@@ -15,9 +15,13 @@ use LAAO_Advertiser_Portal\Core\Service;
 use LAAO_Advertiser_Portal\Install\Installer;
 use LAAO_Advertiser_Portal\Install\Upgrader;
 use LAAO_Advertiser_Portal\Repository\Audit_Repository;
+use LAAO_Advertiser_Portal\Domain\Transition_Table;
 use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
+use LAAO_Advertiser_Portal\Repository\Creative_Repository;
 use LAAO_Advertiser_Portal\Repository\Org_Repository;
+use LAAO_Advertiser_Portal\Repository\Placement_Repository;
 use LAAO_Advertiser_Portal\Workflow\Campaign_State_Machine;
+use LAAO_Advertiser_Portal\Workflow\Campaign_Validator;
 use LAAO_Advertiser_Portal\Workflow\Transition_Guards;
 use LAAO_Advertiser_Portal\Security\Admin_Guard;
 use LAAO_Advertiser_Portal\Security\Ownership;
@@ -214,9 +218,32 @@ final class Plugin {
 		);
 
 		$this->container->register(
+			Creative_Repository::class,
+			static fn (): Creative_Repository => new Creative_Repository()
+		);
+
+		$this->container->register(
+			Placement_Repository::class,
+			static fn (): Placement_Repository => new Placement_Repository()
+		);
+
+		$this->container->register(
+			Campaign_Validator::class,
+			static fn ( Service_Container $c ): Campaign_Validator => new Campaign_Validator(
+				$c->get( Campaign_Repository::class ),
+				$c->get( Creative_Repository::class ),
+				$c->get( Placement_Repository::class ),
+				$c->get( Org_Repository::class )
+			)
+		);
+
+		$this->container->register(
 			Transition_Guards::class,
 			static fn ( Service_Container $c ): Transition_Guards => new Transition_Guards(
-				$c->get( Campaign_Repository::class )
+				$c->get( Campaign_Repository::class ),
+				array(
+					Transition_Table::GUARD_VALIDATOR => $c->get( Campaign_Validator::class )->as_guard(),
+				)
 			)
 		);
 

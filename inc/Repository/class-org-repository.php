@@ -32,6 +32,10 @@ final class Org_Repository {
 	 */
 	public const MAX_MEMBERSHIPS = 100;
 
+	public const STATE_ACTIVE    = 'active';
+	public const STATE_SUSPENDED = 'suspended';
+
+	public const META_ORG_STATE   = '_laao_ads_org_state';
 	public const META_ORG_ID      = '_laao_ads_org_id';
 	public const META_OWNER_USER  = '_laao_ads_owner_user_id';
 	public const META_MEMBER_USER = '_laao_ads_member_user_id';
@@ -133,6 +137,27 @@ final class Org_Repository {
 		);
 
 		return $this->contexts[ $post_id ];
+	}
+
+	/**
+	 * Whether an organization may transact.
+	 *
+	 * Defaults to active when unset, so an organization created before this
+	 * field existed is not silently frozen out. Suspension has to be
+	 * deliberate — it is a decision someone makes, not a default someone
+	 * forgets to undo.
+	 *
+	 * @param int $org_id Organization post id.
+	 * @return bool
+	 */
+	public function is_active( int $org_id ): bool {
+		if ( $org_id <= 0 || Post_Types::ORGANIZATION !== get_post_type( $org_id ) ) {
+			return false;
+		}
+
+		$state = (string) get_post_meta( $org_id, self::META_ORG_STATE, true );
+
+		return '' === $state || self::STATE_ACTIVE === $state;
 	}
 
 	/**

@@ -31,6 +31,7 @@ final class Campaign_Repository {
 	public const META_REVIEW_NOTES = '_laao_ads_review_notes';
 	public const META_REVISION     = '_laao_ads_revision';
 	public const META_ADSANITY_ID  = '_laao_ads_adsanity_ad_id';
+	public const META_PLACEMENT_ID = '_laao_ads_placement_id';
 
 	/**
 	 * Whether a post exists and is a campaign.
@@ -201,6 +202,26 @@ final class Campaign_Repository {
 	 */
 	public function end_ts( int $campaign_id ): int {
 		return (int) get_post_meta( $campaign_id, self::META_END_TS, true );
+	}
+
+	/**
+	 * The placements this campaign has selected.
+	 *
+	 * Repeated meta rather than a serialized array, so "which campaigns use
+	 * placement 62?" stays an indexed lookup. A serialized array would need a
+	 * LIKE '%i:62;%', which is also wrong, because it matches 162 and 620.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return array<int, int>
+	 */
+	public function placement_ids( int $campaign_id ): array {
+		$ids = get_post_meta( $campaign_id, self::META_PLACEMENT_ID, false );
+
+		if ( ! is_array( $ids ) ) {
+			return array();
+		}
+
+		return array_values( array_unique( array_filter( array_map( 'intval', $ids ) ) ) );
 	}
 
 	/**

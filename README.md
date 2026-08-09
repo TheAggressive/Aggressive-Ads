@@ -10,13 +10,15 @@ The portal owns the business workflow. AdSanity owns ad delivery. The LAAO theme
 
 ## Requirements
 
-| | |
-|---|---|
-| PHP | 8.4+ |
-| WordPress | 6.7+ |
-| Node | 24.x |
-| pnpm | 11.x |
-| AdSanity | 2.0.1+ — **optional**; the portal degrades, it does not break |
+
+|           |                                                               |
+| --------- | ------------------------------------------------------------- |
+| PHP       | 8.4+                                                          |
+| WordPress | 6.7+                                                          |
+| Node      | 24.x                                                          |
+| pnpm      | 11.x                                                          |
+| AdSanity  | 2.0.1+ — **optional**; the portal degrades, it does not break |
+
 
 The plugin has **no theme dependency**. It runs under Twenty Twenty-Five with no functional degradation, and that claim is enforced by an e2e test rather than by discipline. See [ADR-0001](docs/adr/0001-standalone-plugin-zero-theme-dependency.md).
 
@@ -41,6 +43,8 @@ pnpm ci:php            # all three PHP gates
 pnpm ci:verify         # every lane, serially, as CI would
 ```
 
+
+
 ## Documentation
 
 Start with [docs/README.md](docs/README.md), which gives a reading order and indexes the seventeen [Architecture Decision Records](docs/adr/).
@@ -52,6 +56,8 @@ The short version:
 - [campaign-workflow.md](docs/campaign-workflow.md) — the state machine every status write goes through
 - [threat-model.md](docs/threat-model.md) — attack surfaces, mitigations, and the test proving each
 - [adsanity-integration.md](docs/adsanity-integration.md) — what AdSanity actually does, verified against its source
+
+
 
 ## License
 
