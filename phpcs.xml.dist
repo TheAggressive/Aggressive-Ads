@@ -6,6 +6,12 @@
 	<file>inc</file>
 	<file>tests/php</file>
 	<file>laao-advertiser-portal.php</file>
+	<!--
+		uninstall.php is easy to forget and the worst file to leave unchecked:
+		it runs with full privileges, outside the plugin's own bootstrap, and
+		its job is deleting things.
+	-->
+	<file>uninstall.php</file>
 
 	<!-- Exclude generated and third-party code -->
 	<exclude-pattern>*/vendor/*</exclude-pattern>

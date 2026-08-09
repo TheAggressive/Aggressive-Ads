@@ -476,6 +476,51 @@ final class OwnershipTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Invoked directly with one of our own capability names, the filter still
+	 * answers — and still refuses a mismatched post type.
+	 *
+	 * WordPress never dispatches this path: it recurses with the generic
+	 * 'edit_post' instead, so the branch is unreachable through
+	 * current_user_can(). It is kept because a dispatch change would otherwise
+	 * silently return the filter to being inert, which is the exact defect this
+	 * class was written with. Kept code in a security class gets tested, or it
+	 * rots into a protection nobody has ever seen work.
+	 *
+	 * @return void
+	 */
+	public function test_the_filter_answers_when_called_with_our_own_capability_name(): void {
+		$ownership = \LAAO_Advertiser_Portal\Plugin::instance()->container()->get( Ownership::class );
+
+		$granted = $ownership->map(
+			array( 'edit_laao_ads_campaign' ),
+			'edit_laao_ads_campaign',
+			$this->user_a,
+			array( $this->campaign_a )
+		);
+
+		$this->assertSame( array( 'edit_laao_ads_campaigns' ), $granted );
+
+		$cross_org = $ownership->map(
+			array( 'edit_laao_ads_campaign' ),
+			'edit_laao_ads_campaign',
+			$this->user_b,
+			array( $this->campaign_a )
+		);
+
+		$this->assertSame( array( 'do_not_allow' ), $cross_org );
+
+		// A campaign capability aimed at an organization's id.
+		$mismatched = $ownership->map(
+			array( 'edit_laao_ads_campaign' ),
+			'edit_laao_ads_campaign',
+			$this->user_a,
+			array( $this->org_a )
+		);
+
+		$this->assertSame( array( 'do_not_allow' ), $mismatched );
+	}
+
+	/**
 	 * A logged-out visitor is denied everything.
 	 *
 	 * @return void

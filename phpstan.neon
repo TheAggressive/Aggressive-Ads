@@ -13,6 +13,8 @@ parameters:
 	paths:
 		- inc
 		- laao-advertiser-portal.php
+		# Runs with full privileges, outside the bootstrap, and deletes things.
+		- uninstall.php
 
 	bootstrapFiles:
 		- tests/php/phpstan-bootstrap.php
