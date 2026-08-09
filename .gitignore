@@ -1,0 +1,51 @@
+# Dependencies — never committed, never shipped.
+# See docs/adr/0011-no-composer-runtime-dependencies.md.
+/vendor/
+/node_modules/
+
+# Build output
+/dist/
+/build/
+
+# Release artifacts
+/release/
+*.zip
+*.zip.sha256
+
+# Tooling caches
+/.phpunit.cache/
+/.phpunit.result.cache
+/.phpcs-cache
+/.eslintcache
+/coverage/
+/test-results/
+/playwright-report/
+
+# Compiled translations are built at package time, not committed.
+/languages/*.mo
+/languages/*.l10n.php
+
+# Local environment
+/.wp-env.override.json
+.env
+.env.local
+
+# Editors and OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Claude Code: this one file only.
+#
+# settings.local.json is per-machine state — permissions someone approved on
+# their own laptop — and belongs to nobody else. Everything else under
+# .claude/ is shared knowledge that must stay in version control: a skill
+# describing how to drive this plugin is documentation, and reviewable.
+#
+# Ignoring the whole `.claude/` directory is the trap. The sibling Aggressive
+# Apparel theme does exactly that, and the consequence is that its `verify`
+# skill exists only on one developer's disk — untracked, unreviewed, and lost
+# with the checkout. Keep this narrow.
+.claude/settings.local.json

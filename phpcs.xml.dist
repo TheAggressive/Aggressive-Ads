@@ -1,0 +1,91 @@
+<?xml version="1.0"?>
+<ruleset name="LAAO Advertiser Portal">
+	<description>PHP coding standards for the LAAO Advertiser Portal plugin.</description>
+
+	<!-- What to scan -->
+	<file>inc</file>
+	<file>tests/php</file>
+	<file>laao-advertiser-portal.php</file>
+
+	<!-- Exclude generated and third-party code -->
+	<exclude-pattern>*/vendor/*</exclude-pattern>
+	<exclude-pattern>*/node_modules/*</exclude-pattern>
+	<exclude-pattern>*/dist/*</exclude-pattern>
+
+	<arg name="basepath" value="."/>
+	<arg name="colors"/>
+	<arg name="extensions" value="php"/>
+	<arg name="parallel" value="8"/>
+	<arg value="sp"/>
+
+	<!-- Base standard -->
+	<rule ref="WordPress">
+		<!-- Short array syntax is the house style. -->
+		<exclude name="Universal.Arrays.DisallowShortArraySyntax"/>
+	</rule>
+
+	<!-- Security and correctness sniffs from the VIP standard, minus its
+	     platform-specific hosting restrictions which do not apply here. -->
+	<rule ref="WordPressVIPMinimum.Security"/>
+	<rule ref="WordPressVIPMinimum.Performance"/>
+
+	<!-- Forward/backward PHP compatibility. Matches composer platform (8.4). -->
+	<rule ref="PHPCompatibilityWP"/>
+	<config name="testVersion" value="8.4-"/>
+	<config name="minimum_supported_wp_version" value="6.7"/>
+
+	<!--
+		Exception messages are developer-facing diagnostics thrown at boot for
+		programming errors — an unregistered service, a dependency cycle, a
+		factory returning the wrong type. They are never rendered to a browser;
+		anything a user can cause returns WP_Error instead. Escaping them would
+		only mangle the message in a stack trace.
+	-->
+	<rule ref="WordPress.Security.EscapeOutput">
+		<exclude name="WordPress.Security.EscapeOutput.ExceptionNotEscaped"/>
+	</rule>
+
+	<!-- Text domain must match the plugin slug everywhere. -->
+	<rule ref="WordPress.WP.I18n">
+		<properties>
+			<property name="text_domain" type="array">
+				<element value="laao-advertiser-portal"/>
+			</property>
+		</properties>
+	</rule>
+
+	<!-- Prefix for globals, hooks and options owned by this plugin. -->
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties>
+			<property name="prefixes" type="array">
+				<element value="laao_ads"/>
+				<element value="LAAO_ADS"/>
+				<element value="LAAO_Advertiser_Portal"/>
+			</property>
+		</properties>
+	</rule>
+
+	<!-- Test files follow PHPUnit conventions, not WordPress file/naming rules. -->
+	<rule ref="WordPress.Files.FileName">
+		<exclude-pattern>tests/php/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<exclude-pattern>tests/php/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.WP.AlternativeFunctions">
+		<exclude-pattern>tests/php/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.DB.DirectDatabaseQuery">
+		<exclude-pattern>tests/php/*</exclude-pattern>
+	</rule>
+	<rule ref="Squiz.Commenting.FunctionComment">
+		<exclude-pattern>tests/php/*</exclude-pattern>
+	</rule>
+	<rule ref="Squiz.Commenting.ClassComment">
+		<exclude-pattern>tests/php/*</exclude-pattern>
+	</rule>
+	<!-- Test doubles live alongside the test that uses them. -->
+	<rule ref="Generic.Files.OneObjectStructurePerFile">
+		<exclude-pattern>tests/php/*</exclude-pattern>
+	</rule>
+</ruleset>

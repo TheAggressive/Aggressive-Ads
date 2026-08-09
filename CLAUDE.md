@@ -1,0 +1,153 @@
+# CLAUDE.md — LAAO Advertiser Portal
+
+Guidance for AI assistants working in this plugin.
+
+Architectural patterns are adapted from the LAAO and Aggressive Apparel themes.
+**Nothing is inherited at runtime**, and where the three differ, this file is
+authoritative here. In particular: this is a plugin, not a theme; there is no
+WooCommerce, no Tailwind history, no block set to speak of, and the test stack
+is deliberately older than LAAO's.
+
+## Read the docs first
+
+This repository's architecture is already written down, in `docs/`. Do not
+re-derive it, and do not restate it here.
+
+| Question | File |
+|---|---|
+| How are the layers separated, and what enforces it? | `docs/architecture.md` |
+| What are the entities and their invariants? | `docs/domain-model.md` |
+| How does a campaign change status? | `docs/campaign-workflow.md` |
+| Who may do what? | `docs/roles-and-capabilities.md` |
+| What does AdSanity actually do? | `docs/adsanity-integration.md` |
+| What are we defending against? | `docs/threat-model.md` |
+| Why was X decided? | `docs/adr/` — 17 records |
+
+**The ADR contract:** a change that reverses a decision recorded in an ADR must
+supersede that ADR in the same change. Add a new one marked `Supersedes NNNN`
+and set the old one's status to `Superseded by NNNN`. Never edit an ADR in
+place to say something different from what was decided.
+
+## Status — read this before assuming anything exists
+
+Phase 1 (foundation) is **in progress**. What is built:
+
+- root plugin file, autoloader, service container, composition root
+- five private post types, eleven campaign statuses
+- the capability vocabulary and the two role matrices (declared, not yet installed)
+- PHPCS / PHPStan / PHPUnit-unit / structural guards, wired into `bin/ci/verify.sh`
+
+What does **not** exist yet, despite being described in `docs/`: the installer,
+upgrader, audit table, `Ownership::map()`, repositories, REST routes, the portal
+route, any UI, any JavaScript toolchain, wp-env, Playwright, the integration
+suite, i18n tooling, and packaging. `docs/` describes the design; `docs/roadmap.md`
+says which phase builds it. If a doc describes something you cannot find, it has
+not been built — that is expected, not a bug.
+
+## Commands
+
+```bash
+composer install        # dev tooling only; vendor/ never ships
+pnpm ci:verify          # the contract for declaring a change finished
+
+pnpm lint:php           # PHPCS
+pnpm analyse:php        # PHPStan level 8, no baseline
+pnpm test:php:unit      # unit suite — no WordPress, no database
+pnpm lint:files         # file length + architecture boundaries + permission callbacks
+pnpm lint:php:fix       # phpcbf
+```
+
+Every `ci:*` script maps 1:1 onto a CI job. Adding a lane means adding it to
+**both** the workflow and `bin/ci/verify.sh`; adding it to one is how the two
+drift.
+
+## Architecture, in brief
+
+```
+laao-advertiser-portal.php   header, constants, floor guard, hand-off. Never a fifth job.
+  └ inc/class-autoloader.php   LAAO_Advertiser_Portal\X\Y_Z → inc/X/class-y-z.php
+      └ inc/class-plugin.php   register_services() / init_services(), explicit order
+```
+
+Registration stores a closure and runs nothing. Behaviour begins only at
+`init_services()`. Adding a service costs two edits in one file, deliberately —
+the wiring stays greppable and there is no autowiring to reverse-engineer.
+
+Two boundaries carry most of the weight, and both fail the build when crossed:
+
+- **`inc/Repository/` is the only place data access appears.** No `WP_Query`,
+  `get_posts()`, `get_post_meta()`, `$wpdb` anywhere else in `inc/`.
+- **`inc/Integration/Adsanity/` is the only place AdSanity exists.** Its
+  constants, classes, hooks, taxonomy, post type and meta keys appear nowhere else.
+
+`inc/Domain/` may not call WordPress **at all**. That is what makes the campaign
+rules testable in milliseconds with no bootstrap, which is what makes it
+affordable to test them exhaustively.
+
+## Testing
+
+PHPUnit is pinned to **9.6**, not 13 like the LAAO theme. This is deliberate and
+test-only: the assertions that matter here — org-scoped `map_meta_cap`, `dbDelta`
+idempotence, real REST authorization, real uploads — are not expressible under
+Brain\Monkey, and the WordPress core test suite requires 9.x. See ADR-0013.
+
+Two config files because **PHPUnit allows exactly one bootstrap per file**. The
+unit suite must not load WordPress; the integration suite must.
+
+`failOnWarning`, `failOnRisky`, `failOnSkipped` and `failOnIncomplete` are all
+true. A skipped security test is a security test that is not running.
+
+### Prove the test works
+
+Write it, watch it pass, **break the implementation deliberately**, watch it
+fail, read the failure message, restore, watch it pass.
+
+This is not ceremony. The autoloader's path-traversal test already passed once
+with the guard removed — it asserted null against a path where nothing existed,
+so `is_file()` was rejecting it for an unrelated reason. It now aims a `..`
+segment at a file that genuinely exists. A test that passes for the wrong reason
+is worse than no test, because it produces confidence.
+
+## Gotchas that cost real time
+
+- **`wp_posts.post_type` and `post_status` are `varchar(20)`.** A longer slug does
+  not error — it truncates on write and then never matches on read, producing
+  rows that exist and cannot be queried. This is the entire reason statuses use
+  the `lap_` prefix while everything else uses `laao_ads_`. Do not "fix" that
+  inconsistency.
+- **No runtime Composer dependencies, ever.** WordPress has no dependency
+  isolation; two plugins shipping different versions of one package fatal the
+  site. `composer.json` `require` is `{"php": ">=8.4"}` and stays that way. See
+  ADR-0011 for the core substitution table before reaching for a package.
+- **The production autoloader is ours, not Composer's.** `inc/class-autoloader.php`
+  is listed in the packaging script's required files for that reason.
+- **Your editor's PHPCS is not the project's.** IDE integrations often run stock
+  WordPress standards and will flag `tests/php/**/FooTest.php` filenames.
+  `phpcs.xml.dist` excludes `WordPress.Files.FileName` there on purpose — tests
+  follow PHPUnit conventions. `vendor/bin/phpcs` is the authority.
+- **Exception messages are exempt from the escaping sniff**, narrowly and with a
+  reason in `phpcs.xml.dist`: they are boot-time developer diagnostics, never
+  rendered. Anything a user can cause returns `WP_Error` instead.
+- **AdSanity writes have no safety net.** `AdSanity_Ads_CPT::save_post()` requires
+  `$_POST['ads_nonce']` and so returns immediately for programmatic writes. It
+  will store whatever we write and then fail to display it. The publisher must
+  read back every key it wrote.
+- **AdSanity has no cron.** Scheduling is a read-time `meta_query`, so an ad
+  missing either date key is *invisible everywhere* — not "expired", absent. That
+  is the failure mode that produces "we billed for a campaign nobody ever saw".
+
+## Working style
+
+- **Verify before asserting.** Read the installed source rather than inferring
+  from documentation or a plugin's UI. Everything in
+  `docs/adsanity-integration.md` carries a file and line reference for this reason.
+- **Do not weaken a gate to get green.** Fix the cause, or change the rule
+  deliberately with an ADR. A gate that fires on legitimate code is itself a
+  defect — fix the pattern, do not add an exception.
+- **Comments explain why, not what.** A comment restating the line below it is
+  noise; one recording the incident that made the line necessary is the most
+  valuable thing in the file.
+- **Security, accessibility, idempotency and failure recovery are requirements,
+  not a later pass.** They block a release.
+- Conventional commits (`feat:`, `fix:`, `docs:`, `ci:`, …). semantic-release
+  owns the version — never hardcode it.
