@@ -184,6 +184,16 @@
 		<exclude-pattern>tests/php/*</exclude-pattern>
 	</rule>
 	<!--
+		Test helpers read the plugin's own audit table back to assert what was
+		written. The table name is built from $wpdb->prefix and a class
+		constant — an identifier, which cannot be bound as a parameter — while
+		every actual value still is. Production queries keep the sniff, which
+		is where it earns its keep.
+	-->
+	<rule ref="WordPress.DB.PreparedSQL">
+		<exclude-pattern>tests/php/*</exclude-pattern>
+	</rule>
+	<!--
 		Simulating a request is what an integration test does. Asserting that
 		admin-post.php is exempt from the admin guard requires setting $pagenow,
 		because that is the value the guard reads.

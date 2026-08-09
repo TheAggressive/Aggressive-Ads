@@ -15,7 +15,10 @@ use LAAO_Advertiser_Portal\Core\Service;
 use LAAO_Advertiser_Portal\Install\Installer;
 use LAAO_Advertiser_Portal\Install\Upgrader;
 use LAAO_Advertiser_Portal\Repository\Audit_Repository;
+use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
 use LAAO_Advertiser_Portal\Repository\Org_Repository;
+use LAAO_Advertiser_Portal\Workflow\Campaign_State_Machine;
+use LAAO_Advertiser_Portal\Workflow\Transition_Guards;
 use LAAO_Advertiser_Portal\Security\Admin_Guard;
 use LAAO_Advertiser_Portal\Security\Ownership;
 use LAAO_Advertiser_Portal\Security\Roles;
@@ -205,10 +208,37 @@ final class Plugin {
 			static fn (): Admin_Guard => new Admin_Guard()
 		);
 
+		$this->container->register(
+			Campaign_Repository::class,
+			static fn (): Campaign_Repository => new Campaign_Repository()
+		);
+
+		$this->container->register(
+			Transition_Guards::class,
+			static fn ( Service_Container $c ): Transition_Guards => new Transition_Guards(
+				$c->get( Campaign_Repository::class )
+			)
+		);
+
+		$this->container->register(
+			Campaign_State_Machine::class,
+			static fn ( Service_Container $c ): Campaign_State_Machine => new Campaign_State_Machine(
+				$c->get( Campaign_Repository::class ),
+				$c->get( Audit_Repository::class ),
+				$c->get( Transition_Guards::class )
+			)
+		);
+
 		/*
 		 * Remaining services land here as the phases build them — router,
 		 * assets, REST — each as one register() line, each also listed in
 		 * service_init_order() below when it needs hooks.
+		 *
+		 * The validator and placement-mapping guards, and the publish and
+		 * unpublish effects, are injected into Transition_Guards and
+		 * Campaign_State_Machine when their phases build them. Until then both
+		 * fail closed, so a transition depending on one refuses rather than
+		 * skipping the check.
 		 */
 	}
 
@@ -258,6 +288,10 @@ final class Plugin {
 			// author comparison instead of ours.
 			Ownership::class,
 			Admin_Guard::class,
+
+			// Attaches the listener that notices a campaign status written
+			// without going through the state machine.
+			Campaign_State_Machine::class,
 		);
 	}
 }
