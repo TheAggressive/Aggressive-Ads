@@ -16,6 +16,7 @@ use LAAO_Advertiser_Portal\Install\Installer;
 use LAAO_Advertiser_Portal\Install\Upgrader;
 use LAAO_Advertiser_Portal\Repository\Audit_Repository;
 use LAAO_Advertiser_Portal\Domain\Transition_Table;
+use LAAO_Advertiser_Portal\Integration\Adsanity\Placement_Mapping;
 use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
 use LAAO_Advertiser_Portal\Repository\Creative_Repository;
 use LAAO_Advertiser_Portal\Repository\Org_Repository;
@@ -238,13 +239,27 @@ final class Plugin {
 		);
 
 		$this->container->register(
-			Transition_Guards::class,
-			static fn ( Service_Container $c ): Transition_Guards => new Transition_Guards(
-				$c->get( Campaign_Repository::class ),
-				array(
-					Transition_Table::GUARD_VALIDATOR => $c->get( Campaign_Validator::class )->as_guard(),
-				)
+			Placement_Mapping::class,
+			static fn ( Service_Container $c ): Placement_Mapping => new Placement_Mapping(
+				$c->get( Placement_Repository::class )
 			)
+		);
+
+		$this->container->register(
+			Transition_Guards::class,
+			static function ( Service_Container $c ): Transition_Guards {
+				$campaigns = $c->get( Campaign_Repository::class );
+
+				return new Transition_Guards(
+					$campaigns,
+					array(
+						Transition_Table::GUARD_VALIDATOR => $c->get( Campaign_Validator::class )->as_guard(),
+						Transition_Table::GUARD_MAPPINGS_RESOLVE => $c->get( Placement_Mapping::class )->as_guard(
+							static fn ( int $campaign_id ): array => $campaigns->placement_ids( $campaign_id )
+						),
+					)
+				);
+			}
 		);
 
 		$this->container->register(

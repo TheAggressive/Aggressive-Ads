@@ -14,7 +14,10 @@
 	"env": {
 		"tests": {
 			"port": 9970,
-			"phpmyadminPort": 9972
+			"phpmyadminPort": 9972,
+			"mappings": {
+				"wp-content/mu-plugins": "./tests/fixtures/mu-plugins"
+			}
 		}
 	}
 }

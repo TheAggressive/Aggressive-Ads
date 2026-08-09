@@ -159,18 +159,32 @@ foreach ( php_files( $inc ) as $path ) {
 
 		if ( in_array( $id, $qualified, true ) ) {
 			if ( ! $in_adsanity ) {
-				foreach ( explode( '\\', ltrim( $text, '\\' ) ) as $segment ) {
-					// `Adsanity\Meta_Data` is a bare namespace segment with no
-					// underscore, so no prefix matches it — and that class is
-					// exactly the undocumented internal wrapper the AdSanity
-					// notes warn against depending on.
-					$is_vendor_namespace = 0 === strcasecmp( $segment, 'adsanity' );
+				$segments = explode( '\\', ltrim( $text, '\\' ) );
 
-					if ( $is_vendor_namespace || has_prefix( $segment, ADSANITY_PREFIXES ) ) {
-						$violations[] = "{$relative}:{$line}: AdSanity identifier {$text} outside inc/Integration/Adsanity/";
+				/*
+				 * `Adsanity\Meta_Data` is a bare segment with no underscore, so
+				 * no prefix matches it — and it is exactly the undocumented
+				 * internal wrapper the AdSanity notes warn against depending on.
+				 *
+				 * Only the **root** segment counts, though. Our own adapter
+				 * lives in LAAO_Advertiser_Portal\Integration\Adsanity, and the
+				 * composition root has to be able to name it in order to wire
+				 * it up. Matching any segment flagged that import, which is the
+				 * one place in the codebase that must be allowed to say it.
+				 */
+				$is_vendor_namespace = 0 === strcasecmp( $segments[0], 'adsanity' );
+				$has_vendor_prefix   = false;
+
+				foreach ( $segments as $segment ) {
+					if ( has_prefix( $segment, ADSANITY_PREFIXES ) ) {
+						$has_vendor_prefix = true;
 
 						break;
 					}
+				}
+
+				if ( $is_vendor_namespace || $has_vendor_prefix ) {
+					$violations[] = "{$relative}:{$line}: AdSanity identifier {$text} outside inc/Integration/Adsanity/";
 				}
 			}
 
