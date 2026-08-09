@@ -70,6 +70,32 @@ if [ -n "$adsanity_hits" ]; then
 	status=1
 fi
 
+# --- Rule 3: inc/Domain/ calls no WordPress ---------------------------------
+#
+# The domain layer's purity is what makes the campaign rules testable in
+# milliseconds with no bootstrap — which is what makes it affordable to test
+# them exhaustively, all 121 status pairs rather than the handful anyone
+# remembers. One get_option() in here and that property is gone, and the
+# exhaustive test becomes an integration test nobody runs on every save.
+#
+# Referencing another class's constants is fine; calling a WordPress function
+# is not.
+
+if [ -d inc/Domain ]; then
+	WORDPRESS_CALL_PATTERN='(\b(apply_filters|do_action|add_action|add_filter|current_user_can|get_option|update_option|get_userdata|get_post|wp_[a-z_]+|esc_[a-z]+|sanitize_[a-z_]+|__|_e|_n|_x|is_wp_error|absint)[[:space:]]*\()'
+
+	domain_hits=$(
+		grep -rInE "$WORDPRESS_CALL_PATTERN" inc/Domain --include='*.php' 2>/dev/null || true
+	)
+
+	if [ -n "$domain_hits" ]; then
+		echo "WordPress called from inc/Domain/:" >&2
+		echo "$domain_hits" >&2
+		echo >&2
+		status=1
+	fi
+fi
+
 if [ "$status" -ne 0 ]; then
 	echo "See docs/architecture.md for why these boundaries exist." >&2
 	exit 1

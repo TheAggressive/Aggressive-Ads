@@ -39,7 +39,11 @@ Two rules carry most of the weight:
 
 Both boundaries exist for the same reason. AdSanity is a third-party plugin whose internals we read but do not control, and whose meta keys are undocumented implementation detail. When it changes — and a licensed plugin on a weekly update cadence will change — the blast radius must be one directory. Scatter `get_post_meta( $id, '_start_date' )` through the codebase and every future AdSanity release is a full-repository audit.
 
+**`inc/Domain/` calls no WordPress function.** Enforced by the same script.
+
 The domain layer's "no WordPress at all" rule buys something narrower but real: the campaign rules — is this transition legal, is this creative valid for this placement, is this date range sane — are testable in milliseconds with no database and no bootstrap. That is what makes it affordable to test them exhaustively.
+
+That is not a figure of speech. `TransitionTableTest` checks **all 121 status pairs**, not the handful anyone remembers, and the whole unit suite runs in under ten milliseconds. One `get_option()` in `inc/Domain/` and that property is gone: the exhaustive test becomes an integration test, and an integration test is not something anyone runs on every save.
 
 ## Dependency direction
 

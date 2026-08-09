@@ -38,6 +38,7 @@ Phase 1 (foundation) is **in progress**. What is built:
 - the audit table, `Audit_Event`, and `Audit_Repository` (write path only)
 - installer, version-driven upgrader with a tested migration walker, `uninstall.php`
 - org-scoped `Ownership::map()`, `Org_Repository`, `Admin_Guard`, `Portal\Routes`
+- `Domain\Transition_Table` — the 22 legal edges, with all 121 pairs asserted
 - wp-env (dev `:9960`, tests `:9970`) and the integration/security/rest/upgrade suites
 - PHPCS / PHPStan / PHPUnit / structural guards, wired into `bin/ci/verify.sh`
 
@@ -87,6 +88,8 @@ Two boundaries carry most of the weight, and both fail the build when crossed:
   `get_posts()`, `get_post_meta()`, `$wpdb` anywhere else in `inc/`.
 - **`inc/Integration/Adsanity/` is the only place AdSanity exists.** Its
   constants, classes, hooks, taxonomy, post type and meta keys appear nowhere else.
+- **`inc/Domain/` calls no WordPress function.** Constants from other classes
+  are fine; a function call is not.
 
 `inc/Domain/` may not call WordPress **at all**. That is what makes the campaign
 rules testable in milliseconds with no bootstrap, which is what makes it

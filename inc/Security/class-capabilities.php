@@ -184,6 +184,27 @@ final class Capabilities {
 	}
 
 	/**
+	 * One meta capability, by post type and action.
+	 *
+	 * Named rather than positional so a caller cannot quietly depend on the
+	 * order meta_for() happens to return, which is how `delete_` ends up being
+	 * checked where `read_` was meant.
+	 *
+	 * @param string $post_type Post type slug.
+	 * @param string $action    One of edit, read, delete.
+	 * @return string Empty when either argument is unknown.
+	 */
+	public static function meta_cap( string $post_type, string $action ): string {
+		$names = Post_Types::capability_names();
+
+		if ( ! isset( $names[ $post_type ] ) || ! in_array( $action . '_', self::META_PREFIXES, true ) ) {
+			return '';
+		}
+
+		return $action . '_' . $names[ $post_type ]['singular'];
+	}
+
+	/**
 	 * Every capability this plugin grants: primitives plus generated.
 	 *
 	 * This is what an administrator receives on install.
