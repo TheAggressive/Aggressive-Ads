@@ -138,21 +138,50 @@ final class RolesMatrixTest extends TestCase {
 	}
 
 	/**
-	 * Placements, packages and organizations are readable but not writable by
-	 * an advertiser. read_private_ is required rather than optional, because
-	 * these post types are registered private.
+	 * Shared configuration is readable but not writable by an advertiser.
+	 *
+	 * The read_private_ variant is required rather than optional here, because
+	 * these post types are registered private and carry no owning org — an
+	 * advertiser choosing placements in the wizard has no membership to
+	 * authorize through.
 	 *
 	 * @return void
 	 */
-	public function test_advertiser_reads_configuration_but_cannot_edit_it(): void {
+	public function test_advertiser_reads_shared_configuration_but_cannot_edit_it(): void {
 		$caps = Roles::definitions()['laao_ads_advertiser']['capabilities'];
 
-		foreach ( array( Post_Types::PLACEMENT, Post_Types::PACKAGE, Post_Types::ORGANIZATION ) as $post_type ) {
+		foreach ( array( Post_Types::PLACEMENT, Post_Types::PACKAGE ) as $post_type ) {
 			$plural = Post_Types::capability_names()[ $post_type ]['plural'];
 
 			$this->assertTrue( $caps[ 'read_private_' . $plural ], "advertiser cannot read {$plural}" );
 			$this->assertArrayNotHasKey( 'edit_' . $plural, $caps, "advertiser can edit {$plural}" );
 			$this->assertArrayNotHasKey( 'delete_' . $plural, $caps, "advertiser can delete {$plural}" );
+		}
+	}
+
+	/**
+	 * An advertiser is granted no cross-organization read primitive.
+	 *
+	 * An advertiser reads their own organization through membership, which
+	 * Ownership::map() resolves to plain `read`. Granting
+	 * read_private_laao_ads_orgs would therefore do nothing for their own
+	 * organization and everything for everyone else's — leaving exactly one
+	 * dropped guard between an advertiser and every other customer's contact
+	 * and billing details.
+	 *
+	 * @return void
+	 */
+	public function test_advertiser_holds_no_cross_organization_read(): void {
+		$caps = Roles::definitions()['laao_ads_advertiser']['capabilities'];
+
+		foreach ( array( Post_Types::ORGANIZATION, Post_Types::CAMPAIGN, Post_Types::CREATIVE ) as $post_type ) {
+			$plural = Post_Types::capability_names()[ $post_type ]['plural'];
+
+			$this->assertArrayNotHasKey(
+				'read_private_' . $plural,
+				$caps,
+				"advertiser holds read_private_{$plural}, which reaches other organizations"
+			);
 		}
 	}
 

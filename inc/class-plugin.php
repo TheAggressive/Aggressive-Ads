@@ -15,6 +15,9 @@ use LAAO_Advertiser_Portal\Core\Service;
 use LAAO_Advertiser_Portal\Install\Installer;
 use LAAO_Advertiser_Portal\Install\Upgrader;
 use LAAO_Advertiser_Portal\Repository\Audit_Repository;
+use LAAO_Advertiser_Portal\Repository\Org_Repository;
+use LAAO_Advertiser_Portal\Security\Admin_Guard;
+use LAAO_Advertiser_Portal\Security\Ownership;
 use LAAO_Advertiser_Portal\Security\Roles;
 
 /**
@@ -185,9 +188,26 @@ final class Plugin {
 			)
 		);
 
+		$this->container->register(
+			Org_Repository::class,
+			static fn (): Org_Repository => new Org_Repository()
+		);
+
+		$this->container->register(
+			Ownership::class,
+			static fn ( Service_Container $c ): Ownership => new Ownership(
+				$c->get( Org_Repository::class )
+			)
+		);
+
+		$this->container->register(
+			Admin_Guard::class,
+			static fn (): Admin_Guard => new Admin_Guard()
+		);
+
 		/*
-		 * Remaining services land here as the phases build them — ownership,
-		 * router, assets — each as one register() line, each also listed in
+		 * Remaining services land here as the phases build them — router,
+		 * assets, REST — each as one register() line, each also listed in
 		 * service_init_order() below when it needs hooks.
 		 */
 	}
@@ -232,6 +252,12 @@ final class Plugin {
 			// filters on it.
 			Post_Types::class,
 			Post_Statuses::class,
+
+			// Ownership before anything that could ask a capability question,
+			// so no surface ever resolves an object check through core's
+			// author comparison instead of ours.
+			Ownership::class,
+			Admin_Guard::class,
 		);
 	}
 }

@@ -45,6 +45,105 @@
 		<exclude name="WordPress.Security.EscapeOutput.ExceptionNotEscaped"/>
 	</rule>
 
+	<!--
+		Teach the capability sniff this plugin's vocabulary.
+		
+		Generated from Security\Capabilities and Core\Post_Types: the ten
+		primitives, the eleven WordPress generates per post type, and the three
+		meta capabilities per post type.
+
+		Declaring them is not silencing the sniff — it is the opposite. Without
+		this list every custom capability warns and the signal is worthless;
+		with it, a typo in one of our own capability names is a build failure.
+		Regenerate when the vocabulary changes.
+	-->
+	<rule ref="WordPress.WP.Capabilities">
+		<properties>
+			<property name="custom_capabilities" type="array">
+				<element value="create_laao_ads_campaigns"/>
+				<element value="create_laao_ads_creatives"/>
+				<element value="create_laao_ads_orgs"/>
+				<element value="create_laao_ads_packages"/>
+				<element value="create_laao_ads_placements"/>
+				<element value="delete_laao_ads_campaign"/>
+				<element value="delete_laao_ads_campaigns"/>
+				<element value="delete_laao_ads_creative"/>
+				<element value="delete_laao_ads_creatives"/>
+				<element value="delete_laao_ads_org"/>
+				<element value="delete_laao_ads_orgs"/>
+				<element value="delete_laao_ads_package"/>
+				<element value="delete_laao_ads_packages"/>
+				<element value="delete_laao_ads_placement"/>
+				<element value="delete_laao_ads_placements"/>
+				<element value="delete_others_laao_ads_campaigns"/>
+				<element value="delete_others_laao_ads_creatives"/>
+				<element value="delete_others_laao_ads_orgs"/>
+				<element value="delete_others_laao_ads_packages"/>
+				<element value="delete_others_laao_ads_placements"/>
+				<element value="delete_private_laao_ads_campaigns"/>
+				<element value="delete_private_laao_ads_creatives"/>
+				<element value="delete_private_laao_ads_orgs"/>
+				<element value="delete_private_laao_ads_packages"/>
+				<element value="delete_private_laao_ads_placements"/>
+				<element value="delete_published_laao_ads_campaigns"/>
+				<element value="delete_published_laao_ads_creatives"/>
+				<element value="delete_published_laao_ads_orgs"/>
+				<element value="delete_published_laao_ads_packages"/>
+				<element value="delete_published_laao_ads_placements"/>
+				<element value="edit_laao_ads_campaign"/>
+				<element value="edit_laao_ads_campaigns"/>
+				<element value="edit_laao_ads_creative"/>
+				<element value="edit_laao_ads_creatives"/>
+				<element value="edit_laao_ads_org"/>
+				<element value="edit_laao_ads_orgs"/>
+				<element value="edit_laao_ads_package"/>
+				<element value="edit_laao_ads_packages"/>
+				<element value="edit_laao_ads_placement"/>
+				<element value="edit_laao_ads_placements"/>
+				<element value="edit_others_laao_ads_campaigns"/>
+				<element value="edit_others_laao_ads_creatives"/>
+				<element value="edit_others_laao_ads_orgs"/>
+				<element value="edit_others_laao_ads_packages"/>
+				<element value="edit_others_laao_ads_placements"/>
+				<element value="edit_private_laao_ads_campaigns"/>
+				<element value="edit_private_laao_ads_creatives"/>
+				<element value="edit_private_laao_ads_orgs"/>
+				<element value="edit_private_laao_ads_packages"/>
+				<element value="edit_private_laao_ads_placements"/>
+				<element value="edit_published_laao_ads_campaigns"/>
+				<element value="edit_published_laao_ads_creatives"/>
+				<element value="edit_published_laao_ads_orgs"/>
+				<element value="edit_published_laao_ads_packages"/>
+				<element value="edit_published_laao_ads_placements"/>
+				<element value="laao_ads_access_portal"/>
+				<element value="laao_ads_manage_orgs"/>
+				<element value="laao_ads_manage_packages"/>
+				<element value="laao_ads_manage_placements"/>
+				<element value="laao_ads_manage_settings"/>
+				<element value="laao_ads_publish_to_adsanity"/>
+				<element value="laao_ads_review_campaigns"/>
+				<element value="laao_ads_submit_campaign"/>
+				<element value="laao_ads_upload_creative"/>
+				<element value="laao_ads_view_audit_log"/>
+				<element value="publish_laao_ads_campaigns"/>
+				<element value="publish_laao_ads_creatives"/>
+				<element value="publish_laao_ads_orgs"/>
+				<element value="publish_laao_ads_packages"/>
+				<element value="publish_laao_ads_placements"/>
+				<element value="read_laao_ads_campaign"/>
+				<element value="read_laao_ads_creative"/>
+				<element value="read_laao_ads_org"/>
+				<element value="read_laao_ads_package"/>
+				<element value="read_laao_ads_placement"/>
+				<element value="read_private_laao_ads_campaigns"/>
+				<element value="read_private_laao_ads_creatives"/>
+				<element value="read_private_laao_ads_orgs"/>
+				<element value="read_private_laao_ads_packages"/>
+				<element value="read_private_laao_ads_placements"/>
+			</property>
+		</properties>
+	</rule>
+
 	<!-- Text domain must match the plugin slug everywhere. -->
 	<rule ref="WordPress.WP.I18n">
 		<properties>
@@ -76,6 +175,14 @@
 		<exclude-pattern>tests/php/*</exclude-pattern>
 	</rule>
 	<rule ref="WordPress.DB.DirectDatabaseQuery">
+		<exclude-pattern>tests/php/*</exclude-pattern>
+	</rule>
+	<!--
+		Simulating a request is what an integration test does. Asserting that
+		admin-post.php is exempt from the admin guard requires setting $pagenow,
+		because that is the value the guard reads.
+	-->
+	<rule ref="WordPress.WP.GlobalVariablesOverride">
 		<exclude-pattern>tests/php/*</exclude-pattern>
 	</rule>
 	<rule ref="Squiz.Commenting.FunctionComment">

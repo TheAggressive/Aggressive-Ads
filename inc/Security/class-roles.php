@@ -29,7 +29,7 @@ final class Roles {
 	 * Bumped whenever the capability matrix below changes, so an update
 	 * re-applies roles on sites that were installed under the old matrix.
 	 */
-	public const VERSION = 1;
+	public const VERSION = 2;
 
 	/**
 	 * The role capability matrix.
@@ -84,10 +84,20 @@ final class Roles {
 			}
 		}
 
-		// Placements, packages and organizations are read-only for advertisers.
-		// read_private_ is required rather than optional: these post types are
-		// registered private, so a plain read is not enough to see one.
-		foreach ( array( Post_Types::PLACEMENT, Post_Types::PACKAGE, Post_Types::ORGANIZATION ) as $post_type ) {
+		/*
+		 * Placements and packages are shared configuration, readable by anyone
+		 * building a campaign. read_private_ is required rather than optional:
+		 * these post types are registered private, so a plain read is not
+		 * enough to see one.
+		 *
+		 * Organizations are deliberately NOT in this list. An advertiser reads
+		 * their own organization through membership, which Ownership::map()
+		 * resolves to plain `read` — so granting read_private_laao_ads_orgs
+		 * would do nothing for their own org and everything for everyone
+		 * else's, leaving one dropped guard between an advertiser and every
+		 * other customer's contact and billing details.
+		 */
+		foreach ( array( Post_Types::PLACEMENT, Post_Types::PACKAGE ) as $post_type ) {
 			foreach ( Capabilities::subset_for( $post_type, array( 'read_private_' ) ) as $cap ) {
 				$caps[ $cap ] = true;
 			}
