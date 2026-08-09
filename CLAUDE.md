@@ -37,13 +37,14 @@ Phase 1 (foundation) is **in progress**. What is built:
 - the capability vocabulary and the two role matrices, installed by the installer
 - the audit table, `Audit_Event`, and `Audit_Repository` (write path only)
 - installer, version-driven upgrader with a tested migration walker, `uninstall.php`
+- org-scoped `Ownership::map()`, `Org_Repository`, `Admin_Guard`, `Portal\Routes`
 - wp-env (dev `:9960`, tests `:9970`) and the integration/security/rest/upgrade suites
 - PHPCS / PHPStan / PHPUnit / structural guards, wired into `bin/ci/verify.sh`
 
-What does **not** exist yet, despite being described in `docs/`: `Ownership::map()`,
-the entity repositories, REST routes, the portal route, any UI, any JavaScript
-toolchain, Playwright, the AdSanity adapter and its contract stub, i18n tooling,
-and packaging. `docs/` describes the design; `docs/roadmap.md` says which phase
+What does **not** exist yet, despite being described in `docs/`: the campaign,
+creative, placement and package repositories, the state machine, REST routes,
+the portal route and templates, any UI, any JavaScript toolchain, Playwright,
+the AdSanity adapter and its contract stub, i18n tooling, and packaging. `docs/` describes the design; `docs/roadmap.md` says which phase
 builds it. If a doc describes something you cannot find, it has not been built —
 that is expected, not a bug.
 
@@ -109,11 +110,19 @@ true. A skipped security test is a security test that is not running.
 Write it, watch it pass, **break the implementation deliberately**, watch it
 fail, read the failure message, restore, watch it pass.
 
-This is not ceremony. The autoloader's path-traversal test already passed once
-with the guard removed — it asserted null against a path where nothing existed,
-so `is_file()` was rejecting it for an unrelated reason. It now aims a `..`
-segment at a file that genuinely exists. A test that passes for the wrong reason
-is worse than no test, because it produces confidence.
+This is not ceremony. Three tests here have already been caught passing for the
+wrong reason, and each hid a real defect:
+
+- The autoloader's path-traversal test asserted null against a path where
+  nothing existed, so `is_file()` rejected it for an unrelated reason.
+- The "no `wp/v2` route" test scanned a locally built `WP_REST_Server`, which
+  never receives the routes — `register_rest_route()` writes to the global.
+- The ownership tests exposed that `map_meta_cap` **never passes a custom meta
+  capability to the filter**; it recurses with the generic `edit_post`. The
+  filter was silently inert, and reads were being granted by core.
+
+A test that passes for the wrong reason is worse than no test, because it
+produces confidence. Assert your fixture is real before asserting on it.
 
 ## Gotchas that cost real time
 

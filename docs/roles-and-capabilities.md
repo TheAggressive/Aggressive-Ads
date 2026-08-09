@@ -54,14 +54,27 @@ A meta cap is never granted to a role. `current_user_can( 'edit_laao_ads_campaig
 
 Core's meta-cap mapping tests `$post->post_author === $user_id`. That is the wrong question here. An organization has several member users, and a campaign created by member A must be editable by member B. Left to core, the portal would silently become single-user-per-organization — and would appear to work, right up until the second person at an agency tried to fix a typo.
 
+### The filter never sees our capability name
+
+**core does not pass a custom meta capability to the `map_meta_cap` filter.** For `edit_laao_ads_campaign` it looks the name up in the global `$post_type_meta_caps`, then *returns* a recursive call using the generic `edit_post` — so the outer `apply_filters()` never runs, and all the filter is ever handed is `edit_post` plus the object id.
+
+A filter that only handles our own names therefore looks correct and does nothing. Every object check falls through to core's `post_author` comparison, which denies strangers for the wrong reason and **grants reads**, because core maps `read_post` on a published post to plain `read`. This was written that way first, and the co-member test is what caught it.
+
+So `Ownership::map()` owns `edit_post`, `read_post` and `delete_post`, and returns `$caps` untouched whenever the target is not one of our five post types.
+
+### The mapping
+
 `Security\Ownership::map( array $caps, string $cap, int $user_id, array $args ): array` handles the three meta caps across all five post types:
 
 1. Return `$caps` untouched for any capability it does not own. **The filter must be inert for everything else** — this runs on every capability check in WordPress, including core's own.
 2. Resolve the object's `_laao_ads_org_id`. For `laao_ads_org` itself, that is the post ID.
 3. Resolve the user's organization memberships via `Org_Repository::org_ids_for_user()`, **memoized per request**.
-4. If the user holds `laao_ads_review_campaigns`, map to the `_others_` primitive.
-5. If the object's org is among the user's memberships, map to the owner primitive.
-6. Otherwise return `array( 'do_not_allow' )`.
+4. **Placements and packages are shared configuration**, not anyone's property. They carry no owning org, so an org comparison would deny every advertiser — including on the wizard screen whose whole job is choosing among them. Reads map to `read_private_<plural>`; writes map to `laao_ads_manage_placements` / `laao_ads_manage_packages`, which neither advertisers nor reviewers hold.
+5. If the user holds `laao_ads_review_campaigns`, map to the `_others_` primitive.
+6. If the object's org is among the user's memberships, map to the owner primitive — and for a read, to plain `read`.
+7. Otherwise return `array( 'do_not_allow' )`.
+
+**A member's read maps to `read`, not to `read_private_<plural>`.** Membership is the authorization; requiring the primitive as well would be redundant *and* actively harmful, because `read_private_laao_ads_orgs` granted to advertisers would do nothing for their own organization and everything for everyone else's. The advertiser role holds `read_private_` on placements and packages only, and that is deliberate.
 
 ### Three hazards
 
