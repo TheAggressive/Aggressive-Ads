@@ -34,15 +34,22 @@ Phase 1 (foundation) is **in progress**. What is built:
 
 - root plugin file, autoloader, service container, composition root
 - five private post types, eleven campaign statuses
-- the capability vocabulary and the two role matrices (declared, not yet installed)
-- PHPCS / PHPStan / PHPUnit-unit / structural guards, wired into `bin/ci/verify.sh`
+- the capability vocabulary and the two role matrices, installed by the installer
+- the audit table, `Audit_Event`, and `Audit_Repository` (write path only)
+- installer, version-driven upgrader with a tested migration walker, `uninstall.php`
+- wp-env (dev `:9960`, tests `:9970`) and the integration/security/rest/upgrade suites
+- PHPCS / PHPStan / PHPUnit / structural guards, wired into `bin/ci/verify.sh`
 
-What does **not** exist yet, despite being described in `docs/`: the installer,
-upgrader, audit table, `Ownership::map()`, repositories, REST routes, the portal
-route, any UI, any JavaScript toolchain, wp-env, Playwright, the integration
-suite, i18n tooling, and packaging. `docs/` describes the design; `docs/roadmap.md`
-says which phase builds it. If a doc describes something you cannot find, it has
-not been built — that is expected, not a bug.
+What does **not** exist yet, despite being described in `docs/`: `Ownership::map()`,
+the entity repositories, REST routes, the portal route, any UI, any JavaScript
+toolchain, Playwright, the AdSanity adapter and its contract stub, i18n tooling,
+and packaging. `docs/` describes the design; `docs/roadmap.md` says which phase
+builds it. If a doc describes something you cannot find, it has not been built —
+that is expected, not a bug.
+
+`tests/php/Security/` and `tests/php/Rest/` exist but are empty: the suites are
+declared in `phpunit-integration.xml.dist` so that adding the first test needs no
+configuration change.
 
 ## Commands
 

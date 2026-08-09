@@ -34,6 +34,28 @@ Things that are true, annoying, and worth writing down so nobody rediscovers the
 
 **Mitigation.** Path unguessability (UUID filename plus a 32-char token) is the layer that actually holds, because it does not depend on server configuration. Reads go through an authorized streaming endpoint that never redirects to the raw file. A Site Health check warns when the directory cannot be proven blocked, and the nginx `location` snippet belongs in the deployment notes.
 
+## Every integration run logs two `WP_MEMORY_LIMIT` warnings
+
+**What.** The first two lines of `pnpm test:php:integration` are always:
+
+```
+PHP Warning:  Constant WP_MEMORY_LIMIT already defined in /wordpress-phpunit/includes/bootstrap.php
+PHP Warning:  Constant WP_MAX_MEMORY_LIMIT already defined in /wordpress-phpunit/includes/bootstrap.php
+```
+
+**Cause.** `@wordpress/env` writes both constants into the tests `wp-config.php`
+unconditionally, and the WordPress core test bootstrap then defines them again.
+Both sides use the same values, so nothing behaves differently.
+
+**Cost.** Noise that looks like a defect. It was mistaken for one during Phase 1
+and "fixed" twice before being measured: removing the keys from `.wp-env.json`
+entirely, and running `wp-env start --update`, both leave the constants in place,
+because they were never ours.
+
+**Status.** Not fixable from this repository. Not a PHPUnit warning either, so
+`failOnWarning` is unaffected and the suite reports honestly. Ignore the two
+lines; do not add memory constants to `.wp-env.json` trying to silence them.
+
 ## CI cannot test the real AdSanity integration
 
 **What.** AdSanity is licensed and cannot be fetched in CI. CI runs against a contract stub.

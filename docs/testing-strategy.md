@@ -12,6 +12,14 @@ Before a meaningful test counts as done:
 
 A test that passes for a reason unrelated to the behaviour it names is worse than no test, because it produces confidence. The most common variety is a test that asserts on a mock it configured itself.
 
+Two have already been caught here this way, and both are worth knowing:
+
+**The autoloader's path-traversal test** asserted null against a path where nothing existed, so `is_file()` rejected it for an unrelated reason and the test passed with the guard removed. It now aims a `..` segment at a file that genuinely exists one level up.
+
+**The "no `wp/v2` route" test** built its own `WP_REST_Server` and scanned it. But `register_rest_route()` resolves its target through `rest_get_server()`, which returns the **global** — so routes registered during `rest_api_init` never reached the local instance, and the test scanned an empty list. It passed just as happily with `show_in_rest => true` on all five post types. Assigning `global $wp_rest_server` first took the suite from 283 assertions to 920.
+
+The lesson both share: **assert your fixture is real before asserting on it.** That test now checks `/wp/v2/posts` is present before concluding anything from the absence of ours.
+
 ## Suites
 
 | Suite | Config | Bootstrap | Needs |
