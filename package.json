@@ -10,12 +10,21 @@
 		"pnpm": ">=11 <12"
 	},
 	"packageManager": "pnpm@11.1.2",
+	"devDependencies": {
+		"@wordpress/env": "^10.17.0"
+	},
 	"scripts": {
+		"env:start": "wp-env start",
+		"env:stop": "wp-env stop",
+		"env:destroy": "wp-env destroy",
+		"env:logs": "wp-env logs",
+		"cli": "wp-env run cli wp",
 		"lint:php": "composer run-script phpcs",
 		"lint:php:fix": "composer run-script phpcs:fix",
 		"analyse:php": "composer run-script analyse",
 		"lint:files": "bash bin/check-file-length.sh && bash bin/ci/check-repository-boundary.sh && bash bin/ci/check-permission-callbacks.sh",
 		"test:php:unit": "vendor/bin/phpunit",
+		"test:php:integration": "wp-env run tests-cli --env-cwd=wp-content/plugins/laao-advertiser-portal vendor/bin/phpunit -c phpunit-integration.xml.dist",
 		"ci:doctor": "node bin/ci/doctor.mjs",
 		"ci:php": "pnpm lint:php && pnpm analyse:php && pnpm test:php:unit",
 		"ci:verify": "bash bin/ci/verify.sh",

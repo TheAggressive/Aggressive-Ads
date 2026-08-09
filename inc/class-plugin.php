@@ -12,6 +12,10 @@ namespace LAAO_Advertiser_Portal;
 use LAAO_Advertiser_Portal\Core\Post_Statuses;
 use LAAO_Advertiser_Portal\Core\Post_Types;
 use LAAO_Advertiser_Portal\Core\Service;
+use LAAO_Advertiser_Portal\Install\Installer;
+use LAAO_Advertiser_Portal\Install\Upgrader;
+use LAAO_Advertiser_Portal\Repository\Audit_Repository;
+use LAAO_Advertiser_Portal\Security\Roles;
 
 /**
  * Wires the application together, then starts it.
@@ -96,7 +100,38 @@ final class Plugin {
 
 		$this->register_services();
 
+		register_activation_hook( LAAO_ADS_PLUGIN_FILE, array( $this, 'activate' ) );
+
+		// Priority 5, ahead of init_services at 10: schema must be current
+		// before any service reads it. Activation is only a hint — it does not
+		// run on a file-only deploy, an in-place update, or a database restore.
+		add_action( 'plugins_loaded', array( $this, 'run_upgrade_check' ), 5 );
 		add_action( 'plugins_loaded', array( $this, 'init_services' ), 10 );
+	}
+
+	/**
+	 * Activation hook. Installs schema, roles and options.
+	 *
+	 * Public because it is a hook callback. The upgrader performs the same work
+	 * on any request where a version option is behind, so this being missed is
+	 * survivable by design.
+	 *
+	 * @return void
+	 */
+	public function activate(): void {
+		$this->container->get( Installer::class )->install();
+	}
+
+	/**
+	 * Brings the site's schema, roles and options up to the code's versions.
+	 *
+	 * Public because it is a hook callback. Cheap when there is nothing to do:
+	 * three autoloaded option reads and three comparisons.
+	 *
+	 * @return void
+	 */
+	public function run_upgrade_check(): void {
+		$this->container->get( Upgrader::class )->maybe_upgrade();
 	}
 
 	/**
@@ -124,10 +159,36 @@ final class Plugin {
 			static fn (): Post_Statuses => new Post_Statuses()
 		);
 
+		$this->container->register(
+			Audit_Repository::class,
+			static fn (): Audit_Repository => new Audit_Repository()
+		);
+
+		$this->container->register(
+			Roles::class,
+			static fn (): Roles => new Roles()
+		);
+
+		$this->container->register(
+			Installer::class,
+			static fn ( Service_Container $c ): Installer => new Installer(
+				$c->get( Audit_Repository::class ),
+				$c->get( Roles::class )
+			)
+		);
+
+		$this->container->register(
+			Upgrader::class,
+			static fn ( Service_Container $c ): Upgrader => new Upgrader(
+				$c->get( Installer::class ),
+				$c->get( Audit_Repository::class )
+			)
+		);
+
 		/*
-		 * Remaining services land here as the phases build them — installer,
-		 * upgrader, audit, ownership, router, assets — each as one register()
-		 * line, each also listed in service_init_order() below.
+		 * Remaining services land here as the phases build them — ownership,
+		 * router, assets — each as one register() line, each also listed in
+		 * service_init_order() below when it needs hooks.
 		 */
 	}
 

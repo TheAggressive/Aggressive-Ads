@@ -1,0 +1,44 @@
+<?xml version="1.0"?>
+<!--
+	The suites that need real WordPress and a real database.
+
+	Separate from phpunit.xml.dist because PHPUnit allows exactly one bootstrap
+	per configuration file, and the unit suite must not load WordPress while
+	these must. See docs/adr/0013-phpunit-9-with-wp-test-suite.md.
+
+	Run with: pnpm test:php:integration
+-->
+<phpunit
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+	bootstrap="tests/php/bootstrap-wp.php"
+	colors="true"
+	beStrictAboutTestsThatDoNotTestAnything="true"
+	convertDeprecationsToExceptions="true"
+	failOnWarning="true"
+	failOnRisky="true"
+	failOnSkipped="true"
+	failOnIncomplete="true"
+	cacheResultFile=".phpunit.cache/integration.result"
+	>
+	<testsuites>
+		<testsuite name="integration">
+			<directory suffix="Test.php">tests/php/Integration</directory>
+		</testsuite>
+		<testsuite name="security">
+			<directory suffix="Test.php">tests/php/Security</directory>
+		</testsuite>
+		<testsuite name="rest">
+			<directory suffix="Test.php">tests/php/Rest</directory>
+		</testsuite>
+		<testsuite name="upgrade">
+			<directory suffix="Test.php">tests/php/Upgrade</directory>
+		</testsuite>
+	</testsuites>
+
+	<coverage>
+		<include>
+			<directory suffix=".php">inc</directory>
+		</include>
+	</coverage>
+</phpunit>
