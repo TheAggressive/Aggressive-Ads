@@ -71,10 +71,10 @@ final class AuditEventTest extends TestCase {
 	 */
 	public static function data_empty_names(): array {
 		return array(
-			'empty'      => array( '' ),
-			'spaces'     => array( '   ' ),
-			'newline'    => array( "\n" ),
-			'tab'        => array( "\t" ),
+			'empty'   => array( '' ),
+			'spaces'  => array( '   ' ),
+			'newline' => array( "\n" ),
+			'tab'     => array( "\t" ),
 		);
 	}
 

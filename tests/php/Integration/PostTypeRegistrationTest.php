@@ -44,11 +44,26 @@ final class PostTypeRegistrationTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function test_no_rest_route_exists_for_any_post_type(): void {
-		$server = new WP_REST_Server();
+		/*
+		 * The server has to be the *global* one.
+		 *
+		 * register_rest_route() resolves its target through rest_get_server(),
+		 * which returns the global — so routes registered during rest_api_init
+		 * never reach a locally constructed WP_REST_Server. An earlier version
+		 * of this test did exactly that and scanned an empty list, which meant
+		 * it passed just as happily with show_in_rest => true on all five post
+		 * types. It was asserting nothing.
+		 */
+		global $wp_rest_server;
 
-		do_action( 'rest_api_init', $server );
+		$wp_rest_server = new WP_REST_Server();
 
-		$routes = array_keys( $server->get_routes() );
+		do_action( 'rest_api_init', $wp_rest_server );
+
+		$routes = array_keys( $wp_rest_server->get_routes() );
+
+		$this->assertNotEmpty( $routes, 'No routes were collected, so this test would prove nothing.' );
+		$this->assertContains( '/wp/v2/posts', $routes, 'Core routes are missing; the scan is not seeing the real registry.' );
 
 		foreach ( Post_Types::all() as $slug ) {
 			// The route scan comes first deliberately: it is the assertion that

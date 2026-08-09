@@ -39,6 +39,13 @@ final class UpgraderTest extends WP_UnitTestCase {
 	private Installer $installer;
 
 	/**
+	 * Steps recorded by the test migrations, in the order they ran.
+	 *
+	 * @var array<int, int>
+	 */
+	private array $ran = array();
+
+	/**
 	 * Builds collaborators and clears any lock left by another test.
 	 *
 	 * @return void
@@ -48,8 +55,46 @@ final class UpgraderTest extends WP_UnitTestCase {
 
 		$this->audit     = new Audit_Repository();
 		$this->installer = new Installer( $this->audit, new Roles() );
+		$this->ran       = array();
 
 		delete_option( Installer::OPTION_UPGRADE_LOCK );
+	}
+
+	/**
+	 * Builds a migration step that records having run.
+	 *
+	 * @param int $version The version the step produces.
+	 * @return callable(): void
+	 */
+	private function recording_step( int $version ): callable {
+		return function () use ( $version ): void {
+			$this->ran[] = $version;
+		};
+	}
+
+	/**
+	 * Builds a migration step that fails, as a bad ALTER would.
+	 *
+	 * @param string $message Failure message.
+	 * @return callable(): void
+	 */
+	private function failing_step( string $message ): callable {
+		return static function () use ( $message ): void {
+			throw new RuntimeException( $message );
+		};
+	}
+
+	/**
+	 * Puts the site one version behind so the upgrader has work to do.
+	 *
+	 * @param int $db_version The db version to pretend is stored.
+	 * @return void
+	 */
+	private function pretend_site_is_behind( int $db_version = 1 ): void {
+		$this->installer->install();
+
+		update_option( Installer::OPTION_DB_VERSION, $db_version );
+		update_option( Installer::OPTION_PLUGIN_VERSION, '0.0.1' );
 	}
 
 	/**
@@ -63,19 +108,17 @@ final class UpgraderTest extends WP_UnitTestCase {
 	public function test_does_nothing_when_versions_are_current(): void {
 		$this->installer->install();
 
-		$ran = false;
-
 		$upgrader = new Upgrader(
 			$this->installer,
 			$this->audit,
-			array( 999 => static function () use ( &$ran ): void { $ran = true; } )
+			array( 999 => $this->recording_step( 999 ) )
 		);
 
 		$this->assertFalse( $upgrader->needs_work() );
 
 		$upgrader->maybe_upgrade();
 
-		$this->assertFalse( $ran, 'A migration ran while every version was current.' );
+		$this->assertSame( array(), $this->ran, 'A migration ran while every version was current.' );
 	}
 
 	/**
@@ -103,24 +146,21 @@ final class UpgraderTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function test_migrations_run_in_version_order(): void {
-		$this->installer->install();
-		update_option( Installer::OPTION_PLUGIN_VERSION, '0.0.1' );
-
-		$order = array();
+		$this->pretend_site_is_behind();
 
 		$upgrader = new Upgrader(
 			$this->installer,
 			$this->audit,
 			array(
-				4 => static function () use ( &$order ): void { $order[] = 4; },
-				2 => static function () use ( &$order ): void { $order[] = 2; },
-				3 => static function () use ( &$order ): void { $order[] = 3; },
+				4 => $this->recording_step( 4 ),
+				2 => $this->recording_step( 2 ),
+				3 => $this->recording_step( 3 ),
 			)
 		);
 
 		$upgrader->maybe_upgrade();
 
-		$this->assertSame( array( 2, 3, 4 ), $order );
+		$this->assertSame( array( 2, 3, 4 ), $this->ran );
 		$this->assertSame( 4, (int) get_option( Installer::OPTION_DB_VERSION ) );
 	}
 
@@ -130,25 +170,21 @@ final class UpgraderTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function test_already_applied_steps_are_skipped(): void {
-		$this->installer->install();
-		update_option( Installer::OPTION_DB_VERSION, 3 );
-		update_option( Installer::OPTION_PLUGIN_VERSION, '0.0.1' );
-
-		$ran = array();
+		$this->pretend_site_is_behind( 3 );
 
 		$upgrader = new Upgrader(
 			$this->installer,
 			$this->audit,
 			array(
-				2 => static function () use ( &$ran ): void { $ran[] = 2; },
-				3 => static function () use ( &$ran ): void { $ran[] = 3; },
-				4 => static function () use ( &$ran ): void { $ran[] = 4; },
+				2 => $this->recording_step( 2 ),
+				3 => $this->recording_step( 3 ),
+				4 => $this->recording_step( 4 ),
 			)
 		);
 
 		$upgrader->maybe_upgrade();
 
-		$this->assertSame( array( 4 ), $ran );
+		$this->assertSame( array( 4 ), $this->ran );
 	}
 
 	/**
@@ -162,25 +198,21 @@ final class UpgraderTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function test_a_failing_step_leaves_the_version_at_the_last_success(): void {
-		$this->installer->install();
-		update_option( Installer::OPTION_DB_VERSION, 1 );
-		update_option( Installer::OPTION_PLUGIN_VERSION, '0.0.1' );
-
-		$ran = array();
+		$this->pretend_site_is_behind();
 
 		$upgrader = new Upgrader(
 			$this->installer,
 			$this->audit,
 			array(
-				2 => static function () use ( &$ran ): void { $ran[] = 2; },
-				3 => static function (): void { throw new RuntimeException( 'ALTER failed' ); },
-				4 => static function () use ( &$ran ): void { $ran[] = 4; },
+				2 => $this->recording_step( 2 ),
+				3 => $this->failing_step( 'ALTER failed' ),
+				4 => $this->recording_step( 4 ),
 			)
 		);
 
 		$upgrader->maybe_upgrade();
 
-		$this->assertSame( array( 2 ), $ran, 'Step 4 ran despite step 3 failing.' );
+		$this->assertSame( array( 2 ), $this->ran, 'Step 4 ran despite step 3 failing.' );
 		$this->assertSame( 2, (int) get_option( Installer::OPTION_DB_VERSION ) );
 	}
 
@@ -192,14 +224,12 @@ final class UpgraderTest extends WP_UnitTestCase {
 	public function test_a_failing_step_writes_a_failed_audit_row(): void {
 		global $wpdb;
 
-		$this->installer->install();
-		update_option( Installer::OPTION_DB_VERSION, 1 );
-		update_option( Installer::OPTION_PLUGIN_VERSION, '0.0.1' );
+		$this->pretend_site_is_behind();
 
 		$upgrader = new Upgrader(
 			$this->installer,
 			$this->audit,
-			array( 2 => static function (): void { throw new RuntimeException( 'ALTER failed' ); } )
+			array( 2 => $this->failing_step( 'ALTER failed' ) )
 		);
 
 		$upgrader->maybe_upgrade();
@@ -223,14 +253,12 @@ final class UpgraderTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function test_the_lock_is_released_after_a_failure(): void {
-		$this->installer->install();
-		update_option( Installer::OPTION_DB_VERSION, 1 );
-		update_option( Installer::OPTION_PLUGIN_VERSION, '0.0.1' );
+		$this->pretend_site_is_behind();
 
 		$upgrader = new Upgrader(
 			$this->installer,
 			$this->audit,
-			array( 2 => static function (): void { throw new RuntimeException( 'boom' ); } )
+			array( 2 => $this->failing_step( 'boom' ) )
 		);
 
 		$upgrader->maybe_upgrade();
@@ -244,24 +272,20 @@ final class UpgraderTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function test_a_held_lock_prevents_a_concurrent_upgrade(): void {
-		$this->installer->install();
-		update_option( Installer::OPTION_DB_VERSION, 1 );
-		update_option( Installer::OPTION_PLUGIN_VERSION, '0.0.1' );
+		$this->pretend_site_is_behind();
 
 		// Another request is mid-upgrade, right now.
 		add_option( Installer::OPTION_UPGRADE_LOCK, time(), '', false );
 
-		$ran = false;
-
 		$upgrader = new Upgrader(
 			$this->installer,
 			$this->audit,
-			array( 2 => static function () use ( &$ran ): void { $ran = true; } )
+			array( 2 => $this->recording_step( 2 ) )
 		);
 
 		$upgrader->maybe_upgrade();
 
-		$this->assertFalse( $ran, 'Two requests migrated at the same time.' );
+		$this->assertSame( array(), $this->ran, 'Two requests migrated at the same time.' );
 	}
 
 	/**
@@ -270,39 +294,34 @@ final class UpgraderTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function test_a_stale_lock_is_cleared(): void {
-		$this->installer->install();
-		update_option( Installer::OPTION_DB_VERSION, 1 );
-		update_option( Installer::OPTION_PLUGIN_VERSION, '0.0.1' );
+		$this->pretend_site_is_behind();
 
 		// A lock from a request that fataled an hour ago.
 		add_option( Installer::OPTION_UPGRADE_LOCK, time() - 3600, '', false );
 
-		$ran = false;
-
 		$upgrader = new Upgrader(
 			$this->installer,
 			$this->audit,
-			array( 2 => static function () use ( &$ran ): void { $ran = true; } )
+			array( 2 => $this->recording_step( 2 ) )
 		);
 
 		$upgrader->maybe_upgrade();
 
-		$this->assertTrue( $ran, 'A stale lock permanently wedged the upgrade.' );
+		$this->assertSame( array( 2 ), $this->ran, 'A stale lock permanently wedged the upgrade.' );
 	}
 
 	/**
-	 * The upgrade lock is never autoloaded. It is written and deleted rather
-	 * than read, and an autoloaded option that churns is a cache-invalidation
-	 * cost for nothing.
+	 * The upgrade lock is never autoloaded.
+	 *
+	 * It is written and deleted rather than read, and an autoloaded option that
+	 * churns is a cache-invalidation cost for nothing.
 	 *
 	 * @return void
 	 */
 	public function test_the_lock_option_is_not_autoloaded(): void {
 		global $wpdb;
 
-		$this->installer->install();
-		update_option( Installer::OPTION_DB_VERSION, 1 );
-		update_option( Installer::OPTION_PLUGIN_VERSION, '0.0.1' );
+		$this->pretend_site_is_behind();
 
 		$observed = null;
 

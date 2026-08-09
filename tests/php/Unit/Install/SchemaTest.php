@@ -13,8 +13,8 @@ use LAAO_Advertiser_Portal\Install\Schema;
 use Yoast\PHPUnitPolyfills\TestCases\TestCase;
 
 /**
- * dbDelta parses SQL with regular expressions, so the DDL's *formatting* is
- * functional. Each assertion here corresponds to a documented dbDelta trap,
+ * The DDL's *formatting* is functional, because dbDelta parses SQL with regular
+ * expressions. Each assertion here corresponds to a documented dbDelta trap,
  * and every one of them fails silently in production: the table is created,
  * looks correct, and dbDelta tries to re-apply something on every single
  * request thereafter.

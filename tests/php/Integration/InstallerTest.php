@@ -136,7 +136,7 @@ final class InstallerTest extends WP_UnitTestCase {
 
 		$this->assertNotNull( $role );
 
-		$granted = array_keys( array_filter( $role->capabilities ) );
+		$granted  = array_keys( array_filter( $role->capabilities ) );
 		$declared = array_keys( Roles::definitions()[ Roles::ADVERTISER ]['capabilities'] );
 
 		sort( $granted );
@@ -220,8 +220,9 @@ final class InstallerTest extends WP_UnitTestCase {
 	/**
 	 * Re-installing revokes a capability that was removed from the matrix.
 	 *
-	 * add_role() on an existing role is a no-op, so an implementation that does
-	 * not remove first can add capabilities but never take one away — and a
+	 * Calling add_role() on an existing role is a no-op, so an implementation
+	 * that does not remove first can add capabilities but never take one away —
+	 * and a
 	 * revoked capability that stays granted is a security regression that no
 	 * amount of matrix editing fixes.
 	 *
