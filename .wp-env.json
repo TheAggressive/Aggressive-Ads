@@ -12,12 +12,6 @@
 		"WP_AUTO_UPDATE_CORE": false
 	},
 	"env": {
-		"development": {
-			"config": {
-				"WP_MEMORY_LIMIT": "256M",
-				"WP_MAX_MEMORY_LIMIT": "512M"
-			}
-		},
 		"tests": {
 			"port": 9970,
 			"phpmyadminPort": 9972

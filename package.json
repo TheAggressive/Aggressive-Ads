@@ -27,6 +27,7 @@
 		"test:php:integration": "wp-env run tests-cli --env-cwd=wp-content/plugins/laao-advertiser-portal vendor/bin/phpunit -c phpunit-integration.xml.dist",
 		"ci:doctor": "node bin/ci/doctor.mjs",
 		"ci:php": "pnpm lint:php && pnpm analyse:php && pnpm test:php:unit",
+		"ci:php:wp": "pnpm test:php:integration",
 		"ci:verify": "bash bin/ci/verify.sh",
 		"qa": "pnpm ci:php && pnpm lint:files"
 	}

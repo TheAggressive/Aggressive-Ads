@@ -25,9 +25,21 @@ run "doctor"      pnpm ci:doctor
 run "structure"   pnpm lint:files
 run "php"         pnpm ci:php
 
+# The integration, security, rest and upgrade suites need real WordPress and
+# real MySQL, which means wp-env must be up. Failing with a usable instruction
+# beats a wall of connection errors — but it still fails, because a suite that
+# quietly skips itself is a suite that stops covering anything.
+if ! docker info >/dev/null 2>&1; then
+	echo
+	echo "ci:verify: Docker is not running, so the WordPress suites cannot run." >&2
+	echo "           Start Docker, then: pnpm env:start" >&2
+	exit 1
+fi
+
+run "php:wp"      pnpm ci:php:wp
+
 # Lanes landing with the phases that need them:
 #   frontend  — lint:js, lint:css, format:check, typecheck, test:js
-#   php:wp    — the integration, security, rest and upgrade suites
 #   i18n      — POT drift and .mo compilation
 #   build     — webpack bundles
 #   e2e       — Playwright, including the Twenty Twenty-Five smoke test
