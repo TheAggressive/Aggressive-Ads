@@ -549,6 +549,97 @@ final class CampaignStateMachineTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A clock-driven edge applies with no acting user.
+	 *
+	 * @return void
+	 */
+	public function test_a_system_transition_applies_without_a_user(): void {
+		wp_set_current_user( 0 );
+
+		$campaign = $this->campaign( Post_Statuses::SCHEDULED );
+		update_post_meta( $campaign, Campaign_Repository::META_START_TS, time() - 60 );
+
+		$this->assertTrue( $this->machine()->apply_system( $campaign, Post_Statuses::LIVE ) );
+		$this->assertSame( Post_Statuses::LIVE, $this->campaigns->status( $campaign ) );
+	}
+
+	/**
+	 * A clock-driven edge still respects its guard.
+	 *
+	 * @return void
+	 */
+	public function test_a_system_transition_respects_its_guard(): void {
+		wp_set_current_user( 0 );
+
+		$campaign = $this->campaign( Post_Statuses::SCHEDULED );
+		update_post_meta( $campaign, Campaign_Repository::META_START_TS, time() + 86400 );
+
+		$result = $this->machine()->apply_system( $campaign, Post_Statuses::LIVE );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'laao_ads_not_started', $result->get_error_code() );
+		$this->assertSame( Post_Statuses::SCHEDULED, $this->campaigns->status( $campaign ) );
+	}
+
+	/**
+	 * **The system path cannot be used to make a person's transition.**
+	 *
+	 * Otherwise apply_system() is a way to reach any edge in the table without
+	 * holding a capability — approval included.
+	 *
+	 * @return void
+	 */
+	public function test_the_system_path_refuses_a_person_transition(): void {
+		wp_set_current_user( 0 );
+
+		$campaign = $this->campaign( Post_Statuses::REVIEW );
+
+		$machine = $this->machine(
+			array(
+				Transition_Table::GUARD_VALIDATOR        => $this->passing_guard(),
+				Transition_Table::GUARD_MAPPINGS_RESOLVE => $this->passing_guard(),
+			),
+			array( Transition_Table::EFFECT_PUBLISH => static fn (): bool => true )
+		);
+
+		$result  = $machine->apply_system( $campaign, Post_Statuses::APPROVED );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'laao_ads_not_a_system_transition', $result->get_error_code() );
+		$this->assertSame( Post_Statuses::REVIEW, $this->campaigns->status( $campaign ) );
+	}
+
+	/**
+	 * **Context cannot buy a capability bypass.**
+	 *
+	 * The clock-driven edges are exactly the ones that put a campaign live, and
+	 * they carry no capability requirement. An earlier version selected that
+	 * bypass with a flag inside the caller-supplied context array, which would
+	 * have handed every advertiser a one-key escalation the moment a controller
+	 * forwarded request data into it.
+	 *
+	 * @return void
+	 */
+	public function test_context_cannot_grant_a_system_bypass(): void {
+		wp_set_current_user( $this->advertiser );
+
+		$campaign = $this->campaign( Post_Statuses::SCHEDULED );
+		update_post_meta( $campaign, Campaign_Repository::META_START_TS, time() - 60 );
+
+		// Exactly what an advertiser would put in a request body.
+		foreach ( array( 'system', 'is_system', 'actor' ) as $key ) {
+			$result = $this->machine()->apply(
+				$campaign,
+				Post_Statuses::LIVE,
+				array( $key => true )
+			);
+
+			$this->assertInstanceOf( WP_Error::class, $result, "context[{$key}] was honoured." );
+			$this->assertSame( Post_Statuses::SCHEDULED, $this->campaigns->status( $campaign ) );
+		}
+	}
+
+	/**
 	 * A campaign that does not exist is denied rather than fatal.
 	 *
 	 * @return void

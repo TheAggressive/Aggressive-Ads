@@ -103,6 +103,41 @@ final class Campaign_State_Machine implements Service {
 	 * @return true|WP_Error
 	 */
 	public function apply( int $campaign_id, string $to, array $context = array() ) {
+		return $this->transition( $campaign_id, $to, $context, false );
+	}
+
+	/**
+	 * Moves a campaign along a clock-driven edge, with no acting user.
+	 *
+	 * Separate from apply() **as a security boundary, not as convenience.**
+	 * The clock-driven edges are the ones that put a campaign live, and they
+	 * carry no capability requirement because during cron there is no current
+	 * user to check one against. If that bypass were selected by a flag inside
+	 * the caller-supplied context array, then the first controller to forward
+	 * request data into that array would hand every advertiser a one-key
+	 * escalation to lap_live on their own campaign.
+	 *
+	 * Being a distinct method means no request body can ever reach it.
+	 *
+	 * @param int                  $campaign_id Campaign post id.
+	 * @param string               $to          Target status.
+	 * @param array<string, mixed> $context     Caller-supplied context.
+	 * @return true|WP_Error
+	 */
+	public function apply_system( int $campaign_id, string $to, array $context = array() ) {
+		return $this->transition( $campaign_id, $to, $context, true );
+	}
+
+	/**
+	 * The shared implementation.
+	 *
+	 * @param int                  $campaign_id Campaign post id.
+	 * @param string               $to          Target status.
+	 * @param array<string, mixed> $context     Caller-supplied context.
+	 * @param bool                 $as_system   Whether this is a clock-driven transition.
+	 * @return true|WP_Error
+	 */
+	private function transition( int $campaign_id, string $to, array $context, bool $as_system ) {
 		$from = $this->campaigns->status( $campaign_id );
 
 		if ( '' === $from ) {
@@ -125,12 +160,36 @@ final class Campaign_State_Machine implements Service {
 			);
 		}
 
+		/*
+		 * The two paths are mutually exclusive, in both directions.
+		 *
+		 * A clock-driven caller may only take a clock-driven edge, or
+		 * apply_system() becomes a way to reach any transition in the table
+		 * without holding a capability — approval included.
+		 *
+		 * And a person may never take one. This direction is the one that
+		 * bites: the clock-driven edges declare **no capabilities**, because
+		 * during cron there is no user to check one against. So the capability
+		 * loop below iterates an empty array and passes for absolutely anyone.
+		 * Without this check, any logged-in visitor could move a scheduled
+		 * campaign straight to live by calling apply() — no context flag
+		 * required, no capability held.
+		 */
+		if ( $as_system !== $transition->is_system() ) {
+			return $this->deny(
+				$campaign_id,
+				$org_id,
+				$from,
+				$to,
+				$as_system ? 'laao_ads_not_a_system_transition' : 'laao_ads_system_transition',
+				__( 'That is not something this campaign can do right now.', 'laao-advertiser-portal' )
+			);
+		}
+
 		// 2 and 3. Capabilities, and ownership through them: every capability
 		// is checked against the object, so the org-scoped map_meta_cap filter
 		// answers the ownership question in the same call.
-		$system = $transition->is_system() && ( $context['system'] ?? false );
-
-		if ( ! $system ) {
+		if ( ! $as_system ) {
 			foreach ( $transition->capabilities as $capability ) {
 				if ( ! current_user_can( $capability, $campaign_id ) ) {
 					return $this->deny(
