@@ -37,6 +37,8 @@ Two rules carry most of the weight:
 
 **`inc/Integration/Adsanity/` is the only place AdSanity exists.** The strings `'ads'`, `'ad-group'`, `ADSANITY_EOL`, and every AdSanity meta key (`_url`, `_size`, `_start_date`, …) appear nowhere else. Enforced by the same script.
 
+**The AdSanity adapter is exempt from the repository rule, and only it.** The two boundaries otherwise contradict each other: the publisher has to write AdSanity's posts, terms and meta, and a repository is forbidden from naming AdSanity identifiers. The resolution is that the repository rule governs *our* domain data — the provider's data belongs to the provider's adapter. The exemption is directory-level, because no static check can tell which post type an `update_post_meta()` call targets; the mitigations are that the directory is small and that every write in it is read back.
+
 Both boundaries exist for the same reason. AdSanity is a third-party plugin whose internals we read but do not control, and whose meta keys are undocumented implementation detail. When it changes — and a licensed plugin on a weekly update cadence will change — the blast radius must be one directory. Scatter `get_post_meta( $id, '_start_date' )` through the codebase and every future AdSanity release is a full-repository audit.
 
 **`inc/Domain/` calls no WordPress function.** Enforced by the same script.

@@ -228,7 +228,22 @@ foreach ( php_files( $inc ) as $path ) {
 			continue;
 		}
 
-		if ( ! $in_repository && in_array( $text, DATA_ACCESS_FUNCTIONS, true ) ) {
+		/*
+		 * The AdSanity adapter is exempt from the data-access rule, and only
+		 * it.
+		 *
+		 * The two boundaries would otherwise contradict each other: the
+		 * publisher has to write AdSanity's own posts, terms and meta, and a
+		 * repository is forbidden from naming AdSanity identifiers. Something
+		 * has to give, and the right answer is that the repository rule governs
+		 * *our* domain data. The provider's data belongs to the provider's
+		 * adapter.
+		 *
+		 * This is directory-level, because no static check can tell which post
+		 * type an update_post_meta() call targets. The mitigation is that the
+		 * directory is small and every write in it is read back.
+		 */
+		if ( ! $in_repository && ! $in_adsanity && in_array( $text, DATA_ACCESS_FUNCTIONS, true ) ) {
 			$violations[] = "{$relative}:{$line}: {$text}() outside inc/Repository/";
 
 			continue;
