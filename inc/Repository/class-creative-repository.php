@@ -153,6 +153,47 @@ final class Creative_Repository {
 	}
 
 	/**
+	 * Creates a creative belonging to a campaign.
+	 *
+	 * The organization is passed in from the campaign rather than accepted
+	 * from anywhere near a request. `org_id` is never read from client input —
+	 * that single rule collapses most of the object-reference attack surface.
+	 *
+	 * @param int                   $campaign_id  Owning campaign.
+	 * @param int                   $org_id       Owning organization, derived server-side.
+	 * @param int                   $placement_id Placement the creative fills.
+	 * @param array<string, string> $fields       kind, click_url, alt_text and size.
+	 * @return int Zero on failure.
+	 */
+	public function create( int $campaign_id, int $org_id, int $placement_id, array $fields ): int {
+		$creative_id = wp_insert_post(
+			array(
+				'post_type'   => Post_Types::CREATIVE,
+				'post_status' => 'publish',
+				'post_title'  => sprintf( 'Creative for campaign %d', $campaign_id ),
+			),
+			true
+		);
+
+		if ( is_wp_error( $creative_id ) ) {
+			return 0;
+		}
+
+		$creative_id = (int) $creative_id;
+
+		update_post_meta( $creative_id, self::META_CAMPAIGN_ID, $campaign_id );
+		update_post_meta( $creative_id, self::META_ORG_ID, $org_id );
+		update_post_meta( $creative_id, self::META_PLACEMENT_ID, $placement_id );
+		update_post_meta( $creative_id, self::META_KIND, $fields['kind'] ?? '' );
+		update_post_meta( $creative_id, self::META_CLICK_URL, $fields['click_url'] ?? '' );
+		update_post_meta( $creative_id, self::META_ALT_TEXT, $fields['alt_text'] ?? '' );
+		update_post_meta( $creative_id, self::META_SIZE, $fields['size'] ?? '' );
+		update_post_meta( $creative_id, self::META_REVIEW_STATE, 'pending' );
+
+		return $creative_id;
+	}
+
+	/**
 	 * Whether a creative already points at a real attachment.
 	 *
 	 * Checks the post actually exists rather than trusting the recorded id: an

@@ -21,7 +21,9 @@ use LAAO_Advertiser_Portal\Integration\Adsanity\Placement_Mapping;
 use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
 use LAAO_Advertiser_Portal\Repository\Creative_Repository;
 use LAAO_Advertiser_Portal\Repository\Org_Repository;
+use LAAO_Advertiser_Portal\REST\Creative_Controller;
 use LAAO_Advertiser_Portal\REST\Creative_File_Controller;
+use LAAO_Advertiser_Portal\REST\Transitions_Controller;
 use LAAO_Advertiser_Portal\Repository\Placement_Repository;
 use LAAO_Advertiser_Portal\Storage\Private_Storage;
 use LAAO_Advertiser_Portal\Workflow\Campaign_State_Machine;
@@ -31,6 +33,7 @@ use LAAO_Advertiser_Portal\Workflow\Creative_Uploader;
 use LAAO_Advertiser_Portal\Workflow\Transition_Guards;
 use LAAO_Advertiser_Portal\Security\Admin_Guard;
 use LAAO_Advertiser_Portal\Security\Ownership;
+use LAAO_Advertiser_Portal\Security\Rate_Limiter;
 use LAAO_Advertiser_Portal\Security\Roles;
 
 /**
@@ -288,6 +291,33 @@ final class Plugin {
 		);
 
 		$this->container->register(
+			Rate_Limiter::class,
+			static fn ( Service_Container $c ): Rate_Limiter => new Rate_Limiter(
+				$c->get( Audit_Repository::class )
+			)
+		);
+
+		$this->container->register(
+			Creative_Controller::class,
+			static fn ( Service_Container $c ): Creative_Controller => new Creative_Controller(
+				$c->get( Campaign_Repository::class ),
+				$c->get( Creative_Repository::class ),
+				$c->get( Placement_Repository::class ),
+				$c->get( Creative_Uploader::class ),
+				$c->get( Rate_Limiter::class )
+			)
+		);
+
+		$this->container->register(
+			Transitions_Controller::class,
+			static fn ( Service_Container $c ): Transitions_Controller => new Transitions_Controller(
+				$c->get( Campaign_State_Machine::class ),
+				$c->get( Campaign_Repository::class ),
+				$c->get( Rate_Limiter::class )
+			)
+		);
+
+		$this->container->register(
 			Creative_File_Controller::class,
 			static fn ( Service_Container $c ): Creative_File_Controller => new Creative_File_Controller(
 				$c->get( Creative_Repository::class ),
@@ -385,6 +415,8 @@ final class Plugin {
 			// REST last: routes are registered on rest_api_init, which fires
 			// well after this, so ordering here is about nothing but reading.
 			Creative_File_Controller::class,
+			Creative_Controller::class,
+			Transitions_Controller::class,
 		);
 	}
 }

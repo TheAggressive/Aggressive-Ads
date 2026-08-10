@@ -1,0 +1,523 @@
+<?php
+/**
+ * The REST write paths.
+ *
+ * @package LAAO_Advertiser_Portal
+ */
+
+declare(strict_types=1);
+
+namespace LAAO_Advertiser_Portal\Tests\Rest;
+
+use LAAO_Advertiser_Portal\Core\Post_Statuses;
+use LAAO_Advertiser_Portal\Core\Post_Types;
+use LAAO_Advertiser_Portal\Install\Installer;
+use LAAO_Advertiser_Portal\Plugin;
+use LAAO_Advertiser_Portal\Repository\Audit_Repository;
+use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
+use LAAO_Advertiser_Portal\Repository\Creative_Repository;
+use LAAO_Advertiser_Portal\Repository\Org_Repository;
+use LAAO_Advertiser_Portal\Repository\Placement_Repository;
+use LAAO_Advertiser_Portal\Security\Ownership;
+use LAAO_Advertiser_Portal\Security\Rate_Limiter;
+use LAAO_Advertiser_Portal\Security\Roles;
+use WP_REST_Request;
+use WP_UnitTestCase;
+
+/**
+ * Upload and transition, through the real router.
+ *
+ * Writes may answer 403 where reads answer 404: the caller already knows the
+ * object exists, because they are trying to change it.
+ */
+final class WriteRoutesTest extends WP_UnitTestCase {
+
+	/**
+	 * An advertiser who owns the campaign.
+	 *
+	 * @var int
+	 */
+	private int $owner;
+
+	/**
+	 * An advertiser from a different organization.
+	 *
+	 * @var int
+	 */
+	private int $stranger;
+
+	/**
+	 * A staff reviewer.
+	 *
+	 * @var int
+	 */
+	private int $reviewer;
+
+	/**
+	 * The campaign under test.
+	 *
+	 * @var int
+	 */
+	private int $campaign_id;
+
+	/**
+	 * An active, selected placement.
+	 *
+	 * @var int
+	 */
+	private int $placement_id;
+
+	/**
+	 * Temporary files.
+	 *
+	 * @var array<int, string>
+	 */
+	private array $temporary = array();
+
+	/**
+	 * Builds users, a campaign and a placement.
+	 *
+	 * @return void
+	 */
+	public function set_up(): void {
+		parent::set_up();
+
+		( new Installer( new Audit_Repository(), new Roles() ) )->install_roles();
+
+		$this->owner    = self::factory()->user->create( array( 'role' => Roles::ADVERTISER ) );
+		$this->stranger = self::factory()->user->create( array( 'role' => Roles::ADVERTISER ) );
+		$this->reviewer = self::factory()->user->create( array( 'role' => Roles::REVIEWER ) );
+
+		$org = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::ORGANIZATION,
+				'post_status' => 'publish',
+			)
+		);
+		update_post_meta( $org, Org_Repository::META_OWNER_USER, $this->owner );
+
+		$other = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::ORGANIZATION,
+				'post_status' => 'publish',
+			)
+		);
+		update_post_meta( $other, Org_Repository::META_OWNER_USER, $this->stranger );
+
+		$this->placement_id = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::PLACEMENT,
+				'post_status' => 'publish',
+				'post_title'  => 'Homepage Leaderboard',
+			)
+		);
+		update_post_meta( $this->placement_id, Placement_Repository::META_IS_ACTIVE, 1 );
+		update_post_meta( $this->placement_id, Placement_Repository::META_SIZE, '728x90' );
+
+		$this->campaign_id = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::CAMPAIGN,
+				'post_status' => Post_Statuses::DRAFT,
+				'post_author' => $this->owner,
+			)
+		);
+		update_post_meta( $this->campaign_id, Campaign_Repository::META_ORG_ID, $org );
+		add_post_meta( $this->campaign_id, Campaign_Repository::META_PLACEMENT_ID, $this->placement_id );
+
+		Plugin::instance()->container()->get( Ownership::class )->flush_cache();
+
+		do_action( 'rest_api_init', rest_get_server() );
+	}
+
+	/**
+	 * Removes temporary files.
+	 *
+	 * @return void
+	 */
+	public function tear_down(): void {
+		foreach ( $this->temporary as $path ) {
+			if ( is_file( $path ) ) {
+				unlink( $path );
+			}
+		}
+
+		$this->temporary = array();
+
+		parent::tear_down();
+	}
+
+	/**
+	 * Builds an upload request.
+	 *
+	 * @param int $campaign_id  Campaign to upload to.
+	 * @param int $placement_id Placement to fill.
+	 * @return WP_REST_Request
+	 */
+	private function upload_request( int $campaign_id, int $placement_id ): WP_REST_Request {
+		$image = imagecreatetruecolor( 728, 90 );
+
+		ob_start();
+		imagepng( $image );
+		$bytes = (string) ob_get_clean();
+
+		$temp = wp_tempnam( 'laao-ads-rest-upload' );
+		file_put_contents( $temp, $bytes );
+		$this->temporary[] = $temp;
+
+		$request = new WP_REST_Request( 'POST', '/laao-advertiser-portal/v1/campaigns/' . $campaign_id . '/creatives' );
+
+		$request->set_body_params(
+			array(
+				'placement_id' => $placement_id,
+				'click_url'    => 'https://example.com/tickets',
+				'alt_text'     => 'Spring season poster',
+			)
+		);
+
+		$request->set_file_params(
+			array(
+				'file' => array(
+					'name'     => 'poster.png',
+					'tmp_name' => $temp,
+					'error'    => UPLOAD_ERR_OK,
+					'size'     => strlen( $bytes ),
+				),
+			)
+		);
+
+		return $request;
+	}
+
+	/**
+	 * Both write routes exist.
+	 *
+	 * @return void
+	 */
+	public function test_the_write_routes_are_registered(): void {
+		$routes = rest_get_server()->get_routes();
+
+		$this->assertArrayHasKey( '/laao-advertiser-portal/v1/campaigns/(?P<id>\d+)/creatives', $routes );
+		$this->assertArrayHasKey( '/laao-advertiser-portal/v1/campaigns/(?P<id>\d+)/transitions', $routes );
+	}
+
+	/**
+	 * The owner can upload a creative to their own campaign.
+	 *
+	 * @return void
+	 */
+	public function test_the_owner_can_upload(): void {
+		wp_set_current_user( $this->owner );
+
+		$response = rest_get_server()->dispatch( $this->upload_request( $this->campaign_id, $this->placement_id ) );
+
+		$this->assertSame( 201, $response->get_status() );
+
+		$data = $response->get_data();
+
+		$this->assertSame( 728, $data['width'] );
+		$this->assertSame( 90, $data['height'] );
+		$this->assertSame( 'image/png', $data['mime'] );
+	}
+
+	/**
+	 * **The response never carries the private path or its token.**
+	 *
+	 * The stored path and token are on the creative this route just made, and
+	 * the private root's unguessability is the layer that actually holds.
+	 *
+	 * @return void
+	 */
+	public function test_the_response_never_leaks_storage_details(): void {
+		wp_set_current_user( $this->owner );
+
+		$response = rest_get_server()->dispatch( $this->upload_request( $this->campaign_id, $this->placement_id ) );
+		$body     = (string) wp_json_encode( $response->get_data() );
+
+		foreach (
+			array(
+				Creative_Repository::META_PRIVATE_PATH,
+				Creative_Repository::META_PRIVATE_TOKEN,
+				Creative_Repository::META_SHA256,
+				'laao-ads-private',
+			) as $secret
+		) {
+			$this->assertStringNotContainsString( $secret, $body );
+		}
+
+		$stored = (string) get_post_meta( (int) $response->get_data()['id'], Creative_Repository::META_PRIVATE_PATH, true );
+
+		$this->assertNotSame( '', $stored );
+		$this->assertStringNotContainsString( $stored, $body );
+	}
+
+	/**
+	 * **Another organization cannot upload into this campaign.**
+	 *
+	 * A write, so 403 is correct here — the caller already knows the campaign
+	 * exists, because they are trying to add to it.
+	 *
+	 * @return void
+	 */
+	public function test_another_organization_cannot_upload(): void {
+		wp_set_current_user( $this->stranger );
+
+		$response = rest_get_server()->dispatch( $this->upload_request( $this->campaign_id, $this->placement_id ) );
+
+		$this->assertSame( 403, $response->get_status() );
+		$this->assertSame( 'laao_ads_forbidden', $response->get_data()['code'] );
+	}
+
+	/**
+	 * A placement the campaign has not selected is refused.
+	 *
+	 * @return void
+	 */
+	public function test_an_unselected_placement_is_refused(): void {
+		$other = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::PLACEMENT,
+				'post_status' => 'publish',
+			)
+		);
+		update_post_meta( $other, Placement_Repository::META_IS_ACTIVE, 1 );
+
+		wp_set_current_user( $this->owner );
+
+		$response = rest_get_server()->dispatch( $this->upload_request( $this->campaign_id, $other ) );
+
+		$this->assertSame( 422, $response->get_status() );
+	}
+
+	/**
+	 * An SVG is refused by the route, not merely by the rules.
+	 *
+	 * @return void
+	 */
+	public function test_the_route_refuses_an_svg(): void {
+		wp_set_current_user( $this->owner );
+
+		$temp = wp_tempnam( 'laao-ads-svg' );
+		file_put_contents( $temp, '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>' );
+		$this->temporary[] = $temp;
+
+		$request = new WP_REST_Request( 'POST', '/laao-advertiser-portal/v1/campaigns/' . $this->campaign_id . '/creatives' );
+		$request->set_body_params( array( 'placement_id' => $this->placement_id ) );
+		$request->set_file_params(
+			array(
+				'file' => array(
+					'name'     => 'logo.svg',
+					'tmp_name' => $temp,
+					'error'    => UPLOAD_ERR_OK,
+					'size'     => 64,
+				),
+			)
+		);
+
+		$this->assertSame( 422, rest_get_server()->dispatch( $request )->get_status() );
+	}
+
+	/**
+	 * Uploading to a campaign that is no longer editable is refused.
+	 *
+	 * @return void
+	 */
+	public function test_uploading_to_a_submitted_campaign_is_refused(): void {
+		wp_update_post(
+			array(
+				'ID'          => $this->campaign_id,
+				'post_status' => Post_Statuses::SUBMITTED,
+			)
+		);
+
+		wp_set_current_user( $this->owner );
+
+		$response = rest_get_server()->dispatch( $this->upload_request( $this->campaign_id, $this->placement_id ) );
+
+		$this->assertSame( 409, $response->get_status() );
+	}
+
+	/**
+	 * **An advertiser POSTing an approval is denied, not accepted.**
+	 *
+	 * Deliberately not rejected by schema validation: it is an expected event
+	 * that must reach the state machine so the denial is recorded.
+	 *
+	 * @return void
+	 */
+	public function test_an_advertiser_cannot_approve_their_own_campaign(): void {
+		wp_update_post(
+			array(
+				'ID'          => $this->campaign_id,
+				'post_status' => Post_Statuses::REVIEW,
+			)
+		);
+
+		wp_set_current_user( $this->owner );
+
+		$request = new WP_REST_Request( 'POST', '/laao-advertiser-portal/v1/campaigns/' . $this->campaign_id . '/transitions' );
+		$request->set_body_params( array( 'to' => Post_Statuses::APPROVED ) );
+
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertSame( 403, $response->get_status() );
+		$this->assertSame( Post_Statuses::REVIEW, get_post_status( $this->campaign_id ) );
+	}
+
+	/**
+	 * An illegal edge is a conflict, not a bad request: the body is
+	 * well-formed and the campaign's state is what makes it impossible.
+	 *
+	 * @return void
+	 */
+	public function test_an_illegal_transition_is_a_conflict(): void {
+		wp_set_current_user( $this->reviewer );
+
+		$request = new WP_REST_Request( 'POST', '/laao-advertiser-portal/v1/campaigns/' . $this->campaign_id . '/transitions' );
+		$request->set_body_params( array( 'to' => Post_Statuses::COMPLETE ) );
+
+		$this->assertSame( 409, rest_get_server()->dispatch( $request )->get_status() );
+	}
+
+	/**
+	 * A status that is not one of ours never reaches the state machine.
+	 *
+	 * @return void
+	 */
+	public function test_an_unknown_status_is_rejected_by_the_schema(): void {
+		wp_set_current_user( $this->reviewer );
+
+		$request = new WP_REST_Request( 'POST', '/laao-advertiser-portal/v1/campaigns/' . $this->campaign_id . '/transitions' );
+		$request->set_body_params( array( 'to' => 'publish' ) );
+
+		$this->assertSame( 400, rest_get_server()->dispatch( $request )->get_status() );
+	}
+
+	/**
+	 * Sending a campaign back without feedback is refused by the guard.
+	 *
+	 * @return void
+	 */
+	public function test_sending_back_without_feedback_is_refused(): void {
+		wp_update_post(
+			array(
+				'ID'          => $this->campaign_id,
+				'post_status' => Post_Statuses::REVIEW,
+			)
+		);
+
+		wp_set_current_user( $this->reviewer );
+
+		$request = new WP_REST_Request( 'POST', '/laao-advertiser-portal/v1/campaigns/' . $this->campaign_id . '/transitions' );
+		$request->set_body_params( array( 'to' => Post_Statuses::CHANGES ) );
+
+		$this->assertSame( 422, rest_get_server()->dispatch( $request )->get_status() );
+
+		$with_notes = new WP_REST_Request( 'POST', '/laao-advertiser-portal/v1/campaigns/' . $this->campaign_id . '/transitions' );
+		$with_notes->set_body_params(
+			array(
+				'to'           => Post_Statuses::CHANGES,
+				'review_notes' => 'The leaderboard is 1200x400, not 728x90.',
+			)
+		);
+
+		$response = rest_get_server()->dispatch( $with_notes );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( Post_Statuses::CHANGES, $response->get_data()['status'] );
+	}
+
+	/**
+	 * A logged-out visitor reaches neither route.
+	 *
+	 * @return void
+	 */
+	public function test_logged_out_visitors_are_refused(): void {
+		wp_set_current_user( 0 );
+
+		$upload = rest_get_server()->dispatch( $this->upload_request( $this->campaign_id, $this->placement_id ) );
+		$this->assertContains( $upload->get_status(), array( 401, 403 ) );
+
+		$transition = new WP_REST_Request( 'POST', '/laao-advertiser-portal/v1/campaigns/' . $this->campaign_id . '/transitions' );
+		$transition->set_body_params( array( 'to' => Post_Statuses::SUBMITTED ) );
+
+		$this->assertContains( rest_get_server()->dispatch( $transition )->get_status(), array( 401, 403 ) );
+	}
+
+	/**
+	 * The upload limit bites, and says when to come back.
+	 *
+	 * Generous by design — an advertiser correcting a rejected campaign at
+	 * 11pm must never meet it — so the test spends the allowance directly
+	 * rather than by uploading thirty files.
+	 *
+	 * @return void
+	 */
+	public function test_the_upload_limit_bites(): void {
+		$limiter = Plugin::instance()->container()->get( Rate_Limiter::class );
+
+		$limit = Rate_Limiter::limit_for( Rate_Limiter::ACTION_UPLOAD );
+
+		for ( $i = 0; $i < $limit; $i++ ) {
+			$this->assertTrue( $limiter->attempt( Rate_Limiter::ACTION_UPLOAD, $this->owner ) );
+		}
+
+		wp_set_current_user( $this->owner );
+
+		$response = rest_get_server()->dispatch( $this->upload_request( $this->campaign_id, $this->placement_id ) );
+
+		$this->assertSame( 429, $response->get_status() );
+		$this->assertGreaterThan( 0, $response->get_data()['data']['retry_after'] );
+	}
+
+	/**
+	 * One user's limit is not another's.
+	 *
+	 * @return void
+	 */
+	public function test_the_limit_is_per_user(): void {
+		$limiter = Plugin::instance()->container()->get( Rate_Limiter::class );
+
+		$limit = Rate_Limiter::limit_for( Rate_Limiter::ACTION_TRANSITION );
+
+		for ( $i = 0; $i < $limit; $i++ ) {
+			$limiter->attempt( Rate_Limiter::ACTION_TRANSITION, $this->owner );
+		}
+
+		$this->assertInstanceOf(
+			\WP_Error::class,
+			$limiter->attempt( Rate_Limiter::ACTION_TRANSITION, $this->owner )
+		);
+
+		$this->assertTrue( $limiter->attempt( Rate_Limiter::ACTION_TRANSITION, $this->reviewer ) );
+	}
+
+	/**
+	 * Hitting the limit is recorded, since a denial is the interesting record.
+	 *
+	 * @return void
+	 */
+	public function test_hitting_the_limit_is_audited(): void {
+		global $wpdb;
+
+		$limiter = Plugin::instance()->container()->get( Rate_Limiter::class );
+		$audit   = new Audit_Repository();
+
+		$limit = Rate_Limiter::limit_for( Rate_Limiter::ACTION_AUTOSAVE );
+
+		for ( $i = 0; $i <= $limit; $i++ ) {
+			$limiter->attempt( Rate_Limiter::ACTION_AUTOSAVE, $this->owner );
+		}
+
+		$table = $audit->table_name();
+
+		$rows = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COUNT(*) FROM {$table} WHERE event = %s AND actor_user_id = %d",
+				'rate_limit.exceeded',
+				$this->owner
+			)
+		);
+
+		$this->assertGreaterThan( 0, $rows );
+	}
+}
