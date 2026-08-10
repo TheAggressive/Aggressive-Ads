@@ -23,8 +23,10 @@ use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
 use LAAO_Advertiser_Portal\Repository\Creative_Repository;
 use LAAO_Advertiser_Portal\Repository\Org_Repository;
 use LAAO_Advertiser_Portal\Portal\Router;
+use LAAO_Advertiser_Portal\REST\Campaigns_Controller;
 use LAAO_Advertiser_Portal\REST\Creative_Controller;
 use LAAO_Advertiser_Portal\REST\Creative_File_Controller;
+use LAAO_Advertiser_Portal\REST\Placements_Controller;
 use LAAO_Advertiser_Portal\REST\Transitions_Controller;
 use LAAO_Advertiser_Portal\Repository\Placement_Repository;
 use LAAO_Advertiser_Portal\Storage\Private_Storage;
@@ -305,6 +307,23 @@ final class Plugin {
 		);
 
 		$this->container->register(
+			Campaigns_Controller::class,
+			static fn ( Service_Container $c ): Campaigns_Controller => new Campaigns_Controller(
+				$c->get( Campaign_Repository::class ),
+				$c->get( Creative_Repository::class ),
+				$c->get( Placement_Repository::class ),
+				$c->get( Org_Repository::class )
+			)
+		);
+
+		$this->container->register(
+			Placements_Controller::class,
+			static fn ( Service_Container $c ): Placements_Controller => new Placements_Controller(
+				$c->get( Placement_Repository::class )
+			)
+		);
+
+		$this->container->register(
 			Rate_Limiter::class,
 			static fn ( Service_Container $c ): Rate_Limiter => new Rate_Limiter(
 				$c->get( Audit_Repository::class )
@@ -437,6 +456,8 @@ final class Plugin {
 			Creative_File_Controller::class,
 			Creative_Controller::class,
 			Transitions_Controller::class,
+			Campaigns_Controller::class,
+			Placements_Controller::class,
 		);
 	}
 }

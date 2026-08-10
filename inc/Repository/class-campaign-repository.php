@@ -205,6 +205,83 @@ final class Campaign_Repository {
 	}
 
 	/**
+	 * How many campaigns one page of a listing returns.
+	 *
+	 * Paged server-side, always. An advertiser with four campaigns and one with
+	 * four hundred hit the same query, and the second is the one that decides
+	 * whether this page loads.
+	 */
+	public const PAGE_SIZE = 20;
+
+	/**
+	 * One page of an organization's campaigns, newest first.
+	 *
+	 * Scoped by organization in the query rather than filtered afterwards. The
+	 * array-filtering version works until somebody adds pagination, at which
+	 * point page two is short for reasons nobody can explain, and the fix that
+	 * suggests itself is to remove the filter.
+	 *
+	 * @param int $org_id Owning organization.
+	 * @param int $page   1-based page number.
+	 * @return array{ids: array<int, int>, total: int, pages: int}
+	 */
+	public function for_org( int $org_id, int $page = 1 ): array {
+		if ( $org_id <= 0 ) {
+			return array(
+				'ids'   => array(),
+				'total' => 0,
+				'pages' => 0,
+			);
+		}
+
+		$query = new \WP_Query(
+			array(
+				'post_type'              => Post_Types::CAMPAIGN,
+				'post_status'            => Post_Statuses::all(),
+				'posts_per_page'         => self::PAGE_SIZE,
+				'paged'                  => max( 1, $page ),
+				'fields'                 => 'ids',
+				'orderby'                => 'date',
+				'order'                  => 'DESC',
+				'update_post_term_cache' => false,
+				'meta_query'             => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Indexed lookup on a single meta key; this is the org scope, and it belongs in SQL.
+					array(
+						'key'   => self::META_ORG_ID,
+						'value' => (string) $org_id,
+					),
+				),
+			)
+		);
+
+		// `fields => ids` yields integers, but WP_Query::$posts is typed as the
+		// union either way. Narrowing here rather than casting blindly keeps
+		// the method honest if somebody ever drops that argument.
+		$ids = array();
+
+		foreach ( $query->posts as $post ) {
+			$ids[] = $post instanceof \WP_Post ? (int) $post->ID : (int) $post;
+		}
+
+		return array(
+			'ids'   => $ids,
+			'total' => (int) $query->found_posts,
+			'pages' => (int) $query->max_num_pages,
+		);
+	}
+
+	/**
+	 * The campaign's title.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return string
+	 */
+	public function title( int $campaign_id ): string {
+		$title = get_the_title( $campaign_id );
+
+		return is_string( $title ) ? $title : '';
+	}
+
+	/**
 	 * Records a provider ad id against the campaign, without duplicating it.
 	 *
 	 * Repeated meta, one row per ad, so a retry can see exactly what already

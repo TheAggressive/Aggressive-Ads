@@ -94,19 +94,40 @@ final class Placement_Repository {
 	}
 
 	/**
+	 * A placement's display order, defaulting to 0 when unset.
+	 *
+	 * @param int $placement_id Placement post id.
+	 * @return int
+	 */
+	public function sort_order( int $placement_id ): int {
+		return (int) get_post_meta( $placement_id, self::META_SORT_ORDER, true );
+	}
+
+	/**
 	 * Every active placement, in sort order.
 	 *
 	 * @return array<int, int>
 	 */
 	public function active_ids(): array {
+		/*
+		 * Ordered in PHP, deliberately.
+		 *
+		 * `orderby => meta_value_num` with a meta_key requires the post to
+		 * *have* that key: WP_Query joins on it, so a placement created without
+		 * a sort order silently disappears from every advertiser's list. That
+		 * is a configuration mistake presenting as a missing feature, which is
+		 * the worst way for one to present.
+		 *
+		 * The set is bounded at MAX_PLACEMENTS and read once per screen, so
+		 * sorting it here costs nothing and cannot hide a row.
+		 */
 		$ids = get_posts(
 			array(
 				'post_type'              => Post_Types::PLACEMENT,
 				'post_status'            => 'any',
 				'numberposts'            => self::MAX_PLACEMENTS,
 				'fields'                 => 'ids',
-				'orderby'                => 'meta_value_num',
-				'meta_key'               => self::META_SORT_ORDER, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Ordering a small, bounded configuration set.
+				'orderby'                => 'title',
 				'order'                  => 'ASC',
 				'no_found_rows'          => true,
 				'update_post_term_cache' => false,
@@ -119,6 +140,17 @@ final class Placement_Repository {
 			)
 		);
 
-		return array_map( 'intval', $ids );
+		$ids = array_map( 'intval', $ids );
+
+		usort(
+			$ids,
+			function ( int $a, int $b ): int {
+				// Unset sorts as 0, so an unordered placement leads rather than
+				// vanishing. Ties fall back to the title order above.
+				return $this->sort_order( $a ) <=> $this->sort_order( $b );
+			}
+		);
+
+		return $ids;
 	}
 }
