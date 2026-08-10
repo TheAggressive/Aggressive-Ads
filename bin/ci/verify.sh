@@ -37,6 +37,7 @@ if ! docker info >/dev/null 2>&1; then
 fi
 
 run "php:wp"      pnpm ci:php:wp
+run "package"     pnpm ci:package
 
 # Every lane above maps 1:1 onto a job in .github/workflows/ci.yml.
 # Adding one here without adding it there is how the two drift.
@@ -46,7 +47,6 @@ run "php:wp"      pnpm ci:php:wp
 #   i18n      — POT drift and .mo compilation
 #   build     — webpack bundles
 #   e2e       — Playwright, including the Twenty Twenty-Five smoke test
-#   package   — release packaging and independent ZIP verification
 
 echo
 echo "ci:verify: all lanes passed"

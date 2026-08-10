@@ -1,0 +1,137 @@
+#!/usr/bin/env bash
+#
+# Verifies the built ZIP.
+#
+# **Everything here is asserted against the archive, not against the staging
+# directory.** The staging directory is what the script that just ran believes
+# it produced; the ZIP is what a site owner installs. Checking the former and
+# shipping the latter is how a packaging bug survives its own test.
+#
+# Usage: bin/release/verify-package.sh [version]
+
+set -euo pipefail
+
+cd "$(dirname "$0")/../.."
+
+SLUG=laao-advertiser-portal
+PLUGIN_FILE="${SLUG}.php"
+BUILD_DIR=release
+
+PACKAGE_FORBIDDEN=(
+	node_modules
+	vendor
+	tests
+	bin
+	src
+	.git
+	.github
+	docs
+	CLAUDE.md
+	composer.json
+	package.json
+	phpcs.xml.dist
+	phpstan.neon
+)
+
+PACKAGE_REQUIRED=(
+	"${PLUGIN_FILE}"
+	uninstall.php
+	inc/class-autoloader.php
+	inc/class-plugin.php
+)
+
+header_version() {
+	grep -m1 -oE '^\s*\*\s*Version:\s*\S+' "${PLUGIN_FILE}" | awk '{print $NF}'
+}
+
+VERSION="${1:-$(header_version)}"
+ZIP="${BUILD_DIR}/${SLUG}-${VERSION}.zip"
+
+if [ ! -f "${ZIP}" ]; then
+	echo "No package at ${ZIP}. Run: pnpm release:package" >&2
+	exit 1
+fi
+
+failed=0
+fail() {
+	echo "  FAIL: $1" >&2
+	failed=1
+}
+
+# 1. The archive is the one that was built.
+if [ -f "${ZIP}.sha256" ]; then
+	( cd "${BUILD_DIR}" && sha256sum -c --quiet "$(basename "${ZIP}").sha256" ) \
+		|| fail "checksum does not match the sidecar"
+else
+	fail "no checksum sidecar beside the archive"
+fi
+
+listing=$(unzip -Z1 "${ZIP}")
+
+# 2. Exactly one top-level directory, named for the slug. WordPress unpacks
+#    whatever is at the root, so two entries here installs two plugins or none.
+top_level=$(echo "${listing}" | awk -F/ '{print $1}' | sort -u)
+
+if [ "${top_level}" != "${SLUG}" ]; then
+	fail "expected one top-level directory named ${SLUG}, found: $(echo "${top_level}" | tr '\n' ' ')"
+fi
+
+# 3. Nothing that should not ship.
+for path in "${PACKAGE_FORBIDDEN[@]}"; do
+	if echo "${listing}" | grep -qE "^${SLUG}/${path}(/|$)"; then
+		fail "forbidden path in the archive: ${path}"
+	fi
+done
+
+# 4. Everything that must.
+for path in "${PACKAGE_REQUIRED[@]}"; do
+	if ! echo "${listing}" | grep -qxF "${SLUG}/${path}"; then
+		fail "required file missing from the archive: ${path}"
+	fi
+done
+
+extracted=$(mktemp -d)
+trap 'rm -rf "${extracted}"' EXIT
+
+unzip -qq "${ZIP}" -d "${extracted}"
+root="${extracted}/${SLUG}"
+
+# 5. The header version is the version being released. A ZIP named 1.2.0 whose
+#    header says 1.1.0 updates to a version WordPress then offers to update
+#    again, forever.
+packaged_version=$(grep -m1 -oE '^\s*\*\s*Version:\s*\S+' "${root}/${PLUGIN_FILE}" | awk '{print $NF}')
+
+if [ "${packaged_version}" != "${VERSION}" ]; then
+	fail "header says ${packaged_version}, archive is ${VERSION}"
+fi
+
+# 6. Every PHP file parses. A syntax error in a shipped file is a white screen
+#    on somebody else's site, and it costs two seconds to rule out.
+while IFS= read -r file; do
+	php -l "${file}" >/dev/null 2>&1 || fail "syntax error in ${file#"${root}/"}"
+done < <(find "${root}" -name '*.php')
+
+# 7. Every translation has been compiled. Skipping the compile step is
+#    invisible: the site simply renders English, and the first report arrives
+#    weeks later from a user.
+while IFS= read -r po; do
+	[ -f "${po%.po}.mo" ] || fail "no compiled .mo for ${po#"${root}/"}"
+done < <(find "${root}" -name '*.po' 2>/dev/null)
+
+# 8. Built assets are present whenever there are sources to build them from.
+#    Tied to a real fact rather than skipped: the day src/ appears, this starts
+#    asserting without anybody remembering to enable it.
+if [ -d src ] && [ ! -d "${root}/dist" ]; then
+	fail "src/ exists in the repository but the archive has no dist/"
+fi
+
+if [ "${failed}" -ne 0 ]; then
+	echo >&2
+	echo "Package verification failed. See docs/build-and-release.md." >&2
+	exit 1
+fi
+
+echo "verify-package: ok"
+echo "  archive: ${ZIP}"
+echo "  version: ${VERSION}"
+echo "  files:   $(echo "${listing}" | wc -l | tr -d ' ')"

@@ -28,7 +28,10 @@
 		"ci:doctor": "node bin/ci/doctor.mjs",
 		"ci:php": "pnpm lint:php && pnpm analyse:php && pnpm test:php:unit",
 		"ci:php:wp": "pnpm test:php:integration",
-		"ci:verify": "bash bin/ci/verify.sh",
-		"qa": "pnpm ci:php && pnpm lint:files"
+		"release:package": "bash bin/release/package.sh",
+		"release:verify": "bash bin/release/verify-package.sh",
+		"ci:package": "pnpm release:package && pnpm release:verify",
+		"qa": "pnpm ci:php && pnpm lint:files",
+		"ci:verify": "bash bin/ci/verify.sh"
 	}
 }
