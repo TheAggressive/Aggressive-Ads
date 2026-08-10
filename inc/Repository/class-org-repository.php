@@ -161,6 +161,22 @@ final class Org_Repository {
 	}
 
 	/**
+	 * The organization's display name.
+	 *
+	 * @param int $org_id Organization post id.
+	 * @return string Empty when the id is not an organization.
+	 */
+	public function name( int $org_id ): string {
+		if ( $org_id <= 0 || Post_Types::ORGANIZATION !== get_post_type( $org_id ) ) {
+			return '';
+		}
+
+		$title = get_the_title( $org_id );
+
+		return is_string( $title ) ? $title : '';
+	}
+
+	/**
 	 * Drops memoized state.
 	 *
 	 * Called whenever membership or ownership data changes within a request.

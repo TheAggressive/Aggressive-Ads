@@ -21,7 +21,7 @@ re-derive it, and do not restate it here.
 | Who may do what? | `docs/roles-and-capabilities.md` |
 | What does AdSanity actually do? | `docs/adsanity-integration.md` |
 | What are we defending against? | `docs/threat-model.md` |
-| Why was X decided? | `docs/adr/` — 17 records |
+| Why was X decided? | `docs/adr/` — 18 records |
 
 **The ADR contract:** a change that reverses a decision recorded in an ADR must
 supersede that ADR in the same change. Add a new one marked `Supersedes NNNN`
@@ -45,23 +45,32 @@ Phase 1 (foundation) is **in progress**. What is built:
   publisher, with idempotent reconciliation and read-back verification
 - wp-env (dev `:9960`, tests `:9970`) and the integration/security/rest/upgrade suites
 - PHPCS / PHPStan / PHPUnit / structural guards, wired into `bin/ci/verify.sh`
+- creative upload, two-stage private storage, the promoter, and the REST routes
+- the portal route, `Portal\Router`, `Portal\View_Data`, and the screens it
+  serves: dashboard, campaign list, campaign detail, 403, 404, placeholder
+- `assets/portal.css` — the `--laao-ads-*` token layer and its components,
+  contrast-gated by `tests/php/Unit/Assets/PortalContrastTest.php`
+- release packaging and independent archive verification
 
-What does **not** exist yet, despite being described in `docs/`: creative upload
-and the two-stage private storage (so a creative has no attachment until one is
-set by hand), the package repository, unpublish/pause/resume, notifications,
-REST routes, the portal route and templates, any UI, any JavaScript toolchain,
-Playwright, i18n tooling, and packaging. `docs/` describes the design; `docs/roadmap.md` says which phase
-builds it. If a doc describes something you cannot find, it has not been built —
-that is expected, not a bug.
+What does **not** exist yet, despite being described in `docs/`: the package
+repository, unpublish/pause/resume, notifications, the new-campaign wizard, the
+upload UI, the staff review queue, analytics, any JavaScript toolchain,
+Playwright, i18n tooling, semantic-release, and self-hosted Archivo.
+`docs/` describes the design; `docs/roadmap.md` says which phase builds it. If a
+doc describes something you cannot find, it has not been built — that is
+expected, not a bug.
 
-`tests/php/Security/` and `tests/php/Rest/` exist but are empty: the suites are
-declared in `phpunit-integration.xml.dist` so that adding the first test needs no
-configuration change.
+The screens that exist are the ones with real data behind them. The design's
+impression/click/CTR/spend tiles are deliberately absent until there is
+something to put in them — see
+[ADR-0018](docs/adr/0018-portal-ui-from-the-design-with-three-deviations.md).
 
 ## Commands
 
 ```bash
 composer install        # dev tooling only; vendor/ never ships
+pnpm wp-env start       # dev :9960, tests :9970
+pnpm dev:seed           # an advertiser, an org and five campaigns to look at
 pnpm ci:verify          # the contract for declaring a change finished
 
 pnpm lint:php           # PHPCS

@@ -45,6 +45,18 @@ final class Router implements Service {
 	private ?Request $request = null;
 
 	/**
+	 * Whether the URL landed on a portal rewrite rule at all.
+	 *
+	 * Distinct from $request, and the distinction is the whole point: a URL can
+	 * match the rule and still name nothing — /advertiser/campaigns/abc/. That
+	 * is not "not a portal request", it is a portal request for something that
+	 * does not exist, and the two deserve different answers.
+	 *
+	 * @var bool
+	 */
+	private bool $is_portal_url = false;
+
+	/**
 	 * Attaches everything.
 	 *
 	 * @return void
@@ -154,19 +166,34 @@ final class Router implements Service {
 		 * request, ordinary under WP-CLI, cron, and any test process that
 		 * visits two URLs.
 		 */
-		$this->request = null;
+		$this->request       = null;
+		$this->is_portal_url = false;
 
 		if ( '1' !== (string) $query->get( self::QUERY_PORTAL ) ) {
 			return;
 		}
+
+		$this->is_portal_url = true;
 
 		$this->request = Request::from(
 			(string) $query->get( self::QUERY_ROUTE ),
 			(string) $query->get( self::QUERY_OBJECT )
 		);
 
-		// An unknown route stays a 404, and stays it honestly.
+		/*
+		 * A portal URL naming nothing is a 404, and has to be made one.
+		 *
+		 * Returning here was not enough: the rewrite rule had already consumed
+		 * the path, so the main query carried no post selection at all and
+		 * resolved as the home query. WordPress then rendered the front page,
+		 * at 200, for /advertiser/campaigns/abc/. set_404() here plus the
+		 * status header in gate() — which runs at template_redirect, after
+		 * core's own handle_404() has had its say — is what makes the answer
+		 * match the URL.
+		 */
 		if ( null === $this->request ) {
+			$query->set_404();
+
 			return;
 		}
 
@@ -198,6 +225,13 @@ final class Router implements Service {
 	 * @return void
 	 */
 	public function gate(): void {
+		if ( $this->is_portal_url && null === $this->request ) {
+			status_header( 404 );
+			nocache_headers();
+
+			return;
+		}
+
 		if ( null === $this->request ) {
 			return;
 		}
@@ -225,6 +259,10 @@ final class Router implements Service {
 	 * @return string
 	 */
 	public function template( string $template ): string {
+		if ( $this->is_portal_url && null === $this->request ) {
+			return $this->locate( '404.php' );
+		}
+
 		if ( null === $this->request ) {
 			return $template;
 		}

@@ -2,6 +2,12 @@
 /**
  * Dashboard contents.
  *
+ * Prioritises action over decoration. The design's impression, click, CTR and
+ * spend tiles are deliberately absent: reporting is a later phase and there is
+ * no data behind those numbers. A business dashboard showing invented figures
+ * is worse than one showing fewer real ones — somebody will make a decision on
+ * them.
+ *
  * @package LAAO_Advertiser_Portal
  */
 
@@ -11,24 +17,51 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$laao_ads_user = wp_get_current_user();
-?>
-<p class="laao-ads-lede">
-	<?php
-	printf(
-		/* translators: %s: the advertiser's display name. */
-		esc_html__( 'Welcome back, %s.', 'laao-advertiser-portal' ),
-		esc_html( $laao_ads_user->display_name )
-	);
-	?>
-</p>
+use LAAO_Advertiser_Portal\Plugin;
+use LAAO_Advertiser_Portal\Portal\Request;
+use LAAO_Advertiser_Portal\Portal\Routes;
+use LAAO_Advertiser_Portal\Portal\View_Data;
 
-<section class="laao-ads-panel" aria-labelledby="laao-ads-next-steps">
-	<h2 id="laao-ads-next-steps" class="laao-ads-panel__title">
-		<?php esc_html_e( 'Needs your attention', 'laao-advertiser-portal' ); ?>
+$laao_ads_view      = Plugin::instance()->container()->get( View_Data::class );
+$laao_ads_campaigns = $laao_ads_view->campaigns();
+$laao_ads_user      = wp_get_current_user();
+?>
+<div class="laao-ads-pagehead">
+	<div>
+		<h1 class="laao-ads-title">
+			<?php
+			printf(
+				/* translators: %s: the advertiser's display name. */
+				esc_html__( 'Welcome back, %s', 'laao-advertiser-portal' ),
+				esc_html( $laao_ads_user->display_name )
+			);
+			?>
+		</h1>
+		<p class="laao-ads-lede"><?php esc_html_e( 'Your campaigns and where each one has got to.', 'laao-advertiser-portal' ); ?></p>
+	</div>
+
+	<a class="laao-ads-button" href="<?php echo esc_url( Routes::url( Request::ROUTE_CAMPAIGNS ) ); ?>">
+		<?php esc_html_e( 'View campaigns', 'laao-advertiser-portal' ); ?>
+	</a>
+</div>
+
+<div class="laao-ads-stats">
+	<?php foreach ( $laao_ads_view->counts() as $laao_ads_stat ) : ?>
+		<div class="laao-ads-stat">
+			<div class="laao-ads-stat__label"><?php echo esc_html( (string) $laao_ads_stat['label'] ); ?></div>
+			<div class="laao-ads-stat__value"><?php echo esc_html( number_format_i18n( (int) $laao_ads_stat['value'] ) ); ?></div>
+		</div>
+	<?php endforeach; ?>
+</div>
+
+<section class="laao-ads-panel" aria-labelledby="laao-ads-campaigns-heading">
+	<h2 id="laao-ads-campaigns-heading" class="laao-ads-panel__head">
+		<?php esc_html_e( 'Your campaigns', 'laao-advertiser-portal' ); ?>
 	</h2>
 
-	<p class="laao-ads-empty">
-		<?php esc_html_e( 'Nothing needs your attention right now.', 'laao-advertiser-portal' ); ?>
-	</p>
+	<?php
+	$laao_ads_rows = $laao_ads_campaigns['rows'];
+
+	require LAAO_ADS_PLUGIN_DIR . 'templates/portal/partials/campaign-table.php';
+	?>
 </section>

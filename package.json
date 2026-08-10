@@ -21,6 +21,7 @@
 		"cli": "wp-env run cli wp",
 		"lint:php": "composer run-script phpcs",
 		"lint:php:fix": "composer run-script phpcs:fix",
+		"dev:seed": "wp-env run cli --env-cwd=wp-content/plugins/laao-advertiser-portal wp eval 'require \"bin/dev/seed.php\";'",
 		"analyse:php": "composer run-script analyse",
 		"lint:files": "bash bin/check-file-length.sh && bash bin/ci/check-repository-boundary.sh && bash bin/ci/check-permission-callbacks.sh && bash bin/ci/check-action-pins.sh && bash bin/ci/check-ci-parity.sh",
 		"test:php:unit": "vendor/bin/phpunit",

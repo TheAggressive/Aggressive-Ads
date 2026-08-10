@@ -4,6 +4,11 @@
 
 	<!-- What to scan -->
 	<file>inc</file>
+	<!--
+		Templates escape output. Leaving the one layer that writes to the
+		browser unlinted is how an unescaped echo ships.
+	-->
+	<file>templates</file>
 	<file>tests/php</file>
 	<file>laao-advertiser-portal.php</file>
 	<!--
@@ -12,6 +17,8 @@
 		its job is deleting things.
 	-->
 	<file>uninstall.php</file>
+	<!-- Build and dev scripts are PHP too, and nobody reviews them twice. -->
+	<file>bin</file>
 
 	<!-- Exclude generated and third-party code -->
 	<exclude-pattern>*/vendor/*</exclude-pattern>
@@ -216,6 +223,39 @@
 	</rule>
 	<rule ref="WordPressVIPMinimum.Functions.RestrictedFunctions.file_ops_fwrite">
 		<exclude-pattern>tests/php/*</exclude-pattern>
+	</rule>
+	<!--
+		The remote-data sniff cannot tell a URL from a path, so it warns on any
+		file_get_contents(). Tests read the plugin's own files off disk to
+		assert that PHP and CSS agree — the pill modifiers View_Data emits
+		against the rules assets/portal.css defines — and there is no request,
+		no network and nothing to cache. Shipped code keeps the sniff.
+	-->
+	<rule ref="WordPressVIPMinimum.Performance.FetchingRemoteData">
+		<exclude-pattern>tests/php/*</exclude-pattern>
+		<exclude-pattern>bin/*</exclude-pattern>
+	</rule>
+	<!--
+		bin/ holds standalone scripts, not plugin code.
+
+		The build guards run under plain `php` with no WordPress at all, and the
+		dev seeder runs once inside WP-CLI. "Global" there means script scope,
+		not a variable leaking into a shared request, so prefixing every local
+		would be noise that hides the one name that matters. The sniffs that
+		catch real defects — escaping, capabilities, SQL, PHP compatibility —
+		all still apply, which is the reason bin/ is scanned at all.
+
+		Nothing in bin/ ships: the release archive excludes it, and
+		verify-package.sh fails if it appears.
+	-->
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<exclude-pattern>bin/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.WP.GlobalVariablesOverride">
+		<exclude-pattern>bin/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPressVIPMinimum.Functions.RestrictedFunctions.file_ops_fwrite">
+		<exclude-pattern>bin/*</exclude-pattern>
 	</rule>
 	<!--
 		Test helpers read the plugin's own audit table back to assert what was

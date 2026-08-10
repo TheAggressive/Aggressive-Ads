@@ -33,11 +33,31 @@ PACKAGE_FORBIDDEN=(
 	phpstan.neon
 )
 
+# Files with no import graph pointing at them, so nothing else notices when one
+# stops shipping. The autoloader is ours rather than Composer's; the templates
+# and the stylesheet are located by path at render time, and a portal missing
+# base.php is a fatal on the advertiser's first page load, not a build error.
 PACKAGE_REQUIRED=(
 	"${PLUGIN_FILE}"
 	uninstall.php
 	inc/class-autoloader.php
 	inc/class-plugin.php
+	assets/portal.css
+	templates/portal/base.php
+	templates/portal/dashboard.php
+	templates/portal/campaigns.php
+	templates/portal/campaigns-detail.php
+	templates/portal/403.php
+	templates/portal/404.php
+	templates/portal/partials/rail.php
+	templates/portal/partials/campaign-table.php
+	templates/portal/partials/icon.php
+	templates/portal/screens/dashboard.php
+	templates/portal/screens/campaigns.php
+	templates/portal/screens/campaign.php
+	templates/portal/screens/campaign-not-found.php
+	templates/portal/screens/403.php
+	templates/portal/screens/404.php
 )
 
 header_version() {

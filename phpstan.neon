@@ -12,6 +12,7 @@ parameters:
 	level: 8
 	paths:
 		- inc
+		- templates
 		- laao-advertiser-portal.php
 		# Runs with full privileges, outside the bootstrap, and deletes things.
 		- uninstall.php

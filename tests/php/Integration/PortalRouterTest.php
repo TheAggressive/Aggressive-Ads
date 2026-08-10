@@ -164,6 +164,102 @@ final class PortalRouterTest extends WP_UnitTestCase {
 		$this->go_to( home_url( '/advertiser/not-a-screen/' ) );
 
 		$this->assertNull( $this->router->request() );
+
+		/*
+		 * The assertion above is not enough on its own, and for a while it was
+		 * the only one.
+		 *
+		 * The rewrite rule has already consumed the path by this point, so the
+		 * main query carries no post selection and resolves as the home query.
+		 * A router that merely declines to claim the request leaves WordPress
+		 * rendering the front page — at 200 — for /advertiser/not-a-screen/.
+		 * `request() === null` is true in both the broken and the fixed
+		 * version, which is exactly why it passed while the behaviour was
+		 * wrong.
+		 */
+		$this->assertTrue( is_404(), 'A portal URL naming no route must resolve as a 404.' );
+	}
+
+	/**
+	 * An object segment that is not an id is a 404, not the list screen.
+	 *
+	 * /advertiser/campaigns/abc/ means "campaign abc". Answering it with the
+	 * campaign list, at 200, is a soft 404: every client that checks status
+	 * codes — crawlers, uptime monitors, the browser's own history — is told
+	 * the address was fine.
+	 *
+	 * @return void
+	 */
+	public function test_a_malformed_object_segment_is_a_404(): void {
+		wp_set_current_user( $this->advertiser );
+
+		foreach ( array( 'abc', '0', '-1', '1.5' ) as $segment ) {
+			$this->go_to( home_url( '/advertiser/campaigns/' . $segment . '/' ) );
+
+			$this->assertNull( $this->router->request(), "Segment {$segment} should not parse." );
+			$this->assertTrue( is_404(), "Segment {$segment} should resolve as a 404." );
+
+			$template = apply_filters( 'template_include', 'theme-template.php' );
+
+			$this->assertStringContainsString(
+				'templates/portal/404.php',
+				$template,
+				"Segment {$segment} should render the portal's not-found screen."
+			);
+		}
+	}
+
+	/**
+	 * The 404 status code is actually sent, not merely implied by is_404().
+	 *
+	 * Core decides the status in handle_404(), which runs before
+	 * template_redirect and sends 200 because the home query it fell back to
+	 * did find posts. is_404() being true and the response being 200 is the
+	 * exact state this is here to rule out — the two are set in different
+	 * places and only one of them is what a client sees.
+	 *
+	 * Captured through the `status_header` filter, which is the last thing
+	 * status_header() consults before writing the header.
+	 *
+	 * @return void
+	 */
+	public function test_the_404_status_code_is_sent(): void {
+		wp_set_current_user( $this->advertiser );
+
+		$codes = array();
+
+		add_filter(
+			'status_header',
+			static function ( $header, $code ) use ( &$codes ) {
+				$codes[] = (int) $code;
+
+				return $header;
+			},
+			10,
+			2
+		);
+
+		$this->go_to( home_url( '/advertiser/campaigns/abc/' ) );
+		$this->router->gate();
+
+		$this->assertContains( 404, $codes, 'gate() must send a 404 for a portal URL that names nothing.' );
+	}
+
+	/**
+	 * A well-formed id still resolves, so the check above is not just refusing.
+	 *
+	 * @return void
+	 */
+	public function test_a_well_formed_object_segment_still_resolves(): void {
+		wp_set_current_user( $this->advertiser );
+
+		$this->go_to( home_url( '/advertiser/campaigns/42/' ) );
+
+		$request = $this->router->request();
+
+		$this->assertNotNull( $request );
+		$this->assertSame( 42, $request->object_id );
+		$this->assertFalse( is_404() );
 	}
 
 	/**

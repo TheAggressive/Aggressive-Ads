@@ -1,0 +1,351 @@
+<?php
+/**
+ * What the portal screens render.
+ *
+ * @package LAAO_Advertiser_Portal
+ */
+
+declare(strict_types=1);
+
+namespace LAAO_Advertiser_Portal\Portal;
+
+use LAAO_Advertiser_Portal\Core\Post_Statuses;
+use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
+use LAAO_Advertiser_Portal\Repository\Creative_Repository;
+use LAAO_Advertiser_Portal\Repository\Org_Repository;
+use LAAO_Advertiser_Portal\Repository\Placement_Repository;
+
+/**
+ * Assembles a screen's data, so templates render and nothing else.
+ *
+ * Templates that query are templates nobody can test and nobody can reason
+ * about the cost of. Everything a screen needs arrives as a plain array,
+ * already scoped to the caller's own organization — the scoping happens here,
+ * once, rather than in each template where forgetting it is invisible.
+ */
+final class View_Data {
+
+	/**
+	 * Constructor.
+	 *
+	 * @param Campaign_Repository  $campaigns  Campaign persistence.
+	 * @param Placement_Repository $placements Placement persistence.
+	 * @param Creative_Repository  $creatives  Creative persistence.
+	 * @param Org_Repository       $orgs       Organization lookups.
+	 */
+	public function __construct(
+		private readonly Campaign_Repository $campaigns,
+		private readonly Placement_Repository $placements,
+		private readonly Creative_Repository $creatives,
+		private readonly Org_Repository $orgs
+	) {
+	}
+
+	/**
+	 * The organization the current user is acting for, or 0.
+	 *
+	 * @return int
+	 */
+	public function org_id(): int {
+		$orgs = $this->orgs->org_ids_for_user( get_current_user_id() );
+
+		return array() === $orgs ? 0 : $orgs[0];
+	}
+
+	/**
+	 * The organization's name, for the top bar.
+	 *
+	 * @return string
+	 */
+	public function org_name(): string {
+		return $this->orgs->name( $this->org_id() );
+	}
+
+	/**
+	 * Up to two initials for the avatar.
+	 *
+	 * @return string
+	 */
+	public function org_initials(): string {
+		$name = $this->org_name();
+
+		if ( '' === $name ) {
+			return '—';
+		}
+
+		$initials = '';
+		$words    = preg_split( '/\s+/', $name );
+		$words    = is_array( $words ) ? $words : array();
+
+		foreach ( $words as $word ) {
+			if ( '' !== $word ) {
+				$initials .= mb_strtoupper( mb_substr( $word, 0, 1 ) );
+			}
+
+			if ( 2 === mb_strlen( $initials ) ) {
+				break;
+			}
+		}
+
+		return $initials;
+	}
+
+	/**
+	 * The caller's campaigns, ready to render.
+	 *
+	 * @param int $page 1-based page.
+	 * @return array{rows: array<int, array<string, mixed>>, total: int, pages: int, page: int}
+	 */
+	public function campaigns( int $page = 1 ): array {
+		$org_id = $this->org_id();
+
+		/*
+		 * Not the isolation boundary — that is the org meta_query inside
+		 * for_org(), and it is there whatever this returns. This only skips a
+		 * query that can only ever match nothing, and keeps the array shape
+		 * constant so a template rendering during an expired session gets an
+		 * empty list rather than a fatal.
+		 */
+		if ( 0 === $org_id ) {
+			return array(
+				'rows'  => array(),
+				'total' => 0,
+				'pages' => 0,
+				'page'  => 1,
+			);
+		}
+
+		$result = $this->campaigns->for_org( $org_id, $page );
+		$rows   = array();
+
+		foreach ( $result['ids'] as $campaign_id ) {
+			$rows[] = $this->campaign_row( $campaign_id );
+		}
+
+		return array(
+			'rows'  => $rows,
+			'total' => $result['total'],
+			'pages' => $result['pages'],
+			'page'  => max( 1, $page ),
+		);
+	}
+
+	/**
+	 * One campaign in full, or null when the caller may not see it.
+	 *
+	 * The authorization is `read_post`, not a comparison against the caller's
+	 * own org id. Both would work today; only one keeps working when a user
+	 * belongs to two organizations, or when staff open an advertiser's campaign
+	 * during review. `Security\Ownership` is the single answer to "may they?",
+	 * and asking it here means this screen cannot drift away from it.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return array<string, mixed>|null
+	 */
+	public function campaign( int $campaign_id ): ?array {
+		if ( $campaign_id <= 0 || ! $this->campaigns->exists( $campaign_id ) ) {
+			return null;
+		}
+
+		if ( ! current_user_can( 'read_post', $campaign_id ) ) {
+			return null;
+		}
+
+		$row = $this->campaign_row( $campaign_id );
+
+		$row['review_notes'] = $this->campaigns->review_notes( $campaign_id );
+		$row['revision']     = $this->campaigns->revision( $campaign_id );
+		$row['submitted_at'] = $this->campaigns->submitted_at( $campaign_id );
+		$row['creatives']    = $this->creative_rows( $campaign_id );
+
+		return $row;
+	}
+
+	/**
+	 * The campaign's creatives, shaped for display.
+	 *
+	 * No file path, no storage token and no checksum: those describe where the
+	 * bytes live on disk, and a private-storage path is not something a browser
+	 * ever needs to be told.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return array<int, array{id: int, placement: string, size: string, dimensions: string, click_url: string, alt_text: string, approved: bool}>
+	 */
+	private function creative_rows( int $campaign_id ): array {
+		$rows = array();
+
+		foreach ( $this->creatives->for_campaign( $campaign_id ) as $creative ) {
+			$rows[] = array(
+				'id'         => $creative['id'],
+				'placement'  => $this->placements->name( $creative['placement_id'] ),
+				'size'       => $creative['size'],
+				'dimensions' => $creative['width'] > 0 && $creative['height'] > 0
+					? $creative['width'] . '×' . $creative['height']
+					: '',
+				'click_url'  => $creative['click_url'],
+				'alt_text'   => $creative['alt_text'],
+				'approved'   => $this->creatives->has_attachment( $creative['id'] ),
+			);
+		}
+
+		return $rows;
+	}
+
+	/**
+	 * Counts worth putting on a dashboard.
+	 *
+	 * Only what the plugin actually knows. Impressions, clicks and spend are a
+	 * later phase and there is no data behind them — a dashboard showing
+	 * invented business figures is worse than one showing fewer real ones.
+	 *
+	 * @return array<int, array{label: string, value: int}>
+	 */
+	public function counts(): array {
+		$campaigns = $this->campaigns( 1 );
+
+		$running   = 0;
+		$reviewing = 0;
+		$drafts    = 0;
+
+		foreach ( $campaigns['rows'] as $row ) {
+			$status = (string) $row['status'];
+
+			if ( in_array( $status, Post_Statuses::published(), true ) ) {
+				++$running;
+
+				continue;
+			}
+
+			if ( in_array( $status, array( Post_Statuses::SUBMITTED, Post_Statuses::REVIEW ), true ) ) {
+				++$reviewing;
+
+				continue;
+			}
+
+			if ( in_array( $status, Post_Statuses::advertiser_editable(), true ) ) {
+				++$drafts;
+			}
+		}
+
+		return array(
+			array(
+				'label' => __( 'Running', 'laao-advertiser-portal' ),
+				'value' => $running,
+			),
+			array(
+				'label' => __( 'In review', 'laao-advertiser-portal' ),
+				'value' => $reviewing,
+			),
+			array(
+				'label' => __( 'Needs your attention', 'laao-advertiser-portal' ),
+				'value' => $drafts,
+			),
+		);
+	}
+
+	/**
+	 * One campaign, shaped for a table row.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return array<string, mixed>
+	 */
+	private function campaign_row( int $campaign_id ): array {
+		$status = $this->campaigns->status( $campaign_id );
+
+		$names = array();
+
+		foreach ( $this->campaigns->placement_ids( $campaign_id ) as $placement_id ) {
+			$name = $this->placements->name( $placement_id );
+
+			if ( '' !== $name ) {
+				$names[] = $name;
+			}
+		}
+
+		return array(
+			'id'          => $campaign_id,
+			'title'       => $this->campaigns->title( $campaign_id ),
+			'status'      => $status,
+			'status_text' => $this->status_label( $status ),
+			'pill'        => self::pill_for( $status ),
+			'placements'  => $names,
+			'dates'       => $this->window( $campaign_id ),
+			'url'         => Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id ),
+		);
+	}
+
+	/**
+	 * The campaign's window, in the site's own timezone and format.
+	 *
+	 * Formatted with wp_date() rather than date(): the stored values are UTC
+	 * integers, and the reader is not in UTC.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return string
+	 */
+	private function window( int $campaign_id ): string {
+		$start = $this->campaigns->start_ts( $campaign_id );
+		$end   = $this->campaigns->end_ts( $campaign_id );
+
+		if ( 0 === $start ) {
+			return __( 'Not scheduled', 'laao-advertiser-portal' );
+		}
+
+		$format = (string) get_option( 'date_format', 'M j, Y' );
+		$from   = (string) wp_date( $format, $start );
+
+		if ( 0 === $end ) {
+			return sprintf(
+				/* translators: %s: campaign start date. */
+				__( 'From %s', 'laao-advertiser-portal' ),
+				$from
+			);
+		}
+
+		return sprintf(
+			/* translators: 1: campaign start date. 2: campaign end date. */
+			__( '%1$s – %2$s', 'laao-advertiser-portal' ),
+			$from,
+			(string) wp_date( $format, $end )
+		);
+	}
+
+	/**
+	 * The status's human label, from the registered status itself.
+	 *
+	 * @param string $status Status slug.
+	 * @return string
+	 */
+	private function status_label( string $status ): string {
+		$object = get_post_status_object( $status );
+
+		return null === $object ? $status : (string) $object->label;
+	}
+
+	/**
+	 * The pill modifier a status renders with.
+	 *
+	 * A campaign's colour is derived from its status here, once. Deriving it in
+	 * each template is how "paused" ends up green on one screen and grey on
+	 * another.
+	 *
+	 * @param string $status Status slug.
+	 * @return string
+	 */
+	public static function pill_for( string $status ): string {
+		if ( in_array( $status, Post_Statuses::published(), true ) ) {
+			return Post_Statuses::PAUSED === $status ? 'pending' : 'live';
+		}
+
+		return match ( $status ) {
+			Post_Statuses::APPROVED  => 'live',
+			Post_Statuses::SUBMITTED,
+			Post_Statuses::REVIEW,
+			Post_Statuses::CHANGES   => 'pending',
+			Post_Statuses::COMPLETE  => 'ended',
+			Post_Statuses::REJECTED,
+			Post_Statuses::CANCELLED => 'danger',
+			default                  => 'neutral',
+		};
+	}
+}

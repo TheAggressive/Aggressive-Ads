@@ -23,6 +23,7 @@ use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
 use LAAO_Advertiser_Portal\Repository\Creative_Repository;
 use LAAO_Advertiser_Portal\Repository\Org_Repository;
 use LAAO_Advertiser_Portal\Portal\Router;
+use LAAO_Advertiser_Portal\Portal\View_Data;
 use LAAO_Advertiser_Portal\REST\Campaigns_Controller;
 use LAAO_Advertiser_Portal\REST\Creative_Controller;
 use LAAO_Advertiser_Portal\REST\Creative_File_Controller;
@@ -297,6 +298,16 @@ final class Plugin {
 		$this->container->register(
 			Router::class,
 			static fn (): Router => new Router()
+		);
+
+		$this->container->register(
+			View_Data::class,
+			static fn ( Service_Container $c ): View_Data => new View_Data(
+				$c->get( Campaign_Repository::class ),
+				$c->get( Placement_Repository::class ),
+				$c->get( Creative_Repository::class ),
+				$c->get( Org_Repository::class )
+			)
 		);
 
 		$this->container->register(

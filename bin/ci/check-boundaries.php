@@ -14,16 +14,21 @@
  *   2. AdSanity appears only in inc/Integration/Adsanity/.
  *   3. inc/Domain/ calls no WordPress function at all.
  *
+ * templates/ is walked under the same rules. It is the layer most likely to
+ * reach for get_post_meta() — the data is right there and the template is
+ * already rendering the post — and it is the layer where doing so is least
+ * visible in review.
+ *
  * @package LAAO_Advertiser_Portal
  */
 
 declare(strict_types=1);
 
-$root = dirname( __DIR__, 2 );
-$inc  = $root . '/inc';
+$root  = dirname( __DIR__, 2 );
+$roots = array_values( array_filter( array( $root . '/inc', $root . '/templates' ), 'is_dir' ) );
 
-if ( ! is_dir( $inc ) ) {
-	echo "check-boundaries: ok (no inc/ yet)\n";
+if ( array() === $roots ) {
+	echo "check-boundaries: ok (nothing to scan yet)\n";
 	exit( 0 );
 }
 
@@ -103,7 +108,13 @@ function has_prefix( string $name, array $prefixes ): bool {
 	return false;
 }
 
-foreach ( php_files( $inc ) as $path ) {
+$paths = array();
+
+foreach ( $roots as $dir ) {
+	$paths = array_merge( $paths, php_files( $dir ) );
+}
+
+foreach ( $paths as $path ) {
 	$relative      = ltrim( str_replace( $root, '', $path ), '/' );
 	$in_repository = str_starts_with( $relative, 'inc/Repository/' );
 	$in_adsanity   = str_starts_with( $relative, 'inc/Integration/Adsanity/' );

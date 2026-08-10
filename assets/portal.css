@@ -1,8 +1,11 @@
 /*
  * Portal styles.
  *
+ * Implements the LAArtsOnline advertiser portal design: a dark rail, a warm
+ * paper canvas, and Archivo set heavy for headings.
+ *
  * Every token carries a literal value. Nothing resolves through
- * --wp--preset--* , because Twenty Twenty-Five and the LAAO theme expose
+ * --wp--preset--*, because Twenty Twenty-Five and the LAAO theme expose
  * different preset names — a token defined as var(--wp--preset--color--primary)
  * renders correctly on one and as *nothing* on the other, and an unresolved
  * custom property in a colour declaration is transparent text on a transparent
@@ -19,81 +22,120 @@
 
 @layer laao-ads-tokens {
 	.laao-ads-portal {
-		/* Surfaces and text. Contrast verified against WCAG 2.2 AA. */
+		/* Canvas and surfaces. */
+		--laao-ads-color-canvas: #f7f4ee;
 		--laao-ads-color-surface: #ffffff;
-		--laao-ads-color-surface-raised: #f6f7f9;
-		--laao-ads-color-surface-sunken: #eceef1;
-		--laao-ads-color-text: #16191d;
-		--laao-ads-color-text-muted: #5a6270;
-		--laao-ads-color-accent: #7a1f2b;
+		--laao-ads-color-surface-raised: #faf9f6;
+		--laao-ads-color-surface-sunken: #efede7;
+		--laao-ads-color-surface-inset: #eceae4;
+
+		/* Ink. */
+		--laao-ads-color-text: #111214;
+		--laao-ads-color-text-body: #4a4844;
+		/* 4.55:1 on the inset surface the empty state uses, its worst pairing. */
+		--laao-ads-color-text-muted: #6d695f;
+		/*
+		 * Darker than the design's #8a8676, which measured 3.65:1 on white and
+		 * 3.12:1 on the sunken surface. It carries table headers and stat
+		 * labels — 11px uppercase, the smallest text in the system, and the
+		 * least forgiving of low contrast. WCAG 2.2 AA wants 4.5:1 for text
+		 * this size and every pairing now clears it.
+		 */
+		--laao-ads-color-text-subtle: #6d6a5d;
+
+		--laao-ads-border-color: #e3dfd4;
+		--laao-ads-border-color-strong: #d8d4c8;
+
+		/*
+		 * The accent. The design offers four; this is the default, and it is
+		 * the one place to change it — every accented surface reads this token
+		 * rather than repeating a hex.
+		 */
+		--laao-ads-color-accent: #ff3b2f;
+		/*
+		 * The same red, dark enough to carry white text.
+		 *
+		 * White on #ff3b2f is 3.55:1 — fine behind an icon, a failure behind a
+		 * 14px button label. Buttons read this one; the rail chip and the focus
+		 * ring keep the brighter accent, because neither is text.
+		 */
+		--laao-ads-color-accent-strong: #e90d00;
 		--laao-ads-color-accent-contrast: #ffffff;
-		--laao-ads-color-success: #1c6b3f;
-		--laao-ads-color-warning: #8a5a00;
-		--laao-ads-color-danger: #a01722;
-		--laao-ads-border-color: #d3d7de;
 
-		--laao-ads-radius-panel: 10px;
-		--laao-ads-radius-control: 6px;
-		--laao-ads-shadow-panel: 0 1px 2px rgb(16 25 45 / 6%), 0 8px 24px rgb(16 25 45 / 6%);
+		/* The rail. */
+		--laao-ads-color-rail: #111214;
+		--laao-ads-color-rail-active: #1d1d20;
+		--laao-ads-color-rail-chip: #26262a;
+		--laao-ads-color-rail-text: #b9b6ac;
+		--laao-ads-color-rail-text-strong: #ffffff;
 
-		/* A single top z-index, so dialog stacking has one source of truth
-		   rather than an escalating series of magic numbers. */
-		--laao-ads-z-dialog: 1000;
+		/*
+		 * Status. Each pairs an ink with the tint it sits on.
+		 *
+		 * The inks are darker than the design's. A pill is 12px bold, which is
+		 * not "large text" under WCAG — it needs 4.5:1, and the original pairs
+		 * measured between 2.61:1 and 4.35:1. The tints are untouched, so the
+		 * screens still read as the design intended.
+		 */
+		--laao-ads-color-live: #1a7a4d;
+		--laao-ads-color-live-tint: #e3f3ea;
+		--laao-ads-color-pending: #91630d;
+		--laao-ads-color-pending-tint: #fbf0dc;
+		--laao-ads-color-neutral: #6c685e;
+		--laao-ads-color-neutral-tint: #eceae4;
+		--laao-ads-color-ended: #6d6a5d;
+		--laao-ads-color-ended-tint: #efede7;
+		--laao-ads-color-danger: #c03826;
+		--laao-ads-color-danger-tint: #fbe7e3;
 
-		/* 44px is the WCAG 2.2 target minimum. Controls ask for this rather
-		   than each deciding their own hit area. */
-		--laao-ads-control-min: 44px;
+		--laao-ads-radius-panel: 12px;
+		--laao-ads-radius-control: 8px;
+		--laao-ads-radius-small: 6px;
+		--laao-ads-radius-pill: 999px;
 
-		--laao-ads-space-xs: 0.25rem;
-		--laao-ads-space-sm: 0.5rem;
+		--laao-ads-space-2xs: 0.25rem;
+		--laao-ads-space-xs: 0.5rem;
+		--laao-ads-space-sm: 0.75rem;
 		--laao-ads-space-md: 1rem;
 		--laao-ads-space-lg: 1.5rem;
-		--laao-ads-space-xl: 2.5rem;
+		--laao-ads-space-xl: 2rem;
+		--laao-ads-space-2xl: 2.5rem;
 
+		--laao-ads-rail-width: 232px;
 		--laao-ads-measure: 68ch;
-		--laao-ads-font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+		/*
+		 * Archivo is named but never fetched from a third party. A Google Fonts
+		 * link would send every advertiser's IP to Google on every screen,
+		 * which is a live data-protection question for an EU visitor and an
+		 * external render-blocking request besides. It is SIL OFL, so
+		 * self-hosting the woff2 is permitted and is the intended follow-up;
+		 * until then the system stack carries the layout, which it does
+		 * perfectly well at these weights.
+		 */
+		--laao-ads-font: "Archivo", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+		--laao-ads-control-min: 44px;
 
 		--laao-ads-duration-fast: 120ms;
-		--laao-ads-duration-slow: 240ms;
 	}
 
-	@media (prefers-color-scheme: dark) {
-		.laao-ads-portal:not([data-laao-ads-theme="light"]) {
-			--laao-ads-color-surface: #14171b;
-			--laao-ads-color-surface-raised: #1c2026;
-			--laao-ads-color-surface-sunken: #0f1216;
-			--laao-ads-color-text: #eef1f4;
-			--laao-ads-color-text-muted: #a3acb9;
-			--laao-ads-color-accent: #e8909b;
-			--laao-ads-color-accent-contrast: #14171b;
-			--laao-ads-color-success: #6fd39b;
-			--laao-ads-color-warning: #e3b463;
-			--laao-ads-color-danger: #f0929a;
-			--laao-ads-border-color: #333a44;
-			--laao-ads-shadow-panel: 0 1px 2px rgb(0 0 0 / 40%), 0 8px 24px rgb(0 0 0 / 30%);
-		}
-	}
-
-	/* Reduced motion zeroes both duration tokens in one place, so no component
-	   has to remember. */
 	@media (prefers-reduced-motion: reduce) {
 		.laao-ads-portal {
 			--laao-ads-duration-fast: 0ms;
-			--laao-ads-duration-slow: 0ms;
 		}
 	}
 }
 
 @layer laao-ads-reset {
-	/*
-	 * Scoped to the portal, never global. A plugin that restyles `body` is a
-	 * plugin that breaks the host site.
-	 */
+	/* Scoped to the portal, never global: a plugin that restyles `body` is a
+	   plugin that breaks the host site. */
 	.laao-ads-portal {
 		margin: 0;
-		background: var(--laao-ads-color-surface-sunken);
+		background: var(--laao-ads-color-canvas);
 		color: var(--laao-ads-color-text);
 		font-family: var(--laao-ads-font);
+		font-size: 15px;
 		line-height: 1.55;
 		-webkit-text-size-adjust: 100%;
 	}
@@ -109,52 +151,76 @@
 		height: auto;
 	}
 
-	/* Never removed without a replacement at least as visible. */
 	.laao-ads-portal :focus-visible {
 		outline: 3px solid var(--laao-ads-color-accent);
 		outline-offset: 2px;
-		border-radius: var(--laao-ads-radius-control);
+		border-radius: var(--laao-ads-radius-small);
 	}
 }
 
 @layer laao-ads-layout {
 	.laao-ads-shell {
 		display: flex;
-		flex-direction: column;
 		min-height: 100vh;
 		min-height: 100dvh;
 	}
 
-	.laao-ads-masthead {
+	.laao-ads-rail {
+		display: flex;
+		flex-direction: column;
+		gap: var(--laao-ads-space-2xs);
+		flex-shrink: 0;
+		width: var(--laao-ads-rail-width);
+		padding: var(--laao-ads-space-lg) var(--laao-ads-space-md);
+		background: var(--laao-ads-color-rail);
+		color: var(--laao-ads-color-rail-text);
+	}
+
+	.laao-ads-body {
+		display: flex;
+		flex: 1;
+		flex-direction: column;
+		min-width: 0;
+	}
+
+	.laao-ads-topbar {
 		display: flex;
 		flex-wrap: wrap;
 		gap: var(--laao-ads-space-md);
 		align-items: center;
 		justify-content: space-between;
-		padding: var(--laao-ads-space-md) var(--laao-ads-space-lg);
+		min-height: 64px;
+		padding: var(--laao-ads-space-sm) var(--laao-ads-space-2xl);
 		background: var(--laao-ads-color-surface);
 		border-bottom: 1px solid var(--laao-ads-border-color);
 	}
 
 	.laao-ads-main {
 		flex: 1;
-		width: 100%;
-		max-width: 72rem;
-		margin-inline: auto;
-		padding: var(--laao-ads-space-xl) var(--laao-ads-space-lg);
+		padding: var(--laao-ads-space-2xl);
 	}
 
-	/* Focus moves here between screens, and an outline on a full-width main
-	   is noise rather than information. */
 	.laao-ads-main:focus {
 		outline: none;
 	}
 
-	.laao-ads-colophon {
-		padding: var(--laao-ads-space-lg);
-		color: var(--laao-ads-color-text-muted);
-		text-align: center;
-		font-size: 0.875rem;
+	/* The rail becomes a horizontal strip before it becomes a hamburger. A
+	   five-item nav does not need a disclosure widget. */
+	@media (max-width: 782px) {
+		.laao-ads-shell {
+			flex-direction: column;
+		}
+
+		.laao-ads-rail {
+			width: 100%;
+			flex-direction: row;
+			flex-wrap: wrap;
+			align-items: center;
+		}
+
+		.laao-ads-main {
+			padding: var(--laao-ads-space-lg) var(--laao-ads-space-md);
+		}
 	}
 }
 
@@ -162,35 +228,46 @@
 	.laao-ads-skip {
 		position: absolute;
 		left: -9999px;
-		padding: var(--laao-ads-space-sm) var(--laao-ads-space-md);
+		padding: var(--laao-ads-space-xs) var(--laao-ads-space-md);
 		background: var(--laao-ads-color-accent);
 		color: var(--laao-ads-color-accent-contrast);
+		border-radius: var(--laao-ads-radius-control);
 	}
 
 	.laao-ads-skip:focus {
-		left: var(--laao-ads-space-sm);
-		top: var(--laao-ads-space-sm);
-		z-index: var(--laao-ads-z-dialog);
+		left: var(--laao-ads-space-xs);
+		top: var(--laao-ads-space-xs);
+		z-index: 100;
 	}
 
 	.laao-ads-brand {
-		display: flex;
-		flex-direction: column;
-		font-weight: 700;
-		color: inherit;
+		display: block;
+		margin-bottom: var(--laao-ads-space-lg);
+		padding: 0 var(--laao-ads-space-xs);
+		color: var(--laao-ads-color-rail-text-strong);
 		text-decoration: none;
 	}
 
+	.laao-ads-brand__mark {
+		font-size: 22px;
+		font-weight: 900;
+		letter-spacing: -0.5px;
+	}
+
 	.laao-ads-brand__sub {
-		font-weight: 400;
-		font-size: 0.8125rem;
-		color: var(--laao-ads-color-text-muted);
+		display: block;
+		margin-top: 2px;
+		font-size: 10px;
+		font-weight: 600;
+		letter-spacing: 1.5px;
+		text-transform: uppercase;
+		color: var(--laao-ads-color-text-subtle);
 	}
 
 	.laao-ads-nav__list {
 		display: flex;
-		flex-wrap: wrap;
-		gap: var(--laao-ads-space-xs);
+		flex-direction: column;
+		gap: var(--laao-ads-space-2xs);
 		margin: 0;
 		padding: 0;
 		list-style: none;
@@ -199,72 +276,351 @@
 	.laao-ads-nav__link {
 		display: flex;
 		align-items: center;
+		gap: var(--laao-ads-space-sm);
 		min-height: var(--laao-ads-control-min);
-		padding-inline: var(--laao-ads-space-md);
+		padding: var(--laao-ads-space-xs);
 		border-radius: var(--laao-ads-radius-control);
-		color: var(--laao-ads-color-text-muted);
+		color: var(--laao-ads-color-rail-text);
+		font-size: 14px;
+		font-weight: 600;
 		text-decoration: none;
 		transition: background var(--laao-ads-duration-fast) ease;
 	}
 
-	.laao-ads-nav__link:hover {
-		background: var(--laao-ads-color-surface-raised);
-		color: var(--laao-ads-color-text);
+	.laao-ads-nav__icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-shrink: 0;
+		width: 28px;
+		height: 28px;
+		border-radius: var(--laao-ads-radius-control);
+		background: var(--laao-ads-color-rail-chip);
+		color: var(--laao-ads-color-rail-text);
 	}
 
 	/*
-	 * Keyed off aria-current, not a separate class. The visual state and the
+	 * The icon inherits currentColor from its chip, so the active and hover
+	 * states above recolour the stroke without a second rule.
+	 */
+	.laao-ads-icon {
+		display: block;
+		width: 18px;
+		height: 18px;
+	}
+
+	.laao-ads-nav__link:hover {
+		background: var(--laao-ads-color-rail-active);
+		color: var(--laao-ads-color-rail-text-strong);
+	}
+
+	/*
+	 * Keyed off aria-current, not a parallel class. The visual state and the
 	 * announced state then cannot disagree — which they do the moment a
 	 * template sets one and forgets the other.
 	 */
 	.laao-ads-nav__link[aria-current="page"] {
-		background: var(--laao-ads-color-surface-sunken);
-		color: var(--laao-ads-color-text);
-		font-weight: 600;
+		background: var(--laao-ads-color-rail-active);
+		color: var(--laao-ads-color-rail-text-strong);
+	}
+
+	.laao-ads-nav__link[aria-current="page"] .laao-ads-nav__icon {
+		background: var(--laao-ads-color-accent);
+		color: var(--laao-ads-color-accent-contrast);
+	}
+
+	.laao-ads-org {
+		display: flex;
+		align-items: center;
+		gap: var(--laao-ads-space-xs);
+		font-size: 14px;
+		font-weight: 700;
+	}
+
+	.laao-ads-topbar__actions {
+		display: flex;
+		align-items: center;
+		gap: var(--laao-ads-space-md);
+		font-size: 13px;
+	}
+
+	.laao-ads-avatar {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 34px;
+		height: 34px;
+		border-radius: 50%;
+		background: var(--laao-ads-color-accent);
+		color: var(--laao-ads-color-accent-contrast);
+		font-size: 13px;
+		font-weight: 800;
+	}
+
+	.laao-ads-pagehead {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--laao-ads-space-lg);
+		align-items: flex-end;
+		justify-content: space-between;
+		margin-bottom: var(--laao-ads-space-xl);
 	}
 
 	.laao-ads-title {
-		margin: 0 0 var(--laao-ads-space-lg);
-		font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2rem);
-		line-height: 1.2;
+		margin: 0;
+		font-size: clamp(1.5rem, 1.2rem + 1.4vw, 2rem);
+		font-weight: 800;
+		letter-spacing: -0.5px;
+		line-height: 1.15;
 	}
 
 	.laao-ads-lede {
 		max-width: var(--laao-ads-measure);
-		margin: 0 0 var(--laao-ads-space-lg);
+		margin: var(--laao-ads-space-xs) 0 0;
 		color: var(--laao-ads-color-text-muted);
 	}
 
 	.laao-ads-panel {
+		margin-bottom: var(--laao-ads-space-lg);
+		background: var(--laao-ads-color-surface);
+		border: 1px solid var(--laao-ads-border-color);
+		border-radius: var(--laao-ads-radius-panel);
+		overflow: hidden;
+	}
+
+	.laao-ads-panel__head {
+		padding: var(--laao-ads-space-md) var(--laao-ads-space-lg);
+		border-bottom: 1px solid var(--laao-ads-border-color);
+		font-size: 16px;
+		font-weight: 700;
+	}
+
+	.laao-ads-stats {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+		gap: var(--laao-ads-space-md);
+		margin-bottom: var(--laao-ads-space-lg);
+	}
+
+	.laao-ads-stat {
 		padding: var(--laao-ads-space-lg);
 		background: var(--laao-ads-color-surface);
 		border: 1px solid var(--laao-ads-border-color);
 		border-radius: var(--laao-ads-radius-panel);
-		box-shadow: var(--laao-ads-shadow-panel);
 	}
 
-	.laao-ads-panel__title {
-		margin: 0 0 var(--laao-ads-space-md);
-		font-size: 1.125rem;
+	.laao-ads-stat__label {
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 1px;
+		text-transform: uppercase;
+		color: var(--laao-ads-color-text-subtle);
 	}
 
-	.laao-ads-empty {
-		margin: 0;
+	.laao-ads-stat__value {
+		margin-top: var(--laao-ads-space-xs);
+		font-size: 30px;
+		font-weight: 800;
+		line-height: 1.1;
+	}
+
+	.laao-ads-table {
+		width: 100%;
+		border-collapse: collapse;
+	}
+
+	.laao-ads-table th {
+		padding: var(--laao-ads-space-sm) var(--laao-ads-space-lg);
+		background: var(--laao-ads-color-surface-sunken);
+		border-bottom: 1px solid var(--laao-ads-border-color);
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.5px;
+		text-transform: uppercase;
+		color: var(--laao-ads-color-text-subtle);
+		text-align: left;
+	}
+
+	.laao-ads-table td {
+		padding: var(--laao-ads-space-md) var(--laao-ads-space-lg);
+		border-bottom: 1px solid var(--laao-ads-border-color);
+		font-size: 13px;
 		color: var(--laao-ads-color-text-muted);
+		vertical-align: top;
+	}
+
+	.laao-ads-table tr:last-child td {
+		border-bottom: 0;
+	}
+
+	.laao-ads-table__primary {
+		font-size: 14px;
+		font-weight: 700;
+		color: var(--laao-ads-color-text);
+	}
+
+	.laao-ads-table__primary a {
+		color: inherit;
+	}
+
+	/*
+	 * Destination URLs are advertiser-supplied and arbitrarily long. Breaking
+	 * anywhere is what keeps one pasted tracking URL from widening the whole
+	 * table past the panel.
+	 */
+	.laao-ads-table__url {
+		max-width: 22rem;
+		overflow-wrap: anywhere;
+		color: var(--laao-ads-color-text-muted);
+	}
+
+	/* A table is a table. It scrolls inside its own panel rather than making
+	   the page scroll sideways on a phone. */
+	.laao-ads-tablewrap {
+		overflow-x: auto;
+	}
+
+	/*
+	 * Status carries text, never colour alone. The pill's own word is the
+	 * information; the tint is emphasis.
+	 */
+	.laao-ads-pill {
+		display: inline-block;
+		padding: 4px 10px;
+		border-radius: var(--laao-ads-radius-pill);
+		background: var(--laao-ads-color-neutral-tint);
+		color: var(--laao-ads-color-neutral);
+		font-size: 12px;
+		font-weight: 700;
+		white-space: nowrap;
+	}
+
+	/*
+	 * Named explicitly rather than relying on the base rule. View_Data returns
+	 * "neutral" as a real value, and a modifier that exists in PHP but not in
+	 * CSS is the kind of gap nobody notices until a status renders unstyled.
+	 */
+	.laao-ads-pill--neutral {
+		background: var(--laao-ads-color-neutral-tint);
+		color: var(--laao-ads-color-neutral);
+	}
+
+	.laao-ads-pill--live {
+		background: var(--laao-ads-color-live-tint);
+		color: var(--laao-ads-color-live);
+	}
+
+	.laao-ads-pill--pending {
+		background: var(--laao-ads-color-pending-tint);
+		color: var(--laao-ads-color-pending);
+	}
+
+	.laao-ads-pill--ended {
+		background: var(--laao-ads-color-ended-tint);
+		color: var(--laao-ads-color-ended);
+	}
+
+	.laao-ads-pill--danger {
+		background: var(--laao-ads-color-danger-tint);
+		color: var(--laao-ads-color-danger);
 	}
 
 	.laao-ads-button {
 		display: inline-flex;
 		align-items: center;
+		justify-content: center;
 		min-height: var(--laao-ads-control-min);
-		padding-inline: var(--laao-ads-space-lg);
-		background: var(--laao-ads-color-accent);
+		padding: 0 var(--laao-ads-space-lg);
+		background: var(--laao-ads-color-accent-strong);
 		color: var(--laao-ads-color-accent-contrast);
-		border: 0;
+		border: 1px solid transparent;
 		border-radius: var(--laao-ads-radius-control);
 		font: inherit;
-		font-weight: 600;
+		font-weight: 700;
+		font-size: 14px;
 		text-decoration: none;
+		white-space: nowrap;
 		cursor: pointer;
+	}
+
+
+	.laao-ads-empty {
+		margin: 0;
+		padding: var(--laao-ads-space-xl) var(--laao-ads-space-lg);
+		background: var(--laao-ads-color-surface-inset);
+		color: var(--laao-ads-color-text-muted);
+		text-align: center;
+	}
+
+	.laao-ads-empty__title {
+		margin: 0 0 var(--laao-ads-space-xs);
+		font-size: 16px;
+		font-weight: 700;
+		color: var(--laao-ads-color-text);
+	}
+
+	.laao-ads-notice {
+		margin-bottom: var(--laao-ads-space-lg);
+		padding: var(--laao-ads-space-md) var(--laao-ads-space-lg);
+		background: var(--laao-ads-color-pending-tint);
+		border-radius: var(--laao-ads-radius-control);
+		color: var(--laao-ads-color-text-body);
+	}
+
+	.laao-ads-notice p {
+		margin: 0;
+	}
+
+	.laao-ads-notice__head {
+		margin: 0 0 var(--laao-ads-space-xs);
+		font-size: 14px;
+		font-weight: 700;
+		color: var(--laao-ads-color-text);
+	}
+
+	.laao-ads-breadcrumb {
+		margin-bottom: var(--laao-ads-space-sm);
+		font-size: 13px;
+		font-weight: 600;
+	}
+
+	.laao-ads-breadcrumb a {
+		color: var(--laao-ads-color-text-muted);
+	}
+
+	/*
+	 * A description list, because that is what these are: term and value. The
+	 * grid is on the <dl> and each pair is wrapped in a <div>, which is the
+	 * only arrangement where dt/dd stay a valid pair and still lay out.
+	 */
+	.laao-ads-facts {
+		background: var(--laao-ads-color-surface-raised);
+		display: grid;
+		gap: var(--laao-ads-space-lg);
+		grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+		margin: 0;
+		padding: var(--laao-ads-space-lg);
+	}
+
+	.laao-ads-fact dt {
+		margin-bottom: 4px;
+		color: var(--laao-ads-color-text-subtle);
+		font-size: 12px;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+	}
+
+	.laao-ads-fact dd {
+		margin: 0;
+		color: var(--laao-ads-color-text);
+		font-size: 15px;
+		font-weight: 600;
+	}
+
+	.laao-ads-colophon {
+		padding: var(--laao-ads-space-lg) var(--laao-ads-space-2xl);
+		color: var(--laao-ads-color-text-subtle);
+		font-size: 13px;
 	}
 }
