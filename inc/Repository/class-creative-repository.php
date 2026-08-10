@@ -34,6 +34,12 @@ final class Creative_Repository {
 	public const META_TARGET_BLANK  = '_laao_ads_target_blank';
 	public const META_ATTACHMENT_ID = '_laao_ads_attachment_id';
 	public const META_PROVIDER_AD   = '_laao_ads_adsanity_ad_id';
+	public const META_PRIVATE_PATH  = '_laao_ads_private_path';
+	public const META_PRIVATE_TOKEN = '_laao_ads_private_token';
+	public const META_SHA256        = '_laao_ads_sha256';
+	public const META_MIME          = '_laao_ads_mime';
+	public const META_FILESIZE      = '_laao_ads_filesize';
+	public const META_ORIGINAL_NAME = '_laao_ads_original_name';
 
 	/**
 	 * A campaign cannot carry more creatives than this.
@@ -103,6 +109,86 @@ final class Creative_Repository {
 			'click_url'    => (string) get_post_meta( $creative_id, self::META_CLICK_URL, true ),
 			'alt_text'     => (string) get_post_meta( $creative_id, self::META_ALT_TEXT, true ),
 		);
+	}
+
+	/**
+	 * Everything the promoter needs about a creative's stored file.
+	 *
+	 * @param int $creative_id Creative post id.
+	 * @return array{path: string, sha256: string, mime: string, alt_text: string, name: string}|null
+	 */
+	public function storage_details( int $creative_id ): ?array {
+		if ( Post_Types::CREATIVE !== get_post_type( $creative_id ) ) {
+			return null;
+		}
+
+		return array(
+			'path'     => (string) get_post_meta( $creative_id, self::META_PRIVATE_PATH, true ),
+			'sha256'   => (string) get_post_meta( $creative_id, self::META_SHA256, true ),
+			'mime'     => (string) get_post_meta( $creative_id, self::META_MIME, true ),
+			'alt_text' => (string) get_post_meta( $creative_id, self::META_ALT_TEXT, true ),
+			'name'     => (string) get_post_meta( $creative_id, self::META_ORIGINAL_NAME, true ),
+		);
+	}
+
+	/**
+	 * Records where an accepted upload was stored, and what it is.
+	 *
+	 * Dimensions and MIME come from the server's own inspection of the bytes,
+	 * never from what the browser claimed.
+	 *
+	 * @param int                                                                                                                 $creative_id Creative post id.
+	 * @param array{path: string, token: string, sha256: string, bytes: int, mime: string, width: int, height: int, name: string} $upload      Accepted upload.
+	 * @return void
+	 */
+	public function record_upload( int $creative_id, array $upload ): void {
+		update_post_meta( $creative_id, self::META_PRIVATE_PATH, $upload['path'] );
+		update_post_meta( $creative_id, self::META_PRIVATE_TOKEN, $upload['token'] );
+		update_post_meta( $creative_id, self::META_SHA256, $upload['sha256'] );
+		update_post_meta( $creative_id, self::META_FILESIZE, $upload['bytes'] );
+		update_post_meta( $creative_id, self::META_MIME, $upload['mime'] );
+		update_post_meta( $creative_id, self::META_WIDTH, $upload['width'] );
+		update_post_meta( $creative_id, self::META_HEIGHT, $upload['height'] );
+		update_post_meta( $creative_id, self::META_ORIGINAL_NAME, $upload['name'] );
+	}
+
+	/**
+	 * Whether a creative already points at a real attachment.
+	 *
+	 * Checks the post actually exists rather than trusting the recorded id: an
+	 * attachment deleted from the library leaves the meta behind, and a
+	 * promoted-but-missing creative must be promoted again rather than
+	 * published with nothing behind it.
+	 *
+	 * @param int $creative_id Creative post id.
+	 * @return bool
+	 */
+	public function has_attachment( int $creative_id ): bool {
+		$attachment_id = $this->attachment_id( $creative_id );
+
+		return $attachment_id > 0 && 'attachment' === get_post_type( $attachment_id );
+	}
+
+	/**
+	 * Sets an attachment's alternative text.
+	 *
+	 * @param int    $attachment_id Attachment id.
+	 * @param string $alt_text      Alternative text.
+	 * @return void
+	 */
+	public function set_attachment_alt_text( int $attachment_id, string $alt_text ): void {
+		update_post_meta( $attachment_id, '_wp_attachment_image_alt', $alt_text );
+	}
+
+	/**
+	 * Records the Media Library attachment a creative was promoted into.
+	 *
+	 * @param int $creative_id   Creative post id.
+	 * @param int $attachment_id Attachment id.
+	 * @return void
+	 */
+	public function set_attachment_id( int $creative_id, int $attachment_id ): void {
+		update_post_meta( $creative_id, self::META_ATTACHMENT_ID, $attachment_id );
 	}
 
 	/**

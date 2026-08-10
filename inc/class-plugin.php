@@ -22,8 +22,11 @@ use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
 use LAAO_Advertiser_Portal\Repository\Creative_Repository;
 use LAAO_Advertiser_Portal\Repository\Org_Repository;
 use LAAO_Advertiser_Portal\Repository\Placement_Repository;
+use LAAO_Advertiser_Portal\Storage\Private_Storage;
 use LAAO_Advertiser_Portal\Workflow\Campaign_State_Machine;
 use LAAO_Advertiser_Portal\Workflow\Campaign_Validator;
+use LAAO_Advertiser_Portal\Workflow\Creative_Promoter;
+use LAAO_Advertiser_Portal\Workflow\Creative_Uploader;
 use LAAO_Advertiser_Portal\Workflow\Transition_Guards;
 use LAAO_Advertiser_Portal\Security\Admin_Guard;
 use LAAO_Advertiser_Portal\Security\Ownership;
@@ -261,6 +264,26 @@ final class Plugin {
 					)
 				);
 			}
+		);
+
+		$this->container->register(
+			Private_Storage::class,
+			static fn (): Private_Storage => new Private_Storage()
+		);
+
+		$this->container->register(
+			Creative_Uploader::class,
+			static fn ( Service_Container $c ): Creative_Uploader => new Creative_Uploader(
+				$c->get( Private_Storage::class )
+			)
+		);
+
+		$this->container->register(
+			Creative_Promoter::class,
+			static fn ( Service_Container $c ): Creative_Promoter => new Creative_Promoter(
+				$c->get( Creative_Repository::class ),
+				$c->get( Private_Storage::class )
+			)
 		);
 
 		$this->container->register(
