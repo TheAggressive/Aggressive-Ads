@@ -38,6 +38,9 @@ fi
 
 run "php:wp"      pnpm ci:php:wp
 
+# Every lane above maps 1:1 onto a job in .github/workflows/ci.yml.
+# Adding one here without adding it there is how the two drift.
+#
 # Lanes landing with the phases that need them:
 #   frontend  — lint:js, lint:css, format:check, typecheck, test:js
 #   i18n      — POT drift and .mo compilation

@@ -180,9 +180,23 @@ final class Audit_Repository {
 	 * @return string
 	 */
 	private function actor_ip_hash(): string {
+		// phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.cache_constraints___SERVER__REMOTE_ADDR__, WordPressVIPMinimum.Variables.ServerVariables.UserControlledHeaders -- Validated as an IP two lines below, then hashed into an audit row. Never used for a caching, routing or authorization decision, and no forwarded-for header is consulted.
 		$remote = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
 
-		if ( '' === $remote ) {
+		/*
+		 * Validated before hashing, not merely sanitised.
+		 *
+		 * A hash of a malformed value is indistinguishable from a hash of a
+		 * real address once it is in the column: both are 64 hex characters,
+		 * and the log then answers "was this the same client?" with something
+		 * that was never a client at all. Refusing garbage keeps the empty
+		 * string meaning "we do not know" rather than "we hashed nonsense".
+		 *
+		 * Note this is the connecting address. Behind a proxy or CDN it is the
+		 * proxy's, and no forwarded-for header is trusted here — one that were
+		 * would let a caller choose what the audit log records about them.
+		 */
+		if ( '' === $remote || false === filter_var( $remote, FILTER_VALIDATE_IP ) ) {
 			return '';
 		}
 

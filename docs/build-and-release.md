@@ -25,7 +25,7 @@ Adding a lane means adding it to **both** the workflow and `bin/ci/verify.sh`. A
 | Gate | Standard |
 |---|---|
 | PHPStan | **Level 8, no baseline, no `ignoreErrors`** |
-| PHPCS | WordPress + `WordPressVIPMinimum.Security` + `.Performance` + PHPCompatibilityWP |
+| PHPCS | WordPress + **the full `WordPress-VIP-Go` standard** + PHPCompatibilityWP |
 | ESLint | Flat config, `--max-warnings 0` |
 | TypeScript | `strict`, `noUncheckedIndexedAccess`, `checkJs` |
 | Stylelint | `@wordpress/stylelint-config` |
@@ -36,13 +36,22 @@ Adding a lane means adding it to **both** the workflow and `bin/ci/verify.sh`. A
 `lint:files` bundles the structural gates that are not really lint:
 
 - file length
-- GitHub Actions pinned to SHAs
+- GitHub Actions pinned to SHAs, each carrying a version comment
+- every `ci:*` lane present in **both** the workflow and `verify.sh`
 - **no `get_posts` / `WP_Query` / `get_post_meta` / `$wpdb` outside `inc/Repository/`**
 - **no AdSanity identifiers outside `inc/Integration/Adsanity/`**
 - no `'permission_callback' => '__return_true'`
 - one top z-index token
 
 These enforce the architecture in [architecture.md](architecture.md). Conventions that are only written down erode; conventions that fail the build do not.
+
+### On the VIP standard
+
+The **whole** `WordPress-VIP-Go` standard runs, not a chosen subset. VIP's value is the sniffs nobody thinks to run; picking two categories means only ever meeting the bar you already knew about.
+
+This plugin is not hosted on WordPress VIP, so a small number of rules genuinely do not apply — they name VIP *platform* functions that are undefined elsewhere, and following them would fatal the plugin. Each is excluded individually in `phpcs.xml.dist` with the reason, and **no security or correctness rule is among them**. Today that list is one entry: `wpcom_vip_add_role()`.
+
+Filesystem sniffs are excluded for `tests/php/*` only. A test that proves a hostile upload is refused needs the file to exist on disk first; shipped code is not excluded and does not trip them.
 
 **Do not weaken a gate to get green.** Fix the cause, or change the rule deliberately with an ADR. Lowering PHPStan a level to ship on a Friday is a decision nobody remembers making by Monday.
 

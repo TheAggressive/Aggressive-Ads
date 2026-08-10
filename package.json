@@ -22,7 +22,7 @@
 		"lint:php": "composer run-script phpcs",
 		"lint:php:fix": "composer run-script phpcs:fix",
 		"analyse:php": "composer run-script analyse",
-		"lint:files": "bash bin/check-file-length.sh && bash bin/ci/check-repository-boundary.sh && bash bin/ci/check-permission-callbacks.sh",
+		"lint:files": "bash bin/check-file-length.sh && bash bin/ci/check-repository-boundary.sh && bash bin/ci/check-permission-callbacks.sh && bash bin/ci/check-action-pins.sh && bash bin/ci/check-ci-parity.sh",
 		"test:php:unit": "vendor/bin/phpunit",
 		"test:php:integration": "wp-env run tests-cli --env-cwd=wp-content/plugins/laao-advertiser-portal vendor/bin/phpunit -c phpunit-integration.xml.dist",
 		"ci:doctor": "node bin/ci/doctor.mjs",

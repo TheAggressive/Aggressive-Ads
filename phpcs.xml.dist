@@ -30,10 +30,28 @@
 		<exclude name="Universal.Arrays.DisallowShortArraySyntax"/>
 	</rule>
 
-	<!-- Security and correctness sniffs from the VIP standard, minus its
-	     platform-specific hosting restrictions which do not apply here. -->
-	<rule ref="WordPressVIPMinimum.Security"/>
-	<rule ref="WordPressVIPMinimum.Performance"/>
+	<!--
+		The full WordPress VIP standard.
+
+		Not the security-and-performance subset: VIP's value is the sniffs
+		nobody thinks to run, and picking two categories means only meeting the
+		bar you already knew about. The whole standard runs, and each exclusion
+		below is named individually with the reason it does not apply.
+
+		This plugin is not hosted on WordPress VIP. The exclusions are
+		therefore about VIP *platform* functions that do not exist here — using
+		them would fatal — and never about a security or correctness rule.
+	-->
+	<rule ref="WordPress-VIP-Go">
+		<!--
+			wpcom_vip_add_role() is a VIP platform function. On any other host
+			it is undefined, so following this sniff would fatal the plugin at
+			activation. Roles are installed by a version-driven installer that
+			removes before adding, which is the behaviour the sniff is
+			protecting: see docs/adr/0014-version-driven-idempotent-installer.md.
+		-->
+		<exclude name="WordPressVIPMinimum.Functions.RestrictedFunctions.custom_role_add_role"/>
+	</rule>
 
 	<!-- Forward/backward PHP compatibility. Matches composer platform (8.4). -->
 	<rule ref="PHPCompatibilityWP"/>
@@ -181,6 +199,22 @@
 		<exclude-pattern>tests/php/*</exclude-pattern>
 	</rule>
 	<rule ref="WordPress.DB.DirectDatabaseQuery">
+		<exclude-pattern>tests/php/*</exclude-pattern>
+	</rule>
+	<!--
+		VIP's filesystem rules describe VIP's filesystem, where only /tmp and
+		uploads are writable. Test fixtures write real files — a hostile upload
+		has to exist on disk before the uploader can refuse it — and they do so
+		through wp_tempnam(), which is the helper the rule points at. Shipped
+		code is not excluded and does not trip these.
+	-->
+	<rule ref="WordPressVIPMinimum.Functions.RestrictedFunctions.file_ops_file_put_contents">
+		<exclude-pattern>tests/php/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPressVIPMinimum.Functions.RestrictedFunctions.file_ops_unlink">
+		<exclude-pattern>tests/php/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPressVIPMinimum.Functions.RestrictedFunctions.file_ops_fwrite">
 		<exclude-pattern>tests/php/*</exclude-pattern>
 	</rule>
 	<!--
