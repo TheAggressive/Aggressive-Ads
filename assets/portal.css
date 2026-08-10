@@ -1,0 +1,270 @@
+/*
+ * Portal styles.
+ *
+ * Every token carries a literal value. Nothing resolves through
+ * --wp--preset--* , because Twenty Twenty-Five and the LAAO theme expose
+ * different preset names — a token defined as var(--wp--preset--color--primary)
+ * renders correctly on one and as *nothing* on the other, and an unresolved
+ * custom property in a colour declaration is transparent text on a transparent
+ * background. Not a degraded look; an unreadable screen.
+ *
+ * The LAAO theme may override any --laao-ads-* token to make the portal feel
+ * native. That is the only supported coupling, it runs one direction, and the
+ * portal is fully functional without it.
+ *
+ * See docs/adr/0017-self-contained-design-tokens.md.
+ */
+
+@layer laao-ads-tokens, laao-ads-reset, laao-ads-layout, laao-ads-components;
+
+@layer laao-ads-tokens {
+	.laao-ads-portal {
+		/* Surfaces and text. Contrast verified against WCAG 2.2 AA. */
+		--laao-ads-color-surface: #ffffff;
+		--laao-ads-color-surface-raised: #f6f7f9;
+		--laao-ads-color-surface-sunken: #eceef1;
+		--laao-ads-color-text: #16191d;
+		--laao-ads-color-text-muted: #5a6270;
+		--laao-ads-color-accent: #7a1f2b;
+		--laao-ads-color-accent-contrast: #ffffff;
+		--laao-ads-color-success: #1c6b3f;
+		--laao-ads-color-warning: #8a5a00;
+		--laao-ads-color-danger: #a01722;
+		--laao-ads-border-color: #d3d7de;
+
+		--laao-ads-radius-panel: 10px;
+		--laao-ads-radius-control: 6px;
+		--laao-ads-shadow-panel: 0 1px 2px rgb(16 25 45 / 6%), 0 8px 24px rgb(16 25 45 / 6%);
+
+		/* A single top z-index, so dialog stacking has one source of truth
+		   rather than an escalating series of magic numbers. */
+		--laao-ads-z-dialog: 1000;
+
+		/* 44px is the WCAG 2.2 target minimum. Controls ask for this rather
+		   than each deciding their own hit area. */
+		--laao-ads-control-min: 44px;
+
+		--laao-ads-space-xs: 0.25rem;
+		--laao-ads-space-sm: 0.5rem;
+		--laao-ads-space-md: 1rem;
+		--laao-ads-space-lg: 1.5rem;
+		--laao-ads-space-xl: 2.5rem;
+
+		--laao-ads-measure: 68ch;
+		--laao-ads-font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+
+		--laao-ads-duration-fast: 120ms;
+		--laao-ads-duration-slow: 240ms;
+	}
+
+	@media (prefers-color-scheme: dark) {
+		.laao-ads-portal:not([data-laao-ads-theme="light"]) {
+			--laao-ads-color-surface: #14171b;
+			--laao-ads-color-surface-raised: #1c2026;
+			--laao-ads-color-surface-sunken: #0f1216;
+			--laao-ads-color-text: #eef1f4;
+			--laao-ads-color-text-muted: #a3acb9;
+			--laao-ads-color-accent: #e8909b;
+			--laao-ads-color-accent-contrast: #14171b;
+			--laao-ads-color-success: #6fd39b;
+			--laao-ads-color-warning: #e3b463;
+			--laao-ads-color-danger: #f0929a;
+			--laao-ads-border-color: #333a44;
+			--laao-ads-shadow-panel: 0 1px 2px rgb(0 0 0 / 40%), 0 8px 24px rgb(0 0 0 / 30%);
+		}
+	}
+
+	/* Reduced motion zeroes both duration tokens in one place, so no component
+	   has to remember. */
+	@media (prefers-reduced-motion: reduce) {
+		.laao-ads-portal {
+			--laao-ads-duration-fast: 0ms;
+			--laao-ads-duration-slow: 0ms;
+		}
+	}
+}
+
+@layer laao-ads-reset {
+	/*
+	 * Scoped to the portal, never global. A plugin that restyles `body` is a
+	 * plugin that breaks the host site.
+	 */
+	.laao-ads-portal {
+		margin: 0;
+		background: var(--laao-ads-color-surface-sunken);
+		color: var(--laao-ads-color-text);
+		font-family: var(--laao-ads-font);
+		line-height: 1.55;
+		-webkit-text-size-adjust: 100%;
+	}
+
+	.laao-ads-portal *,
+	.laao-ads-portal *::before,
+	.laao-ads-portal *::after {
+		box-sizing: border-box;
+	}
+
+	.laao-ads-portal img {
+		max-width: 100%;
+		height: auto;
+	}
+
+	/* Never removed without a replacement at least as visible. */
+	.laao-ads-portal :focus-visible {
+		outline: 3px solid var(--laao-ads-color-accent);
+		outline-offset: 2px;
+		border-radius: var(--laao-ads-radius-control);
+	}
+}
+
+@layer laao-ads-layout {
+	.laao-ads-shell {
+		display: flex;
+		flex-direction: column;
+		min-height: 100vh;
+		min-height: 100dvh;
+	}
+
+	.laao-ads-masthead {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--laao-ads-space-md);
+		align-items: center;
+		justify-content: space-between;
+		padding: var(--laao-ads-space-md) var(--laao-ads-space-lg);
+		background: var(--laao-ads-color-surface);
+		border-bottom: 1px solid var(--laao-ads-border-color);
+	}
+
+	.laao-ads-main {
+		flex: 1;
+		width: 100%;
+		max-width: 72rem;
+		margin-inline: auto;
+		padding: var(--laao-ads-space-xl) var(--laao-ads-space-lg);
+	}
+
+	/* Focus moves here between screens, and an outline on a full-width main
+	   is noise rather than information. */
+	.laao-ads-main:focus {
+		outline: none;
+	}
+
+	.laao-ads-colophon {
+		padding: var(--laao-ads-space-lg);
+		color: var(--laao-ads-color-text-muted);
+		text-align: center;
+		font-size: 0.875rem;
+	}
+}
+
+@layer laao-ads-components {
+	.laao-ads-skip {
+		position: absolute;
+		left: -9999px;
+		padding: var(--laao-ads-space-sm) var(--laao-ads-space-md);
+		background: var(--laao-ads-color-accent);
+		color: var(--laao-ads-color-accent-contrast);
+	}
+
+	.laao-ads-skip:focus {
+		left: var(--laao-ads-space-sm);
+		top: var(--laao-ads-space-sm);
+		z-index: var(--laao-ads-z-dialog);
+	}
+
+	.laao-ads-brand {
+		display: flex;
+		flex-direction: column;
+		font-weight: 700;
+		color: inherit;
+		text-decoration: none;
+	}
+
+	.laao-ads-brand__sub {
+		font-weight: 400;
+		font-size: 0.8125rem;
+		color: var(--laao-ads-color-text-muted);
+	}
+
+	.laao-ads-nav__list {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--laao-ads-space-xs);
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.laao-ads-nav__link {
+		display: flex;
+		align-items: center;
+		min-height: var(--laao-ads-control-min);
+		padding-inline: var(--laao-ads-space-md);
+		border-radius: var(--laao-ads-radius-control);
+		color: var(--laao-ads-color-text-muted);
+		text-decoration: none;
+		transition: background var(--laao-ads-duration-fast) ease;
+	}
+
+	.laao-ads-nav__link:hover {
+		background: var(--laao-ads-color-surface-raised);
+		color: var(--laao-ads-color-text);
+	}
+
+	/*
+	 * Keyed off aria-current, not a separate class. The visual state and the
+	 * announced state then cannot disagree — which they do the moment a
+	 * template sets one and forgets the other.
+	 */
+	.laao-ads-nav__link[aria-current="page"] {
+		background: var(--laao-ads-color-surface-sunken);
+		color: var(--laao-ads-color-text);
+		font-weight: 600;
+	}
+
+	.laao-ads-title {
+		margin: 0 0 var(--laao-ads-space-lg);
+		font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2rem);
+		line-height: 1.2;
+	}
+
+	.laao-ads-lede {
+		max-width: var(--laao-ads-measure);
+		margin: 0 0 var(--laao-ads-space-lg);
+		color: var(--laao-ads-color-text-muted);
+	}
+
+	.laao-ads-panel {
+		padding: var(--laao-ads-space-lg);
+		background: var(--laao-ads-color-surface);
+		border: 1px solid var(--laao-ads-border-color);
+		border-radius: var(--laao-ads-radius-panel);
+		box-shadow: var(--laao-ads-shadow-panel);
+	}
+
+	.laao-ads-panel__title {
+		margin: 0 0 var(--laao-ads-space-md);
+		font-size: 1.125rem;
+	}
+
+	.laao-ads-empty {
+		margin: 0;
+		color: var(--laao-ads-color-text-muted);
+	}
+
+	.laao-ads-button {
+		display: inline-flex;
+		align-items: center;
+		min-height: var(--laao-ads-control-min);
+		padding-inline: var(--laao-ads-space-lg);
+		background: var(--laao-ads-color-accent);
+		color: var(--laao-ads-color-accent-contrast);
+		border: 0;
+		border-radius: var(--laao-ads-radius-control);
+		font: inherit;
+		font-weight: 600;
+		text-decoration: none;
+		cursor: pointer;
+	}
+}

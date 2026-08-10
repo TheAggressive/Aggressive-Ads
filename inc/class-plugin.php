@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace LAAO_Advertiser_Portal;
 
+use LAAO_Advertiser_Portal\Assets\Assets;
 use LAAO_Advertiser_Portal\Core\Post_Statuses;
 use LAAO_Advertiser_Portal\Core\Post_Types;
 use LAAO_Advertiser_Portal\Core\Service;
@@ -21,6 +22,7 @@ use LAAO_Advertiser_Portal\Integration\Adsanity\Placement_Mapping;
 use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
 use LAAO_Advertiser_Portal\Repository\Creative_Repository;
 use LAAO_Advertiser_Portal\Repository\Org_Repository;
+use LAAO_Advertiser_Portal\Portal\Router;
 use LAAO_Advertiser_Portal\REST\Creative_Controller;
 use LAAO_Advertiser_Portal\REST\Creative_File_Controller;
 use LAAO_Advertiser_Portal\REST\Transitions_Controller;
@@ -291,6 +293,18 @@ final class Plugin {
 		);
 
 		$this->container->register(
+			Router::class,
+			static fn (): Router => new Router()
+		);
+
+		$this->container->register(
+			Assets::class,
+			static fn ( Service_Container $c ): Assets => new Assets(
+				$c->get( Router::class )
+			)
+		);
+
+		$this->container->register(
 			Rate_Limiter::class,
 			static fn ( Service_Container $c ): Rate_Limiter => new Rate_Limiter(
 				$c->get( Audit_Repository::class )
@@ -414,6 +428,12 @@ final class Plugin {
 
 			// REST last: routes are registered on rest_api_init, which fires
 			// well after this, so ordering here is about nothing but reading.
+			// The router registers rewrite rules on init, so it has to be
+			// initialized before init runs — which is why services are
+			// initialized at plugins_loaded rather than later.
+			Router::class,
+			Assets::class,
+
 			Creative_File_Controller::class,
 			Creative_Controller::class,
 			Transitions_Controller::class,
