@@ -17,6 +17,8 @@ use LAAO_Advertiser_Portal\Integration\Adsanity\Placement_Mapping;
 use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
 use LAAO_Advertiser_Portal\Repository\Creative_Repository;
 use LAAO_Advertiser_Portal\Repository\Placement_Repository;
+use LAAO_Advertiser_Portal\Storage\Private_Storage;
+use LAAO_Advertiser_Portal\Workflow\Creative_Promoter;
 use WP_Error;
 use WP_UnitTestCase;
 
@@ -79,7 +81,8 @@ final class AdPublisherTest extends WP_UnitTestCase {
 			$this->campaigns,
 			$this->creatives,
 			$placements,
-			new Placement_Mapping( $placements )
+			new Placement_Mapping( $placements ),
+			new Creative_Promoter( new Creative_Repository(), new Private_Storage() )
 		);
 
 		$term = wp_insert_term( '728x90 Header', Adsanity::TAXONOMY );
@@ -301,7 +304,7 @@ final class AdPublisherTest extends WP_UnitTestCase {
 		$this->assertFalse( $result->is_complete() );
 		$this->assertTrue( $result->has_published() );
 		$this->assertArrayHasKey( $bad, $result->failures() );
-		$this->assertSame( 'missing_attachment', $result->failures()[ $bad ] );
+		$this->assertSame( 'laao_ads_creative_file_missing', $result->failures()[ $bad ] );
 
 		$ad_id = $result->created_ids()[ $good ];
 		$this->assertGreaterThan( 0, $ad_id );
@@ -347,7 +350,95 @@ final class AdPublisherTest extends WP_UnitTestCase {
 
 		$result = $this->publisher->publish_campaign( $campaign );
 
-		$this->assertSame( 'missing_attachment', $result->failures()[ $creative ] );
+		$this->assertSame( 'laao_ads_creative_file_missing', $result->failures()[ $creative ] );
+	}
+
+	/**
+	 * **Publishing promotes the creative, rather than requiring somebody else
+	 * to have done it.**
+	 *
+	 * This is the regression test for a real gap: every piece of the approval
+	 * path passed in isolation, but nothing called the promoter, so
+	 * attachment_id stayed 0 and publication always failed with a missing
+	 * attachment. Each part was tested; the seam between them was not.
+	 *
+	 * @return void
+	 */
+	public function test_publishing_promotes_the_creative_itself(): void {
+		$campaign = $this->campaign();
+		$creative = $this->stored_creative( $campaign );
+
+		$this->assertSame(
+			0,
+			$this->creatives->attachment_id( $creative ),
+			'Test precondition: nothing has promoted this creative yet.'
+		);
+
+		$result = $this->publisher->publish_campaign( $campaign );
+
+		$this->assertNotInstanceOf( WP_Error::class, $result );
+		$this->assertTrue( $result->is_complete(), 'Failures: ' . implode( ', ', $result->failures() ) );
+
+		$attachment_id = $this->creatives->attachment_id( $creative );
+
+		$this->assertGreaterThan( 0, $attachment_id, 'Publishing did not promote the creative.' );
+		$this->assertSame( 'attachment', get_post_type( $attachment_id ) );
+		$this->assertSame( $attachment_id, (int) get_post_thumbnail_id( $result->ad_ids()[0] ) );
+	}
+
+	/**
+	 * Creates a creative with a real file in private storage, unpromoted.
+	 *
+	 * @param int $campaign_id Owning campaign.
+	 * @return int
+	 */
+	private function stored_creative( int $campaign_id ): int {
+		$image = imagecreatetruecolor( 728, 90 );
+
+		ob_start();
+		imagepng( $image );
+		$bytes = (string) ob_get_clean();
+
+		$temp = wp_tempnam( 'laao-ads-publish' );
+		file_put_contents( $temp, $bytes );
+
+		$storage  = new Private_Storage();
+		$accepted = ( new \LAAO_Advertiser_Portal\Workflow\Creative_Uploader( $storage ) )->accept(
+			array(
+				'name'     => 'poster.png',
+				'tmp_name' => $temp,
+				'error'    => UPLOAD_ERR_OK,
+				'size'     => strlen( $bytes ),
+			)
+		);
+
+		$this->assertIsArray( $accepted );
+
+		$creative_id = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::CREATIVE,
+				'post_status' => 'publish',
+			)
+		);
+
+		$this->creatives->record_upload( $creative_id, $accepted );
+
+		foreach (
+			array(
+				Creative_Repository::META_CAMPAIGN_ID  => $campaign_id,
+				Creative_Repository::META_PLACEMENT_ID => $this->placement_id,
+				Creative_Repository::META_KIND         => 'image',
+				Creative_Repository::META_CLICK_URL    => 'https://example.com/tickets',
+			) as $key => $value
+		) {
+			update_post_meta( $creative_id, $key, $value );
+		}
+
+		if ( is_file( $temp ) ) {
+			unlink( $temp );
+		}
+
+		return $creative_id;
 	}
 
 	/**

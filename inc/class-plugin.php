@@ -364,7 +364,8 @@ final class Plugin {
 				$c->get( Campaign_Repository::class ),
 				$c->get( Creative_Repository::class ),
 				$c->get( Placement_Repository::class ),
-				$c->get( Placement_Mapping::class )
+				$c->get( Placement_Mapping::class ),
+				$c->get( Creative_Promoter::class )
 			)
 		);
 

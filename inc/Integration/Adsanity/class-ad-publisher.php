@@ -14,6 +14,7 @@ use LAAO_Advertiser_Portal\Domain\Transition_Table;
 use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
 use LAAO_Advertiser_Portal\Repository\Creative_Repository;
 use LAAO_Advertiser_Portal\Repository\Placement_Repository;
+use LAAO_Advertiser_Portal\Workflow\Creative_Promoter;
 use WP_Error;
 
 /**
@@ -49,12 +50,14 @@ final class Ad_Publisher {
 	 * @param Creative_Repository  $creatives  Creative persistence.
 	 * @param Placement_Repository $placements Placement persistence.
 	 * @param Placement_Mapping    $mapping    Ad-group resolution.
+	 * @param Creative_Promoter    $promoter   Private storage to Media Library.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
 		private readonly Creative_Repository $creatives,
 		private readonly Placement_Repository $placements,
-		private readonly Placement_Mapping $mapping
+		private readonly Placement_Mapping $mapping,
+		private readonly Creative_Promoter $promoter
 	) {
 	}
 
@@ -263,7 +266,24 @@ final class Ad_Publisher {
 	private function publish_creative( int $campaign_id, array $creative, array $groups, Publication_Result $result ): void {
 		$creative_id = $creative['id'];
 
-		$attachment_id = $this->creatives->attachment_id( $creative_id );
+		/*
+		 * Promotion is step 2 of the documented sequence, and it happens here
+		 * rather than in a caller so that a creative failing to promote is
+		 * recorded per-creative like any other failure — the campaign's other
+		 * ads still publish, and the retry reconciles them.
+		 *
+		 * It is also the sha256 re-verification: the bytes about to go on a
+		 * public site are proven to be the bytes somebody approved. A creative
+		 * already promoted returns its existing attachment, so a retried
+		 * approval does not duplicate anything.
+		 */
+		$attachment_id = $this->promoter->promote( $creative_id );
+
+		if ( is_wp_error( $attachment_id ) ) {
+			$result->failed( $creative_id, (string) $attachment_id->get_error_code() );
+
+			return;
+		}
 
 		if ( $attachment_id <= 0 ) {
 			$result->failed( $creative_id, 'missing_attachment' );

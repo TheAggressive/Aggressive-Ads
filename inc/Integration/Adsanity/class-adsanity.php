@@ -137,16 +137,4 @@ final class Adsanity {
 
 		return $term instanceof \WP_Term;
 	}
-
-	/**
-	 * An ad-group's name, for error messages staff will read.
-	 *
-	 * @param int $term_id Term id.
-	 * @return string
-	 */
-	public static function group_name( int $term_id ): string {
-		$term = get_term( $term_id, self::TAXONOMY );
-
-		return $term instanceof \WP_Term ? $term->name : '';
-	}
 }

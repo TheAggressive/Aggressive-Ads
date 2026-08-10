@@ -17,6 +17,8 @@ use LAAO_Advertiser_Portal\Integration\Adsanity\Placement_Mapping;
 use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
 use LAAO_Advertiser_Portal\Repository\Creative_Repository;
 use LAAO_Advertiser_Portal\Repository\Placement_Repository;
+use LAAO_Advertiser_Portal\Storage\Private_Storage;
+use LAAO_Advertiser_Portal\Workflow\Creative_Promoter;
 use WP_Error;
 use WP_UnitTestCase;
 
@@ -74,7 +76,8 @@ final class AdLifecycleTest extends WP_UnitTestCase {
 			$this->campaigns,
 			new Creative_Repository(),
 			$placements,
-			new Placement_Mapping( $placements )
+			new Placement_Mapping( $placements ),
+			new Creative_Promoter( new Creative_Repository(), new Private_Storage() )
 		);
 
 		$term = wp_insert_term( '728x90 Header', Adsanity::TAXONOMY );
