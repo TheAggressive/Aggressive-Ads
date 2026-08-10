@@ -16,6 +16,7 @@ use LAAO_Advertiser_Portal\Install\Installer;
 use LAAO_Advertiser_Portal\Install\Upgrader;
 use LAAO_Advertiser_Portal\Repository\Audit_Repository;
 use LAAO_Advertiser_Portal\Domain\Transition_Table;
+use LAAO_Advertiser_Portal\Integration\Adsanity\Ad_Publisher;
 use LAAO_Advertiser_Portal\Integration\Adsanity\Placement_Mapping;
 use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
 use LAAO_Advertiser_Portal\Repository\Creative_Repository;
@@ -263,11 +264,24 @@ final class Plugin {
 		);
 
 		$this->container->register(
+			Ad_Publisher::class,
+			static fn ( Service_Container $c ): Ad_Publisher => new Ad_Publisher(
+				$c->get( Campaign_Repository::class ),
+				$c->get( Creative_Repository::class ),
+				$c->get( Placement_Repository::class ),
+				$c->get( Placement_Mapping::class )
+			)
+		);
+
+		$this->container->register(
 			Campaign_State_Machine::class,
 			static fn ( Service_Container $c ): Campaign_State_Machine => new Campaign_State_Machine(
 				$c->get( Campaign_Repository::class ),
 				$c->get( Audit_Repository::class ),
-				$c->get( Transition_Guards::class )
+				$c->get( Transition_Guards::class ),
+				array(
+					Transition_Table::EFFECT_PUBLISH => $c->get( Ad_Publisher::class )->as_effect(),
+				)
 			)
 		);
 

@@ -39,13 +39,18 @@ Phase 1 (foundation) is **in progress**. What is built:
 - installer, version-driven upgrader with a tested migration walker, `uninstall.php`
 - org-scoped `Ownership::map()`, `Org_Repository`, `Admin_Guard`, `Portal\Routes`
 - `Domain\Transition_Table` — the 22 legal edges, with all 121 pairs asserted
+- `Campaign_State_Machine`, the campaign validator, and the campaign/creative/
+  placement repositories — submission works end to end
+- `Integration\Adsanity\` — the fail-closed placement resolver and the ad
+  publisher, with idempotent reconciliation and read-back verification
 - wp-env (dev `:9960`, tests `:9970`) and the integration/security/rest/upgrade suites
 - PHPCS / PHPStan / PHPUnit / structural guards, wired into `bin/ci/verify.sh`
 
-What does **not** exist yet, despite being described in `docs/`: the campaign,
-creative, placement and package repositories, the state machine, REST routes,
-the portal route and templates, any UI, any JavaScript toolchain, Playwright,
-the AdSanity adapter and its contract stub, i18n tooling, and packaging. `docs/` describes the design; `docs/roadmap.md` says which phase
+What does **not** exist yet, despite being described in `docs/`: creative upload
+and the two-stage private storage (so a creative has no attachment until one is
+set by hand), the package repository, unpublish/pause/resume, notifications,
+REST routes, the portal route and templates, any UI, any JavaScript toolchain,
+Playwright, i18n tooling, and packaging. `docs/` describes the design; `docs/roadmap.md` says which phase
 builds it. If a doc describes something you cannot find, it has not been built —
 that is expected, not a bug.
 

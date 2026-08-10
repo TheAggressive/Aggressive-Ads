@@ -205,6 +205,25 @@ final class Campaign_Repository {
 	}
 
 	/**
+	 * Records a provider ad id against the campaign, without duplicating it.
+	 *
+	 * Repeated meta, one row per ad, so a retry can see exactly what already
+	 * exists. Adding the same id twice would make "how many ads does this
+	 * campaign have?" wrong in the direction that hides a problem.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @param int $ad_id       Provider ad id.
+	 * @return void
+	 */
+	public function add_provider_ad_id( int $campaign_id, int $ad_id ): void {
+		if ( $ad_id <= 0 || in_array( $ad_id, $this->provider_ad_ids( $campaign_id ), true ) ) {
+			return;
+		}
+
+		add_post_meta( $campaign_id, self::META_ADSANITY_ID, $ad_id );
+	}
+
+	/**
 	 * The placements this campaign has selected.
 	 *
 	 * Repeated meta rather than a serialized array, so "which campaigns use

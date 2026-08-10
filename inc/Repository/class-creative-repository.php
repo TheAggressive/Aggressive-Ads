@@ -21,16 +21,19 @@ use LAAO_Advertiser_Portal\Core\Post_Types;
  */
 final class Creative_Repository {
 
-	public const META_CAMPAIGN_ID  = '_laao_ads_campaign_id';
-	public const META_ORG_ID       = '_laao_ads_org_id';
-	public const META_PLACEMENT_ID = '_laao_ads_placement_id';
-	public const META_SIZE         = '_laao_ads_size';
-	public const META_KIND         = '_laao_ads_kind';
-	public const META_WIDTH        = '_laao_ads_width';
-	public const META_HEIGHT       = '_laao_ads_height';
-	public const META_CLICK_URL    = '_laao_ads_click_url';
-	public const META_ALT_TEXT     = '_laao_ads_alt_text';
-	public const META_REVIEW_STATE = '_laao_ads_review_state';
+	public const META_CAMPAIGN_ID   = '_laao_ads_campaign_id';
+	public const META_ORG_ID        = '_laao_ads_org_id';
+	public const META_PLACEMENT_ID  = '_laao_ads_placement_id';
+	public const META_SIZE          = '_laao_ads_size';
+	public const META_KIND          = '_laao_ads_kind';
+	public const META_WIDTH         = '_laao_ads_width';
+	public const META_HEIGHT        = '_laao_ads_height';
+	public const META_CLICK_URL     = '_laao_ads_click_url';
+	public const META_ALT_TEXT      = '_laao_ads_alt_text';
+	public const META_REVIEW_STATE  = '_laao_ads_review_state';
+	public const META_TARGET_BLANK  = '_laao_ads_target_blank';
+	public const META_ATTACHMENT_ID = '_laao_ads_attachment_id';
+	public const META_PROVIDER_AD   = '_laao_ads_adsanity_ad_id';
 
 	/**
 	 * A campaign cannot carry more creatives than this.
@@ -100,6 +103,55 @@ final class Creative_Repository {
 			'click_url'    => (string) get_post_meta( $creative_id, self::META_CLICK_URL, true ),
 			'alt_text'     => (string) get_post_meta( $creative_id, self::META_ALT_TEXT, true ),
 		);
+	}
+
+	/**
+	 * The Media Library attachment backing a creative, or 0.
+	 *
+	 * Zero until the creative is promoted at approval: uploads live in private
+	 * storage and only become attachments once somebody has approved them.
+	 * See docs/adr/0010-two-stage-creative-storage.md.
+	 *
+	 * @param int $creative_id Creative post id.
+	 * @return int
+	 */
+	public function attachment_id( int $creative_id ): int {
+		return (int) get_post_meta( $creative_id, self::META_ATTACHMENT_ID, true );
+	}
+
+	/**
+	 * Whether the creative's destination should open in a new window.
+	 *
+	 * @param int $creative_id Creative post id.
+	 * @return bool
+	 */
+	public function opens_in_new_window( int $creative_id ): bool {
+		return 1 === (int) get_post_meta( $creative_id, self::META_TARGET_BLANK, true );
+	}
+
+	/**
+	 * The provider ad id published for this creative, or 0.
+	 *
+	 * @param int $creative_id Creative post id.
+	 * @return int
+	 */
+	public function provider_ad_id( int $creative_id ): int {
+		return (int) get_post_meta( $creative_id, self::META_PROVIDER_AD, true );
+	}
+
+	/**
+	 * Records the provider ad id for a creative.
+	 *
+	 * Written the moment each ad succeeds rather than once at the end, so a
+	 * failure partway through leaves the successes recorded and a retry
+	 * reconciles them instead of creating duplicates.
+	 *
+	 * @param int $creative_id Creative post id.
+	 * @param int $ad_id       Provider ad id.
+	 * @return void
+	 */
+	public function set_provider_ad_id( int $creative_id, int $ad_id ): void {
+		update_post_meta( $creative_id, self::META_PROVIDER_AD, $ad_id );
 	}
 
 	/**
