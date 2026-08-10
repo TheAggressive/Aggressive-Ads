@@ -302,8 +302,9 @@ final class Plugin {
 				$c->get( Campaign_Repository::class ),
 				$c->get( Audit_Repository::class ),
 				$c->get( Transition_Guards::class ),
-				array(
-					Transition_Table::EFFECT_PUBLISH => $c->get( Ad_Publisher::class )->as_effect(),
+				array_merge(
+					array( Transition_Table::EFFECT_PUBLISH => $c->get( Ad_Publisher::class )->as_effect() ),
+					$c->get( Ad_Publisher::class )->lifecycle_effects()
 				)
 			)
 		);

@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace LAAO_Advertiser_Portal\Integration\Adsanity;
 
 use LAAO_Advertiser_Portal\Domain\Publication_Result;
+use LAAO_Advertiser_Portal\Domain\Transition_Table;
 use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
 use LAAO_Advertiser_Portal\Repository\Creative_Repository;
 use LAAO_Advertiser_Portal\Repository\Placement_Repository;
@@ -117,6 +118,137 @@ final class Ad_Publisher {
 				)
 			);
 		};
+	}
+
+	/**
+	 * Takes a campaign's ads out of rotation permanently.
+	 *
+	 * Expires them and drafts them rather than deleting them. AdSanity's
+	 * per-day view and click counters live on the ad post, and a cancelled
+	 * campaign is still something the business billed for and will be asked
+	 * about — deleting the post throws that away to save a row.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return true|WP_Error
+	 */
+	public function unpublish_campaign( int $campaign_id ) {
+		return $this->rewrite_schedules(
+			$campaign_id,
+			$this->expired_at(),
+			'draft'
+		);
+	}
+
+	/**
+	 * Suspends a campaign's ads, reversibly.
+	 *
+	 * Expires them but leaves them published, because resuming has to be able
+	 * to put them straight back. Suppression works through AdSanity's own
+	 * scheduling rather than through a filter, so nothing depends on a hook of
+	 * ours running on every front-end request.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return true|WP_Error
+	 */
+	public function suppress_campaign( int $campaign_id ) {
+		return $this->rewrite_schedules( $campaign_id, $this->expired_at(), '' );
+	}
+
+	/**
+	 * Puts a suspended campaign's ads back into rotation.
+	 *
+	 * Dates are restored from the campaign rather than from anything stashed
+	 * on the ad, so a campaign whose window was edited while paused resumes
+	 * with the window it actually has.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return true|WP_Error
+	 */
+	public function resume_campaign( int $campaign_id ) {
+		return $this->rewrite_schedules(
+			$campaign_id,
+			$this->end_date_for( $campaign_id ),
+			'publish'
+		);
+	}
+
+	/**
+	 * The effect callables the state machine consumes for the lifecycle
+	 * transitions.
+	 *
+	 * @return array<string, callable>
+	 */
+	public function lifecycle_effects(): array {
+		return array(
+			Transition_Table::EFFECT_UNPUBLISH => fn ( int $id ): bool|WP_Error => $this->unpublish_campaign( $id ),
+			Transition_Table::EFFECT_SUPPRESS  => fn ( int $id ): bool|WP_Error => $this->suppress_campaign( $id ),
+			Transition_Table::EFFECT_RESUME    => fn ( int $id ): bool|WP_Error => $this->resume_campaign( $id ),
+		);
+	}
+
+	/**
+	 * Rewrites the end date, and optionally the status, of every ad a campaign
+	 * has.
+	 *
+	 * Tolerant of a campaign with no ads: a campaign cancelled before its
+	 * publication ever succeeded has nothing to withdraw, and refusing there
+	 * would leave it stuck in a state it cannot leave.
+	 *
+	 * @param int    $campaign_id Campaign post id.
+	 * @param int    $end_date    End date to write.
+	 * @param string $status      Post status to set, or empty to leave alone.
+	 * @return true|WP_Error
+	 */
+	private function rewrite_schedules( int $campaign_id, int $end_date, string $status ) {
+		$failed = array();
+
+		foreach ( $this->campaigns->provider_ad_ids( $campaign_id ) as $ad_id ) {
+			// An ad deleted by hand in the admin is not an error to report at
+			// somebody trying to cancel a campaign; there is simply nothing
+			// left to withdraw.
+			if ( Adsanity::POST_TYPE !== get_post_type( $ad_id ) ) {
+				continue;
+			}
+
+			update_post_meta( $ad_id, Adsanity::META_END_DATE, $end_date );
+
+			if ( '' !== $status ) {
+				wp_update_post(
+					array(
+						'ID'          => $ad_id,
+						'post_status' => $status,
+					)
+				);
+			}
+
+			// Read back, for the same reason every other write here is: nothing
+			// in AdSanity checks that what we asked for is what was stored.
+			if ( (int) get_post_meta( $ad_id, Adsanity::META_END_DATE, true ) !== $end_date ) {
+				$failed[] = $ad_id;
+			}
+		}
+
+		if ( array() !== $failed ) {
+			return new WP_Error(
+				'laao_ads_schedule_write_failed',
+				__( 'Some ads could not be updated. Please try again.', 'laao-advertiser-portal' ),
+				array( 'ads' => $failed )
+			);
+		}
+
+		return true;
+	}
+
+	/**
+	 * A moment already past, so AdSanity's read-time filter excludes the ad.
+	 *
+	 * One second back rather than exactly now, because `_end_date >= now` is
+	 * inclusive and "now" moves during a request.
+	 *
+	 * @return int
+	 */
+	private function expired_at(): int {
+		return time() - 1;
 	}
 
 	/**
