@@ -27,6 +27,10 @@ $laao_ads_installer_options = LAAO_Advertiser_Portal\Install\Installer::options(
 
 ( new LAAO_Advertiser_Portal\Repository\Audit_Repository() )->drop_table();
 
+// The reconciler's hourly event, which otherwise stays in the cron array
+// pointing at a hook nothing answers.
+LAAO_Advertiser_Portal\Workflow\Campaign_Clock::unschedule();
+
 /*
  * Campaign, creative and organization content is deliberately preserved unless
  * the site owner explicitly opted in.
@@ -58,12 +62,29 @@ if ( ! $laao_ads_delete_content ) {
  */
 const LAAO_ADS_UNINSTALL_BATCH = 200;
 
+// Our own statuses plus the core ones the non-campaign types are stored in.
+$laao_ads_statuses = array_merge(
+	LAAO_Advertiser_Portal\Core\Post_Statuses::all(),
+	array( 'publish', 'draft', 'pending', 'private', 'future', 'trash' )
+);
+
 foreach ( LAAO_Advertiser_Portal\Core\Post_Types::all() as $laao_ads_post_type ) {
 	do {
 		$laao_ads_batch = get_posts(
 			array(
 				'post_type'              => $laao_ads_post_type,
-				'post_status'            => 'any',
+
+				/*
+				 * Every status by name, and never 'any'.
+				 *
+				 * 'any' means "every status not excluded from search", and all
+				 * eleven campaign statuses are excluded from search by design.
+				 * This loop therefore matched no campaign at all: an uninstall
+				 * that had been asked to delete the content deleted the
+				 * organizations and packages, reported success, and left every
+				 * campaign row in the database.
+				 */
+				'post_status'            => $laao_ads_statuses,
 				'numberposts'            => LAAO_ADS_UNINSTALL_BATCH,
 				'fields'                 => 'ids',
 				'no_found_rows'          => true,

@@ -361,6 +361,28 @@ final class Transition_Table {
 	}
 
 	/**
+	 * Every status the clock can move a campaign out of.
+	 *
+	 * Derived from the table rather than listed, so adding a fifth system edge
+	 * puts its source in the reconciler's sweep without a second edit. A list
+	 * kept by hand is a list that goes stale silently — the campaigns in the
+	 * status nobody remembered simply stop moving, and nothing reports it.
+	 *
+	 * @return array<int, string>
+	 */
+	public static function system_sources(): array {
+		$sources = array();
+
+		foreach ( self::all() as $transition ) {
+			if ( $transition->allows_actor( self::ACTOR_SYSTEM ) && ! in_array( $transition->from, $sources, true ) ) {
+				$sources[] = $transition->from;
+			}
+		}
+
+		return $sources;
+	}
+
+	/**
 	 * Whether a status has no outgoing transitions.
 	 *
 	 * @param string $status Status slug.

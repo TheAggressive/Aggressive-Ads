@@ -524,6 +524,59 @@ final class Campaign_Repository {
 	}
 
 	/**
+	 * Campaign ids in the given statuses, oldest-modified first.
+	 *
+	 * For the reconciler, which sweeps every organization: there is no org
+	 * clause here and there should not be, because the clock belongs to nobody.
+	 * The caller is cron, not a request, and the transitions it drives carry no
+	 * capability requirement by design — see Campaign_State_Machine::apply_system().
+	 *
+	 * Bounded by $limit rather than paged. A sweep that falls behind catches up
+	 * on the next run, which is safe precisely because these transitions are
+	 * functions of the clock: nothing is lost by arriving late, and a run that
+	 * tried to process every campaign on a large site in one request would be
+	 * the thing that guaranteed it never finished.
+	 *
+	 * @param array<int, string> $statuses Statuses to include.
+	 * @param int                $limit    Maximum ids to return.
+	 * @return array<int, int>
+	 */
+	public function ids_in_status( array $statuses, int $limit ): array {
+		$wanted = array();
+
+		foreach ( $statuses as $status ) {
+			if ( is_string( $status ) && Post_Statuses::is_valid( $status ) ) {
+				$wanted[] = $status;
+			}
+		}
+
+		if ( array() === $wanted || $limit <= 0 ) {
+			return array();
+		}
+
+		$query = new \WP_Query(
+			array(
+				'post_type'              => Post_Types::CAMPAIGN,
+				'post_status'            => $wanted,
+				'posts_per_page'         => $limit,
+				'fields'                 => 'ids',
+				'orderby'                => 'modified',
+				'order'                  => 'ASC',
+				'no_found_rows'          => true,
+				'update_post_term_cache' => false,
+			)
+		);
+
+		$ids = array();
+
+		foreach ( $query->posts as $post ) {
+			$ids[] = $post instanceof \WP_Post ? (int) $post->ID : (int) $post;
+		}
+
+		return $ids;
+	}
+
+	/**
 	 * How many campaigns sit in each of the given statuses.
 	 *
 	 * One query for the whole set rather than one per status: the queue's tabs

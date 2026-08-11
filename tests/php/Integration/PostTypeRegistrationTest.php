@@ -187,4 +187,52 @@ final class PostTypeRegistrationTest extends WP_UnitTestCase {
 			$this->assertSame( $slug, get_post_status( $id ), "{$slug} did not survive the round trip" );
 		}
 	}
+
+	/**
+	 * `post_status => 'any'` does not mean "any campaign status".
+	 *
+	 * Every campaign status is excluded from search by design, and 'any'
+	 * expands to exactly the statuses that are not. A query written with 'any'
+	 * therefore matches no campaign at all, silently and with no error — it
+	 * simply returns nothing and looks like an empty site.
+	 *
+	 * This has already cost two defects: the dev seeder created a duplicate of
+	 * every object on its second run, and uninstall.php deleted the
+	 * organizations, reported success, and left every campaign row in the
+	 * database on a site that had asked for its content to be removed.
+	 *
+	 * Pinned here rather than in either caller, because the trap belongs to the
+	 * status registration and the next caller has not been written yet.
+	 *
+	 * @return void
+	 */
+	public function test_campaign_statuses_are_invisible_to_post_status_any(): void {
+		$campaign_id = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::CAMPAIGN,
+				'post_status' => Post_Statuses::DRAFT,
+			)
+		);
+
+		$any = get_posts(
+			array(
+				'post_type'   => Post_Types::CAMPAIGN,
+				'post_status' => 'any',
+				'numberposts' => 20,
+				'fields'      => 'ids',
+			)
+		);
+
+		$named = get_posts(
+			array(
+				'post_type'   => Post_Types::CAMPAIGN,
+				'post_status' => Post_Statuses::all(),
+				'numberposts' => 20,
+				'fields'      => 'ids',
+			)
+		);
+
+		$this->assertNotContains( $campaign_id, array_map( 'intval', $any ), "'any' must not be trusted to find campaigns." );
+		$this->assertContains( $campaign_id, array_map( 'intval', $named ), 'Naming the statuses must find them.' );
+	}
 }

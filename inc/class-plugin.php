@@ -43,6 +43,7 @@ use LAAO_Advertiser_Portal\Repository\Placement_Repository;
 use LAAO_Advertiser_Portal\Repository\User_Repository;
 use LAAO_Advertiser_Portal\Storage\Private_Storage;
 use LAAO_Advertiser_Portal\Workflow\Campaign_State_Machine;
+use LAAO_Advertiser_Portal\Workflow\Campaign_Clock;
 use LAAO_Advertiser_Portal\Workflow\Campaign_Editor;
 use LAAO_Advertiser_Portal\Workflow\Campaign_Validator;
 use LAAO_Advertiser_Portal\Workflow\Creative_Promoter;
@@ -287,6 +288,14 @@ final class Plugin {
 				$c->get( Placement_Repository::class ),
 				$c->get( Org_Repository::class ),
 				$c->get( Package_Repository::class )
+			)
+		);
+
+		$this->container->register(
+			Campaign_Clock::class,
+			static fn ( Service_Container $c ): Campaign_Clock => new Campaign_Clock(
+				$c->get( Campaign_State_Machine::class ),
+				$c->get( Campaign_Repository::class )
 			)
 		);
 
@@ -607,6 +616,10 @@ final class Plugin {
 			// Attaches the listener that notices a campaign status written
 			// without going through the state machine.
 			Campaign_State_Machine::class,
+
+			// After the state machine, whose listener must be attached before
+			// the clock drives a single transition through it.
+			Campaign_Clock::class,
 			Notification_Service::class,
 			Review_Screen::class,
 			Placement_Mapping_Screen::class,
