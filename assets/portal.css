@@ -590,6 +590,63 @@
 		color: var(--laao-ads-color-danger);
 	}
 
+	/* A closing note or secondary action under a panel's main content. */
+	.laao-ads-panel__foot {
+		padding: var(--laao-ads-space-lg);
+		border-top: 1px solid var(--laao-ads-border-color);
+		color: var(--laao-ads-color-text-muted);
+		font-size: 14px;
+	}
+
+	.laao-ads-panel__foot > p {
+		margin: 0 0 var(--laao-ads-space-md);
+	}
+
+	.laao-ads-panel__foot > p:last-child {
+		margin-bottom: 0;
+	}
+
+	/*
+	 * Running prose, which the rest of the portal deliberately has none of.
+	 * The help screen is the one place someone reads sentences rather than
+	 * scanning a table, so it is the one place a measure and list styling are
+	 * worth having.
+	 */
+	.laao-ads-prose {
+		max-width: var(--laao-ads-measure);
+		padding: var(--laao-ads-space-lg);
+		color: var(--laao-ads-color-text-body);
+	}
+
+	.laao-ads-prose p {
+		margin: 0 0 var(--laao-ads-space-md);
+	}
+
+	.laao-ads-prose > :last-child {
+		margin-bottom: 0;
+	}
+
+	.laao-ads-prose ol,
+	.laao-ads-prose ul {
+		margin: 0 0 var(--laao-ads-space-md);
+		padding-left: var(--laao-ads-space-lg);
+	}
+
+	.laao-ads-prose li {
+		margin-bottom: var(--laao-ads-space-xs);
+	}
+
+	/*
+	 * The quieter of the two buttons. Reinstated with the account screen: the
+	 * password reset sits beside nothing else, and rendering it in the accent
+	 * red makes an ordinary action look like a warning.
+	 */
+	.laao-ads-button--secondary {
+		background: var(--laao-ads-color-surface);
+		color: var(--laao-ads-color-text);
+		border-color: var(--laao-ads-border-color-strong);
+	}
+
 	.laao-ads-panel__head h2 {
 		margin: 0;
 		font: inherit;

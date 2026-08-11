@@ -72,6 +72,12 @@ PACKAGE_REQUIRED=(
 	templates/portal/screens/campaign.php
 	templates/portal/screens/campaign-not-found.php
 	templates/portal/screens/403.php
+	templates/portal/organization.php
+	templates/portal/account.php
+	templates/portal/help.php
+	templates/portal/screens/organization.php
+	templates/portal/screens/account.php
+	templates/portal/screens/help.php
 	templates/portal/screens/404.php
 )
 

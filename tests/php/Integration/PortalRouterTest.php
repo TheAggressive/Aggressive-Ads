@@ -279,18 +279,48 @@ final class PortalRouterTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A route with no screen yet renders the shell, not the theme's 404.
+	 * Every declared route has its own screen.
+	 *
+	 * This used to name `help` as the example of an unbuilt route, so building
+	 * that screen broke it — a test that fails as a side effect of the work
+	 * going well teaches people to edit tests rather than read them. What is
+	 * worth protecting is the opposite claim: that no route is silently
+	 * resolving to the placeholder because somebody added it to the allowlist
+	 * and forgot the template.
 	 *
 	 * @return void
 	 */
-	public function test_a_route_without_a_screen_renders_the_shell(): void {
+	public function test_every_declared_route_has_its_own_screen(): void {
 		wp_set_current_user( $this->advertiser );
 
-		$this->go_to( home_url( '/advertiser/help/' ) );
+		foreach ( Request::routes() as $route ) {
+			$this->go_to( home_url( '/advertiser/' . ( Request::ROUTE_DASHBOARD === $route ? '' : $route . '/' ) ) );
 
-		$template = apply_filters( 'template_include', 'theme-template.php' );
+			$template = apply_filters( 'template_include', 'theme-template.php' );
 
-		$this->assertStringContainsString( 'placeholder.php', $template );
+			$this->assertStringContainsString( 'templates/portal/' . $route . '.php', $template, "Route {$route} has no screen of its own." );
+			$this->assertStringNotContainsString( 'placeholder.php', $template, "Route {$route} is falling through to the placeholder." );
+		}
+	}
+
+	/**
+	 * The placeholder is still there for the next route somebody declares.
+	 *
+	 * Router::template() falls back to it when a route's template is missing,
+	 * so a route added to the allowlist before its screen exists renders the
+	 * portal shell rather than a fatal. Kept deliberately, and asserted so it
+	 * is not deleted as unused — nothing reaches it today precisely because
+	 * every route above is built.
+	 *
+	 * @return void
+	 */
+	public function test_the_placeholder_fallback_still_exists(): void {
+		$this->assertFileExists( LAAO_ADS_PLUGIN_DIR . 'templates/portal/placeholder.php' );
+		$this->assertStringContainsString(
+			"locate( 'placeholder.php' )",
+			(string) file_get_contents( LAAO_ADS_PLUGIN_DIR . 'inc/Portal/class-router.php' ),
+			'The router no longer falls back to the placeholder.'
+		);
 	}
 
 	/**

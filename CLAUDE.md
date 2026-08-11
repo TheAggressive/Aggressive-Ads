@@ -70,11 +70,14 @@ advertiser creation UI is the largest open product area. What is built:
 - pause, resume and cancel, which need no new UI: the review screen's buttons
   are derived from `Transition_Table`, so an edge added there appears by itself
 - Playwright + axe (`tests/e2e/`), wired into `ci:verify` as its own lane
+- every portal route now has its own screen: dashboard, campaigns, organization,
+  account and help. `Portal\Account_Actions` is the only way a portal user can
+  write anything about their own user record, because `Admin_Guard` closes
+  wp-admin to them
 
-What does **not** exist yet, despite being described in `docs/`: the
-organization, account and help screens (the routes resolve to a placeholder),
-the private-file retention purge, analytics, i18n tooling, semantic-release,
-and self-hosted Archivo.
+What does **not** exist yet, despite being described in `docs/`: organization
+editing and invitations, self-service email change, the private-file retention
+purge, analytics, i18n tooling, semantic-release, and self-hosted Archivo.
 `docs/` describes the design; `docs/roadmap.md` says which phase builds it. If a
 doc describes something you cannot find, it has not been built — that is
 expected, not a bug.

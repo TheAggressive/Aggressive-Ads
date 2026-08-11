@@ -54,7 +54,9 @@ Pause, resume and cancel need no separate UI — the review screen derives its b
 
 ## Phase 8 — Organizations and members
 
-Organization CRUD for advertisers, multiple users per organization, invitations, member management, and suspension. The data model already supports this; the UI does not exist yet.
+The organization screen is **built and read-only**: name, active state, people with owner/member roles, and the campaign count. Everything that writes is still outstanding — renaming, invitations, member management and suspension — because each needs an authorization answer the portal does not have yet: "may this member remove that member?" is a different question from "may they see the portal?".
+
+Self-service email change belongs here too. Core's flow mails a signed confirmation to the *new* address and completes on `profile.php`, which portal users cannot reach, so supporting it means owning the token: issue, expiry, single use and rate limiting. The account screen shows the address read-only until then.
 
 ## Phase 9 — Packages and pricing *(catalogue read/selection complete; management remains)*
 

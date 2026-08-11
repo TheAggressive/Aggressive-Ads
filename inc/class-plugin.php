@@ -31,6 +31,7 @@ use LAAO_Advertiser_Portal\Repository\Org_Repository;
 use LAAO_Advertiser_Portal\Repository\Package_Repository;
 use LAAO_Advertiser_Portal\Portal\Router;
 use LAAO_Advertiser_Portal\Portal\View_Data;
+use LAAO_Advertiser_Portal\Portal\Account_Actions;
 use LAAO_Advertiser_Portal\Portal\Campaign_Actions;
 use LAAO_Advertiser_Portal\Portal\Creative_Actions;
 use LAAO_Advertiser_Portal\REST\Campaigns_Controller;
@@ -415,6 +416,11 @@ final class Plugin {
 		);
 
 		$this->container->register(
+			Account_Actions::class,
+			static fn (): Account_Actions => new Account_Actions()
+		);
+
+		$this->container->register(
 			Creative_Actions::class,
 			static fn ( Service_Container $c ): Creative_Actions => new Creative_Actions(
 				$c->get( Creative_Manager::class )
@@ -633,6 +639,7 @@ final class Plugin {
 			Assets::class,
 			Campaign_Actions::class,
 			Creative_Actions::class,
+			Account_Actions::class,
 
 			Creative_File_Controller::class,
 			Creative_Controller::class,
