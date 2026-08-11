@@ -20,6 +20,7 @@ Then, as needed:
 | [portal-routing-and-ui.md](portal-routing-and-ui.md) | URL grammar, auth gate, template hierarchy, theme independence |
 | [interactivity-stores.md](interactivity-stores.md) | Interactivity API conventions and the script-module i18n gap |
 | [rest-api.md](rest-api.md) | Route table, auth model, the 404-not-403 rule |
+| [notifications.md](notifications.md) | Capability-driven recipients, private fan-out, deduplication and failure policy |
 | [threat-model.md](threat-model.md) | Attack surfaces, mitigations, and the test proving each |
 | [testing-strategy.md](testing-strategy.md) | Five suites, two PHPUnit configs, and why |
 | [build-and-release.md](build-and-release.md) | CI lanes, packaging policy, semantic-release |

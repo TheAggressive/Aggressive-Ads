@@ -71,7 +71,7 @@ $this->assertSame( 10, has_filter( 'map_meta_cap', array( Ownership::class, 'map
 
 **unit** — the transition table; illegal transitions; the validator; URL and date validation; placement and package resolution; the `Portal\Request` grammar; audit value objects; the container; the autoloader; CPT argument maps and slug lengths.
 
-**integration** — activation and reactivation idempotence; the audit table and every declared index; the upgrader replaying 0→current in order, and stopping at the last successful step on failure; roles carrying exactly the declared capabilities; persistence round trips; the rewrite rule's presence; **that no `wp/v2` route exists for any of the five post types**.
+**integration** — activation and reactivation idempotence; the audit table and every declared index; the upgrader replaying 0→current in order, and stopping at the last successful step on failure; roles carrying exactly the declared capabilities; persistence round trips; the rewrite rule's presence; **that no `wp/v2` route exists for any of the five post types**; AdSanity contract publication, exact read-back, draft checkpoint recovery, idempotent retry, stale-pointer isolation, mapping authorization, deleted-group races, empty-provider states, audit, and nonce enforcement.
 
 **security** — every IDOR surface in [threat-model.md](threat-model.md) with a Phase-1 endpoint; advertiser A denied on B's campaign **and a co-member of A's org allowed** (the case that proves ownership is org-scoped rather than accidentally author-scoped); deleted objects mapping to `do_not_allow`; nonce-missing and nonce-forged raising `WPDieException`; the advertiser holding none of `upload_files` / `edit_posts` / `unfiltered_html`; no `wp_ajax_laao_ads*` action registered.
 
@@ -82,6 +82,26 @@ $this->assertSame( 10, has_filter( 'map_meta_cap', array( Ownership::class, 'map
 **JS** — the pure logic layer only. `src/interactivity/logic.ts` imports nothing from `@wordpress/interactivity` precisely so Jest can test it without mocking the runtime. No snapshot tests: a snapshot asserts that output has not changed, which is not the same as asserting it is correct, and the usual response to a failing snapshot is to update it.
 
 **E2E** — real browser flows against real WordPress. The portal smoke test under Twenty Twenty-Five is the single test that proves the zero-theme-dependency claim; everything else in [architecture.md](architecture.md) about theme independence is a convention, and this is the enforcement.
+
+The campaign browser spec signs in through core, creates a fresh draft, selects
+a real seeded package, uploads a generated exact-size PNG through the native
+multipart form, schedules, reviews, submits, and reloads the locked result. It
+also proves the skip link, authenticated private preview, non-clickable review
+destination, axe conformance on the dashboard/review/submit surfaces, and that
+the active Twenty Twenty-Five block theme does not wrap the standalone portal.
+The mapping browser spec signs in as an administrator, opens the capability-
+gated wp-admin screen, verifies the shared staff design system, maps a dedicated
+placement to a generated provider term, follows the post/redirect/get result,
+and scans both pre- and post-write states with axe. The local browser wp-env
+mounts the same AdSanity contract fixture used by integration tests; production
+code never loads it.
+
+Global setup seeds and resets deterministic data; teardown deletes the campaign,
+its private bytes, and the mapping placement and term. It also hard-flushes
+Apache rewrite rules so a rebuilt wp-env cannot turn a stale `.htaccess` file
+into a misleading portal failure. Chromium runs with one worker because the
+WordPress site is shared mutable state, and retries are zero so a flaky gate
+cannot hide.
 
 ## Accessibility testing
 
@@ -105,7 +125,8 @@ pnpm test:php:unit            # fast, no database
 pnpm test:php:integration     # needs wp-env + WP test suite
 pnpm test:php:security
 pnpm test:js
-pnpm test:e2e
+pnpm test:e2e:install         # once per machine: install Chromium
+pnpm test:e2e                 # needs wp-env running; setup seeds its own data
 pnpm test:contract            # local only, needs real AdSanity
 pnpm ci:verify                # everything, serially, as CI would
 ```

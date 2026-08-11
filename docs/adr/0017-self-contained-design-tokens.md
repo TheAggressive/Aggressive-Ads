@@ -1,6 +1,6 @@
 # ADR-0017 — Self-contained `--laao-ads-*` tokens with literal fallbacks
 
-**Status:** Accepted — 2026-08-08
+**Status:** Accepted — 2026-08-08; amended 2026-08-10
 
 ## Context
 
@@ -22,7 +22,7 @@ The defaults are accessible on their own: contrast verified against WCAG 2.2 AA,
 
 Two supporting rules:
 
-- All portal CSS lives in `@layer laao-ads-*` cascade layers, so a theme's own rules can win where they should without a specificity fight.
+- Token defaults live in the low-priority `laao-ads-tokens` cascade layer, so an integrating theme can override them deliberately. The scoped reset, layout, and component rules are unlayered: CSS gives every unlayered theme declaration priority over every normal layered declaration regardless of specificity, which otherwise lets a generic host rule such as `a { color: ... }` recolor a portal button.
 - **The reset is scoped to `.laao-ads-portal`, never global.** A plugin that restyles `body` is a plugin that breaks the host site.
 
 One top z-index token, enforced by `lint:files`, so dialog stacking has a single source of truth rather than an escalating series of magic numbers.
@@ -30,7 +30,8 @@ One top z-index token, enforced by `lint:files`, so dialog stacking has a single
 ## Consequences
 
 - The portal renders correctly under Twenty Twenty-Five, under LAAO, and under a theme nobody has written yet.
-- Verified, not asserted: `tests/e2e/portal-smoke.spec.ts` runs under Twenty Twenty-Five with axe, so a token that silently resolves to nothing fails the accessibility scan rather than shipping.
+- Verified, not asserted: `tests/e2e/campaign-wizard.spec.ts` runs under Twenty Twenty-Five with axe, so a token that silently resolves to nothing fails the accessibility scan rather than shipping.
+- `CampaignCreationDesignSystemTest` pins the cascade boundary: only token defaults may be layered, while authored portal rules remain scoped and authoritative over generic host-theme element styles.
 - The portal does not automatically inherit LAAO's palette. Making it feel native is a deliberate, small block of overrides in the theme, which is also the only place a designer would look for it.
 - Component CSS never contains a literal colour, radius, or shadow. A component asks for a role; the token layer decides what the role looks like. Overriding one token then changes every component consistently, which is the property that makes the theme override worth supporting at all.
 - `prefers-reduced-motion: reduce` zeroes both duration tokens in one place, so no component has to remember.

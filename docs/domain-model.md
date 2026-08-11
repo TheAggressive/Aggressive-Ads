@@ -18,7 +18,7 @@ All five share these `register_post_type()` arguments:
 'public'              => false,
 'publicly_queryable'  => false,
 'exclude_from_search' => true,
-'show_ui'             => false,   // flipped per-CPT in Phase 5 for staff screens
+'show_ui'             => false,   // staff use the constrained Phase 5 review screen
 'show_in_menu'        => false,
 'show_in_nav_menus'   => false,
 'show_in_admin_bar'   => false,
@@ -70,11 +70,12 @@ All meta is `_laao_ads_`-prefixed and leading-underscore. The underscore is load
 | `_laao_ads_reviewed_at` | int | |
 | `_laao_ads_review_notes` | string | **Advertiser-visible.** Required non-empty on reject / changes-requested |
 | `_laao_ads_internal_notes` | string | Staff-only; never leaves the admin |
+| `_laao_ads_notification_receipt` | string, repeated | Internal notification type/revision/recipient receipt for idempotent delivery |
 | `_laao_ads_advertiser_notes` | string | |
 | `_laao_ads_revision` | int | Increments on each resubmission |
-| `_laao_ads_adsanity_ad_id` | int | **Repeated** — one per published ad |
+| `_laao_ads_adsanity_ad_id` | int | **Repeated** — one per provider object. A failed configuration may leave a checkpointed draft for idempotent retry. |
 | `_laao_ads_autosave_rev` | int | Optimistic-concurrency token for wizard autosave |
-| `_laao_ads_wizard_step` | string | Resume point |
+| `_laao_ads_wizard_step` | string | Resume point; advancing to `review` requires complete creative coverage and a submission-grade date window. Review itself is read-only; submit is a state transition, not another persisted edit step. |
 
 ### Creative — `laao_ads_creative`
 
@@ -95,7 +96,7 @@ All meta is `_laao_ads_`-prefixed and leading-underscore. The underscore is load
 | `_laao_ads_target_blank` | int | `0` \| `1` |
 | `_laao_ads_alt_text` | string | Becomes `_wp_attachment_image_alt` on promotion |
 | `_laao_ads_attachment_id` | int | `0` until approval |
-| `_laao_ads_adsanity_ad_id` | int | `0` until publish |
+| `_laao_ads_adsanity_ad_id` | int | `0` until provider-object creation; checkpointed while the new object is still a draft, before configuration and activation |
 | `_laao_ads_review_state` | enum | `pending` \| `approved` \| `rejected` |
 
 ### Organization — `laao_ads_org`
@@ -125,6 +126,8 @@ These hold at all times and are asserted in the repositories, not merely assumed
 3. **`org_id` is never read from client input.** It is derived server-side from the authenticated user on every request without exception. This one rule collapses most of the IDOR surface — see [threat-model.md](threat-model.md).
 4. **A campaign's `post_status` is only ever written by `Campaign_State_Machine::apply()`.** See [campaign-workflow.md](campaign-workflow.md).
 5. **Timestamps are UTC Unix integers everywhere.** No date strings, no site-local times, no `DateTime` in storage. Formatting happens at the display layer via `wp_date()`. See [ADR-0016](adr/0016-utc-unix-integer-times.md).
+6. **Package selection creates a campaign snapshot.** The selected package must be active and completely configured, and every included placement must be active. Its package id, repeated placement ids, integer-cent price, and currency are copied onto the campaign in one editor operation. Later package edits never mutate an existing campaign implicitly.
+7. **An editable campaign has at most one creative per selected placement.** Upload validates exact dimensions before creating the record. Removal deletes private bytes before the record, and neither operation is allowed after the campaign leaves an advertiser-editable state.
 
 ## Money
 

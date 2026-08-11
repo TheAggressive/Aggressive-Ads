@@ -1,0 +1,364 @@
+/*
+ * Staff review screens.
+ *
+ * This file contains layout only. Colour, type, spacing, radii, focus and
+ * control sizing all come from the portal's --laao-ads-* token layer, so the
+ * staff and advertiser surfaces cannot become two visual systems.
+ */
+
+	.laao-ads-admin {
+		max-width: 1440px;
+		margin: 0;
+		padding: var(--laao-ads-space-xl) var(--laao-ads-space-lg) var(--laao-ads-space-2xl) 0;
+		background: transparent;
+	}
+
+	.laao-ads-review-columns {
+		display: grid;
+		grid-template-columns: minmax(0, 3fr) minmax(280px, 2fr);
+		gap: var(--laao-ads-space-lg);
+		align-items: start;
+	}
+
+	@media (max-width: 960px) {
+		.laao-ads-review-columns {
+			grid-template-columns: 1fr;
+		}
+	}
+
+	.laao-ads-tabs {
+		display: flex;
+		gap: var(--laao-ads-space-xs);
+		margin-bottom: var(--laao-ads-space-lg);
+		overflow-x: auto;
+		padding-bottom: 2px;
+	}
+
+	.laao-ads-tab {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--laao-ads-space-xs);
+		min-height: var(--laao-ads-control-min);
+		padding: 0 var(--laao-ads-space-md);
+		border: 1px solid var(--laao-ads-border-color-strong);
+		border-radius: var(--laao-ads-radius-pill);
+		background: var(--laao-ads-color-surface);
+		color: var(--laao-ads-color-text-body);
+		font-weight: 700;
+		text-decoration: none;
+		white-space: nowrap;
+	}
+
+	.laao-ads-tab:hover,
+	.laao-ads-tab[aria-current="page"] {
+		border-color: var(--laao-ads-color-accent-strong);
+		color: var(--laao-ads-color-text);
+	}
+
+	.laao-ads-tab[aria-current="page"] {
+		box-shadow: inset 0 -3px 0 var(--laao-ads-color-accent-strong);
+	}
+
+	.laao-ads-tab__count {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 1.75rem;
+		height: 1.75rem;
+		padding: 0 var(--laao-ads-space-xs);
+		border-radius: var(--laao-ads-radius-pill);
+		background: var(--laao-ads-color-surface-sunken);
+		color: var(--laao-ads-color-text-subtle);
+		font-size: 12px;
+	}
+
+	.laao-ads-review-table th,
+	.laao-ads-review-table td {
+		white-space: nowrap;
+	}
+
+	.laao-ads-review-table th:first-child,
+	.laao-ads-review-table td:first-child {
+		min-width: 15rem;
+		white-space: normal;
+	}
+
+	.laao-ads-flash {
+		margin-bottom: var(--laao-ads-space-lg);
+		padding: var(--laao-ads-space-md) var(--laao-ads-space-lg);
+		border-left: 4px solid currentcolor;
+		border-radius: var(--laao-ads-radius-control);
+		font-weight: 700;
+	}
+
+	.laao-ads-flash__message {
+		margin: 0;
+		font-weight: 600;
+	}
+
+	/*
+	 * The workflow's own words, under the summary line. The mapping resolver
+	 * names every placement that needs an ad group; without somewhere to put
+	 * that, a reviewer is told only that something went wrong.
+	 */
+	.laao-ads-flash__detail {
+		margin: var(--laao-ads-space-xs) 0 0;
+	}
+
+	.laao-ads-flash__action {
+		margin: var(--laao-ads-space-xs) 0 0;
+		font-weight: 600;
+	}
+
+	.laao-ads-flash--success {
+		background: var(--laao-ads-color-live-tint);
+		color: var(--laao-ads-color-live);
+	}
+
+	.laao-ads-flash--error {
+		background: var(--laao-ads-color-danger-tint);
+		color: var(--laao-ads-color-danger);
+	}
+
+	.laao-ads-pagination {
+		display: flex;
+		justify-content: flex-end;
+		gap: var(--laao-ads-space-xs);
+	}
+
+	.laao-ads-pagination .page-numbers {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: var(--laao-ads-control-min);
+		min-height: var(--laao-ads-control-min);
+		padding: 0 var(--laao-ads-space-xs);
+		border: 1px solid var(--laao-ads-border-color-strong);
+		border-radius: var(--laao-ads-radius-control);
+		background: var(--laao-ads-color-surface);
+		color: var(--laao-ads-color-text-body);
+		font-weight: 700;
+		text-decoration: none;
+	}
+
+	.laao-ads-pagination .current {
+		border-color: var(--laao-ads-color-accent-strong);
+		color: var(--laao-ads-color-text);
+	}
+
+	.laao-ads-creative-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+		gap: var(--laao-ads-space-lg);
+		padding: var(--laao-ads-space-lg);
+	}
+
+	.laao-ads-creative {
+		overflow: hidden;
+		border: 1px solid var(--laao-ads-border-color);
+		border-radius: var(--laao-ads-radius-control);
+		background: var(--laao-ads-color-surface-raised);
+	}
+
+	.laao-ads-creative__preview {
+		display: grid;
+		min-height: 180px;
+		place-items: center;
+		padding: var(--laao-ads-space-lg);
+		background: var(--laao-ads-color-surface-sunken);
+	}
+
+	.laao-ads-creative__preview img {
+		max-height: 360px;
+		object-fit: contain;
+	}
+
+	.laao-ads-creative__body {
+		padding: var(--laao-ads-space-lg);
+	}
+
+	.laao-ads-creative__body h3 {
+		margin: 0 0 var(--laao-ads-space-md);
+		font-size: 16px;
+	}
+
+	.laao-ads-creative__body dl {
+		display: grid;
+		gap: var(--laao-ads-space-sm);
+		margin: 0;
+	}
+
+	.laao-ads-creative__body dl div {
+		display: grid;
+		gap: var(--laao-ads-space-2xs);
+	}
+
+	.laao-ads-creative__body dt {
+		color: var(--laao-ads-color-text-subtle);
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+	}
+
+	.laao-ads-creative__body dd {
+		margin: 0;
+		color: var(--laao-ads-color-text-body);
+	}
+
+	.laao-ads-actions {
+		display: grid;
+		gap: var(--laao-ads-space-md);
+		padding: var(--laao-ads-space-lg);
+	}
+
+	.laao-ads-action {
+		display: grid;
+		gap: var(--laao-ads-space-sm);
+		padding-bottom: var(--laao-ads-space-md);
+		border-bottom: 1px solid var(--laao-ads-border-color);
+	}
+
+	.laao-ads-action:last-child {
+		padding-bottom: 0;
+		border-bottom: 0;
+	}
+
+	.laao-ads-action label,
+	.laao-ads-form label {
+		color: var(--laao-ads-color-text);
+		font-weight: 700;
+	}
+
+	.laao-ads-action textarea,
+	.laao-ads-form textarea {
+		width: 100%;
+		border: 1px solid var(--laao-ads-border-color-strong);
+		border-radius: var(--laao-ads-radius-control);
+		background: var(--laao-ads-color-surface);
+		color: var(--laao-ads-color-text);
+		font: inherit;
+		line-height: 1.5;
+	}
+
+	.laao-ads-form {
+		display: grid;
+		gap: var(--laao-ads-space-sm);
+		padding: var(--laao-ads-space-lg);
+	}
+
+	.laao-ads-button--secondary {
+		background: var(--laao-ads-color-surface);
+		border-color: var(--laao-ads-border-color-strong);
+		color: var(--laao-ads-color-text);
+	}
+
+	.laao-ads-button--danger {
+		background: var(--laao-ads-color-danger-tint);
+		border-color: var(--laao-ads-color-danger);
+		color: var(--laao-ads-color-danger);
+	}
+
+	.laao-ads-button:hover {
+		filter: brightness(0.96);
+	}
+
+	.laao-ads-timeline {
+		margin: 0;
+		padding: var(--laao-ads-space-lg);
+		list-style: none;
+	}
+
+	.laao-ads-timeline__item {
+		position: relative;
+		margin: 0;
+		padding: 0 0 var(--laao-ads-space-lg) var(--laao-ads-space-lg);
+		border-left: 2px solid var(--laao-ads-border-color-strong);
+	}
+
+	.laao-ads-timeline__item::before {
+		position: absolute;
+		top: 0.35rem;
+		left: -0.4rem;
+		width: 0.7rem;
+		height: 0.7rem;
+		border-radius: 50%;
+		background: var(--laao-ads-color-accent);
+		content: "";
+	}
+
+	.laao-ads-timeline__item:last-child {
+		padding-bottom: 0;
+	}
+
+	.laao-ads-timeline__message {
+		color: var(--laao-ads-color-text);
+		font-weight: 700;
+	}
+
+	.laao-ads-timeline__meta {
+		margin-top: var(--laao-ads-space-2xs);
+		color: var(--laao-ads-color-text-muted);
+		font-size: 13px;
+	}
+
+	.laao-ads-provider-state {
+		margin-bottom: var(--laao-ads-space-lg);
+		padding: var(--laao-ads-space-md) var(--laao-ads-space-lg);
+		border: 1px solid var(--laao-ads-border-color-strong);
+		border-radius: var(--laao-ads-radius-control);
+		background: var(--laao-ads-color-surface-raised);
+		color: var(--laao-ads-color-text-body);
+	}
+
+	.laao-ads-provider-state--error {
+		border-color: var(--laao-ads-color-danger);
+		background: var(--laao-ads-color-danger-tint);
+		color: var(--laao-ads-color-danger);
+	}
+
+	.laao-ads-provider-state h2,
+	.laao-ads-provider-state p {
+		margin: 0;
+	}
+
+	.laao-ads-provider-state h2 {
+		margin-bottom: var(--laao-ads-space-xs);
+		font-size: 16px;
+	}
+
+	.laao-ads-mapping-table th:first-child {
+		min-width: 14rem;
+	}
+
+	.laao-ads-mapping-table th:last-child,
+	.laao-ads-mapping-table td:last-child {
+		min-width: 28rem;
+	}
+
+	.laao-ads-mapping-control {
+		display: flex;
+		gap: var(--laao-ads-space-sm);
+		align-items: center;
+	}
+
+	.laao-ads-mapping-control select {
+		min-width: 19rem;
+		min-height: var(--laao-ads-control-min);
+		border: 1px solid var(--laao-ads-border-color-strong);
+		border-radius: var(--laao-ads-radius-control);
+		background: var(--laao-ads-color-surface);
+		color: var(--laao-ads-color-text);
+		font: inherit;
+	}
+
+	@media (max-width: 782px) {
+		.laao-ads-mapping-control {
+			align-items: stretch;
+			flex-direction: column;
+		}
+
+		.laao-ads-mapping-control select {
+			min-width: 16rem;
+		}
+	}

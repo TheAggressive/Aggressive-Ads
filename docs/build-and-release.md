@@ -18,6 +18,11 @@ ci:verify   → bash bin/ci/verify.sh          (every lane, serially)
 
 Adding a lane means adding it to **both** the workflow and `bin/ci/verify.sh`. Adding it to only one is how the two drift.
 
+The E2E job installs Playwright's pinned Chromium build, starts wp-env, and
+runs the same `pnpm ci:e2e` command as local verification. Failed runs retain
+the trace, screenshot, video, and WordPress debug log; skipped specs make the
+lane fail rather than quietly reducing coverage.
+
 `ci:doctor` runs first everywhere. It semver-checks Node and pnpm against `engines` with no dependencies of its own, so a toolchain mismatch fails in two seconds rather than as a confusing error twenty minutes in.
 
 ## Quality gates

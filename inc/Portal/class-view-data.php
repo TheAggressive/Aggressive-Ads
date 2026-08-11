@@ -13,7 +13,11 @@ use LAAO_Advertiser_Portal\Core\Post_Statuses;
 use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
 use LAAO_Advertiser_Portal\Repository\Creative_Repository;
 use LAAO_Advertiser_Portal\Repository\Org_Repository;
+use LAAO_Advertiser_Portal\Repository\Package_Repository;
 use LAAO_Advertiser_Portal\Repository\Placement_Repository;
+use LAAO_Advertiser_Portal\REST\Creative_File_Controller;
+use LAAO_Advertiser_Portal\Workflow\Campaign_Editor;
+use LAAO_Advertiser_Portal\Workflow\Review_Readiness;
 
 /**
  * Assembles a screen's data, so templates render and nothing else.
@@ -32,12 +36,18 @@ final class View_Data {
 	 * @param Placement_Repository $placements Placement persistence.
 	 * @param Creative_Repository  $creatives  Creative persistence.
 	 * @param Org_Repository       $orgs       Organization lookups.
+	 * @param Package_Repository   $packages   Package persistence.
+	 * @param Campaign_Editor      $editor     Shared package validation.
+	 * @param Review_Readiness     $readiness  Safe canonical review readiness.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
 		private readonly Placement_Repository $placements,
 		private readonly Creative_Repository $creatives,
-		private readonly Org_Repository $orgs
+		private readonly Org_Repository $orgs,
+		private readonly Package_Repository $packages,
+		private readonly Campaign_Editor $editor,
+		private readonly Review_Readiness $readiness
 	) {
 	}
 
@@ -153,12 +163,110 @@ final class View_Data {
 
 		$row = $this->campaign_row( $campaign_id );
 
-		$row['review_notes'] = $this->campaigns->review_notes( $campaign_id );
-		$row['revision']     = $this->campaigns->revision( $campaign_id );
-		$row['submitted_at'] = $this->campaigns->submitted_at( $campaign_id );
-		$row['creatives']    = $this->creative_rows( $campaign_id );
+		$row['review_notes']      = $this->campaigns->review_notes( $campaign_id );
+		$row['revision']          = $this->campaigns->revision( $campaign_id );
+		$row['submitted_at']      = $this->campaigns->submitted_at( $campaign_id );
+		$row['creatives']         = $this->creative_rows( $campaign_id );
+		$row['creative_slots']    = $this->creative_slots( $campaign_id, $row['creatives'] );
+		$row['placement_ids']     = $this->campaigns->placement_ids( $campaign_id );
+		$row['placement_options'] = $this->placement_options();
+		$row['package_id']        = $this->campaigns->package_id( $campaign_id );
+		$row['package_name']      = $row['package_id'] > 0 ? $this->packages->name( $row['package_id'] ) : '';
+		$row['package_options']   = $this->package_options();
+		$row['budget_cents']      = $this->campaigns->budget_cents( $campaign_id );
+		$row['currency']          = $this->campaigns->currency( $campaign_id );
+		$row['package_price']     = '' === $row['currency'] ? '' : $this->format_money( $row['budget_cents'], $row['currency'] );
+		$row['wizard_step']       = $this->campaigns->wizard_step( $campaign_id );
+		$row['start_date']        = $this->date_input_value( $this->campaigns->start_ts( $campaign_id ) );
+		$row['end_date']          = $this->date_input_value( $this->campaigns->end_ts( $campaign_id ) );
+		$row['advertiser_notes']  = $this->campaigns->advertiser_notes( $campaign_id );
+		$row['autosave_rev']      = $this->campaigns->autosave_revision( $campaign_id );
+		$row['readiness']         = $this->readiness->for_campaign( $campaign_id );
+		$row['editable']          = in_array( $this->campaigns->status( $campaign_id ), Post_Statuses::advertiser_editable(), true );
 
 		return $row;
+	}
+
+	/**
+	 * Active placements with the preparation details an advertiser needs.
+	 *
+	 * @return array<int, array{id: int, name: string, size: string}>
+	 */
+	public function placement_options(): array {
+		$options = array();
+
+		foreach ( $this->placements->active_ids() as $placement_id ) {
+			$options[] = array(
+				'id'   => $placement_id,
+				'name' => $this->placements->name( $placement_id ),
+				'size' => $this->placements->size( $placement_id ),
+			);
+		}
+
+		return $options;
+	}
+
+	/**
+	 * Active, complete packages with their advertiser-facing catalogue details.
+	 *
+	 * @return array<int, array{id: int, name: string, duration: string, price: string, placements: array<int, string>}>
+	 */
+	public function package_options(): array {
+		$options = array();
+
+		foreach ( $this->packages->active_ids() as $package_id ) {
+			$snapshot = $this->editor->package_snapshot( $package_id );
+
+			if ( is_wp_error( $snapshot ) ) {
+				continue;
+			}
+
+			$placement_names = array();
+
+			foreach ( $snapshot['placement_ids'] as $placement_id ) {
+				$name = $this->placements->name( $placement_id );
+				$size = $this->placements->size( $placement_id );
+
+				$placement_names[] = '' === $size ? $name : sprintf( '%1$s (%2$s px)', $name, $size );
+			}
+
+			$duration = $this->packages->duration_days( $package_id );
+
+			$options[] = array(
+				'id'         => $package_id,
+				'name'       => $this->packages->name( $package_id ),
+				'duration'   => sprintf(
+					/* translators: %s: number of days. */
+					_n( '%s day', '%s days', $duration, 'laao-advertiser-portal' ),
+					number_format_i18n( $duration )
+				),
+				'price'      => $this->format_money( $snapshot['budget_cents'], $snapshot['currency'] ),
+				'placements' => $placement_names,
+			);
+		}
+
+		return $options;
+	}
+
+	/**
+	 * Formats an integer minor-unit amount without changing stored precision.
+	 *
+	 * @param int    $cents    Amount in cents.
+	 * @param string $currency ISO 4217 currency code.
+	 * @return string
+	 */
+	private function format_money( int $cents, string $currency ): string {
+		return sprintf( '%1$s %2$s', $currency, number_format_i18n( $cents / 100, 2 ) );
+	}
+
+	/**
+	 * Formats a stored UTC timestamp for an HTML date input in site time.
+	 *
+	 * @param int $timestamp UTC Unix timestamp, or zero.
+	 * @return string
+	 */
+	private function date_input_value( int $timestamp ): string {
+		return $timestamp > 0 ? (string) wp_date( 'Y-m-d', $timestamp, wp_timezone() ) : '';
 	}
 
 	/**
@@ -169,26 +277,67 @@ final class View_Data {
 	 * ever needs to be told.
 	 *
 	 * @param int $campaign_id Campaign post id.
-	 * @return array<int, array{id: int, placement: string, size: string, dimensions: string, click_url: string, alt_text: string, approved: bool}>
+	 * @return array<int, array{id: int, placement_id: int, placement: string, size: string, dimensions: string, click_url: string, alt_text: string, approved: bool, name: string, bytes: int, preview: string}>
 	 */
 	private function creative_rows( int $campaign_id ): array {
 		$rows = array();
 
 		foreach ( $this->creatives->for_campaign( $campaign_id ) as $creative ) {
+			$stored = $this->creatives->storage_details( $creative['id'] );
+
 			$rows[] = array(
-				'id'         => $creative['id'],
-				'placement'  => $this->placements->name( $creative['placement_id'] ),
-				'size'       => $creative['size'],
-				'dimensions' => $creative['width'] > 0 && $creative['height'] > 0
+				'id'           => $creative['id'],
+				'placement_id' => $creative['placement_id'],
+				'placement'    => $this->placements->name( $creative['placement_id'] ),
+				'size'         => $creative['size'],
+				'dimensions'   => $creative['width'] > 0 && $creative['height'] > 0
 					? $creative['width'] . '×' . $creative['height']
 					: '',
-				'click_url'  => $creative['click_url'],
-				'alt_text'   => $creative['alt_text'],
-				'approved'   => $this->creatives->has_attachment( $creative['id'] ),
+				'click_url'    => $creative['click_url'],
+				'alt_text'     => $creative['alt_text'],
+				'approved'     => $this->creatives->has_attachment( $creative['id'] ),
+				'name'         => null === $stored ? '' : $stored['name'],
+				'bytes'        => null === $stored ? 0 : $stored['bytes'],
+				'preview'      => add_query_arg(
+					'_wpnonce',
+					wp_create_nonce( 'wp_rest' ),
+					rest_url( Creative_File_Controller::NAMESPACE . '/creatives/' . $creative['id'] . '/file' )
+				),
 			);
 		}
 
 		return $rows;
+	}
+
+	/**
+	 * Selected placements paired with any creative already covering them.
+	 *
+	 * @param int                              $campaign_id Campaign post id.
+	 * @param array<int, array<string, mixed>> $creatives   Render-ready creative rows.
+	 * @return array<int, array{id: int, name: string, size: string, active: bool, creatives: array<int, array<string, mixed>>}>
+	 */
+	private function creative_slots( int $campaign_id, array $creatives ): array {
+		$slots = array();
+
+		foreach ( $this->campaigns->placement_ids( $campaign_id ) as $placement_id ) {
+			$matching = array();
+
+			foreach ( $creatives as $creative ) {
+				if ( (int) ( $creative['placement_id'] ?? 0 ) === $placement_id ) {
+					$matching[] = $creative;
+				}
+			}
+
+			$slots[] = array(
+				'id'        => $placement_id,
+				'name'      => $this->placements->name( $placement_id ),
+				'size'      => $this->placements->size( $placement_id ),
+				'active'    => $this->placements->is_active( $placement_id ),
+				'creatives' => $matching,
+			);
+		}
+
+		return $slots;
 	}
 
 	/**

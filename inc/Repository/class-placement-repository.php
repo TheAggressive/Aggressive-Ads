@@ -82,6 +82,30 @@ final class Placement_Repository {
 	}
 
 	/**
+	 * Stores one placement's provider-group mapping and verifies the write.
+	 *
+	 * Zero deliberately means unmapped. The workflow layer decides whether a
+	 * non-zero provider id is valid before it reaches this persistence method.
+	 *
+	 * @param int $placement_id Placement post id.
+	 * @param int $term_id      Provider ad-group term id, or zero.
+	 * @return bool
+	 */
+	public function set_adgroup_term_id( int $placement_id, int $term_id ): bool {
+		if ( ! $this->exists( $placement_id ) || $term_id < 0 ) {
+			return false;
+		}
+
+		if ( $this->adgroup_term_id( $placement_id ) === $term_id ) {
+			return true;
+		}
+
+		update_post_meta( $placement_id, self::META_ADGROUP_TERM, $term_id );
+
+		return $this->adgroup_term_id( $placement_id ) === $term_id;
+	}
+
+	/**
 	 * A placement's display name.
 	 *
 	 * @param int $placement_id Placement post id.
@@ -101,6 +125,35 @@ final class Placement_Repository {
 	 */
 	public function sort_order( int $placement_id ): int {
 		return (int) get_post_meta( $placement_id, self::META_SORT_ORDER, true );
+	}
+
+	/**
+	 * Every placement, including inactive configuration rows.
+	 *
+	 * @return array<int, int>
+	 */
+	public function all_ids(): array {
+		$ids = get_posts(
+			array(
+				'post_type'              => Post_Types::PLACEMENT,
+				'post_status'            => 'any',
+				'numberposts'            => self::MAX_PLACEMENTS,
+				'fields'                 => 'ids',
+				'orderby'                => 'title',
+				'order'                  => 'ASC',
+				'no_found_rows'          => true,
+				'update_post_term_cache' => false,
+			)
+		);
+
+		$ids = array_map( 'intval', $ids );
+
+		usort(
+			$ids,
+			fn ( int $a, int $b ): int => $this->sort_order( $a ) <=> $this->sort_order( $b )
+		);
+
+		return $ids;
 	}
 
 	/**

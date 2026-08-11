@@ -22,16 +22,202 @@ use LAAO_Advertiser_Portal\Core\Post_Types;
  */
 final class Campaign_Repository {
 
-	public const META_ORG_ID       = '_laao_ads_org_id';
-	public const META_START_TS     = '_laao_ads_start_ts';
-	public const META_END_TS       = '_laao_ads_end_ts';
-	public const META_SUBMITTED_AT = '_laao_ads_submitted_at';
-	public const META_REVIEWED_BY  = '_laao_ads_reviewed_by';
-	public const META_REVIEWED_AT  = '_laao_ads_reviewed_at';
-	public const META_REVIEW_NOTES = '_laao_ads_review_notes';
-	public const META_REVISION     = '_laao_ads_revision';
-	public const META_ADSANITY_ID  = '_laao_ads_adsanity_ad_id';
-	public const META_PLACEMENT_ID = '_laao_ads_placement_id';
+	public const META_ORG_ID               = '_laao_ads_org_id';
+	public const META_START_TS             = '_laao_ads_start_ts';
+	public const META_END_TS               = '_laao_ads_end_ts';
+	public const META_SUBMITTED_AT         = '_laao_ads_submitted_at';
+	public const META_REVIEWED_BY          = '_laao_ads_reviewed_by';
+	public const META_REVIEWED_AT          = '_laao_ads_reviewed_at';
+	public const META_REVIEW_NOTES         = '_laao_ads_review_notes';
+	public const META_INTERNAL_NOTES       = '_laao_ads_internal_notes';
+	public const META_NOTIFICATION_RECEIPT = '_laao_ads_notification_receipt';
+	public const META_REVISION             = '_laao_ads_revision';
+	public const META_ADSANITY_ID          = '_laao_ads_adsanity_ad_id';
+	public const META_PLACEMENT_ID         = '_laao_ads_placement_id';
+	public const META_AUTOSAVE_REV         = '_laao_ads_autosave_rev';
+	public const META_WIZARD_STEP          = '_laao_ads_wizard_step';
+	public const META_ADVERTISER_NOTES     = '_laao_ads_advertiser_notes';
+	public const META_PACKAGE_ID           = '_laao_ads_package_id';
+	public const META_BUDGET_CENTS         = '_laao_ads_budget_cents';
+	public const META_CURRENCY             = '_laao_ads_currency';
+
+	/**
+	 * Creates an organization-scoped draft.
+	 *
+	 * Initial status assignment is creation, not a lifecycle transition. Every
+	 * later status change still belongs exclusively to Campaign_State_Machine.
+	 *
+	 * @param int    $org_id  Owning organization, derived server-side.
+	 * @param int    $user_id Authoring user.
+	 * @param string $title   Campaign title.
+	 * @return int|\WP_Error
+	 */
+	public function create_draft( int $org_id, int $user_id, string $title ) {
+		$campaign_id = wp_insert_post(
+			array(
+				'post_type'   => Post_Types::CAMPAIGN,
+				'post_status' => Post_Statuses::DRAFT,
+				'post_author' => $user_id,
+				'post_title'  => $title,
+			),
+			true
+		);
+
+		if ( is_wp_error( $campaign_id ) ) {
+			return $campaign_id;
+		}
+
+		$campaign_id = (int) $campaign_id;
+
+		update_post_meta( $campaign_id, self::META_ORG_ID, $org_id );
+		update_post_meta( $campaign_id, self::META_AUTOSAVE_REV, 0 );
+		update_post_meta( $campaign_id, self::META_WIZARD_STEP, 'details' );
+
+		return $campaign_id;
+	}
+
+	/**
+	 * Updates the campaign fields exposed to an advertiser.
+	 *
+	 * The workflow validates and authorizes before calling this method. Keeping
+	 * persistence here means no controller or template writes post meta.
+	 *
+	 * @param int                  $campaign_id Campaign post id.
+	 * @param array<string, mixed> $fields      Allowlisted, validated values.
+	 * @return true|\WP_Error
+	 */
+	public function update_draft( int $campaign_id, array $fields ) {
+		if ( isset( $fields['title'] ) ) {
+			$updated = wp_update_post(
+				array(
+					'ID'         => $campaign_id,
+					'post_title' => (string) $fields['title'],
+				),
+				true
+			);
+
+			if ( is_wp_error( $updated ) ) {
+				return $updated;
+			}
+		}
+
+		if ( isset( $fields['start_ts'] ) ) {
+			update_post_meta( $campaign_id, self::META_START_TS, (int) $fields['start_ts'] );
+		}
+
+		if ( isset( $fields['end_ts'] ) ) {
+			update_post_meta( $campaign_id, self::META_END_TS, (int) $fields['end_ts'] );
+		}
+
+		if ( isset( $fields['advertiser_notes'] ) ) {
+			update_post_meta( $campaign_id, self::META_ADVERTISER_NOTES, (string) $fields['advertiser_notes'] );
+		}
+
+		if ( isset( $fields['wizard_step'] ) ) {
+			update_post_meta( $campaign_id, self::META_WIZARD_STEP, (string) $fields['wizard_step'] );
+		}
+
+		if ( isset( $fields['package_id'] ) ) {
+			update_post_meta( $campaign_id, self::META_PACKAGE_ID, (int) $fields['package_id'] );
+		}
+
+		if ( isset( $fields['budget_cents'] ) ) {
+			update_post_meta( $campaign_id, self::META_BUDGET_CENTS, (int) $fields['budget_cents'] );
+		}
+
+		if ( isset( $fields['currency'] ) ) {
+			update_post_meta( $campaign_id, self::META_CURRENCY, (string) $fields['currency'] );
+		}
+
+		if ( isset( $fields['placement_ids'] ) && is_array( $fields['placement_ids'] ) ) {
+			delete_post_meta( $campaign_id, self::META_PLACEMENT_ID );
+
+			foreach ( $fields['placement_ids'] as $placement_id ) {
+				add_post_meta( $campaign_id, self::META_PLACEMENT_ID, (int) $placement_id );
+			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Current optimistic-concurrency token.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return int
+	 */
+	public function autosave_revision( int $campaign_id ): int {
+		return (int) get_post_meta( $campaign_id, self::META_AUTOSAVE_REV, true );
+	}
+
+	/**
+	 * Atomically claims the next optimistic-concurrency token.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @param int $expected    Client's last-seen revision.
+	 * @return int|false New revision, or false when another write won.
+	 */
+	public function claim_autosave_revision( int $campaign_id, int $expected ): int|false {
+		$next = $expected + 1;
+
+		if ( '' === get_post_meta( $campaign_id, self::META_AUTOSAVE_REV, true ) ) {
+			return add_post_meta( $campaign_id, self::META_AUTOSAVE_REV, $next, true ) ? $next : false;
+		}
+
+		$updated = update_post_meta( $campaign_id, self::META_AUTOSAVE_REV, $next, $expected );
+
+		return false === $updated ? false : $next;
+	}
+
+	/**
+	 * The advertiser's private notes for staff.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return string
+	 */
+	public function advertiser_notes( int $campaign_id ): string {
+		return (string) get_post_meta( $campaign_id, self::META_ADVERTISER_NOTES, true );
+	}
+
+	/**
+	 * The saved wizard resume point.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return string
+	 */
+	public function wizard_step( int $campaign_id ): string {
+		return (string) get_post_meta( $campaign_id, self::META_WIZARD_STEP, true );
+	}
+
+	/**
+	 * Selected package id, or zero.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return int
+	 */
+	public function package_id( int $campaign_id ): int {
+		return (int) get_post_meta( $campaign_id, self::META_PACKAGE_ID, true );
+	}
+
+	/**
+	 * Snapshotted package price in integer cents.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return int
+	 */
+	public function budget_cents( int $campaign_id ): int {
+		return (int) get_post_meta( $campaign_id, self::META_BUDGET_CENTS, true );
+	}
+
+	/**
+	 * Snapshotted package currency.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return string
+	 */
+	public function currency( int $campaign_id ): string {
+		return (string) get_post_meta( $campaign_id, self::META_CURRENCY, true );
+	}
 
 	/**
 	 * Whether a post exists and is a campaign.
@@ -140,6 +326,64 @@ final class Campaign_Repository {
 	}
 
 	/**
+	 * Staff-only notes that never leave the review interface.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return string
+	 */
+	public function internal_notes( int $campaign_id ): string {
+		return (string) get_post_meta( $campaign_id, self::META_INTERNAL_NOTES, true );
+	}
+
+	/**
+	 * Saves the staff-only notes for a campaign.
+	 *
+	 * @param int    $campaign_id Campaign post id.
+	 * @param string $notes       Internal notes.
+	 * @return void
+	 */
+	public function set_internal_notes( int $campaign_id, string $notes ): void {
+		update_post_meta( $campaign_id, self::META_INTERNAL_NOTES, $notes );
+	}
+
+	/**
+	 * Reserves one recipient delivery for an idempotent notification fan-out.
+	 *
+	 * Repeated protected meta keeps the receipt with the campaign and out of
+	 * generic APIs. The value comparison matters: add_post_meta()'s `$unique`
+	 * flag makes the entire meta key unique, not one key/value pair, which would
+	 * allow only the first reviewer to receive any notification.
+	 *
+	 * @param int    $campaign_id Campaign post id.
+	 * @param string $receipt     Stable notification/revision/recipient key.
+	 * @return bool Whether this call acquired the receipt.
+	 */
+	public function reserve_notification_receipt( int $campaign_id, string $receipt ): bool {
+		if ( ! $this->exists( $campaign_id ) || '' === $receipt ) {
+			return false;
+		}
+
+		$receipts = get_post_meta( $campaign_id, self::META_NOTIFICATION_RECEIPT, false );
+
+		if ( is_array( $receipts ) && in_array( $receipt, $receipts, true ) ) {
+			return false;
+		}
+
+		return false !== add_post_meta( $campaign_id, self::META_NOTIFICATION_RECEIPT, $receipt );
+	}
+
+	/**
+	 * Releases a reservation after a delivery failure, allowing a safe retry.
+	 *
+	 * @param int    $campaign_id Campaign post id.
+	 * @param string $receipt     Exact receipt reserved before delivery.
+	 * @return void
+	 */
+	public function release_notification_receipt( int $campaign_id, string $receipt ): void {
+		delete_post_meta( $campaign_id, self::META_NOTIFICATION_RECEIPT, $receipt );
+	}
+
+	/**
 	 * How many times this campaign has been submitted.
 	 *
 	 * @param int $campaign_id Campaign post id.
@@ -212,6 +456,122 @@ final class Campaign_Repository {
 	 * whether this page loads.
 	 */
 	public const PAGE_SIZE = 20;
+
+	/**
+	 * One page of every organization's campaigns in the given statuses.
+	 *
+	 * **Deliberately unscoped by organization.** This is the staff review
+	 * queue: a reviewer works across every advertiser, and the authorization
+	 * for that is the `laao_ads_review_campaigns` capability, checked by the
+	 * caller before it ever gets here. It is the one listing in the plugin
+	 * without an org clause, which is why it says so.
+	 *
+	 * Ordered oldest-modified first, so the campaign that has been waiting
+	 * longest is at the top and nobody's submission can sit at the bottom of
+	 * page three forever. `modified` rather than the submitted_at meta on
+	 * purpose: every transition goes through wp_update_post(), so post_modified
+	 * already tracks the last status change, and ordering by meta_value_num
+	 * would join on the key and silently drop any campaign missing it — the
+	 * same trap that hid placements without a sort order.
+	 *
+	 * @param array<int, string> $statuses Campaign statuses to include.
+	 * @param int                $page     1-based page number.
+	 * @return array{ids: array<int, int>, total: int, pages: int}
+	 */
+	public function for_review( array $statuses, int $page = 1 ): array {
+		$wanted = array();
+
+		foreach ( $statuses as $status ) {
+			if ( is_string( $status ) && Post_Statuses::is_valid( $status ) ) {
+				$wanted[] = $status;
+			}
+		}
+
+		if ( array() === $wanted ) {
+			return array(
+				'ids'   => array(),
+				'total' => 0,
+				'pages' => 0,
+			);
+		}
+
+		$query = new \WP_Query(
+			array(
+				'post_type'              => Post_Types::CAMPAIGN,
+				'post_status'            => $wanted,
+				'posts_per_page'         => self::PAGE_SIZE,
+				'paged'                  => max( 1, $page ),
+				'fields'                 => 'ids',
+				'orderby'                => array(
+					'modified' => 'ASC',
+					'ID'       => 'ASC',
+				),
+				'update_post_term_cache' => false,
+			)
+		);
+
+		$ids = array();
+
+		foreach ( $query->posts as $post ) {
+			$ids[] = $post instanceof \WP_Post ? (int) $post->ID : (int) $post;
+		}
+
+		return array(
+			'ids'   => $ids,
+			'total' => (int) $query->found_posts,
+			'pages' => (int) $query->max_num_pages,
+		);
+	}
+
+	/**
+	 * How many campaigns sit in each of the given statuses.
+	 *
+	 * One query for the whole set rather than one per status: the queue's tabs
+	 * all need a number, and five COUNT queries to draw five tabs is how an
+	 * admin screen becomes the slowest page on the site.
+	 *
+	 * @param array<int, string> $statuses Campaign statuses to count.
+	 * @return array<string, int> Status slug to count, including zeroes.
+	 */
+	public function count_by_status( array $statuses ): array {
+		$counts = array();
+
+		foreach ( $statuses as $status ) {
+			if ( is_string( $status ) && Post_Statuses::is_valid( $status ) ) {
+				$counts[ $status ] = 0;
+			}
+		}
+
+		if ( array() === $counts ) {
+			return array();
+		}
+
+		$totals = (array) wp_count_posts( Post_Types::CAMPAIGN );
+
+		foreach ( array_keys( $counts ) as $status ) {
+			$counts[ $status ] = isset( $totals[ $status ] ) ? (int) $totals[ $status ] : 0;
+		}
+
+		return $counts;
+	}
+
+	/**
+	 * When the campaign was last touched, as a UTC timestamp.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return int
+	 */
+	public function modified_ts( int $campaign_id ): int {
+		$modified = get_post_field( 'post_modified_gmt', $campaign_id );
+
+		if ( ! is_string( $modified ) || '' === $modified ) {
+			return 0;
+		}
+
+		$timestamp = strtotime( $modified . ' UTC' );
+
+		return false === $timestamp ? 0 : $timestamp;
+	}
 
 	/**
 	 * One page of an organization's campaigns, newest first.

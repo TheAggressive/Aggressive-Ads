@@ -2,6 +2,9 @@
 	"core": "https://wordpress.org/wordpress-7.0.2.zip",
 	"phpVersion": "8.4",
 	"plugins": [ "." ],
+	"mappings": {
+		"wp-content/mu-plugins": "./tests/fixtures/mu-plugins"
+	},
 	"port": 9960,
 	"phpmyadminPort": 9962,
 	"config": {

@@ -14,6 +14,7 @@ use LAAO_Advertiser_Portal\Domain\Validation_Result;
 use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
 use LAAO_Advertiser_Portal\Repository\Creative_Repository;
 use LAAO_Advertiser_Portal\Repository\Org_Repository;
+use LAAO_Advertiser_Portal\Repository\Package_Repository;
 use LAAO_Advertiser_Portal\Repository\Placement_Repository;
 use WP_Error;
 
@@ -38,12 +39,14 @@ final class Campaign_Validator {
 	 * @param Creative_Repository  $creatives  Creative persistence.
 	 * @param Placement_Repository $placements Placement persistence.
 	 * @param Org_Repository       $orgs       Organization persistence.
+	 * @param Package_Repository   $packages   Package persistence.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
 		private readonly Creative_Repository $creatives,
 		private readonly Placement_Repository $placements,
-		private readonly Org_Repository $orgs
+		private readonly Org_Repository $orgs,
+		private readonly Package_Repository $packages
 	) {
 	}
 
@@ -57,6 +60,7 @@ final class Campaign_Validator {
 		$result = new Validation_Result();
 
 		$this->check_organization( $campaign_id, $result );
+		$this->check_package( $campaign_id, $result );
 		$this->check_window( $campaign_id, $result );
 
 		$placement_ids = $this->campaigns->placement_ids( $campaign_id );
@@ -170,6 +174,18 @@ final class Campaign_Validator {
 			case Campaign_Rules::ERROR_ORG_NOT_ACTIVE:
 				return __( 'This organization cannot submit campaigns. Please get in touch.', 'laao-advertiser-portal' );
 
+			case Campaign_Rules::ERROR_ORG_MISSING:
+				return __( 'This campaign is not connected to an organization. Please get in touch.', 'laao-advertiser-portal' );
+
+			case Campaign_Rules::ERROR_PACKAGE_MISSING:
+				return __( 'Choose a package before submitting.', 'laao-advertiser-portal' );
+
+			case Campaign_Rules::ERROR_PACKAGE_UNAVAILABLE:
+				return __( 'The package on this campaign is no longer offered. Choose another one.', 'laao-advertiser-portal' );
+
+			case Campaign_Rules::ERROR_PRICE_MISSING:
+				return __( 'This campaign has no price recorded. Choose its package again.', 'laao-advertiser-portal' );
+
 			default:
 				return __( 'This campaign is not ready to submit.', 'laao-advertiser-portal' );
 		}
@@ -193,6 +209,46 @@ final class Campaign_Validator {
 
 		if ( ! $this->orgs->is_active( $org_id ) ) {
 			$result->add( Campaign_Rules::ERROR_ORG_NOT_ACTIVE, 'org_id', array( 'org_id' => $org_id ) );
+		}
+	}
+
+	/**
+	 * A package is selected, still offered, and its price was captured.
+	 *
+	 * The wizard already refuses to save a campaign without one, and that was
+	 * not enough: the steps are reachable by URL, so a campaign could be
+	 * submitted having skipped step two entirely. It arrived in the review
+	 * queue with no package and no price, and nothing downstream noticed —
+	 * staff would have approved commercial terms that did not exist.
+	 *
+	 * The price is checked separately from the package because they are written
+	 * separately: the package id is a reference, the price is the snapshot taken
+	 * when it was chosen, and a campaign carrying one without the other is the
+	 * shape a half-completed write leaves behind.
+	 *
+	 * @param int               $campaign_id Campaign post id.
+	 * @param Validation_Result $result      Result to add to.
+	 * @return void
+	 */
+	private function check_package( int $campaign_id, Validation_Result $result ): void {
+		$package_id = $this->campaigns->package_id( $campaign_id );
+
+		if ( $package_id <= 0 ) {
+			$result->add( Campaign_Rules::ERROR_PACKAGE_MISSING, 'package_id' );
+
+			return;
+		}
+
+		if ( ! $this->packages->is_active( $package_id ) ) {
+			$result->add(
+				Campaign_Rules::ERROR_PACKAGE_UNAVAILABLE,
+				'package_id',
+				array( 'package_id' => $package_id )
+			);
+		}
+
+		if ( $this->campaigns->budget_cents( $campaign_id ) <= 0 || '' === $this->campaigns->currency( $campaign_id ) ) {
+			$result->add( Campaign_Rules::ERROR_PRICE_MISSING, 'package_id' );
 		}
 	}
 

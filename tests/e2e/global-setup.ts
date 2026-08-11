@@ -1,0 +1,12 @@
+import { wp } from './wp-cli';
+
+export default function globalSetup(): void {
+	wp( 'plugin', 'activate', 'laao-advertiser-portal' );
+	wp( 'eval', 'require "bin/dev/seed.php";' );
+	wp( 'eval', 'require "tests/e2e/reset.php";' );
+	wp( 'eval', 'require "tests/e2e/seed-mappings.php";' );
+	wp( 'user', 'update', 'advertiser', '--user_pass=advertiser' );
+	wp( 'user', 'update', 'admin', '--user_pass=admin' );
+	wp( 'theme', 'activate', 'twentytwentyfive' );
+	wp( 'rewrite', 'flush', '--hard' );
+}

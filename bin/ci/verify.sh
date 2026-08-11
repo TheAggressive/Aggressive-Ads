@@ -37,6 +37,7 @@ if ! docker info >/dev/null 2>&1; then
 fi
 
 run "php:wp"      pnpm ci:php:wp
+run "e2e"         pnpm ci:e2e
 run "package"     pnpm ci:package
 
 # Every lane above maps 1:1 onto a job in .github/workflows/ci.yml.
@@ -46,7 +47,6 @@ run "package"     pnpm ci:package
 #   frontend  — lint:js, lint:css, format:check, typecheck, test:js
 #   i18n      — POT drift and .mo compilation
 #   build     — webpack bundles
-#   e2e       — Playwright, including the Twenty Twenty-Five smoke test
 
 echo
 echo "ci:verify: all lanes passed"

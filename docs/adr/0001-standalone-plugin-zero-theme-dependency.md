@@ -18,7 +18,7 @@ Architecture and engineering lessons are ported. Code is re-implemented under `L
 
 The single supported coupling runs one direction only: the LAAO theme **may** override `--laao-ads-*` custom properties to make the portal feel native. The portal is fully functional without that (see [ADR-0017](0017-self-contained-design-tokens.md)).
 
-This claim is **enforced, not asserted**. `tests/e2e/portal-smoke.spec.ts` switches the active theme to Twenty Twenty-Five, logs in as an advertiser, loads the portal, and runs axe. An accidental theme dependency fails that test.
+This claim is **enforced, not asserted**. `tests/e2e/campaign-wizard.spec.ts` switches the active theme to Twenty Twenty-Five, logs in as an advertiser, loads the portal, and runs axe. An accidental theme dependency fails that test.
 
 ## Consequences
 

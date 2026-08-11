@@ -11,6 +11,7 @@ namespace LAAO_Advertiser_Portal\Tests\Integration;
 
 use LAAO_Advertiser_Portal\Core\Post_Statuses;
 use LAAO_Advertiser_Portal\Core\Post_Types;
+use LAAO_Advertiser_Portal\Integration\Ad_Provider_Interface;
 use LAAO_Advertiser_Portal\Integration\Adsanity\Ad_Publisher;
 use LAAO_Advertiser_Portal\Integration\Adsanity\Adsanity;
 use LAAO_Advertiser_Portal\Integration\Adsanity\Placement_Mapping;
@@ -194,6 +195,36 @@ final class AdPublisherTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Campaign orchestration can depend on the provider contract, not AdSanity.
+	 *
+	 * @return void
+	 */
+	public function test_the_publisher_implements_the_provider_boundary(): void {
+		$this->assertInstanceOf( Ad_Provider_Interface::class, $this->publisher );
+
+		$container = \LAAO_Advertiser_Portal\Plugin::instance()->container();
+
+		$this->assertSame(
+			$container->get( Ad_Publisher::class ),
+			$container->get( Ad_Provider_Interface::class )
+		);
+
+		$effects = $this->publisher->transition_effects();
+
+		foreach (
+			array(
+				\LAAO_Advertiser_Portal\Domain\Transition_Table::EFFECT_PUBLISH,
+				\LAAO_Advertiser_Portal\Domain\Transition_Table::EFFECT_UNPUBLISH,
+				\LAAO_Advertiser_Portal\Domain\Transition_Table::EFFECT_SUPPRESS,
+				\LAAO_Advertiser_Portal\Domain\Transition_Table::EFFECT_RESUME,
+			) as $effect
+		) {
+			$this->assertArrayHasKey( $effect, $effects );
+			$this->assertIsCallable( $effects[ $effect ] );
+		}
+	}
+
+	/**
 	 * **Both dates are always written, as integers.**
 	 *
 	 * AdSanity has no cron: scheduling is a read-time meta_query requiring
@@ -316,6 +347,163 @@ final class AdPublisherTest extends WP_UnitTestCase {
 		$retry = $this->publisher->publish_campaign( $campaign );
 
 		$this->assertSame( $ad_id, $retry->reused_ids()[ $good ] );
+	}
+
+	/**
+	 * A failure after provider-object creation checkpoints a non-rendering draft.
+	 *
+	 * This is the recovery boundary that prevents the hardest duplicate: the
+	 * provider accepted the post, but one of its undocumented meta writes did
+	 * not stick. Retrying must reconcile that exact object, never create a
+	 * second one or leave the incomplete first object public.
+	 *
+	 * @return void
+	 */
+	public function test_a_configuration_failure_reuses_the_checkpointed_draft_on_retry(): void {
+		$campaign = $this->campaign();
+		$creative = $this->creative( $campaign );
+
+		$block_size = static function ( $check, int $object_id, string $meta_key ) {
+			if ( Adsanity::META_SIZE === $meta_key && Adsanity::POST_TYPE === get_post_type( $object_id ) ) {
+				return true;
+			}
+
+			return $check;
+		};
+
+		add_filter( 'update_post_metadata', $block_size, 10, 3 );
+
+		try {
+			$failed = $this->publisher->publish_campaign( $campaign );
+		} finally {
+			remove_filter( 'update_post_metadata', $block_size, 10 );
+		}
+
+		$this->assertNotInstanceOf( WP_Error::class, $failed );
+		$this->assertSame( 'size_not_stored', $failed->failures()[ $creative ] );
+
+		$checkpoint = $this->creatives->provider_ad_id( $creative );
+
+		$this->assertGreaterThan( 0, $checkpoint );
+		$this->assertSame( array( $checkpoint ), $this->campaigns->provider_ad_ids( $campaign ) );
+		$this->assertSame( 'draft', get_post_status( $checkpoint ), 'An incomplete ad entered rotation.' );
+
+		$retry = $this->publisher->publish_campaign( $campaign );
+
+		$this->assertTrue( $retry->is_complete() );
+		$this->assertSame( array( $creative => $checkpoint ), $retry->reused_ids() );
+		$this->assertSame( 'publish', get_post_status( $checkpoint ) );
+		$this->assertCount(
+			1,
+			get_posts(
+				array(
+					'post_type'   => Adsanity::POST_TYPE,
+					'post_status' => 'any',
+					'numberposts' => 10,
+					'fields'      => 'ids',
+				)
+			),
+			'A retry created a duplicate provider object.'
+		);
+	}
+
+	/**
+	 * Read-back includes the target flag rather than merely the visible fields.
+	 *
+	 * @return void
+	 */
+	public function test_target_write_is_verified_before_the_ad_is_published(): void {
+		$campaign = $this->campaign();
+		$creative = $this->creative( $campaign, array( Creative_Repository::META_TARGET_BLANK => 1 ) );
+
+		$block_target = static function ( $check, int $object_id, string $meta_key ) {
+			if ( Adsanity::META_TARGET === $meta_key && Adsanity::POST_TYPE === get_post_type( $object_id ) ) {
+				return true;
+			}
+
+			return $check;
+		};
+
+		add_filter( 'update_post_metadata', $block_target, 10, 3 );
+
+		try {
+			$result = $this->publisher->publish_campaign( $campaign );
+		} finally {
+			remove_filter( 'update_post_metadata', $block_target, 10 );
+		}
+
+		$this->assertNotInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'target_not_stored', $result->failures()[ $creative ] );
+		$this->assertSame( 'draft', get_post_status( $this->creatives->provider_ad_id( $creative ) ) );
+	}
+
+	/**
+	 * A present but incorrect date is still a failed write.
+	 *
+	 * Merely checking for a non-empty date would let an ad run outside the
+	 * campaign window while the portal declared publication successful.
+	 *
+	 * @return void
+	 */
+	public function test_date_read_back_must_match_the_campaign_exactly(): void {
+		$campaign = $this->campaign();
+		$creative = $this->creative( $campaign );
+
+		$replace_start = static function ( $check, int $object_id, string $meta_key ) {
+			if ( Adsanity::META_START_DATE === $meta_key && Adsanity::POST_TYPE === get_post_type( $object_id ) ) {
+				add_post_meta( $object_id, $meta_key, 123, true );
+
+				return true;
+			}
+
+			return $check;
+		};
+
+		add_filter( 'update_post_metadata', $replace_start, 10, 3 );
+
+		try {
+			$result = $this->publisher->publish_campaign( $campaign );
+		} finally {
+			remove_filter( 'update_post_metadata', $replace_start, 10 );
+		}
+
+		$this->assertNotInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'start_date_not_stored', $result->failures()[ $creative ] );
+		$this->assertSame( 123, (int) get_post_meta( $this->creatives->provider_ad_id( $creative ), Adsanity::META_START_DATE, true ) );
+		$this->assertSame( 'draft', get_post_status( $this->creatives->provider_ad_id( $creative ) ) );
+	}
+
+	/**
+	 * A creative pointer alone cannot authorize rewriting an unrelated ad.
+	 *
+	 * A valid checkpoint is deliberately redundant: both the creative and its
+	 * campaign record the provider id. If only one side points at an existing
+	 * AdSanity post, reconciliation creates a new owned object instead of
+	 * clobbering a manually managed ad.
+	 *
+	 * @return void
+	 */
+	public function test_a_stale_creative_pointer_does_not_rewrite_an_unrelated_ad(): void {
+		$campaign = $this->campaign();
+		$creative = $this->creative( $campaign );
+		$foreign  = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Adsanity::POST_TYPE,
+				'post_status' => 'publish',
+				'post_title'  => 'Manually managed ad',
+			)
+		);
+
+		update_post_meta( $foreign, Adsanity::META_URL, 'https://example.com/original' );
+		$this->creatives->set_provider_ad_id( $creative, $foreign );
+
+		$result = $this->publisher->publish_campaign( $campaign );
+
+		$this->assertTrue( $result->is_complete() );
+		$this->assertCount( 1, $result->created_ids() );
+		$this->assertNotSame( $foreign, $result->created_ids()[ $creative ] );
+		$this->assertSame( 'https://example.com/original', get_post_meta( $foreign, Adsanity::META_URL, true ) );
+		$this->assertSame( 'Manually managed ad', get_the_title( $foreign ) );
 	}
 
 	/**

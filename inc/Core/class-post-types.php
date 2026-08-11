@@ -136,7 +136,8 @@ final class Post_Types implements Service {
 	 * REST route, the permalink and the ?post_type= query all open. It is the
 	 * combination of show_in_rest, rewrite and query_var that closes them.
 	 *
-	 * `show_ui` flips per-post-type in Phase 5 for the staff review screens.
+	 * `show_ui` stays false: Phase 5 uses a constrained review screen rather
+	 * than WordPress's generic editor, which could bypass the state machine.
 	 * `delete_with_user` stays false forever: deleting a WordPress user must
 	 * not erase the record of what their organization ran.
 	 *
@@ -185,8 +186,9 @@ final class Post_Types implements Service {
 	/**
 	 * Labels for one post type.
 	 *
-	 * Staff see these in Phase 5. Advertisers never do — the portal speaks its
-	 * own language and never exposes WordPress terminology.
+	 * These labels support registration and internal APIs. Advertisers never see
+	 * them — the portal speaks its own language and never exposes WordPress
+	 * terminology.
 	 *
 	 * @param string $slug Post type slug.
 	 * @return array<string, string>

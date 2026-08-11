@@ -105,6 +105,7 @@ final class AuditEventTest extends TestCase {
 			'token'         => array( 'token' ),
 			'private token' => array( '_laao_ads_private_token' ),
 			'raw ip'        => array( 'ip_address' ),
+			'email address' => array( 'recipient_email' ),
 			'file path'     => array( '_laao_ads_private_path' ),
 			'authorization' => array( 'authorization' ),
 		);

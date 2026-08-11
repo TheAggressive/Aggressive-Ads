@@ -32,6 +32,9 @@ final class Campaign_Rules {
 	public const ERROR_END_BEFORE_START    = 'end_date_before_start';
 	public const ERROR_ORG_NOT_ACTIVE      = 'organization_not_active';
 	public const ERROR_ORG_MISSING         = 'organization_missing';
+	public const ERROR_PACKAGE_MISSING     = 'package_missing';
+	public const ERROR_PACKAGE_UNAVAILABLE = 'package_unavailable';
+	public const ERROR_PRICE_MISSING       = 'price_missing';
 
 	/**
 	 * The only creative kind an advertiser may submit.

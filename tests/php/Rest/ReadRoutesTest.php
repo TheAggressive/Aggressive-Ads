@@ -16,6 +16,7 @@ use LAAO_Advertiser_Portal\Plugin;
 use LAAO_Advertiser_Portal\Repository\Audit_Repository;
 use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
 use LAAO_Advertiser_Portal\Repository\Org_Repository;
+use LAAO_Advertiser_Portal\Repository\Package_Repository;
 use LAAO_Advertiser_Portal\Repository\Placement_Repository;
 use LAAO_Advertiser_Portal\Security\Ownership;
 use LAAO_Advertiser_Portal\Security\Roles;
@@ -133,6 +134,7 @@ final class ReadRoutesTest extends WP_UnitTestCase {
 		$this->assertArrayHasKey( '/laao-advertiser-portal/v1/campaigns', $routes );
 		$this->assertArrayHasKey( '/laao-advertiser-portal/v1/campaigns/(?P<id>\d+)', $routes );
 		$this->assertArrayHasKey( '/laao-advertiser-portal/v1/placements', $routes );
+		$this->assertArrayHasKey( '/laao-advertiser-portal/v1/packages', $routes );
 	}
 
 	/**
@@ -231,6 +233,24 @@ final class ReadRoutesTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Campaign detail exposes safe readiness guidance without validator context.
+	 *
+	 * @return void
+	 */
+	public function test_campaign_detail_exposes_safe_review_readiness(): void {
+		wp_set_current_user( $this->owner );
+
+		$data      = $this->get( '/campaigns/' . $this->campaign_id )->get_data();
+		$readiness = $data['readiness'];
+
+		$this->assertFalse( $readiness['ready'] );
+		$this->assertNotSame( array(), $readiness['problems'] );
+		$this->assertSame( array( 'code', 'message', 'step', 'target' ), array_keys( $readiness['problems'][0] ) );
+		$this->assertStringNotContainsString( 'context', (string) wp_json_encode( $readiness ) );
+		$this->assertStringNotContainsString( 'https://', (string) wp_json_encode( $readiness ) );
+	}
+
+	/**
 	 * The actions list reflects what this advertiser could actually do.
 	 *
 	 * @return void
@@ -302,6 +322,61 @@ final class ReadRoutesTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Packages expose catalogue details but no provider mapping or malformed row.
+	 *
+	 * @return void
+	 */
+	public function test_packages_expose_only_valid_advertiser_facing_data(): void {
+		$placement = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::PLACEMENT,
+				'post_status' => 'publish',
+				'post_title'  => 'Homepage Leaderboard',
+			)
+		);
+		update_post_meta( $placement, Placement_Repository::META_IS_ACTIVE, 1 );
+		update_post_meta( $placement, Placement_Repository::META_SIZE, '728x90' );
+		update_post_meta( $placement, Placement_Repository::META_ADGROUP_TERM, 9876 );
+
+		$package = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::PACKAGE,
+				'post_status' => 'publish',
+				'post_title'  => 'Launch package',
+			)
+		);
+		add_post_meta( $package, Package_Repository::META_PLACEMENT_ID, $placement );
+		update_post_meta( $package, Package_Repository::META_DURATION_DAYS, 30 );
+		update_post_meta( $package, Package_Repository::META_PRICE_CENTS, 45000 );
+		update_post_meta( $package, Package_Repository::META_CURRENCY, 'USD' );
+		update_post_meta( $package, Package_Repository::META_IS_ACTIVE, 1 );
+
+		$malformed = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::PACKAGE,
+				'post_status' => 'publish',
+				'post_title'  => 'Broken package',
+			)
+		);
+		update_post_meta( $malformed, Package_Repository::META_IS_ACTIVE, 1 );
+
+		wp_set_current_user( $this->owner );
+		Plugin::instance()->container()->get( Ownership::class )->flush_cache();
+
+		$response = $this->get( '/packages' );
+		$data     = $response->get_data();
+		$body     = (string) wp_json_encode( $data );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertCount( 1, $data['packages'] );
+		$this->assertSame( $package, $data['packages'][0]['id'] );
+		$this->assertSame( 45000, $data['packages'][0]['price_cents'] );
+		$this->assertStringNotContainsString( 'Broken package', $body );
+		$this->assertStringNotContainsString( 'adgroup', $body );
+		$this->assertStringNotContainsString( '9876', $body );
+	}
+
+	/**
 	 * Logged-out visitors reach none of it.
 	 *
 	 * @return void
@@ -309,7 +384,7 @@ final class ReadRoutesTest extends WP_UnitTestCase {
 	public function test_logged_out_visitors_are_refused(): void {
 		wp_set_current_user( 0 );
 
-		foreach ( array( '/campaigns', '/campaigns/' . $this->campaign_id, '/placements' ) as $route ) {
+		foreach ( array( '/campaigns', '/campaigns/' . $this->campaign_id, '/placements', '/packages' ) as $route ) {
 			$this->assertContains( $this->get( $route )->get_status(), array( 401, 403 ), $route );
 		}
 	}

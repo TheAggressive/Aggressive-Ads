@@ -15,6 +15,7 @@ use LAAO_Advertiser_Portal\Domain\Campaign_Transition;
 use LAAO_Advertiser_Portal\Domain\Transition_Table;
 use LAAO_Advertiser_Portal\Repository\Audit_Repository;
 use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
+use LAAO_Advertiser_Portal\Security\Capabilities;
 use Throwable;
 use WP_Error;
 
@@ -184,6 +185,30 @@ final class Campaign_State_Machine implements Service {
 				$as_system ? 'laao_ads_not_a_system_transition' : 'laao_ads_system_transition',
 				__( 'That is not something this campaign can do right now.', 'laao-advertiser-portal' )
 			);
+		}
+
+		/*
+		 * Capabilities say what a person may do; actors say in which role they may
+		 * do it. Reviewers intentionally inherit the advertiser capability set, so
+		 * checking capabilities alone lets a reviewer submit or withdraw somebody
+		 * else's draft even though the transition table says advertiser-only.
+		 */
+		if ( ! $as_system ) {
+			$actor = current_user_can( Capabilities::REVIEW_CAMPAIGNS )
+				? Transition_Table::ACTOR_STAFF
+				: Transition_Table::ACTOR_ADVERTISER;
+
+			if ( ! $transition->allows_actor( $actor ) ) {
+				return $this->deny(
+					$campaign_id,
+					$org_id,
+					$from,
+					$to,
+					'laao_ads_forbidden',
+					__( 'You do not have permission to do that.', 'laao-advertiser-portal' ),
+					array( 'actor' => $actor )
+				);
+			}
 		}
 
 		// 2 and 3. Capabilities, and ownership through them: every capability
@@ -358,11 +383,16 @@ final class Campaign_State_Machine implements Service {
 	 * @return void
 	 */
 	private function apply_meta_effects( int $campaign_id, Campaign_Transition $transition, array $context ): void {
+		$was_submitted = $this->campaigns->submitted_at( $campaign_id ) > 0;
+
 		if ( $transition->has_effect( Transition_Table::EFFECT_STAMP_SUBMITTED ) ) {
 			$this->campaigns->set_submitted_at( $campaign_id, time() );
 		}
 
-		if ( $transition->has_effect( Transition_Table::EFFECT_INCREMENT_REVISION ) ) {
+		if (
+			$transition->has_effect( Transition_Table::EFFECT_INCREMENT_REVISION )
+			|| ( $was_submitted && $transition->has_effect( Transition_Table::EFFECT_STAMP_SUBMITTED ) )
+		) {
 			$this->campaigns->increment_revision( $campaign_id );
 		}
 
@@ -398,6 +428,7 @@ final class Campaign_State_Machine implements Service {
 					outcome: Audit_Event::OUTCOME_FAILED,
 					object_type: 'campaign',
 					object_id: $campaign_id,
+					org_id: $this->campaigns->org_id( $campaign_id ),
 					message: $e->getMessage()
 				)
 			);

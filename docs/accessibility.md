@@ -46,6 +46,12 @@ Drag and drop is an enhancement, never the only path. Every upload zone has a re
 
 Progress is announced through a live region, not only shown as a bar. Completion and failure are both announced.
 
+The progressively enhanced baseline ships native file inputs, visible labels,
+pre-field type/size/dimension instructions, required destination and
+alternative-text fields, linked error summaries, and server-rendered completion
+notices. Drag/drop and live progress remain enhancements; upload, review, and
+removal do not depend on them.
+
 **Validation errors state the actual problem and the actual fix:**
 
 ```
@@ -59,6 +65,29 @@ Not "invalid image". The advertiser has to fix this themselves without calling a
 
 Progress is conveyed by text and structure, not only by a coloured bar. Each step is a landmark with a heading. Moving between steps moves focus to the new step's heading, so a screen-reader user knows the context changed. Validation errors summarize at the top with in-page links to the offending fields — the standard pattern, because it works.
 
+Destination-and-schedule Step 4 renders creative destinations as text rather
+than activating external links during campaign creation. Its native date inputs
+have visible labels and pre-field instructions; start is programmatically
+required and carries the earliest allowed local date. Server errors link back
+to the affected date or destination summary and are included in that field's
+`aria-describedby` only while the error is present.
+
+Review Step 5 exposes all current submission problems in one ordered summary,
+not only the first failure. The problem state is an alert, the ready state is a
+status, and every issue has a keyboard-operable 44px edit target that returns
+to the exact step and field. Review sections use labelled landmarks and native
+description lists. Creative previews use their required alternative text;
+destination URLs render as text so keyboard users are not sent away from an
+unfinished campaign accidentally.
+
+Submit Step 6 has a visible heading, plain-language consequences before the
+action, a native POST form, and separate Back and Submit controls with shared
+touch-target and focus tokens. It does not use a surprise dialog or depend on
+JavaScript. If readiness changes, the submit button disappears and the full
+ordered, linked problem summary replaces it. Successful submission is
+announced with `role="status"`; server refusal returns an alert without placing
+the campaign into a false submitted state.
+
 ## Creative alt text
 
 Every creative carries `_laao_ads_alt_text`, collected from the advertiser and written to `_wp_attachment_image_alt` when the creative is promoted at approval.
@@ -69,7 +98,7 @@ Ads this portal publishes will not need it: the alt text is required at upload a
 
 ## Verification
 
-- `pnpm test:e2e` runs axe on every major screen under **Twenty Twenty-Five**, failing on any serious or critical violation.
-- Keyboard-only traversal of campaign creation and upload is asserted explicitly, not assumed from the axe pass.
+- `pnpm test:e2e` runs axe on the dashboard, review, submit, and both pre/post-save Ad delivery mapping surfaces, failing on every violation carrying one of the configured WCAG conformance tags.
+- The browser suite asserts the keyboard skip path, complete native-form campaign flow, private preview, review, final submission, labeled mapping controls, and the real mapping write; these are not inferred from axe.
 - Focus order, trap, and restoration are asserted per dialog.
 - Manual screen-reader passes supplement all of the above before any release that changes a flow.

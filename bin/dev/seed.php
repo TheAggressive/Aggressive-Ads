@@ -18,6 +18,7 @@ use LAAO_Advertiser_Portal\Core\Post_Statuses;
 use LAAO_Advertiser_Portal\Core\Post_Types;
 use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
 use LAAO_Advertiser_Portal\Repository\Org_Repository;
+use LAAO_Advertiser_Portal\Repository\Package_Repository;
 use LAAO_Advertiser_Portal\Repository\Placement_Repository;
 use LAAO_Advertiser_Portal\Security\Roles;
 
@@ -128,8 +129,78 @@ foreach ( $placements as $slug => $placement ) {
 		$slug,
 		$placement[0],
 		'publish',
-		array( Placement_Repository::META_SIZE => $placement[1] )
+		array(
+			Placement_Repository::META_SIZE      => $placement[1],
+			Placement_Repository::META_IS_ACTIVE => 1,
+		)
 	);
+}
+
+/*
+ * The AdSanity ad group each placement publishes into.
+ *
+ * Without this the seeded site looks complete and cannot approve anything: the
+ * mapping guard fails closed on an unmapped placement, which is correct and
+ * also the last thing anybody thinks to check. A dev site that can carry a
+ * campaign from draft to a live AdSanity ad is the whole point of seeding one.
+ *
+ * Skipped rather than fatal when AdSanity is absent — the portal is designed to
+ * work without it, and so is this script.
+ */
+if ( taxonomy_exists( 'ad-group' ) ) {
+	foreach ( $placements as $slug => $placement ) {
+		$term = get_term_by( 'slug', 'laao-' . $slug, 'ad-group' );
+
+		if ( ! $term instanceof WP_Term ) {
+			$created = wp_insert_term(
+				$placement[0],
+				'ad-group',
+				array( 'slug' => 'laao-' . $slug )
+			);
+
+			if ( is_wp_error( $created ) ) {
+				WP_CLI::warning( "Could not create the ad group for {$slug}: " . $created->get_error_message() );
+
+				continue;
+			}
+
+			$term = get_term( (int) $created['term_id'], 'ad-group' );
+		}
+
+		if ( $term instanceof WP_Term ) {
+			update_post_meta( $placement_ids[ $slug ], Placement_Repository::META_ADGROUP_TERM, $term->term_id );
+		}
+	}
+} else {
+	WP_CLI::warning( 'AdSanity is not active, so placements were left unmapped and approval will fail closed.' );
+}
+
+$packages = array(
+	'launch-bundle'   => array( 'Launch bundle', 30, 45000, array( 'leaderboard', 'sidebar' ) ),
+	'focused-sidebar' => array( 'Focused sidebar', 14, 17500, array( 'sidebar' ) ),
+);
+
+foreach ( $packages as $slug => $package ) {
+	list( $package_title, $duration_days, $price_cents, $package_placements ) = $package;
+
+	$package_id = laao_ads_seed_post(
+		Post_Types::PACKAGE,
+		$slug,
+		$package_title,
+		'publish',
+		array(
+			Package_Repository::META_DURATION_DAYS => $duration_days,
+			Package_Repository::META_PRICE_CENTS   => $price_cents,
+			Package_Repository::META_CURRENCY      => 'USD',
+			Package_Repository::META_IS_ACTIVE     => 1,
+		)
+	);
+
+	delete_post_meta( $package_id, Package_Repository::META_PLACEMENT_ID );
+
+	foreach ( $package_placements as $placement ) {
+		add_post_meta( $package_id, Package_Repository::META_PLACEMENT_ID, $placement_ids[ $placement ] );
+	}
 }
 
 $day = DAY_IN_SECONDS;

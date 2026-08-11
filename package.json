@@ -11,6 +11,8 @@
 	},
 	"packageManager": "pnpm@11.1.2",
 	"devDependencies": {
+		"@axe-core/playwright": "^4.12.1",
+		"@playwright/test": "^1.62.1",
 		"@wordpress/env": "^10.17.0"
 	},
 	"scripts": {
@@ -26,9 +28,12 @@
 		"lint:files": "bash bin/check-file-length.sh && bash bin/ci/check-repository-boundary.sh && bash bin/ci/check-permission-callbacks.sh && bash bin/ci/check-action-pins.sh && bash bin/ci/check-ci-parity.sh",
 		"test:php:unit": "vendor/bin/phpunit",
 		"test:php:integration": "wp-env run tests-cli --env-cwd=wp-content/plugins/laao-advertiser-portal vendor/bin/phpunit -c phpunit-integration.xml.dist",
+		"test:e2e:install": "playwright install chromium",
+		"test:e2e": "playwright test",
 		"ci:doctor": "node bin/ci/doctor.mjs",
 		"ci:php": "pnpm lint:php && pnpm analyse:php && pnpm test:php:unit",
 		"ci:php:wp": "pnpm test:php:integration",
+		"ci:e2e": "pnpm test:e2e",
 		"release:package": "bash bin/release/package.sh",
 		"release:verify": "bash bin/release/verify-package.sh",
 		"ci:package": "pnpm release:package && pnpm release:verify",

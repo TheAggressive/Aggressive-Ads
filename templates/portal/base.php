@@ -55,6 +55,18 @@ add_filter( 'pre_get_document_title', static fn (): string => $laao_ads_document
 add_filter( 'wp_robots', 'wp_robots_no_robots' );
 
 /*
+ * The portal is the complete application chrome. Core's front-end admin bar
+ * renders at wp_body_open() before our skip link, making unrelated WordPress
+ * controls the first keyboard stop and exposing wp-admin navigation to an
+ * advertiser who does not need it. Suppress both render locations only for
+ * this owned document; the toolbar remains untouched everywhere else.
+ */
+// phpcs:ignore WordPressVIPMinimum.UserExperience.AdminBarRemoval.RemovalDetected -- This standalone application document replaces WordPress chrome; retaining the toolbar puts unrelated wp-admin controls before the portal skip link. Browser coverage asserts the portal-only keyboard order.
+show_admin_bar( false );
+remove_action( 'wp_body_open', 'wp_admin_bar_render', 0 );
+remove_action( 'wp_footer', 'wp_admin_bar_render', 1000 );
+
+/*
  * Whether wp_head() will emit these itself.
  *
  * Asking current_theme_supports( 'title-tag' ) is the obvious test and it is

@@ -1,36 +1,48 @@
 # Roadmap
 
-Phase 0 (documentation, ADRs) and Phase 1 (foundation) are the current work. Everything below is intent, not commitment — later phases will be planned properly when the phases before them have shipped and invalidated some of these assumptions.
+This is the capability sequence, not a claim that implementation has landed in
+strict phase order. The repository currently contains the foundation, domain,
+private-upload, portal-read, staff-review, and core AdSanity publishing paths;
+the status on each phase below names the remaining product work.
 
 Nothing here is built merely because the architecture supports it.
 
-## Phase 1 — Foundation *(current)*
+## Phase 1 — Foundation *(runtime complete; release automation remains)*
 
 Bootstrap, autoloader, container, post types and statuses, installer, upgrader, audit log, roles and org-scoped ownership, asset pipeline, design tokens, portal route shell, CI, i18n, packaging, semantic-release.
 
 **Ends with:** a plugin that installs, upgrades, uninstalls, enforces its capability model, routes its portal under any theme, and packages reproducibly. No campaign can be created yet — deliberately. The security foundation lands before the UI does.
 
-## Phase 2 — Domain layer
+## Phase 2 — Domain layer *(in progress)*
 
 The five repositories, domain value objects, the campaign validator, and `Campaign_State_Machine` with exhaustive transition coverage including every illegal edge. Placement and package resolution.
 
-## Phase 3 — Creative upload
+## Phase 3 — Creative upload *(complete)*
 
 The REST upload route, private two-stage storage, MIME/dimension/integrity validation, the authenticated file-stream endpoint, rate limiting, and the security regression tests for every upload threat in [threat-model.md](threat-model.md).
 
-## Phase 4 — Portal UI
+## Phase 4 — Portal UI *(in progress; creation steps 1–6 complete)*
 
-Dashboard, campaign list and detail, organization, account. The wizard: details → package → creative → destination and schedule → review → submit. Interactivity stores for wizard, upload, autosave, and dialog. Autosave and resumable drafts. Full keyboard and screen-reader coverage.
+Dashboard, campaign list and detail, organization, account. The wizard: details → package → creative → destination and schedule → review → submit. The complete creation and submission flow now works without JavaScript, including draft creation, package snapshots, exact-size private creative upload, authenticated preview, removal, destination confirmation, submission-grade scheduling, actionable review, final confirmation, transition-time revalidation, audit, and reviewer notification. REST and forms converge on the same workflows. Remaining here: drag/drop and atomic-replace enhancement, Interactivity stores for wizard/upload/autosave/dialog, and full keyboard and screen-reader flow coverage.
 
-## Phase 5 — Staff review and notifications
+## Phase 5 — Staff review and notifications *(complete)*
 
-`show_ui` flipped on for the staff post types. Review queue, campaign review screen with all creative previews in one place, internal notes, the rejection workflow with required advertiser-facing feedback, approval controls, and the audit timeline.
+A purpose-built, capability-gated admin surface keeps the private post types out
+of WordPress's generic editor and forces every status write through the campaign
+state machine. The review queue and campaign detail are built, including
+authenticated creative previews, internal notes, required advertiser-facing
+feedback, approval controls, and the object-and-organization-scoped audit
+timeline.
 
-Notification infrastructure lands here rather than earlier because it depends on the queue existing: the `Notification_Service`, capability-based recipient resolution (every user holding `laao_ads_review_campaigns`, resolved dynamically — never a maintained list), the submission and resubmission emails, duplicate-submission suppression, and failure handling that never reverses a successful submission.
+Notification infrastructure lives here because it depends on the queue:
+`Notification_Service`, dynamically resolved capability-based recipients,
+individual submission and resubmission emails, per-recipient duplicate
+suppression and bounded partial retry, and failure handling that never reverses
+a successful submission. See [notifications.md](notifications.md).
 
-## Phase 6 — AdSanity publisher
+## Phase 6 — AdSanity publisher *(complete)*
 
-`Ad_Provider_Interface` and the AdSanity adapter. `Placement_Mapping` with the fail-closed resolver and its admin UI. `Creative_Promoter`. Provider ID persistence, reconciliation, idempotent retry, and partial-failure recovery that reuses what already succeeded.
+`Ad_Provider_Interface`, the AdSanity adapter, fail-closed `Placement_Mapping` resolver, `Creative_Promoter`, exact write/read-back verification, draft-first provider checkpoints, dual-record reconciliation, idempotent retry, and partial-failure recovery. The capability-gated Ad delivery screen maps every placement to an immutable ad-group term ID through placement-scoped, nonce-protected, verified and audited writes; missing providers, empty catalogues, unmapped placements and deleted groups all fail closed.
 
 **The phase that removes the manual work**, and the reason the rest exists.
 
@@ -42,9 +54,9 @@ Notification infrastructure lands here rather than earlier because it depends on
 
 Organization CRUD for advertisers, multiple users per organization, invitations, member management, and suspension. The data model already supports this; the UI does not exist yet.
 
-## Phase 9 — Packages and pricing
+## Phase 9 — Packages and pricing *(catalogue read/selection complete; management remains)*
 
-Package catalogue, selection in the wizard, price display, renew and duplicate. **Payment processing is deliberately out of scope** — the currency fields exist so that adding it later is not a migration, not because it is planned.
+The validated catalogue, wizard selection, price display, and campaign snapshot are implemented. Remaining: the staff package-management surface, renew, and duplicate. **Payment processing is deliberately out of scope** — the currency fields exist so that adding it later is not a migration, not because it is planned.
 
 ## Phase 10 — Reporting
 

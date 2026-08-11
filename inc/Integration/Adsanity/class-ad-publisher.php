@@ -11,6 +11,7 @@ namespace LAAO_Advertiser_Portal\Integration\Adsanity;
 
 use LAAO_Advertiser_Portal\Domain\Publication_Result;
 use LAAO_Advertiser_Portal\Domain\Transition_Table;
+use LAAO_Advertiser_Portal\Integration\Ad_Provider_Interface;
 use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
 use LAAO_Advertiser_Portal\Repository\Creative_Repository;
 use LAAO_Advertiser_Portal\Repository\Placement_Repository;
@@ -41,7 +42,7 @@ use WP_Error;
  * and only one applies. We publish image ads, so we set the thumbnail and none
  * of the others.
  */
-final class Ad_Publisher {
+final class Ad_Publisher implements Ad_Provider_Interface {
 
 	/**
 	 * Constructor.
@@ -190,6 +191,21 @@ final class Ad_Publisher {
 	}
 
 	/**
+	 * Every provider effect consumed by the campaign state machine.
+	 *
+	 * Kept behind the provider interface so application composition does not
+	 * need to know which adapter supplies publication and lifecycle behavior.
+	 *
+	 * @return array<string, callable>
+	 */
+	public function transition_effects(): array {
+		return array_merge(
+			array( Transition_Table::EFFECT_PUBLISH => $this->as_effect() ),
+			$this->lifecycle_effects()
+		);
+	}
+
+	/**
 	 * Rewrites the end date, and optionally the status, of every ad a campaign
 	 * has.
 	 *
@@ -310,7 +326,9 @@ final class Ad_Publisher {
 		}
 
 		$existing = $this->creatives->provider_ad_id( $creative_id );
-		$reusing  = $existing > 0 && Adsanity::POST_TYPE === get_post_type( $existing );
+		$reusing  = $existing > 0
+			&& Adsanity::POST_TYPE === get_post_type( $existing )
+			&& in_array( $existing, $this->campaigns->provider_ad_ids( $campaign_id ), true );
 
 		$ad_id = $reusing ? $existing : $this->create_ad( $campaign_id, $creative );
 
@@ -320,9 +338,26 @@ final class Ad_Publisher {
 			return;
 		}
 
+		/*
+		 * Checkpoint before configuration. WordPress has created a real provider
+		 * object at this point; if a later meta, taxonomy, or status write fails,
+		 * losing its id would make the retry create a duplicate. New objects are
+		 * drafts until every required value has passed read-back verification, so
+		 * the checkpoint can never expose a partially configured ad.
+		 */
+		$this->creatives->set_provider_ad_id( $creative_id, $ad_id );
+		$this->campaigns->add_provider_ad_id( $campaign_id, $ad_id );
+
 		$this->write_ad( $ad_id, $creative, $size, $attachment_id, $groups[ $creative['placement_id'] ], $campaign_id );
 
-		$verified = $this->verify_ad( $ad_id, $creative, $size, $attachment_id, $groups[ $creative['placement_id'] ] );
+		$verified = $this->verify_ad(
+			$ad_id,
+			$creative,
+			$size,
+			$attachment_id,
+			$groups[ $creative['placement_id'] ],
+			$campaign_id
+		);
 
 		if ( '' !== $verified ) {
 			$result->failed( $creative_id, $verified );
@@ -330,10 +365,19 @@ final class Ad_Publisher {
 			return;
 		}
 
-		// Persisted the moment it succeeds. A failure on the next creative
-		// then leaves this one recorded, and the retry reconciles it.
-		$this->creatives->set_provider_ad_id( $creative_id, $ad_id );
-		$this->campaigns->add_provider_ad_id( $campaign_id, $ad_id );
+		$activated = wp_update_post(
+			array(
+				'ID'          => $ad_id,
+				'post_status' => 'publish',
+			),
+			true
+		);
+
+		if ( is_wp_error( $activated ) || 'publish' !== get_post_status( $ad_id ) ) {
+			$result->failed( $creative_id, 'status_not_published' );
+
+			return;
+		}
 
 		if ( $reusing ) {
 			$result->reused( $creative_id, $ad_id );
@@ -363,7 +407,8 @@ final class Ad_Publisher {
 		$ad_id = wp_insert_post(
 			array(
 				'post_type'   => Adsanity::POST_TYPE,
-				'post_status' => 'publish',
+				// A partially configured provider object must never enter rotation.
+				'post_status' => 'draft',
 				'post_title'  => $title,
 			),
 			true
@@ -409,9 +454,10 @@ final class Ad_Publisher {
 	 * @param string               $size          Ad size key.
 	 * @param int                  $attachment_id Attachment backing the creative.
 	 * @param int                  $term_id       Ad-group term id.
+	 * @param int                  $campaign_id   Campaign the dates come from.
 	 * @return string Empty when everything matches, otherwise a reason code.
 	 */
-	private function verify_ad( int $ad_id, array $creative, string $size, int $attachment_id, int $term_id ): string {
+	private function verify_ad( int $ad_id, array $creative, string $size, int $attachment_id, int $term_id, int $campaign_id ): string {
 		if ( (int) get_post_thumbnail_id( $ad_id ) !== $attachment_id ) {
 			return 'thumbnail_not_stored';
 		}
@@ -424,18 +470,23 @@ final class Ad_Publisher {
 			return 'size_not_stored';
 		}
 
-		$start = get_post_meta( $ad_id, Adsanity::META_START_DATE, true );
-		$end   = get_post_meta( $ad_id, Adsanity::META_END_DATE, true );
+		$target = $this->creatives->opens_in_new_window( (int) $creative['id'] ) ? 1 : 0;
 
-		if ( '' === $start || '' === $end ) {
-			// The failure that makes an ad invisible everywhere rather than
-			// merely wrong.
-			return 'dates_not_stored';
+		if ( (int) get_post_meta( $ad_id, Adsanity::META_TARGET, true ) !== $target ) {
+			return 'target_not_stored';
+		}
+
+		if ( (int) get_post_meta( $ad_id, Adsanity::META_START_DATE, true ) !== $this->campaigns->start_ts( $campaign_id ) ) {
+			return 'start_date_not_stored';
+		}
+
+		if ( (int) get_post_meta( $ad_id, Adsanity::META_END_DATE, true ) !== $this->end_date_for( $campaign_id ) ) {
+			return 'end_date_not_stored';
 		}
 
 		$terms = wp_get_object_terms( $ad_id, Adsanity::TAXONOMY, array( 'fields' => 'ids' ) );
 
-		if ( ! is_array( $terms ) || ! in_array( $term_id, array_map( 'intval', $terms ), true ) ) {
+		if ( ! is_array( $terms ) || array( $term_id ) !== array_map( 'intval', $terms ) ) {
 			return 'group_not_assigned';
 		}
 

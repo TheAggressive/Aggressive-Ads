@@ -32,6 +32,11 @@ use WP_Error;
 final class Placement_Mapping {
 
 	/**
+	 * Defensive bound for one provider taxonomy read.
+	 */
+	private const MAX_GROUPS = 500;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param Placement_Repository $placements Placement persistence.
@@ -93,6 +98,53 @@ final class Placement_Mapping {
 		}
 
 		return $resolved;
+	}
+
+	/**
+	 * Provider groups available to the staff mapping screen.
+	 *
+	 * Names are display text only. Every write and resolution remains keyed on
+	 * the integer term id.
+	 *
+	 * @return array<int, array{id: int, name: string}>|WP_Error
+	 */
+	public function available_groups() {
+		if ( ! Adsanity::is_available() ) {
+			return new WP_Error(
+				'laao_ads_provider_unavailable',
+				__( 'AdSanity is not active, so mappings cannot be changed.', 'laao-advertiser-portal' )
+			);
+		}
+
+		$terms = get_terms(
+			array(
+				'taxonomy'   => Adsanity::TAXONOMY,
+				'hide_empty' => false,
+				'orderby'    => 'name',
+				'order'      => 'ASC',
+				'number'     => self::MAX_GROUPS,
+			)
+		);
+
+		if ( is_wp_error( $terms ) ) {
+			return new WP_Error(
+				'laao_ads_provider_groups_unavailable',
+				__( 'AdSanity ad groups could not be loaded. No mappings were changed.', 'laao-advertiser-portal' )
+			);
+		}
+
+		$groups = array();
+
+		foreach ( $terms as $term ) {
+			if ( $term instanceof \WP_Term ) {
+				$groups[] = array(
+					'id'   => (int) $term->term_id,
+					'name' => (string) $term->name,
+				);
+			}
+		}
+
+		return $groups;
 	}
 
 	/**

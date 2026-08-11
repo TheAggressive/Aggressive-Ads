@@ -42,7 +42,22 @@ PACKAGE_REQUIRED=(
 	uninstall.php
 	inc/class-autoloader.php
 	inc/class-plugin.php
+	inc/Admin/class-review-data.php
+	inc/Admin/class-review-screen.php
+	inc/Notification/class-notification-service.php
+	inc/Portal/class-campaign-actions.php
+	inc/Portal/class-creative-actions.php
+	inc/REST/class-packages-controller.php
+	inc/Repository/class-package-repository.php
+	inc/Repository/class-user-repository.php
+	inc/Workflow/class-campaign-editor.php
+	inc/Workflow/class-creative-manager.php
+	inc/Workflow/class-review-actions.php
+	inc/Workflow/class-review-readiness.php
 	assets/portal.css
+	assets/admin.css
+	templates/admin/review-queue.php
+	templates/admin/review-campaign.php
 	templates/portal/base.php
 	templates/portal/dashboard.php
 	templates/portal/campaigns.php

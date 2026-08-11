@@ -80,7 +80,7 @@ Three properties this ordering buys:
 
 **It never throws for a merely illegal transition.** An advertiser POSTing `lap_approved` is an expected event, not an exceptional one. `apply()` returns a `WP_Error`, writes an `outcome=denied` audit row, and the REST layer turns it into a 403. Exceptions are reserved for genuine faults.
 
-**Notifications cannot roll back a business fact.** Step 10 is last and its failure is swallowed and logged. A submitted campaign stays submitted when the mail server is down. See [ADR-0008](adr/0008-explicit-transition-table.md).
+**Notifications cannot roll back a business fact.** Step 10 is last and its failure is swallowed and logged. A submitted campaign stays submitted when the mail server is down. Recipient resolution, per-user receipts, and retry behavior are specified in [notifications.md](notifications.md). See [ADR-0008](adr/0008-explicit-transition-table.md).
 
 ## Nothing else may write `post_status`
 
@@ -97,6 +97,43 @@ This mirrors AdSanity, which has no cron at all and computes active-vs-expired a
 An hourly `laao_ads_reconcile_campaigns` cron event also exists — not because correctness needs it, but because dashboards, counts, and future billing should be right without waiting for someone to open a page. Both paths funnel through `apply()`, so there is exactly one implementation of "this campaign is now live."
 
 ## Validation
+
+Draft edits from the server-rendered wizard and REST autosave both pass through
+`Campaign_Editor`. Package selection is not a client-side convenience: the
+editor re-resolves the posted id, refuses inactive or incomplete packages,
+checks every child placement, and persists a commercial/placement snapshot
+under the same optimistic revision claim as every other draft edit.
+
+Creative writes similarly converge in `Creative_Manager`. It authorizes the
+campaign and placement, validates destination and alternative text, delegates
+hostile-byte inspection to `Creative_Uploader`, enforces exact placement
+dimensions, and deletes staged bytes if a later check or record creation fails.
+Removal is limited to unpublished creative on an advertiser-editable campaign
+and deletes the private file before its record.
+
+Leaving destination-and-schedule Step 4 is another `Campaign_Editor` operation,
+not a display-only step change. After authorization and optimistic concurrency,
+the editor verifies one creative covers every selected placement and applies
+`Campaign_Rules::validate_window()` to the candidate dates. A successful write
+stores the UTC timestamps and advances `_laao_ads_wizard_step` to `review` in
+the same draft update. REST and the progressive form therefore cannot disagree
+about whether Step 4 is complete.
+
+The Step 5 review screen does not invent a second definition of complete.
+`Review_Readiness` runs `Campaign_Validator`, converts every problem into a
+localized advertiser-facing message and exact wizard edit destination, and
+removes the validator's raw context before returning data to the portal or REST
+detail response. The screen is a read-only snapshot; it never advances status
+and it never substitutes for transition-time validation.
+
+Step 6 is also delivery-only: it does not persist a `submit` resume point.
+After an explicit confirmation, its campaign-bound form nonce and the REST
+transition route both call `Campaign_State_Machine::apply( ..., lap_submitted )`
+under the same per-user transition rate limit. The machine decides the edge,
+reauthorizes the campaign, runs the validator against current stored data, and
+only then commits status, submission metadata, audit, domain event, and
+notification. A double post sees `lap_submitted` as its current state, fails the
+edge check, and is audited without repeating the successful transition.
 
 The validator runs at every advertiser-triggered submission **and again at approval**. Re-running it is not redundant: a placement can be deactivated, an organization suspended, or a start date can fall into the past while a campaign sits in the queue.
 
@@ -122,15 +159,17 @@ reviewer clicks Approve
         │
         ├─ for each creative:
         │     sha256 re-verify → sideload → attachment → alt text
-        │     wp_insert_post( 'ads' ) → set_post_thumbnail
+        │     reconcile checkpoint, or wp_insert_post( 'ads', draft )
+        │     persist the ad ID on creative + campaign
+        │     set_post_thumbnail
         │     meta: _url _target _size _start_date _end_date   (dates as ints)
         │     wp_set_object_terms( ad-group )
-        │     read back and assert
-        │     persist the ad ID                  ← so a retry reuses it
+        │     exact read-back of every required value
+        │     status → publish only after verification
         │
         ├─ status → lap_scheduled or lap_live
         ├─ audit
         └─ notify the advertiser
 ```
 
-Persisting each ad ID as it succeeds is what makes retry safe. A failure on the third of four creatives leaves two recorded ad IDs; the retry reconciles those and creates only the missing ones. Nothing is identified by title, so nothing is duplicated. Partial-failure handling lands with the publisher in Phase 6.
+Persisting each ad ID immediately after WordPress creates its draft is what makes every later failure retry-safe. If a meta or taxonomy write does not stick, the incomplete provider object stays out of rotation and the retry reconciles that exact draft. A failure on the third of four creatives also leaves the two successful ad IDs recorded; the retry reuses those and creates only what is missing. Nothing is identified by title, so nothing is duplicated. The integration suite forces both failure shapes and proves the retry behavior.

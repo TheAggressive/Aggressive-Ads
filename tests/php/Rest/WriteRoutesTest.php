@@ -17,10 +17,12 @@ use LAAO_Advertiser_Portal\Repository\Audit_Repository;
 use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
 use LAAO_Advertiser_Portal\Repository\Creative_Repository;
 use LAAO_Advertiser_Portal\Repository\Org_Repository;
+use LAAO_Advertiser_Portal\Repository\Package_Repository;
 use LAAO_Advertiser_Portal\Repository\Placement_Repository;
 use LAAO_Advertiser_Portal\Security\Ownership;
 use LAAO_Advertiser_Portal\Security\Rate_Limiter;
 use LAAO_Advertiser_Portal\Security\Roles;
+use LAAO_Advertiser_Portal\Storage\Private_Storage;
 use WP_REST_Request;
 use WP_UnitTestCase;
 
@@ -189,15 +191,240 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Both write routes exist.
+	 * Every write route exists.
 	 *
 	 * @return void
 	 */
 	public function test_the_write_routes_are_registered(): void {
 		$routes = rest_get_server()->get_routes();
 
+		$this->assertArrayHasKey( '/laao-advertiser-portal/v1/campaigns', $routes );
+		$this->assertArrayHasKey( '/laao-advertiser-portal/v1/campaigns/(?P<id>\d+)', $routes );
 		$this->assertArrayHasKey( '/laao-advertiser-portal/v1/campaigns/(?P<id>\d+)/creatives', $routes );
+		$this->assertArrayHasKey( '/laao-advertiser-portal/v1/creatives/(?P<id>\d+)', $routes );
 		$this->assertArrayHasKey( '/laao-advertiser-portal/v1/campaigns/(?P<id>\d+)/transitions', $routes );
+	}
+
+	/**
+	 * A draft created through REST derives its tenant from the caller.
+	 *
+	 * @return void
+	 */
+	public function test_the_owner_can_create_an_organization_scoped_draft(): void {
+		wp_set_current_user( $this->owner );
+
+		$request = new WP_REST_Request( 'POST', '/laao-advertiser-portal/v1/campaigns' );
+		$request->set_body_params( array( 'title' => 'New campaign' ) );
+
+		$response = rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertSame( 201, $response->get_status() );
+		$this->assertSame( 'New campaign', $data['title'] );
+		$this->assertSame( Post_Statuses::DRAFT, $data['status'] );
+		$this->assertSame( 0, $data['autosave_rev'] );
+		$this->assertSame(
+			get_post_meta( $this->campaign_id, Campaign_Repository::META_ORG_ID, true ),
+			get_post_meta( (int) $data['id'], Campaign_Repository::META_ORG_ID, true )
+		);
+	}
+
+	/**
+	 * REST autosave persists only its public allowlist.
+	 *
+	 * @return void
+	 */
+	public function test_the_owner_can_autosave_an_editable_campaign(): void {
+		wp_set_current_user( $this->owner );
+
+		$original_org = get_post_meta( $this->campaign_id, Campaign_Repository::META_ORG_ID, true );
+		$request      = new WP_REST_Request( 'PATCH', '/laao-advertiser-portal/v1/campaigns/' . $this->campaign_id );
+		$request->set_body_params(
+			array(
+				'title'            => 'Updated campaign',
+				'placement_ids'    => array( $this->placement_id ),
+				'start_ts'         => 1_900_000_000,
+				'end_ts'           => 1_900_086_400,
+				'advertiser_notes' => 'Please review this artwork.',
+				'wizard_step'      => 'creative',
+				'autosave_rev'     => 0,
+				'org_id'           => PHP_INT_MAX,
+				'internal_notes'   => 'Must never persist.',
+			)
+		);
+
+		$response = rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 'Updated campaign', $data['title'] );
+		$this->assertSame( 1, $data['autosave_rev'] );
+		$this->assertSame( 'creative', $data['wizard_step'] );
+		$this->assertSame( $original_org, get_post_meta( $this->campaign_id, Campaign_Repository::META_ORG_ID, true ) );
+		$this->assertSame( '', get_post_meta( $this->campaign_id, Campaign_Repository::META_INTERNAL_NOTES, true ) );
+	}
+
+	/**
+	 * REST package selection uses the same validated snapshot as the HTML form.
+	 *
+	 * @return void
+	 */
+	public function test_the_owner_can_select_a_package_through_autosave(): void {
+		$package_id = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::PACKAGE,
+				'post_status' => 'publish',
+				'post_title'  => 'Launch package',
+			)
+		);
+		add_post_meta( $package_id, Package_Repository::META_PLACEMENT_ID, $this->placement_id );
+		update_post_meta( $package_id, Package_Repository::META_DURATION_DAYS, 30 );
+		update_post_meta( $package_id, Package_Repository::META_PRICE_CENTS, 45000 );
+		update_post_meta( $package_id, Package_Repository::META_CURRENCY, 'USD' );
+		update_post_meta( $package_id, Package_Repository::META_IS_ACTIVE, 1 );
+
+		wp_set_current_user( $this->owner );
+		Plugin::instance()->container()->get( Ownership::class )->flush_cache();
+
+		$request = new WP_REST_Request( 'PATCH', '/laao-advertiser-portal/v1/campaigns/' . $this->campaign_id );
+		$request->set_body_params(
+			array(
+				'package_id'   => $package_id,
+				'wizard_step'  => 'package',
+				'autosave_rev' => 0,
+			)
+		);
+
+		$response = rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( $package_id, $data['package_id'] );
+		$this->assertSame( 45000, $data['budget_cents'] );
+		$this->assertSame( 'USD', $data['currency'] );
+		$this->assertSame( array( $this->placement_id ), $data['placement_ids'] );
+	}
+
+	/**
+	 * REST cannot advance Step 4 without complete creative coverage.
+	 *
+	 * @return void
+	 */
+	public function test_rest_review_step_requires_complete_creative_coverage(): void {
+		wp_set_current_user( $this->owner );
+
+		$request = new WP_REST_Request( 'PATCH', '/laao-advertiser-portal/v1/campaigns/' . $this->campaign_id );
+		$request->set_body_params(
+			array(
+				'start_ts'     => time() + DAY_IN_SECONDS,
+				'end_ts'       => 0,
+				'wizard_step'  => 'review',
+				'autosave_rev' => 0,
+			)
+		);
+
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertSame( 422, $response->get_status() );
+		$this->assertSame( 'laao_ads_creatives_incomplete', $response->get_data()['code'] );
+		$this->assertSame( 0, (int) get_post_meta( $this->campaign_id, Campaign_Repository::META_START_TS, true ) );
+	}
+
+	/**
+	 * REST and HTML share successful Step 4 completion validation.
+	 *
+	 * @return void
+	 */
+	public function test_rest_can_complete_destination_and_schedule_step(): void {
+		wp_set_current_user( $this->owner );
+
+		$creative_id = Plugin::instance()->container()->get( Creative_Repository::class )->create(
+			$this->campaign_id,
+			(int) get_post_meta( $this->campaign_id, Campaign_Repository::META_ORG_ID, true ),
+			$this->placement_id,
+			array(
+				'kind'      => 'image',
+				'click_url' => 'https://example.com/exhibition',
+				'alt_text'  => 'Visitors viewing an exhibition',
+				'size'      => '728x90',
+			)
+		);
+		$this->assertGreaterThan( 0, $creative_id );
+
+		$start   = time() + ( 10 * DAY_IN_SECONDS );
+		$end     = time() + ( 20 * DAY_IN_SECONDS );
+		$request = new WP_REST_Request( 'PATCH', '/laao-advertiser-portal/v1/campaigns/' . $this->campaign_id );
+		$request->set_body_params(
+			array(
+				'start_ts'     => $start,
+				'end_ts'       => $end,
+				'wizard_step'  => 'review',
+				'autosave_rev' => 0,
+			)
+		);
+
+		$response = rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 'review', $data['wizard_step'] );
+		$this->assertSame( $start, $data['start_ts'] );
+		$this->assertSame( $end, $data['end_ts'] );
+		$this->assertSame( 1, $data['autosave_rev'] );
+	}
+
+	/**
+	 * A stale autosave receives a conflict and cannot overwrite current data.
+	 *
+	 * @return void
+	 */
+	public function test_a_stale_rest_autosave_is_refused(): void {
+		wp_set_current_user( $this->owner );
+
+		$first = new WP_REST_Request( 'PATCH', '/laao-advertiser-portal/v1/campaigns/' . $this->campaign_id );
+		$first->set_body_params(
+			array(
+				'title'        => 'Current title',
+				'autosave_rev' => 0,
+			)
+		);
+		$this->assertSame( 200, rest_get_server()->dispatch( $first )->get_status() );
+
+		$stale = new WP_REST_Request( 'PATCH', '/laao-advertiser-portal/v1/campaigns/' . $this->campaign_id );
+		$stale->set_body_params(
+			array(
+				'title'        => 'Stale title',
+				'autosave_rev' => 0,
+			)
+		);
+
+		$response = rest_get_server()->dispatch( $stale );
+
+		$this->assertSame( 409, $response->get_status() );
+		$this->assertSame( 'laao_ads_edit_conflict', $response->get_data()['code'] );
+		$this->assertSame( 'Current title', get_the_title( $this->campaign_id ) );
+	}
+
+	/**
+	 * Another tenant cannot autosave into an owned campaign.
+	 *
+	 * @return void
+	 */
+	public function test_another_organization_cannot_autosave(): void {
+		wp_set_current_user( $this->stranger );
+
+		$request = new WP_REST_Request( 'PATCH', '/laao-advertiser-portal/v1/campaigns/' . $this->campaign_id );
+		$request->set_body_params(
+			array(
+				'title'        => 'Taken over',
+				'autosave_rev' => 0,
+			)
+		);
+
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertSame( 403, $response->get_status() );
+		$this->assertSame( 'laao_ads_forbidden', $response->get_data()['code'] );
 	}
 
 	/**
@@ -217,6 +444,46 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 		$this->assertSame( 728, $data['width'] );
 		$this->assertSame( 90, $data['height'] );
 		$this->assertSame( 'image/png', $data['mime'] );
+	}
+
+	/**
+	 * The owner can remove an unapproved creative and its private bytes.
+	 *
+	 * @return void
+	 */
+	public function test_the_owner_can_delete_an_editable_creative(): void {
+		wp_set_current_user( $this->owner );
+		$uploaded    = rest_get_server()->dispatch( $this->upload_request( $this->campaign_id, $this->placement_id ) );
+		$creative_id = (int) $uploaded->get_data()['id'];
+		$stored      = Plugin::instance()->container()->get( Creative_Repository::class )->storage_details( $creative_id );
+		$this->assertIsArray( $stored );
+
+		$request  = new WP_REST_Request( 'DELETE', '/laao-advertiser-portal/v1/creatives/' . $creative_id );
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertSame( 204, $response->get_status() );
+		$this->assertNull( get_post( $creative_id ) );
+		$this->assertNull( Plugin::instance()->container()->get( Private_Storage::class )->resolve( $stored['path'] ) );
+	}
+
+	/**
+	 * Another tenant cannot delete creative by posting its object id.
+	 *
+	 * @return void
+	 */
+	public function test_another_organization_cannot_delete_a_creative(): void {
+		wp_set_current_user( $this->owner );
+		$uploaded    = rest_get_server()->dispatch( $this->upload_request( $this->campaign_id, $this->placement_id ) );
+		$creative_id = (int) $uploaded->get_data()['id'];
+
+		wp_set_current_user( $this->stranger );
+		Plugin::instance()->container()->get( Ownership::class )->flush_cache();
+
+		$request  = new WP_REST_Request( 'DELETE', '/laao-advertiser-portal/v1/creatives/' . $creative_id );
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertSame( 403, $response->get_status() );
+		$this->assertNotNull( get_post( $creative_id ) );
 	}
 
 	/**
@@ -301,7 +568,13 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 		$this->temporary[] = $temp;
 
 		$request = new WP_REST_Request( 'POST', '/laao-advertiser-portal/v1/campaigns/' . $this->campaign_id . '/creatives' );
-		$request->set_body_params( array( 'placement_id' => $this->placement_id ) );
+		$request->set_body_params(
+			array(
+				'placement_id' => $this->placement_id,
+				'click_url'    => 'https://example.com/exhibition',
+				'alt_text'     => 'Gallery exhibition artwork',
+			)
+		);
 		$request->set_file_params(
 			array(
 				'file' => array(
@@ -441,6 +714,9 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 		$transition->set_body_params( array( 'to' => Post_Statuses::SUBMITTED ) );
 
 		$this->assertContains( rest_get_server()->dispatch( $transition )->get_status(), array( 401, 403 ) );
+
+		$delete = new WP_REST_Request( 'DELETE', '/laao-advertiser-portal/v1/creatives/999999' );
+		$this->assertContains( rest_get_server()->dispatch( $delete )->get_status(), array( 401, 403 ) );
 	}
 
 	/**

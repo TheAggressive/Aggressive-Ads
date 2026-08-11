@@ -30,12 +30,15 @@ place to say something different from what was decided.
 
 ## Status — read this before assuming anything exists
 
-Phase 1 (foundation) is **in progress**. What is built:
+The runtime and security foundation is built, while i18n/release automation and
+implementation across later roadmap phases remain in progress. Phase 4's
+advertiser creation UI is the largest open product area. What is built:
 
 - root plugin file, autoloader, service container, composition root
 - five private post types, eleven campaign statuses
 - the capability vocabulary and the two role matrices, installed by the installer
-- the audit table, `Audit_Event`, and `Audit_Repository` (write path only)
+- the audit table, `Audit_Event`, and `Audit_Repository`, including
+  object-and-organization-scoped timeline reads
 - installer, version-driven upgrader with a tested migration walker, `uninstall.php`
 - org-scoped `Ownership::map()`, `Org_Repository`, `Admin_Guard`, `Portal\Routes`
 - `Domain\Transition_Table` — the 22 legal edges, with all 121 pairs asserted
@@ -48,13 +51,21 @@ Phase 1 (foundation) is **in progress**. What is built:
 - creative upload, two-stage private storage, the promoter, and the REST routes
 - the portal route, `Portal\Router`, `Portal\View_Data`, and the screens it
   serves: dashboard, campaign list, campaign detail, 403, 404, placeholder
+- advertiser draft creation and the first wizard step (details, placements,
+  schedule, and advertiser notes), with an HTML form path, REST create/autosave,
+  optimistic concurrency, and shared `Campaign_Editor` validation
 - `assets/portal.css` — the `--laao-ads-*` token layer and its components,
   contrast-gated by `tests/php/Unit/Assets/PortalContrastTest.php`
+- the capability-gated staff review queue and campaign review detail, with
+  private creative previews, internal notes, transition controls, and audit
+  history using the same design tokens
+- capability-resolved, individualized submission/resubmission notifications,
+  with per-recipient duplicate suppression, bounded cron retry, localized
+  plain-text messages, and failure auditing that cannot reverse a transition
 - release packaging and independent archive verification
 
 What does **not** exist yet, despite being described in `docs/`: the package
-repository, unpublish/pause/resume, notifications, the new-campaign wizard, the
-upload UI, the staff review queue, analytics, any JavaScript toolchain,
+repository, the lifecycle clock, wizard steps 2–6, the upload UI, analytics, any JavaScript toolchain,
 Playwright, i18n tooling, semantic-release, and self-hosted Archivo.
 `docs/` describes the design; `docs/roadmap.md` says which phase builds it. If a
 doc describes something you cannot find, it has not been built — that is

@@ -9,6 +9,10 @@ declare(strict_types=1);
 
 namespace LAAO_Advertiser_Portal;
 
+use LAAO_Advertiser_Portal\Admin\Review_Data;
+use LAAO_Advertiser_Portal\Admin\Review_Screen;
+use LAAO_Advertiser_Portal\Admin\Placement_Mapping_Data;
+use LAAO_Advertiser_Portal\Admin\Placement_Mapping_Screen;
 use LAAO_Advertiser_Portal\Assets\Assets;
 use LAAO_Advertiser_Portal\Core\Post_Statuses;
 use LAAO_Advertiser_Portal\Core\Post_Types;
@@ -17,24 +21,36 @@ use LAAO_Advertiser_Portal\Install\Installer;
 use LAAO_Advertiser_Portal\Install\Upgrader;
 use LAAO_Advertiser_Portal\Repository\Audit_Repository;
 use LAAO_Advertiser_Portal\Domain\Transition_Table;
+use LAAO_Advertiser_Portal\Integration\Ad_Provider_Interface;
 use LAAO_Advertiser_Portal\Integration\Adsanity\Ad_Publisher;
 use LAAO_Advertiser_Portal\Integration\Adsanity\Placement_Mapping;
+use LAAO_Advertiser_Portal\Notification\Notification_Service;
 use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
 use LAAO_Advertiser_Portal\Repository\Creative_Repository;
 use LAAO_Advertiser_Portal\Repository\Org_Repository;
+use LAAO_Advertiser_Portal\Repository\Package_Repository;
 use LAAO_Advertiser_Portal\Portal\Router;
 use LAAO_Advertiser_Portal\Portal\View_Data;
+use LAAO_Advertiser_Portal\Portal\Campaign_Actions;
+use LAAO_Advertiser_Portal\Portal\Creative_Actions;
 use LAAO_Advertiser_Portal\REST\Campaigns_Controller;
 use LAAO_Advertiser_Portal\REST\Creative_Controller;
 use LAAO_Advertiser_Portal\REST\Creative_File_Controller;
 use LAAO_Advertiser_Portal\REST\Placements_Controller;
+use LAAO_Advertiser_Portal\REST\Packages_Controller;
 use LAAO_Advertiser_Portal\REST\Transitions_Controller;
 use LAAO_Advertiser_Portal\Repository\Placement_Repository;
+use LAAO_Advertiser_Portal\Repository\User_Repository;
 use LAAO_Advertiser_Portal\Storage\Private_Storage;
 use LAAO_Advertiser_Portal\Workflow\Campaign_State_Machine;
+use LAAO_Advertiser_Portal\Workflow\Campaign_Editor;
 use LAAO_Advertiser_Portal\Workflow\Campaign_Validator;
 use LAAO_Advertiser_Portal\Workflow\Creative_Promoter;
+use LAAO_Advertiser_Portal\Workflow\Creative_Manager;
 use LAAO_Advertiser_Portal\Workflow\Creative_Uploader;
+use LAAO_Advertiser_Portal\Workflow\Review_Actions;
+use LAAO_Advertiser_Portal\Workflow\Review_Readiness;
+use LAAO_Advertiser_Portal\Workflow\Placement_Mapping_Manager;
 use LAAO_Advertiser_Portal\Workflow\Transition_Guards;
 use LAAO_Advertiser_Portal\Security\Admin_Guard;
 use LAAO_Advertiser_Portal\Security\Ownership;
@@ -232,6 +248,11 @@ final class Plugin {
 		);
 
 		$this->container->register(
+			User_Repository::class,
+			static fn (): User_Repository => new User_Repository()
+		);
+
+		$this->container->register(
 			Creative_Repository::class,
 			static fn (): Creative_Repository => new Creative_Repository()
 		);
@@ -242,12 +263,37 @@ final class Plugin {
 		);
 
 		$this->container->register(
+			Package_Repository::class,
+			static fn (): Package_Repository => new Package_Repository()
+		);
+
+		$this->container->register(
+			Campaign_Editor::class,
+			static fn ( Service_Container $c ): Campaign_Editor => new Campaign_Editor(
+				$c->get( Campaign_Repository::class ),
+				$c->get( Org_Repository::class ),
+				$c->get( Package_Repository::class ),
+				$c->get( Placement_Repository::class ),
+				$c->get( Creative_Repository::class ),
+				$c->get( Audit_Repository::class )
+			)
+		);
+
+		$this->container->register(
 			Campaign_Validator::class,
 			static fn ( Service_Container $c ): Campaign_Validator => new Campaign_Validator(
 				$c->get( Campaign_Repository::class ),
 				$c->get( Creative_Repository::class ),
 				$c->get( Placement_Repository::class ),
-				$c->get( Org_Repository::class )
+				$c->get( Org_Repository::class ),
+				$c->get( Package_Repository::class )
+			)
+		);
+
+		$this->container->register(
+			Review_Readiness::class,
+			static fn ( Service_Container $c ): Review_Readiness => new Review_Readiness(
+				$c->get( Campaign_Validator::class )
 			)
 		);
 
@@ -255,6 +301,23 @@ final class Plugin {
 			Placement_Mapping::class,
 			static fn ( Service_Container $c ): Placement_Mapping => new Placement_Mapping(
 				$c->get( Placement_Repository::class )
+			)
+		);
+
+		$this->container->register(
+			Placement_Mapping_Manager::class,
+			static fn ( Service_Container $c ): Placement_Mapping_Manager => new Placement_Mapping_Manager(
+				$c->get( Placement_Repository::class ),
+				$c->get( Placement_Mapping::class ),
+				$c->get( Audit_Repository::class )
+			)
+		);
+
+		$this->container->register(
+			Placement_Mapping_Data::class,
+			static fn ( Service_Container $c ): Placement_Mapping_Data => new Placement_Mapping_Data(
+				$c->get( Placement_Repository::class ),
+				$c->get( Placement_Mapping::class )
 			)
 		);
 
@@ -288,6 +351,19 @@ final class Plugin {
 		);
 
 		$this->container->register(
+			Creative_Manager::class,
+			static fn ( Service_Container $c ): Creative_Manager => new Creative_Manager(
+				$c->get( Campaign_Repository::class ),
+				$c->get( Creative_Repository::class ),
+				$c->get( Placement_Repository::class ),
+				$c->get( Creative_Uploader::class ),
+				$c->get( Private_Storage::class ),
+				$c->get( Rate_Limiter::class ),
+				$c->get( Audit_Repository::class )
+			)
+		);
+
+		$this->container->register(
 			Creative_Promoter::class,
 			static fn ( Service_Container $c ): Creative_Promoter => new Creative_Promoter(
 				$c->get( Creative_Repository::class ),
@@ -306,7 +382,10 @@ final class Plugin {
 				$c->get( Campaign_Repository::class ),
 				$c->get( Placement_Repository::class ),
 				$c->get( Creative_Repository::class ),
-				$c->get( Org_Repository::class )
+				$c->get( Org_Repository::class ),
+				$c->get( Package_Repository::class ),
+				$c->get( Campaign_Editor::class ),
+				$c->get( Review_Readiness::class )
 			)
 		);
 
@@ -318,12 +397,31 @@ final class Plugin {
 		);
 
 		$this->container->register(
+			Campaign_Actions::class,
+			static fn ( Service_Container $c ): Campaign_Actions => new Campaign_Actions(
+				$c->get( Campaign_Editor::class ),
+				$c->get( Campaign_State_Machine::class ),
+				$c->get( Rate_Limiter::class )
+			)
+		);
+
+		$this->container->register(
+			Creative_Actions::class,
+			static fn ( Service_Container $c ): Creative_Actions => new Creative_Actions(
+				$c->get( Creative_Manager::class )
+			)
+		);
+
+		$this->container->register(
 			Campaigns_Controller::class,
 			static fn ( Service_Container $c ): Campaigns_Controller => new Campaigns_Controller(
 				$c->get( Campaign_Repository::class ),
 				$c->get( Creative_Repository::class ),
 				$c->get( Placement_Repository::class ),
-				$c->get( Org_Repository::class )
+				$c->get( Org_Repository::class ),
+				$c->get( Campaign_Editor::class ),
+				$c->get( Review_Readiness::class ),
+				$c->get( Rate_Limiter::class )
 			)
 		);
 
@@ -331,6 +429,15 @@ final class Plugin {
 			Placements_Controller::class,
 			static fn ( Service_Container $c ): Placements_Controller => new Placements_Controller(
 				$c->get( Placement_Repository::class )
+			)
+		);
+
+		$this->container->register(
+			Packages_Controller::class,
+			static fn ( Service_Container $c ): Packages_Controller => new Packages_Controller(
+				$c->get( Package_Repository::class ),
+				$c->get( Placement_Repository::class ),
+				$c->get( Campaign_Editor::class )
 			)
 		);
 
@@ -344,11 +451,7 @@ final class Plugin {
 		$this->container->register(
 			Creative_Controller::class,
 			static fn ( Service_Container $c ): Creative_Controller => new Creative_Controller(
-				$c->get( Campaign_Repository::class ),
-				$c->get( Creative_Repository::class ),
-				$c->get( Placement_Repository::class ),
-				$c->get( Creative_Uploader::class ),
-				$c->get( Rate_Limiter::class )
+				$c->get( Creative_Manager::class )
 			)
 		);
 
@@ -381,15 +484,63 @@ final class Plugin {
 		);
 
 		$this->container->register(
+			Ad_Provider_Interface::class,
+			static fn ( Service_Container $c ): Ad_Provider_Interface => $c->get( Ad_Publisher::class )
+		);
+
+		$this->container->register(
 			Campaign_State_Machine::class,
 			static fn ( Service_Container $c ): Campaign_State_Machine => new Campaign_State_Machine(
 				$c->get( Campaign_Repository::class ),
 				$c->get( Audit_Repository::class ),
 				$c->get( Transition_Guards::class ),
-				array_merge(
-					array( Transition_Table::EFFECT_PUBLISH => $c->get( Ad_Publisher::class )->as_effect() ),
-					$c->get( Ad_Publisher::class )->lifecycle_effects()
-				)
+				$c->get( Ad_Provider_Interface::class )->transition_effects()
+			)
+		);
+
+		$this->container->register(
+			Notification_Service::class,
+			static fn ( Service_Container $c ): Notification_Service => new Notification_Service(
+				$c->get( Campaign_Repository::class ),
+				$c->get( Org_Repository::class ),
+				$c->get( User_Repository::class ),
+				$c->get( Audit_Repository::class )
+			)
+		);
+
+		$this->container->register(
+			Review_Data::class,
+			static fn ( Service_Container $c ): Review_Data => new Review_Data(
+				$c->get( Campaign_Repository::class ),
+				$c->get( Creative_Repository::class ),
+				$c->get( Placement_Repository::class ),
+				$c->get( Org_Repository::class ),
+				$c->get( Audit_Repository::class )
+			)
+		);
+
+		$this->container->register(
+			Review_Actions::class,
+			static fn ( Service_Container $c ): Review_Actions => new Review_Actions(
+				$c->get( Campaign_State_Machine::class ),
+				$c->get( Campaign_Repository::class ),
+				$c->get( Audit_Repository::class )
+			)
+		);
+
+		$this->container->register(
+			Review_Screen::class,
+			static fn ( Service_Container $c ): Review_Screen => new Review_Screen(
+				$c->get( Review_Data::class ),
+				$c->get( Review_Actions::class )
+			)
+		);
+
+		$this->container->register(
+			Placement_Mapping_Screen::class,
+			static fn ( Service_Container $c ): Placement_Mapping_Screen => new Placement_Mapping_Screen(
+				$c->get( Placement_Mapping_Data::class ),
+				$c->get( Placement_Mapping_Manager::class )
 			)
 		);
 
@@ -456,6 +607,9 @@ final class Plugin {
 			// Attaches the listener that notices a campaign status written
 			// without going through the state machine.
 			Campaign_State_Machine::class,
+			Notification_Service::class,
+			Review_Screen::class,
+			Placement_Mapping_Screen::class,
 
 			// REST last: routes are registered on rest_api_init, which fires
 			// well after this, so ordering here is about nothing but reading.
@@ -464,12 +618,15 @@ final class Plugin {
 			// initialized at plugins_loaded rather than later.
 			Router::class,
 			Assets::class,
+			Campaign_Actions::class,
+			Creative_Actions::class,
 
 			Creative_File_Controller::class,
 			Creative_Controller::class,
 			Transitions_Controller::class,
 			Campaigns_Controller::class,
 			Placements_Controller::class,
+			Packages_Controller::class,
 		);
 	}
 }

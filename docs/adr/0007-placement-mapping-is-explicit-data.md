@@ -34,7 +34,9 @@ The mapping is **stored data**: `_laao_ads_adgroup_term_id` on each placement, a
 
 ## Consequences
 
-- A fresh install cannot approve anything until mappings are set. Correct: the alternative is publishing into a guessed group. The Site Health check and the placements screen both surface unmapped placements before a reviewer discovers it mid-approval.
+- A fresh install cannot approve anything until mappings are set. Correct: the alternative is publishing into a guessed group. The Ad delivery screen surfaces unmapped and dangling placements before a reviewer discovers them mid-approval.
+- Each placement has an independent, placement-scoped form. This avoids partial bulk updates and gives every configuration change its own nonce, verification result, and audit event.
+- Provider absence, taxonomy-read failure, and an empty group catalogue make the screen read-only without clearing existing mappings.
 - The same rule makes AdSanity's absence a clean failure rather than a partial publish — the check that aborts is the same check.
 - Deleting an `ad-group` term dangles a mapping. Caught by the existence check at resolve time, reported as an error, never published into a term ID that no longer resolves.
 - Advertisers never see AdSanity terminology. `_laao_ads_adgroup_term_id` is on the never-expose list for advertiser-facing REST responses.

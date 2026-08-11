@@ -219,6 +219,26 @@ final class CampaignStateMachineTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A reviewer cannot make an advertiser-only transition.
+	 *
+	 * Reviewers inherit advertiser primitives, so this proves the transition's
+	 * actor declaration is enforced rather than treated as UI-only metadata.
+	 *
+	 * @return void
+	 */
+	public function test_a_reviewer_cannot_make_an_advertiser_transition(): void {
+		wp_set_current_user( $this->reviewer );
+
+		$campaign = $this->campaign( Post_Statuses::DRAFT );
+		$machine  = $this->machine( array( Transition_Table::GUARD_VALIDATOR => $this->passing_guard() ) );
+		$result   = $machine->apply( $campaign, Post_Statuses::SUBMITTED );
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'laao_ads_forbidden', $result->get_error_code() );
+		$this->assertSame( Post_Statuses::DRAFT, $this->campaigns->status( $campaign ) );
+	}
+
+	/**
 	 * An advertiser from another organization is refused.
 	 *
 	 * The capability is checked against the object, so the org-scoped
@@ -458,6 +478,23 @@ final class CampaignStateMachineTest extends WP_UnitTestCase {
 		$again = $this->campaign( Post_Statuses::CHANGES );
 		$this->assertTrue( $machine->apply( $again, Post_Statuses::SUBMITTED ) );
 		$this->assertSame( 1, $this->campaigns->revision( $again ) );
+	}
+
+	/**
+	 * A withdrawn or reopened draft is still a resubmission, not revision zero.
+	 *
+	 * @return void
+	 */
+	public function test_a_previously_submitted_draft_increments_the_revision(): void {
+		wp_set_current_user( $this->advertiser );
+
+		$campaign = $this->campaign( Post_Statuses::DRAFT );
+		$this->campaigns->set_submitted_at( $campaign, time() - 60 );
+
+		$machine = $this->machine( array( Transition_Table::GUARD_VALIDATOR => $this->passing_guard() ) );
+
+		$this->assertTrue( $machine->apply( $campaign, Post_Statuses::SUBMITTED ) );
+		$this->assertSame( 1, $this->campaigns->revision( $campaign ) );
 	}
 
 	/**

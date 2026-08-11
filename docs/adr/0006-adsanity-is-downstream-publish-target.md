@@ -1,6 +1,6 @@
 # ADR-0006 — AdSanity is a downstream publish target, not the system of record
 
-**Status:** Accepted — 2026-08-08
+**Status:** Accepted — 2026-08-08; amended 2026-08-10
 
 ## Context
 
@@ -16,7 +16,7 @@ The portal owns the domain. AdSanity is a **publish target reached through an ad
 
 All AdSanity-specific behaviour lives in `inc/Integration/Adsanity/`. The strings `'ads'`, `'ad-group'`, `ADSANITY_EOL`, and every AdSanity meta key (`_url`, `_size`, `_start_date`, `_end_date`, …) appear nowhere else in `inc/`. `bin/ci/check-repository-boundary.sh` fails the build on a violation.
 
-Campaign code speaks to `Ad_Provider_Interface` — publish, update, pause, resume, remove, get status. The AdSanity implementation is one class behind it.
+Campaign orchestration speaks to `Ad_Provider_Interface`: publish/reconcile, unpublish, suppress, resume, and the transition-effect map. The concrete AdSanity publisher is registered behind that contract. Provider status is deliberately absent: the portal's state machine is authoritative and never derives campaign state from AdSanity.
 
 **AdSanity being inactive is a supported state, not an error state.** Placements exist, campaigns are created, creative is uploaded, submission works, staff review and reject. Only *approval* fails, cleanly, naming the unmapped placement, with no status change and no partial publish. See [ADR-0007](0007-placement-mapping-is-explicit-data.md).
 
@@ -25,7 +25,7 @@ Campaign code speaks to `Ad_Provider_Interface` — publish, update, pause, resu
 - The blast radius of an AdSanity change is one directory. Without the boundary, every AdSanity release is a full-repository audit.
 - The portal's own statuses are authoritative. `lap_live` is a fact about our state machine, never a query against AdSanity — which matters because AdSanity's REST filter checks only `_end_date` and would report a future-dated ad as present.
 - Publication is a side effect of a transition, so it happens at step 5 of `apply()`, before the status write. A failed publish leaves the campaign in `lap_review` with an error, not marked live with nothing behind it. See [ADR-0008](0008-explicit-transition-table.md).
-- Provider IDs are persisted per creative and per campaign as they succeed, which is what makes a retry reconcile rather than duplicate.
+- A newly created provider object starts as a draft and its ID is immediately checkpointed on both the creative and campaign. Required fields are then written and read back exactly before the object becomes published. A later failure therefore leaves a non-rendering object that retry reconciles rather than duplicates; a one-sided stale pointer is not trusted to rewrite an existing ad.
 - Two hard-won facts about the target, both verified in its source and recorded in [adsanity-integration.md](../adsanity-integration.md): **there is no cron** — scheduling is a read-time `meta_query`, so an ad missing either date key is invisible everywhere rather than merely expired; and **`AdSanity_Ads_CPT::save_post()` returns immediately for programmatic writes** because it requires `$_POST['ads_nonce']`, so there is no sanitization safety net at all. The publisher therefore re-reads every key it wrote and asserts it back. That read-back is the only validation in the pipeline.
 - A second ad provider is possible later behind the same interface. Not planned, and not a reason this decision was made.
 

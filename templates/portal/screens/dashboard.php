@@ -18,6 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use LAAO_Advertiser_Portal\Plugin;
+use LAAO_Advertiser_Portal\Portal\Campaign_Actions;
 use LAAO_Advertiser_Portal\Portal\Request;
 use LAAO_Advertiser_Portal\Portal\Routes;
 use LAAO_Advertiser_Portal\Portal\View_Data;
@@ -40,9 +41,13 @@ $laao_ads_user      = wp_get_current_user();
 		<p class="laao-ads-lede"><?php esc_html_e( 'Your campaigns and where each one has got to.', 'laao-advertiser-portal' ); ?></p>
 	</div>
 
-	<a class="laao-ads-button" href="<?php echo esc_url( Routes::url( Request::ROUTE_CAMPAIGNS ) ); ?>">
-		<?php esc_html_e( 'View campaigns', 'laao-advertiser-portal' ); ?>
-	</a>
+	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+		<input type="hidden" name="action" value="<?php echo esc_attr( Campaign_Actions::CREATE_ACTION ); ?>">
+		<?php wp_nonce_field( Campaign_Actions::CREATE_ACTION ); ?>
+		<button class="laao-ads-button" type="submit">
+			<?php esc_html_e( 'Create campaign', 'laao-advertiser-portal' ); ?>
+		</button>
+	</form>
 </div>
 
 <div class="laao-ads-stats">

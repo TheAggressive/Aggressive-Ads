@@ -63,7 +63,7 @@ Nothing expires an ad. There is no scheduled task, and `post_status` stays a nor
 
 **The consequence: an ad missing either date meta key is invisible everywhere.** Not "shows as expired" — absent. No shortcode, no widget, no block, no REST response will include it, and the post itself looks perfectly healthy in the database. An ad published without dates is the failure mode that produces "we billed for a campaign nobody ever saw."
 
-So the publisher always writes both keys, as ints, and re-reads them to confirm before declaring success.
+So the publisher always writes both keys as ints and re-reads their exact values before declaring success. A merely present but incorrect timestamp is still a failed publication.
 
 *(One asymmetry worth knowing: `lib/rest-api.php:36-64` filters only on `_end_date`, not `_start_date`, so a future-dated ad can appear via REST while correctly hidden on the front end. We do not rely on AdSanity's REST output, so this does not affect us — but do not use it as a source of truth for "is this campaign live".)*
 
@@ -132,13 +132,22 @@ Recorded so a future reader does not rediscover them and assume they matter.
 ```
 1. resolve_all( placement_ids )        → term IDs, or abort before any write
 2. promote creative to an attachment   → sha256 re-verified first
-3. wp_insert_post( post_type: 'ads' )
-4. set_post_thumbnail( ad_id, attachment_id )
-5. update_post_meta: _url, _target, _size, _start_date, _end_date   (ints for dates)
-6. wp_set_object_terms( ad_id, term_id, 'ad-group' )
-7. read back every key written and assert it
-8. persist the ad ID onto the creative and the campaign
-9. audit
+3. reconcile a dual-checkpointed existing ad, or wp_insert_post( post_type: 'ads', post_status: 'draft' )
+4. persist the ad ID onto both the creative and campaign immediately
+5. set_post_thumbnail( ad_id, attachment_id )
+6. update_post_meta: _url, _target, _size, _start_date, _end_date   (ints for dates)
+7. wp_set_object_terms( ad_id, term_id, 'ad-group' )
+8. read back every required value and assert an exact match
+9. change the verified draft to publish and confirm the status
+10. audit
 ```
 
-Steps 1 and 7 are the ones that would be skipped by someone in a hurry, and they are the two that prevent a silently invisible ad. Step 1 fails closed and touches nothing; step 7 is the only validation AdSanity does not do for us.
+Steps 1, 4, and 8 are the ones that would be skipped by someone in a hurry. Step 1 fails closed before any write. Step 4 makes a post-creation failure retryable without creating a duplicate, while the draft status keeps that incomplete object out of rotation. Step 8 is the only validation AdSanity does not do for us. A saved provider ID is trusted for reconciliation only when both the creative and its campaign contain it; a stale one-sided pointer cannot authorize rewriting an unrelated ad.
+
+## Managing placement mappings
+
+Staff holding `laao_ads_manage_placements` use **wp-admin → Ad delivery**. The screen lists active and inactive placements, their declared sizes, and one of three mapping states: mapped, unmapped, or deleted group. Every option includes the provider term ID because the ID is the stored identity; the name remains editable display text.
+
+Each placement saves through its own form, nonce, capability check, object-aware capability check, exact persistence read-back, and `placement.mapping_updated` audit event. An arbitrary or just-deleted term ID is rejected against a freshly loaded provider catalogue. Choosing “Not mapped — approval blocked” is an explicit supported operation.
+
+If AdSanity is inactive, its taxonomy cannot be read, or it contains no groups, the screen becomes read-only and explains why. Existing stored mappings are not cleared. Approval independently re-resolves every selected placement, so a screen viewed before a provider change cannot weaken the fail-closed publication guard.

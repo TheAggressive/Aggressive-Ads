@@ -18,6 +18,7 @@ use LAAO_Advertiser_Portal\Repository\Audit_Repository;
 use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
 use LAAO_Advertiser_Portal\Repository\Creative_Repository;
 use LAAO_Advertiser_Portal\Repository\Org_Repository;
+use LAAO_Advertiser_Portal\Repository\Package_Repository;
 use LAAO_Advertiser_Portal\Repository\Placement_Repository;
 use LAAO_Advertiser_Portal\Security\Ownership;
 use LAAO_Advertiser_Portal\Security\Roles;
@@ -61,6 +62,13 @@ final class CampaignValidatorTest extends WP_UnitTestCase {
 	private int $placement_id;
 
 	/**
+	 * An active package covering that placement.
+	 *
+	 * @var int
+	 */
+	private int $package_id;
+
+	/**
 	 * Builds an organization, an advertiser and one active placement.
 	 *
 	 * @return void
@@ -83,6 +91,7 @@ final class CampaignValidatorTest extends WP_UnitTestCase {
 		update_post_meta( $this->org_id, Org_Repository::META_OWNER_USER, $this->advertiser );
 
 		$this->placement_id = $this->placement( '728x90', true );
+		$this->package_id   = $this->package( array( $this->placement_id ) );
 
 		Plugin::instance()->container()->get( Ownership::class )->flush_cache();
 	}
@@ -127,12 +136,41 @@ final class CampaignValidatorTest extends WP_UnitTestCase {
 		update_post_meta( $id, Campaign_Repository::META_ORG_ID, $this->org_id );
 		update_post_meta( $id, Campaign_Repository::META_START_TS, time() + WEEK_IN_SECONDS );
 		update_post_meta( $id, Campaign_Repository::META_END_TS, time() + ( 2 * WEEK_IN_SECONDS ) );
+		update_post_meta( $id, Campaign_Repository::META_PACKAGE_ID, $this->package_id );
+		update_post_meta( $id, Campaign_Repository::META_BUDGET_CENTS, 45000 );
+		update_post_meta( $id, Campaign_Repository::META_CURRENCY, 'USD' );
 
 		foreach ( $placement_ids as $placement_id ) {
 			add_post_meta( $id, Campaign_Repository::META_PLACEMENT_ID, $placement_id );
 		}
 
 		Plugin::instance()->container()->get( Ownership::class )->flush_cache();
+
+		return $id;
+	}
+
+	/**
+	 * Creates an active package.
+	 *
+	 * @param array<int, int> $placement_ids Placements the package covers.
+	 * @return int
+	 */
+	private function package( array $placement_ids ): int {
+		$id = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::PACKAGE,
+				'post_status' => 'publish',
+			)
+		);
+
+		update_post_meta( $id, Package_Repository::META_IS_ACTIVE, 1 );
+		update_post_meta( $id, Package_Repository::META_DURATION_DAYS, 30 );
+		update_post_meta( $id, Package_Repository::META_PRICE_CENTS, 45000 );
+		update_post_meta( $id, Package_Repository::META_CURRENCY, 'USD' );
+
+		foreach ( $placement_ids as $placement_id ) {
+			add_post_meta( $id, Package_Repository::META_PLACEMENT_ID, $placement_id );
+		}
 
 		return $id;
 	}
@@ -454,5 +492,72 @@ final class CampaignValidatorTest extends WP_UnitTestCase {
 		) as $expected ) {
 			$this->assertContains( $expected, $codes );
 		}
+	}
+
+	/**
+	 * A campaign with no package cannot be submitted.
+	 *
+	 * The wizard refuses to save one without a package, and that was not
+	 * enough: its steps are reachable by URL, so skipping step two and posting
+	 * the submit form produced a submitted campaign with no package and no
+	 * price. It reached the review queue looking complete, and staff would have
+	 * approved commercial terms that did not exist.
+	 *
+	 * @return void
+	 */
+	public function test_a_campaign_without_a_package_is_rejected(): void {
+		$campaign_id = $this->campaign( array( $this->placement_id ) );
+
+		$this->creative( $campaign_id );
+
+		delete_post_meta( $campaign_id, Campaign_Repository::META_PACKAGE_ID );
+		delete_post_meta( $campaign_id, Campaign_Repository::META_BUDGET_CENTS );
+		delete_post_meta( $campaign_id, Campaign_Repository::META_CURRENCY );
+
+		$result = $this->validator->validate( $campaign_id );
+
+		$this->assertFalse( $result->is_valid() );
+		$this->assertTrue( $result->has( Campaign_Rules::ERROR_PACKAGE_MISSING ) );
+	}
+
+	/**
+	 * A package that has been withdrawn is caught before submission.
+	 *
+	 * @return void
+	 */
+	public function test_a_deactivated_package_is_caught(): void {
+		$campaign_id = $this->campaign( array( $this->placement_id ) );
+
+		$this->creative( $campaign_id );
+
+		update_post_meta( $this->package_id, Package_Repository::META_IS_ACTIVE, 0 );
+
+		$result = $this->validator->validate( $campaign_id );
+
+		$this->assertFalse( $result->is_valid() );
+		$this->assertTrue( $result->has( Campaign_Rules::ERROR_PACKAGE_UNAVAILABLE ) );
+	}
+
+	/**
+	 * A package reference without its price snapshot is caught.
+	 *
+	 * The id and the price are written separately, so a campaign carrying one
+	 * without the other is what a half-completed write leaves behind. Checking
+	 * only the id would call that campaign complete and let it be approved for
+	 * nothing.
+	 *
+	 * @return void
+	 */
+	public function test_a_package_without_its_price_snapshot_is_caught(): void {
+		$campaign_id = $this->campaign( array( $this->placement_id ) );
+
+		$this->creative( $campaign_id );
+
+		delete_post_meta( $campaign_id, Campaign_Repository::META_BUDGET_CENTS );
+
+		$result = $this->validator->validate( $campaign_id );
+
+		$this->assertFalse( $result->is_valid() );
+		$this->assertTrue( $result->has( Campaign_Rules::ERROR_PRICE_MISSING ) );
 	}
 }

@@ -2,7 +2,7 @@
 
 **Status:** Accepted — 2026-08-10
 
-Refines [ADR-0017](0017-self-contained-design-tokens.md). It does not supersede it: the token layer, the literal values, the cascade layers and the scoped reset are all unchanged. What changes is the inventory of status tokens and three specific values.
+Refines [ADR-0017](0017-self-contained-design-tokens.md). It does not supersede it: the semantic token layer, literal values, host-theme isolation, and scoped reset are unchanged. What changes is the inventory of status tokens and three specific values.
 
 ## Context
 

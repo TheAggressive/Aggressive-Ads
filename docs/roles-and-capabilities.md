@@ -11,7 +11,7 @@ Declared once in `inc/Security/class-capabilities.php`, which is the source of t
 | `laao_ads_submit_campaign` | Move a campaign into review |
 | `laao_ads_review_campaigns` | See the queue; claim, request changes, reject |
 | `laao_ads_publish_to_adsanity` | Approve, which publishes |
-| `laao_ads_manage_placements` | Edit placements and their ad-group mappings |
+| `laao_ads_manage_placements` | Reach the Ad delivery screen and change placement-to-ad-group mappings |
 | `laao_ads_manage_packages` | Edit packages |
 | `laao_ads_manage_orgs` | Edit any organization |
 | `laao_ads_view_audit_log` | Read the audit log |

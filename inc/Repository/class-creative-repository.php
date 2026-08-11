@@ -115,7 +115,7 @@ final class Creative_Repository {
 	 * Everything the promoter needs about a creative's stored file.
 	 *
 	 * @param int $creative_id Creative post id.
-	 * @return array{path: string, sha256: string, mime: string, alt_text: string, name: string}|null
+	 * @return array{path: string, sha256: string, mime: string, alt_text: string, name: string, bytes: int}|null
 	 */
 	public function storage_details( int $creative_id ): ?array {
 		if ( Post_Types::CREATIVE !== get_post_type( $creative_id ) ) {
@@ -128,6 +128,7 @@ final class Creative_Repository {
 			'mime'     => (string) get_post_meta( $creative_id, self::META_MIME, true ),
 			'alt_text' => (string) get_post_meta( $creative_id, self::META_ALT_TEXT, true ),
 			'name'     => (string) get_post_meta( $creative_id, self::META_ORIGINAL_NAME, true ),
+			'bytes'    => (int) get_post_meta( $creative_id, self::META_FILESIZE, true ),
 		);
 	}
 
@@ -150,6 +151,23 @@ final class Creative_Repository {
 		update_post_meta( $creative_id, self::META_WIDTH, $upload['width'] );
 		update_post_meta( $creative_id, self::META_HEIGHT, $upload['height'] );
 		update_post_meta( $creative_id, self::META_ORIGINAL_NAME, $upload['name'] );
+	}
+
+	/**
+	 * Permanently removes one creative record.
+	 *
+	 * Private-file deletion is deliberately a workflow responsibility: the
+	 * repository knows the record, while the workflow coordinates both stores.
+	 *
+	 * @param int $creative_id Creative post id.
+	 * @return bool
+	 */
+	public function delete( int $creative_id ): bool {
+		if ( Post_Types::CREATIVE !== get_post_type( $creative_id ) ) {
+			return false;
+		}
+
+		return null !== wp_delete_post( $creative_id, true );
 	}
 
 	/**

@@ -133,6 +133,69 @@ final class Audit_Repository {
 	}
 
 	/**
+	 * Most recent audit events for one object.
+	 *
+	 * The object and organization predicates stay in SQL. Fetching a broad page
+	 * and filtering it afterwards breaks the moment pagination arrives, and the
+	 * audit log is too sensitive to ever make that an attractive shortcut.
+	 *
+	 * @param string $object_type Object type, for example campaign.
+	 * @param int    $object_id   Object id.
+	 * @param int    $org_id      Owning organization id.
+	 * @param int    $limit       Maximum rows, capped defensively.
+	 * @return array<int, array{id: int, created_at_ts: int, actor_user_id: int, actor_role: string, event: string, from_state: string, to_state: string, outcome: string, message: string}>
+	 */
+	public function for_object( string $object_type, int $object_id, int $org_id, int $limit = 50 ): array {
+		global $wpdb;
+
+		if ( '' === $object_type || $object_id <= 0 || $org_id < 0 ) {
+			return array();
+		}
+
+		$limit = min( 100, max( 1, $limit ) );
+		$table = $this->table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom append-only table, object-scoped in SQL and ordered from its composite object index.
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				'SELECT id, created_at_ts, actor_user_id, actor_role, event, from_state, to_state, outcome, message FROM %i WHERE object_type = %s AND object_id = %d AND org_id = %d ORDER BY id DESC LIMIT %d',
+				$table,
+				$object_type,
+				$object_id,
+				$org_id,
+				$limit
+			),
+			ARRAY_A
+		);
+
+		if ( ! is_array( $rows ) ) {
+			return array();
+		}
+
+		$events = array();
+
+		foreach ( $rows as $row ) {
+			if ( ! is_array( $row ) ) {
+				continue;
+			}
+
+			$events[] = array(
+				'id'            => (int) ( $row['id'] ?? 0 ),
+				'created_at_ts' => (int) ( $row['created_at_ts'] ?? 0 ),
+				'actor_user_id' => (int) ( $row['actor_user_id'] ?? 0 ),
+				'actor_role'    => (string) ( $row['actor_role'] ?? '' ),
+				'event'         => (string) ( $row['event'] ?? '' ),
+				'from_state'    => (string) ( $row['from_state'] ?? '' ),
+				'to_state'      => (string) ( $row['to_state'] ?? '' ),
+				'outcome'       => (string) ( $row['outcome'] ?? '' ),
+				'message'       => (string) ( $row['message'] ?? '' ),
+			);
+		}
+
+		return $events;
+	}
+
+	/**
 	 * JSON-encodes the context, or null when there is nothing to record.
 	 *
 	 * @param array<string, mixed> $context Structured detail.
