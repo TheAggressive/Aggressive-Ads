@@ -50,7 +50,7 @@ a successful submission. See [notifications.md](notifications.md).
 
 `Campaign_Clock` and its hourly reconcile event are **built**: approved → scheduled → live → complete, driven by the guards rather than by the reconciler, with the sweep's source statuses derived from `Transition_Table::system_sources()`.
 
-Still outstanding in this phase: ending-soon notifications, pause and resume UI, and the private-file retention purge.
+Pause, resume and cancel need no separate UI — the review screen derives its buttons from the transition table. Still outstanding in this phase: ending-soon notifications and the private-file retention purge.
 
 ## Phase 8 — Organizations and members
 

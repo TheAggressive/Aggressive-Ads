@@ -67,11 +67,14 @@ advertiser creation UI is the largest open product area. What is built:
   scheduled → live → complete, without which status freezes at approval
 - staff review queue and placement mapping screens, and the advertiser-facing
   notifications for changes, rejection, approval, going live and completion
+- pause, resume and cancel, which need no new UI: the review screen's buttons
+  are derived from `Transition_Table`, so an edge added there appears by itself
+- Playwright + axe (`tests/e2e/`), wired into `ci:verify` as its own lane
 
 What does **not** exist yet, despite being described in `docs/`: the
 organization, account and help screens (the routes resolve to a placeholder),
-pause/resume UI, the private-file retention purge, analytics, any JavaScript
-toolchain, Playwright, i18n tooling, semantic-release, and self-hosted Archivo.
+the private-file retention purge, analytics, i18n tooling, semantic-release,
+and self-hosted Archivo.
 `docs/` describes the design; `docs/roadmap.md` says which phase builds it. If a
 doc describes something you cannot find, it has not been built — that is
 expected, not a bug.
