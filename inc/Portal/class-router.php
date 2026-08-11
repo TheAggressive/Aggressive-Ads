@@ -240,10 +240,41 @@ final class Router implements Service {
 		// here belongs in an index.
 		add_filter( 'wp_robots', 'wp_robots_no_robots' );
 
-		if ( ! is_user_logged_in() ) {
-			auth_redirect();
+		/*
+		 * The sign-in screen is the one portal route that must render without
+		 * a session, and it must not render *with* one — a signed-in person
+		 * landing on a login form has no way to tell that they are already in.
+		 */
+		if ( Request::ROUTE_LOGIN === $this->request->route ) {
+			if ( is_user_logged_in() ) {
+				wp_safe_redirect( Routes::url() );
+
+				exit;
+			}
+
+			nocache_headers();
 
 			return;
+		}
+
+		if ( ! is_user_logged_in() ) {
+			/*
+			 * Our own form, not wp-login.php.
+			 *
+			 * auth_redirect() sends advertisers to the WordPress login screen,
+			 * which is a different site as far as they are concerned. The
+			 * destination is carried so they land where they were going, and
+			 * it is re-validated on the way back in.
+			 */
+			wp_safe_redirect(
+				add_query_arg(
+					'redirect_to',
+					rawurlencode( Routes::canonical( $this->request->route, $this->request->object_id ) ),
+					Routes::url( Request::ROUTE_LOGIN )
+				)
+			);
+
+			exit;
 		}
 
 		if ( ! current_user_can( Capabilities::ACCESS_PORTAL ) ) {
@@ -265,6 +296,16 @@ final class Router implements Service {
 
 		if ( null === $this->request ) {
 			return $template;
+		}
+
+		/*
+		 * The sign-in screen is served before the session check, because it is
+		 * the screen whose whole job is not having a session. Ordering the
+		 * capability test first sent every logged-out caller to the 403 screen
+		 * — including the one the gate had just redirected here to sign in.
+		 */
+		if ( Request::ROUTE_LOGIN === $this->request->route ) {
+			return $this->locate( 'login.php' );
 		}
 
 		if ( ! is_user_logged_in() || ! current_user_can( Capabilities::ACCESS_PORTAL ) ) {

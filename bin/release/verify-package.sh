@@ -55,10 +55,14 @@ PACKAGE_REQUIRED=(
 	inc/Workflow/class-review-actions.php
 	inc/Workflow/class-review-readiness.php
 	assets/portal.css
+	assets/icon.svg
 	assets/admin.css
 	templates/admin/review-queue.php
 	templates/admin/review-campaign.php
 	templates/portal/base.php
+	templates/portal/base-bare.php
+	templates/portal/login.php
+	templates/portal/screens/login.php
 	templates/portal/dashboard.php
 	templates/portal/campaigns.php
 	templates/portal/campaigns-detail.php

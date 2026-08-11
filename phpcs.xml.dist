@@ -275,6 +275,17 @@
 	<rule ref="WordPress.WP.GlobalVariablesOverride">
 		<exclude-pattern>tests/php/*</exclude-pattern>
 	</rule>
+	<!--
+		Simulating a client is what a test of client identification does. The
+		cache-constraint sniff warns that varying output by address breaks
+		server-side caching; a test setting $_SERVER['REMOTE_ADDR'] to check
+		that two clients get different rate-limit counters is not varying any
+		output, and there is no cache in a test process. Shipped code keeps the
+		sniff, which is where it earns its keep.
+	-->
+	<rule ref="WordPressVIPMinimum.Variables.RestrictedVariables">
+		<exclude-pattern>tests/php/*</exclude-pattern>
+	</rule>
 	<rule ref="Squiz.Commenting.FunctionComment">
 		<exclude-pattern>tests/php/*</exclude-pattern>
 	</rule>

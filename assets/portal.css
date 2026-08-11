@@ -591,6 +591,75 @@
 	}
 
 	/* A closing note or secondary action under a panel's main content. */
+	/*
+	 * The sign-in screen. No rail, so the panel centres on the canvas rather
+	 * than sitting inside a body column.
+	 */
+	.laao-ads-bare {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		min-height: 100vh;
+		min-height: 100dvh;
+		padding: var(--laao-ads-space-lg);
+		background: var(--laao-ads-color-canvas);
+	}
+
+	.laao-ads-signin {
+		width: 100%;
+		max-width: 26rem;
+	}
+
+	.laao-ads-signin__brand {
+		display: flex;
+		align-items: baseline;
+		gap: var(--laao-ads-space-xs);
+		margin-bottom: var(--laao-ads-space-lg);
+	}
+
+	/*
+	 * The brand block is styled for the dark rail, where its colours are the
+	 * rail's. On the sign-in screen it sits on the light canvas, so both parts
+	 * need re-colouring — axe caught the subtitle at 1.84:1, which is what a
+	 * rail colour looks like on a pale background.
+	 */
+	.laao-ads-signin .laao-ads-brand__mark {
+		color: var(--laao-ads-color-text);
+	}
+
+	.laao-ads-signin .laao-ads-brand__sub {
+		color: var(--laao-ads-color-text-muted);
+	}
+
+	.laao-ads-signin .laao-ads-panel {
+		padding-bottom: var(--laao-ads-space-lg);
+	}
+
+	.laao-ads-signin .laao-ads-form {
+		padding: var(--laao-ads-space-lg);
+	}
+
+	.laao-ads-signin .laao-ads-alert {
+		margin: var(--laao-ads-space-lg) var(--laao-ads-space-lg) 0;
+	}
+
+	.laao-ads-signin__aside {
+		margin: 0;
+		padding: 0 var(--laao-ads-space-lg);
+		font-size: 14px;
+	}
+
+	.laao-ads-field--inline {
+		display: flex;
+		align-items: center;
+		gap: var(--laao-ads-space-xs);
+	}
+
+	.laao-ads-field--inline label {
+		margin: 0;
+		font-weight: 500;
+	}
+
 	.laao-ads-panel__foot {
 		padding: var(--laao-ads-space-lg);
 		border-top: 1px solid var(--laao-ads-border-color);

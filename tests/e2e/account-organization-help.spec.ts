@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { expectPortalA11y } from './accessibility';
+import { signIn } from './sign-in-helper';
 
 /**
  * The three screens that finish the portal's navigation.
@@ -11,9 +12,7 @@ import { expectPortalA11y } from './accessibility';
  */
 test( 'advertiser reads and edits their account, organization and help', async ( { page } ) => {
 	await page.goto( '/advertiser/' );
-	await page.locator( '#user_login' ).fill( 'advertiser' );
-	await page.locator( '#user_pass' ).fill( 'advertiser' );
-	await page.locator( '#wp-submit' ).click();
+	await signIn( page, 'advertiser', 'advertiser' );
 	await expect( page ).toHaveURL( /\/advertiser\/?$/ );
 
 	// Reached by the rail, not by typing a URL: the navigation is part of what
@@ -77,9 +76,7 @@ test( 'the account screen exposes no editable email or role field', async ( {
 	page,
 } ) => {
 	await page.goto( '/advertiser/' );
-	await page.locator( '#user_login' ).fill( 'advertiser' );
-	await page.locator( '#user_pass' ).fill( 'advertiser' );
-	await page.locator( '#wp-submit' ).click();
+	await signIn( page, 'advertiser', 'advertiser' );
 
 	await page.goto( '/advertiser/account/' );
 

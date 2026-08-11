@@ -42,9 +42,7 @@ $laao_ads_items = array(
 			<?php foreach ( $laao_ads_items as $laao_ads_route => $laao_ads_label ) : ?>
 				<?php
 				$laao_ads_is_current = $laao_ads_route === $laao_ads_current;
-				$laao_ads_href       = Request::ROUTE_DASHBOARD === $laao_ads_route
-					? Routes::url()
-					: Routes::url( $laao_ads_route );
+				$laao_ads_href       = Routes::canonical( $laao_ads_route );
 				?>
 				<li>
 					<a

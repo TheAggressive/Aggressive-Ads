@@ -30,6 +30,8 @@ final class Rate_Limiter {
 	public const ACTION_UPLOAD     = 'upload';
 	public const ACTION_TRANSITION = 'transition';
 	public const ACTION_AUTOSAVE   = 'autosave';
+	public const ACTION_LOGIN      = 'login';
+	public const ACTION_SIGNUP     = 'signup';
 
 	/**
 	 * Limits per action, as attempts per window.
@@ -47,6 +49,21 @@ final class Rate_Limiter {
 		),
 		self::ACTION_AUTOSAVE   => array(
 			'limit'  => 120,
+			'window' => HOUR_IN_SECONDS,
+		),
+
+		/*
+		 * Counted per client rather than per user, because a login attempt has
+		 * no user until it succeeds. Generous enough that a person mistyping a
+		 * password on a shared office connection is never locked out, tight
+		 * enough that credential stuffing is not worth the round trips.
+		 */
+		self::ACTION_LOGIN      => array(
+			'limit'  => 20,
+			'window' => 15 * MINUTE_IN_SECONDS,
+		),
+		self::ACTION_SIGNUP     => array(
+			'limit'  => 5,
 			'window' => HOUR_IN_SECONDS,
 		),
 	);
@@ -67,13 +84,34 @@ final class Rate_Limiter {
 	 * @return true|WP_Error
 	 */
 	public function attempt( string $action, int $user_id ): bool|WP_Error {
-		if ( ! isset( self::LIMITS[ $action ] ) || $user_id <= 0 ) {
+		if ( $user_id <= 0 ) {
+			return true;
+		}
+
+		return $this->attempt_for( $action, (string) $user_id, $user_id );
+	}
+
+	/**
+	 * Counts an attempt against an arbitrary subject.
+	 *
+	 * Exists for the two actions that happen before there is a user to count
+	 * against: signing in and signing up. The subject is a hashed client
+	 * identifier, never a raw address — a rate-limit transient is not a place
+	 * to accumulate a log of who visited from where.
+	 *
+	 * @param string $action  One of the ACTION_* constants.
+	 * @param string $subject Opaque subject identifier.
+	 * @param int    $user_id Acting user, or 0 when there is none yet.
+	 * @return true|WP_Error
+	 */
+	public function attempt_for( string $action, string $subject, int $user_id = 0 ): bool|WP_Error {
+		if ( ! isset( self::LIMITS[ $action ] ) || '' === $subject ) {
 			return true;
 		}
 
 		$limit  = self::LIMITS[ $action ]['limit'];
 		$window = self::LIMITS[ $action ]['window'];
-		$key    = $this->key( $action, $user_id );
+		$key    = $this->key( $action, $subject );
 		$now    = time();
 
 		$state = get_transient( $key );
@@ -134,11 +172,22 @@ final class Rate_Limiter {
 	 * @return int
 	 */
 	public function remaining( string $action, int $user_id ): int {
+		return $this->remaining_for( $action, (string) $user_id );
+	}
+
+	/**
+	 * How many attempts remain for an arbitrary subject.
+	 *
+	 * @param string $action  One of the ACTION_* constants.
+	 * @param string $subject Opaque subject identifier.
+	 * @return int
+	 */
+	public function remaining_for( string $action, string $subject ): int {
 		if ( ! isset( self::LIMITS[ $action ] ) ) {
 			return PHP_INT_MAX;
 		}
 
-		$state = get_transient( $this->key( $action, $user_id ) );
+		$state = get_transient( $this->key( $action, $subject ) );
 
 		if ( ! is_array( $state ) || ! isset( $state['count'], $state['reset'] ) || time() >= (int) $state['reset'] ) {
 			return self::LIMITS[ $action ]['limit'];
@@ -158,13 +207,63 @@ final class Rate_Limiter {
 	}
 
 	/**
-	 * The transient key for one user's counter.
+	 * The transient key for one subject's counter.
 	 *
 	 * @param string $action  Action name.
-	 * @param int    $user_id Acting user.
+	 * @param string $subject Subject identifier.
 	 * @return string
 	 */
-	private function key( string $action, int $user_id ): string {
-		return 'laao_ads_rl_' . $action . '_' . $user_id;
+	private function key( string $action, string $subject ): string {
+		return 'laao_ads_rl_' . $action . '_' . $subject;
+	}
+
+	/**
+	 * An opaque, stable identifier for the current client.
+	 *
+	 * Hashed with wp_hash() so the stored value cannot be reversed into an
+	 * address: this is a counter, not a visitor log, and a plugin that quietly
+	 * accumulates IP addresses in the options table is a data-protection
+	 * problem nobody asked for.
+	 *
+	 * REMOTE_ADDR only. The forwarded-for headers are attacker-controlled
+	 * unless a known proxy is in front, and trusting them by default would let
+	 * anyone reset their own counter by inventing a header.
+	 *
+	 * @return string
+	 */
+	public static function client_subject(): string {
+		/*
+		 * Both sniffs on this line are answered by the lines below it, and
+		 * neither can see that from where it stands.
+		 *
+		 * The cache sniff guards against varying cached page output by address;
+		 * this value never reaches a response, only a counter key, and the
+		 * requests it counts are POSTs that are uncacheable by definition. The
+		 * user-controlled-header sniff asks for validation, which is exactly
+		 * what filter_var() below does — it fires on any read of REMOTE_ADDR
+		 * regardless, because it cannot follow the value.
+		 *
+		 * There is no pattern to fix here: identifying an anonymous client is
+		 * the one thing rate limiting a login form requires.
+		 */
+		// phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.cache_constraints___SERVER__REMOTE_ADDR__, WordPressVIPMinimum.Variables.ServerVariables.UserControlledHeaders
+		$raw = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
+
+		/*
+		 * Validated as an address, not merely sanitized.
+		 *
+		 * Anything that is not one falls into a single shared bucket rather
+		 * than minting its own key. That is the fail-safe direction: a client
+		 * the server cannot identify gets a stricter allowance, never an
+		 * unlimited one, and no amount of junk in the header can manufacture
+		 * fresh counters.
+		 */
+		$address = filter_var( $raw, FILTER_VALIDATE_IP );
+
+		if ( ! is_string( $address ) ) {
+			return 'ip_unknown';
+		}
+
+		return 'ip_' . substr( wp_hash( $address ), 0, 32 );
 	}
 }

@@ -1,14 +1,11 @@
 import { expect, test } from '@playwright/test';
 import { expectPortalA11y } from './accessibility';
+import { signIn } from './sign-in-helper';
 import { solidPng } from './png';
 
 test( 'advertiser completes and submits the accessible six-step wizard', async ( { page } ) => {
 	await page.goto( '/advertiser/' );
-	await page.locator( '#user_login' ).fill( 'advertiser' );
-	await page.locator( '#user_pass' ).fill( 'advertiser' );
-	await expect( page.locator( '#user_login' ) ).toHaveValue( 'advertiser' );
-	await expect( page.locator( '#user_pass' ) ).toHaveValue( 'advertiser' );
-	await page.locator( '#wp-submit' ).click();
+	await signIn( page, 'advertiser', 'advertiser' );
 
 	await expect( page ).toHaveURL( /\/advertiser\/?$/ );
 	await expect( page.locator( 'body' ) ).toHaveClass( /wp-theme-twentytwentyfive/ );

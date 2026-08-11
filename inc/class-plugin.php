@@ -33,6 +33,7 @@ use LAAO_Advertiser_Portal\Portal\Router;
 use LAAO_Advertiser_Portal\Portal\View_Data;
 use LAAO_Advertiser_Portal\Portal\Account_Actions;
 use LAAO_Advertiser_Portal\Portal\Campaign_Actions;
+use LAAO_Advertiser_Portal\Portal\Login_Actions;
 use LAAO_Advertiser_Portal\Portal\Creative_Actions;
 use LAAO_Advertiser_Portal\REST\Campaigns_Controller;
 use LAAO_Advertiser_Portal\REST\Creative_Controller;
@@ -416,6 +417,14 @@ final class Plugin {
 		);
 
 		$this->container->register(
+			Login_Actions::class,
+			static fn ( Service_Container $c ): Login_Actions => new Login_Actions(
+				$c->get( Rate_Limiter::class ),
+				$c->get( Audit_Repository::class )
+			)
+		);
+
+		$this->container->register(
 			Account_Actions::class,
 			static fn (): Account_Actions => new Account_Actions()
 		);
@@ -640,6 +649,7 @@ final class Plugin {
 			Campaign_Actions::class,
 			Creative_Actions::class,
 			Account_Actions::class,
+			Login_Actions::class,
 
 			Creative_File_Controller::class,
 			Creative_Controller::class,

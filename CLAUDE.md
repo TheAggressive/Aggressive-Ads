@@ -70,12 +70,16 @@ advertiser creation UI is the largest open product area. What is built:
 - pause, resume and cancel, which need no new UI: the review screen's buttons
   are derived from `Transition_Table`, so an edge added there appears by itself
 - Playwright + axe (`tests/e2e/`), wired into `ci:verify` as its own lane
+- the portal's own sign-in form (`Portal\Login_Actions`), authenticated by
+  core's `wp_signon()`. wp-login.php is untouched and is still how staff reach
+  wp-admin; only the portal's gate was redirected away from it
 - every portal route now has its own screen: dashboard, campaigns, organization,
-  account and help. `Portal\Account_Actions` is the only way a portal user can
+  account, help and login. `Portal\Account_Actions` is the only way a portal user can
   write anything about their own user record, because `Admin_Guard` closes
   wp-admin to them
 
-What does **not** exist yet, despite being described in `docs/`: organization
+What does **not** exist yet, despite being described in `docs/`: **advertiser
+sign-up** (accounts and organizations are still created by hand), organization
 editing and invitations, self-service email change, the private-file retention
 purge, analytics, i18n tooling, semantic-release, and self-hosted Archivo.
 `docs/` describes the design; `docs/roadmap.md` says which phase builds it. If a

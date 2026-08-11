@@ -46,6 +46,39 @@ final class Assets implements Service {
 	 */
 	public function init(): void {
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue' ) );
+		add_action( 'wp_head', array( $this, 'print_icon' ) );
+	}
+
+	/**
+	 * Gives the portal its own tab icon.
+	 *
+	 * WordPress serves its own W logo from /favicon.ico when no site icon is
+	 * set, so a portal that emits nothing shows the WordPress logo in the tab —
+	 * on a screen whose whole purpose is to look like it belongs to this
+	 * publication rather than to WordPress.
+	 *
+	 * **Deferred to the site icon whenever there is one.** If somebody has set
+	 * Settings → General → Site Icon, that is a deliberate branding decision
+	 * and wp_head() has already emitted it; printing ours on top would override
+	 * a choice the site owner made on purpose.
+	 *
+	 * @return void
+	 */
+	public function print_icon(): void {
+		if ( null === $this->router->request() || has_site_icon() ) {
+			return;
+		}
+
+		$relative = 'assets/icon.svg';
+
+		if ( ! is_file( LAAO_ADS_PLUGIN_DIR . $relative ) ) {
+			return;
+		}
+
+		printf(
+			'<link rel="icon" href="%s" sizes="any" type="image/svg+xml">' . "\n",
+			esc_url( LAAO_ADS_PLUGIN_URL . $relative )
+		);
 	}
 
 	/**

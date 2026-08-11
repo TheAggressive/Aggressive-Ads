@@ -11,6 +11,13 @@ export async function expectAdminA11y( page: Page ): Promise<void> {
 	await expectScopedA11y( page, '.laao-ads-admin' );
 }
 
+/**
+ * The sign-in document, which has no rail and therefore no .laao-ads-shell.
+ */
+export async function expectSignInA11y( page: Page ): Promise<void> {
+	await expectScopedA11y( page, '.laao-ads-bare' );
+}
+
 async function expectScopedA11y( page: Page, selector: string ): Promise<void> {
 	const result = await new AxeBuilder( { page } )
 		.include( selector )

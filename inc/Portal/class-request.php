@@ -30,6 +30,10 @@ final class Request {
 	public const ROUTE_ORGANIZATION = 'organization';
 	public const ROUTE_ACCOUNT      = 'account';
 	public const ROUTE_HELP         = 'help';
+	/**
+	 * The one route that does not require a session — see Router::gate().
+	 */
+	public const ROUTE_LOGIN = 'login';
 
 	/**
 	 * Long enough for any route we will name, short enough that a segment
@@ -64,6 +68,7 @@ final class Request {
 			self::ROUTE_ORGANIZATION,
 			self::ROUTE_ACCOUNT,
 			self::ROUTE_HELP,
+			self::ROUTE_LOGIN,
 		);
 	}
 

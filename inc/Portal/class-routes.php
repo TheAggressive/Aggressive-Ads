@@ -53,6 +53,35 @@ final class Routes {
 	 * @param int    $object_id Optional object id.
 	 * @return string
 	 */
+	/**
+	 * The canonical URL for a screen.
+	 *
+	 * The dashboard has two spellings — /advertiser/ and /advertiser/dashboard/
+	 * — because the grammar names the route and the rewrite rule defaults to
+	 * it. Only the short one is canonical, and collapsing that here means the
+	 * rule exists once: the rail was already doing it inline, and the sign-in
+	 * redirect was not, so signing in landed people on the long spelling of the
+	 * page they had asked for.
+	 *
+	 * @param string $route     Route segment.
+	 * @param int    $object_id Optional object id.
+	 * @return string
+	 */
+	public static function canonical( string $route, int $object_id = 0 ): string {
+		if ( Request::ROUTE_DASHBOARD === $route && 0 === $object_id ) {
+			return self::url();
+		}
+
+		return self::url( $route, $object_id );
+	}
+
+	/**
+	 * An absolute URL to a portal screen.
+	 *
+	 * @param string $route     Optional route segment, e.g. `campaigns`.
+	 * @param int    $object_id Optional object id.
+	 * @return string
+	 */
 	public static function url( string $route = '', int $object_id = 0 ): string {
 		$path = self::base();
 
