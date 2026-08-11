@@ -418,4 +418,229 @@ final class NotificationServiceTest extends WP_UnitTestCase {
 		$this->assertContains( 'campaign.notification_retry_exhausted', array_column( $events, 'event' ) );
 		$this->assertFalse( wp_next_scheduled( Notification_Service::RETRY_HOOK, array( $campaign, 0, 4 ) ) );
 	}
+
+	/**
+	 * A member of the organization, so notices are not owner-only.
+	 *
+	 * @param string $email Member address.
+	 * @return int
+	 */
+	private function member( string $email ): int {
+		$user_id = self::factory()->user->create(
+			array(
+				'role'       => Roles::ADVERTISER,
+				'user_email' => $email,
+			)
+		);
+
+		add_post_meta( $this->org_id, Org_Repository::META_MEMBER_USER, $user_id );
+
+		Plugin::instance()->container()->get( Ownership::class )->flush_cache();
+
+		return $user_id;
+	}
+
+	/**
+	 * **Requested changes reach the advertiser, carrying the feedback.**
+	 *
+	 * GUARD_REVIEW_NOTES forces a reviewer to write advertiser-facing feedback
+	 * before this transition. Until the notice existed that feedback went
+	 * nowhere: it sat on a screen the advertiser had no reason to open, so the
+	 * guard compelled people to write into a void.
+	 *
+	 * @return void
+	 */
+	public function test_requested_changes_reach_the_advertiser_with_the_feedback(): void {
+		$campaign = $this->campaign( Post_Statuses::CHANGES );
+
+		$this->campaigns->set_review_notes( $campaign, 'The leaderboard artwork is 720x90 and must be 728x90.' );
+		$this->campaigns->set_internal_notes( $campaign, 'Third time this agency has done this.' );
+
+		$this->service->campaign_transitioned( $campaign, Post_Statuses::REVIEW, Post_Statuses::CHANGES );
+
+		$this->assertCount( 1, $this->mail );
+		$this->assertSame( 'advertiser@example.test', $this->mail[0]['to'] );
+		$this->assertStringContainsString( 'Changes requested: Autumn arts guide', (string) $this->mail[0]['subject'] );
+		$this->assertStringContainsString( 'The leaderboard artwork is 720x90', (string) $this->mail[0]['message'] );
+
+		// The advertiser's own screen, never the staff review screen.
+		$this->assertStringContainsString( '/advertiser/campaigns/' . $campaign, (string) $this->mail[0]['message'] );
+		$this->assertStringNotContainsString( 'page=laao-ads-review', (string) $this->mail[0]['message'] );
+	}
+
+	/**
+	 * **Internal notes never leave the admin.**
+	 *
+	 * Two note fields exist precisely so staff can write candidly. Leaking one
+	 * into an advertiser's inbox is unrecoverable.
+	 *
+	 * @return void
+	 */
+	public function test_internal_notes_never_reach_the_advertiser(): void {
+		$campaign = $this->campaign( Post_Statuses::REJECTED );
+
+		$this->campaigns->set_review_notes( $campaign, 'This does not meet our content guidelines.' );
+		$this->campaigns->set_internal_notes( $campaign, 'Do not take bookings from them again.' );
+
+		$this->service->campaign_transitioned( $campaign, Post_Statuses::REVIEW, Post_Statuses::REJECTED );
+
+		$this->assertCount( 1, $this->mail );
+		$this->assertStringContainsString( 'This does not meet our content guidelines.', (string) $this->mail[0]['message'] );
+		$this->assertStringNotContainsString( 'Do not take bookings', (string) $this->mail[0]['message'] );
+	}
+
+	/**
+	 * Approval reaches everyone in the organization, not only its owner.
+	 *
+	 * @return void
+	 */
+	public function test_approval_reaches_every_member_of_the_organization(): void {
+		$this->member( 'colleague@example.test' );
+
+		$campaign = $this->campaign( Post_Statuses::APPROVED );
+
+		$this->service->campaign_transitioned( $campaign, Post_Statuses::REVIEW, Post_Statuses::APPROVED );
+
+		$addresses = array_column( $this->mail, 'to' );
+
+		$this->assertContains( 'advertiser@example.test', $addresses );
+		$this->assertContains( 'colleague@example.test', $addresses );
+		$this->assertCount( 2, array_unique( $addresses ) );
+	}
+
+	/**
+	 * Good news carries no feedback block, even when review notes exist.
+	 *
+	 * Notes left over from an earlier round of changes must not be replayed as
+	 * though they were the reason for the approval.
+	 *
+	 * @return void
+	 */
+	public function test_approval_does_not_replay_old_feedback(): void {
+		$campaign = $this->campaign( Post_Statuses::APPROVED );
+
+		$this->campaigns->set_review_notes( $campaign, 'Left over from the previous round.' );
+
+		$this->service->campaign_transitioned( $campaign, Post_Statuses::REVIEW, Post_Statuses::APPROVED );
+
+		$this->assertCount( 1, $this->mail );
+		$this->assertStringNotContainsString( 'Left over from the previous round.', (string) $this->mail[0]['message'] );
+	}
+
+	/**
+	 * The clock going live tells the advertiser, since nobody else will.
+	 *
+	 * @return void
+	 */
+	public function test_going_live_tells_the_advertiser(): void {
+		$campaign = $this->campaign( Post_Statuses::LIVE );
+
+		$this->service->campaign_transitioned( $campaign, Post_Statuses::SCHEDULED, Post_Statuses::LIVE );
+
+		$this->assertCount( 1, $this->mail );
+		$this->assertStringContainsString( 'Campaign is now running', (string) $this->mail[0]['subject'] );
+	}
+
+	/**
+	 * **Queue management is not news.**
+	 *
+	 * A reviewer claiming a campaign and putting it back moves it through two
+	 * statuses. Emailing the advertiser about either is the surest way to make
+	 * them ignore the message that matters.
+	 *
+	 * @return void
+	 */
+	public function test_internal_queue_movement_does_not_email_the_advertiser(): void {
+		$campaign = $this->campaign( Post_Statuses::REVIEW );
+
+		$this->service->campaign_transitioned( $campaign, Post_Statuses::SUBMITTED, Post_Statuses::REVIEW );
+
+		$this->assertSame( array(), $this->mail );
+	}
+
+	/**
+	 * A repeated hook does not send the same decision twice.
+	 *
+	 * @return void
+	 */
+	public function test_a_repeated_decision_hook_sends_once(): void {
+		$campaign = $this->campaign( Post_Statuses::CHANGES );
+
+		$this->campaigns->set_review_notes( $campaign, 'Please resize the artwork.' );
+
+		$this->service->campaign_transitioned( $campaign, Post_Statuses::REVIEW, Post_Statuses::CHANGES );
+		$this->service->campaign_transitioned( $campaign, Post_Statuses::REVIEW, Post_Statuses::CHANGES );
+
+		$this->assertCount( 1, $this->mail );
+	}
+
+	/**
+	 * A second round of changes does send again.
+	 *
+	 * The receipt carries the revision as well as the status, so a campaign
+	 * resubmitted and sent back a second time is a different decision about
+	 * different work. Keying on status alone would silence every round after
+	 * the first — the advertiser would be told once and then left waiting.
+	 *
+	 * @return void
+	 */
+	public function test_a_second_round_of_changes_sends_again(): void {
+		$campaign = $this->campaign( Post_Statuses::CHANGES );
+
+		$this->campaigns->set_review_notes( $campaign, 'First round.' );
+		$this->service->campaign_transitioned( $campaign, Post_Statuses::REVIEW, Post_Statuses::CHANGES );
+
+		$this->campaigns->increment_revision( $campaign );
+		$this->campaigns->set_review_notes( $campaign, 'Second round.' );
+		$this->service->campaign_transitioned( $campaign, Post_Statuses::REVIEW, Post_Statuses::CHANGES );
+
+		$this->assertCount( 2, $this->mail );
+		$this->assertStringContainsString( 'First round.', (string) $this->mail[0]['message'] );
+		$this->assertStringContainsString( 'Second round.', (string) $this->mail[1]['message'] );
+	}
+
+	/**
+	 * A failed advertiser notice schedules a retry and never reverses anything.
+	 *
+	 * @return void
+	 */
+	public function test_a_failed_advertiser_notice_is_retried(): void {
+		$campaign = $this->campaign( Post_Statuses::CHANGES );
+
+		$this->campaigns->set_review_notes( $campaign, 'Please resize the artwork.' );
+		$this->mail_results['advertiser@example.test'] = false;
+
+		$threw = false;
+
+		try {
+			$this->service->campaign_transitioned( $campaign, Post_Statuses::REVIEW, Post_Statuses::CHANGES );
+		} catch ( RuntimeException ) {
+			$threw = true;
+		}
+
+		$this->assertTrue( $threw, 'A failed notice must surface so the state machine can audit it.' );
+		$this->assertNotFalse(
+			wp_next_scheduled(
+				Notification_Service::ADVERTISER_RETRY_HOOK,
+				array( $campaign, Post_Statuses::CHANGES, $this->campaigns->revision( $campaign ), 1 )
+			)
+		);
+	}
+
+	/**
+	 * A retry for a campaign that has moved on is dropped.
+	 *
+	 * "Changes requested" landing after the advertiser has already resubmitted
+	 * describes a state the campaign is no longer in, which is worse than
+	 * silence.
+	 *
+	 * @return void
+	 */
+	public function test_a_stale_advertiser_retry_is_dropped(): void {
+		$campaign = $this->campaign( Post_Statuses::SUBMITTED );
+
+		$this->service->retry_advertiser_notice( $campaign, Post_Statuses::CHANGES, $this->campaigns->revision( $campaign ), 1 );
+
+		$this->assertSame( array(), $this->mail );
+	}
 }

@@ -48,7 +48,9 @@ a successful submission. See [notifications.md](notifications.md).
 
 ## Phase 7 — Lifecycle automation
 
-`Campaign_Clock`, the hourly reconcile event, scheduled → live → complete, expiry and ending-soon notifications, pause and resume, and the private-file retention purge.
+`Campaign_Clock` and its hourly reconcile event are **built**: approved → scheduled → live → complete, driven by the guards rather than by the reconciler, with the sweep's source statuses derived from `Transition_Table::system_sources()`.
+
+Still outstanding in this phase: ending-soon notifications, pause and resume UI, and the private-file retention purge.
 
 ## Phase 8 — Organizations and members
 

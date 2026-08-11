@@ -63,10 +63,15 @@ advertiser creation UI is the largest open product area. What is built:
   with per-recipient duplicate suppression, bounded cron retry, localized
   plain-text messages, and failure auditing that cannot reverse a transition
 - release packaging and independent archive verification
+- `Workflow\Campaign_Clock` — the hourly reconcile that drives approved →
+  scheduled → live → complete, without which status freezes at approval
+- staff review queue and placement mapping screens, and the advertiser-facing
+  notifications for changes, rejection, approval, going live and completion
 
-What does **not** exist yet, despite being described in `docs/`: the package
-repository, the lifecycle clock, wizard steps 2–6, the upload UI, analytics, any JavaScript toolchain,
-Playwright, i18n tooling, semantic-release, and self-hosted Archivo.
+What does **not** exist yet, despite being described in `docs/`: the
+organization, account and help screens (the routes resolve to a placeholder),
+pause/resume UI, the private-file retention purge, analytics, any JavaScript
+toolchain, Playwright, i18n tooling, semantic-release, and self-hosted Archivo.
 `docs/` describes the design; `docs/roadmap.md` says which phase builds it. If a
 doc describes something you cannot find, it has not been built — that is
 expected, not a bug.

@@ -98,6 +98,37 @@ final class Org_Repository {
 	}
 
 	/**
+	 * Everyone in an organization, owner first.
+	 *
+	 * The inverse of org_ids_for_user(), and read from the same two meta keys
+	 * so the two cannot disagree about who is a member. Owner first because a
+	 * notice about somebody's campaign should reach the person answerable for
+	 * it even if the list is later truncated.
+	 *
+	 * @param int $org_id Organization post id.
+	 * @return array<int, int> User ids, without duplicates.
+	 */
+	public function user_ids_for_org( int $org_id ): array {
+		if ( $org_id <= 0 || Post_Types::ORGANIZATION !== get_post_type( $org_id ) ) {
+			return array();
+		}
+
+		$ids = array();
+
+		foreach ( array( self::META_OWNER_USER, self::META_MEMBER_USER ) as $key ) {
+			foreach ( get_post_meta( $org_id, $key, false ) as $value ) {
+				$user_id = (int) $value;
+
+				if ( $user_id > 0 && ! in_array( $user_id, $ids, true ) ) {
+					$ids[] = $user_id;
+				}
+			}
+		}
+
+		return $ids;
+	}
+
+	/**
 	 * What a post is, and which organization owns it.
 	 *
 	 * Returns null when the post does not exist. That distinction matters:
