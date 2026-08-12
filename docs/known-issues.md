@@ -32,7 +32,7 @@ Things that are true, annoying, and worth writing down so nobody rediscovers the
 
 **Cost.** Defence in depth is one layer thinner than it looks.
 
-**Mitigation.** Path unguessability (UUID filename plus a 32-char token) is the layer that actually holds, because it does not depend on server configuration. Reads go through an authorized streaming endpoint that never redirects to the raw file. A Site Health check warns when the directory cannot be proven blocked, and the nginx `location` snippet belongs in the deployment notes.
+**Current mitigation.** Path unguessability (UUID filename plus a 32-char token) is the layer that actually holds, because it does not depend on server configuration. Reads go through an authorized streaming endpoint that never redirects to the raw file. The Site Health warning and production nginx deployment snippet remain Phase 11 work; until then an nginx deployment must verify the deny rule operationally.
 
 ## Every integration run logs two `WP_MEMORY_LIMIT` warnings
 
@@ -94,4 +94,4 @@ lines; do not add memory constants to `.wp-env.json` trying to silence them.
 
 **Cost.** `/advertiser/` 404s, and it looks like a broken deploy rather than a stale cache.
 
-**Mitigation.** A Site Health check asserts the rules are present in `get_option( 'rewrite_rules' )`, and a Tools screen offers a manual re-flush. Bumping the constant is the documented procedure for shipping a route change.
+**Current mitigation.** Bumping the constant is the documented procedure for shipping a route change, and deployment verification must request the portal URL. The Site Health assertion and Tools re-flush control remain Phase 11 work.

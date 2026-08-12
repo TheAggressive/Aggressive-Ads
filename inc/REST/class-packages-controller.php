@@ -81,7 +81,8 @@ final class Packages_Controller implements Service {
 	 * @phpstan-param WP_REST_Request<array<string, mixed>> $request
 	 */
 	public function index( WP_REST_Request $request ): WP_REST_Response {
-		$rows = array();
+		$rows       = array();
+		$default_id = $this->packages->default_id();
 
 		foreach ( $this->packages->active_ids() as $package_id ) {
 			$snapshot = $this->editor->package_snapshot( $package_id );
@@ -101,12 +102,14 @@ final class Packages_Controller implements Service {
 			}
 
 			$rows[] = array(
-				'id'            => $package_id,
-				'name'          => $this->packages->name( $package_id ),
-				'duration_days' => $this->packages->duration_days( $package_id ),
-				'price_cents'   => $snapshot['budget_cents'],
-				'currency'      => $snapshot['currency'],
-				'placements'    => $placements,
+				'id'              => $package_id,
+				'name'            => $this->packages->name( $package_id ),
+				'duration_days'   => $this->packages->duration_days( $package_id ),
+				'custom_duration' => $this->packages->has_custom_duration( $package_id ),
+				'is_default'      => $package_id === $default_id,
+				'price_cents'     => $snapshot['budget_cents'],
+				'currency'        => $snapshot['currency'],
+				'placements'      => $placements,
 			);
 		}
 

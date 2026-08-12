@@ -94,10 +94,7 @@ final class Creative_Manager {
 		}
 
 		$alt_text = trim( sanitize_text_field( $alt_text ) );
-
-		if ( '' === $alt_text ) {
-			return $this->error( 'laao_ads_alt_text_required', __( 'Describe the image for people who cannot see it.', 'laao-advertiser-portal' ), 422, 'alt_text' );
-		}
+		$alt_text = '' === $alt_text ? self::automatic_alt_text( $click_url ) : $alt_text;
 
 		if ( mb_strlen( $alt_text ) > self::MAX_ALT_TEXT_LENGTH ) {
 			return $this->error( 'laao_ads_alt_text_too_long', __( 'Use 500 characters or fewer for the image description.', 'laao-advertiser-portal' ), 422, 'alt_text' );
@@ -197,6 +194,33 @@ final class Creative_Manager {
 			'bytes'        => $accepted['bytes'],
 			'name'         => $accepted['name'],
 		);
+	}
+
+	/**
+	 * Supplies concise accessibility text without asking advertisers for copy.
+	 *
+	 * A linked image cannot safely have an empty alt attribute. The validated
+	 * destination host describes the link's purpose without exposing an
+	 * internal campaign title or requiring a visible description field.
+	 *
+	 * @param string $click_url Validated public destination URL.
+	 * @return string
+	 */
+	public static function automatic_alt_text( string $click_url ): string {
+		$host = (string) wp_parse_url( $click_url, PHP_URL_HOST );
+		$host = sanitize_text_field( strtolower( $host ) );
+
+		if ( str_starts_with( $host, 'www.' ) ) {
+			$host = substr( $host, 4 );
+		}
+
+		return '' === $host
+			? __( 'Advertisement', 'laao-advertiser-portal' )
+			: sprintf(
+				/* translators: %s: destination website hostname. */
+				__( 'Advertisement linking to %s', 'laao-advertiser-portal' ),
+				$host
+			);
 	}
 
 	/**

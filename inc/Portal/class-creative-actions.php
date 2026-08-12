@@ -12,6 +12,7 @@ namespace LAAO_Advertiser_Portal\Portal;
 use LAAO_Advertiser_Portal\Core\Service;
 use LAAO_Advertiser_Portal\Domain\Upload_Rules;
 use LAAO_Advertiser_Portal\Security\Capabilities;
+use LAAO_Advertiser_Portal\Workflow\Creative_Change_Manager;
 use LAAO_Advertiser_Portal\Workflow\Creative_Manager;
 use WP_Error;
 
@@ -20,15 +21,21 @@ use WP_Error;
  */
 final class Creative_Actions implements Service {
 
-	public const UPLOAD_ACTION = 'laao_ads_upload_creative';
-	public const REMOVE_ACTION = 'laao_ads_remove_creative';
+	public const UPLOAD_ACTION   = 'laao_ads_upload_creative';
+	public const REMOVE_ACTION   = 'laao_ads_remove_creative';
+	public const REPLACE_ACTION  = 'laao_ads_request_creative_replacement';
+	public const WITHDRAW_ACTION = 'laao_ads_withdraw_creative_replacement';
 
 	/**
 	 * Constructor.
 	 *
-	 * @param Creative_Manager $manager Shared creative workflow.
+	 * @param Creative_Manager        $manager Shared draft creative workflow.
+	 * @param Creative_Change_Manager $changes Reviewed published-ad changes.
 	 */
-	public function __construct( private readonly Creative_Manager $manager ) {
+	public function __construct(
+		private readonly Creative_Manager $manager,
+		private readonly Creative_Change_Manager $changes
+	) {
 	}
 
 	/**
@@ -39,6 +46,56 @@ final class Creative_Actions implements Service {
 	public function init(): void {
 		add_action( 'admin_post_' . self::UPLOAD_ACTION, array( $this, 'handle_upload' ) );
 		add_action( 'admin_post_' . self::REMOVE_ACTION, array( $this, 'handle_remove' ) );
+		add_action( 'admin_post_' . self::REPLACE_ACTION, array( $this, 'handle_replace' ) );
+		add_action( 'admin_post_' . self::WITHDRAW_ACTION, array( $this, 'handle_withdraw' ) );
+	}
+
+	/**
+	 * Requests review of a published-ad replacement.
+	 *
+	 * @return void
+	 */
+	public function handle_replace(): void {
+		$this->assert_portal_access();
+
+		$creative_id = isset( $_POST['creative_id'] ) ? absint( $_POST['creative_id'] ) : 0;
+		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0;
+
+		check_admin_referer( self::replace_nonce_action( $creative_id ) );
+
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Hostile bytes are inspected by Creative_Uploader; sanitizing the temporary path corrupts it.
+		$file      = isset( $_FILES['file'] ) && is_array( $_FILES['file'] ) ? $_FILES['file'] : array();
+		$click_url = isset( $_POST['click_url'] ) ? sanitize_text_field( wp_unslash( $_POST['click_url'] ) ) : '';
+		$alt_text  = isset( $_POST['alt_text'] ) ? sanitize_text_field( wp_unslash( $_POST['alt_text'] ) ) : '';
+		$result    = $this->changes->request( $creative_id, $file, $click_url, $alt_text );
+
+		if ( is_wp_error( $result ) ) {
+			$this->redirect( $campaign_id, 'error', $result );
+		}
+
+		$this->redirect( $campaign_id, 'creative_update_requested' );
+	}
+
+	/**
+	 * Withdraws a pending published-ad replacement.
+	 *
+	 * @return void
+	 */
+	public function handle_withdraw(): void {
+		$this->assert_portal_access();
+
+		$replacement_id = isset( $_POST['replacement_id'] ) ? absint( $_POST['replacement_id'] ) : 0;
+		$campaign_id    = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0;
+
+		check_admin_referer( self::withdraw_nonce_action( $replacement_id ) );
+
+		$result = $this->changes->withdraw( $replacement_id );
+
+		if ( is_wp_error( $result ) ) {
+			$this->redirect( $campaign_id, 'error', $result );
+		}
+
+		$this->redirect( $campaign_id, 'creative_update_withdrawn' );
 	}
 
 	/**
@@ -135,6 +192,26 @@ final class Creative_Actions implements Service {
 	}
 
 	/**
+	 * Nonce scoped to a current creative replacement request.
+	 *
+	 * @param int $creative_id Current creative id.
+	 * @return string
+	 */
+	public static function replace_nonce_action( int $creative_id ): string {
+		return self::REPLACE_ACTION . '_' . max( 0, $creative_id );
+	}
+
+	/**
+	 * Nonce scoped to one pending replacement withdrawal.
+	 *
+	 * @param int $replacement_id Replacement id.
+	 * @return string
+	 */
+	public static function withdraw_nonce_action( int $replacement_id ): string {
+		return self::WITHDRAW_ACTION . '_' . max( 0, $replacement_id );
+	}
+
+	/**
 	 * Reads an allowlisted creative notice.
 	 *
 	 * @return string
@@ -143,7 +220,7 @@ final class Creative_Actions implements Service {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only post/redirect/get display state.
 		$value = isset( $_GET['laao_ads_notice'] ) ? sanitize_key( wp_unslash( $_GET['laao_ads_notice'] ) ) : '';
 
-		return in_array( $value, array( 'creative_uploaded', 'creative_removed', 'error' ), true ) ? $value : '';
+		return in_array( $value, array( 'creative_uploaded', 'creative_removed', 'creative_update_requested', 'creative_update_withdrawn', 'error' ), true ) ? $value : '';
 	}
 
 	/**
@@ -180,6 +257,9 @@ final class Creative_Actions implements Service {
 			'laao_ads_alt_text_too_long'        => __( 'Use 500 characters or fewer for the image description.', 'laao-advertiser-portal' ),
 			'laao_ads_creative_size_mismatch'   => __( 'The uploaded dimensions do not match this placement. Resize the image to the required dimensions and try again.', 'laao-advertiser-portal' ),
 			'laao_ads_creative_already_exists'  => __( 'That placement already has a creative. Remove it before uploading a replacement.', 'laao-advertiser-portal' ),
+			'laao_ads_replacement_pending'       => __( 'This ad already has an update waiting for review.', 'laao-advertiser-portal' ),
+			'laao_ads_replacement_unavailable'   => __( 'Only an ad in a scheduled or live campaign can be updated.', 'laao-advertiser-portal' ),
+			'laao_ads_replacement_busy'          => __( 'Another update is already being saved for this ad. Try again.', 'laao-advertiser-portal' ),
 			'laao_ads_upload_no_file'           => __( 'No file was received. Choose an image and try again.', 'laao-advertiser-portal' ),
 			'laao_ads_upload_too_large'         => sprintf(
 				/* translators: %s: maximum file size. */

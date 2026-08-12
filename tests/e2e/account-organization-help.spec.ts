@@ -12,7 +12,7 @@ import { signIn } from './sign-in-helper';
  */
 test( 'advertiser reads and edits their account, organization and help', async ( { page } ) => {
 	await page.goto( '/advertiser/' );
-	await signIn( page, 'advertiser', 'advertiser' );
+	await signIn( page, 'advertiser@example.test', 'advertiser' );
 	await expect( page ).toHaveURL( /\/advertiser\/?$/ );
 
 	// Reached by the rail, not by typing a URL: the navigation is part of what
@@ -76,7 +76,7 @@ test( 'the account screen exposes no editable email or role field', async ( {
 	page,
 } ) => {
 	await page.goto( '/advertiser/' );
-	await signIn( page, 'advertiser', 'advertiser' );
+	await signIn( page, 'advertiser@example.test', 'advertiser' );
 
 	await page.goto( '/advertiser/account/' );
 

@@ -89,8 +89,12 @@ final class Adsanity {
 		 *
 		 * @param array<string, string> $sizes Size key to label.
 		 */
+		$option_name = defined( 'ADSANITY_ADMIN_OPTIONS' ) ? (string) constant( 'ADSANITY_ADMIN_OPTIONS' ) : 'adsanity-options';
+		$options     = get_option( $option_name, array( 'sizes' => array() ) );
+		$base_sizes  = is_array( $options ) && isset( $options['sizes'] ) && is_array( $options['sizes'] ) ? $options['sizes'] : array();
+
 		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.DynamicHooknameFound -- AdSanity's own filter, applied here to read its size map. Prefixing it with ours would invent a hook nobody listens to.
-		$sizes = apply_filters( self::FILTER_AD_SIZES, array() );
+		$sizes = apply_filters( self::FILTER_AD_SIZES, $base_sizes );
 
 		if ( ! is_array( $sizes ) ) {
 			return array();

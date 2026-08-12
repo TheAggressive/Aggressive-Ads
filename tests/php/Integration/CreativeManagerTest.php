@@ -230,11 +230,11 @@ final class CreativeManagerTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Destination and alternative text are mandatory at the upload boundary.
+	 * Destination is mandatory and missing alternative text is generated.
 	 *
 	 * @return void
 	 */
-	public function test_accessible_metadata_is_required_before_file_storage(): void {
+	public function test_destination_is_required_and_accessible_text_is_automatic(): void {
 		wp_set_current_user( $this->owner );
 		$file = $this->image_file( 728, 90 );
 
@@ -246,11 +246,17 @@ final class CreativeManagerTest extends WP_UnitTestCase {
 		$this->assertWPError( $bad_url );
 		$this->assertSame( 'laao_ads_click_url_invalid', $bad_url->get_error_code() );
 
-		$missing_alt = $this->manager->upload( $this->campaign_id, $this->placement_id, $file, 'https://example.com/', '' );
-		$this->assertWPError( $missing_alt );
-		$this->assertSame( 'laao_ads_alt_text_required', $missing_alt->get_error_code() );
+		$uploaded = $this->manager->upload( $this->campaign_id, $this->placement_id, $file, 'https://www.example.com/gallery', '' );
+		$this->assertIsArray( $uploaded );
 
-		$this->assertSame( array(), Plugin::instance()->container()->get( Creative_Repository::class )->for_campaign( $this->campaign_id ) );
+		$repository = Plugin::instance()->container()->get( Creative_Repository::class );
+		$creative   = $repository->details( (int) $uploaded['id'] );
+		$stored     = $repository->storage_details( (int) $uploaded['id'] );
+
+		$this->assertIsArray( $creative );
+		$this->assertSame( 'Advertisement linking to example.com', $creative['alt_text'] );
+		$this->assertIsArray( $stored );
+		$this->stored[] = $stored['path'];
 	}
 
 	/**

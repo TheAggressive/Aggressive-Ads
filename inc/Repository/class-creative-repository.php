@@ -40,6 +40,17 @@ final class Creative_Repository {
 	public const META_MIME          = '_laao_ads_mime';
 	public const META_FILESIZE      = '_laao_ads_filesize';
 	public const META_ORIGINAL_NAME = '_laao_ads_original_name';
+	public const META_REPLACES_ID   = '_laao_ads_replaces_creative_id';
+	public const META_REPLACED_BY   = '_laao_ads_replaced_by_creative_id';
+	public const META_CHANGE_STATE  = '_laao_ads_change_state';
+	public const META_CHANGE_NOTES  = '_laao_ads_change_notes';
+	public const META_REQUESTED_AT  = '_laao_ads_change_requested_at';
+	public const META_DECIDED_AT    = '_laao_ads_change_decided_at';
+	public const META_CHANGE_LOCK   = '_laao_ads_change_lock';
+
+	public const CHANGE_PENDING  = 'pending';
+	public const CHANGE_REJECTED = 'rejected';
+	public const CHANGE_APPLIED  = 'applied';
 
 	/**
 	 * A campaign cannot carry more creatives than this.
@@ -68,7 +79,7 @@ final class Creative_Repository {
 				'numberposts'            => self::MAX_PER_CAMPAIGN,
 				'fields'                 => 'ids',
 				'orderby'                => 'ID',
-				'order'                  => 'ASC',
+				'order'                  => 'DESC',
 				'no_found_rows'          => true,
 				'update_post_term_cache' => false,
 				'meta_key'               => self::META_CAMPAIGN_ID, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Indexed lookup; a creative belongs to exactly one campaign.
@@ -79,7 +90,10 @@ final class Creative_Repository {
 			)
 		);
 
-		return array_map( 'intval', $ids );
+		$ids = array_map( 'intval', $ids );
+		sort( $ids );
+
+		return $ids;
 	}
 
 	/**
@@ -212,6 +226,236 @@ final class Creative_Repository {
 	}
 
 	/**
+	 * Creates a private revision linked to the currently published creative.
+	 *
+	 * The revision is excluded from for_campaign() until approval, so existing
+	 * validation and publication always see exactly one active creative per
+	 * placement.
+	 *
+	 * @param int                   $creative_id Current creative id.
+	 * @param array<string, string> $fields      Validated creative fields.
+	 * @return int Zero on failure.
+	 */
+	public function create_replacement( int $creative_id, array $fields ): int {
+		$current = $this->details( $creative_id );
+
+		if ( null === $current || ! $this->is_active( $creative_id ) ) {
+			return 0;
+		}
+
+		$replacement_id = $this->create(
+			$current['campaign_id'],
+			$current['org_id'],
+			$current['placement_id'],
+			$fields
+		);
+
+		if ( 0 === $replacement_id ) {
+			return 0;
+		}
+
+		update_post_meta( $replacement_id, self::META_REPLACES_ID, $creative_id );
+		update_post_meta( $replacement_id, self::META_CHANGE_STATE, self::CHANGE_PENDING );
+		update_post_meta( $replacement_id, self::META_REQUESTED_AT, time() );
+
+		return $replacement_id;
+	}
+
+	/**
+	 * Whether a creative is the active campaign revision.
+	 *
+	 * @param int $creative_id Creative id.
+	 * @return bool
+	 */
+	public function is_active( int $creative_id ): bool {
+		return null !== $this->details( $creative_id )
+			&& 0 === $this->replacement_target_id( $creative_id )
+			&& 0 === (int) get_post_meta( $creative_id, self::META_REPLACED_BY, true );
+	}
+
+	/**
+	 * Current creative a revision proposes to replace.
+	 *
+	 * @param int $creative_id Creative revision id.
+	 * @return int
+	 */
+	public function replacement_target_id( int $creative_id ): int {
+		return (int) get_post_meta( $creative_id, self::META_REPLACES_ID, true );
+	}
+
+	/**
+	 * Replacement-review state.
+	 *
+	 * @param int $creative_id Creative revision id.
+	 * @return string
+	 */
+	public function change_state( int $creative_id ): string {
+		return (string) get_post_meta( $creative_id, self::META_CHANGE_STATE, true );
+	}
+
+	/**
+	 * Advertiser-facing decision notes.
+	 *
+	 * @param int $creative_id Creative revision id.
+	 * @return string
+	 */
+	public function change_notes( int $creative_id ): string {
+		return (string) get_post_meta( $creative_id, self::META_CHANGE_NOTES, true );
+	}
+
+	/**
+	 * When a replacement was requested.
+	 *
+	 * @param int $creative_id Creative revision id.
+	 * @return int
+	 */
+	public function requested_at( int $creative_id ): int {
+		return (int) get_post_meta( $creative_id, self::META_REQUESTED_AT, true );
+	}
+
+	/**
+	 * Pending replacement for one active creative, if any.
+	 *
+	 * @param int $creative_id Active creative id.
+	 * @return int
+	 */
+	public function pending_replacement_id( int $creative_id ): int {
+		foreach ( $this->ids_for_campaign( (int) ( $this->details( $creative_id )['campaign_id'] ?? 0 ) ) as $candidate_id ) {
+			if ( $creative_id === $this->replacement_target_id( $candidate_id ) && self::CHANGE_PENDING === $this->change_state( $candidate_id ) ) {
+				return $candidate_id;
+			}
+		}
+
+		return 0;
+	}
+
+	/**
+	 * Replacement revisions for a campaign, newest first.
+	 *
+	 * @param int                $campaign_id Campaign id.
+	 * @param array<int, string> $states      Optional state allowlist.
+	 * @return array<int, array{id: int, campaign_id: int, org_id: int, placement_id: int, size: string, kind: string, width: int, height: int, click_url: string, alt_text: string}>
+	 */
+	public function replacements_for_campaign( int $campaign_id, array $states = array() ): array {
+		$rows = array();
+
+		foreach ( array_reverse( $this->ids_for_campaign( $campaign_id ) ) as $creative_id ) {
+			$state = $this->change_state( $creative_id );
+
+			if ( $this->replacement_target_id( $creative_id ) <= 0 || ( array() !== $states && ! in_array( $state, $states, true ) ) ) {
+				continue;
+			}
+
+			$details = $this->details( $creative_id );
+
+			if ( null !== $details ) {
+				$rows[] = $details;
+			}
+		}
+
+		return $rows;
+	}
+
+	/**
+	 * Stores a rejected replacement and the advertiser-facing reason.
+	 *
+	 * @param int    $creative_id Replacement id.
+	 * @param string $notes       Review reason.
+	 * @return bool
+	 */
+	public function reject_replacement( int $creative_id, string $notes ): bool {
+		update_post_meta( $creative_id, self::META_CHANGE_STATE, self::CHANGE_REJECTED );
+		update_post_meta( $creative_id, self::META_CHANGE_NOTES, $notes );
+		update_post_meta( $creative_id, self::META_DECIDED_AT, time() );
+
+		return self::CHANGE_REJECTED === $this->change_state( $creative_id )
+			&& $notes === $this->change_notes( $creative_id );
+	}
+
+	/**
+	 * Makes an approved replacement current and archives its predecessor.
+	 *
+	 * The provider write happens first. If these verified metadata writes fail,
+	 * the caller restores the provider from the still-intact old creative.
+	 *
+	 * @param int $current_id     Current creative id.
+	 * @param int $replacement_id Approved replacement id.
+	 * @param int $provider_ad_id Existing provider ad id.
+	 * @return bool
+	 */
+	public function activate_replacement( int $current_id, int $replacement_id, int $provider_ad_id ): bool {
+		$old_review = (string) get_post_meta( $current_id, self::META_REVIEW_STATE, true );
+
+		update_post_meta( $current_id, self::META_REPLACED_BY, $replacement_id );
+		update_post_meta( $current_id, self::META_REVIEW_STATE, 'replaced' );
+		delete_post_meta( $current_id, self::META_PROVIDER_AD );
+
+		delete_post_meta( $replacement_id, self::META_REPLACES_ID );
+		update_post_meta( $replacement_id, self::META_CHANGE_STATE, self::CHANGE_APPLIED );
+		update_post_meta( $replacement_id, self::META_REVIEW_STATE, 'approved' );
+		update_post_meta( $replacement_id, self::META_DECIDED_AT, time() );
+		update_post_meta( $replacement_id, self::META_PROVIDER_AD, $provider_ad_id );
+
+		$activated = $this->is_active( $replacement_id )
+			&& ! $this->is_active( $current_id )
+			&& $provider_ad_id === $this->provider_ad_id( $replacement_id );
+
+		if ( $activated ) {
+			return true;
+		}
+
+		delete_post_meta( $current_id, self::META_REPLACED_BY );
+		update_post_meta( $current_id, self::META_REVIEW_STATE, $old_review );
+		update_post_meta( $current_id, self::META_PROVIDER_AD, $provider_ad_id );
+		update_post_meta( $replacement_id, self::META_REPLACES_ID, $current_id );
+		update_post_meta( $replacement_id, self::META_CHANGE_STATE, self::CHANGE_PENDING );
+		update_post_meta( $replacement_id, self::META_REVIEW_STATE, 'pending' );
+		delete_post_meta( $replacement_id, self::META_PROVIDER_AD );
+
+		return false;
+	}
+
+	/**
+	 * Atomically claims a short-lived replacement operation lock.
+	 *
+	 * @param int $creative_id Current creative id.
+	 * @return string Empty when another request owns the lock.
+	 */
+	public function claim_change_lock( int $creative_id ): string {
+		$token = time() . '|' . wp_generate_uuid4();
+
+		if ( add_post_meta( $creative_id, self::META_CHANGE_LOCK, $token, true ) ) {
+			return $token;
+		}
+
+		$existing = (string) get_post_meta( $creative_id, self::META_CHANGE_LOCK, true );
+		$created  = (int) strtok( $existing, '|' );
+
+		if ( $created <= 0 || $created > time() - ( 5 * MINUTE_IN_SECONDS ) ) {
+			return '';
+		}
+
+		delete_post_meta( $creative_id, self::META_CHANGE_LOCK, $existing );
+
+		add_post_meta( $creative_id, self::META_CHANGE_LOCK, $token, true );
+
+		return (string) get_post_meta( $creative_id, self::META_CHANGE_LOCK, true ) === $token ? $token : '';
+	}
+
+	/**
+	 * Releases a replacement operation lock only for its owner.
+	 *
+	 * @param int    $creative_id Current creative id.
+	 * @param string $token       Claim token.
+	 * @return void
+	 */
+	public function release_change_lock( int $creative_id, string $token ): void {
+		if ( '' !== $token ) {
+			delete_post_meta( $creative_id, self::META_CHANGE_LOCK, $token );
+		}
+	}
+
+	/**
 	 * Whether a creative already points at a real attachment.
 	 *
 	 * Checks the post actually exists rather than trusting the recorded id: an
@@ -311,7 +555,7 @@ final class Creative_Repository {
 		foreach ( $this->ids_for_campaign( $campaign_id ) as $creative_id ) {
 			$details = $this->details( $creative_id );
 
-			if ( null !== $details ) {
+			if ( null !== $details && $this->is_active( $creative_id ) ) {
 				$creatives[] = $details;
 			}
 		}

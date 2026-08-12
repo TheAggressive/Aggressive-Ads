@@ -350,6 +350,7 @@ final class ReadRoutesTest extends WP_UnitTestCase {
 		update_post_meta( $package, Package_Repository::META_PRICE_CENTS, 45000 );
 		update_post_meta( $package, Package_Repository::META_CURRENCY, 'USD' );
 		update_post_meta( $package, Package_Repository::META_IS_ACTIVE, 1 );
+		update_post_meta( $package, Package_Repository::META_IS_DEFAULT, 1 );
 
 		$malformed = (int) self::factory()->post->create(
 			array(
@@ -371,6 +372,8 @@ final class ReadRoutesTest extends WP_UnitTestCase {
 		$this->assertCount( 1, $data['packages'] );
 		$this->assertSame( $package, $data['packages'][0]['id'] );
 		$this->assertSame( 45000, $data['packages'][0]['price_cents'] );
+		$this->assertTrue( $data['packages'][0]['is_default'] );
+		$this->assertFalse( $data['packages'][0]['custom_duration'] );
 		$this->assertStringNotContainsString( 'Broken package', $body );
 		$this->assertStringNotContainsString( 'adgroup', $body );
 		$this->assertStringNotContainsString( '9876', $body );

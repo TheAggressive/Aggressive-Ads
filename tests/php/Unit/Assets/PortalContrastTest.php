@@ -197,6 +197,15 @@ final class PortalContrastTest extends TestCase {
 	}
 
 	/**
+	 * Account-entry links use the darker red that remains readable on white.
+	 *
+	 * @return void
+	 */
+	public function test_account_links_read_on_the_panel(): void {
+		$this->assertContrast( 'accent-strong', 'surface', self::AA_NORMAL );
+	}
+
+	/**
 	 * The accent is distinguishable where it marks state rather than carries text.
 	 *
 	 * @return void

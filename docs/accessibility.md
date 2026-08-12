@@ -76,7 +76,7 @@ Review Step 5 exposes all current submission problems in one ordered summary,
 not only the first failure. The problem state is an alert, the ready state is a
 status, and every issue has a keyboard-operable 44px edit target that returns
 to the exact step and field. Review sections use labelled landmarks and native
-description lists. Creative previews use their required alternative text;
+description lists. Creative previews use their generated alternative text;
 destination URLs render as text so keyboard users are not sent away from an
 unfinished campaign accidentally.
 
@@ -90,11 +90,11 @@ the campaign into a false submitted state.
 
 ## Creative alt text
 
-Every creative carries `_laao_ads_alt_text`, collected from the advertiser and written to `_wp_attachment_image_alt` when the creative is promoted at approval.
+Every creative carries `_laao_ads_alt_text` and writes it to `_wp_attachment_image_alt` when promoted. The portal generates concise text from the validated destination host, so advertisers are not asked for a separate description; API clients may still supply more specific text.
 
 This closes a real gap. The LAAO theme currently patches missing ad alt text at render time in `inc/Accessibility/class-ad-link-labels.php`, injecting `alt="Advertisement: {title}"` — written because three ads on the front page had no alt text and were failing an axe link-name check. That shim is a workaround for ads created by hand in AdSanity's admin, where alt text is not a field.
 
-Ads this portal publishes will not need it: the alt text is required at upload and travels with the file. The theme's shim can stay as a safety net for legacy ads, but it will have nothing to do for ours.
+Ads this portal publishes will not need it: accessible text is generated during upload and travels with the file. The theme's shim can stay as a safety net for legacy ads, but it will have nothing to do for ours.
 
 ## Verification
 

@@ -2,10 +2,11 @@ import { expect, test } from '@playwright/test';
 import { expectPortalA11y } from './accessibility';
 import { signIn } from './sign-in-helper';
 import { solidPng } from './png';
+import { wp } from './wp-cli';
 
 test( 'advertiser completes and submits the accessible six-step wizard', async ( { page } ) => {
 	await page.goto( '/advertiser/' );
-	await signIn( page, 'advertiser', 'advertiser' );
+	await signIn( page, 'advertiser@example.test', 'advertiser' );
 
 	await expect( page ).toHaveURL( /\/advertiser\/?$/ );
 	await expect( page.locator( 'body' ) ).toHaveClass( /wp-theme-twentytwentyfive/ );
@@ -36,6 +37,7 @@ test( 'advertiser completes and submits the accessible six-step wizard', async (
 	await page.getByRole( 'button', { name: 'Save and continue' } ).click();
 
 	await expect( page.getByRole( 'heading', { level: 2, name: 'Choose a package' } ) ).toBeVisible();
+	await expect( page.getByRole( 'radio', { name: /Launch bundle/ } ) ).toBeChecked();
 	await page.getByRole( 'radio', { name: /Focused sidebar/ } ).check();
 	await page.getByRole( 'button', { name: 'Save package' } ).click();
 
@@ -47,11 +49,10 @@ test( 'advertiser completes and submits the accessible six-step wizard', async (
 		buffer: solidPng( 300, 250 ),
 	} );
 	await upload.getByLabel( 'Destination URL' ).fill( 'https://www.example.com/exhibition' );
-	await upload.getByLabel( 'Image description' ).fill( 'Visitors viewing a gallery exhibition' );
 	await upload.getByRole( 'button', { name: 'Upload creative' } ).click();
 
 	await expect( page.getByRole( 'status' ).filter( { hasText: 'Creative uploaded' } ) ).toBeVisible();
-	const preview = page.getByRole( 'img', { name: 'Visitors viewing a gallery exhibition' } );
+	const preview = page.getByRole( 'img', { name: 'Advertisement linking to example.com' } );
 	await expect( preview ).toBeVisible();
 	await expect.poll( () => preview.evaluate( ( image: HTMLImageElement ) => image.naturalWidth ) ).toBe( 300 );
 	await page.getByRole( 'link', { name: 'Continue to schedule' } ).click();
@@ -84,4 +85,20 @@ test( 'advertiser completes and submits the accessible six-step wizard', async (
 	await page.reload();
 	await expect( page.getByText( 'Submitted', { exact: true } ) ).toBeVisible();
 	await expect( page.getByRole( 'button', { name: 'Submit campaign for review' } ) ).toHaveCount( 0 );
+
+	// Put this isolated browser fixture into the post-approval state so the
+	// advertiser's ad-update interaction is exercised without mocking markup.
+	const campaignId = new URL( page.url() ).pathname.match( /campaigns\/(\d+)/ )?.[ 1 ];
+	expect( campaignId ).toBeTruthy();
+	wp( 'post', 'update', campaignId!, '--post_status=lap_live' );
+
+	await page.reload();
+	await expect( page.getByRole( 'heading', { level: 2, name: 'Your ads' } ) ).toBeVisible();
+
+	const ad = page.locator( 'summary' ).filter( { hasText: 'Article sidebar' } );
+	await ad.locator( 'img' ).click();
+	await expect( page.getByLabel( 'Replacement image' ) ).toBeVisible();
+	await expect( page.getByLabel( 'Destination URL' ) ).toHaveValue( 'https://www.example.com/exhibition' );
+	await expect( page.getByLabel( 'Image description' ) ).toHaveCount( 0 );
+	await expectPortalA11y( page );
 } );

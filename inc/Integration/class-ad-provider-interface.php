@@ -55,6 +55,28 @@ interface Ad_Provider_Interface {
 	public function resume_campaign( int $campaign_id );
 
 	/**
+	 * Reconciles one reviewed replacement onto an existing provider ad.
+	 *
+	 * The current creative remains authoritative unless this operation returns
+	 * true; implementations must restore it when replacement verification fails.
+	 *
+	 * @param int $campaign_id       Campaign id.
+	 * @param int $current_id        Current creative id.
+	 * @param int $replacement_id    Reviewed replacement id.
+	 * @return true|WP_Error
+	 */
+	public function replace_creative( int $campaign_id, int $current_id, int $replacement_id );
+
+	/**
+	 * Reconciles one current creative back onto its existing provider ad.
+	 *
+	 * @param int $campaign_id Campaign id.
+	 * @param int $creative_id Current creative id.
+	 * @return true|WP_Error
+	 */
+	public function restore_creative( int $campaign_id, int $creative_id );
+
+	/**
 	 * Effect handlers keyed by the transition table's provider effect names.
 	 *
 	 * @return array<string, callable>

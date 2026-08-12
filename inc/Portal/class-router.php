@@ -241,18 +241,35 @@ final class Router implements Service {
 		add_filter( 'wp_robots', 'wp_robots_no_robots' );
 
 		/*
-		 * The sign-in screen is the one portal route that must render without
-		 * a session, and it must not render *with* one — a signed-in person
-		 * landing on a login form has no way to tell that they are already in.
+		 * Account-entry screens render without a session. Most move an already
+		 * signed-in visitor onward; set-password is the deliberate exception.
 		 */
-		if ( Request::ROUTE_LOGIN === $this->request->route ) {
-			if ( is_user_logged_in() ) {
+		if ( $this->request->is_public() ) {
+			$sensitive_link = Request::ROUTE_SET_PASSWORD === $this->request->route
+				|| ( Request::ROUTE_SIGNUP === $this->request->route && '' !== Signup_Actions::request_invite_token() );
+
+			/*
+			 * A password link must remain usable in the browser that requested it
+			 * from the signed-in account screen. An emailed invitation must likewise
+			 * remain usable by an existing WordPress account. The other entry
+			 * screens have no useful signed-in state and move the visitor onward.
+			 */
+			if ( is_user_logged_in() && ! $sensitive_link ) {
 				wp_safe_redirect( Routes::url() );
 
 				exit;
 			}
 
 			nocache_headers();
+
+			/*
+			 * Reset keys and invitation bearer tokens live in query strings. Do not
+			 * let a theme, analytics script or linked destination receive either in
+			 * a Referer header.
+			 */
+			if ( $sensitive_link && ! headers_sent() ) {
+				header( 'Referrer-Policy: no-referrer' );
+			}
 
 			return;
 		}
@@ -299,13 +316,13 @@ final class Router implements Service {
 		}
 
 		/*
-		 * The sign-in screen is served before the session check, because it is
-		 * the screen whose whole job is not having a session. Ordering the
+		 * Public account screens are served before the session check, because
+		 * their whole job is not having a session. Ordering the
 		 * capability test first sent every logged-out caller to the 403 screen
 		 * — including the one the gate had just redirected here to sign in.
 		 */
-		if ( Request::ROUTE_LOGIN === $this->request->route ) {
-			return $this->locate( 'login.php' );
+		if ( $this->request->is_public() ) {
+			return $this->locate( $this->request->template() );
 		}
 
 		if ( ! is_user_logged_in() || ! current_user_can( Capabilities::ACCESS_PORTAL ) ) {

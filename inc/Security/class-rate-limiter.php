@@ -27,11 +27,13 @@ use WP_Error;
  */
 final class Rate_Limiter {
 
-	public const ACTION_UPLOAD     = 'upload';
-	public const ACTION_TRANSITION = 'transition';
-	public const ACTION_AUTOSAVE   = 'autosave';
-	public const ACTION_LOGIN      = 'login';
-	public const ACTION_SIGNUP     = 'signup';
+	public const ACTION_UPLOAD         = 'upload';
+	public const ACTION_TRANSITION     = 'transition';
+	public const ACTION_AUTOSAVE       = 'autosave';
+	public const ACTION_LOGIN          = 'login';
+	public const ACTION_SIGNUP         = 'signup';
+	public const ACTION_PASSWORD_RESET = 'password_reset';
+	public const ACTION_ORG_INVITE     = 'org_invite';
 
 	/**
 	 * Limits per action, as attempts per window.
@@ -39,15 +41,15 @@ final class Rate_Limiter {
 	 * @var array<string, array{limit: int, window: int}>
 	 */
 	private const LIMITS = array(
-		self::ACTION_UPLOAD     => array(
+		self::ACTION_UPLOAD         => array(
 			'limit'  => 30,
 			'window' => HOUR_IN_SECONDS,
 		),
-		self::ACTION_TRANSITION => array(
+		self::ACTION_TRANSITION     => array(
 			'limit'  => 20,
 			'window' => HOUR_IN_SECONDS,
 		),
-		self::ACTION_AUTOSAVE   => array(
+		self::ACTION_AUTOSAVE       => array(
 			'limit'  => 120,
 			'window' => HOUR_IN_SECONDS,
 		),
@@ -58,13 +60,21 @@ final class Rate_Limiter {
 		 * password on a shared office connection is never locked out, tight
 		 * enough that credential stuffing is not worth the round trips.
 		 */
-		self::ACTION_LOGIN      => array(
+		self::ACTION_LOGIN          => array(
 			'limit'  => 20,
 			'window' => 15 * MINUTE_IN_SECONDS,
 		),
-		self::ACTION_SIGNUP     => array(
+		self::ACTION_SIGNUP         => array(
 			'limit'  => 5,
 			'window' => HOUR_IN_SECONDS,
+		),
+		self::ACTION_PASSWORD_RESET => array(
+			'limit'  => 5,
+			'window' => HOUR_IN_SECONDS,
+		),
+		self::ACTION_ORG_INVITE     => array(
+			'limit'  => 20,
+			'window' => DAY_IN_SECONDS,
 		),
 	);
 
@@ -94,8 +104,8 @@ final class Rate_Limiter {
 	/**
 	 * Counts an attempt against an arbitrary subject.
 	 *
-	 * Exists for the two actions that happen before there is a user to count
-	 * against: signing in and signing up. The subject is a hashed client
+	 * Exists for actions that happen before there is a user to count against:
+	 * signing in, signing up and requesting password recovery. The subject is a hashed client
 	 * identifier, never a raw address — a rate-limit transient is not a place
 	 * to accumulate a log of who visited from where.
 	 *

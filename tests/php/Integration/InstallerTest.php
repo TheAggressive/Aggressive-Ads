@@ -12,6 +12,7 @@ namespace LAAO_Advertiser_Portal\Tests\Integration;
 use LAAO_Advertiser_Portal\Install\Installer;
 use LAAO_Advertiser_Portal\Install\Schema;
 use LAAO_Advertiser_Portal\Repository\Audit_Repository;
+use LAAO_Advertiser_Portal\Repository\Org_Access_Repository;
 use LAAO_Advertiser_Portal\Security\Capabilities;
 use LAAO_Advertiser_Portal\Security\Roles;
 use WP_UnitTestCase;
@@ -32,6 +33,13 @@ final class InstallerTest extends WP_UnitTestCase {
 	private Audit_Repository $audit;
 
 	/**
+	 * Organization identity and access persistence.
+	 *
+	 * @var Org_Access_Repository
+	 */
+	private Org_Access_Repository $org_access;
+
+	/**
 	 * Installer under test.
 	 *
 	 * @var Installer
@@ -46,8 +54,9 @@ final class InstallerTest extends WP_UnitTestCase {
 	public function set_up(): void {
 		parent::set_up();
 
-		$this->audit     = new Audit_Repository();
-		$this->installer = new Installer( $this->audit, new Roles() );
+		$this->audit      = new Audit_Repository();
+		$this->org_access = new Org_Access_Repository();
+		$this->installer  = new Installer( $this->audit, new Roles() );
 	}
 
 	/**
@@ -57,6 +66,28 @@ final class InstallerTest extends WP_UnitTestCase {
 	 */
 	public function test_the_audit_table_exists(): void {
 		$this->assertTrue( $this->audit->table_exists() );
+		$this->assertTrue( $this->org_access->table_exists() );
+	}
+
+	/** The organization access table has every declared column and index. */
+	public function test_the_organization_access_table_matches_the_schema(): void {
+		global $wpdb;
+
+		$table = $this->org_access->table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Integration schema assertion.
+		$columns = $wpdb->get_col( "SHOW COLUMNS FROM {$table}" );
+		sort( $columns );
+
+		$declared_columns = Schema::org_access_columns();
+		sort( $declared_columns );
+		$this->assertSame( $declared_columns, $columns );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Integration schema assertion.
+		$rows    = $wpdb->get_results( "SHOW INDEX FROM {$table}", ARRAY_A );
+		$indexes = array_values( array_unique( array_column( $rows, 'Key_name' ) ) );
+
+		$this->assertSame( Schema::org_access_index_names(), $indexes );
 	}
 
 	/**

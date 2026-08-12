@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace LAAO_Advertiser_Portal\Repository;
 
+use LAAO_Advertiser_Portal\Security\Roles;
+use WP_Error;
 use WP_User;
 
 /**
@@ -17,6 +19,153 @@ use WP_User;
 final class User_Repository {
 	/** Number of users held in memory while resolving capability filters. */
 	private const BATCH_SIZE = 200;
+
+	/**
+	 * Whether an email address is already attached to a WordPress account.
+	 *
+	 * @param string $email Normalized email address.
+	 * @return bool
+	 */
+	public function email_exists( string $email ): bool {
+		return false !== email_exists( $email );
+	}
+
+	/**
+	 * Creates the deliberately unprivileged half of a registration.
+	 *
+	 * The advertiser role is assigned only after the organization has been
+	 * created and read back successfully. A callback running on user_register
+	 * therefore sees a subscriber, never a portal account with no ownership
+	 * context. The generated login is intentionally unrelated to the email;
+	 * people sign in with their email address and no public response reveals the
+	 * internal identifier.
+	 *
+	 * @param array{email: string, first_name: string, last_name: string} $fields Validated account fields.
+	 * @return int|WP_Error
+	 */
+	public function create_registration_account( array $fields ): int|WP_Error {
+		for ( $attempt = 0; $attempt < 3; ++$attempt ) {
+			$user_id = wp_insert_user(
+				array(
+					'user_login'   => 'laao_' . strtolower( wp_generate_password( 20, false, false ) ),
+					'user_pass'    => wp_generate_password( 64, true, true ),
+					'user_email'   => $fields['email'],
+					'first_name'   => $fields['first_name'],
+					'last_name'    => $fields['last_name'],
+					'display_name' => trim( $fields['first_name'] . ' ' . $fields['last_name'] ),
+					'role'         => 'subscriber',
+				)
+			);
+
+			if ( ! is_wp_error( $user_id ) || 'existing_user_login' !== $user_id->get_error_code() ) {
+				return $user_id;
+			}
+		}
+
+		return new WP_Error( 'laao_ads_user_collision', __( 'The account could not be created.', 'laao-advertiser-portal' ) );
+	}
+
+	/**
+	 * Grants portal access after every ownership record exists.
+	 *
+	 * @param int $user_id User id.
+	 * @return bool
+	 */
+	public function grant_advertiser_role( int $user_id ): bool {
+		$user = get_userdata( $user_id );
+
+		if ( ! $user instanceof WP_User ) {
+			return false;
+		}
+
+		$user->set_role( Roles::ADVERTISER );
+
+		return in_array( Roles::ADVERTISER, $user->roles, true );
+	}
+
+	/**
+	 * Add portal access without removing an existing WordPress role.
+	 *
+	 * Used for an explicitly invited existing account. Replacing all roles
+	 * would silently demote an editor or administrator who also advertises.
+	 *
+	 * @param int $user_id User id.
+	 */
+	public function add_advertiser_role( int $user_id ): bool {
+		$user = get_userdata( $user_id );
+
+		if ( ! $user instanceof WP_User ) {
+			return false;
+		}
+
+		$user->add_role( Roles::ADVERTISER );
+
+		return in_array( Roles::ADVERTISER, $user->roles, true );
+	}
+
+	/**
+	 * Whether the user already has the advertiser role.
+	 *
+	 * Compensation must not remove a role that predated an invitation attempt.
+	 *
+	 * @param int $user_id User id.
+	 */
+	public function has_advertiser_role( int $user_id ): bool {
+		$user = get_userdata( $user_id );
+
+		return $user instanceof WP_User && in_array( Roles::ADVERTISER, $user->roles, true );
+	}
+
+	/**
+	 * Remove only the advertiser role during membership compensation.
+	 *
+	 * @param int $user_id User id.
+	 */
+	public function remove_advertiser_role( int $user_id ): void {
+		$user = get_userdata( $user_id );
+
+		if ( $user instanceof WP_User ) {
+			$user->remove_role( Roles::ADVERTISER );
+		}
+	}
+
+	/**
+	 * Loads the identity used to issue a core password-reset key.
+	 *
+	 * @param int $user_id User id.
+	 * @return WP_User|null
+	 */
+	public function by_id( int $user_id ): ?WP_User {
+		$user = get_userdata( $user_id );
+
+		return $user instanceof WP_User ? $user : null;
+	}
+
+	/**
+	 * Loads an identity by its normalized email address.
+	 *
+	 * @param string $email Email address.
+	 * @return WP_User|null
+	 */
+	public function by_email( string $email ): ?WP_User {
+		$user = get_user_by( 'email', $email );
+
+		return $user instanceof WP_User ? $user : null;
+	}
+
+	/**
+	 * Removes an incomplete public registration.
+	 *
+	 * @param int $user_id User id.
+	 * @return bool
+	 */
+	public function delete_registration_account( int $user_id ): bool {
+		if ( ! function_exists( 'wp_delete_user' ) ) {
+			require_once ABSPATH . 'wp-admin/includes/user.php';
+		}
+
+		return (bool) wp_delete_user( $user_id );
+	}
 
 	/**
 	 * Every current user who actually holds a capability.

@@ -18,6 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 use LAAO_Advertiser_Portal\Admin\Review_Screen;
 use LAAO_Advertiser_Portal\Admin\Review_Data;
+use LAAO_Advertiser_Portal\Admin\Creative_Change_Actions;
 
 $laao_ads_back = Review_Screen::queue_url( $laao_ads_filter, $laao_ads_page );
 ?>
@@ -156,6 +157,47 @@ $laao_ads_back = Review_Screen::queue_url( $laao_ads_filter, $laao_ads_page );
 			</div>
 		<?php endif; ?>
 	</section>
+
+	<?php if ( array() !== $laao_ads_campaign['creative_updates'] ) : ?>
+		<section class="laao-ads-panel" aria-labelledby="laao-ads-creative-updates">
+			<h2 id="laao-ads-creative-updates" class="laao-ads-panel__head"><?php esc_html_e( 'Pending ad updates', 'laao-advertiser-portal' ); ?></h2>
+			<p><?php esc_html_e( 'The current ads remain in rotation until an update below is approved and verified in AdSanity.', 'laao-advertiser-portal' ); ?></p>
+
+			<div class="laao-ads-creative-grid">
+				<?php foreach ( $laao_ads_campaign['creative_updates'] as $laao_ads_update ) : ?>
+					<article class="laao-ads-creative">
+						<div class="laao-ads-creative__preview">
+							<img src="<?php echo esc_url( (string) $laao_ads_update['preview'] ); ?>" alt="<?php echo esc_attr( (string) $laao_ads_update['alt_text'] ); ?>" loading="lazy">
+						</div>
+						<div class="laao-ads-creative__body">
+							<h3><?php echo esc_html( (string) $laao_ads_update['placement'] ); ?></h3>
+							<dl>
+								<div><dt><?php esc_html_e( 'Required size', 'laao-advertiser-portal' ); ?></dt><dd><?php echo esc_html( (string) $laao_ads_update['size'] ); ?></dd></div>
+								<div><dt><?php esc_html_e( 'Uploaded size', 'laao-advertiser-portal' ); ?></dt><dd><?php echo esc_html( (string) $laao_ads_update['dimensions'] ); ?></dd></div>
+								<div><dt><?php esc_html_e( 'Current destination', 'laao-advertiser-portal' ); ?></dt><dd class="laao-ads-table__url"><?php echo esc_html( (string) $laao_ads_update['current_url'] ); ?></dd></div>
+								<div><dt><?php esc_html_e( 'Proposed destination', 'laao-advertiser-portal' ); ?></dt><dd class="laao-ads-table__url"><?php echo esc_html( (string) $laao_ads_update['click_url'] ); ?></dd></div>
+								<div><dt><?php esc_html_e( 'Current alt text', 'laao-advertiser-portal' ); ?></dt><dd><?php echo esc_html( (string) $laao_ads_update['current_alt'] ); ?></dd></div>
+								<div><dt><?php esc_html_e( 'Proposed alt text', 'laao-advertiser-portal' ); ?></dt><dd><?php echo esc_html( (string) $laao_ads_update['alt_text'] ); ?></dd></div>
+							</dl>
+
+							<form class="laao-ads-form" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post">
+								<input type="hidden" name="action" value="<?php echo esc_attr( Creative_Change_Actions::ACTION ); ?>">
+								<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) $laao_ads_campaign_id ); ?>">
+								<input type="hidden" name="replacement_id" value="<?php echo esc_attr( (string) $laao_ads_update['id'] ); ?>">
+								<?php wp_nonce_field( Creative_Change_Actions::nonce_action( (int) $laao_ads_update['id'] ) ); ?>
+								<div class="laao-ads-form__actions">
+									<button class="laao-ads-button" type="submit" name="decision" value="approve"><?php esc_html_e( 'Approve and replace', 'laao-advertiser-portal' ); ?></button>
+								</div>
+								<label for="laao-ads-update-feedback-<?php echo esc_attr( (string) $laao_ads_update['id'] ); ?>"><?php esc_html_e( 'Feedback required when rejecting', 'laao-advertiser-portal' ); ?></label>
+								<textarea id="laao-ads-update-feedback-<?php echo esc_attr( (string) $laao_ads_update['id'] ); ?>" name="review_notes" rows="4" maxlength="2000"></textarea>
+								<button class="laao-ads-button laao-ads-button--danger" type="submit" name="decision" value="reject"><?php esc_html_e( 'Reject update', 'laao-advertiser-portal' ); ?></button>
+							</form>
+						</div>
+					</article>
+				<?php endforeach; ?>
+			</div>
+		</section>
+	<?php endif; ?>
 
 	<div class="laao-ads-review-columns">
 		<section class="laao-ads-panel" aria-labelledby="laao-ads-review-actions">

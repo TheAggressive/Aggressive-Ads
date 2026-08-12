@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace LAAO_Advertiser_Portal\Portal;
 
 use LAAO_Advertiser_Portal\Core\Service;
+use LAAO_Advertiser_Portal\Notification\Password_Notification;
 use LAAO_Advertiser_Portal\Security\Capabilities;
 use WP_Error;
 use WP_User;
@@ -44,6 +45,14 @@ final class Account_Actions implements Service {
 	 * limit is a field somebody eventually pastes a document into.
 	 */
 	public const MAX_NAME_LENGTH = 100;
+
+	/**
+	 * Constructor.
+	 *
+	 * @param Password_Notification $notification Portal recovery email.
+	 */
+	public function __construct( private readonly Password_Notification $notification ) {
+	}
 
 	/**
 	 * Attaches the form handlers.
@@ -82,12 +91,10 @@ final class Account_Actions implements Service {
 	/**
 	 * Sends the caller a password reset link.
 	 *
-	 * Core's retrieve_password() rather than a password field on this screen.
-	 * A password change wants the old password or a fresh proof of control of
-	 * the mailbox, plus rate limiting and a single-use token — all of which
-	 * core already has and gets right. Re-implementing it here would be a
-	 * worse version of a solved problem, in the one place where being worse
-	 * means account takeover.
+	 * Password_Notification issues WordPress core's single-use reset key but
+	 * puts the portal's set-password route in the message. The key, expiry,
+	 * hashing and invalidation remain core-owned; the customer never crosses
+	 * into WordPress's login UI.
 	 *
 	 * @return void
 	 */
@@ -101,9 +108,9 @@ final class Account_Actions implements Service {
 			$this->redirect( 'error', new WP_Error( 'laao_ads_account_missing', __( 'Your account could not be read.', 'laao-advertiser-portal' ) ) );
 		}
 
-		$sent = retrieve_password( $user->user_login );
+		$sent = $this->notification->send_reset( $user->ID );
 
-		if ( is_wp_error( $sent ) ) {
+		if ( ! $sent ) {
 			/*
 			 * Core's own error, deliberately not forwarded verbatim: its codes
 			 * distinguish "no such user" from "could not send", which is a

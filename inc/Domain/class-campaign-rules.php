@@ -29,7 +29,9 @@ final class Campaign_Rules {
 	public const ERROR_CLICK_URL_INVALID   = 'click_url_invalid';
 	public const ERROR_START_MISSING       = 'start_date_missing';
 	public const ERROR_START_IN_PAST       = 'start_date_in_past';
+	public const ERROR_START_NOT_MIDNIGHT  = 'start_date_not_midnight';
 	public const ERROR_END_BEFORE_START    = 'end_date_before_start';
+	public const ERROR_END_NOT_DAY_END     = 'end_date_not_day_end';
 	public const ERROR_ORG_NOT_ACTIVE      = 'organization_not_active';
 	public const ERROR_ORG_MISSING         = 'organization_missing';
 	public const ERROR_PACKAGE_MISSING     = 'package_missing';
@@ -176,6 +178,34 @@ final class Campaign_Rules {
 					'end_ts'   => $end_ts,
 				)
 			);
+		}
+
+		return $result;
+	}
+
+	/**
+	 * Requires a schedule to cover whole local calendar days.
+	 *
+	 * AdSanity compares both endpoints inclusively at one-second precision. The
+	 * canonical representation is therefore 00:00:00 at the beginning and
+	 * 23:59:59 at the end. Converting in the site timezone (rather than adding
+	 * 86,400 seconds) keeps those boundaries correct across DST transitions.
+	 *
+	 * @param int    $start_ts Start time, UTC Unix seconds.
+	 * @param int    $end_ts   End time, UTC Unix seconds. Zero means open-ended.
+	 * @param string $timezone IANA timezone or fixed UTC offset.
+	 * @return Validation_Result
+	 */
+	public static function validate_day_boundaries( int $start_ts, int $end_ts, string $timezone ): Validation_Result {
+		$result = new Validation_Result();
+		$zone   = new \DateTimeZone( $timezone );
+
+		if ( $start_ts > 0 && '00:00:00' !== ( new \DateTimeImmutable( '@' . $start_ts ) )->setTimezone( $zone )->format( 'H:i:s' ) ) {
+			$result->add( self::ERROR_START_NOT_MIDNIGHT, 'start_ts' );
+		}
+
+		if ( $end_ts > 0 && '23:59:59' !== ( new \DateTimeImmutable( '@' . $end_ts ) )->setTimezone( $zone )->format( 'H:i:s' ) ) {
+			$result->add( self::ERROR_END_NOT_DAY_END, 'end_ts' );
 		}
 
 		return $result;

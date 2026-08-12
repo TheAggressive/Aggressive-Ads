@@ -50,6 +50,15 @@ All five share these `register_post_type()` arguments:
 
 Creative uses a meta reference rather than `post_parent` because `post_parent` carries WordPress semantics we do not want: hierarchical permalink construction, `wp_delete_post()` cascade behaviour, and admin list-table nesting. A plain `_laao_ads_campaign_id` says exactly what it means and nothing more.
 
+A published-ad update is another `laao_ads_creative` revision linked through
+`_laao_ads_replaces_creative_id`. While `_laao_ads_change_state` is `pending`
+or `rejected`, it is excluded from the campaign's active creative set and has
+no provider-ad id. Approval moves the existing provider-ad id to the revision,
+clears the replacement link, and marks the predecessor with
+`_laao_ads_replaced_by_creative_id`. This preserves every reviewed artifact and
+keeps one unambiguous current creative per placement without creating a second
+campaign or AdSanity ad.
+
 ## Meta keys
 
 All meta is `_laao_ads_`-prefixed and leading-underscore. The underscore is load-bearing: it marks the key protected, which hides it from the custom-fields UI and excludes it from `WP_REST_Post_Meta_Fields`. Every key is declared with `register_post_meta()` carrying an explicit `type`, `single`, `sanitize_callback`, and an `auth_callback` that returns `false` by default — meta is written by repositories, never by a generic API.
@@ -101,7 +110,15 @@ All meta is `_laao_ads_`-prefixed and leading-underscore. The underscore is load
 
 ### Organization — `laao_ads_org`
 
-`_laao_ads_owner_user_id` int · `_laao_ads_member_user_id` int **repeated** · `_laao_ads_billing_email` string · `_laao_ads_contact_phone` string · `_laao_ads_website_url` string · `_laao_ads_org_state` enum `active|suspended`
+`_laao_ads_owner_user_id` int · `_laao_ads_member_user_id` int **repeated** · `_laao_ads_canonical_name` string · `_laao_ads_billing_email` string · `_laao_ads_contact_phone` string · `_laao_ads_website_url` string · `_laao_ads_org_state` enum `active|suspended`
+
+The post title is the uppercase display name. `_laao_ads_canonical_name` is an
+uppercase, accent-free, punctuation-free comparison key; it is not shown to
+customers. A unique digest of that key is also reserved in the organization
+access table so two concurrent signups cannot create the same tenant. Exact and
+unambiguous fuzzy matches create a pending access request rather than a second
+organization or an automatic membership. See
+[ADR-0019](adr/0019-private-organization-matching-and-approved-membership.md).
 
 ### Placement — `laao_ads_placement`
 
@@ -109,7 +126,15 @@ All meta is `_laao_ads_`-prefixed and leading-underscore. The underscore is load
 
 ### Package — `laao_ads_package`
 
-`_laao_ads_placement_id` int **repeated** · `_laao_ads_duration_days` int · `_laao_ads_price_cents` int · `_laao_ads_currency` string · `_laao_ads_is_active` int `0|1`
+`_laao_ads_placement_id` int **repeated** · `_laao_ads_duration_days` int · `_laao_ads_custom_duration` int `0|1` · `_laao_ads_price_cents` int · `_laao_ads_currency` string · `_laao_ads_is_active` int `0|1` · `_laao_ads_is_default` int `0|1`
+
+`_laao_ads_duration_days = 0` is valid only when
+`_laao_ads_custom_duration = 1`; this means the advertiser chooses the start
+and end dates. Missing duration data does not silently become flexible terms.
+The first active package carrying `_laao_ads_is_default = 1` is preselected for
+a campaign that has no package snapshot yet. A deterministic first match keeps
+duplicate flags contained until the package-management screen can enforce
+single-default writes.
 
 ## Repeated meta, not serialized arrays
 

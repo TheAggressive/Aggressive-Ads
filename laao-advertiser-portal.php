@@ -2,6 +2,7 @@
 /**
  * Plugin Name:       LAAO Advertiser Portal
  * Plugin URI:        https://laartsonline.com/
+ * Update URI:        https://github.com/TheAggressive/LAAO-Advertiser-Portal
  * Description:       Self-service advertising portal for LAArtsOnline. Advertisers build their own campaigns; staff review and approve; approval publishes to AdSanity automatically.
  * Version:           0.1.0
  * Requires at least: 6.7

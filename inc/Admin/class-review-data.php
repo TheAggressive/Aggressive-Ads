@@ -41,6 +41,19 @@ final class Review_Data {
 	 */
 	private const FILTERS = array(
 		'pending'  => array( Post_Statuses::SUBMITTED, Post_Statuses::REVIEW ),
+		'updates'  => array(
+			Post_Statuses::DRAFT,
+			Post_Statuses::SUBMITTED,
+			Post_Statuses::REVIEW,
+			Post_Statuses::CHANGES,
+			Post_Statuses::REJECTED,
+			Post_Statuses::APPROVED,
+			Post_Statuses::SCHEDULED,
+			Post_Statuses::LIVE,
+			Post_Statuses::PAUSED,
+			Post_Statuses::COMPLETE,
+			Post_Statuses::CANCELLED,
+		),
 		'changes'  => array( Post_Statuses::CHANGES ),
 		'decided'  => array( Post_Statuses::APPROVED, Post_Statuses::REJECTED ),
 		'running'  => array( Post_Statuses::SCHEDULED, Post_Statuses::LIVE, Post_Statuses::PAUSED ),
@@ -125,8 +138,12 @@ final class Review_Data {
 		foreach ( self::FILTERS as $key => $statuses ) {
 			$total = 0;
 
-			foreach ( $statuses as $status ) {
-				$total += $counts[ $status ] ?? 0;
+			if ( 'updates' === $key ) {
+				$total = $this->campaigns->campaigns_with_pending_updates();
+			} else {
+				foreach ( $statuses as $status ) {
+					$total += $counts[ $status ] ?? 0;
+				}
 			}
 
 			$tabs[] = array(
@@ -147,7 +164,7 @@ final class Review_Data {
 	 * @return array{rows: array<int, array<string, mixed>>, total: int, pages: int, page: int}
 	 */
 	public function queue( string $filter, int $page = 1 ): array {
-		$result = $this->campaigns->for_review( self::statuses_for( $filter ), $page );
+		$result = $this->campaigns->for_review( self::statuses_for( $filter ), $page, 'updates' === $filter );
 		$rows   = array();
 
 		foreach ( $result['ids'] as $campaign_id ) {
@@ -175,11 +192,12 @@ final class Review_Data {
 
 		$row = $this->row( $campaign_id );
 
-		$row['creatives']      = $this->creative_rows( $campaign_id );
-		$row['actions']        = $this->actions_for( $campaign_id, $row['status'] );
-		$row['internal_notes'] = $this->campaigns->internal_notes( $campaign_id );
-		$row['can_view_audit'] = current_user_can( Capabilities::VIEW_AUDIT_LOG );
-		$row['audit']          = $row['can_view_audit'] ? $this->audit_rows( $campaign_id ) : array();
+		$row['creatives']        = $this->creative_rows( $campaign_id );
+		$row['creative_updates'] = $this->replacement_rows( $campaign_id );
+		$row['actions']          = $this->actions_for( $campaign_id, $row['status'] );
+		$row['internal_notes']   = $this->campaigns->internal_notes( $campaign_id );
+		$row['can_view_audit']   = current_user_can( Capabilities::VIEW_AUDIT_LOG );
+		$row['audit']            = $row['can_view_audit'] ? $this->audit_rows( $campaign_id ) : array();
 
 		return $row;
 	}
@@ -237,23 +255,63 @@ final class Review_Data {
 		}
 
 		return array(
-			'id'           => $campaign_id,
-			'title'        => $this->campaigns->title( $campaign_id ),
-			'status'       => $status,
-			'status_text'  => self::status_label( $status ),
-			'pill'         => View_Data::pill_for( $status ),
-			'org_id'       => $this->campaigns->org_id( $campaign_id ),
-			'org_name'     => $this->orgs->name( $this->campaigns->org_id( $campaign_id ) ),
-			'placements'   => $names,
-			'submitted_at' => $this->campaigns->submitted_at( $campaign_id ),
-			'modified_at'  => $this->campaigns->modified_ts( $campaign_id ),
-			'reviewer_id'  => $reviewer_id,
-			'reviewer'     => self::user_name( $reviewer_id ),
-			'revision'     => $this->campaigns->revision( $campaign_id ),
-			'review_notes' => $this->campaigns->review_notes( $campaign_id ),
-			'start_ts'     => $this->campaigns->start_ts( $campaign_id ),
-			'end_ts'       => $this->campaigns->end_ts( $campaign_id ),
+			'id'              => $campaign_id,
+			'title'           => $this->campaigns->title( $campaign_id ),
+			'status'          => $status,
+			'status_text'     => self::status_label( $status ),
+			'pill'            => View_Data::pill_for( $status ),
+			'org_id'          => $this->campaigns->org_id( $campaign_id ),
+			'org_name'        => $this->orgs->name( $this->campaigns->org_id( $campaign_id ) ),
+			'placements'      => $names,
+			'submitted_at'    => $this->campaigns->submitted_at( $campaign_id ),
+			'modified_at'     => $this->campaigns->modified_ts( $campaign_id ),
+			'reviewer_id'     => $reviewer_id,
+			'reviewer'        => self::user_name( $reviewer_id ),
+			'revision'        => $this->campaigns->revision( $campaign_id ),
+			'review_notes'    => $this->campaigns->review_notes( $campaign_id ),
+			'start_ts'        => $this->campaigns->start_ts( $campaign_id ),
+			'end_ts'          => $this->campaigns->end_ts( $campaign_id ),
+			'pending_updates' => $this->campaigns->pending_update_count( $campaign_id ),
 		);
+	}
+
+	/**
+	 * Pending creative revisions awaiting a staff decision.
+	 *
+	 * @param int $campaign_id Campaign id.
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function replacement_rows( int $campaign_id ): array {
+		$rows = array();
+
+		foreach ( $this->creatives->replacements_for_campaign( $campaign_id, array( Creative_Repository::CHANGE_PENDING ) ) as $creative ) {
+			$current_id = $this->creatives->replacement_target_id( $creative['id'] );
+			$current    = $this->creatives->details( $current_id );
+
+			if ( null === $current ) {
+				continue;
+			}
+
+			$rows[] = array(
+				'id'           => $creative['id'],
+				'current_id'   => $current_id,
+				'placement'    => $this->placements->name( $creative['placement_id'] ),
+				'size'         => $creative['size'],
+				'dimensions'   => $creative['width'] . '×' . $creative['height'],
+				'click_url'    => $creative['click_url'],
+				'alt_text'     => $creative['alt_text'],
+				'current_url'  => $current['click_url'],
+				'current_alt'  => $current['alt_text'],
+				'requested_at' => $this->creatives->requested_at( $creative['id'] ),
+				'preview'      => add_query_arg(
+					'_wpnonce',
+					wp_create_nonce( 'wp_rest' ),
+					rest_url( Creative_File_Controller::NAMESPACE . '/creatives/' . $creative['id'] . '/file' )
+				),
+			);
+		}
+
+		return $rows;
 	}
 
 	/**
@@ -350,6 +408,7 @@ final class Review_Data {
 	private static function label_for( string $filter ): string {
 		return match ( $filter ) {
 			'pending'  => __( 'Needs review', 'laao-advertiser-portal' ),
+			'updates'  => __( 'Ad updates', 'laao-advertiser-portal' ),
 			'changes'  => __( 'With the advertiser', 'laao-advertiser-portal' ),
 			'decided'  => __( 'Decided', 'laao-advertiser-portal' ),
 			'running'  => __( 'Running', 'laao-advertiser-portal' ),

@@ -262,6 +262,47 @@ final class CampaignRulesTest extends TestCase {
 	}
 
 	/**
+	 * Whole-day boundaries are evaluated as local wall-clock times, including
+	 * the short and long days around daylight-saving transitions.
+	 *
+	 * @return void
+	 */
+	public function test_whole_day_boundaries_are_dst_safe(): void {
+		$zone = new \DateTimeZone( 'America/New_York' );
+
+		$spring_start = new \DateTimeImmutable( '2027-03-14 00:00:00', $zone );
+		$spring_end   = new \DateTimeImmutable( '2027-03-14 23:59:59', $zone );
+		$fall_start   = new \DateTimeImmutable( '2027-11-07 00:00:00', $zone );
+		$fall_end     = new \DateTimeImmutable( '2027-11-07 23:59:59', $zone );
+
+		$this->assertTrue(
+			Campaign_Rules::validate_day_boundaries( $spring_start->getTimestamp(), $spring_end->getTimestamp(), $zone->getName() )->is_valid()
+		);
+		$this->assertTrue(
+			Campaign_Rules::validate_day_boundaries( $fall_start->getTimestamp(), $fall_end->getTimestamp(), $zone->getName() )->is_valid()
+		);
+		$this->assertSame( 82_799, $spring_end->getTimestamp() - $spring_start->getTimestamp() );
+		$this->assertSame( 89_999, $fall_end->getTimestamp() - $fall_start->getTimestamp() );
+	}
+
+	/**
+	 * Partial-day timestamps cannot enter a submission-grade schedule.
+	 *
+	 * @return void
+	 */
+	public function test_partial_day_boundaries_are_refused(): void {
+		$zone   = new \DateTimeZone( 'America/Phoenix' );
+		$start  = new \DateTimeImmutable( '2027-06-01 00:00:01', $zone );
+		$end    = new \DateTimeImmutable( '2027-06-03 00:00:00', $zone );
+		$result = Campaign_Rules::validate_day_boundaries( $start->getTimestamp(), $end->getTimestamp(), $zone->getName() );
+
+		$this->assertSame(
+			array( Campaign_Rules::ERROR_START_NOT_MIDNIGHT, Campaign_Rules::ERROR_END_NOT_DAY_END ),
+			$result->codes()
+		);
+	}
+
+	/**
 	 * Only image creatives may be submitted by an advertiser.
 	 *
 	 * @return void

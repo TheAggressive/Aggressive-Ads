@@ -63,11 +63,13 @@ final class Review_Readiness {
 	private function edit_location( string $code ): array {
 		return match ( $code ) {
 			Campaign_Rules::ERROR_START_MISSING,
-			Campaign_Rules::ERROR_START_IN_PAST => array(
+			Campaign_Rules::ERROR_START_IN_PAST,
+			Campaign_Rules::ERROR_START_NOT_MIDNIGHT => array(
 				'step'   => 'destination',
 				'target' => 'laao-ads-start-date',
 			),
-			Campaign_Rules::ERROR_END_BEFORE_START => array(
+			Campaign_Rules::ERROR_END_BEFORE_START,
+			Campaign_Rules::ERROR_END_NOT_DAY_END => array(
 				'step'   => 'destination',
 				'target' => 'laao-ads-end-date',
 			),

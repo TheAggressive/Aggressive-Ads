@@ -111,6 +111,24 @@ dimensions, and deletes staged bytes if a later check or record creation fails.
 Removal is limited to unpublished creative on an advertiser-editable campaign
 and deletes the private file before its record.
 
+Scheduled and live campaigns use a separate reviewed-replacement workflow.
+An advertiser uploads a replacement against one current creative; the same
+MIME, pixel, exact-dimension, URL, alternative-text, tenant, and upload-rate
+rules apply. The revision remains private and is excluded from the campaign's
+active creative set, so the existing AdSanity ad keeps serving. Only one
+pending revision may target a current creative, guarded by a short-lived
+atomic metadata lock. The advertiser may withdraw it before a decision.
+
+Staff see pending revisions in the dedicated **Ad updates** queue and compare
+the current and proposed destinations, alternative text, dimensions, and
+artwork. Rejection requires advertiser-facing feedback and never touches
+delivery. Approval requires both review and AdSanity publication capabilities,
+promotes the checksum-verified revision, rewrites the existing provider ad,
+and reads every public field back. A failed read-back restores and verifies the
+old creative. Only after provider success does the repository make the
+revision current and archive its predecessor; a metadata activation failure
+also restores the provider projection. Every outcome is campaign-audited.
+
 Leaving destination-and-schedule Step 4 is another `Campaign_Editor` operation,
 not a display-only step change. After authorization and optimistic concurrency,
 the editor verifies one creative covers every selected placement and applies
@@ -142,7 +160,8 @@ The submission validator requires:
 - at least one creative
 - every creative `image`-kind, with dimensions matching a placement selected on the campaign
 - every creative carrying a valid `http`/`https` click URL
-- `start_ts` in the future, `end_ts` after `start_ts` or `0`
+- `start_ts` in the future at local `00:00:00`; `end_ts` at local `23:59:59`
+  after `start_ts`, or `0` for open-ended
 - the owning organization `active`
 - every selected placement `_laao_ads_is_active`
 

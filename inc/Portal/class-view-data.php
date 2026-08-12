@@ -14,6 +14,8 @@ use LAAO_Advertiser_Portal\Domain\Upload_Rules;
 use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
 use LAAO_Advertiser_Portal\Repository\Creative_Repository;
 use LAAO_Advertiser_Portal\Repository\Org_Repository;
+use LAAO_Advertiser_Portal\Repository\Org_Access_Repository;
+use LAAO_Advertiser_Portal\Security\Capabilities;
 use LAAO_Advertiser_Portal\Repository\Package_Repository;
 use LAAO_Advertiser_Portal\Repository\Placement_Repository;
 use LAAO_Advertiser_Portal\REST\Creative_File_Controller;
@@ -33,19 +35,21 @@ final class View_Data {
 	/**
 	 * Constructor.
 	 *
-	 * @param Campaign_Repository  $campaigns  Campaign persistence.
-	 * @param Placement_Repository $placements Placement persistence.
-	 * @param Creative_Repository  $creatives  Creative persistence.
-	 * @param Org_Repository       $orgs       Organization lookups.
-	 * @param Package_Repository   $packages   Package persistence.
-	 * @param Campaign_Editor      $editor     Shared package validation.
-	 * @param Review_Readiness     $readiness  Safe canonical review readiness.
+	 * @param Campaign_Repository   $campaigns  Campaign persistence.
+	 * @param Placement_Repository  $placements Placement persistence.
+	 * @param Creative_Repository   $creatives  Creative persistence.
+	 * @param Org_Repository        $orgs       Organization lookups.
+	 * @param Org_Access_Repository $org_access Organization access persistence.
+	 * @param Package_Repository    $packages   Package persistence.
+	 * @param Campaign_Editor       $editor     Shared package validation.
+	 * @param Review_Readiness      $readiness  Safe canonical review readiness.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
 		private readonly Placement_Repository $placements,
 		private readonly Creative_Repository $creatives,
 		private readonly Org_Repository $orgs,
+		private readonly Org_Access_Repository $org_access,
 		private readonly Package_Repository $packages,
 		private readonly Campaign_Editor $editor,
 		private readonly Review_Readiness $readiness
@@ -164,37 +168,34 @@ final class View_Data {
 
 		$row = $this->campaign_row( $campaign_id );
 
-		$row['review_notes']      = $this->campaigns->review_notes( $campaign_id );
-		$row['revision']          = $this->campaigns->revision( $campaign_id );
-		$row['submitted_at']      = $this->campaigns->submitted_at( $campaign_id );
-		$row['creatives']         = $this->creative_rows( $campaign_id );
-		$row['creative_slots']    = $this->creative_slots( $campaign_id, $row['creatives'] );
-		$row['placement_ids']     = $this->campaigns->placement_ids( $campaign_id );
-		$row['placement_options'] = $this->placement_options();
-		$row['package_id']        = $this->campaigns->package_id( $campaign_id );
-		$row['package_name']      = $row['package_id'] > 0 ? $this->packages->name( $row['package_id'] ) : '';
-		$row['package_options']   = $this->package_options();
-		$row['budget_cents']      = $this->campaigns->budget_cents( $campaign_id );
-		$row['currency']          = $this->campaigns->currency( $campaign_id );
-		$row['package_price']     = '' === $row['currency'] ? '' : $this->format_money( $row['budget_cents'], $row['currency'] );
-		$row['wizard_step']       = $this->campaigns->wizard_step( $campaign_id );
-		$row['start_date']        = $this->date_input_value( $this->campaigns->start_ts( $campaign_id ) );
-		$row['end_date']          = $this->date_input_value( $this->campaigns->end_ts( $campaign_id ) );
-		$row['advertiser_notes']  = $this->campaigns->advertiser_notes( $campaign_id );
-		$row['autosave_rev']      = $this->campaigns->autosave_revision( $campaign_id );
-		$row['readiness']         = $this->readiness->for_campaign( $campaign_id );
-		$row['editable']          = in_array( $this->campaigns->status( $campaign_id ), Post_Statuses::advertiser_editable(), true );
+		$row['review_notes']        = $this->campaigns->review_notes( $campaign_id );
+		$row['revision']            = $this->campaigns->revision( $campaign_id );
+		$row['submitted_at']        = $this->campaigns->submitted_at( $campaign_id );
+		$row['creatives']           = $this->creative_rows( $campaign_id );
+		$row['creative_updates']    = $this->creative_update_rows( $campaign_id );
+		$row['creative_slots']      = $this->creative_slots( $campaign_id, $row['creatives'] );
+		$row['placement_ids']       = $this->campaigns->placement_ids( $campaign_id );
+		$row['placement_options']   = $this->placement_options();
+		$row['package_id']          = $this->campaigns->package_id( $campaign_id );
+		$row['package_name']        = $row['package_id'] > 0 ? $this->packages->name( $row['package_id'] ) : '';
+		$row['package_options']     = $this->package_options();
+		$row['budget_cents']        = $this->campaigns->budget_cents( $campaign_id );
+		$row['currency']            = $this->campaigns->currency( $campaign_id );
+		$row['package_price']       = '' === $row['currency'] ? '' : $this->format_money( $row['budget_cents'], $row['currency'] );
+		$row['wizard_step']         = $this->campaigns->wizard_step( $campaign_id );
+		$row['start_date']          = $this->date_input_value( $this->campaigns->start_ts( $campaign_id ) );
+		$row['end_date']            = $this->date_input_value( $this->campaigns->end_ts( $campaign_id ) );
+		$row['advertiser_notes']    = $this->campaigns->advertiser_notes( $campaign_id );
+		$row['autosave_rev']        = $this->campaigns->autosave_revision( $campaign_id );
+		$row['readiness']           = $this->readiness->for_campaign( $campaign_id );
+		$row['editable']            = in_array( $this->campaigns->status( $campaign_id ), Post_Statuses::advertiser_editable(), true );
+		$row['can_request_updates'] = in_array( $this->campaigns->status( $campaign_id ), array( Post_Statuses::SCHEDULED, Post_Statuses::LIVE ), true );
 
 		return $row;
 	}
 
 	/**
 	 * The caller's organization, for the organization screen.
-	 *
-	 * Read-only by design. Renaming an organization, inviting a colleague and
-	 * removing one are Phase 8, and each needs an authorization answer this
-	 * screen does not have yet — "may this member remove that member?" is not
-	 * the same question as "may they see the portal?".
 	 *
 	 * @return array<string, mixed>|null Null when the caller has no organization.
 	 */
@@ -205,15 +206,40 @@ final class View_Data {
 			return null;
 		}
 
-		$campaigns = $this->campaigns->for_org( $org_id, 1 );
+		$campaigns  = $this->campaigns->for_org( $org_id, 1 );
+		$can_manage = $this->orgs->is_owner( $org_id, get_current_user_id() )
+			|| current_user_can( Capabilities::MANAGE_ORGS );
 
 		return array(
-			'id'        => $org_id,
-			'name'      => $this->orgs->name( $org_id ),
-			'active'    => $this->orgs->is_active( $org_id ),
-			'members'   => $this->member_rows( $org_id ),
-			'campaigns' => $campaigns['total'],
+			'id'                 => $org_id,
+			'name'               => $this->orgs->name( $org_id ),
+			'active'             => $this->orgs->is_active( $org_id ),
+			'members'            => $this->member_rows( $org_id ),
+			'campaigns'          => $campaigns['total'],
+			'can_manage_members' => $can_manage,
+			'pending_access'     => $can_manage ? $this->pending_access_rows( $org_id ) : array(),
 		);
+	}
+
+	/**
+	 * Pending rows contain only addresses already scoped to this organization.
+	 *
+	 * @param int $org_id Organization id.
+	 * @return array<int, array{id: int, email: string, kind: string, expires_at_ts: int}>
+	 */
+	private function pending_access_rows( int $org_id ): array {
+		$rows = array();
+
+		foreach ( $this->org_access->pending_for_org( $org_id ) as $row ) {
+			$rows[] = array(
+				'id'            => (int) ( $row['id'] ?? 0 ),
+				'email'         => (string) ( $row['email'] ?? '' ),
+				'kind'          => (string) ( $row['kind'] ?? '' ),
+				'expires_at_ts' => (int) ( $row['expires_at_ts'] ?? 0 ),
+			);
+		}
+
+		return $rows;
 	}
 
 	/**
@@ -376,10 +402,11 @@ final class View_Data {
 	/**
 	 * Active, complete packages with their advertiser-facing catalogue details.
 	 *
-	 * @return array<int, array{id: int, name: string, duration: string, price: string, placements: array<int, string>}>
+	 * @return array<int, array{id: int, name: string, duration: string, price: string, placements: array<int, string>, is_default: bool}>
 	 */
 	public function package_options(): array {
-		$options = array();
+		$options    = array();
+		$default_id = $this->packages->default_id();
 
 		foreach ( $this->packages->active_ids() as $package_id ) {
 			$snapshot = $this->editor->package_snapshot( $package_id );
@@ -397,18 +424,22 @@ final class View_Data {
 				$placement_names[] = '' === $size ? $name : sprintf( '%1$s (%2$s px)', $name, $size );
 			}
 
-			$duration = $this->packages->duration_days( $package_id );
+			$duration        = $this->packages->duration_days( $package_id );
+			$custom_duration = $this->packages->has_custom_duration( $package_id );
 
 			$options[] = array(
 				'id'         => $package_id,
 				'name'       => $this->packages->name( $package_id ),
-				'duration'   => sprintf(
-					/* translators: %s: number of days. */
-					_n( '%s day', '%s days', $duration, 'laao-advertiser-portal' ),
-					number_format_i18n( $duration )
-				),
+				'duration'   => $custom_duration
+					? __( 'Custom schedule', 'laao-advertiser-portal' )
+					: sprintf(
+						/* translators: %s: number of days. */
+						_n( '%s day', '%s days', $duration, 'laao-advertiser-portal' ),
+						number_format_i18n( $duration )
+					),
 				'price'      => $this->format_money( $snapshot['budget_cents'], $snapshot['currency'] ),
 				'placements' => $placement_names,
+				'is_default' => $package_id === $default_id,
 			);
 		}
 
@@ -465,6 +496,47 @@ final class View_Data {
 				'approved'     => $this->creatives->has_attachment( $creative['id'] ),
 				'name'         => null === $stored ? '' : $stored['name'],
 				'bytes'        => null === $stored ? 0 : $stored['bytes'],
+				'preview'      => add_query_arg(
+					'_wpnonce',
+					wp_create_nonce( 'wp_rest' ),
+					rest_url( Creative_File_Controller::NAMESPACE . '/creatives/' . $creative['id'] . '/file' )
+				),
+			);
+		}
+
+		return $rows;
+	}
+
+	/**
+	 * Published-ad revisions visible to the owning advertiser.
+	 *
+	 * @param int $campaign_id Campaign id.
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function creative_update_rows( int $campaign_id ): array {
+		$rows = array();
+
+		foreach ( $this->creatives->replacements_for_campaign( $campaign_id ) as $creative ) {
+			$state = $this->creatives->change_state( $creative['id'] );
+
+			if ( ! in_array( $state, array( Creative_Repository::CHANGE_PENDING, Creative_Repository::CHANGE_REJECTED ), true ) ) {
+				continue;
+			}
+
+			$rows[] = array(
+				'id'           => $creative['id'],
+				'creative_id'  => $this->creatives->replacement_target_id( $creative['id'] ),
+				'placement_id' => $creative['placement_id'],
+				'placement'    => $this->placements->name( $creative['placement_id'] ),
+				'dimensions'   => $creative['width'] . '×' . $creative['height'],
+				'click_url'    => $creative['click_url'],
+				'alt_text'     => $creative['alt_text'],
+				'state'        => $state,
+				'state_text'   => Creative_Repository::CHANGE_PENDING === $state
+					? __( 'Waiting for review', 'laao-advertiser-portal' )
+					: __( 'Changes needed', 'laao-advertiser-portal' ),
+				'notes'        => $this->creatives->change_notes( $creative['id'] ),
+				'requested_at' => $this->creatives->requested_at( $creative['id'] ),
 				'preview'      => add_query_arg(
 					'_wpnonce',
 					wp_create_nonce( 'wp_rest' ),

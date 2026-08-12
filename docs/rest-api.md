@@ -36,6 +36,16 @@ Routes marked “planned” remain contracts for later phases. Every other row i
 | `GET` | `/packages` | `laao_ads_access_portal` | Active, completely configured packages only; includes advertiser-facing placement labels, duration and integer-cent price |
 | `GET` | `/queue` | `laao_ads_review_campaigns` | **Planned as REST.** Staff currently use the server-rendered review screen |
 | `GET` | `/audit` | `laao_ads_view_audit_log` | **Planned as REST.** Current staff timeline is org-filtered **in SQL** |
+| `POST` | `/creatives/{id}/replacement` | `laao_ads_upload_creative` + object ownership | Stages a private replacement for a scheduled/live ad; multipart `file`, `click_url`, and optional `alt_text` |
+| `DELETE` | `/creative-replacements/{id}` | `laao_ads_upload_creative` + object ownership | Withdraws the caller's pending replacement |
+| `POST` | `/creative-replacements/{id}/decision` | `laao_ads_review_campaigns`; approval also requires `laao_ads_publish_to_adsanity` | Staff `approve` or `reject`; rejection requires `review_notes` |
+
+Replacement routes call the same `Creative_Change_Manager` as the HTML forms.
+They never accept a campaign, organization, placement, provider-ad, or current
+creative relationship from the caller; every relationship is derived from the
+authorized creative record. Approval returns only after the existing AdSanity
+ad has been rewritten and read back exactly, or the previous creative has been
+restored.
 
 ## Draft creation and autosave
 
@@ -52,20 +62,27 @@ with the current revision and does not overwrite the newer draft. Successful
 writes return the newly incremented `autosave_rev`.
 
 Selecting `package_id` is one validated editor operation: `Campaign_Editor` validates that the package,
-all of its placements, duration, integer-cent price, and ISO currency are
+all of its placements, fixed or explicitly custom duration, integer-cent price,
+and ISO currency are
 currently usable, then copies the package id, placement set, price and currency
 onto the draft. Later catalogue edits do not silently reprice or reshape that
 campaign. Inactive or malformed packages are omitted from `GET /packages` and
-are still rejected if their ids are posted directly.
+are still rejected if their ids are posted directly. Catalogue rows expose
+`custom_duration` and `is_default` booleans alongside `duration_days`; consumers
+must not infer a custom schedule merely from a zero duration.
 
 The server-rendered form calls the same `Campaign_Editor` workflow. It converts
 HTML dates from the WordPress timezone to UTC Unix integers before saving, so
 progressive enhancement and REST autosave cannot develop different rules.
 Setting `wizard_step` to `review` is the Step 4 completion boundary: both
 deliveries require exactly one creative for every selected placement, a future
-start, and either no end or an end after the start. Validation runs only after
-object authorization and the optimistic revision check, so readiness failures
-cannot be used to probe another tenant's campaign.
+start at `00:00:00` in the WordPress site timezone, and either no end or an end
+at `23:59:59` after the start. The inclusive end is the last second before the
+following midnight, matching AdSanity's comparison semantics. Partial-day REST
+timestamps are rejected at Step 4 completion and by submission/approval
+validation. Validation runs only after object authorization and the optimistic
+revision check, so readiness failures cannot be used to probe another tenant's
+campaign.
 
 `GET /campaigns/{id}` also returns `readiness`; collection rows deliberately do
 not, avoiding a full submission validation for every item in a paginated list.

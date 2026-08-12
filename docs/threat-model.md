@@ -8,6 +8,9 @@ Security is a release blocker, not a hardening pass. Every mitigation below name
 2. **Campaign data across organizations.** Budgets, schedules, and destination URLs reveal a competitor's plans.
 3. **The approval action.** Approving publishes to a public website and can bill a customer.
 4. **The public site itself.** A creative renders on laartsonline.com. Anything that lets an advertiser control markup there is stored XSS against every visitor.
+5. **Organization membership and the customer directory.** A spelling helper
+   must not reveal which organizations advertise here or let a stranger attach
+   themselves to one.
 
 ## Object-reference attacks (IDOR / BOLA)
 
@@ -26,6 +29,7 @@ Each of these gets a named test in `tests/php/Security/`.
 | 9 | Differential errors | Enumerate valid IDs |
 | 10 | Audit log reads | Read another org's history |
 | 11 | Staff queue listing | Leak cross-org data to a user holding a staff-ish cap from an unrelated plugin |
+| 12 | Organization access row IDs | Approve, deny, or revoke another tenant's pending access |
 
 ### The mitigations
 
@@ -74,7 +78,68 @@ Every `admin-post` handler calls `check_admin_referer()`. Security tests cover n
 
 Autosave accepts a field allowlist derived from the same schema the validator uses, so mass assignment is structurally impossible rather than defended against — a field that is not in the schema has nowhere to land.
 
-Rate limits apply to upload, autosave, and submission. Limits are per-user and generous enough that a legitimate advertiser cannot hit them; the goal is to bound the cost of abuse, not to police normal use.
+Rate limits apply to upload, autosave, submission, login, signup and password
+recovery. Authenticated
+operations are counted per user; anonymous account operations use a hashed
+connecting-address subject. Limits are generous enough that a legitimate
+advertiser cannot hit them; the goal is to bound the cost of abuse, not to
+police normal use.
+
+## Public signup
+
+Signup is closed unless site policy explicitly enables registration. When
+enabled, attempts are bounded per hashed connecting address, protected by an
+action nonce and a honeypot, and accept a strict field allowlist. No password is
+accepted: a cryptographically random unknown password is replaced only through
+WordPress core's expiring, single-use reset-key flow sent to the supplied
+address. The emailed URL points to the portal's set-password screen rather than
+WordPress UI. That screen validates the core key on display and again on submit,
+requires matching passwords of at least 12 characters, honors the core password
+policy hook, consumes the key through core, disables caching, and sets a
+no-referrer policy.
+
+The response for an existing address is byte-for-byte the ordinary success
+response and sends no repeat mail. This prevents account enumeration and keeps
+the endpoint from becoming a password-reset mail flood. A new user remains a
+subscriber until its organization ownership row has been written and verified;
+only then is the advertiser role granted. Organization, role, key-generation or
+mail failure triggers compensating deletion, with recovery results audited but
+names, addresses, passwords and tokens excluded from audit context.
+
+Organization-name assistance is private and server-side. Display names are
+uppercased; a canonical accent/punctuation-normalized key has a unique database
+reservation, so case variants and concurrent requests cannot create a second
+tenant. A conservative fuzzy match is only a candidate: it grants nothing and
+creates a subscriber-only request for an owner decision. No public route lists
+or suggests organizations. Pending emails are assembled into view data only for
+the tenant owner or `laao_ads_manage_orgs` staff. Approval actions derive the
+tenant from the authenticated user, then constrain the row again by primary
+key, organization, kind, status and expiry.
+
+Owner invitations use 256-bit random URL-safe bearer tokens. Only a salted HMAC
+is stored; each row is email-bound, three-day expiring and atomically claimed
+before side effects. Tokens are single-use. Failed membership, role, required
+setup mail, or terminal transition compensates newly introduced state and
+returns the claim to pending. Existing WordPress roles are never replaced.
+Signup and invitation responses do not expose the matched organization or raw
+tokens in audit context. Invitation pages are non-cacheable and set a
+no-referrer policy so the query-string bearer credential cannot leave through a
+resource or navigation referrer.
+
+Password recovery is a separate nonce-protected, rate-limited public action.
+Unknown addresses, non-portal users, successful sends and mail failures receive
+the same response. Reset keys and passwords never enter audit context, and the
+opaque internal username is not shown on any advertiser screen.
+
+Published creative cannot be overwritten directly. Advertisers may only stage
+a private revision against a current creative owned by their organization and
+only while its campaign is scheduled or live. The workflow derives campaign,
+organization, placement, and provider relationships server-side, applies the
+normal hostile-file and destination checks, permits one pending revision per
+creative under an atomic lock, and leaves the public ad untouched until a user
+holding both review and provider-publication authority approves it. Provider
+read-back failure restores the previous reviewed artifact; rejection requires
+feedback and changes no public state.
 
 ## Structural mitigations
 
@@ -89,7 +154,8 @@ Some risks are removed by design rather than defended:
 Named so their absence is deliberate:
 
 - Two-factor authentication — WordPress core plus a plugin, not our layer
-- Brute-force protection on `wp-login.php` — site infrastructure
+- Brute-force protection for staff on `wp-login.php` — site infrastructure;
+  advertisers use the portal's independently rate-limited sign-in form
 - Payment data — nothing is stored; there is no payment feature
 - Multisite — untested, unsupported, undeclared
 

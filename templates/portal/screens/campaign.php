@@ -23,6 +23,7 @@ use LAAO_Advertiser_Portal\Portal\Campaign_Actions;
 use LAAO_Advertiser_Portal\Portal\Creative_Actions;
 
 $laao_ads_creatives          = is_array( $laao_ads_campaign['creatives'] ) ? $laao_ads_campaign['creatives'] : array();
+$laao_ads_creative_updates   = is_array( $laao_ads_campaign['creative_updates'] ) ? $laao_ads_campaign['creative_updates'] : array();
 $laao_ads_notes              = (string) $laao_ads_campaign['review_notes'];
 $laao_ads_places             = is_array( $laao_ads_campaign['placements'] ) ? $laao_ads_campaign['placements'] : array();
 $laao_ads_place_ids          = is_array( $laao_ads_campaign['placement_ids'] ) ? array_map( 'intval', $laao_ads_campaign['placement_ids'] ) : array();
@@ -104,10 +105,19 @@ if ( 'creative' === $laao_ads_step && '' !== $laao_ads_creative_notice ) {
 	</div>
 <?php endif; ?>
 
-<?php if ( 'creative_uploaded' === $laao_ads_creative_notice || 'creative_removed' === $laao_ads_creative_notice ) : ?>
+<?php if ( in_array( $laao_ads_creative_notice, array( 'creative_uploaded', 'creative_removed', 'creative_update_requested', 'creative_update_withdrawn' ), true ) ) : ?>
 	<div class="laao-ads-alert laao-ads-alert--success" role="status">
 		<p>
-			<?php echo esc_html( 'creative_uploaded' === $laao_ads_creative_notice ? __( 'Creative uploaded and stored privately.', 'laao-advertiser-portal' ) : __( 'Creative removed.', 'laao-advertiser-portal' ) ); ?>
+			<?php
+			echo esc_html(
+				match ( $laao_ads_creative_notice ) {
+					'creative_uploaded'         => __( 'Creative uploaded and stored privately.', 'laao-advertiser-portal' ),
+					'creative_removed'          => __( 'Creative removed.', 'laao-advertiser-portal' ),
+					'creative_update_requested' => __( 'Your ad update is waiting for review. The current ad will keep running.', 'laao-advertiser-portal' ),
+					default                     => __( 'The pending ad update was withdrawn.', 'laao-advertiser-portal' ),
+				}
+			);
+			?>
 		</p>
 	</div>
 <?php elseif ( 'error' === $laao_ads_creative_notice ) : ?>
@@ -267,16 +277,20 @@ if ( 'creative' === $laao_ads_step && '' !== $laao_ads_creative_notice ) {
 					<?php else : ?>
 						<div class="laao-ads-choicegrid laao-ads-choicegrid--packages">
 							<?php foreach ( $laao_ads_packages as $laao_ads_package ) : ?>
+								<?php $laao_ads_selected_package_id = $laao_ads_package_id > 0 ? $laao_ads_package_id : ( (bool) $laao_ads_package['is_default'] ? (int) $laao_ads_package['id'] : 0 ); ?>
 								<label class="laao-ads-choice laao-ads-choice--package">
 									<input
 										type="radio"
 										name="package_id"
 										value="<?php echo esc_attr( (string) $laao_ads_package['id'] ); ?>"
 										required
-										<?php checked( (int) $laao_ads_package['id'], $laao_ads_package_id ); ?>
+										<?php checked( (int) $laao_ads_package['id'], $laao_ads_selected_package_id ); ?>
 									>
 									<span>
 										<strong><?php echo esc_html( (string) $laao_ads_package['name'] ); ?></strong>
+										<?php if ( (bool) $laao_ads_package['is_default'] ) : ?>
+											<small><?php esc_html_e( 'Recommended', 'laao-advertiser-portal' ); ?></small>
+										<?php endif; ?>
 										<small><?php echo esc_html( (string) $laao_ads_package['price'] . ' · ' . (string) $laao_ads_package['duration'] ); ?></small>
 										<small><?php echo esc_html( implode( ', ', $laao_ads_package['placements'] ) ); ?></small>
 									</span>
@@ -334,7 +348,6 @@ if ( 'creative' === $laao_ads_step && '' !== $laao_ads_creative_notice ) {
 											<div class="laao-ads-uploaded__details">
 												<p><strong><?php echo esc_html( (string) $laao_ads_creative['name'] ); ?></strong></p>
 												<p><?php echo esc_html( (string) $laao_ads_creative['dimensions'] . ' · ' . size_format( (int) $laao_ads_creative['bytes'] ) ); ?></p>
-												<p><?php echo esc_html( (string) $laao_ads_creative['alt_text'] ); ?></p>
 												<p class="laao-ads-table__url"><?php echo esc_html( (string) $laao_ads_creative['click_url'] ); ?></p>
 												<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 													<input type="hidden" name="action" value="<?php echo esc_attr( Creative_Actions::REMOVE_ACTION ); ?>">
@@ -370,12 +383,6 @@ if ( 'creative' === $laao_ads_step && '' !== $laao_ads_creative_notice ) {
 											<input id="laao-ads-click-<?php echo esc_attr( (string) $laao_ads_slot['id'] ); ?>" name="click_url" type="url" inputmode="url" required aria-describedby="laao-ads-click-hint-<?php echo esc_attr( (string) $laao_ads_slot['id'] ); ?><?php echo ( 'laao-ads-click-' . $laao_ads_slot['id'] ) === $laao_ads_creative_error_for ? ' laao-ads-creative-error' : ''; ?>" <?php echo ( 'laao-ads-click-' . $laao_ads_slot['id'] ) === $laao_ads_creative_error_for ? 'aria-invalid="true"' : ''; ?>>
 										</div>
 
-										<div class="laao-ads-field">
-											<label for="laao-ads-alt-<?php echo esc_attr( (string) $laao_ads_slot['id'] ); ?>"><?php esc_html_e( 'Image description', 'laao-advertiser-portal' ); ?></label>
-											<p id="laao-ads-alt-hint-<?php echo esc_attr( (string) $laao_ads_slot['id'] ); ?>" class="laao-ads-hint"><?php esc_html_e( 'Briefly describe the meaningful content for people who cannot see the image. Do not repeat “image of.”', 'laao-advertiser-portal' ); ?></p>
-											<input id="laao-ads-alt-<?php echo esc_attr( (string) $laao_ads_slot['id'] ); ?>" name="alt_text" type="text" maxlength="500" required aria-describedby="laao-ads-alt-hint-<?php echo esc_attr( (string) $laao_ads_slot['id'] ); ?><?php echo ( 'laao-ads-alt-' . $laao_ads_slot['id'] ) === $laao_ads_creative_error_for ? ' laao-ads-creative-error' : ''; ?>" <?php echo ( 'laao-ads-alt-' . $laao_ads_slot['id'] ) === $laao_ads_creative_error_for ? 'aria-invalid="true"' : ''; ?>>
-										</div>
-
 										<button class="laao-ads-button" type="submit"><?php esc_html_e( 'Upload creative', 'laao-advertiser-portal' ); ?></button>
 									</form>
 								<?php endif; ?>
@@ -402,7 +409,7 @@ if ( 'creative' === $laao_ads_step && '' !== $laao_ads_creative_notice ) {
 
 				<section id="laao-ads-destinations" class="laao-ads-confirmation" aria-labelledby="laao-ads-destinations-heading">
 					<h3 id="laao-ads-destinations-heading"><?php esc_html_e( 'Creative destinations', 'laao-advertiser-portal' ); ?></h3>
-					<p class="laao-ads-hint"><?php esc_html_e( 'Confirm where each advertisement sends visitors. Return to the creative step if an address or image description needs to change.', 'laao-advertiser-portal' ); ?></p>
+					<p class="laao-ads-hint"><?php esc_html_e( 'Confirm where each advertisement sends visitors. Return to the creative step if an address needs to change.', 'laao-advertiser-portal' ); ?></p>
 
 					<?php if ( ! $laao_ads_creative_ready ) : ?>
 						<div class="laao-ads-alert laao-ads-alert--error" role="alert">
@@ -415,7 +422,6 @@ if ( 'creative' === $laao_ads_step && '' !== $laao_ads_creative_notice ) {
 							<article class="laao-ads-destination-card">
 								<h4><?php echo esc_html( (string) $laao_ads_creative['placement'] ); ?></h4>
 								<p class="laao-ads-table__url"><?php echo esc_html( (string) $laao_ads_creative['click_url'] ); ?></p>
-								<p><?php echo esc_html( (string) $laao_ads_creative['alt_text'] ); ?></p>
 							</article>
 						<?php endforeach; ?>
 					</div>
@@ -526,7 +532,6 @@ if ( 'creative' === $laao_ads_step && '' !== $laao_ads_creative_notice ) {
 									<h4><?php echo esc_html( (string) $laao_ads_creative['placement'] ); ?></h4>
 									<p><?php echo esc_html( (string) $laao_ads_creative['dimensions'] ); ?></p>
 									<p class="laao-ads-table__url"><?php echo esc_html( (string) $laao_ads_creative['click_url'] ); ?></p>
-									<p><?php echo esc_html( (string) $laao_ads_creative['alt_text'] ); ?></p>
 								</div>
 							</article>
 						<?php endforeach; ?>
@@ -621,17 +626,18 @@ if ( 'creative' === $laao_ads_step && '' !== $laao_ads_creative_notice ) {
 	</dl>
 </section>
 
+	<?php if ( true !== $laao_ads_campaign['can_request_updates'] ) : ?>
 <section class="laao-ads-panel" aria-labelledby="laao-ads-creatives-heading">
 	<h2 id="laao-ads-creatives-heading" class="laao-ads-panel__head">
 		<?php esc_html_e( 'Creatives', 'laao-advertiser-portal' ); ?>
 	</h2>
 
-	<?php if ( array() === $laao_ads_creatives ) : ?>
+		<?php if ( array() === $laao_ads_creatives ) : ?>
 		<div class="laao-ads-empty">
 			<p class="laao-ads-empty__title"><?php esc_html_e( 'No creatives yet', 'laao-advertiser-portal' ); ?></p>
 			<p><?php esc_html_e( 'A campaign needs at least one creative before it can be submitted.', 'laao-advertiser-portal' ); ?></p>
 		</div>
-	<?php else : ?>
+		<?php else : ?>
 		<div class="laao-ads-tablewrap">
 			<table class="laao-ads-table">
 				<thead>
@@ -639,7 +645,6 @@ if ( 'creative' === $laao_ads_step && '' !== $laao_ads_creative_notice ) {
 						<th scope="col"><?php esc_html_e( 'Placement', 'laao-advertiser-portal' ); ?></th>
 						<th scope="col"><?php esc_html_e( 'Size', 'laao-advertiser-portal' ); ?></th>
 						<th scope="col"><?php esc_html_e( 'Destination', 'laao-advertiser-portal' ); ?></th>
-						<th scope="col"><?php esc_html_e( 'Alt text', 'laao-advertiser-portal' ); ?></th>
 					</tr>
 				</thead>
 				<tbody>
@@ -658,20 +663,113 @@ if ( 'creative' === $laao_ads_step && '' !== $laao_ads_creative_notice ) {
 							<td class="laao-ads-table__url">
 								<?php echo esc_html( (string) $laao_ads_creative['click_url'] ); ?>
 							</td>
-							<td>
-								<?php
-								echo esc_html(
-									'' !== $laao_ads_creative['alt_text']
-										? (string) $laao_ads_creative['alt_text']
-										: __( 'Not set', 'laao-advertiser-portal' )
-								);
-								?>
-							</td>
 						</tr>
 					<?php endforeach; ?>
 				</tbody>
 			</table>
 		</div>
-	<?php endif; ?>
+		<?php endif; ?>
 </section>
+	<?php endif; ?>
+
+	<?php if ( true === $laao_ads_campaign['can_request_updates'] ) : ?>
+	<section class="laao-ads-panel" aria-labelledby="laao-ads-update-creatives-heading">
+		<h2 id="laao-ads-update-creatives-heading" class="laao-ads-panel__head"><?php esc_html_e( 'Your ads', 'laao-advertiser-portal' ); ?></h2>
+		<p><?php esc_html_e( 'Select an ad to change its image or destination. The current ad keeps running until staff approve its replacement.', 'laao-advertiser-portal' ); ?></p>
+
+		<div class="laao-ads-creative-grid">
+				<?php foreach ( $laao_ads_creatives as $laao_ads_creative ) : ?>
+					<?php
+					$laao_ads_pending_update = null;
+
+					foreach ( $laao_ads_creative_updates as $laao_ads_update ) {
+						if ( (int) $laao_ads_update['creative_id'] === (int) $laao_ads_creative['id'] && 'pending' === (string) $laao_ads_update['state'] ) {
+							$laao_ads_pending_update = $laao_ads_update;
+							break;
+						}
+					}
+					?>
+					<?php if ( is_array( $laao_ads_pending_update ) ) : ?>
+					<article class="laao-ads-creative laao-ads-creative--pending">
+						<div class="laao-ads-creative__summary">
+							<div class="laao-ads-creative__preview">
+								<img src="<?php echo esc_url( (string) $laao_ads_pending_update['preview'] ); ?>" alt="" loading="lazy">
+							</div>
+							<div>
+								<h3><?php echo esc_html( (string) $laao_ads_creative['placement'] ); ?></h3>
+								<p><?php echo esc_html( (string) $laao_ads_creative['dimensions'] ); ?></p>
+							<p><span class="laao-ads-pill laao-ads-pill--pending"><?php esc_html_e( 'Waiting for review', 'laao-advertiser-portal' ); ?></span></p>
+							</div>
+						</div>
+						<div class="laao-ads-creative__body">
+							<p class="laao-ads-table__url"><?php echo esc_html( (string) $laao_ads_pending_update['click_url'] ); ?></p>
+							<form action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post">
+								<input type="hidden" name="action" value="<?php echo esc_attr( Creative_Actions::WITHDRAW_ACTION ); ?>">
+								<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) $laao_ads_campaign['id'] ); ?>">
+								<input type="hidden" name="replacement_id" value="<?php echo esc_attr( (string) $laao_ads_pending_update['id'] ); ?>">
+								<?php wp_nonce_field( Creative_Actions::withdraw_nonce_action( (int) $laao_ads_pending_update['id'] ) ); ?>
+								<button class="laao-ads-button laao-ads-button--secondary" type="submit"><?php esc_html_e( 'Withdraw update', 'laao-advertiser-portal' ); ?></button>
+							</form>
+						</div>
+					</article>
+				<?php else : ?>
+					<details class="laao-ads-creative laao-ads-creative--editable">
+						<summary class="laao-ads-creative__summary">
+							<span class="laao-ads-creative__preview">
+								<img src="<?php echo esc_url( (string) $laao_ads_creative['preview'] ); ?>" alt="" loading="lazy">
+							</span>
+							<span class="laao-ads-creative__meta">
+								<strong><?php echo esc_html( (string) $laao_ads_creative['placement'] ); ?></strong>
+								<span><?php echo esc_html( (string) $laao_ads_creative['dimensions'] ); ?></span>
+								<span class="laao-ads-creative__action"><?php esc_html_e( 'Change this ad', 'laao-advertiser-portal' ); ?></span>
+							</span>
+						</summary>
+						<div class="laao-ads-creative__body">
+							<form class="laao-ads-form" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post" enctype="multipart/form-data">
+								<input type="hidden" name="action" value="<?php echo esc_attr( Creative_Actions::REPLACE_ACTION ); ?>">
+								<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) $laao_ads_campaign['id'] ); ?>">
+								<input type="hidden" name="creative_id" value="<?php echo esc_attr( (string) $laao_ads_creative['id'] ); ?>">
+								<?php wp_nonce_field( Creative_Actions::replace_nonce_action( (int) $laao_ads_creative['id'] ) ); ?>
+
+								<label for="laao-ads-replacement-file-<?php echo esc_attr( (string) $laao_ads_creative['id'] ); ?>"><?php esc_html_e( 'Replacement image', 'laao-advertiser-portal' ); ?></label>
+								<input id="laao-ads-replacement-file-<?php echo esc_attr( (string) $laao_ads_creative['id'] ); ?>" name="file" type="file" accept="image/jpeg,image/png,image/gif,image/webp" required>
+								<p class="laao-ads-hint">
+									<?php
+									printf(
+										/* translators: %s: required creative dimensions, for example 728x90. */
+										esc_html__( 'Exactly %s. JPEG, PNG, GIF, or WebP.', 'laao-advertiser-portal' ),
+										esc_html( (string) $laao_ads_creative['size'] )
+									);
+									?>
+								</p>
+
+								<label for="laao-ads-replacement-url-<?php echo esc_attr( (string) $laao_ads_creative['id'] ); ?>"><?php esc_html_e( 'Destination URL', 'laao-advertiser-portal' ); ?></label>
+								<input id="laao-ads-replacement-url-<?php echo esc_attr( (string) $laao_ads_creative['id'] ); ?>" name="click_url" type="url" value="<?php echo esc_attr( (string) $laao_ads_creative['click_url'] ); ?>" required>
+
+								<button class="laao-ads-button" type="submit"><?php esc_html_e( 'Submit replacement for review', 'laao-advertiser-portal' ); ?></button>
+							</form>
+						</div>
+					</details>
+				<?php endif; ?>
+			<?php endforeach; ?>
+		</div>
+	</section>
+	<?php endif; ?>
+
+	<?php if ( array() !== $laao_ads_creative_updates ) : ?>
+	<section class="laao-ads-panel" aria-labelledby="laao-ads-update-history-heading">
+		<h2 id="laao-ads-update-history-heading" class="laao-ads-panel__head"><?php esc_html_e( 'Ad update history', 'laao-advertiser-portal' ); ?></h2>
+		<ul class="laao-ads-list">
+				<?php foreach ( $laao_ads_creative_updates as $laao_ads_update ) : ?>
+				<li>
+					<strong><?php echo esc_html( (string) $laao_ads_update['placement'] ); ?>:</strong>
+					<?php echo esc_html( (string) $laao_ads_update['state_text'] ); ?>
+					<?php if ( '' !== (string) $laao_ads_update['notes'] ) : ?>
+						&mdash; <?php echo esc_html( (string) $laao_ads_update['notes'] ); ?>
+					<?php endif; ?>
+				</li>
+			<?php endforeach; ?>
+		</ul>
+	</section>
+	<?php endif; ?>
 <?php endif; ?>

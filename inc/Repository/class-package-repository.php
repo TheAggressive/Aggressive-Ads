@@ -16,11 +16,13 @@ use LAAO_Advertiser_Portal\Core\Post_Types;
  */
 final class Package_Repository {
 
-	public const META_PLACEMENT_ID  = '_laao_ads_placement_id';
-	public const META_DURATION_DAYS = '_laao_ads_duration_days';
-	public const META_PRICE_CENTS   = '_laao_ads_price_cents';
-	public const META_CURRENCY      = '_laao_ads_currency';
-	public const META_IS_ACTIVE     = '_laao_ads_is_active';
+	public const META_PLACEMENT_ID    = '_laao_ads_placement_id';
+	public const META_DURATION_DAYS   = '_laao_ads_duration_days';
+	public const META_PRICE_CENTS     = '_laao_ads_price_cents';
+	public const META_CURRENCY        = '_laao_ads_currency';
+	public const META_IS_ACTIVE       = '_laao_ads_is_active';
+	public const META_CUSTOM_DURATION = '_laao_ads_custom_duration';
+	public const META_IS_DEFAULT      = '_laao_ads_is_default';
 
 	/**
 	 * A bounded configuration catalogue, not an unbounded content query.
@@ -84,7 +86,7 @@ final class Package_Repository {
 	 * @return string
 	 */
 	public function name( int $package_id ): string {
-		$title = get_the_title( $package_id );
+		$title = get_post_field( 'post_title', $package_id, 'raw' );
 
 		return is_string( $title ) ? $title : '';
 	}
@@ -111,6 +113,36 @@ final class Package_Repository {
 	 */
 	public function duration_days( int $package_id ): int {
 		return (int) get_post_meta( $package_id, self::META_DURATION_DAYS, true );
+	}
+
+	/**
+	 * Whether advertisers choose this package's schedule rather than receiving
+	 * a fixed contract duration.
+	 *
+	 * @param int $package_id Package post id.
+	 * @return bool
+	 */
+	public function has_custom_duration( int $package_id ): bool {
+		return $this->exists( $package_id ) && 1 === (int) get_post_meta( $package_id, self::META_CUSTOM_DURATION, true );
+	}
+
+	/**
+	 * The first active package explicitly designated as the catalogue default.
+	 *
+	 * A deterministic first match contains accidental duplicate flags without
+	 * making the entire catalogue disappear. The future management screen must
+	 * clear the old flag when assigning a new default.
+	 *
+	 * @return int
+	 */
+	public function default_id(): int {
+		foreach ( $this->active_ids() as $package_id ) {
+			if ( 1 === (int) get_post_meta( $package_id, self::META_IS_DEFAULT, true ) ) {
+				return $package_id;
+			}
+		}
+
+		return 0;
 	}
 
 	/**

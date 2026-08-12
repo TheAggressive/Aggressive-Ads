@@ -134,8 +134,11 @@ final class CampaignValidatorTest extends WP_UnitTestCase {
 		);
 
 		update_post_meta( $id, Campaign_Repository::META_ORG_ID, $this->org_id );
-		update_post_meta( $id, Campaign_Repository::META_START_TS, time() + WEEK_IN_SECONDS );
-		update_post_meta( $id, Campaign_Repository::META_END_TS, time() + ( 2 * WEEK_IN_SECONDS ) );
+		$start = ( new \DateTimeImmutable( '+7 days', wp_timezone() ) )->setTime( 0, 0, 0 );
+		$end   = ( new \DateTimeImmutable( '+14 days', wp_timezone() ) )->setTime( 23, 59, 59 );
+
+		update_post_meta( $id, Campaign_Repository::META_START_TS, $start->getTimestamp() );
+		update_post_meta( $id, Campaign_Repository::META_END_TS, $end->getTimestamp() );
 		update_post_meta( $id, Campaign_Repository::META_PACKAGE_ID, $this->package_id );
 		update_post_meta( $id, Campaign_Repository::META_BUDGET_CENTS, 45000 );
 		update_post_meta( $id, Campaign_Repository::META_CURRENCY, 'USD' );

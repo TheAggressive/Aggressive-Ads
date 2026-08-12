@@ -29,6 +29,13 @@ Declared once in `inc/Security/class-capabilities.php`, which is the source of t
 
 `editor` receives nothing. The filter `laao_ads_roles_receiving_caps` (default `['administrator']`) is the supported way to grant the full set to another role.
 
+Organization ownership is data, not another WordPress role. The user ID stored
+in `_laao_ads_owner_user_id` may invite, approve, deny, and revoke access only
+for that organization. `laao_ads_manage_orgs` is the explicit staff override.
+Portal form handlers still derive the organization from the authenticated user;
+they never trust a submitted `org_id`, and each workflow scopes the access row
+to the same tenant before changing it.
+
 ### What the advertiser deliberately does not have
 
 Asserted explicitly in `tests/php/Security/RolesTest.php`:

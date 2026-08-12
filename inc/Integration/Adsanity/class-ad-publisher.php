@@ -177,6 +177,132 @@ final class Ad_Publisher implements Ad_Provider_Interface {
 	}
 
 	/**
+	 * Applies a reviewed revision to its existing AdSanity ad.
+	 *
+	 * The old attachment and metadata remain intact until the replacement has
+	 * been promoted and all relationships have been checked. A failed provider
+	 * read-back immediately restores and verifies the old creative, so a review
+	 * failure never leaves a partially updated public ad behind.
+	 *
+	 * @param int $campaign_id    Campaign id.
+	 * @param int $current_id     Current creative id.
+	 * @param int $replacement_id Replacement creative id.
+	 * @return true|WP_Error
+	 */
+	public function replace_creative( int $campaign_id, int $current_id, int $replacement_id ) {
+		$current     = $this->creatives->details( $current_id );
+		$replacement = $this->creatives->details( $replacement_id );
+
+		if (
+			null === $current
+			|| null === $replacement
+			|| $campaign_id !== $current['campaign_id']
+			|| $campaign_id !== $replacement['campaign_id']
+			|| $current['org_id'] !== $replacement['org_id']
+			|| $current['placement_id'] !== $replacement['placement_id']
+			|| $current_id !== $this->creatives->replacement_target_id( $replacement_id )
+			|| Creative_Repository::CHANGE_PENDING !== $this->creatives->change_state( $replacement_id )
+		) {
+			return new WP_Error(
+				'laao_ads_replacement_invalid',
+				__( 'That creative replacement is no longer valid for this campaign.', 'laao-advertiser-portal' )
+			);
+		}
+
+		$ad_id = $this->creatives->provider_ad_id( $current_id );
+
+		if ( $ad_id <= 0 || Adsanity::POST_TYPE !== get_post_type( $ad_id ) || ! in_array( $ad_id, $this->campaigns->provider_ad_ids( $campaign_id ), true ) ) {
+			return new WP_Error(
+				'laao_ads_replacement_provider_missing',
+				__( 'The currently published ad could not be found, so it was not replaced.', 'laao-advertiser-portal' )
+			);
+		}
+
+		if ( ! $this->creatives->has_attachment( $current_id ) ) {
+			return new WP_Error(
+				'laao_ads_replacement_rollback_unavailable',
+				__( 'The current ad cannot be verified for rollback, so it was not changed.', 'laao-advertiser-portal' )
+			);
+		}
+
+		$groups = $this->mapping->resolve_all( array( $current['placement_id'] ) );
+
+		if ( is_wp_error( $groups ) ) {
+			return $groups;
+		}
+
+		$size = $this->placements->size( $current['placement_id'] );
+
+		if ( ! Adsanity::knows_size( $size ) || ! isset( $groups[ $current['placement_id'] ] ) ) {
+			return new WP_Error(
+				'laao_ads_replacement_mapping_invalid',
+				__( 'The ad placement is not configured for publication, so the current ad was left unchanged.', 'laao-advertiser-portal' )
+			);
+		}
+
+		$attachment_id = $this->promoter->promote( $replacement_id );
+
+		if ( is_wp_error( $attachment_id ) ) {
+			return $attachment_id;
+		}
+
+		$this->write_ad( $ad_id, $replacement, $size, $attachment_id, $groups[ $current['placement_id'] ], $campaign_id );
+
+		$verified = $this->verify_ad( $ad_id, $replacement, $size, $attachment_id, $groups[ $current['placement_id'] ], $campaign_id );
+
+		if ( '' === $verified ) {
+			return true;
+		}
+
+		$restored = $this->restore_creative( $campaign_id, $current_id );
+
+		return new WP_Error(
+			true === $restored ? 'laao_ads_replacement_write_failed' : 'laao_ads_replacement_rollback_failed',
+			true === $restored
+				? __( 'The replacement could not be verified. The current ad was restored.', 'laao-advertiser-portal' )
+				: __( 'The replacement and rollback could not be verified. Pause the campaign and inspect the provider ad immediately.', 'laao-advertiser-portal' ),
+			array( 'reason' => $verified )
+		);
+	}
+
+	/**
+	 * Restores and verifies the current creative after a failed replacement.
+	 *
+	 * @param int $campaign_id Campaign id.
+	 * @param int $creative_id Current creative id.
+	 * @return true|WP_Error
+	 */
+	public function restore_creative( int $campaign_id, int $creative_id ) {
+		$creative = $this->creatives->details( $creative_id );
+		$ad_id    = $this->creatives->provider_ad_id( $creative_id );
+
+		if ( null === $creative || $campaign_id !== $creative['campaign_id'] || $ad_id <= 0 || ! $this->creatives->has_attachment( $creative_id ) ) {
+			return new WP_Error( 'laao_ads_replacement_rollback_unavailable', __( 'The current creative cannot be restored automatically.', 'laao-advertiser-portal' ) );
+		}
+
+		$groups = $this->mapping->resolve_all( array( $creative['placement_id'] ) );
+		$size   = $this->placements->size( $creative['placement_id'] );
+
+		if ( is_wp_error( $groups ) ) {
+			return $groups;
+		}
+
+		if ( ! isset( $groups[ $creative['placement_id'] ] ) || ! Adsanity::knows_size( $size ) ) {
+			return new WP_Error( 'laao_ads_replacement_mapping_invalid', __( 'The current creative cannot be restored because its placement mapping is invalid.', 'laao-advertiser-portal' ) );
+		}
+
+		$attachment_id = $this->creatives->attachment_id( $creative_id );
+
+		$this->write_ad( $ad_id, $creative, $size, $attachment_id, $groups[ $creative['placement_id'] ], $campaign_id );
+
+		if ( '' !== $this->verify_ad( $ad_id, $creative, $size, $attachment_id, $groups[ $creative['placement_id'] ], $campaign_id ) ) {
+			return new WP_Error( 'laao_ads_replacement_rollback_failed', __( 'The current creative could not be restored in AdSanity.', 'laao-advertiser-portal' ) );
+		}
+
+		return true;
+	}
+
+	/**
 	 * The effect callables the state machine consumes for the lifecycle
 	 * transitions.
 	 *

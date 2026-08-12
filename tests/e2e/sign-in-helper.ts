@@ -12,7 +12,7 @@ export async function signIn(
 	login: string,
 	password: string
 ): Promise< void > {
-	await page.getByLabel( 'Username or email' ).fill( login );
+	await page.getByLabel( 'Work email' ).fill( login );
 	await page.getByLabel( 'Password' ).fill( password );
 	await page.getByRole( 'button', { name: 'Sign in' } ).click();
 	await expect( page ).not.toHaveURL( /\/advertiser\/login\// );

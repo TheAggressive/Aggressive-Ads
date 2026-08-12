@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace LAAO_Advertiser_Portal;
 
+use LAAO_Advertiser_Portal\Admin\Creative_Change_Actions;
 use LAAO_Advertiser_Portal\Admin\Review_Data;
 use LAAO_Advertiser_Portal\Admin\Review_Screen;
 use LAAO_Advertiser_Portal\Admin\Placement_Mapping_Data;
@@ -25,15 +26,21 @@ use LAAO_Advertiser_Portal\Integration\Ad_Provider_Interface;
 use LAAO_Advertiser_Portal\Integration\Adsanity\Ad_Publisher;
 use LAAO_Advertiser_Portal\Integration\Adsanity\Placement_Mapping;
 use LAAO_Advertiser_Portal\Notification\Notification_Service;
+use LAAO_Advertiser_Portal\Notification\Organization_Notification;
+use LAAO_Advertiser_Portal\Notification\Password_Notification;
 use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
 use LAAO_Advertiser_Portal\Repository\Creative_Repository;
 use LAAO_Advertiser_Portal\Repository\Org_Repository;
+use LAAO_Advertiser_Portal\Repository\Org_Access_Repository;
 use LAAO_Advertiser_Portal\Repository\Package_Repository;
 use LAAO_Advertiser_Portal\Portal\Router;
 use LAAO_Advertiser_Portal\Portal\View_Data;
 use LAAO_Advertiser_Portal\Portal\Account_Actions;
 use LAAO_Advertiser_Portal\Portal\Campaign_Actions;
 use LAAO_Advertiser_Portal\Portal\Login_Actions;
+use LAAO_Advertiser_Portal\Portal\Organization_Actions;
+use LAAO_Advertiser_Portal\Portal\Password_Actions;
+use LAAO_Advertiser_Portal\Portal\Signup_Actions;
 use LAAO_Advertiser_Portal\Portal\Creative_Actions;
 use LAAO_Advertiser_Portal\REST\Campaigns_Controller;
 use LAAO_Advertiser_Portal\REST\Creative_Controller;
@@ -44,11 +51,19 @@ use LAAO_Advertiser_Portal\REST\Transitions_Controller;
 use LAAO_Advertiser_Portal\Repository\Placement_Repository;
 use LAAO_Advertiser_Portal\Repository\User_Repository;
 use LAAO_Advertiser_Portal\Storage\Private_Storage;
+use LAAO_Advertiser_Portal\Update\Package_Verifier;
+use LAAO_Advertiser_Portal\Update\Plugin_Updates;
+use LAAO_Advertiser_Portal\Update\Release_Repository;
+use LAAO_Advertiser_Portal\Update\Update_Http_Client;
 use LAAO_Advertiser_Portal\Workflow\Campaign_State_Machine;
+use LAAO_Advertiser_Portal\Workflow\Advertiser_Registration;
+use LAAO_Advertiser_Portal\Workflow\Password_Reset;
+use LAAO_Advertiser_Portal\Workflow\Organization_Membership;
 use LAAO_Advertiser_Portal\Workflow\Campaign_Clock;
 use LAAO_Advertiser_Portal\Workflow\Campaign_Editor;
 use LAAO_Advertiser_Portal\Workflow\Campaign_Validator;
 use LAAO_Advertiser_Portal\Workflow\Creative_Promoter;
+use LAAO_Advertiser_Portal\Workflow\Creative_Change_Manager;
 use LAAO_Advertiser_Portal\Workflow\Creative_Manager;
 use LAAO_Advertiser_Portal\Workflow\Creative_Uploader;
 use LAAO_Advertiser_Portal\Workflow\Review_Actions;
@@ -193,6 +208,39 @@ final class Plugin {
 	 */
 	private function register_services(): void {
 		$this->container->register(
+			Update_Http_Client::class,
+			static fn (): Update_Http_Client => new Update_Http_Client()
+		);
+
+		$this->container->register(
+			Release_Repository::class,
+			static fn ( Service_Container $c ): Release_Repository => new Release_Repository(
+				$c->get( Update_Http_Client::class )
+			)
+		);
+
+		$this->container->register(
+			Package_Verifier::class,
+			static fn ( Service_Container $c ): Package_Verifier => new Package_Verifier(
+				$c->get( Release_Repository::class ),
+				$c->get( Update_Http_Client::class )
+			)
+		);
+
+		$this->container->register(
+			Plugin_Updates::class,
+			static fn ( Service_Container $c ): Plugin_Updates => new Plugin_Updates(
+				$c->get( Release_Repository::class ),
+				$c->get( Package_Verifier::class )
+			)
+		);
+
+		$this->container->register(
+			Org_Access_Repository::class,
+			static fn (): Org_Access_Repository => new Org_Access_Repository()
+		);
+
+		$this->container->register(
 			Post_Types::class,
 			static fn (): Post_Types => new Post_Types()
 		);
@@ -224,13 +272,20 @@ final class Plugin {
 			Upgrader::class,
 			static fn ( Service_Container $c ): Upgrader => new Upgrader(
 				$c->get( Installer::class ),
-				$c->get( Audit_Repository::class )
+				$c->get( Audit_Repository::class ),
+				array(
+					2 => static function () use ( $c ): void {
+						$c->get( Installer::class )->install_org_access();
+					},
+				)
 			)
 		);
 
 		$this->container->register(
 			Org_Repository::class,
-			static fn (): Org_Repository => new Org_Repository()
+			static fn ( Service_Container $c ): Org_Repository => new Org_Repository(
+				$c->get( Org_Access_Repository::class )
+			)
 		);
 
 		$this->container->register(
@@ -253,6 +308,50 @@ final class Plugin {
 		$this->container->register(
 			User_Repository::class,
 			static fn (): User_Repository => new User_Repository()
+		);
+
+		$this->container->register(
+			Password_Notification::class,
+			static fn ( Service_Container $c ): Password_Notification => new Password_Notification(
+				$c->get( User_Repository::class )
+			)
+		);
+
+		$this->container->register(
+			Organization_Notification::class,
+			static fn ( Service_Container $c ): Organization_Notification => new Organization_Notification(
+				$c->get( User_Repository::class )
+			)
+		);
+
+		$this->container->register(
+			Password_Reset::class,
+			static fn ( Service_Container $c ): Password_Reset => new Password_Reset(
+				$c->get( Audit_Repository::class )
+			)
+		);
+
+		$this->container->register(
+			Organization_Membership::class,
+			static fn ( Service_Container $c ): Organization_Membership => new Organization_Membership(
+				$c->get( Org_Access_Repository::class ),
+				$c->get( Org_Repository::class ),
+				$c->get( User_Repository::class ),
+				$c->get( Password_Notification::class ),
+				$c->get( Organization_Notification::class ),
+				$c->get( Audit_Repository::class )
+			)
+		);
+
+		$this->container->register(
+			Advertiser_Registration::class,
+			static fn ( Service_Container $c ): Advertiser_Registration => new Advertiser_Registration(
+				$c->get( User_Repository::class ),
+				$c->get( Org_Repository::class ),
+				$c->get( Organization_Membership::class ),
+				$c->get( Password_Notification::class ),
+				$c->get( Audit_Repository::class )
+			)
 		);
 
 		$this->container->register(
@@ -394,6 +493,7 @@ final class Plugin {
 				$c->get( Placement_Repository::class ),
 				$c->get( Creative_Repository::class ),
 				$c->get( Org_Repository::class ),
+				$c->get( Org_Access_Repository::class ),
 				$c->get( Package_Repository::class ),
 				$c->get( Campaign_Editor::class ),
 				$c->get( Review_Readiness::class )
@@ -420,19 +520,51 @@ final class Plugin {
 			Login_Actions::class,
 			static fn ( Service_Container $c ): Login_Actions => new Login_Actions(
 				$c->get( Rate_Limiter::class ),
+				$c->get( Audit_Repository::class ),
+				$c->get( Org_Access_Repository::class )
+			)
+		);
+
+		$this->container->register(
+			Organization_Actions::class,
+			static fn ( Service_Container $c ): Organization_Actions => new Organization_Actions(
+				$c->get( Organization_Membership::class ),
+				$c->get( Org_Repository::class ),
+				$c->get( Rate_Limiter::class )
+			)
+		);
+
+		$this->container->register(
+			Signup_Actions::class,
+			static fn ( Service_Container $c ): Signup_Actions => new Signup_Actions(
+				$c->get( Advertiser_Registration::class ),
+				$c->get( Rate_Limiter::class )
+			)
+		);
+
+		$this->container->register(
+			Password_Actions::class,
+			static fn ( Service_Container $c ): Password_Actions => new Password_Actions(
+				$c->get( User_Repository::class ),
+				$c->get( Password_Notification::class ),
+				$c->get( Password_Reset::class ),
+				$c->get( Rate_Limiter::class ),
 				$c->get( Audit_Repository::class )
 			)
 		);
 
 		$this->container->register(
 			Account_Actions::class,
-			static fn (): Account_Actions => new Account_Actions()
+			static fn ( Service_Container $c ): Account_Actions => new Account_Actions(
+				$c->get( Password_Notification::class )
+			)
 		);
 
 		$this->container->register(
 			Creative_Actions::class,
 			static fn ( Service_Container $c ): Creative_Actions => new Creative_Actions(
-				$c->get( Creative_Manager::class )
+				$c->get( Creative_Manager::class ),
+				$c->get( Creative_Change_Manager::class )
 			)
 		);
 
@@ -475,7 +607,8 @@ final class Plugin {
 		$this->container->register(
 			Creative_Controller::class,
 			static fn ( Service_Container $c ): Creative_Controller => new Creative_Controller(
-				$c->get( Creative_Manager::class )
+				$c->get( Creative_Manager::class ),
+				$c->get( Creative_Change_Manager::class )
 			)
 		);
 
@@ -510,6 +643,27 @@ final class Plugin {
 		$this->container->register(
 			Ad_Provider_Interface::class,
 			static fn ( Service_Container $c ): Ad_Provider_Interface => $c->get( Ad_Publisher::class )
+		);
+
+		$this->container->register(
+			Creative_Change_Manager::class,
+			static fn ( Service_Container $c ): Creative_Change_Manager => new Creative_Change_Manager(
+				$c->get( Campaign_Repository::class ),
+				$c->get( Creative_Repository::class ),
+				$c->get( Placement_Repository::class ),
+				$c->get( Creative_Uploader::class ),
+				$c->get( Private_Storage::class ),
+				$c->get( Rate_Limiter::class ),
+				$c->get( Ad_Provider_Interface::class ),
+				$c->get( Audit_Repository::class )
+			)
+		);
+
+		$this->container->register(
+			Creative_Change_Actions::class,
+			static fn ( Service_Container $c ): Creative_Change_Actions => new Creative_Change_Actions(
+				$c->get( Creative_Change_Manager::class )
+			)
 		);
 
 		$this->container->register(
@@ -616,6 +770,10 @@ final class Plugin {
 	 */
 	private function service_init_order(): array {
 		return array(
+			// Update hooks are independent of the application's data model and
+			// must be available on every admin and cron update check.
+			Plugin_Updates::class,
+
 			// Data shapes first: nothing may query a post type that does not
 			// exist yet, and a status must be registered before any query
 			// filters on it.
@@ -637,6 +795,7 @@ final class Plugin {
 			Campaign_Clock::class,
 			Notification_Service::class,
 			Review_Screen::class,
+			Creative_Change_Actions::class,
 			Placement_Mapping_Screen::class,
 
 			// REST last: routes are registered on rest_api_init, which fires
@@ -649,7 +808,10 @@ final class Plugin {
 			Campaign_Actions::class,
 			Creative_Actions::class,
 			Account_Actions::class,
+			Organization_Actions::class,
 			Login_Actions::class,
+			Signup_Actions::class,
+			Password_Actions::class,
 
 			Creative_File_Controller::class,
 			Creative_Controller::class,

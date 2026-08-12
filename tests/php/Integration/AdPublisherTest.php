@@ -300,6 +300,76 @@ final class AdPublisherTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A reviewed replacement reuses the existing provider ad and verifies every
+	 * public field before reporting success.
+	 *
+	 * @return void
+	 */
+	public function test_a_reviewed_replacement_updates_the_existing_ad(): void {
+		$campaign = $this->campaign( 1_900_100_000 );
+		$current  = $this->creative( $campaign );
+		$initial  = $this->publisher->publish_campaign( $campaign );
+		$ad_id    = $initial->ad_ids()[0];
+
+		$replacement = $this->creative(
+			$campaign,
+			array(
+				Creative_Repository::META_CLICK_URL    => 'https://example.com/new-exhibition',
+				Creative_Repository::META_REPLACES_ID  => $current,
+				Creative_Repository::META_CHANGE_STATE => Creative_Repository::CHANGE_PENDING,
+			)
+		);
+
+		$this->assertTrue( $this->publisher->replace_creative( $campaign, $current, $replacement ) );
+		$this->assertSame( $ad_id, $this->creatives->provider_ad_id( $current ) );
+		$this->assertSame( 'https://example.com/new-exhibition', get_post_meta( $ad_id, Adsanity::META_URL, true ) );
+		$this->assertSame( $this->creatives->attachment_id( $replacement ), (int) get_post_thumbnail_id( $ad_id ) );
+		$this->assertCount( 1, $this->campaigns->provider_ad_ids( $campaign ) );
+	}
+
+	/**
+	 * A replacement write that does not stick restores the old creative.
+	 *
+	 * @return void
+	 */
+	public function test_a_failed_replacement_restores_the_current_ad(): void {
+		$campaign = $this->campaign( 1_900_100_000 );
+		$current  = $this->creative( $campaign );
+		$initial  = $this->publisher->publish_campaign( $campaign );
+		$ad_id    = $initial->ad_ids()[0];
+
+		$replacement = $this->creative(
+			$campaign,
+			array(
+				Creative_Repository::META_CLICK_URL    => 'https://example.com/rejected-write',
+				Creative_Repository::META_REPLACES_ID  => $current,
+				Creative_Repository::META_CHANGE_STATE => Creative_Repository::CHANGE_PENDING,
+			)
+		);
+
+		$block_replacement_url = static function ( $check, int $object_id, string $meta_key, $value ) {
+			if ( Adsanity::META_URL === $meta_key && 'https://example.com/rejected-write' === $value ) {
+				return true;
+			}
+
+			return $check;
+		};
+
+		add_filter( 'update_post_metadata', $block_replacement_url, 10, 4 );
+
+		try {
+			$result = $this->publisher->replace_creative( $campaign, $current, $replacement );
+		} finally {
+			remove_filter( 'update_post_metadata', $block_replacement_url, 10 );
+		}
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'laao_ads_replacement_write_failed', $result->get_error_code() );
+		$this->assertSame( 'https://example.com/tickets', get_post_meta( $ad_id, Adsanity::META_URL, true ) );
+		$this->assertSame( $this->creatives->attachment_id( $current ), (int) get_post_thumbnail_id( $ad_id ) );
+	}
+
+	/**
 	 * The campaign records each ad exactly once, however often it publishes.
 	 *
 	 * @return void

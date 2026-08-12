@@ -24,12 +24,86 @@ final class Schema {
 	 *
 	 * Drives the migration walker in Upgrader.
 	 */
-	public const DB_VERSION = 1;
+	public const DB_VERSION = 2;
 
 	/**
 	 * The audit table's name, without the site's table prefix.
 	 */
 	public const AUDIT_TABLE = 'laao_ads_audit_log';
+
+	/** Organization identity, invitation, and access-request registry. */
+	public const ORG_ACCESS_TABLE = 'laao_ads_org_access';
+
+	/**
+	 * Organization identity and access workflow table.
+	 *
+	 * `active_key` is unique. Pending invitations/requests derive it from the
+	 * organization, normalized email, and kind, making duplicate creation an
+	 * atomic database refusal. Resolved rows replace it with a random digest so
+	 * a later legitimate invitation may use the same address.
+	 *
+	 * @param string $table_name      Fully prefixed table name.
+	 * @param string $charset_collate Database charset and collation.
+	 * @return string
+	 */
+	public static function org_access_table_ddl( string $table_name, string $charset_collate ): string {
+		return "CREATE TABLE {$table_name} (
+	id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	org_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	kind varchar(16) NOT NULL DEFAULT '',
+	status varchar(16) NOT NULL DEFAULT 'pending',
+	email varchar(100) NOT NULL DEFAULT '',
+	canonical_name varchar(191) NOT NULL DEFAULT '',
+	request_user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	created_by_user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	resolved_by_user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	created_at_ts bigint(20) unsigned NOT NULL DEFAULT 0,
+	expires_at_ts bigint(20) unsigned NOT NULL DEFAULT 0,
+	resolved_at_ts bigint(20) unsigned NOT NULL DEFAULT 0,
+	token_hash char(64) NOT NULL DEFAULT '',
+	active_key char(64) NOT NULL DEFAULT '',
+	PRIMARY KEY  (id),
+	UNIQUE KEY token_hash (token_hash),
+	UNIQUE KEY active_key (active_key),
+	KEY org_status (org_id,status,id),
+	KEY email_status (email,status,id),
+	KEY user_status (request_user_id,status,id),
+	KEY expiry (status,expires_at_ts)
+) {$charset_collate};";
+	}
+
+	/**
+	 * Organization access table columns.
+	 *
+	 * @return array<int, string>
+	 */
+	public static function org_access_columns(): array {
+		return array(
+			'id',
+			'org_id',
+			'kind',
+			'status',
+			'email',
+			'canonical_name',
+			'request_user_id',
+			'created_by_user_id',
+			'resolved_by_user_id',
+			'created_at_ts',
+			'expires_at_ts',
+			'resolved_at_ts',
+			'token_hash',
+			'active_key',
+		);
+	}
+
+	/**
+	 * Organization access table indexes.
+	 *
+	 * @return array<int, string>
+	 */
+	public static function org_access_index_names(): array {
+		return array( 'PRIMARY', 'token_hash', 'active_key', 'org_status', 'email_status', 'user_status', 'expiry' );
+	}
 
 	/**
 	 * The audit log's CREATE TABLE statement.

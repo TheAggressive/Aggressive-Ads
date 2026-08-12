@@ -27,25 +27,40 @@ test( 'a signed-out visitor signs in on the portal, not on wp-login', async ( {
 
 	await expectSignInA11y( page );
 
-	await page.getByLabel( 'Username or email' ).fill( 'advertiser' );
+	await page.getByRole( 'link', { name: 'Forgotten your password?' } ).click();
+	await expect( page ).toHaveURL( /\/advertiser\/forgot-password\/\?redirect_to=/ );
+	await expect( page ).not.toHaveURL( /wp-login\.php/ );
+	await expect( page.getByRole( 'heading', { level: 1, name: 'Reset your password' } ) ).toBeVisible();
+	await page.getByRole( 'link', { name: 'Back to sign in' } ).click();
+
+	const usernameWidth = await page.getByLabel( 'Work email' ).evaluate(
+		( input ) => input.getBoundingClientRect().width
+	);
+	const passwordWidth = await page.getByLabel( 'Password' ).evaluate(
+		( input ) => input.getBoundingClientRect().width
+	);
+
+	expect( passwordWidth ).toBe( usernameWidth );
+
+	await page.getByLabel( 'Work email' ).fill( 'advertiser@example.test' );
 	await page.getByLabel( 'Password' ).fill( 'nope-wrong-password' );
 	await page.getByRole( 'button', { name: 'Sign in' } ).click();
 
 	await expect(
-		page.getByText( 'That username and password did not match. Please try again.' )
+		page.getByText( 'That email and password did not match. Please try again.' )
 	).toBeVisible();
 
 	// A wrong password must not reveal that the account exists, so the same
 	// sentence has to answer a username nobody has.
-	await page.getByLabel( 'Username or email' ).fill( 'nobody-by-that-name' );
+	await page.getByLabel( 'Work email' ).fill( 'nobody@example.test' );
 	await page.getByLabel( 'Password' ).fill( 'nope-wrong-password' );
 	await page.getByRole( 'button', { name: 'Sign in' } ).click();
 
 	await expect(
-		page.getByText( 'That username and password did not match. Please try again.' )
+		page.getByText( 'That email and password did not match. Please try again.' )
 	).toBeVisible();
 
-	await page.getByLabel( 'Username or email' ).fill( 'advertiser' );
+	await page.getByLabel( 'Work email' ).fill( 'advertiser@example.test' );
 	await page.getByLabel( 'Password' ).fill( 'advertiser' );
 	await page.getByRole( 'button', { name: 'Sign in' } ).click();
 

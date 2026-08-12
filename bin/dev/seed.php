@@ -26,6 +26,11 @@ if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
 	exit( 1 );
 }
 
+// The development site should expose the signup surface this repository ships.
+// bin/ never enters a release archive, so this cannot open registration on a
+// production install by surprise.
+update_option( 'users_can_register', 1 );
+
 /**
  * Finds a post of ours by slug, or makes one.
  *
@@ -193,6 +198,7 @@ foreach ( $packages as $slug => $package ) {
 			Package_Repository::META_PRICE_CENTS   => $price_cents,
 			Package_Repository::META_CURRENCY      => 'USD',
 			Package_Repository::META_IS_ACTIVE     => 1,
+			Package_Repository::META_IS_DEFAULT    => 'launch-bundle' === $slug ? 1 : 0,
 		)
 	);
 

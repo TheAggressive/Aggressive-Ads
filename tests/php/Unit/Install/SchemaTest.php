@@ -162,4 +162,25 @@ final class SchemaTest extends TestCase {
 	public function test_a_db_version_is_declared(): void {
 		$this->assertGreaterThanOrEqual( 1, Schema::DB_VERSION );
 	}
+
+	/** The access DDL declares its atomic uniqueness and lookup indexes. */
+	public function test_org_access_schema_has_declared_columns_and_indexes(): void {
+		$ddl = Schema::org_access_table_ddl( 'wp_laao_ads_org_access', 'DEFAULT CHARACTER SET utf8mb4' );
+
+		foreach ( Schema::org_access_columns() as $column ) {
+			$this->assertMatchesRegularExpression( '/^\s*' . preg_quote( $column, '/' ) . '\s/mi', $ddl );
+		}
+
+		foreach ( Schema::org_access_index_names() as $index ) {
+			if ( 'PRIMARY' === $index ) {
+				$this->assertStringContainsString( 'PRIMARY KEY  (id)', $ddl );
+				continue;
+			}
+
+			$this->assertMatchesRegularExpression(
+				'/^\s*(?:UNIQUE )?KEY ' . preg_quote( $index, '/' ) . ' \(/mi',
+				$ddl
+			);
+		}
+	}
 }

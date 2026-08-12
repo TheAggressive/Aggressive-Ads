@@ -350,6 +350,7 @@ final class Campaign_Editor {
 		}
 
 		$window = Campaign_Rules::validate_window( $start_ts, $end_ts, time() );
+		$window->absorb( Campaign_Rules::validate_day_boundaries( $start_ts, $end_ts, wp_timezone()->getName() ) );
 
 		if ( $window->is_valid() ) {
 			return true;
@@ -359,7 +360,9 @@ final class Campaign_Editor {
 		$code    = match ( $problem['code'] ) {
 			Campaign_Rules::ERROR_START_MISSING    => 'laao_ads_start_date_required',
 			Campaign_Rules::ERROR_START_IN_PAST    => 'laao_ads_start_date_past',
+			Campaign_Rules::ERROR_START_NOT_MIDNIGHT => 'laao_ads_start_date_not_midnight',
 			Campaign_Rules::ERROR_END_BEFORE_START => 'laao_ads_end_before_start',
+			Campaign_Rules::ERROR_END_NOT_DAY_END  => 'laao_ads_end_date_not_day_end',
 			default                                => 'laao_ads_schedule_invalid',
 		};
 
@@ -400,7 +403,9 @@ final class Campaign_Editor {
 		$price_cents   = $this->packages->price_cents( $package_id );
 		$currency      = $this->packages->currency( $package_id );
 
-		if ( array() === $placement_ids || $duration_days <= 0 || $price_cents < 0 || 1 !== preg_match( '/^[A-Z]{3}$/', $currency ) ) {
+		$duration_valid = $duration_days > 0 || $this->packages->has_custom_duration( $package_id );
+
+		if ( array() === $placement_ids || ! $duration_valid || $price_cents < 0 || 1 !== preg_match( '/^[A-Z]{3}$/', $currency ) ) {
 			return $this->error( 'laao_ads_package_misconfigured', __( 'That package is not configured completely. Please choose another package or get in touch.', 'laao-advertiser-portal' ), 422, 'package_id' );
 		}
 

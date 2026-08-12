@@ -553,6 +553,23 @@
 		color: var(--laao-ads-color-text);
 	}
 
+	.laao-ads-button--small {
+		min-height: 2.25rem;
+		padding-inline: var(--laao-ads-space-sm);
+		font-size: 12px;
+	}
+
+	.laao-ads-actions {
+		display: flex;
+		align-items: center;
+		gap: var(--laao-ads-space-xs);
+		flex-wrap: wrap;
+	}
+
+	.laao-ads-actions form {
+		margin: 0;
+	}
+
 	.laao-ads-button--danger {
 		background: var(--laao-ads-color-danger);
 		color: var(--laao-ads-color-accent-contrast);
@@ -610,6 +627,10 @@
 		max-width: 26rem;
 	}
 
+	.laao-ads-signup {
+		max-width: 36rem;
+	}
+
 	.laao-ads-signin__brand {
 		display: flex;
 		align-items: baseline;
@@ -644,9 +665,32 @@
 	}
 
 	.laao-ads-signin__aside {
-		margin: 0;
+		margin: var(--laao-ads-space-xs) 0 0;
 		padding: 0 var(--laao-ads-space-lg);
 		font-size: 14px;
+	}
+
+	.laao-ads-signin__aside a {
+		color: var(--laao-ads-color-accent-strong);
+		font-weight: 700;
+		text-underline-offset: 3px;
+	}
+
+	/*
+	 * A low-cost bot trap that is absent from the accessibility tree and from
+	 * keyboard order. It remains in the form DOM because automated submitters
+	 * that fill every text input are the behavior it is intended to identify.
+	 */
+	.laao-ads-form-trap {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+		border: 0;
 	}
 
 	.laao-ads-field--inline {
@@ -820,6 +864,8 @@
 	}
 
 	.laao-ads-field input[type="text"],
+	.laao-ads-field input[type="email"],
+	.laao-ads-field input[type="password"],
 	.laao-ads-field input[type="url"],
 	.laao-ads-field input[type="date"],
 	.laao-ads-field textarea {
@@ -844,6 +890,10 @@
 		border: 1px dashed var(--laao-ads-border-color-strong);
 		border-radius: var(--laao-ads-radius-control);
 		font: inherit;
+	}
+
+	.laao-ads-input--uppercase {
+		text-transform: uppercase;
 	}
 
 	.laao-ads-field input[type="file"]::file-selector-button {
@@ -1242,6 +1292,104 @@
 		padding-left: var(--laao-ads-space-lg);
 	}
 
+	.laao-ads-creative-grid {
+		display: grid;
+		gap: var(--laao-ads-space-md);
+		grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+		margin-top: var(--laao-ads-space-md);
+	}
+
+	.laao-ads-creative {
+		min-width: 0;
+		background: var(--laao-ads-color-surface-raised);
+		border: 1px solid var(--laao-ads-border-color);
+		border-radius: var(--laao-ads-radius-panel);
+		overflow: hidden;
+	}
+
+	.laao-ads-creative__summary {
+		display: grid;
+		grid-template-columns: minmax(7rem, 12rem) 1fr;
+		gap: var(--laao-ads-space-md);
+		align-items: center;
+		padding: var(--laao-ads-space-md);
+	}
+
+	details.laao-ads-creative > summary {
+		cursor: pointer;
+		list-style: none;
+	}
+
+	details.laao-ads-creative > summary::-webkit-details-marker {
+		display: none;
+	}
+
+	details.laao-ads-creative > summary:hover {
+		background: var(--laao-ads-color-surface-inset);
+	}
+
+	details.laao-ads-creative > summary:focus-visible {
+		outline: 3px solid var(--laao-ads-color-accent);
+		outline-offset: -3px;
+	}
+
+	.laao-ads-creative__preview {
+		display: grid;
+		min-height: 6rem;
+		place-items: center;
+		padding: var(--laao-ads-space-xs);
+		background: var(--laao-ads-color-surface-inset);
+		border-radius: var(--laao-ads-radius-control);
+	}
+
+	.laao-ads-creative__preview img {
+		display: block;
+		max-height: 10rem;
+		object-fit: contain;
+	}
+
+	.laao-ads-creative__meta {
+		display: grid;
+		gap: var(--laao-ads-space-xs);
+		min-width: 0;
+	}
+
+	.laao-ads-creative__meta strong,
+	.laao-ads-creative--pending h3 {
+		margin: 0;
+		color: var(--laao-ads-color-text);
+		font-size: 16px;
+	}
+
+	.laao-ads-creative__meta > span:not(.laao-ads-creative__action),
+	.laao-ads-creative--pending p {
+		margin: 0;
+		color: var(--laao-ads-color-text-muted);
+		font-size: 13px;
+	}
+
+	.laao-ads-creative__action {
+		color: var(--laao-ads-color-text);
+		font-weight: 700;
+		text-decoration: underline;
+		text-decoration-color: var(--laao-ads-color-accent-strong);
+		text-decoration-thickness: 2px;
+		text-underline-offset: 3px;
+	}
+
+	details[open].laao-ads-creative .laao-ads-creative__action::after {
+		content: " \2212";
+	}
+
+	.laao-ads-creative__body {
+		padding: var(--laao-ads-space-md);
+		border-top: 1px solid var(--laao-ads-border-color);
+	}
+
+	.laao-ads-creative__body > :first-child {
+		margin-top: 0;
+	}
+
 
 	.laao-ads-empty {
 		margin: 0;
@@ -1326,7 +1474,8 @@
 	@media (max-width: 782px) {
 		.laao-ads-upload-form,
 		.laao-ads-uploaded,
-		.laao-ads-review-creative {
+		.laao-ads-review-creative,
+		.laao-ads-creative__summary {
 			grid-template-columns: 1fr;
 		}
 

@@ -21,6 +21,13 @@ Conversion happens at exactly two boundaries:
 - **Input** — an advertiser picks a date in the site's timezone; it is converted to a UTC integer at the validation edge, once.
 - **Display** — `wp_date()` formats it in the viewer's timezone, at render.
 
+Campaign dates represent complete local calendar days: start is `00:00:00` and
+the inclusive end is `23:59:59`. The shared workflow validates those boundaries
+for both HTML and REST clients. AdSanity uses inclusive second-precision
+comparisons, so this representation serves through the selected final day and
+stops at the following midnight. Boundaries are constructed as local calendar
+times rather than by assuming every day contains 86,400 seconds.
+
 The audit table also carries a `DATETIME` column alongside the integer, for humans reading the table directly and for `BETWEEN` reporting. Both are written from the same value.
 
 ## Consequences

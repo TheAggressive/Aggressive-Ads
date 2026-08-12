@@ -7,9 +7,12 @@ the status on each phase below names the remaining product work.
 
 Nothing here is built merely because the architecture supports it.
 
-## Phase 1 — Foundation *(runtime complete; release automation remains)*
+## Phase 1 — Foundation *(complete)*
 
-Bootstrap, autoloader, container, post types and statuses, installer, upgrader, audit log, roles and org-scoped ownership, asset pipeline, design tokens, portal route shell, CI, i18n, packaging, semantic-release.
+Bootstrap, autoloader, container, post types and statuses, installer, schema
+upgrader, audit log, roles and org-scoped ownership, design tokens, portal route
+shell, CI, reproducible packaging, a SHA-256-verifying GitHub plugin updater,
+and tag-driven release automation with build provenance.
 
 **Ends with:** a plugin that installs, upgrades, uninstalls, enforces its capability model, routes its portal under any theme, and packages reproducibly. No campaign can be created yet — deliberately. The security foundation lands before the UI does.
 
@@ -23,7 +26,16 @@ The REST upload route, private two-stage storage, MIME/dimension/integrity valid
 
 ## Phase 4 — Portal UI *(in progress; creation steps 1–6 complete)*
 
-Dashboard, campaign list and detail, organization, account. The wizard: details → package → creative → destination and schedule → review → submit. The complete creation and submission flow now works without JavaScript, including draft creation, package snapshots, exact-size private creative upload, authenticated preview, removal, destination confirmation, submission-grade scheduling, actionable review, final confirmation, transition-time revalidation, audit, and reviewer notification. REST and forms converge on the same workflows. Remaining here: drag/drop and atomic-replace enhancement, Interactivity stores for wizard/upload/autosave/dialog, and full keyboard and screen-reader flow coverage.
+Dashboard, campaign list and detail, organization, account. The wizard: details → package → creative → destination and schedule → review → submit. The complete creation and submission flow now works without JavaScript, including draft creation, package snapshots, exact-size private creative upload, authenticated preview, removal, destination confirmation, submission-grade scheduling, actionable review, final confirmation, transition-time revalidation, audit, and reviewer notification. REST and forms converge on the same workflows. Atomic replacement for scheduled and live ads is also built: advertisers stage private revisions without interrupting delivery, staff review them in a dedicated queue, and approval reconciles the existing AdSanity object with exact read-back and rollback. Remaining here: drag/drop, Interactivity stores for wizard/upload/autosave/dialog, and full keyboard and screen-reader flow coverage.
+
+Public advertiser signup is also built. It is opt-in through WordPress's
+"Anyone can register" policy (with a dedicated filter for managed identity
+deployments), creates the user and organization as a compensating transaction,
+and sends a core-backed one-time password setup link to a portal-owned password
+screen. Password setup, recovery and subsequent sign-in remain inside the
+advertiser portal while WordPress core still owns key validation, password
+hashing, session invalidation and authentication. The public response never
+reveals whether an email address already exists.
 
 ## Phase 5 — Staff review and notifications *(complete)*
 
@@ -52,9 +64,18 @@ a successful submission. See [notifications.md](notifications.md).
 
 Pause, resume and cancel need no separate UI — the review screen derives its buttons from the transition table. Still outstanding in this phase: ending-soon notifications and the private-file retention purge.
 
-## Phase 8 — Organizations and members
+## Phase 8 — Organizations and members *(in progress; secure access workflow complete)*
 
-The organization screen is **built and read-only**: name, active state, people with owner/member roles, and the campaign count. Everything that writes is still outstanding — renaming, invitations, member management and suspension — because each needs an authorization answer the portal does not have yet: "may this member remove that member?" is a different question from "may they see the portal?".
+The organization screen shows name, active state, people with owner/member roles,
+and campaign count. Initial creation is atomic during signup. Organization names
+are uppercase with a unique private canonical identity; exact or unambiguous
+misspellings create an owner-reviewed pending request rather than a duplicate
+tenant or automatic attachment. Owner/staff email invitations are expiring,
+email-bound and single-use, and the screen supports approve, deny and revoke.
+
+Remaining here: organization rename with canonical-key collision handling,
+removing existing members (including the last-owner rule), ownership transfer,
+and staff suspension controls.
 
 Self-service email change belongs here too. Core's flow mails a signed confirmation to the *new* address and completes on `profile.php`, which portal users cannot reach, so supporting it means owning the token: issue, expiry, single use and rate limiting. The account screen shows the address read-only until then.
 
@@ -74,4 +95,4 @@ Full threat-model test coverage, authorization review, audit-table load testing 
 
 The domain model accommodates these without redesign. None is scheduled.
 
-Campaign analytics beyond Phase 10 · downloadable reports · account invitations · an Advertising Manager role · online payments and invoices · campaign templates · sponsored content · richer creative formats · notification channels beyond email · CRM integration · multiple ad providers behind `Ad_Provider_Interface` · self-service exports.
+Campaign analytics beyond Phase 10 · downloadable reports · an Advertising Manager role · online payments and invoices · campaign templates · sponsored content · richer creative formats · notification channels beyond email · CRM integration · multiple ad providers behind `Ad_Provider_Interface` · self-service exports.

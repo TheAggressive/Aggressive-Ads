@@ -71,15 +71,20 @@ $this->assertSame( 10, has_filter( 'map_meta_cap', array( Ownership::class, 'map
 
 **unit** — the transition table; illegal transitions; the validator; URL and date validation; placement and package resolution; the `Portal\Request` grammar; audit value objects; the container; the autoloader; CPT argument maps and slug lengths.
 
-**integration** — activation and reactivation idempotence; the audit table and every declared index; the upgrader replaying 0→current in order, and stopping at the last successful step on failure; roles carrying exactly the declared capabilities; persistence round trips; the rewrite rule's presence; **that no `wp/v2` route exists for any of the five post types**; AdSanity contract publication, exact read-back, draft checkpoint recovery, idempotent retry, stale-pointer isolation, mapping authorization, deleted-group races, empty-provider states, audit, and nonce enforcement.
+**integration** — activation and reactivation idempotence; both custom tables and every declared column/index; the upgrader replaying 0→current in order, and stopping at the last successful step on failure; roles carrying exactly the declared capabilities; persistence round trips; the rewrite rule's presence; **that no `wp/v2` route exists for any of the five post types**; AdSanity contract publication, exact read-back, draft checkpoint recovery, idempotent retry, stale-pointer isolation, mapping authorization, deleted-group races, empty-provider states, audit, and nonce enforcement.
 
-**security** — every IDOR surface in [threat-model.md](threat-model.md) with a Phase-1 endpoint; advertiser A denied on B's campaign **and a co-member of A's org allowed** (the case that proves ownership is org-scoped rather than accidentally author-scoped); deleted objects mapping to `do_not_allow`; nonce-missing and nonce-forged raising `WPDieException`; the advertiser holding none of `upload_files` / `edit_posts` / `unfiltered_html`; no `wp_ajax_laao_ads*` action registered.
+**security** — every IDOR surface in [threat-model.md](threat-model.md) with a Phase-1 endpoint; advertiser A denied on B's campaign **and a co-member of A's org allowed** (the case that proves ownership is org-scoped rather than accidentally author-scoped); deleted objects mapping to `do_not_allow`; nonce-missing and nonce-forged raising `WPDieException`; signup non-enumeration, anonymous rate limiting, unprivileged-before-ownership ordering and mail-failure rollback; private canonical organization matching, no duplicate tenant, pending users without portal capability, owner-only pending emails, cross-tenant approval denial, email-bound and single-use invitation consumption; portal-only setup and recovery URLs, core reset-key validation, minimum password policy and single-use consumption; the advertiser holding none of `upload_files` / `edit_posts` / `unfiltered_html`; no `wp_ajax_laao_ads*` action registered.
 
 **rest** — every route's permission callback, schema validation, sanitization, and the 404-not-403 rule.
 
 **upgrade** — migration ordering, idempotence, the concurrency lock, and stale-lock recovery.
 
-**JS** — the pure logic layer only. `src/interactivity/logic.ts` imports nothing from `@wordpress/interactivity` precisely so Jest can test it without mocking the runtime. No snapshot tests: a snapshot asserts that output has not changed, which is not the same as asserting it is correct, and the usual response to a failing snapshot is to update it.
+**JS (when it lands)** — the pure logic layer only.
+`src/interactivity/logic.ts` will import nothing from
+`@wordpress/interactivity`, so the test runner can exercise it without mocking
+the runtime. No snapshot tests: a snapshot asserts that output has not changed,
+which is not the same as asserting it is correct, and the usual response to a
+failing snapshot is to update it.
 
 **E2E** — real browser flows against real WordPress. The portal smoke test under Twenty Twenty-Five is the single test that proves the zero-theme-dependency claim; everything else in [architecture.md](architecture.md) about theme independence is a convention, and this is the enforcement.
 

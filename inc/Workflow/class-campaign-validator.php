@@ -168,8 +168,14 @@ final class Campaign_Validator {
 			case Campaign_Rules::ERROR_START_IN_PAST:
 				return __( 'The start date has already passed. Choose a later one.', 'laao-advertiser-portal' );
 
+			case Campaign_Rules::ERROR_START_NOT_MIDNIGHT:
+				return __( 'The start date must begin at midnight in the site timezone.', 'laao-advertiser-portal' );
+
 			case Campaign_Rules::ERROR_END_BEFORE_START:
 				return __( 'The end date must be after the start date.', 'laao-advertiser-portal' );
+
+			case Campaign_Rules::ERROR_END_NOT_DAY_END:
+				return __( 'The end date must include the full selected day in the site timezone.', 'laao-advertiser-portal' );
 
 			case Campaign_Rules::ERROR_ORG_NOT_ACTIVE:
 				return __( 'This organization cannot submit campaigns. Please get in touch.', 'laao-advertiser-portal' );
@@ -265,6 +271,14 @@ final class Campaign_Validator {
 				$this->campaigns->start_ts( $campaign_id ),
 				$this->campaigns->end_ts( $campaign_id ),
 				time()
+			)
+		);
+
+		$result->absorb(
+			Campaign_Rules::validate_day_boundaries(
+				$this->campaigns->start_ts( $campaign_id ),
+				$this->campaigns->end_ts( $campaign_id ),
+				wp_timezone()->getName()
 			)
 		);
 	}

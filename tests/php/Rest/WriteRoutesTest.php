@@ -202,6 +202,9 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 		$this->assertArrayHasKey( '/laao-advertiser-portal/v1/campaigns/(?P<id>\d+)', $routes );
 		$this->assertArrayHasKey( '/laao-advertiser-portal/v1/campaigns/(?P<id>\d+)/creatives', $routes );
 		$this->assertArrayHasKey( '/laao-advertiser-portal/v1/creatives/(?P<id>\d+)', $routes );
+		$this->assertArrayHasKey( '/laao-advertiser-portal/v1/creatives/(?P<id>\d+)/replacement', $routes );
+		$this->assertArrayHasKey( '/laao-advertiser-portal/v1/creative-replacements/(?P<id>\d+)', $routes );
+		$this->assertArrayHasKey( '/laao-advertiser-portal/v1/creative-replacements/(?P<id>\d+)/decision', $routes );
 		$this->assertArrayHasKey( '/laao-advertiser-portal/v1/campaigns/(?P<id>\d+)/transitions', $routes );
 	}
 
@@ -351,8 +354,8 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 		);
 		$this->assertGreaterThan( 0, $creative_id );
 
-		$start   = time() + ( 10 * DAY_IN_SECONDS );
-		$end     = time() + ( 20 * DAY_IN_SECONDS );
+		$start   = ( new \DateTimeImmutable( '+10 days', wp_timezone() ) )->setTime( 0, 0, 0 )->getTimestamp();
+		$end     = ( new \DateTimeImmutable( '+20 days', wp_timezone() ) )->setTime( 23, 59, 59 )->getTimestamp();
 		$request = new WP_REST_Request( 'PATCH', '/laao-advertiser-portal/v1/campaigns/' . $this->campaign_id );
 		$request->set_body_params(
 			array(

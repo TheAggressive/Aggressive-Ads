@@ -280,11 +280,16 @@ final class Review_Screen implements Service {
 	 */
 	public static function notice_for( string $result, string $code, string $detail = '' ): ?array {
 		if ( 'success' === $result ) {
+			$message = match ( $code ) {
+				'notes_saved'              => __( 'Internal notes saved.', 'laao-advertiser-portal' ),
+				'creative_update_approved' => __( 'The ad update was approved and published.', 'laao-advertiser-portal' ),
+				'creative_update_rejected' => __( 'The ad update was rejected. The current ad remains unchanged.', 'laao-advertiser-portal' ),
+				default                    => __( 'Campaign status updated.', 'laao-advertiser-portal' ),
+			};
+
 			return array(
 				'type'         => 'success',
-				'message'      => 'notes_saved' === $code
-					? __( 'Internal notes saved.', 'laao-advertiser-portal' )
-					: __( 'Campaign status updated.', 'laao-advertiser-portal' ),
+				'message'      => $message,
 				'detail'       => '',
 				'action_url'   => '',
 				'action_label' => '',
@@ -320,6 +325,10 @@ final class Review_Screen implements Service {
 			'laao_ads_promote_failed'           => __( 'A creative file could not be moved into the media library, so nothing was published.', 'laao-advertiser-portal' ),
 			'laao_ads_nothing_to_publish'       => __( 'This campaign has no creative to publish.', 'laao-advertiser-portal' ),
 			'laao_ads_organization_inactive'    => __( 'The advertising organization is suspended, so this campaign cannot go live.', 'laao-advertiser-portal' ),
+			'laao_ads_replacement_notes_required' => __( 'Add advertiser-facing feedback before rejecting this ad update.', 'laao-advertiser-portal' ),
+			'laao_ads_replacement_campaign_inactive' => __( 'This campaign is no longer scheduled or live, so the update cannot be applied.', 'laao-advertiser-portal' ),
+			'laao_ads_replacement_write_failed' => __( 'AdSanity did not retain the replacement. The current ad was restored.', 'laao-advertiser-portal' ),
+			'laao_ads_replacement_rollback_failed' => __( 'The provider rollback could not be verified. Pause the campaign and inspect its AdSanity ad immediately.', 'laao-advertiser-portal' ),
 			default                             => __( 'The campaign could not be updated. Review its requirements and try again.', 'laao-advertiser-portal' ),
 		};
 

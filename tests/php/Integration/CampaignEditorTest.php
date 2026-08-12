@@ -230,6 +230,28 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A package may explicitly delegate its date window to the advertiser.
+	 *
+	 * Zero days without the flag remains malformed, so missing configuration
+	 * cannot silently become a custom commercial term.
+	 *
+	 * @return void
+	 */
+	public function test_custom_duration_must_be_explicit(): void {
+		wp_set_current_user( $this->advertiser );
+
+		update_post_meta( $this->package_id, Package_Repository::META_DURATION_DAYS, 0 );
+		$invalid = $this->editor->package_snapshot( $this->package_id );
+
+		$this->assertWPError( $invalid );
+		$this->assertSame( 'laao_ads_package_misconfigured', $invalid->get_error_code() );
+
+		update_post_meta( $this->package_id, Package_Repository::META_CUSTOM_DURATION, 1 );
+
+		$this->assertIsArray( $this->editor->package_snapshot( $this->package_id ) );
+	}
+
+	/**
 	 * Inactive catalogue entries cannot be selected by posting their ids.
 	 *
 	 * @return void
@@ -375,6 +397,39 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 		$reversed   = $this->actions->process_save_schedule( $campaign_id, $start_date, $end_date, 1 );
 		$this->assertWPError( $reversed );
 		$this->assertSame( 'laao_ads_end_before_start', $reversed->get_error_code() );
+		$this->assertSame( 1, Plugin::instance()->container()->get( Campaign_Repository::class )->autosave_revision( $campaign_id ) );
+	}
+
+	/**
+	 * The shared editor prevents API clients from bypassing date-only form
+	 * boundaries with arbitrary timestamps.
+	 *
+	 * @return void
+	 */
+	public function test_schedule_completion_rejects_partial_day_api_timestamps(): void {
+		wp_set_current_user( $this->advertiser );
+
+		$campaign_id = $this->editor->create( 'API schedule boundaries' );
+		$this->assertIsInt( $campaign_id );
+		$this->assertSame( 1, $this->actions->process_save_package( $campaign_id, $this->package_id, 0 ) );
+		$this->add_creative( $campaign_id );
+
+		$zone   = wp_timezone();
+		$start  = ( new \DateTimeImmutable( '+10 days', $zone ) )->setTime( 0, 0, 1 );
+		$end    = ( new \DateTimeImmutable( '+20 days', $zone ) )->setTime( 23, 59, 59 );
+		$result = $this->editor->save(
+			$campaign_id,
+			array(
+				'start_ts'    => $start->getTimestamp(),
+				'end_ts'      => $end->getTimestamp(),
+				'wizard_step' => 'review',
+			),
+			1
+		);
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'laao_ads_start_date_not_midnight', $result->get_error_code() );
+		$this->assertSame( 0, (int) get_post_meta( $campaign_id, Campaign_Repository::META_START_TS, true ) );
 		$this->assertSame( 1, Plugin::instance()->container()->get( Campaign_Repository::class )->autosave_revision( $campaign_id ) );
 	}
 

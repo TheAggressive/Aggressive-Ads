@@ -28,3 +28,38 @@ add_filter(
 		return str_contains( $from, '@localhost' ) ? 'wordpress@example.test' : $from;
 	}
 );
+
+/*
+ * Browser tests exercise request handlers that exit, including signup's
+ * compensating rollback when the transport refuses a message. The E2E harness
+ * opts into a successful short circuit so it can test the successful browser
+ * round trip without requiring a real SMTP service. Integration tests leave
+ * the option absent and install their own per-test interception.
+ */
+add_filter(
+	'pre_wp_mail',
+	static function ( null|bool $short_circuit, array $mail ): null|bool {
+		if ( (bool) get_option( 'laao_ads_dev_mail_capture', false ) ) {
+			/*
+			 * Development-only outbox. Attachments are deliberately excluded:
+			 * they can contain private file paths and signup sends none. The
+			 * fixture never enters a release archive.
+			 */
+			update_option(
+				'laao_ads_dev_last_mail',
+				array(
+					'to'      => $mail['to'] ?? '',
+					'subject' => $mail['subject'] ?? '',
+					'message' => $mail['message'] ?? '',
+				),
+				false
+			);
+
+			return true;
+		}
+
+		return (bool) get_option( 'laao_ads_e2e_mail_success', false ) ? true : $short_circuit;
+	},
+	10,
+	2
+);

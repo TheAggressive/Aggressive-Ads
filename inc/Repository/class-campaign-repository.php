@@ -40,6 +40,7 @@ final class Campaign_Repository {
 	public const META_PACKAGE_ID           = '_laao_ads_package_id';
 	public const META_BUDGET_CENTS         = '_laao_ads_budget_cents';
 	public const META_CURRENCY             = '_laao_ads_currency';
+	public const META_PENDING_UPDATES      = '_laao_ads_pending_creative_updates';
 
 	/**
 	 * Creates an organization-scoped draft.
@@ -476,9 +477,10 @@ final class Campaign_Repository {
 	 *
 	 * @param array<int, string> $statuses Campaign statuses to include.
 	 * @param int                $page     1-based page number.
+	 * @param bool               $pending_updates_only Limit to campaigns with pending creative updates.
 	 * @return array{ids: array<int, int>, total: int, pages: int}
 	 */
-	public function for_review( array $statuses, int $page = 1 ): array {
+	public function for_review( array $statuses, int $page = 1, bool $pending_updates_only = false ): array {
 		$wanted = array();
 
 		foreach ( $statuses as $status ) {
@@ -495,20 +497,31 @@ final class Campaign_Repository {
 			);
 		}
 
-		$query = new \WP_Query(
-			array(
-				'post_type'              => Post_Types::CAMPAIGN,
-				'post_status'            => $wanted,
-				'posts_per_page'         => self::PAGE_SIZE,
-				'paged'                  => max( 1, $page ),
-				'fields'                 => 'ids',
-				'orderby'                => array(
-					'modified' => 'ASC',
-					'ID'       => 'ASC',
-				),
-				'update_post_term_cache' => false,
-			)
+		$args = array(
+			'post_type'              => Post_Types::CAMPAIGN,
+			'post_status'            => $wanted,
+			'posts_per_page'         => self::PAGE_SIZE,
+			'paged'                  => max( 1, $page ),
+			'fields'                 => 'ids',
+			'orderby'                => array(
+				'modified' => 'ASC',
+				'ID'       => 'ASC',
+			),
+			'update_post_term_cache' => false,
 		);
+
+		if ( $pending_updates_only ) {
+			$args['meta_query'] = array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Staff queue query against one bounded denormalized count.
+				array(
+					'key'     => self::META_PENDING_UPDATES,
+					'value'   => 0,
+					'compare' => '>',
+					'type'    => 'NUMERIC',
+				),
+			);
+		}
+
+		$query = new \WP_Query( $args );
 
 		$ids = array();
 
@@ -521,6 +534,54 @@ final class Campaign_Repository {
 			'total' => (int) $query->found_posts,
 			'pages' => (int) $query->max_num_pages,
 		);
+	}
+
+	/**
+	 * Synchronizes the denormalized pending-update count used by the queue.
+	 *
+	 * @param int $campaign_id Campaign id.
+	 * @param int $count       Canonical count from the creative repository.
+	 * @return void
+	 */
+	public function set_pending_update_count( int $campaign_id, int $count ): void {
+		update_post_meta( $campaign_id, self::META_PENDING_UPDATES, max( 0, $count ) );
+	}
+
+	/**
+	 * Pending replacement count for one campaign.
+	 *
+	 * @param int $campaign_id Campaign id.
+	 * @return int
+	 */
+	public function pending_update_count( int $campaign_id ): int {
+		return max( 0, (int) get_post_meta( $campaign_id, self::META_PENDING_UPDATES, true ) );
+	}
+
+	/**
+	 * Number of campaigns with replacement creative awaiting review.
+	 *
+	 * @return int
+	 */
+	public function campaigns_with_pending_updates(): int {
+		$query = new \WP_Query(
+			array(
+				'post_type'              => Post_Types::CAMPAIGN,
+				'post_status'            => Post_Statuses::all(),
+				'posts_per_page'         => 1,
+				'fields'                 => 'ids',
+				'update_post_term_cache' => false,
+				'meta_query'             => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Count for the dedicated staff update queue.
+					array(
+						'key'     => self::META_PENDING_UPDATES,
+						'value'   => 0,
+						'compare' => '>',
+						'type'    => 'NUMERIC',
+					),
+				),
+			)
+		);
+
+		return (int) $query->found_posts;
 	}
 
 	/**

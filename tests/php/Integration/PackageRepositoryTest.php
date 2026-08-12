@@ -37,13 +37,19 @@ final class PackageRepositoryTest extends WP_UnitTestCase {
 		update_post_meta( $alpha, Package_Repository::META_DURATION_DAYS, 30 );
 		update_post_meta( $alpha, Package_Repository::META_PRICE_CENTS, 12500 );
 		update_post_meta( $alpha, Package_Repository::META_CURRENCY, 'usd' );
+		update_post_meta( $alpha, Package_Repository::META_IS_DEFAULT, 1 );
+		update_post_meta( $zulu, Package_Repository::META_CUSTOM_DURATION, 1 );
 
 		$this->assertSame( array( $alpha, $zulu ), $repository->active_ids() );
 		$this->assertNotContains( $inactive, $repository->active_ids() );
 		$this->assertSame( array( $placement_a, $placement_b ), $repository->placement_ids( $alpha ) );
+		$this->assertSame( 'Alpha package', $repository->name( $alpha ) );
 		$this->assertSame( 30, $repository->duration_days( $alpha ) );
 		$this->assertSame( 12500, $repository->price_cents( $alpha ) );
 		$this->assertSame( 'USD', $repository->currency( $alpha ) );
+		$this->assertSame( $alpha, $repository->default_id() );
+		$this->assertFalse( $repository->has_custom_duration( $alpha ) );
+		$this->assertTrue( $repository->has_custom_duration( $zulu ) );
 	}
 
 	/**

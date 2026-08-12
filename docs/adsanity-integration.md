@@ -61,6 +61,14 @@ Nothing expires an ad. There is no scheduled task, and `post_status` stays a nor
 - the admin "Active" group column — `class-adsanity-ads-cpt.php:319-333`
 - REST — `lib/rest-api.php:36-64`
 
+Portal schedules cover whole days in the WordPress site timezone. A selected
+start date is stored as local `00:00:00`; a selected end date is stored as local
+`23:59:59`. The latter is the final representable second before the following
+midnight and is required because AdSanity treats `_end_date` as inclusive. Thus
+an ad is eligible from the first midnight and ceases to be eligible at the next
+midnight after its selected final day. These are calendar conversions, not
+86,400-second additions, so daylight-saving changes remain correct.
+
 **The consequence: an ad missing either date meta key is invisible everywhere.** Not "shows as expired" — absent. No shortcode, no widget, no block, no REST response will include it, and the post itself looks perfectly healthy in the database. An ad published without dates is the failure mode that produces "we billed for a campaign nobody ever saw."
 
 So the publisher always writes both keys as ints and re-reads their exact values before declaring success. A merely present but incorrect timestamp is still a failed publication.
@@ -78,11 +86,25 @@ Two consequences, in opposite directions:
 
 The publisher therefore re-reads every key it wrote and asserts the value back before reporting success. That read-back is not paranoia; it is the only validation in the pipeline.
 
+### Reviewed replacement of a running ad
+
+A creative update reuses the existing AdSanity post so its placement identity,
+schedule, and accumulated reporting remain continuous. The proposed image
+stays in private storage until staff approval. Approval promotes the checked
+bytes, writes thumbnail, URL, target, size, dates, and group, then performs the
+same exact read-back used at initial publication. If any value disagrees, the
+publisher immediately rewrites and verifies the previous creative. The portal
+does not mark the revision active or transfer the provider id until that public
+write succeeds.
+
 ### Ad sizes
 
 Not a taxonomy. A key→label map in the single option `adsanity-options`, sub-key `sizes`, e.g. `'728x90' => '728x90 - Leaderboard'`. Defaults at `adsanity.php:57-94` (32 entries), seeded on activation.
 
-Always read through the `adsanity_ad_sizes` filter, never the raw option — that filter is how `adsanity-custom-ad-sizes` (installed here) injects and removes entries. Reading the option directly would miss custom sizes and reject valid ones.
+Load the saved option as the base map and then pass that map through the
+`adsanity_ad_sizes` filter. Calling the filter with an empty array discards the
+four configured base sizes; reading the option without applying the filter
+misses changes made by `adsanity-custom-ad-sizes`. Both halves are required.
 
 `_size` on the ad post is **not validated at save**. Any string is accepted and stored. An unrecognized value renders with an empty CSS class and shows "- invalid size -" in the admin list — cosmetic, not fatal, but it means AdSanity will not catch our typos either.
 
@@ -124,7 +146,7 @@ Recorded so a future reader does not rediscover them and assume they matter.
 ## Interactions with the rest of this site
 
 - The LAAO theme **dequeues** `adsanity-default-css` and `adsanity-cas` (`inc/Assets/class-styles.php:41-44`) and supplies its own ad styling keyed on `.ad-{size}` / `.adsanity-{size}` classes.
-- The theme patches missing ad-image alt text at render time in `inc/Accessibility/class-ad-link-labels.php`, injecting `alt="Advertisement: {title}"` — written because three ads on the front page had no alt text. **We close that gap at the source**: `_laao_ads_alt_text` is collected from the advertiser and written to `_wp_attachment_image_alt` when the creative is promoted, so the theme's shim has nothing to fix. See [accessibility.md](accessibility.md).
+- The theme patches missing ad-image alt text at render time in `inc/Accessibility/class-ad-link-labels.php`, injecting `alt="Advertisement: {title}"` — written because three ads on the front page had no alt text. **We close that gap at the source**: `_laao_ads_alt_text` is generated from the validated destination host (or accepted from an API client) and written to `_wp_attachment_image_alt` when the creative is promoted, so the theme's shim has nothing to fix. See [accessibility.md](accessibility.md).
 - `adsanity-custom-ad-sizes` is active, so the size map is not the stock 32 entries. Read it through the filter.
 
 ## Publishing an ad — the required sequence

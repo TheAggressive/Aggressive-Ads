@@ -87,4 +87,49 @@ if ( taxonomy_exists( Adsanity::TAXONOMY ) ) {
 	}
 }
 
+$signup_user = get_user_by( 'email', 'e2e-signup@example.test' );
+
+if ( $signup_user instanceof WP_User ) {
+	$signup_orgs = get_posts(
+		array(
+			'post_type'      => Post_Types::ORGANIZATION,
+			'post_status'    => 'any',
+			'posts_per_page' => 10,
+			'fields'         => 'ids',
+			'meta_key'       => LAAO_Advertiser_Portal\Repository\Org_Repository::META_OWNER_USER,
+			'meta_value'     => $signup_user->ID,
+		)
+	);
+
+	foreach ( $signup_orgs as $signup_org ) {
+		wp_delete_post( (int) $signup_org, true );
+	}
+
+	if ( ! function_exists( 'wp_delete_user' ) ) {
+		require_once ABSPATH . 'wp-admin/includes/user.php';
+	}
+
+	wp_delete_user( $signup_user->ID );
+}
+
+$laao_ads_signup_requester = get_user_by( 'email', 'e2e-org-requester@example.test' );
+
+if ( $laao_ads_signup_requester instanceof WP_User ) {
+	if ( ! function_exists( 'wp_delete_user' ) ) {
+		require_once ABSPATH . 'wp-admin/includes/user.php';
+	}
+
+	wp_delete_user( $laao_ads_signup_requester->ID );
+}
+
+$laao_ads_existing_invitee = get_user_by( 'email', 'e2e-existing-invitee@example.test' );
+
+if ( $laao_ads_existing_invitee instanceof WP_User ) {
+	if ( ! function_exists( 'wp_delete_user' ) ) {
+		require_once ABSPATH . 'wp-admin/includes/user.php';
+	}
+
+	wp_delete_user( $laao_ads_existing_invitee->ID );
+}
+
 WP_CLI::log( sprintf( 'E2E reset removed %d campaign(s).', $removed ) );

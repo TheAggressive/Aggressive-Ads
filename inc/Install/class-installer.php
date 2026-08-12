@@ -11,6 +11,8 @@ namespace LAAO_Advertiser_Portal\Install;
 
 use LAAO_Advertiser_Portal\Audit\Audit_Event;
 use LAAO_Advertiser_Portal\Repository\Audit_Repository;
+use LAAO_Advertiser_Portal\Repository\Org_Access_Repository;
+use LAAO_Advertiser_Portal\Repository\Org_Repository;
 use LAAO_Advertiser_Portal\Security\Roles;
 
 /**
@@ -72,6 +74,7 @@ final class Installer {
 	 */
 	public function install(): void {
 		$this->audit_repository->install_table();
+		$this->install_org_access();
 
 		$this->install_roles();
 
@@ -90,6 +93,21 @@ final class Installer {
 				)
 			)
 		);
+	}
+
+	/**
+	 * Install the organization identity/access registry and backfill identities.
+	 *
+	 * This is public so the versioned migration can run the exact same
+	 * idempotent operation as a fresh installation.
+	 *
+	 * @return void
+	 */
+	public function install_org_access(): void {
+		$access = new Org_Access_Repository();
+		$access->install_table();
+
+		( new Org_Repository( $access ) )->backfill_identities();
 	}
 
 	/**

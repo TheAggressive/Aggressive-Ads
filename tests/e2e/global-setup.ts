@@ -4,6 +4,8 @@ export default function globalSetup(): void {
 	wp( 'plugin', 'activate', 'laao-advertiser-portal' );
 	wp( 'eval', 'require "bin/dev/seed.php";' );
 	wp( 'eval', 'require "tests/e2e/reset.php";' );
+	wp( 'option', 'update', 'laao_ads_dev_mail_capture', '1' );
+	wp( 'option', 'delete', 'laao_ads_dev_last_mail' );
 	wp( 'eval', 'require "tests/e2e/seed-mappings.php";' );
 	wp( 'user', 'update', 'advertiser', '--user_pass=advertiser' );
 	wp( 'user', 'update', 'admin', '--user_pass=admin' );

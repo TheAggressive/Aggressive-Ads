@@ -6,15 +6,16 @@
 
 ```
 ci:doctor   → node bin/ci/doctor.mjs
-ci:frontend → lint:js && lint:css && format:check && typecheck && lint:files && test:js
 ci:php      → lint:php && analyse:php && test:php:unit
-ci:php:wp   → test:php:integration           (needs a MySQL service)
-ci:i18n     → ci:doctor && bash bin/ci/i18n.sh
-ci:build    → build
+ci:php:wp   → test:php:integration           (needs wp-env)
 ci:e2e      → test:e2e
 ci:package  → release:package && release:verify
-ci:verify   → bash bin/ci/verify.sh          (every lane, serially)
+ci:verify   → bash bin/ci/verify.sh          (every current lane, serially)
 ```
+
+The frontend, i18n, and compiled-asset lanes land with the first source files
+that need them. Until then they are future gates, not commands the repository
+pretends to run.
 
 Adding a lane means adding it to **both** the workflow and `bin/ci/verify.sh`. Adding it to only one is how the two drift.
 
@@ -31,9 +32,9 @@ lane fail rather than quietly reducing coverage.
 |---|---|
 | PHPStan | **Level 8, no baseline, no `ignoreErrors`** |
 | PHPCS | WordPress + **the full `WordPress-VIP-Go` standard** + PHPCompatibilityWP |
-| ESLint | Flat config, `--max-warnings 0` |
-| TypeScript | `strict`, `noUncheckedIndexedAccess`, `checkJs` |
-| Stylelint | `@wordpress/stylelint-config` |
+| ESLint *(when JS lands)* | Flat config, `--max-warnings 0` |
+| TypeScript *(when JS lands)* | `strict`, `noUncheckedIndexedAccess`, `checkJs` |
+| Stylelint *(when compiled styles land)* | `@wordpress/stylelint-config` |
 | File length | Warn > 800, fail > 1000, no allowlist |
 
 **No baseline.** A baseline is a list of known problems you have agreed to stop looking at, and it only grows. Type issues get fixed as they are introduced, while the context is still in someone's head.
@@ -62,12 +63,16 @@ Filesystem sniffs are excluded for `tests/php/*` only. A test that proves a host
 
 ## Build
 
-Two webpack configs wrapping `@wordpress/scripts`:
+The current plugin is server-rendered PHP and ships hand-authored CSS, so it has
+no JavaScript source and no asset compilation step yet. Packaging is still a
+build: it creates and verifies the exact installable ZIP and checksum.
 
-- `webpack.config.mjs` — blocks → `dist/blocks`
-- `webpack.assets.config.mjs` — `src/styles/*.css` → `dist/styles`, `src/interactivity/*.ts` → `dist/interactivity`
-
-Each bundle emits an `.asset.php` manifest carrying real dependencies and a content hash. Enqueue code reads the manifest for version and dependency arrays, with a safe fallback if it is missing — a missing manifest means an incomplete build, and a portal that renders unstyled is easier to diagnose than one that silently drops a feature.
+Before the first JavaScript enhancement lands, add one small
+`@wordpress/scripts`/TypeScript pipeline for `src/interactivity/*.ts` →
+`dist/interactivity`. It must emit `.asset.php` dependency manifests, run strict
+type checking and lint/tests in both local QA and CI, and place only compiled
+`dist/` output in the release ZIP. Do not add a block build until the plugin has
+an actual block.
 
 ## Packaging
 
@@ -109,8 +114,23 @@ If a runtime dependency ever becomes genuinely unavoidable, [ADR-0011](adr/0011-
 
 ## Releases
 
-Conventional commits (`feat:`, `fix:`, `perf:`, `refactor:`, `test:`, `docs:`, `ci:`, `chore:`), enforced by commitlint on `commit-msg`.
+Releases are explicit and tag-driven. Update the version in the plugin header,
+`LAAO_ADS_VERSION`, and `package.json`, merge a fully green commit, then push a
+strict `vMAJOR.MINOR.PATCH` tag for that commit.
 
-semantic-release on `master` runs commit-analyzer → release-notes-generator → changelog → `bin/release/prepare.sh ${version}` → git → github, attaching the ZIP and its checksum. `prepare.sh` stamps the version into the plugin header and `package.json`, then packages and verifies.
+`.github/workflows/release.yml` refuses a tag whose version differs from the
+plugin header. It packages and verifies the ZIP, creates a build-provenance
+attestation, and uploads these exact assets to a private draft:
 
-Husky: `pre-commit` formats and autofixes; `pre-push` runs `pnpm qa` (frontend + PHP, minus the lanes needing wp-env). The real gate is CI; the hooks exist to keep obvious breakage out of a push.
+- `laao-advertiser-portal-{version}.zip`
+- `laao-advertiser-portal-{version}.zip.sha256`
+
+`bin/release/publish.sh` downloads both assets again, compares them byte for
+byte with the accepted local build, verifies the SHA-256 sidecar and provenance,
+and only then publishes the draft. A failed release stays invisible to the
+updater. Published release assets are treated as immutable.
+
+The plugin updater accepts only stable strict-semver releases from the exact
+`TheAggressive/LAAO-Advertiser-Portal` repository and exact asset names. It does
+not fall back to GitHub source archives, and it verifies the sidecar before
+WordPress extracts an update.

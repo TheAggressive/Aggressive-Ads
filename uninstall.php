@@ -26,6 +26,7 @@ $laao_ads_installer_options = LAAO_Advertiser_Portal\Install\Installer::options(
 ( new LAAO_Advertiser_Portal\Security\Roles() )->remove();
 
 ( new LAAO_Advertiser_Portal\Repository\Audit_Repository() )->drop_table();
+( new LAAO_Advertiser_Portal\Repository\Org_Access_Repository() )->drop_table();
 
 // The reconciler's hourly event, which otherwise stays in the cron array
 // pointing at a hook nothing answers.

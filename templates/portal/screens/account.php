@@ -96,11 +96,6 @@ $laao_ads_error   = Account_Actions::request_error_code();
 
 	<dl class="laao-ads-facts">
 		<div class="laao-ads-fact">
-			<dt><?php esc_html_e( 'Username', 'laao-advertiser-portal' ); ?></dt>
-			<dd><?php echo esc_html( (string) $laao_ads_account['login'] ); ?></dd>
-		</div>
-
-		<div class="laao-ads-fact">
 			<dt><?php esc_html_e( 'Email', 'laao-advertiser-portal' ); ?></dt>
 			<dd><?php echo esc_html( (string) $laao_ads_account['email'] ); ?></dd>
 		</div>
@@ -119,7 +114,7 @@ $laao_ads_error   = Account_Actions::request_error_code();
 
 	<div class="laao-ads-panel__foot">
 		<p>
-			<?php esc_html_e( 'Your username and email address cannot be changed here. Get in touch and we will update them for you.', 'laao-advertiser-portal' ); ?>
+			<?php esc_html_e( 'Your email address cannot be changed here. Get in touch and we will update it for you.', 'laao-advertiser-portal' ); ?>
 		</p>
 
 		<form class="laao-ads-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">

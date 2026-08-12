@@ -43,6 +43,31 @@ final class RequestTest extends TestCase {
 	}
 
 	/**
+	 * Public account screens are explicit and never object-scoped.
+	 *
+	 * @return void
+	 */
+	public function test_public_routes_are_not_object_scoped(): void {
+		$this->assertSame(
+			array(
+				Request::ROUTE_LOGIN,
+				Request::ROUTE_SIGNUP,
+				Request::ROUTE_FORGOT_PASSWORD,
+				Request::ROUTE_SET_PASSWORD,
+			),
+			Request::public_routes()
+		);
+
+		foreach ( Request::public_routes() as $route ) {
+			$request = Request::from( $route );
+
+			$this->assertNotNull( $request );
+			$this->assertTrue( $request->is_public() );
+			$this->assertNull( Request::from( $route, '42' ) );
+		}
+	}
+
+	/**
 	 * An object segment becomes an id.
 	 *
 	 * @return void
@@ -134,7 +159,9 @@ final class RequestTest extends TestCase {
 	 */
 	public function test_a_template_name_never_contains_a_separator(): void {
 		foreach ( Request::routes() as $route ) {
-			foreach ( array( '', '5' ) as $object ) {
+			$objects = in_array( $route, Request::public_routes(), true ) ? array( '' ) : array( '', '5' );
+
+			foreach ( $objects as $object ) {
 				$request = Request::from( $route, $object );
 
 				$this->assertNotNull( $request );

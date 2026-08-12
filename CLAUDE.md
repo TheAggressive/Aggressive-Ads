@@ -31,8 +31,9 @@ place to say something different from what was decided.
 ## Status — read this before assuming anything exists
 
 The runtime and security foundation is built, while i18n/release automation and
-implementation across later roadmap phases remain in progress. Phase 4's
-advertiser creation UI is the largest open product area. What is built:
+implementation across later roadmap phases remain in progress. Organization
+management, private-file retention and reporting are the largest open product
+areas. What is built:
 
 - root plugin file, autoloader, service container, composition root
 - five private post types, eleven campaign statuses
@@ -73,13 +74,16 @@ advertiser creation UI is the largest open product area. What is built:
 - the portal's own sign-in form (`Portal\Login_Actions`), authenticated by
   core's `wp_signon()`. wp-login.php is untouched and is still how staff reach
   wp-admin; only the portal's gate was redirected away from it
+- public advertiser signup, gated by WordPress's registration policy, with
+  anonymous-client rate limiting, non-enumerating responses, compensating
+  user/organization writes, and a core one-time password setup key used only
+  through the portal-owned setup and recovery screens
 - every portal route now has its own screen: dashboard, campaigns, organization,
-  account, help and login. `Portal\Account_Actions` is the only way a portal user can
+  account, help, login, signup, password setup and password recovery. `Portal\Account_Actions` is the only way a portal user can
   write anything about their own user record, because `Admin_Guard` closes
   wp-admin to them
 
-What does **not** exist yet, despite being described in `docs/`: **advertiser
-sign-up** (accounts and organizations are still created by hand), organization
+What does **not** exist yet, despite being described in `docs/`: organization
 editing and invitations, self-service email change, the private-file retention
 purge, analytics, i18n tooling, semantic-release, and self-hosted Archivo.
 `docs/` describes the design; `docs/roadmap.md` says which phase builds it. If a

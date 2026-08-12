@@ -1,6 +1,6 @@
 # Data schema
 
-Post types and their meta live in [domain-model.md](domain-model.md). This document covers the custom table, the options, and how schema changes ship.
+Post types and their meta live in [domain-model.md](domain-model.md). This document covers the custom tables, the options, and how schema changes ship.
 
 ## Audit table
 
@@ -49,7 +49,47 @@ CREATE TABLE {$wpdb->prefix}laao_ads_audit_log (
 
 ### Writes
 
-All writes go through one method on `Audit_Repository`, using `$wpdb->insert()` with an explicit format array. No string interpolation, ever. The `WordPress.DB.DirectDatabaseQuery` phpcs suppression appears on that one method with a reasoned comment and nowhere else in the codebase; a second occurrence is a review failure.
+All writes go through `Audit_Repository`, using `$wpdb->insert()` with an
+explicit format array. Direct database access for this table is confined to
+that repository.
+
+## Organization identity and access table
+
+`{$wpdb->prefix}laao_ads_org_access`
+
+This table stores three deliberately small row kinds:
+
+| Kind | Purpose | Active state |
+|---|---|---|
+| `identity` | Unique canonical organization-name reservation | `active` |
+| `invite` | Owner/staff-issued, email-bound bearer invitation | `pending` → `processing` → `accepted|revoked` |
+| `request` | Possible duplicate-name signup awaiting approval | `pending` → `processing` → `accepted|denied` |
+
+`token_hash` and `active_key` are 64-character salted HMAC-SHA-256 digests.
+Raw bearer tokens are returned only to the mail workflow and never persisted.
+`token_hash` is unique, while `active_key` atomically prevents duplicate
+canonical identities and duplicate pending rows for the same organization,
+kind and normalized email. A terminal transition replaces `active_key` with a
+random digest, permitting a later legitimate invitation without deleting the
+history.
+
+Invitations expire after three days; duplicate-name requests expire after
+seven. All timestamps are UTC Unix integers. Reads are bounded to 100 pending
+rows per organization and use `(org_id,status,id)`, `(email,status,id)`,
+`(request_user_id,status,id)`, and `(status,expires_at_ts)` indexes. Conditional
+`pending → processing` updates claim a row before membership side effects so
+two requests cannot consume it. Failure restores the claim and compensates only
+the membership or role introduced by that attempt.
+
+An expired duplicate-name request may be submitted again only by the same
+subscriber email for the same canonical organization. This narrow retry keeps
+expiry from permanently stranding the WordPress address while preserving the
+ordinary rule that existing-email signup sends no mail.
+
+All access-table SQL lives in `Org_Access_Repository`; every query uses
+`$wpdb->prepare()` or a format array, except fixed prefix-derived schema
+statements. See
+[ADR-0019](adr/0019-private-organization-matching-and-approved-membership.md).
 
 ## Options
 
@@ -95,10 +135,17 @@ Every migration step writes an audit row with `actor_user_id = 0`.
 - Field types must match `SHOW CREATE TABLE` output exactly, including MySQL's own normalizations — `bigint(20) unsigned` versus `BIGINT UNSIGNED` is a difference `dbDelta` will act on repeatedly.
 - **`dbDelta` adds but never drops.** It will not remove a column, an index, or a table. Dropping anything requires an explicit `ALTER` in a numbered migration step. This is the one people forget, and it surfaces as "the old column is still there in production six months later."
 
-`Schema::table_ddl()` returns the DDL as a string rather than executing it, so `tests/php/Integration/InstallerTest.php` can assert the shape without running a migration, and can compare the declared indexes against `SHOW INDEX` after install.
+Schema DDL methods return strings rather than executing them, so
+`tests/php/Integration/InstallerTest.php` can compare every declared column and
+index against live `SHOW COLUMNS` / `SHOW INDEX` results after install.
 
 ## Uninstall
 
-`uninstall.php` runs only on a real uninstall, never on deactivation. It drops the audit table, removes both roles and all granted capabilities, and deletes every `laao_ads_*` option.
+`uninstall.php` runs only on a real uninstall, never on deactivation. It drops
+the audit and organization-access tables, removes both roles and all granted
+capabilities, and deletes every `laao_ads_*` option. Dropping access rows removes
+outstanding bearer invitations and pending personal data. If business content
+is preserved and the plugin is later reinstalled, canonical identities are
+rebuilt idempotently from the retained organizations.
 
 **It preserves campaign, creative, and organization content** unless `laao_ads_delete_data_on_uninstall` is explicitly set. Deleting a plugin should not silently destroy the record of what a business ran and billed for. Someone who genuinely wants that has to ask for it.

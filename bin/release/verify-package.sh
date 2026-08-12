@@ -42,11 +42,27 @@ PACKAGE_REQUIRED=(
 	uninstall.php
 	inc/class-autoloader.php
 	inc/class-plugin.php
+	inc/Update/class-update-http-client.php
+	inc/Update/class-release-repository.php
+	inc/Update/class-package-verifier.php
+	inc/Update/class-plugin-updates.php
 	inc/Admin/class-review-data.php
 	inc/Admin/class-review-screen.php
 	inc/Notification/class-notification-service.php
+	inc/Notification/class-password-notification.php
+	inc/Notification/class-organization-notification.php
+	inc/Portal/class-organization-actions.php
+	inc/Portal/class-password-actions.php
+	inc/Repository/class-org-access-repository.php
+	inc/Workflow/class-organization-membership.php
+	inc/Workflow/class-password-reset.php
+	templates/portal/forgot-password.php
+	templates/portal/set-password.php
+	templates/portal/screens/forgot-password.php
+	templates/portal/screens/set-password.php
 	inc/Portal/class-campaign-actions.php
 	inc/Portal/class-creative-actions.php
+	inc/Portal/class-signup-actions.php
 	inc/REST/class-packages-controller.php
 	inc/Repository/class-package-repository.php
 	inc/Repository/class-user-repository.php
@@ -54,6 +70,7 @@ PACKAGE_REQUIRED=(
 	inc/Workflow/class-creative-manager.php
 	inc/Workflow/class-review-actions.php
 	inc/Workflow/class-review-readiness.php
+	inc/Workflow/class-advertiser-registration.php
 	assets/portal.css
 	assets/icon.svg
 	assets/admin.css
@@ -63,6 +80,8 @@ PACKAGE_REQUIRED=(
 	templates/portal/base-bare.php
 	templates/portal/login.php
 	templates/portal/screens/login.php
+	templates/portal/signup.php
+	templates/portal/screens/signup.php
 	templates/portal/dashboard.php
 	templates/portal/campaigns.php
 	templates/portal/campaigns-detail.php

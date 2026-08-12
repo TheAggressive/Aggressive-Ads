@@ -264,8 +264,12 @@ final class PortalViewDataTest extends WP_UnitTestCase {
 		update_post_meta( $placement_id, Placement_Repository::META_IS_ACTIVE, 1 );
 		update_post_meta( $placement_id, Placement_Repository::META_SIZE, '728x90' );
 		add_post_meta( $mine, Campaign_Repository::META_PLACEMENT_ID, $placement_id );
-		update_post_meta( $mine, Campaign_Repository::META_START_TS, time() + ( 10 * DAY_IN_SECONDS ) );
-		update_post_meta( $mine, Campaign_Repository::META_END_TS, time() + ( 20 * DAY_IN_SECONDS ) );
+
+		$start = ( new \DateTimeImmutable( '+10 days', wp_timezone() ) )->setTime( 0, 0, 0 );
+		$end   = ( new \DateTimeImmutable( '+20 days', wp_timezone() ) )->setTime( 23, 59, 59 );
+
+		update_post_meta( $mine, Campaign_Repository::META_START_TS, $start->getTimestamp() );
+		update_post_meta( $mine, Campaign_Repository::META_END_TS, $end->getTimestamp() );
 
 		$this->attach_package( $mine, array( $placement_id ) );
 
@@ -321,7 +325,9 @@ final class PortalViewDataTest extends WP_UnitTestCase {
 		);
 
 		add_post_meta( $package_id, Package_Repository::META_PLACEMENT_ID, $placement_id );
-		update_post_meta( $package_id, Package_Repository::META_DURATION_DAYS, 30 );
+		update_post_meta( $package_id, Package_Repository::META_DURATION_DAYS, 0 );
+		update_post_meta( $package_id, Package_Repository::META_CUSTOM_DURATION, 1 );
+		update_post_meta( $package_id, Package_Repository::META_IS_DEFAULT, 1 );
 		update_post_meta( $package_id, Package_Repository::META_PRICE_CENTS, 45000 );
 		update_post_meta( $package_id, Package_Repository::META_CURRENCY, 'USD' );
 		update_post_meta( $package_id, Package_Repository::META_IS_ACTIVE, 1 );
@@ -335,7 +341,8 @@ final class PortalViewDataTest extends WP_UnitTestCase {
 		$this->assertCount( 1, $campaign['package_options'] );
 		$this->assertSame( $package_id, $campaign['package_options'][0]['id'] );
 		$this->assertSame( 'USD 450.00', $campaign['package_options'][0]['price'] );
-		$this->assertSame( '30 days', $campaign['package_options'][0]['duration'] );
+		$this->assertSame( 'Custom schedule', $campaign['package_options'][0]['duration'] );
+		$this->assertTrue( $campaign['package_options'][0]['is_default'] );
 		$this->assertSame( array( 'Homepage Leaderboard (728x90 px)' ), $campaign['package_options'][0]['placements'] );
 	}
 

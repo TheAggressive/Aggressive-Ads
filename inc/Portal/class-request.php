@@ -31,9 +31,12 @@ final class Request {
 	public const ROUTE_ACCOUNT      = 'account';
 	public const ROUTE_HELP         = 'help';
 	/**
-	 * The one route that does not require a session — see Router::gate().
+	 * Routes that do not require a session — see Router::gate().
 	 */
-	public const ROUTE_LOGIN = 'login';
+	public const ROUTE_LOGIN           = 'login';
+	public const ROUTE_SIGNUP          = 'signup';
+	public const ROUTE_FORGOT_PASSWORD = 'forgot-password';
+	public const ROUTE_SET_PASSWORD    = 'set-password';
 
 	/**
 	 * Long enough for any route we will name, short enough that a segment
@@ -69,6 +72,9 @@ final class Request {
 			self::ROUTE_ACCOUNT,
 			self::ROUTE_HELP,
 			self::ROUTE_LOGIN,
+			self::ROUTE_SIGNUP,
+			self::ROUTE_FORGOT_PASSWORD,
+			self::ROUTE_SET_PASSWORD,
 		);
 	}
 
@@ -108,6 +114,13 @@ final class Request {
 			return new self( $route, 0 );
 		}
 
+		// Authentication screens are never object-scoped. Treating /signup/7/
+		// as the signup screen would create a second canonical URL for a public
+		// form and let arbitrary ids leak into access logs beside it.
+		if ( in_array( $route, self::public_routes(), true ) ) {
+			return null;
+		}
+
 		if ( ! self::is_safe_segment( $object_segment ) ) {
 			return null;
 		}
@@ -136,6 +149,29 @@ final class Request {
 	 */
 	public function has_object(): bool {
 		return $this->object_id > 0;
+	}
+
+	/**
+	 * Routes that may render without an authenticated session.
+	 *
+	 * @return array<int, string>
+	 */
+	public static function public_routes(): array {
+		return array(
+			self::ROUTE_LOGIN,
+			self::ROUTE_SIGNUP,
+			self::ROUTE_FORGOT_PASSWORD,
+			self::ROUTE_SET_PASSWORD,
+		);
+	}
+
+	/**
+	 * Whether the request is an anonymous account surface.
+	 *
+	 * @return bool
+	 */
+	public function is_public(): bool {
+		return in_array( $this->route, self::public_routes(), true );
 	}
 
 	/**

@@ -1,8 +1,10 @@
 # Interactivity API conventions
 
-The portal is server-rendered PHP with WordPress Interactivity API stores for interaction. No SPA, no router, no client-side state tree. See [ADR-0004](adr/0004-server-rendered-plus-interactivity-api.md).
+The portal is currently server-rendered PHP. Its planned JavaScript enhancements
+use WordPress Interactivity API stores: no SPA, no router, and no client-side
+state tree. See [ADR-0004](adr/0004-server-rendered-plus-interactivity-api.md).
 
-## Stores
+## Planned stores
 
 | Namespace | Owns |
 |---|---|

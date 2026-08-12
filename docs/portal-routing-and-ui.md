@@ -10,7 +10,9 @@ Base segment comes from settings, default `advertiser`.
 /advertiser/{route}/{object}/       → a screen scoped to one object
 ```
 
-Planned routes: `campaigns`, `organization`, `account`, `help`. So `/advertiser/campaigns/123/` is the campaign detail screen.
+Routes: `campaigns`, `organization`, `account`, `help`, plus the public `login`
+and `signup` account-entry screens. So `/advertiser/campaigns/123/` is the
+campaign detail screen. Public routes never accept an object segment.
 
 Three rewrite rules, registered `top`:
 
@@ -26,7 +28,8 @@ Three rewrite rules, registered `top`:
 
 ```
 parse_query      → if laao_ads_portal: is_home = false, is_404 = false, pre_handle_404 = true
-template_redirect → Gate: auth_redirect() if logged out
+template_redirect → Gate: redirect to the portal login if logged out
+                          allow account-entry routes without a session
                           403 template if no laao_ads_access_portal
                           wp_robots noindex
 template_include  → templates/portal/base.php
@@ -34,13 +37,16 @@ template_include  → templates/portal/base.php
 
 Forcing `is_404 = false` at `parse_query` matters: without it core resolves the request as a 404 before `template_include` ever runs, and the portal renders inside the theme's 404 template with a 404 status code. Search engines and uptime monitors both notice.
 
-`auth_redirect()` rather than a hand-rolled login redirect, because it handles the `redirect_to` round trip, SSL, and the interim-login case correctly and we would get at least one of those wrong.
+The portal login handler delegates authentication to `wp_signon()` so core and
+authentication plugins retain ownership of password verification, cookies,
+sessions, SSO and two-factor filters. The portal owns only the presentation,
+non-enumerating errors, rate limit and same-host destination validation.
 
 ## Why a rewrite rule, not a page with a block
 
 The honest trade-off, since this decision is load-bearing.
 
-**What it costs.** There is no row in the Pages list, so "where does `/advertiser/` come from?" is a harder support question. A rewrite flush that never ran produces a 404 that looks exactly like a broken deploy. Both are mitigated: a Site Health check asserts the rules are present in `get_option( 'rewrite_rules' )`, and a Tools screen shows the resolved URL with a manual re-flush.
+**What it costs.** There is no row in the Pages list, so "where does `/advertiser/` come from?" is a harder support question. A rewrite flush that never ran produces a 404 that looks exactly like a broken deploy. The version-gated automatic flush is built; the Site Health assertion and Tools re-flush control remain Phase 11 work.
 
 **What it buys.** The portal is a multi-screen area, not a page. A page-plus-block design expresses `/advertiser/campaigns/123/` as either a query string or one WordPress page per screen — and every one of those pages is something an editor can rename, trash, reorder, or paste a pattern into. A route the plugin owns cannot be edited into a broken state, and it removes the entire class of "the portal disappeared because someone trashed a page" incident. It also means the portal exists the moment the plugin activates, with no setup step and nothing to document.
 
@@ -85,11 +91,15 @@ The detail screen is also the resumable wizard surface. All six steps currently
 ship. Details collects campaign name, optional placement interests, and notes
 for reviewers. Package presents only active,
 completely configured catalogue entries as native radio controls, with price,
-duration, and included placement sizes. Creative presents one upload card per
+duration, and included placement sizes. A package explicitly marked for a
+custom schedule displays that label instead of inventing a duration, and the
+active package marked as default is preselected only while the campaign has no
+saved package. Creative presents one upload card per
 package placement, including exact dimensions, a native file input, destination
-URL, required alternative text, authenticated preview, and nonce-protected
-removal. Destination and schedule confirms every per-creative destination and
-description, then collects a required future local start date and optional
+URL, authenticated preview, and nonce-protected removal. Accessible image text
+is generated from the validated destination host unless an API client supplies
+its own. Destination and schedule confirms every per-creative destination, then
+collects a required future local start date and optional
 end date. Review presents the stored campaign, commercial package snapshot,
 schedule, and authenticated creative previews. It aggregates every current
 submission problem and links each one back to the exact editing step and field.
@@ -104,14 +114,22 @@ the optimistic revision token through `Campaign_Editor`. Creative writes have
 campaign/placement- or creative-bound nonces and share `Creative_Manager` with
 REST. Creative files remain private, previews use the authorized stream with a
 short-lived REST nonce, and invalid dimensions report the uploaded and required
-sizes. Later drag/drop, live progress, and atomic replace work enhances this
-flow; it does not replace it.
+sizes. Scheduled and live campaign detail screens expose **Your ads** as
+selectable previews. Selecting an ad opens its image and destination controls.
+Each current placement accepts one private replacement, keeps the current ad
+running while review is pending, shows the proposed preview and destination,
+and permits withdrawal. Rejected revisions remain visible with staff feedback;
+approved revisions become the new current creative. Later drag/drop and live
+progress enhance this flow; they do not replace it.
 
 Step 4 has its own campaign-bound nonce and optimistic revision. Completion is
 not cosmetic: `Campaign_Editor` refuses to advance the resume point to `review`
 unless every selected placement has exactly one creative and the date window
 already satisfies submission-grade rules. Existing REST clients continue to
-write Unix timestamps; the HTML form performs the timezone conversion.
+write Unix timestamps; the HTML form performs the timezone conversion. Both
+paths enforce complete calendar days in the WordPress site timezone: start at
+`00:00:00`, inclusive end at `23:59:59`, or an open end. Because AdSanity's end
+comparison is inclusive, the ad stops being eligible at the next midnight.
 
 Step 5 is intentionally read-only. `Review_Readiness` adapts the canonical
 submission validator into advertiser-safe `code`, `message`, `step`, and
@@ -132,6 +150,67 @@ writes the audit event, and dispatches notifications only after status commits.
 A replay reaches an illegal edge, is audited as denied, and cannot create a
 second successful submission. Post/redirect/get then renders the locked
 campaign detail with an announced success notice.
+
+## Advertiser signup
+
+`/advertiser/signup/` is public only when WordPress's **Anyone can register**
+setting is enabled. `laao_ads_signup_enabled` may replace that answer for a
+managed identity policy; the default fails closed so installing the plugin does
+not silently open account creation.
+
+The normal form accepts a name, organization and work email, never a password.
+Organization names are canonicalized to uppercase before persistence, so
+capitalization cannot create inconsistent display variants. A private
+server-side lookup compares an accent- and punctuation-normalized canonical key
+and then a conservative fuzzy score. There is intentionally no public
+autocomplete endpoint: exposing suggestions would expose the customer
+directory. A unique match does not automatically attach the applicant. It
+creates a subscriber-only pending request, emails the existing owner, and
+requires an explicit approve or deny decision on the organization screen.
+Until approval, a successful sign-in returns to the portal login screen with a
+pending notice and creates no portal session.
+
+Organization owners can instead issue a single-use invitation from the
+organization screen. It is bound to the normalized recipient email, expires
+after three days, is stored only as a salted hash, and leads back to the signup
+screen. An invitation recipient does not retype the organization name. The
+recipient either creates a subscriber account and receives the portal password
+setup link, or attaches an existing WordPress account without replacing its
+other roles. Only the owner or a user carrying `laao_ads_manage_orgs` can create,
+approve, deny, or revoke access. The acting portal tenant is derived from the
+authenticated user and is never accepted from a hidden field.
+
+Invitation pages remain usable when a recipient already has a WordPress
+session. Like password links, they are non-cacheable and send
+`Referrer-Policy: no-referrer` so the query-string bearer token is not disclosed
+to theme assets, analytics, or later navigation.
+
+The nonce-protected `admin-post` signup handler is rate-limited by a hashed connecting-IP
+subject and carries a honeypot that produces no data or mail. Existing emails
+receive the same success response as new ones and no repeat email, preventing
+both account enumeration and use of the endpoint as a mail-bombing primitive.
+
+For a genuinely new organization, creation is deliberately ordered. The WordPress user starts as a subscriber,
+the private organization and ownership meta are written and read back, then the
+advertiser role is granted. A failure after either durable write compensates by
+removing both records. Last, the plugin sends a single-recipient activation
+message containing a password-reset key generated and validated by WordPress
+core. A mail-transport refusal also rolls the writes back, so there is no usable
+portal account without a delivered setup path.
+
+The message links to `/advertiser/set-password/`, never `wp-login.php`. That
+portal screen re-validates the expiring, single-use core key on both GET and
+POST, enforces the local password floor, runs core's password-policy extension
+hook, consumes the key through `reset_password()`, and returns to
+`/advertiser/login/`. The token response is non-cacheable and sends
+`Referrer-Policy: no-referrer` so a reset key cannot leak through a resource or
+navigation referrer.
+
+`/advertiser/forgot-password/` owns recovery for existing accounts with the
+same portal-only message and reset screen. Its public response is identical for
+missing, ineligible and real addresses, and requests are bounded per hashed
+client address. Advertisers sign in with their work email; their opaque
+WordPress login identifier is neither displayed nor accepted by portal forms.
 
 ## Theme independence
 

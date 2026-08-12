@@ -77,6 +77,7 @@ use LAAO_Advertiser_Portal\Admin\Review_Data;
 							<th scope="col"><?php esc_html_e( 'Status', 'laao-advertiser-portal' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'Submitted', 'laao-advertiser-portal' ); ?></th>
 							<th scope="col"><?php esc_html_e( 'Reviewer', 'laao-advertiser-portal' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Ad updates', 'laao-advertiser-portal' ); ?></th>
 						</tr>
 					</thead>
 					<tbody>
@@ -97,7 +98,8 @@ use LAAO_Advertiser_Portal\Admin\Review_Data;
 								<td>
 									<?php echo 0 === (int) $laao_ads_row['submitted_at'] ? '&mdash;' : esc_html( Review_Data::format_timestamp( (int) $laao_ads_row['submitted_at'] ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- The only raw branch is the fixed &mdash; entity. ?>
 								</td>
-								<td><?php echo esc_html( '' === (string) $laao_ads_row['reviewer'] ? __( 'Unassigned', 'laao-advertiser-portal' ) : (string) $laao_ads_row['reviewer'] ); ?></td>
+							<td><?php echo esc_html( '' === (string) $laao_ads_row['reviewer'] ? __( 'Unassigned', 'laao-advertiser-portal' ) : (string) $laao_ads_row['reviewer'] ); ?></td>
+							<td><?php echo esc_html( number_format_i18n( (int) $laao_ads_row['pending_updates'] ) ); ?></td>
 							</tr>
 						<?php endforeach; ?>
 					</tbody>

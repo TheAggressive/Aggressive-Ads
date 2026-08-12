@@ -112,7 +112,7 @@ final class Placement_Repository {
 	 * @return string
 	 */
 	public function name( int $placement_id ): string {
-		$title = get_the_title( $placement_id );
+		$title = get_post_field( 'post_title', $placement_id, 'raw' );
 
 		return is_string( $title ) ? $title : '';
 	}
