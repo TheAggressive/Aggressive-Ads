@@ -90,8 +90,8 @@ final class Review_Screen implements Service {
 			return;
 		}
 
-		$this->enqueue_style( Assets::HANDLE, 'assets/portal.css' );
-		$this->enqueue_style( 'laao-ads-review', 'assets/admin.css', array( Assets::HANDLE ) );
+		$this->enqueue_style( Assets::HANDLE, Assets::STYLE_PORTAL );
+		$this->enqueue_style( 'laao-ads-review', Assets::STYLE_ADMIN, array( Assets::HANDLE ) );
 	}
 
 	/**

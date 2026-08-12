@@ -86,8 +86,8 @@ final class Placement_Mapping_Screen implements Service {
 			return;
 		}
 
-		$this->enqueue_style( Assets::HANDLE, 'assets/portal.css' );
-		$this->enqueue_style( 'laao-ads-admin', 'assets/admin.css', array( Assets::HANDLE ) );
+		$this->enqueue_style( Assets::HANDLE, Assets::STYLE_PORTAL );
+		$this->enqueue_style( 'laao-ads-admin', Assets::STYLE_ADMIN, array( Assets::HANDLE ) );
 	}
 
 	/**

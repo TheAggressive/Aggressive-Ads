@@ -228,7 +228,7 @@
 		The remote-data sniff cannot tell a URL from a path, so it warns on any
 		file_get_contents(). Tests read the plugin's own files off disk to
 		assert that PHP and CSS agree — the pill modifiers View_Data emits
-		against the rules assets/portal.css defines — and there is no request,
+		against the rules src/styles/ defines — and there is no request,
 		no network and nothing to cache. Shipped code keeps the sniff.
 	-->
 	<rule ref="WordPressVIPMinimum.Performance.FetchingRemoteData">

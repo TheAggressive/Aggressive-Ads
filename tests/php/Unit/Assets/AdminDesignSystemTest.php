@@ -22,9 +22,9 @@ final class AdminDesignSystemTest extends TestCase {
 	 * @return void
 	 */
 	public function test_admin_css_uses_the_shared_color_tokens(): void {
-		$css = file_get_contents( LAAO_ADS_PLUGIN_DIR . 'assets/admin.css' );
+		$css = file_get_contents( LAAO_ADS_PLUGIN_DIR . 'src/styles/admin.css' );
 
-		$this->assertIsString( $css, 'assets/admin.css must be readable.' );
+		$this->assertIsString( $css, 'src/styles/admin.css must be readable.' );
 		$this->assertStringContainsString( '--laao-ads-', $css );
 		$this->assertDoesNotMatchRegularExpression( '/#[0-9a-fA-F]{3,8}\b/', $css, 'Admin CSS introduced a literal color outside the token layer.' );
 	}
@@ -35,7 +35,7 @@ final class AdminDesignSystemTest extends TestCase {
 	 * @return void
 	 */
 	public function test_admin_navigation_uses_the_control_size_token(): void {
-		$css = file_get_contents( LAAO_ADS_PLUGIN_DIR . 'assets/admin.css' );
+		$css = file_get_contents( LAAO_ADS_PLUGIN_DIR . 'src/styles/admin.css' );
 
 		$this->assertIsString( $css );
 		$this->assertGreaterThanOrEqual( 2, substr_count( $css, 'var(--laao-ads-control-min)' ) );

@@ -15,26 +15,19 @@ See [ADR-0004](adr/0004-server-rendered-plus-interactivity-api.md).
 
 Four namespaces, deliberately. A single `portal` store would become the client-side god object this architecture exists to avoid.
 
-## Source layout (today vs planned)
+## Source layout
 
-Modules currently ship as hand-authored ES modules under
-`assets/interactivity/`:
+Author under `src/`; ship compiled `dist/` (see [build-and-release.md](build-and-release.md)):
 
-| Import map id | File |
-|---|---|
-| `@laao-ads/scroll-lock` | `assets/interactivity/scroll-lock.js` |
-| `@laao-ads/helpers` | `assets/interactivity/helpers.js` |
-| `@laao-ads/dialog` | `assets/interactivity/dialog.js` |
+| Import map id | Source | Compiled |
+|---|---|---|
+| `@laao-ads/scroll-lock` | `src/interactivity/scroll-lock.ts` | `dist/interactivity/scroll-lock.js` |
+| `@laao-ads/helpers` | `src/interactivity/helpers.ts` | `dist/interactivity/helpers.js` |
+| `@laao-ads/dialog` | `src/interactivity/dialog.ts` | `dist/interactivity/dialog.js` |
 
-`inc/Assets/class-assets.php` registers them, no-ops when a file is missing,
-and early-enqueues the dialog store (plus `@wordpress/interactivity`) on
-screens that need it so block themes print the import map in `wp_head`.
-
-The documented `@wordpress/scripts` / TypeScript pipeline
-(`src/interactivity/*.ts` → `dist/interactivity` with `.asset.php` manifests)
-still lands with the rest of the frontend lane — see
-[build-and-release.md](build-and-release.md). Until then, do not invent a
-parallel `src/` tree; extend the hand-authored modules.
+`inc/Assets/class-assets.php` registers modules from `dist/`, reads `.asset.php`
+manifests, and early-enqueues the dialog store (plus `@wordpress/interactivity`)
+on screens that need it so block themes print the import map in `wp_head`.
 
 ## Per-instance keyed state
 
@@ -88,21 +81,21 @@ Hydration also carries server-derived configuration — REST route URLs, the non
 
 ## Pure logic lives outside the store
 
-When the TypeScript lane lands, `src/interactivity/logic.ts` imports nothing
+`src/interactivity/logic.ts` (when the wizard/upload stores land) imports nothing
 from `@wordpress/interactivity`. It holds the decidable parts: which wizard
 step comes next given a validity map, whether a file's dimensions match a
 placement, how to format a size for display, what the exit animation should be.
 
-That import boundary is the whole point — Jest tests it directly with no runtime mocking. Anything requiring a mocked `@wordpress/interactivity` to test is a sign the logic belongs in `logic.ts`. Until that file exists, keep decidable helpers free of Interactivity imports (as `helpers.js` / `scroll-lock.js` already are).
+That import boundary is the whole point — Jest tests it directly with no runtime mocking. Anything requiring a mocked `@wordpress/interactivity` to test is a sign the logic belongs in `logic.ts`. Keep decidable helpers free of Interactivity imports (as `helpers.ts` / `scroll-lock.ts` already are).
 
 ## Module registration
 
 Through `inc/Assets/class-assets.php`, which:
 
 - no-ops gracefully when `wp_register_script_module` does not exist
-- no-ops when the module file is missing, rather than emitting a 404 for every visitor
+- no-ops when the compiled file is missing, rather than emitting a 404 for every visitor
 - declares `@wordpress/interactivity` where the store needs it
-- will read version and dependencies from `.asset.php` manifests once the build pipeline exists
+- reads version and dependencies from `.asset.php` manifests
 
 Shared modules (`dialog`, `scroll-lock`, `helpers`) are **registered but not enqueued** until a feature calls `enqueue_dialog()` (or the equivalent). A screen with no dialog ships no dialog code.
 

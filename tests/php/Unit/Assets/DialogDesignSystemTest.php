@@ -52,9 +52,8 @@ final class DialogDesignSystemTest extends TestCase {
 	 * @return void
 	 */
 	public function test_overlay_styles_use_dialog_tokens(): void {
-		$css = file_get_contents( LAAO_ADS_PLUGIN_DIR . 'assets/portal.css' );
+		$css = Portal_Styles::contents();
 
-		$this->assertIsString( $css );
 		$this->assertStringContainsString( '--laao-ads-z-dialog:', $css );
 		$this->assertStringContainsString( '--laao-ads-shadow-panel:', $css );
 		$this->assertStringContainsString( '--laao-ads-duration-dialog:', $css );
@@ -69,12 +68,12 @@ final class DialogDesignSystemTest extends TestCase {
 	 * @return void
 	 */
 	public function test_dialog_modules_exist_on_disk(): void {
-		foreach ( array( 'scroll-lock.js', 'helpers.js', 'dialog.js' ) as $file ) {
-			$this->assertFileExists( LAAO_ADS_PLUGIN_DIR . 'assets/interactivity/' . $file );
+		foreach ( array( 'scroll-lock.ts', 'helpers.ts', 'dialog.ts' ) as $file ) {
+			$this->assertFileExists( LAAO_ADS_PLUGIN_DIR . 'src/interactivity/' . $file );
 		}
 
 		$assets = file_get_contents( LAAO_ADS_PLUGIN_DIR . 'inc/Assets/class-assets.php' );
-		$dialog = file_get_contents( LAAO_ADS_PLUGIN_DIR . 'assets/interactivity/dialog.js' );
+		$dialog = file_get_contents( LAAO_ADS_PLUGIN_DIR . 'src/interactivity/dialog.ts' );
 		$this->assertIsString( $assets );
 		$this->assertIsString( $dialog );
 		$this->assertStringContainsString( 'enqueue_dialog', $assets );

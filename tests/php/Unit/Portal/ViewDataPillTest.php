@@ -11,6 +11,7 @@ namespace LAAO_Advertiser_Portal\Tests\Unit\Portal;
 
 use LAAO_Advertiser_Portal\Core\Post_Statuses;
 use LAAO_Advertiser_Portal\Portal\View_Data;
+use LAAO_Advertiser_Portal\Tests\Unit\Assets\Portal_Styles;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -105,9 +106,7 @@ final class ViewDataPillTest extends TestCase {
 	 * @return void
 	 */
 	public function test_only_defined_modifiers_are_emitted(): void {
-		$css = file_get_contents( LAAO_ADS_PLUGIN_DIR . 'assets/portal.css' );
-
-		$this->assertIsString( $css, 'assets/portal.css must be readable.' );
+		$css = Portal_Styles::contents();
 
 		foreach ( array_merge( Post_Statuses::all(), array( 'lap_invented', '' ) ) as $status ) {
 			$modifier = View_Data::pill_for( $status );
@@ -115,7 +114,7 @@ final class ViewDataPillTest extends TestCase {
 			$this->assertStringContainsString(
 				'.laao-ads-pill--' . $modifier . ' {',
 				$css,
-				"assets/portal.css defines no rule for .laao-ads-pill--{$modifier}."
+				"portal styles define no rule for .laao-ads-pill--{$modifier}."
 			);
 		}
 	}

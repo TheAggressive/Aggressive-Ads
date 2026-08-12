@@ -23,6 +23,8 @@ run() {
 
 run "doctor"      pnpm ci:doctor
 run "structure"   pnpm lint:files
+run "build"       pnpm ci:build
+run "frontend"    pnpm ci:frontend
 run "php"         pnpm ci:php
 
 # The integration, security, rest and upgrade suites need real WordPress and
@@ -44,9 +46,7 @@ run "package"     pnpm ci:package
 # Adding one here without adding it there is how the two drift.
 #
 # Lanes landing with the phases that need them:
-#   frontend  — lint:js, lint:css, format:check, typecheck, test:js
 #   i18n      — POT drift and .mo compilation
-#   build     — webpack bundles
 
 echo
 echo "ci:verify: all lanes passed"

@@ -22,65 +22,48 @@ const FALLBACK_BUFFER_MS = 50;
 const DEFAULT_DURATION_MS = 200;
 const PAGE_ROOT_SELECTOR = '.laao-ads-shell';
 
-/**
- * @typedef {{ isOpen: boolean, animationDuration?: number }} DialogState
- */
+interface DialogState {
+	isOpen: boolean;
+	animationDuration?: number;
+}
 
-/** @type {Map<string, {
- *   triggerElement: HTMLElement | null,
- *   focusTrapCleanup: (() => void) | null,
- *   closeTimer: ReturnType<typeof setTimeout> | null,
- *   transitionEndHandler: ((event: TransitionEvent) => void) | null,
- *   isClosing: boolean,
- * }>} */
-const dialogRefs = new Map();
+interface DialogContext {
+	dialogId?: string;
+}
 
-/** @type {string[]} */
-const dialogStack = [];
+interface DialogRefs {
+	triggerElement: HTMLElement | null;
+	focusTrapCleanup: ( () => void ) | null;
+	closeTimer: ReturnType< typeof setTimeout > | null;
+	transitionEndHandler: ( ( event: TransitionEvent ) => void ) | null;
+	isClosing: boolean;
+}
 
-/** @type {Set<string>} */
-const initializedIds = new Set();
-
-/** @type {WeakMap<HTMLElement, string>} */
-const boundTriggers = new WeakMap();
+const dialogRefs = new Map< string, DialogRefs >();
+const dialogStack: string[] = [];
+const initializedIds = new Set< string >();
+const boundTriggers = new WeakMap< HTMLElement, string >();
 
 let escapeBound = false;
-/** @type {Record<string, DialogState> | null} */
-let dialogsStateRef = null;
+let dialogsStateRef: Record< string, DialogState > | null = null;
 
-/**
- * @param {string} id
- * @return {HTMLElement | null}
- */
-function getShell( id ) {
+function getShell( id: string ): HTMLElement | null {
 	return document.querySelector(
 		`.laao-ads-overlay[data-dialog-id="${ CSS.escape( id ) }"]`
 	);
 }
 
-/**
- * @param {string} id
- * @return {HTMLElement | null}
- */
-function getPanel( id ) {
+function getPanel( id: string ): HTMLElement | null {
 	return getShell( id )?.querySelector( '.laao-ads-overlay__panel' ) ?? null;
 }
 
-/**
- * @param {string} id
- * @return {HTMLElement | null}
- */
-function getAnnouncer( id ) {
+function getAnnouncer( id: string ): HTMLElement | null {
 	return (
 		getShell( id )?.querySelector( '.laao-ads-overlay__announcer' ) ?? null
 	);
 }
 
-/**
- * @param {string} id
- * @param {boolean} isOpen
- */
-function syncTriggers( id, isOpen ) {
+function syncTriggers( id: string, isOpen: boolean ): void {
 	const expanded = isOpen ? 'true' : 'false';
 	document
 		.querySelectorAll( `[aria-controls="${ CSS.escape( id ) }"]` )
@@ -89,10 +72,7 @@ function syncTriggers( id, isOpen ) {
 		} );
 }
 
-/**
- * @param {string} id
- */
-function removeFromStack( id ) {
+function removeFromStack( id: string ): void {
 	let index = dialogStack.lastIndexOf( id );
 	while ( index !== -1 ) {
 		dialogStack.splice( index, 1 );
@@ -100,7 +80,7 @@ function removeFromStack( id ) {
 	}
 }
 
-function syncBackgroundInert() {
+function syncBackgroundInert(): void {
 	const root = document.querySelector( PAGE_ROOT_SELECTOR );
 	if ( ! ( root instanceof HTMLElement ) ) {
 		return;
@@ -109,11 +89,7 @@ function syncBackgroundInert() {
 	root.inert = dialogStack.length > 0;
 }
 
-/**
- * @param {string} id
- * @return {Record<string, DialogState>}
- */
-function ensureDialogState( id ) {
+function ensureDialogState( id: string ): Record< string, DialogState > {
 	if ( ! state.dialogs || typeof state.dialogs !== 'object' ) {
 		state.dialogs = {};
 	}
@@ -129,15 +105,7 @@ function ensureDialogState( id ) {
 	return state.dialogs;
 }
 
-/**
- * @param {HTMLElement | null} panel
- * @param {{
- *   closeTimer: ReturnType<typeof setTimeout> | null,
- *   transitionEndHandler: ((event: TransitionEvent) => void) | null,
- *   isClosing: boolean,
- * }} refs
- */
-function cancelPendingClose( panel, refs ) {
+function cancelPendingClose( panel: HTMLElement | null, refs: DialogRefs ): void {
 	if ( refs.closeTimer !== null ) {
 		clearTimeout( refs.closeTimer );
 		refs.closeTimer = null;
@@ -153,13 +121,10 @@ function cancelPendingClose( panel, refs ) {
 	}
 }
 
-/**
- * @param {string} id
- * @param {HTMLElement | null} [trigger]
- */
-function openDialog( id, trigger = null ) {
+function openDialog( id: string, trigger: HTMLElement | null = null ): void {
 	const dialogs = ensureDialogState( id );
-	if ( ! id || dialogs[ id ].isOpen ) {
+	const current = dialogs[ id ];
+	if ( ! id || ! current || current.isOpen ) {
 		return;
 	}
 
@@ -198,7 +163,7 @@ function openDialog( id, trigger = null ) {
 
 	void shell.offsetHeight;
 	shell.classList.add( 'is-open' );
-	dialogs[ id ].isOpen = true;
+	current.isOpen = true;
 	syncTriggers( id, true );
 	syncBackgroundInert();
 
@@ -213,29 +178,27 @@ function openDialog( id, trigger = null ) {
 	}
 
 	requestAnimationFrame( () => {
-		const current = dialogRefs.get( id );
+		const currentRefs = dialogRefs.get( id );
 		const shellEl = getShell( id );
 		const panelEl = getPanel( id );
-		if ( ! shellEl || ! panelEl || ! dialogs[ id ]?.isOpen || ! current ) {
+		if ( ! shellEl || ! panelEl || ! dialogs[ id ]?.isOpen || ! currentRefs ) {
 			return;
 		}
-		if ( ! current.focusTrapCleanup ) {
-			current.focusTrapCleanup = setupFocusTrap( shellEl );
+		if ( ! currentRefs.focusTrapCleanup ) {
+			currentRefs.focusTrapCleanup = setupFocusTrap( shellEl );
 		}
 		panelEl.focus();
 	} );
 }
 
-/**
- * @param {string} id
- */
-function closeDialog( id ) {
+function closeDialog( id: string ): void {
 	const dialogs = ensureDialogState( id );
-	if ( ! id || ! dialogs[ id ]?.isOpen ) {
+	const current = dialogs[ id ];
+	if ( ! id || ! current?.isOpen ) {
 		return;
 	}
 
-	dialogs[ id ].isOpen = false;
+	current.isOpen = false;
 	syncTriggers( id, false );
 
 	const announcer = getAnnouncer( id );
@@ -248,7 +211,7 @@ function closeDialog( id ) {
 		refs.isClosing = true;
 	}
 
-	const duration = dialogs[ id ].animationDuration ?? DEFAULT_DURATION_MS;
+	const duration = current.animationDuration ?? DEFAULT_DURATION_MS;
 	const shell = getShell( id );
 	const panel = getPanel( id );
 	const reducedMotion = window.matchMedia(
@@ -266,7 +229,7 @@ function closeDialog( id ) {
 	}
 
 	let done = false;
-	const finish = () => {
+	const finish = (): void => {
 		if ( done ) {
 			return;
 		}
@@ -317,7 +280,7 @@ function closeDialog( id ) {
 	};
 
 	if ( panel && effectiveDuration > 0 ) {
-		const handleTransitionEnd = ( /** @type {TransitionEvent} */ event ) => {
+		const handleTransitionEnd = ( event: TransitionEvent ): void => {
 			if (
 				event.target === panel &&
 				event.propertyName === 'opacity'
@@ -342,10 +305,8 @@ function closeDialog( id ) {
 
 /**
  * Bind open/close controls for one dialog. Idempotent per element.
- *
- * @param {string} id
  */
-function bindControls( id ) {
+function bindControls( id: string ): void {
 	document
 		.querySelectorAll( `[aria-controls="${ CSS.escape( id ) }"]` )
 		.forEach( ( el ) => {
@@ -392,7 +353,7 @@ function bindControls( id ) {
 		} );
 }
 
-function bindEscape() {
+function bindEscape(): void {
 	if ( escapeBound ) {
 		return;
 	}
@@ -416,25 +377,29 @@ function bindEscape() {
 	);
 }
 
-const { state } = store( 'laao-advertiser-portal/dialog', {
-	actions: {
-		/**
-		 * Idempotent per dialog id — data-wp-init can fire twice.
-		 */
-		init() {
-			const context = getContext();
-			const id = context?.dialogId;
-			if ( typeof id === 'string' && '' !== id ) {
-				bootDialog( id );
-			}
-		},
-	},
-} );
+interface DialogStoreState {
+	dialogs: Record< string, DialogState >;
+}
 
-/**
- * @param {string} id
- */
-function bootDialog( id ) {
+const { state } = store< DialogStoreState, { init: () => void } >(
+	'laao-advertiser-portal/dialog',
+	{
+		actions: {
+			/**
+			 * Idempotent per dialog id — data-wp-init can fire twice.
+			 */
+			init() {
+				const context = getContext< DialogContext >();
+				const id = context?.dialogId;
+				if ( typeof id === 'string' && '' !== id ) {
+					bootDialog( id );
+				}
+			},
+		},
+	}
+);
+
+function bootDialog( id: string ): void {
 	bindEscape();
 	ensureDialogState( id );
 	bindControls( id );
@@ -444,10 +409,12 @@ function bootDialog( id ) {
 	}
 	initializedIds.add( id );
 
+	const current = state.dialogs[ id ];
 	if (
 		typeof window !== 'undefined' &&
 		window.location.hash === `#${ id }` &&
-		! state.dialogs[ id ].isOpen
+		current &&
+		! current.isOpen
 	) {
 		openDialog( id );
 	}
@@ -457,7 +424,7 @@ function bootDialog( id ) {
  * Boot every dialog shell on the page without waiting for data-wp-init.
  * Script modules print after our wp_footer(5) markup, so the shells exist.
  */
-function bootAllDialogs() {
+function bootAllDialogs(): void {
 	document
 		.querySelectorAll( '.laao-ads-overlay[data-dialog-id]' )
 		.forEach( ( shell ) => {
@@ -469,4 +436,3 @@ function bootAllDialogs() {
 }
 
 bootAllDialogs();
-

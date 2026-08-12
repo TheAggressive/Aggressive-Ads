@@ -217,7 +217,7 @@ WordPress login identifier is neither displayed nor accepted by portal forms.
 The portal must look and behave the same under any theme. The mechanisms:
 
 - The document is ours, so no theme markup wraps it.
-- All layout comes from scoped `.laao-ads-*` rules in `assets/portal.css`. Only token defaults are cascade-layered; authored reset, layout, and component rules stay unlayered so generic host-theme element styles cannot outrank them.
+- All layout comes from scoped `.laao-ads-*` rules in `src/styles/` (compiled to `dist/styles/portal.css`). Only token defaults are cascade-layered; authored reset, layout, and component rules stay unlayered so generic host-theme element styles cannot outrank them.
 - Every design token carries a literal value. Nothing resolves through `--wp--preset--*`, because Twenty Twenty-Five and the LAAO theme expose *different* preset names — a token defined as `var(--wp--preset--color--primary)` renders correctly on one and transparent on the other. See [ADR-0017](adr/0017-self-contained-design-tokens.md).
 - The reset is scoped to `.laao-ads-portal`, never global. A plugin that restyles `body` is a plugin that breaks the host site.
 

@@ -6,6 +6,7 @@
 # Build output
 /dist/
 /build/
+/.pnpm-store/
 
 # Release artifacts
 /release/

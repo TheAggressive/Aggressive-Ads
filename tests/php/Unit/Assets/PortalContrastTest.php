@@ -52,9 +52,9 @@ final class PortalContrastTest extends TestCase {
 	protected function setUp(): void {
 		parent::setUp();
 
-		$css = file_get_contents( LAAO_ADS_PLUGIN_DIR . 'assets/portal.css' );
+		$css = Portal_Styles::contents();
 
-		$this->assertIsString( $css, 'assets/portal.css must be readable.' );
+		$this->assertNotSame( '', $css, 'src/styles/portal.css must be readable.' );
 
 		$matches = array();
 

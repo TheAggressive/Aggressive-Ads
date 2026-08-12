@@ -1,0 +1,25 @@
+/*
+ * Portal styles entry.
+ *
+ * Implements the LAArtsOnline advertiser portal design: a dark rail, a warm
+ * paper canvas, and Archivo set heavy for headings.
+ *
+ * Every token carries a literal value. Nothing resolves through
+ * --wp--preset--*, because Twenty Twenty-Five and the LAAO theme expose
+ * different preset names — a token defined as var(--wp--preset--color--primary)
+ * renders correctly on one and as *nothing* on the other, and an unresolved
+ * custom property in a colour declaration is transparent text on a transparent
+ * background. Not a degraded look; an unreadable screen.
+ *
+ * The LAAO theme may override any --laao-ads-* token to make the portal feel
+ * native. That is the only supported coupling, it runs one direction, and the
+ * portal is fully functional without it.
+ *
+ * Partials are compiled into this entry by webpack; they are never enqueued
+ * alone. See docs/adr/0017-self-contained-design-tokens.md.
+ */
+
+@import './base/_tokens.css';
+@import './layout/_chrome.css';
+@import './components/_surfaces.css';
+@import './components/_overlay.css';

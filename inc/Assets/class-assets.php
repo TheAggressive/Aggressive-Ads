@@ -24,9 +24,9 @@ use LAAO_Advertiser_Portal\Portal\Router;
  * calls {@see self::enqueue_dialog()} so a screen with no dialog ships no
  * dialog JavaScript. See docs/interactivity-stores.md.
  *
- * Modules currently live under assets/interactivity/ as hand-authored ES
- * modules — the documented TypeScript → dist/ pipeline lands with the rest of
- * the frontend lane. Registration still no-ops when a file is missing.
+ * Compiled assets live under dist/ (TypeScript / CSS from src/). Registration
+ * no-ops when a built file is missing — run `pnpm build` before loading the
+ * portal in development.
  */
 final class Assets implements Service {
 
@@ -34,6 +34,16 @@ final class Assets implements Service {
 	 * Stylesheet handle.
 	 */
 	public const HANDLE = 'laao-ads-portal';
+
+	/**
+	 * Compiled portal stylesheet (relative to plugin root).
+	 */
+	public const STYLE_PORTAL = 'dist/styles/portal.css';
+
+	/**
+	 * Compiled admin stylesheet (relative to plugin root).
+	 */
+	public const STYLE_ADMIN = 'dist/styles/admin.css';
 
 	/**
 	 * Script-module ids (import-map keys).
@@ -167,26 +177,7 @@ final class Assets implements Service {
 			return;
 		}
 
-		$relative = 'assets/portal.css';
-		$path     = LAAO_ADS_PLUGIN_DIR . $relative;
-
-		if ( ! is_file( $path ) ) {
-			return;
-		}
-
-		// The file's own mtime, so a deploy busts the cache without anybody
-		// remembering to bump a version. Falls back to the plugin version rather
-		// than to null: null appends the WordPress version, which does not change
-		// on a plugin release and would serve the old file to everyone who had it.
-		$mtime = filemtime( $path );
-
-		wp_enqueue_style(
-			self::HANDLE,
-			LAAO_ADS_PLUGIN_URL . $relative,
-			array(),
-			false === $mtime ? LAAO_ADS_VERSION : (string) $mtime
-		);
-
+		$this->enqueue_style( self::HANDLE, self::STYLE_PORTAL );
 		$this->register_interactivity_modules();
 
 		/*
@@ -202,11 +193,34 @@ final class Assets implements Service {
 			Request::ROUTE_CAMPAIGNS === $request->route
 			&& $request->object_id > 0
 			&& function_exists( 'wp_enqueue_script_module' )
-			&& is_file( LAAO_ADS_PLUGIN_DIR . 'assets/interactivity/dialog.js' )
+			&& is_file( LAAO_ADS_PLUGIN_DIR . 'dist/interactivity/dialog.js' )
 		) {
 			wp_enqueue_script_module( '@wordpress/interactivity' );
 			wp_enqueue_script_module( self::MODULE_DIALOG );
 		}
+	}
+
+	/**
+	 * Enqueues a compiled stylesheet when the file exists.
+	 *
+	 * @param string             $handle       Style handle.
+	 * @param string             $relative     Path relative to the plugin root.
+	 * @param array<int, string> $dependencies Style dependencies.
+	 * @return void
+	 */
+	public function enqueue_style( string $handle, string $relative, array $dependencies = array() ): void {
+		$path = LAAO_ADS_PLUGIN_DIR . $relative;
+
+		if ( ! is_file( $path ) ) {
+			return;
+		}
+
+		wp_enqueue_style(
+			$handle,
+			LAAO_ADS_PLUGIN_URL . $relative,
+			$dependencies,
+			$this->asset_version( $relative )
+		);
 	}
 
 	/**
@@ -276,7 +290,7 @@ final class Assets implements Service {
 			return false;
 		}
 
-		if ( ! is_file( LAAO_ADS_PLUGIN_DIR . 'assets/interactivity/dialog.js' ) ) {
+		if ( ! is_file( LAAO_ADS_PLUGIN_DIR . 'dist/interactivity/dialog.js' ) ) {
 			return false;
 		}
 
@@ -302,22 +316,32 @@ final class Assets implements Service {
 	}
 
 	/**
-	 * Registers one module when its file exists.
+	 * Registers one module when its compiled file exists.
 	 *
 	 * @param string             $module_id Module id.
-	 * @param string             $basename  File basename under assets/interactivity/.
-	 * @param array<int, string> $deps      Module dependency ids.
+	 * @param string             $basename  File basename under dist/interactivity/.
+	 * @param array<int, string> $deps      Module dependency ids (merged with .asset.php).
 	 * @return bool
 	 */
 	private function register_module( string $module_id, string $basename, array $deps ): bool {
-		$relative = 'assets/interactivity/' . $basename . '.js';
+		$relative = 'dist/interactivity/' . $basename . '.js';
 		$path     = LAAO_ADS_PLUGIN_DIR . $relative;
 
 		if ( ! is_file( $path ) ) {
 			return false;
 		}
 
-		$mtime = filemtime( $path );
+		$asset = $this->read_asset_php( 'dist/interactivity/' . $basename . '.asset.php' );
+		$merged = array_values(
+			array_unique(
+				array_merge(
+					is_array( $asset['dependencies'] ?? null )
+						? array_map( 'strval', $asset['dependencies'] )
+						: array(),
+					$deps
+				)
+			)
+		);
 
 		// Stubs type deps as id/import shapes; string ids remain valid at runtime.
 		$normalized = array_map(
@@ -325,16 +349,59 @@ final class Assets implements Service {
 				'id'     => $id,
 				'import' => 'static',
 			),
-			$deps
+			$merged
 		);
 
 		wp_register_script_module(
 			$module_id,
 			LAAO_ADS_PLUGIN_URL . $relative,
 			$normalized,
-			false === $mtime ? LAAO_ADS_VERSION : (string) $mtime
+			$this->asset_version( $relative, $asset )
 		);
 
 		return true;
+	}
+
+	/**
+	 * Cache-busting version from .asset.php, else file mtime, else plugin version.
+	 *
+	 * @param string               $relative Path relative to the plugin root.
+	 * @param array<string, mixed> $asset    Optional already-loaded .asset.php payload.
+	 * @return string
+	 */
+	private function asset_version( string $relative, array $asset = array() ): string {
+		if ( array() === $asset ) {
+			$asset_php = preg_replace( '/\.(css|js)$/', '.asset.php', $relative );
+			if ( is_string( $asset_php ) ) {
+				$asset = $this->read_asset_php( $asset_php );
+			}
+		}
+
+		if ( isset( $asset['version'] ) && is_scalar( $asset['version'] ) && '' !== (string) $asset['version'] ) {
+			return (string) $asset['version'];
+		}
+
+		$path  = LAAO_ADS_PLUGIN_DIR . $relative;
+		$mtime = is_file( $path ) ? filemtime( $path ) : false;
+
+		return false === $mtime ? LAAO_ADS_VERSION : (string) $mtime;
+	}
+
+	/**
+	 * Reads a webpack DependencyExtractionWebpackPlugin manifest.
+	 *
+	 * @param string $relative Path relative to the plugin root.
+	 * @return array<string, mixed>
+	 */
+	private function read_asset_php( string $relative ): array {
+		$path = LAAO_ADS_PLUGIN_DIR . $relative;
+
+		if ( ! is_file( $path ) ) {
+			return array();
+		}
+
+		$asset = include $path;
+
+		return is_array( $asset ) ? $asset : array();
 	}
 }

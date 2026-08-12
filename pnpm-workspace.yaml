@@ -11,7 +11,11 @@
 packages: []
 
 allowBuilds:
-    fs-ext-extra-prebuilt: false
+  '@parcel/watcher': set this to true or false
+  core-js: set this to true or false
+  core-js-pure: set this to true or false
+  fs-ext-extra-prebuilt: false
+  unrs-resolver: set this to true or false
 
 # Any dependency override MUST live here, not in package.json's
 # `pnpm.overrides`: with a pnpm-workspace.yaml present, pnpm 10+ reads

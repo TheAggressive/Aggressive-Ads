@@ -5,17 +5,18 @@
 **Green locally means green in CI.** The `ci:*` scripts in `package.json` are the source of truth; each maps 1:1 onto a GitHub Actions job. A CI-only command chain is how "it passed on my machine" becomes a permanent state of affairs.
 
 ```
-ci:doctor   → node bin/ci/doctor.mjs
-ci:php      → lint:php && analyse:php && test:php:unit
-ci:php:wp   → test:php:integration           (needs wp-env)
-ci:e2e      → test:e2e
-ci:package  → release:package && release:verify
-ci:verify   → bash bin/ci/verify.sh          (every current lane, serially)
+ci:doctor    → node bin/ci/doctor.mjs
+ci:build     → pnpm build
+ci:frontend  → lint:js && typecheck && lint:css && test:js
+ci:php       → lint:php && analyse:php && test:php:unit
+ci:php:wp    → test:php:integration           (needs wp-env)
+ci:e2e       → build && test:e2e
+ci:package   → build && release:package && release:verify
+ci:verify    → bash bin/ci/verify.sh          (every current lane, serially)
 ```
 
-The frontend, i18n, and compiled-asset lanes land with the first source files
-that need them. Until then they are future gates, not commands the repository
-pretends to run.
+The i18n lane lands with POT / `.mo` tooling. Until then it is a future gate,
+not a command the repository pretends to run.
 
 Adding a lane means adding it to **both** the workflow and `bin/ci/verify.sh`. Adding it to only one is how the two drift.
 
@@ -32,9 +33,9 @@ lane fail rather than quietly reducing coverage.
 |---|---|
 | PHPStan | **Level 8, no baseline, no `ignoreErrors`** |
 | PHPCS | WordPress + **the full `WordPress-VIP-Go` standard** + PHPCompatibilityWP |
-| ESLint *(when JS lands)* | Flat config, `--max-warnings 0` |
-| TypeScript *(when JS lands)* | `strict`, `noUncheckedIndexedAccess`, `checkJs` |
-| Stylelint *(when compiled styles land)* | `@wordpress/stylelint-config` |
+| ESLint | Flat config, `--max-warnings 0` |
+| TypeScript | `strict`, `noUncheckedIndexedAccess` |
+| Stylelint | `@wordpress/stylelint-config` |
 | File length | Warn > 800, fail > 1000, no allowlist |
 
 **No baseline.** A baseline is a list of known problems you have agreed to stop looking at, and it only grows. Type issues get fixed as they are introduced, while the context is still in someone's head.
@@ -63,19 +64,45 @@ Filesystem sniffs are excluded for `tests/php/*` only. A test that proves a host
 
 ## Build
 
-The current plugin is server-rendered PHP. Portal CSS is hand-authored
-(`assets/portal.css`). The first Interactivity modules also ship hand-authored
-from `assets/interactivity/` (dialog, scroll-lock, helpers) — packaging still
-creates and verifies the installable ZIP and checksum, and release verification
-requires those module files.
+Authoring lives under `src/`. Webpack (via `@wordpress/scripts`) compiles to
+`dist/`, which is what PHP enqueues and what the release ZIP ships — same shape
+as Aggressive Apparel's theme build, with this plugin's output directory kept as
+`dist/` (packaging already required it).
 
-Add a small `@wordpress/scripts`/TypeScript pipeline for
-`src/interactivity/*.ts` → `dist/interactivity` when the rest of the frontend
-lane lands (wizard/upload/autosave). It must emit `.asset.php` dependency
-manifests, run strict type checking and lint/tests in both local QA and CI,
-move the existing modules into that tree, and place only compiled `dist/`
-output in the release ZIP. Do not add a block build until the plugin has an
-actual block.
+```
+src/interactivity/*.ts  →  dist/interactivity/*.js (+ .asset.php)
+src/styles/*.css        →  dist/styles/*.css     (+ .asset.php)
+assets/icon.svg         →  shipped as-is (not compiled)
+```
+
+```bash
+pnpm build            # clean dist/, then modules + assets
+pnpm start            # watch both lanes
+pnpm typecheck        # tsc --noEmit (strict + noUncheckedIndexedAccess)
+pnpm lint:js          # ESLint on src/
+pnpm lint:css         # Stylelint on src/styles/
+pnpm test:js          # Jest via wp-scripts (pure helpers only)
+```
+
+Two webpack configs:
+
+| Config | Role |
+|---|---|
+| `webpack.modules.config.mjs` | ES modules for `wp_register_script_module` / import maps |
+| `webpack.assets.config.mjs` | Styles (and future classic scripts under `src/scripts/`) |
+
+`@laao-ads/*` and `@wordpress/interactivity` stay bare-specifier externals so
+WordPress resolves them at runtime. Entry discovery is
+`bin/lib/build-manifest.mjs`. Underscore-prefixed CSS partials
+(`src/styles/**/_*.css`) and anything `@import`ed by `portal.css` are not
+standalone entries.
+
+`inc/Assets/class-assets.php` reads `.asset.php` manifests for cache-busting
+versions and merges listed dependencies with the known `@laao-ads/*` graph.
+Missing `dist/` files no-op rather than 404 — run `pnpm build` before loading
+the portal locally.
+
+Do not add a block build until the plugin has an actual block.
 
 ## Packaging
 

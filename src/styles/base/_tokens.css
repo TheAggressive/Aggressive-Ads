@@ -1,0 +1,126 @@
+/* Token defaults deliberately sit in a low-priority layer so an integrating
+ * theme can override them. Authored portal rules remain unlayered: otherwise
+ * any unlayered host-theme element rule outranks them regardless of selector
+ * specificity (for example, a global anchor color can recolor a button).
+ */
+@layer laao-ads-tokens;
+
+@layer laao-ads-tokens {
+	.laao-ads-portal {
+		/* Canvas and surfaces. */
+		--laao-ads-color-canvas: #f7f4ee;
+		--laao-ads-color-surface: #ffffff;
+		--laao-ads-color-surface-raised: #faf9f6;
+		--laao-ads-color-surface-sunken: #efede7;
+		--laao-ads-color-surface-inset: #eceae4;
+
+		/* Ink. */
+		--laao-ads-color-text: #111214;
+		--laao-ads-color-text-body: #4a4844;
+		/* 4.55:1 on the inset surface the empty state uses, its worst pairing. */
+		--laao-ads-color-text-muted: #6d695f;
+		/*
+		 * Darker than the design's #8a8676, which measured 3.65:1 on white and
+		 * 3.12:1 on the sunken surface. It carries table headers and stat
+		 * labels — 11px uppercase, the smallest text in the system, and the
+		 * least forgiving of low contrast. WCAG 2.2 AA wants 4.5:1 for text
+		 * this size and every pairing now clears it.
+		 */
+		--laao-ads-color-text-subtle: #6d6a5d;
+
+		--laao-ads-border-color: #e3dfd4;
+		--laao-ads-border-color-strong: #d8d4c8;
+
+		/*
+		 * The accent. The design offers four; this is the default, and it is
+		 * the one place to change it — every accented surface reads this token
+		 * rather than repeating a hex.
+		 */
+		--laao-ads-color-accent: #ff3b2f;
+		/*
+		 * The same red, dark enough to carry white text.
+		 *
+		 * White on #ff3b2f is 3.55:1 — fine behind an icon, a failure behind a
+		 * 14px button label. Buttons read this one; the rail chip and the focus
+		 * ring keep the brighter accent, because neither is text.
+		 */
+		--laao-ads-color-accent-strong: #e90d00;
+		--laao-ads-color-accent-contrast: #ffffff;
+
+		/* The rail. */
+		--laao-ads-color-rail: #111214;
+		--laao-ads-color-rail-active: #1d1d20;
+		--laao-ads-color-rail-chip: #26262a;
+		--laao-ads-color-rail-text: #b9b6ac;
+		--laao-ads-color-rail-text-strong: #ffffff;
+
+		/*
+		 * Status. Each pairs an ink with the tint it sits on.
+		 *
+		 * The inks are darker than the design's. A pill is 12px bold, which is
+		 * not "large text" under WCAG — it needs 4.5:1, and the original pairs
+		 * measured between 2.61:1 and 4.35:1. The tints are untouched, so the
+		 * screens still read as the design intended.
+		 */
+		--laao-ads-color-live: #1a7a4d;
+		--laao-ads-color-live-tint: #e3f3ea;
+		--laao-ads-color-pending: #91630d;
+		--laao-ads-color-pending-tint: #fbf0dc;
+		--laao-ads-color-neutral: #6c685e;
+		--laao-ads-color-neutral-tint: #eceae4;
+		--laao-ads-color-ended: #6d6a5d;
+		--laao-ads-color-ended-tint: #efede7;
+		--laao-ads-color-danger: #c03826;
+		--laao-ads-color-danger-tint: #fbe7e3;
+
+		--laao-ads-radius-panel: 12px;
+		--laao-ads-radius-control: 8px;
+		--laao-ads-radius-small: 6px;
+		--laao-ads-radius-pill: 999px;
+
+		--laao-ads-space-2xs: 0.25rem;
+		--laao-ads-space-xs: 0.5rem;
+		--laao-ads-space-sm: 0.75rem;
+		--laao-ads-space-md: 1rem;
+		--laao-ads-space-lg: 1.5rem;
+		--laao-ads-space-xl: 2rem;
+		--laao-ads-space-2xl: 2.5rem;
+
+		--laao-ads-rail-width: 232px;
+		--laao-ads-measure: 68ch;
+
+		/*
+		 * Archivo is named but never fetched from a third party. A Google Fonts
+		 * link would send every advertiser's IP to Google on every screen,
+		 * which is a live data-protection question for an EU visitor and an
+		 * external render-blocking request besides. It is SIL OFL, so
+		 * self-hosting the woff2 is permitted and is the intended follow-up;
+		 * until then the system stack carries the layout, which it does
+		 * perfectly well at these weights.
+		 */
+		--laao-ads-font:
+			"Archivo", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+			Arial, sans-serif;
+
+		--laao-ads-control-min: 44px;
+
+		--laao-ads-duration-fast: 120ms;
+		--laao-ads-duration-dialog: 200ms;
+
+		/*
+		 * One stacking token for overlays. Anything else that needs to sit
+		 * above the page chrome reads this rather than inventing a number.
+		 */
+		--laao-ads-z-dialog: 1000;
+
+		--laao-ads-shadow-panel: 0 12px 40px rgb(17 18 20 / 18%);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.laao-ads-portal {
+			--laao-ads-duration-fast: 0ms;
+			--laao-ads-duration-dialog: 0ms;
+		}
+	}
+}
+

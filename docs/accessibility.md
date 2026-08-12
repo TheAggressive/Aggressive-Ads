@@ -22,11 +22,12 @@ Axe catches roughly a third of real problems. The rest is keyboard traversal, fo
 
 ## The dialog primitive
 
-One implementation: `assets/interactivity/dialog.js` (store namespace
-`laao-advertiser-portal/dialog`), with overlay styles in `assets/portal.css`
-under `.laao-ads-overlay*`. Shared helpers live in `scroll-lock.js` and
-`helpers.js`. Every portal dialog must use this stack — building a second one
-is how half of them end up without a focus trap.
+One implementation: `src/interactivity/dialog.ts` → `dist/interactivity/dialog.js`
+(store namespace `laao-advertiser-portal/dialog`), with overlay styles in
+`src/styles/components/_overlay.css` (bundled into `dist/styles/portal.css`).
+Shared helpers live in `scroll-lock.ts` and `helpers.ts`. Every portal dialog
+must use this stack — building a second one is how half of them end up without
+a focus trap.
 
 **Shipped today:** creative replace on campaign detail (overlays in
 `templates/portal/partials/creative-replace-dialogs.php`, triggers in
@@ -60,8 +61,6 @@ The contract, ported from the Aggressive Apparel implementation:
 | Close control | Icon-only gets `aria-label`; a visible text label supplies the accessible name and **no `aria-label` is added** — a redundant one overrides the visible text and breaks voice control |
 
 Native `<dialog>` was not used because its top-layer and backdrop semantics conflict with the drawer positioning and animation variety the portal needs, and because the reference implementation being ported is already custom and already correct.
-
-When the TypeScript → `dist/` pipeline lands ([build-and-release.md](build-and-release.md)), these modules move under `src/interactivity/` and ship compiled; the contract above does not change.
 
 ## Upload accessibility
 

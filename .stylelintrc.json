@@ -1,0 +1,24 @@
+{
+	"extends": ["@wordpress/stylelint-config"],
+	"ignoreFiles": [
+		"dist/**",
+		"build/**",
+		"node_modules/**",
+		"vendor/**",
+		"assets/**"
+	],
+	"rules": {
+		"selector-class-pattern": null,
+		"custom-property-pattern": null,
+		"rule-empty-line-before": null,
+		"comment-empty-line-before": null,
+		"no-descending-specificity": null,
+		"color-hex-length": null,
+		"value-keyword-case": [
+			"lower",
+			{
+				"ignoreKeywords": ["Roboto", "Arial", "Archivo", "monospace"]
+			}
+		]
+	}
+}

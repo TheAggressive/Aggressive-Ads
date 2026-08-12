@@ -79,14 +79,13 @@ $this->assertSame( 10, has_filter( 'map_meta_cap', array( Ownership::class, 'map
 
 **upgrade** — migration ordering, idempotence, the concurrency lock, and stale-lock recovery.
 
-**JS (when the TypeScript lane lands)** — the pure logic layer only.
-`src/interactivity/logic.ts` will import nothing from
-`@wordpress/interactivity`, so the test runner can exercise it without mocking
-the runtime. Hand-authored modules under `assets/interactivity/` (dialog,
-scroll-lock, helpers) ship today without that Jest lane; do not add
-runtime-mocked Interactivity unit tests in the meantime. No snapshot tests: a
-snapshot asserts that output has not changed, which is not the same as asserting
-it is correct, and the usual response to a failing snapshot is to update it.
+**JS** — the pure logic layer only. `helpers.ts` / future `logic.ts` import
+nothing from `@wordpress/interactivity`, so Jest exercises them without mocking
+the runtime. Hand-authored sources live under `src/interactivity/`; compiled
+modules under `dist/`. Do not add runtime-mocked Interactivity unit tests.
+No snapshot tests: a snapshot asserts that output has not changed, which is not
+the same as asserting it is correct, and the usual response to a failing
+snapshot is to update it.
 
 **E2E** — real browser flows against real WordPress. The portal smoke test under Twenty Twenty-Five is the single test that proves the zero-theme-dependency claim; everything else in [architecture.md](architecture.md) about theme independence is a convention, and this is the enforcement.
 

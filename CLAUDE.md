@@ -54,8 +54,10 @@ staff package management are the largest open product areas. What is built:
 - advertiser draft creation and the first wizard step (details, placements,
   schedule, and advertiser notes), with an HTML form path, REST create/autosave,
   optimistic concurrency, and shared `Campaign_Editor` validation
-- `assets/portal.css` — the `--laao-ads-*` token layer and its components,
-  contrast-gated by `tests/php/Unit/Assets/PortalContrastTest.php`
+- `src/styles/` — the `--laao-ads-*` token layer and components (`pnpm build` →
+  `dist/styles/`), contrast-gated by `tests/php/Unit/Assets/PortalContrastTest.php`
+- TypeScript Interactivity modules under `src/interactivity/` (dialog, scroll-lock,
+  helpers), compiled to `dist/interactivity/`
 - the capability-gated staff review queue and campaign review detail, with
   private creative previews, internal notes, transition controls, and audit
   history using the same design tokens
@@ -100,6 +102,8 @@ something to put in them — see
 
 ```bash
 composer install        # dev tooling only; vendor/ never ships
+pnpm install            # webpack / TypeScript / Playwright
+pnpm build              # src/ → dist/
 pnpm wp-env start       # dev :9960, tests :9970
 pnpm dev:seed           # an advertiser, an org and five campaigns to look at
 pnpm ci:verify          # the contract for declaring a change finished
@@ -107,6 +111,9 @@ pnpm ci:verify          # the contract for declaring a change finished
 pnpm lint:php           # PHPCS
 pnpm analyse:php        # PHPStan level 8, no baseline
 pnpm test:php:unit      # unit suite — no WordPress, no database
+pnpm lint:js            # ESLint on src/
+pnpm typecheck          # tsc --noEmit
+pnpm lint:css           # Stylelint on src/styles/
 pnpm lint:files         # file length + architecture boundaries + permission callbacks
 pnpm lint:php:fix       # phpcbf
 ```

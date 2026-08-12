@@ -9,18 +9,15 @@ const FOCUSABLE_SELECTOR =
 /**
  * Trap Tab within a container. Applied to the overlay shell so close controls
  * outside the panel stay in the cycle.
- *
- * @param {HTMLElement} container
- * @return {() => void} Cleanup.
  */
-export function setupFocusTrap( container ) {
-	const handleKeydown = ( event ) => {
+export function setupFocusTrap( container: HTMLElement ): () => void {
+	const handleKeydown = ( event: KeyboardEvent ): void => {
 		if ( event.key !== 'Tab' ) {
 			return;
 		}
 
 		const focusable = Array.from(
-			container.querySelectorAll( FOCUSABLE_SELECTOR )
+			container.querySelectorAll< HTMLElement >( FOCUSABLE_SELECTOR )
 		).filter(
 			( el ) => ! el.closest( '[hidden]' ) && ! el.closest( '[inert]' )
 		);
@@ -31,9 +28,9 @@ export function setupFocusTrap( container ) {
 		}
 
 		const currentIndex = focusable.indexOf(
-			/** @type {HTMLElement} */ ( document.activeElement )
+			document.activeElement as HTMLElement
 		);
-		let nextIndex;
+		let nextIndex: number;
 
 		if ( event.shiftKey ) {
 			nextIndex =
@@ -44,7 +41,7 @@ export function setupFocusTrap( container ) {
 		}
 
 		event.preventDefault();
-		focusable[ nextIndex ].focus();
+		focusable[ nextIndex ]?.focus();
 	};
 
 	container.addEventListener( 'keydown', handleKeydown );
@@ -56,11 +53,10 @@ export function setupFocusTrap( container ) {
 
 /**
  * Whether focus can safely return to an element after a dialog closes.
- *
- * @param {Element | null} element
- * @return {element is HTMLElement}
  */
-export function canRestoreFocus( element ) {
+export function canRestoreFocus(
+	element: Element | null
+): element is HTMLElement {
 	return (
 		element instanceof HTMLElement &&
 		element.isConnected &&

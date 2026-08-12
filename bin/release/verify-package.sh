@@ -23,14 +23,19 @@ PACKAGE_FORBIDDEN=(
 	tests
 	bin
 	src
+	types
 	.git
 	.github
+	.pnpm-store
 	docs
 	CLAUDE.md
 	composer.json
 	package.json
 	phpcs.xml.dist
 	phpstan.neon
+	test-results
+	playwright-report
+	playwright.config.ts
 )
 
 # Files with no import graph pointing at them, so nothing else notices when one
@@ -74,12 +79,13 @@ PACKAGE_REQUIRED=(
 	inc/Workflow/class-review-actions.php
 	inc/Workflow/class-review-readiness.php
 	inc/Workflow/class-advertiser-registration.php
-	assets/portal.css
 	assets/icon.svg
-	assets/admin.css
-	assets/interactivity/scroll-lock.js
-	assets/interactivity/helpers.js
-	assets/interactivity/dialog.js
+	dist/styles/portal.css
+	dist/styles/admin.css
+	dist/interactivity/scroll-lock.js
+	dist/interactivity/helpers.js
+	dist/interactivity/dialog.js
+	dist/interactivity/dialog.asset.php
 	templates/admin/review-queue.php
 	templates/admin/review-campaign.php
 	templates/portal/base.php

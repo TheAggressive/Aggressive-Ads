@@ -7,7 +7,7 @@
 
 let lockCount = 0;
 
-function measureScrollbarWidth() {
+function measureScrollbarWidth(): number {
 	const probe = document.createElement( 'div' );
 	probe.style.cssText =
 		'position:fixed;top:0;left:0;right:0;overflow-y:scroll;visibility:hidden;pointer-events:none;';
@@ -17,7 +17,7 @@ function measureScrollbarWidth() {
 	return width;
 }
 
-export function lockScroll() {
+export function lockScroll(): void {
 	lockCount += 1;
 	if ( lockCount !== 1 ) {
 		return;
@@ -36,7 +36,7 @@ export function lockScroll() {
 	}
 }
 
-export function unlockScroll() {
+export function unlockScroll(): void {
 	lockCount = Math.max( 0, lockCount - 1 );
 	if ( lockCount !== 0 ) {
 		return;

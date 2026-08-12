@@ -83,9 +83,8 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 	 * @return void
 	 */
 	public function test_creation_styles_use_shared_tokens(): void {
-		$css = file_get_contents( LAAO_ADS_PLUGIN_DIR . 'assets/portal.css' );
+		$css = Portal_Styles::contents();
 
-		$this->assertIsString( $css );
 		$this->assertStringContainsString( '.laao-ads-form', $css );
 		$this->assertStringContainsString( '.laao-ads-steps', $css );
 		$this->assertStringContainsString( '.laao-ads-choice--package', $css );
@@ -115,9 +114,8 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 	 * @return void
 	 */
 	public function test_only_token_defaults_use_a_cascade_layer(): void {
-		$css = file_get_contents( LAAO_ADS_PLUGIN_DIR . 'assets/portal.css' );
+		$css = Portal_Styles::contents();
 
-		$this->assertIsString( $css );
 		$this->assertSame( 2, substr_count( $css, '@layer laao-ads-tokens' ) );
 		$this->assertStringNotContainsString( '@layer laao-ads-reset', $css );
 		$this->assertStringNotContainsString( '@layer laao-ads-layout', $css );

@@ -30,10 +30,14 @@ PACKAGE_FORBIDDEN=(
 	tests
 	bin
 	src
+	types
 	.git
 	.github
+	.pnpm-store
 	docs
 	CLAUDE.md
+	test-results
+	playwright-report
 )
 
 # Files without which the plugin does not work. inc/class-autoloader.php is
@@ -46,7 +50,8 @@ PACKAGE_REQUIRED=(
 	inc/class-autoloader.php
 	inc/class-plugin.php
 	inc/class-service-registrar.php
-	assets/interactivity/dialog.js
+	dist/interactivity/dialog.js
+	dist/styles/portal.css
 )
 
 header_version() {
@@ -75,19 +80,30 @@ rsync -a \
 	--exclude='.gitignore' \
 	--exclude='.phpunit.cache/' \
 	--exclude='node_modules/' \
+	--exclude='.pnpm-store/' \
 	--exclude='vendor/' \
 	--exclude='tests/' \
+	--exclude='test-results/' \
+	--exclude='playwright-report/' \
 	--exclude='bin/' \
 	--exclude='src/' \
+	--exclude='types/' \
 	--exclude='docs/' \
 	--exclude='CLAUDE.md' \
 	--exclude='release/' \
 	--exclude='composer.*' \
 	--exclude='package.json' \
 	--exclude='pnpm-*' \
+	--exclude='.npmrc' \
 	--exclude='phpcs.xml*' \
 	--exclude='phpstan.neon*' \
 	--exclude='phpunit*.xml*' \
+	--exclude='playwright.config.ts' \
+	--exclude='tsconfig.json' \
+	--exclude='jest.config.js' \
+	--exclude='eslint.config.js' \
+	--exclude='.stylelintrc.json' \
+	--exclude='webpack*.mjs' \
 	--exclude='*.zip' \
 	--exclude='*.sha256' \
 	--exclude='.env*' \
