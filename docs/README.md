@@ -54,6 +54,9 @@ Then, as needed:
 | [0015](adr/0015-adsanity-contract-stub-for-ci.md) | AdSanity contract stub for CI, plus a drift test |
 | [0016](adr/0016-utc-unix-integer-times.md) | All portal times are UTC Unix integers |
 | [0017](adr/0017-self-contained-design-tokens.md) | Self-contained `--laao-ads-*` tokens with literal fallbacks |
+| [0018](adr/0018-portal-ui-from-the-design-with-three-deviations.md) | Portal UI follows the design, with three deviations |
+| [0019](adr/0019-private-organization-matching-and-approved-membership.md) | Organization matching is private and membership requires approval |
+| [0020](adr/0020-portal-owned-email-change.md) | Portal-owned email change with HMAC token and confirm-email route |
 
 ## Conventions
 

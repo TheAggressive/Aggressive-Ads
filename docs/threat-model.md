@@ -124,7 +124,31 @@ returns the claim to pending. Existing WordPress roles are never replaced.
 Signup and invitation responses do not expose the matched organization or raw
 tokens in audit context. Invitation pages are non-cacheable and set a
 no-referrer policy so the query-string bearer credential cannot leave through a
-resource or navigation referrer.
+resource or navigation referrer. Member removal derives the tenant from the
+authenticated user, refuses the owner row (ownership transfer is separate),
+strips membership meta before the advertiser role, and never puts the former
+member's email into audit context. Notification failure after a successful
+removal is audited and does not reverse the membership change. Ownership
+transfer likewise derives the tenant from the authenticated user, accepts only
+an existing non-owner member as the new owner, verifies the owner/member meta
+swap on read-back with compensating rollback, audits the previous owner id
+without email addresses, and treats notification failure as non-reversing.
+Organization rename reserves the destination canonical identity before
+releasing the previous row, refuses exact collisions with another tenant, never
+writes names into audit context, and rolls the registry and post title back
+together when verification fails. Staff organization suspension is gated by
+`laao_ads_manage_orgs`, uses a per-organization nonce, verifies the post type
+before writing `_laao_ads_org_state`, read-backs the result, and audits the
+previous state without organization names. Advertisers cannot suspend their own
+tenant through that workflow.
+
+Self-service email change is portal-owned: a rate-limited request stores only a
+salted HMAC plus destination and expiry in user meta, mails the new address a
+`/advertiser/confirm-email/` link, and completes only when that token matches
+the signed-in account. Taken addresses receive the same opaque success response
+without mail. Audit events never include the raw token or either address. The
+account details save path still cannot set `user_email` or `role`. See
+[ADR-0020](adr/0020-portal-owned-email-change.md).
 
 Password recovery is a separate nonce-protected, rate-limited public action.
 Unknown addresses, non-portal users, successful sends and mail failures receive
@@ -161,4 +185,4 @@ Named so their absence is deliberate:
 
 ## Retention and privacy
 
-The audit log stores hashed IPs, never raw. `context` never carries paths, nonces, tokens, or personal data. Private creative files for campaigns terminal more than 90 days get purged by a retention job in Phase 7 — the retention policy exists now so the job has something to implement rather than something to invent.
+The audit log stores hashed IPs, never raw. `context` never carries paths, nonces, tokens, or personal data. Private creative files for campaigns terminal more than 90 days are purged by `Workflow\Creative_Retention`: the private bytes and path/token meta go, while campaign records, checksums and Media Library attachments remain.

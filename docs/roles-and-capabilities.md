@@ -30,11 +30,19 @@ Declared once in `inc/Security/class-capabilities.php`, which is the source of t
 `editor` receives nothing. The filter `laao_ads_roles_receiving_caps` (default `['administrator']`) is the supported way to grant the full set to another role.
 
 Organization ownership is data, not another WordPress role. The user ID stored
-in `_laao_ads_owner_user_id` may invite, approve, deny, and revoke access only
-for that organization. `laao_ads_manage_orgs` is the explicit staff override.
-Portal form handlers still derive the organization from the authenticated user;
-they never trust a submitted `org_id`, and each workflow scopes the access row
-to the same tenant before changing it.
+in `_laao_ads_owner_user_id` may invite, approve, deny, revoke, remove members,
+rename the organization, and transfer ownership only for that organization.
+`laao_ads_manage_orgs` is the explicit staff override and also gates the
+Organizations admin screen that suspends or reactivates a tenant. Portal form
+handlers still derive the organization from the authenticated user; they never
+trust a submitted `org_id`, and each workflow scopes the access row or member id
+to the same tenant before changing it. Staff suspension writes accept an
+organization id only after `MANAGE_ORGS` and an existence check, with a
+per-organization nonce. Removing a member never clears the owner meta key;
+ownership moves only through the transfer workflow, which requires an existing
+member target and leaves the former owner as a member. Rename reserves the
+destination canonical `active_key` before releasing the previous identity row
+so two tenants cannot claim the same name.
 
 ### What the advertiser deliberately does not have
 

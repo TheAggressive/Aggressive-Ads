@@ -45,6 +45,8 @@ PACKAGE_REQUIRED=(
 	uninstall.php
 	inc/class-autoloader.php
 	inc/class-plugin.php
+	inc/class-service-registrar.php
+	assets/interactivity/dialog.js
 )
 
 header_version() {

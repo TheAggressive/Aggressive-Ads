@@ -67,6 +67,13 @@ $laao_ads_icon = isset( $laao_ads_icon ) && is_string( $laao_ads_icon ) ? $laao_
 			<path d="M12 17h.01" />
 			<?php
 			break;
+
+		case 'close':
+			?>
+			<path d="M6 6l12 12" />
+			<path d="M18 6L6 18" />
+			<?php
+			break;
 	}
 	?>
 </svg>

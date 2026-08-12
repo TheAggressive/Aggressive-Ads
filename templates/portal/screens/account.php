@@ -16,11 +16,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 use LAAO_Advertiser_Portal\Plugin;
 use LAAO_Advertiser_Portal\Portal\Account_Actions;
+use LAAO_Advertiser_Portal\Portal\Email_Change_Actions;
 use LAAO_Advertiser_Portal\Portal\View_Data;
+use LAAO_Advertiser_Portal\Workflow\Advertiser_Registration;
 
-$laao_ads_account = Plugin::instance()->container()->get( View_Data::class )->account();
-$laao_ads_notice  = Account_Actions::request_notice();
-$laao_ads_error   = Account_Actions::request_error_code();
+$laao_ads_account      = Plugin::instance()->container()->get( View_Data::class )->account();
+$laao_ads_notice       = Account_Actions::request_notice();
+$laao_ads_error        = Account_Actions::request_error_code();
+$laao_ads_email_notice = Email_Change_Actions::account_notice();
+// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only PRG display state shared with Account_Actions notices.
+$laao_ads_email_error = isset( $_GET['laao_ads_error'] ) ? sanitize_key( wp_unslash( $_GET['laao_ads_error'] ) ) : '';
 ?>
 <div class="laao-ads-pagehead">
 	<div>
@@ -40,6 +45,14 @@ $laao_ads_error   = Account_Actions::request_error_code();
 <?php elseif ( 'password_sent' === $laao_ads_notice ) : ?>
 	<div class="laao-ads-alert laao-ads-alert--success" role="status">
 		<p><?php esc_html_e( 'Check your email for a link to set a new password.', 'laao-advertiser-portal' ); ?></p>
+	</div>
+<?php elseif ( 'email_error' === $laao_ads_email_notice ) : ?>
+	<div class="laao-ads-alert laao-ads-alert--error" role="alert">
+		<p><?php echo esc_html( Email_Change_Actions::error_message( $laao_ads_email_error ) ); ?></p>
+	</div>
+<?php elseif ( '' !== $laao_ads_email_notice ) : ?>
+	<div class="laao-ads-alert <?php echo esc_attr( 'rate_limited' === $laao_ads_email_notice ? 'laao-ads-alert--error' : 'laao-ads-alert--success' ); ?>" role="status">
+		<p><?php echo esc_html( Email_Change_Actions::account_notice_message( $laao_ads_email_notice ) ); ?></p>
 	</div>
 <?php endif; ?>
 
@@ -113,9 +126,49 @@ $laao_ads_error   = Account_Actions::request_error_code();
 	</dl>
 
 	<div class="laao-ads-panel__foot">
-		<p>
-			<?php esc_html_e( 'Your email address cannot be changed here. Get in touch and we will update it for you.', 'laao-advertiser-portal' ); ?>
-		</p>
+		<?php if ( '' !== (string) $laao_ads_account['pending_email'] ) : ?>
+			<p>
+				<?php
+				printf(
+					/* translators: %s: pending new email address. */
+					esc_html__( 'A confirmation is waiting for %s. Check that inbox, or cancel and try again.', 'laao-advertiser-portal' ),
+					esc_html( (string) $laao_ads_account['pending_email'] )
+				);
+				?>
+			</p>
+			<form class="laao-ads-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="<?php echo esc_attr( Email_Change_Actions::CANCEL_ACTION ); ?>">
+				<?php wp_nonce_field( Email_Change_Actions::CANCEL_ACTION ); ?>
+				<button class="laao-ads-button laao-ads-button--secondary" type="submit">
+					<?php esc_html_e( 'Cancel email change', 'laao-advertiser-portal' ); ?>
+				</button>
+			</form>
+		<?php else : ?>
+			<form class="laao-ads-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="<?php echo esc_attr( Email_Change_Actions::REQUEST_ACTION ); ?>">
+				<?php wp_nonce_field( Email_Change_Actions::REQUEST_ACTION ); ?>
+
+				<div class="laao-ads-field">
+					<label for="laao-ads-new-email"><?php esc_html_e( 'New email address', 'laao-advertiser-portal' ); ?></label>
+					<input
+						id="laao-ads-new-email"
+						name="new_email"
+						type="email"
+						autocomplete="email"
+						maxlength="<?php echo esc_attr( (string) Advertiser_Registration::MAX_EMAIL ); ?>"
+						required
+					>
+				</div>
+
+				<p class="laao-ads-hint">
+					<?php esc_html_e( 'We will email a one-time confirmation link to the new address. You must be signed in to finish, and your current address stays active until then.', 'laao-advertiser-portal' ); ?>
+				</p>
+
+				<button class="laao-ads-button laao-ads-button--secondary" type="submit">
+					<?php esc_html_e( 'Send confirmation link', 'laao-advertiser-portal' ); ?>
+				</button>
+			</form>
+		<?php endif; ?>
 
 		<form class="laao-ads-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 			<input type="hidden" name="action" value="<?php echo esc_attr( Account_Actions::PASSWORD_ACTION ); ?>">

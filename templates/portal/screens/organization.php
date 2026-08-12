@@ -15,6 +15,7 @@ use LAAO_Advertiser_Portal\Plugin;
 use LAAO_Advertiser_Portal\Portal\Organization_Actions;
 use LAAO_Advertiser_Portal\Portal\View_Data;
 use LAAO_Advertiser_Portal\Repository\Org_Access_Repository;
+use LAAO_Advertiser_Portal\Repository\Org_Repository;
 
 $laao_ads_org        = Plugin::instance()->container()->get( View_Data::class )->organization();
 $laao_ads_org_notice = Organization_Actions::request_notice();
@@ -32,7 +33,7 @@ if ( null === $laao_ads_org ) :
 endif;
 ?>
 <?php if ( '' !== $laao_ads_org_notice ) : ?>
-	<div class="laao-ads-alert <?php echo esc_attr( 'error' === $laao_ads_org_notice || 'rate_limited' === $laao_ads_org_notice ? 'laao-ads-alert--error' : 'laao-ads-alert--success' ); ?>" role="status">
+	<div class="laao-ads-alert <?php echo esc_attr( in_array( $laao_ads_org_notice, array( 'error', 'rate_limited', 'name_taken' ), true ) ? 'laao-ads-alert--error' : 'laao-ads-alert--success' ); ?>" role="status">
 		<p><?php echo esc_html( Organization_Actions::notice_message( $laao_ads_org_notice ) ); ?></p>
 	</div>
 <?php endif; ?>
@@ -75,6 +76,32 @@ endif;
 	</dl>
 </section>
 
+<?php if ( true === $laao_ads_org['can_manage_members'] ) : ?>
+	<section class="laao-ads-panel" aria-labelledby="laao-ads-org-name">
+		<h2 id="laao-ads-org-name" class="laao-ads-panel__head"><?php esc_html_e( 'Organization name', 'laao-advertiser-portal' ); ?></h2>
+		<p class="laao-ads-hint"><?php esc_html_e( 'Names are stored in uppercase. Exact matches of another organization’s name are refused so two tenants cannot claim the same identity.', 'laao-advertiser-portal' ); ?></p>
+
+		<form class="laao-ads-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<input type="hidden" name="action" value="<?php echo esc_attr( Organization_Actions::RENAME_ACTION ); ?>">
+			<?php wp_nonce_field( Organization_Actions::RENAME_ACTION ); ?>
+
+			<div class="laao-ads-field">
+				<label for="laao-ads-organization-name"><?php esc_html_e( 'Display name', 'laao-advertiser-portal' ); ?></label>
+				<input
+					id="laao-ads-organization-name"
+					name="organization_name"
+					type="text"
+					value="<?php echo esc_attr( (string) $laao_ads_org['name'] ); ?>"
+					maxlength="<?php echo esc_attr( (string) Org_Repository::MAX_NAME_LENGTH ); ?>"
+					required
+				>
+			</div>
+
+			<button class="laao-ads-button" type="submit"><?php esc_html_e( 'Save name', 'laao-advertiser-portal' ); ?></button>
+		</form>
+	</section>
+<?php endif; ?>
+
 <section class="laao-ads-panel" aria-labelledby="laao-ads-org-people">
 	<h2 id="laao-ads-org-people" class="laao-ads-panel__head"><?php esc_html_e( 'People', 'laao-advertiser-portal' ); ?></h2>
 
@@ -85,6 +112,9 @@ endif;
 					<th scope="col"><?php esc_html_e( 'Name', 'laao-advertiser-portal' ); ?></th>
 					<th scope="col"><?php esc_html_e( 'Email', 'laao-advertiser-portal' ); ?></th>
 					<th scope="col"><?php esc_html_e( 'Role', 'laao-advertiser-portal' ); ?></th>
+					<?php if ( true === $laao_ads_org['can_manage_members'] ) : ?>
+						<th scope="col"><span class="screen-reader-text"><?php esc_html_e( 'Actions', 'laao-advertiser-portal' ); ?></span></th>
+					<?php endif; ?>
 				</tr>
 			</thead>
 			<tbody>
@@ -104,6 +134,30 @@ endif;
 								: esc_html__( 'Member', 'laao-advertiser-portal' );
 							?>
 						</td>
+						<?php if ( true === $laao_ads_org['can_manage_members'] ) : ?>
+							<td>
+								<?php if ( true !== $laao_ads_member['is_owner'] ) : ?>
+									<div class="laao-ads-actions">
+										<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+											<input type="hidden" name="action" value="<?php echo esc_attr( Organization_Actions::TRANSFER_ACTION ); ?>">
+											<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $laao_ads_member['id'] ); ?>">
+											<?php wp_nonce_field( Organization_Actions::TRANSFER_ACTION ); ?>
+											<button class="laao-ads-button laao-ads-button--secondary laao-ads-button--small" type="submit">
+												<?php esc_html_e( 'Make owner', 'laao-advertiser-portal' ); ?>
+											</button>
+										</form>
+										<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+											<input type="hidden" name="action" value="<?php echo esc_attr( Organization_Actions::REMOVE_ACTION ); ?>">
+											<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $laao_ads_member['id'] ); ?>">
+											<?php wp_nonce_field( Organization_Actions::REMOVE_ACTION ); ?>
+											<button class="laao-ads-button laao-ads-button--secondary laao-ads-button--small" type="submit">
+												<?php esc_html_e( 'Remove', 'laao-advertiser-portal' ); ?>
+											</button>
+										</form>
+									</div>
+								<?php endif; ?>
+							</td>
+						<?php endif; ?>
 					</tr>
 				<?php endforeach; ?>
 			</tbody>
@@ -187,5 +241,5 @@ endif;
 		</section>
 	<?php endif; ?>
 <?php else : ?>
-	<p class="laao-ads-panel__foot"><?php esc_html_e( 'Only the organization owner can invite or approve people.', 'laao-advertiser-portal' ); ?></p>
+	<p class="laao-ads-panel__foot"><?php esc_html_e( 'Only the organization owner can rename the organization, invite people, approve requests, remove members, or transfer ownership.', 'laao-advertiser-portal' ); ?></p>
 <?php endif; ?>

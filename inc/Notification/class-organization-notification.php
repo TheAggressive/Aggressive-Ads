@@ -97,6 +97,70 @@ final class Organization_Notification {
 	}
 
 	/**
+	 * Tell a removed member their portal access for this organization ended.
+	 *
+	 * @param string $email    Former member email.
+	 * @param string $org_name Organization display name.
+	 */
+	public function send_removed( string $email, string $org_name ): bool {
+		$subject = sprintf(
+			/* translators: %s: organization name. */
+			__( 'Access removed for %s', 'laao-advertiser-portal' ),
+			$org_name
+		);
+		$body = sprintf(
+			/* translators: %s: organization name. */
+			__( 'Your access to %s in the advertiser portal has been removed. Contact the organization owner if you believe this was a mistake.', 'laao-advertiser-portal' ),
+			$org_name
+		);
+
+		return $this->send_email( $email, $subject, $body );
+	}
+
+	/**
+	 * Tell the new owner that organization administration moved to them.
+	 *
+	 * @param string $email    New owner email.
+	 * @param string $org_name Organization display name.
+	 */
+	public function send_ownership_received( string $email, string $org_name ): bool {
+		$subject = sprintf(
+			/* translators: %s: organization name. */
+			__( 'You are now the owner of %s', 'laao-advertiser-portal' ),
+			$org_name
+		);
+		$body = sprintf(
+			/* translators: 1: organization name. 2: organization screen URL. */
+			__( "You are now the owner of %1\$s in the advertiser portal. Invite people, approve requests, and manage membership here:\n\n%2\$s", 'laao-advertiser-portal' ),
+			$org_name,
+			Routes::url( Request::ROUTE_ORGANIZATION )
+		);
+
+		return $this->send_email( $email, $subject, $body );
+	}
+
+	/**
+	 * Tell the former owner they remain a member after transferring.
+	 *
+	 * @param string $email    Former owner email.
+	 * @param string $org_name Organization display name.
+	 */
+	public function send_ownership_transferred( string $email, string $org_name ): bool {
+		$subject = sprintf(
+			/* translators: %s: organization name. */
+			__( 'Ownership transferred for %s', 'laao-advertiser-portal' ),
+			$org_name
+		);
+		$body = sprintf(
+			/* translators: %s: organization name. */
+			__( 'You transferred ownership of %s. You remain a member of the organization and can still work on its campaigns.', 'laao-advertiser-portal' ),
+			$org_name
+		);
+
+		return $this->send_email( $email, $subject, $body );
+	}
+
+	/**
 	 * Send one plain-text transactional message.
 	 *
 	 * @param string $email   Recipient address.

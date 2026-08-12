@@ -31,9 +31,8 @@ place to say something different from what was decided.
 ## Status — read this before assuming anything exists
 
 The runtime and security foundation is built, while i18n/release automation and
-implementation across later roadmap phases remain in progress. Organization
-management, private-file retention and reporting are the largest open product
-areas. What is built:
+implementation across later roadmap phases remain in progress. Reporting and
+staff package management are the largest open product areas. What is built:
 
 - root plugin file, autoloader, service container, composition root
 - five private post types, eleven campaign statuses
@@ -66,6 +65,9 @@ areas. What is built:
 - release packaging and independent archive verification
 - `Workflow\Campaign_Clock` — the hourly reconcile that drives approved →
   scheduled → live → complete, without which status freezes at approval
+- `Workflow\Ending_Soon_Notifier` and `Notification\Ending_Soon_Mailer` — the
+  seven-day live/paused reminder with receipt-backed fan-out
+- `Workflow\Creative_Retention` — the daily ninety-day private-file purge
 - staff review queue and placement mapping screens, and the advertiser-facing
   notifications for changes, rejection, approval, going live and completion
 - pause, resume and cancel, which need no new UI: the review screen's buttons
@@ -83,9 +85,8 @@ areas. What is built:
   write anything about their own user record, because `Admin_Guard` closes
   wp-admin to them
 
-What does **not** exist yet, despite being described in `docs/`: organization
-editing and invitations, self-service email change, the private-file retention
-purge, analytics, i18n tooling, semantic-release, and self-hosted Archivo.
+What does **not** exist yet, despite being described in `docs/`: analytics, i18n
+tooling, semantic-release, and self-hosted Archivo.
 `docs/` describes the design; `docs/roadmap.md` says which phase builds it. If a
 doc describes something you cannot find, it has not been built — that is
 expected, not a bug.
@@ -119,12 +120,14 @@ drift.
 ```
 laao-advertiser-portal.php   header, constants, floor guard, hand-off. Never a fifth job.
   └ inc/class-autoloader.php   LAAO_Advertiser_Portal\X\Y_Z → inc/X/class-y-z.php
-      └ inc/class-plugin.php   register_services() / init_services(), explicit order
+      └ inc/class-plugin.php   boot + ordered init_services()
+      └ inc/class-service-registrar.php   register() factories — instantiates nothing
 ```
 
 Registration stores a closure and runs nothing. Behaviour begins only at
-`init_services()`. Adding a service costs two edits in one file, deliberately —
-the wiring stays greppable and there is no autowiring to reverse-engineer.
+`init_services()`. Adding a service costs two greppable edits: one
+`Service_Registrar::register()` line and, when hooks are needed, one entry in
+`Plugin::service_init_order()`. There is no autowiring to reverse-engineer.
 
 Two boundaries carry most of the weight, and both fail the build when crossed:
 

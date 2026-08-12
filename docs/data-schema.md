@@ -69,9 +69,12 @@ This table stores three deliberately small row kinds:
 Raw bearer tokens are returned only to the mail workflow and never persisted.
 `token_hash` is unique, while `active_key` atomically prevents duplicate
 canonical identities and duplicate pending rows for the same organization,
-kind and normalized email. A terminal transition replaces `active_key` with a
-random digest, permitting a later legitimate invitation without deleting the
-history.
+kind and normalized email. Organization rename reserves the destination
+`active_key` before deleting the previous identity row for that organization,
+so a concurrent signup cannot claim the new name and a failed rename can roll
+the registry back without wiping both keys. A terminal invitation/request
+transition replaces `active_key` with a random digest, permitting a later
+legitimate invitation without deleting the history.
 
 Invitations expire after three days; duplicate-name requests expire after
 seven. All timestamps are UTC Unix integers. Reads are bounded to 100 pending

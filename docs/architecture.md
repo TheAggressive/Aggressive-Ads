@@ -7,17 +7,18 @@ laao-advertiser-portal.php        constants, guards, autoloader require
         ↓
 inc/class-autoloader.php          LAAO_Advertiser_Portal\X\Y_Z → inc/X/class-y-z.php
         ↓
-inc/class-plugin.php              composition root (singleton)
+inc/class-plugin.php              composition root (boot + init order)
+        ↓
+inc/class-service-registrar.php   factory closures — instantiates nothing
         ↓
 inc/class-service-container.php   lazy singletons, no reflection
         ↓
-register_services()               builds factories — instantiates nothing
 init_services()                   explicit, ordered ->init() calls
 ```
 
 The root plugin file does four things: declare the header, define constants, guard the PHP/WP floor, and hand off. If it ever grows a fifth responsibility, that responsibility belongs in a service.
 
-`register_services()` and `init_services()` are deliberately separate. Registering a service must never cause application behaviour — a factory closure is stored, nothing runs. Behaviour begins only when `init_services()` calls `->init()`, in an order the file makes visible. Adding a service costs two edits in one file, and that is the point: the wiring stays greppable, and there is no autowiring magic to reverse-engineer at 2am.
+`register_services()` and `init_services()` are deliberately separate. Registering a service must never cause application behaviour — a factory closure is stored, nothing runs. Behaviour begins only when `init_services()` calls `->init()`, in an order `Plugin` makes visible. Adding a service costs two greppable edits: one `register()` in `Service_Registrar` and, when the service needs hooks, one entry in `Plugin::service_init_order()`. There is no autowiring magic to reverse-engineer at 2am.
 
 ## Layers
 

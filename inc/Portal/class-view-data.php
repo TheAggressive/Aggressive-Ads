@@ -20,6 +20,7 @@ use LAAO_Advertiser_Portal\Repository\Package_Repository;
 use LAAO_Advertiser_Portal\Repository\Placement_Repository;
 use LAAO_Advertiser_Portal\REST\Creative_File_Controller;
 use LAAO_Advertiser_Portal\Workflow\Campaign_Editor;
+use LAAO_Advertiser_Portal\Workflow\Email_Change;
 use LAAO_Advertiser_Portal\Workflow\Review_Readiness;
 
 /**
@@ -43,6 +44,7 @@ final class View_Data {
 	 * @param Package_Repository    $packages   Package persistence.
 	 * @param Campaign_Editor       $editor     Shared package validation.
 	 * @param Review_Readiness      $readiness  Safe canonical review readiness.
+	 * @param Email_Change          $emails     Pending email-change lookup.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -52,7 +54,8 @@ final class View_Data {
 		private readonly Org_Access_Repository $org_access,
 		private readonly Package_Repository $packages,
 		private readonly Campaign_Editor $editor,
-		private readonly Review_Readiness $readiness
+		private readonly Review_Readiness $readiness,
+		private readonly Email_Change $emails
 	) {
 	}
 
@@ -290,13 +293,14 @@ final class View_Data {
 		$user = wp_get_current_user();
 
 		return array(
-			'id'           => (int) $user->ID,
-			'login'        => (string) $user->user_login,
-			'email'        => (string) $user->user_email,
-			'display_name' => (string) $user->display_name,
-			'first_name'   => (string) get_user_meta( $user->ID, 'first_name', true ),
-			'last_name'    => (string) get_user_meta( $user->ID, 'last_name', true ),
-			'org_name'     => $this->org_name(),
+			'id'            => (int) $user->ID,
+			'login'         => (string) $user->user_login,
+			'email'         => (string) $user->user_email,
+			'display_name'  => (string) $user->display_name,
+			'first_name'    => (string) get_user_meta( $user->ID, 'first_name', true ),
+			'last_name'     => (string) get_user_meta( $user->ID, 'last_name', true ),
+			'org_name'      => $this->org_name(),
+			'pending_email' => $this->emails->pending_email( (int) $user->ID ),
 		);
 	}
 

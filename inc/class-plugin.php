@@ -10,80 +10,51 @@ declare(strict_types=1);
 namespace LAAO_Advertiser_Portal;
 
 use LAAO_Advertiser_Portal\Admin\Creative_Change_Actions;
-use LAAO_Advertiser_Portal\Admin\Review_Data;
-use LAAO_Advertiser_Portal\Admin\Review_Screen;
-use LAAO_Advertiser_Portal\Admin\Placement_Mapping_Data;
+use LAAO_Advertiser_Portal\Admin\Organization_Screen;
 use LAAO_Advertiser_Portal\Admin\Placement_Mapping_Screen;
+use LAAO_Advertiser_Portal\Admin\Review_Screen;
 use LAAO_Advertiser_Portal\Assets\Assets;
 use LAAO_Advertiser_Portal\Core\Post_Statuses;
 use LAAO_Advertiser_Portal\Core\Post_Types;
 use LAAO_Advertiser_Portal\Core\Service;
 use LAAO_Advertiser_Portal\Install\Installer;
 use LAAO_Advertiser_Portal\Install\Upgrader;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Domain\Transition_Table;
-use LAAO_Advertiser_Portal\Integration\Ad_Provider_Interface;
-use LAAO_Advertiser_Portal\Integration\Adsanity\Ad_Publisher;
-use LAAO_Advertiser_Portal\Integration\Adsanity\Placement_Mapping;
+use LAAO_Advertiser_Portal\Notification\Ending_Soon_Mailer;
 use LAAO_Advertiser_Portal\Notification\Notification_Service;
-use LAAO_Advertiser_Portal\Notification\Organization_Notification;
-use LAAO_Advertiser_Portal\Notification\Password_Notification;
-use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
-use LAAO_Advertiser_Portal\Repository\Creative_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Access_Repository;
-use LAAO_Advertiser_Portal\Repository\Package_Repository;
-use LAAO_Advertiser_Portal\Portal\Router;
-use LAAO_Advertiser_Portal\Portal\View_Data;
 use LAAO_Advertiser_Portal\Portal\Account_Actions;
 use LAAO_Advertiser_Portal\Portal\Campaign_Actions;
+use LAAO_Advertiser_Portal\Portal\Creative_Actions;
+use LAAO_Advertiser_Portal\Portal\Email_Change_Actions;
 use LAAO_Advertiser_Portal\Portal\Login_Actions;
 use LAAO_Advertiser_Portal\Portal\Organization_Actions;
 use LAAO_Advertiser_Portal\Portal\Password_Actions;
+use LAAO_Advertiser_Portal\Portal\Router;
 use LAAO_Advertiser_Portal\Portal\Signup_Actions;
-use LAAO_Advertiser_Portal\Portal\Creative_Actions;
 use LAAO_Advertiser_Portal\REST\Campaigns_Controller;
 use LAAO_Advertiser_Portal\REST\Creative_Controller;
 use LAAO_Advertiser_Portal\REST\Creative_File_Controller;
-use LAAO_Advertiser_Portal\REST\Placements_Controller;
 use LAAO_Advertiser_Portal\REST\Packages_Controller;
+use LAAO_Advertiser_Portal\REST\Placements_Controller;
 use LAAO_Advertiser_Portal\REST\Transitions_Controller;
-use LAAO_Advertiser_Portal\Repository\Placement_Repository;
-use LAAO_Advertiser_Portal\Repository\User_Repository;
-use LAAO_Advertiser_Portal\Storage\Private_Storage;
-use LAAO_Advertiser_Portal\Update\Package_Verifier;
-use LAAO_Advertiser_Portal\Update\Plugin_Updates;
-use LAAO_Advertiser_Portal\Update\Release_Repository;
-use LAAO_Advertiser_Portal\Update\Update_Http_Client;
-use LAAO_Advertiser_Portal\Workflow\Campaign_State_Machine;
-use LAAO_Advertiser_Portal\Workflow\Advertiser_Registration;
-use LAAO_Advertiser_Portal\Workflow\Password_Reset;
-use LAAO_Advertiser_Portal\Workflow\Organization_Membership;
-use LAAO_Advertiser_Portal\Workflow\Campaign_Clock;
-use LAAO_Advertiser_Portal\Workflow\Campaign_Editor;
-use LAAO_Advertiser_Portal\Workflow\Campaign_Validator;
-use LAAO_Advertiser_Portal\Workflow\Creative_Promoter;
-use LAAO_Advertiser_Portal\Workflow\Creative_Change_Manager;
-use LAAO_Advertiser_Portal\Workflow\Creative_Manager;
-use LAAO_Advertiser_Portal\Workflow\Creative_Uploader;
-use LAAO_Advertiser_Portal\Workflow\Review_Actions;
-use LAAO_Advertiser_Portal\Workflow\Review_Readiness;
-use LAAO_Advertiser_Portal\Workflow\Placement_Mapping_Manager;
-use LAAO_Advertiser_Portal\Workflow\Transition_Guards;
 use LAAO_Advertiser_Portal\Security\Admin_Guard;
 use LAAO_Advertiser_Portal\Security\Ownership;
-use LAAO_Advertiser_Portal\Security\Rate_Limiter;
-use LAAO_Advertiser_Portal\Security\Roles;
+use LAAO_Advertiser_Portal\Update\Plugin_Updates;
+use LAAO_Advertiser_Portal\Workflow\Campaign_Clock;
+use LAAO_Advertiser_Portal\Workflow\Campaign_State_Machine;
+use LAAO_Advertiser_Portal\Workflow\Creative_Retention;
+use LAAO_Advertiser_Portal\Workflow\Ending_Soon_Notifier;
 
 /**
  * Wires the application together, then starts it.
  *
  * Registration and initialization are deliberately separate. Registering must
- * never cause application behaviour — a closure is stored, nothing runs.
+ * never cause application behaviour — a factory is stored, nothing runs.
  * Behaviour begins only when init_services() calls init(), in an order this
- * file makes visible.
+ * file makes visible. Factories live in Service_Registrar so this class stays
+ * about boot and init order.
  *
- * Adding a service costs two edits in one file, and that is the point.
+ * Adding a service costs two greppable edits: Service_Registrar::register() and,
+ * when the service needs hooks, service_init_order() below.
  * See docs/architecture.md.
  */
 final class Plugin {
@@ -207,532 +178,7 @@ final class Plugin {
 	 * @return void
 	 */
 	private function register_services(): void {
-		$this->container->register(
-			Update_Http_Client::class,
-			static fn (): Update_Http_Client => new Update_Http_Client()
-		);
-
-		$this->container->register(
-			Release_Repository::class,
-			static fn ( Service_Container $c ): Release_Repository => new Release_Repository(
-				$c->get( Update_Http_Client::class )
-			)
-		);
-
-		$this->container->register(
-			Package_Verifier::class,
-			static fn ( Service_Container $c ): Package_Verifier => new Package_Verifier(
-				$c->get( Release_Repository::class ),
-				$c->get( Update_Http_Client::class )
-			)
-		);
-
-		$this->container->register(
-			Plugin_Updates::class,
-			static fn ( Service_Container $c ): Plugin_Updates => new Plugin_Updates(
-				$c->get( Release_Repository::class ),
-				$c->get( Package_Verifier::class )
-			)
-		);
-
-		$this->container->register(
-			Org_Access_Repository::class,
-			static fn (): Org_Access_Repository => new Org_Access_Repository()
-		);
-
-		$this->container->register(
-			Post_Types::class,
-			static fn (): Post_Types => new Post_Types()
-		);
-
-		$this->container->register(
-			Post_Statuses::class,
-			static fn (): Post_Statuses => new Post_Statuses()
-		);
-
-		$this->container->register(
-			Audit_Repository::class,
-			static fn (): Audit_Repository => new Audit_Repository()
-		);
-
-		$this->container->register(
-			Roles::class,
-			static fn (): Roles => new Roles()
-		);
-
-		$this->container->register(
-			Installer::class,
-			static fn ( Service_Container $c ): Installer => new Installer(
-				$c->get( Audit_Repository::class ),
-				$c->get( Roles::class )
-			)
-		);
-
-		$this->container->register(
-			Upgrader::class,
-			static fn ( Service_Container $c ): Upgrader => new Upgrader(
-				$c->get( Installer::class ),
-				$c->get( Audit_Repository::class ),
-				array(
-					2 => static function () use ( $c ): void {
-						$c->get( Installer::class )->install_org_access();
-					},
-				)
-			)
-		);
-
-		$this->container->register(
-			Org_Repository::class,
-			static fn ( Service_Container $c ): Org_Repository => new Org_Repository(
-				$c->get( Org_Access_Repository::class )
-			)
-		);
-
-		$this->container->register(
-			Ownership::class,
-			static fn ( Service_Container $c ): Ownership => new Ownership(
-				$c->get( Org_Repository::class )
-			)
-		);
-
-		$this->container->register(
-			Admin_Guard::class,
-			static fn (): Admin_Guard => new Admin_Guard()
-		);
-
-		$this->container->register(
-			Campaign_Repository::class,
-			static fn (): Campaign_Repository => new Campaign_Repository()
-		);
-
-		$this->container->register(
-			User_Repository::class,
-			static fn (): User_Repository => new User_Repository()
-		);
-
-		$this->container->register(
-			Password_Notification::class,
-			static fn ( Service_Container $c ): Password_Notification => new Password_Notification(
-				$c->get( User_Repository::class )
-			)
-		);
-
-		$this->container->register(
-			Organization_Notification::class,
-			static fn ( Service_Container $c ): Organization_Notification => new Organization_Notification(
-				$c->get( User_Repository::class )
-			)
-		);
-
-		$this->container->register(
-			Password_Reset::class,
-			static fn ( Service_Container $c ): Password_Reset => new Password_Reset(
-				$c->get( Audit_Repository::class )
-			)
-		);
-
-		$this->container->register(
-			Organization_Membership::class,
-			static fn ( Service_Container $c ): Organization_Membership => new Organization_Membership(
-				$c->get( Org_Access_Repository::class ),
-				$c->get( Org_Repository::class ),
-				$c->get( User_Repository::class ),
-				$c->get( Password_Notification::class ),
-				$c->get( Organization_Notification::class ),
-				$c->get( Audit_Repository::class )
-			)
-		);
-
-		$this->container->register(
-			Advertiser_Registration::class,
-			static fn ( Service_Container $c ): Advertiser_Registration => new Advertiser_Registration(
-				$c->get( User_Repository::class ),
-				$c->get( Org_Repository::class ),
-				$c->get( Organization_Membership::class ),
-				$c->get( Password_Notification::class ),
-				$c->get( Audit_Repository::class )
-			)
-		);
-
-		$this->container->register(
-			Creative_Repository::class,
-			static fn (): Creative_Repository => new Creative_Repository()
-		);
-
-		$this->container->register(
-			Placement_Repository::class,
-			static fn (): Placement_Repository => new Placement_Repository()
-		);
-
-		$this->container->register(
-			Package_Repository::class,
-			static fn (): Package_Repository => new Package_Repository()
-		);
-
-		$this->container->register(
-			Campaign_Editor::class,
-			static fn ( Service_Container $c ): Campaign_Editor => new Campaign_Editor(
-				$c->get( Campaign_Repository::class ),
-				$c->get( Org_Repository::class ),
-				$c->get( Package_Repository::class ),
-				$c->get( Placement_Repository::class ),
-				$c->get( Creative_Repository::class ),
-				$c->get( Audit_Repository::class )
-			)
-		);
-
-		$this->container->register(
-			Campaign_Validator::class,
-			static fn ( Service_Container $c ): Campaign_Validator => new Campaign_Validator(
-				$c->get( Campaign_Repository::class ),
-				$c->get( Creative_Repository::class ),
-				$c->get( Placement_Repository::class ),
-				$c->get( Org_Repository::class ),
-				$c->get( Package_Repository::class )
-			)
-		);
-
-		$this->container->register(
-			Campaign_Clock::class,
-			static fn ( Service_Container $c ): Campaign_Clock => new Campaign_Clock(
-				$c->get( Campaign_State_Machine::class ),
-				$c->get( Campaign_Repository::class )
-			)
-		);
-
-		$this->container->register(
-			Review_Readiness::class,
-			static fn ( Service_Container $c ): Review_Readiness => new Review_Readiness(
-				$c->get( Campaign_Validator::class )
-			)
-		);
-
-		$this->container->register(
-			Placement_Mapping::class,
-			static fn ( Service_Container $c ): Placement_Mapping => new Placement_Mapping(
-				$c->get( Placement_Repository::class )
-			)
-		);
-
-		$this->container->register(
-			Placement_Mapping_Manager::class,
-			static fn ( Service_Container $c ): Placement_Mapping_Manager => new Placement_Mapping_Manager(
-				$c->get( Placement_Repository::class ),
-				$c->get( Placement_Mapping::class ),
-				$c->get( Audit_Repository::class )
-			)
-		);
-
-		$this->container->register(
-			Placement_Mapping_Data::class,
-			static fn ( Service_Container $c ): Placement_Mapping_Data => new Placement_Mapping_Data(
-				$c->get( Placement_Repository::class ),
-				$c->get( Placement_Mapping::class )
-			)
-		);
-
-		$this->container->register(
-			Transition_Guards::class,
-			static function ( Service_Container $c ): Transition_Guards {
-				$campaigns = $c->get( Campaign_Repository::class );
-
-				return new Transition_Guards(
-					$campaigns,
-					array(
-						Transition_Table::GUARD_VALIDATOR => $c->get( Campaign_Validator::class )->as_guard(),
-						Transition_Table::GUARD_MAPPINGS_RESOLVE => $c->get( Placement_Mapping::class )->as_guard(
-							static fn ( int $campaign_id ): array => $campaigns->placement_ids( $campaign_id )
-						),
-					)
-				);
-			}
-		);
-
-		$this->container->register(
-			Private_Storage::class,
-			static fn (): Private_Storage => new Private_Storage()
-		);
-
-		$this->container->register(
-			Creative_Uploader::class,
-			static fn ( Service_Container $c ): Creative_Uploader => new Creative_Uploader(
-				$c->get( Private_Storage::class )
-			)
-		);
-
-		$this->container->register(
-			Creative_Manager::class,
-			static fn ( Service_Container $c ): Creative_Manager => new Creative_Manager(
-				$c->get( Campaign_Repository::class ),
-				$c->get( Creative_Repository::class ),
-				$c->get( Placement_Repository::class ),
-				$c->get( Creative_Uploader::class ),
-				$c->get( Private_Storage::class ),
-				$c->get( Rate_Limiter::class ),
-				$c->get( Audit_Repository::class )
-			)
-		);
-
-		$this->container->register(
-			Creative_Promoter::class,
-			static fn ( Service_Container $c ): Creative_Promoter => new Creative_Promoter(
-				$c->get( Creative_Repository::class ),
-				$c->get( Private_Storage::class )
-			)
-		);
-
-		$this->container->register(
-			Router::class,
-			static fn (): Router => new Router()
-		);
-
-		$this->container->register(
-			View_Data::class,
-			static fn ( Service_Container $c ): View_Data => new View_Data(
-				$c->get( Campaign_Repository::class ),
-				$c->get( Placement_Repository::class ),
-				$c->get( Creative_Repository::class ),
-				$c->get( Org_Repository::class ),
-				$c->get( Org_Access_Repository::class ),
-				$c->get( Package_Repository::class ),
-				$c->get( Campaign_Editor::class ),
-				$c->get( Review_Readiness::class )
-			)
-		);
-
-		$this->container->register(
-			Assets::class,
-			static fn ( Service_Container $c ): Assets => new Assets(
-				$c->get( Router::class )
-			)
-		);
-
-		$this->container->register(
-			Campaign_Actions::class,
-			static fn ( Service_Container $c ): Campaign_Actions => new Campaign_Actions(
-				$c->get( Campaign_Editor::class ),
-				$c->get( Campaign_State_Machine::class ),
-				$c->get( Rate_Limiter::class )
-			)
-		);
-
-		$this->container->register(
-			Login_Actions::class,
-			static fn ( Service_Container $c ): Login_Actions => new Login_Actions(
-				$c->get( Rate_Limiter::class ),
-				$c->get( Audit_Repository::class ),
-				$c->get( Org_Access_Repository::class )
-			)
-		);
-
-		$this->container->register(
-			Organization_Actions::class,
-			static fn ( Service_Container $c ): Organization_Actions => new Organization_Actions(
-				$c->get( Organization_Membership::class ),
-				$c->get( Org_Repository::class ),
-				$c->get( Rate_Limiter::class )
-			)
-		);
-
-		$this->container->register(
-			Signup_Actions::class,
-			static fn ( Service_Container $c ): Signup_Actions => new Signup_Actions(
-				$c->get( Advertiser_Registration::class ),
-				$c->get( Rate_Limiter::class )
-			)
-		);
-
-		$this->container->register(
-			Password_Actions::class,
-			static fn ( Service_Container $c ): Password_Actions => new Password_Actions(
-				$c->get( User_Repository::class ),
-				$c->get( Password_Notification::class ),
-				$c->get( Password_Reset::class ),
-				$c->get( Rate_Limiter::class ),
-				$c->get( Audit_Repository::class )
-			)
-		);
-
-		$this->container->register(
-			Account_Actions::class,
-			static fn ( Service_Container $c ): Account_Actions => new Account_Actions(
-				$c->get( Password_Notification::class )
-			)
-		);
-
-		$this->container->register(
-			Creative_Actions::class,
-			static fn ( Service_Container $c ): Creative_Actions => new Creative_Actions(
-				$c->get( Creative_Manager::class ),
-				$c->get( Creative_Change_Manager::class )
-			)
-		);
-
-		$this->container->register(
-			Campaigns_Controller::class,
-			static fn ( Service_Container $c ): Campaigns_Controller => new Campaigns_Controller(
-				$c->get( Campaign_Repository::class ),
-				$c->get( Creative_Repository::class ),
-				$c->get( Placement_Repository::class ),
-				$c->get( Org_Repository::class ),
-				$c->get( Campaign_Editor::class ),
-				$c->get( Review_Readiness::class ),
-				$c->get( Rate_Limiter::class )
-			)
-		);
-
-		$this->container->register(
-			Placements_Controller::class,
-			static fn ( Service_Container $c ): Placements_Controller => new Placements_Controller(
-				$c->get( Placement_Repository::class )
-			)
-		);
-
-		$this->container->register(
-			Packages_Controller::class,
-			static fn ( Service_Container $c ): Packages_Controller => new Packages_Controller(
-				$c->get( Package_Repository::class ),
-				$c->get( Placement_Repository::class ),
-				$c->get( Campaign_Editor::class )
-			)
-		);
-
-		$this->container->register(
-			Rate_Limiter::class,
-			static fn ( Service_Container $c ): Rate_Limiter => new Rate_Limiter(
-				$c->get( Audit_Repository::class )
-			)
-		);
-
-		$this->container->register(
-			Creative_Controller::class,
-			static fn ( Service_Container $c ): Creative_Controller => new Creative_Controller(
-				$c->get( Creative_Manager::class ),
-				$c->get( Creative_Change_Manager::class )
-			)
-		);
-
-		$this->container->register(
-			Transitions_Controller::class,
-			static fn ( Service_Container $c ): Transitions_Controller => new Transitions_Controller(
-				$c->get( Campaign_State_Machine::class ),
-				$c->get( Campaign_Repository::class ),
-				$c->get( Rate_Limiter::class )
-			)
-		);
-
-		$this->container->register(
-			Creative_File_Controller::class,
-			static fn ( Service_Container $c ): Creative_File_Controller => new Creative_File_Controller(
-				$c->get( Creative_Repository::class ),
-				$c->get( Private_Storage::class )
-			)
-		);
-
-		$this->container->register(
-			Ad_Publisher::class,
-			static fn ( Service_Container $c ): Ad_Publisher => new Ad_Publisher(
-				$c->get( Campaign_Repository::class ),
-				$c->get( Creative_Repository::class ),
-				$c->get( Placement_Repository::class ),
-				$c->get( Placement_Mapping::class ),
-				$c->get( Creative_Promoter::class )
-			)
-		);
-
-		$this->container->register(
-			Ad_Provider_Interface::class,
-			static fn ( Service_Container $c ): Ad_Provider_Interface => $c->get( Ad_Publisher::class )
-		);
-
-		$this->container->register(
-			Creative_Change_Manager::class,
-			static fn ( Service_Container $c ): Creative_Change_Manager => new Creative_Change_Manager(
-				$c->get( Campaign_Repository::class ),
-				$c->get( Creative_Repository::class ),
-				$c->get( Placement_Repository::class ),
-				$c->get( Creative_Uploader::class ),
-				$c->get( Private_Storage::class ),
-				$c->get( Rate_Limiter::class ),
-				$c->get( Ad_Provider_Interface::class ),
-				$c->get( Audit_Repository::class )
-			)
-		);
-
-		$this->container->register(
-			Creative_Change_Actions::class,
-			static fn ( Service_Container $c ): Creative_Change_Actions => new Creative_Change_Actions(
-				$c->get( Creative_Change_Manager::class )
-			)
-		);
-
-		$this->container->register(
-			Campaign_State_Machine::class,
-			static fn ( Service_Container $c ): Campaign_State_Machine => new Campaign_State_Machine(
-				$c->get( Campaign_Repository::class ),
-				$c->get( Audit_Repository::class ),
-				$c->get( Transition_Guards::class ),
-				$c->get( Ad_Provider_Interface::class )->transition_effects()
-			)
-		);
-
-		$this->container->register(
-			Notification_Service::class,
-			static fn ( Service_Container $c ): Notification_Service => new Notification_Service(
-				$c->get( Campaign_Repository::class ),
-				$c->get( Org_Repository::class ),
-				$c->get( User_Repository::class ),
-				$c->get( Audit_Repository::class )
-			)
-		);
-
-		$this->container->register(
-			Review_Data::class,
-			static fn ( Service_Container $c ): Review_Data => new Review_Data(
-				$c->get( Campaign_Repository::class ),
-				$c->get( Creative_Repository::class ),
-				$c->get( Placement_Repository::class ),
-				$c->get( Org_Repository::class ),
-				$c->get( Audit_Repository::class )
-			)
-		);
-
-		$this->container->register(
-			Review_Actions::class,
-			static fn ( Service_Container $c ): Review_Actions => new Review_Actions(
-				$c->get( Campaign_State_Machine::class ),
-				$c->get( Campaign_Repository::class ),
-				$c->get( Audit_Repository::class )
-			)
-		);
-
-		$this->container->register(
-			Review_Screen::class,
-			static fn ( Service_Container $c ): Review_Screen => new Review_Screen(
-				$c->get( Review_Data::class ),
-				$c->get( Review_Actions::class )
-			)
-		);
-
-		$this->container->register(
-			Placement_Mapping_Screen::class,
-			static fn ( Service_Container $c ): Placement_Mapping_Screen => new Placement_Mapping_Screen(
-				$c->get( Placement_Mapping_Data::class ),
-				$c->get( Placement_Mapping_Manager::class )
-			)
-		);
-
-		/*
-		 * Remaining services land here as the phases build them — router,
-		 * assets, REST — each as one register() line, each also listed in
-		 * service_init_order() below when it needs hooks.
-		 *
-		 * The validator and placement-mapping guards, and the publish and
-		 * unpublish effects, are injected into Transition_Guards and
-		 * Campaign_State_Machine when their phases build them. Until then both
-		 * fail closed, so a transition depending on one refuses rather than
-		 * skipping the check.
-		 */
+		( new Service_Registrar() )->register( $this->container );
 	}
 
 	/**
@@ -793,10 +239,14 @@ final class Plugin {
 			// After the state machine, whose listener must be attached before
 			// the clock drives a single transition through it.
 			Campaign_Clock::class,
+			Ending_Soon_Mailer::class,
+			Ending_Soon_Notifier::class,
+			Creative_Retention::class,
 			Notification_Service::class,
 			Review_Screen::class,
 			Creative_Change_Actions::class,
 			Placement_Mapping_Screen::class,
+			Organization_Screen::class,
 
 			// REST last: routes are registered on rest_api_init, which fires
 			// well after this, so ordering here is about nothing but reading.
@@ -808,6 +258,7 @@ final class Plugin {
 			Campaign_Actions::class,
 			Creative_Actions::class,
 			Account_Actions::class,
+			Email_Change_Actions::class,
 			Organization_Actions::class,
 			Login_Actions::class,
 			Signup_Actions::class,

@@ -34,6 +34,7 @@ final class Rate_Limiter {
 	public const ACTION_SIGNUP         = 'signup';
 	public const ACTION_PASSWORD_RESET = 'password_reset';
 	public const ACTION_ORG_INVITE     = 'org_invite';
+	public const ACTION_EMAIL_CHANGE   = 'email_change';
 
 	/**
 	 * Limits per action, as attempts per window.
@@ -75,6 +76,10 @@ final class Rate_Limiter {
 		self::ACTION_ORG_INVITE     => array(
 			'limit'  => 20,
 			'window' => DAY_IN_SECONDS,
+		),
+		self::ACTION_EMAIL_CHANGE   => array(
+			'limit'  => 5,
+			'window' => HOUR_IN_SECONDS,
 		),
 	);
 

@@ -37,6 +37,7 @@ final class Request {
 	public const ROUTE_SIGNUP          = 'signup';
 	public const ROUTE_FORGOT_PASSWORD = 'forgot-password';
 	public const ROUTE_SET_PASSWORD    = 'set-password';
+	public const ROUTE_CONFIRM_EMAIL   = 'confirm-email';
 
 	/**
 	 * Long enough for any route we will name, short enough that a segment
@@ -75,6 +76,7 @@ final class Request {
 			self::ROUTE_SIGNUP,
 			self::ROUTE_FORGOT_PASSWORD,
 			self::ROUTE_SET_PASSWORD,
+			self::ROUTE_CONFIRM_EMAIL,
 		);
 	}
 
@@ -162,6 +164,7 @@ final class Request {
 			self::ROUTE_SIGNUP,
 			self::ROUTE_FORGOT_PASSWORD,
 			self::ROUTE_SET_PASSWORD,
+			self::ROUTE_CONFIRM_EMAIL,
 		);
 	}
 

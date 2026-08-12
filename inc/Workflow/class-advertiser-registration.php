@@ -28,7 +28,7 @@ use WP_Error;
 final class Advertiser_Registration {
 
 	public const MAX_PERSON_NAME = 100;
-	public const MAX_ORG_NAME    = 150;
+	public const MAX_ORG_NAME    = Org_Repository::MAX_NAME_LENGTH;
 	public const MAX_EMAIL       = 100;
 
 	/**

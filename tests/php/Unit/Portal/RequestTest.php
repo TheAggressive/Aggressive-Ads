@@ -54,6 +54,7 @@ final class RequestTest extends TestCase {
 				Request::ROUTE_SIGNUP,
 				Request::ROUTE_FORGOT_PASSWORD,
 				Request::ROUTE_SET_PASSWORD,
+				Request::ROUTE_CONFIRM_EMAIL,
 			),
 			Request::public_routes()
 		);

@@ -20,9 +20,12 @@ use WP_Error;
  */
 final class Organization_Actions implements Service {
 
-	public const INVITE_ACTION  = 'laao_ads_invite_org_member';
-	public const APPROVE_ACTION = 'laao_ads_approve_org_access';
-	public const DENY_ACTION    = 'laao_ads_deny_org_access';
+	public const INVITE_ACTION   = 'laao_ads_invite_org_member';
+	public const APPROVE_ACTION  = 'laao_ads_approve_org_access';
+	public const DENY_ACTION     = 'laao_ads_deny_org_access';
+	public const REMOVE_ACTION   = 'laao_ads_remove_org_member';
+	public const TRANSFER_ACTION = 'laao_ads_transfer_org_ownership';
+	public const RENAME_ACTION   = 'laao_ads_rename_organization';
 
 	/**
 	 * Constructor.
@@ -43,6 +46,9 @@ final class Organization_Actions implements Service {
 		add_action( 'admin_post_' . self::INVITE_ACTION, array( $this, 'handle_invite' ) );
 		add_action( 'admin_post_' . self::APPROVE_ACTION, array( $this, 'handle_approve' ) );
 		add_action( 'admin_post_' . self::DENY_ACTION, array( $this, 'handle_deny' ) );
+		add_action( 'admin_post_' . self::REMOVE_ACTION, array( $this, 'handle_remove' ) );
+		add_action( 'admin_post_' . self::TRANSFER_ACTION, array( $this, 'handle_transfer' ) );
+		add_action( 'admin_post_' . self::RENAME_ACTION, array( $this, 'handle_rename' ) );
 	}
 
 	/** Send an expiring invitation. */
@@ -90,12 +96,59 @@ final class Organization_Actions implements Service {
 		$this->redirect_result( $result, 'denied' );
 	}
 
+	/** Remove an existing non-owner member. */
+	public function handle_remove(): void {
+		check_admin_referer( self::REMOVE_ACTION );
+
+		$result = $this->memberships->remove(
+			$this->current_org_id(),
+			$this->post_id( 'user_id' ),
+			get_current_user_id()
+		);
+
+		$this->redirect_result( $result, 'removed' );
+	}
+
+	/** Transfer ownership to an existing member. */
+	public function handle_transfer(): void {
+		check_admin_referer( self::TRANSFER_ACTION );
+
+		$result = $this->memberships->transfer(
+			$this->current_org_id(),
+			$this->post_id( 'user_id' ),
+			get_current_user_id()
+		);
+
+		$this->redirect_result( $result, 'transferred' );
+	}
+
+	/** Rename the authenticated user's organization. */
+	public function handle_rename(): void {
+		check_admin_referer( self::RENAME_ACTION );
+
+		$result = $this->memberships->rename(
+			$this->current_org_id(),
+			$this->post_organization_name(),
+			get_current_user_id()
+		);
+
+		if ( is_wp_error( $result ) && 'laao_ads_duplicate_org_identity' === $result->get_error_code() ) {
+			$this->redirect( 'name_taken' );
+		}
+
+		$this->redirect_result( $result, 'renamed' );
+	}
+
 	/** Read an allowlisted organization notice. */
 	public static function request_notice(): string {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only PRG display state; authorizes nothing.
 		$value = isset( $_GET['laao_ads_org_notice'] ) ? sanitize_key( wp_unslash( $_GET['laao_ads_org_notice'] ) ) : '';
 
-		return in_array( $value, array( 'invited', 'approved', 'denied', 'rate_limited', 'error' ), true ) ? $value : '';
+		return in_array(
+			$value,
+			array( 'invited', 'approved', 'denied', 'removed', 'transferred', 'renamed', 'name_taken', 'rate_limited', 'error' ),
+			true
+		) ? $value : '';
 	}
 
 	/**
@@ -108,6 +161,10 @@ final class Organization_Actions implements Service {
 			'invited'      => __( 'Invitation sent.', 'laao-advertiser-portal' ),
 			'approved'     => __( 'Organization access approved.', 'laao-advertiser-portal' ),
 			'denied'       => __( 'The pending request was closed.', 'laao-advertiser-portal' ),
+			'removed'      => __( 'That person was removed from the organization.', 'laao-advertiser-portal' ),
+			'transferred'  => __( 'Organization ownership was transferred.', 'laao-advertiser-portal' ),
+			'renamed'      => __( 'Organization name updated.', 'laao-advertiser-portal' ),
+			'name_taken'   => __( 'That organization name is already in use.', 'laao-advertiser-portal' ),
 			'rate_limited' => __( 'Too many invitations were sent. Please wait before trying again.', 'laao-advertiser-portal' ),
 			default        => __( 'The organization change could not be completed.', 'laao-advertiser-portal' ),
 		};
@@ -138,6 +195,14 @@ final class Organization_Actions implements Service {
 		$value = isset( $_POST['email'] ) && is_string( $_POST['email'] ) ? wp_unslash( $_POST['email'] ) : '';
 
 		return strlen( $value ) <= 100 ? strtolower( sanitize_email( $value ) ) : '';
+	}
+
+	/** Read and bound the organization display name. */
+	private function post_organization_name(): string {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- handle_rename() verifies its action nonce; the value is sanitized and length-bounded before the workflow sees it.
+		$value = isset( $_POST['organization_name'] ) && is_string( $_POST['organization_name'] ) ? wp_unslash( $_POST['organization_name'] ) : '';
+
+		return strlen( $value ) <= Org_Repository::MAX_NAME_LENGTH ? sanitize_text_field( $value ) : '';
 	}
 
 	/**

@@ -142,6 +142,80 @@ final class Org_Access_Repository {
 	}
 
 	/**
+	 * Atomically move one organization's reserved canonical identity.
+	 *
+	 * The new `active_key` is reserved first so a concurrent signup cannot claim
+	 * the destination name. Only the previous identity row is deleted afterwards;
+	 * `remove_identity()` would wipe both and leave the tenant unmatchable.
+	 *
+	 * @param int    $org_id         Organization id.
+	 * @param string $old_canonical  Current canonical name.
+	 * @param string $new_canonical  Destination canonical name.
+	 * @return true|WP_Error
+	 */
+	public function rename_identity( int $org_id, string $old_canonical, string $new_canonical ): bool|WP_Error {
+		global $wpdb;
+
+		if ( $org_id <= 0 || '' === $old_canonical || '' === $new_canonical ) {
+			return new WP_Error( 'laao_ads_invalid_org_identity' );
+		}
+
+		if ( $old_canonical === $new_canonical ) {
+			return true;
+		}
+
+		if ( $org_id !== $this->org_id_for_canonical( $old_canonical ) ) {
+			return new WP_Error( 'laao_ads_org_identity_mismatch' );
+		}
+
+		$registered = $this->register_identity( $org_id, $new_canonical );
+		if ( is_wp_error( $registered ) ) {
+			return $registered;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Deletes only the previous identity row after the destination key is reserved.
+		$wpdb->delete(
+			$this->table_name(),
+			array(
+				'org_id'         => $org_id,
+				'kind'           => self::KIND_IDENTITY,
+				'canonical_name' => $old_canonical,
+			),
+			array( '%d', '%s', '%s' )
+		);
+
+		if ( $org_id !== $this->org_id_for_canonical( $new_canonical ) || $org_id === $this->org_id_for_canonical( $old_canonical ) ) {
+			$this->delete_identity_name( $org_id, $new_canonical );
+			$this->register_identity( $org_id, $old_canonical );
+
+			return new WP_Error( 'laao_ads_org_identity_not_saved' );
+		}
+
+		return true;
+	}
+
+	/**
+	 * Delete one identity row by organization and canonical name.
+	 *
+	 * @param int    $org_id         Organization id.
+	 * @param string $canonical_name Canonical name.
+	 */
+	private function delete_identity_name( int $org_id, string $canonical_name ): void {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Compensating deletion of one identity reservation.
+		$wpdb->delete(
+			$this->table_name(),
+			array(
+				'org_id'         => $org_id,
+				'kind'           => self::KIND_IDENTITY,
+				'canonical_name' => $canonical_name,
+			),
+			array( '%d', '%s', '%s' )
+		);
+	}
+
+	/**
 	 * Resolve an exact canonical identity.
 	 *
 	 * @param string $canonical_name Canonical name.

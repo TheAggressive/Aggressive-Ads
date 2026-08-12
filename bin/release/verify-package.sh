@@ -42,6 +42,7 @@ PACKAGE_REQUIRED=(
 	uninstall.php
 	inc/class-autoloader.php
 	inc/class-plugin.php
+	inc/class-service-registrar.php
 	inc/Update/class-update-http-client.php
 	inc/Update/class-release-repository.php
 	inc/Update/class-package-verifier.php
@@ -49,11 +50,13 @@ PACKAGE_REQUIRED=(
 	inc/Admin/class-review-data.php
 	inc/Admin/class-review-screen.php
 	inc/Notification/class-notification-service.php
+	inc/Notification/class-notification-delivery.php
 	inc/Notification/class-password-notification.php
 	inc/Notification/class-organization-notification.php
 	inc/Portal/class-organization-actions.php
 	inc/Portal/class-password-actions.php
 	inc/Repository/class-org-access-repository.php
+	inc/Repository/class-campaign-lifecycle-repository.php
 	inc/Workflow/class-organization-membership.php
 	inc/Workflow/class-password-reset.php
 	templates/portal/forgot-password.php
@@ -74,12 +77,17 @@ PACKAGE_REQUIRED=(
 	assets/portal.css
 	assets/icon.svg
 	assets/admin.css
+	assets/interactivity/scroll-lock.js
+	assets/interactivity/helpers.js
+	assets/interactivity/dialog.js
 	templates/admin/review-queue.php
 	templates/admin/review-campaign.php
 	templates/portal/base.php
 	templates/portal/base-bare.php
 	templates/portal/login.php
 	templates/portal/screens/login.php
+	templates/portal/partials/campaign-ad-updates.php
+	templates/portal/partials/creative-replace-dialogs.php
 	templates/portal/signup.php
 	templates/portal/screens/signup.php
 	templates/portal/dashboard.php

@@ -11,6 +11,7 @@ namespace LAAO_Advertiser_Portal\Workflow;
 
 use LAAO_Advertiser_Portal\Core\Service;
 use LAAO_Advertiser_Portal\Domain\Transition_Table;
+use LAAO_Advertiser_Portal\Repository\Campaign_Lifecycle_Repository;
 use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
 
 /**
@@ -76,11 +77,13 @@ final class Campaign_Clock implements Service {
 	/**
 	 * Constructor.
 	 *
-	 * @param Campaign_State_Machine $machine   The lifecycle.
-	 * @param Campaign_Repository    $campaigns Campaign persistence.
+	 * @param Campaign_State_Machine        $machine    The lifecycle.
+	 * @param Campaign_Lifecycle_Repository $lifecycle  Batch campaign lookups.
+	 * @param Campaign_Repository           $campaigns  Campaign status reads.
 	 */
 	public function __construct(
 		private readonly Campaign_State_Machine $machine,
+		private readonly Campaign_Lifecycle_Repository $lifecycle,
 		private readonly Campaign_Repository $campaigns
 	) {
 	}
@@ -158,7 +161,7 @@ final class Campaign_Clock implements Service {
 	public function reconcile(): int {
 		$changed = 0;
 
-		foreach ( $this->campaigns->ids_in_status( Transition_Table::system_sources(), self::BATCH ) as $campaign_id ) {
+		foreach ( $this->lifecycle->ids_in_status( Transition_Table::system_sources(), self::BATCH ) as $campaign_id ) {
 			$changed += $this->reconcile_campaign( $campaign_id ) ? 1 : 0;
 		}
 

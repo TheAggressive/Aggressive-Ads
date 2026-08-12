@@ -397,4 +397,26 @@ final class PortalRouterTest extends WP_UnitTestCase {
 
 		$this->assertFalse( wp_style_is( Assets::HANDLE, 'enqueued' ) );
 	}
+
+	/**
+	 * Host theme chrome (GSAP, site nav scripts, etc.) must not run on the
+	 * portal document — it has no .site-nav / .site-footer for them to find.
+	 *
+	 * @return void
+	 */
+	public function test_host_theme_scripts_are_stripped_on_the_portal(): void {
+		wp_set_current_user( $this->advertiser );
+
+		$this->go_to( home_url( '/advertiser/' ) );
+
+		wp_register_script( 'laartsonline-gsap-js', 'https://example.test/gsap.js', array(), '1.0', true );
+		wp_enqueue_script( 'laartsonline-gsap-js' );
+
+		$assets = Plugin::instance()->container()->get( Assets::class );
+		$assets->enqueue();
+		$assets->strip_host_chrome_assets();
+
+		$this->assertFalse( wp_script_is( 'laartsonline-gsap-js', 'enqueued' ) );
+		$this->assertTrue( wp_style_is( Assets::HANDLE, 'enqueued' ) );
+	}
 }

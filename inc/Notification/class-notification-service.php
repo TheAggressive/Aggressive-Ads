@@ -21,7 +21,6 @@ use LAAO_Advertiser_Portal\Repository\Org_Repository;
 use LAAO_Advertiser_Portal\Repository\User_Repository;
 use LAAO_Advertiser_Portal\Security\Capabilities;
 use RuntimeException;
-use Throwable;
 
 /**
  * Sends individualized, idempotent messages after a transition commits.
@@ -37,7 +36,6 @@ final class Notification_Service implements Service {
 
 	private const STAFF_SUBMISSION    = 'staff_submission';
 	private const ADVERTISER_DECISION = 'advertiser_decision';
-	private const MAX_RETRIES         = 3;
 
 	/**
 	 * The statuses worth telling an advertiser about, and nothing else.
@@ -61,16 +59,18 @@ final class Notification_Service implements Service {
 	/**
 	 * Constructor.
 	 *
-	 * @param Campaign_Repository $campaigns Campaign persistence.
-	 * @param Org_Repository      $orgs      Organization persistence.
-	 * @param User_Repository     $users     Recipient resolution.
-	 * @param Audit_Repository    $audit     Audit persistence.
+	 * @param Campaign_Repository   $campaigns Campaign persistence.
+	 * @param Org_Repository        $orgs      Organization persistence.
+	 * @param User_Repository       $users     Recipient resolution.
+	 * @param Audit_Repository      $audit     Audit persistence.
+	 * @param Notification_Delivery $delivery  Shared receipt and retry helpers.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
 		private readonly Org_Repository $orgs,
 		private readonly User_Repository $users,
-		private readonly Audit_Repository $audit
+		private readonly Audit_Repository $audit,
+		private readonly Notification_Delivery $delivery
 	) {
 	}
 
@@ -164,7 +164,7 @@ final class Notification_Service implements Service {
 	public function retry_advertiser_notice( int $campaign_id, string $status, int $revision, int $attempt ): void {
 		if (
 			$attempt < 1
-			|| $attempt > self::MAX_RETRIES
+			|| $attempt > Notification_Delivery::MAX_RETRIES
 			|| $status !== $this->campaigns->status( $campaign_id )
 			|| $revision !== $this->campaigns->revision( $campaign_id )
 		) {
@@ -174,7 +174,7 @@ final class Notification_Service implements Service {
 		try {
 			$this->queue_advertiser_notice( $campaign_id, $status, $revision );
 		} catch ( RuntimeException ) {
-			$exhausted = self::MAX_RETRIES === $attempt;
+			$exhausted = Notification_Delivery::MAX_RETRIES === $attempt;
 
 			$this->audit->insert(
 				new Audit_Event(
@@ -210,7 +210,7 @@ final class Notification_Service implements Service {
 	public function retry_submission( int $campaign_id, int $revision, int $attempt ): void {
 		if (
 			$attempt < 1
-			|| $attempt > self::MAX_RETRIES
+			|| $attempt > Notification_Delivery::MAX_RETRIES
 			|| Post_Statuses::SUBMITTED !== $this->campaigns->status( $campaign_id )
 			|| $revision !== $this->campaigns->revision( $campaign_id )
 		) {
@@ -220,7 +220,7 @@ final class Notification_Service implements Service {
 		try {
 			$this->queue_submission( $campaign_id, $revision );
 		} catch ( RuntimeException ) {
-			$exhausted = self::MAX_RETRIES === $attempt;
+			$exhausted = Notification_Delivery::MAX_RETRIES === $attempt;
 
 			$this->audit->insert(
 				new Audit_Event(
@@ -276,12 +276,17 @@ final class Notification_Service implements Service {
 				continue;
 			}
 
-			if ( ! $this->campaigns->reserve_notification_receipt( $campaign_id, $receipt ) ) {
+			$result = $this->delivery->deliver(
+				$campaign_id,
+				$receipt,
+				fn (): bool => $this->send_submission( $email, $recipient['id'], $campaign_id, $revision )
+			);
+
+			if ( Notification_Delivery::RESULT_SKIPPED === $result ) {
 				continue;
 			}
 
-			if ( ! $this->send_submission( $email, $recipient['id'], $campaign_id, $revision ) ) {
-				$this->campaigns->release_notification_receipt( $campaign_id, $receipt );
+			if ( Notification_Delivery::RESULT_FAILED === $result ) {
 				++$failed;
 				continue;
 			}
@@ -322,49 +327,19 @@ final class Notification_Service implements Service {
 	 * @return void
 	 */
 	private function schedule_retry( int $campaign_id, int $revision, int $attempt ): void {
-		if ( $attempt < 1 || $attempt > self::MAX_RETRIES ) {
-			return;
-		}
-
-		$args = array( $campaign_id, $revision, $attempt );
-
-		if ( false !== wp_get_scheduled_event( self::RETRY_HOOK, $args ) ) {
-			return;
-		}
-
-		$delay = match ( $attempt ) {
-			1       => 5 * MINUTE_IN_SECONDS,
-			2       => 30 * MINUTE_IN_SECONDS,
-			default => 2 * HOUR_IN_SECONDS,
-		};
-		$result = wp_schedule_single_event( time() + $delay, self::RETRY_HOOK, $args, true );
-
-		if ( false !== $result && ! is_wp_error( $result ) ) {
-			return;
-		}
-
-		// Another request may have scheduled the same retry between our check
-		// and insert. In that race the recovery exists, so it is not a failure.
-		if ( false !== wp_next_scheduled( self::RETRY_HOOK, $args ) ) {
-			return;
-		}
-
-		$this->audit->insert(
-			new Audit_Event(
-				event: 'campaign.notification_retry_schedule_failed',
-				outcome: Audit_Event::OUTCOME_FAILED,
-				object_type: 'campaign',
-				object_id: $campaign_id,
-				org_id: $this->campaigns->org_id( $campaign_id ),
-				message: 'Campaign notification retry could not be scheduled.',
-				context: array(
-					'notification' => self::STAFF_SUBMISSION,
-					'revision'     => $revision,
-					'attempt'      => $attempt,
-				)
+		$this->delivery->schedule_retry(
+			self::RETRY_HOOK,
+			array( $campaign_id, $revision, $attempt ),
+			$attempt,
+			$campaign_id,
+			array(
+				'notification' => self::STAFF_SUBMISSION,
+				'revision'     => $revision,
+				'attempt'      => $attempt,
 			)
 		);
 	}
+
 
 	/**
 	 * Fans one decision out to every member of the owning organization.
@@ -415,13 +390,17 @@ final class Notification_Service implements Service {
 				continue;
 			}
 
-			if ( ! $this->campaigns->reserve_notification_receipt( $campaign_id, $receipt ) ) {
+			$result = $this->delivery->deliver(
+				$campaign_id,
+				$receipt,
+				fn (): bool => $this->send_advertiser_notice( $email, $user_id, $campaign_id, $status )
+			);
+
+			if ( Notification_Delivery::RESULT_SKIPPED === $result ) {
 				continue;
 			}
 
-			if ( ! $this->send_advertiser_notice( $email, $user_id, $campaign_id, $status ) ) {
-				$this->campaigns->release_notification_receipt( $campaign_id, $receipt );
-
+			if ( Notification_Delivery::RESULT_FAILED === $result ) {
 				++$failed;
 
 				continue;
@@ -463,49 +442,20 @@ final class Notification_Service implements Service {
 	 * @return void
 	 */
 	private function schedule_advertiser_retry( int $campaign_id, string $status, int $revision, int $attempt ): void {
-		if ( $attempt < 1 || $attempt > self::MAX_RETRIES ) {
-			return;
-		}
-
-		$args = array( $campaign_id, $status, $revision, $attempt );
-
-		if ( false !== wp_get_scheduled_event( self::ADVERTISER_RETRY_HOOK, $args ) ) {
-			return;
-		}
-
-		$delay = match ( $attempt ) {
-			1       => 5 * MINUTE_IN_SECONDS,
-			2       => 30 * MINUTE_IN_SECONDS,
-			default => 2 * HOUR_IN_SECONDS,
-		};
-
-		$result = wp_schedule_single_event( time() + $delay, self::ADVERTISER_RETRY_HOOK, $args, true );
-
-		if ( false !== $result && ! is_wp_error( $result ) ) {
-			return;
-		}
-
-		if ( false !== wp_next_scheduled( self::ADVERTISER_RETRY_HOOK, $args ) ) {
-			return;
-		}
-
-		$this->audit->insert(
-			new Audit_Event(
-				event: 'campaign.notification_retry_schedule_failed',
-				outcome: Audit_Event::OUTCOME_FAILED,
-				object_type: 'campaign',
-				object_id: $campaign_id,
-				org_id: $this->campaigns->org_id( $campaign_id ),
-				message: 'Advertiser notification retry could not be scheduled.',
-				context: array(
-					'notification' => self::ADVERTISER_DECISION,
-					'status'       => $status,
-					'revision'     => $revision,
-					'attempt'      => $attempt,
-				)
+		$this->delivery->schedule_retry(
+			self::ADVERTISER_RETRY_HOOK,
+			array( $campaign_id, $status, $revision, $attempt ),
+			$attempt,
+			$campaign_id,
+			array(
+				'notification' => self::ADVERTISER_DECISION,
+				'status'       => $status,
+				'revision'     => $revision,
+				'attempt'      => $attempt,
 			)
 		);
 	}
+
 
 	/**
 	 * Queues one localized plain-text decision email.
@@ -517,21 +467,19 @@ final class Notification_Service implements Service {
 	 * @return bool
 	 */
 	private function send_advertiser_notice( string $email, int $user_id, int $campaign_id, string $status ): bool {
-		$switched = switch_to_user_locale( $user_id );
+		$result = $this->delivery->with_user_locale(
+			$user_id,
+			function () use ( $email, $campaign_id, $status ): bool {
+				$message = $this->advertiser_message( $campaign_id, $status );
 
-		try {
-			$message = $this->advertiser_message( $campaign_id, $status );
-
-			// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.wp_mail_wp_mail -- Transactional notification to a member of the owning organization, not bulk or marketing email.
-			return wp_mail( $email, $message['subject'], $message['body'] );
-		} catch ( Throwable ) {
-			return false;
-		} finally {
-			if ( $switched ) {
-				restore_previous_locale();
+				// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.wp_mail_wp_mail -- Transactional notification to a member of the owning organization, not bulk or marketing email.
+				return wp_mail( $email, $message['subject'], $message['body'] );
 			}
-		}
+		);
+
+		return true === $result;
 	}
+
 
 	/**
 	 * Builds the advertiser's plain-text message.
@@ -607,21 +555,19 @@ final class Notification_Service implements Service {
 	 * @return bool
 	 */
 	private function send_submission( string $email, int $user_id, int $campaign_id, int $revision ): bool {
-		$switched = switch_to_user_locale( $user_id );
+		$result = $this->delivery->with_user_locale(
+			$user_id,
+			function () use ( $email, $campaign_id, $revision ): bool {
+				$message = $this->submission_message( $campaign_id, $revision );
 
-		try {
-			$message = $this->submission_message( $campaign_id, $revision );
-
-			// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.wp_mail_wp_mail -- Transactional notification to individually authorized staff, not bulk or marketing email.
-			return wp_mail( $email, $message['subject'], $message['body'] );
-		} catch ( Throwable ) {
-			return false;
-		} finally {
-			if ( $switched ) {
-				restore_previous_locale();
+				// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.wp_mail_wp_mail -- Transactional notification to individually authorized staff, not bulk or marketing email.
+				return wp_mail( $email, $message['subject'], $message['body'] );
 			}
-		}
+		);
+
+		return true === $result;
 	}
+
 
 	/**
 	 * Builds a plain-text message with no private creative or internal-note data.

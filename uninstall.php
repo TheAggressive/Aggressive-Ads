@@ -31,6 +31,8 @@ $laao_ads_installer_options = LAAO_Advertiser_Portal\Install\Installer::options(
 // The reconciler's hourly event, which otherwise stays in the cron array
 // pointing at a hook nothing answers.
 LAAO_Advertiser_Portal\Workflow\Campaign_Clock::unschedule();
+LAAO_Advertiser_Portal\Workflow\Ending_Soon_Notifier::unschedule();
+LAAO_Advertiser_Portal\Workflow\Creative_Retention::unschedule();
 
 /*
  * Campaign, creative and organization content is deliberately preserved unless

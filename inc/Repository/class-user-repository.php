@@ -20,6 +20,9 @@ final class User_Repository {
 	/** Number of users held in memory while resolving capability filters. */
 	private const BATCH_SIZE = 200;
 
+	/** Pending self-service email change (HMAC hash + destination + expiry). */
+	public const META_EMAIL_CHANGE = '_laao_ads_email_change';
+
 	/**
 	 * Whether an email address is already attached to a WordPress account.
 	 *
@@ -28,6 +31,112 @@ final class User_Repository {
 	 */
 	public function email_exists( string $email ): bool {
 		return false !== email_exists( $email );
+	}
+
+	/**
+	 * Whether another account already owns this address.
+	 *
+	 * @param string $email   Normalized email.
+	 * @param int    $user_id User allowed to keep the address.
+	 */
+	public function email_taken_by_other( string $email, int $user_id ): bool {
+		$existing = $this->by_email( $email );
+
+		return null !== $existing && (int) $existing->ID !== $user_id;
+	}
+
+	/**
+	 * Store one pending email-change challenge.
+	 *
+	 * @param int                  $user_id User id.
+	 * @param array<string, mixed> $pending Hash, destination and expiry.
+	 */
+	public function store_email_change( int $user_id, array $pending ): bool {
+		if ( $user_id <= 0 ) {
+			return false;
+		}
+
+		update_user_meta( $user_id, self::META_EMAIL_CHANGE, $pending );
+
+		$stored = $this->email_change( $user_id );
+
+		return is_array( $stored )
+			&& (string) ( $stored['token_hash'] ?? '' ) === (string) ( $pending['token_hash'] ?? '' )
+			&& (string) ( $stored['new_email'] ?? '' ) === (string) ( $pending['new_email'] ?? '' )
+			&& (int) ( $stored['expires_at'] ?? 0 ) === (int) ( $pending['expires_at'] ?? 0 );
+	}
+
+	/**
+	 * Read a pending email-change challenge.
+	 *
+	 * @param int $user_id User id.
+	 * @return array{token_hash: string, new_email: string, expires_at: int}|null
+	 */
+	public function email_change( int $user_id ): ?array {
+		if ( $user_id <= 0 ) {
+			return null;
+		}
+
+		$raw = get_user_meta( $user_id, self::META_EMAIL_CHANGE, true );
+		if ( ! is_array( $raw ) ) {
+			return null;
+		}
+
+		$hash    = (string) ( $raw['token_hash'] ?? '' );
+		$email   = (string) ( $raw['new_email'] ?? '' );
+		$expires = (int) ( $raw['expires_at'] ?? 0 );
+
+		if ( '' === $hash || '' === $email || $expires <= 0 ) {
+			return null;
+		}
+
+		return array(
+			'token_hash' => $hash,
+			'new_email'  => $email,
+			'expires_at' => $expires,
+		);
+	}
+
+	/**
+	 * Clear a pending email-change challenge.
+	 *
+	 * @param int $user_id User id.
+	 */
+	public function clear_email_change( int $user_id ): void {
+		if ( $user_id > 0 ) {
+			delete_user_meta( $user_id, self::META_EMAIL_CHANGE );
+		}
+	}
+
+	/**
+	 * Persist a confirmed email address through core.
+	 *
+	 * @param int    $user_id User id.
+	 * @param string $email   Normalized destination address.
+	 * @return true|WP_Error
+	 */
+	public function update_email( int $user_id, string $email ): bool|WP_Error {
+		if ( $user_id <= 0 || ! is_email( $email ) ) {
+			return new WP_Error( 'laao_ads_invalid_email' );
+		}
+
+		$updated = wp_update_user(
+			array(
+				'ID'         => $user_id,
+				'user_email' => $email,
+			)
+		);
+
+		if ( is_wp_error( $updated ) ) {
+			return $updated;
+		}
+
+		$user = $this->by_id( $user_id );
+		if ( null === $user || strtolower( (string) $user->user_email ) !== strtolower( $email ) ) {
+			return new WP_Error( 'laao_ads_email_not_saved' );
+		}
+
+		return true;
 	}
 
 	/**

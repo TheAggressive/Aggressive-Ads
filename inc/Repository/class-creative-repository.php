@@ -549,6 +549,31 @@ final class Creative_Repository {
 	 * @param int $campaign_id Campaign post id.
 	 * @return array<int, array{id: int, campaign_id: int, org_id: int, placement_id: int, size: string, kind: string, width: int, height: int, click_url: string, alt_text: string}>
 	 */
+	/**
+	 * Clears the private-file pointers after the bytes have been deleted.
+	 *
+	 * Leaves checksum, MIME and dimensions in place: the creative record is
+	 * still the reviewed artifact, and the Media Library attachment (when one
+	 * exists) remains the public copy. Only the private stage is removable.
+	 *
+	 * @param int $creative_id Creative post id.
+	 * @return void
+	 */
+	public function clear_private_file( int $creative_id ): void {
+		if ( Post_Types::CREATIVE !== get_post_type( $creative_id ) ) {
+			return;
+		}
+
+		delete_post_meta( $creative_id, self::META_PRIVATE_PATH );
+		delete_post_meta( $creative_id, self::META_PRIVATE_TOKEN );
+	}
+
+	/**
+	 * Every creative on a campaign, with details.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return array<int, array{id: int, campaign_id: int, org_id: int, placement_id: int, size: string, kind: string, width: int, height: int, click_url: string, alt_text: string}>
+	 */
 	public function for_campaign( int $campaign_id ): array {
 		$creatives = array();
 

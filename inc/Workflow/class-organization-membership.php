@@ -240,6 +240,67 @@ final class Organization_Membership {
 	}
 
 	/**
+	 * Remove an existing non-owner member from the organization.
+	 *
+	 * The owner meta key is never cleared here. Ownership transfer is a
+	 * separate workflow; without it, removing the owner would leave a tenant
+	 * nobody can administer.
+	 *
+	 * @param int $org_id   Organization id.
+	 * @param int $user_id  Member being removed.
+	 * @param int $actor_id Owner or staff user.
+	 * @return true|WP_Error
+	 */
+	public function remove( int $org_id, int $user_id, int $actor_id ): bool|WP_Error {
+		if ( ! $this->can_manage( $org_id, $actor_id ) ) {
+			return new WP_Error( 'laao_ads_org_access_denied' );
+		}
+
+		if ( $user_id <= 0 || ! in_array( $user_id, $this->organizations->user_ids_for_org( $org_id ), true ) ) {
+			return new WP_Error( 'laao_ads_not_org_member', __( 'That person is not a member of this organization.', 'laao-advertiser-portal' ) );
+		}
+
+		if ( $this->organizations->is_owner( $org_id, $user_id ) ) {
+			return new WP_Error( 'laao_ads_cannot_remove_owner', __( 'The organization owner cannot be removed. Transfer ownership first.', 'laao-advertiser-portal' ) );
+		}
+
+		$user = $this->users->by_id( $user_id );
+		if ( null === $user ) {
+			return new WP_Error( 'laao_ads_not_org_member', __( 'That person is not a member of this organization.', 'laao-advertiser-portal' ) );
+		}
+
+		if ( ! $this->organizations->remove_member( $org_id, $user_id ) ) {
+			return new WP_Error( 'laao_ads_membership_not_saved', __( 'The member could not be removed.', 'laao-advertiser-portal' ) );
+		}
+
+		// One portal tenant per user today: with no remaining membership the
+		// advertiser role is just a privilege that no longer authorizes anything.
+		if ( array() === $this->organizations->org_ids_for_user( $user_id ) ) {
+			$this->users->remove_advertiser_role( $user_id );
+		}
+
+		$email    = strtolower( (string) $user->user_email );
+		$org_name = $this->organizations->name( $org_id );
+		$notified = '' !== $email && $this->notifications->send_removed( $email, $org_name );
+
+		$this->audit->insert(
+			new Audit_Event(
+				event: $notified ? 'organization.member_removed' : 'organization.member_removed_notification_failed',
+				outcome: $notified ? Audit_Event::OUTCOME_OK : Audit_Event::OUTCOME_FAILED,
+				object_type: 'user',
+				object_id: $user_id,
+				org_id: $org_id,
+				message: $notified
+					? 'Removed an organization member.'
+					: 'Removed an organization member but could not notify them.',
+				actor_user_id: $actor_id
+			)
+		);
+
+		return true;
+	}
+
+	/**
 	 * Deny a request or revoke an unconsumed invitation.
 	 *
 	 * @param int $row_id   Access row id.
@@ -283,6 +344,108 @@ final class Organization_Membership {
 				org_id: $org_id,
 				message: Org_Access_Repository::KIND_INVITE === $row['kind'] ? 'Revoked an organization invitation.' : 'Denied an organization access request.',
 				context: array( 'access_id' => $row_id ),
+				actor_user_id: $actor_id
+			)
+		);
+
+		return true;
+	}
+
+	/**
+	 * Transfer organization ownership to an existing non-owner member.
+	 *
+	 * @param int $org_id       Organization id.
+	 * @param int $new_owner_id Member who becomes owner.
+	 * @param int $actor_id     Current owner or staff user.
+	 * @return true|WP_Error
+	 */
+	public function transfer( int $org_id, int $new_owner_id, int $actor_id ): bool|WP_Error {
+		if ( ! $this->can_manage( $org_id, $actor_id ) ) {
+			return new WP_Error( 'laao_ads_org_access_denied' );
+		}
+
+		$current_owner = 0;
+		foreach ( $this->organizations->user_ids_for_org( $org_id ) as $user_id ) {
+			if ( $this->organizations->is_owner( $org_id, $user_id ) ) {
+				$current_owner = $user_id;
+				break;
+			}
+		}
+
+		if ( $current_owner <= 0 ) {
+			return new WP_Error( 'laao_ads_ownership_unavailable', __( 'This organization has no owner to transfer from.', 'laao-advertiser-portal' ) );
+		}
+
+		if ( $new_owner_id <= 0 || $new_owner_id === $current_owner ) {
+			return new WP_Error( 'laao_ads_invalid_ownership_transfer', __( 'Choose a different member to become the owner.', 'laao-advertiser-portal' ) );
+		}
+
+		if ( ! in_array( $new_owner_id, $this->organizations->user_ids_for_org( $org_id ), true ) ) {
+			return new WP_Error( 'laao_ads_not_org_member', __( 'That person is not a member of this organization.', 'laao-advertiser-portal' ) );
+		}
+
+		if ( $this->organizations->is_owner( $org_id, $new_owner_id ) ) {
+			return new WP_Error( 'laao_ads_invalid_ownership_transfer', __( 'Choose a different member to become the owner.', 'laao-advertiser-portal' ) );
+		}
+
+		$new_owner = $this->users->by_id( $new_owner_id );
+		$old_owner = $this->users->by_id( $current_owner );
+		if ( null === $new_owner || null === $old_owner ) {
+			return new WP_Error( 'laao_ads_not_org_member', __( 'That person is not a member of this organization.', 'laao-advertiser-portal' ) );
+		}
+
+		if ( ! $this->organizations->transfer_ownership( $org_id, $new_owner_id ) ) {
+			return new WP_Error( 'laao_ads_ownership_not_saved', __( 'Ownership could not be transferred.', 'laao-advertiser-portal' ) );
+		}
+
+		$org_name = $this->organizations->name( $org_id );
+		$received = $this->notifications->send_ownership_received( strtolower( (string) $new_owner->user_email ), $org_name );
+		$sent_old = $this->notifications->send_ownership_transferred( strtolower( (string) $old_owner->user_email ), $org_name );
+		$notified = $received && $sent_old;
+
+		$this->audit->insert(
+			new Audit_Event(
+				event: $notified ? 'organization.ownership_transferred' : 'organization.ownership_transfer_notification_failed',
+				outcome: $notified ? Audit_Event::OUTCOME_OK : Audit_Event::OUTCOME_FAILED,
+				object_type: 'user',
+				object_id: $new_owner_id,
+				org_id: $org_id,
+				message: $notified
+					? 'Transferred organization ownership.'
+					: 'Transferred organization ownership but could not notify every party.',
+				context: array( 'previous_owner_id' => $current_owner ),
+				actor_user_id: $actor_id
+			)
+		);
+
+		return true;
+	}
+
+	/**
+	 * Rename the organization display name and its reserved canonical identity.
+	 *
+	 * @param int    $org_id   Organization id.
+	 * @param string $name     Requested display name.
+	 * @param int    $actor_id Owner or staff user.
+	 * @return true|WP_Error
+	 */
+	public function rename( int $org_id, string $name, int $actor_id ): bool|WP_Error {
+		if ( ! $this->can_manage( $org_id, $actor_id ) ) {
+			return new WP_Error( 'laao_ads_org_access_denied' );
+		}
+
+		$result = $this->organizations->rename( $org_id, $name );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		$this->audit->insert(
+			new Audit_Event(
+				event: 'organization.renamed',
+				object_type: 'organization',
+				object_id: $org_id,
+				org_id: $org_id,
+				message: 'Renamed the organization.',
 				actor_user_id: $actor_id
 			)
 		);

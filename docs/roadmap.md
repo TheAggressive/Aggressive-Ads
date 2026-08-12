@@ -26,7 +26,7 @@ The REST upload route, private two-stage storage, MIME/dimension/integrity valid
 
 ## Phase 4 — Portal UI *(in progress; creation steps 1–6 complete)*
 
-Dashboard, campaign list and detail, organization, account. The wizard: details → package → creative → destination and schedule → review → submit. The complete creation and submission flow now works without JavaScript, including draft creation, package snapshots, exact-size private creative upload, authenticated preview, removal, destination confirmation, submission-grade scheduling, actionable review, final confirmation, transition-time revalidation, audit, and reviewer notification. REST and forms converge on the same workflows. Atomic replacement for scheduled and live ads is also built: advertisers stage private revisions without interrupting delivery, staff review them in a dedicated queue, and approval reconciles the existing AdSanity object with exact read-back and rollback. Remaining here: drag/drop, Interactivity stores for wizard/upload/autosave/dialog, and full keyboard and screen-reader flow coverage.
+Dashboard, campaign list and detail, organization, account. The wizard: details → package → creative → destination and schedule → review → submit. The complete creation and submission flow now works without JavaScript, including draft creation, package snapshots, exact-size private creative upload, authenticated preview, removal, destination confirmation, submission-grade scheduling, actionable review, final confirmation, transition-time revalidation, audit, and reviewer notification. REST and forms converge on the same workflows. Atomic replacement for scheduled and live ads is also built: advertisers stage private revisions without interrupting delivery, staff review them in a dedicated queue, and approval reconciles the existing AdSanity object with exact read-back and rollback. The shared dialog Interactivity store is shipped (creative replace on campaign detail; imperative open/close — see [interactivity-stores.md](interactivity-stores.md)). Remaining here: drag/drop, Interactivity stores for wizard/upload/autosave, and full keyboard and screen-reader flow coverage.
 
 Public advertiser signup is also built. It is opt-in through WordPress's
 "Anyone can register" policy (with a dedicated filter for managed identity
@@ -62,9 +62,9 @@ a successful submission. See [notifications.md](notifications.md).
 
 `Campaign_Clock` and its hourly reconcile event are **built**: approved → scheduled → live → complete, driven by the guards rather than by the reconciler, with the sweep's source statuses derived from `Transition_Table::system_sources()`.
 
-Pause, resume and cancel need no separate UI — the review screen derives its buttons from the transition table. Still outstanding in this phase: ending-soon notifications and the private-file retention purge.
+Pause, resume and cancel need no separate UI — the review screen derives its buttons from the transition table. Ending-soon notifications and the private-file retention purge are built: live and paused campaigns with a finite `end_ts` inside a seven-day window receive one receipt-backed reminder per end date; private creative bytes for terminal campaigns past ninety days are deleted while campaign records, checksums and Media Library attachments remain.
 
-## Phase 8 — Organizations and members *(in progress; secure access workflow complete)*
+## Phase 8 — Organizations and members *(complete)*
 
 The organization screen shows name, active state, people with owner/member roles,
 and campaign count. Initial creation is atomic during signup. Organization names
@@ -73,11 +73,17 @@ misspellings create an owner-reviewed pending request rather than a duplicate
 tenant or automatic attachment. Owner/staff email invitations are expiring,
 email-bound and single-use, and the screen supports approve, deny and revoke.
 
-Remaining here: organization rename with canonical-key collision handling,
-removing existing members (including the last-owner rule), ownership transfer,
-and staff suspension controls.
+Remaining here: none for membership administration. Self-service email change is
+built: the account screen issues a portal-owned confirmation token to the new
+address, stores only a salted HMAC with expiry, rate-limits requests, and
+completes on `/advertiser/confirm-email/` with a signed-in session. Staff
+suspension controls remain on the Organizations admin screen.
 
-Self-service email change belongs here too. Core's flow mails a signed confirmation to the *new* address and completes on `profile.php`, which portal users cannot reach, so supporting it means owning the token: issue, expiry, single use and rate limiting. The account screen shows the address read-only until then.
+Organization rename with canonical-key collision handling, member removal with
+the last-owner rule, and ownership transfer remain available on the portal
+organization screen for owners and staff.
+
+See [ADR-0020](adr/0020-portal-owned-email-change.md).
 
 ## Phase 9 — Packages and pricing *(catalogue read/selection complete; management remains)*
 

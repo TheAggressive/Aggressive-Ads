@@ -246,6 +246,7 @@ final class Router implements Service {
 		 */
 		if ( $this->request->is_public() ) {
 			$sensitive_link = Request::ROUTE_SET_PASSWORD === $this->request->route
+				|| Request::ROUTE_CONFIRM_EMAIL === $this->request->route
 				|| ( Request::ROUTE_SIGNUP === $this->request->route && '' !== Signup_Actions::request_invite_token() );
 
 			/*

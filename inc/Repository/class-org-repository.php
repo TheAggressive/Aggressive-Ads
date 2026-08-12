@@ -33,6 +33,12 @@ final class Org_Repository {
 	 */
 	public const MAX_MEMBERSHIPS = 100;
 
+	/** Upper bound shared by signup and rename display names. */
+	public const MAX_NAME_LENGTH = 150;
+
+	/** Bounded staff organization catalogue size. */
+	private const MAX_ADMIN_ORGS = 500;
+
 	public const STATE_ACTIVE    = 'active';
 	public const STATE_SUSPENDED = 'suspended';
 
@@ -183,6 +189,99 @@ final class Org_Repository {
 	}
 
 	/**
+	 * Rename an organization display title and its reserved canonical identity.
+	 *
+	 * Collision handling is the unique `active_key` insert: another tenant's
+	 * exact canonical name cannot be taken. Display-only punctuation changes
+	 * that leave the canonical key unchanged skip the identity swap.
+	 *
+	 * @param int    $org_id Organization id.
+	 * @param string $name   Requested display name.
+	 * @return true|WP_Error
+	 */
+	public function rename( int $org_id, string $name ): bool|WP_Error {
+		if ( $org_id <= 0 || Post_Types::ORGANIZATION !== get_post_type( $org_id ) ) {
+			return new WP_Error( 'laao_ads_org_missing', __( 'The organization could not be found.', 'laao-advertiser-portal' ) );
+		}
+
+		$display   = self::display_name( $name );
+		$canonical = self::canonical_name( $display );
+
+		if ( '' === $canonical || strlen( $display ) > self::MAX_NAME_LENGTH ) {
+			return new WP_Error( 'laao_ads_invalid_org_identity', __( 'Enter a valid organization name.', 'laao-advertiser-portal' ) );
+		}
+
+		$old_display   = $this->name( $org_id );
+		$old_canonical = (string) get_post_meta( $org_id, self::META_CANONICAL_NAME, true );
+
+		if ( '' === $old_canonical ) {
+			$old_canonical = self::canonical_name( $old_display );
+		}
+
+		if ( $display === $old_display && $canonical === $old_canonical ) {
+			return true;
+		}
+
+		$identity_moved = false;
+		if ( $canonical !== $old_canonical ) {
+			$identity = $this->access->rename_identity( $org_id, $old_canonical, $canonical );
+			if ( is_wp_error( $identity ) ) {
+				if ( 'laao_ads_duplicate_org_identity' === $identity->get_error_code() ) {
+					return new WP_Error(
+						'laao_ads_duplicate_org_identity',
+						__( 'That organization name is already in use.', 'laao-advertiser-portal' )
+					);
+				}
+
+				return $identity;
+			}
+			$identity_moved = true;
+		}
+
+		$updated = wp_update_post(
+			array(
+				'ID'         => $org_id,
+				'post_title' => $display,
+			),
+			true
+		);
+
+		if ( is_wp_error( $updated ) ) {
+			if ( $identity_moved ) {
+				$this->access->rename_identity( $org_id, $canonical, $old_canonical );
+			}
+
+			return new WP_Error( 'laao_ads_org_write_failed', __( 'The organization could not be renamed.', 'laao-advertiser-portal' ) );
+		}
+
+		update_post_meta( $org_id, self::META_CANONICAL_NAME, $canonical );
+		$this->flush_cache();
+
+		$verified = $this->name( $org_id ) === $display
+			&& (string) get_post_meta( $org_id, self::META_CANONICAL_NAME, true ) === $canonical
+			&& ( ! $identity_moved || $org_id === $this->access->org_id_for_canonical( $canonical ) );
+
+		if ( ! $verified ) {
+			wp_update_post(
+				array(
+					'ID'         => $org_id,
+					'post_title' => $old_display,
+				),
+				true
+			);
+			update_post_meta( $org_id, self::META_CANONICAL_NAME, $old_canonical );
+			if ( $identity_moved ) {
+				$this->access->rename_identity( $org_id, $canonical, $old_canonical );
+			}
+			$this->flush_cache();
+
+			return new WP_Error( 'laao_ads_org_write_failed', __( 'The organization could not be renamed.', 'laao-advertiser-portal' ) );
+		}
+
+		return true;
+	}
+
+	/**
 	 * Removes an organization created by a registration that could not finish.
 	 *
 	 * @param int $org_id Organization post id.
@@ -262,6 +361,65 @@ final class Org_Repository {
 	}
 
 	/**
+	 * Move ownership from the current owner to an existing member.
+	 *
+	 * The former owner becomes a repeated member. The new owner is removed from
+	 * the member list so the two roles never share one user id. Suspended orgs
+	 * remain transferable so staff can recover an account without reactivating
+	 * it first.
+	 *
+	 * @param int $org_id       Organization id.
+	 * @param int $new_owner_id Existing member who becomes owner.
+	 */
+	public function transfer_ownership( int $org_id, int $new_owner_id ): bool {
+		if ( $org_id <= 0 || $new_owner_id <= 0 || Post_Types::ORGANIZATION !== get_post_type( $org_id ) ) {
+			return false;
+		}
+
+		$current_owner = (int) get_post_meta( $org_id, self::META_OWNER_USER, true );
+		if ( $current_owner <= 0 || $current_owner === $new_owner_id || $this->is_owner( $org_id, $new_owner_id ) ) {
+			return false;
+		}
+
+		$members = array_map( 'intval', get_post_meta( $org_id, self::META_MEMBER_USER, false ) );
+		if ( ! in_array( $new_owner_id, $members, true ) ) {
+			return false;
+		}
+
+		$owner_updated = update_post_meta( $org_id, self::META_OWNER_USER, $new_owner_id );
+		if ( false === $owner_updated && (int) get_post_meta( $org_id, self::META_OWNER_USER, true ) !== $new_owner_id ) {
+			return false;
+		}
+
+		delete_post_meta( $org_id, self::META_MEMBER_USER, $new_owner_id );
+
+		if ( ! in_array( $current_owner, array_map( 'intval', get_post_meta( $org_id, self::META_MEMBER_USER, false ) ), true ) ) {
+			add_post_meta( $org_id, self::META_MEMBER_USER, $current_owner, false );
+		}
+
+		$this->flush_cache();
+
+		$verified = $this->is_owner( $org_id, $new_owner_id )
+			&& ! $this->is_owner( $org_id, $current_owner )
+			&& in_array( $current_owner, $this->user_ids_for_org( $org_id ), true )
+			&& in_array( $new_owner_id, $this->user_ids_for_org( $org_id ), true )
+			&& ! in_array( $new_owner_id, array_map( 'intval', get_post_meta( $org_id, self::META_MEMBER_USER, false ) ), true );
+
+		if ( $verified ) {
+			return true;
+		}
+
+		update_post_meta( $org_id, self::META_OWNER_USER, $current_owner );
+		delete_post_meta( $org_id, self::META_MEMBER_USER, $current_owner );
+		if ( ! in_array( $new_owner_id, array_map( 'intval', get_post_meta( $org_id, self::META_MEMBER_USER, false ) ), true ) ) {
+			add_post_meta( $org_id, self::META_MEMBER_USER, $new_owner_id, false );
+		}
+		$this->flush_cache();
+
+		return false;
+	}
+
+	/**
 	 * Add one member exactly once.
 	 *
 	 * @param int $org_id  Organization id.
@@ -283,16 +441,24 @@ final class Org_Repository {
 	}
 
 	/**
-	 * Remove one member during compensation or denial.
+	 * Remove one non-owner member.
+	 *
+	 * The owner lives in a separate meta key and is never cleared here. Product
+	 * removal and compensation both call this path, so refusing the owner at
+	 * the repository keeps a mistaken workflow from stranding the tenant.
 	 *
 	 * @param int $org_id  Organization id.
 	 * @param int $user_id User id.
 	 */
 	public function remove_member( int $org_id, int $user_id ): bool {
+		if ( $org_id <= 0 || $user_id <= 0 || $this->is_owner( $org_id, $user_id ) ) {
+			return false;
+		}
+
 		$deleted = delete_post_meta( $org_id, self::META_MEMBER_USER, $user_id );
 		$this->flush_cache();
 
-		return $deleted;
+		return $deleted && ! in_array( $user_id, $this->user_ids_for_org( $org_id ), true );
 	}
 
 	/**
@@ -423,13 +589,100 @@ final class Org_Repository {
 	 * @return bool
 	 */
 	public function is_active( int $org_id ): bool {
+		return self::STATE_ACTIVE === $this->state( $org_id );
+	}
+
+	/**
+	 * Normalized organization lifecycle state.
+	 *
+	 * Empty meta is treated as active so legacy rows stay usable until staff
+	 * deliberately suspend them.
+	 *
+	 * @param int $org_id Organization post id.
+	 * @return string Empty when the id is not an organization; otherwise active or suspended.
+	 */
+	public function state( int $org_id ): string {
 		if ( $org_id <= 0 || Post_Types::ORGANIZATION !== get_post_type( $org_id ) ) {
-			return false;
+			return '';
 		}
 
 		$state = (string) get_post_meta( $org_id, self::META_ORG_STATE, true );
 
-		return '' === $state || self::STATE_ACTIVE === $state;
+		if ( self::STATE_SUSPENDED === $state ) {
+			return self::STATE_SUSPENDED;
+		}
+
+		return self::STATE_ACTIVE;
+	}
+
+	/**
+	 * Persist an explicit active or suspended state with read-back.
+	 *
+	 * @param int    $org_id Organization post id.
+	 * @param string $state  self::STATE_ACTIVE or self::STATE_SUSPENDED.
+	 */
+	public function set_state( int $org_id, string $state ): bool {
+		if ( $org_id <= 0 || Post_Types::ORGANIZATION !== get_post_type( $org_id ) ) {
+			return false;
+		}
+
+		if ( self::STATE_ACTIVE !== $state && self::STATE_SUSPENDED !== $state ) {
+			return false;
+		}
+
+		if ( $this->state( $org_id ) === $state ) {
+			return true;
+		}
+
+		update_post_meta( $org_id, self::META_ORG_STATE, $state );
+		$this->flush_cache();
+
+		return $this->state( $org_id ) === $state;
+	}
+
+	/**
+	 * Whether the id is an organization post.
+	 *
+	 * @param int $org_id Organization post id.
+	 */
+	public function exists( int $org_id ): bool {
+		return $org_id > 0 && Post_Types::ORGANIZATION === get_post_type( $org_id );
+	}
+
+	/**
+	 * Bounded catalogue of organization ids for staff administration.
+	 *
+	 * @return array<int, int>
+	 */
+	public function all_ids(): array {
+		$ids = get_posts(
+			array(
+				'post_type'              => Post_Types::ORGANIZATION,
+				'post_status'            => 'any',
+				'numberposts'            => self::MAX_ADMIN_ORGS,
+				'fields'                 => 'ids',
+				'orderby'                => 'title',
+				'order'                  => 'ASC',
+				'no_found_rows'          => true,
+				'update_post_term_cache' => false,
+				'update_post_meta_cache' => false,
+			)
+		);
+
+		return array_values( array_map( 'intval', is_array( $ids ) ? $ids : array() ) );
+	}
+
+	/**
+	 * Owner user id for one organization.
+	 *
+	 * @param int $org_id Organization post id.
+	 */
+	public function owner_user_id( int $org_id ): int {
+		if ( ! $this->exists( $org_id ) ) {
+			return 0;
+		}
+
+		return (int) get_post_meta( $org_id, self::META_OWNER_USER, true );
 	}
 
 	/**

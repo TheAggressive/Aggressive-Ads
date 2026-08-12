@@ -63,16 +63,19 @@ Filesystem sniffs are excluded for `tests/php/*` only. A test that proves a host
 
 ## Build
 
-The current plugin is server-rendered PHP and ships hand-authored CSS, so it has
-no JavaScript source and no asset compilation step yet. Packaging is still a
-build: it creates and verifies the exact installable ZIP and checksum.
+The current plugin is server-rendered PHP. Portal CSS is hand-authored
+(`assets/portal.css`). The first Interactivity modules also ship hand-authored
+from `assets/interactivity/` (dialog, scroll-lock, helpers) — packaging still
+creates and verifies the installable ZIP and checksum, and release verification
+requires those module files.
 
-Before the first JavaScript enhancement lands, add one small
-`@wordpress/scripts`/TypeScript pipeline for `src/interactivity/*.ts` →
-`dist/interactivity`. It must emit `.asset.php` dependency manifests, run strict
-type checking and lint/tests in both local QA and CI, and place only compiled
-`dist/` output in the release ZIP. Do not add a block build until the plugin has
-an actual block.
+Add a small `@wordpress/scripts`/TypeScript pipeline for
+`src/interactivity/*.ts` → `dist/interactivity` when the rest of the frontend
+lane lands (wizard/upload/autosave). It must emit `.asset.php` dependency
+manifests, run strict type checking and lint/tests in both local QA and CI,
+move the existing modules into that tree, and place only compiled `dist/`
+output in the release ZIP. Do not add a block build until the plugin has an
+actual block.
 
 ## Packaging
 

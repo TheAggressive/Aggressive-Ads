@@ -328,4 +328,133 @@ final class OrganizationMembershipTest extends WP_UnitTestCase {
 		$this->assertFalse( $member_data['can_manage_members'] );
 		$this->assertSame( array(), $member_data['pending_access'] );
 	}
+
+	/** An owner may remove a member; the owner row itself is protected. */
+	public function test_owner_can_remove_member_but_not_themselves(): void {
+		$org       = $this->make_org();
+		$member_id = self::factory()->user->create(
+			array(
+				'role'       => Roles::ADVERTISER,
+				'user_email' => 'removable@example.test',
+			)
+		);
+		$this->assertTrue( $this->organizations->add_member( $org['org_id'], $member_id ) );
+
+		$blocked = $this->memberships->remove( $org['org_id'], $org['owner_id'], $org['owner_id'] );
+		$this->assertWPError( $blocked );
+		$this->assertSame( 'laao_ads_cannot_remove_owner', $blocked->get_error_code() );
+		$this->assertSame( array( $org['org_id'] ), $this->organizations->org_ids_for_user( $org['owner_id'] ) );
+		$this->assertTrue( $this->organizations->is_owner( $org['org_id'], $org['owner_id'] ) );
+
+		$this->mail = array();
+		$this->assertTrue( $this->memberships->remove( $org['org_id'], $member_id, $org['owner_id'] ) );
+		$this->assertSame( array(), $this->organizations->org_ids_for_user( $member_id ) );
+		$this->assertNotContains( Roles::ADVERTISER, get_userdata( $member_id )->roles );
+		$this->assertCount( 1, $this->mail );
+		$this->assertStringContainsString( 'removable@example.test', (string) $this->mail[0]['to'] );
+		$this->assertStringContainsString( 'has been removed', (string) $this->mail[0]['message'] );
+	}
+
+	/** Removal is scoped to the managing tenant and preserves unrelated WordPress roles. */
+	public function test_member_removal_is_org_scoped_and_preserves_other_roles(): void {
+		$org      = $this->make_org();
+		$attacker = $this->make_org( 'OTHER ORGANIZATION' );
+		$user_id  = self::factory()->user->create(
+			array(
+				'role'       => 'editor',
+				'user_email' => 'keep-editor@example.test',
+			)
+		);
+		$user     = get_userdata( $user_id );
+		$user->add_role( Roles::ADVERTISER );
+		$this->assertTrue( $this->organizations->add_member( $org['org_id'], $user_id ) );
+
+		$denied = $this->memberships->remove( $org['org_id'], $user_id, $attacker['owner_id'] );
+		$this->assertWPError( $denied );
+		$this->assertSame( 'laao_ads_org_access_denied', $denied->get_error_code() );
+		$this->assertSame( array( $org['org_id'] ), $this->organizations->org_ids_for_user( $user_id ) );
+
+		$ordinary = self::factory()->user->create( array( 'role' => Roles::ADVERTISER ) );
+		$this->assertTrue( $this->organizations->add_member( $org['org_id'], $ordinary ) );
+		$member_denied = $this->memberships->remove( $org['org_id'], $user_id, $ordinary );
+		$this->assertWPError( $member_denied );
+		$this->assertSame( 'laao_ads_org_access_denied', $member_denied->get_error_code() );
+
+		$this->assertTrue( $this->memberships->remove( $org['org_id'], $user_id, $org['owner_id'] ) );
+		$user = get_userdata( $user_id );
+		$this->assertContains( 'editor', $user->roles );
+		$this->assertNotContains( Roles::ADVERTISER, $user->roles );
+		$this->assertSame( array(), $this->organizations->org_ids_for_user( $user_id ) );
+		$this->assertFalse( $this->organizations->remove_member( $org['org_id'], $org['owner_id'] ) );
+	}
+
+	/** Ownership moves to a member; the former owner remains and strangers cannot transfer. */
+	public function test_ownership_transfer_is_org_scoped_and_leaves_former_owner_as_member(): void {
+		$org      = $this->make_org();
+		$attacker = $this->make_org( 'OTHER ORGANIZATION' );
+		$member   = self::factory()->user->create(
+			array(
+				'role'       => Roles::ADVERTISER,
+				'user_email' => 'next-owner@example.test',
+			)
+		);
+		$this->assertTrue( $this->organizations->add_member( $org['org_id'], $member ) );
+
+		$denied = $this->memberships->transfer( $org['org_id'], $member, $attacker['owner_id'] );
+		$this->assertWPError( $denied );
+		$this->assertSame( 'laao_ads_org_access_denied', $denied->get_error_code() );
+		$this->assertTrue( $this->organizations->is_owner( $org['org_id'], $org['owner_id'] ) );
+
+		$self = $this->memberships->transfer( $org['org_id'], $org['owner_id'], $org['owner_id'] );
+		$this->assertWPError( $self );
+		$this->assertSame( 'laao_ads_invalid_ownership_transfer', $self->get_error_code() );
+
+		$this->mail = array();
+		$this->assertTrue( $this->memberships->transfer( $org['org_id'], $member, $org['owner_id'] ) );
+		$this->assertTrue( $this->organizations->is_owner( $org['org_id'], $member ) );
+		$this->assertFalse( $this->organizations->is_owner( $org['org_id'], $org['owner_id'] ) );
+		$this->assertSame( array( $org['org_id'] ), $this->organizations->org_ids_for_user( $org['owner_id'] ) );
+		$this->assertCount( 2, $this->mail );
+
+		wp_set_current_user( $member );
+		$data = $this->view->organization();
+		$this->assertIsArray( $data );
+		$this->assertTrue( $data['can_manage_members'] );
+
+		wp_set_current_user( $org['owner_id'] );
+		$former = $this->view->organization();
+		$this->assertIsArray( $former );
+		$this->assertFalse( $former['can_manage_members'] );
+
+		$this->assertTrue( $this->memberships->remove( $org['org_id'], $org['owner_id'], $member ) );
+		$this->assertSame( array(), $this->organizations->org_ids_for_user( $org['owner_id'] ) );
+	}
+
+	/** Rename reserves the new canonical key and refuses another tenant's identity. */
+	public function test_organization_rename_swaps_identity_and_blocks_collisions(): void {
+		$org      = $this->make_org( 'COPPER STATE ARTS' );
+		$occupied = $this->make_org( 'DESERT CANVAS CO' );
+
+		$denied = $this->memberships->rename( $org['org_id'], 'Desert Canvas Co', $occupied['owner_id'] );
+		$this->assertWPError( $denied );
+		$this->assertSame( 'laao_ads_org_access_denied', $denied->get_error_code() );
+		$this->assertSame( 'COPPER STATE ARTS', $this->organizations->name( $org['org_id'] ) );
+
+		$collision = $this->memberships->rename( $org['org_id'], 'desert canvas co', $org['owner_id'] );
+		$this->assertWPError( $collision );
+		$this->assertSame( 'laao_ads_duplicate_org_identity', $collision->get_error_code() );
+		$this->assertSame( $occupied['org_id'], $this->access->org_id_for_canonical( Org_Repository::canonical_name( 'DESERT CANVAS CO' ) ) );
+		$this->assertSame( $org['org_id'], $this->access->org_id_for_canonical( Org_Repository::canonical_name( 'COPPER STATE ARTS' ) ) );
+
+		$this->assertTrue( $this->memberships->rename( $org['org_id'], 'Copper State Arts, LLC', $org['owner_id'] ) );
+		$this->assertSame( 'COPPER STATE ARTS, LLC', $this->organizations->name( $org['org_id'] ) );
+		$this->assertSame( $org['org_id'], $this->access->org_id_for_canonical( Org_Repository::canonical_name( 'COPPER STATE ARTS LLC' ) ) );
+		$this->assertSame( 0, $this->access->org_id_for_canonical( Org_Repository::canonical_name( 'COPPER STATE ARTS' ) ) );
+		$this->assertSame( $org['org_id'], $this->organizations->matching_org_id( 'copper state arts llc' ) );
+
+		// Display-only punctuation that collapses to the same canonical key is a no-op identity swap.
+		$this->assertTrue( $this->memberships->rename( $org['org_id'], 'Copper State Arts LLC', $org['owner_id'] ) );
+		$this->assertSame( 'COPPER STATE ARTS LLC', $this->organizations->name( $org['org_id'] ) );
+		$this->assertSame( $org['org_id'], $this->access->org_id_for_canonical( Org_Repository::canonical_name( 'COPPER STATE ARTS LLC' ) ) );
+	}
 }

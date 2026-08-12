@@ -25,13 +25,8 @@ use WP_User;
  * login screen's "Lost your password?" link would work. The guard is right;
  * the missing destination was the defect.
  *
- * **What is deliberately not here.** Changing the email address is not
- * self-service. Core's flow for that emails a signed confirmation link to the
- * *new* address and completes on profile.php, which these users cannot reach,
- * so supporting it means owning a token: issue, expiry, single use, and rate
- * limiting. An account-takeover primitive is not something to approximate on
- * the way to a settings screen, so the address is shown read-only and changing
- * it goes through staff. See docs/roadmap.md.
+ * Email changes are owned by `Email_Change_Actions`: a portal confirmation
+ * token mailed to the new address, never core's profile.php completion path.
  */
 final class Account_Actions implements Service {
 

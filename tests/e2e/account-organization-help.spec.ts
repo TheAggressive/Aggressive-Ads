@@ -64,15 +64,13 @@ test( 'advertiser reads and edits their account, organization and help', async (
 } );
 
 /**
- * The username and email are shown but not editable.
+ * The details form still cannot post email or role; email change is a separate form.
  *
- * Changing an email address is an account-takeover primitive: core's flow mails
- * a signed confirmation to the *new* address and completes on profile.php,
- * which these users cannot reach. Until this plugin owns that token properly,
- * the field must not be posted at all — a disabled input that still submits is
- * the version of this that looks safe and is not.
+ * Changing an email address is an account-takeover primitive. The dedicated
+ * change form posts `new_email` only; the details save path must remain free of
+ * `email` / `user_email` / `role` / `user_pass`.
  */
-test( 'the account screen exposes no editable email or role field', async ( {
+test( 'the account details form exposes no email or role field', async ( {
 	page,
 } ) => {
 	await page.goto( '/advertiser/' );
@@ -80,8 +78,11 @@ test( 'the account screen exposes no editable email or role field', async ( {
 
 	await page.goto( '/advertiser/account/' );
 
-	const names = await page
-		.locator( 'form.laao-ads-form input[name], form.laao-ads-form select[name]' )
+	const detailsForm = page.locator( 'form.laao-ads-form' ).filter( {
+		has: page.getByRole( 'button', { name: 'Save details' } ),
+	} );
+	const names = await detailsForm
+		.locator( 'input[name], select[name]' )
 		.evaluateAll( ( nodes ) =>
 			nodes.map( ( node ) => node.getAttribute( 'name' ) )
 		);
@@ -91,4 +92,6 @@ test( 'the account screen exposes no editable email or role field', async ( {
 	expect( names ).not.toContain( 'role' );
 	expect( names ).not.toContain( 'user_pass' );
 	expect( names ).toContain( 'display_name' );
+
+	await expect( page.getByLabel( 'New email address' ) ).toBeVisible();
 } );

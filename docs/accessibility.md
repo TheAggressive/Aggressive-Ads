@@ -22,7 +22,28 @@ Axe catches roughly a third of real problems. The rest is keyboard traversal, fo
 
 ## The dialog primitive
 
-One implementation, in `src/interactivity/dialog.ts` plus `src/styles/components/_overlay.css`. Every dialog in the portal uses it — creative preview, replace, delete confirmation, cancellation, rejection detail, approval confirmation, retry. Building a second one is how half of them end up without a focus trap.
+One implementation: `assets/interactivity/dialog.js` (store namespace
+`laao-advertiser-portal/dialog`), with overlay styles in `assets/portal.css`
+under `.laao-ads-overlay*`. Shared helpers live in `scroll-lock.js` and
+`helpers.js`. Every portal dialog must use this stack — building a second one
+is how half of them end up without a focus trap.
+
+**Shipped today:** creative replace on campaign detail (overlays in
+`templates/portal/partials/creative-replace-dialogs.php`, triggers in
+`campaign-ad-updates.php`). Preview, delete confirmation, and the other
+named dialogs adopt the same primitive when those screens need them.
+
+**Open/close is imperative**, same pattern as Aggressive Apparel's modal:
+`classList` on the overlay shell, trigger listeners bound by `aria-controls`,
+close via `data-laao-ads-dialog-close`. Nested Interactivity path bindings such
+as `data-wp-class--is-open="state.dialogs[context.dialogId].isOpen"` are not
+reliable enough here; a `preventDefault` without a visible open leaves the
+page looking dead. Store state still tracks `isOpen` per instance for stacking
+and hydration — the visible class is not driven by a declarative class binding.
+See [interactivity-stores.md](interactivity-stores.md).
+
+No-JS keeps working through `:target` on the overlay `id` (Update links are
+`href="#laao-ads-replace-{id}"`). Do not remove that path when enhancing.
 
 The contract, ported from the Aggressive Apparel implementation:
 
@@ -31,7 +52,7 @@ The contract, ported from the Aggressive Apparel implementation:
 | Semantics | `div[role="dialog"][aria-modal="true"]` with `aria-labelledby`. **Not native `<dialog>`** |
 | Focus trap | Applied to the **shell**, not the panel, so close controls positioned outside the panel stay in the Tab cycle. Focusable list excludes anything under `[hidden]` or `[inert]` |
 | Focus restoration | The element focused at open time is captured and restored, guarded against restoring to `document.body` or a detached node |
-| Background | `inert` on the page root, feature-detected, re-exempting any other open overlay |
+| Background | `inert` on `.laao-ads-shell`, feature-detected; overlays render in `wp_footer` outside the shell so they are not inerted with the page |
 | Scroll lock | **Reference-counted**, so a stacked dialog closing does not unlock the page underneath. Scrollbar width compensated to avoid layout shift |
 | Escape | One document-level capturing `keydown` listener, closing **only the top of the stack** |
 | Reduced motion | Exit duration collapses to zero |
@@ -39,6 +60,8 @@ The contract, ported from the Aggressive Apparel implementation:
 | Close control | Icon-only gets `aria-label`; a visible text label supplies the accessible name and **no `aria-label` is added** — a redundant one overrides the visible text and breaks voice control |
 
 Native `<dialog>` was not used because its top-layer and backdrop semantics conflict with the drawer positioning and animation variety the portal needs, and because the reference implementation being ported is already custom and already correct.
+
+When the TypeScript → `dist/` pipeline lands ([build-and-release.md](build-and-release.md)), these modules move under `src/interactivity/` and ship compiled; the contract above does not change.
 
 ## Upload accessibility
 

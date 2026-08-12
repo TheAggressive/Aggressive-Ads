@@ -77,3 +77,22 @@ Focused integration coverage proves service and cron wiring, role/direct/filter-
 recipients, individual-address privacy, duplicate suppression, revision email,
 partial retry, bounded exhaustion, ignored staff unclaims, and
 failure-without-rollback.
+
+## Ending-soon reminders
+
+Live and paused campaigns with a finite `_laao_ads_end_ts` inside the next
+seven days are swept hourly by `Workflow\Ending_Soon_Notifier`. Delivery lives
+in `Notification\Ending_Soon_Mailer`: one plain-text message per organization
+member, receipt-keyed on `ending_soon:{end_ts}:{user_id}` so the same end date
+never double-sends and a later schedule change can re-arm. Open-ended campaigns
+(`end_ts` of 0) are never candidates. Failures retry with the same bounded
+backoff as decision mail and never reverse status.
+
+## Private-file retention
+
+`Workflow\Creative_Retention` runs daily. For campaigns in a terminal status
+whose relevance timestamp is more than ninety days old, it deletes each
+remaining private creative file and clears `_laao_ads_private_path` /
+`_laao_ads_private_token`. Relevance is `end_ts` when set, otherwise last
+modified. Campaign posts, checksum metadata and Media Library attachments are
+kept. Audit context carries counts only — never paths.
