@@ -2,17 +2,17 @@
 /**
  * GitHub plugin updater integration.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Integration;
+namespace Aggressive\Ads\Tests\Integration;
 
-use LAAO_Advertiser_Portal\Update\Package_Verifier;
-use LAAO_Advertiser_Portal\Update\Plugin_Updates;
-use LAAO_Advertiser_Portal\Update\Release_Repository;
-use LAAO_Advertiser_Portal\Update\Update_Http_Client;
+use Aggressive\Ads\Update\Package_Verifier;
+use Aggressive\Ads\Update\Plugin_Updates;
+use Aggressive\Ads\Update\Release_Repository;
+use Aggressive\Ads\Update\Update_Http_Client;
 use WP_UnitTestCase;
 
 /**
@@ -74,15 +74,15 @@ final class PluginUpdatesTest extends WP_UnitTestCase {
 		$this->mock_github( $this->release( '1.4.0' ), str_repeat( 'a', 64 ) );
 
 		$transient          = new \stdClass();
-		$transient->checked = array( plugin_basename( LAAO_ADS_PLUGIN_FILE ) => '1.3.0' );
+		$transient->checked = array( plugin_basename( AGGR_PLUGIN_FILE ) => '1.3.0' );
 		$result             = $this->updates->check( $transient );
-		$plugin             = plugin_basename( LAAO_ADS_PLUGIN_FILE );
+		$plugin             = plugin_basename( AGGR_PLUGIN_FILE );
 
 		$this->assertTrue( property_exists( $result, 'response' ) );
 		$this->assertArrayHasKey( $plugin, $result->response );
 		$this->assertSame( '1.4.0', $result->response[ $plugin ]->new_version );
 		$this->assertSame(
-			'https://github.com/TheAggressive/LAAO-Advertiser-Portal/releases/download/v1.4.0/laao-advertiser-portal-1.4.0.zip',
+			'https://github.com/TheAggressive/Aggressive-Ads/releases/download/v1.4.0/aggressive-ads-1.4.0.zip',
 			$result->response[ $plugin ]->package
 		);
 		$this->assertSame( str_repeat( 'a', 64 ), get_transient( Package_Verifier::CACHE_KEY )['checksum'] );
@@ -97,7 +97,7 @@ final class PluginUpdatesTest extends WP_UnitTestCase {
 		$this->mock_github( $release, str_repeat( 'a', 64 ) );
 
 		$transient          = new \stdClass();
-		$transient->checked = array( plugin_basename( LAAO_ADS_PLUGIN_FILE ) => '1.3.0' );
+		$transient->checked = array( plugin_basename( AGGR_PLUGIN_FILE ) => '1.3.0' );
 		$result             = $this->updates->check( $transient );
 
 		$this->assertFalse( property_exists( $result, 'response' ) );
@@ -140,12 +140,12 @@ final class PluginUpdatesTest extends WP_UnitTestCase {
 	 */
 	public static function data_untrusted_package_urls(): array {
 		return array(
-			'http'        => array( 'http://github.com/TheAggressive/LAAO-Advertiser-Portal/releases/download/v1.4.0/laao-advertiser-portal-1.4.0.zip' ),
-			'lookalike'   => array( 'https://github.example/TheAggressive/LAAO-Advertiser-Portal/releases/download/v1.4.0/laao-advertiser-portal-1.4.0.zip' ),
-			'credentials' => array( 'https://user@github.com/TheAggressive/LAAO-Advertiser-Portal/releases/download/v1.4.0/laao-advertiser-portal-1.4.0.zip' ),
-			'traversal'   => array( 'https://github.com/TheAggressive/LAAO-Advertiser-Portal/releases/download/v1.4.0/../laao-advertiser-portal-1.4.0.zip' ),
-			'mismatch'    => array( 'https://github.com/TheAggressive/LAAO-Advertiser-Portal/releases/download/v1.4.0/laao-advertiser-portal-1.5.0.zip' ),
-			'query'       => array( 'https://github.com/TheAggressive/LAAO-Advertiser-Portal/releases/download/v1.4.0/laao-advertiser-portal-1.4.0.zip?token=nope' ),
+			'http'        => array( 'http://github.com/TheAggressive/Aggressive-Ads/releases/download/v1.4.0/aggressive-ads-1.4.0.zip' ),
+			'lookalike'   => array( 'https://github.example/TheAggressive/Aggressive-Ads/releases/download/v1.4.0/aggressive-ads-1.4.0.zip' ),
+			'credentials' => array( 'https://user@github.com/TheAggressive/Aggressive-Ads/releases/download/v1.4.0/aggressive-ads-1.4.0.zip' ),
+			'traversal'   => array( 'https://github.com/TheAggressive/Aggressive-Ads/releases/download/v1.4.0/../aggressive-ads-1.4.0.zip' ),
+			'mismatch'    => array( 'https://github.com/TheAggressive/Aggressive-Ads/releases/download/v1.4.0/aggressive-ads-1.5.0.zip' ),
+			'query'       => array( 'https://github.com/TheAggressive/Aggressive-Ads/releases/download/v1.4.0/aggressive-ads-1.4.0.zip?token=nope' ),
 		);
 	}
 
@@ -156,8 +156,8 @@ final class PluginUpdatesTest extends WP_UnitTestCase {
 	 * @return array<string, mixed>
 	 */
 	private function release( string $version ): array {
-		$base = "https://github.com/TheAggressive/LAAO-Advertiser-Portal/releases/download/v{$version}";
-		$zip  = "laao-advertiser-portal-{$version}.zip";
+		$base = "https://github.com/TheAggressive/Aggressive-Ads/releases/download/v{$version}";
+		$zip  = "aggressive-ads-{$version}.zip";
 
 		return array(
 			'tag_name'     => "v{$version}",

@@ -2,20 +2,21 @@
 /**
  * Progressive campaign form delivery.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Portal;
+namespace Aggressive\Ads\Portal;
 
 use DateTimeImmutable;
-use LAAO_Advertiser_Portal\Core\Post_Statuses;
-use LAAO_Advertiser_Portal\Core\Service;
-use LAAO_Advertiser_Portal\Security\Capabilities;
-use LAAO_Advertiser_Portal\Security\Rate_Limiter;
-use LAAO_Advertiser_Portal\Workflow\Campaign_Editor;
-use LAAO_Advertiser_Portal\Workflow\Campaign_State_Machine;
+use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Security\Capabilities;
+use Aggressive\Ads\Security\Rate_Limiter;
+use Aggressive\Ads\Workflow\Campaign_Copier;
+use Aggressive\Ads\Workflow\Campaign_Editor;
+use Aggressive\Ads\Workflow\Campaign_State_Machine;
 use WP_Error;
 
 /**
@@ -26,21 +27,24 @@ use WP_Error;
  */
 final class Campaign_Actions implements Service {
 
-	public const CREATE_ACTION        = 'laao_ads_create_campaign';
-	public const SAVE_ACTION          = 'laao_ads_save_campaign';
-	public const SAVE_PACKAGE_ACTION  = 'laao_ads_save_campaign_package';
-	public const SAVE_SCHEDULE_ACTION = 'laao_ads_save_campaign_schedule';
-	public const SUBMIT_ACTION        = 'laao_ads_submit_campaign';
+	public const CREATE_ACTION        = 'aggr_create_campaign';
+	public const COPY_ACTION          = 'aggr_copy_campaign';
+	public const SAVE_ACTION          = 'aggr_save_campaign';
+	public const SAVE_PACKAGE_ACTION  = 'aggr_save_campaign_package';
+	public const SAVE_SCHEDULE_ACTION = 'aggr_save_campaign_schedule';
+	public const SUBMIT_ACTION        = 'aggr_submit_campaign';
 
 	/**
 	 * Constructor.
 	 *
 	 * @param Campaign_Editor        $editor  Draft workflow.
+	 * @param Campaign_Copier        $copier  Campaign copy into a new draft.
 	 * @param Campaign_State_Machine $machine Campaign lifecycle.
 	 * @param Rate_Limiter           $limiter Transition abuse bounding.
 	 */
 	public function __construct(
 		private readonly Campaign_Editor $editor,
+		private readonly Campaign_Copier $copier,
 		private readonly Campaign_State_Machine $machine,
 		private readonly Rate_Limiter $limiter
 	) {
@@ -53,6 +57,7 @@ final class Campaign_Actions implements Service {
 	 */
 	public function init(): void {
 		add_action( 'admin_post_' . self::CREATE_ACTION, array( $this, 'handle_create' ) );
+		add_action( 'admin_post_' . self::COPY_ACTION, array( $this, 'handle_copy' ) );
 		add_action( 'admin_post_' . self::SAVE_ACTION, array( $this, 'handle_save' ) );
 		add_action( 'admin_post_' . self::SAVE_PACKAGE_ACTION, array( $this, 'handle_save_package' ) );
 		add_action( 'admin_post_' . self::SAVE_SCHEDULE_ACTION, array( $this, 'handle_save_schedule' ) );
@@ -75,6 +80,27 @@ final class Campaign_Actions implements Service {
 		}
 
 		$this->redirect( Routes::url( Request::ROUTE_CAMPAIGNS, $result ), 'created' );
+	}
+
+	/**
+	 * Copies a campaign into a new draft and opens it.
+	 *
+	 * @return void
+	 */
+	public function handle_copy(): void {
+		$this->assert_portal_access();
+
+		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- copy_nonce_action() uses this id immediately below.
+
+		check_admin_referer( self::copy_nonce_action( $campaign_id ) );
+
+		$result = $this->process_copy( $campaign_id );
+
+		if ( is_wp_error( $result ) ) {
+			$this->redirect( Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id ), 'error', $result );
+		}
+
+		$this->redirect( Routes::url( Request::ROUTE_CAMPAIGNS, $result ), 'copied' );
 	}
 
 	/**
@@ -173,7 +199,7 @@ final class Campaign_Actions implements Service {
 		$url    = Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id );
 
 		if ( is_wp_error( $result ) ) {
-			$step = 'laao_ads_campaign_invalid' === $result->get_error_code() ? 'review' : 'submit';
+			$step = 'aggr_campaign_invalid' === $result->get_error_code() ? 'review' : 'submit';
 			$this->redirect( add_query_arg( 'step', $step, $url ), 'error', $result );
 		}
 
@@ -187,10 +213,30 @@ final class Campaign_Actions implements Service {
 	 */
 	public function process_create(): int|WP_Error {
 		if ( ! current_user_can( Capabilities::ACCESS_PORTAL ) ) {
-			return new WP_Error( 'laao_ads_forbidden', __( 'You do not have permission to create a campaign.', 'laao-advertiser-portal' ), array( 'status' => 403 ) );
+			return new WP_Error( 'aggr_forbidden', __( 'You do not have permission to create a campaign.', 'aggressive-ads' ), array( 'status' => 403 ) );
 		}
 
 		return $this->editor->create();
+	}
+
+	/**
+	 * Delivery-level copy entry point for forms and integration tests.
+	 *
+	 * @param int $campaign_id Source campaign post id.
+	 * @return int|WP_Error
+	 */
+	public function process_copy( int $campaign_id ): int|WP_Error {
+		if ( ! current_user_can( Capabilities::ACCESS_PORTAL ) ) {
+			return new WP_Error( 'aggr_forbidden', __( 'You do not have permission to copy that campaign.', 'aggressive-ads' ), array( 'status' => 403 ) );
+		}
+
+		$allowed = $this->limiter->attempt( Rate_Limiter::ACTION_COPY, get_current_user_id() );
+
+		if ( is_wp_error( $allowed ) ) {
+			return $allowed;
+		}
+
+		return $this->copier->copy( $campaign_id );
 	}
 
 	/**
@@ -203,7 +249,7 @@ final class Campaign_Actions implements Service {
 	 */
 	public function process_save( int $campaign_id, array $fields, int $revision ): int|WP_Error {
 		if ( ! current_user_can( Capabilities::ACCESS_PORTAL ) ) {
-			return new WP_Error( 'laao_ads_forbidden', __( 'You do not have permission to edit that campaign.', 'laao-advertiser-portal' ), array( 'status' => 403 ) );
+			return new WP_Error( 'aggr_forbidden', __( 'You do not have permission to edit that campaign.', 'aggressive-ads' ), array( 'status' => 403 ) );
 		}
 
 		return $this->editor->save(
@@ -228,11 +274,11 @@ final class Campaign_Actions implements Service {
 	 */
 	public function process_save_package( int $campaign_id, int $package_id, int $revision ): int|WP_Error {
 		if ( ! current_user_can( Capabilities::ACCESS_PORTAL ) ) {
-			return new WP_Error( 'laao_ads_forbidden', __( 'You do not have permission to edit that campaign.', 'laao-advertiser-portal' ), array( 'status' => 403 ) );
+			return new WP_Error( 'aggr_forbidden', __( 'You do not have permission to edit that campaign.', 'aggressive-ads' ), array( 'status' => 403 ) );
 		}
 
 		if ( $package_id <= 0 ) {
-			return new WP_Error( 'laao_ads_package_required', __( 'Choose a package.', 'laao-advertiser-portal' ), array( 'status' => 422 ) );
+			return new WP_Error( 'aggr_package_required', __( 'Choose a package.', 'aggressive-ads' ), array( 'status' => 422 ) );
 		}
 
 		return $this->editor->save(
@@ -256,7 +302,7 @@ final class Campaign_Actions implements Service {
 	 */
 	public function process_save_schedule( int $campaign_id, string $start_date, string $end_date, int $revision ): int|WP_Error {
 		if ( ! current_user_can( Capabilities::ACCESS_PORTAL ) ) {
-			return new WP_Error( 'laao_ads_forbidden', __( 'You do not have permission to edit that campaign.', 'laao-advertiser-portal' ), array( 'status' => 403 ) );
+			return new WP_Error( 'aggr_forbidden', __( 'You do not have permission to edit that campaign.', 'aggressive-ads' ), array( 'status' => 403 ) );
 		}
 
 		$start = $this->parse_date( $start_date, false );
@@ -285,7 +331,7 @@ final class Campaign_Actions implements Service {
 	 */
 	public function process_submit( int $campaign_id ): bool|WP_Error {
 		if ( ! current_user_can( Capabilities::ACCESS_PORTAL ) ) {
-			return new WP_Error( 'laao_ads_forbidden', __( 'You do not have permission to submit that campaign.', 'laao-advertiser-portal' ), array( 'status' => 403 ) );
+			return new WP_Error( 'aggr_forbidden', __( 'You do not have permission to submit that campaign.', 'aggressive-ads' ), array( 'status' => 403 ) );
 		}
 
 		$allowed = $this->limiter->attempt( Rate_Limiter::ACTION_TRANSITION, get_current_user_id() );
@@ -305,6 +351,16 @@ final class Campaign_Actions implements Service {
 	 */
 	public static function save_nonce_action( int $campaign_id ): string {
 		return self::SAVE_ACTION . '_' . max( 0, $campaign_id );
+	}
+
+	/**
+	 * Nonce action bound to the campaign being copied.
+	 *
+	 * @param int $campaign_id Source campaign post id.
+	 * @return string
+	 */
+	public static function copy_nonce_action( int $campaign_id ): string {
+		return self::COPY_ACTION . '_' . max( 0, $campaign_id );
 	}
 
 	/**
@@ -344,9 +400,9 @@ final class Campaign_Actions implements Service {
 	 */
 	public static function request_notice(): string {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only post/redirect/get display state; never authorizes or mutates anything.
-		$value = isset( $_GET['laao_ads_notice'] ) ? sanitize_key( wp_unslash( $_GET['laao_ads_notice'] ) ) : '';
+		$value = isset( $_GET['aggr_notice'] ) ? sanitize_key( wp_unslash( $_GET['aggr_notice'] ) ) : '';
 
-		return in_array( $value, array( 'created', 'saved', 'package_saved', 'schedule_saved', 'submitted', 'error' ), true ) ? $value : '';
+		return in_array( $value, array( 'created', 'copied', 'saved', 'package_saved', 'schedule_saved', 'submitted', 'error' ), true ) ? $value : '';
 	}
 
 	/**
@@ -371,7 +427,7 @@ final class Campaign_Actions implements Service {
 	 */
 	public static function request_error_code(): string {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only allowlisted display state; never authorizes or mutates anything.
-		return isset( $_GET['laao_ads_error'] ) ? sanitize_key( wp_unslash( $_GET['laao_ads_error'] ) ) : '';
+		return isset( $_GET['aggr_error'] ) ? sanitize_key( wp_unslash( $_GET['aggr_error'] ) ) : '';
 	}
 
 	/**
@@ -382,27 +438,28 @@ final class Campaign_Actions implements Service {
 	 */
 	public static function error_message( string $code ): string {
 		return match ( $code ) {
-			'laao_ads_title_required'          => __( 'Enter a campaign name.', 'laao-advertiser-portal' ),
-			'laao_ads_title_too_long'          => __( 'Use 160 characters or fewer for the campaign name.', 'laao-advertiser-portal' ),
-			'laao_ads_end_before_start'        => __( 'The end date must be after the start date.', 'laao-advertiser-portal' ),
-			'laao_ads_start_date_required'     => __( 'Choose a start date.', 'laao-advertiser-portal' ),
-			'laao_ads_start_date_past'         => __( 'The start date has already passed. Choose a later one.', 'laao-advertiser-portal' ),
-			'laao_ads_start_date_invalid',
-			'laao_ads_end_date_invalid'        => __( 'Enter a valid date in the required format.', 'laao-advertiser-portal' ),
-			'laao_ads_placement_unavailable'   => __( 'One of the selected placements is no longer available.', 'laao-advertiser-portal' ),
-			'laao_ads_package_required'        => __( 'Choose a package.', 'laao-advertiser-portal' ),
-			'laao_ads_package_unavailable'     => __( 'That package is no longer available. Choose another package.', 'laao-advertiser-portal' ),
-			'laao_ads_package_misconfigured'   => __( 'That package is not configured completely. Choose another package or get in touch.', 'laao-advertiser-portal' ),
-			'laao_ads_creatives_incomplete'    => __( 'Upload one creative for every package placement before scheduling.', 'laao-advertiser-portal' ),
-			'laao_ads_edit_conflict'           => __( 'This campaign changed in another window. Review the current values and save again.', 'laao-advertiser-portal' ),
-			'laao_ads_organization_missing'    => __( 'Your account is not connected to an organization.', 'laao-advertiser-portal' ),
-			'laao_ads_organization_inactive'   => __( 'This organization cannot create campaigns. Please get in touch.', 'laao-advertiser-portal' ),
-			'laao_ads_campaign_invalid'        => __( 'The campaign changed and is no longer ready to submit. Resolve every review item and try again.', 'laao-advertiser-portal' ),
-			'laao_ads_illegal_transition'      => __( 'This campaign has already been submitted or cannot be submitted right now.', 'laao-advertiser-portal' ),
-			'laao_ads_rate_limited'            => __( 'There have been too many submission attempts. Wait a moment and try again.', 'laao-advertiser-portal' ),
-			'laao_ads_forbidden'               => __( 'You do not have permission to submit that campaign.', 'laao-advertiser-portal' ),
-			'laao_ads_status_write_failed'     => __( 'The campaign could not be submitted. Please try again.', 'laao-advertiser-portal' ),
-			default                            => __( 'The campaign could not be saved. Please try again.', 'laao-advertiser-portal' ),
+			'aggr_title_required'          => __( 'Enter a campaign name.', 'aggressive-ads' ),
+			'aggr_title_too_long'          => __( 'Use 160 characters or fewer for the campaign name.', 'aggressive-ads' ),
+			'aggr_end_before_start'        => __( 'The end date must be after the start date.', 'aggressive-ads' ),
+			'aggr_start_date_required'     => __( 'Choose a start date.', 'aggressive-ads' ),
+			'aggr_start_date_past'         => __( 'The start date has already passed. Choose a later one.', 'aggressive-ads' ),
+			'aggr_start_date_invalid',
+			'aggr_end_date_invalid'        => __( 'Enter a valid date in the required format.', 'aggressive-ads' ),
+			'aggr_placement_unavailable'   => __( 'One of the selected placements is no longer available.', 'aggressive-ads' ),
+			'aggr_package_required'        => __( 'Choose a package.', 'aggressive-ads' ),
+			'aggr_package_unavailable'     => __( 'That package is no longer available. Choose another package.', 'aggressive-ads' ),
+			'aggr_package_misconfigured'   => __( 'That package is not configured completely. Choose another package or get in touch.', 'aggressive-ads' ),
+			'aggr_creatives_incomplete'    => __( 'Upload one creative for every package placement before scheduling.', 'aggressive-ads' ),
+			'aggr_edit_conflict'           => __( 'This campaign changed in another window. Review the current values and save again.', 'aggressive-ads' ),
+			'aggr_organization_missing'    => __( 'Your account is not connected to an organization.', 'aggressive-ads' ),
+			'aggr_organization_inactive'   => __( 'This organization cannot create campaigns. Please get in touch.', 'aggressive-ads' ),
+			'aggr_campaign_invalid'        => __( 'The campaign changed and is no longer ready to submit. Resolve every review item and try again.', 'aggressive-ads' ),
+			'aggr_illegal_transition'      => __( 'This campaign has already been submitted or cannot be submitted right now.', 'aggressive-ads' ),
+			'aggr_campaign_not_copied'     => __( 'The campaign could not be copied. Please try again.', 'aggressive-ads' ),
+			'aggr_rate_limited'            => __( 'There have been too many attempts. Wait a moment and try again.', 'aggressive-ads' ),
+			'aggr_forbidden'               => __( 'You do not have permission to submit that campaign.', 'aggressive-ads' ),
+			'aggr_status_write_failed'     => __( 'The campaign could not be submitted. Please try again.', 'aggressive-ads' ),
+			default                            => __( 'The campaign could not be saved. Please try again.', 'aggressive-ads' ),
 		};
 	}
 
@@ -414,19 +471,19 @@ final class Campaign_Actions implements Service {
 	 */
 	public static function error_field( string $code ): string {
 		return match ( $code ) {
-			'laao_ads_title_required',
-			'laao_ads_title_too_long'          => 'laao-ads-title',
-			'laao_ads_end_before_start',
-			'laao_ads_end_date_invalid'        => 'laao-ads-end-date',
-			'laao_ads_start_date_invalid',
-			'laao_ads_start_date_required',
-			'laao_ads_start_date_past'         => 'laao-ads-start-date',
-			'laao_ads_placement_unavailable'   => 'laao-ads-placements',
-			'laao_ads_package_required',
-			'laao_ads_package_unavailable',
-			'laao_ads_package_misconfigured'   => 'laao-ads-packages',
-			'laao_ads_creatives_incomplete'    => 'laao-ads-destinations',
-			'laao_ads_campaign_invalid'        => 'laao-ads-readiness-heading',
+			'aggr_title_required',
+			'aggr_title_too_long'          => 'aggr-title',
+			'aggr_end_before_start',
+			'aggr_end_date_invalid'        => 'aggr-end-date',
+			'aggr_start_date_invalid',
+			'aggr_start_date_required',
+			'aggr_start_date_past'         => 'aggr-start-date',
+			'aggr_placement_unavailable'   => 'aggr-placements',
+			'aggr_package_required',
+			'aggr_package_unavailable',
+			'aggr_package_misconfigured'   => 'aggr-packages',
+			'aggr_creatives_incomplete'    => 'aggr-destinations',
+			'aggr_campaign_invalid'        => 'aggr-readiness-heading',
 			default                            => '',
 		};
 	}
@@ -450,8 +507,8 @@ final class Campaign_Actions implements Service {
 
 		if ( false === $date || $date->format( 'Y-m-d' ) !== $value ) {
 			return new WP_Error(
-				$end_of_day ? 'laao_ads_end_date_invalid' : 'laao_ads_start_date_invalid',
-				__( 'Enter a valid date in the required format.', 'laao-advertiser-portal' ),
+				$end_of_day ? 'aggr_end_date_invalid' : 'aggr_start_date_invalid',
+				__( 'Enter a valid date in the required format.', 'aggressive-ads' ),
 				array( 'status' => 422 )
 			);
 		}
@@ -474,7 +531,7 @@ final class Campaign_Actions implements Service {
 		}
 
 		wp_die(
-			esc_html__( 'You do not have permission to do that.', 'laao-advertiser-portal' ),
+			esc_html__( 'You do not have permission to do that.', 'aggressive-ads' ),
 			'',
 			array( 'response' => 403 )
 		);
@@ -489,10 +546,10 @@ final class Campaign_Actions implements Service {
 	 * @return never
 	 */
 	private function redirect( string $url, string $notice, ?WP_Error $error = null ): never {
-		$args = array( 'laao_ads_notice' => $notice );
+		$args = array( 'aggr_notice' => $notice );
 
 		if ( null !== $error ) {
-			$args['laao_ads_error'] = sanitize_key( (string) $error->get_error_code() );
+			$args['aggr_error'] = sanitize_key( (string) $error->get_error_code() );
 		}
 
 		wp_safe_redirect( add_query_arg( $args, $url ) );

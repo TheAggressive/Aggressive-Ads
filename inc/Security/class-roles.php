@@ -2,14 +2,16 @@
 /**
  * The two custom roles.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Security;
+namespace Aggressive\Ads\Security;
 
-use LAAO_Advertiser_Portal\Core\Post_Types;
+use Aggressive\Ads\Core\Hook_Aliases;
+use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Domain\Identity_Maps;
 
 /**
  * Declares and installs the advertiser and reviewer roles.
@@ -22,14 +24,14 @@ use LAAO_Advertiser_Portal\Core\Post_Types;
  */
 final class Roles {
 
-	public const ADVERTISER = 'laao_ads_advertiser';
-	public const REVIEWER   = 'laao_ads_reviewer';
+	public const ADVERTISER = 'aggr_advertiser';
+	public const REVIEWER   = 'aggr_reviewer';
 
 	/**
 	 * Bumped whenever the capability matrix below changes, so an update
 	 * re-applies roles on sites that were installed under the old matrix.
 	 */
-	public const VERSION = 2;
+	public const VERSION = 3;
 
 	/**
 	 * The role capability matrix.
@@ -92,7 +94,7 @@ final class Roles {
 		 *
 		 * Organizations are deliberately NOT in this list. An advertiser reads
 		 * their own organization through membership, which Ownership::map()
-		 * resolves to plain `read` — so granting read_private_laao_ads_orgs
+		 * resolves to plain `read` — so granting read_private_aggr_orgs
 		 * would do nothing for their own org and everything for everyone
 		 * else's, leaving one dropped guard between an advertiser and every
 		 * other customer's contact and billing details.
@@ -148,7 +150,7 @@ final class Roles {
 		 *
 		 * @param array<int, string> $roles Role slugs.
 		 */
-		$roles = apply_filters( 'laao_ads_roles_receiving_caps', array( 'administrator' ) );
+		$roles = Hook_Aliases::apply( 'aggr_roles_receiving_caps', array( 'administrator' ) );
 
 		if ( ! is_array( $roles ) ) {
 			return array( 'administrator' );
@@ -200,6 +202,10 @@ final class Roles {
 			remove_role( $slug );
 		}
 
+		foreach ( array_keys( Identity_Maps::roles() ) as $slug ) {
+			remove_role( $slug );
+		}
+
 		foreach ( self::roles_receiving_all_capabilities() as $slug ) {
 			$role = get_role( $slug );
 
@@ -208,6 +214,10 @@ final class Roles {
 			}
 
 			foreach ( Capabilities::all() as $cap ) {
+				$role->remove_cap( $cap );
+			}
+
+			foreach ( array_keys( Identity_Maps::capabilities() ) as $cap ) {
 				$role->remove_cap( $cap );
 			}
 		}

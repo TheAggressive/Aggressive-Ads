@@ -2,12 +2,12 @@
 /**
  * The outcome of validating something.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Domain;
+namespace Aggressive\Ads\Domain;
 
 /**
  * A collected list of problems, or the absence of them.

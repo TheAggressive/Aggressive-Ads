@@ -2,12 +2,12 @@
 /**
  * Staff campaign-review detail.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  *
- * @var string                                    $laao_ads_filter   Queue filter.
- * @var int                                       $laao_ads_page     Queue page.
- * @var array{type: string, message: string, detail: string, action_url: string, action_label: string}|null $laao_ads_notice Result notice.
- * @var array<string, mixed>|null                 $laao_ads_campaign Campaign data.
+ * @var string                                    $aggr_filter   Queue filter.
+ * @var int                                       $aggr_page     Queue page.
+ * @var array{type: string, message: string, detail: string, action_url: string, action_label: string}|null $aggr_notice Result notice.
+ * @var array<string, mixed>|null                 $aggr_campaign Campaign data.
  */
 
 declare(strict_types=1);
@@ -16,40 +16,40 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use LAAO_Advertiser_Portal\Admin\Review_Screen;
-use LAAO_Advertiser_Portal\Admin\Review_Data;
-use LAAO_Advertiser_Portal\Admin\Creative_Change_Actions;
+use Aggressive\Ads\Admin\Review_Screen;
+use Aggressive\Ads\Admin\Review_Data;
+use Aggressive\Ads\Admin\Creative_Change_Actions;
 
-$laao_ads_back = Review_Screen::queue_url( $laao_ads_filter, $laao_ads_page );
+$aggr_back = Review_Screen::queue_url( $aggr_filter, $aggr_page );
 ?>
-<div class="wrap laao-ads-portal laao-ads-admin">
-	<p class="laao-ads-breadcrumb">
-		<a href="<?php echo esc_url( $laao_ads_back ); ?>">&larr; <?php esc_html_e( 'Back to campaign review', 'laao-advertiser-portal' ); ?></a>
+<div class="wrap aggr-portal aggr-admin">
+	<p class="aggr-breadcrumb">
+		<a href="<?php echo esc_url( $aggr_back ); ?>">&larr; <?php esc_html_e( 'Back to campaign review', 'aggressive-ads' ); ?></a>
 	</p>
 
-	<?php if ( is_array( $laao_ads_notice ) ) : ?>
-		<div class="laao-ads-flash laao-ads-flash--<?php echo esc_attr( $laao_ads_notice['type'] ); ?>" role="status">
-			<p class="laao-ads-flash__message"><?php echo esc_html( $laao_ads_notice['message'] ); ?></p>
+	<?php if ( is_array( $aggr_notice ) ) : ?>
+		<div class="aggr-flash aggr-flash--<?php echo esc_attr( $aggr_notice['type'] ); ?>" role="status">
+			<p class="aggr-flash__message"><?php echo esc_html( $aggr_notice['message'] ); ?></p>
 
-			<?php if ( '' !== (string) $laao_ads_notice['detail'] ) : ?>
-				<p class="laao-ads-flash__detail"><?php echo esc_html( (string) $laao_ads_notice['detail'] ); ?></p>
+			<?php if ( '' !== (string) $aggr_notice['detail'] ) : ?>
+				<p class="aggr-flash__detail"><?php echo esc_html( (string) $aggr_notice['detail'] ); ?></p>
 			<?php endif; ?>
 
-			<?php if ( '' !== (string) $laao_ads_notice['action_url'] ) : ?>
-				<p class="laao-ads-flash__action">
-					<a href="<?php echo esc_url( (string) $laao_ads_notice['action_url'] ); ?>">
-						<?php echo esc_html( (string) $laao_ads_notice['action_label'] ); ?>
+			<?php if ( '' !== (string) $aggr_notice['action_url'] ) : ?>
+				<p class="aggr-flash__action">
+					<a href="<?php echo esc_url( (string) $aggr_notice['action_url'] ); ?>">
+						<?php echo esc_html( (string) $aggr_notice['action_label'] ); ?>
 					</a>
 				</p>
 			<?php endif; ?>
 		</div>
 	<?php endif; ?>
 
-	<?php if ( ! is_array( $laao_ads_campaign ) ) : ?>
-		<section class="laao-ads-panel">
-			<div class="laao-ads-empty">
-				<h1 class="laao-ads-title"><?php esc_html_e( 'Campaign not found', 'laao-advertiser-portal' ); ?></h1>
-				<p><?php esc_html_e( 'The campaign may have been removed. Return to the queue and choose another campaign.', 'laao-advertiser-portal' ); ?></p>
+	<?php if ( ! is_array( $aggr_campaign ) ) : ?>
+		<section class="aggr-panel">
+			<div class="aggr-empty">
+				<h1 class="aggr-title"><?php esc_html_e( 'Campaign not found', 'aggressive-ads' ); ?></h1>
+				<p><?php esc_html_e( 'The campaign may have been removed. Return to the queue and choose another campaign.', 'aggressive-ads' ); ?></p>
 			</div>
 		</section>
 	</div>
@@ -57,98 +57,98 @@ $laao_ads_back = Review_Screen::queue_url( $laao_ads_filter, $laao_ads_page );
 	<?php endif; ?>
 
 	<?php
-	$laao_ads_campaign_id = (int) $laao_ads_campaign['id'];
+	$aggr_campaign_id = (int) $aggr_campaign['id'];
 	?>
 
-	<header class="laao-ads-pagehead">
+	<header class="aggr-pagehead">
 		<div>
-			<h1 class="laao-ads-title"><?php echo esc_html( (string) $laao_ads_campaign['title'] ); ?></h1>
-			<p class="laao-ads-lede"><?php echo esc_html( (string) $laao_ads_campaign['org_name'] ); ?></p>
+			<h1 class="aggr-title"><?php echo esc_html( (string) $aggr_campaign['title'] ); ?></h1>
+			<p class="aggr-lede"><?php echo esc_html( (string) $aggr_campaign['org_name'] ); ?></p>
 		</div>
-		<span class="laao-ads-pill laao-ads-pill--<?php echo esc_attr( (string) $laao_ads_campaign['pill'] ); ?>">
-			<?php echo esc_html( (string) $laao_ads_campaign['status_text'] ); ?>
+		<span class="aggr-pill aggr-pill--<?php echo esc_attr( (string) $aggr_campaign['pill'] ); ?>">
+			<?php echo esc_html( (string) $aggr_campaign['status_text'] ); ?>
 		</span>
 	</header>
 
-	<section class="laao-ads-panel" aria-labelledby="laao-ads-review-summary">
-		<h2 id="laao-ads-review-summary" class="laao-ads-panel__head"><?php esc_html_e( 'Campaign summary', 'laao-advertiser-portal' ); ?></h2>
-		<dl class="laao-ads-facts">
-			<div class="laao-ads-fact">
-				<dt><?php esc_html_e( 'Organization', 'laao-advertiser-portal' ); ?></dt>
-				<dd><?php echo esc_html( (string) $laao_ads_campaign['org_name'] ); ?></dd>
+	<section class="aggr-panel" aria-labelledby="aggr-review-summary">
+		<h2 id="aggr-review-summary" class="aggr-panel__head"><?php esc_html_e( 'Campaign summary', 'aggressive-ads' ); ?></h2>
+		<dl class="aggr-facts">
+			<div class="aggr-fact">
+				<dt><?php esc_html_e( 'Organization', 'aggressive-ads' ); ?></dt>
+				<dd><?php echo esc_html( (string) $aggr_campaign['org_name'] ); ?></dd>
 			</div>
-			<div class="laao-ads-fact">
-				<dt><?php esc_html_e( 'Placements', 'laao-advertiser-portal' ); ?></dt>
-				<dd><?php echo esc_html( implode( ', ', $laao_ads_campaign['placements'] ) ); ?></dd>
+			<div class="aggr-fact">
+				<dt><?php esc_html_e( 'Placements', 'aggressive-ads' ); ?></dt>
+				<dd><?php echo esc_html( implode( ', ', $aggr_campaign['placements'] ) ); ?></dd>
 			</div>
-			<div class="laao-ads-fact">
-				<dt><?php esc_html_e( 'Schedule', 'laao-advertiser-portal' ); ?></dt>
+			<div class="aggr-fact">
+				<dt><?php esc_html_e( 'Schedule', 'aggressive-ads' ); ?></dt>
 				<dd>
 					<?php
-					if ( (int) $laao_ads_campaign['start_ts'] <= 0 ) {
-						esc_html_e( 'Not scheduled', 'laao-advertiser-portal' );
+					if ( (int) $aggr_campaign['start_ts'] <= 0 ) {
+						esc_html_e( 'Not scheduled', 'aggressive-ads' );
 					} else {
-						echo esc_html( Review_Data::format_timestamp( (int) $laao_ads_campaign['start_ts'] ) );
+						echo esc_html( Review_Data::format_timestamp( (int) $aggr_campaign['start_ts'] ) );
 
-						if ( (int) $laao_ads_campaign['end_ts'] > 0 ) {
-							echo ' &ndash; ' . esc_html( Review_Data::format_timestamp( (int) $laao_ads_campaign['end_ts'] ) );
+						if ( (int) $aggr_campaign['end_ts'] > 0 ) {
+							echo ' &ndash; ' . esc_html( Review_Data::format_timestamp( (int) $aggr_campaign['end_ts'] ) );
 						}
 					}
 					?>
 				</dd>
 			</div>
-			<div class="laao-ads-fact">
-				<dt><?php esc_html_e( 'Reviewer', 'laao-advertiser-portal' ); ?></dt>
-				<dd><?php echo esc_html( '' === (string) $laao_ads_campaign['reviewer'] ? __( 'Unassigned', 'laao-advertiser-portal' ) : (string) $laao_ads_campaign['reviewer'] ); ?></dd>
+			<div class="aggr-fact">
+				<dt><?php esc_html_e( 'Reviewer', 'aggressive-ads' ); ?></dt>
+				<dd><?php echo esc_html( '' === (string) $aggr_campaign['reviewer'] ? __( 'Unassigned', 'aggressive-ads' ) : (string) $aggr_campaign['reviewer'] ); ?></dd>
 			</div>
-			<div class="laao-ads-fact">
-				<dt><?php esc_html_e( 'Submission', 'laao-advertiser-portal' ); ?></dt>
+			<div class="aggr-fact">
+				<dt><?php esc_html_e( 'Submission', 'aggressive-ads' ); ?></dt>
 				<dd>
-					<?php echo 0 === (int) $laao_ads_campaign['submitted_at'] ? esc_html__( 'Not submitted', 'laao-advertiser-portal' ) : esc_html( Review_Data::format_timestamp( (int) $laao_ads_campaign['submitted_at'], true ) ); ?>
+					<?php echo 0 === (int) $aggr_campaign['submitted_at'] ? esc_html__( 'Not submitted', 'aggressive-ads' ) : esc_html( Review_Data::format_timestamp( (int) $aggr_campaign['submitted_at'], true ) ); ?>
 				</dd>
 			</div>
-			<div class="laao-ads-fact">
-				<dt><?php esc_html_e( 'Revision', 'laao-advertiser-portal' ); ?></dt>
-				<dd><?php echo esc_html( number_format_i18n( (int) $laao_ads_campaign['revision'] ) ); ?></dd>
+			<div class="aggr-fact">
+				<dt><?php esc_html_e( 'Revision', 'aggressive-ads' ); ?></dt>
+				<dd><?php echo esc_html( number_format_i18n( (int) $aggr_campaign['revision'] ) ); ?></dd>
 			</div>
 		</dl>
 	</section>
 
-	<?php if ( '' !== (string) $laao_ads_campaign['review_notes'] ) : ?>
-		<section class="laao-ads-notice" aria-labelledby="laao-ads-review-feedback">
-			<h2 id="laao-ads-review-feedback" class="laao-ads-notice__head"><?php esc_html_e( 'Advertiser-facing feedback', 'laao-advertiser-portal' ); ?></h2>
-			<p><?php echo nl2br( esc_html( (string) $laao_ads_campaign['review_notes'] ) ); ?></p>
+	<?php if ( '' !== (string) $aggr_campaign['review_notes'] ) : ?>
+		<section class="aggr-notice" aria-labelledby="aggr-review-feedback">
+			<h2 id="aggr-review-feedback" class="aggr-notice__head"><?php esc_html_e( 'Advertiser-facing feedback', 'aggressive-ads' ); ?></h2>
+			<p><?php echo nl2br( esc_html( (string) $aggr_campaign['review_notes'] ) ); ?></p>
 		</section>
 	<?php endif; ?>
 
-	<section class="laao-ads-panel" aria-labelledby="laao-ads-review-creatives">
-		<h2 id="laao-ads-review-creatives" class="laao-ads-panel__head"><?php esc_html_e( 'Creative review', 'laao-advertiser-portal' ); ?></h2>
+	<section class="aggr-panel" aria-labelledby="aggr-review-creatives">
+		<h2 id="aggr-review-creatives" class="aggr-panel__head"><?php esc_html_e( 'Creative review', 'aggressive-ads' ); ?></h2>
 
-		<?php if ( array() === $laao_ads_campaign['creatives'] ) : ?>
-			<div class="laao-ads-empty">
-				<h3 class="laao-ads-empty__title"><?php esc_html_e( 'No creative uploaded', 'laao-advertiser-portal' ); ?></h3>
-				<p><?php esc_html_e( 'This campaign cannot be approved until every placement has creative.', 'laao-advertiser-portal' ); ?></p>
+		<?php if ( array() === $aggr_campaign['creatives'] ) : ?>
+			<div class="aggr-empty">
+				<h3 class="aggr-empty__title"><?php esc_html_e( 'No creative uploaded', 'aggressive-ads' ); ?></h3>
+				<p><?php esc_html_e( 'This campaign cannot be approved until every placement has creative.', 'aggressive-ads' ); ?></p>
 			</div>
 		<?php else : ?>
-			<div class="laao-ads-creative-grid">
-				<?php foreach ( $laao_ads_campaign['creatives'] as $laao_ads_creative ) : ?>
-					<article class="laao-ads-creative">
-						<div class="laao-ads-creative__preview">
+			<div class="aggr-creative-grid">
+				<?php foreach ( $aggr_campaign['creatives'] as $aggr_creative ) : ?>
+					<article class="aggr-creative">
+						<div class="aggr-creative__preview">
 							<img
-								src="<?php echo esc_url( (string) $laao_ads_creative['preview'] ); ?>"
-								alt="<?php echo esc_attr( (string) $laao_ads_creative['alt_text'] ); ?>"
+								src="<?php echo esc_url( (string) $aggr_creative['preview'] ); ?>"
+								alt="<?php echo esc_attr( (string) $aggr_creative['alt_text'] ); ?>"
 								loading="lazy"
 							>
 						</div>
-						<div class="laao-ads-creative__body">
-							<h3><?php echo esc_html( (string) $laao_ads_creative['placement'] ); ?></h3>
+						<div class="aggr-creative__body">
+							<h3><?php echo esc_html( (string) $aggr_creative['placement'] ); ?></h3>
 							<dl>
-								<div><dt><?php esc_html_e( 'Required size', 'laao-advertiser-portal' ); ?></dt><dd><?php echo esc_html( (string) $laao_ads_creative['size'] ); ?></dd></div>
-								<div><dt><?php esc_html_e( 'Uploaded size', 'laao-advertiser-portal' ); ?></dt><dd><?php echo esc_html( (string) $laao_ads_creative['dimensions'] ); ?></dd></div>
-								<div><dt><?php esc_html_e( 'Alt text', 'laao-advertiser-portal' ); ?></dt><dd><?php echo esc_html( (string) $laao_ads_creative['alt_text'] ); ?></dd></div>
+								<div><dt><?php esc_html_e( 'Required size', 'aggressive-ads' ); ?></dt><dd><?php echo esc_html( (string) $aggr_creative['size'] ); ?></dd></div>
+								<div><dt><?php esc_html_e( 'Uploaded size', 'aggressive-ads' ); ?></dt><dd><?php echo esc_html( (string) $aggr_creative['dimensions'] ); ?></dd></div>
+								<div><dt><?php esc_html_e( 'Alt text', 'aggressive-ads' ); ?></dt><dd><?php echo esc_html( (string) $aggr_creative['alt_text'] ); ?></dd></div>
 								<div>
-									<dt><?php esc_html_e( 'Destination', 'laao-advertiser-portal' ); ?></dt>
-									<dd class="laao-ads-table__url"><a href="<?php echo esc_url( (string) $laao_ads_creative['click_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( (string) $laao_ads_creative['click_url'] ); ?></a></dd>
+									<dt><?php esc_html_e( 'Destination', 'aggressive-ads' ); ?></dt>
+									<dd class="aggr-table__url"><a href="<?php echo esc_url( (string) $aggr_creative['click_url'] ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( (string) $aggr_creative['click_url'] ); ?></a></dd>
 								</div>
 							</dl>
 						</div>
@@ -158,39 +158,39 @@ $laao_ads_back = Review_Screen::queue_url( $laao_ads_filter, $laao_ads_page );
 		<?php endif; ?>
 	</section>
 
-	<?php if ( array() !== $laao_ads_campaign['creative_updates'] ) : ?>
-		<section class="laao-ads-panel" aria-labelledby="laao-ads-creative-updates">
-			<h2 id="laao-ads-creative-updates" class="laao-ads-panel__head"><?php esc_html_e( 'Pending ad updates', 'laao-advertiser-portal' ); ?></h2>
-			<p><?php esc_html_e( 'The current ads remain in rotation until an update below is approved and verified in AdSanity.', 'laao-advertiser-portal' ); ?></p>
+	<?php if ( array() !== $aggr_campaign['creative_updates'] ) : ?>
+		<section class="aggr-panel" aria-labelledby="aggr-creative-updates">
+			<h2 id="aggr-creative-updates" class="aggr-panel__head"><?php esc_html_e( 'Pending ad updates', 'aggressive-ads' ); ?></h2>
+			<p><?php esc_html_e( 'The current ads remain in rotation until an update below is approved.', 'aggressive-ads' ); ?></p>
 
-			<div class="laao-ads-creative-grid">
-				<?php foreach ( $laao_ads_campaign['creative_updates'] as $laao_ads_update ) : ?>
-					<article class="laao-ads-creative">
-						<div class="laao-ads-creative__preview">
-							<img src="<?php echo esc_url( (string) $laao_ads_update['preview'] ); ?>" alt="<?php echo esc_attr( (string) $laao_ads_update['alt_text'] ); ?>" loading="lazy">
+			<div class="aggr-creative-grid">
+				<?php foreach ( $aggr_campaign['creative_updates'] as $aggr_update ) : ?>
+					<article class="aggr-creative">
+						<div class="aggr-creative__preview">
+							<img src="<?php echo esc_url( (string) $aggr_update['preview'] ); ?>" alt="<?php echo esc_attr( (string) $aggr_update['alt_text'] ); ?>" loading="lazy">
 						</div>
-						<div class="laao-ads-creative__body">
-							<h3><?php echo esc_html( (string) $laao_ads_update['placement'] ); ?></h3>
+						<div class="aggr-creative__body">
+							<h3><?php echo esc_html( (string) $aggr_update['placement'] ); ?></h3>
 							<dl>
-								<div><dt><?php esc_html_e( 'Required size', 'laao-advertiser-portal' ); ?></dt><dd><?php echo esc_html( (string) $laao_ads_update['size'] ); ?></dd></div>
-								<div><dt><?php esc_html_e( 'Uploaded size', 'laao-advertiser-portal' ); ?></dt><dd><?php echo esc_html( (string) $laao_ads_update['dimensions'] ); ?></dd></div>
-								<div><dt><?php esc_html_e( 'Current destination', 'laao-advertiser-portal' ); ?></dt><dd class="laao-ads-table__url"><?php echo esc_html( (string) $laao_ads_update['current_url'] ); ?></dd></div>
-								<div><dt><?php esc_html_e( 'Proposed destination', 'laao-advertiser-portal' ); ?></dt><dd class="laao-ads-table__url"><?php echo esc_html( (string) $laao_ads_update['click_url'] ); ?></dd></div>
-								<div><dt><?php esc_html_e( 'Current alt text', 'laao-advertiser-portal' ); ?></dt><dd><?php echo esc_html( (string) $laao_ads_update['current_alt'] ); ?></dd></div>
-								<div><dt><?php esc_html_e( 'Proposed alt text', 'laao-advertiser-portal' ); ?></dt><dd><?php echo esc_html( (string) $laao_ads_update['alt_text'] ); ?></dd></div>
+								<div><dt><?php esc_html_e( 'Required size', 'aggressive-ads' ); ?></dt><dd><?php echo esc_html( (string) $aggr_update['size'] ); ?></dd></div>
+								<div><dt><?php esc_html_e( 'Uploaded size', 'aggressive-ads' ); ?></dt><dd><?php echo esc_html( (string) $aggr_update['dimensions'] ); ?></dd></div>
+								<div><dt><?php esc_html_e( 'Current destination', 'aggressive-ads' ); ?></dt><dd class="aggr-table__url"><?php echo esc_html( (string) $aggr_update['current_url'] ); ?></dd></div>
+								<div><dt><?php esc_html_e( 'Proposed destination', 'aggressive-ads' ); ?></dt><dd class="aggr-table__url"><?php echo esc_html( (string) $aggr_update['click_url'] ); ?></dd></div>
+								<div><dt><?php esc_html_e( 'Current alt text', 'aggressive-ads' ); ?></dt><dd><?php echo esc_html( (string) $aggr_update['current_alt'] ); ?></dd></div>
+								<div><dt><?php esc_html_e( 'Proposed alt text', 'aggressive-ads' ); ?></dt><dd><?php echo esc_html( (string) $aggr_update['alt_text'] ); ?></dd></div>
 							</dl>
 
-							<form class="laao-ads-form" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post">
+							<form class="aggr-form" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post">
 								<input type="hidden" name="action" value="<?php echo esc_attr( Creative_Change_Actions::ACTION ); ?>">
-								<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) $laao_ads_campaign_id ); ?>">
-								<input type="hidden" name="replacement_id" value="<?php echo esc_attr( (string) $laao_ads_update['id'] ); ?>">
-								<?php wp_nonce_field( Creative_Change_Actions::nonce_action( (int) $laao_ads_update['id'] ) ); ?>
-								<div class="laao-ads-form__actions">
-									<button class="laao-ads-button" type="submit" name="decision" value="approve"><?php esc_html_e( 'Approve and replace', 'laao-advertiser-portal' ); ?></button>
+								<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) $aggr_campaign_id ); ?>">
+								<input type="hidden" name="replacement_id" value="<?php echo esc_attr( (string) $aggr_update['id'] ); ?>">
+								<?php wp_nonce_field( Creative_Change_Actions::nonce_action( (int) $aggr_update['id'] ) ); ?>
+								<div class="aggr-form__actions">
+									<button class="aggr-button" type="submit" name="decision" value="approve"><?php esc_html_e( 'Approve and replace', 'aggressive-ads' ); ?></button>
 								</div>
-								<label for="laao-ads-update-feedback-<?php echo esc_attr( (string) $laao_ads_update['id'] ); ?>"><?php esc_html_e( 'Feedback required when rejecting', 'laao-advertiser-portal' ); ?></label>
-								<textarea id="laao-ads-update-feedback-<?php echo esc_attr( (string) $laao_ads_update['id'] ); ?>" name="review_notes" rows="4" maxlength="2000"></textarea>
-								<button class="laao-ads-button laao-ads-button--danger" type="submit" name="decision" value="reject"><?php esc_html_e( 'Reject update', 'laao-advertiser-portal' ); ?></button>
+								<label for="aggr-update-feedback-<?php echo esc_attr( (string) $aggr_update['id'] ); ?>"><?php esc_html_e( 'Feedback required when rejecting', 'aggressive-ads' ); ?></label>
+								<textarea id="aggr-update-feedback-<?php echo esc_attr( (string) $aggr_update['id'] ); ?>" name="review_notes" rows="4" maxlength="2000"></textarea>
+								<button class="aggr-button aggr-button--danger" type="submit" name="decision" value="reject"><?php esc_html_e( 'Reject update', 'aggressive-ads' ); ?></button>
 							</form>
 						</div>
 					</article>
@@ -199,32 +199,32 @@ $laao_ads_back = Review_Screen::queue_url( $laao_ads_filter, $laao_ads_page );
 		</section>
 	<?php endif; ?>
 
-	<div class="laao-ads-review-columns">
-		<section class="laao-ads-panel" aria-labelledby="laao-ads-review-actions">
-			<h2 id="laao-ads-review-actions" class="laao-ads-panel__head"><?php esc_html_e( 'Review actions', 'laao-advertiser-portal' ); ?></h2>
+	<div class="aggr-review-columns">
+		<section class="aggr-panel" aria-labelledby="aggr-review-actions">
+			<h2 id="aggr-review-actions" class="aggr-panel__head"><?php esc_html_e( 'Review actions', 'aggressive-ads' ); ?></h2>
 
-			<?php if ( array() === $laao_ads_campaign['actions'] ) : ?>
-				<p class="laao-ads-empty"><?php esc_html_e( 'No staff action is available from this status.', 'laao-advertiser-portal' ); ?></p>
+			<?php if ( array() === $aggr_campaign['actions'] ) : ?>
+				<p class="aggr-empty"><?php esc_html_e( 'No staff action is available from this status.', 'aggressive-ads' ); ?></p>
 			<?php else : ?>
-				<div class="laao-ads-actions">
-					<?php foreach ( $laao_ads_campaign['actions'] as $laao_ads_action ) : ?>
-						<form class="laao-ads-action" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post">
+				<div class="aggr-actions">
+					<?php foreach ( $aggr_campaign['actions'] as $aggr_action ) : ?>
+						<form class="aggr-action" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post">
 							<input type="hidden" name="action" value="<?php echo esc_attr( Review_Screen::TRANSITION_ACTION ); ?>">
-							<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) $laao_ads_campaign_id ); ?>">
-							<input type="hidden" name="to" value="<?php echo esc_attr( (string) $laao_ads_action['to'] ); ?>">
-							<input type="hidden" name="filter" value="<?php echo esc_attr( $laao_ads_filter ); ?>">
-							<input type="hidden" name="queue_page" value="<?php echo esc_attr( (string) $laao_ads_page ); ?>">
-							<?php wp_nonce_field( Review_Screen::nonce_action( $laao_ads_campaign_id ) ); ?>
+							<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) $aggr_campaign_id ); ?>">
+							<input type="hidden" name="to" value="<?php echo esc_attr( (string) $aggr_action['to'] ); ?>">
+							<input type="hidden" name="filter" value="<?php echo esc_attr( $aggr_filter ); ?>">
+							<input type="hidden" name="queue_page" value="<?php echo esc_attr( (string) $aggr_page ); ?>">
+							<?php wp_nonce_field( Review_Screen::nonce_action( $aggr_campaign_id ) ); ?>
 
-							<?php if ( $laao_ads_action['needs_notes'] ) : ?>
-								<label for="laao-ads-feedback-<?php echo esc_attr( (string) $laao_ads_action['to'] ); ?>">
-									<?php esc_html_e( 'Feedback the advertiser will see', 'laao-advertiser-portal' ); ?>
+							<?php if ( $aggr_action['needs_notes'] ) : ?>
+								<label for="aggr-feedback-<?php echo esc_attr( (string) $aggr_action['to'] ); ?>">
+									<?php esc_html_e( 'Feedback the advertiser will see', 'aggressive-ads' ); ?>
 								</label>
-								<textarea id="laao-ads-feedback-<?php echo esc_attr( (string) $laao_ads_action['to'] ); ?>" name="review_notes" rows="4" required></textarea>
+								<textarea id="aggr-feedback-<?php echo esc_attr( (string) $aggr_action['to'] ); ?>" name="review_notes" rows="4" required></textarea>
 							<?php endif; ?>
 
-							<button class="laao-ads-button <?php echo $laao_ads_action['destructive'] ? 'laao-ads-button--danger' : ''; ?>" type="submit">
-								<?php echo esc_html( (string) $laao_ads_action['label'] ); ?>
+							<button class="aggr-button <?php echo $aggr_action['destructive'] ? 'aggr-button--danger' : ''; ?>" type="submit">
+								<?php echo esc_html( (string) $aggr_action['label'] ); ?>
 							</button>
 						</form>
 					<?php endforeach; ?>
@@ -232,39 +232,39 @@ $laao_ads_back = Review_Screen::queue_url( $laao_ads_filter, $laao_ads_page );
 			<?php endif; ?>
 		</section>
 
-		<section class="laao-ads-panel" aria-labelledby="laao-ads-internal-notes">
-			<h2 id="laao-ads-internal-notes" class="laao-ads-panel__head"><?php esc_html_e( 'Internal notes', 'laao-advertiser-portal' ); ?></h2>
-			<form class="laao-ads-form" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post">
+		<section class="aggr-panel" aria-labelledby="aggr-internal-notes">
+			<h2 id="aggr-internal-notes" class="aggr-panel__head"><?php esc_html_e( 'Internal notes', 'aggressive-ads' ); ?></h2>
+			<form class="aggr-form" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post">
 				<input type="hidden" name="action" value="<?php echo esc_attr( Review_Screen::NOTES_ACTION ); ?>">
-				<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) $laao_ads_campaign_id ); ?>">
-				<input type="hidden" name="filter" value="<?php echo esc_attr( $laao_ads_filter ); ?>">
-				<input type="hidden" name="queue_page" value="<?php echo esc_attr( (string) $laao_ads_page ); ?>">
-				<?php wp_nonce_field( Review_Screen::notes_nonce_action( $laao_ads_campaign_id ) ); ?>
-				<label for="laao-ads-internal-notes-field"><?php esc_html_e( 'Visible to staff only', 'laao-advertiser-portal' ); ?></label>
-				<textarea id="laao-ads-internal-notes-field" name="internal_notes" rows="7"><?php echo esc_textarea( (string) $laao_ads_campaign['internal_notes'] ); ?></textarea>
-				<button class="laao-ads-button laao-ads-button--secondary" type="submit"><?php esc_html_e( 'Save internal notes', 'laao-advertiser-portal' ); ?></button>
+				<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) $aggr_campaign_id ); ?>">
+				<input type="hidden" name="filter" value="<?php echo esc_attr( $aggr_filter ); ?>">
+				<input type="hidden" name="queue_page" value="<?php echo esc_attr( (string) $aggr_page ); ?>">
+				<?php wp_nonce_field( Review_Screen::notes_nonce_action( $aggr_campaign_id ) ); ?>
+				<label for="aggr-internal-notes-field"><?php esc_html_e( 'Visible to staff only', 'aggressive-ads' ); ?></label>
+				<textarea id="aggr-internal-notes-field" name="internal_notes" rows="7"><?php echo esc_textarea( (string) $aggr_campaign['internal_notes'] ); ?></textarea>
+				<button class="aggr-button aggr-button--secondary" type="submit"><?php esc_html_e( 'Save internal notes', 'aggressive-ads' ); ?></button>
 			</form>
 		</section>
 	</div>
 
-	<?php if ( $laao_ads_campaign['can_view_audit'] ) : ?>
-		<section class="laao-ads-panel" aria-labelledby="laao-ads-audit-timeline">
-			<h2 id="laao-ads-audit-timeline" class="laao-ads-panel__head"><?php esc_html_e( 'Audit timeline', 'laao-advertiser-portal' ); ?></h2>
-			<?php if ( array() === $laao_ads_campaign['audit'] ) : ?>
-				<p class="laao-ads-empty"><?php esc_html_e( 'No audit events have been recorded for this campaign.', 'laao-advertiser-portal' ); ?></p>
+	<?php if ( $aggr_campaign['can_view_audit'] ) : ?>
+		<section class="aggr-panel" aria-labelledby="aggr-audit-timeline">
+			<h2 id="aggr-audit-timeline" class="aggr-panel__head"><?php esc_html_e( 'Audit timeline', 'aggressive-ads' ); ?></h2>
+			<?php if ( array() === $aggr_campaign['audit'] ) : ?>
+				<p class="aggr-empty"><?php esc_html_e( 'No audit events have been recorded for this campaign.', 'aggressive-ads' ); ?></p>
 			<?php else : ?>
-				<ol class="laao-ads-timeline">
-					<?php foreach ( $laao_ads_campaign['audit'] as $laao_ads_event ) : ?>
-						<li class="laao-ads-timeline__item">
-							<div class="laao-ads-timeline__message"><?php echo esc_html( (string) $laao_ads_event['message'] ); ?></div>
-							<div class="laao-ads-timeline__meta">
+				<ol class="aggr-timeline">
+					<?php foreach ( $aggr_campaign['audit'] as $aggr_event ) : ?>
+						<li class="aggr-timeline__item">
+							<div class="aggr-timeline__message"><?php echo esc_html( (string) $aggr_event['message'] ); ?></div>
+							<div class="aggr-timeline__meta">
 								<?php
 								printf(
 									/* translators: 1: actor name. 2: event date and time. 3: event outcome. */
-									esc_html__( '%1$s · %2$s · %3$s', 'laao-advertiser-portal' ),
-									esc_html( '' === (string) $laao_ads_event['actor'] ? __( 'Unknown user', 'laao-advertiser-portal' ) : (string) $laao_ads_event['actor'] ),
-									esc_html( Review_Data::format_timestamp( (int) $laao_ads_event['created_at'], true ) ),
-									esc_html( (string) $laao_ads_event['outcome'] )
+									esc_html__( '%1$s · %2$s · %3$s', 'aggressive-ads' ),
+									esc_html( '' === (string) $aggr_event['actor'] ? __( 'Unknown user', 'aggressive-ads' ) : (string) $aggr_event['actor'] ),
+									esc_html( Review_Data::format_timestamp( (int) $aggr_event['created_at'], true ) ),
+									esc_html( (string) $aggr_event['outcome'] )
 								);
 								?>
 							</div>

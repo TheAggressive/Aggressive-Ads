@@ -7,6 +7,11 @@ the status on each phase below names the remaining product work.
 
 Nothing here is built merely because the architecture supports it.
 
+**Suite direction** (white-label, unified admin, native ad serving, cache-safe
+tracking) lives in [suite-roadmap.md](suite-roadmap.md). Identity:
+[ADR-0022](adr/0022-aggressive-ads-identity.md). This file remains the history of what
+the LAAO-prefixed plugin already shipped.
+
 ## Phase 1 — Foundation *(complete)*
 
 Bootstrap, autoloader, container, post types and statuses, installer, schema
@@ -26,7 +31,7 @@ The REST upload route, private two-stage storage, MIME/dimension/integrity valid
 
 ## Phase 4 — Portal UI *(in progress; creation steps 1–6 complete)*
 
-Dashboard, campaign list and detail, organization, account. The wizard: details → package → creative → destination and schedule → review → submit. The complete creation and submission flow now works without JavaScript, including draft creation, package snapshots, exact-size private creative upload, authenticated preview, removal, destination confirmation, submission-grade scheduling, actionable review, final confirmation, transition-time revalidation, audit, and reviewer notification. REST and forms converge on the same workflows. Atomic replacement for scheduled and live ads is also built: advertisers stage private revisions without interrupting delivery, staff review them in a dedicated queue, and approval reconciles the existing AdSanity object with exact read-back and rollback. The shared dialog Interactivity store is shipped (creative replace on campaign detail; imperative open/close — see [interactivity-stores.md](interactivity-stores.md)). Remaining here: drag/drop, Interactivity stores for wizard/upload/autosave, and full keyboard and screen-reader flow coverage.
+Dashboard, campaign list and detail, organization, account. The wizard: details → package → creative → destination and schedule → review → submit. The complete creation and submission flow now works without JavaScript, including draft creation, package snapshots, exact-size private creative upload, authenticated preview, removal, destination confirmation, submission-grade scheduling, actionable review, final confirmation, transition-time revalidation, audit, and reviewer notification. REST and forms converge on the same workflows. Atomic replacement for scheduled and live ads is also built: advertisers stage private revisions without interrupting delivery, staff review them in a dedicated queue, and approval reconciles the existing AdSanity object with exact read-back and rollback. The shared dialog Interactivity store is shipped (creative replace, live-ad preview, draft preview and remove confirmation on campaign detail; imperative open/close — see [interactivity-stores.md](interactivity-stores.md)). Remaining here: none for the creation UI; reporting tiles stay absent until analytics exists.
 
 Public advertiser signup is also built. It is opt-in through WordPress's
 "Anyone can register" policy (with a dedicated filter for managed identity
@@ -52,11 +57,9 @@ individual submission and resubmission emails, per-recipient duplicate
 suppression and bounded partial retry, and failure handling that never reverses
 a successful submission. See [notifications.md](notifications.md).
 
-## Phase 6 — AdSanity publisher *(complete)*
+## Phase 6 — Publisher *(complete; adapter superseded)*
 
-`Ad_Provider_Interface`, the AdSanity adapter, fail-closed `Placement_Mapping` resolver, `Creative_Promoter`, exact write/read-back verification, draft-first provider checkpoints, dual-record reconciliation, idempotent retry, and partial-failure recovery. The capability-gated Ad delivery screen maps every placement to an immutable ad-group term ID through placement-scoped, nonce-protected, verified and audited writes; missing providers, empty catalogues, unmapped placements and deleted groups all fail closed.
-
-**The phase that removes the manual work**, and the reason the rest exists.
+`Ad_Provider_Interface` is implemented by `Integration\Native\Publisher`. Inventory is the placement catalogue (common IAB sizes plus custom WxH). The former AdSanity adapter, mapping resolver, and contract stub were removed in [ADR-0031](adr/0031-native-is-the-only-publisher.md).
 
 ## Phase 7 — Lifecycle automation
 
@@ -85,13 +88,20 @@ organization screen for owners and staff.
 
 See [ADR-0020](adr/0020-portal-owned-email-change.md).
 
-## Phase 9 — Packages and pricing *(catalogue read/selection complete; management remains)*
+## Phase 9 — Packages and pricing *(complete)*
 
-The validated catalogue, wizard selection, price display, and campaign snapshot are implemented. Remaining: the staff package-management surface, renew, and duplicate. **Payment processing is deliberately out of scope** — the currency fields exist so that adding it later is not a migration, not because it is planned.
+The validated catalogue, wizard selection, price display, campaign snapshot,
+staff package-management surface, and campaign copy (renew / duplicate) are
+implemented.
+**Payment processing is deliberately out of scope** — the currency fields exist so that adding it later is not a migration, not because it is planned.
 
-## Phase 10 — Reporting
+## Phase 10 — Reporting *(first slice complete)*
 
-Impressions and clicks surfaced from AdSanity's `_views-{ts}` / `_clicks-{ts}` counters, per-organization dashboards, and CSV export.
+Org-scoped impression, click and CTR tiles from `aggr_rollups`, gated on both
+the reporting and native-delivery modules ([ADR-0030](adr/0030-reporting-from-native-rollups.md)).
+Campaign list/detail and `GET /campaigns` expose the same integer counts for
+authorized objects. Spend stays absent until billing has a source. CSV export
+is not this slice.
 
 ## Phase 11 — Hardening and launch
 

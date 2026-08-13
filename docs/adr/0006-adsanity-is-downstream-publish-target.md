@@ -1,6 +1,8 @@
 # ADR-0006 — AdSanity is a downstream publish target, not the system of record
 
-**Status:** Accepted — 2026-08-08; amended 2026-08-10
+**Status:** Superseded by [0031](0031-native-is-the-only-publisher.md) — 2026-08-13
+
+Accepted — 2026-08-08; amended 2026-08-10; serving-disinterest superseded by [0026](0026-native-delivery.md)
 
 ## Context
 
@@ -37,4 +39,6 @@ Campaign orchestration speaks to `Ad_Provider_Interface`: publish/reconcile, unp
 
 **Routing writes through `Adsanity\Meta_Data`.** Its hooks drive nothing we need, and core `update_post_meta()` bypasses the wrapper anyway. Depending on an undocumented internal class to store data is worse than depending on WordPress. Revisit only if an add-on ever starts relying on those hooks.
 
-**Forking AdSanity.** Loses licensed updates, and puts ad *delivery* — a solved problem we have no interest in owning — inside our maintenance surface.
+**Forking AdSanity.** Loses licensed updates. Native serving is now a first-party
+surface ([ADR-0026](0026-native-delivery.md)); the adapter remains until cutover
+rather than a fork of AdSanity's renderer.

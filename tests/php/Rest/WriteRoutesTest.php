@@ -2,27 +2,27 @@
 /**
  * The REST write paths.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Rest;
+namespace Aggressive\Ads\Tests\Rest;
 
-use LAAO_Advertiser_Portal\Core\Post_Statuses;
-use LAAO_Advertiser_Portal\Core\Post_Types;
-use LAAO_Advertiser_Portal\Install\Installer;
-use LAAO_Advertiser_Portal\Plugin;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
-use LAAO_Advertiser_Portal\Repository\Creative_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Repository;
-use LAAO_Advertiser_Portal\Repository\Package_Repository;
-use LAAO_Advertiser_Portal\Repository\Placement_Repository;
-use LAAO_Advertiser_Portal\Security\Ownership;
-use LAAO_Advertiser_Portal\Security\Rate_Limiter;
-use LAAO_Advertiser_Portal\Security\Roles;
-use LAAO_Advertiser_Portal\Storage\Private_Storage;
+use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Install\Installer;
+use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Repository\Package_Repository;
+use Aggressive\Ads\Repository\Placement_Repository;
+use Aggressive\Ads\Security\Ownership;
+use Aggressive\Ads\Security\Rate_Limiter;
+use Aggressive\Ads\Security\Roles;
+use Aggressive\Ads\Storage\Private_Storage;
 use WP_REST_Request;
 use WP_UnitTestCase;
 
@@ -162,11 +162,11 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 		imagepng( $image );
 		$bytes = (string) ob_get_clean();
 
-		$temp = wp_tempnam( 'laao-ads-rest-upload' );
+		$temp = wp_tempnam( 'aggr-rest-upload' );
 		file_put_contents( $temp, $bytes );
 		$this->temporary[] = $temp;
 
-		$request = new WP_REST_Request( 'POST', '/laao-advertiser-portal/v1/campaigns/' . $campaign_id . '/creatives' );
+		$request = new WP_REST_Request( 'POST', '/aggr/v1/campaigns/' . $campaign_id . '/creatives' );
 
 		$request->set_body_params(
 			array(
@@ -198,14 +198,15 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 	public function test_the_write_routes_are_registered(): void {
 		$routes = rest_get_server()->get_routes();
 
-		$this->assertArrayHasKey( '/laao-advertiser-portal/v1/campaigns', $routes );
-		$this->assertArrayHasKey( '/laao-advertiser-portal/v1/campaigns/(?P<id>\d+)', $routes );
-		$this->assertArrayHasKey( '/laao-advertiser-portal/v1/campaigns/(?P<id>\d+)/creatives', $routes );
-		$this->assertArrayHasKey( '/laao-advertiser-portal/v1/creatives/(?P<id>\d+)', $routes );
-		$this->assertArrayHasKey( '/laao-advertiser-portal/v1/creatives/(?P<id>\d+)/replacement', $routes );
-		$this->assertArrayHasKey( '/laao-advertiser-portal/v1/creative-replacements/(?P<id>\d+)', $routes );
-		$this->assertArrayHasKey( '/laao-advertiser-portal/v1/creative-replacements/(?P<id>\d+)/decision', $routes );
-		$this->assertArrayHasKey( '/laao-advertiser-portal/v1/campaigns/(?P<id>\d+)/transitions', $routes );
+		$this->assertArrayHasKey( '/aggr/v1/campaigns', $routes );
+		$this->assertArrayHasKey( '/aggr/v1/campaigns/(?P<id>\d+)', $routes );
+		$this->assertArrayHasKey( '/aggr/v1/campaigns/(?P<id>\d+)/copy', $routes );
+		$this->assertArrayHasKey( '/aggr/v1/campaigns/(?P<id>\d+)/creatives', $routes );
+		$this->assertArrayHasKey( '/aggr/v1/creatives/(?P<id>\d+)', $routes );
+		$this->assertArrayHasKey( '/aggr/v1/creatives/(?P<id>\d+)/replacement', $routes );
+		$this->assertArrayHasKey( '/aggr/v1/creative-replacements/(?P<id>\d+)', $routes );
+		$this->assertArrayHasKey( '/aggr/v1/creative-replacements/(?P<id>\d+)/decision', $routes );
+		$this->assertArrayHasKey( '/aggr/v1/campaigns/(?P<id>\d+)/transitions', $routes );
 	}
 
 	/**
@@ -216,7 +217,7 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 	public function test_the_owner_can_create_an_organization_scoped_draft(): void {
 		wp_set_current_user( $this->owner );
 
-		$request = new WP_REST_Request( 'POST', '/laao-advertiser-portal/v1/campaigns' );
+		$request = new WP_REST_Request( 'POST', '/aggr/v1/campaigns' );
 		$request->set_body_params( array( 'title' => 'New campaign' ) );
 
 		$response = rest_get_server()->dispatch( $request );
@@ -241,7 +242,7 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 		wp_set_current_user( $this->owner );
 
 		$original_org = get_post_meta( $this->campaign_id, Campaign_Repository::META_ORG_ID, true );
-		$request      = new WP_REST_Request( 'PATCH', '/laao-advertiser-portal/v1/campaigns/' . $this->campaign_id );
+		$request      = new WP_REST_Request( 'PATCH', '/aggr/v1/campaigns/' . $this->campaign_id );
 		$request->set_body_params(
 			array(
 				'title'            => 'Updated campaign',
@@ -289,7 +290,7 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 		wp_set_current_user( $this->owner );
 		Plugin::instance()->container()->get( Ownership::class )->flush_cache();
 
-		$request = new WP_REST_Request( 'PATCH', '/laao-advertiser-portal/v1/campaigns/' . $this->campaign_id );
+		$request = new WP_REST_Request( 'PATCH', '/aggr/v1/campaigns/' . $this->campaign_id );
 		$request->set_body_params(
 			array(
 				'package_id'   => $package_id,
@@ -316,7 +317,7 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 	public function test_rest_review_step_requires_complete_creative_coverage(): void {
 		wp_set_current_user( $this->owner );
 
-		$request = new WP_REST_Request( 'PATCH', '/laao-advertiser-portal/v1/campaigns/' . $this->campaign_id );
+		$request = new WP_REST_Request( 'PATCH', '/aggr/v1/campaigns/' . $this->campaign_id );
 		$request->set_body_params(
 			array(
 				'start_ts'     => time() + DAY_IN_SECONDS,
@@ -329,7 +330,7 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 		$response = rest_get_server()->dispatch( $request );
 
 		$this->assertSame( 422, $response->get_status() );
-		$this->assertSame( 'laao_ads_creatives_incomplete', $response->get_data()['code'] );
+		$this->assertSame( 'aggr_creatives_incomplete', $response->get_data()['code'] );
 		$this->assertSame( 0, (int) get_post_meta( $this->campaign_id, Campaign_Repository::META_START_TS, true ) );
 	}
 
@@ -356,7 +357,7 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 
 		$start   = ( new \DateTimeImmutable( '+10 days', wp_timezone() ) )->setTime( 0, 0, 0 )->getTimestamp();
 		$end     = ( new \DateTimeImmutable( '+20 days', wp_timezone() ) )->setTime( 23, 59, 59 )->getTimestamp();
-		$request = new WP_REST_Request( 'PATCH', '/laao-advertiser-portal/v1/campaigns/' . $this->campaign_id );
+		$request = new WP_REST_Request( 'PATCH', '/aggr/v1/campaigns/' . $this->campaign_id );
 		$request->set_body_params(
 			array(
 				'start_ts'     => $start,
@@ -384,7 +385,7 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 	public function test_a_stale_rest_autosave_is_refused(): void {
 		wp_set_current_user( $this->owner );
 
-		$first = new WP_REST_Request( 'PATCH', '/laao-advertiser-portal/v1/campaigns/' . $this->campaign_id );
+		$first = new WP_REST_Request( 'PATCH', '/aggr/v1/campaigns/' . $this->campaign_id );
 		$first->set_body_params(
 			array(
 				'title'        => 'Current title',
@@ -393,7 +394,7 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 		);
 		$this->assertSame( 200, rest_get_server()->dispatch( $first )->get_status() );
 
-		$stale = new WP_REST_Request( 'PATCH', '/laao-advertiser-portal/v1/campaigns/' . $this->campaign_id );
+		$stale = new WP_REST_Request( 'PATCH', '/aggr/v1/campaigns/' . $this->campaign_id );
 		$stale->set_body_params(
 			array(
 				'title'        => 'Stale title',
@@ -404,7 +405,7 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 		$response = rest_get_server()->dispatch( $stale );
 
 		$this->assertSame( 409, $response->get_status() );
-		$this->assertSame( 'laao_ads_edit_conflict', $response->get_data()['code'] );
+		$this->assertSame( 'aggr_edit_conflict', $response->get_data()['code'] );
 		$this->assertSame( 'Current title', get_the_title( $this->campaign_id ) );
 	}
 
@@ -416,7 +417,7 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 	public function test_another_organization_cannot_autosave(): void {
 		wp_set_current_user( $this->stranger );
 
-		$request = new WP_REST_Request( 'PATCH', '/laao-advertiser-portal/v1/campaigns/' . $this->campaign_id );
+		$request = new WP_REST_Request( 'PATCH', '/aggr/v1/campaigns/' . $this->campaign_id );
 		$request->set_body_params(
 			array(
 				'title'        => 'Taken over',
@@ -427,7 +428,7 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 		$response = rest_get_server()->dispatch( $request );
 
 		$this->assertSame( 403, $response->get_status() );
-		$this->assertSame( 'laao_ads_forbidden', $response->get_data()['code'] );
+		$this->assertSame( 'aggr_forbidden', $response->get_data()['code'] );
 	}
 
 	/**
@@ -461,7 +462,7 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 		$stored      = Plugin::instance()->container()->get( Creative_Repository::class )->storage_details( $creative_id );
 		$this->assertIsArray( $stored );
 
-		$request  = new WP_REST_Request( 'DELETE', '/laao-advertiser-portal/v1/creatives/' . $creative_id );
+		$request  = new WP_REST_Request( 'DELETE', '/aggr/v1/creatives/' . $creative_id );
 		$response = rest_get_server()->dispatch( $request );
 
 		$this->assertSame( 204, $response->get_status() );
@@ -482,7 +483,7 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 		wp_set_current_user( $this->stranger );
 		Plugin::instance()->container()->get( Ownership::class )->flush_cache();
 
-		$request  = new WP_REST_Request( 'DELETE', '/laao-advertiser-portal/v1/creatives/' . $creative_id );
+		$request  = new WP_REST_Request( 'DELETE', '/aggr/v1/creatives/' . $creative_id );
 		$response = rest_get_server()->dispatch( $request );
 
 		$this->assertSame( 403, $response->get_status() );
@@ -508,7 +509,7 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 				Creative_Repository::META_PRIVATE_PATH,
 				Creative_Repository::META_PRIVATE_TOKEN,
 				Creative_Repository::META_SHA256,
-				'laao-ads-private',
+				'aggr-private',
 			) as $secret
 		) {
 			$this->assertStringNotContainsString( $secret, $body );
@@ -534,7 +535,7 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 		$response = rest_get_server()->dispatch( $this->upload_request( $this->campaign_id, $this->placement_id ) );
 
 		$this->assertSame( 403, $response->get_status() );
-		$this->assertSame( 'laao_ads_forbidden', $response->get_data()['code'] );
+		$this->assertSame( 'aggr_forbidden', $response->get_data()['code'] );
 	}
 
 	/**
@@ -566,11 +567,11 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 	public function test_the_route_refuses_an_svg(): void {
 		wp_set_current_user( $this->owner );
 
-		$temp = wp_tempnam( 'laao-ads-svg' );
+		$temp = wp_tempnam( 'aggr-svg' );
 		file_put_contents( $temp, '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>' );
 		$this->temporary[] = $temp;
 
-		$request = new WP_REST_Request( 'POST', '/laao-advertiser-portal/v1/campaigns/' . $this->campaign_id . '/creatives' );
+		$request = new WP_REST_Request( 'POST', '/aggr/v1/campaigns/' . $this->campaign_id . '/creatives' );
 		$request->set_body_params(
 			array(
 				'placement_id' => $this->placement_id,
@@ -630,7 +631,7 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 
 		wp_set_current_user( $this->owner );
 
-		$request = new WP_REST_Request( 'POST', '/laao-advertiser-portal/v1/campaigns/' . $this->campaign_id . '/transitions' );
+		$request = new WP_REST_Request( 'POST', '/aggr/v1/campaigns/' . $this->campaign_id . '/transitions' );
 		$request->set_body_params( array( 'to' => Post_Statuses::APPROVED ) );
 
 		$response = rest_get_server()->dispatch( $request );
@@ -648,7 +649,7 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 	public function test_an_illegal_transition_is_a_conflict(): void {
 		wp_set_current_user( $this->reviewer );
 
-		$request = new WP_REST_Request( 'POST', '/laao-advertiser-portal/v1/campaigns/' . $this->campaign_id . '/transitions' );
+		$request = new WP_REST_Request( 'POST', '/aggr/v1/campaigns/' . $this->campaign_id . '/transitions' );
 		$request->set_body_params( array( 'to' => Post_Statuses::COMPLETE ) );
 
 		$this->assertSame( 409, rest_get_server()->dispatch( $request )->get_status() );
@@ -662,7 +663,7 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 	public function test_an_unknown_status_is_rejected_by_the_schema(): void {
 		wp_set_current_user( $this->reviewer );
 
-		$request = new WP_REST_Request( 'POST', '/laao-advertiser-portal/v1/campaigns/' . $this->campaign_id . '/transitions' );
+		$request = new WP_REST_Request( 'POST', '/aggr/v1/campaigns/' . $this->campaign_id . '/transitions' );
 		$request->set_body_params( array( 'to' => 'publish' ) );
 
 		$this->assertSame( 400, rest_get_server()->dispatch( $request )->get_status() );
@@ -683,12 +684,12 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 
 		wp_set_current_user( $this->reviewer );
 
-		$request = new WP_REST_Request( 'POST', '/laao-advertiser-portal/v1/campaigns/' . $this->campaign_id . '/transitions' );
+		$request = new WP_REST_Request( 'POST', '/aggr/v1/campaigns/' . $this->campaign_id . '/transitions' );
 		$request->set_body_params( array( 'to' => Post_Statuses::CHANGES ) );
 
 		$this->assertSame( 422, rest_get_server()->dispatch( $request )->get_status() );
 
-		$with_notes = new WP_REST_Request( 'POST', '/laao-advertiser-portal/v1/campaigns/' . $this->campaign_id . '/transitions' );
+		$with_notes = new WP_REST_Request( 'POST', '/aggr/v1/campaigns/' . $this->campaign_id . '/transitions' );
 		$with_notes->set_body_params(
 			array(
 				'to'           => Post_Statuses::CHANGES,
@@ -713,12 +714,12 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 		$upload = rest_get_server()->dispatch( $this->upload_request( $this->campaign_id, $this->placement_id ) );
 		$this->assertContains( $upload->get_status(), array( 401, 403 ) );
 
-		$transition = new WP_REST_Request( 'POST', '/laao-advertiser-portal/v1/campaigns/' . $this->campaign_id . '/transitions' );
+		$transition = new WP_REST_Request( 'POST', '/aggr/v1/campaigns/' . $this->campaign_id . '/transitions' );
 		$transition->set_body_params( array( 'to' => Post_Statuses::SUBMITTED ) );
 
 		$this->assertContains( rest_get_server()->dispatch( $transition )->get_status(), array( 401, 403 ) );
 
-		$delete = new WP_REST_Request( 'DELETE', '/laao-advertiser-portal/v1/creatives/999999' );
+		$delete = new WP_REST_Request( 'DELETE', '/aggr/v1/creatives/999999' );
 		$this->assertContains( rest_get_server()->dispatch( $delete )->get_status(), array( 401, 403 ) );
 	}
 

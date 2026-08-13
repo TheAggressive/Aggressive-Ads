@@ -6,7 +6,7 @@
  * file standalone with no plugin bootstrapped, so it wires up its own
  * autoloader rather than assuming anything is available.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
@@ -17,95 +17,89 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 
 require_once __DIR__ . '/inc/class-autoloader.php';
 
-LAAO_Advertiser_Portal\Autoloader::register( __DIR__ . '/inc' );
+Aggressive\Ads\Autoloader::register( __DIR__ . '/inc' );
 
-$laao_ads_installer_options = LAAO_Advertiser_Portal\Install\Installer::options();
+/**
+ * Deletes campaign, creative and organization posts on the current site.
+ *
+ * Stays in this file because get_posts() is forbidden inside inc/ outside
+ * Repository/. Schema, roles, cron and options are Uninstaller.
+ *
+ * @return void
+ */
+function aggr_uninstall_delete_content(): void {
+	$aggr_batch_size = 200;
 
-// Roles and their granted capabilities go, because leaving an advertiser role
-// behind on a site with no plugin is a capability nobody can explain later.
-( new LAAO_Advertiser_Portal\Security\Roles() )->remove();
+	$aggr_statuses = array_merge(
+		Aggressive\Ads\Core\Post_Statuses::all(),
+		array_keys( Aggressive\Ads\Domain\Identity_Maps::statuses() ),
+		array( 'publish', 'draft', 'pending', 'private', 'future', 'trash' )
+	);
 
-( new LAAO_Advertiser_Portal\Repository\Audit_Repository() )->drop_table();
-( new LAAO_Advertiser_Portal\Repository\Org_Access_Repository() )->drop_table();
+	$aggr_post_types = array_merge(
+		Aggressive\Ads\Core\Post_Types::all(),
+		array_keys( Aggressive\Ads\Domain\Identity_Maps::post_types() )
+	);
 
-// The reconciler's hourly event, which otherwise stays in the cron array
-// pointing at a hook nothing answers.
-LAAO_Advertiser_Portal\Workflow\Campaign_Clock::unschedule();
-LAAO_Advertiser_Portal\Workflow\Ending_Soon_Notifier::unschedule();
-LAAO_Advertiser_Portal\Workflow\Creative_Retention::unschedule();
+	foreach ( $aggr_post_types as $aggr_post_type ) {
+		do {
+			$aggr_batch = get_posts(
+				array(
+					'post_type'              => $aggr_post_type,
+
+					/*
+					 * Every status by name, and never 'any'.
+					 *
+					 * 'any' means "every status not excluded from search", and all
+					 * eleven campaign statuses are excluded from search by design.
+					 * This loop therefore matched no campaign at all: an uninstall
+					 * that had been asked to delete the content deleted the
+					 * organizations and packages, reported success, and left every
+					 * campaign row in the database.
+					 */
+					'post_status'            => $aggr_statuses,
+					'numberposts'            => $aggr_batch_size,
+					'fields'                 => 'ids',
+					'no_found_rows'          => true,
+					'update_post_term_cache' => false,
+					'update_post_meta_cache' => false,
+				)
+			);
+
+			$aggr_deleted = 0;
+
+			foreach ( $aggr_batch as $aggr_post_id ) {
+				if ( false !== wp_delete_post( (int) $aggr_post_id, true ) ) {
+					++$aggr_deleted;
+				}
+			}
+
+			// Terminates on an empty batch, and also when a batch cannot be
+			// deleted at all — otherwise a post another plugin refuses to delete
+			// spins this loop until the request dies.
+		} while ( array() !== $aggr_batch && $aggr_deleted > 0 );
+	}
+}
+
+$aggr_after_schema = static function ( bool $delete_content ): void {
+	if ( $delete_content ) {
+		aggr_uninstall_delete_content();
+	}
+};
 
 /*
  * Campaign, creative and organization content is deliberately preserved unless
- * the site owner explicitly opted in.
+ * the site owner explicitly opted in. Deleting a plugin should not silently
+ * destroy the record of what a business ran and billed for.
  *
- * Deleting a plugin should not silently destroy the record of what a business
- * ran and billed for. Someone who genuinely wants that has to ask for it — and
- * the option is read before the options are deleted, for obvious reasons.
+ * Network Admin uninstall walks every site. A per-site uninstall touches only
+ * the current blog, so removing the plugin from one tenant cannot wipe another.
+ * See docs/adr/0034-site-scoped-tenancy.md.
  */
-$laao_ads_delete_content = (bool) get_option(
-	LAAO_Advertiser_Portal\Install\Installer::OPTION_DELETE_DATA,
-	false
-);
-
-foreach ( $laao_ads_installer_options as $laao_ads_option ) {
-	delete_option( $laao_ads_option );
-}
-
-if ( ! $laao_ads_delete_content ) {
-	return;
-}
-
-/*
- * Deleted in batches, not all at once.
- *
- * A site with tens of thousands of creatives cannot load every id into one
- * request and then delete them one at a time — it times out partway, leaving
- * the plugin gone and its content half-removed, which is the worst of both
- * outcomes and impossible to resume.
- */
-const LAAO_ADS_UNINSTALL_BATCH = 200;
-
-// Our own statuses plus the core ones the non-campaign types are stored in.
-$laao_ads_statuses = array_merge(
-	LAAO_Advertiser_Portal\Core\Post_Statuses::all(),
-	array( 'publish', 'draft', 'pending', 'private', 'future', 'trash' )
-);
-
-foreach ( LAAO_Advertiser_Portal\Core\Post_Types::all() as $laao_ads_post_type ) {
-	do {
-		$laao_ads_batch = get_posts(
-			array(
-				'post_type'              => $laao_ads_post_type,
-
-				/*
-				 * Every status by name, and never 'any'.
-				 *
-				 * 'any' means "every status not excluded from search", and all
-				 * eleven campaign statuses are excluded from search by design.
-				 * This loop therefore matched no campaign at all: an uninstall
-				 * that had been asked to delete the content deleted the
-				 * organizations and packages, reported success, and left every
-				 * campaign row in the database.
-				 */
-				'post_status'            => $laao_ads_statuses,
-				'numberposts'            => LAAO_ADS_UNINSTALL_BATCH,
-				'fields'                 => 'ids',
-				'no_found_rows'          => true,
-				'update_post_term_cache' => false,
-				'update_post_meta_cache' => false,
-			)
-		);
-
-		$laao_ads_deleted = 0;
-
-		foreach ( $laao_ads_batch as $laao_ads_post_id ) {
-			if ( false !== wp_delete_post( (int) $laao_ads_post_id, true ) ) {
-				++$laao_ads_deleted;
-			}
-		}
-
-		// Terminates on an empty batch, and also when a batch cannot be
-		// deleted at all — otherwise a post another plugin refuses to delete
-		// spins this loop until the request dies.
-	} while ( array() !== $laao_ads_batch && $laao_ads_deleted > 0 );
+if ( is_multisite() && is_network_admin() ) {
+	Aggressive\Ads\Install\Uninstaller::run_network( $aggr_after_schema );
+} else {
+	$aggr_delete_content = Aggressive\Ads\Install\Uninstaller::should_delete_content();
+	Aggressive\Ads\Install\Uninstaller::run_for_current_site();
+	$aggr_after_schema( $aggr_delete_content );
 }

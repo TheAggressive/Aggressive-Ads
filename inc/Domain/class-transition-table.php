@@ -2,16 +2,16 @@
 /**
  * The campaign lifecycle, as data.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Domain;
+namespace Aggressive\Ads\Domain;
 
-use LAAO_Advertiser_Portal\Core\Post_Statuses;
-use LAAO_Advertiser_Portal\Core\Post_Types;
-use LAAO_Advertiser_Portal\Security\Capabilities;
+use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Security\Capabilities;
 
 /**
  * Every legal status change a campaign can make. **An edge absent from this
@@ -49,12 +49,6 @@ final class Transition_Table {
 	public const GUARD_REVIEW_NOTES = 'review_notes';
 
 	/**
-	 * Every selected placement resolves to an ad group, and the provider is
-	 * available. Fails closed, before anything is written.
-	 */
-	public const GUARD_MAPPINGS_RESOLVE = 'mappings_resolve';
-
-	/**
 	 * The campaign's start time has arrived.
 	 */
 	public const GUARD_STARTED = 'started';
@@ -68,11 +62,6 @@ final class Transition_Table {
 	 * The campaign's end time has passed.
 	 */
 	public const GUARD_ENDED = 'ended';
-
-	/**
-	 * Provider objects exist for every required creative.
-	 */
-	public const GUARD_PUBLISHED = 'published';
 
 	public const EFFECT_STAMP_SUBMITTED    = 'stamp_submitted';
 	public const EFFECT_CLAIM_REVIEWER     = 'claim_reviewer';
@@ -170,15 +159,15 @@ final class Transition_Table {
 				array( self::GUARD_REVIEW_NOTES )
 			),
 
-			// Approval is the transaction. The validator runs again and the
-			// mappings resolve before anything is written, so a campaign is
-			// never marked approved with nothing behind it.
+			// Approval is the transaction. The validator runs again before
+			// anything is written. Native fill reads campaign status; there is
+			// no downstream ad CPT to map.
 			new Campaign_Transition(
 				Post_Statuses::REVIEW,
 				Post_Statuses::APPROVED,
 				array( self::ACTOR_STAFF ),
 				array( Capabilities::REVIEW_CAMPAIGNS, Capabilities::PUBLISH_TO_ADSANITY ),
-				array( self::GUARD_VALIDATOR, self::GUARD_MAPPINGS_RESOLVE ),
+				array( self::GUARD_VALIDATOR ),
 				array( self::EFFECT_PUBLISH )
 			),
 
@@ -213,14 +202,14 @@ final class Transition_Table {
 				Post_Statuses::SCHEDULED,
 				array( self::ACTOR_SYSTEM ),
 				array(),
-				array( self::GUARD_PUBLISHED, self::GUARD_NOT_STARTED )
+				array( self::GUARD_NOT_STARTED )
 			),
 			new Campaign_Transition(
 				Post_Statuses::APPROVED,
 				Post_Statuses::LIVE,
 				array( self::ACTOR_SYSTEM ),
 				array(),
-				array( self::GUARD_PUBLISHED, self::GUARD_STARTED )
+				array( self::GUARD_STARTED )
 			),
 			new Campaign_Transition(
 				Post_Statuses::SCHEDULED,
@@ -402,11 +391,9 @@ final class Transition_Table {
 			self::GUARD_VALIDATOR,
 			self::GUARD_UNCLAIMED,
 			self::GUARD_REVIEW_NOTES,
-			self::GUARD_MAPPINGS_RESOLVE,
 			self::GUARD_STARTED,
 			self::GUARD_NOT_STARTED,
 			self::GUARD_ENDED,
-			self::GUARD_PUBLISHED,
 		);
 	}
 

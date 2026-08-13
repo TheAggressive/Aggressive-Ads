@@ -2,14 +2,14 @@
 /**
  * The portal URL grammar.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Unit\Portal;
+namespace Aggressive\Ads\Tests\Unit\Portal;
 
-use LAAO_Advertiser_Portal\Portal\Request;
+use Aggressive\Ads\Portal\Request;
 use Yoast\PHPUnitPolyfills\TestCases\TestCase;
 
 /**

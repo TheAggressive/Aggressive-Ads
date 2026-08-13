@@ -2,20 +2,20 @@
 /**
  * Whether a campaign is fit to submit.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Workflow;
+namespace Aggressive\Ads\Workflow;
 
-use LAAO_Advertiser_Portal\Domain\Campaign_Rules;
-use LAAO_Advertiser_Portal\Domain\Validation_Result;
-use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
-use LAAO_Advertiser_Portal\Repository\Creative_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Repository;
-use LAAO_Advertiser_Portal\Repository\Package_Repository;
-use LAAO_Advertiser_Portal\Repository\Placement_Repository;
+use Aggressive\Ads\Domain\Campaign_Rules;
+use Aggressive\Ads\Domain\Validation_Result;
+use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Repository\Package_Repository;
+use Aggressive\Ads\Repository\Placement_Repository;
 use WP_Error;
 
 /**
@@ -111,7 +111,7 @@ final class Campaign_Validator {
 		}
 
 		return new WP_Error(
-			'laao_ads_campaign_invalid',
+			'aggr_campaign_invalid',
 			implode( ' ', $messages ),
 			array( 'problems' => $problems )
 		);
@@ -131,69 +131,69 @@ final class Campaign_Validator {
 	public static function message_for( string $code, array $context = array() ): string {
 		switch ( $code ) {
 			case Campaign_Rules::ERROR_NO_CREATIVES:
-				return __( 'Add at least one creative before submitting.', 'laao-advertiser-portal' );
+				return __( 'Add at least one creative before submitting.', 'aggressive-ads' );
 
 			case Campaign_Rules::ERROR_NO_PLACEMENTS:
-				return __( 'Choose at least one placement before submitting.', 'laao-advertiser-portal' );
+				return __( 'Choose at least one placement before submitting.', 'aggressive-ads' );
 
 			case Campaign_Rules::ERROR_PLACEMENT_INACTIVE:
-				return __( 'One of the placements on this campaign is no longer available.', 'laao-advertiser-portal' );
+				return __( 'One of the placements on this campaign is no longer available.', 'aggressive-ads' );
 
 			case Campaign_Rules::ERROR_PLACEMENT_UNCOVERED:
-				return __( 'Every placement needs its own creative.', 'laao-advertiser-portal' );
+				return __( 'Every placement needs its own creative.', 'aggressive-ads' );
 
 			case Campaign_Rules::ERROR_CREATIVE_KIND:
-				return __( 'Only image creatives can be submitted.', 'laao-advertiser-portal' );
+				return __( 'Only image creatives can be submitted.', 'aggressive-ads' );
 
 			case Campaign_Rules::ERROR_CREATIVE_PLACEMENT:
-				return __( 'A creative is attached to a placement this campaign has not selected.', 'laao-advertiser-portal' );
+				return __( 'A creative is attached to a placement this campaign has not selected.', 'aggressive-ads' );
 
 			case Campaign_Rules::ERROR_CREATIVE_SIZE:
 				return sprintf(
 					/* translators: 1: uploaded dimensions, e.g. 1200 × 400. 2: required dimensions, e.g. 1200 × 300. */
-					__( 'Uploaded: %1$s. Required: %2$s.', 'laao-advertiser-portal' ),
+					__( 'Uploaded: %1$s. Required: %2$s.', 'aggressive-ads' ),
 					sprintf( '%d × %d', (int) ( $context['width'] ?? 0 ), (int) ( $context['height'] ?? 0 ) ),
 					(string) ( $context['expected'] ?? '' )
 				);
 
 			case Campaign_Rules::ERROR_CLICK_URL_MISSING:
-				return __( 'Every creative needs a destination URL.', 'laao-advertiser-portal' );
+				return __( 'Every creative needs a destination URL.', 'aggressive-ads' );
 
 			case Campaign_Rules::ERROR_CLICK_URL_INVALID:
-				return __( 'A destination URL is not a valid http or https address.', 'laao-advertiser-portal' );
+				return __( 'A destination URL is not a valid http or https address.', 'aggressive-ads' );
 
 			case Campaign_Rules::ERROR_START_MISSING:
-				return __( 'Choose a start date.', 'laao-advertiser-portal' );
+				return __( 'Choose a start date.', 'aggressive-ads' );
 
 			case Campaign_Rules::ERROR_START_IN_PAST:
-				return __( 'The start date has already passed. Choose a later one.', 'laao-advertiser-portal' );
+				return __( 'The start date has already passed. Choose a later one.', 'aggressive-ads' );
 
 			case Campaign_Rules::ERROR_START_NOT_MIDNIGHT:
-				return __( 'The start date must begin at midnight in the site timezone.', 'laao-advertiser-portal' );
+				return __( 'The start date must begin at midnight in the site timezone.', 'aggressive-ads' );
 
 			case Campaign_Rules::ERROR_END_BEFORE_START:
-				return __( 'The end date must be after the start date.', 'laao-advertiser-portal' );
+				return __( 'The end date must be after the start date.', 'aggressive-ads' );
 
 			case Campaign_Rules::ERROR_END_NOT_DAY_END:
-				return __( 'The end date must include the full selected day in the site timezone.', 'laao-advertiser-portal' );
+				return __( 'The end date must include the full selected day in the site timezone.', 'aggressive-ads' );
 
 			case Campaign_Rules::ERROR_ORG_NOT_ACTIVE:
-				return __( 'This organization cannot submit campaigns. Please get in touch.', 'laao-advertiser-portal' );
+				return __( 'This organization cannot submit campaigns. Please get in touch.', 'aggressive-ads' );
 
 			case Campaign_Rules::ERROR_ORG_MISSING:
-				return __( 'This campaign is not connected to an organization. Please get in touch.', 'laao-advertiser-portal' );
+				return __( 'This campaign is not connected to an organization. Please get in touch.', 'aggressive-ads' );
 
 			case Campaign_Rules::ERROR_PACKAGE_MISSING:
-				return __( 'Choose a package before submitting.', 'laao-advertiser-portal' );
+				return __( 'Choose a package before submitting.', 'aggressive-ads' );
 
 			case Campaign_Rules::ERROR_PACKAGE_UNAVAILABLE:
-				return __( 'The package on this campaign is no longer offered. Choose another one.', 'laao-advertiser-portal' );
+				return __( 'The package on this campaign is no longer offered. Choose another one.', 'aggressive-ads' );
 
 			case Campaign_Rules::ERROR_PRICE_MISSING:
-				return __( 'This campaign has no price recorded. Choose its package again.', 'laao-advertiser-portal' );
+				return __( 'This campaign has no price recorded. Choose its package again.', 'aggressive-ads' );
 
 			default:
-				return __( 'This campaign is not ready to submit.', 'laao-advertiser-portal' );
+				return __( 'This campaign is not ready to submit.', 'aggressive-ads' );
 		}
 	}
 

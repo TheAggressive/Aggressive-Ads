@@ -1,6 +1,6 @@
 # ADR-0014 — Version-driven idempotent installer, not activation-hook-only
 
-**Status:** Accepted — 2026-08-08
+**Status:** Accepted — 2026-08-08; amended 2026-08-13 by [0034](0034-site-scoped-tenancy.md)
 
 ## Context
 
@@ -55,3 +55,10 @@ Every migration step writes an audit row with `actor_user_id = 0`.
 **A transient as the concurrency lock.** Transients may be backed by a shared object cache with no atomicity guarantee, and can be evicted mid-migration. `add_option` at least fails predictably.
 
 **No lock at all.** Two requests arriving simultaneously after a deploy both migrate. With `dbDelta` this is usually survivable and with a data migration it is not, and "usually" is not a property to build on.
+
+## Amendment (2026-08-13)
+
+`maybe_upgrade()` remains the self-heal for file-only deploys and for sites
+that already exist when the plugin is network-activated. A *new* site under
+a network-active install is initialized on `wp_initialize_site` so public
+fill is not the migration. See [ADR-0034](0034-site-scoped-tenancy.md).

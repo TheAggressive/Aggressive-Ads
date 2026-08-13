@@ -2,18 +2,18 @@
 /**
  * Serving private creative bytes.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\REST;
+namespace Aggressive\Ads\REST;
 
-use LAAO_Advertiser_Portal\Core\Service;
-use LAAO_Advertiser_Portal\Domain\Upload_Rules;
-use LAAO_Advertiser_Portal\Repository\Creative_Repository;
-use LAAO_Advertiser_Portal\Security\Capabilities;
-use LAAO_Advertiser_Portal\Storage\Private_Storage;
+use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Domain\Upload_Rules;
+use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Security\Capabilities;
+use Aggressive\Ads\Storage\Private_Storage;
 use WP_Error;
 use WP_HTTP_Response;
 use WP_REST_Request;
@@ -46,7 +46,30 @@ final class Creative_File_Controller implements Service {
 	/**
 	 * The REST namespace.
 	 */
-	public const NAMESPACE = 'laao-advertiser-portal/v1';
+	public const NAMESPACE        = 'aggr/v1';
+	public const LEGACY_NAMESPACE = 'laao-advertiser-portal/v1';
+
+	/**
+	 * Current and one-release alias namespaces.
+	 *
+	 * @return array<int, non-falsy-string>
+	 */
+	public static function namespaces(): array {
+		return array( self::NAMESPACE, self::LEGACY_NAMESPACE );
+	}
+
+	/**
+	 * Registers a route on every namespace this plugin answers.
+	 *
+	 * @param non-falsy-string         $route Route pattern.
+	 * @param array<int|string, mixed> $args  register_rest_route() arguments.
+	 * @return void
+	 */
+	public static function register_route( string $route, array $args ): void {
+		foreach ( self::namespaces() as $namespace ) {
+			register_rest_route( $namespace, $route, $args );
+		}
+	}
 
 	/**
 	 * Absolute path to serve once the response has been approved.
@@ -87,8 +110,7 @@ final class Creative_File_Controller implements Service {
 	 * @return void
 	 */
 	public function register_routes(): void {
-		register_rest_route(
-			self::NAMESPACE,
+		self::register_route(
 			'/creatives/(?P<id>\d+)/file',
 			array(
 				'methods'             => 'GET',
@@ -171,12 +193,12 @@ final class Creative_File_Controller implements Service {
 		 * oracle.
 		 */
 		$denied = new WP_Error(
-			'laao_ads_not_found',
-			__( 'Not found.', 'laao-advertiser-portal' ),
+			'aggr_not_found',
+			__( 'Not found.', 'aggressive-ads' ),
 			array( 'status' => 404 )
 		);
 
-		if ( ! current_user_can( 'read_laao_ads_creative', $creative_id ) ) {
+		if ( ! current_user_can( 'read_aggr_creative', $creative_id ) ) {
 			return $denied;
 		}
 

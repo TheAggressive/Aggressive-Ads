@@ -47,7 +47,7 @@ test( 'advertiser reads and edits their account, organization and help', async (
 	await displayName.fill( 'Dana from Bright Angle' );
 	await page.getByRole( 'button', { name: 'Save details' } ).click();
 
-	await expect( page ).toHaveURL( /laao_ads_notice=saved/ );
+	await expect( page ).toHaveURL( /aggr_notice=saved/ );
 	await expect( page.getByText( 'Your details were saved.' ) ).toBeVisible();
 	await expect( page.getByLabel( 'Name to display' ) ).toHaveValue(
 		'Dana from Bright Angle'
@@ -78,7 +78,7 @@ test( 'the account details form exposes no email or role field', async ( {
 
 	await page.goto( '/advertiser/account/' );
 
-	const detailsForm = page.locator( 'form.laao-ads-form' ).filter( {
+	const detailsForm = page.locator( 'form.aggr-form' ).filter( {
 		has: page.getByRole( 'button', { name: 'Save details' } ),
 	} );
 	const names = await detailsForm

@@ -2,16 +2,16 @@
 /**
  * Shared receipt reservation and retry scheduling for campaign mail.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Notification;
+namespace Aggressive\Ads\Notification;
 
-use LAAO_Advertiser_Portal\Audit\Audit_Event;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
+use Aggressive\Ads\Audit\Audit_Event;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Campaign_Repository;
 use Throwable;
 
 /**

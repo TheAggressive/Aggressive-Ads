@@ -2,23 +2,23 @@
 /**
  * What the review queue renders.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Admin;
+namespace Aggressive\Ads\Admin;
 
-use LAAO_Advertiser_Portal\Core\Post_Statuses;
-use LAAO_Advertiser_Portal\Domain\Transition_Table;
-use LAAO_Advertiser_Portal\Portal\View_Data;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
-use LAAO_Advertiser_Portal\Repository\Creative_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Repository;
-use LAAO_Advertiser_Portal\Repository\Placement_Repository;
-use LAAO_Advertiser_Portal\REST\Creative_File_Controller;
-use LAAO_Advertiser_Portal\Security\Capabilities;
+use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Domain\Transition_Table;
+use Aggressive\Ads\Portal\View_Data;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Repository\Placement_Repository;
+use Aggressive\Ads\REST\Creative_File_Controller;
+use Aggressive\Ads\Security\Capabilities;
 
 /**
  * Assembles the staff review screens, so templates render and nothing else.
@@ -361,7 +361,7 @@ final class Review_Data {
 			$rows[] = array(
 				'id'         => $event['id'],
 				'created_at' => $event['created_at_ts'],
-				'actor'      => 0 === $event['actor_user_id'] ? __( 'System', 'laao-advertiser-portal' ) : self::user_name( $event['actor_user_id'] ),
+				'actor'      => 0 === $event['actor_user_id'] ? __( 'System', 'aggressive-ads' ) : self::user_name( $event['actor_user_id'] ),
 				'event'      => $event['event'],
 				'outcome'    => $event['outcome'],
 				'message'    => $event['message'],
@@ -407,12 +407,12 @@ final class Review_Data {
 	 */
 	private static function label_for( string $filter ): string {
 		return match ( $filter ) {
-			'pending'  => __( 'Needs review', 'laao-advertiser-portal' ),
-			'updates'  => __( 'Ad updates', 'laao-advertiser-portal' ),
-			'changes'  => __( 'With the advertiser', 'laao-advertiser-portal' ),
-			'decided'  => __( 'Decided', 'laao-advertiser-portal' ),
-			'running'  => __( 'Running', 'laao-advertiser-portal' ),
-			default    => __( 'Finished', 'laao-advertiser-portal' ),
+			'pending'  => __( 'Needs review', 'aggressive-ads' ),
+			'updates'  => __( 'Ad updates', 'aggressive-ads' ),
+			'changes'  => __( 'With the advertiser', 'aggressive-ads' ),
+			'decided'  => __( 'Decided', 'aggressive-ads' ),
+			'running'  => __( 'Running', 'aggressive-ads' ),
+			default    => __( 'Finished', 'aggressive-ads' ),
 		};
 	}
 
@@ -428,15 +428,15 @@ final class Review_Data {
 	 */
 	private static function action_label( string $to ): string {
 		return match ( $to ) {
-			Post_Statuses::REVIEW    => __( 'Start review', 'laao-advertiser-portal' ),
-			Post_Statuses::SUBMITTED => __( 'Release back to the queue', 'laao-advertiser-portal' ),
-			Post_Statuses::CHANGES   => __( 'Request changes', 'laao-advertiser-portal' ),
-			Post_Statuses::REJECTED  => __( 'Reject', 'laao-advertiser-portal' ),
-			Post_Statuses::APPROVED  => __( 'Approve and publish', 'laao-advertiser-portal' ),
-			Post_Statuses::DRAFT     => __( 'Reopen as a draft', 'laao-advertiser-portal' ),
-			Post_Statuses::PAUSED    => __( 'Pause campaign', 'laao-advertiser-portal' ),
-			Post_Statuses::LIVE      => __( 'Resume campaign', 'laao-advertiser-portal' ),
-			Post_Statuses::CANCELLED => __( 'Cancel campaign', 'laao-advertiser-portal' ),
+			Post_Statuses::REVIEW    => __( 'Start review', 'aggressive-ads' ),
+			Post_Statuses::SUBMITTED => __( 'Release back to the queue', 'aggressive-ads' ),
+			Post_Statuses::CHANGES   => __( 'Request changes', 'aggressive-ads' ),
+			Post_Statuses::REJECTED  => __( 'Reject', 'aggressive-ads' ),
+			Post_Statuses::APPROVED  => __( 'Approve and publish', 'aggressive-ads' ),
+			Post_Statuses::DRAFT     => __( 'Reopen as a draft', 'aggressive-ads' ),
+			Post_Statuses::PAUSED    => __( 'Pause campaign', 'aggressive-ads' ),
+			Post_Statuses::LIVE      => __( 'Resume campaign', 'aggressive-ads' ),
+			Post_Statuses::CANCELLED => __( 'Cancel campaign', 'aggressive-ads' ),
 			default                  => self::status_label( $to ),
 		};
 	}

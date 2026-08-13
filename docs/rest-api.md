@@ -1,6 +1,6 @@
 # REST API
 
-Namespace `laao-advertiser-portal/v1`. Hand-rolled, not `wp/v2` — the five post types are `show_in_rest => false` precisely so no generic CRUD surface exists.
+Namespace `aggr/v1`. Hand-rolled, not `wp/v2` — the five post types are `show_in_rest => false` precisely so no generic CRUD surface exists. `laao-advertiser-portal/v1` is registered as a one-release alias of the same routes.
 
 ## Rules
 
@@ -8,7 +8,7 @@ Namespace `laao-advertiser-portal/v1`. Hand-rolled, not `wp/v2` — the five pos
 
 **Every route declares an `args` schema** with `type`, `sanitize_callback`, `validate_callback`, and `required`. Write controllers then extract only a named field allowlist before calling the workflow. A field outside that allowlist has nowhere to land, which makes mass assignment structurally impossible rather than dependent on a denylist staying current.
 
-**Every route touching an object checks ownership**, via `current_user_can( 'edit_laao_ads_campaign', $id )` — never by comparing IDs in the controller. One implementation of ownership, in `Ownership::map()`.
+**Every route touching an object checks ownership**, via `current_user_can( 'edit_aggr_campaign', $id )` — never by comparing IDs in the controller. One implementation of ownership, in `Ownership::map()`.
 
 **`org_id` is never a parameter.** Not in any route, ever. It is derived from the authenticated user.
 
@@ -24,28 +24,30 @@ Routes marked “planned” remain contracts for later phases. Every other row i
 
 | Method | Path | Capability | Notes |
 |---|---|---|---|
-| `GET` | `/campaigns` | `laao_ads_access_portal` | Own org only, always. Paged, server-side |
-| `POST` | `/campaigns` | `laao_ads_submit_campaign` | Creates a draft |
-| `GET` | `/campaigns/{id}` | `read_laao_ads_campaign` | 404 when not owned |
-| `PATCH` | `/campaigns/{id}` | `edit_laao_ads_campaign` | Autosave; allowlisted fields; `_laao_ads_autosave_rev` for optimistic concurrency |
+| `GET` | `/campaigns` | `aggr_access_portal` | Own org only, always. Paged, server-side. `impressions` / `clicks` / `ctr` only while Reporting is on. `ctr` is a ratio, or null when impressions are 0 |
+| `POST` | `/campaigns` | `aggr_submit_campaign` | Creates a draft |
+| `GET` | `/campaigns/{id}` | `read_aggr_campaign` | 404 when not owned. Same metric fields as the list, same module gate |
+| `PATCH` | `/campaigns/{id}` | `edit_aggr_campaign` | Autosave; allowlisted fields; `_aggr_autosave_rev` for optimistic concurrency |
+| `POST` | `/campaigns/{id}/copy` | `aggr_submit_campaign` | New draft; source is read, not edited. No `org_id`. Rate-limited |
 | `POST` | `/campaigns/{id}/transitions` | varies by target | Body carries `to`; the state machine authorizes the specific edge |
-| `POST` | `/campaigns/{id}/creatives` | `laao_ads_upload_creative` | Multipart. Rate-limited |
-| `GET` | `/creatives/{id}/file` | `read_laao_ads_creative` | **Streams bytes. Never redirects** |
-| `DELETE` | `/creatives/{id}` | `delete_laao_ads_creative` | Removes private bytes and the record only while advertiser-editable and unpublished |
-| `GET` | `/placements` | `laao_ads_access_portal` | Active placements only; no ad-group IDs in the response |
-| `GET` | `/packages` | `laao_ads_access_portal` | Active, completely configured packages only; includes advertiser-facing placement labels, duration and integer-cent price |
-| `GET` | `/queue` | `laao_ads_review_campaigns` | **Planned as REST.** Staff currently use the server-rendered review screen |
-| `GET` | `/audit` | `laao_ads_view_audit_log` | **Planned as REST.** Current staff timeline is org-filtered **in SQL** |
-| `POST` | `/creatives/{id}/replacement` | `laao_ads_upload_creative` + object ownership | Stages a private replacement for a scheduled/live ad; multipart `file`, `click_url`, and optional `alt_text` |
-| `DELETE` | `/creative-replacements/{id}` | `laao_ads_upload_creative` + object ownership | Withdraws the caller's pending replacement |
-| `POST` | `/creative-replacements/{id}/decision` | `laao_ads_review_campaigns`; approval also requires `laao_ads_publish_to_adsanity` | Staff `approve` or `reject`; rejection requires `review_notes` |
+| `POST` | `/campaigns/{id}/creatives` | `aggr_upload_creative` | Multipart. Rate-limited |
+| `GET` | `/creatives/{id}/file` | `read_aggr_creative` | **Streams bytes. Never redirects** |
+| `DELETE` | `/creatives/{id}` | `delete_aggr_creative` | Removes private bytes and the record only while advertiser-editable and unpublished |
+| `GET` | `/placements` | `aggr_access_portal` **or** `edit_posts` **or** `edit_theme_options` | Active placements only; includes public `slug` for the slot block; no ad-group IDs |
+| `GET` | `/packages` | `aggr_access_portal` | Active, completely configured packages only; includes advertiser-facing placement labels, duration and integer-cent price |
+| `GET` | `/queue` | `aggr_review_campaigns` | **Planned as REST.** Staff currently use the server-rendered review screen |
+| `GET` | `/audit` | `aggr_view_audit_log` | **Planned as REST.** Current staff timeline is org-filtered **in SQL** |
+| `POST` | `/creatives/{id}/replacement` | `aggr_upload_creative` + object ownership | Stages a private replacement for a scheduled/live ad; multipart `file`, `click_url`, and optional `alt_text` |
+| `GET` | `/fill/{slot}` | public (always registered) | Public, same-origin. Uncached. One live creative from the equal-rotation set, or house. Mints a token bound to that campaign **and the current `blog_id`**. Response omits internal ids and never lists candidates |
+| `POST` | `/i` | public (always registered) | Public same-origin beacon. Prefetch 400, replay 409, cross-origin 403, success 204 |
+| `DELETE` | `/creative-replacements/{id}` | `aggr_upload_creative` + object ownership | Withdraws the caller's pending replacement |
+| `POST` | `/creative-replacements/{id}/decision` | `aggr_review_campaigns`; approval also requires `aggr_publish` | Staff `approve` or `reject`; rejection requires `review_notes` |
 
 Replacement routes call the same `Creative_Change_Manager` as the HTML forms.
 They never accept a campaign, organization, placement, provider-ad, or current
 creative relationship from the caller; every relationship is derived from the
-authorized creative record. Approval returns only after the existing AdSanity
-ad has been rewritten and read back exactly, or the previous creative has been
-restored.
+authorized creative record. Approval busts fill cache and swaps our creative
+records; there is no downstream ad to rewrite.
 
 ## Draft creation and autosave
 
@@ -57,7 +59,7 @@ cannot create an unowned draft.
 `end_ts`, `advertiser_notes`, and `wizard_step`, plus the required
 `autosave_rev` concurrency token. Placement references must still be active,
 the date window must be internally ordered, and only advertiser-editable
-statuses may be changed. A stale revision returns `409 laao_ads_edit_conflict`
+statuses may be changed. A stale revision returns `409 aggr_edit_conflict`
 with the current revision and does not overwrite the newer draft. Successful
 writes return the newly incremented `autosave_rev`.
 
@@ -95,7 +97,7 @@ the transition endpoint revalidates immediately before changing status.
 The progressive Step 6 form is a second delivery of that transition contract,
 not a second implementation. It posts a campaign-bound nonce to `admin-post`,
 uses the transition rate limiter, and calls the same state machine with
-`lap_submitted`. The `submit` confirmation is selected by query string only;
+`aggr_submitted`. The `submit` confirmation is selected by query string only;
 `PATCH /campaigns/{id}` cannot persist it as `wizard_step`. Replayed form or
 REST submissions are refused by the current-state edge check and recorded as
 denied transitions.
@@ -105,11 +107,11 @@ denied transitions.
 The highest-value endpoint in the system, so its contract is explicit.
 
 ```
-GET /wp-json/laao-advertiser-portal/v1/creatives/{id}/file
+GET /wp-json/aggr/v1/creatives/{id}/file
 ```
 
-1. `read_laao_ads_creative` — which resolves through org-scoped `map_meta_cap`.
-2. Resolve `_laao_ads_private_path` and confirm it stays inside the private root after `realpath()`.
+1. `read_aggr_creative` — which resolves through org-scoped `map_meta_cap`.
+2. Resolve `_aggr_private_path` and confirm it stays inside the private root after `realpath()`.
 3. `readfile()` the bytes with:
    - `Content-Type` from a strict allowlist, never from the stored value
    - `X-Content-Type-Options: nosniff`
@@ -136,9 +138,9 @@ destination URLs, or alternative text.
 
 ## Responses
 
-Advertiser-facing responses never include: `_laao_ads_internal_notes`, `_laao_ads_adgroup_term_id`, raw file paths, `_laao_ads_private_token`, reviewer identities, or any AdSanity ID. Response shaping is explicit per-route — never `get_post_meta( $id )` serialized wholesale, which is how internal fields leak the moment someone adds one.
+Advertiser-facing responses never include: `_aggr_internal_notes`, `_aggr_adgroup_term_id`, raw file paths, `_aggr_private_token`, reviewer identities, or provider ids. Response shaping is explicit per-route — never `get_post_meta( $id )` serialized wholesale, which is how internal fields leak the moment someone adds one.
 
-Errors use `WP_Error` with a `laao_ads_` code prefix and a message safe to show a user. Diagnostics go to the audit log, not the response body.
+Errors use `WP_Error` with a `aggr_` code prefix and a message safe to show a user. Diagnostics go to the audit log, not the response body.
 
 ## Rate limits
 

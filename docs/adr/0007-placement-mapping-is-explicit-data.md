@@ -1,6 +1,6 @@
 # ADR-0007 — Placement→ad-group mapping is explicit data, keyed on term ID, and fails closed
 
-**Status:** Accepted — 2026-08-08
+**Status:** Superseded by [0031](0031-native-is-the-only-publisher.md) — 2026-08-13
 
 ## Context
 

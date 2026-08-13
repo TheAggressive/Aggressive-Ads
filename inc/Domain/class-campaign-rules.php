@@ -2,12 +2,12 @@
 /**
  * The campaign rules, as pure functions.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Domain;
+namespace Aggressive\Ads\Domain;
 
 /**
  * Every rule that can be decided from values alone.
@@ -97,12 +97,10 @@ final class Campaign_Rules {
 	}
 
 	/**
-	 * Splits an AdSanity-style size into width and height.
+	 * Splits a stored `{width}x{height}` size into integers.
 	 *
-	 * Only the ASCII `x` form is accepted. The live ad-group taxonomy contains
-	 * a term named with U+00D7 MULTIPLICATION SIGN, and quietly accepting it
-	 * here would let a size that looks right flow through to a placement that
-	 * never matches. See docs/known-issues.md.
+	 * Only the ASCII `x` form is accepted. U+00D7 MULTIPLICATION SIGN looks
+	 * right in a label and would never match an uploaded file.
 	 *
 	 * @param string $size Size string, e.g. `728x90`.
 	 * @return array{0: int, 1: int}|null
@@ -186,10 +184,9 @@ final class Campaign_Rules {
 	/**
 	 * Requires a schedule to cover whole local calendar days.
 	 *
-	 * AdSanity compares both endpoints inclusively at one-second precision. The
-	 * canonical representation is therefore 00:00:00 at the beginning and
-	 * 23:59:59 at the end. Converting in the site timezone (rather than adding
-	 * 86,400 seconds) keeps those boundaries correct across DST transitions.
+	 * The canonical representation is 00:00:00 at the beginning and 23:59:59
+	 * at the end. Converting in the site timezone (rather than adding 86,400
+	 * seconds) keeps those boundaries correct across DST transitions.
 	 *
 	 * @param int    $start_ts Start time, UTC Unix seconds.
 	 * @param int    $end_ts   End time, UTC Unix seconds. Zero means open-ended.

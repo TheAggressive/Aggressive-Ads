@@ -2,26 +2,26 @@
 /**
  * What the portal screens are allowed to see.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Integration;
+namespace Aggressive\Ads\Tests\Integration;
 
-use LAAO_Advertiser_Portal\Core\Post_Statuses;
-use LAAO_Advertiser_Portal\Core\Post_Types;
-use LAAO_Advertiser_Portal\Install\Installer;
-use LAAO_Advertiser_Portal\Plugin;
-use LAAO_Advertiser_Portal\Portal\View_Data;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
-use LAAO_Advertiser_Portal\Repository\Creative_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Repository;
-use LAAO_Advertiser_Portal\Repository\Package_Repository;
-use LAAO_Advertiser_Portal\Repository\Placement_Repository;
-use LAAO_Advertiser_Portal\Security\Ownership;
-use LAAO_Advertiser_Portal\Security\Roles;
+use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Install\Installer;
+use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Portal\View_Data;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Repository\Package_Repository;
+use Aggressive\Ads\Repository\Placement_Repository;
+use Aggressive\Ads\Security\Ownership;
+use Aggressive\Ads\Security\Roles;
 use WP_UnitTestCase;
 
 /**
@@ -236,10 +236,10 @@ final class PortalViewDataTest extends WP_UnitTestCase {
 
 		$this->assertSame(
 			array(
-				'package_missing'    => array( 'package', 'laao-ads-packages' ),
-				'start_date_missing' => array( 'destination', 'laao-ads-start-date' ),
-				'no_placements'      => array( 'package', 'laao-ads-packages' ),
-				'no_creatives'       => array( 'creative', 'laao-ads-details-heading' ),
+				'package_missing'    => array( 'package', 'aggr-packages' ),
+				'start_date_missing' => array( 'destination', 'aggr-start-date' ),
+				'no_placements'      => array( 'package', 'aggr-packages' ),
+				'no_creatives'       => array( 'creative', 'aggr-details-heading' ),
 			),
 			$locations
 		);
@@ -453,6 +453,30 @@ final class PortalViewDataTest extends WP_UnitTestCase {
 		}
 
 		$this->assertSame( array( 1, 1, 1 ), $values );
+	}
+
+	/**
+	 * Metric fields stay absent until both reporting modules are on.
+	 *
+	 * A row of zeros would look like "nobody saw this ad" while native
+	 * delivery is off. ADR-0030 requires the keys not to exist at all.
+	 *
+	 * @return void
+	 */
+	public function test_metric_fields_are_absent_by_default(): void {
+		$mine = $this->make_campaign( $this->org_a, Post_Statuses::LIVE, 'Running' );
+
+		wp_set_current_user( $this->advertiser_a );
+
+		$list   = $this->view->campaigns();
+		$detail = $this->view->campaign( $mine );
+
+		$this->assertFalse( $list['show_metrics'] );
+		$this->assertArrayNotHasKey( 'impressions', $list['rows'][0] );
+		$this->assertArrayNotHasKey( 'clicks', $list['rows'][0] );
+		$this->assertIsArray( $detail );
+		$this->assertArrayNotHasKey( 'impressions', $detail );
+		$this->assertSame( array(), $this->view->delivery_counts() );
 	}
 
 	/**

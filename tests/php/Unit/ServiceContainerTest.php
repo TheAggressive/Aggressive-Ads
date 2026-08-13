@@ -2,16 +2,16 @@
 /**
  * Service container tests.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Unit;
+namespace Aggressive\Ads\Tests\Unit;
 
 use ArrayObject;
-use LAAO_Advertiser_Portal\Container_Exception;
-use LAAO_Advertiser_Portal\Service_Container;
+use Aggressive\Ads\Container_Exception;
+use Aggressive\Ads\Service_Container;
 use stdClass;
 use Yoast\PHPUnitPolyfills\TestCases\TestCase;
 

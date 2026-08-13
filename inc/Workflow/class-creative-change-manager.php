@@ -2,24 +2,25 @@
 /**
  * Reviewed replacement of published creative.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Workflow;
+namespace Aggressive\Ads\Workflow;
 
-use LAAO_Advertiser_Portal\Audit\Audit_Event;
-use LAAO_Advertiser_Portal\Core\Post_Statuses;
-use LAAO_Advertiser_Portal\Domain\Campaign_Rules;
-use LAAO_Advertiser_Portal\Integration\Ad_Provider_Interface;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
-use LAAO_Advertiser_Portal\Repository\Creative_Repository;
-use LAAO_Advertiser_Portal\Repository\Placement_Repository;
-use LAAO_Advertiser_Portal\Security\Capabilities;
-use LAAO_Advertiser_Portal\Security\Rate_Limiter;
-use LAAO_Advertiser_Portal\Storage\Private_Storage;
+use Aggressive\Ads\Audit\Audit_Event;
+use Aggressive\Ads\Core\Hook_Aliases;
+use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Domain\Campaign_Rules;
+use Aggressive\Ads\Integration\Ad_Provider_Interface;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Repository\Placement_Repository;
+use Aggressive\Ads\Security\Capabilities;
+use Aggressive\Ads\Security\Rate_Limiter;
+use Aggressive\Ads\Storage\Private_Storage;
 use WP_Error;
 
 /**
@@ -64,7 +65,7 @@ final class Creative_Change_Manager {
 	 */
 	public function request( int $creative_id, array $file, string $click_url, string $alt_text ): array|WP_Error {
 		if ( ! current_user_can( Capabilities::UPLOAD_CREATIVE ) ) {
-			return $this->error( 'laao_ads_forbidden', __( 'You do not have permission to request an ad update.', 'laao-advertiser-portal' ), 403 );
+			return $this->error( 'aggr_forbidden', __( 'You do not have permission to request an ad update.', 'aggressive-ads' ), 403 );
 		}
 
 		$allowed = $this->limiter->attempt( Rate_Limiter::ACTION_UPLOAD, get_current_user_id() );
@@ -82,12 +83,12 @@ final class Creative_Change_Manager {
 		$lock = $this->creatives->claim_change_lock( $creative_id );
 
 		if ( '' === $lock ) {
-			return $this->error( 'laao_ads_replacement_busy', __( 'Another update is already being saved for this ad. Try again.', 'laao-advertiser-portal' ), 409 );
+			return $this->error( 'aggr_replacement_busy', __( 'Another update is already being saved for this ad. Try again.', 'aggressive-ads' ), 409 );
 		}
 
 		try {
 			if ( $this->creatives->pending_replacement_id( $creative_id ) > 0 ) {
-				return $this->error( 'laao_ads_replacement_pending', __( 'This ad already has an update waiting for review.', 'laao-advertiser-portal' ), 409 );
+				return $this->error( 'aggr_replacement_pending', __( 'This ad already has an update waiting for review.', 'aggressive-ads' ), 409 );
 			}
 
 			$accepted = $this->accept( $current['placement_id'], $file, $click_url, $alt_text );
@@ -109,7 +110,7 @@ final class Creative_Change_Manager {
 			if ( 0 === $replacement_id ) {
 				$this->storage->delete( $accepted['path'] );
 
-				return $this->error( 'laao_ads_replacement_not_created', __( 'The ad update could not be saved. Please try again.', 'laao-advertiser-portal' ), 500 );
+				return $this->error( 'aggr_replacement_not_created', __( 'The ad update could not be saved. Please try again.', 'aggressive-ads' ), 500 );
 			}
 
 			$this->creatives->record_upload( $replacement_id, $this->upload_record( $accepted ) );
@@ -118,7 +119,7 @@ final class Creative_Change_Manager {
 				$this->creatives->delete( $replacement_id );
 				$this->storage->delete( $accepted['path'] );
 
-				return $this->error( 'laao_ads_replacement_not_created', __( 'The ad update could not be verified. Please try again.', 'laao-advertiser-portal' ), 500 );
+				return $this->error( 'aggr_replacement_not_created', __( 'The ad update could not be verified. Please try again.', 'aggressive-ads' ), 500 );
 			}
 
 			$campaign_id = $current['campaign_id'];
@@ -147,7 +148,7 @@ final class Creative_Change_Manager {
 	 */
 	public function approve( int $replacement_id ): bool|WP_Error {
 		if ( ! current_user_can( Capabilities::REVIEW_CAMPAIGNS ) || ! current_user_can( Capabilities::PUBLISH_TO_ADSANITY ) ) {
-			return $this->error( 'laao_ads_forbidden', __( 'You do not have permission to approve ad updates.', 'laao-advertiser-portal' ), 403 );
+			return $this->error( 'aggr_forbidden', __( 'You do not have permission to approve ad updates.', 'aggressive-ads' ), 403 );
 		}
 
 		$context = $this->replacement_context( $replacement_id );
@@ -157,13 +158,13 @@ final class Creative_Change_Manager {
 		}
 
 		if ( ! in_array( $this->campaigns->status( $context['campaign_id'] ), array( Post_Statuses::SCHEDULED, Post_Statuses::LIVE ), true ) ) {
-			return $this->error( 'laao_ads_replacement_campaign_inactive', __( 'Only a scheduled or live campaign can apply an ad update.', 'laao-advertiser-portal' ), 409 );
+			return $this->error( 'aggr_replacement_campaign_inactive', __( 'Only a scheduled or live campaign can apply an ad update.', 'aggressive-ads' ), 409 );
 		}
 
 		$lock = $this->creatives->claim_change_lock( $context['current_id'] );
 
 		if ( '' === $lock ) {
-			return $this->error( 'laao_ads_replacement_busy', __( 'Another review action is already updating this ad. Try again.', 'laao-advertiser-portal' ), 409 );
+			return $this->error( 'aggr_replacement_busy', __( 'Another review action is already updating this ad. Try again.', 'aggressive-ads' ), 409 );
 		}
 
 		try {
@@ -181,16 +182,17 @@ final class Creative_Change_Manager {
 				$restored = $this->provider->restore_creative( $context['campaign_id'], $context['current_id'] );
 
 				return $this->error(
-					is_wp_error( $restored ) ? 'laao_ads_replacement_rollback_failed' : 'laao_ads_replacement_activation_failed',
+					is_wp_error( $restored ) ? 'aggr_replacement_rollback_failed' : 'aggr_replacement_activation_failed',
 					is_wp_error( $restored )
-						? __( 'The update could not be recorded or rolled back. Pause the campaign and inspect the provider ad.', 'laao-advertiser-portal' )
-						: __( 'The update could not be recorded. The current ad was restored.', 'laao-advertiser-portal' ),
+						? __( 'The update could not be recorded or rolled back. Pause the campaign and inspect the provider ad.', 'aggressive-ads' )
+						: __( 'The update could not be recorded. The current ad was restored.', 'aggressive-ads' ),
 					500
 				);
 			}
 
 			$this->sync_pending_count( $context['campaign_id'] );
 			$this->audit( 'creative.replacement_approved', $context['campaign_id'], $replacement_id, $context['current_id'], 'Creative replacement approved and published.' );
+			Hook_Aliases::fire( 'aggr_creative_replaced', $context['campaign_id'] );
 
 			return true;
 		} finally {
@@ -207,17 +209,17 @@ final class Creative_Change_Manager {
 	 */
 	public function reject( int $replacement_id, string $notes ): bool|WP_Error {
 		if ( ! current_user_can( Capabilities::REVIEW_CAMPAIGNS ) ) {
-			return $this->error( 'laao_ads_forbidden', __( 'You do not have permission to reject ad updates.', 'laao-advertiser-portal' ), 403 );
+			return $this->error( 'aggr_forbidden', __( 'You do not have permission to reject ad updates.', 'aggressive-ads' ), 403 );
 		}
 
 		$notes = trim( sanitize_textarea_field( $notes ) );
 
 		if ( '' === $notes ) {
-			return $this->error( 'laao_ads_replacement_notes_required', __( 'Explain why this ad update needs changes.', 'laao-advertiser-portal' ), 422 );
+			return $this->error( 'aggr_replacement_notes_required', __( 'Explain why this ad update needs changes.', 'aggressive-ads' ), 422 );
 		}
 
 		if ( mb_strlen( $notes ) > self::MAX_REVIEW_NOTES_LENGTH ) {
-			return $this->error( 'laao_ads_replacement_notes_too_long', __( 'Use 2,000 characters or fewer for update feedback.', 'laao-advertiser-portal' ), 422 );
+			return $this->error( 'aggr_replacement_notes_too_long', __( 'Use 2,000 characters or fewer for update feedback.', 'aggressive-ads' ), 422 );
 		}
 
 		$context = $this->replacement_context( $replacement_id );
@@ -229,12 +231,12 @@ final class Creative_Change_Manager {
 		$lock = $this->creatives->claim_change_lock( $context['current_id'] );
 
 		if ( '' === $lock ) {
-			return $this->error( 'laao_ads_replacement_busy', __( 'Another review action is already updating this ad. Try again.', 'laao-advertiser-portal' ), 409 );
+			return $this->error( 'aggr_replacement_busy', __( 'Another review action is already updating this ad. Try again.', 'aggressive-ads' ), 409 );
 		}
 
 		try {
 			if ( ! $this->creatives->reject_replacement( $replacement_id, $notes ) ) {
-				return $this->error( 'laao_ads_replacement_rejection_failed', __( 'The update decision could not be saved. Please try again.', 'laao-advertiser-portal' ), 500 );
+				return $this->error( 'aggr_replacement_rejection_failed', __( 'The update decision could not be saved. Please try again.', 'aggressive-ads' ), 500 );
 			}
 
 			$this->sync_pending_count( $context['campaign_id'] );
@@ -256,28 +258,28 @@ final class Creative_Change_Manager {
 		$context = $this->replacement_context( $replacement_id );
 
 		if ( is_wp_error( $context ) ) {
-			return $this->error( 'laao_ads_forbidden', __( 'You do not have permission to withdraw that ad update.', 'laao-advertiser-portal' ), 403 );
+			return $this->error( 'aggr_forbidden', __( 'You do not have permission to withdraw that ad update.', 'aggressive-ads' ), 403 );
 		}
 
-		if ( ! current_user_can( 'delete_laao_ads_creative', $replacement_id ) || ! current_user_can( 'edit_laao_ads_campaign', $context['campaign_id'] ) ) {
-			return $this->error( 'laao_ads_forbidden', __( 'You do not have permission to withdraw that ad update.', 'laao-advertiser-portal' ), 403 );
+		if ( ! current_user_can( 'delete_aggr_creative', $replacement_id ) || ! current_user_can( 'edit_aggr_campaign', $context['campaign_id'] ) ) {
+			return $this->error( 'aggr_forbidden', __( 'You do not have permission to withdraw that ad update.', 'aggressive-ads' ), 403 );
 		}
 
 		$lock = $this->creatives->claim_change_lock( $context['current_id'] );
 
 		if ( '' === $lock ) {
-			return $this->error( 'laao_ads_replacement_busy', __( 'Another action is already updating this ad. Try again.', 'laao-advertiser-portal' ), 409 );
+			return $this->error( 'aggr_replacement_busy', __( 'Another action is already updating this ad. Try again.', 'aggressive-ads' ), 409 );
 		}
 
 		try {
 			$stored = $this->creatives->storage_details( $replacement_id );
 
 			if ( null !== $stored && '' !== $stored['path'] && null !== $this->storage->resolve( $stored['path'] ) && ! $this->storage->delete( $stored['path'] ) ) {
-				return $this->error( 'laao_ads_replacement_not_deleted', __( 'The update file could not be removed. Please try again.', 'laao-advertiser-portal' ), 500 );
+				return $this->error( 'aggr_replacement_not_deleted', __( 'The update file could not be removed. Please try again.', 'aggressive-ads' ), 500 );
 			}
 
 			if ( ! $this->creatives->delete( $replacement_id ) ) {
-				return $this->error( 'laao_ads_replacement_not_deleted', __( 'The update could not be withdrawn. Please try again.', 'laao-advertiser-portal' ), 500 );
+				return $this->error( 'aggr_replacement_not_deleted', __( 'The update could not be withdrawn. Please try again.', 'aggressive-ads' ), 500 );
 			}
 
 			$this->sync_pending_count( $context['campaign_id'] );
@@ -298,18 +300,14 @@ final class Creative_Change_Manager {
 	private function authorize_current( int $creative_id ): array|WP_Error {
 		$current = $this->creatives->details( $creative_id );
 
-		if ( null === $current || ! $this->creatives->is_active( $creative_id ) || ! current_user_can( 'edit_laao_ads_creative', $creative_id ) ) {
-			return $this->error( 'laao_ads_forbidden', __( 'You do not have permission to update that ad.', 'laao-advertiser-portal' ), 403 );
+		if ( null === $current || ! $this->creatives->is_active( $creative_id ) || ! current_user_can( 'edit_aggr_creative', $creative_id ) ) {
+			return $this->error( 'aggr_forbidden', __( 'You do not have permission to update that ad.', 'aggressive-ads' ), 403 );
 		}
 
 		$campaign_id = $current['campaign_id'];
 
-		if ( ! current_user_can( 'edit_laao_ads_campaign', $campaign_id ) || ! in_array( $this->campaigns->status( $campaign_id ), array( Post_Statuses::SCHEDULED, Post_Statuses::LIVE ), true ) ) {
-			return $this->error( 'laao_ads_replacement_unavailable', __( 'Only an ad in a scheduled or live campaign can be updated.', 'laao-advertiser-portal' ), 409 );
-		}
-
-		if ( $this->creatives->provider_ad_id( $creative_id ) <= 0 ) {
-			return $this->error( 'laao_ads_replacement_provider_missing', __( 'This ad is not connected to its delivery record, so it cannot be updated safely.', 'laao-advertiser-portal' ), 409 );
+		if ( ! current_user_can( 'edit_aggr_campaign', $campaign_id ) || ! in_array( $this->campaigns->status( $campaign_id ), array( Post_Statuses::SCHEDULED, Post_Statuses::LIVE ), true ) ) {
+			return $this->error( 'aggr_replacement_unavailable', __( 'Only an ad in a scheduled or live campaign can be updated.', 'aggressive-ads' ), 409 );
 		}
 
 		return $current;
@@ -334,9 +332,9 @@ final class Creative_Change_Manager {
 			|| $replacement['org_id'] !== $current['org_id']
 			|| $replacement['placement_id'] !== $current['placement_id']
 			|| ! $this->creatives->is_active( $current_id )
-			|| ! current_user_can( 'read_laao_ads_campaign', $current['campaign_id'] )
+			|| ! current_user_can( 'read_aggr_campaign', $current['campaign_id'] )
 		) {
-			return $this->error( 'laao_ads_replacement_invalid', __( 'That ad update is no longer available.', 'laao-advertiser-portal' ), 409 );
+			return $this->error( 'aggr_replacement_invalid', __( 'That ad update is no longer available.', 'aggressive-ads' ), 409 );
 		}
 
 		return array(
@@ -358,18 +356,18 @@ final class Creative_Change_Manager {
 		$click_url = trim( $click_url );
 
 		if ( '' === $click_url ) {
-			return $this->error( 'laao_ads_click_url_required', __( 'Enter the destination URL for this creative.', 'laao-advertiser-portal' ), 422, 'click_url' );
+			return $this->error( 'aggr_click_url_required', __( 'Enter the destination URL for this creative.', 'aggressive-ads' ), 422, 'click_url' );
 		}
 
 		if ( ! Campaign_Rules::is_valid_click_url( $click_url ) || false === wp_http_validate_url( $click_url ) ) {
-			return $this->error( 'laao_ads_click_url_invalid', __( 'Enter a valid http or https destination URL without embedded credentials.', 'laao-advertiser-portal' ), 422, 'click_url' );
+			return $this->error( 'aggr_click_url_invalid', __( 'Enter a valid http or https destination URL without embedded credentials.', 'aggressive-ads' ), 422, 'click_url' );
 		}
 
 		$alt_text = trim( sanitize_text_field( $alt_text ) );
 		$alt_text = '' === $alt_text ? Creative_Manager::automatic_alt_text( $click_url ) : $alt_text;
 
 		if ( mb_strlen( $alt_text ) > Creative_Manager::MAX_ALT_TEXT_LENGTH ) {
-			return $this->error( 'laao_ads_alt_text_too_long', __( 'Use 500 characters or fewer for the image description.', 'laao-advertiser-portal' ), 422, 'alt_text' );
+			return $this->error( 'aggr_alt_text_too_long', __( 'Use 500 characters or fewer for the image description.', 'aggressive-ads' ), 422, 'alt_text' );
 		}
 
 		$accepted = $this->uploader->accept( $file );
@@ -385,7 +383,7 @@ final class Creative_Change_Manager {
 		if ( ! Campaign_Rules::size_matches( $accepted['width'], $accepted['height'], $size ) ) {
 			$this->storage->delete( $accepted['path'] );
 
-			return $this->error( 'laao_ads_creative_size_mismatch', __( 'The uploaded dimensions do not match this placement.', 'laao-advertiser-portal' ), 422, 'file' );
+			return $this->error( 'aggr_creative_size_mismatch', __( 'The uploaded dimensions do not match this placement.', 'aggressive-ads' ), 422, 'file' );
 		}
 
 		$accepted['click_url'] = esc_url_raw( $click_url );

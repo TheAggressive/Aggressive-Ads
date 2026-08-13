@@ -2,19 +2,19 @@
 /**
  * Moving a campaign through its lifecycle.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\REST;
+namespace Aggressive\Ads\REST;
 
-use LAAO_Advertiser_Portal\Core\Post_Statuses;
-use LAAO_Advertiser_Portal\Core\Service;
-use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
-use LAAO_Advertiser_Portal\Security\Capabilities;
-use LAAO_Advertiser_Portal\Security\Rate_Limiter;
-use LAAO_Advertiser_Portal\Workflow\Campaign_State_Machine;
+use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Security\Capabilities;
+use Aggressive\Ads\Security\Rate_Limiter;
+use Aggressive\Ads\Workflow\Campaign_State_Machine;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -29,7 +29,7 @@ use WP_REST_Response;
  * lifecycle, and the two would disagree within a release.
  *
  * The target status is deliberately not restricted by an enum in the schema
- * beyond being one of ours: an advertiser POSTing `lap_approved` is an
+ * beyond being one of ours: an advertiser POSTing `aggr_approved` is an
  * expected event that must be denied and *recorded* as denied, not rejected by
  * schema validation before anything sees it.
  */
@@ -64,8 +64,7 @@ final class Transitions_Controller implements Service {
 	 * @return void
 	 */
 	public function register_routes(): void {
-		register_rest_route(
-			Creative_File_Controller::NAMESPACE,
+		Creative_File_Controller::register_route(
 			'/campaigns/(?P<id>\d+)/transitions',
 			array(
 				'methods'             => 'POST',
@@ -158,16 +157,16 @@ final class Transitions_Controller implements Service {
 	 */
 	private function with_status( WP_Error $error ): WP_Error {
 		$status = match ( (string) $error->get_error_code() ) {
-			'laao_ads_campaign_not_found' => 404,
-			'laao_ads_forbidden'          => 403,
+			'aggr_campaign_not_found' => 404,
+			'aggr_forbidden'          => 403,
 
 			// The caller asked for something this campaign cannot currently
 			// do. 409 rather than 400: the request is well-formed, the
 			// campaign's state is what makes it impossible.
-			'laao_ads_illegal_transition',
-			'laao_ads_system_transition',
-			'laao_ads_not_a_system_transition',
-			'laao_ads_campaign_claimed'   => 409,
+			'aggr_illegal_transition',
+			'aggr_system_transition',
+			'aggr_not_a_system_transition',
+			'aggr_campaign_claimed'   => 409,
 
 			// Well-formed and permitted, but something about the campaign is
 			// not ready.

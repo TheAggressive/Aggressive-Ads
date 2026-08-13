@@ -9,18 +9,18 @@
  * so running it twice does not produce a second organization and leave the
  * advertiser owning both.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-use LAAO_Advertiser_Portal\Core\Post_Statuses;
-use LAAO_Advertiser_Portal\Core\Post_Types;
-use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Repository;
-use LAAO_Advertiser_Portal\Repository\Package_Repository;
-use LAAO_Advertiser_Portal\Repository\Placement_Repository;
-use LAAO_Advertiser_Portal\Security\Roles;
+use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Repository\Package_Repository;
+use Aggressive\Ads\Repository\Placement_Repository;
+use Aggressive\Ads\Security\Roles;
 
 if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
 	exit( 1 );
@@ -41,11 +41,11 @@ update_option( 'users_can_register', 1 );
  * @param array<string, mixed> $meta      Meta to set.
  * @return int
  */
-function laao_ads_seed_post( string $post_type, string $slug, string $title, string $status, array $meta ): int {
+function aggr_seed_post( string $post_type, string $slug, string $title, string $status, array $meta ): int {
 	/*
 	 * Every status by name, not 'any'.
 	 *
-	 * 'any' means "every status not excluded from search", and the lap_
+	 * 'any' means "every status not excluded from search", and the campaign
 	 * statuses are all excluded. The lookup therefore matched nothing, the
 	 * script created a second copy of every object on its second run, and the
 	 * dashboard counted ten campaigns where five were seeded.
@@ -113,7 +113,7 @@ if ( ! $user instanceof WP_User ) {
 
 $user->set_role( Roles::ADVERTISER );
 
-$org_id = laao_ads_seed_post(
+$org_id = aggr_seed_post(
 	Post_Types::ORGANIZATION,
 	'bright-angle-media',
 	'Bright Angle Media',
@@ -129,7 +129,7 @@ $placements = array(
 $placement_ids = array();
 
 foreach ( $placements as $slug => $placement ) {
-	$placement_ids[ $slug ] = laao_ads_seed_post(
+	$placement_ids[ $slug ] = aggr_seed_post(
 		Post_Types::PLACEMENT,
 		$slug,
 		$placement[0],
@@ -141,45 +141,6 @@ foreach ( $placements as $slug => $placement ) {
 	);
 }
 
-/*
- * The AdSanity ad group each placement publishes into.
- *
- * Without this the seeded site looks complete and cannot approve anything: the
- * mapping guard fails closed on an unmapped placement, which is correct and
- * also the last thing anybody thinks to check. A dev site that can carry a
- * campaign from draft to a live AdSanity ad is the whole point of seeding one.
- *
- * Skipped rather than fatal when AdSanity is absent — the portal is designed to
- * work without it, and so is this script.
- */
-if ( taxonomy_exists( 'ad-group' ) ) {
-	foreach ( $placements as $slug => $placement ) {
-		$term = get_term_by( 'slug', 'laao-' . $slug, 'ad-group' );
-
-		if ( ! $term instanceof WP_Term ) {
-			$created = wp_insert_term(
-				$placement[0],
-				'ad-group',
-				array( 'slug' => 'laao-' . $slug )
-			);
-
-			if ( is_wp_error( $created ) ) {
-				WP_CLI::warning( "Could not create the ad group for {$slug}: " . $created->get_error_message() );
-
-				continue;
-			}
-
-			$term = get_term( (int) $created['term_id'], 'ad-group' );
-		}
-
-		if ( $term instanceof WP_Term ) {
-			update_post_meta( $placement_ids[ $slug ], Placement_Repository::META_ADGROUP_TERM, $term->term_id );
-		}
-	}
-} else {
-	WP_CLI::warning( 'AdSanity is not active, so placements were left unmapped and approval will fail closed.' );
-}
-
 $packages = array(
 	'launch-bundle'   => array( 'Launch bundle', 30, 45000, array( 'leaderboard', 'sidebar' ) ),
 	'focused-sidebar' => array( 'Focused sidebar', 14, 17500, array( 'sidebar' ) ),
@@ -188,7 +149,7 @@ $packages = array(
 foreach ( $packages as $slug => $package ) {
 	list( $package_title, $duration_days, $price_cents, $package_placements ) = $package;
 
-	$package_id = laao_ads_seed_post(
+	$package_id = aggr_seed_post(
 		Post_Types::PACKAGE,
 		$slug,
 		$package_title,
@@ -223,7 +184,7 @@ $campaigns = array(
 foreach ( $campaigns as $campaign ) {
 	list( $slug, $campaign_title, $campaign_status, $start, $end, $placement ) = $campaign;
 
-	$campaign_id = laao_ads_seed_post(
+	$campaign_id = aggr_seed_post(
 		Post_Types::CAMPAIGN,
 		$slug,
 		$campaign_title,
@@ -257,6 +218,6 @@ WP_CLI::success(
 		'Seeded %d campaigns for "%s". Sign in as advertiser / advertiser, then open %s',
 		count( $campaigns ),
 		get_the_title( $org_id ),
-		\LAAO_Advertiser_Portal\Portal\Routes::url()
+		\Aggressive\Ads\Portal\Routes::url()
 	)
 );

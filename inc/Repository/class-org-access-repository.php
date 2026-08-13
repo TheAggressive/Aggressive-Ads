@@ -2,14 +2,14 @@
 /**
  * Organization identity and membership-access persistence.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Repository;
+namespace Aggressive\Ads\Repository;
 
-use LAAO_Advertiser_Portal\Install\Schema;
+use Aggressive\Ads\Install\Schema;
 use WP_Error;
 
 /**
@@ -90,12 +90,13 @@ final class Org_Access_Repository {
 		global $wpdb;
 
 		if ( $org_id <= 0 || '' === $canonical_name ) {
-			return new WP_Error( 'laao_ads_invalid_org_identity' );
+			return new WP_Error( 'aggr_invalid_org_identity' );
 		}
 
 		$key = $this->active_key( self::KIND_IDENTITY, 0, $canonical_name );
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom identity registry; the unique active_key is the concurrency control.
+		$wpdb->suppress_errors( true );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom identity registry; the unique active_key is the concurrency control. Duplicate key is a WP_Error, not HTML.
 		$written = $wpdb->insert(
 			$this->table_name(),
 			array(
@@ -109,6 +110,7 @@ final class Org_Access_Repository {
 			),
 			array( '%d', '%s', '%s', '%s', '%d', '%s', '%s' )
 		);
+		$wpdb->suppress_errors( false );
 
 		if ( false !== $written ) {
 			return true;
@@ -119,7 +121,7 @@ final class Org_Access_Repository {
 			return true;
 		}
 
-		return new WP_Error( 'laao_ads_duplicate_org_identity', '', array( 'org_id' => $existing ) );
+		return new WP_Error( 'aggr_duplicate_org_identity', '', array( 'org_id' => $existing ) );
 	}
 
 	/**
@@ -157,7 +159,7 @@ final class Org_Access_Repository {
 		global $wpdb;
 
 		if ( $org_id <= 0 || '' === $old_canonical || '' === $new_canonical ) {
-			return new WP_Error( 'laao_ads_invalid_org_identity' );
+			return new WP_Error( 'aggr_invalid_org_identity' );
 		}
 
 		if ( $old_canonical === $new_canonical ) {
@@ -165,7 +167,7 @@ final class Org_Access_Repository {
 		}
 
 		if ( $org_id !== $this->org_id_for_canonical( $old_canonical ) ) {
-			return new WP_Error( 'laao_ads_org_identity_mismatch' );
+			return new WP_Error( 'aggr_org_identity_mismatch' );
 		}
 
 		$registered = $this->register_identity( $org_id, $new_canonical );
@@ -188,7 +190,7 @@ final class Org_Access_Repository {
 			$this->delete_identity_name( $org_id, $new_canonical );
 			$this->register_identity( $org_id, $old_canonical );
 
-			return new WP_Error( 'laao_ads_org_identity_not_saved' );
+			return new WP_Error( 'aggr_org_identity_not_saved' );
 		}
 
 		return true;
@@ -577,13 +579,14 @@ final class Org_Access_Repository {
 		global $wpdb;
 
 		if ( ! in_array( $kind, array( self::KIND_INVITE, self::KIND_REQUEST ), true ) || $org_id <= 0 || ! is_email( $email ) ) {
-			return new WP_Error( 'laao_ads_invalid_org_access' );
+			return new WP_Error( 'aggr_invalid_org_access' );
 		}
 
 		$token   = $this->token();
 		$expires = time() + $ttl;
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom access write; unique active_key atomically prevents a duplicate pending row.
+		$wpdb->suppress_errors( true );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom access write; unique active_key atomically prevents a duplicate pending row. Duplicate key is a WP_Error, not HTML.
 		$written = $wpdb->insert(
 			$this->table_name(),
 			array(
@@ -600,9 +603,10 @@ final class Org_Access_Repository {
 			),
 			array( '%d', '%s', '%s', '%s', '%d', '%d', '%d', '%d', '%s', '%s' )
 		);
+		$wpdb->suppress_errors( false );
 
 		if ( false === $written ) {
-			return new WP_Error( 'laao_ads_org_access_exists', __( 'A request for that email is already pending.', 'laao-advertiser-portal' ) );
+			return new WP_Error( 'aggr_org_access_exists', __( 'A request for that email is already pending.', 'aggressive-ads' ) );
 		}
 
 		return array(

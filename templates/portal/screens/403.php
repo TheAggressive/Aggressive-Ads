@@ -2,7 +2,7 @@
 /**
  * No-access contents.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
@@ -11,12 +11,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 ?>
-<p class="laao-ads-lede">
-	<?php esc_html_e( 'Your account does not have access to the advertiser portal.', 'laao-advertiser-portal' ); ?>
+<p class="aggr-lede">
+	<?php esc_html_e( 'Your account does not have access to the advertiser portal.', 'aggressive-ads' ); ?>
 </p>
 
 <p>
-	<a class="laao-ads-button" href="<?php echo esc_url( home_url( '/' ) ); ?>">
-		<?php esc_html_e( 'Back to the site', 'laao-advertiser-portal' ); ?>
+	<a class="aggr-button" href="<?php echo esc_url( home_url( '/' ) ); ?>">
+		<?php esc_html_e( 'Back to the site', 'aggressive-ads' ); ?>
 	</a>
 </p>

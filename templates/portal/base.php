@@ -12,10 +12,10 @@
  * regardless of the active theme. See
  * docs/adr/0001-standalone-plugin-zero-theme-dependency.md.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  *
- * @var string $laao_ads_screen Absolute path to the screen partial.
- * @var string $laao_ads_title  Screen title.
+ * @var string $aggr_screen Absolute path to the screen partial.
+ * @var string $aggr_title  Screen title.
  */
 
 declare(strict_types=1);
@@ -24,12 +24,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use LAAO_Advertiser_Portal\Plugin;
-use LAAO_Advertiser_Portal\Portal\View_Data;
+use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Portal\View_Data;
 
-$laao_ads_screen = isset( $laao_ads_screen ) && is_string( $laao_ads_screen ) ? $laao_ads_screen : '';
-$laao_ads_title  = isset( $laao_ads_title ) && is_string( $laao_ads_title ) ? $laao_ads_title : '';
-$laao_ads_view   = Plugin::instance()->container()->get( View_Data::class );
+$aggr_screen = isset( $aggr_screen ) && is_string( $aggr_screen ) ? $aggr_screen : '';
+$aggr_title  = isset( $aggr_title ) && is_string( $aggr_title ) ? $aggr_title : '';
+$aggr_view   = Plugin::instance()->container()->get( View_Data::class );
 
 /*
  * The portal has no queried object, so core's document title falls back to the
@@ -37,16 +37,16 @@ $laao_ads_view   = Plugin::instance()->container()->get( View_Data::class );
  * failure and makes browser history and open tabs useless — which matters most
  * to the people who need them most.
  */
-$laao_ads_document_title = '' === $laao_ads_title
+$aggr_document_title = '' === $aggr_title
 	? get_bloginfo( 'name' )
 	: sprintf(
 		/* translators: 1: screen name. 2: site name. */
-		__( '%1$s — %2$s', 'laao-advertiser-portal' ),
-		$laao_ads_title,
+		__( '%1$s — %2$s', 'aggressive-ads' ),
+		$aggr_title,
 		get_bloginfo( 'name' )
 	);
 
-add_filter( 'pre_get_document_title', static fn (): string => $laao_ads_document_title );
+add_filter( 'pre_get_document_title', static fn (): string => $aggr_document_title );
 
 /*
  * Robots: the portal is behind a capability check, so a crawler never sees it,
@@ -76,8 +76,8 @@ remove_action( 'wp_footer', 'wp_admin_bar_render', 1000 );
  * Twenty Twenty-Five, and shipped two <title> elements in one document.
  * Asking which callback is attached answers the actual question.
  */
-$laao_ads_head_has_title    = has_action( 'wp_head', '_wp_render_title_tag' ) || has_action( 'wp_head', '_block_template_render_title_tag' );
-$laao_ads_head_has_viewport = has_action( 'wp_head', '_block_template_viewport_meta_tag' );
+$aggr_head_has_title    = has_action( 'wp_head', '_wp_render_title_tag' ) || has_action( 'wp_head', '_block_template_render_title_tag' );
+$aggr_head_has_viewport = has_action( 'wp_head', '_block_template_viewport_meta_tag' );
 
 ?>
 <!doctype html>
@@ -85,55 +85,55 @@ $laao_ads_head_has_viewport = has_action( 'wp_head', '_block_template_viewport_m
 <head>
 	<meta charset="<?php bloginfo( 'charset' ); ?>">
 	<?php
-	if ( false === $laao_ads_head_has_title ) {
-		echo '<title>' . esc_html( $laao_ads_document_title ) . '</title>';
+	if ( false === $aggr_head_has_title ) {
+		echo '<title>' . esc_html( $aggr_document_title ) . '</title>';
 	}
 
-	if ( false === $laao_ads_head_has_viewport ) {
+	if ( false === $aggr_head_has_viewport ) {
 		echo '<meta name="viewport" content="width=device-width, initial-scale=1">';
 	}
 
 	wp_head();
 	?>
 </head>
-<body <?php body_class( 'laao-ads-portal' ); ?>>
+<body <?php body_class( 'aggr-portal' ); ?>>
 <?php wp_body_open(); ?>
 
-<a class="laao-ads-skip" href="#laao-ads-main">
-	<?php esc_html_e( 'Skip to main content', 'laao-advertiser-portal' ); ?>
+<a class="aggr-skip" href="#aggr-main">
+	<?php esc_html_e( 'Skip to main content', 'aggressive-ads' ); ?>
 </a>
 
-<div class="laao-ads-shell">
-	<?php require LAAO_ADS_PLUGIN_DIR . 'templates/portal/partials/rail.php'; ?>
+<div class="aggr-shell">
+	<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/rail.php'; ?>
 
-	<div class="laao-ads-body">
-		<header class="laao-ads-topbar">
-			<div class="laao-ads-org">
-				<?php echo esc_html( '' !== $laao_ads_view->org_name() ? $laao_ads_view->org_name() : get_bloginfo( 'name' ) ); ?>
+	<div class="aggr-body">
+		<header class="aggr-topbar">
+			<div class="aggr-org">
+				<?php echo esc_html( '' !== $aggr_view->org_name() ? $aggr_view->org_name() : get_bloginfo( 'name' ) ); ?>
 			</div>
 
-			<div class="laao-ads-topbar__actions">
+			<div class="aggr-topbar__actions">
 				<a href="<?php echo esc_url( wp_logout_url( home_url( '/' ) ) ); ?>">
-					<?php esc_html_e( 'Sign out', 'laao-advertiser-portal' ); ?>
+					<?php esc_html_e( 'Sign out', 'aggressive-ads' ); ?>
 				</a>
-				<span class="laao-ads-avatar" aria-hidden="true"><?php echo esc_html( $laao_ads_view->org_initials() ); ?></span>
+				<span class="aggr-avatar" aria-hidden="true"><?php echo esc_html( $aggr_view->org_initials() ); ?></span>
 			</div>
 		</header>
 
-		<main id="laao-ads-main" class="laao-ads-main" tabindex="-1">
+		<main id="aggr-main" class="aggr-main" tabindex="-1">
 			<?php
-			if ( '' !== $laao_ads_screen && is_file( $laao_ads_screen ) ) {
-				require $laao_ads_screen;
+			if ( '' !== $aggr_screen && is_file( $aggr_screen ) ) {
+				require $aggr_screen;
 			}
 			?>
 		</main>
 
-		<footer class="laao-ads-colophon">
+		<footer class="aggr-colophon">
 			<p>
 				<?php
 				printf(
 					/* translators: %s: site name. */
-					esc_html__( 'Advertising with %s', 'laao-advertiser-portal' ),
+					esc_html__( 'Advertising with %s', 'aggressive-ads' ),
 					esc_html( get_bloginfo( 'name' ) )
 				);
 				?>

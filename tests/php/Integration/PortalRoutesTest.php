@@ -2,14 +2,14 @@
 /**
  * The portal URL grammar.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Integration;
+namespace Aggressive\Ads\Tests\Integration;
 
-use LAAO_Advertiser_Portal\Portal\Routes;
+use Aggressive\Ads\Portal\Routes;
 use WP_UnitTestCase;
 
 /**
@@ -27,7 +27,7 @@ final class PortalRoutesTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function tear_down(): void {
-		remove_all_filters( 'laao_ads_portal_base' );
+		remove_all_filters( 'aggr_portal_base' );
 
 		parent::tear_down();
 	}
@@ -47,7 +47,7 @@ final class PortalRoutesTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function test_the_base_is_filterable(): void {
-		add_filter( 'laao_ads_portal_base', static fn (): string => 'advertisers' );
+		add_filter( 'aggr_portal_base', static fn (): string => 'advertisers' );
 
 		$this->assertSame( 'advertisers', Routes::base() );
 	}
@@ -62,7 +62,7 @@ final class PortalRoutesTest extends WP_UnitTestCase {
 	 * @dataProvider data_unusable_bases
 	 */
 	public function test_an_unusable_base_falls_back( $value ): void {
-		add_filter( 'laao_ads_portal_base', static fn () => $value );
+		add_filter( 'aggr_portal_base', static fn () => $value );
 
 		$this->assertSame( 'advertiser', Routes::base() );
 	}
@@ -89,7 +89,7 @@ final class PortalRoutesTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function test_a_hostile_base_is_sanitised(): void {
-		add_filter( 'laao_ads_portal_base', static fn (): string => '../../wp-admin' );
+		add_filter( 'aggr_portal_base', static fn (): string => '../../wp-admin' );
 
 		$base = Routes::base();
 

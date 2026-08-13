@@ -2,12 +2,12 @@
 /**
  * The campaign lifecycle statuses.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Core;
+namespace Aggressive\Ads\Core;
 
 /**
  * Registers the eleven campaign statuses.
@@ -17,26 +17,23 @@ namespace LAAO_Advertiser_Portal\Core;
  */
 final class Post_Statuses implements Service {
 
-	public const DRAFT     = 'lap_draft';
-	public const SUBMITTED = 'lap_submitted';
-	public const REVIEW    = 'lap_review';
-	public const CHANGES   = 'lap_changes';
-	public const APPROVED  = 'lap_approved';
-	public const SCHEDULED = 'lap_scheduled';
-	public const LIVE      = 'lap_live';
-	public const PAUSED    = 'lap_paused';
-	public const COMPLETE  = 'lap_complete';
-	public const CANCELLED = 'lap_cancelled';
-	public const REJECTED  = 'lap_rejected';
+	public const DRAFT     = 'aggr_draft';
+	public const SUBMITTED = 'aggr_submitted';
+	public const REVIEW    = 'aggr_review';
+	public const CHANGES   = 'aggr_changes';
+	public const APPROVED  = 'aggr_approved';
+	public const SCHEDULED = 'aggr_scheduled';
+	public const LIVE      = 'aggr_live';
+	public const PAUSED    = 'aggr_paused';
+	public const COMPLETE  = 'aggr_complete';
+	public const CANCELLED = 'aggr_cancelled';
+	public const REJECTED  = 'aggr_rejected';
 
 	/**
 	 * `wp_posts.post_status` is varchar(20), same trap as post_type.
 	 *
-	 * This is why these eleven use the `lap_` storage prefix rather than
-	 * `laao_ads_`: `laao_ads_changes_requested` is 26 characters, which would
-	 * truncate on write and then never match on read, producing campaigns in
-	 * no status at all. It is the only place in the codebase using `lap_`, and
-	 * the inconsistency is deliberate.
+	 * `aggr_scheduled` is 14 characters. Do not invent a longer slug — a
+	 * value over 20 truncates on write and then never matches on read.
 	 */
 	public const MAX_SLUG_LENGTH = 20;
 
@@ -109,7 +106,7 @@ final class Post_Statuses implements Service {
 	}
 
 	/**
-	 * Statuses whose campaigns have live AdSanity objects behind them.
+	 * Statuses whose campaigns occupy the live set native fill reads.
 	 *
 	 * @return array<int, string>
 	 */
@@ -166,17 +163,17 @@ final class Post_Statuses implements Service {
 	 */
 	private static function label_for( string $slug ): string {
 		return match ( $slug ) {
-			self::DRAFT     => __( 'Draft', 'laao-advertiser-portal' ),
-			self::SUBMITTED => __( 'Submitted', 'laao-advertiser-portal' ),
-			self::REVIEW    => __( 'In Review', 'laao-advertiser-portal' ),
-			self::CHANGES   => __( 'Changes Requested', 'laao-advertiser-portal' ),
-			self::REJECTED  => __( 'Rejected', 'laao-advertiser-portal' ),
-			self::APPROVED  => __( 'Approved', 'laao-advertiser-portal' ),
-			self::SCHEDULED => __( 'Scheduled', 'laao-advertiser-portal' ),
-			self::LIVE      => __( 'Live', 'laao-advertiser-portal' ),
-			self::PAUSED    => __( 'Paused', 'laao-advertiser-portal' ),
-			self::COMPLETE  => __( 'Completed', 'laao-advertiser-portal' ),
-			default         => __( 'Cancelled', 'laao-advertiser-portal' ),
+			self::DRAFT     => __( 'Draft', 'aggressive-ads' ),
+			self::SUBMITTED => __( 'Submitted', 'aggressive-ads' ),
+			self::REVIEW    => __( 'In Review', 'aggressive-ads' ),
+			self::CHANGES   => __( 'Changes Requested', 'aggressive-ads' ),
+			self::REJECTED  => __( 'Rejected', 'aggressive-ads' ),
+			self::APPROVED  => __( 'Approved', 'aggressive-ads' ),
+			self::SCHEDULED => __( 'Scheduled', 'aggressive-ads' ),
+			self::LIVE      => __( 'Live', 'aggressive-ads' ),
+			self::PAUSED    => __( 'Paused', 'aggressive-ads' ),
+			self::COMPLETE  => __( 'Completed', 'aggressive-ads' ),
+			default         => __( 'Cancelled', 'aggressive-ads' ),
 		};
 	}
 
@@ -192,27 +189,27 @@ final class Post_Statuses implements Service {
 	private static function label_count_for( string $slug ): array {
 		return match ( $slug ) {
 			/* translators: %s: number of campaigns. */
-			self::DRAFT     => _n_noop( 'Draft <span class="count">(%s)</span>', 'Draft <span class="count">(%s)</span>', 'laao-advertiser-portal' ),
+			self::DRAFT     => _n_noop( 'Draft <span class="count">(%s)</span>', 'Draft <span class="count">(%s)</span>', 'aggressive-ads' ),
 			/* translators: %s: number of campaigns. */
-			self::SUBMITTED => _n_noop( 'Submitted <span class="count">(%s)</span>', 'Submitted <span class="count">(%s)</span>', 'laao-advertiser-portal' ),
+			self::SUBMITTED => _n_noop( 'Submitted <span class="count">(%s)</span>', 'Submitted <span class="count">(%s)</span>', 'aggressive-ads' ),
 			/* translators: %s: number of campaigns. */
-			self::REVIEW    => _n_noop( 'In Review <span class="count">(%s)</span>', 'In Review <span class="count">(%s)</span>', 'laao-advertiser-portal' ),
+			self::REVIEW    => _n_noop( 'In Review <span class="count">(%s)</span>', 'In Review <span class="count">(%s)</span>', 'aggressive-ads' ),
 			/* translators: %s: number of campaigns. */
-			self::CHANGES   => _n_noop( 'Changes Requested <span class="count">(%s)</span>', 'Changes Requested <span class="count">(%s)</span>', 'laao-advertiser-portal' ),
+			self::CHANGES   => _n_noop( 'Changes Requested <span class="count">(%s)</span>', 'Changes Requested <span class="count">(%s)</span>', 'aggressive-ads' ),
 			/* translators: %s: number of campaigns. */
-			self::REJECTED  => _n_noop( 'Rejected <span class="count">(%s)</span>', 'Rejected <span class="count">(%s)</span>', 'laao-advertiser-portal' ),
+			self::REJECTED  => _n_noop( 'Rejected <span class="count">(%s)</span>', 'Rejected <span class="count">(%s)</span>', 'aggressive-ads' ),
 			/* translators: %s: number of campaigns. */
-			self::APPROVED  => _n_noop( 'Approved <span class="count">(%s)</span>', 'Approved <span class="count">(%s)</span>', 'laao-advertiser-portal' ),
+			self::APPROVED  => _n_noop( 'Approved <span class="count">(%s)</span>', 'Approved <span class="count">(%s)</span>', 'aggressive-ads' ),
 			/* translators: %s: number of campaigns. */
-			self::SCHEDULED => _n_noop( 'Scheduled <span class="count">(%s)</span>', 'Scheduled <span class="count">(%s)</span>', 'laao-advertiser-portal' ),
+			self::SCHEDULED => _n_noop( 'Scheduled <span class="count">(%s)</span>', 'Scheduled <span class="count">(%s)</span>', 'aggressive-ads' ),
 			/* translators: %s: number of campaigns. */
-			self::LIVE      => _n_noop( 'Live <span class="count">(%s)</span>', 'Live <span class="count">(%s)</span>', 'laao-advertiser-portal' ),
+			self::LIVE      => _n_noop( 'Live <span class="count">(%s)</span>', 'Live <span class="count">(%s)</span>', 'aggressive-ads' ),
 			/* translators: %s: number of campaigns. */
-			self::PAUSED    => _n_noop( 'Paused <span class="count">(%s)</span>', 'Paused <span class="count">(%s)</span>', 'laao-advertiser-portal' ),
+			self::PAUSED    => _n_noop( 'Paused <span class="count">(%s)</span>', 'Paused <span class="count">(%s)</span>', 'aggressive-ads' ),
 			/* translators: %s: number of campaigns. */
-			self::COMPLETE  => _n_noop( 'Completed <span class="count">(%s)</span>', 'Completed <span class="count">(%s)</span>', 'laao-advertiser-portal' ),
+			self::COMPLETE  => _n_noop( 'Completed <span class="count">(%s)</span>', 'Completed <span class="count">(%s)</span>', 'aggressive-ads' ),
 			/* translators: %s: number of campaigns. */
-			default         => _n_noop( 'Cancelled <span class="count">(%s)</span>', 'Cancelled <span class="count">(%s)</span>', 'laao-advertiser-portal' ),
+			default         => _n_noop( 'Cancelled <span class="count">(%s)</span>', 'Cancelled <span class="count">(%s)</span>', 'aggressive-ads' ),
 		};
 	}
 }

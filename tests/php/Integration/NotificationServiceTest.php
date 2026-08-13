@@ -2,28 +2,28 @@
 /**
  * Campaign notifications against real WordPress users, roles, mail and meta.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Integration;
+namespace Aggressive\Ads\Tests\Integration;
 
-use LAAO_Advertiser_Portal\Core\Post_Statuses;
-use LAAO_Advertiser_Portal\Core\Post_Types;
-use LAAO_Advertiser_Portal\Domain\Transition_Table;
-use LAAO_Advertiser_Portal\Install\Installer;
-use LAAO_Advertiser_Portal\Notification\Notification_Service;
-use LAAO_Advertiser_Portal\Plugin;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Repository;
-use LAAO_Advertiser_Portal\Repository\User_Repository;
-use LAAO_Advertiser_Portal\Security\Capabilities;
-use LAAO_Advertiser_Portal\Security\Ownership;
-use LAAO_Advertiser_Portal\Security\Roles;
-use LAAO_Advertiser_Portal\Workflow\Campaign_State_Machine;
-use LAAO_Advertiser_Portal\Workflow\Transition_Guards;
+use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Domain\Transition_Table;
+use Aggressive\Ads\Install\Installer;
+use Aggressive\Ads\Notification\Notification_Service;
+use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Repository\User_Repository;
+use Aggressive\Ads\Security\Capabilities;
+use Aggressive\Ads\Security\Ownership;
+use Aggressive\Ads\Security\Roles;
+use Aggressive\Ads\Workflow\Campaign_State_Machine;
+use Aggressive\Ads\Workflow\Transition_Guards;
 use RuntimeException;
 use WP_UnitTestCase;
 
@@ -199,7 +199,7 @@ final class NotificationServiceTest extends WP_UnitTestCase {
 	public function test_notification_service_is_wired(): void {
 		$this->assertSame(
 			10,
-			has_action( 'laao_ads_notify_campaign_transitioned', array( $this->service, 'campaign_transitioned' ) )
+			has_action( 'aggr_notify_campaign_transitioned', array( $this->service, 'campaign_transitioned' ) )
 		);
 		$this->assertSame( 10, has_action( Notification_Service::RETRY_HOOK, array( $this->service, 'retry_submission' ) ) );
 	}
@@ -272,7 +272,7 @@ final class NotificationServiceTest extends WP_UnitTestCase {
 			$this->assertStringContainsString( 'New campaign submitted: Autumn arts guide', (string) $mail['subject'] );
 			$this->assertStringNotContainsString( "\n", (string) $mail['subject'] );
 			$this->assertStringContainsString( 'Organization: Bright Angle Media', (string) $mail['message'] );
-			$this->assertStringContainsString( 'page=laao-ads-review', (string) $mail['message'] );
+			$this->assertStringContainsString( 'page=aggr-review', (string) $mail['message'] );
 			$this->assertStringNotContainsString( 'Never include this in email.', (string) $mail['message'] );
 			$this->assertStringNotContainsString( 'first-reviewer@example.test', (string) $mail['message'] );
 			$this->assertStringNotContainsString( 'direct-grant@example.test', (string) $mail['message'] );
@@ -465,7 +465,7 @@ final class NotificationServiceTest extends WP_UnitTestCase {
 
 		// The advertiser's own screen, never the staff review screen.
 		$this->assertStringContainsString( '/advertiser/campaigns/' . $campaign, (string) $this->mail[0]['message'] );
-		$this->assertStringNotContainsString( 'page=laao-ads-review', (string) $this->mail[0]['message'] );
+		$this->assertStringNotContainsString( 'page=aggr-review', (string) $this->mail[0]['message'] );
 	}
 
 	/**

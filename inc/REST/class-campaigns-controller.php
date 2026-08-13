@@ -2,24 +2,26 @@
 /**
  * Reading campaigns.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\REST;
+namespace Aggressive\Ads\REST;
 
-use LAAO_Advertiser_Portal\Core\Post_Statuses;
-use LAAO_Advertiser_Portal\Core\Service;
-use LAAO_Advertiser_Portal\Domain\Transition_Table;
-use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
-use LAAO_Advertiser_Portal\Repository\Creative_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Repository;
-use LAAO_Advertiser_Portal\Repository\Placement_Repository;
-use LAAO_Advertiser_Portal\Security\Capabilities;
-use LAAO_Advertiser_Portal\Security\Rate_Limiter;
-use LAAO_Advertiser_Portal\Workflow\Campaign_Editor;
-use LAAO_Advertiser_Portal\Workflow\Review_Readiness;
+use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Domain\Transition_Table;
+use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Repository\Placement_Repository;
+use Aggressive\Ads\Security\Capabilities;
+use Aggressive\Ads\Security\Rate_Limiter;
+use Aggressive\Ads\Workflow\Campaign_Copier;
+use Aggressive\Ads\Workflow\Campaign_Editor;
+use Aggressive\Ads\Workflow\Reporting_Read;
+use Aggressive\Ads\Workflow\Review_Readiness;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -46,8 +48,10 @@ final class Campaigns_Controller implements Service {
 	 * @param Placement_Repository $placements Placement persistence.
 	 * @param Org_Repository       $orgs       Organization lookups.
 	 * @param Campaign_Editor      $editor     Draft creation and editing.
+	 * @param Campaign_Copier      $copier     Campaign copy into a new draft.
 	 * @param Review_Readiness     $readiness  Safe canonical review readiness.
 	 * @param Rate_Limiter         $limiter    Autosave abuse bounding.
+	 * @param Reporting_Read       $reporting  Native rollup reads.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -55,8 +59,10 @@ final class Campaigns_Controller implements Service {
 		private readonly Placement_Repository $placements,
 		private readonly Org_Repository $orgs,
 		private readonly Campaign_Editor $editor,
+		private readonly Campaign_Copier $copier,
 		private readonly Review_Readiness $readiness,
-		private readonly Rate_Limiter $limiter
+		private readonly Rate_Limiter $limiter,
+		private readonly Reporting_Read $reporting
 	) {
 	}
 
@@ -75,8 +81,7 @@ final class Campaigns_Controller implements Service {
 	 * @return void
 	 */
 	public function register_routes(): void {
-		register_rest_route(
-			Creative_File_Controller::NAMESPACE,
+		Creative_File_Controller::register_route(
 			'/campaigns',
 			array(
 				array(
@@ -104,8 +109,7 @@ final class Campaigns_Controller implements Service {
 			)
 		);
 
-		register_rest_route(
-			Creative_File_Controller::NAMESPACE,
+		Creative_File_Controller::register_route(
 			'/campaigns/(?P<id>\d+)',
 			array(
 				array(
@@ -137,6 +141,18 @@ final class Campaigns_Controller implements Service {
 						'wizard_step'      => $this->string_arg( false ),
 						'autosave_rev'     => $this->nonnegative_int_arg( true ),
 					),
+				),
+			)
+		);
+
+		Creative_File_Controller::register_route(
+			'/campaigns/(?P<id>\d+)/copy',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'copy' ),
+				'permission_callback' => array( $this, 'write_permission' ),
+				'args'                => array(
+					'id' => $this->positive_int_arg( true ),
 				),
 			)
 		);
@@ -182,7 +198,7 @@ final class Campaigns_Controller implements Service {
 			return $campaign_id;
 		}
 
-		return new WP_REST_Response( $this->summary( $campaign_id ), 201 );
+		return new WP_REST_Response( $this->advertised_summary( $campaign_id ), 201 );
 	}
 
 	/**
@@ -215,7 +231,31 @@ final class Campaigns_Controller implements Service {
 			return $revision;
 		}
 
-		return new WP_REST_Response( $this->summary( $campaign_id ), 200 );
+		return new WP_REST_Response( $this->advertised_summary( $campaign_id ), 200 );
+	}
+
+	/**
+	 * Copies a campaign into a new organization-scoped draft.
+	 *
+	 * @param WP_REST_Request $request The request.
+	 * @return WP_REST_Response|WP_Error
+	 *
+	 * @phpstan-param WP_REST_Request<array<string, mixed>> $request
+	 */
+	public function copy( WP_REST_Request $request ) {
+		$allowed = $this->limiter->attempt( Rate_Limiter::ACTION_COPY, get_current_user_id() );
+
+		if ( is_wp_error( $allowed ) ) {
+			return $allowed;
+		}
+
+		$campaign_id = $this->copier->copy( (int) $request->get_param( 'id' ) );
+
+		if ( is_wp_error( $campaign_id ) ) {
+			return $campaign_id;
+		}
+
+		return new WP_REST_Response( $this->advertised_summary( $campaign_id ), 201 );
 	}
 
 	/**
@@ -243,7 +283,7 @@ final class Campaigns_Controller implements Service {
 			$campaigns[] = $this->summary( $campaign_id );
 		}
 
-		return $this->paged( $campaigns, $rows['total'], $rows['pages'], $page );
+		return $this->paged( $this->reporting->attach( $campaigns ), $rows['total'], $rows['pages'], $page );
 	}
 
 	/**
@@ -259,19 +299,29 @@ final class Campaigns_Controller implements Service {
 
 		// One answer for "not yours" and "does not exist". Anything that
 		// distinguishes them is an oracle for enumerating the id space.
-		if ( ! current_user_can( 'read_laao_ads_campaign', $campaign_id ) ) {
+		if ( ! current_user_can( 'read_aggr_campaign', $campaign_id ) ) {
 			return new WP_Error(
-				'laao_ads_not_found',
-				__( 'Not found.', 'laao-advertiser-portal' ),
+				'aggr_not_found',
+				__( 'Not found.', 'aggressive-ads' ),
 				array( 'status' => 404 )
 			);
 		}
 
-		$detail              = $this->summary( $campaign_id );
+		$detail              = $this->advertised_summary( $campaign_id );
 		$detail['creatives'] = $this->creatives_for( $campaign_id );
 		$detail['readiness'] = $this->readiness->for_campaign( $campaign_id );
 
 		return new WP_REST_Response( $detail, 200 );
+	}
+
+	/**
+	 * One campaign summary with metrics attached when the surface is on.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return array<string, mixed>
+	 */
+	private function advertised_summary( int $campaign_id ): array {
+		return $this->reporting->attach_one( $this->summary( $campaign_id ) );
 	}
 
 	/**
@@ -309,6 +359,7 @@ final class Campaigns_Controller implements Service {
 			'advertiser_notes' => $this->campaigns->advertiser_notes( $campaign_id ),
 
 			'editable'         => in_array( $status, Post_Statuses::advertiser_editable(), true ),
+			'can_copy'         => current_user_can( Capabilities::SUBMIT_CAMPAIGN ),
 			'placement_ids'    => $this->campaigns->placement_ids( $campaign_id ),
 
 			// What this advertiser could do next, so a UI does not have to

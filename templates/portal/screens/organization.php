@@ -2,7 +2,7 @@
 /**
  * Organization contents.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
@@ -11,147 +11,147 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use LAAO_Advertiser_Portal\Plugin;
-use LAAO_Advertiser_Portal\Portal\Organization_Actions;
-use LAAO_Advertiser_Portal\Portal\View_Data;
-use LAAO_Advertiser_Portal\Repository\Org_Access_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Repository;
+use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Portal\Organization_Actions;
+use Aggressive\Ads\Portal\View_Data;
+use Aggressive\Ads\Repository\Org_Access_Repository;
+use Aggressive\Ads\Repository\Org_Repository;
 
-$laao_ads_org        = Plugin::instance()->container()->get( View_Data::class )->organization();
-$laao_ads_org_notice = Organization_Actions::request_notice();
+$aggr_org        = Plugin::instance()->container()->get( View_Data::class )->organization();
+$aggr_org_notice = Organization_Actions::request_notice();
 
-if ( null === $laao_ads_org ) :
+if ( null === $aggr_org ) :
 	?>
-	<div class="laao-ads-pagehead">
+	<div class="aggr-pagehead">
 		<div>
-			<h1 class="laao-ads-title"><?php esc_html_e( 'Organization', 'laao-advertiser-portal' ); ?></h1>
-			<p class="laao-ads-lede"><?php esc_html_e( 'Your account is not linked to an advertising organization yet. Get in touch and we will connect it.', 'laao-advertiser-portal' ); ?></p>
+			<h1 class="aggr-title"><?php esc_html_e( 'Organization', 'aggressive-ads' ); ?></h1>
+			<p class="aggr-lede"><?php esc_html_e( 'Your account is not linked to an advertising organization yet. Get in touch and we will connect it.', 'aggressive-ads' ); ?></p>
 		</div>
 	</div>
 	<?php
 	return;
 endif;
 ?>
-<?php if ( '' !== $laao_ads_org_notice ) : ?>
-	<div class="laao-ads-alert <?php echo esc_attr( in_array( $laao_ads_org_notice, array( 'error', 'rate_limited', 'name_taken' ), true ) ? 'laao-ads-alert--error' : 'laao-ads-alert--success' ); ?>" role="status">
-		<p><?php echo esc_html( Organization_Actions::notice_message( $laao_ads_org_notice ) ); ?></p>
+<?php if ( '' !== $aggr_org_notice ) : ?>
+	<div class="aggr-alert <?php echo esc_attr( in_array( $aggr_org_notice, array( 'error', 'rate_limited', 'name_taken' ), true ) ? 'aggr-alert--error' : 'aggr-alert--success' ); ?>" role="status">
+		<p><?php echo esc_html( Organization_Actions::notice_message( $aggr_org_notice ) ); ?></p>
 	</div>
 <?php endif; ?>
 
-<div class="laao-ads-pagehead">
+<div class="aggr-pagehead">
 	<div>
-		<h1 class="laao-ads-title"><?php echo esc_html( (string) $laao_ads_org['name'] ); ?></h1>
-		<p class="laao-ads-lede"><?php esc_html_e( 'Who can work on this organization’s campaigns.', 'laao-advertiser-portal' ); ?></p>
+		<h1 class="aggr-title"><?php echo esc_html( (string) $aggr_org['name'] ); ?></h1>
+		<p class="aggr-lede"><?php esc_html_e( 'Who can work on this organization’s campaigns.', 'aggressive-ads' ); ?></p>
 	</div>
 
-	<span class="laao-ads-pill laao-ads-pill--<?php echo true === $laao_ads_org['active'] ? 'live' : 'danger'; ?>">
+	<span class="aggr-pill aggr-pill--<?php echo true === $aggr_org['active'] ? 'live' : 'danger'; ?>">
 		<?php
-		echo true === $laao_ads_org['active']
-			? esc_html__( 'Active', 'laao-advertiser-portal' )
-			: esc_html__( 'Suspended', 'laao-advertiser-portal' );
+		echo true === $aggr_org['active']
+			? esc_html__( 'Active', 'aggressive-ads' )
+			: esc_html__( 'Suspended', 'aggressive-ads' );
 		?>
 	</span>
 </div>
 
-<?php if ( true !== $laao_ads_org['active'] ) : ?>
-	<section class="laao-ads-notice">
-		<h2 class="laao-ads-notice__head"><?php esc_html_e( 'This organization cannot submit campaigns', 'laao-advertiser-portal' ); ?></h2>
-		<p><?php esc_html_e( 'Existing campaigns are unaffected. Please get in touch to discuss reactivating the account.', 'laao-advertiser-portal' ); ?></p>
+<?php if ( true !== $aggr_org['active'] ) : ?>
+	<section class="aggr-notice">
+		<h2 class="aggr-notice__head"><?php esc_html_e( 'This organization cannot submit campaigns', 'aggressive-ads' ); ?></h2>
+		<p><?php esc_html_e( 'Existing campaigns are unaffected. Please get in touch to discuss reactivating the account.', 'aggressive-ads' ); ?></p>
 	</section>
 <?php endif; ?>
 
-<section class="laao-ads-panel" aria-labelledby="laao-ads-org-summary">
-	<h2 id="laao-ads-org-summary" class="laao-ads-panel__head"><?php esc_html_e( 'Summary', 'laao-advertiser-portal' ); ?></h2>
+<section class="aggr-panel" aria-labelledby="aggr-org-summary">
+	<h2 id="aggr-org-summary" class="aggr-panel__head"><?php esc_html_e( 'Summary', 'aggressive-ads' ); ?></h2>
 
-	<dl class="laao-ads-facts">
-		<div class="laao-ads-fact">
-			<dt><?php esc_html_e( 'People', 'laao-advertiser-portal' ); ?></dt>
-			<dd><?php echo esc_html( number_format_i18n( count( $laao_ads_org['members'] ) ) ); ?></dd>
+	<dl class="aggr-facts">
+		<div class="aggr-fact">
+			<dt><?php esc_html_e( 'People', 'aggressive-ads' ); ?></dt>
+			<dd><?php echo esc_html( number_format_i18n( count( $aggr_org['members'] ) ) ); ?></dd>
 		</div>
 
-		<div class="laao-ads-fact">
-			<dt><?php esc_html_e( 'Campaigns', 'laao-advertiser-portal' ); ?></dt>
-			<dd><?php echo esc_html( number_format_i18n( (int) $laao_ads_org['campaigns'] ) ); ?></dd>
+		<div class="aggr-fact">
+			<dt><?php esc_html_e( 'Campaigns', 'aggressive-ads' ); ?></dt>
+			<dd><?php echo esc_html( number_format_i18n( (int) $aggr_org['campaigns'] ) ); ?></dd>
 		</div>
 	</dl>
 </section>
 
-<?php if ( true === $laao_ads_org['can_manage_members'] ) : ?>
-	<section class="laao-ads-panel" aria-labelledby="laao-ads-org-name">
-		<h2 id="laao-ads-org-name" class="laao-ads-panel__head"><?php esc_html_e( 'Organization name', 'laao-advertiser-portal' ); ?></h2>
-		<p class="laao-ads-hint"><?php esc_html_e( 'Names are stored in uppercase. Exact matches of another organization’s name are refused so two tenants cannot claim the same identity.', 'laao-advertiser-portal' ); ?></p>
+<?php if ( true === $aggr_org['can_manage_members'] ) : ?>
+	<section class="aggr-panel" aria-labelledby="aggr-org-name">
+		<h2 id="aggr-org-name" class="aggr-panel__head"><?php esc_html_e( 'Organization name', 'aggressive-ads' ); ?></h2>
+		<p class="aggr-hint"><?php esc_html_e( 'Names are stored in uppercase. Exact matches of another organization’s name are refused so two tenants cannot claim the same identity.', 'aggressive-ads' ); ?></p>
 
-		<form class="laao-ads-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+		<form class="aggr-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 			<input type="hidden" name="action" value="<?php echo esc_attr( Organization_Actions::RENAME_ACTION ); ?>">
 			<?php wp_nonce_field( Organization_Actions::RENAME_ACTION ); ?>
 
-			<div class="laao-ads-field">
-				<label for="laao-ads-organization-name"><?php esc_html_e( 'Display name', 'laao-advertiser-portal' ); ?></label>
+			<div class="aggr-field">
+				<label for="aggr-organization-name"><?php esc_html_e( 'Display name', 'aggressive-ads' ); ?></label>
 				<input
-					id="laao-ads-organization-name"
+					id="aggr-organization-name"
 					name="organization_name"
 					type="text"
-					value="<?php echo esc_attr( (string) $laao_ads_org['name'] ); ?>"
+					value="<?php echo esc_attr( (string) $aggr_org['name'] ); ?>"
 					maxlength="<?php echo esc_attr( (string) Org_Repository::MAX_NAME_LENGTH ); ?>"
 					required
 				>
 			</div>
 
-			<button class="laao-ads-button" type="submit"><?php esc_html_e( 'Save name', 'laao-advertiser-portal' ); ?></button>
+			<button class="aggr-button" type="submit"><?php esc_html_e( 'Save name', 'aggressive-ads' ); ?></button>
 		</form>
 	</section>
 <?php endif; ?>
 
-<section class="laao-ads-panel" aria-labelledby="laao-ads-org-people">
-	<h2 id="laao-ads-org-people" class="laao-ads-panel__head"><?php esc_html_e( 'People', 'laao-advertiser-portal' ); ?></h2>
+<section class="aggr-panel" aria-labelledby="aggr-org-people">
+	<h2 id="aggr-org-people" class="aggr-panel__head"><?php esc_html_e( 'People', 'aggressive-ads' ); ?></h2>
 
-	<div class="laao-ads-tablewrap">
-		<table class="laao-ads-table">
+	<div class="aggr-tablewrap">
+		<table class="aggr-table">
 			<thead>
 				<tr>
-					<th scope="col"><?php esc_html_e( 'Name', 'laao-advertiser-portal' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'Email', 'laao-advertiser-portal' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'Role', 'laao-advertiser-portal' ); ?></th>
-					<?php if ( true === $laao_ads_org['can_manage_members'] ) : ?>
-						<th scope="col"><span class="screen-reader-text"><?php esc_html_e( 'Actions', 'laao-advertiser-portal' ); ?></span></th>
+					<th scope="col"><?php esc_html_e( 'Name', 'aggressive-ads' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Email', 'aggressive-ads' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Role', 'aggressive-ads' ); ?></th>
+					<?php if ( true === $aggr_org['can_manage_members'] ) : ?>
+						<th scope="col"><span class="screen-reader-text"><?php esc_html_e( 'Actions', 'aggressive-ads' ); ?></span></th>
 					<?php endif; ?>
 				</tr>
 			</thead>
 			<tbody>
-				<?php foreach ( $laao_ads_org['members'] as $laao_ads_member ) : ?>
+				<?php foreach ( $aggr_org['members'] as $aggr_member ) : ?>
 					<tr>
-						<td class="laao-ads-table__primary">
-							<?php echo esc_html( (string) $laao_ads_member['name'] ); ?>
-							<?php if ( true === $laao_ads_member['is_you'] ) : ?>
-								<span class="laao-ads-pill laao-ads-pill--neutral"><?php esc_html_e( 'You', 'laao-advertiser-portal' ); ?></span>
+						<td class="aggr-table__primary">
+							<?php echo esc_html( (string) $aggr_member['name'] ); ?>
+							<?php if ( true === $aggr_member['is_you'] ) : ?>
+								<span class="aggr-pill aggr-pill--neutral"><?php esc_html_e( 'You', 'aggressive-ads' ); ?></span>
 							<?php endif; ?>
 						</td>
-						<td class="laao-ads-table__url"><?php echo esc_html( (string) $laao_ads_member['email'] ); ?></td>
+						<td class="aggr-table__url"><?php echo esc_html( (string) $aggr_member['email'] ); ?></td>
 						<td>
 							<?php
-							echo true === $laao_ads_member['is_owner']
-								? esc_html__( 'Owner', 'laao-advertiser-portal' )
-								: esc_html__( 'Member', 'laao-advertiser-portal' );
+							echo true === $aggr_member['is_owner']
+								? esc_html__( 'Owner', 'aggressive-ads' )
+								: esc_html__( 'Member', 'aggressive-ads' );
 							?>
 						</td>
-						<?php if ( true === $laao_ads_org['can_manage_members'] ) : ?>
+						<?php if ( true === $aggr_org['can_manage_members'] ) : ?>
 							<td>
-								<?php if ( true !== $laao_ads_member['is_owner'] ) : ?>
-									<div class="laao-ads-actions">
+								<?php if ( true !== $aggr_member['is_owner'] ) : ?>
+									<div class="aggr-actions">
 										<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 											<input type="hidden" name="action" value="<?php echo esc_attr( Organization_Actions::TRANSFER_ACTION ); ?>">
-											<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $laao_ads_member['id'] ); ?>">
+											<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $aggr_member['id'] ); ?>">
 											<?php wp_nonce_field( Organization_Actions::TRANSFER_ACTION ); ?>
-											<button class="laao-ads-button laao-ads-button--secondary laao-ads-button--small" type="submit">
-												<?php esc_html_e( 'Make owner', 'laao-advertiser-portal' ); ?>
+											<button class="aggr-button aggr-button--secondary aggr-button--small" type="submit">
+												<?php esc_html_e( 'Make owner', 'aggressive-ads' ); ?>
 											</button>
 										</form>
 										<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 											<input type="hidden" name="action" value="<?php echo esc_attr( Organization_Actions::REMOVE_ACTION ); ?>">
-											<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $laao_ads_member['id'] ); ?>">
+											<input type="hidden" name="user_id" value="<?php echo esc_attr( (string) $aggr_member['id'] ); ?>">
 											<?php wp_nonce_field( Organization_Actions::REMOVE_ACTION ); ?>
-											<button class="laao-ads-button laao-ads-button--secondary laao-ads-button--small" type="submit">
-												<?php esc_html_e( 'Remove', 'laao-advertiser-portal' ); ?>
+											<button class="aggr-button aggr-button--secondary aggr-button--small" type="submit">
+												<?php esc_html_e( 'Remove', 'aggressive-ads' ); ?>
 											</button>
 										</form>
 									</div>
@@ -166,69 +166,69 @@ endif;
 
 </section>
 
-<?php if ( true === $laao_ads_org['can_manage_members'] ) : ?>
-	<section class="laao-ads-panel" aria-labelledby="laao-ads-org-invite">
-		<h2 id="laao-ads-org-invite" class="laao-ads-panel__head"><?php esc_html_e( 'Invite a person', 'laao-advertiser-portal' ); ?></h2>
-		<p class="laao-ads-hint"><?php esc_html_e( 'We will email a single-use invitation that expires after three days. Membership is granted only after the recipient completes it.', 'laao-advertiser-portal' ); ?></p>
+<?php if ( true === $aggr_org['can_manage_members'] ) : ?>
+	<section class="aggr-panel" aria-labelledby="aggr-org-invite">
+		<h2 id="aggr-org-invite" class="aggr-panel__head"><?php esc_html_e( 'Invite a person', 'aggressive-ads' ); ?></h2>
+		<p class="aggr-hint"><?php esc_html_e( 'We will email a single-use invitation that expires after three days. Membership is granted only after the recipient completes it.', 'aggressive-ads' ); ?></p>
 
-		<form class="laao-ads-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+		<form class="aggr-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 			<input type="hidden" name="action" value="<?php echo esc_attr( Organization_Actions::INVITE_ACTION ); ?>">
 			<?php wp_nonce_field( Organization_Actions::INVITE_ACTION ); ?>
 
-			<div class="laao-ads-field">
-				<label for="laao-ads-invite-email"><?php esc_html_e( 'Work email', 'laao-advertiser-portal' ); ?></label>
-				<input id="laao-ads-invite-email" name="email" type="email" autocomplete="email" maxlength="100" required>
+			<div class="aggr-field">
+				<label for="aggr-invite-email"><?php esc_html_e( 'Work email', 'aggressive-ads' ); ?></label>
+				<input id="aggr-invite-email" name="email" type="email" autocomplete="email" maxlength="100" required>
 			</div>
 
-			<button class="laao-ads-button" type="submit"><?php esc_html_e( 'Send invitation', 'laao-advertiser-portal' ); ?></button>
+			<button class="aggr-button" type="submit"><?php esc_html_e( 'Send invitation', 'aggressive-ads' ); ?></button>
 		</form>
 	</section>
 
-	<?php if ( array() !== $laao_ads_org['pending_access'] ) : ?>
-		<section class="laao-ads-panel" aria-labelledby="laao-ads-org-pending">
-			<h2 id="laao-ads-org-pending" class="laao-ads-panel__head"><?php esc_html_e( 'Pending access', 'laao-advertiser-portal' ); ?></h2>
-			<p class="laao-ads-hint"><?php esc_html_e( 'Name matches are suggestions only. Review the email before granting access.', 'laao-advertiser-portal' ); ?></p>
+	<?php if ( array() !== $aggr_org['pending_access'] ) : ?>
+		<section class="aggr-panel" aria-labelledby="aggr-org-pending">
+			<h2 id="aggr-org-pending" class="aggr-panel__head"><?php esc_html_e( 'Pending access', 'aggressive-ads' ); ?></h2>
+			<p class="aggr-hint"><?php esc_html_e( 'Name matches are suggestions only. Review the email before granting access.', 'aggressive-ads' ); ?></p>
 
-			<div class="laao-ads-tablewrap">
-				<table class="laao-ads-table">
+			<div class="aggr-tablewrap">
+				<table class="aggr-table">
 					<thead>
 						<tr>
-							<th scope="col"><?php esc_html_e( 'Email', 'laao-advertiser-portal' ); ?></th>
-							<th scope="col"><?php esc_html_e( 'Type', 'laao-advertiser-portal' ); ?></th>
-							<th scope="col"><?php esc_html_e( 'Expires', 'laao-advertiser-portal' ); ?></th>
-							<th scope="col"><?php esc_html_e( 'Actions', 'laao-advertiser-portal' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Email', 'aggressive-ads' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Type', 'aggressive-ads' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Expires', 'aggressive-ads' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Actions', 'aggressive-ads' ); ?></th>
 						</tr>
 					</thead>
 					<tbody>
-						<?php foreach ( $laao_ads_org['pending_access'] as $laao_ads_access ) : ?>
+						<?php foreach ( $aggr_org['pending_access'] as $aggr_access ) : ?>
 							<tr>
-								<td><?php echo esc_html( (string) $laao_ads_access['email'] ); ?></td>
+								<td><?php echo esc_html( (string) $aggr_access['email'] ); ?></td>
 								<td>
-									<?php echo Org_Access_Repository::KIND_REQUEST === $laao_ads_access['kind'] ? esc_html__( 'Access request', 'laao-advertiser-portal' ) : esc_html__( 'Invitation', 'laao-advertiser-portal' ); ?>
+									<?php echo Org_Access_Repository::KIND_REQUEST === $aggr_access['kind'] ? esc_html__( 'Access request', 'aggressive-ads' ) : esc_html__( 'Invitation', 'aggressive-ads' ); ?>
 								</td>
 							<td>
 								<?php
-								$laao_ads_expiry = wp_date( get_option( 'date_format' ), (int) $laao_ads_access['expires_at_ts'] );
-								echo esc_html( is_string( $laao_ads_expiry ) ? $laao_ads_expiry : '—' );
+								$aggr_expiry = wp_date( get_option( 'date_format' ), (int) $aggr_access['expires_at_ts'] );
+								echo esc_html( is_string( $aggr_expiry ) ? $aggr_expiry : '—' );
 								?>
 							</td>
 								<td>
-									<div class="laao-ads-actions">
-										<?php if ( Org_Access_Repository::KIND_REQUEST === $laao_ads_access['kind'] ) : ?>
+									<div class="aggr-actions">
+										<?php if ( Org_Access_Repository::KIND_REQUEST === $aggr_access['kind'] ) : ?>
 											<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 												<input type="hidden" name="action" value="<?php echo esc_attr( Organization_Actions::APPROVE_ACTION ); ?>">
-								<input type="hidden" name="access_id" value="<?php echo esc_attr( (string) $laao_ads_access['id'] ); ?>">
+								<input type="hidden" name="access_id" value="<?php echo esc_attr( (string) $aggr_access['id'] ); ?>">
 												<?php wp_nonce_field( Organization_Actions::APPROVE_ACTION ); ?>
-												<button class="laao-ads-button laao-ads-button--small" type="submit"><?php esc_html_e( 'Approve', 'laao-advertiser-portal' ); ?></button>
+												<button class="aggr-button aggr-button--small" type="submit"><?php esc_html_e( 'Approve', 'aggressive-ads' ); ?></button>
 											</form>
 										<?php endif; ?>
 
 										<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 											<input type="hidden" name="action" value="<?php echo esc_attr( Organization_Actions::DENY_ACTION ); ?>">
-							<input type="hidden" name="access_id" value="<?php echo esc_attr( (string) $laao_ads_access['id'] ); ?>">
+							<input type="hidden" name="access_id" value="<?php echo esc_attr( (string) $aggr_access['id'] ); ?>">
 											<?php wp_nonce_field( Organization_Actions::DENY_ACTION ); ?>
-							<button class="laao-ads-button laao-ads-button--secondary laao-ads-button--small" type="submit">
-												<?php echo Org_Access_Repository::KIND_REQUEST === $laao_ads_access['kind'] ? esc_html__( 'Deny', 'laao-advertiser-portal' ) : esc_html__( 'Revoke', 'laao-advertiser-portal' ); ?>
+							<button class="aggr-button aggr-button--secondary aggr-button--small" type="submit">
+												<?php echo Org_Access_Repository::KIND_REQUEST === $aggr_access['kind'] ? esc_html__( 'Deny', 'aggressive-ads' ) : esc_html__( 'Revoke', 'aggressive-ads' ); ?>
 											</button>
 										</form>
 									</div>
@@ -241,5 +241,5 @@ endif;
 		</section>
 	<?php endif; ?>
 <?php else : ?>
-	<p class="laao-ads-panel__foot"><?php esc_html_e( 'Only the organization owner can rename the organization, invite people, approve requests, remove members, or transfer ownership.', 'laao-advertiser-portal' ); ?></p>
+	<p class="aggr-panel__foot"><?php esc_html_e( 'Only the organization owner can rename the organization, invite people, approve requests, remove members, or transfer ownership.', 'aggressive-ads' ); ?></p>
 <?php endif; ?>

@@ -2,12 +2,12 @@
 /**
  * The five business entities, as private custom post types.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Core;
+namespace Aggressive\Ads\Core;
 
 /**
  * Registers Organization, Placement, Package, Campaign and Creative.
@@ -17,11 +17,11 @@ namespace LAAO_Advertiser_Portal\Core;
  */
 final class Post_Types implements Service {
 
-	public const ORGANIZATION = 'laao_ads_org';
-	public const PLACEMENT    = 'laao_ads_placement';
-	public const PACKAGE      = 'laao_ads_package';
-	public const CAMPAIGN     = 'laao_ads_campaign';
-	public const CREATIVE     = 'laao_ads_creative';
+	public const ORGANIZATION = 'aggr_org';
+	public const PLACEMENT    = 'aggr_placement';
+	public const PACKAGE      = 'aggr_package';
+	public const CAMPAIGN     = 'aggr_campaign';
+	public const CREATIVE     = 'aggr_creative';
 
 	/**
 	 * `wp_posts.post_type` is varchar(20).
@@ -82,24 +82,24 @@ final class Post_Types implements Service {
 	public static function capability_names(): array {
 		return array(
 			self::ORGANIZATION => array(
-				'singular' => 'laao_ads_org',
-				'plural'   => 'laao_ads_orgs',
+				'singular' => 'aggr_org',
+				'plural'   => 'aggr_orgs',
 			),
 			self::PLACEMENT    => array(
-				'singular' => 'laao_ads_placement',
-				'plural'   => 'laao_ads_placements',
+				'singular' => 'aggr_placement',
+				'plural'   => 'aggr_placements',
 			),
 			self::PACKAGE      => array(
-				'singular' => 'laao_ads_package',
-				'plural'   => 'laao_ads_packages',
+				'singular' => 'aggr_package',
+				'plural'   => 'aggr_packages',
 			),
 			self::CAMPAIGN     => array(
-				'singular' => 'laao_ads_campaign',
-				'plural'   => 'laao_ads_campaigns',
+				'singular' => 'aggr_campaign',
+				'plural'   => 'aggr_campaigns',
 			),
 			self::CREATIVE     => array(
-				'singular' => 'laao_ads_creative',
-				'plural'   => 'laao_ads_creatives',
+				'singular' => 'aggr_creative',
+				'plural'   => 'aggr_creatives',
 			),
 		);
 	}
@@ -195,11 +195,11 @@ final class Post_Types implements Service {
 	 */
 	private static function labels_for( string $slug ): array {
 		$names = match ( $slug ) {
-			self::ORGANIZATION => array( __( 'Organization', 'laao-advertiser-portal' ), __( 'Organizations', 'laao-advertiser-portal' ) ),
-			self::PLACEMENT    => array( __( 'Placement', 'laao-advertiser-portal' ), __( 'Placements', 'laao-advertiser-portal' ) ),
-			self::PACKAGE      => array( __( 'Package', 'laao-advertiser-portal' ), __( 'Packages', 'laao-advertiser-portal' ) ),
-			self::CAMPAIGN     => array( __( 'Campaign', 'laao-advertiser-portal' ), __( 'Campaigns', 'laao-advertiser-portal' ) ),
-			default            => array( __( 'Creative', 'laao-advertiser-portal' ), __( 'Creatives', 'laao-advertiser-portal' ) ),
+			self::ORGANIZATION => array( __( 'Organization', 'aggressive-ads' ), __( 'Organizations', 'aggressive-ads' ) ),
+			self::PLACEMENT    => array( __( 'Placement', 'aggressive-ads' ), __( 'Placements', 'aggressive-ads' ) ),
+			self::PACKAGE      => array( __( 'Package', 'aggressive-ads' ), __( 'Packages', 'aggressive-ads' ) ),
+			self::CAMPAIGN     => array( __( 'Campaign', 'aggressive-ads' ), __( 'Campaigns', 'aggressive-ads' ) ),
+			default            => array( __( 'Creative', 'aggressive-ads' ), __( 'Creatives', 'aggressive-ads' ) ),
 		};
 
 		list( $singular, $plural ) = $names;

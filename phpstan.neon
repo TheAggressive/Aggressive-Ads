@@ -5,7 +5,7 @@
 # docs/build-and-release.md.
 #
 # The plugin ships without vendor/, so the runtime autoloader is
-# LAAO_Advertiser_Portal\Autoloader; the bootstrap file below defines the
+# Aggressive\Ads\Autoloader; the bootstrap file below defines the
 # constants WordPress would have defined by the time any of this code runs.
 
 parameters:
@@ -13,7 +13,7 @@ parameters:
 	paths:
 		- inc
 		- templates
-		- laao-advertiser-portal.php
+		- aggressive-ads.php
 		# Runs with full privileges, outside the bootstrap, and deletes things.
 		- uninstall.php
 

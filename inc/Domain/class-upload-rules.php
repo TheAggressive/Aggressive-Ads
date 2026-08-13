@@ -2,12 +2,12 @@
 /**
  * What an uploaded creative is allowed to be.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Domain;
+namespace Aggressive\Ads\Domain;
 
 /**
  * The upload allowlist and its limits, as pure decisions.

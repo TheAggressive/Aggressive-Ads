@@ -2,12 +2,12 @@
 /**
  * Bounded HTTP access for the plugin updater.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Update;
+namespace Aggressive\Ads\Update;
 
 /**
  * Makes SSRF-safe requests to the updater's fixed GitHub endpoints.
@@ -28,7 +28,7 @@ final class Update_Http_Client {
 		if ( function_exists( 'vip_safe_wp_remote_get' ) ) {
 			$response = \vip_safe_wp_remote_get( $url, false, 3, $timeout, 20, $args );
 
-			return is_array( $response ) ? $response : new \WP_Error( 'laao_ads_update_request_failed' );
+			return is_array( $response ) ? $response : new \WP_Error( 'aggr_update_request_failed' );
 		}
 
 		return wp_safe_remote_get( $url, $args );

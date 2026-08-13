@@ -2,18 +2,18 @@
 /**
  * Structural mitigations.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Security;
+namespace Aggressive\Ads\Tests\Security;
 
-use LAAO_Advertiser_Portal\Core\Post_Types;
-use LAAO_Advertiser_Portal\Plugin;
-use LAAO_Advertiser_Portal\Security\Admin_Guard;
-use LAAO_Advertiser_Portal\Security\Capabilities;
-use LAAO_Advertiser_Portal\Security\Roles;
+use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Security\Admin_Guard;
+use Aggressive\Ads\Security\Capabilities;
+use Aggressive\Ads\Security\Roles;
 use WP_UnitTestCase;
 
 /**
@@ -30,8 +30,8 @@ final class AttackSurfaceTest extends WP_UnitTestCase {
 	public function set_up(): void {
 		parent::set_up();
 
-		( new \LAAO_Advertiser_Portal\Install\Installer(
-			new \LAAO_Advertiser_Portal\Repository\Audit_Repository(),
+		( new \Aggressive\Ads\Install\Installer(
+			new \Aggressive\Ads\Repository\Audit_Repository(),
 			new Roles()
 		) )->install_roles();
 	}
@@ -72,7 +72,7 @@ final class AttackSurfaceTest extends WP_UnitTestCase {
 		$exposed = array();
 
 		foreach ( get_registered_meta_keys( 'post' ) as $key => $args ) {
-			if ( ! str_starts_with( (string) $key, '_laao_ads_' ) ) {
+			if ( ! str_starts_with( (string) $key, '_aggr_' ) ) {
 				continue;
 			}
 

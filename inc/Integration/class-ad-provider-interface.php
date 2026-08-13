@@ -2,14 +2,14 @@
 /**
  * Provider boundary for campaign publication and delivery lifecycle effects.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Integration;
+namespace Aggressive\Ads\Integration;
 
-use LAAO_Advertiser_Portal\Domain\Publication_Result;
+use Aggressive\Ads\Domain\Publication_Result;
 use WP_Error;
 
 /**

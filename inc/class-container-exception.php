@@ -2,12 +2,12 @@
 /**
  * Container failures.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal;
+namespace Aggressive\Ads;
 
 use RuntimeException;
 

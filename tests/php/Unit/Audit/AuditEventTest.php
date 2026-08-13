@@ -2,15 +2,15 @@
 /**
  * Audit event validation tests.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Unit\Audit;
+namespace Aggressive\Ads\Tests\Unit\Audit;
 
 use InvalidArgumentException;
-use LAAO_Advertiser_Portal\Audit\Audit_Event;
+use Aggressive\Ads\Audit\Audit_Event;
 use Yoast\PHPUnitPolyfills\TestCases\TestCase;
 
 /**
@@ -103,10 +103,10 @@ final class AuditEventTest extends TestCase {
 			'password'      => array( 'password' ),
 			'nonce'         => array( '_wpnonce' ),
 			'token'         => array( 'token' ),
-			'private token' => array( '_laao_ads_private_token' ),
+			'private token' => array( '_aggr_private_token' ),
 			'raw ip'        => array( 'ip_address' ),
 			'email address' => array( 'recipient_email' ),
-			'file path'     => array( '_laao_ads_private_path' ),
+			'file path'     => array( '_aggr_private_path' ),
 			'authorization' => array( 'authorization' ),
 		);
 	}
@@ -158,8 +158,8 @@ final class AuditEventTest extends TestCase {
 			object_type: 'campaign',
 			object_id: 42,
 			org_id: 7,
-			from_state: 'lap_draft',
-			to_state: 'lap_submitted',
+			from_state: 'aggr_draft',
+			to_state: 'aggr_submitted',
 			context: array(
 				'placements' => array( 6, 48 ),
 				'revision'   => 2,
@@ -169,8 +169,8 @@ final class AuditEventTest extends TestCase {
 		$this->assertSame( 'campaign', $event->object_type() );
 		$this->assertSame( 42, $event->object_id() );
 		$this->assertSame( 7, $event->org_id() );
-		$this->assertSame( 'lap_draft', $event->from_state() );
-		$this->assertSame( 'lap_submitted', $event->to_state() );
+		$this->assertSame( 'aggr_draft', $event->from_state() );
+		$this->assertSame( 'aggr_submitted', $event->to_state() );
 		$this->assertSame( array( 6, 48 ), $event->context()['placements'] );
 	}
 

@@ -42,8 +42,8 @@ jobs:
             echo "Release tags must be strict vMAJOR.MINOR.PATCH versions." >&2
             exit 1
           fi
-          HEADER_VERSION="$(grep -m1 -oE '^\s*\*\s*Version:\s*\S+' laao-advertiser-portal.php | awk '{print $NF}')"
-          CONSTANT_VERSION="$(grep -m1 -oE "define\( 'LAAO_ADS_VERSION', '[^']+'" laao-advertiser-portal.php | awk -F"'" '{print $4}')"
+          HEADER_VERSION="$(grep -m1 -oE '^\s*\*\s*Version:\s*\S+' aggressive-ads.php | awk '{print $NF}')"
+          CONSTANT_VERSION="$(grep -m1 -oE "define\( 'AGGR_VERSION', '[^']+'" aggressive-ads.php | awk -F"'" '{print $4}')"
           PACKAGE_VERSION="$(php -r '$data = json_decode(file_get_contents("package.json"), true, flags: JSON_THROW_ON_ERROR); echo $data["version"];')"
           if [[ "${HEADER_VERSION}" != "${VERSION}" || "${CONSTANT_VERSION}" != "${VERSION}" || "${PACKAGE_VERSION}" != "${VERSION}" ]]; then
             echo "Tag ${RELEASE_TAG} must match the header (${HEADER_VERSION}), constant (${CONSTANT_VERSION}), and package (${PACKAGE_VERSION})." >&2

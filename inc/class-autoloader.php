@@ -5,17 +5,17 @@
  * The plugin ships without vendor/, so this is the only autoloader in a
  * released build. See docs/adr/0012-own-autoloader-in-production.md.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal;
+namespace Aggressive\Ads;
 
 /**
  * Maps this plugin's namespaced class names onto WordPress-style filenames.
  *
- *     LAAO_Advertiser_Portal\Workflow\Campaign_State_Machine
+ *     Aggressive\Ads\Workflow\Campaign_State_Machine
  *         → inc/Workflow/class-campaign-state-machine.php
  *
  * Namespace segments after the root map to directories verbatim. The final

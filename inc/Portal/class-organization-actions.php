@@ -2,17 +2,17 @@
 /**
  * Organization invitation and access-request form handling.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Portal;
+namespace Aggressive\Ads\Portal;
 
-use LAAO_Advertiser_Portal\Core\Service;
-use LAAO_Advertiser_Portal\Repository\Org_Repository;
-use LAAO_Advertiser_Portal\Security\Rate_Limiter;
-use LAAO_Advertiser_Portal\Workflow\Organization_Membership;
+use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Security\Rate_Limiter;
+use Aggressive\Ads\Workflow\Organization_Membership;
 use WP_Error;
 
 /**
@@ -20,12 +20,12 @@ use WP_Error;
  */
 final class Organization_Actions implements Service {
 
-	public const INVITE_ACTION   = 'laao_ads_invite_org_member';
-	public const APPROVE_ACTION  = 'laao_ads_approve_org_access';
-	public const DENY_ACTION     = 'laao_ads_deny_org_access';
-	public const REMOVE_ACTION   = 'laao_ads_remove_org_member';
-	public const TRANSFER_ACTION = 'laao_ads_transfer_org_ownership';
-	public const RENAME_ACTION   = 'laao_ads_rename_organization';
+	public const INVITE_ACTION   = 'aggr_invite_org_member';
+	public const APPROVE_ACTION  = 'aggr_approve_org_access';
+	public const DENY_ACTION     = 'aggr_deny_org_access';
+	public const REMOVE_ACTION   = 'aggr_remove_org_member';
+	public const TRANSFER_ACTION = 'aggr_transfer_org_ownership';
+	public const RENAME_ACTION   = 'aggr_rename_organization';
 
 	/**
 	 * Constructor.
@@ -132,7 +132,7 @@ final class Organization_Actions implements Service {
 			get_current_user_id()
 		);
 
-		if ( is_wp_error( $result ) && 'laao_ads_duplicate_org_identity' === $result->get_error_code() ) {
+		if ( is_wp_error( $result ) && 'aggr_duplicate_org_identity' === $result->get_error_code() ) {
 			$this->redirect( 'name_taken' );
 		}
 
@@ -142,7 +142,7 @@ final class Organization_Actions implements Service {
 	/** Read an allowlisted organization notice. */
 	public static function request_notice(): string {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only PRG display state; authorizes nothing.
-		$value = isset( $_GET['laao_ads_org_notice'] ) ? sanitize_key( wp_unslash( $_GET['laao_ads_org_notice'] ) ) : '';
+		$value = isset( $_GET['aggr_org_notice'] ) ? sanitize_key( wp_unslash( $_GET['aggr_org_notice'] ) ) : '';
 
 		return in_array(
 			$value,
@@ -158,15 +158,15 @@ final class Organization_Actions implements Service {
 	 */
 	public static function notice_message( string $notice ): string {
 		return match ( $notice ) {
-			'invited'      => __( 'Invitation sent.', 'laao-advertiser-portal' ),
-			'approved'     => __( 'Organization access approved.', 'laao-advertiser-portal' ),
-			'denied'       => __( 'The pending request was closed.', 'laao-advertiser-portal' ),
-			'removed'      => __( 'That person was removed from the organization.', 'laao-advertiser-portal' ),
-			'transferred'  => __( 'Organization ownership was transferred.', 'laao-advertiser-portal' ),
-			'renamed'      => __( 'Organization name updated.', 'laao-advertiser-portal' ),
-			'name_taken'   => __( 'That organization name is already in use.', 'laao-advertiser-portal' ),
-			'rate_limited' => __( 'Too many invitations were sent. Please wait before trying again.', 'laao-advertiser-portal' ),
-			default        => __( 'The organization change could not be completed.', 'laao-advertiser-portal' ),
+			'invited'      => __( 'Invitation sent.', 'aggressive-ads' ),
+			'approved'     => __( 'Organization access approved.', 'aggressive-ads' ),
+			'denied'       => __( 'The pending request was closed.', 'aggressive-ads' ),
+			'removed'      => __( 'That person was removed from the organization.', 'aggressive-ads' ),
+			'transferred'  => __( 'Organization ownership was transferred.', 'aggressive-ads' ),
+			'renamed'      => __( 'Organization name updated.', 'aggressive-ads' ),
+			'name_taken'   => __( 'That organization name is already in use.', 'aggressive-ads' ),
+			'rate_limited' => __( 'Too many invitations were sent. Please wait before trying again.', 'aggressive-ads' ),
+			default        => __( 'The organization change could not be completed.', 'aggressive-ads' ),
 		};
 	}
 
@@ -222,7 +222,7 @@ final class Organization_Actions implements Service {
 	 */
 	private function redirect( string $notice ): never {
 		wp_safe_redirect(
-			add_query_arg( 'laao_ads_org_notice', $notice, Routes::url( Request::ROUTE_ORGANIZATION ) )
+			add_query_arg( 'aggr_org_notice', $notice, Routes::url( Request::ROUTE_ORGANIZATION ) )
 		);
 
 		exit;

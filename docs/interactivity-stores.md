@@ -8,10 +8,10 @@ See [ADR-0004](adr/0004-server-rendered-plus-interactivity-api.md).
 
 | Namespace | Status | Owns |
 |---|---|---|
-| `laao-advertiser-portal/dialog` | **Shipped** | Shared dialog primitive — open/close, stack, focus, scroll lock |
-| `laao-advertiser-portal/wizard` | Planned | Step navigation, per-step validity, resume point |
-| `laao-advertiser-portal/upload` | Planned | File selection, progress, validation results, replace and remove |
-| `laao-advertiser-portal/autosave` | Planned | Debounced PATCH, dirty tracking, save status |
+| `aggr/dialog` | **Shipped** | Shared dialog primitive — open/close, stack, focus, scroll lock. Consumers: creative replace, live-ad preview, draft preview, remove confirmation |
+| `aggr/wizard` | **Shipped** | Step announcement, submit-step gating on the existing no-JS forms |
+| `aggr/upload` | **Shipped** | Drag/drop onto the native file input, client size/type/dimension checks |
+| `aggr/autosave` | **Shipped** | Debounced PATCH of the public allowlist, dirty/save status |
 
 Four namespaces, deliberately. A single `portal` store would become the client-side god object this architecture exists to avoid.
 
@@ -21,9 +21,13 @@ Author under `src/`; ship compiled `dist/` (see [build-and-release.md](build-and
 
 | Import map id | Source | Compiled |
 |---|---|---|
-| `@laao-ads/scroll-lock` | `src/interactivity/scroll-lock.ts` | `dist/interactivity/scroll-lock.js` |
-| `@laao-ads/helpers` | `src/interactivity/helpers.ts` | `dist/interactivity/helpers.js` |
-| `@laao-ads/dialog` | `src/interactivity/dialog.ts` | `dist/interactivity/dialog.js` |
+| `@aggr/scroll-lock` | `src/interactivity/scroll-lock.ts` | `dist/interactivity/scroll-lock.js` |
+| `@aggr/helpers` | `src/interactivity/helpers.ts` | `dist/interactivity/helpers.js` |
+| `@aggr/logic` | `src/interactivity/logic.ts` | `dist/interactivity/logic.js` |
+| `@aggr/dialog` | `src/interactivity/dialog.ts` | `dist/interactivity/dialog.js` |
+| `@aggr/wizard` | `src/interactivity/wizard.ts` | `dist/interactivity/wizard.js` |
+| `@aggr/autosave` | `src/interactivity/autosave.ts` | `dist/interactivity/autosave.js` |
+| `@aggr/upload` | `src/interactivity/upload.ts` | `dist/interactivity/upload.js` |
 
 `inc/Assets/class-assets.php` registers modules from `dist/`, reads `.asset.php`
 manifests, and early-enqueues the dialog store (plus `@wordpress/interactivity`)
@@ -34,7 +38,7 @@ on screens that need it so block themes print the import map in `wp_head`.
 A page can hold several dialogs and several upload zones. All instances of a component share one store namespace, so **state is keyed by a unique instance ID**, never held as a namespace-level scalar:
 
 ```php
-wp_interactivity_state( 'laao-advertiser-portal/dialog', array(
+wp_interactivity_state( 'aggr/dialog', array(
     'dialogs' => array(
         $unique_id => array( 'isOpen' => false, 'animationDuration' => 200 ),
     ),
@@ -45,11 +49,11 @@ The store reads `state.dialogs[ context.dialogId ]`. A namespace-level `state.is
 
 ## Dialog open/close is imperative
 
-Visibility is driven by `classList` on `.laao-ads-overlay` (`is-open`), not by
+Visibility is driven by `classList` on `.aggr-overlay` (`is-open`), not by
 a nested `data-wp-class` binding on `state.dialogs[context.dialogId].isOpen`.
 Triggers outside the overlay are bound in `init` / `bootAllDialogs` via
 `aria-controls` (click / Enter / Space); close controls use
-`data-laao-ads-dialog-close`. Store `isOpen` still updates for stack and
+`data-aggr-dialog-close`. Store `isOpen` still updates for stack and
 hydration bookkeeping.
 
 That matches Aggressive Apparel's modal and avoids a hard failure mode:
@@ -68,9 +72,9 @@ No-JS fallback remains `:target` on the overlay `id`. Accessibility contract:
 Every user-facing string is therefore translated in PHP and hydrated into state:
 
 ```php
-wp_interactivity_state( 'laao-advertiser-portal/upload', array(
+wp_interactivity_state( 'aggr/upload', array(
     'i18n' => array(
-        'uploading' => __( 'Uploading…', 'laao-advertiser-portal' ),
+        'uploading' => __( 'Uploading…', 'aggressive-ads' ),
     ),
 ) );
 ```
@@ -81,12 +85,13 @@ Hydration also carries server-derived configuration — REST route URLs, the non
 
 ## Pure logic lives outside the store
 
-`src/interactivity/logic.ts` (when the wizard/upload stores land) imports nothing
-from `@wordpress/interactivity`. It holds the decidable parts: which wizard
-step comes next given a validity map, whether a file's dimensions match a
-placement, how to format a size for display, what the exit animation should be.
-
-That import boundary is the whole point — Jest tests it directly with no runtime mocking. Anything requiring a mocked `@wordpress/interactivity` to test is a sign the logic belongs in `logic.ts`. Keep decidable helpers free of Interactivity imports (as `helpers.ts` / `scroll-lock.ts` already are).
+`src/interactivity/logic.ts` imports nothing from `@wordpress/interactivity`.
+It holds the decidable parts: which wizard step comes next, whether a file's
+dimensions match a placement, whether a visit to Submit is allowed. That
+import boundary is the whole point — Jest tests it directly with no runtime
+mocking. Anything requiring a mocked `@wordpress/interactivity` to test is a
+sign the logic belongs in `logic.ts`. Keep decidable helpers free of
+Interactivity imports (as `helpers.ts` / `scroll-lock.ts` already are).
 
 ## Module registration
 
@@ -97,7 +102,7 @@ Through `inc/Assets/class-assets.php`, which:
 - declares `@wordpress/interactivity` where the store needs it
 - reads version and dependencies from `.asset.php` manifests
 
-Shared modules (`dialog`, `scroll-lock`, `helpers`) are **registered but not enqueued** until a feature calls `enqueue_dialog()` (or the equivalent). A screen with no dialog ships no dialog code.
+Shared modules (`dialog`, `logic`, `scroll-lock`, `helpers`) are **registered but not enqueued** until a feature calls `enqueue_dialog()` or the campaign editor hydrates. A screen with no dialog ships no dialog code. Wizard, autosave and upload enqueue only on campaign detail.
 
 Modules are enqueued only on the portal route. The plugin adds nothing to any other page on the site.
 

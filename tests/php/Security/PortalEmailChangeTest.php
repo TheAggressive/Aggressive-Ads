@@ -2,18 +2,18 @@
 /**
  * Portal-owned email change security.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Security;
+namespace Aggressive\Ads\Tests\Security;
 
-use LAAO_Advertiser_Portal\Plugin;
-use LAAO_Advertiser_Portal\Portal\View_Data;
-use LAAO_Advertiser_Portal\Repository\User_Repository;
-use LAAO_Advertiser_Portal\Security\Roles;
-use LAAO_Advertiser_Portal\Workflow\Email_Change;
+use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Portal\View_Data;
+use Aggressive\Ads\Repository\User_Repository;
+use Aggressive\Ads\Security\Roles;
+use Aggressive\Ads\Workflow\Email_Change;
 use WP_UnitTestCase;
 
 /**
@@ -71,6 +71,8 @@ final class PortalEmailChangeTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Parameter.
+	 *
 	 * @param null|bool            $short_circuit Earlier short-circuit.
 	 * @param array<string, mixed> $mail          Mail args.
 	 */
@@ -127,7 +129,7 @@ final class PortalEmailChangeTest extends WP_UnitTestCase {
 
 		$denied = $this->changes->confirm( $other, $login, $token );
 		$this->assertWPError( $denied );
-		$this->assertSame( 'laao_ads_invalid_email_change', $denied->get_error_code() );
+		$this->assertSame( 'aggr_invalid_email_change', $denied->get_error_code() );
 		$this->assertSame( 'owner@example.test', strtolower( (string) get_userdata( $user_id )->user_email ) );
 
 		$this->assertTrue( $this->changes->confirm( $user_id, $login, $token ) );
@@ -136,7 +138,7 @@ final class PortalEmailChangeTest extends WP_UnitTestCase {
 
 		$replay = $this->changes->confirm( $user_id, $login, $token );
 		$this->assertWPError( $replay );
-		$this->assertSame( 'laao_ads_invalid_email_change', $replay->get_error_code() );
+		$this->assertSame( 'aggr_invalid_email_change', $replay->get_error_code() );
 	}
 
 	/** Taken addresses are suppressed without revealing the collision. */
@@ -166,7 +168,7 @@ final class PortalEmailChangeTest extends WP_UnitTestCase {
 	/** Details save still cannot set email even after email change exists. */
 	public function test_account_save_still_cannot_set_email(): void {
 		$user_id = $this->make_advertiser( 'locked@example.test' );
-		$actions = Plugin::instance()->container()->get( \LAAO_Advertiser_Portal\Portal\Account_Actions::class );
+		$actions = Plugin::instance()->container()->get( \Aggressive\Ads\Portal\Account_Actions::class );
 
 		$this->assertTrue(
 			$actions->process_save(

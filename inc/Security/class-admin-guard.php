@@ -2,15 +2,15 @@
 /**
  * Keeps advertisers out of wp-admin.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Security;
+namespace Aggressive\Ads\Security;
 
-use LAAO_Advertiser_Portal\Core\Service;
-use LAAO_Advertiser_Portal\Portal\Routes;
+use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Portal\Routes;
 
 /**
  * Redirects portal users away from the WordPress admin.

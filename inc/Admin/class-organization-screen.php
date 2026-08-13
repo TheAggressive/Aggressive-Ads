@@ -2,18 +2,18 @@
 /**
  * Staff organization suspension screen.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Admin;
+namespace Aggressive\Ads\Admin;
 
-use LAAO_Advertiser_Portal\Assets\Assets;
-use LAAO_Advertiser_Portal\Core\Service;
-use LAAO_Advertiser_Portal\Repository\Org_Repository;
-use LAAO_Advertiser_Portal\Security\Capabilities;
-use LAAO_Advertiser_Portal\Workflow\Organization_State_Manager;
+use Aggressive\Ads\Assets\Assets;
+use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Security\Capabilities;
+use Aggressive\Ads\Workflow\Organization_State_Manager;
 use WP_Error;
 
 /**
@@ -21,9 +21,9 @@ use WP_Error;
  */
 final class Organization_Screen implements Service {
 
-	public const MENU_SLUG         = 'laao-ads-organizations';
-	public const SUSPEND_ACTION    = 'laao_ads_suspend_organization';
-	public const REACTIVATE_ACTION = 'laao_ads_reactivate_organization';
+	public const MENU_SLUG         = 'aggr-organizations';
+	public const SUSPEND_ACTION    = 'aggr_suspend_organization';
+	public const REACTIVATE_ACTION = 'aggr_reactivate_organization';
 
 	/**
 	 * Hook suffix assigned by WordPress.
@@ -53,20 +53,16 @@ final class Organization_Screen implements Service {
 	}
 
 	/**
-	 * Registers a capability-owned top-level screen.
-	 *
-	 * Kept separate from the review menu so organization operations do not
-	 * require campaign-review access.
+	 * Registers a capability-owned submenu under Advertising.
 	 */
 	public function register_menu(): void {
-		$hook = add_menu_page(
-			__( 'Organizations', 'laao-advertiser-portal' ),
-			__( 'Organizations', 'laao-advertiser-portal' ),
+		$hook = add_submenu_page(
+			Menu::PARENT_SLUG,
+			__( 'Organizations', 'aggressive-ads' ),
+			__( 'Organizations', 'aggressive-ads' ),
 			Capabilities::MANAGE_ORGS,
 			self::MENU_SLUG,
-			array( $this, 'render' ),
-			'dashicons-building',
-			28
+			array( $this, 'render' )
 		);
 
 		$this->hook_suffix = is_string( $hook ) ? $hook : '';
@@ -83,23 +79,23 @@ final class Organization_Screen implements Service {
 		}
 
 		$this->enqueue_style( Assets::HANDLE, Assets::STYLE_PORTAL );
-		$this->enqueue_style( 'laao-ads-admin', Assets::STYLE_ADMIN, array( Assets::HANDLE ) );
+		$this->enqueue_style( 'aggr-admin', Assets::STYLE_ADMIN, array( Assets::HANDLE ) );
 	}
 
 	/** Renders the authorized organization table. */
 	public function render(): void {
 		if ( ! current_user_can( Capabilities::MANAGE_ORGS ) ) {
 			wp_die(
-				esc_html__( 'You do not have permission to view this page.', 'laao-advertiser-portal' ),
+				esc_html__( 'You do not have permission to view this page.', 'aggressive-ads' ),
 				'',
 				array( 'response' => 403 )
 			);
 		}
 
-		$laao_ads_view   = $this->data->view();
-		$laao_ads_notice = $this->request_notice();
+		$aggr_view   = $this->data->view();
+		$aggr_notice = $this->request_notice();
 
-		require LAAO_ADS_PLUGIN_DIR . 'templates/admin/organizations.php';
+		require AGGR_PLUGIN_DIR . 'templates/admin/organizations.php';
 	}
 
 	/** Verifies and suspends one organization. */
@@ -150,9 +146,9 @@ final class Organization_Screen implements Service {
 	public static function notice_for( string $result, string $code ): ?array {
 		if ( 'success' === $result ) {
 			$message = match ( $code ) {
-				'organization_suspended'   => __( 'Organization suspended.', 'laao-advertiser-portal' ),
-				'organization_reactivated' => __( 'Organization reactivated.', 'laao-advertiser-portal' ),
-				default                    => __( 'Organization updated.', 'laao-advertiser-portal' ),
+				'organization_suspended'   => __( 'Organization suspended.', 'aggressive-ads' ),
+				'organization_reactivated' => __( 'Organization reactivated.', 'aggressive-ads' ),
+				default                    => __( 'Organization updated.', 'aggressive-ads' ),
 			};
 
 			return array(
@@ -166,10 +162,10 @@ final class Organization_Screen implements Service {
 		}
 
 		$message = match ( $code ) {
-			'laao_ads_forbidden'            => __( 'You do not have permission to manage organizations.', 'laao-advertiser-portal' ),
-			'laao_ads_org_not_found'        => __( 'That organization could not be found.', 'laao-advertiser-portal' ),
-			'laao_ads_org_state_not_saved'  => __( 'The organization state could not be saved. Try again.', 'laao-advertiser-portal' ),
-			default                         => __( 'The organization could not be updated.', 'laao-advertiser-portal' ),
+			'aggr_forbidden'            => __( 'You do not have permission to manage organizations.', 'aggressive-ads' ),
+			'aggr_org_not_found'        => __( 'That organization could not be found.', 'aggressive-ads' ),
+			'aggr_org_state_not_saved'  => __( 'The organization state could not be saved. Try again.', 'aggressive-ads' ),
+			default                         => __( 'The organization could not be updated.', 'aggressive-ads' ),
 		};
 
 		return array(
@@ -187,7 +183,7 @@ final class Organization_Screen implements Service {
 	private function handle_state_change( string $action, string $state ): void {
 		if ( ! current_user_can( Capabilities::MANAGE_ORGS ) ) {
 			wp_die(
-				esc_html__( 'You do not have permission to do that.', 'laao-advertiser-portal' ),
+				esc_html__( 'You do not have permission to do that.', 'aggressive-ads' ),
 				'',
 				array( 'response' => 403 )
 			);
@@ -208,7 +204,7 @@ final class Organization_Screen implements Service {
 	 * @param array<int, string> $dependencies Style dependencies.
 	 */
 	private function enqueue_style( string $handle, string $relative, array $dependencies = array() ): void {
-		$path = LAAO_ADS_PLUGIN_DIR . $relative;
+		$path = AGGR_PLUGIN_DIR . $relative;
 
 		if ( ! is_file( $path ) ) {
 			return;
@@ -218,9 +214,9 @@ final class Organization_Screen implements Service {
 
 		wp_enqueue_style(
 			$handle,
-			LAAO_ADS_PLUGIN_URL . $relative,
+			AGGR_PLUGIN_URL . $relative,
 			$dependencies,
-			false === $mtime ? LAAO_ADS_VERSION : (string) $mtime
+			false === $mtime ? AGGR_VERSION : (string) $mtime
 		);
 	}
 
@@ -240,8 +236,8 @@ final class Organization_Screen implements Service {
 		wp_safe_redirect(
 			add_query_arg(
 				array(
-					'laao_ads_result' => $is_error ? 'error' : 'success',
-					'laao_ads_code'   => $code,
+					'aggr_result' => $is_error ? 'error' : 'success',
+					'aggr_code'   => $code,
 				),
 				self::url()
 			),
@@ -258,9 +254,9 @@ final class Organization_Screen implements Service {
 	 */
 	private function request_notice(): ?array {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only, allowlisted state selecting fixed copy.
-		$result = isset( $_GET['laao_ads_result'] ) ? sanitize_key( wp_unslash( $_GET['laao_ads_result'] ) ) : '';
+		$result = isset( $_GET['aggr_result'] ) ? sanitize_key( wp_unslash( $_GET['aggr_result'] ) ) : '';
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only, allowlisted state selecting fixed copy.
-		$code = isset( $_GET['laao_ads_code'] ) ? sanitize_key( wp_unslash( $_GET['laao_ads_code'] ) ) : '';
+		$code = isset( $_GET['aggr_code'] ) ? sanitize_key( wp_unslash( $_GET['aggr_code'] ) ) : '';
 
 		return self::notice_for( $result, $code );
 	}

@@ -2,14 +2,14 @@
 /**
  * Campaign status registration tests.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Unit\Core;
+namespace Aggressive\Ads\Tests\Unit\Core;
 
-use LAAO_Advertiser_Portal\Core\Post_Statuses;
+use Aggressive\Ads\Core\Post_Statuses;
 use Yoast\PHPUnitPolyfills\TestCases\TestCase;
 
 /**
@@ -20,9 +20,8 @@ final class PostStatusesTest extends TestCase {
 	/**
 	 * Every slug fits wp_posts.post_status.
 	 *
-	 * This is the whole reason for the lap_ prefix: laao_ads_changes_requested
-	 * is 26 characters, which would truncate on write and then never match on
-	 * read, producing campaigns in no status at all.
+	 * `aggr_scheduled` is 14 characters. A longer invented slug would
+	 * truncate on write and then never match on read.
 	 *
 	 * @return void
 	 */
@@ -37,7 +36,7 @@ final class PostStatusesTest extends TestCase {
 	}
 
 	/**
-	 * Eleven statuses, all lap_-prefixed, none duplicated.
+	 * Eleven statuses, all aggr_-prefixed, none duplicated.
 	 *
 	 * @return void
 	 */
@@ -48,7 +47,7 @@ final class PostStatusesTest extends TestCase {
 		$this->assertSame( $all, array_unique( $all ) );
 
 		foreach ( $all as $slug ) {
-			$this->assertStringStartsWith( 'lap_', $slug );
+			$this->assertStringStartsWith( 'aggr_', $slug );
 		}
 	}
 
@@ -121,8 +120,7 @@ final class PostStatusesTest extends TestCase {
 	}
 
 	/**
-	 * The published set is exactly the states with AdSanity objects behind
-	 * them — the ones a cancellation has to unpublish.
+	 * The published set is the states native fill treats as occupying a slot.
 	 *
 	 * @return void
 	 */
@@ -163,8 +161,8 @@ final class PostStatusesTest extends TestCase {
 	public function test_foreign_statuses_are_rejected(): void {
 		$this->assertFalse( Post_Statuses::is_valid( 'publish' ) );
 		$this->assertFalse( Post_Statuses::is_valid( 'draft' ) );
-		$this->assertFalse( Post_Statuses::is_valid( 'lap_' ) );
+		$this->assertFalse( Post_Statuses::is_valid( 'aggr_' ) );
 		$this->assertFalse( Post_Statuses::is_valid( '' ) );
-		$this->assertFalse( Post_Statuses::is_valid( 'lap_approved_by_me' ) );
+		$this->assertFalse( Post_Statuses::is_valid( 'aggr_approved_by_me' ) );
 	}
 }

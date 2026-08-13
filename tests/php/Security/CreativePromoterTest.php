@@ -2,18 +2,18 @@
 /**
  * Promotion from private storage into the Media Library.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Security;
+namespace Aggressive\Ads\Tests\Security;
 
-use LAAO_Advertiser_Portal\Core\Post_Types;
-use LAAO_Advertiser_Portal\Repository\Creative_Repository;
-use LAAO_Advertiser_Portal\Storage\Private_Storage;
-use LAAO_Advertiser_Portal\Workflow\Creative_Promoter;
-use LAAO_Advertiser_Portal\Workflow\Creative_Uploader;
+use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Storage\Private_Storage;
+use Aggressive\Ads\Workflow\Creative_Promoter;
+use Aggressive\Ads\Workflow\Creative_Uploader;
 use WP_Error;
 use WP_UnitTestCase;
 
@@ -96,7 +96,7 @@ final class CreativePromoterTest extends WP_UnitTestCase {
 		imagepng( $image );
 		$bytes = (string) ob_get_clean();
 
-		$temp = wp_tempnam( 'laao-ads-promote' );
+		$temp = wp_tempnam( 'aggr-promote' );
 		file_put_contents( $temp, $bytes );
 		$this->temporary[] = $temp;
 
@@ -186,7 +186,7 @@ final class CreativePromoterTest extends WP_UnitTestCase {
 		$result = $this->promoter->promote( $creative_id );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'laao_ads_creative_changed', $result->get_error_code() );
+		$this->assertSame( 'aggr_creative_changed', $result->get_error_code() );
 		$this->assertSame( 0, $this->creatives->attachment_id( $creative_id ) );
 	}
 
@@ -222,7 +222,7 @@ final class CreativePromoterTest extends WP_UnitTestCase {
 		$result = $this->promoter->promote( $creative_id );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'laao_ads_creative_file_missing', $result->get_error_code() );
+		$this->assertSame( 'aggr_creative_file_missing', $result->get_error_code() );
 	}
 
 	/**
@@ -240,7 +240,7 @@ final class CreativePromoterTest extends WP_UnitTestCase {
 		$result = $this->promoter->promote( $creative_id );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'laao_ads_creative_file_missing', $result->get_error_code() );
+		$this->assertSame( 'aggr_creative_file_missing', $result->get_error_code() );
 	}
 
 	/**

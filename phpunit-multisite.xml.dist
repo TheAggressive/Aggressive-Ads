@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<!--
+	Multisite tenancy. Same WordPress bootstrap as phpunit-integration.xml.dist,
+	with WP_TESTS_MULTISITE so factory()->blog exists and post ids restart per
+	site. A separate file because PHPUnit allows exactly one bootstrap per
+	config, and because failOnSkipped forbids parking these assertions behind
+	markTestSkipped() on the single-site lane.
+
+	See docs/adr/0034-site-scoped-tenancy.md.
+
+	Run with: pnpm test:php:multisite
+-->
+<phpunit
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+	bootstrap="tests/php/bootstrap-wp.php"
+	colors="true"
+	beStrictAboutTestsThatDoNotTestAnything="true"
+	convertDeprecationsToExceptions="true"
+	failOnWarning="true"
+	failOnRisky="true"
+	failOnSkipped="true"
+	failOnIncomplete="true"
+	cacheResultFile=".phpunit.cache/multisite.result"
+	>
+	<php>
+		<const name="WP_TESTS_MULTISITE" value="1"/>
+	</php>
+	<testsuites>
+		<testsuite name="multisite">
+			<directory suffix="Test.php">tests/php/Multisite</directory>
+		</testsuite>
+	</testsuites>
+
+	<coverage>
+		<include>
+			<directory suffix=".php">inc</directory>
+		</include>
+	</coverage>
+</phpunit>

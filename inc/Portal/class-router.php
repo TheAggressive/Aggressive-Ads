@@ -2,15 +2,16 @@
 /**
  * Putting the portal on a URL.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Portal;
+namespace Aggressive\Ads\Portal;
 
-use LAAO_Advertiser_Portal\Core\Service;
-use LAAO_Advertiser_Portal\Security\Capabilities;
+use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Security\Capabilities;
+use Aggressive\Ads\Workflow\Advertiser_Registration;
 use WP_Query;
 
 /**
@@ -31,11 +32,11 @@ final class Router implements Service {
 	 */
 	public const REWRITE_VERSION = 1;
 
-	public const QUERY_PORTAL = 'laao_ads_portal';
-	public const QUERY_ROUTE  = 'laao_ads_route';
-	public const QUERY_OBJECT = 'laao_ads_object';
+	public const QUERY_PORTAL = 'aggr_portal';
+	public const QUERY_ROUTE  = 'aggr_route';
+	public const QUERY_OBJECT = 'aggr_object';
 
-	public const OPTION_REWRITE_VERSION = 'laao_ads_rewrite_version';
+	public const OPTION_REWRITE_VERSION = 'aggr_rewrite_version';
 
 	/**
 	 * The parsed request, once one has been recognised.
@@ -55,6 +56,14 @@ final class Router implements Service {
 	 * @var bool
 	 */
 	private bool $is_portal_url = false;
+
+	/**
+	 * Constructor. Reads nothing.
+	 *
+	 * @param Advertiser_Registration $registration Signup module + invite exception.
+	 */
+	public function __construct( private readonly Advertiser_Registration $registration ) {
+	}
 
 	/**
 	 * Attaches everything.
@@ -192,6 +201,22 @@ final class Router implements Service {
 		 * match the URL.
 		 */
 		if ( null === $this->request ) {
+			$query->set_404();
+
+			return;
+		}
+
+		/*
+		 * Public signup is a kill-switch: off means the route is absent, not a
+		 * closed form. An invitation token is membership, not open registration,
+		 * so that URL still resolves.
+		 */
+		if (
+			Request::ROUTE_SIGNUP === $this->request->route
+			&& ! $this->registration->is_route_available()
+			&& '' === Signup_Actions::request_invite_token()
+		) {
+			$this->request = null;
 			$query->set_404();
 
 			return;
@@ -348,7 +373,7 @@ final class Router implements Service {
 	 * @return string Empty when it does not exist.
 	 */
 	private function locate( string $file ): string {
-		$path = LAAO_ADS_PLUGIN_DIR . 'templates/portal/' . $file;
+		$path = AGGR_PLUGIN_DIR . 'templates/portal/' . $file;
 
 		return is_file( $path ) ? $path : '';
 	}

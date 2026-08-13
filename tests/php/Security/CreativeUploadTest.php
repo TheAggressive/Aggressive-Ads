@@ -2,16 +2,16 @@
 /**
  * Upload security.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Security;
+namespace Aggressive\Ads\Tests\Security;
 
-use LAAO_Advertiser_Portal\Domain\Upload_Rules;
-use LAAO_Advertiser_Portal\Storage\Private_Storage;
-use LAAO_Advertiser_Portal\Workflow\Creative_Uploader;
+use Aggressive\Ads\Domain\Upload_Rules;
+use Aggressive\Ads\Storage\Private_Storage;
+use Aggressive\Ads\Workflow\Creative_Uploader;
 use WP_Error;
 use WP_UnitTestCase;
 
@@ -82,7 +82,7 @@ final class CreativeUploadTest extends WP_UnitTestCase {
 	 * @return array<string, mixed>
 	 */
 	private function upload( string $contents, string $name ): array {
-		$path = wp_tempnam( 'laao-ads-test' );
+		$path = wp_tempnam( 'aggr-test' );
 
 		file_put_contents( $path, $contents );
 
@@ -212,7 +212,7 @@ final class CreativeUploadTest extends WP_UnitTestCase {
 		$result = $this->uploader->accept( $this->upload( $this->png(), 'banner.gif' ) );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'laao_ads_' . Upload_Rules::ERROR_TYPE_MISMATCH, $result->get_error_code() );
+		$this->assertSame( 'aggr_' . Upload_Rules::ERROR_TYPE_MISMATCH, $result->get_error_code() );
 	}
 
 	/**
@@ -226,7 +226,7 @@ final class CreativeUploadTest extends WP_UnitTestCase {
 		$result = $this->uploader->accept( $this->upload( $oversized, 'big.png' ) );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'laao_ads_' . Upload_Rules::ERROR_TOO_LARGE, $result->get_error_code() );
+		$this->assertSame( 'aggr_' . Upload_Rules::ERROR_TOO_LARGE, $result->get_error_code() );
 	}
 
 	/**
@@ -321,7 +321,7 @@ final class CreativeUploadTest extends WP_UnitTestCase {
 	public function test_traversal_cannot_reach_a_real_file_outside_the_root(): void {
 		$this->storage->ensure();
 
-		$outside = dirname( $this->storage->root() ) . '/laao-ads-traversal-target.txt';
+		$outside = dirname( $this->storage->root() ) . '/aggr-traversal-target.txt';
 
 		file_put_contents( $outside, 'secret' );
 		$this->temporary[] = $outside;
@@ -348,7 +348,7 @@ final class CreativeUploadTest extends WP_UnitTestCase {
 
 		// The dimensions have to be readable, or this would be testing that a
 		// corrupt file is rejected rather than that the cap works.
-		$temp = wp_tempnam( 'laao-ads-bomb' );
+		$temp = wp_tempnam( 'aggr-bomb' );
 		file_put_contents( $temp, $header );
 		$this->temporary[] = $temp;
 
@@ -359,7 +359,7 @@ final class CreativeUploadTest extends WP_UnitTestCase {
 		$result = $this->uploader->accept( $this->upload( $header, 'bomb.png' ) );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'laao_ads_' . Upload_Rules::ERROR_TOO_MANY_PIXELS, $result->get_error_code() );
+		$this->assertSame( 'aggr_' . Upload_Rules::ERROR_TOO_MANY_PIXELS, $result->get_error_code() );
 	}
 
 	/**

@@ -2,24 +2,24 @@
 /**
  * The clock-driven half of the lifecycle.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Integration;
+namespace Aggressive\Ads\Tests\Integration;
 
-use LAAO_Advertiser_Portal\Core\Post_Statuses;
-use LAAO_Advertiser_Portal\Core\Post_Types;
-use LAAO_Advertiser_Portal\Domain\Transition_Table;
-use LAAO_Advertiser_Portal\Install\Installer;
-use LAAO_Advertiser_Portal\Plugin;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Repository;
-use LAAO_Advertiser_Portal\Security\Ownership;
-use LAAO_Advertiser_Portal\Security\Roles;
-use LAAO_Advertiser_Portal\Workflow\Campaign_Clock;
+use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Domain\Transition_Table;
+use Aggressive\Ads\Install\Installer;
+use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Security\Ownership;
+use Aggressive\Ads\Security\Roles;
+use Aggressive\Ads\Workflow\Campaign_Clock;
 use WP_UnitTestCase;
 
 /**
@@ -102,7 +102,6 @@ final class CampaignClockTest extends WP_UnitTestCase {
 		update_post_meta( $campaign_id, Campaign_Repository::META_END_TS, $end );
 
 		if ( $published ) {
-			// GUARD_PUBLISHED asks whether AdSanity is actually holding an ad.
 			$this->campaigns->add_provider_ad_id( $campaign_id, 4242 );
 		}
 
@@ -209,15 +208,14 @@ final class CampaignClockTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * An approved campaign with nothing published behind it does not go live.
+	 * An approved campaign advances on the clock without a provider ad id.
 	 *
-	 * GUARD_PUBLISHED is what stops the portal announcing that an advertisement
-	 * is running when AdSanity is holding nothing — the failure mode that ends
-	 * with billing for a campaign nobody ever saw.
+	 * Native fill reads campaign status. There is no downstream ad CPT to wait
+	 * for, so an approved window that has opened goes live.
 	 *
 	 * @return void
 	 */
-	public function test_an_approved_campaign_with_no_provider_ad_does_not_advance(): void {
+	public function test_an_approved_campaign_with_no_provider_ad_advances(): void {
 		$campaign_id = $this->campaign(
 			Post_Statuses::APPROVED,
 			time() - HOUR_IN_SECONDS,
@@ -225,8 +223,8 @@ final class CampaignClockTest extends WP_UnitTestCase {
 			false
 		);
 
-		$this->assertSame( 0, $this->clock->reconcile() );
-		$this->assertSame( Post_Statuses::APPROVED, $this->campaigns->status( $campaign_id ) );
+		$this->assertSame( 1, $this->clock->reconcile() );
+		$this->assertSame( Post_Statuses::LIVE, $this->campaigns->status( $campaign_id ) );
 	}
 
 	/**

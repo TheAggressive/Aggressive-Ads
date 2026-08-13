@@ -2,17 +2,17 @@
 /**
  * Migration walker behaviour.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Upgrade;
+namespace Aggressive\Ads\Tests\Upgrade;
 
-use LAAO_Advertiser_Portal\Install\Installer;
-use LAAO_Advertiser_Portal\Install\Upgrader;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Security\Roles;
+use Aggressive\Ads\Install\Installer;
+use Aggressive\Ads\Install\Upgrader;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Security\Roles;
 use RuntimeException;
 use WP_UnitTestCase;
 

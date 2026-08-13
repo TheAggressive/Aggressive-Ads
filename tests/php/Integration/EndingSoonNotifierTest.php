@@ -2,24 +2,24 @@
 /**
  * Ending-soon reminders against real WordPress.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Integration;
+namespace Aggressive\Ads\Tests\Integration;
 
-use LAAO_Advertiser_Portal\Core\Post_Statuses;
-use LAAO_Advertiser_Portal\Core\Post_Types;
-use LAAO_Advertiser_Portal\Install\Installer;
-use LAAO_Advertiser_Portal\Notification\Ending_Soon_Mailer;
-use LAAO_Advertiser_Portal\Plugin;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Repository;
-use LAAO_Advertiser_Portal\Security\Ownership;
-use LAAO_Advertiser_Portal\Security\Roles;
-use LAAO_Advertiser_Portal\Workflow\Ending_Soon_Notifier;
+use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Install\Installer;
+use Aggressive\Ads\Notification\Ending_Soon_Mailer;
+use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Security\Ownership;
+use Aggressive\Ads\Security\Roles;
+use Aggressive\Ads\Workflow\Ending_Soon_Notifier;
 use WP_UnitTestCase;
 
 /**
@@ -28,41 +28,57 @@ use WP_UnitTestCase;
 final class EndingSoonNotifierTest extends WP_UnitTestCase {
 
 	/**
+	 * Property.
+	 *
 	 * @var Ending_Soon_Notifier
 	 */
 	private Ending_Soon_Notifier $notifier;
 
 	/**
+	 * Property.
+	 *
 	 * @var Ending_Soon_Mailer
 	 */
 	private Ending_Soon_Mailer $mailer;
 
 	/**
+	 * Property.
+	 *
 	 * @var Campaign_Repository
 	 */
 	private Campaign_Repository $campaigns;
 
 	/**
+	 * Property.
+	 *
 	 * @var Audit_Repository
 	 */
 	private Audit_Repository $audit;
 
 	/**
+	 * Property.
+	 *
 	 * @var int
 	 */
 	private int $org_id;
 
 	/**
+	 * Property.
+	 *
 	 * @var int
 	 */
 	private int $member_id;
 
 	/**
+	 * Property.
+	 *
 	 * @var array<int, array<string, mixed>>
 	 */
 	private array $mail = array();
 
 	/**
+	 * Sets up collaborators and captures mail.
+	 *
 	 * @return void
 	 */
 	public function set_up(): void {
@@ -98,6 +114,8 @@ final class EndingSoonNotifierTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Removes the mail capture.
+	 *
 	 * @return void
 	 */
 	public function tear_down(): void {
@@ -106,6 +124,8 @@ final class EndingSoonNotifierTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Parameter.
+	 *
 	 * @param null|bool            $short_circuit Unused.
 	 * @param array<string, mixed> $atts          Mail attributes.
 	 * @return bool
@@ -183,6 +203,8 @@ final class EndingSoonNotifierTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Parameter.
+	 *
 	 * @param string $status Campaign status.
 	 * @param int    $end_ts End timestamp.
 	 * @return int

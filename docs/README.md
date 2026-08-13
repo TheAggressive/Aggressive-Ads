@@ -1,6 +1,10 @@
-# LAAO Advertiser Portal — documentation
+# Aggressive Ads — documentation
 
-The portal owns the advertising campaign workflow. AdSanity owns ad delivery. The LAAO theme owns site presentation. Those boundaries hold throughout this codebase, and most of what follows exists to keep them from eroding.
+The plugin owns the advertising campaign workflow and is the source of truth
+for which creative fills each slot ([ADR-0031](adr/0031-native-is-the-only-publisher.md)).
+The host theme owns site presentation and must embed `aggr/placement` (or the
+PHP helper / shortcode). Those boundaries hold throughout this codebase, and
+most of what follows exists to keep them from eroding.
 
 ## Reading order
 
@@ -10,7 +14,7 @@ New contributors should read these in order. Each assumes the previous.
 2. [domain-model.md](domain-model.md) — the five entities, their storage, their invariants
 3. [campaign-workflow.md](campaign-workflow.md) — the state machine every status write goes through
 4. [roles-and-capabilities.md](roles-and-capabilities.md) — who may do what, and why ownership is org-scoped
-5. [adsanity-integration.md](adsanity-integration.md) — what AdSanity actually does, verified against its source
+5. [adsanity-integration.md](adsanity-integration.md) — historical notes on the former publish adapter
 
 Then, as needed:
 
@@ -27,7 +31,8 @@ Then, as needed:
 | [accessibility.md](accessibility.md) | WCAG target, dialog contract, creative alt text |
 | [i18n.md](i18n.md) | Text domain, POT drift gate, the plugin-vs-theme `.mo` naming trap |
 | [known-issues.md](known-issues.md) | Live list of things that are true and annoying |
-| [roadmap.md](roadmap.md) | Phases 2–11 |
+| [roadmap.md](roadmap.md) | Phases 1–11 (what already shipped vs remaining product) |
+| [suite-roadmap.md](suite-roadmap.md) | Aggressive Ads suite: identity, admin shell, native delivery, cache, tracking |
 
 ## Architecture Decision Records
 
@@ -42,8 +47,8 @@ Then, as needed:
 | [0003](adr/0003-audit-log-in-custom-table.md) | Audit log in a custom indexed table |
 | [0004](adr/0004-server-rendered-plus-interactivity-api.md) | Server-rendered templates + Interactivity API, no SPA |
 | [0005](adr/0005-portal-route-via-rewrite-rule.md) | Portal route via rewrite rule + `template_include` |
-| [0006](adr/0006-adsanity-is-downstream-publish-target.md) | AdSanity is a downstream publish target, not the system of record |
-| [0007](adr/0007-placement-mapping-is-explicit-data.md) | Placement→ad-group mapping is explicit data, keyed on term ID, fails closed |
+| [0006](adr/0006-adsanity-is-downstream-publish-target.md) | ~~AdSanity as publish adapter~~ — superseded by 0031 |
+| [0007](adr/0007-placement-mapping-is-explicit-data.md) | ~~Placement→ad-group mapping~~ — superseded by 0031 |
 | [0008](adr/0008-explicit-transition-table.md) | An explicit transition table owns every status write |
 | [0009](adr/0009-org-scoped-map-meta-cap.md) | Custom roles + org-scoped `map_meta_cap` |
 | [0010](adr/0010-two-stage-creative-storage.md) | Two-stage creative storage |
@@ -51,12 +56,26 @@ Then, as needed:
 | [0012](adr/0012-own-autoloader-in-production.md) | The plugin's own autoloader is the production autoloader |
 | [0013](adr/0013-phpunit-9-with-wp-test-suite.md) | PHPUnit 9.6 + the WP core test suite, two bootstraps |
 | [0014](adr/0014-version-driven-idempotent-installer.md) | Version-driven idempotent installer, not activation-hook-only |
-| [0015](adr/0015-adsanity-contract-stub-for-ci.md) | AdSanity contract stub for CI, plus a drift test |
+| [0015](adr/0015-adsanity-contract-stub-for-ci.md) | ~~AdSanity contract stub for CI~~ — superseded by 0031 |
 | [0016](adr/0016-utc-unix-integer-times.md) | All portal times are UTC Unix integers |
-| [0017](adr/0017-self-contained-design-tokens.md) | Self-contained `--laao-ads-*` tokens with literal fallbacks |
+| [0017](adr/0017-self-contained-design-tokens.md) | Self-contained `--aggr-*` tokens with literal fallbacks |
 | [0018](adr/0018-portal-ui-from-the-design-with-three-deviations.md) | Portal UI follows the design, with three deviations |
 | [0019](adr/0019-private-organization-matching-and-approved-membership.md) | Organization matching is private and membership requires approval |
 | [0020](adr/0020-portal-owned-email-change.md) | Portal-owned email change with HMAC token and confirm-email route |
+| [0021](adr/0021-agate-identity.md) | ~~Agate / `agate_`~~ — superseded by 0022 |
+| [0022](adr/0022-aggressive-ads-identity.md) | Product identity is Aggressive Ads; one `aggr_` prefix |
+| [0023](adr/0023-settings-and-module-flags.md) | One `aggr_settings` option; a disabled module is absent |
+| [0024](adr/0024-white-label-tokens.md) | White-label via token values; contrast-gated save |
+| [0025](adr/0025-unified-admin-menu.md) | One Advertising menu; submenus keep distinct caps |
+| [0026](adr/0026-native-delivery.md) | Native delivery; live set is ours (adapter dual-write superseded by 0031) |
+| [0027](adr/0027-cache-safe-fill.md) | Cached HTML is a reserved slot; counts happen after paint |
+| [0028](adr/0028-staff-package-catalogue.md) | Staff package catalogue is the only writer; campaigns keep snapshots |
+| [0029](adr/0029-campaign-copy-is-not-a-transition.md) | Renew and duplicate copy into a new draft, never reopen |
+| [0030](adr/0030-reporting-from-native-rollups.md) | Reporting reads native rollups; tiles when Reporting is on |
+| [0031](adr/0031-native-is-the-only-publisher.md) | Native is the only publisher; Inventory is the placement catalogue |
+| [0032](adr/0032-equal-rotation-counts-follow-the-fill.md) | Equal rotation among live campaigns; counts follow the filled token |
+| [0033](adr/0033-native-delivery-is-not-a-staff-module.md) | Native delivery is not a Modules checkbox; it cannot be turned off |
+| [0034](adr/0034-site-scoped-tenancy.md) | One WordPress site is one publisher tenant; fill tokens bind `blog_id` |
 
 ## Conventions
 

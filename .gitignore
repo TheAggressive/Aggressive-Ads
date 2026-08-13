@@ -26,6 +26,9 @@
 /languages/*.mo
 /languages/*.l10n.php
 
+# Accidental nested wp-env / copy, never part of the plugin.
+/wp-content/
+
 # Local environment
 /.wp-env.override.json
 .env

@@ -2,14 +2,14 @@
 /**
  * Post type registration argument tests.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Unit\Core;
+namespace Aggressive\Ads\Tests\Unit\Core;
 
-use LAAO_Advertiser_Portal\Core\Post_Types;
+use Aggressive\Ads\Core\Post_Types;
 use Yoast\PHPUnitPolyfills\TestCases\TestCase;
 
 /**
@@ -45,11 +45,11 @@ final class PostTypesTest extends TestCase {
 	public function test_declares_exactly_five_post_types(): void {
 		$this->assertSame(
 			array(
-				'laao_ads_org',
-				'laao_ads_placement',
-				'laao_ads_package',
-				'laao_ads_campaign',
-				'laao_ads_creative',
+				'aggr_org',
+				'aggr_placement',
+				'aggr_package',
+				'aggr_campaign',
+				'aggr_creative',
 			),
 			Post_Types::all()
 		);
@@ -137,12 +137,12 @@ final class PostTypesTest extends TestCase {
 	public function test_only_advertiser_owned_types_support_author(): void {
 		$args = Post_Types::registration_args();
 
-		$this->assertNotContains( 'author', $args['laao_ads_placement']['supports'] );
-		$this->assertNotContains( 'author', $args['laao_ads_package']['supports'] );
+		$this->assertNotContains( 'author', $args['aggr_placement']['supports'] );
+		$this->assertNotContains( 'author', $args['aggr_package']['supports'] );
 
-		$this->assertContains( 'author', $args['laao_ads_org']['supports'] );
-		$this->assertContains( 'author', $args['laao_ads_campaign']['supports'] );
-		$this->assertContains( 'author', $args['laao_ads_creative']['supports'] );
+		$this->assertContains( 'author', $args['aggr_org']['supports'] );
+		$this->assertContains( 'author', $args['aggr_campaign']['supports'] );
+		$this->assertContains( 'author', $args['aggr_creative']['supports'] );
 	}
 
 	/**
@@ -156,8 +156,8 @@ final class PostTypesTest extends TestCase {
 		$this->assertSame( Post_Types::all(), array_keys( $names ) );
 
 		foreach ( $names as $slug => $pair ) {
-			$this->assertStringStartsWith( 'laao_ads_', $pair['singular'], "{$slug}: singular" );
-			$this->assertStringStartsWith( 'laao_ads_', $pair['plural'], "{$slug}: plural" );
+			$this->assertStringStartsWith( 'aggr_', $pair['singular'], "{$slug}: singular" );
+			$this->assertStringStartsWith( 'aggr_', $pair['plural'], "{$slug}: plural" );
 			$this->assertNotSame( $pair['singular'], $pair['plural'], "{$slug}: singular and plural must differ" );
 		}
 	}

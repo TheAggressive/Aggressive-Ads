@@ -2,15 +2,15 @@
 /**
  * Batch campaign queries for clock, reminder and retention sweeps.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Repository;
+namespace Aggressive\Ads\Repository;
 
-use LAAO_Advertiser_Portal\Core\Post_Statuses;
-use LAAO_Advertiser_Portal\Core\Post_Types;
+use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Core\Post_Types;
 
 /**
  * Cron-facing campaign id lookups.

@@ -2,47 +2,59 @@
 /**
  * The composition root.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal;
+namespace Aggressive\Ads;
 
-use LAAO_Advertiser_Portal\Admin\Creative_Change_Actions;
-use LAAO_Advertiser_Portal\Admin\Organization_Screen;
-use LAAO_Advertiser_Portal\Admin\Placement_Mapping_Screen;
-use LAAO_Advertiser_Portal\Admin\Review_Screen;
-use LAAO_Advertiser_Portal\Assets\Assets;
-use LAAO_Advertiser_Portal\Core\Post_Statuses;
-use LAAO_Advertiser_Portal\Core\Post_Types;
-use LAAO_Advertiser_Portal\Core\Service;
-use LAAO_Advertiser_Portal\Install\Installer;
-use LAAO_Advertiser_Portal\Install\Upgrader;
-use LAAO_Advertiser_Portal\Notification\Ending_Soon_Mailer;
-use LAAO_Advertiser_Portal\Notification\Notification_Service;
-use LAAO_Advertiser_Portal\Portal\Account_Actions;
-use LAAO_Advertiser_Portal\Portal\Campaign_Actions;
-use LAAO_Advertiser_Portal\Portal\Creative_Actions;
-use LAAO_Advertiser_Portal\Portal\Email_Change_Actions;
-use LAAO_Advertiser_Portal\Portal\Login_Actions;
-use LAAO_Advertiser_Portal\Portal\Organization_Actions;
-use LAAO_Advertiser_Portal\Portal\Password_Actions;
-use LAAO_Advertiser_Portal\Portal\Router;
-use LAAO_Advertiser_Portal\Portal\Signup_Actions;
-use LAAO_Advertiser_Portal\REST\Campaigns_Controller;
-use LAAO_Advertiser_Portal\REST\Creative_Controller;
-use LAAO_Advertiser_Portal\REST\Creative_File_Controller;
-use LAAO_Advertiser_Portal\REST\Packages_Controller;
-use LAAO_Advertiser_Portal\REST\Placements_Controller;
-use LAAO_Advertiser_Portal\REST\Transitions_Controller;
-use LAAO_Advertiser_Portal\Security\Admin_Guard;
-use LAAO_Advertiser_Portal\Security\Ownership;
-use LAAO_Advertiser_Portal\Update\Plugin_Updates;
-use LAAO_Advertiser_Portal\Workflow\Campaign_Clock;
-use LAAO_Advertiser_Portal\Workflow\Campaign_State_Machine;
-use LAAO_Advertiser_Portal\Workflow\Creative_Retention;
-use LAAO_Advertiser_Portal\Workflow\Ending_Soon_Notifier;
+use Aggressive\Ads\Admin\Creative_Change_Actions;
+use Aggressive\Ads\Admin\Menu;
+use Aggressive\Ads\Admin\Organization_Screen;
+use Aggressive\Ads\Admin\Package_Screen;
+use Aggressive\Ads\Admin\Placement_Screen;
+use Aggressive\Ads\Admin\Review_Screen;
+use Aggressive\Ads\Admin\Settings_Screen;
+use Aggressive\Ads\Assets\Assets;
+use Aggressive\Ads\Assets\Brand_Styles;
+use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Install\Installer;
+use Aggressive\Ads\Install\Site_Lifecycle;
+use Aggressive\Ads\Install\Upgrader;
+use Aggressive\Ads\Notification\Ending_Soon_Mailer;
+use Aggressive\Ads\Notification\Notification_Service;
+use Aggressive\Ads\Portal\Account_Actions;
+use Aggressive\Ads\Portal\Campaign_Actions;
+use Aggressive\Ads\Portal\Creative_Actions;
+use Aggressive\Ads\Portal\Email_Change_Actions;
+use Aggressive\Ads\Portal\Login_Actions;
+use Aggressive\Ads\Portal\Organization_Actions;
+use Aggressive\Ads\Portal\Password_Actions;
+use Aggressive\Ads\Portal\Router;
+use Aggressive\Ads\Portal\Signup_Actions;
+use Aggressive\Ads\REST\Beacon_Controller;
+use Aggressive\Ads\REST\Campaigns_Controller;
+use Aggressive\Ads\REST\Creative_Controller;
+use Aggressive\Ads\REST\Creative_File_Controller;
+use Aggressive\Ads\REST\Fill_Controller;
+use Aggressive\Ads\REST\Packages_Controller;
+use Aggressive\Ads\REST\Placements_Controller;
+use Aggressive\Ads\REST\Transitions_Controller;
+use Aggressive\Ads\Security\Admin_Guard;
+use Aggressive\Ads\Security\Capability_Alias;
+use Aggressive\Ads\Security\Ownership;
+use Aggressive\Ads\Update\Plugin_Updates;
+use Aggressive\Ads\Workflow\Campaign_Clock;
+use Aggressive\Ads\Workflow\Campaign_State_Machine;
+use Aggressive\Ads\Workflow\Click_Hop;
+use Aggressive\Ads\Workflow\Creative_Retention;
+use Aggressive\Ads\Workflow\Ending_Soon_Notifier;
+use Aggressive\Ads\Workflow\Event_Retention;
+use Aggressive\Ads\Workflow\Fill_Cache;
+use Aggressive\Ads\Workflow\Placement_Slot;
 
 /**
  * Wires the application together, then starts it.
@@ -114,9 +126,9 @@ final class Plugin {
 	 * Registers services and schedules their initialization.
 	 *
 	 * Initialization is deferred to `plugins_loaded` priority 10 so that every
-	 * plugin on the site — AdSanity in particular — has declared itself before
-	 * any of our services look for it. The upgrader runs earlier, at priority
-	 * 5, because schema must be current before anything reads it.
+	 * other plugin on the site has declared itself before any of our services
+	 * look for it. The upgrader runs earlier, at priority 5, because schema
+	 * must be current before anything reads it.
 	 *
 	 * @return void
 	 */
@@ -129,7 +141,7 @@ final class Plugin {
 
 		$this->register_services();
 
-		register_activation_hook( LAAO_ADS_PLUGIN_FILE, array( $this, 'activate' ) );
+		register_activation_hook( AGGR_PLUGIN_FILE, array( $this, 'activate' ) );
 
 		// Priority 5, ahead of init_services at 10: schema must be current
 		// before any service reads it. Activation is only a hint — it does not
@@ -139,15 +151,19 @@ final class Plugin {
 	}
 
 	/**
-	 * Activation hook. Installs schema, roles and options.
+	 * Activation hook. Migrates, then repairs schema, roles and options.
 	 *
-	 * Public because it is a hook callback. The upgrader performs the same work
-	 * on any request where a version option is behind, so this being missed is
-	 * survivable by design.
+	 * Public because it is a hook callback. The upgrader must run first:
+	 * install() stamps the current db version, and doing that before the
+	 * identity rewrite would make a later request skip migration 3.
+	 * WordPress does not re-fire this on a file-only update — plugins_loaded
+	 * priority 5 is the path that covers those — but a deactivate/reactivate
+	 * of new code against an old database does fire it.
 	 *
 	 * @return void
 	 */
 	public function activate(): void {
+		$this->container->get( Upgrader::class )->maybe_upgrade();
 		$this->container->get( Installer::class )->install();
 	}
 
@@ -220,6 +236,10 @@ final class Plugin {
 			// must be available on every admin and cron update check.
 			Plugin_Updates::class,
 
+			// Network site create/delete. Hooks only; the work runs later on
+			// wp_initialize_site / wp_uninitialize_site, never on fill.
+			Site_Lifecycle::class,
+
 			// Data shapes first: nothing may query a post type that does not
 			// exist yet, and a status must be registered before any query
 			// filters on it.
@@ -230,6 +250,7 @@ final class Plugin {
 			// so no surface ever resolves an object check through core's
 			// author comparison instead of ours.
 			Ownership::class,
+			Capability_Alias::class,
 			Admin_Guard::class,
 
 			// Attaches the listener that notices a campaign status written
@@ -238,15 +259,20 @@ final class Plugin {
 
 			// After the state machine, whose listener must be attached before
 			// the clock drives a single transition through it.
+			Fill_Cache::class,
 			Campaign_Clock::class,
 			Ending_Soon_Mailer::class,
 			Ending_Soon_Notifier::class,
 			Creative_Retention::class,
+			Event_Retention::class,
 			Notification_Service::class,
+			Menu::class,
 			Review_Screen::class,
 			Creative_Change_Actions::class,
-			Placement_Mapping_Screen::class,
+			Placement_Screen::class,
 			Organization_Screen::class,
+			Package_Screen::class,
+			Settings_Screen::class,
 
 			// REST last: routes are registered on rest_api_init, which fires
 			// well after this, so ordering here is about nothing but reading.
@@ -255,6 +281,7 @@ final class Plugin {
 			// initialized at plugins_loaded rather than later.
 			Router::class,
 			Assets::class,
+			Brand_Styles::class,
 			Campaign_Actions::class,
 			Creative_Actions::class,
 			Account_Actions::class,
@@ -270,6 +297,10 @@ final class Plugin {
 			Campaigns_Controller::class,
 			Placements_Controller::class,
 			Packages_Controller::class,
+			Fill_Controller::class,
+			Beacon_Controller::class,
+			Click_Hop::class,
+			Placement_Slot::class,
 		);
 	}
 }

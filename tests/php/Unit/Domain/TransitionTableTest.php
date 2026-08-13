@@ -2,16 +2,16 @@
 /**
  * The campaign lifecycle table.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Unit\Domain;
+namespace Aggressive\Ads\Tests\Unit\Domain;
 
-use LAAO_Advertiser_Portal\Core\Post_Statuses;
-use LAAO_Advertiser_Portal\Domain\Transition_Table;
-use LAAO_Advertiser_Portal\Security\Capabilities;
+use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Domain\Transition_Table;
+use Aggressive\Ads\Security\Capabilities;
 use Yoast\PHPUnitPolyfills\TestCases\TestCase;
 
 /**
@@ -36,28 +36,28 @@ final class TransitionTableTest extends TestCase {
 	 */
 	private static function expected_edges(): array {
 		return array(
-			'lap_draft->lap_submitted',
-			'lap_draft->lap_cancelled',
-			'lap_submitted->lap_draft',
-			'lap_submitted->lap_review',
-			'lap_submitted->lap_changes',
-			'lap_review->lap_submitted',
-			'lap_review->lap_changes',
-			'lap_review->lap_rejected',
-			'lap_review->lap_approved',
-			'lap_changes->lap_submitted',
-			'lap_changes->lap_cancelled',
-			'lap_rejected->lap_draft',
-			'lap_approved->lap_scheduled',
-			'lap_approved->lap_live',
-			'lap_scheduled->lap_live',
-			'lap_scheduled->lap_paused',
-			'lap_scheduled->lap_cancelled',
-			'lap_live->lap_paused',
-			'lap_live->lap_cancelled',
-			'lap_live->lap_complete',
-			'lap_paused->lap_live',
-			'lap_paused->lap_cancelled',
+			'aggr_draft->aggr_submitted',
+			'aggr_draft->aggr_cancelled',
+			'aggr_submitted->aggr_draft',
+			'aggr_submitted->aggr_review',
+			'aggr_submitted->aggr_changes',
+			'aggr_review->aggr_submitted',
+			'aggr_review->aggr_changes',
+			'aggr_review->aggr_rejected',
+			'aggr_review->aggr_approved',
+			'aggr_changes->aggr_submitted',
+			'aggr_changes->aggr_cancelled',
+			'aggr_rejected->aggr_draft',
+			'aggr_approved->aggr_scheduled',
+			'aggr_approved->aggr_live',
+			'aggr_scheduled->aggr_live',
+			'aggr_scheduled->aggr_paused',
+			'aggr_scheduled->aggr_cancelled',
+			'aggr_live->aggr_paused',
+			'aggr_live->aggr_cancelled',
+			'aggr_live->aggr_complete',
+			'aggr_paused->aggr_live',
+			'aggr_paused->aggr_cancelled',
 		);
 	}
 
@@ -204,7 +204,7 @@ final class TransitionTableTest extends TestCase {
 		$known = Capabilities::all();
 
 		foreach ( array( 'edit', 'read', 'delete' ) as $action ) {
-			$known[] = Capabilities::meta_cap( \LAAO_Advertiser_Portal\Core\Post_Types::CAMPAIGN, $action );
+			$known[] = Capabilities::meta_cap( \Aggressive\Ads\Core\Post_Types::CAMPAIGN, $action );
 		}
 
 		foreach ( Transition_Table::all() as $transition ) {
@@ -296,20 +296,20 @@ final class TransitionTableTest extends TestCase {
 	}
 
 	/**
-	 * Approval resolves the placement mappings and re-runs the validator before
-	 * anything is written.
+	 * Approval re-runs the validator before anything is written.
 	 *
 	 * A placement can be deactivated, an organization suspended, or a start
-	 * date fall into the past while a campaign sits in the queue.
+	 * date fall into the past while a campaign sits in the queue. Native fill
+	 * reads campaign status; there is no downstream ad to map.
 	 *
 	 * @return void
 	 */
-	public function test_approval_revalidates_and_resolves_mappings(): void {
+	public function test_approval_revalidates_before_publish(): void {
 		$approval = Transition_Table::find( Post_Statuses::REVIEW, Post_Statuses::APPROVED );
 
 		$this->assertNotNull( $approval );
 		$this->assertTrue( $approval->has_guard( Transition_Table::GUARD_VALIDATOR ) );
-		$this->assertTrue( $approval->has_guard( Transition_Table::GUARD_MAPPINGS_RESOLVE ) );
+		$this->assertFalse( $approval->has_guard( 'mappings_resolve' ) );
 		$this->assertTrue( $approval->has_effect( Transition_Table::EFFECT_PUBLISH ) );
 	}
 
@@ -479,6 +479,6 @@ final class TransitionTableTest extends TestCase {
 		$this->assertSame( array(), Transition_Table::targets_from( 'publish' ) );
 		$this->assertSame( array(), Transition_Table::targets_from( '' ) );
 		$this->assertNull( Transition_Table::find( 'publish', Post_Statuses::LIVE ) );
-		$this->assertFalse( Transition_Table::is_legal( 'lap_bogus', Post_Statuses::APPROVED ) );
+		$this->assertFalse( Transition_Table::is_legal( 'aggr_bogus', Post_Statuses::APPROVED ) );
 	}
 }

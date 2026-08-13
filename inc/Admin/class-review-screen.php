@@ -2,18 +2,18 @@
 /**
  * The staff campaign-review interface.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Admin;
+namespace Aggressive\Ads\Admin;
 
-use LAAO_Advertiser_Portal\Assets\Assets;
-use LAAO_Advertiser_Portal\Core\Post_Statuses;
-use LAAO_Advertiser_Portal\Core\Service;
-use LAAO_Advertiser_Portal\Security\Capabilities;
-use LAAO_Advertiser_Portal\Workflow\Review_Actions;
+use Aggressive\Ads\Assets\Assets;
+use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Security\Capabilities;
+use Aggressive\Ads\Workflow\Review_Actions;
 use WP_Error;
 
 /**
@@ -25,12 +25,12 @@ use WP_Error;
  */
 final class Review_Screen implements Service {
 
-	public const MENU_SLUG         = 'laao-ads-review';
-	public const TRANSITION_ACTION = 'laao_ads_review_transition';
-	public const NOTES_ACTION      = 'laao_ads_review_notes';
+	public const MENU_SLUG         = 'aggr-review';
+	public const TRANSITION_ACTION = 'aggr_review_transition';
+	public const NOTES_ACTION      = 'aggr_review_notes';
 
 	/**
-	 * This screen's hook suffix, assigned by add_menu_page().
+	 * This screen's hook suffix, assigned by add_submenu_page().
 	 *
 	 * @var string
 	 */
@@ -66,14 +66,13 @@ final class Review_Screen implements Service {
 	 * @return void
 	 */
 	public function register_menu(): void {
-		$hook = add_menu_page(
-			__( 'Ad Review', 'laao-advertiser-portal' ),
-			__( 'Ad Review', 'laao-advertiser-portal' ),
+		$hook = add_submenu_page(
+			Menu::PARENT_SLUG,
+			__( 'Campaign review', 'aggressive-ads' ),
+			__( 'Review', 'aggressive-ads' ),
 			Capabilities::REVIEW_CAMPAIGNS,
 			self::MENU_SLUG,
-			array( $this, 'render' ),
-			'dashicons-megaphone',
-			26
+			array( $this, 'render' )
 		);
 
 		$this->hook_suffix = is_string( $hook ) ? $hook : '';
@@ -91,7 +90,7 @@ final class Review_Screen implements Service {
 		}
 
 		$this->enqueue_style( Assets::HANDLE, Assets::STYLE_PORTAL );
-		$this->enqueue_style( 'laao-ads-review', Assets::STYLE_ADMIN, array( Assets::HANDLE ) );
+		$this->enqueue_style( 'aggr-review', Assets::STYLE_ADMIN, array( Assets::HANDLE ) );
 	}
 
 	/**
@@ -102,28 +101,28 @@ final class Review_Screen implements Service {
 	public function render(): void {
 		if ( ! current_user_can( Capabilities::REVIEW_CAMPAIGNS ) ) {
 			wp_die(
-				esc_html__( 'You do not have permission to view this page.', 'laao-advertiser-portal' ),
+				esc_html__( 'You do not have permission to view this page.', 'aggressive-ads' ),
 				'',
 				array( 'response' => 403 )
 			);
 		}
 
-		$laao_ads_filter = $this->request_filter();
-		$laao_ads_page   = $this->request_page();
-		$campaign_id     = $this->request_campaign_id();
-		$laao_ads_notice = $this->request_notice();
+		$aggr_filter = $this->request_filter();
+		$aggr_page   = $this->request_page();
+		$campaign_id = $this->request_campaign_id();
+		$aggr_notice = $this->request_notice();
 
 		if ( $campaign_id > 0 ) {
-			$laao_ads_campaign = $this->data->campaign( $campaign_id );
-			require LAAO_ADS_PLUGIN_DIR . 'templates/admin/review-campaign.php';
+			$aggr_campaign = $this->data->campaign( $campaign_id );
+			require AGGR_PLUGIN_DIR . 'templates/admin/review-campaign.php';
 
 			return;
 		}
 
-		$laao_ads_tabs  = $this->data->tabs();
-		$laao_ads_queue = $this->data->queue( $laao_ads_filter, $laao_ads_page );
+		$aggr_tabs  = $this->data->tabs();
+		$aggr_queue = $this->data->queue( $aggr_filter, $aggr_page );
 
-		require LAAO_ADS_PLUGIN_DIR . 'templates/admin/review-queue.php';
+		require AGGR_PLUGIN_DIR . 'templates/admin/review-queue.php';
 	}
 
 	/**
@@ -134,7 +133,7 @@ final class Review_Screen implements Service {
 	public function handle_transition(): void {
 		if ( ! current_user_can( Capabilities::REVIEW_CAMPAIGNS ) ) {
 			wp_die(
-				esc_html__( 'You do not have permission to do that.', 'laao-advertiser-portal' ),
+				esc_html__( 'You do not have permission to do that.', 'aggressive-ads' ),
 				'',
 				array( 'response' => 403 )
 			);
@@ -159,7 +158,7 @@ final class Review_Screen implements Service {
 	public function handle_notes(): void {
 		if ( ! current_user_can( Capabilities::REVIEW_CAMPAIGNS ) ) {
 			wp_die(
-				esc_html__( 'You do not have permission to do that.', 'laao-advertiser-portal' ),
+				esc_html__( 'You do not have permission to do that.', 'aggressive-ads' ),
 				'',
 				array( 'response' => 403 )
 			);
@@ -185,11 +184,11 @@ final class Review_Screen implements Service {
 	 */
 	public function process_transition( int $campaign_id, string $to, string $notes = '' ) {
 		if ( ! current_user_can( Capabilities::REVIEW_CAMPAIGNS ) ) {
-			return new WP_Error( 'laao_ads_forbidden', __( 'You do not have permission to do that.', 'laao-advertiser-portal' ) );
+			return new WP_Error( 'aggr_forbidden', __( 'You do not have permission to do that.', 'aggressive-ads' ) );
 		}
 
 		if ( $campaign_id <= 0 || ! Post_Statuses::is_valid( $to ) ) {
-			return new WP_Error( 'laao_ads_invalid_request', __( 'That review action is not valid.', 'laao-advertiser-portal' ) );
+			return new WP_Error( 'aggr_invalid_request', __( 'That review action is not valid.', 'aggressive-ads' ) );
 		}
 
 		return $this->actions->transition( $campaign_id, $to, $notes );
@@ -204,7 +203,7 @@ final class Review_Screen implements Service {
 	 */
 	public function process_notes( int $campaign_id, string $notes ) {
 		if ( ! current_user_can( Capabilities::REVIEW_CAMPAIGNS ) ) {
-			return new WP_Error( 'laao_ads_forbidden', __( 'You do not have permission to do that.', 'laao-advertiser-portal' ) );
+			return new WP_Error( 'aggr_forbidden', __( 'You do not have permission to do that.', 'aggressive-ads' ) );
 		}
 
 		return $this->actions->save_internal_notes( $campaign_id, $notes );
@@ -281,10 +280,10 @@ final class Review_Screen implements Service {
 	public static function notice_for( string $result, string $code, string $detail = '' ): ?array {
 		if ( 'success' === $result ) {
 			$message = match ( $code ) {
-				'notes_saved'              => __( 'Internal notes saved.', 'laao-advertiser-portal' ),
-				'creative_update_approved' => __( 'The ad update was approved and published.', 'laao-advertiser-portal' ),
-				'creative_update_rejected' => __( 'The ad update was rejected. The current ad remains unchanged.', 'laao-advertiser-portal' ),
-				default                    => __( 'Campaign status updated.', 'laao-advertiser-portal' ),
+				'notes_saved'              => __( 'Internal notes saved.', 'aggressive-ads' ),
+				'creative_update_approved' => __( 'The ad update was approved and published.', 'aggressive-ads' ),
+				'creative_update_rejected' => __( 'The ad update was rejected. The current ad remains unchanged.', 'aggressive-ads' ),
+				default                    => __( 'Campaign status updated.', 'aggressive-ads' ),
 			};
 
 			return array(
@@ -302,51 +301,32 @@ final class Review_Screen implements Service {
 
 		/*
 		 * Every code a reviewer can reach, said in terms of what to do next.
-		 *
-		 * The default used to catch most of these, and the one that mattered
-		 * most was the placement mapping: approval fails closed when a
-		 * placement has no AdSanity ad group, which is correct, but the
-		 * reviewer was told only that "the campaign could not be updated" and
-		 * had no way to discover that the fix lives on a different screen.
 		 */
 		$message = match ( $code ) {
-			'laao_ads_forbidden'                => __( 'You do not have permission to perform that review action.', 'laao-advertiser-portal' ),
-			'laao_ads_review_notes_required'    => __( 'Add advertiser-facing feedback before requesting changes or rejecting.', 'laao-advertiser-portal' ),
-			'laao_ads_publication_incomplete'   => __( 'Some ads could not be published. Successful ads were kept, so retrying will not duplicate them.', 'laao-advertiser-portal' ),
-			'laao_ads_campaign_not_found'       => __( 'The campaign could not be found.', 'laao-advertiser-portal' ),
-			'laao_ads_placement_unmapped'       => __( 'This campaign cannot be published until every placement is mapped to an AdSanity ad group.', 'laao-advertiser-portal' ),
-			'laao_ads_invalid_adgroup'          => __( 'A placement points at an ad group AdSanity no longer has. Re-map it and try again.', 'laao-advertiser-portal' ),
-			'laao_ads_provider_unavailable',
-			'laao_ads_provider_groups_unavailable' => __( 'AdSanity is not available, so nothing can be published right now. The campaign has not been changed.', 'laao-advertiser-portal' ),
-			'laao_ads_campaign_invalid',
-			'laao_ads_creatives_incomplete'     => __( 'The campaign no longer passes its own submission checks. Request changes from the advertiser.', 'laao-advertiser-portal' ),
-			'laao_ads_campaign_claimed'         => __( 'Another reviewer has claimed this campaign. Reload the queue to see who.', 'laao-advertiser-portal' ),
-			'laao_ads_illegal_transition'       => __( 'That is not a move this campaign can make from its current status. Reload the page.', 'laao-advertiser-portal' ),
-			'laao_ads_promote_failed'           => __( 'A creative file could not be moved into the media library, so nothing was published.', 'laao-advertiser-portal' ),
-			'laao_ads_nothing_to_publish'       => __( 'This campaign has no creative to publish.', 'laao-advertiser-portal' ),
-			'laao_ads_organization_inactive'    => __( 'The advertising organization is suspended, so this campaign cannot go live.', 'laao-advertiser-portal' ),
-			'laao_ads_replacement_notes_required' => __( 'Add advertiser-facing feedback before rejecting this ad update.', 'laao-advertiser-portal' ),
-			'laao_ads_replacement_campaign_inactive' => __( 'This campaign is no longer scheduled or live, so the update cannot be applied.', 'laao-advertiser-portal' ),
-			'laao_ads_replacement_write_failed' => __( 'AdSanity did not retain the replacement. The current ad was restored.', 'laao-advertiser-portal' ),
-			'laao_ads_replacement_rollback_failed' => __( 'The provider rollback could not be verified. Pause the campaign and inspect its AdSanity ad immediately.', 'laao-advertiser-portal' ),
-			default                             => __( 'The campaign could not be updated. Review its requirements and try again.', 'laao-advertiser-portal' ),
+			'aggr_forbidden'                => __( 'You do not have permission to perform that review action.', 'aggressive-ads' ),
+			'aggr_review_notes_required'    => __( 'Add advertiser-facing feedback before requesting changes or rejecting.', 'aggressive-ads' ),
+			'aggr_publication_incomplete'   => __( 'Some ads could not be published. Successful ads were kept, so retrying will not duplicate them.', 'aggressive-ads' ),
+			'aggr_campaign_not_found'       => __( 'The campaign could not be found.', 'aggressive-ads' ),
+			'aggr_campaign_invalid',
+			'aggr_creatives_incomplete'     => __( 'The campaign no longer passes its own submission checks. Request changes from the advertiser.', 'aggressive-ads' ),
+			'aggr_campaign_claimed'         => __( 'Another reviewer has claimed this campaign. Reload the queue to see who.', 'aggressive-ads' ),
+			'aggr_illegal_transition'       => __( 'That is not a move this campaign can make from its current status. Reload the page.', 'aggressive-ads' ),
+			'aggr_promote_failed'           => __( 'A creative file could not be moved into the media library, so nothing was published.', 'aggressive-ads' ),
+			'aggr_nothing_to_publish'       => __( 'This campaign has no creative to publish.', 'aggressive-ads' ),
+			'aggr_organization_inactive'    => __( 'The advertising organization is suspended, so this campaign cannot go live.', 'aggressive-ads' ),
+			'aggr_replacement_notes_required' => __( 'Add advertiser-facing feedback before rejecting this ad update.', 'aggressive-ads' ),
+			'aggr_replacement_campaign_inactive' => __( 'This campaign is no longer scheduled or live, so the update cannot be applied.', 'aggressive-ads' ),
+			'aggr_replacement_write_failed' => __( 'The replacement could not be applied. The current ad was left in place.', 'aggressive-ads' ),
+			'aggr_replacement_rollback_failed' => __( 'The update could not be recorded or rolled back. Pause the campaign and inspect its creatives.', 'aggressive-ads' ),
+			default                             => __( 'The campaign could not be updated. Review its requirements and try again.', 'aggressive-ads' ),
 		};
-
-		/*
-		 * The only failures a reviewer fixes themselves are configuration ones,
-		 * and the screen that fixes them is not this one. Everything else is
-		 * the advertiser's to correct or nobody's, so it gets no link.
-		 */
-		$mapping_codes = array( 'laao_ads_placement_unmapped', 'laao_ads_invalid_adgroup' );
 
 		return array(
 			'type'         => 'error',
 			'message'      => $message,
 			'detail'       => $detail,
-			'action_url'   => in_array( $code, $mapping_codes, true ) ? Placement_Mapping_Screen::url() : '',
-			'action_label' => in_array( $code, $mapping_codes, true )
-				? __( 'Open placement mapping', 'laao-advertiser-portal' )
-				: '',
+			'action_url'   => '',
+			'action_label' => '',
 		);
 	}
 
@@ -359,7 +339,7 @@ final class Review_Screen implements Service {
 	 * @return void
 	 */
 	private function enqueue_style( string $handle, string $relative, array $dependencies = array() ): void {
-		$path = LAAO_ADS_PLUGIN_DIR . $relative;
+		$path = AGGR_PLUGIN_DIR . $relative;
 
 		if ( ! is_file( $path ) ) {
 			return;
@@ -369,9 +349,9 @@ final class Review_Screen implements Service {
 
 		wp_enqueue_style(
 			$handle,
-			LAAO_ADS_PLUGIN_URL . $relative,
+			AGGR_PLUGIN_URL . $relative,
 			$dependencies,
-			false === $mtime ? LAAO_ADS_VERSION : (string) $mtime
+			false === $mtime ? AGGR_VERSION : (string) $mtime
 		);
 	}
 
@@ -393,8 +373,8 @@ final class Review_Screen implements Service {
 
 		$url = add_query_arg(
 			array(
-				'laao_ads_result' => $is_error ? 'error' : 'success',
-				'laao_ads_code'   => sanitize_key( $code ),
+				'aggr_result' => $is_error ? 'error' : 'success',
+				'aggr_code'   => sanitize_key( $code ),
 			),
 			self::campaign_url( $campaign_id, $this->posted_filter(), $this->posted_page() )
 		);
@@ -411,9 +391,9 @@ final class Review_Screen implements Service {
 	 */
 	private function request_notice(): ?array {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only, allowlisted result state used only to select a fixed message.
-		$result = isset( $_GET['laao_ads_result'] ) ? sanitize_key( wp_unslash( $_GET['laao_ads_result'] ) ) : '';
+		$result = isset( $_GET['aggr_result'] ) ? sanitize_key( wp_unslash( $_GET['aggr_result'] ) ) : '';
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only, allowlisted result state used only to select a fixed message.
-		$code = isset( $_GET['laao_ads_code'] ) ? sanitize_key( wp_unslash( $_GET['laao_ads_code'] ) ) : '';
+		$code = isset( $_GET['aggr_code'] ) ? sanitize_key( wp_unslash( $_GET['aggr_code'] ) ) : '';
 
 		return self::notice_for( $result, $code, $this->take_detail( $this->request_campaign_id() ) );
 	}
@@ -476,7 +456,7 @@ final class Review_Screen implements Service {
 	 * @return string
 	 */
 	private static function detail_key( int $campaign_id ): string {
-		return 'laao_ads_review_detail_' . get_current_user_id() . '_' . $campaign_id;
+		return 'aggr_review_detail_' . get_current_user_id() . '_' . $campaign_id;
 	}
 
 	/**

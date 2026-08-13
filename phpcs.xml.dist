@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
-<ruleset name="LAAO Advertiser Portal">
-	<description>PHP coding standards for the LAAO Advertiser Portal plugin.</description>
+<ruleset name="Aggressive Ads">
+	<description>PHP coding standards for the Aggressive Ads plugin.</description>
 
 	<!-- What to scan -->
 	<file>inc</file>
@@ -10,6 +10,7 @@
 	-->
 	<file>templates</file>
 	<file>tests/php</file>
+	<file>aggressive-ads.php</file>
 	<file>laao-advertiser-portal.php</file>
 	<!--
 		uninstall.php is easy to forget and the worst file to leave unchecked:
@@ -91,86 +92,87 @@
 	<rule ref="WordPress.WP.Capabilities">
 		<properties>
 			<property name="custom_capabilities" type="array">
-				<element value="create_laao_ads_campaigns"/>
-				<element value="create_laao_ads_creatives"/>
-				<element value="create_laao_ads_orgs"/>
-				<element value="create_laao_ads_packages"/>
-				<element value="create_laao_ads_placements"/>
-				<element value="delete_laao_ads_campaign"/>
-				<element value="delete_laao_ads_campaigns"/>
-				<element value="delete_laao_ads_creative"/>
-				<element value="delete_laao_ads_creatives"/>
-				<element value="delete_laao_ads_org"/>
-				<element value="delete_laao_ads_orgs"/>
-				<element value="delete_laao_ads_package"/>
-				<element value="delete_laao_ads_packages"/>
-				<element value="delete_laao_ads_placement"/>
-				<element value="delete_laao_ads_placements"/>
-				<element value="delete_others_laao_ads_campaigns"/>
-				<element value="delete_others_laao_ads_creatives"/>
-				<element value="delete_others_laao_ads_orgs"/>
-				<element value="delete_others_laao_ads_packages"/>
-				<element value="delete_others_laao_ads_placements"/>
-				<element value="delete_private_laao_ads_campaigns"/>
-				<element value="delete_private_laao_ads_creatives"/>
-				<element value="delete_private_laao_ads_orgs"/>
-				<element value="delete_private_laao_ads_packages"/>
-				<element value="delete_private_laao_ads_placements"/>
-				<element value="delete_published_laao_ads_campaigns"/>
-				<element value="delete_published_laao_ads_creatives"/>
-				<element value="delete_published_laao_ads_orgs"/>
-				<element value="delete_published_laao_ads_packages"/>
-				<element value="delete_published_laao_ads_placements"/>
-				<element value="edit_laao_ads_campaign"/>
-				<element value="edit_laao_ads_campaigns"/>
-				<element value="edit_laao_ads_creative"/>
-				<element value="edit_laao_ads_creatives"/>
-				<element value="edit_laao_ads_org"/>
-				<element value="edit_laao_ads_orgs"/>
-				<element value="edit_laao_ads_package"/>
-				<element value="edit_laao_ads_packages"/>
-				<element value="edit_laao_ads_placement"/>
-				<element value="edit_laao_ads_placements"/>
-				<element value="edit_others_laao_ads_campaigns"/>
-				<element value="edit_others_laao_ads_creatives"/>
-				<element value="edit_others_laao_ads_orgs"/>
-				<element value="edit_others_laao_ads_packages"/>
-				<element value="edit_others_laao_ads_placements"/>
-				<element value="edit_private_laao_ads_campaigns"/>
-				<element value="edit_private_laao_ads_creatives"/>
-				<element value="edit_private_laao_ads_orgs"/>
-				<element value="edit_private_laao_ads_packages"/>
-				<element value="edit_private_laao_ads_placements"/>
-				<element value="edit_published_laao_ads_campaigns"/>
-				<element value="edit_published_laao_ads_creatives"/>
-				<element value="edit_published_laao_ads_orgs"/>
-				<element value="edit_published_laao_ads_packages"/>
-				<element value="edit_published_laao_ads_placements"/>
-				<element value="laao_ads_access_portal"/>
-				<element value="laao_ads_manage_orgs"/>
-				<element value="laao_ads_manage_packages"/>
-				<element value="laao_ads_manage_placements"/>
-				<element value="laao_ads_manage_settings"/>
+				<element value="create_aggr_campaigns"/>
+				<element value="create_aggr_creatives"/>
+				<element value="create_aggr_orgs"/>
+				<element value="create_aggr_packages"/>
+				<element value="create_aggr_placements"/>
+				<element value="delete_aggr_campaign"/>
+				<element value="delete_aggr_campaigns"/>
+				<element value="delete_aggr_creative"/>
+				<element value="delete_aggr_creatives"/>
+				<element value="delete_aggr_org"/>
+				<element value="delete_aggr_orgs"/>
+				<element value="delete_aggr_package"/>
+				<element value="delete_aggr_packages"/>
+				<element value="delete_aggr_placement"/>
+				<element value="delete_aggr_placements"/>
+				<element value="delete_others_aggr_campaigns"/>
+				<element value="delete_others_aggr_creatives"/>
+				<element value="delete_others_aggr_orgs"/>
+				<element value="delete_others_aggr_packages"/>
+				<element value="delete_others_aggr_placements"/>
+				<element value="delete_private_aggr_campaigns"/>
+				<element value="delete_private_aggr_creatives"/>
+				<element value="delete_private_aggr_orgs"/>
+				<element value="delete_private_aggr_packages"/>
+				<element value="delete_private_aggr_placements"/>
+				<element value="delete_published_aggr_campaigns"/>
+				<element value="delete_published_aggr_creatives"/>
+				<element value="delete_published_aggr_orgs"/>
+				<element value="delete_published_aggr_packages"/>
+				<element value="delete_published_aggr_placements"/>
+				<element value="edit_aggr_campaign"/>
+				<element value="edit_aggr_campaigns"/>
+				<element value="edit_aggr_creative"/>
+				<element value="edit_aggr_creatives"/>
+				<element value="edit_aggr_org"/>
+				<element value="edit_aggr_orgs"/>
+				<element value="edit_aggr_package"/>
+				<element value="edit_aggr_packages"/>
+				<element value="edit_aggr_placement"/>
+				<element value="edit_aggr_placements"/>
+				<element value="edit_others_aggr_campaigns"/>
+				<element value="edit_others_aggr_creatives"/>
+				<element value="edit_others_aggr_orgs"/>
+				<element value="edit_others_aggr_packages"/>
+				<element value="edit_others_aggr_placements"/>
+				<element value="edit_private_aggr_campaigns"/>
+				<element value="edit_private_aggr_creatives"/>
+				<element value="edit_private_aggr_orgs"/>
+				<element value="edit_private_aggr_packages"/>
+				<element value="edit_private_aggr_placements"/>
+				<element value="edit_published_aggr_campaigns"/>
+				<element value="edit_published_aggr_creatives"/>
+				<element value="edit_published_aggr_orgs"/>
+				<element value="edit_published_aggr_packages"/>
+				<element value="edit_published_aggr_placements"/>
+				<element value="aggr_access_portal"/>
+				<element value="aggr_manage_orgs"/>
+				<element value="aggr_manage_packages"/>
+				<element value="aggr_manage_placements"/>
+				<element value="aggr_manage_settings"/>
+				<element value="aggr_publish"/>
 				<element value="laao_ads_publish_to_adsanity"/>
-				<element value="laao_ads_review_campaigns"/>
-				<element value="laao_ads_submit_campaign"/>
-				<element value="laao_ads_upload_creative"/>
-				<element value="laao_ads_view_audit_log"/>
-				<element value="publish_laao_ads_campaigns"/>
-				<element value="publish_laao_ads_creatives"/>
-				<element value="publish_laao_ads_orgs"/>
-				<element value="publish_laao_ads_packages"/>
-				<element value="publish_laao_ads_placements"/>
-				<element value="read_laao_ads_campaign"/>
-				<element value="read_laao_ads_creative"/>
-				<element value="read_laao_ads_org"/>
-				<element value="read_laao_ads_package"/>
-				<element value="read_laao_ads_placement"/>
-				<element value="read_private_laao_ads_campaigns"/>
-				<element value="read_private_laao_ads_creatives"/>
-				<element value="read_private_laao_ads_orgs"/>
-				<element value="read_private_laao_ads_packages"/>
-				<element value="read_private_laao_ads_placements"/>
+				<element value="aggr_review_campaigns"/>
+				<element value="aggr_submit_campaign"/>
+				<element value="aggr_upload_creative"/>
+				<element value="aggr_view_audit_log"/>
+				<element value="publish_aggr_campaigns"/>
+				<element value="publish_aggr_creatives"/>
+				<element value="publish_aggr_orgs"/>
+				<element value="publish_aggr_packages"/>
+				<element value="publish_aggr_placements"/>
+				<element value="read_aggr_campaign"/>
+				<element value="read_aggr_creative"/>
+				<element value="read_aggr_org"/>
+				<element value="read_aggr_package"/>
+				<element value="read_aggr_placement"/>
+				<element value="read_private_aggr_campaigns"/>
+				<element value="read_private_aggr_creatives"/>
+				<element value="read_private_aggr_orgs"/>
+				<element value="read_private_aggr_packages"/>
+				<element value="read_private_aggr_placements"/>
 			</property>
 		</properties>
 	</rule>
@@ -179,7 +181,7 @@
 	<rule ref="WordPress.WP.I18n">
 		<properties>
 			<property name="text_domain" type="array">
-				<element value="laao-advertiser-portal"/>
+				<element value="aggressive-ads"/>
 			</property>
 		</properties>
 	</rule>
@@ -188,9 +190,10 @@
 	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
 		<properties>
 			<property name="prefixes" type="array">
+				<element value="aggr"/>
+				<element value="AGGR"/>
+				<element value="Aggressive"/>
 				<element value="laao_ads"/>
-				<element value="LAAO_ADS"/>
-				<element value="LAAO_Advertiser_Portal"/>
 			</property>
 		</properties>
 	</rule>

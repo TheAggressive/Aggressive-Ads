@@ -2,7 +2,7 @@
 /**
  * The sign-in screen.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$laao_ads_screen = LAAO_ADS_PLUGIN_DIR . 'templates/portal/screens/login.php';
-$laao_ads_title  = __( 'Sign in', 'laao-advertiser-portal' );
+$aggr_screen = AGGR_PLUGIN_DIR . 'templates/portal/screens/login.php';
+$aggr_title  = __( 'Sign in', 'aggressive-ads' );
 
-require LAAO_ADS_PLUGIN_DIR . 'templates/portal/base-bare.php';
+require AGGR_PLUGIN_DIR . 'templates/portal/base-bare.php';

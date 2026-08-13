@@ -6,7 +6,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/../.."
 
-SLUG=laao-advertiser-portal
+SLUG=aggressive-ads
 TAG="${RELEASE_TAG:?RELEASE_TAG is required}"
 REPOSITORY="${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is required}"
 VERSION="${TAG#v}"

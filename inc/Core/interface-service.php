@@ -2,12 +2,12 @@
 /**
  * The service contract.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Core;
+namespace Aggressive\Ads\Core;
 
 /**
  * A unit of application behaviour that attaches itself to WordPress.

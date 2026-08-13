@@ -1,6 +1,6 @@
 # ADR-0018 — The portal UI follows the design, with three deviations
 
-**Status:** Accepted — 2026-08-10
+**Status:** Accepted — 2026-08-10; amended 2026-08-13 by [0030](0030-reporting-from-native-rollups.md)
 
 Refines [ADR-0017](0017-self-contained-design-tokens.md). It does not supersede it: the semantic token layer, literal values, host-theme isolation, and scoped reset are unchanged. What changes is the inventory of status tokens and three specific values.
 

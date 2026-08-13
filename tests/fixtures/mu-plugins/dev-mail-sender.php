@@ -17,7 +17,7 @@
  * wp-env, so nothing is delivered; the point is that failures now mean
  * something.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
@@ -39,14 +39,14 @@ add_filter(
 add_filter(
 	'pre_wp_mail',
 	static function ( null|bool $short_circuit, array $mail ): null|bool {
-		if ( (bool) get_option( 'laao_ads_dev_mail_capture', false ) ) {
+		if ( (bool) get_option( 'aggr_dev_mail_capture', false ) ) {
 			/*
 			 * Development-only outbox. Attachments are deliberately excluded:
 			 * they can contain private file paths and signup sends none. The
 			 * fixture never enters a release archive.
 			 */
 			update_option(
-				'laao_ads_dev_last_mail',
+				'aggr_dev_last_mail',
 				array(
 					'to'      => $mail['to'] ?? '',
 					'subject' => $mail['subject'] ?? '',
@@ -58,7 +58,7 @@ add_filter(
 			return true;
 		}
 
-		return (bool) get_option( 'laao_ads_e2e_mail_success', false ) ? true : $short_circuit;
+		return (bool) get_option( 'aggr_e2e_mail_success', false ) ? true : $short_circuit;
 	},
 	10,
 	2

@@ -2,19 +2,19 @@
 /**
  * Signing in to the portal, on the portal.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Portal;
+namespace Aggressive\Ads\Portal;
 
-use LAAO_Advertiser_Portal\Audit\Audit_Event;
-use LAAO_Advertiser_Portal\Core\Service;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Access_Repository;
-use LAAO_Advertiser_Portal\Security\Capabilities;
-use LAAO_Advertiser_Portal\Security\Rate_Limiter;
+use Aggressive\Ads\Audit\Audit_Event;
+use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Org_Access_Repository;
+use Aggressive\Ads\Security\Capabilities;
+use Aggressive\Ads\Security\Rate_Limiter;
 use WP_Error;
 use WP_User;
 
@@ -39,8 +39,8 @@ use WP_User;
  */
 final class Login_Actions implements Service {
 
-	public const LOGIN_ACTION  = 'laao_ads_login';
-	public const LOGOUT_ACTION = 'laao_ads_logout';
+	public const LOGIN_ACTION  = 'aggr_login';
+	public const LOGOUT_ACTION = 'aggr_logout';
 
 	/**
 	 * Constructor.
@@ -177,7 +177,7 @@ final class Login_Actions implements Service {
 	 */
 	public static function request_notice(): string {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only display state; selects a fixed message and authorizes nothing.
-		$value = isset( $_GET['laao_ads_login'] ) ? sanitize_key( wp_unslash( $_GET['laao_ads_login'] ) ) : '';
+		$value = isset( $_GET['aggr_login'] ) ? sanitize_key( wp_unslash( $_GET['aggr_login'] ) ) : '';
 
 		return in_array( $value, array( 'failed', 'rate_limited', 'password_set', 'pending' ), true ) ? $value : '';
 	}
@@ -194,10 +194,10 @@ final class Login_Actions implements Service {
 	 */
 	public static function notice_message( string $code ): string {
 		return match ( $code ) {
-			'rate_limited' => __( 'Too many sign-in attempts. Please wait a few minutes and try again.', 'laao-advertiser-portal' ),
-			'password_set' => __( 'Your password is ready. Sign in with your work email.', 'laao-advertiser-portal' ),
-			'pending'      => __( 'Your organization access request is still waiting for approval.', 'laao-advertiser-portal' ),
-			default        => __( 'That email and password did not match. Please try again.', 'laao-advertiser-portal' ),
+			'rate_limited' => __( 'Too many sign-in attempts. Please wait a few minutes and try again.', 'aggressive-ads' ),
+			'password_set' => __( 'Your password is ready. Sign in with your work email.', 'aggressive-ads' ),
+			'pending'      => __( 'Your organization access request is still waiting for approval.', 'aggressive-ads' ),
+			default        => __( 'That email and password did not match. Please try again.', 'aggressive-ads' ),
 		};
 	}
 
@@ -212,8 +212,8 @@ final class Login_Actions implements Service {
 		if ( '' !== $notice ) {
 			$url = add_query_arg(
 				array(
-					'laao_ads_login' => $notice,
-					'redirect_to'    => rawurlencode( $url ),
+					'aggr_login'  => $notice,
+					'redirect_to' => rawurlencode( $url ),
 				),
 				Routes::url( Request::ROUTE_LOGIN )
 			);

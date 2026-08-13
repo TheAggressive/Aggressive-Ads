@@ -11,7 +11,7 @@
  * Three rules, all from docs/architecture.md:
  *
  *   1. Data access appears only in inc/Repository/.
- *   2. AdSanity appears only in inc/Integration/Adsanity/.
+ *   2. AdSanity identifiers appear nowhere in inc/ or templates/.
  *   3. inc/Domain/ calls no WordPress function at all.
  *
  * templates/ is walked under the same rules. It is the layer most likely to
@@ -19,7 +19,7 @@
  * already rendering the post — and it is the layer where doing so is least
  * visible in review.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
@@ -59,7 +59,7 @@ const ADSANITY_PREFIXES = array( 'adsanity_', 'ADSANITY_', 'AdSanity_' );
 /**
  * AdSanity's data, as string literals.
  */
-const ADSANITY_LITERALS = array( 'ad-group', '_start_date', '_end_date', 'ad_src', 'ads' );
+const ADSANITY_LITERALS = array( 'ad-group', '_start_date', '_end_date', 'ad_src' );
 
 /**
  * WordPress functions the domain layer may not call. Prefix-matched, plus the
@@ -117,7 +117,6 @@ foreach ( $roots as $dir ) {
 foreach ( $paths as $path ) {
 	$relative      = ltrim( str_replace( $root, '', $path ), '/' );
 	$in_repository = str_starts_with( $relative, 'inc/Repository/' );
-	$in_adsanity   = str_starts_with( $relative, 'inc/Integration/Adsanity/' );
 	$in_domain     = str_starts_with( $relative, 'inc/Domain/' );
 
 	$source = file_get_contents( $path );
@@ -149,11 +148,11 @@ foreach ( $paths as $path ) {
 			continue;
 		}
 
-		if ( T_CONSTANT_ENCAPSED_STRING === $id && ! $in_adsanity ) {
+		if ( T_CONSTANT_ENCAPSED_STRING === $id ) {
 			$literal = trim( $text, "'\"" );
 
 			if ( in_array( $literal, ADSANITY_LITERALS, true ) ) {
-				$violations[] = "{$relative}:{$line}: AdSanity literal \"{$literal}\" outside inc/Integration/Adsanity/";
+				$violations[] = "{$relative}:{$line}: AdSanity literal \"{$literal}\"";
 			}
 
 			continue;
@@ -169,34 +168,25 @@ foreach ( $paths as $path ) {
 		$qualified = array( T_NAME_FULLY_QUALIFIED, T_NAME_QUALIFIED, T_NAME_RELATIVE );
 
 		if ( in_array( $id, $qualified, true ) ) {
-			if ( ! $in_adsanity ) {
-				$segments = explode( '\\', ltrim( $text, '\\' ) );
+			$segments = explode( '\\', ltrim( $text, '\\' ) );
 
-				/*
-				 * `Adsanity\Meta_Data` is a bare segment with no underscore, so
-				 * no prefix matches it — and it is exactly the undocumented
-				 * internal wrapper the AdSanity notes warn against depending on.
-				 *
-				 * Only the **root** segment counts, though. Our own adapter
-				 * lives in LAAO_Advertiser_Portal\Integration\Adsanity, and the
-				 * composition root has to be able to name it in order to wire
-				 * it up. Matching any segment flagged that import, which is the
-				 * one place in the codebase that must be allowed to say it.
-				 */
-				$is_vendor_namespace = 0 === strcasecmp( $segments[0], 'adsanity' );
-				$has_vendor_prefix   = false;
+			/*
+			 * `Adsanity\Meta_Data` is a bare segment with no underscore, so
+			 * no prefix matches it. Only the root segment counts.
+			 */
+			$is_vendor_namespace = 0 === strcasecmp( $segments[0], 'adsanity' );
+			$has_vendor_prefix   = false;
 
-				foreach ( $segments as $segment ) {
-					if ( has_prefix( $segment, ADSANITY_PREFIXES ) ) {
-						$has_vendor_prefix = true;
+			foreach ( $segments as $segment ) {
+				if ( has_prefix( $segment, ADSANITY_PREFIXES ) ) {
+					$has_vendor_prefix = true;
 
-						break;
-					}
+					break;
 				}
+			}
 
-				if ( $is_vendor_namespace || $has_vendor_prefix ) {
-					$violations[] = "{$relative}:{$line}: AdSanity identifier {$text} outside inc/Integration/Adsanity/";
-				}
+			if ( $is_vendor_namespace || $has_vendor_prefix ) {
+				$violations[] = "{$relative}:{$line}: AdSanity identifier {$text}";
 			}
 
 			continue;
@@ -206,8 +196,8 @@ foreach ( $paths as $path ) {
 			continue;
 		}
 
-		if ( ! $in_adsanity && has_prefix( $text, ADSANITY_PREFIXES ) ) {
-			$violations[] = "{$relative}:{$line}: AdSanity identifier {$text} outside inc/Integration/Adsanity/";
+		if ( has_prefix( $text, ADSANITY_PREFIXES ) ) {
+			$violations[] = "{$relative}:{$line}: AdSanity identifier {$text}";
 
 			continue;
 		}
@@ -239,22 +229,7 @@ foreach ( $paths as $path ) {
 			continue;
 		}
 
-		/*
-		 * The AdSanity adapter is exempt from the data-access rule, and only
-		 * it.
-		 *
-		 * The two boundaries would otherwise contradict each other: the
-		 * publisher has to write AdSanity's own posts, terms and meta, and a
-		 * repository is forbidden from naming AdSanity identifiers. Something
-		 * has to give, and the right answer is that the repository rule governs
-		 * *our* domain data. The provider's data belongs to the provider's
-		 * adapter.
-		 *
-		 * This is directory-level, because no static check can tell which post
-		 * type an update_post_meta() call targets. The mitigation is that the
-		 * directory is small and every write in it is read back.
-		 */
-		if ( ! $in_repository && ! $in_adsanity && in_array( $text, DATA_ACCESS_FUNCTIONS, true ) ) {
+		if ( ! $in_repository && in_array( $text, DATA_ACCESS_FUNCTIONS, true ) ) {
 			$violations[] = "{$relative}:{$line}: {$text}() outside inc/Repository/";
 
 			continue;

@@ -2,25 +2,23 @@
 /**
  * Guard evaluation for campaign transitions.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Workflow;
+namespace Aggressive\Ads\Workflow;
 
-use LAAO_Advertiser_Portal\Domain\Transition_Table;
-use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
+use Aggressive\Ads\Domain\Transition_Table;
+use Aggressive\Ads\Repository\Campaign_Repository;
 use WP_Error;
 
 /**
  * Answers whether each named guard holds for a campaign.
  *
  * Guards are resolved by name from the transition table, and **an unknown
- * guard fails closed**. That matters while the system is half-built: the
- * validator and the placement-mapping resolver land in later phases, and until
- * they do, a submission or an approval must refuse rather than quietly skip
- * the check that was supposed to protect it.
+ * guard fails closed**. A missing implementation must refuse rather than
+ * quietly skip the check that was supposed to protect it.
  */
 final class Transition_Guards {
 
@@ -84,17 +82,14 @@ final class Transition_Guards {
 
 			case Transition_Table::GUARD_ENDED:
 				return $this->ended( $campaign_id );
-
-			case Transition_Table::GUARD_PUBLISHED:
-				return $this->published( $campaign_id );
 		}
 
 		// Fails closed, and names itself. A guard that silently passed because
 		// nobody had implemented it yet would be indistinguishable from one
 		// that ran and approved.
 		return new WP_Error(
-			'laao_ads_guard_unavailable',
-			__( 'This action cannot be completed yet.', 'laao-advertiser-portal' ),
+			'aggr_guard_unavailable',
+			__( 'This action cannot be completed yet.', 'aggressive-ads' ),
 			array( 'guard' => $guard )
 		);
 	}
@@ -108,8 +103,8 @@ final class Transition_Guards {
 	private function unclaimed( int $campaign_id ) {
 		if ( 0 !== $this->campaigns->reviewed_by( $campaign_id ) ) {
 			return new WP_Error(
-				'laao_ads_campaign_claimed',
-				__( 'This campaign is already being reviewed and can no longer be withdrawn.', 'laao-advertiser-portal' )
+				'aggr_campaign_claimed',
+				__( 'This campaign is already being reviewed and can no longer be withdrawn.', 'aggressive-ads' )
 			);
 		}
 
@@ -133,8 +128,8 @@ final class Transition_Guards {
 
 		if ( '' === $notes ) {
 			return new WP_Error(
-				'laao_ads_review_notes_required',
-				__( 'Tell the advertiser what needs to change before sending the campaign back.', 'laao-advertiser-portal' )
+				'aggr_review_notes_required',
+				__( 'Tell the advertiser what needs to change before sending the campaign back.', 'aggressive-ads' )
 			);
 		}
 
@@ -152,8 +147,8 @@ final class Transition_Guards {
 
 		if ( 0 === $start || $start > time() ) {
 			return new WP_Error(
-				'laao_ads_not_started',
-				__( 'This campaign has not reached its start date.', 'laao-advertiser-portal' )
+				'aggr_not_started',
+				__( 'This campaign has not reached its start date.', 'aggressive-ads' )
 			);
 		}
 
@@ -171,8 +166,8 @@ final class Transition_Guards {
 
 		if ( 0 !== $start && $start <= time() ) {
 			return new WP_Error(
-				'laao_ads_already_started',
-				__( 'This campaign has already reached its start date.', 'laao-advertiser-portal' )
+				'aggr_already_started',
+				__( 'This campaign has already reached its start date.', 'aggressive-ads' )
 			);
 		}
 
@@ -192,25 +187,8 @@ final class Transition_Guards {
 
 		if ( 0 === $end || $end >= time() ) {
 			return new WP_Error(
-				'laao_ads_not_ended',
-				__( 'This campaign has not reached its end date.', 'laao-advertiser-portal' )
-			);
-		}
-
-		return true;
-	}
-
-	/**
-	 * Provider objects exist for this campaign.
-	 *
-	 * @param int $campaign_id Campaign post id.
-	 * @return true|WP_Error
-	 */
-	private function published( int $campaign_id ) {
-		if ( array() === $this->campaigns->provider_ad_ids( $campaign_id ) ) {
-			return new WP_Error(
-				'laao_ads_not_published',
-				__( 'This campaign has no published ads behind it.', 'laao-advertiser-portal' )
+				'aggr_not_ended',
+				__( 'This campaign has not reached its end date.', 'aggressive-ads' )
 			);
 		}
 

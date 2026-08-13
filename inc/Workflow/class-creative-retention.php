@@ -2,20 +2,20 @@
 /**
  * Deletes private creative files once a campaign has been terminal long enough.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Workflow;
+namespace Aggressive\Ads\Workflow;
 
-use LAAO_Advertiser_Portal\Audit\Audit_Event;
-use LAAO_Advertiser_Portal\Core\Service;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Repository\Campaign_Lifecycle_Repository;
-use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
-use LAAO_Advertiser_Portal\Repository\Creative_Repository;
-use LAAO_Advertiser_Portal\Storage\Private_Storage;
+use Aggressive\Ads\Audit\Audit_Event;
+use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Campaign_Lifecycle_Repository;
+use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Storage\Private_Storage;
 
 /**
  * Daily retention job for the private stage of two-stage creative storage.
@@ -29,7 +29,7 @@ final class Creative_Retention implements Service {
 	/**
 	 * The cron hook.
 	 */
-	public const HOOK = 'laao_ads_purge_private_creatives';
+	public const HOOK = 'aggr_purge_private_creatives';
 
 	/**
 	 * How often the sweep runs.

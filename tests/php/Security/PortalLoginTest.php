@@ -2,21 +2,21 @@
 /**
  * Signing in on the portal rather than on wp-login.php.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Security;
+namespace Aggressive\Ads\Tests\Security;
 
-use LAAO_Advertiser_Portal\Install\Installer;
-use LAAO_Advertiser_Portal\Plugin;
-use LAAO_Advertiser_Portal\Portal\Login_Actions;
-use LAAO_Advertiser_Portal\Portal\Request;
-use LAAO_Advertiser_Portal\Portal\Router;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Security\Rate_Limiter;
-use LAAO_Advertiser_Portal\Security\Roles;
+use Aggressive\Ads\Install\Installer;
+use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Portal\Login_Actions;
+use Aggressive\Ads\Portal\Request;
+use Aggressive\Ads\Portal\Router;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Security\Rate_Limiter;
+use Aggressive\Ads\Security\Roles;
 use WP_UnitTestCase;
 
 /**
@@ -193,13 +193,13 @@ final class PortalLoginTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function test_the_notice_is_allowlisted(): void {
-		$_GET['laao_ads_login'] = 'failed';
+		$_GET['aggr_login'] = 'failed';
 		$this->assertSame( 'failed', Login_Actions::request_notice() );
 
-		$_GET['laao_ads_login'] = '<script>alert(1)</script>';
+		$_GET['aggr_login'] = '<script>alert(1)</script>';
 		$this->assertSame( '', Login_Actions::request_notice() );
 
-		unset( $_GET['laao_ads_login'] );
+		unset( $_GET['aggr_login'] );
 	}
 
 	/**

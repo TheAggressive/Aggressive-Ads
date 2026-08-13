@@ -2,12 +2,12 @@
 /**
  * Integrity verification for GitHub update packages.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Update;
+namespace Aggressive\Ads\Update;
 
 /**
  * Resolves a release checksum and verifies the downloaded ZIP before install.
@@ -15,7 +15,7 @@ namespace LAAO_Advertiser_Portal\Update;
 final class Package_Verifier {
 
 	/** Trusted update metadata transient. */
-	public const CACHE_KEY = 'laao_ads_update_package';
+	public const CACHE_KEY = 'aggr_update_package';
 
 	/**
 	 * Release repository.
@@ -75,7 +75,7 @@ final class Package_Verifier {
 		$response = $this->http->get(
 			$checksum_url,
 			array(
-				'headers' => array( 'User-Agent' => 'LAAO-Advertiser-Portal-Updater' ),
+				'headers' => array( 'User-Agent' => 'Aggressive-Ads-Updater' ),
 			)
 		);
 
@@ -131,8 +131,8 @@ final class Package_Verifier {
 		$checksum = $this->checksum( $package );
 		if ( ! is_string( $checksum ) ) {
 			return new \WP_Error(
-				'laao_ads_update_checksum_missing',
-				__( 'LAAO Advertiser Portal update is missing a valid SHA-256 checksum.', 'laao-advertiser-portal' )
+				'aggr_update_checksum_missing',
+				__( 'LAAO Advertiser Portal update is missing a valid SHA-256 checksum.', 'aggressive-ads' )
 			);
 		}
 
@@ -150,8 +150,8 @@ final class Package_Verifier {
 			wp_delete_file( $downloaded );
 
 			return new \WP_Error(
-				'laao_ads_update_checksum_mismatch',
-				__( 'LAAO Advertiser Portal update failed integrity verification.', 'laao-advertiser-portal' )
+				'aggr_update_checksum_mismatch',
+				__( 'LAAO Advertiser Portal update failed integrity verification.', 'aggressive-ads' )
 			);
 		}
 

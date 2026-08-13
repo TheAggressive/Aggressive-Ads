@@ -2,17 +2,17 @@
 /**
  * Staff-only review writes that are not campaign status persistence.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Workflow;
+namespace Aggressive\Ads\Workflow;
 
-use LAAO_Advertiser_Portal\Audit\Audit_Event;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
-use LAAO_Advertiser_Portal\Security\Capabilities;
+use Aggressive\Ads\Audit\Audit_Event;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Security\Capabilities;
 use WP_Error;
 
 /**
@@ -56,17 +56,17 @@ final class Review_Actions {
 	 * @return true|WP_Error
 	 */
 	public function save_internal_notes( int $campaign_id, string $notes ) {
-		if ( ! current_user_can( Capabilities::REVIEW_CAMPAIGNS ) || ! current_user_can( 'edit_laao_ads_campaign', $campaign_id ) ) {
+		if ( ! current_user_can( Capabilities::REVIEW_CAMPAIGNS ) || ! current_user_can( 'edit_aggr_campaign', $campaign_id ) ) {
 			return new WP_Error(
-				'laao_ads_forbidden',
-				__( 'You do not have permission to do that.', 'laao-advertiser-portal' )
+				'aggr_forbidden',
+				__( 'You do not have permission to do that.', 'aggressive-ads' )
 			);
 		}
 
 		if ( ! $this->campaigns->exists( $campaign_id ) ) {
 			return new WP_Error(
-				'laao_ads_campaign_not_found',
-				__( 'Campaign not found.', 'laao-advertiser-portal' )
+				'aggr_campaign_not_found',
+				__( 'Campaign not found.', 'aggressive-ads' )
 			);
 		}
 

@@ -2,17 +2,17 @@
 /**
  * Organization-scoped object authorization.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Security;
+namespace Aggressive\Ads\Tests\Security;
 
-use LAAO_Advertiser_Portal\Core\Post_Types;
-use LAAO_Advertiser_Portal\Repository\Org_Repository;
-use LAAO_Advertiser_Portal\Security\Ownership;
-use LAAO_Advertiser_Portal\Security\Roles;
+use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Security\Ownership;
+use Aggressive\Ads\Security\Roles;
 use WP_UnitTestCase;
 
 /**
@@ -90,8 +90,8 @@ final class OwnershipTest extends WP_UnitTestCase {
 	public function set_up(): void {
 		parent::set_up();
 
-		( new \LAAO_Advertiser_Portal\Install\Installer(
-			new \LAAO_Advertiser_Portal\Repository\Audit_Repository(),
+		( new \Aggressive\Ads\Install\Installer(
+			new \Aggressive\Ads\Repository\Audit_Repository(),
 			new Roles()
 		) )->install_roles();
 
@@ -145,7 +145,7 @@ final class OwnershipTest extends WP_UnitTestCase {
 		$campaign_id = (int) self::factory()->post->create(
 			array(
 				'post_type'   => Post_Types::CAMPAIGN,
-				'post_status' => \LAAO_Advertiser_Portal\Core\Post_Statuses::DRAFT,
+				'post_status' => \Aggressive\Ads\Core\Post_Statuses::DRAFT,
 				'post_author' => $author,
 				'post_title'  => 'Campaign for org ' . $org_id,
 			)
@@ -162,7 +162,7 @@ final class OwnershipTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	private function flush_ownership_cache(): void {
-		\LAAO_Advertiser_Portal\Plugin::instance()->container()->get( Ownership::class )->flush_cache();
+		\Aggressive\Ads\Plugin::instance()->container()->get( Ownership::class )->flush_cache();
 	}
 
 	/**
@@ -179,7 +179,7 @@ final class OwnershipTest extends WP_UnitTestCase {
 			10,
 			has_filter(
 				'map_meta_cap',
-				array( \LAAO_Advertiser_Portal\Plugin::instance()->container()->get( Ownership::class ), 'map' )
+				array( \Aggressive\Ads\Plugin::instance()->container()->get( Ownership::class ), 'map' )
 			)
 		);
 	}
@@ -192,7 +192,7 @@ final class OwnershipTest extends WP_UnitTestCase {
 	public function test_a_member_may_edit_their_own_campaign(): void {
 		wp_set_current_user( $this->user_a );
 
-		$this->assertTrue( current_user_can( 'edit_laao_ads_campaign', $this->campaign_a ) );
+		$this->assertTrue( current_user_can( 'edit_aggr_campaign', $this->campaign_a ) );
 	}
 
 	/**
@@ -213,7 +213,7 @@ final class OwnershipTest extends WP_UnitTestCase {
 		wp_set_current_user( $this->user_a2 );
 
 		$this->assertTrue(
-			current_user_can( 'edit_laao_ads_campaign', $this->campaign_a ),
+			current_user_can( 'edit_aggr_campaign', $this->campaign_a ),
 			'A co-member cannot edit their organization\'s campaign; ownership has collapsed to the author.'
 		);
 	}
@@ -242,9 +242,9 @@ final class OwnershipTest extends WP_UnitTestCase {
 	 */
 	public static function data_object_capabilities(): array {
 		return array(
-			'edit'   => array( 'edit_laao_ads_campaign' ),
-			'read'   => array( 'read_laao_ads_campaign' ),
-			'delete' => array( 'delete_laao_ads_campaign' ),
+			'edit'   => array( 'edit_aggr_campaign' ),
+			'read'   => array( 'read_aggr_campaign' ),
+			'delete' => array( 'delete_aggr_campaign' ),
 		);
 	}
 
@@ -256,8 +256,8 @@ final class OwnershipTest extends WP_UnitTestCase {
 	public function test_the_denial_is_symmetric(): void {
 		wp_set_current_user( $this->user_b );
 
-		$this->assertFalse( current_user_can( 'edit_laao_ads_campaign', $this->campaign_a ) );
-		$this->assertTrue( current_user_can( 'edit_laao_ads_campaign', $this->campaign_b ) );
+		$this->assertFalse( current_user_can( 'edit_aggr_campaign', $this->campaign_a ) );
+		$this->assertTrue( current_user_can( 'edit_aggr_campaign', $this->campaign_b ) );
 	}
 
 	/**
@@ -268,9 +268,9 @@ final class OwnershipTest extends WP_UnitTestCase {
 	public function test_a_reviewer_may_reach_any_organization(): void {
 		wp_set_current_user( $this->reviewer );
 
-		$this->assertTrue( current_user_can( 'edit_laao_ads_campaign', $this->campaign_a ) );
-		$this->assertTrue( current_user_can( 'edit_laao_ads_campaign', $this->campaign_b ) );
-		$this->assertTrue( current_user_can( 'read_laao_ads_campaign', $this->campaign_b ) );
+		$this->assertTrue( current_user_can( 'edit_aggr_campaign', $this->campaign_a ) );
+		$this->assertTrue( current_user_can( 'edit_aggr_campaign', $this->campaign_b ) );
+		$this->assertTrue( current_user_can( 'read_aggr_campaign', $this->campaign_b ) );
 	}
 
 	/**
@@ -287,7 +287,7 @@ final class OwnershipTest extends WP_UnitTestCase {
 		wp_delete_post( $this->campaign_a, true );
 		$this->flush_ownership_cache();
 
-		$this->assertFalse( current_user_can( 'edit_laao_ads_campaign', $this->campaign_a ) );
+		$this->assertFalse( current_user_can( 'edit_aggr_campaign', $this->campaign_a ) );
 	}
 
 	/**
@@ -298,8 +298,8 @@ final class OwnershipTest extends WP_UnitTestCase {
 	public function test_a_nonexistent_object_is_denied(): void {
 		wp_set_current_user( $this->user_a );
 
-		$this->assertFalse( current_user_can( 'edit_laao_ads_campaign', 999999 ) );
-		$this->assertFalse( current_user_can( 'edit_laao_ads_campaign', 0 ) );
+		$this->assertFalse( current_user_can( 'edit_aggr_campaign', 999999 ) );
+		$this->assertFalse( current_user_can( 'edit_aggr_campaign', 0 ) );
 	}
 
 	/**
@@ -309,7 +309,7 @@ final class OwnershipTest extends WP_UnitTestCase {
 	 * **object's** post type, not by the name used to ask. core looks the
 	 * custom name up in $post_type_meta_caps and recurses with the generic
 	 * 'edit_post', at which point the requested type is gone — so
-	 * current_user_can( 'edit_laao_ads_campaign', $creative_id ) authorizes the
+	 * current_user_can( 'edit_aggr_campaign', $creative_id ) authorizes the
 	 * creative. That is core's behaviour and it is not a bypass: the check is
 	 * against the object, and the object is checked correctly.
 	 *
@@ -327,20 +327,20 @@ final class OwnershipTest extends WP_UnitTestCase {
 		$this->flush_ownership_cache();
 
 		wp_set_current_user( $this->user_a );
-		$this->assertTrue( current_user_can( 'edit_laao_ads_creative', $creative_id ) );
+		$this->assertTrue( current_user_can( 'edit_aggr_creative', $creative_id ) );
 
 		wp_set_current_user( $this->user_a2 );
 		$this->assertTrue(
-			current_user_can( 'edit_laao_ads_creative', $creative_id ),
+			current_user_can( 'edit_aggr_creative', $creative_id ),
 			'A co-member cannot edit their organization\'s creative.'
 		);
 
 		wp_set_current_user( $this->user_b );
 		$this->assertFalse(
-			current_user_can( 'edit_laao_ads_creative', $creative_id ),
+			current_user_can( 'edit_aggr_creative', $creative_id ),
 			'Another organization reached this creative.'
 		);
-		$this->assertFalse( current_user_can( 'read_laao_ads_creative', $creative_id ) );
+		$this->assertFalse( current_user_can( 'read_aggr_creative', $creative_id ) );
 	}
 
 	/**
@@ -351,8 +351,8 @@ final class OwnershipTest extends WP_UnitTestCase {
 	public function test_an_organization_is_its_own_owner(): void {
 		wp_set_current_user( $this->user_a );
 
-		$this->assertTrue( current_user_can( 'read_laao_ads_org', $this->org_a ) );
-		$this->assertFalse( current_user_can( 'read_laao_ads_org', $this->org_b ) );
+		$this->assertTrue( current_user_can( 'read_aggr_org', $this->org_a ) );
+		$this->assertFalse( current_user_can( 'read_aggr_org', $this->org_b ) );
 	}
 
 	/**
@@ -381,8 +381,8 @@ final class OwnershipTest extends WP_UnitTestCase {
 
 		wp_set_current_user( $this->user_a );
 
-		$this->assertTrue( current_user_can( 'read_laao_ads_placement', $placement_id ) );
-		$this->assertTrue( current_user_can( 'read_laao_ads_package', $package_id ) );
+		$this->assertTrue( current_user_can( 'read_aggr_placement', $placement_id ) );
+		$this->assertTrue( current_user_can( 'read_aggr_package', $package_id ) );
 	}
 
 	/**
@@ -403,13 +403,13 @@ final class OwnershipTest extends WP_UnitTestCase {
 		);
 
 		wp_set_current_user( $this->user_a );
-		$this->assertFalse( current_user_can( 'edit_laao_ads_placement', $placement_id ) );
+		$this->assertFalse( current_user_can( 'edit_aggr_placement', $placement_id ) );
 
 		wp_set_current_user( $this->reviewer );
-		$this->assertFalse( current_user_can( 'edit_laao_ads_placement', $placement_id ) );
+		$this->assertFalse( current_user_can( 'edit_aggr_placement', $placement_id ) );
 
 		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
-		$this->assertTrue( current_user_can( 'edit_laao_ads_placement', $placement_id ) );
+		$this->assertTrue( current_user_can( 'edit_aggr_placement', $placement_id ) );
 	}
 
 	/**
@@ -426,9 +426,9 @@ final class OwnershipTest extends WP_UnitTestCase {
 		$user = get_userdata( $this->user_a );
 
 		$this->assertNotFalse( $user );
-		$this->assertArrayNotHasKey( 'read_private_laao_ads_orgs', array_filter( $user->allcaps ) );
-		$this->assertArrayNotHasKey( 'read_private_laao_ads_campaigns', array_filter( $user->allcaps ) );
-		$this->assertArrayNotHasKey( 'read_private_laao_ads_creatives', array_filter( $user->allcaps ) );
+		$this->assertArrayNotHasKey( 'read_private_aggr_orgs', array_filter( $user->allcaps ) );
+		$this->assertArrayNotHasKey( 'read_private_aggr_campaigns', array_filter( $user->allcaps ) );
+		$this->assertArrayNotHasKey( 'read_private_aggr_creatives', array_filter( $user->allcaps ) );
 	}
 
 	/**
@@ -436,7 +436,7 @@ final class OwnershipTest extends WP_UnitTestCase {
 	 *
 	 * This is the layer the role matrix cannot provide. Another plugin, a
 	 * bulk-role editor, or a future role of our own can grant
-	 * read_private_laao_ads_campaigns to somebody — and the moment that
+	 * read_private_aggr_campaigns to somebody — and the moment that
 	 * happens, "they do not hold the primitive" stops being the thing keeping
 	 * one customer out of another's data. The membership gate runs *before*
 	 * primitives are consulted, so it denies regardless.
@@ -452,27 +452,27 @@ final class OwnershipTest extends WP_UnitTestCase {
 
 		// Something outside this plugin grants the cross-organization
 		// primitives directly.
-		$user->add_cap( 'read_private_laao_ads_campaigns' );
-		$user->add_cap( 'edit_others_laao_ads_campaigns' );
+		$user->add_cap( 'read_private_aggr_campaigns' );
+		$user->add_cap( 'edit_others_aggr_campaigns' );
 
 		wp_set_current_user( $this->user_a );
 
 		$this->assertTrue(
-			current_user_can( 'read_private_laao_ads_campaigns' ),
+			current_user_can( 'read_private_aggr_campaigns' ),
 			'Test precondition: the capability was not actually granted.'
 		);
 
 		$this->assertFalse(
-			current_user_can( 'read_laao_ads_campaign', $this->campaign_b ),
+			current_user_can( 'read_aggr_campaign', $this->campaign_b ),
 			'A capability granted outside the plugin reached another organization\'s campaign.'
 		);
 		$this->assertFalse(
-			current_user_can( 'edit_laao_ads_campaign', $this->campaign_b ),
+			current_user_can( 'edit_aggr_campaign', $this->campaign_b ),
 			'A capability granted outside the plugin allowed editing another organization\'s campaign.'
 		);
 
 		// Still fine on their own.
-		$this->assertTrue( current_user_can( 'edit_laao_ads_campaign', $this->campaign_a ) );
+		$this->assertTrue( current_user_can( 'edit_aggr_campaign', $this->campaign_a ) );
 	}
 
 	/**
@@ -489,20 +489,20 @@ final class OwnershipTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function test_the_filter_answers_when_called_with_our_own_capability_name(): void {
-		$ownership = \LAAO_Advertiser_Portal\Plugin::instance()->container()->get( Ownership::class );
+		$ownership = \Aggressive\Ads\Plugin::instance()->container()->get( Ownership::class );
 
 		$granted = $ownership->map(
-			array( 'edit_laao_ads_campaign' ),
-			'edit_laao_ads_campaign',
+			array( 'edit_aggr_campaign' ),
+			'edit_aggr_campaign',
 			$this->user_a,
 			array( $this->campaign_a )
 		);
 
-		$this->assertSame( array( 'edit_laao_ads_campaigns' ), $granted );
+		$this->assertSame( array( 'edit_aggr_campaigns' ), $granted );
 
 		$cross_org = $ownership->map(
-			array( 'edit_laao_ads_campaign' ),
-			'edit_laao_ads_campaign',
+			array( 'edit_aggr_campaign' ),
+			'edit_aggr_campaign',
 			$this->user_b,
 			array( $this->campaign_a )
 		);
@@ -511,8 +511,8 @@ final class OwnershipTest extends WP_UnitTestCase {
 
 		// A campaign capability aimed at an organization's id.
 		$mismatched = $ownership->map(
-			array( 'edit_laao_ads_campaign' ),
-			'edit_laao_ads_campaign',
+			array( 'edit_aggr_campaign' ),
+			'edit_aggr_campaign',
 			$this->user_a,
 			array( $this->org_a )
 		);
@@ -528,8 +528,8 @@ final class OwnershipTest extends WP_UnitTestCase {
 	public function test_a_logged_out_visitor_is_denied(): void {
 		wp_set_current_user( 0 );
 
-		$this->assertFalse( current_user_can( 'edit_laao_ads_campaign', $this->campaign_a ) );
-		$this->assertFalse( current_user_can( 'read_laao_ads_campaign', $this->campaign_a ) );
+		$this->assertFalse( current_user_can( 'edit_aggr_campaign', $this->campaign_a ) );
+		$this->assertFalse( current_user_can( 'read_aggr_campaign', $this->campaign_a ) );
 	}
 
 	/**
@@ -565,12 +565,12 @@ final class OwnershipTest extends WP_UnitTestCase {
 	public function test_membership_changes_are_visible_within_the_request(): void {
 		wp_set_current_user( $this->user_b );
 
-		$this->assertFalse( current_user_can( 'edit_laao_ads_campaign', $this->campaign_a ) );
+		$this->assertFalse( current_user_can( 'edit_aggr_campaign', $this->campaign_a ) );
 
 		add_post_meta( $this->org_a, Org_Repository::META_MEMBER_USER, $this->user_b );
 
 		$this->assertTrue(
-			current_user_can( 'edit_laao_ads_campaign', $this->campaign_a ),
+			current_user_can( 'edit_aggr_campaign', $this->campaign_a ),
 			'A membership added during the request was not visible; the memo is not invalidated.'
 		);
 	}

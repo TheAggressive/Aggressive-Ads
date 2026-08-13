@@ -2,15 +2,15 @@
 /**
  * Package catalogue persistence.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Integration;
+namespace Aggressive\Ads\Tests\Integration;
 
-use LAAO_Advertiser_Portal\Core\Post_Types;
-use LAAO_Advertiser_Portal\Repository\Package_Repository;
+use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Repository\Package_Repository;
 use WP_UnitTestCase;
 
 /**

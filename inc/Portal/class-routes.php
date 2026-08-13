@@ -2,12 +2,14 @@
 /**
  * Portal URL grammar.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Portal;
+namespace Aggressive\Ads\Portal;
+
+use Aggressive\Ads\Core\Hook_Aliases;
 
 /**
  * Where the portal lives.
@@ -35,7 +37,7 @@ final class Routes {
 		 *
 		 * @param string $base Base segment, without slashes.
 		 */
-		$base = apply_filters( 'laao_ads_portal_base', self::DEFAULT_BASE );
+		$base = Hook_Aliases::apply( 'aggr_portal_base', self::DEFAULT_BASE );
 
 		if ( ! is_string( $base ) ) {
 			return self::DEFAULT_BASE;

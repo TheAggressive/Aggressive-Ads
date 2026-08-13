@@ -2,8 +2,9 @@
  * Webpack entry discovery for portal assets and Interactivity modules.
  *
  * Mirrors the Aggressive Apparel theme's build-manifest helpers, scoped to
- * what this plugin ships today: styles under src/styles/ and top-level
- * script modules under src/interactivity/.
+ * what this plugin ships today: styles under src/styles/, top-level
+ * script modules under src/interactivity/, and blocks under src/blocks/
+ * (compiled by a separate wp-scripts invocation, like the LAAO theme).
  */
 
 import fg from 'fast-glob';

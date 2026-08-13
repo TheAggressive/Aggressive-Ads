@@ -2,12 +2,12 @@
 /**
  * GitHub release metadata for plugin updates.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Update;
+namespace Aggressive\Ads\Update;
 
 /**
  * Retrieves, validates, and caches the newest stable GitHub release.
@@ -15,7 +15,7 @@ namespace LAAO_Advertiser_Portal\Update;
 final class Release_Repository {
 
 	/** Release metadata transient. */
-	public const CACHE_KEY = 'laao_ads_update_release';
+	public const CACHE_KEY = 'aggr_update_release';
 
 	/** Treat cached metadata as fresh for five minutes. */
 	private const FRESH_SECONDS = 300;
@@ -51,7 +51,7 @@ final class Release_Repository {
 	public function __construct(
 		Update_Http_Client $http,
 		string $owner = 'TheAggressive',
-		string $repository = 'LAAO-Advertiser-Portal'
+		string $repository = 'Aggressive-Ads'
 	) {
 		$this->http       = $http;
 		$this->owner      = $owner;
@@ -88,7 +88,7 @@ final class Release_Repository {
 			array(
 				'headers' => array(
 					'Accept'     => 'application/vnd.github+json',
-					'User-Agent' => 'LAAO-Advertiser-Portal-Updater',
+					'User-Agent' => 'Aggressive-Ads-Updater',
 				),
 			)
 		);
@@ -144,7 +144,7 @@ final class Release_Repository {
 
 		return null === $version
 			? false
-			: $this->asset_url( $release, "laao-advertiser-portal-{$version}.zip", false );
+			: $this->asset_url( $release, "aggressive-ads-{$version}.zip", false );
 	}
 
 	/**
@@ -158,7 +158,7 @@ final class Release_Repository {
 
 		return null === $version
 			? false
-			: $this->asset_url( $release, "laao-advertiser-portal-{$version}.zip.sha256", true );
+			: $this->asset_url( $release, "aggressive-ads-{$version}.zip.sha256", true );
 	}
 
 	/**
@@ -279,7 +279,7 @@ final class Release_Repository {
 			return false;
 		}
 
-		$expected = "laao-advertiser-portal-{$matches[1]}.zip";
+		$expected = "aggressive-ads-{$matches[1]}.zip";
 		if ( $checksum ) {
 			$expected .= '.sha256';
 		}

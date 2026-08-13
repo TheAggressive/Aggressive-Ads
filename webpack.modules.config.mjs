@@ -14,9 +14,13 @@ import wpConfig from '@wordpress/scripts/config/webpack.config.js';
 import { getInteractivityModuleEntries } from './bin/lib/build-manifest.mjs';
 
 const PLUGIN_MODULE_IDS = {
-	'@laao-ads/helpers': '@laao-ads/helpers',
-	'@laao-ads/scroll-lock': '@laao-ads/scroll-lock',
-	'@laao-ads/dialog': '@laao-ads/dialog',
+	'@aggr/helpers': '@aggr/helpers',
+	'@aggr/scroll-lock': '@aggr/scroll-lock',
+	'@aggr/logic': '@aggr/logic',
+	'@aggr/dialog': '@aggr/dialog',
+	'@aggr/wizard': '@aggr/wizard',
+	'@aggr/autosave': '@aggr/autosave',
+	'@aggr/upload': '@aggr/upload',
 };
 
 export default ( env = {}, argv = {} ) => {

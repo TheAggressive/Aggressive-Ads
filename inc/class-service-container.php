@@ -2,12 +2,12 @@
 /**
  * The service container.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal;
+namespace Aggressive\Ads;
 
 /**
  * Lazy singletons, keyed by class name, with no reflection and no autowiring.

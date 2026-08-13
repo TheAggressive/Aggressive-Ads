@@ -9,7 +9,7 @@ ci:doctor    → node bin/ci/doctor.mjs
 ci:build     → pnpm build
 ci:frontend  → lint:js && typecheck && lint:css && test:js
 ci:php       → lint:php && analyse:php && test:php:unit
-ci:php:wp    → test:php:integration           (needs wp-env)
+ci:php:wp    → test:php:integration && test:php:multisite  (needs wp-env)
 ci:e2e       → build && test:e2e
 ci:package   → build && release:package && release:verify
 ci:verify    → bash bin/ci/verify.sh          (every current lane, serially)
@@ -46,7 +46,7 @@ lane fail rather than quietly reducing coverage.
 - GitHub Actions pinned to SHAs, each carrying a version comment
 - every `ci:*` lane present in **both** the workflow and `verify.sh`
 - **no `get_posts` / `WP_Query` / `get_post_meta` / `$wpdb` outside `inc/Repository/`**
-- **no AdSanity identifiers outside `inc/Integration/Adsanity/`**
+- **no AdSanity identifiers in `inc/` or `templates/`**
 - no `'permission_callback' => '__return_true'`
 - one top z-index token
 
@@ -70,43 +70,49 @@ as Aggressive Apparel's theme build, with this plugin's output directory kept as
 `dist/` (packaging already required it).
 
 ```
-src/interactivity/*.ts  →  dist/interactivity/*.js (+ .asset.php)
-src/styles/*.css        →  dist/styles/*.css     (+ .asset.php)
-assets/icon.svg         →  shipped as-is (not compiled)
+src/interactivity/*.ts     →  dist/interactivity/*.js (+ .asset.php)
+src/styles/*.css           →  dist/styles/*.css     (+ .asset.php)
+src/blocks/placement/      →  dist/blocks/placement/ (block.json, editor, view module)
+assets/icon.svg            →  shipped as-is (not compiled)
 ```
 
 ```bash
-pnpm build            # clean dist/, then modules + assets
-pnpm start            # watch both lanes
+pnpm build            # clean dist/, then modules + assets + blocks
+pnpm start            # watch all three lanes
 pnpm typecheck        # tsc --noEmit (strict + noUncheckedIndexedAccess)
 pnpm lint:js          # ESLint on src/
 pnpm lint:css         # Stylelint on src/styles/
 pnpm test:js          # Jest via wp-scripts (pure helpers only)
 ```
 
-Two webpack configs:
+Three webpack configs:
 
 | Config | Role |
 |---|---|
 | `webpack.modules.config.mjs` | ES modules for `wp_register_script_module` / import maps |
 | `webpack.assets.config.mjs` | Styles (and future classic scripts under `src/scripts/`) |
+| `build:blocks` (`@wordpress/scripts` defaults) | `src/blocks` → `dist/blocks`, including `viewScriptModule` |
 
-`@laao-ads/*` and `@wordpress/interactivity` stay bare-specifier externals so
-WordPress resolves them at runtime. Entry discovery is
+`@aggr/*` and `@wordpress/interactivity` stay bare-specifier externals so
+WordPress resolves them at runtime. Entry discovery for modules and assets is
 `bin/lib/build-manifest.mjs`. Underscore-prefixed CSS partials
 (`src/styles/**/_*.css`) and anything `@import`ed by `portal.css` are not
 standalone entries.
 
 `inc/Assets/class-assets.php` reads `.asset.php` manifests for cache-busting
-versions and merges listed dependencies with the known `@laao-ads/*` graph.
+versions and merges listed dependencies with the known `@aggr/*` graph.
 Missing `dist/` files no-op rather than 404 — run `pnpm build` before loading
 the portal locally.
 
-Do not add a block build until the plugin has an actual block.
+The placement block is authored under `src/blocks/placement/` the same way the
+LAAO theme authors `src/blocks/`. PHP registers `dist/blocks/placement` and
+supplies the dynamic `render_callback`. Alignment, spacing, background, and
+border come from core block `supports` / `theme.json`, not a parallel CSS
+island. The view script fills after paint; it does not count.
 
 ## Packaging
 
-`bin/release/package.sh` rsyncs the repository into a staging directory under a single top-level `laao-advertiser-portal/` folder, applying `PACKAGE_EXCLUDES`, then zips it with a `sha256` sidecar.
+`bin/release/package.sh` rsyncs the repository into a staging directory under a single top-level `aggressive-ads/` folder, applying `PACKAGE_EXCLUDES`, then zips it with a `sha256` sidecar.
 
 It **hard-fails** if `node_modules`, `src`, `tests`, `vendor`, or `bin` reached the staging directory. A stray `src/` or `node_modules/` is historically how a 4 MB plugin becomes a 400 MB one.
 
@@ -140,20 +146,20 @@ Core substitutions, named so nobody reaches for a package later:
 | `ezyang/htmlpurifier` | `wp_kses()` with an explicit allowlist |
 | a state-machine library | `TRANSITIONS`, ~120 greppable lines |
 
-If a runtime dependency ever becomes genuinely unavoidable, [ADR-0011](adr/0011-no-composer-runtime-dependencies.md) requires php-scoper prefixing into `LAAO_Advertiser_Portal\Vendor\` before it ships.
+If a runtime dependency ever becomes genuinely unavoidable, [ADR-0011](adr/0011-no-composer-runtime-dependencies.md) requires php-scoper prefixing into `Aggressive\Ads\Vendor\` before it ships.
 
 ## Releases
 
 Releases are explicit and tag-driven. Update the version in the plugin header,
-`LAAO_ADS_VERSION`, and `package.json`, merge a fully green commit, then push a
+`AGGR_VERSION`, and `package.json`, merge a fully green commit, then push a
 strict `vMAJOR.MINOR.PATCH` tag for that commit.
 
 `.github/workflows/release.yml` refuses a tag whose version differs from the
 plugin header. It packages and verifies the ZIP, creates a build-provenance
 attestation, and uploads these exact assets to a private draft:
 
-- `laao-advertiser-portal-{version}.zip`
-- `laao-advertiser-portal-{version}.zip.sha256`
+- `aggressive-ads-{version}.zip`
+- `aggressive-ads-{version}.zip.sha256`
 
 `bin/release/publish.sh` downloads both assets again, compares them byte for
 byte with the accepted local build, verifies the SHA-256 sidecar and provenance,
@@ -161,6 +167,6 @@ and only then publishes the draft. A failed release stays invisible to the
 updater. Published release assets are treated as immutable.
 
 The plugin updater accepts only stable strict-semver releases from the exact
-`TheAggressive/LAAO-Advertiser-Portal` repository and exact asset names. It does
+`TheAggressive/Aggressive-Ads` repository and exact asset names. It does
 not fall back to GitHub source archives, and it verifies the sidecar before
 WordPress extracts an update.

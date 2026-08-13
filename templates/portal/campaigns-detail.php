@@ -7,7 +7,7 @@
  * the document is written. Resolving it one file later meant the not-found page
  * went out with 200 — it looked right and told every client the wrong thing.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
@@ -16,11 +16,11 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use LAAO_Advertiser_Portal\Plugin;
-use LAAO_Advertiser_Portal\Portal\Router;
-use LAAO_Advertiser_Portal\Portal\View_Data;
+use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Portal\Router;
+use Aggressive\Ads\Portal\View_Data;
 
-$laao_ads_request = Plugin::instance()->container()->get( Router::class )->request();
+$aggr_request = Plugin::instance()->container()->get( Router::class )->request();
 
 /*
  * A campaign the caller may not read resolves to exactly the same null as one
@@ -28,19 +28,19 @@ $laao_ads_request = Plugin::instance()->container()->get( Router::class )->reque
  * are real, and a 403 on a neighbouring organization's campaign confirms that
  * organization has one.
  */
-$laao_ads_campaign = null === $laao_ads_request
+$aggr_campaign = null === $aggr_request
 	? null
-	: Plugin::instance()->container()->get( View_Data::class )->campaign( $laao_ads_request->object_id );
+	: Plugin::instance()->container()->get( View_Data::class )->campaign( $aggr_request->object_id );
 
-if ( null === $laao_ads_campaign ) {
+if ( null === $aggr_campaign ) {
 	status_header( 404 );
 	nocache_headers();
 
-	$laao_ads_screen = LAAO_ADS_PLUGIN_DIR . 'templates/portal/screens/campaign-not-found.php';
-	$laao_ads_title  = __( 'Campaign not found', 'laao-advertiser-portal' );
+	$aggr_screen = AGGR_PLUGIN_DIR . 'templates/portal/screens/campaign-not-found.php';
+	$aggr_title  = __( 'Campaign not found', 'aggressive-ads' );
 } else {
-	$laao_ads_screen = LAAO_ADS_PLUGIN_DIR . 'templates/portal/screens/campaign.php';
-	$laao_ads_title  = (string) $laao_ads_campaign['title'];
+	$aggr_screen = AGGR_PLUGIN_DIR . 'templates/portal/screens/campaign.php';
+	$aggr_title  = (string) $aggr_campaign['title'];
 }
 
-require LAAO_ADS_PLUGIN_DIR . 'templates/portal/base.php';
+require AGGR_PLUGIN_DIR . 'templates/portal/base.php';

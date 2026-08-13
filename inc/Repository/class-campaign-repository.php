@@ -2,15 +2,15 @@
 /**
  * Campaign persistence.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Repository;
+namespace Aggressive\Ads\Repository;
 
-use LAAO_Advertiser_Portal\Core\Post_Statuses;
-use LAAO_Advertiser_Portal\Core\Post_Types;
+use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Core\Post_Types;
 
 /**
  * Every read and write of a campaign.
@@ -22,25 +22,25 @@ use LAAO_Advertiser_Portal\Core\Post_Types;
  */
 final class Campaign_Repository {
 
-	public const META_ORG_ID               = '_laao_ads_org_id';
-	public const META_START_TS             = '_laao_ads_start_ts';
-	public const META_END_TS               = '_laao_ads_end_ts';
-	public const META_SUBMITTED_AT         = '_laao_ads_submitted_at';
-	public const META_REVIEWED_BY          = '_laao_ads_reviewed_by';
-	public const META_REVIEWED_AT          = '_laao_ads_reviewed_at';
-	public const META_REVIEW_NOTES         = '_laao_ads_review_notes';
-	public const META_INTERNAL_NOTES       = '_laao_ads_internal_notes';
-	public const META_NOTIFICATION_RECEIPT = '_laao_ads_notification_receipt';
-	public const META_REVISION             = '_laao_ads_revision';
-	public const META_ADSANITY_ID          = '_laao_ads_adsanity_ad_id';
-	public const META_PLACEMENT_ID         = '_laao_ads_placement_id';
-	public const META_AUTOSAVE_REV         = '_laao_ads_autosave_rev';
-	public const META_WIZARD_STEP          = '_laao_ads_wizard_step';
-	public const META_ADVERTISER_NOTES     = '_laao_ads_advertiser_notes';
-	public const META_PACKAGE_ID           = '_laao_ads_package_id';
-	public const META_BUDGET_CENTS         = '_laao_ads_budget_cents';
-	public const META_CURRENCY             = '_laao_ads_currency';
-	public const META_PENDING_UPDATES      = '_laao_ads_pending_creative_updates';
+	public const META_ORG_ID               = '_aggr_org_id';
+	public const META_START_TS             = '_aggr_start_ts';
+	public const META_END_TS               = '_aggr_end_ts';
+	public const META_SUBMITTED_AT         = '_aggr_submitted_at';
+	public const META_REVIEWED_BY          = '_aggr_reviewed_by';
+	public const META_REVIEWED_AT          = '_aggr_reviewed_at';
+	public const META_REVIEW_NOTES         = '_aggr_review_notes';
+	public const META_INTERNAL_NOTES       = '_aggr_internal_notes';
+	public const META_NOTIFICATION_RECEIPT = '_aggr_notification_receipt';
+	public const META_REVISION             = '_aggr_revision';
+	public const META_ADSANITY_ID          = '_aggr_adsanity_ad_id';
+	public const META_PLACEMENT_ID         = '_aggr_placement_id';
+	public const META_AUTOSAVE_REV         = '_aggr_autosave_rev';
+	public const META_WIZARD_STEP          = '_aggr_wizard_step';
+	public const META_ADVERTISER_NOTES     = '_aggr_advertiser_notes';
+	public const META_PACKAGE_ID           = '_aggr_package_id';
+	public const META_BUDGET_CENTS         = '_aggr_budget_cents';
+	public const META_CURRENCY             = '_aggr_currency';
+	public const META_PENDING_UPDATES      = '_aggr_pending_creative_updates';
 
 	/**
 	 * Creates an organization-scoped draft.
@@ -75,6 +75,19 @@ final class Campaign_Repository {
 		update_post_meta( $campaign_id, self::META_WIZARD_STEP, 'details' );
 
 		return $campaign_id;
+	}
+
+	/**
+	 * Hard-deletes a campaign. Compensating rollback for a failed copy only.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 */
+	public function delete( int $campaign_id ): bool {
+		if ( ! $this->exists( $campaign_id ) ) {
+			return false;
+		}
+
+		return null !== wp_delete_post( $campaign_id, true );
 	}
 
 	/**
@@ -463,7 +476,7 @@ final class Campaign_Repository {
 	 *
 	 * **Deliberately unscoped by organization.** This is the staff review
 	 * queue: a reviewer works across every advertiser, and the authorization
-	 * for that is the `laao_ads_review_campaigns` capability, checked by the
+	 * for that is the `aggr_review_campaigns` capability, checked by the
 	 * caller before it ever gets here. It is the one listing in the plugin
 	 * without an org clause, which is why it says so.
 	 *
@@ -758,5 +771,43 @@ final class Campaign_Repository {
 		}
 
 		return array_values( array_filter( array_map( 'intval', $ids ) ) );
+	}
+
+	/**
+	 * Live campaigns occupying a placement, lowest id first.
+	 *
+	 * Fill rotates equally among this list (ADR-0032). Order is stable so a
+	 * test can name the members; it is not a serving priority.
+	 *
+	 * @param int $placement_id Placement post id.
+	 * @return array<int, int>
+	 */
+	public function live_ids_for_placement( int $placement_id ): array {
+		if ( $placement_id <= 0 ) {
+			return array();
+		}
+
+		$ids = get_posts(
+			array(
+				'post_type'              => Post_Types::CAMPAIGN,
+				'post_status'            => Post_Statuses::LIVE,
+				'numberposts'            => 20,
+				'fields'                 => 'ids',
+				'orderby'                => 'ID',
+				'order'                  => 'ASC',
+				'no_found_rows'          => true,
+				'update_post_term_cache' => false,
+				'meta_query'             => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Bounded live set for one placement at fill time.
+					array(
+						'key'     => self::META_PLACEMENT_ID,
+						'value'   => $placement_id,
+						'compare' => '=',
+						'type'    => 'NUMERIC',
+					),
+				),
+			)
+		);
+
+		return array_values( array_map( 'intval', $ids ) );
 	}
 }

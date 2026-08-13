@@ -2,16 +2,16 @@
 /**
  * Organization invitation and access-request email.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Notification;
+namespace Aggressive\Ads\Notification;
 
-use LAAO_Advertiser_Portal\Portal\Request;
-use LAAO_Advertiser_Portal\Portal\Routes;
-use LAAO_Advertiser_Portal\Repository\User_Repository;
+use Aggressive\Ads\Portal\Request;
+use Aggressive\Ads\Portal\Routes;
+use Aggressive\Ads\Repository\User_Repository;
 
 /**
  * Sends individualized organization membership messages.
@@ -39,12 +39,12 @@ final class Organization_Notification {
 
 		$subject = sprintf(
 			/* translators: %s: organization name. */
-			__( 'Invitation to join %s', 'laao-advertiser-portal' ),
+			__( 'Invitation to join %s', 'aggressive-ads' ),
 			$org_name
 		);
 		$body = sprintf(
 			/* translators: 1: organization name. 2: invitation URL. 3: expiration date. */
-			__( "You were invited to join %1\$s in the advertiser portal. Complete the invitation using this single-use link:\n\n%2\$s\n\nThis invitation expires %3\$s. If you were not expecting it, ignore this message.", 'laao-advertiser-portal' ),
+			__( "You were invited to join %1\$s in the advertiser portal. Complete the invitation using this single-use link:\n\n%2\$s\n\nThis invitation expires %3\$s. If you were not expecting it, ignore this message.", 'aggressive-ads' ),
 			$org_name,
 			$url,
 			wp_date( 'F j, Y g:i a T', $expires_at )
@@ -69,12 +69,12 @@ final class Organization_Notification {
 
 		$subject = sprintf(
 			/* translators: %s: organization name. */
-			__( 'Access request for %s', 'laao-advertiser-portal' ),
+			__( 'Access request for %s', 'aggressive-ads' ),
 			$org_name
 		);
 		$body = sprintf(
 			/* translators: 1: requesting email. 2: organization name. 3: organization screen URL. */
-			__( "%1\$s entered a name similar to %2\$s while signing up. No access was granted. Review and approve or deny the request here:\n\n%3\$s", 'laao-advertiser-portal' ),
+			__( "%1\$s entered a name similar to %2\$s while signing up. No access was granted. Review and approve or deny the request here:\n\n%3\$s", 'aggressive-ads' ),
 			$email,
 			$org_name,
 			Routes::url( Request::ROUTE_ORGANIZATION )
@@ -91,8 +91,8 @@ final class Organization_Notification {
 	public function send_denied( string $email ): bool {
 		return $this->send_email(
 			$email,
-			__( 'Advertiser organization request update', 'laao-advertiser-portal' ),
-			__( 'Your request to join an existing advertiser organization was not approved. Contact the organization directly if you believe this was a mistake.', 'laao-advertiser-portal' )
+			__( 'Advertiser organization request update', 'aggressive-ads' ),
+			__( 'Your request to join an existing advertiser organization was not approved. Contact the organization directly if you believe this was a mistake.', 'aggressive-ads' )
 		);
 	}
 
@@ -105,12 +105,12 @@ final class Organization_Notification {
 	public function send_removed( string $email, string $org_name ): bool {
 		$subject = sprintf(
 			/* translators: %s: organization name. */
-			__( 'Access removed for %s', 'laao-advertiser-portal' ),
+			__( 'Access removed for %s', 'aggressive-ads' ),
 			$org_name
 		);
 		$body = sprintf(
 			/* translators: %s: organization name. */
-			__( 'Your access to %s in the advertiser portal has been removed. Contact the organization owner if you believe this was a mistake.', 'laao-advertiser-portal' ),
+			__( 'Your access to %s in the advertiser portal has been removed. Contact the organization owner if you believe this was a mistake.', 'aggressive-ads' ),
 			$org_name
 		);
 
@@ -126,12 +126,12 @@ final class Organization_Notification {
 	public function send_ownership_received( string $email, string $org_name ): bool {
 		$subject = sprintf(
 			/* translators: %s: organization name. */
-			__( 'You are now the owner of %s', 'laao-advertiser-portal' ),
+			__( 'You are now the owner of %s', 'aggressive-ads' ),
 			$org_name
 		);
 		$body = sprintf(
 			/* translators: 1: organization name. 2: organization screen URL. */
-			__( "You are now the owner of %1\$s in the advertiser portal. Invite people, approve requests, and manage membership here:\n\n%2\$s", 'laao-advertiser-portal' ),
+			__( "You are now the owner of %1\$s in the advertiser portal. Invite people, approve requests, and manage membership here:\n\n%2\$s", 'aggressive-ads' ),
 			$org_name,
 			Routes::url( Request::ROUTE_ORGANIZATION )
 		);
@@ -148,12 +148,12 @@ final class Organization_Notification {
 	public function send_ownership_transferred( string $email, string $org_name ): bool {
 		$subject = sprintf(
 			/* translators: %s: organization name. */
-			__( 'Ownership transferred for %s', 'laao-advertiser-portal' ),
+			__( 'Ownership transferred for %s', 'aggressive-ads' ),
 			$org_name
 		);
 		$body = sprintf(
 			/* translators: %s: organization name. */
-			__( 'You transferred ownership of %s. You remain a member of the organization and can still work on its campaigns.', 'laao-advertiser-portal' ),
+			__( 'You transferred ownership of %s. You remain a member of the organization and can still work on its campaigns.', 'aggressive-ads' ),
 			$org_name
 		);
 

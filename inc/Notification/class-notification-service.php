@@ -2,24 +2,24 @@
 /**
  * Campaign email notifications.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Notification;
+namespace Aggressive\Ads\Notification;
 
-use LAAO_Advertiser_Portal\Admin\Review_Screen;
-use LAAO_Advertiser_Portal\Audit\Audit_Event;
-use LAAO_Advertiser_Portal\Core\Post_Statuses;
-use LAAO_Advertiser_Portal\Core\Service;
-use LAAO_Advertiser_Portal\Portal\Request;
-use LAAO_Advertiser_Portal\Portal\Routes;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Repository;
-use LAAO_Advertiser_Portal\Repository\User_Repository;
-use LAAO_Advertiser_Portal\Security\Capabilities;
+use Aggressive\Ads\Admin\Review_Screen;
+use Aggressive\Ads\Audit\Audit_Event;
+use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Portal\Request;
+use Aggressive\Ads\Portal\Routes;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Repository\User_Repository;
+use Aggressive\Ads\Security\Capabilities;
 use RuntimeException;
 
 /**
@@ -31,8 +31,8 @@ use RuntimeException;
  */
 final class Notification_Service implements Service {
 
-	public const RETRY_HOOK            = 'laao_ads_retry_submission_notifications';
-	public const ADVERTISER_RETRY_HOOK = 'laao_ads_retry_advertiser_notifications';
+	public const RETRY_HOOK            = 'aggr_retry_submission_notifications';
+	public const ADVERTISER_RETRY_HOOK = 'aggr_retry_advertiser_notifications';
 
 	private const STAFF_SUBMISSION    = 'staff_submission';
 	private const ADVERTISER_DECISION = 'advertiser_decision';
@@ -80,7 +80,7 @@ final class Notification_Service implements Service {
 	 * @return void
 	 */
 	public function init(): void {
-		add_action( 'laao_ads_notify_campaign_transitioned', array( $this, 'campaign_transitioned' ), 10, 4 );
+		add_action( 'aggr_notify_campaign_transitioned', array( $this, 'campaign_transitioned' ), 10, 4 );
 		add_action( self::RETRY_HOOK, array( $this, 'retry_submission' ), 10, 3 );
 		add_action( self::ADVERTISER_RETRY_HOOK, array( $this, 'retry_advertiser_notice' ), 10, 4 );
 	}
@@ -497,45 +497,45 @@ final class Notification_Service implements Service {
 		$site_name = sanitize_text_field( wp_specialchars_decode( (string) get_bloginfo( 'name' ), ENT_QUOTES ) );
 
 		$headline = match ( $status ) {
-			Post_Statuses::CHANGES  => __( 'Changes requested', 'laao-advertiser-portal' ),
-			Post_Statuses::REJECTED => __( 'Campaign not approved', 'laao-advertiser-portal' ),
-			Post_Statuses::APPROVED => __( 'Campaign approved', 'laao-advertiser-portal' ),
-			Post_Statuses::LIVE     => __( 'Campaign is now running', 'laao-advertiser-portal' ),
-			default                 => __( 'Campaign finished', 'laao-advertiser-portal' ),
+			Post_Statuses::CHANGES  => __( 'Changes requested', 'aggressive-ads' ),
+			Post_Statuses::REJECTED => __( 'Campaign not approved', 'aggressive-ads' ),
+			Post_Statuses::APPROVED => __( 'Campaign approved', 'aggressive-ads' ),
+			Post_Statuses::LIVE     => __( 'Campaign is now running', 'aggressive-ads' ),
+			default                 => __( 'Campaign finished', 'aggressive-ads' ),
 		};
 
 		$intro = match ( $status ) {
-			Post_Statuses::CHANGES  => __( 'The review team has asked for changes before this campaign can run.', 'laao-advertiser-portal' ),
-			Post_Statuses::REJECTED => __( 'The review team was not able to approve this campaign.', 'laao-advertiser-portal' ),
-			Post_Statuses::APPROVED => __( 'This campaign has been approved and will run on its scheduled dates.', 'laao-advertiser-portal' ),
-			Post_Statuses::LIVE     => __( 'This campaign is now being shown on the site.', 'laao-advertiser-portal' ),
-			default                 => __( 'This campaign has reached its end date and is no longer being shown.', 'laao-advertiser-portal' ),
+			Post_Statuses::CHANGES  => __( 'The review team has asked for changes before this campaign can run.', 'aggressive-ads' ),
+			Post_Statuses::REJECTED => __( 'The review team was not able to approve this campaign.', 'aggressive-ads' ),
+			Post_Statuses::APPROVED => __( 'This campaign has been approved and will run on its scheduled dates.', 'aggressive-ads' ),
+			Post_Statuses::LIVE     => __( 'This campaign is now being shown on the site.', 'aggressive-ads' ),
+			default                 => __( 'This campaign has reached its end date and is no longer being shown.', 'aggressive-ads' ),
 		};
 
 		$body = array(
 			$intro,
 			'',
 			/* translators: %s: campaign title. */
-			sprintf( __( 'Campaign: %s', 'laao-advertiser-portal' ), $title ),
+			sprintf( __( 'Campaign: %s', 'aggressive-ads' ), $title ),
 		);
 
 		$notes = trim( $this->campaigns->review_notes( $campaign_id ) );
 
 		if ( '' !== $notes && in_array( $status, array( Post_Statuses::CHANGES, Post_Statuses::REJECTED ), true ) ) {
 			$body[] = '';
-			$body[] = __( 'Feedback from the review team:', 'laao-advertiser-portal' );
+			$body[] = __( 'Feedback from the review team:', 'aggressive-ads' );
 			$body[] = sanitize_textarea_field( $notes );
 		}
 
 		$body[] = '';
-		$body[] = __( 'Open your campaign:', 'laao-advertiser-portal' );
+		$body[] = __( 'Open your campaign:', 'aggressive-ads' );
 		$body[] = Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id );
 
 		return array(
 			'subject' => sanitize_text_field(
 				sprintf(
 					/* translators: 1: site name. 2: headline, e.g. Changes requested. 3: campaign title. */
-					__( '[%1$s] %2$s: %3$s', 'laao-advertiser-portal' ),
+					__( '[%1$s] %2$s: %3$s', 'aggressive-ads' ),
 					$site_name,
 					$headline,
 					$title
@@ -584,27 +584,27 @@ final class Notification_Service implements Service {
 
 		if ( $resubmitted ) {
 			/* translators: 1: site name. 2: campaign title. */
-			$subject = sprintf( __( '[%1$s] Campaign resubmitted: %2$s', 'laao-advertiser-portal' ), $site_name, $title );
+			$subject = sprintf( __( '[%1$s] Campaign resubmitted: %2$s', 'aggressive-ads' ), $site_name, $title );
 		} else {
 			/* translators: 1: site name. 2: campaign title. */
-			$subject = sprintf( __( '[%1$s] New campaign submitted: %2$s', 'laao-advertiser-portal' ), $site_name, $title );
+			$subject = sprintf( __( '[%1$s] New campaign submitted: %2$s', 'aggressive-ads' ), $site_name, $title );
 		}
 
 		$intro = $resubmitted
-			? __( 'A revised advertising campaign is ready for review.', 'laao-advertiser-portal' )
-			: __( 'A new advertising campaign is ready for review.', 'laao-advertiser-portal' );
+			? __( 'A revised advertising campaign is ready for review.', 'aggressive-ads' )
+			: __( 'A new advertising campaign is ready for review.', 'aggressive-ads' );
 
 		$body = array(
 			$intro,
 			'',
 			/* translators: %s: organization name. */
-			sprintf( __( 'Organization: %s', 'laao-advertiser-portal' ), $organization ),
+			sprintf( __( 'Organization: %s', 'aggressive-ads' ), $organization ),
 			/* translators: %s: campaign title. */
-			sprintf( __( 'Campaign: %s', 'laao-advertiser-portal' ), $title ),
+			sprintf( __( 'Campaign: %s', 'aggressive-ads' ), $title ),
 			/* translators: %s: campaign revision number. */
-			sprintf( __( 'Revision: %s', 'laao-advertiser-portal' ), number_format_i18n( $revision ) ),
+			sprintf( __( 'Revision: %s', 'aggressive-ads' ), number_format_i18n( $revision ) ),
 			'',
-			__( 'Review campaign:', 'laao-advertiser-portal' ),
+			__( 'Review campaign:', 'aggressive-ads' ),
 			Review_Screen::campaign_url( $campaign_id ),
 		);
 

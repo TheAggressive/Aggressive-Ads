@@ -2,7 +2,7 @@
 /**
  * The account screen.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$laao_ads_screen = LAAO_ADS_PLUGIN_DIR . 'templates/portal/screens/account.php';
-$laao_ads_title  = __( 'Account', 'laao-advertiser-portal' );
+$aggr_screen = AGGR_PLUGIN_DIR . 'templates/portal/screens/account.php';
+$aggr_title  = __( 'Account', 'aggressive-ads' );
 
-require LAAO_ADS_PLUGIN_DIR . 'templates/portal/base.php';
+require AGGR_PLUGIN_DIR . 'templates/portal/base.php';

@@ -2,21 +2,21 @@
 /**
  * Portal-owned password setup and recovery.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Security;
+namespace Aggressive\Ads\Tests\Security;
 
-use LAAO_Advertiser_Portal\Notification\Password_Notification;
-use LAAO_Advertiser_Portal\Plugin;
-use LAAO_Advertiser_Portal\Portal\Password_Actions;
-use LAAO_Advertiser_Portal\Portal\Request;
-use LAAO_Advertiser_Portal\Portal\Router;
-use LAAO_Advertiser_Portal\Security\Rate_Limiter;
-use LAAO_Advertiser_Portal\Security\Roles;
-use LAAO_Advertiser_Portal\Workflow\Password_Reset;
+use Aggressive\Ads\Notification\Password_Notification;
+use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Portal\Password_Actions;
+use Aggressive\Ads\Portal\Request;
+use Aggressive\Ads\Portal\Router;
+use Aggressive\Ads\Security\Rate_Limiter;
+use Aggressive\Ads\Security\Roles;
+use Aggressive\Ads\Workflow\Password_Reset;
 use WP_UnitTestCase;
 
 /**
@@ -121,7 +121,7 @@ final class PortalPasswordResetTest extends WP_UnitTestCase {
 
 		$weak = $passwords->reset( $args['key'], $args['login'], 'short', 'short' );
 		$this->assertWPError( $weak );
-		$this->assertSame( 'laao_ads_invalid_password', $weak->get_error_code() );
+		$this->assertSame( 'aggr_invalid_password', $weak->get_error_code() );
 		$this->assertNotWPError( $passwords->validate( $args['key'], $args['login'] ), 'A rejected password must not consume the link.' );
 
 		$this->assertTrue( $passwords->reset( $args['key'], $args['login'], 'a secure portal passphrase', 'a secure portal passphrase' ) );
@@ -153,7 +153,7 @@ final class PortalPasswordResetTest extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'templates/portal/forgot-password.php', $template );
 
 		ob_start();
-		require LAAO_ADS_PLUGIN_DIR . 'templates/portal/screens/forgot-password.php';
+		require AGGR_PLUGIN_DIR . 'templates/portal/screens/forgot-password.php';
 		$html = (string) ob_get_clean();
 
 		$this->assertStringContainsString( 'name="_wpnonce"', $html );

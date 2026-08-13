@@ -6,7 +6,7 @@
  * capability is usually a staff member or a former advertiser, and the useful
  * response is an explanation and a way out, not a stack of bare text.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$laao_ads_screen = LAAO_ADS_PLUGIN_DIR . 'templates/portal/screens/403.php';
-$laao_ads_title  = __( 'No access', 'laao-advertiser-portal' );
+$aggr_screen = AGGR_PLUGIN_DIR . 'templates/portal/screens/403.php';
+$aggr_title  = __( 'No access', 'aggressive-ads' );
 
-require LAAO_ADS_PLUGIN_DIR . 'templates/portal/base.php';
+require AGGR_PLUGIN_DIR . 'templates/portal/base.php';

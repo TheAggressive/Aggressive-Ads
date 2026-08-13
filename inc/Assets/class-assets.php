@@ -2,16 +2,18 @@
 /**
  * Enqueueing the portal's assets.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Assets;
+namespace Aggressive\Ads\Assets;
 
-use LAAO_Advertiser_Portal\Core\Service;
-use LAAO_Advertiser_Portal\Portal\Request;
-use LAAO_Advertiser_Portal\Portal\Router;
+use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Domain\Upload_Rules;
+use Aggressive\Ads\Portal\Request;
+use Aggressive\Ads\Portal\Router;
+use Aggressive\Ads\REST\Creative_File_Controller;
 
 /**
  * Loads portal styles and Interactivity script modules, on the portal only.
@@ -33,7 +35,7 @@ final class Assets implements Service {
 	/**
 	 * Stylesheet handle.
 	 */
-	public const HANDLE = 'laao-ads-portal';
+	public const HANDLE = 'aggr-portal';
 
 	/**
 	 * Compiled portal stylesheet (relative to plugin root).
@@ -48,14 +50,21 @@ final class Assets implements Service {
 	/**
 	 * Script-module ids (import-map keys).
 	 */
-	public const MODULE_SCROLL_LOCK = '@laao-ads/scroll-lock';
-	public const MODULE_HELPERS     = '@laao-ads/helpers';
-	public const MODULE_DIALOG      = '@laao-ads/dialog';
+	public const MODULE_SCROLL_LOCK = '@aggr/scroll-lock';
+	public const MODULE_HELPERS     = '@aggr/helpers';
+	public const MODULE_LOGIC       = '@aggr/logic';
+	public const MODULE_DIALOG      = '@aggr/dialog';
+	public const MODULE_WIZARD      = '@aggr/wizard';
+	public const MODULE_AUTOSAVE    = '@aggr/autosave';
+	public const MODULE_UPLOAD      = '@aggr/upload';
 
 	/**
-	 * Interactivity store namespace for the shared dialog.
+	 * Interactivity store namespaces.
 	 */
-	public const DIALOG_STORE = 'laao-advertiser-portal/dialog';
+	public const DIALOG_STORE   = 'aggr/dialog';
+	public const WIZARD_STORE   = 'aggr/wizard';
+	public const AUTOSAVE_STORE = 'aggr/autosave';
+	public const UPLOAD_STORE   = 'aggr/upload';
 
 	/**
 	 * Whether shared modules have been registered this request.
@@ -111,13 +120,13 @@ final class Assets implements Service {
 
 		$relative = 'assets/icon.svg';
 
-		if ( ! is_file( LAAO_ADS_PLUGIN_DIR . $relative ) ) {
+		if ( ! is_file( AGGR_PLUGIN_DIR . $relative ) ) {
 			return;
 		}
 
 		printf(
 			'<link rel="icon" href="%s" sizes="any" type="image/svg+xml">' . "\n",
-			esc_url( LAAO_ADS_PLUGIN_URL . $relative )
+			esc_url( AGGR_PLUGIN_URL . $relative )
 		);
 	}
 
@@ -158,7 +167,7 @@ final class Assets implements Service {
 	 * @return bool
 	 */
 	private function keeps_classic_handle( string $handle ): bool {
-		if ( self::HANDLE === $handle || str_starts_with( $handle, 'laao-ads-' ) ) {
+		if ( self::HANDLE === $handle || str_starts_with( $handle, 'aggr-' ) ) {
 			return true;
 		}
 
@@ -183,20 +192,35 @@ final class Assets implements Service {
 		/*
 		 * Block themes print the import map in wp_head. Enqueue the dialog
 		 * module here — not during template render — so @wordpress/interactivity
-		 * and the shared @laao-ads/* modules are in that map before the browser
+		 * and the shared @aggr/* modules are in that map before the browser
 		 * evaluates dialog.js. Late enqueue still prints the <script type=module>
 		 * tag, but bare-specifier imports then fail with "Failed to resolve
 		 * module specifier".
 		 */
 		$request = $this->router->request();
 		if (
-			Request::ROUTE_CAMPAIGNS === $request->route
+			null !== $request
+			&& Request::ROUTE_CAMPAIGNS === $request->route
 			&& $request->object_id > 0
 			&& function_exists( 'wp_enqueue_script_module' )
-			&& is_file( LAAO_ADS_PLUGIN_DIR . 'dist/interactivity/dialog.js' )
+			&& is_file( AGGR_PLUGIN_DIR . 'dist/interactivity/dialog.js' )
 		) {
 			wp_enqueue_script_module( '@wordpress/interactivity' );
 			wp_enqueue_script_module( self::MODULE_DIALOG );
+
+			$has_logic = is_file( AGGR_PLUGIN_DIR . 'dist/interactivity/logic.js' );
+
+			if ( $has_logic && is_file( AGGR_PLUGIN_DIR . 'dist/interactivity/wizard.js' ) ) {
+				wp_enqueue_script_module( self::MODULE_WIZARD );
+			}
+
+			if ( $has_logic && is_file( AGGR_PLUGIN_DIR . 'dist/interactivity/autosave.js' ) ) {
+				wp_enqueue_script_module( self::MODULE_AUTOSAVE );
+			}
+
+			if ( $has_logic && is_file( AGGR_PLUGIN_DIR . 'dist/interactivity/upload.js' ) ) {
+				wp_enqueue_script_module( self::MODULE_UPLOAD );
+			}
 		}
 	}
 
@@ -209,7 +233,7 @@ final class Assets implements Service {
 	 * @return void
 	 */
 	public function enqueue_style( string $handle, string $relative, array $dependencies = array() ): void {
-		$path = LAAO_ADS_PLUGIN_DIR . $relative;
+		$path = AGGR_PLUGIN_DIR . $relative;
 
 		if ( ! is_file( $path ) ) {
 			return;
@@ -217,7 +241,7 @@ final class Assets implements Service {
 
 		wp_enqueue_style(
 			$handle,
-			LAAO_ADS_PLUGIN_URL . $relative,
+			AGGR_PLUGIN_URL . $relative,
 			$dependencies,
 			$this->asset_version( $relative )
 		);
@@ -273,11 +297,97 @@ final class Assets implements Service {
 			array(
 				'dialogs' => $normalized,
 				'i18n'    => array(
-					'opened' => __( 'Dialog opened', 'laao-advertiser-portal' ),
-					'closed' => __( 'Dialog closed', 'laao-advertiser-portal' ),
+					'opened' => __( 'Dialog opened', 'aggressive-ads' ),
+					'closed' => __( 'Dialog closed', 'aggressive-ads' ),
 				),
 			)
 		);
+	}
+
+	/**
+	 * Hydrates wizard, autosave and upload stores for an editable campaign.
+	 *
+	 * Modules are enqueued from enqueue() so the import map prints in wp_head.
+	 * This only writes Interactivity state. Safe to call when the APIs are absent.
+	 *
+	 * @param array{id: int, wizard_step: string, autosave_rev: int, submit_ready: bool, step_label: string, slots: array<int, array{id: int, size: string}>} $campaign Campaign view data.
+	 * @return void
+	 */
+	public function hydrate_campaign_editor( array $campaign ): void {
+		if ( null === $this->router->request() ) {
+			return;
+		}
+
+		if ( ! function_exists( 'wp_interactivity_state' ) ) {
+			return;
+		}
+
+		$wizard_id   = 'campaign-' . $campaign['id'];
+		$autosave_id = $wizard_id;
+
+		wp_interactivity_state(
+			self::WIZARD_STORE,
+			array(
+				'wizards' => array(
+					$wizard_id => array(
+						'current'     => $campaign['wizard_step'],
+						'submitReady' => $campaign['submit_ready'],
+					),
+				),
+				'i18n'    => array(
+					'step' => $campaign['step_label'],
+				),
+			)
+		);
+
+		wp_interactivity_state(
+			self::AUTOSAVE_STORE,
+			array(
+				'autosaves' => array(
+					$autosave_id => array(
+						'restUrl'  => rest_url( Creative_File_Controller::NAMESPACE . '/campaigns/' . $campaign['id'] ),
+						'nonce'    => wp_create_nonce( 'wp_rest' ),
+						'revision' => $campaign['autosave_rev'],
+						'status'   => 'idle',
+					),
+				),
+				'i18n'      => array(
+					'idle'     => '',
+					'saving'   => __( 'Saving…', 'aggressive-ads' ),
+					'saved'    => __( 'Draft saved.', 'aggressive-ads' ),
+					'error'    => __( 'Could not save the draft. Your last change may not be stored.', 'aggressive-ads' ),
+					'conflict' => __( 'This campaign was saved elsewhere. Refresh to continue from the latest draft.', 'aggressive-ads' ),
+				),
+			)
+		);
+
+		$uploads = array();
+
+		foreach ( $campaign['slots'] as $slot ) {
+			$uploads[ (string) $slot['id'] ] = array(
+				'expectedSize' => $slot['size'],
+				'maxBytes'     => Upload_Rules::MAX_BYTES,
+				'maxPixels'    => Upload_Rules::MAX_PIXELS,
+				'allowedMime'  => Upload_Rules::ALLOWED_MIME,
+			);
+		}
+
+		if ( array() !== $uploads ) {
+			wp_interactivity_state(
+				self::UPLOAD_STORE,
+				array(
+					'uploads' => $uploads,
+					'i18n'    => array(
+						'ready'      => __( 'File selected. Upload when you are ready.', 'aggressive-ads' ),
+						'empty'      => __( 'Choose an image file to upload.', 'aggressive-ads' ),
+						'type'       => __( 'Use a JPEG, PNG, GIF, or WebP image.', 'aggressive-ads' ),
+						'size'       => __( 'The file is larger than 2 MB. Choose a smaller image.', 'aggressive-ads' ),
+						'pixels'     => __( 'That image is too large in pixels to process safely. Choose a smaller image.', 'aggressive-ads' ),
+						'dimensions' => __( 'The image must match the required pixel size for this placement.', 'aggressive-ads' ),
+					),
+				)
+			);
+		}
 	}
 
 	/**
@@ -290,7 +400,7 @@ final class Assets implements Service {
 			return false;
 		}
 
-		if ( ! is_file( LAAO_ADS_PLUGIN_DIR . 'dist/interactivity/dialog.js' ) ) {
+		if ( ! is_file( AGGR_PLUGIN_DIR . 'dist/interactivity/dialog.js' ) ) {
 			return false;
 		}
 
@@ -312,6 +422,32 @@ final class Assets implements Service {
 			)
 		) && $ok;
 
+		$this->register_module( self::MODULE_LOGIC, 'logic', array() );
+		$this->register_module(
+			self::MODULE_WIZARD,
+			'wizard',
+			array(
+				'@wordpress/interactivity',
+				self::MODULE_LOGIC,
+			)
+		);
+		$this->register_module(
+			self::MODULE_AUTOSAVE,
+			'autosave',
+			array(
+				'@wordpress/interactivity',
+				self::MODULE_LOGIC,
+			)
+		);
+		$this->register_module(
+			self::MODULE_UPLOAD,
+			'upload',
+			array(
+				'@wordpress/interactivity',
+				self::MODULE_LOGIC,
+			)
+		);
+
 		return $ok;
 	}
 
@@ -325,13 +461,13 @@ final class Assets implements Service {
 	 */
 	private function register_module( string $module_id, string $basename, array $deps ): bool {
 		$relative = 'dist/interactivity/' . $basename . '.js';
-		$path     = LAAO_ADS_PLUGIN_DIR . $relative;
+		$path     = AGGR_PLUGIN_DIR . $relative;
 
 		if ( ! is_file( $path ) ) {
 			return false;
 		}
 
-		$asset = $this->read_asset_php( 'dist/interactivity/' . $basename . '.asset.php' );
+		$asset  = $this->read_asset_php( 'dist/interactivity/' . $basename . '.asset.php' );
 		$merged = array_values(
 			array_unique(
 				array_merge(
@@ -354,7 +490,7 @@ final class Assets implements Service {
 
 		wp_register_script_module(
 			$module_id,
-			LAAO_ADS_PLUGIN_URL . $relative,
+			AGGR_PLUGIN_URL . $relative,
 			$normalized,
 			$this->asset_version( $relative, $asset )
 		);
@@ -381,10 +517,10 @@ final class Assets implements Service {
 			return (string) $asset['version'];
 		}
 
-		$path  = LAAO_ADS_PLUGIN_DIR . $relative;
+		$path  = AGGR_PLUGIN_DIR . $relative;
 		$mtime = is_file( $path ) ? filemtime( $path ) : false;
 
-		return false === $mtime ? LAAO_ADS_VERSION : (string) $mtime;
+		return false === $mtime ? AGGR_VERSION : (string) $mtime;
 	}
 
 	/**
@@ -394,7 +530,7 @@ final class Assets implements Service {
 	 * @return array<string, mixed>
 	 */
 	private function read_asset_php( string $relative ): array {
-		$path = LAAO_ADS_PLUGIN_DIR . $relative;
+		$path = AGGR_PLUGIN_DIR . $relative;
 
 		if ( ! is_file( $path ) ) {
 			return array();

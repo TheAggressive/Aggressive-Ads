@@ -2,20 +2,20 @@
 /**
  * The portal route against real WordPress.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Integration;
+namespace Aggressive\Ads\Tests\Integration;
 
-use LAAO_Advertiser_Portal\Assets\Assets;
-use LAAO_Advertiser_Portal\Install\Installer;
-use LAAO_Advertiser_Portal\Plugin;
-use LAAO_Advertiser_Portal\Portal\Request;
-use LAAO_Advertiser_Portal\Portal\Router;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Security\Roles;
+use Aggressive\Ads\Assets\Assets;
+use Aggressive\Ads\Install\Installer;
+use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Portal\Request;
+use Aggressive\Ads\Portal\Router;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Security\Roles;
 use WP_UnitTestCase;
 
 /**
@@ -315,10 +315,10 @@ final class PortalRouterTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function test_the_placeholder_fallback_still_exists(): void {
-		$this->assertFileExists( LAAO_ADS_PLUGIN_DIR . 'templates/portal/placeholder.php' );
+		$this->assertFileExists( AGGR_PLUGIN_DIR . 'templates/portal/placeholder.php' );
 		$this->assertStringContainsString(
 			"locate( 'placeholder.php' )",
-			(string) file_get_contents( LAAO_ADS_PLUGIN_DIR . 'inc/Portal/class-router.php' ),
+			(string) file_get_contents( AGGR_PLUGIN_DIR . 'inc/Portal/class-router.php' ),
 			'The router no longer falls back to the placeholder.'
 		);
 	}

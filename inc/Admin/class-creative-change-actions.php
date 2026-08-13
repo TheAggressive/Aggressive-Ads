@@ -2,16 +2,16 @@
 /**
  * Staff delivery for creative replacement decisions.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Admin;
+namespace Aggressive\Ads\Admin;
 
-use LAAO_Advertiser_Portal\Core\Service;
-use LAAO_Advertiser_Portal\Security\Capabilities;
-use LAAO_Advertiser_Portal\Workflow\Creative_Change_Manager;
+use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Security\Capabilities;
+use Aggressive\Ads\Workflow\Creative_Change_Manager;
 use WP_Error;
 
 /**
@@ -19,7 +19,7 @@ use WP_Error;
  */
 final class Creative_Change_Actions implements Service {
 
-	public const ACTION = 'laao_ads_review_creative_replacement';
+	public const ACTION = 'aggr_review_creative_replacement';
 
 	/**
 	 * Constructor.
@@ -45,7 +45,7 @@ final class Creative_Change_Actions implements Service {
 	 */
 	public function handle(): void {
 		if ( ! current_user_can( Capabilities::REVIEW_CAMPAIGNS ) ) {
-			wp_die( esc_html__( 'You do not have permission to do that.', 'laao-advertiser-portal' ), '', array( 'response' => 403 ) );
+			wp_die( esc_html__( 'You do not have permission to do that.', 'aggressive-ads' ), '', array( 'response' => 403 ) );
 		}
 
 		$replacement_id = isset( $_POST['replacement_id'] ) ? absint( $_POST['replacement_id'] ) : 0;
@@ -70,13 +70,13 @@ final class Creative_Change_Actions implements Service {
 	 */
 	public function process( int $replacement_id, string $decision, string $notes = '' ): bool|WP_Error {
 		if ( ! current_user_can( Capabilities::REVIEW_CAMPAIGNS ) ) {
-			return new WP_Error( 'laao_ads_forbidden', __( 'You do not have permission to review ad updates.', 'laao-advertiser-portal' ) );
+			return new WP_Error( 'aggr_forbidden', __( 'You do not have permission to review ad updates.', 'aggressive-ads' ) );
 		}
 
 		return match ( $decision ) {
 			'approve' => $this->manager->approve( $replacement_id ),
 			'reject'  => $this->manager->reject( $replacement_id, $notes ),
-			default   => new WP_Error( 'laao_ads_replacement_decision_invalid', __( 'That ad-update decision is not valid.', 'laao-advertiser-portal' ) ),
+			default   => new WP_Error( 'aggr_replacement_decision_invalid', __( 'That ad-update decision is not valid.', 'aggressive-ads' ) ),
 		};
 	}
 
@@ -101,8 +101,8 @@ final class Creative_Change_Actions implements Service {
 	private function redirect( int $campaign_id, bool|WP_Error $result, string $success ): never {
 		$url = add_query_arg(
 			array(
-				'laao_ads_result' => is_wp_error( $result ) ? 'error' : 'success',
-				'laao_ads_code'   => is_wp_error( $result ) ? sanitize_key( (string) $result->get_error_code() ) : $success,
+				'aggr_result' => is_wp_error( $result ) ? 'error' : 'success',
+				'aggr_code'   => is_wp_error( $result ) ? sanitize_key( (string) $result->get_error_code() ) : $success,
 			),
 			Review_Screen::campaign_url( $campaign_id, 'updates' )
 		);

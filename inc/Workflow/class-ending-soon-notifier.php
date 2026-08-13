@@ -2,16 +2,16 @@
 /**
  * Reminds advertisers when a running campaign is about to end.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Workflow;
+namespace Aggressive\Ads\Workflow;
 
-use LAAO_Advertiser_Portal\Core\Service;
-use LAAO_Advertiser_Portal\Notification\Ending_Soon_Mailer;
-use LAAO_Advertiser_Portal\Repository\Campaign_Lifecycle_Repository;
+use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Notification\Ending_Soon_Mailer;
+use Aggressive\Ads\Repository\Campaign_Lifecycle_Repository;
 
 /**
  * Hourly sweep that emails org members seven days before end_ts.
@@ -25,7 +25,7 @@ final class Ending_Soon_Notifier implements Service {
 	/**
 	 * The cron hook.
 	 */
-	public const HOOK = 'laao_ads_notify_ending_soon';
+	public const HOOK = 'aggr_notify_ending_soon';
 
 	/**
 	 * How often the sweep runs.

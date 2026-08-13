@@ -1,4 +1,9 @@
-# AdSanity integration
+# AdSanity integration (historical)
+
+**This plugin no longer publishes to AdSanity.** Native fill is the only
+publisher. See [ADR-0031](adr/0031-native-is-the-only-publisher.md). The notes
+below are the contract we used to integrate with AdSanity 2.0.1; they are not
+load-bearing.
 
 Everything here was verified by reading AdSanity's source, not inferred from its documentation or its UI. Line references are to the installed copy at `wp-content/plugins/adsanity`.
 
@@ -138,7 +143,7 @@ Recorded so a future reader does not rediscover them and assume they matter.
 
 - **`Adsanity\Meta_Data`** (`lib/class-meta-data.php`) wraps core meta functions and fires `adsanity_pre_update_meta`, `adsanity_after_update_meta_{$key}`, and friends. **Core `update_post_meta()` bypasses all of it.** We use core functions deliberately: the wrapper's hooks drive nothing we need, and depending on an undocumented internal wrapper to store data is worse than depending on WordPress. Recorded in [known-issues.md](known-issues.md) in case an add-on ever starts relying on those hooks.
 - **`AdSanityQuery`** (`lib/query.php`) — thin `get_posts()` wrappers. We query through our own repositories.
-- **`adsanity_view()` / `adsanity_click()`** (`lib/tracking.php`) — global functions that bump per-day counters stored as `_views-{timestamp}` / `_clicks-{timestamp}` meta, using raw `$wpdb` increments. Undocumented as an API. Phase 10 reporting will read these counters; nothing before then touches them.
+- **`adsanity_view()` / `adsanity_click()`** (`lib/tracking.php`) — global functions that bump per-day counters stored as `_views-{timestamp}` / `_clicks-{timestamp}` meta, using raw `$wpdb` increments. Undocumented as an API. Our reporting reads `aggr_rollups`, not these counters ([ADR-0030](adr/0030-reporting-from-native-rollups.md)). They remain AdSanity's own accounting while it still serves.
 - **REST**: AdSanity adds `rendered_ad`, `ad_type`, `ad_size` fields to core's `wp/v2/ads`, and `ad_ids` to `wp/v2/ad-group`. No bespoke namespace. We do not consume any of it.
 - **admin-ajax**: one core endpoint, `wp_ajax_adsanity_get_ads_by_term`, logged-in only.
 - **No registry table.** An ad is `wp_posts` + `wp_postmeta` + `wp_term_relationships` and nothing else. There is no bookkeeping we must also update.
@@ -146,7 +151,7 @@ Recorded so a future reader does not rediscover them and assume they matter.
 ## Interactions with the rest of this site
 
 - The LAAO theme **dequeues** `adsanity-default-css` and `adsanity-cas` (`inc/Assets/class-styles.php:41-44`) and supplies its own ad styling keyed on `.ad-{size}` / `.adsanity-{size}` classes.
-- The theme patches missing ad-image alt text at render time in `inc/Accessibility/class-ad-link-labels.php`, injecting `alt="Advertisement: {title}"` — written because three ads on the front page had no alt text. **We close that gap at the source**: `_laao_ads_alt_text` is generated from the validated destination host (or accepted from an API client) and written to `_wp_attachment_image_alt` when the creative is promoted, so the theme's shim has nothing to fix. See [accessibility.md](accessibility.md).
+- The theme patches missing ad-image alt text at render time in `inc/Accessibility/class-ad-link-labels.php`, injecting `alt="Advertisement: {title}"` — written because three ads on the front page had no alt text. **We close that gap at the source**: `_aggr_alt_text` is generated from the validated destination host (or accepted from an API client) and written to `_wp_attachment_image_alt` when the creative is promoted, so the theme's shim has nothing to fix. See [accessibility.md](accessibility.md).
 - `adsanity-custom-ad-sizes` is active, so the size map is not the stock 32 entries. Read it through the filter.
 
 ## Publishing an ad — the required sequence
@@ -168,7 +173,7 @@ Steps 1, 4, and 8 are the ones that would be skipped by someone in a hurry. Step
 
 ## Managing placement mappings
 
-Staff holding `laao_ads_manage_placements` use **wp-admin → Ad delivery**. The screen lists active and inactive placements, their declared sizes, and one of three mapping states: mapped, unmapped, or deleted group. Every option includes the provider term ID because the ID is the stored identity; the name remains editable display text.
+Staff holding `aggr_manage_placements` use **wp-admin → Ad delivery**. The screen lists active and inactive placements, their declared sizes, and one of three mapping states: mapped, unmapped, or deleted group. Every option includes the provider term ID because the ID is the stored identity; the name remains editable display text.
 
 Each placement saves through its own form, nonce, capability check, object-aware capability check, exact persistence read-back, and `placement.mapping_updated` audit event. An arbitrary or just-deleted term ID is rejected against a freshly loaded provider catalogue. Choosing “Not mapped — approval blocked” is an explicit supported operation.
 

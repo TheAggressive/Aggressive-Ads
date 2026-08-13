@@ -2,25 +2,25 @@
 /**
  * The account, organization and help screens.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Integration;
+namespace Aggressive\Ads\Tests\Integration;
 
-use LAAO_Advertiser_Portal\Core\Post_Statuses;
-use LAAO_Advertiser_Portal\Core\Post_Types;
-use LAAO_Advertiser_Portal\Install\Installer;
-use LAAO_Advertiser_Portal\Plugin;
-use LAAO_Advertiser_Portal\Portal\Account_Actions;
-use LAAO_Advertiser_Portal\Portal\Request;
-use LAAO_Advertiser_Portal\Portal\Router;
-use LAAO_Advertiser_Portal\Portal\View_Data;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Repository;
-use LAAO_Advertiser_Portal\Security\Ownership;
-use LAAO_Advertiser_Portal\Security\Roles;
+use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Install\Installer;
+use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Portal\Account_Actions;
+use Aggressive\Ads\Portal\Request;
+use Aggressive\Ads\Portal\Router;
+use Aggressive\Ads\Portal\View_Data;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Security\Ownership;
+use Aggressive\Ads\Security\Roles;
 use WP_UnitTestCase;
 
 /**
@@ -143,7 +143,7 @@ final class PortalAccountTest extends WP_UnitTestCase {
 		$result = $this->actions->process_save( $this->advertiser, array( 'display_name' => '   ' ) );
 
 		$this->assertWPError( $result );
-		$this->assertSame( 'laao_ads_display_name_required', $result->get_error_code() );
+		$this->assertSame( 'aggr_display_name_required', $result->get_error_code() );
 		$this->assertSame( 'Dana Okonkwo', (string) get_userdata( $this->advertiser )->display_name );
 	}
 
@@ -159,7 +159,7 @@ final class PortalAccountTest extends WP_UnitTestCase {
 		);
 
 		$this->assertWPError( $result );
-		$this->assertSame( 'laao_ads_name_too_long', $result->get_error_code() );
+		$this->assertSame( 'aggr_name_too_long', $result->get_error_code() );
 	}
 
 	/**

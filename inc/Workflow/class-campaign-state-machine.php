@@ -2,20 +2,21 @@
 /**
  * The only thing that writes a campaign's status.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Workflow;
+namespace Aggressive\Ads\Workflow;
 
-use LAAO_Advertiser_Portal\Audit\Audit_Event;
-use LAAO_Advertiser_Portal\Core\Service;
-use LAAO_Advertiser_Portal\Domain\Campaign_Transition;
-use LAAO_Advertiser_Portal\Domain\Transition_Table;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
-use LAAO_Advertiser_Portal\Security\Capabilities;
+use Aggressive\Ads\Audit\Audit_Event;
+use Aggressive\Ads\Core\Hook_Aliases;
+use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Domain\Campaign_Transition;
+use Aggressive\Ads\Domain\Transition_Table;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Security\Capabilities;
 use Throwable;
 use WP_Error;
 
@@ -95,7 +96,7 @@ final class Campaign_State_Machine implements Service {
 	 * Moves a campaign to a new status.
 	 *
 	 * Returns WP_Error rather than throwing for anything a caller can cause —
-	 * an advertiser POSTing `lap_approved` is an expected event, not an
+	 * an advertiser POSTing `aggr_approved` is an expected event, not an
 	 * exceptional one. Exceptions are reserved for genuine faults.
 	 *
 	 * @param int                  $campaign_id Campaign post id.
@@ -116,7 +117,7 @@ final class Campaign_State_Machine implements Service {
 	 * user to check one against. If that bypass were selected by a flag inside
 	 * the caller-supplied context array, then the first controller to forward
 	 * request data into that array would hand every advertiser a one-key
-	 * escalation to lap_live on their own campaign.
+	 * escalation to aggr_live on their own campaign.
 	 *
 	 * Being a distinct method means no request body can ever reach it.
 	 *
@@ -142,7 +143,7 @@ final class Campaign_State_Machine implements Service {
 		$from = $this->campaigns->status( $campaign_id );
 
 		if ( '' === $from ) {
-			return $this->deny( $campaign_id, 0, '', $to, 'laao_ads_campaign_not_found', __( 'Campaign not found.', 'laao-advertiser-portal' ) );
+			return $this->deny( $campaign_id, 0, '', $to, 'aggr_campaign_not_found', __( 'Campaign not found.', 'aggressive-ads' ) );
 		}
 
 		$org_id = $this->campaigns->org_id( $campaign_id );
@@ -156,8 +157,8 @@ final class Campaign_State_Machine implements Service {
 				$org_id,
 				$from,
 				$to,
-				'laao_ads_illegal_transition',
-				__( 'That is not something this campaign can do right now.', 'laao-advertiser-portal' )
+				'aggr_illegal_transition',
+				__( 'That is not something this campaign can do right now.', 'aggressive-ads' )
 			);
 		}
 
@@ -182,8 +183,8 @@ final class Campaign_State_Machine implements Service {
 				$org_id,
 				$from,
 				$to,
-				$as_system ? 'laao_ads_not_a_system_transition' : 'laao_ads_system_transition',
-				__( 'That is not something this campaign can do right now.', 'laao-advertiser-portal' )
+				$as_system ? 'aggr_not_a_system_transition' : 'aggr_system_transition',
+				__( 'That is not something this campaign can do right now.', 'aggressive-ads' )
 			);
 		}
 
@@ -204,8 +205,8 @@ final class Campaign_State_Machine implements Service {
 					$org_id,
 					$from,
 					$to,
-					'laao_ads_forbidden',
-					__( 'You do not have permission to do that.', 'laao-advertiser-portal' ),
+					'aggr_forbidden',
+					__( 'You do not have permission to do that.', 'aggressive-ads' ),
 					array( 'actor' => $actor )
 				);
 			}
@@ -222,8 +223,8 @@ final class Campaign_State_Machine implements Service {
 						$org_id,
 						$from,
 						$to,
-						'laao_ads_forbidden',
-						__( 'You do not have permission to do that.', 'laao-advertiser-portal' ),
+						'aggr_forbidden',
+						__( 'You do not have permission to do that.', 'aggressive-ads' ),
 						array( 'capability' => $capability )
 					);
 				}
@@ -263,8 +264,8 @@ final class Campaign_State_Machine implements Service {
 				$org_id,
 				$from,
 				$to,
-				'laao_ads_status_write_failed',
-				__( 'The campaign could not be updated.', 'laao-advertiser-portal' )
+				'aggr_status_write_failed',
+				__( 'The campaign could not be updated.', 'aggressive-ads' )
 			);
 		}
 
@@ -287,7 +288,7 @@ final class Campaign_State_Machine implements Service {
 		);
 
 		// 9. The domain event.
-		do_action( 'laao_ads_campaign_transitioned', $campaign_id, $from, $to, $context );
+		Hook_Aliases::fire( 'aggr_campaign_transitioned', $campaign_id, $from, $to, $context );
 
 		// 10. Notifications, whose failure must never reverse a business fact
 		// that has already happened.
@@ -358,8 +359,8 @@ final class Campaign_State_Machine implements Service {
 				// with no ads behind it, which is the failure this whole
 				// ordering exists to prevent.
 				return new WP_Error(
-					'laao_ads_effect_unavailable',
-					__( 'This action cannot be completed yet.', 'laao-advertiser-portal' ),
+					'aggr_effect_unavailable',
+					__( 'This action cannot be completed yet.', 'aggressive-ads' ),
 					array( 'effect' => $effect )
 				);
 			}
@@ -420,7 +421,7 @@ final class Campaign_State_Machine implements Service {
 	 */
 	private function notify( int $campaign_id, string $from, string $to, array $context ): void {
 		try {
-			do_action( 'laao_ads_notify_campaign_transitioned', $campaign_id, $from, $to, $context );
+			Hook_Aliases::fire( 'aggr_notify_campaign_transitioned', $campaign_id, $from, $to, $context );
 		} catch ( Throwable $e ) {
 			$this->audit->insert(
 				new Audit_Event(

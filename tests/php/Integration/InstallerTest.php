@@ -2,19 +2,21 @@
 /**
  * Installation against a real database.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Integration;
+namespace Aggressive\Ads\Tests\Integration;
 
-use LAAO_Advertiser_Portal\Install\Installer;
-use LAAO_Advertiser_Portal\Install\Schema;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Access_Repository;
-use LAAO_Advertiser_Portal\Security\Capabilities;
-use LAAO_Advertiser_Portal\Security\Roles;
+use Aggressive\Ads\Install\Installer;
+use Aggressive\Ads\Install\Schema;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Event_Repository;
+use Aggressive\Ads\Repository\Org_Access_Repository;
+use Aggressive\Ads\Repository\Rollup_Repository;
+use Aggressive\Ads\Security\Capabilities;
+use Aggressive\Ads\Security\Roles;
 use WP_UnitTestCase;
 
 /**
@@ -67,6 +69,8 @@ final class InstallerTest extends WP_UnitTestCase {
 	public function test_the_audit_table_exists(): void {
 		$this->assertTrue( $this->audit->table_exists() );
 		$this->assertTrue( $this->org_access->table_exists() );
+		$this->assertTrue( ( new Event_Repository() )->table_exists() );
+		$this->assertTrue( ( new Rollup_Repository() )->table_exists() );
 	}
 
 	/** The organization access table has every declared column and index. */
@@ -88,6 +92,77 @@ final class InstallerTest extends WP_UnitTestCase {
 		$indexes = array_values( array_unique( array_column( $rows, 'Key_name' ) ) );
 
 		$this->assertSame( Schema::org_access_index_names(), $indexes );
+	}
+
+	/** Native fill tables match the declared schema. */
+	public function test_the_delivery_tables_match_the_schema(): void {
+		global $wpdb;
+
+		$events  = new Event_Repository();
+		$rollups = new Rollup_Repository();
+
+		$this->installer->install_delivery_tables();
+
+		foreach (
+			array(
+				array( $events->table_name(), Schema::events_columns(), Schema::events_index_names() ),
+				array( $rollups->table_name(), Schema::rollups_columns(), Schema::rollups_index_names() ),
+			) as $spec
+		) {
+			[ $table, $declared_columns, $declared_indexes ] = $spec;
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Integration schema assertion.
+			$columns = $wpdb->get_col( "SHOW COLUMNS FROM {$table}" );
+			sort( $columns );
+			sort( $declared_columns );
+			$this->assertSame( $declared_columns, $columns );
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Integration schema assertion.
+			$rows    = $wpdb->get_results( "SHOW INDEX FROM {$table}", ARRAY_A );
+			$indexes = array_values( array_unique( array_column( $rows, 'Key_name' ) ) );
+			$this->assertSame( $declared_indexes, $indexes );
+		}
+	}
+
+	/**
+	 * WordPress dbDelta will not drop the v4 unique; the walker must.
+	 *
+	 * @return void
+	 */
+	public function test_event_token_uniqueness_migration_replaces_the_v4_index(): void {
+		global $wpdb;
+
+		$events = new Event_Repository();
+		$table  = $events->table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Rebuilding this plugin's table as the v4 shape.
+		$wpdb->query( "DROP TABLE IF EXISTS {$table}" );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Installing the v4 unique so the migration has something to drop.
+		$wpdb->query(
+			"CREATE TABLE {$table} (
+				id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+				created_at_ts bigint(20) unsigned NOT NULL DEFAULT 0,
+				event varchar(16) NOT NULL DEFAULT '',
+				placement_id bigint(20) unsigned NOT NULL DEFAULT 0,
+				campaign_id bigint(20) unsigned NOT NULL DEFAULT 0,
+				creative_id bigint(20) unsigned NOT NULL DEFAULT 0,
+				token_hash char(64) NOT NULL DEFAULT '',
+				ip_hash char(64) NOT NULL DEFAULT '',
+				PRIMARY KEY  (id),
+				UNIQUE KEY token_hash (token_hash),
+				KEY created (created_at_ts,id),
+				KEY campaign_day (campaign_id,created_at_ts,id)
+			) {$wpdb->get_charset_collate()}"
+		);
+
+		$this->installer->migrate_event_token_uniqueness();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Integration schema assertion.
+		$rows    = $wpdb->get_results( "SHOW INDEX FROM {$table}", ARRAY_A );
+		$indexes = array_values( array_unique( array_column( $rows, 'Key_name' ) ) );
+
+		$this->assertContains( 'token_event', $indexes );
+		$this->assertNotContains( 'token_hash', $indexes );
 	}
 
 	/**
@@ -284,7 +359,7 @@ final class InstallerTest extends WP_UnitTestCase {
 
 		$this->assertSame( Schema::DB_VERSION, (int) get_option( Installer::OPTION_DB_VERSION ) );
 		$this->assertSame( Roles::VERSION, (int) get_option( Installer::OPTION_ROLES_VERSION ) );
-		$this->assertSame( LAAO_ADS_VERSION, get_option( Installer::OPTION_PLUGIN_VERSION ) );
+		$this->assertSame( AGGR_VERSION, get_option( Installer::OPTION_PLUGIN_VERSION ) );
 	}
 
 	/**

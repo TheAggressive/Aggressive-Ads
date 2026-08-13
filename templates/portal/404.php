@@ -9,7 +9,7 @@
  *
  * The 404 status itself is sent by Router::gate(), before this file runs.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$laao_ads_screen = LAAO_ADS_PLUGIN_DIR . 'templates/portal/screens/404.php';
-$laao_ads_title  = __( 'Page not found', 'laao-advertiser-portal' );
+$aggr_screen = AGGR_PLUGIN_DIR . 'templates/portal/screens/404.php';
+$aggr_title  = __( 'Page not found', 'aggressive-ads' );
 
-require LAAO_ADS_PLUGIN_DIR . 'templates/portal/base.php';
+require AGGR_PLUGIN_DIR . 'templates/portal/base.php';

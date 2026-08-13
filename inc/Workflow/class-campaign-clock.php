@@ -2,17 +2,17 @@
 /**
  * Moves campaigns along the edges only time can open.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Workflow;
+namespace Aggressive\Ads\Workflow;
 
-use LAAO_Advertiser_Portal\Core\Service;
-use LAAO_Advertiser_Portal\Domain\Transition_Table;
-use LAAO_Advertiser_Portal\Repository\Campaign_Lifecycle_Repository;
-use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
+use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Domain\Transition_Table;
+use Aggressive\Ads\Repository\Campaign_Lifecycle_Repository;
+use Aggressive\Ads\Repository\Campaign_Repository;
 
 /**
  * The reconciler behind approved → scheduled → live → complete.
@@ -23,9 +23,8 @@ use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
  * must run for them to become true", and that sentence describes what makes
  * this class *safe*, not what makes it unnecessary. Nothing was calling
  * apply_system(), so status stopped moving the moment a campaign was approved:
- * AdSanity kept serving the ad correctly off its own date meta while every
- * screen in the portal reported `Approved` forever, the queue's Running tab
- * stayed empty, and no campaign ever reached `Completed`.
+ * every screen in the portal reported `Approved` forever, the queue's Running
+ * tab stayed empty, and no campaign ever reached `Completed`.
  *
  * **Why the status is written rather than derived.** Deriving it at read time
  * is the obvious alternative and it does not survive contact with the
@@ -33,8 +32,8 @@ use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
  * forces filtering in PHP, which makes page two short for reasons nobody can
  * explain. It also loses the two things that matter most — the audit row
  * recording *when* a campaign went live, which is a billing question, and the
- * transition effects, which do real work in AdSanity. A view cannot have side
- * effects.
+ * transition effects, which bust fill cache so a pause cannot ride out a TTL.
+ * A view cannot have side effects.
  *
  * **Recovery is the whole design.** A missed run costs nothing: the next sweep
  * reads the clock as it is then and reaches the same state. That is why the
@@ -45,7 +44,7 @@ final class Campaign_Clock implements Service {
 	/**
 	 * The cron hook.
 	 */
-	public const HOOK = 'laao_ads_reconcile_campaigns';
+	public const HOOK = 'aggr_reconcile_campaigns';
 
 	/**
 	 * How often the sweep runs.

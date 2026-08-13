@@ -2,13 +2,14 @@
 /**
  * Colour contrast in the portal stylesheet.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Unit\Assets;
+namespace Aggressive\Ads\Tests\Unit\Assets;
 
+use Aggressive\Ads\Domain\Contrast;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -30,12 +31,12 @@ final class PortalContrastTest extends TestCase {
 	/**
 	 * WCAG 2.2 AA, normal text.
 	 */
-	private const AA_NORMAL = 4.5;
+	private const AA_NORMAL = Contrast::AA_NORMAL;
 
 	/**
 	 * WCAG 2.2 AA, user interface components and graphical objects.
 	 */
-	private const AA_NON_TEXT = 3.0;
+	private const AA_NON_TEXT = Contrast::AA_NON_TEXT;
 
 	/**
 	 * The token values, parsed from the stylesheet.
@@ -58,7 +59,7 @@ final class PortalContrastTest extends TestCase {
 
 		$matches = array();
 
-		preg_match_all( '/(--laao-ads-color-[\w-]+):\s*(#[0-9a-fA-F]{6})\s*;/', $css, $matches, PREG_SET_ORDER );
+		preg_match_all( '/(--aggr-color-[\w-]+):\s*(#[0-9a-fA-F]{6})\s*;/', $css, $matches, PREG_SET_ORDER );
 
 		foreach ( $matches as $match ) {
 			$this->tokens[ $match[1] ] = strtolower( $match[2] );
@@ -68,49 +69,20 @@ final class PortalContrastTest extends TestCase {
 	}
 
 	/**
-	 * The relative luminance of a hex colour, per WCAG.
-	 *
-	 * @param string $hex Six-digit hex colour with a leading hash.
-	 * @return float
-	 */
-	private function luminance( string $hex ): float {
-		$channels = array(
-			hexdec( substr( $hex, 1, 2 ) ) / 255,
-			hexdec( substr( $hex, 3, 2 ) ) / 255,
-			hexdec( substr( $hex, 5, 2 ) ) / 255,
-		);
-
-		foreach ( $channels as $index => $value ) {
-			$channels[ $index ] = $value <= 0.04045
-				? $value / 12.92
-				: ( ( $value + 0.055 ) / 1.055 ) ** 2.4;
-		}
-
-		return ( 0.2126 * $channels[0] ) + ( 0.7152 * $channels[1] ) + ( 0.0722 * $channels[2] );
-	}
-
-	/**
 	 * The contrast ratio between two tokens.
 	 *
-	 * @param string $foreground Token name, without the --laao-ads-color- prefix.
-	 * @param string $background Token name, without the --laao-ads-color- prefix.
+	 * @param string $foreground Token name, without the --aggr-color- prefix.
+	 * @param string $background Token name, without the --aggr-color- prefix.
 	 * @return float
 	 */
 	private function ratio( string $foreground, string $background ): float {
-		$fg = '--laao-ads-color-' . $foreground;
-		$bg = '--laao-ads-color-' . $background;
+		$fg = '--aggr-color-' . $foreground;
+		$bg = '--aggr-color-' . $background;
 
 		$this->assertArrayHasKey( $fg, $this->tokens, "No such token: {$fg}" );
 		$this->assertArrayHasKey( $bg, $this->tokens, "No such token: {$bg}" );
 
-		$light = $this->luminance( $this->tokens[ $fg ] );
-		$dark  = $this->luminance( $this->tokens[ $bg ] );
-
-		if ( $dark > $light ) {
-			list( $light, $dark ) = array( $dark, $light );
-		}
-
-		return ( $light + 0.05 ) / ( $dark + 0.05 );
+		return Contrast::ratio( $this->tokens[ $fg ], $this->tokens[ $bg ] );
 	}
 
 	/**

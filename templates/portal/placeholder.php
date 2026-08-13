@@ -6,7 +6,7 @@
  * the screen is simply not built, and saying so is more useful than pretending
  * the URL is wrong.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
@@ -15,7 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$laao_ads_screen = LAAO_ADS_PLUGIN_DIR . 'templates/portal/screens/placeholder.php';
-$laao_ads_title  = __( 'Coming soon', 'laao-advertiser-portal' );
+$aggr_screen = AGGR_PLUGIN_DIR . 'templates/portal/screens/placeholder.php';
+$aggr_title  = __( 'Coming soon', 'aggressive-ads' );
 
-require LAAO_ADS_PLUGIN_DIR . 'templates/portal/base.php';
+require AGGR_PLUGIN_DIR . 'templates/portal/base.php';

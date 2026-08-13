@@ -2,29 +2,27 @@
 /**
  * Reading placements.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\REST;
+namespace Aggressive\Ads\REST;
 
-use LAAO_Advertiser_Portal\Core\Service;
-use LAAO_Advertiser_Portal\Domain\Campaign_Rules;
-use LAAO_Advertiser_Portal\Domain\Upload_Rules;
-use LAAO_Advertiser_Portal\Repository\Placement_Repository;
-use LAAO_Advertiser_Portal\Security\Capabilities;
+use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Domain\Campaign_Rules;
+use Aggressive\Ads\Domain\Upload_Rules;
+use Aggressive\Ads\Repository\Placement_Repository;
+use Aggressive\Ads\Security\Capabilities;
 use WP_REST_Request;
 use WP_REST_Response;
 
 /**
  * The placements an advertiser can buy.
  *
- * Shared configuration rather than anybody's data, so there is no ownership
- * question here — but there is a disclosure one. **The ad-group term id never
- * appears in the response.** It is the mapping between our placements and
- * AdSanity's delivery, it is meaningless to an advertiser, and advertisers
- * never see AdSanity terminology at all.
+ * Shared catalogue. Advertisers (portal) and editors (block inserter) may
+ * read it. The response is width, height, name, and slug — never orphan
+ * mapping meta, never a provider id.
  */
 final class Placements_Controller implements Service {
 
@@ -51,8 +49,7 @@ final class Placements_Controller implements Service {
 	 * @return void
 	 */
 	public function register_routes(): void {
-		register_rest_route(
-			Creative_File_Controller::NAMESPACE,
+		Creative_File_Controller::register_route(
 			'/placements',
 			array(
 				'methods'             => 'GET',
@@ -69,7 +66,13 @@ final class Placements_Controller implements Service {
 	 * @return bool
 	 */
 	public function permission(): bool {
-		return is_user_logged_in() && current_user_can( Capabilities::ACCESS_PORTAL );
+		if ( ! is_user_logged_in() ) {
+			return false;
+		}
+
+		return current_user_can( Capabilities::ACCESS_PORTAL )
+			|| current_user_can( 'edit_posts' )
+			|| current_user_can( 'edit_theme_options' );
 	}
 
 	/**
@@ -90,6 +93,7 @@ final class Placements_Controller implements Service {
 			$placements[] = array(
 				'id'        => $placement_id,
 				'name'      => $this->placements->name( $placement_id ),
+				'slug'      => $this->placements->slug( $placement_id ),
 				'size'      => $size,
 				'width'     => null === $parsed ? 0 : $parsed[0],
 				'height'    => null === $parsed ? 0 : $parsed[1],

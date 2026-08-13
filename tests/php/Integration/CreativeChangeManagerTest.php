@@ -2,29 +2,27 @@
 /**
  * Published creative replacement workflow.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Integration;
+namespace Aggressive\Ads\Tests\Integration;
 
-use LAAO_Advertiser_Portal\Core\Post_Statuses;
-use LAAO_Advertiser_Portal\Core\Post_Types;
-use LAAO_Advertiser_Portal\Install\Installer;
-use LAAO_Advertiser_Portal\Integration\Adsanity\Ad_Publisher;
-use LAAO_Advertiser_Portal\Integration\Adsanity\Adsanity;
-use LAAO_Advertiser_Portal\Plugin;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
-use LAAO_Advertiser_Portal\Repository\Creative_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Repository;
-use LAAO_Advertiser_Portal\Repository\Placement_Repository;
-use LAAO_Advertiser_Portal\Security\Ownership;
-use LAAO_Advertiser_Portal\Security\Roles;
-use LAAO_Advertiser_Portal\Storage\Private_Storage;
-use LAAO_Advertiser_Portal\Workflow\Creative_Change_Manager;
-use LAAO_Advertiser_Portal\Workflow\Creative_Manager;
+use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Install\Installer;
+use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Repository\Placement_Repository;
+use Aggressive\Ads\Security\Ownership;
+use Aggressive\Ads\Security\Roles;
+use Aggressive\Ads\Storage\Private_Storage;
+use Aggressive\Ads\Workflow\Creative_Change_Manager;
+use Aggressive\Ads\Workflow\Creative_Manager;
 use WP_UnitTestCase;
 
 /**
@@ -80,13 +78,6 @@ final class CreativeChangeManagerTest extends WP_UnitTestCase {
 	 * @var int
 	 */
 	private int $creative_id;
-
-	/**
-	 * Existing AdSanity ad id.
-	 *
-	 * @var int
-	 */
-	private int $ad_id;
 
 	/**
 	 * Replacement workflow.
@@ -151,9 +142,6 @@ final class CreativeChangeManagerTest extends WP_UnitTestCase {
 		);
 		update_post_meta( $this->org_id, Org_Repository::META_OWNER_USER, $this->owner );
 
-		$term = wp_insert_term( 'Creative update group', Adsanity::TAXONOMY );
-		$this->assertIsArray( $term );
-
 		$this->placement_id = (int) self::factory()->post->create(
 			array(
 				'post_type'   => Post_Types::PLACEMENT,
@@ -163,7 +151,6 @@ final class CreativeChangeManagerTest extends WP_UnitTestCase {
 		);
 		update_post_meta( $this->placement_id, Placement_Repository::META_IS_ACTIVE, 1 );
 		update_post_meta( $this->placement_id, Placement_Repository::META_SIZE, '728x90' );
-		update_post_meta( $this->placement_id, Placement_Repository::META_ADGROUP_TERM, (int) $term['term_id'] );
 
 		$this->campaign_id = (int) self::factory()->post->create(
 			array(
@@ -198,10 +185,6 @@ final class CreativeChangeManagerTest extends WP_UnitTestCase {
 		$this->creative_id = (int) $uploaded['id'];
 		$this->remember_storage( $this->creative_id );
 
-		$published = $container->get( Ad_Publisher::class )->publish_campaign( $this->campaign_id );
-		$this->assertTrue( $published->is_complete() );
-		$this->ad_id = $published->ad_ids()[0];
-
 		wp_update_post(
 			array(
 				'ID'          => $this->campaign_id,
@@ -230,8 +213,8 @@ final class CreativeChangeManagerTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Requesting leaves the current provider ad untouched until staff approval,
-	 * then reuses that ad and makes the reviewed revision current.
+	 * Requesting leaves the current creative untouched until staff approval,
+	 * then makes the reviewed revision current.
 	 *
 	 * @return void
 	 */
@@ -249,21 +232,23 @@ final class CreativeChangeManagerTest extends WP_UnitTestCase {
 		$replacement_id = (int) $request['id'];
 		$this->remember_storage( $replacement_id );
 		$replacement = $this->creatives->details( $replacement_id );
+		$current     = $this->creatives->details( $this->creative_id );
 		$this->assertIsArray( $replacement );
+		$this->assertIsArray( $current );
 		$this->assertSame( 'Advertisement linking to example.com', $replacement['alt_text'] );
-		$this->assertSame( 'https://example.com/current', get_post_meta( $this->ad_id, Adsanity::META_URL, true ) );
+		$this->assertSame( 'https://example.com/current', $current['click_url'] );
 		$this->assertSame( array( $this->creative_id ), array_column( $this->creatives->for_campaign( $this->campaign_id ), 'id' ) );
 		$this->assertSame( 1, $this->campaigns->pending_update_count( $this->campaign_id ) );
 
 		wp_set_current_user( $this->reviewer );
 		$this->assertTrue( $this->changes->approve( $replacement_id ) );
 
-		$this->assertSame( 'https://example.com/replacement', get_post_meta( $this->ad_id, Adsanity::META_URL, true ) );
+		$applied = $this->creatives->details( $replacement_id );
+		$this->assertIsArray( $applied );
+		$this->assertSame( 'https://example.com/replacement', $applied['click_url'] );
 		$this->assertSame( array( $replacement_id ), array_column( $this->creatives->for_campaign( $this->campaign_id ), 'id' ) );
-		$this->assertSame( $this->ad_id, $this->creatives->provider_ad_id( $replacement_id ) );
 		$this->assertSame( 0, $this->creatives->provider_ad_id( $this->creative_id ) );
 		$this->assertSame( 0, $this->campaigns->pending_update_count( $this->campaign_id ) );
-		$this->assertSame( array( $this->ad_id ), $this->campaigns->provider_ad_ids( $this->campaign_id ) );
 	}
 
 	/**
@@ -281,12 +266,14 @@ final class CreativeChangeManagerTest extends WP_UnitTestCase {
 		wp_set_current_user( $this->reviewer );
 		$missing = $this->changes->reject( $replacement_id, '   ' );
 		$this->assertWPError( $missing );
-		$this->assertSame( 'laao_ads_replacement_notes_required', $missing->get_error_code() );
+		$this->assertSame( 'aggr_replacement_notes_required', $missing->get_error_code() );
 		$this->assertTrue( $this->changes->reject( $replacement_id, 'Use the approved exhibition branding.' ) );
 
 		$this->assertSame( Creative_Repository::CHANGE_REJECTED, $this->creatives->change_state( $replacement_id ) );
 		$this->assertSame( 'Use the approved exhibition branding.', $this->creatives->change_notes( $replacement_id ) );
-		$this->assertSame( 'https://example.com/current', get_post_meta( $this->ad_id, Adsanity::META_URL, true ) );
+		$current = $this->creatives->details( $this->creative_id );
+		$this->assertIsArray( $current );
+		$this->assertSame( 'https://example.com/current', $current['click_url'] );
 		$this->assertSame( 0, $this->campaigns->pending_update_count( $this->campaign_id ) );
 	}
 
@@ -300,7 +287,7 @@ final class CreativeChangeManagerTest extends WP_UnitTestCase {
 		wp_set_current_user( $this->stranger );
 		$foreign = $this->changes->request( $this->creative_id, $this->image_file(), 'https://example.com/attack', 'Foreign update' );
 		$this->assertWPError( $foreign );
-		$this->assertSame( 'laao_ads_forbidden', $foreign->get_error_code() );
+		$this->assertSame( 'aggr_forbidden', $foreign->get_error_code() );
 
 		wp_set_current_user( $this->owner );
 		$first = $this->changes->request( $this->creative_id, $this->image_file(), 'https://example.com/first', 'First update' );
@@ -309,7 +296,7 @@ final class CreativeChangeManagerTest extends WP_UnitTestCase {
 
 		$second = $this->changes->request( $this->creative_id, $this->image_file(), 'https://example.com/second', 'Second update' );
 		$this->assertWPError( $second );
-		$this->assertSame( 'laao_ads_replacement_pending', $second->get_error_code() );
+		$this->assertSame( 'aggr_replacement_pending', $second->get_error_code() );
 	}
 
 	/**
@@ -328,7 +315,9 @@ final class CreativeChangeManagerTest extends WP_UnitTestCase {
 		$this->assertTrue( $this->changes->withdraw( $replacement_id ) );
 		$this->assertNull( get_post( $replacement_id ) );
 		$this->assertNull( $this->storage->resolve( $stored['path'] ) );
-		$this->assertSame( 'https://example.com/current', get_post_meta( $this->ad_id, Adsanity::META_URL, true ) );
+		$current = $this->creatives->details( $this->creative_id );
+		$this->assertIsArray( $current );
+		$this->assertSame( 'https://example.com/current', $current['click_url'] );
 		$this->assertSame( 0, $this->campaigns->pending_update_count( $this->campaign_id ) );
 	}
 
@@ -342,7 +331,7 @@ final class CreativeChangeManagerTest extends WP_UnitTestCase {
 		ob_start();
 		imagepng( $image );
 		$bytes = (string) ob_get_clean();
-		$path  = wp_tempnam( 'laao-ads-creative-change' );
+		$path  = wp_tempnam( 'aggr-creative-change' );
 		file_put_contents( $path, $bytes );
 		$this->temporary[] = $path;
 

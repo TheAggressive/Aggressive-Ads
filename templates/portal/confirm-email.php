@@ -2,7 +2,7 @@
 /**
  * The portal email confirmation screen.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$laao_ads_screen = LAAO_ADS_PLUGIN_DIR . 'templates/portal/screens/confirm-email.php';
-$laao_ads_title  = __( 'Confirm your email', 'laao-advertiser-portal' );
+$aggr_screen = AGGR_PLUGIN_DIR . 'templates/portal/screens/confirm-email.php';
+$aggr_title  = __( 'Confirm your email', 'aggressive-ads' );
 
-require LAAO_ADS_PLUGIN_DIR . 'templates/portal/base-bare.php';
+require AGGR_PLUGIN_DIR . 'templates/portal/base-bare.php';

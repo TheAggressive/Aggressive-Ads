@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
 
-const pluginSlug = 'laao-advertiser-portal';
+const pluginDir = 'laao-advertiser-portal';
 
 export function wp( ...args: string[] ): string {
 	return execFileSync(
@@ -10,7 +10,7 @@ export function wp( ...args: string[] ): string {
 			'wp-env',
 			'run',
 			'cli',
-			`--env-cwd=wp-content/plugins/${ pluginSlug }`,
+			`--env-cwd=wp-content/plugins/${ pluginDir }`,
 			'wp',
 			...args,
 		],

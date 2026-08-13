@@ -2,18 +2,18 @@
 /**
  * Portal email-change form handling.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Portal;
+namespace Aggressive\Ads\Portal;
 
-use LAAO_Advertiser_Portal\Core\Service;
-use LAAO_Advertiser_Portal\Security\Capabilities;
-use LAAO_Advertiser_Portal\Security\Rate_Limiter;
-use LAAO_Advertiser_Portal\Workflow\Advertiser_Registration;
-use LAAO_Advertiser_Portal\Workflow\Email_Change;
+use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Security\Capabilities;
+use Aggressive\Ads\Security\Rate_Limiter;
+use Aggressive\Ads\Workflow\Advertiser_Registration;
+use Aggressive\Ads\Workflow\Email_Change;
 use WP_Error;
 
 /**
@@ -21,9 +21,9 @@ use WP_Error;
  */
 final class Email_Change_Actions implements Service {
 
-	public const REQUEST_ACTION = 'laao_ads_request_email_change';
-	public const CANCEL_ACTION  = 'laao_ads_cancel_email_change';
-	public const CONFIRM_ACTION = 'laao_ads_confirm_email_change';
+	public const REQUEST_ACTION = 'aggr_request_email_change';
+	public const CANCEL_ACTION  = 'aggr_cancel_email_change';
+	public const CONFIRM_ACTION = 'aggr_confirm_email_change';
 
 	/**
 	 * Constructor.
@@ -110,7 +110,7 @@ final class Email_Change_Actions implements Service {
 	/** Allowlisted account-screen notice. */
 	public static function account_notice(): string {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only PRG display state.
-		$value = isset( $_GET['laao_ads_notice'] ) ? sanitize_key( wp_unslash( $_GET['laao_ads_notice'] ) ) : '';
+		$value = isset( $_GET['aggr_notice'] ) ? sanitize_key( wp_unslash( $_GET['aggr_notice'] ) ) : '';
 
 		return in_array(
 			$value,
@@ -126,11 +126,11 @@ final class Email_Change_Actions implements Service {
 	 */
 	public static function account_notice_message( string $notice ): string {
 		return match ( $notice ) {
-			'email_sent'      => __( 'Check the new inbox for a confirmation link. You must be signed in to finish.', 'laao-advertiser-portal' ),
-			'email_cancelled' => __( 'The pending email change was cancelled.', 'laao-advertiser-portal' ),
-			'email_changed'   => __( 'Your email address was updated.', 'laao-advertiser-portal' ),
-			'rate_limited'    => __( 'Too many email change requests. Please wait before trying again.', 'laao-advertiser-portal' ),
-			default           => __( 'The email change could not be completed.', 'laao-advertiser-portal' ),
+			'email_sent'      => __( 'Check the new inbox for a confirmation link. You must be signed in to finish.', 'aggressive-ads' ),
+			'email_cancelled' => __( 'The pending email change was cancelled.', 'aggressive-ads' ),
+			'email_changed'   => __( 'Your email address was updated.', 'aggressive-ads' ),
+			'rate_limited'    => __( 'Too many email change requests. Please wait before trying again.', 'aggressive-ads' ),
+			default           => __( 'The email change could not be completed.', 'aggressive-ads' ),
 		};
 	}
 
@@ -141,21 +141,21 @@ final class Email_Change_Actions implements Service {
 	 */
 	public static function error_message( string $code ): string {
 		return match ( $code ) {
-			'laao_ads_invalid_email'             => __( 'Enter a valid email address.', 'laao-advertiser-portal' ),
-			'laao_ads_email_unchanged'           => __( 'That is already your email address.', 'laao-advertiser-portal' ),
-			'laao_ads_email_change_mail_failed'  => __( 'The confirmation email could not be sent. Please try again shortly.', 'laao-advertiser-portal' ),
-			'laao_ads_email_change_not_saved'    => __( 'The email change could not be started.', 'laao-advertiser-portal' ),
-			'laao_ads_invalid_email_change'      => __( 'This confirmation link is invalid or has expired.', 'laao-advertiser-portal' ),
-			'laao_ads_email_taken'               => __( 'That email address is no longer available.', 'laao-advertiser-portal' ),
-			'laao_ads_email_not_saved'           => __( 'Your email address could not be updated.', 'laao-advertiser-portal' ),
-			default                              => __( 'The email change could not be completed.', 'laao-advertiser-portal' ),
+			'aggr_invalid_email'             => __( 'Enter a valid email address.', 'aggressive-ads' ),
+			'aggr_email_unchanged'           => __( 'That is already your email address.', 'aggressive-ads' ),
+			'aggr_email_change_mail_failed'  => __( 'The confirmation email could not be sent. Please try again shortly.', 'aggressive-ads' ),
+			'aggr_email_change_not_saved'    => __( 'The email change could not be started.', 'aggressive-ads' ),
+			'aggr_invalid_email_change'      => __( 'This confirmation link is invalid or has expired.', 'aggressive-ads' ),
+			'aggr_email_taken'               => __( 'That email address is no longer available.', 'aggressive-ads' ),
+			'aggr_email_not_saved'           => __( 'Your email address could not be updated.', 'aggressive-ads' ),
+			default                              => __( 'The email change could not be completed.', 'aggressive-ads' ),
 		};
 	}
 
 	/** Confirm-screen notice from PRG. */
 	public static function confirm_notice(): string {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only PRG display state.
-		$value = isset( $_GET['laao_ads_notice'] ) ? sanitize_key( wp_unslash( $_GET['laao_ads_notice'] ) ) : '';
+		$value = isset( $_GET['aggr_notice'] ) ? sanitize_key( wp_unslash( $_GET['aggr_notice'] ) ) : '';
 
 		return in_array( $value, array( 'error' ), true ) ? $value : '';
 	}
@@ -163,7 +163,7 @@ final class Email_Change_Actions implements Service {
 	/** Confirm-screen error code. */
 	public static function confirm_error_code(): string {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only PRG display state.
-		$value = isset( $_GET['laao_ads_error'] ) ? sanitize_key( wp_unslash( $_GET['laao_ads_error'] ) ) : '';
+		$value = isset( $_GET['aggr_error'] ) ? sanitize_key( wp_unslash( $_GET['aggr_error'] ) ) : '';
 
 		return '' === $value ? '' : $value;
 	}
@@ -175,7 +175,7 @@ final class Email_Change_Actions implements Service {
 		}
 
 		wp_die(
-			esc_html__( 'You do not have permission to do that.', 'laao-advertiser-portal' ),
+			esc_html__( 'You do not have permission to do that.', 'aggressive-ads' ),
 			'',
 			array( 'response' => 403 )
 		);
@@ -213,9 +213,9 @@ final class Email_Change_Actions implements Service {
 	 * @return never
 	 */
 	private function redirect_account( string $notice, ?WP_Error $error = null ): never {
-		$args = array( 'laao_ads_notice' => $notice );
+		$args = array( 'aggr_notice' => $notice );
 		if ( null !== $error ) {
-			$args['laao_ads_error'] = sanitize_key( (string) $error->get_error_code() );
+			$args['aggr_error'] = sanitize_key( (string) $error->get_error_code() );
 		}
 
 		wp_safe_redirect( add_query_arg( $args, Routes::url( Request::ROUTE_ACCOUNT ) ) );
@@ -231,12 +231,12 @@ final class Email_Change_Actions implements Service {
 	 */
 	private function redirect_confirm( string $notice, ?WP_Error $error = null ): never {
 		$args = array(
-			'laao_ads_notice' => $notice,
-			'key'             => $this->post_token(),
-			'login'           => $this->post_login(),
+			'aggr_notice' => $notice,
+			'key'         => $this->post_token(),
+			'login'       => $this->post_login(),
 		);
 		if ( null !== $error ) {
-			$args['laao_ads_error'] = sanitize_key( (string) $error->get_error_code() );
+			$args['aggr_error'] = sanitize_key( (string) $error->get_error_code() );
 		}
 
 		wp_safe_redirect( add_query_arg( $args, Routes::url( Request::ROUTE_CONFIRM_EMAIL ) ) );

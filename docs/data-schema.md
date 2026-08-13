@@ -4,10 +4,14 @@ Post types and their meta live in [domain-model.md](domain-model.md). This docum
 
 ## Audit table
 
-`{$wpdb->prefix}laao_ads_audit_log`
+`{$wpdb->prefix}aggr_audit_log`
+
+On a network that is `wp_{blog_id}_aggr_audit_log`. One WordPress site is one
+publisher tenant ([ADR-0034](adr/0034-site-scoped-tenancy.md)); these tables
+are never network-global.
 
 ```sql
-CREATE TABLE {$wpdb->prefix}laao_ads_audit_log (
+CREATE TABLE {$wpdb->prefix}aggr_audit_log (
   id            BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   created_at    DATETIME        NOT NULL,
   created_at_ts BIGINT UNSIGNED NOT NULL,
@@ -37,7 +41,7 @@ CREATE TABLE {$wpdb->prefix}laao_ads_audit_log (
 
 **Both `created_at` and `created_at_ts`.** The `DATETIME` is for humans reading the table and for `BETWEEN` reporting; the integer is for cheap comparison and matches the UTC-integer rule in [ADR-0016](adr/0016-utc-unix-integer-times.md). Storing both costs 8 bytes and removes every timezone question from every query.
 
-**`actor_ip_hash`, never a raw IP.** `sha256( $ip . wp_salt( 'laao_ads_audit' ) )`. A raw IP is personal data carrying a retention obligation; a salted hash still answers "was this the same client?", which is the only question the log is actually asked. The salt means the hashes are not comparable across installs, which is fine and slightly desirable.
+**`actor_ip_hash`, never a raw IP.** `sha256( $ip . wp_salt( 'aggr_audit' ) )`. A raw IP is personal data carrying a retention obligation; a salted hash still answers "was this the same client?", which is the only question the log is actually asked. The salt means the hashes are not comparable across installs, which is fine and slightly desirable.
 
 **`request_id`.** One `wp_generate_uuid4()` per request. A single approval writes four or five rows; the request ID is what proves they were one action rather than a coincidence.
 
@@ -55,7 +59,7 @@ that repository.
 
 ## Organization identity and access table
 
-`{$wpdb->prefix}laao_ads_org_access`
+`{$wpdb->prefix}aggr_org_access`
 
 This table stores three deliberately small row kinds:
 
@@ -94,37 +98,66 @@ All access-table SQL lives in `Org_Access_Repository`; every query uses
 statements. See
 [ADR-0019](adr/0019-private-organization-matching-and-approved-membership.md).
 
+## Native fill events and rollups
+
+`{$wpdb->prefix}aggr_events` is append-only. `(token_hash, event)` is unique, so a
+replay of the same event is a database refusal, while one fill may still
+record both an impression and a click. `ip_hash` is `HMAC(IP + daily salt)`, never a
+raw address. House fills store campaign_id and creative_id as 0.
+
+`{$wpdb->prefix}aggr_rollups` is the reporting source: unique
+`(placement_id, campaign_id, day_utc)`. Advertiser tiles appear only when
+the reporting **and** native-delivery modules are on
+([ADR-0030](adr/0030-reporting-from-native-rollups.md)). House rows
+(`campaign_id = 0`) are never attributed to an organization. Org totals are
+filtered in SQL against campaign `_aggr_org_id`.
+
+Event SQL lives in `Event_Repository`; rollup SQL in `Rollup_Repository`.
+Retention is a daily sweep of events older than `tracking.retention_days`.
+Rollups are not purged with events.
+
 ## Options
 
 | Option | Type | Autoload | Purpose |
 |---|---|---|---|
-| `laao_ads_db_version` | int | yes | Schema version; drives the migration walker |
-| `laao_ads_plugin_version` | string | yes | Mirrors the plugin header |
-| `laao_ads_roles_version` | int | yes | Bumped when the capability matrix changes |
-| `laao_ads_rewrite_version` | int | yes | Bumped when routes change; triggers one flush |
-| `laao_ads_seed_version` | int | yes | Bumped once placements are fully seeded and mapped |
-| `laao_ads_upgrade_lock` | int | **no** | Transient-ish concurrency guard; see below |
-| `laao_ads_settings` | array | yes | The settings schema's storage |
-| `laao_ads_delete_data_on_uninstall` | bool | yes | Opt-in; default off |
+| `aggr_db_version` | int | yes | Schema version; drives the migration walker |
+| `aggr_plugin_version` | string | yes | Mirrors the plugin header |
+| `aggr_roles_version` | int | yes | Bumped when the capability matrix changes |
+| `aggr_rewrite_version` | int | yes | Bumped when routes change; triggers one flush |
+| `aggr_seed_version` | int | yes | Bumped once placements are fully seeded and mapped |
+| `aggr_upgrade_lock` | int | **no** | Transient-ish concurrency guard; see below |
+| `aggr_settings` | array | yes | The settings schema's storage |
+| `aggr_delivery_rewrite_version` | int | yes | Bumped when the click-hop rule changes; triggers one flush |
+| `aggr_delete_data_on_uninstall` | bool | yes | Opt-in; default off |
 
-Version options autoload because they are read on every request. `laao_ads_upgrade_lock` does not, because it is written and deleted rather than read, and an autoloaded option that churns is a cache-invalidation cost for nothing.
+Version options autoload because they are read on every request. `aggr_upgrade_lock` does not, because it is written and deleted rather than read, and an autoloaded option that churns is a cache-invalidation cost for nothing.
 
-Nothing calls `get_option()` outside `inc/Core/class-settings.php`. Settings are declared once in a schema consumed by *both* `register_setting()` and the read API, so a registration default and a read fallback cannot drift apart — the bug where the settings form shows one value and the site behaves as another.
+Nothing calls `get_option( 'aggr_settings' )` outside `inc/Core/class-settings.php`. The shape is declared once in `Domain\Settings_Schema` and written only through `Core\Settings::save()`, which rejects the whole payload on any error. The WordPress Settings API (`register_setting` / `options.php`) is not used: that screen is gated on `manage_options`, and ours is `aggr_manage_settings`. See [ADR-0023](adr/0023-settings-and-module-flags.md).
 
 ## Migrations
 
-`Upgrader::maybe_upgrade()` runs on `plugins_loaded` priority 5. It reads `laao_ads_db_version` and walks an ordered map:
+`Upgrader::maybe_upgrade()` runs on `plugins_loaded` priority 5. It reads
+`aggr_db_version`, falling back to the previous option name so an existing
+install is not mistaken for a fresh site, and walks an ordered map. A
+network-active install also runs on `wp_initialize_site` so a brand-new site
+is not migrated by its first public fill request.
 
 ```php
-private const MIGRATIONS = array(
-    2 => 'to_2',
-    3 => 'to_3',
-);
+array(
+    2 => install_org_access,
+    3 => Identity_Migration::to_3, // rewrite post types, statuses, meta, tables, options, roles, cron
+    4 => install_delivery_tables,  // aggr_events + aggr_rollups
+)
 ```
 
-**Each step is idempotent and bumps `laao_ads_db_version` itself on success.** A fatal partway through the sequence therefore never replays completed work — the next request resumes at the first unfinished step. A single bump after the whole loop would mean any failure re-runs everything from the beginning, which for an `ALTER TABLE` is how you turn one bad deploy into a corrupted schema.
+`Installer::install()` runs that same rewrite **before** `dbDelta` and before
+stamping the current version. Activating new code against a LAAO database
+otherwise creates empty new tables, stamps version 3, and the walker skips
+the rewrite — leaving every campaign under a post type nothing queries.
 
-Concurrency is guarded with `add_option( 'laao_ads_upgrade_lock', time(), '', false )`. `add_option` returns `false` when the row already exists, which is the closest thing to an atomic test-and-set WordPress offers without a direct query. Two simultaneous requests after a deploy do not both migrate. The lock is released in a `finally`, and a stale lock older than five minutes is force-cleared, because a fatal inside a migration would otherwise wedge the site permanently.
+**Each step is idempotent and bumps `aggr_db_version` itself on success.** A fatal partway through the sequence therefore never replays completed work — the next request resumes at the first unfinished step. A single bump after the whole loop would mean any failure re-runs everything from the beginning, which for an `ALTER TABLE` is how you turn one bad deploy into a corrupted schema.
+
+Concurrency is guarded with `add_option( 'aggr_upgrade_lock', time(), '', false )`. `add_option` returns `false` when the row already exists, which is the closest thing to an atomic test-and-set WordPress offers without a direct query. Two simultaneous requests after a deploy do not both migrate. The lock is released in a `finally`, and a stale lock older than five minutes is force-cleared, because a fatal inside a migration would otherwise wedge the site permanently.
 
 Every migration step writes an audit row with `actor_user_id = 0`.
 
@@ -145,10 +178,10 @@ index against live `SHOW COLUMNS` / `SHOW INDEX` results after install.
 ## Uninstall
 
 `uninstall.php` runs only on a real uninstall, never on deactivation. It drops
-the audit and organization-access tables, removes both roles and all granted
-capabilities, and deletes every `laao_ads_*` option. Dropping access rows removes
+the audit, organization-access, events, and rollups tables, removes both roles and all granted
+capabilities, and deletes every `aggr_*` option. Dropping access rows removes
 outstanding bearer invitations and pending personal data. If business content
 is preserved and the plugin is later reinstalled, canonical identities are
 rebuilt idempotently from the retained organizations.
 
-**It preserves campaign, creative, and organization content** unless `laao_ads_delete_data_on_uninstall` is explicitly set. Deleting a plugin should not silently destroy the record of what a business ran and billed for. Someone who genuinely wants that has to ask for it.
+**It preserves campaign, creative, and organization content** unless `aggr_delete_data_on_uninstall` is explicitly set. Deleting a plugin should not silently destroy the record of what a business ran and billed for. Someone who genuinely wants that has to ask for it.

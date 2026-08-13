@@ -2,15 +2,15 @@
 /**
  * Turning a reviewed creative into an attachment.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Workflow;
+namespace Aggressive\Ads\Workflow;
 
-use LAAO_Advertiser_Portal\Repository\Creative_Repository;
-use LAAO_Advertiser_Portal\Storage\Private_Storage;
+use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Storage\Private_Storage;
 use WP_Error;
 
 /**
@@ -60,8 +60,8 @@ final class Creative_Promoter {
 
 		if ( null === $details || '' === $details['path'] ) {
 			return new WP_Error(
-				'laao_ads_creative_file_missing',
-				__( 'This creative has no file to publish.', 'laao-advertiser-portal' )
+				'aggr_creative_file_missing',
+				__( 'This creative has no file to publish.', 'aggressive-ads' )
 			);
 		}
 
@@ -69,8 +69,8 @@ final class Creative_Promoter {
 
 		if ( null === $path ) {
 			return new WP_Error(
-				'laao_ads_creative_file_missing',
-				__( 'This creative’s file could not be found.', 'laao-advertiser-portal' )
+				'aggr_creative_file_missing',
+				__( 'This creative’s file could not be found.', 'aggressive-ads' )
 			);
 		}
 
@@ -78,8 +78,8 @@ final class Creative_Promoter {
 		// approved.
 		if ( ! $this->storage->matches_checksum( $details['path'], $details['sha256'] ) ) {
 			return new WP_Error(
-				'laao_ads_creative_changed',
-				__( 'This creative’s file has changed since it was reviewed, so it has not been published.', 'laao-advertiser-portal' )
+				'aggr_creative_changed',
+				__( 'This creative’s file has changed since it was reviewed, so it has not been published.', 'aggressive-ads' )
 			);
 		}
 
@@ -118,8 +118,8 @@ final class Creative_Promoter {
 
 		if ( ! empty( $uploads['error'] ) || ! isset( $uploads['path'] ) || ! is_string( $uploads['path'] ) ) {
 			return new WP_Error(
-				'laao_ads_upload_dir_unavailable',
-				__( 'The Media Library is not writable, so this creative could not be published.', 'laao-advertiser-portal' )
+				'aggr_upload_dir_unavailable',
+				__( 'The Media Library is not writable, so this creative could not be published.', 'aggressive-ads' )
 			);
 		}
 
@@ -130,8 +130,8 @@ final class Creative_Promoter {
 
 		if ( ! copy( $path, $target ) ) {
 			return new WP_Error(
-				'laao_ads_promote_failed',
-				__( 'This creative could not be copied into the Media Library.', 'laao-advertiser-portal' )
+				'aggr_promote_failed',
+				__( 'This creative could not be copied into the Media Library.', 'aggressive-ads' )
 			);
 		}
 

@@ -2,21 +2,21 @@
 /**
  * Ending-soon campaign email delivery.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Notification;
+namespace Aggressive\Ads\Notification;
 
-use LAAO_Advertiser_Portal\Audit\Audit_Event;
-use LAAO_Advertiser_Portal\Core\Post_Statuses;
-use LAAO_Advertiser_Portal\Core\Service;
-use LAAO_Advertiser_Portal\Portal\Request;
-use LAAO_Advertiser_Portal\Portal\Routes;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Repository;
+use Aggressive\Ads\Audit\Audit_Event;
+use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Portal\Request;
+use Aggressive\Ads\Portal\Routes;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Org_Repository;
 use RuntimeException;
 
 /**
@@ -27,7 +27,7 @@ use RuntimeException;
  */
 final class Ending_Soon_Mailer implements Service {
 
-	public const RETRY_HOOK = 'laao_ads_retry_ending_soon_notifications';
+	public const RETRY_HOOK = 'aggr_retry_ending_soon_notifications';
 
 	private const TYPE = 'ending_soon';
 
@@ -261,7 +261,7 @@ final class Ending_Soon_Mailer implements Service {
 				$subject   = sanitize_text_field(
 					sprintf(
 						/* translators: 1: site name. 2: campaign title. */
-						__( '[%1$s] Campaign ending soon: %2$s', 'laao-advertiser-portal' ),
+						__( '[%1$s] Campaign ending soon: %2$s', 'aggressive-ads' ),
 						$site_name,
 						$title
 					)
@@ -269,14 +269,14 @@ final class Ending_Soon_Mailer implements Service {
 				$body = implode(
 					"\n",
 					array(
-						__( 'This campaign is scheduled to stop running soon.', 'laao-advertiser-portal' ),
+						__( 'This campaign is scheduled to stop running soon.', 'aggressive-ads' ),
 						'',
 						/* translators: %s: campaign title. */
-						sprintf( __( 'Campaign: %s', 'laao-advertiser-portal' ), $title ),
+						sprintf( __( 'Campaign: %s', 'aggressive-ads' ), $title ),
 						/* translators: %s: localized end date. */
-						sprintf( __( 'Ends on: %s', 'laao-advertiser-portal' ), $end_date ),
+						sprintf( __( 'Ends on: %s', 'aggressive-ads' ), $end_date ),
 						'',
-						__( 'Open your campaign:', 'laao-advertiser-portal' ),
+						__( 'Open your campaign:', 'aggressive-ads' ),
 						Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id ),
 					)
 				);

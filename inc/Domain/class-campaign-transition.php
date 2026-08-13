@@ -2,12 +2,12 @@
 /**
  * One edge in the campaign lifecycle.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Domain;
+namespace Aggressive\Ads\Domain;
 
 /**
  * A single legal status change, and everything that is true about it.

@@ -1,554 +1,112 @@
 /* Scoped to the portal, never global: a plugin that restyles `body` is a
 	   plugin that breaks the host site. */
-.laao-ads-portal {
+.aggr-portal {
 	margin: 0;
-	background: var(--laao-ads-color-canvas);
-	color: var(--laao-ads-color-text);
-	font-family: var(--laao-ads-font);
+	background: var(--aggr-color-canvas);
+	color: var(--aggr-color-text);
+	font-family: var(--aggr-font);
 	font-size: 15px;
 	line-height: 1.55;
 	-webkit-text-size-adjust: 100%;
 }
 
-.laao-ads-portal *,
-.laao-ads-portal *::before,
-.laao-ads-portal *::after {
+.aggr-portal *,
+.aggr-portal *::before,
+.aggr-portal *::after {
 	box-sizing: border-box;
 }
 
-.laao-ads-portal img {
+.aggr-portal img {
 	max-width: 100%;
 	height: auto;
 }
 
-.laao-ads-portal :focus-visible {
-	outline: 3px solid var(--laao-ads-color-accent);
+.aggr-portal :focus-visible {
+	outline: 3px solid var(--aggr-color-accent);
 	outline-offset: 2px;
-	border-radius: var(--laao-ads-radius-small);
+	border-radius: var(--aggr-radius-small);
 }
 
-.laao-ads-shell {
+.aggr-shell {
 	display: flex;
 	min-height: 100vh;
 	min-height: 100dvh;
 }
 
-.laao-ads-rail {
+.aggr-rail {
 	display: flex;
 	flex-direction: column;
-	gap: var(--laao-ads-space-2xs);
+	gap: var(--aggr-space-2xs);
 	flex-shrink: 0;
-	width: var(--laao-ads-rail-width);
-	padding: var(--laao-ads-space-lg) var(--laao-ads-space-md);
-	background: var(--laao-ads-color-rail);
-	color: var(--laao-ads-color-rail-text);
+	width: var(--aggr-rail-width);
+	padding: var(--aggr-space-lg) var(--aggr-space-md);
+	background: var(--aggr-color-rail);
+	color: var(--aggr-color-rail-text);
 }
 
-.laao-ads-body {
+.aggr-body {
 	display: flex;
 	flex: 1;
 	flex-direction: column;
 	min-width: 0;
 }
 
-.laao-ads-topbar {
+.aggr-topbar {
 	display: flex;
 	flex-wrap: wrap;
-	gap: var(--laao-ads-space-md);
+	gap: var(--aggr-space-md);
 	align-items: center;
 	justify-content: space-between;
 	min-height: 64px;
-	padding: var(--laao-ads-space-sm) var(--laao-ads-space-2xl);
-	background: var(--laao-ads-color-surface);
-	border-bottom: 1px solid var(--laao-ads-border-color);
+	padding: var(--aggr-space-sm) var(--aggr-space-2xl);
+	background: var(--aggr-color-surface);
+	border-bottom: 1px solid var(--aggr-border-color);
 }
 
-.laao-ads-main {
+.aggr-main {
 	flex: 1;
-	padding: var(--laao-ads-space-2xl);
+	padding: var(--aggr-space-2xl);
 }
 
-.laao-ads-main:focus {
+.aggr-main:focus {
 	outline: none;
 }
 
 /* The rail becomes a horizontal strip before it becomes a hamburger. A
 	   five-item nav does not need a disclosure widget. */
 @media (max-width: 782px) {
-	.laao-ads-shell {
+	.aggr-shell {
 		flex-direction: column;
 	}
 
-	.laao-ads-rail {
+	.aggr-rail {
 		width: 100%;
 		flex-direction: row;
 		flex-wrap: wrap;
 		align-items: center;
 	}
 
-	.laao-ads-main {
-		padding: var(--laao-ads-space-lg) var(--laao-ads-space-md);
+	.aggr-main {
+		padding: var(--aggr-space-lg) var(--aggr-space-md);
 	}
 }
 
-.laao-ads-skip {
+.aggr-skip {
 	position: absolute;
 	left: -9999px;
-	padding: var(--laao-ads-space-xs) var(--laao-ads-space-md);
-	background: var(--laao-ads-color-accent-strong);
-	color: var(--laao-ads-color-accent-contrast);
-	border-radius: var(--laao-ads-radius-control);
+	padding: var(--aggr-space-xs) var(--aggr-space-md);
+	background: var(--aggr-color-accent-strong);
+	color: var(--aggr-color-accent-contrast);
+	border-radius: var(--aggr-radius-control);
 }
 
-.laao-ads-skip:focus {
-	left: var(--laao-ads-space-xs);
-	top: var(--laao-ads-space-xs);
+.aggr-skip:focus {
+	left: var(--aggr-space-xs);
+	top: var(--aggr-space-xs);
 	z-index: 100;
 }
 
-.laao-ads-brand {
-	display: block;
-	margin-bottom: var(--laao-ads-space-lg);
-	padding: 0 var(--laao-ads-space-xs);
-	color: var(--laao-ads-color-rail-text-strong);
-	text-decoration: none;
-}
-
-.laao-ads-brand__mark {
-	font-size: 22px;
-	font-weight: 900;
-	letter-spacing: -0.5px;
-}
-
-.laao-ads-brand__sub {
-	display: block;
-	margin-top: 2px;
-	font-size: 10px;
-	font-weight: 600;
-	letter-spacing: 1.5px;
-	text-transform: uppercase;
-	color: var(--laao-ads-color-rail-text);
-}
-
-.laao-ads-nav__list {
-	display: flex;
-	flex-direction: column;
-	gap: var(--laao-ads-space-2xs);
-	margin: 0;
-	padding: 0;
-	list-style: none;
-}
-
-.laao-ads-nav__link {
-	display: flex;
-	align-items: center;
-	gap: var(--laao-ads-space-sm);
-	min-height: var(--laao-ads-control-min);
-	padding: var(--laao-ads-space-xs);
-	border-radius: var(--laao-ads-radius-control);
-	color: var(--laao-ads-color-rail-text);
-	font-size: 14px;
-	font-weight: 600;
-	text-decoration: none;
-	transition: background var(--laao-ads-duration-fast) ease;
-}
-
-.laao-ads-nav__icon {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	flex-shrink: 0;
-	width: 28px;
-	height: 28px;
-	border-radius: var(--laao-ads-radius-control);
-	background: var(--laao-ads-color-rail-chip);
-	color: var(--laao-ads-color-rail-text);
-}
-
-/*
-	 * The icon inherits currentColor from its chip, so the active and hover
-	 * states above recolour the stroke without a second rule.
-	 */
-.laao-ads-icon {
-	display: block;
-	width: 18px;
-	height: 18px;
-}
-
-.laao-ads-nav__link:hover {
-	background: var(--laao-ads-color-rail-active);
-	color: var(--laao-ads-color-rail-text-strong);
-}
-
-/*
-	 * Keyed off aria-current, not a parallel class. The visual state and the
-	 * announced state then cannot disagree — which they do the moment a
-	 * template sets one and forgets the other.
-	 */
-.laao-ads-nav__link[aria-current="page"] {
-	background: var(--laao-ads-color-rail-active);
-	color: var(--laao-ads-color-rail-text-strong);
-}
-
-.laao-ads-nav__link[aria-current="page"] .laao-ads-nav__icon {
-	background: var(--laao-ads-color-accent);
-	color: var(--laao-ads-color-accent-contrast);
-}
-
-.laao-ads-org {
-	display: flex;
-	align-items: center;
-	gap: var(--laao-ads-space-xs);
-	font-size: 14px;
-	font-weight: 700;
-}
-
-.laao-ads-topbar__actions {
-	display: flex;
-	align-items: center;
-	gap: var(--laao-ads-space-md);
-	font-size: 13px;
-}
-
-.laao-ads-avatar {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: 34px;
-	height: 34px;
-	border-radius: 50%;
-	background: var(--laao-ads-color-accent-strong);
-	color: var(--laao-ads-color-accent-contrast);
-	font-size: 13px;
-	font-weight: 800;
-}
-
-.laao-ads-pagehead {
-	display: flex;
-	flex-wrap: wrap;
-	gap: var(--laao-ads-space-lg);
-	align-items: flex-end;
-	justify-content: space-between;
-	margin-bottom: var(--laao-ads-space-xl);
-}
-
-.laao-ads-title {
-	margin: 0;
-	font-size: clamp(1.5rem, 1.2rem + 1.4vw, 2rem);
-	font-weight: 800;
-	letter-spacing: -0.5px;
-	line-height: 1.15;
-}
-
-.laao-ads-lede {
-	max-width: var(--laao-ads-measure);
-	margin: var(--laao-ads-space-xs) 0 0;
-	color: var(--laao-ads-color-text-muted);
-}
-
-.laao-ads-panel {
-	margin-bottom: var(--laao-ads-space-lg);
-	background: var(--laao-ads-color-surface);
-	border: 1px solid var(--laao-ads-border-color);
-	border-radius: var(--laao-ads-radius-panel);
-	overflow: hidden;
-	padding: 1.5rem;
-}
-
-.laao-ads-panel__head {
-	padding: var(--laao-ads-space-md) var(--laao-ads-space-lg);
-	border-bottom: 1px solid var(--laao-ads-border-color);
-	font-size: 16px;
-	font-weight: 700;
-}
-
-.laao-ads-stats {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-	gap: var(--laao-ads-space-md);
-	margin-bottom: var(--laao-ads-space-lg);
-}
-
-.laao-ads-stat {
-	padding: var(--laao-ads-space-lg);
-	background: var(--laao-ads-color-surface);
-	border: 1px solid var(--laao-ads-border-color);
-	border-radius: var(--laao-ads-radius-panel);
-}
-
-.laao-ads-stat__label {
-	font-size: 11px;
-	font-weight: 700;
-	letter-spacing: 1px;
-	text-transform: uppercase;
-	color: var(--laao-ads-color-text-subtle);
-}
-
-.laao-ads-stat__value {
-	margin-top: var(--laao-ads-space-xs);
-	font-size: 30px;
-	font-weight: 800;
-	line-height: 1.1;
-}
-
-.laao-ads-table {
-	width: 100%;
-	border-collapse: collapse;
-}
-
-.laao-ads-table th {
-	padding: var(--laao-ads-space-sm) var(--laao-ads-space-lg);
-	background: var(--laao-ads-color-surface-sunken);
-	border-bottom: 1px solid var(--laao-ads-border-color);
-	font-size: 11px;
-	font-weight: 700;
-	letter-spacing: 0.5px;
-	text-transform: uppercase;
-	color: var(--laao-ads-color-text-subtle);
-	text-align: left;
-}
-
-.laao-ads-table td {
-	padding: var(--laao-ads-space-md) var(--laao-ads-space-lg);
-	border-bottom: 1px solid var(--laao-ads-border-color);
-	font-size: 13px;
-	color: var(--laao-ads-color-text-muted);
-	vertical-align: top;
-}
-
-.laao-ads-table tr:last-child td {
-	border-bottom: 0;
-}
-
-.laao-ads-table__primary {
-	font-size: 14px;
-	font-weight: 700;
-	color: var(--laao-ads-color-text);
-}
-
-.laao-ads-table__primary a {
-	color: inherit;
-}
-
-/*
-	 * Destination URLs are advertiser-supplied and arbitrarily long. Breaking
-	 * anywhere is what keeps one pasted tracking URL from widening the whole
-	 * table past the panel.
-	 */
-.laao-ads-table__url {
-	max-width: 22rem;
-	overflow-wrap: anywhere;
-	color: var(--laao-ads-color-text-muted);
-}
-
-/* A table is a table. It scrolls inside its own panel rather than making
-	   the page scroll sideways on a phone. */
-.laao-ads-tablewrap {
-	overflow-x: auto;
-}
-
-/*
-	 * Status carries text, never colour alone. The pill's own word is the
-	 * information; the tint is emphasis.
-	 */
-.laao-ads-pill {
-	display: inline-block;
-	padding: 4px 10px;
-	border-radius: var(--laao-ads-radius-pill);
-	background: var(--laao-ads-color-neutral-tint);
-	color: var(--laao-ads-color-neutral);
-	font-size: 12px;
-	font-weight: 700;
-	white-space: nowrap;
-}
-
-/*
-	 * Named explicitly rather than relying on the base rule. View_Data returns
-	 * "neutral" as a real value, and a modifier that exists in PHP but not in
-	 * CSS is the kind of gap nobody notices until a status renders unstyled.
-	 */
-.laao-ads-pill--neutral {
-	background: var(--laao-ads-color-neutral-tint);
-	color: var(--laao-ads-color-neutral);
-}
-
-.laao-ads-pill--live {
-	background: var(--laao-ads-color-live-tint);
-	color: var(--laao-ads-color-live);
-}
-
-.laao-ads-pill--pending {
-	background: var(--laao-ads-color-pending-tint);
-	color: var(--laao-ads-color-pending);
-}
-
-.laao-ads-pill--ended {
-	background: var(--laao-ads-color-ended-tint);
-	color: var(--laao-ads-color-ended);
-}
-
-.laao-ads-pill--danger {
-	background: var(--laao-ads-color-danger-tint);
-	color: var(--laao-ads-color-danger);
-}
-
-.laao-ads-button {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	min-height: var(--laao-ads-control-min);
-	padding: 0 var(--laao-ads-space-lg);
-	background: var(--laao-ads-color-accent-strong);
-	color: var(--laao-ads-color-accent-contrast);
-	border: 1px solid transparent;
-	border-radius: var(--laao-ads-radius-control);
-	font: inherit;
-	font-weight: 700;
-	font-size: 14px;
-	text-decoration: none;
-	white-space: nowrap;
-	cursor: pointer;
-}
-
-.laao-ads-button:hover {
-	filter: brightness(0.92);
-}
-
-.laao-ads-button--secondary {
-	background: var(--laao-ads-color-surface);
-	border-color: var(--laao-ads-border-color-strong);
-	color: var(--laao-ads-color-text);
-}
-
-.laao-ads-button--small {
-	min-height: 2.25rem;
-	padding-inline: var(--laao-ads-space-sm);
-	font-size: 12px;
-}
-
-.laao-ads-actions {
-	display: flex;
-	align-items: center;
-	gap: var(--laao-ads-space-xs);
-	flex-wrap: wrap;
-}
-
-.laao-ads-actions form {
-	margin: 0;
-}
-
-.laao-ads-button--danger {
-	background: var(--laao-ads-color-danger);
-	color: var(--laao-ads-color-accent-contrast);
-}
-
-.laao-ads-alert {
-	margin-bottom: var(--laao-ads-space-lg);
-	padding: var(--laao-ads-space-md) var(--laao-ads-space-lg);
-	border: 1px solid var(--laao-ads-border-color-strong);
-	border-radius: var(--laao-ads-radius-control);
-}
-
-.laao-ads-alert p,
-.laao-ads-alert h2 {
-	margin: 0;
-}
-
-.laao-ads-alert h2 {
-	margin-bottom: var(--laao-ads-space-xs);
-	font-size: 16px;
-}
-
-.laao-ads-alert a {
-	color: inherit;
-	font-weight: 700;
-}
-
-.laao-ads-alert--success {
-	background: var(--laao-ads-color-live-tint);
-	color: var(--laao-ads-color-live);
-}
-
-.laao-ads-alert--error {
-	background: var(--laao-ads-color-danger-tint);
-	color: var(--laao-ads-color-danger);
-}
-
-/* A closing note or secondary action under a panel's main content. */
-/*
-	 * The sign-in screen. No rail, so the panel centres on the canvas rather
-	 * than sitting inside a body column.
-	 */
-.laao-ads-bare {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	min-height: 100vh;
-	min-height: 100dvh;
-	padding: var(--laao-ads-space-lg);
-	background: var(--laao-ads-color-canvas);
-}
-
-.laao-ads-signin {
-	width: 100%;
-	max-width: 26rem;
-}
-
-.laao-ads-signup {
-	max-width: 36rem;
-}
-
-.laao-ads-signin__brand {
-	display: flex;
-	align-items: baseline;
-	gap: var(--laao-ads-space-xs);
-	margin-bottom: var(--laao-ads-space-lg);
-}
-
-/*
-	 * The brand block is styled for the dark rail, where its colours are the
-	 * rail's. On the sign-in screen it sits on the light canvas, so both parts
-	 * need re-colouring — axe caught the subtitle at 1.84:1, which is what a
-	 * rail colour looks like on a pale background.
-	 */
-.laao-ads-signin .laao-ads-brand__mark {
-	color: var(--laao-ads-color-text);
-}
-
-.laao-ads-signin .laao-ads-brand__sub {
-	color: var(--laao-ads-color-text-muted);
-}
-
-.laao-ads-signin .laao-ads-panel {
-	padding-bottom: var(--laao-ads-space-lg);
-}
-
-.laao-ads-signin .laao-ads-form {
-	padding: var(--laao-ads-space-lg);
-}
-
-.laao-ads-signin .laao-ads-alert {
-	margin: var(--laao-ads-space-lg) var(--laao-ads-space-lg) 0;
-}
-
-.laao-ads-signin__aside {
-	margin: var(--laao-ads-space-xs) 0 0;
-	padding: 0 var(--laao-ads-space-lg);
-	font-size: 14px;
-}
-
-.laao-ads-signin__aside a {
-	color: var(--laao-ads-color-accent-strong);
-	font-weight: 700;
-	text-underline-offset: 3px;
-}
-
-/*
-	 * A low-cost bot trap that is absent from the accessibility tree and from
-	 * keyboard order. It remains in the form DOM because automated submitters
-	 * that fill every text input are the behavior it is intended to identify.
-	 */
-.laao-ads-form-trap {
+.aggr-sr {
 	position: absolute;
 	width: 1px;
 	height: 1px;
@@ -560,29 +118,540 @@
 	border: 0;
 }
 
-.laao-ads-field--inline {
-	display: flex;
-	align-items: center;
-	gap: var(--laao-ads-space-xs);
+.aggr-brand {
+	display: block;
+	margin-bottom: var(--aggr-space-lg);
+	padding: 0 var(--aggr-space-xs);
+	color: var(--aggr-color-rail-text-strong);
+	text-decoration: none;
 }
 
-.laao-ads-field--inline label {
+.aggr-brand__mark {
+	font-size: 22px;
+	font-weight: 900;
+	letter-spacing: -0.5px;
+}
+
+.aggr-brand__logo {
+	display: block;
+	max-width: 10rem;
+	max-height: 2.5rem;
+	height: auto;
+}
+
+.aggr-brand__sub {
+	display: block;
+	margin-top: 2px;
+	font-size: 10px;
+	font-weight: 600;
+	letter-spacing: 1.5px;
+	text-transform: uppercase;
+	color: var(--aggr-color-rail-text);
+}
+
+.aggr-nav__list {
+	display: flex;
+	flex-direction: column;
+	gap: var(--aggr-space-2xs);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.aggr-nav__link {
+	display: flex;
+	align-items: center;
+	gap: var(--aggr-space-sm);
+	min-height: var(--aggr-control-min);
+	padding: var(--aggr-space-xs);
+	border-radius: var(--aggr-radius-control);
+	color: var(--aggr-color-rail-text);
+	font-size: 14px;
+	font-weight: 600;
+	text-decoration: none;
+	transition: background var(--aggr-duration-fast) ease;
+}
+
+.aggr-nav__icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	width: 28px;
+	height: 28px;
+	border-radius: var(--aggr-radius-control);
+	background: var(--aggr-color-rail-chip);
+	color: var(--aggr-color-rail-text);
+}
+
+/*
+	 * The icon inherits currentColor from its chip, so the active and hover
+	 * states above recolour the stroke without a second rule.
+	 */
+.aggr-icon {
+	display: block;
+	width: 18px;
+	height: 18px;
+}
+
+.aggr-nav__link:hover {
+	background: var(--aggr-color-rail-active);
+	color: var(--aggr-color-rail-text-strong);
+}
+
+/*
+	 * Keyed off aria-current, not a parallel class. The visual state and the
+	 * announced state then cannot disagree — which they do the moment a
+	 * template sets one and forgets the other.
+	 */
+.aggr-nav__link[aria-current="page"] {
+	background: var(--aggr-color-rail-active);
+	color: var(--aggr-color-rail-text-strong);
+}
+
+.aggr-nav__link[aria-current="page"] .aggr-nav__icon {
+	background: var(--aggr-color-accent);
+	color: var(--aggr-color-accent-contrast);
+}
+
+.aggr-org {
+	display: flex;
+	align-items: center;
+	gap: var(--aggr-space-xs);
+	font-size: 14px;
+	font-weight: 700;
+}
+
+.aggr-topbar__actions {
+	display: flex;
+	align-items: center;
+	gap: var(--aggr-space-md);
+	font-size: 13px;
+}
+
+.aggr-avatar {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 34px;
+	height: 34px;
+	border-radius: 50%;
+	background: var(--aggr-color-accent-strong);
+	color: var(--aggr-color-accent-contrast);
+	font-size: 13px;
+	font-weight: 800;
+}
+
+.aggr-pagehead {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--aggr-space-lg);
+	align-items: flex-end;
+	justify-content: space-between;
+	margin-bottom: var(--aggr-space-xl);
+}
+
+.aggr-pagehead form {
+	margin: 0;
+}
+
+.aggr-title {
+	margin: 0;
+	font-size: clamp(1.5rem, 1.2rem + 1.4vw, 2rem);
+	font-weight: 800;
+	letter-spacing: -0.5px;
+	line-height: 1.15;
+}
+
+.aggr-lede {
+	max-width: var(--aggr-measure);
+	margin: var(--aggr-space-xs) 0 0;
+	color: var(--aggr-color-text-muted);
+}
+
+.aggr-panel {
+	margin-bottom: var(--aggr-space-lg);
+	background: var(--aggr-color-surface);
+	border: 1px solid var(--aggr-border-color);
+	border-radius: var(--aggr-radius-panel);
+	overflow: hidden;
+	padding: 1.5rem;
+}
+
+.aggr-panel__head {
+	padding: var(--aggr-space-md) var(--aggr-space-lg);
+	border-bottom: 1px solid var(--aggr-border-color);
+	font-size: 16px;
+	font-weight: 700;
+}
+
+.aggr-stats {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+	gap: var(--aggr-space-md);
+	margin-bottom: var(--aggr-space-lg);
+}
+
+.aggr-stat {
+	padding: var(--aggr-space-lg);
+	background: var(--aggr-color-surface);
+	border: 1px solid var(--aggr-border-color);
+	border-radius: var(--aggr-radius-panel);
+}
+
+.aggr-stat__label {
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 1px;
+	text-transform: uppercase;
+	color: var(--aggr-color-text-subtle);
+}
+
+.aggr-stat__value {
+	margin-top: var(--aggr-space-xs);
+	font-size: 30px;
+	font-weight: 800;
+	line-height: 1.1;
+}
+
+.aggr-dashboard--split {
+	display: grid;
+	grid-template-columns: 2fr 1fr;
+	gap: var(--aggr-space-md);
+	align-items: start;
+}
+
+@media (max-width: 782px) {
+	.aggr-dashboard--split {
+		grid-template-columns: 1fr;
+	}
+}
+
+.aggr-spark__lede {
+	margin: 0;
+	padding: 0 var(--aggr-space-lg) var(--aggr-space-sm);
+	color: var(--aggr-color-text-subtle);
+	font-size: 12px;
+}
+
+.aggr-spark__track {
+	display: flex;
+	align-items: flex-end;
+	gap: 8px;
+	height: 110px;
+	margin: 0;
+	padding: 0 var(--aggr-space-lg);
+	list-style: none;
+}
+
+.aggr-spark__bar {
+	flex: 1 1 0;
+	min-width: 0;
+	background: var(--aggr-color-accent);
+	border-radius: 4px 4px 0 0;
+}
+
+.aggr-spark__axis {
+	display: flex;
+	justify-content: space-between;
+	margin: var(--aggr-space-xs) 0 0;
+	padding: 0 var(--aggr-space-lg) var(--aggr-space-md);
+	color: var(--aggr-color-text-subtle);
+	font-size: 11px;
+}
+
+.aggr-table {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+.aggr-table th {
+	padding: var(--aggr-space-sm) var(--aggr-space-lg);
+	background: var(--aggr-color-surface-sunken);
+	border-bottom: 1px solid var(--aggr-border-color);
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.5px;
+	text-transform: uppercase;
+	color: var(--aggr-color-text-subtle);
+	text-align: left;
+}
+
+.aggr-table td {
+	padding: var(--aggr-space-md) var(--aggr-space-lg);
+	border-bottom: 1px solid var(--aggr-border-color);
+	font-size: 13px;
+	color: var(--aggr-color-text-muted);
+	vertical-align: top;
+}
+
+.aggr-table tr:last-child td {
+	border-bottom: 0;
+}
+
+.aggr-table__primary {
+	font-size: 14px;
+	font-weight: 700;
+	color: var(--aggr-color-text);
+}
+
+.aggr-table__primary a {
+	color: inherit;
+}
+
+/*
+	 * Destination URLs are advertiser-supplied and arbitrarily long. Breaking
+	 * anywhere is what keeps one pasted tracking URL from widening the whole
+	 * table past the panel.
+	 */
+.aggr-table__url {
+	max-width: 22rem;
+	overflow-wrap: anywhere;
+	color: var(--aggr-color-text-muted);
+}
+
+/* A table is a table. It scrolls inside its own panel rather than making
+	   the page scroll sideways on a phone. */
+.aggr-tablewrap {
+	overflow-x: auto;
+}
+
+/*
+	 * Status carries text, never colour alone. The pill's own word is the
+	 * information; the tint is emphasis.
+	 */
+.aggr-pill {
+	display: inline-block;
+	padding: 4px 10px;
+	border-radius: var(--aggr-radius-pill);
+	background: var(--aggr-color-neutral-tint);
+	color: var(--aggr-color-neutral);
+	font-size: 12px;
+	font-weight: 700;
+	white-space: nowrap;
+}
+
+/*
+	 * Named explicitly rather than relying on the base rule. View_Data returns
+	 * "neutral" as a real value, and a modifier that exists in PHP but not in
+	 * CSS is the kind of gap nobody notices until a status renders unstyled.
+	 */
+.aggr-pill--neutral {
+	background: var(--aggr-color-neutral-tint);
+	color: var(--aggr-color-neutral);
+}
+
+.aggr-pill--live {
+	background: var(--aggr-color-live-tint);
+	color: var(--aggr-color-live);
+}
+
+.aggr-pill--pending {
+	background: var(--aggr-color-pending-tint);
+	color: var(--aggr-color-pending);
+}
+
+.aggr-pill--ended {
+	background: var(--aggr-color-ended-tint);
+	color: var(--aggr-color-ended);
+}
+
+.aggr-pill--danger {
+	background: var(--aggr-color-danger-tint);
+	color: var(--aggr-color-danger);
+}
+
+.aggr-button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: var(--aggr-control-min);
+	padding: 0 var(--aggr-space-lg);
+	background: var(--aggr-color-accent-strong);
+	color: var(--aggr-color-accent-contrast);
+	border: 1px solid transparent;
+	border-radius: var(--aggr-radius-control);
+	font: inherit;
+	font-weight: 700;
+	font-size: 14px;
+	text-decoration: none;
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+.aggr-button:hover {
+	filter: brightness(0.92);
+}
+
+.aggr-button--secondary {
+	background: var(--aggr-color-surface);
+	border-color: var(--aggr-border-color-strong);
+	color: var(--aggr-color-text);
+}
+
+.aggr-button--small {
+	min-height: 2.25rem;
+	padding-inline: var(--aggr-space-sm);
+	font-size: 12px;
+}
+
+.aggr-actions {
+	display: flex;
+	align-items: center;
+	gap: var(--aggr-space-xs);
+	flex-wrap: wrap;
+}
+
+.aggr-actions form {
+	margin: 0;
+}
+
+.aggr-button--danger {
+	background: var(--aggr-color-danger);
+	color: var(--aggr-color-accent-contrast);
+}
+
+.aggr-alert {
+	margin-bottom: var(--aggr-space-lg);
+	padding: var(--aggr-space-md) var(--aggr-space-lg);
+	border: 1px solid var(--aggr-border-color-strong);
+	border-radius: var(--aggr-radius-control);
+}
+
+.aggr-alert p,
+.aggr-alert h2 {
+	margin: 0;
+}
+
+.aggr-alert h2 {
+	margin-bottom: var(--aggr-space-xs);
+	font-size: 16px;
+}
+
+.aggr-alert a {
+	color: inherit;
+	font-weight: 700;
+}
+
+.aggr-alert--success {
+	background: var(--aggr-color-live-tint);
+	color: var(--aggr-color-live);
+}
+
+.aggr-alert--error {
+	background: var(--aggr-color-danger-tint);
+	color: var(--aggr-color-danger);
+}
+
+/* A closing note or secondary action under a panel's main content. */
+/*
+	 * The sign-in screen. No rail, so the panel centres on the canvas rather
+	 * than sitting inside a body column.
+	 */
+.aggr-bare {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 100vh;
+	min-height: 100dvh;
+	padding: var(--aggr-space-lg);
+	background: var(--aggr-color-canvas);
+}
+
+.aggr-signin {
+	width: 100%;
+	max-width: 26rem;
+}
+
+.aggr-signup {
+	max-width: 36rem;
+}
+
+.aggr-signin__brand {
+	display: flex;
+	align-items: baseline;
+	gap: var(--aggr-space-xs);
+	margin-bottom: var(--aggr-space-lg);
+}
+
+/*
+	 * The brand block is styled for the dark rail, where its colours are the
+	 * rail's. On the sign-in screen it sits on the light canvas, so both parts
+	 * need re-colouring — axe caught the subtitle at 1.84:1, which is what a
+	 * rail colour looks like on a pale background.
+	 */
+.aggr-signin .aggr-brand__mark {
+	color: var(--aggr-color-text);
+}
+
+.aggr-signin .aggr-brand__sub {
+	color: var(--aggr-color-text-muted);
+}
+
+.aggr-signin .aggr-panel {
+	padding-bottom: var(--aggr-space-lg);
+}
+
+.aggr-signin .aggr-form {
+	padding: var(--aggr-space-lg);
+}
+
+.aggr-signin .aggr-alert {
+	margin: var(--aggr-space-lg) var(--aggr-space-lg) 0;
+}
+
+.aggr-signin__aside {
+	margin: var(--aggr-space-xs) 0 0;
+	padding: 0 var(--aggr-space-lg);
+	font-size: 14px;
+}
+
+.aggr-signin__aside a {
+	color: var(--aggr-color-accent-strong);
+	font-weight: 700;
+	text-underline-offset: 3px;
+}
+
+/*
+	 * A low-cost bot trap that is absent from the accessibility tree and from
+	 * keyboard order. It remains in the form DOM because automated submitters
+	 * that fill every text input are the behavior it is intended to identify.
+	 */
+.aggr-form-trap {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+.aggr-field--inline {
+	display: flex;
+	align-items: center;
+	gap: var(--aggr-space-xs);
+}
+
+.aggr-field--inline label {
 	margin: 0;
 	font-weight: 500;
 }
 
-.laao-ads-panel__foot {
-	padding: var(--laao-ads-space-lg);
-	border-top: 1px solid var(--laao-ads-border-color);
-	color: var(--laao-ads-color-text-muted);
+.aggr-panel__foot {
+	padding: var(--aggr-space-lg);
+	border-top: 1px solid var(--aggr-border-color);
+	color: var(--aggr-color-text-muted);
 	font-size: 14px;
 }
 
-.laao-ads-panel__foot > p {
-	margin: 0 0 var(--laao-ads-space-md);
+.aggr-panel__foot > p {
+	margin: 0 0 var(--aggr-space-md);
 }
 
-.laao-ads-panel__foot > p:last-child {
+.aggr-panel__foot > p:last-child {
 	margin-bottom: 0;
 }
 
@@ -592,27 +661,27 @@
 	 * scanning a table, so it is the one place a measure and list styling are
 	 * worth having.
 	 */
-.laao-ads-prose {
-	max-width: var(--laao-ads-measure);
-	padding: var(--laao-ads-space-lg);
-	color: var(--laao-ads-color-text-body);
+.aggr-prose {
+	max-width: var(--aggr-measure);
+	padding: var(--aggr-space-lg);
+	color: var(--aggr-color-text-body);
 }
 
-.laao-ads-prose p {
-	margin: 0 0 var(--laao-ads-space-md);
+.aggr-prose p {
+	margin: 0 0 var(--aggr-space-md);
 }
 
-.laao-ads-prose > :last-child {
+.aggr-prose > :last-child {
 	margin-bottom: 0;
 }
 
-.laao-ads-prose ol,
-.laao-ads-prose ul {
-	margin: 0 0 var(--laao-ads-space-md);
-	padding-left: var(--laao-ads-space-lg);
+.aggr-prose ol,
+.aggr-prose ul {
+	margin: 0 0 var(--aggr-space-md);
+	padding-left: var(--aggr-space-lg);
 }
 
-.laao-ads-prose li {
-	margin-bottom: var(--laao-ads-space-xs);
+.aggr-prose li {
+	margin-bottom: var(--aggr-space-xs);
 }
 

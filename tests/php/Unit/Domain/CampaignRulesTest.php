@@ -2,14 +2,14 @@
 /**
  * The pure campaign rules.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Unit\Domain;
+namespace Aggressive\Ads\Tests\Unit\Domain;
 
-use LAAO_Advertiser_Portal\Domain\Campaign_Rules;
+use Aggressive\Ads\Domain\Campaign_Rules;
 use Yoast\PHPUnitPolyfills\TestCases\TestCase;
 
 /**

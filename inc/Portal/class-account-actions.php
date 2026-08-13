@@ -2,16 +2,16 @@
 /**
  * The advertiser's own account, which they can otherwise never reach.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Portal;
+namespace Aggressive\Ads\Portal;
 
-use LAAO_Advertiser_Portal\Core\Service;
-use LAAO_Advertiser_Portal\Notification\Password_Notification;
-use LAAO_Advertiser_Portal\Security\Capabilities;
+use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Notification\Password_Notification;
+use Aggressive\Ads\Security\Capabilities;
 use WP_Error;
 use WP_User;
 
@@ -30,8 +30,8 @@ use WP_User;
  */
 final class Account_Actions implements Service {
 
-	public const SAVE_ACTION     = 'laao_ads_save_account';
-	public const PASSWORD_ACTION = 'laao_ads_request_password_reset';
+	public const SAVE_ACTION     = 'aggr_save_account';
+	public const PASSWORD_ACTION = 'aggr_request_password_reset';
 
 	/**
 	 * The longest display name worth storing.
@@ -100,7 +100,7 @@ final class Account_Actions implements Service {
 		$user = wp_get_current_user();
 
 		if ( ! $user instanceof WP_User || 0 === $user->ID ) {
-			$this->redirect( 'error', new WP_Error( 'laao_ads_account_missing', __( 'Your account could not be read.', 'laao-advertiser-portal' ) ) );
+			$this->redirect( 'error', new WP_Error( 'aggr_account_missing', __( 'Your account could not be read.', 'aggressive-ads' ) ) );
 		}
 
 		$sent = $this->notification->send_reset( $user->ID );
@@ -111,7 +111,7 @@ final class Account_Actions implements Service {
 			 * distinguish "no such user" from "could not send", which is a
 			 * distinction worth keeping out of a response anyone can trigger.
 			 */
-			$this->redirect( 'error', new WP_Error( 'laao_ads_password_reset_failed', __( 'The reset email could not be sent.', 'laao-advertiser-portal' ) ) );
+			$this->redirect( 'error', new WP_Error( 'aggr_password_reset_failed', __( 'The reset email could not be sent.', 'aggressive-ads' ) ) );
 		}
 
 		$this->redirect( 'password_sent' );
@@ -126,18 +126,18 @@ final class Account_Actions implements Service {
 	 */
 	public function process_save( int $user_id, array $fields ) {
 		if ( $user_id <= 0 ) {
-			return new WP_Error( 'laao_ads_account_missing', __( 'Your account could not be read.', 'laao-advertiser-portal' ) );
+			return new WP_Error( 'aggr_account_missing', __( 'Your account could not be read.', 'aggressive-ads' ) );
 		}
 
 		$display = trim( $fields['display_name'] ?? '' );
 
 		if ( '' === $display ) {
-			return new WP_Error( 'laao_ads_display_name_required', __( 'Enter a name to display.', 'laao-advertiser-portal' ) );
+			return new WP_Error( 'aggr_display_name_required', __( 'Enter a name to display.', 'aggressive-ads' ) );
 		}
 
 		foreach ( array( $display, trim( $fields['first_name'] ?? '' ), trim( $fields['last_name'] ?? '' ) ) as $value ) {
 			if ( mb_strlen( $value ) > self::MAX_NAME_LENGTH ) {
-				return new WP_Error( 'laao_ads_name_too_long', __( 'Use 100 characters or fewer.', 'laao-advertiser-portal' ) );
+				return new WP_Error( 'aggr_name_too_long', __( 'Use 100 characters or fewer.', 'aggressive-ads' ) );
 			}
 		}
 
@@ -160,7 +160,7 @@ final class Account_Actions implements Service {
 		);
 
 		if ( is_wp_error( $updated ) ) {
-			return new WP_Error( 'laao_ads_account_not_saved', __( 'Your details could not be saved.', 'laao-advertiser-portal' ) );
+			return new WP_Error( 'aggr_account_not_saved', __( 'Your details could not be saved.', 'aggressive-ads' ) );
 		}
 
 		return true;
@@ -173,7 +173,7 @@ final class Account_Actions implements Service {
 	 */
 	public static function request_notice(): string {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only post/redirect/get display state; never authorizes or mutates anything.
-		$value = isset( $_GET['laao_ads_notice'] ) ? sanitize_key( wp_unslash( $_GET['laao_ads_notice'] ) ) : '';
+		$value = isset( $_GET['aggr_notice'] ) ? sanitize_key( wp_unslash( $_GET['aggr_notice'] ) ) : '';
 
 		return in_array( $value, array( 'saved', 'password_sent', 'error' ), true ) ? $value : '';
 	}
@@ -185,7 +185,7 @@ final class Account_Actions implements Service {
 	 */
 	public static function request_error_code(): string {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only post/redirect/get display state; never authorizes or mutates anything.
-		$value = isset( $_GET['laao_ads_error'] ) ? sanitize_key( wp_unslash( $_GET['laao_ads_error'] ) ) : '';
+		$value = isset( $_GET['aggr_error'] ) ? sanitize_key( wp_unslash( $_GET['aggr_error'] ) ) : '';
 
 		return '' === $value ? '' : $value;
 	}
@@ -198,11 +198,11 @@ final class Account_Actions implements Service {
 	 */
 	public static function error_message( string $code ): string {
 		return match ( $code ) {
-			'laao_ads_display_name_required' => __( 'Enter a name to display.', 'laao-advertiser-portal' ),
-			'laao_ads_name_too_long'         => __( 'Use 100 characters or fewer.', 'laao-advertiser-portal' ),
-			'laao_ads_password_reset_failed' => __( 'The reset email could not be sent. Please try again shortly.', 'laao-advertiser-portal' ),
-			'laao_ads_account_missing'       => __( 'Your account could not be read.', 'laao-advertiser-portal' ),
-			default                          => __( 'Your details could not be saved.', 'laao-advertiser-portal' ),
+			'aggr_display_name_required' => __( 'Enter a name to display.', 'aggressive-ads' ),
+			'aggr_name_too_long'         => __( 'Use 100 characters or fewer.', 'aggressive-ads' ),
+			'aggr_password_reset_failed' => __( 'The reset email could not be sent. Please try again shortly.', 'aggressive-ads' ),
+			'aggr_account_missing'       => __( 'Your account could not be read.', 'aggressive-ads' ),
+			default                          => __( 'Your details could not be saved.', 'aggressive-ads' ),
 		};
 	}
 
@@ -217,7 +217,7 @@ final class Account_Actions implements Service {
 		}
 
 		wp_die(
-			esc_html__( 'You do not have permission to do that.', 'laao-advertiser-portal' ),
+			esc_html__( 'You do not have permission to do that.', 'aggressive-ads' ),
 			'',
 			array( 'response' => 403 )
 		);
@@ -231,10 +231,10 @@ final class Account_Actions implements Service {
 	 * @return never
 	 */
 	private function redirect( string $notice, ?WP_Error $error = null ): never {
-		$args = array( 'laao_ads_notice' => $notice );
+		$args = array( 'aggr_notice' => $notice );
 
 		if ( null !== $error ) {
-			$args['laao_ads_error'] = sanitize_key( (string) $error->get_error_code() );
+			$args['aggr_error'] = sanitize_key( (string) $error->get_error_code() );
 		}
 
 		wp_safe_redirect( add_query_arg( $args, Routes::url( Request::ROUTE_ACCOUNT ) ) );

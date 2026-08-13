@@ -2,24 +2,24 @@
 /**
  * The private creative stream.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Rest;
+namespace Aggressive\Ads\Tests\Rest;
 
-use LAAO_Advertiser_Portal\Core\Post_Types;
-use LAAO_Advertiser_Portal\Install\Installer;
-use LAAO_Advertiser_Portal\Plugin;
-use LAAO_Advertiser_Portal\REST\Creative_File_Controller;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Repository\Creative_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Repository;
-use LAAO_Advertiser_Portal\Security\Ownership;
-use LAAO_Advertiser_Portal\Security\Roles;
-use LAAO_Advertiser_Portal\Storage\Private_Storage;
-use LAAO_Advertiser_Portal\Workflow\Creative_Uploader;
+use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Install\Installer;
+use Aggressive\Ads\Plugin;
+use Aggressive\Ads\REST\Creative_File_Controller;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Security\Ownership;
+use Aggressive\Ads\Security\Roles;
+use Aggressive\Ads\Storage\Private_Storage;
+use Aggressive\Ads\Workflow\Creative_Uploader;
 use WP_REST_Request;
 use WP_UnitTestCase;
 
@@ -157,7 +157,7 @@ final class CreativeFileTest extends WP_UnitTestCase {
 		imagepng( $image );
 		$bytes = (string) ob_get_clean();
 
-		$temp = wp_tempnam( 'laao-ads-rest' );
+		$temp = wp_tempnam( 'aggr-rest' );
 		file_put_contents( $temp, $bytes );
 		$this->temporary[] = $temp;
 
@@ -193,7 +193,7 @@ final class CreativeFileTest extends WP_UnitTestCase {
 	 */
 	private function request( int $creative_id ): \WP_REST_Response {
 		return rest_get_server()->dispatch(
-			new WP_REST_Request( 'GET', '/laao-advertiser-portal/v1/creatives/' . $creative_id . '/file' )
+			new WP_REST_Request( 'GET', '/aggr/v1/creatives/' . $creative_id . '/file' )
 		);
 	}
 
@@ -204,7 +204,7 @@ final class CreativeFileTest extends WP_UnitTestCase {
 	 */
 	public function test_the_route_is_registered(): void {
 		$this->assertArrayHasKey(
-			'/laao-advertiser-portal/v1/creatives/(?P<id>\d+)/file',
+			'/aggr/v1/creatives/(?P<id>\d+)/file',
 			rest_get_server()->get_routes()
 		);
 	}

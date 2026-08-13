@@ -2,12 +2,12 @@
 /**
  * Reads authored portal stylesheets for unit assertions.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Unit\Assets;
+namespace Aggressive\Ads\Tests\Unit\Assets;
 
 /**
  * Concatenates the portal entry and its underscore partials.
@@ -21,11 +21,14 @@ final class Portal_Styles {
 	 * Full portal stylesheet source (entry + @imported partials).
 	 *
 	 * @return string
+	 *
+	 * @throws \RuntimeException When a stylesheet cannot be read.
 	 */
 	public static function contents(): string {
-		$root = LAAO_ADS_PLUGIN_DIR . 'src/styles/';
+		$root  = AGGR_PLUGIN_DIR . 'src/styles/';
 		$parts = array(
 			$root . 'portal.css',
+			$root . 'base/_fonts.css',
 			$root . 'base/_tokens.css',
 			$root . 'layout/_chrome.css',
 			$root . 'components/_surfaces.css',

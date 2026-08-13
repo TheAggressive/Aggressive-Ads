@@ -1,7 +1,7 @@
 /**
  * Shared portal dialog store.
  *
- * Namespace: laao-advertiser-portal/dialog
+ * Namespace: aggr/dialog
  * State is keyed per instance at state.dialogs[ dialogId ].
  *
  * Open/close is imperative (classList + trigger listeners in init), same pattern
@@ -10,17 +10,17 @@
  * a preventDefault without a visible open leaves the page looking dead.
  *
  * Contract: docs/accessibility.md — focus trap on the shell, guarded restore,
- * reference-counted scroll lock, inert on .laao-ads-shell, Escape closes only
+ * reference-counted scroll lock, inert on .aggr-shell, Escape closes only
  * the top of the stack, reduced-motion collapses exit duration.
  */
 
 import { store, getContext } from '@wordpress/interactivity';
-import { lockScroll, unlockScroll } from '@laao-ads/scroll-lock';
-import { canRestoreFocus, setupFocusTrap } from '@laao-ads/helpers';
+import { lockScroll, unlockScroll } from '@aggr/scroll-lock';
+import { canRestoreFocus, setupFocusTrap } from '@aggr/helpers';
 
 const FALLBACK_BUFFER_MS = 50;
 const DEFAULT_DURATION_MS = 200;
-const PAGE_ROOT_SELECTOR = '.laao-ads-shell';
+const PAGE_ROOT_SELECTOR = '.aggr-shell';
 
 interface DialogState {
 	isOpen: boolean;
@@ -49,17 +49,17 @@ let dialogsStateRef: Record< string, DialogState > | null = null;
 
 function getShell( id: string ): HTMLElement | null {
 	return document.querySelector(
-		`.laao-ads-overlay[data-dialog-id="${ CSS.escape( id ) }"]`
+		`.aggr-overlay[data-dialog-id="${ CSS.escape( id ) }"]`
 	);
 }
 
 function getPanel( id: string ): HTMLElement | null {
-	return getShell( id )?.querySelector( '.laao-ads-overlay__panel' ) ?? null;
+	return getShell( id )?.querySelector( '.aggr-overlay__panel' ) ?? null;
 }
 
 function getAnnouncer( id: string ): HTMLElement | null {
 	return (
-		getShell( id )?.querySelector( '.laao-ads-overlay__announcer' ) ?? null
+		getShell( id )?.querySelector( '.aggr-overlay__announcer' ) ?? null
 	);
 }
 
@@ -336,7 +336,7 @@ function bindControls( id: string ): void {
 	}
 
 	shell
-		.querySelectorAll( '[data-laao-ads-dialog-close]' )
+		.querySelectorAll( '[data-aggr-dialog-close]' )
 		.forEach( ( el ) => {
 			if ( ! ( el instanceof HTMLElement ) ) {
 				return;
@@ -382,7 +382,7 @@ interface DialogStoreState {
 }
 
 const { state } = store< DialogStoreState, { init: () => void } >(
-	'laao-advertiser-portal/dialog',
+	'aggr/dialog',
 	{
 		actions: {
 			/**
@@ -426,7 +426,7 @@ function bootDialog( id: string ): void {
  */
 function bootAllDialogs(): void {
 	document
-		.querySelectorAll( '.laao-ads-overlay[data-dialog-id]' )
+		.querySelectorAll( '.aggr-overlay[data-dialog-id]' )
 		.forEach( ( shell ) => {
 			const id = shell.getAttribute( 'data-dialog-id' );
 			if ( id ) {

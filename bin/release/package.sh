@@ -17,7 +17,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/../.."
 
-SLUG=laao-advertiser-portal
+SLUG=aggressive-ads
 PLUGIN_FILE="${SLUG}.php"
 BUILD_DIR=release
 STAGING="${BUILD_DIR}/${SLUG}"
@@ -46,11 +46,21 @@ PACKAGE_FORBIDDEN=(
 # missing loader. See docs/adr/0012-own-autoloader-in-production.md.
 PACKAGE_REQUIRED=(
 	"${PLUGIN_FILE}"
+	laao-advertiser-portal.php
 	uninstall.php
 	inc/class-autoloader.php
 	inc/class-plugin.php
 	inc/class-service-registrar.php
 	dist/interactivity/dialog.js
+	dist/interactivity/logic.js
+	dist/interactivity/wizard.js
+	dist/interactivity/autosave.js
+	dist/interactivity/upload.js
+	dist/blocks/placement/block.json
+	dist/blocks/placement/index.js
+	dist/blocks/placement/index.asset.php
+	dist/blocks/placement/view.js
+	dist/blocks/placement/view.asset.php
 	dist/styles/portal.css
 )
 

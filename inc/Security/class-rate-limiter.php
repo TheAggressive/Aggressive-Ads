@@ -2,15 +2,15 @@
 /**
  * Bounding the cost of abuse.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Security;
+namespace Aggressive\Ads\Security;
 
-use LAAO_Advertiser_Portal\Audit\Audit_Event;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
+use Aggressive\Ads\Audit\Audit_Event;
+use Aggressive\Ads\Repository\Audit_Repository;
 use WP_Error;
 
 /**
@@ -30,11 +30,14 @@ final class Rate_Limiter {
 	public const ACTION_UPLOAD         = 'upload';
 	public const ACTION_TRANSITION     = 'transition';
 	public const ACTION_AUTOSAVE       = 'autosave';
+	public const ACTION_COPY           = 'copy';
 	public const ACTION_LOGIN          = 'login';
 	public const ACTION_SIGNUP         = 'signup';
 	public const ACTION_PASSWORD_RESET = 'password_reset';
 	public const ACTION_ORG_INVITE     = 'org_invite';
 	public const ACTION_EMAIL_CHANGE   = 'email_change';
+	public const ACTION_BEACON         = 'beacon';
+	public const ACTION_CLICK          = 'click';
 
 	/**
 	 * Limits per action, as attempts per window.
@@ -52,6 +55,10 @@ final class Rate_Limiter {
 		),
 		self::ACTION_AUTOSAVE       => array(
 			'limit'  => 120,
+			'window' => HOUR_IN_SECONDS,
+		),
+		self::ACTION_COPY           => array(
+			'limit'  => 20,
 			'window' => HOUR_IN_SECONDS,
 		),
 
@@ -79,6 +86,19 @@ final class Rate_Limiter {
 		),
 		self::ACTION_EMAIL_CHANGE   => array(
 			'limit'  => 5,
+			'window' => HOUR_IN_SECONDS,
+		),
+
+		/*
+		 * Counted per client. Fill GET is cached and high-volume, so it is
+		 * not limited. Beacon and click writes are.
+		 */
+		self::ACTION_BEACON         => array(
+			'limit'  => 300,
+			'window' => HOUR_IN_SECONDS,
+		),
+		self::ACTION_CLICK          => array(
+			'limit'  => 120,
 			'window' => HOUR_IN_SECONDS,
 		),
 	);
@@ -158,8 +178,8 @@ final class Rate_Limiter {
 			);
 
 			return new WP_Error(
-				'laao_ads_rate_limited',
-				__( 'That is more requests than we can accept right now. Please wait a moment and try again.', 'laao-advertiser-portal' ),
+				'aggr_rate_limited',
+				__( 'That is more requests than we can accept right now. Please wait a moment and try again.', 'aggressive-ads' ),
 				array(
 					'status'      => 429,
 					'retry_after' => max( 1, $reset - $now ),
@@ -229,7 +249,10 @@ final class Rate_Limiter {
 	 * @return string
 	 */
 	private function key( string $action, string $subject ): string {
-		return 'laao_ads_rl_' . $action . '_' . $subject;
+		$blog_id = get_current_blog_id();
+		$blog_id = $blog_id > 0 ? $blog_id : 1;
+
+		return 'aggr_rl_' . $blog_id . '_' . $action . '_' . $subject;
 	}
 
 	/**

@@ -2,23 +2,23 @@
 /**
  * Public signup form handling.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Portal;
+namespace Aggressive\Ads\Portal;
 
-use LAAO_Advertiser_Portal\Core\Service;
-use LAAO_Advertiser_Portal\Security\Rate_Limiter;
-use LAAO_Advertiser_Portal\Workflow\Advertiser_Registration;
+use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Security\Rate_Limiter;
+use Aggressive\Ads\Workflow\Advertiser_Registration;
 
 /**
  * Protects, bounds and dispatches anonymous advertiser registration.
  */
 final class Signup_Actions implements Service {
 
-	public const SIGNUP_ACTION = 'laao_ads_signup';
+	public const SIGNUP_ACTION = 'aggr_signup';
 
 	/**
 	 * Constructor.
@@ -82,8 +82,8 @@ final class Signup_Actions implements Service {
 		}
 
 		$notice = match ( $result->get_error_code() ) {
-			'laao_ads_registration_closed' => 'unavailable',
-			'laao_ads_invalid_registration' => 'invalid',
+			'aggr_registration_closed' => 'unavailable',
+			'aggr_invalid_registration' => 'invalid',
 			default                         => 'failed',
 		};
 
@@ -110,7 +110,7 @@ final class Signup_Actions implements Service {
 	 */
 	public static function request_notice(): string {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only display state; selects a fixed message and authorizes nothing.
-		$value = isset( $_GET['laao_ads_signup'] ) ? sanitize_key( wp_unslash( $_GET['laao_ads_signup'] ) ) : '';
+		$value = isset( $_GET['aggr_signup'] ) ? sanitize_key( wp_unslash( $_GET['aggr_signup'] ) ) : '';
 
 		return in_array( $value, array( 'sent', 'invalid', 'failed', 'rate_limited', 'unavailable' ), true ) ? $value : '';
 	}
@@ -123,11 +123,11 @@ final class Signup_Actions implements Service {
 	 */
 	public static function notice_message( string $code ): string {
 		return match ( $code ) {
-			'sent'         => __( 'Check your email for a one-time link to set your password. If an account already uses that address, no additional email will be sent.', 'laao-advertiser-portal' ),
-			'invalid'      => __( 'Enter a valid name, organization and email address.', 'laao-advertiser-portal' ),
-			'rate_limited' => __( 'Too many signup attempts. Please wait before trying again.', 'laao-advertiser-portal' ),
-			'unavailable'  => __( 'Account registration is not available right now.', 'laao-advertiser-portal' ),
-			default        => __( 'We could not create the account. Please try again later.', 'laao-advertiser-portal' ),
+			'sent'         => __( 'Check your email for a one-time link to set your password. If an account already uses that address, no additional email will be sent.', 'aggressive-ads' ),
+			'invalid'      => __( 'Enter a valid name, organization and email address.', 'aggressive-ads' ),
+			'rate_limited' => __( 'Too many signup attempts. Please wait before trying again.', 'aggressive-ads' ),
+			'unavailable'  => __( 'Account registration is not available right now.', 'aggressive-ads' ),
+			default        => __( 'We could not create the account. Please try again later.', 'aggressive-ads' ),
 		};
 	}
 
@@ -158,7 +158,7 @@ final class Signup_Actions implements Service {
 	 * @return never
 	 */
 	private function redirect( string $notice, string $invite_token = '' ): never {
-		$args = array( 'laao_ads_signup' => $notice );
+		$args = array( 'aggr_signup' => $notice );
 
 		if ( 'sent' !== $notice && '' !== $invite_token ) {
 			$args['invite'] = $invite_token;

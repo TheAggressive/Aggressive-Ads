@@ -2,15 +2,15 @@
 /**
  * Core-backed password reset workflow.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Workflow;
+namespace Aggressive\Ads\Workflow;
 
-use LAAO_Advertiser_Portal\Audit\Audit_Event;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
+use Aggressive\Ads\Audit\Audit_Event;
+use Aggressive\Ads\Repository\Audit_Repository;
 use WP_Error;
 use WP_User;
 
@@ -39,13 +39,13 @@ final class Password_Reset {
 	 */
 	public function validate( string $key, string $login ): WP_User|WP_Error {
 		if ( '' === $key || '' === $login || strlen( $key ) > 100 || strlen( $login ) > 60 ) {
-			return new WP_Error( 'laao_ads_invalid_reset_key', __( 'This password link is invalid or has expired.', 'laao-advertiser-portal' ) );
+			return new WP_Error( 'aggr_invalid_reset_key', __( 'This password link is invalid or has expired.', 'aggressive-ads' ) );
 		}
 
 		$user = check_password_reset_key( $key, $login );
 
 		if ( is_wp_error( $user ) || ! $user instanceof WP_User ) {
-			return new WP_Error( 'laao_ads_invalid_reset_key', __( 'This password link is invalid or has expired.', 'laao-advertiser-portal' ) );
+			return new WP_Error( 'aggr_invalid_reset_key', __( 'This password link is invalid or has expired.', 'aggressive-ads' ) );
 		}
 
 		return $user;
@@ -70,7 +70,7 @@ final class Password_Reset {
 		$length = strlen( $password );
 
 		if ( $password !== $confirmation || $length < self::MIN_LENGTH || $length > self::MAX_LENGTH ) {
-			return new WP_Error( 'laao_ads_invalid_password', __( 'Use matching passwords of at least 12 characters.', 'laao-advertiser-portal' ) );
+			return new WP_Error( 'aggr_invalid_password', __( 'Use matching passwords of at least 12 characters.', 'aggressive-ads' ) );
 		}
 
 		$policy_errors = new WP_Error();
@@ -83,7 +83,7 @@ final class Password_Reset {
 		do_action( 'validate_password_reset', $policy_errors, $user );
 
 		if ( $policy_errors->has_errors() ) {
-			return new WP_Error( 'laao_ads_invalid_password', __( 'That password does not meet this site\'s security requirements.', 'laao-advertiser-portal' ) );
+			return new WP_Error( 'aggr_invalid_password', __( 'That password does not meet this site\'s security requirements.', 'aggressive-ads' ) );
 		}
 
 		reset_password( $user, $password );

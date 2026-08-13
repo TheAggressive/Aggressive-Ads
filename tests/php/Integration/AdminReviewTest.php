@@ -2,28 +2,28 @@
 /**
  * The staff review workflow against real WordPress.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Integration;
+namespace Aggressive\Ads\Tests\Integration;
 
-use LAAO_Advertiser_Portal\Admin\Review_Data;
-use LAAO_Advertiser_Portal\Admin\Review_Screen;
-use LAAO_Advertiser_Portal\Audit\Audit_Event;
-use LAAO_Advertiser_Portal\Core\Post_Statuses;
-use LAAO_Advertiser_Portal\Core\Post_Types;
-use LAAO_Advertiser_Portal\Install\Installer;
-use LAAO_Advertiser_Portal\Plugin;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
-use LAAO_Advertiser_Portal\Repository\Creative_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Repository;
-use LAAO_Advertiser_Portal\Repository\Placement_Repository;
-use LAAO_Advertiser_Portal\Security\Capabilities;
-use LAAO_Advertiser_Portal\Security\Ownership;
-use LAAO_Advertiser_Portal\Security\Roles;
+use Aggressive\Ads\Admin\Review_Data;
+use Aggressive\Ads\Admin\Review_Screen;
+use Aggressive\Ads\Audit\Audit_Event;
+use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Install\Installer;
+use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Repository\Placement_Repository;
+use Aggressive\Ads\Security\Capabilities;
+use Aggressive\Ads\Security\Ownership;
+use Aggressive\Ads\Security\Roles;
 use WP_Error;
 use WP_UnitTestCase;
 
@@ -260,7 +260,7 @@ final class AdminReviewTest extends WP_UnitTestCase {
 		$query = wp_parse_url( $url, PHP_URL_QUERY );
 		parse_str( is_string( $query ) ? $query : '', $parameters );
 
-		$this->assertSame( '/laao-advertiser-portal/v1/creatives/' . $creative['creative_id'] . '/file', $parameters['rest_route'] ?? '' );
+		$this->assertSame( '/aggr/v1/creatives/' . $creative['creative_id'] . '/file', $parameters['rest_route'] ?? '' );
 		$this->assertNotEmpty( $parameters['_wpnonce'] ?? '' );
 		$this->assertStringNotContainsString( $creative['private_path'], $url );
 		$this->assertStringNotContainsString( $creative['private_token'], $url );
@@ -283,7 +283,7 @@ final class AdminReviewTest extends WP_UnitTestCase {
 		$this->screen->render();
 		$html = (string) ob_get_clean();
 
-		$this->assertStringContainsString( '<h1 class="laao-ads-title">Rendered campaign</h1>', $html );
+		$this->assertStringContainsString( '<h1 class="aggr-title">Rendered campaign</h1>', $html );
 		$this->assertStringContainsString( 'name="_wpnonce"', $html );
 		$this->assertStringContainsString( 'Start review', $html );
 		$this->assertStringNotContainsString( $creative['private_path'], $html );
@@ -365,7 +365,7 @@ final class AdminReviewTest extends WP_UnitTestCase {
 		$denied = $this->screen->process_notes( $campaign, 'Advertiser overwrite' );
 
 		$this->assertInstanceOf( WP_Error::class, $denied );
-		$this->assertSame( 'laao_ads_forbidden', $denied->get_error_code() );
+		$this->assertSame( 'aggr_forbidden', $denied->get_error_code() );
 		$this->assertSame( 'Confirm destination with sales.', $this->campaigns->internal_notes( $campaign ) );
 	}
 

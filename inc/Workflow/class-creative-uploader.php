@@ -2,15 +2,15 @@
 /**
  * Accepting a creative file.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Workflow;
+namespace Aggressive\Ads\Workflow;
 
-use LAAO_Advertiser_Portal\Domain\Upload_Rules;
-use LAAO_Advertiser_Portal\Storage\Private_Storage;
+use Aggressive\Ads\Domain\Upload_Rules;
+use Aggressive\Ads\Storage\Private_Storage;
 use WP_Error;
 
 /**
@@ -163,19 +163,19 @@ final class Creative_Uploader {
 	 */
 	private function error( string $code ): WP_Error {
 		$message = match ( $code ) {
-			Upload_Rules::ERROR_NO_FILE => __( 'No file was received. Please choose a file and try again.', 'laao-advertiser-portal' ),
+			Upload_Rules::ERROR_NO_FILE => __( 'No file was received. Please choose a file and try again.', 'aggressive-ads' ),
 			Upload_Rules::ERROR_TOO_LARGE => sprintf(
 				/* translators: %s: maximum file size, e.g. 2 MB. */
-				__( 'That file is larger than %s. Please save it at a smaller size and try again.', 'laao-advertiser-portal' ),
+				__( 'That file is larger than %s. Please save it at a smaller size and try again.', 'aggressive-ads' ),
 				size_format( Upload_Rules::MAX_BYTES )
 			),
-			Upload_Rules::ERROR_TOO_MANY_PIXELS => __( 'That image has too many pixels to process. Please save it at the size the placement asks for.', 'laao-advertiser-portal' ),
-			Upload_Rules::ERROR_NOT_AN_IMAGE    => __( 'That file is not an image we can read. JPEG, PNG, GIF and WebP are supported.', 'laao-advertiser-portal' ),
-			Upload_Rules::ERROR_TYPE_MISMATCH   => __( 'That file does not match the type its name suggests, so it has not been accepted.', 'laao-advertiser-portal' ),
-			Upload_Rules::ERROR_FAILED          => __( 'The upload did not complete. Please try again.', 'laao-advertiser-portal' ),
-			default                             => __( 'That file type is not supported. JPEG, PNG, GIF and WebP are.', 'laao-advertiser-portal' ),
+			Upload_Rules::ERROR_TOO_MANY_PIXELS => __( 'That image has too many pixels to process. Please save it at the size the placement asks for.', 'aggressive-ads' ),
+			Upload_Rules::ERROR_NOT_AN_IMAGE    => __( 'That file is not an image we can read. JPEG, PNG, GIF and WebP are supported.', 'aggressive-ads' ),
+			Upload_Rules::ERROR_TYPE_MISMATCH   => __( 'That file does not match the type its name suggests, so it has not been accepted.', 'aggressive-ads' ),
+			Upload_Rules::ERROR_FAILED          => __( 'The upload did not complete. Please try again.', 'aggressive-ads' ),
+			default                             => __( 'That file type is not supported. JPEG, PNG, GIF and WebP are.', 'aggressive-ads' ),
 		};
 
-		return new WP_Error( 'laao_ads_' . $code, $message );
+		return new WP_Error( 'aggr_' . $code, $message );
 	}
 }

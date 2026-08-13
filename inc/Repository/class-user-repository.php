@@ -2,14 +2,14 @@
 /**
  * User lookup persistence.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Repository;
+namespace Aggressive\Ads\Repository;
 
-use LAAO_Advertiser_Portal\Security\Roles;
+use Aggressive\Ads\Security\Roles;
 use WP_Error;
 use WP_User;
 
@@ -21,7 +21,7 @@ final class User_Repository {
 	private const BATCH_SIZE = 200;
 
 	/** Pending self-service email change (HMAC hash + destination + expiry). */
-	public const META_EMAIL_CHANGE = '_laao_ads_email_change';
+	public const META_EMAIL_CHANGE = '_aggr_email_change';
 
 	/**
 	 * Whether an email address is already attached to a WordPress account.
@@ -117,7 +117,7 @@ final class User_Repository {
 	 */
 	public function update_email( int $user_id, string $email ): bool|WP_Error {
 		if ( $user_id <= 0 || ! is_email( $email ) ) {
-			return new WP_Error( 'laao_ads_invalid_email' );
+			return new WP_Error( 'aggr_invalid_email' );
 		}
 
 		$updated = wp_update_user(
@@ -133,7 +133,7 @@ final class User_Repository {
 
 		$user = $this->by_id( $user_id );
 		if ( null === $user || strtolower( (string) $user->user_email ) !== strtolower( $email ) ) {
-			return new WP_Error( 'laao_ads_email_not_saved' );
+			return new WP_Error( 'aggr_email_not_saved' );
 		}
 
 		return true;
@@ -171,7 +171,7 @@ final class User_Repository {
 			}
 		}
 
-		return new WP_Error( 'laao_ads_user_collision', __( 'The account could not be created.', 'laao-advertiser-portal' ) );
+		return new WP_Error( 'aggr_user_collision', __( 'The account could not be created.', 'aggressive-ads' ) );
 	}
 
 	/**

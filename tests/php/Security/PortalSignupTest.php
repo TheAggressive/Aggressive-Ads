@@ -2,23 +2,25 @@
 /**
  * Secure public advertiser registration.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Security;
+namespace Aggressive\Ads\Tests\Security;
 
-use LAAO_Advertiser_Portal\Core\Post_Types;
-use LAAO_Advertiser_Portal\Plugin;
-use LAAO_Advertiser_Portal\Portal\Request;
-use LAAO_Advertiser_Portal\Portal\Router;
-use LAAO_Advertiser_Portal\Portal\Signup_Actions;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Repository;
-use LAAO_Advertiser_Portal\Security\Rate_Limiter;
-use LAAO_Advertiser_Portal\Security\Roles;
-use LAAO_Advertiser_Portal\Workflow\Advertiser_Registration;
+use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Core\Settings;
+use Aggressive\Ads\Domain\Settings_Schema;
+use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Portal\Request;
+use Aggressive\Ads\Portal\Router;
+use Aggressive\Ads\Portal\Signup_Actions;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Security\Rate_Limiter;
+use Aggressive\Ads\Security\Roles;
+use Aggressive\Ads\Workflow\Advertiser_Registration;
 use WP_UnitTestCase;
 use WP_User;
 
@@ -72,7 +74,8 @@ final class PortalSignupTest extends WP_UnitTestCase {
 	public function tear_down(): void {
 		remove_filter( 'pre_wp_mail', array( $this, 'capture_mail' ), 10 );
 		delete_option( 'users_can_register' );
-		unset( $_GET['laao_ads_signup'] );
+		delete_option( Settings::OPTION );
+		unset( $_GET['aggr_signup'], $_GET['invite'] );
 		$_POST = array();
 		$this->set_permalink_structure( '' );
 
@@ -170,7 +173,7 @@ final class PortalSignupTest extends WP_UnitTestCase {
 		$this->assertFileExists( $template );
 
 		ob_start();
-		require LAAO_ADS_PLUGIN_DIR . 'templates/portal/screens/signup.php';
+		require AGGR_PLUGIN_DIR . 'templates/portal/screens/signup.php';
 		$html = (string) ob_get_clean();
 
 		$this->assertStringContainsString( 'name="_wpnonce"', $html );
@@ -244,7 +247,7 @@ final class PortalSignupTest extends WP_UnitTestCase {
 		$result               = $this->registration->register( $fields );
 
 		$this->assertWPError( $result );
-		$this->assertSame( 'laao_ads_invalid_registration', $result->get_error_code() );
+		$this->assertSame( 'aggr_invalid_registration', $result->get_error_code() );
 		$this->assertFalse( get_user_by( 'email', 'not-an-email' ) );
 		$this->assertCount( 0, $this->mail );
 	}
@@ -261,7 +264,7 @@ final class PortalSignupTest extends WP_UnitTestCase {
 		$result = $this->registration->register( $fields );
 
 		$this->assertWPError( $result );
-		$this->assertSame( 'laao_ads_invalid_registration', $result->get_error_code() );
+		$this->assertSame( 'aggr_invalid_registration', $result->get_error_code() );
 		$this->assertFalse( get_user_by( 'email', 'new-advertiser@example.test' ) );
 	}
 
@@ -276,7 +279,7 @@ final class PortalSignupTest extends WP_UnitTestCase {
 		$result = $this->registration->register( $this->fields( 'mail-fails@example.test' ) );
 
 		$this->assertWPError( $result );
-		$this->assertSame( 'laao_ads_registration_failed', $result->get_error_code() );
+		$this->assertSame( 'aggr_registration_failed', $result->get_error_code() );
 		$this->assertFalse( get_user_by( 'email', 'mail-fails@example.test' ) );
 		$this->assertCount( 1, $this->mail );
 
@@ -302,8 +305,98 @@ final class PortalSignupTest extends WP_UnitTestCase {
 		$result = $this->registration->register( $this->fields() );
 
 		$this->assertWPError( $result );
-		$this->assertSame( 'laao_ads_registration_closed', $result->get_error_code() );
+		$this->assertSame( 'aggr_registration_closed', $result->get_error_code() );
 		$this->assertFalse( get_user_by( 'email', 'new-advertiser@example.test' ) );
+	}
+
+	/**
+	 * The public signup module is a kill-switch, independent of WordPress's switch.
+	 *
+	 * @return void
+	 */
+	public function test_registration_fails_closed_when_the_signup_module_is_off(): void {
+		$settings = Plugin::instance()->container()->get( Settings::class );
+		$document = $settings->get();
+		$document['modules'][ Settings_Schema::MODULE_PUBLIC_SIGNUP ] = false;
+
+		$this->assertTrue( $settings->save( $document ) );
+
+		$result = $this->registration->register( $this->fields() );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'aggr_registration_closed', $result->get_error_code() );
+		$this->assertFalse( get_user_by( 'email', 'new-advertiser@example.test' ) );
+	}
+
+	/**
+	 * An invitation is membership, not open registration, so the closed check
+	 * does not apply. An unknown token still fails later for a different reason.
+	 *
+	 * @return void
+	 */
+	public function test_an_invitation_is_not_closed_when_the_signup_module_is_off(): void {
+		$settings = Plugin::instance()->container()->get( Settings::class );
+		$document = $settings->get();
+		$document['modules'][ Settings_Schema::MODULE_PUBLIC_SIGNUP ] = false;
+
+		$this->assertTrue( $settings->save( $document ) );
+
+		$fields                 = $this->fields();
+		$fields['invite_token'] = str_repeat( 'A', 43 );
+		$result                 = $this->registration->register( $fields );
+
+		$this->assertWPError( $result );
+		$this->assertNotSame( 'aggr_registration_closed', $result->get_error_code() );
+	}
+
+	/**
+	 * Off means the route is a 404, not a closed form.
+	 *
+	 * @return void
+	 */
+	public function test_signup_is_a_404_when_the_module_is_off(): void {
+		$settings = Plugin::instance()->container()->get( Settings::class );
+		$document = $settings->get();
+		$document['modules'][ Settings_Schema::MODULE_PUBLIC_SIGNUP ] = false;
+
+		$this->assertTrue( $settings->save( $document ) );
+
+		$router = Plugin::instance()->container()->get( Router::class );
+		$this->set_permalink_structure( '/%postname%/' );
+		$router->register_rules();
+		// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.flush_rewrite_rules_flush_rewrite_rules -- Test setup needs the route in this process.
+		flush_rewrite_rules( false );
+		$this->go_to( home_url( '/advertiser/signup/' ) );
+
+		$this->assertTrue( is_404(), 'Public signup off must make /advertiser/signup/ a 404.' );
+		$this->assertNull( $router->request() );
+	}
+
+	/**
+	 * An invitation URL still resolves when public signup is off.
+	 *
+	 * @return void
+	 */
+	public function test_an_invitation_still_reaches_signup_when_the_module_is_off(): void {
+		$settings = Plugin::instance()->container()->get( Settings::class );
+		$document = $settings->get();
+		$document['modules'][ Settings_Schema::MODULE_PUBLIC_SIGNUP ] = false;
+
+		$this->assertTrue( $settings->save( $document ) );
+
+		$token          = str_repeat( 'A', 43 );
+		$_GET['invite'] = $token;
+		$router         = Plugin::instance()->container()->get( Router::class );
+		$this->set_permalink_structure( '/%postname%/' );
+		$router->register_rules();
+		// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.flush_rewrite_rules_flush_rewrite_rules -- Test setup needs the route in this process.
+		flush_rewrite_rules( false );
+		$this->go_to( home_url( '/advertiser/signup/?invite=' . $token ) );
+
+		$this->assertFalse( is_404() );
+		$request = $router->request();
+		$this->assertNotNull( $request );
+		$this->assertSame( Request::ROUTE_SIGNUP, $request->route );
 	}
 
 	/**
@@ -331,10 +424,10 @@ final class PortalSignupTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function test_signup_notices_are_allowlisted(): void {
-		$_GET['laao_ads_signup'] = 'sent';
+		$_GET['aggr_signup'] = 'sent';
 		$this->assertSame( 'sent', Signup_Actions::request_notice() );
 
-		$_GET['laao_ads_signup'] = '<script>alert(1)</script>';
+		$_GET['aggr_signup'] = '<script>alert(1)</script>';
 		$this->assertSame( '', Signup_Actions::request_notice() );
 	}
 }

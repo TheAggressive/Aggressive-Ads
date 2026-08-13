@@ -2,24 +2,25 @@
 /**
  * The REST read paths.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Rest;
+namespace Aggressive\Ads\Tests\Rest;
 
-use LAAO_Advertiser_Portal\Core\Post_Statuses;
-use LAAO_Advertiser_Portal\Core\Post_Types;
-use LAAO_Advertiser_Portal\Install\Installer;
-use LAAO_Advertiser_Portal\Plugin;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Repository;
-use LAAO_Advertiser_Portal\Repository\Package_Repository;
-use LAAO_Advertiser_Portal\Repository\Placement_Repository;
-use LAAO_Advertiser_Portal\Security\Ownership;
-use LAAO_Advertiser_Portal\Security\Roles;
+use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Install\Installer;
+use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Repository\Package_Repository;
+use Aggressive\Ads\Repository\Placement_Repository;
+use Aggressive\Ads\Security\Capabilities;
+use Aggressive\Ads\Security\Ownership;
+use Aggressive\Ads\Security\Roles;
 use WP_REST_Request;
 use WP_UnitTestCase;
 
@@ -107,7 +108,7 @@ final class ReadRoutesTest extends WP_UnitTestCase {
 
 		update_post_meta( $campaign, Campaign_Repository::META_ORG_ID, $org );
 		update_post_meta( $campaign, Campaign_Repository::META_REVIEW_NOTES, 'Visible feedback' );
-		update_post_meta( $campaign, '_laao_ads_internal_notes', 'Staff only, never shown' );
+		update_post_meta( $campaign, '_aggr_internal_notes', 'Staff only, never shown' );
 		add_post_meta( $campaign, Campaign_Repository::META_ADSANITY_ID, 4242 );
 
 		return $campaign;
@@ -120,7 +121,7 @@ final class ReadRoutesTest extends WP_UnitTestCase {
 	 * @return \WP_REST_Response
 	 */
 	private function get( string $route ): \WP_REST_Response {
-		return rest_get_server()->dispatch( new WP_REST_Request( 'GET', '/laao-advertiser-portal/v1' . $route ) );
+		return rest_get_server()->dispatch( new WP_REST_Request( 'GET', '/aggr/v1' . $route ) );
 	}
 
 	/**
@@ -131,6 +132,10 @@ final class ReadRoutesTest extends WP_UnitTestCase {
 	public function test_the_read_routes_are_registered(): void {
 		$routes = rest_get_server()->get_routes();
 
+		$this->assertArrayHasKey( '/aggr/v1/campaigns', $routes );
+		$this->assertArrayHasKey( '/aggr/v1/campaigns/(?P<id>\d+)', $routes );
+		$this->assertArrayHasKey( '/aggr/v1/placements', $routes );
+		$this->assertArrayHasKey( '/aggr/v1/packages', $routes );
 		$this->assertArrayHasKey( '/laao-advertiser-portal/v1/campaigns', $routes );
 		$this->assertArrayHasKey( '/laao-advertiser-portal/v1/campaigns/(?P<id>\d+)', $routes );
 		$this->assertArrayHasKey( '/laao-advertiser-portal/v1/placements', $routes );
@@ -296,6 +301,36 @@ final class ReadRoutesTest extends WP_UnitTestCase {
 
 		$this->assertSame( 728, $first['width'] );
 		$this->assertSame( 90, $first['height'] );
+		$this->assertNotSame( '', $first['slug'] );
+	}
+
+	/**
+	 * Theme editors placing the slot block may read the catalogue without
+	 * holding the advertiser portal cap.
+	 *
+	 * @return void
+	 */
+	public function test_editors_can_list_placements_for_the_block(): void {
+		$placement = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::PLACEMENT,
+				'post_status' => 'publish',
+				'post_title'  => 'Sidebar',
+				'post_name'   => 'sidebar-300x250',
+			)
+		);
+		update_post_meta( $placement, Placement_Repository::META_IS_ACTIVE, 1 );
+		update_post_meta( $placement, Placement_Repository::META_SIZE, '300x250' );
+
+		$editor = (int) self::factory()->user->create( array( 'role' => 'editor' ) );
+		wp_set_current_user( $editor );
+
+		$response = $this->get( '/placements' );
+		$data     = $response->get_data();
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 'sidebar-300x250', $data['placements'][0]['slug'] );
+		$this->assertFalse( user_can( $editor, Capabilities::ACCESS_PORTAL ) );
 	}
 
 	/**

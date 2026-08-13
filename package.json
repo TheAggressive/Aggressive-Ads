@@ -1,7 +1,7 @@
 {
-	"name": "laao-advertiser-portal",
+	"name": "aggressive-ads",
 	"version": "0.1.0",
-	"description": "Self-service advertising portal for LAArtsOnline, publishing to AdSanity on approval.",
+	"description": "Live means live. White-label advertising management for WordPress.",
 	"license": "GPL-2.0-or-later",
 	"private": true,
 	"type": "module",
@@ -16,6 +16,7 @@
 	"devDependencies": {
 		"@axe-core/playwright": "^4.12.1",
 		"@eslint/js": "^9.39.5",
+		"@fontsource-variable/archivo": "^5.3.0",
 		"@playwright/test": "^1.62.1",
 		"@types/jest": "^30.0.0",
 		"@types/node": "^24.0.0",
@@ -42,12 +43,14 @@
 		"env:destroy": "wp-env destroy",
 		"env:logs": "wp-env logs",
 		"cli": "wp-env run cli wp",
-		"build": "rm -rf dist && pnpm build:modules && pnpm build:assets",
+		"build": "rm -rf dist && pnpm build:modules && pnpm build:assets && pnpm build:blocks",
 		"build:modules": "wp-scripts build --config webpack.modules.config.mjs",
 		"build:assets": "wp-scripts build --config webpack.assets.config.mjs",
-		"start": "concurrently -k -n modules,assets -c blue,magenta \"pnpm start:modules\" \"pnpm start:assets\"",
+		"build:blocks": "wp-scripts build --webpack-src-dir=./src/blocks --output-path=./dist/blocks --experimental-modules",
+		"start": "concurrently -k -n modules,assets,blocks -c blue,magenta,green \"pnpm start:modules\" \"pnpm start:assets\" \"pnpm start:blocks\"",
 		"start:modules": "wp-scripts start --config webpack.modules.config.mjs",
 		"start:assets": "wp-scripts start --config webpack.assets.config.mjs",
+		"start:blocks": "wp-scripts start --webpack-src-dir=./src/blocks --output-path=./dist/blocks --experimental-modules",
 		"lint:js": "eslint src --max-warnings 0",
 		"lint:css": "stylelint \"src/styles/**/*.css\" --max-warnings 0",
 		"typecheck": "tsc --noEmit",
@@ -59,18 +62,27 @@
 		"lint:files": "bash bin/check-file-length.sh && bash bin/ci/check-repository-boundary.sh && bash bin/ci/check-permission-callbacks.sh && bash bin/ci/check-action-pins.sh && bash bin/ci/check-ci-parity.sh",
 		"test:php:unit": "vendor/bin/phpunit",
 		"test:php:integration": "wp-env run tests-cli --env-cwd=wp-content/plugins/laao-advertiser-portal vendor/bin/phpunit -c phpunit-integration.xml.dist",
+		"test:php:multisite": "wp-env run tests-cli --env-cwd=wp-content/plugins/laao-advertiser-portal vendor/bin/phpunit -c phpunit-multisite.xml.dist",
 		"test:e2e:install": "playwright install chromium",
 		"test:e2e": "playwright test",
 		"ci:doctor": "node bin/ci/doctor.mjs",
 		"ci:build": "pnpm build",
 		"ci:frontend": "pnpm lint:js && pnpm typecheck && pnpm lint:css && pnpm test:js",
 		"ci:php": "pnpm lint:php && pnpm analyse:php && pnpm test:php:unit",
-		"ci:php:wp": "pnpm test:php:integration",
+		"ci:php:wp": "pnpm test:php:integration && pnpm test:php:multisite",
 		"ci:e2e": "pnpm build && pnpm test:e2e",
 		"release:package": "bash bin/release/package.sh",
 		"release:verify": "bash bin/release/verify-package.sh",
 		"ci:package": "pnpm build && pnpm release:package && pnpm release:verify",
 		"qa": "pnpm ci:php && pnpm lint:files",
 		"ci:verify": "bash bin/ci/verify.sh"
+	},
+	"pnpm": {
+		"ignoredBuiltDependencies": [
+			"@parcel/watcher",
+			"core-js",
+			"core-js-pure",
+			"unrs-resolver"
+		]
 	}
 }

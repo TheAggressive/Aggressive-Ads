@@ -2,21 +2,21 @@
 /**
  * Portal-native password setup and recovery actions.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Portal;
+namespace Aggressive\Ads\Portal;
 
-use LAAO_Advertiser_Portal\Audit\Audit_Event;
-use LAAO_Advertiser_Portal\Core\Service;
-use LAAO_Advertiser_Portal\Notification\Password_Notification;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Repository\User_Repository;
-use LAAO_Advertiser_Portal\Security\Capabilities;
-use LAAO_Advertiser_Portal\Security\Rate_Limiter;
-use LAAO_Advertiser_Portal\Workflow\Password_Reset;
+use Aggressive\Ads\Audit\Audit_Event;
+use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Notification\Password_Notification;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\User_Repository;
+use Aggressive\Ads\Security\Capabilities;
+use Aggressive\Ads\Security\Rate_Limiter;
+use Aggressive\Ads\Workflow\Password_Reset;
 use WP_Error;
 
 /**
@@ -24,8 +24,8 @@ use WP_Error;
  */
 final class Password_Actions implements Service {
 
-	public const REQUEST_ACTION = 'laao_ads_request_password';
-	public const SET_ACTION     = 'laao_ads_set_password';
+	public const REQUEST_ACTION = 'aggr_request_password';
+	public const SET_ACTION     = 'aggr_set_password';
 
 	/**
 	 * Constructor.
@@ -124,13 +124,13 @@ final class Password_Actions implements Service {
 
 		if ( true === $result ) {
 			wp_safe_redirect(
-				add_query_arg( 'laao_ads_login', 'password_set', Routes::url( Request::ROUTE_LOGIN ) )
+				add_query_arg( 'aggr_login', 'password_set', Routes::url( Request::ROUTE_LOGIN ) )
 			);
 
 			exit;
 		}
 
-		if ( 'laao_ads_invalid_password' === $result->get_error_code() ) {
+		if ( 'aggr_invalid_password' === $result->get_error_code() ) {
 			$this->redirect_set( 'invalid_password', $key, $login );
 		}
 
@@ -171,7 +171,7 @@ final class Password_Actions implements Service {
 	 */
 	public static function request_notice(): string {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only display state selects a fixed message.
-		$value = isset( $_GET['laao_ads_password_request'] ) ? sanitize_key( wp_unslash( $_GET['laao_ads_password_request'] ) ) : '';
+		$value = isset( $_GET['aggr_password_request'] ) ? sanitize_key( wp_unslash( $_GET['aggr_password_request'] ) ) : '';
 
 		return in_array( $value, array( 'sent', 'rate_limited' ), true ) ? $value : '';
 	}
@@ -183,7 +183,7 @@ final class Password_Actions implements Service {
 	 */
 	public static function set_notice(): string {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only display state selects a fixed message.
-		$value = isset( $_GET['laao_ads_password'] ) ? sanitize_key( wp_unslash( $_GET['laao_ads_password'] ) ) : '';
+		$value = isset( $_GET['aggr_password'] ) ? sanitize_key( wp_unslash( $_GET['aggr_password'] ) ) : '';
 
 		return in_array( $value, array( 'invalid_password', 'invalid_key' ), true ) ? $value : '';
 	}
@@ -210,8 +210,8 @@ final class Password_Actions implements Service {
 	 */
 	public static function request_message( string $notice ): string {
 		return 'rate_limited' === $notice
-			? __( 'Too many password requests. Please wait before trying again.', 'laao-advertiser-portal' )
-			: __( 'If a portal account uses that address, a one-time password link has been sent.', 'laao-advertiser-portal' );
+			? __( 'Too many password requests. Please wait before trying again.', 'aggressive-ads' )
+			: __( 'If a portal account uses that address, a one-time password link has been sent.', 'aggressive-ads' );
 	}
 
 	/**
@@ -222,7 +222,7 @@ final class Password_Actions implements Service {
 	 * @return never
 	 */
 	private function redirect_request( string $notice, string $redirect = '' ): never {
-		$args = array( 'laao_ads_password_request' => $notice );
+		$args = array( 'aggr_password_request' => $notice );
 
 		if ( '' !== $redirect ) {
 			$args['redirect_to'] = $redirect;
@@ -244,7 +244,7 @@ final class Password_Actions implements Service {
 	 * @return never
 	 */
 	private function redirect_set( string $notice, string $key = '', string $login = '' ): never {
-		$args = array( 'laao_ads_password' => $notice );
+		$args = array( 'aggr_password' => $notice );
 
 		if ( '' !== $key && '' !== $login ) {
 			$args['key']   = $key;

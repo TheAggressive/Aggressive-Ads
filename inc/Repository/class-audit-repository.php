@@ -2,15 +2,15 @@
 /**
  * Audit log persistence.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Repository;
+namespace Aggressive\Ads\Repository;
 
-use LAAO_Advertiser_Portal\Audit\Audit_Event;
-use LAAO_Advertiser_Portal\Install\Schema;
+use Aggressive\Ads\Audit\Audit_Event;
+use Aggressive\Ads\Install\Schema;
 
 /**
  * The only code that touches the audit table.
@@ -263,7 +263,7 @@ final class Audit_Repository {
 			return '';
 		}
 
-		return hash( 'sha256', $remote . wp_salt( 'laao_ads_audit' ) );
+		return hash( 'sha256', $remote . wp_salt( 'aggr_audit' ) );
 	}
 
 	/**

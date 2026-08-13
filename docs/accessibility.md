@@ -17,26 +17,27 @@ Axe catches roughly a third of real problems. The rest is keyboard traversal, fo
 - Instructions and constraints available *before* the field, not only after a failed submit.
 - Live regions for asynchronous status: upload progress, autosave confirmation, validation results.
 - Reduced-motion support — `prefers-reduced-motion: reduce` zeroes both duration tokens.
-- Touch targets at least 44×44px, via `--laao-ads-control-min`.
+- Touch targets at least 44×44px, via `--aggr-control-min`.
 - Never colour alone. Status chips carry text; validation carries an icon and a message.
 
 ## The dialog primitive
 
 One implementation: `src/interactivity/dialog.ts` → `dist/interactivity/dialog.js`
-(store namespace `laao-advertiser-portal/dialog`), with overlay styles in
+(store namespace `aggr/dialog`), with overlay styles in
 `src/styles/components/_overlay.css` (bundled into `dist/styles/portal.css`).
 Shared helpers live in `scroll-lock.ts` and `helpers.ts`. Every portal dialog
 must use this stack — building a second one is how half of them end up without
 a focus trap.
 
-**Shipped today:** creative replace on campaign detail (overlays in
-`templates/portal/partials/creative-replace-dialogs.php`, triggers in
-`campaign-ad-updates.php`). Preview, delete confirmation, and the other
-named dialogs adopt the same primitive when those screens need them.
+**Shipped today:** creative replace, live-ad preview, draft creative
+preview, and remove confirmation — all on the shared overlay
+(`templates/portal/partials/campaign-overlays.php`). Triggers are hash links with
+`aria-haspopup="dialog"` and `aria-controls`. Do not add a second dialog
+stack.
 
 **Open/close is imperative**, same pattern as Aggressive Apparel's modal:
 `classList` on the overlay shell, trigger listeners bound by `aria-controls`,
-close via `data-laao-ads-dialog-close`. Nested Interactivity path bindings such
+close via `data-aggr-dialog-close`. Nested Interactivity path bindings such
 as `data-wp-class--is-open="state.dialogs[context.dialogId].isOpen"` are not
 reliable enough here; a `preventDefault` without a visible open leaves the
 page looking dead. Store state still tracks `isOpen` per instance for stacking
@@ -44,7 +45,8 @@ and hydration — the visible class is not driven by a declarative class binding
 See [interactivity-stores.md](interactivity-stores.md).
 
 No-JS keeps working through `:target` on the overlay `id` (Update links are
-`href="#laao-ads-replace-{id}"`). Do not remove that path when enhancing.
+`href="#aggr-replace-{id}"`; draft preview/remove use `#aggr-preview-{id}`
+and `#aggr-remove-{id}`). Do not remove that path when enhancing.
 
 The contract, ported from the Aggressive Apparel implementation:
 
@@ -53,7 +55,7 @@ The contract, ported from the Aggressive Apparel implementation:
 | Semantics | `div[role="dialog"][aria-modal="true"]` with `aria-labelledby`. **Not native `<dialog>`** |
 | Focus trap | Applied to the **shell**, not the panel, so close controls positioned outside the panel stay in the Tab cycle. Focusable list excludes anything under `[hidden]` or `[inert]` |
 | Focus restoration | The element focused at open time is captured and restored, guarded against restoring to `document.body` or a detached node |
-| Background | `inert` on `.laao-ads-shell`, feature-detected; overlays render in `wp_footer` outside the shell so they are not inerted with the page |
+| Background | `inert` on `.aggr-shell`, feature-detected; overlays render in `wp_footer` outside the shell so they are not inerted with the page |
 | Scroll lock | **Reference-counted**, so a stacked dialog closing does not unlock the page underneath. Scrollbar width compensated to avoid layout shift |
 | Escape | One document-level capturing `keydown` listener, closing **only the top of the stack** |
 | Reduced motion | Exit duration collapses to zero |
@@ -112,7 +114,7 @@ the campaign into a false submitted state.
 
 ## Creative alt text
 
-Every creative carries `_laao_ads_alt_text` and writes it to `_wp_attachment_image_alt` when promoted. The portal generates concise text from the validated destination host, so advertisers are not asked for a separate description; API clients may still supply more specific text.
+Every creative carries `_aggr_alt_text` and writes it to `_wp_attachment_image_alt` when promoted. The portal generates concise text from the validated destination host, so advertisers are not asked for a separate description; API clients may still supply more specific text.
 
 This closes a real gap. The LAAO theme currently patches missing ad alt text at render time in `inc/Accessibility/class-ad-link-labels.php`, injecting `alt="Advertisement: {title}"` — written because three ads on the front page had no alt text and were failing an axe link-name check. That shim is a workaround for ads created by hand in AdSanity's admin, where alt text is not a field.
 
@@ -120,7 +122,12 @@ Ads this portal publishes will not need it: accessible text is generated during 
 
 ## Verification
 
-- `pnpm test:e2e` runs axe on the dashboard, review, submit, and both pre/post-save Ad delivery mapping surfaces, failing on every violation carrying one of the configured WCAG conformance tags.
+- `pnpm test:e2e` runs axe on the dashboard, package, creative, destination,
+  review, and submit wizard steps, plus open dialog overlays (which sit
+  outside `.aggr-shell`), failing on every violation carrying one of the
+  configured WCAG conformance tags.
 - The browser suite asserts the keyboard skip path, complete native-form campaign flow, private preview, review, final submission, labeled mapping controls, and the real mapping write; these are not inferred from axe.
-- Focus order, trap, and restoration are asserted per dialog.
+- Focus order, trap, and restoration are asserted per dialog: open from the
+  trigger, Tab stays inside the overlay, Escape closes, focus returns to the
+  trigger.
 - Manual screen-reader passes supplement all of the above before any release that changes a flow.

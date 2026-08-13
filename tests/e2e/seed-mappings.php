@@ -1,32 +1,24 @@
 <?php
 /**
- * Deterministic placement-mapping fixture for browser tests.
+ * Deterministic inventory fixture for browser tests.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-use LAAO_Advertiser_Portal\Core\Post_Types;
-use LAAO_Advertiser_Portal\Integration\Adsanity\Adsanity;
-use LAAO_Advertiser_Portal\Repository\Placement_Repository;
+use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Repository\Placement_Repository;
 
 if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
 	exit( 1 );
 }
 
-if ( ! Adsanity::is_available() ) {
-	WP_CLI::error( 'The AdSanity contract fixture is unavailable in the browser environment.' );
-}
+$existing = get_page_by_path( 'e2e-browser-placement', OBJECT, Post_Types::PLACEMENT );
 
-$term = wp_insert_term(
-	'E2E browser group',
-	Adsanity::TAXONOMY,
-	array( 'slug' => 'e2e-browser-group' )
-);
-
-if ( is_wp_error( $term ) ) {
-	WP_CLI::error( $term->get_error_message() );
+if ( $existing instanceof WP_Post ) {
+	WP_CLI::log( 'E2E inventory fixture already present.' );
+	return;
 }
 
 $placement_id = wp_insert_post(
@@ -46,6 +38,5 @@ if ( is_wp_error( $placement_id ) ) {
 update_post_meta( $placement_id, Placement_Repository::META_SIZE, '728x90' );
 update_post_meta( $placement_id, Placement_Repository::META_IS_ACTIVE, 1 );
 update_post_meta( $placement_id, Placement_Repository::META_SORT_ORDER, 999 );
-delete_post_meta( $placement_id, Placement_Repository::META_ADGROUP_TERM );
 
-WP_CLI::log( 'Seeded E2E placement mapping fixture.' );
+WP_CLI::log( 'Seeded E2E inventory fixture.' );

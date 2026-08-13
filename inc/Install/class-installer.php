@@ -2,18 +2,24 @@
 /**
  * First-run installation.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Install;
+namespace Aggressive\Ads\Install;
 
-use LAAO_Advertiser_Portal\Audit\Audit_Event;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Access_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Repository;
-use LAAO_Advertiser_Portal\Security\Roles;
+use Aggressive\Ads\Audit\Audit_Event;
+use Aggressive\Ads\Domain\Identity_Maps;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Event_Repository;
+use Aggressive\Ads\Repository\Identity_Rewrite;
+use Aggressive\Ads\Repository\Org_Access_Repository;
+use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Repository\Rollup_Repository;
+use Aggressive\Ads\Security\Roles;
+use Aggressive\Ads\Storage\Private_Storage;
+use Aggressive\Ads\Workflow\Click_Hop;
 
 /**
  * Brings a site up to the current schema, roles and options.
@@ -25,13 +31,13 @@ use LAAO_Advertiser_Portal\Security\Roles;
  */
 final class Installer {
 
-	public const OPTION_DB_VERSION      = 'laao_ads_db_version';
-	public const OPTION_PLUGIN_VERSION  = 'laao_ads_plugin_version';
-	public const OPTION_ROLES_VERSION   = 'laao_ads_roles_version';
-	public const OPTION_REWRITE_VERSION = 'laao_ads_rewrite_version';
-	public const OPTION_SEED_VERSION    = 'laao_ads_seed_version';
-	public const OPTION_UPGRADE_LOCK    = 'laao_ads_upgrade_lock';
-	public const OPTION_DELETE_DATA     = 'laao_ads_delete_data_on_uninstall';
+	public const OPTION_DB_VERSION      = 'aggr_db_version';
+	public const OPTION_PLUGIN_VERSION  = 'aggr_plugin_version';
+	public const OPTION_ROLES_VERSION   = 'aggr_roles_version';
+	public const OPTION_REWRITE_VERSION = 'aggr_rewrite_version';
+	public const OPTION_SEED_VERSION    = 'aggr_seed_version';
+	public const OPTION_UPGRADE_LOCK    = 'aggr_upgrade_lock';
+	public const OPTION_DELETE_DATA     = 'aggr_delete_data_on_uninstall';
 
 	/**
 	 * Every option this plugin owns, for uninstall.
@@ -39,16 +45,94 @@ final class Installer {
 	 * @return array<int, string>
 	 */
 	public static function options(): array {
-		return array(
-			self::OPTION_DB_VERSION,
-			self::OPTION_PLUGIN_VERSION,
-			self::OPTION_ROLES_VERSION,
-			self::OPTION_REWRITE_VERSION,
-			self::OPTION_SEED_VERSION,
-			self::OPTION_UPGRADE_LOCK,
-			self::OPTION_DELETE_DATA,
-			'laao_ads_settings',
+		return array_values(
+			array_unique(
+				array_merge(
+					array(
+						self::OPTION_DB_VERSION,
+						self::OPTION_PLUGIN_VERSION,
+						self::OPTION_ROLES_VERSION,
+						self::OPTION_REWRITE_VERSION,
+						self::OPTION_SEED_VERSION,
+						self::OPTION_UPGRADE_LOCK,
+						self::OPTION_DELETE_DATA,
+						'aggr_settings',
+						Click_Hop::OPTION_REWRITE,
+					),
+					array_keys( Identity_Maps::option_keys() ),
+					array_values( Identity_Maps::option_keys() )
+				)
+			)
 		);
+	}
+
+	/**
+	 * Stored schema version, falling back to the pre-rename option.
+	 *
+	 * Reading only the new key treats an existing LAAO install as a fresh
+	 * site and would run install() instead of migration 3 — leaving every
+	 * campaign under a post type nothing queries.
+	 *
+	 * @return int
+	 */
+	public static function stored_db_version(): int {
+		return self::stored_int( self::OPTION_DB_VERSION );
+	}
+
+	/**
+	 * Stored roles-matrix version, with the same legacy fallback.
+	 *
+	 * @return int
+	 */
+	public static function stored_roles_version(): int {
+		return self::stored_int( self::OPTION_ROLES_VERSION );
+	}
+
+	/**
+	 * Stored plugin version string, with the same legacy fallback.
+	 *
+	 * @return string
+	 */
+	public static function stored_plugin_version(): string {
+		$current = get_option( self::OPTION_PLUGIN_VERSION, null );
+
+		if ( is_string( $current ) && '' !== $current ) {
+			return $current;
+		}
+
+		$legacy = Identity_Maps::legacy_option_key( self::OPTION_PLUGIN_VERSION );
+
+		if ( null === $legacy ) {
+			return '';
+		}
+
+		$old = get_option( $legacy, null );
+
+		return is_string( $old ) ? $old : '';
+	}
+
+	/**
+	 * Integer option with a legacy-key fallback.
+	 *
+	 * @param string $current Current option name.
+	 * @return int
+	 */
+	private static function stored_int( string $current ): int {
+		$value = get_option( $current, null );
+
+		if ( is_numeric( $value ) ) {
+			return (int) $value;
+		}
+
+		$legacy = Identity_Maps::legacy_option_key( $current );
+
+		if ( null === $legacy ) {
+			return 0;
+		}
+
+		$old = get_option( $legacy, null );
+
+		return is_numeric( $old ) ? (int) $old : 0;
 	}
 
 	/**
@@ -66,20 +150,28 @@ final class Installer {
 	/**
 	 * Installs everything a fresh site needs, and repairs an existing one.
 	 *
-	 * Ordering matters: the table exists before anything writes an audit row,
-	 * and the version options are stamped last so a fatal midway leaves them
-	 * behind — which makes the next request retry rather than skip.
+	 * Ordering matters: identity rewrite runs before dbDelta, so activating
+	 * new code against a LAAO database cannot create empty new tables beside
+	 * populated old ones and then stamp the current version — which would
+	 * make the upgrader skip migration 3 and leave every campaign
+	 * unqueryable. The rewrite is a no-op on a fresh site. Tables exist
+	 * before anything writes an audit row, and the version options are
+	 * stamped last so a fatal midway leaves them behind — which makes the
+	 * next request retry rather than skip.
 	 *
 	 * @return void
 	 */
 	public function install(): void {
+		( new Identity_Migration( new Identity_Rewrite(), new Private_Storage() ) )->to_3();
+
 		$this->audit_repository->install_table();
 		$this->install_org_access();
+		$this->install_delivery_tables();
 
 		$this->install_roles();
 
 		update_option( self::OPTION_DB_VERSION, Schema::DB_VERSION, true );
-		update_option( self::OPTION_PLUGIN_VERSION, LAAO_ADS_VERSION, true );
+		update_option( self::OPTION_PLUGIN_VERSION, AGGR_VERSION, true );
 
 		$this->audit_repository->insert(
 			new Audit_Event(
@@ -89,7 +181,7 @@ final class Installer {
 				context: array(
 					'db_version'     => Schema::DB_VERSION,
 					'roles_version'  => Roles::VERSION,
-					'plugin_version' => LAAO_ADS_VERSION,
+					'plugin_version' => AGGR_VERSION,
 				)
 			)
 		);
@@ -108,6 +200,23 @@ final class Installer {
 		$access->install_table();
 
 		( new Org_Repository( $access ) )->backfill_identities();
+	}
+
+	/**
+	 * Installs native fill event and rollup tables.
+	 */
+	public function install_delivery_tables(): void {
+		( new Event_Repository() )->install_table();
+		( new Rollup_Repository() )->install_table();
+	}
+
+	/**
+	 * One fill may impression and click; the same event may not replay.
+	 *
+	 * WordPress dbDelta will add token_event but will not drop the v4 token_hash unique.
+	 */
+	public function migrate_event_token_uniqueness(): void {
+		( new Event_Repository() )->migrate_token_event_unique();
 	}
 
 	/**

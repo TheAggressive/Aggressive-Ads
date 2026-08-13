@@ -2,26 +2,28 @@
 /**
  * What the portal screens render.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Portal;
+namespace Aggressive\Ads\Portal;
 
-use LAAO_Advertiser_Portal\Core\Post_Statuses;
-use LAAO_Advertiser_Portal\Domain\Upload_Rules;
-use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
-use LAAO_Advertiser_Portal\Repository\Creative_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Access_Repository;
-use LAAO_Advertiser_Portal\Security\Capabilities;
-use LAAO_Advertiser_Portal\Repository\Package_Repository;
-use LAAO_Advertiser_Portal\Repository\Placement_Repository;
-use LAAO_Advertiser_Portal\REST\Creative_File_Controller;
-use LAAO_Advertiser_Portal\Workflow\Campaign_Editor;
-use LAAO_Advertiser_Portal\Workflow\Email_Change;
-use LAAO_Advertiser_Portal\Workflow\Review_Readiness;
+use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Domain\Reporting_Rules;
+use Aggressive\Ads\Domain\Upload_Rules;
+use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Repository\Org_Access_Repository;
+use Aggressive\Ads\Security\Capabilities;
+use Aggressive\Ads\Repository\Package_Repository;
+use Aggressive\Ads\Repository\Placement_Repository;
+use Aggressive\Ads\REST\Creative_File_Controller;
+use Aggressive\Ads\Workflow\Campaign_Editor;
+use Aggressive\Ads\Workflow\Email_Change;
+use Aggressive\Ads\Workflow\Reporting_Read;
+use Aggressive\Ads\Workflow\Review_Readiness;
 
 /**
  * Assembles a screen's data, so templates render and nothing else.
@@ -45,6 +47,7 @@ final class View_Data {
 	 * @param Campaign_Editor       $editor     Shared package validation.
 	 * @param Review_Readiness      $readiness  Safe canonical review readiness.
 	 * @param Email_Change          $emails     Pending email-change lookup.
+	 * @param Reporting_Read        $reporting  Native rollup reads.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -55,7 +58,8 @@ final class View_Data {
 		private readonly Package_Repository $packages,
 		private readonly Campaign_Editor $editor,
 		private readonly Review_Readiness $readiness,
-		private readonly Email_Change $emails
+		private readonly Email_Change $emails,
+		private readonly Reporting_Read $reporting
 	) {
 	}
 
@@ -112,7 +116,7 @@ final class View_Data {
 	 * The caller's campaigns, ready to render.
 	 *
 	 * @param int $page 1-based page.
-	 * @return array{rows: array<int, array<string, mixed>>, total: int, pages: int, page: int}
+	 * @return array{rows: array<int, array<string, mixed>>, total: int, pages: int, page: int, show_metrics: bool}
 	 */
 	public function campaigns( int $page = 1 ): array {
 		$org_id = $this->org_id();
@@ -126,10 +130,11 @@ final class View_Data {
 		 */
 		if ( 0 === $org_id ) {
 			return array(
-				'rows'  => array(),
-				'total' => 0,
-				'pages' => 0,
-				'page'  => 1,
+				'rows'         => array(),
+				'total'        => 0,
+				'pages'        => 0,
+				'page'         => 1,
+				'show_metrics' => $this->reporting->surfaces(),
 			);
 		}
 
@@ -141,10 +146,11 @@ final class View_Data {
 		}
 
 		return array(
-			'rows'  => $rows,
-			'total' => $result['total'],
-			'pages' => $result['pages'],
-			'page'  => max( 1, $page ),
+			'rows'         => $this->reporting->attach( $rows ),
+			'total'        => $result['total'],
+			'pages'        => $result['pages'],
+			'page'         => max( 1, $page ),
+			'show_metrics' => $this->reporting->surfaces(),
 		);
 	}
 
@@ -169,7 +175,7 @@ final class View_Data {
 			return null;
 		}
 
-		$row = $this->campaign_row( $campaign_id );
+		$row = $this->reporting->attach_one( $this->campaign_row( $campaign_id ) );
 
 		$row['review_notes']        = $this->campaigns->review_notes( $campaign_id );
 		$row['revision']            = $this->campaigns->revision( $campaign_id );
@@ -192,6 +198,10 @@ final class View_Data {
 		$row['autosave_rev']        = $this->campaigns->autosave_revision( $campaign_id );
 		$row['readiness']           = $this->readiness->for_campaign( $campaign_id );
 		$row['editable']            = in_array( $this->campaigns->status( $campaign_id ), Post_Statuses::advertiser_editable(), true );
+		$row['can_copy']            = current_user_can( Capabilities::SUBMIT_CAMPAIGN );
+		$row['copy_label']          = Post_Statuses::COMPLETE === $this->campaigns->status( $campaign_id )
+			? __( 'Renew campaign', 'aggressive-ads' )
+			: __( 'Duplicate campaign', 'aggressive-ads' );
 		$row['can_request_updates'] = in_array( $this->campaigns->status( $campaign_id ), array( Post_Statuses::SCHEDULED, Post_Statuses::LIVE ), true );
 
 		return $row;
@@ -370,17 +380,17 @@ final class View_Data {
 	 */
 	private static function status_description( string $status ): string {
 		return match ( $status ) {
-			Post_Statuses::DRAFT     => __( 'Yours to edit. Nobody else can see it yet.', 'laao-advertiser-portal' ),
-			Post_Statuses::SUBMITTED => __( 'Waiting for the review team. You can still withdraw it until someone starts reviewing.', 'laao-advertiser-portal' ),
-			Post_Statuses::REVIEW    => __( 'Someone is reviewing it now.', 'laao-advertiser-portal' ),
-			Post_Statuses::CHANGES   => __( 'The review team has asked for changes. Edit it and submit again.', 'laao-advertiser-portal' ),
-			Post_Statuses::REJECTED  => __( 'Not approved. The reason is on the campaign.', 'laao-advertiser-portal' ),
-			Post_Statuses::APPROVED  => __( 'Approved, and it will start on its scheduled date.', 'laao-advertiser-portal' ),
-			Post_Statuses::SCHEDULED => __( 'Ready and waiting for its start date.', 'laao-advertiser-portal' ),
-			Post_Statuses::LIVE      => __( 'Being shown on the site right now.', 'laao-advertiser-portal' ),
-			Post_Statuses::PAUSED    => __( 'Temporarily not being shown. Get in touch if this is unexpected.', 'laao-advertiser-portal' ),
-			Post_Statuses::COMPLETE  => __( 'Finished. Duplicate it to run the campaign again.', 'laao-advertiser-portal' ),
-			default                  => __( 'Cancelled and no longer running.', 'laao-advertiser-portal' ),
+			Post_Statuses::DRAFT     => __( 'Yours to edit. Nobody else can see it yet.', 'aggressive-ads' ),
+			Post_Statuses::SUBMITTED => __( 'Waiting for the review team. You can still withdraw it until someone starts reviewing.', 'aggressive-ads' ),
+			Post_Statuses::REVIEW    => __( 'Someone is reviewing it now.', 'aggressive-ads' ),
+			Post_Statuses::CHANGES   => __( 'The review team has asked for changes. Edit it and submit again.', 'aggressive-ads' ),
+			Post_Statuses::REJECTED  => __( 'Not approved. The reason is on the campaign.', 'aggressive-ads' ),
+			Post_Statuses::APPROVED  => __( 'Approved, and it will start on its scheduled date.', 'aggressive-ads' ),
+			Post_Statuses::SCHEDULED => __( 'Ready and waiting for its start date.', 'aggressive-ads' ),
+			Post_Statuses::LIVE      => __( 'Being shown on the site right now.', 'aggressive-ads' ),
+			Post_Statuses::PAUSED    => __( 'Temporarily not being shown. Get in touch if this is unexpected.', 'aggressive-ads' ),
+			Post_Statuses::COMPLETE  => __( 'Finished. Duplicate it to run the campaign again.', 'aggressive-ads' ),
+			default                  => __( 'Cancelled and no longer running.', 'aggressive-ads' ),
 		};
 	}
 
@@ -435,10 +445,10 @@ final class View_Data {
 				'id'         => $package_id,
 				'name'       => $this->packages->name( $package_id ),
 				'duration'   => $custom_duration
-					? __( 'Custom schedule', 'laao-advertiser-portal' )
+					? __( 'Custom schedule', 'aggressive-ads' )
 					: sprintf(
 						/* translators: %s: number of days. */
-						_n( '%s day', '%s days', $duration, 'laao-advertiser-portal' ),
+						_n( '%s day', '%s days', $duration, 'aggressive-ads' ),
 						number_format_i18n( $duration )
 					),
 				'price'      => $this->format_money( $snapshot['budget_cents'], $snapshot['currency'] ),
@@ -459,6 +469,23 @@ final class View_Data {
 	 */
 	private function format_money( int $cents, string $currency ): string {
 		return sprintf( '%1$s %2$s', $currency, number_format_i18n( $cents / 100, 2 ) );
+	}
+
+	/**
+	 * CTR as a percentage, or an em dash when there were no impressions.
+	 *
+	 * @param float|null $ratio Clicks per impression.
+	 */
+	private function format_ctr( ?float $ratio ): string {
+		if ( null === $ratio ) {
+			return __( '—', 'aggressive-ads' );
+		}
+
+		return sprintf(
+			/* translators: %s: click-through rate as a percentage, e.g. 1.2. */
+			__( '%s%%', 'aggressive-ads' ),
+			number_format_i18n( $ratio * 100, 1 )
+		);
 	}
 
 	/**
@@ -537,8 +564,8 @@ final class View_Data {
 				'alt_text'     => $creative['alt_text'],
 				'state'        => $state,
 				'state_text'   => Creative_Repository::CHANGE_PENDING === $state
-					? __( 'Waiting for review', 'laao-advertiser-portal' )
-					: __( 'Changes needed', 'laao-advertiser-portal' ),
+					? __( 'Waiting for review', 'aggressive-ads' )
+					: __( 'Changes needed', 'aggressive-ads' ),
 				'notes'        => $this->creatives->change_notes( $creative['id'] ),
 				'requested_at' => $this->creatives->requested_at( $creative['id'] ),
 				'preview'      => add_query_arg(
@@ -586,9 +613,9 @@ final class View_Data {
 	/**
 	 * Counts worth putting on a dashboard.
 	 *
-	 * Only what the plugin actually knows. Impressions, clicks and spend are a
-	 * later phase and there is no data behind them — a dashboard showing
-	 * invented business figures is worse than one showing fewer real ones.
+	 * Campaign-by-state tiles always ship. Impression, click and CTR tiles
+	 * are `delivery_counts()` and stay absent unless both reporting modules
+	 * are on — a dashboard of invented zeros is worse than fewer real numbers.
 	 *
 	 * @return array<int, array{label: string, value: int}>
 	 */
@@ -621,18 +648,86 @@ final class View_Data {
 
 		return array(
 			array(
-				'label' => __( 'Running', 'laao-advertiser-portal' ),
+				'label' => __( 'Running', 'aggressive-ads' ),
 				'value' => $running,
 			),
 			array(
-				'label' => __( 'In review', 'laao-advertiser-portal' ),
+				'label' => __( 'In review', 'aggressive-ads' ),
 				'value' => $reviewing,
 			),
 			array(
-				'label' => __( 'Needs your attention', 'laao-advertiser-portal' ),
+				'label' => __( 'Needs your attention', 'aggressive-ads' ),
 				'value' => $drafts,
 			),
 		);
+	}
+
+	/**
+	 * Native delivery totals for the caller's organization.
+	 *
+	 * Empty when the reporting surface is off, so the template does not render
+	 * a row of zeros that look like traffic.
+	 *
+	 * @return array<int, array{label: string, value: string}>
+	 */
+	public function delivery_counts(): array {
+		if ( ! $this->reporting->surfaces() ) {
+			return array();
+		}
+
+		$totals = $this->reporting->totals_for_org( $this->org_id() );
+		$ctr    = Reporting_Rules::ctr( $totals['impressions'], $totals['clicks'] );
+
+		return array(
+			array(
+				'label' => __( 'Impressions', 'aggressive-ads' ),
+				'value' => (string) number_format_i18n( $totals['impressions'] ),
+			),
+			array(
+				'label' => __( 'Clicks', 'aggressive-ads' ),
+				'value' => (string) number_format_i18n( $totals['clicks'] ),
+			),
+			array(
+				'label' => __( 'CTR', 'aggressive-ads' ),
+				'value' => $this->format_ctr( $ctr ),
+			),
+		);
+	}
+
+	/**
+	 * Seven-day impression series for the dashboard sparkline.
+	 *
+	 * Empty when Reporting is off, so the template omits the chart rather than
+	 * drawing a flat line that looks like traffic.
+	 *
+	 * @return list<array{day: string, label: string, impressions: int, height: int}>
+	 */
+	public function delivery_series(): array {
+		if ( ! $this->reporting->surfaces() ) {
+			return array();
+		}
+
+		$raw = $this->reporting->series_for_org( $this->org_id() );
+		$max = 0;
+
+		foreach ( $raw as $row ) {
+			$max = max( $max, $row['impressions'] );
+		}
+
+		$series = array();
+
+		foreach ( $raw as $row ) {
+			$timestamp = strtotime( $row['day'] . ' UTC' );
+
+			$series[] = array(
+				'day'         => $row['day'],
+				'label'       => false === $timestamp ? $row['day'] : (string) wp_date( 'D', $timestamp ),
+				'impressions' => $row['impressions'],
+				'height'      => Reporting_Rules::bar_height( $row['impressions'], $max ),
+			);
+		}
+
+		return $series;
 	}
 
 	/**
@@ -680,7 +775,7 @@ final class View_Data {
 		$end   = $this->campaigns->end_ts( $campaign_id );
 
 		if ( 0 === $start ) {
-			return __( 'Not scheduled', 'laao-advertiser-portal' );
+			return __( 'Not scheduled', 'aggressive-ads' );
 		}
 
 		$format = (string) get_option( 'date_format', 'M j, Y' );
@@ -689,14 +784,14 @@ final class View_Data {
 		if ( 0 === $end ) {
 			return sprintf(
 				/* translators: %s: campaign start date. */
-				__( 'From %s', 'laao-advertiser-portal' ),
+				__( 'From %s', 'aggressive-ads' ),
 				$from
 			);
 		}
 
 		return sprintf(
 			/* translators: 1: campaign start date. 2: campaign end date. */
-			__( '%1$s – %2$s', 'laao-advertiser-portal' ),
+			__( '%1$s – %2$s', 'aggressive-ads' ),
 			$from,
 			(string) wp_date( $format, $end )
 		);

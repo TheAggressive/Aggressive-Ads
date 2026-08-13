@@ -2,21 +2,21 @@
 /**
  * Staff organization suspension against real WordPress.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Integration;
+namespace Aggressive\Ads\Tests\Integration;
 
-use LAAO_Advertiser_Portal\Admin\Organization_Data;
-use LAAO_Advertiser_Portal\Admin\Organization_Screen;
-use LAAO_Advertiser_Portal\Audit\Audit_Event;
-use LAAO_Advertiser_Portal\Install\Installer;
-use LAAO_Advertiser_Portal\Plugin;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Repository;
-use LAAO_Advertiser_Portal\Security\Roles;
+use Aggressive\Ads\Admin\Organization_Data;
+use Aggressive\Ads\Admin\Organization_Screen;
+use Aggressive\Ads\Audit\Audit_Event;
+use Aggressive\Ads\Install\Installer;
+use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Security\Roles;
 use WP_UnitTestCase;
 
 /**
@@ -142,7 +142,7 @@ final class OrganizationAdminTest extends WP_UnitTestCase {
 
 		$result = $this->screen->process_state_change( $this->org_id, Org_Repository::STATE_SUSPENDED );
 		$this->assertWPError( $result );
-		$this->assertSame( 'laao_ads_forbidden', $result->get_error_code() );
+		$this->assertSame( 'aggr_forbidden', $result->get_error_code() );
 		$this->assertTrue( $this->organizations->is_active( $this->org_id ) );
 	}
 
@@ -156,7 +156,7 @@ final class OrganizationAdminTest extends WP_UnitTestCase {
 
 		$missing = $this->screen->process_state_change( 999999, Org_Repository::STATE_SUSPENDED );
 		$this->assertWPError( $missing );
-		$this->assertSame( 'laao_ads_org_not_found', $missing->get_error_code() );
+		$this->assertSame( 'aggr_org_not_found', $missing->get_error_code() );
 	}
 
 	/** The staff list exposes the organization and its suspension state. */

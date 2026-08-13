@@ -13,7 +13,7 @@ set -euo pipefail
 
 cd "$(dirname "$0")/../.."
 
-SLUG=laao-advertiser-portal
+SLUG=aggressive-ads
 PLUGIN_FILE="${SLUG}.php"
 BUILD_DIR=release
 
@@ -44,16 +44,28 @@ PACKAGE_FORBIDDEN=(
 # base.php is a fatal on the advertiser's first page load, not a build error.
 PACKAGE_REQUIRED=(
 	"${PLUGIN_FILE}"
+	laao-advertiser-portal.php
 	uninstall.php
 	inc/class-autoloader.php
 	inc/class-plugin.php
 	inc/class-service-registrar.php
+	inc/Domain/class-identity-maps.php
+	inc/Repository/class-identity-rewrite.php
+	inc/Install/class-identity-migration.php
+	inc/Security/class-capability-alias.php
+	inc/Core/class-hook-aliases.php
 	inc/Update/class-update-http-client.php
 	inc/Update/class-release-repository.php
 	inc/Update/class-package-verifier.php
 	inc/Update/class-plugin-updates.php
 	inc/Admin/class-review-data.php
 	inc/Admin/class-review-screen.php
+	inc/Admin/class-menu.php
+	inc/Admin/class-settings-screen.php
+	inc/Assets/class-brand-styles.php
+	inc/Core/class-settings.php
+	inc/Domain/class-contrast.php
+	inc/Domain/class-settings-schema.php
 	inc/Notification/class-notification-service.php
 	inc/Notification/class-notification-delivery.php
 	inc/Notification/class-password-notification.php
@@ -73,27 +85,56 @@ PACKAGE_REQUIRED=(
 	inc/Portal/class-signup-actions.php
 	inc/REST/class-packages-controller.php
 	inc/Repository/class-package-repository.php
+	inc/Admin/class-package-data.php
+	inc/Admin/class-package-screen.php
+	inc/Workflow/class-package-manager.php
+	templates/admin/packages.php
 	inc/Repository/class-user-repository.php
 	inc/Workflow/class-campaign-editor.php
+	inc/Workflow/class-campaign-copier.php
 	inc/Workflow/class-creative-manager.php
 	inc/Workflow/class-review-actions.php
 	inc/Workflow/class-review-readiness.php
 	inc/Workflow/class-advertiser-registration.php
+	inc/Workflow/class-fill-service.php
+	inc/Workflow/class-fill-token.php
+	inc/Workflow/class-fill-cache.php
+	inc/Workflow/class-delivery-request.php
+	inc/Workflow/class-click-hop.php
+	inc/Workflow/class-placement-slot.php
+	inc/Workflow/placement-slot-function.php
+	inc/Workflow/class-event-retention.php
+	inc/REST/class-fill-controller.php
+	inc/REST/class-beacon-controller.php
+	inc/Repository/class-event-repository.php
+	inc/Repository/class-rollup-repository.php
 	assets/icon.svg
+	assets/fonts/OFL.txt
 	dist/styles/portal.css
 	dist/styles/admin.css
 	dist/interactivity/scroll-lock.js
 	dist/interactivity/helpers.js
+	dist/interactivity/logic.js
 	dist/interactivity/dialog.js
 	dist/interactivity/dialog.asset.php
+	dist/interactivity/wizard.js
+	dist/interactivity/autosave.js
+	dist/interactivity/upload.js
+	dist/blocks/placement/block.json
+	dist/blocks/placement/index.js
+	dist/blocks/placement/index.asset.php
+	dist/blocks/placement/view.js
+	dist/blocks/placement/view.asset.php
 	templates/admin/review-queue.php
 	templates/admin/review-campaign.php
+	templates/admin/settings.php
 	templates/portal/base.php
 	templates/portal/base-bare.php
 	templates/portal/login.php
 	templates/portal/screens/login.php
 	templates/portal/partials/campaign-ad-updates.php
-	templates/portal/partials/creative-replace-dialogs.php
+	templates/portal/partials/campaign-overlays.php
+	templates/portal/partials/campaign-editor-modules.php
 	templates/portal/signup.php
 	templates/portal/screens/signup.php
 	templates/portal/dashboard.php
@@ -102,6 +143,7 @@ PACKAGE_REQUIRED=(
 	templates/portal/403.php
 	templates/portal/404.php
 	templates/portal/partials/rail.php
+	templates/portal/partials/brand.php
 	templates/portal/partials/campaign-table.php
 	templates/portal/partials/icon.php
 	templates/portal/screens/dashboard.php

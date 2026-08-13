@@ -2,16 +2,16 @@
 /**
  * Organization-scoped object authorization.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Security;
+namespace Aggressive\Ads\Security;
 
-use LAAO_Advertiser_Portal\Core\Post_Types;
-use LAAO_Advertiser_Portal\Core\Service;
-use LAAO_Advertiser_Portal\Repository\Org_Repository;
+use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Repository\Org_Repository;
 
 /**
  * Answers "may this user touch this object?" for all five post types.
@@ -24,7 +24,7 @@ use LAAO_Advertiser_Portal\Repository\Org_Repository;
  * right up until the second person at an agency tried to fix a typo.
  *
  * Controllers never compare ids. They ask
- * current_user_can( 'edit_laao_ads_campaign', $id ) and this filter answers,
+ * current_user_can( 'edit_aggr_campaign', $id ) and this filter answers,
  * so there is exactly one implementation of ownership behind every surface.
  *
  * See docs/adr/0009-org-scoped-map-meta-cap.md.
@@ -140,7 +140,7 @@ final class Ownership implements Service {
 			$post_type = $context['post_type'];
 		} elseif ( $context['post_type'] !== $post_type ) {
 			// The capability names a post type; the object must actually be
-			// one. Without this, edit_laao_ads_campaign against a creative's id
+			// one. Without this, edit_aggr_campaign against a creative's id
 			// would be answered using the campaign rules.
 			return array( 'do_not_allow' );
 		}

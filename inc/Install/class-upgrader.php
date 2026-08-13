@@ -2,16 +2,17 @@
 /**
  * Version-driven upgrades.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Install;
+namespace Aggressive\Ads\Install;
 
-use LAAO_Advertiser_Portal\Audit\Audit_Event;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Security\Roles;
+use Aggressive\Ads\Audit\Audit_Event;
+use Aggressive\Ads\Domain\Identity_Maps;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Security\Roles;
 use Throwable;
 
 /**
@@ -101,15 +102,15 @@ final class Upgrader {
 	 * @return bool
 	 */
 	public function needs_work(): bool {
-		if ( (int) get_option( Installer::OPTION_DB_VERSION, 0 ) < Schema::DB_VERSION ) {
+		if ( Installer::stored_db_version() < Schema::DB_VERSION ) {
 			return true;
 		}
 
-		if ( (int) get_option( Installer::OPTION_ROLES_VERSION, 0 ) < Roles::VERSION ) {
+		if ( Installer::stored_roles_version() < Roles::VERSION ) {
 			return true;
 		}
 
-		return (string) get_option( Installer::OPTION_PLUGIN_VERSION, '' ) !== LAAO_ADS_VERSION;
+		return Installer::stored_plugin_version() !== AGGR_VERSION;
 	}
 
 	/**
@@ -118,7 +119,7 @@ final class Upgrader {
 	 * @return void
 	 */
 	private function run(): void {
-		$from = (int) get_option( Installer::OPTION_DB_VERSION, 0 );
+		$from = Installer::stored_db_version();
 
 		if ( 0 === $from ) {
 			// Nothing installed: the installer is the migration.
@@ -129,7 +130,7 @@ final class Upgrader {
 
 		$this->migrate( $from );
 
-		if ( (int) get_option( Installer::OPTION_ROLES_VERSION, 0 ) < Roles::VERSION ) {
+		if ( Installer::stored_roles_version() < Roles::VERSION ) {
 			$this->installer->install_roles();
 
 			$this->audit_repository->insert(
@@ -142,7 +143,7 @@ final class Upgrader {
 			);
 		}
 
-		update_option( Installer::OPTION_PLUGIN_VERSION, LAAO_ADS_VERSION, true );
+		update_option( Installer::OPTION_PLUGIN_VERSION, AGGR_VERSION, true );
 	}
 
 	/**
@@ -194,6 +195,12 @@ final class Upgrader {
 	private function acquire_lock(): bool {
 		$this->clear_stale_lock();
 
+		foreach ( $this->lock_keys() as $key ) {
+			if ( false !== get_option( $key, false ) ) {
+				return false;
+			}
+		}
+
 		return add_option( Installer::OPTION_UPGRADE_LOCK, time(), '', false );
 	}
 
@@ -203,7 +210,9 @@ final class Upgrader {
 	 * @return void
 	 */
 	private function release_lock(): void {
-		delete_option( Installer::OPTION_UPGRADE_LOCK );
+		foreach ( $this->lock_keys() as $key ) {
+			delete_option( $key );
+		}
 	}
 
 	/**
@@ -212,14 +221,32 @@ final class Upgrader {
 	 * @return void
 	 */
 	private function clear_stale_lock(): void {
-		$held = get_option( Installer::OPTION_UPGRADE_LOCK, false );
+		foreach ( $this->lock_keys() as $key ) {
+			$held = get_option( $key, false );
 
-		if ( false === $held ) {
-			return;
+			if ( false === $held ) {
+				continue;
+			}
+
+			if ( ( time() - (int) $held ) > self::STALE_LOCK_SECONDS ) {
+				delete_option( $key );
+			}
+		}
+	}
+
+	/**
+	 * Current and legacy lock option names.
+	 *
+	 * @return array<int, string>
+	 */
+	private function lock_keys(): array {
+		$keys   = array( Installer::OPTION_UPGRADE_LOCK );
+		$legacy = Identity_Maps::legacy_option_key( Installer::OPTION_UPGRADE_LOCK );
+
+		if ( null !== $legacy ) {
+			$keys[] = $legacy;
 		}
 
-		if ( ( time() - (int) $held ) > self::STALE_LOCK_SECONDS ) {
-			delete_option( Installer::OPTION_UPGRADE_LOCK );
-		}
+		return $keys;
 	}
 }

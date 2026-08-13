@@ -1,0 +1,85 @@
+<?php
+/**
+ * Pure reporting arithmetic.
+ *
+ * @package Aggressive\Ads
+ */
+
+declare(strict_types=1);
+
+namespace Aggressive\Ads\Domain;
+
+/**
+ * Derived metric rules with no WordPress dependency.
+ *
+ * CTR is a ratio, not a percentage, so a display layer can format it. Null
+ * means "there is nothing to divide by" — rendering that as 0% would claim
+ * the ad was seen and ignored.
+ */
+final class Reporting_Rules {
+
+	/**
+	 * Clicks per impression, or null when impressions are not positive.
+	 *
+	 * @param int $impressions Counted views.
+	 * @param int $clicks      Counted clicks.
+	 */
+	public static function ctr( int $impressions, int $clicks ): ?float {
+		if ( $impressions <= 0 || $clicks < 0 ) {
+			return null;
+		}
+
+		return $clicks / $impressions;
+	}
+
+	/**
+	 * Inclusive UTC day keys ending on $end_day.
+	 *
+	 * Invalid ranges and dates yield an empty list so a caller cannot walk
+	 * an unbounded series.
+	 *
+	 * @param int    $days    Length, 1–31.
+	 * @param string $end_day UTC Y-m-d of the last day.
+	 * @return list<string>
+	 */
+	public static function utc_day_keys( int $days, string $end_day ): array {
+		if ( $days < 1 || $days > 31 || 1 !== preg_match( '/^\d{4}-\d{2}-\d{2}$/', $end_day ) ) {
+			return array();
+		}
+
+		try {
+			$end = new \DateTimeImmutable( $end_day . ' 00:00:00', new \DateTimeZone( 'UTC' ) );
+		} catch ( \Exception $e ) {
+			return array();
+		}
+
+		$keys = array();
+
+		for ( $offset = $days - 1; $offset >= 0; $offset-- ) {
+			$keys[] = $end->modify( '-' . (string) $offset . ' days' )->format( 'Y-m-d' );
+		}
+
+		return $keys;
+	}
+
+	/**
+	 * Height of one sparkline bar as an integer 0–$track.
+	 *
+	 * A positive value on a positive max is at least 1 so a single impression
+	 * is visible. All-zero series stay flat at 0 — that is "nobody saw an ad",
+	 * not a row of equal bars that look like traffic.
+	 *
+	 * @param int $value Observed count.
+	 * @param int $max   Series maximum.
+	 * @param int $track Track height, typically 100.
+	 */
+	public static function bar_height( int $value, int $max, int $track = 100 ): int {
+		if ( $value <= 0 || $max <= 0 || $track <= 0 ) {
+			return 0;
+		}
+
+		$height = (int) round( ( $value / $max ) * $track );
+
+		return max( 1, min( $track, $height ) );
+	}
+}

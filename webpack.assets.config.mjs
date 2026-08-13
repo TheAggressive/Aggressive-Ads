@@ -23,7 +23,8 @@ export default ( env = {}, argv = {} ) => {
 			path: path.resolve( process.cwd(), 'dist' ),
 			filename: '[name].js',
 			chunkFilename: '[name].js',
-			publicPath: '',
+			// Relative URLs from dist/styles/*.css to dist/fonts/*.woff2.
+			publicPath: 'auto',
 			clean: false,
 		},
 		optimization: {

@@ -2,24 +2,24 @@
 /**
  * The state machine, against real WordPress.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Integration;
+namespace Aggressive\Ads\Tests\Integration;
 
-use LAAO_Advertiser_Portal\Core\Post_Statuses;
-use LAAO_Advertiser_Portal\Core\Post_Types;
-use LAAO_Advertiser_Portal\Domain\Transition_Table;
-use LAAO_Advertiser_Portal\Install\Installer;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Repository;
-use LAAO_Advertiser_Portal\Security\Ownership;
-use LAAO_Advertiser_Portal\Security\Roles;
-use LAAO_Advertiser_Portal\Workflow\Campaign_State_Machine;
-use LAAO_Advertiser_Portal\Workflow\Transition_Guards;
+use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Domain\Transition_Table;
+use Aggressive\Ads\Install\Installer;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Security\Ownership;
+use Aggressive\Ads\Security\Roles;
+use Aggressive\Ads\Workflow\Campaign_State_Machine;
+use Aggressive\Ads\Workflow\Transition_Guards;
 use WP_Error;
 use WP_UnitTestCase;
 
@@ -90,7 +90,7 @@ final class CampaignStateMachineTest extends WP_UnitTestCase {
 
 		update_post_meta( $this->org_id, Org_Repository::META_OWNER_USER, $this->advertiser );
 
-		\LAAO_Advertiser_Portal\Plugin::instance()->container()->get( Ownership::class )->flush_cache();
+		\Aggressive\Ads\Plugin::instance()->container()->get( Ownership::class )->flush_cache();
 	}
 
 	/**
@@ -138,7 +138,7 @@ final class CampaignStateMachineTest extends WP_UnitTestCase {
 
 		update_post_meta( $id, Campaign_Repository::META_ORG_ID, $this->org_id );
 
-		\LAAO_Advertiser_Portal\Plugin::instance()->container()->get( Ownership::class )->flush_cache();
+		\Aggressive\Ads\Plugin::instance()->container()->get( Ownership::class )->flush_cache();
 
 		return $id;
 	}
@@ -184,7 +184,7 @@ final class CampaignStateMachineTest extends WP_UnitTestCase {
 	/**
 	 * An illegal transition returns WP_Error rather than throwing.
 	 *
-	 * An advertiser POSTing lap_approved is an expected event. Throwing would
+	 * An advertiser POSTing aggr_approved is an expected event. Throwing would
 	 * turn every probe into a 500 and fill the error log with other people's
 	 * curiosity.
 	 *
@@ -197,7 +197,7 @@ final class CampaignStateMachineTest extends WP_UnitTestCase {
 		$result   = $this->machine()->apply( $campaign, Post_Statuses::APPROVED );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'laao_ads_illegal_transition', $result->get_error_code() );
+		$this->assertSame( 'aggr_illegal_transition', $result->get_error_code() );
 		$this->assertSame( Post_Statuses::DRAFT, $this->campaigns->status( $campaign ) );
 		$this->assertSame( 1, $this->audit_rows( $campaign, 'campaign.transition_denied' ) );
 	}
@@ -214,7 +214,7 @@ final class CampaignStateMachineTest extends WP_UnitTestCase {
 		$result   = $this->machine()->apply( $campaign, Post_Statuses::REVIEW );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'laao_ads_forbidden', $result->get_error_code() );
+		$this->assertSame( 'aggr_forbidden', $result->get_error_code() );
 		$this->assertSame( Post_Statuses::SUBMITTED, $this->campaigns->status( $campaign ) );
 	}
 
@@ -234,7 +234,7 @@ final class CampaignStateMachineTest extends WP_UnitTestCase {
 		$result   = $machine->apply( $campaign, Post_Statuses::SUBMITTED );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'laao_ads_forbidden', $result->get_error_code() );
+		$this->assertSame( 'aggr_forbidden', $result->get_error_code() );
 		$this->assertSame( Post_Statuses::DRAFT, $this->campaigns->status( $campaign ) );
 	}
 
@@ -257,7 +257,7 @@ final class CampaignStateMachineTest extends WP_UnitTestCase {
 		$result  = $machine->apply( $campaign, Post_Statuses::SUBMITTED );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'laao_ads_forbidden', $result->get_error_code() );
+		$this->assertSame( 'aggr_forbidden', $result->get_error_code() );
 		$this->assertSame( Post_Statuses::DRAFT, $this->campaigns->status( $campaign ) );
 	}
 
@@ -274,7 +274,7 @@ final class CampaignStateMachineTest extends WP_UnitTestCase {
 		$machine = $this->machine(
 			array(
 				Transition_Table::GUARD_VALIDATOR => static fn (): WP_Error => new WP_Error(
-					'laao_ads_invalid_campaign',
+					'aggr_invalid_campaign',
 					'Creative missing.'
 				),
 			)
@@ -283,7 +283,7 @@ final class CampaignStateMachineTest extends WP_UnitTestCase {
 		$result = $machine->apply( $campaign, Post_Statuses::SUBMITTED );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'laao_ads_invalid_campaign', $result->get_error_code() );
+		$this->assertSame( 'aggr_invalid_campaign', $result->get_error_code() );
 		$this->assertSame( Post_Statuses::DRAFT, $this->campaigns->status( $campaign ) );
 		$this->assertSame( 0, $this->campaigns->submitted_at( $campaign ) );
 	}
@@ -305,7 +305,7 @@ final class CampaignStateMachineTest extends WP_UnitTestCase {
 		$result = $this->machine()->apply( $campaign, Post_Statuses::SUBMITTED );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'laao_ads_guard_unavailable', $result->get_error_code() );
+		$this->assertSame( 'aggr_guard_unavailable', $result->get_error_code() );
 		$this->assertSame( Post_Statuses::DRAFT, $this->campaigns->status( $campaign ) );
 	}
 
@@ -325,12 +325,11 @@ final class CampaignStateMachineTest extends WP_UnitTestCase {
 
 		$machine = $this->machine(
 			array(
-				Transition_Table::GUARD_VALIDATOR        => $this->passing_guard(),
-				Transition_Table::GUARD_MAPPINGS_RESOLVE => $this->passing_guard(),
+				Transition_Table::GUARD_VALIDATOR => $this->passing_guard(),
 			),
 			array(
 				Transition_Table::EFFECT_PUBLISH => static fn (): WP_Error => new WP_Error(
-					'laao_ads_publish_failed',
+					'aggr_publish_failed',
 					'The provider is unavailable.'
 				),
 			)
@@ -339,7 +338,7 @@ final class CampaignStateMachineTest extends WP_UnitTestCase {
 		$result = $machine->apply( $campaign, Post_Statuses::APPROVED );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'laao_ads_publish_failed', $result->get_error_code() );
+		$this->assertSame( 'aggr_publish_failed', $result->get_error_code() );
 		$this->assertSame(
 			Post_Statuses::REVIEW,
 			$this->campaigns->status( $campaign ),
@@ -359,15 +358,14 @@ final class CampaignStateMachineTest extends WP_UnitTestCase {
 
 		$machine = $this->machine(
 			array(
-				Transition_Table::GUARD_VALIDATOR        => $this->passing_guard(),
-				Transition_Table::GUARD_MAPPINGS_RESOLVE => $this->passing_guard(),
+				Transition_Table::GUARD_VALIDATOR => $this->passing_guard(),
 			)
 		);
 
 		$result = $machine->apply( $campaign, Post_Statuses::APPROVED );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'laao_ads_effect_unavailable', $result->get_error_code() );
+		$this->assertSame( 'aggr_effect_unavailable', $result->get_error_code() );
 		$this->assertSame( Post_Statuses::REVIEW, $this->campaigns->status( $campaign ) );
 	}
 
@@ -409,7 +407,7 @@ final class CampaignStateMachineTest extends WP_UnitTestCase {
 		$result = $this->machine()->apply( $campaign, Post_Statuses::DRAFT );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'laao_ads_campaign_claimed', $result->get_error_code() );
+		$this->assertSame( 'aggr_campaign_claimed', $result->get_error_code() );
 	}
 
 	/**
@@ -426,7 +424,7 @@ final class CampaignStateMachineTest extends WP_UnitTestCase {
 		$refused = $this->machine()->apply( $campaign, Post_Statuses::CHANGES );
 
 		$this->assertInstanceOf( WP_Error::class, $refused );
-		$this->assertSame( 'laao_ads_review_notes_required', $refused->get_error_code() );
+		$this->assertSame( 'aggr_review_notes_required', $refused->get_error_code() );
 
 		$accepted = $this->machine()->apply(
 			$campaign,
@@ -458,7 +456,7 @@ final class CampaignStateMachineTest extends WP_UnitTestCase {
 		);
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'laao_ads_review_notes_required', $result->get_error_code() );
+		$this->assertSame( 'aggr_review_notes_required', $result->get_error_code() );
 	}
 
 	/**
@@ -540,7 +538,7 @@ final class CampaignStateMachineTest extends WP_UnitTestCase {
 		$seen     = array();
 
 		add_action(
-			'laao_ads_campaign_transitioned',
+			'aggr_campaign_transitioned',
 			function ( int $id, string $from, string $to ) use ( &$seen ): void {
 				$seen[] = array( $id, $from, $to, $this->campaigns->status( $id ) );
 			},
@@ -571,7 +569,7 @@ final class CampaignStateMachineTest extends WP_UnitTestCase {
 		$campaign = $this->campaign( Post_Statuses::DRAFT );
 
 		add_action(
-			'laao_ads_notify_campaign_transitioned',
+			'aggr_notify_campaign_transitioned',
 			static function (): void {
 				throw new \RuntimeException( 'SMTP unreachable' );
 			}
@@ -614,7 +612,7 @@ final class CampaignStateMachineTest extends WP_UnitTestCase {
 		$result = $this->machine()->apply_system( $campaign, Post_Statuses::LIVE );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'laao_ads_not_started', $result->get_error_code() );
+		$this->assertSame( 'aggr_not_started', $result->get_error_code() );
 		$this->assertSame( Post_Statuses::SCHEDULED, $this->campaigns->status( $campaign ) );
 	}
 
@@ -633,8 +631,7 @@ final class CampaignStateMachineTest extends WP_UnitTestCase {
 
 		$machine = $this->machine(
 			array(
-				Transition_Table::GUARD_VALIDATOR        => $this->passing_guard(),
-				Transition_Table::GUARD_MAPPINGS_RESOLVE => $this->passing_guard(),
+				Transition_Table::GUARD_VALIDATOR => $this->passing_guard(),
 			),
 			array( Transition_Table::EFFECT_PUBLISH => static fn (): bool => true )
 		);
@@ -642,7 +639,7 @@ final class CampaignStateMachineTest extends WP_UnitTestCase {
 		$result  = $machine->apply_system( $campaign, Post_Statuses::APPROVED );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'laao_ads_not_a_system_transition', $result->get_error_code() );
+		$this->assertSame( 'aggr_not_a_system_transition', $result->get_error_code() );
 		$this->assertSame( Post_Statuses::REVIEW, $this->campaigns->status( $campaign ) );
 	}
 
@@ -687,7 +684,7 @@ final class CampaignStateMachineTest extends WP_UnitTestCase {
 		$result = $this->machine()->apply( 999999, Post_Statuses::REVIEW );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
-		$this->assertSame( 'laao_ads_campaign_not_found', $result->get_error_code() );
+		$this->assertSame( 'aggr_campaign_not_found', $result->get_error_code() );
 	}
 
 	/**

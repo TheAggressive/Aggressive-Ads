@@ -2,14 +2,14 @@
 /**
  * Autoloader mapping tests.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Unit;
+namespace Aggressive\Ads\Tests\Unit;
 
-use LAAO_Advertiser_Portal\Autoloader;
+use Aggressive\Ads\Autoloader;
 use Yoast\PHPUnitPolyfills\TestCases\TestCase;
 
 /**
@@ -50,7 +50,7 @@ final class AutoloaderTest extends TestCase {
 	public function test_resolves_a_root_namespace_class(): void {
 		$this->assertSame(
 			$this->inc_dir . '/class-service-container.php',
-			$this->autoloader->resolve( 'LAAO_Advertiser_Portal\\Service_Container' )
+			$this->autoloader->resolve( 'Aggressive\Ads\\Service_Container' )
 		);
 	}
 
@@ -63,7 +63,7 @@ final class AutoloaderTest extends TestCase {
 	public function test_resolves_a_subnamespaced_interface(): void {
 		$this->assertSame(
 			$this->inc_dir . '/Core/interface-service.php',
-			$this->autoloader->resolve( 'LAAO_Advertiser_Portal\\Core\\Service' )
+			$this->autoloader->resolve( 'Aggressive\Ads\\Core\\Service' )
 		);
 	}
 
@@ -75,7 +75,7 @@ final class AutoloaderTest extends TestCase {
 	public function test_underscores_become_hyphens_and_the_name_lowercases(): void {
 		$this->assertSame(
 			$this->inc_dir . '/class-container-exception.php',
-			$this->autoloader->resolve( 'LAAO_Advertiser_Portal\\Container_Exception' )
+			$this->autoloader->resolve( 'Aggressive\Ads\\Container_Exception' )
 		);
 	}
 
@@ -96,7 +96,7 @@ final class AutoloaderTest extends TestCase {
 	 * @return void
 	 */
 	public function test_ignores_a_similarly_named_namespace(): void {
-		$this->assertNull( $this->autoloader->resolve( 'LAAO_Advertiser_Portal_Addon\\Thing' ) );
+		$this->assertNull( $this->autoloader->resolve( 'Aggressive\Ads_Addon\\Thing' ) );
 	}
 
 	/**
@@ -106,7 +106,7 @@ final class AutoloaderTest extends TestCase {
 	 * @return void
 	 */
 	public function test_returns_null_for_a_class_with_no_file(): void {
-		$this->assertNull( $this->autoloader->resolve( 'LAAO_Advertiser_Portal\\Nope\\Not_A_Class' ) );
+		$this->assertNull( $this->autoloader->resolve( 'Aggressive\Ads\\Nope\\Not_A_Class' ) );
 	}
 
 	/**
@@ -129,11 +129,11 @@ final class AutoloaderTest extends TestCase {
 	 */
 	public static function data_hostile_class_names(): array {
 		return array(
-			'parent traversal'   => array( 'LAAO_Advertiser_Portal\\..\\..\\Thing' ),
-			'forward slash'      => array( 'LAAO_Advertiser_Portal\\Core/../../Thing' ),
-			'null byte'          => array( "LAAO_Advertiser_Portal\\Core\\Thing\0.php" ),
-			'empty segment'      => array( 'LAAO_Advertiser_Portal\\\\Thing' ),
-			'trailing separator' => array( 'LAAO_Advertiser_Portal\\' ),
+			'parent traversal'   => array( 'Aggressive\Ads\\..\\..\\Thing' ),
+			'forward slash'      => array( 'Aggressive\Ads\\Core/../../Thing' ),
+			'null byte'          => array( "Aggressive\Ads\\Core\\Thing\0.php" ),
+			'empty segment'      => array( 'Aggressive\Ads\\\\Thing' ),
+			'trailing separator' => array( 'Aggressive\Ads\\' ),
 		);
 	}
 
@@ -158,7 +158,7 @@ final class AutoloaderTest extends TestCase {
 			'Test precondition: the traversal target must exist, or this proves nothing.'
 		);
 
-		$this->assertNull( $scoped->resolve( 'LAAO_Advertiser_Portal\\..\\Service_Container' ) );
+		$this->assertNull( $scoped->resolve( 'Aggressive\Ads\\..\\Service_Container' ) );
 	}
 
 	/**
@@ -167,9 +167,9 @@ final class AutoloaderTest extends TestCase {
 	 * @return void
 	 */
 	public function test_autoload_loads_a_resolvable_class(): void {
-		$this->autoloader->autoload( 'LAAO_Advertiser_Portal\\Container_Exception' );
+		$this->autoloader->autoload( 'Aggressive\Ads\\Container_Exception' );
 
-		$this->assertTrue( class_exists( 'LAAO_Advertiser_Portal\\Container_Exception', false ) );
+		$this->assertTrue( class_exists( 'Aggressive\Ads\\Container_Exception', false ) );
 	}
 
 	/**

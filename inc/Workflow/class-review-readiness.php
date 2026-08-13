@@ -2,14 +2,14 @@
 /**
  * Advertiser-safe campaign readiness presentation.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Workflow;
+namespace Aggressive\Ads\Workflow;
 
-use LAAO_Advertiser_Portal\Domain\Campaign_Rules;
+use Aggressive\Ads\Domain\Campaign_Rules;
 
 /**
  * Converts canonical validator results into safe review-screen guidance.
@@ -66,12 +66,12 @@ final class Review_Readiness {
 			Campaign_Rules::ERROR_START_IN_PAST,
 			Campaign_Rules::ERROR_START_NOT_MIDNIGHT => array(
 				'step'   => 'destination',
-				'target' => 'laao-ads-start-date',
+				'target' => 'aggr-start-date',
 			),
 			Campaign_Rules::ERROR_END_BEFORE_START,
 			Campaign_Rules::ERROR_END_NOT_DAY_END => array(
 				'step'   => 'destination',
-				'target' => 'laao-ads-end-date',
+				'target' => 'aggr-end-date',
 			),
 			Campaign_Rules::ERROR_NO_PLACEMENTS,
 			Campaign_Rules::ERROR_PLACEMENT_INACTIVE,
@@ -79,7 +79,7 @@ final class Review_Readiness {
 			Campaign_Rules::ERROR_PACKAGE_UNAVAILABLE,
 			Campaign_Rules::ERROR_PRICE_MISSING      => array(
 				'step'   => 'package',
-				'target' => 'laao-ads-packages',
+				'target' => 'aggr-packages',
 			),
 			Campaign_Rules::ERROR_NO_CREATIVES,
 			Campaign_Rules::ERROR_PLACEMENT_UNCOVERED,
@@ -89,11 +89,11 @@ final class Review_Readiness {
 			Campaign_Rules::ERROR_CLICK_URL_MISSING,
 			Campaign_Rules::ERROR_CLICK_URL_INVALID => array(
 				'step'   => 'creative',
-				'target' => 'laao-ads-details-heading',
+				'target' => 'aggr-details-heading',
 			),
 			default => array(
 				'step'   => 'details',
-				'target' => 'laao-ads-details-heading',
+				'target' => 'aggr-details-heading',
 			),
 		};
 	}

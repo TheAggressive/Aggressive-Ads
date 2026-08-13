@@ -2,14 +2,14 @@
 /**
  * Schema DDL tests.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Unit\Install;
+namespace Aggressive\Ads\Tests\Unit\Install;
 
-use LAAO_Advertiser_Portal\Install\Schema;
+use Aggressive\Ads\Install\Schema;
 use Yoast\PHPUnitPolyfills\TestCases\TestCase;
 
 /**
@@ -34,7 +34,7 @@ final class SchemaTest extends TestCase {
 	 * @return void
 	 */
 	protected function set_up(): void {
-		$this->ddl = Schema::audit_table_ddl( 'wp_laao_ads_audit_log', 'DEFAULT CHARACTER SET utf8mb4' );
+		$this->ddl = Schema::audit_table_ddl( 'wp_aggr_audit_log', 'DEFAULT CHARACTER SET utf8mb4' );
 	}
 
 	/**
@@ -150,7 +150,7 @@ final class SchemaTest extends TestCase {
 	 * @return void
 	 */
 	public function test_table_name_and_charset_are_applied(): void {
-		$this->assertStringContainsString( 'CREATE TABLE wp_laao_ads_audit_log (', $this->ddl );
+		$this->assertStringContainsString( 'CREATE TABLE wp_aggr_audit_log (', $this->ddl );
 		$this->assertStringContainsString( 'DEFAULT CHARACTER SET utf8mb4', $this->ddl );
 	}
 
@@ -165,7 +165,7 @@ final class SchemaTest extends TestCase {
 
 	/** The access DDL declares its atomic uniqueness and lookup indexes. */
 	public function test_org_access_schema_has_declared_columns_and_indexes(): void {
-		$ddl = Schema::org_access_table_ddl( 'wp_laao_ads_org_access', 'DEFAULT CHARACTER SET utf8mb4' );
+		$ddl = Schema::org_access_table_ddl( 'wp_aggr_org_access', 'DEFAULT CHARACTER SET utf8mb4' );
 
 		foreach ( Schema::org_access_columns() as $column ) {
 			$this->assertMatchesRegularExpression( '/^\s*' . preg_quote( $column, '/' ) . '\s/mi', $ddl );
@@ -174,6 +174,55 @@ final class SchemaTest extends TestCase {
 		foreach ( Schema::org_access_index_names() as $index ) {
 			if ( 'PRIMARY' === $index ) {
 				$this->assertStringContainsString( 'PRIMARY KEY  (id)', $ddl );
+				continue;
+			}
+
+			$this->assertMatchesRegularExpression(
+				'/^\s*(?:UNIQUE )?KEY ' . preg_quote( $index, '/' ) . ' \(/mi',
+				$ddl
+			);
+		}
+	}
+
+	/** Events DDL uses dbDelta-safe keys and unique (token_hash, event). */
+	public function test_events_schema_has_declared_columns_and_indexes(): void {
+		$ddl = Schema::events_table_ddl( 'wp_aggr_events', 'DEFAULT CHARACTER SET utf8mb4' );
+
+		$this->assertStringContainsString( 'PRIMARY KEY  (id)', $ddl );
+		$this->assertDoesNotMatchRegularExpression( '/\bINDEX\b/i', $ddl );
+
+		$this->assertStringContainsString( 'UNIQUE KEY token_event (token_hash,event)', $ddl );
+		$this->assertStringNotContainsString( 'UNIQUE KEY token_hash (token_hash)', $ddl );
+
+		foreach ( Schema::events_columns() as $column ) {
+			$this->assertMatchesRegularExpression( '/^\s*' . preg_quote( $column, '/' ) . '\s/mi', $ddl );
+		}
+
+		foreach ( Schema::events_index_names() as $index ) {
+			if ( 'PRIMARY' === $index ) {
+				continue;
+			}
+
+			$this->assertMatchesRegularExpression(
+				'/^\s*(?:UNIQUE )?KEY ' . preg_quote( $index, '/' ) . ' \(/mi',
+				$ddl
+			);
+		}
+	}
+
+	/** Rollups DDL keys the day counter uniquely per slot and campaign. */
+	public function test_rollups_schema_has_declared_columns_and_indexes(): void {
+		$ddl = Schema::rollups_table_ddl( 'wp_aggr_rollups', 'DEFAULT CHARACTER SET utf8mb4' );
+
+		$this->assertStringContainsString( 'PRIMARY KEY  (id)', $ddl );
+		$this->assertDoesNotMatchRegularExpression( '/\bINDEX\b/i', $ddl );
+
+		foreach ( Schema::rollups_columns() as $column ) {
+			$this->assertMatchesRegularExpression( '/^\s*' . preg_quote( $column, '/' ) . '\s/mi', $ddl );
+		}
+
+		foreach ( Schema::rollups_index_names() as $index ) {
+			if ( 'PRIMARY' === $index ) {
 				continue;
 			}
 

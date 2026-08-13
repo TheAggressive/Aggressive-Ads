@@ -2,18 +2,18 @@
 /**
  * Uploading a creative.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\REST;
+namespace Aggressive\Ads\REST;
 
-use LAAO_Advertiser_Portal\Core\Post_Types;
-use LAAO_Advertiser_Portal\Core\Service;
-use LAAO_Advertiser_Portal\Security\Capabilities;
-use LAAO_Advertiser_Portal\Workflow\Creative_Change_Manager;
-use LAAO_Advertiser_Portal\Workflow\Creative_Manager;
+use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Security\Capabilities;
+use Aggressive\Ads\Workflow\Creative_Change_Manager;
+use Aggressive\Ads\Workflow\Creative_Manager;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -58,8 +58,7 @@ final class Creative_Controller implements Service {
 	 * @return void
 	 */
 	public function register_routes(): void {
-		register_rest_route(
-			Creative_File_Controller::NAMESPACE,
+		Creative_File_Controller::register_route(
 			'/campaigns/(?P<id>\d+)/creatives',
 			array(
 				'methods'             => 'POST',
@@ -92,8 +91,7 @@ final class Creative_Controller implements Service {
 			)
 		);
 
-		register_rest_route(
-			Creative_File_Controller::NAMESPACE,
+		Creative_File_Controller::register_route(
 			'/creatives/(?P<id>\d+)',
 			array(
 				'methods'             => 'DELETE',
@@ -110,8 +108,7 @@ final class Creative_Controller implements Service {
 			)
 		);
 
-		register_rest_route(
-			Creative_File_Controller::NAMESPACE,
+		Creative_File_Controller::register_route(
 			'/creatives/(?P<id>\d+)/replacement',
 			array(
 				'methods'             => 'POST',
@@ -133,8 +130,7 @@ final class Creative_Controller implements Service {
 			)
 		);
 
-		register_rest_route(
-			Creative_File_Controller::NAMESPACE,
+		Creative_File_Controller::register_route(
 			'/creative-replacements/(?P<id>\d+)',
 			array(
 				'methods'             => 'DELETE',
@@ -144,8 +140,7 @@ final class Creative_Controller implements Service {
 			)
 		);
 
-		register_rest_route(
-			Creative_File_Controller::NAMESPACE,
+		Creative_File_Controller::register_route(
 			'/creative-replacements/(?P<id>\d+)/decision',
 			array(
 				'methods'             => 'POST',

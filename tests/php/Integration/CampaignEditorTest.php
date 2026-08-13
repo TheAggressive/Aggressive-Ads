@@ -2,27 +2,27 @@
 /**
  * Campaign creation and draft editing.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Integration;
+namespace Aggressive\Ads\Tests\Integration;
 
-use LAAO_Advertiser_Portal\Core\Post_Statuses;
-use LAAO_Advertiser_Portal\Core\Post_Types;
-use LAAO_Advertiser_Portal\Install\Installer;
-use LAAO_Advertiser_Portal\Plugin;
-use LAAO_Advertiser_Portal\Portal\Campaign_Actions;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
-use LAAO_Advertiser_Portal\Repository\Creative_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Repository;
-use LAAO_Advertiser_Portal\Repository\Package_Repository;
-use LAAO_Advertiser_Portal\Repository\Placement_Repository;
-use LAAO_Advertiser_Portal\Security\Ownership;
-use LAAO_Advertiser_Portal\Security\Roles;
-use LAAO_Advertiser_Portal\Workflow\Campaign_Editor;
+use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Install\Installer;
+use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Portal\Campaign_Actions;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Repository\Package_Repository;
+use Aggressive\Ads\Repository\Placement_Repository;
+use Aggressive\Ads\Security\Ownership;
+use Aggressive\Ads\Security\Roles;
+use Aggressive\Ads\Workflow\Campaign_Editor;
 use WP_UnitTestCase;
 
 /**
@@ -173,7 +173,7 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 		$result = $this->editor->create();
 
 		$this->assertWPError( $result );
-		$this->assertSame( 'laao_ads_organization_missing', $result->get_error_code() );
+		$this->assertSame( 'aggr_organization_missing', $result->get_error_code() );
 	}
 
 	/**
@@ -244,7 +244,7 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 		$invalid = $this->editor->package_snapshot( $this->package_id );
 
 		$this->assertWPError( $invalid );
-		$this->assertSame( 'laao_ads_package_misconfigured', $invalid->get_error_code() );
+		$this->assertSame( 'aggr_package_misconfigured', $invalid->get_error_code() );
 
 		update_post_meta( $this->package_id, Package_Repository::META_CUSTOM_DURATION, 1 );
 
@@ -267,7 +267,7 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 		$result = $this->editor->save( $campaign_id, array( 'package_id' => $this->package_id ), 0 );
 
 		$this->assertWPError( $result );
-		$this->assertSame( 'laao_ads_package_unavailable', $result->get_error_code() );
+		$this->assertSame( 'aggr_package_unavailable', $result->get_error_code() );
 		$this->assertSame( 0, (int) get_post_meta( $campaign_id, Campaign_Repository::META_PACKAGE_ID, true ) );
 	}
 
@@ -287,7 +287,7 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 		$result = $this->editor->save( $campaign_id, array( 'package_id' => $this->package_id ), 0 );
 
 		$this->assertWPError( $result );
-		$this->assertSame( 'laao_ads_package_misconfigured', $result->get_error_code() );
+		$this->assertSame( 'aggr_package_misconfigured', $result->get_error_code() );
 	}
 
 	/**
@@ -306,7 +306,7 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 		$result = $this->editor->save( $campaign_id, array( 'package_id' => $this->package_id ), 0 );
 
 		$this->assertWPError( $result );
-		$this->assertSame( 'laao_ads_package_misconfigured', $result->get_error_code() );
+		$this->assertSame( 'aggr_package_misconfigured', $result->get_error_code() );
 		$this->assertSame( array(), Plugin::instance()->container()->get( Campaign_Repository::class )->placement_ids( $campaign_id ) );
 	}
 
@@ -324,7 +324,7 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 		$result = $this->actions->process_save_package( $campaign_id, 0, 0 );
 
 		$this->assertWPError( $result );
-		$this->assertSame( 'laao_ads_package_required', $result->get_error_code() );
+		$this->assertSame( 'aggr_package_required', $result->get_error_code() );
 	}
 
 	/**
@@ -366,7 +366,7 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 		$result     = $this->actions->process_save_schedule( $campaign_id, $start_date, '', 1 );
 
 		$this->assertWPError( $result );
-		$this->assertSame( 'laao_ads_creatives_incomplete', $result->get_error_code() );
+		$this->assertSame( 'aggr_creatives_incomplete', $result->get_error_code() );
 		$this->assertSame( 0, (int) get_post_meta( $campaign_id, Campaign_Repository::META_START_TS, true ) );
 		$this->assertSame( 'creative', get_post_meta( $campaign_id, Campaign_Repository::META_WIZARD_STEP, true ) );
 	}
@@ -386,17 +386,17 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 
 		$missing = $this->actions->process_save_schedule( $campaign_id, '', '', 1 );
 		$this->assertWPError( $missing );
-		$this->assertSame( 'laao_ads_start_date_required', $missing->get_error_code() );
+		$this->assertSame( 'aggr_start_date_required', $missing->get_error_code() );
 
 		$past = $this->actions->process_save_schedule( $campaign_id, '2020-01-01', '', 1 );
 		$this->assertWPError( $past );
-		$this->assertSame( 'laao_ads_start_date_past', $past->get_error_code() );
+		$this->assertSame( 'aggr_start_date_past', $past->get_error_code() );
 
 		$start_date = ( new \DateTimeImmutable( '+20 days', wp_timezone() ) )->format( 'Y-m-d' );
 		$end_date   = ( new \DateTimeImmutable( '+10 days', wp_timezone() ) )->format( 'Y-m-d' );
 		$reversed   = $this->actions->process_save_schedule( $campaign_id, $start_date, $end_date, 1 );
 		$this->assertWPError( $reversed );
-		$this->assertSame( 'laao_ads_end_before_start', $reversed->get_error_code() );
+		$this->assertSame( 'aggr_end_before_start', $reversed->get_error_code() );
 		$this->assertSame( 1, Plugin::instance()->container()->get( Campaign_Repository::class )->autosave_revision( $campaign_id ) );
 	}
 
@@ -428,7 +428,7 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 		);
 
 		$this->assertWPError( $result );
-		$this->assertSame( 'laao_ads_start_date_not_midnight', $result->get_error_code() );
+		$this->assertSame( 'aggr_start_date_not_midnight', $result->get_error_code() );
 		$this->assertSame( 0, (int) get_post_meta( $campaign_id, Campaign_Repository::META_START_TS, true ) );
 		$this->assertSame( 1, Plugin::instance()->container()->get( Campaign_Repository::class )->autosave_revision( $campaign_id ) );
 	}
@@ -449,7 +449,7 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 
 		$this->assertSame( 1, $first );
 		$this->assertWPError( $stale );
-		$this->assertSame( 'laao_ads_edit_conflict', $stale->get_error_code() );
+		$this->assertSame( 'aggr_edit_conflict', $stale->get_error_code() );
 		$this->assertSame( 'Fresh value', get_the_title( $campaign_id ) );
 	}
 
@@ -467,7 +467,7 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 		$result = $this->editor->save( $campaign_id, array( 'wizard_step' => 'submit' ), 0 );
 
 		$this->assertWPError( $result );
-		$this->assertSame( 'laao_ads_wizard_step_invalid', $result->get_error_code() );
+		$this->assertSame( 'aggr_wizard_step_invalid', $result->get_error_code() );
 		$this->assertSame( 'details', get_post_meta( $campaign_id, Campaign_Repository::META_WIZARD_STEP, true ) );
 		$this->assertSame( 0, Plugin::instance()->container()->get( Campaign_Repository::class )->autosave_revision( $campaign_id ) );
 	}
@@ -488,7 +488,7 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 		$result = $this->editor->save( $campaign_id, array( 'placement_ids' => array( $this->placement_id ) ), 0 );
 
 		$this->assertWPError( $result );
-		$this->assertSame( 'laao_ads_placement_unavailable', $result->get_error_code() );
+		$this->assertSame( 'aggr_placement_unavailable', $result->get_error_code() );
 		$this->assertSame( array(), Plugin::instance()->container()->get( Campaign_Repository::class )->placement_ids( $campaign_id ) );
 	}
 
@@ -507,14 +507,14 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 		$result = $this->editor->save( $campaign_id, array( 'title' => 'Taken over' ), 0 );
 
 		$this->assertWPError( $result );
-		$this->assertSame( 'laao_ads_forbidden', $result->get_error_code() );
+		$this->assertSame( 'aggr_forbidden', $result->get_error_code() );
 		$this->assertSame( 'Protected', get_the_title( $campaign_id ) );
 
 		$start_date = ( new \DateTimeImmutable( '+10 days', wp_timezone() ) )->format( 'Y-m-d' );
 		$schedule   = $this->actions->process_save_schedule( $campaign_id, $start_date, '', 0 );
 
 		$this->assertWPError( $schedule );
-		$this->assertSame( 'laao_ads_forbidden', $schedule->get_error_code(), 'Readiness checks must not reveal another tenant campaign state.' );
+		$this->assertSame( 'aggr_forbidden', $schedule->get_error_code(), 'Readiness checks must not reveal another tenant campaign state.' );
 	}
 
 	/**
@@ -537,7 +537,7 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 		$result = $this->editor->save( $campaign_id, array( 'title' => 'Changed' ), 0 );
 
 		$this->assertWPError( $result );
-		$this->assertSame( 'laao_ads_campaign_not_editable', $result->get_error_code() );
+		$this->assertSame( 'aggr_campaign_not_editable', $result->get_error_code() );
 	}
 
 	/**
@@ -574,7 +574,7 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 		$result = $this->actions->process_submit( $campaign_id );
 
 		$this->assertWPError( $result );
-		$this->assertSame( 'laao_ads_campaign_invalid', $result->get_error_code() );
+		$this->assertSame( 'aggr_campaign_invalid', $result->get_error_code() );
 		$this->assertSame( Post_Statuses::DRAFT, get_post_status( $campaign_id ) );
 		$error_data = $result->get_error_data();
 		$this->assertIsArray( $error_data );
@@ -594,7 +594,7 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 		$result = $this->actions->process_submit( $campaign_id );
 
 		$this->assertWPError( $result );
-		$this->assertSame( 'laao_ads_forbidden', $result->get_error_code() );
+		$this->assertSame( 'aggr_forbidden', $result->get_error_code() );
 		$this->assertSame( Post_Statuses::DRAFT, get_post_status( $campaign_id ) );
 	}
 
@@ -611,7 +611,7 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 		$replayed = $this->actions->process_submit( $campaign_id );
 
 		$this->assertWPError( $replayed );
-		$this->assertSame( 'laao_ads_illegal_transition', $replayed->get_error_code() );
+		$this->assertSame( 'aggr_illegal_transition', $replayed->get_error_code() );
 
 		$events = ( new Audit_Repository() )->for_object( 'campaign', $campaign_id, $this->org_id );
 		$this->assertSame( 1, count( array_filter( $events, static fn ( array $event ): bool => 'campaign.transitioned' === $event['event'] ) ) );
@@ -625,15 +625,15 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 	 */
 	public function test_submission_display_state_is_allowlisted(): void {
 		$_GET = array(
-			'step'            => 'submit',
-			'laao_ads_notice' => 'submitted',
+			'step'        => 'submit',
+			'aggr_notice' => 'submitted',
 		);
 
 		$this->assertSame( 'submit', Campaign_Actions::request_step( 'review' ) );
 		$this->assertSame( 'submitted', Campaign_Actions::request_notice() );
 
-		$_GET['step']            = 'approved';
-		$_GET['laao_ads_notice'] = 'campaign.transitioned';
+		$_GET['step']        = 'approved';
+		$_GET['aggr_notice'] = 'campaign.transitioned';
 
 		$this->assertSame( 'review', Campaign_Actions::request_step( 'review' ) );
 		$this->assertSame( '', Campaign_Actions::request_notice() );

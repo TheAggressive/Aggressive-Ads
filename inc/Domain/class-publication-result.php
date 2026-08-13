@@ -2,12 +2,12 @@
 /**
  * What a publication attempt actually did.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Domain;
+namespace Aggressive\Ads\Domain;
 
 /**
  * A per-creative record of what was created, reused, and what failed.

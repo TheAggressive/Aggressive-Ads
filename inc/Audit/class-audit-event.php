@@ -2,12 +2,12 @@
 /**
  * One audit log entry.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Audit;
+namespace Aggressive\Ads\Audit;
 
 use InvalidArgumentException;
 
@@ -51,7 +51,7 @@ final class Audit_Event {
 		'nonce',
 		'_wpnonce',
 		'token',
-		'_laao_ads_private_token',
+		'_aggr_private_token',
 		'secret',
 		'api_key',
 		'authorization',
@@ -67,7 +67,7 @@ final class Audit_Event {
 		'path',
 		'file_path',
 		'private_path',
-		'_laao_ads_private_path',
+		'_aggr_private_path',
 	);
 
 	/**

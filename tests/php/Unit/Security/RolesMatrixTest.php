@@ -2,16 +2,16 @@
 /**
  * Role capability matrix tests.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Unit\Security;
+namespace Aggressive\Ads\Tests\Unit\Security;
 
-use LAAO_Advertiser_Portal\Core\Post_Types;
-use LAAO_Advertiser_Portal\Security\Capabilities;
-use LAAO_Advertiser_Portal\Security\Roles;
+use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Security\Capabilities;
+use Aggressive\Ads\Security\Roles;
 use Yoast\PHPUnitPolyfills\TestCases\TestCase;
 
 /**
@@ -29,7 +29,7 @@ final class RolesMatrixTest extends TestCase {
 	 */
 	public function test_declares_two_roles(): void {
 		$this->assertSame(
-			array( 'laao_ads_advertiser', 'laao_ads_reviewer' ),
+			array( 'aggr_advertiser', 'aggr_reviewer' ),
 			array_keys( Roles::definitions() )
 		);
 	}
@@ -49,7 +49,7 @@ final class RolesMatrixTest extends TestCase {
 	 * @dataProvider data_forbidden_advertiser_capabilities
 	 */
 	public function test_advertiser_lacks_dangerous_core_capabilities( string $forbidden ): void {
-		$caps = Roles::definitions()['laao_ads_advertiser']['capabilities'];
+		$caps = Roles::definitions()['aggr_advertiser']['capabilities'];
 
 		$this->assertArrayNotHasKey( $forbidden, $caps );
 	}
@@ -75,15 +75,15 @@ final class RolesMatrixTest extends TestCase {
 	 * @return void
 	 */
 	public function test_advertiser_holds_the_portal_primitives(): void {
-		$caps = Roles::definitions()['laao_ads_advertiser']['capabilities'];
+		$caps = Roles::definitions()['aggr_advertiser']['capabilities'];
 
 		$this->assertTrue( $caps['read'] );
 		$this->assertTrue( $caps[ Capabilities::ACCESS_PORTAL ] );
 		$this->assertTrue( $caps[ Capabilities::UPLOAD_CREATIVE ] );
 		$this->assertTrue( $caps[ Capabilities::SUBMIT_CAMPAIGN ] );
-		$this->assertTrue( $caps['create_laao_ads_campaigns'] );
-		$this->assertTrue( $caps['edit_laao_ads_campaigns'] );
-		$this->assertTrue( $caps['edit_laao_ads_creatives'] );
+		$this->assertTrue( $caps['create_aggr_campaigns'] );
+		$this->assertTrue( $caps['edit_aggr_campaigns'] );
+		$this->assertTrue( $caps['edit_aggr_creatives'] );
 	}
 
 	/**
@@ -96,7 +96,7 @@ final class RolesMatrixTest extends TestCase {
 	 * @return void
 	 */
 	public function test_advertiser_holds_no_cross_organization_variant(): void {
-		$caps = Roles::definitions()['laao_ads_advertiser']['capabilities'];
+		$caps = Roles::definitions()['aggr_advertiser']['capabilities'];
 
 		foreach ( array_keys( $caps ) as $cap ) {
 			$this->assertStringNotContainsString(
@@ -120,7 +120,7 @@ final class RolesMatrixTest extends TestCase {
 	 * @return void
 	 */
 	public function test_advertiser_holds_no_staff_primitive(): void {
-		$caps = Roles::definitions()['laao_ads_advertiser']['capabilities'];
+		$caps = Roles::definitions()['aggr_advertiser']['capabilities'];
 
 		$staff = array(
 			Capabilities::REVIEW_CAMPAIGNS,
@@ -130,6 +130,7 @@ final class RolesMatrixTest extends TestCase {
 			Capabilities::MANAGE_ORGS,
 			Capabilities::MANAGE_SETTINGS,
 			Capabilities::VIEW_AUDIT_LOG,
+			Capabilities::ACCESS_STAFF,
 		);
 
 		foreach ( $staff as $cap ) {
@@ -148,7 +149,7 @@ final class RolesMatrixTest extends TestCase {
 	 * @return void
 	 */
 	public function test_advertiser_reads_shared_configuration_but_cannot_edit_it(): void {
-		$caps = Roles::definitions()['laao_ads_advertiser']['capabilities'];
+		$caps = Roles::definitions()['aggr_advertiser']['capabilities'];
 
 		foreach ( array( Post_Types::PLACEMENT, Post_Types::PACKAGE ) as $post_type ) {
 			$plural = Post_Types::capability_names()[ $post_type ]['plural'];
@@ -164,7 +165,7 @@ final class RolesMatrixTest extends TestCase {
 	 *
 	 * An advertiser reads their own organization through membership, which
 	 * Ownership::map() resolves to plain `read`. Granting
-	 * read_private_laao_ads_orgs would therefore do nothing for their own
+	 * read_private_aggr_orgs would therefore do nothing for their own
 	 * organization and everything for everyone else's — leaving exactly one
 	 * dropped guard between an advertiser and every other customer's contact
 	 * and billing details.
@@ -172,7 +173,7 @@ final class RolesMatrixTest extends TestCase {
 	 * @return void
 	 */
 	public function test_advertiser_holds_no_cross_organization_read(): void {
-		$caps = Roles::definitions()['laao_ads_advertiser']['capabilities'];
+		$caps = Roles::definitions()['aggr_advertiser']['capabilities'];
 
 		foreach ( array( Post_Types::ORGANIZATION, Post_Types::CAMPAIGN, Post_Types::CREATIVE ) as $post_type ) {
 			$plural = Post_Types::capability_names()[ $post_type ]['plural'];
@@ -194,8 +195,8 @@ final class RolesMatrixTest extends TestCase {
 	 */
 	public function test_reviewer_is_a_superset_of_advertiser(): void {
 		$definitions = Roles::definitions();
-		$advertiser  = $definitions['laao_ads_advertiser']['capabilities'];
-		$reviewer    = $definitions['laao_ads_reviewer']['capabilities'];
+		$advertiser  = $definitions['aggr_advertiser']['capabilities'];
+		$reviewer    = $definitions['aggr_reviewer']['capabilities'];
 
 		foreach ( array_keys( $advertiser ) as $cap ) {
 			$this->assertArrayHasKey( $cap, $reviewer, "Reviewer is missing advertiser capability {$cap}." );
@@ -211,7 +212,7 @@ final class RolesMatrixTest extends TestCase {
 	 * @return void
 	 */
 	public function test_reviewer_holds_the_review_primitives(): void {
-		$caps = Roles::definitions()['laao_ads_reviewer']['capabilities'];
+		$caps = Roles::definitions()['aggr_reviewer']['capabilities'];
 
 		$this->assertTrue( $caps[ Capabilities::REVIEW_CAMPAIGNS ] );
 		$this->assertTrue( $caps[ Capabilities::PUBLISH_TO_ADSANITY ] );
@@ -235,12 +236,13 @@ final class RolesMatrixTest extends TestCase {
 	 * @return void
 	 */
 	public function test_reviewer_cannot_change_configuration(): void {
-		$caps = Roles::definitions()['laao_ads_reviewer']['capabilities'];
+		$caps = Roles::definitions()['aggr_reviewer']['capabilities'];
 
 		$this->assertArrayNotHasKey( Capabilities::MANAGE_PLACEMENTS, $caps );
 		$this->assertArrayNotHasKey( Capabilities::MANAGE_PACKAGES, $caps );
 		$this->assertArrayNotHasKey( Capabilities::MANAGE_SETTINGS, $caps );
 		$this->assertArrayNotHasKey( Capabilities::MANAGE_ORGS, $caps );
+		$this->assertArrayNotHasKey( Capabilities::ACCESS_STAFF, $caps );
 	}
 
 	/**

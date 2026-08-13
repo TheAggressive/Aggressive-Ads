@@ -2,18 +2,18 @@
 /**
  * Portal-owned email change challenges.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Workflow;
+namespace Aggressive\Ads\Workflow;
 
-use LAAO_Advertiser_Portal\Audit\Audit_Event;
-use LAAO_Advertiser_Portal\Notification\Email_Change_Notification;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Repository\User_Repository;
-use LAAO_Advertiser_Portal\Security\Capabilities;
+use Aggressive\Ads\Audit\Audit_Event;
+use Aggressive\Ads\Notification\Email_Change_Notification;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\User_Repository;
+use Aggressive\Ads\Security\Capabilities;
 use WP_Error;
 use WP_User;
 
@@ -57,11 +57,11 @@ final class Email_Change {
 
 		$email = strtolower( sanitize_email( $new_email ) );
 		if ( '' === $email || strlen( $email ) > Advertiser_Registration::MAX_EMAIL || ! is_email( $email ) ) {
-			return new WP_Error( 'laao_ads_invalid_email', __( 'Enter a valid email address.', 'laao-advertiser-portal' ) );
+			return new WP_Error( 'aggr_invalid_email', __( 'Enter a valid email address.', 'aggressive-ads' ) );
 		}
 
 		if ( strtolower( (string) $user->user_email ) === $email ) {
-			return new WP_Error( 'laao_ads_email_unchanged', __( 'That is already your email address.', 'laao-advertiser-portal' ) );
+			return new WP_Error( 'aggr_email_unchanged', __( 'That is already your email address.', 'aggressive-ads' ) );
 		}
 
 		if ( $this->users->email_taken_by_other( $email, $user_id ) ) {
@@ -91,7 +91,7 @@ final class Email_Change {
 		);
 
 		if ( ! $stored ) {
-			return new WP_Error( 'laao_ads_email_change_not_saved', __( 'The email change could not be started.', 'laao-advertiser-portal' ) );
+			return new WP_Error( 'aggr_email_change_not_saved', __( 'The email change could not be started.', 'aggressive-ads' ) );
 		}
 
 		if ( ! $this->notifications->send_confirmation( $email, (string) $user->user_login, $token, $expires ) ) {
@@ -107,7 +107,7 @@ final class Email_Change {
 				)
 			);
 
-			return new WP_Error( 'laao_ads_email_change_mail_failed', __( 'The confirmation email could not be sent.', 'laao-advertiser-portal' ) );
+			return new WP_Error( 'aggr_email_change_mail_failed', __( 'The confirmation email could not be sent.', 'aggressive-ads' ) );
 		}
 
 		$this->audit->insert(
@@ -164,21 +164,21 @@ final class Email_Change {
 		}
 
 		if ( (string) $user->user_login !== $login ) {
-			return new WP_Error( 'laao_ads_invalid_email_change', __( 'This confirmation link is invalid or has expired.', 'laao-advertiser-portal' ) );
+			return new WP_Error( 'aggr_invalid_email_change', __( 'This confirmation link is invalid or has expired.', 'aggressive-ads' ) );
 		}
 
 		$pending = $this->users->email_change( $user_id );
 		if ( null === $pending || $pending['expires_at'] < time() || ! hash_equals( $pending['token_hash'], $this->digest( $token ) ) ) {
 			$this->users->clear_email_change( $user_id );
 
-			return new WP_Error( 'laao_ads_invalid_email_change', __( 'This confirmation link is invalid or has expired.', 'laao-advertiser-portal' ) );
+			return new WP_Error( 'aggr_invalid_email_change', __( 'This confirmation link is invalid or has expired.', 'aggressive-ads' ) );
 		}
 
 		$email = $pending['new_email'];
 		if ( $this->users->email_taken_by_other( $email, $user_id ) ) {
 			$this->users->clear_email_change( $user_id );
 
-			return new WP_Error( 'laao_ads_email_taken', __( 'That email address is no longer available.', 'laao-advertiser-portal' ) );
+			return new WP_Error( 'aggr_email_taken', __( 'That email address is no longer available.', 'aggressive-ads' ) );
 		}
 
 		// Consume before the write so a replay cannot complete twice if mail or
@@ -189,7 +189,7 @@ final class Email_Change {
 		if ( is_wp_error( $result ) ) {
 			$this->users->store_email_change( $user_id, $pending );
 
-			return new WP_Error( 'laao_ads_email_not_saved', __( 'Your email address could not be updated.', 'laao-advertiser-portal' ) );
+			return new WP_Error( 'aggr_email_not_saved', __( 'Your email address could not be updated.', 'aggressive-ads' ) );
 		}
 
 		$this->audit->insert(
@@ -242,7 +242,7 @@ final class Email_Change {
 	private function authorized_user( int $user_id ): WP_User|WP_Error {
 		$user = $this->users->by_id( $user_id );
 		if ( null === $user || ! user_can( $user_id, Capabilities::ACCESS_PORTAL ) ) {
-			return new WP_Error( 'laao_ads_forbidden', __( 'You do not have permission to do that.', 'laao-advertiser-portal' ) );
+			return new WP_Error( 'aggr_forbidden', __( 'You do not have permission to do that.', 'aggressive-ads' ) );
 		}
 
 		return $user;

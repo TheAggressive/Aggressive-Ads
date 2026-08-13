@@ -2,18 +2,18 @@
 /**
  * Reading the package catalogue.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\REST;
+namespace Aggressive\Ads\REST;
 
-use LAAO_Advertiser_Portal\Core\Service;
-use LAAO_Advertiser_Portal\Repository\Package_Repository;
-use LAAO_Advertiser_Portal\Repository\Placement_Repository;
-use LAAO_Advertiser_Portal\Security\Capabilities;
-use LAAO_Advertiser_Portal\Workflow\Campaign_Editor;
+use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Repository\Package_Repository;
+use Aggressive\Ads\Repository\Placement_Repository;
+use Aggressive\Ads\Security\Capabilities;
+use Aggressive\Ads\Workflow\Campaign_Editor;
 use WP_REST_Request;
 use WP_REST_Response;
 
@@ -51,8 +51,7 @@ final class Packages_Controller implements Service {
 	 * @return void
 	 */
 	public function register_routes(): void {
-		register_rest_route(
-			Creative_File_Controller::NAMESPACE,
+		Creative_File_Controller::register_route(
 			'/packages',
 			array(
 				'methods'             => 'GET',

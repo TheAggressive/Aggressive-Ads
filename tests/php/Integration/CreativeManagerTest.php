@@ -2,27 +2,27 @@
 /**
  * Shared creative workflow and progressive forms.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Integration;
+namespace Aggressive\Ads\Tests\Integration;
 
-use LAAO_Advertiser_Portal\Core\Post_Statuses;
-use LAAO_Advertiser_Portal\Core\Post_Types;
-use LAAO_Advertiser_Portal\Install\Installer;
-use LAAO_Advertiser_Portal\Plugin;
-use LAAO_Advertiser_Portal\Portal\Creative_Actions;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
-use LAAO_Advertiser_Portal\Repository\Creative_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Repository;
-use LAAO_Advertiser_Portal\Repository\Placement_Repository;
-use LAAO_Advertiser_Portal\Security\Ownership;
-use LAAO_Advertiser_Portal\Security\Roles;
-use LAAO_Advertiser_Portal\Storage\Private_Storage;
-use LAAO_Advertiser_Portal\Workflow\Creative_Manager;
+use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Install\Installer;
+use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Portal\Creative_Actions;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Repository\Placement_Repository;
+use Aggressive\Ads\Security\Ownership;
+use Aggressive\Ads\Security\Roles;
+use Aggressive\Ads\Storage\Private_Storage;
+use Aggressive\Ads\Workflow\Creative_Manager;
 use WP_Error;
 use WP_UnitTestCase;
 
@@ -222,7 +222,7 @@ final class CreativeManagerTest extends WP_UnitTestCase {
 		);
 
 		$this->assertWPError( $result );
-		$this->assertSame( 'laao_ads_creative_size_mismatch', $result->get_error_code() );
+		$this->assertSame( 'aggr_creative_size_mismatch', $result->get_error_code() );
 		$this->assertStringContainsString( '720 × 90', $result->get_error_message() );
 		$this->assertStringContainsString( '728x90', $result->get_error_message() );
 		$this->assertSame( $before, $this->private_images(), 'Rejected dimensions left an unreferenced private file.' );
@@ -240,11 +240,11 @@ final class CreativeManagerTest extends WP_UnitTestCase {
 
 		$missing_url = $this->manager->upload( $this->campaign_id, $this->placement_id, $file, '', 'Alt text' );
 		$this->assertWPError( $missing_url );
-		$this->assertSame( 'laao_ads_click_url_required', $missing_url->get_error_code() );
+		$this->assertSame( 'aggr_click_url_required', $missing_url->get_error_code() );
 
 		$bad_url = $this->manager->upload( $this->campaign_id, $this->placement_id, $file, 'javascript:alert(1)', 'Alt text' );
 		$this->assertWPError( $bad_url );
-		$this->assertSame( 'laao_ads_click_url_invalid', $bad_url->get_error_code() );
+		$this->assertSame( 'aggr_click_url_invalid', $bad_url->get_error_code() );
 
 		$uploaded = $this->manager->upload( $this->campaign_id, $this->placement_id, $file, 'https://www.example.com/gallery', '' );
 		$this->assertIsArray( $uploaded );
@@ -289,7 +289,7 @@ final class CreativeManagerTest extends WP_UnitTestCase {
 		);
 
 		$this->assertWPError( $second );
-		$this->assertSame( 'laao_ads_creative_already_exists', $second->get_error_code() );
+		$this->assertSame( 'aggr_creative_already_exists', $second->get_error_code() );
 		$this->assertCount( 1, Plugin::instance()->container()->get( Creative_Repository::class )->for_campaign( $this->campaign_id ) );
 	}
 
@@ -310,7 +310,7 @@ final class CreativeManagerTest extends WP_UnitTestCase {
 		);
 
 		$this->assertWPError( $result );
-		$this->assertSame( 'laao_ads_forbidden', $result->get_error_code() );
+		$this->assertSame( 'aggr_forbidden', $result->get_error_code() );
 	}
 
 	/**
@@ -373,7 +373,7 @@ final class CreativeManagerTest extends WP_UnitTestCase {
 		$result = $this->manager->remove( $creative_id );
 
 		$this->assertWPError( $result );
-		$this->assertSame( 'laao_ads_campaign_not_editable', $result->get_error_code() );
+		$this->assertSame( 'aggr_campaign_not_editable', $result->get_error_code() );
 		$this->assertNotNull( get_post( $creative_id ) );
 		$this->assertNotNull( $this->storage->resolve( $stored['path'] ) );
 	}
@@ -407,7 +407,7 @@ final class CreativeManagerTest extends WP_UnitTestCase {
 		ob_start();
 		imagepng( $image );
 		$bytes = (string) ob_get_clean();
-		$path  = wp_tempnam( 'laao-ads-creative-manager' );
+		$path  = wp_tempnam( 'aggr-creative-manager' );
 		file_put_contents( $path, $bytes );
 		$this->temporary[] = $path;
 

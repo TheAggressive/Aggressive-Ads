@@ -2,24 +2,25 @@
 /**
  * Advertiser campaign creation and draft editing.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Workflow;
+namespace Aggressive\Ads\Workflow;
 
-use LAAO_Advertiser_Portal\Audit\Audit_Event;
-use LAAO_Advertiser_Portal\Core\Post_Statuses;
-use LAAO_Advertiser_Portal\Core\Post_Types;
-use LAAO_Advertiser_Portal\Domain\Campaign_Rules;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
-use LAAO_Advertiser_Portal\Repository\Creative_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Repository;
-use LAAO_Advertiser_Portal\Repository\Package_Repository;
-use LAAO_Advertiser_Portal\Repository\Placement_Repository;
-use LAAO_Advertiser_Portal\Security\Capabilities;
+use Aggressive\Ads\Audit\Audit_Event;
+use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Domain\Ad_Sizes;
+use Aggressive\Ads\Domain\Campaign_Rules;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Repository\Package_Repository;
+use Aggressive\Ads\Repository\Placement_Repository;
+use Aggressive\Ads\Security\Capabilities;
 use WP_Error;
 
 /**
@@ -73,8 +74,8 @@ final class Campaign_Editor {
 	 * @return int|WP_Error
 	 */
 	public function create( string $title = '' ): int|WP_Error {
-		if ( ! current_user_can( Capabilities::SUBMIT_CAMPAIGN ) || ! current_user_can( 'create_laao_ads_campaigns' ) ) {
-			return $this->error( 'laao_ads_forbidden', __( 'You do not have permission to create a campaign.', 'laao-advertiser-portal' ), 403 );
+		if ( ! current_user_can( Capabilities::SUBMIT_CAMPAIGN ) || ! current_user_can( 'create_aggr_campaigns' ) ) {
+			return $this->error( 'aggr_forbidden', __( 'You do not have permission to create a campaign.', 'aggressive-ads' ), 403 );
 		}
 
 		$user_id = get_current_user_id();
@@ -82,27 +83,27 @@ final class Campaign_Editor {
 		$org_id  = array() === $org_ids ? 0 : $org_ids[0];
 
 		if ( $org_id <= 0 ) {
-			return $this->error( 'laao_ads_organization_missing', __( 'Your account is not connected to an organization.', 'laao-advertiser-portal' ), 409 );
+			return $this->error( 'aggr_organization_missing', __( 'Your account is not connected to an organization.', 'aggressive-ads' ), 409 );
 		}
 
 		if ( ! $this->orgs->is_active( $org_id ) ) {
-			return $this->error( 'laao_ads_organization_inactive', __( 'This organization cannot create campaigns. Please get in touch.', 'laao-advertiser-portal' ), 403 );
+			return $this->error( 'aggr_organization_inactive', __( 'This organization cannot create campaigns. Please get in touch.', 'aggressive-ads' ), 403 );
 		}
 
 		$title = $this->clean_title( $title );
 
 		if ( mb_strlen( $title ) > self::MAX_TITLE_LENGTH ) {
-			return $this->error( 'laao_ads_title_too_long', __( 'Use 160 characters or fewer for the campaign name.', 'laao-advertiser-portal' ), 422, 'title' );
+			return $this->error( 'aggr_title_too_long', __( 'Use 160 characters or fewer for the campaign name.', 'aggressive-ads' ), 422, 'title' );
 		}
 
 		if ( '' === $title ) {
-			$title = __( 'Untitled campaign', 'laao-advertiser-portal' );
+			$title = __( 'Untitled campaign', 'aggressive-ads' );
 		}
 
 		$campaign_id = $this->campaigns->create_draft( $org_id, $user_id, $title );
 
 		if ( is_wp_error( $campaign_id ) ) {
-			return $this->error( 'laao_ads_campaign_not_created', __( 'The campaign could not be created. Please try again.', 'laao-advertiser-portal' ), 500 );
+			return $this->error( 'aggr_campaign_not_created', __( 'The campaign could not be created. Please try again.', 'aggressive-ads' ), 500 );
 		}
 
 		$this->audit->insert(
@@ -139,8 +140,8 @@ final class Campaign_Editor {
 
 		if ( $expected_rev < 0 || $expected_rev !== $current_rev ) {
 			return new WP_Error(
-				'laao_ads_edit_conflict',
-				__( 'This campaign changed in another window. Reload it before saving again.', 'laao-advertiser-portal' ),
+				'aggr_edit_conflict',
+				__( 'This campaign changed in another window. Reload it before saving again.', 'aggressive-ads' ),
 				array(
 					'status'       => 409,
 					'current_rev'  => $current_rev,
@@ -159,8 +160,8 @@ final class Campaign_Editor {
 
 		if ( false === $revision ) {
 			return new WP_Error(
-				'laao_ads_edit_conflict',
-				__( 'This campaign changed in another window. Reload it before saving again.', 'laao-advertiser-portal' ),
+				'aggr_edit_conflict',
+				__( 'This campaign changed in another window. Reload it before saving again.', 'aggressive-ads' ),
 				array(
 					'status'      => 409,
 					'current_rev' => $this->campaigns->autosave_revision( $campaign_id ),
@@ -171,7 +172,7 @@ final class Campaign_Editor {
 		$saved = $this->campaigns->update_draft( $campaign_id, $clean );
 
 		if ( is_wp_error( $saved ) ) {
-			return $this->error( 'laao_ads_campaign_not_saved', __( 'The campaign could not be saved. Please try again.', 'laao-advertiser-portal' ), 500 );
+			return $this->error( 'aggr_campaign_not_saved', __( 'The campaign could not be saved. Please try again.', 'aggressive-ads' ), 500 );
 		}
 
 		$this->audit->insert(
@@ -221,12 +222,12 @@ final class Campaign_Editor {
 	 * @return true|WP_Error
 	 */
 	private function authorize_edit( int $campaign_id ): bool|WP_Error {
-		if ( ! current_user_can( Capabilities::SUBMIT_CAMPAIGN ) || ! $this->campaigns->exists( $campaign_id ) || ! current_user_can( 'edit_laao_ads_campaign', $campaign_id ) ) {
-			return $this->error( 'laao_ads_forbidden', __( 'You do not have permission to edit that campaign.', 'laao-advertiser-portal' ), 403 );
+		if ( ! current_user_can( Capabilities::SUBMIT_CAMPAIGN ) || ! $this->campaigns->exists( $campaign_id ) || ! current_user_can( 'edit_aggr_campaign', $campaign_id ) ) {
+			return $this->error( 'aggr_forbidden', __( 'You do not have permission to edit that campaign.', 'aggressive-ads' ), 403 );
 		}
 
 		if ( ! in_array( $this->campaigns->status( $campaign_id ), Post_Statuses::advertiser_editable(), true ) ) {
-			return $this->error( 'laao_ads_campaign_not_editable', __( 'This campaign cannot be changed right now.', 'laao-advertiser-portal' ), 409 );
+			return $this->error( 'aggr_campaign_not_editable', __( 'This campaign cannot be changed right now.', 'aggressive-ads' ), 409 );
 		}
 
 		return true;
@@ -246,11 +247,11 @@ final class Campaign_Editor {
 			$title = $this->clean_title( (string) $fields['title'] );
 
 			if ( '' === $title ) {
-				return $this->error( 'laao_ads_title_required', __( 'Enter a campaign name.', 'laao-advertiser-portal' ), 422, 'title' );
+				return $this->error( 'aggr_title_required', __( 'Enter a campaign name.', 'aggressive-ads' ), 422, 'title' );
 			}
 
 			if ( mb_strlen( $title ) > self::MAX_TITLE_LENGTH ) {
-				return $this->error( 'laao_ads_title_too_long', __( 'Use 160 characters or fewer for the campaign name.', 'laao-advertiser-portal' ), 422, 'title' );
+				return $this->error( 'aggr_title_too_long', __( 'Use 160 characters or fewer for the campaign name.', 'aggressive-ads' ), 422, 'title' );
 			}
 
 			$clean['title'] = $title;
@@ -261,7 +262,7 @@ final class Campaign_Editor {
 
 			foreach ( $ids as $placement_id ) {
 				if ( ! $this->placements->is_active( $placement_id ) ) {
-					return $this->error( 'laao_ads_placement_unavailable', __( 'One of the selected placements is not available.', 'laao-advertiser-portal' ), 422, 'placement_ids' );
+					return $this->error( 'aggr_placement_unavailable', __( 'One of the selected placements is not available.', 'aggressive-ads' ), 422, 'placement_ids' );
 				}
 			}
 
@@ -290,7 +291,7 @@ final class Campaign_Editor {
 		}
 
 		if ( 0 !== $end && ( 0 === $start || $end <= $start ) ) {
-			return $this->error( 'laao_ads_end_before_start', __( 'The end date must be after the start date.', 'laao-advertiser-portal' ), 422, 'end_ts' );
+			return $this->error( 'aggr_end_before_start', __( 'The end date must be after the start date.', 'aggressive-ads' ), 422, 'end_ts' );
 		}
 
 		if ( array_key_exists( 'advertiser_notes', $fields ) ) {
@@ -301,7 +302,7 @@ final class Campaign_Editor {
 			$step = sanitize_key( (string) $fields['wizard_step'] );
 
 			if ( ! in_array( $step, self::WIZARD_STEPS, true ) ) {
-				return $this->error( 'laao_ads_wizard_step_invalid', __( 'That campaign step is not valid.', 'laao-advertiser-portal' ), 422, 'wizard_step' );
+				return $this->error( 'aggr_wizard_step_invalid', __( 'That campaign step is not valid.', 'aggressive-ads' ), 422, 'wizard_step' );
 			}
 
 			$clean['wizard_step'] = $step;
@@ -340,12 +341,12 @@ final class Campaign_Editor {
 		}
 
 		if ( array() === $placement_ids || count( $creative_rows ) !== count( $placement_ids ) ) {
-			return $this->error( 'laao_ads_creatives_incomplete', __( 'Upload one creative for every package placement before scheduling.', 'laao-advertiser-portal' ), 422, 'creatives' );
+			return $this->error( 'aggr_creatives_incomplete', __( 'Upload one creative for every package placement before scheduling.', 'aggressive-ads' ), 422, 'creatives' );
 		}
 
 		foreach ( $placement_ids as $placement_id ) {
 			if ( 1 !== ( $coverage[ $placement_id ] ?? 0 ) ) {
-				return $this->error( 'laao_ads_creatives_incomplete', __( 'Upload one creative for every package placement before scheduling.', 'laao-advertiser-portal' ), 422, 'creatives' );
+				return $this->error( 'aggr_creatives_incomplete', __( 'Upload one creative for every package placement before scheduling.', 'aggressive-ads' ), 422, 'creatives' );
 			}
 		}
 
@@ -358,12 +359,12 @@ final class Campaign_Editor {
 
 		$problem = $window->problems()[0];
 		$code    = match ( $problem['code'] ) {
-			Campaign_Rules::ERROR_START_MISSING    => 'laao_ads_start_date_required',
-			Campaign_Rules::ERROR_START_IN_PAST    => 'laao_ads_start_date_past',
-			Campaign_Rules::ERROR_START_NOT_MIDNIGHT => 'laao_ads_start_date_not_midnight',
-			Campaign_Rules::ERROR_END_BEFORE_START => 'laao_ads_end_before_start',
-			Campaign_Rules::ERROR_END_NOT_DAY_END  => 'laao_ads_end_date_not_day_end',
-			default                                => 'laao_ads_schedule_invalid',
+			Campaign_Rules::ERROR_START_MISSING    => 'aggr_start_date_required',
+			Campaign_Rules::ERROR_START_IN_PAST    => 'aggr_start_date_past',
+			Campaign_Rules::ERROR_START_NOT_MIDNIGHT => 'aggr_start_date_not_midnight',
+			Campaign_Rules::ERROR_END_BEFORE_START => 'aggr_end_before_start',
+			Campaign_Rules::ERROR_END_NOT_DAY_END  => 'aggr_end_date_not_day_end',
+			default                                => 'aggr_schedule_invalid',
 		};
 
 		return $this->error(
@@ -394,8 +395,8 @@ final class Campaign_Editor {
 			);
 		}
 
-		if ( ! $this->packages->is_active( $package_id ) || ! current_user_can( 'read_laao_ads_package', $package_id ) ) {
-			return $this->error( 'laao_ads_package_unavailable', __( 'That package is not available.', 'laao-advertiser-portal' ), 422, 'package_id' );
+		if ( ! $this->packages->is_active( $package_id ) || ! current_user_can( 'read_aggr_package', $package_id ) ) {
+			return $this->error( 'aggr_package_unavailable', __( 'That package is not available.', 'aggressive-ads' ), 422, 'package_id' );
 		}
 
 		$placement_ids = $this->packages->placement_ids( $package_id );
@@ -406,12 +407,12 @@ final class Campaign_Editor {
 		$duration_valid = $duration_days > 0 || $this->packages->has_custom_duration( $package_id );
 
 		if ( array() === $placement_ids || ! $duration_valid || $price_cents < 0 || 1 !== preg_match( '/^[A-Z]{3}$/', $currency ) ) {
-			return $this->error( 'laao_ads_package_misconfigured', __( 'That package is not configured completely. Please choose another package or get in touch.', 'laao-advertiser-portal' ), 422, 'package_id' );
+			return $this->error( 'aggr_package_misconfigured', __( 'That package is not configured completely. Please choose another package or get in touch.', 'aggressive-ads' ), 422, 'package_id' );
 		}
 
 		foreach ( $placement_ids as $placement_id ) {
-			if ( ! $this->placements->is_active( $placement_id ) || null === Campaign_Rules::parse_size( $this->placements->size( $placement_id ) ) ) {
-				return $this->error( 'laao_ads_package_misconfigured', __( 'That package includes a placement that is not available. Please choose another package or get in touch.', 'laao-advertiser-portal' ), 422, 'package_id' );
+			if ( ! $this->placements->is_active( $placement_id ) || ! Ad_Sizes::is_valid( $this->placements->size( $placement_id ) ) ) {
+				return $this->error( 'aggr_package_misconfigured', __( 'That package includes a placement that is not available. Please choose another package or get in touch.', 'aggressive-ads' ), 422, 'package_id' );
 			}
 		}
 

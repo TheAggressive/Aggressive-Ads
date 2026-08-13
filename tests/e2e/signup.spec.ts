@@ -34,14 +34,14 @@ test( 'a new advertiser requests an account without submitting a password', asyn
 	await page.getByLabel( 'Work email' ).fill( 'e2e-signup@example.test' );
 	await page.getByRole( 'button', { name: 'Create account' } ).click();
 
-	await expect( page ).toHaveURL( /\/advertiser\/signup\/\?laao_ads_signup=sent$/ );
+	await expect( page ).toHaveURL( /\/advertiser\/signup\/\?aggr_signup=sent$/ );
 	await expect(
 		page.getByText( 'Check your email for a one-time link to set your password.' )
 	).toBeVisible();
 	await expect( page.getByRole( 'button', { name: 'Create account' } ) ).toHaveCount( 0 );
 
 	const mail = JSON.parse(
-		wp( 'option', 'get', 'laao_ads_dev_last_mail', '--format=json' ).trim()
+		wp( 'option', 'get', 'aggr_dev_last_mail', '--format=json' ).trim()
 	) as { message: string };
 	const setupLink = mail.message.match(
 		/http:\/\/localhost:9960\/advertiser\/set-password\/\?[^\s]+/
@@ -63,7 +63,7 @@ test( 'a new advertiser requests an account without submitting a password', asyn
 	await page.getByLabel( 'Confirm new password' ).fill( password );
 	await page.getByRole( 'button', { name: 'Set password' } ).click();
 
-	await expect( page ).toHaveURL( /\/advertiser\/login\/\?laao_ads_login=password_set$/ );
+	await expect( page ).toHaveURL( /\/advertiser\/login\/\?aggr_login=password_set$/ );
 	await expect( page.getByText( 'Your password is ready.' ) ).toBeVisible();
 	await page.getByLabel( 'Work email' ).fill( 'e2e-signup@example.test' );
 	await page.getByLabel( 'Password' ).fill( password );
@@ -79,7 +79,7 @@ test( 'a new advertiser requests an account without submitting a password', asyn
 	await page.getByLabel( 'Organization' ).fill( 'E2E Signup Organizaton' );
 	await page.getByLabel( 'Work email' ).fill( 'e2e-org-requester@example.test' );
 	await page.getByRole( 'button', { name: 'Create account' } ).click();
-	await expect( page ).toHaveURL( /laao_ads_signup=sent/ );
+	await expect( page ).toHaveURL( /aggr_signup=sent/ );
 
 	const requesterId = wp(
 		'user',
@@ -93,7 +93,7 @@ test( 'a new advertiser requests an account without submitting a password', asyn
 	await page.getByLabel( 'Work email' ).fill( 'e2e-org-requester@example.test' );
 	await page.getByLabel( 'Password' ).fill( 'A secure pending passphrase!' );
 	await page.getByRole( 'button', { name: 'Sign in' } ).click();
-	await expect( page ).toHaveURL( /laao_ads_login=pending/ );
+	await expect( page ).toHaveURL( /aggr_login=pending/ );
 	await expect( page.getByText( 'still waiting for approval' ) ).toBeVisible();
 
 	await page.context().clearCookies();
@@ -122,7 +122,7 @@ test( 'a new advertiser requests an account without submitting a password', asyn
 	await expect( page.getByText( 'Invitation sent.' ) ).toBeVisible();
 
 	const inviteMail = JSON.parse(
-		wp( 'option', 'get', 'laao_ads_dev_last_mail', '--format=json' ).trim()
+		wp( 'option', 'get', 'aggr_dev_last_mail', '--format=json' ).trim()
 	) as { message: string };
 	const inviteLink = inviteMail.message.match(
 		/http:\/\/localhost:9960\/advertiser\/signup\/\?invite=[A-Za-z0-9_-]{43}/
@@ -139,7 +139,7 @@ test( 'a new advertiser requests an account without submitting a password', asyn
 	await page.getByLabel( 'Last name' ).fill( 'Invitee' );
 	await page.getByLabel( 'Work email' ).fill( 'e2e-existing-invitee@example.test' );
 	await page.getByRole( 'button', { name: 'Create account' } ).click();
-	await expect( page ).toHaveURL( /laao_ads_signup=sent/ );
+	await expect( page ).toHaveURL( /aggr_signup=sent/ );
 
 	await page.context().clearCookies();
 	await page.goto( '/advertiser/login/' );

@@ -2,15 +2,15 @@
 /**
  * Capability vocabulary tests.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Unit\Security;
+namespace Aggressive\Ads\Tests\Unit\Security;
 
-use LAAO_Advertiser_Portal\Core\Post_Types;
-use LAAO_Advertiser_Portal\Security\Capabilities;
+use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Security\Capabilities;
 use Yoast\PHPUnitPolyfills\TestCases\TestCase;
 
 /**
@@ -31,16 +31,16 @@ final class CapabilitiesTest extends TestCase {
 	public function test_primitive_names_are_pinned(): void {
 		$this->assertSame(
 			array(
-				'laao_ads_access_portal',
-				'laao_ads_upload_creative',
-				'laao_ads_submit_campaign',
-				'laao_ads_review_campaigns',
-				'laao_ads_publish_to_adsanity',
-				'laao_ads_manage_placements',
-				'laao_ads_manage_packages',
-				'laao_ads_manage_orgs',
-				'laao_ads_view_audit_log',
-				'laao_ads_manage_settings',
+				'aggr_access_portal',
+				'aggr_upload_creative',
+				'aggr_submit_campaign',
+				'aggr_review_campaigns',
+				'aggr_publish',
+				'aggr_manage_placements',
+				'aggr_manage_packages',
+				'aggr_manage_orgs',
+				'aggr_view_audit_log',
+				'aggr_manage_settings',
 			),
 			Capabilities::primitives()
 		);
@@ -69,7 +69,7 @@ final class CapabilitiesTest extends TestCase {
 	 */
 	public function test_every_capability_is_prefixed(): void {
 		foreach ( Capabilities::all() as $cap ) {
-			$this->assertMatchesRegularExpression( '/laao_ads_/', $cap, "Unprefixed capability: {$cap}" );
+			$this->assertMatchesRegularExpression( '/aggr_/', $cap, "Unprefixed capability: {$cap}" );
 		}
 	}
 
@@ -147,7 +147,7 @@ final class CapabilitiesTest extends TestCase {
 			array( 'edit_', 'moderate_', 'promote_' )
 		);
 
-		$this->assertSame( array( 'edit_laao_ads_campaigns' ), $subset );
+		$this->assertSame( array( 'edit_aggr_campaigns' ), $subset );
 	}
 
 	/**
@@ -160,6 +160,29 @@ final class CapabilitiesTest extends TestCase {
 
 		$this->assertSame( $all, array_unique( $all ) );
 		$this->assertCount( 10 + ( 5 * 11 ), $all );
+	}
+
+	/**
+	 * The staff shell cap is derived at user_has_cap, never granted on a role.
+	 *
+	 * Adding it to primitives() would stamp it onto administrator at install
+	 * and make a placements-only role need a second grant just to see the menu.
+	 *
+	 * @return void
+	 */
+	public function test_access_staff_is_derived_not_a_primitive(): void {
+		$this->assertSame( 'aggr_access_staff', Capabilities::ACCESS_STAFF );
+		$this->assertNotContains( Capabilities::ACCESS_STAFF, Capabilities::primitives() );
+		$this->assertSame(
+			array(
+				Capabilities::REVIEW_CAMPAIGNS,
+				Capabilities::MANAGE_ORGS,
+				Capabilities::MANAGE_PLACEMENTS,
+				Capabilities::MANAGE_PACKAGES,
+				Capabilities::MANAGE_SETTINGS,
+			),
+			Capabilities::staff_menu_caps()
+		);
 	}
 
 	/**

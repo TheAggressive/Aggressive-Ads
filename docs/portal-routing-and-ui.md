@@ -17,20 +17,20 @@ campaign detail screen. Public routes never accept an object segment.
 Three rewrite rules, registered `top`:
 
 ```php
-'^advertiser/?$'                 → index.php?laao_ads_portal=1&laao_ads_route=dashboard
-'^advertiser/([^/]+)/?$'         → index.php?laao_ads_portal=1&laao_ads_route=$matches[1]
-'^advertiser/([^/]+)/([^/]+)/?$' → index.php?laao_ads_portal=1&laao_ads_route=$matches[1]&laao_ads_object=$matches[2]
+'^advertiser/?$'                 → index.php?aggr_portal=1&aggr_route=dashboard
+'^advertiser/([^/]+)/?$'         → index.php?aggr_portal=1&aggr_route=$matches[1]
+'^advertiser/([^/]+)/([^/]+)/?$' → index.php?aggr_portal=1&aggr_route=$matches[1]&aggr_object=$matches[2]
 ```
 
-`laao_ads_portal`, `laao_ads_route`, and `laao_ads_object` are registered via the `query_vars` filter. Route and object are parsed into an immutable `Portal\Request` value object which validates the grammar — unknown routes, over-long segments, and anything containing a path separator resolve to a 404 before the controller runs. `Request` has no WordPress dependency, so the grammar is unit-tested without a bootstrap.
+`aggr_portal`, `aggr_route`, and `aggr_object` are registered via the `query_vars` filter. Route and object are parsed into an immutable `Portal\Request` value object which validates the grammar — unknown routes, over-long segments, and anything containing a path separator resolve to a 404 before the controller runs. `Request` has no WordPress dependency, so the grammar is unit-tested without a bootstrap.
 
 ## Request lifecycle
 
 ```
-parse_query      → if laao_ads_portal: is_home = false, is_404 = false, pre_handle_404 = true
+parse_query      → if aggr_portal: is_home = false, is_404 = false, pre_handle_404 = true
 template_redirect → Gate: redirect to the portal login if logged out
                           allow account-entry routes without a session
-                          403 template if no laao_ads_access_portal
+                          403 template if no aggr_access_portal
                           wp_robots noindex
 template_include  → templates/portal/base.php
 ```
@@ -56,7 +56,7 @@ See [ADR-0005](adr/0005-portal-route-via-rewrite-rule.md).
 
 Never on every request — `flush_rewrite_rules()` rewrites `.htaccess` and regenerates every rule in the site, and calling it per-request is a well-known way to make a site inexplicably slow.
 
-`Router::maybe_flush()` runs on `init` priority 99, compares the `laao_ads_rewrite_version` option against a class constant, and calls `flush_rewrite_rules( false )` once if they differ. The soft form skips the `.htaccess` write, which we do not need. Rules are added earlier in `init`, so they are in `$wp_rewrite` when the flush happens.
+`Router::maybe_flush()` runs on `init` priority 99, compares the `aggr_rewrite_version` option against a class constant, and calls `flush_rewrite_rules( false )` once if they differ. The soft form skips the `.htaccess` write, which we do not need. Rules are added earlier in `init`, so they are in `$wp_rewrite` when the flush happens.
 
 **Shipping a route change means bumping the constant.** That is the whole deployment procedure for routing.
 
@@ -83,7 +83,7 @@ global styles still emit, but the portal's scoped cascade remains authoritative.
 ## Campaign creation
 
 Creation starts from a nonce-protected form on the dashboard or campaign list.
-It creates an organization-scoped `lap_draft` and redirects to the ordinary
+It creates an organization-scoped `aggr_draft` and redirects to the ordinary
 `/advertiser/campaigns/{id}/` detail URL, keeping the documented URL grammar
 numeric rather than inventing a special `new` object segment.
 
@@ -106,6 +106,18 @@ submission problem and links each one back to the exact editing step and field.
 Submit explains the editing lock, withdrawal boundary, and changes-requested
 path before presenting the final action. All six steps work without JavaScript.
 
+A completed or otherwise uneditable campaign can be copied from the detail
+screen. Complete campaigns label the action **Renew campaign**; others say
+**Duplicate campaign**. Both create a new draft with the stored snapshot and
+artwork, never the old dates or provider ads. See
+[ADR-0029](adr/0029-campaign-copy-is-not-a-transition.md).
+
+The dashboard always shows campaign-by-state counts. Impression, click and CTR
+tiles, a seven-day impression sparkline, and the matching campaign-table
+columns appear only when Reporting is on. Native delivery is always recording.
+They read `aggr_rollups` and never invented zeros. Spend stays absent. See
+[ADR-0030](adr/0030-reporting-from-native-rollups.md).
+
 Saving details persists `package` as the resume point. Saving a package copies
 its current placement set, integer-cent price, and currency onto the campaign;
 the catalogue remains mutable without retroactively changing the draft. Each
@@ -115,12 +127,14 @@ campaign/placement- or creative-bound nonces and share `Creative_Manager` with
 REST. Creative files remain private, previews use the authorized stream with a
 short-lived REST nonce, and invalid dimensions report the uploaded and required
 sizes. Scheduled and live campaign detail screens expose **Your ads** as
-selectable previews. Selecting an ad opens its image and destination controls.
+selectable previews. The thumbnail opens a larger preview overlay; **Update**
+opens the replacement form on the same dialog primitive. Draft removal is a
+hash-link confirmation overlay that POSTs only after the advertiser confirms.
 Each current placement accepts one private replacement, keeps the current ad
 running while review is pending, shows the proposed preview and destination,
 and permits withdrawal. Rejected revisions remain visible with staff feedback;
-approved revisions become the new current creative. Later drag/drop and live
-progress enhance this flow; they do not replace it.
+approved revisions become the new current creative. Drag/drop and client-side
+type/size/dimension checks enhance the native file input; they do not replace it.
 
 Step 4 has its own campaign-bound nonce and optimistic revision. Completion is
 not cosmetic: `Campaign_Editor` refuses to advance the resume point to `review`
@@ -128,8 +142,8 @@ unless every selected placement has exactly one creative and the date window
 already satisfies submission-grade rules. Existing REST clients continue to
 write Unix timestamps; the HTML form performs the timezone conversion. Both
 paths enforce complete calendar days in the WordPress site timezone: start at
-`00:00:00`, inclusive end at `23:59:59`, or an open end. Because AdSanity's end
-comparison is inclusive, the ad stops being eligible at the next midnight.
+`00:00:00`, inclusive end at `23:59:59`, or an open end. Fill eligibility
+ends at the next midnight.
 
 Step 5 is intentionally read-only. `Review_Readiness` adapts the canonical
 submission validator into advertiser-safe `code`, `message`, `step`, and
@@ -153,10 +167,13 @@ campaign detail with an announced success notice.
 
 ## Advertiser signup
 
-`/advertiser/signup/` is public only when WordPress's **Anyone can register**
-setting is enabled. `laao_ads_signup_enabled` may replace that answer for a
-managed identity policy; the default fails closed so installing the plugin does
-not silently open account creation.
+`/advertiser/signup/` is public when the **Public signup** module is on *and*
+WordPress's **Anyone can register** setting is enabled. Turning the module off
+makes the route a 404, not a closed form. An invitation token is membership,
+not open registration, so that URL still resolves. `aggr_signup_enabled` may
+replace the WordPress-switch answer for a managed identity policy; it cannot
+reopen a disabled module. The default fails closed so installing the plugin
+does not silently open account creation.
 
 The normal form accepts a name, organization and work email, never a password.
 Organization names are canonicalized to uppercase before persistence, so
@@ -176,7 +193,7 @@ after three days, is stored only as a salted hash, and leads back to the signup
 screen. An invitation recipient does not retype the organization name. The
 recipient either creates a subscriber account and receives the portal password
 setup link, or attaches an existing WordPress account without replacing its
-other roles. Only the owner or a user carrying `laao_ads_manage_orgs` can create,
+other roles. Only the owner or a user carrying `aggr_manage_orgs` can create,
 approve, deny, or revoke access. The acting portal tenant is derived from the
 authenticated user and is never accepted from a hidden field.
 
@@ -217,11 +234,11 @@ WordPress login identifier is neither displayed nor accepted by portal forms.
 The portal must look and behave the same under any theme. The mechanisms:
 
 - The document is ours, so no theme markup wraps it.
-- All layout comes from scoped `.laao-ads-*` rules in `src/styles/` (compiled to `dist/styles/portal.css`). Only token defaults are cascade-layered; authored reset, layout, and component rules stay unlayered so generic host-theme element styles cannot outrank them.
+- All layout comes from scoped `.aggr-*` rules in `src/styles/` (compiled to `dist/styles/portal.css`). Only token defaults are cascade-layered; authored reset, layout, and component rules stay unlayered so generic host-theme element styles cannot outrank them.
 - Every design token carries a literal value. Nothing resolves through `--wp--preset--*`, because Twenty Twenty-Five and the LAAO theme expose *different* preset names — a token defined as `var(--wp--preset--color--primary)` renders correctly on one and transparent on the other. See [ADR-0017](adr/0017-self-contained-design-tokens.md).
-- The reset is scoped to `.laao-ads-portal`, never global. A plugin that restyles `body` is a plugin that breaks the host site.
+- The reset is scoped to `.aggr-portal`, never global. A plugin that restyles `body` is a plugin that breaks the host site.
 
-The LAAO theme may override `--laao-ads-*` tokens to make the portal feel native. That is the only supported coupling, it is one-directional, and the portal is fully functional without it.
+The LAAO theme may override `--aggr-*` tokens to make the portal feel native. That is the only supported coupling, it is one-directional, and the portal is fully functional without it.
 
 **This is verified, not asserted.** `tests/e2e/campaign-wizard.spec.ts` switches the active theme to Twenty Twenty-Five, logs in as an advertiser, loads the portal, and runs axe. An accidental theme dependency fails that test.
 

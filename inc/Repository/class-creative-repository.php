@@ -2,14 +2,14 @@
 /**
  * Creative persistence.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Repository;
+namespace Aggressive\Ads\Repository;
 
-use LAAO_Advertiser_Portal\Core\Post_Types;
+use Aggressive\Ads\Core\Post_Types;
 
 /**
  * Reads the creatives belonging to a campaign.
@@ -21,32 +21,32 @@ use LAAO_Advertiser_Portal\Core\Post_Types;
  */
 final class Creative_Repository {
 
-	public const META_CAMPAIGN_ID   = '_laao_ads_campaign_id';
-	public const META_ORG_ID        = '_laao_ads_org_id';
-	public const META_PLACEMENT_ID  = '_laao_ads_placement_id';
-	public const META_SIZE          = '_laao_ads_size';
-	public const META_KIND          = '_laao_ads_kind';
-	public const META_WIDTH         = '_laao_ads_width';
-	public const META_HEIGHT        = '_laao_ads_height';
-	public const META_CLICK_URL     = '_laao_ads_click_url';
-	public const META_ALT_TEXT      = '_laao_ads_alt_text';
-	public const META_REVIEW_STATE  = '_laao_ads_review_state';
-	public const META_TARGET_BLANK  = '_laao_ads_target_blank';
-	public const META_ATTACHMENT_ID = '_laao_ads_attachment_id';
-	public const META_PROVIDER_AD   = '_laao_ads_adsanity_ad_id';
-	public const META_PRIVATE_PATH  = '_laao_ads_private_path';
-	public const META_PRIVATE_TOKEN = '_laao_ads_private_token';
-	public const META_SHA256        = '_laao_ads_sha256';
-	public const META_MIME          = '_laao_ads_mime';
-	public const META_FILESIZE      = '_laao_ads_filesize';
-	public const META_ORIGINAL_NAME = '_laao_ads_original_name';
-	public const META_REPLACES_ID   = '_laao_ads_replaces_creative_id';
-	public const META_REPLACED_BY   = '_laao_ads_replaced_by_creative_id';
-	public const META_CHANGE_STATE  = '_laao_ads_change_state';
-	public const META_CHANGE_NOTES  = '_laao_ads_change_notes';
-	public const META_REQUESTED_AT  = '_laao_ads_change_requested_at';
-	public const META_DECIDED_AT    = '_laao_ads_change_decided_at';
-	public const META_CHANGE_LOCK   = '_laao_ads_change_lock';
+	public const META_CAMPAIGN_ID   = '_aggr_campaign_id';
+	public const META_ORG_ID        = '_aggr_org_id';
+	public const META_PLACEMENT_ID  = '_aggr_placement_id';
+	public const META_SIZE          = '_aggr_size';
+	public const META_KIND          = '_aggr_kind';
+	public const META_WIDTH         = '_aggr_width';
+	public const META_HEIGHT        = '_aggr_height';
+	public const META_CLICK_URL     = '_aggr_click_url';
+	public const META_ALT_TEXT      = '_aggr_alt_text';
+	public const META_REVIEW_STATE  = '_aggr_review_state';
+	public const META_TARGET_BLANK  = '_aggr_target_blank';
+	public const META_ATTACHMENT_ID = '_aggr_attachment_id';
+	public const META_PROVIDER_AD   = '_aggr_adsanity_ad_id';
+	public const META_PRIVATE_PATH  = '_aggr_private_path';
+	public const META_PRIVATE_TOKEN = '_aggr_private_token';
+	public const META_SHA256        = '_aggr_sha256';
+	public const META_MIME          = '_aggr_mime';
+	public const META_FILESIZE      = '_aggr_filesize';
+	public const META_ORIGINAL_NAME = '_aggr_original_name';
+	public const META_REPLACES_ID   = '_aggr_replaces_creative_id';
+	public const META_REPLACED_BY   = '_aggr_replaced_by_creative_id';
+	public const META_CHANGE_STATE  = '_aggr_change_state';
+	public const META_CHANGE_NOTES  = '_aggr_change_notes';
+	public const META_REQUESTED_AT  = '_aggr_change_requested_at';
+	public const META_DECIDED_AT    = '_aggr_change_decided_at';
+	public const META_CHANGE_LOCK   = '_aggr_change_lock';
 
 	public const CHANGE_PENDING  = 'pending';
 	public const CHANGE_REJECTED = 'rejected';
@@ -506,6 +506,26 @@ final class Creative_Repository {
 	 */
 	public function attachment_id( int $creative_id ): int {
 		return (int) get_post_meta( $creative_id, self::META_ATTACHMENT_ID, true );
+	}
+
+	/**
+	 * Absolute path of a promoted Media Library file, or empty.
+	 *
+	 * Used when a copy cannot resolve the private stage (retention) but the
+	 * approved attachment is still on disk.
+	 *
+	 * @param int $creative_id Creative post id.
+	 */
+	public function attachment_file( int $creative_id ): string {
+		$attachment_id = $this->attachment_id( $creative_id );
+
+		if ( $attachment_id <= 0 ) {
+			return '';
+		}
+
+		$file = get_attached_file( $attachment_id );
+
+		return is_string( $file ) ? $file : '';
 	}
 
 	/**

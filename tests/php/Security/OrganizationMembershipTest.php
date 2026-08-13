@@ -2,20 +2,20 @@
 /**
  * Secure organization matching, invitations, and approval.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Security;
+namespace Aggressive\Ads\Tests\Security;
 
-use LAAO_Advertiser_Portal\Plugin;
-use LAAO_Advertiser_Portal\Portal\View_Data;
-use LAAO_Advertiser_Portal\Repository\Org_Access_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Repository;
-use LAAO_Advertiser_Portal\Security\Roles;
-use LAAO_Advertiser_Portal\Workflow\Advertiser_Registration;
-use LAAO_Advertiser_Portal\Workflow\Organization_Membership;
+use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Portal\View_Data;
+use Aggressive\Ads\Repository\Org_Access_Repository;
+use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Security\Roles;
+use Aggressive\Ads\Workflow\Advertiser_Registration;
+use Aggressive\Ads\Workflow\Organization_Membership;
 use WP_UnitTestCase;
 use WP_User;
 
@@ -210,7 +210,7 @@ final class OrganizationMembershipTest extends WP_UnitTestCase {
 
 		$denied = $this->memberships->approve( (int) $pending['id'], $org['org_id'], $attacker['owner_id'] );
 		$this->assertWPError( $denied );
-		$this->assertSame( 'laao_ads_org_access_denied', $denied->get_error_code() );
+		$this->assertSame( 'aggr_org_access_denied', $denied->get_error_code() );
 
 		$this->assertTrue( $this->memberships->approve( (int) $pending['id'], $org['org_id'], $org['owner_id'] ) );
 		$this->assertSame( array( $org['org_id'] ), $this->organizations->org_ids_for_user( $user->ID ) );
@@ -239,7 +239,7 @@ final class OrganizationMembershipTest extends WP_UnitTestCase {
 
 		$reused = $this->registration->register( $fields );
 		$this->assertWPError( $reused );
-		$this->assertSame( 'laao_ads_invalid_invitation', $reused->get_error_code() );
+		$this->assertSame( 'aggr_invalid_invitation', $reused->get_error_code() );
 	}
 
 	/** An invited existing account keeps its original role while gaining access. */
@@ -289,7 +289,7 @@ final class OrganizationMembershipTest extends WP_UnitTestCase {
 		$result                 = $this->registration->register( $fields );
 
 		$this->assertWPError( $result );
-		$this->assertSame( 'laao_ads_invalid_invitation', $result->get_error_code() );
+		$this->assertSame( 'aggr_invalid_invitation', $result->get_error_code() );
 		$this->assertFalse( get_user_by( 'email', 'expired@example.test' ) );
 	}
 
@@ -304,7 +304,7 @@ final class OrganizationMembershipTest extends WP_UnitTestCase {
 		$result                 = $this->registration->register( $fields );
 
 		$this->assertWPError( $result );
-		$this->assertSame( 'laao_ads_invalid_invitation', $result->get_error_code() );
+		$this->assertSame( 'aggr_invalid_invitation', $result->get_error_code() );
 		$this->assertFalse( get_user_by( 'email', 'wrong@example.test' ) );
 		$this->assertNull( $this->access->invitation( $matches[1], 'wrong@example.test' ) );
 		$this->assertIsArray( $this->access->invitation( $matches[1], 'intended@example.test' ) );
@@ -342,7 +342,7 @@ final class OrganizationMembershipTest extends WP_UnitTestCase {
 
 		$blocked = $this->memberships->remove( $org['org_id'], $org['owner_id'], $org['owner_id'] );
 		$this->assertWPError( $blocked );
-		$this->assertSame( 'laao_ads_cannot_remove_owner', $blocked->get_error_code() );
+		$this->assertSame( 'aggr_cannot_remove_owner', $blocked->get_error_code() );
 		$this->assertSame( array( $org['org_id'] ), $this->organizations->org_ids_for_user( $org['owner_id'] ) );
 		$this->assertTrue( $this->organizations->is_owner( $org['org_id'], $org['owner_id'] ) );
 
@@ -371,14 +371,14 @@ final class OrganizationMembershipTest extends WP_UnitTestCase {
 
 		$denied = $this->memberships->remove( $org['org_id'], $user_id, $attacker['owner_id'] );
 		$this->assertWPError( $denied );
-		$this->assertSame( 'laao_ads_org_access_denied', $denied->get_error_code() );
+		$this->assertSame( 'aggr_org_access_denied', $denied->get_error_code() );
 		$this->assertSame( array( $org['org_id'] ), $this->organizations->org_ids_for_user( $user_id ) );
 
 		$ordinary = self::factory()->user->create( array( 'role' => Roles::ADVERTISER ) );
 		$this->assertTrue( $this->organizations->add_member( $org['org_id'], $ordinary ) );
 		$member_denied = $this->memberships->remove( $org['org_id'], $user_id, $ordinary );
 		$this->assertWPError( $member_denied );
-		$this->assertSame( 'laao_ads_org_access_denied', $member_denied->get_error_code() );
+		$this->assertSame( 'aggr_org_access_denied', $member_denied->get_error_code() );
 
 		$this->assertTrue( $this->memberships->remove( $org['org_id'], $user_id, $org['owner_id'] ) );
 		$user = get_userdata( $user_id );
@@ -402,12 +402,12 @@ final class OrganizationMembershipTest extends WP_UnitTestCase {
 
 		$denied = $this->memberships->transfer( $org['org_id'], $member, $attacker['owner_id'] );
 		$this->assertWPError( $denied );
-		$this->assertSame( 'laao_ads_org_access_denied', $denied->get_error_code() );
+		$this->assertSame( 'aggr_org_access_denied', $denied->get_error_code() );
 		$this->assertTrue( $this->organizations->is_owner( $org['org_id'], $org['owner_id'] ) );
 
 		$self = $this->memberships->transfer( $org['org_id'], $org['owner_id'], $org['owner_id'] );
 		$this->assertWPError( $self );
-		$this->assertSame( 'laao_ads_invalid_ownership_transfer', $self->get_error_code() );
+		$this->assertSame( 'aggr_invalid_ownership_transfer', $self->get_error_code() );
 
 		$this->mail = array();
 		$this->assertTrue( $this->memberships->transfer( $org['org_id'], $member, $org['owner_id'] ) );
@@ -437,12 +437,15 @@ final class OrganizationMembershipTest extends WP_UnitTestCase {
 
 		$denied = $this->memberships->rename( $org['org_id'], 'Desert Canvas Co', $occupied['owner_id'] );
 		$this->assertWPError( $denied );
-		$this->assertSame( 'laao_ads_org_access_denied', $denied->get_error_code() );
+		$this->assertSame( 'aggr_org_access_denied', $denied->get_error_code() );
 		$this->assertSame( 'COPPER STATE ARTS', $this->organizations->name( $org['org_id'] ) );
 
+		ob_start();
 		$collision = $this->memberships->rename( $org['org_id'], 'desert canvas co', $org['owner_id'] );
+		$output    = ob_get_clean();
 		$this->assertWPError( $collision );
-		$this->assertSame( 'laao_ads_duplicate_org_identity', $collision->get_error_code() );
+		$this->assertSame( 'aggr_duplicate_org_identity', $collision->get_error_code() );
+		$this->assertStringNotContainsString( 'wpdberror', is_string( $output ) ? $output : '' );
 		$this->assertSame( $occupied['org_id'], $this->access->org_id_for_canonical( Org_Repository::canonical_name( 'DESERT CANVAS CO' ) ) );
 		$this->assertSame( $org['org_id'], $this->access->org_id_for_canonical( Org_Repository::canonical_name( 'COPPER STATE ARTS' ) ) );
 

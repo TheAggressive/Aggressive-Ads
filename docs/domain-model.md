@@ -40,79 +40,79 @@ All five share these `register_post_type()` arguments:
 
 | Slug | Length | `capability_type` | Notes |
 |---|---|---|---|
-| `laao_ads_org` | 12 | `['laao_ads_org','laao_ads_orgs']` | Registered first — every other entity resolves ownership through it |
-| `laao_ads_placement` | 18 | `['laao_ads_placement','laao_ads_placements']` | Seeded on install; `supports` drops `author` |
-| `laao_ads_package` | 16 | `['laao_ads_package','laao_ads_packages']` | `supports` drops `author` |
-| `laao_ads_campaign` | 17 | `['laao_ads_campaign','laao_ads_campaigns']` | Carries the custom post statuses |
-| `laao_ads_creative` | 17 | `['laao_ads_creative','laao_ads_creatives']` | Belongs to a campaign via meta, not `post_parent` |
+| `aggr_org` | 12 | `['aggr_org','aggr_orgs']` | Registered first — every other entity resolves ownership through it |
+| `aggr_placement` | 18 | `['aggr_placement','aggr_placements']` | Seeded on install; `supports` drops `author` |
+| `aggr_package` | 16 | `['aggr_package','aggr_packages']` | `supports` drops `author` |
+| `aggr_campaign` | 17 | `['aggr_campaign','aggr_campaigns']` | Carries the custom post statuses |
+| `aggr_creative` | 17 | `['aggr_creative','aggr_creatives']` | Belongs to a campaign via meta, not `post_parent` |
 
 **Every slug is ≤ 20 characters, and that is a hard constraint, not a style preference.** `wp_posts.post_type` is `varchar(20)`. A longer slug does not error — it truncates on write and then fails to match on read, producing posts that exist but cannot be queried. `tests/php/Unit/Core/PostTypesTest.php` asserts the lengths so nobody discovers this the slow way.
 
-Creative uses a meta reference rather than `post_parent` because `post_parent` carries WordPress semantics we do not want: hierarchical permalink construction, `wp_delete_post()` cascade behaviour, and admin list-table nesting. A plain `_laao_ads_campaign_id` says exactly what it means and nothing more.
+Creative uses a meta reference rather than `post_parent` because `post_parent` carries WordPress semantics we do not want: hierarchical permalink construction, `wp_delete_post()` cascade behaviour, and admin list-table nesting. A plain `_aggr_campaign_id` says exactly what it means and nothing more.
 
-A published-ad update is another `laao_ads_creative` revision linked through
-`_laao_ads_replaces_creative_id`. While `_laao_ads_change_state` is `pending`
+A published-ad update is another `aggr_creative` revision linked through
+`_aggr_replaces_creative_id`. While `_aggr_change_state` is `pending`
 or `rejected`, it is excluded from the campaign's active creative set and has
 no provider-ad id. Approval moves the existing provider-ad id to the revision,
 clears the replacement link, and marks the predecessor with
-`_laao_ads_replaced_by_creative_id`. This preserves every reviewed artifact and
+`_aggr_replaced_by_creative_id`. This preserves every reviewed artifact and
 keeps one unambiguous current creative per placement without creating a second
-campaign or AdSanity ad.
+campaign.
 
 ## Meta keys
 
-All meta is `_laao_ads_`-prefixed and leading-underscore. The underscore is load-bearing: it marks the key protected, which hides it from the custom-fields UI and excludes it from `WP_REST_Post_Meta_Fields`. Every key is declared with `register_post_meta()` carrying an explicit `type`, `single`, `sanitize_callback`, and an `auth_callback` that returns `false` by default — meta is written by repositories, never by a generic API.
+All meta is `_aggr_`-prefixed and leading-underscore. The underscore is load-bearing: it marks the key protected, which hides it from the custom-fields UI and excludes it from `WP_REST_Post_Meta_Fields`. Every key is declared with `register_post_meta()` carrying an explicit `type`, `single`, `sanitize_callback`, and an `auth_callback` that returns `false` by default — meta is written by repositories, never by a generic API.
 
-### Campaign — `laao_ads_campaign`
-
-| Key | Type | Notes |
-|---|---|---|
-| `_laao_ads_org_id` | int | Owning organization. **Never accepted from client input.** |
-| `_laao_ads_start_ts` | int | UTC Unix seconds |
-| `_laao_ads_end_ts` | int | UTC Unix seconds; `0` means open-ended → becomes `ADSANITY_EOL` at publish |
-| `_laao_ads_package_id` | int | |
-| `_laao_ads_placement_id` | int | **Repeated** (`single => false`) |
-| `_laao_ads_budget_cents` | int | Integer cents; never a float |
-| `_laao_ads_currency` | string | ISO 4217 |
-| `_laao_ads_submitted_at` | int | |
-| `_laao_ads_reviewed_by` | int | `0` = unclaimed |
-| `_laao_ads_reviewed_at` | int | |
-| `_laao_ads_review_notes` | string | **Advertiser-visible.** Required non-empty on reject / changes-requested |
-| `_laao_ads_internal_notes` | string | Staff-only; never leaves the admin |
-| `_laao_ads_notification_receipt` | string, repeated | Internal notification type/revision/recipient receipt for idempotent delivery |
-| `_laao_ads_advertiser_notes` | string | |
-| `_laao_ads_revision` | int | Increments on each resubmission |
-| `_laao_ads_adsanity_ad_id` | int | **Repeated** — one per provider object. A failed configuration may leave a checkpointed draft for idempotent retry. |
-| `_laao_ads_autosave_rev` | int | Optimistic-concurrency token for wizard autosave |
-| `_laao_ads_wizard_step` | string | Resume point; advancing to `review` requires complete creative coverage and a submission-grade date window. Review itself is read-only; submit is a state transition, not another persisted edit step. |
-
-### Creative — `laao_ads_creative`
+### Campaign — `aggr_campaign`
 
 | Key | Type | Notes |
 |---|---|---|
-| `_laao_ads_campaign_id` | int | |
-| `_laao_ads_org_id` | int | Denormalized from the campaign — see invariants |
-| `_laao_ads_placement_id` | int | |
-| `_laao_ads_size` | string | Must be a key of AdSanity's current size map, ASCII `x` form |
-| `_laao_ads_kind` | enum | `image` \| `code` \| `text` \| `html5`. **Advertisers may only set `image`** |
-| `_laao_ads_private_path` | string | Relative to the private root. Never absolute, never a URL |
-| `_laao_ads_private_token` | string | 32 hex chars |
-| `_laao_ads_mime` | string | Server-detected, never the browser's claim |
-| `_laao_ads_width` / `_height` | int | From `getimagesize()`, not from the client |
-| `_laao_ads_filesize` | int | Bytes |
-| `_laao_ads_sha256` | string | 64 hex chars — proves at approval that this is the file that was reviewed |
-| `_laao_ads_click_url` | string | `http`/`https` only |
-| `_laao_ads_target_blank` | int | `0` \| `1` |
-| `_laao_ads_alt_text` | string | Becomes `_wp_attachment_image_alt` on promotion |
-| `_laao_ads_attachment_id` | int | `0` until approval |
-| `_laao_ads_adsanity_ad_id` | int | `0` until provider-object creation; checkpointed while the new object is still a draft, before configuration and activation |
-| `_laao_ads_review_state` | enum | `pending` \| `approved` \| `rejected` |
+| `_aggr_org_id` | int | Owning organization. **Never accepted from client input.** |
+| `_aggr_start_ts` | int | UTC Unix seconds |
+| `_aggr_end_ts` | int | UTC Unix seconds; `0` means open-ended |
+| `_aggr_package_id` | int | |
+| `_aggr_placement_id` | int | **Repeated** (`single => false`) |
+| `_aggr_budget_cents` | int | Integer cents; never a float |
+| `_aggr_currency` | string | ISO 4217 |
+| `_aggr_submitted_at` | int | |
+| `_aggr_reviewed_by` | int | `0` = unclaimed |
+| `_aggr_reviewed_at` | int | |
+| `_aggr_review_notes` | string | **Advertiser-visible.** Required non-empty on reject / changes-requested |
+| `_aggr_internal_notes` | string | Staff-only; never leaves the admin |
+| `_aggr_notification_receipt` | string, repeated | Internal notification type/revision/recipient receipt for idempotent delivery |
+| `_aggr_advertiser_notes` | string | |
+| `_aggr_revision` | int | Increments on each resubmission |
+| `_aggr_adsanity_ad_id` | int | **Repeated**, unused. Former provider checkpoint. Not read for fill. |
+| `_aggr_autosave_rev` | int | Optimistic-concurrency token for wizard autosave |
+| `_aggr_wizard_step` | string | Resume point; advancing to `review` requires complete creative coverage and a submission-grade date window. Review itself is read-only; submit is a state transition, not another persisted edit step. |
 
-### Organization — `laao_ads_org`
+### Creative — `aggr_creative`
 
-`_laao_ads_owner_user_id` int · `_laao_ads_member_user_id` int **repeated** · `_laao_ads_canonical_name` string · `_laao_ads_billing_email` string · `_laao_ads_contact_phone` string · `_laao_ads_website_url` string · `_laao_ads_org_state` enum `active|suspended`
+| Key | Type | Notes |
+|---|---|---|
+| `_aggr_campaign_id` | int | |
+| `_aggr_org_id` | int | Denormalized from the campaign — see invariants |
+| `_aggr_placement_id` | int | |
+| `_aggr_size` | string | `{width}x{height}` with ASCII `x`; must match the placement |
+| `_aggr_kind` | enum | `image` \| `code` \| `text` \| `html5`. **Advertisers may only set `image`** |
+| `_aggr_private_path` | string | Relative to the private root. Never absolute, never a URL |
+| `_aggr_private_token` | string | 32 hex chars |
+| `_aggr_mime` | string | Server-detected, never the browser's claim |
+| `_aggr_width` / `_height` | int | From `getimagesize()`, not from the client |
+| `_aggr_filesize` | int | Bytes |
+| `_aggr_sha256` | string | 64 hex chars — proves at approval that this is the file that was reviewed |
+| `_aggr_click_url` | string | `http`/`https` only |
+| `_aggr_target_blank` | int | `0` \| `1` |
+| `_aggr_alt_text` | string | Becomes `_wp_attachment_image_alt` on promotion |
+| `_aggr_attachment_id` | int | `0` until approval |
+| `_aggr_adsanity_ad_id` | int | Unused. Former provider-object id. Native fill reads the creative record. |
+| `_aggr_review_state` | enum | `pending` \| `approved` \| `rejected` |
 
-The post title is the uppercase display name. `_laao_ads_canonical_name` is an
+### Organization — `aggr_org`
+
+`_aggr_owner_user_id` int · `_aggr_member_user_id` int **repeated** · `_aggr_canonical_name` string · `_aggr_billing_email` string · `_aggr_contact_phone` string · `_aggr_website_url` string · `_aggr_org_state` enum `active|suspended`
+
+The post title is the uppercase display name. `_aggr_canonical_name` is an
 uppercase, accent-free, punctuation-free comparison key; it is not shown to
 customers. A unique digest of that key is also reserved in the organization
 access table so two concurrent signups cannot create the same tenant. Exact and
@@ -120,25 +120,26 @@ unambiguous fuzzy matches create a pending access request rather than a second
 organization or an automatic membership. See
 [ADR-0019](adr/0019-private-organization-matching-and-approved-membership.md).
 
-### Placement — `laao_ads_placement`
+### Placement — `aggr_placement`
 
-`_laao_ads_size` string · `_laao_ads_adgroup_term_id` int · `_laao_ads_position_label` string · `_laao_ads_max_concurrent` int · `_laao_ads_is_active` int `0|1` · `_laao_ads_sort_order` int
+`_aggr_size` string `{width}x{height}` · `_aggr_position_label` string · `_aggr_max_concurrent` int · `_aggr_is_active` int `0|1` · `_aggr_sort_order` int · `_aggr_house_attachment_id` int · `_aggr_house_click_url` string · `_aggr_house_alt` string
 
-### Package — `laao_ads_package`
+The public slot id is `post_name`. Size is a pixel pair from `Domain\Ad_Sizes` (common IAB list or custom WxH), not a slot identity. House creative is placement meta, not a sixth post type. Orphan `_aggr_adgroup_term_id` is not read. See [ADR-0026](adr/0026-native-delivery.md) and [ADR-0031](adr/0031-native-is-the-only-publisher.md).
 
-`_laao_ads_placement_id` int **repeated** · `_laao_ads_duration_days` int · `_laao_ads_custom_duration` int `0|1` · `_laao_ads_price_cents` int · `_laao_ads_currency` string · `_laao_ads_is_active` int `0|1` · `_laao_ads_is_default` int `0|1`
+### Package — `aggr_package`
 
-`_laao_ads_duration_days = 0` is valid only when
-`_laao_ads_custom_duration = 1`; this means the advertiser chooses the start
+`_aggr_placement_id` int **repeated** · `_aggr_duration_days` int · `_aggr_custom_duration` int `0|1` · `_aggr_price_cents` int · `_aggr_currency` string · `_aggr_is_active` int `0|1` · `_aggr_is_default` int `0|1`
+
+`_aggr_duration_days = 0` is valid only when
+`_aggr_custom_duration = 1`; this means the advertiser chooses the start
 and end dates. Missing duration data does not silently become flexible terms.
-The first active package carrying `_laao_ads_is_default = 1` is preselected for
-a campaign that has no package snapshot yet. A deterministic first match keeps
-duplicate flags contained until the package-management screen can enforce
-single-default writes.
+The first active package carrying `_aggr_is_default = 1` is preselected for
+a campaign that has no package snapshot yet. The package-management screen
+clears every other default flag in the same save so duplicates cannot accumulate.
 
 ## Repeated meta, not serialized arrays
 
-`_laao_ads_placement_id` and `_laao_ads_member_user_id` are stored as multiple rows with `single => false`, never as one serialized array.
+`_aggr_placement_id` and `_aggr_member_user_id` are stored as multiple rows with `single => false`, never as one serialized array.
 
 A serialized array is opaque to `meta_query`. "Which campaigns use placement 62?" and "which organizations is user 41 a member of?" are both day-one queries — the second runs inside `map_meta_cap` on every capability check. With repeated rows those are indexed lookups. With a serialized array they are a full scan plus `LIKE '%i:62;%'`, which is also wrong, because it matches `162` and `620`.
 
@@ -146,8 +147,8 @@ A serialized array is opaque to `meta_query`. "Which campaigns use placement 62?
 
 These hold at all times and are asserted in the repositories, not merely assumed:
 
-1. **A Creative's `_laao_ads_org_id` equals its Campaign's `_laao_ads_org_id`.** Denormalizing the org onto the creative is what lets the file-stream endpoint authorize without loading the campaign — the hottest authorization path in the system. The denormalization is only safe because this invariant is enforced on write.
-2. **A Campaign's placements are all `_laao_ads_is_active`.** Checked at submission and re-checked at approval, because a placement can be deactivated while a campaign sits in the queue.
+1. **A Creative's `_aggr_org_id` equals its Campaign's `_aggr_org_id`.** Denormalizing the org onto the creative is what lets the file-stream endpoint authorize without loading the campaign — the hottest authorization path in the system. The denormalization is only safe because this invariant is enforced on write.
+2. **A Campaign's placements are all `_aggr_is_active`.** Checked at submission and re-checked at approval, because a placement can be deactivated while a campaign sits in the queue.
 3. **`org_id` is never read from client input.** It is derived server-side from the authenticated user on every request without exception. This one rule collapses most of the IDOR surface — see [threat-model.md](threat-model.md).
 4. **A campaign's `post_status` is only ever written by `Campaign_State_Machine::apply()`.** See [campaign-workflow.md](campaign-workflow.md).
 5. **Timestamps are UTC Unix integers everywhere.** No date strings, no site-local times, no `DateTime` in storage. Formatting happens at the display layer via `wp_date()`. See [ADR-0016](adr/0016-utc-unix-integer-times.md).

@@ -2,15 +2,15 @@
 /**
  * Email-change confirmation mail.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Notification;
+namespace Aggressive\Ads\Notification;
 
-use LAAO_Advertiser_Portal\Portal\Request;
-use LAAO_Advertiser_Portal\Portal\Routes;
+use Aggressive\Ads\Portal\Request;
+use Aggressive\Ads\Portal\Routes;
 
 /**
  * Sends the one-time confirmation link only to the requested new address.
@@ -38,10 +38,10 @@ final class Email_Change_Notification {
 			Routes::url( Request::ROUTE_CONFIRM_EMAIL )
 		);
 
-		$subject = __( 'Confirm your new advertiser portal email', 'laao-advertiser-portal' );
+		$subject = __( 'Confirm your new advertiser portal email', 'aggressive-ads' );
 		$body    = sprintf(
 			/* translators: 1: confirmation URL. 2: expiration date. */
-			__( "Confirm this email address for your advertiser portal account using this one-time link:\n\n%1\$s\n\nThis link expires %2\$s. You must be signed in as the same account to finish. If you did not request this change, ignore this message.", 'laao-advertiser-portal' ),
+			__( "Confirm this email address for your advertiser portal account using this one-time link:\n\n%1\$s\n\nThis link expires %2\$s. You must be signed in as the same account to finish. If you did not request this change, ignore this message.", 'aggressive-ads' ),
 			$url,
 			wp_date( 'F j, Y g:i a T', $expires_at )
 		);

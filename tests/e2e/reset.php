@@ -2,17 +2,16 @@
 /**
  * Removes browser-test campaigns and their private files.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-use LAAO_Advertiser_Portal\Core\Post_Statuses;
-use LAAO_Advertiser_Portal\Core\Post_Types;
-use LAAO_Advertiser_Portal\Integration\Adsanity\Adsanity;
-use LAAO_Advertiser_Portal\Plugin;
-use LAAO_Advertiser_Portal\Repository\Creative_Repository;
-use LAAO_Advertiser_Portal\Storage\Private_Storage;
+use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Storage\Private_Storage;
 
 if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
 	exit( 1 );
@@ -31,12 +30,12 @@ if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
 global $wpdb;
 
 // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Development fixture: transients have no lookup API by prefix, and this file never ships.
-$laao_ads_limiter_keys = $wpdb->get_col(
-	"SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE '_transient_laao_ads_rl_%'"
+$aggr_limiter_keys = $wpdb->get_col(
+	"SELECT option_name FROM {$wpdb->options} WHERE option_name LIKE '_transient_aggr_rl_%'"
 );
 
-foreach ( (array) $laao_ads_limiter_keys as $laao_ads_option ) {
-	delete_transient( str_replace( '_transient_', '', (string) $laao_ads_option ) );
+foreach ( (array) $aggr_limiter_keys as $aggr_option ) {
+	delete_transient( str_replace( '_transient_', '', (string) $aggr_option ) );
 }
 
 $campaign_ids = get_posts(
@@ -79,12 +78,10 @@ if ( $mapping_placement instanceof WP_Post ) {
 	wp_delete_post( $mapping_placement->ID, true );
 }
 
-if ( taxonomy_exists( Adsanity::TAXONOMY ) ) {
-	$mapping_term = get_term_by( 'slug', 'e2e-browser-group', Adsanity::TAXONOMY );
+$custom_placement = get_page_by_path( 'e2e-custom-slot', OBJECT, Post_Types::PLACEMENT );
 
-	if ( $mapping_term instanceof WP_Term ) {
-		wp_delete_term( $mapping_term->term_id, Adsanity::TAXONOMY );
-	}
+if ( $custom_placement instanceof WP_Post ) {
+	wp_delete_post( $custom_placement->ID, true );
 }
 
 $signup_user = get_user_by( 'email', 'e2e-signup@example.test' );
@@ -96,7 +93,7 @@ if ( $signup_user instanceof WP_User ) {
 			'post_status'    => 'any',
 			'posts_per_page' => 10,
 			'fields'         => 'ids',
-			'meta_key'       => LAAO_Advertiser_Portal\Repository\Org_Repository::META_OWNER_USER,
+			'meta_key'       => Aggressive\Ads\Repository\Org_Repository::META_OWNER_USER,
 			'meta_value'     => $signup_user->ID,
 		)
 	);
@@ -112,24 +109,24 @@ if ( $signup_user instanceof WP_User ) {
 	wp_delete_user( $signup_user->ID );
 }
 
-$laao_ads_signup_requester = get_user_by( 'email', 'e2e-org-requester@example.test' );
+$aggr_signup_requester = get_user_by( 'email', 'e2e-org-requester@example.test' );
 
-if ( $laao_ads_signup_requester instanceof WP_User ) {
+if ( $aggr_signup_requester instanceof WP_User ) {
 	if ( ! function_exists( 'wp_delete_user' ) ) {
 		require_once ABSPATH . 'wp-admin/includes/user.php';
 	}
 
-	wp_delete_user( $laao_ads_signup_requester->ID );
+	wp_delete_user( $aggr_signup_requester->ID );
 }
 
-$laao_ads_existing_invitee = get_user_by( 'email', 'e2e-existing-invitee@example.test' );
+$aggr_existing_invitee = get_user_by( 'email', 'e2e-existing-invitee@example.test' );
 
-if ( $laao_ads_existing_invitee instanceof WP_User ) {
+if ( $aggr_existing_invitee instanceof WP_User ) {
 	if ( ! function_exists( 'wp_delete_user' ) ) {
 		require_once ABSPATH . 'wp-admin/includes/user.php';
 	}
 
-	wp_delete_user( $laao_ads_existing_invitee->ID );
+	wp_delete_user( $aggr_existing_invitee->ID );
 }
 
 WP_CLI::log( sprintf( 'E2E reset removed %d campaign(s).', $removed ) );

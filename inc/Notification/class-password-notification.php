@@ -2,16 +2,16 @@
 /**
  * Portal password setup and recovery messages.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Notification;
+namespace Aggressive\Ads\Notification;
 
-use LAAO_Advertiser_Portal\Portal\Request;
-use LAAO_Advertiser_Portal\Portal\Routes;
-use LAAO_Advertiser_Portal\Repository\User_Repository;
+use Aggressive\Ads\Portal\Request;
+use Aggressive\Ads\Portal\Routes;
+use Aggressive\Ads\Repository\User_Repository;
 use WP_User;
 
 /**
@@ -43,12 +43,12 @@ final class Password_Notification {
 		$site_name = $this->site_name();
 		$subject   = sprintf(
 			/* translators: %s: site name. */
-			__( '[%s] Set up your advertiser account', 'laao-advertiser-portal' ),
+			__( '[%s] Set up your advertiser account', 'aggressive-ads' ),
 			$site_name
 		);
 		$body = sprintf(
 			/* translators: 1: first name. 2: site name. 3: one-time password setup URL. 4: portal sign-in URL. */
-			__( "Hello %1\$s,\n\nYour advertiser account for %2\$s is ready. Use this one-time link to choose a password:\n\n%3\$s\n\nAfter setting it, sign in with this email address at:\n%4\$s\n\nIf you did not request this account, you can ignore this message.", 'laao-advertiser-portal' ),
+			__( "Hello %1\$s,\n\nYour advertiser account for %2\$s is ready. Use this one-time link to choose a password:\n\n%3\$s\n\nAfter setting it, sign in with this email address at:\n%4\$s\n\nIf you did not request this account, you can ignore this message.", 'aggressive-ads' ),
 			$user->first_name,
 			$site_name,
 			$this->issue_url( $user ),
@@ -73,12 +73,12 @@ final class Password_Notification {
 		$site_name = $this->site_name();
 		$subject   = sprintf(
 			/* translators: %s: site name. */
-			__( '[%s] Confirm your advertiser request', 'laao-advertiser-portal' ),
+			__( '[%s] Confirm your advertiser request', 'aggressive-ads' ),
 			$site_name
 		);
 		$body = sprintf(
 			/* translators: 1: first name. 2: site name. 3: one-time password setup URL. */
-			__( "Hello %1\$s,\n\nWe received your advertiser access request for %2\$s. Use this one-time link to choose a password:\n\n%3\$s\n\nAn organization owner must approve the request before the portal becomes available. We will email you when that happens. If you did not make this request, you can ignore this message.", 'laao-advertiser-portal' ),
+			__( "Hello %1\$s,\n\nWe received your advertiser access request for %2\$s. Use this one-time link to choose a password:\n\n%3\$s\n\nAn organization owner must approve the request before the portal becomes available. We will email you when that happens. If you did not make this request, you can ignore this message.", 'aggressive-ads' ),
 			$user->first_name,
 			$site_name,
 			$this->issue_url( $user )
@@ -103,12 +103,12 @@ final class Password_Notification {
 		$site_name = $this->site_name();
 		$subject   = sprintf(
 			/* translators: %s: site name. */
-			__( '[%s] Your organization access was approved', 'laao-advertiser-portal' ),
+			__( '[%s] Your organization access was approved', 'aggressive-ads' ),
 			$site_name
 		);
 		$body = sprintf(
 			/* translators: 1: first name. 2: organization name. 3: site name. 4: portal password-recovery URL. 5: portal sign-in URL. */
-			__( "Hello %1\$s,\n\nYour access to %2\$s in the %3\$s advertiser portal was approved. Sign in at:\n\n%5\$s\n\nIf you still need to choose or reset your password, request a link here:\n%4\$s", 'laao-advertiser-portal' ),
+			__( "Hello %1\$s,\n\nYour access to %2\$s in the %3\$s advertiser portal was approved. Sign in at:\n\n%5\$s\n\nIf you still need to choose or reset your password, request a link here:\n%4\$s", 'aggressive-ads' ),
 			$user->first_name,
 			$org_name,
 			$site_name,
@@ -142,12 +142,12 @@ final class Password_Notification {
 		$site_name = $this->site_name();
 		$subject   = sprintf(
 			/* translators: %s: site name. */
-			__( '[%s] Reset your advertiser password', 'laao-advertiser-portal' ),
+			__( '[%s] Reset your advertiser password', 'aggressive-ads' ),
 			$site_name
 		);
 		$body = sprintf(
 			/* translators: 1: first name. 2: site name. 3: one-time password reset URL. */
-			__( "Hello %1\$s,\n\nA password reset was requested for your %2\$s advertiser account. Use this one-time link to choose a new password:\n\n%3\$s\n\nIf you did not request this change, you can ignore this message.", 'laao-advertiser-portal' ),
+			__( "Hello %1\$s,\n\nA password reset was requested for your %2\$s advertiser account. Use this one-time link to choose a new password:\n\n%3\$s\n\nIf you did not request this change, you can ignore this message.", 'aggressive-ads' ),
 			$user->first_name,
 			$site_name,
 			$this->issue_url( $user )

@@ -2,25 +2,25 @@
 /**
  * Private creative retention against real WordPress storage.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Integration;
+namespace Aggressive\Ads\Tests\Integration;
 
-use LAAO_Advertiser_Portal\Core\Post_Statuses;
-use LAAO_Advertiser_Portal\Core\Post_Types;
-use LAAO_Advertiser_Portal\Install\Installer;
-use LAAO_Advertiser_Portal\Plugin;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Repository\Campaign_Repository;
-use LAAO_Advertiser_Portal\Repository\Creative_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Repository;
-use LAAO_Advertiser_Portal\Security\Ownership;
-use LAAO_Advertiser_Portal\Security\Roles;
-use LAAO_Advertiser_Portal\Storage\Private_Storage;
-use LAAO_Advertiser_Portal\Workflow\Creative_Retention;
+use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Install\Installer;
+use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Security\Ownership;
+use Aggressive\Ads\Security\Roles;
+use Aggressive\Ads\Storage\Private_Storage;
+use Aggressive\Ads\Workflow\Creative_Retention;
 use WP_UnitTestCase;
 
 /**
@@ -29,31 +29,43 @@ use WP_UnitTestCase;
 final class CreativeRetentionTest extends WP_UnitTestCase {
 
 	/**
+	 * Property.
+	 *
 	 * @var Creative_Retention
 	 */
 	private Creative_Retention $retention;
 
 	/**
+	 * Property.
+	 *
 	 * @var Private_Storage
 	 */
 	private Private_Storage $storage;
 
 	/**
+	 * Property.
+	 *
 	 * @var Creative_Repository
 	 */
 	private Creative_Repository $creatives;
 
 	/**
+	 * Property.
+	 *
 	 * @var Audit_Repository
 	 */
 	private Audit_Repository $audit;
 
 	/**
+	 * Property.
+	 *
 	 * @var int
 	 */
 	private int $org_id;
 
 	/**
+	 * Sets up collaborators and an organization.
+	 *
 	 * @return void
 	 */
 	public function set_up(): void {
@@ -158,6 +170,8 @@ final class CreativeRetentionTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Parameter.
+	 *
 	 * @param string $status Campaign status.
 	 * @param int    $end_ts End timestamp.
 	 * @return int
@@ -187,6 +201,8 @@ final class CreativeRetentionTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Parameter.
+	 *
 	 * @param int $campaign_id Campaign post id.
 	 * @return int
 	 */
@@ -198,7 +214,7 @@ final class CreativeRetentionTest extends WP_UnitTestCase {
 			)
 		);
 
-		$source = wp_tempnam( 'laao-ads-retention' );
+		$source = wp_tempnam( 'aggr-retention' );
 		file_put_contents( $source, 'retention-fixture' ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents -- Test fixture write.
 
 		$stored = $this->storage->store( $source, 'bin' );

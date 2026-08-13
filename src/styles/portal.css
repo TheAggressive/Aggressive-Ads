@@ -11,7 +11,7 @@
  * custom property in a colour declaration is transparent text on a transparent
  * background. Not a degraded look; an unreadable screen.
  *
- * The LAAO theme may override any --laao-ads-* token to make the portal feel
+ * The LAAO theme may override any --aggr-* token to make the portal feel
  * native. That is the only supported coupling, it runs one direction, and the
  * portal is fully functional without it.
  *
@@ -19,6 +19,7 @@
  * alone. See docs/adr/0017-self-contained-design-tokens.md.
  */
 
+@import './base/_fonts.css';
 @import './base/_tokens.css';
 @import './layout/_chrome.css';
 @import './components/_surfaces.css';

@@ -2,7 +2,7 @@
 /**
  * Not-found contents.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
@@ -11,18 +11,18 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use LAAO_Advertiser_Portal\Portal\Routes;
+use Aggressive\Ads\Portal\Routes;
 
 ?>
-<div class="laao-ads-pagehead">
+<div class="aggr-pagehead">
 	<div>
-		<h1 class="laao-ads-title"><?php esc_html_e( 'Page not found', 'laao-advertiser-portal' ); ?></h1>
-		<p class="laao-ads-lede"><?php esc_html_e( 'That address does not match anything in the portal.', 'laao-advertiser-portal' ); ?></p>
+		<h1 class="aggr-title"><?php esc_html_e( 'Page not found', 'aggressive-ads' ); ?></h1>
+		<p class="aggr-lede"><?php esc_html_e( 'That address does not match anything in the portal.', 'aggressive-ads' ); ?></p>
 	</div>
 </div>
 
 <p>
-	<a class="laao-ads-button" href="<?php echo esc_url( Routes::url() ); ?>">
-		<?php esc_html_e( 'Go to your dashboard', 'laao-advertiser-portal' ); ?>
+	<a class="aggr-button" href="<?php echo esc_url( Routes::url() ); ?>">
+		<?php esc_html_e( 'Go to your dashboard', 'aggressive-ads' ); ?>
 	</a>
 </p>

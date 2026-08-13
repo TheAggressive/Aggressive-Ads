@@ -2,14 +2,14 @@
 /**
  * WordPress plugin update integration.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Update;
+namespace Aggressive\Ads\Update;
 
-use LAAO_Advertiser_Portal\Core\Service;
+use Aggressive\Ads\Core\Service;
 
 /**
  * Publishes verified GitHub releases to WordPress's native update UI.
@@ -17,7 +17,7 @@ use LAAO_Advertiser_Portal\Core\Service;
 final class Plugin_Updates implements Service {
 
 	/** Plugin slug and installed directory. */
-	private const SLUG = 'laao-advertiser-portal';
+	private const SLUG = 'aggressive-ads';
 
 	/**
 	 * Release metadata.
@@ -65,8 +65,8 @@ final class Plugin_Updates implements Service {
 			return $transient;
 		}
 
-		$plugin  = plugin_basename( LAAO_ADS_PLUGIN_FILE );
-		$current = $transient->checked[ $plugin ] ?? LAAO_ADS_VERSION;
+		$plugin  = plugin_basename( AGGR_PLUGIN_FILE );
+		$current = $transient->checked[ $plugin ] ?? AGGR_VERSION;
 		if ( ! is_string( $current ) ) {
 			return $transient;
 		}
@@ -104,8 +104,8 @@ final class Plugin_Updates implements Service {
 			'new_version'  => $version,
 			'url'          => $this->releases->repository_url(),
 			'package'      => $package,
-			'requires'     => LAAO_ADS_MIN_WP,
-			'requires_php' => LAAO_ADS_MIN_PHP,
+			'requires'     => AGGR_MIN_WP,
+			'requires_php' => AGGR_MIN_PHP,
 		);
 
 		if ( isset( $transient->no_update ) && is_array( $transient->no_update ) ) {
@@ -159,20 +159,20 @@ final class Plugin_Updates implements Service {
 		$body      = $release['body'] ?? '';
 
 		return (object) array(
-			'name'              => __( 'LAAO Advertiser Portal', 'laao-advertiser-portal' ),
+			'name'              => __( 'LAAO Advertiser Portal', 'aggressive-ads' ),
 			'slug'              => self::SLUG,
 			'version'           => $version,
 			'author'            => '<a href="https://theaggressive.com">The Aggressive, LLC</a>',
 			'homepage'          => $this->releases->repository_url(),
-			'requires'          => LAAO_ADS_MIN_WP,
-			'requires_php'      => LAAO_ADS_MIN_PHP,
+			'requires'          => AGGR_MIN_WP,
+			'requires_php'      => AGGR_MIN_PHP,
 			'last_updated'      => is_string( $published ) ? $published : '',
-			'short_description' => __( 'Self-service advertising portal for LAArtsOnline.', 'laao-advertiser-portal' ),
+			'short_description' => __( 'Self-service advertising portal for LAArtsOnline.', 'aggressive-ads' ),
 			'sections'          => array(
-				'description' => __( 'Advertisers build campaigns and staff review and publish them to AdSanity.', 'laao-advertiser-portal' ),
+				'description' => __( 'Advertisers build campaigns and staff review and publish them.', 'aggressive-ads' ),
 				'changelog'   => is_string( $body ) && '' !== trim( $body )
 					? nl2br( esc_html( $body ) )
-					: esc_html__( 'No release notes were provided.', 'laao-advertiser-portal' ),
+					: esc_html__( 'No release notes were provided.', 'aggressive-ads' ),
 			),
 			'download_link'     => $package,
 		);
@@ -190,7 +190,7 @@ final class Plugin_Updates implements Service {
 			'update' !== ( $options['action'] ?? null )
 			|| 'plugin' !== ( $options['type'] ?? null )
 			|| ! is_array( $plugins )
-			|| ! in_array( plugin_basename( LAAO_ADS_PLUGIN_FILE ), $plugins, true )
+			|| ! in_array( plugin_basename( AGGR_PLUGIN_FILE ), $plugins, true )
 		) {
 			return;
 		}

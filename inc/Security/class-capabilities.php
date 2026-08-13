@@ -2,14 +2,14 @@
 /**
  * The capability vocabulary.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Security;
+namespace Aggressive\Ads\Security;
 
-use LAAO_Advertiser_Portal\Core\Post_Types;
+use Aggressive\Ads\Core\Post_Types;
 
 /**
  * Declares every capability this plugin defines, once.
@@ -23,16 +23,21 @@ use LAAO_Advertiser_Portal\Core\Post_Types;
  */
 final class Capabilities {
 
-	public const ACCESS_PORTAL       = 'laao_ads_access_portal';
-	public const UPLOAD_CREATIVE     = 'laao_ads_upload_creative';
-	public const SUBMIT_CAMPAIGN     = 'laao_ads_submit_campaign';
-	public const REVIEW_CAMPAIGNS    = 'laao_ads_review_campaigns';
-	public const PUBLISH_TO_ADSANITY = 'laao_ads_publish_to_adsanity';
-	public const MANAGE_PLACEMENTS   = 'laao_ads_manage_placements';
-	public const MANAGE_PACKAGES     = 'laao_ads_manage_packages';
-	public const MANAGE_ORGS         = 'laao_ads_manage_orgs';
-	public const VIEW_AUDIT_LOG      = 'laao_ads_view_audit_log';
-	public const MANAGE_SETTINGS     = 'laao_ads_manage_settings';
+	public const ACCESS_PORTAL       = 'aggr_access_portal';
+	public const UPLOAD_CREATIVE     = 'aggr_upload_creative';
+	public const SUBMIT_CAMPAIGN     = 'aggr_submit_campaign';
+	public const REVIEW_CAMPAIGNS    = 'aggr_review_campaigns';
+	public const PUBLISH_TO_ADSANITY = 'aggr_publish';
+	public const MANAGE_PLACEMENTS   = 'aggr_manage_placements';
+	public const MANAGE_PACKAGES     = 'aggr_manage_packages';
+	public const MANAGE_ORGS         = 'aggr_manage_orgs';
+	public const VIEW_AUDIT_LOG      = 'aggr_view_audit_log';
+	public const MANAGE_SETTINGS     = 'aggr_manage_settings';
+
+	/**
+	 * Derived shell cap for the unified admin parent. Not granted on a role.
+	 */
+	public const ACCESS_STAFF = 'aggr_access_staff';
 
 	/**
 	 * The primitive-capability suffixes `map_meta_cap => true` generates from a
@@ -83,6 +88,24 @@ final class Capabilities {
 			self::MANAGE_PACKAGES,
 			self::MANAGE_ORGS,
 			self::VIEW_AUDIT_LOG,
+			self::MANAGE_SETTINGS,
+		);
+	}
+
+	/**
+	 * Capabilities that reveal a submenu under the Advertising parent.
+	 *
+	 * `ACCESS_STAFF` is derived from these at user_has_cap. It is not a
+	 * primitive and is never granted on a role.
+	 *
+	 * @return list<string>
+	 */
+	public static function staff_menu_caps(): array {
+		return array(
+			self::REVIEW_CAMPAIGNS,
+			self::MANAGE_ORGS,
+			self::MANAGE_PLACEMENTS,
+			self::MANAGE_PACKAGES,
 			self::MANAGE_SETTINGS,
 		);
 	}
@@ -159,7 +182,7 @@ final class Capabilities {
 	 * The meta capabilities for one post type.
 	 *
 	 * Listed for the tests and for Ownership::map(); never granted to a role.
-	 * current_user_can( 'edit_laao_ads_campaign', 42 ) is translated by
+	 * current_user_can( 'edit_aggr_campaign', 42 ) is translated by
 	 * map_meta_cap into whichever primitive applies to that object, and the
 	 * primitive is what the role holds.
 	 *

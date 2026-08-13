@@ -2,12 +2,12 @@
 /**
  * A parsed portal request.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Portal;
+namespace Aggressive\Ads\Portal;
 
 /**
  * The URL grammar, as a value object.

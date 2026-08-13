@@ -2,7 +2,7 @@
 /**
  * The portal password-recovery request screen.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$laao_ads_screen = LAAO_ADS_PLUGIN_DIR . 'templates/portal/screens/forgot-password.php';
-$laao_ads_title  = __( 'Reset your password', 'laao-advertiser-portal' );
+$aggr_screen = AGGR_PLUGIN_DIR . 'templates/portal/screens/forgot-password.php';
+$aggr_title  = __( 'Reset your password', 'aggressive-ads' );
 
-require LAAO_ADS_PLUGIN_DIR . 'templates/portal/base-bare.php';
+require AGGR_PLUGIN_DIR . 'templates/portal/base-bare.php';

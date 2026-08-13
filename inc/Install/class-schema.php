@@ -2,12 +2,12 @@
 /**
  * Database schema definitions.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Install;
+namespace Aggressive\Ads\Install;
 
 /**
  * Produces the plugin's DDL as a string, and executes nothing.
@@ -24,15 +24,21 @@ final class Schema {
 	 *
 	 * Drives the migration walker in Upgrader.
 	 */
-	public const DB_VERSION = 2;
+	public const DB_VERSION = 5;
 
 	/**
 	 * The audit table's name, without the site's table prefix.
 	 */
-	public const AUDIT_TABLE = 'laao_ads_audit_log';
+	public const AUDIT_TABLE = 'aggr_audit_log';
 
 	/** Organization identity, invitation, and access-request registry. */
-	public const ORG_ACCESS_TABLE = 'laao_ads_org_access';
+	public const ORG_ACCESS_TABLE = 'aggr_org_access';
+
+	/** Append-only fill impressions and clicks. */
+	public const EVENTS_TABLE = 'aggr_events';
+
+	/** Campaign/placement/day counters. Reporting reads this, never the event log. */
+	public const ROLLUPS_TABLE = 'aggr_rollups';
 
 	/**
 	 * Organization identity and access workflow table.
@@ -199,5 +205,104 @@ final class Schema {
 			'message',
 			'context',
 		);
+	}
+
+	/**
+	 * Impression and click events. (token_hash, event) is unique so a replay
+	 * of the same event is a database refusal, while one fill may still
+	 * record both an impression and a click.
+	 *
+	 * @param string $table_name      Fully prefixed table name.
+	 * @param string $charset_collate Database charset and collation.
+	 * @return string
+	 */
+	public static function events_table_ddl( string $table_name, string $charset_collate ): string {
+		return "CREATE TABLE {$table_name} (
+	id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	created_at_ts bigint(20) unsigned NOT NULL DEFAULT 0,
+	event varchar(16) NOT NULL DEFAULT '',
+	placement_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	campaign_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	creative_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	token_hash char(64) NOT NULL DEFAULT '',
+	ip_hash char(64) NOT NULL DEFAULT '',
+	PRIMARY KEY  (id),
+	UNIQUE KEY token_event (token_hash,event),
+	KEY created (created_at_ts,id),
+	KEY campaign_day (campaign_id,created_at_ts,id)
+) {$charset_collate};";
+	}
+
+	/**
+	 * Events table columns.
+	 *
+	 * @return array<int, string>
+	 */
+	public static function events_columns(): array {
+		return array(
+			'id',
+			'created_at_ts',
+			'event',
+			'placement_id',
+			'campaign_id',
+			'creative_id',
+			'token_hash',
+			'ip_hash',
+		);
+	}
+
+	/**
+	 * Events table indexes.
+	 *
+	 * @return array<int, string>
+	 */
+	public static function events_index_names(): array {
+		return array( 'PRIMARY', 'token_event', 'created', 'campaign_day' );
+	}
+
+	/**
+	 * Per-day counters. Reporting reads this, never the event log.
+	 *
+	 * @param string $table_name      Fully prefixed table name.
+	 * @param string $charset_collate Database charset and collation.
+	 * @return string
+	 */
+	public static function rollups_table_ddl( string $table_name, string $charset_collate ): string {
+		return "CREATE TABLE {$table_name} (
+	id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	day_utc date NOT NULL,
+	placement_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	campaign_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	impressions bigint(20) unsigned NOT NULL DEFAULT 0,
+	clicks bigint(20) unsigned NOT NULL DEFAULT 0,
+	PRIMARY KEY  (id),
+	UNIQUE KEY slot_day (placement_id,campaign_id,day_utc),
+	KEY campaign_day (campaign_id,day_utc)
+) {$charset_collate};";
+	}
+
+	/**
+	 * Rollups table columns.
+	 *
+	 * @return array<int, string>
+	 */
+	public static function rollups_columns(): array {
+		return array(
+			'id',
+			'day_utc',
+			'placement_id',
+			'campaign_id',
+			'impressions',
+			'clicks',
+		);
+	}
+
+	/**
+	 * Rollups table indexes.
+	 *
+	 * @return array<int, string>
+	 */
+	public static function rollups_index_names(): array {
+		return array( 'PRIMARY', 'slot_day', 'campaign_day' );
 	}
 }

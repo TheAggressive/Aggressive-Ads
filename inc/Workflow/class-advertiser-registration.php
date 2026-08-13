@@ -2,18 +2,21 @@
 /**
  * Public advertiser registration.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Workflow;
+namespace Aggressive\Ads\Workflow;
 
-use LAAO_Advertiser_Portal\Audit\Audit_Event;
-use LAAO_Advertiser_Portal\Notification\Password_Notification;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Repository;
-use LAAO_Advertiser_Portal\Repository\User_Repository;
+use Aggressive\Ads\Audit\Audit_Event;
+use Aggressive\Ads\Core\Hook_Aliases;
+use Aggressive\Ads\Core\Settings;
+use Aggressive\Ads\Domain\Settings_Schema;
+use Aggressive\Ads\Notification\Password_Notification;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Repository\User_Repository;
 use WP_Error;
 
 /**
@@ -38,33 +41,53 @@ final class Advertiser_Registration {
 	 * @param Org_Repository          $organizations Organization persistence.
 	 * @param Organization_Membership $memberships Organization access workflow.
 	 * @param Password_Notification   $notification Activation email.
-	 * @param Audit_Repository        $audit        Audit persistence.
+	 * @param Audit_Repository        $audit         Audit persistence.
+	 * @param Settings                $settings      Module flags.
 	 */
 	public function __construct(
 		private readonly User_Repository $users,
 		private readonly Org_Repository $organizations,
 		private readonly Organization_Membership $memberships,
 		private readonly Password_Notification $notification,
-		private readonly Audit_Repository $audit
+		private readonly Audit_Repository $audit,
+		private readonly Settings $settings
 	) {
 	}
 
 	/**
-	 * Whether this site has explicitly enabled public account creation.
+	 * Whether public account creation is on.
 	 *
-	 * Core's registration switch is the default. The filter supports an
-	 * enterprise identity policy without making an accidental open-registration
-	 * deployment the plugin default.
+	 * The module is a kill-switch: off means this returns false even if
+	 * WordPress would allow registration. The filter wraps the core switch so
+	 * an identity policy can close signup without turning the module off
+	 * (invitations still need the route). The filter cannot reopen a disabled
+	 * module.
 	 *
 	 * @return bool
 	 */
 	public function is_enabled(): bool {
+		if ( ! $this->settings->module_enabled( Settings_Schema::MODULE_PUBLIC_SIGNUP ) ) {
+			return false;
+		}
+
 		/**
 		 * Filters whether public advertiser signup is enabled.
 		 *
-		 * @param bool $enabled WordPress's Anyone can register setting.
+		 * @param bool $enabled WordPress's Anyone can register setting, after the module flag.
 		 */
-		return (bool) apply_filters( 'laao_ads_signup_enabled', (bool) get_option( 'users_can_register', false ) );
+		return (bool) Hook_Aliases::apply( 'aggr_signup_enabled', (bool) get_option( 'users_can_register', false ) );
+	}
+
+	/**
+	 * Whether the public signup route exists at all.
+	 *
+	 * Distinct from is_enabled(): WordPress may close registration while the
+	 * module stays on (form shows “unavailable”). The module off means 404.
+	 *
+	 * @return bool
+	 */
+	public function is_route_available(): bool {
+		return $this->settings->module_enabled( Settings_Schema::MODULE_PUBLIC_SIGNUP );
 	}
 
 	/**
@@ -78,8 +101,10 @@ final class Advertiser_Registration {
 	 * @return true|WP_Error
 	 */
 	public function register( array $input ): bool|WP_Error {
-		if ( ! $this->is_enabled() ) {
-			return new WP_Error( 'laao_ads_registration_closed', __( 'Account registration is not available.', 'laao-advertiser-portal' ) );
+		$invite = is_string( $input['invite_token'] ?? null ) ? $input['invite_token'] : '';
+
+		if ( ! $this->is_enabled() && 1 !== preg_match( '/^[A-Za-z0-9_-]{43}$/', $invite ) ) {
+			return new WP_Error( 'aggr_registration_closed', __( 'Account registration is not available.', 'aggressive-ads' ) );
 		}
 
 		$fields = $this->validated_fields( $input );
@@ -127,7 +152,7 @@ final class Advertiser_Registration {
 
 			$this->record_failure( 0, 0, 'user_create' );
 
-			return new WP_Error( 'laao_ads_registration_failed', __( 'The account could not be created.', 'laao-advertiser-portal' ) );
+			return new WP_Error( 'aggr_registration_failed', __( 'The account could not be created.', 'aggressive-ads' ) );
 		}
 
 		if ( '' !== $fields['invite_token'] ) {
@@ -154,8 +179,8 @@ final class Advertiser_Registration {
 		$org_id = $this->organizations->create_for_owner( $fields['organization_name'], $user_id );
 
 		if ( is_wp_error( $org_id ) ) {
-			$error_data    = $org_id->get_error_data( 'laao_ads_duplicate_org_identity' );
-			$duplicate_org = 'laao_ads_duplicate_org_identity' === $org_id->get_error_code() && is_array( $error_data )
+			$error_data    = $org_id->get_error_data( 'aggr_duplicate_org_identity' );
+			$duplicate_org = 'aggr_duplicate_org_identity' === $org_id->get_error_code() && is_array( $error_data )
 				? (int) ( $error_data['org_id'] ?? 0 )
 				: 0;
 
@@ -170,19 +195,19 @@ final class Advertiser_Registration {
 			$user_removed = $this->users->delete_registration_account( $user_id );
 			$this->record_failure( $user_id, 0, 'organization_create', array( 'user_removed' => $user_removed ) );
 
-			return new WP_Error( 'laao_ads_registration_failed', __( 'The account could not be created.', 'laao-advertiser-portal' ) );
+			return new WP_Error( 'aggr_registration_failed', __( 'The account could not be created.', 'aggressive-ads' ) );
 		}
 
 		if ( ! $this->users->grant_advertiser_role( $user_id ) ) {
 			$this->rollback( $user_id, $org_id, 'role_assignment' );
 
-			return new WP_Error( 'laao_ads_registration_failed', __( 'The account could not be created.', 'laao-advertiser-portal' ) );
+			return new WP_Error( 'aggr_registration_failed', __( 'The account could not be created.', 'aggressive-ads' ) );
 		}
 
 		if ( ! $this->notification->send_setup( $user_id ) ) {
 			$this->rollback( $user_id, $org_id, 'activation_email' );
 
-			return new WP_Error( 'laao_ads_registration_failed', __( 'The account could not be created.', 'laao-advertiser-portal' ) );
+			return new WP_Error( 'aggr_registration_failed', __( 'The account could not be created.', 'aggressive-ads' ) );
 		}
 
 		$this->audit->insert(
@@ -211,7 +236,7 @@ final class Advertiser_Registration {
 			|| strlen( $input['organization_name'] ?? '' ) > self::MAX_ORG_NAME
 			|| strlen( $input['email'] ?? '' ) > self::MAX_EMAIL
 		) {
-			return new WP_Error( 'laao_ads_invalid_registration', __( 'Enter a valid name, organization and email address.', 'laao-advertiser-portal' ) );
+			return new WP_Error( 'aggr_invalid_registration', __( 'Enter a valid name, organization and email address.', 'aggressive-ads' ) );
 		}
 
 		$first_name        = sanitize_text_field( $input['first_name'] ?? '' );
@@ -232,7 +257,7 @@ final class Advertiser_Registration {
 			|| ! is_email( $email )
 			|| ( '' !== $invite_token && 1 !== preg_match( '/^[A-Za-z0-9_-]{43}$/', $invite_token ) )
 		) {
-			return new WP_Error( 'laao_ads_invalid_registration', __( 'Enter a valid name, organization and email address.', 'laao-advertiser-portal' ) );
+			return new WP_Error( 'aggr_invalid_registration', __( 'Enter a valid name, organization and email address.', 'aggressive-ads' ) );
 		}
 
 		return array(

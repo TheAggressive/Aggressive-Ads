@@ -2,17 +2,17 @@
 /**
  * Authorized organization active/suspended state writes.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Workflow;
+namespace Aggressive\Ads\Workflow;
 
-use LAAO_Advertiser_Portal\Audit\Audit_Event;
-use LAAO_Advertiser_Portal\Repository\Audit_Repository;
-use LAAO_Advertiser_Portal\Repository\Org_Repository;
-use LAAO_Advertiser_Portal\Security\Capabilities;
+use Aggressive\Ads\Audit\Audit_Event;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Security\Capabilities;
 use WP_Error;
 
 /**
@@ -64,15 +64,15 @@ final class Organization_State_Manager {
 			$this->record( $org_id, Audit_Event::OUTCOME_DENIED, 'Organization state change denied.' );
 
 			return new WP_Error(
-				'laao_ads_forbidden',
-				__( 'You do not have permission to manage organizations.', 'laao-advertiser-portal' )
+				'aggr_forbidden',
+				__( 'You do not have permission to manage organizations.', 'aggressive-ads' )
 			);
 		}
 
 		if ( ! $this->organizations->exists( $org_id ) ) {
 			return new WP_Error(
-				'laao_ads_org_not_found',
-				__( 'That organization could not be found.', 'laao-advertiser-portal' )
+				'aggr_org_not_found',
+				__( 'That organization could not be found.', 'aggressive-ads' )
 			);
 		}
 
@@ -85,8 +85,8 @@ final class Organization_State_Manager {
 			$this->record( $org_id, Audit_Event::OUTCOME_FAILED, 'Organization state write failed.' );
 
 			return new WP_Error(
-				'laao_ads_org_state_not_saved',
-				__( 'The organization state could not be saved.', 'laao-advertiser-portal' )
+				'aggr_org_state_not_saved',
+				__( 'The organization state could not be saved.', 'aggressive-ads' )
 			);
 		}
 

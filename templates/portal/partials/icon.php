@@ -9,9 +9,9 @@
  * Every icon is aria-hidden. The label beside it is the accessible name; a
  * decorative shape announcing itself twice is worse than not announcing at all.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  *
- * @var string $laao_ads_icon Icon name.
+ * @var string $aggr_icon Icon name.
  */
 
 declare(strict_types=1);
@@ -20,14 +20,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-$laao_ads_icon = isset( $laao_ads_icon ) && is_string( $laao_ads_icon ) ? $laao_ads_icon : '';
+$aggr_icon = isset( $aggr_icon ) && is_string( $aggr_icon ) ? $aggr_icon : '';
 
 ?>
-<svg class="laao-ads-icon" viewBox="0 0 24 24" width="18" height="18" fill="none"
+<svg class="aggr-icon" viewBox="0 0 24 24" width="18" height="18" fill="none"
 	stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"
 	aria-hidden="true" focusable="false">
 	<?php
-	switch ( $laao_ads_icon ) {
+	switch ( $aggr_icon ) {
 		case 'dashboard':
 			?>
 			<rect x="3" y="3" width="7" height="9" rx="1.5" />

@@ -2,14 +2,14 @@
 /**
  * Organization and ownership lookups.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Repository;
+namespace Aggressive\Ads\Repository;
 
-use LAAO_Advertiser_Portal\Core\Post_Types;
+use Aggressive\Ads\Core\Post_Types;
 use WP_Error;
 
 /**
@@ -42,11 +42,11 @@ final class Org_Repository {
 	public const STATE_ACTIVE    = 'active';
 	public const STATE_SUSPENDED = 'suspended';
 
-	public const META_ORG_STATE      = '_laao_ads_org_state';
-	public const META_ORG_ID         = '_laao_ads_org_id';
-	public const META_OWNER_USER     = '_laao_ads_owner_user_id';
-	public const META_MEMBER_USER    = '_laao_ads_member_user_id';
-	public const META_CANONICAL_NAME = '_laao_ads_canonical_name';
+	public const META_ORG_STATE      = '_aggr_org_state';
+	public const META_ORG_ID         = '_aggr_org_id';
+	public const META_OWNER_USER     = '_aggr_owner_user_id';
+	public const META_MEMBER_USER    = '_aggr_member_user_id';
+	public const META_CANONICAL_NAME = '_aggr_canonical_name';
 
 	/**
 	 * Organization identity registry.
@@ -145,7 +145,7 @@ final class Org_Repository {
 		$canonical = self::canonical_name( $name );
 
 		if ( '' === $canonical ) {
-			return new WP_Error( 'laao_ads_invalid_org_identity', __( 'The organization name is not valid.', 'laao-advertiser-portal' ) );
+			return new WP_Error( 'aggr_invalid_org_identity', __( 'The organization name is not valid.', 'aggressive-ads' ) );
 		}
 
 		$org_id = wp_insert_post(
@@ -173,7 +173,7 @@ final class Org_Repository {
 		if ( false === $owner_written || false === $state_written || false === $name_written || ! $verified ) {
 			wp_delete_post( $org_id, true );
 
-			return new WP_Error( 'laao_ads_org_write_failed', __( 'The organization could not be created.', 'laao-advertiser-portal' ) );
+			return new WP_Error( 'aggr_org_write_failed', __( 'The organization could not be created.', 'aggressive-ads' ) );
 		}
 
 		$identity = $this->access->register_identity( $org_id, $canonical );
@@ -201,14 +201,14 @@ final class Org_Repository {
 	 */
 	public function rename( int $org_id, string $name ): bool|WP_Error {
 		if ( $org_id <= 0 || Post_Types::ORGANIZATION !== get_post_type( $org_id ) ) {
-			return new WP_Error( 'laao_ads_org_missing', __( 'The organization could not be found.', 'laao-advertiser-portal' ) );
+			return new WP_Error( 'aggr_org_missing', __( 'The organization could not be found.', 'aggressive-ads' ) );
 		}
 
 		$display   = self::display_name( $name );
 		$canonical = self::canonical_name( $display );
 
 		if ( '' === $canonical || strlen( $display ) > self::MAX_NAME_LENGTH ) {
-			return new WP_Error( 'laao_ads_invalid_org_identity', __( 'Enter a valid organization name.', 'laao-advertiser-portal' ) );
+			return new WP_Error( 'aggr_invalid_org_identity', __( 'Enter a valid organization name.', 'aggressive-ads' ) );
 		}
 
 		$old_display   = $this->name( $org_id );
@@ -226,10 +226,10 @@ final class Org_Repository {
 		if ( $canonical !== $old_canonical ) {
 			$identity = $this->access->rename_identity( $org_id, $old_canonical, $canonical );
 			if ( is_wp_error( $identity ) ) {
-				if ( 'laao_ads_duplicate_org_identity' === $identity->get_error_code() ) {
+				if ( 'aggr_duplicate_org_identity' === $identity->get_error_code() ) {
 					return new WP_Error(
-						'laao_ads_duplicate_org_identity',
-						__( 'That organization name is already in use.', 'laao-advertiser-portal' )
+						'aggr_duplicate_org_identity',
+						__( 'That organization name is already in use.', 'aggressive-ads' )
 					);
 				}
 
@@ -251,7 +251,7 @@ final class Org_Repository {
 				$this->access->rename_identity( $org_id, $canonical, $old_canonical );
 			}
 
-			return new WP_Error( 'laao_ads_org_write_failed', __( 'The organization could not be renamed.', 'laao-advertiser-portal' ) );
+			return new WP_Error( 'aggr_org_write_failed', __( 'The organization could not be renamed.', 'aggressive-ads' ) );
 		}
 
 		update_post_meta( $org_id, self::META_CANONICAL_NAME, $canonical );
@@ -275,7 +275,7 @@ final class Org_Repository {
 			}
 			$this->flush_cache();
 
-			return new WP_Error( 'laao_ads_org_write_failed', __( 'The organization could not be renamed.', 'laao-advertiser-portal' ) );
+			return new WP_Error( 'aggr_org_write_failed', __( 'The organization could not be renamed.', 'aggressive-ads' ) );
 		}
 
 		return true;

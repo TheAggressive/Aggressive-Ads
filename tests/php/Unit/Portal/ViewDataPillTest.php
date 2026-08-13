@@ -2,16 +2,16 @@
 /**
  * The status-to-pill mapping.
  *
- * @package LAAO_Advertiser_Portal
+ * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-namespace LAAO_Advertiser_Portal\Tests\Unit\Portal;
+namespace Aggressive\Ads\Tests\Unit\Portal;
 
-use LAAO_Advertiser_Portal\Core\Post_Statuses;
-use LAAO_Advertiser_Portal\Portal\View_Data;
-use LAAO_Advertiser_Portal\Tests\Unit\Assets\Portal_Styles;
+use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Portal\View_Data;
+use Aggressive\Ads\Tests\Unit\Assets\Portal_Styles;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -43,7 +43,7 @@ final class ViewDataPillTest extends TestCase {
 			'paused is pending, not live'  => array( Post_Statuses::PAUSED, 'pending' ),
 			'complete is ended'            => array( Post_Statuses::COMPLETE, 'ended' ),
 			'cancelled is danger'          => array( Post_Statuses::CANCELLED, 'danger' ),
-			'an unknown status is neutral' => array( 'lap_invented', 'neutral' ),
+			'an unknown status is neutral' => array( 'aggr_invented', 'neutral' ),
 			'a core status is neutral'     => array( 'publish', 'neutral' ),
 			'the empty string is neutral'  => array( '', 'neutral' ),
 		);
@@ -65,7 +65,7 @@ final class ViewDataPillTest extends TestCase {
 	/**
 	 * Paused is the case the "published means live" shortcut gets wrong.
 	 *
-	 * A paused campaign is published — AdSanity still holds its ad — so any
+	 * A paused campaign occupies the live set but is not serving, so any
 	 * mapping written as "published statuses are green" shows it as running.
 	 * The advertiser then sees green for a campaign that is serving nothing.
 	 *
@@ -108,13 +108,13 @@ final class ViewDataPillTest extends TestCase {
 	public function test_only_defined_modifiers_are_emitted(): void {
 		$css = Portal_Styles::contents();
 
-		foreach ( array_merge( Post_Statuses::all(), array( 'lap_invented', '' ) ) as $status ) {
+		foreach ( array_merge( Post_Statuses::all(), array( 'aggr_invented', '' ) ) as $status ) {
 			$modifier = View_Data::pill_for( $status );
 
 			$this->assertStringContainsString(
-				'.laao-ads-pill--' . $modifier . ' {',
+				'.aggr-pill--' . $modifier . ' {',
 				$css,
-				"portal styles define no rule for .laao-ads-pill--{$modifier}."
+				"portal styles define no rule for .aggr-pill--{$modifier}."
 			);
 		}
 	}
