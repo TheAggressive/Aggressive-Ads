@@ -28,6 +28,6 @@ Aggressive\Ads\Autoloader::register( $aggr_root . '/inc' );
 define( 'AGGR_VERSION', '0.1.0' );
 define( 'AGGR_PLUGIN_FILE', $aggr_root . '/aggressive-ads.php' );
 define( 'AGGR_PLUGIN_DIR', $aggr_root . '/' );
-define( 'AGGR_PLUGIN_URL', 'https://example.test/wp-content/plugins/laao-advertiser-portal/' );
+define( 'AGGR_PLUGIN_URL', 'https://example.test/wp-content/plugins/aggressive-ads/' );
 define( 'AGGR_MIN_PHP', '8.4' );
 define( 'AGGR_MIN_WP', '6.7' );

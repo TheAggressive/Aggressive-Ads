@@ -22,6 +22,6 @@ declare(strict_types=1);
 define( 'AGGR_PLUGIN_DIR', dirname( __DIR__, 2 ) . '/' );
 define( 'AGGR_VERSION', '0.1.0' );
 define( 'AGGR_PLUGIN_FILE', AGGR_PLUGIN_DIR . 'aggressive-ads.php' );
-define( 'AGGR_PLUGIN_URL', 'https://example.test/wp-content/plugins/laao-advertiser-portal/' );
+define( 'AGGR_PLUGIN_URL', 'https://example.test/wp-content/plugins/aggressive-ads/' );
 define( 'AGGR_MIN_PHP', '8.4' );
 define( 'AGGR_MIN_WP', '6.7' );

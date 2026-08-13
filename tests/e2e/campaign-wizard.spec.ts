@@ -20,7 +20,7 @@ test( 'advertiser completes and submits the accessible six-step wizard', async (
 
 	const portalCssLoaded = await page.evaluate( () =>
 		Array.from( document.styleSheets ).some( ( sheet ) =>
-			sheet.href?.includes( '/plugins/laao-advertiser-portal/dist/styles/portal.css' )
+			sheet.href?.includes( '/plugins/aggressive-ads/dist/styles/portal.css' )
 		)
 	);
 	expect( portalCssLoaded ).toBe( true );

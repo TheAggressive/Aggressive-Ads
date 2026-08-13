@@ -1,7 +1,7 @@
 import { wp } from './wp-cli';
 
 export default function globalSetup(): void {
-	wp( 'plugin', 'activate', 'laao-advertiser-portal' );
+	wp( 'plugin', 'activate', 'aggressive-ads' );
 	wp( 'eval', 'require "bin/dev/seed.php";' );
 	wp( 'eval', 'require "tests/e2e/reset.php";' );
 	wp( 'option', 'update', 'aggr_dev_mail_capture', '1' );

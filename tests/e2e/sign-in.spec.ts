@@ -22,7 +22,7 @@ test( 'a signed-out visitor signs in on the portal, not on wp-login', async ( {
 	// The tab icon is ours, not the WordPress logo.
 	await expect( page.locator( 'link[rel="icon"]' ) ).toHaveAttribute(
 		'href',
-		/laao-advertiser-portal\/assets\/icon\.svg$/
+		/aggressive-ads\/assets\/icon\.svg$/
 	);
 
 	await expectSignInA11y( page );

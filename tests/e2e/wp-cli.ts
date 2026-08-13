@@ -1,7 +1,9 @@
 import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
 
-const pluginDir = 'laao-advertiser-portal';
+// Mapped in .wp-env.json so GitHub's Aggressive-Ads checkout and a local
+// laao-advertiser-portal folder both appear as this slug inside the container.
+const pluginDir = 'aggressive-ads';
 
 export function wp( ...args: string[] ): string {
 	return execFileSync(
