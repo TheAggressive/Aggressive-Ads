@@ -10,5 +10,7 @@ export default function globalSetup(): void {
 	wp( 'user', 'update', 'advertiser', '--user_pass=advertiser' );
 	wp( 'user', 'update', 'admin', '--user_pass=admin' );
 	wp( 'theme', 'activate', 'twentytwentyfive' );
-	wp( 'rewrite', 'flush', '--hard' );
+	// A fresh wp-env has an empty permalink_structure. Flush then no-ops and
+	// every /advertiser/... URL 404s, which is how five specs timed out on CI.
+	wp( 'rewrite', 'structure', '/%postname%/' );
 }
