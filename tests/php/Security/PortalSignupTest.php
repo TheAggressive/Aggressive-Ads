@@ -430,4 +430,79 @@ final class PortalSignupTest extends WP_UnitTestCase {
 		$_GET['aggr_signup'] = '<script>alert(1)</script>';
 		$this->assertSame( '', Signup_Actions::request_notice() );
 	}
+
+	/**
+	 * A signed-in visitor does not sit on the open signup form.
+	 *
+	 * @return void
+	 */
+	public function test_a_signed_in_visitor_is_moved_off_open_signup(): void {
+		$gate = $this->signed_in_signup_gate( '/advertiser/signup/' );
+
+		$this->assertCount( 1, $gate['redirects'] );
+		$this->assertStringContainsString( '/advertiser/', $gate['redirects'][0] );
+		$this->assertStringNotContainsString( 'signup', $gate['redirects'][0] );
+	}
+
+	/**
+	 * An invitation URL stays on signup even when another WordPress session exists.
+	 *
+	 * @return void
+	 */
+	public function test_a_signed_in_visitor_keeps_an_invitation_signup(): void {
+		$gate = $this->signed_in_signup_gate( '/advertiser/signup/?invite=' . str_repeat( 'A', 43 ) );
+
+		$request = $gate['router']->request();
+		$this->assertNotNull( $request );
+		$this->assertSame( Request::ROUTE_SIGNUP, $request->route );
+		$this->assertSame( array(), $gate['redirects'] );
+	}
+
+	/**
+	 * Success drops the invite token, so the confirmation notice must keep the screen.
+	 *
+	 * @return void
+	 */
+	public function test_a_signed_in_visitor_keeps_the_signup_confirmation(): void {
+		$gate = $this->signed_in_signup_gate( '/advertiser/signup/?aggr_signup=sent' );
+
+		$request = $gate['router']->request();
+		$this->assertNotNull( $request );
+		$this->assertSame( Request::ROUTE_SIGNUP, $request->route );
+		$this->assertSame( array(), $gate['redirects'] );
+	}
+
+	/**
+	 * Drive gate() as a signed-in advertiser and capture redirects.
+	 *
+	 * @param string $path Portal path including any query string.
+	 * @return array{router: Router, redirects: list<string>}
+	 */
+	private function signed_in_signup_gate( string $path ): array {
+		$redirects = array();
+		$capture   = static function ( string $location ) use ( &$redirects ): bool {
+			$redirects[] = $location;
+
+			return false;
+		};
+
+		add_filter( 'wp_redirect', $capture );
+
+		$router = Plugin::instance()->container()->get( Router::class );
+		$this->set_permalink_structure( '/%postname%/' );
+		$router->register_rules();
+		// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.flush_rewrite_rules_flush_rewrite_rules -- Test setup needs the route in this process.
+		flush_rewrite_rules( false );
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Roles::ADVERTISER ) ) );
+		$this->go_to( home_url( $path ) );
+		$router->gate();
+
+		remove_filter( 'wp_redirect', $capture );
+
+		return array(
+			'router'    => $router,
+			'redirects' => $redirects,
+		);
+	}
 }

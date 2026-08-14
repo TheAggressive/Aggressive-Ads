@@ -267,20 +267,28 @@ final class Router implements Service {
 
 		/*
 		 * Account-entry screens render without a session. Most move an already
-		 * signed-in visitor onward; set-password is the deliberate exception.
+		 * signed-in visitor onward; set-password, email confirm, an invitation,
+		 * and the signup confirmation after POST are the exceptions.
 		 */
 		if ( $this->request->is_public() ) {
+			$invite_signup  = Request::ROUTE_SIGNUP === $this->request->route
+				&& '' !== Signup_Actions::request_invite_token();
+			$signup_notice  = Request::ROUTE_SIGNUP === $this->request->route
+				&& '' !== Signup_Actions::request_notice();
 			$sensitive_link = Request::ROUTE_SET_PASSWORD === $this->request->route
 				|| Request::ROUTE_CONFIRM_EMAIL === $this->request->route
-				|| ( Request::ROUTE_SIGNUP === $this->request->route && '' !== Signup_Actions::request_invite_token() );
+				|| $invite_signup;
 
 			/*
 			 * A password link must remain usable in the browser that requested it
 			 * from the signed-in account screen. An emailed invitation must likewise
-			 * remain usable by an existing WordPress account. The other entry
-			 * screens have no useful signed-in state and move the visitor onward.
+			 * remain usable by an existing WordPress account. Success drops the
+			 * invite token from the URL on purpose, so the confirmation notice is
+			 * what keeps that visitor on the result instead of the dashboard.
+			 * The other entry screens have no useful signed-in state and move
+			 * the visitor onward.
 			 */
-			if ( is_user_logged_in() && ! $sensitive_link ) {
+			if ( is_user_logged_in() && ! $sensitive_link && ! $signup_notice ) {
 				wp_safe_redirect( Routes::url() );
 
 				exit;

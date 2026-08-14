@@ -54,7 +54,7 @@ The contract, ported from the Aggressive Apparel implementation:
 |---|---|
 | Semantics | `div[role="dialog"][aria-modal="true"]` with `aria-labelledby`. **Not native `<dialog>`** |
 | Focus trap | Applied to the **shell**, not the panel, so close controls positioned outside the panel stay in the Tab cycle. Focusable list excludes anything under `[hidden]` or `[inert]` |
-| Focus restoration | The element focused at open time is captured and restored, guarded against restoring to `document.body` or a detached node |
+| Focus restoration | The element focused at open time is captured and restored **after** `inert` is cleared on `.aggr-shell`. Restoring first is ignored by the browser because the trigger lives in that subtree. Guarded against restoring to `document.body` or a detached node |
 | Background | `inert` on `.aggr-shell`, feature-detected; overlays render in `wp_footer` outside the shell so they are not inerted with the page |
 | Scroll lock | **Reference-counted**, so a stacked dialog closing does not unlock the page underneath. Scrollbar width compensated to avoid layout shift |
 | Escape | One document-level capturing `keydown` listener, closing **only the top of the stack** |

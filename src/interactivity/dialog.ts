@@ -9,9 +9,9 @@
  * like state.dialogs[context.dialogId].isOpen is not reliable enough here, and
  * a preventDefault without a visible open leaves the page looking dead.
  *
- * Contract: docs/accessibility.md — focus trap on the shell, guarded restore,
- * reference-counted scroll lock, inert on .aggr-shell, Escape closes only
- * the top of the stack, reduced-motion collapses exit duration.
+ * Contract: docs/accessibility.md — focus trap on the shell, guarded restore
+ * after inert lifts, reference-counted scroll lock, inert on .aggr-shell,
+ * Escape closes only the top of the stack, reduced-motion collapses exit duration.
  */
 
 import { store, getContext } from '@wordpress/interactivity';
@@ -255,14 +255,19 @@ function closeDialog( id: string ): void {
 			refs.focusTrapCleanup = null;
 		}
 
+		unlockScroll();
+		removeFromStack( id );
+		syncBackgroundInert();
+
+		/*
+		 * Restore after inert lifts. The trigger lives in .aggr-shell; focusing
+		 * it while that subtree is still inert is ignored by the browser.
+		 */
 		const returnFocus = refs?.triggerElement ?? null;
 		if ( canRestoreFocus( returnFocus ) ) {
 			returnFocus.focus( { preventScroll: true } );
 		}
 
-		unlockScroll();
-		removeFromStack( id );
-		syncBackgroundInert();
 		if ( dialogRefs.get( id ) === refs ) {
 			dialogRefs.delete( id );
 		}

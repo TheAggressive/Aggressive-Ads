@@ -200,7 +200,11 @@ authenticated user and is never accepted from a hidden field.
 Invitation pages remain usable when a recipient already has a WordPress
 session. Like password links, they are non-cacheable and send
 `Referrer-Policy: no-referrer` so the query-string bearer token is not disclosed
-to theme assets, analytics, or later navigation.
+to theme assets, analytics, or later navigation. A successful invite POST
+drops the token from the redirect (it has been consumed) and lands on
+`?aggr_signup=sent`. That confirmation still renders for a signed-in visitor;
+bouncing them to the dashboard would hide the result of the invitation they
+just used.
 
 The nonce-protected `admin-post` signup handler is rate-limited by a hashed connecting-IP
 subject and carries a honeypot that produces no data or mail. Existing emails
