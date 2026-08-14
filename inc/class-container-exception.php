@@ -18,7 +18,7 @@ use RuntimeException;
  * unregistered service, a duplicate registration, a factory returning the
  * wrong type, a dependency cycle. None of them is a runtime condition a user
  * can cause, so an exception is correct here where WP_Error would be correct
- * for a denied transition. See docs/adr/0008-explicit-transition-table.md.
+ * for a denied transition. See docs/campaign-workflow.md.
  */
 final class Container_Exception extends RuntimeException {
 }

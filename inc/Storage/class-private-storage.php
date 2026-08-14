@@ -24,7 +24,7 @@ use WP_Error;
  * nginx reads none of them: if production runs nginx that layer contributes
  * nothing, which is recorded in docs/known-issues.md rather than assumed away.
  * Reads go through an authorized endpoint that streams bytes and never
- * redirects. See docs/adr/0010-two-stage-creative-storage.md.
+ * redirects. See docs/domain-model.md.
  */
 final class Private_Storage {
 

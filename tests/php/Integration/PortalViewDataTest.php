@@ -459,7 +459,7 @@ final class PortalViewDataTest extends WP_UnitTestCase {
 	 * Metric fields stay absent until both reporting modules are on.
 	 *
 	 * A row of zeros would look like "nobody saw this ad" while native
-	 * delivery is off. ADR-0030 requires the keys not to exist at all.
+	 * delivery is off. The keys must not exist at all.
 	 *
 	 * @return void
 	 */

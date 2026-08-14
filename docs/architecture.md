@@ -70,7 +70,7 @@ LAAO theme  →  may restyle the portal via CSS custom properties
 
 The portal never calls a theme class, never requires a theme file, and never assumes a theme's markup or CSS variables exist. It must run under Twenty Twenty-Five with no visual or functional degradation beyond the absence of site chrome.
 
-This is not an aspiration maintained by discipline. `tests/e2e/campaign-wizard.spec.ts` switches the active theme to Twenty Twenty-Five, logs in, loads the portal, and runs axe. A theme dependency introduced by accident fails that test. See [ADR-0001](adr/0001-standalone-plugin-zero-theme-dependency.md).
+This is not an aspiration maintained by discipline. `tests/e2e/campaign-wizard.spec.ts` switches the active theme to Twenty Twenty-Five, logs in, loads the portal, and runs axe. A theme dependency introduced by accident fails that test.
 
 ## Public pages without a theme embed
 

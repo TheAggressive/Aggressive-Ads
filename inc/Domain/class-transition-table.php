@@ -21,7 +21,7 @@ use Aggressive\Ads\Security\Capabilities;
  * controllers is the entire point: the question "can a campaign go from here
  * to there, and who may do it?" has exactly one answer, in one file, and every
  * surface gets the same answer. See docs/campaign-workflow.md and
- * docs/adr/0008-explicit-transition-table.md.
+ * docs/campaign-workflow.md.
  *
  * This class calls no WordPress function, which is what makes the rules
  * testable exhaustively in milliseconds — all 121 status pairs, not just the

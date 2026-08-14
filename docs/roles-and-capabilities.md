@@ -50,7 +50,7 @@ so two tenants cannot claim the same name.
 
 Asserted explicitly in `tests/php/Security/RolesTest.php`:
 
-- **`upload_files`** — advertisers never touch the Media Library. Creative goes to private storage and only becomes an attachment at approval. See [ADR-0010](adr/0010-two-stage-creative-storage.md).
+- **`upload_files`** — advertisers never touch the Media Library. Creative goes to private storage and only becomes an attachment at approval.
 - **`edit_posts`** — no access to site content of any kind.
 - **`unfiltered_html`** — decisive, given that `_code` and `html5` creatives are arbitrary HTML on the public site.
 

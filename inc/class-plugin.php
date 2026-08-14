@@ -22,6 +22,7 @@ use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Install\Installer;
+use Aggressive\Ads\Install\Rewrite_Flusher;
 use Aggressive\Ads\Install\Site_Lifecycle;
 use Aggressive\Ads\Install\Upgrader;
 use Aggressive\Ads\Notification\Ending_Soon_Mailer;
@@ -150,20 +151,27 @@ final class Plugin {
 	}
 
 	/**
-	 * Activation hook. Migrates, then repairs schema, roles and options.
+	 * Activation hook. Migrates, then repairs schema, roles, options, and
+	 * rewrite rules.
 	 *
 	 * Public because it is a hook callback. The upgrader must run first:
-	 * install() stamps the current db version, and doing that before the
-	 * identity rewrite would make a later request skip migration 3.
+	 * install() stamps the current db version, and doing that before a
+	 * numbered migration would make a later request skip the unfinished step.
 	 * WordPress does not re-fire this on a file-only update — plugins_loaded
 	 * priority 5 is the path that covers those — but a deactivate/reactivate
 	 * of new code against an old database does fire it.
+	 *
+	 * Rewrite flush belongs here, not on a later `init`. `activate_plugin()`
+	 * includes this file after `init` has already run, so the version-gated
+	 * flush never sees this request. Without it, `/advertiser/` 404s at Apache
+	 * until someone clicks Save Permalinks.
 	 *
 	 * @return void
 	 */
 	public function activate(): void {
 		$this->container->get( Upgrader::class )->maybe_upgrade();
 		$this->container->get( Installer::class )->install();
+		$this->container->get( Rewrite_Flusher::class )->flush();
 	}
 
 	/**
@@ -298,6 +306,11 @@ final class Plugin {
 			Fill_Controller::class,
 			Beacon_Controller::class,
 			Click_Hop::class,
+
+			// After both rule owners have hooked `init` priority 10, so a
+			// version bump on this request flushes rules that are already in
+			// $wp_rewrite. Activation calls flush() directly and never waits.
+			Rewrite_Flusher::class,
 			Placement_Slot::class,
 		);
 	}

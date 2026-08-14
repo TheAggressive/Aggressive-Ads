@@ -7,7 +7,7 @@ Post types and their meta live in [domain-model.md](domain-model.md). This docum
 `{$wpdb->prefix}aggr_audit_log`
 
 On a network that is `wp_{blog_id}_aggr_audit_log`. One WordPress site is one
-publisher tenant ([ADR-0034](adr/0034-site-scoped-tenancy.md)); these tables
+publisher tenant; these tables
 are never network-global.
 
 ```sql
@@ -39,7 +39,7 @@ CREATE TABLE {$wpdb->prefix}aggr_audit_log (
 
 ### Why each unusual choice
 
-**Both `created_at` and `created_at_ts`.** The `DATETIME` is for humans reading the table and for `BETWEEN` reporting; the integer is for cheap comparison and matches the UTC-integer rule in [ADR-0016](adr/0016-utc-unix-integer-times.md). Storing both costs 8 bytes and removes every timezone question from every query.
+**Both `created_at` and `created_at_ts`.** The `DATETIME` is for humans reading the table and for `BETWEEN` reporting; the integer is for cheap comparison and matches the UTC-integer rule. Storing both costs 8 bytes and removes every timezone question from every query.
 
 **`actor_ip_hash`, never a raw IP.** `sha256( $ip . wp_salt( 'aggr_audit' ) )`. A raw IP is personal data carrying a retention obligation; a salted hash still answers "was this the same client?", which is the only question the log is actually asked. The salt means the hashes are not comparable across installs, which is fine and slightly desirable.
 
@@ -95,8 +95,7 @@ ordinary rule that existing-email signup sends no mail.
 
 All access-table SQL lives in `Org_Access_Repository`; every query uses
 `$wpdb->prepare()` or a format array, except fixed prefix-derived schema
-statements. See
-[ADR-0019](adr/0019-private-organization-matching-and-approved-membership.md).
+statements.
 
 ## Native fill events and rollups
 
@@ -107,8 +106,8 @@ raw address. House fills store campaign_id and creative_id as 0.
 
 `{$wpdb->prefix}aggr_rollups` is the reporting source: unique
 `(placement_id, campaign_id, day_utc)`. Advertiser tiles appear only when
-the reporting **and** native-delivery modules are on
-([ADR-0030](adr/0030-reporting-from-native-rollups.md)). House rows
+the reporting module is on.
+House rows
 (`campaign_id = 0`) are never attributed to an organization. Org totals are
 filtered in SQL against campaign `_aggr_org_id`.
 
@@ -132,7 +131,7 @@ Rollups are not purged with events.
 
 Version options autoload because they are read on every request. `aggr_upgrade_lock` does not, because it is written and deleted rather than read, and an autoloaded option that churns is a cache-invalidation cost for nothing.
 
-Nothing calls `get_option( 'aggr_settings' )` outside `inc/Core/class-settings.php`. The shape is declared once in `Domain\Settings_Schema` and written only through `Core\Settings::save()`, which rejects the whole payload on any error. The WordPress Settings API (`register_setting` / `options.php`) is not used: that screen is gated on `manage_options`, and ours is `aggr_manage_settings`. See [ADR-0023](adr/0023-settings-and-module-flags.md).
+Nothing calls `get_option( 'aggr_settings' )` outside `inc/Core/class-settings.php`. The shape is declared once in `Domain\Settings_Schema` and written only through `Core\Settings::save()`, which rejects the whole payload on any error. The WordPress Settings API (`register_setting` / `options.php`) is not used: that screen is gated on `manage_options`, and ours is `aggr_manage_settings`.
 
 ## Migrations
 
@@ -149,9 +148,7 @@ array(
 )
 ```
 
-There is no rewrite of previous product identifiers. See [ADR-0035](adr/0035-no-laao-compatibility-layer.md).
-
-**Each step is idempotent and bumps `aggr_db_version` itself on success.** A fatal partway through the sequence therefore never replays completed work — the next request resumes at the first unfinished step. A single bump after the whole loop would mean any failure re-runs everything from the beginning, which for an `ALTER TABLE` is how you turn one bad deploy into a corrupted schema.
+There is no rewrite of previous product identifiers. **Each step is idempotent and bumps `aggr_db_version` itself on success.** A fatal partway through the sequence therefore never replays completed work — the next request resumes at the first unfinished step. A single bump after the whole loop would mean any failure re-runs everything from the beginning, which for an `ALTER TABLE` is how you turn one bad deploy into a corrupted schema.
 
 Concurrency is guarded with `add_option( 'aggr_upgrade_lock', time(), '', false )`. `add_option` returns `false` when the row already exists, which is the closest thing to an atomic test-and-set WordPress offers without a direct query. Two simultaneous requests after a deploy do not both migrate. The lock is released in a `finally`, and a stale lock older than five minutes is force-cleared, because a fatal inside a migration would otherwise wedge the site permanently.
 

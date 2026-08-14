@@ -5,7 +5,7 @@
  * Campaign-by-state tiles always ship. Impression, click and CTR tiles, a
  * seven-day sparkline, and table CTR appear only when Reporting is on, and
  * they read `aggr_rollups` — never invented zeros. Spend stays absent until
- * billing has a source. See ADR-0030.
+ * billing has a source.
  *
  * @package Aggressive\Ads
  */

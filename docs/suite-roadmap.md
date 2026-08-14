@@ -1,13 +1,10 @@
 # Aggressive Ads — suite build outline
 
 Working identity: **Aggressive Ads** / `aggr_`. Tagline: **Live means live.**
-See [ADR-0022](adr/0022-aggressive-ads-identity.md).
-
-This is the sequence for turning the LAAO advertiser portal into a white-label
-advertising management suite that can **serve** ads, not only review them.
-Phases 1–8 of [roadmap.md](roadmap.md) already shipped the campaign domain.
-This file is what to build **next**, in order. Do not start a later phase
-because it looks more fun.
+This is the sequence for a white-label advertising management suite that
+**serves** ads, not only reviews them. Phases 1–8 of [roadmap.md](roadmap.md)
+already shipped the campaign domain. This file is what to build **next**, in
+order. Do not start a later phase because it looks more fun.
 
 Nothing here is built merely because this document exists.
 
@@ -33,7 +30,7 @@ distinct; only the **shell** unifies. Parent slug `aggr` stays stable.
 
 | Panel | Behaviour |
 |---|---|
-| **Modules** | Kill-switches: Billing UI, Public signup, Reporting. Native delivery is always on and is not a checkbox ([ADR-0033](adr/0033-native-delivery-is-not-a-staff-module.md)). Off = routes/menus/fields **absent**, not `display:none`. |
+| **Modules** | Kill-switches: Billing UI, Public signup, Reporting. Native delivery is always on and is not a checkbox. Off = routes/menus/fields **absent**, not `display:none`. |
 | **Brand** | Product name, logo, tagline, accent/surface tokens. Writes `--aggr-*` on `.aggr-portal` / staff admin. Save **rejects** WCAG AA failures. |
 | **Delivery** | Native fill. Fill cache TTL. House-ad policy. |
 | **Tracking** | Beacon-only impressions, click hop, retention. Never trust a client-supplied count. |
@@ -41,7 +38,7 @@ distinct; only the **shell** unifies. Parent slug `aggr` stays stable.
 Billing **off** until payments exist: campaign snapshots may still store
 currency; the UI must not pretend checkout exists.
 
-**White-label** is ADR-0017 owned by the plugin: token *values*, logo, and
+**White-label** is owned by the plugin: token *values*, logo, and
 display name. Theme CSS may still override. Settings should win on
 `.aggr-portal` so a tenant is not fighting the host theme. Prefixes never
 change per tenant. Advertiser-facing default is “Advertising”, not
@@ -91,13 +88,12 @@ Own tables, not `_views-{day}` postmeta:
 Rules:
 
 - Server increments only. Fill mints a signed, single-use token bound to the
-  campaign and creative that were actually chosen ([ADR-0032](adr/0032-equal-rotation-counts-follow-the-fill.md)).
+  campaign and creative that were actually chosen.
 - Reject expired, reused, prefetch (`Sec-Purpose`), obvious bots.
 - Store `HMAC(IP + daily salt)`, not raw IP.
 - Click is a first-party hop, then the destination. Destination works without JS.
 - Advertiser metric tiles and a seven-day sparkline read **rollups only**, and
-  only while Reporting is on ([ADR-0030](adr/0030-reporting-from-native-rollups.md),
-  [ADR-0033](adr/0033-native-delivery-is-not-a-staff-module.md)).
+  only while Reporting is on.
   House (`campaign_id = 0`) never joins an org. Rotation does not move a view
   onto a different campaign after the fact.
 
@@ -107,14 +103,14 @@ Rules:
 
 ### Phase 0 — Identity *(shipped)*
 
-Aggressive Ads / `aggr_` ([ADR-0022](adr/0022-aggressive-ads-identity.md),
-[ADR-0035](adr/0035-no-laao-compatibility-layer.md)). There is no LAAO rewrite
-or one-release alias. New installs write the current names.
+Aggressive Ads / `aggr_`.
+There is no LAAO rewrite or one-release alias. New installs write the current
+names.
 
 ### Phase A — Portal UI close
 
 Wizard / upload / autosave Interactivity stores on the existing no-JS forms.
-Self-hosted Archivo (ADR-0018). Preview, remove-confirmation, and live-ad
+Self-hosted Archivo. Preview, remove-confirmation, and live-ad
 preview dialogs on the shared overlay primitive. Keyboard + screen-reader
 e2e covers skip link, step-heading focus, dialog trap/Escape/restore, and
 axe on each wizard step plus open overlays.
@@ -126,23 +122,17 @@ axe on each wizard step plus open overlays.
 Settings screen. Public signup off is a 404 unless the URL carries an
 invitation token. Inventory is always registered.
 
-ADRs in this phase: [0023](adr/0023-settings-and-module-flags.md),
-[0024](adr/0024-white-label-tokens.md), [0025](adr/0025-unified-admin-menu.md).
-
 ### Phase C — Native delivery
 
 **Shipped.** Live set is `aggr_live`, not an `ads` CPT. Cached HTML is a
 reserved slot; fill and beacons are uncached. Native is the
-`Ad_Provider_Interface` ([ADR-0031](adr/0031-native-is-the-only-publisher.md)).
+`Ad_Provider_Interface`.
 Inventory creates placements (common sizes + custom WxH), house creative, and
 the public slug.
 
-ADRs in this phase: [0026](adr/0026-native-delivery.md),
-[0027](adr/0027-cache-safe-fill.md).
-
 ### Phase D — Cutover (LAAO site)
 
-**Plugin half shipped (ADR-0031).** Dual-write is gone. Template parts in the
+**Plugin half shipped.** Dual-write is gone. Template parts in the
 LAAO theme still need to swap AdSanity group blocks for `aggr/placement`.
 Until they do, public pages show empty reserved slots. That theme change is
 outside this repository.
@@ -150,31 +140,9 @@ outside this repository.
 ### Phase E — Suite depth
 
 Staff package admin is **shipped** (Advertising → Packages). Equal rotation
-among live campaigns on a slot is **shipped** ([ADR-0032](adr/0032-equal-rotation-counts-follow-the-fill.md)).
+among live campaigns on a slot is **shipped**.
 Fill dashboard and weighted rotation remain. Geo / frequency cap only when a
 buyer needs them. Payments only behind the Billing module and a real PCI story.
-
----
-
-## ADRs this outline still owes
-
-| # | Topic |
-|---|---|
-| [0021](adr/0021-agate-identity.md) | Superseded (Agate) |
-| [0022](adr/0022-aggressive-ads-identity.md) | **Done.** Aggressive Ads / `aggr_` |
-| [0023](adr/0023-settings-and-module-flags.md) | **Done.** One `aggr_settings` option; a disabled module is absent |
-| [0024](adr/0024-white-label-tokens.md) | **Done.** Brand tokens, contrast-gated save |
-| [0025](adr/0025-unified-admin-menu.md) | **Done.** One Advertising parent; submenus keep distinct caps |
-| [0026](adr/0026-native-delivery.md) | **Done.** Live set is ours (adapter dual-write superseded by 0031) |
-| [0028](adr/0028-staff-package-catalogue.md) | **Done.** Staff package catalogue; campaigns keep snapshots |
-| [0029](adr/0029-campaign-copy-is-not-a-transition.md) | **Done.** Renew/duplicate copy into a new draft |
-| [0030](adr/0030-reporting-from-native-rollups.md) | **Done.** Reporting from `aggr_rollups`; tiles need native delivery too |
-| [0031](adr/0031-native-is-the-only-publisher.md) | **Done.** Native is the only publisher; Inventory is the catalogue |
-| [0032](adr/0032-equal-rotation-counts-follow-the-fill.md) | **Done.** Equal rotation; counts follow the filled campaign |
-| [0033](adr/0033-native-delivery-is-not-a-staff-module.md) | **Done.** Native delivery is not a staff module |
-| [0034](adr/0034-site-scoped-tenancy.md) | **Done.** One site is one publisher tenant; fill tokens bind `blog_id` |
-
-Write each ADR in the same change that starts that phase.
 
 ---
 

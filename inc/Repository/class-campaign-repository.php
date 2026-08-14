@@ -18,7 +18,7 @@ use Aggressive\Ads\Core\Post_Types;
  * The status setter is deliberately blunt and deliberately not public API:
  * only Campaign_State_Machine::apply() should reach it, and a listener writes
  * an audit row when a campaign's status changes without it. See
- * docs/adr/0008-explicit-transition-table.md.
+ * docs/campaign-workflow.md.
  */
 final class Campaign_Repository {
 
@@ -776,7 +776,7 @@ final class Campaign_Repository {
 	/**
 	 * Live campaigns occupying a placement, lowest id first.
 	 *
-	 * Fill rotates equally among this list (ADR-0032). Order is stable so a
+	 * Fill rotates equally among this list. Order is stable so a
 	 * test can name the members; it is not a serving priority.
 	 *
 	 * @param int $placement_id Placement post id.

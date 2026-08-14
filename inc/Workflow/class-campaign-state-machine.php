@@ -36,7 +36,7 @@ use WP_Error;
  * failure is swallowed: a submitted campaign stays submitted when the mail
  * server is down.
  *
- * See docs/adr/0008-explicit-transition-table.md.
+ * See docs/campaign-workflow.md.
  */
 final class Campaign_State_Machine implements Service {
 

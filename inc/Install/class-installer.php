@@ -24,7 +24,7 @@ use Aggressive\Ads\Workflow\Click_Hop;
  * Every step is idempotent, because this runs from more than one place: the
  * activation hook, and the upgrader on any request where a version option is
  * behind. Activation is a hint, not the mechanism — see
- * docs/adr/0014-version-driven-idempotent-installer.md.
+ * docs/data-schema.md.
  */
 final class Installer {
 

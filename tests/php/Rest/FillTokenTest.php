@@ -103,7 +103,7 @@ final class FillTokenTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Six-part tokens from before ADR-0034 are refused. TTL is five minutes;
+	 * Six-part tokens from before site-scoped tenancy are refused. TTL is five minutes;
 	 * there is no dual-read.
 	 *
 	 * @return void

@@ -18,8 +18,7 @@ use WP_Error;
  * Provider-specific post types, taxonomies, metadata, and reconciliation
  * details stay behind this boundary. The portal remains the system of record;
  * these operations only project its authoritative state into a delivery
- * system. See ADR-0006.
- */
+ * system. */
 interface Ad_Provider_Interface {
 
 	/**

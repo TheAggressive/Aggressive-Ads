@@ -1,6 +1,6 @@
 # Domain model
 
-Five entities, all stored as private custom post types, all reached through repository classes. See [ADR-0002](adr/0002-private-cpts-behind-repositories.md) for why CPTs rather than custom tables.
+Five entities, all stored as private custom post types, all reached through repository classes. Custom tables are reserved for the audit log, events, and rollups.
 
 ```
 Organization 1 ──── * Campaign 1 ──── * Creative
@@ -117,14 +117,13 @@ uppercase, accent-free, punctuation-free comparison key; it is not shown to
 customers. A unique digest of that key is also reserved in the organization
 access table so two concurrent signups cannot create the same tenant. Exact and
 unambiguous fuzzy matches create a pending access request rather than a second
-organization or an automatic membership. See
-[ADR-0019](adr/0019-private-organization-matching-and-approved-membership.md).
+organization or an automatic membership.
 
 ### Placement — `aggr_placement`
 
 `_aggr_size` string `{width}x{height}` · `_aggr_position_label` string · `_aggr_max_concurrent` int · `_aggr_is_active` int `0|1` · `_aggr_sort_order` int · `_aggr_house_attachment_id` int · `_aggr_house_click_url` string · `_aggr_house_alt` string
 
-The public slot id is `post_name`. Size is a pixel pair from `Domain\Ad_Sizes` (common IAB list or custom WxH), not a slot identity. House creative is placement meta, not a sixth post type. Orphan `_aggr_adgroup_term_id` is not read. See [ADR-0026](adr/0026-native-delivery.md) and [ADR-0031](adr/0031-native-is-the-only-publisher.md).
+The public slot id is `post_name`. Size is a pixel pair from `Domain\Ad_Sizes` (common IAB list or custom WxH), not a slot identity. House creative is placement meta, not a sixth post type. Orphan `_aggr_adgroup_term_id` is not read.
 
 ### Package — `aggr_package`
 
@@ -151,7 +150,7 @@ These hold at all times and are asserted in the repositories, not merely assumed
 2. **A Campaign's placements are all `_aggr_is_active`.** Checked at submission and re-checked at approval, because a placement can be deactivated while a campaign sits in the queue.
 3. **`org_id` is never read from client input.** It is derived server-side from the authenticated user on every request without exception. This one rule collapses most of the IDOR surface — see [threat-model.md](threat-model.md).
 4. **A campaign's `post_status` is only ever written by `Campaign_State_Machine::apply()`.** See [campaign-workflow.md](campaign-workflow.md).
-5. **Timestamps are UTC Unix integers everywhere.** No date strings, no site-local times, no `DateTime` in storage. Formatting happens at the display layer via `wp_date()`. See [ADR-0016](adr/0016-utc-unix-integer-times.md).
+5. **Timestamps are UTC Unix integers everywhere.** No date strings, no site-local times, no `DateTime` in storage. Formatting happens at the display layer via `wp_date()`.
 6. **Package selection creates a campaign snapshot.** The selected package must be active and completely configured, and every included placement must be active. Its package id, repeated placement ids, integer-cent price, and currency are copied onto the campaign in one editor operation. Later package edits never mutate an existing campaign implicitly.
 7. **An editable campaign has at most one creative per selected placement.** Upload validates exact dimensions before creating the record. Removal deletes private bytes before the record, and neither operation is allowed after the campaign leaves an advertiser-editable state.
 

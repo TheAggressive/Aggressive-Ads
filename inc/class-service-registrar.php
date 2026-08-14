@@ -26,6 +26,7 @@ use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Core\Settings;
 use Aggressive\Ads\Install\Installer;
+use Aggressive\Ads\Install\Rewrite_Flusher;
 use Aggressive\Ads\Install\Site_Lifecycle;
 use Aggressive\Ads\Install\Upgrader;
 use Aggressive\Ads\Repository\Audit_Repository;
@@ -211,7 +212,10 @@ final class Service_Registrar {
 			Site_Lifecycle::class,
 			static fn ( Service_Container $c ): Site_Lifecycle => new Site_Lifecycle(
 				$c->get( Upgrader::class ),
-				$c->get( Installer::class )
+				$c->get( Installer::class ),
+				static function () use ( $c ): void {
+					$c->get( Rewrite_Flusher::class )->flush();
+				}
 			)
 		);
 
@@ -848,6 +852,14 @@ final class Service_Registrar {
 				$c->get( Rollup_Repository::class ),
 				$c->get( Creative_Repository::class ),
 				$c->get( Placement_Repository::class )
+			)
+		);
+
+		$container->register(
+			Rewrite_Flusher::class,
+			static fn ( Service_Container $c ): Rewrite_Flusher => new Rewrite_Flusher(
+				$c->get( Router::class ),
+				$c->get( Click_Hop::class )
 			)
 		);
 

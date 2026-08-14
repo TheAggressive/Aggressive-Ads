@@ -6,7 +6,7 @@
  * carry — org-scoped map_meta_cap, dbDelta idempotence, real REST
  * authorization — are not expressible against mocks, which is the entire
  * reason PHPUnit is pinned to 9.6 here. See
- * docs/adr/0013-phpunit-9-with-wp-test-suite.md.
+ * docs/testing-strategy.md.
  *
  * @package Aggressive\Ads
  */

@@ -23,7 +23,7 @@ use Aggressive\Ads\Security\Rate_Limiter;
 final class Click_Hop implements Service {
 
 	public const QUERY_VAR       = 'aggr_click';
-	public const REWRITE_VERSION = 1;
+	public const REWRITE_VERSION = 2;
 	public const OPTION_REWRITE  = 'aggr_delivery_rewrite_version';
 	public const REFERRER_POLICY = 'no-referrer';
 
@@ -54,7 +54,6 @@ final class Click_Hop implements Service {
 	 */
 	public function init(): void {
 		add_action( 'init', array( $this, 'register_rules' ) );
-		add_action( 'init', array( $this, 'maybe_flush' ), 99 );
 		add_filter( 'query_vars', array( $this, 'register_query_var' ) );
 		add_action( 'template_redirect', array( $this, 'hop' ) );
 	}
@@ -85,22 +84,6 @@ final class Click_Hop implements Service {
 		$vars[] = self::QUERY_VAR;
 
 		return $vars;
-	}
-
-	/**
-	 * Flushes once when the rule version changes.
-	 */
-	public function maybe_flush(): void {
-		$stored = (int) get_option( self::OPTION_REWRITE, 0 );
-
-		if ( self::REWRITE_VERSION === $stored ) {
-			return;
-		}
-
-		$this->register_rules();
-		// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.flush_rewrite_rules_flush_rewrite_rules -- Version-gated, so this runs once per deploy that changes the hop, never per request. Same reason as Portal\Router.
-		flush_rewrite_rules( false );
-		update_option( self::OPTION_REWRITE, self::REWRITE_VERSION, true );
 	}
 
 	/**

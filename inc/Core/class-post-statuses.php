@@ -13,7 +13,7 @@ namespace Aggressive\Ads\Core;
  * Registers the eleven campaign statuses.
  *
  * Only Campaign_State_Machine::apply() ever writes one of these onto a post.
- * See docs/campaign-workflow.md and docs/adr/0008-explicit-transition-table.md.
+ * See docs/campaign-workflow.md.
  */
 final class Post_Statuses implements Service {
 

@@ -21,7 +21,7 @@ updates:
         patterns: ['*']
 
   # Dev tooling only — the plugin has no runtime Composer dependencies and
-  # vendor/ never ships. See docs/adr/0011-no-composer-runtime-dependencies.md.
+  # vendor/ never ships. See docs/build-and-release.md.
   - package-ecosystem: composer
     directory: /
     schedule:

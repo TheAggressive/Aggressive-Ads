@@ -48,7 +48,7 @@ final class Fill_Cache implements Service {
 	 * @param array<string, mixed> $payload      Fill identity without tokens.
 	 */
 	public function put( int $placement_id, array $payload ): void {
-		// phpcs:ignore WordPressVIPMinimum.Performance.LowExpiryCacheTime.CacheTimeUndetermined -- Fill TTL is 5–300s by design (ADR-0027); a 300s floor is the paused-campaign-still-showing bug.
+		// phpcs:ignore WordPressVIPMinimum.Performance.LowExpiryCacheTime.CacheTimeUndetermined -- Fill TTL is 5–300s by design; a 300s floor is the paused-campaign-still-showing bug.
 		wp_cache_set( $this->key( $placement_id ), $payload, self::GROUP, $this->settings->fill_ttl() );
 	}
 

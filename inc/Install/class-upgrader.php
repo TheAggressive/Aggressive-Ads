@@ -23,7 +23,7 @@ use Throwable;
  * against old schema, silently, until something reads a column that is not
  * there. So the check runs always, and does nothing when the versions match.
  *
- * See docs/adr/0014-version-driven-idempotent-installer.md.
+ * See docs/data-schema.md.
  */
 final class Upgrader {
 

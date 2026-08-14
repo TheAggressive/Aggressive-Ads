@@ -17,9 +17,6 @@ theme dependency. Display name and logo are settings; the code prefix is
 | Author | [The Aggressive, LLC](https://theaggressive.com) |
 | Repository | [TheAggressive/Aggressive-Ads](https://github.com/TheAggressive/Aggressive-Ads) |
 
-See [ADR-0035](docs/adr/0035-no-laao-compatibility-layer.md) and
-[ADR-0022](docs/adr/0022-aggressive-ads-identity.md).
-
 ## What it does
 
 **Advertiser portal** at `/advertiser/` — its own document, not a page with a
@@ -70,15 +67,14 @@ cannot find, it has not been built.
 
 No runtime Composer packages. `vendor/` is dev tooling and never ships. The
 production autoloader is `inc/class-autoloader.php`. See
-[ADR-0011](docs/adr/0011-no-composer-runtime-dependencies.md) and
-[ADR-0012](docs/adr/0012-own-autoloader-in-production.md).
+[build-and-release.md](docs/build-and-release.md).
 
 ## Getting started
 
 ```bash
 composer install      # PHPCS, PHPStan, PHPUnit — vendor/ never ships
 pnpm install          # webpack, TypeScript, Playwright
-pnpm wp-env start     # dev http://localhost:9960 , tests :9970
+pnpm wp-env start     # dev http://localhost:9960, tests :9970
 pnpm build            # src/ → dist/
 pnpm dev:seed         # an advertiser, an org, and five campaigns
 pnpm ci:verify        # the contract for declaring a change finished
@@ -127,17 +123,13 @@ Start with [docs/README.md](docs/README.md). Short version:
 
 | Doc | Covers |
 |---|---|
-| [architecture.md](docs/architecture.md) | Layers and the rules that keep them apart |
+| [architecture.md](docs/architecture.md) | Layers, native fill, Inventory, no downstream ads CPT |
 | [domain-model.md](docs/domain-model.md) | Five entities, storage, invariants |
 | [campaign-workflow.md](docs/campaign-workflow.md) | The state machine every status write goes through |
 | [roles-and-capabilities.md](docs/roles-and-capabilities.md) | Who may do what |
-| [adr/0031-native-is-the-only-publisher.md](docs/adr/0031-native-is-the-only-publisher.md) | Fill, Inventory, no downstream ads CPT |
 | [threat-model.md](docs/threat-model.md) | Attack surfaces and the test proving each |
 | [roadmap.md](docs/roadmap.md) | What shipped vs remaining product |
 | [suite-roadmap.md](docs/suite-roadmap.md) | Suite build order |
-
-Decisions live in [`docs/adr/`](docs/adr/). A change that reverses one must
-supersede that ADR in the same change.
 
 ## License
 

@@ -13,7 +13,7 @@ namespace Aggressive\Ads\Core;
  * Registers Organization, Placement, Package, Campaign and Creative.
  *
  * All five are private in the full sense — no REST route, no permalink, no
- * query var. See docs/adr/0002-private-cpts-behind-repositories.md.
+ * query var. See docs/architecture.md.
  */
 final class Post_Types implements Service {
 
@@ -170,7 +170,7 @@ final class Post_Types implements Service {
 	 * they carry no author. Everything else does, because `author` is what the
 	 * admin list tables and core's own meta-cap mapping expect to find — even
 	 * though ownership here is resolved by organization, not by author. See
-	 * docs/adr/0009-org-scoped-map-meta-cap.md.
+	 * docs/roles-and-capabilities.md.
 	 *
 	 * @param string $slug Post type slug.
 	 * @return array<int, string>

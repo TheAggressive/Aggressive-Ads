@@ -55,7 +55,7 @@
 			it is undefined, so following this sniff would fatal the plugin at
 			activation. Roles are installed by a version-driven installer that
 			removes before adding, which is the behaviour the sniff is
-			protecting: see docs/adr/0014-version-driven-idempotent-installer.md.
+			protecting: see docs/data-schema.md.
 		-->
 		<exclude name="WordPressVIPMinimum.Functions.RestrictedFunctions.custom_role_add_role"/>
 	</rule>

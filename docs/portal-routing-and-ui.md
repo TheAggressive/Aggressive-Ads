@@ -46,19 +46,19 @@ non-enumerating errors, rate limit and same-host destination validation.
 
 The honest trade-off, since this decision is load-bearing.
 
-**What it costs.** There is no row in the Pages list, so "where does `/advertiser/` come from?" is a harder support question. A rewrite flush that never ran produces a 404 that looks exactly like a broken deploy. The version-gated automatic flush is built; the Site Health assertion and Tools re-flush control remain Phase 11 work.
+**What it costs.** There is no row in the Pages list, so "where does `/advertiser/` come from?" is a harder support question. A rewrite flush that never ran produces a 404 that looks exactly like a broken deploy. Activation writes the rules (hard flush); a version bump covers file-only deploys. The Site Health assertion and Tools re-flush control remain Phase 11 work.
 
 **What it buys.** The portal is a multi-screen area, not a page. A page-plus-block design expresses `/advertiser/campaigns/123/` as either a query string or one WordPress page per screen — and every one of those pages is something an editor can rename, trash, reorder, or paste a pattern into. A route the plugin owns cannot be edited into a broken state, and it removes the entire class of "the portal disappeared because someone trashed a page" incident. It also means the portal exists the moment the plugin activates, with no setup step and nothing to document.
-
-See [ADR-0005](adr/0005-portal-route-via-rewrite-rule.md).
 
 ## The rewrite flush
 
 Never on every request — `flush_rewrite_rules()` rewrites `.htaccess` and regenerates every rule in the site, and calling it per-request is a well-known way to make a site inexplicably slow.
 
-`Router::maybe_flush()` runs on `init` priority 99, compares the `aggr_rewrite_version` option against a class constant, and calls `flush_rewrite_rules( false )` once if they differ. The soft form skips the `.htaccess` write, which we do not need. Rules are added earlier in `init`, so they are in `$wp_rewrite` when the flush happens.
+`Plugin::activate()` and `wp_initialize_site` call `Rewrite_Flusher::flush()`, which registers the portal and click-hop rules, then calls `flush_rewrite_rules( true )`. That is the same write Settings → Permalinks → Save performs. It has to happen in the activation hook because `activate_plugin()` includes this file after `init` has already run, so the plugin's `init` callbacks never fire on that request. Soft flush (`false`) updates the `rewrite_rules` option and leaves Apache's `.htaccess` stale, which is why `/advertiser/` 404s until someone clicks Save. Pretty permalinks must already be on; activation does not change `permalink_structure`.
 
-**Shipping a route change means bumping the constant.** That is the whole deployment procedure for routing.
+File-only deploys never see the activation hook. `Rewrite_Flusher::maybe_flush()` runs on `init` priority 99, compares `aggr_rewrite_version` and `aggr_delivery_rewrite_version` against the class constants, and hard-flushes once if either differs.
+
+**Shipping a route change means bumping the constant.** That is the whole deployment procedure for routing after the plugin is already active.
 
 ## Templates
 
@@ -109,14 +109,12 @@ path before presenting the final action. All six steps work without JavaScript.
 A completed or otherwise uneditable campaign can be copied from the detail
 screen. Complete campaigns label the action **Renew campaign**; others say
 **Duplicate campaign**. Both create a new draft with the stored snapshot and
-artwork, never the old dates or provider ads. See
-[ADR-0029](adr/0029-campaign-copy-is-not-a-transition.md).
+artwork, never the old dates or provider ads.
 
 The dashboard always shows campaign-by-state counts. Impression, click and CTR
 tiles, a seven-day impression sparkline, and the matching campaign-table
 columns appear only when Reporting is on. Native delivery is always recording.
-They read `aggr_rollups` and never invented zeros. Spend stays absent. See
-[ADR-0030](adr/0030-reporting-from-native-rollups.md).
+They read `aggr_rollups` and never invented zeros. Spend stays absent.
 
 Saving details persists `package` as the resume point. Saving a package copies
 its current placement set, integer-cent price, and currency onto the campaign;
@@ -239,7 +237,7 @@ The portal must look and behave the same under any theme. The mechanisms:
 
 - The document is ours, so no theme markup wraps it.
 - All layout comes from scoped `.aggr-*` rules in `src/styles/` (compiled to `dist/styles/portal.css`). Only token defaults are cascade-layered; authored reset, layout, and component rules stay unlayered so generic host-theme element styles cannot outrank them.
-- Every design token carries a literal value. Nothing resolves through `--wp--preset--*`, because Twenty Twenty-Five and the LAAO theme expose *different* preset names — a token defined as `var(--wp--preset--color--primary)` renders correctly on one and transparent on the other. See [ADR-0017](adr/0017-self-contained-design-tokens.md).
+- Every design token carries a literal value. Nothing resolves through `--wp--preset--*`, because Twenty Twenty-Five and the LAAO theme expose *different* preset names — a token defined as `var(--wp--preset--color--primary)` renders correctly on one and transparent on the other.
 - The reset is scoped to `.aggr-portal`, never global. A plugin that restyles `body` is a plugin that breaks the host site.
 
 The LAAO theme may override `--aggr-*` tokens to make the portal feel native. That is the only supported coupling, it is one-directional, and the portal is fully functional without it.

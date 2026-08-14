@@ -20,7 +20,7 @@ use Aggressive\Ads\Install\Schema;
  * the DDL itself in Install\Schema — as a string, executed here — is what lets
  * the schema be asserted without running a migration.
  *
- * See docs/architecture.md and docs/adr/0003-audit-log-in-custom-table.md.
+ * See docs/architecture.md and docs/data-schema.md.
  */
 final class Audit_Repository {
 

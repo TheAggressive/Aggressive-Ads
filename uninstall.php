@@ -90,7 +90,7 @@ $aggr_after_schema = static function ( bool $delete_content ): void {
  *
  * Network Admin uninstall walks every site. A per-site uninstall touches only
  * the current blog, so removing the plugin from one tenant cannot wipe another.
- * See docs/adr/0034-site-scoped-tenancy.md.
+ * See docs/data-schema.md.
  */
 if ( is_multisite() && is_network_admin() ) {
 	Aggressive\Ads\Install\Uninstaller::run_network( $aggr_after_schema );

@@ -25,7 +25,7 @@ use WP_Error;
  * describes a moment rather than an artifact: somebody could replace the file
  * between review and publication and nothing would notice.
  *
- * See docs/adr/0010-two-stage-creative-storage.md.
+ * See docs/domain-model.md.
  */
 final class Creative_Promoter {
 

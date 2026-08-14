@@ -1,5 +1,5 @@
 # Dependencies — never committed, never shipped.
-# See docs/adr/0011-no-composer-runtime-dependencies.md.
+# vendor/ is dev tooling only; it never ships.
 /vendor/
 /node_modules/
 

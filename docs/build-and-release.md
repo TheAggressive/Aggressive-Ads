@@ -146,7 +146,8 @@ Core substitutions, named so nobody reaches for a package later:
 | `ezyang/htmlpurifier` | `wp_kses()` with an explicit allowlist |
 | a state-machine library | `TRANSITIONS`, ~120 greppable lines |
 
-If a runtime dependency ever becomes genuinely unavoidable, [ADR-0011](adr/0011-no-composer-runtime-dependencies.md) requires php-scoper prefixing into `Aggressive\Ads\Vendor\` before it ships.
+If a runtime dependency ever becomes genuinely unavoidable, it ships
+php-scoper-prefixed into `Aggressive\Ads\Vendor\` before it ships.
 
 ## Releases
 

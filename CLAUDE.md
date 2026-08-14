@@ -19,16 +19,12 @@ re-derive it, and do not restate it here.
 | What are the entities and their invariants? | `docs/domain-model.md` |
 | How does a campaign change status? | `docs/campaign-workflow.md` |
 | Who may do what? | `docs/roles-and-capabilities.md` |
-| What does native fill and Inventory do? | `docs/adr/0031-native-is-the-only-publisher.md` |
-| What did AdSanity used to do? | `docs/adsanity-integration.md` |
+| What does native fill and Inventory do? | `docs/architecture.md` |
 | What are we defending against? | `docs/threat-model.md` |
-| Why was X decided? | `docs/adr/` |
 | What is the Aggressive Ads suite build order? | `docs/suite-roadmap.md` |
 
-**The ADR contract:** a change that reverses a decision recorded in an ADR must
-supersede that ADR in the same change. Add a new one marked `Supersedes NNNN`
-and set the old one's status to `Superseded by NNNN`. Never edit an ADR in
-place to say something different from what was decided.
+Product rules live in `docs/`. Put a reversed decision in the same living
+doc in the same change; do not add an `adr/` log.
 
 ## Status — read this before assuming anything exists
 
@@ -113,10 +109,10 @@ and deeper analytics remain open. What is built:
 - reporting from `aggr_rollups`: dashboard tiles, a seven-day sparkline, campaign
   list/detail columns, and REST `impressions`/`clicks`/`ctr` only while Reporting
   is on. House and other orgs are excluded in SQL. Spend stays absent.
-- site-scoped tenancy ([ADR-0034](docs/adr/0034-site-scoped-tenancy.md)): fill
-  tokens and fill-cache keys bind `blog_id`; network-active installs run on
-  `wp_initialize_site`; a dedicated multisite PHPUnit config proves colliding
-  post ids cannot cross sites. Network-wide organizations are out of scope.
+- site-scoped tenancy: fill tokens and fill-cache keys bind `blog_id`;
+  network-active installs run on `wp_initialize_site`; a dedicated multisite
+  PHPUnit config proves colliding post ids cannot cross sites. Network-wide
+  organizations are out of scope.
 
 What does **not** exist yet, despite being described in `docs/`: CSV reporting,
 i18n tooling, and semantic-release.
@@ -126,7 +122,7 @@ expected, not a bug.
 
 The screens that exist are the ones with real data behind them. Impression,
 click and CTR tiles, a seven-day sparkline, and table CTR appear only when
-Reporting is on — see [ADR-0030](docs/adr/0030-reporting-from-native-rollups.md).
+Reporting is on.
 Spend stays absent until billing has a source.
 
 ## Commands
@@ -186,9 +182,7 @@ affordable to test them exhaustively.
 PHPUnit is pinned to **9.6**, not 13 like the LAAO theme. This is deliberate and
 test-only: the assertions that matter here — org-scoped `map_meta_cap`, `dbDelta`
 idempotence, real REST authorization, real uploads — are not expressible under
-Brain\Monkey, and the WordPress core test suite requires 9.x. See ADR-0013.
-
-Two config files because **PHPUnit allows exactly one bootstrap per file**. The
+Brain\Monkey, and the WordPress core test suite requires 9.x. Two config files because **PHPUnit allows exactly one bootstrap per file**. The
 unit suite must not load WordPress; the integration suite must.
 
 `failOnWarning`, `failOnRisky`, `failOnSkipped` and `failOnIncomplete` are all
@@ -222,7 +216,8 @@ produces confidence. Assert your fixture is real before asserting on it.
 - **No runtime Composer dependencies, ever.** WordPress has no dependency
   isolation; two plugins shipping different versions of one package fatal the
   site. `composer.json` `require` is `{"php": ">=8.4"}` and stays that way. See
-  ADR-0011 for the core substitution table before reaching for a package.
+  `docs/build-and-release.md` for the core substitution table before reaching
+  for a package.
 - **The production autoloader is ours, not Composer's.** `inc/class-autoloader.php`
   is listed in the packaging script's required files for that reason.
 - **Your editor's PHPCS is not the project's.** IDE integrations often run stock

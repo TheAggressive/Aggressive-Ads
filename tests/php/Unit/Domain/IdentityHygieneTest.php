@@ -17,7 +17,7 @@ use Yoast\PHPUnitPolyfills\TestCases\TestCase;
 
 /**
  * There is no LAAO compatibility layer. A new laao_ads_ string in inc/ is a
- * regression, not an alias. See docs/adr/0035-no-laao-compatibility-layer.md.
+ * regression, not an alias. See README.md.
  */
 final class IdentityHygieneTest extends TestCase {
 

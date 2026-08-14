@@ -16,6 +16,7 @@ use Aggressive\Ads\Portal\Request;
 use Aggressive\Ads\Portal\Router;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Security\Roles;
+use Aggressive\Ads\Workflow\Click_Hop;
 use WP_UnitTestCase;
 
 /**
@@ -99,6 +100,54 @@ final class PortalRouterTest extends WP_UnitTestCase {
 		);
 
 		$this->assertCount( 3, $ours, 'Expected exactly three portal rules.' );
+	}
+
+	/**
+	 * Activation writes portal and click-hop rules without a Permalinks save.
+	 *
+	 * WordPress includes the plugin after `init` on activate, so the test
+	 * empties extra_rules_top the same way that request would see it.
+	 *
+	 * @return void
+	 */
+	public function test_activation_flushes_portal_rules_without_saving_permalinks(): void {
+		global $wp_rewrite;
+
+		$hard_flush_requested = false;
+		$observe_hard_flush   = static function ( bool $hard ) use ( &$hard_flush_requested ): bool {
+			$hard_flush_requested = $hard;
+
+			// Observe the hard-flush request without writing the test environment's .htaccess.
+			return false;
+		};
+
+		$wp_rewrite->extra_rules_top = array();
+		delete_option( 'rewrite_rules' );
+		delete_option( Router::OPTION_REWRITE_VERSION );
+		delete_option( Click_Hop::OPTION_REWRITE );
+
+		add_filter( 'flush_rewrite_rules_hard', $observe_hard_flush );
+
+		try {
+			Plugin::instance()->activate();
+		} finally {
+			remove_filter( 'flush_rewrite_rules_hard', $observe_hard_flush );
+		}
+
+		$rules = get_option( 'rewrite_rules' );
+
+		$this->assertIsArray( $rules );
+		$this->assertTrue( $hard_flush_requested, 'Activation must request a hard rewrite flush.' );
+
+		$ours = array_filter(
+			$rules,
+			static fn ( string $target ): bool => str_contains( $target, Router::QUERY_PORTAL )
+		);
+
+		$this->assertCount( 3, $ours, 'Expected exactly three portal rules.' );
+		$this->assertArrayHasKey( '^ads/c/([^/]+)/?$', $rules );
+		$this->assertSame( Router::REWRITE_VERSION, (int) get_option( Router::OPTION_REWRITE_VERSION ) );
+		$this->assertSame( Click_Hop::REWRITE_VERSION, (int) get_option( Click_Hop::OPTION_REWRITE ) );
 	}
 
 	/**

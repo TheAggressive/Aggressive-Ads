@@ -27,7 +27,7 @@ use Aggressive\Ads\Repository\Org_Repository;
  * current_user_can( 'edit_aggr_campaign', $id ) and this filter answers,
  * so there is exactly one implementation of ownership behind every surface.
  *
- * See docs/adr/0009-org-scoped-map-meta-cap.md.
+ * See docs/roles-and-capabilities.md.
  */
 final class Ownership implements Service {
 

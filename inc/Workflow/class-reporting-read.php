@@ -35,8 +35,8 @@ final class Reporting_Read {
 	/**
 	 * Impression tiles and fields exist only while Reporting is on.
 	 *
-	 * Native delivery is always recording (ADR-0033). Reporting-off omits the
-	 * tiles so zeros are not invented as business figures (ADR-0030).
+	 * Native delivery is always recording. Reporting-off omits the
+	 * tiles so zeros are not invented as business figures.
 	 */
 	public function surfaces(): bool {
 		return $this->settings->module_enabled( Settings_Schema::MODULE_REPORTING );

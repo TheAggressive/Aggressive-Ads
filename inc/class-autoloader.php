@@ -3,7 +3,7 @@
  * The production autoloader.
  *
  * The plugin ships without vendor/, so this is the only autoloader in a
- * released build. See docs/adr/0012-own-autoloader-in-production.md.
+ * released build. See docs/build-and-release.md.
  *
  * @package Aggressive\Ads
  */

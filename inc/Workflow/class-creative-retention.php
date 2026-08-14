@@ -22,7 +22,7 @@ use Aggressive\Ads\Storage\Private_Storage;
  *
  * Campaign posts, Media Library attachments and checksum metadata stay. Only
  * the unguessable private bytes are removed, and only after the campaign has
- * been terminal for ninety days. See docs/adr/0010-two-stage-creative-storage.md.
+ * been terminal for ninety days. See docs/domain-model.md.
  */
 final class Creative_Retention implements Service {
 

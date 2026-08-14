@@ -2,15 +2,13 @@
 
 This is the capability sequence, not a claim that implementation has landed in
 strict phase order. The repository currently contains the foundation, domain,
-private-upload, portal-read, staff-review, and core AdSanity publishing paths;
+private-upload, portal, staff review, native publishing, and reporting tiles;
 the status on each phase below names the remaining product work.
 
 Nothing here is built merely because the architecture supports it.
 
 **Suite direction** (white-label, unified admin, native ad serving, cache-safe
-tracking) lives in [suite-roadmap.md](suite-roadmap.md). Identity:
-[ADR-0022](adr/0022-aggressive-ads-identity.md). This file remains the history of what
-the LAAO-prefixed plugin already shipped.
+tracking) lives in [suite-roadmap.md](suite-roadmap.md).
 
 ## Phase 1 — Foundation *(complete)*
 
@@ -59,7 +57,7 @@ a successful submission. See [notifications.md](notifications.md).
 
 ## Phase 6 — Publisher *(complete; adapter superseded)*
 
-`Ad_Provider_Interface` is implemented by `Integration\Native\Publisher`. Inventory is the placement catalogue (common IAB sizes plus custom WxH). The former AdSanity adapter, mapping resolver, and contract stub were removed in [ADR-0031](adr/0031-native-is-the-only-publisher.md).
+`Ad_Provider_Interface` is implemented by `Integration\Native\Publisher`. Inventory is the placement catalogue (common IAB sizes plus custom WxH). There is no AdSanity adapter.
 
 ## Phase 7 — Lifecycle automation
 
@@ -86,8 +84,6 @@ Organization rename with canonical-key collision handling, member removal with
 the last-owner rule, and ownership transfer remain available on the portal
 organization screen for owners and staff.
 
-See [ADR-0020](adr/0020-portal-owned-email-change.md).
-
 ## Phase 9 — Packages and pricing *(complete)*
 
 The validated catalogue, wizard selection, price display, campaign snapshot,
@@ -97,8 +93,8 @@ implemented.
 
 ## Phase 10 — Reporting *(first slice complete)*
 
-Org-scoped impression, click and CTR tiles from `aggr_rollups`, gated on both
-the reporting and native-delivery modules ([ADR-0030](adr/0030-reporting-from-native-rollups.md)).
+Org-scoped impression, click and CTR tiles from `aggr_rollups`, gated on the
+Reporting module. Native delivery is always on.
 Campaign list/detail and `GET /campaigns` expose the same integer counts for
 authorized objects. Spend stays absent until billing has a source. CSV export
 is not this slice.

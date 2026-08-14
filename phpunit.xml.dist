@@ -6,7 +6,7 @@
 	The integration, security, rest and upgrade suites live in
 	phpunit-integration.xml.dist, because PHPUnit allows exactly one bootstrap
 	per configuration file. That is the reason for the split, not preference.
-	See docs/adr/0013-phpunit-9-with-wp-test-suite.md.
+	See docs/testing-strategy.md.
 -->
 <phpunit
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"

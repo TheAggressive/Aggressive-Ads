@@ -16,7 +16,7 @@
  * portal is fully functional without it.
  *
  * Partials are compiled into this entry by webpack; they are never enqueued
- * alone. See docs/adr/0017-self-contained-design-tokens.md.
+ * alone.
  */
 
 @import './base/_fonts.css';

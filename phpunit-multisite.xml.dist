@@ -6,7 +6,7 @@
 	config, and because failOnSkipped forbids parking these assertions behind
 	markTestSkipped() on the single-site lane.
 
-	See docs/adr/0034-site-scoped-tenancy.md.
+	See docs/data-schema.md.
 
 	Run with: pnpm test:php:multisite
 -->

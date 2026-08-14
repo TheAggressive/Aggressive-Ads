@@ -106,7 +106,7 @@ final class Settings_Schema {
 		}
 
 		// There is no fallback publisher. A stored false from the old Modules
-		// checkbox must not keep the public site dark. See ADR-0033.
+		// checkbox must not keep the public site dark.
 		$defaults['modules'][ self::MODULE_NATIVE_DELIVERY ] = true;
 
 		foreach ( array_keys( $defaults['brand'] ) as $key ) {

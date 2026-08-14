@@ -23,7 +23,7 @@ use WP_UnitTestCase;
  * per blog, and factory()->blog does not exist. They must not skip — this
  * file is loaded only when WP_TESTS_MULTISITE is defined.
  *
- * See docs/adr/0034-site-scoped-tenancy.md.
+ * See docs/data-schema.md.
  */
 final class SiteScopedTenancyTest extends WP_UnitTestCase {
 

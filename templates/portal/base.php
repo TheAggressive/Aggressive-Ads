@@ -10,7 +10,7 @@
  *
  * Owning the document is what makes the portal look and behave the same
  * regardless of the active theme. See
- * docs/adr/0001-standalone-plugin-zero-theme-dependency.md.
+ * docs/architecture.md.
  *
  * @package Aggressive\Ads
  *

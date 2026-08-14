@@ -4,7 +4,7 @@
 
 	Separate from phpunit.xml.dist because PHPUnit allows exactly one bootstrap
 	per configuration file, and the unit suite must not load WordPress while
-	these must. See docs/adr/0013-phpunit-9-with-wp-test-suite.md.
+	these must. See docs/testing-strategy.md.
 
 	Run with: pnpm test:php:integration
 -->

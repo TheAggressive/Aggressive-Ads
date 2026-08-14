@@ -15,7 +15,7 @@ namespace Aggressive\Ads\Install;
  * Returning SQL rather than running it is what lets the installer tests assert
  * the declared shape without a migration, and compare it against SHOW INDEX
  * afterwards. See docs/data-schema.md and
- * docs/adr/0003-audit-log-in-custom-table.md.
+ * docs/data-schema.md.
  */
 final class Schema {
 

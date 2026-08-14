@@ -18,7 +18,7 @@ use Aggressive\Ads\Core\Post_Types;
  * therefore testable without WordPress. install() and remove() are the only
  * parts that touch it, and they are driven by the installer's role-version
  * check rather than by activation alone — see
- * docs/adr/0014-version-driven-idempotent-installer.md.
+ * docs/data-schema.md.
  */
 final class Roles {
 

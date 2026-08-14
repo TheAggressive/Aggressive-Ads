@@ -51,9 +51,7 @@ Registered with `register_post_status()` as non-public, non-internal, protected,
 | `aggr_paused` | `aggr_live` | staff | `aggr_review_campaigns` | Busts fill cache |
 | `aggr_paused` | `aggr_cancelled` | staff | `aggr_review_campaigns` | — |
 
-`aggr_complete` and `aggr_cancelled` have no outgoing edges. A completed campaign is duplicated into a new draft, never reopened — renew and duplicate are the same copy operation, not a transition. See [ADR-0029](adr/0029-campaign-copy-is-not-a-transition.md).
-
-Nothing re-enters `aggr_draft` except a staff reopen from `aggr_rejected`. An advertiser who wants to change a submitted campaign either withdraws it (only while unclaimed) or waits for changes to be requested.
+`aggr_complete` and `aggr_cancelled` have no outgoing edges. A completed campaign is duplicated into a new draft, never reopened — renew and duplicate are the same copy operation, not a transition. Nothing re-enters `aggr_draft` except a staff reopen from `aggr_rejected`. An advertiser who wants to change a submitted campaign either withdraws it (only while unclaimed) or waits for changes to be requested.
 
 ## What every transition does
 
@@ -78,7 +76,7 @@ Three properties this ordering buys:
 
 **It never throws for a merely illegal transition.** An advertiser POSTing `aggr_approved` is an expected event, not an exceptional one. `apply()` returns a `WP_Error`, writes an `outcome=denied` audit row, and the REST layer turns it into a 403. Exceptions are reserved for genuine faults.
 
-**Notifications cannot roll back a business fact.** Step 10 is last and its failure is swallowed and logged. A submitted campaign stays submitted when the mail server is down. Recipient resolution, per-user receipts, and retry behavior are specified in [notifications.md](notifications.md). See [ADR-0008](adr/0008-explicit-transition-table.md).
+**Notifications cannot roll back a business fact.** Step 10 is last and its failure is swallowed and logged. A submitted campaign stays submitted when the mail server is down. Recipient resolution, per-user receipts, and retry behavior are specified in [notifications.md](notifications.md).
 
 ## Nothing else may write `post_status`
 
@@ -161,7 +159,7 @@ The submission validator requires:
 - every selected placement `_aggr_is_active`
 
 The approval validator re-runs the same checks. There is no placement-mapping
-or third-party publisher check. See [ADR-0031](adr/0031-native-is-the-only-publisher.md).
+or third-party publisher check.
 
 ## Approval, end to end
 

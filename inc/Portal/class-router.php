@@ -20,7 +20,7 @@ use WP_Query;
  * A route the plugin owns rather than a Page with a block: the portal is a
  * multi-screen area, and a page-plus-block design makes every screen a row an
  * editor can rename, trash or paste a pattern into. See
- * docs/adr/0005-portal-route-via-rewrite-rule.md.
+ * docs/portal-routing-and-ui.md.
  */
 final class Router implements Service {
 
@@ -30,7 +30,7 @@ final class Router implements Service {
 	 * database and the portal 404s in a way that looks like a broken deploy
 	 * rather than a stale cache.
 	 */
-	public const REWRITE_VERSION = 1;
+	public const REWRITE_VERSION = 2;
 
 	public const QUERY_PORTAL = 'aggr_portal';
 	public const QUERY_ROUTE  = 'aggr_route';
@@ -72,7 +72,6 @@ final class Router implements Service {
 	 */
 	public function init(): void {
 		add_action( 'init', array( $this, 'register_rules' ) );
-		add_action( 'init', array( $this, 'maybe_flush' ), 99 );
 		add_filter( 'query_vars', array( $this, 'register_query_vars' ) );
 		add_action( 'parse_query', array( $this, 'claim_request' ) );
 		add_action( 'template_redirect', array( $this, 'gate' ) );
@@ -118,28 +117,6 @@ final class Router implements Service {
 		$vars[] = self::QUERY_OBJECT;
 
 		return $vars;
-	}
-
-	/**
-	 * Flushes exactly once, when the declared version moves.
-	 *
-	 * Never on every request: flush_rewrite_rules() regenerates every rule on
-	 * the site and rewrites .htaccess, and calling it per request is a
-	 * well-known way to make a site inexplicably slow.
-	 *
-	 * @return void
-	 */
-	public function maybe_flush(): void {
-		if ( (int) get_option( self::OPTION_REWRITE_VERSION, 0 ) === self::REWRITE_VERSION ) {
-			return;
-		}
-
-		// The soft form: skips the .htaccess write, which we do not need.
-		//
-		// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.flush_rewrite_rules_flush_rewrite_rules -- Version-gated, so this runs once per deploy that changes a route, never per request. VIP bans it because it is normally called on init unconditionally; that is the misuse, and the guard above is what prevents it. On VIP the flush would be an operational step, but this plugin ships to ordinary hosting where a plugin owning rewrite rules must flush its own. See docs/adr/0005-portal-route-via-rewrite-rule.md.
-		flush_rewrite_rules( false );
-
-		update_option( self::OPTION_REWRITE_VERSION, self::REWRITE_VERSION, true );
 	}
 
 	/**

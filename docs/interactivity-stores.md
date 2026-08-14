@@ -2,7 +2,6 @@
 
 The portal is server-rendered PHP. JavaScript enhancements use WordPress
 Interactivity API stores: no SPA, no router, and no client-side state tree.
-See [ADR-0004](adr/0004-server-rendered-plus-interactivity-api.md).
 
 ## Stores
 

@@ -91,7 +91,7 @@ final class Assets implements Service {
 
 		/*
 		 * After themes and plugins have queued front-end chrome. The portal owns
-		 * the document (ADR-0001); host theme scripts that expect .site-nav /
+		 * the document; host theme scripts that expect .site-nav /
 		 * .site-footer only produce console noise and wasted bytes here.
 		 */
 		add_action( 'wp_enqueue_scripts', array( $this, 'strip_host_chrome_assets' ), 9999 );

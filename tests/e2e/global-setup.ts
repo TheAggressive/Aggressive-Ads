@@ -10,8 +10,8 @@ export default function globalSetup(): void {
 	wp( 'user', 'update', 'advertiser', '--user_pass=advertiser' );
 	wp( 'user', 'update', 'admin', '--user_pass=admin' );
 	wp( 'theme', 'activate', 'twentytwentyfive' );
-	// A fresh wp-env has an empty permalink_structure and no .htaccess rewrite.
-	// Soft flush only updates the option, so Apache 404s /advertiser/... before
-	// WordPress sees it. --hard writes the rules Apache actually uses.
+	// A fresh wp-env has an empty permalink_structure. Activation hard-flushes
+	// plugin rules but does not change that setting, so Apache still has no
+	// catch-all to index.php. --hard writes the structure Apache actually uses.
 	wp( 'rewrite', 'structure', '/%postname%/', '--hard' );
 }

@@ -33,7 +33,7 @@ The lesson both share: **assert your fixture is real before asserting on it.** T
 | JS | `jest.config.js` | — | Node |
 | E2E | `playwright.config.ts` | — | wp-env |
 
-Separate PHPUnit configs because **PHPUnit allows exactly one bootstrap per configuration file**. That is the reason for the split, not preference — the unit suite must not load WordPress, and the WordPress suites must. Multisite is its own file so colliding-id tests cannot `markTestSkipped()` on the single-site lane. See [ADR-0034](adr/0034-site-scoped-tenancy.md).
+Separate PHPUnit configs because **PHPUnit allows exactly one bootstrap per configuration file**. That is the reason for the split, not preference — the unit suite must not load WordPress, and the WordPress suites must. Multisite is its own file so colliding-id tests cannot `markTestSkipped()` on the single-site lane.
 
 ## PHPUnit 9.6, not 13
 
@@ -43,7 +43,7 @@ A `map_meta_cap` test written with Brain\Monkey mocks `current_user_can()` — a
 
 The same holds for `dbDelta` idempotence (which depends on MySQL's own type normalization), REST authorization (needs a real `WP_REST_Server` and real nonce verification), uploads (touch GD and the filesystem), and "roles survived the upgrade" (is by definition about real `wp_options` state).
 
-Aggressive Apparel already runs PHPUnit 9.6 with `yoast/phpunit-polyfills:^4.0` against WordPress 7.0.2 in wp-env, so this is a proven combination rather than a hopeful one. It is a **test-only** constraint — no shipped code changes — and Brain\Monkey `^2.7` runs on 9.6, so unit tests are unaffected. See [ADR-0013](adr/0013-phpunit-9-with-wp-test-suite.md).
+Aggressive Apparel already runs PHPUnit 9.6 with `yoast/phpunit-polyfills:^4.0` against WordPress 7.0.2 in wp-env, so this is a proven combination rather than a hopeful one. It is a **test-only** constraint — no shipped code changes — and Brain\Monkey `^2.7` runs on 9.6, so unit tests are unaffected.
 
 ## Failure policy
 
@@ -84,7 +84,6 @@ $this->assertSame( 10, has_filter( 'map_meta_cap', array( Ownership::class, 'map
 on site B, fill-cache isolation, org membership invisible across sites,
 `wp_initialize_site` installing only when network-active, and plugin tables
 dropped on `wp_uninitialize_site`. Loaded only under `phpunit-multisite.xml.dist`.
-See [ADR-0034](adr/0034-site-scoped-tenancy.md).
 
 **JS** — the pure logic layer only. `helpers.ts` / future `logic.ts` import
 nothing from `@wordpress/interactivity`, so Jest exercises them without mocking

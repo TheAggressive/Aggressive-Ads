@@ -43,7 +43,7 @@ PACKAGE_FORBIDDEN=(
 # Files without which the plugin does not work. inc/class-autoloader.php is
 # here because it is the production autoloader — the plugin ships without
 # vendor/, so dropping it produces a fatal naming a class rather than the
-# missing loader. See docs/adr/0012-own-autoloader-in-production.md.
+# missing loader. See docs/build-and-release.md.
 PACKAGE_REQUIRED=(
 	"${PLUGIN_FILE}"
 	uninstall.php

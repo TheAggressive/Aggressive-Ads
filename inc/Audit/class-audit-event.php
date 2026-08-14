@@ -18,7 +18,7 @@ use InvalidArgumentException;
  * in particular the rule about what must never be logged — are enforced before
  * a row can be built at all, and are testable with no database.
  *
- * See docs/data-schema.md and docs/adr/0003-audit-log-in-custom-table.md.
+ * See docs/data-schema.md.
  */
 final class Audit_Event {
 

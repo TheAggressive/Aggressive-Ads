@@ -74,7 +74,7 @@ House click URLs use the same two checks as paid creatives (`Campaign_Rules::is_
 
 ## Native fill
 
-Public fill, beacon, and click hop are always registered. Native delivery is not a staff kill-switch ([ADR-0033](adr/0033-native-delivery-is-not-a-staff-module.md)).
+Public fill, beacon, and click hop are always registered. Native delivery is not a staff kill-switch.
 
 | Threat | Mitigation | Test |
 |---|---|---|
@@ -92,9 +92,7 @@ Public fill, beacon, and click hop are always registered. Native delivery is not
 
 ## Injection and CSRF
 
-**`_code` and `html5` creatives are arbitrary attacker-controlled HTML on a public page.** Advertisers can never set them — both kinds require `aggr_review_campaigns`. The advertiser role also lacks `unfiltered_html`. See [ADR-0010](adr/0010-two-stage-creative-storage.md).
-
-Every REST route has a real `permission_callback`. `bin/ci/check-permission-callbacks.sh` fails the build on any `'permission_callback' => '__return_true'`, because that is a thing people write while debugging and then commit.
+**`_code` and `html5` creatives are arbitrary attacker-controlled HTML on a public page.** Advertisers can never set them — both kinds require `aggr_review_campaigns`. The advertiser role also lacks `unfiltered_html`. Every REST route has a real `permission_callback`. `bin/ci/check-permission-callbacks.sh` fails the build on any `'permission_callback' => '__return_true'`, because that is a thing people write while debugging and then commit.
 
 Every `admin-post` handler calls `check_admin_referer()`. Security tests cover nonce-missing, nonce-forged, and insufficient-capability, expecting `WPDieException`.
 
@@ -170,8 +168,7 @@ salted HMAC plus destination and expiry in user meta, mails the new address a
 `/advertiser/confirm-email/` link, and completes only when that token matches
 the signed-in account. Taken addresses receive the same opaque success response
 without mail. Audit events never include the raw token or either address. The
-account details save path still cannot set `user_email` or `role`. See
-[ADR-0020](adr/0020-portal-owned-email-change.md).
+account details save path still cannot set `user_email` or `role`.
 
 Password recovery is a separate nonce-protected, rate-limited public action.
 Unknown addresses, non-portal users, successful sends and mail failures receive

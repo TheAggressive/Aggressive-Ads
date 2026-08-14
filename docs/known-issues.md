@@ -46,12 +46,12 @@ lines; do not add memory constants to `.wp-env.json` trying to silence them.
 
 **Cost.** Newer PHPUnit features are unavailable. `yoast/phpunit-polyfills` covers the assertion API gap.
 
-**Status.** Test-only; no shipped code is affected. Revisit whenever the core test suite supports a newer PHPUnit. See [ADR-0013](adr/0013-phpunit-9-with-wp-test-suite.md).
+**Status.** Test-only; no shipped code is affected. Revisit whenever the core test suite supports a newer PHPUnit.
 
 ## Rewrite rules can go stale
 
-**What.** The portal route depends on rewrite rules being flushed. A deploy that does not bump `aggr_rewrite_version` after a route change leaves the old rules in place.
+**What.** The portal route depends on rewrite rules being flushed. Activation hard-flushes so `/advertiser/` does not wait for Save Permalinks. A file-only deploy that does not bump `aggr_rewrite_version` after a route change still leaves the old rules in place. Pretty permalinks must already be on; this plugin does not set `permalink_structure`.
 
 **Cost.** `/advertiser/` 404s, and it looks like a broken deploy rather than a stale cache.
 
-**Current mitigation.** Bumping the constant is the documented procedure for shipping a route change, and deployment verification must request the portal URL. The Site Health assertion and Tools re-flush control remain Phase 11 work.
+**Current mitigation.** `Rewrite_Flusher` hard-flushes on activation, on `wp_initialize_site`, and once when a rewrite version constant moves. Bumping the constant is the documented procedure for shipping a route change after the plugin is already active, and deployment verification must request the portal URL. The Site Health assertion and Tools re-flush control remain Phase 11 work.

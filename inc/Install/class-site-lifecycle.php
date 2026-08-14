@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Install;
 
 use Aggressive\Ads\Core\Service;
+use Closure;
 use WP_Site;
 
 /**
@@ -19,19 +20,21 @@ use WP_Site;
  * when the plugin is network-active, and drops plugin tables on
  * wp_uninitialize_site because core does not.
  *
- * See docs/adr/0034-site-scoped-tenancy.md.
+ * See docs/data-schema.md.
  */
 final class Site_Lifecycle implements Service {
 
 	/**
 	 * Constructor.
 	 *
-	 * @param Upgrader  $upgrader  Version-driven install.
-	 * @param Installer $installer Schema, roles, options.
+	 * @param Upgrader  $upgrader       Version-driven install.
+	 * @param Installer $installer      Schema, roles, options.
+	 * @param Closure   $flush_rewrites Portal and click-hop rules.
 	 */
 	public function __construct(
 		private readonly Upgrader $upgrader,
-		private readonly Installer $installer
+		private readonly Installer $installer,
+		private readonly Closure $flush_rewrites
 	) {
 	}
 
@@ -62,6 +65,7 @@ final class Site_Lifecycle implements Service {
 			function (): void {
 				$this->upgrader->maybe_upgrade();
 				$this->installer->install();
+				( $this->flush_rewrites )();
 			}
 		);
 	}

@@ -17,7 +17,7 @@ use Yoast\PHPUnitPolyfills\TestCases\TestCase;
 
 /**
  * Screens register submenus against Menu::PARENT_SLUG. A second add_menu_page
- * in Admin/ is a third megaphone, which is the thing ADR-0025 forbids.
+ * in Admin/ is a third megaphone, which the unified menu forbids.
  */
 final class MenuStructureTest extends TestCase {
 

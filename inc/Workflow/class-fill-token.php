@@ -15,7 +15,7 @@ namespace Aggressive\Ads\Workflow;
  * The secret is wp_salt( 'aggr_fill' ), which is network-wide, and post ids
  * restart on every site. blog_id is therefore part of the signed payload —
  * authenticity without tenancy would credit the wrong publisher. See
- * docs/adr/0034-site-scoped-tenancy.md.
+ * docs/data-schema.md.
  *
  * The payload is not encrypted; authenticity is the HMAC and replay is the
  * unique (token_hash, event) row.

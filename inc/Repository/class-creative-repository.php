@@ -499,7 +499,7 @@ final class Creative_Repository {
 	 *
 	 * Zero until the creative is promoted at approval: uploads live in private
 	 * storage and only become attachments once somebody has approved them.
-	 * See docs/adr/0010-two-stage-creative-storage.md.
+	 * See docs/domain-model.md.
 	 *
 	 * @param int $creative_id Creative post id.
 	 * @return int
