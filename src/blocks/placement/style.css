@@ -1,0 +1,18 @@
+.aggr-slot {
+	box-sizing: border-box;
+	display: grid;
+	width: fit-content;
+	max-width: 100%;
+	min-width: 0;
+}
+
+.aggr-slot > .aggr-slot__canvas {
+	min-width: 0;
+}
+
+@media (max-width: 782px) {
+	.aggr-slot,
+	.aggr-slot > .aggr-slot__canvas {
+		width: 100% !important;
+	}
+}

@@ -135,10 +135,18 @@ final class Placement_Slot implements Service {
 
 		$this->enqueue_view();
 
-		$style = '';
+		$style        = '';
+		$canvas_style = '';
 
 		if ( $width > 0 && $height > 0 ) {
-			$style = sprintf( 'width:%dpx;min-height:%dpx;', $width, $height );
+			/*
+			 * Block padding belongs to the outer shell. The inner canvas owns the
+			 * declared ad dimensions, so border-box theme CSS cannot subtract the
+			 * padding from a 728x90 creative. max-width keeps smaller viewports
+			 * proportional instead of creating horizontal page overflow.
+			 */
+			$style        = 'display:grid;width:fit-content;max-width:100%;box-sizing:border-box;';
+			$canvas_style = sprintf( 'width:%dpx;max-width:100%%;aspect-ratio:%d/%d;', $width, $width, $height );
 		}
 
 		$extra = array(
@@ -155,7 +163,11 @@ final class Placement_Slot implements Service {
 			? '<div ' . get_block_wrapper_attributes( $extra ) . '>'
 			: $this->plain_wrapper( $extra );
 
-		return $open . $this->noscript_house( $placement_id ) . '</div>';
+		$canvas  = '<div class="aggr-slot__canvas"';
+		$canvas .= '' !== $canvas_style ? ' style="' . esc_attr( $canvas_style ) . '"' : '';
+		$canvas .= '>' . $this->noscript_house( $placement_id ) . '</div>';
+
+		return $open . $canvas . '</div>';
 	}
 
 	/**
@@ -205,16 +217,20 @@ final class Placement_Slot implements Service {
 	 * Enqueues the fill script module when a slot is rendered.
 	 */
 	private function enqueue_view(): void {
-		if ( ! function_exists( 'wp_enqueue_script_module' ) ) {
+		if ( ! function_exists( 'generate_block_asset_handle' ) ) {
 			return;
 		}
 
-		$handle = function_exists( 'generate_block_asset_handle' )
-			? generate_block_asset_handle( self::BLOCK, 'viewScriptModule' )
-			: '';
+		$handle = generate_block_asset_handle( self::BLOCK, 'viewScriptModule' );
 
-		if ( is_string( $handle ) && '' !== $handle ) {
+		if ( function_exists( 'wp_enqueue_script_module' ) && is_string( $handle ) && '' !== $handle ) {
 			wp_enqueue_script_module( $handle );
+		}
+
+		$style_handle = generate_block_asset_handle( self::BLOCK, 'style' );
+
+		if ( is_string( $style_handle ) && '' !== $style_handle && wp_style_is( $style_handle, 'registered' ) ) {
+			wp_enqueue_style( $style_handle );
 		}
 	}
 }

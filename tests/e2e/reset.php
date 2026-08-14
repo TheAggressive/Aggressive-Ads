@@ -86,6 +86,12 @@ if ( $custom_placement instanceof WP_Post ) {
 	wp_delete_post( $custom_placement->ID, true );
 }
 
+$sizing_page = get_page_by_path( 'e2e-ad-sizing', OBJECT, 'page' );
+
+if ( $sizing_page instanceof WP_Post ) {
+	wp_delete_post( $sizing_page->ID, true );
+}
+
 $signup_user = get_user_by( 'email', 'e2e-signup@example.test' );
 
 if ( $signup_user instanceof WP_User ) {

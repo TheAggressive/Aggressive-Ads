@@ -61,9 +61,22 @@ export default function Edit( { attributes, setAttributes } ) {
 		className: 'aggr-slot',
 		style:
 			width > 0 && height > 0
-				? { width: `${ width }px`, minHeight: `${ height }px` }
+				? {
+						display: 'grid',
+						width: 'fit-content',
+						maxWidth: '100%',
+						boxSizing: 'border-box',
+				  }
 				: undefined,
 	} );
+	const canvasStyle =
+		width > 0 && height > 0
+			? {
+					width: `${ width }px`,
+					maxWidth: '100%',
+					aspectRatio: `${ width } / ${ height }`,
+			  }
+			: undefined;
 
 	const options = [
 		{
@@ -116,18 +129,22 @@ export default function Edit( { attributes, setAttributes } ) {
 		createElement(
 			'div',
 			blockProps,
-			createElement( Placeholder, {
-				icon: 'megaphone',
-				label: selected
-					? selected.name
-					: __( 'Ad placement', 'aggressive-ads' ),
-				instructions: selected
-					? selected.size
-					: __(
-							'Choose a placement in the sidebar. The reserved box keeps its size so the page does not jump when the ad fills.',
-							'aggressive-ads'
-					  ),
-			} )
+			createElement(
+				'div',
+				{ className: 'aggr-slot__canvas', style: canvasStyle },
+				createElement( Placeholder, {
+					icon: 'megaphone',
+					label: selected
+						? selected.name
+						: __( 'Ad placement', 'aggressive-ads' ),
+					instructions: selected
+						? selected.size
+						: __(
+								'Choose a placement in the sidebar. The reserved box keeps its size so the page does not jump when the ad fills.',
+								'aggressive-ads'
+						  ),
+				} )
+			)
 		)
 	);
 }

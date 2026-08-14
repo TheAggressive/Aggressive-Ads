@@ -4,7 +4,7 @@
 
 const SLOT_SELECTOR = '[data-aggr-slot][data-aggr-fill]';
 
-const fillSlot = async ( root ) => {
+export const fillSlot = async ( root ) => {
 	if ( root.dataset.aggrFilled === '1' ) {
 		return;
 	}
@@ -35,13 +35,29 @@ const fillSlot = async ( root ) => {
 		const link = document.createElement( 'a' );
 		link.href = creative.click;
 		link.rel = 'noopener noreferrer';
+		link.style.display = 'block';
+		link.style.width = '100%';
 
 		const image = document.createElement( 'img' );
 		image.src = creative.image;
 		image.alt = creative.alt ?? '';
 		image.decoding = 'async';
+		image.style.display = 'block';
+		image.style.width = '100%';
+		image.style.height = 'auto';
+
+		if ( Number.isInteger( creative.width ) && creative.width > 0 ) {
+			image.width = creative.width;
+		}
+
+		if ( Number.isInteger( creative.height ) && creative.height > 0 ) {
+			image.height = creative.height;
+		}
+
 		link.appendChild( image );
-		root.appendChild( link );
+
+		const canvas = root.querySelector( ':scope > .aggr-slot__canvas' );
+		( canvas ?? root ).appendChild( link );
 
 		if ( payload.beacon && creative.token ) {
 			window.navigator.sendBeacon?.(
@@ -54,7 +70,7 @@ const fillSlot = async ( root ) => {
 	}
 };
 
-const boot = () => {
+export const boot = () => {
 	document.querySelectorAll( SLOT_SELECTOR ).forEach( ( slot ) => {
 		void fillSlot( slot );
 	} );
