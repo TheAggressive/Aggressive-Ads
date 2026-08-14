@@ -1,0 +1,367 @@
+/*
+ * Staff review screens.
+ *
+ * This file contains layout only. Colour, type, spacing, radii, focus and
+ * control sizing all come from the portal's --aggr-* token layer, so the
+ * staff and advertiser surfaces cannot become two visual systems.
+ */
+
+	.aggr-package-row {
+		padding-top: var(--aggr-space-lg);
+		border-top: 1px solid var(--aggr-border-color);
+	}
+
+	.aggr-package-row:first-of-type {
+		padding-top: 0;
+		border-top: 0;
+	}
+
+	.aggr-review-columns {
+		display: grid;
+		grid-template-columns: minmax(0, 3fr) minmax(280px, 2fr);
+		gap: var(--aggr-space-lg);
+		align-items: start;
+	}
+
+	@media (max-width: 960px) {
+		.aggr-review-columns {
+			grid-template-columns: 1fr;
+		}
+	}
+
+	.aggr-tabs {
+		display: flex;
+		gap: var(--aggr-space-xs);
+		margin-bottom: var(--aggr-space-lg);
+		overflow-x: auto;
+		padding-bottom: 2px;
+	}
+
+	.aggr-tab {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--aggr-space-xs);
+		min-height: var(--aggr-control-min);
+		padding: 0 var(--aggr-space-md);
+		border: 1px solid var(--aggr-border-color-strong);
+		border-radius: var(--aggr-radius-pill);
+		background: var(--aggr-color-surface);
+		color: var(--aggr-color-text-body);
+		font-weight: 700;
+		text-decoration: none;
+		white-space: nowrap;
+	}
+
+	.aggr-tab:hover,
+	.aggr-tab[aria-current="page"] {
+		border-color: var(--aggr-color-accent-strong);
+		color: var(--aggr-color-text);
+	}
+
+	.aggr-tab[aria-current="page"] {
+		box-shadow: inset 0 -3px 0 var(--aggr-color-accent-strong);
+	}
+
+	.aggr-tab__count {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: 1.75rem;
+		height: 1.75rem;
+		padding: 0 var(--aggr-space-xs);
+		border-radius: var(--aggr-radius-pill);
+		background: var(--aggr-color-surface-sunken);
+		color: var(--aggr-color-text-subtle);
+		font-size: 12px;
+	}
+
+	.aggr-review-table th,
+	.aggr-review-table td {
+		white-space: nowrap;
+	}
+
+	.aggr-review-table th:first-child,
+	.aggr-review-table td:first-child {
+		min-width: 15rem;
+		white-space: normal;
+	}
+
+	.aggr-flash {
+		margin-bottom: var(--aggr-space-lg);
+		padding: var(--aggr-space-md) var(--aggr-space-lg);
+		border-left: 4px solid currentcolor;
+		border-radius: var(--aggr-radius-control);
+		font-weight: 700;
+	}
+
+	.aggr-flash__message {
+		margin: 0;
+		font-weight: 600;
+	}
+
+	/*
+	 * The workflow's own words, under the summary line. The mapping resolver
+	 * names every placement that needs an ad group; without somewhere to put
+	 * that, a reviewer is told only that something went wrong.
+	 */
+	.aggr-flash__detail {
+		margin: var(--aggr-space-xs) 0 0;
+	}
+
+	.aggr-flash__action {
+		margin: var(--aggr-space-xs) 0 0;
+		font-weight: 600;
+	}
+
+	.aggr-flash--success {
+		background: var(--aggr-color-live-tint);
+		color: var(--aggr-color-live);
+	}
+
+	.aggr-flash--error {
+		background: var(--aggr-color-danger-tint);
+		color: var(--aggr-color-danger);
+	}
+
+	.aggr-pagination {
+		display: flex;
+		justify-content: flex-end;
+		gap: var(--aggr-space-xs);
+	}
+
+	.aggr-pagination .page-numbers {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		min-width: var(--aggr-control-min);
+		min-height: var(--aggr-control-min);
+		padding: 0 var(--aggr-space-xs);
+		border: 1px solid var(--aggr-border-color-strong);
+		border-radius: var(--aggr-radius-control);
+		background: var(--aggr-color-surface);
+		color: var(--aggr-color-text-body);
+		font-weight: 700;
+		text-decoration: none;
+	}
+
+	.aggr-pagination .current {
+		border-color: var(--aggr-color-accent-strong);
+		color: var(--aggr-color-text);
+	}
+
+	.aggr-creative-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+		gap: var(--aggr-space-lg);
+		padding: var(--aggr-space-lg);
+	}
+
+	.aggr-creative {
+		overflow: hidden;
+		border: 1px solid var(--aggr-border-color);
+		border-radius: var(--aggr-radius-control);
+		background: var(--aggr-color-surface-raised);
+	}
+
+	.aggr-creative__preview {
+		display: grid;
+		min-height: 180px;
+		place-items: center;
+		padding: var(--aggr-space-lg);
+		background: var(--aggr-color-surface-sunken);
+	}
+
+	.aggr-creative__preview img {
+		max-height: 360px;
+		object-fit: contain;
+	}
+
+	.aggr-creative__body {
+		padding: var(--aggr-space-lg);
+	}
+
+	.aggr-creative__body h3 {
+		margin: 0 0 var(--aggr-space-md);
+		font-size: 16px;
+	}
+
+	.aggr-creative__body dl {
+		display: grid;
+		gap: var(--aggr-space-sm);
+		margin: 0;
+	}
+
+	.aggr-creative__body dl div {
+		display: grid;
+		gap: var(--aggr-space-2xs);
+	}
+
+	.aggr-creative__body dt {
+		color: var(--aggr-color-text-subtle);
+		font-size: 11px;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+	}
+
+	.aggr-creative__body dd {
+		margin: 0;
+		color: var(--aggr-color-text-body);
+	}
+
+	.aggr-actions {
+		display: grid;
+		gap: var(--aggr-space-md);
+		padding: var(--aggr-space-lg);
+	}
+
+	.aggr-action {
+		display: grid;
+		gap: var(--aggr-space-sm);
+		padding-bottom: var(--aggr-space-md);
+		border-bottom: 1px solid var(--aggr-border-color);
+	}
+
+	.aggr-action:last-child {
+		padding-bottom: 0;
+		border-bottom: 0;
+	}
+
+	.aggr-action label,
+	.aggr-form label {
+		color: var(--aggr-color-text);
+		font-weight: 700;
+	}
+
+	.aggr-action textarea,
+	.aggr-form textarea {
+		width: 100%;
+		border: 1px solid var(--aggr-border-color-strong);
+		border-radius: var(--aggr-radius-control);
+		background: var(--aggr-color-surface);
+		color: var(--aggr-color-text);
+		font: inherit;
+		line-height: 1.5;
+	}
+
+	.aggr-form {
+		display: grid;
+		gap: var(--aggr-space-sm);
+		padding: var(--aggr-space-lg);
+	}
+
+	.aggr-button--secondary {
+		background: var(--aggr-color-surface);
+		border-color: var(--aggr-border-color-strong);
+		color: var(--aggr-color-text);
+	}
+
+	.aggr-button--danger {
+		background: var(--aggr-color-danger-tint);
+		border-color: var(--aggr-color-danger);
+		color: var(--aggr-color-danger);
+	}
+
+	.aggr-button:hover {
+		filter: brightness(0.96);
+	}
+
+	.aggr-timeline {
+		margin: 0;
+		padding: var(--aggr-space-lg);
+		list-style: none;
+	}
+
+	.aggr-timeline__item {
+		position: relative;
+		margin: 0;
+		padding: 0 0 var(--aggr-space-lg) var(--aggr-space-lg);
+		border-left: 2px solid var(--aggr-border-color-strong);
+	}
+
+	.aggr-timeline__item::before {
+		position: absolute;
+		top: 0.35rem;
+		left: -0.4rem;
+		width: 0.7rem;
+		height: 0.7rem;
+		border-radius: 50%;
+		background: var(--aggr-color-accent);
+		content: "";
+	}
+
+	.aggr-timeline__item:last-child {
+		padding-bottom: 0;
+	}
+
+	.aggr-timeline__message {
+		color: var(--aggr-color-text);
+		font-weight: 700;
+	}
+
+	.aggr-timeline__meta {
+		margin-top: var(--aggr-space-2xs);
+		color: var(--aggr-color-text-muted);
+		font-size: 13px;
+	}
+
+	.aggr-provider-state {
+		margin-bottom: var(--aggr-space-lg);
+		padding: var(--aggr-space-md) var(--aggr-space-lg);
+		border: 1px solid var(--aggr-border-color-strong);
+		border-radius: var(--aggr-radius-control);
+		background: var(--aggr-color-surface-raised);
+		color: var(--aggr-color-text-body);
+	}
+
+	.aggr-provider-state--error {
+		border-color: var(--aggr-color-danger);
+		background: var(--aggr-color-danger-tint);
+		color: var(--aggr-color-danger);
+	}
+
+	.aggr-provider-state h2,
+	.aggr-provider-state p {
+		margin: 0;
+	}
+
+	.aggr-provider-state h2 {
+		margin-bottom: var(--aggr-space-xs);
+		font-size: 16px;
+	}
+
+	.aggr-mapping-table th:first-child {
+		min-width: 14rem;
+	}
+
+	.aggr-mapping-table th:last-child,
+	.aggr-mapping-table td:last-child {
+		min-width: 28rem;
+	}
+
+	.aggr-mapping-control {
+		display: flex;
+		gap: var(--aggr-space-sm);
+		align-items: center;
+	}
+
+	.aggr-mapping-control select {
+		min-width: 19rem;
+		min-height: var(--aggr-control-min);
+		border: 1px solid var(--aggr-border-color-strong);
+		border-radius: var(--aggr-radius-control);
+		background: var(--aggr-color-surface);
+		color: var(--aggr-color-text);
+		font: inherit;
+	}
+
+	@media (max-width: 782px) {
+		.aggr-mapping-control {
+			align-items: stretch;
+			flex-direction: column;
+		}
+
+		.aggr-mapping-control select {
+			min-width: 16rem;
+		}
+	}

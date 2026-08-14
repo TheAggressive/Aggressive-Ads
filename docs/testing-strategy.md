@@ -1,0 +1,135 @@
+# Testing strategy
+
+## Prove the test works
+
+Before a meaningful test counts as done:
+
+1. Write it and watch it pass.
+2. **Break the implementation deliberately.**
+3. Watch it fail — and read the failure message, which is what someone will see at 2am.
+4. Restore.
+5. Watch it pass.
+
+A test that passes for a reason unrelated to the behaviour it names is worse than no test, because it produces confidence. The most common variety is a test that asserts on a mock it configured itself.
+
+Two have already been caught here this way, and both are worth knowing:
+
+**The autoloader's path-traversal test** asserted null against a path where nothing existed, so `is_file()` rejected it for an unrelated reason and the test passed with the guard removed. It now aims a `..` segment at a file that genuinely exists one level up.
+
+**The "no `wp/v2` route" test** built its own `WP_REST_Server` and scanned it. But `register_rest_route()` resolves its target through `rest_get_server()`, which returns the **global** — so routes registered during `rest_api_init` never reached the local instance, and the test scanned an empty list. It passed just as happily with `show_in_rest => true` on all five post types. Assigning `global $wp_rest_server` first took the suite from 283 assertions to 920.
+
+The lesson both share: **assert your fixture is real before asserting on it.** That test now checks `/wp/v2/posts` is present before concluding anything from the absence of ours.
+
+## Suites
+
+| Suite | Config | Bootstrap | Needs |
+|---|---|---|---|
+| `unit` | `phpunit.xml.dist` | `tests/php/bootstrap-unit.php` | Nothing. No WordPress, no database |
+| `integration` | `phpunit-integration.xml.dist` | `tests/php/bootstrap-wp.php` | WP test suite + MySQL |
+| `security` | same | same | same |
+| `rest` | same | same | same |
+| `upgrade` | same | same | same |
+| `multisite` | `phpunit-multisite.xml.dist` | `tests/php/bootstrap-wp.php` + `WP_TESTS_MULTISITE` | same, as a network |
+| JS | `jest.config.js` | — | Node |
+| E2E | `playwright.config.ts` | — | wp-env |
+
+Separate PHPUnit configs because **PHPUnit allows exactly one bootstrap per configuration file**. That is the reason for the split, not preference — the unit suite must not load WordPress, and the WordPress suites must. Multisite is its own file so colliding-id tests cannot `markTestSkipped()` on the single-site lane. See [ADR-0034](adr/0034-site-scoped-tenancy.md).
+
+## PHPUnit 9.6, not 13
+
+The LAAO theme runs PHPUnit 13 with Brain\Monkey only, deliberately avoiding the WordPress test suite's version ceiling. This plugin goes the other way, and the reason is specific: **the assertions this plugin needs are not expressible under Brain\Monkey.**
+
+A `map_meta_cap` test written with Brain\Monkey mocks `current_user_can()` — and then proves that the mock returns what it was told to return. The actual question is whether core's capability pipeline, with our filter attached at priority 10 taking four arguments, denies advertiser B on advertiser A's campaign. Answering it needs a real `WP_User`, a real `$wp_filter`, and real `map_meta_cap()`.
+
+The same holds for `dbDelta` idempotence (which depends on MySQL's own type normalization), REST authorization (needs a real `WP_REST_Server` and real nonce verification), uploads (touch GD and the filesystem), and "roles survived the upgrade" (is by definition about real `wp_options` state).
+
+Aggressive Apparel already runs PHPUnit 9.6 with `yoast/phpunit-polyfills:^4.0` against WordPress 7.0.2 in wp-env, so this is a proven combination rather than a hopeful one. It is a **test-only** constraint — no shipped code changes — and Brain\Monkey `^2.7` runs on 9.6, so unit tests are unaffected. See [ADR-0013](adr/0013-phpunit-9-with-wp-test-suite.md).
+
+## Failure policy
+
+`failOnWarning`, `failOnRisky`, `failOnSkipped`, and `failOnIncomplete` are all `true`.
+
+**A skipped security test is a security test that is not running.** Skips accumulate silently — one environment-conditional skip becomes six, and the suite reports green while covering less every month. If a test genuinely cannot run in an environment, that belongs in the configuration as an excluded suite, where it is visible, not as a runtime skip.
+
+The Playwright config uses the same principle via a reporter that fails CI on any skipped spec.
+
+## Security tests assert the wiring
+
+Ported from Aggressive Apparel, and the most valuable convention here.
+
+A security test that only calls the method under test proves the method is correct. It does not prove the method *runs*. A refactor that drops `add_action( 'admin_init', … )` leaves every behavioural test green and the guard entirely absent.
+
+So security tests assert both:
+
+```php
+$this->assertNotFalse( has_action( 'admin_init', array( Admin_Guard::class, 'guard' ) ) );
+$this->assertSame( 10, has_filter( 'map_meta_cap', array( Ownership::class, 'map' ) ) );
+```
+
+…and then the behaviour. Both halves, every time.
+
+## What each suite covers
+
+**unit** — the transition table; illegal transitions; the validator; URL and date validation; placement and package resolution; the `Portal\Request` grammar; audit value objects; the container; the autoloader; CPT argument maps and slug lengths.
+
+**integration** — activation and reactivation idempotence; both custom tables and every declared column/index; the upgrader replaying 0→current in order, and stopping at the last successful step on failure; roles carrying exactly the declared capabilities; persistence round trips; the rewrite rule's presence; **that no `wp/v2` route exists for any of the five post types**; native publisher cache-bust; placement catalogue create/edit with common and custom sizes, unique slugs, deactivate, house MIME/URL refusals, audit, and nonce enforcement; ending-soon receipt suppression and open-ended exclusion; private-file retention after ninety days with record retention.
+
+**security** — every IDOR surface in [threat-model.md](threat-model.md) with a Phase-1 endpoint; advertiser A denied on B's campaign **and a co-member of A's org allowed** (the case that proves ownership is org-scoped rather than accidentally author-scoped); deleted objects mapping to `do_not_allow`; nonce-missing and nonce-forged raising `WPDieException`; signup non-enumeration, anonymous rate limiting, unprivileged-before-ownership ordering and mail-failure rollback; private canonical organization matching, no duplicate tenant, pending users without portal capability, owner-only pending emails, cross-tenant approval denial, email-bound and single-use invitation consumption; owner-scoped member removal with the last-owner guard, cross-tenant removal denial, and advertiser-role cleanup that preserves unrelated WordPress roles; ownership transfer only to an existing member, with cross-tenant denial and former-owner demotion to member; organization rename with destination `active_key` reservation, cross-tenant denial, and exact identity collision refusal; staff organization suspend/reactivate requiring `aggr_manage_orgs`, with advertiser denial and audited read-back; portal-owned email change with HMAC token, single-use confirm, taken-address suppression, and details-save still unable to set email/role; portal-only setup and recovery URLs, core reset-key validation, minimum password policy and single-use consumption; the advertiser holding none of `upload_files` / `edit_posts` / `unfiltered_html`; no `wp_ajax_laao_ads*` action registered.
+
+**rest** — every route's permission callback, schema validation, sanitization, and the 404-not-403 rule.
+
+**upgrade** — migration ordering, idempotence, the concurrency lock, and stale-lock recovery.
+
+**multisite** — two blogs, colliding post ids, a fill token from site A rejected
+on site B, fill-cache isolation, org membership invisible across sites,
+`wp_initialize_site` installing only when network-active, and plugin tables
+dropped on `wp_uninitialize_site`. Loaded only under `phpunit-multisite.xml.dist`.
+See [ADR-0034](adr/0034-site-scoped-tenancy.md).
+
+**JS** — the pure logic layer only. `helpers.ts` / future `logic.ts` import
+nothing from `@wordpress/interactivity`, so Jest exercises them without mocking
+the runtime. Hand-authored sources live under `src/interactivity/` and
+`src/blocks/`; compiled output under `dist/`. Do not add runtime-mocked
+Interactivity unit tests.
+No snapshot tests: a snapshot asserts that output has not changed, which is not
+the same as asserting it is correct, and the usual response to a failing
+snapshot is to update it.
+
+**E2E** — real browser flows against real WordPress. The portal smoke test under Twenty Twenty-Five is the single test that proves the zero-theme-dependency claim; everything else in [architecture.md](architecture.md) about theme independence is a convention, and this is the enforcement.
+
+The campaign browser spec signs in through core, creates a fresh draft, selects
+a real seeded package, uploads a generated exact-size PNG through the native
+multipart form, schedules, reviews, submits, and reloads the locked result. It
+also proves the skip link, step-heading focus after each wizard navigation,
+authenticated private preview, dialog keyboard (open, Tab trap, Escape,
+focus restore) for preview/remove/replace, non-clickable review
+destination, axe conformance on each wizard step plus open overlays, and that
+the active Twenty Twenty-Five block theme does not wrap the standalone portal.
+The inventory browser spec signs in as an administrator, opens the capability-
+gated wp-admin Inventory screen, creates a custom-size placement, and scans
+pre- and post-write states with axe.
+
+Global setup seeds and resets deterministic data; teardown deletes the campaign,
+its private bytes, and the inventory fixtures. It also hard-flushes
+Apache rewrite rules so a rebuilt wp-env cannot turn a stale `.htaccess` file
+into a misleading portal failure. Chromium runs with one worker because the
+WordPress site is shared mutable state, and retries are zero so a flaky gate
+cannot hide.
+
+## Accessibility testing
+
+`@axe-core/playwright`, scoped to the `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa` tags. Best-practice rules are excluded deliberately — they are advice, and mixing advice with conformance means the conformance signal gets muted the first time someone needs to ship.
+
+Automated scanning catches roughly a third of real accessibility problems. Keyboard-only traversal, focus order, and screen-reader announcement quality are asserted explicitly per-flow, and manual testing supplements both. See [accessibility.md](accessibility.md).
+
+## Running
+
+```bash
+pnpm test:php:unit            # fast, no database
+pnpm test:php:integration     # needs wp-env + WP test suite
+pnpm test:php:security
+pnpm test:js
+pnpm test:e2e:install         # once per machine: install Chromium
+pnpm test:e2e                 # needs wp-env running; setup seeds its own data
+pnpm ci:verify                # everything, serially, as CI would
+```

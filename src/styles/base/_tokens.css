@@ -1,0 +1,121 @@
+/* Token defaults deliberately sit in a low-priority layer so an integrating
+ * theme can override them. Authored portal rules remain unlayered: otherwise
+ * any unlayered host-theme element rule outranks them regardless of selector
+ * specificity (for example, a global anchor color can recolor a button).
+ */
+@layer aggr-tokens;
+
+@layer aggr-tokens {
+	.aggr-portal {
+		/* Canvas and surfaces. */
+		--aggr-color-canvas: #f7f4ee;
+		--aggr-color-surface: #ffffff;
+		--aggr-color-surface-raised: #faf9f6;
+		--aggr-color-surface-sunken: #efede7;
+		--aggr-color-surface-inset: #eceae4;
+
+		/* Ink. */
+		--aggr-color-text: #111214;
+		--aggr-color-text-body: #4a4844;
+		/* 4.55:1 on the inset surface the empty state uses, its worst pairing. */
+		--aggr-color-text-muted: #6d695f;
+		/*
+		 * Darker than the design's #8a8676, which measured 3.65:1 on white and
+		 * 3.12:1 on the sunken surface. It carries table headers and stat
+		 * labels — 11px uppercase, the smallest text in the system, and the
+		 * least forgiving of low contrast. WCAG 2.2 AA wants 4.5:1 for text
+		 * this size and every pairing now clears it.
+		 */
+		--aggr-color-text-subtle: #6d6a5d;
+
+		--aggr-border-color: #e3dfd4;
+		--aggr-border-color-strong: #d8d4c8;
+
+		/*
+		 * The accent. The design offers four; this is the default, and it is
+		 * the one place to change it — every accented surface reads this token
+		 * rather than repeating a hex.
+		 */
+		--aggr-color-accent: #ff3b2f;
+		/*
+		 * The same red, dark enough to carry white text.
+		 *
+		 * White on #ff3b2f is 3.55:1 — fine behind an icon, a failure behind a
+		 * 14px button label. Buttons read this one; the rail chip and the focus
+		 * ring keep the brighter accent, because neither is text.
+		 */
+		--aggr-color-accent-strong: #e90d00;
+		--aggr-color-accent-contrast: #ffffff;
+
+		/* The rail. */
+		--aggr-color-rail: #111214;
+		--aggr-color-rail-active: #1d1d20;
+		--aggr-color-rail-chip: #26262a;
+		--aggr-color-rail-text: #b9b6ac;
+		--aggr-color-rail-text-strong: #ffffff;
+
+		/*
+		 * Status. Each pairs an ink with the tint it sits on.
+		 *
+		 * The inks are darker than the design's. A pill is 12px bold, which is
+		 * not "large text" under WCAG — it needs 4.5:1, and the original pairs
+		 * measured between 2.61:1 and 4.35:1. The tints are untouched, so the
+		 * screens still read as the design intended.
+		 */
+		--aggr-color-live: #1a7a4d;
+		--aggr-color-live-tint: #e3f3ea;
+		--aggr-color-pending: #91630d;
+		--aggr-color-pending-tint: #fbf0dc;
+		--aggr-color-neutral: #6c685e;
+		--aggr-color-neutral-tint: #eceae4;
+		--aggr-color-ended: #6d6a5d;
+		--aggr-color-ended-tint: #efede7;
+		--aggr-color-danger: #c03826;
+		--aggr-color-danger-tint: #fbe7e3;
+
+		--aggr-radius-panel: 12px;
+		--aggr-radius-control: 8px;
+		--aggr-radius-small: 6px;
+		--aggr-radius-pill: 999px;
+
+		--aggr-space-2xs: 0.25rem;
+		--aggr-space-xs: 0.5rem;
+		--aggr-space-sm: 0.75rem;
+		--aggr-space-md: 1rem;
+		--aggr-space-lg: 1.5rem;
+		--aggr-space-xl: 2rem;
+		--aggr-space-2xl: 2.5rem;
+
+		--aggr-rail-width: 232px;
+		--aggr-measure: 68ch;
+
+		/*
+		 * Archivo is self-hosted (SIL OFL). A Google Fonts link would send
+		 * every advertiser's IP to Google on every screen. See ADR-0018.
+		 */
+		--aggr-font:
+			"Archivo", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+			Arial, sans-serif;
+
+		--aggr-control-min: 44px;
+
+		--aggr-duration-fast: 120ms;
+		--aggr-duration-dialog: 200ms;
+
+		/*
+		 * One stacking token for overlays. Anything else that needs to sit
+		 * above the page chrome reads this rather than inventing a number.
+		 */
+		--aggr-z-dialog: 1000;
+
+		--aggr-shadow-panel: 0 12px 40px rgb(17 18 20 / 18%);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.aggr-portal {
+			--aggr-duration-fast: 0ms;
+			--aggr-duration-dialog: 0ms;
+		}
+	}
+}
+

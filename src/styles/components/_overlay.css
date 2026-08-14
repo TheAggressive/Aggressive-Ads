@@ -1,0 +1,250 @@
+/* Overlay / dialog shell — outside .aggr-shell so inert can apply there. */
+.aggr-overlays {
+	position: relative;
+	z-index: var(--aggr-z-dialog);
+}
+
+.aggr-overlay {
+	position: fixed;
+	inset: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: var(--aggr-space-lg);
+	z-index: var(--aggr-z-dialog);
+}
+
+.aggr-overlay:not(.is-open):not(:target) {
+	display: none;
+}
+
+.aggr-overlay__backdrop {
+	position: absolute;
+	inset: 0;
+	background: rgb(17 18 20 / 55%);
+}
+
+.aggr-overlay__panel {
+	position: relative;
+	z-index: 1;
+	display: flex;
+	flex-direction: column;
+	gap: var(--aggr-space-md);
+	width: min(100%, 28rem);
+	max-height: min(90vh, 40rem);
+	overflow: auto;
+	padding: var(--aggr-space-lg);
+	background: var(--aggr-color-surface);
+	border: 1px solid var(--aggr-border-color);
+	border-radius: var(--aggr-radius-panel);
+	box-shadow: var(--aggr-shadow-panel);
+	opacity: 0;
+	transform: translateY(0.35rem);
+	transition:
+		opacity var(--aggr-duration-dialog) ease,
+		transform var(--aggr-duration-dialog) ease;
+}
+
+.aggr-overlay.is-open .aggr-overlay__panel,
+.aggr-overlay:target .aggr-overlay__panel {
+	opacity: 1;
+	transform: none;
+}
+
+.aggr-overlay--preview .aggr-overlay__panel {
+	width: min(100%, 48rem);
+}
+
+.aggr-overlay__preview-image {
+	display: block;
+	width: auto;
+	height: auto;
+	max-width: 100%;
+	max-height: min(70vh, 32rem);
+	margin: 0 auto;
+	object-fit: contain;
+}
+
+.aggr-overlay__header {
+	display: flex;
+	gap: var(--aggr-space-md);
+	align-items: flex-start;
+	justify-content: space-between;
+}
+
+.aggr-overlay__title {
+	margin: 0;
+	font-size: 1.15rem;
+	font-weight: 700;
+	line-height: 1.3;
+}
+
+.aggr-overlay__close {
+	display: inline-flex;
+	flex-shrink: 0;
+	align-items: center;
+	justify-content: center;
+	width: var(--aggr-control-min);
+	height: var(--aggr-control-min);
+	min-height: var(--aggr-control-min);
+	min-width: var(--aggr-control-min);
+	padding: 0;
+	border: 1px solid var(--aggr-border-color);
+	border-radius: var(--aggr-radius-control);
+	background: var(--aggr-color-surface-raised);
+	color: var(--aggr-color-text);
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.aggr-overlay__close .aggr-icon {
+	width: 18px;
+	height: 18px;
+}
+
+.aggr-overlay__body {
+	min-width: 0;
+}
+
+.aggr-overlay__body .aggr-form {
+	padding: 0;
+}
+
+.aggr-overlay__body .aggr-field label {
+	margin-bottom: var(--aggr-space-xs);
+}
+
+.aggr-overlay__body .aggr-field .aggr-hint {
+	margin-top: var(--aggr-space-sm);
+	text-align: center;
+}
+
+.aggr-overlay__body > .aggr-hint {
+	margin-top: 0;
+}
+
+.aggr-overlay__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--aggr-space-sm);
+	align-items: stretch;
+	margin-top: var(--aggr-space-md);
+}
+
+.aggr-overlay__actions .aggr-button {
+	min-height: var(--aggr-control-min);
+	box-sizing: border-box;
+}
+
+.aggr-overlay__actions .aggr-button--secondary {
+	flex: 1 1 auto;
+}
+
+.aggr-overlay__announcer {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	padding: 0;
+	margin: -1px;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+.aggr-empty {
+	margin: 0;
+	padding: var(--aggr-space-xl) var(--aggr-space-lg);
+	background: var(--aggr-color-surface-inset);
+	color: var(--aggr-color-text-muted);
+	text-align: center;
+}
+
+.aggr-empty__title {
+	margin: 0 0 var(--aggr-space-xs);
+	font-size: 16px;
+	font-weight: 700;
+	color: var(--aggr-color-text);
+}
+
+.aggr-notice {
+	margin-bottom: var(--aggr-space-lg);
+	padding: var(--aggr-space-md) var(--aggr-space-lg);
+	background: var(--aggr-color-pending-tint);
+	border-radius: var(--aggr-radius-control);
+	color: var(--aggr-color-text-body);
+}
+
+.aggr-notice p {
+	margin: 0;
+}
+
+.aggr-notice__head {
+	margin: 0 0 var(--aggr-space-xs);
+	font-size: 14px;
+	font-weight: 700;
+	color: var(--aggr-color-text);
+}
+
+.aggr-breadcrumb {
+	margin-bottom: var(--aggr-space-sm);
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.aggr-breadcrumb a {
+	color: var(--aggr-color-text-muted);
+}
+
+/*
+	 * A description list, because that is what these are: term and value. The
+	 * grid is on the <dl> and each pair is wrapped in a <div>, which is the
+	 * only arrangement where dt/dd stay a valid pair and still lay out.
+	 */
+.aggr-facts {
+	background: var(--aggr-color-surface-raised);
+	display: grid;
+	gap: var(--aggr-space-lg);
+	grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+	margin: 0;
+	padding: var(--aggr-space-lg);
+}
+
+.aggr-fact dt {
+	margin-bottom: 4px;
+	color: var(--aggr-color-text-subtle);
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.aggr-fact dd {
+	margin: 0;
+	color: var(--aggr-color-text);
+	font-size: 15px;
+	font-weight: 600;
+}
+
+.aggr-colophon {
+	padding: var(--aggr-space-lg) var(--aggr-space-2xl);
+	color: var(--aggr-color-text-subtle);
+	font-size: 13px;
+}
+
+@media (max-width: 782px) {
+	.aggr-upload-form,
+	.aggr-uploaded,
+	.aggr-review-creative {
+		grid-template-columns: 1fr;
+	}
+
+	.aggr-upload-form .aggr-field,
+	.aggr-upload-form button {
+		grid-column: 1;
+	}
+
+	.aggr-upload-card__head {
+		flex-direction: column;
+	}
+}

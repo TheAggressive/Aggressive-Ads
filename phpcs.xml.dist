@@ -1,0 +1,302 @@
+<?xml version="1.0"?>
+<ruleset name="Aggressive Ads">
+	<description>PHP coding standards for the Aggressive Ads plugin.</description>
+
+	<!-- What to scan -->
+	<file>inc</file>
+	<!--
+		Templates escape output. Leaving the one layer that writes to the
+		browser unlinted is how an unescaped echo ships.
+	-->
+	<file>templates</file>
+	<file>tests/php</file>
+	<file>aggressive-ads.php</file>
+	<file>laao-advertiser-portal.php</file>
+	<!--
+		uninstall.php is easy to forget and the worst file to leave unchecked:
+		it runs with full privileges, outside the plugin's own bootstrap, and
+		its job is deleting things.
+	-->
+	<file>uninstall.php</file>
+	<!-- Build and dev scripts are PHP too, and nobody reviews them twice. -->
+	<file>bin</file>
+
+	<!-- Exclude generated and third-party code -->
+	<exclude-pattern>*/vendor/*</exclude-pattern>
+	<exclude-pattern>*/node_modules/*</exclude-pattern>
+	<exclude-pattern>*/dist/*</exclude-pattern>
+
+	<arg name="basepath" value="."/>
+	<arg name="colors"/>
+	<arg name="extensions" value="php"/>
+	<arg name="parallel" value="8"/>
+	<arg value="sp"/>
+
+	<!-- Base standard -->
+	<rule ref="WordPress">
+		<!-- Short array syntax is the house style. -->
+		<exclude name="Universal.Arrays.DisallowShortArraySyntax"/>
+	</rule>
+
+	<!--
+		The full WordPress VIP standard.
+
+		Not the security-and-performance subset: VIP's value is the sniffs
+		nobody thinks to run, and picking two categories means only meeting the
+		bar you already knew about. The whole standard runs, and each exclusion
+		below is named individually with the reason it does not apply.
+
+		This plugin is not hosted on WordPress VIP. The exclusions are
+		therefore about VIP *platform* functions that do not exist here — using
+		them would fatal — and never about a security or correctness rule.
+	-->
+	<rule ref="WordPress-VIP-Go">
+		<!--
+			wpcom_vip_add_role() is a VIP platform function. On any other host
+			it is undefined, so following this sniff would fatal the plugin at
+			activation. Roles are installed by a version-driven installer that
+			removes before adding, which is the behaviour the sniff is
+			protecting: see docs/adr/0014-version-driven-idempotent-installer.md.
+		-->
+		<exclude name="WordPressVIPMinimum.Functions.RestrictedFunctions.custom_role_add_role"/>
+	</rule>
+
+	<!-- Forward/backward PHP compatibility. Matches composer platform (8.4). -->
+	<rule ref="PHPCompatibilityWP"/>
+	<config name="testVersion" value="8.4-"/>
+	<config name="minimum_supported_wp_version" value="6.7"/>
+
+	<!--
+		Exception messages are developer-facing diagnostics thrown at boot for
+		programming errors — an unregistered service, a dependency cycle, a
+		factory returning the wrong type. They are never rendered to a browser;
+		anything a user can cause returns WP_Error instead. Escaping them would
+		only mangle the message in a stack trace.
+	-->
+	<rule ref="WordPress.Security.EscapeOutput">
+		<exclude name="WordPress.Security.EscapeOutput.ExceptionNotEscaped"/>
+	</rule>
+
+	<!--
+		Teach the capability sniff this plugin's vocabulary.
+		
+		Generated from Security\Capabilities and Core\Post_Types: the ten
+		primitives, the eleven WordPress generates per post type, and the three
+		meta capabilities per post type.
+
+		Declaring them is not silencing the sniff — it is the opposite. Without
+		this list every custom capability warns and the signal is worthless;
+		with it, a typo in one of our own capability names is a build failure.
+		Regenerate when the vocabulary changes.
+	-->
+	<rule ref="WordPress.WP.Capabilities">
+		<properties>
+			<property name="custom_capabilities" type="array">
+				<element value="create_aggr_campaigns"/>
+				<element value="create_aggr_creatives"/>
+				<element value="create_aggr_orgs"/>
+				<element value="create_aggr_packages"/>
+				<element value="create_aggr_placements"/>
+				<element value="delete_aggr_campaign"/>
+				<element value="delete_aggr_campaigns"/>
+				<element value="delete_aggr_creative"/>
+				<element value="delete_aggr_creatives"/>
+				<element value="delete_aggr_org"/>
+				<element value="delete_aggr_orgs"/>
+				<element value="delete_aggr_package"/>
+				<element value="delete_aggr_packages"/>
+				<element value="delete_aggr_placement"/>
+				<element value="delete_aggr_placements"/>
+				<element value="delete_others_aggr_campaigns"/>
+				<element value="delete_others_aggr_creatives"/>
+				<element value="delete_others_aggr_orgs"/>
+				<element value="delete_others_aggr_packages"/>
+				<element value="delete_others_aggr_placements"/>
+				<element value="delete_private_aggr_campaigns"/>
+				<element value="delete_private_aggr_creatives"/>
+				<element value="delete_private_aggr_orgs"/>
+				<element value="delete_private_aggr_packages"/>
+				<element value="delete_private_aggr_placements"/>
+				<element value="delete_published_aggr_campaigns"/>
+				<element value="delete_published_aggr_creatives"/>
+				<element value="delete_published_aggr_orgs"/>
+				<element value="delete_published_aggr_packages"/>
+				<element value="delete_published_aggr_placements"/>
+				<element value="edit_aggr_campaign"/>
+				<element value="edit_aggr_campaigns"/>
+				<element value="edit_aggr_creative"/>
+				<element value="edit_aggr_creatives"/>
+				<element value="edit_aggr_org"/>
+				<element value="edit_aggr_orgs"/>
+				<element value="edit_aggr_package"/>
+				<element value="edit_aggr_packages"/>
+				<element value="edit_aggr_placement"/>
+				<element value="edit_aggr_placements"/>
+				<element value="edit_others_aggr_campaigns"/>
+				<element value="edit_others_aggr_creatives"/>
+				<element value="edit_others_aggr_orgs"/>
+				<element value="edit_others_aggr_packages"/>
+				<element value="edit_others_aggr_placements"/>
+				<element value="edit_private_aggr_campaigns"/>
+				<element value="edit_private_aggr_creatives"/>
+				<element value="edit_private_aggr_orgs"/>
+				<element value="edit_private_aggr_packages"/>
+				<element value="edit_private_aggr_placements"/>
+				<element value="edit_published_aggr_campaigns"/>
+				<element value="edit_published_aggr_creatives"/>
+				<element value="edit_published_aggr_orgs"/>
+				<element value="edit_published_aggr_packages"/>
+				<element value="edit_published_aggr_placements"/>
+				<element value="aggr_access_portal"/>
+				<element value="aggr_manage_orgs"/>
+				<element value="aggr_manage_packages"/>
+				<element value="aggr_manage_placements"/>
+				<element value="aggr_manage_settings"/>
+				<element value="aggr_publish"/>
+				<element value="laao_ads_publish_to_adsanity"/>
+				<element value="aggr_review_campaigns"/>
+				<element value="aggr_submit_campaign"/>
+				<element value="aggr_upload_creative"/>
+				<element value="aggr_view_audit_log"/>
+				<element value="publish_aggr_campaigns"/>
+				<element value="publish_aggr_creatives"/>
+				<element value="publish_aggr_orgs"/>
+				<element value="publish_aggr_packages"/>
+				<element value="publish_aggr_placements"/>
+				<element value="read_aggr_campaign"/>
+				<element value="read_aggr_creative"/>
+				<element value="read_aggr_org"/>
+				<element value="read_aggr_package"/>
+				<element value="read_aggr_placement"/>
+				<element value="read_private_aggr_campaigns"/>
+				<element value="read_private_aggr_creatives"/>
+				<element value="read_private_aggr_orgs"/>
+				<element value="read_private_aggr_packages"/>
+				<element value="read_private_aggr_placements"/>
+			</property>
+		</properties>
+	</rule>
+
+	<!-- Text domain must match the plugin slug everywhere. -->
+	<rule ref="WordPress.WP.I18n">
+		<properties>
+			<property name="text_domain" type="array">
+				<element value="aggressive-ads"/>
+			</property>
+		</properties>
+	</rule>
+
+	<!-- Prefix for globals, hooks and options owned by this plugin. -->
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<properties>
+			<property name="prefixes" type="array">
+				<element value="aggr"/>
+				<element value="AGGR"/>
+				<element value="Aggressive"/>
+				<element value="laao_ads"/>
+			</property>
+		</properties>
+	</rule>
+
+	<!-- Test files follow PHPUnit conventions, not WordPress file/naming rules. -->
+	<rule ref="WordPress.Files.FileName">
+		<exclude-pattern>tests/php/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<exclude-pattern>tests/php/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.WP.AlternativeFunctions">
+		<exclude-pattern>tests/php/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.DB.DirectDatabaseQuery">
+		<exclude-pattern>tests/php/*</exclude-pattern>
+	</rule>
+	<!--
+		VIP's filesystem rules describe VIP's filesystem, where only /tmp and
+		uploads are writable. Test fixtures write real files — a hostile upload
+		has to exist on disk before the uploader can refuse it — and they do so
+		through wp_tempnam(), which is the helper the rule points at. Shipped
+		code is not excluded and does not trip these.
+	-->
+	<rule ref="WordPressVIPMinimum.Functions.RestrictedFunctions.file_ops_file_put_contents">
+		<exclude-pattern>tests/php/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPressVIPMinimum.Functions.RestrictedFunctions.file_ops_unlink">
+		<exclude-pattern>tests/php/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPressVIPMinimum.Functions.RestrictedFunctions.file_ops_fwrite">
+		<exclude-pattern>tests/php/*</exclude-pattern>
+	</rule>
+	<!--
+		The remote-data sniff cannot tell a URL from a path, so it warns on any
+		file_get_contents(). Tests read the plugin's own files off disk to
+		assert that PHP and CSS agree — the pill modifiers View_Data emits
+		against the rules src/styles/ defines — and there is no request,
+		no network and nothing to cache. Shipped code keeps the sniff.
+	-->
+	<rule ref="WordPressVIPMinimum.Performance.FetchingRemoteData">
+		<exclude-pattern>tests/php/*</exclude-pattern>
+		<exclude-pattern>bin/*</exclude-pattern>
+	</rule>
+	<!--
+		bin/ holds standalone scripts, not plugin code.
+
+		The build guards run under plain `php` with no WordPress at all, and the
+		dev seeder runs once inside WP-CLI. "Global" there means script scope,
+		not a variable leaking into a shared request, so prefixing every local
+		would be noise that hides the one name that matters. The sniffs that
+		catch real defects — escaping, capabilities, SQL, PHP compatibility —
+		all still apply, which is the reason bin/ is scanned at all.
+
+		Nothing in bin/ ships: the release archive excludes it, and
+		verify-package.sh fails if it appears.
+	-->
+	<rule ref="WordPress.NamingConventions.PrefixAllGlobals">
+		<exclude-pattern>bin/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPress.WP.GlobalVariablesOverride">
+		<exclude-pattern>bin/*</exclude-pattern>
+	</rule>
+	<rule ref="WordPressVIPMinimum.Functions.RestrictedFunctions.file_ops_fwrite">
+		<exclude-pattern>bin/*</exclude-pattern>
+	</rule>
+	<!--
+		Test helpers read the plugin's own audit table back to assert what was
+		written. The table name is built from $wpdb->prefix and a class
+		constant — an identifier, which cannot be bound as a parameter — while
+		every actual value still is. Production queries keep the sniff, which
+		is where it earns its keep.
+	-->
+	<rule ref="WordPress.DB.PreparedSQL">
+		<exclude-pattern>tests/php/*</exclude-pattern>
+	</rule>
+	<!--
+		Simulating a request is what an integration test does. Asserting that
+		admin-post.php is exempt from the admin guard requires setting $pagenow,
+		because that is the value the guard reads.
+	-->
+	<rule ref="WordPress.WP.GlobalVariablesOverride">
+		<exclude-pattern>tests/php/*</exclude-pattern>
+	</rule>
+	<!--
+		Simulating a client is what a test of client identification does. The
+		cache-constraint sniff warns that varying output by address breaks
+		server-side caching; a test setting $_SERVER['REMOTE_ADDR'] to check
+		that two clients get different rate-limit counters is not varying any
+		output, and there is no cache in a test process. Shipped code keeps the
+		sniff, which is where it earns its keep.
+	-->
+	<rule ref="WordPressVIPMinimum.Variables.RestrictedVariables">
+		<exclude-pattern>tests/php/*</exclude-pattern>
+	</rule>
+	<rule ref="Squiz.Commenting.FunctionComment">
+		<exclude-pattern>tests/php/*</exclude-pattern>
+	</rule>
+	<rule ref="Squiz.Commenting.ClassComment">
+		<exclude-pattern>tests/php/*</exclude-pattern>
+	</rule>
+	<!-- Test doubles live alongside the test that uses them. -->
+	<rule ref="Generic.Files.OneObjectStructurePerFile">
+		<exclude-pattern>tests/php/*</exclude-pattern>
+	</rule>
+</ruleset>

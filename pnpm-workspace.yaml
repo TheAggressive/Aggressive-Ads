@@ -1,0 +1,22 @@
+# pnpm 11 blocks dependency build scripts unless they are listed here, and
+# exits non-zero when an unlisted one is encountered. That exit code is not
+# cosmetic: `wp-env start` shells out to `pnpm install`, so an unapproved build
+# script stops the whole environment from starting.
+#
+# Keeping the list explicit means a new transitive dependency cannot silently
+# run arbitrary code at install time — adding one is a reviewable change.
+#
+# fs-ext-extra-prebuilt arrives via @wordpress/env for file locking, and ships
+# a working JavaScript fallback, so it does not need its native build.
+packages: []
+
+allowBuilds:
+  '@parcel/watcher': false
+  core-js: false
+  core-js-pure: false
+  fs-ext-extra-prebuilt: false
+  unrs-resolver: false
+
+# Any dependency override MUST live here, not in package.json's
+# `pnpm.overrides`: with a pnpm-workspace.yaml present, pnpm 10+ reads
+# overrides from this file and silently ignores the package.json field.

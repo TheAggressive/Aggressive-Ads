@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<!--
+	The unit suite. No WordPress, no database, no bootstrap beyond Composer and
+	the plugin's own autoloader.
+
+	The integration, security, rest and upgrade suites live in
+	phpunit-integration.xml.dist, because PHPUnit allows exactly one bootstrap
+	per configuration file. That is the reason for the split, not preference.
+	See docs/adr/0013-phpunit-9-with-wp-test-suite.md.
+-->
+<phpunit
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="vendor/phpunit/phpunit/phpunit.xsd"
+	bootstrap="tests/php/bootstrap-unit.php"
+	colors="true"
+	beStrictAboutTestsThatDoNotTestAnything="true"
+	beStrictAboutOutputDuringTests="true"
+	convertDeprecationsToExceptions="true"
+	failOnWarning="true"
+	failOnRisky="true"
+	failOnSkipped="true"
+	failOnIncomplete="true"
+	cacheResultFile=".phpunit.cache/unit.result"
+	>
+	<testsuites>
+		<testsuite name="unit">
+			<directory suffix="Test.php">tests/php/Unit</directory>
+		</testsuite>
+	</testsuites>
+
+	<coverage>
+		<include>
+			<directory suffix=".php">inc</directory>
+		</include>
+	</coverage>
+</phpunit>

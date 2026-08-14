@@ -1,0 +1,47 @@
+# Dependency updates.
+#
+# Grouped and monthly rather than individually and daily: a stream of one-line
+# PRs nobody reviews is worse than none, because it trains people to merge
+# dependency changes without reading them.
+#
+# Security updates are exempt from the schedule — GitHub raises those
+# immediately regardless of `interval`.
+version: 2
+
+updates:
+  # The actions themselves are a supply-chain surface, and they are pinned to
+  # SHAs, so this is the only thing that moves them. bin/ci/check-action-pins.sh
+  # keeps the pin format honest when Dependabot rewrites one.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ['*']
+
+  # Dev tooling only — the plugin has no runtime Composer dependencies and
+  # vendor/ never ships. See docs/adr/0011-no-composer-runtime-dependencies.md.
+  - package-ecosystem: composer
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      php-tooling:
+        patterns: ['*']
+        update-types: [minor, patch]
+    ignore:
+      # PHPUnit is pinned to 9.6 deliberately: the WordPress core test suite
+      # requires 9.x, and the assertions that matter here are not expressible
+      # without it. A major bump is a decision with an ADR, not a PR to merge.
+      - dependency-name: phpunit/phpunit
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      js-tooling:
+        patterns: ['*']
+        update-types: [minor, patch]

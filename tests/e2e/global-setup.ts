@@ -1,0 +1,17 @@
+import { wp } from './wp-cli';
+
+export default function globalSetup(): void {
+	wp( 'plugin', 'activate', 'aggressive-ads' );
+	wp( 'eval', 'require "bin/dev/seed.php";' );
+	wp( 'eval', 'require "tests/e2e/reset.php";' );
+	wp( 'option', 'update', 'aggr_dev_mail_capture', '1' );
+	wp( 'option', 'delete', 'aggr_dev_last_mail' );
+	wp( 'eval', 'require "tests/e2e/seed-mappings.php";' );
+	wp( 'user', 'update', 'advertiser', '--user_pass=advertiser' );
+	wp( 'user', 'update', 'admin', '--user_pass=admin' );
+	wp( 'theme', 'activate', 'twentytwentyfive' );
+	// A fresh wp-env has an empty permalink_structure and no .htaccess rewrite.
+	// Soft flush only updates the option, so Apache 404s /advertiser/... before
+	// WordPress sees it. --hard writes the rules Apache actually uses.
+	wp( 'rewrite', 'structure', '/%postname%/', '--hard' );
+}
