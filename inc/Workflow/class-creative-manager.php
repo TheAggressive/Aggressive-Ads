@@ -250,14 +250,27 @@ final class Creative_Manager {
 			return $this->error( 'aggr_creative_published', __( 'A published creative cannot be removed from this draft workflow.', 'aggressive-ads' ), 409 );
 		}
 
-		$stored = $this->creatives->storage_details( $creative_id );
+		$stored      = $this->creatives->storage_details( $creative_id );
+		$quarantined = '';
 
-		if ( null !== $stored && '' !== $stored['path'] && null !== $this->storage->resolve( $stored['path'] ) && ! $this->storage->delete( $stored['path'] ) ) {
-			return $this->error( 'aggr_creative_not_deleted', __( 'The creative could not be removed. Please try again.', 'aggressive-ads' ), 500 );
+		if ( null !== $stored && '' !== $stored['path'] && null !== $this->storage->resolve( $stored['path'] ) ) {
+			$quarantined = (string) $this->storage->quarantine( $stored['path'] );
+
+			if ( '' === $quarantined ) {
+				return $this->error( 'aggr_creative_not_deleted', __( 'The creative could not be removed. Please try again.', 'aggressive-ads' ), 500 );
+			}
 		}
 
 		if ( ! $this->creatives->delete( $creative_id ) ) {
+			if ( '' !== $quarantined && null !== $stored && ! $this->storage->restore( $quarantined, $stored['path'] ) ) {
+				return $this->error( 'aggr_creative_restore_failed', __( 'The creative record and file could not be reconciled. Please contact an administrator.', 'aggressive-ads' ), 500 );
+			}
+
 			return $this->error( 'aggr_creative_not_deleted', __( 'The creative could not be removed. Please try again.', 'aggressive-ads' ), 500 );
+		}
+
+		if ( '' !== $quarantined ) {
+			$this->storage->delete( $quarantined );
 		}
 
 		$this->audit->insert(

@@ -12,6 +12,7 @@ namespace Aggressive\Ads\Workflow;
 use Aggressive\Ads\Audit\Audit_Event;
 use Aggressive\Ads\Domain\Ad_Sizes;
 use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Package_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Security\Capabilities;
@@ -199,6 +200,17 @@ final class Package_Manager {
 			if ( $id > 0 && ! in_array( $id, $placement_ids, true ) ) {
 				$placement_ids[] = $id;
 			}
+		}
+
+		if ( count( $placement_ids ) > Creative_Repository::MAX_PER_CAMPAIGN ) {
+			return new WP_Error(
+				'aggr_package_too_many_placements',
+				sprintf(
+					/* translators: %d: maximum placements in one package. */
+					__( 'A package may include at most %d placements.', 'aggressive-ads' ),
+					Creative_Repository::MAX_PER_CAMPAIGN
+				)
+			);
 		}
 
 		$custom      = ! empty( $input['custom_duration'] );

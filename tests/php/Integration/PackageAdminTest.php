@@ -16,6 +16,7 @@ use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Package_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
@@ -242,6 +243,26 @@ final class PackageAdminTest extends WP_UnitTestCase {
 		$this->assertIsInt( $draft );
 		$this->assertFalse( $this->packages->is_active( $draft ) );
 		$this->assertNotContains( $draft, $this->packages->active_ids() );
+	}
+
+	/**
+	 * A package cannot require more creatives than campaign reads support.
+	 *
+	 * @return void
+	 */
+	public function test_package_placement_count_is_bounded_by_creative_capacity(): void {
+		wp_set_current_user( $this->administrator );
+
+		$result = $this->manager->create(
+			$this->valid_fields(
+				array(
+					'placement_ids' => range( 1, Creative_Repository::MAX_PER_CAMPAIGN + 1 ),
+				)
+			)
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'aggr_package_too_many_placements', $result->get_error_code() );
 	}
 
 	/**

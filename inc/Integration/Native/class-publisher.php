@@ -12,7 +12,10 @@ namespace Aggressive\Ads\Integration\Native;
 use Aggressive\Ads\Domain\Publication_Result;
 use Aggressive\Ads\Domain\Transition_Table;
 use Aggressive\Ads\Integration\Ad_Provider_Interface;
+use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Workflow\Creative_Promoter;
 use Aggressive\Ads\Workflow\Fill_Cache;
+use WP_Error;
 
 /**
  * There is no downstream ad CPT. The live set is campaign status. These
@@ -23,10 +26,14 @@ final class Publisher implements Ad_Provider_Interface {
 	/**
 	 * Constructor.
 	 *
-	 * @param Fill_Cache $cache Native fill cache.
+	 * @param Fill_Cache          $cache     Native fill cache.
+	 * @param Creative_Repository $creatives Creative persistence.
+	 * @param Creative_Promoter   $promoter  Private-to-public promotion.
 	 */
 	public function __construct(
-		private readonly Fill_Cache $cache
+		private readonly Fill_Cache $cache,
+		private readonly Creative_Repository $creatives,
+		private readonly Creative_Promoter $promoter
 	) {
 	}
 
@@ -35,7 +42,15 @@ final class Publisher implements Ad_Provider_Interface {
 	 *
 	 * @param int $campaign_id Campaign post id.
 	 */
-	public function publish_campaign( int $campaign_id ): Publication_Result {
+	public function publish_campaign( int $campaign_id ): Publication_Result|WP_Error {
+		foreach ( $this->creatives->for_campaign( $campaign_id ) as $creative ) {
+			$promoted = $this->promoter->promote( $creative['id'] );
+
+			if ( is_wp_error( $promoted ) ) {
+				return $promoted;
+			}
+		}
+
 		$this->cache->bust_campaign( $campaign_id );
 
 		return new Publication_Result();
@@ -81,8 +96,15 @@ final class Publisher implements Ad_Provider_Interface {
 	 * @param int $current_id     Current creative id.
 	 * @param int $replacement_id Reviewed replacement id.
 	 */
-	public function replace_creative( int $campaign_id, int $current_id, int $replacement_id ): true {
-		unset( $current_id, $replacement_id );
+	public function replace_creative( int $campaign_id, int $current_id, int $replacement_id ): true|WP_Error {
+		unset( $current_id );
+
+		$promoted = $this->promoter->promote( $replacement_id );
+
+		if ( is_wp_error( $promoted ) ) {
+			return $promoted;
+		}
+
 		$this->cache->bust_campaign( $campaign_id );
 
 		return true;
@@ -108,11 +130,7 @@ final class Publisher implements Ad_Provider_Interface {
 	 */
 	public function transition_effects(): array {
 		return array(
-			Transition_Table::EFFECT_PUBLISH   => function ( int $campaign_id ): true {
-				$this->publish_campaign( $campaign_id );
-
-				return true;
-			},
+			Transition_Table::EFFECT_PUBLISH   => fn ( int $id ): Publication_Result|WP_Error => $this->publish_campaign( $id ),
 			Transition_Table::EFFECT_UNPUBLISH => fn ( int $id ): true => $this->unpublish_campaign( $id ),
 			Transition_Table::EFFECT_SUPPRESS  => fn ( int $id ): true => $this->suppress_campaign( $id ),
 			Transition_Table::EFFECT_RESUME    => fn ( int $id ): true => $this->resume_campaign( $id ),

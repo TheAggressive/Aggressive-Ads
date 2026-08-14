@@ -44,6 +44,7 @@ use Aggressive\Ads\Repository\Event_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Org_Access_Repository;
 use Aggressive\Ads\Repository\Package_Repository;
+use Aggressive\Ads\Repository\Rate_Limit_Repository;
 use Aggressive\Ads\Portal\Email_Change_Actions;
 use Aggressive\Ads\Portal\Router;
 use Aggressive\Ads\Portal\View_Data;
@@ -653,9 +654,15 @@ final class Service_Registrar {
 		);
 
 		$container->register(
+			Rate_Limit_Repository::class,
+			static fn (): Rate_Limit_Repository => new Rate_Limit_Repository()
+		);
+
+		$container->register(
 			Rate_Limiter::class,
 			static fn ( Service_Container $c ): Rate_Limiter => new Rate_Limiter(
-				$c->get( Audit_Repository::class )
+				$c->get( Audit_Repository::class ),
+				$c->get( Rate_Limit_Repository::class )
 			)
 		);
 
@@ -687,7 +694,9 @@ final class Service_Registrar {
 		$container->register(
 			Publisher::class,
 			static fn ( Service_Container $c ): Publisher => new Publisher(
-				$c->get( Fill_Cache::class )
+				$c->get( Fill_Cache::class ),
+				$c->get( Creative_Repository::class ),
+				$c->get( Creative_Promoter::class )
 			)
 		);
 

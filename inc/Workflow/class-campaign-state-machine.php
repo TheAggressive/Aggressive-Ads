@@ -139,6 +139,43 @@ final class Campaign_State_Machine implements Service {
 	 * @return true|WP_Error
 	 */
 	private function transition( int $campaign_id, string $to, array $context, bool $as_system ) {
+		if ( ! $this->campaigns->exists( $campaign_id ) ) {
+			return $this->deny( $campaign_id, 0, '', $to, 'aggr_campaign_not_found', __( 'Campaign not found.', 'aggressive-ads' ) );
+		}
+
+		$lock = $this->campaigns->claim_transition_lock( $campaign_id );
+
+		if ( '' === $lock ) {
+			$from   = $this->campaigns->status( $campaign_id );
+			$org_id = '' === $from ? 0 : $this->campaigns->org_id( $campaign_id );
+
+			return $this->deny(
+				$campaign_id,
+				$org_id,
+				$from,
+				$to,
+				'aggr_transition_busy',
+				__( 'Another request is already updating this campaign. Please try again.', 'aggressive-ads' )
+			);
+		}
+
+		try {
+			return $this->transition_locked( $campaign_id, $to, $context, $as_system );
+		} finally {
+			$this->campaigns->release_transition_lock( $campaign_id, $lock );
+		}
+	}
+
+	/**
+	 * Applies a transition while the caller owns the campaign lock.
+	 *
+	 * @param int                  $campaign_id Campaign post id.
+	 * @param string               $to          Target status.
+	 * @param array<string, mixed> $context     Caller-supplied context.
+	 * @param bool                 $as_system   Whether this is a clock-driven transition.
+	 * @return true|WP_Error
+	 */
+	private function transition_locked( int $campaign_id, string $to, array $context, bool $as_system ) {
 		$from = $this->campaigns->status( $campaign_id );
 
 		if ( '' === $from ) {

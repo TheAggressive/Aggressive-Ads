@@ -89,7 +89,14 @@ final class Creative_Promoter {
 			return $attachment_id;
 		}
 
-		$this->creatives->set_attachment_id( $creative_id, $attachment_id );
+		if ( ! $this->creatives->set_attachment_id( $creative_id, $attachment_id ) ) {
+			wp_delete_attachment( $attachment_id, true );
+
+			return new WP_Error(
+				'aggr_creative_link_failed',
+				__( 'This creative could not be linked to its Media Library file.', 'aggressive-ads' )
+			);
+		}
 
 		// Collected from the advertiser at upload and carried through to the
 		// image itself, which is what stops the theme's render-time alt-text
@@ -147,6 +154,8 @@ final class Creative_Promoter {
 		);
 
 		if ( is_wp_error( $attachment_id ) ) {
+			wp_delete_file( $target );
+
 			return $attachment_id;
 		}
 

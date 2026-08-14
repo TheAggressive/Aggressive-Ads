@@ -182,6 +182,28 @@ final class CampaignStateMachineTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A second request cannot evaluate from a status already being changed.
+	 *
+	 * @return void
+	 */
+	public function test_a_transition_refuses_a_campaign_owned_by_another_request(): void {
+		wp_set_current_user( $this->advertiser );
+
+		$campaign = $this->campaign( Post_Statuses::DRAFT );
+		$lock     = $this->campaigns->claim_transition_lock( $campaign );
+
+		$this->assertNotSame( '', $lock );
+
+		$result = $this->machine()->apply( $campaign, Post_Statuses::CANCELLED );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'aggr_transition_busy', $result->get_error_code() );
+		$this->assertSame( Post_Statuses::DRAFT, $this->campaigns->status( $campaign ) );
+
+		$this->campaigns->release_transition_lock( $campaign, $lock );
+	}
+
+	/**
 	 * An illegal transition returns WP_Error rather than throwing.
 	 *
 	 * An advertiser POSTing aggr_approved is an expected event. Throwing would

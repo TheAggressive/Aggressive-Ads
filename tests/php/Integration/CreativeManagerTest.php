@@ -343,6 +343,42 @@ final class CreativeManagerTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A vetoed record deletion restores the private bytes to their original path.
+	 *
+	 * @return void
+	 */
+	public function test_remove_restores_private_file_when_record_deletion_fails(): void {
+		wp_set_current_user( $this->owner );
+		$uploaded = $this->manager->upload(
+			$this->campaign_id,
+			$this->placement_id,
+			$this->image_file( 728, 90 ),
+			'https://example.com/',
+			'Gallery exhibition'
+		);
+		$this->assertIsArray( $uploaded );
+
+		$creative_id = (int) $uploaded['id'];
+		$stored      = Plugin::instance()->container()->get( Creative_Repository::class )->storage_details( $creative_id );
+		$this->assertIsArray( $stored );
+		$this->stored[] = $stored['path'];
+
+		$veto = static fn ( $delete, \WP_Post $post ) => $creative_id === (int) $post->ID ? false : $delete;
+		add_filter( 'pre_delete_post', $veto, 10, 2 );
+
+		try {
+			$result = $this->manager->remove( $creative_id );
+		} finally {
+			remove_filter( 'pre_delete_post', $veto, 10 );
+		}
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'aggr_creative_not_deleted', $result->get_error_code() );
+		$this->assertNotNull( get_post( $creative_id ) );
+		$this->assertNotNull( $this->storage->resolve( $stored['path'] ) );
+	}
+
+	/**
 	 * Submitted creative cannot be removed through the draft workflow.
 	 *
 	 * @return void

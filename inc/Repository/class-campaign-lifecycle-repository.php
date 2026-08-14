@@ -12,6 +12,8 @@ namespace Aggressive\Ads\Repository;
 use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Core\Post_Types;
 
+// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared -- Cron keyset queries must see current rows and use generated placeholders only for validated statuses.
+
 /**
  * Cron-facing campaign id lookups.
  *
@@ -21,13 +23,17 @@ use Aggressive\Ads\Core\Post_Types;
  */
 final class Campaign_Lifecycle_Repository {
 
+	private const CURSOR_CLOCK       = 'aggr_lifecycle_cursor_clock';
+	private const CURSOR_ENDING_SOON = 'aggr_lifecycle_cursor_ending_soon';
+	private const CURSOR_RETENTION   = 'aggr_lifecycle_cursor_retention';
+
 	/**
-	 * Campaign ids in the given statuses, oldest-modified first.
+	 * Campaign ids in the given statuses, advancing by stable id.
 	 *
 	 * For the reconciler, which sweeps every organization: there is no org
 	 * clause here and there should not be, because the clock belongs to nobody.
-	 * Bounded by $limit rather than paged — a sweep that falls behind catches
-	 * up on the next run.
+	 * A durable keyset cursor ensures a full first batch cannot permanently
+	 * starve later campaigns. The cursor wraps after the final page.
 	 *
 	 * @param array<int, string> $statuses Statuses to include.
 	 * @param int                $limit    Maximum ids to return.
@@ -46,14 +52,15 @@ final class Campaign_Lifecycle_Repository {
 			return array();
 		}
 
-		return $this->query_ids(
-			array(
-				'post_status' => $wanted,
-				'orderby'     => 'modified',
-				'order'       => 'ASC',
-			),
-			$limit
-		);
+		global $wpdb;
+
+		$cursor       = (int) get_option( self::CURSOR_CLOCK, 0 );
+		$placeholders = implode( ', ', array_fill( 0, count( $wanted ), '%s' ) );
+		$sql          = "SELECT ID FROM {$wpdb->posts} WHERE post_type = %s AND post_status IN ({$placeholders}) AND ID > %d ORDER BY ID ASC LIMIT %d";
+		$args         = array_merge( array( Post_Types::CAMPAIGN ), $wanted, array( $cursor, $limit ) );
+		$ids          = $wpdb->get_col( $wpdb->prepare( $sql, $args ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.NotPrepared -- Dynamic placeholders are generated for validated status values.
+
+		return $this->finish_page( self::CURSOR_CLOCK, $ids, $limit );
 	}
 
 	/**
@@ -71,23 +78,25 @@ final class Campaign_Lifecycle_Repository {
 			return array();
 		}
 
-		return $this->query_ids(
-			array(
-				'post_status' => array( Post_Statuses::LIVE, Post_Statuses::PAUSED ),
-				'orderby'     => 'meta_value_num',
-				'meta_key'    => Campaign_Repository::META_END_TS, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Indexed end-window lookup for the ending-soon sweep.
-				'order'       => 'ASC',
-				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Bounded lifecycle sweep; not a page-read path.
-					array(
-						'key'     => Campaign_Repository::META_END_TS,
-						'value'   => array( $from_ts, $to_ts ),
-						'compare' => 'BETWEEN',
-						'type'    => 'NUMERIC',
-					),
-				),
-			),
-			$limit
-		);
+		global $wpdb;
+
+		$cursor = (int) get_option( self::CURSOR_ENDING_SOON, 0 );
+		$sql    = "SELECT DISTINCT p.ID FROM {$wpdb->posts} p INNER JOIN {$wpdb->postmeta} ends ON ends.post_id = p.ID AND ends.meta_key = %s WHERE p.post_type = %s AND p.post_status IN (%s, %s) AND p.ID > %d AND CAST(ends.meta_value AS UNSIGNED) BETWEEN %d AND %d ORDER BY p.ID ASC LIMIT %d";
+		$ids    = $wpdb->get_col(
+			$wpdb->prepare( // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared -- The query is a fixed repository statement with prepared values.
+				$sql,
+				Campaign_Repository::META_END_TS,
+				Post_Types::CAMPAIGN,
+				Post_Statuses::LIVE,
+				Post_Statuses::PAUSED,
+				$cursor,
+				$from_ts,
+				$to_ts,
+				$limit
+			)
+		); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Cron-only bounded keyset query.
+
+		return $this->finish_page( self::CURSOR_ENDING_SOON, $ids, $limit );
 	}
 
 	/**
@@ -105,91 +114,35 @@ final class Campaign_Lifecycle_Repository {
 			return array();
 		}
 
-		$ids = $this->query_ids(
-			array(
-				'post_status' => Post_Statuses::terminal(),
-				'orderby'     => 'meta_value_num',
-				'meta_key'    => Campaign_Repository::META_END_TS, // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_key -- Retention sweep keyed on end date.
-				'order'       => 'ASC',
-				'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Bounded retention sweep.
-					array(
-						'key'     => Campaign_Repository::META_END_TS,
-						'value'   => array( 1, $cutoff_ts ),
-						'compare' => 'BETWEEN',
-						'type'    => 'NUMERIC',
-					),
-				),
-			),
-			$limit
-		);
+		global $wpdb;
 
-		if ( count( $ids ) >= $limit ) {
-			return $ids;
-		}
-
-		return array_values(
-			array_unique(
-				array_merge(
-					$ids,
-					$this->query_ids(
-						array(
-							'post_status' => Post_Statuses::terminal(),
-							'orderby'     => 'modified',
-							'order'       => 'ASC',
-							'date_query'  => array(
-								array(
-									'column'    => 'post_modified_gmt',
-									'before'    => gmdate( 'Y-m-d H:i:s', $cutoff_ts ),
-									'inclusive' => true,
-								),
-							),
-							'meta_query'  => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Open-ended terminal retention.
-								'relation' => 'OR',
-								array(
-									'key'     => Campaign_Repository::META_END_TS,
-									'compare' => 'NOT EXISTS',
-								),
-								array(
-									'key'     => Campaign_Repository::META_END_TS,
-									'value'   => 0,
-									'compare' => '=',
-									'type'    => 'NUMERIC',
-								),
-							),
-						),
-						$limit - count( $ids )
-					)
-				)
-			)
+		$cursor       = (int) get_option( self::CURSOR_RETENTION, 0 );
+		$terminal     = Post_Statuses::terminal();
+		$placeholders = implode( ', ', array_fill( 0, count( $terminal ), '%s' ) );
+		$sql          = "SELECT DISTINCT p.ID FROM {$wpdb->posts} p LEFT JOIN {$wpdb->postmeta} ends ON ends.post_id = p.ID AND ends.meta_key = %s WHERE p.post_type = %s AND p.post_status IN ({$placeholders}) AND p.ID > %d AND ((CAST(ends.meta_value AS UNSIGNED) BETWEEN 1 AND %d) OR ((ends.meta_id IS NULL OR CAST(ends.meta_value AS UNSIGNED) = 0) AND p.post_modified_gmt <= %s)) ORDER BY p.ID ASC LIMIT %d";
+		$args         = array_merge(
+			array( Campaign_Repository::META_END_TS, Post_Types::CAMPAIGN ),
+			$terminal,
+			array( $cursor, $cutoff_ts, gmdate( 'Y-m-d H:i:s', $cutoff_ts ), $limit )
 		);
+		$ids          = $wpdb->get_col( $wpdb->prepare( $sql, $args ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.NotPrepared -- Dynamic placeholders are generated for known terminal statuses.
+
+		return $this->finish_page( self::CURSOR_RETENTION, $ids, $limit );
 	}
 
 	/**
-	 * Runs a campaign id query with shared defaults.
+	 * Advances a durable keyset cursor so bounded sweeps cannot starve later ids.
 	 *
-	 * @param array<string, mixed> $args  Extra WP_Query args.
-	 * @param int                  $limit Maximum ids.
+	 * @param string            $cursor_key Cursor option name.
+	 * @param array<int, mixed> $raw_ids    Database result ids.
+	 * @param int               $limit      Maximum ids.
 	 * @return array<int, int>
 	 */
-	private function query_ids( array $args, int $limit ): array {
-		$query = new \WP_Query(
-			array_merge(
-				array(
-					'post_type'              => Post_Types::CAMPAIGN,
-					'posts_per_page'         => $limit,
-					'fields'                 => 'ids',
-					'no_found_rows'          => true,
-					'update_post_term_cache' => false,
-				),
-				$args
-			)
-		);
+	private function finish_page( string $cursor_key, array $raw_ids, int $limit ): array {
+		$ids  = array_values( array_map( 'intval', $raw_ids ) );
+		$next = count( $ids ) < $limit ? 0 : (int) end( $ids );
 
-		$ids = array();
-
-		foreach ( $query->posts as $post ) {
-			$ids[] = $post instanceof \WP_Post ? (int) $post->ID : (int) $post;
-		}
+		update_option( $cursor_key, $next, false );
 
 		return $ids;
 	}

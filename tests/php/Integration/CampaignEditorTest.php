@@ -163,6 +163,40 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A partial metadata write is detected and earlier fields are restored.
+	 *
+	 * @return void
+	 */
+	public function test_draft_persistence_rolls_back_a_partial_meta_failure(): void {
+		$campaigns   = Plugin::instance()->container()->get( Campaign_Repository::class );
+		$campaign_id = $campaigns->create_draft( $this->org_id, $this->advertiser, 'Original title' );
+		$this->assertIsInt( $campaign_id );
+
+		update_post_meta( $campaign_id, Campaign_Repository::META_START_TS, 100 );
+		update_post_meta( $campaign_id, Campaign_Repository::META_END_TS, 200 );
+
+		$fail_end = static fn ( $check, int $object_id, string $meta_key ) => Campaign_Repository::META_END_TS === $meta_key ? false : $check;
+		add_filter( 'update_post_metadata', $fail_end, 10, 3 );
+
+		try {
+			$result = $campaigns->update_draft(
+				$campaign_id,
+				array(
+					'start_ts' => 300,
+					'end_ts'   => 400,
+				)
+			);
+		} finally {
+			remove_filter( 'update_post_metadata', $fail_end, 10 );
+		}
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'aggr_campaign_write_failed', $result->get_error_code() );
+		$this->assertSame( 100, $campaigns->start_ts( $campaign_id ) );
+		$this->assertSame( 200, $campaigns->end_ts( $campaign_id ) );
+	}
+
+	/**
 	 * A portal user without an organization cannot create unowned data.
 	 *
 	 * @return void

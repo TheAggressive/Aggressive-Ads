@@ -148,6 +148,31 @@ final class FillRotationTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Every live campaign remains eligible when a placement exceeds twenty rows.
+	 *
+	 * @return void
+	 */
+	public function test_live_candidate_lookup_does_not_drop_the_twenty_first_campaign(): void {
+		$expected = array();
+
+		for ( $i = 0; $i < 21; $i++ ) {
+			$campaign_id = (int) self::factory()->post->create(
+				array(
+					'post_type'   => Post_Types::CAMPAIGN,
+					'post_status' => Post_Statuses::LIVE,
+				)
+			);
+			add_post_meta( $campaign_id, Campaign_Repository::META_PLACEMENT_ID, $this->placement_id );
+			$expected[] = $campaign_id;
+		}
+
+		$this->assertSame(
+			$expected,
+			Plugin::instance()->container()->get( Campaign_Repository::class )->live_ids_for_placement( $this->placement_id )
+		);
+	}
+
+	/**
 	 * Turns native delivery on for this request.
 	 */
 	private function enable_native(): void {

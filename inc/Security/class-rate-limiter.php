@@ -11,6 +11,7 @@ namespace Aggressive\Ads\Security;
 
 use Aggressive\Ads\Audit\Audit_Event;
 use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Rate_Limit_Repository;
 use WP_Error;
 
 /**
@@ -106,9 +107,13 @@ final class Rate_Limiter {
 	/**
 	 * Constructor.
 	 *
-	 * @param Audit_Repository $audit Audit persistence.
+	 * @param Audit_Repository      $audit    Audit persistence.
+	 * @param Rate_Limit_Repository $counters Atomic counter persistence.
 	 */
-	public function __construct( private readonly Audit_Repository $audit ) {
+	public function __construct(
+		private readonly Audit_Repository $audit,
+		private readonly Rate_Limit_Repository $counters
+	) {
 	}
 
 	/**
@@ -149,19 +154,17 @@ final class Rate_Limiter {
 		$key    = $this->key( $action, $subject );
 		$now    = time();
 
-		$state = get_transient( $key );
+		$claimed = $this->counters->claim( $key, $limit, $window, $now );
 
-		if ( ! is_array( $state ) || ! isset( $state['count'], $state['reset'] ) || $now >= (int) $state['reset'] ) {
-			$state = array(
-				'count' => 0,
-				'reset' => $now + $window,
+		if ( null === $claimed ) {
+			return new WP_Error(
+				'aggr_rate_limit_unavailable',
+				__( 'This request could not be safely accepted. Please try again.', 'aggressive-ads' ),
+				array( 'status' => 503 )
 			);
 		}
 
-		$count = (int) $state['count'];
-		$reset = (int) $state['reset'];
-
-		if ( $count >= $limit ) {
+		if ( ! $claimed['allowed'] ) {
 			$this->audit->insert(
 				new Audit_Event(
 					event: 'rate_limit.exceeded',
@@ -182,19 +185,10 @@ final class Rate_Limiter {
 				__( 'That is more requests than we can accept right now. Please wait a moment and try again.', 'aggressive-ads' ),
 				array(
 					'status'      => 429,
-					'retry_after' => max( 1, $reset - $now ),
+					'retry_after' => max( 1, $claimed['reset'] - $now ),
 				)
 			);
 		}
-
-		set_transient(
-			$key,
-			array(
-				'count' => $count + 1,
-				'reset' => $reset,
-			),
-			max( 1, $reset - $now )
-		);
 
 		return true;
 	}

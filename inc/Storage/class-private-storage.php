@@ -191,6 +191,53 @@ final class Private_Storage {
 	}
 
 	/**
+	 * Atomically moves a file aside while its database record is deleted.
+	 *
+	 * @param string $relative Stored relative path.
+	 * @return string|null Quarantined relative path, or null on failure.
+	 */
+	public function quarantine( string $relative ): ?string {
+		$path = $this->resolve( $relative );
+
+		if ( null === $path ) {
+			return null;
+		}
+
+		$target = $path . '.aggr-trash-' . wp_generate_uuid4();
+
+		if ( ! rename( $path, $target ) ) { // phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.file_ops_rename -- Both paths were resolved under the uploads-backed private root.
+			return null;
+		}
+
+		return ltrim( substr( $target, strlen( $this->root() ) ), '/\\' );
+	}
+
+	/**
+	 * Restores a quarantined file after its database deletion was refused.
+	 *
+	 * @param string $quarantined Quarantined relative path.
+	 * @param string $original    Original relative path.
+	 * @return bool
+	 */
+	public function restore( string $quarantined, string $original ): bool {
+		$source = $this->resolve( $quarantined );
+		$root   = realpath( $this->root() );
+		$target = $this->root() . '/' . ltrim( $original, '/\\' );
+		$parent = realpath( dirname( $target ) );
+
+		if (
+			null === $source
+			|| false === $root
+			|| false === $parent
+			|| ( $parent !== $root && ! str_starts_with( $parent, $root . DIRECTORY_SEPARATOR ) )
+		) {
+			return false;
+		}
+
+		return rename( $source, $target ); // phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.file_ops_rename -- Both paths are verified inside the uploads-backed private root.
+	}
+
+	/**
 	 * Moves a file into place.
 	 *
 	 * @param string $source Absolute source path.

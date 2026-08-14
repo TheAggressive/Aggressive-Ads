@@ -261,4 +261,54 @@ final class CreativePromoterTest extends WP_UnitTestCase {
 		$this->assertSame( 24, $metadata['width'] );
 		$this->assertSame( 12, $metadata['height'] );
 	}
+
+	/**
+	 * A failed creative-to-attachment link removes the unreferenced attachment.
+	 *
+	 * @return void
+	 */
+	public function test_a_failed_attachment_link_is_compensated(): void {
+		$creative_id = $this->creative_with_file();
+		$before      = wp_count_posts( 'attachment' )->inherit;
+		$fail_link   = static fn ( $check, int $object_id, string $meta_key ) => Creative_Repository::META_ATTACHMENT_ID === $meta_key ? false : $check;
+
+		add_filter( 'update_post_metadata', $fail_link, 10, 3 );
+
+		try {
+			$result = $this->promoter->promote( $creative_id );
+		} finally {
+			remove_filter( 'update_post_metadata', $fail_link, 10 );
+		}
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'aggr_creative_link_failed', $result->get_error_code() );
+		$this->assertSame( $before, wp_count_posts( 'attachment' )->inherit );
+	}
+
+	/**
+	 * Attachment insertion failure removes the already-copied public file.
+	 *
+	 * @return void
+	 */
+	public function test_failed_attachment_insertion_removes_the_public_copy(): void {
+		$creative_id = $this->creative_with_file();
+		$uploads     = wp_upload_dir();
+		$before      = glob( trailingslashit( $uploads['path'] ) . '*' );
+		$before      = is_array( $before ) ? $before : array();
+		$reject      = static fn ( bool $is_empty, array $post ): bool => 'attachment' === ( $post['post_type'] ?? '' ) ? true : $is_empty;
+
+		add_filter( 'wp_insert_post_empty_content', $reject, 10, 2 );
+
+		try {
+			$result = $this->promoter->promote( $creative_id );
+		} finally {
+			remove_filter( 'wp_insert_post_empty_content', $reject, 10 );
+		}
+
+		$after = glob( trailingslashit( $uploads['path'] ) . '*' );
+		$after = is_array( $after ) ? $after : array();
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( $before, $after );
+	}
 }

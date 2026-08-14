@@ -43,6 +43,17 @@ final class Campaign_Repository {
 	public const META_PENDING_UPDATES      = '_aggr_pending_creative_updates';
 
 	/**
+	 * Transition locks held by this PHP request.
+	 *
+	 * MySQL advisory locks are reentrant on one connection, so request-local
+	 * ownership prevents a nested transition from acquiring the same lock a
+	 * second time.
+	 *
+	 * @var array<string, true>
+	 */
+	private static array $transition_locks = array();
+
+	/**
 	 * Creates an organization-scoped draft.
 	 *
 	 * Initial status assignment is creation, not a lifecycle transition. Every
@@ -101,57 +112,7 @@ final class Campaign_Repository {
 	 * @return true|\WP_Error
 	 */
 	public function update_draft( int $campaign_id, array $fields ) {
-		if ( isset( $fields['title'] ) ) {
-			$updated = wp_update_post(
-				array(
-					'ID'         => $campaign_id,
-					'post_title' => (string) $fields['title'],
-				),
-				true
-			);
-
-			if ( is_wp_error( $updated ) ) {
-				return $updated;
-			}
-		}
-
-		if ( isset( $fields['start_ts'] ) ) {
-			update_post_meta( $campaign_id, self::META_START_TS, (int) $fields['start_ts'] );
-		}
-
-		if ( isset( $fields['end_ts'] ) ) {
-			update_post_meta( $campaign_id, self::META_END_TS, (int) $fields['end_ts'] );
-		}
-
-		if ( isset( $fields['advertiser_notes'] ) ) {
-			update_post_meta( $campaign_id, self::META_ADVERTISER_NOTES, (string) $fields['advertiser_notes'] );
-		}
-
-		if ( isset( $fields['wizard_step'] ) ) {
-			update_post_meta( $campaign_id, self::META_WIZARD_STEP, (string) $fields['wizard_step'] );
-		}
-
-		if ( isset( $fields['package_id'] ) ) {
-			update_post_meta( $campaign_id, self::META_PACKAGE_ID, (int) $fields['package_id'] );
-		}
-
-		if ( isset( $fields['budget_cents'] ) ) {
-			update_post_meta( $campaign_id, self::META_BUDGET_CENTS, (int) $fields['budget_cents'] );
-		}
-
-		if ( isset( $fields['currency'] ) ) {
-			update_post_meta( $campaign_id, self::META_CURRENCY, (string) $fields['currency'] );
-		}
-
-		if ( isset( $fields['placement_ids'] ) && is_array( $fields['placement_ids'] ) ) {
-			delete_post_meta( $campaign_id, self::META_PLACEMENT_ID );
-
-			foreach ( $fields['placement_ids'] as $placement_id ) {
-				add_post_meta( $campaign_id, self::META_PLACEMENT_ID, (int) $placement_id );
-			}
-		}
-
-		return true;
+		return ( new Campaign_Draft_Persistence( $this ) )->update( $campaign_id, $fields );
 	}
 
 	/**
@@ -181,6 +142,61 @@ final class Campaign_Repository {
 		$updated = update_post_meta( $campaign_id, self::META_AUTOSAVE_REV, $next, $expected );
 
 		return false === $updated ? false : $next;
+	}
+
+	/**
+	 * Atomically claims the campaign lifecycle for one request.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return string Empty when another request owns the lock.
+	 */
+	public function claim_transition_lock( int $campaign_id ): string {
+		global $wpdb;
+
+		$lock_name = 'aggr_transition_' . get_current_blog_id() . '_' . $campaign_id;
+
+		if ( isset( self::$transition_locks[ $lock_name ] ) ) {
+			return '';
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- The advisory lock is the atomic cross-request serialization primitive.
+		$acquired = (int) $wpdb->get_var(
+			$wpdb->prepare( 'SELECT GET_LOCK(%s, %d)', $lock_name, 0 ) // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared -- The advisory lock is the atomic cross-request serialization primitive.
+		);
+
+		if ( 1 !== $acquired ) {
+			return '';
+		}
+
+		self::$transition_locks[ $lock_name ] = true;
+
+		return $lock_name;
+	}
+
+	/**
+	 * Releases a lifecycle lock only for its owner.
+	 *
+	 * @param int    $campaign_id Campaign post id.
+	 * @param string $token       Claim token.
+	 * @return void
+	 */
+	public function release_transition_lock( int $campaign_id, string $token ): void {
+		global $wpdb;
+
+		$expected = 'aggr_transition_' . get_current_blog_id() . '_' . $campaign_id;
+
+		if ( $expected !== $token || ! isset( self::$transition_locks[ $token ] ) ) {
+			return;
+		}
+
+		try {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Releases only the exact advisory lock this request acquired.
+			$wpdb->get_var(
+				$wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $token ) // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared -- Releases only the exact advisory lock this request acquired.
+			);
+		} finally {
+			unset( self::$transition_locks[ $token ] );
+		}
 	}
 
 	/**
@@ -787,27 +803,39 @@ final class Campaign_Repository {
 			return array();
 		}
 
-		$ids = get_posts(
-			array(
-				'post_type'              => Post_Types::CAMPAIGN,
-				'post_status'            => Post_Statuses::LIVE,
-				'numberposts'            => 20,
-				'fields'                 => 'ids',
-				'orderby'                => 'ID',
-				'order'                  => 'ASC',
-				'no_found_rows'          => true,
-				'update_post_term_cache' => false,
-				'meta_query'             => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Bounded live set for one placement at fill time.
-					array(
-						'key'     => self::META_PLACEMENT_ID,
-						'value'   => $placement_id,
-						'compare' => '=',
-						'type'    => 'NUMERIC',
-					),
-				),
-			)
-		);
+		$ids       = array();
+		$offset    = 0;
+		$page_size = 100;
 
-		return array_values( array_map( 'intval', $ids ) );
+		do {
+			$page = get_posts(
+				array(
+					'post_type'              => Post_Types::CAMPAIGN,
+					'post_status'            => Post_Statuses::LIVE,
+					'numberposts'            => $page_size,
+					'offset'                 => $offset,
+					'fields'                 => 'ids',
+					'orderby'                => 'ID',
+					'order'                  => 'ASC',
+					'no_found_rows'          => true,
+					'update_post_term_cache' => false,
+					'meta_query'             => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Bounded live set for one placement at fill time.
+						array(
+							'key'     => self::META_PLACEMENT_ID,
+							'value'   => $placement_id,
+							'compare' => '=',
+							'type'    => 'NUMERIC',
+						),
+					),
+				)
+			);
+
+			$page       = array_map( 'intval', $page );
+			$page_count = count( $page );
+			$ids        = array_merge( $ids, $page );
+			$offset    += $page_count;
+		} while ( $page_size === $page_count );
+
+		return array_values( $ids );
 	}
 }

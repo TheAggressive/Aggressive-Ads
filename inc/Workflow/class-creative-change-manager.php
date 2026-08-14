@@ -271,14 +271,27 @@ final class Creative_Change_Manager {
 		}
 
 		try {
-			$stored = $this->creatives->storage_details( $replacement_id );
+			$stored      = $this->creatives->storage_details( $replacement_id );
+			$quarantined = '';
 
-			if ( null !== $stored && '' !== $stored['path'] && null !== $this->storage->resolve( $stored['path'] ) && ! $this->storage->delete( $stored['path'] ) ) {
-				return $this->error( 'aggr_replacement_not_deleted', __( 'The update file could not be removed. Please try again.', 'aggressive-ads' ), 500 );
+			if ( null !== $stored && '' !== $stored['path'] && null !== $this->storage->resolve( $stored['path'] ) ) {
+				$quarantined = (string) $this->storage->quarantine( $stored['path'] );
+
+				if ( '' === $quarantined ) {
+					return $this->error( 'aggr_replacement_not_deleted', __( 'The update file could not be removed. Please try again.', 'aggressive-ads' ), 500 );
+				}
 			}
 
 			if ( ! $this->creatives->delete( $replacement_id ) ) {
+				if ( '' !== $quarantined && null !== $stored && ! $this->storage->restore( $quarantined, $stored['path'] ) ) {
+					return $this->error( 'aggr_replacement_restore_failed', __( 'The update record and file could not be reconciled. Please contact an administrator.', 'aggressive-ads' ), 500 );
+				}
+
 				return $this->error( 'aggr_replacement_not_deleted', __( 'The update could not be withdrawn. Please try again.', 'aggressive-ads' ), 500 );
+			}
+
+			if ( '' !== $quarantined ) {
+				$this->storage->delete( $quarantined );
 			}
 
 			$this->sync_pending_count( $context['campaign_id'] );

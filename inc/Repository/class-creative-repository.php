@@ -181,7 +181,7 @@ final class Creative_Repository {
 			return false;
 		}
 
-		return null !== wp_delete_post( $creative_id, true );
+		return wp_delete_post( $creative_id, true ) instanceof \WP_Post;
 	}
 
 	/**
@@ -488,10 +488,12 @@ final class Creative_Repository {
 	 *
 	 * @param int $creative_id   Creative post id.
 	 * @param int $attachment_id Attachment id.
-	 * @return void
+	 * @return bool Whether the exact attachment id was persisted.
 	 */
-	public function set_attachment_id( int $creative_id, int $attachment_id ): void {
+	public function set_attachment_id( int $creative_id, int $attachment_id ): bool {
 		update_post_meta( $creative_id, self::META_ATTACHMENT_ID, $attachment_id );
+
+		return $attachment_id > 0 && $attachment_id === $this->attachment_id( $creative_id );
 	}
 
 	/**
