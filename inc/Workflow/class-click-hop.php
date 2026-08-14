@@ -10,11 +10,6 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Workflow;
 
 use Aggressive\Ads\Core\Service;
-use Aggressive\Ads\Domain\Campaign_Rules;
-use Aggressive\Ads\Repository\Creative_Repository;
-use Aggressive\Ads\Repository\Event_Repository;
-use Aggressive\Ads\Repository\Placement_Repository;
-use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Security\Rate_Limiter;
 
 /**
@@ -30,22 +25,16 @@ final class Click_Hop implements Service {
 	/**
 	 * Constructor.
 	 *
-	 * @param Fill_Service         $fill       Module gate and live check.
-	 * @param Fill_Token           $tokens     Token parser.
-	 * @param Rate_Limiter         $limiter    Anonymous click bound.
-	 * @param Event_Repository     $events     Append-only log.
-	 * @param Rollup_Repository    $rollups    Day counters.
-	 * @param Creative_Repository  $creatives  Paid destinations.
-	 * @param Placement_Repository $placements House destinations.
+	 * @param Fill_Service   $fill       Module gate and live check.
+	 * @param Fill_Token     $tokens     Token parser.
+	 * @param Rate_Limiter   $limiter    Anonymous click bound.
+	 * @param Event_Recorder $recorder Durable event and projection write.
 	 */
 	public function __construct(
 		private readonly Fill_Service $fill,
 		private readonly Fill_Token $tokens,
 		private readonly Rate_Limiter $limiter,
-		private readonly Event_Repository $events,
-		private readonly Rollup_Repository $rollups,
-		private readonly Creative_Repository $creatives,
-		private readonly Placement_Repository $placements
+		private readonly Event_Recorder $recorder
 	) {
 	}
 
@@ -103,14 +92,9 @@ final class Click_Hop implements Service {
 		}
 
 		$parsed = $this->tokens->parse( $token );
-		$dest   = $this->destination( $parsed );
+		$dest   = is_array( $parsed ) ? $this->fill->destination( $parsed ) : null;
 
-		if (
-			null === $parsed
-			|| ! $this->fill->accepts( $parsed )
-			|| ! Campaign_Rules::is_valid_click_url( $dest )
-			|| false === wp_http_validate_url( $dest )
-		) {
+		if ( null === $parsed || null === $dest ) {
 			$this->not_found();
 
 			return;
@@ -118,7 +102,7 @@ final class Click_Hop implements Service {
 
 		$allowed = $this->limiter->attempt_for( Rate_Limiter::ACTION_CLICK, Rate_Limiter::client_subject() );
 
-		if ( ! is_wp_error( $allowed ) ) {
+		if ( ! is_wp_error( $allowed ) && ! Delivery_Request::is_obvious_bot() ) {
 			$this->record_click( $token, $parsed );
 		}
 
@@ -137,25 +121,6 @@ final class Click_Hop implements Service {
 	}
 
 	/**
-	 * Paid or house destination for a parsed token.
-	 *
-	 * @param array{placement_id: int, campaign_id: int, creative_id: int, exp: int, nonce: string}|null $parsed Token.
-	 */
-	private function destination( ?array $parsed ): string {
-		if ( null === $parsed ) {
-			return '';
-		}
-
-		if ( $parsed['creative_id'] > 0 ) {
-			$details = $this->creatives->details( $parsed['creative_id'] );
-
-			return is_array( $details ) ? $details['click_url'] : '';
-		}
-
-		return $this->placements->house_click_url( $parsed['placement_id'] );
-	}
-
-	/**
 	 * Records one click if this token has not already counted a click.
 	 *
 	 * @param string                                                                                $token  Full token string.
@@ -165,11 +130,7 @@ final class Click_Hop implements Service {
 		$hash = $this->tokens->hash( $token );
 		$ip   = $this->tokens->ip_hash( Delivery_Request::client_ip() );
 
-		if ( ! $this->events->insert( Event_Repository::TYPE_CLICK, $parsed['placement_id'], $parsed['campaign_id'], $parsed['creative_id'], $hash, $ip ) ) {
-			return;
-		}
-
-		$this->rollups->increment( 'clicks', $parsed['placement_id'], $parsed['campaign_id'] );
+		$this->recorder->record( 'click', $parsed['placement_id'], $parsed['campaign_id'], $parsed['creative_id'], $hash, $ip );
 	}
 
 	/**

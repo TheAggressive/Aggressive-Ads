@@ -14,23 +14,28 @@ use Aggressive\Ads\Core\Settings;
 use Aggressive\Ads\Repository\Event_Repository;
 
 /**
- * Daily retention job for aggr_events. Rollups stay; they are the reporting
- * source and are not personal data.
+ * Bounded hourly retention for aggr_events. Only days already reconciled into
+ * rollups are eligible for deletion.
  */
 final class Event_Retention implements Service {
 
 	public const HOOK       = 'aggr_purge_fill_events';
-	public const RECURRENCE = 'daily';
+	public const RECURRENCE = 'hourly';
+
+	private const BATCH_SIZE          = 10_000;
+	private const MAX_BATCHES_PER_RUN = 10;
 
 	/**
 	 * Constructor.
 	 *
-	 * @param Event_Repository $events   Append-only log.
-	 * @param Settings         $settings Retention days.
+	 * @param Event_Repository  $events   Append-only log.
+	 * @param Settings          $settings   Retention days.
+	 * @param Rollup_Reconciler $reconciler Closed-day projection repair.
 	 */
 	public function __construct(
 		private readonly Event_Repository $events,
-		private readonly Settings $settings
+		private readonly Settings $settings,
+		private readonly Rollup_Reconciler $reconciler
 	) {
 	}
 
@@ -76,6 +81,21 @@ final class Event_Retention implements Service {
 			return;
 		}
 
-		$this->events->purge_before( time() - ( $days * DAY_IN_SECONDS ) );
+		$this->reconciler->run();
+
+		$through = $this->reconciler->reconciled_through();
+		$safe    = '' === $through ? false : strtotime( $through . ' +1 day UTC' );
+
+		if ( false === $safe ) {
+			return;
+		}
+
+		$cutoff = min( time() - ( $days * DAY_IN_SECONDS ), $safe );
+
+		for ( $batch = 0; $batch < self::MAX_BATCHES_PER_RUN; ++$batch ) {
+			if ( self::BATCH_SIZE !== $this->events->purge_before( $cutoff, self::BATCH_SIZE ) ) {
+				break;
+			}
+		}
 	}
 }

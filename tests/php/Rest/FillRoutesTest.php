@@ -88,7 +88,7 @@ final class FillRoutesTest extends WP_UnitTestCase {
 	 */
 	public function tear_down(): void {
 		delete_option( Settings::OPTION );
-		unset( $_SERVER['HTTP_SEC_PURPOSE'], $_SERVER['HTTP_PURPOSE'], $_SERVER['HTTP_ORIGIN'], $_SERVER['HTTP_SEC_FETCH_SITE'] );
+		unset( $_SERVER['HTTP_SEC_PURPOSE'], $_SERVER['HTTP_PURPOSE'], $_SERVER['HTTP_ORIGIN'], $_SERVER['HTTP_SEC_FETCH_SITE'], $_SERVER['HTTP_USER_AGENT'] );
 		set_query_var( Click_Hop::QUERY_VAR, '' );
 		parent::tear_down();
 	}
@@ -276,6 +276,19 @@ final class FillRoutesTest extends WP_UnitTestCase {
 		$this->enable_native();
 
 		$_SERVER['HTTP_PURPOSE'] = 'prefetch';
+
+		$token   = ( new Fill_Token() )->mint( $this->placement_id, 0, 0 )['token'];
+		$request = new WP_REST_Request( 'POST', '/aggr/v1/i' );
+		$request->set_body_params( array( 'token' => $token ) );
+
+		$this->assertSame( 400, rest_get_server()->dispatch( $request )->get_status() );
+	}
+
+	/** A cooperative crawler cannot become a paid impression. */
+	public function test_beacon_rejects_an_obvious_bot(): void {
+		$this->enable_native();
+
+		$_SERVER['HTTP_USER_AGENT'] = 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)';
 
 		$token   = ( new Fill_Token() )->mint( $this->placement_id, 0, 0 )['token'];
 		$request = new WP_REST_Request( 'POST', '/aggr/v1/i' );

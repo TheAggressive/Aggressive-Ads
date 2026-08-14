@@ -45,6 +45,7 @@ use Aggressive\Ads\REST\Packages_Controller;
 use Aggressive\Ads\REST\Placements_Controller;
 use Aggressive\Ads\REST\Transitions_Controller;
 use Aggressive\Ads\Security\Admin_Guard;
+use Aggressive\Ads\Security\Delivery_Health;
 use Aggressive\Ads\Security\Ownership;
 use Aggressive\Ads\Security\Private_Storage_Health;
 use Aggressive\Ads\Update\Plugin_Updates;
@@ -56,6 +57,7 @@ use Aggressive\Ads\Workflow\Ending_Soon_Notifier;
 use Aggressive\Ads\Workflow\Event_Retention;
 use Aggressive\Ads\Workflow\Fill_Cache;
 use Aggressive\Ads\Workflow\Placement_Slot;
+use Aggressive\Ads\Workflow\Rollup_Reconciler;
 
 /**
  * Wires the application together, then starts it.
@@ -260,6 +262,7 @@ final class Plugin {
 			Ownership::class,
 			Admin_Guard::class,
 			Private_Storage_Health::class,
+			Delivery_Health::class,
 
 			// Attaches the listener that notices a campaign status written
 			// without going through the state machine.
@@ -272,6 +275,7 @@ final class Plugin {
 			Ending_Soon_Mailer::class,
 			Ending_Soon_Notifier::class,
 			Creative_Retention::class,
+			Rollup_Reconciler::class,
 			Event_Retention::class,
 			Notification_Service::class,
 			Menu::class,

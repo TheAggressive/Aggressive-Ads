@@ -45,4 +45,43 @@ final class RateLimitRepositoryTest extends WP_UnitTestCase {
 
 		delete_transient( $key );
 	}
+
+	/** Persistent cache uses atomic increment without database advisory locks. */
+	public function test_persistent_cache_claim_is_atomic_and_avoids_database_locks(): void {
+		$key        = 'aggr_test_cached_rate_limit_' . wp_generate_uuid4();
+		$repository = new Rate_Limit_Repository();
+		$now        = time();
+		$bucket     = $key . '_' . intdiv( $now, HOUR_IN_SECONDS );
+		$queries    = array();
+		$external   = wp_using_ext_object_cache();
+
+		$listener = static function ( string $query ) use ( &$queries ): string {
+			$queries[] = $query;
+
+			return $query;
+		};
+
+		wp_using_ext_object_cache( true );
+		wp_cache_delete( $bucket, 'aggr_rate_limits' );
+		add_filter( 'query', $listener );
+
+		try {
+			$first  = $repository->claim( $key, 2, HOUR_IN_SECONDS, $now );
+			$second = $repository->claim( $key, 2, HOUR_IN_SECONDS, $now );
+			$denied = $repository->claim( $key, 2, HOUR_IN_SECONDS, $now );
+		} finally {
+			remove_filter( 'query', $listener );
+			wp_cache_delete( $bucket, 'aggr_rate_limits' );
+			wp_using_ext_object_cache( $external );
+		}
+
+		$this->assertIsArray( $first );
+		$this->assertIsArray( $second );
+		$this->assertIsArray( $denied );
+		$this->assertSame( 1, $first['count'] );
+		$this->assertSame( 2, $second['count'] );
+		$this->assertFalse( $denied['allowed'] );
+		$this->assertSame( 3, $denied['count'] );
+		$this->assertSame( 0, count( preg_grep( '/(?:GET|RELEASE)_LOCK/', $queries ) ) );
+	}
 }

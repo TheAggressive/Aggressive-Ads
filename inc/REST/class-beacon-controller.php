@@ -10,10 +10,9 @@ declare(strict_types=1);
 namespace Aggressive\Ads\REST;
 
 use Aggressive\Ads\Core\Service;
-use Aggressive\Ads\Repository\Event_Repository;
-use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Security\Rate_Limiter;
 use Aggressive\Ads\Workflow\Delivery_Request;
+use Aggressive\Ads\Workflow\Event_Recorder;
 use Aggressive\Ads\Workflow\Fill_Service;
 use Aggressive\Ads\Workflow\Fill_Token;
 use WP_Error;
@@ -28,18 +27,16 @@ final class Beacon_Controller implements Service {
 	/**
 	 * Constructor.
 	 *
-	 * @param Fill_Service      $fill    Module gate and live check.
-	 * @param Fill_Token        $tokens  Token parser.
-	 * @param Rate_Limiter      $limiter Anonymous beacon bound.
-	 * @param Event_Repository  $events  Append-only log.
-	 * @param Rollup_Repository $rollups Day counters.
+	 * @param Fill_Service   $fill    Module gate and live check.
+	 * @param Fill_Token     $tokens  Token parser.
+	 * @param Rate_Limiter   $limiter Anonymous beacon bound.
+	 * @param Event_Recorder $recorder Durable event and projection write.
 	 */
 	public function __construct(
 		private readonly Fill_Service $fill,
 		private readonly Fill_Token $tokens,
 		private readonly Rate_Limiter $limiter,
-		private readonly Event_Repository $events,
-		private readonly Rollup_Repository $rollups
+		private readonly Event_Recorder $recorder
 	) {
 	}
 
@@ -109,10 +106,10 @@ final class Beacon_Controller implements Service {
 	 * @phpstan-param WP_REST_Request<array<string, mixed>> $request
 	 */
 	public function record( WP_REST_Request $request ): WP_REST_Response|WP_Error {
-		if ( Delivery_Request::is_prefetch() ) {
+		if ( Delivery_Request::is_prefetch() || Delivery_Request::is_obvious_bot() ) {
 			return new WP_Error(
-				'aggr_beacon_prefetch',
-				__( 'Prefetch is not an impression.', 'aggressive-ads' ),
+				'aggr_beacon_nonhuman',
+				__( 'Automated fetches are not impressions.', 'aggressive-ads' ),
 				array( 'status' => 400 )
 			);
 		}
@@ -137,7 +134,9 @@ final class Beacon_Controller implements Service {
 		$hash = $this->tokens->hash( $token );
 		$ip   = $this->tokens->ip_hash( Delivery_Request::client_ip() );
 
-		if ( ! $this->events->insert( Event_Repository::TYPE_IMPRESSION, $parsed['placement_id'], $parsed['campaign_id'], $parsed['creative_id'], $hash, $ip ) ) {
+		$recorded = $this->recorder->record( 'impression', $parsed['placement_id'], $parsed['campaign_id'], $parsed['creative_id'], $hash, $ip );
+
+		if ( Event_Recorder::REPLAY === $recorded ) {
 			return new WP_Error(
 				'aggr_beacon_replay',
 				__( 'That token has already been used.', 'aggressive-ads' ),
@@ -145,7 +144,13 @@ final class Beacon_Controller implements Service {
 			);
 		}
 
-		$this->rollups->increment( 'impressions', $parsed['placement_id'], $parsed['campaign_id'] );
+		if ( Event_Recorder::FAILED === $recorded ) {
+			return new WP_Error(
+				'aggr_beacon_unavailable',
+				__( 'That impression could not be recorded. Please try again.', 'aggressive-ads' ),
+				array( 'status' => 503 )
+			);
+		}
 
 		return new WP_REST_Response( null, 204 );
 	}

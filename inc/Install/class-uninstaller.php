@@ -18,6 +18,7 @@ use Aggressive\Ads\Workflow\Campaign_Clock;
 use Aggressive\Ads\Workflow\Creative_Retention;
 use Aggressive\Ads\Workflow\Ending_Soon_Notifier;
 use Aggressive\Ads\Workflow\Event_Retention;
+use Aggressive\Ads\Workflow\Rollup_Reconciler;
 
 /**
  * The current-site half of uninstall.php.
@@ -58,6 +59,7 @@ final class Uninstaller {
 		Ending_Soon_Notifier::unschedule();
 		Creative_Retention::unschedule();
 		Event_Retention::unschedule();
+		Rollup_Reconciler::unschedule();
 
 		foreach ( Installer::options() as $option ) {
 			delete_option( $option );

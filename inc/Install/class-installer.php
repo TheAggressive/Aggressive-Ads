@@ -17,6 +17,7 @@ use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Security\Roles;
 use Aggressive\Ads\Workflow\Click_Hop;
+use Aggressive\Ads\Workflow\Rollup_Reconciler;
 
 /**
  * Brings a site up to the current schema, roles and options.
@@ -52,6 +53,7 @@ final class Installer {
 			self::OPTION_DELETE_DATA,
 			'aggr_settings',
 			Click_Hop::OPTION_REWRITE,
+			Rollup_Reconciler::OPTION,
 		);
 	}
 

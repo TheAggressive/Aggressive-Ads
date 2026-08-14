@@ -64,8 +64,8 @@ on HTML render).
 Cached page              Fill (short TTL)                 Count (never cached)
 ────────────             ────────────────                 ────────────────────
 Reserved slot            GET aggr/v1/fill/{slot}          POST impression token
-+ noscript house ad      live eligible set, pick one      HMAC, single-use,
-                         object-cache of candidates       after paint
++ noscript house ad      compact eligible-id cache        HMAC, single-use,
+                         per-creative payload, pick one   durable event ledger
                          bust on approve/pause/complete   click: 302 /ads/c/{token}
 ```
 
@@ -96,6 +96,8 @@ Rules:
   only while Reporting is on.
   House (`campaign_id = 0`) never joins an org. Rotation does not move a view
   onto a different campaign after the fact.
+- Closed UTC days are reconciled exactly from the event ledger before bounded
+  retention may delete their raw rows.
 
 ---
 

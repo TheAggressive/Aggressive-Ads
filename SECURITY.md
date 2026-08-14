@@ -58,6 +58,16 @@ Named so their absence is deliberate rather than overlooked:
   Several controls in this codebase were found to be untested that way, having
   looked fully covered.
 
+## Production delivery controls
+
+High-volume native delivery requires persistent Redis or Memcached, a real
+system cron invoking WordPress cron, and CDN/WAF abuse controls. Site Health
+checks the plugin-owned parts, including a representative 1,000-creative cache
+item, atomic counter support, and tracking-maintenance schedules. Reverse
+proxies must restore a validated client address into `REMOTE_ADDR`; forwarded
+headers are not trusted by the plugin. See
+[delivery performance and operations](docs/delivery-performance.md).
+
 ## Patched development dependency
 
 `pnpm ci:security` audits the complete development tree. `adm-zip` 0.5.18 is

@@ -139,22 +139,68 @@ final class Event_Repository {
 	}
 
 	/**
+	 * Whether an exact event digest already exists.
+	 *
+	 * Used only to distinguish an expected replay from an infrastructure write
+	 * failure after insert() returns false.
+	 *
+	 * @param string $type       impression|click.
+	 * @param string $token_hash 64-char digest.
+	 */
+	public function exists( string $type, string $token_hash ): bool {
+		global $wpdb;
+
+		if ( ! in_array( $type, array( self::TYPE_IMPRESSION, self::TYPE_CLICK ), true ) || 1 !== preg_match( '/^[a-f0-9]{64}$/', $token_hash ) ) {
+			return false;
+		}
+
+		$table = $this->table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Exact unique-key diagnostic after a failed ledger insert.
+		$id = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table} WHERE token_hash = %s AND event = %s LIMIT 1", $token_hash, $type ) );
+
+		return is_numeric( $id ) && (int) $id > 0;
+	}
+
+	/**
+	 * Oldest event day in a closed UTC range.
+	 *
+	 * @param int $after_ts  Inclusive lower Unix timestamp.
+	 * @param int $before_ts Exclusive upper Unix timestamp.
+	 */
+	public function earliest_day_between( int $after_ts, int $before_ts ): ?string {
+		global $wpdb;
+
+		if ( $after_ts < 0 || $before_ts <= $after_ts ) {
+			return null;
+		}
+
+		$table = $this->table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Indexed range lookup for the rollup reconciliation watermark.
+		$timestamp = $wpdb->get_var( $wpdb->prepare( "SELECT MIN(created_at_ts) FROM {$table} WHERE created_at_ts >= %d AND created_at_ts < %d", $after_ts, $before_ts ) );
+
+		return is_numeric( $timestamp ) && (int) $timestamp > 0 ? gmdate( 'Y-m-d', (int) $timestamp ) : null;
+	}
+
+	/**
 	 * Deletes events older than the retention cutoff.
 	 *
 	 * @param int $before_ts UTC Unix seconds.
+	 * @param int $limit     Maximum rows removed by one statement.
 	 * @return int Rows deleted.
 	 */
-	public function purge_before( int $before_ts ): int {
+	public function purge_before( int $before_ts, int $limit = 10_000 ): int {
 		global $wpdb;
 
-		if ( $before_ts <= 0 ) {
+		if ( $before_ts <= 0 || $limit < 1 || $limit > 100_000 ) {
 			return 0;
 		}
 
 		$table = $this->table_name();
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Bounded retention delete on this plugin's table; the name is prefix + constant.
-		$deleted = $wpdb->query( $wpdb->prepare( "DELETE FROM {$table} WHERE created_at_ts < %d", $before_ts ) );
+		$deleted = $wpdb->query( $wpdb->prepare( "DELETE FROM {$table} WHERE created_at_ts < %d ORDER BY id ASC LIMIT %d", $before_ts, $limit ) );
 
 		return is_int( $deleted ) ? $deleted : 0;
 	}

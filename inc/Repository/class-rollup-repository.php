@@ -71,18 +71,18 @@ final class Rollup_Repository {
 	 * @param int    $campaign_id  Campaign id, or 0 for house.
 	 * @param string $day_utc      Optional UTC Y-m-d. Invalid values use today.
 	 */
-	public function increment( string $column, int $placement_id, int $campaign_id, string $day_utc = '' ): void {
+	public function increment( string $column, int $placement_id, int $campaign_id, string $day_utc = '' ): bool {
 		global $wpdb;
 
 		if ( ! in_array( $column, array( 'impressions', 'clicks' ), true ) ) {
-			return;
+			return false;
 		}
 
 		$table = $this->table_name();
 		$day   = 1 === preg_match( '/^\d{4}-\d{2}-\d{2}$/', $day_utc ) ? $day_utc : gmdate( 'Y-m-d' );
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is prefix+constant; column is allowlisted to impressions|clicks.
-		$wpdb->query(
+		$written = $wpdb->query(
 			$wpdb->prepare(
 				"INSERT INTO {$table} (day_utc, placement_id, campaign_id, impressions, clicks) VALUES (%s, %d, %d, %d, %d)
 				ON DUPLICATE KEY UPDATE {$column} = {$column} + 1",
@@ -94,6 +94,56 @@ final class Rollup_Repository {
 			)
 		);
 		// phpcs:enable
+
+		return false !== $written;
+	}
+
+	/**
+	 * Rebuilds one closed UTC day's counters exactly from the event ledger.
+	 *
+	 * INSERT ... SELECT is one atomic statement. Re-running it is idempotent;
+	 * it repairs a synchronous projection failure without replaying an event.
+	 *
+	 * @param string $day_utc Closed UTC Y-m-d.
+	 */
+	public function reconcile_day( string $day_utc ): bool {
+		if ( 1 !== preg_match( '/^\d{4}-\d{2}-\d{2}$/', $day_utc ) ) {
+			return false;
+		}
+
+		$start = strtotime( $day_utc . ' 00:00:00 UTC' );
+
+		if ( false === $start ) {
+			return false;
+		}
+
+		global $wpdb;
+
+		$rollups = $this->table_name();
+		$events  = $wpdb->prefix . Schema::EVENTS_TABLE;
+		$end     = $start + DAY_IN_SECONDS;
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Idempotent projection repair between this plugin's two custom tables.
+		$written = $wpdb->query(
+			$wpdb->prepare(
+				"INSERT INTO {$rollups} (day_utc, placement_id, campaign_id, impressions, clicks)
+				SELECT %s, placement_id, campaign_id,
+					SUM(CASE WHEN event = %s THEN 1 ELSE 0 END),
+					SUM(CASE WHEN event = %s THEN 1 ELSE 0 END)
+				FROM {$events}
+				WHERE created_at_ts >= %d AND created_at_ts < %d
+				GROUP BY placement_id, campaign_id
+				ON DUPLICATE KEY UPDATE impressions = VALUES(impressions), clicks = VALUES(clicks)",
+				$day_utc,
+				Event_Repository::TYPE_IMPRESSION,
+				Event_Repository::TYPE_CLICK,
+				$start,
+				$end
+			)
+		);
+		// phpcs:enable
+
+		return false !== $written;
 	}
 
 	/**

@@ -11,11 +11,9 @@ namespace Aggressive\Ads\Workflow;
 
 use Aggressive\Ads\Core\Settings;
 use Aggressive\Ads\Domain\Campaign_Rules;
-use Aggressive\Ads\Domain\Fill_Rotation;
 use Aggressive\Ads\Domain\Settings_Schema;
 use Aggressive\Ads\Domain\Upload_Rules;
-use Aggressive\Ads\Repository\Campaign_Repository;
-use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Repository\Delivery_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\REST\Creative_File_Controller;
 
@@ -24,21 +22,26 @@ use Aggressive\Ads\REST\Creative_File_Controller;
  */
 final class Fill_Service {
 
+	/** A corrupt candidate cannot turn a large slot into another linear scan. */
+	private const MAX_CANDIDATE_ATTEMPTS = 5;
+
+	/** Bounded wait for the request currently rebuilding a placement. */
+	private const REBUILD_WAIT_ATTEMPTS     = 10;
+	private const REBUILD_WAIT_MICROSECONDS = 20_000;
+
 	/**
 	 * Constructor.
 	 *
 	 * @param Settings             $settings   Module and delivery flags.
 	 * @param Placement_Repository $placements Slot catalogue.
-	 * @param Campaign_Repository  $campaigns  Live membership.
-	 * @param Creative_Repository  $creatives  Active artwork.
+	 * @param Delivery_Repository  $delivery   Indexed live creative reads.
 	 * @param Fill_Cache           $cache      Short-TTL payload cache.
 	 * @param Fill_Token           $tokens     Signed beacon/click tokens.
 	 */
 	public function __construct(
 		private readonly Settings $settings,
 		private readonly Placement_Repository $placements,
-		private readonly Campaign_Repository $campaigns,
-		private readonly Creative_Repository $creatives,
+		private readonly Delivery_Repository $delivery,
 		private readonly Fill_Cache $cache,
 		private readonly Fill_Token $tokens
 	) {
@@ -62,9 +65,9 @@ final class Fill_Service {
 	/**
 	 * Fill payload for a placement slug, or null when the slot does not exist.
 	 *
-	 * Identity of the candidate set is cached. The winner and tokens are
-	 * chosen per request so a TTL hit is not a replay of the previous
-	 * visitor's impression, and is not a frozen rotation.
+	 * The candidate id vector and individual payloads are cached separately.
+	 * The winner and token are chosen per request, so a hit is neither a replay
+	 * of the previous visitor's impression nor a frozen rotation.
 	 *
 	 * @param string $slug Placement post_name.
 	 * @return array<string, mixed>|null
@@ -80,14 +83,22 @@ final class Fill_Service {
 			return null;
 		}
 
-		$cached = $this->cache->get( $placement_id );
+		$paid  = $this->paid_creative( $placement_id );
+		$house = null;
 
-		if ( ! is_array( $cached ) ) {
-			$cached = $this->build( $placement_id, $slug );
-			$this->cache->put( $placement_id, $cached );
+		if ( null === $paid && Settings_Schema::HOUSE_WHEN_EMPTY === $this->settings->house_policy() ) {
+			$house = $this->house_creative( $placement_id );
 		}
 
-		return $this->present( $cached );
+		return $this->with_tokens(
+			array(
+				'slot'     => $slug,
+				'size'     => $this->placements->size( $placement_id ),
+				'creative' => $paid,
+				'house'    => $house,
+				'beacon'   => rest_url( Creative_File_Controller::NAMESPACE . '/i' ),
+			)
+		);
 	}
 
 	/**
@@ -99,35 +110,39 @@ final class Fill_Service {
 	 * @param array{placement_id: int, campaign_id: int, creative_id: int, exp: int, nonce: string} $parsed Token.
 	 */
 	public function accepts( array $parsed ): bool {
+		return null !== $this->destination( $parsed );
+	}
+
+	/**
+	 * Destination for an exact, still-live token identity.
+	 *
+	 * This primary-id read is shared by beacon validation and the click hop so
+	 * a click does not resolve and validate the same creative twice.
+	 *
+	 * @param array{placement_id: int, campaign_id: int, creative_id: int, exp: int, nonce: string} $parsed Token.
+	 */
+	public function destination( array $parsed ): ?string {
 		if ( ! $this->is_enabled() ) {
-			return false;
+			return null;
 		}
 
 		$placement_id = $parsed['placement_id'];
 
 		if ( $placement_id <= 0 || ! $this->placements->is_active( $placement_id ) ) {
-			return false;
+			return null;
 		}
 
 		if ( 0 === $parsed['campaign_id'] && 0 === $parsed['creative_id'] ) {
-			return $this->house_is_servable( $placement_id );
+			return $this->house_is_servable( $placement_id ) ? $this->placements->house_click_url( $placement_id ) : null;
 		}
 
 		if ( $parsed['campaign_id'] <= 0 || $parsed['creative_id'] <= 0 ) {
-			return false;
+			return null;
 		}
 
-		if ( ! in_array( $parsed['campaign_id'], $this->campaigns->live_ids_for_placement( $placement_id ), true ) ) {
-			return false;
-		}
+		$row = $this->delivery->candidate( $parsed['creative_id'], $placement_id, $parsed['campaign_id'] );
 
-		foreach ( $this->creatives->for_campaign( $parsed['campaign_id'] ) as $row ) {
-			if ( $parsed['creative_id'] === $row['id'] && $placement_id === $row['placement_id'] ) {
-				return Campaign_Rules::is_valid_click_url( $row['click_url'] ) && false !== wp_http_validate_url( $row['click_url'] );
-			}
-		}
-
-		return false;
+		return is_array( $row ) && Campaign_Rules::is_valid_click_url( $row['click_url'] ) ? $row['click_url'] : null;
 	}
 
 	/**
@@ -142,55 +157,39 @@ final class Fill_Service {
 
 		$click = $this->placements->house_click_url( $placement_id );
 
-		return Campaign_Rules::is_valid_click_url( $click ) && false !== wp_http_validate_url( $click );
+		return Campaign_Rules::is_valid_click_url( $click );
 	}
 
 	/**
-	 * Candidate set for one placement. The winner is not cached.
+	 * Chooses one creative from a compact cached id vector.
 	 *
-	 * @param int    $placement_id Placement post id.
-	 * @param string $slug         Placement post_name.
-	 * @return array<string, mixed>
+	 * Candidate payloads have separate keys, so a 1,000-ad placement does not
+	 * transfer and deserialize 1,000 image URLs and alt strings on every fill.
+	 *
+	 * @param int $placement_id Placement post id.
+	 * @return array<string, mixed>|null
 	 */
-	private function build( int $placement_id, string $slug ): array {
-		$candidates = $this->paid_creatives( $placement_id );
-		$house      = null;
+	private function paid_creative( int $placement_id ): ?array {
+		$ids   = $this->candidate_ids( $placement_id );
+		$count = count( $ids );
 
-		if ( array() === $candidates && Settings_Schema::HOUSE_WHEN_EMPTY === $this->settings->house_policy() ) {
-			$house = $this->house_creative( $placement_id );
+		if ( 0 === $count ) {
+			return null;
 		}
 
-		return array(
-			'slot'       => $slug,
-			'size'       => $this->placements->size( $placement_id ),
-			'candidates' => $candidates,
-			'house'      => $house,
-			'beacon'     => rest_url( Creative_File_Controller::NAMESPACE . '/i' ),
-		);
-	}
+		$start    = random_int( 0, $count - 1 );
+		$attempts = min( $count, self::MAX_CANDIDATE_ATTEMPTS );
 
-	/**
-	 * Picks one candidate and mints a token. The set never leaves the cache.
-	 *
-	 * @param array<string, mixed> $cached Cached identity.
-	 * @return array<string, mixed>
-	 */
-	private function present( array $cached ): array {
-		$candidates = isset( $cached['candidates'] ) && is_array( $cached['candidates'] ) ? $cached['candidates'] : array();
-		$count      = count( $candidates );
-		$draw       = $count > 0 ? random_int( 0, $count - 1 ) : 0;
-		$paid       = Fill_Rotation::at( $candidates, $draw );
-		$house      = null === $paid && isset( $cached['house'] ) && is_array( $cached['house'] ) ? $cached['house'] : null;
+		for ( $offset = 0; $offset < $attempts; ++$offset ) {
+			$creative_id = $ids[ ( $start + $offset ) % $count ];
+			$candidate   = $this->candidate_payload( $creative_id, $placement_id );
 
-		return $this->with_tokens(
-			array(
-				'slot'     => isset( $cached['slot'] ) && is_string( $cached['slot'] ) ? $cached['slot'] : '',
-				'size'     => isset( $cached['size'] ) && is_string( $cached['size'] ) ? $cached['size'] : '',
-				'creative' => is_array( $paid ) ? $paid : null,
-				'house'    => $house,
-				'beacon'   => isset( $cached['beacon'] ) && is_string( $cached['beacon'] ) ? $cached['beacon'] : '',
-			)
-		);
+			if ( null !== $candidate ) {
+				return $candidate;
+			}
+		}
+
+		return null;
 	}
 
 	/**
@@ -223,44 +222,107 @@ final class Fill_Service {
 	}
 
 	/**
-	 * Servable paid creatives occupying this placement, live campaigns first.
+	 * Cached creative ids, rebuilt by one request per placement on a miss.
 	 *
 	 * @param int $placement_id Placement post id.
-	 * @return list<array<string, mixed>>
+	 * @return list<int>
 	 */
-	private function paid_creatives( int $placement_id ): array {
-		$candidates = array();
+	private function candidate_ids( int $placement_id ): array {
+		$cached = $this->cache->get( $placement_id );
 
-		foreach ( $this->campaigns->live_ids_for_placement( $placement_id ) as $campaign_id ) {
-			foreach ( $this->creatives->for_campaign( $campaign_id ) as $row ) {
-				if ( $placement_id !== $row['placement_id'] ) {
-					continue;
+		if ( is_array( $cached ) && isset( $cached['candidate_ids'] ) && is_array( $cached['candidate_ids'] ) ) {
+			return $this->positive_ids( $cached['candidate_ids'] );
+		}
+
+		$owner = $this->cache->claim_rebuild( $placement_id );
+
+		if ( '' === $owner ) {
+			for ( $attempt = 0; $attempt < self::REBUILD_WAIT_ATTEMPTS; ++$attempt ) {
+				usleep( self::REBUILD_WAIT_MICROSECONDS );
+				$cached = $this->cache->get( $placement_id );
+
+				if ( is_array( $cached ) && isset( $cached['candidate_ids'] ) && is_array( $cached['candidate_ids'] ) ) {
+					return $this->positive_ids( $cached['candidate_ids'] );
 				}
+			}
 
-				if ( ! Campaign_Rules::is_valid_click_url( $row['click_url'] ) || false === wp_http_validate_url( $row['click_url'] ) ) {
-					continue;
-				}
+			/*
+			 * Do not turn a slow cache rebuild or cache outage into a database
+			 * stampede. This request can safely render no paid ad; the lock owner
+			 * will populate the short-lived candidate vector for later requests.
+			 */
+			return array();
+		}
 
-				$attachment_id = $this->creatives->attachment_id( $row['id'] );
-				$image         = $attachment_id > 0 ? wp_get_attachment_image_url( $attachment_id, 'full' ) : false;
+		try {
+			$ids = $this->delivery->candidate_ids( $placement_id );
+			$this->cache->put( $placement_id, array( 'candidate_ids' => $ids ) );
 
-				if ( ! is_string( $image ) || '' === $image ) {
-					continue;
-				}
+			return $ids;
+		} finally {
+			$this->cache->release_rebuild( $placement_id, $owner );
+		}
+	}
 
-				$candidates[] = array(
-					'image'     => $image,
-					'alt'       => $row['alt_text'],
-					'width'     => $row['width'],
-					'height'    => $row['height'],
-					'placement' => $placement_id,
-					'campaign'  => $campaign_id,
-					'creative'  => $row['id'],
-				);
+	/**
+	 * One token-free candidate payload.
+	 *
+	 * @param int $creative_id Creative post id.
+	 * @param int $placement_id Placement post id.
+	 * @return array<string, mixed>|null
+	 */
+	private function candidate_payload( int $creative_id, int $placement_id ): ?array {
+		$cached = $this->cache->get_candidate( $creative_id );
+
+		if ( is_array( $cached ) && (int) ( $cached['placement'] ?? 0 ) === $placement_id ) {
+			return $cached;
+		}
+
+		$row = $this->delivery->candidate( $creative_id, $placement_id );
+
+		if ( ! is_array( $row ) || ! Campaign_Rules::is_valid_click_url( $row['click_url'] ) ) {
+			return null;
+		}
+
+		$image = wp_get_attachment_image_url( $row['attachment_id'], 'full' );
+
+		if ( ! is_string( $image ) || '' === $image ) {
+			return null;
+		}
+
+		$payload = array(
+			'image'     => $image,
+			'alt'       => $row['alt_text'],
+			'width'     => $row['width'],
+			'height'    => $row['height'],
+			'placement' => $placement_id,
+			'campaign'  => $row['campaign_id'],
+			'creative'  => $row['creative_id'],
+		);
+
+		$this->cache->put_candidate( $creative_id, $payload );
+
+		return $payload;
+	}
+
+	/**
+	 * Normalizes a cache value into unique positive ids.
+	 *
+	 * @param array<int, mixed> $values Cached values.
+	 * @return list<int>
+	 */
+	private function positive_ids( array $values ): array {
+		$ids = array();
+
+		foreach ( $values as $value ) {
+			$id = (int) $value;
+
+			if ( $id > 0 ) {
+				$ids[ $id ] = $id;
 			}
 		}
 
-		return $candidates;
+		return array_values( $ids );
 	}
 
 	/**

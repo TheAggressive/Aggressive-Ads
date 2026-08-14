@@ -64,13 +64,22 @@ Treat every uploaded file as hostile.
 
 ## Destination URLs
 
-`wp_http_validate_url()` plus an explicit `http` / `https` scheme allowlist. That combination blocks `javascript:` and `data:`, which `esc_url_raw()` alone does not reliably stop for every downstream consumer. Credential-bearing URLs (`https://user:pass@…`) are rejected.
+`wp_http_validate_url()` plus an explicit `http` / `https` scheme allowlist run
+at write and approval. That combination blocks `javascript:` and `data:`, which
+`esc_url_raw()` alone does not reliably stop for every downstream consumer.
+Credential-bearing URLs (`https://user:pass@…`) are rejected. The public hop
+re-applies the pure scheme/host/credential check to the exact reviewed live
+creative but does not repeat DNS/private-address resolution: redirects never
+fetch the destination server-side, and DNS on every impression/click made
+advertiser DNS part of tracking availability.
 
 **Open redirect is an accepted risk with a named control.** The click URL is by design a third-party destination rendered as an `href` on the public site. It cannot be restricted to an allowlist without breaking the product. The control is human review plus the audit trail, not filtering. Recorded here so it is a decision rather than an oversight.
 
 **SSRF: nothing server-side ever fetches a destination URL.** If a preview or screenshot feature is ever added, it must use `wp_safe_remote_get()` and appear in this document first.
 
-House click URLs use the same two checks as paid creatives (`Campaign_Rules::is_valid_click_url()` and `wp_http_validate_url()`), at save and again at the hop. House attachments use `Upload_Rules` — JPEG, PNG, GIF, WebP only; SVG is refused.
+House click URLs use both checks at save. The hop repeats the pure URL check
+against current placement meta. House attachments use `Upload_Rules` — JPEG,
+PNG, GIF, WebP only; SVG is refused.
 
 ## Native fill
 
@@ -83,8 +92,9 @@ Public fill, beacon, and click hop are always registered. Native delivery is not
 | Destination replays `/ads/c/{token}` from Referer | `Referrer-Policy: no-referrer` on the hop | `FillRoutesTest::test_click_hop_redirects_to_the_house_url` |
 | Leftover token after pause | Beacon and hop call `Fill_Service::accepts()` | `FillRoutesTest::test_beacon_rejects_a_token_that_is_no_longer_live` |
 | Cross-origin fill/beacon | Origin host must match `home_url()`; beacon also refuses `Sec-Fetch-Site: cross-site` | `FillRoutesTest::test_fill_and_beacon_reject_a_cross_origin_browser` |
-| Beacon/click flood | Per-client rate limits (`ACTION_BEACON` 300/hour, `ACTION_CLICK` 120/hour). Over-limit clicks still redirect and do not count | Rate_Limiter limits |
+| Beacon/click flood | Per-client rate limits (`ACTION_BEACON` 300/hour, `ACTION_CLICK` 120/hour). Persistent caches use atomic increment; the database-lock fallback is a degraded mode surfaced in Site Health. Over-limit clicks still redirect and do not count | `RateLimitRepositoryTest` |
 | Prefetch counted as a view | `Sec-Purpose` and `Purpose` | `FillRoutesTest` prefetch tests |
+| Cooperative crawler counted as a person | Conservative known-bot User-Agent tokens refuse beacons and suppress click counts; edge bot management remains required for hostile clients | `FillRoutesTest::test_beacon_rejects_an_obvious_bot` |
 | Fill JSON as an ID oracle | Public payload unsets `placement`, `campaign`, `creative` after minting; candidate set never leaves the cache | `FillRoutesTest::test_fill_json_omits_internal_ids`, `FillRotationTest::test_fill_rotates_and_omits_the_candidate_set` |
 | Rotation credits the wrong advertiser | Token binds campaign+creative at fill; beacon/hop increment that row, not the current winner | `FillRotationTest::test_beacon_credits_the_filled_campaign_not_the_oldest` |
 | Cross-site fill token (multisite) | Token HMAC includes `blog_id`; parse rejects a valid token bound to another site. Post ids restart per blog and `wp_salt( 'aggr_fill' )` is network-wide | `FillTokenTest`, `SiteScopedTenancyTest` |

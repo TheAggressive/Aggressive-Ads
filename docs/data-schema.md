@@ -112,8 +112,12 @@ House rows
 filtered in SQL against campaign `_aggr_org_id`.
 
 Event SQL lives in `Event_Repository`; rollup SQL in `Rollup_Repository`.
-Retention is a daily sweep of events older than `tracking.retention_days`.
-Rollups are not purged with events.
+The event row is the durable ledger; the synchronous rollup upsert is a
+low-latency projection. An hourly restartable reconciler rebuilds closed UTC
+days exactly after a ten-minute midnight grace period and stores its non-autoloaded watermark in
+`aggr_rollups_reconciled_through`. Retention runs hourly in bounded 10,000-row
+deletes and never purges beyond that watermark. Rollups are not purged with
+events. See [delivery-performance.md](delivery-performance.md).
 
 ## Options
 
@@ -127,6 +131,7 @@ Rollups are not purged with events.
 | `aggr_upgrade_lock` | int | **no** | Transient-ish concurrency guard; see below |
 | `aggr_settings` | array | yes | The settings schema's storage |
 | `aggr_delivery_rewrite_version` | int | yes | Bumped when the click-hop rule changes; triggers one flush |
+| `aggr_rollups_reconciled_through` | `Y-m-d` | **no** | Last closed UTC event day exactly projected into rollups |
 | `aggr_delete_data_on_uninstall` | bool | yes | Opt-in; default off |
 
 Version options autoload because they are read on every request. `aggr_upgrade_lock` does not, because it is written and deleted rather than read, and an autoloaded option that churns is a cache-invalidation cost for nothing.

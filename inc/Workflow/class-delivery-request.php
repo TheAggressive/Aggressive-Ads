@@ -14,6 +14,28 @@ namespace Aggressive\Ads\Workflow;
  */
 final class Delivery_Request {
 
+	/** Conservative tokens for well-known non-human fetchers. */
+	private const BOT_TOKENS = array(
+		'ahrefsbot',
+		'applebot',
+		'baiduspider',
+		'bingbot',
+		'bytespider',
+		'discordbot',
+		'dotbot',
+		'duckduckbot',
+		'facebookexternalhit',
+		'googlebot',
+		'linkedinbot',
+		'mj12bot',
+		'petalbot',
+		'pinterestbot',
+		'semrushbot',
+		'slackbot',
+		'twitterbot',
+		'yandexbot',
+	);
+
 	/**
 	 * Chromium Sec-Purpose and the older Purpose header.
 	 */
@@ -23,6 +45,32 @@ final class Delivery_Request {
 			$value = $_SERVER[ $header ] ?? '';
 
 			if ( is_string( $value ) && str_contains( strtolower( $value ), 'prefetch' ) ) {
+				return true;
+			}
+		}
+
+		return false;
+	}
+
+	/**
+	 * Whether the request identifies as a known crawler or link unfurler.
+	 *
+	 * This improves reporting quality for cooperative bots; it is not an abuse
+	 * boundary because a hostile client can choose any User-Agent. Edge bot
+	 * management and token/rate-limit controls remain the security controls.
+	 */
+	public static function is_obvious_bot(): bool {
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPressVIPMinimum.Variables.RestrictedVariables.cache_constraints___SERVER__HTTP_USER_AGENT__ -- Compared with fixed tokens for an uncached tracking write; never persisted or rendered.
+		$agent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+
+		if ( ! is_string( $agent ) || '' === $agent ) {
+			return false;
+		}
+
+		$agent = strtolower( $agent );
+
+		foreach ( self::BOT_TOKENS as $token ) {
+			if ( str_contains( $agent, $token ) ) {
 				return true;
 			}
 		}

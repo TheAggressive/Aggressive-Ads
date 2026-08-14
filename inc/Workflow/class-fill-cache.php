@@ -14,12 +14,15 @@ use Aggressive\Ads\Core\Settings;
 use Aggressive\Ads\Repository\Campaign_Repository;
 
 /**
- * Object-cache wrapper. A miss rebuilds the candidate set; the winner and
- * tokens are chosen per request so rotation is not frozen for the TTL.
+ * Object-cache wrapper. A miss rebuilds a compact creative-id vector; selected
+ * payloads are separate and tokens are always minted per request.
  */
 final class Fill_Cache implements Service {
 
 	public const GROUP = 'aggr_fill';
+
+	/** Rebuild locks expire even when the building request dies. */
+	private const LOCK_TTL = 10;
 
 	/**
 	 * Constructor.
@@ -42,14 +45,14 @@ final class Fill_Cache implements Service {
 	}
 
 	/**
-	 * Stores the candidate set for one placement. The winner is picked per request.
+	 * Stores the candidate-id vector for one placement.
 	 *
 	 * @param int                  $placement_id Placement post id.
 	 * @param array<string, mixed> $payload      Fill identity without tokens.
 	 */
-	public function put( int $placement_id, array $payload ): void {
+	public function put( int $placement_id, array $payload ): bool {
 		// phpcs:ignore WordPressVIPMinimum.Performance.LowExpiryCacheTime.CacheTimeUndetermined -- Fill TTL is 5–300s by design; a 300s floor is the paused-campaign-still-showing bug.
-		wp_cache_set( $this->key( $placement_id ), $payload, self::GROUP, $this->settings->fill_ttl() );
+		return wp_cache_set( $this->key( $placement_id ), $payload, self::GROUP, $this->settings->fill_ttl() );
 	}
 
 	/**
@@ -62,6 +65,56 @@ final class Fill_Cache implements Service {
 		$cached = wp_cache_get( $this->key( $placement_id ), self::GROUP );
 
 		return is_array( $cached ) ? $cached : null;
+	}
+
+	/**
+	 * Stores one small candidate payload separately from the placement id list.
+	 *
+	 * @param int                  $creative_id Creative post id.
+	 * @param array<string, mixed> $payload     Token-free candidate identity.
+	 */
+	public function put_candidate( int $creative_id, array $payload ): bool {
+		// phpcs:ignore WordPressVIPMinimum.Performance.LowExpiryCacheTime.CacheTimeUndetermined -- Same bounded consistency window as the placement candidate list.
+		return wp_cache_set( $this->candidate_key( $creative_id ), $payload, self::GROUP, $this->settings->fill_ttl() );
+	}
+
+	/**
+	 * Cached token-free identity for one creative.
+	 *
+	 * @param int $creative_id Creative post id.
+	 * @return array<string, mixed>|null
+	 */
+	public function get_candidate( int $creative_id ): ?array {
+		$cached = wp_cache_get( $this->candidate_key( $creative_id ), self::GROUP );
+
+		return is_array( $cached ) ? $cached : null;
+	}
+
+	/**
+	 * Claims a short cross-request rebuild lock when a persistent cache exists.
+	 *
+	 * @param int $placement_id Placement post id.
+	 * @return string Empty when another request owns the lock.
+	 */
+	public function claim_rebuild( int $placement_id ): string {
+		$owner = wp_generate_uuid4();
+
+		// phpcs:ignore WordPressVIPMinimum.Performance.LowExpiryCacheTime.CacheTimeUndetermined -- A rebuild mutex must fail open quickly after a dead request; it is not cached data.
+		return wp_cache_add( $this->lock_key( $placement_id ), $owner, self::GROUP, self::LOCK_TTL ) ? $owner : '';
+	}
+
+	/**
+	 * Releases only the caller's rebuild lock.
+	 *
+	 * @param int    $placement_id Placement post id.
+	 * @param string $owner        Claim token.
+	 */
+	public function release_rebuild( int $placement_id, string $owner ): void {
+		if ( '' === $owner || wp_cache_get( $this->lock_key( $placement_id ), self::GROUP ) !== $owner ) {
+			return;
+		}
+
+		wp_cache_delete( $this->lock_key( $placement_id ), self::GROUP );
 	}
 
 	/**
@@ -98,5 +151,25 @@ final class Fill_Cache implements Service {
 		$blog_id = $blog_id > 0 ? $blog_id : 1;
 
 		return 'aggr_fill_' . $blog_id . '_' . $placement_id;
+	}
+
+	/**
+	 * One creative payload on the current site.
+	 *
+	 * @param int $creative_id Creative post id.
+	 */
+	private function candidate_key( int $creative_id ): string {
+		$blog_id = max( 1, get_current_blog_id() );
+
+		return 'aggr_candidate_' . $blog_id . '_' . $creative_id;
+	}
+
+	/**
+	 * One placement rebuild lock on the current site.
+	 *
+	 * @param int $placement_id Placement post id.
+	 */
+	private function lock_key( int $placement_id ): string {
+		return $this->key( $placement_id ) . '_lock';
 	}
 }

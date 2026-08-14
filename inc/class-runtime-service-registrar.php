@@ -27,6 +27,7 @@ use Aggressive\Ads\Portal\Router;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Repository\Delivery_Repository;
 use Aggressive\Ads\Repository\Event_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Package_Repository;
@@ -39,6 +40,7 @@ use Aggressive\Ads\Security\Rate_Limiter;
 use Aggressive\Ads\Workflow\Campaign_State_Machine;
 use Aggressive\Ads\Workflow\Click_Hop;
 use Aggressive\Ads\Workflow\Creative_Change_Manager;
+use Aggressive\Ads\Workflow\Event_Recorder;
 use Aggressive\Ads\Workflow\Event_Retention;
 use Aggressive\Ads\Workflow\Fill_Cache;
 use Aggressive\Ads\Workflow\Fill_Service;
@@ -48,6 +50,7 @@ use Aggressive\Ads\Workflow\Package_Manager;
 use Aggressive\Ads\Workflow\Placement_Manager;
 use Aggressive\Ads\Workflow\Placement_Slot;
 use Aggressive\Ads\Workflow\Review_Actions;
+use Aggressive\Ads\Workflow\Rollup_Reconciler;
 use Aggressive\Ads\Workflow\Transition_Guards;
 
 /**
@@ -160,6 +163,20 @@ final class Runtime_Service_Registrar {
 		$container->register( Event_Repository::class, static fn (): Event_Repository => new Event_Repository() );
 		$container->register( Rollup_Repository::class, static fn (): Rollup_Repository => new Rollup_Repository() );
 		$container->register( Fill_Token::class, static fn (): Fill_Token => new Fill_Token() );
+		$container->register(
+			Event_Recorder::class,
+			static fn ( Service_Container $c ): Event_Recorder => new Event_Recorder(
+				$c->get( Event_Repository::class ),
+				$c->get( Rollup_Repository::class )
+			)
+		);
+		$container->register(
+			Rollup_Reconciler::class,
+			static fn ( Service_Container $c ): Rollup_Reconciler => new Rollup_Reconciler(
+				$c->get( Event_Repository::class ),
+				$c->get( Rollup_Repository::class )
+			)
+		);
 
 		$container->register(
 			Fill_Cache::class,
@@ -174,8 +191,7 @@ final class Runtime_Service_Registrar {
 			static fn ( Service_Container $c ): Fill_Service => new Fill_Service(
 				$c->get( Settings::class ),
 				$c->get( Placement_Repository::class ),
-				$c->get( Campaign_Repository::class ),
-				$c->get( Creative_Repository::class ),
+				$c->get( Delivery_Repository::class ),
 				$c->get( Fill_Cache::class ),
 				$c->get( Fill_Token::class )
 			)
@@ -187,10 +203,7 @@ final class Runtime_Service_Registrar {
 				$c->get( Fill_Service::class ),
 				$c->get( Fill_Token::class ),
 				$c->get( Rate_Limiter::class ),
-				$c->get( Event_Repository::class ),
-				$c->get( Rollup_Repository::class ),
-				$c->get( Creative_Repository::class ),
-				$c->get( Placement_Repository::class )
+				$c->get( Event_Recorder::class )
 			)
 		);
 
@@ -213,8 +226,7 @@ final class Runtime_Service_Registrar {
 				$c->get( Fill_Service::class ),
 				$c->get( Fill_Token::class ),
 				$c->get( Rate_Limiter::class ),
-				$c->get( Event_Repository::class ),
-				$c->get( Rollup_Repository::class )
+				$c->get( Event_Recorder::class )
 			)
 		);
 
@@ -230,7 +242,8 @@ final class Runtime_Service_Registrar {
 			Event_Retention::class,
 			static fn ( Service_Container $c ): Event_Retention => new Event_Retention(
 				$c->get( Event_Repository::class ),
-				$c->get( Settings::class )
+				$c->get( Settings::class ),
+				$c->get( Rollup_Reconciler::class )
 			)
 		);
 	}

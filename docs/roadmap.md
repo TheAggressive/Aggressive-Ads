@@ -101,7 +101,12 @@ is not this slice.
 
 ## Phase 11 — Hardening and launch
 
-Full threat-model test coverage, authorization review, audit-table load testing at volume, Site Health checks, performance profiling, failure-state review, admin documentation, and the production rollout runbook.
+The 1,000-ad delivery query-budget regression, delivery Site Health dependency
+check, atomic persistent-cache rate limiting, exact rollup reconciliation, and
+bounded event retention are built. Remaining: concurrent request/soak testing
+on production-equivalent infrastructure, audit-table load testing at volume,
+full authorization/failure-state review, admin documentation, and the final
+production rollout runbook.
 
 ## Architected for, not planned
 

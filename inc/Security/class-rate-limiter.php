@@ -216,13 +216,10 @@ final class Rate_Limiter {
 			return PHP_INT_MAX;
 		}
 
-		$state = get_transient( $this->key( $action, $subject ) );
+		$limit  = self::LIMITS[ $action ]['limit'];
+		$window = self::LIMITS[ $action ]['window'];
 
-		if ( ! is_array( $state ) || ! isset( $state['count'], $state['reset'] ) || time() >= (int) $state['reset'] ) {
-			return self::LIMITS[ $action ]['limit'];
-		}
-
-		return max( 0, self::LIMITS[ $action ]['limit'] - (int) $state['count'] );
+		return $this->counters->remaining( $this->key( $action, $subject ), $limit, $window, time() );
 	}
 
 	/**

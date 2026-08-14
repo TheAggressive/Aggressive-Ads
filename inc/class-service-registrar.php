@@ -32,6 +32,8 @@ use Aggressive\Ads\Notification\Organization_Notification;
 use Aggressive\Ads\Notification\Password_Notification;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Repository\Delivery_Repository;
+use Aggressive\Ads\Repository\Event_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Org_Access_Repository;
 use Aggressive\Ads\Repository\Package_Repository;
@@ -82,6 +84,7 @@ use Aggressive\Ads\Workflow\Organization_State_Manager;
 use Aggressive\Ads\Workflow\Email_Change;
 use Aggressive\Ads\Workflow\Transition_Guards;
 use Aggressive\Ads\Security\Admin_Guard;
+use Aggressive\Ads\Security\Delivery_Health;
 use Aggressive\Ads\Security\Ownership;
 use Aggressive\Ads\Security\Private_Storage_Health;
 use Aggressive\Ads\Security\Rate_Limiter;
@@ -329,9 +332,22 @@ final class Service_Registrar {
 		);
 
 		$container->register(
+			Delivery_Repository::class,
+			static fn (): Delivery_Repository => new Delivery_Repository()
+		);
+
+		$container->register(
 			Private_Storage_Health::class,
 			static fn ( Service_Container $c ): Private_Storage_Health => new Private_Storage_Health(
 				$c->get( Private_Storage::class )
+			)
+		);
+
+		$container->register(
+			Delivery_Health::class,
+			static fn ( Service_Container $c ): Delivery_Health => new Delivery_Health(
+				$c->get( Event_Repository::class ),
+				$c->get( Rollup_Repository::class )
 			)
 		);
 

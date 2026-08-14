@@ -86,6 +86,13 @@ not identity — two slots may share 728×90. There is no delete: deactivate,
 same as packages. The Block Editor block is authored under `src/blocks/`
 (same layout as the LAAO theme) and styled with core block `supports`.
 
+The hot read model remains authoritative posts/meta rather than a second
+eventually-consistent delivery table. `Delivery_Repository` resolves a
+placement with two bounded, index-led reads and validates a consumed token by
+its exact creative/campaign/placement tuple. `Fill_Cache` stores a compact id
+vector plus individual creative payloads. Capacity measurements and production
+requirements live in [delivery-performance.md](delivery-performance.md).
+
 ## File size
 
 `bin/check-file-length.sh` warns above 800 lines and fails above 1000, with no allowlist. The remedy is always to split by responsibility. Raising the threshold is not an option, because the threshold is not the point — a 1200-line class is telling you it has more than one job, and the number is just how you found out.
