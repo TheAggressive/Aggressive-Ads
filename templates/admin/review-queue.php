@@ -67,7 +67,7 @@ use Aggressive\Ads\Admin\Review_Data;
 				<p><?php esc_html_e( 'Campaigns will appear in this view as their status changes.', 'aggressive-ads' ); ?></p>
 			</div>
 		<?php else : ?>
-			<div class="aggr-tablewrap">
+			<div class="aggr-tablewrap" role="region" aria-label="<?php esc_attr_e( 'Campaign review queue table', 'aggressive-ads' ); ?>" tabindex="0">
 				<table class="aggr-table aggr-review-table">
 					<thead>
 						<tr>

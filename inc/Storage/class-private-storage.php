@@ -69,6 +69,51 @@ final class Private_Storage {
 	}
 
 	/**
+	 * Creates a harmless file used to verify direct HTTP access is denied.
+	 *
+	 * The caller must delete the returned path in a finally block. A random
+	 * name prevents caches from turning yesterday's server configuration into
+	 * today's Site Health result.
+	 *
+	 * @return array{path: string, url: string}|null Probe location, or null when unavailable.
+	 */
+	public function create_verification_probe(): ?array {
+		$uploads = wp_upload_dir();
+		$baseurl = isset( $uploads['baseurl'] ) && is_string( $uploads['baseurl'] )
+			? rtrim( $uploads['baseurl'], '/' )
+			: '';
+
+		if ( '' === $baseurl || ! $this->ensure() ) {
+			return null;
+		}
+
+		// Match a real creative's non-hidden UUID filename and common extension.
+		// A dotfile probe could be denied by a generic dotfile rule even while
+		// the actual creative files remained public, producing a false success.
+		$relative = wp_generate_uuid4() . '.png';
+		$path     = $this->root() . '/' . $relative;
+
+		global $wp_filesystem;
+
+		if ( ! $wp_filesystem instanceof \WP_Filesystem_Base ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+			WP_Filesystem();
+		}
+
+		if (
+			! $wp_filesystem instanceof \WP_Filesystem_Base
+			|| ! $wp_filesystem->put_contents( $path, 'Aggressive Ads private-storage verification.', FS_CHMOD_FILE )
+		) {
+			return null;
+		}
+
+		return array(
+			'path' => $relative,
+			'url'  => $baseurl . '/' . self::DIRECTORY . '/' . rawurlencode( $relative ),
+		);
+	}
+
+	/**
 	 * Stores an uploaded file under a name we generate.
 	 *
 	 * @param string $source_path Absolute path to the file to store.

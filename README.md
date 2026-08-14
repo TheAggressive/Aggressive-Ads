@@ -74,7 +74,7 @@ production autoloader is `inc/class-autoloader.php`. See
 ```bash
 composer install      # PHPCS, PHPStan, PHPUnit — vendor/ never ships
 pnpm install          # webpack, TypeScript, Playwright
-pnpm wp-env start     # dev http://localhost:9960, tests :9970
+pnpm env:start        # dev http://localhost:9960, tests :9970
 pnpm build            # src/ → dist/
 pnpm dev:seed         # an advertiser, an org, and five campaigns
 pnpm ci:verify        # the contract for declaring a change finished
@@ -96,6 +96,8 @@ pnpm typecheck               # tsc --noEmit
 pnpm lint:css                # Stylelint on src/styles/
 pnpm test:js                 # Jest on Interactivity helpers
 pnpm lint:files              # file length, repository boundary, permission callbacks
+pnpm ci:coverage             # quantitative unit-coverage regression gate
+pnpm test:e2e:install        # install pinned Chromium and WebKit browsers
 pnpm test:e2e                # Playwright + axe (needs wp-env, after pnpm build)
 pnpm ci:verify               # every CI lane, serially
 ```

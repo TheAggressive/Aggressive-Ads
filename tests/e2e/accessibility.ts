@@ -1,7 +1,19 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, type Locator, type Page } from '@playwright/test';
 
-const wcagTags = [ 'wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa' ];
+const wcagTags = [ 'wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa' ];
+
+/**
+ * WCAG 1.4.10: content reflows at 320 CSS pixels without two-dimensional scrolling.
+ */
+export async function expectNoHorizontalOverflow( page: Page ): Promise<void> {
+	const dimensions = await page.evaluate( () => ( {
+		clientWidth: document.documentElement.clientWidth,
+		scrollWidth: document.documentElement.scrollWidth,
+	} ) );
+
+	expect( dimensions.scrollWidth ).toBeLessThanOrEqual( dimensions.clientWidth + 1 );
+}
 
 export async function expectPortalA11y( page: Page ): Promise<void> {
 	await expectScopedA11y( page, '.aggr-shell' );

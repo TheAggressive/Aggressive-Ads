@@ -10,12 +10,33 @@
 # a working JavaScript fallback, so it does not need its native build.
 packages: []
 
+# WordPress tooling occasionally pins vulnerable transitive releases after a
+# patched version exists. Keep overrides narrow to the parent that introduces
+# each advisory, then remove them when upstream moves. Every override is
+# exercised by build, lint, wp-env, and Playwright in ci:verify.
+overrides:
+  'markdownlint-cli>minimatch': 3.1.4
+  'copy-webpack-plugin>serialize-javascript': 7.0.5
+  'markdown-it>linkify-it': 5.0.2
+  'markdownlint>markdown-it': 15.0.0
+  '@wordpress/e2e-test-utils-playwright>lighthouse': 13.4.1
+  'sockjs>uuid': 11.1.1
+  '@sentry/node>@opentelemetry/core': 2.8.0
+  eslint: 9.39.5
+
 allowBuilds:
   '@parcel/watcher': false
   core-js: false
   core-js-pure: false
   fs-ext-extra-prebuilt: false
   unrs-resolver: false
+
+patchedDependencies:
+  adm-zip@0.5.18: patches/adm-zip@0.5.18.patch
+
+auditConfig:
+  ignoreGhsas:
+    - GHSA-xcpc-8h2w-3j85
 
 # Any dependency override MUST live here, not in package.json's
 # `pnpm.overrides`: with a pnpm-workspace.yaml present, pnpm 10+ reads

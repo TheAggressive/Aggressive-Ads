@@ -1,6 +1,6 @@
 <?php
 /**
- * Registers every service factory on the container.
+ * Registers core and request-facing service factories on the container.
  *
  * @package Aggressive\Ads
  */
@@ -9,16 +9,9 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads;
 
-use Aggressive\Ads\Admin\Creative_Change_Actions;
 use Aggressive\Ads\Admin\Menu;
 use Aggressive\Ads\Admin\Organization_Data;
-use Aggressive\Ads\Admin\Organization_Screen;
-use Aggressive\Ads\Admin\Package_Data;
-use Aggressive\Ads\Admin\Package_Screen;
-use Aggressive\Ads\Admin\Review_Data;
-use Aggressive\Ads\Admin\Review_Screen;
 use Aggressive\Ads\Admin\Placement_Data;
-use Aggressive\Ads\Admin\Placement_Screen;
 use Aggressive\Ads\Admin\Settings_Screen;
 use Aggressive\Ads\Assets\Assets;
 use Aggressive\Ads\Assets\Brand_Styles;
@@ -35,12 +28,10 @@ use Aggressive\Ads\Integration\Ad_Provider_Interface;
 use Aggressive\Ads\Integration\Native\Publisher;
 use Aggressive\Ads\Notification\Email_Change_Notification;
 use Aggressive\Ads\Notification\Ending_Soon_Mailer;
-use Aggressive\Ads\Notification\Notification_Service;
 use Aggressive\Ads\Notification\Organization_Notification;
 use Aggressive\Ads\Notification\Password_Notification;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
-use Aggressive\Ads\Repository\Event_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Org_Access_Repository;
 use Aggressive\Ads\Repository\Package_Repository;
@@ -55,11 +46,9 @@ use Aggressive\Ads\Portal\Organization_Actions;
 use Aggressive\Ads\Portal\Password_Actions;
 use Aggressive\Ads\Portal\Signup_Actions;
 use Aggressive\Ads\Portal\Creative_Actions;
-use Aggressive\Ads\REST\Beacon_Controller;
 use Aggressive\Ads\REST\Campaigns_Controller;
 use Aggressive\Ads\REST\Creative_Controller;
 use Aggressive\Ads\REST\Creative_File_Controller;
-use Aggressive\Ads\REST\Fill_Controller;
 use Aggressive\Ads\REST\Placements_Controller;
 use Aggressive\Ads\REST\Packages_Controller;
 use Aggressive\Ads\REST\Transitions_Controller;
@@ -85,22 +74,16 @@ use Aggressive\Ads\Workflow\Creative_Manager;
 use Aggressive\Ads\Workflow\Creative_Retention;
 use Aggressive\Ads\Workflow\Creative_Uploader;
 use Aggressive\Ads\Workflow\Ending_Soon_Notifier;
-use Aggressive\Ads\Workflow\Event_Retention;
 use Aggressive\Ads\Workflow\Fill_Cache;
-use Aggressive\Ads\Workflow\Fill_Service;
-use Aggressive\Ads\Workflow\Fill_Token;
-use Aggressive\Ads\Workflow\Click_Hop;
-use Aggressive\Ads\Workflow\Placement_Slot;
-use Aggressive\Ads\Workflow\Review_Actions;
 use Aggressive\Ads\Workflow\Reporting_Read;
 use Aggressive\Ads\Workflow\Review_Readiness;
 use Aggressive\Ads\Workflow\Placement_Manager;
 use Aggressive\Ads\Workflow\Organization_State_Manager;
-use Aggressive\Ads\Workflow\Package_Manager;
 use Aggressive\Ads\Workflow\Email_Change;
 use Aggressive\Ads\Workflow\Transition_Guards;
 use Aggressive\Ads\Security\Admin_Guard;
 use Aggressive\Ads\Security\Ownership;
+use Aggressive\Ads\Security\Private_Storage_Health;
 use Aggressive\Ads\Security\Rate_Limiter;
 use Aggressive\Ads\Security\Roles;
 use Aggressive\Ads\Service_Container;
@@ -343,6 +326,13 @@ final class Service_Registrar {
 		$container->register(
 			Creative_Repository::class,
 			static fn (): Creative_Repository => new Creative_Repository()
+		);
+
+		$container->register(
+			Private_Storage_Health::class,
+			static fn ( Service_Container $c ): Private_Storage_Health => new Private_Storage_Health(
+				$c->get( Private_Storage::class )
+			)
 		);
 
 		$container->register(
@@ -719,203 +709,6 @@ final class Service_Registrar {
 			)
 		);
 
-		$container->register(
-			Creative_Change_Actions::class,
-			static fn ( Service_Container $c ): Creative_Change_Actions => new Creative_Change_Actions(
-				$c->get( Creative_Change_Manager::class )
-			)
-		);
-
-		$container->register(
-			Campaign_State_Machine::class,
-			static fn ( Service_Container $c ): Campaign_State_Machine => new Campaign_State_Machine(
-				$c->get( Campaign_Repository::class ),
-				$c->get( Audit_Repository::class ),
-				$c->get( Transition_Guards::class ),
-				$c->get( Ad_Provider_Interface::class )->transition_effects()
-			)
-		);
-
-		$container->register(
-			Notification_Service::class,
-			static fn ( Service_Container $c ): Notification_Service => new Notification_Service(
-				$c->get( Campaign_Repository::class ),
-				$c->get( Org_Repository::class ),
-				$c->get( User_Repository::class ),
-				$c->get( Audit_Repository::class ),
-				$c->get( Notification_Delivery::class )
-			)
-		);
-
-		$container->register(
-			Review_Data::class,
-			static fn ( Service_Container $c ): Review_Data => new Review_Data(
-				$c->get( Campaign_Repository::class ),
-				$c->get( Creative_Repository::class ),
-				$c->get( Placement_Repository::class ),
-				$c->get( Org_Repository::class ),
-				$c->get( Audit_Repository::class )
-			)
-		);
-
-		$container->register(
-			Review_Actions::class,
-			static fn ( Service_Container $c ): Review_Actions => new Review_Actions(
-				$c->get( Campaign_State_Machine::class ),
-				$c->get( Campaign_Repository::class ),
-				$c->get( Audit_Repository::class )
-			)
-		);
-
-		$container->register(
-			Review_Screen::class,
-			static fn ( Service_Container $c ): Review_Screen => new Review_Screen(
-				$c->get( Review_Data::class ),
-				$c->get( Review_Actions::class )
-			)
-		);
-
-		$container->register(
-			Placement_Screen::class,
-			static fn ( Service_Container $c ): Placement_Screen => new Placement_Screen(
-				$c->get( Placement_Data::class ),
-				$c->get( Placement_Manager::class )
-			)
-		);
-
-		$container->register(
-			Organization_Screen::class,
-			static fn ( Service_Container $c ): Organization_Screen => new Organization_Screen(
-				$c->get( Organization_Data::class ),
-				$c->get( Organization_State_Manager::class )
-			)
-		);
-
-		$container->register(
-			Package_Manager::class,
-			static fn ( Service_Container $c ): Package_Manager => new Package_Manager(
-				$c->get( Package_Repository::class ),
-				$c->get( Placement_Repository::class ),
-				$c->get( Audit_Repository::class )
-			)
-		);
-
-		$container->register(
-			Package_Data::class,
-			static fn ( Service_Container $c ): Package_Data => new Package_Data(
-				$c->get( Package_Repository::class ),
-				$c->get( Placement_Repository::class )
-			)
-		);
-
-		$container->register(
-			Package_Screen::class,
-			static fn ( Service_Container $c ): Package_Screen => new Package_Screen(
-				$c->get( Package_Data::class ),
-				$c->get( Package_Manager::class )
-			)
-		);
-
-		$container->register(
-			Event_Repository::class,
-			static fn (): Event_Repository => new Event_Repository()
-		);
-
-		$container->register(
-			Rollup_Repository::class,
-			static fn (): Rollup_Repository => new Rollup_Repository()
-		);
-
-		$container->register(
-			Fill_Token::class,
-			static fn (): Fill_Token => new Fill_Token()
-		);
-
-		$container->register(
-			Fill_Cache::class,
-			static fn ( Service_Container $c ): Fill_Cache => new Fill_Cache(
-				$c->get( Campaign_Repository::class ),
-				$c->get( Settings::class )
-			)
-		);
-
-		$container->register(
-			Fill_Service::class,
-			static fn ( Service_Container $c ): Fill_Service => new Fill_Service(
-				$c->get( Settings::class ),
-				$c->get( Placement_Repository::class ),
-				$c->get( Campaign_Repository::class ),
-				$c->get( Creative_Repository::class ),
-				$c->get( Fill_Cache::class ),
-				$c->get( Fill_Token::class )
-			)
-		);
-
-		$container->register(
-			Click_Hop::class,
-			static fn ( Service_Container $c ): Click_Hop => new Click_Hop(
-				$c->get( Fill_Service::class ),
-				$c->get( Fill_Token::class ),
-				$c->get( Rate_Limiter::class ),
-				$c->get( Event_Repository::class ),
-				$c->get( Rollup_Repository::class ),
-				$c->get( Creative_Repository::class ),
-				$c->get( Placement_Repository::class )
-			)
-		);
-
-		$container->register(
-			Rewrite_Flusher::class,
-			static fn ( Service_Container $c ): Rewrite_Flusher => new Rewrite_Flusher(
-				$c->get( Router::class ),
-				$c->get( Click_Hop::class )
-			)
-		);
-
-		$container->register(
-			Fill_Controller::class,
-			static fn ( Service_Container $c ): Fill_Controller => new Fill_Controller(
-				$c->get( Fill_Service::class )
-			)
-		);
-
-		$container->register(
-			Beacon_Controller::class,
-			static fn ( Service_Container $c ): Beacon_Controller => new Beacon_Controller(
-				$c->get( Fill_Service::class ),
-				$c->get( Fill_Token::class ),
-				$c->get( Rate_Limiter::class ),
-				$c->get( Event_Repository::class ),
-				$c->get( Rollup_Repository::class )
-			)
-		);
-
-		$container->register(
-			Placement_Slot::class,
-			static fn ( Service_Container $c ): Placement_Slot => new Placement_Slot(
-				$c->get( Fill_Service::class ),
-				$c->get( Placement_Repository::class )
-			)
-		);
-
-		$container->register(
-			Event_Retention::class,
-			static fn ( Service_Container $c ): Event_Retention => new Event_Retention(
-				$c->get( Event_Repository::class ),
-				$c->get( Settings::class )
-			)
-		);
-
-		/*
-		 * Remaining services land here as the phases build them — router,
-		 * assets, REST — each as one register() line, each also listed in
-		 * service_init_order() below when it needs hooks.
-		 *
-		 * The validator and placement-mapping guards, and the publish and
-		 * unpublish effects, are injected into Transition_Guards and
-		 * Campaign_State_Machine when their phases build them. Until then both
-		 * fail closed, so a transition depending on one refuses rather than
-		 * skipping the check.
-		 */
+		( new Runtime_Service_Registrar() )->register( $container );
 	}
 }

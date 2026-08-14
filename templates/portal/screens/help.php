@@ -70,7 +70,7 @@ $aggr_help = Plugin::instance()->container()->get( View_Data::class )->help();
 	</div>
 
 	<?php if ( array() !== $aggr_help['placements'] ) : ?>
-		<div class="aggr-tablewrap">
+		<div class="aggr-tablewrap" role="region" aria-label="<?php esc_attr_e( 'Artwork requirements table', 'aggressive-ads' ); ?>" tabindex="0">
 			<table class="aggr-table">
 				<thead>
 					<tr>
@@ -102,7 +102,7 @@ $aggr_help = Plugin::instance()->container()->get( View_Data::class )->help();
 <section class="aggr-panel" aria-labelledby="aggr-help-statuses">
 	<h2 id="aggr-help-statuses" class="aggr-panel__head"><?php esc_html_e( 'What each status means', 'aggressive-ads' ); ?></h2>
 
-	<div class="aggr-tablewrap">
+	<div class="aggr-tablewrap" role="region" aria-label="<?php esc_attr_e( 'Campaign statuses table', 'aggressive-ads' ); ?>" tabindex="0">
 		<table class="aggr-table">
 			<thead>
 				<tr>

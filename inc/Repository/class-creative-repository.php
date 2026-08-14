@@ -46,7 +46,6 @@ final class Creative_Repository {
 	public const META_CHANGE_NOTES  = '_aggr_change_notes';
 	public const META_REQUESTED_AT  = '_aggr_change_requested_at';
 	public const META_DECIDED_AT    = '_aggr_change_decided_at';
-	public const META_CHANGE_LOCK   = '_aggr_change_lock';
 
 	public const CHANGE_PENDING  = 'pending';
 	public const CHANGE_REJECTED = 'rejected';
@@ -60,6 +59,13 @@ final class Creative_Repository {
 	 * campaign has one creative per placement.
 	 */
 	public const MAX_PER_CAMPAIGN = 100;
+
+	/**
+	 * Advisory locks held by this request, keyed by database lock name.
+	 *
+	 * @var array<string, true>
+	 */
+	private static array $change_locks = array();
 
 	/**
 	 * The creative ids belonging to a campaign.
@@ -416,30 +422,32 @@ final class Creative_Repository {
 	}
 
 	/**
-	 * Atomically claims a short-lived replacement operation lock.
+	 * Atomically claims a replacement operation lock.
 	 *
 	 * @param int $creative_id Current creative id.
 	 * @return string Empty when another request owns the lock.
 	 */
 	public function claim_change_lock( int $creative_id ): string {
-		$token = time() . '|' . wp_generate_uuid4();
+		global $wpdb;
 
-		if ( add_post_meta( $creative_id, self::META_CHANGE_LOCK, $token, true ) ) {
-			return $token;
-		}
+		$lock_name = 'aggr_creative_change_' . get_current_blog_id() . '_' . $creative_id;
 
-		$existing = (string) get_post_meta( $creative_id, self::META_CHANGE_LOCK, true );
-		$created  = (int) strtok( $existing, '|' );
-
-		if ( $created <= 0 || $created > time() - ( 5 * MINUTE_IN_SECONDS ) ) {
+		if ( isset( self::$change_locks[ $lock_name ] ) ) {
 			return '';
 		}
 
-		delete_post_meta( $creative_id, self::META_CHANGE_LOCK, $existing );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- The advisory lock is the atomic cross-request serialization primitive.
+		$acquired = (int) $wpdb->get_var(
+			$wpdb->prepare( 'SELECT GET_LOCK(%s, %d)', $lock_name, 0 ) // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared -- The advisory lock name and timeout are prepared.
+		);
 
-		add_post_meta( $creative_id, self::META_CHANGE_LOCK, $token, true );
+		if ( 1 !== $acquired ) {
+			return '';
+		}
 
-		return (string) get_post_meta( $creative_id, self::META_CHANGE_LOCK, true ) === $token ? $token : '';
+		self::$change_locks[ $lock_name ] = true;
+
+		return $lock_name;
 	}
 
 	/**
@@ -450,8 +458,21 @@ final class Creative_Repository {
 	 * @return void
 	 */
 	public function release_change_lock( int $creative_id, string $token ): void {
-		if ( '' !== $token ) {
-			delete_post_meta( $creative_id, self::META_CHANGE_LOCK, $token );
+		global $wpdb;
+
+		$expected = 'aggr_creative_change_' . get_current_blog_id() . '_' . $creative_id;
+
+		if ( $expected !== $token || ! isset( self::$change_locks[ $token ] ) ) {
+			return;
+		}
+
+		try {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Releases only the exact advisory lock this request acquired.
+			$wpdb->get_var(
+				$wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $token ) // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared -- Releases only the exact advisory lock this request acquired.
+			);
+		} finally {
+			unset( self::$change_locks[ $token ] );
 		}
 	}
 

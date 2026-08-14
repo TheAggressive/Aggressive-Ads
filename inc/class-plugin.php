@@ -46,6 +46,7 @@ use Aggressive\Ads\REST\Placements_Controller;
 use Aggressive\Ads\REST\Transitions_Controller;
 use Aggressive\Ads\Security\Admin_Guard;
 use Aggressive\Ads\Security\Ownership;
+use Aggressive\Ads\Security\Private_Storage_Health;
 use Aggressive\Ads\Update\Plugin_Updates;
 use Aggressive\Ads\Workflow\Campaign_Clock;
 use Aggressive\Ads\Workflow\Campaign_State_Machine;
@@ -258,6 +259,7 @@ final class Plugin {
 			// author comparison instead of ours.
 			Ownership::class,
 			Admin_Guard::class,
+			Private_Storage_Health::class,
 
 			// Attaches the listener that notices a campaign status written
 			// without going through the state machine.

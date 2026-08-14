@@ -201,7 +201,9 @@ Named so their absence is deliberate:
 - Brute-force protection for staff on `wp-login.php` — site infrastructure;
   advertisers use the portal's independently rate-limited sign-in form
 - Payment data — nothing is stored; there is no payment feature
-- Multisite — untested, unsupported, undeclared
+- Cross-network tenancy. Standard site-scoped multisite is supported and tested;
+  colliding object ids, cache isolation, network activation, and site deletion
+  lifecycle are covered by the dedicated multisite suite
 
 ## Retention and privacy
 

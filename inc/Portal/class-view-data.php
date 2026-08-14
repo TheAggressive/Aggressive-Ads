@@ -11,7 +11,6 @@ namespace Aggressive\Ads\Portal;
 
 use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Domain\Reporting_Rules;
-use Aggressive\Ads\Domain\Upload_Rules;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
@@ -315,83 +314,12 @@ final class View_Data {
 	}
 
 	/**
-	 * What the help screen explains, derived rather than written down twice.
-	 *
-	 * The status glossary comes from the registered statuses and the creative
-	 * limits from Domain\Upload_Rules, so a rule change updates the help text
-	 * by itself. Help that is maintained by hand is help that is wrong, and
-	 * wrong help costs more than none because people act on it.
+	 * What the help screen explains.
 	 *
 	 * @return array<string, mixed>
 	 */
 	public function help(): array {
-		$statuses = array();
-
-		foreach ( Post_Statuses::all() as $status ) {
-			$object = get_post_status_object( $status );
-
-			$statuses[] = array(
-				'label'       => null === $object ? $status : (string) $object->label,
-				'pill'        => self::pill_for( $status ),
-				'description' => self::status_description( $status ),
-			);
-		}
-
-		/*
-		 * Formats, not extensions. Listing ALLOWED_EXTENSIONS shows "JPG, JPEG"
-		 * — one format twice — which reads like the page does not know what it
-		 * is talking about. The MIME allowlist is the same rule expressed once
-		 * per format, and it is still derived rather than retyped here.
-		 */
-		$labels = array(
-			'image/jpeg' => 'JPEG',
-			'image/png'  => 'PNG',
-			'image/gif'  => 'GIF',
-			'image/webp' => 'WebP',
-		);
-
-		$types = array();
-
-		/*
-		 * No fallback, deliberately. ALLOWED_MIME is a closed set, so PHPStan
-		 * proves this lookup total — which means adding a format to the rules
-		 * without naming it here fails static analysis rather than shipping a
-		 * help screen that describes the wrong thing. A default arm would only
-		 * have hidden that.
-		 */
-		foreach ( Upload_Rules::ALLOWED_MIME as $mime ) {
-			$types[] = $labels[ $mime ];
-		}
-
-		return array(
-			'statuses'   => $statuses,
-			'placements' => $this->placement_options(),
-			'max_size'   => size_format( Upload_Rules::MAX_BYTES ),
-			'file_types' => array_values( array_unique( $types ) ),
-			'contact'    => (string) get_option( 'admin_email', '' ),
-		);
-	}
-
-	/**
-	 * What a status means to the advertiser reading it.
-	 *
-	 * @param string $status Status slug.
-	 * @return string
-	 */
-	private static function status_description( string $status ): string {
-		return match ( $status ) {
-			Post_Statuses::DRAFT     => __( 'Yours to edit. Nobody else can see it yet.', 'aggressive-ads' ),
-			Post_Statuses::SUBMITTED => __( 'Waiting for the review team. You can still withdraw it until someone starts reviewing.', 'aggressive-ads' ),
-			Post_Statuses::REVIEW    => __( 'Someone is reviewing it now.', 'aggressive-ads' ),
-			Post_Statuses::CHANGES   => __( 'The review team has asked for changes. Edit it and submit again.', 'aggressive-ads' ),
-			Post_Statuses::REJECTED  => __( 'Not approved. The reason is on the campaign.', 'aggressive-ads' ),
-			Post_Statuses::APPROVED  => __( 'Approved, and it will start on its scheduled date.', 'aggressive-ads' ),
-			Post_Statuses::SCHEDULED => __( 'Ready and waiting for its start date.', 'aggressive-ads' ),
-			Post_Statuses::LIVE      => __( 'Being shown on the site right now.', 'aggressive-ads' ),
-			Post_Statuses::PAUSED    => __( 'Temporarily not being shown. Get in touch if this is unexpected.', 'aggressive-ads' ),
-			Post_Statuses::COMPLETE  => __( 'Finished. Duplicate it to run the campaign again.', 'aggressive-ads' ),
-			default                  => __( 'Cancelled and no longer running.', 'aggressive-ads' ),
-		};
+		return $this->catalogue()->help();
 	}
 
 	/**
@@ -400,17 +328,7 @@ final class View_Data {
 	 * @return array<int, array{id: int, name: string, size: string}>
 	 */
 	public function placement_options(): array {
-		$options = array();
-
-		foreach ( $this->placements->active_ids() as $placement_id ) {
-			$options[] = array(
-				'id'   => $placement_id,
-				'name' => $this->placements->name( $placement_id ),
-				'size' => $this->placements->size( $placement_id ),
-			);
-		}
-
-		return $options;
+		return $this->catalogue()->placement_options();
 	}
 
 	/**
@@ -419,45 +337,16 @@ final class View_Data {
 	 * @return array<int, array{id: int, name: string, duration: string, price: string, placements: array<int, string>, is_default: bool}>
 	 */
 	public function package_options(): array {
-		$options    = array();
-		$default_id = $this->packages->default_id();
+		return $this->catalogue()->package_options();
+	}
 
-		foreach ( $this->packages->active_ids() as $package_id ) {
-			$snapshot = $this->editor->package_snapshot( $package_id );
-
-			if ( is_wp_error( $snapshot ) ) {
-				continue;
-			}
-
-			$placement_names = array();
-
-			foreach ( $snapshot['placement_ids'] as $placement_id ) {
-				$name = $this->placements->name( $placement_id );
-				$size = $this->placements->size( $placement_id );
-
-				$placement_names[] = '' === $size ? $name : sprintf( '%1$s (%2$s px)', $name, $size );
-			}
-
-			$duration        = $this->packages->duration_days( $package_id );
-			$custom_duration = $this->packages->has_custom_duration( $package_id );
-
-			$options[] = array(
-				'id'         => $package_id,
-				'name'       => $this->packages->name( $package_id ),
-				'duration'   => $custom_duration
-					? __( 'Custom schedule', 'aggressive-ads' )
-					: sprintf(
-						/* translators: %s: number of days. */
-						_n( '%s day', '%s days', $duration, 'aggressive-ads' ),
-						number_format_i18n( $duration )
-					),
-				'price'      => $this->format_money( $snapshot['budget_cents'], $snapshot['currency'] ),
-				'placements' => $placement_names,
-				'is_default' => $package_id === $default_id,
-			);
-		}
-
-		return $options;
+	/**
+	 * Focused catalogue presenter shared by help and campaign creation.
+	 *
+	 * @return Catalogue_View_Data
+	 */
+	private function catalogue(): Catalogue_View_Data {
+		return new Catalogue_View_Data( $this->placements, $this->packages, $this->editor );
 	}
 
 	/**

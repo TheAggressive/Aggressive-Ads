@@ -37,7 +37,8 @@ Named so their absence is deliberate rather than overlooked:
 
 - Two-factor authentication and brute-force protection on `wp-login.php` —
   WordPress core plus site infrastructure, not this plugin's layer.
-- Multisite — untested, unsupported, undeclared.
+- Cross-network tenancy. Standard site-scoped multisite is supported and tested;
+  organizations, campaigns, caches, and lifecycle tables remain isolated per site.
 - Payment data — none is stored; there is no payment feature.
 - Open redirect via a creative's destination URL. That URL is by design a
   third-party destination rendered as an `href` on a public page and cannot be
@@ -56,3 +57,17 @@ Named so their absence is deliberate rather than overlooked:
 - Tests are verified by breaking the implementation and confirming they fail.
   Several controls in this codebase were found to be untested that way, having
   looked fully covered.
+
+## Patched development dependency
+
+`pnpm ci:security` audits the complete development tree. `adm-zip` 0.5.18 is
+locally patched with the upstream CVE-2026-39244 allocation fix because npm's
+advisory marks every version below 0.6.0 and 0.6.0 is not available from the
+configured registry. The patch is recorded under `patches/`, pinned by the
+lockfile, and `bin/ci/check-patched-dependencies.mjs` proves both that the
+vulnerable allocation is absent and that a normal ZIP round trip still works.
+
+The audit command ignores only `GHSA-xcpc-8h2w-3j85`, after that source check
+passes. It does not use `--ignore-unfixable`, so every unrelated advisory still
+fails CI. Remove the patch and exception once WordPress tooling resolves a
+published fixed release.

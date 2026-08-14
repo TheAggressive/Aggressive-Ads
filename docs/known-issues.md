@@ -16,7 +16,15 @@ Things that are true, annoying, and worth writing down so nobody rediscovers the
 
 **Cost.** Defence in depth is one layer thinner than it looks.
 
-**Current mitigation.** Path unguessability (UUID filename plus a 32-char token) is the layer that actually holds, because it does not depend on server configuration. Reads go through an authorized streaming endpoint that never redirects to the raw file. The Site Health warning and production nginx deployment snippet remain Phase 11 work; until then an nginx deployment must verify the deny rule operationally.
+**Mitigation.** Path unguessability (UUID filename plus a 32-char token) does not depend on server configuration, and reads go through an authorized streaming endpoint that never redirects to the raw file. Production nginx must also deny the directory directly:
+
+```nginx
+location ~ ^/wp-content/uploads(?:/sites/[0-9]+)?/aggr-private(?:/|$) {
+    return 404;
+}
+```
+
+Adapt the prefix when `upload_url_path` or the uploads directory is customized. After deployment, open Tools → Site Health: **Unapproved advertising creative is protected** creates a random harmless probe, requests it through the public uploads URL, requires a 401/403/404/410 response, and removes it. A 2xx response is a critical failure and creative uploads must not be accepted until the server rule is corrected.
 
 ## Every integration run logs two `WP_MEMORY_LIMIT` warnings
 

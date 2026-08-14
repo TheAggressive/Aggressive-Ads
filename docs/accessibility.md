@@ -2,7 +2,7 @@
 
 Target: **WCAG 2.2 AA**. Accessibility is a release blocker, not a polish pass.
 
-Automated scanning runs against the `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa` axe tags. Best-practice rules are excluded deliberately — they are advice rather than conformance, and mixing the two means the conformance signal gets muted the first time someone needs to ship.
+Automated scanning runs against the `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, and `wcag22aa` axe tags. Best-practice rules are excluded deliberately — they are advice rather than conformance, and mixing the two means the conformance signal gets muted the first time someone needs to ship.
 
 Axe catches roughly a third of real problems. The rest is keyboard traversal, focus order, announcement quality, and whether the error message actually tells someone what to do. Those are asserted per-flow and checked manually.
 
@@ -131,3 +131,7 @@ Ads this portal publishes will not need it: accessible text is generated during 
   trigger, Tab stays inside the overlay, Escape closes, focus returns to the
   trigger.
 - Manual screen-reader passes supplement all of the above before any release that changes a flow.
+- The release owner records those manual results in
+  [accessibility-release-checklist.md](accessibility-release-checklist.md);
+  an incomplete record blocks production release rather than being interpreted
+  as a pass.

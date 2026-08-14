@@ -33,6 +33,11 @@ The lesson both share: **assert your fixture is real before asserting on it.** T
 | JS | `jest.config.js` | — | Node |
 | E2E | `playwright.config.ts` | — | wp-env |
 
+`pnpm ci:coverage` collects the isolated unit suite with PCOV, Xdebug, or
+phpdbg and enforces an 8% statement floor across `inc/`. This is a quantitative
+regression signal; it does not replace the WordPress suites whose database and
+core interactions are deliberately outside the unit bootstrap.
+
 Separate PHPUnit configs because **PHPUnit allows exactly one bootstrap per configuration file**. That is the reason for the split, not preference — the unit suite must not load WordPress, and the WordPress suites must. Multisite is its own file so colliding-id tests cannot `markTestSkipped()` on the single-site lane.
 
 ## PHPUnit 9.6, not 13
@@ -117,9 +122,14 @@ cannot hide.
 
 ## Accessibility testing
 
-`@axe-core/playwright`, scoped to the `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa` tags. Best-practice rules are excluded deliberately — they are advice, and mixing advice with conformance means the conformance signal gets muted the first time someone needs to ship.
+`@axe-core/playwright`, scoped to the `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, and `wcag22aa` tags. Best-practice rules are excluded deliberately — they are advice, and mixing advice with conformance means the conformance signal gets muted the first time someone needs to ship.
 
 Automated scanning catches roughly a third of real accessibility problems. Keyboard-only traversal, focus order, and screen-reader announcement quality are asserted explicitly per-flow, and manual testing supplements both. See [accessibility.md](accessibility.md).
+
+The main mutable flow remains one-worker Chromium. Separate read-focused
+projects exercise 320 CSS-pixel reflow and the custom dialog's focus/inert
+contract in WebKit, without replaying account-creation fixtures that are
+deliberately single-use.
 
 ## Running
 
@@ -128,7 +138,7 @@ pnpm test:php:unit            # fast, no database
 pnpm test:php:integration     # needs wp-env + WP test suite
 pnpm test:php:security
 pnpm test:js
-pnpm test:e2e:install         # once per machine: install Chromium
+pnpm test:e2e:install         # once per machine: install Chromium and WebKit
 pnpm test:e2e                 # needs wp-env running; setup seeds its own data
 pnpm ci:verify                # everything, serially, as CI would
 ```

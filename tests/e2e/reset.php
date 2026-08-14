@@ -11,6 +11,7 @@ use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Storage\Private_Storage;
 
 if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
@@ -48,6 +49,7 @@ $campaign_ids = get_posts(
 );
 
 $creatives = Plugin::instance()->container()->get( Creative_Repository::class );
+$orgs       = Plugin::instance()->container()->get( Org_Repository::class );
 $storage   = Plugin::instance()->container()->get( Private_Storage::class );
 $removed   = 0;
 
@@ -99,7 +101,7 @@ if ( $signup_user instanceof WP_User ) {
 	);
 
 	foreach ( $signup_orgs as $signup_org ) {
-		wp_delete_post( (int) $signup_org, true );
+		$orgs->delete_registration_org( (int) $signup_org );
 	}
 
 	if ( ! function_exists( 'wp_delete_user' ) ) {

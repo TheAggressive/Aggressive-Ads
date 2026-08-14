@@ -9,6 +9,7 @@ ci:doctor    → node bin/ci/doctor.mjs
 ci:build     → pnpm build
 ci:frontend  → lint:js && typecheck && lint:css && test:js
 ci:php       → lint:php && analyse:php && test:php:unit
+ci:coverage  → unit coverage collection + quantitative regression floor
 ci:php:wp    → test:php:integration && test:php:multisite  (needs wp-env)
 ci:e2e       → build && test:e2e
 ci:package   → build && release:package && release:verify
@@ -20,7 +21,7 @@ not a command the repository pretends to run.
 
 Adding a lane means adding it to **both** the workflow and `bin/ci/verify.sh`. Adding it to only one is how the two drift.
 
-The E2E job installs Playwright's pinned Chromium build, starts wp-env, and
+The E2E job installs Playwright's pinned Chromium and WebKit builds, starts wp-env, and
 runs the same `pnpm ci:e2e` command as local verification. Failed runs retain
 the trace, screenshot, video, and WordPress debug log; skipped specs make the
 lane fail rather than quietly reducing coverage.
@@ -37,8 +38,15 @@ lane fail rather than quietly reducing coverage.
 | TypeScript | `strict`, `noUncheckedIndexedAccess` |
 | Stylelint | `@wordpress/stylelint-config` |
 | File length | Warn > 800, fail > 1000, no allowlist |
+| Unit coverage | **At least 8% of executable `inc/` statements** |
 
 **No baseline.** A baseline is a list of known problems you have agreed to stop looking at, and it only grows. Type issues get fixed as they are introduced, while the context is still in someone's head.
+
+The coverage floor is intentionally a regression guard, not a claim that 8% is
+enough coverage. The database, REST, authorization, lifecycle, and multisite
+behavior lives in the WordPress suites and cannot be measured by the isolated
+unit runner. New behavior still needs the appropriate focused test; the floor
+prevents the measurable unit-tested surface from silently shrinking.
 
 `lint:files` bundles the structural gates that are not really lint:
 

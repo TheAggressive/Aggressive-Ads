@@ -22,10 +22,12 @@ run() {
 }
 
 run "doctor"      pnpm ci:doctor
+run "security"    pnpm ci:security
 run "structure"   pnpm lint:files
 run "build"       pnpm ci:build
 run "frontend"    pnpm ci:frontend
 run "php"         pnpm ci:php
+run "coverage"    pnpm ci:coverage
 
 # The integration, security, rest and upgrade suites need real WordPress and
 # real MySQL, which means wp-env must be up. Failing with a usable instruction

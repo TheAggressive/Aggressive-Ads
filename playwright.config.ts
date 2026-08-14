@@ -25,6 +25,20 @@ export default defineConfig( {
 		{
 			name: 'chromium',
 			use: { ...devices[ 'Desktop Chrome' ] },
+			testIgnore: [ /compatibility\//, /reflow\// ],
+		},
+		{
+			name: 'webkit-dialog',
+			use: { ...devices[ 'Desktop Safari' ] },
+			testMatch: /compatibility\/.*\.spec\.ts/,
+		},
+		{
+			name: 'chromium-reflow',
+			use: {
+				...devices[ 'Desktop Chrome' ],
+				viewport: { width: 320, height: 800 },
+			},
+			testMatch: /reflow\/.*\.spec\.ts/,
 		},
 	],
 	outputDir: 'test-results/playwright',

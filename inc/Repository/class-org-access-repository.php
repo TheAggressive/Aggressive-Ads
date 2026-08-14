@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Repository;
 
+use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Install\Schema;
 use WP_Error;
 
@@ -94,6 +95,11 @@ final class Org_Access_Repository {
 		}
 
 		$key = $this->active_key( self::KIND_IDENTITY, 0, $canonical_name );
+
+		// Exact lookup also removes a reservation whose organization was deleted
+		// outside this repository. Without that repair, one stale row can block
+		// the organization name permanently.
+		$this->org_id_for_canonical( $canonical_name );
 
 		$wpdb->suppress_errors( true );
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom identity registry; the unique active_key is the concurrency control. Duplicate key is a WP_Error, not HTML.
@@ -232,7 +238,7 @@ final class Org_Access_Repository {
 		$key = $this->active_key( self::KIND_IDENTITY, 0, $canonical_name );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Exact indexed lookup in the custom identity registry.
-		return (int) $wpdb->get_var(
+		$org_id = (int) $wpdb->get_var(
 			$wpdb->prepare(
 				'SELECT org_id FROM %i WHERE active_key = %s AND kind = %s AND status = %s LIMIT 1',
 				$this->table_name(),
@@ -241,6 +247,14 @@ final class Org_Access_Repository {
 				self::STATUS_ACTIVE
 			)
 		);
+
+		if ( $org_id <= 0 || Post_Types::ORGANIZATION === get_post_type( $org_id ) ) {
+			return $org_id;
+		}
+
+		$this->remove_identity( $org_id );
+
+		return 0;
 	}
 
 	/**
@@ -255,11 +269,13 @@ final class Org_Access_Repository {
 			return 0;
 		}
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Bounded identity catalogue used only on signup misses; no post/meta join or unbounded scan.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Bounded identity catalogue joined to existing organization posts so deleted tenants cannot attract access requests.
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
-				'SELECT org_id, canonical_name FROM %i WHERE kind = %s AND status = %s ORDER BY id ASC LIMIT 1000',
+				'SELECT identities.org_id, identities.canonical_name FROM %i identities INNER JOIN %i posts ON posts.ID = identities.org_id AND posts.post_type = %s WHERE identities.kind = %s AND identities.status = %s ORDER BY identities.id ASC LIMIT 1000',
 				$this->table_name(),
+				$wpdb->posts,
+				Post_Types::ORGANIZATION,
 				self::KIND_IDENTITY,
 				self::STATUS_ACTIVE
 			),

@@ -105,7 +105,7 @@ endif;
 <section class="aggr-panel" aria-labelledby="aggr-org-people">
 	<h2 id="aggr-org-people" class="aggr-panel__head"><?php esc_html_e( 'People', 'aggressive-ads' ); ?></h2>
 
-	<div class="aggr-tablewrap">
+	<div class="aggr-tablewrap" role="region" aria-label="<?php esc_attr_e( 'Organization members table', 'aggressive-ads' ); ?>" tabindex="0">
 		<table class="aggr-table">
 			<thead>
 				<tr>
@@ -189,7 +189,7 @@ endif;
 			<h2 id="aggr-org-pending" class="aggr-panel__head"><?php esc_html_e( 'Pending access', 'aggressive-ads' ); ?></h2>
 			<p class="aggr-hint"><?php esc_html_e( 'Name matches are suggestions only. Review the email before granting access.', 'aggressive-ads' ); ?></p>
 
-			<div class="aggr-tablewrap">
+			<div class="aggr-tablewrap" role="region" aria-label="<?php esc_attr_e( 'Pending invitations table', 'aggressive-ads' ); ?>" tabindex="0">
 				<table class="aggr-table">
 					<thead>
 						<tr>

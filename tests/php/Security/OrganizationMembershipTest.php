@@ -146,6 +146,18 @@ final class OrganizationMembershipTest extends WP_UnitTestCase {
 		$this->assertSame( $org['org_id'], $this->organizations->matching_org_id( 'Museo Aguila LCC' ) );
 	}
 
+	/** A deleted organization cannot reserve or fuzzily match its old identity. */
+	public function test_matching_repairs_a_stale_identity_reservation(): void {
+		$deleted = $this->make_org( 'Desert Lantern Studio' );
+		$this->assertNotNull( wp_delete_post( $deleted['org_id'], true ) );
+
+		$this->assertSame( 0, $this->organizations->matching_org_id( 'Desert Lantern Studio' ) );
+		$this->assertSame( 0, $this->organizations->matching_org_id( 'Desert Lantern Studios' ) );
+
+		$replacement = $this->make_org( 'Desert Lantern Studio' );
+		$this->assertSame( $replacement['org_id'], $this->organizations->matching_org_id( 'Desert Lantern Studio' ) );
+	}
+
 	/** A possible duplicate creates no second tenant and grants no portal role. */
 	public function test_duplicate_name_signup_waits_for_owner_approval(): void {
 		$org    = $this->make_org();

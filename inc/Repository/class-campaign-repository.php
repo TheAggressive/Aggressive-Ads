@@ -510,59 +510,7 @@ final class Campaign_Repository {
 	 * @return array{ids: array<int, int>, total: int, pages: int}
 	 */
 	public function for_review( array $statuses, int $page = 1, bool $pending_updates_only = false ): array {
-		$wanted = array();
-
-		foreach ( $statuses as $status ) {
-			if ( is_string( $status ) && Post_Statuses::is_valid( $status ) ) {
-				$wanted[] = $status;
-			}
-		}
-
-		if ( array() === $wanted ) {
-			return array(
-				'ids'   => array(),
-				'total' => 0,
-				'pages' => 0,
-			);
-		}
-
-		$args = array(
-			'post_type'              => Post_Types::CAMPAIGN,
-			'post_status'            => $wanted,
-			'posts_per_page'         => self::PAGE_SIZE,
-			'paged'                  => max( 1, $page ),
-			'fields'                 => 'ids',
-			'orderby'                => array(
-				'modified' => 'ASC',
-				'ID'       => 'ASC',
-			),
-			'update_post_term_cache' => false,
-		);
-
-		if ( $pending_updates_only ) {
-			$args['meta_query'] = array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Staff queue query against one bounded denormalized count.
-				array(
-					'key'     => self::META_PENDING_UPDATES,
-					'value'   => 0,
-					'compare' => '>',
-					'type'    => 'NUMERIC',
-				),
-			);
-		}
-
-		$query = new \WP_Query( $args );
-
-		$ids = array();
-
-		foreach ( $query->posts as $post ) {
-			$ids[] = $post instanceof \WP_Post ? (int) $post->ID : (int) $post;
-		}
-
-		return array(
-			'ids'   => $ids,
-			'total' => (int) $query->found_posts,
-			'pages' => (int) $query->max_num_pages,
-		);
+		return ( new Campaign_Query_Repository() )->for_review( $statuses, $page, $pending_updates_only );
 	}
 
 	/**
@@ -624,25 +572,7 @@ final class Campaign_Repository {
 	 * @return array<string, int> Status slug to count, including zeroes.
 	 */
 	public function count_by_status( array $statuses ): array {
-		$counts = array();
-
-		foreach ( $statuses as $status ) {
-			if ( is_string( $status ) && Post_Statuses::is_valid( $status ) ) {
-				$counts[ $status ] = 0;
-			}
-		}
-
-		if ( array() === $counts ) {
-			return array();
-		}
-
-		$totals = (array) wp_count_posts( Post_Types::CAMPAIGN );
-
-		foreach ( array_keys( $counts ) as $status ) {
-			$counts[ $status ] = isset( $totals[ $status ] ) ? (int) $totals[ $status ] : 0;
-		}
-
-		return $counts;
+		return ( new Campaign_Query_Repository() )->count_by_status( $statuses );
 	}
 
 	/**
@@ -676,47 +606,7 @@ final class Campaign_Repository {
 	 * @return array{ids: array<int, int>, total: int, pages: int}
 	 */
 	public function for_org( int $org_id, int $page = 1 ): array {
-		if ( $org_id <= 0 ) {
-			return array(
-				'ids'   => array(),
-				'total' => 0,
-				'pages' => 0,
-			);
-		}
-
-		$query = new \WP_Query(
-			array(
-				'post_type'              => Post_Types::CAMPAIGN,
-				'post_status'            => Post_Statuses::all(),
-				'posts_per_page'         => self::PAGE_SIZE,
-				'paged'                  => max( 1, $page ),
-				'fields'                 => 'ids',
-				'orderby'                => 'date',
-				'order'                  => 'DESC',
-				'update_post_term_cache' => false,
-				'meta_query'             => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Indexed lookup on a single meta key; this is the org scope, and it belongs in SQL.
-					array(
-						'key'   => self::META_ORG_ID,
-						'value' => (string) $org_id,
-					),
-				),
-			)
-		);
-
-		// `fields => ids` yields integers, but WP_Query::$posts is typed as the
-		// union either way. Narrowing here rather than casting blindly keeps
-		// the method honest if somebody ever drops that argument.
-		$ids = array();
-
-		foreach ( $query->posts as $post ) {
-			$ids[] = $post instanceof \WP_Post ? (int) $post->ID : (int) $post;
-		}
-
-		return array(
-			'ids'   => $ids,
-			'total' => (int) $query->found_posts,
-			'pages' => (int) $query->max_num_pages,
-		);
+		return ( new Campaign_Query_Repository() )->for_org( $org_id, $page );
 	}
 
 	/**
@@ -799,43 +689,6 @@ final class Campaign_Repository {
 	 * @return array<int, int>
 	 */
 	public function live_ids_for_placement( int $placement_id ): array {
-		if ( $placement_id <= 0 ) {
-			return array();
-		}
-
-		$ids       = array();
-		$offset    = 0;
-		$page_size = 100;
-
-		do {
-			$page = get_posts(
-				array(
-					'post_type'              => Post_Types::CAMPAIGN,
-					'post_status'            => Post_Statuses::LIVE,
-					'numberposts'            => $page_size,
-					'offset'                 => $offset,
-					'fields'                 => 'ids',
-					'orderby'                => 'ID',
-					'order'                  => 'ASC',
-					'no_found_rows'          => true,
-					'update_post_term_cache' => false,
-					'meta_query'             => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Bounded live set for one placement at fill time.
-						array(
-							'key'     => self::META_PLACEMENT_ID,
-							'value'   => $placement_id,
-							'compare' => '=',
-							'type'    => 'NUMERIC',
-						),
-					),
-				)
-			);
-
-			$page       = array_map( 'intval', $page );
-			$page_count = count( $page );
-			$ids        = array_merge( $ids, $page );
-			$offset    += $page_count;
-		} while ( $page_size === $page_count );
-
-		return array_values( $ids );
+		return ( new Campaign_Query_Repository() )->live_ids_for_placement( $placement_id );
 	}
 }

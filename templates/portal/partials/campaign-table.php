@@ -26,7 +26,7 @@ $aggr_show_metrics = ! empty( $aggr_show_metrics );
 		<p><?php esc_html_e( 'When you create a campaign it will appear here with its status.', 'aggressive-ads' ); ?></p>
 	</div>
 <?php else : ?>
-	<div class="aggr-tablewrap">
+	<div class="aggr-tablewrap" role="region" aria-label="<?php esc_attr_e( 'Campaigns table', 'aggressive-ads' ); ?>" tabindex="0">
 		<table class="aggr-table">
 			<thead>
 				<tr>

@@ -1,0 +1,29 @@
+diff --git a/zipEntry.js b/zipEntry.js
+index 0e6f771280258210c3f2f99000a2fd00305dfe55..d1470b27bf92efc1f42e956d681b712ad869744c 100644
+--- a/zipEntry.js
++++ b/zipEntry.js
+@@ -100,10 +100,13 @@ module.exports = function (/** object */ options, /*Buffer*/ input) {
+             compressedData = Methods.ZipCrypto.decrypt(compressedData, _centralHeader, pass);
+         }
+ 
+-        var data = Buffer.alloc(_centralHeader.size);
++        var data;
+ 
+         switch (_centralHeader.method) {
+             case Utils.Constants.STORED:
++                // Allocate from bytes actually present, not attacker-controlled
++                // uncompressed-size metadata (CVE-2026-39244).
++                data = Buffer.alloc(compressedData.length);
+                 compressedData.copy(data);
+                 if (!crc32OK(data)) {
+                     if (async && callback) callback(data, Utils.Errors.BAD_CRC()); //si added error
+@@ -116,8 +119,7 @@ module.exports = function (/** object */ options, /*Buffer*/ input) {
+             case Utils.Constants.DEFLATED:
+                 var inflater = new Methods.Inflater(compressedData, _centralHeader.size);
+                 if (!async) {
+-                    const result = inflater.inflate(data);
+-                    result.copy(data, 0);
++                    data = inflater.inflate();
+                     if (!crc32OK(data)) {
+                         throw Utils.Errors.BAD_CRC(`"${decoder.decode(_entryName)}"`);
+                     }

@@ -40,7 +40,7 @@ use Aggressive\Ads\Admin\Organization_Screen;
 				<p><?php esc_html_e( 'Organizations appear here after an advertiser signs up or is invited.', 'aggressive-ads' ); ?></p>
 			</div>
 		<?php else : ?>
-			<div class="aggr-tablewrap">
+			<div class="aggr-tablewrap" role="region" aria-label="<?php esc_attr_e( 'Organizations table', 'aggressive-ads' ); ?>" tabindex="0">
 				<table class="aggr-table">
 					<thead>
 						<tr>
