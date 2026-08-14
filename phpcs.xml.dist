@@ -11,7 +11,6 @@
 	<file>templates</file>
 	<file>tests/php</file>
 	<file>aggressive-ads.php</file>
-	<file>laao-advertiser-portal.php</file>
 	<!--
 		uninstall.php is easy to forget and the worst file to leave unchecked:
 		it runs with full privileges, outside the plugin's own bootstrap, and
@@ -153,7 +152,6 @@
 				<element value="aggr_manage_placements"/>
 				<element value="aggr_manage_settings"/>
 				<element value="aggr_publish"/>
-				<element value="laao_ads_publish_to_adsanity"/>
 				<element value="aggr_review_campaigns"/>
 				<element value="aggr_submit_campaign"/>
 				<element value="aggr_upload_creative"/>
@@ -193,7 +191,6 @@
 				<element value="aggr"/>
 				<element value="AGGR"/>
 				<element value="Aggressive"/>
-				<element value="laao_ads"/>
 			</property>
 		</properties>
 	</rule>

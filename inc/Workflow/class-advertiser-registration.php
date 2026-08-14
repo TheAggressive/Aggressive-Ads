@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Workflow;
 
 use Aggressive\Ads\Audit\Audit_Event;
-use Aggressive\Ads\Core\Hook_Aliases;
 use Aggressive\Ads\Core\Settings;
 use Aggressive\Ads\Domain\Settings_Schema;
 use Aggressive\Ads\Notification\Password_Notification;
@@ -75,7 +74,7 @@ final class Advertiser_Registration {
 		 *
 		 * @param bool $enabled WordPress's Anyone can register setting, after the module flag.
 		 */
-		return (bool) Hook_Aliases::apply( 'aggr_signup_enabled', (bool) get_option( 'users_can_register', false ) );
+		return (bool) apply_filters( 'aggr_signup_enabled', (bool) get_option( 'users_can_register', false ) );
 	}
 
 	/**

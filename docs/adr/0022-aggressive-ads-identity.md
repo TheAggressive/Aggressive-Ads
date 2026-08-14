@@ -1,6 +1,6 @@
 # ADR-0022 — Product identity is Aggressive Ads; one `aggr_` prefix
 
-**Status:** Accepted — 2026-08-12
+**Status:** Superseded by [0035](0035-no-laao-compatibility-layer.md) — 2026-08-13
 
 **Supersedes:** [0021](0021-agate-identity.md)
 

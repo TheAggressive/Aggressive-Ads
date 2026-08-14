@@ -63,7 +63,7 @@ Then, as needed:
 | [0019](adr/0019-private-organization-matching-and-approved-membership.md) | Organization matching is private and membership requires approval |
 | [0020](adr/0020-portal-owned-email-change.md) | Portal-owned email change with HMAC token and confirm-email route |
 | [0021](adr/0021-agate-identity.md) | ~~Agate / `agate_`~~ — superseded by 0022 |
-| [0022](adr/0022-aggressive-ads-identity.md) | Product identity is Aggressive Ads; one `aggr_` prefix |
+| [0022](adr/0022-aggressive-ads-identity.md) | ~~Product identity is Aggressive Ads; one `aggr_` prefix~~ — superseded by 0035 |
 | [0023](adr/0023-settings-and-module-flags.md) | One `aggr_settings` option; a disabled module is absent |
 | [0024](adr/0024-white-label-tokens.md) | White-label via token values; contrast-gated save |
 | [0025](adr/0025-unified-admin-menu.md) | One Advertising menu; submenus keep distinct caps |
@@ -76,6 +76,7 @@ Then, as needed:
 | [0032](adr/0032-equal-rotation-counts-follow-the-fill.md) | Equal rotation among live campaigns; counts follow the filled token |
 | [0033](adr/0033-native-delivery-is-not-a-staff-module.md) | Native delivery is not a Modules checkbox; it cannot be turned off |
 | [0034](adr/0034-site-scoped-tenancy.md) | One WordPress site is one publisher tenant; fill tokens bind `blog_id` |
+| [0035](adr/0035-no-laao-compatibility-layer.md) | No LAAO compatibility layer; `aggr_` only |
 
 ## Conventions
 

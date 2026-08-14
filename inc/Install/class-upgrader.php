@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Install;
 
 use Aggressive\Ads\Audit\Audit_Event;
-use Aggressive\Ads\Domain\Identity_Maps;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Security\Roles;
 use Throwable;
@@ -235,18 +234,11 @@ final class Upgrader {
 	}
 
 	/**
-	 * Current and legacy lock option names.
+	 * Lock option names.
 	 *
 	 * @return array<int, string>
 	 */
 	private function lock_keys(): array {
-		$keys   = array( Installer::OPTION_UPGRADE_LOCK );
-		$legacy = Identity_Maps::legacy_option_key( Installer::OPTION_UPGRADE_LOCK );
-
-		if ( null !== $legacy ) {
-			$keys[] = $legacy;
-		}
-
-		return $keys;
+		return array( Installer::OPTION_UPGRADE_LOCK );
 	}
 }

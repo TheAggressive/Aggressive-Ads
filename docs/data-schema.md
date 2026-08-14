@@ -137,23 +137,19 @@ Nothing calls `get_option( 'aggr_settings' )` outside `inc/Core/class-settings.p
 ## Migrations
 
 `Upgrader::maybe_upgrade()` runs on `plugins_loaded` priority 5. It reads
-`aggr_db_version`, falling back to the previous option name so an existing
-install is not mistaken for a fresh site, and walks an ordered map. A
-network-active install also runs on `wp_initialize_site` so a brand-new site
-is not migrated by its first public fill request.
+`aggr_db_version` and walks an ordered map. A network-active install also runs
+on `wp_initialize_site` so a brand-new site is not migrated by its first public
+fill request.
 
 ```php
 array(
     2 => install_org_access,
-    3 => Identity_Migration::to_3, // rewrite post types, statuses, meta, tables, options, roles, cron
     4 => install_delivery_tables,  // aggr_events + aggr_rollups
+    5 => migrate_event_token_uniqueness,
 )
 ```
 
-`Installer::install()` runs that same rewrite **before** `dbDelta` and before
-stamping the current version. Activating new code against a LAAO database
-otherwise creates empty new tables, stamps version 3, and the walker skips
-the rewrite — leaving every campaign under a post type nothing queries.
+There is no rewrite of previous product identifiers. See [ADR-0035](adr/0035-no-laao-compatibility-layer.md).
 
 **Each step is idempotent and bumps `aggr_db_version` itself on success.** A fatal partway through the sequence therefore never replays completed work — the next request resumes at the first unfinished step. A single bump after the whole loop would mean any failure re-runs everything from the beginning, which for an `ALTER TABLE` is how you turn one bad deploy into a corrupted schema.
 

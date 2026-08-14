@@ -9,10 +9,8 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Install;
 
-use Aggressive\Ads\Domain\Identity_Maps;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Event_Repository;
-use Aggressive\Ads\Repository\Identity_Rewrite;
 use Aggressive\Ads\Repository\Org_Access_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Security\Roles;
@@ -39,13 +37,7 @@ final class Uninstaller {
 	 * answer.
 	 */
 	public static function should_delete_content(): bool {
-		if ( (bool) get_option( Installer::OPTION_DELETE_DATA, false ) ) {
-			return true;
-		}
-
-		$legacy = Identity_Maps::legacy_option_key( Installer::OPTION_DELETE_DATA );
-
-		return null !== $legacy && (bool) get_option( $legacy, false );
+		return (bool) get_option( Installer::OPTION_DELETE_DATA, false );
 	}
 
 	/**
@@ -61,7 +53,6 @@ final class Uninstaller {
 		( new Org_Access_Repository() )->drop_table();
 		( new Event_Repository() )->drop_table();
 		( new Rollup_Repository() )->drop_table();
-		( new Identity_Rewrite() )->drop_legacy_tables();
 
 		Campaign_Clock::unschedule();
 		Ending_Soon_Notifier::unschedule();

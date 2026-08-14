@@ -26,11 +26,9 @@ use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Core\Settings;
 use Aggressive\Ads\Install\Installer;
-use Aggressive\Ads\Install\Identity_Migration;
 use Aggressive\Ads\Install\Site_Lifecycle;
 use Aggressive\Ads\Install\Upgrader;
 use Aggressive\Ads\Repository\Audit_Repository;
-use Aggressive\Ads\Repository\Identity_Rewrite;
 use Aggressive\Ads\Domain\Transition_Table;
 use Aggressive\Ads\Integration\Ad_Provider_Interface;
 use Aggressive\Ads\Integration\Native\Publisher;
@@ -100,7 +98,6 @@ use Aggressive\Ads\Workflow\Package_Manager;
 use Aggressive\Ads\Workflow\Email_Change;
 use Aggressive\Ads\Workflow\Transition_Guards;
 use Aggressive\Ads\Security\Admin_Guard;
-use Aggressive\Ads\Security\Capability_Alias;
 use Aggressive\Ads\Security\Ownership;
 use Aggressive\Ads\Security\Rate_Limiter;
 use Aggressive\Ads\Security\Roles;
@@ -227,12 +224,6 @@ final class Service_Registrar {
 					2 => static function () use ( $c ): void {
 						$c->get( Installer::class )->install_org_access();
 					},
-					3 => static function () use ( $c ): void {
-						( new Identity_Migration(
-							new Identity_Rewrite(),
-							$c->get( Private_Storage::class )
-						) )->to_3();
-					},
 					4 => static function () use ( $c ): void {
 						$c->get( Installer::class )->install_delivery_tables();
 					},
@@ -260,11 +251,6 @@ final class Service_Registrar {
 		$container->register(
 			Admin_Guard::class,
 			static fn (): Admin_Guard => new Admin_Guard()
-		);
-
-		$container->register(
-			Capability_Alias::class,
-			static fn (): Capability_Alias => new Capability_Alias()
 		);
 
 		$container->register(

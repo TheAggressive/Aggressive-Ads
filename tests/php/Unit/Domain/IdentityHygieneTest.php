@@ -1,6 +1,6 @@
 <?php
 /**
- * Runtime code must not grow new LAAO identifiers.
+ * Runtime code must not grow retired identifiers.
  *
  * @package Aggressive\Ads
  */
@@ -16,22 +16,10 @@ use SplFileInfo;
 use Yoast\PHPUnitPolyfills\TestCases\TestCase;
 
 /**
- * Identity_Maps is the only place in inc/ that may still spell the old names.
- * A new laao_ads_ constant anywhere else is a Phase 0 regression.
+ * There is no LAAO compatibility layer. A new laao_ads_ string in inc/ is a
+ * regression, not an alias. See docs/adr/0035-no-laao-compatibility-layer.md.
  */
 final class IdentityHygieneTest extends TestCase {
-
-	/**
-	 * Files that must mention the previous identifiers, because they implement
-	 * the rewrite or a one-release alias.
-	 *
-	 * @var array<int, string>
-	 */
-	private const ALLOWLIST = array(
-		'inc/Domain/class-identity-maps.php',
-		'inc/REST/class-creative-file-controller.php',
-		'inc/Storage/class-private-storage.php',
-	);
 
 	/**
 	 * Patterns that belong to the retired identity.
@@ -40,12 +28,15 @@ final class IdentityHygieneTest extends TestCase {
 	 */
 	private const FORBIDDEN = array(
 		'laao_ads_',
+		'laao_',
 		'lap_draft',
 		'LAAO_Advertiser_Portal',
 		'LAAO_ADS_',
 		'--laao-ads-',
 		'laao-ads-',
 		'@laao-ads/',
+		'laao-advertiser-portal',
+		'laao-ads-private',
 	);
 
 	/**
@@ -68,12 +59,7 @@ final class IdentityHygieneTest extends TestCase {
 			}
 
 			$relative = ltrim( str_replace( $root, '', $file->getPathname() ), '/' );
-
-			if ( in_array( $relative, self::ALLOWLIST, true ) ) {
-				continue;
-			}
-
-			$source = file_get_contents( $file->getPathname() );
+			$source   = file_get_contents( $file->getPathname() );
 
 			if ( false === $source ) {
 				continue;

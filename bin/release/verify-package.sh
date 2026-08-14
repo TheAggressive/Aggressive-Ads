@@ -44,16 +44,10 @@ PACKAGE_FORBIDDEN=(
 # base.php is a fatal on the advertiser's first page load, not a build error.
 PACKAGE_REQUIRED=(
 	"${PLUGIN_FILE}"
-	laao-advertiser-portal.php
 	uninstall.php
 	inc/class-autoloader.php
 	inc/class-plugin.php
 	inc/class-service-registrar.php
-	inc/Domain/class-identity-maps.php
-	inc/Repository/class-identity-rewrite.php
-	inc/Install/class-identity-migration.php
-	inc/Security/class-capability-alias.php
-	inc/Core/class-hook-aliases.php
 	inc/Update/class-update-http-client.php
 	inc/Update/class-release-repository.php
 	inc/Update/class-package-verifier.php

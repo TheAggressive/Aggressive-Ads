@@ -159,7 +159,7 @@ final class Plugin_Updates implements Service {
 		$body      = $release['body'] ?? '';
 
 		return (object) array(
-			'name'              => __( 'LAAO Advertiser Portal', 'aggressive-ads' ),
+			'name'              => __( 'Aggressive Ads', 'aggressive-ads' ),
 			'slug'              => self::SLUG,
 			'version'           => $version,
 			'author'            => '<a href="https://theaggressive.com">The Aggressive, LLC</a>',
@@ -167,7 +167,7 @@ final class Plugin_Updates implements Service {
 			'requires'          => AGGR_MIN_WP,
 			'requires_php'      => AGGR_MIN_PHP,
 			'last_updated'      => is_string( $published ) ? $published : '',
-			'short_description' => __( 'Self-service advertising portal for LAArtsOnline.', 'aggressive-ads' ),
+			'short_description' => __( 'Live means live. White-label advertising management for WordPress.', 'aggressive-ads' ),
 			'sections'          => array(
 				'description' => __( 'Advertisers build campaigns and staff review and publish them.', 'aggressive-ads' ),
 				'changelog'   => is_string( $body ) && '' !== trim( $body )

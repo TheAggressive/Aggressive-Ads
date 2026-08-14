@@ -136,10 +136,7 @@ final class ReadRoutesTest extends WP_UnitTestCase {
 		$this->assertArrayHasKey( '/aggr/v1/campaigns/(?P<id>\d+)', $routes );
 		$this->assertArrayHasKey( '/aggr/v1/placements', $routes );
 		$this->assertArrayHasKey( '/aggr/v1/packages', $routes );
-		$this->assertArrayHasKey( '/laao-advertiser-portal/v1/campaigns', $routes );
-		$this->assertArrayHasKey( '/laao-advertiser-portal/v1/campaigns/(?P<id>\d+)', $routes );
-		$this->assertArrayHasKey( '/laao-advertiser-portal/v1/placements', $routes );
-		$this->assertArrayHasKey( '/laao-advertiser-portal/v1/packages', $routes );
+		$this->assertArrayNotHasKey( '/laao-advertiser-portal/v1/campaigns', $routes );
 	}
 
 	/**

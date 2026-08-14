@@ -107,12 +107,9 @@ Rules:
 
 ### Phase 0 — Identity *(shipped)*
 
-Mechanical rename LAAO → Aggressive Ads: plugin header, namespace, autoloader,
-text domain, CPT/status/meta/option/cap/cron/REST/CSS/store IDs, installer
-migration that **rewrites existing rows**. The previous publish capability is
-aliased to `aggr_publish` for one release.
-
-Do not land Settings or the unified menu on `laao_*` and rename twice.
+Aggressive Ads / `aggr_` ([ADR-0022](adr/0022-aggressive-ads-identity.md),
+[ADR-0035](adr/0035-no-laao-compatibility-layer.md)). There is no LAAO rewrite
+or one-release alias. New installs write the current names.
 
 ### Phase A — Portal UI close
 

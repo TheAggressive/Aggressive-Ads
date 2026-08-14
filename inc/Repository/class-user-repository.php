@@ -156,7 +156,7 @@ final class User_Repository {
 		for ( $attempt = 0; $attempt < 3; ++$attempt ) {
 			$user_id = wp_insert_user(
 				array(
-					'user_login'   => 'laao_' . strtolower( wp_generate_password( 20, false, false ) ),
+					'user_login'   => 'aggr_' . strtolower( wp_generate_password( 20, false, false ) ),
 					'user_pass'    => wp_generate_password( 64, true, true ),
 					'user_email'   => $fields['email'],
 					'first_name'   => $fields['first_name'],

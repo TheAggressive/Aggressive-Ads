@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Workflow;
 
 use Aggressive\Ads\Audit\Audit_Event;
-use Aggressive\Ads\Core\Hook_Aliases;
 use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Domain\Campaign_Rules;
 use Aggressive\Ads\Integration\Ad_Provider_Interface;
@@ -192,7 +191,7 @@ final class Creative_Change_Manager {
 
 			$this->sync_pending_count( $context['campaign_id'] );
 			$this->audit( 'creative.replacement_approved', $context['campaign_id'], $replacement_id, $context['current_id'], 'Creative replacement approved and published.' );
-			Hook_Aliases::fire( 'aggr_creative_replaced', $context['campaign_id'] );
+			do_action( 'aggr_creative_replaced', $context['campaign_id'] );
 
 			return true;
 		} finally {

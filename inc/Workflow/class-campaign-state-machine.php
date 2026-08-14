@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Workflow;
 
 use Aggressive\Ads\Audit\Audit_Event;
-use Aggressive\Ads\Core\Hook_Aliases;
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Domain\Campaign_Transition;
 use Aggressive\Ads\Domain\Transition_Table;
@@ -288,7 +287,7 @@ final class Campaign_State_Machine implements Service {
 		);
 
 		// 9. The domain event.
-		Hook_Aliases::fire( 'aggr_campaign_transitioned', $campaign_id, $from, $to, $context );
+		do_action( 'aggr_campaign_transitioned', $campaign_id, $from, $to, $context );
 
 		// 10. Notifications, whose failure must never reverse a business fact
 		// that has already happened.
@@ -421,7 +420,7 @@ final class Campaign_State_Machine implements Service {
 	 */
 	private function notify( int $campaign_id, string $from, string $to, array $context ): void {
 		try {
-			Hook_Aliases::fire( 'aggr_notify_campaign_transitioned', $campaign_id, $from, $to, $context );
+			do_action( 'aggr_notify_campaign_transitioned', $campaign_id, $from, $to, $context );
 		} catch ( Throwable $e ) {
 			$this->audit->insert(
 				new Audit_Event(

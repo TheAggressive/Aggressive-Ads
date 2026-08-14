@@ -89,6 +89,31 @@ final class PluginUpdatesTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The update modal uses the product name, not a previous site identity.
+	 *
+	 * @return void
+	 */
+	public function test_plugin_information_uses_the_product_name(): void {
+		$this->mock_github( $this->release( '1.4.0' ), str_repeat( 'a', 64 ) );
+
+		$info = $this->updates->plugin_information(
+			false,
+			'plugin_information',
+			(object) array( 'slug' => 'aggressive-ads' )
+		);
+
+		$this->assertIsObject( $info );
+		$this->assertSame( 'Aggressive Ads', $info->name );
+		$this->assertSame(
+			'Live means live. White-label advertising management for WordPress.',
+			$info->short_description
+		);
+		$this->assertStringNotContainsString( 'LAAO', $info->name );
+		$this->assertStringNotContainsString( 'LAAO', $info->short_description );
+		$this->assertStringNotContainsString( 'LAArtsOnline', $info->short_description );
+	}
+
+	/**
 	 * A missing checksum makes the release invisible, not merely un-installable.
 	 */
 	public function test_missing_checksum_asset_fails_closed(): void {

@@ -32,14 +32,10 @@ function aggr_uninstall_delete_content(): void {
 
 	$aggr_statuses = array_merge(
 		Aggressive\Ads\Core\Post_Statuses::all(),
-		array_keys( Aggressive\Ads\Domain\Identity_Maps::statuses() ),
 		array( 'publish', 'draft', 'pending', 'private', 'future', 'trash' )
 	);
 
-	$aggr_post_types = array_merge(
-		Aggressive\Ads\Core\Post_Types::all(),
-		array_keys( Aggressive\Ads\Domain\Identity_Maps::post_types() )
-	);
+	$aggr_post_types = Aggressive\Ads\Core\Post_Types::all();
 
 	foreach ( $aggr_post_types as $aggr_post_type ) {
 		do {

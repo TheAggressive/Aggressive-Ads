@@ -159,7 +159,6 @@ drift.
 
 ```
 aggressive-ads.php   header, constants, floor guard, hand-off. Never a fifth job.
-  └ laao-advertiser-portal.php   headerless shim for sites still listing the old basename
   └ inc/class-autoloader.php   Aggressive\Ads\X\Y_Z → inc/X/class-y-z.php
       └ inc/class-plugin.php   boot + ordered init_services()
       └ inc/class-service-registrar.php   register() factories — instantiates nothing

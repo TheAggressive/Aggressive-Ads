@@ -44,7 +44,6 @@ use Aggressive\Ads\REST\Packages_Controller;
 use Aggressive\Ads\REST\Placements_Controller;
 use Aggressive\Ads\REST\Transitions_Controller;
 use Aggressive\Ads\Security\Admin_Guard;
-use Aggressive\Ads\Security\Capability_Alias;
 use Aggressive\Ads\Security\Ownership;
 use Aggressive\Ads\Update\Plugin_Updates;
 use Aggressive\Ads\Workflow\Campaign_Clock;
@@ -250,7 +249,6 @@ final class Plugin {
 			// so no surface ever resolves an object check through core's
 			// author comparison instead of ours.
 			Ownership::class,
-			Capability_Alias::class,
 			Admin_Guard::class,
 
 			// Attaches the listener that notices a campaign status written

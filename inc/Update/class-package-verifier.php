@@ -132,7 +132,7 @@ final class Package_Verifier {
 		if ( ! is_string( $checksum ) ) {
 			return new \WP_Error(
 				'aggr_update_checksum_missing',
-				__( 'LAAO Advertiser Portal update is missing a valid SHA-256 checksum.', 'aggressive-ads' )
+				__( 'Aggressive Ads update is missing a valid SHA-256 checksum.', 'aggressive-ads' )
 			);
 		}
 
@@ -151,7 +151,7 @@ final class Package_Verifier {
 
 			return new \WP_Error(
 				'aggr_update_checksum_mismatch',
-				__( 'LAAO Advertiser Portal update failed integrity verification.', 'aggressive-ads' )
+				__( 'Aggressive Ads update failed integrity verification.', 'aggressive-ads' )
 			);
 		}
 

@@ -1,6 +1,6 @@
 <?php
 /**
- * Plugin Name: LAAO Ads dev mail sender
+ * Plugin Name: Aggressive Ads dev mail sender
  * Description: Gives wp_mail a valid From address inside wp-env.
  *
  * Development fixture, never shipped: tests/fixtures/ is outside the release

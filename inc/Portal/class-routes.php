@@ -9,8 +9,6 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Portal;
 
-use Aggressive\Ads\Core\Hook_Aliases;
-
 /**
  * Where the portal lives.
  *
@@ -37,7 +35,7 @@ final class Routes {
 		 *
 		 * @param string $base Base segment, without slashes.
 		 */
-		$base = Hook_Aliases::apply( 'aggr_portal_base', self::DEFAULT_BASE );
+		$base = apply_filters( 'aggr_portal_base', self::DEFAULT_BASE );
 
 		if ( ! is_string( $base ) ) {
 			return self::DEFAULT_BASE;

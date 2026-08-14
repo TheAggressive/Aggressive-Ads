@@ -1,6 +1,6 @@
 # REST API
 
-Namespace `aggr/v1`. Hand-rolled, not `wp/v2` — the five post types are `show_in_rest => false` precisely so no generic CRUD surface exists. `laao-advertiser-portal/v1` is registered as a one-release alias of the same routes.
+Namespace `aggr/v1`. Hand-rolled, not `wp/v2` — the five post types are `show_in_rest => false` precisely so no generic CRUD surface exists.
 
 ## Rules
 

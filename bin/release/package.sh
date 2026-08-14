@@ -46,7 +46,6 @@ PACKAGE_FORBIDDEN=(
 # missing loader. See docs/adr/0012-own-autoloader-in-production.md.
 PACKAGE_REQUIRED=(
 	"${PLUGIN_FILE}"
-	laao-advertiser-portal.php
 	uninstall.php
 	inc/class-autoloader.php
 	inc/class-plugin.php

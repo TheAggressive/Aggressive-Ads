@@ -9,9 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Security;
 
-use Aggressive\Ads\Core\Hook_Aliases;
 use Aggressive\Ads\Core\Post_Types;
-use Aggressive\Ads\Domain\Identity_Maps;
 
 /**
  * Declares and installs the advertiser and reviewer roles.
@@ -150,7 +148,7 @@ final class Roles {
 		 *
 		 * @param array<int, string> $roles Role slugs.
 		 */
-		$roles = Hook_Aliases::apply( 'aggr_roles_receiving_caps', array( 'administrator' ) );
+		$roles = apply_filters( 'aggr_roles_receiving_caps', array( 'administrator' ) );
 
 		if ( ! is_array( $roles ) ) {
 			return array( 'administrator' );
@@ -202,10 +200,6 @@ final class Roles {
 			remove_role( $slug );
 		}
 
-		foreach ( array_keys( Identity_Maps::roles() ) as $slug ) {
-			remove_role( $slug );
-		}
-
 		foreach ( self::roles_receiving_all_capabilities() as $slug ) {
 			$role = get_role( $slug );
 
@@ -214,10 +208,6 @@ final class Roles {
 			}
 
 			foreach ( Capabilities::all() as $cap ) {
-				$role->remove_cap( $cap );
-			}
-
-			foreach ( array_keys( Identity_Maps::capabilities() ) as $cap ) {
 				$role->remove_cap( $cap );
 			}
 		}

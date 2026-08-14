@@ -10,15 +10,12 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Install;
 
 use Aggressive\Ads\Audit\Audit_Event;
-use Aggressive\Ads\Domain\Identity_Maps;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Event_Repository;
-use Aggressive\Ads\Repository\Identity_Rewrite;
 use Aggressive\Ads\Repository\Org_Access_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Security\Roles;
-use Aggressive\Ads\Storage\Private_Storage;
 use Aggressive\Ads\Workflow\Click_Hop;
 
 /**
@@ -45,33 +42,21 @@ final class Installer {
 	 * @return array<int, string>
 	 */
 	public static function options(): array {
-		return array_values(
-			array_unique(
-				array_merge(
-					array(
-						self::OPTION_DB_VERSION,
-						self::OPTION_PLUGIN_VERSION,
-						self::OPTION_ROLES_VERSION,
-						self::OPTION_REWRITE_VERSION,
-						self::OPTION_SEED_VERSION,
-						self::OPTION_UPGRADE_LOCK,
-						self::OPTION_DELETE_DATA,
-						'aggr_settings',
-						Click_Hop::OPTION_REWRITE,
-					),
-					array_keys( Identity_Maps::option_keys() ),
-					array_values( Identity_Maps::option_keys() )
-				)
-			)
+		return array(
+			self::OPTION_DB_VERSION,
+			self::OPTION_PLUGIN_VERSION,
+			self::OPTION_ROLES_VERSION,
+			self::OPTION_REWRITE_VERSION,
+			self::OPTION_SEED_VERSION,
+			self::OPTION_UPGRADE_LOCK,
+			self::OPTION_DELETE_DATA,
+			'aggr_settings',
+			Click_Hop::OPTION_REWRITE,
 		);
 	}
 
 	/**
-	 * Stored schema version, falling back to the pre-rename option.
-	 *
-	 * Reading only the new key treats an existing LAAO install as a fresh
-	 * site and would run install() instead of migration 3 — leaving every
-	 * campaign under a post type nothing queries.
+	 * Stored schema version.
 	 *
 	 * @return int
 	 */
@@ -80,7 +65,7 @@ final class Installer {
 	}
 
 	/**
-	 * Stored roles-matrix version, with the same legacy fallback.
+	 * Stored roles-matrix version.
 	 *
 	 * @return int
 	 */
@@ -89,30 +74,18 @@ final class Installer {
 	}
 
 	/**
-	 * Stored plugin version string, with the same legacy fallback.
+	 * Stored plugin version string.
 	 *
 	 * @return string
 	 */
 	public static function stored_plugin_version(): string {
 		$current = get_option( self::OPTION_PLUGIN_VERSION, null );
 
-		if ( is_string( $current ) && '' !== $current ) {
-			return $current;
-		}
-
-		$legacy = Identity_Maps::legacy_option_key( self::OPTION_PLUGIN_VERSION );
-
-		if ( null === $legacy ) {
-			return '';
-		}
-
-		$old = get_option( $legacy, null );
-
-		return is_string( $old ) ? $old : '';
+		return is_string( $current ) ? $current : '';
 	}
 
 	/**
-	 * Integer option with a legacy-key fallback.
+	 * Integer option, or zero when absent.
 	 *
 	 * @param string $current Current option name.
 	 * @return int
@@ -120,19 +93,7 @@ final class Installer {
 	private static function stored_int( string $current ): int {
 		$value = get_option( $current, null );
 
-		if ( is_numeric( $value ) ) {
-			return (int) $value;
-		}
-
-		$legacy = Identity_Maps::legacy_option_key( $current );
-
-		if ( null === $legacy ) {
-			return 0;
-		}
-
-		$old = get_option( $legacy, null );
-
-		return is_numeric( $old ) ? (int) $old : 0;
+		return is_numeric( $value ) ? (int) $value : 0;
 	}
 
 	/**
@@ -150,20 +111,13 @@ final class Installer {
 	/**
 	 * Installs everything a fresh site needs, and repairs an existing one.
 	 *
-	 * Ordering matters: identity rewrite runs before dbDelta, so activating
-	 * new code against a LAAO database cannot create empty new tables beside
-	 * populated old ones and then stamp the current version — which would
-	 * make the upgrader skip migration 3 and leave every campaign
-	 * unqueryable. The rewrite is a no-op on a fresh site. Tables exist
-	 * before anything writes an audit row, and the version options are
-	 * stamped last so a fatal midway leaves them behind — which makes the
-	 * next request retry rather than skip.
+	 * Tables exist before anything writes an audit row, and the version
+	 * options are stamped last so a fatal midway leaves them behind — which
+	 * makes the next request retry rather than skip.
 	 *
 	 * @return void
 	 */
 	public function install(): void {
-		( new Identity_Migration( new Identity_Rewrite(), new Private_Storage() ) )->to_3();
-
 		$this->audit_repository->install_table();
 		$this->install_org_access();
 		$this->install_delivery_tables();

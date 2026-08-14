@@ -88,7 +88,7 @@ final class PortalEmailChangeTest extends WP_UnitTestCase {
 			array(
 				'role'       => Roles::ADVERTISER,
 				'user_email' => $email,
-				'user_login' => 'laao_' . wp_generate_password( 12, false, false ),
+				'user_login' => 'aggr_' . wp_generate_password( 12, false, false ),
 			)
 		);
 

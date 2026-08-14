@@ -46,29 +46,17 @@ final class Creative_File_Controller implements Service {
 	/**
 	 * The REST namespace.
 	 */
-	public const NAMESPACE        = 'aggr/v1';
-	public const LEGACY_NAMESPACE = 'laao-advertiser-portal/v1';
+	public const NAMESPACE = 'aggr/v1';
 
 	/**
-	 * Current and one-release alias namespaces.
-	 *
-	 * @return array<int, non-falsy-string>
-	 */
-	public static function namespaces(): array {
-		return array( self::NAMESPACE, self::LEGACY_NAMESPACE );
-	}
-
-	/**
-	 * Registers a route on every namespace this plugin answers.
+	 * Registers a route on the plugin namespace.
 	 *
 	 * @param non-falsy-string         $route Route pattern.
 	 * @param array<int|string, mixed> $args  register_rest_route() arguments.
 	 * @return void
 	 */
 	public static function register_route( string $route, array $args ): void {
-		foreach ( self::namespaces() as $namespace ) {
-			register_rest_route( $namespace, $route, $args );
-		}
+		register_rest_route( self::NAMESPACE, $route, $args );
 	}
 
 	/**

@@ -31,8 +31,7 @@ final class Private_Storage {
 	/**
 	 * Directory name under the uploads base.
 	 */
-	public const DIRECTORY        = 'aggr-private';
-	public const LEGACY_DIRECTORY = 'laao-ads-private';
+	public const DIRECTORY = 'aggr-private';
 
 	/**
 	 * The absolute path to the private root, without a trailing slash.
@@ -47,32 +46,6 @@ final class Private_Storage {
 			: WP_CONTENT_DIR . '/uploads';
 
 		return rtrim( $base, '/\\' ) . '/' . self::DIRECTORY;
-	}
-
-	/**
-	 * Renames the previous private directory onto the current name.
-	 *
-	 * Idempotent: a missing source or an already-present destination is a
-	 * no-op. Two directories at once is left alone rather than merged — a
-	 * merge would be a second source of truth for the same tokens.
-	 *
-	 * @return void
-	 */
-	public function promote_legacy_directory(): void {
-		$uploads = wp_upload_dir();
-
-		$base = isset( $uploads['basedir'] ) && is_string( $uploads['basedir'] )
-			? $uploads['basedir']
-			: WP_CONTENT_DIR . '/uploads';
-
-		$base = rtrim( $base, '/\\' );
-		$old  = $base . '/' . self::LEGACY_DIRECTORY;
-		$new  = $base . '/' . self::DIRECTORY;
-
-		if ( is_dir( $old ) && ! is_dir( $new ) ) {
-			// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.file_ops_rename -- Destination is under wp_upload_dir(); this is a one-time directory rename, not a stream write.
-			rename( $old, $new );
-		}
 	}
 
 	/**
