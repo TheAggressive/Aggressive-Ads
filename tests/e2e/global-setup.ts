@@ -10,7 +10,8 @@ export default function globalSetup(): void {
 	wp( 'user', 'update', 'advertiser', '--user_pass=advertiser' );
 	wp( 'user', 'update', 'admin', '--user_pass=admin' );
 	wp( 'theme', 'activate', 'twentytwentyfive' );
-	// A fresh wp-env has an empty permalink_structure. Flush then no-ops and
-	// every /advertiser/... URL 404s, which is how five specs timed out on CI.
-	wp( 'rewrite', 'structure', '/%postname%/' );
+	// A fresh wp-env has an empty permalink_structure and no .htaccess rewrite.
+	// Soft flush only updates the option, so Apache 404s /advertiser/... before
+	// WordPress sees it. --hard writes the rules Apache actually uses.
+	wp( 'rewrite', 'structure', '/%postname%/', '--hard' );
 }
