@@ -21,6 +21,40 @@ env:
   PHP_VERSION: '8.4'
 
 jobs:
+  # semantic-release verifies push permission even in dry-run mode. Keep that
+  # write-capable token isolated from build and test jobs, and plan only from a
+  # trusted push to master.
+  release-plan:
+    name: Plan Release
+    runs-on: ubuntu-24.04
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+      release_type: ${{ steps.check.outputs.release_type }}
+      next_version: ${{ steps.check.outputs.next_version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      # Lifecycle scripts are not needed for release analysis and must not run
+      # while this job holds its scoped write token.
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Determine release
+        id: check
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HUSKY: '0'
+        run: node bin/release/plan.mjs
+
   security:
     name: Security
     runs-on: ubuntu-24.04
@@ -221,7 +255,18 @@ jobs:
     name: Package
     runs-on: ubuntu-24.04
     timeout-minutes: 10
-    needs: [security, structure, frontend, php, coverage, wordpress, build, e2e]
+    needs: [release-plan, security, structure, frontend, php, coverage, wordpress, build, e2e]
+    if: >-
+      always() &&
+      (needs.release-plan.result == 'success' || needs.release-plan.result == 'skipped') &&
+      needs.security.result == 'success' &&
+      needs.structure.result == 'success' &&
+      needs.frontend.result == 'success' &&
+      needs.php.result == 'success' &&
+      needs.coverage.result == 'success' &&
+      needs.wordpress.result == 'success' &&
+      needs.build.result == 'success' &&
+      needs.e2e.result == 'success'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -240,7 +285,10 @@ jobs:
         with:
           name: dist
           path: dist/
-      - run: pnpm ci:package
+      - name: Build reproducible verified package
+        env:
+          AGGR_RELEASE_VERSION: ${{ needs.release-plan.outputs.next_version }}
+        run: pnpm ci:package
       - name: Upload verified plugin package
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -250,13 +298,76 @@ jobs:
             release/*.zip.sha256
           retention-days: 30
 
+  # semantic-release creates the tag and a private draft from the package that
+  # passed every CI lane. The reconciler verifies remote bytes and provenance
+  # before making that draft visible to the plugin updater.
+  release:
+    name: Release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    needs: [release-plan, package]
+    if: >-
+      success() &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/master' &&
+      needs.release-plan.outputs.should_release == 'true'
+    environment: production
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          # zizmor: ignore[artipacked] semantic-release needs this credential
+          # only in the publishing job so it can push the verified release tag.
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install release tooling
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+      - name: Download accepted plugin package
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: plugin-package
+          path: release/
+      - name: Create semantic release draft
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HUSKY: '0'
+        run: pnpm semantic-release
+      - name: Attest build provenance
+        if: ${{ !cancelled() && hashFiles('release/aggressive-ads-*.zip') != '' }}
+        uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4.1.1
+        with:
+          subject-path: release/aggressive-ads-*.zip
+      - name: Reconcile and publish verified draft
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AGGR_RELEASE_VERSION: ${{ needs.release-plan.outputs.next_version }}
+        run: bash bin/release/publish.sh
+
   summary:
     name: CI Summary
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     if: always()
-    needs: [security, structure, frontend, php, coverage, wordpress, build, e2e, package]
+    needs: [release-plan, security, structure, frontend, php, coverage, wordpress, build, e2e, package, release]
     env:
+      EVENT_NAME: ${{ github.event_name }}
+      EVENT_REF: ${{ github.ref }}
+      SHOULD_RELEASE: ${{ needs.release-plan.outputs.should_release }}
+      RELEASE_PLAN: ${{ needs.release-plan.result }}
       SECURITY: ${{ needs.security.result }}
       STRUCTURE: ${{ needs.structure.result }}
       FRONTEND: ${{ needs.frontend.result }}
@@ -266,6 +377,7 @@ jobs:
       BUILD: ${{ needs.build.result }}
       E2E: ${{ needs.e2e.result }}
       PACKAGE: ${{ needs.package.result }}
+      RELEASE: ${{ needs.release.result }}
     steps:
       - name: Require every quality and artifact lane
         run: |
@@ -278,4 +390,19 @@ jobs:
               failed=1
             fi
           done
+
+          if [[ "${EVENT_NAME}" == "push" && "${EVENT_REF}" == "refs/heads/master" ]]; then
+            [[ "${RELEASE_PLAN}" == "success" ]] || failed=1
+          else
+            [[ "${RELEASE_PLAN}" == "skipped" ]] || failed=1
+          fi
+
+          if [[ "${SHOULD_RELEASE}" == "true" ]]; then
+            [[ "${RELEASE}" == "success" ]] || failed=1
+          else
+            [[ "${RELEASE}" == "skipped" ]] || failed=1
+          fi
+
+          printf '%-12s %s\n' RELEASE_PLAN "${RELEASE_PLAN}"
+          printf '%-12s %s\n' RELEASE "${RELEASE}"
           exit "${failed}"

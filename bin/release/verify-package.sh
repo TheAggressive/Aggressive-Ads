@@ -162,8 +162,13 @@ header_version() {
 	grep -m1 -oE '^\s*\*\s*Version:\s*\S+' "${PLUGIN_FILE}" | awk '{print $NF}'
 }
 
-VERSION="${1:-$(header_version)}"
+VERSION="${1:-${AGGR_RELEASE_VERSION:-$(header_version)}}"
 ZIP="${BUILD_DIR}/${SLUG}-${VERSION}.zip"
+
+if [[ ! "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+	echo "Invalid release version: ${VERSION}" >&2
+	exit 2
+fi
 
 if [ ! -f "${ZIP}" ]; then
 	echo "No package at ${ZIP}. Run: pnpm release:package" >&2
@@ -218,9 +223,16 @@ root="${extracted}/${SLUG}"
 #    header says 1.1.0 updates to a version WordPress then offers to update
 #    again, forever.
 packaged_version=$(grep -m1 -oE '^\s*\*\s*Version:\s*\S+' "${root}/${PLUGIN_FILE}" | awk '{print $NF}')
+packaged_constant=$(
+	grep -m1 -oE "define\( 'AGGR_VERSION', '[^']+'" "${root}/${PLUGIN_FILE}" | awk -F"'" '{print $4}'
+)
 
 if [ "${packaged_version}" != "${VERSION}" ]; then
 	fail "header says ${packaged_version}, archive is ${VERSION}"
+fi
+
+if [ "${packaged_constant}" != "${VERSION}" ]; then
+	fail "AGGR_VERSION says ${packaged_constant}, archive is ${VERSION}"
 fi
 
 # 6. Every PHP file parses. A syntax error in a shipped file is a white screen

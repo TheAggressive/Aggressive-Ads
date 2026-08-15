@@ -1,59 +1,86 @@
-# Dependency updates.
-#
-# Grouped and monthly rather than individually and daily: a stream of one-line
-# PRs nobody reviews is worse than none, because it trains people to merge
-# dependency changes without reading them.
-#
-# Security updates are exempt from the schedule — GitHub raises those
-# immediately regardless of `interval`.
+# Dependency updates are grouped, cooled down, and limited to non-major
+# releases so the guarded auto-merge workflow can handle routine maintenance
+# without turning dependency churn into product releases.
 version: 2
 
 updates:
-  # The actions themselves are a supply-chain surface, and they are pinned to
-  # SHAs, so this is the only thing that moves them. bin/ci/check-action-pins.sh
-  # keeps the pin format honest when Dependabot rewrites one.
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: monthly
+      interval: weekly
+      day: monday
+      time: '06:00'
+    open-pull-requests-limit: 3
     cooldown:
       default-days: 7
+    commit-message:
+      prefix: chore
+      include: scope
+    labels:
+      - dependencies
+      - github_actions
+    ignore:
+      - dependency-name: '*'
+        update-types: [version-update:semver-major]
     groups:
       actions:
         patterns: ['*']
 
   # Dev tooling only — the plugin has no runtime Composer dependencies and
-  # vendor/ never ships. See docs/build-and-release.md.
+  # vendor/ never ships. Security updates remain exempt from the schedule.
   - package-ecosystem: composer
     directory: /
     schedule:
-      interval: monthly
+      interval: weekly
+      day: monday
+      time: '06:00'
+    open-pull-requests-limit: 3
     cooldown:
       default-days: 7
       semver-major-days: 30
       semver-minor-days: 7
       semver-patch-days: 3
+    commit-message:
+      prefix: chore
+      include: scope
+    labels:
+      - dependencies
+      - php
+    ignore:
+      # Tooling majors are reviewed deliberately. Security updates still arrive.
+      - dependency-name: '*'
+        update-types: [version-update:semver-major]
     groups:
       php-tooling:
         patterns: ['*']
         update-types: [minor, patch]
-    ignore:
-      # PHPUnit is pinned to 9.6 deliberately: the WordPress core test suite
-      # requires 9.x, and the assertions that matter here are not expressible
-      # without it. A major bump is a decision with an ADR, not a PR to merge.
-      - dependency-name: phpunit/phpunit
-        update-types: [version-update:semver-major]
 
   - package-ecosystem: npm
     directory: /
     schedule:
-      interval: monthly
+      interval: weekly
+      day: monday
+      time: '06:00'
+    open-pull-requests-limit: 3
     cooldown:
       default-days: 7
       semver-major-days: 30
       semver-minor-days: 7
       semver-patch-days: 3
+    commit-message:
+      prefix: chore
+      include: scope
+    labels:
+      - dependencies
+      - javascript
+    ignore:
+      - dependency-name: '*'
+        update-types: [version-update:semver-major]
     groups:
+      wordpress:
+        patterns: ['@wordpress/*']
+        update-types: [minor, patch]
       js-tooling:
         patterns: ['*']
+        exclude-patterns: ['@wordpress/*']
         update-types: [minor, patch]

@@ -46,7 +46,7 @@ undocumented=$(
 )
 
 if [ -n "$undocumented" ]; then
-	echo "Pinned actions must carry a '# vX.Y.Z' comment naming the version:" >&2
+	echo "Pinned actions must carry a comment naming the exact tag:" >&2
 	echo >&2
 	echo "$undocumented" >&2
 	exit 1

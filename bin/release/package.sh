@@ -71,11 +71,11 @@ header_version() {
 	grep -m1 -oE '^\s*\*\s*Version:\s*\S+' "${PLUGIN_FILE}" | awk '{print $NF}'
 }
 
-VERSION="${1:-$(header_version)}"
+VERSION="${1:-${AGGR_RELEASE_VERSION:-$(header_version)}}"
 
-if [ -z "${VERSION}" ]; then
-	echo "Could not determine a version from ${PLUGIN_FILE}." >&2
-	exit 1
+if [[ ! "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+	echo "Invalid release version: ${VERSION}" >&2
+	exit 2
 fi
 
 ZIP="${BUILD_DIR}/${SLUG}-${VERSION}.zip"
@@ -127,6 +127,27 @@ rsync -a \
 	--exclude='*.log' \
 	./ "${STAGING}/"
 
+# semantic-release owns the published version. Stamp only the staged tree so
+# the checkout is never rewritten by the release bot and the bytes verified by
+# CI are the bytes WordPress ultimately installs.
+sed -i -E \
+	"s/^([[:space:]]*\*[[:space:]]*Version:[[:space:]]*).*/\1${VERSION}/" \
+	"${STAGING}/${PLUGIN_FILE}"
+sed -i -E \
+	"s/define\( 'AGGR_VERSION', '[^']+' \);/define( 'AGGR_VERSION', '${VERSION}' );/" \
+	"${STAGING}/${PLUGIN_FILE}"
+
+staged_header_version=$(
+	grep -m1 -oE '^\s*\*\s*Version:\s*\S+' "${STAGING}/${PLUGIN_FILE}" | awk '{print $NF}'
+)
+staged_constant_version=$(
+	grep -m1 -oE "define\( 'AGGR_VERSION', '[^']+'" "${STAGING}/${PLUGIN_FILE}" | awk -F"'" '{print $4}'
+)
+if [[ "${staged_header_version}" != "${VERSION}" || "${staged_constant_version}" != "${VERSION}" ]]; then
+	echo "Version stamp did not apply to the staged plugin." >&2
+	exit 1
+fi
+
 failed=0
 
 for path in "${PACKAGE_FORBIDDEN[@]}"; do
@@ -160,7 +181,24 @@ if [ "${failed}" -ne 0 ]; then
 	exit 1
 fi
 
-( cd "${BUILD_DIR}" && zip -rq "$(basename "${ZIP}")" "${SLUG}" -x '*.DS_Store' )
+# Normalize modes, timestamps, and archive order. `zip -X` alone does not make
+# archives reproducible because filesystem metadata and traversal order remain.
+SOURCE_EPOCH="${SOURCE_DATE_EPOCH:-$(git log -1 --format=%ct)}"
+if [[ ! "${SOURCE_EPOCH}" =~ ^[0-9]+$ || "${SOURCE_EPOCH}" -lt 315532800 ]]; then
+	echo "SOURCE_DATE_EPOCH must be a ZIP-compatible Unix timestamp." >&2
+	exit 2
+fi
+
+find "${STAGING}" -type d -exec chmod 0755 {} +
+find "${STAGING}" -type f -exec chmod 0644 {} +
+find "${STAGING}" -exec touch -h -d "@${SOURCE_EPOCH}" {} +
+
+(
+	cd "${BUILD_DIR}"
+	TZ=UTC find "${SLUG}" -print |
+		LC_ALL=C sort |
+		TZ=UTC zip -qX "$(basename "${ZIP}")" -@
+)
 
 # A checksum beside the archive, so the verifier can prove it is checking the
 # file that was actually built.

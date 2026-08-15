@@ -124,7 +124,15 @@ island. The view script fills after paint; it does not count.
 
 ## Packaging
 
-`bin/release/package.sh` rsyncs the repository into a staging directory under a single top-level `aggressive-ads/` folder, applying `PACKAGE_EXCLUDES`, then zips it with a `sha256` sidecar.
+`bin/release/package.sh` rsyncs the repository into a staging directory under a
+single top-level `aggressive-ads/` folder, applies the package exclusions,
+stamps the requested version into the staged plugin header and `AGGR_VERSION`,
+normalizes archive metadata, then writes a ZIP with a SHA-256 sidecar. The
+checkout is never rewritten.
+
+`ci:package` builds the archive twice and requires identical digests. This
+detects timestamp, traversal-order, or generated-file nondeterminism before a
+release reaches GitHub.
 
 It **hard-fails** if `node_modules`, `src`, `tests`, `vendor`, or `bin` reached the staging directory. A stray `src/` or `node_modules/` is historically how a 4 MB plugin becomes a 400 MB one.
 
@@ -163,20 +171,27 @@ php-scoper-prefixed into `Aggressive\Ads\Vendor\` before it ships.
 
 ## Releases
 
-Releases are explicit and tag-driven. Update the version in the plugin header,
-`AGGR_VERSION`, and `package.json`, merge a fully green commit, then push a
-strict `vMAJOR.MINOR.PATCH` tag for that commit.
+Releases are calculated automatically from Conventional Commits merged to
+`master`. `semantic-release` performs a dry run in an isolated planning job;
+`feat` creates a minor release, `fix` creates a patch release, and an explicit
+breaking change creates a major release. Documentation, CI, chores, tests, and
+dependency maintenance do not publish.
 
-`.github/workflows/release.yml` refuses a tag whose version differs from the
-plugin header or whose commit has no successful master CI run. It downloads the
-verified `plugin-package` artifact from that run rather than rebuilding it,
-verifies it again, creates a build-provenance attestation, and uploads these
-exact assets to a private draft:
+There are no existing release tags, so the first release-worthy master commit
+bootstraps `v1.0.0`. After that, Git tags and published GitHub Releases are the
+version source of truth. `package.json` remains `0.0.0-development`, while the
+source plugin header remains useful for local development; the planned version
+is stamped only into the staged artifact.
+
+The `package` job receives the planned version only on a trusted master push.
+After every quality lane succeeds, `semantic-release` creates the tag and a
+private draft containing these exact accepted assets:
 
 - `aggressive-ads-{version}.zip`
 - `aggressive-ads-{version}.zip.sha256`
 
-`bin/release/publish.sh` downloads both assets again, compares them byte for
+The publishing job attests the ZIP. `bin/release/publish.sh` then reconciles the
+Semantic Release draft, downloads both assets again, compares them byte for
 byte with the accepted CI build, verifies the SHA-256 sidecar and provenance,
 and only then publishes the draft. A failed release stays invisible to the
 updater. Published release assets are treated as immutable.
@@ -188,6 +203,13 @@ The artifact invariant is:
 
 The release job uses the `production` GitHub environment. Its deployment branch
 policy permits only `master`, matching the Aggressive Apparel repository.
+
+To rehearse release stamping without creating a tag or release:
+
+```bash
+pnpm ci:build
+AGGR_RELEASE_VERSION=1.2.3 pnpm ci:package
+```
 
 ## Local Git hooks
 
@@ -209,13 +231,21 @@ authoritative enforcement boundary.
 
 ## Branch protection
 
-The importable ruleset in `.github/rulesets/release-branches.json` requires
-pull requests, signed squash commits, resolved review threads, the stable
-`CI Summary` check, CodeQL, Actionlint, and Zizmor. Committing the JSON does not
-change GitHub settings: import it under **Settings → Rules → Rulesets** after the
-new checks have completed successfully once.
+The active `release-branches` ruleset (GitHub ruleset ID `20884246`) is mirrored
+in `.github/rulesets/release-branches.json`. It requires pull requests, signed
+squash commits, resolved review threads, the stable `CI Summary` check, CodeQL,
+Actionlint, and Zizmor. Committing the JSON does not change GitHub settings, so
+apply policy changes under **Settings → Rules → Rulesets** and keep the file
+synchronized with the live ruleset. When recreating the repository, import the
+file after the required checks have completed successfully once.
 
 The plugin updater accepts only stable strict-semver releases from the exact
 `TheAggressive/Aggressive-Ads` repository and exact asset names. It does
 not fall back to GitHub source archives, and it verifies the sidecar before
 WordPress extracts an update.
+
+The Dependabot auto-merge workflow runs in a privileged `workflow_run` context
+but never checks out pull-request code. It re-verifies bot authorship, refuses
+major or unrecognized updates, refreshes stale branches, and registers squash
+auto-merge only after every reported check is green. Branch rules remain the
+final independent enforcement layer.
