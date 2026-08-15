@@ -1,0 +1,99 @@
+name: Dependabot auto-merge
+
+# Register squash auto-merge only for genuine Dependabot minor/patch updates
+# after the full repository check set is green. No pull-request code executes in
+# this privileged workflow_run context.
+on: # zizmor: ignore[dangerous-triggers] guarded policy job never executes pull-request code
+  workflow_run:
+    workflows: ['CI/CD Pipeline', 'CodeQL', 'Workflow Security']
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependabot-auto-merge-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+jobs:
+  merge:
+    name: Auto-merge Dependabot
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.actor.login == 'dependabot[bot]'
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Merge if every check passed and no major version is crossed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          set -euo pipefail
+
+          PR="$(gh pr list --head "${HEAD_BRANCH}" --state open \
+                  --json number --jq '.[0].number // empty')"
+          if [[ -z "${PR}" ]]; then
+            echo "No open pull request for ${HEAD_BRANCH}; nothing to do."
+            exit 0
+          fi
+
+          AUTHOR="$(gh pr view "${PR}" --json author --jq '.author.login')"
+          if [[ "${AUTHOR}" != "app/dependabot" && "${AUTHOR}" != "dependabot[bot]" ]]; then
+            echo "::notice::#${PR} is authored by ${AUTHOR}, not Dependabot."
+            exit 0
+          fi
+
+          TITLE="$(gh pr view "${PR}" --json title --jq '.title')"
+          if [[ "${TITLE}" =~ from\ ([0-9]+)\.[0-9]+\.[0-9]+.*\ to\ ([0-9]+)\.[0-9]+\.[0-9]+ ]]; then
+            FROM_MAJOR="${BASH_REMATCH[1]}"
+            TO_MAJOR="${BASH_REMATCH[2]}"
+            if [[ "${FROM_MAJOR}" != "${TO_MAJOR}" ]]; then
+              echo "::notice::#${PR} crosses a major version (${FROM_MAJOR} -> ${TO_MAJOR})."
+              exit 0
+            fi
+          elif [[ ! "${TITLE}" =~ bump\ the\ .*\ group ]]; then
+            echo "::notice::#${PR} title is not a recognized Dependabot form."
+            exit 0
+          fi
+
+          MERGE_STATE="$(gh pr view "${PR}" --json mergeStateStatus --jq '.mergeStateStatus')"
+          if [[ "${MERGE_STATE}" == "BEHIND" ]]; then
+            HEAD_SHA="$(gh pr view "${PR}" --json headRefOid --jq '.headRefOid')"
+            gh api --method PUT "repos/${GH_REPO}/pulls/${PR}/update-branch" \
+              -f expected_head_sha="${HEAD_SHA}"
+            echo "::notice::#${PR} was updated; fresh checks will decide auto-merge."
+            exit 0
+          fi
+
+          if [[ "${MERGE_STATE}" == "DIRTY" ]]; then
+            echo "::notice::#${PR} conflicts with its base."
+            exit 0
+          fi
+
+          STATES="$(gh pr view "${PR}" --json statusCheckRollup \
+                      --jq '[.statusCheckRollup[] | (.conclusion // .status // "PENDING")] | join(" ")')"
+          echo "Checks on #${PR}: ${STATES}"
+
+          if [[ -z "${STATES}" ]]; then
+            echo "::notice::#${PR} has no reported checks; refusing to enable auto-merge."
+            exit 0
+          fi
+
+          for state in ${STATES}; do
+            case "${state}" in
+              SUCCESS|SKIPPED|NEUTRAL|COMPLETED) ;;
+              *)
+                echo "::notice::#${PR} has a check in state ${state}."
+                exit 0
+                ;;
+            esac
+          done
+
+          echo "All checks are green on #${PR}; enabling squash auto-merge."
+          gh pr merge "${PR}" --auto --squash --delete-branch

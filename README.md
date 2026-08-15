@@ -53,8 +53,8 @@ private creative storage, portal and staff UI, notifications, campaign clock
 GitHub updater with SHA-256 verification, Playwright + axe.
 
 Not built, even where `docs/` describes the design: CSV reporting, i18n
-tooling, semantic-release, spend/billing. If a doc describes something you
-cannot find, it has not been built.
+tooling, spend/billing. If a doc describes something you cannot find, it has
+not been built.
 
 ## Requirements
 

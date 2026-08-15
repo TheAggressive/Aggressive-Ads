@@ -114,8 +114,8 @@ and deeper analytics remain open. What is built:
   PHPUnit config proves colliding post ids cannot cross sites. Network-wide
   organizations are out of scope.
 
-What does **not** exist yet, despite being described in `docs/`: CSV reporting,
-i18n tooling, and semantic-release.
+What does **not** exist yet, despite being described in `docs/`: CSV reporting
+and i18n tooling.
 `docs/` describes the design; `docs/roadmap.md` says which phase builds it. If a
 doc describes something you cannot find, it has not been built — that is
 expected, not a bug.
@@ -241,4 +241,5 @@ produces confidence. Assert your fixture is real before asserting on it.
 - **Security, accessibility, idempotency and failure recovery are requirements,
   not a later pass.** They block a release.
 - Conventional commits (`feat:`, `fix:`, `docs:`, `ci:`, …). semantic-release
-  owns the version — never hardcode it.
+  owns published versions; release packaging stamps the planned version into
+  the staged plugin without rewriting the checkout.
