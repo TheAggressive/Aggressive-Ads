@@ -15,6 +15,7 @@ use Aggressive\Ads\Repository\Org_Access_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Security\Roles;
 use Aggressive\Ads\Workflow\Campaign_Clock;
+use Aggressive\Ads\Security\Private_Storage_Notice;
 use Aggressive\Ads\Workflow\Creative_Retention;
 use Aggressive\Ads\Workflow\Ending_Soon_Notifier;
 use Aggressive\Ads\Workflow\Event_Retention;
@@ -60,6 +61,7 @@ final class Uninstaller {
 		Creative_Retention::unschedule();
 		Event_Retention::unschedule();
 		Rollup_Reconciler::unschedule();
+		Private_Storage_Notice::unschedule();
 
 		foreach ( Installer::options() as $option ) {
 			delete_option( $option );
