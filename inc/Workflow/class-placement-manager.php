@@ -330,13 +330,25 @@ final class Placement_Manager {
 					__( 'House creative must be a JPEG, PNG, GIF, or WebP image.', 'aggressive-ads' )
 				);
 			}
+		}
 
-			if ( ! Campaign_Rules::is_valid_click_url( $click_url ) || false === wp_http_validate_url( $click_url ) ) {
-				return new WP_Error(
-					'aggr_invalid_house_url',
-					__( 'House destination must be an http or https URL without credentials.', 'aggressive-ads' )
-				);
-			}
+		/*
+		 * Outside the attachment block on purpose.
+		 *
+		 * The destination used to be checked only when an image came with it,
+		 * so clearing the image while editing the URL wrote whatever was typed
+		 * straight to post meta. Nothing served it — house_is_servable() and
+		 * esc_url() both re-check downstream — but the admin got no error and
+		 * the row sat there looking saved. Validate whenever there is a URL to
+		 * validate; an empty one with no attachment is how house is cleared.
+		 */
+		if ( ( $attachment_id > 0 || '' !== $click_url )
+			&& ( ! Campaign_Rules::is_valid_click_url( $click_url ) || false === wp_http_validate_url( $click_url ) )
+		) {
+			return new WP_Error(
+				'aggr_invalid_house_url',
+				__( 'House destination must be an http or https URL without credentials.', 'aggressive-ads' )
+			);
 		}
 
 		if (

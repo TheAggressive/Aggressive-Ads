@@ -220,12 +220,12 @@ final class Package_Screen implements Service {
 		return array(
 			'name'            => isset( $_POST['name'] ) && is_string( $_POST['name'] ) ? wp_unslash( $_POST['name'] ) : '', // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Workflow sanitizes.
 			'placement_ids'   => $placements,
-			'duration_days'   => isset( $_POST['duration_days'] ) ? absint( wp_unslash( $_POST['duration_days'] ) ) : 0, // phpcs:ignore WordPress.Security.NonceVerification.Missing
-			'custom_duration' => ! empty( $_POST['custom_duration'] ), // phpcs:ignore WordPress.Security.NonceVerification.Missing
+			'duration_days'   => isset( $_POST['duration_days'] ) ? absint( wp_unslash( $_POST['duration_days'] ) ) : 0, // phpcs:ignore WordPress.Security.NonceVerification.Missing -- The caller verifies the action nonce before reading these fields.
+			'custom_duration' => ! empty( $_POST['custom_duration'] ), // phpcs:ignore WordPress.Security.NonceVerification.Missing -- The caller verifies the action nonce before reading these fields.
 			'price_cents'     => isset( $_POST['price_cents'] ) ? (int) wp_unslash( $_POST['price_cents'] ) : -1, // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Workflow bounds the integer.
 			'currency'        => isset( $_POST['currency'] ) && is_string( $_POST['currency'] ) ? wp_unslash( $_POST['currency'] ) : '', // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Workflow sanitizes.
-			'is_active'       => ! empty( $_POST['is_active'] ), // phpcs:ignore WordPress.Security.NonceVerification.Missing
-			'is_default'      => ! empty( $_POST['is_default'] ), // phpcs:ignore WordPress.Security.NonceVerification.Missing
+			'is_active'       => ! empty( $_POST['is_active'] ), // phpcs:ignore WordPress.Security.NonceVerification.Missing -- The caller verifies the action nonce before reading these fields.
+			'is_default'      => ! empty( $_POST['is_default'] ), // phpcs:ignore WordPress.Security.NonceVerification.Missing -- The caller verifies the action nonce before reading these fields.
 		);
 	}
 

@@ -210,7 +210,7 @@
 }
 
 .aggr-nav__link[aria-current="page"] .aggr-nav__icon {
-	background: var(--aggr-color-accent);
+	background: var(--aggr-color-accent-rail);
 	color: var(--aggr-color-accent-contrast);
 }
 

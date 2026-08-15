@@ -306,6 +306,67 @@ final class PlacementAdminTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The same URL rules apply with no attachment attached.
+	 *
+	 * The check used to live inside the "an image was supplied" branch, so
+	 * dropping the image while editing the destination wrote the raw string to
+	 * post meta and reported success. Two downstream gates meant nothing ever
+	 * served it, which is exactly why it could sit there unnoticed.
+	 *
+	 * @return void
+	 */
+	public function test_house_update_rejects_a_javascript_url_without_an_attachment(): void {
+		wp_set_current_user( $this->administrator );
+
+		$placement_id = $this->manager->create( $this->valid_fields() );
+		$this->assertIsInt( $placement_id );
+
+		$result = $this->manager->update(
+			$placement_id,
+			$this->valid_fields(
+				array(
+					'house_attachment_id' => 0,
+					'house_click_url'     => 'javascript:alert(1)',
+					'house_alt'           => 'House',
+				)
+			)
+		);
+
+		$this->assertInstanceOf( WP_Error::class, $result );
+		$this->assertSame( 'aggr_invalid_house_url', $result->get_error_code() );
+		$this->assertSame( '', $this->placements->house_click_url( $placement_id ) );
+	}
+
+	/**
+	 * Clearing house creative stays possible: no attachment, no destination.
+	 *
+	 * The guard above must not turn the empty-and-empty case into an error,
+	 * because that is the only way to remove a house creative.
+	 *
+	 * @return void
+	 */
+	public function test_house_can_be_cleared_with_empty_fields(): void {
+		wp_set_current_user( $this->administrator );
+
+		$placement_id = $this->manager->create( $this->valid_fields() );
+		$this->assertIsInt( $placement_id );
+
+		$result = $this->manager->update(
+			$placement_id,
+			$this->valid_fields(
+				array(
+					'house_attachment_id' => 0,
+					'house_click_url'     => '',
+					'house_alt'           => '',
+				)
+			)
+		);
+
+		$this->assertNotInstanceOf( WP_Error::class, $result );
+		$this->assertSame( '', $this->placements->house_click_url( $placement_id ) );
+	}
+
+	/**
 	 * SVG is stored XSS on the public site. House creative cannot be one.
 	 *
 	 * @return void

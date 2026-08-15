@@ -59,13 +59,44 @@ final class PortalContrastTest extends TestCase {
 
 		$matches = array();
 
-		preg_match_all( '/(--aggr-color-[\w-]+):\s*(#[0-9a-fA-F]{6})\s*;/', $css, $matches, PREG_SET_ORDER );
+		preg_match_all( '/(--aggr-(?:color-[\w-]+|border-color)):\s*(#[0-9a-fA-F]{6})\s*;/', $css, $matches, PREG_SET_ORDER );
 
 		foreach ( $matches as $match ) {
 			$this->tokens[ $match[1] ] = strtolower( $match[2] );
 		}
 
 		$this->assertNotSame( array(), $this->tokens, 'No colour tokens found — has the stylesheet moved?' );
+	}
+
+	/**
+	 * The approved product palette remains the fresh-install visual identity.
+	 *
+	 * Contrast assertions permit many accessible colours. This exact contract
+	 * catches an unintended rebrand that would otherwise remain technically
+	 * accessible and pass every pairing below.
+	 *
+	 * @return void
+	 */
+	public function test_default_tokens_match_the_approved_product_palette(): void {
+		$approved = array(
+			'--aggr-color-rail'          => '#111214',
+			'--aggr-color-canvas'        => '#f7f4ee',
+			'--aggr-color-surface'       => '#ffffff',
+			'--aggr-color-accent'        => '#ff3b2f',
+			'--aggr-color-accent-strong' => '#8e1f1f',
+			'--aggr-color-accent-rail'   => '#e90d00',
+			'--aggr-color-text-body'     => '#4a4844',
+			'--aggr-color-text-subtle'   => '#6d6a5d',
+			'--aggr-border-color'        => '#e3dfd4',
+			'--aggr-color-live'          => '#1a7a4d',
+			'--aggr-color-pending'       => '#91630d',
+			'--aggr-color-danger'        => '#c03826',
+		);
+
+		foreach ( $approved as $token => $hex ) {
+			$this->assertArrayHasKey( $token, $this->tokens );
+			$this->assertSame( $hex, $this->tokens[ $token ], "{$token} drifted from the approved product palette." );
+		}
 	}
 
 	/**
@@ -180,10 +211,28 @@ final class PortalContrastTest extends TestCase {
 	/**
 	 * The accent is distinguishable where it marks state rather than carries text.
 	 *
+	 * The focus ring is the accent itself and lands on both the light surfaces
+	 * and the rail, so it is measured against both.
+	 *
 	 * @return void
 	 */
 	public function test_the_accent_is_visible_against_the_rail(): void {
 		$this->assertContrast( 'accent', 'rail-active', self::AA_NON_TEXT );
 		$this->assertContrast( 'accent', 'surface', self::AA_NON_TEXT );
+	}
+
+	/**
+	 * The active nav chip separates from the rail, and its glyph from the chip.
+	 *
+	 * Both are graphical rather than text, so 3:1 applies. This is the only
+	 * accented surface measured against a dark background, which is why it has
+	 * its own token — see the note beside --aggr-color-accent-rail.
+	 *
+	 * @return void
+	 */
+	public function test_the_active_nav_chip_reads_on_the_rail(): void {
+		$this->assertContrast( 'accent-rail', 'rail-active', self::AA_NON_TEXT );
+		$this->assertContrast( 'accent-rail', 'rail', self::AA_NON_TEXT );
+		$this->assertContrast( 'accent-contrast', 'accent-rail', self::AA_NON_TEXT );
 	}
 }

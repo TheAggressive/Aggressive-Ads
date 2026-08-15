@@ -226,6 +226,9 @@ packaged_version=$(grep -m1 -oE '^\s*\*\s*Version:\s*\S+' "${root}/${PLUGIN_FILE
 packaged_constant=$(
 	grep -m1 -oE "define\( 'AGGR_VERSION', '[^']+'" "${root}/${PLUGIN_FILE}" | awk -F"'" '{print $4}'
 )
+packaged_block_version=$(
+	grep -m1 -oE '"version": "[^"]+"' "${root}/dist/blocks/placement/block.json" | cut -d'"' -f4
+)
 
 if [ "${packaged_version}" != "${VERSION}" ]; then
 	fail "header says ${packaged_version}, archive is ${VERSION}"
@@ -233,6 +236,10 @@ fi
 
 if [ "${packaged_constant}" != "${VERSION}" ]; then
 	fail "AGGR_VERSION says ${packaged_constant}, archive is ${VERSION}"
+fi
+
+if [ "${packaged_block_version}" != "${VERSION}" ]; then
+	fail "placement block says ${packaged_block_version}, archive is ${VERSION}"
 fi
 
 # 6. Every PHP file parses. A syntax error in a shipped file is a white screen

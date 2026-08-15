@@ -87,6 +87,7 @@ use Aggressive\Ads\Security\Admin_Guard;
 use Aggressive\Ads\Security\Delivery_Health;
 use Aggressive\Ads\Security\Ownership;
 use Aggressive\Ads\Security\Private_Storage_Health;
+use Aggressive\Ads\Security\Private_Storage_Notice;
 use Aggressive\Ads\Security\Rate_Limiter;
 use Aggressive\Ads\Security\Roles;
 use Aggressive\Ads\Service_Container;
@@ -340,6 +341,13 @@ final class Service_Registrar {
 			Private_Storage_Health::class,
 			static fn ( Service_Container $c ): Private_Storage_Health => new Private_Storage_Health(
 				$c->get( Private_Storage::class )
+			)
+		);
+
+		$container->register(
+			Private_Storage_Notice::class,
+			static fn ( Service_Container $c ): Private_Storage_Notice => new Private_Storage_Notice(
+				$c->get( Private_Storage_Health::class )
 			)
 		);
 
