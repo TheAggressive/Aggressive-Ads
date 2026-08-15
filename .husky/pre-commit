@@ -1,0 +1,4 @@
+# Fix and re-stage only files already selected for this commit. The bounded
+# quality gate runs on pre-push.
+pnpm precommit
+git diff --cached --check

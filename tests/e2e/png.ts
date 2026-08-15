@@ -4,7 +4,8 @@ const crcTable = Array.from( { length: 256 }, ( _, index ) => {
 	let value = index;
 
 	for ( let bit = 0; bit < 8; bit += 1 ) {
-		value = ( value & 1 ) === 1 ? 0xedb88320 ^ ( value >>> 1 ) : value >>> 1;
+		value =
+			( value & 1 ) === 1 ? 0xedb88320 ^ ( value >>> 1 ) : value >>> 1;
 	}
 
 	return value >>> 0;

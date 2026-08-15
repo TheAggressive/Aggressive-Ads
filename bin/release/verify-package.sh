@@ -26,7 +26,11 @@ PACKAGE_FORBIDDEN=(
 	types
 	.git
 	.github
+	.husky
+	.prettierignore
+	.prettierrc.cjs
 	.pnpm-store
+	commitlint.config.mjs
 	docs
 	CLAUDE.md
 	composer.json

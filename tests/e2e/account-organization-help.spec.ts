@@ -10,7 +10,9 @@ import { signIn } from './sign-in-helper';
  * is closed to them. That makes this the one browser path where a real person
  * changes something about their own login, and it is worth driving as one.
  */
-test( 'advertiser reads and edits their account, organization and help', async ( { page } ) => {
+test( 'advertiser reads and edits their account, organization and help', async ( {
+	page,
+} ) => {
 	await page.goto( '/advertiser/' );
 	await signIn( page, 'advertiser@example.test', 'advertiser' );
 	await expect( page ).toHaveURL( /\/advertiser\/?$/ );
@@ -20,7 +22,9 @@ test( 'advertiser reads and edits their account, organization and help', async (
 	await page.getByRole( 'link', { name: 'Organization' } ).click();
 	await expect( page ).toHaveURL( /\/advertiser\/organization\/$/ );
 	await expect( page.getByRole( 'heading', { level: 1 } ) ).toBeVisible();
-	await expect( page.getByRole( 'columnheader', { name: 'Role' } ) ).toBeVisible();
+	await expect(
+		page.getByRole( 'columnheader', { name: 'Role' } )
+	).toBeVisible();
 	await expect( page.getByRole( 'cell', { name: 'Owner' } ) ).toBeVisible();
 	await expect(
 		page.getByRole( 'link', { name: 'Organization' } )
@@ -30,12 +34,17 @@ test( 'advertiser reads and edits their account, organization and help', async (
 	await page.getByRole( 'link', { name: 'Help' } ).click();
 	await expect( page ).toHaveURL( /\/advertiser\/help\/$/ );
 	await expect(
-		page.getByRole( 'heading', { level: 2, name: 'What each status means' } )
+		page.getByRole( 'heading', {
+			level: 2,
+			name: 'What each status means',
+		} )
 	).toBeVisible();
 
 	// Derived from the upload rules rather than written into the page, so this
 	// also pins that the derivation still produces something readable.
-	await expect( page.getByText( /Images only: JPEG, PNG, GIF, WebP/ ) ).toBeVisible();
+	await expect(
+		page.getByText( /Images only: JPEG, PNG, GIF, WebP/ )
+	).toBeVisible();
 	await expectPortalA11y( page );
 
 	await page.getByRole( 'link', { name: 'Account' } ).click();

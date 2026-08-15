@@ -33,7 +33,11 @@ PACKAGE_FORBIDDEN=(
 	types
 	.git
 	.github
+	.husky
+	.prettierignore
+	.prettierrc.cjs
 	.pnpm-store
+	commitlint.config.mjs
 	docs
 	CLAUDE.md
 	test-results
@@ -84,6 +88,9 @@ mkdir -p "${STAGING}"
 rsync -a \
 	--exclude='.git/' \
 	--exclude='.github/' \
+	--exclude='.husky/' \
+	--exclude='.prettierignore' \
+	--exclude='.prettierrc*' \
 	--exclude='.wp-env*' \
 	--exclude='.editorconfig' \
 	--exclude='.gitignore' \
@@ -101,6 +108,7 @@ rsync -a \
 	--exclude='CLAUDE.md' \
 	--exclude='release/' \
 	--exclude='composer.*' \
+	--exclude='commitlint.config.*' \
 	--exclude='package.json' \
 	--exclude='pnpm-*' \
 	--exclude='.npmrc' \

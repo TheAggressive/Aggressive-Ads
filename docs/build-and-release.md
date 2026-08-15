@@ -6,13 +6,14 @@
 
 ```
 ci:doctor    → node bin/ci/doctor.mjs
+composer:verify → strict manifest/lock validation + dependency dry run
 ci:build     → pnpm build
-ci:frontend  → lint:js && typecheck && lint:css && test:js
+ci:frontend  → lint:js && typecheck && lint:css && format:check && test:js
 ci:php       → lint:php && analyse:php && test:php:unit
 ci:coverage  → unit coverage collection + quantitative regression floor
 ci:php:wp    → test:php:integration && test:php:multisite  (needs wp-env)
-ci:e2e       → build && test:e2e
-ci:package   → build && release:package && release:verify
+ci:e2e       → test:e2e  (consumes the build artifact)
+ci:package   → release:package && release:verify  (consumes the build artifact)
 ci:verify    → bash bin/ci/verify.sh          (every current lane, serially)
 ```
 
@@ -21,8 +22,11 @@ not a command the repository pretends to run.
 
 Adding a lane means adding it to **both** the workflow and `bin/ci/verify.sh`. Adding it to only one is how the two drift.
 
-The E2E job installs Playwright's pinned Chromium and WebKit builds, starts wp-env, and
-runs the same `pnpm ci:e2e` command as local verification. Failed runs retain
+The build job uploads one `dist/` artifact which the E2E and package jobs both
+download. This makes the browser-tested assets the packaged assets instead of
+allowing each job to compile a different tree. The E2E job installs Playwright's
+pinned Chromium and WebKit builds, starts wp-env, and runs the same
+`pnpm ci:e2e` command as local verification. Failed runs retain
 the trace, screenshot, video, and WordPress debug log; skipped specs make the
 lane fail rather than quietly reducing coverage.
 
@@ -89,7 +93,7 @@ pnpm build            # clean dist/, then modules + assets + blocks
 pnpm start            # watch all three lanes
 pnpm typecheck        # tsc --noEmit (strict + noUncheckedIndexedAccess)
 pnpm lint:js          # ESLint on src/
-pnpm lint:css         # Stylelint on src/styles/
+pnpm lint:css         # Stylelint on all authored CSS, including block CSS
 pnpm test:js          # Jest via wp-scripts (pure helpers only)
 ```
 
@@ -164,16 +168,49 @@ Releases are explicit and tag-driven. Update the version in the plugin header,
 strict `vMAJOR.MINOR.PATCH` tag for that commit.
 
 `.github/workflows/release.yml` refuses a tag whose version differs from the
-plugin header. It packages and verifies the ZIP, creates a build-provenance
-attestation, and uploads these exact assets to a private draft:
+plugin header or whose commit has no successful master CI run. It downloads the
+verified `plugin-package` artifact from that run rather than rebuilding it,
+verifies it again, creates a build-provenance attestation, and uploads these
+exact assets to a private draft:
 
 - `aggressive-ads-{version}.zip`
 - `aggressive-ads-{version}.zip.sha256`
 
 `bin/release/publish.sh` downloads both assets again, compares them byte for
-byte with the accepted local build, verifies the SHA-256 sidecar and provenance,
+byte with the accepted CI build, verifies the SHA-256 sidecar and provenance,
 and only then publishes the draft. A failed release stays invisible to the
 updater. Published release assets are treated as immutable.
+
+The artifact invariant is:
+
+> The ZIP accepted by CI is the same ZIP checksummed, attested, remotely
+> verified, and published.
+
+## Local Git hooks
+
+The hooks mirror the Aggressive theme's development cycle:
+
+- `pre-commit` runs deterministic WordPress formatting plus ESLint/Stylelint
+  autofixes, then rejects whitespace errors.
+- `commit-msg` enforces Conventional Commits so release history stays
+  machine-readable.
+- `pre-push` runs `pnpm qa:fast`: toolchain and lock validation, repository
+  contracts, frontend checks, build, PHP quality/tests, and unit coverage.
+- `pnpm qa` is the full release rehearsal, including Docker-backed WordPress,
+  Playwright browser/system-dependency provisioning, browser tests, and the
+  packaging lane.
+
+Hooks are installed by `pnpm install` through the `prepare` script. `--no-verify`
+is an emergency escape hatch, not the normal development path; CI remains the
+authoritative enforcement boundary.
+
+## Branch protection
+
+The importable ruleset in `.github/rulesets/release-branches.json` requires
+pull requests, signed squash commits, resolved review threads, the stable
+`CI Summary` check, CodeQL, Actionlint, and Zizmor. Committing the JSON does not
+change GitHub settings: import it under **Settings → Rules → Rulesets** after the
+new checks have completed successfully once.
 
 The plugin updater accepts only stable strict-semver releases from the exact
 `TheAggressive/Aggressive-Ads` repository and exact asset names. It does

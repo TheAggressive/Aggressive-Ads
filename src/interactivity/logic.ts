@@ -16,16 +16,9 @@ export const DISPLAY_STEPS = [
 
 export type WizardStep = ( typeof DISPLAY_STEPS )[ number ];
 
-export type FileCheckCode =
-	| 'type'
-	| 'size'
-	| 'pixels'
-	| 'dimensions'
-	| 'empty';
+export type FileCheckCode = 'type' | 'size' | 'pixels' | 'dimensions' | 'empty';
 
-export type FileCheck =
-	| { ok: true }
-	| { ok: false; code: FileCheckCode };
+export type FileCheck = { ok: true } | { ok: false; code: FileCheckCode };
 
 export function isWizardStep( value: string ): value is WizardStep {
 	return ( DISPLAY_STEPS as readonly string[] ).includes( value );
@@ -55,10 +48,7 @@ export function previousStep( current: string ): WizardStep | null {
  * Submit is gated. Every earlier step is reachable so an advertiser can
  * go back; the server still refuses to persist an illegal resume point.
  */
-export function canVisitStep(
-	target: string,
-	submitReady: boolean
-): boolean {
+export function canVisitStep( target: string, submitReady: boolean ): boolean {
 	if ( ! isWizardStep( target ) ) {
 		return false;
 	}

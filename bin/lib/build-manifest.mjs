@@ -65,7 +65,10 @@ export function getAssetWebpackEntries( cwd = process.cwd() ) {
 
 	jsFiles.forEach( ( file ) => {
 		const rel = toPosix(
-			path.relative( path.join( cwd, 'src/scripts' ), path.join( cwd, file ) )
+			path.relative(
+				path.join( cwd, 'src/scripts' ),
+				path.join( cwd, file )
+			)
 		);
 		const name = rel.replace( /\.(js|ts|tsx)$/i, '' );
 		entries[ `scripts/${ name }` ] = path.resolve( cwd, file );
@@ -78,7 +81,10 @@ export function getAssetWebpackEntries( cwd = process.cwd() ) {
 
 	styleFiles.forEach( ( file ) => {
 		const rel = toPosix(
-			path.relative( path.join( cwd, 'src/styles' ), path.join( cwd, file ) )
+			path.relative(
+				path.join( cwd, 'src/styles' ),
+				path.join( cwd, file )
+			)
 		);
 
 		if ( portalPartials.has( rel ) ) {

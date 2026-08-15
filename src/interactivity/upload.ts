@@ -55,7 +55,10 @@ function readImageSize(
 		const image = new Image();
 		image.onload = () => {
 			URL.revokeObjectURL( url );
-			resolve( { width: image.naturalWidth, height: image.naturalHeight } );
+			resolve( {
+				width: image.naturalWidth,
+				height: image.naturalHeight,
+			} );
 		};
 		image.onerror = () => {
 			URL.revokeObjectURL( url );

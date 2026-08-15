@@ -1,0 +1,4 @@
+# Mirrors the Aggressive theme: keep this fast enough that developers do not
+# routinely bypass it. Docker-backed integration, browser and package lanes
+# remain CI/full-rehearsal checks.
+pnpm qa:fast

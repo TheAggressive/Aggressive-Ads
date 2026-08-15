@@ -144,7 +144,7 @@ pnpm test:php:unit            # fast, no database
 pnpm test:php:integration     # needs wp-env + WP test suite
 pnpm test:php:security
 pnpm test:js
-pnpm test:e2e:install         # once per machine: install Chromium and WebKit
+pnpm test:e2e:install         # install browsers and required system libraries
 pnpm test:e2e                 # needs wp-env running; setup seeds its own data
 pnpm ci:verify                # everything, serially, as CI would
 ```

@@ -6,7 +6,12 @@ import {
 	SelectControl,
 	Spinner,
 } from '@wordpress/components';
-import { createElement, Fragment, useEffect, useState } from '@wordpress/element';
+import {
+	createElement,
+	Fragment,
+	useEffect,
+	useState,
+} from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import apiFetch from '@wordpress/api-fetch';
 

@@ -58,9 +58,7 @@ function getPanel( id: string ): HTMLElement | null {
 }
 
 function getAnnouncer( id: string ): HTMLElement | null {
-	return (
-		getShell( id )?.querySelector( '.aggr-overlay__announcer' ) ?? null
-	);
+	return getShell( id )?.querySelector( '.aggr-overlay__announcer' ) ?? null;
 }
 
 function syncTriggers( id: string, isOpen: boolean ): void {
@@ -105,7 +103,10 @@ function ensureDialogState( id: string ): Record< string, DialogState > {
 	return state.dialogs;
 }
 
-function cancelPendingClose( panel: HTMLElement | null, refs: DialogRefs ): void {
+function cancelPendingClose(
+	panel: HTMLElement | null,
+	refs: DialogRefs
+): void {
 	if ( refs.closeTimer !== null ) {
 		clearTimeout( refs.closeTimer );
 		refs.closeTimer = null;
@@ -140,8 +141,8 @@ function openDialog( id: string, trigger: HTMLElement | null = null ): void {
 		trigger instanceof HTMLElement
 			? trigger
 			: document.activeElement instanceof HTMLElement
-				? document.activeElement
-				: null;
+			? document.activeElement
+			: null;
 
 	if ( refs?.isClosing ) {
 		cancelPendingClose( panel, refs );
@@ -181,7 +182,12 @@ function openDialog( id: string, trigger: HTMLElement | null = null ): void {
 		const currentRefs = dialogRefs.get( id );
 		const shellEl = getShell( id );
 		const panelEl = getPanel( id );
-		if ( ! shellEl || ! panelEl || ! dialogs[ id ]?.isOpen || ! currentRefs ) {
+		if (
+			! shellEl ||
+			! panelEl ||
+			! dialogs[ id ]?.isOpen ||
+			! currentRefs
+		) {
 			return;
 		}
 		if ( ! currentRefs.focusTrapCleanup ) {
@@ -286,10 +292,7 @@ function closeDialog( id: string ): void {
 
 	if ( panel && effectiveDuration > 0 ) {
 		const handleTransitionEnd = ( event: TransitionEvent ): void => {
-			if (
-				event.target === panel &&
-				event.propertyName === 'opacity'
-			) {
+			if ( event.target === panel && event.propertyName === 'opacity' ) {
 				finish();
 			}
 		};
@@ -340,22 +343,20 @@ function bindControls( id: string ): void {
 		return;
 	}
 
-	shell
-		.querySelectorAll( '[data-aggr-dialog-close]' )
-		.forEach( ( el ) => {
-			if ( ! ( el instanceof HTMLElement ) ) {
-				return;
-			}
-			if ( boundTriggers.get( el ) === `close:${ id }` ) {
-				return;
-			}
-			boundTriggers.set( el, `close:${ id }` );
+	shell.querySelectorAll( '[data-aggr-dialog-close]' ).forEach( ( el ) => {
+		if ( ! ( el instanceof HTMLElement ) ) {
+			return;
+		}
+		if ( boundTriggers.get( el ) === `close:${ id }` ) {
+			return;
+		}
+		boundTriggers.set( el, `close:${ id }` );
 
-			el.addEventListener( 'click', ( event ) => {
-				event.preventDefault();
-				closeDialog( id );
-			} );
+		el.addEventListener( 'click', ( event ) => {
+			event.preventDefault();
+			closeDialog( id );
 		} );
+	} );
 }
 
 function bindEscape(): void {

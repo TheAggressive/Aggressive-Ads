@@ -81,12 +81,13 @@ describe( 'checkCreativeFile', () => {
 			ok: false,
 			code: 'empty',
 		} );
-		expect( checkCreativeFile( { ...base, mime: 'image/svg+xml' } ) ).toEqual(
-			{ ok: false, code: 'type' }
-		);
 		expect(
-			checkCreativeFile( { ...base, bytes: 2097153 } )
-		).toEqual( { ok: false, code: 'size' } );
+			checkCreativeFile( { ...base, mime: 'image/svg+xml' } )
+		).toEqual( { ok: false, code: 'type' } );
+		expect( checkCreativeFile( { ...base, bytes: 2097153 } ) ).toEqual( {
+			ok: false,
+			code: 'size',
+		} );
 		expect(
 			checkCreativeFile( { ...base, width: 5000, height: 5001 } )
 		).toEqual( { ok: false, code: 'pixels' } );

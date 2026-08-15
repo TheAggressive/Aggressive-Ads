@@ -1,0 +1,23 @@
+# CSS is formatted by Stylelint.
+src/**/*.css
+
+# PHP follows PHPCS/WPCS rather than Prettier.
+**/*.php
+
+# Generated and third-party content.
+dist/
+build/
+release/
+node_modules/
+vendor/
+coverage/
+test-results/
+.playwright-results/
+playwright-report/
+.phpunit.cache/
+pnpm-lock.yaml
+
+# Prose and templates are deliberately outside the automatic commit formatter.
+docs/
+templates/
+*.md

@@ -22,6 +22,7 @@ run() {
 }
 
 run "doctor"      pnpm ci:doctor
+run "composer"    pnpm composer:verify
 run "security"    pnpm ci:security
 run "structure"   pnpm lint:files
 run "build"       pnpm ci:build
@@ -41,6 +42,7 @@ if ! docker info >/dev/null 2>&1; then
 fi
 
 run "php:wp"      pnpm ci:php:wp
+run "browsers"    pnpm test:e2e:install
 run "e2e"         pnpm ci:e2e
 run "package"     pnpm ci:package
 

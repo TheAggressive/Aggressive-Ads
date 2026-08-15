@@ -11,7 +11,10 @@ driver=$(php -r 'echo extension_loaded("pcov") ? "pcov" : (extension_loaded("xde
 
 case "$driver" in
 	pcov)
-		php -d pcov.enabled=1 vendor/bin/phpunit --coverage-clover "$report"
+		# PCOV's automatic directory detection prefers a top-level src/ folder.
+		# This project has JavaScript in src/ and PHP in inc/, so leaving the
+		# default in place records zero covered PHP statements in Actions.
+		php -d pcov.enabled=1 -d "pcov.directory=${PWD}/inc" vendor/bin/phpunit --coverage-clover "$report"
 		;;
 	xdebug)
 		XDEBUG_MODE=coverage php vendor/bin/phpunit --coverage-clover "$report"

@@ -1,6 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const baseURL = process.env.AGGR_E2E_BASE_URL ?? 'http://localhost:9960';
+const outputDir = process.env.AGGR_E2E_OUTPUT_DIR ?? '.playwright-results';
 
 export default defineConfig( {
 	testDir: './tests/e2e',
@@ -41,5 +42,5 @@ export default defineConfig( {
 			testMatch: /reflow\/.*\.spec\.ts/,
 		},
 	],
-	outputDir: 'test-results/playwright',
+	outputDir,
 } );

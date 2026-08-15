@@ -16,7 +16,9 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve( dirname( fileURLToPath( import.meta.url ) ), '../..' );
-const pkg = JSON.parse( readFileSync( resolve( root, 'package.json' ), 'utf8' ) );
+const pkg = JSON.parse(
+	readFileSync( resolve( root, 'package.json' ), 'utf8' )
+);
 
 /**
  * Parses a range of the form ">=24 <25" into inclusive/exclusive majors.
@@ -46,17 +48,33 @@ function majorOf( output ) {
 	return match ? Number( match[ 1 ] ) : null;
 }
 
+/**
+ * Reads pnpm from the package-manager user agent when invoked by a pnpm
+ * script. This avoids recursively starting pnpm (and opening its store) merely
+ * to print a version. Direct invocations retain the command fallback.
+ *
+ * @return {string} pnpm version, or an empty string when unavailable.
+ */
+function pnpmVersion() {
+	const userAgent = process.env.npm_config_user_agent ?? '';
+	const fromUserAgent = /(?:^|\s)pnpm\/([^\s]+)/.exec( userAgent )?.[ 1 ];
+
+	if ( fromUserAgent ) {
+		return fromUserAgent;
+	}
+
+	try {
+		return execFileSync( 'pnpm', [ '--version' ], { encoding: 'utf8' } );
+	} catch {
+		return '';
+	}
+}
+
 const checks = [
 	{ name: 'node', actual: process.version, range: pkg.engines?.node },
 	{
 		name: 'pnpm',
-		actual: ( () => {
-			try {
-				return execFileSync( 'pnpm', [ '--version' ], { encoding: 'utf8' } );
-			} catch {
-				return '';
-			}
-		} )(),
+		actual: pnpmVersion(),
 		range: pkg.engines?.pnpm,
 	},
 ];
@@ -71,7 +89,9 @@ for ( const { name, actual, range } of checks ) {
 	const major = majorOf( actual );
 
 	if ( major === null ) {
-		console.error( `doctor: could not determine ${ name } version (is it installed?)` );
+		console.error(
+			`doctor: could not determine ${ name } version (is it installed?)`
+		);
 		failed = true;
 		continue;
 	}
@@ -81,7 +101,9 @@ for ( const { name, actual, range } of checks ) {
 	const tooNew = maxExclusive !== null && major >= maxExclusive;
 
 	if ( tooOld || tooNew ) {
-		console.error( `doctor: ${ name } ${ actual.trim() } does not satisfy "${ range }"` );
+		console.error(
+			`doctor: ${ name } ${ actual.trim() } does not satisfy "${ range }"`
+		);
 		failed = true;
 		continue;
 	}

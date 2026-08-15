@@ -20,6 +20,7 @@
 /.eslintcache
 /coverage/
 /test-results/
+/.playwright-results/
 /playwright-report/
 
 # Compiled translations are built at package time, not committed.

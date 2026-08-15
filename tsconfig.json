@@ -1,7 +1,7 @@
 {
 	"compilerOptions": {
 		"target": "ES2021",
-		"lib": ["ES2021", "DOM", "DOM.Iterable"],
+		"lib": [ "ES2021", "DOM", "DOM.Iterable" ],
 		"allowJs": false,
 		"skipLibCheck": true,
 		"esModuleInterop": true,
@@ -15,8 +15,8 @@
 		"resolveJsonModule": true,
 		"isolatedModules": true,
 		"noEmit": true,
-		"types": ["jest", "node"]
+		"types": [ "jest", "node" ]
 	},
-	"include": ["src/**/*", "types/**/*"],
-	"exclude": ["node_modules", "vendor", "dist", "build"]
+	"include": [ "src/**/*", "types/**/*" ],
+	"exclude": [ "node_modules", "vendor", "dist", "build" ]
 }

@@ -26,7 +26,10 @@ interface AutosaveContext {
 }
 
 const initializedIds = new Set< string >();
-const pending = new Map< string, ReturnType< typeof debounce< () => void > > >();
+const pending = new Map<
+	string,
+	ReturnType< typeof debounce< () => void > >
+>();
 
 function announcerFor( id: string ): HTMLElement | null {
 	return document.getElementById( `aggr-autosave-status-${ id }` );

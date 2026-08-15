@@ -6,27 +6,31 @@ const wcagTags = [ 'wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa' ];
 /**
  * WCAG 1.4.10: content reflows at 320 CSS pixels without two-dimensional scrolling.
  */
-export async function expectNoHorizontalOverflow( page: Page ): Promise<void> {
+export async function expectNoHorizontalOverflow(
+	page: Page
+): Promise< void > {
 	const dimensions = await page.evaluate( () => ( {
 		clientWidth: document.documentElement.clientWidth,
 		scrollWidth: document.documentElement.scrollWidth,
 	} ) );
 
-	expect( dimensions.scrollWidth ).toBeLessThanOrEqual( dimensions.clientWidth + 1 );
+	expect( dimensions.scrollWidth ).toBeLessThanOrEqual(
+		dimensions.clientWidth + 1
+	);
 }
 
-export async function expectPortalA11y( page: Page ): Promise<void> {
+export async function expectPortalA11y( page: Page ): Promise< void > {
 	await expectScopedA11y( page, '.aggr-shell' );
 }
 
-export async function expectAdminA11y( page: Page ): Promise<void> {
+export async function expectAdminA11y( page: Page ): Promise< void > {
 	await expectScopedA11y( page, '.aggr-admin' );
 }
 
 /**
  * The sign-in document, which has no rail and therefore no .aggr-shell.
  */
-export async function expectSignInA11y( page: Page ): Promise<void> {
+export async function expectSignInA11y( page: Page ): Promise< void > {
 	await expectScopedA11y( page, '.aggr-bare' );
 }
 
@@ -34,7 +38,7 @@ export async function expectSignInA11y( page: Page ): Promise<void> {
  * Open overlays render in wp_footer, outside .aggr-shell (so inert on the
  * page root does not inert the dialog). Axe the open overlay, not the shell.
  */
-export async function expectOpenDialogA11y( page: Page ): Promise<void> {
+export async function expectOpenDialogA11y( page: Page ): Promise< void > {
 	await expectScopedA11y( page, '.aggr-overlay.is-open' );
 }
 
@@ -46,7 +50,7 @@ export async function expectDialogKeyboard(
 	page: Page,
 	trigger: Locator,
 	dialogName: string | RegExp
-): Promise<void> {
+): Promise< void > {
 	await trigger.click();
 	const dialog = page.getByRole( 'dialog', { name: dialogName } );
 	await expect( dialog ).toBeVisible();
@@ -66,7 +70,10 @@ export async function expectDialogKeyboard(
 	await expect( trigger ).toBeFocused();
 }
 
-async function expectScopedA11y( page: Page, selector: string ): Promise<void> {
+async function expectScopedA11y(
+	page: Page,
+	selector: string
+): Promise< void > {
 	const result = await new AxeBuilder( { page } )
 		.include( selector )
 		.withTags( wcagTags )

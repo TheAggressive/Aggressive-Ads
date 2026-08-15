@@ -24,7 +24,8 @@ const PLUGIN_MODULE_IDS = {
 };
 
 export default ( env = {}, argv = {} ) => {
-	const base = typeof wpConfig === 'function' ? wpConfig( env, argv ) : wpConfig;
+	const base =
+		typeof wpConfig === 'function' ? wpConfig( env, argv ) : wpConfig;
 	const template = Array.isArray( base ) ? base[ 0 ] : base;
 
 	return {

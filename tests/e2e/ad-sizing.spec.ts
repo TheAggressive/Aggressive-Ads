@@ -1,7 +1,9 @@
 import { expect, test } from '@playwright/test';
 import { expectNoHorizontalOverflow } from './accessibility';
 
-test( 'block padding does not shrink a native-size advertisement', async ( { page } ) => {
+test( 'block padding does not shrink a native-size advertisement', async ( {
+	page,
+} ) => {
 	await page.goto( '/e2e-ad-sizing/' );
 
 	const shell = page.locator( '[data-aggr-slot="e2e-browser-placement"]' );
@@ -21,8 +23,7 @@ test( 'block padding does not shrink a native-size advertisement', async ( { pag
 
 	const narrowCanvas = await canvas.boundingBox();
 	expect( narrowCanvas ).not.toBeNull();
-	expect( ( narrowCanvas?.width ?? 0 ) / ( narrowCanvas?.height ?? 1 ) ).toBeCloseTo(
-		728 / 90,
-		1
-	);
+	expect(
+		( narrowCanvas?.width ?? 0 ) / ( narrowCanvas?.height ?? 1 )
+	).toBeCloseTo( 728 / 90, 1 );
 } );
