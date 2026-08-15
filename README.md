@@ -98,7 +98,8 @@ pnpm lint:css                # Stylelint on every authored CSS file under src/
 pnpm test:js                 # Jest on Interactivity helpers
 pnpm lint:files              # file length, repository boundary, permission callbacks
 pnpm ci:coverage             # quantitative unit-coverage regression gate
-pnpm test:e2e:install        # install Chromium, WebKit, and required system libraries
+pnpm test:e2e:browsers       # install Chromium and WebKit
+pnpm test:e2e:install        # the same, plus system libraries (needs sudo; what CI runs)
 pnpm test:e2e                # Playwright + axe (needs wp-env, after pnpm build)
 pnpm qa:fast                 # pre-push checks; no Docker or browsers
 pnpm qa                      # every CI lane, serially; needs Docker
@@ -109,10 +110,11 @@ adding it to **both** the workflow and `bin/ci/verify.sh`.
 
 `pnpm install` enables the repository's Git hooks. Pre-commit formats and
 re-stages only selected files, commit-msg enforces Conventional Commits, and
-pre-push runs `pnpm qa:fast`. The full `pnpm qa` rehearsal provisions
-Playwright's browser and operating-system dependencies and may request elevated
-permission on Linux. See [build-and-release.md](docs/build-and-release.md) for
-the CI graph, release artifact chain, and branch-protection contract.
+pre-push runs `pnpm qa:fast`. The full `pnpm qa` rehearsal installs Playwright's
+browsers but not their system libraries, so it never asks for a password; CI
+installs those with `--with-deps` on a bare runner. See
+[build-and-release.md](docs/build-and-release.md) for the CI graph, release
+artifact chain, and branch-protection contract.
 
 ## Architecture
 

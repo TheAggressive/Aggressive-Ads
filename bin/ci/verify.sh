@@ -42,7 +42,19 @@ if ! docker info >/dev/null 2>&1; then
 fi
 
 run "php:wp"      pnpm ci:php:wp
-run "browsers"    pnpm test:e2e:install
+
+# The one deliberate difference from CI, and the only one.
+#
+# CI runs `test:e2e:install`, whose --with-deps apt-gets the browsers' system
+# libraries onto a bare runner. Locally that flag shells out to sudo on every
+# single run — it never checks whether the libraries are already present — so
+# the full rehearsal stopped to ask for a root password each time.
+#
+# The libraries are one-time machine setup, not part of the change under test,
+# and a host that really is missing one fails at browse time with Playwright's
+# own instruction to run `playwright install-deps`. What CI and this script
+# still share byte for byte is the lane that decides anything: ci:e2e.
+run "browsers"    pnpm test:e2e:browsers
 run "e2e"         pnpm ci:e2e
 run "package"     pnpm ci:package
 
