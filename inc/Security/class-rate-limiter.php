@@ -275,7 +275,7 @@ final class Rate_Limiter {
 		 * There is no pattern to fix here: identifying an anonymous client is
 		 * the one thing rate limiting a login form requires.
 		 */
-		// phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.cache_constraints___SERVER__REMOTE_ADDR__, WordPressVIPMinimum.Variables.ServerVariables.UserControlledHeaders
+		// phpcs:ignore WordPressVIPMinimum.Variables.RestrictedVariables.cache_constraints___SERVER__REMOTE_ADDR__, WordPressVIPMinimum.Variables.ServerVariables.UserControlledHeaders -- See the block comment above; validated by filter_var() below and never used for caching or routing.
 		$raw = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
 
 		/*
