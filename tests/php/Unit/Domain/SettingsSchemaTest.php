@@ -34,7 +34,7 @@ final class SettingsSchemaTest extends TestCase {
 		$this->assertSame( '', $defaults['brand']['tagline'] );
 		$this->assertSame( '', $defaults['brand']['logo_url'] );
 		$this->assertSame( '#ff3b2f', $defaults['brand']['accent'] );
-		$this->assertSame( '#e90d00', $defaults['brand']['accent_strong'] );
+		$this->assertSame( '#8e1f1f', $defaults['brand']['accent_strong'] );
 		$this->assertSame( '#f7f4ee', $defaults['brand']['canvas'] );
 		$this->assertSame( '#ffffff', $defaults['brand']['surface'] );
 		$this->assertSame( '#111214', $defaults['brand']['text'] );

@@ -66,7 +66,7 @@ final class Settings_Schema {
 				'tagline'       => '',
 				'logo_url'      => '',
 				'accent'        => '#ff3b2f',
-				'accent_strong' => '#e90d00',
+				'accent_strong' => '#8e1f1f',
 				'canvas'        => '#f7f4ee',
 				'surface'       => '#ffffff',
 				'text'          => '#111214',

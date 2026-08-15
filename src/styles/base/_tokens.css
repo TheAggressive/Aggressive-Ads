@@ -38,14 +38,35 @@
 		 */
 		--aggr-color-accent: #ff3b2f;
 		/*
-		 * The same red, dark enough to carry white text.
+		 * Oxblood: the brand-forward accent, dark enough to carry white text.
 		 *
 		 * White on #ff3b2f is 3.55:1 — fine behind an icon, a failure behind a
-		 * 14px button label. Buttons read this one; the rail chip and the focus
-		 * ring keep the brighter accent, because neither is text.
+		 * 14px button label. Buttons, primary CTAs and account links read this
+		 * one; the focus ring keeps the brighter accent, because it is not text.
+		 *
+		 * It replaced #e90d00, which cleared the 4.5:1 button threshold by
+		 * 0.14. Oxblood is 8.88:1 on white and 7.58:1 on the sunken surface, so
+		 * a later nudge toward a mock has room to move without failing.
 		 */
-		--aggr-color-accent-strong: #e90d00;
+		--aggr-color-accent-strong: #8e1f1f;
 		--aggr-color-accent-contrast: #ffffff;
+
+		/*
+		 * The accent as it lands on the dark rail — today, the active nav chip.
+		 *
+		 * Every other accented surface sits on a light one, where darker is
+		 * safer. The rail inverts that: oxblood measures 1.89:1 on #1d1d20, and
+		 * no rail dark enough to still be a rail can rescue it — reading the
+		 * ratio backwards puts the required row at roughly #949189, a light
+		 * grey. So the chip gets its own token rather than borrowing either
+		 * accent, and this is about as dark as it goes while clearing the 3:1
+		 * non-text minimum, at 3.62:1.
+		 *
+		 * Unlike accent and accent-strong this is not brand-overridable, for
+		 * the same reason the rail's own colours are not: it is measured
+		 * against a fixed dark surface.
+		 */
+		--aggr-color-accent-rail: #e90d00;
 
 		/* The rail. */
 		--aggr-color-rail: #111214;
