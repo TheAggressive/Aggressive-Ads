@@ -39,7 +39,7 @@
 		"mini-css-extract-plugin": "^2.10.2",
 		"prettier": "npm:wp-prettier@^3.0.3",
 		"stylelint": "^16.24.0",
-		"typescript": "^5.9.3",
+		"typescript": "^6.0.3",
 		"webpack-merge": "^6.0.1",
 		"webpack-remove-empty-scripts": "^1.0.4"
 	},
