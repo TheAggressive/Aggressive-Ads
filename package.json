@@ -35,7 +35,7 @@
 		"fast-glob": "^3.3.3",
 		"husky": "^9.1.7",
 		"jest-environment-jsdom": "30.4.1",
-		"lint-staged": "^16.2.7",
+		"lint-staged": "^17.0.8",
 		"mini-css-extract-plugin": "^2.10.2",
 		"prettier": "npm:wp-prettier@^3.0.3",
 		"stylelint": "^16.24.0",
