@@ -186,6 +186,9 @@ The artifact invariant is:
 > The ZIP accepted by CI is the same ZIP checksummed, attested, remotely
 > verified, and published.
 
+The release job uses the `production` GitHub environment. Its deployment branch
+policy permits only `master`, matching the Aggressive Apparel repository.
+
 ## Local Git hooks
 
 The hooks mirror the Aggressive theme's development cycle:

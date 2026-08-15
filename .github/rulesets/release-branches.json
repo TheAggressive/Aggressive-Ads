@@ -33,7 +33,7 @@
 				"strict_required_status_checks_policy": true,
 				"required_status_checks": [
 					{ "context": "CI Summary" },
-					{ "context": "Analyze (JavaScript/TypeScript)" },
+					{ "context": "Analyze (JavaScript/TypeScript) (javascript-typescript)" },
 					{ "context": "Actionlint" },
 					{ "context": "Zizmor" }
 				]

@@ -13,6 +13,13 @@ You should get an acknowledgement within two working days. If you do not,
 assume the mail did not arrive and try again rather than assuming it was
 ignored.
 
+## Supported versions
+
+Security fixes are issued for the latest published stable release. Older
+releases and development snapshots are not maintained; upgrade to the latest
+release before requesting a backport. Before the first stable release, security
+fixes land on `master` and are included in the next tagged release.
+
 ## What we consider in scope
 
 Anything that lets one advertiser reach another's data, lets an advertiser
@@ -67,6 +74,25 @@ item, atomic counter support, and tracking-maintenance schedules. Reverse
 proxies must restore a validated client address into `REMOTE_ADDR`; forwarded
 headers are not trusted by the plugin. See
 [delivery performance and operations](docs/delivery-performance.md).
+
+## Software supply-chain controls
+
+- Third-party GitHub Actions are pinned to immutable commit SHAs and checked in
+  CI. Actionlint and Zizmor independently validate workflow correctness and
+  security; CodeQL analyzes JavaScript and TypeScript.
+- Composer and pnpm lockfiles are installed frozen and audited. Audit exceptions
+  require a local source-level regression check and a documented removal
+  condition.
+- The release workflow never rebuilds the plugin. It downloads the exact ZIP
+  accepted by the successful `master` CI run, verifies its SHA-256 sidecar,
+  creates a provenance attestation, compares the uploaded assets byte-for-byte,
+  and only then publishes the release.
+- The protected release branch requires signed linear history, squash-only pull
+  requests, resolved review threads, and successful CI and workflow-security
+  checks.
+
+The implementation and operator procedure are documented in
+[build-and-release.md](docs/build-and-release.md).
 
 ## Patched development dependency
 

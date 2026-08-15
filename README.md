@@ -73,11 +73,12 @@ production autoloader is `inc/class-autoloader.php`. See
 
 ```bash
 composer install      # PHPCS, PHPStan, PHPUnit — vendor/ never ships
-pnpm install          # webpack, TypeScript, Playwright
+pnpm install          # frontend tools + staged-file Git hooks
 pnpm env:start        # dev http://localhost:9960, tests :9970
 pnpm build            # src/ → dist/
 pnpm dev:seed         # an advertiser, an org, and five campaigns
-pnpm ci:verify        # the contract for declaring a change finished
+pnpm qa:fast          # deterministic pre-push quality gate
+pnpm qa               # full release rehearsal (Docker + browser dependencies)
 ```
 
 wp-env mounts this checkout at `wp-content/plugins/aggressive-ads`. Sign in as
@@ -93,17 +94,25 @@ pnpm test:php:integration    # integration / security / rest / upgrade (needs wp
 pnpm test:php:multisite      # colliding-id tenancy (needs wp-env)
 pnpm lint:js                 # ESLint on src/
 pnpm typecheck               # tsc --noEmit
-pnpm lint:css                # Stylelint on src/styles/
+pnpm lint:css                # Stylelint on every authored CSS file under src/
 pnpm test:js                 # Jest on Interactivity helpers
 pnpm lint:files              # file length, repository boundary, permission callbacks
 pnpm ci:coverage             # quantitative unit-coverage regression gate
-pnpm test:e2e:install        # install pinned Chromium and WebKit browsers
+pnpm test:e2e:install        # install Chromium, WebKit, and required system libraries
 pnpm test:e2e                # Playwright + axe (needs wp-env, after pnpm build)
-pnpm ci:verify               # every CI lane, serially
+pnpm qa:fast                 # pre-push checks; no Docker or browsers
+pnpm qa                      # every CI lane, serially; needs Docker
 ```
 
 Each `ci:*` script maps 1:1 onto a GitHub Actions job. Adding a lane means
 adding it to **both** the workflow and `bin/ci/verify.sh`.
+
+`pnpm install` enables the repository's Git hooks. Pre-commit formats and
+re-stages only selected files, commit-msg enforces Conventional Commits, and
+pre-push runs `pnpm qa:fast`. The full `pnpm qa` rehearsal provisions
+Playwright's browser and operating-system dependencies and may request elevated
+permission on Linux. See [build-and-release.md](docs/build-and-release.md) for
+the CI graph, release artifact chain, and branch-protection contract.
 
 ## Architecture
 
