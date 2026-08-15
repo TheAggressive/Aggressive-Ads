@@ -67,13 +67,16 @@ if ( 'creative' === $aggr_step && '' !== $aggr_creative_notice ) {
 
 <div class="aggr-pagehead">
 	<div>
-		<h1 class="aggr-title"><?php echo esc_html( (string) $aggr_campaign['title'] ); ?></h1>
+		<div class="aggr-pagehead__heading">
+			<h1 class="aggr-title"><?php echo esc_html( (string) $aggr_campaign['title'] ); ?></h1>
+
+			<span class="aggr-pill aggr-pill--<?php echo esc_attr( (string) $aggr_campaign['pill'] ); ?>">
+				<?php echo esc_html( (string) $aggr_campaign['status_text'] ); ?>
+			</span>
+		</div>
+
 		<p class="aggr-lede"><?php echo esc_html( (string) $aggr_campaign['dates'] ); ?></p>
 	</div>
-
-	<span class="aggr-pill aggr-pill--<?php echo esc_attr( (string) $aggr_campaign['pill'] ); ?>">
-		<?php echo esc_html( (string) $aggr_campaign['status_text'] ); ?>
-	</span>
 
 	<?php if ( true === $aggr_campaign['can_copy'] ) : ?>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">

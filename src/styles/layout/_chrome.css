@@ -27,6 +27,25 @@
 	border-radius: var(--aggr-radius-small);
 }
 
+/*
+ * Headings that exist only as focus targets do not get a ring.
+ *
+ * The wizard moves focus to the step heading after each step so a screen
+ * reader announces the new context. Those headings are tabindex="-1", which
+ * means no keyboard user can ever reach them by tabbing — so the ring marks a
+ * stop that does not exist, and on a fresh document Chrome treats programmatic
+ * focus as keyboard focus and draws it on arrival. The result was a red box
+ * around "Campaign details" every time somebody opened a campaign.
+ *
+ * Removing it costs nothing that WCAG 2.4.7 asks for: that applies to
+ * keyboard-operable components, and this is not one. The announcement, which
+ * is the reason the focus move exists, is unaffected.
+ */
+.aggr-portal h1[tabindex="-1"]:focus-visible,
+.aggr-portal h2[tabindex="-1"]:focus-visible {
+	outline: none;
+}
+
 .aggr-shell {
 	display: flex;
 	min-height: 100vh;
@@ -253,6 +272,22 @@
 
 .aggr-pagehead form {
 	margin: 0;
+}
+
+/*
+ * The status sits with the name it describes, not stranded between the name
+ * and the button. .aggr-pagehead is space-between, so a third child landed in
+ * the middle of the row and read as belonging to neither.
+ *
+ * baseline rather than center so the pill sits on the title's baseline as the
+ * heading grows with its clamp(), and wrap so a long name pushes the pill to
+ * the next line instead of squeezing it.
+ */
+.aggr-pagehead__heading {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: baseline;
+	gap: var(--aggr-space-sm);
 }
 
 .aggr-title {
