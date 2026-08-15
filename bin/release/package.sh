@@ -127,27 +127,6 @@ rsync -a \
 	--exclude='*.log' \
 	./ "${STAGING}/"
 
-# semantic-release owns the published version. Stamp only the staged tree so
-# the checkout is never rewritten by the release bot and the bytes verified by
-# CI are the bytes WordPress ultimately installs.
-sed -i -E \
-	"s/^([[:space:]]*\*[[:space:]]*Version:[[:space:]]*).*/\1${VERSION}/" \
-	"${STAGING}/${PLUGIN_FILE}"
-sed -i -E \
-	"s/define\( 'AGGR_VERSION', '[^']+' \);/define( 'AGGR_VERSION', '${VERSION}' );/" \
-	"${STAGING}/${PLUGIN_FILE}"
-
-staged_header_version=$(
-	grep -m1 -oE '^\s*\*\s*Version:\s*\S+' "${STAGING}/${PLUGIN_FILE}" | awk '{print $NF}'
-)
-staged_constant_version=$(
-	grep -m1 -oE "define\( 'AGGR_VERSION', '[^']+'" "${STAGING}/${PLUGIN_FILE}" | awk -F"'" '{print $4}'
-)
-if [[ "${staged_header_version}" != "${VERSION}" || "${staged_constant_version}" != "${VERSION}" ]]; then
-	echo "Version stamp did not apply to the staged plugin." >&2
-	exit 1
-fi
-
 failed=0
 
 for path in "${PACKAGE_FORBIDDEN[@]}"; do
@@ -178,6 +157,37 @@ fi
 if [ "${failed}" -ne 0 ]; then
 	echo >&2
 	echo "Packaging aborted. See docs/build-and-release.md." >&2
+	exit 1
+fi
+
+# Stamped only after the required-file gate has run: sed on a missing
+# dist/blocks/placement/block.json dies with "can't read", burying the
+# diagnostic that names the unbuilt file.
+#
+# semantic-release owns the published version. Stamp only the staged tree so
+# the checkout is never rewritten by the release bot and the bytes verified by
+# CI are the bytes WordPress ultimately installs.
+sed -i -E \
+	"s/^([[:space:]]*\*[[:space:]]*Version:[[:space:]]*).*/\1${VERSION}/" \
+	"${STAGING}/${PLUGIN_FILE}"
+sed -i -E \
+	"s/define\( 'AGGR_VERSION', '[^']+' \);/define( 'AGGR_VERSION', '${VERSION}' );/" \
+	"${STAGING}/${PLUGIN_FILE}"
+sed -i -E \
+	"0,/\"version\": \"[^\"]+\"/s//\"version\": \"${VERSION}\"/" \
+	"${STAGING}/dist/blocks/placement/block.json"
+
+staged_header_version=$(
+	grep -m1 -oE '^\s*\*\s*Version:\s*\S+' "${STAGING}/${PLUGIN_FILE}" | awk '{print $NF}'
+)
+staged_constant_version=$(
+	grep -m1 -oE "define\( 'AGGR_VERSION', '[^']+'" "${STAGING}/${PLUGIN_FILE}" | awk -F"'" '{print $4}'
+)
+staged_block_version=$(
+	grep -m1 -oE '"version": "[^"]+"' "${STAGING}/dist/blocks/placement/block.json" | cut -d'"' -f4
+)
+if [[ "${staged_header_version}" != "${VERSION}" || "${staged_constant_version}" != "${VERSION}" || "${staged_block_version}" != "${VERSION}" ]]; then
+	echo "Version stamp did not apply to the staged plugin." >&2
 	exit 1
 fi
 

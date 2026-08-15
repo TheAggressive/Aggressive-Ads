@@ -1,6 +1,6 @@
 {
 	"name": "aggressive-ads",
-	"version": "0.0.0-development",
+	"version": "1.0.0",
 	"description": "Live means live. White-label advertising management for WordPress.",
 	"license": "GPL-2.0-or-later",
 	"private": true,
@@ -74,7 +74,7 @@
 		"lint:php:fix": "composer run-script phpcs:fix",
 		"dev:seed": "wp-env run cli --env-cwd=wp-content/plugins/aggressive-ads wp eval 'require \"bin/dev/seed.php\";'",
 		"analyse:php": "composer run-script analyse",
-		"lint:files": "bash bin/check-file-length.sh && bash bin/ci/check-repository-boundary.sh && bash bin/ci/check-permission-callbacks.sh && bash bin/ci/check-action-pins.sh && bash bin/ci/check-ci-parity.sh",
+		"lint:files": "node --test bin/release/version-contract.test.mjs && node bin/ci/check-version-contract.mjs && bash bin/check-file-length.sh && bash bin/ci/check-repository-boundary.sh && bash bin/ci/check-permission-callbacks.sh && bash bin/ci/check-action-pins.sh && bash bin/ci/check-ci-parity.sh",
 		"test:php:unit": "vendor/bin/phpunit",
 		"test:php:integration": "wp-env run tests-cli --env-cwd=wp-content/plugins/aggressive-ads vendor/bin/phpunit -c phpunit-integration.xml.dist",
 		"test:php:multisite": "wp-env run tests-cli --env-cwd=wp-content/plugins/aggressive-ads vendor/bin/phpunit -c phpunit-multisite.xml.dist",

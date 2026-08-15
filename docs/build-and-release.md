@@ -128,7 +128,9 @@ island. The view script fills after paint; it does not count.
 single top-level `aggressive-ads/` folder, applies the package exclusions,
 stamps the requested version into the staged plugin header and `AGGR_VERSION`,
 normalizes archive metadata, then writes a ZIP with a SHA-256 sidecar. The
-checkout is never rewritten.
+checkout is never rewritten. Pull-request and local rehearsals use the
+synchronized checked-in version; trusted release runs always supply Semantic
+Release's planned version.
 
 `ci:package` builds the archive twice and requires identical digests. This
 detects timestamp, traversal-order, or generated-file nondeterminism before a
@@ -177,15 +179,51 @@ Releases are calculated automatically from Conventional Commits merged to
 breaking change creates a major release. Documentation, CI, chores, tests, and
 dependency maintenance do not publish.
 
-There are no existing release tags, so the first release-worthy master commit
-bootstraps `v1.0.0`. After that, Git tags and published GitHub Releases are the
-version source of truth. `package.json` remains `0.0.0-development`, while the
-source plugin header remains useful for local development; the planned version
-is stamped only into the staged artifact.
+Git tags and published GitHub Releases are the production version source of
+truth. The checked-in `package.json`, plugin header, block manifest,
+`AGGR_VERSION`, README, and test bootstraps all carry that same strict-semver
+version.
+`bin/ci/check-version-contract.mjs` fails CI if those declarations drift.
+
+When Semantic Release plans a newer version from a product commit, the trusted
+master pipeline first opens a version-only `chore(release)` pull request. Because
+GitHub deliberately suppresses recursive workflow events created with
+`GITHUB_TOKEN`, the release helper explicitly dispatches CI, CodeQL, and workflow
+security against that PR's exact head commit and registers squash auto-merge.
+There is no ruleset bypass. After the protected version PR merges, the next
+master pipeline confirms the checked-in version equals the plan and publishes
+from that synchronized commit.
+
+That suppression applies to the merge as well as the branch. Auto-merge pushes
+its merge commit on behalf of whichever credential registered it, so registering
+it with `GITHUB_TOKEN` lands the synchronized commit on master without emitting a
+push event — and the publishing run never starts. Configure an
+`AGGR_RELEASE_TOKEN` secret (a fine-grained PAT or GitHub App token with
+`contents: write` and `pull requests: write`) and the helper registers auto-merge
+with it, so the merge push starts the run that publishes. Without that secret the
+helper still opens and auto-merges the PR, but prints the manual step it leaves
+behind:
+
+```bash
+gh workflow run ci.yml --ref master
+```
+
+`workflow_dispatch` on `master` is a trusted release trigger for exactly that
+reason: `release-plan`, `version-pr`, and `release` accept it alongside `push`.
+Dispatching on any other ref — including the branch dispatches this helper makes
+against the version PR head — runs the quality lanes only.
+
+This automation requires the repository setting **Allow GitHub Actions to
+create and approve pull requests**. GitHub combines PR creation and review
+approval in one setting; this workflow uses only PR creation and auto-merge and
+never submits an approving review. Keep the repository's default workflow
+permission read-only: only the isolated `version-pr` job receives the scoped
+`actions: write`, `contents: write`, and `pull-requests: write` permissions.
 
 The `package` job receives the planned version only on a trusted master push.
-After every quality lane succeeds, `semantic-release` creates the tag and a
-private draft containing these exact accepted assets:
+After every quality lane succeeds and the version contract is synchronized,
+`semantic-release` creates the tag and a private draft containing these exact
+accepted assets:
 
 - `aggressive-ads-{version}.zip`
 - `aggressive-ads-{version}.zip.sha256`
