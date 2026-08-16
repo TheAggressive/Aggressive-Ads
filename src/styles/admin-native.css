@@ -49,6 +49,20 @@
 }
 
 /*
+ * Room under the page title.
+ *
+ * Core gives `.wrap h1` four pixels of bottom padding and no margin, which
+ * works on its own screens because what follows is a table or a form with its
+ * own leading. These screens mount a card immediately after the heading, so the
+ * title ended up sitting on the first panel — Settings looked right only
+ * because its first control happened to carry a margin, which is not a spacing
+ * system.
+ */
+.wrap.aggr-admin > h1 {
+	margin: 0 0 20px;
+}
+
+/*
  * The intro paragraph under the page title is the one line that orients
  * somebody arriving cold, and core leaves it tight against the heading.
  */
