@@ -231,13 +231,59 @@ final class Review_Data {
 		$row['creatives']        = $this->creative_rows( $campaign_id );
 		$row['creative_updates'] = $this->replacement_rows( $campaign_id );
 		$row['pending_edits']    = $this->changes->pending_summary( $campaign_id );
-		$row['action_request']   = $this->campaigns->action_request( $campaign_id );
+		$row['action_request']   = self::labelled_request( $this->campaigns->action_request( $campaign_id ) );
 		$row['actions']          = $this->actions_for( $campaign_id, $row['status'] );
 		$row['internal_notes']   = $this->campaigns->internal_notes( $campaign_id );
 		$row['can_view_audit']   = current_user_can( Capabilities::VIEW_AUDIT_LOG );
 		$row['audit']            = $row['can_view_audit'] ? $this->audit_rows( $campaign_id ) : array();
 
 		return $row;
+	}
+
+	/**
+	 * A campaign's run window as one readable phrase.
+	 *
+	 * @param int $start_ts Start timestamp.
+	 * @param int $end_ts   End timestamp.
+	 * @return string
+	 */
+	private static function schedule_text( int $start_ts, int $end_ts ): string {
+		if ( $start_ts <= 0 ) {
+			return __( 'Not scheduled', 'aggressive-ads' );
+		}
+
+		$start = self::format_timestamp( $start_ts );
+
+		if ( $end_ts <= 0 ) {
+			return $start;
+		}
+
+		return sprintf(
+			/* translators: 1: campaign start date. 2: campaign end date. */
+			__( '%1$s – %2$s', 'aggressive-ads' ),
+			$start,
+			self::format_timestamp( $end_ts )
+		);
+	}
+
+	/**
+	 * The advertiser's request, carrying the label staff will read.
+	 *
+	 * The label is resolved here because `Campaign_Change_Manager` owns the
+	 * wording and it is translated; a client that mapped the status slug to a
+	 * word itself would be a second vocabulary to keep in step.
+	 *
+	 * @param array{action: string, reason: string, at: int, by: int}|array{} $request Stored request.
+	 * @return array<string, mixed>
+	 */
+	private static function labelled_request( array $request ): array {
+		if ( array() === $request ) {
+			return array();
+		}
+
+		$request['action_label'] = Campaign_Change_Manager::request_label( $request['action'] );
+
+		return $request;
 	}
 
 	/**
@@ -302,6 +348,19 @@ final class Review_Data {
 			'org_name'        => $this->orgs->name( $this->campaigns->org_id( $campaign_id ) ),
 			'placements'      => $names,
 			'submitted_at'    => $this->campaigns->submitted_at( $campaign_id ),
+
+			/*
+			 * Formatted here rather than in the client. wp_date() resolves the
+			 * site's timezone and the reader's locale, and neither is knowable
+			 * in a browser — a date built from the raw stamp in JavaScript is
+			 * the visitor's timezone, silently, and off by hours for anyone
+			 * whose is not the site's.
+			 */
+			'submitted_text'  => self::format_timestamp( $this->campaigns->submitted_at( $campaign_id ), true ),
+			'schedule_text'   => self::schedule_text(
+				$this->campaigns->start_ts( $campaign_id ),
+				$this->campaigns->end_ts( $campaign_id )
+			),
 			'modified_at'     => $this->campaigns->modified_ts( $campaign_id ),
 			'reviewer_id'     => $reviewer_id,
 			'reviewer'        => self::user_name( $reviewer_id ),
@@ -397,12 +456,13 @@ final class Review_Data {
 
 		foreach ( $this->audit->for_object( 'campaign', $campaign_id, $this->campaigns->org_id( $campaign_id ) ) as $event ) {
 			$rows[] = array(
-				'id'         => $event['id'],
-				'created_at' => $event['created_at_ts'],
-				'actor'      => 0 === $event['actor_user_id'] ? __( 'System', 'aggressive-ads' ) : self::user_name( $event['actor_user_id'] ),
-				'event'      => $event['event'],
-				'outcome'    => $event['outcome'],
-				'message'    => $event['message'],
+				'id'           => $event['id'],
+				'created_at'   => $event['created_at_ts'],
+				'created_text' => self::format_timestamp( $event['created_at_ts'], true ),
+				'actor'        => 0 === $event['actor_user_id'] ? __( 'System', 'aggressive-ads' ) : self::user_name( $event['actor_user_id'] ),
+				'event'        => $event['event'],
+				'outcome'      => $event['outcome'],
+				'message'      => $event['message'],
 			);
 		}
 

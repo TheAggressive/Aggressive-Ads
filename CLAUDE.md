@@ -79,8 +79,12 @@ and deeper analytics remain open. What is built:
 - `Workflow\Ending_Soon_Notifier` and `Notification\Ending_Soon_Mailer` — the
   seven-day live/paused reminder with receipt-backed fan-out
 - `Workflow\Creative_Retention` — the daily ninety-day private-file purge
-- staff review queue, Inventory (placement catalogue), and package catalogue screens, and the advertiser-facing
-  notifications for changes, rejection, approval, going live and completion
+- every wp-admin screen is now React over REST: Settings, Packages,
+  Organizations, Inventory, and the review queue and campaign detail. The
+  review screens keep the plugin's own design system (`src/styles/admin.css`);
+  the other four use core's component set
+- the advertiser-facing notifications for changes, rejection, approval, going
+  live and completion
 - pause, resume and cancel, which need no new UI: the review screen's buttons
   are derived from `Transition_Table`, so an edge added there appears by itself
 - Playwright + axe (`tests/e2e/`), wired into `ci:verify` as its own lane

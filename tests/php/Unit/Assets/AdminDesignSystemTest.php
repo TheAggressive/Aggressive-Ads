@@ -43,21 +43,41 @@ final class AdminDesignSystemTest extends TestCase {
 	}
 
 	/**
-	 * The review templates retain their keyboard and form semantics.
+	 * The review screens keep their accessible structure after the conversion.
+	 *
+	 * The two templates these assertions read no longer exist — the screens are
+	 * React writing through REST. What they were protecting is the structure
+	 * itself, so it is asserted against the components that now render it:
+	 * scoped table headers, a labelled control for every textarea, and the
+	 * design system this screen deliberately kept rather than moving to core's
+	 * component set.
 	 *
 	 * @return void
 	 */
-	public function test_review_templates_keep_accessible_structure(): void {
-		$queue  = file_get_contents( AGGR_PLUGIN_DIR . 'templates/admin/review-queue.php' );
-		$detail = file_get_contents( AGGR_PLUGIN_DIR . 'templates/admin/review-campaign.php' );
+	public function test_review_screens_keep_accessible_structure(): void {
+		$queue    = file_get_contents( AGGR_PLUGIN_DIR . 'src/admin/review/queue.tsx' );
+		$campaign = file_get_contents( AGGR_PLUGIN_DIR . 'src/admin/review/campaign.tsx' );
 
 		$this->assertIsString( $queue );
-		$this->assertIsString( $detail );
-		$this->assertStringContainsString( 'aria-current="page"', $queue );
-		$this->assertStringContainsString( '<th scope="col">', $queue );
-		$this->assertStringContainsString( 'wp_nonce_field', $detail );
-		$this->assertStringContainsString( '<label for=', $detail );
-		$this->assertStringContainsString( 'required>', $detail );
+		$this->assertIsString( $campaign );
+
+		$this->assertStringContainsString( 'aria-current', $queue );
+		$this->assertStringContainsString( 'scope="col"', $queue );
+		$this->assertStringContainsString( 'aria-labelledby', $campaign );
+
+		// Every textarea on the detail screen is reachable by its label.
+		$this->assertSame(
+			substr_count( $campaign, '<textarea' ),
+			substr_count( $campaign, 'htmlFor=' ),
+			'A textarea on the review screen has no label bound to it.'
+		);
+
+		// The plugin's own design system, not wp-components. Mixing the two on
+		// one screen is the half-done state src/styles/admin.css exists to
+		// avoid; see the note in Review_Screen.
+		$this->assertStringContainsString( 'aggr-panel', $campaign );
+		$this->assertStringNotContainsString( '@wordpress/components', $campaign );
+		$this->assertStringNotContainsString( '@wordpress/components', $queue );
 	}
 
 	/**

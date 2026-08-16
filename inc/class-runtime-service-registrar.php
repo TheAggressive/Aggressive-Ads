@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace Aggressive\Ads;
 
 use Aggressive\Ads\Admin\Campaign_Change_Actions;
-use Aggressive\Ads\Admin\Creative_Change_Actions;
 use Aggressive\Ads\Admin\Organization_Data;
 use Aggressive\Ads\Admin\Organization_Screen;
 use Aggressive\Ads\Admin\Package_Data;
@@ -70,11 +69,6 @@ final class Runtime_Service_Registrar {
 	 */
 	public function register( Service_Container $container ): void {
 		$container->register(
-			Creative_Change_Actions::class,
-			static fn ( Service_Container $c ): Creative_Change_Actions => new Creative_Change_Actions( $c->get( Creative_Change_Manager::class ) )
-		);
-
-		$container->register(
 			Campaign_State_Machine::class,
 			static fn ( Service_Container $c ): Campaign_State_Machine => new Campaign_State_Machine(
 				$c->get( Campaign_Repository::class ),
@@ -128,8 +122,7 @@ final class Runtime_Service_Registrar {
 		$container->register(
 			Review_Screen::class,
 			static fn ( Service_Container $c ): Review_Screen => new Review_Screen(
-				$c->get( Review_Data::class ),
-				$c->get( Review_Actions::class )
+				$c->get( Review_Data::class )
 			)
 		);
 
