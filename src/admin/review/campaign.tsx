@@ -13,6 +13,7 @@
 
 import type { ReactElement } from 'react';
 import { useState } from '@wordpress/element';
+import { Dialog } from './dialog';
 import { t } from '../shared/save';
 import type { Campaign, Creative, CreativeUpdate, ReviewAction } from './types';
 import { requestOf } from './types';
@@ -156,45 +157,78 @@ function Decision( {
 	);
 }
 
-/** One transition button, with the feedback box its edge requires. */
-function ActionForm( {
+/** The tone a transition is drawn in. Approval is the only assertion. */
+function toneClass( action: ReviewAction ): string {
+	if ( action.destructive ) {
+		return 'aggr-button aggr-button--danger';
+	}
+
+	return action.positive
+		? 'aggr-button aggr-button--positive'
+		: 'aggr-button';
+}
+
+/**
+ * The feedback a refusal requires, collected in a dialog.
+ *
+ * The box is compulsory, so the confirm button stays disabled until there is
+ * something in it — GUARD_REVIEW_NOTES would refuse an empty one anyway, and
+ * saying so before the click is kinder than saying so after.
+ */
+function FeedbackDialog( {
 	action,
 	busy,
-	onTransition,
+	onConfirm,
+	onClose,
 }: {
-	action: ReviewAction;
+	action: ReviewAction | null;
 	busy: boolean;
-	onTransition: ( to: string, notes: string ) => void;
+	onConfirm: ( to: string, notes: string ) => void;
+	onClose: () => void;
 } ): ReactElement {
 	const [ notes, setNotes ] = useState( '' );
-	const id = `aggr-feedback-${ action.to }`;
-	const blocked = action.needs_notes && '' === notes.trim();
 
 	return (
-		<div className="aggr-action">
-			{ action.needs_notes ? (
-				<>
-					<label htmlFor={ id }>{ t( 'advertiserFeedback' ) }</label>
-					<textarea
-						id={ id }
-						rows={ 4 }
-						maxLength={ 2000 }
-						value={ notes }
-						onChange={ ( event ) => setNotes( event.target.value ) }
-					/>
-				</>
-			) : null }
-			<button
-				type="button"
-				className={ `aggr-button ${
-					action.destructive ? 'aggr-button--danger' : ''
-				}` }
-				disabled={ busy || blocked }
-				onClick={ () => onTransition( action.to, notes ) }
-			>
-				{ action.label }
-			</button>
-		</div>
+		<Dialog
+			open={ null !== action }
+			title={ action ? action.label : '' }
+			labelId="aggr-review-dialog-title"
+			onClose={ onClose }
+		>
+			<div className="aggr-form">
+				<label htmlFor="aggr-dialog-feedback">
+					{ t( 'advertiserFeedback' ) }
+				</label>
+				<textarea
+					id="aggr-dialog-feedback"
+					rows={ 6 }
+					maxLength={ 2000 }
+					value={ notes }
+					onChange={ ( event ) => setNotes( event.target.value ) }
+				/>
+			</div>
+			<div className="aggr-overlay__actions">
+				<button
+					type="button"
+					className="aggr-button aggr-button--secondary"
+					onClick={ onClose }
+				>
+					{ t( 'cancel' ) }
+				</button>
+				<button
+					type="button"
+					className={ action ? toneClass( action ) : 'aggr-button' }
+					disabled={ busy || '' === notes.trim() }
+					onClick={ () => {
+						if ( action ) {
+							onConfirm( action.to, notes );
+						}
+					} }
+				>
+					{ action ? action.label : '' }
+				</button>
+			</div>
+		</Dialog>
 	);
 }
 
@@ -263,290 +297,284 @@ export function CampaignView( {
 	);
 
 	/*
-	 * Split by whether the edge requires advertiser-facing feedback.
-	 *
-	 * An action that needs none is a single decision and belongs in the page
-	 * header, beside the status it changes. One that does owns a textarea, and
-	 * lifting its button away from the box it submits would leave a control
-	 * separated from its required input — so those stay in the panel, and the
-	 * panel disappears entirely when none are left.
+	 * Every action lives in the header now, including the two that need
+	 * advertiser-facing feedback. Those open a dialog carrying the textarea
+	 * instead of each printing one down the page — a screen that showed two
+	 * identical "Feedback the advertiser will see" boxes stacked above their
+	 * own buttons made a refusal look like the primary thing to do here.
 	 */
-	const quickActions = campaign.actions.filter(
-		( action ) => ! action.needs_notes
-	);
-	const guidedActions = campaign.actions.filter(
-		( action ) => action.needs_notes
-	);
+	const [ prompting, setPrompting ] = useState< ReviewAction | null >( null );
 
 	return (
 		<>
-			<p className="aggr-breadcrumb">
-				<button
-					type="button"
-					className="aggr-linkbutton"
-					onClick={ onBack }
-				>
-					{ `← ${ t( 'backToQueue' ) }` }
-				</button>
-			</p>
-
 			{ /*
-			 * The pill sits with the heading, not as a third child of
-			 * .aggr-pagehead. That container is space-between, so a status left
-			 * on its own lands midway across the screen and reads as belonging
-			 * to nothing — the same defect fixed on the advertiser's campaign
-			 * screen in 6015287. .aggr-pagehead__heading centres the two and
-			 * wraps the pill to its own line rather than squeezing it when a
-			 * campaign name is long.
+			 * Everything except the dialog, so the dialog can make it inert
+			 * without inerting itself. This replaces the portal-to-<body> a
+			 * modal would normally use: every --aggr-* token is declared on
+			 * `.aggr-portal`, and in wp-admin that class is on this wrap rather
+			 * than on <body>, so a dialog rendered outside it resolves every
+			 * token to nothing.
 			 */ }
-			<header className="aggr-pagehead">
-				<div>
-					<div className="aggr-pagehead__heading">
-						<h1 className="aggr-title">{ campaign.title }</h1>
-						<span
-							className={ `aggr-pill aggr-pill--${ campaign.pill }` }
-						>
-							{ campaign.status_text }
-						</span>
-					</div>
-					<p className="aggr-lede">{ campaign.org_name }</p>
-				</div>
-
-				{ 0 === quickActions.length ? null : (
-					<div className="aggr-pagehead__actions">
-						{ quickActions.map( ( action ) => (
-							<button
-								key={ action.to }
-								type="button"
-								className={ `aggr-button ${
-									action.destructive
-										? 'aggr-button--danger'
-										: ''
-								}` }
-								disabled={ busy }
-								onClick={ () => onTransition( action.to, '' ) }
-							>
-								{ action.label }
-							</button>
-						) ) }
-					</div>
-				) }
-			</header>
-
-			<section
-				className="aggr-panel"
-				aria-labelledby="aggr-review-summary"
-			>
-				<h2 id="aggr-review-summary" className="aggr-panel__head">
-					{ t( 'campaignSummary' ) }
-				</h2>
-				<dl className="aggr-facts">
-					{ [
-						[ t( 'organization' ), campaign.org_name ],
-						[ t( 'placements' ), campaign.placements.join( ', ' ) ],
-						[ t( 'schedule' ), campaign.schedule_text ],
-						[
-							t( 'reviewer' ),
-							'' === campaign.reviewer
-								? t( 'unassigned' )
-								: campaign.reviewer,
-						],
-						[
-							t( 'submission' ),
-							'' === campaign.submitted_text
-								? t( 'notSubmitted' )
-								: campaign.submitted_text,
-						],
-						[ t( 'revision' ), String( campaign.revision ) ],
-					].map( ( [ term, detail ] ) => (
-						<div className="aggr-fact" key={ term }>
-							<dt>{ term }</dt>
-							<dd>{ detail }</dd>
-						</div>
-					) ) }
-				</dl>
-			</section>
-
-			{ '' === campaign.review_notes ? null : (
-				<section
-					className="aggr-notice"
-					aria-labelledby="aggr-review-feedback"
-				>
-					<h2 id="aggr-review-feedback" className="aggr-notice__head">
-						{ t( 'advertiserFacingFeedback' ) }
-					</h2>
-					<p>{ campaign.review_notes }</p>
-				</section>
-			) }
-
-			<section
-				className="aggr-panel"
-				aria-labelledby="aggr-review-creatives"
-			>
-				<h2 id="aggr-review-creatives" className="aggr-panel__head">
-					{ t( 'creativeReview' ) }
-				</h2>
-				{ 0 === campaign.creatives.length ? (
-					<div className="aggr-empty">
-						<h3 className="aggr-empty__title">
-							{ t( 'noCreativeTitle' ) }
-						</h3>
-						<p>{ t( 'noCreativeBody' ) }</p>
-					</div>
-				) : (
-					<div className="aggr-creative-grid">
-						{ campaign.creatives.map( ( creative ) => (
-							<CreativeCard
-								key={ creative.id }
-								creative={ creative }
-							/>
-						) ) }
-					</div>
-				) }
-			</section>
-
-			{ request ? (
-				<section
-					className="aggr-panel"
-					aria-labelledby="aggr-action-request"
-				>
-					<h2 id="aggr-action-request" className="aggr-panel__head">
-						{ t( 'advertiserAsked' ) }
-					</h2>
-					<p>
-						{ t( 'requested' ).replace(
-							'%s',
-							request.action_label
-						) }
-					</p>
-					{ '' === request.reason ? null : (
-						<blockquote>{ request.reason }</blockquote>
-					) }
-					<p className="aggr-hint">{ t( 'requestHint' ) }</p>
-					<DeclineRequest
-						busy={ busy }
-						onDecline={ onDeclineRequest }
-					/>
-				</section>
-			) : null }
-
-			{ 0 === campaign.pending_edits.length ? null : (
-				<section
-					className="aggr-panel"
-					aria-labelledby="aggr-campaign-changes"
-				>
-					<h2 id="aggr-campaign-changes" className="aggr-panel__head">
-						{ t( 'requestedChanges' ) }
-					</h2>
-					<p>{ t( 'requestedChangesLede' ) }</p>
-					<div
-						className="aggr-tablewrap"
-						role="region"
-						aria-label={ t( 'requestedChanges' ) }
-						tabIndex={ 0 }
+			<div className="aggr-review-content">
+				<p className="aggr-breadcrumb">
+					<button
+						type="button"
+						className="aggr-linkbutton"
+						onClick={ onBack }
 					>
-						<table className="aggr-table">
-							<thead>
-								<tr>
-									<th scope="col">{ t( 'field' ) }</th>
-									<th scope="col">{ t( 'currently' ) }</th>
-									<th scope="col">{ t( 'requestedCol' ) }</th>
-								</tr>
-							</thead>
-							<tbody>
-								{ campaign.pending_edits.map( ( row ) => (
-									<tr key={ row.field }>
-										<td className="aggr-table__primary">
-											{ row.label }
-										</td>
-										<td>{ row.from }</td>
-										<td>{ row.to }</td>
-									</tr>
-								) ) }
-							</tbody>
-						</table>
-					</div>
-					{ changesPlacements ? (
-						<p className="aggr-hint">
-							<strong>{ t( 'placementChangeWarn' ) }</strong>{ ' ' }
-							{ t( 'placementChangeBody' ) }
-						</p>
-					) : null }
-					<Decision
-						label={ t( 'approveChanges' ) }
-						rejectLabel={ t( 'rejectChanges' ) }
-						noteLabel={ t( 'rejectionFeedback' ) }
-						busy={ busy }
-						onDecide={ onChanges }
-					/>
-				</section>
-			) }
+						{ `← ${ t( 'backToQueue' ) }` }
+					</button>
+				</p>
 
-			{ 0 === campaign.creative_updates.length ? null : (
+				{ /*
+				 * The pill sits with the heading, not as a third child of
+				 * .aggr-pagehead. That container is space-between, so a status left
+				 * on its own lands midway across the screen and reads as belonging
+				 * to nothing — the same defect fixed on the advertiser's campaign
+				 * screen in 6015287. .aggr-pagehead__heading centres the two and
+				 * wraps the pill to its own line rather than squeezing it when a
+				 * campaign name is long.
+				 */ }
+				<header className="aggr-pagehead">
+					<div>
+						<div className="aggr-pagehead__heading">
+							<h1 className="aggr-title">{ campaign.title }</h1>
+							<span
+								className={ `aggr-pill aggr-pill--${ campaign.pill }` }
+							>
+								{ campaign.status_text }
+							</span>
+						</div>
+						<p className="aggr-lede">{ campaign.org_name }</p>
+					</div>
+
+					{ 0 === campaign.actions.length ? null : (
+						<div className="aggr-pagehead__actions">
+							{ campaign.actions.map( ( action ) => (
+								<button
+									key={ action.to }
+									type="button"
+									className={ toneClass( action ) }
+									disabled={ busy }
+									onClick={ () =>
+										action.needs_notes
+											? setPrompting( action )
+											: onTransition( action.to, '' )
+									}
+								>
+									{ action.label }
+								</button>
+							) ) }
+						</div>
+					) }
+				</header>
+
 				<section
 					className="aggr-panel"
-					aria-labelledby="aggr-creative-updates"
+					aria-labelledby="aggr-review-summary"
 				>
-					<h2 id="aggr-creative-updates" className="aggr-panel__head">
-						{ t( 'pendingUpdates' ) }
+					<h2 id="aggr-review-summary" className="aggr-panel__head">
+						{ t( 'campaignSummary' ) }
 					</h2>
-					<p>{ t( 'pendingUpdatesLede' ) }</p>
-					<div className="aggr-creative-grid">
-						{ campaign.creative_updates.map( ( update ) => (
-							<CreativeCard key={ update.id } creative={ update }>
-								<Decision
-									label={ t( 'approveReplace' ) }
-									rejectLabel={ t( 'rejectUpdate' ) }
-									noteLabel={ t( 'rejectionFeedback' ) }
-									busy={ busy }
-									onDecide={ ( decision, notes ) =>
-										onReplacement(
-											update.id,
-											decision,
-											notes
-										)
-									}
-								/>
-							</CreativeCard>
+					<dl className="aggr-facts">
+						{ [
+							[ t( 'organization' ), campaign.org_name ],
+							[
+								t( 'placements' ),
+								campaign.placements.join( ', ' ),
+							],
+							[ t( 'schedule' ), campaign.schedule_text ],
+							[
+								t( 'reviewer' ),
+								'' === campaign.reviewer
+									? t( 'unassigned' )
+									: campaign.reviewer,
+							],
+							[
+								t( 'submission' ),
+								'' === campaign.submitted_text
+									? t( 'notSubmitted' )
+									: campaign.submitted_text,
+							],
+							[ t( 'revision' ), String( campaign.revision ) ],
+						].map( ( [ term, detail ] ) => (
+							<div className="aggr-fact" key={ term }>
+								<dt>{ term }</dt>
+								<dd>{ detail }</dd>
+							</div>
 						) ) }
-					</div>
+					</dl>
 				</section>
-			) }
 
-			<div
-				className={
-					0 === guidedActions.length ? '' : 'aggr-review-columns'
-				}
-			>
-				{ 0 === guidedActions.length ? null : (
+				{ '' === campaign.review_notes ? null : (
 					<section
-						className="aggr-panel"
-						aria-labelledby="aggr-review-actions"
+						className="aggr-notice"
+						aria-labelledby="aggr-review-feedback"
 					>
 						<h2
-							id="aggr-review-actions"
+							id="aggr-review-feedback"
+							className="aggr-notice__head"
+						>
+							{ t( 'advertiserFacingFeedback' ) }
+						</h2>
+						<p>{ campaign.review_notes }</p>
+					</section>
+				) }
+
+				<section
+					className="aggr-panel"
+					aria-labelledby="aggr-review-creatives"
+				>
+					<h2 id="aggr-review-creatives" className="aggr-panel__head">
+						{ t( 'creativeReview' ) }
+					</h2>
+					{ 0 === campaign.creatives.length ? (
+						<div className="aggr-empty">
+							<h3 className="aggr-empty__title">
+								{ t( 'noCreativeTitle' ) }
+							</h3>
+							<p>{ t( 'noCreativeBody' ) }</p>
+						</div>
+					) : (
+						<div className="aggr-creative-grid">
+							{ campaign.creatives.map( ( creative ) => (
+								<CreativeCard
+									key={ creative.id }
+									creative={ creative }
+								/>
+							) ) }
+						</div>
+					) }
+				</section>
+
+				{ request ? (
+					<section
+						className="aggr-panel"
+						aria-labelledby="aggr-action-request"
+					>
+						<h2
+							id="aggr-action-request"
 							className="aggr-panel__head"
 						>
-							{ t( 'reviewActions' ) }
+							{ t( 'advertiserAsked' ) }
 						</h2>
-						<div className="aggr-actions">
-							{ guidedActions.map( ( action ) => (
-								<ActionForm
-									key={ action.to }
-									action={ action }
-									busy={ busy }
-									onTransition={ onTransition }
-								/>
+						<p>
+							{ t( 'requested' ).replace(
+								'%s',
+								request.action_label
+							) }
+						</p>
+						{ '' === request.reason ? null : (
+							<blockquote>{ request.reason }</blockquote>
+						) }
+						<p className="aggr-hint">{ t( 'requestHint' ) }</p>
+						<DeclineRequest
+							busy={ busy }
+							onDecline={ onDeclineRequest }
+						/>
+					</section>
+				) : null }
+
+				{ 0 === campaign.pending_edits.length ? null : (
+					<section
+						className="aggr-panel"
+						aria-labelledby="aggr-campaign-changes"
+					>
+						<h2
+							id="aggr-campaign-changes"
+							className="aggr-panel__head"
+						>
+							{ t( 'requestedChanges' ) }
+						</h2>
+						<p>{ t( 'requestedChangesLede' ) }</p>
+						<div
+							className="aggr-tablewrap"
+							role="region"
+							aria-label={ t( 'requestedChanges' ) }
+							tabIndex={ 0 }
+						>
+							<table className="aggr-table">
+								<thead>
+									<tr>
+										<th scope="col">{ t( 'field' ) }</th>
+										<th scope="col">
+											{ t( 'currently' ) }
+										</th>
+										<th scope="col">
+											{ t( 'requestedCol' ) }
+										</th>
+									</tr>
+								</thead>
+								<tbody>
+									{ campaign.pending_edits.map( ( row ) => (
+										<tr key={ row.field }>
+											<td className="aggr-table__primary">
+												{ row.label }
+											</td>
+											<td>{ row.from }</td>
+											<td>{ row.to }</td>
+										</tr>
+									) ) }
+								</tbody>
+							</table>
+						</div>
+						{ changesPlacements ? (
+							<p className="aggr-hint">
+								<strong>{ t( 'placementChangeWarn' ) }</strong>{ ' ' }
+								{ t( 'placementChangeBody' ) }
+							</p>
+						) : null }
+						<Decision
+							label={ t( 'approveChanges' ) }
+							rejectLabel={ t( 'rejectChanges' ) }
+							noteLabel={ t( 'rejectionFeedback' ) }
+							busy={ busy }
+							onDecide={ onChanges }
+						/>
+					</section>
+				) }
+
+				{ 0 === campaign.creative_updates.length ? null : (
+					<section
+						className="aggr-panel"
+						aria-labelledby="aggr-creative-updates"
+					>
+						<h2
+							id="aggr-creative-updates"
+							className="aggr-panel__head"
+						>
+							{ t( 'pendingUpdates' ) }
+						</h2>
+						<p>{ t( 'pendingUpdatesLede' ) }</p>
+						<div className="aggr-creative-grid">
+							{ campaign.creative_updates.map( ( update ) => (
+								<CreativeCard
+									key={ update.id }
+									creative={ update }
+								>
+									<Decision
+										label={ t( 'approveReplace' ) }
+										rejectLabel={ t( 'rejectUpdate' ) }
+										noteLabel={ t( 'rejectionFeedback' ) }
+										busy={ busy }
+										onDecide={ ( decision, notes ) =>
+											onReplacement(
+												update.id,
+												decision,
+												notes
+											)
+										}
+									/>
+								</CreativeCard>
 							) ) }
 						</div>
 					</section>
 				) }
 
 				{ /*
-				 * The "nothing to do here" line only belongs on screen when
-				 * there is genuinely nothing — with the simple actions moved
-				 * into the header, an empty panel below them would contradict
-				 * the buttons sitting at the top of the same page.
+				 * Internal notes stand alone now. The Review Actions panel beside
+				 * it held nothing but the two feedback boxes, and those moved into
+				 * the dialog the header buttons open.
 				 */ }
 				{ 0 === campaign.actions.length ? (
 					<section
@@ -564,50 +592,66 @@ export function CampaignView( {
 				) : null }
 
 				<InternalNotes
-					// Remounted when the server's copy changes, so the box
-					// shows what was stored rather than what was typed.
+					// Remounted when the server's copy changes, so the box shows
+					// what was stored rather than what was typed.
 					key={ campaign.internal_notes }
 					value={ campaign.internal_notes }
 					busy={ busy }
 					onSave={ onNotes }
 				/>
+
+				{ campaign.can_view_audit ? (
+					<section
+						className="aggr-panel"
+						aria-labelledby="aggr-audit-timeline"
+					>
+						<h2
+							id="aggr-audit-timeline"
+							className="aggr-panel__head"
+						>
+							{ t( 'auditTimeline' ) }
+						</h2>
+						{ 0 === campaign.audit.length ? (
+							<p className="aggr-empty">{ t( 'noAudit' ) }</p>
+						) : (
+							<ol className="aggr-timeline">
+								{ campaign.audit.map( ( event, index ) => (
+									<li
+										className="aggr-timeline__item"
+										key={ `${ event.created_at }-${ index }` }
+									>
+										<div className="aggr-timeline__message">
+											{ event.message }
+										</div>
+										<div className="aggr-timeline__meta">
+											{ `${
+												'' === event.actor
+													? t( 'unknownUser' )
+													: event.actor
+											} · ${ event.created_text } · ${
+												event.outcome
+											}` }
+										</div>
+									</li>
+								) ) }
+							</ol>
+						) }
+					</section>
+				) : null }
 			</div>
 
-			{ campaign.can_view_audit ? (
-				<section
-					className="aggr-panel"
-					aria-labelledby="aggr-audit-timeline"
-				>
-					<h2 id="aggr-audit-timeline" className="aggr-panel__head">
-						{ t( 'auditTimeline' ) }
-					</h2>
-					{ 0 === campaign.audit.length ? (
-						<p className="aggr-empty">{ t( 'noAudit' ) }</p>
-					) : (
-						<ol className="aggr-timeline">
-							{ campaign.audit.map( ( event, index ) => (
-								<li
-									className="aggr-timeline__item"
-									key={ `${ event.created_at }-${ index }` }
-								>
-									<div className="aggr-timeline__message">
-										{ event.message }
-									</div>
-									<div className="aggr-timeline__meta">
-										{ `${
-											'' === event.actor
-												? t( 'unknownUser' )
-												: event.actor
-										} · ${ event.created_text } · ${
-											event.outcome
-										}` }
-									</div>
-								</li>
-							) ) }
-						</ol>
-					) }
-				</section>
-			) : null }
+			<FeedbackDialog
+				// Remounted per action, so the box opens empty rather than
+				// carrying what somebody typed into a decision they abandoned.
+				key={ prompting ? prompting.to : 'none' }
+				action={ prompting }
+				busy={ busy }
+				onConfirm={ ( to, notes ) => {
+					setPrompting( null );
+					onTransition( to, notes );
+				} }
+				onClose={ () => setPrompting( null ) }
+			/>
 		</>
 	);
 }

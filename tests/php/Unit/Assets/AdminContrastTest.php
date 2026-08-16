@@ -123,6 +123,11 @@ final class AdminContrastTest extends TestCase {
 	 * @return void
 	 */
 	public function test_the_accent_reads_as_text_and_as_a_button(): void {
+		// Approval is drawn on the live green rather than the accent blue, so
+		// its label is measured against that colour and not assumed from the
+		// pill it shares a token with — a pill puts dark ink on a tint, and a
+		// button puts white ink on the ink.
+		$this->assertContrast( 'accent-contrast', 'live' );
 		$this->assertContrast( 'accent', 'surface' );
 		$this->assertContrast( 'accent', 'canvas' );
 		$this->assertContrast( 'accent-strong', 'surface' );

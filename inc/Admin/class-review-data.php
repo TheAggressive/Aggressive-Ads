@@ -296,7 +296,7 @@ final class Review_Data {
 	 *
 	 * @param int    $campaign_id Campaign post id.
 	 * @param string $status      Current status.
-	 * @return array<int, array{to: string, label: string, needs_notes: bool, destructive: bool}>
+	 * @return array<int, array{to: string, label: string, needs_notes: bool, destructive: bool, positive: bool}>
 	 */
 	public function actions_for( int $campaign_id, string $status ): array {
 		$actions = array();
@@ -313,6 +313,15 @@ final class Review_Data {
 				'label'       => self::action_label( $transition->to ),
 				'needs_notes' => $transition->has_guard( Transition_Table::GUARD_REVIEW_NOTES ),
 				'destructive' => in_array( $transition->to, array( Post_Statuses::REJECTED, Post_Statuses::CANCELLED ), true ),
+
+				/*
+				 * Approval is the one edge that puts a campaign in front of the
+				 * public, so it is the one the screen colours as an assertion
+				 * rather than as a step. Decided here rather than in the client
+				 * for the same reason the label is: the status vocabulary lives
+				 * on this side, and a second copy of it drifts.
+				 */
+				'positive'    => Post_Statuses::APPROVED === $transition->to,
 			);
 		}
 

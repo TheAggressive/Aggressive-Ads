@@ -154,3 +154,101 @@ test( 'a tall creative stays inside its preview box', async ( { page } ) => {
 		)
 		.toBeLessThanOrEqual( 0 );
 } );
+
+test( 'a decision that needs feedback is taken in an accessible dialog', async ( {
+	page,
+} ) => {
+	await page.goto( '/wp-login.php' );
+	await page.locator( '#user_login' ).fill( 'admin' );
+	await page.locator( '#user_pass' ).fill( 'admin' );
+	await page.locator( '#wp-submit' ).click();
+
+	const campaignId = wp(
+		'eval',
+		'require "tests/e2e/seed-review-creative.php";'
+	).trim();
+
+	await page.goto(
+		`/wp-admin/admin.php?page=aggr-review&campaign=${ campaignId }`
+	);
+
+	// Claim it, so the edges that require feedback become available.
+	const claim = page.getByRole( 'button', { name: 'Start review' } );
+
+	if ( await claim.isVisible() ) {
+		await claim.click();
+		await expect( claim ).toBeHidden();
+	}
+
+	const trigger = page.getByRole( 'button', { name: 'Request changes' } );
+
+	await expect( trigger ).toBeVisible();
+	await expectAdminA11y( page );
+
+	await trigger.click();
+
+	const dialog = page.getByRole( 'dialog', { name: 'Request changes' } );
+
+	await expect( dialog ).toBeVisible();
+	await expect( dialog ).toBeFocused();
+
+	// The background is inert, so nothing behind the dialog is reachable.
+	expect(
+		await page.evaluate(
+			() =>
+				document
+					.querySelector( '.aggr-review-content' )
+					?.hasAttribute( 'inert' ) ?? false
+		)
+	).toBe( true );
+
+	// Refusing without a reason is refused by the workflow, so the button says
+	// so before the click rather than after it.
+	const confirm = dialog.getByRole( 'button', { name: 'Request changes' } );
+
+	await expect( confirm ).toBeDisabled();
+
+	// Focus is trapped: a full cycle plus one never leaves the panel.
+	const stops = await page.evaluate( () => {
+		const panel = document.querySelector( '.aggr-overlay__panel' );
+		return panel
+			? panel.querySelectorAll(
+					'a[href], button:not([disabled]), textarea, input, select'
+			  ).length
+			: 0;
+	} );
+
+	for ( let press = 0; press <= stops; press++ ) {
+		await page.keyboard.press( 'Tab' );
+		expect(
+			await page.evaluate(
+				() =>
+					document
+						.querySelector( '.aggr-overlay__panel' )
+						?.contains( document.activeElement ) ?? false
+			),
+			`Focus left the dialog after ${ press + 1 } Tab press(es).`
+		).toBe( true );
+	}
+
+	// Escape closes and hands focus back to the button that opened it.
+	await page.keyboard.press( 'Escape' );
+	await expect( dialog ).toBeHidden();
+	await expect( trigger ).toBeFocused();
+
+	// And the decision goes through when the reason is given.
+	await trigger.click();
+	await dialog
+		.getByLabel( 'Feedback the advertiser will see' )
+		.fill( 'Please resize the artwork to 728x90.' );
+	await dialog.getByRole( 'button', { name: 'Request changes' } ).click();
+
+	await expect( dialog ).toBeHidden();
+	await expect( page.locator( '.aggr-flash--success' ) ).toBeVisible();
+	await expect(
+		page.getByRole( 'heading', {
+			level: 2,
+			name: 'Advertiser-facing feedback',
+		} )
+	).toBeVisible();
+} );

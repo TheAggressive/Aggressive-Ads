@@ -47,6 +47,39 @@
 }
 
 /*
+ * Approval, drawn as an assertion.
+ *
+ * The one edge that puts a campaign in front of the public, and the only
+ * button on the screen that should read as a decision rather than a step.
+ * Uses the live token, which is the same green the Live pill carries, so the
+ * colour means the same thing in both places.
+ */
+.aggr-button--positive {
+	border-color: var(--aggr-color-live);
+	background: var(--aggr-color-live);
+	color: var(--aggr-color-accent-contrast);
+}
+
+.aggr-button--positive:hover,
+.aggr-button--positive:focus-visible {
+	border-color: var(--aggr-color-live);
+	background: var(--aggr-color-live);
+	color: var(--aggr-color-accent-contrast);
+	filter: brightness(0.92);
+}
+
+/*
+ * Above the admin bar, which core puts at 99999.
+ *
+ * The overlay's own token is 1000, which is right on the front end and would
+ * render this dialog *underneath* the admin menu and toolbar. The dialog is
+ * portaled to <body>, so it is outside .aggr-admin and needs its own hook.
+ */
+.aggr-overlay--admin {
+	z-index: 100000;
+}
+
+/*
  * A control that reads as a link.
  *
  * The queue's campaign names and the detail screen's breadcrumb navigate

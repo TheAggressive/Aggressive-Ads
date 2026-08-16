@@ -65,6 +65,7 @@ export type ReviewAction = {
 	label: string;
 	needs_notes: boolean;
 	destructive: boolean;
+	positive: boolean;
 };
 
 export type AuditEvent = {

@@ -309,6 +309,8 @@ final class Review_Screen implements Service {
 			'reviewActions'            => __( 'Review actions', 'aggressive-ads' ),
 			'noActions'                => __( 'No staff action is available from this status.', 'aggressive-ads' ),
 			'advertiserFeedback'       => __( 'Feedback the advertiser will see', 'aggressive-ads' ),
+			'cancel'                   => __( 'Cancel', 'aggressive-ads' ),
+			'close'                    => __( 'Close', 'aggressive-ads' ),
 			'internalNotes'            => __( 'Internal notes', 'aggressive-ads' ),
 			'staffOnly'                => __( 'Visible to staff only', 'aggressive-ads' ),
 			'saveInternalNotes'        => __( 'Save internal notes', 'aggressive-ads' ),

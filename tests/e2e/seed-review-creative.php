@@ -25,6 +25,22 @@ $aggr_slug = 'e2e-review-preview';
 $aggr_post = get_page_by_path( $aggr_slug, OBJECT, Post_Types::CAMPAIGN );
 
 if ( $aggr_post instanceof WP_Post ) {
+	/*
+	 * Reset rather than reuse as found. A review test moves this campaign's
+	 * status, so a second run would open on whatever the first left behind and
+	 * find none of the actions it came for — which is a test that passes or
+	 * fails by how recently it last ran.
+	 */
+	wp_update_post(
+		array(
+			'ID'          => $aggr_post->ID,
+			'post_status' => Post_Statuses::SUBMITTED,
+		)
+	);
+
+	delete_post_meta( $aggr_post->ID, Campaign_Repository::META_REVIEW_NOTES );
+	delete_post_meta( $aggr_post->ID, Campaign_Repository::META_REVIEWED_BY );
+
 	echo (int) $aggr_post->ID;
 
 	return;
