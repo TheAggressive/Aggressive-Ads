@@ -14,22 +14,48 @@ delete it.
 ## 1. The review screens are still server-rendered
 
 `Settings`, `Packages`, `Organizations` and `Inventory` are React screens
-writing through REST, sharing `src/admin/shared/save.tsx`. One is not converted:
+writing through REST, sharing `src/admin/shared/save.tsx`. The review queue and
+review campaign screens are not.
 
-- **Review queue and review campaign** — the largest. Buttons are derived from
-  `Domain\Transition_Table`, so the screen must stay data-driven rather than
-  hardcoding actions; it also renders private creative and internal notes.
+**The routes they need already exist.** `REST\Review_Controller` ships the two
+reads and three writes. The other two were already there and must not be
+duplicated: `Transitions_Controller` owns status changes, and
+`Creative_Controller` owns staff decisions on an ad replacement.
 
-  Carry this over from the security pass: **`Admin\Review_Data::campaign()` has
-  no capability check of its own.** It returns internal notes, private creative
-  previews and the audit timeline, and is safe today only because
-  `Review_Screen::render()` is its sole caller and gates it. A REST route
-  reaching it directly would have no gate at all, which is exactly what a React
-  conversion adds. Give the read route its own `aggr_review_campaigns` check;
-  do not rely on the screen's.
+| What | Route |
+|---|---|
+| Queue, with tab counts | `GET /review/queue` |
+| One campaign, in full | `GET /review/campaigns/{id}` |
+| Internal notes | `POST /review/campaigns/{id}/notes` |
+| Decide campaign edits | `POST /review/campaigns/{id}/changes` |
+| Close an advertiser request | `POST /review/campaigns/{id}/request` |
+| Decide an ad replacement | `POST /creative-replacements/{id}/decision` (already existed) |
+| Status change | `POST /campaigns/{id}/transitions` (already existed) |
 
-Conversion is not required for correctness. The screen works as a
-server-rendered template today.
+That closed the gate this entry used to warn about: `Review_Data::campaign()`
+still has no capability check of its own, and now never needs one, because the
+only two callers — `Review_Screen::render()` and the controller — each gate it.
+**Read that asymmetry before editing the controller.** Its writes have two gates
+and its reads have exactly one, so `permission()` is the whole of the protection
+on the campaign payload, which carries internal notes, private creative previews
+and the audit timeline.
+
+What is left is the UI, and it is genuinely only the UI:
+
+- Two views rather than one — a queue with tabs, filters and pagination, and a
+  campaign detail — where every other converted screen is a single list.
+- Transition buttons stay derived from `Domain\Transition_Table` through
+  `Review_Data::actions_for()`, which already filters per-edge by capability.
+  Hardcoding the actions in TSX would be a second lifecycle.
+- These screens carry the plugin's own design system (`Assets::STYLE_ADMIN`),
+  not the native admin markup the other four use. Either port the styling or
+  accept that this screen looks different from its siblings; do not half-do it.
+- Deleting `templates/admin/review-queue.php`, `templates/admin/review-campaign.php`,
+  `Admin\Campaign_Change_Actions` and `Admin\Creative_Change_Actions` is part of
+  the job. Leaving handlers registered with no form pointing at them is an
+  unreferenced write path.
+
+Conversion is not required for correctness. The screens work today.
 
 Two things the Inventory conversion is worth copying:
 

@@ -90,7 +90,26 @@ final class Campaign_Change_Actions implements Service {
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified immediately above.
 		$notes = isset( $_POST['review_notes'] ) ? sanitize_textarea_field( wp_unslash( $_POST['review_notes'] ) ) : '';
 
-		$this->redirect( $campaign_id, $this->manager->resolve_action( $campaign_id, $notes ), 'campaign_request_declined' );
+		$this->redirect( $campaign_id, $this->decline( $campaign_id, $notes ), 'campaign_request_declined' );
+	}
+
+	/**
+	 * Testable staff decision edge for closing a request.
+	 *
+	 * A sibling of `process()` and here for the same reason: the delivery layer
+	 * — a form post or a REST route — should not be the only way to reach the
+	 * decision, or each new delivery path grows its own copy of it.
+	 *
+	 * No capability check of its own, deliberately. `resolve_action()` carries
+	 * one and records the denial in the audit trail; repeating it here would add
+	 * a second gate that hides whether the first still works.
+	 *
+	 * @param int    $campaign_id Campaign post id.
+	 * @param string $notes       Advertiser-facing explanation.
+	 * @return true|WP_Error
+	 */
+	public function decline( int $campaign_id, string $notes = '' ): bool|WP_Error {
+		return $this->manager->resolve_action( $campaign_id, $notes );
 	}
 
 	/**

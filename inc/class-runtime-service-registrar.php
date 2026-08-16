@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads;
 
+use Aggressive\Ads\Admin\Campaign_Change_Actions;
 use Aggressive\Ads\Admin\Creative_Change_Actions;
 use Aggressive\Ads\Admin\Organization_Data;
 use Aggressive\Ads\Admin\Organization_Screen;
@@ -38,6 +39,7 @@ use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Repository\User_Repository;
 use Aggressive\Ads\REST\Beacon_Controller;
 use Aggressive\Ads\REST\Fill_Controller;
+use Aggressive\Ads\REST\Review_Controller;
 use Aggressive\Ads\Security\Rate_Limiter;
 use Aggressive\Ads\Workflow\Campaign_State_Machine;
 use Aggressive\Ads\Workflow\Click_Hop;
@@ -111,6 +113,15 @@ final class Runtime_Service_Registrar {
 				$c->get( Campaign_State_Machine::class ),
 				$c->get( Campaign_Repository::class ),
 				$c->get( Audit_Repository::class )
+			)
+		);
+
+		$container->register(
+			Review_Controller::class,
+			static fn ( Service_Container $c ): Review_Controller => new Review_Controller(
+				$c->get( Review_Data::class ),
+				$c->get( Review_Actions::class ),
+				$c->get( Campaign_Change_Actions::class )
 			)
 		);
 

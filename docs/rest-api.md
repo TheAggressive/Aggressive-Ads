@@ -36,7 +36,11 @@ Routes marked “planned” remain contracts for later phases. Every other row i
 | `GET` | `/placements` | `aggr_access_portal` **or** `edit_posts` **or** `edit_theme_options` | Active placements only; includes public `slug` for the slot block; no ad-group IDs |
 | `GET` | `/packages` | `aggr_access_portal` | Active, completely configured packages only; includes advertiser-facing placement labels, duration and integer-cent price |
 | `POST` | `/settings` | `aggr_manage_settings` | Autosave for the Settings screen. Replaces the whole document; shares `Settings_Input` and `Settings::save()` with the admin-post form, so the WCAG contrast gate applies identically. Rejects the whole payload on any schema error |
-| `GET` | `/queue` | `aggr_review_campaigns` | **Planned as REST.** Staff currently use the server-rendered review screen |
+| `GET` | `/review/queue` | `aggr_review_campaigns` | Queue page plus tab counts. An unknown `filter` falls back to the default rather than erroring |
+| `GET` | `/review/campaigns/{id}` | `aggr_review_campaigns` | The staff view: internal notes, private creative previews, audit timeline. **The capability check on this route is the only gate** — `Review_Data` holds none |
+| `POST` | `/review/campaigns/{id}/notes` | `aggr_review_campaigns` + `edit_aggr_campaign` | Staff-only internal notes. Returns the refreshed campaign |
+| `POST` | `/review/campaigns/{id}/changes` | `aggr_review_campaigns` | `approve` or `reject` the advertiser's proposed campaign edits |
+| `POST` | `/review/campaigns/{id}/request` | `aggr_review_campaigns` | Closes an advertiser's action request with an explanation they will read |
 | `GET` | `/audit` | `aggr_view_audit_log` | **Planned as REST.** Current staff timeline is org-filtered **in SQL** |
 | `POST` | `/creatives/{id}/replacement` | `aggr_upload_creative` + object ownership | Stages a private replacement for a scheduled/live ad; multipart `file`, `click_url`, and optional `alt_text` |
 | `GET` | `/fill/{slot}` | public (always registered) | Public, same-origin. Uncached. One live creative from the equal-rotation set, or house. Mints a token bound to that campaign **and the current `blog_id`**. Response omits internal ids and never lists candidates |

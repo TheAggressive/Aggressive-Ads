@@ -49,6 +49,7 @@ use Aggressive\Ads\REST\Packages_Controller;
 use Aggressive\Ads\REST\Organizations_Controller;
 use Aggressive\Ads\REST\Settings_Controller;
 use Aggressive\Ads\REST\Placements_Controller;
+use Aggressive\Ads\REST\Review_Controller;
 use Aggressive\Ads\REST\Transitions_Controller;
 use Aggressive\Ads\Security\Admin_Guard;
 use Aggressive\Ads\Security\Delivery_Health;
@@ -321,6 +322,7 @@ final class Plugin {
 			Creative_File_Controller::class,
 			Creative_Controller::class,
 			Transitions_Controller::class,
+			Review_Controller::class,
 			Campaigns_Controller::class,
 			Placements_Controller::class,
 			Packages_Controller::class,
