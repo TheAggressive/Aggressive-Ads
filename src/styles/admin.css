@@ -2,9 +2,56 @@
  * Staff review screens.
  *
  * This file contains layout only. Colour, type, spacing, radii, focus and
- * control sizing all come from the portal's --aggr-* token layer, so the
- * staff and advertiser surfaces cannot become two visual systems.
+ * control sizing all come from the --aggr-* token layer, so the staff and
+ * advertiser surfaces cannot become two visual systems.
+ *
+ * The staff surface resolves those tokens to WordPress's own admin palette —
+ * see base/_admin-tokens.css. That is a token substitution and nothing more:
+ * every rule below is unchanged by it, which is the whole reason the colours
+ * were never written here in the first place.
  */
+
+@import './base/_admin-tokens.css';
+
+/*
+ * Restores the gutter wp-admin gives every screen.
+ *
+ * `.aggr-portal` zeroes the margin, correctly, because on the front end it is
+ * the page. In wp-admin the same element also carries `.wrap`, whose right
+ * margin is what keeps a screen off the edge of the viewport — and losing it
+ * put the table hard against the window. Two classes, so this wins on
+ * specificity rather than on load order.
+ */
+.wrap.aggr-admin {
+	margin: 10px 20px 0 2px;
+	padding-bottom: var(--aggr-space-xl);
+}
+
+/*
+ * A control that reads as a link.
+ *
+ * The queue's campaign names and the detail screen's breadcrumb navigate
+ * within a client-rendered screen rather than following an href, so they are
+ * buttons — and an unstyled button in a table cell renders as a grey box with
+ * a border, which is what shipped. This gives them a link's appearance while
+ * they keep a button's semantics and keyboard behaviour.
+ */
+.aggr-linkbutton {
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--aggr-color-accent);
+	font: inherit;
+	font-weight: 600;
+	text-align: left;
+	cursor: pointer;
+}
+
+.aggr-linkbutton:hover,
+.aggr-linkbutton:focus-visible {
+	color: var(--aggr-color-accent-strong);
+	text-decoration: underline;
+}
 
 	.aggr-package-row {
 		padding-top: var(--aggr-space-lg);
