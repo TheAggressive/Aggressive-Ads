@@ -129,8 +129,13 @@ final class PlacementAdminTest extends WP_UnitTestCase {
 		}
 
 		$this->assertTrue( $found );
-		$this->assertNotFalse( has_action( 'admin_post_' . Placement_Screen::CREATE_ACTION ) );
-		$this->assertNotFalse( has_action( 'admin_post_' . Placement_Screen::UPDATE_ACTION ) );
+
+		// The catalogue's admin-post handlers were deleted with the server-
+		// rendered template; writes go to REST\Placements_Controller now, and
+		// leaving handlers registered with no form pointing at them would be
+		// unreferenced write paths to the catalogue. See Rest\PlacementsWriteTest.
+		$this->assertFalse( has_action( 'admin_post_aggr_create_placement' ) );
+		$this->assertFalse( has_action( 'admin_post_aggr_update_placement' ) );
 	}
 
 	/**
@@ -259,11 +264,16 @@ final class PlacementAdminTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The rendered catalogue names Inventory and offers common sizes.
+	 * The screen mounts the catalogue it edits, rather than a form.
+	 *
+	 * The markup assertions that used to live here described a server-rendered
+	 * form that no longer exists. What they were protecting — that the screen
+	 * hands over the real catalogue and the common sizes — survives the move and
+	 * is asserted against the bootstrap payload the React screen reads.
 	 *
 	 * @return void
 	 */
-	public function test_screen_renders_the_catalogue(): void {
+	public function test_screen_mounts_the_catalogue(): void {
 		wp_set_current_user( $this->administrator );
 		$this->assertIsInt( $this->manager->create( $this->valid_fields() ) );
 
@@ -272,10 +282,20 @@ final class PlacementAdminTest extends WP_UnitTestCase {
 		$html = (string) ob_get_clean();
 
 		$this->assertStringContainsString( 'Inventory', $html );
-		$this->assertStringContainsString( 'Leaderboard (728×90)', $html );
-		$this->assertStringContainsString( 'Custom size', $html );
-		$this->assertStringContainsString( 'Create placement', $html );
-		$this->assertStringContainsString( 'name="_wpnonce"', $html );
+		$this->assertStringContainsString( 'id="aggr-inventory-root"', $html );
+		$this->assertStringContainsString( '<noscript>', $html );
+
+		$payload = $this->mounted_payload( $html );
+
+		$this->assertSame( '/aggr/v1/placements', $payload['restPath'] );
+		$this->assertSame( 'Leaderboard (728×90)', $payload['view']['sizes']['728x90'] );
+		$this->assertSame( 'Homepage leaderboard', $payload['view']['rows'][0]['name'] );
+		$this->assertSame( 'Create placement', $payload['i18n']['create'] );
+		$this->assertSame( 'Custom size', $payload['i18n']['customSize'] );
+
+		// No form, so no nonce: the write path is REST, which authenticates
+		// with its own nonce header rather than a posted field.
+		$this->assertStringNotContainsString( 'name="_wpnonce"', $html );
 	}
 
 	/**
@@ -433,26 +453,49 @@ final class PlacementAdminTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Capability denial precedes nonce acceptance.
+	 * An advertiser cannot reach the screen at all.
+	 *
+	 * This replaces a test that posted to the deleted update handler. The
+	 * equivalent assertion for the write path now lives in
+	 * Rest\PlacementsWriteTest; what belongs here is the screen's own gate.
 	 *
 	 * @return void
 	 */
-	public function test_handler_rejects_an_advertiser_with_a_valid_nonce(): void {
+	public function test_render_refuses_an_advertiser(): void {
 		wp_set_current_user( $this->administrator );
-		$placement_id = $this->manager->create( $this->valid_fields() );
-		$this->assertIsInt( $placement_id );
+		$this->assertIsInt( $this->manager->create( $this->valid_fields() ) );
 
 		wp_set_current_user( $this->advertiser );
-		$_POST = array(
-			'placement_id' => (string) $placement_id,
-			'name'         => 'Hijacked',
-			'slug'         => 'header',
-			'size_preset'  => '728x90',
-			'_wpnonce'     => wp_create_nonce( Placement_Screen::nonce_action( $placement_id ) ),
-		);
 
 		$this->expectException( 'WPDieException' );
-		$this->screen->handle_update();
+
+		ob_start();
+
+		try {
+			$this->screen->render();
+		} finally {
+			$html = (string) ob_get_clean();
+
+			$this->assertStringNotContainsString( 'aggr-inventory-root', $html );
+		}
+	}
+
+	/**
+	 * The bootstrap payload the mounted screen reads.
+	 *
+	 * @param string $html Rendered screen.
+	 * @return array<string, mixed>
+	 */
+	private function mounted_payload( string $html ): array {
+		$matched = preg_match( '/data-aggr-inventory="([^"]*)"/', $html, $matches );
+
+		$this->assertSame( 1, $matched, 'The screen printed no bootstrap payload.' );
+
+		$decoded = json_decode( html_entity_decode( $matches[1], ENT_QUOTES ), true );
+
+		$this->assertIsArray( $decoded );
+
+		return $decoded;
 	}
 
 	/**

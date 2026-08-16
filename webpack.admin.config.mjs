@@ -33,6 +33,10 @@ export default ( env = {}, argv = {} ) => {
 				process.cwd(),
 				'src/admin/organizations/index.tsx'
 			),
+			'admin/inventory': path.resolve(
+				process.cwd(),
+				'src/admin/inventory/index.tsx'
+			),
 		},
 		output: {
 			path: path.resolve( process.cwd(), 'dist' ),

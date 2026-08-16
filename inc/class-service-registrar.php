@@ -686,7 +686,9 @@ final class Service_Registrar {
 		$container->register(
 			Placements_Controller::class,
 			static fn ( Service_Container $c ): Placements_Controller => new Placements_Controller(
-				$c->get( Placement_Repository::class )
+				$c->get( Placement_Repository::class ),
+				$c->get( Placement_Manager::class ),
+				$c->get( Placement_Data::class )
 			)
 		);
 

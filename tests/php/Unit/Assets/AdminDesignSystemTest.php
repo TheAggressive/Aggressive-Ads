@@ -61,20 +61,52 @@ final class AdminDesignSystemTest extends TestCase {
 	}
 
 	/**
-	 * Inventory remains a labeled, nonce-protected form. There is no delete.
+	 * A placement is deactivated, never deleted.
+	 *
+	 * The markup assertions that used to live here described a server-rendered
+	 * form that no longer exists — Inventory is a React screen writing through
+	 * REST. What they were really protecting survives the move and is asserted
+	 * where it now lives: there is no delete affordance and no route to reach
+	 * one. Deleting a placement would orphan every package that sells it and
+	 * every campaign snapshot that bought one.
 	 *
 	 * @return void
 	 */
-	public function test_inventory_template_keeps_accessible_form_semantics(): void {
-		$template = file_get_contents( AGGR_PLUGIN_DIR . 'templates/admin/placements.php' );
+	public function test_a_placement_can_never_be_deleted(): void {
+		$controller = file_get_contents( AGGR_PLUGIN_DIR . 'inc/REST/class-placements-controller.php' );
+		$screen     = file_get_contents( AGGR_PLUGIN_DIR . 'src/admin/inventory/index.tsx' );
 
-		$this->assertIsString( $template );
-		$this->assertStringContainsString( 'wp_nonce_field', $template );
-		$this->assertStringContainsString( '<label for=', $template );
-		$this->assertStringContainsString( 'admin-post.php', $template );
-		$this->assertStringContainsString( 'Create placement', $template );
-		$this->assertStringContainsString( 'Custom size', $template );
-		$this->assertStringNotContainsString( 'Delete placement', $template );
+		$this->assertIsString( $controller );
+		$this->assertIsString( $screen );
+		$this->assertStringNotContainsString( "'DELETE'", $controller );
+		$this->assertStringNotContainsString( 'Delete placement', $screen );
+		$this->assertStringContainsString( 'is_active', $controller );
+	}
+
+	/**
+	 * Inventory keeps the size choices the deleted template offered.
+	 *
+	 * The common-size list and the custom escape hatch are the whole point of
+	 * the screen: without the second, a site with a slot that is not an IAB
+	 * size cannot sell it at all.
+	 *
+	 * @return void
+	 */
+	public function test_inventory_offers_common_and_custom_sizes(): void {
+		$screen = file_get_contents( AGGR_PLUGIN_DIR . 'src/admin/inventory/index.tsx' );
+		$php    = file_get_contents( AGGR_PLUGIN_DIR . 'inc/Admin/class-placement-screen.php' );
+
+		$this->assertIsString( $screen );
+		$this->assertIsString( $php );
+
+		// The strings live in PHP because make-pot does not parse .tsx.
+		$this->assertStringContainsString( "'customSize'", $screen );
+		$this->assertStringContainsString( 'Custom size', $php );
+		$this->assertStringContainsString( 'Create placement', $php );
+		// A translation call would need this import, and make-pot would still
+		// never see the string. Asserting on the import rather than on "__("
+		// matters: the only "__(" in the file is the comment saying not to.
+		$this->assertStringNotContainsString( "from '@wordpress/i18n'", $screen );
 	}
 
 	/**

@@ -57,3 +57,35 @@
 	margin: 0 0 20px;
 	font-size: 14px;
 }
+
+/*
+ * The saved catalogue, as a grid rather than one column.
+ *
+ * Layout only, which is why it belongs in this file: it positions cards and
+ * restyles nothing inside them. A single column of full-width cards turns a
+ * dozen placements into a page nobody scrolls to the bottom of.
+ *
+ * Mobile-first, so the stacked case needs no query and is what any browser
+ * without media-query support would land on. `minmax(0, 1fr)` rather than a
+ * bare `1fr`: a grid item's default minimum is its content, so a long slug or
+ * URL in one card would otherwise push the whole row wider than the screen.
+ */
+.wrap.aggr-admin .aggr-card-grid {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: 20px;
+	align-items: start;
+}
+
+/* Two up before three, or the cards are unreadably narrow on a tablet. */
+@media (min-width: 782px) {
+	.wrap.aggr-admin .aggr-card-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (min-width: 1200px) {
+	.wrap.aggr-admin .aggr-card-grid {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+}

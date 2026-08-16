@@ -125,8 +125,7 @@ final class Runtime_Service_Registrar {
 		$container->register(
 			Placement_Screen::class,
 			static fn ( Service_Container $c ): Placement_Screen => new Placement_Screen(
-				$c->get( Placement_Data::class ),
-				$c->get( Placement_Manager::class )
+				$c->get( Placement_Data::class )
 			)
 		);
 

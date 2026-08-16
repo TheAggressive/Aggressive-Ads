@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-16T11:51:59+00:00\n"
+"POT-Creation-Date: 2026-08-16T20:10:04+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -51,8 +51,6 @@ msgstr ""
 #: inc/Admin/class-campaign-change-actions.php:55
 #: inc/Admin/class-campaign-change-actions.php:83
 #: inc/Admin/class-creative-change-actions.php:48
-#: inc/Admin/class-placement-screen.php:90
-#: inc/Admin/class-placement-screen.php:108
 #: inc/Admin/class-review-screen.php:177
 #: inc/Admin/class-review-screen.php:202
 #: inc/Admin/class-review-screen.php:228
@@ -89,7 +87,7 @@ msgstr ""
 #: inc/Admin/class-menu.php:136
 #: inc/Admin/class-organization-screen.php:105
 #: inc/Admin/class-package-screen.php:116
-#: inc/Admin/class-placement-screen.php:72
+#: inc/Admin/class-placement-screen.php:116
 #: inc/Admin/class-review-screen.php:145
 #: inc/Admin/class-settings-screen.php:130
 msgid "You do not have permission to view this page."
@@ -113,7 +111,7 @@ msgstr ""
 
 #: inc/Admin/class-organization-screen.php:135
 #: inc/Admin/class-package-screen.php:160
-#: templates/admin/placements.php:164
+#: inc/Admin/class-placement-screen.php:160
 #: templates/portal/screens/organization.php:50
 msgid "Active"
 msgstr ""
@@ -243,6 +241,7 @@ msgstr ""
 
 #: inc/Admin/class-organization-screen.php:167
 #: inc/Admin/class-package-screen.php:170
+#: inc/Admin/class-placement-screen.php:173
 #: inc/Admin/class-settings-screen.php:276
 msgid "Try again"
 msgstr ""
@@ -285,8 +284,7 @@ msgid "Package saved."
 msgstr ""
 
 #: inc/Admin/class-package-screen.php:150
-#: templates/admin/placements.php:84
-#: templates/admin/placements.php:144
+#: inc/Admin/class-placement-screen.php:150
 #: templates/portal/screens/campaign.php:685
 #: templates/portal/screens/organization.php:112
 msgid "Name"
@@ -295,7 +293,6 @@ msgstr ""
 #: inc/Admin/class-package-screen.php:151
 #: inc/Core/class-post-types.php:199
 #: inc/Workflow/class-campaign-change-manager.php:766
-#: templates/admin/placements.php:118
 #: templates/admin/review-campaign.php:83
 #: templates/portal/partials/campaign-changes.php:148
 #: templates/portal/screens/campaign.php:698
@@ -308,6 +305,7 @@ msgid "No placements exist yet. Create one under Inventory first."
 msgstr ""
 
 #: inc/Admin/class-package-screen.php:153
+#: inc/Admin/class-placement-screen.php:162
 msgid "inactive"
 msgstr ""
 
@@ -353,22 +351,26 @@ msgid "default"
 msgstr ""
 
 #: inc/Admin/class-package-screen.php:165
+#: inc/Admin/class-placement-screen.php:168
 #: inc/Admin/class-settings-screen.php:271
 msgid "Not saved yet…"
 msgstr ""
 
 #: inc/Admin/class-package-screen.php:166
+#: inc/Admin/class-placement-screen.php:169
 #: inc/Admin/class-settings-screen.php:272
 #: inc/Assets/class-assets.php:356
 msgid "Saving…"
 msgstr ""
 
 #: inc/Admin/class-package-screen.php:167
+#: inc/Admin/class-placement-screen.php:170
 #: inc/Admin/class-settings-screen.php:273
 msgid "Saved."
 msgstr ""
 
 #: inc/Admin/class-package-screen.php:168
+#: inc/Admin/class-placement-screen.php:171
 #: inc/Admin/class-settings-screen.php:274
 msgid "Not saved."
 msgstr ""
@@ -381,84 +383,104 @@ msgstr ""
 msgid "The packages screen needs JavaScript enabled."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:53
-#: inc/Admin/class-placement-screen.php:54
-#: templates/admin/placements.php:65
+#: inc/Admin/class-placement-screen.php:92
+#: inc/Admin/class-placement-screen.php:93
+#: inc/Admin/class-placement-screen.php:134
+#: inc/Admin/class-placement-screen.php:179
 msgid "Inventory"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:150
+#: inc/Admin/class-placement-screen.php:135
+msgid "The inventory screen has not been built. Run “pnpm build” and reload."
+msgstr ""
+
+#: inc/Admin/class-placement-screen.php:145
+msgid "New placement"
+msgstr ""
+
+#: inc/Admin/class-placement-screen.php:146
+msgid "Create placement"
+msgstr ""
+
+#: inc/Admin/class-placement-screen.php:147
+msgid "Save placement"
+msgstr ""
+
+#: inc/Admin/class-placement-screen.php:148
 msgid "Placement created."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:151
+#: inc/Admin/class-placement-screen.php:149
 msgid "Placement saved."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:160
-#: inc/Workflow/class-placement-manager.php:61
-#: inc/Workflow/class-placement-manager.php:131
-msgid "You do not have permission to manage placements."
+#: inc/Admin/class-placement-screen.php:151
+msgid "Slot slug"
+msgstr ""
+
+#: inc/Admin/class-placement-screen.php:152
+msgid "Used by the placement block to choose this slot. Lowercase letters, numbers and hyphens."
+msgstr ""
+
+#: inc/Admin/class-placement-screen.php:153
+#: templates/portal/screens/campaign.php:873
+msgid "Size"
+msgstr ""
+
+#: inc/Admin/class-placement-screen.php:154
+msgid "Choose a size"
+msgstr ""
+
+#: inc/Admin/class-placement-screen.php:155
+msgid "Custom size"
+msgstr ""
+
+#: inc/Admin/class-placement-screen.php:156
+msgid "Custom width (px)"
+msgstr ""
+
+#: inc/Admin/class-placement-screen.php:157
+msgid "Custom height (px)"
+msgstr ""
+
+#: inc/Admin/class-placement-screen.php:158
+msgid "Sort order"
+msgstr ""
+
+#: inc/Admin/class-placement-screen.php:159
+msgid "Lower numbers appear first in the advertiser wizard."
 msgstr ""
 
 #: inc/Admin/class-placement-screen.php:161
-#: inc/Workflow/class-placement-manager.php:138
-msgid "That placement could not be found."
-msgstr ""
-
-#: inc/Admin/class-placement-screen.php:162
-msgid "The placement could not be saved. Try again."
+msgid "Inactive placements are hidden from advertisers and stop being filled."
 msgstr ""
 
 #: inc/Admin/class-placement-screen.php:163
-msgid "The placement catalogue is full."
+msgid "House advertisement"
 msgstr ""
 
 #: inc/Admin/class-placement-screen.php:164
-#: inc/Workflow/class-placement-manager.php:196
-msgid "Enter a placement name."
+msgid "House attachment ID"
 msgstr ""
 
 #: inc/Admin/class-placement-screen.php:165
-#: inc/Workflow/class-placement-manager.php:205
-msgid "Enter a slot slug."
+msgid "Shown when no paid creative is live, if the Delivery house-ad policy allows it. Leave at 0 for none."
 msgstr ""
 
 #: inc/Admin/class-placement-screen.php:166
-#: inc/Workflow/class-placement-manager.php:214
-msgid "That slot slug is already in use."
+msgid "House click URL"
 msgstr ""
 
 #: inc/Admin/class-placement-screen.php:167
-#: inc/Workflow/class-placement-manager.php:223
-msgid "Choose a common size or enter a custom width and height in pixels."
-msgstr ""
-
-#: inc/Admin/class-placement-screen.php:168
-#: inc/Workflow/class-placement-manager.php:232
-msgid "Sort order must be between 0 and 9999."
-msgstr ""
-
-#: inc/Admin/class-placement-screen.php:169
-#: inc/Workflow/class-placement-manager.php:300
-#: inc/Workflow/class-placement-manager.php:309
-#: inc/Workflow/class-placement-manager.php:318
-#: inc/Workflow/class-placement-manager.php:330
-msgid "House creative must be a JPEG, PNG, GIF, or WebP image."
-msgstr ""
-
-#: inc/Admin/class-placement-screen.php:170
-#: inc/Workflow/class-placement-manager.php:350
-msgid "House destination must be an http or https URL without credentials."
-msgstr ""
-
-#: inc/Admin/class-placement-screen.php:171
-#: inc/Workflow/class-placement-manager.php:367
-msgid "The house creative could not be saved."
+msgid "House alt text"
 msgstr ""
 
 #: inc/Admin/class-placement-screen.php:172
-msgid "The placement could not be updated."
+msgid "That placement could not be saved."
+msgstr ""
+
+#: inc/Admin/class-placement-screen.php:180
+msgid "The inventory screen needs JavaScript enabled."
 msgstr ""
 
 #: inc/Admin/class-review-data.php:402
@@ -2816,13 +2838,57 @@ msgstr ""
 msgid "That password does not meet this site's security requirements."
 msgstr ""
 
+#: inc/Workflow/class-placement-manager.php:61
+#: inc/Workflow/class-placement-manager.php:131
+msgid "You do not have permission to manage placements."
+msgstr ""
+
 #: inc/Workflow/class-placement-manager.php:78
 #: inc/Workflow/class-placement-manager.php:88
 msgid "The placement could not be created."
 msgstr ""
 
+#: inc/Workflow/class-placement-manager.php:138
+msgid "That placement could not be found."
+msgstr ""
+
 #: inc/Workflow/class-placement-manager.php:153
 msgid "The placement could not be saved."
+msgstr ""
+
+#: inc/Workflow/class-placement-manager.php:196
+msgid "Enter a placement name."
+msgstr ""
+
+#: inc/Workflow/class-placement-manager.php:205
+msgid "Enter a slot slug."
+msgstr ""
+
+#: inc/Workflow/class-placement-manager.php:214
+msgid "That slot slug is already in use."
+msgstr ""
+
+#: inc/Workflow/class-placement-manager.php:223
+msgid "Choose a common size or enter a custom width and height in pixels."
+msgstr ""
+
+#: inc/Workflow/class-placement-manager.php:232
+msgid "Sort order must be between 0 and 9999."
+msgstr ""
+
+#: inc/Workflow/class-placement-manager.php:300
+#: inc/Workflow/class-placement-manager.php:309
+#: inc/Workflow/class-placement-manager.php:318
+#: inc/Workflow/class-placement-manager.php:330
+msgid "House creative must be a JPEG, PNG, GIF, or WebP image."
+msgstr ""
+
+#: inc/Workflow/class-placement-manager.php:350
+msgid "House destination must be an http or https URL without credentials."
+msgstr ""
+
+#: inc/Workflow/class-placement-manager.php:367
+msgid "The house creative could not be saved."
 msgstr ""
 
 #: inc/Workflow/class-placement-slot.php:84
@@ -2860,94 +2926,6 @@ msgstr ""
 
 #: inc/Workflow/class-transition-guards.php:191
 msgid "This campaign has not reached its end date."
-msgstr ""
-
-#: templates/admin/placements.php:42
-#: templates/portal/screens/campaign.php:873
-msgid "Size"
-msgstr ""
-
-#: templates/admin/placements.php:48
-msgid "Custom size"
-msgstr ""
-
-#: templates/admin/placements.php:50
-msgid "Custom width and height are used only when Custom size is selected. Creatives must match these pixels exactly."
-msgstr ""
-
-#: templates/admin/placements.php:54
-msgid "Custom width (px)"
-msgstr ""
-
-#: templates/admin/placements.php:58
-msgid "Custom height (px)"
-msgstr ""
-
-#: templates/admin/placements.php:66
-msgid "Placements are the slots editors embed. The public slot id is the slug. Changing a slug after a theme has used it will empty that slot until the theme is updated."
-msgstr ""
-
-#: templates/admin/placements.php:77
-msgid "New placement"
-msgstr ""
-
-#: templates/admin/placements.php:88
-#: templates/admin/placements.php:148
-msgid "Slot slug"
-msgstr ""
-
-#: templates/admin/placements.php:91
-msgid "Used in the placement block and aggr_placement(). Leave blank to generate from the name."
-msgstr ""
-
-#: templates/admin/placements.php:96
-#: templates/admin/placements.php:156
-msgid "Sort order"
-msgstr ""
-
-#: templates/admin/placements.php:100
-#: templates/admin/placements.php:160
-msgid "Availability"
-msgstr ""
-
-#: templates/admin/placements.php:104
-msgid "Active — advertisers can select this slot"
-msgstr ""
-
-#: templates/admin/placements.php:110
-msgid "Create placement"
-msgstr ""
-
-#: templates/admin/placements.php:120
-msgid "No placements yet. Create a slot above, then add it to a package."
-msgstr ""
-
-#: templates/admin/placements.php:133
-msgid "— inactive"
-msgstr ""
-
-#: templates/admin/placements.php:151
-msgid "Changing this empties the slot in any theme still using the old id."
-msgstr ""
-
-#: templates/admin/placements.php:169
-msgid "House attachment ID"
-msgstr ""
-
-#: templates/admin/placements.php:172
-msgid "Shown when no paid creative is live, if the Delivery house-ad policy allows it."
-msgstr ""
-
-#: templates/admin/placements.php:176
-msgid "House click URL"
-msgstr ""
-
-#: templates/admin/placements.php:180
-msgid "House alt text"
-msgstr ""
-
-#: templates/admin/placements.php:185
-msgid "Save placement"
 msgstr ""
 
 #: templates/admin/review-campaign.php:29
