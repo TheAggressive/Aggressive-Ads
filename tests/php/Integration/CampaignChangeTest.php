@@ -231,6 +231,70 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Edits cannot be approved onto a campaign that stopped running.
+	 *
+	 * A proposal can sit in the review queue while the campaign underneath it
+	 * completes or is cancelled. Approving it then rewrites the title and the
+	 * date window of a finished campaign, busts the fill cache for it, and
+	 * records the change in the audit log as applied — all against something no
+	 * longer serving. The status is therefore re-checked at approval and the
+	 * staged edits are dropped when the campaign transitions.
+	 *
+	 * @return void
+	 */
+	public function test_edits_cannot_be_approved_after_the_campaign_stops(): void {
+		wp_set_current_user( $this->advertiser );
+		$campaign_id = $this->running_campaign();
+
+		$this->allow( array( Settings_Schema::EDIT_TITLE ) );
+		$this->propose( $campaign_id, array( 'title' => 'Renamed mid-flight' ) );
+
+		$this->assertTrue( $this->campaigns->has_pending_edits( $campaign_id ) );
+
+		// The campaign ends underneath the queued proposal.
+		wp_update_post(
+			array(
+				'ID'          => $campaign_id,
+				'post_status' => Post_Statuses::COMPLETE,
+			)
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Roles::REVIEWER ) ) );
+
+		$result = $this->changes->approve( $campaign_id );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'aggr_campaign_not_running', $result->get_error_code() );
+		$this->assertSame( 'Running flight', get_post_field( 'post_title', $campaign_id ) );
+	}
+
+	/**
+	 * A transition drops staged edits along with the action request.
+	 *
+	 * @return void
+	 */
+	public function test_a_transition_clears_staged_edits(): void {
+		wp_set_current_user( $this->advertiser );
+		$campaign_id = $this->running_campaign();
+
+		$this->allow( array( Settings_Schema::EDIT_TITLE ) );
+		$this->propose( $campaign_id, array( 'title' => 'Renamed mid-flight' ) );
+
+		$this->assertTrue( $this->campaigns->has_pending_edits( $campaign_id ) );
+
+		wp_update_post(
+			array(
+				'ID'          => $campaign_id,
+				'post_status' => Post_Statuses::CANCELLED,
+			)
+		);
+
+		do_action( 'aggr_campaign_transitioned', $campaign_id );
+
+		$this->assertFalse( $this->campaigns->has_pending_edits( $campaign_id ) );
+	}
+
+	/**
 	 * With nothing enabled the workflow refuses, whatever is posted.
 	 *
 	 * @return void

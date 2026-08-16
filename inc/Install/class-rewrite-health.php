@@ -133,21 +133,53 @@ final class Rewrite_Health implements Service {
 	 * @return array<int, string> Human-readable paths, or an empty array.
 	 */
 	private function missing_rules(): array {
-		$rules   = get_option( 'rewrite_rules', array() );
-		$rules   = is_array( $rules ) ? $rules : array();
-		$pattern = implode( '|', array_map( 'strval', array_keys( $rules ) ) );
+		$rules = get_option( 'rewrite_rules', array() );
+		$rules = is_array( $rules ) ? $rules : array();
 
 		$missing = array();
 
-		if ( ! str_contains( $pattern, Routes::base() ) ) {
-			$missing[] = '/' . Routes::base() . '/';
-		}
-
-		if ( ! str_contains( $pattern, Click_Hop::PATH ) ) {
-			$missing[] = '/' . Click_Hop::PATH . '/';
+		foreach ( array( Routes::base(), Click_Hop::PATH ) as $base ) {
+			if ( ! self::has_rule_for( $rules, (string) $base ) ) {
+				$missing[] = '/' . $base . '/';
+			}
 		}
 
 		return $missing;
+	}
+
+	/**
+	 * Whether any installed rule actually opens with this path segment.
+	 *
+	 * The first version concatenated every rule key and looked for the base as a
+	 * substring, which any unrelated rule containing the word would satisfy: a
+	 * page at /advertiser-terms/ produced a rule whose key contains
+	 * "advertiser", so the check reported the portal reachable while every
+	 * /advertiser/ URL returned a 404. A health check that answers "fine" during
+	 * the outage it exists to detect is worse than no check.
+	 *
+	 * Rule keys are regular expressions anchored at the start of the path, so
+	 * the segment is matched as a whole one — followed by a separator, an end of
+	 * pattern, or a regex construct — rather than by any prefix that shares its
+	 * letters.
+	 *
+	 * @param array<string, mixed> $rules Installed rewrite rules.
+	 * @param string               $base  Path segment the plugin advertises.
+	 * @return bool
+	 */
+	private static function has_rule_for( array $rules, string $base ): bool {
+		if ( '' === $base ) {
+			return false;
+		}
+
+		$expected = '#^\^?' . preg_quote( $base, '#' ) . '(?:/|\\|\$|\(|\[|$)#';
+
+		foreach ( array_keys( $rules ) as $key ) {
+			if ( 1 === preg_match( $expected, (string) $key ) ) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**

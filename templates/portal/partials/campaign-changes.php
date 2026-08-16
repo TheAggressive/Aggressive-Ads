@@ -168,16 +168,27 @@ $aggr_step_link = static function ( string $step, string $label, string $current
 					</div>
 				<?php endif; ?>
 			<?php elseif ( 'schedule' === $aggr_edit_step ) : ?>
+				<?php
+				/*
+				 * Staged values first, stored campaign only as the fallback.
+				 *
+				 * Every other step reads $aggr_values; this one read the stored
+				 * campaign, so stepping back into Schedule redisplayed the live
+				 * dates and saving wrote them straight back over a date change
+				 * the advertiser had already staged — silently, because the form
+				 * looked exactly as it should.
+				 */
+				?>
 				<input type="hidden" name="next_step" value="<?php echo esc_attr( $aggr_has_destination ? 'destination' : 'review' ); ?>">
 
 				<div class="aggr-field">
 					<label for="aggr-edit-start"><?php esc_html_e( 'Start date', 'aggressive-ads' ); ?></label>
-					<input type="date" id="aggr-edit-start" name="start_date" value="<?php echo esc_attr( (string) $aggr_campaign['start_date'] ); ?>">
+					<input type="date" id="aggr-edit-start" name="start_date" value="<?php echo esc_attr( (string) ( $aggr_values['start_date'] ?? $aggr_campaign['start_date'] ) ); ?>">
 					<p class="aggr-hint"><?php esc_html_e( 'A start date that has already passed cannot be moved.', 'aggressive-ads' ); ?></p>
 				</div>
 				<div class="aggr-field">
 					<label for="aggr-edit-end"><?php esc_html_e( 'End date', 'aggressive-ads' ); ?></label>
-					<input type="date" id="aggr-edit-end" name="end_date" value="<?php echo esc_attr( (string) $aggr_campaign['end_date'] ); ?>">
+					<input type="date" id="aggr-edit-end" name="end_date" value="<?php echo esc_attr( (string) ( $aggr_values['end_date'] ?? $aggr_campaign['end_date'] ) ); ?>">
 				</div>
 			<?php else : ?>
 				<input type="hidden" name="next_step" value="review">

@@ -211,6 +211,37 @@ final class SettingsAutosaveTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A malformed support address is refused, not quietly blanked.
+	 *
+	 * Empty means "fall back to the site admin address", so sanitizing the input
+	 * before validating it turned a typo into a silent un-setting: the schema's
+	 * rule became unreachable, the autosave answered "Saved.", and the address
+	 * advertisers see on the Help screen changed without anybody being told.
+	 *
+	 * @return void
+	 */
+	public function test_a_malformed_support_email_is_rejected(): void {
+		wp_set_current_user( $this->manager );
+
+		$good                           = $this->valid_document();
+		$good['brand']['support_email'] = 'help@example.com';
+
+		$this->assertSame( 200, $this->save( $good )->get_status() );
+
+		$bad                           = $this->valid_document();
+		$bad['brand']['support_email'] = 'not-an-address';
+
+		$response = $this->save( $bad );
+
+		$this->assertSame( 400, $response->get_status() );
+		$this->assertSame(
+			'help@example.com',
+			( new Settings() )->get()['brand']['support_email'],
+			'A rejected address must leave the stored one untouched.'
+		);
+	}
+
+	/**
 	 * A key the schema does not know is not stored.
 	 *
 	 * @return void

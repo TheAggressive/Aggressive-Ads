@@ -96,6 +96,35 @@ final class RewriteHealthTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A rule that merely contains the portal base does not satisfy the check.
+	 *
+	 * The first version concatenated every rule key and searched for the base as
+	 * a substring, so an ordinary page at /advertiser-terms/ made the check
+	 * report the portal reachable while every /advertiser/ URL 404ed. A health
+	 * check that answers "fine" during the outage it exists to detect is worse
+	 * than no check at all.
+	 *
+	 * @return void
+	 */
+	public function test_a_lookalike_rule_does_not_satisfy_the_check(): void {
+		$base = Routes::base();
+
+		update_option(
+			'rewrite_rules',
+			array(
+				$base . '-terms/?$'             => 'index.php?pagename=' . $base . '-terms',
+				'about-' . $base . '/?$'        => 'index.php?pagename=about',
+				Click_Hop::PATH . '/([^/]+)/?$' => 'index.php?aggr_click=$matches[1]',
+			)
+		);
+
+		$result = $this->health->run_test();
+
+		$this->assertSame( 'critical', $result['status'] );
+		$this->assertStringContainsString( '/' . $base . '/', (string) $result['description'] );
+	}
+
+	/**
 	 * The whole point: rules absent from the option is critical even though
 	 * the recorded rewrite version is perfectly current.
 	 *

@@ -87,6 +87,33 @@ final class Campaign_Change_Manager implements Service {
 		if ( array() !== $this->campaigns->action_request( $campaign_id ) ) {
 			$this->campaigns->clear_action_request( $campaign_id );
 		}
+
+		/*
+		 * Staged edits go the same way, and for the same reason.
+		 *
+		 * This used to clear only the action request, which left a submitted
+		 * edit attached to a campaign that had since been cancelled or
+		 * completed. Nothing downstream re-checked the status, so a reviewer
+		 * working the queue could approve a title and a date window onto a
+		 * finished campaign — rewriting it, busting the fill cache and auditing
+		 * the change as applied.
+		 */
+		if ( array() === $this->submitted_edits( $campaign_id ) ) {
+			return;
+		}
+
+		if ( in_array( $this->campaigns->status( $campaign_id ), self::editable_statuses(), true ) ) {
+			return;
+		}
+
+		$this->campaigns->clear_pending_edits( $campaign_id );
+		$this->log(
+			'campaign.changes_dropped',
+			$campaign_id,
+			array(),
+			'Pending campaign changes dropped: the campaign is no longer running.',
+			Audit_Event::OUTCOME_FAILED
+		);
 	}
 
 	/**
@@ -496,6 +523,20 @@ final class Campaign_Change_Manager implements Service {
 
 		if ( array() === $edits ) {
 			return $this->error( 'aggr_no_pending_edits', __( 'This campaign has no changes waiting for review.', 'aggressive-ads' ), 404 );
+		}
+
+		/*
+		 * The campaign must still be one this workflow applies to.
+		 *
+		 * The transition hook clears stale edits, but a hook is a promise about
+		 * a code path rather than about state: a status written by a migration,
+		 * a direct repository call, or a transition that fired before this
+		 * service was initialized leaves edits behind with nothing to catch
+		 * them. This is the check that makes approving onto a finished campaign
+		 * impossible rather than merely unlikely.
+		 */
+		if ( ! in_array( $this->campaigns->status( $campaign_id ), self::editable_statuses(), true ) ) {
+			return $this->error( 'aggr_campaign_not_running', __( 'This campaign is no longer running, so its changes cannot be approved.', 'aggressive-ads' ), 409 );
 		}
 
 		// Re-judged at approval, not merely at request. A proposal can sit in

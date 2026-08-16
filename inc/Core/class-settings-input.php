@@ -109,8 +109,20 @@ final class Settings_Input {
 		return array(
 			'product_name'  => $text( 'product_name' ),
 			'tagline'       => $text( 'tagline' ),
+
+			/*
+			 * Trimmed, not sanitized.
+			 *
+			 * sanitize_email() returns '' for anything malformed, and '' is a
+			 * meaningful value here — it means "fall back to the site admin
+			 * address". So sanitizing first turned a typo into a silent
+			 * un-setting: the schema's support_email rule became unreachable,
+			 * the autosave answered "Saved.", and the address the advertiser
+			 * sees on the Help screen quietly changed. Settings_Schema::validate()
+			 * decides whether it is an address; shaping only makes it a string.
+			 */
 			'support_email' => isset( $section['support_email'] ) && is_string( $section['support_email'] )
-				? sanitize_email( $section['support_email'] )
+				? trim( wp_strip_all_tags( $section['support_email'] ) )
 				: '',
 			'logo_url'      => isset( $section['logo_url'] ) && is_string( $section['logo_url'] )
 				? esc_url_raw( $section['logo_url'] )
