@@ -28,6 +28,25 @@
 }
 
 /*
+ * Review actions in the page header.
+ *
+ * Sized to their content, unlike the same buttons inside .aggr-action, which
+ * stretch to the width of the feedback box they submit. Wraps rather than
+ * shrinks: two actions plus a long campaign name is the normal case on a
+ * narrow viewport, not an edge one.
+ */
+.aggr-pagehead__actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--aggr-space-sm);
+}
+
+.aggr-pagehead__actions .aggr-button {
+	width: auto;
+}
+
+/*
  * A control that reads as a link.
  *
  * The queue's campaign names and the detail screen's breadcrumb navigate
@@ -203,24 +222,46 @@
 		padding: var(--aggr-space-lg);
 	}
 
-	.aggr-creative {
+	/*
+	 * Scoped to .aggr-admin, and that scoping is the fix rather than a habit.
+	 *
+	 * `.aggr-creative` is defined twice: the advertiser's card in
+	 * components/_surfaces.css is `display: flex; flex-direction: column`, and
+	 * this one was written as a plain block. Both stylesheets load on the staff
+	 * screen, so the portal's rule won and the preview became a flex item —
+	 * which then refused to grow past its own min-height while the image inside
+	 * kept its 360px cap. A 160x600 skyscraper hung 204px below its own box and
+	 * over the text beneath it. Two components should not share a class name;
+	 * until one is renamed, this scope is what keeps them apart.
+	 */
+	.aggr-admin .aggr-creative {
+		display: block;
 		overflow: hidden;
+		padding: 0;
 		border: 1px solid var(--aggr-border-color);
 		border-radius: var(--aggr-radius-control);
 		background: var(--aggr-color-surface-raised);
+		box-shadow: none;
 	}
 
-	.aggr-creative__preview {
-		display: grid;
-		min-height: 180px;
-		place-items: center;
+	/*
+	 * Only the two things that genuinely differ from the advertiser's card.
+	 *
+	 * components/_surfaces.css already gets this right — a flex box with a
+	 * definite height, and an image capped at 100% of it — and that pairing is
+	 * the whole trick: a percentage max-height needs a definite parent to
+	 * resolve against. Redefining the box here as a grid with a min-height
+	 * broke both halves at once, and a 160x600 skyscraper hung 204px below its
+	 * own card and over the text beneath it.
+	 *
+	 * So this overrides the height, because reviewing a creative means reading
+	 * it rather than recognising it, and the tint, because the staff card sits
+	 * on a different surface. Everything else is inherited on purpose.
+	 */
+	.aggr-admin .aggr-creative__preview {
+		height: 22rem;
 		padding: var(--aggr-space-lg);
 		background: var(--aggr-color-surface-sunken);
-	}
-
-	.aggr-creative__preview img {
-		max-height: 360px;
-		object-fit: contain;
 	}
 
 	.aggr-creative__body {

@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { expectAdminA11y } from './accessibility';
+import { solidPng } from './png';
+import { wp } from './wp-cli';
 
 /**
  * The review screens after the React conversion.
@@ -85,4 +87,70 @@ test( 'a reviewer works the queue, claims a campaign and writes notes', async ( 
 		page.getByRole( 'heading', { level: 1, name: 'Campaign review' } )
 	).toBeVisible();
 	await expectAdminA11y( page );
+} );
+
+test( 'a tall creative stays inside its preview box', async ( { page } ) => {
+	/*
+	 * A 160x600 skyscraper used to render 204px below its own card and over the
+	 * text beneath it. The cause was CSS rather than data — the staff card
+	 * redefined a box the portal already sizes, and a percentage max-height
+	 * lost the definite parent it resolves against — so this drives the real
+	 * screen and swaps the image, which is what actually exercises the rules.
+	 */
+	await page.goto( '/wp-login.php' );
+	await page.locator( '#user_login' ).fill( 'admin' );
+	await page.locator( '#user_pass' ).fill( 'admin' );
+	await page.locator( '#wp-submit' ).click();
+
+	// Seeded here rather than borrowed from whatever the queue happens to hold:
+	// no other fixture in the suite carries a creative, and depending on the
+	// wizard spec having run first would make this pass or fail by ordering.
+	const campaignId = wp(
+		'eval',
+		'require "tests/e2e/seed-review-creative.php";'
+	).trim();
+
+	expect( Number( campaignId ) ).toBeGreaterThan( 0 );
+
+	await page.goto(
+		`/wp-admin/admin.php?page=aggr-review&campaign=${ campaignId }`
+	);
+
+	const preview = page.locator( '.aggr-creative__preview' ).first();
+
+	await preview.locator( 'img' ).waitFor();
+
+	const tall = `data:image/png;base64,${ solidPng( 160, 600 ).toString(
+		'base64'
+	) }`;
+
+	await page.evaluate( ( src ) => {
+		document
+			.querySelectorAll< HTMLImageElement >(
+				'.aggr-creative__preview img'
+			)
+			.forEach( ( img ) => {
+				img.src = src;
+			} );
+	}, tall );
+
+	await expect
+		.poll( async () =>
+			page.evaluate( () => {
+				const img = document.querySelector(
+					'.aggr-creative__preview img'
+				);
+				const box = document.querySelector( '.aggr-creative__preview' );
+
+				if ( ! img || ! box ) {
+					return 999;
+				}
+
+				return Math.round(
+					img.getBoundingClientRect().bottom -
+						box.getBoundingClientRect().bottom
+				);
+			} )
+		)
+		.toBeLessThanOrEqual( 0 );
 } );

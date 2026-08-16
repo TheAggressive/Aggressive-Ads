@@ -262,6 +262,22 @@ export function CampaignView( {
 		( row ) => 'placement_ids' === row.field
 	);
 
+	/*
+	 * Split by whether the edge requires advertiser-facing feedback.
+	 *
+	 * An action that needs none is a single decision and belongs in the page
+	 * header, beside the status it changes. One that does owns a textarea, and
+	 * lifting its button away from the box it submits would leave a control
+	 * separated from its required input — so those stay in the panel, and the
+	 * panel disappears entirely when none are left.
+	 */
+	const quickActions = campaign.actions.filter(
+		( action ) => ! action.needs_notes
+	);
+	const guidedActions = campaign.actions.filter(
+		( action ) => action.needs_notes
+	);
+
 	return (
 		<>
 			<p className="aggr-breadcrumb">
@@ -274,14 +290,47 @@ export function CampaignView( {
 				</button>
 			</p>
 
+			{ /*
+			 * The pill sits with the heading, not as a third child of
+			 * .aggr-pagehead. That container is space-between, so a status left
+			 * on its own lands midway across the screen and reads as belonging
+			 * to nothing — the same defect fixed on the advertiser's campaign
+			 * screen in 6015287. .aggr-pagehead__heading centres the two and
+			 * wraps the pill to its own line rather than squeezing it when a
+			 * campaign name is long.
+			 */ }
 			<header className="aggr-pagehead">
 				<div>
-					<h1 className="aggr-title">{ campaign.title }</h1>
+					<div className="aggr-pagehead__heading">
+						<h1 className="aggr-title">{ campaign.title }</h1>
+						<span
+							className={ `aggr-pill aggr-pill--${ campaign.pill }` }
+						>
+							{ campaign.status_text }
+						</span>
+					</div>
 					<p className="aggr-lede">{ campaign.org_name }</p>
 				</div>
-				<span className={ `aggr-pill aggr-pill--${ campaign.pill }` }>
-					{ campaign.status_text }
-				</span>
+
+				{ 0 === quickActions.length ? null : (
+					<div className="aggr-pagehead__actions">
+						{ quickActions.map( ( action ) => (
+							<button
+								key={ action.to }
+								type="button"
+								className={ `aggr-button ${
+									action.destructive
+										? 'aggr-button--danger'
+										: ''
+								}` }
+								disabled={ busy }
+								onClick={ () => onTransition( action.to, '' ) }
+							>
+								{ action.label }
+							</button>
+						) ) }
+					</div>
+				) }
 			</header>
 
 			<section
@@ -464,19 +513,24 @@ export function CampaignView( {
 				</section>
 			) }
 
-			<div className="aggr-review-columns">
-				<section
-					className="aggr-panel"
-					aria-labelledby="aggr-review-actions"
-				>
-					<h2 id="aggr-review-actions" className="aggr-panel__head">
-						{ t( 'reviewActions' ) }
-					</h2>
-					{ 0 === campaign.actions.length ? (
-						<p className="aggr-empty">{ t( 'noActions' ) }</p>
-					) : (
+			<div
+				className={
+					0 === guidedActions.length ? '' : 'aggr-review-columns'
+				}
+			>
+				{ 0 === guidedActions.length ? null : (
+					<section
+						className="aggr-panel"
+						aria-labelledby="aggr-review-actions"
+					>
+						<h2
+							id="aggr-review-actions"
+							className="aggr-panel__head"
+						>
+							{ t( 'reviewActions' ) }
+						</h2>
 						<div className="aggr-actions">
-							{ campaign.actions.map( ( action ) => (
+							{ guidedActions.map( ( action ) => (
 								<ActionForm
 									key={ action.to }
 									action={ action }
@@ -485,8 +539,29 @@ export function CampaignView( {
 								/>
 							) ) }
 						</div>
-					) }
-				</section>
+					</section>
+				) }
+
+				{ /*
+				 * The "nothing to do here" line only belongs on screen when
+				 * there is genuinely nothing — with the simple actions moved
+				 * into the header, an empty panel below them would contradict
+				 * the buttons sitting at the top of the same page.
+				 */ }
+				{ 0 === campaign.actions.length ? (
+					<section
+						className="aggr-panel"
+						aria-labelledby="aggr-review-actions"
+					>
+						<h2
+							id="aggr-review-actions"
+							className="aggr-panel__head"
+						>
+							{ t( 'reviewActions' ) }
+						</h2>
+						<p className="aggr-empty">{ t( 'noActions' ) }</p>
+					</section>
+				) : null }
 
 				<InternalNotes
 					// Remounted when the server's copy changes, so the box
