@@ -274,6 +274,54 @@ final class OwnershipTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * **The review capability alone is not cross-organization access.**
+	 *
+	 * Passing the membership gate and being authorized are two different
+	 * things, and `Ownership::map()` keeps them apart by resolving a non-member
+	 * to the `_others_` and `read_private_` variants rather than to the plain
+	 * ones. The reviewer *role* holds both halves, so every existing test here
+	 * is answered by the role and none of them can see the split: collapsing it
+	 * — resolving a non-member to `edit_` and to `read` — leaves all 659 tests
+	 * green.
+	 *
+	 * The configuration that exposes it is an ordinary one. Somebody hands an
+	 * advertiser `aggr_review_campaigns` so they can help work the queue. That
+	 * grant is supported and deliberate — `User_Repository::with_capability()`
+	 * honours exactly this shape for notifications — and the scope split is the
+	 * only thing that stops it also handing over every other customer's
+	 * campaigns, and the contact and billing details on their organization.
+	 *
+	 * @return void
+	 */
+	public function test_the_review_capability_alone_does_not_grant_another_organization(): void {
+		$helper = get_user_by( 'id', $this->user_a );
+
+		$this->assertInstanceOf( \WP_User::class, $helper );
+
+		$helper->add_cap( \Aggressive\Ads\Security\Capabilities::REVIEW_CAMPAIGNS );
+
+		// The fixture is only real if the grant took and the primitives did not
+		// arrive with it. Asserting denial against a user who never became
+		// staff would prove nothing about the split.
+		$this->assertTrue( user_can( $this->user_a, \Aggressive\Ads\Security\Capabilities::REVIEW_CAMPAIGNS ) );
+		$this->assertFalse( user_can( $this->user_a, 'edit_others_aggr_campaigns' ) );
+		$this->assertFalse( user_can( $this->user_a, 'read_private_aggr_campaigns' ) );
+		$this->assertFalse( user_can( $this->user_a, 'read_private_aggr_orgs' ) );
+
+		wp_set_current_user( $this->user_a );
+		$this->flush_ownership_cache();
+
+		$this->assertFalse( current_user_can( 'edit_aggr_campaign', $this->campaign_b ) );
+		$this->assertFalse( current_user_can( 'read_aggr_campaign', $this->campaign_b ) );
+		$this->assertFalse( current_user_can( 'read_aggr_org', $this->org_b ) );
+
+		// Their own organization is unaffected: membership, not the grant, is
+		// what authorizes that, and it resolves to the plain primitives.
+		$this->assertTrue( current_user_can( 'edit_aggr_campaign', $this->campaign_a ) );
+		$this->assertTrue( current_user_can( 'read_aggr_org', $this->org_a ) );
+	}
+
+	/**
 	 * A deleted object denies rather than defaulting.
 	 *
 	 * If the object cannot be loaded, falling through to core means comparing
@@ -300,6 +348,42 @@ final class OwnershipTest extends WP_UnitTestCase {
 
 		$this->assertFalse( current_user_can( 'edit_aggr_campaign', 999999 ) );
 		$this->assertFalse( current_user_can( 'edit_aggr_campaign', 0 ) );
+	}
+
+	/**
+	 * **A missing object denies through our own capability name, not core's.**
+	 *
+	 * The two tests above prove the outcome, not the mechanism, and they cannot:
+	 * core's map_meta_cap() denies a nonexistent post on its own before this
+	 * filter has an opinion, so both stayed green with the branch they document
+	 * deleted outright. Reached with one of our names the recursion never
+	 * happens, core has computed nothing, and this filter is the only thing
+	 * standing between the caller and a $post_author comparison against null.
+	 *
+	 * The `$post_type === null` half is asserted alongside it because the two
+	 * halves must differ: a generic capability against a missing post has to
+	 * stay somebody else's business, or every plugin that asks `edit_post` about
+	 * a since-deleted id starts being denied by us.
+	 *
+	 * @return void
+	 */
+	public function test_our_own_capability_name_denies_a_missing_object(): void {
+		$ownership = \Aggressive\Ads\Plugin::instance()->container()->get( Ownership::class );
+
+		$this->assertSame(
+			array( 'do_not_allow' ),
+			$ownership->map( array( 'edit_aggr_campaign' ), 'edit_aggr_campaign', $this->user_a, array( 999999 ) )
+		);
+		$this->assertSame(
+			array( 'do_not_allow' ),
+			$ownership->map( array( 'read_aggr_campaign' ), 'read_aggr_campaign', $this->user_a, array( 0 ) )
+		);
+
+		// The generic half, unchanged: core keeps the answer it computed.
+		$this->assertSame(
+			array( 'edit_posts' ),
+			$ownership->map( array( 'edit_posts' ), 'edit_post', $this->user_a, array( 999999 ) )
+		);
 	}
 
 	/**

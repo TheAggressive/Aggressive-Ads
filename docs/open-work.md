@@ -19,12 +19,30 @@ capability gate excluded the case the inner check handled. Each was found by
 deliberately breaking it, never by reading it. That method works and has not
 been applied to the highest-privilege code.
 
+**Done: `Security\Ownership::map()`.** Seven checks were mutated one at a time
+against the full suite. Four were held by a test that named them; three were
+not, and all three are now covered in `OwnershipTest`:
+
+- the missing-object denial reached through one of our own capability names.
+  The two tests that document it go through `current_user_can()`, where core
+  denies a nonexistent post before this filter has an opinion — so both stayed
+  green with the branch deleted outright.
+- the non-member read mapping to `read_private_<plural>` rather than `read`.
+- the non-member write mapping to `edit_others_<plural>` rather than `edit_`.
+
+The last two are one finding twice. The reviewer role holds both halves of each
+pair, so the split is invisible to every test that uses the role; it is only
+load-bearing for a user granted `aggr_review_campaigns` without the primitives,
+which is the ordinary "help work the queue" misconfiguration. Nothing in `inc/`
+changed — the guards were right, and untested.
+
+Note for the remaining slices: the membership gate and the primitive scope mask
+each other. Deleting either alone leaves the suite nearly green, because the
+other still denies. Mutate one at a time and read *which* tests fail, not just
+whether any do.
+
 **Not yet examined:**
 
-- `Security\Ownership::map()` and the org-scoping filters — the tenancy
-  boundary. `CLAUDE.md` already records one test here that passed for the wrong
-  reason, because `map_meta_cap` never passes a custom meta capability to the
-  filter and recurses with the generic `edit_post` instead.
 - `Admin\Review_Screen` and `Admin\Review_Data` — they render another
   organization's unapproved creative and drive status transitions.
 - Portal handler delegation. Six `Portal\Organization_Actions` handlers check

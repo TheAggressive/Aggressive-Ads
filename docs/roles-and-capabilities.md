@@ -87,7 +87,7 @@ So `Ownership::map()` owns `edit_post`, `read_post` and `delete_post`, and retur
 2. Resolve the object's `_aggr_org_id`. For `aggr_org` itself, that is the post ID.
 3. Resolve the user's organization memberships via `Org_Repository::org_ids_for_user()`, **memoized per request**.
 4. **Placements and packages are shared configuration**, not anyone's property. They carry no owning org, so an org comparison would deny every advertiser — including on the wizard screen whose whole job is choosing among them. Reads map to `read_private_<plural>`; writes map to `aggr_manage_placements` / `aggr_manage_packages`, which neither advertisers nor reviewers hold.
-5. If the user holds `aggr_review_campaigns`, map to the `_others_` primitive.
+5. If the user holds `aggr_review_campaigns`, map to the `_others_` primitive — and for a read, to `read_private_<plural>`. The capability gets a user *past the membership gate*; the primitive is what authorizes them. Both are required, and the reviewer role holds both, which is why collapsing the distinction is invisible in ordinary use. It stops being invisible the moment someone grants `aggr_review_campaigns` to an advertiser to help work the queue: that user holds `edit_<plural>` and not `edit_others_<plural>`, so the split is the only thing between them and every other tenant's campaigns and organization record.
 6. If the object's org is among the user's memberships, map to the owner primitive — and for a read, to plain `read`.
 7. Otherwise return `array( 'do_not_allow' )`.
 

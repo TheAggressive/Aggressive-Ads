@@ -198,8 +198,9 @@ true. A skipped security test is a security test that is not running.
 Write it, watch it pass, **break the implementation deliberately**, watch it
 fail, read the failure message, restore, watch it pass.
 
-This is not ceremony. Three tests here have already been caught passing for the
-wrong reason, and each hid a real defect:
+This is not ceremony. Four tests here have already been caught passing for the
+wrong reason. The first three hid a real defect; the fourth hid a guard nobody
+had ever seen work:
 
 - The autoloader's path-traversal test asserted null against a path where
   nothing existed, so `is_file()` rejected it for an unrelated reason.
@@ -208,6 +209,9 @@ wrong reason, and each hid a real defect:
 - The ownership tests exposed that `map_meta_cap` **never passes a custom meta
   capability to the filter**; it recurses with the generic `edit_post`. The
   filter was silently inert, and reads were being granted by core.
+- `OwnershipTest`'s deleted- and nonexistent-object tests asked through
+  `current_user_can()`, where **core denies a missing post before our filter
+  has an opinion**. Both stayed green with the branch they document deleted.
 
 A test that passes for the wrong reason is worse than no test, because it
 produces confidence. Assert your fixture is real before asserting on it.
