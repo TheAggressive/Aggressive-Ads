@@ -156,13 +156,17 @@ async function patch( id: string, form: HTMLFormElement ): Promise< void > {
 const { state } = store( 'aggr/autosave', {
 	state: {
 		autosaves: {} as Record< string, AutosaveState >,
-		i18n: {
-			idle: '',
-			saving: '',
-			saved: '',
-			error: '',
-			conflict: '',
-		},
+		/*
+		 * Left empty on purpose, and it must stay that way.
+		 *
+		 * The server hydrates these through wp_interactivity_state(), and the
+		 * Interactivity API merges *this* object over that one — so spelling out
+		 * placeholder defaults here overwrites every translated string with an
+		 * empty one. The live region then renders, passes axe, and announces
+		 * nothing at all. Errors and conflicts are the messages that matters
+		 * most, and they were the ones being silently dropped.
+		 */
+		i18n: {} as Partial< Record< SaveStatus, string > >,
 	},
 	actions: {
 		init() {

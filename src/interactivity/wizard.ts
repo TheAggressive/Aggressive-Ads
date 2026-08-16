@@ -26,9 +26,9 @@ const initializedIds = new Set< string >();
 const { state, actions } = store( 'aggr/wizard', {
 	state: {
 		wizards: {} as Record< string, WizardState >,
-		i18n: {
-			step: '',
-		},
+		// Empty by design: the server hydrates it and this object is merged
+		// over the server's. See the note in autosave.ts.
+		i18n: {} as { step?: string },
 	},
 	actions: {
 		init() {
