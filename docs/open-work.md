@@ -74,12 +74,25 @@ Left untested on purpose, so nobody re-derives it:
   It stops being fine the moment a REST route or a React screen calls it — worth
   remembering when the review screen is converted.
 
+**Done: `Portal\Organization_Actions` delegation.** The delegation is sound —
+all six workflow methods do call `can_manage()`. The coverage was not: **no test
+reached any of the six handlers at all**, so all six `check_admin_referer()`
+calls could be deleted together with the suite green, and two of the six
+`can_manage()` guards (`invite` and `deny`) were untested as well.
+
+Worse, `current_org_id()` derives the tenant from the authenticated user and
+ignores request input — and teaching it to trust a posted `org_id`, which is the
+ordinary way this gets written, left all 668 tests green. That one field is the
+difference between a portal account managing its own organization and managing
+any organization on the site.
+
+Covered now in `PortalOrganizationActionsTest`: CSRF on all six (a data provider
+over the handlers, plus a wrong-action nonce), the tenant derivation, and the
+`invite` and `deny` guards through a plain member who belongs to the
+organization but does not own it.
+
 **Not yet examined:**
 
-- Portal handler delegation. Six `Portal\Organization_Actions` handlers check
-  no capability inline and rely on `Organization_Membership::can_manage()`.
-  That is legitimate *if* the workflow always checks; the pattern was verified,
-  each method was not.
 - Keyboard and focus. The axe lane passes, but axe catches a minority of real
   barriers. Dialog focus traps and focus placement after an autosave are
   unaudited.
