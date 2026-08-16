@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-16T11:12:33+00:00\n"
+"POT-Creation-Date: 2026-08-16T11:51:59+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -294,7 +294,7 @@ msgstr ""
 
 #: inc/Admin/class-package-screen.php:151
 #: inc/Core/class-post-types.php:199
-#: inc/Workflow/class-campaign-change-manager.php:722
+#: inc/Workflow/class-campaign-change-manager.php:766
 #: templates/admin/placements.php:118
 #: templates/admin/review-campaign.php:83
 #: templates/portal/partials/campaign-changes.php:148
@@ -663,14 +663,14 @@ msgid "Native fill is always recording; this switch only shows the numbers."
 msgstr ""
 
 #: inc/Admin/class-settings-screen.php:184
-#: inc/Workflow/class-campaign-change-manager.php:712
+#: inc/Workflow/class-campaign-change-manager.php:756
 #: templates/portal/partials/campaign-changes.php:141
 #: templates/portal/screens/campaign.php:350
 msgid "Campaign name"
 msgstr ""
 
 #: inc/Admin/class-settings-screen.php:185
-#: inc/Workflow/class-campaign-change-manager.php:714
+#: inc/Workflow/class-campaign-change-manager.php:758
 msgid "Advertiser notes"
 msgstr ""
 
@@ -1150,6 +1150,7 @@ msgstr ""
 #: inc/Notification/class-ending-soon-mailer.php:275
 #: inc/Notification/class-notification-service.php:519
 #: inc/Notification/class-notification-service.php:603
+#: inc/Notification/class-request-mailer.php:330
 #, php-format
 msgid "Campaign: %s"
 msgstr ""
@@ -1166,6 +1167,7 @@ msgid "Open your campaign:"
 msgstr ""
 
 #: inc/Notification/class-notification-service.php:500
+#: inc/Notification/class-request-mailer.php:319
 msgid "Changes requested"
 msgstr ""
 
@@ -1211,6 +1213,7 @@ msgstr ""
 
 #. translators: 1: site name. 2: headline, e.g. Changes requested. 3: campaign title.
 #: inc/Notification/class-notification-service.php:538
+#: inc/Notification/class-request-mailer.php:363
 #, php-format
 msgid "[%1$s] %2$s: %3$s"
 msgstr ""
@@ -1237,6 +1240,7 @@ msgstr ""
 
 #. translators: %s: organization name.
 #: inc/Notification/class-notification-service.php:601
+#: inc/Notification/class-request-mailer.php:328
 #, php-format
 msgid "Organization: %s"
 msgstr ""
@@ -1248,6 +1252,7 @@ msgid "Revision: %s"
 msgstr ""
 
 #: inc/Notification/class-notification-service.php:607
+#: inc/Notification/class-request-mailer.php:352
 msgid "Review campaign:"
 msgstr ""
 
@@ -1408,6 +1413,29 @@ msgid ""
 "%3$s\n"
 "\n"
 "If you did not request this change, you can ignore this message."
+msgstr ""
+
+#: inc/Notification/class-request-mailer.php:320
+msgid "Action requested"
+msgstr ""
+
+#: inc/Notification/class-request-mailer.php:324
+msgid "An advertiser has proposed changes to a running campaign."
+msgstr ""
+
+#: inc/Notification/class-request-mailer.php:325
+msgid "An advertiser has asked the review team to act on a running campaign."
+msgstr ""
+
+#. translators: %s: the requested action, already translated.
+#: inc/Notification/class-request-mailer.php:338
+#: templates/admin/review-campaign.php:170
+#, php-format
+msgid "Requested: %s"
+msgstr ""
+
+#: inc/Notification/class-request-mailer.php:346
+msgid "Reason given by the advertiser:"
 msgstr ""
 
 #: inc/Portal/class-account-actions.php:103
@@ -2185,154 +2213,154 @@ msgstr ""
 msgid "Account registration is not available."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:170
-#: inc/Workflow/class-campaign-change-manager.php:406
+#: inc/Workflow/class-campaign-change-manager.php:172
+#: inc/Workflow/class-campaign-change-manager.php:409
 msgid "Changes to running campaigns are not accepted on this site."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:174
-#: inc/Workflow/class-campaign-change-manager.php:410
+#: inc/Workflow/class-campaign-change-manager.php:176
+#: inc/Workflow/class-campaign-change-manager.php:413
 msgid "This campaign is not running, so there is nothing to change."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:184
+#: inc/Workflow/class-campaign-change-manager.php:186
 msgid "This campaign already has changes waiting for review. Withdraw them first."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:194
+#: inc/Workflow/class-campaign-change-manager.php:196
 msgid "These changes cannot be requested yet."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:203
+#: inc/Workflow/class-campaign-change-manager.php:205
 msgid "The requested changes could not be saved. Please try again."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:278
+#: inc/Workflow/class-campaign-change-manager.php:280
 msgid "That cannot be requested for this campaign."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:288
+#: inc/Workflow/class-campaign-change-manager.php:290
 msgid "You have already asked the review team about this campaign."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:294
+#: inc/Workflow/class-campaign-change-manager.php:296
 msgid "Tell the review team why."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:298
-#: inc/Workflow/class-campaign-change-manager.php:598
+#: inc/Workflow/class-campaign-change-manager.php:300
+#: inc/Workflow/class-campaign-change-manager.php:642
 msgid "That explanation is too long."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:302
+#: inc/Workflow/class-campaign-change-manager.php:304
 msgid "The request could not be saved. Please try again."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:324
+#: inc/Workflow/class-campaign-change-manager.php:327
 msgid "There is no request to withdraw."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:345
+#: inc/Workflow/class-campaign-change-manager.php:348
 msgid "You do not have permission to decide campaign requests."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:349
+#: inc/Workflow/class-campaign-change-manager.php:352
 msgid "This campaign has no request waiting."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:372
+#: inc/Workflow/class-campaign-change-manager.php:375
 msgid "Pause this campaign"
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:374
+#: inc/Workflow/class-campaign-change-manager.php:377
 msgid "Restart this campaign"
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:376
+#: inc/Workflow/class-campaign-change-manager.php:379
 msgid "Cancel this campaign"
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:378
+#: inc/Workflow/class-campaign-change-manager.php:381
 msgid "End this campaign now"
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:414
+#: inc/Workflow/class-campaign-change-manager.php:417
 msgid "These changes are already with the review team. Withdraw them to keep editing."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:450
+#: inc/Workflow/class-campaign-change-manager.php:453
 msgid "These changes cannot be saved yet."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:459
+#: inc/Workflow/class-campaign-change-manager.php:462
 msgid "The changes could not be saved. Please try again."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:485
+#: inc/Workflow/class-campaign-change-manager.php:488
 msgid "These changes are already with the review team."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:494
+#: inc/Workflow/class-campaign-change-manager.php:497
 msgid "These changes cannot be submitted yet."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:503
+#: inc/Workflow/class-campaign-change-manager.php:506
 msgid "The changes could not be submitted. Please try again."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:519
+#: inc/Workflow/class-campaign-change-manager.php:563
 msgid "You do not have permission to approve campaign changes."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:525
-#: inc/Workflow/class-campaign-change-manager.php:604
+#: inc/Workflow/class-campaign-change-manager.php:569
+#: inc/Workflow/class-campaign-change-manager.php:648
 msgid "This campaign has no changes waiting for review."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:539
+#: inc/Workflow/class-campaign-change-manager.php:583
 msgid "This campaign is no longer running, so its changes cannot be approved."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:552
+#: inc/Workflow/class-campaign-change-manager.php:596
 msgid "These changes are no longer valid and cannot be approved. Ask the advertiser to request them again."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:588
+#: inc/Workflow/class-campaign-change-manager.php:632
 msgid "You do not have permission to decide campaign changes."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:594
+#: inc/Workflow/class-campaign-change-manager.php:638
 msgid "Tell the advertiser why the changes were not accepted."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:631
+#: inc/Workflow/class-campaign-change-manager.php:675
 msgid "There are no requested changes to withdraw."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:716
+#: inc/Workflow/class-campaign-change-manager.php:760
 #: templates/portal/partials/campaign-changes.php:185
 #: templates/portal/screens/campaign.php:621
 msgid "Start date"
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:718
+#: inc/Workflow/class-campaign-change-manager.php:762
 #: templates/portal/partials/campaign-changes.php:190
 #: templates/portal/screens/campaign.php:636
 msgid "End date"
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:720
+#: inc/Workflow/class-campaign-change-manager.php:764
 #: templates/admin/review-campaign.php:152
 #: templates/portal/partials/campaign-changes.php:77
 #: templates/portal/screens/campaign.php:874
 msgid "Destination"
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:739
+#: inc/Workflow/class-campaign-change-manager.php:783
 msgid "Open-ended"
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:850
+#: inc/Workflow/class-campaign-change-manager.php:894
 msgid "You do not have permission to change that campaign."
 msgstr ""
 
@@ -3003,12 +3031,6 @@ msgstr ""
 
 #: templates/admin/review-campaign.php:165
 msgid "The advertiser has asked for something"
-msgstr ""
-
-#. translators: %s: the requested action, already translated.
-#: templates/admin/review-campaign.php:170
-#, php-format
-msgid "Requested: %s"
 msgstr ""
 
 #: templates/admin/review-campaign.php:180

@@ -29,6 +29,7 @@ use Aggressive\Ads\Install\Site_Lifecycle;
 use Aggressive\Ads\Install\Upgrader;
 use Aggressive\Ads\Notification\Ending_Soon_Mailer;
 use Aggressive\Ads\Notification\Notification_Service;
+use Aggressive\Ads\Notification\Request_Mailer;
 use Aggressive\Ads\Portal\Account_Actions;
 use Aggressive\Ads\Portal\Campaign_Actions;
 use Aggressive\Ads\Portal\Creative_Actions;
@@ -289,6 +290,7 @@ final class Plugin {
 			Rollup_Reconciler::class,
 			Event_Retention::class,
 			Notification_Service::class,
+			Request_Mailer::class,
 			Menu::class,
 			Review_Screen::class,
 			Creative_Change_Actions::class,

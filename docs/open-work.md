@@ -41,38 +41,7 @@ matter how many tests cover the file — write the test that calls the guard
 directly, the way `PackagesWriteTest::test_the_write_gate_refuses_without_the_capability`
 does.
 
-## 2. Staff notification for advertiser requests
-
-**State.** The queue tab and menu badge ship (see `Admin\Review_Data`). Staff
-can *see* a request. Nobody is *told* about one.
-
-`Notification_Service::queue_submission()` is the template: recipient
-resolution, per-recipient receipt, delivery, audit. The structural difference
-is that existing notifications hang off `aggr_notify_campaign_transitioned`,
-and an advertiser request is a meta write rather than a transition, so it needs
-its own hook.
-
-1. Fire `do_action( 'aggr_notify_advertiser_request', $campaign_id, $kind )`
-   from `Campaign_Change_Manager::submit()` and `request_action()`, where
-   `$kind` is `edits` or the requested status.
-2. Handle it in `Notification_Service`, modelled on `queue_submission()`, with
-   recipients from `$this->users->with_capability( Capabilities::REVIEW_CAMPAIGNS )`.
-3. Receipt key: `request:{kind}:{revision}:{user_id}`. **The revision must be in
-   the key.** Without it, a withdrawn and resubmitted request is suppressed as a
-   duplicate and nobody is told the second time.
-4. Retry on the `RETRY_HOOK` pattern, re-checking the request still exists
-   before sending. A cancelled request must not produce a late email — the same
-   rule `retry_advertiser_notice()` already applies to stale statuses.
-5. Test: two reviewers each receive one message; an identical second submit
-   sends none; a withdraw-and-resubmit sends again. Break the receipt key and
-   confirm the middle assertion fails.
-
-**Why it was stopped rather than half-built.** Receipt-based suppression and a
-cron retry chain fail in two directions — the review team gets the same mail on
-every tick, or mail silently drops — and neither is visible until the chain is
-complete.
-
-## 3. Remaining admin screens
+## 2. Remaining admin screens
 
 `Settings`, `Packages` and `Organizations` are React screens writing through
 REST, sharing `src/admin/shared/save.tsx`. Two are not converted:
@@ -85,7 +54,7 @@ REST, sharing `src/admin/shared/save.tsx`. Two are not converted:
 Conversion is not required for correctness. Both screens work as
 server-rendered templates today.
 
-## 4. Moving a member between organizations
+## 3. Moving a member between organizations
 
 A portal account belongs to exactly one organization
 (`Organization_Membership::eligible_for_org()`). Staff correct a mistake by

@@ -32,6 +32,7 @@ use Aggressive\Ads\Notification\Email_Change_Notification;
 use Aggressive\Ads\Notification\Ending_Soon_Mailer;
 use Aggressive\Ads\Notification\Organization_Notification;
 use Aggressive\Ads\Notification\Password_Notification;
+use Aggressive\Ads\Notification\Request_Mailer;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Delivery_Repository;
@@ -434,6 +435,17 @@ final class Service_Registrar {
 			static fn ( Service_Container $c ): Ending_Soon_Mailer => new Ending_Soon_Mailer(
 				$c->get( Campaign_Repository::class ),
 				$c->get( Org_Repository::class ),
+				$c->get( Audit_Repository::class ),
+				$c->get( Notification_Delivery::class )
+			)
+		);
+
+		$container->register(
+			Request_Mailer::class,
+			static fn ( Service_Container $c ): Request_Mailer => new Request_Mailer(
+				$c->get( Campaign_Repository::class ),
+				$c->get( Org_Repository::class ),
+				$c->get( User_Repository::class ),
 				$c->get( Audit_Repository::class ),
 				$c->get( Notification_Delivery::class )
 			)

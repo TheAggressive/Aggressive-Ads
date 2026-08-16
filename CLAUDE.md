@@ -69,6 +69,10 @@ and deeper analytics remain open. What is built:
 - capability-resolved, individualized submission/resubmission notifications,
   with per-recipient duplicate suppression, bounded cron retry, localized
   plain-text messages, and failure auditing that cannot reverse a transition
+- `Notification\Request_Mailer` — the staff email for an advertiser's request
+  against a running campaign, on its own `aggr_notify_advertiser_request` hook
+  and its own `_aggr_request_revision` counter, because a request is a meta
+  write rather than a transition
 - release packaging and independent archive verification
 - `Workflow\Campaign_Clock` — the hourly reconcile that drives approved →
   scheduled → live → complete, without which status freezes at approval

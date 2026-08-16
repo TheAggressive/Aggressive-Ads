@@ -46,6 +46,7 @@ final class Campaign_Repository {
 	public const META_PENDING_EDITS_BY     = '_aggr_pending_edits_by';
 	public const META_PENDING_EDITS_SENT   = '_aggr_pending_edits_submitted';
 	public const META_ACTION_REQUEST       = '_aggr_action_request';
+	public const META_REQUEST_REVISION     = '_aggr_request_revision';
 
 	/**
 	 * Transition locks held by this PHP request.
@@ -598,6 +599,37 @@ final class Campaign_Repository {
 		$next = $this->revision( $campaign_id ) + 1;
 
 		update_post_meta( $campaign_id, self::META_REVISION, $next );
+
+		return $next;
+	}
+
+	/**
+	 * How many times an advertiser has asked staff for something on this campaign.
+	 *
+	 * Deliberately not `revision()`. That counter tracks *submissions of the
+	 * campaign itself* and only moves on a transition, whereas a request is a
+	 * meta write against a campaign that stays live throughout. Keying request
+	 * notification receipts on `revision()` would leave the number unchanged
+	 * across a withdraw and a resubmit, so the second ask would be suppressed as
+	 * a duplicate and nobody would be told about it.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return int
+	 */
+	public function request_revision( int $campaign_id ): int {
+		return (int) get_post_meta( $campaign_id, self::META_REQUEST_REVISION, true );
+	}
+
+	/**
+	 * Bumps the request counter and returns the new value.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return int
+	 */
+	public function increment_request_revision( int $campaign_id ): int {
+		$next = $this->request_revision( $campaign_id ) + 1;
+
+		update_post_meta( $campaign_id, self::META_REQUEST_REVISION, $next );
 
 		return $next;
 	}

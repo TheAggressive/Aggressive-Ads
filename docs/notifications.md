@@ -78,6 +78,41 @@ recipients, individual-address privacy, duplicate suppression, revision email,
 partial retry, bounded exhaustion, ignored staff unclaims, and
 failure-without-rollback.
 
+## Advertiser requests
+
+An advertiser with a *running* campaign cannot edit it or stop it themselves.
+They ask, through `Workflow\Campaign_Change_Manager`: `submit()` sends staged
+field changes, `request_action()` asks staff to perform a transition the
+advertiser has no edge for. Both are meta writes against a campaign whose status
+does not move, so neither reaches `aggr_notify_campaign_transitioned`. They fire
+`aggr_notify_advertiser_request` instead, with `$campaign_id` and a `$kind` of
+either `edits` or the requested status slug.
+
+`Notification\Request_Mailer` handles it, with the same recipient resolution as
+a submission — every user for whom `aggr_review_campaigns` is true, one
+`wp_mail()` each. The message carries the organization, the campaign title, what
+was requested, the advertiser's stated reason, and a link to the review screen's
+**requests** tab. Proposed *values* are deliberately left out: a proposal can
+change while it waits, and an email quoting a superseded destination URL is
+worse than one that says to go and look.
+
+Receipts are keyed `staff_request:{kind}:{revision}:{user_id}`, where the
+revision is `_aggr_request_revision` — a counter of *requests*, not of
+submissions. `revision()` would not do: it only moves on a transition, so it
+would be identical across a withdraw and a resubmit and the second ask would be
+silently suppressed. The counter is bumped by the workflow before the hook
+fires, never by the mailer, so a cron retry re-reads the same number and reserves
+the same receipt rather than mailing the whole review team on every tick.
+
+Retries follow the shared bounded backoff and first re-check that the request is
+still outstanding — still-submitted edits, or an action request still naming the
+same status. A withdrawn or already-decided request cancels its own retry.
+
+A delivery failure never becomes the advertiser's error. Their request is
+already stored when mail is attempted, so `Campaign_Change_Manager` audits
+`campaign.notification_failed` and still returns success — the same reason
+`Campaign_State_Machine::notify()` swallows what its notifications throw.
+
 ## Ending-soon reminders
 
 Live and paused campaigns with a finite `_aggr_end_ts` inside the next
