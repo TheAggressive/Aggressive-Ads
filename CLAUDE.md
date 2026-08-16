@@ -198,8 +198,8 @@ true. A skipped security test is a security test that is not running.
 Write it, watch it pass, **break the implementation deliberately**, watch it
 fail, read the failure message, restore, watch it pass.
 
-This is not ceremony. Four tests here have already been caught passing for the
-wrong reason. The first three hid a real defect; the fourth hid a guard nobody
+This is not ceremony. Five tests here have already been caught passing for the
+wrong reason. The first three hid a real defect; the last two hid guards nobody
 had ever seen work:
 
 - The autoloader's path-traversal test asserted null against a path where
@@ -212,6 +212,12 @@ had ever seen work:
 - `OwnershipTest`'s deleted- and nonexistent-object tests asked through
   `current_user_can()`, where **core denies a missing post before our filter
   has an opinion**. Both stayed green with the branch they document deleted.
+- `AdminReviewTest`'s three transition-nonce tests set only `$_POST`, but
+  **`check_admin_referer()` reads `$_REQUEST`**, which PHP does not populate
+  from `$_POST` under CLI. All three presented no nonce and died identically;
+  the "valid nonce, wrong capability" one never reached a capability check and
+  passed with both gates on that path deleted. Posting to a handler in a test
+  means setting `$_REQUEST` too.
 
 A test that passes for the wrong reason is worse than no test, because it
 produces confidence. Assert your fixture is real before asserting on it.

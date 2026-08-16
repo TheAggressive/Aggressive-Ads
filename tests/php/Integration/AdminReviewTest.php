@@ -391,6 +391,157 @@ final class AdminReviewTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * **The review screen itself refuses anyone without the capability.**
+	 *
+	 * This is the screen that renders another organization's unapproved
+	 * creative, the staff-only internal notes and the audit timeline. In
+	 * production `add_submenu_page()` gates the callback, so the in-method check
+	 * is the second lock — and it could be deleted with all 661 tests green,
+	 * which means nobody had ever seen it work.
+	 *
+	 * @return void
+	 */
+	public function test_render_refuses_a_user_without_the_review_capability(): void {
+		$campaign = $this->campaign( Post_Statuses::REVIEW );
+
+		$this->campaigns->set_internal_notes( $campaign, 'Never shown to an advertiser.' );
+
+		wp_set_current_user( $this->advertiser );
+
+		$query    = array( 'campaign' => (string) $campaign );
+		$_GET     = $query;
+		$_REQUEST = $query;
+
+		$this->expectException( 'WPDieException' );
+
+		ob_start();
+
+		try {
+			$this->screen->render();
+		} finally {
+			$output = (string) ob_get_clean();
+
+			$this->assertStringNotContainsString( 'Never shown to an advertiser.', $output );
+		}
+	}
+
+	/**
+	 * A logged-out visitor is refused the same way.
+	 *
+	 * @return void
+	 */
+	public function test_render_refuses_a_logged_out_visitor(): void {
+		wp_set_current_user( 0 );
+
+		$this->expectException( 'WPDieException' );
+		$this->screen->render();
+	}
+
+	/**
+	 * **The review capability alone is not a licence over every organization.**
+	 *
+	 * `save_internal_notes()` checks the capability *and* `edit_aggr_campaign`
+	 * against the specific campaign, and only the first half was tested: the
+	 * object check could be deleted with the suite green, because the reviewer
+	 * role holds the cross-organization primitive and every existing test uses
+	 * that role.
+	 *
+	 * The configuration that separates them is the one `OwnershipTest` covers
+	 * for reads — somebody handed the review capability to an advertiser so they
+	 * could help work the queue. That user is staff enough to pass the first
+	 * check and holds no `edit_others_aggr_campaigns`, so the object check is
+	 * the only thing keeping them out of another tenant's campaign.
+	 *
+	 * @return void
+	 */
+	public function test_the_review_capability_alone_cannot_write_notes_on_another_organization(): void {
+		$other_org      = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::ORGANIZATION,
+				'post_status' => 'publish',
+				'post_title'  => 'Second tenant',
+			)
+		);
+		$other_campaign = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::CAMPAIGN,
+				'post_status' => Post_Statuses::REVIEW,
+				'post_title'  => 'Another tenant flight',
+			)
+		);
+
+		update_post_meta( $other_campaign, Campaign_Repository::META_ORG_ID, $other_org );
+
+		$helper = get_user_by( 'id', $this->advertiser );
+
+		$this->assertInstanceOf( \WP_User::class, $helper );
+
+		$helper->add_cap( Capabilities::REVIEW_CAMPAIGNS );
+
+		Plugin::instance()->container()->get( Ownership::class )->flush_cache();
+
+		// The fixture is only real if the first check passes and the second is
+		// the one left to deny. Asserting against a user who never became staff
+		// would prove nothing about the object check.
+		$this->assertTrue( user_can( $this->advertiser, Capabilities::REVIEW_CAMPAIGNS ) );
+		$this->assertFalse( user_can( $this->advertiser, 'edit_others_aggr_campaigns' ) );
+
+		wp_set_current_user( $this->advertiser );
+
+		$denied = $this->screen->process_notes( $other_campaign, 'Reaching into another tenant.' );
+
+		$this->assertInstanceOf( WP_Error::class, $denied );
+		$this->assertSame( 'aggr_forbidden', $denied->get_error_code() );
+		$this->assertSame( '', $this->campaigns->internal_notes( $other_campaign ) );
+	}
+
+	/**
+	 * **A button is only offered to somebody who holds every capability it needs.**
+	 *
+	 * Approval requires two capabilities and a reviewer may hold only one, so
+	 * the filter is per-edge rather than per-screen. Dropping it leaves a screen
+	 * offering an action the state machine will refuse — and dropping it left
+	 * the suite green.
+	 *
+	 * @return void
+	 */
+	public function test_actions_omit_edges_the_user_cannot_complete(): void {
+		$campaign = $this->campaign( Post_Statuses::REVIEW );
+
+		wp_set_current_user( $this->reviewer );
+
+		$targets = array_column( $this->data->actions_for( $campaign, Post_Statuses::REVIEW ), 'to' );
+
+		$this->assertContains( Post_Statuses::APPROVED, $targets, 'A full reviewer should be offered approval.' );
+
+		// Revoked through the capability pipeline rather than remove_cap():
+		// PUBLISH_TO_ADSANITY comes from the reviewer role, and remove_cap()
+		// only touches user-level grants, so the role would hand it straight
+		// back and this test would assert nothing.
+		$revoke = static function ( array $allcaps ): array {
+			unset( $allcaps[ Capabilities::PUBLISH_TO_ADSANITY ] );
+
+			return $allcaps;
+		};
+
+		add_filter( 'user_has_cap', $revoke, 10 );
+
+		try {
+			$this->assertFalse( current_user_can( Capabilities::PUBLISH_TO_ADSANITY ) );
+
+			$reduced = array_column( $this->data->actions_for( $campaign, Post_Statuses::REVIEW ), 'to' );
+
+			$this->assertNotContains( Post_Statuses::APPROVED, $reduced );
+
+			// The edges that need only the review capability are untouched, so
+			// this is a per-edge filter and not the whole screen going dark.
+			$this->assertContains( Post_Statuses::CHANGES, $reduced );
+		} finally {
+			remove_filter( 'user_has_cap', $revoke, 10 );
+		}
+	}
+
+	/**
 	 * Missing nonces die before a transition is attempted.
 	 *
 	 * @return void
@@ -430,7 +581,18 @@ final class AdminReviewTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Capability denial happens before a valid nonce can authorize a write.
+	 * **Capability denial happens before a valid nonce can authorize a write.**
+	 *
+	 * `$_REQUEST` is set deliberately, and it is the whole point of this test.
+	 * `check_admin_referer()` reads the nonce from `$_REQUEST`, which PHP does
+	 * not populate from `$_POST` under CLI — so a test that sets only `$_POST`
+	 * presents *no* nonce however carefully it built one, dies at
+	 * `wp_nonce_ays()`, and proves nothing beyond what the missing-nonce test
+	 * above already proved. This one was written that way and passed with both
+	 * capability gates on the transition path deleted.
+	 *
+	 * With the nonce genuinely valid, the only thing left to deny an advertiser
+	 * is the capability check, which is what this now asserts.
 	 *
 	 * @return void
 	 */
@@ -439,13 +601,101 @@ final class AdminReviewTest extends WP_UnitTestCase {
 
 		wp_set_current_user( $this->advertiser );
 
-		$_POST = array(
+		$fields = array(
 			'campaign_id' => (string) $campaign,
 			'to'          => Post_Statuses::REVIEW,
 			'_wpnonce'    => wp_create_nonce( Review_Screen::nonce_action( $campaign ) ),
 		);
 
+		$_POST    = $fields;
+		$_REQUEST = $fields;
+
 		$this->expectException( 'WPDieException' );
 		$this->screen->handle_transition();
+	}
+
+	/**
+	 * The notes handler dies without a nonce, exactly as the transition one does.
+	 *
+	 * Two `admin_post` handlers write on this screen. Only one of them had any
+	 * CSRF coverage, and `check_admin_referer()` could be deleted from this one
+	 * with the whole suite green.
+	 *
+	 * @return void
+	 */
+	public function test_notes_handler_rejects_a_missing_nonce(): void {
+		$campaign = $this->campaign( Post_Statuses::REVIEW );
+
+		wp_set_current_user( $this->reviewer );
+
+		$fields   = array(
+			'campaign_id'    => (string) $campaign,
+			'internal_notes' => 'Written by a forged request.',
+		);
+		$_POST    = $fields;
+		$_REQUEST = $fields;
+
+		try {
+			$this->screen->handle_notes();
+			$this->fail( 'The notes handler accepted a request with no nonce.' );
+		} catch ( \WPDieException ) {
+			$this->assertSame( '', $this->campaigns->internal_notes( $campaign ) );
+		}
+	}
+
+	/**
+	 * A nonce minted for another campaign cannot authorize this one.
+	 *
+	 * @return void
+	 */
+	public function test_notes_handler_rejects_a_forged_nonce(): void {
+		$campaign = $this->campaign( Post_Statuses::REVIEW );
+
+		wp_set_current_user( $this->reviewer );
+
+		$fields   = array(
+			'campaign_id'    => (string) $campaign,
+			'internal_notes' => 'Written by a forged request.',
+			'_wpnonce'       => wp_create_nonce( Review_Screen::notes_nonce_action( $campaign + 1 ) ),
+		);
+		$_POST    = $fields;
+		$_REQUEST = $fields;
+
+		try {
+			$this->screen->handle_notes();
+			$this->fail( 'The notes handler accepted a nonce minted for another campaign.' );
+		} catch ( \WPDieException ) {
+			$this->assertSame( '', $this->campaigns->internal_notes( $campaign ) );
+		}
+	}
+
+	/**
+	 * **An advertiser with a valid nonce still cannot write internal notes.**
+	 *
+	 * Internal notes are the field staff write candidly in, on the explicit
+	 * promise that the advertiser never sees them. A valid nonce is not
+	 * authorization, and this is the assertion that says so.
+	 *
+	 * @return void
+	 */
+	public function test_notes_handler_rejects_an_advertiser_with_a_valid_nonce(): void {
+		$campaign = $this->campaign( Post_Statuses::REVIEW );
+
+		wp_set_current_user( $this->advertiser );
+
+		$fields   = array(
+			'campaign_id'    => (string) $campaign,
+			'internal_notes' => 'Advertiser overwrite.',
+			'_wpnonce'       => wp_create_nonce( Review_Screen::notes_nonce_action( $campaign ) ),
+		);
+		$_POST    = $fields;
+		$_REQUEST = $fields;
+
+		try {
+			$this->screen->handle_notes();
+			$this->fail( 'An advertiser wrote internal notes with a valid nonce.' );
+		} catch ( \WPDieException ) {
+			$this->assertSame( '', $this->campaigns->internal_notes( $campaign ) );
+		}
 	}
 }

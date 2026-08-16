@@ -41,10 +41,41 @@ each other. Deleting either alone leaves the suite nearly green, because the
 other still denies. Mutate one at a time and read *which* tests fail, not just
 whether any do.
 
+**Done: `Admin\Review_Screen` / `Admin\Review_Data`.** Ten checks mutated; one
+was held. The rest are now covered in `AdminReviewTest`, or recorded below as
+deliberately not worth a test. Again nothing in `inc/` changed.
+
+The one that mattered most was not a missing test but a wrong one.
+`check_admin_referer()` reads the nonce from **`$_REQUEST`**, which PHP does not
+populate from `$_POST` under CLI. All three transition-handler nonce tests set
+only `$_POST`, so all three presented no nonce at all and died in the same place
+— including `test_transition_handler_rejects_an_advertiser_with_a_valid_nonce`,
+which therefore never reached a capability check and passed with **both**
+capability gates on that path deleted. Any test here that posts to a handler
+must set `$_REQUEST` or it is testing `wp_nonce_ays()` and nothing else.
+
+Also newly covered: `render()`'s own capability gate (the screen showing another
+tenant's unapproved creative, internal notes and audit trail); CSRF on the notes
+handler, which had none while the transition handler had three tests; the
+object-level `edit_aggr_campaign` check in `Review_Actions::save_internal_notes()`,
+which is the same two-key shape found in `Ownership::map()`; and the per-edge
+capability filter in `Review_Data::actions_for()`.
+
+Left untested on purpose, so nobody re-derives it:
+
+- the gates in `process_transition()` / `process_notes()`. Genuinely redundant —
+  the handler gates them, and `Campaign_State_Machine::apply()` re-checks actor
+  and per-edge capability against the object anyway.
+- `menu_title()`'s capability check. `add_submenu_page()` never registers the
+  item for a user without the capability, so the count cannot reach them. The
+  check avoids a query, it does not prevent a disclosure.
+- `Review_Data::campaign()` has no capability check of its own and is entirely
+  caller-gated. That is fine while `Review_Screen::render()` is its only caller.
+  It stops being fine the moment a REST route or a React screen calls it — worth
+  remembering when the review screen is converted.
+
 **Not yet examined:**
 
-- `Admin\Review_Screen` and `Admin\Review_Data` — they render another
-  organization's unapproved creative and drive status transitions.
 - Portal handler delegation. Six `Portal\Organization_Actions` handlers check
   no capability inline and rely on `Organization_Membership::can_manage()`.
   That is legitimate *if* the workflow always checks; the pattern was verified,
