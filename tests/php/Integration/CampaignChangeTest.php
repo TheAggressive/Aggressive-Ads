@@ -26,6 +26,7 @@ use Aggressive\Ads\Security\Ownership;
 use Aggressive\Ads\Security\Roles;
 use Aggressive\Ads\Portal\Campaign_Actions;
 use Aggressive\Ads\Workflow\Campaign_Change_Manager;
+use Aggressive\Ads\Admin\Review_Data;
 use Aggressive\Ads\Workflow\Campaign_State_Machine;
 use Aggressive\Ads\Workflow\Campaign_Editor;
 use WP_UnitTestCase;
@@ -292,6 +293,89 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 		do_action( 'aggr_campaign_transitioned', $campaign_id );
 
 		$this->assertFalse( $this->campaigns->has_pending_edits( $campaign_id ) );
+	}
+
+	/**
+	 * A submitted edit reaches the staff queue and the menu count.
+	 *
+	 * This is the assertion the feature exists for. Before it, an advertiser
+	 * could submit a change to a running campaign and it would reach the
+	 * database and stop there: no tab listed it, no count carried it, and the
+	 * reviewer who had to decide on it was never told it existed.
+	 *
+	 * @return void
+	 */
+	public function test_a_submitted_edit_appears_in_the_staff_queue(): void {
+		wp_set_current_user( $this->advertiser );
+		$campaign_id = $this->running_campaign();
+
+		$this->allow( array( Settings_Schema::EDIT_TITLE ) );
+
+		$data = Plugin::instance()->container()->get( Review_Data::class );
+
+		$before = $data->pending_decision_count();
+
+		$this->propose( $campaign_id, array( 'title' => 'Renamed mid-flight' ) );
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Roles::REVIEWER ) ) );
+
+		$this->assertSame( $before + 1, $data->pending_decision_count() );
+
+		$queue = $data->queue( 'requests' );
+
+		$this->assertContains(
+			$campaign_id,
+			array_map( static fn ( array $row ): int => (int) $row['id'], $queue['rows'] ),
+			'A submitted edit must be listed on the requests tab.'
+		);
+	}
+
+	/**
+	 * An action request reaches the same queue.
+	 *
+	 * @return void
+	 */
+	public function test_an_action_request_appears_in_the_staff_queue(): void {
+		wp_set_current_user( $this->advertiser );
+		$campaign_id = $this->running_campaign();
+
+		$this->assertTrue(
+			$this->changes->request_action( $campaign_id, Post_Statuses::CANCELLED, 'The client pulled the budget.' )
+		);
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Roles::REVIEWER ) ) );
+
+		$data  = Plugin::instance()->container()->get( Review_Data::class );
+		$queue = $data->queue( 'requests' );
+
+		$this->assertGreaterThan( 0, $data->pending_decision_count() );
+		$this->assertContains(
+			$campaign_id,
+			array_map( static fn ( array $row ): int => (int) $row['id'], $queue['rows'] )
+		);
+	}
+
+	/**
+	 * A campaign with nothing outstanding is not in the queue.
+	 *
+	 * Without this the tab could list every running campaign and still pass the
+	 * two tests above — a queue that shows everything hides the thing that
+	 * needs doing just as effectively as one that shows nothing.
+	 *
+	 * @return void
+	 */
+	public function test_a_campaign_without_a_request_is_not_queued(): void {
+		wp_set_current_user( $this->advertiser );
+		$quiet = $this->running_campaign( 'Nothing pending' );
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Roles::REVIEWER ) ) );
+
+		$queue = Plugin::instance()->container()->get( Review_Data::class )->queue( 'requests' );
+
+		$this->assertNotContains(
+			$quiet,
+			array_map( static fn ( array $row ): int => (int) $row['id'], $queue['rows'] )
+		);
 	}
 
 	/**

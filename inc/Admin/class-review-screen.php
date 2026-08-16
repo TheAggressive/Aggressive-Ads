@@ -69,13 +69,54 @@ final class Review_Screen implements Service {
 		$hook = add_submenu_page(
 			Menu::PARENT_SLUG,
 			__( 'Campaign review', 'aggressive-ads' ),
-			__( 'Review', 'aggressive-ads' ),
+			$this->menu_title(),
 			Capabilities::REVIEW_CAMPAIGNS,
 			self::MENU_SLUG,
 			array( $this, 'render' )
 		);
 
 		$this->hook_suffix = is_string( $hook ) ? $hook : '';
+	}
+
+	/**
+	 * The menu label, carrying a count of what is waiting.
+	 *
+	 * Core's own bubble markup, so it inherits the styling and the screen-reader
+	 * treatment WordPress already applies to Comments and Updates rather than
+	 * inventing a second convention.
+	 *
+	 * The badge exists because a request that nobody is told about is a request
+	 * that does not get answered. Advertisers could submit a change to a running
+	 * campaign and staff had no tab, no count and no notification carrying it —
+	 * the work reached the database and stopped there.
+	 *
+	 * Counted only for a user who could act on it: rendering "3" to somebody
+	 * whose queue would show nothing is worse than rendering nothing.
+	 *
+	 * @return string
+	 */
+	private function menu_title(): string {
+		$label = __( 'Review', 'aggressive-ads' );
+
+		if ( ! current_user_can( Capabilities::REVIEW_CAMPAIGNS ) ) {
+			return $label;
+		}
+
+		$waiting = $this->data->pending_decision_count();
+
+		if ( $waiting < 1 ) {
+			return $label;
+		}
+
+		return sprintf(
+			/* translators: 1: menu label, 2: number of items awaiting a decision. */
+			__( '%1$s %2$s', 'aggressive-ads' ),
+			$label,
+			sprintf(
+				'<span class="awaiting-mod"><span class="pending-count">%s</span></span>',
+				esc_html( number_format_i18n( $waiting ) )
+			)
+		);
 	}
 
 	/**

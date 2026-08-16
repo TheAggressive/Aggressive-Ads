@@ -55,6 +55,11 @@ final class Review_Data {
 			Post_Statuses::COMPLETE,
 			Post_Statuses::CANCELLED,
 		),
+		'requests' => array(
+			Post_Statuses::SCHEDULED,
+			Post_Statuses::LIVE,
+			Post_Statuses::PAUSED,
+		),
 		'changes'  => array( Post_Statuses::CHANGES ),
 		'decided'  => array( Post_Statuses::APPROVED, Post_Statuses::REJECTED ),
 		'running'  => array( Post_Statuses::SCHEDULED, Post_Statuses::LIVE, Post_Statuses::PAUSED ),
@@ -143,6 +148,8 @@ final class Review_Data {
 
 			if ( 'updates' === $key ) {
 				$total = $this->campaigns->campaigns_with_pending_updates();
+			} elseif ( 'requests' === $key ) {
+				$total = $this->campaigns->campaigns_with_pending_requests();
 			} else {
 				foreach ( $statuses as $status ) {
 					$total += $counts[ $status ] ?? 0;
@@ -160,6 +167,27 @@ final class Review_Data {
 	}
 
 	/**
+	 * How many items are waiting for a staff decision.
+	 *
+	 * Submitted campaigns plus advertiser requests — the two things a reviewer
+	 * is expected to clear. Creative replacements are deliberately excluded:
+	 * they already surface on their own tab, and a badge that counts everything
+	 * is a badge nobody can act on.
+	 *
+	 * @return int
+	 */
+	public function pending_decision_count(): int {
+		$counts = $this->campaigns->count_by_status( array( Post_Statuses::SUBMITTED, Post_Statuses::REVIEW ) );
+		$total  = 0;
+
+		foreach ( $counts as $count ) {
+			$total += (int) $count;
+		}
+
+		return $total + $this->campaigns->campaigns_with_pending_requests();
+	}
+
+	/**
 	 * One page of the queue.
 	 *
 	 * @param string $filter Filter key.
@@ -167,7 +195,12 @@ final class Review_Data {
 	 * @return array{rows: array<int, array<string, mixed>>, total: int, pages: int, page: int}
 	 */
 	public function queue( string $filter, int $page = 1 ): array {
-		$result = $this->campaigns->for_review( self::statuses_for( $filter ), $page, 'updates' === $filter );
+		$result = $this->campaigns->for_review(
+			self::statuses_for( $filter ),
+			$page,
+			'updates' === $filter,
+			'requests' === $filter
+		);
 		$rows   = array();
 
 		foreach ( $result['ids'] as $campaign_id ) {
@@ -414,6 +447,7 @@ final class Review_Data {
 		return match ( $filter ) {
 			'pending'  => __( 'Needs review', 'aggressive-ads' ),
 			'updates'  => __( 'Ad updates', 'aggressive-ads' ),
+			'requests' => __( 'Advertiser requests', 'aggressive-ads' ),
 			'changes'  => __( 'With the advertiser', 'aggressive-ads' ),
 			'decided'  => __( 'Decided', 'aggressive-ads' ),
 			'running'  => __( 'Running', 'aggressive-ads' ),

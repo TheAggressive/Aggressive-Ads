@@ -672,10 +672,23 @@ final class Campaign_Repository {
 	 * @param array<int, string> $statuses Campaign statuses to include.
 	 * @param int                $page     1-based page number.
 	 * @param bool               $pending_updates_only Limit to campaigns with pending creative updates.
+	 * @param bool               $pending_requests_only Advertiser requests awaiting a decision only.
 	 * @return array{ids: array<int, int>, total: int, pages: int}
 	 */
-	public function for_review( array $statuses, int $page = 1, bool $pending_updates_only = false ): array {
-		return ( new Campaign_Query_Repository() )->for_review( $statuses, $page, $pending_updates_only );
+	public function for_review( array $statuses, int $page = 1, bool $pending_updates_only = false, bool $pending_requests_only = false ): array {
+		return ( new Campaign_Query_Repository() )->for_review( $statuses, $page, $pending_updates_only, $pending_requests_only );
+	}
+
+	/**
+	 * How many campaigns are waiting on a staff decision about a request.
+	 *
+	 * Drives the queue tab and the menu badge from one query, so the number on
+	 * the menu and the number of rows behind it cannot disagree.
+	 *
+	 * @return int
+	 */
+	public function campaigns_with_pending_requests(): int {
+		return ( new Campaign_Query_Repository() )->for_review( Post_Statuses::all(), 1, false, true )['total'];
 	}
 
 	/**

@@ -23,9 +23,10 @@ final class Campaign_Query_Repository {
 	 * @param array<int, string> $statuses Campaign statuses.
 	 * @param int                $page Page number.
 	 * @param bool               $pending_updates_only Pending creative updates only.
+	 * @param bool               $pending_requests_only Advertiser requests awaiting a decision only.
 	 * @return array{ids: array<int, int>, total: int, pages: int}
 	 */
-	public function for_review( array $statuses, int $page, bool $pending_updates_only ): array {
+	public function for_review( array $statuses, int $page, bool $pending_updates_only, bool $pending_requests_only = false ): array {
 		$wanted = array_values(
 			array_filter( $statuses, static fn ( $status ): bool => is_string( $status ) && Post_Statuses::is_valid( $status ) )
 		);
@@ -58,6 +59,31 @@ final class Campaign_Query_Repository {
 					'value'   => 0,
 					'compare' => '>',
 					'type'    => 'NUMERIC',
+				),
+			);
+		}
+
+		/*
+		 * Advertiser asks that need a staff decision: a submitted edit to a
+		 * running campaign, or a request for a transition only staff can make.
+		 *
+		 * Both are stored as meta on the campaign rather than in a queue table,
+		 * so this is the query that makes them findable. Until it existed there
+		 * was no screen, no count and no notification carrying them, and an
+		 * advertiser could submit a change that nobody was ever told about.
+		 */
+		if ( $pending_requests_only ) {
+			$args['meta_query'] = array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Bounded staff queue; both keys are written only by the change workflow.
+				'relation' => 'OR',
+				array(
+					'key'     => Campaign_Repository::META_PENDING_EDITS_SENT,
+					'value'   => 0,
+					'compare' => '>',
+					'type'    => 'NUMERIC',
+				),
+				array(
+					'key'     => Campaign_Repository::META_ACTION_REQUEST,
+					'compare' => 'EXISTS',
 				),
 			);
 		}
