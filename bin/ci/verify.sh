@@ -25,6 +25,7 @@ run "doctor"      pnpm ci:doctor
 run "composer"    pnpm composer:verify
 run "security"    pnpm ci:security
 run "structure"   pnpm lint:files
+run "i18n"        pnpm ci:i18n
 run "build"       pnpm ci:build
 run "frontend"    pnpm ci:frontend
 run "php"         pnpm ci:php
@@ -59,10 +60,8 @@ run "e2e"         pnpm ci:e2e
 run "package"     pnpm ci:package
 
 # Every lane above maps 1:1 onto a job in .github/workflows/ci.yml.
-# Adding one here without adding it there is how the two drift.
-#
-# Lanes landing with the phases that need them:
-#   i18n      — POT drift and .mo compilation
+# Adding one here without adding it there is how the two drift, and
+# bin/ci/check-ci-parity.sh fails the structure lane when they do.
 
 echo
 echo "ci:verify: all lanes passed"

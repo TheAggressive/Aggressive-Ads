@@ -53,4 +53,28 @@ $aggr_spark_label = sprintf(
 			<span><?php echo esc_html( (string) $aggr_bar['label'] ); ?></span>
 		<?php endforeach; ?>
 	</div>
+
+	<?php
+	/*
+	 * The export lives here, beside the chart, because this partial renders
+	 * only when Reporting is on — so the control cannot outlive the surface it
+	 * belongs to. A POST rather than a link: it is a nonce-protected action,
+	 * and a GET download is a link a browser or a prefetcher may follow on its
+	 * own.
+	 */
+	?>
+	<form class="aggr-spark__export" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+		<input type="hidden" name="action" value="<?php echo esc_attr( \Aggressive\Ads\Portal\Report_Actions::EXPORT_ACTION ); ?>">
+		<input type="hidden" name="days" value="<?php echo esc_attr( (string) \Aggressive\Ads\Portal\Report_Actions::MAX_DAYS ); ?>">
+		<?php wp_nonce_field( \Aggressive\Ads\Portal\Report_Actions::EXPORT_ACTION ); ?>
+		<button type="submit" class="aggr-button aggr-button--secondary aggr-button--small">
+			<?php
+			printf(
+				/* translators: %d: number of days covered by the export. */
+				esc_html__( 'Download last %d days (CSV)', 'aggressive-ads' ),
+				(int) \Aggressive\Ads\Portal\Report_Actions::MAX_DAYS
+			);
+			?>
+		</button>
+	</form>
 </section>

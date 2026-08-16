@@ -1,0 +1,59 @@
+/*
+ * Rhythm for the native staff screens. Nothing else.
+ *
+ * These screens are core markup — postbox, form-table, notice, button — and
+ * core styles every component on them. This file deliberately touches none of
+ * that: no colours, no buttons, no tables, no notices. Only spacing, measure
+ * and heading weight.
+ *
+ * That restraint is the entire point. A rule that restyles a core component
+ * has to be re-checked against every WordPress release, because those
+ * components carry states (hover, focus, disabled, dismissible) that are easy
+ * to half-implement. A rule that adjusts spacing cannot fail that way: if core
+ * changes underneath it, the worst outcome is slightly-off margins rather than
+ * a broken control.
+ *
+ * Scoped to `#poststuff` inside our wrap, which only the converted screens
+ * use — the review screens still carry the plugin's own design system and must
+ * not be reached from here.
+ */
+
+/*
+ * Long-form guidance on these screens is prose, and prose past roughly 75
+ * characters is measurably harder to scan. form-table already constrains
+ * inputs; this constrains the sentences around them.
+ */
+.wrap.aggr-admin #poststuff .inside > p,
+.wrap.aggr-admin #poststuff .inside > .description,
+.wrap.aggr-admin #poststuff .inside p.description {
+	max-width: 75ch;
+}
+
+/* Cards need room to read as separate things rather than one long sheet. */
+.wrap.aggr-admin #poststuff .postbox {
+	margin-bottom: 20px;
+}
+
+/*
+ * A postbox header is a section title; core sets it at the same weight as body
+ * text, which leaves a stack of cards with no visible hierarchy.
+ */
+.wrap.aggr-admin #poststuff .postbox-header .hndle {
+	font-size: 15px;
+	font-weight: 600;
+}
+
+/* Secondary detail in a header — a slug, a size, a state — should recede. */
+.wrap.aggr-admin #poststuff .postbox-header .hndle .description {
+	font-weight: 400;
+}
+
+/*
+ * The intro paragraph under the page title is the one line that orients
+ * somebody arriving cold, and core leaves it tight against the heading.
+ */
+.wrap.aggr-admin > h1 + p {
+	max-width: 75ch;
+	margin: 0 0 20px;
+	font-size: 14px;
+}

@@ -25,6 +25,10 @@ $aggr_error     = Campaign_Actions::request_error_code();
 	<div class="aggr-alert aggr-alert--error" role="alert">
 		<p><?php echo esc_html( Campaign_Actions::error_message( $aggr_error ) ); ?></p>
 	</div>
+<?php elseif ( 'cancelled' === $aggr_notice ) : ?>
+	<div class="aggr-alert aggr-alert--success" role="status">
+		<p><?php esc_html_e( 'Campaign ended. It stays in your list as cancelled, along with anything it delivered.', 'aggressive-ads' ); ?></p>
+	</div>
 <?php endif; ?>
 
 <div class="aggr-pagehead">

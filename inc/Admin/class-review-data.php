@@ -19,6 +19,7 @@ use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\REST\Creative_File_Controller;
 use Aggressive\Ads\Security\Capabilities;
+use Aggressive\Ads\Workflow\Campaign_Change_Manager;
 
 /**
  * Assembles the staff review screens, so templates render and nothing else.
@@ -68,18 +69,20 @@ final class Review_Data {
 	/**
 	 * Constructor.
 	 *
-	 * @param Campaign_Repository  $campaigns  Campaign persistence.
-	 * @param Creative_Repository  $creatives  Creative persistence.
-	 * @param Placement_Repository $placements Placement persistence.
-	 * @param Org_Repository       $orgs       Organization lookups.
-	 * @param Audit_Repository     $audit      Audit history.
+	 * @param Campaign_Repository     $campaigns  Campaign persistence.
+	 * @param Creative_Repository     $creatives  Creative persistence.
+	 * @param Placement_Repository    $placements Placement persistence.
+	 * @param Org_Repository          $orgs       Organization lookups.
+	 * @param Audit_Repository        $audit      Audit history.
+	 * @param Campaign_Change_Manager $changes    Running-campaign change proposals.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
 		private readonly Creative_Repository $creatives,
 		private readonly Placement_Repository $placements,
 		private readonly Org_Repository $orgs,
-		private readonly Audit_Repository $audit
+		private readonly Audit_Repository $audit,
+		private readonly Campaign_Change_Manager $changes
 	) {
 	}
 
@@ -194,6 +197,8 @@ final class Review_Data {
 
 		$row['creatives']        = $this->creative_rows( $campaign_id );
 		$row['creative_updates'] = $this->replacement_rows( $campaign_id );
+		$row['pending_edits']    = $this->changes->pending_summary( $campaign_id );
+		$row['action_request']   = $this->campaigns->action_request( $campaign_id );
 		$row['actions']          = $this->actions_for( $campaign_id, $row['status'] );
 		$row['internal_notes']   = $this->campaigns->internal_notes( $campaign_id );
 		$row['can_view_audit']   = current_user_can( Capabilities::VIEW_AUDIT_LOG );

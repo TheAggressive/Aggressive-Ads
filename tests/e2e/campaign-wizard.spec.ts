@@ -71,7 +71,7 @@ test( 'advertiser completes and submits the accessible six-step wizard', async (
 		page.getByRole( 'heading', { level: 2, name: 'Upload creative' } )
 	).toBeFocused();
 	const upload = page.getByRole( 'region', { name: 'Article sidebar' } );
-	await upload.getByLabel( 'Image file' ).setInputFiles( {
+	await upload.getByLabel( 'Ad creative file' ).setInputFiles( {
 		name: 'e2e-sidebar.png',
 		mimeType: 'image/png',
 		buffer: solidPng( 300, 250 ),
@@ -204,7 +204,7 @@ test( 'advertiser completes and submits the accessible six-step wizard', async (
 	await expect(
 		page.getByRole( 'dialog', { name: 'Update Article sidebar' } )
 	).toBeVisible();
-	await expect( page.getByLabel( 'Replacement image' ) ).toBeVisible();
+	await expect( page.getByLabel( 'Replacement ad creative' ) ).toBeVisible();
 	await expect( page.getByLabel( 'Destination URL' ) ).toHaveValue(
 		'https://www.example.com/exhibition'
 	);

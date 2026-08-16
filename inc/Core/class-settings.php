@@ -40,6 +40,38 @@ final class Settings {
 	}
 
 	/**
+	 * Whether advertisers may propose changing one field on a running campaign.
+	 *
+	 * @param string $field One of Settings_Schema::edit_keys().
+	 */
+	public function live_edit_enabled( string $field ): bool {
+		$document = $this->get();
+
+		return ! empty( $document['live_edits'][ $field ] );
+	}
+
+	/**
+	 * The fields advertisers may propose changing, in display order.
+	 *
+	 * An empty list is the whole feature switched off, and every surface treats
+	 * it that way: no button, no form, and a refusal in the workflow. That is
+	 * the shipped default.
+	 *
+	 * @return list<string>
+	 */
+	public function live_edit_fields(): array {
+		$allowed = array();
+
+		foreach ( Settings_Schema::edit_keys() as $field ) {
+			if ( $this->live_edit_enabled( $field ) ) {
+				$allowed[] = $field;
+			}
+		}
+
+		return $allowed;
+	}
+
+	/**
 	 * Advertiser-facing product name.
 	 */
 	public function product_name(): string {

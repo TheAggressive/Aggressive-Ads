@@ -17,7 +17,7 @@ test( 'the shared creative dialog works in WebKit', async ( { page } ) => {
 	await page.getByRole( 'button', { name: 'Save package' } ).click();
 
 	const upload = page.getByRole( 'region', { name: 'Article sidebar' } );
-	await upload.getByLabel( 'Image file' ).setInputFiles( {
+	await upload.getByLabel( 'Ad creative file' ).setInputFiles( {
 		name: 'webkit-sidebar.png',
 		mimeType: 'image/png',
 		buffer: solidPng( 300, 250 ),

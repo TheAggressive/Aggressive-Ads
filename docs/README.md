@@ -30,6 +30,8 @@ Then, as needed:
 | [accessibility.md](accessibility.md) | WCAG target, dialog contract, creative alt text |
 | [i18n.md](i18n.md) | Text domain, POT drift gate, the plugin-vs-theme `.mo` naming trap |
 | [known-issues.md](known-issues.md) | Live list of things that are true and annoying |
+| [administration.md](administration.md) | Running the plugin: screens, capabilities, scheduled work, Site Health, uninstall |
+| [runbook.md](runbook.md) | Deploying to production, verifying each step, and rolling back |
 | [roadmap.md](roadmap.md) | Phases 1–11 (what already shipped vs remaining product) |
 | [suite-roadmap.md](suite-roadmap.md) | Aggressive Ads suite: identity, admin shell, native delivery, cache, tracking |
 

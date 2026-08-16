@@ -9,7 +9,6 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Admin;
 
-use Aggressive\Ads\Assets\Assets;
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Workflow\Package_Manager;
@@ -23,13 +22,6 @@ final class Package_Screen implements Service {
 	public const MENU_SLUG     = 'aggr-packages';
 	public const CREATE_ACTION = 'aggr_create_package';
 	public const UPDATE_ACTION = 'aggr_update_package';
-
-	/**
-	 * Hook suffix assigned by WordPress.
-	 *
-	 * @var string
-	 */
-	private string $hook_suffix = '';
 
 	/**
 	 * Constructor.
@@ -48,7 +40,6 @@ final class Package_Screen implements Service {
 	 */
 	public function init(): void {
 		add_action( 'admin_menu', array( $this, 'register_menu' ) );
-		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue' ) );
 		add_action( 'admin_post_' . self::CREATE_ACTION, array( $this, 'handle_create' ) );
 		add_action( 'admin_post_' . self::UPDATE_ACTION, array( $this, 'handle_update' ) );
 	}
@@ -57,7 +48,7 @@ final class Package_Screen implements Service {
 	 * Registers a capability-owned submenu under Advertising.
 	 */
 	public function register_menu(): void {
-		$hook = add_submenu_page(
+		add_submenu_page(
 			Menu::PARENT_SLUG,
 			__( 'Packages', 'aggressive-ads' ),
 			__( 'Packages', 'aggressive-ads' ),
@@ -65,23 +56,15 @@ final class Package_Screen implements Service {
 			self::MENU_SLUG,
 			array( $this, 'render' )
 		);
-
-		$this->hook_suffix = is_string( $hook ) ? $hook : '';
 	}
 
-	/**
-	 * Loads the shared staff design system only on this screen.
+	/*
+	 * No stylesheet is enqueued here.
 	 *
-	 * @param string $hook_suffix Current admin screen.
+	 * This screen is native WordPress admin markup — poststuff, postbox,
+	 * form-table, notice, button — so core already styles every part of it.
+	 * Loading the plugin's design system would only give it something to fight.
 	 */
-	public function enqueue( string $hook_suffix ): void {
-		if ( '' === $this->hook_suffix || $hook_suffix !== $this->hook_suffix ) {
-			return;
-		}
-
-		$this->enqueue_style( Assets::HANDLE, Assets::STYLE_PORTAL );
-		$this->enqueue_style( 'aggr-admin', Assets::STYLE_ADMIN, array( Assets::HANDLE ) );
-	}
 
 	/**
 	 * Renders the authorized catalogue.
@@ -260,29 +243,5 @@ final class Package_Screen implements Service {
 		$code   = isset( $_GET['aggr_code'] ) ? sanitize_key( wp_unslash( $_GET['aggr_code'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Display-only flash from our own redirect.
 
 		return self::notice_for( $result, $code );
-	}
-
-	/**
-	 * Enqueues one local stylesheet with cache-safe versioning.
-	 *
-	 * @param string             $handle       Style handle.
-	 * @param string             $relative     Plugin-relative path.
-	 * @param array<int, string> $dependencies Style dependencies.
-	 */
-	private function enqueue_style( string $handle, string $relative, array $dependencies = array() ): void {
-		$path = AGGR_PLUGIN_DIR . $relative;
-
-		if ( ! is_file( $path ) ) {
-			return;
-		}
-
-		$mtime = filemtime( $path );
-
-		wp_enqueue_style(
-			$handle,
-			AGGR_PLUGIN_URL . $relative,
-			$dependencies,
-			false === $mtime ? AGGR_VERSION : (string) $mtime
-		);
 	}
 }

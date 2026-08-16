@@ -97,7 +97,7 @@ final class Creative_Manager {
 		$alt_text = '' === $alt_text ? self::automatic_alt_text( $click_url ) : $alt_text;
 
 		if ( mb_strlen( $alt_text ) > self::MAX_ALT_TEXT_LENGTH ) {
-			return $this->error( 'aggr_alt_text_too_long', __( 'Use 500 characters or fewer for the image description.', 'aggressive-ads' ), 422, 'alt_text' );
+			return $this->error( 'aggr_alt_text_too_long', __( 'Use 500 characters or fewer for the ad creative description.', 'aggressive-ads' ), 422, 'alt_text' );
 		}
 
 		$accepted = $this->uploader->accept( $file );
@@ -117,7 +117,7 @@ final class Creative_Manager {
 				'aggr_creative_size_mismatch',
 				sprintf(
 					/* translators: 1: uploaded dimensions. 2: required dimensions. */
-					__( 'Uploaded: %1$s. Required: %2$s. Resize the image and try again.', 'aggressive-ads' ),
+					__( 'Uploaded: %1$s. Required: %2$s. Resize the ad creative and try again.', 'aggressive-ads' ),
 					$accepted['width'] . ' × ' . $accepted['height'],
 					$required_size
 				),

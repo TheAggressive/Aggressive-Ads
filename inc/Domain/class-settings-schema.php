@@ -19,9 +19,25 @@ final class Settings_Schema {
 	public const MODULE_PUBLIC_SIGNUP   = 'public_signup';
 	public const MODULE_REPORTING       = 'reporting';
 
-	public const MAX_PRODUCT_NAME = 60;
-	public const MAX_TAGLINE      = 80;
-	public const MAX_LOGO_URL     = 500;
+	/**
+	 * Fields an advertiser may propose changing on a campaign that is already
+	 * scheduled, live or paused. Every one still goes to staff for approval.
+	 *
+	 * Per-field rather than one switch because "can advertisers edit a running
+	 * campaign" is not one question. Letting somebody extend an end date is a
+	 * different risk from letting them repoint the destination URL, and a site
+	 * that wants the first does not necessarily want the second.
+	 */
+	public const EDIT_TITLE       = 'title';
+	public const EDIT_NOTES       = 'notes';
+	public const EDIT_SCHEDULE    = 'schedule';
+	public const EDIT_DESTINATION = 'destination';
+	public const EDIT_PLACEMENTS  = 'placements';
+
+	public const MAX_PRODUCT_NAME  = 60;
+	public const MAX_TAGLINE       = 80;
+	public const MAX_LOGO_URL      = 500;
+	public const MAX_SUPPORT_EMAIL = 254;
 
 	public const ACCENT_CONTRAST = '#ffffff';
 
@@ -48,22 +64,58 @@ final class Settings_Schema {
 	}
 
 	/**
+	 * Editable-field keys in display order.
+	 *
+	 * `EDIT_PLACEMENTS` is last and deliberately separated in the UI: it is not
+	 * a peer of the others. Changing placements changes the required creative
+	 * size, so an approved placement change leaves the campaign unable to serve
+	 * until a correctly sized creative is uploaded and reviewed. It is a
+	 * re-submission, not a field edit.
+	 *
+	 * @return list<string>
+	 */
+	public static function edit_keys(): array {
+		return array(
+			self::EDIT_TITLE,
+			self::EDIT_NOTES,
+			self::EDIT_SCHEDULE,
+			self::EDIT_DESTINATION,
+			self::EDIT_PLACEMENTS,
+		);
+	}
+
+	/**
+	 * Editable fields whose approval invalidates the existing creative.
+	 *
+	 * @return list<string>
+	 */
+	public static function structural_edit_keys(): array {
+		return array( self::EDIT_PLACEMENTS );
+	}
+
+	/**
 	 * First-read document. Public signup stays on so existing WP registration
 	 * policy is unchanged until staff turn the module off.
 	 *
-	 * @return array{modules: array<string, bool>, brand: array<string, string>, delivery: array{fill_ttl: int, house_policy: string}, tracking: array{retention_days: int}}
+	 * Every live-edit field starts off. A running campaign is one staff already
+	 * approved, and silently widening what an advertiser may change underneath
+	 * an approval is not a default anybody chose — it is one they inherited on
+	 * upgrade.
+	 *
+	 * @return array{modules: array<string, bool>, brand: array<string, string>, delivery: array{fill_ttl: int, house_policy: string}, tracking: array{retention_days: int}, live_edits: array<string, bool>}
 	 */
 	public static function defaults(): array {
 		return array(
-			'modules'  => array(
+			'modules'    => array(
 				self::MODULE_PUBLIC_SIGNUP   => true,
 				self::MODULE_BILLING         => false,
 				self::MODULE_NATIVE_DELIVERY => true,
 				self::MODULE_REPORTING       => false,
 			),
-			'brand'    => array(
+			'brand'      => array(
 				'product_name'  => 'Advertising',
 				'tagline'       => '',
+				'support_email' => '',
 				'logo_url'      => '',
 				'accent'        => '#ff3b2f',
 				'accent_strong' => '#8e1f1f',
@@ -71,12 +123,19 @@ final class Settings_Schema {
 				'surface'       => '#ffffff',
 				'text'          => '#111214',
 			),
-			'delivery' => array(
+			'delivery'   => array(
 				'fill_ttl'     => 30,
 				'house_policy' => self::HOUSE_WHEN_EMPTY,
 			),
-			'tracking' => array(
+			'tracking'   => array(
 				'retention_days' => 90,
+			),
+			'live_edits' => array(
+				self::EDIT_TITLE       => false,
+				self::EDIT_NOTES       => false,
+				self::EDIT_SCHEDULE    => false,
+				self::EDIT_DESTINATION => false,
+				self::EDIT_PLACEMENTS  => false,
 			),
 		);
 	}
@@ -85,7 +144,7 @@ final class Settings_Schema {
 	 * Merge stored values onto defaults. Unknown keys are dropped.
 	 *
 	 * @param mixed $stored Raw option value.
-	 * @return array{modules: array<string, bool>, brand: array<string, string>, delivery: array{fill_ttl: int, house_policy: string}, tracking: array{retention_days: int}}
+	 * @return array{modules: array<string, bool>, brand: array<string, string>, delivery: array{fill_ttl: int, house_policy: string}, tracking: array{retention_days: int}, live_edits: array<string, bool>}
 	 */
 	public static function merge( mixed $stored ): array {
 		$defaults = self::defaults();
@@ -94,10 +153,17 @@ final class Settings_Schema {
 			return $defaults;
 		}
 
-		$modules  = is_array( $stored['modules'] ?? null ) ? $stored['modules'] : array();
-		$brand    = is_array( $stored['brand'] ?? null ) ? $stored['brand'] : array();
-		$delivery = is_array( $stored['delivery'] ?? null ) ? $stored['delivery'] : array();
-		$tracking = is_array( $stored['tracking'] ?? null ) ? $stored['tracking'] : array();
+		$modules    = is_array( $stored['modules'] ?? null ) ? $stored['modules'] : array();
+		$brand      = is_array( $stored['brand'] ?? null ) ? $stored['brand'] : array();
+		$delivery   = is_array( $stored['delivery'] ?? null ) ? $stored['delivery'] : array();
+		$tracking   = is_array( $stored['tracking'] ?? null ) ? $stored['tracking'] : array();
+		$live_edits = is_array( $stored['live_edits'] ?? null ) ? $stored['live_edits'] : array();
+
+		foreach ( self::edit_keys() as $key ) {
+			if ( array_key_exists( $key, $live_edits ) ) {
+				$defaults['live_edits'][ $key ] = (bool) $live_edits[ $key ];
+			}
+		}
 
 		foreach ( self::module_keys() as $key ) {
 			if ( array_key_exists( $key, $modules ) ) {
@@ -133,21 +199,28 @@ final class Settings_Schema {
 	/**
 	 * Validate and normalise a submitted document.
 	 *
-	 * @param array<string, mixed> $input Raw modules/brand/delivery/tracking fields.
-	 * @return array{ok: true, value: array{modules: array<string, bool>, brand: array<string, string>, delivery: array{fill_ttl: int, house_policy: string}, tracking: array{retention_days: int}}}|array{ok: false, errors: list<string>}
+	 * @param array<string, mixed> $input Raw modules/brand/delivery/tracking/live_edits fields.
+	 * @return array{ok: true, value: array{modules: array<string, bool>, brand: array<string, string>, delivery: array{fill_ttl: int, house_policy: string}, tracking: array{retention_days: int}, live_edits: array<string, bool>}}|array{ok: false, errors: list<string>}
 	 */
 	public static function validate( array $input ): array {
-		$defaults = self::defaults();
-		$modules  = is_array( $input['modules'] ?? null ) ? $input['modules'] : array();
-		$brand    = is_array( $input['brand'] ?? null ) ? $input['brand'] : array();
-		$delivery = is_array( $input['delivery'] ?? null ) ? $input['delivery'] : array();
-		$tracking = is_array( $input['tracking'] ?? null ) ? $input['tracking'] : array();
-		$errors   = array();
+		$defaults   = self::defaults();
+		$modules    = is_array( $input['modules'] ?? null ) ? $input['modules'] : array();
+		$brand      = is_array( $input['brand'] ?? null ) ? $input['brand'] : array();
+		$delivery   = is_array( $input['delivery'] ?? null ) ? $input['delivery'] : array();
+		$tracking   = is_array( $input['tracking'] ?? null ) ? $input['tracking'] : array();
+		$live_edits = is_array( $input['live_edits'] ?? null ) ? $input['live_edits'] : array();
+		$errors     = array();
 
 		$out_modules = array();
 
 		foreach ( self::module_keys() as $key ) {
 			$out_modules[ $key ] = ! empty( $modules[ $key ] );
+		}
+
+		$out_live_edits = array();
+
+		foreach ( self::edit_keys() as $key ) {
+			$out_live_edits[ $key ] = ! empty( $live_edits[ $key ] );
 		}
 
 		// HTML checkboxes do not POST when off. Forcing true here is what stops
@@ -157,6 +230,16 @@ final class Settings_Schema {
 		$product_name = self::plain_text( $brand['product_name'] ?? $defaults['brand']['product_name'] );
 		$tagline      = self::plain_text( $brand['tagline'] ?? '' );
 		$logo_url     = trim( is_string( $brand['logo_url'] ?? null ) ? $brand['logo_url'] : '' );
+		$support      = trim( is_string( $brand['support_email'] ?? null ) ? $brand['support_email'] : '' );
+
+		/*
+		 * Optional, and empty is meaningful: it means "fall back to the site's
+		 * admin address". Validated only when supplied, so a site that never
+		 * sets one is never blocked from saving anything else.
+		 */
+		if ( '' !== $support && ( strlen( $support ) > self::MAX_SUPPORT_EMAIL || ! self::is_email( $support ) ) ) {
+			$errors[] = 'support_email';
+		}
 
 		if ( '' === $product_name ) {
 			$errors[] = 'product_name';
@@ -254,10 +337,11 @@ final class Settings_Schema {
 		return array(
 			'ok'    => true,
 			'value' => array(
-				'modules'  => $out_modules,
-				'brand'    => array(
+				'modules'    => $out_modules,
+				'brand'      => array(
 					'product_name'  => $product_name,
 					'tagline'       => $tagline,
+					'support_email' => $support,
 					'logo_url'      => $logo_url,
 					'accent'        => $colours['accent'],
 					'accent_strong' => $colours['accent_strong'],
@@ -265,13 +349,14 @@ final class Settings_Schema {
 					'surface'       => $colours['surface'],
 					'text'          => $colours['text'],
 				),
-				'delivery' => array(
+				'delivery'   => array(
 					'fill_ttl'     => $fill_ttl,
 					'house_policy' => $house_policy,
 				),
-				'tracking' => array(
+				'tracking'   => array(
 					'retention_days' => $retention,
 				),
+				'live_edits' => $out_live_edits,
 			),
 		);
 	}
@@ -286,6 +371,19 @@ final class Settings_Schema {
 		$value = str_replace( array( "\r", "\n", "\t" ), ' ', $value );
 
 		return trim( preg_replace( '/ {2,}/', ' ', $value ) ?? $value );
+	}
+
+	/**
+	 * A syntactically plausible email address.
+	 *
+	 * Deliberately not is_email(): that is a WordPress function, and this layer
+	 * must not call one. The check is intentionally loose — an address that
+	 * parses can still bounce, and the only real test is sending to it.
+	 *
+	 * @param string $value Candidate address.
+	 */
+	private static function is_email( string $value ): bool {
+		return 1 === preg_match( '/^[^@\s]+@[^@\s.]+\.[^@\s]+$/', $value );
 	}
 
 	/**

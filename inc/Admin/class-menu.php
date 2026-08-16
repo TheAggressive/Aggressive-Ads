@@ -37,6 +37,43 @@ final class Menu implements Service {
 		add_filter( 'user_has_cap', array( $this, 'grant_staff_shell' ), 10, 3 );
 		add_action( 'admin_menu', array( $this, 'register_parent' ), 9 );
 		add_action( 'admin_menu', array( $this, 'remove_duplicate_parent' ), 11 );
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_rhythm' ) );
+	}
+
+	/**
+	 * Loads the rhythm-only stylesheet on the Advertising screens.
+	 *
+	 * Enqueued here rather than per screen because it is one sheet for all of
+	 * them, and because a screen that forgets to ask for it is a screen that
+	 * quietly looks different from its siblings.
+	 *
+	 * It carries spacing and measure only — the screens themselves are native
+	 * WordPress markup that core already styles. See src/styles/admin-native.css
+	 * for why that restraint is the point rather than an omission.
+	 *
+	 * @param string $hook_suffix Current admin screen.
+	 * @return void
+	 */
+	public function enqueue_rhythm( string $hook_suffix ): void {
+		if ( ! str_contains( $hook_suffix, self::PARENT_SLUG ) ) {
+			return;
+		}
+
+		$relative = 'dist/styles/admin-native.css';
+		$path     = AGGR_PLUGIN_DIR . $relative;
+
+		if ( ! is_file( $path ) ) {
+			return;
+		}
+
+		$mtime = filemtime( $path );
+
+		wp_enqueue_style(
+			'aggr-admin-native',
+			AGGR_PLUGIN_URL . $relative,
+			array(),
+			false === $mtime ? AGGR_VERSION : (string) $mtime
+		);
 	}
 
 	/**

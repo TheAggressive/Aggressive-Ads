@@ -89,8 +89,21 @@ final class AdminDesignSystemTest extends TestCase {
 		$this->assertStringContainsString( 'wp_nonce_field', $template );
 		$this->assertStringContainsString( '<label for=', $template );
 		$this->assertStringContainsString( 'admin-post.php', $template );
-		$this->assertStringContainsString( 'required maxlength="120"', $template );
 		$this->assertStringNotContainsString( 'Delete package', $template );
+
+		/*
+		 * Whitespace-normalized before matching the attribute pair.
+		 *
+		 * The assertion is that the package name is required and length-bounded,
+		 * not that those two attributes share a line — and the literal form
+		 * failed the moment the input was reformatted across several lines, which
+		 * changed no behaviour at all. A test that breaks on indentation reports
+		 * formatting, not the property it was written to protect.
+		 */
+		$collapsed = preg_replace( '/\s+/', ' ', $template );
+
+		$this->assertIsString( $collapsed );
+		$this->assertStringContainsString( 'required maxlength="120"', $collapsed );
 	}
 
 	/**
@@ -99,12 +112,15 @@ final class AdminDesignSystemTest extends TestCase {
 	 *
 	 * @return void
 	 */
-	public function test_settings_template_does_not_offer_native_delivery(): void {
-		$template = file_get_contents( AGGR_PLUGIN_DIR . 'templates/admin/settings.php' );
+	public function test_settings_screen_does_not_offer_native_delivery(): void {
+		// The toggle list moved out of a template and into the payload the React
+		// screen is hydrated with. The rule did not move: whichever file builds
+		// the list is the file that must never build this one.
+		$screen = file_get_contents( AGGR_PLUGIN_DIR . 'inc/Admin/class-settings-screen.php' );
 
-		$this->assertIsString( $template );
-		$this->assertStringNotContainsString( 'MODULE_NATIVE_DELIVERY', $template );
-		$this->assertStringNotContainsString( 'Native delivery', $template );
-		$this->assertStringNotContainsString( 'native_delivery', $template );
+		$this->assertIsString( $screen );
+		$this->assertStringNotContainsString( 'MODULE_NATIVE_DELIVERY', $screen );
+		$this->assertStringNotContainsString( 'Native delivery', $screen );
+		$this->assertStringNotContainsString( 'native_delivery', $screen );
 	}
 }

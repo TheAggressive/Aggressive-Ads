@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads;
 
+use Aggressive\Ads\Admin\Campaign_Change_Actions;
 use Aggressive\Ads\Admin\Creative_Change_Actions;
 use Aggressive\Ads\Admin\Menu;
 use Aggressive\Ads\Admin\Organization_Screen;
@@ -23,6 +24,7 @@ use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Install\Rewrite_Flusher;
+use Aggressive\Ads\Install\Rewrite_Health;
 use Aggressive\Ads\Install\Site_Lifecycle;
 use Aggressive\Ads\Install\Upgrader;
 use Aggressive\Ads\Notification\Ending_Soon_Mailer;
@@ -34,6 +36,7 @@ use Aggressive\Ads\Portal\Email_Change_Actions;
 use Aggressive\Ads\Portal\Login_Actions;
 use Aggressive\Ads\Portal\Organization_Actions;
 use Aggressive\Ads\Portal\Password_Actions;
+use Aggressive\Ads\Portal\Report_Actions;
 use Aggressive\Ads\Portal\Router;
 use Aggressive\Ads\Portal\Signup_Actions;
 use Aggressive\Ads\REST\Beacon_Controller;
@@ -42,6 +45,7 @@ use Aggressive\Ads\REST\Creative_Controller;
 use Aggressive\Ads\REST\Creative_File_Controller;
 use Aggressive\Ads\REST\Fill_Controller;
 use Aggressive\Ads\REST\Packages_Controller;
+use Aggressive\Ads\REST\Settings_Controller;
 use Aggressive\Ads\REST\Placements_Controller;
 use Aggressive\Ads\REST\Transitions_Controller;
 use Aggressive\Ads\Security\Admin_Guard;
@@ -50,6 +54,7 @@ use Aggressive\Ads\Security\Ownership;
 use Aggressive\Ads\Security\Private_Storage_Health;
 use Aggressive\Ads\Security\Private_Storage_Notice;
 use Aggressive\Ads\Update\Plugin_Updates;
+use Aggressive\Ads\Workflow\Campaign_Change_Manager;
 use Aggressive\Ads\Workflow\Campaign_Clock;
 use Aggressive\Ads\Workflow\Campaign_State_Machine;
 use Aggressive\Ads\Workflow\Click_Hop;
@@ -270,6 +275,9 @@ final class Plugin {
 			// without going through the state machine.
 			Campaign_State_Machine::class,
 
+			// After the state machine, whose transition action it listens to.
+			Campaign_Change_Manager::class,
+
 			// After the state machine, whose listener must be attached before
 			// the clock drives a single transition through it.
 			Fill_Cache::class,
@@ -283,6 +291,7 @@ final class Plugin {
 			Menu::class,
 			Review_Screen::class,
 			Creative_Change_Actions::class,
+			Campaign_Change_Actions::class,
 			Placement_Screen::class,
 			Organization_Screen::class,
 			Package_Screen::class,
@@ -300,6 +309,7 @@ final class Plugin {
 			Creative_Actions::class,
 			Account_Actions::class,
 			Email_Change_Actions::class,
+			Report_Actions::class,
 			Organization_Actions::class,
 			Login_Actions::class,
 			Signup_Actions::class,
@@ -311,6 +321,7 @@ final class Plugin {
 			Campaigns_Controller::class,
 			Placements_Controller::class,
 			Packages_Controller::class,
+			Settings_Controller::class,
 			Fill_Controller::class,
 			Beacon_Controller::class,
 			Click_Hop::class,
@@ -319,6 +330,12 @@ final class Plugin {
 			// version bump on this request flushes rules that are already in
 			// $wp_rewrite. Activation calls flush() directly and never waits.
 			Rewrite_Flusher::class,
+
+			// After the flusher, so a version bump on this request is applied
+			// before the check that reports whether the rules are installed.
+			// The other order reports a stale state that has already been
+			// repaired, one page load out of date.
+			Rewrite_Health::class,
 			Placement_Slot::class,
 		);
 	}

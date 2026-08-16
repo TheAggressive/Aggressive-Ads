@@ -263,6 +263,88 @@ final class Rollup_Repository {
 	}
 
 	/**
+	 * Org-scoped per-campaign, per-day rows for export, oldest day first.
+	 *
+	 * Unlike `series_for_org()` this does not pad missing days. A sparkline
+	 * needs a bar for every day so the shape is honest; a spreadsheet does not
+	 * need a row asserting that nothing happened, and 90 days times every
+	 * campaign of zeros would bury the days that did.
+	 *
+	 * The campaign title is joined here rather than looked up per row, because
+	 * the alternative is one `get_post()` per row inside an export loop.
+	 *
+	 * @param int $org_id Owning organization.
+	 * @param int $days   Window length, 1–31.
+	 * @return list<array{day: string, campaign_id: int, campaign: string, impressions: int, clicks: int}>
+	 */
+	public function daily_rows_for_org( int $org_id, int $days = 31 ): array {
+		$keys = Reporting_Rules::utc_day_keys( $days, gmdate( 'Y-m-d' ) );
+
+		if ( array() === $keys || $org_id <= 0 ) {
+			return array();
+		}
+
+		global $wpdb;
+
+		$table = $this->table_name();
+		$meta  = $wpdb->postmeta;
+		$posts = $wpdb->posts;
+		$first = $keys[0];
+		$last  = $keys[ array_key_last( $keys ) ];
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table names are prefix+constant / core posts and postmeta; bounds and org id are prepared.
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT r.day_utc AS day,
+					r.campaign_id AS campaign_id,
+					p.post_title AS campaign,
+					COALESCE(SUM(r.impressions), 0) AS impressions,
+					COALESCE(SUM(r.clicks), 0) AS clicks
+				FROM {$table} r
+				INNER JOIN {$meta} m
+					ON m.post_id = r.campaign_id
+					AND m.meta_key = %s
+					AND m.meta_value = %s
+				INNER JOIN {$posts} p
+					ON p.ID = r.campaign_id
+				WHERE r.campaign_id > 0
+					AND r.day_utc >= %s
+					AND r.day_utc <= %s
+				GROUP BY r.day_utc, r.campaign_id, p.post_title
+				ORDER BY r.day_utc ASC, p.post_title ASC",
+				Campaign_Repository::META_ORG_ID,
+				(string) $org_id,
+				$first,
+				$last
+			),
+			ARRAY_A
+		);
+		// phpcs:enable
+
+		if ( ! is_array( $rows ) ) {
+			return array();
+		}
+
+		$out = array();
+
+		foreach ( $rows as $row ) {
+			if ( ! is_array( $row ) ) {
+				continue;
+			}
+
+			$out[] = array(
+				'day'         => (string) $row['day'],
+				'campaign_id' => (int) $row['campaign_id'],
+				'campaign'    => (string) $row['campaign'],
+				'impressions' => (int) $row['impressions'],
+				'clicks'      => (int) $row['clicks'],
+			);
+		}
+
+		return $out;
+	}
+
+	/**
 	 * Org-scoped daily totals for a closed UTC window, oldest day first.
 	 *
 	 * Missing days are zeros. House rows cannot join organization meta, so they

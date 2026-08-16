@@ -212,7 +212,7 @@ if ( true !== ( $aggr_overlay_print ?? false ) ) {
 							<?php wp_nonce_field( Creative_Actions::replace_nonce_action( (int) $aggr_creative['id'] ) ); ?>
 
 							<div class="aggr-field">
-								<label for="aggr-replacement-file-<?php echo esc_attr( (string) $aggr_creative['id'] ); ?>"><?php esc_html_e( 'Replacement image', 'aggressive-ads' ); ?></label>
+								<label for="aggr-replacement-file-<?php echo esc_attr( (string) $aggr_creative['id'] ); ?>"><?php esc_html_e( 'Replacement ad creative', 'aggressive-ads' ); ?></label>
 								<input id="aggr-replacement-file-<?php echo esc_attr( (string) $aggr_creative['id'] ); ?>" name="file" type="file" accept="image/jpeg,image/png,image/gif,image/webp" required>
 								<p class="aggr-hint">
 									<?php

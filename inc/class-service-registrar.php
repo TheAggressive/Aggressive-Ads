@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads;
 
+use Aggressive\Ads\Admin\Campaign_Change_Actions;
 use Aggressive\Ads\Admin\Menu;
 use Aggressive\Ads\Admin\Organization_Data;
 use Aggressive\Ads\Admin\Placement_Data;
@@ -46,6 +47,7 @@ use Aggressive\Ads\Portal\Campaign_Actions;
 use Aggressive\Ads\Portal\Login_Actions;
 use Aggressive\Ads\Portal\Organization_Actions;
 use Aggressive\Ads\Portal\Password_Actions;
+use Aggressive\Ads\Portal\Report_Actions;
 use Aggressive\Ads\Portal\Signup_Actions;
 use Aggressive\Ads\Portal\Creative_Actions;
 use Aggressive\Ads\REST\Campaigns_Controller;
@@ -53,6 +55,7 @@ use Aggressive\Ads\REST\Creative_Controller;
 use Aggressive\Ads\REST\Creative_File_Controller;
 use Aggressive\Ads\REST\Placements_Controller;
 use Aggressive\Ads\REST\Packages_Controller;
+use Aggressive\Ads\REST\Settings_Controller;
 use Aggressive\Ads\REST\Transitions_Controller;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
@@ -66,6 +69,7 @@ use Aggressive\Ads\Workflow\Campaign_State_Machine;
 use Aggressive\Ads\Workflow\Advertiser_Registration;
 use Aggressive\Ads\Workflow\Password_Reset;
 use Aggressive\Ads\Workflow\Organization_Membership;
+use Aggressive\Ads\Workflow\Campaign_Change_Manager;
 use Aggressive\Ads\Workflow\Campaign_Clock;
 use Aggressive\Ads\Workflow\Campaign_Copier;
 use Aggressive\Ads\Workflow\Campaign_Editor;
@@ -78,6 +82,7 @@ use Aggressive\Ads\Workflow\Creative_Uploader;
 use Aggressive\Ads\Workflow\Ending_Soon_Notifier;
 use Aggressive\Ads\Workflow\Fill_Cache;
 use Aggressive\Ads\Workflow\Reporting_Read;
+use Aggressive\Ads\Workflow\Reviewer_Access;
 use Aggressive\Ads\Workflow\Review_Readiness;
 use Aggressive\Ads\Workflow\Placement_Manager;
 use Aggressive\Ads\Workflow\Organization_State_Manager;
@@ -152,7 +157,8 @@ final class Service_Registrar {
 		$container->register(
 			Settings_Screen::class,
 			static fn ( Service_Container $c ): Settings_Screen => new Settings_Screen(
-				$c->get( Settings::class )
+				$c->get( Settings::class ),
+				$c->get( Reviewer_Access::class )
 			)
 		);
 
@@ -555,7 +561,9 @@ final class Service_Registrar {
 				$c->get( Campaign_Editor::class ),
 				$c->get( Review_Readiness::class ),
 				$c->get( Email_Change::class ),
-				$c->get( Reporting_Read::class )
+				$c->get( Reporting_Read::class ),
+				$c->get( Campaign_Change_Manager::class ),
+				$c->get( Settings::class )
 			)
 		);
 
@@ -572,7 +580,8 @@ final class Service_Registrar {
 				$c->get( Campaign_Editor::class ),
 				$c->get( Campaign_Copier::class ),
 				$c->get( Campaign_State_Machine::class ),
-				$c->get( Rate_Limiter::class )
+				$c->get( Rate_Limiter::class ),
+				$c->get( Campaign_Change_Manager::class )
 			)
 		);
 
@@ -629,6 +638,14 @@ final class Service_Registrar {
 		);
 
 		$container->register(
+			Report_Actions::class,
+			static fn ( Service_Container $c ): Report_Actions => new Report_Actions(
+				$c->get( Reporting_Read::class ),
+				$c->get( Org_Repository::class )
+			)
+		);
+
+		$container->register(
 			Creative_Actions::class,
 			static fn ( Service_Container $c ): Creative_Actions => new Creative_Actions(
 				$c->get( Creative_Manager::class ),
@@ -664,6 +681,14 @@ final class Service_Registrar {
 				$c->get( Package_Repository::class ),
 				$c->get( Placement_Repository::class ),
 				$c->get( Campaign_Editor::class )
+			)
+		);
+
+		$container->register(
+			Settings_Controller::class,
+			static fn ( Service_Container $c ): Settings_Controller => new Settings_Controller(
+				$c->get( Settings::class ),
+				$c->get( Reviewer_Access::class )
 			)
 		);
 
@@ -729,6 +754,34 @@ final class Service_Registrar {
 				$c->get( Private_Storage::class ),
 				$c->get( Rate_Limiter::class ),
 				$c->get( Ad_Provider_Interface::class ),
+				$c->get( Audit_Repository::class )
+			)
+		);
+
+		$container->register(
+			Campaign_Change_Actions::class,
+			static fn ( Service_Container $c ): Campaign_Change_Actions => new Campaign_Change_Actions(
+				$c->get( Campaign_Change_Manager::class )
+			)
+		);
+
+		$container->register(
+			Reviewer_Access::class,
+			static fn ( Service_Container $c ): Reviewer_Access => new Reviewer_Access(
+				$c->get( User_Repository::class ),
+				$c->get( Audit_Repository::class )
+			)
+		);
+
+		$container->register(
+			Campaign_Change_Manager::class,
+			static fn ( Service_Container $c ): Campaign_Change_Manager => new Campaign_Change_Manager(
+				$c->get( Campaign_Repository::class ),
+				$c->get( Creative_Repository::class ),
+				$c->get( Placement_Repository::class ),
+				$c->get( Settings::class ),
+				$c->get( Fill_Cache::class ),
+				$c->get( Rate_Limiter::class ),
 				$c->get( Audit_Repository::class )
 			)
 		);

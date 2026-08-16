@@ -108,6 +108,32 @@ jobs:
       - run: pnpm composer:verify
       - run: pnpm lint:files
 
+  i18n:
+    name: Translations
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          coverage: none
+          tools: composer:v2
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Installed explicitly rather than left to the runner image: catalog
+      # validation must fail closed on a broken .po, and it can only do that
+      # if msgfmt is present for a reason instead of by luck.
+      - name: Install gettext
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq gettext
+      - run: pnpm ci:i18n
+
   frontend:
     name: Frontend Quality
     runs-on: ubuntu-24.04
@@ -262,7 +288,7 @@ jobs:
     name: Package
     runs-on: ubuntu-24.04
     timeout-minutes: 10
-    needs: [release-plan, security, structure, frontend, php, coverage, wordpress, build, e2e]
+    needs: [release-plan, security, structure, i18n, frontend, php, coverage, wordpress, build, e2e]
     if: >-
       always() &&
       (needs.release-plan.result == 'success' || needs.release-plan.result == 'skipped') &&
@@ -409,7 +435,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     if: always()
-    needs: [release-plan, security, structure, frontend, php, coverage, wordpress, build, e2e, package, version-pr, release]
+    needs: [release-plan, security, structure, i18n, frontend, php, coverage, wordpress, build, e2e, package, version-pr, release]
     env:
       EVENT_NAME: ${{ github.event_name }}
       EVENT_REF: ${{ github.ref }}
@@ -418,6 +444,7 @@ jobs:
       RELEASE_PLAN: ${{ needs.release-plan.result }}
       SECURITY: ${{ needs.security.result }}
       STRUCTURE: ${{ needs.structure.result }}
+      I18N: ${{ needs.i18n.result }}
       FRONTEND: ${{ needs.frontend.result }}
       PHP: ${{ needs.php.result }}
       COVERAGE: ${{ needs.coverage.result }}
@@ -432,7 +459,7 @@ jobs:
         run: |
           set -euo pipefail
           failed=0
-          for lane in SECURITY STRUCTURE FRONTEND PHP COVERAGE WORDPRESS BUILD E2E PACKAGE; do
+          for lane in SECURITY STRUCTURE I18N FRONTEND PHP COVERAGE WORDPRESS BUILD E2E PACKAGE; do
             result="${!lane}"
             printf '%-12s %s\n' "${lane}" "${result}"
             if [[ "${result}" != "success" ]]; then

@@ -365,3 +365,50 @@
 			min-width: 16rem;
 		}
 	}
+
+/* Row actions live in their own forms outside the settings form, because a
+   form inside a form is invalid HTML that browsers discard. They carry only
+   hidden inputs, so they must not take up space. */
+.aggr-hidden-form {
+	display: contents;
+}
+
+/*
+ * A form beside its list, rather than under it. Used by Inventory and
+ * Packages; Settings groups its roster and add control into one panel instead,
+ * because there they are one subject rather than two.
+ *
+ * Same proportions as the review screen, and scoped separately so renaming one
+ * does not silently restyle the other.
+ */
+.aggr-admin-split {
+	display: grid;
+	grid-template-columns: minmax(0, 3fr) minmax(280px, 2fr);
+	gap: var(--aggr-space-lg);
+	align-items: start;
+}
+
+/*
+ * Inventory and Packages put their create form before their list, because
+ * that is the right reading and tab order. The list still deserves the wider
+ * column, so the proportions are reversed here rather than the markup.
+ */
+.aggr-admin-split--narrow-first {
+	grid-template-columns: minmax(280px, 2fr) minmax(0, 3fr);
+}
+
+@media (max-width: 960px) {
+	.aggr-admin-split,
+	.aggr-admin-split--narrow-first {
+		grid-template-columns: 1fr;
+	}
+}
+
+.aggr-admin-split > .aggr-panel {
+	margin-bottom: 0;
+}
+
+/* A colour swatch needs no measure at all. */
+.aggr-admin .aggr-field input[type="color"] {
+	max-width: 6rem;
+}

@@ -24,6 +24,7 @@ PACKAGE_FORBIDDEN=(
 	bin
 	src
 	types
+	.cache
 	.git
 	.github
 	.husky
@@ -123,9 +124,10 @@ PACKAGE_REQUIRED=(
 	dist/blocks/placement/index.asset.php
 	dist/blocks/placement/view.js
 	dist/blocks/placement/view.asset.php
+	dist/admin/settings.js
+	dist/admin/settings.asset.php
 	templates/admin/review-queue.php
 	templates/admin/review-campaign.php
-	templates/admin/settings.php
 	templates/portal/base.php
 	templates/portal/base-bare.php
 	templates/portal/login.php

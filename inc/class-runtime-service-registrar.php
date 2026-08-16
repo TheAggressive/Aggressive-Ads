@@ -19,7 +19,9 @@ use Aggressive\Ads\Admin\Placement_Screen;
 use Aggressive\Ads\Admin\Review_Data;
 use Aggressive\Ads\Admin\Review_Screen;
 use Aggressive\Ads\Core\Settings;
+use Aggressive\Ads\Workflow\Campaign_Change_Manager;
 use Aggressive\Ads\Install\Rewrite_Flusher;
+use Aggressive\Ads\Install\Rewrite_Health;
 use Aggressive\Ads\Integration\Ad_Provider_Interface;
 use Aggressive\Ads\Notification\Notification_Delivery;
 use Aggressive\Ads\Notification\Notification_Service;
@@ -98,7 +100,8 @@ final class Runtime_Service_Registrar {
 				$c->get( Creative_Repository::class ),
 				$c->get( Placement_Repository::class ),
 				$c->get( Org_Repository::class ),
-				$c->get( Audit_Repository::class )
+				$c->get( Audit_Repository::class ),
+				$c->get( Campaign_Change_Manager::class )
 			)
 		);
 
@@ -212,6 +215,13 @@ final class Runtime_Service_Registrar {
 			static fn ( Service_Container $c ): Rewrite_Flusher => new Rewrite_Flusher(
 				$c->get( Router::class ),
 				$c->get( Click_Hop::class )
+			)
+		);
+
+		$container->register(
+			Rewrite_Health::class,
+			static fn ( Service_Container $c ): Rewrite_Health => new Rewrite_Health(
+				$c->get( Rewrite_Flusher::class )
 			)
 		);
 

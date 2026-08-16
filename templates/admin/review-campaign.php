@@ -18,6 +18,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 use Aggressive\Ads\Admin\Review_Screen;
 use Aggressive\Ads\Admin\Review_Data;
+use Aggressive\Ads\Admin\Campaign_Change_Actions;
+use Aggressive\Ads\Workflow\Campaign_Change_Manager;
 use Aggressive\Ads\Admin\Creative_Change_Actions;
 
 $aggr_back = Review_Screen::queue_url( $aggr_filter, $aggr_page );
@@ -157,6 +159,80 @@ $aggr_back = Review_Screen::queue_url( $aggr_filter, $aggr_page );
 			</div>
 		<?php endif; ?>
 	</section>
+
+	<?php if ( array() !== $aggr_campaign['action_request'] ) : ?>
+		<section class="aggr-panel" aria-labelledby="aggr-action-request">
+			<h2 id="aggr-action-request" class="aggr-panel__head"><?php esc_html_e( 'The advertiser has asked for something', 'aggressive-ads' ); ?></h2>
+			<p>
+				<?php
+				printf(
+					/* translators: %s: the requested action, already translated. */
+					esc_html__( 'Requested: %s', 'aggressive-ads' ),
+					esc_html( Campaign_Change_Manager::request_label( (string) $aggr_campaign['action_request']['action'] ) )
+				);
+				?>
+			</p>
+
+			<?php if ( '' !== (string) $aggr_campaign['action_request']['reason'] ) : ?>
+				<blockquote><?php echo esc_html( (string) $aggr_campaign['action_request']['reason'] ); ?></blockquote>
+			<?php endif; ?>
+
+			<p class="aggr-hint"><?php esc_html_e( 'Use the review actions below to carry this out. The request clears itself once the campaign moves, or you can decline it with an explanation.', 'aggressive-ads' ); ?></p>
+
+			<form class="aggr-form" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post">
+				<input type="hidden" name="action" value="<?php echo esc_attr( Campaign_Change_Actions::DECLINE_ACTION ); ?>">
+				<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) $aggr_campaign_id ); ?>">
+				<?php wp_nonce_field( Campaign_Change_Actions::decline_nonce_action( $aggr_campaign_id ) ); ?>
+				<label for="aggr-decline-notes"><?php esc_html_e( 'Explanation for the advertiser', 'aggressive-ads' ); ?></label>
+				<textarea id="aggr-decline-notes" name="review_notes" rows="3" maxlength="2000"></textarea>
+				<button class="aggr-button aggr-button--secondary" type="submit"><?php esc_html_e( 'Decline request', 'aggressive-ads' ); ?></button>
+			</form>
+		</section>
+	<?php endif; ?>
+
+	<?php if ( array() !== $aggr_campaign['pending_edits'] ) : ?>
+		<section class="aggr-panel" aria-labelledby="aggr-campaign-changes">
+			<h2 id="aggr-campaign-changes" class="aggr-panel__head"><?php esc_html_e( 'Requested campaign changes', 'aggressive-ads' ); ?></h2>
+			<p><?php esc_html_e( 'The campaign keeps running exactly as approved until you decide. Approving writes these values and refreshes delivery immediately.', 'aggressive-ads' ); ?></p>
+
+			<div class="aggr-tablewrap" role="region" aria-label="<?php esc_attr_e( 'Requested campaign changes', 'aggressive-ads' ); ?>" tabindex="0">
+				<table class="aggr-table">
+					<thead>
+						<tr>
+							<th scope="col"><?php esc_html_e( 'Field', 'aggressive-ads' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Currently', 'aggressive-ads' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Requested', 'aggressive-ads' ); ?></th>
+						</tr>
+					</thead>
+					<tbody>
+						<?php foreach ( $aggr_campaign['pending_edits'] as $aggr_change ) : ?>
+							<tr>
+								<td class="aggr-table__primary"><?php echo esc_html( (string) $aggr_change['label'] ); ?></td>
+								<td><?php echo esc_html( (string) $aggr_change['from'] ); ?></td>
+								<td><?php echo esc_html( (string) $aggr_change['to'] ); ?></td>
+							</tr>
+						<?php endforeach; ?>
+					</tbody>
+				</table>
+			</div>
+
+			<?php if ( in_array( 'placement_ids', array_column( $aggr_campaign['pending_edits'], 'field' ), true ) ) : ?>
+				<p class="aggr-hint"><strong><?php esc_html_e( 'This change alters the placements.', 'aggressive-ads' ); ?></strong> <?php esc_html_e( 'The existing creative will no longer match the required size, and the campaign will not serve until a new one is uploaded and reviewed.', 'aggressive-ads' ); ?></p>
+			<?php endif; ?>
+
+			<form class="aggr-form" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post">
+				<input type="hidden" name="action" value="<?php echo esc_attr( Campaign_Change_Actions::ACTION ); ?>">
+				<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) $aggr_campaign_id ); ?>">
+				<?php wp_nonce_field( Campaign_Change_Actions::nonce_action( $aggr_campaign_id ) ); ?>
+				<div class="aggr-form__actions">
+					<button class="aggr-button" type="submit" name="decision" value="approve"><?php esc_html_e( 'Approve changes', 'aggressive-ads' ); ?></button>
+				</div>
+				<label for="aggr-change-feedback"><?php esc_html_e( 'Feedback required when rejecting', 'aggressive-ads' ); ?></label>
+				<textarea id="aggr-change-feedback" name="review_notes" rows="4" maxlength="2000"></textarea>
+				<button class="aggr-button aggr-button--danger" type="submit" name="decision" value="reject"><?php esc_html_e( 'Reject changes', 'aggressive-ads' ); ?></button>
+			</form>
+		</section>
+	<?php endif; ?>
 
 	<?php if ( array() !== $aggr_campaign['creative_updates'] ) : ?>
 		<section class="aggr-panel" aria-labelledby="aggr-creative-updates">

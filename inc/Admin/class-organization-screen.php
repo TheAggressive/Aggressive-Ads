@@ -9,7 +9,6 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Admin;
 
-use Aggressive\Ads\Assets\Assets;
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Security\Capabilities;
@@ -26,13 +25,6 @@ final class Organization_Screen implements Service {
 	public const REACTIVATE_ACTION = 'aggr_reactivate_organization';
 
 	/**
-	 * Hook suffix assigned by WordPress.
-	 *
-	 * @var string
-	 */
-	private string $hook_suffix = '';
-
-	/**
 	 * Constructor.
 	 *
 	 * @param Organization_Data          $data    Screen read model.
@@ -47,7 +39,6 @@ final class Organization_Screen implements Service {
 	/** Attach menu, assets, and authenticated form handlers. */
 	public function init(): void {
 		add_action( 'admin_menu', array( $this, 'register_menu' ) );
-		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue' ) );
 		add_action( 'admin_post_' . self::SUSPEND_ACTION, array( $this, 'handle_suspend' ) );
 		add_action( 'admin_post_' . self::REACTIVATE_ACTION, array( $this, 'handle_reactivate' ) );
 	}
@@ -56,7 +47,7 @@ final class Organization_Screen implements Service {
 	 * Registers a capability-owned submenu under Advertising.
 	 */
 	public function register_menu(): void {
-		$hook = add_submenu_page(
+		add_submenu_page(
 			Menu::PARENT_SLUG,
 			__( 'Organizations', 'aggressive-ads' ),
 			__( 'Organizations', 'aggressive-ads' ),
@@ -64,23 +55,12 @@ final class Organization_Screen implements Service {
 			self::MENU_SLUG,
 			array( $this, 'render' )
 		);
-
-		$this->hook_suffix = is_string( $hook ) ? $hook : '';
 	}
 
-	/**
-	 * Loads the shared staff design system only on this screen.
-	 *
-	 * @param string $hook_suffix Current admin screen.
+	/*
+	 * No stylesheet is enqueued here: the screen is native WordPress admin
+	 * markup, so core already styles every part of it.
 	 */
-	public function enqueue( string $hook_suffix ): void {
-		if ( '' === $this->hook_suffix || $hook_suffix !== $this->hook_suffix ) {
-			return;
-		}
-
-		$this->enqueue_style( Assets::HANDLE, Assets::STYLE_PORTAL );
-		$this->enqueue_style( 'aggr-admin', Assets::STYLE_ADMIN, array( Assets::HANDLE ) );
-	}
 
 	/** Renders the authorized organization table. */
 	public function render(): void {
@@ -197,34 +177,10 @@ final class Organization_Screen implements Service {
 	}
 
 	/**
-	 * Enqueues one local stylesheet with cache-safe versioning.
+	 * Returns to the list with a success or error flag.
 	 *
-	 * @param string             $handle       Style handle.
-	 * @param string             $relative     Plugin-relative path.
-	 * @param array<int, string> $dependencies Style dependencies.
-	 */
-	private function enqueue_style( string $handle, string $relative, array $dependencies = array() ): void {
-		$path = AGGR_PLUGIN_DIR . $relative;
-
-		if ( ! is_file( $path ) ) {
-			return;
-		}
-
-		$mtime = filemtime( $path );
-
-		wp_enqueue_style(
-			$handle,
-			AGGR_PLUGIN_URL . $relative,
-			$dependencies,
-			false === $mtime ? AGGR_VERSION : (string) $mtime
-		);
-	}
-
-	/**
-	 * Redirects after a verified write.
-	 *
-	 * @param true|WP_Error $result Workflow result.
-	 * @param string        $state  Target state.
+	 * @param true|WP_Error $result Outcome.
+	 * @param string        $state  Requested state.
 	 * @return never
 	 */
 	private function redirect_after( bool|WP_Error $result, string $state ): never {
@@ -248,7 +204,7 @@ final class Organization_Screen implements Service {
 	}
 
 	/**
-	 * Read-only redirect notice.
+	 * Flash copy from the redirect query string.
 	 *
 	 * @return array{type: string, message: string}|null
 	 */

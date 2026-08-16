@@ -14,6 +14,7 @@ use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Security\Rate_Limiter;
+use Aggressive\Ads\Workflow\Campaign_Change_Manager;
 use Aggressive\Ads\Workflow\Campaign_Copier;
 use Aggressive\Ads\Workflow\Campaign_Editor;
 use Aggressive\Ads\Workflow\Campaign_State_Machine;
@@ -33,20 +34,29 @@ final class Campaign_Actions implements Service {
 	public const SAVE_PACKAGE_ACTION  = 'aggr_save_campaign_package';
 	public const SAVE_SCHEDULE_ACTION = 'aggr_save_campaign_schedule';
 	public const SUBMIT_ACTION        = 'aggr_submit_campaign';
+	public const WITHDRAW_ACTION      = 'aggr_withdraw_campaign';
+	public const CHANGES_ACTION       = 'aggr_request_campaign_changes';
+	public const CHANGES_CANCEL       = 'aggr_cancel_campaign_changes';
+	public const CHANGES_SUBMIT       = 'aggr_submit_campaign_changes';
+	public const CANCEL_ACTION        = 'aggr_cancel_campaign';
+	public const REQUEST_ACTION       = 'aggr_request_campaign_action';
+	public const REQUEST_WITHDRAW     = 'aggr_withdraw_campaign_action';
 
 	/**
 	 * Constructor.
 	 *
-	 * @param Campaign_Editor        $editor  Draft workflow.
-	 * @param Campaign_Copier        $copier  Campaign copy into a new draft.
-	 * @param Campaign_State_Machine $machine Campaign lifecycle.
-	 * @param Rate_Limiter           $limiter Transition abuse bounding.
+	 * @param Campaign_Editor         $editor  Draft workflow.
+	 * @param Campaign_Copier         $copier  Campaign copy into a new draft.
+	 * @param Campaign_State_Machine  $machine Campaign lifecycle.
+	 * @param Rate_Limiter            $limiter Transition abuse bounding.
+	 * @param Campaign_Change_Manager $changes Running-campaign change proposals.
 	 */
 	public function __construct(
 		private readonly Campaign_Editor $editor,
 		private readonly Campaign_Copier $copier,
 		private readonly Campaign_State_Machine $machine,
-		private readonly Rate_Limiter $limiter
+		private readonly Rate_Limiter $limiter,
+		private readonly Campaign_Change_Manager $changes
 	) {
 	}
 
@@ -62,6 +72,13 @@ final class Campaign_Actions implements Service {
 		add_action( 'admin_post_' . self::SAVE_PACKAGE_ACTION, array( $this, 'handle_save_package' ) );
 		add_action( 'admin_post_' . self::SAVE_SCHEDULE_ACTION, array( $this, 'handle_save_schedule' ) );
 		add_action( 'admin_post_' . self::SUBMIT_ACTION, array( $this, 'handle_submit' ) );
+		add_action( 'admin_post_' . self::WITHDRAW_ACTION, array( $this, 'handle_withdraw' ) );
+		add_action( 'admin_post_' . self::CHANGES_ACTION, array( $this, 'handle_request_changes' ) );
+		add_action( 'admin_post_' . self::CHANGES_CANCEL, array( $this, 'handle_cancel_changes' ) );
+		add_action( 'admin_post_' . self::CHANGES_SUBMIT, array( $this, 'handle_submit_changes' ) );
+		add_action( 'admin_post_' . self::CANCEL_ACTION, array( $this, 'handle_cancel' ) );
+		add_action( 'admin_post_' . self::REQUEST_ACTION, array( $this, 'handle_request_action' ) );
+		add_action( 'admin_post_' . self::REQUEST_WITHDRAW, array( $this, 'handle_withdraw_action' ) );
 	}
 
 	/**
@@ -207,6 +224,296 @@ final class Campaign_Actions implements Service {
 	}
 
 	/**
+	 * Pulls a submitted campaign back to draft and reopens the wizard.
+	 *
+	 * Lands on the first step rather than the persisted one. The persisted step
+	 * after a submission is `submit`, and returning somebody there — to the one
+	 * screen with no fields on it — after they asked to edit would be answering
+	 * a different question than the one the button asks.
+	 *
+	 * @return void
+	 */
+	public function handle_withdraw(): void {
+		$this->assert_portal_access();
+
+		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- withdraw_nonce_action() uses this id immediately below.
+
+		check_admin_referer( self::withdraw_nonce_action( $campaign_id ) );
+
+		$result = $this->process_withdraw( $campaign_id );
+		$url    = Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id );
+
+		if ( is_wp_error( $result ) ) {
+			$this->redirect( $url, 'error', $result );
+		}
+
+		$this->redirect( add_query_arg( 'step', 'details', $url ), 'withdrawn' );
+	}
+
+	/**
+	 * Proposes changes to a campaign that is already running.
+	 *
+	 * Only the fields the site allows are read out of the request at all. A
+	 * field name that is not enabled is never looked for, so an extra input in
+	 * a hand-built POST has nothing to reach.
+	 *
+	 * @return void
+	 */
+	public function handle_request_changes(): void {
+		$this->assert_portal_access();
+
+		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- changes_nonce_action() uses this id immediately below.
+
+		check_admin_referer( self::changes_nonce_action( $campaign_id ) );
+
+		$result = $this->changes->stage( $campaign_id, $this->posted_changes() );
+		$url    = add_query_arg( 'edit', '1', Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id ) );
+		$next   = isset( $_POST['next_step'] ) ? sanitize_key( wp_unslash( $_POST['next_step'] ) ) : 'review'; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified above; only ever an allowlisted step name.
+		$next   = in_array( $next, self::CHANGE_STEPS, true ) ? $next : 'review';
+
+		if ( is_wp_error( $result ) ) {
+			$this->redirect( $url, 'error', $result );
+		}
+
+		$this->redirect( add_query_arg( 'step', $next, $url ), 'changes_saved' );
+	}
+
+	/**
+	 * Sends the accumulated proposal to the review team.
+	 *
+	 * @return void
+	 */
+	public function handle_submit_changes(): void {
+		$this->assert_portal_access();
+
+		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- submit_changes_nonce_action() uses this id immediately below.
+
+		check_admin_referer( self::submit_changes_nonce_action( $campaign_id ) );
+
+		$result = $this->changes->submit( $campaign_id );
+		$url    = Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id );
+
+		if ( is_wp_error( $result ) ) {
+			$this->redirect(
+				add_query_arg(
+					array(
+						'edit' => '1',
+						'step' => 'review',
+					),
+					$url 
+				),
+				'error',
+				$result 
+			);
+		}
+
+		$this->redirect( $url, 'changes_requested' );
+	}
+
+	/**
+	 * Takes back a pending proposal.
+	 *
+	 * @return void
+	 */
+	public function handle_cancel_changes(): void {
+		$this->assert_portal_access();
+
+		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- cancel_changes_nonce_action() uses this id immediately below.
+
+		check_admin_referer( self::cancel_changes_nonce_action( $campaign_id ) );
+
+		$result = $this->changes->withdraw( $campaign_id );
+		$url    = Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id );
+
+		if ( is_wp_error( $result ) ) {
+			$this->redirect( $url, 'error', $result );
+		}
+
+		$this->redirect( $url, 'changes_cancelled' );
+	}
+
+	/**
+	 * Reads only the proposal fields this site has enabled.
+	 *
+	 * @return array<string, mixed>
+	 */
+	private function posted_changes(): array {
+		$allowed  = $this->changes->allowed_fields();
+		$proposed = array();
+
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Every caller verifies the action nonce before reaching this.
+		if ( in_array( 'title', $allowed, true ) && isset( $_POST['title'] ) ) {
+			$proposed['title'] = sanitize_text_field( wp_unslash( $_POST['title'] ) );
+		}
+
+		if ( in_array( 'advertiser_notes', $allowed, true ) && isset( $_POST['advertiser_notes'] ) ) {
+			$proposed['advertiser_notes'] = sanitize_textarea_field( wp_unslash( $_POST['advertiser_notes'] ) );
+		}
+
+		if ( in_array( 'start_ts', $allowed, true ) && isset( $_POST['start_date'] ) ) {
+			$proposed['start_ts'] = $this->proposed_date( sanitize_text_field( wp_unslash( $_POST['start_date'] ) ), false );
+		}
+
+		if ( in_array( 'end_ts', $allowed, true ) && isset( $_POST['end_date'] ) ) {
+			$proposed['end_ts'] = $this->proposed_date( sanitize_text_field( wp_unslash( $_POST['end_date'] ) ), true );
+		}
+
+		if ( in_array( 'placement_ids', $allowed, true ) && isset( $_POST['placement_ids'] ) && is_array( $_POST['placement_ids'] ) ) {
+			$proposed['placement_ids'] = array_map( 'absint', wp_unslash( $_POST['placement_ids'] ) );
+		}
+
+		if ( in_array( 'click_urls', $allowed, true ) && isset( $_POST['click_urls'] ) && is_array( $_POST['click_urls'] ) ) {
+			$urls = array();
+
+			// esc_url_raw rather than sanitize_text_field: the workflow rejects
+			// anything that is not http(s), and a mangled scheme would fail
+			// that check for the wrong reason and confuse the message.
+			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Each element is esc_url_raw()'d in the loop body; the array itself carries no value.
+			foreach ( wp_unslash( $_POST['click_urls'] ) as $creative_id => $url ) {
+				$urls[ absint( $creative_id ) ] = is_string( $url ) ? esc_url_raw( trim( $url ) ) : '';
+			}
+
+			$proposed['click_urls'] = $urls;
+		}
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		return $proposed;
+	}
+
+	/**
+	 * Asks staff to pause, restart or cancel a running campaign.
+	 *
+	 * @return void
+	 */
+	public function handle_request_action(): void {
+		$this->assert_portal_access();
+
+		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- action_nonce_action() uses this id immediately below.
+
+		check_admin_referer( self::action_nonce_action( $campaign_id ) );
+
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Verified immediately above.
+		$action = isset( $_POST['requested_action'] ) ? sanitize_key( wp_unslash( $_POST['requested_action'] ) ) : '';
+		$reason = isset( $_POST['reason'] ) ? sanitize_textarea_field( wp_unslash( $_POST['reason'] ) ) : '';
+		// phpcs:enable WordPress.Security.NonceVerification.Missing
+
+		$result = $this->changes->request_action( $campaign_id, $action, $reason );
+		$url    = Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id );
+
+		if ( is_wp_error( $result ) ) {
+			$this->redirect( $url, 'error', $result );
+		}
+
+		$this->redirect( $url, 'action_requested' );
+	}
+
+	/**
+	 * Takes back a request staff have not acted on.
+	 *
+	 * @return void
+	 */
+	public function handle_withdraw_action(): void {
+		$this->assert_portal_access();
+
+		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- withdraw_action_nonce_action() uses this id immediately below.
+
+		check_admin_referer( self::withdraw_action_nonce_action( $campaign_id ) );
+
+		$result = $this->changes->withdraw_action( $campaign_id );
+		$url    = Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id );
+
+		if ( is_wp_error( $result ) ) {
+			$this->redirect( $url, 'error', $result );
+		}
+
+		$this->redirect( $url, 'action_withdrawn' );
+	}
+
+	/**
+	 * Nonce action for one campaign's staff-action request.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return string
+	 */
+	public static function action_nonce_action( int $campaign_id ): string {
+		return self::REQUEST_ACTION . '_' . max( 0, $campaign_id );
+	}
+
+	/**
+	 * Nonce action for withdrawing one campaign's staff-action request.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return string
+	 */
+	public static function withdraw_action_nonce_action( int $campaign_id ): string {
+		return self::REQUEST_WITHDRAW . '_' . max( 0, $campaign_id );
+	}
+
+	/**
+	 * Ends a campaign at the advertiser's request.
+	 *
+	 * @return void
+	 */
+	public function handle_cancel(): void {
+		$this->assert_portal_access();
+
+		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- cancel_nonce_action() uses this id immediately below.
+
+		check_admin_referer( self::cancel_nonce_action( $campaign_id ) );
+
+		$result = $this->process_cancel( $campaign_id );
+
+		if ( is_wp_error( $result ) ) {
+			$this->redirect( Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id ), 'error', $result );
+		}
+
+		// Back to the list, not to the campaign: the thing they were looking at
+		// is finished, and leaving them on it invites a second attempt.
+		$this->redirect( Routes::url( Request::ROUTE_CAMPAIGNS ), 'cancelled' );
+	}
+
+	/**
+	 * Delivery-level cancellation entry point for forms and integration tests.
+	 *
+	 * Cancellation, not deletion. `aggr_cancelled` is terminal, so the campaign
+	 * stops serving and can never restart — but the row, its audit trail and
+	 * its delivery figures survive. Hard-deleting instead would orphan audit
+	 * and rollup rows that reference the id, and would strand the private
+	 * creative bytes on disk: `Creative_Retention` frees those by walking
+	 * *terminal campaigns*, and a row that no longer exists is never walked.
+	 *
+	 * Which statuses this is offered from is Transition_Table's business, not
+	 * this method's — it just asks the state machine, which refuses an edge the
+	 * advertiser does not have.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return bool|WP_Error
+	 */
+	public function process_cancel( int $campaign_id ): bool|WP_Error {
+		if ( ! current_user_can( Capabilities::ACCESS_PORTAL ) ) {
+			return new WP_Error( 'aggr_forbidden', __( 'You do not have permission to end that campaign.', 'aggressive-ads' ), array( 'status' => 403 ) );
+		}
+
+		$allowed = $this->limiter->attempt( Rate_Limiter::ACTION_TRANSITION, get_current_user_id() );
+
+		if ( is_wp_error( $allowed ) ) {
+			return $allowed;
+		}
+
+		return $this->machine->apply( $campaign_id, Post_Statuses::CANCELLED );
+	}
+
+	/**
+	 * Nonce action for one campaign's cancellation.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return string
+	 */
+	public static function cancel_nonce_action( int $campaign_id ): string {
+		return self::CANCEL_ACTION . '_' . max( 0, $campaign_id );
+	}
+
+	/**
 	 * Delivery-level create entry point, kept public for integration tests.
 	 *
 	 * @return int|WP_Error
@@ -344,6 +651,32 @@ final class Campaign_Actions implements Service {
 	}
 
 	/**
+	 * Delivery-level withdrawal entry point for forms and integration tests.
+	 *
+	 * There is no status check here on purpose. `Transition_Table` already
+	 * says withdrawal runs from `submitted` only, and its `unclaimed` guard
+	 * already refuses once a reviewer has the campaign open — re-testing either
+	 * here would be a second copy of the rule, free to drift from the first and
+	 * certain to be the one somebody forgets to update.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return bool|WP_Error
+	 */
+	public function process_withdraw( int $campaign_id ): bool|WP_Error {
+		if ( ! current_user_can( Capabilities::ACCESS_PORTAL ) ) {
+			return new WP_Error( 'aggr_forbidden', __( 'You do not have permission to withdraw that campaign.', 'aggressive-ads' ), array( 'status' => 403 ) );
+		}
+
+		$allowed = $this->limiter->attempt( Rate_Limiter::ACTION_TRANSITION, get_current_user_id() );
+
+		if ( is_wp_error( $allowed ) ) {
+			return $allowed;
+		}
+
+		return $this->machine->apply( $campaign_id, Post_Statuses::DRAFT );
+	}
+
+	/**
 	 * Nonce action bound to one campaign.
 	 *
 	 * @param int $campaign_id Campaign post id.
@@ -394,6 +727,91 @@ final class Campaign_Actions implements Service {
 	}
 
 	/**
+	 * Nonce action for one campaign's withdrawal.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return string
+	 */
+	public static function withdraw_nonce_action( int $campaign_id ): string {
+		return self::WITHDRAW_ACTION . '_' . max( 0, $campaign_id );
+	}
+
+	/**
+	 * Nonce action for one campaign's change proposal.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return string
+	 */
+	public static function changes_nonce_action( int $campaign_id ): string {
+		return self::CHANGES_ACTION . '_' . max( 0, $campaign_id );
+	}
+
+	/**
+	 * Nonce action for cancelling one campaign's change proposal.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return string
+	 */
+	public static function cancel_changes_nonce_action( int $campaign_id ): string {
+		return self::CHANGES_CANCEL . '_' . max( 0, $campaign_id );
+	}
+
+	/**
+	 * Nonce action for submitting one campaign's change proposal.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return string
+	 */
+	public static function submit_changes_nonce_action( int $campaign_id ): string {
+		return self::CHANGES_SUBMIT . '_' . max( 0, $campaign_id );
+	}
+
+	/**
+	 * The steps of the running-campaign edit flow, in order.
+	 *
+	 * Deliberately fewer than the creation wizard: package and creative upload
+	 * are not proposal fields, and a step with nothing in it is a step that
+	 * teaches an advertiser the flow is broken.
+	 */
+	public const CHANGE_STEPS = array( 'details', 'schedule', 'destination', 'review' );
+
+	/**
+	 * The requested edit step, allowlisted.
+	 *
+	 * @return string
+	 */
+	public static function request_change_step(): string {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only display preference; authorization does not depend on it.
+		$requested = isset( $_GET['step'] ) ? sanitize_key( wp_unslash( $_GET['step'] ) ) : '';
+
+		return in_array( $requested, self::CHANGE_STEPS, true ) ? $requested : 'details';
+	}
+
+	/**
+	 * Whether the request asked to confirm ending a campaign.
+	 *
+	 * A GET flag rather than a stored state: it selects which screen to draw
+	 * and changes nothing, so a reload or a shared link is harmless. The write
+	 * behind it is a nonce-checked POST.
+	 *
+	 * @return bool
+	 */
+	public static function wants_cancel_confirmation(): bool {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Chooses a screen; the cancellation itself is a nonce-checked POST.
+		return isset( $_GET['confirm'] ) && 'cancel' === sanitize_key( wp_unslash( $_GET['confirm'] ) );
+	}
+
+	/**
+	 * Whether the request asked to edit a running campaign.
+	 *
+	 * @return bool
+	 */
+	public static function wants_change_editor(): bool {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only mode flag; the workflow re-authorizes every write.
+		return isset( $_GET['edit'] ) && '1' === sanitize_key( wp_unslash( $_GET['edit'] ) );
+	}
+
+	/**
 	 * Reads a known post/redirect/get notice.
 	 *
 	 * @return string
@@ -402,7 +820,7 @@ final class Campaign_Actions implements Service {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only post/redirect/get display state; never authorizes or mutates anything.
 		$value = isset( $_GET['aggr_notice'] ) ? sanitize_key( wp_unslash( $_GET['aggr_notice'] ) ) : '';
 
-		return in_array( $value, array( 'created', 'copied', 'saved', 'package_saved', 'schedule_saved', 'submitted', 'error' ), true ) ? $value : '';
+		return in_array( $value, array( 'created', 'copied', 'saved', 'package_saved', 'schedule_saved', 'submitted', 'withdrawn', 'changes_requested', 'changes_cancelled', 'changes_saved', 'cancelled', 'action_requested', 'action_withdrawn', 'error' ), true ) ? $value : '';
 	}
 
 	/**
@@ -486,6 +904,25 @@ final class Campaign_Actions implements Service {
 			'aggr_campaign_invalid'        => 'aggr-readiness-heading',
 			default                            => '',
 		};
+	}
+
+	/**
+	 * A proposed date as a timestamp, or -1 when it will not parse.
+	 *
+	 * -1 rather than 0 or a WP_Error: zero is the model's legitimate
+	 * open-ended value, so returning it for garbage would silently clear an end
+	 * date the advertiser meant to change. -1 can never equal a stored value,
+	 * so it always reaches the validator as a change and is refused there,
+	 * where the message belongs.
+	 *
+	 * @param string $value      YYYY-MM-DD or empty.
+	 * @param bool   $end_of_day Whether to use 23:59:59.
+	 * @return int
+	 */
+	private function proposed_date( string $value, bool $end_of_day ): int {
+		$parsed = $this->parse_date( $value, $end_of_day );
+
+		return is_wp_error( $parsed ) ? -1 : $parsed;
 	}
 
 	/**

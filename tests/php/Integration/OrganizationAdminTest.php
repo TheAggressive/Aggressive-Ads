@@ -107,10 +107,18 @@ final class OrganizationAdminTest extends WP_UnitTestCase {
 		parent::tear_down();
 	}
 
-	/** Menu, assets, and authenticated handlers are attached. */
+	/**
+	 * Menu and authenticated handlers are attached.
+	 *
+	 * There is deliberately no `admin_enqueue_scripts` assertion. This screen was
+	 * converted to native wp-admin markup — form-table, wp-list-table, notice —
+	 * which core already styles, so it enqueues nothing of ours. The assertion
+	 * that used to be here outlived the behaviour it described and went on
+	 * failing unnoticed, because the suite it ran in was exiting early and
+	 * reporting success. See bin/ci/run-wp-tests.sh.
+	 */
 	public function test_organization_surface_is_wired(): void {
 		$this->assertNotFalse( has_action( 'admin_menu', array( $this->screen, 'register_menu' ) ) );
-		$this->assertNotFalse( has_action( 'admin_enqueue_scripts', array( $this->screen, 'enqueue' ) ) );
 		$this->assertNotFalse( has_action( 'admin_post_' . Organization_Screen::SUSPEND_ACTION, array( $this->screen, 'handle_suspend' ) ) );
 		$this->assertNotFalse( has_action( 'admin_post_' . Organization_Screen::REACTIVATE_ACTION, array( $this->screen, 'handle_reactivate' ) ) );
 	}

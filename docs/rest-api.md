@@ -35,6 +35,7 @@ Routes marked “planned” remain contracts for later phases. Every other row i
 | `DELETE` | `/creatives/{id}` | `delete_aggr_creative` | Removes private bytes and the record only while advertiser-editable and unpublished |
 | `GET` | `/placements` | `aggr_access_portal` **or** `edit_posts` **or** `edit_theme_options` | Active placements only; includes public `slug` for the slot block; no ad-group IDs |
 | `GET` | `/packages` | `aggr_access_portal` | Active, completely configured packages only; includes advertiser-facing placement labels, duration and integer-cent price |
+| `POST` | `/settings` | `aggr_manage_settings` | Autosave for the Settings screen. Replaces the whole document; shares `Settings_Input` and `Settings::save()` with the admin-post form, so the WCAG contrast gate applies identically. Rejects the whole payload on any schema error |
 | `GET` | `/queue` | `aggr_review_campaigns` | **Planned as REST.** Staff currently use the server-rendered review screen |
 | `GET` | `/audit` | `aggr_view_audit_log` | **Planned as REST.** Current staff timeline is org-filtered **in SQL** |
 | `POST` | `/creatives/{id}/replacement` | `aggr_upload_creative` + object ownership | Stages a private replacement for a scheduled/live ad; multipart `file`, `click_url`, and optional `alt_text` |

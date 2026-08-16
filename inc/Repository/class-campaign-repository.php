@@ -41,6 +41,11 @@ final class Campaign_Repository {
 	public const META_BUDGET_CENTS         = '_aggr_budget_cents';
 	public const META_CURRENCY             = '_aggr_currency';
 	public const META_PENDING_UPDATES      = '_aggr_pending_creative_updates';
+	public const META_PENDING_EDITS        = '_aggr_pending_edits';
+	public const META_PENDING_EDITS_AT     = '_aggr_pending_edits_at';
+	public const META_PENDING_EDITS_BY     = '_aggr_pending_edits_by';
+	public const META_PENDING_EDITS_SENT   = '_aggr_pending_edits_submitted';
+	public const META_ACTION_REQUEST       = '_aggr_action_request';
 
 	/**
 	 * Transition locks held by this PHP request.
@@ -113,6 +118,166 @@ final class Campaign_Repository {
 	 */
 	public function update_draft( int $campaign_id, array $fields ) {
 		return ( new Campaign_Draft_Persistence( $this ) )->update( $campaign_id, $fields );
+	}
+
+	/**
+	 * The change set an advertiser has proposed for a running campaign.
+	 *
+	 * Stored as meta on the campaign rather than as a shadow post, unlike a
+	 * creative replacement. That asymmetry is deliberate: a replacement has
+	 * *bytes* to hold, validate and stream before anyone approves it, and a
+	 * post is what owns bytes here. A field change is a handful of scalars, and
+	 * giving it a post would buy a second thing to keep in step with the
+	 * campaign for no capability in return.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return array<string, mixed> Empty when nothing is pending.
+	 */
+	public function pending_edits( int $campaign_id ): array {
+		$stored = get_post_meta( $campaign_id, self::META_PENDING_EDITS, true );
+
+		return is_array( $stored ) ? $stored : array();
+	}
+
+	/**
+	 * Whether a change is waiting for a decision.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 */
+	public function has_pending_edits( int $campaign_id ): bool {
+		return array() !== $this->pending_edits( $campaign_id );
+	}
+
+	/**
+	 * Records a proposed change, replacing any previous one.
+	 *
+	 * @param int                  $campaign_id Campaign post id.
+	 * @param array<string, mixed> $edits       Validated change set.
+	 * @param int                  $user_id     Proposing user.
+	 * @param bool                 $submitted   Whether it has been sent for review.
+	 * @return bool
+	 */
+	public function set_pending_edits( int $campaign_id, array $edits, int $user_id, bool $submitted = false ): bool {
+		if ( array() === $edits ) {
+			return $this->clear_pending_edits( $campaign_id );
+		}
+
+		update_post_meta( $campaign_id, self::META_PENDING_EDITS, $edits );
+		update_post_meta( $campaign_id, self::META_PENDING_EDITS_AT, time() );
+		update_post_meta( $campaign_id, self::META_PENDING_EDITS_BY, $user_id );
+		update_post_meta( $campaign_id, self::META_PENDING_EDITS_SENT, $submitted ? 1 : 0 );
+
+		// Read back rather than trusting update_post_meta()'s return, which is
+		// false both when the write failed and when the value was unchanged.
+		return $this->pending_edits( $campaign_id ) === $edits;
+	}
+
+	/**
+	 * Drops a proposed change.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 */
+	public function clear_pending_edits( int $campaign_id ): bool {
+		delete_post_meta( $campaign_id, self::META_PENDING_EDITS );
+		delete_post_meta( $campaign_id, self::META_PENDING_EDITS_AT );
+		delete_post_meta( $campaign_id, self::META_PENDING_EDITS_BY );
+		delete_post_meta( $campaign_id, self::META_PENDING_EDITS_SENT );
+
+		return array() === $this->pending_edits( $campaign_id );
+	}
+
+	/**
+	 * Whether the pending change has been sent for review.
+	 *
+	 * A proposal being assembled across wizard steps is not one a reviewer
+	 * should see. Without this flag the review queue would show half-finished
+	 * edits and staff would approve a change the advertiser had not finished
+	 * making.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 */
+	public function pending_edits_submitted( int $campaign_id ): bool {
+		return 1 === (int) get_post_meta( $campaign_id, self::META_PENDING_EDITS_SENT, true );
+	}
+
+	/**
+	 * When the pending change was proposed, as a UTC Unix timestamp.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 */
+	public function pending_edits_at( int $campaign_id ): int {
+		return (int) get_post_meta( $campaign_id, self::META_PENDING_EDITS_AT, true );
+	}
+
+	/**
+	 * Who proposed the pending change.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 */
+	public function pending_edits_by( int $campaign_id ): int {
+		return (int) get_post_meta( $campaign_id, self::META_PENDING_EDITS_BY, true );
+	}
+
+	/**
+	 * An advertiser's request for a staff-only action on a running campaign.
+	 *
+	 * Kept apart from pending edits even though both are "the advertiser wants
+	 * something": an edit proposes new *values* and is applied on approval,
+	 * while this proposes a *transition* that staff perform themselves through
+	 * the review screen. Sharing storage would mean one approval path deciding
+	 * two different kinds of thing.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return array{action: string, reason: string, at: int, by: int}|array{}
+	 */
+	public function action_request( int $campaign_id ): array {
+		$stored = get_post_meta( $campaign_id, self::META_ACTION_REQUEST, true );
+
+		if ( ! is_array( $stored ) || ! isset( $stored['action'] ) ) {
+			return array();
+		}
+
+		return array(
+			'action' => (string) $stored['action'],
+			'reason' => (string) ( $stored['reason'] ?? '' ),
+			'at'     => (int) ( $stored['at'] ?? 0 ),
+			'by'     => (int) ( $stored['by'] ?? 0 ),
+		);
+	}
+
+	/**
+	 * Records a requested action, replacing any previous one.
+	 *
+	 * @param int    $campaign_id Campaign post id.
+	 * @param string $action      Target status.
+	 * @param string $reason      Advertiser's explanation.
+	 * @param int    $user_id     Requesting user.
+	 * @return bool
+	 */
+	public function set_action_request( int $campaign_id, string $action, string $reason, int $user_id ): bool {
+		update_post_meta(
+			$campaign_id,
+			self::META_ACTION_REQUEST,
+			array(
+				'action' => $action,
+				'reason' => $reason,
+				'at'     => time(),
+				'by'     => $user_id,
+			)
+		);
+
+		return array() !== $this->action_request( $campaign_id );
+	}
+
+	/**
+	 * Drops a requested action.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 */
+	public function clear_action_request( int $campaign_id ): bool {
+		delete_post_meta( $campaign_id, self::META_ACTION_REQUEST );
+
+		return array() === $this->action_request( $campaign_id );
 	}
 
 	/**

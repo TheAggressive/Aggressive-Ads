@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Install;
 
 use Aggressive\Ads\Audit\Audit_Event;
+use Aggressive\Ads\Workflow\Reviewer_Access;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Event_Repository;
 use Aggressive\Ads\Repository\Org_Access_Repository;
@@ -51,6 +52,7 @@ final class Installer {
 			self::OPTION_SEED_VERSION,
 			self::OPTION_UPGRADE_LOCK,
 			self::OPTION_DELETE_DATA,
+			Reviewer_Access::OPTION,
 			'aggr_settings',
 			Click_Hop::OPTION_REWRITE,
 			Rollup_Reconciler::OPTION,

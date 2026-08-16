@@ -1,6 +1,17 @@
 <?php
 /**
- * Staff package catalogue.
+ * Staff package catalogue, in native WordPress admin markup.
+ *
+ * Same conventions as templates/admin/settings.php: `wrap`, `#poststuff`,
+ * `postbox`, `form-table`, `notice`, `description` and core `button` classes,
+ * with no plugin stylesheet enqueued for the screen.
+ *
+ * `#poststuff` is the scope core hangs postbox padding and typography on — most
+ * of those rules are written as `#poststuff .postbox …`. It is not the same
+ * thing as `metabox-holder columns-2`, which pairs a main column with a metabox
+ * sidebar this screen does not have.
+ *
+ * `aggr-admin` stays on the wrap purely as the e2e accessibility scope hook.
  *
  * @package Aggressive\Ads
  *
@@ -25,133 +36,190 @@ use Aggressive\Ads\Admin\Package_Screen;
  */
 $aggr_placement_checklist = static function ( array $placements, array $selected, string $legend ): void {
 	?>
-	<fieldset class="aggr-fieldset">
-		<legend><?php echo esc_html( $legend ); ?></legend>
+	<fieldset>
+		<legend class="screen-reader-text"><span><?php echo esc_html( $legend ); ?></span></legend>
 		<?php if ( array() === $placements ) : ?>
-			<p class="aggr-hint"><?php esc_html_e( 'Create placements in Inventory before offering a package.', 'aggressive-ads' ); ?></p>
+			<p class="description"><?php esc_html_e( 'Create placements in Inventory before offering a package.', 'aggressive-ads' ); ?></p>
 		<?php else : ?>
 			<?php foreach ( $placements as $placement ) : ?>
 				<label>
 					<input type="checkbox" name="placement_ids[]" value="<?php echo esc_attr( (string) $placement['id'] ); ?>" <?php checked( in_array( $placement['id'], $selected, true ) ); ?>>
 					<?php echo esc_html( $placement['name'] ); ?>
-					<span class="aggr-hint"><?php echo esc_html( $placement['size'] . ( $placement['active'] ? '' : ' — ' . __( 'inactive', 'aggressive-ads' ) ) ); ?></span>
+					<span class="description"><?php echo esc_html( $placement['size'] . ( $placement['active'] ? '' : ' — ' . __( 'inactive', 'aggressive-ads' ) ) ); ?></span>
 				</label>
+				<br>
 			<?php endforeach; ?>
 		<?php endif; ?>
 	</fieldset>
 	<?php
 };
+
+/**
+ * The editable fields of one package, as native form-table rows.
+ *
+ * Shared by the create form and every edit form so the two cannot drift: a
+ * field added to one and forgotten in the other is the defect this closure
+ * exists to make impossible.
+ *
+ * @param string                    $id_prefix Unique per form, for label/input pairing.
+ * @param array<string, mixed>|null $row       Existing package, or null when creating.
+ * @param callable                  $checklist Placement checklist renderer.
+ * @param array<int, mixed>         $placements Placement catalogue.
+ */
+$aggr_package_fields = static function ( string $id_prefix, ?array $row, callable $checklist, array $placements ): void {
+	$aggr_selected = null === $row ? array() : (array) $row['placement_ids'];
+	?>
+	<table class="form-table" role="presentation">
+		<tr>
+			<th scope="row"><label for="<?php echo esc_attr( $id_prefix ); ?>-name"><?php esc_html_e( 'Name', 'aggressive-ads' ); ?></label></th>
+			<td>
+				<input
+					id="<?php echo esc_attr( $id_prefix ); ?>-name"
+					class="regular-text"
+					name="name"
+					type="text"
+					required
+					maxlength="120"
+					value="<?php echo esc_attr( null === $row ? '' : (string) $row['name'] ); ?>"
+				>
+			</td>
+		</tr>
+		<tr>
+			<th scope="row"><?php esc_html_e( 'Placements', 'aggressive-ads' ); ?></th>
+			<td><?php $checklist( $placements, $aggr_selected, __( 'Placements', 'aggressive-ads' ) ); ?></td>
+		</tr>
+		<tr>
+			<th scope="row"><label for="<?php echo esc_attr( $id_prefix ); ?>-duration"><?php esc_html_e( 'Duration (days)', 'aggressive-ads' ); ?></label></th>
+			<td>
+				<input
+					id="<?php echo esc_attr( $id_prefix ); ?>-duration"
+					class="small-text"
+					name="duration_days"
+					type="number"
+					min="<?php echo esc_attr( null === $row ? '1' : '0' ); ?>"
+					max="3650"
+					value="<?php echo esc_attr( null === $row ? '30' : (string) $row['duration_days'] ); ?>"
+				>
+				<p class="description">
+					<label>
+						<input type="checkbox" name="custom_duration" value="1" <?php checked( null !== $row && (bool) $row['custom_duration'] ); ?>>
+						<?php esc_html_e( 'Advertiser chooses the schedule', 'aggressive-ads' ); ?>
+					</label>
+				</p>
+			</td>
+		</tr>
+		<tr>
+			<th scope="row"><label for="<?php echo esc_attr( $id_prefix ); ?>-price"><?php esc_html_e( 'Price (integer cents)', 'aggressive-ads' ); ?></label></th>
+			<td>
+				<input
+					id="<?php echo esc_attr( $id_prefix ); ?>-price"
+					class="small-text"
+					name="price_cents"
+					type="number"
+					min="0"
+					max="999999999"
+					value="<?php echo esc_attr( null === $row ? '0' : (string) $row['price_cents'] ); ?>"
+					required
+				>
+			</td>
+		</tr>
+		<tr>
+			<th scope="row"><label for="<?php echo esc_attr( $id_prefix ); ?>-currency"><?php esc_html_e( 'Currency', 'aggressive-ads' ); ?></label></th>
+			<td>
+				<input
+					id="<?php echo esc_attr( $id_prefix ); ?>-currency"
+					class="small-text code"
+					name="currency"
+					type="text"
+					maxlength="3"
+					value="<?php echo esc_attr( null === $row ? 'USD' : (string) $row['currency'] ); ?>"
+					required
+				>
+			</td>
+		</tr>
+		<tr>
+			<th scope="row"><?php esc_html_e( 'Availability', 'aggressive-ads' ); ?></th>
+			<td>
+				<fieldset>
+					<legend class="screen-reader-text"><span><?php esc_html_e( 'Availability', 'aggressive-ads' ); ?></span></legend>
+					<label>
+						<input type="checkbox" name="is_active" value="1" <?php checked( null === $row ? true : (bool) $row['is_active'] ); ?>>
+						<?php esc_html_e( 'Offered to advertisers', 'aggressive-ads' ); ?>
+					</label>
+					<br>
+					<label>
+						<input type="checkbox" name="is_default" value="1" <?php checked( null !== $row && (bool) $row['is_default'] ); ?>>
+						<?php esc_html_e( 'Catalogue default', 'aggressive-ads' ); ?>
+					</label>
+				</fieldset>
+			</td>
+		</tr>
+	</table>
+	<?php
+};
 ?>
-<div class="wrap aggr-portal aggr-admin">
-	<header class="aggr-pagehead">
-		<div>
-			<h1 class="aggr-title"><?php esc_html_e( 'Packages', 'aggressive-ads' ); ?></h1>
-			<p class="aggr-lede"><?php esc_html_e( 'Packages are the catalogue advertisers choose from. Editing a package never changes campaigns that already selected it.', 'aggressive-ads' ); ?></p>
-		</div>
-	</header>
+<div class="wrap aggr-admin">
+	<h1><?php esc_html_e( 'Packages', 'aggressive-ads' ); ?></h1>
+	<p><?php esc_html_e( 'Packages are the catalogue advertisers choose from. Editing a package never changes campaigns that already selected it.', 'aggressive-ads' ); ?></p>
 
 	<?php if ( is_array( $aggr_notice ) ) : ?>
-		<div class="aggr-flash aggr-flash--<?php echo esc_attr( $aggr_notice['type'] ); ?>" role="<?php echo 'error' === $aggr_notice['type'] ? 'alert' : 'status'; ?>">
-			<?php echo esc_html( $aggr_notice['message'] ); ?>
+		<div class="notice notice-<?php echo esc_attr( 'error' === $aggr_notice['type'] ? 'error' : 'success' ); ?>">
+			<p><?php echo esc_html( $aggr_notice['message'] ); ?></p>
 		</div>
 	<?php endif; ?>
 
-	<section class="aggr-panel" aria-labelledby="aggr-package-create-heading">
-		<h2 id="aggr-package-create-heading" class="aggr-panel__head"><?php esc_html_e( 'New package', 'aggressive-ads' ); ?></h2>
-		<form class="aggr-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-			<input type="hidden" name="action" value="<?php echo esc_attr( Package_Screen::CREATE_ACTION ); ?>">
-			<?php wp_nonce_field( Package_Screen::CREATE_ACTION ); ?>
-			<div class="aggr-field">
-				<label for="aggr-package-create-name"><?php esc_html_e( 'Name', 'aggressive-ads' ); ?></label>
-				<input id="aggr-package-create-name" name="name" type="text" required maxlength="120">
-			</div>
-			<?php $aggr_placement_checklist( $aggr_view['placements'], array(), __( 'Placements', 'aggressive-ads' ) ); ?>
-			<div class="aggr-field">
-				<label for="aggr-package-create-duration"><?php esc_html_e( 'Duration (days)', 'aggressive-ads' ); ?></label>
-				<input id="aggr-package-create-duration" name="duration_days" type="number" min="1" max="3650" value="30">
-			</div>
-			<div class="aggr-field">
-				<label>
-					<input type="checkbox" name="custom_duration" value="1">
-					<?php esc_html_e( 'Advertiser chooses the schedule', 'aggressive-ads' ); ?>
-				</label>
-			</div>
-			<div class="aggr-field">
-				<label for="aggr-package-create-price"><?php esc_html_e( 'Price (integer cents)', 'aggressive-ads' ); ?></label>
-				<input id="aggr-package-create-price" name="price_cents" type="number" min="0" max="999999999" value="0" required>
-			</div>
-			<div class="aggr-field">
-				<label for="aggr-package-create-currency"><?php esc_html_e( 'Currency', 'aggressive-ads' ); ?></label>
-				<input id="aggr-package-create-currency" name="currency" type="text" value="USD" maxlength="3" required>
-			</div>
-			<div class="aggr-field">
-				<label>
-					<input type="checkbox" name="is_active" value="1" checked>
-					<?php esc_html_e( 'Offered to advertisers', 'aggressive-ads' ); ?>
-				</label>
-			</div>
-			<div class="aggr-field">
-				<label>
-					<input type="checkbox" name="is_default" value="1">
-					<?php esc_html_e( 'Catalogue default', 'aggressive-ads' ); ?>
-				</label>
-			</div>
-			<button type="submit" class="aggr-button"><?php esc_html_e( 'Create package', 'aggressive-ads' ); ?></button>
-		</form>
-	</section>
+	<div id="poststuff">
 
-	<section class="aggr-panel" aria-labelledby="aggr-package-list-heading">
-		<h2 id="aggr-package-list-heading" class="aggr-panel__head"><?php esc_html_e( 'Catalogue', 'aggressive-ads' ); ?></h2>
+		<div class="postbox">
+			<div class="postbox-header"><h2 class="hndle"><?php esc_html_e( 'New package', 'aggressive-ads' ); ?></h2></div>
+			<div class="inside">
+				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+					<input type="hidden" name="action" value="<?php echo esc_attr( Package_Screen::CREATE_ACTION ); ?>">
+					<?php wp_nonce_field( Package_Screen::CREATE_ACTION ); ?>
+					<?php $aggr_package_fields( 'aggr-package-create', null, $aggr_placement_checklist, $aggr_view['placements'] ); ?>
+					<p class="submit">
+						<button type="submit" class="button button-primary"><?php esc_html_e( 'Create package', 'aggressive-ads' ); ?></button>
+					</p>
+				</form>
+			</div>
+		</div>
+
 		<?php if ( array() === $aggr_view['rows'] ) : ?>
-			<div class="aggr-empty">
-				<h3 class="aggr-empty__title"><?php esc_html_e( 'No packages yet.', 'aggressive-ads' ); ?></h3>
-				<p><?php esc_html_e( 'Create the first package above. Advertisers only see active, complete packages.', 'aggressive-ads' ); ?></p>
+			<div class="postbox">
+				<div class="postbox-header"><h2 class="hndle"><?php esc_html_e( 'Catalogue', 'aggressive-ads' ); ?></h2></div>
+				<div class="inside">
+					<p><?php esc_html_e( 'No packages yet. Create the first one above — advertisers only see active, complete packages.', 'aggressive-ads' ); ?></p>
+				</div>
 			</div>
 		<?php else : ?>
 			<?php foreach ( $aggr_view['rows'] as $aggr_row ) : ?>
-				<form class="aggr-form aggr-package-row" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-					<input type="hidden" name="action" value="<?php echo esc_attr( Package_Screen::UPDATE_ACTION ); ?>">
-					<input type="hidden" name="package_id" value="<?php echo esc_attr( (string) $aggr_row['id'] ); ?>">
-					<?php wp_nonce_field( Package_Screen::nonce_action( $aggr_row['id'] ) ); ?>
-					<h3><?php echo esc_html( $aggr_row['name'] ); ?></h3>
-					<div class="aggr-field">
-						<label for="aggr-package-name-<?php echo esc_attr( (string) $aggr_row['id'] ); ?>"><?php esc_html_e( 'Name', 'aggressive-ads' ); ?></label>
-						<input id="aggr-package-name-<?php echo esc_attr( (string) $aggr_row['id'] ); ?>" name="name" type="text" required maxlength="120" value="<?php echo esc_attr( $aggr_row['name'] ); ?>">
+				<?php $aggr_prefix = 'aggr-package-' . (int) $aggr_row['id']; ?>
+				<div class="postbox">
+					<div class="postbox-header">
+						<h2 class="hndle">
+							<?php echo esc_html( $aggr_row['name'] ); ?>
+							<?php if ( true === $aggr_row['is_default'] ) : ?>
+								<span class="description"><?php esc_html_e( '— catalogue default', 'aggressive-ads' ); ?></span>
+							<?php endif; ?>
+							<?php if ( true !== $aggr_row['is_active'] ) : ?>
+								<span class="description"><?php esc_html_e( '— not offered', 'aggressive-ads' ); ?></span>
+							<?php endif; ?>
+						</h2>
 					</div>
-					<?php $aggr_placement_checklist( $aggr_view['placements'], $aggr_row['placement_ids'], __( 'Placements', 'aggressive-ads' ) ); ?>
-					<div class="aggr-field">
-						<label for="aggr-package-duration-<?php echo esc_attr( (string) $aggr_row['id'] ); ?>"><?php esc_html_e( 'Duration (days)', 'aggressive-ads' ); ?></label>
-						<input id="aggr-package-duration-<?php echo esc_attr( (string) $aggr_row['id'] ); ?>" name="duration_days" type="number" min="0" max="3650" value="<?php echo esc_attr( (string) $aggr_row['duration_days'] ); ?>">
+					<div class="inside">
+						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+							<input type="hidden" name="action" value="<?php echo esc_attr( Package_Screen::UPDATE_ACTION ); ?>">
+							<input type="hidden" name="package_id" value="<?php echo esc_attr( (string) $aggr_row['id'] ); ?>">
+							<?php wp_nonce_field( Package_Screen::nonce_action( $aggr_row['id'] ) ); ?>
+							<?php $aggr_package_fields( $aggr_prefix, $aggr_row, $aggr_placement_checklist, $aggr_view['placements'] ); ?>
+							<p class="submit">
+								<button type="submit" class="button button-primary"><?php esc_html_e( 'Save package', 'aggressive-ads' ); ?></button>
+							</p>
+						</form>
 					</div>
-					<div class="aggr-field">
-						<label>
-							<input type="checkbox" name="custom_duration" value="1" <?php checked( $aggr_row['custom_duration'] ); ?>>
-							<?php esc_html_e( 'Advertiser chooses the schedule', 'aggressive-ads' ); ?>
-						</label>
-					</div>
-					<div class="aggr-field">
-						<label for="aggr-package-price-<?php echo esc_attr( (string) $aggr_row['id'] ); ?>"><?php esc_html_e( 'Price (integer cents)', 'aggressive-ads' ); ?></label>
-						<input id="aggr-package-price-<?php echo esc_attr( (string) $aggr_row['id'] ); ?>" name="price_cents" type="number" min="0" max="999999999" value="<?php echo esc_attr( (string) $aggr_row['price_cents'] ); ?>" required>
-					</div>
-					<div class="aggr-field">
-						<label for="aggr-package-currency-<?php echo esc_attr( (string) $aggr_row['id'] ); ?>"><?php esc_html_e( 'Currency', 'aggressive-ads' ); ?></label>
-						<input id="aggr-package-currency-<?php echo esc_attr( (string) $aggr_row['id'] ); ?>" name="currency" type="text" maxlength="3" value="<?php echo esc_attr( $aggr_row['currency'] ); ?>" required>
-					</div>
-					<div class="aggr-field">
-						<label>
-							<input type="checkbox" name="is_active" value="1" <?php checked( $aggr_row['is_active'] ); ?>>
-							<?php esc_html_e( 'Offered to advertisers', 'aggressive-ads' ); ?>
-						</label>
-					</div>
-					<div class="aggr-field">
-						<label>
-							<input type="checkbox" name="is_default" value="1" <?php checked( $aggr_row['is_default'] ); ?>>
-							<?php esc_html_e( 'Catalogue default', 'aggressive-ads' ); ?>
-						</label>
-					</div>
-					<button type="submit" class="aggr-button"><?php esc_html_e( 'Save package', 'aggressive-ads' ); ?></button>
-				</form>
+				</div>
 			<?php endforeach; ?>
 		<?php endif; ?>
-	</section>
+
+	</div>
 </div>

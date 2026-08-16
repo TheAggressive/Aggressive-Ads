@@ -38,7 +38,7 @@ $aggr_overlays = array();
 	aria-labelledby="aggr-update-creatives-heading"
 >
 	<h2 id="aggr-update-creatives-heading" class="aggr-panel__head"><?php esc_html_e( 'Your ads', 'aggressive-ads' ); ?></h2>
-	<p><?php esc_html_e( 'Select an ad to change its image or destination. The current ad keeps running until staff approve its replacement.', 'aggressive-ads' ); ?></p>
+	<p><?php esc_html_e( 'Select an ad to change its ad creative or destination. The current ad keeps running until staff approve its replacement.', 'aggressive-ads' ); ?></p>
 
 	<div class="aggr-creative-grid">
 		<?php foreach ( $aggr_creatives as $aggr_creative ) : ?>
