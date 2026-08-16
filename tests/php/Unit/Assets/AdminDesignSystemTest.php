@@ -78,32 +78,44 @@ final class AdminDesignSystemTest extends TestCase {
 	}
 
 	/**
-	 * The package catalogue is a labeled, nonce-protected form with no delete.
+	 * A package is deactivated, never deleted.
+	 *
+	 * The markup assertions that used to live here described a server-rendered
+	 * form that no longer exists — the catalogue is a React screen writing
+	 * through REST. What they were really protecting survives the move and is
+	 * asserted where it now lives: there is no delete affordance and no route to
+	 * reach one. Deleting a package would orphan the snapshot every campaign that
+	 * bought it still points at.
 	 *
 	 * @return void
 	 */
-	public function test_packages_template_keeps_accessible_form_semantics(): void {
-		$template = file_get_contents( AGGR_PLUGIN_DIR . 'templates/admin/packages.php' );
+	public function test_a_package_can_never_be_deleted(): void {
+		$controller = file_get_contents( AGGR_PLUGIN_DIR . 'inc/REST/class-packages-controller.php' );
+		$screen     = file_get_contents( AGGR_PLUGIN_DIR . 'src/admin/packages/index.tsx' );
 
-		$this->assertIsString( $template );
-		$this->assertStringContainsString( 'wp_nonce_field', $template );
-		$this->assertStringContainsString( '<label for=', $template );
-		$this->assertStringContainsString( 'admin-post.php', $template );
-		$this->assertStringNotContainsString( 'Delete package', $template );
+		$this->assertIsString( $controller );
+		$this->assertIsString( $screen );
 
-		/*
-		 * Whitespace-normalized before matching the attribute pair.
-		 *
-		 * The assertion is that the package name is required and length-bounded,
-		 * not that those two attributes share a line — and the literal form
-		 * failed the moment the input was reformatted across several lines, which
-		 * changed no behaviour at all. A test that breaks on indentation reports
-		 * formatting, not the property it was written to protect.
-		 */
-		$collapsed = preg_replace( '/\s+/', ' ', $template );
+		$this->assertStringNotContainsString( "'DELETE'", $controller );
+		$this->assertStringNotContainsString( "method: 'DELETE'", $screen );
+		$this->assertStringNotContainsString( 'Delete package', $screen );
+	}
 
-		$this->assertIsString( $collapsed );
-		$this->assertStringContainsString( 'required maxlength="120"', $collapsed );
+	/**
+	 * Money never becomes a float on its way to the server.
+	 *
+	 * Prices are integer cents end to end. Parsing "12.34" as a float and
+	 * multiplying by 100 yields 1233.9999999999998, and (int) of that is 1233 —
+	 * a penny lost per package, silently, on a value customers are charged.
+	 *
+	 * @return void
+	 */
+	public function test_the_package_screen_converts_price_without_floating_point(): void {
+		$screen = file_get_contents( AGGR_PLUGIN_DIR . 'src/admin/packages/index.tsx' );
+
+		$this->assertIsString( $screen );
+		$this->assertStringNotContainsString( 'parseFloat', $screen );
+		$this->assertStringContainsString( 'function toCents', $screen );
 	}
 
 	/**

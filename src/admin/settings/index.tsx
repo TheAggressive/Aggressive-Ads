@@ -19,13 +19,7 @@
 
 import type { ReactElement } from 'react';
 import apiFetch from '@wordpress/api-fetch';
-import {
-	createRoot,
-	useCallback,
-	useEffect,
-	useRef,
-	useState,
-} from '@wordpress/element';
+import { createRoot, useCallback, useState } from '@wordpress/element';
 import {
 	Button,
 	Card,
@@ -36,13 +30,23 @@ import {
 	Dropdown,
 	Notice,
 	SelectControl,
-	Spinner,
 	TextControl,
 	ToggleControl,
 	__experimentalHeading as Heading,
 	__experimentalHStack as HStack,
+	__experimentalText as Text,
 	__experimentalVStack as VStack,
 } from '@wordpress/components';
+import {
+	AFTER_DRAGGING,
+	AFTER_TYPING,
+	AT_ONCE,
+	SaveError,
+	SaveStatus,
+	setStrings,
+	t,
+	useAutosave,
+} from '../shared/save';
 
 type Toggle = {
 	key: string;
@@ -116,32 +120,6 @@ const EMPTY: Bootstrap = {
 	restPath: '',
 };
 
-/**
- * The hydrated catalog, set once before the tree renders.
- *
- * Module scope rather than context or props: there is exactly one root on the
- * page, the strings never change after mount, and threading a dictionary
- * through six components would add ceremony without adding safety. A missing
- * key renders empty rather than throwing — a settings screen with one blank
- * label is recoverable; one that white-screens is not.
- */
-let strings: Record< string, string > = {};
-
-const t = ( key: string ): string => strings[ key ] ?? '';
-
-/*
- * How long a change waits before it is sent.
- *
- * A switch is a finished decision the moment it is flipped, so it goes at once
- * and the screen feels like it responds. Text and colour are not: every
- * keystroke of a hex value and every pixel of a colour drag is an intermediate
- * state, most of which fail validation. Sending those would turn the contrast
- * gate into a flicker of errors about values nobody chose.
- */
-const AT_ONCE = 0;
-const AFTER_TYPING = 1000;
-const AFTER_DRAGGING = 1200;
-
 /** The document in the field names PHP allowlists. */
 function payload( doc: Doc ): Record< string, unknown > {
 	const flags = ( items: Toggle[] ): Record< string, boolean > =>
@@ -170,108 +148,6 @@ function payload( doc: Doc ): Record< string, unknown > {
 		},
 		tracking: { retention_days: doc.tracking.retentionDays },
 	};
-}
-
-type Status = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
-
-/**
- * Debounced whole-document save.
- *
- * Three things here are load-bearing and none of them are obvious:
- *
- * The newest change wins. Every send takes a ticket, and a response whose
- * ticket is no longer current is dropped. Without that, a slow first request
- * finishing after a fast second one would report the older outcome — and on a
- * failure that means telling somebody their saved change was rejected.
- *
- * The whole document goes every time, so a field that fails validation blocks
- * the save of every other field with it. That is `Settings::save()`'s contract,
- * not a limitation of this hook: it rejects the whole payload on any error, and
- * a screen that implied otherwise would be lying about what was stored.
- *
- * Leaving with a change still in the timer loses it, so the browser asks first.
- */
-function useAutosave( path: string ): {
-	status: Status;
-	error: string;
-	schedule: ( doc: Doc, delay: number ) => void;
-	retry: () => void;
-} {
-	const [ status, setStatus ] = useState< Status >( 'idle' );
-	const [ error, setError ] = useState( '' );
-	const timer = useRef< ReturnType< typeof setTimeout > | undefined >(
-		undefined
-	);
-	const ticket = useRef( 0 );
-	const pending = useRef< Doc | null >( null );
-
-	const send = useCallback( () => {
-		const doc = pending.current;
-
-		if ( ! doc ) {
-			return;
-		}
-
-		const mine = ticket.current + 1;
-		ticket.current = mine;
-		setStatus( 'saving' );
-
-		apiFetch( { path, method: 'POST', data: payload( doc ) } )
-			.then( () => {
-				if ( mine !== ticket.current ) {
-					return;
-				}
-
-				setError( '' );
-				setStatus( 'saved' );
-			} )
-			.catch( ( reason: unknown ) => {
-				if ( mine !== ticket.current ) {
-					return;
-				}
-
-				const message =
-					reason &&
-					typeof reason === 'object' &&
-					'message' in reason &&
-					typeof reason.message === 'string'
-						? reason.message
-						: t( 'saveFailed' );
-
-				setError( message );
-				setStatus( 'error' );
-			} );
-	}, [ path ] );
-
-	const schedule = useCallback(
-		( doc: Doc, delay: number ) => {
-			pending.current = doc;
-			setStatus( 'pending' );
-			clearTimeout( timer.current );
-			timer.current = setTimeout( send, delay );
-		},
-		[ send ]
-	);
-
-	useEffect( () => {
-		const unsaved = 'pending' === status || 'saving' === status;
-
-		if ( ! unsaved ) {
-			return;
-		}
-
-		const warn = ( event: BeforeUnloadEvent ): void => {
-			event.preventDefault();
-		};
-
-		window.addEventListener( 'beforeunload', warn );
-
-		return () => window.removeEventListener( 'beforeunload', warn );
-	}, [ status ] );
-
-	useEffect( () => () => clearTimeout( timer.current ), [] );
-
-	return { status, error, schedule, retry: send };
 }
 
 function Section( {
@@ -568,55 +444,34 @@ function Access( {
 				</VStack>
 			) }
 
-			<HStack justify="flex-start" alignment="flex-end" spacing={ 3 }>
-				<TextControl
-					label={ t( 'addReviewer' ) }
-					help={ t( 'addReviewerHint' ) }
-					value={ identifier }
-					autoComplete="off"
-					onChange={ setIdentifier }
-					__nextHasNoMarginBottom
-					__next40pxDefaultSize
-				/>
-				<Button
-					variant="secondary"
-					disabled={ busy || '' === identifier.trim() }
-					onClick={ () =>
-						call( {
-							path,
-							method: 'POST',
-							data: { user: identifier.trim() },
-						} )
-					}
-				>
-					{ t( 'add' ) }
-				</Button>
-			</HStack>
+			<VStack spacing={ 2 }>
+				<HStack justify="flex-start" alignment="flex-end" spacing={ 3 }>
+					<TextControl
+						label={ t( 'addReviewer' ) }
+						value={ identifier }
+						autoComplete="off"
+						onChange={ setIdentifier }
+						__nextHasNoMarginBottom
+						__next40pxDefaultSize
+					/>
+					<Button
+						variant="secondary"
+						__next40pxDefaultSize
+						disabled={ busy || '' === identifier.trim() }
+						onClick={ () =>
+							call( {
+								path,
+								method: 'POST',
+								data: { user: identifier.trim() },
+							} )
+						}
+					>
+						{ t( 'add' ) }
+					</Button>
+				</HStack>
+				<Text variant="muted">{ t( 'addReviewerHint' ) }</Text>
+			</VStack>
 		</VStack>
-	);
-}
-
-/**
- * Save state, announced rather than only drawn.
- *
- * An autosaved screen has no button to watch, so the only evidence a change was
- * stored is this line. Drawing it without announcing it would mean a screen
- * reader user gets no evidence at all.
- */
-function SaveStatus( { status }: { status: Status } ): ReactElement {
-	const label: Record< Status, string > = {
-		idle: '',
-		pending: t( 'statusPending' ),
-		saving: t( 'statusSaving' ),
-		saved: t( 'statusSaved' ),
-		error: t( 'statusError' ),
-	};
-
-	return (
-		<HStack justify="flex-start" spacing={ 2 } aria-live="polite">
-			{ 'saving' === status ? <Spinner /> : <></> }
-			<span>{ label[ status ] }</span>
-		</HStack>
 	);
 }
 
@@ -632,7 +487,13 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 		tracking: { retentionDays: String( data.tracking.retentionDays ) },
 	} );
 
-	const { status, error, schedule, retry } = useAutosave( data.restPath );
+	const { status, error, schedule, retry } = useAutosave< Doc >( ( next ) =>
+		apiFetch( {
+			path: data.restPath,
+			method: 'POST',
+			data: payload( next ),
+		} )
+	);
 
 	// One writer for the whole document, so there is exactly one place a change
 	// becomes both new state and a scheduled save. Splitting those two steps is
@@ -651,18 +512,7 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 
 	return (
 		<VStack spacing={ 5 }>
-			{ 'error' === status ? (
-				<Notice status="error" isDismissible={ false }>
-					<VStack spacing={ 2 }>
-						<span>{ error }</span>
-						<HStack justify="flex-start">
-							<Button variant="secondary" onClick={ retry }>
-								{ t( 'retry' ) }
-							</Button>
-						</HStack>
-					</VStack>
-				</Notice>
-			) : null }
+			<SaveError message={ error } onRetry={ retry } />
 
 			<SaveStatus status={ status } />
 
@@ -758,12 +608,12 @@ if ( root ) {
 
 	try {
 		data = raw ? ( JSON.parse( raw ) as Bootstrap ) : EMPTY;
-		strings = data.i18n ?? {};
 	} catch {
 		// A malformed payload renders an empty screen rather than throwing
 		// inside a page the administrator still needs to use.
 		data = EMPTY;
 	}
 
+	setStrings( data.i18n ?? {} );
 	createRoot( root ).render( <App data={ data } /> );
 }

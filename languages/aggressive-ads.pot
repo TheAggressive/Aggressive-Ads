@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-16T08:07:16+00:00\n"
+"POT-Creation-Date: 2026-08-16T10:40:01+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -51,9 +51,6 @@ msgstr ""
 #: inc/Admin/class-campaign-change-actions.php:55
 #: inc/Admin/class-campaign-change-actions.php:83
 #: inc/Admin/class-creative-change-actions.php:48
-#: inc/Admin/class-organization-screen.php:166
-#: inc/Admin/class-package-screen.php:93
-#: inc/Admin/class-package-screen.php:111
 #: inc/Admin/class-placement-screen.php:90
 #: inc/Admin/class-placement-screen.php:108
 #: inc/Admin/class-review-screen.php:136
@@ -90,117 +87,298 @@ msgid "That ad-update decision is not valid."
 msgstr ""
 
 #: inc/Admin/class-menu.php:136
-#: inc/Admin/class-organization-screen.php:69
-#: inc/Admin/class-package-screen.php:75
+#: inc/Admin/class-organization-screen.php:105
+#: inc/Admin/class-package-screen.php:116
 #: inc/Admin/class-placement-screen.php:72
 #: inc/Admin/class-review-screen.php:104
 #: inc/Admin/class-settings-screen.php:130
 msgid "You do not have permission to view this page."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:52
-#: inc/Admin/class-organization-screen.php:53
+#: inc/Admin/class-organization-screen.php:86
+#: inc/Admin/class-organization-screen.php:87
+#: inc/Admin/class-organization-screen.php:123
+#: inc/Admin/class-organization-screen.php:173
 #: inc/Core/class-post-types.php:198
-#: templates/admin/organizations.php:32
 msgid "Organizations"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:129
-msgid "Organization suspended."
+#: inc/Admin/class-organization-screen.php:124
+msgid "The organizations screen has not been built. Run “pnpm build” and reload."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:130
-msgid "Organization reactivated."
+#: inc/Admin/class-organization-screen.php:134
+msgid "No organizations exist yet."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:131
-msgid "Organization updated."
+#: inc/Admin/class-organization-screen.php:135
+#: inc/Admin/class-package-screen.php:160
+#: templates/admin/placements.php:164
+#: templates/portal/screens/organization.php:50
+msgid "Active"
+msgstr ""
+
+#: inc/Admin/class-organization-screen.php:136
+#: templates/portal/screens/organization.php:51
+msgid "Suspended"
+msgstr ""
+
+#: inc/Admin/class-organization-screen.php:137
+msgid "Suspend"
+msgstr ""
+
+#: inc/Admin/class-organization-screen.php:138
+#: templates/portal/partials/campaign-changes.php:69
+#: templates/portal/screens/campaign.php:309
+msgid "Details"
+msgstr ""
+
+#: inc/Admin/class-organization-screen.php:139
+msgid "Members"
+msgstr ""
+
+#: inc/Admin/class-organization-screen.php:140
+msgid "The owner is the only member. Ownership can only move to another member, so invite someone first."
+msgstr ""
+
+#: inc/Admin/class-organization-screen.php:141
+#: templates/portal/screens/organization.php:81
+msgid "Organization name"
+msgstr ""
+
+#: inc/Admin/class-organization-screen.php:142
+msgid "Rename"
+msgstr ""
+
+#: inc/Admin/class-organization-screen.php:143
+msgid "Organization renamed."
+msgstr ""
+
+#: inc/Admin/class-organization-screen.php:144
+msgid "owner"
 msgstr ""
 
 #: inc/Admin/class-organization-screen.php:145
-#: inc/Workflow/class-organization-state-manager.php:68
-msgid "You do not have permission to manage organizations."
+#: templates/portal/screens/organization.php:146
+msgid "Make owner"
 msgstr ""
 
 #: inc/Admin/class-organization-screen.php:146
-#: inc/Workflow/class-organization-state-manager.php:75
-msgid "That organization could not be found."
+msgid "Ownership transferred."
 msgstr ""
 
 #: inc/Admin/class-organization-screen.php:147
-msgid "The organization state could not be saved. Try again."
+#: inc/Admin/class-settings-screen.php:270
+#: templates/portal/screens/organization.php:154
+msgid "Remove"
 msgstr ""
 
 #: inc/Admin/class-organization-screen.php:148
-msgid "The organization could not be updated."
+msgid "Member removed."
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:53
-#: inc/Admin/class-package-screen.php:54
+#: inc/Admin/class-organization-screen.php:149
+msgid "Invite someone to this organization"
+msgstr ""
+
+#: inc/Admin/class-organization-screen.php:150
+msgid "Email address. To move somebody between organizations, remove them here and invite them there — they keep no access in between."
+msgstr ""
+
+#: inc/Admin/class-organization-screen.php:151
+#: templates/portal/screens/organization.php:183
+msgid "Send invitation"
+msgstr ""
+
+#: inc/Admin/class-organization-screen.php:152
+#: inc/Portal/class-organization-actions.php:161
+msgid "Invitation sent."
+msgstr ""
+
+#: inc/Admin/class-organization-screen.php:153
+msgid "Reactivate"
+msgstr ""
+
+#: inc/Admin/class-organization-screen.php:154
+msgid "Organization suspended."
+msgstr ""
+
+#: inc/Admin/class-organization-screen.php:155
+msgid "Organization reactivated."
+msgstr ""
+
+#. translators: %s: organization name.
+#: inc/Admin/class-organization-screen.php:157
+#, php-format
+msgid "Suspend %s? Every campaign it is running stops serving immediately."
+msgstr ""
+
+#. translators: %d: number of members.
+#: inc/Admin/class-organization-screen.php:159
+#, php-format
+msgid "%d member"
+msgstr ""
+
+#. translators: %d: number of members.
+#: inc/Admin/class-organization-screen.php:161
+#, php-format
+msgid "%d members"
+msgstr ""
+
+#. translators: %d: number of campaigns.
+#: inc/Admin/class-organization-screen.php:163
+#, php-format
+msgid "%d campaign"
+msgstr ""
+
+#. translators: %d: number of campaigns.
+#: inc/Admin/class-organization-screen.php:165
+#, php-format
+msgid "%d campaigns"
+msgstr ""
+
+#: inc/Admin/class-organization-screen.php:166
+msgid "That organization could not be updated."
+msgstr ""
+
+#: inc/Admin/class-organization-screen.php:167
+#: inc/Admin/class-package-screen.php:170
+#: inc/Admin/class-settings-screen.php:276
+msgid "Try again"
+msgstr ""
+
+#: inc/Admin/class-organization-screen.php:174
+msgid "The organizations screen needs JavaScript enabled."
+msgstr ""
+
+#: inc/Admin/class-package-screen.php:92
+#: inc/Admin/class-package-screen.php:93
+#: inc/Admin/class-package-screen.php:134
+#: inc/Admin/class-package-screen.php:176
 #: inc/Core/class-post-types.php:200
-#: templates/admin/packages.php:162
 msgid "Packages"
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:153
+#: inc/Admin/class-package-screen.php:135
+msgid "The packages screen has not been built. Run “pnpm build” and reload."
+msgstr ""
+
+#: inc/Admin/class-package-screen.php:145
+msgid "New package"
+msgstr ""
+
+#: inc/Admin/class-package-screen.php:146
+msgid "Create package"
+msgstr ""
+
+#: inc/Admin/class-package-screen.php:147
+#: templates/portal/screens/campaign.php:459
+msgid "Save package"
+msgstr ""
+
+#: inc/Admin/class-package-screen.php:148
 msgid "Package created."
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:154
+#: inc/Admin/class-package-screen.php:149
 msgid "Package saved."
 msgstr ""
 
+#: inc/Admin/class-package-screen.php:150
+#: templates/admin/placements.php:84
+#: templates/admin/placements.php:144
+#: templates/portal/screens/campaign.php:685
+#: templates/portal/screens/organization.php:112
+msgid "Name"
+msgstr ""
+
+#: inc/Admin/class-package-screen.php:151
+#: inc/Core/class-post-types.php:199
+#: inc/Workflow/class-campaign-change-manager.php:722
+#: templates/admin/placements.php:118
+#: templates/admin/review-campaign.php:83
+#: templates/portal/partials/campaign-changes.php:148
+#: templates/portal/screens/campaign.php:698
+#: templates/portal/screens/campaign.php:794
+msgid "Placements"
+msgstr ""
+
+#: inc/Admin/class-package-screen.php:152
+msgid "No placements exist yet. Create one under Inventory first."
+msgstr ""
+
+#: inc/Admin/class-package-screen.php:153
+msgid "inactive"
+msgstr ""
+
+#: inc/Admin/class-package-screen.php:154
+msgid "Advertiser chooses the dates"
+msgstr ""
+
+#: inc/Admin/class-package-screen.php:155
+msgid "Leave off to sell a fixed run length."
+msgstr ""
+
+#: inc/Admin/class-package-screen.php:156
+msgid "Duration (days)"
+msgstr ""
+
+#: inc/Admin/class-package-screen.php:157
+#: templates/portal/screens/campaign.php:697
+msgid "Price"
+msgstr ""
+
+#: inc/Admin/class-package-screen.php:158
+msgid "Stored as whole cents. Two decimal places."
+msgstr ""
+
+#: inc/Admin/class-package-screen.php:159
+msgid "Currency"
+msgstr ""
+
+#: inc/Admin/class-package-screen.php:161
+msgid "Inactive packages are hidden from advertisers."
+msgstr ""
+
+#: inc/Admin/class-package-screen.php:162
+msgid "Catalogue default"
+msgstr ""
+
 #: inc/Admin/class-package-screen.php:163
-#: inc/Workflow/class-package-manager.php:62
-#: inc/Workflow/class-package-manager.php:126
-msgid "You do not have permission to manage packages."
+msgid "Pre-selected in the campaign wizard. Only one package can be the default."
 msgstr ""
 
 #: inc/Admin/class-package-screen.php:164
-#: inc/Workflow/class-package-manager.php:133
-msgid "That package could not be found."
+msgid "default"
 msgstr ""
 
 #: inc/Admin/class-package-screen.php:165
-msgid "The package could not be saved. Try again."
+#: inc/Admin/class-settings-screen.php:271
+msgid "Not saved yet…"
 msgstr ""
 
 #: inc/Admin/class-package-screen.php:166
-#: inc/Workflow/class-package-manager.php:74
-msgid "The package catalogue is full."
+#: inc/Admin/class-settings-screen.php:272
+#: inc/Assets/class-assets.php:356
+msgid "Saving…"
 msgstr ""
 
 #: inc/Admin/class-package-screen.php:167
-#: inc/Workflow/class-package-manager.php:190
-msgid "Enter a package name."
+#: inc/Admin/class-settings-screen.php:273
+msgid "Saved."
 msgstr ""
 
 #: inc/Admin/class-package-screen.php:168
-#: inc/Workflow/class-package-manager.php:228
-msgid "Enter a duration in days, or mark the package as advertiser-scheduled."
+#: inc/Admin/class-settings-screen.php:274
+msgid "Not saved."
 msgstr ""
 
 #: inc/Admin/class-package-screen.php:169
-#: inc/Workflow/class-package-manager.php:235
-msgid "Price must be an integer number of cents."
+msgid "That package could not be saved."
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:170
-#: inc/Workflow/class-package-manager.php:242
-msgid "Currency must be a three-letter ISO 4217 code."
-msgstr ""
-
-#: inc/Admin/class-package-screen.php:171
-#: inc/Workflow/class-package-manager.php:249
-msgid "Only an active package can be the catalogue default."
-msgstr ""
-
-#: inc/Admin/class-package-screen.php:172
-msgid "An active package must include at least one active placement with a valid size."
-msgstr ""
-
-#: inc/Admin/class-package-screen.php:173
-msgid "The package could not be updated."
+#: inc/Admin/class-package-screen.php:177
+msgid "The packages screen needs JavaScript enabled."
 msgstr ""
 
 #: inc/Admin/class-placement-screen.php:53
@@ -475,14 +653,14 @@ msgid "Native fill is always recording; this switch only shows the numbers."
 msgstr ""
 
 #: inc/Admin/class-settings-screen.php:184
-#: inc/Workflow/class-campaign-change-manager.php:671
+#: inc/Workflow/class-campaign-change-manager.php:712
 #: templates/portal/partials/campaign-changes.php:141
 #: templates/portal/screens/campaign.php:350
 msgid "Campaign name"
 msgstr ""
 
 #: inc/Admin/class-settings-screen.php:185
-#: inc/Workflow/class-campaign-change-manager.php:673
+#: inc/Workflow/class-campaign-change-manager.php:714
 msgid "Advertiser notes"
 msgstr ""
 
@@ -491,7 +669,7 @@ msgid "Start and end dates"
 msgstr ""
 
 #: inc/Admin/class-settings-screen.php:186
-#: templates/portal/partials/campaign-changes.php:176
+#: templates/portal/partials/campaign-changes.php:187
 msgid "A start date that has already passed cannot be moved."
 msgstr ""
 
@@ -553,34 +731,8 @@ msgstr ""
 msgid "Username or email address. Advertiser accounts cannot be given review access — reviewing means reading every organization’s unpublished work."
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:270
-#: templates/portal/screens/organization.php:154
-msgid "Remove"
-msgstr ""
-
-#: inc/Admin/class-settings-screen.php:271
-msgid "Not saved yet…"
-msgstr ""
-
-#: inc/Admin/class-settings-screen.php:272
-#: inc/Assets/class-assets.php:356
-msgid "Saving…"
-msgstr ""
-
-#: inc/Admin/class-settings-screen.php:273
-msgid "Saved."
-msgstr ""
-
-#: inc/Admin/class-settings-screen.php:274
-msgid "Not saved."
-msgstr ""
-
 #: inc/Admin/class-settings-screen.php:275
 msgid "Those settings could not be saved."
-msgstr ""
-
-#: inc/Admin/class-settings-screen.php:276
-msgid "Try again"
 msgstr ""
 
 #: inc/Admin/class-settings-screen.php:277
@@ -849,7 +1001,6 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: inc/Core/class-post-types.php:198
-#: templates/admin/organizations.php:53
 #: templates/admin/review-campaign.php:79
 #: templates/portal/organization.php:15
 #: templates/portal/partials/rail.php:29
@@ -866,18 +1017,6 @@ msgstr ""
 #: templates/portal/screens/help.php:77
 #: src/blocks/placement/edit.js:106
 msgid "Placement"
-msgstr ""
-
-#: inc/Core/class-post-types.php:199
-#: inc/Workflow/class-campaign-change-manager.php:681
-#: templates/admin/packages.php:88
-#: templates/admin/packages.php:89
-#: templates/admin/placements.php:118
-#: templates/admin/review-campaign.php:83
-#: templates/portal/partials/campaign-changes.php:148
-#: templates/portal/screens/campaign.php:698
-#: templates/portal/screens/campaign.php:794
-msgid "Placements"
 msgstr ""
 
 #: inc/Core/class-post-types.php:200
@@ -897,7 +1036,6 @@ msgid "Campaign"
 msgstr ""
 
 #: inc/Core/class-post-types.php:201
-#: templates/admin/organizations.php:56
 #: templates/portal/campaigns.php:15
 #: templates/portal/partials/rail.php:28
 #: templates/portal/screens/campaign.php:76
@@ -953,23 +1091,23 @@ msgstr ""
 msgid "These paths have no rewrite rule and will return 404: %s. This normally follows a deployment that changed files without reactivating the plugin."
 msgstr ""
 
-#: inc/Install/class-rewrite-health.php:172
+#: inc/Install/class-rewrite-health.php:204
 msgid "Reinstall advertising rewrite rules"
 msgstr ""
 
-#: inc/Install/class-rewrite-health.php:189
+#: inc/Install/class-rewrite-health.php:221
 msgid "You are not allowed to reinstall rewrite rules on this site."
 msgstr ""
 
-#: inc/Install/class-rewrite-health.php:229
+#: inc/Install/class-rewrite-health.php:261
 msgid "Advertising rewrite rules reinstalled. The advertiser portal is reachable."
 msgstr ""
 
-#: inc/Install/class-rewrite-health.php:236
+#: inc/Install/class-rewrite-health.php:268
 msgid "The advertising rewrite rules could not be written. Open Settings → Permalinks and save, then run this check again."
 msgstr ""
 
-#: inc/Install/class-rewrite-health.php:255
+#: inc/Install/class-rewrite-health.php:287
 msgid "Advertising"
 msgstr ""
 
@@ -1643,10 +1781,6 @@ msgstr ""
 msgid "That email and password did not match. Please try again."
 msgstr ""
 
-#: inc/Portal/class-organization-actions.php:161
-msgid "Invitation sent."
-msgstr ""
-
 #: inc/Portal/class-organization-actions.php:162
 msgid "Organization access approved."
 msgstr ""
@@ -1883,6 +2017,10 @@ msgstr ""
 msgid "No such placement."
 msgstr ""
 
+#: inc/REST/class-organizations-controller.php:322
+msgid "That change could not be made."
+msgstr ""
+
 #: inc/REST/class-settings-controller.php:136
 msgid "The settings could not be read."
 msgstr ""
@@ -2037,150 +2175,154 @@ msgstr ""
 msgid "Account registration is not available."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:143
-#: inc/Workflow/class-campaign-change-manager.php:379
+#: inc/Workflow/class-campaign-change-manager.php:170
+#: inc/Workflow/class-campaign-change-manager.php:406
 msgid "Changes to running campaigns are not accepted on this site."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:147
-#: inc/Workflow/class-campaign-change-manager.php:383
+#: inc/Workflow/class-campaign-change-manager.php:174
+#: inc/Workflow/class-campaign-change-manager.php:410
 msgid "This campaign is not running, so there is nothing to change."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:157
+#: inc/Workflow/class-campaign-change-manager.php:184
 msgid "This campaign already has changes waiting for review. Withdraw them first."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:167
+#: inc/Workflow/class-campaign-change-manager.php:194
 msgid "These changes cannot be requested yet."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:176
+#: inc/Workflow/class-campaign-change-manager.php:203
 msgid "The requested changes could not be saved. Please try again."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:251
+#: inc/Workflow/class-campaign-change-manager.php:278
 msgid "That cannot be requested for this campaign."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:261
+#: inc/Workflow/class-campaign-change-manager.php:288
 msgid "You have already asked the review team about this campaign."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:267
+#: inc/Workflow/class-campaign-change-manager.php:294
 msgid "Tell the review team why."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:271
-#: inc/Workflow/class-campaign-change-manager.php:557
+#: inc/Workflow/class-campaign-change-manager.php:298
+#: inc/Workflow/class-campaign-change-manager.php:598
 msgid "That explanation is too long."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:275
+#: inc/Workflow/class-campaign-change-manager.php:302
 msgid "The request could not be saved. Please try again."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:297
+#: inc/Workflow/class-campaign-change-manager.php:324
 msgid "There is no request to withdraw."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:318
+#: inc/Workflow/class-campaign-change-manager.php:345
 msgid "You do not have permission to decide campaign requests."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:322
+#: inc/Workflow/class-campaign-change-manager.php:349
 msgid "This campaign has no request waiting."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:345
+#: inc/Workflow/class-campaign-change-manager.php:372
 msgid "Pause this campaign"
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:347
+#: inc/Workflow/class-campaign-change-manager.php:374
 msgid "Restart this campaign"
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:349
+#: inc/Workflow/class-campaign-change-manager.php:376
 msgid "Cancel this campaign"
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:351
+#: inc/Workflow/class-campaign-change-manager.php:378
 msgid "End this campaign now"
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:387
+#: inc/Workflow/class-campaign-change-manager.php:414
 msgid "These changes are already with the review team. Withdraw them to keep editing."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:423
+#: inc/Workflow/class-campaign-change-manager.php:450
 msgid "These changes cannot be saved yet."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:432
+#: inc/Workflow/class-campaign-change-manager.php:459
 msgid "The changes could not be saved. Please try again."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:458
+#: inc/Workflow/class-campaign-change-manager.php:485
 msgid "These changes are already with the review team."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:467
+#: inc/Workflow/class-campaign-change-manager.php:494
 msgid "These changes cannot be submitted yet."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:476
+#: inc/Workflow/class-campaign-change-manager.php:503
 msgid "The changes could not be submitted. Please try again."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:492
+#: inc/Workflow/class-campaign-change-manager.php:519
 msgid "You do not have permission to approve campaign changes."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:498
-#: inc/Workflow/class-campaign-change-manager.php:563
+#: inc/Workflow/class-campaign-change-manager.php:525
+#: inc/Workflow/class-campaign-change-manager.php:604
 msgid "This campaign has no changes waiting for review."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:511
+#: inc/Workflow/class-campaign-change-manager.php:539
+msgid "This campaign is no longer running, so its changes cannot be approved."
+msgstr ""
+
+#: inc/Workflow/class-campaign-change-manager.php:552
 msgid "These changes are no longer valid and cannot be approved. Ask the advertiser to request them again."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:547
+#: inc/Workflow/class-campaign-change-manager.php:588
 msgid "You do not have permission to decide campaign changes."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:553
+#: inc/Workflow/class-campaign-change-manager.php:594
 msgid "Tell the advertiser why the changes were not accepted."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:590
+#: inc/Workflow/class-campaign-change-manager.php:631
 msgid "There are no requested changes to withdraw."
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:675
-#: templates/portal/partials/campaign-changes.php:174
+#: inc/Workflow/class-campaign-change-manager.php:716
+#: templates/portal/partials/campaign-changes.php:185
 #: templates/portal/screens/campaign.php:621
 msgid "Start date"
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:677
-#: templates/portal/partials/campaign-changes.php:179
+#: inc/Workflow/class-campaign-change-manager.php:718
+#: templates/portal/partials/campaign-changes.php:190
 #: templates/portal/screens/campaign.php:636
 msgid "End date"
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:679
+#: inc/Workflow/class-campaign-change-manager.php:720
 #: templates/admin/review-campaign.php:152
 #: templates/portal/partials/campaign-changes.php:77
 #: templates/portal/screens/campaign.php:874
 msgid "Destination"
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:698
+#: inc/Workflow/class-campaign-change-manager.php:739
 msgid "Open-ended"
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-manager.php:809
+#: inc/Workflow/class-campaign-change-manager.php:850
 msgid "You do not have permission to change that campaign."
 msgstr ""
 
@@ -2546,8 +2688,29 @@ msgstr ""
 msgid "This invitation is invalid or has expired."
 msgstr ""
 
-#: inc/Workflow/class-organization-state-manager.php:89
+#: inc/Workflow/class-organization-state-manager.php:78
+msgid "That is not an organization state."
+msgstr ""
+
+#: inc/Workflow/class-organization-state-manager.php:87
+msgid "You do not have permission to manage organizations."
+msgstr ""
+
+#: inc/Workflow/class-organization-state-manager.php:94
+msgid "That organization could not be found."
+msgstr ""
+
+#: inc/Workflow/class-organization-state-manager.php:108
 msgid "The organization state could not be saved."
+msgstr ""
+
+#: inc/Workflow/class-package-manager.php:62
+#: inc/Workflow/class-package-manager.php:126
+msgid "You do not have permission to manage packages."
+msgstr ""
+
+#: inc/Workflow/class-package-manager.php:74
+msgid "The package catalogue is full."
 msgstr ""
 
 #: inc/Workflow/class-package-manager.php:82
@@ -2555,14 +2718,38 @@ msgstr ""
 msgid "The package could not be created."
 msgstr ""
 
+#: inc/Workflow/class-package-manager.php:133
+msgid "That package could not be found."
+msgstr ""
+
 #: inc/Workflow/class-package-manager.php:148
 msgid "The package could not be saved."
+msgstr ""
+
+#: inc/Workflow/class-package-manager.php:190
+msgid "Enter a package name."
 msgstr ""
 
 #. translators: %d: maximum placements in one package.
 #: inc/Workflow/class-package-manager.php:210
 #, php-format
 msgid "A package may include at most %d placements."
+msgstr ""
+
+#: inc/Workflow/class-package-manager.php:228
+msgid "Enter a duration in days, or mark the package as advertiser-scheduled."
+msgstr ""
+
+#: inc/Workflow/class-package-manager.php:235
+msgid "Price must be an integer number of cents."
+msgstr ""
+
+#: inc/Workflow/class-package-manager.php:242
+msgid "Currency must be a three-letter ISO 4217 code."
+msgstr ""
+
+#: inc/Workflow/class-package-manager.php:249
+msgid "Only an active package can be the catalogue default."
 msgstr ""
 
 #: inc/Workflow/class-package-manager.php:256
@@ -2637,145 +2824,6 @@ msgstr ""
 msgid "This campaign has not reached its end date."
 msgstr ""
 
-#: templates/admin/organizations.php:33
-msgid "Suspend an organization to block new submissions and membership growth. Existing campaigns keep their current status until staff change them."
-msgstr ""
-
-#: templates/admin/organizations.php:44
-msgid "Advertiser organizations"
-msgstr ""
-
-#: templates/admin/organizations.php:48
-msgid "No organizations yet. They appear here after an advertiser signs up or is invited."
-msgstr ""
-
-#: templates/admin/organizations.php:54
-#: templates/portal/screens/organization.php:133
-msgid "Owner"
-msgstr ""
-
-#: templates/admin/organizations.php:55
-#: templates/portal/screens/organization.php:68
-#: templates/portal/screens/organization.php:106
-msgid "People"
-msgstr ""
-
-#: templates/admin/organizations.php:57
-#: templates/admin/review-queue.php:77
-#: templates/portal/partials/campaign-table.php:35
-#: templates/portal/screens/help.php:109
-msgid "Status"
-msgstr ""
-
-#: templates/admin/organizations.php:58
-#: templates/portal/screens/organization.php:116
-#: templates/portal/screens/organization.php:199
-msgid "Actions"
-msgstr ""
-
-#: templates/admin/organizations.php:76
-#: templates/admin/placements.php:164
-#: templates/portal/screens/organization.php:50
-msgid "Active"
-msgstr ""
-
-#: templates/admin/organizations.php:77
-#: templates/portal/screens/organization.php:51
-msgid "Suspended"
-msgstr ""
-
-#. translators: %s: organization name.
-#: templates/admin/organizations.php:90
-#, php-format
-msgid "Suspend %s"
-msgstr ""
-
-#. translators: %s: organization name.
-#: templates/admin/organizations.php:105
-#, php-format
-msgid "Reactivate %s"
-msgstr ""
-
-#: templates/admin/packages.php:42
-msgid "Create placements in Inventory before offering a package."
-msgstr ""
-
-#: templates/admin/packages.php:48
-msgid "inactive"
-msgstr ""
-
-#: templates/admin/packages.php:74
-#: templates/admin/placements.php:84
-#: templates/admin/placements.php:144
-#: templates/portal/screens/campaign.php:685
-#: templates/portal/screens/organization.php:112
-msgid "Name"
-msgstr ""
-
-#: templates/admin/packages.php:92
-msgid "Duration (days)"
-msgstr ""
-
-#: templates/admin/packages.php:106
-msgid "Advertiser chooses the schedule"
-msgstr ""
-
-#: templates/admin/packages.php:112
-msgid "Price (integer cents)"
-msgstr ""
-
-#: templates/admin/packages.php:127
-msgid "Currency"
-msgstr ""
-
-#: templates/admin/packages.php:141
-#: templates/admin/packages.php:144
-#: templates/admin/placements.php:100
-#: templates/admin/placements.php:160
-msgid "Availability"
-msgstr ""
-
-#: templates/admin/packages.php:147
-msgid "Offered to advertisers"
-msgstr ""
-
-#: templates/admin/packages.php:152
-msgid "Catalogue default"
-msgstr ""
-
-#: templates/admin/packages.php:163
-msgid "Packages are the catalogue advertisers choose from. Editing a package never changes campaigns that already selected it."
-msgstr ""
-
-#: templates/admin/packages.php:174
-msgid "New package"
-msgstr ""
-
-#: templates/admin/packages.php:181
-msgid "Create package"
-msgstr ""
-
-#: templates/admin/packages.php:189
-msgid "Catalogue"
-msgstr ""
-
-#: templates/admin/packages.php:191
-msgid "No packages yet. Create the first one above — advertisers only see active, complete packages."
-msgstr ""
-
-#: templates/admin/packages.php:202
-msgid "— catalogue default"
-msgstr ""
-
-#: templates/admin/packages.php:205
-msgid "— not offered"
-msgstr ""
-
-#: templates/admin/packages.php:216
-#: templates/portal/screens/campaign.php:459
-msgid "Save package"
-msgstr ""
-
 #: templates/admin/placements.php:42
 #: templates/portal/screens/campaign.php:873
 msgid "Size"
@@ -2817,6 +2865,11 @@ msgstr ""
 #: templates/admin/placements.php:96
 #: templates/admin/placements.php:156
 msgid "Sort order"
+msgstr ""
+
+#: templates/admin/placements.php:100
+#: templates/admin/placements.php:160
+msgid "Availability"
 msgstr ""
 
 #: templates/admin/placements.php:104
@@ -3111,6 +3164,12 @@ msgstr ""
 msgid "Advertiser"
 msgstr ""
 
+#: templates/admin/review-queue.php:77
+#: templates/portal/partials/campaign-table.php:35
+#: templates/portal/screens/help.php:109
+msgid "Status"
+msgstr ""
+
 #: templates/admin/review-queue.php:112
 msgid "Campaign review pages"
 msgstr ""
@@ -3234,11 +3293,6 @@ msgstr ""
 msgid "Campaign edit progress"
 msgstr ""
 
-#: templates/portal/partials/campaign-changes.php:69
-#: templates/portal/screens/campaign.php:309
-msgid "Details"
-msgstr ""
-
 #: templates/portal/partials/campaign-changes.php:80
 msgid "Review and submit"
 msgstr ""
@@ -3277,12 +3331,12 @@ msgid "Notes for the review team"
 msgstr ""
 
 #. translators: %s: the placement this advertisement runs in.
-#: templates/portal/partials/campaign-changes.php:191
+#: templates/portal/partials/campaign-changes.php:202
 #, php-format
 msgid "Destination for %s"
 msgstr ""
 
-#: templates/portal/partials/campaign-changes.php:207
+#: templates/portal/partials/campaign-changes.php:218
 #: templates/portal/screens/campaign.php:403
 msgid "Save and continue"
 msgstr ""
@@ -3880,10 +3934,6 @@ msgstr ""
 msgid "Not selected"
 msgstr ""
 
-#: templates/portal/screens/campaign.php:697
-msgid "Price"
-msgstr ""
-
 #: templates/portal/screens/campaign.php:731
 msgid "Back to schedule"
 msgstr ""
@@ -4148,8 +4198,9 @@ msgstr ""
 msgid "Existing campaigns are unaffected. Please get in touch to discuss reactivating the account."
 msgstr ""
 
-#: templates/portal/screens/organization.php:81
-msgid "Organization name"
+#: templates/portal/screens/organization.php:68
+#: templates/portal/screens/organization.php:106
+msgid "People"
 msgstr ""
 
 #: templates/portal/screens/organization.php:82
@@ -4172,16 +4223,21 @@ msgstr ""
 msgid "Role"
 msgstr ""
 
+#: templates/portal/screens/organization.php:116
+#: templates/portal/screens/organization.php:199
+msgid "Actions"
+msgstr ""
+
 #: templates/portal/screens/organization.php:126
 msgid "You"
 msgstr ""
 
-#: templates/portal/screens/organization.php:134
-msgid "Member"
+#: templates/portal/screens/organization.php:133
+msgid "Owner"
 msgstr ""
 
-#: templates/portal/screens/organization.php:146
-msgid "Make owner"
+#: templates/portal/screens/organization.php:134
+msgid "Member"
 msgstr ""
 
 #: templates/portal/screens/organization.php:171
@@ -4190,10 +4246,6 @@ msgstr ""
 
 #: templates/portal/screens/organization.php:172
 msgid "We will email a single-use invitation that expires after three days. Membership is granted only after the recipient completes it."
-msgstr ""
-
-#: templates/portal/screens/organization.php:183
-msgid "Send invitation"
 msgstr ""
 
 #: templates/portal/screens/organization.php:189

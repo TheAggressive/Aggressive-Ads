@@ -10,44 +10,78 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Admin;
 
 use Aggressive\Ads\Core\Service;
-use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\REST\Creative_File_Controller;
 use Aggressive\Ads\Security\Capabilities;
-use Aggressive\Ads\Workflow\Organization_State_Manager;
-use WP_Error;
 
 /**
  * Delivers suspension controls without exposing the generic organization editor.
  */
 final class Organization_Screen implements Service {
 
-	public const MENU_SLUG         = 'aggr-organizations';
-	public const SUSPEND_ACTION    = 'aggr_suspend_organization';
-	public const REACTIVATE_ACTION = 'aggr_reactivate_organization';
+	public const MENU_SLUG = 'aggr-organizations';
 
 	/**
 	 * Constructor.
 	 *
-	 * @param Organization_Data          $data    Screen read model.
-	 * @param Organization_State_Manager $manager State workflow.
+	 * @param Organization_Data $data Screen read model.
 	 */
-	public function __construct(
-		private readonly Organization_Data $data,
-		private readonly Organization_State_Manager $manager
-	) {
+	public function __construct( private readonly Organization_Data $data ) {
 	}
 
-	/** Attach menu, assets, and authenticated form handlers. */
+	/**
+	 * Attaches the menu and the screen's bundle.
+	 *
+	 * There are no admin-post handlers any more. State changes go to
+	 * REST\Organizations_Controller, which calls the same workflow the handlers
+	 * called — one authenticated path to suspension rather than two.
+	 */
 	public function init(): void {
 		add_action( 'admin_menu', array( $this, 'register_menu' ) );
-		add_action( 'admin_post_' . self::SUSPEND_ACTION, array( $this, 'handle_suspend' ) );
-		add_action( 'admin_post_' . self::REACTIVATE_ACTION, array( $this, 'handle_reactivate' ) );
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue' ) );
+	}
+
+	/**
+	 * The screen's own hook suffix, captured at registration.
+	 *
+	 * @var string
+	 */
+	private string $hook_suffix = '';
+
+	/**
+	 * Loads the screen's bundle, on this screen only.
+	 *
+	 * @param string $hook_suffix Current admin screen.
+	 * @return void
+	 */
+	public function enqueue( string $hook_suffix ): void {
+		if ( '' === $this->hook_suffix || $hook_suffix !== $this->hook_suffix ) {
+			return;
+		}
+
+		$asset = AGGR_PLUGIN_DIR . 'dist/admin/organizations.asset.php';
+
+		if ( ! is_file( $asset ) ) {
+			return;
+		}
+
+		$meta = require $asset;
+
+		wp_enqueue_script(
+			'aggr-organizations',
+			AGGR_PLUGIN_URL . 'dist/admin/organizations.js',
+			is_array( $meta['dependencies'] ?? null ) ? $meta['dependencies'] : array(),
+			is_string( $meta['version'] ?? null ) ? $meta['version'] : AGGR_VERSION,
+			true
+		);
+
+		wp_enqueue_style( 'wp-components' );
 	}
 
 	/**
 	 * Registers a capability-owned submenu under Advertising.
 	 */
 	public function register_menu(): void {
-		add_submenu_page(
+		$hook = add_submenu_page(
 			Menu::PARENT_SLUG,
 			__( 'Organizations', 'aggressive-ads' ),
 			__( 'Organizations', 'aggressive-ads' ),
@@ -55,6 +89,8 @@ final class Organization_Screen implements Service {
 			self::MENU_SLUG,
 			array( $this, 'render' )
 		);
+
+		$this->hook_suffix = is_string( $hook ) ? $hook : '';
 	}
 
 	/*
@@ -72,154 +108,80 @@ final class Organization_Screen implements Service {
 			);
 		}
 
-		$aggr_view   = $this->data->view();
-		$aggr_notice = $this->request_notice();
-
-		require AGGR_PLUGIN_DIR . 'templates/admin/organizations.php';
-	}
-
-	/** Verifies and suspends one organization. */
-	public function handle_suspend(): void {
-		$this->handle_state_change( self::SUSPEND_ACTION, Org_Repository::STATE_SUSPENDED );
-	}
-
-	/** Verifies and reactivates one organization. */
-	public function handle_reactivate(): void {
-		$this->handle_state_change( self::REACTIVATE_ACTION, Org_Repository::STATE_ACTIVE );
+		$this->render_screen();
 	}
 
 	/**
-	 * Testable delivery boundary for one state change.
+	 * Prints the mount point and the roster it edits.
 	 *
-	 * @param int    $org_id Organization id.
-	 * @param string $state  Active or suspended.
-	 * @return true|WP_Error
+	 * @return void
 	 */
-	public function process_state_change( int $org_id, string $state ): bool|WP_Error {
-		return Org_Repository::STATE_SUSPENDED === $state
-			? $this->manager->suspend( $org_id )
-			: $this->manager->reactivate( $org_id );
+	private function render_screen(): void {
+		if ( ! is_file( AGGR_PLUGIN_DIR . 'dist/admin/organizations.asset.php' ) ) {
+			printf(
+				'<div class="wrap"><h1>%1$s</h1><div class="notice notice-error"><p>%2$s</p></div></div>',
+				esc_html__( 'Organizations', 'aggressive-ads' ),
+				esc_html__( 'The organizations screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' )
+			);
+
+			return;
+		}
+
+		$payload = array(
+			'view'     => $this->data->view(),
+			'restPath' => '/' . Creative_File_Controller::NAMESPACE . '/organizations',
+			'i18n'     => array(
+				'empty'          => __( 'No organizations exist yet.', 'aggressive-ads' ),
+				'stateActive'    => __( 'Active', 'aggressive-ads' ),
+				'stateSuspended' => __( 'Suspended', 'aggressive-ads' ),
+				'suspend'        => __( 'Suspend', 'aggressive-ads' ),
+				'detailsSection' => __( 'Details', 'aggressive-ads' ),
+				'membersSection' => __( 'Members', 'aggressive-ads' ),
+				'onlyOwner'      => __( 'The owner is the only member. Ownership can only move to another member, so invite someone first.', 'aggressive-ads' ),
+				'name'           => __( 'Organization name', 'aggressive-ads' ),
+				'rename'         => __( 'Rename', 'aggressive-ads' ),
+				'renamed'        => __( 'Organization renamed.', 'aggressive-ads' ),
+				'ownerTag'       => __( 'owner', 'aggressive-ads' ),
+				'makeOwner'      => __( 'Make owner', 'aggressive-ads' ),
+				'ownerChanged'   => __( 'Ownership transferred.', 'aggressive-ads' ),
+				'removeMember'   => __( 'Remove', 'aggressive-ads' ),
+				'memberRemoved'  => __( 'Member removed.', 'aggressive-ads' ),
+				'inviteMember'   => __( 'Invite someone to this organization', 'aggressive-ads' ),
+				'inviteHelp'     => __( 'Email address. To move somebody between organizations, remove them here and invite them there — they keep no access in between.', 'aggressive-ads' ),
+				'invite'         => __( 'Send invitation', 'aggressive-ads' ),
+				'invited'        => __( 'Invitation sent.', 'aggressive-ads' ),
+				'reactivate'     => __( 'Reactivate', 'aggressive-ads' ),
+				'suspended'      => __( 'Organization suspended.', 'aggressive-ads' ),
+				'reactivated'    => __( 'Organization reactivated.', 'aggressive-ads' ),
+				/* translators: %s: organization name. */
+				'confirmSuspend' => __( 'Suspend %s? Every campaign it is running stops serving immediately.', 'aggressive-ads' ),
+				/* translators: %d: number of members. */
+				'memberOne'      => __( '%d member', 'aggressive-ads' ),
+				/* translators: %d: number of members. */
+				'memberMany'     => __( '%d members', 'aggressive-ads' ),
+				/* translators: %d: number of campaigns. */
+				'campaignOne'    => __( '%d campaign', 'aggressive-ads' ),
+				/* translators: %d: number of campaigns. */
+				'campaignMany'   => __( '%d campaigns', 'aggressive-ads' ),
+				'saveFailed'     => __( 'That organization could not be updated.', 'aggressive-ads' ),
+				'retry'          => __( 'Try again', 'aggressive-ads' ),
+			),
+		);
+
+		printf(
+			'<div class="wrap aggr-admin"><h1>%1$s</h1><noscript><div class="notice notice-error"><p>%2$s</p></div></noscript><div id="aggr-organizations-root" data-aggr-organizations="%3$s"></div></div>',
+			esc_html__( 'Organizations', 'aggressive-ads' ),
+			esc_html__( 'The organizations screen needs JavaScript enabled.', 'aggressive-ads' ),
+			esc_attr( (string) wp_json_encode( $payload ) )
+		);
 	}
 
-	/**
-	 * Organization-scoped form nonce action.
-	 *
-	 * @param string $action Form action.
-	 * @param int    $org_id Organization id.
-	 */
-	public static function nonce_action( string $action, int $org_id ): string {
-		return $action . '_' . max( 0, $org_id );
-	}
+
+
+
 
 	/** Screen URL. */
 	public static function url(): string {
 		return add_query_arg( 'page', self::MENU_SLUG, admin_url( 'admin.php' ) );
-	}
-
-	/**
-	 * Fixed notice selected from allowlisted redirect state.
-	 *
-	 * @param string $result success or error.
-	 * @param string $code   Stable result code.
-	 * @return array{type: string, message: string}|null
-	 */
-	public static function notice_for( string $result, string $code ): ?array {
-		if ( 'success' === $result ) {
-			$message = match ( $code ) {
-				'organization_suspended'   => __( 'Organization suspended.', 'aggressive-ads' ),
-				'organization_reactivated' => __( 'Organization reactivated.', 'aggressive-ads' ),
-				default                    => __( 'Organization updated.', 'aggressive-ads' ),
-			};
-
-			return array(
-				'type'    => 'success',
-				'message' => $message,
-			);
-		}
-
-		if ( 'error' !== $result ) {
-			return null;
-		}
-
-		$message = match ( $code ) {
-			'aggr_forbidden'            => __( 'You do not have permission to manage organizations.', 'aggressive-ads' ),
-			'aggr_org_not_found'        => __( 'That organization could not be found.', 'aggressive-ads' ),
-			'aggr_org_state_not_saved'  => __( 'The organization state could not be saved. Try again.', 'aggressive-ads' ),
-			default                         => __( 'The organization could not be updated.', 'aggressive-ads' ),
-		};
-
-		return array(
-			'type'    => 'error',
-			'message' => $message,
-		);
-	}
-
-	/**
-	 * Shared authenticated handler for suspend and reactivate.
-	 *
-	 * @param string $action Form action constant.
-	 * @param string $state  Target state.
-	 */
-	private function handle_state_change( string $action, string $state ): void {
-		if ( ! current_user_can( Capabilities::MANAGE_ORGS ) ) {
-			wp_die(
-				esc_html__( 'You do not have permission to do that.', 'aggressive-ads' ),
-				'',
-				array( 'response' => 403 )
-			);
-		}
-
-		$org_id = $this->posted_org_id();
-		check_admin_referer( self::nonce_action( $action, $org_id ) );
-
-		$result = $this->process_state_change( $org_id, $state );
-		$this->redirect_after( $result, $state );
-	}
-
-	/**
-	 * Returns to the list with a success or error flag.
-	 *
-	 * @param true|WP_Error $result Outcome.
-	 * @param string        $state  Requested state.
-	 * @return never
-	 */
-	private function redirect_after( bool|WP_Error $result, string $state ): never {
-		$is_error = is_wp_error( $result );
-		$code     = $is_error
-			? sanitize_key( (string) $result->get_error_code() )
-			: ( Org_Repository::STATE_SUSPENDED === $state ? 'organization_suspended' : 'organization_reactivated' );
-
-		wp_safe_redirect(
-			add_query_arg(
-				array(
-					'aggr_result' => $is_error ? 'error' : 'success',
-					'aggr_code'   => $code,
-				),
-				self::url()
-			),
-			303
-		);
-
-		exit;
-	}
-
-	/**
-	 * Flash copy from the redirect query string.
-	 *
-	 * @return array{type: string, message: string}|null
-	 */
-	private function request_notice(): ?array {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only, allowlisted state selecting fixed copy.
-		$result = isset( $_GET['aggr_result'] ) ? sanitize_key( wp_unslash( $_GET['aggr_result'] ) ) : '';
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only, allowlisted state selecting fixed copy.
-		$code = isset( $_GET['aggr_code'] ) ? sanitize_key( wp_unslash( $_GET['aggr_code'] ) ) : '';
-
-		return self::notice_for( $result, $code );
-	}
-
-	/** Organization id used only to select its nonce action before verification. */
-	private function posted_org_id(): int {
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Used only to select the per-organization nonce checked by the caller.
-		return isset( $_POST['org_id'] ) ? absint( wp_unslash( $_POST['org_id'] ) ) : 0;
 	}
 }

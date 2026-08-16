@@ -25,6 +25,14 @@ export default ( env = {}, argv = {} ) => {
 				process.cwd(),
 				'src/admin/settings/index.tsx'
 			),
+			'admin/packages': path.resolve(
+				process.cwd(),
+				'src/admin/packages/index.tsx'
+			),
+			'admin/organizations': path.resolve(
+				process.cwd(),
+				'src/admin/organizations/index.tsx'
+			),
 		},
 		output: {
 			path: path.resolve( process.cwd(), 'dist' ),

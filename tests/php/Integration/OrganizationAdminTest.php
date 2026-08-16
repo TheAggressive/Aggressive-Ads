@@ -16,6 +16,7 @@ use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Workflow\Organization_State_Manager;
 use Aggressive\Ads\Security\Roles;
 use WP_UnitTestCase;
 
@@ -30,6 +31,13 @@ final class OrganizationAdminTest extends WP_UnitTestCase {
 	 * @var Organization_Screen
 	 */
 	private Organization_Screen $screen;
+
+	/**
+	 * The workflow that owns the state vocabulary.
+	 *
+	 * @var Organization_State_Manager
+	 */
+	private Organization_State_Manager $state_manager;
 
 	/**
 	 * Organization read model.
@@ -95,8 +103,9 @@ final class OrganizationAdminTest extends WP_UnitTestCase {
 		$this->assertIsInt( $org_id );
 		$this->org_id = $org_id;
 
-		$this->screen = $container->get( Organization_Screen::class );
-		$this->data   = $container->get( Organization_Data::class );
+		$this->screen        = $container->get( Organization_Screen::class );
+		$this->state_manager = $container->get( Organization_State_Manager::class );
+		$this->data          = $container->get( Organization_Data::class );
 	}
 
 	/** Clears request state changed by handler tests. */
@@ -108,19 +117,17 @@ final class OrganizationAdminTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Menu and authenticated handlers are attached.
-	 *
-	 * There is deliberately no `admin_enqueue_scripts` assertion. This screen was
-	 * converted to native wp-admin markup — form-table, wp-list-table, notice —
-	 * which core already styles, so it enqueues nothing of ours. The assertion
-	 * that used to be here outlived the behaviour it described and went on
-	 * failing unnoticed, because the suite it ran in was exiting early and
-	 * reporting success. See bin/ci/run-wp-tests.sh.
+	 * The menu and the screen's bundle are attached, and nothing else is.
 	 */
 	public function test_organization_surface_is_wired(): void {
 		$this->assertNotFalse( has_action( 'admin_menu', array( $this->screen, 'register_menu' ) ) );
-		$this->assertNotFalse( has_action( 'admin_post_' . Organization_Screen::SUSPEND_ACTION, array( $this->screen, 'handle_suspend' ) ) );
-		$this->assertNotFalse( has_action( 'admin_post_' . Organization_Screen::REACTIVATE_ACTION, array( $this->screen, 'handle_reactivate' ) ) );
+		$this->assertNotFalse( has_action( 'admin_enqueue_scripts', array( $this->screen, 'enqueue' ) ) );
+
+		// State changes moved to REST\Organizations_Controller with the screen's
+		// conversion to React; leaving handlers registered with no form pointing
+		// at them would be unreferenced write paths to suspension.
+		$this->assertFalse( has_action( 'admin_post_aggr_suspend_organization' ) );
+		$this->assertFalse( has_action( 'admin_post_aggr_reactivate_organization' ) );
 	}
 
 	/** An administrator can suspend and reactivate with audit and read-back. */
@@ -128,7 +135,7 @@ final class OrganizationAdminTest extends WP_UnitTestCase {
 		wp_set_current_user( $this->administrator );
 
 		$this->assertTrue( $this->organizations->is_active( $this->org_id ) );
-		$this->assertTrue( $this->screen->process_state_change( $this->org_id, Org_Repository::STATE_SUSPENDED ) );
+		$this->assertTrue( $this->state_manager->set_state( $this->org_id, Org_Repository::STATE_SUSPENDED ) );
 		$this->assertFalse( $this->organizations->is_active( $this->org_id ) );
 		$this->assertSame( Org_Repository::STATE_SUSPENDED, $this->organizations->state( $this->org_id ) );
 
@@ -137,7 +144,7 @@ final class OrganizationAdminTest extends WP_UnitTestCase {
 		$this->assertSame( 'organization.suspended', $events[0]['event'] );
 		$this->assertSame( Audit_Event::OUTCOME_OK, $events[0]['outcome'] );
 
-		$this->assertTrue( $this->screen->process_state_change( $this->org_id, Org_Repository::STATE_ACTIVE ) );
+		$this->assertTrue( $this->state_manager->set_state( $this->org_id, Org_Repository::STATE_ACTIVE ) );
 		$this->assertTrue( $this->organizations->is_active( $this->org_id ) );
 
 		$events = $this->audit->for_object( 'organization', $this->org_id, $this->org_id );
@@ -148,7 +155,7 @@ final class OrganizationAdminTest extends WP_UnitTestCase {
 	public function test_advertiser_cannot_suspend_an_organization(): void {
 		wp_set_current_user( $this->advertiser );
 
-		$result = $this->screen->process_state_change( $this->org_id, Org_Repository::STATE_SUSPENDED );
+		$result = $this->state_manager->set_state( $this->org_id, Org_Repository::STATE_SUSPENDED );
 		$this->assertWPError( $result );
 		$this->assertSame( 'aggr_forbidden', $result->get_error_code() );
 		$this->assertTrue( $this->organizations->is_active( $this->org_id ) );
@@ -158,11 +165,11 @@ final class OrganizationAdminTest extends WP_UnitTestCase {
 	public function test_idempotent_state_and_missing_organization(): void {
 		wp_set_current_user( $this->administrator );
 
-		$this->assertTrue( $this->screen->process_state_change( $this->org_id, Org_Repository::STATE_ACTIVE ) );
-		$this->assertTrue( $this->screen->process_state_change( $this->org_id, Org_Repository::STATE_SUSPENDED ) );
-		$this->assertTrue( $this->screen->process_state_change( $this->org_id, Org_Repository::STATE_SUSPENDED ) );
+		$this->assertTrue( $this->state_manager->set_state( $this->org_id, Org_Repository::STATE_ACTIVE ) );
+		$this->assertTrue( $this->state_manager->set_state( $this->org_id, Org_Repository::STATE_SUSPENDED ) );
+		$this->assertTrue( $this->state_manager->set_state( $this->org_id, Org_Repository::STATE_SUSPENDED ) );
 
-		$missing = $this->screen->process_state_change( 999999, Org_Repository::STATE_SUSPENDED );
+		$missing = $this->state_manager->set_state( 999999, Org_Repository::STATE_SUSPENDED );
 		$this->assertWPError( $missing );
 		$this->assertSame( 'aggr_org_not_found', $missing->get_error_code() );
 	}

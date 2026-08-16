@@ -12,6 +12,7 @@ namespace Aggressive\Ads;
 use Aggressive\Ads\Admin\Campaign_Change_Actions;
 use Aggressive\Ads\Admin\Menu;
 use Aggressive\Ads\Admin\Organization_Data;
+use Aggressive\Ads\Admin\Package_Data;
 use Aggressive\Ads\Admin\Placement_Data;
 use Aggressive\Ads\Admin\Settings_Screen;
 use Aggressive\Ads\Assets\Assets;
@@ -55,6 +56,7 @@ use Aggressive\Ads\REST\Creative_Controller;
 use Aggressive\Ads\REST\Creative_File_Controller;
 use Aggressive\Ads\REST\Placements_Controller;
 use Aggressive\Ads\REST\Packages_Controller;
+use Aggressive\Ads\REST\Organizations_Controller;
 use Aggressive\Ads\REST\Settings_Controller;
 use Aggressive\Ads\REST\Transitions_Controller;
 use Aggressive\Ads\Repository\Placement_Repository;
@@ -86,6 +88,7 @@ use Aggressive\Ads\Workflow\Reviewer_Access;
 use Aggressive\Ads\Workflow\Review_Readiness;
 use Aggressive\Ads\Workflow\Placement_Manager;
 use Aggressive\Ads\Workflow\Organization_State_Manager;
+use Aggressive\Ads\Workflow\Package_Manager;
 use Aggressive\Ads\Workflow\Email_Change;
 use Aggressive\Ads\Workflow\Transition_Guards;
 use Aggressive\Ads\Security\Admin_Guard;
@@ -680,7 +683,18 @@ final class Service_Registrar {
 			static fn ( Service_Container $c ): Packages_Controller => new Packages_Controller(
 				$c->get( Package_Repository::class ),
 				$c->get( Placement_Repository::class ),
-				$c->get( Campaign_Editor::class )
+				$c->get( Campaign_Editor::class ),
+				$c->get( Package_Manager::class ),
+				$c->get( Package_Data::class )
+			)
+		);
+
+		$container->register(
+			Organizations_Controller::class,
+			static fn ( Service_Container $c ): Organizations_Controller => new Organizations_Controller(
+				$c->get( Organization_State_Manager::class ),
+				$c->get( Organization_Data::class ),
+				$c->get( Organization_Membership::class )
 			)
 		);
 

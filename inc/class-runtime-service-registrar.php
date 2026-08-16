@@ -133,8 +133,7 @@ final class Runtime_Service_Registrar {
 		$container->register(
 			Organization_Screen::class,
 			static fn ( Service_Container $c ): Organization_Screen => new Organization_Screen(
-				$c->get( Organization_Data::class ),
-				$c->get( Organization_State_Manager::class )
+				$c->get( Organization_Data::class )
 			)
 		);
 
@@ -158,8 +157,7 @@ final class Runtime_Service_Registrar {
 		$container->register(
 			Package_Screen::class,
 			static fn ( Service_Container $c ): Package_Screen => new Package_Screen(
-				$c->get( Package_Data::class ),
-				$c->get( Package_Manager::class )
+				$c->get( Package_Data::class )
 			)
 		);
 
