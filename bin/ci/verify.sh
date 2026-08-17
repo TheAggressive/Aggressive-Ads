@@ -12,6 +12,11 @@ set -euo pipefail
 
 cd "$(dirname "$0")/../.."
 
+# Not a lane: a precondition. CI checks out committed content, so a run against
+# an uncommitted working tree can pass here and fail there for a file that only
+# exists on this machine. See bin/ci/check-worktree.sh.
+bash bin/ci/check-worktree.sh
+
 run() {
 	echo
 	echo "──────────────────────────────────────────────────────────────"

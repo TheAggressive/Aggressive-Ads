@@ -22,6 +22,30 @@ not a command the repository pretends to run.
 
 Adding a lane means adding it to **both** the workflow and `bin/ci/verify.sh`. Adding it to only one is how the two drift.
 
+### Why local can pass and CI still fail
+
+The lanes are identical — `check-ci-parity.sh` enforces that. The *inputs* are
+not, and there are exactly three ways they differ. Two are already closed:
+
+**Uncommitted work.** `pnpm run qa` reads the working tree; CI checks out the
+commit. A file created but never `git add`ed is read by every lane locally and
+absent remotely, so the same suite passes here and fails there over a file that
+does not appear in the diff — because the problem is what the diff omits.
+`bin/ci/check-worktree.sh` runs before the lanes and refuses a dirty tree.
+`AGGR_QA_ALLOW_DIRTY=1` runs them anyway for work in progress.
+
+**A stale `dist/`.** Gitignored, so CI always builds it. `pnpm build` begins
+`rm -rf dist`, so `qa` cannot pass against yesterday's bundle. Running
+`pnpm test:e2e` on its own can, and that is a real trap: the browser then tests
+whatever was built last, not what the source says now.
+
+**Database state.** wp-env's database persists locally and is new on every CI
+run. `tests/e2e/reset.php` clears the fixtures it knows by slug and cannot clear
+a row left by some earlier failed run — which is why an e2e fixture must reuse a
+slug that file already deletes. `pnpm qa:fresh` destroys the environment and
+starts over before running the lanes, which is the closest local equivalent to
+what CI does every time.
+
 The build job uploads one `dist/` artifact which the E2E and package jobs both
 download. This makes the browser-tested assets the packaged assets instead of
 allowing each job to compile a different tree. The E2E job installs Playwright's

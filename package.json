@@ -108,6 +108,7 @@
 		"release:verify": "bash bin/release/verify-package.sh",
 		"ci:package": "bash bin/ci/package.sh",
 		"qa": "pnpm ci:verify",
+		"qa:fresh": "pnpm wp-env destroy --scripts=false || true; pnpm env:start && pnpm ci:verify",
 		"qa:fast": "bash bin/ci/verify-fast.sh",
 		"precommit": "lint-staged",
 		"ci:verify": "bash bin/ci/verify.sh"
