@@ -71,6 +71,8 @@ A meta cap is never granted to a role. `current_user_can( 'edit_aggr_campaign', 
 
 Core's meta-cap mapping tests `$post->post_author === $user_id`. That is the wrong question here. An organization has several member users, and a campaign created by member A must be editable by member B. Left to core, the portal would silently become single-user-per-organization — and would appear to work, right up until the second person at an agency tried to fix a typo.
 
+The relationship runs one way only: **an organization has many users, and a user belongs to exactly one organization**, enforced by `Organization_Membership::eligible_for_org()`. `Org_Repository::org_ids_for_user()` returns a list, and the membership test below is genuinely list-correct — but the callers that must name a single organization take `$org_ids[0]`, so the invariant is what makes those safe. See invariant 8 in [domain-model.md](domain-model.md#invariants) before designing anything that relaxes it.
+
 ### The filter never sees our capability name
 
 **core does not pass a custom meta capability to the `map_meta_cap` filter.** For `edit_aggr_campaign` it looks the name up in the global `$post_type_meta_caps`, then *returns* a recursive call using the generic `edit_post` — so the outer `apply_filters()` never runs, and all the filter is ever handed is `edit_post` plus the object id.
