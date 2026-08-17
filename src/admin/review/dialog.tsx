@@ -29,8 +29,15 @@ import { canRestoreFocus, setupFocusTrap } from '../../interactivity/helpers';
 import { lockScroll, unlockScroll } from '../../interactivity/scroll-lock';
 import { t } from '../shared/save';
 
-/** The background, which is everything on the screen except this dialog. */
-const PAGE_ROOT = '.aggr-review-content';
+/**
+ * The background, which is everything on the screen except this dialog.
+ *
+ * A data attribute rather than a class, following the convention the rest of
+ * the plugin already uses for behaviour hooks — `data-aggr-autosave`,
+ * `data-aggr-dialog-close`. A class here would be one with no rule behind it,
+ * which is indistinguishable from a class whose rule was forgotten.
+ */
+const PAGE_ROOT = '[data-aggr-review-content]';
 
 export function Dialog( {
 	open,

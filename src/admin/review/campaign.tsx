@@ -315,7 +315,7 @@ export function CampaignView( {
 			 * than on <body>, so a dialog rendered outside it resolves every
 			 * token to nothing.
 			 */ }
-			<div className="aggr-review-content">
+			<div data-aggr-review-content>
 				<p className="aggr-breadcrumb">
 					<button
 						type="button"

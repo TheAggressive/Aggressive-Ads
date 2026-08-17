@@ -30,7 +30,7 @@ if ( array() === $aggr_pending ) {
 		<?php esc_html_e( 'Edits awaiting review', 'aggressive-ads' ); ?>
 	</h2>
 
-	<div class="aggr-alert aggr-alert--info" role="status">
+	<div class="aggr-alert" role="status">
 		<p><?php esc_html_e( 'These edits are with the review team. Your campaign keeps running unchanged until they are approved.', 'aggressive-ads' ); ?></p>
 	</div>
 

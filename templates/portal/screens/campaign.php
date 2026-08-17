@@ -428,7 +428,7 @@ endif;
 							<p><?php esc_html_e( 'The catalogue is not configured yet. Your draft is safe; please return later or get in touch.', 'aggressive-ads' ); ?></p>
 						</div>
 					<?php else : ?>
-						<div class="aggr-choicegrid aggr-choicegrid--packages">
+						<div class="aggr-choicegrid">
 							<?php foreach ( $aggr_packages as $aggr_package ) : ?>
 								<?php $aggr_selected_package_id = $aggr_package_id > 0 ? $aggr_package_id : ( (bool) $aggr_package['is_default'] ? (int) $aggr_package['id'] : 0 ); ?>
 								<label class="aggr-choice aggr-choice--package">

@@ -197,7 +197,7 @@ test( 'a decision that needs feedback is taken in an accessible dialog', async (
 		await page.evaluate(
 			() =>
 				document
-					.querySelector( '.aggr-review-content' )
+					.querySelector( '[data-aggr-review-content]' )
 					?.hasAttribute( 'inert' ) ?? false
 		)
 	).toBe( true );

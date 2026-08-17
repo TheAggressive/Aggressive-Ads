@@ -36,7 +36,7 @@ if ( array() === $aggr_request && array() === $aggr_options ) {
 	</h2>
 
 	<?php if ( array() !== $aggr_request ) : ?>
-		<div class="aggr-alert aggr-alert--info" role="status">
+		<div class="aggr-alert" role="status">
 			<p>
 				<?php
 				printf(
@@ -49,7 +49,7 @@ if ( array() === $aggr_request && array() === $aggr_options ) {
 		</div>
 
 		<?php if ( '' !== (string) $aggr_request['reason'] ) : ?>
-			<blockquote class="aggr-quote"><?php echo esc_html( (string) $aggr_request['reason'] ); ?></blockquote>
+			<blockquote><?php echo esc_html( (string) $aggr_request['reason'] ); ?></blockquote>
 		<?php endif; ?>
 
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">

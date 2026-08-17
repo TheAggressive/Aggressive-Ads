@@ -26,7 +26,7 @@ $aggr_spark_label = sprintf(
 	$aggr_last
 );
 ?>
-<section class="aggr-panel aggr-spark" aria-labelledby="aggr-spark-heading">
+<section class="aggr-panel" aria-labelledby="aggr-spark-heading">
 	<h2 id="aggr-spark-heading" class="aggr-panel__head"><?php esc_html_e( 'Impressions', 'aggressive-ads' ); ?></h2>
 	<p class="aggr-spark__lede"><?php esc_html_e( 'Last 7 days', 'aggressive-ads' ); ?></p>
 	<ol class="aggr-spark__track" aria-label="<?php echo esc_attr( $aggr_spark_label ); ?>">

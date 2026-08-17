@@ -53,7 +53,7 @@ $aggr_overlays = array();
 			}
 			?>
 			<?php if ( is_array( $aggr_pending_update ) ) : ?>
-			<article class="aggr-creative aggr-creative--pending">
+			<article class="aggr-creative">
 				<div class="aggr-creative__summary">
 					<div class="aggr-creative__preview">
 						<img src="<?php echo esc_url( (string) $aggr_pending_update['preview'] ); ?>" alt="" loading="lazy">
@@ -99,7 +99,7 @@ $aggr_overlays = array();
 					'close_href' => 'aggr-update-creatives-heading',
 				);
 				?>
-			<article class="aggr-creative aggr-creative--editable">
+			<article class="aggr-creative">
 				<div class="aggr-creative__summary">
 					<a
 						class="aggr-creative__preview"
