@@ -62,6 +62,15 @@ final class Menu implements Service {
 	/**
 	 * Paints the menu mark so it takes its colour from the menu.
 	 *
+	 * Centred by making the container a flex box rather than by nudging the
+	 * mark with a margin. The first version used `margin: 7px auto 0`, which
+	 * was a number picked to look right against one row height while
+	 * WordPress's own `padding: 8px 0` on this pseudo-element was still
+	 * applying underneath it — so the mark sat off-centre, and would have
+	 * drifted again on the folded menu and the mobile breakpoint, where the row
+	 * is a different height. Zeroing that padding and letting flex do the
+	 * centring means there is no measurement to keep in sync.
+	 *
 	 * @return void
 	 */
 	public function print_icon_style(): void {
@@ -70,7 +79,7 @@ final class Menu implements Service {
 		}
 
 		printf(
-			'<style id="aggr-menu-icon">#toplevel_page_%1$s .wp-menu-image::before{content:"";display:block;width:20px;height:20px;margin:7px auto 0;background-color:currentColor;-webkit-mask:url(%2$s) no-repeat center/20px 20px;mask:url(%2$s) no-repeat center/20px 20px;}</style>' . "\n",
+			'<style id="aggr-menu-icon">#toplevel_page_%1$s .wp-menu-image{display:flex;align-items:center;justify-content:center;}#toplevel_page_%1$s .wp-menu-image::before{content:"";display:block;width:20px;height:20px;padding:0;margin:0;background-color:currentColor;-webkit-mask:url(%2$s) no-repeat center/20px 20px;mask:url(%2$s) no-repeat center/20px 20px;}</style>' . "\n",
 			esc_attr( self::PARENT_SLUG ),
 			esc_url( AGGR_PLUGIN_URL . self::ICON_FILE )
 		);

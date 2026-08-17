@@ -83,6 +83,16 @@ final class MenuIconTest extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'background-color:currentColor', $css );
 		$this->assertStringContainsString( 'aggressive-ads-icon.svg', $css );
 		$this->assertStringContainsString( '-webkit-mask:', $css, 'Safari needs the prefixed property.' );
+
+		// Centring is done by flex, not by a margin measured against one row
+		// height. A magic offset looked right on the expanded menu and sat
+		// off-centre everywhere else.
+		$this->assertStringContainsString( 'align-items:center', $css );
+		$this->assertStringNotContainsString(
+			'margin:7px',
+			$css,
+			'A hand-tuned offset drifts on the folded menu and the mobile breakpoint.'
+		);
 		$this->assertStringNotContainsString(
 			'background-image',
 			$css,
