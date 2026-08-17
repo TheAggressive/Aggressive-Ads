@@ -198,6 +198,22 @@ if (( UNATTENDED )); then
 		echo "::warning title=Dispatching version PR checks as a fallback::The version PR started no checks of its own within 60s, so they are being dispatched explicitly."
 		DISPATCH=1
 	fi
+
+	# Existing is not the same as running. GitHub holds runs at
+	# `action_required` until a human approves them, and a held run still
+	# counts above — so the poll alone would report checks that never execute
+	# and auto-merge would wait on them forever. Approval cannot be granted
+	# from inside the run that needs it, so this names it instead of hanging.
+	HELD="$(gh api "repos/${REPOSITORY}/actions/runs?branch=${BRANCH}&status=action_required" \
+		--jq '.total_count' 2>/dev/null || echo 0)"
+
+	if [[ "${HELD:-0}" -gt 0 ]]; then
+		announce_manual_step "${HELD} workflow run(s) for version PR
+#${PR_NUMBER} are held at \`action_required\` and will not start until they are
+approved, even though a release credential opened the PR. Approve them at
+https://github.com/${REPOSITORY}/pull/${PR_NUMBER}/checks — auto-merge is
+already registered and will proceed once they pass."
+	fi
 fi
 
 if (( DISPATCH )); then

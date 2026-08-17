@@ -300,8 +300,49 @@ through their ordinary `pull_request: [master]` triggers, so the helper also
 stops dispatching them by hand — dispatching would run every lane twice against
 the same commit and report each required check twice.
 
-Create it as a fine-grained PAT or GitHub App token with `contents: write` and
-`pull requests: write`, and add it as the `AGGR_RELEASE_TOKEN` repository secret.
+#### Provide it as a GitHub App, not a PAT
+
+A fine-grained PAT works and is one secret, but it expires. A release that fails
+because a token lapsed on a date nobody wrote down is the same silent stall this
+pipeline already spent two releases eliminating, so the App is the supported
+path and the PAT is the fallback.
+
+A GitHub App stores a **private key**, which does not expire. The `version-pr`
+job mints a fresh installation token from it on every run, scoped to this
+repository, valid for an hour. Nothing needs regenerating on a calendar.
+
+1. **Settings → Developer settings → GitHub Apps → New GitHub App**
+2. Name it (for example `Aggressive Ads Release`); homepage URL can be the
+   repository. Uncheck **Webhook → Active**.
+3. Repository permissions: **Contents: Read and write**, **Pull requests: Read
+   and write**. Nothing else.
+4. Create it, note the **App ID**, then **Generate a private key** (downloads a
+   `.pem`).
+5. **Install App** → only this repository.
+6. Add two repository secrets: `AGGR_RELEASE_APP_ID` (the App ID) and
+   `AGGR_RELEASE_APP_PRIVATE_KEY` (the entire `.pem`, including the
+   `-----BEGIN...` and `-----END...` lines).
+
+The job prefers the App token, falls back to `AGGR_RELEASE_TOKEN`, and falls
+back again to announcing the manual steps. Setting neither is a supported state,
+not a broken one.
+
+A PAT instead needs `contents: write` and `pull requests: write`, stored as the
+`AGGR_RELEASE_TOKEN` repository secret.
+
+#### Held runs are reported, never waited on
+
+A credential that is not `GITHUB_TOKEN` should make the version PR start its own
+checks — but "should" is an assumption about GitHub, and this pipeline has been
+bitten by two of those already. Two guards make an incorrect assumption loud
+instead of silent:
+
+- If no checks register within a minute, the helper dispatches them explicitly
+  and says it fell back.
+- If runs exist but sit at `action_required`, it reports them with a link.
+  Existing is not running, a held run still counts as a check, and approval
+  cannot be granted from inside the run that needs it — so waiting would hang
+  forever while looking like progress.
 
 Without the secret the helper still opens and auto-merges the PR, but it now
 raises a workflow **error annotation** and a job-summary block naming both
