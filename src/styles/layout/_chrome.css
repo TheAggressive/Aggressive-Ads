@@ -22,9 +22,28 @@
 }
 
 .aggr-portal :focus-visible {
-	outline: 3px solid var(--aggr-color-accent);
-	outline-offset: 2px;
+	outline: 2px solid var(--aggr-color-accent);
+	outline-offset: 0;
 	border-radius: var(--aggr-radius-small);
+}
+
+/*
+ * Headings that exist only as focus targets do not get a ring.
+ *
+ * The wizard moves focus to the step heading after each step so a screen
+ * reader announces the new context. Those headings are tabindex="-1", which
+ * means no keyboard user can ever reach them by tabbing — so the ring marks a
+ * stop that does not exist, and on a fresh document Chrome treats programmatic
+ * focus as keyboard focus and draws it on arrival. The result was a red box
+ * around "Campaign details" every time somebody opened a campaign.
+ *
+ * Removing it costs nothing that WCAG 2.4.7 asks for: that applies to
+ * keyboard-operable components, and this is not one. The announcement, which
+ * is the reason the focus move exists, is unaffected.
+ */
+.aggr-portal h1[tabindex="-1"]:focus-visible,
+.aggr-portal h2[tabindex="-1"]:focus-visible {
+	outline: none;
 }
 
 .aggr-shell {
@@ -255,6 +274,32 @@
 	margin: 0;
 }
 
+/* Wraps rather than shrinks: two buttons plus a long campaign name is the
+	   normal case on a narrow viewport, not an edge one. */
+.aggr-pagehead__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--aggr-space-sm);
+	align-items: center;
+}
+
+/*
+ * The status sits with the name it describes, not stranded between the name
+ * and the button. .aggr-pagehead is space-between, so a third child landed in
+ * the middle of the row and read as belonging to neither.
+ *
+ * center rather than baseline: the pill is a control-height chip, and aligning
+ * it to the title's text baseline left it sitting low against a heading that
+ * grows with its clamp(). Wrap so a long name pushes the pill to the next line
+ * instead of squeezing it.
+ */
+.aggr-pagehead__heading {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--aggr-space-sm);
+}
+
 .aggr-title {
 	margin: 0;
 	font-size: clamp(1.5rem, 1.2rem + 1.4vw, 2rem);
@@ -278,11 +323,20 @@
 	padding: 1.5rem;
 }
 
+/*
+ * Capitalized on purpose: it is the portal's chosen voice, and the portal is a
+ * branded surface the site owner controls. wp-admin is not — the staff screens
+ * use native WordPress markup and inherit core's typography, so this rule never
+ * reaches them.
+ */
 .aggr-panel__head {
-	padding: var(--aggr-space-md) var(--aggr-space-lg);
+	padding: var(--aggr-space-md) var(--aggr-space-sm);
 	border-bottom: 1px solid var(--aggr-border-color);
-	font-size: 16px;
+	font-size: 1.5rem;
 	font-weight: 700;
+	text-transform: capitalize;
+	margin-bottom: var(--aggr-space-md);
+	margin-top: 0;
 }
 
 .aggr-stats {
@@ -358,6 +412,36 @@
 	padding: 0 var(--aggr-space-lg) var(--aggr-space-md);
 	color: var(--aggr-color-text-subtle);
 	font-size: 11px;
+}
+
+/* The confirmation screen is set apart by its border rather than a red fill. */
+.aggr-panel--danger {
+	border-color: var(--aggr-color-danger);
+}
+
+/*
+ * Explicit margins, because the host theme resets them.
+ *
+ * The portal renders inside whatever theme the site runs, and block themes
+ * zero `p` margins and re-space paragraphs through layout blocks the portal
+ * does not use. Inheriting that reset ran these two sentences together with no
+ * gap. Every portal paragraph that is not a .aggr-hint or .aggr-lede — both of
+ * which carry their own spacing — has to state its own.
+ */
+.aggr-panel--danger > p {
+	margin: 0 0 var(--aggr-space-md);
+	color: var(--aggr-color-text-muted);
+}
+
+.aggr-panel--danger > p:last-of-type {
+	margin-bottom: var(--aggr-space-lg);
+}
+
+/* The CSV download sits under the axis, inside the same panel as the chart. */
+.aggr-spark__export {
+	margin-top: var(--aggr-space-lg);
+	display: flex;
+	justify-content: center;
 }
 
 .aggr-table {
@@ -507,6 +591,33 @@
 }
 
 .aggr-button--danger {
+	background: var(--aggr-color-danger);
+	color: var(--aggr-color-accent-contrast);
+}
+
+/*
+ * Outlined, not filled.
+ *
+ * It sits in the same row as Edit and Duplicate, so it has to read as the same
+ * kind of control — but a solid red button beside two ordinary ones pulls the
+ * eye first, which is the wrong order for the only irreversible action on the
+ * screen.
+ *
+ * Written as .aggr-button.aggr-button--outline-danger rather than the single
+ * class the other modifiers use. Those tie with .aggr-button on specificity and
+ * are only winning because of where they sit in the import order — this rule
+ * lost that race once already, silently, and rendered a solid red button. Two
+ * classes is one point of specificity, so it cannot lose again wherever the
+ * partial ends up being imported.
+ */
+.aggr-button.aggr-button--outline-danger {
+	background: transparent;
+	color: var(--aggr-color-danger);
+	border-color: currentcolor;
+}
+
+.aggr-button.aggr-button--outline-danger:hover,
+.aggr-button.aggr-button--outline-danger:focus-visible {
 	background: var(--aggr-color-danger);
 	color: var(--aggr-color-accent-contrast);
 }

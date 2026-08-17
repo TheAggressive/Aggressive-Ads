@@ -253,20 +253,20 @@ final class Creative_Actions implements Service {
 		return match ( $code ) {
 			'aggr_click_url_required'       => __( 'Enter the destination URL for this creative.', 'aggressive-ads' ),
 			'aggr_click_url_invalid'        => __( 'Enter a valid http or https destination URL without embedded credentials.', 'aggressive-ads' ),
-			'aggr_alt_text_required'        => __( 'Describe the image for people who cannot see it.', 'aggressive-ads' ),
-			'aggr_alt_text_too_long'        => __( 'Use 500 characters or fewer for the image description.', 'aggressive-ads' ),
-			'aggr_creative_size_mismatch'   => __( 'The uploaded dimensions do not match this placement. Resize the image to the required dimensions and try again.', 'aggressive-ads' ),
+			'aggr_alt_text_required'        => __( 'Describe the ad creative for people who cannot see it.', 'aggressive-ads' ),
+			'aggr_alt_text_too_long'        => __( 'Use 500 characters or fewer for the ad creative description.', 'aggressive-ads' ),
+			'aggr_creative_size_mismatch'   => __( 'The uploaded dimensions do not match this placement. Resize the ad creative to the required dimensions and try again.', 'aggressive-ads' ),
 			'aggr_creative_already_exists'  => __( 'That placement already has a creative. Remove it before uploading a replacement.', 'aggressive-ads' ),
 			'aggr_replacement_pending'       => __( 'This ad already has an update waiting for review.', 'aggressive-ads' ),
 			'aggr_replacement_unavailable'   => __( 'Only an ad in a scheduled or live campaign can be updated.', 'aggressive-ads' ),
 			'aggr_replacement_busy'          => __( 'Another update is already being saved for this ad. Try again.', 'aggressive-ads' ),
-			'aggr_upload_no_file'           => __( 'No file was received. Choose an image and try again.', 'aggressive-ads' ),
+			'aggr_upload_no_file'           => __( 'No file was received. Choose an ad creative and try again.', 'aggressive-ads' ),
 			'aggr_upload_too_large'         => sprintf(
 				/* translators: %s: maximum file size. */
 				__( 'That file is larger than %s. Save it at a smaller size and try again.', 'aggressive-ads' ),
 				size_format( Upload_Rules::MAX_BYTES )
 			),
-			'aggr_upload_too_many_pixels'   => __( 'That image has too many pixels to process. Resize it to the placement dimensions and try again.', 'aggressive-ads' ),
+			'aggr_upload_too_many_pixels'   => __( 'That ad creative has too many pixels to process. Resize it to the placement dimensions and try again.', 'aggressive-ads' ),
 			'aggr_upload_not_an_image'      => __( 'That file is not a readable image. JPEG, PNG, GIF, and WebP are supported.', 'aggressive-ads' ),
 			'aggr_upload_type_mismatch'     => __( 'The file contents do not match its filename, so it was not accepted.', 'aggressive-ads' ),
 			'aggr_upload_type_not_allowed'  => __( 'That file type is not supported. Use JPEG, PNG, GIF, or WebP.', 'aggressive-ads' ),

@@ -103,14 +103,22 @@ final class SettingsAdminTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Menu, assets, and the save handler are attached.
+	 * Menu and assets are attached.
+	 *
+	 * There is deliberately no admin-post assertion left here. The screen's
+	 * writes moved to REST\Settings_Controller when the server-rendered template
+	 * was deleted, and leaving an admin_post handler registered with no form
+	 * pointing at it would be an unreferenced write path to the settings option.
+	 * SettingsAutosaveTest covers what replaced it.
 	 *
 	 * @return void
 	 */
 	public function test_settings_surface_is_wired(): void {
 		$this->assertNotFalse( has_action( 'admin_menu', array( $this->screen, 'register_menu' ) ) );
 		$this->assertNotFalse( has_action( 'admin_enqueue_scripts', array( $this->screen, 'enqueue' ) ) );
-		$this->assertNotFalse( has_action( 'admin_post_' . Settings_Screen::ACTION, array( $this->screen, 'handle_save' ) ) );
+		$this->assertFalse( has_action( 'admin_post_aggr_save_settings' ) );
+		$this->assertFalse( has_action( 'admin_post_aggr_grant_reviewer' ) );
+		$this->assertFalse( has_action( 'admin_post_aggr_revoke_reviewer' ) );
 	}
 
 	/**

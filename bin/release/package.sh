@@ -31,6 +31,7 @@ PACKAGE_FORBIDDEN=(
 	bin
 	src
 	types
+	.cache
 	.git
 	.github
 	.husky
@@ -80,12 +81,22 @@ fi
 
 ZIP="${BUILD_DIR}/${SLUG}-${VERSION}.zip"
 
+# Compiled catalogs are build output — gitignored, like dist/ — so they have to
+# be produced here or the archive ships .po files WordPress cannot read and the
+# site silently renders English. verify-package.sh refuses such an archive, but
+# failing at package time is cheaper than failing at verification time.
+#
+# A no-op until a locale .po is committed, so this costs nothing today and
+# starts working by itself on the day one is.
+bash bin/i18n/compile.sh
+
 rm -rf "${BUILD_DIR}"
 mkdir -p "${STAGING}"
 
 # A single top-level directory named for the slug, because that is what
 # WordPress unpacks and what determines the installed folder name.
 rsync -a \
+	--exclude='.cache/' \
 	--exclude='.git/' \
 	--exclude='.github/' \
 	--exclude='.husky/' \

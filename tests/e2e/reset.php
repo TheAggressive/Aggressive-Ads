@@ -49,7 +49,7 @@ $campaign_ids = get_posts(
 );
 
 $creatives = Plugin::instance()->container()->get( Creative_Repository::class );
-$orgs       = Plugin::instance()->container()->get( Org_Repository::class );
+$orgs      = Plugin::instance()->container()->get( Org_Repository::class );
 $storage   = Plugin::instance()->container()->get( Private_Storage::class );
 $removed   = 0;
 

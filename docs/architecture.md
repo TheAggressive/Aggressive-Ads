@@ -93,6 +93,34 @@ its exact creative/campaign/placement tuple. `Fill_Cache` stores a compact id
 vector plus individual creative payloads. Capacity measurements and production
 requirements live in [delivery-performance.md](delivery-performance.md).
 
+## Stylesheets
+
+`bin/ci/check-styles.mjs` compares the two sides that a CSS linter cannot see at
+once: every `aggr-*` class named in a `class=` or `className=` attribute must
+resolve to a selector in `src/styles/`, and every `var(--aggr-*)` read without a
+fallback must resolve to a declaration.
+
+It exists because the stylesheets had no equivalent of the boundary guards that
+protect `inc/`, and it showed. `aggr-linkbutton` was written into two components
+and defined nowhere, so the browser drew its default button — a grey box around
+a campaign name — while PHPCS, Stylelint, axe and the whole test suite stayed
+green. Stylelint reads the stylesheet in isolation and cannot know what the
+markup asks for; nothing else was looking at all.
+
+Names built at runtime are matched as prefixes, so `aggr-pill--${status}` needs
+only that something starting `aggr-pill--` exists — which status maps to which
+modifier is the server's business. **Behaviour hooks are data attributes, not
+classes**: `data-aggr-autosave`, `data-aggr-review-content`. A class with no
+rule behind it is indistinguishable from a class whose rule was forgotten, which
+is the whole thing this guard is looking for.
+
+What it does not check is whether a token *resolves where it is used*. Every
+`--aggr-*` is declared on `.aggr-portal`, the front end puts that class on
+`<body>` and wp-admin does not, so a dialog rendered outside that scope resolves
+every token to nothing — a transparent panel rather than a degraded one. That
+failure is a scope question rather than an existence one, and it is caught by
+looking at the screen.
+
 ## File size
 
 `bin/check-file-length.sh` warns above 800 lines and fails above 1000, with no allowlist. The remedy is always to split by responsibility. Raising the threshold is not an option, because the threshold is not the point — a 1200-line class is telling you it has more than one job, and the number is just how you found out.

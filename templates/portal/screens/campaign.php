@@ -18,6 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use Aggressive\Ads\Assets\Assets;
+use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Portal\Request;
 use Aggressive\Ads\Portal\Routes;
 use Aggressive\Ads\Portal\Campaign_Actions;
@@ -55,6 +56,17 @@ foreach ( $aggr_slots as $aggr_slot ) {
 	}
 }
 
+/*
+ * Editing a running campaign is a mode, not a status: the campaign stays live
+ * throughout. It is only entered when the site allows it, the campaign is
+ * running, and nothing is already with the review team.
+ */
+$aggr_confirming_cancel = true === ( $aggr_campaign['can_cancel'] ?? false )
+	&& Campaign_Actions::wants_cancel_confirmation();
+
+$aggr_editing_changes = Campaign_Actions::wants_change_editor()
+	&& true === ( $aggr_campaign['can_request_changes'] ?? false );
+
 if ( 'creative' === $aggr_step && '' !== $aggr_creative_notice ) {
 	$aggr_notice = '';
 }
@@ -67,27 +79,110 @@ if ( 'creative' === $aggr_step && '' !== $aggr_creative_notice ) {
 
 <div class="aggr-pagehead">
 	<div>
-		<h1 class="aggr-title"><?php echo esc_html( (string) $aggr_campaign['title'] ); ?></h1>
+		<div class="aggr-pagehead__heading">
+			<h1 class="aggr-title"><?php echo esc_html( (string) $aggr_campaign['title'] ); ?></h1>
+
+			<span class="aggr-pill aggr-pill--<?php echo esc_attr( (string) $aggr_campaign['pill'] ); ?>">
+				<?php echo esc_html( (string) $aggr_campaign['status_text'] ); ?>
+			</span>
+		</div>
+
 		<p class="aggr-lede"><?php echo esc_html( (string) $aggr_campaign['dates'] ); ?></p>
 	</div>
 
-	<span class="aggr-pill aggr-pill--<?php echo esc_attr( (string) $aggr_campaign['pill'] ); ?>">
-		<?php echo esc_html( (string) $aggr_campaign['status_text'] ); ?>
-	</span>
+	<div class="aggr-pagehead__actions">
+		<?php if ( true === $aggr_campaign['can_withdraw'] ) : ?>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="<?php echo esc_attr( Campaign_Actions::WITHDRAW_ACTION ); ?>">
+				<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) (int) $aggr_campaign['id'] ); ?>">
+				<?php wp_nonce_field( Campaign_Actions::withdraw_nonce_action( (int) $aggr_campaign['id'] ) ); ?>
+				<button class="aggr-button" type="submit">
+					<?php esc_html_e( 'Withdraw and edit', 'aggressive-ads' ); ?>
+				</button>
+			</form>
+		<?php endif; ?>
 
-	<?php if ( true === $aggr_campaign['can_copy'] ) : ?>
-		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-			<input type="hidden" name="action" value="<?php echo esc_attr( Campaign_Actions::COPY_ACTION ); ?>">
-			<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) (int) $aggr_campaign['id'] ); ?>">
-			<?php wp_nonce_field( Campaign_Actions::copy_nonce_action( (int) $aggr_campaign['id'] ) ); ?>
-			<button class="aggr-button aggr-button--secondary" type="submit">
-				<?php echo esc_html( (string) $aggr_campaign['copy_label'] ); ?>
-			</button>
-		</form>
-	<?php endif; ?>
+		<?php if ( true === $aggr_campaign['can_request_changes'] && ! $aggr_editing_changes ) : ?>
+			<a class="aggr-button" href="<?php echo esc_url( add_query_arg( 'edit', '1', $aggr_campaign_url ) ); ?>">
+				<?php esc_html_e( 'Edit', 'aggressive-ads' ); ?>
+			</a>
+		<?php endif; ?>
+
+		<?php if ( true === $aggr_campaign['can_copy'] ) : ?>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="<?php echo esc_attr( Campaign_Actions::COPY_ACTION ); ?>">
+				<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) (int) $aggr_campaign['id'] ); ?>">
+				<?php wp_nonce_field( Campaign_Actions::copy_nonce_action( (int) $aggr_campaign['id'] ) ); ?>
+				<button class="aggr-button aggr-button--secondary" type="submit">
+					<?php echo esc_html( (string) $aggr_campaign['copy_label'] ); ?>
+				</button>
+			</form>
+		<?php endif; ?>
+
+		<?php if ( true === $aggr_campaign['can_cancel'] ) : ?>
+			<?php
+			/*
+			 * Outlined rather than filled, and last in the row. It sits beside
+			 * Edit and Duplicate because that is where a reader looks for what
+			 * they can do to a campaign — but it is irreversible, so it must not
+			 * compete with them for a glance.
+			 *
+			 * `formnovalidate` is absent deliberately: this posts to its own
+			 * handler, and the confirmation is the interstitial screen rather
+			 * than a JavaScript dialog, so the flow works with scripting off.
+			 */
+			?>
+			<form method="get" action="<?php echo esc_url( $aggr_campaign_url ); ?>">
+				<input type="hidden" name="confirm" value="cancel">
+				<button class="aggr-button aggr-button--outline-danger" type="submit">
+					<?php echo esc_html( (string) $aggr_campaign['cancel_label'] ); ?>
+				</button>
+			</form>
+		<?php endif; ?>
+	</div>
 </div>
 
-<?php if ( in_array( $aggr_notice, array( 'created', 'copied', 'saved', 'package_saved', 'schedule_saved', 'submitted' ), true ) ) : ?>
+<?php if ( $aggr_confirming_cancel ) : ?>
+	<section class="aggr-panel aggr-panel--danger" aria-labelledby="aggr-confirm-heading">
+		<h2 id="aggr-confirm-heading" class="aggr-panel__head" tabindex="-1">
+			<?php echo esc_html( (string) $aggr_campaign['cancel_label'] ); ?>
+		</h2>
+
+		<p>
+			<?php
+			echo esc_html(
+				Post_Statuses::DRAFT === (string) $aggr_campaign['status']
+					? __( 'This campaign will be closed and can never be reopened or submitted. Its record stays in your list so you can see what happened.', 'aggressive-ads' )
+					: __( 'This campaign will stop and can never be restarted. Its record and any delivery figures stay in your list.', 'aggressive-ads' )
+			);
+			?>
+		</p>
+		<p><?php esc_html_e( 'If you only want to change something, go back and use Edit instead.', 'aggressive-ads' ); ?></p>
+
+		<div class="aggr-form__actions">
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="<?php echo esc_attr( Campaign_Actions::CANCEL_ACTION ); ?>">
+				<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) (int) $aggr_campaign['id'] ); ?>">
+				<?php wp_nonce_field( Campaign_Actions::cancel_nonce_action( (int) $aggr_campaign['id'] ) ); ?>
+				<button class="aggr-button aggr-button--outline-danger" type="submit">
+					<?php echo esc_html( (string) $aggr_campaign['cancel_label'] ); ?>
+				</button>
+			</form>
+
+			<a class="aggr-button aggr-button--secondary" href="<?php echo esc_url( $aggr_campaign_url ); ?>">
+				<?php esc_html_e( 'Keep this campaign', 'aggressive-ads' ); ?>
+			</a>
+		</div>
+	</section>
+	<?php
+	// Nothing below this point applies while the reader is being asked to
+	// confirm: showing the wizard underneath a confirmation invites them to
+	// carry on editing a campaign they are about to end.
+	return;
+endif;
+?>
+
+<?php if ( in_array( $aggr_notice, array( 'created', 'copied', 'saved', 'package_saved', 'schedule_saved', 'submitted', 'withdrawn', 'changes_requested', 'changes_cancelled', 'changes_saved' ), true ) ) : ?>
 	<div class="aggr-alert aggr-alert--success" role="status">
 		<p>
 			<?php
@@ -98,6 +193,10 @@ if ( 'creative' === $aggr_step && '' !== $aggr_creative_notice ) {
 						'package_saved'  => __( 'Package saved. Add one correctly sized creative for each placement.', 'aggressive-ads' ),
 						'schedule_saved' => __( 'Destinations and schedule saved. Continue to review when you are ready.', 'aggressive-ads' ),
 						'submitted'      => __( 'Campaign submitted. It is now in the review queue.', 'aggressive-ads' ),
+						'withdrawn'      => __( 'Campaign withdrawn from review and reopened for editing. Submit it again when you are ready.', 'aggressive-ads' ),
+						'changes_requested' => __( 'Edits submitted for review. Your campaign keeps running as approved until the review team decides.', 'aggressive-ads' ),
+						'changes_cancelled' => __( 'Edits discarded. Nothing about your running campaign changed.', 'aggressive-ads' ),
+						'changes_saved'     => __( 'Saved. Nothing is sent to the review team until you submit these edits.', 'aggressive-ads' ),
 						default          => __( 'Details saved. Choose a package to continue.', 'aggressive-ads' ),
 					}
 				);
@@ -329,7 +428,7 @@ if ( 'creative' === $aggr_step && '' !== $aggr_creative_notice ) {
 							<p><?php esc_html_e( 'The catalogue is not configured yet. Your draft is safe; please return later or get in touch.', 'aggressive-ads' ); ?></p>
 						</div>
 					<?php else : ?>
-						<div class="aggr-choicegrid aggr-choicegrid--packages">
+						<div class="aggr-choicegrid">
 							<?php foreach ( $aggr_packages as $aggr_package ) : ?>
 								<?php $aggr_selected_package_id = $aggr_package_id > 0 ? $aggr_package_id : ( (bool) $aggr_package['is_default'] ? (int) $aggr_package['id'] : 0 ); ?>
 								<label class="aggr-choice aggr-choice--package">
@@ -363,12 +462,12 @@ if ( 'creative' === $aggr_step && '' !== $aggr_creative_notice ) {
 			</form>
 		<?php elseif ( 'creative' === $aggr_step ) : ?>
 			<div class="aggr-form">
-				<p class="aggr-hint"><?php esc_html_e( 'Upload one image for every placement. Files stay in private storage until staff approve the campaign. JPEG, PNG, GIF, and WebP are supported, up to 2 MB.', 'aggressive-ads' ); ?></p>
+				<p class="aggr-hint"><?php esc_html_e( 'Upload one ad creative for every placement. Files stay in private storage until staff approve the campaign. JPEG, PNG, GIF, and WebP are supported, up to 2 MB.', 'aggressive-ads' ); ?></p>
 
 				<?php if ( array() === $aggr_slots ) : ?>
 					<div class="aggr-empty">
 						<p class="aggr-empty__title"><?php esc_html_e( 'Choose a package first', 'aggressive-ads' ); ?></p>
-						<p><?php esc_html_e( 'A package supplies the placements and exact image sizes required for this campaign.', 'aggressive-ads' ); ?></p>
+						<p><?php esc_html_e( 'A package supplies the placements and exact ad creative sizes required for this campaign.', 'aggressive-ads' ); ?></p>
 					</div>
 				<?php else : ?>
 					<div class="aggr-upload-list">
@@ -380,7 +479,7 @@ if ( 'creative' === $aggr_step && '' !== $aggr_creative_notice ) {
 										<p>
 											<?php
 											/* translators: %s: required image dimensions, e.g. 728x90. */
-											printf( esc_html__( 'Required image size: %s pixels', 'aggressive-ads' ), esc_html( (string) $aggr_slot['size'] ) );
+											printf( esc_html__( 'Required ad creative size: %s pixels', 'aggressive-ads' ), esc_html( (string) $aggr_slot['size'] ) );
 											?>
 										</p>
 									</div>
@@ -455,7 +554,7 @@ if ( 'creative' === $aggr_step && '' !== $aggr_creative_notice ) {
 										<?php wp_nonce_field( Creative_Actions::upload_nonce_action( (int) $aggr_campaign['id'], (int) $aggr_slot['id'] ) ); ?>
 
 										<div class="aggr-field">
-											<label for="aggr-file-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?>"><?php esc_html_e( 'Image file', 'aggressive-ads' ); ?></label>
+											<label for="aggr-file-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?>"><?php esc_html_e( 'Ad creative file', 'aggressive-ads' ); ?></label>
 											<p id="aggr-file-hint-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?>" class="aggr-hint">
 												<?php
 												/* translators: %s: required image dimensions, e.g. 728x90. */
@@ -743,6 +842,16 @@ if ( 'creative' === $aggr_step && '' !== $aggr_creative_notice ) {
 		<?php endif; ?>
 	</dl>
 </section>
+
+	<?php
+	if ( true === ( $aggr_campaign['edits_submitted'] ?? false ) ) {
+		require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-changes-pending.php';
+	} elseif ( $aggr_editing_changes ) {
+		require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-changes.php';
+	}
+	?>
+
+	<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-request.php'; ?>
 
 	<?php if ( true !== $aggr_campaign['can_request_updates'] ) : ?>
 <section class="aggr-panel" aria-labelledby="aggr-creatives-heading">

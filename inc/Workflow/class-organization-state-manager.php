@@ -32,6 +32,7 @@ final class Organization_State_Manager {
 	) {
 	}
 
+
 	/**
 	 * Suspend an organization so it cannot submit or grow membership.
 	 *
@@ -53,13 +54,31 @@ final class Organization_State_Manager {
 	}
 
 	/**
-	 * Apply one explicit lifecycle state.
+	 * Applies one explicit lifecycle state.
+	 *
+	 * Public because the REST route needs the state vocabulary to live in one
+	 * place. suspend() and reactivate() are the internal spellings of the same
+	 * call, and a caller that already holds the state as a string should not
+	 * have to translate it back into a verb — that translation is what would
+	 * end up duplicated in every screen and route that grows a third state.
+	 *
+	 * Being callable from outside is why the allowlist below exists. The private
+	 * version could trust its two callers; this one cannot, and an unrecognised
+	 * state must not reach the meta write, because Org_Repository stores what it
+	 * is given and every later read compares against the two known constants.
 	 *
 	 * @param int    $org_id Organization id.
 	 * @param string $state  Active or suspended.
 	 * @return true|WP_Error
 	 */
-	private function set_state( int $org_id, string $state ): bool|WP_Error {
+	public function set_state( int $org_id, string $state ): bool|WP_Error {
+		if ( ! in_array( $state, array( Org_Repository::STATE_ACTIVE, Org_Repository::STATE_SUSPENDED ), true ) ) {
+			return new WP_Error(
+				'aggr_invalid_org_state',
+				__( 'That is not an organization state.', 'aggressive-ads' )
+			);
+		}
+
 		if ( ! current_user_can( Capabilities::MANAGE_ORGS ) ) {
 			$this->record( $org_id, Audit_Event::OUTCOME_DENIED, 'Organization state change denied.' );
 

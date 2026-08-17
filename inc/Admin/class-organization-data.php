@@ -35,7 +35,7 @@ final class Organization_Data {
 	/**
 	 * Complete organizations-screen state.
 	 *
-	 * @return array{rows: array<int, array{id: int, name: string, state: string, active: bool, owner_name: string, members: int, campaigns: int}>}
+	 * @return array{rows: array<int, array<string, mixed>>}
 	 */
 	public function view(): array {
 		$rows = array();
@@ -46,14 +46,42 @@ final class Organization_Data {
 			$list     = $this->campaigns->for_org( $org_id, 1 );
 			$state    = $this->organizations->state( $org_id );
 
+			/*
+			 * The roster is listed, not counted.
+			 *
+			 * Staff need to act on a specific person — transfer ownership to
+			 * them, or remove them — and a count identifies nobody. The owner is
+			 * marked here rather than compared in the browser, because the rule
+			 * that an owner cannot be removed is the server's and the screen
+			 * should not be re-deriving it.
+			 */
+			$members = array();
+
+			foreach ( $this->organizations->user_ids_for_org( $org_id ) as $member_id ) {
+				$member = $this->users->by_id( $member_id );
+
+				if ( null === $member ) {
+					continue;
+				}
+
+				$members[] = array(
+					'id'       => $member_id,
+					'name'     => (string) $member->display_name,
+					'email'    => (string) $member->user_email,
+					'is_owner' => $member_id === $owner_id,
+				);
+			}
+
 			$rows[] = array(
-				'id'         => $org_id,
-				'name'       => $this->organizations->name( $org_id ),
-				'state'      => $state,
-				'active'     => Org_Repository::STATE_ACTIVE === $state,
-				'owner_name' => null !== $owner ? (string) $owner->display_name : '',
-				'members'    => count( $this->organizations->user_ids_for_org( $org_id ) ),
-				'campaigns'  => (int) ( $list['total'] ?? 0 ),
+				'id'          => $org_id,
+				'name'        => $this->organizations->name( $org_id ),
+				'state'       => $state,
+				'active'      => Org_Repository::STATE_ACTIVE === $state,
+				'owner_id'    => $owner_id,
+				'owner_name'  => null !== $owner ? (string) $owner->display_name : '',
+				'member_list' => $members,
+				'members'     => count( $members ),
+				'campaigns'   => (int) ( $list['total'] ?? 0 ),
 			);
 		}
 

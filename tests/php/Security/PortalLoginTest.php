@@ -17,6 +17,7 @@ use Aggressive\Ads\Portal\Router;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Security\Rate_Limiter;
 use Aggressive\Ads\Security\Roles;
+use Aggressive\Ads\Tests\Redirect_Trap;
 use WP_UnitTestCase;
 
 /**
@@ -28,6 +29,7 @@ use WP_UnitTestCase;
  * indistinguishable from one another.
  */
 final class PortalLoginTest extends WP_UnitTestCase {
+	use Redirect_Trap;
 
 	/**
 	 * The router under test.
@@ -35,13 +37,6 @@ final class PortalLoginTest extends WP_UnitTestCase {
 	 * @var Router
 	 */
 	private Router $router;
-
-	/**
-	 * Redirects captured instead of performed.
-	 *
-	 * @var array<int, string>
-	 */
-	private array $redirects = array();
 
 	/**
 	 * Sets up roles, permalinks and redirect capture.
@@ -53,10 +48,8 @@ final class PortalLoginTest extends WP_UnitTestCase {
 
 		( new Installer( new Audit_Repository(), new Roles() ) )->install_roles();
 
-		$this->router    = Plugin::instance()->container()->get( Router::class );
-		$this->redirects = array();
+		$this->router = Plugin::instance()->container()->get( Router::class );
 
-		add_filter( 'wp_redirect', array( $this, 'capture_redirect' ) );
 
 		$this->set_permalink_structure( '/%postname%/' );
 		$this->router->register_rules();
@@ -71,22 +64,9 @@ final class PortalLoginTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function tear_down(): void {
-		remove_filter( 'wp_redirect', array( $this, 'capture_redirect' ) );
 		$this->set_permalink_structure( '' );
 
 		parent::tear_down();
-	}
-
-	/**
-	 * Records a redirect and cancels it, so the caller does not exit.
-	 *
-	 * @param string $location Redirect target.
-	 * @return false
-	 */
-	public function capture_redirect( string $location ): bool {
-		$this->redirects[] = $location;
-
-		return false;
 	}
 
 	/**
@@ -102,11 +82,11 @@ final class PortalLoginTest extends WP_UnitTestCase {
 		wp_set_current_user( 0 );
 
 		$this->go_to( home_url( '/advertiser/campaigns/' ) );
-		$this->router->gate();
+		$redirects = $this->trap_redirects( fn () => $this->router->gate() );
 
-		$this->assertCount( 1, $this->redirects );
-		$this->assertStringContainsString( '/advertiser/login/', $this->redirects[0] );
-		$this->assertStringNotContainsString( 'wp-login.php', $this->redirects[0] );
+		$this->assertCount( 1, $redirects );
+		$this->assertStringContainsString( '/advertiser/login/', $redirects[0] );
+		$this->assertStringNotContainsString( 'wp-login.php', $redirects[0] );
 	}
 
 	/**
@@ -118,11 +98,11 @@ final class PortalLoginTest extends WP_UnitTestCase {
 		wp_set_current_user( 0 );
 
 		$this->go_to( home_url( '/advertiser/campaigns/' ) );
-		$this->router->gate();
+		$redirects = $this->trap_redirects( fn () => $this->router->gate() );
 
 		$this->assertStringContainsString(
 			rawurlencode( home_url( '/advertiser/campaigns/' ) ),
-			$this->redirects[0]
+			$redirects[0]
 		);
 	}
 
@@ -156,11 +136,11 @@ final class PortalLoginTest extends WP_UnitTestCase {
 		wp_set_current_user( self::factory()->user->create( array( 'role' => Roles::ADVERTISER ) ) );
 
 		$this->go_to( home_url( '/advertiser/login/' ) );
-		$this->router->gate();
+		$redirects = $this->trap_redirects( fn () => $this->router->gate() );
 
-		$this->assertCount( 1, $this->redirects );
-		$this->assertStringContainsString( '/advertiser/', $this->redirects[0] );
-		$this->assertStringNotContainsString( 'login', $this->redirects[0] );
+		$this->assertCount( 1, $redirects );
+		$this->assertStringContainsString( '/advertiser/', $redirects[0] );
+		$this->assertStringNotContainsString( 'login', $redirects[0] );
 	}
 
 	/**

@@ -1,0 +1,80 @@
+/*
+ * WordPress admin palette for the staff screens.
+ *
+ * The review screens sit inside wp-admin, beside core's own lists and notices,
+ * and the advertiser portal does not. Sharing one palette across both made the
+ * staff surface read as a plugin bolted into the admin rather than part of it —
+ * warm paper and a maroon accent next to core's grey and blue.
+ *
+ * So this is a *token* override, not a rewrite: every component rule in
+ * admin.css and the shared partials keeps referencing the same --aggr-* names
+ * and simply resolves them to core's values here. Nothing about layout,
+ * spacing, focus behaviour or structure changes, and the portal is untouched —
+ * the block is scoped to .aggr-admin, which only the staff screens carry.
+ *
+ * Values are the default "Fresh" admin scheme. They are literals for the reason
+ * portal.css states about its own: a token resolving through --wp--preset--*
+ * renders as *nothing* where that preset is absent, and an unresolved custom
+ * property in a colour declaration is transparent text on a transparent
+ * background. Not a degraded look; an unreadable screen.
+ *
+ * Every pair below is measured in AdminContrastTest. Core's own palette is not
+ * automatically WCAG AA at small sizes — #2271b1 on white is 4.6:1, which
+ * passes with almost nothing to spare — so these cannot be nudged by eye.
+ */
+
+.aggr-admin {
+	/* Surfaces. Core's canvas is the grey behind every admin list. */
+	--aggr-color-canvas: #f0f0f1;
+	--aggr-color-surface: #ffffff;
+	--aggr-color-surface-raised: #ffffff;
+	--aggr-color-surface-sunken: #f6f7f7;
+	--aggr-color-surface-inset: #f0f0f1;
+
+	/* Ink. #1d2327 is core's heading colour, #3c434a its body. */
+	--aggr-color-text: #1d2327;
+	--aggr-color-text-body: #3c434a;
+	--aggr-color-text-muted: #646970;
+	--aggr-color-text-subtle: #646970;
+
+	/*
+	 * Rules. The light one is core's row separator; the strong one is its
+	 * *input* border, which is a different and darker grey on purpose —
+	 * #c3c4c7 is 1.7:1 on white and cannot carry a control's boundary.
+	 */
+	--aggr-border-color: #dcdcde;
+	--aggr-border-color-strong: #8c8f94;
+
+	/*
+	 * Accent. Core's primary blue, and the darker shade it uses for hover and
+	 * for links on a tinted background.
+	 */
+	--aggr-color-accent: #2271b1;
+	--aggr-color-accent-strong: #135e96;
+	--aggr-color-accent-contrast: #ffffff;
+	--aggr-color-accent-rail: #72aee6;
+
+	/*
+	 * Status. Core's notice colours, darkened where its own value would fail
+	 * on a tint: #00a32a on #edfaef is 2.8:1, so the ink is #007017 instead.
+	 * The tints are core's; the inks are the darkest shade that still reads as
+	 * the same colour.
+	 */
+	--aggr-color-live: #007017;
+	--aggr-color-live-tint: #edfaef;
+	--aggr-color-pending: #8a6116;
+	--aggr-color-pending-tint: #fcf9e8;
+	--aggr-color-danger: #b32d2e;
+	--aggr-color-danger-tint: #fcf0f1;
+	--aggr-color-neutral: #2271b1;
+	--aggr-color-neutral-tint: #f0f6fc;
+	--aggr-color-ended: #50575e;
+	--aggr-color-ended-tint: #f0f0f1;
+
+	/* The rail is core's admin menu, for any component that reaches for it. */
+	--aggr-color-rail: #1d2327;
+	--aggr-color-rail-active: #2271b1;
+	--aggr-color-rail-chip: #2c3338;
+	--aggr-color-rail-text: #f0f0f1;
+	--aggr-color-rail-text-strong: #ffffff;
+}

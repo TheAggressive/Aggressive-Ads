@@ -38,7 +38,7 @@ $aggr_overlays = array();
 	aria-labelledby="aggr-update-creatives-heading"
 >
 	<h2 id="aggr-update-creatives-heading" class="aggr-panel__head"><?php esc_html_e( 'Your ads', 'aggressive-ads' ); ?></h2>
-	<p><?php esc_html_e( 'Select an ad to change its image or destination. The current ad keeps running until staff approve its replacement.', 'aggressive-ads' ); ?></p>
+	<p><?php esc_html_e( 'Select an ad to change its ad creative or destination. The current ad keeps running until staff approve its replacement.', 'aggressive-ads' ); ?></p>
 
 	<div class="aggr-creative-grid">
 		<?php foreach ( $aggr_creatives as $aggr_creative ) : ?>
@@ -53,7 +53,7 @@ $aggr_overlays = array();
 			}
 			?>
 			<?php if ( is_array( $aggr_pending_update ) ) : ?>
-			<article class="aggr-creative aggr-creative--pending">
+			<article class="aggr-creative">
 				<div class="aggr-creative__summary">
 					<div class="aggr-creative__preview">
 						<img src="<?php echo esc_url( (string) $aggr_pending_update['preview'] ); ?>" alt="" loading="lazy">
@@ -99,7 +99,7 @@ $aggr_overlays = array();
 					'close_href' => 'aggr-update-creatives-heading',
 				);
 				?>
-			<article class="aggr-creative aggr-creative--editable">
+			<article class="aggr-creative">
 				<div class="aggr-creative__summary">
 					<a
 						class="aggr-creative__preview"

@@ -13,6 +13,7 @@ use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Domain\Upload_Rules;
 use Aggressive\Ads\Repository\Package_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
+use Aggressive\Ads\Core\Settings;
 use Aggressive\Ads\Workflow\Campaign_Editor;
 
 /**
@@ -26,11 +27,13 @@ final class Catalogue_View_Data {
 	 * @param Placement_Repository $placements Placement persistence.
 	 * @param Package_Repository   $packages   Package persistence.
 	 * @param Campaign_Editor      $editor     Canonical package validation.
+	 * @param Settings             $settings   Brand and support details.
 	 */
 	public function __construct(
 		private readonly Placement_Repository $placements,
 		private readonly Package_Repository $packages,
-		private readonly Campaign_Editor $editor
+		private readonly Campaign_Editor $editor,
+		private readonly Settings $settings
 	) {
 	}
 
@@ -68,7 +71,15 @@ final class Catalogue_View_Data {
 			'placements' => $this->placement_options(),
 			'max_size'   => size_format( Upload_Rules::MAX_BYTES ),
 			'file_types' => array_values( array_unique( $types ) ),
-			'contact'    => (string) get_option( 'admin_email', '' ),
+
+			/*
+			 * The configured support address, falling back to the site's admin
+			 * email. The fallback is a starting point, not a destination:
+			 * admin_email is where WordPress sends password resets and core
+			 * update notices, and pointing every advertiser at it is how a
+			 * support request lands in an inbox nobody watches for support.
+			 */
+			'contact'    => '' !== $this->support_email() ? $this->support_email() : (string) get_option( 'admin_email', '' ),
 		);
 	}
 
@@ -155,5 +166,14 @@ final class Catalogue_View_Data {
 			Post_Statuses::COMPLETE  => __( 'Finished. Duplicate it to run the campaign again.', 'aggressive-ads' ),
 			default                  => __( 'Cancelled and no longer running.', 'aggressive-ads' ),
 		};
+	}
+
+	/**
+	 * The configured advertiser-facing support address, or an empty string.
+	 */
+	private function support_email(): string {
+		$document = $this->settings->get();
+
+		return isset( $document['brand']['support_email'] ) ? (string) $document['brand']['support_email'] : '';
 	}
 }

@@ -379,7 +379,7 @@ final class Creative_Change_Manager {
 		$alt_text = '' === $alt_text ? Creative_Manager::automatic_alt_text( $click_url ) : $alt_text;
 
 		if ( mb_strlen( $alt_text ) > Creative_Manager::MAX_ALT_TEXT_LENGTH ) {
-			return $this->error( 'aggr_alt_text_too_long', __( 'Use 500 characters or fewer for the image description.', 'aggressive-ads' ), 422, 'alt_text' );
+			return $this->error( 'aggr_alt_text_too_long', __( 'Use 500 characters or fewer for the ad creative description.', 'aggressive-ads' ), 422, 'alt_text' );
 		}
 
 		$accepted = $this->uploader->accept( $file );

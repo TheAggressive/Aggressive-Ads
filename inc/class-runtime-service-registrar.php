@@ -9,7 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads;
 
-use Aggressive\Ads\Admin\Creative_Change_Actions;
+use Aggressive\Ads\Admin\Campaign_Change_Actions;
 use Aggressive\Ads\Admin\Organization_Data;
 use Aggressive\Ads\Admin\Organization_Screen;
 use Aggressive\Ads\Admin\Package_Data;
@@ -19,7 +19,9 @@ use Aggressive\Ads\Admin\Placement_Screen;
 use Aggressive\Ads\Admin\Review_Data;
 use Aggressive\Ads\Admin\Review_Screen;
 use Aggressive\Ads\Core\Settings;
+use Aggressive\Ads\Workflow\Campaign_Change_Manager;
 use Aggressive\Ads\Install\Rewrite_Flusher;
+use Aggressive\Ads\Install\Rewrite_Health;
 use Aggressive\Ads\Integration\Ad_Provider_Interface;
 use Aggressive\Ads\Notification\Notification_Delivery;
 use Aggressive\Ads\Notification\Notification_Service;
@@ -36,6 +38,7 @@ use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Repository\User_Repository;
 use Aggressive\Ads\REST\Beacon_Controller;
 use Aggressive\Ads\REST\Fill_Controller;
+use Aggressive\Ads\REST\Review_Controller;
 use Aggressive\Ads\Security\Rate_Limiter;
 use Aggressive\Ads\Workflow\Campaign_State_Machine;
 use Aggressive\Ads\Workflow\Click_Hop;
@@ -66,11 +69,6 @@ final class Runtime_Service_Registrar {
 	 */
 	public function register( Service_Container $container ): void {
 		$container->register(
-			Creative_Change_Actions::class,
-			static fn ( Service_Container $c ): Creative_Change_Actions => new Creative_Change_Actions( $c->get( Creative_Change_Manager::class ) )
-		);
-
-		$container->register(
 			Campaign_State_Machine::class,
 			static fn ( Service_Container $c ): Campaign_State_Machine => new Campaign_State_Machine(
 				$c->get( Campaign_Repository::class ),
@@ -98,7 +96,8 @@ final class Runtime_Service_Registrar {
 				$c->get( Creative_Repository::class ),
 				$c->get( Placement_Repository::class ),
 				$c->get( Org_Repository::class ),
-				$c->get( Audit_Repository::class )
+				$c->get( Audit_Repository::class ),
+				$c->get( Campaign_Change_Manager::class )
 			)
 		);
 
@@ -112,26 +111,32 @@ final class Runtime_Service_Registrar {
 		);
 
 		$container->register(
+			Review_Controller::class,
+			static fn ( Service_Container $c ): Review_Controller => new Review_Controller(
+				$c->get( Review_Data::class ),
+				$c->get( Review_Actions::class ),
+				$c->get( Campaign_Change_Actions::class )
+			)
+		);
+
+		$container->register(
 			Review_Screen::class,
 			static fn ( Service_Container $c ): Review_Screen => new Review_Screen(
-				$c->get( Review_Data::class ),
-				$c->get( Review_Actions::class )
+				$c->get( Review_Data::class )
 			)
 		);
 
 		$container->register(
 			Placement_Screen::class,
 			static fn ( Service_Container $c ): Placement_Screen => new Placement_Screen(
-				$c->get( Placement_Data::class ),
-				$c->get( Placement_Manager::class )
+				$c->get( Placement_Data::class )
 			)
 		);
 
 		$container->register(
 			Organization_Screen::class,
 			static fn ( Service_Container $c ): Organization_Screen => new Organization_Screen(
-				$c->get( Organization_Data::class ),
-				$c->get( Organization_State_Manager::class )
+				$c->get( Organization_Data::class )
 			)
 		);
 
@@ -155,8 +160,7 @@ final class Runtime_Service_Registrar {
 		$container->register(
 			Package_Screen::class,
 			static fn ( Service_Container $c ): Package_Screen => new Package_Screen(
-				$c->get( Package_Data::class ),
-				$c->get( Package_Manager::class )
+				$c->get( Package_Data::class )
 			)
 		);
 
@@ -212,6 +216,13 @@ final class Runtime_Service_Registrar {
 			static fn ( Service_Container $c ): Rewrite_Flusher => new Rewrite_Flusher(
 				$c->get( Router::class ),
 				$c->get( Click_Hop::class )
+			)
+		);
+
+		$container->register(
+			Rewrite_Health::class,
+			static fn ( Service_Container $c ): Rewrite_Health => new Rewrite_Health(
+				$c->get( Rewrite_Flusher::class )
 			)
 		);
 

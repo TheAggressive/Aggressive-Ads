@@ -52,9 +52,34 @@ test( 'advertiser completes and submits the accessible six-step wizard', async (
 
 	const title = `E2E browser campaign ${ Date.now() }`;
 	await page.getByLabel( 'Campaign name' ).fill( title );
-	await page
-		.getByLabel( 'Notes for the review team' )
-		.fill( 'Browser-tested submission.' );
+
+	/*
+	 * Autosave must not move the caret out from under someone who is still
+	 * typing. It fires on a 600ms debounce, announces through a polite live
+	 * region, and deliberately touches focus not at all — so the assertion is
+	 * that the field the user was in is still focused, with the caret still
+	 * where they left it, after a save has actually completed.
+	 */
+	const notes = page.getByLabel( 'Notes for the review team' );
+	await notes.click();
+	await page.keyboard.type( 'Browser-tested submission.' );
+
+	/*
+	 * The announcement text is asserted, not merely its presence. These strings
+	 * are hydrated by the server and were being overwritten with empty defaults
+	 * by the client store, so the region rendered, passed axe, and said nothing
+	 * — for saves, and for the save *errors* that matter more.
+	 */
+	const status = page.locator( '[id^="aggr-autosave-status-"]' );
+	await expect( status ).toHaveText( 'Draft saved.', { timeout: 15_000 } );
+
+	await expect( notes ).toBeFocused();
+	expect(
+		await notes.evaluate(
+			( el ) => ( el as HTMLTextAreaElement ).selectionStart
+		)
+	).toBe( 'Browser-tested submission.'.length );
+
 	await page.getByRole( 'button', { name: 'Save and continue' } ).click();
 
 	await expect(
@@ -71,7 +96,7 @@ test( 'advertiser completes and submits the accessible six-step wizard', async (
 		page.getByRole( 'heading', { level: 2, name: 'Upload creative' } )
 	).toBeFocused();
 	const upload = page.getByRole( 'region', { name: 'Article sidebar' } );
-	await upload.getByLabel( 'Image file' ).setInputFiles( {
+	await upload.getByLabel( 'Ad creative file' ).setInputFiles( {
 		name: 'e2e-sidebar.png',
 		mimeType: 'image/png',
 		buffer: solidPng( 300, 250 ),
@@ -204,7 +229,7 @@ test( 'advertiser completes and submits the accessible six-step wizard', async (
 	await expect(
 		page.getByRole( 'dialog', { name: 'Update Article sidebar' } )
 	).toBeVisible();
-	await expect( page.getByLabel( 'Replacement image' ) ).toBeVisible();
+	await expect( page.getByLabel( 'Replacement ad creative' ) ).toBeVisible();
 	await expect( page.getByLabel( 'Destination URL' ) ).toHaveValue(
 		'https://www.example.com/exhibition'
 	);

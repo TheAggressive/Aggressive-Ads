@@ -2,9 +2,108 @@
  * Staff review screens.
  *
  * This file contains layout only. Colour, type, spacing, radii, focus and
- * control sizing all come from the portal's --aggr-* token layer, so the
- * staff and advertiser surfaces cannot become two visual systems.
+ * control sizing all come from the --aggr-* token layer, so the staff and
+ * advertiser surfaces cannot become two visual systems.
+ *
+ * The staff surface resolves those tokens to WordPress's own admin palette —
+ * see base/_admin-tokens.css. That is a token substitution and nothing more:
+ * every rule below is unchanged by it, which is the whole reason the colours
+ * were never written here in the first place.
  */
+
+@import './base/_admin-tokens.css';
+
+/*
+ * Restores the gutter wp-admin gives every screen.
+ *
+ * `.aggr-portal` zeroes the margin, correctly, because on the front end it is
+ * the page. In wp-admin the same element also carries `.wrap`, whose right
+ * margin is what keeps a screen off the edge of the viewport — and losing it
+ * put the table hard against the window. Two classes, so this wins on
+ * specificity rather than on load order.
+ */
+.wrap.aggr-admin {
+	margin: 10px 20px 0 2px;
+	padding-bottom: var(--aggr-space-xl);
+}
+
+/*
+ * Review actions in the page header.
+ *
+ * Sized to their content, unlike the same buttons inside .aggr-action, which
+ * stretch to the width of the feedback box they submit. Wraps rather than
+ * shrinks: two actions plus a long campaign name is the normal case on a
+ * narrow viewport, not an edge one.
+ */
+.aggr-pagehead__actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--aggr-space-sm);
+}
+
+.aggr-pagehead__actions .aggr-button {
+	width: auto;
+}
+
+/*
+ * Approval, drawn as an assertion.
+ *
+ * The one edge that puts a campaign in front of the public, and the only
+ * button on the screen that should read as a decision rather than a step.
+ * Uses the live token, which is the same green the Live pill carries, so the
+ * colour means the same thing in both places.
+ */
+.aggr-button--positive {
+	border-color: var(--aggr-color-live);
+	background: var(--aggr-color-live);
+	color: var(--aggr-color-accent-contrast);
+}
+
+.aggr-button--positive:hover,
+.aggr-button--positive:focus-visible {
+	border-color: var(--aggr-color-live);
+	background: var(--aggr-color-live);
+	color: var(--aggr-color-accent-contrast);
+	filter: brightness(0.92);
+}
+
+/*
+ * Above the admin bar, which core puts at 99999.
+ *
+ * The overlay's own token is 1000, which is right on the front end and would
+ * render this dialog *underneath* the admin menu and toolbar. The dialog is
+ * portaled to <body>, so it is outside .aggr-admin and needs its own hook.
+ */
+.aggr-overlay--admin {
+	z-index: 100000;
+}
+
+/*
+ * A control that reads as a link.
+ *
+ * The queue's campaign names and the detail screen's breadcrumb navigate
+ * within a client-rendered screen rather than following an href, so they are
+ * buttons — and an unstyled button in a table cell renders as a grey box with
+ * a border, which is what shipped. This gives them a link's appearance while
+ * they keep a button's semantics and keyboard behaviour.
+ */
+.aggr-linkbutton {
+	padding: 0;
+	border: 0;
+	background: none;
+	color: var(--aggr-color-accent);
+	font: inherit;
+	font-weight: 600;
+	text-align: left;
+	cursor: pointer;
+}
+
+.aggr-linkbutton:hover,
+.aggr-linkbutton:focus-visible {
+	color: var(--aggr-color-accent-strong);
+	text-decoration: underline;
+}
 
 	.aggr-package-row {
 		padding-top: var(--aggr-space-lg);
@@ -156,24 +255,46 @@
 		padding: var(--aggr-space-lg);
 	}
 
-	.aggr-creative {
+	/*
+	 * Scoped to .aggr-admin, and that scoping is the fix rather than a habit.
+	 *
+	 * `.aggr-creative` is defined twice: the advertiser's card in
+	 * components/_surfaces.css is `display: flex; flex-direction: column`, and
+	 * this one was written as a plain block. Both stylesheets load on the staff
+	 * screen, so the portal's rule won and the preview became a flex item —
+	 * which then refused to grow past its own min-height while the image inside
+	 * kept its 360px cap. A 160x600 skyscraper hung 204px below its own box and
+	 * over the text beneath it. Two components should not share a class name;
+	 * until one is renamed, this scope is what keeps them apart.
+	 */
+	.aggr-admin .aggr-creative {
+		display: block;
 		overflow: hidden;
+		padding: 0;
 		border: 1px solid var(--aggr-border-color);
 		border-radius: var(--aggr-radius-control);
 		background: var(--aggr-color-surface-raised);
+		box-shadow: none;
 	}
 
-	.aggr-creative__preview {
-		display: grid;
-		min-height: 180px;
-		place-items: center;
+	/*
+	 * Only the two things that genuinely differ from the advertiser's card.
+	 *
+	 * components/_surfaces.css already gets this right — a flex box with a
+	 * definite height, and an image capped at 100% of it — and that pairing is
+	 * the whole trick: a percentage max-height needs a definite parent to
+	 * resolve against. Redefining the box here as a grid with a min-height
+	 * broke both halves at once, and a 160x600 skyscraper hung 204px below its
+	 * own card and over the text beneath it.
+	 *
+	 * So this overrides the height, because reviewing a creative means reading
+	 * it rather than recognising it, and the tint, because the staff card sits
+	 * on a different surface. Everything else is inherited on purpose.
+	 */
+	.aggr-admin .aggr-creative__preview {
+		height: 22rem;
 		padding: var(--aggr-space-lg);
 		background: var(--aggr-color-surface-sunken);
-	}
-
-	.aggr-creative__preview img {
-		max-height: 360px;
-		object-fit: contain;
 	}
 
 	.aggr-creative__body {
@@ -365,3 +486,50 @@
 			min-width: 16rem;
 		}
 	}
+
+/* Row actions live in their own forms outside the settings form, because a
+   form inside a form is invalid HTML that browsers discard. They carry only
+   hidden inputs, so they must not take up space. */
+.aggr-hidden-form {
+	display: contents;
+}
+
+/*
+ * A form beside its list, rather than under it. Used by Inventory and
+ * Packages; Settings groups its roster and add control into one panel instead,
+ * because there they are one subject rather than two.
+ *
+ * Same proportions as the review screen, and scoped separately so renaming one
+ * does not silently restyle the other.
+ */
+.aggr-admin-split {
+	display: grid;
+	grid-template-columns: minmax(0, 3fr) minmax(280px, 2fr);
+	gap: var(--aggr-space-lg);
+	align-items: start;
+}
+
+/*
+ * Inventory and Packages put their create form before their list, because
+ * that is the right reading and tab order. The list still deserves the wider
+ * column, so the proportions are reversed here rather than the markup.
+ */
+.aggr-admin-split--narrow-first {
+	grid-template-columns: minmax(280px, 2fr) minmax(0, 3fr);
+}
+
+@media (max-width: 960px) {
+	.aggr-admin-split,
+	.aggr-admin-split--narrow-first {
+		grid-template-columns: 1fr;
+	}
+}
+
+.aggr-admin-split > .aggr-panel {
+	margin-bottom: 0;
+}
+
+/* A colour swatch needs no measure at all. */
+.aggr-admin .aggr-field input[type="color"] {
+	max-width: 6rem;
+}

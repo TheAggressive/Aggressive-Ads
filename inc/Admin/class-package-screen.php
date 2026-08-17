@@ -9,48 +9,78 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Admin;
 
-use Aggressive\Ads\Assets\Assets;
 use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\REST\Creative_File_Controller;
 use Aggressive\Ads\Security\Capabilities;
-use Aggressive\Ads\Workflow\Package_Manager;
-use WP_Error;
 
 /**
  * Delivers package create/update without exposing generic package post editing.
  */
 final class Package_Screen implements Service {
 
-	public const MENU_SLUG     = 'aggr-packages';
-	public const CREATE_ACTION = 'aggr_create_package';
-	public const UPDATE_ACTION = 'aggr_update_package';
+	public const MENU_SLUG = 'aggr-packages';
 
 	/**
-	 * Hook suffix assigned by WordPress.
+	 * Constructor.
+	 *
+	 * @param Package_Data $data    Screen read model.
+	 */
+	public function __construct( private readonly Package_Data $data ) {
+	}
+
+	/**
+	 * The screen's own hook suffix, captured at registration.
 	 *
 	 * @var string
 	 */
 	private string $hook_suffix = '';
 
 	/**
-	 * Constructor.
+	 * Attaches the menu and the screen's bundle.
 	 *
-	 * @param Package_Data    $data    Screen read model.
-	 * @param Package_Manager $manager Package workflow.
-	 */
-	public function __construct(
-		private readonly Package_Data $data,
-		private readonly Package_Manager $manager
-	) {
-	}
-
-	/**
-	 * Attaches menu, assets, and the authenticated form handlers.
+	 * There are no admin-post handlers any more. Catalogue writes go to
+	 * REST\Packages_Controller, which is thin over the same Package_Manager the
+	 * handlers called — one authenticated path to the catalogue rather than two
+	 * that have to be kept in agreement.
 	 */
 	public function init(): void {
 		add_action( 'admin_menu', array( $this, 'register_menu' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue' ) );
-		add_action( 'admin_post_' . self::CREATE_ACTION, array( $this, 'handle_create' ) );
-		add_action( 'admin_post_' . self::UPDATE_ACTION, array( $this, 'handle_update' ) );
+	}
+
+	/**
+	 * Loads the screen's bundle, on this screen only.
+	 *
+	 * Enqueuing belongs on this hook rather than inside the render callback: a
+	 * callback runs after the document head has been sent, so a stylesheet asked
+	 * for there survives only because core prints late styles in the footer, and
+	 * flashes an unstyled screen while it does.
+	 *
+	 * @param string $hook_suffix Current admin screen.
+	 * @return void
+	 */
+	public function enqueue( string $hook_suffix ): void {
+		if ( '' === $this->hook_suffix || $hook_suffix !== $this->hook_suffix ) {
+			return;
+		}
+
+		$asset = AGGR_PLUGIN_DIR . 'dist/admin/packages.asset.php';
+
+		if ( ! is_file( $asset ) ) {
+			return;
+		}
+
+		$meta = require $asset;
+
+		wp_enqueue_script(
+			'aggr-packages',
+			AGGR_PLUGIN_URL . 'dist/admin/packages.js',
+			is_array( $meta['dependencies'] ?? null ) ? $meta['dependencies'] : array(),
+			is_string( $meta['version'] ?? null ) ? $meta['version'] : AGGR_VERSION,
+			true
+		);
+
+		wp_enqueue_style( 'wp-components' );
 	}
 
 	/**
@@ -69,19 +99,13 @@ final class Package_Screen implements Service {
 		$this->hook_suffix = is_string( $hook ) ? $hook : '';
 	}
 
-	/**
-	 * Loads the shared staff design system only on this screen.
+	/*
+	 * No stylesheet is enqueued here.
 	 *
-	 * @param string $hook_suffix Current admin screen.
+	 * This screen is native WordPress admin markup — poststuff, postbox,
+	 * form-table, notice, button — so core already styles every part of it.
+	 * Loading the plugin's design system would only give it something to fight.
 	 */
-	public function enqueue( string $hook_suffix ): void {
-		if ( '' === $this->hook_suffix || $hook_suffix !== $this->hook_suffix ) {
-			return;
-		}
-
-		$this->enqueue_style( Assets::HANDLE, Assets::STYLE_PORTAL );
-		$this->enqueue_style( 'aggr-admin', Assets::STYLE_ADMIN, array( Assets::HANDLE ) );
-	}
 
 	/**
 	 * Renders the authorized catalogue.
@@ -95,194 +119,73 @@ final class Package_Screen implements Service {
 			);
 		}
 
-		$aggr_view   = $this->data->view();
-		$aggr_notice = $this->request_notice();
-
-		require AGGR_PLUGIN_DIR . 'templates/admin/packages.php';
+		$this->render_screen();
 	}
 
 	/**
-	 * Creates one package.
-	 */
-	public function handle_create(): void {
-		if ( ! current_user_can( Capabilities::MANAGE_PACKAGES ) ) {
-			wp_die(
-				esc_html__( 'You do not have permission to do that.', 'aggressive-ads' ),
-				'',
-				array( 'response' => 403 )
-			);
-		}
-
-		check_admin_referer( self::CREATE_ACTION );
-
-		$result = $this->manager->create( $this->posted_fields() );
-		$this->redirect_after( $result, 'package_created' );
-	}
-
-	/**
-	 * Updates one existing package.
-	 */
-	public function handle_update(): void {
-		if ( ! current_user_can( Capabilities::MANAGE_PACKAGES ) ) {
-			wp_die(
-				esc_html__( 'You do not have permission to do that.', 'aggressive-ads' ),
-				'',
-				array( 'response' => 403 )
-			);
-		}
-
-		$package_id = $this->posted_package_id();
-
-		check_admin_referer( self::nonce_action( $package_id ) );
-
-		$result = $this->manager->update( $package_id, $this->posted_fields() );
-		$this->redirect_after( $result, 'package_saved' );
-	}
-
-	/**
-	 * Package-scoped form nonce action.
+	 * Prints the mount point and the catalogue it edits.
 	 *
-	 * @param int $package_id Package post id.
+	 * @return void
 	 */
-	public static function nonce_action( int $package_id ): string {
-		return self::UPDATE_ACTION . '_' . max( 0, $package_id );
+	private function render_screen(): void {
+		if ( ! is_file( AGGR_PLUGIN_DIR . 'dist/admin/packages.asset.php' ) ) {
+			printf(
+				'<div class="wrap"><h1>%1$s</h1><div class="notice notice-error"><p>%2$s</p></div></div>',
+				esc_html__( 'Packages', 'aggressive-ads' ),
+				esc_html__( 'The packages screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' )
+			);
+
+			return;
+		}
+
+		$payload = array(
+			'view'     => $this->data->view(),
+			'restPath' => '/' . Creative_File_Controller::NAMESPACE . '/packages',
+			'i18n'     => array(
+				'newPackage'         => __( 'New package', 'aggressive-ads' ),
+				'create'             => __( 'Create package', 'aggressive-ads' ),
+				'save'               => __( 'Save package', 'aggressive-ads' ),
+				'created'            => __( 'Package created.', 'aggressive-ads' ),
+				'saved'              => __( 'Package saved.', 'aggressive-ads' ),
+				'name'               => __( 'Name', 'aggressive-ads' ),
+				'placements'         => __( 'Placements', 'aggressive-ads' ),
+				'noPlacements'       => __( 'No placements exist yet. Create one under Inventory first.', 'aggressive-ads' ),
+				'inactive'           => __( 'inactive', 'aggressive-ads' ),
+				'customDuration'     => __( 'Advertiser chooses the dates', 'aggressive-ads' ),
+				'customDurationHelp' => __( 'Leave off to sell a fixed run length.', 'aggressive-ads' ),
+				'durationDays'       => __( 'Duration (days)', 'aggressive-ads' ),
+				'price'              => __( 'Price', 'aggressive-ads' ),
+				'priceHelp'          => __( 'Stored as whole cents. Two decimal places.', 'aggressive-ads' ),
+				'currency'           => __( 'Currency', 'aggressive-ads' ),
+				'active'             => __( 'Active', 'aggressive-ads' ),
+				'activeHelp'         => __( 'Inactive packages are hidden from advertisers.', 'aggressive-ads' ),
+				'isDefault'          => __( 'Catalogue default', 'aggressive-ads' ),
+				'isDefaultHelp'      => __( 'Pre-selected in the campaign wizard. Only one package can be the default.', 'aggressive-ads' ),
+				'defaultTag'         => __( 'default', 'aggressive-ads' ),
+				'statusPending'      => __( 'Not saved yet…', 'aggressive-ads' ),
+				'statusSaving'       => __( 'Saving…', 'aggressive-ads' ),
+				'statusSaved'        => __( 'Saved.', 'aggressive-ads' ),
+				'statusError'        => __( 'Not saved.', 'aggressive-ads' ),
+				'saveFailed'         => __( 'That package could not be saved.', 'aggressive-ads' ),
+				'retry'              => __( 'Try again', 'aggressive-ads' ),
+			),
+		);
+
+		printf(
+			'<div class="wrap aggr-admin"><h1>%1$s</h1><noscript><div class="notice notice-error"><p>%2$s</p></div></noscript><div id="aggr-packages-root" data-aggr-packages="%3$s"></div></div>',
+			esc_html__( 'Packages', 'aggressive-ads' ),
+			esc_html__( 'The packages screen needs JavaScript enabled.', 'aggressive-ads' ),
+			esc_attr( (string) wp_json_encode( $payload ) )
+		);
 	}
+
+
+
 
 	/**
 	 * Screen URL.
 	 */
 	public static function url(): string {
 		return add_query_arg( 'page', self::MENU_SLUG, admin_url( 'admin.php' ) );
-	}
-
-	/**
-	 * Fixed notice selected from allowlisted redirect state.
-	 *
-	 * @param string $result success or error.
-	 * @param string $code   Stable result code.
-	 * @return array{type: string, message: string}|null
-	 */
-	public static function notice_for( string $result, string $code ): ?array {
-		if ( 'success' === $result && in_array( $code, array( 'package_saved', 'package_created' ), true ) ) {
-			return array(
-				'type'    => 'success',
-				'message' => 'package_created' === $code
-					? __( 'Package created.', 'aggressive-ads' )
-					: __( 'Package saved.', 'aggressive-ads' ),
-			);
-		}
-
-		if ( 'error' !== $result ) {
-			return null;
-		}
-
-		$message = match ( $code ) {
-			'aggr_forbidden'                  => __( 'You do not have permission to manage packages.', 'aggressive-ads' ),
-			'aggr_package_not_found'          => __( 'That package could not be found.', 'aggressive-ads' ),
-			'aggr_package_not_saved'          => __( 'The package could not be saved. Try again.', 'aggressive-ads' ),
-			'aggr_package_limit'              => __( 'The package catalogue is full.', 'aggressive-ads' ),
-			'aggr_invalid_package_name'       => __( 'Enter a package name.', 'aggressive-ads' ),
-			'aggr_invalid_package_duration'   => __( 'Enter a duration in days, or mark the package as advertiser-scheduled.', 'aggressive-ads' ),
-			'aggr_invalid_package_price'      => __( 'Price must be an integer number of cents.', 'aggressive-ads' ),
-			'aggr_invalid_package_currency'   => __( 'Currency must be a three-letter ISO 4217 code.', 'aggressive-ads' ),
-			'aggr_invalid_package_default'    => __( 'Only an active package can be the catalogue default.', 'aggressive-ads' ),
-			'aggr_invalid_package_placements' => __( 'An active package must include at least one active placement with a valid size.', 'aggressive-ads' ),
-			default                           => __( 'The package could not be updated.', 'aggressive-ads' ),
-		};
-
-		return array(
-			'type'    => 'error',
-			'message' => $message,
-		);
-	}
-
-	/**
-	 * Posted package id.
-	 */
-	private function posted_package_id(): int {
-		return isset( $_POST['package_id'] ) ? absint( wp_unslash( $_POST['package_id'] ) ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- handle_update() verifies the package nonce before calling this.
-	}
-
-	/**
-	 * Allowlisted fields from the form.
-	 *
-	 * @return array<string, mixed>
-	 */
-	private function posted_fields(): array {
-		$placements = array();
-
-		if ( isset( $_POST['placement_ids'] ) && is_array( $_POST['placement_ids'] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing -- handle_*() verifies the nonce before calling this.
-			foreach ( wp_unslash( $_POST['placement_ids'] ) as $raw ) { // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- handle_*() verified the nonce; absint below.
-				$placements[] = absint( $raw );
-			}
-		}
-
-		return array(
-			'name'            => isset( $_POST['name'] ) && is_string( $_POST['name'] ) ? wp_unslash( $_POST['name'] ) : '', // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Workflow sanitizes.
-			'placement_ids'   => $placements,
-			'duration_days'   => isset( $_POST['duration_days'] ) ? absint( wp_unslash( $_POST['duration_days'] ) ) : 0, // phpcs:ignore WordPress.Security.NonceVerification.Missing -- The caller verifies the action nonce before reading these fields.
-			'custom_duration' => ! empty( $_POST['custom_duration'] ), // phpcs:ignore WordPress.Security.NonceVerification.Missing -- The caller verifies the action nonce before reading these fields.
-			'price_cents'     => isset( $_POST['price_cents'] ) ? (int) wp_unslash( $_POST['price_cents'] ) : -1, // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Workflow bounds the integer.
-			'currency'        => isset( $_POST['currency'] ) && is_string( $_POST['currency'] ) ? wp_unslash( $_POST['currency'] ) : '', // phpcs:ignore WordPress.Security.NonceVerification.Missing, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Workflow sanitizes.
-			'is_active'       => ! empty( $_POST['is_active'] ), // phpcs:ignore WordPress.Security.NonceVerification.Missing -- The caller verifies the action nonce before reading these fields.
-			'is_default'      => ! empty( $_POST['is_default'] ), // phpcs:ignore WordPress.Security.NonceVerification.Missing -- The caller verifies the action nonce before reading these fields.
-		);
-	}
-
-	/**
-	 * Redirects after a verified write.
-	 *
-	 * @param true|int|WP_Error $result Workflow result.
-	 * @param string            $ok     Success code.
-	 * @return never
-	 */
-	private function redirect_after( bool|int|WP_Error $result, string $ok ): never {
-		$is_error = is_wp_error( $result );
-		$url      = add_query_arg(
-			array(
-				'aggr_result' => $is_error ? 'error' : 'success',
-				'aggr_code'   => $is_error ? sanitize_key( (string) $result->get_error_code() ) : $ok,
-			),
-			self::url()
-		);
-
-		wp_safe_redirect( $url, 303 );
-		exit;
-	}
-
-	/**
-	 * Notice from the redirect query.
-	 *
-	 * @return array{type: string, message: string}|null
-	 */
-	private function request_notice(): ?array {
-		$result = isset( $_GET['aggr_result'] ) ? sanitize_key( wp_unslash( $_GET['aggr_result'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Display-only flash from our own redirect.
-		$code   = isset( $_GET['aggr_code'] ) ? sanitize_key( wp_unslash( $_GET['aggr_code'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Display-only flash from our own redirect.
-
-		return self::notice_for( $result, $code );
-	}
-
-	/**
-	 * Enqueues one local stylesheet with cache-safe versioning.
-	 *
-	 * @param string             $handle       Style handle.
-	 * @param string             $relative     Plugin-relative path.
-	 * @param array<int, string> $dependencies Style dependencies.
-	 */
-	private function enqueue_style( string $handle, string $relative, array $dependencies = array() ): void {
-		$path = AGGR_PLUGIN_DIR . $relative;
-
-		if ( ! is_file( $path ) ) {
-			return;
-		}
-
-		$mtime = filemtime( $path );
-
-		wp_enqueue_style(
-			$handle,
-			AGGR_PLUGIN_URL . $relative,
-			$dependencies,
-			false === $mtime ? AGGR_VERSION : (string) $mtime
-		);
 	}
 }

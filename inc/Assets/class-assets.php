@@ -379,11 +379,11 @@ final class Assets implements Service {
 					'uploads' => $uploads,
 					'i18n'    => array(
 						'ready'      => __( 'File selected. Upload when you are ready.', 'aggressive-ads' ),
-						'empty'      => __( 'Choose an image file to upload.', 'aggressive-ads' ),
+						'empty'      => __( 'Choose an ad creative file to upload.', 'aggressive-ads' ),
 						'type'       => __( 'Use a JPEG, PNG, GIF, or WebP image.', 'aggressive-ads' ),
-						'size'       => __( 'The file is larger than 2 MB. Choose a smaller image.', 'aggressive-ads' ),
-						'pixels'     => __( 'That image is too large in pixels to process safely. Choose a smaller image.', 'aggressive-ads' ),
-						'dimensions' => __( 'The image must match the required pixel size for this placement.', 'aggressive-ads' ),
+						'size'       => __( 'The file is larger than 2 MB. Choose a smaller ad creative.', 'aggressive-ads' ),
+						'pixels'     => __( 'That ad creative is too large in pixels to process safely. Choose a smaller one.', 'aggressive-ads' ),
+						'dimensions' => __( 'The ad creative must match the required pixel size for this placement.', 'aggressive-ads' ),
 					),
 				)
 			);

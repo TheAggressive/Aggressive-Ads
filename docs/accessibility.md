@@ -6,6 +6,28 @@ Automated scanning runs against the `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, 
 
 Axe catches roughly a third of real problems. The rest is keyboard traversal, focus order, announcement quality, and whether the error message actually tells someone what to do. Those are asserted per-flow and checked manually.
 
+## Two traps this codebase has already fallen into
+
+Both passed axe. Both were found by deliberately breaking the guard and watching
+nothing fail.
+
+**A live region that renders and never speaks.** The Interactivity API merges the
+client `store()` state *over* the server's `wp_interactivity_state()`, so
+declaring placeholder `i18n` defaults in a module — `saved: ''`, `error: ''` —
+silently overwrites every translated string with an empty one. `aggr/autosave`,
+`aggr/wizard` and `aggr/upload` all did this, so every portal live region was
+mute: no "Draft saved.", no upload validation message, and no "Could not save
+the draft. Your last change may not be stored." Never declare an `i18n` key the
+server hydrates, and assert the announcement **text** in e2e rather than that
+the element exists.
+
+**A focus-trap test that only presses Tab once.** One press lands on the first
+control inside the panel whether or not anything is trapping focus, so it passes
+with `setupFocusTrap()` deleted outright — which it did, in both browser
+projects. Only a press from the *last* stop tells a trap from an ordinary tab
+order. `expectDialogKeyboard()` now counts the stops and walks a full cycle plus
+one in both directions.
+
 ## Requirements
 
 - Complete keyboard operation. Every action reachable and performable without a mouse.

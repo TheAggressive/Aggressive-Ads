@@ -10,11 +10,9 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Admin;
 
 use Aggressive\Ads\Assets\Assets;
-use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\REST\Creative_File_Controller;
 use Aggressive\Ads\Security\Capabilities;
-use Aggressive\Ads\Workflow\Review_Actions;
-use WP_Error;
 
 /**
  * Registers and serves the review queue without exposing the private CPT UI.
@@ -22,12 +20,20 @@ use WP_Error;
  * A purpose-built screen keeps staff on the workflow: there is no generic
  * post-status dropdown that can bypass the state machine and no custom-fields
  * box that can leak or overwrite protected metadata.
+ *
+ * There are no admin-post handlers any more. Every decision goes to
+ * `REST\Review_Controller` or, for a status change, to `Transitions_Controller`
+ * — one authenticated path per decision rather than two that have to be kept in
+ * agreement. What is left here is the menu, the assets and the mount point.
+ *
+ * Unlike the other converted admin screens this one keeps the plugin's own
+ * design system rather than moving to core's component set. `src/styles/admin.css`
+ * exists for these two views and is contrast-gated; replacing it would be a
+ * decision about the product's visual direction, not part of moving the writes.
  */
 final class Review_Screen implements Service {
 
-	public const MENU_SLUG         = 'aggr-review';
-	public const TRANSITION_ACTION = 'aggr_review_transition';
-	public const NOTES_ACTION      = 'aggr_review_notes';
+	public const MENU_SLUG = 'aggr-review';
 
 	/**
 	 * This screen's hook suffix, assigned by add_submenu_page().
@@ -39,25 +45,19 @@ final class Review_Screen implements Service {
 	/**
 	 * Constructor.
 	 *
-	 * @param Review_Data    $data    Screen data.
-	 * @param Review_Actions $actions Review writes.
+	 * @param Review_Data $data Screen data.
 	 */
-	public function __construct(
-		private readonly Review_Data $data,
-		private readonly Review_Actions $actions
-	) {
+	public function __construct( private readonly Review_Data $data ) {
 	}
 
 	/**
-	 * Attaches the menu, assets and form handlers.
+	 * Attaches the menu and assets.
 	 *
 	 * @return void
 	 */
 	public function init(): void {
 		add_action( 'admin_menu', array( $this, 'register_menu' ) );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue' ) );
-		add_action( 'admin_post_' . self::TRANSITION_ACTION, array( $this, 'handle_transition' ) );
-		add_action( 'admin_post_' . self::NOTES_ACTION, array( $this, 'handle_notes' ) );
 	}
 
 	/**
@@ -69,7 +69,7 @@ final class Review_Screen implements Service {
 		$hook = add_submenu_page(
 			Menu::PARENT_SLUG,
 			__( 'Campaign review', 'aggressive-ads' ),
-			__( 'Review', 'aggressive-ads' ),
+			$this->menu_title(),
 			Capabilities::REVIEW_CAMPAIGNS,
 			self::MENU_SLUG,
 			array( $this, 'render' )
@@ -79,7 +79,53 @@ final class Review_Screen implements Service {
 	}
 
 	/**
-	 * Loads the shared design tokens and the admin layout only on this screen.
+	 * The menu label, carrying a count of what is waiting.
+	 *
+	 * Core's own bubble markup, so it inherits the styling and the screen-reader
+	 * treatment WordPress already applies to Comments and Updates rather than
+	 * inventing a second convention.
+	 *
+	 * The badge exists because a request that nobody is told about is a request
+	 * that does not get answered. Advertisers could submit a change to a running
+	 * campaign and staff had no tab, no count and no notification carrying it —
+	 * the work reached the database and stopped there.
+	 *
+	 * Counted only for a user who could act on it: rendering "3" to somebody
+	 * whose queue would show nothing is worse than rendering nothing.
+	 *
+	 * @return string
+	 */
+	private function menu_title(): string {
+		$label = __( 'Review', 'aggressive-ads' );
+
+		if ( ! current_user_can( Capabilities::REVIEW_CAMPAIGNS ) ) {
+			return $label;
+		}
+
+		$waiting = $this->data->pending_decision_count();
+
+		if ( $waiting < 1 ) {
+			return $label;
+		}
+
+		return sprintf(
+			/* translators: 1: menu label, 2: number of items awaiting a decision. */
+			__( '%1$s %2$s', 'aggressive-ads' ),
+			$label,
+			sprintf(
+				'<span class="awaiting-mod"><span class="pending-count">%s</span></span>',
+				esc_html( number_format_i18n( $waiting ) )
+			)
+		);
+	}
+
+	/**
+	 * Loads the shared design tokens, the admin layout and the screen's bundle.
+	 *
+	 * Enqueuing belongs on this hook rather than inside the render callback: a
+	 * callback runs after the document head has been sent, so a stylesheet asked
+	 * for there survives only because core prints late styles in the footer, and
+	 * flashes an unstyled screen while it does.
 	 *
 	 * @param string $hook_suffix Current admin screen.
 	 * @return void
@@ -91,10 +137,26 @@ final class Review_Screen implements Service {
 
 		$this->enqueue_style( Assets::HANDLE, Assets::STYLE_PORTAL );
 		$this->enqueue_style( 'aggr-review', Assets::STYLE_ADMIN, array( Assets::HANDLE ) );
+
+		$asset = AGGR_PLUGIN_DIR . 'dist/admin/review.asset.php';
+
+		if ( ! is_file( $asset ) ) {
+			return;
+		}
+
+		$meta = require $asset;
+
+		wp_enqueue_script(
+			'aggr-review-screen',
+			AGGR_PLUGIN_URL . 'dist/admin/review.js',
+			is_array( $meta['dependencies'] ?? null ) ? $meta['dependencies'] : array(),
+			is_string( $meta['version'] ?? null ) ? $meta['version'] : AGGR_VERSION,
+			true
+		);
 	}
 
 	/**
-	 * Renders either the queue or one campaign.
+	 * Renders the authorized review interface.
 	 *
 	 * @return void
 	 */
@@ -107,106 +169,164 @@ final class Review_Screen implements Service {
 			);
 		}
 
-		$aggr_filter = $this->request_filter();
-		$aggr_page   = $this->request_page();
-		$campaign_id = $this->request_campaign_id();
-		$aggr_notice = $this->request_notice();
+		$this->render_screen();
+	}
 
-		if ( $campaign_id > 0 ) {
-			$aggr_campaign = $this->data->campaign( $campaign_id );
-			require AGGR_PLUGIN_DIR . 'templates/admin/review-campaign.php';
+	/**
+	 * Prints the mount point and the state it opens on.
+	 *
+	 * The first view is server-rendered *state*, not markup: the queue or the
+	 * campaign named in the URL travels in the payload so the screen draws
+	 * without a round trip, and a bookmarked campaign opens on that campaign.
+	 *
+	 * @return void
+	 */
+	private function render_screen(): void {
+		if ( ! is_file( AGGR_PLUGIN_DIR . 'dist/admin/review.asset.php' ) ) {
+			printf(
+				'<div class="wrap"><h1>%1$s</h1><div class="notice notice-error"><p>%2$s</p></div></div>',
+				esc_html__( 'Campaign review', 'aggressive-ads' ),
+				esc_html__( 'The review screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' )
+			);
 
 			return;
 		}
 
-		$aggr_tabs  = $this->data->tabs();
-		$aggr_queue = $this->data->queue( $aggr_filter, $aggr_page );
+		$filter      = $this->request_filter();
+		$page        = $this->request_page();
+		$campaign_id = $this->request_campaign_id();
 
-		require AGGR_PLUGIN_DIR . 'templates/admin/review-queue.php';
+		$payload = array(
+			'filter'     => $filter,
+			'paged'      => $page,
+			'campaignId' => $campaign_id,
+			'queueUrl'   => self::queue_url(),
+			'restPath'   => '/' . Creative_File_Controller::NAMESPACE . '/review',
+			'tabs'       => $this->data->tabs(),
+			'queue'      => $campaign_id > 0 ? self::empty_queue( $page ) : $this->data->queue( $filter, $page ),
+			'campaign'   => $campaign_id > 0 ? $this->data->campaign( $campaign_id ) : null,
+			'i18n'       => self::strings(),
+		);
+
+		printf(
+			'<div class="wrap aggr-portal aggr-admin"><noscript><div class="notice notice-error"><p>%1$s</p></div></noscript><div id="aggr-review-root" data-aggr-review="%2$s"></div></div>',
+			esc_html__( 'The campaign review screen needs JavaScript enabled.', 'aggressive-ads' ),
+			esc_attr( (string) wp_json_encode( $payload ) )
+		);
 	}
 
 	/**
-	 * Handles one lifecycle action.
+	 * A queue placeholder for the campaign view.
 	 *
-	 * @return void
+	 * Opening straight onto one campaign should not also run the queue's paged
+	 * query for a list nobody is about to look at.
+	 *
+	 * @param int $page Current page.
+	 * @return array{rows: array<int, mixed>, total: int, pages: int, page: int}
 	 */
-	public function handle_transition(): void {
-		if ( ! current_user_can( Capabilities::REVIEW_CAMPAIGNS ) ) {
-			wp_die(
-				esc_html__( 'You do not have permission to do that.', 'aggressive-ads' ),
-				'',
-				array( 'response' => 403 )
-			);
-		}
-
-		$campaign_id = $this->posted_campaign_id();
-
-		check_admin_referer( self::nonce_action( $campaign_id ) );
-
-		$to     = isset( $_POST['to'] ) ? sanitize_key( wp_unslash( $_POST['to'] ) ) : '';
-		$notes  = isset( $_POST['review_notes'] ) ? sanitize_textarea_field( wp_unslash( $_POST['review_notes'] ) ) : '';
-		$result = $this->process_transition( $campaign_id, $to, $notes );
-
-		$this->redirect_after( $campaign_id, $result, 'transitioned' );
+	private static function empty_queue( int $page ): array {
+		return array(
+			'rows'  => array(),
+			'total' => 0,
+			'pages' => 1,
+			'page'  => max( 1, $page ),
+		);
 	}
 
 	/**
-	 * Handles the staff-only notes form.
+	 * Every string the screen renders.
 	 *
-	 * @return void
-	 */
-	public function handle_notes(): void {
-		if ( ! current_user_can( Capabilities::REVIEW_CAMPAIGNS ) ) {
-			wp_die(
-				esc_html__( 'You do not have permission to do that.', 'aggressive-ads' ),
-				'',
-				array( 'response' => 403 )
-			);
-		}
-
-		$campaign_id = $this->posted_campaign_id();
-
-		check_admin_referer( self::notes_nonce_action( $campaign_id ) );
-
-		$notes  = isset( $_POST['internal_notes'] ) ? sanitize_textarea_field( wp_unslash( $_POST['internal_notes'] ) ) : '';
-		$result = $this->process_notes( $campaign_id, $notes );
-
-		$this->redirect_after( $campaign_id, $result, 'notes_saved' );
-	}
-
-	/**
-	 * Validates delivery-level transition input before calling the workflow.
+	 * They live here rather than in the .tsx because `wp i18n make-pot` does not
+	 * parse TypeScript: an `__()` call over there would compile, run, and
+	 * produce no catalog entry at all.
 	 *
-	 * @param int    $campaign_id Campaign post id.
-	 * @param string $to          Target status.
-	 * @param string $notes       Advertiser-facing feedback.
-	 * @return true|WP_Error
+	 * @return array<string, string>
 	 */
-	public function process_transition( int $campaign_id, string $to, string $notes = '' ) {
-		if ( ! current_user_can( Capabilities::REVIEW_CAMPAIGNS ) ) {
-			return new WP_Error( 'aggr_forbidden', __( 'You do not have permission to do that.', 'aggressive-ads' ) );
-		}
-
-		if ( $campaign_id <= 0 || ! Post_Statuses::is_valid( $to ) ) {
-			return new WP_Error( 'aggr_invalid_request', __( 'That review action is not valid.', 'aggressive-ads' ) );
-		}
-
-		return $this->actions->transition( $campaign_id, $to, $notes );
-	}
-
-	/**
-	 * Validates delivery-level note input before calling the workflow.
-	 *
-	 * @param int    $campaign_id Campaign post id.
-	 * @param string $notes       Staff-only notes.
-	 * @return true|WP_Error
-	 */
-	public function process_notes( int $campaign_id, string $notes ) {
-		if ( ! current_user_can( Capabilities::REVIEW_CAMPAIGNS ) ) {
-			return new WP_Error( 'aggr_forbidden', __( 'You do not have permission to do that.', 'aggressive-ads' ) );
-		}
-
-		return $this->actions->save_internal_notes( $campaign_id, $notes );
+	private static function strings(): array {
+		return array(
+			'queueTitle'               => __( 'Campaign review', 'aggressive-ads' ),
+			'queueLede'                => __( 'Review advertiser submissions, provide clear feedback, and approve campaigns into the live set.', 'aggressive-ads' ),
+			'tabsLabel'                => __( 'Review queue filters', 'aggressive-ads' ),
+			'pagesLabel'               => __( 'Campaign review pages', 'aggressive-ads' ),
+			'previous'                 => __( 'Previous', 'aggressive-ads' ),
+			'next'                     => __( 'Next', 'aggressive-ads' ),
+			/* translators: 1: current page number. 2: total number of pages. */
+			'pageOf'                   => __( 'Page %1$s of %2$s', 'aggressive-ads' ),
+			/* translators: %s: number of campaigns in the selected queue. */
+			'campaignsCount'           => __( 'Campaigns (%s)', 'aggressive-ads' ),
+			'queueEmptyTitle'          => __( 'Nothing is waiting here.', 'aggressive-ads' ),
+			'queueEmptyBody'           => __( 'Campaigns will appear in this view as their status changes.', 'aggressive-ads' ),
+			'queueTableLabel'          => __( 'Campaign review queue table', 'aggressive-ads' ),
+			'colCampaign'              => __( 'Campaign', 'aggressive-ads' ),
+			'colAdvertiser'            => __( 'Advertiser', 'aggressive-ads' ),
+			'colPlacement'             => __( 'Placement', 'aggressive-ads' ),
+			'colStatus'                => __( 'Status', 'aggressive-ads' ),
+			'colSubmitted'             => __( 'Submitted', 'aggressive-ads' ),
+			'colReviewer'              => __( 'Reviewer', 'aggressive-ads' ),
+			'colUpdates'               => __( 'Ad updates', 'aggressive-ads' ),
+			'unassigned'               => __( 'Unassigned', 'aggressive-ads' ),
+			'backToQueue'              => __( 'Back to campaign review', 'aggressive-ads' ),
+			'campaignSummary'          => __( 'Campaign summary', 'aggressive-ads' ),
+			'organization'             => __( 'Organization', 'aggressive-ads' ),
+			'placements'               => __( 'Placements', 'aggressive-ads' ),
+			'schedule'                 => __( 'Schedule', 'aggressive-ads' ),
+			'reviewer'                 => __( 'Reviewer', 'aggressive-ads' ),
+			'submission'               => __( 'Submission', 'aggressive-ads' ),
+			'notSubmitted'             => __( 'Not submitted', 'aggressive-ads' ),
+			'revision'                 => __( 'Revision', 'aggressive-ads' ),
+			'advertiserFacingFeedback' => __( 'Advertiser-facing feedback', 'aggressive-ads' ),
+			'creativeReview'           => __( 'Creative review', 'aggressive-ads' ),
+			'noCreativeTitle'          => __( 'No creative uploaded', 'aggressive-ads' ),
+			'noCreativeBody'           => __( 'This campaign cannot be approved until every placement has creative.', 'aggressive-ads' ),
+			'requiredSize'             => __( 'Required size', 'aggressive-ads' ),
+			'uploadedSize'             => __( 'Uploaded size', 'aggressive-ads' ),
+			'altText'                  => __( 'Alt text', 'aggressive-ads' ),
+			'destination'              => __( 'Destination', 'aggressive-ads' ),
+			'currentDestination'       => __( 'Current destination', 'aggressive-ads' ),
+			'proposedDestination'      => __( 'Proposed destination', 'aggressive-ads' ),
+			'currentAlt'               => __( 'Current alt text', 'aggressive-ads' ),
+			'proposedAlt'              => __( 'Proposed alt text', 'aggressive-ads' ),
+			'advertiserAsked'          => __( 'The advertiser has asked for something', 'aggressive-ads' ),
+			/* translators: %s: the requested action, already translated. */
+			'requested'                => __( 'Requested: %s', 'aggressive-ads' ),
+			'requestHint'              => __( 'Use the review actions below to carry this out. The request clears itself once the campaign moves, or you can decline it with an explanation.', 'aggressive-ads' ),
+			'declineExplanation'       => __( 'Explanation for the advertiser', 'aggressive-ads' ),
+			'declineRequest'           => __( 'Decline request', 'aggressive-ads' ),
+			'requestedChanges'         => __( 'Requested campaign changes', 'aggressive-ads' ),
+			'requestedChangesLede'     => __( 'The campaign keeps running exactly as approved until you decide. Approving writes these values and refreshes delivery immediately.', 'aggressive-ads' ),
+			'field'                    => __( 'Field', 'aggressive-ads' ),
+			'currently'                => __( 'Currently', 'aggressive-ads' ),
+			'requestedCol'             => __( 'Requested', 'aggressive-ads' ),
+			'placementChangeWarn'      => __( 'This change alters the placements.', 'aggressive-ads' ),
+			'placementChangeBody'      => __( 'The existing creative will no longer match the required size, and the campaign will not serve until a new one is uploaded and reviewed.', 'aggressive-ads' ),
+			'approveChanges'           => __( 'Approve changes', 'aggressive-ads' ),
+			'rejectChanges'            => __( 'Reject changes', 'aggressive-ads' ),
+			'rejectionFeedback'        => __( 'Feedback required when rejecting', 'aggressive-ads' ),
+			'pendingUpdates'           => __( 'Pending ad updates', 'aggressive-ads' ),
+			'pendingUpdatesLede'       => __( 'The current ads remain in rotation until an update below is approved.', 'aggressive-ads' ),
+			'approveReplace'           => __( 'Approve and replace', 'aggressive-ads' ),
+			'rejectUpdate'             => __( 'Reject update', 'aggressive-ads' ),
+			'reviewActions'            => __( 'Review actions', 'aggressive-ads' ),
+			'noActions'                => __( 'No staff action is available from this status.', 'aggressive-ads' ),
+			'advertiserFeedback'       => __( 'Feedback the advertiser will see', 'aggressive-ads' ),
+			'cancel'                   => __( 'Cancel', 'aggressive-ads' ),
+			'close'                    => __( 'Close', 'aggressive-ads' ),
+			'internalNotes'            => __( 'Internal notes', 'aggressive-ads' ),
+			'staffOnly'                => __( 'Visible to staff only', 'aggressive-ads' ),
+			'saveInternalNotes'        => __( 'Save internal notes', 'aggressive-ads' ),
+			'auditTimeline'            => __( 'Audit timeline', 'aggressive-ads' ),
+			'noAudit'                  => __( 'No audit events have been recorded for this campaign.', 'aggressive-ads' ),
+			'unknownUser'              => __( 'Unknown user', 'aggressive-ads' ),
+			'transitioned'             => __( 'Campaign updated.', 'aggressive-ads' ),
+			'notesSaved'               => __( 'Internal notes saved.', 'aggressive-ads' ),
+			'changesApproved'          => __( 'Campaign changes approved.', 'aggressive-ads' ),
+			'changesRejected'          => __( 'Campaign changes rejected.', 'aggressive-ads' ),
+			'requestDeclined'          => __( 'The advertiser request was declined.', 'aggressive-ads' ),
+			'updateApproved'           => __( 'Ad update approved.', 'aggressive-ads' ),
+			'updateRejected'           => __( 'Ad update rejected.', 'aggressive-ads' ),
+			'saveFailed'               => __( 'That change could not be saved.', 'aggressive-ads' ),
+			'retry'                    => __( 'Try again', 'aggressive-ads' ),
+		);
 	}
 
 	/**
@@ -233,6 +353,11 @@ final class Review_Screen implements Service {
 	/**
 	 * URL for one campaign in the review interface.
 	 *
+	 * Still a real URL, and still what the notification emails link to. The
+	 * screen reads these parameters on load and keeps them in step as the
+	 * reviewer moves, so a link pasted to a colleague opens the campaign it
+	 * names rather than the queue.
+	 *
 	 * @param int    $campaign_id Campaign post id.
 	 * @param string $filter      Queue filter to return to.
 	 * @param int    $page        Queue page to return to.
@@ -246,87 +371,6 @@ final class Review_Screen implements Service {
 				'paged'    => max( 1, $page ),
 			),
 			self::queue_url()
-		);
-	}
-
-	/**
-	 * Nonce action for a campaign transition.
-	 *
-	 * @param int $campaign_id Campaign post id.
-	 * @return string
-	 */
-	public static function nonce_action( int $campaign_id ): string {
-		return self::TRANSITION_ACTION . '_' . $campaign_id;
-	}
-
-	/**
-	 * Nonce action for staff-only notes.
-	 *
-	 * @param int $campaign_id Campaign post id.
-	 * @return string
-	 */
-	public static function notes_nonce_action( int $campaign_id ): string {
-		return self::NOTES_ACTION . '_' . $campaign_id;
-	}
-
-	/**
-	 * A result notice safe to show after a redirect.
-	 *
-	 * @param string $result success or error.
-	 * @param string $code   Stable result code.
-	 * @param string $detail The workflow's own message, when one survived the redirect.
-	 * @return array{type: string, message: string, detail: string, action_url: string, action_label: string}|null
-	 */
-	public static function notice_for( string $result, string $code, string $detail = '' ): ?array {
-		if ( 'success' === $result ) {
-			$message = match ( $code ) {
-				'notes_saved'              => __( 'Internal notes saved.', 'aggressive-ads' ),
-				'creative_update_approved' => __( 'The ad update was approved and published.', 'aggressive-ads' ),
-				'creative_update_rejected' => __( 'The ad update was rejected. The current ad remains unchanged.', 'aggressive-ads' ),
-				default                    => __( 'Campaign status updated.', 'aggressive-ads' ),
-			};
-
-			return array(
-				'type'         => 'success',
-				'message'      => $message,
-				'detail'       => '',
-				'action_url'   => '',
-				'action_label' => '',
-			);
-		}
-
-		if ( 'error' !== $result ) {
-			return null;
-		}
-
-		/*
-		 * Every code a reviewer can reach, said in terms of what to do next.
-		 */
-		$message = match ( $code ) {
-			'aggr_forbidden'                => __( 'You do not have permission to perform that review action.', 'aggressive-ads' ),
-			'aggr_review_notes_required'    => __( 'Add advertiser-facing feedback before requesting changes or rejecting.', 'aggressive-ads' ),
-			'aggr_publication_incomplete'   => __( 'Some ads could not be published. Successful ads were kept, so retrying will not duplicate them.', 'aggressive-ads' ),
-			'aggr_campaign_not_found'       => __( 'The campaign could not be found.', 'aggressive-ads' ),
-			'aggr_campaign_invalid',
-			'aggr_creatives_incomplete'     => __( 'The campaign no longer passes its own submission checks. Request changes from the advertiser.', 'aggressive-ads' ),
-			'aggr_campaign_claimed'         => __( 'Another reviewer has claimed this campaign. Reload the queue to see who.', 'aggressive-ads' ),
-			'aggr_illegal_transition'       => __( 'That is not a move this campaign can make from its current status. Reload the page.', 'aggressive-ads' ),
-			'aggr_promote_failed'           => __( 'A creative file could not be moved into the media library, so nothing was published.', 'aggressive-ads' ),
-			'aggr_nothing_to_publish'       => __( 'This campaign has no creative to publish.', 'aggressive-ads' ),
-			'aggr_organization_inactive'    => __( 'The advertising organization is suspended, so this campaign cannot go live.', 'aggressive-ads' ),
-			'aggr_replacement_notes_required' => __( 'Add advertiser-facing feedback before rejecting this ad update.', 'aggressive-ads' ),
-			'aggr_replacement_campaign_inactive' => __( 'This campaign is no longer scheduled or live, so the update cannot be applied.', 'aggressive-ads' ),
-			'aggr_replacement_write_failed' => __( 'The replacement could not be applied. The current ad was left in place.', 'aggressive-ads' ),
-			'aggr_replacement_rollback_failed' => __( 'The update could not be recorded or rolled back. Pause the campaign and inspect its creatives.', 'aggressive-ads' ),
-			default                             => __( 'The campaign could not be updated. Review its requirements and try again.', 'aggressive-ads' ),
-		};
-
-		return array(
-			'type'         => 'error',
-			'message'      => $message,
-			'detail'       => $detail,
-			'action_url'   => '',
-			'action_label' => '',
 		);
 	}
 
@@ -353,110 +397,6 @@ final class Review_Screen implements Service {
 			$dependencies,
 			false === $mtime ? AGGR_VERSION : (string) $mtime
 		);
-	}
-
-	/**
-	 * Redirects to the campaign with only a stable result code in the URL.
-	 *
-	 * @param int           $campaign_id Campaign post id.
-	 * @param true|WP_Error $result      Workflow result.
-	 * @param string        $success     Success code.
-	 * @return never
-	 */
-	private function redirect_after( int $campaign_id, bool|WP_Error $result, string $success ): never {
-		$is_error = is_wp_error( $result );
-		$code     = $is_error ? (string) $result->get_error_code() : $success;
-
-		if ( $is_error ) {
-			$this->stash_detail( $campaign_id, (string) $result->get_error_message() );
-		}
-
-		$url = add_query_arg(
-			array(
-				'aggr_result' => $is_error ? 'error' : 'success',
-				'aggr_code'   => sanitize_key( $code ),
-			),
-			self::campaign_url( $campaign_id, $this->posted_filter(), $this->posted_page() )
-		);
-
-		wp_safe_redirect( $url, 303 );
-
-		exit;
-	}
-
-	/**
-	 * Notice selected from allowlisted query values.
-	 *
-	 * @return array{type: string, message: string}|null
-	 */
-	private function request_notice(): ?array {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only, allowlisted result state used only to select a fixed message.
-		$result = isset( $_GET['aggr_result'] ) ? sanitize_key( wp_unslash( $_GET['aggr_result'] ) ) : '';
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only, allowlisted result state used only to select a fixed message.
-		$code = isset( $_GET['aggr_code'] ) ? sanitize_key( wp_unslash( $_GET['aggr_code'] ) ) : '';
-
-		return self::notice_for( $result, $code, $this->take_detail( $this->request_campaign_id() ) );
-	}
-
-	/**
-	 * Keeps a failure's own words for one redirect.
-	 *
-	 * Only the stable code travels in the URL, which is right — a message in a
-	 * query string is a message an attacker can choose. But the code alone threw
-	 * away the useful half: the mapping resolver names every placement that
-	 * needs an ad group, and the reviewer saw "The campaign could not be
-	 * updated." A transient scoped to this user and this campaign carries the
-	 * detail across the redirect without letting anyone else write it.
-	 *
-	 * @param int    $campaign_id Campaign post id.
-	 * @param string $detail      The workflow's own message.
-	 * @return void
-	 */
-	private function stash_detail( int $campaign_id, string $detail ): void {
-		if ( '' === trim( $detail ) ) {
-			return;
-		}
-
-		set_transient( self::detail_key( $campaign_id ), $detail, MINUTE_IN_SECONDS );
-	}
-
-	/**
-	 * Reads and clears the stashed detail.
-	 *
-	 * Cleared on read so a reload does not repeat a failure the reviewer has
-	 * already dealt with.
-	 *
-	 * @param int $campaign_id Campaign post id.
-	 * @return string
-	 */
-	private function take_detail( int $campaign_id ): string {
-		if ( $campaign_id <= 0 ) {
-			return '';
-		}
-
-		$key    = self::detail_key( $campaign_id );
-		$detail = get_transient( $key );
-
-		if ( ! is_string( $detail ) || '' === $detail ) {
-			return '';
-		}
-
-		delete_transient( $key );
-
-		return $detail;
-	}
-
-	/**
-	 * The transient key for one reviewer's view of one campaign.
-	 *
-	 * Scoped by user as well as campaign: two reviewers acting on the same
-	 * campaign must not read each other's failures.
-	 *
-	 * @param int $campaign_id Campaign post id.
-	 * @return string
-	 */
-	private static function detail_key( int $campaign_id ): string {
-		return 'aggr_review_detail_' . get_current_user_id() . '_' . $campaign_id;
 	}
 
 	/**
@@ -487,38 +427,6 @@ final class Review_Screen implements Service {
 	private function request_filter(): string {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only navigation constrained to Review_Data's allowlist.
 		$filter = isset( $_GET['filter'] ) ? sanitize_key( wp_unslash( $_GET['filter'] ) ) : Review_Data::DEFAULT_FILTER;
-
-		return Review_Data::is_filter( $filter ) ? $filter : Review_Data::DEFAULT_FILTER;
-	}
-
-	/**
-	 * Campaign id from a write request.
-	 *
-	 * @return int
-	 */
-	private function posted_campaign_id(): int {
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- The id selects the per-campaign nonce action and is not used until check_admin_referer() passes.
-		return isset( $_POST['campaign_id'] ) ? absint( wp_unslash( $_POST['campaign_id'] ) ) : 0;
-	}
-
-	/**
-	 * Queue page preserved by a verified form.
-	 *
-	 * @return int
-	 */
-	private function posted_page(): int {
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Both callers verify their per-campaign nonce before redirecting.
-		return isset( $_POST['queue_page'] ) ? max( 1, absint( wp_unslash( $_POST['queue_page'] ) ) ) : 1;
-	}
-
-	/**
-	 * Queue filter preserved by a verified form.
-	 *
-	 * @return string
-	 */
-	private function posted_filter(): string {
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Both callers verify their per-campaign nonce before redirecting; the value is also allowlisted.
-		$filter = isset( $_POST['filter'] ) ? sanitize_key( wp_unslash( $_POST['filter'] ) ) : Review_Data::DEFAULT_FILTER;
 
 		return Review_Data::is_filter( $filter ) ? $filter : Review_Data::DEFAULT_FILTER;
 	}

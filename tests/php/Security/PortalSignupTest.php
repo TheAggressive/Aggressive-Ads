@@ -21,6 +21,7 @@ use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Security\Rate_Limiter;
 use Aggressive\Ads\Security\Roles;
 use Aggressive\Ads\Workflow\Advertiser_Registration;
+use Aggressive\Ads\Tests\Redirect_Trap;
 use WP_UnitTestCase;
 use WP_User;
 
@@ -28,6 +29,7 @@ use WP_User;
  * The public route, account transaction, activation and abuse controls.
  */
 final class PortalSignupTest extends WP_UnitTestCase {
+	use Redirect_Trap;
 
 	/**
 	 * Registration workflow.
@@ -479,15 +481,6 @@ final class PortalSignupTest extends WP_UnitTestCase {
 	 * @return array{router: Router, redirects: list<string>}
 	 */
 	private function signed_in_signup_gate( string $path ): array {
-		$redirects = array();
-		$capture   = static function ( string $location ) use ( &$redirects ): bool {
-			$redirects[] = $location;
-
-			return false;
-		};
-
-		add_filter( 'wp_redirect', $capture );
-
 		$router = Plugin::instance()->container()->get( Router::class );
 		$this->set_permalink_structure( '/%postname%/' );
 		$router->register_rules();
@@ -496,9 +489,8 @@ final class PortalSignupTest extends WP_UnitTestCase {
 
 		wp_set_current_user( self::factory()->user->create( array( 'role' => Roles::ADVERTISER ) ) );
 		$this->go_to( home_url( $path ) );
-		$router->gate();
 
-		remove_filter( 'wp_redirect', $capture );
+		$redirects = $this->trap_redirects( static fn () => $router->gate() );
 
 		return array(
 			'router'    => $router,

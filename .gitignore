@@ -14,6 +14,7 @@
 *.zip.sha256
 
 # Tooling caches
+/.cache/
 /.phpunit.cache/
 /.phpunit.result.cache
 /.phpcs-cache
@@ -24,8 +25,12 @@
 /playwright-report/
 
 # Compiled translations are built at package time, not committed.
+# The .pot and every .po ARE committed — they are the source translators work
+# from, and the drift gate diffs against the committed .pot.
 /languages/*.mo
 /languages/*.l10n.php
+/languages/*.json
+/languages/.drift.pot
 
 # Accidental nested wp-env / copy, never part of the plugin.
 /wp-content/
@@ -55,3 +60,4 @@ Thumbs.db
 # with the checkout. Keep this narrow.
 .claude/settings.local.json
 /release/
+build/test-results/

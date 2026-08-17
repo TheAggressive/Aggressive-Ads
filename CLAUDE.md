@@ -22,6 +22,7 @@ re-derive it, and do not restate it here.
 | What does native fill and Inventory do? | `docs/architecture.md` |
 | What are we defending against? | `docs/threat-model.md` |
 | What is the Aggressive Ads suite build order? | `docs/suite-roadmap.md` |
+| What is half-finished right now, and why? | `docs/open-work.md` |
 
 Product rules live in `docs/`. Put a reversed decision in the same living
 doc in the same change; do not add an `adr/` log.
@@ -68,14 +69,22 @@ and deeper analytics remain open. What is built:
 - capability-resolved, individualized submission/resubmission notifications,
   with per-recipient duplicate suppression, bounded cron retry, localized
   plain-text messages, and failure auditing that cannot reverse a transition
+- `Notification\Request_Mailer` — the staff email for an advertiser's request
+  against a running campaign, on its own `aggr_notify_advertiser_request` hook
+  and its own `_aggr_request_revision` counter, because a request is a meta
+  write rather than a transition
 - release packaging and independent archive verification
 - `Workflow\Campaign_Clock` — the hourly reconcile that drives approved →
   scheduled → live → complete, without which status freezes at approval
 - `Workflow\Ending_Soon_Notifier` and `Notification\Ending_Soon_Mailer` — the
   seven-day live/paused reminder with receipt-backed fan-out
 - `Workflow\Creative_Retention` — the daily ninety-day private-file purge
-- staff review queue, Inventory (placement catalogue), and package catalogue screens, and the advertiser-facing
-  notifications for changes, rejection, approval, going live and completion
+- every wp-admin screen is now React over REST: Settings, Packages,
+  Organizations, Inventory, and the review queue and campaign detail. The
+  review screens keep the plugin's own design system (`src/styles/admin.css`);
+  the other four use core's component set
+- the advertiser-facing notifications for changes, rejection, approval, going
+  live and completion
 - pause, resume and cancel, which need no new UI: the review screen's buttons
   are derived from `Transition_Table`, so an edge added there appears by itself
 - Playwright + axe (`tests/e2e/`), wired into `ci:verify` as its own lane
@@ -193,8 +202,9 @@ true. A skipped security test is a security test that is not running.
 Write it, watch it pass, **break the implementation deliberately**, watch it
 fail, read the failure message, restore, watch it pass.
 
-This is not ceremony. Three tests here have already been caught passing for the
-wrong reason, and each hid a real defect:
+This is not ceremony. Five tests here have already been caught passing for the
+wrong reason. The first three hid a real defect; the last two hid guards nobody
+had ever seen work:
 
 - The autoloader's path-traversal test asserted null against a path where
   nothing existed, so `is_file()` rejected it for an unrelated reason.
@@ -203,6 +213,15 @@ wrong reason, and each hid a real defect:
 - The ownership tests exposed that `map_meta_cap` **never passes a custom meta
   capability to the filter**; it recurses with the generic `edit_post`. The
   filter was silently inert, and reads were being granted by core.
+- `OwnershipTest`'s deleted- and nonexistent-object tests asked through
+  `current_user_can()`, where **core denies a missing post before our filter
+  has an opinion**. Both stayed green with the branch they document deleted.
+- `AdminReviewTest`'s three transition-nonce tests set only `$_POST`, but
+  **`check_admin_referer()` reads `$_REQUEST`**, which PHP does not populate
+  from `$_POST` under CLI. All three presented no nonce and died identically;
+  the "valid nonce, wrong capability" one never reached a capability check and
+  passed with both gates on that path deleted. Posting to a handler in a test
+  means setting `$_REQUEST` too.
 
 A test that passes for the wrong reason is worse than no test, because it
 produces confidence. Assert your fixture is real before asserting on it.

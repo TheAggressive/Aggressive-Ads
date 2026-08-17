@@ -76,7 +76,7 @@
 }
 
 .aggr-form {
-	padding: var(--aggr-space-lg);
+	padding: var(--aggr-space-lg) 0;
 }
 
 .aggr-formgrid,

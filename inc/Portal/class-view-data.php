@@ -10,7 +10,9 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Portal;
 
 use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Core\Settings;
 use Aggressive\Ads\Domain\Reporting_Rules;
+use Aggressive\Ads\Domain\Transition_Table;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
@@ -19,6 +21,7 @@ use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Repository\Package_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\REST\Creative_File_Controller;
+use Aggressive\Ads\Workflow\Campaign_Change_Manager;
 use Aggressive\Ads\Workflow\Campaign_Editor;
 use Aggressive\Ads\Workflow\Email_Change;
 use Aggressive\Ads\Workflow\Reporting_Read;
@@ -37,16 +40,18 @@ final class View_Data {
 	/**
 	 * Constructor.
 	 *
-	 * @param Campaign_Repository   $campaigns  Campaign persistence.
-	 * @param Placement_Repository  $placements Placement persistence.
-	 * @param Creative_Repository   $creatives  Creative persistence.
-	 * @param Org_Repository        $orgs       Organization lookups.
-	 * @param Org_Access_Repository $org_access Organization access persistence.
-	 * @param Package_Repository    $packages   Package persistence.
-	 * @param Campaign_Editor       $editor     Shared package validation.
-	 * @param Review_Readiness      $readiness  Safe canonical review readiness.
-	 * @param Email_Change          $emails     Pending email-change lookup.
-	 * @param Reporting_Read        $reporting  Native rollup reads.
+	 * @param Campaign_Repository     $campaigns  Campaign persistence.
+	 * @param Placement_Repository    $placements Placement persistence.
+	 * @param Creative_Repository     $creatives  Creative persistence.
+	 * @param Org_Repository          $orgs       Organization lookups.
+	 * @param Org_Access_Repository   $org_access Organization access persistence.
+	 * @param Package_Repository      $packages   Package persistence.
+	 * @param Campaign_Editor         $editor     Shared package validation.
+	 * @param Review_Readiness        $readiness  Safe canonical review readiness.
+	 * @param Email_Change            $emails     Pending email-change lookup.
+	 * @param Reporting_Read          $reporting  Native rollup reads.
+	 * @param Campaign_Change_Manager $changes  Running-campaign change proposals.
+	 * @param Settings                $settings   Brand and support details.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -58,7 +63,9 @@ final class View_Data {
 		private readonly Campaign_Editor $editor,
 		private readonly Review_Readiness $readiness,
 		private readonly Email_Change $emails,
-		private readonly Reporting_Read $reporting
+		private readonly Reporting_Read $reporting,
+		private readonly Campaign_Change_Manager $changes,
+		private readonly Settings $settings
 	) {
 	}
 
@@ -203,7 +210,90 @@ final class View_Data {
 			: __( 'Duplicate campaign', 'aggressive-ads' );
 		$row['can_request_updates'] = in_array( $this->campaigns->status( $campaign_id ), array( Post_Statuses::SCHEDULED, Post_Statuses::LIVE ), true );
 
+		/*
+		 * Withdrawal reopens editing, and `submitted` is the only status it
+		 * runs from — a reviewer claiming the campaign moves it to `review`,
+		 * so the status alone already expresses "nobody has started".
+		 *
+		 * Transition_Table's `unclaimed` guard is still the authority: if a
+		 * reviewer claims it between this render and the click, the transition
+		 * refuses and the advertiser is told. Rendering a button that can lose
+		 * a race is correct here; hiding it by pre-checking the guard would
+		 * only narrow the window, never close it.
+		 */
+		$row['can_withdraw'] = Post_Statuses::SUBMITTED === $this->campaigns->status( $campaign_id )
+			&& current_user_can( Capabilities::SUBMIT_CAMPAIGN );
+
+		/*
+		 * Changes to a running campaign. `live_edit_fields` is the site's
+		 * allowlist, and the template renders one input per entry — so a field
+		 * the owner did not enable has no control, no label and nothing in the
+		 * POST the handler will look for. Absent, not disabled.
+		 */
+		$row['pending_edits']       = $this->changes->pending_summary( $campaign_id );
+		$row['draft_edits']         = $this->changes->draft_summary( $campaign_id );
+		$row['edits_submitted']     = $this->campaigns->pending_edits_submitted( $campaign_id );
+		$row['can_request_changes'] = $this->changes->accepts_changes( $campaign_id )
+			&& current_user_can( Capabilities::SUBMIT_CAMPAIGN )
+			&& ! $row['edits_submitted'];
+		$row['live_edit_fields']    = $this->changes->accepts_changes( $campaign_id )
+			? $this->changes->allowed_fields()
+			: array();
+
+		/*
+		 * Values the edit screen shows: the campaign, overlaid with whatever
+		 * the advertiser has staged so far. Rendering the stored campaign
+		 * instead would silently discard a half-finished proposal every time
+		 * they moved between steps.
+		 */
+		$row['edit_values'] = array_merge( $this->changes->current( $campaign_id ), $this->campaigns->pending_edits( $campaign_id ) );
+
+		$row['action_request']       = $this->campaigns->action_request( $campaign_id );
+		$row['requestable_actions']  = array() === $row['action_request']
+			? $this->changes->requestable_actions( $campaign_id )
+			: array();
+		$row['action_request_label'] = array() === $row['action_request']
+			? ''
+			: Campaign_Change_Manager::request_label( (string) $row['action_request']['action'] );
+
+		$row['can_cancel']   = $this->advertiser_may_cancel( $campaign_id, $this->campaigns->status( $campaign_id ) );
+		$row['cancel_label'] = Post_Statuses::DRAFT === $this->campaigns->status( $campaign_id )
+			? __( 'Delete campaign', 'aggressive-ads' )
+			: __( 'Cancel campaign', 'aggressive-ads' );
+
+
 		return $row;
+	}
+
+	/**
+	 * Whether this advertiser may end this campaign themselves.
+	 *
+	 * Read from Transition_Table rather than from a list of statuses kept here.
+	 * The table already says an advertiser may cancel a draft, a
+	 * changes-requested campaign and a scheduled one, and may *not* cancel a
+	 * campaign that is already live — pulling a running advertisement is a
+	 * conversation, not a button. A second copy of that policy in the portal
+	 * would be a second policy, and the two would disagree within a release.
+	 *
+	 * @param int    $campaign_id Campaign post id.
+	 * @param string $status      Current status.
+	 */
+	private function advertiser_may_cancel( int $campaign_id, string $status ): bool {
+		foreach ( Transition_Table::available_to( $status, Transition_Table::ACTOR_ADVERTISER ) as $transition ) {
+			if ( Post_Statuses::CANCELLED !== $transition->to ) {
+				continue;
+			}
+
+			foreach ( $transition->capabilities as $capability ) {
+				if ( ! current_user_can( $capability, $campaign_id ) ) {
+					continue 2;
+				}
+			}
+
+			return true;
+		}
+
+		return false;
 	}
 
 	/**
@@ -346,7 +436,7 @@ final class View_Data {
 	 * @return Catalogue_View_Data
 	 */
 	private function catalogue(): Catalogue_View_Data {
-		return new Catalogue_View_Data( $this->placements, $this->packages, $this->editor );
+		return new Catalogue_View_Data( $this->placements, $this->packages, $this->editor, $this->settings );
 	}
 
 	/**

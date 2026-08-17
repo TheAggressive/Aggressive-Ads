@@ -180,3 +180,56 @@ reviewer clicks Approve
 
 Native fill reads campaign status. An approved campaign whose window has opened
 goes live on the next clock sweep without a downstream ad CPT.
+
+## Changing a campaign that is already running
+
+A campaign that is scheduled, live or paused was approved by staff as a
+specific thing. Editing it in place would mean the approval no longer describes
+what is being served, so an advertiser cannot: the wizard is gated on
+`Post_Statuses::advertiser_editable()`, which is `draft` and `changes` only.
+
+Two workflows exist instead, and both stage a change beside the campaign rather
+than on it.
+
+**Creative** — `Workflow\Creative_Change_Manager`. A replacement creative is
+uploaded, validated and stored privately while the current one keeps serving.
+Approval reconciles it with exact read-back and rollback.
+
+**Campaign fields** — `Workflow\Campaign_Change_Manager`. The proposal is stored
+as `_aggr_pending_edits` meta on the campaign; the campaign itself is not
+touched until a reviewer approves. Approval writes the values, busts that
+campaign's fill cache, and clears the proposal. Rejection requires
+advertiser-facing feedback. The advertiser may withdraw their own proposal, and
+only one may be pending at a time so a reviewer is never deciding a moving
+target.
+
+Field storage is meta rather than a shadow post, unlike a creative replacement,
+because a replacement has *bytes* to hold and a post is what owns bytes here. A
+handful of scalars does not need one.
+
+### What may be proposed is site policy
+
+`Settings_Schema::edit_keys()` — campaign name, advertiser notes, schedule,
+destination URL, placements — each a checkbox under **Advertising → Settings →
+Changes to running campaigns**. Every one ships **off**: a running campaign is
+one staff already approved, and widening what an advertiser may change
+underneath an approval is not a default anybody chose.
+
+The allowlist is a permission boundary, not a UI hint. `Live_Edit_Rules::diff()`
+drops any field outside it before validation — silently, because reporting it
+would tell an advertiser which fields exist behind a switch the site owner
+turned off — and `CampaignChangeTest` asserts a disabled field cannot be
+smuggled in by hand-building the POST.
+
+**Placements is not a peer of the others.** Changing it changes the required
+creative size, so an approved placement change leaves the campaign unable to
+serve until a correctly sized creative is uploaded and reviewed. It is a
+re-submission, and both the settings screen and the review screen say so.
+
+### Withdrawing a submission
+
+Distinct from the above, and older: `submitted → draft` is a legal edge for the
+advertiser while the `unclaimed` guard passes. The portal exposes it as
+**Withdraw and edit**, which returns the campaign to an editable draft at the
+first wizard step. Once a reviewer claims the campaign its status is `review`,
+and there is no `review → draft` edge at all.

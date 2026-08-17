@@ -113,20 +113,15 @@ async function applyFile( id: string, file: File ): Promise< void > {
 	const transfer = new DataTransfer();
 	transfer.items.add( file );
 	input.files = transfer.files;
-	announce( id, state.i18n.ready );
+	announce( id, state.i18n.ready ?? '' );
 }
 
 const { state } = store( 'aggr/upload', {
 	state: {
 		uploads: {} as Record< string, UploadState >,
-		i18n: {
-			ready: '',
-			empty: '',
-			type: '',
-			size: '',
-			pixels: '',
-			dimensions: '',
-		},
+		// Empty by design: the server hydrates it and this object is merged
+		// over the server's. See the note in autosave.ts.
+		i18n: {} as Partial< Record< string, string > >,
 	},
 	actions: {
 		init() {

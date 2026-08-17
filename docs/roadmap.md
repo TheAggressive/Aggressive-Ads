@@ -19,17 +19,17 @@ and tag-driven release automation with build provenance.
 
 **Ends with:** a plugin that installs, upgrades, uninstalls, enforces its capability model, routes its portal under any theme, and packages reproducibly. No campaign can be created yet — deliberately. The security foundation lands before the UI does.
 
-## Phase 2 — Domain layer *(in progress)*
+## Phase 2 — Domain layer *(complete)*
 
-The five repositories, domain value objects, the campaign validator, and `Campaign_State_Machine` with exhaustive transition coverage including every illegal edge. Placement and package resolution.
+The repositories, domain value objects, the campaign validator, and `Campaign_State_Machine` with exhaustive transition coverage including every illegal edge. Placement and package resolution.
 
 ## Phase 3 — Creative upload *(complete)*
 
 The REST upload route, private two-stage storage, MIME/dimension/integrity validation, the authenticated file-stream endpoint, rate limiting, and the security regression tests for every upload threat in [threat-model.md](threat-model.md).
 
-## Phase 4 — Portal UI *(in progress; creation steps 1–6 complete)*
+## Phase 4 — Portal UI *(complete)*
 
-Dashboard, campaign list and detail, organization, account. The wizard: details → package → creative → destination and schedule → review → submit. The complete creation and submission flow now works without JavaScript, including draft creation, package snapshots, exact-size private creative upload, authenticated preview, removal, destination confirmation, submission-grade scheduling, actionable review, final confirmation, transition-time revalidation, audit, and reviewer notification. REST and forms converge on the same workflows. Atomic replacement for scheduled and live ads is also built: advertisers stage private revisions without interrupting delivery, staff review them in a dedicated queue, and approval reconciles the existing AdSanity object with exact read-back and rollback. The shared dialog Interactivity store is shipped (creative replace, live-ad preview, draft preview and remove confirmation on campaign detail; imperative open/close — see [interactivity-stores.md](interactivity-stores.md)). Remaining here: none for the creation UI; reporting tiles stay absent until analytics exists.
+Dashboard, campaign list and detail, organization, account. The wizard: details → package → creative → destination and schedule → review → submit. The complete creation and submission flow now works without JavaScript, including draft creation, package snapshots, exact-size private creative upload, authenticated preview, removal, destination confirmation, submission-grade scheduling, actionable review, final confirmation, transition-time revalidation, audit, and reviewer notification. REST and forms converge on the same workflows. Atomic replacement for scheduled and live ads is also built: advertisers stage private revisions without interrupting delivery, staff review them in a dedicated queue, and approval reconciles the live publication with exact read-back and rollback. The shared dialog Interactivity store is shipped (creative replace, live-ad preview, draft preview and remove confirmation on campaign detail; imperative open/close — see [interactivity-stores.md](interactivity-stores.md)).
 
 Public advertiser signup is also built. It is opt-in through WordPress's
 "Anyone can register" policy (with a dedicated filter for managed identity
@@ -91,22 +91,32 @@ staff package-management surface, and campaign copy (renew / duplicate) are
 implemented.
 **Payment processing is deliberately out of scope** — the currency fields exist so that adding it later is not a migration, not because it is planned.
 
-## Phase 10 — Reporting *(first slice complete)*
+## Phase 10 — Reporting *(complete)*
 
 Org-scoped impression, click and CTR tiles from `aggr_rollups`, gated on the
 Reporting module. Native delivery is always on.
 Campaign list/detail and `GET /campaigns` expose the same integer counts for
-authorized objects. Spend stays absent until billing has a source. CSV export
-is not this slice.
+authorized objects. Spend stays absent until billing has a source.
+
+CSV export is built: `Portal\Report_Actions` streams a per-campaign, per-day
+document for the caller's own organization, bounded to 31 days, behind the same
+Reporting gate as every other surface. `Domain\Csv_Writer` neutralizes
+spreadsheet formulas — see [threat-model.md](threat-model.md), which explains
+why HTML escaping is not the relevant defence here.
 
 ## Phase 11 — Hardening and launch
 
 The 1,000-ad delivery query-budget regression, delivery Site Health dependency
 check, atomic persistent-cache rate limiting, exact rollup reconciliation, and
-bounded event retention are built. Remaining: concurrent request/soak testing
-on production-equivalent infrastructure, audit-table load testing at volume,
-full authorization/failure-state review, admin documentation, and the final
-production rollout runbook.
+bounded event retention are built. The rewrite-staleness Site Health assertion
+and its repair control are built (`Install\Rewrite_Health`). Administrator
+documentation and the production rollout runbook are written —
+[administration.md](administration.md) and [runbook.md](runbook.md).
+
+Remaining: concurrent request/soak testing on production-equivalent
+infrastructure, audit-table load testing at volume, and a full
+authorization/failure-state review. All three need an environment rather than a
+commit, which is why they are the last items and why nothing here claims them.
 
 ## Architected for, not planned
 

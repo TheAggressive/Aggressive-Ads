@@ -156,8 +156,13 @@ final class PackageAdminTest extends WP_UnitTestCase {
 		}
 
 		$this->assertTrue( $found );
-		$this->assertNotFalse( has_action( 'admin_post_' . Package_Screen::CREATE_ACTION ) );
-		$this->assertNotFalse( has_action( 'admin_post_' . Package_Screen::UPDATE_ACTION ) );
+
+		// The catalogue's admin-post handlers were deleted with the server-
+		// rendered template; writes go to REST\Packages_Controller now, and
+		// leaving handlers registered with no form pointing at them would be
+		// unreferenced write paths to the catalogue. See Rest\PackagesWriteTest.
+		$this->assertFalse( has_action( 'admin_post_aggr_create_package' ) );
+		$this->assertFalse( has_action( 'admin_post_aggr_update_package' ) );
 	}
 
 	/**
@@ -320,39 +325,6 @@ final class PackageAdminTest extends WP_UnitTestCase {
 
 		$this->assertInstanceOf( WP_Error::class, $result );
 		$this->assertSame( 'aggr_forbidden', $result->get_error_code() );
-	}
-
-	/**
-	 * Missing nonce dies before the workflow runs.
-	 *
-	 * @return void
-	 */
-	public function test_handler_rejects_a_missing_nonce(): void {
-		wp_set_current_user( $this->administrator );
-		$_POST = array(
-			'name'        => 'Nonce missing',
-			'price_cents' => '100',
-			'currency'    => 'USD',
-		);
-
-		$this->expectException( 'WPDieException' );
-		Plugin::instance()->container()->get( Package_Screen::class )->handle_create();
-	}
-
-	/**
-	 * Advertisers never reach the handler even with a valid nonce.
-	 *
-	 * @return void
-	 */
-	public function test_handler_rejects_an_advertiser_with_a_valid_nonce(): void {
-		wp_set_current_user( $this->advertiser );
-		$_POST = array(
-			'name'     => 'Advertiser package',
-			'_wpnonce' => wp_create_nonce( Package_Screen::CREATE_ACTION ),
-		);
-
-		$this->expectException( 'WPDieException' );
-		Plugin::instance()->container()->get( Package_Screen::class )->handle_create();
 	}
 
 	/**

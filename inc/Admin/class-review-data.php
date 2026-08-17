@@ -19,6 +19,7 @@ use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\REST\Creative_File_Controller;
 use Aggressive\Ads\Security\Capabilities;
+use Aggressive\Ads\Workflow\Campaign_Change_Manager;
 
 /**
  * Assembles the staff review screens, so templates render and nothing else.
@@ -54,6 +55,11 @@ final class Review_Data {
 			Post_Statuses::COMPLETE,
 			Post_Statuses::CANCELLED,
 		),
+		'requests' => array(
+			Post_Statuses::SCHEDULED,
+			Post_Statuses::LIVE,
+			Post_Statuses::PAUSED,
+		),
 		'changes'  => array( Post_Statuses::CHANGES ),
 		'decided'  => array( Post_Statuses::APPROVED, Post_Statuses::REJECTED ),
 		'running'  => array( Post_Statuses::SCHEDULED, Post_Statuses::LIVE, Post_Statuses::PAUSED ),
@@ -68,18 +74,20 @@ final class Review_Data {
 	/**
 	 * Constructor.
 	 *
-	 * @param Campaign_Repository  $campaigns  Campaign persistence.
-	 * @param Creative_Repository  $creatives  Creative persistence.
-	 * @param Placement_Repository $placements Placement persistence.
-	 * @param Org_Repository       $orgs       Organization lookups.
-	 * @param Audit_Repository     $audit      Audit history.
+	 * @param Campaign_Repository     $campaigns  Campaign persistence.
+	 * @param Creative_Repository     $creatives  Creative persistence.
+	 * @param Placement_Repository    $placements Placement persistence.
+	 * @param Org_Repository          $orgs       Organization lookups.
+	 * @param Audit_Repository        $audit      Audit history.
+	 * @param Campaign_Change_Manager $changes    Running-campaign change proposals.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
 		private readonly Creative_Repository $creatives,
 		private readonly Placement_Repository $placements,
 		private readonly Org_Repository $orgs,
-		private readonly Audit_Repository $audit
+		private readonly Audit_Repository $audit,
+		private readonly Campaign_Change_Manager $changes
 	) {
 	}
 
@@ -140,6 +148,8 @@ final class Review_Data {
 
 			if ( 'updates' === $key ) {
 				$total = $this->campaigns->campaigns_with_pending_updates();
+			} elseif ( 'requests' === $key ) {
+				$total = $this->campaigns->campaigns_with_pending_requests();
 			} else {
 				foreach ( $statuses as $status ) {
 					$total += $counts[ $status ] ?? 0;
@@ -157,6 +167,27 @@ final class Review_Data {
 	}
 
 	/**
+	 * How many items are waiting for a staff decision.
+	 *
+	 * Submitted campaigns plus advertiser requests — the two things a reviewer
+	 * is expected to clear. Creative replacements are deliberately excluded:
+	 * they already surface on their own tab, and a badge that counts everything
+	 * is a badge nobody can act on.
+	 *
+	 * @return int
+	 */
+	public function pending_decision_count(): int {
+		$counts = $this->campaigns->count_by_status( array( Post_Statuses::SUBMITTED, Post_Statuses::REVIEW ) );
+		$total  = 0;
+
+		foreach ( $counts as $count ) {
+			$total += (int) $count;
+		}
+
+		return $total + $this->campaigns->campaigns_with_pending_requests();
+	}
+
+	/**
 	 * One page of the queue.
 	 *
 	 * @param string $filter Filter key.
@@ -164,7 +195,12 @@ final class Review_Data {
 	 * @return array{rows: array<int, array<string, mixed>>, total: int, pages: int, page: int}
 	 */
 	public function queue( string $filter, int $page = 1 ): array {
-		$result = $this->campaigns->for_review( self::statuses_for( $filter ), $page, 'updates' === $filter );
+		$result = $this->campaigns->for_review(
+			self::statuses_for( $filter ),
+			$page,
+			'updates' === $filter,
+			'requests' === $filter
+		);
 		$rows   = array();
 
 		foreach ( $result['ids'] as $campaign_id ) {
@@ -194,12 +230,96 @@ final class Review_Data {
 
 		$row['creatives']        = $this->creative_rows( $campaign_id );
 		$row['creative_updates'] = $this->replacement_rows( $campaign_id );
+		$row['pending_edits']    = $this->changes->pending_summary( $campaign_id );
+		$row['action_request']   = self::labelled_request( $this->campaigns->action_request( $campaign_id ) );
 		$row['actions']          = $this->actions_for( $campaign_id, $row['status'] );
 		$row['internal_notes']   = $this->campaigns->internal_notes( $campaign_id );
 		$row['can_view_audit']   = current_user_can( Capabilities::VIEW_AUDIT_LOG );
 		$row['audit']            = $row['can_view_audit'] ? $this->audit_rows( $campaign_id ) : array();
 
 		return $row;
+	}
+
+	/**
+	 * One audit row's sentence, in the reader's words rather than the schema's.
+	 *
+	 * A transition stores its own message as `Campaign moved from aggr_submitted
+	 * to aggr_review.`, which is the right thing to *store* — an audit row is a
+	 * record, and freezing a translated string into it would make the log read
+	 * in whichever locale happened to be active when it was written. The status
+	 * slugs are also kept in their own columns for exactly this reason.
+	 *
+	 * So the sentence is composed here, at render time, from those columns. That
+	 * localizes it properly and fixes every row already in the table rather than
+	 * only the ones written from now on.
+	 *
+	 * Scoped to `campaign.transitioned` on purpose. A denial carries from/to as
+	 * well, and its own message says something this one does not.
+	 *
+	 * @param array{event: string, from_state: string, to_state: string, message: string} $event Stored row.
+	 * @return string
+	 */
+	private static function event_message( array $event ): string {
+		if (
+			'campaign.transitioned' !== $event['event']
+			|| '' === $event['from_state']
+			|| '' === $event['to_state']
+		) {
+			return $event['message'];
+		}
+
+		return sprintf(
+			/* translators: 1: previous campaign status, already translated. 2: new campaign status, already translated. */
+			__( 'Campaign moved from %1$s to %2$s.', 'aggressive-ads' ),
+			self::status_label( $event['from_state'] ),
+			self::status_label( $event['to_state'] )
+		);
+	}
+
+	/**
+	 * A campaign's run window as one readable phrase.
+	 *
+	 * @param int $start_ts Start timestamp.
+	 * @param int $end_ts   End timestamp.
+	 * @return string
+	 */
+	private static function schedule_text( int $start_ts, int $end_ts ): string {
+		if ( $start_ts <= 0 ) {
+			return __( 'Not scheduled', 'aggressive-ads' );
+		}
+
+		$start = self::format_timestamp( $start_ts );
+
+		if ( $end_ts <= 0 ) {
+			return $start;
+		}
+
+		return sprintf(
+			/* translators: 1: campaign start date. 2: campaign end date. */
+			__( '%1$s – %2$s', 'aggressive-ads' ),
+			$start,
+			self::format_timestamp( $end_ts )
+		);
+	}
+
+	/**
+	 * The advertiser's request, carrying the label staff will read.
+	 *
+	 * The label is resolved here because `Campaign_Change_Manager` owns the
+	 * wording and it is translated; a client that mapped the status slug to a
+	 * word itself would be a second vocabulary to keep in step.
+	 *
+	 * @param array{action: string, reason: string, at: int, by: int}|array{} $request Stored request.
+	 * @return array<string, mixed>
+	 */
+	private static function labelled_request( array $request ): array {
+		if ( array() === $request ) {
+			return array();
+		}
+
+		$request['action_label'] = Campaign_Change_Manager::request_label( $request['action'] );
+
+		return $request;
 	}
 
 	/**
@@ -212,7 +332,7 @@ final class Review_Data {
 	 *
 	 * @param int    $campaign_id Campaign post id.
 	 * @param string $status      Current status.
-	 * @return array<int, array{to: string, label: string, needs_notes: bool, destructive: bool}>
+	 * @return array<int, array{to: string, label: string, needs_notes: bool, destructive: bool, positive: bool}>
 	 */
 	public function actions_for( int $campaign_id, string $status ): array {
 		$actions = array();
@@ -229,6 +349,15 @@ final class Review_Data {
 				'label'       => self::action_label( $transition->to ),
 				'needs_notes' => $transition->has_guard( Transition_Table::GUARD_REVIEW_NOTES ),
 				'destructive' => in_array( $transition->to, array( Post_Statuses::REJECTED, Post_Statuses::CANCELLED ), true ),
+
+				/*
+				 * Approval is the one edge that puts a campaign in front of the
+				 * public, so it is the one the screen colours as an assertion
+				 * rather than as a step. Decided here rather than in the client
+				 * for the same reason the label is: the status vocabulary lives
+				 * on this side, and a second copy of it drifts.
+				 */
+				'positive'    => Post_Statuses::APPROVED === $transition->to,
 			);
 		}
 
@@ -264,6 +393,19 @@ final class Review_Data {
 			'org_name'        => $this->orgs->name( $this->campaigns->org_id( $campaign_id ) ),
 			'placements'      => $names,
 			'submitted_at'    => $this->campaigns->submitted_at( $campaign_id ),
+
+			/*
+			 * Formatted here rather than in the client. wp_date() resolves the
+			 * site's timezone and the reader's locale, and neither is knowable
+			 * in a browser — a date built from the raw stamp in JavaScript is
+			 * the visitor's timezone, silently, and off by hours for anyone
+			 * whose is not the site's.
+			 */
+			'submitted_text'  => self::format_timestamp( $this->campaigns->submitted_at( $campaign_id ), true ),
+			'schedule_text'   => self::schedule_text(
+				$this->campaigns->start_ts( $campaign_id ),
+				$this->campaigns->end_ts( $campaign_id )
+			),
 			'modified_at'     => $this->campaigns->modified_ts( $campaign_id ),
 			'reviewer_id'     => $reviewer_id,
 			'reviewer'        => self::user_name( $reviewer_id ),
@@ -359,12 +501,13 @@ final class Review_Data {
 
 		foreach ( $this->audit->for_object( 'campaign', $campaign_id, $this->campaigns->org_id( $campaign_id ) ) as $event ) {
 			$rows[] = array(
-				'id'         => $event['id'],
-				'created_at' => $event['created_at_ts'],
-				'actor'      => 0 === $event['actor_user_id'] ? __( 'System', 'aggressive-ads' ) : self::user_name( $event['actor_user_id'] ),
-				'event'      => $event['event'],
-				'outcome'    => $event['outcome'],
-				'message'    => $event['message'],
+				'id'           => $event['id'],
+				'created_at'   => $event['created_at_ts'],
+				'created_text' => self::format_timestamp( $event['created_at_ts'], true ),
+				'actor'        => 0 === $event['actor_user_id'] ? __( 'System', 'aggressive-ads' ) : self::user_name( $event['actor_user_id'] ),
+				'event'        => $event['event'],
+				'outcome'      => $event['outcome'],
+				'message'      => self::event_message( $event ),
 			);
 		}
 
@@ -409,6 +552,7 @@ final class Review_Data {
 		return match ( $filter ) {
 			'pending'  => __( 'Needs review', 'aggressive-ads' ),
 			'updates'  => __( 'Ad updates', 'aggressive-ads' ),
+			'requests' => __( 'Advertiser requests', 'aggressive-ads' ),
 			'changes'  => __( 'With the advertiser', 'aggressive-ads' ),
 			'decided'  => __( 'Decided', 'aggressive-ads' ),
 			'running'  => __( 'Running', 'aggressive-ads' ),

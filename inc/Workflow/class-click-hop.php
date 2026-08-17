@@ -23,6 +23,16 @@ final class Click_Hop implements Service {
 	public const REFERRER_POLICY = 'no-referrer';
 
 	/**
+	 * The public path prefix, named once.
+	 *
+	 * Three places need to agree on it — the rule, the URL builder, and the
+	 * Site Health check that asserts the rule is installed. A health check
+	 * carrying its own copy of the path is a health check that passes after
+	 * the path changes.
+	 */
+	public const PATH = 'ads/c';
+
+	/**
 	 * Constructor.
 	 *
 	 * @param Fill_Service   $fill       Module gate and live check.
@@ -53,14 +63,18 @@ final class Click_Hop implements Service {
 	 * @param string $token Full token string.
 	 */
 	public static function url( string $token ): string {
-		return home_url( '/ads/c/' . rawurlencode( $token ) );
+		return home_url( '/' . self::PATH . '/' . rawurlencode( $token ) );
 	}
 
 	/**
 	 * Registers the hop rule.
 	 */
 	public function register_rules(): void {
-		add_rewrite_rule( '^ads/c/([^/]+)/?$', 'index.php?' . self::QUERY_VAR . '=$matches[1]', 'top' );
+		add_rewrite_rule(
+			'^' . self::PATH . '/([^/]+)/?$',
+			'index.php?' . self::QUERY_VAR . '=$matches[1]',
+			'top'
+		);
 	}
 
 	/**

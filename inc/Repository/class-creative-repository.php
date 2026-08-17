@@ -587,6 +587,23 @@ final class Creative_Repository {
 	}
 
 	/**
+	 * Repoints one creative's click destination.
+	 *
+	 * Deliberately narrower than update_details(): approving a destination
+	 * change must not be able to alter the size or kind a reviewer accepted,
+	 * and the way to guarantee that is to have no code path that could.
+	 * Callers validate the URL — Domain\Campaign_Rules::is_valid_click_url()
+	 * is the authority — because this layer does not judge values.
+	 *
+	 * @param int    $creative_id Creative post id.
+	 * @param string $click_url   Validated destination.
+	 * @return void
+	 */
+	public function set_click_url( int $creative_id, string $click_url ): void {
+		update_post_meta( $creative_id, self::META_CLICK_URL, $click_url );
+	}
+
+	/**
 	 * Every creative on a campaign, with details.
 	 *
 	 * @param int $campaign_id Campaign post id.

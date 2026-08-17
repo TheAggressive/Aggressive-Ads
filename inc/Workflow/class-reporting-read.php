@@ -109,6 +109,26 @@ final class Reporting_Read {
 	}
 
 	/**
+	 * Per-campaign, per-day rows for a CSV export, or empty when off.
+	 *
+	 * Gated identically to every other surface. An export that still returned
+	 * rows with Reporting switched off would be the one place a site owner's
+	 * decision to hide the numbers could be walked around, and it would be the
+	 * place that hands them over in bulk.
+	 *
+	 * @param int $org_id Owning organization.
+	 * @param int $days   Window length, 1–31.
+	 * @return list<array{day: string, campaign_id: int, campaign: string, impressions: int, clicks: int}>
+	 */
+	public function daily_rows_for_org( int $org_id, int $days ): array {
+		if ( ! $this->surfaces() ) {
+			return array();
+		}
+
+		return $this->rollups->daily_rows_for_org( $org_id, $days );
+	}
+
+	/**
 	 * One authorized campaign row with metrics attached when the surface is on.
 	 *
 	 * @param array<string, mixed> $row A row that already includes `id`.

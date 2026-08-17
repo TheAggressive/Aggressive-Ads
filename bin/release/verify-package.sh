@@ -24,6 +24,7 @@ PACKAGE_FORBIDDEN=(
 	bin
 	src
 	types
+	.cache
 	.git
 	.github
 	.husky
@@ -82,11 +83,11 @@ PACKAGE_REQUIRED=(
 	inc/Portal/class-creative-actions.php
 	inc/Portal/class-signup-actions.php
 	inc/REST/class-packages-controller.php
+	inc/REST/class-organizations-controller.php
 	inc/Repository/class-package-repository.php
 	inc/Admin/class-package-data.php
 	inc/Admin/class-package-screen.php
 	inc/Workflow/class-package-manager.php
-	templates/admin/packages.php
 	inc/Repository/class-user-repository.php
 	inc/Workflow/class-campaign-editor.php
 	inc/Workflow/class-campaign-copier.php
@@ -123,9 +124,16 @@ PACKAGE_REQUIRED=(
 	dist/blocks/placement/index.asset.php
 	dist/blocks/placement/view.js
 	dist/blocks/placement/view.asset.php
-	templates/admin/review-queue.php
-	templates/admin/review-campaign.php
-	templates/admin/settings.php
+	dist/admin/settings.js
+	dist/admin/settings.asset.php
+	dist/admin/packages.js
+	dist/admin/packages.asset.php
+	dist/admin/organizations.js
+	dist/admin/organizations.asset.php
+	dist/admin/inventory.js
+	dist/admin/inventory.asset.php
+	dist/admin/review.js
+	dist/admin/review.asset.php
 	templates/portal/base.php
 	templates/portal/base-bare.php
 	templates/portal/login.php

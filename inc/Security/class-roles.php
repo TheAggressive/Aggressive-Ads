@@ -116,6 +116,19 @@ final class Roles {
 	 * changing the placement-to-ad-group mapping is a configuration change
 	 * that publishes ads into different slots on a public site.
 	 *
+	 * Exposed so per-user grants can hand out exactly the role's set — a user
+	 * granted access individually and a user holding the role must be
+	 * indistinguishable to every capability check in the plugin.
+	 *
+	 * @return array<string, bool>
+	 */
+	public static function reviewer_capability_map(): array {
+		return self::reviewer_capabilities();
+	}
+
+	/**
+	 * What a reviewer holds, as a capability map.
+	 *
 	 * @return array<string, bool>
 	 */
 	private static function reviewer_capabilities(): array {

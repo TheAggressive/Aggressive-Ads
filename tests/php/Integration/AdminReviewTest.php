@@ -24,6 +24,7 @@ use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Security\Ownership;
 use Aggressive\Ads\Security\Roles;
+use Aggressive\Ads\Workflow\Review_Actions;
 use WP_Error;
 use WP_UnitTestCase;
 
@@ -60,6 +61,13 @@ final class AdminReviewTest extends WP_UnitTestCase {
 	 * @var Campaign_Repository
 	 */
 	private Campaign_Repository $campaigns;
+
+	/**
+	 * The review writes the REST routes call.
+	 *
+	 * @var Review_Actions
+	 */
+	private Review_Actions $actions;
 
 	/**
 	 * Reviewer user id.
@@ -109,8 +117,9 @@ final class AdminReviewTest extends WP_UnitTestCase {
 
 		Plugin::instance()->container()->get( Ownership::class )->flush_cache();
 
-		$this->data   = Plugin::instance()->container()->get( Review_Data::class );
-		$this->screen = Plugin::instance()->container()->get( Review_Screen::class );
+		$this->data    = Plugin::instance()->container()->get( Review_Data::class );
+		$this->screen  = Plugin::instance()->container()->get( Review_Screen::class );
+		$this->actions = Plugin::instance()->container()->get( Review_Actions::class );
 	}
 
 	/**
@@ -198,15 +207,24 @@ final class AdminReviewTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The menu and both write handlers are actually attached.
+	 * The menu and assets are attached, and the write handlers are not.
+	 *
+	 * The review screen moved to React and its forms went with it. Leaving the
+	 * admin-post handlers registered with nothing pointing at them would be
+	 * unreferenced write paths to the campaign lifecycle and to staff-only
+	 * notes. The routes that replaced them are covered in Rest\ReviewRoutesTest.
 	 *
 	 * @return void
 	 */
 	public function test_review_surface_is_wired(): void {
 		$this->assertNotFalse( has_action( 'admin_menu', array( $this->screen, 'register_menu' ) ) );
 		$this->assertNotFalse( has_action( 'admin_enqueue_scripts', array( $this->screen, 'enqueue' ) ) );
-		$this->assertNotFalse( has_action( 'admin_post_' . Review_Screen::TRANSITION_ACTION, array( $this->screen, 'handle_transition' ) ) );
-		$this->assertNotFalse( has_action( 'admin_post_' . Review_Screen::NOTES_ACTION, array( $this->screen, 'handle_notes' ) ) );
+
+		$this->assertFalse( has_action( 'admin_post_aggr_review_transition' ) );
+		$this->assertFalse( has_action( 'admin_post_aggr_review_notes' ) );
+		$this->assertFalse( has_action( 'admin_post_aggr_review_campaign_changes' ) );
+		$this->assertFalse( has_action( 'admin_post_aggr_decline_campaign_request' ) );
+		$this->assertFalse( has_action( 'admin_post_aggr_review_creative_replacement' ) );
 	}
 
 	/**
@@ -271,23 +289,168 @@ final class AdminReviewTest extends WP_UnitTestCase {
 	 *
 	 * @return void
 	 */
-	public function test_campaign_detail_renders_the_review_surface_without_private_data(): void {
+	public function test_campaign_detail_mounts_without_private_storage_data(): void {
 		$campaign = $this->campaign( Post_Statuses::SUBMITTED, 'Rendered campaign' );
 		$creative = $this->creative( $campaign );
 
 		wp_set_current_user( $this->reviewer );
 
-		$_GET['campaign'] = (string) $campaign;
+		$query    = array( 'campaign' => (string) $campaign );
+		$_GET     = $query;
+		$_REQUEST = $query;
 
 		ob_start();
 		$this->screen->render();
 		$html = (string) ob_get_clean();
 
-		$this->assertStringContainsString( '<h1 class="aggr-title">Rendered campaign</h1>', $html );
-		$this->assertStringContainsString( 'name="_wpnonce"', $html );
-		$this->assertStringContainsString( 'Start review', $html );
+		$this->assertStringContainsString( 'id="aggr-review-root"', $html );
+
+		$payload = $this->mounted_payload( $html );
+
+		$this->assertSame( $campaign, $payload['campaign']['id'] );
+		$this->assertSame( 'Rendered campaign', $payload['campaign']['title'] );
+		$this->assertContains(
+			Post_Statuses::REVIEW,
+			array_column( $payload['campaign']['actions'], 'to' ),
+			'A submitted campaign should offer the claim transition.'
+		);
+
+		// The preview is the authenticated file route, never the bytes and
+		// never the path they sit at.
+		// Matched loosely because the REST URL is percent-encoded when the site
+		// has no pretty permalinks, which the test bootstrap does not set up.
+		$this->assertStringContainsString(
+			'creatives',
+			$payload['campaign']['creatives'][0]['preview']
+		);
+		$this->assertStringContainsString(
+			(string) $creative['creative_id'],
+			$payload['campaign']['creatives'][0]['preview']
+		);
 		$this->assertStringNotContainsString( $creative['private_path'], $html );
 		$this->assertStringNotContainsString( $creative['private_token'], $html );
+	}
+
+	/**
+	 * The bootstrap payload the mounted screen reads.
+	 *
+	 * @param string $html Rendered screen.
+	 * @return array<string, mixed>
+	 */
+	private function mounted_payload( string $html ): array {
+		$matched = preg_match( '/data-aggr-review="([^"]*)"/', $html, $matches );
+
+		$this->assertSame( 1, $matched, 'The screen printed no bootstrap payload.' );
+
+		$decoded = json_decode( html_entity_decode( $matches[1], ENT_QUOTES ), true );
+
+		$this->assertIsArray( $decoded );
+
+		return $decoded;
+	}
+
+	/**
+	 * **The review capability alone is not a licence over every organization.**
+	 *
+	 * `save_internal_notes()` checks the capability *and* `edit_aggr_campaign`
+	 * against the specific campaign, and only the first half was tested: the
+	 * object check could be deleted with the suite green, because the reviewer
+	 * role holds the cross-organization primitive and every existing test uses
+	 * that role.
+	 *
+	 * The configuration that separates them is the one `OwnershipTest` covers
+	 * for reads — somebody handed the review capability to an advertiser so they
+	 * could help work the queue. That user is staff enough to pass the first
+	 * check and holds no `edit_others_aggr_campaigns`, so the object check is
+	 * the only thing keeping them out of another tenant's campaign.
+	 *
+	 * @return void
+	 */
+	public function test_the_review_capability_alone_cannot_write_notes_on_another_organization(): void {
+		$other_org      = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::ORGANIZATION,
+				'post_status' => 'publish',
+				'post_title'  => 'Second tenant',
+			)
+		);
+		$other_campaign = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::CAMPAIGN,
+				'post_status' => Post_Statuses::REVIEW,
+				'post_title'  => 'Another tenant flight',
+			)
+		);
+
+		update_post_meta( $other_campaign, Campaign_Repository::META_ORG_ID, $other_org );
+
+		$helper = get_user_by( 'id', $this->advertiser );
+
+		$this->assertInstanceOf( \WP_User::class, $helper );
+
+		$helper->add_cap( Capabilities::REVIEW_CAMPAIGNS );
+
+		Plugin::instance()->container()->get( Ownership::class )->flush_cache();
+
+		// The fixture is only real if the first check passes and the second is
+		// the one left to deny. Asserting against a user who never became staff
+		// would prove nothing about the object check.
+		$this->assertTrue( user_can( $this->advertiser, Capabilities::REVIEW_CAMPAIGNS ) );
+		$this->assertFalse( user_can( $this->advertiser, 'edit_others_aggr_campaigns' ) );
+
+		wp_set_current_user( $this->advertiser );
+
+		$denied = $this->actions->save_internal_notes( $other_campaign, 'Reaching into another tenant.' );
+
+		$this->assertInstanceOf( WP_Error::class, $denied );
+		$this->assertSame( 'aggr_forbidden', $denied->get_error_code() );
+		$this->assertSame( '', $this->campaigns->internal_notes( $other_campaign ) );
+	}
+
+	/**
+	 * **A button is only offered to somebody who holds every capability it needs.**
+	 *
+	 * Approval requires two capabilities and a reviewer may hold only one, so
+	 * the filter is per-edge rather than per-screen. Dropping it leaves a screen
+	 * offering an action the state machine will refuse — and dropping it left
+	 * the suite green.
+	 *
+	 * @return void
+	 */
+	public function test_actions_omit_edges_the_user_cannot_complete(): void {
+		$campaign = $this->campaign( Post_Statuses::REVIEW );
+
+		wp_set_current_user( $this->reviewer );
+
+		$targets = array_column( $this->data->actions_for( $campaign, Post_Statuses::REVIEW ), 'to' );
+
+		$this->assertContains( Post_Statuses::APPROVED, $targets, 'A full reviewer should be offered approval.' );
+
+		// Revoked through the capability pipeline rather than remove_cap():
+		// PUBLISH_TO_ADSANITY comes from the reviewer role, and remove_cap()
+		// only touches user-level grants, so the role would hand it straight
+		// back and this test would assert nothing.
+		$revoke = static function ( array $allcaps ): array {
+			unset( $allcaps[ Capabilities::PUBLISH_TO_ADSANITY ] );
+
+			return $allcaps;
+		};
+
+		add_filter( 'user_has_cap', $revoke, 10 );
+
+		try {
+			$this->assertFalse( current_user_can( Capabilities::PUBLISH_TO_ADSANITY ) );
+
+			$reduced = array_column( $this->data->actions_for( $campaign, Post_Statuses::REVIEW ), 'to' );
+
+			$this->assertNotContains( Post_Statuses::APPROVED, $reduced );
+
+			// The edges that need only the review capability are untouched, so
+			// this is a per-edge filter and not the whole screen going dark.
+			$this->assertContains( Post_Statuses::CHANGES, $reduced );
+		} finally {
+			remove_filter( 'user_has_cap', $revoke, 10 );
+		}
 	}
 
 	/**
@@ -338,7 +501,7 @@ final class AdminReviewTest extends WP_UnitTestCase {
 
 		wp_set_current_user( $this->reviewer );
 
-		$this->assertTrue( $this->screen->process_transition( $campaign, Post_Statuses::REVIEW ) );
+		$this->assertTrue( $this->actions->transition( $campaign, Post_Statuses::REVIEW ) );
 		$this->assertSame( Post_Statuses::REVIEW, $this->campaigns->status( $campaign ) );
 		$this->assertSame( $this->reviewer, $this->campaigns->reviewed_by( $campaign ) );
 	}
@@ -353,7 +516,7 @@ final class AdminReviewTest extends WP_UnitTestCase {
 
 		wp_set_current_user( $this->reviewer );
 
-		$this->assertTrue( $this->screen->process_notes( $campaign, 'Confirm destination with sales.' ) );
+		$this->assertTrue( $this->actions->save_internal_notes( $campaign, 'Confirm destination with sales.' ) );
 		$this->assertSame( 'Confirm destination with sales.', $this->campaigns->internal_notes( $campaign ) );
 
 		$events = $this->audit->for_object( 'campaign', $campaign, $this->org_id );
@@ -362,7 +525,7 @@ final class AdminReviewTest extends WP_UnitTestCase {
 
 		wp_set_current_user( $this->advertiser );
 
-		$denied = $this->screen->process_notes( $campaign, 'Advertiser overwrite' );
+		$denied = $this->actions->save_internal_notes( $campaign, 'Advertiser overwrite' );
 
 		$this->assertInstanceOf( WP_Error::class, $denied );
 		$this->assertSame( 'aggr_forbidden', $denied->get_error_code() );
@@ -391,61 +554,136 @@ final class AdminReviewTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Missing nonces die before a transition is attempted.
+	 * **The review screen itself refuses anyone without the capability.**
+	 *
+	 * This is the screen that renders another organization's unapproved
+	 * creative, the staff-only internal notes and the audit timeline. In
+	 * production `add_submenu_page()` gates the callback, so the in-method check
+	 * is the second lock — and it could be deleted with all 661 tests green,
+	 * which means nobody had ever seen it work.
 	 *
 	 * @return void
 	 */
-	public function test_transition_handler_rejects_a_missing_nonce(): void {
-		$campaign = $this->campaign( Post_Statuses::SUBMITTED );
+	public function test_render_refuses_a_user_without_the_review_capability(): void {
+		$campaign = $this->campaign( Post_Statuses::REVIEW );
 
-		wp_set_current_user( $this->reviewer );
-
-		$_POST = array(
-			'campaign_id' => (string) $campaign,
-			'to'          => Post_Statuses::REVIEW,
-		);
-
-		$this->expectException( 'WPDieException' );
-		$this->screen->handle_transition();
-	}
-
-	/**
-	 * A nonce from another campaign cannot authorize this one.
-	 *
-	 * @return void
-	 */
-	public function test_transition_handler_rejects_a_forged_nonce(): void {
-		$campaign = $this->campaign( Post_Statuses::SUBMITTED );
-
-		wp_set_current_user( $this->reviewer );
-
-		$_POST = array(
-			'campaign_id' => (string) $campaign,
-			'to'          => Post_Statuses::REVIEW,
-			'_wpnonce'    => wp_create_nonce( Review_Screen::nonce_action( $campaign + 1 ) ),
-		);
-
-		$this->expectException( 'WPDieException' );
-		$this->screen->handle_transition();
-	}
-
-	/**
-	 * Capability denial happens before a valid nonce can authorize a write.
-	 *
-	 * @return void
-	 */
-	public function test_transition_handler_rejects_an_advertiser_with_a_valid_nonce(): void {
-		$campaign = $this->campaign( Post_Statuses::SUBMITTED );
+		$this->campaigns->set_internal_notes( $campaign, 'Never shown to an advertiser.' );
 
 		wp_set_current_user( $this->advertiser );
 
-		$_POST = array(
-			'campaign_id' => (string) $campaign,
-			'to'          => Post_Statuses::REVIEW,
-			'_wpnonce'    => wp_create_nonce( Review_Screen::nonce_action( $campaign ) ),
-		);
+		$query    = array( 'campaign' => (string) $campaign );
+		$_GET     = $query;
+		$_REQUEST = $query;
 
 		$this->expectException( 'WPDieException' );
-		$this->screen->handle_transition();
+
+		ob_start();
+
+		try {
+			$this->screen->render();
+		} finally {
+			$output = (string) ob_get_clean();
+
+				$this->assertStringNotContainsString( 'Never shown to an advertiser.', $output );
+		}
+	}
+
+	/**
+	 * A logged-out visitor is refused the same way.
+	 *
+	 * @return void
+	 */
+	public function test_render_refuses_a_logged_out_visitor(): void {
+		wp_set_current_user( 0 );
+
+		$this->expectException( 'WPDieException' );
+		$this->screen->render();
+	}
+
+	/**
+	 * **The timeline reads in status labels, not schema slugs.**
+	 *
+	 * The stored message says `aggr_submitted`, and should keep saying it: an
+	 * audit row is a record, and a translated string frozen into the table
+	 * would read in whichever locale wrote it. The sentence a reviewer sees is
+	 * composed at render time from the from/to columns instead, which also
+	 * repairs every row already written.
+	 *
+	 * @return void
+	 */
+	public function test_the_audit_timeline_reads_in_status_labels(): void {
+		$campaign = $this->campaign( Post_Statuses::SUBMITTED );
+
+		wp_set_current_user( $this->reviewer );
+
+		$this->assertTrue( $this->actions->transition( $campaign, Post_Statuses::REVIEW ) );
+
+		$row = $this->data->campaign( $campaign );
+
+		$this->assertIsArray( $row );
+
+		$moved = array_values(
+			array_filter(
+				array_column( $row['audit'], 'message' ),
+				static fn ( string $message ): bool => str_contains( $message, 'Campaign moved' )
+			)
+		);
+
+		$this->assertNotSame( array(), $moved, 'No transition appeared in the timeline.' );
+		$this->assertStringContainsString( 'Submitted', $moved[0] );
+		$this->assertStringNotContainsString( 'aggr_', $moved[0] );
+
+		// The record underneath still carries the slugs, which is what makes
+		// the rendered sentence reproducible in any locale.
+		$raw = array_values(
+			array_filter(
+				$this->audit->for_object( 'campaign', $campaign, $this->org_id ),
+				static fn ( array $event ): bool => 'campaign.transitioned' === $event['event']
+			)
+		);
+
+		$this->assertSame( Post_Statuses::SUBMITTED, $raw[0]['from_state'] );
+		$this->assertSame( Post_Statuses::REVIEW, $raw[0]['to_state'] );
+	}
+
+	/**
+	 * **The deleted handlers took their CSRF surface with them.**
+	 *
+	 * Six tests used to live here proving that `handle_transition()` and
+	 * `handle_notes()` refused a missing, forged or wrong-capability request.
+	 * Those handlers no longer exist, so the tests cannot: what they protected
+	 * moved to REST, where WordPress verifies the `wp_rest` nonce and
+	 * `Rest\ReviewRoutesTest` proves the capability gate on every route.
+	 *
+	 * This asserts the move actually happened rather than trusting it. A
+	 * handler re-appearing without a form is a write path nobody is testing.
+	 *
+	 * @return void
+	 */
+	public function test_no_admin_post_write_path_survives_on_the_review_screen(): void {
+		$actions = array(
+			'aggr_review_transition',
+			'aggr_review_notes',
+			'aggr_review_campaign_changes',
+			'aggr_decline_campaign_request',
+			'aggr_review_creative_replacement',
+		);
+
+		foreach ( $actions as $action ) {
+			$this->assertFalse(
+				has_action( 'admin_post_' . $action ),
+				$action . ' is still registered with no form pointing at it.'
+			);
+			$this->assertFalse(
+				has_action( 'admin_post_nopriv_' . $action ),
+				$action . ' is reachable without authentication.'
+			);
+		}
+
+		$this->assertFalse(
+			method_exists( $this->screen, 'handle_transition' ),
+			'Review_Screen still carries a form handler.'
+		);
+		$this->assertFalse( method_exists( $this->screen, 'handle_notes' ) );
 	}
 }

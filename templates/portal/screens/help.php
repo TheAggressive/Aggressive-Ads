@@ -42,7 +42,7 @@ $aggr_help = Plugin::instance()->container()->get( View_Data::class )->help();
 		<ol>
 			<li><?php esc_html_e( 'Create a campaign and give it a name.', 'aggressive-ads' ); ?></li>
 			<li><?php esc_html_e( 'Choose a package. This sets the price and where your advertisement appears.', 'aggressive-ads' ); ?></li>
-			<li><?php esc_html_e( 'Upload one image for each placement, with the address it should link to.', 'aggressive-ads' ); ?></li>
+			<li><?php esc_html_e( 'Upload one ad creative for each placement, with the address it should link to.', 'aggressive-ads' ); ?></li>
 			<li><?php esc_html_e( 'Confirm the destinations and choose your dates.', 'aggressive-ads' ); ?></li>
 			<li><?php esc_html_e( 'Submit it. The review team checks the artwork, the links and the dates.', 'aggressive-ads' ); ?></li>
 			<li><?php esc_html_e( 'Once approved, it starts automatically on your start date and stops on your end date.', 'aggressive-ads' ); ?></li>
@@ -66,7 +66,7 @@ $aggr_help = Plugin::instance()->container()->get( View_Data::class )->help();
 			);
 			?>
 		</p>
-		<p><?php esc_html_e( 'Each image must be exactly the size of the placement it is for. Every image also needs a short description for people who cannot see it — this is a legal requirement as well as a courtesy.', 'aggressive-ads' ); ?></p>
+		<p><?php esc_html_e( 'Each ad creative must be exactly the size of the placement it is for. Every ad creative also needs a short description for people who cannot see it — this is a legal requirement as well as a courtesy.', 'aggressive-ads' ); ?></p>
 	</div>
 
 	<?php if ( array() !== $aggr_help['placements'] ) : ?>

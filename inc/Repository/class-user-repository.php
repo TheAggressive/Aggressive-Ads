@@ -17,6 +17,33 @@ use WP_User;
  * Resolves users for capability-driven application work.
  */
 final class User_Repository {
+	/**
+	 * Resolves a login or email address to a user id.
+	 *
+	 * Both, because an administrator adding a colleague will type whichever
+	 * they have to hand, and failing on the other one reads as "no such user".
+	 *
+	 * @param string $identifier Login or email address.
+	 * @return int User id, or 0 when nothing matches.
+	 */
+	public function id_for_login_or_email( string $identifier ): int {
+		$identifier = trim( $identifier );
+
+		if ( '' === $identifier ) {
+			return 0;
+		}
+
+		$user = is_email( $identifier )
+			? get_user_by( 'email', $identifier )
+			: get_user_by( 'login', $identifier );
+
+		if ( false === $user ) {
+			$user = get_user_by( 'login', $identifier );
+		}
+
+		return false === $user ? 0 : (int) $user->ID;
+	}
+
 	/** Number of users held in memory while resolving capability filters. */
 	private const BATCH_SIZE = 200;
 
