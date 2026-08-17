@@ -266,130 +266,74 @@ Releases are calculated automatically from Conventional Commits merged to
 breaking change creates a major release. Documentation, CI, chores, tests, and
 dependency maintenance do not publish.
 
-Git tags and published GitHub Releases are the production version source of
+Git tags and published GitHub Releases are the **only** version source of
 truth. The checked-in `package.json`, plugin header, block manifest,
-`AGGR_VERSION`, README, and test bootstraps all carry that same strict-semver
-version.
-`bin/ci/check-version-contract.mjs` fails CI if those declarations drift.
+`AGGR_VERSION`, README, and test bootstraps all read `0.0.0-development` and are
+never bumped; `package.sh` stamps the planned version into the staged tree at
+package time and mutates nothing in the checkout.
+`bin/ci/check-version-contract.mjs` fails CI if any of them claims otherwise.
 
-When Semantic Release plans a newer version from a product commit, the trusted
-master pipeline first opens a version-only `chore(release)` pull request. Because
-GitHub deliberately suppresses recursive workflow events created with
-`GITHUB_TOKEN`, the release helper explicitly dispatches CI, CodeQL, and workflow
-security against that PR's exact head commit and registers squash auto-merge.
-There is no ruleset bypass. After the protected version PR merges, the next
-master pipeline confirms the checked-in version equals the plan and publishes
-from that synchronized commit.
+When Semantic Release plans a version, the trusted master pipeline packages,
+tags and publishes it **on that same run**. Nothing is written back to the
+repository, so there is no second pass and no credential beyond the run's own
+`GITHUB_TOKEN`.
 
-Because there is no bypass, the version commit has to satisfy the signature rule
-like any other, and `GITHUB_TOKEN` has no signing key. The helper therefore
-creates the branch at a commit that already exists on master — a ref creation
-pushes no new object — and writes the version files through the GraphQL
-`createCommitOnBranch` mutation, which GitHub signs with its own key. It then
-asserts the resulting commit reports `verification.verified`, and deletes the
-branch again if it does not.
+`workflow_dispatch` on `master` is a trusted release trigger alongside `push`,
+so a release that was missed can be started by hand. Dispatching on any other
+ref runs the quality lanes only.
 
-That assertion exists because the failure it prevents is invisible until the
-last moment. An unsigned version commit passes every required check and is
-refused only at the merge, with `the base branch policy prohibits the merge` on
-a PR that looks entirely green — which is how v1.1.0 stalled. Failing in
-`version-pr`, where the commit is made, names the cause at the point it happens.
+### Why the version is not committed
 
-That suppression applies to the merge as well as the branch. Auto-merge pushes
-its merge commit on behalf of whichever credential registered it, so registering
-it with `GITHUB_TOKEN` lands the synchronized commit on master without emitting a
-push event — and the publishing run never starts.
+This was built the other way first, and the reversal is worth recording because
+the original design looked more correct and was not.
 
-### The release credential is what makes a release unattended
+Synchronizing the version into `master` meant a bot opening a pull request
+against a branch that requires signed commits, reviewed pull requests, and
+passing checks. GitHub will not let its own token do that unattended: it holds
+workflow runs on bot-authored pull requests at `action_required` until a human
+approves them, and it suppresses the push event when their merge lands. So a
+release stalled twice, and both stalls looked exactly like a pull request that
+was still running. v1.1.0 sat blocked for two hours with every check green.
 
-`AGGR_RELEASE_TOKEN` is not an optimization. Without it a release **cannot**
-finish on its own, and it stalls in two places that both look like a PR that is
-still running:
+Each fix worked and each added a moving part — an API-created commit so GitHub
+would sign it, a separate credential so the pull request was not bot-authored, a
+GitHub App so that credential did not expire, guards to make the remaining
+manual steps loud. All of it existed to get a version number onto a protected
+branch.
 
-| Stall | Cause | Manual step |
-|---|---|---|
-| Checks never start | GitHub holds workflow runs on bot-authored PRs at `action_required` | Approve three runs on the PR's Checks tab |
-| Publish never starts | The bot's merge emits no push event | `gh workflow run ci.yml --ref master` |
+The version does not need to be there. `package.sh` already stamped the staged
+tree, so the published artifact was always correct; the commit only made the
+repository agree with the tag. Removing it removes the pull request, the
+credential, the App, the approval gate, the suppressed push event, and the
+guards written for them, and `master` keeps every protection because nothing but
+a person's pull request ever lands on it.
 
-The helper therefore uses that credential for **every** operation — creating the
-ref, the commit, the PR, and registering auto-merge — not only the last one. A PR
-opened by `GITHUB_TOKEN` and merged by a release token still stalls on the first
-row, because what GitHub gates is who *opened* it. When the credential is
-present the PR triggers `ci.yml`, `codeql.yml` and `workflow-security.yml`
-through their ordinary `pull_request: [master]` triggers, so the helper also
-stops dispatching them by hand — dispatching would run every lane twice against
-the same commit and report each required check twice.
+The tag is the version. A checkout is not a release and now says so.
 
-#### Provide it as a GitHub App, not a PAT
+### What this costs
 
-A fine-grained PAT works and is one secret, but it expires. A release that fails
-because a token lapsed on a date nobody wrote down is the same silent stall this
-pipeline already spent two releases eliminating, so the App is the supported
-path and the PAT is the fallback.
+`0.0.0-development` is what the repository reads, everywhere, forever.
+`bin/ci/check-version-contract.mjs` fails the build if any declaration says
+otherwise — including a tree where every file was bumped together, which agrees
+with itself and is still not a release.
 
-A GitHub App stores a **private key**, which does not expire. The `version-pr`
-job mints a fresh installation token from it on every run, scoped to this
-repository, valid for an hour. Nothing needs regenerating on a calendar.
+Two consequences worth knowing:
 
-1. **Settings → Developer settings → GitHub Apps → New GitHub App**
-2. Name it (for example `Aggressive Ads Release`); homepage URL can be the
-   repository. Uncheck **Webhook → Active**.
-3. Repository permissions: **Contents: Read and write**, **Pull requests: Read
-   and write**. Nothing else.
-4. Create it, note the **App ID**, then **Generate a private key** (downloads a
-   `.pem`).
-5. **Install App** → only this repository.
-6. Add two repository secrets: `AGGR_RELEASE_APP_ID` (the App ID) and
-   `AGGR_RELEASE_APP_PRIVATE_KEY` (the entire `.pem`, including the
-   `-----BEGIN...` and `-----END...` lines).
+- **A development install reports `0.0.0-development`.** The updater compares
+  against the *installed* header, which is the stamped version for anything
+  installed from a release, so this only affects a checkout — where it correctly
+  reads as older than every published build.
+- **README ships.** It is stamped in the staged tree alongside the plugin header,
+  the `AGGR_VERSION` constant and the block manifest, and `package.sh` verifies
+  all four applied before archiving. It is the one stamped file that is
+  documentation rather than code, which makes it the easiest to forget.
 
-The job prefers the App token, falls back to `AGGR_RELEASE_TOKEN`, and falls
-back again to announcing the manual steps. Setting neither is a supported state,
-not a broken one.
-
-A PAT instead needs `contents: write` and `pull requests: write`, stored as the
-`AGGR_RELEASE_TOKEN` repository secret.
-
-#### Held runs are reported, never waited on
-
-A credential that is not `GITHUB_TOKEN` should make the version PR start its own
-checks — but "should" is an assumption about GitHub, and this pipeline has been
-bitten by two of those already. Two guards make an incorrect assumption loud
-instead of silent:
-
-- If no checks register within a minute, the helper dispatches them explicitly
-  and says it fell back.
-- If runs exist but sit at `action_required`, it reports them with a link.
-  Existing is not running, a held run still counts as a check, and approval
-  cannot be granted from inside the run that needs it — so waiting would hang
-  forever while looking like progress.
-
-Without the secret the helper still opens and auto-merges the PR, but it now
-raises a workflow **error annotation** and a job-summary block naming both
-manual steps, rather than a warning in a log nobody opens. v1.1.0 sat blocked
-for two hours looking entirely green; the annotation exists so that cannot
-repeat quietly. The manual publish step is:
-
-```bash
-gh workflow run ci.yml --ref master
-```
-
-`workflow_dispatch` on `master` is a trusted release trigger for exactly that
-reason: `release-plan`, `version-pr`, and `release` accept it alongside `push`.
-Dispatching on any other ref — including the branch dispatches this helper makes
-against the version PR head — runs the quality lanes only.
-
-This automation requires the repository setting **Allow GitHub Actions to
-create and approve pull requests**. GitHub combines PR creation and review
-approval in one setting; this workflow uses only PR creation and auto-merge and
-never submits an approving review. Keep the repository's default workflow
-permission read-only: only the isolated `version-pr` job receives the scoped
-`actions: write`, `contents: write`, and `pull-requests: write` permissions.
+The same approach runs in the Aggressive Apparel theme, where `style.css` in the
+repository trails the published release by design.
 
 The `package` job receives the planned version only on a trusted master push.
-After every quality lane succeeds and the version contract is synchronized,
-`semantic-release` creates the tag and a private draft containing these exact
-accepted assets:
+After every quality lane succeeds, `semantic-release` creates the tag and a
+private draft containing these exact accepted assets:
 
 - `aggressive-ads-{version}.zip`
 - `aggressive-ads-{version}.zip.sha256`

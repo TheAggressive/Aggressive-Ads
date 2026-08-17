@@ -27,9 +27,9 @@ jobs:
   release-plan:
     name: Plan Release
     runs-on: ubuntu-24.04
-    # workflow_dispatch on master is the recovery path: a version PR merged by
-    # GITHUB_TOKEN emits no push event, so the publishing run has to be started
-    # explicitly. See docs/build-and-release.md.
+    # workflow_dispatch on master is the recovery path for a release that was
+    # missed — nothing writes back to master, so an ordinary push publishes on
+    # its own run. See docs/build-and-release.md.
     if: >-
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
       github.ref == 'refs/heads/master'
@@ -40,8 +40,6 @@ jobs:
       should_release: ${{ steps.check.outputs.should_release }}
       release_type: ${{ steps.check.outputs.release_type }}
       next_version: ${{ steps.check.outputs.next_version }}
-      source_version: ${{ steps.check.outputs.source_version }}
-      needs_version_sync: ${{ steps.check.outputs.needs_version_sync }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -348,75 +346,11 @@ jobs:
             release/*.zip.sha256
           retention-days: 30
 
-  # Version declarations reach master through the same protected PR path as
-  # product code. GITHUB_TOKEN does not emit recursive PR workflow events, so
-  # the helper explicitly dispatches every required workflow on the PR head.
-  version-pr:
-    name: Prepare Version PR
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    needs: [release-plan, package]
-    if: >-
-      success() &&
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
-      github.ref == 'refs/heads/master' &&
-      needs.release-plan.outputs.should_release == 'true' &&
-      needs.release-plan.outputs.needs_version_sync == 'true'
-    permissions:
-      actions: write
-      contents: write
-      pull-requests: write
-    env:
-      # Only so the mint step can test it in `if:`, where `secrets` is not an
-      # available context. An App id is not itself a credential; the private key
-      # is, and that is read straight from secrets at the point of use.
-      AGGR_RELEASE_APP_ID: ${{ secrets.AGGR_RELEASE_APP_ID }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-          # zizmor: ignore[artipacked] this isolated job must push only the
-          # generated version branch; protected master still has no bypass.
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-      # Preferred over a PAT because nothing here expires. The App's private key
-      # is the stored secret, and this mints a fresh installation token scoped
-      # to this repository that dies an hour later. A PAT has to be regenerated
-      # on a calendar, and a release that fails because a token quietly lapsed
-      # is the same silent stall this pipeline has been chasing all along.
-      - name: Mint a release token
-        id: app-token
-        # `secrets` is not a context available to a step `if:`, so the App id is
-        # lifted to job env and tested there. Without the guard the step fails
-        # the whole job on any repository that has no App configured.
-        if: ${{ env.AGGR_RELEASE_APP_ID != '' }}
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          app-id: ${{ env.AGGR_RELEASE_APP_ID }}
-          private-key: ${{ secrets.AGGR_RELEASE_APP_PRIVATE_KEY }}
-          # An installation token inherits every permission the App was granted
-          # unless it is narrowed here. These two are what the helper actually
-          # uses — a version commit and a pull request — so anything the App is
-          # later granted for another purpose stays out of this token.
-          permission-contents: write
-          permission-pull-requests: write
-      - name: Open protected version synchronization PR
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # The App token when one was minted, else a PAT, else nothing — and
-          # with nothing the release still runs but announces the manual steps
-          # it leaves behind. Anything other than GITHUB_TOKEN is what lets the
-          # version PR start its own checks and its merge start the publish.
-          AGGR_RELEASE_TOKEN: ${{ steps.app-token.outputs.token || secrets.AGGR_RELEASE_TOKEN }}
-          AGGR_RELEASE_VERSION: ${{ needs.release-plan.outputs.next_version }}
-        run: bash bin/release/open-version-pr.sh
-
   # semantic-release creates the tag and a private draft from the package that
-  # passed every CI lane and a commit whose reviewed version declarations
-  # already match the plan. The reconciler verifies remote bytes and provenance
-  # before making that draft visible to the plugin updater.
+  # passed every CI lane. The version lives in the tag and is stamped into the
+  # staged tree by package.sh, so nothing is written back to master and this
+  # runs on the same push that merged the change. The reconciler verifies remote
+  # bytes and provenance before making that draft visible to the updater.
   release:
     name: Release
     runs-on: ubuntu-24.04
@@ -426,8 +360,7 @@ jobs:
       success() &&
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
       github.ref == 'refs/heads/master' &&
-      needs.release-plan.outputs.should_release == 'true' &&
-      needs.release-plan.outputs.needs_version_sync == 'false'
+      needs.release-plan.outputs.should_release == 'true'
     environment: production
     permissions:
       contents: write
@@ -479,12 +412,11 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     if: always()
-    needs: [release-plan, security, structure, i18n, frontend, php, coverage, wordpress, build, e2e, package, version-pr, release]
+    needs: [release-plan, security, structure, i18n, frontend, php, coverage, wordpress, build, e2e, package, release]
     env:
       EVENT_NAME: ${{ github.event_name }}
       EVENT_REF: ${{ github.ref }}
       SHOULD_RELEASE: ${{ needs.release-plan.outputs.should_release }}
-      NEEDS_VERSION_SYNC: ${{ needs.release-plan.outputs.needs_version_sync }}
       RELEASE_PLAN: ${{ needs.release-plan.result }}
       SECURITY: ${{ needs.security.result }}
       STRUCTURE: ${{ needs.structure.result }}
@@ -496,7 +428,6 @@ jobs:
       BUILD: ${{ needs.build.result }}
       E2E: ${{ needs.e2e.result }}
       PACKAGE: ${{ needs.package.result }}
-      VERSION_PR: ${{ needs.version-pr.result }}
       RELEASE: ${{ needs.release.result }}
     steps:
       - name: Require every quality and artifact lane
@@ -518,20 +449,15 @@ jobs:
             [[ "${RELEASE_PLAN}" == "skipped" ]] || failed=1
           fi
 
+          # One decision now, where there used to be two: a release-worthy push
+          # publishes on that same run. Nothing is written back to master, so
+          # there is no second pass to wait for.
           if [[ "${SHOULD_RELEASE}" == "true" ]]; then
-            if [[ "${NEEDS_VERSION_SYNC}" == "true" ]]; then
-              [[ "${VERSION_PR}" == "success" ]] || failed=1
-              [[ "${RELEASE}" == "skipped" ]] || failed=1
-            else
-              [[ "${VERSION_PR}" == "skipped" ]] || failed=1
-              [[ "${RELEASE}" == "success" ]] || failed=1
-            fi
+            [[ "${RELEASE}" == "success" ]] || failed=1
           else
-            [[ "${VERSION_PR}" == "skipped" ]] || failed=1
             [[ "${RELEASE}" == "skipped" ]] || failed=1
           fi
 
           printf '%-12s %s\n' RELEASE_PLAN "${RELEASE_PLAN}"
-          printf '%-12s %s\n' VERSION_PR "${VERSION_PR}"
           printf '%-12s %s\n' RELEASE "${RELEASE}"
           exit "${failed}"
