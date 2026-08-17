@@ -20,7 +20,23 @@ ci:verify    → bash bin/ci/verify.sh          (every current lane, serially)
 The i18n lane lands with POT / `.mo` tooling. Until then it is a future gate,
 not a command the repository pretends to run.
 
-Adding a lane means adding it to **both** the workflow and `bin/ci/verify.sh`. Adding it to only one is how the two drift.
+**The lane list is not maintained twice.** `bin/ci/verify.sh` runs whatever
+`bin/ci/lanes.mjs` reads out of `ci.yml`: verification jobs in dependency order,
+their `run: pnpm …` steps in file order, each command run once. Adding a step to
+a verification job is the only edit — the local rehearsal picks it up because it
+is the same source. `pnpm qa:lanes` prints what a local run will do.
+
+Exactly three commands are declared local-only, each with its reason beside it in
+`lanes.mjs`: the two `pnpm install --frozen-lockfile` steps, because a laptop is
+not a bare runner, and `test:e2e:install`, which apt-gets browser libraries
+through sudo on every run and is substituted by `test:e2e:browsers` — the same
+pinned browsers without the root prompt. Publishing jobs are excluded by name:
+they hold write tokens and cut releases, and none of them decides whether the
+change is sound.
+
+`check-ci-parity.sh` now asks whether the derivation *reaches* every `ci:*`
+script rather than whether somebody remembered to copy it into `verify.sh`. Both
+directions fail: a script no job runs, and a job step the parser cannot see.
 
 ### Why local can pass and CI still fail
 
@@ -38,6 +54,15 @@ does not appear in the diff — because the problem is what the diff omits.
 `rm -rf dist`, so `qa` cannot pass against yesterday's bundle. Running
 `pnpm test:e2e` on its own can, and that is a real trap: the browser then tests
 whatever was built last, not what the source says now.
+
+**Interpreter versions.** `ci:doctor` compares the host against the workflow's
+own `NODE_VERSION` and `PHP_VERSION`, so the pins stay declared in one place. A
+Node series mismatch fails, because nothing else constrains the version the
+bundler and scripts run on. A PHP series mismatch only warns: `phpstan.neon`
+pins `phpVersion`, `phpcs.xml.dist` pins `testVersion`, and `composer.json` pins
+`platform.php`, so every analyser already behaves as the floor regardless of
+host. The unit suite is the one thing that genuinely executes on the local
+interpreter.
 
 **Database state.** wp-env's database persists locally and is new on every CI
 run. `tests/e2e/reset.php` clears the fixtures it knows by slug and cannot clear
