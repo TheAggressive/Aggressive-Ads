@@ -28,6 +28,13 @@ cd "$(dirname "$0")/../.."
 # can pass here and fail there for a file that only exists on this machine.
 bash bin/ci/check-worktree.sh
 
+# The one gate lanes.mjs cannot reach. Actionlint and Zizmor are required checks
+# but live in workflow-security.yml, which the derivation does not read, so a
+# workflow edit used to pass here and fail only on GitHub — the divergence this
+# file exists to prevent, in the corner it could not see. Run first because it
+# is seconds and a broken workflow invalidates everything after it.
+bash bin/ci/lint-workflows.sh
+
 # The WordPress suites need real MySQL and the browser lanes need real browsers.
 # Failing with a usable instruction beats a wall of connection errors.
 if ! docker info >/dev/null 2>&1; then

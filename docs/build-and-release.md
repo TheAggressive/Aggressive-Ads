@@ -38,6 +38,26 @@ change is sound.
 script rather than whether somebody remembered to copy it into `verify.sh`. Both
 directions fail: a script no job runs, and a job step the parser cannot see.
 
+**The gate the derivation cannot reach.** `lanes.mjs` reads `ci.yml`, so nothing
+it produces covers `workflow-security.yml` — where Actionlint and Zizmor live,
+both required checks. A workflow edit therefore passed `pnpm qa` and could only
+fail on GitHub, which is the exact divergence the derivation exists to prevent,
+in the one corner it cannot see. Two real defects reached CI that way: `secrets`
+used in a step `if:`, where it is not an available context, and a GitHub App
+token inheriting blanket installation permissions.
+
+`bin/ci/lint-workflows.sh` closes it, and `verify.sh` runs it first — it takes
+seconds, and a broken workflow invalidates everything after it. It reads the
+pinned versions and checksums **out of `workflow-security.yml`** rather than
+repeating them, for the same reason the lanes are derived: a second copy of a
+pinned version is how a local check silently stops standing in for the gate it
+mirrors. Binaries are cached in the gitignored `build/tools/`, and a download
+that fails its checksum is deleted rather than cached.
+
+Zizmor's online audits need a credential. The script borrows `gh auth token`
+when one is available and says so when it is not, so a narrower local run is
+never presented as the same check.
+
 ### Why local can pass and CI still fail
 
 The lanes are identical — `check-ci-parity.sh` enforces that. The *inputs* are
