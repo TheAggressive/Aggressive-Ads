@@ -74,13 +74,15 @@ final class ActionNoticeTest extends WP_UnitTestCase {
 	/**
 	 * A campaign sitting in the submitted queue.
 	 *
+	 * @param string $title Campaign title.
 	 * @return int
 	 */
-	private function submit_a_campaign(): int {
+	private function submit_a_campaign( string $title = 'A campaign' ): int {
 		return self::factory()->post->create(
 			array(
 				'post_type'   => Post_Types::CAMPAIGN,
 				'post_status' => Post_Statuses::SUBMITTED,
+				'post_title'  => $title,
 			)
 		);
 	}
@@ -105,18 +107,40 @@ final class ActionNoticeTest extends WP_UnitTestCase {
 	 *
 	 * @return void
 	 */
-	public function test_a_reviewer_is_told_about_a_submitted_campaign(): void {
+	public function test_a_reviewer_is_told_who_submitted_what(): void {
 		$this->become_a_reviewer();
-		$this->submit_a_campaign();
+		$campaign = $this->submit_a_campaign( 'Spring Sale' );
 
 		$output = $this->render();
 
-		$this->assertStringContainsString( 'notice', $output );
+		// The whole point of naming the work: a count says something is
+		// waiting, a sentence says what it is and goes straight to it.
+		$this->assertStringContainsString( 'Spring Sale', $output );
+		$this->assertStringContainsString( 'submitted', $output );
 		$this->assertStringContainsString(
-			esc_url( Review_Screen::queue_url( 'pending' ) ),
+			esc_url( Review_Screen::campaign_url( $campaign, 'pending' ) ),
 			$output,
-			'The notice must link to the queue that clears the work it reports.'
+			'Each named item must link to the campaign it names, not to the queue.'
 		);
+	}
+
+	/**
+	 * A campaign with no title still reads as a sentence.
+	 *
+	 * An organization can be deleted while its campaigns are queued, and a
+	 * campaign can be saved without a title, so the notice has to survive both
+	 * rather than printing "  submitted   for review".
+	 *
+	 * @return void
+	 */
+	public function test_missing_names_do_not_produce_a_broken_sentence(): void {
+		$this->become_a_reviewer();
+		$this->submit_a_campaign( '' );
+
+		$output = $this->render();
+
+		$this->assertStringContainsString( 'an untitled campaign', $output );
+		$this->assertStringNotContainsString( '  ', wp_strip_all_tags( $output ) );
 	}
 
 	/**

@@ -51,6 +51,15 @@ final class Action_Notice implements Service {
 	private const ACTIONABLE = array( 'pending', 'updates', 'requests' );
 
 	/**
+	 * How many items are named before the notice stops listing them.
+	 *
+	 * Enough that a reviewer usually sees the whole of a quiet day's work and
+	 * can go straight to it, few enough that a busy queue does not push the
+	 * screen they actually opened off the bottom of the page.
+	 */
+	private const NAMED = 4;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param Review_Data $data Queue counts.
@@ -117,31 +126,41 @@ final class Action_Notice implements Service {
 		// is the situation this exists to end.
 		printf(
 			'<div class="notice notice-info"><p><strong>%1$s</strong></p><ul style="margin:0.5em 0 0.5em 1.5em;list-style:disc;">%2$s</ul></div>',
-			esc_html__( 'Aggressive Ads: advertising work is waiting for you.', 'aggressive-ads' ),
+			esc_html__( 'Advertising is waiting on you', 'aggressive-ads' ),
 			implode( '', $items ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Each item is escaped as it is built in items().
 		);
 	}
 
 	/**
-	 * One list item per actionable queue with something in it.
+	 * One list item per named piece of work, plus a remainder line.
 	 *
 	 * @return array<int, string>
 	 */
 	private function items(): array {
-		$counts = $this->counts();
-		$items  = array();
+		$snapshot = $this->snapshot();
+		$items    = array();
 
-		foreach ( self::ACTIONABLE as $filter ) {
-			$count = $counts[ $filter ] ?? 0;
-
-			if ( $count < 1 ) {
-				continue;
-			}
-
+		foreach ( $snapshot['named'] as $entry ) {
 			$items[] = sprintf(
 				'<li><a href="%1$s">%2$s</a></li>',
-				esc_url( Review_Screen::queue_url( $filter ) ),
-				esc_html( $this->label_for( $filter, $count ) )
+				esc_url( Review_Screen::campaign_url( (int) $entry['id'], (string) $entry['filter'] ) ),
+				esc_html( $this->sentence_for( (string) $entry['filter'], (string) $entry['org'], (string) $entry['title'] ) )
+			);
+		}
+
+		$remaining = (int) $snapshot['total'] - count( $snapshot['named'] );
+
+		if ( $remaining > 0 ) {
+			$items[] = sprintf(
+				'<li><a href="%1$s">%2$s</a></li>',
+				esc_url( Review_Screen::queue_url() ),
+				esc_html(
+					sprintf(
+						/* translators: %s: number of further items waiting. */
+						_n( 'and %s more waiting', 'and %s more waiting', $remaining, 'aggressive-ads' ),
+						number_format_i18n( $remaining )
+					)
+				)
 			);
 		}
 
@@ -149,54 +168,89 @@ final class Action_Notice implements Service {
 	}
 
 	/**
-	 * What each queue is called when it has work in it.
+	 * What happened, in the words somebody would use to describe it.
 	 *
-	 * Written as whole sentences rather than "Pending: 3" so the link text says
-	 * what clicking it does, which is what a screen reader announces out of
-	 * context.
+	 * "Acme submitted Spring Sale for review" rather than "3 pending", because
+	 * a count tells a reviewer that work exists and a sentence tells them what
+	 * it is. It is also the link text, so it is what a screen reader announces
+	 * out of context — "Review 3 submitted campaigns" is a description of a
+	 * page, not of the thing being opened.
 	 *
 	 * @param string $filter Queue filter key.
-	 * @param int    $count  How many are waiting.
+	 * @param string $org    Advertiser name.
+	 * @param string $title  Campaign title.
 	 * @return string
 	 */
-	private function label_for( string $filter, int $count ): string {
+	private function sentence_for( string $filter, string $org, string $title ): string {
+		// An organization can be deleted while its campaigns are still queued,
+		// and a campaign can be saved without a title. Neither should produce
+		// "  submitted   for review".
+		$org   = '' !== trim( $org ) ? $org : __( 'An advertiser', 'aggressive-ads' );
+		$title = '' !== trim( $title ) ? $title : __( 'an untitled campaign', 'aggressive-ads' );
+
 		if ( 'updates' === $filter ) {
-			/* translators: %s: number of campaigns. */
-			return sprintf( _n( 'Review %s replacement creative', 'Review %s replacement creatives', $count, 'aggressive-ads' ), number_format_i18n( $count ) );
+			/* translators: 1: advertiser name, 2: campaign title. */
+			return sprintf( __( '%1$s uploaded replacement creative for %2$s', 'aggressive-ads' ), $org, $title );
 		}
 
 		if ( 'requests' === $filter ) {
-			/* translators: %s: number of requests. */
-			return sprintf( _n( 'Answer %s advertiser request', 'Answer %s advertiser requests', $count, 'aggressive-ads' ), number_format_i18n( $count ) );
+			/* translators: 1: advertiser name, 2: campaign title. */
+			return sprintf( __( '%1$s asked for a change to %2$s', 'aggressive-ads' ), $org, $title );
 		}
 
-		/* translators: %s: number of campaigns. */
-		return sprintf( _n( 'Review %s submitted campaign', 'Review %s submitted campaigns', $count, 'aggressive-ads' ), number_format_i18n( $count ) );
+		/* translators: 1: advertiser name, 2: campaign title. */
+		return sprintf( __( '%1$s submitted %2$s for review', 'aggressive-ads' ), $org, $title );
 	}
 
 	/**
-	 * Counts per actionable filter, cached.
+	 * The named work and the total waiting, cached.
 	 *
-	 * @return array<string, int>
+	 * Data rather than rendered strings, because a rendered string carries the
+	 * locale of whoever happened to warm the cache — and two administrators
+	 * reading wp-admin in different languages is exactly the case that makes
+	 * that bug invisible to the person who introduced it.
+	 *
+	 * @return array{named: array<int, array<string, mixed>>, total: int}
 	 */
-	private function counts(): array {
+	private function snapshot(): array {
 		$cached = get_transient( self::TRANSIENT );
 
-		if ( is_array( $cached ) ) {
-			return array_map( 'intval', $cached );
+		if ( is_array( $cached ) && isset( $cached['named'], $cached['total'] ) && is_array( $cached['named'] ) ) {
+			return array(
+				'named' => $cached['named'],
+				'total' => (int) $cached['total'],
+			);
 		}
 
-		$counts = array();
+		$named = array();
+		$total = 0;
 
-		foreach ( $this->data->tabs() as $tab ) {
-			if ( in_array( $tab['key'], self::ACTIONABLE, true ) ) {
-				$counts[ $tab['key'] ] = (int) $tab['count'];
+		foreach ( self::ACTIONABLE as $filter ) {
+			$page   = $this->data->queue( $filter, 1 );
+			$total += (int) $page['total'];
+
+			foreach ( $page['rows'] as $row ) {
+				if ( count( $named ) >= self::NAMED ) {
+					break;
+				}
+
+				$named[] = array(
+					'id'     => (int) ( $row['id'] ?? 0 ),
+					'org'    => (string) ( $row['org_name'] ?? '' ),
+					'title'  => (string) ( $row['title'] ?? '' ),
+					'filter' => $filter,
+				);
 			}
 		}
 
-		set_transient( self::TRANSIENT, $counts, self::TTL );
+		$snapshot = array(
+			'named' => $named,
+			'total' => $total,
+		);
 
-		return $counts;
+		set_transient( self::TRANSIENT, $snapshot, self::TTL );
+
+		return $snapshot;
 	}
 
 	/**
