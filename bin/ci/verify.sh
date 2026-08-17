@@ -51,8 +51,23 @@ if [ -z "$lanes" ]; then
 	exit 1
 fi
 
-while IFS=$'\t' read -r job command; do
+expected=$(printf '%s\n' "$lanes" | grep -c .)
+ran=0
+
+# Read the lane list on fd 3, never stdin.
+#
+# This loop used to read from stdin, and the commands it runs inherited it.
+# Anything that reads stdin — docker exec behind the WordPress suites, the
+# bundler — consumed the lines for the lanes that came next, and `read` then
+# saw them as already gone. Nine of fourteen lanes ran and `ci:verify` still
+# printed "all lanes passed": i18n vanished after lint:files, all three e2e
+# lanes after ci:build, and package after the WordPress suites. A skipped lane
+# reported as a passing lane is worse than a failing one, because it is the
+# exact promise this file exists to make.
+while IFS=$'\t' read -r job command <&3; do
 	[ -n "$command" ] || continue
+
+	ran=$(( ran + 1 ))
 
 	echo
 	echo "──────────────────────────────────────────────────────────────"
@@ -62,8 +77,21 @@ while IFS=$'\t' read -r job command; do
 	# Unquoted on purpose: a command may carry its own arguments, exactly as it
 	# does in the workflow line it was read from.
 	# shellcheck disable=SC2086
-	pnpm $command
-done <<< "$lanes"
+	#
+	# stdin is closed for the same reason the list moved to fd 3. Moving the
+	# list alone stops a lane eating it, but then a lane that reads stdin waits
+	# on a terminal instead of finishing. CI hands these commands nothing, so
+	# closing it here is also what makes a local run behave like the runner.
+	pnpm $command </dev/null
+done 3<<< "$lanes"
+
+# The fd-3 read makes the loop safe today; this makes a regression loud rather
+# than silent tomorrow. Any future lane runner that loses lanes fails here
+# instead of congratulating itself.
+if [ "$ran" -ne "$expected" ]; then
+	echo "ci:verify: ran ${ran} of ${expected} lanes; something consumed the list." >&2
+	exit 1
+fi
 
 echo
-echo "ci:verify: all lanes passed"
+echo "ci:verify: all ${ran} lanes passed"
