@@ -366,6 +366,11 @@ jobs:
       actions: write
       contents: write
       pull-requests: write
+    env:
+      # Only so the mint step can test it in `if:`, where `secrets` is not an
+      # available context. An App id is not itself a credential; the private key
+      # is, and that is read straight from secrets at the point of use.
+      AGGR_RELEASE_APP_ID: ${{ secrets.AGGR_RELEASE_APP_ID }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -383,11 +388,20 @@ jobs:
       # is the same silent stall this pipeline has been chasing all along.
       - name: Mint a release token
         id: app-token
-        if: ${{ secrets.AGGR_RELEASE_APP_ID != '' }}
+        # `secrets` is not a context available to a step `if:`, so the App id is
+        # lifted to job env and tested there. Without the guard the step fails
+        # the whole job on any repository that has no App configured.
+        if: ${{ env.AGGR_RELEASE_APP_ID != '' }}
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
-          app-id: ${{ secrets.AGGR_RELEASE_APP_ID }}
+          app-id: ${{ env.AGGR_RELEASE_APP_ID }}
           private-key: ${{ secrets.AGGR_RELEASE_APP_PRIVATE_KEY }}
+          # An installation token inherits every permission the App was granted
+          # unless it is narrowed here. These two are what the helper actually
+          # uses — a version commit and a pull request — so anything the App is
+          # later granted for another purpose stays out of this token.
+          permission-contents: write
+          permission-pull-requests: write
       - name: Open protected version synchronization PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
