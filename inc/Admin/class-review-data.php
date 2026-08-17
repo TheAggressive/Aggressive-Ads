@@ -241,6 +241,42 @@ final class Review_Data {
 	}
 
 	/**
+	 * One audit row's sentence, in the reader's words rather than the schema's.
+	 *
+	 * A transition stores its own message as `Campaign moved from aggr_submitted
+	 * to aggr_review.`, which is the right thing to *store* — an audit row is a
+	 * record, and freezing a translated string into it would make the log read
+	 * in whichever locale happened to be active when it was written. The status
+	 * slugs are also kept in their own columns for exactly this reason.
+	 *
+	 * So the sentence is composed here, at render time, from those columns. That
+	 * localizes it properly and fixes every row already in the table rather than
+	 * only the ones written from now on.
+	 *
+	 * Scoped to `campaign.transitioned` on purpose. A denial carries from/to as
+	 * well, and its own message says something this one does not.
+	 *
+	 * @param array{event: string, from_state: string, to_state: string, message: string} $event Stored row.
+	 * @return string
+	 */
+	private static function event_message( array $event ): string {
+		if (
+			'campaign.transitioned' !== $event['event']
+			|| '' === $event['from_state']
+			|| '' === $event['to_state']
+		) {
+			return $event['message'];
+		}
+
+		return sprintf(
+			/* translators: 1: previous campaign status, already translated. 2: new campaign status, already translated. */
+			__( 'Campaign moved from %1$s to %2$s.', 'aggressive-ads' ),
+			self::status_label( $event['from_state'] ),
+			self::status_label( $event['to_state'] )
+		);
+	}
+
+	/**
 	 * A campaign's run window as one readable phrase.
 	 *
 	 * @param int $start_ts Start timestamp.
@@ -471,7 +507,7 @@ final class Review_Data {
 				'actor'        => 0 === $event['actor_user_id'] ? __( 'System', 'aggressive-ads' ) : self::user_name( $event['actor_user_id'] ),
 				'event'        => $event['event'],
 				'outcome'      => $event['outcome'],
-				'message'      => $event['message'],
+				'message'      => self::event_message( $event ),
 			);
 		}
 

@@ -130,8 +130,10 @@ PACKAGE_REQUIRED=(
 	dist/admin/packages.asset.php
 	dist/admin/organizations.js
 	dist/admin/organizations.asset.php
-	templates/admin/review-queue.php
-	templates/admin/review-campaign.php
+	dist/admin/inventory.js
+	dist/admin/inventory.asset.php
+	dist/admin/review.js
+	dist/admin/review.asset.php
 	templates/portal/base.php
 	templates/portal/base-bare.php
 	templates/portal/login.php

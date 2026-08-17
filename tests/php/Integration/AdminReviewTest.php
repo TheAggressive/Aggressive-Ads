@@ -454,6 +454,199 @@ final class AdminReviewTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Audit history remains behind its independent read capability.
+	 *
+	 * @return void
+	 */
+	public function test_review_capability_alone_does_not_expose_the_audit_timeline(): void {
+		$campaign = $this->campaign( Post_Statuses::REVIEW );
+		$this->audit->insert( new Audit_Event( event: 'private-event', object_type: 'campaign', object_id: $campaign, org_id: $this->org_id ) );
+
+		$role = get_role( Roles::REVIEWER );
+		$this->assertNotNull( $role );
+		$role->remove_cap( Capabilities::VIEW_AUDIT_LOG );
+
+		wp_set_current_user( $this->reviewer );
+
+		$data = $this->data->campaign( $campaign );
+
+		$this->assertIsArray( $data );
+		$this->assertFalse( $data['can_view_audit'] );
+		$this->assertSame( array(), $data['audit'] );
+	}
+
+	/**
+	 * Object-aware capability checks keep every valid staff action visible.
+	 *
+	 * @return void
+	 */
+	public function test_scheduled_campaign_exposes_pause_and_cancel_actions(): void {
+		$campaign = $this->campaign( Post_Statuses::SCHEDULED );
+
+		wp_set_current_user( $this->reviewer );
+
+		$targets = array_column( $this->data->actions_for( $campaign, Post_Statuses::SCHEDULED ), 'to' );
+
+		$this->assertContains( Post_Statuses::PAUSED, $targets );
+		$this->assertContains( Post_Statuses::CANCELLED, $targets );
+	}
+
+	/**
+	 * Claiming through the screen still funnels through the state machine.
+	 *
+	 * @return void
+	 */
+	public function test_reviewer_can_claim_a_submitted_campaign(): void {
+		$campaign = $this->campaign( Post_Statuses::SUBMITTED );
+
+		wp_set_current_user( $this->reviewer );
+
+		$this->assertTrue( $this->actions->transition( $campaign, Post_Statuses::REVIEW ) );
+		$this->assertSame( Post_Statuses::REVIEW, $this->campaigns->status( $campaign ) );
+		$this->assertSame( $this->reviewer, $this->campaigns->reviewed_by( $campaign ) );
+	}
+
+	/**
+	 * Internal notes are staff-only and every write enters the audit timeline.
+	 *
+	 * @return void
+	 */
+	public function test_internal_notes_are_authorized_and_audited(): void {
+		$campaign = $this->campaign( Post_Statuses::REVIEW );
+
+		wp_set_current_user( $this->reviewer );
+
+		$this->assertTrue( $this->actions->save_internal_notes( $campaign, 'Confirm destination with sales.' ) );
+		$this->assertSame( 'Confirm destination with sales.', $this->campaigns->internal_notes( $campaign ) );
+
+		$events = $this->audit->for_object( 'campaign', $campaign, $this->org_id );
+
+		$this->assertSame( 'campaign.internal_notes_updated', $events[0]['event'] );
+
+		wp_set_current_user( $this->advertiser );
+
+		$denied = $this->actions->save_internal_notes( $campaign, 'Advertiser overwrite' );
+
+		$this->assertInstanceOf( WP_Error::class, $denied );
+		$this->assertSame( 'aggr_forbidden', $denied->get_error_code() );
+		$this->assertSame( 'Confirm destination with sales.', $this->campaigns->internal_notes( $campaign ) );
+	}
+
+	/**
+	 * Audit reads are object-scoped in SQL and newest first.
+	 *
+	 * @return void
+	 */
+	public function test_audit_timeline_is_scoped_and_ordered(): void {
+		$campaign = $this->campaign( Post_Statuses::REVIEW );
+		$other    = $this->campaign( Post_Statuses::REVIEW, 'Another campaign' );
+
+		$this->audit->insert( new Audit_Event( event: 'first', object_type: 'campaign', object_id: $campaign, org_id: $this->org_id, message: 'First' ) );
+		$this->audit->insert( new Audit_Event( event: 'other', object_type: 'campaign', object_id: $other, org_id: $this->org_id, message: 'Other' ) );
+		$this->audit->insert( new Audit_Event( event: 'second', object_type: 'campaign', object_id: $campaign, org_id: $this->org_id, message: 'Second' ) );
+		$this->audit->insert( new Audit_Event( event: 'wrong-org', object_type: 'campaign', object_id: $campaign, org_id: $this->org_id + 1, message: 'Wrong org' ) );
+
+		$events = $this->audit->for_object( 'campaign', $campaign, $this->org_id );
+
+		$this->assertSame( array( 'second', 'first' ), array_column( $events, 'event' ) );
+		$this->assertNotContains( 'other', array_column( $events, 'event' ) );
+		$this->assertNotContains( 'wrong-org', array_column( $events, 'event' ) );
+	}
+
+	/**
+	 * **The review screen itself refuses anyone without the capability.**
+	 *
+	 * This is the screen that renders another organization's unapproved
+	 * creative, the staff-only internal notes and the audit timeline. In
+	 * production `add_submenu_page()` gates the callback, so the in-method check
+	 * is the second lock — and it could be deleted with all 661 tests green,
+	 * which means nobody had ever seen it work.
+	 *
+	 * @return void
+	 */
+	public function test_render_refuses_a_user_without_the_review_capability(): void {
+		$campaign = $this->campaign( Post_Statuses::REVIEW );
+
+		$this->campaigns->set_internal_notes( $campaign, 'Never shown to an advertiser.' );
+
+		wp_set_current_user( $this->advertiser );
+
+		$query    = array( 'campaign' => (string) $campaign );
+		$_GET     = $query;
+		$_REQUEST = $query;
+
+		$this->expectException( 'WPDieException' );
+
+		ob_start();
+
+		try {
+			$this->screen->render();
+		} finally {
+			$output = (string) ob_get_clean();
+
+				$this->assertStringNotContainsString( 'Never shown to an advertiser.', $output );
+		}
+	}
+
+	/**
+	 * A logged-out visitor is refused the same way.
+	 *
+	 * @return void
+	 */
+	public function test_render_refuses_a_logged_out_visitor(): void {
+		wp_set_current_user( 0 );
+
+		$this->expectException( 'WPDieException' );
+		$this->screen->render();
+	}
+
+	/**
+	 * **The timeline reads in status labels, not schema slugs.**
+	 *
+	 * The stored message says `aggr_submitted`, and should keep saying it: an
+	 * audit row is a record, and a translated string frozen into the table
+	 * would read in whichever locale wrote it. The sentence a reviewer sees is
+	 * composed at render time from the from/to columns instead, which also
+	 * repairs every row already written.
+	 *
+	 * @return void
+	 */
+	public function test_the_audit_timeline_reads_in_status_labels(): void {
+		$campaign = $this->campaign( Post_Statuses::SUBMITTED );
+
+		wp_set_current_user( $this->reviewer );
+
+		$this->assertTrue( $this->actions->transition( $campaign, Post_Statuses::REVIEW ) );
+
+		$row = $this->data->campaign( $campaign );
+
+		$this->assertIsArray( $row );
+
+		$moved = array_values(
+			array_filter(
+				array_column( $row['audit'], 'message' ),
+				static fn ( string $message ): bool => str_contains( $message, 'Campaign moved' )
+			)
+		);
+
+		$this->assertNotSame( array(), $moved, 'No transition appeared in the timeline.' );
+		$this->assertStringContainsString( 'Submitted', $moved[0] );
+		$this->assertStringNotContainsString( 'aggr_', $moved[0] );
+
+		// The record underneath still carries the slugs, which is what makes
+		// the rendered sentence reproducible in any locale.
+		$raw = array_values(
+			array_filter(
+				$this->audit->for_object( 'campaign', $campaign, $this->org_id ),
+				static fn ( array $event ): bool => 'campaign.transitioned' === $event['event']
+			)
+		);
+
+		$this->assertSame( Post_Statuses::SUBMITTED, $raw[0]['from_state'] );
+		$this->assertSame( Post_Statuses::REVIEW, $raw[0]['to_state'] );
+	}
+
+	/**
 	 * **The deleted handlers took their CSRF surface with them.**
 	 *
 	 * Six tests used to live here proving that `handle_transition()` and

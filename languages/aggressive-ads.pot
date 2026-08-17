@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-16T23:52:48+00:00\n"
+"POT-Creation-Date: 2026-08-17T00:32:14+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -456,85 +456,91 @@ msgstr ""
 msgid "The inventory screen needs JavaScript enabled."
 msgstr ""
 
-#: inc/Admin/class-review-data.php:252
+#. translators: 1: previous campaign status, already translated. 2: new campaign status, already translated.
+#: inc/Admin/class-review-data.php:273
+#, php-format
+msgid "Campaign moved from %1$s to %2$s."
+msgstr ""
+
+#: inc/Admin/class-review-data.php:288
 #: inc/Portal/class-view-data.php:757
 msgid "Not scheduled"
 msgstr ""
 
 #. translators: 1: campaign start date. 2: campaign end date.
-#: inc/Admin/class-review-data.php:263
+#: inc/Admin/class-review-data.php:299
 #: inc/Portal/class-view-data.php:773
 #, php-format
 msgid "%1$s – %2$s"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:471
+#: inc/Admin/class-review-data.php:507
 msgid "System"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:517
+#: inc/Admin/class-review-data.php:553
 msgid "Needs review"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:518
+#: inc/Admin/class-review-data.php:554
 #: inc/Admin/class-review-screen.php:266
 msgid "Ad updates"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:519
+#: inc/Admin/class-review-data.php:555
 msgid "Advertiser requests"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:520
+#: inc/Admin/class-review-data.php:556
 msgid "With the advertiser"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:521
+#: inc/Admin/class-review-data.php:557
 msgid "Decided"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:522
+#: inc/Admin/class-review-data.php:558
 #: inc/Portal/class-view-data.php:630
 msgid "Running"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:523
+#: inc/Admin/class-review-data.php:559
 msgid "Finished"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:539
+#: inc/Admin/class-review-data.php:575
 msgid "Start review"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:540
+#: inc/Admin/class-review-data.php:576
 msgid "Release back to the queue"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:541
+#: inc/Admin/class-review-data.php:577
 msgid "Request changes"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:542
+#: inc/Admin/class-review-data.php:578
 msgid "Reject"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:543
+#: inc/Admin/class-review-data.php:579
 msgid "Approve and publish"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:544
+#: inc/Admin/class-review-data.php:580
 msgid "Reopen as a draft"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:545
+#: inc/Admin/class-review-data.php:581
 msgid "Pause campaign"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:546
+#: inc/Admin/class-review-data.php:582
 msgid "Resume campaign"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:547
+#: inc/Admin/class-review-data.php:583
 #: inc/Portal/class-view-data.php:262
 msgid "Cancel campaign"
 msgstr ""
