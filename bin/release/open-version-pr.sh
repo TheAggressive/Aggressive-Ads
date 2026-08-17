@@ -170,9 +170,37 @@ PR_NUMBER="$(gh pr view "${PR}" --repo "${REPOSITORY}" --json number --jq '.numb
 HEAD_SHA="$(gh pr view "${PR_NUMBER}" --repo "${REPOSITORY}" --json headRefOid --jq '.headRefOid')"
 
 # A release credential's PR already started these through their own
-# `pull_request: [master]` triggers. Dispatching again would run every lane a
-# second time against the same commit and report each required check twice.
-if (( ! UNATTENDED )); then
+# `pull_request: [master]` triggers, and dispatching again would run every lane
+# a second time against the same commit and report each required check twice.
+#
+# But "already started" is an assumption about GitHub's behaviour, and if it
+# ever failed to hold, auto-merge would wait on checks that never arrive. That
+# trades a loud stall for a silent one, which is the failure this whole change
+# exists to remove. So the assumption is checked rather than trusted: give the
+# PR's own runs a minute to register, and dispatch anyway if none did.
+DISPATCH=1
+
+if (( UNATTENDED )); then
+	DISPATCH=0
+
+	for _ in $(seq 1 6); do
+		STARTED="$(gh api "repos/${REPOSITORY}/commits/${HEAD_SHA}/check-runs" \
+			--jq '.total_count' 2>/dev/null || echo 0)"
+
+		if [[ "${STARTED}" -gt 0 ]]; then
+			break
+		fi
+
+		sleep 10
+	done
+
+	if [[ "${STARTED:-0}" -eq 0 ]]; then
+		echo "::warning title=Dispatching version PR checks as a fallback::The version PR started no checks of its own within 60s, so they are being dispatched explicitly."
+		DISPATCH=1
+	fi
+fi
+
+if (( DISPATCH )); then
 	for workflow in ci.yml codeql.yml workflow-security.yml; do
 		gh workflow run "${workflow}" --repo "${REPOSITORY}" --ref "${BRANCH}"
 	done
