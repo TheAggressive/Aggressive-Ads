@@ -11,13 +11,13 @@ Delete an entry when it ships. An entry that has been here through three
 releases is either not real or not wanted — say which, in the entry, and then
 delete it.
 
-## 1. Moving a member between organizations
+## Nothing is open
 
-A portal account belongs to exactly one organization
-(`Organization_Membership::eligible_for_org()`). Staff correct a mistake by
-removing the member and inviting them to the other organization; the screen
-says so rather than hiding the gap behind a "move" button.
+Every entry this file carried has shipped. The last one was not unfinished work
+at all — "moving a member between organizations" described a deliberate absence,
+so it moved to `domain-model.md` as invariant 8, beside the tenancy rules it
+protects and where somebody designing a membership feature will actually meet
+it. Filed here it read like a task nobody had got round to, which is the
+opposite of what it meant.
 
-Genuine multi-organization membership is a tenancy change, not a screen:
-`Ownership::map()`, fill scoping and every org-scoped query assume one
-organization per user. Do not add it as a convenience.
+Add the next entry when work is genuinely started, understood and unfinished.
