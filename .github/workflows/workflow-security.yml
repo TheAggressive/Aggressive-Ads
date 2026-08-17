@@ -40,6 +40,14 @@ jobs:
     name: Zizmor
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    env:
+      # Declared here rather than inline so `bin/ci/lint-workflows.sh` can read
+      # the version this job pins and run exactly it. Two copies of a version is
+      # how a local check quietly stops matching the gate it stands in for.
+      # ZIZMOR_SHA256 is consumed only by that script, which verifies the
+      # release archive it downloads; this job gets its binary from the action.
+      ZIZMOR_VERSION: 1.25.2
+      ZIZMOR_SHA256: aa1facd105f0d83fe5c55b1adcd9d7417de5d83aa27471f91dc0b66cf3803577
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -50,4 +58,4 @@ jobs:
           advanced-security: false
           online-audits: true
           min-severity: low
-          version: 1.25.2
+          version: ${{ env.ZIZMOR_VERSION }}

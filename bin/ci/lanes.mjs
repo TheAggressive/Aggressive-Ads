@@ -35,7 +35,7 @@ const WORKFLOW = path.join( ROOT, '.github/workflows/ci.yml' );
  * them on a laptop is neither possible nor desirable, and none of them decides
  * whether the change under test is sound.
  */
-const PUBLISHING_JOBS = new Set( [ 'release-plan', 'version-pr', 'release' ] );
+const PUBLISHING_JOBS = new Set( [ 'release-plan', 'release' ] );
 
 /**
  * Commands CI runs that a local rehearsal deliberately does not.

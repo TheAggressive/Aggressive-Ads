@@ -5,11 +5,15 @@ set -euo pipefail
 
 cd "$(dirname "$0")/../.."
 
-PLUGIN_FILE=aggressive-ads.php
-VERSION="${AGGR_RELEASE_VERSION:-}"
-if [[ -z "${VERSION}" ]]; then
-	VERSION="$(grep -m1 -oE '^\s*\*\s*Version:\s*\S+' "${PLUGIN_FILE}" | awk '{print $NF}')"
-fi
+# Only a release run knows a real version. Everywhere else this lane is proving
+# that the packaging path works and is reproducible, not producing something
+# anyone installs, so it builds under a synthetic one.
+#
+# It used to read the plugin header instead. That worked while the header
+# carried the released version and broke the moment it stopped: the header now
+# reads 0.0.0-development, which package.sh rejects as not strict semver, so
+# every pull request failed at packaging.
+VERSION="${AGGR_RELEASE_VERSION:-0.0.0}"
 
 bash bin/release/package.sh "${VERSION}"
 bash bin/release/verify-package.sh "${VERSION}"

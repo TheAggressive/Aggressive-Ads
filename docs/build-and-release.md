@@ -38,6 +38,26 @@ change is sound.
 script rather than whether somebody remembered to copy it into `verify.sh`. Both
 directions fail: a script no job runs, and a job step the parser cannot see.
 
+**The gate the derivation cannot reach.** `lanes.mjs` reads `ci.yml`, so nothing
+it produces covers `workflow-security.yml` — where Actionlint and Zizmor live,
+both required checks. A workflow edit therefore passed `pnpm qa` and could only
+fail on GitHub, which is the exact divergence the derivation exists to prevent,
+in the one corner it cannot see. Two real defects reached CI that way: `secrets`
+used in a step `if:`, where it is not an available context, and a GitHub App
+token inheriting blanket installation permissions.
+
+`bin/ci/lint-workflows.sh` closes it, and `verify.sh` runs it first — it takes
+seconds, and a broken workflow invalidates everything after it. It reads the
+pinned versions and checksums **out of `workflow-security.yml`** rather than
+repeating them, for the same reason the lanes are derived: a second copy of a
+pinned version is how a local check silently stops standing in for the gate it
+mirrors. Binaries are cached in the gitignored `build/tools/`, and a download
+that fails its checksum is deleted rather than cached.
+
+Zizmor's online audits need a credential. The script borrows `gh auth token`
+when one is available and says so when it is not, so a narrower local run is
+never presented as the same check.
+
 ### Why local can pass and CI still fail
 
 The lanes are identical — `check-ci-parity.sh` enforces that. The *inputs* are
@@ -70,6 +90,24 @@ a row left by some earlier failed run — which is why an e2e fixture must reuse
 slug that file already deletes. `pnpm qa:fresh` destroys the environment and
 starts over before running the lanes, which is the closest local equivalent to
 what CI does every time.
+
+**Infrastructure flakes.** A fourth difference is not about inputs at all: CI
+pulls from the network and a laptop with warm caches often does not. The first
+attempt at v1.1.0 failed because `api.github.com` returned HTTP 504 for
+twenty-six package downloads inside wp-env's Docker build — a GitHub outage,
+reported as a red build on this plugin.
+
+`bin/ci/retry.sh` wraps such a command with exponential backoff, and `env:start`
+uses it. It lives in the pnpm script rather than the workflow step on purpose:
+`lanes.mjs` matches `run: pnpm <command>`, so wrapping the workflow line would
+drop the step out of the derived local lanes, and putting it in the script gives
+local runs the same resilience.
+
+Retries are deliberately narrow. A retry around a command that fails for real
+reasons turns a fast failure into a slow one and hides flakiness that deserves
+fixing, so it belongs only on network-bound, idempotent steps. Each retry emits
+a workflow warning, so a run that only passed on the second attempt still says
+so.
 
 The build job uploads one `dist/` artifact which the E2E and package jobs both
 download. This makes the browser-tested assets the packaged assets instead of
@@ -228,65 +266,74 @@ Releases are calculated automatically from Conventional Commits merged to
 breaking change creates a major release. Documentation, CI, chores, tests, and
 dependency maintenance do not publish.
 
-Git tags and published GitHub Releases are the production version source of
+Git tags and published GitHub Releases are the **only** version source of
 truth. The checked-in `package.json`, plugin header, block manifest,
-`AGGR_VERSION`, README, and test bootstraps all carry that same strict-semver
-version.
-`bin/ci/check-version-contract.mjs` fails CI if those declarations drift.
+`AGGR_VERSION`, README, and test bootstraps all read `0.0.0-development` and are
+never bumped; `package.sh` stamps the planned version into the staged tree at
+package time and mutates nothing in the checkout.
+`bin/ci/check-version-contract.mjs` fails CI if any of them claims otherwise.
 
-When Semantic Release plans a newer version from a product commit, the trusted
-master pipeline first opens a version-only `chore(release)` pull request. Because
-GitHub deliberately suppresses recursive workflow events created with
-`GITHUB_TOKEN`, the release helper explicitly dispatches CI, CodeQL, and workflow
-security against that PR's exact head commit and registers squash auto-merge.
-There is no ruleset bypass. After the protected version PR merges, the next
-master pipeline confirms the checked-in version equals the plan and publishes
-from that synchronized commit.
+When Semantic Release plans a version, the trusted master pipeline packages,
+tags and publishes it **on that same run**. Nothing is written back to the
+repository, so there is no second pass and no credential beyond the run's own
+`GITHUB_TOKEN`.
 
-Because there is no bypass, the version commit has to satisfy the signature rule
-like any other, and `GITHUB_TOKEN` has no signing key. The helper therefore
-creates the branch at a commit that already exists on master — a ref creation
-pushes no new object — and writes the version files through the GraphQL
-`createCommitOnBranch` mutation, which GitHub signs with its own key. It then
-asserts the resulting commit reports `verification.verified`, and deletes the
-branch again if it does not.
+`workflow_dispatch` on `master` is a trusted release trigger alongside `push`,
+so a release that was missed can be started by hand. Dispatching on any other
+ref runs the quality lanes only.
 
-That assertion exists because the failure it prevents is invisible until the
-last moment. An unsigned version commit passes every required check and is
-refused only at the merge, with `the base branch policy prohibits the merge` on
-a PR that looks entirely green — which is how v1.1.0 stalled. Failing in
-`version-pr`, where the commit is made, names the cause at the point it happens.
+### Why the version is not committed
 
-That suppression applies to the merge as well as the branch. Auto-merge pushes
-its merge commit on behalf of whichever credential registered it, so registering
-it with `GITHUB_TOKEN` lands the synchronized commit on master without emitting a
-push event — and the publishing run never starts. Configure an
-`AGGR_RELEASE_TOKEN` secret (a fine-grained PAT or GitHub App token with
-`contents: write` and `pull requests: write`) and the helper registers auto-merge
-with it, so the merge push starts the run that publishes. Without that secret the
-helper still opens and auto-merges the PR, but prints the manual step it leaves
-behind:
+This was built the other way first, and the reversal is worth recording because
+the original design looked more correct and was not.
 
-```bash
-gh workflow run ci.yml --ref master
-```
+Synchronizing the version into `master` meant a bot opening a pull request
+against a branch that requires signed commits, reviewed pull requests, and
+passing checks. GitHub will not let its own token do that unattended: it holds
+workflow runs on bot-authored pull requests at `action_required` until a human
+approves them, and it suppresses the push event when their merge lands. So a
+release stalled twice, and both stalls looked exactly like a pull request that
+was still running. v1.1.0 sat blocked for two hours with every check green.
 
-`workflow_dispatch` on `master` is a trusted release trigger for exactly that
-reason: `release-plan`, `version-pr`, and `release` accept it alongside `push`.
-Dispatching on any other ref — including the branch dispatches this helper makes
-against the version PR head — runs the quality lanes only.
+Each fix worked and each added a moving part — an API-created commit so GitHub
+would sign it, a separate credential so the pull request was not bot-authored, a
+GitHub App so that credential did not expire, guards to make the remaining
+manual steps loud. All of it existed to get a version number onto a protected
+branch.
 
-This automation requires the repository setting **Allow GitHub Actions to
-create and approve pull requests**. GitHub combines PR creation and review
-approval in one setting; this workflow uses only PR creation and auto-merge and
-never submits an approving review. Keep the repository's default workflow
-permission read-only: only the isolated `version-pr` job receives the scoped
-`actions: write`, `contents: write`, and `pull-requests: write` permissions.
+The version does not need to be there. `package.sh` already stamped the staged
+tree, so the published artifact was always correct; the commit only made the
+repository agree with the tag. Removing it removes the pull request, the
+credential, the App, the approval gate, the suppressed push event, and the
+guards written for them, and `master` keeps every protection because nothing but
+a person's pull request ever lands on it.
+
+The tag is the version. A checkout is not a release and now says so.
+
+### What this costs
+
+`0.0.0-development` is what the repository reads, everywhere, forever.
+`bin/ci/check-version-contract.mjs` fails the build if any declaration says
+otherwise — including a tree where every file was bumped together, which agrees
+with itself and is still not a release.
+
+Two consequences worth knowing:
+
+- **A development install reports `0.0.0-development`.** The updater compares
+  against the *installed* header, which is the stamped version for anything
+  installed from a release, so this only affects a checkout — where it correctly
+  reads as older than every published build.
+- **README ships.** It is stamped in the staged tree alongside the plugin header,
+  the `AGGR_VERSION` constant and the block manifest, and `package.sh` verifies
+  all four applied before archiving. It is the one stamped file that is
+  documentation rather than code, which makes it the easiest to forget.
+
+The same approach runs in the Aggressive Apparel theme, where `style.css` in the
+repository trails the published release by design.
 
 The `package` job receives the planned version only on a trusted master push.
-After every quality lane succeeds and the version contract is synchronized,
-`semantic-release` creates the tag and a private draft containing these exact
-accepted assets:
+After every quality lane succeeds, `semantic-release` creates the tag and a
+private draft containing these exact accepted assets:
 
 - `aggressive-ads-{version}.zip`
 - `aggressive-ads-{version}.zip.sha256`

@@ -187,6 +187,12 @@ sed -i -E \
 sed -i -E \
 	"0,/\"version\": \"[^\"]+\"/s//\"version\": \"${VERSION}\"/" \
 	"${STAGING}/dist/blocks/placement/block.json"
+# README ships, so it would otherwise reach users still reading
+# 0.0.0-development — the one stamped file that is documentation rather than
+# code, and the easiest to forget precisely because nothing executes it.
+sed -i -E \
+	"s/^\| Plugin \| Aggressive Ads \`[^\`]+\` \|$/| Plugin | Aggressive Ads \`${VERSION}\` |/" \
+	"${STAGING}/README.md"
 
 staged_header_version=$(
 	grep -m1 -oE '^\s*\*\s*Version:\s*\S+' "${STAGING}/${PLUGIN_FILE}" | awk '{print $NF}'
@@ -197,7 +203,10 @@ staged_constant_version=$(
 staged_block_version=$(
 	grep -m1 -oE '"version": "[^"]+"' "${STAGING}/dist/blocks/placement/block.json" | cut -d'"' -f4
 )
-if [[ "${staged_header_version}" != "${VERSION}" || "${staged_constant_version}" != "${VERSION}" || "${staged_block_version}" != "${VERSION}" ]]; then
+staged_readme_version=$(
+	grep -m1 -oE '^\| Plugin \| Aggressive Ads `[^`]+`' "${STAGING}/README.md" | cut -d'`' -f2
+)
+if [[ "${staged_header_version}" != "${VERSION}" || "${staged_constant_version}" != "${VERSION}" || "${staged_block_version}" != "${VERSION}" || "${staged_readme_version}" != "${VERSION}" ]]; then
 	echo "Version stamp did not apply to the staged plugin." >&2
 	exit 1
 fi

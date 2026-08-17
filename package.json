@@ -1,6 +1,6 @@
 {
 	"name": "aggressive-ads",
-	"version": "1.1.0",
+	"version": "0.0.0-development",
 	"description": "Live means live. White-label advertising management for WordPress.",
 	"license": "GPL-2.0-or-later",
 	"private": true,
@@ -54,7 +54,7 @@
 	},
 	"scripts": {
 		"prepare": "husky",
-		"env:start": "wp-env start",
+		"env:start": "bash bin/ci/retry.sh 3 wp-env start",
 		"env:stop": "wp-env stop",
 		"env:destroy": "wp-env destroy",
 		"env:logs": "wp-env logs",
@@ -87,6 +87,7 @@
 		"i18n:locale": "bash bin/i18n/locale.sh",
 		"dev:seed": "wp-env run cli wp eval 'require \"wp-content/plugins/aggressive-ads/bin/dev/seed.php\";'",
 		"analyse:php": "composer run-script analyse",
+		"lint:workflows": "bash bin/ci/lint-workflows.sh",
 		"lint:files": "node --test bin/release/version-contract.test.mjs && node bin/ci/check-version-contract.mjs && node bin/ci/check-suppression-reasons.mjs && node bin/ci/check-styles.mjs && bash bin/check-file-length.sh && bash bin/ci/check-repository-boundary.sh && bash bin/ci/check-permission-callbacks.sh && bash bin/ci/check-action-pins.sh && bash bin/ci/check-ci-parity.sh",
 		"test:php:unit": "vendor/bin/phpunit",
 		"test:php:integration": "bash bin/ci/run-wp-tests.sh phpunit-integration.xml.dist",

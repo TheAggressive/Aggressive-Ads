@@ -12,7 +12,7 @@ import process from 'node:process';
 
 import semanticRelease from 'semantic-release';
 
-import { assertVersion, readSourceVersion } from './version-contract.mjs';
+import { assertVersion } from './version-contract.mjs';
 
 // semantic-release redacts secrets in the log stream it writes, but a thrown
 // error's message never passes through that filter. This job holds a
@@ -35,21 +35,6 @@ function sanitize(message) {
 	return sanitized;
 }
 
-// Safe only because both operands are asserted strict x.y.z first; `Number`
-// would otherwise yield NaN for a prerelease and silently compare as equal.
-function compareVersions(left, right) {
-	const leftParts = left.split('.').map(Number);
-	const rightParts = right.split('.').map(Number);
-
-	for (let index = 0; index < 3; index += 1) {
-		if (leftParts[index] !== rightParts[index]) {
-			return leftParts[index] - rightParts[index];
-		}
-	}
-
-	return 0;
-}
-
 async function writeOutputs(outputPath, values) {
 	await appendFile(
 		outputPath,
@@ -67,7 +52,6 @@ async function planRelease() {
 		throw new Error('GITHUB_OUTPUT is required for release planning.');
 	}
 
-	const sourceVersion = await readSourceVersion();
 	const result = await semanticRelease(
 		{ dryRun: true },
 		{
@@ -79,12 +63,8 @@ async function planRelease() {
 	);
 
 	if (!result) {
-		await writeOutputs(outputPath, {
-			should_release: false,
-			source_version: sourceVersion,
-			needs_version_sync: false,
-		});
-		console.log(`No release-worthy commits found; source is ${sourceVersion}.`);
+		await writeOutputs(outputPath, { should_release: false });
+		console.log('No release-worthy commits found.');
 		return;
 	}
 
@@ -93,25 +73,14 @@ async function planRelease() {
 	// verify-package.sh and the version contract all require strict x.y.z, so a
 	// prerelease must stop planning rather than skip the sync step.
 	assertVersion(version, 'Planned release version');
-	const comparison = compareVersions(sourceVersion, version);
-	if (comparison > 0) {
-		throw new Error(
-			`Source version ${sourceVersion} is ahead of planned release ${version}.`
-		);
-	}
 
-	const needsVersionSync = comparison < 0;
 	await writeOutputs(outputPath, {
 		should_release: true,
 		release_type: type,
 		next_version: version,
-		source_version: sourceVersion,
-		needs_version_sync: needsVersionSync,
 	});
 
-	console.log(
-		`Release due: ${type} version ${version}; source ${sourceVersion}; sync ${needsVersionSync}.`
-	);
+	console.log(`Release due: ${type} version ${version}.`);
 }
 
 try {

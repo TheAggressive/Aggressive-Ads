@@ -27,9 +27,9 @@ jobs:
   release-plan:
     name: Plan Release
     runs-on: ubuntu-24.04
-    # workflow_dispatch on master is the recovery path: a version PR merged by
-    # GITHUB_TOKEN emits no push event, so the publishing run has to be started
-    # explicitly. See docs/build-and-release.md.
+    # workflow_dispatch on master is the recovery path for a release that was
+    # missed — nothing writes back to master, so an ordinary push publishes on
+    # its own run. See docs/build-and-release.md.
     if: >-
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
       github.ref == 'refs/heads/master'
@@ -40,8 +40,6 @@ jobs:
       should_release: ${{ steps.check.outputs.should_release }}
       release_type: ${{ steps.check.outputs.release_type }}
       next_version: ${{ steps.check.outputs.next_version }}
-      source_version: ${{ steps.check.outputs.source_version }}
-      needs_version_sync: ${{ steps.check.outputs.needs_version_sync }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -348,48 +346,11 @@ jobs:
             release/*.zip.sha256
           retention-days: 30
 
-  # Version declarations reach master through the same protected PR path as
-  # product code. GITHUB_TOKEN does not emit recursive PR workflow events, so
-  # the helper explicitly dispatches every required workflow on the PR head.
-  version-pr:
-    name: Prepare Version PR
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    needs: [release-plan, package]
-    if: >-
-      success() &&
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
-      github.ref == 'refs/heads/master' &&
-      needs.release-plan.outputs.should_release == 'true' &&
-      needs.release-plan.outputs.needs_version_sync == 'true'
-    permissions:
-      actions: write
-      contents: write
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-          # zizmor: ignore[artipacked] this isolated job must push only the
-          # generated version branch; protected master still has no bypass.
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-      - name: Open protected version synchronization PR
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Optional. Registering auto-merge with a credential other than
-          # GITHUB_TOKEN is what lets the resulting merge push start the run
-          # that publishes; without it the release needs a manual dispatch.
-          AGGR_RELEASE_TOKEN: ${{ secrets.AGGR_RELEASE_TOKEN }}
-          AGGR_RELEASE_VERSION: ${{ needs.release-plan.outputs.next_version }}
-        run: bash bin/release/open-version-pr.sh
-
   # semantic-release creates the tag and a private draft from the package that
-  # passed every CI lane and a commit whose reviewed version declarations
-  # already match the plan. The reconciler verifies remote bytes and provenance
-  # before making that draft visible to the plugin updater.
+  # passed every CI lane. The version lives in the tag and is stamped into the
+  # staged tree by package.sh, so nothing is written back to master and this
+  # runs on the same push that merged the change. The reconciler verifies remote
+  # bytes and provenance before making that draft visible to the updater.
   release:
     name: Release
     runs-on: ubuntu-24.04
@@ -399,8 +360,7 @@ jobs:
       success() &&
       (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
       github.ref == 'refs/heads/master' &&
-      needs.release-plan.outputs.should_release == 'true' &&
-      needs.release-plan.outputs.needs_version_sync == 'false'
+      needs.release-plan.outputs.should_release == 'true'
     environment: production
     permissions:
       contents: write
@@ -452,12 +412,11 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     if: always()
-    needs: [release-plan, security, structure, i18n, frontend, php, coverage, wordpress, build, e2e, package, version-pr, release]
+    needs: [release-plan, security, structure, i18n, frontend, php, coverage, wordpress, build, e2e, package, release]
     env:
       EVENT_NAME: ${{ github.event_name }}
       EVENT_REF: ${{ github.ref }}
       SHOULD_RELEASE: ${{ needs.release-plan.outputs.should_release }}
-      NEEDS_VERSION_SYNC: ${{ needs.release-plan.outputs.needs_version_sync }}
       RELEASE_PLAN: ${{ needs.release-plan.result }}
       SECURITY: ${{ needs.security.result }}
       STRUCTURE: ${{ needs.structure.result }}
@@ -469,7 +428,6 @@ jobs:
       BUILD: ${{ needs.build.result }}
       E2E: ${{ needs.e2e.result }}
       PACKAGE: ${{ needs.package.result }}
-      VERSION_PR: ${{ needs.version-pr.result }}
       RELEASE: ${{ needs.release.result }}
     steps:
       - name: Require every quality and artifact lane
@@ -491,20 +449,15 @@ jobs:
             [[ "${RELEASE_PLAN}" == "skipped" ]] || failed=1
           fi
 
+          # One decision now, where there used to be two: a release-worthy push
+          # publishes on that same run. Nothing is written back to master, so
+          # there is no second pass to wait for.
           if [[ "${SHOULD_RELEASE}" == "true" ]]; then
-            if [[ "${NEEDS_VERSION_SYNC}" == "true" ]]; then
-              [[ "${VERSION_PR}" == "success" ]] || failed=1
-              [[ "${RELEASE}" == "skipped" ]] || failed=1
-            else
-              [[ "${VERSION_PR}" == "skipped" ]] || failed=1
-              [[ "${RELEASE}" == "success" ]] || failed=1
-            fi
+            [[ "${RELEASE}" == "success" ]] || failed=1
           else
-            [[ "${VERSION_PR}" == "skipped" ]] || failed=1
             [[ "${RELEASE}" == "skipped" ]] || failed=1
           fi
 
           printf '%-12s %s\n' RELEASE_PLAN "${RELEASE_PLAN}"
-          printf '%-12s %s\n' VERSION_PR "${VERSION_PR}"
           printf '%-12s %s\n' RELEASE "${RELEASE}"
           exit "${failed}"

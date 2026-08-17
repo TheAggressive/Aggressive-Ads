@@ -1,10 +1,38 @@
 /**
- * Read and update the product version declarations reviewed in release PRs.
+ * The product version declarations, and the rule that they are never real.
+ *
+ * The checkout does not carry the released version. `package.sh` stamps the
+ * planned version into the staged tree at package time, so the bytes that are
+ * archived, checksummed, attested and uploaded say the right thing while
+ * nothing in the repository is mutated.
+ *
+ * That is a deliberate reversal. Synchronizing versions into `master` meant a
+ * bot opening a pull request against a branch that requires signed commits,
+ * reviewed pull requests and passing checks — and GitHub will not let its own
+ * token do that unattended. The result was a release that stalled twice on
+ * human intervention while every check showed green. Removing the write
+ * removes the credential, the pull request, and both stalls, and `master` keeps
+ * every protection because nothing but a person's pull request ever lands on
+ * it.
+ *
+ * The cost is that a checkout reports `0.0.0-development` rather than the
+ * release it was cut from. That is the intended reading: this tree is not a
+ * release, and the tag is the only source of truth about what is.
  */
 
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
+
+/**
+ * What every checked-in declaration must say.
+ *
+ * `0.0.0-development` is semantic-release's own convention for a repository
+ * whose version lives in its tags, and it sorts below every real release, so
+ * anything comparing against it treats a checkout as older than any published
+ * build rather than newer.
+ */
+export const DEVELOPMENT_VERSION = '0.0.0-development';
 
 export const VERSION_PATHS = Object.freeze([
 	'package.json',
@@ -17,14 +45,6 @@ export const VERSION_PATHS = Object.freeze([
 
 const STRICT_SEMVER = /^\d+\.\d+\.\d+$/u;
 const CONSTANT_PATTERN = /define\(\s*'AGGR_VERSION',\s*'([^']+)'\s*\);/gu;
-
-// JSON is edited textually rather than re-serialized. `JSON.stringify` expands
-// the inline arrays Prettier keeps on one line, so a round-trip through it
-// leaves block.json failing `format:check` — which is a required lane, so the
-// generated version PR could never merge and the release could never publish.
-// Anchored to a single tab so it matches only the top-level key, never
-// `"apiVersion"` or a nested dependency entry.
-const JSON_VERSION_PATTERN = /^(\t"version": ")[^"]+(",?)$/gmu;
 
 function filePath(root, relativePath) {
 	return path.join(root, relativePath);
@@ -40,15 +60,13 @@ function exactlyOne(source, pattern, label) {
 	return matches[0][1];
 }
 
-function replaceOne(source, pattern, replacement, label) {
-	const matches = [...source.matchAll(pattern)];
-	if (matches.length !== 1) {
-		throw new Error(`${label} must appear exactly once.`);
-	}
-
-	return source.replace(pattern, replacement);
-}
-
+/**
+ * Strict x.y.z, for a version that is about to be released.
+ *
+ * Still enforced even though nothing is written back: `package.sh`,
+ * `verify-package.sh` and the archive name all require it, so a prerelease has
+ * to stop the plan rather than reach packaging.
+ */
 export function assertVersion(version, label = 'Version') {
 	if (typeof version !== 'string' || !STRICT_SEMVER.test(version)) {
 		throw new Error(`${label} must be strict x.y.z semver; received ${version}.`);
@@ -67,16 +85,21 @@ async function readSources(root) {
 	);
 }
 
-export async function readSourceVersion(root = process.cwd()) {
+/**
+ * Every declaration the packager stamps, as it currently reads on disk.
+ */
+export async function readSourceVersions(root = process.cwd()) {
 	const sources = await readSources(root);
 	const manifest = JSON.parse(sources['package.json']);
+
 	if (manifest.private !== true) {
 		throw new Error('package.json must remain private.');
 	}
 
 	const plugin = sources['aggressive-ads.php'];
 	const block = JSON.parse(sources['src/blocks/placement/block.json']);
-	const versions = {
+
+	return {
 		'package.json version': manifest.version,
 		'placement block version': block.version,
 		'WordPress plugin header': exactlyOne(
@@ -105,73 +128,29 @@ export async function readSourceVersion(root = process.cwd()) {
 			'PHPStan AGGR_VERSION definition'
 		),
 	};
+}
 
-	for (const [label, version] of Object.entries(versions)) {
-		assertVersion(version, label);
-	}
+/**
+ * Refuse any checked-in declaration that names a real version.
+ *
+ * A hand-edited version is the failure this guards. One file bumped to a real
+ * number would be stamped over in the package and ignored everywhere else, so
+ * it would not break a build — it would just quietly assert something untrue
+ * about a tree that is not a release.
+ */
+export async function assertDevelopmentVersions(root = process.cwd()) {
+	const versions = await readSourceVersions(root);
 
-	if (new Set(Object.values(versions)).size !== 1) {
+	const wrong = Object.entries(versions).filter(
+		([, version]) => version !== DEVELOPMENT_VERSION
+	);
+
+	if (wrong.length > 0) {
 		throw new Error(
-			`Version declarations disagree: ${JSON.stringify(versions)}.`
+			`Checked-in versions must be ${DEVELOPMENT_VERSION}; the release version is stamped at package time. ` +
+				`Found ${JSON.stringify(Object.fromEntries(wrong))}.`
 		);
 	}
 
-	return String(manifest.version);
-}
-
-export async function writeSourceVersion(version, root = process.cwd()) {
-	assertVersion(version, 'Requested version');
-	const sources = await readSources(root);
-
-	const updates = {
-		'package.json': replaceOne(
-			sources['package.json'],
-			JSON_VERSION_PATTERN,
-			`$1${version}$2`,
-			'package.json version'
-		),
-		'src/blocks/placement/block.json': replaceOne(
-			sources['src/blocks/placement/block.json'],
-			JSON_VERSION_PATTERN,
-			`$1${version}$2`,
-			'placement block version'
-		),
-		'aggressive-ads.php': replaceOne(
-			replaceOne(
-				sources['aggressive-ads.php'],
-				/^(\s*\*\s*Version:\s*)\S+\s*$/gmu,
-				`$1${version}`,
-				'WordPress Version header'
-			),
-			CONSTANT_PATTERN,
-			`define( 'AGGR_VERSION', '${version}' );`,
-			'AGGR_VERSION definition'
-		),
-		'README.md': replaceOne(
-			sources['README.md'],
-			/^\| Plugin \| Aggressive Ads `[^`]+` \|$/gmu,
-			`| Plugin | Aggressive Ads \`${version}\` |`,
-			'README plugin version'
-		),
-		'tests/php/bootstrap-unit.php': replaceOne(
-			sources['tests/php/bootstrap-unit.php'],
-			CONSTANT_PATTERN,
-			`define( 'AGGR_VERSION', '${version}' );`,
-			'Unit-test AGGR_VERSION definition'
-		),
-		'tests/php/phpstan-bootstrap.php': replaceOne(
-			sources['tests/php/phpstan-bootstrap.php'],
-			CONSTANT_PATTERN,
-			`define( 'AGGR_VERSION', '${version}' );`,
-			'PHPStan AGGR_VERSION definition'
-		),
-	};
-
-	await Promise.all(
-		Object.entries(updates).map(([relativePath, contents]) =>
-			writeFile(filePath(root, relativePath), contents, 'utf8')
-		)
-	);
-
-	return readSourceVersion(root);
+	return DEVELOPMENT_VERSION;
 }
