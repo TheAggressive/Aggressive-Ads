@@ -93,6 +93,32 @@ aggr_i18n_wp() {
 	aggr_i18n_die "No WP-CLI available. Run: bash bin/ci/install-wp-cli.sh"
 }
 
+# One make-pot invocation, called by both the generator and the drift check.
+#
+# It was two, with the flags copied between them, and the copies disagreed the
+# moment one gained an argument: the drift check regenerated the POT without the
+# pinned Report-Msgid-Bugs-To header and then reported the difference from the
+# committed file as drift. A check that regenerates an artefact differently from
+# the thing that generates it is checking its own copy of the command.
+#
+# $1 Output path, relative to the plugin root.
+aggr_i18n_make_pot() {
+	local output="$1"
+
+	# Report-Msgid-Bugs-To is pinned rather than left to wp-cli, which derives
+	# it from the *directory name* when it is not given. A clone into
+	# `aggressive-ads` and GitHub's checkout into `Aggressive-Ads` therefore
+	# produced two different headers from identical source. The support URL is
+	# a property of the plugin slug, not of wherever the working copy sits.
+	aggr_i18n_wp i18n make-pot \
+		. \
+		"${output}" \
+		--domain="${AGGR_TEXT_DOMAIN}" \
+		--package-name="Aggressive Ads" \
+		--headers="{\"Report-Msgid-Bugs-To\":\"https://wordpress.org/support/plugin/${AGGR_TEXT_DOMAIN}\"}" \
+		--exclude="${AGGR_I18N_EXCLUDE}"
+}
+
 # Strip headers that change on every run, so the drift gate reports real
 # changes rather than a timestamp. Without this the diff is never empty, the
 # gate is pure noise, and somebody disables it inside a week.

@@ -25,12 +25,7 @@ work_dir="$(mktemp -d)"
 trap 'rm -f "${drift_pot}"; rm -rf "${work_dir}"' EXIT
 
 aggr_i18n_info "Regenerating POT for the drift check…"
-aggr_i18n_wp i18n make-pot \
-	. \
-	"languages/.drift.pot" \
-	--domain="${AGGR_TEXT_DOMAIN}" \
-	--package-name="Aggressive Ads" \
-	--exclude="${AGGR_I18N_EXCLUDE}"
+aggr_i18n_make_pot "languages/.drift.pot"
 
 [[ -f "${drift_pot}" ]] || aggr_i18n_die "make-pot produced no output; the drift check cannot pass vacuously."
 
