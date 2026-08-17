@@ -243,6 +243,20 @@ There is no ruleset bypass. After the protected version PR merges, the next
 master pipeline confirms the checked-in version equals the plan and publishes
 from that synchronized commit.
 
+Because there is no bypass, the version commit has to satisfy the signature rule
+like any other, and `GITHUB_TOKEN` has no signing key. The helper therefore
+creates the branch at a commit that already exists on master — a ref creation
+pushes no new object — and writes the version files through the GraphQL
+`createCommitOnBranch` mutation, which GitHub signs with its own key. It then
+asserts the resulting commit reports `verification.verified`, and deletes the
+branch again if it does not.
+
+That assertion exists because the failure it prevents is invisible until the
+last moment. An unsigned version commit passes every required check and is
+refused only at the merge, with `the base branch policy prohibits the merge` on
+a PR that looks entirely green — which is how v1.1.0 stalled. Failing in
+`version-pr`, where the commit is made, names the cause at the point it happens.
+
 That suppression applies to the merge as well as the branch. Auto-merge pushes
 its merge commit on behalf of whichever credential registered it, so registering
 it with `GITHUB_TOKEN` lands the synchronized commit on master without emitting a
