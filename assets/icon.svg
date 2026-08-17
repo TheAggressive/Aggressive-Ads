@@ -1,6 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Advertiser Portal">
-	<rect width="64" height="64" rx="14" fill="#111214"/>
-	<rect x="12" y="16" width="40" height="12" rx="3" fill="#ff3b2f"/>
-	<rect x="12" y="34" width="26" height="7" rx="3" fill="#b9b6ac"/>
-	<rect x="12" y="45" width="18" height="7" rx="3" fill="#6d6a5d"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-label="Advertiser Portal">
+	<!--
+	A favicon has no CSS context to inherit from, so currentColor resolves to
+	black and the mark disappears against dark browser chrome. The media query
+	lives inside the document instead, which is the one place a favicon can
+	still answer the question.
+	-->
+	<style>
+		path { fill: #111214; }
+		@media (prefers-color-scheme: dark) {
+			path { fill: #f0f0f1; }
+		}
+	</style>
+	<path d="M4.33 20.63H0L10.58 3.37h4.41zm19.67 0h-3.88L12.78 8.16h3.67zm-7.82-3.12 1.92 3.12H6.31l4.7-7.81h3.23l-2.66 4.69z"/>
 </svg>
