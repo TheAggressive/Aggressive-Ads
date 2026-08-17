@@ -71,6 +71,24 @@ slug that file already deletes. `pnpm qa:fresh` destroys the environment and
 starts over before running the lanes, which is the closest local equivalent to
 what CI does every time.
 
+**Infrastructure flakes.** A fourth difference is not about inputs at all: CI
+pulls from the network and a laptop with warm caches often does not. The first
+attempt at v1.1.0 failed because `api.github.com` returned HTTP 504 for
+twenty-six package downloads inside wp-env's Docker build — a GitHub outage,
+reported as a red build on this plugin.
+
+`bin/ci/retry.sh` wraps such a command with exponential backoff, and `env:start`
+uses it. It lives in the pnpm script rather than the workflow step on purpose:
+`lanes.mjs` matches `run: pnpm <command>`, so wrapping the workflow line would
+drop the step out of the derived local lanes, and putting it in the script gives
+local runs the same resilience.
+
+Retries are deliberately narrow. A retry around a command that fails for real
+reasons turns a fast failure into a slow one and hides flakiness that deserves
+fixing, so it belongs only on network-bound, idempotent steps. Each retry emits
+a workflow warning, so a run that only passed on the second attempt still says
+so.
+
 The build job uploads one `dist/` artifact which the E2E and package jobs both
 download. This makes the browser-tested assets the packaged assets instead of
 allowing each job to compile a different tree. The E2E job installs Playwright's
@@ -260,12 +278,36 @@ a PR that looks entirely green — which is how v1.1.0 stalled. Failing in
 That suppression applies to the merge as well as the branch. Auto-merge pushes
 its merge commit on behalf of whichever credential registered it, so registering
 it with `GITHUB_TOKEN` lands the synchronized commit on master without emitting a
-push event — and the publishing run never starts. Configure an
-`AGGR_RELEASE_TOKEN` secret (a fine-grained PAT or GitHub App token with
-`contents: write` and `pull requests: write`) and the helper registers auto-merge
-with it, so the merge push starts the run that publishes. Without that secret the
-helper still opens and auto-merges the PR, but prints the manual step it leaves
-behind:
+push event — and the publishing run never starts.
+
+### The release credential is what makes a release unattended
+
+`AGGR_RELEASE_TOKEN` is not an optimization. Without it a release **cannot**
+finish on its own, and it stalls in two places that both look like a PR that is
+still running:
+
+| Stall | Cause | Manual step |
+|---|---|---|
+| Checks never start | GitHub holds workflow runs on bot-authored PRs at `action_required` | Approve three runs on the PR's Checks tab |
+| Publish never starts | The bot's merge emits no push event | `gh workflow run ci.yml --ref master` |
+
+The helper therefore uses that credential for **every** operation — creating the
+ref, the commit, the PR, and registering auto-merge — not only the last one. A PR
+opened by `GITHUB_TOKEN` and merged by a release token still stalls on the first
+row, because what GitHub gates is who *opened* it. When the credential is
+present the PR triggers `ci.yml`, `codeql.yml` and `workflow-security.yml`
+through their ordinary `pull_request: [master]` triggers, so the helper also
+stops dispatching them by hand — dispatching would run every lane twice against
+the same commit and report each required check twice.
+
+Create it as a fine-grained PAT or GitHub App token with `contents: write` and
+`pull requests: write`, and add it as the `AGGR_RELEASE_TOKEN` repository secret.
+
+Without the secret the helper still opens and auto-merges the PR, but it now
+raises a workflow **error annotation** and a job-summary block naming both
+manual steps, rather than a warning in a log nobody opens. v1.1.0 sat blocked
+for two hours looking entirely green; the annotation exists so that cannot
+repeat quietly. The manual publish step is:
 
 ```bash
 gh workflow run ci.yml --ref master

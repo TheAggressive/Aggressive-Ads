@@ -44,6 +44,44 @@ fi
 BRANCH="automation/release-v${VERSION}-${RUN_ID}"
 TITLE="chore(release): synchronize version ${VERSION}"
 
+# One credential decides whether this release finishes by itself, so it is
+# chosen once here and every gh call below inherits it.
+#
+# GITHUB_TOKEN cannot open a pull request that starts its own checks. GitHub
+# holds workflow runs on bot-authored PRs at `action_required` until a human
+# approves them, and suppresses the push event when their merge lands. A
+# release made with it therefore stalls twice — once waiting for approval on
+# three runs, once waiting for someone to dispatch the publish — and both
+# stalls look exactly like a PR that is simply still running.
+#
+# A release credential is not a bot, so its PR triggers ci.yml, codeql.yml and
+# workflow-security.yml through their ordinary `pull_request: [master]`
+# triggers, and its merge emits the push that publishes. That is the whole
+# difference between a release that completes unattended and one that does not.
+if [[ -n "${AGGR_RELEASE_TOKEN:-}" ]]; then
+	export GH_TOKEN="${AGGR_RELEASE_TOKEN}"
+	UNATTENDED=1
+else
+	UNATTENDED=0
+fi
+
+# Manual release steps are announced as workflow errors, not stdout. A warning
+# in a log nobody opens is why v1.1.0 sat blocked while looking green.
+announce_manual_step() {
+	echo "::error title=Release needs a human::$1"
+
+	if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
+		{
+			echo "### ⚠️ This release will not finish by itself"
+			echo
+			echo "$1"
+			echo
+			echo "Configure an \`AGGR_RELEASE_TOKEN\` secret to remove this step."
+			echo "See \`docs/build-and-release.md\`."
+		} >>"${GITHUB_STEP_SUMMARY}"
+	fi
+}
+
 # Everything sync-version.mjs rewrites. Listed once, because the commit is
 # built from exactly this set and check-version-contract.mjs verifies it.
 VERSION_FILES=(
@@ -131,29 +169,30 @@ fi
 PR_NUMBER="$(gh pr view "${PR}" --repo "${REPOSITORY}" --json number --jq '.number')"
 HEAD_SHA="$(gh pr view "${PR_NUMBER}" --repo "${REPOSITORY}" --json headRefOid --jq '.headRefOid')"
 
-for workflow in ci.yml codeql.yml workflow-security.yml; do
-	gh workflow run "${workflow}" --repo "${REPOSITORY}" --ref "${BRANCH}"
-done
-
-# Auto-merge merges on behalf of whoever registered it, and GitHub suppresses
-# workflow events for everything GITHUB_TOKEN does — including the merge commit
-# this eventually pushes to master. Registered with GITHUB_TOKEN, the merge
-# lands silently and the master run that would publish the synchronized commit
-# never starts. A separate credential is what makes that push observable.
-if [[ -n "${AGGR_RELEASE_TOKEN:-}" ]]; then
-	GH_TOKEN="${AGGR_RELEASE_TOKEN}" gh pr merge "${PR_NUMBER}" --repo "${REPOSITORY}" \
-		--auto --squash --delete-branch --match-head-commit "${HEAD_SHA}"
-	echo "Version PR #${PR_NUMBER} is awaiting required checks for ${HEAD_SHA}."
-	exit 0
+# A release credential's PR already started these through their own
+# `pull_request: [master]` triggers. Dispatching again would run every lane a
+# second time against the same commit and report each required check twice.
+if (( ! UNATTENDED )); then
+	for workflow in ci.yml codeql.yml workflow-security.yml; do
+		gh workflow run "${workflow}" --repo "${REPOSITORY}" --ref "${BRANCH}"
+	done
 fi
 
 gh pr merge "${PR_NUMBER}" --repo "${REPOSITORY}" --auto --squash \
 	--delete-branch --match-head-commit "${HEAD_SHA}"
 
 echo "Version PR #${PR_NUMBER} is awaiting required checks for ${HEAD_SHA}."
-echo
-echo "warning: AGGR_RELEASE_TOKEN is not configured, so this merge will not" >&2
-echo "warning: emit a workflow event and v${VERSION} will not publish by itself." >&2
-echo "warning: Once #${PR_NUMBER} merges, start the release run by hand:" >&2
-echo "warning:   gh workflow run ci.yml --repo ${REPOSITORY} --ref master" >&2
-echo "warning: See docs/build-and-release.md." >&2
+
+if (( UNATTENDED )); then
+	exit 0
+fi
+
+# Both stalls a GITHUB_TOKEN release hits, named at the point they are created
+# rather than discovered later on a PR that looks entirely green.
+announce_manual_step "Version PR #${PR_NUMBER} was opened by a bot, so its
+checks are held at \`action_required\` and its merge will emit no push event.
+Approve the held runs at
+https://github.com/${REPOSITORY}/pull/${PR_NUMBER}/checks, then publish
+v${VERSION} once it merges with:
+
+    gh workflow run ci.yml --repo ${REPOSITORY} --ref master"

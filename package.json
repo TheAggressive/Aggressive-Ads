@@ -54,7 +54,7 @@
 	},
 	"scripts": {
 		"prepare": "husky",
-		"env:start": "wp-env start",
+		"env:start": "bash bin/ci/retry.sh 3 wp-env start",
 		"env:stop": "wp-env stop",
 		"env:destroy": "wp-env destroy",
 		"env:logs": "wp-env logs",
