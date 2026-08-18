@@ -387,7 +387,7 @@ jobs:
     env:
       # Only so the mint step can test it in `if:`, where `secrets` is not an
       # available context.
-      AGGR_RELEASE_APP_ID: ${{ secrets.AGGR_RELEASE_APP_ID }}
+      AA_CI_APP_ID: ${{ secrets.AA_CI_APP_ID }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -411,11 +411,11 @@ jobs:
       # opens, and the guard keeps failing until somebody moves it along.
       - name: Mint a release token
         id: app-token
-        if: ${{ env.AGGR_RELEASE_APP_ID != '' }}
+        if: ${{ env.AA_CI_APP_ID != '' }}
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
-          app-id: ${{ env.AGGR_RELEASE_APP_ID }}
-          private-key: ${{ secrets.AGGR_RELEASE_APP_PRIVATE_KEY }}
+          app-id: ${{ env.AA_CI_APP_ID }}
+          private-key: ${{ secrets.AA_CI_PRIVATE_KEY }}
           permission-contents: write
           permission-pull-requests: write
       - name: Open the version sync pull request
