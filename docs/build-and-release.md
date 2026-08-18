@@ -311,6 +311,36 @@ cosmetic — nothing built is wrong when they are behind — and exists so that
 catching them up is one command rather than five files and a gate telling you
 which one you missed.
 
+### Keeping the repository honest
+
+WordPress reads the plugin header as the authoritative version and `AGGR_VERSION`
+is a cache key, so a checkout that disagrees with the release is functionally
+wrong, not merely untidy. Two halves keep them together:
+
+**Delivery.** A `version-sync` job runs after `release` and opens a pull request
+writing the published version into the declarations, regenerating the POT
+alongside them — `Project-Id-Version` embeds the version, and the drift check
+normalizes that header away before comparing, so nothing else would ever notice
+the catalog being left behind.
+
+It opens a pull request rather than pushing. `master` requires signed commits,
+reviewed pull requests and passing checks, and restoring a bypass to commit a
+version header would trade a real security property for a convenience. The
+commit is created through the API (`sign-commits`) so GitHub signs it, and the
+release credential is what lets the pull request start its own checks.
+
+**Enforcement.** Automation can open a pull request; it cannot make anyone merge
+one. `bin/ci/check-version-sync.mjs` fails `lint:files` while the checked-in
+version differs from the newest tag, so an unmerged sync blocks the next change
+instead of accumulating quietly. That gate — not the job — is why the drift
+cannot come back.
+
+It fails closed: no reachable tags means the answer is unknown rather than fine,
+so a shallow clone reports that it cannot verify. The lanes that run it fetch
+tags, because fetching them is the fix and relaxing the guard is not. Tags are
+sorted by version rather than date, so a patch published after a later minor is
+not mistaken for the newest release.
+
 ### The self-updater is off on a checkout
 
 A development install is *always* behind the newest release, because the

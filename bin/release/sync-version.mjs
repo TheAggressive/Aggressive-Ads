@@ -35,7 +35,13 @@ try {
 
 	const written = await writeSourceVersions( requested );
 
-	console.log( `sync-version: checked-in declarations now read ${ written }` );
+	// The catalog embeds the version in Project-Id-Version, so the two have to
+	// move together. The drift check normalizes that header away before
+	// comparing — deliberately, since it compares strings rather than versions —
+	// which means nothing else would ever notice the POT being left behind.
+	execFileSync( 'bash', [ 'bin/i18n/pot.sh' ], { stdio: 'inherit' } );
+
+	console.log( `sync-version: checked-in declarations and the POT now read ${ written }` );
 } catch ( error ) {
 	const message = error instanceof Error ? error.message : String( error );
 	console.error( `sync-version: ${ message }` );

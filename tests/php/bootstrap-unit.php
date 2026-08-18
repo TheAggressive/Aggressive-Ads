@@ -25,7 +25,7 @@ Aggressive\Ads\Autoloader::register( $aggr_root . '/inc' );
 
 // The constants the root plugin file would have defined. Unit tests never load
 // that file, because loading it boots the plugin.
-define( 'AGGR_VERSION', '1.2.0' );
+define( 'AGGR_VERSION', '1.2.1' );
 define( 'AGGR_PLUGIN_FILE', $aggr_root . '/aggressive-ads.php' );
 define( 'AGGR_PLUGIN_DIR', $aggr_root . '/' );
 define( 'AGGR_PLUGIN_URL', 'https://example.test/wp-content/plugins/aggressive-ads/' );
