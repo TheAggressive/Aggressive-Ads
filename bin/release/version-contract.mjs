@@ -30,7 +30,7 @@
  * on a development site and nothing else.
  */
 
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 
@@ -55,6 +55,23 @@ export const VERSION_PATHS = Object.freeze([
 
 const STRICT_SEMVER = /^\d+\.\d+\.\d+$/u;
 const CONSTANT_PATTERN = /define\(\s*'AGGR_VERSION',\s*'([^']+)'\s*\);/gu;
+
+// JSON is edited textually rather than re-serialized. `JSON.stringify` expands
+// the inline arrays Prettier keeps on one line, so a round-trip through it
+// leaves block.json failing `format:check` — a required lane. Anchored to a
+// single tab so it matches only the top-level key, never `"apiVersion"` or a
+// nested dependency entry.
+const JSON_VERSION_PATTERN = /^(\t"version": ")[^"]+(",?)$/gmu;
+
+function replaceOne(source, pattern, replacement, label) {
+	const matches = [...source.matchAll(pattern)];
+
+	if (matches.length !== 1) {
+		throw new Error(`${label} must appear exactly once.`);
+	}
+
+	return source.replace(pattern, replacement);
+}
 
 function filePath(root, relativePath) {
 	return path.join(root, relativePath);
@@ -180,4 +197,70 @@ export async function assertSourceVersions(root = process.cwd()) {
 	}
 
 	return String(declared[0][1]);
+}
+
+/**
+ * Writes a real version into every declaration WordPress reads.
+ *
+ * `package.json` is deliberately absent. It carries the development
+ * placeholder permanently, and writing a release version into it would put the
+ * repository back in the state the version-PR machinery existed to maintain.
+ *
+ * @param {string} version Strict x.y.z version to write.
+ * @param {string} root    Repository root.
+ * @return {Promise<string>} The version now declared, re-read from disk.
+ */
+export async function writeSourceVersions(version, root = process.cwd()) {
+	assertVersion(version, 'Requested version');
+
+	const read = async (relativePath) =>
+		readFile(filePath(root, relativePath), 'utf8');
+
+	const updates = {
+		'src/blocks/placement/block.json': replaceOne(
+			await read('src/blocks/placement/block.json'),
+			JSON_VERSION_PATTERN,
+			`$1${version}$2`,
+			'placement block version'
+		),
+		'aggressive-ads.php': replaceOne(
+			replaceOne(
+				await read('aggressive-ads.php'),
+				/^(\s*\*\s*Version:\s*)\S+\s*$/gmu,
+				`$1${version}`,
+				'WordPress Version header'
+			),
+			CONSTANT_PATTERN,
+			`define( 'AGGR_VERSION', '${version}' );`,
+			'AGGR_VERSION definition'
+		),
+		'README.md': replaceOne(
+			await read('README.md'),
+			/^\| Plugin \| Aggressive Ads `[^`]+` \|$/gmu,
+			`| Plugin | Aggressive Ads \`${version}\` |`,
+			'README plugin version'
+		),
+		'tests/php/bootstrap-unit.php': replaceOne(
+			await read('tests/php/bootstrap-unit.php'),
+			CONSTANT_PATTERN,
+			`define( 'AGGR_VERSION', '${version}' );`,
+			'Unit-test AGGR_VERSION definition'
+		),
+		'tests/php/phpstan-bootstrap.php': replaceOne(
+			await read('tests/php/phpstan-bootstrap.php'),
+			CONSTANT_PATTERN,
+			`define( 'AGGR_VERSION', '${version}' );`,
+			'PHPStan AGGR_VERSION definition'
+		),
+	};
+
+	await Promise.all(
+		Object.entries(updates).map(([relativePath, contents]) =>
+			writeFile(filePath(root, relativePath), contents, 'utf8')
+		)
+	);
+
+	// Re-read rather than trusting the write: this is also the check that the
+	// five files now agree, which is the failure it exists to prevent.
+	return assertSourceVersions(root);
 }
