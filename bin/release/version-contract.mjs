@@ -15,9 +15,19 @@
  * every protection because nothing but a person's pull request ever lands on
  * it.
  *
- * The cost is that a checkout reports `0.0.0-development` rather than the
- * release it was cut from. That is the intended reading: this tree is not a
- * release, and the tag is the only source of truth about what is.
+ * What a checkout declares is split, matching the Aggressive Apparel theme.
+ * `package.json` carries `0.0.0-development`, semantic-release's own marker for
+ * a project whose version lives in its tags. Everything WordPress reads — the
+ * plugin header, `AGGR_VERSION`, the block manifest — carries the last released
+ * version instead, so a development install shows a sensible number in the
+ * plugins list rather than a placeholder, and the updater compares against a
+ * real one.
+ *
+ * Those declarations go stale between releases, and that is accepted rather
+ * than solved: the theme's `style.css` currently trails its published release
+ * by two minors. Nothing reads them at release time — `package.sh` stamps the
+ * planned version over all of them — so staleness costs a slightly old number
+ * on a development site and nothing else.
  */
 
 import { readFile } from 'node:fs/promises';
@@ -131,26 +141,43 @@ export async function readSourceVersions(root = process.cwd()) {
 }
 
 /**
- * Refuse any checked-in declaration that names a real version.
- *
- * A hand-edited version is the failure this guards. One file bumped to a real
- * number would be stamped over in the package and ignored everywhere else, so
- * it would not break a build — it would just quietly assert something untrue
- * about a tree that is not a release.
+ * The one declaration that must stay a placeholder.
  */
-export async function assertDevelopmentVersions(root = process.cwd()) {
+const PLACEHOLDER_KEY = 'package.json version';
+
+/**
+ * Enforce the split: a placeholder in package.json, one real version elsewhere.
+ *
+ * The failure this guards is drift between the WordPress-facing declarations.
+ * A header saying 1.1.1 beside an AGGR_VERSION saying 1.0.4 breaks nothing at
+ * release time, because packaging stamps over both — it just makes two files
+ * disagree about what a development install is, which is the kind of untruth
+ * somebody eventually debugs.
+ */
+export async function assertSourceVersions(root = process.cwd()) {
 	const versions = await readSourceVersions(root);
 
-	const wrong = Object.entries(versions).filter(
-		([, version]) => version !== DEVELOPMENT_VERSION
-	);
-
-	if (wrong.length > 0) {
+	if (versions[PLACEHOLDER_KEY] !== DEVELOPMENT_VERSION) {
 		throw new Error(
-			`Checked-in versions must be ${DEVELOPMENT_VERSION}; the release version is stamped at package time. ` +
-				`Found ${JSON.stringify(Object.fromEntries(wrong))}.`
+			`${PLACEHOLDER_KEY} must be ${DEVELOPMENT_VERSION}; found ${versions[PLACEHOLDER_KEY]}.`
 		);
 	}
 
-	return DEVELOPMENT_VERSION;
+	const declared = Object.entries(versions).filter(
+		([label]) => label !== PLACEHOLDER_KEY
+	);
+
+	for (const [label, version] of declared) {
+		assertVersion(version, label);
+	}
+
+	const distinct = new Set(declared.map(([, version]) => version));
+
+	if (distinct.size !== 1) {
+		throw new Error(
+			`Version declarations disagree: ${JSON.stringify(Object.fromEntries(declared))}.`
+		);
+	}
+
+	return String(declared[0][1]);
 }

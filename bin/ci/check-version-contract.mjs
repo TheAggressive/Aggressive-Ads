@@ -3,17 +3,18 @@
 /**
  * Verify that no checked-in version claims to be a release.
  *
- * The released version is stamped into the staged tree by `package.sh` and is
- * never written back to the repository, so every declaration here must read as
- * development. See `bin/release/version-contract.mjs`.
+ * package.json stays at the development placeholder; everything WordPress reads
+ * carries the last released version and must agree with itself. The released
+ * version is stamped into the staged tree by `package.sh` either way. See
+ * `bin/release/version-contract.mjs`.
  */
 
 import process from 'node:process';
 
-import { assertDevelopmentVersions } from '../release/version-contract.mjs';
+import { assertSourceVersions } from '../release/version-contract.mjs';
 
 try {
-	const version = await assertDevelopmentVersions();
+	const version = await assertSourceVersions();
 	console.log( `check-version-contract: ${ version } ok` );
 } catch ( error ) {
 	const message = error instanceof Error ? error.message : String( error );
