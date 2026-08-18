@@ -293,6 +293,24 @@ placeholder, and every other declaration must be strict semver and agree with
 the rest. Drift between them breaks nothing at release time, which is exactly
 why it needs a gate — it would otherwise sit there being quietly untrue.
 
+### The self-updater is off on a checkout
+
+A development install is *always* behind the newest release, because the
+checked-in version is only bumped by hand — so it is always offered an update.
+Installing that update would delete the checkout: `Plugin_Upgrader` clears the
+destination directory and unpacks the release ZIP over it, and the ZIP is built
+from an allowlist that contains no `.git`, `src`, `bin` or `tests`. Uncommitted
+work and history go with it.
+
+`Plugin_Updates::is_enabled()` therefore returns false when `.git` is present in
+the plugin root, and `init()` registers nothing at all rather than having each
+callback return early — a registered `upgrader_pre_download` could still verify
+a package and hand it back for a directory that must never be overwritten.
+
+Override with the `aggr_enable_plugin_updates` filter, which receives whether
+the root looked like a checkout. The Aggressive Apparel theme carries the same
+guard for the same reason.
+
 When Semantic Release plans a version, the trusted master pipeline packages,
 tags and publishes it **on that same run**. Nothing is written back to the
 repository, so there is no second pass and no credential beyond the run's own
