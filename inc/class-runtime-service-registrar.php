@@ -16,6 +16,7 @@ use Aggressive\Ads\Admin\Package_Data;
 use Aggressive\Ads\Admin\Package_Screen;
 use Aggressive\Ads\Admin\Placement_Data;
 use Aggressive\Ads\Admin\Placement_Screen;
+use Aggressive\Ads\Admin\Action_Notice;
 use Aggressive\Ads\Admin\Review_Data;
 use Aggressive\Ads\Admin\Review_Screen;
 use Aggressive\Ads\Core\Settings;
@@ -116,6 +117,13 @@ final class Runtime_Service_Registrar {
 				$c->get( Review_Data::class ),
 				$c->get( Review_Actions::class ),
 				$c->get( Campaign_Change_Actions::class )
+			)
+		);
+
+		$container->register(
+			Action_Notice::class,
+			static fn ( Service_Container $c ): Action_Notice => new Action_Notice(
+				$c->get( Review_Data::class )
 			)
 		);
 

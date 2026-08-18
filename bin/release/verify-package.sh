@@ -108,6 +108,7 @@ PACKAGE_REQUIRED=(
 	inc/Repository/class-event-repository.php
 	inc/Repository/class-rollup-repository.php
 	assets/icon.svg
+	assets/svg/aggressive-ads-icon.svg
 	assets/fonts/OFL.txt
 	dist/styles/portal.css
 	dist/styles/admin.css

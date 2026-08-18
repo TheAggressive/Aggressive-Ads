@@ -20,7 +20,21 @@ final class Menu implements Service {
 
 	public const PARENT_SLUG = 'aggr';
 	public const POSITION    = 26;
-	public const ICON        = 'dashicons-megaphone';
+	/**
+	 * No glyph from WordPress; the mark is painted in CSS instead.
+	 *
+	 * A data-URI icon becomes a background-image, and a background-image cannot
+	 * take a colour from CSS — it would stay one fixed shade through hover, the
+	 * current-page state and all eight admin colour schemes. Masking the same
+	 * file with `currentColor` lets it inherit whatever the menu is already
+	 * using, which is what every other icon in that sidebar does.
+	 */
+	public const ICON = 'none';
+
+	/**
+	 * The mark, as a mask source.
+	 */
+	private const ICON_FILE = 'assets/svg/aggressive-ads-icon.svg';
 
 	/**
 	 * Constructor.
@@ -38,6 +52,37 @@ final class Menu implements Service {
 		add_action( 'admin_menu', array( $this, 'register_parent' ), 9 );
 		add_action( 'admin_menu', array( $this, 'remove_duplicate_parent' ), 11 );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_rhythm' ) );
+
+		// Inline and on every admin page, because the menu is on every admin
+		// page. A stylesheet request for nine declarations would cost more than
+		// it saves, and the compiled admin styles only load on our screens.
+		add_action( 'admin_head', array( $this, 'print_icon_style' ) );
+	}
+
+	/**
+	 * Paints the menu mark so it takes its colour from the menu.
+	 *
+	 * Centred by making the container a flex box rather than by nudging the
+	 * mark with a margin. The first version used `margin: 7px auto 0`, which
+	 * was a number picked to look right against one row height while
+	 * WordPress's own `padding: 8px 0` on this pseudo-element was still
+	 * applying underneath it — so the mark sat off-centre, and would have
+	 * drifted again on the folded menu and the mobile breakpoint, where the row
+	 * is a different height. Zeroing that padding and letting flex do the
+	 * centring means there is no measurement to keep in sync.
+	 *
+	 * @return void
+	 */
+	public function print_icon_style(): void {
+		if ( ! current_user_can( Capabilities::ACCESS_STAFF ) ) {
+			return;
+		}
+
+		printf(
+			'<style id="aggr-menu-icon">#toplevel_page_%1$s .wp-menu-image{display:flex;align-items:center;justify-content:center;}#toplevel_page_%1$s .wp-menu-image::before{content:"";display:block;width:20px;height:20px;padding:0;margin:0;background-color:currentColor;-webkit-mask:url(%2$s) no-repeat center/20px 20px;mask:url(%2$s) no-repeat center/20px 20px;}</style>' . "\n",
+			esc_attr( self::PARENT_SLUG ),
+			esc_url( AGGR_PLUGIN_URL . self::ICON_FILE )
+		);
 	}
 
 	/**

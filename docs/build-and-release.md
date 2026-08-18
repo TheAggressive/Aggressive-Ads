@@ -266,12 +266,32 @@ Releases are calculated automatically from Conventional Commits merged to
 breaking change creates a major release. Documentation, CI, chores, tests, and
 dependency maintenance do not publish.
 
-Git tags and published GitHub Releases are the **only** version source of
-truth. The checked-in `package.json`, plugin header, block manifest,
-`AGGR_VERSION`, README, and test bootstraps all read `0.0.0-development` and are
-never bumped; `package.sh` stamps the planned version into the staged tree at
-package time and mutates nothing in the checkout.
-`bin/ci/check-version-contract.mjs` fails CI if any of them claims otherwise.
+Git tags and published GitHub Releases are the version source of truth, and
+`package.sh` stamps the planned version into the staged tree at package time
+without mutating the checkout.
+
+What the checkout declares is split, matching the Aggressive Apparel theme:
+
+| Declaration | Reads |
+|---|---|
+| `package.json` | `0.0.0-development` |
+| Plugin header, `AGGR_VERSION`, block manifest, README, test bootstraps | The last released version |
+
+`0.0.0-development` is semantic-release's marker for a project whose version
+lives in its tags. Everything WordPress reads carries a real number instead, so
+a development install shows something sensible in the plugins list and the
+updater compares against a real version rather than a placeholder that sorts
+below every release.
+
+Those numbers go stale between releases, and that is accepted rather than
+solved — the theme's `style.css` currently trails its published release by two
+minors. Nothing reads them at release time, so staleness costs a slightly old
+number on a development site and nothing else.
+
+`bin/ci/check-version-contract.mjs` enforces the split: the manifest must be the
+placeholder, and every other declaration must be strict semver and agree with
+the rest. Drift between them breaks nothing at release time, which is exactly
+why it needs a gate — it would otherwise sit there being quietly untrue.
 
 When Semantic Release plans a version, the trusted master pipeline packages,
 tags and publishes it **on that same run**. Nothing is written back to the

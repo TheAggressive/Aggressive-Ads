@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads;
 
+use Aggressive\Ads\Admin\Action_Notice;
 use Aggressive\Ads\Admin\Menu;
 use Aggressive\Ads\Admin\Organization_Screen;
 use Aggressive\Ads\Admin\Package_Screen;
@@ -292,6 +293,7 @@ final class Plugin {
 			Request_Mailer::class,
 			Menu::class,
 			Review_Screen::class,
+			Action_Notice::class,
 			Placement_Screen::class,
 			Organization_Screen::class,
 			Package_Screen::class,
