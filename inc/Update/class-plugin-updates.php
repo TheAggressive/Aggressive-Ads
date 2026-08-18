@@ -45,9 +45,53 @@ final class Plugin_Updates implements Service {
 	}
 
 	/**
+	 * Whether the self-updater may run against this install.
+	 *
+	 * WordPress installs a plugin update through `Plugin_Upgrader`, which clears
+	 * the destination directory before unpacking. The release package is built
+	 * from an allowlist, so it contains none of the repository: no `.git`, no
+	 * `src`, no `bin`, no `tests`. Running the updater against a working
+	 * checkout therefore replaces the checkout with the shipped subset and
+	 * destroys uncommitted work and history.
+	 *
+	 * This is not theoretical here. `AGGR_VERSION` in the checkout carries the
+	 * last released version and is not bumped automatically, so a development
+	 * install is *always* behind the newest release and is *always* offered the
+	 * update that would delete it.
+	 *
+	 * A checkout is detected by `.git` in the plugin root, so a development
+	 * install opts out with no configuration. Distributed copies have no `.git`
+	 * and update normally.
+	 *
+	 * @return bool True when update checks and installation may proceed.
+	 */
+	public static function is_enabled(): bool {
+		$is_checkout = is_dir( trailingslashit( AGGR_PLUGIN_DIR ) . '.git' );
+
+		/**
+		 * Filters whether the GitHub self-updater is active.
+		 *
+		 * Returning false unhooks the updater entirely: no update is advertised,
+		 * and no package can be installed over this plugin.
+		 *
+		 * @param bool $enabled     Whether the updater may run. False for a checkout.
+		 * @param bool $is_checkout Whether the plugin root looks like a git checkout.
+		 */
+		return (bool) apply_filters( 'aggr_enable_plugin_updates', ! $is_checkout, $is_checkout );
+	}
+
+	/**
 	 * Attach updater hooks.
+	 *
+	 * Nothing is hooked on a checkout rather than each callback returning early,
+	 * so `upgrader_pre_download` cannot verify and hand back a package for a
+	 * directory this must never overwrite.
 	 */
 	public function init(): void {
+		if ( ! self::is_enabled() ) {
+			return;
+		}
+
 		add_filter( 'pre_set_site_transient_update_plugins', array( $this, 'check' ), 100 );
 		add_filter( 'upgrader_pre_download', array( $this, 'verify_download' ), 10, 4 );
 		add_filter( 'plugins_api', array( $this, 'plugin_information' ), 10, 3 );
