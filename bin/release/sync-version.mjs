@@ -17,6 +17,19 @@ import process from 'node:process';
 import { assertVersion, writeSourceVersions } from './version-contract.mjs';
 
 function latestTag() {
+	// Refresh first. `git describe` reads local tags, and a checkout that has
+	// not fetched since the last release resolves to the previous version —
+	// writing a stale number into every declaration and reporting success. The
+	// guard in CI would then reject work that looked correct locally, which is
+	// the divergence this repository spends most of its tooling preventing.
+	try {
+		execFileSync( 'git', [ 'fetch', '--tags', '--quiet' ], { stdio: 'ignore' } );
+	} catch {
+		// Offline is survivable — the tags on disk may well be current, and the
+		// CI guard is the authority either way.
+		console.warn( 'sync-version: could not fetch tags; using what is on disk.' );
+	}
+
 	const described = execFileSync(
 		'git',
 		[ 'describe', '--tags', '--abbrev=0' ],
