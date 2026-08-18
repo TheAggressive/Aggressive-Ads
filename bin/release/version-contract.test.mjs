@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -8,6 +8,7 @@ import {
 	assertSourceVersions,
 	assertVersion,
 	DEVELOPMENT_VERSION,
+	writeSourceVersions,
 } from './version-contract.mjs';
 
 // Written as literal text, not via JSON.stringify: the fixture has to carry the
@@ -94,4 +95,49 @@ test('rejects a planned release version that is not strict semver', () => {
 
 test('accepts a strict planned release version', () => {
 	assert.doesNotThrow(() => assertVersion('2.0.0', 'Planned release version'));
+});
+
+test('writing updates every declaration WordPress reads', async (context) => {
+	const root = await fixture('1.0.0');
+	context.after(() => rm(root, { recursive: true, force: true }));
+
+	assert.equal(await writeSourceVersions('2.5.1', root), '2.5.1');
+});
+
+// The manifest is the one file that must not move. Writing a release version
+// into it would put the repository back in the state the version-PR machinery
+// existed to maintain.
+test('writing leaves the manifest on the development placeholder', async (context) => {
+	const root = await fixture('1.0.0');
+	context.after(() => rm(root, { recursive: true, force: true }));
+
+	await writeSourceVersions('2.5.1', root);
+
+	const manifest = JSON.parse(
+		await readFile(path.join(root, 'package.json'), 'utf8')
+	);
+
+	assert.equal(manifest.version, DEVELOPMENT_VERSION);
+});
+
+test('writing rewrites JSON without reformatting anything else', async (context) => {
+	const root = await fixture('1.0.0');
+	context.after(() => rm(root, { recursive: true, force: true }));
+
+	await writeSourceVersions('2.5.1', root);
+
+	assert.equal(
+		await readFile(path.join(root, 'src/blocks/placement/block.json'), 'utf8'),
+		blockJson('2.5.1')
+	);
+});
+
+test('writing refuses a version that is not strict semver', async (context) => {
+	const root = await fixture('1.0.0');
+	context.after(() => rm(root, { recursive: true, force: true }));
+
+	await assert.rejects(
+		writeSourceVersions('v2.5.1', root),
+		/strict x\.y\.z semver/u
+	);
 });

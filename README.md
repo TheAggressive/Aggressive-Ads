@@ -9,7 +9,7 @@ theme dependency. Display name and logo are settings; the code prefix is
 
 | | |
 |---|---|
-| Plugin | Aggressive Ads `1.1.1` |
+| Plugin | Aggressive Ads `1.2.0` |
 | Slug / text domain | `aggressive-ads` |
 | Namespace | `Aggressive\Ads` |
 | REST | `aggr/v1` |

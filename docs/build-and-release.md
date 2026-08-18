@@ -293,6 +293,24 @@ placeholder, and every other declaration must be strict semver and agree with
 the rest. Drift between them breaks nothing at release time, which is exactly
 why it needs a gate — it would otherwise sit there being quietly untrue.
 
+The version a build stamps comes from the **tag**, not from any of those
+declarations. `package.sh` resolves it in order: an explicit argument, then
+`AGGR_RELEASE_VERSION` (which CI always supplies), then
+`git describe --tags --abbrev=0`, and only then the plugin header — which is
+reachable just for a build from an extracted source archive with no repository
+to ask.
+
+That order is the point. The header is a copy of the tag maintained by hand, and
+it was two releases stale within a day of the release process changing. With the
+header as the fallback, `bash bin/release/package.sh` with no argument produced
+an archive named and labelled `1.1.1` while containing `1.2.1` code, and nothing
+anywhere said so.
+
+`pnpm version:sync` writes the latest tag into the five declarations. It is
+cosmetic — nothing built is wrong when they are behind — and exists so that
+catching them up is one command rather than five files and a gate telling you
+which one you missed.
+
 ### The self-updater is off on a checkout
 
 A development install is *always* behind the newest release, because the

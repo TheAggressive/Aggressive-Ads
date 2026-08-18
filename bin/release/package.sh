@@ -68,11 +68,28 @@ PACKAGE_REQUIRED=(
 	dist/styles/portal.css
 )
 
+# The version this build is of, in order of authority.
+#
+# The tag is the version. The plugin header is a copy of it, updated by hand and
+# therefore usually behind — it was two releases stale within a day of the
+# release process being changed. Falling back to that copy meant a hand-built
+# archive could be stamped 1.1.1 while containing 1.2.1 code, and be named
+# accordingly, with nothing anywhere saying otherwise.
+#
+# `git describe --tags --abbrev=0` reads the same tag the release was cut from,
+# so a build of a given commit produces the right version whatever the checkout
+# happens to declare. The header is only consulted when there is no repository
+# to ask, which is the case for a build from an extracted source archive.
+tag_version() {
+	git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//'
+}
+
 header_version() {
 	grep -m1 -oE '^\s*\*\s*Version:\s*\S+' "${PLUGIN_FILE}" | awk '{print $NF}'
 }
 
-VERSION="${1:-${AGGR_RELEASE_VERSION:-$(header_version)}}"
+VERSION="${1:-${AGGR_RELEASE_VERSION:-$(tag_version)}}"
+VERSION="${VERSION:-$(header_version)}"
 
 if [[ ! "${VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
 	echo "Invalid release version: ${VERSION}" >&2
