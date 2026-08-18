@@ -90,6 +90,12 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          # check-version-sync compares the checked-in version against the
+          # newest release tag and fails closed when none are reachable, so a
+          # shallow clone reports that it cannot verify rather than passing
+          # vacuously. Fetching the tags is the fix; relaxing the guard is not.
+          fetch-tags: true
+          fetch-depth: 0
           persist-credentials: false
       - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
         with:
@@ -346,6 +352,114 @@ jobs:
             release/*.zip.sha256
           retention-days: 30
 
+  # ============================================================================
+  # Post-release: put the published version back into the repository.
+  #
+  # package.sh stamps the version into the archive and deliberately leaves the
+  # checkout untouched, so without this master drifts further from every release.
+  # WordPress reads the plugin header as the authoritative version and
+  # AGGR_VERSION is a cache key, so that drift is functional, not cosmetic.
+  #
+  # This opens a pull request rather than pushing. master requires signed
+  # commits, reviewed pull requests and passing checks, and restoring a bypass
+  # to commit a version header would trade a real security property for a
+  # convenience. The bump goes through the same gates as any other change.
+  #
+  # Its own job, so the publishing job holds its write token for the minimum
+  # time. Delivery is best-effort by construction — automation can open a pull
+  # request but cannot make anyone merge it — and enforcement is
+  # check-version-sync.mjs, which fails lint:files until the sync lands. A
+  # silent failure here would recreate exactly the drift the job exists to end.
+  # ============================================================================
+  version-sync:
+    name: Sync Version
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    needs: [release-plan, release]
+    if: >-
+      success() &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      github.ref == 'refs/heads/master' &&
+      needs.release-plan.outputs.should_release == 'true'
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      # Only so the mint step can test it in `if:`, where `secrets` is not an
+      # available context.
+      AGGR_RELEASE_APP_ID: ${{ secrets.AGGR_RELEASE_APP_ID }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      # The POT embeds the version in Project-Id-Version, so it moves with the
+      # header or the next push fails the i18n lane on a catalog nobody touched.
+      - run: bash bin/ci/install-wp-cli.sh
+      - name: Write the published version into the checkout
+        run: node bin/release/sync-version.mjs "${{ needs.release-plan.outputs.next_version }}"
+      # A credential that is not GITHUB_TOKEN is what lets this pull request
+      # start its own checks; master requires them, and GitHub does not trigger
+      # workflows for its own token. Without the App the pull request still
+      # opens, and the guard keeps failing until somebody moves it along.
+      - name: Mint a release token
+        id: app-token
+        if: ${{ env.AGGR_RELEASE_APP_ID != '' }}
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ env.AGGR_RELEASE_APP_ID }}
+          private-key: ${{ secrets.AGGR_RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
+          permission-pull-requests: write
+      - name: Open the version sync pull request
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        with:
+          token: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
+          # Commits through the API rather than with git, so GitHub signs them.
+          # master refuses an unsigned commit, and an unsigned sync pull request
+          # would pass every check and be refused only at the merge.
+          sign-commits: true
+          add-paths: |
+            aggressive-ads.php
+            src/blocks/placement/block.json
+            README.md
+            tests/php/bootstrap-unit.php
+            tests/php/phpstan-bootstrap.php
+            languages/aggressive-ads.pot
+          branch: chore/version-sync
+          delete-branch: true
+          commit-message: |
+            chore(release): sync version to ${{ needs.release-plan.outputs.next_version }}
+
+            Writes the published version into the declarations WordPress reads
+            and regenerates the POT, whose Project-Id-Version embeds it.
+          title: 'chore(release): sync version to ${{ needs.release-plan.outputs.next_version }}'
+          body: |
+            Automated follow-up to **v${{ needs.release-plan.outputs.next_version }}**.
+
+            `bin/release/package.sh` stamps the version into the distributable
+            archive and leaves the checkout untouched, so this restores the
+            tracked declarations to the published version and regenerates
+            `languages/aggressive-ads.pot` alongside them — the catalog embeds
+            the version in `Project-Id-Version`, so the two must move together.
+
+            `package.json` stays on `0.0.0-development` by design.
+
+            `bin/ci/check-version-sync.mjs` fails `lint:files` until this merges.
+
+            Reproduce locally with:
+
+            ```bash
+            pnpm version:sync
+            ```
+
   # semantic-release creates the tag and a private draft from the package that
   # passed every CI lane. The version lives in the tag and is stamped into the
   # staged tree by package.sh, so nothing is written back to master and this
@@ -412,7 +526,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     if: always()
-    needs: [release-plan, security, structure, i18n, frontend, php, coverage, wordpress, build, e2e, package, release]
+    needs: [release-plan, security, structure, i18n, frontend, php, coverage, wordpress, build, e2e, package, release, version-sync]
     env:
       EVENT_NAME: ${{ github.event_name }}
       EVENT_REF: ${{ github.ref }}
@@ -429,6 +543,7 @@ jobs:
       E2E: ${{ needs.e2e.result }}
       PACKAGE: ${{ needs.package.result }}
       RELEASE: ${{ needs.release.result }}
+      VERSION_SYNC: ${{ needs.version-sync.result }}
     steps:
       - name: Require every quality and artifact lane
         run: |
@@ -452,12 +567,19 @@ jobs:
           # One decision now, where there used to be two: a release-worthy push
           # publishes on that same run. Nothing is written back to master, so
           # there is no second pass to wait for.
+          # A failed sync is a failed run. Delivery is best-effort by
+          # construction, so the only thing keeping the repository honest is
+          # that nobody can miss the failure — and check-version-sync then
+          # blocks the next change until it lands.
           if [[ "${SHOULD_RELEASE}" == "true" ]]; then
             [[ "${RELEASE}" == "success" ]] || failed=1
+            [[ "${VERSION_SYNC}" == "success" ]] || failed=1
           else
             [[ "${RELEASE}" == "skipped" ]] || failed=1
+            [[ "${VERSION_SYNC}" == "skipped" ]] || failed=1
           fi
 
           printf '%-12s %s\n' RELEASE_PLAN "${RELEASE_PLAN}"
+          printf '%-12s %s\n' VERSION_SYNC "${VERSION_SYNC}"
           printf '%-12s %s\n' RELEASE "${RELEASE}"
           exit "${failed}"
