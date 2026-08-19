@@ -146,6 +146,8 @@ jobs:
 
   security:
     name: Security
+    needs: [gate]
+    if: needs.gate.outputs.version_sync != 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -169,17 +171,13 @@ jobs:
 
   structure:
     name: Repository Contracts
+    needs: [gate]
+    if: needs.gate.outputs.version_sync != 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          # check-version-sync compares the checked-in version against the
-          # newest release tag and fails closed when none are reachable, so a
-          # shallow clone reports that it cannot verify rather than passing
-          # vacuously. Fetching the tags is the fix; relaxing the guard is not.
-          fetch-tags: true
-          fetch-depth: 0
           persist-credentials: false
       - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # 2.37.2
         with:
@@ -198,6 +196,8 @@ jobs:
 
   i18n:
     name: Translations
+    needs: [gate]
+    if: needs.gate.outputs.version_sync != 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -224,6 +224,8 @@ jobs:
 
   frontend:
     name: Frontend Quality
+    needs: [gate]
+    if: needs.gate.outputs.version_sync != 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -247,7 +249,8 @@ jobs:
     # resolves the `require dist/admin/*.asset.php` each admin screen performs.
     # Without them it reports five require.fileNotFound errors that no local run
     # can reproduce, because a working copy always has a build in it.
-    needs: [build]
+    needs: [build, gate]
+    if: needs.gate.outputs.version_sync != 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -277,6 +280,8 @@ jobs:
 
   coverage:
     name: PHP Coverage
+    needs: [gate]
+    if: needs.gate.outputs.version_sync != 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -333,7 +338,8 @@ jobs:
     name: Build
     runs-on: ubuntu-24.04
     timeout-minutes: 10
-    needs: [structure, frontend]
+    needs: [structure, frontend, gate]
+    if: needs.gate.outputs.version_sync != 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -488,10 +494,15 @@ jobs:
   # convenience. The bump goes through the same gates as any other change.
   #
   # Its own job, so the publishing job holds its write token for the minimum
-  # time. Delivery is best-effort by construction — automation can open a pull
-  # request but cannot make anyone merge it — and enforcement is
-  # check-version-sync.mjs, which fails lint:files until the sync lands. A
-  # silent failure here would recreate exactly the drift the job exists to end.
+  # time. Enforcement is this job itself: CI Summary requires it to have
+  # succeeded whenever a release was planned, so a sync that fails to open fails
+  # loudly on the run somebody is already watching.
+  #
+  # The pull request merges itself and skips every lane. It rewrites version
+  # strings and a catalog header, so no lane can say anything about it — but the
+  # workflows still trigger, because a workflow that never runs leaves its
+  # required check pending forever and would strand the very pull request this
+  # speeds up.
   # ============================================================================
   version-sync:
     name: Sync Version
@@ -569,8 +580,6 @@ jobs:
             the version in `Project-Id-Version`, so the two must move together.
 
             `package.json` stays on `0.0.0-development` by design.
-
-            `bin/ci/check-version-sync.mjs` fails `lint:files` until this merges.
 
             Reproduce locally with:
 

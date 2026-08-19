@@ -39,6 +39,17 @@ export const SKIPPABLE_LANES = Object.freeze( [
 ] );
 
 /**
+ * What the machine version sync may skip: everything.
+ *
+ * It rewrites version strings and a catalog header, so no lane can say anything
+ * about it. The workflows still trigger, so the required checks still report —
+ * a workflow that never runs leaves its check pending forever, which would
+ * strand the very pull request this exists to speed up. Only the work inside
+ * them is skipped.
+ */
+export const SYNC_SKIPPABLE_LANES = QUALITY_LANES;
+
+/**
  * Judges one run.
  *
  * @param {object} run                   Job results, keyed by lane name.
@@ -60,12 +71,17 @@ export function judge( run ) {
 			continue;
 		}
 
-		// Only skipped, and only for the two shapes that earn it. A failure is
-		// still a failure however the run was classified.
+		// Only skipped, and only for the shapes that earn it. A failure is
+		// still a failure however the run was classified, and a prose diff gets
+		// the narrow allowance rather than the sync's blanket one: prose can
+		// still touch a docblock a linter reads.
+		const allowedHere =
+			run.syncOnly === true ? SYNC_SKIPPABLE_LANES : SKIPPABLE_LANES;
+
 		if (
 			skipAllowed &&
 			'skipped' === result &&
-			SKIPPABLE_LANES.includes( lane )
+			allowedHere.includes( lane )
 		) {
 			continue;
 		}
