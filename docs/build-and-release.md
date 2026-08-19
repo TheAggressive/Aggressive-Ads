@@ -320,6 +320,24 @@ cosmetic — nothing built is wrong when they are behind — and exists so that
 catching them up is one command rather than five files and a gate telling you
 which one you missed.
 
+### Why not release-please
+
+Its release pull request is the same shape as the sync described below, so the
+question comes up roughly whenever somebody meets this machinery. The answer is
+fixed by a constraint rather than a preference: **release-please's generated
+commits are unverified**, and `master` requires signed commits with no bypass
+actor, so its pull request could never merge here.
+
+- [release-please-action#1124](https://github.com/googleapis/release-please-action/issues/1124)
+  — open since 2025-07-06 with no comments.
+- The `signoff` option that did land is the `Signed-off-by:` DCO trailer, a line
+  of text. It is easy to mistake for a solution and does nothing for
+  `required_signatures`.
+- Changesets commits through git the same way, so it has the same problem.
+
+Adopting either means dropping signature enforcement or adding a bypass actor.
+Revisit only if release-please gains API-created commits.
+
 ### Keeping the repository honest
 
 WordPress reads the plugin header as the authoritative version and `AGGR_VERSION`
