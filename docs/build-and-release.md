@@ -335,6 +335,19 @@ version differs from the newest tag, so an unmerged sync blocks the next change
 instead of accumulating quietly. That gate — not the job — is why the drift
 cannot come back.
 
+The sync pull request merges itself once its checks pass, and skips the lanes
+that a version string cannot affect: the WordPress suite, the browser suite and
+the packaged artifact. Those were roughly seven minutes of runner time per
+release spent confirming that a version string is still a version string.
+
+The skip is identified by branch **and** author together, because either alone
+is weak — a fork can name a branch anything, and the App could in principle open
+something else. `CI Summary` accepts those three as `skipped` only for that
+shape, and only as `skipped`: a failure still fails, and every other lane must
+still succeed. Repository contracts, PHP, frontend, security and CodeQL keep
+running, which are the lanes that would notice if the pull request contained
+something other than what it claims.
+
 It fails closed: no reachable tags means the answer is unknown rather than fine,
 so a shallow clone reports that it cannot verify. The lanes that run it fetch
 tags, because fetching them is the fix and relaxing the guard is not. Tags are

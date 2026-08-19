@@ -60,6 +60,42 @@ jobs:
           HUSKY: '0'
         run: node bin/release/plan.mjs
 
+  # ============================================================================
+  # Is this the machine-written version sync?
+  #
+  # That pull request rewrites six version strings and a POT header and nothing
+  # else, yet it was pulling the browser suite, the WordPress suite and a
+  # package build behind it — roughly seven minutes of runner time to confirm
+  # that a version string is still a version string, once per release.
+  #
+  # Identified by branch *and* author together. Either alone is weak: a fork can
+  # name a branch anything, and the App could in principle open something else.
+  # Both must hold, and the lanes that still run — repository contracts, PHP,
+  # frontend, security, CodeQL — are the ones that would actually notice if this
+  # pull request contained something other than what it claims.
+  # ============================================================================
+  gate:
+    name: Classify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    outputs:
+      version_sync: ${{ steps.classify.outputs.version_sync }}
+    steps:
+      - id: classify
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          set -euo pipefail
+
+          if [[ "${HEAD_REF}" == "chore/version-sync" && "${AUTHOR}" == "aggressive-ci[bot]" ]]; then
+            echo "version_sync=true" >> "${GITHUB_OUTPUT}"
+            echo "Machine version sync: the browser, WordPress and package lanes are skipped."
+          else
+            echo "version_sync=false" >> "${GITHUB_OUTPUT}"
+            echo "Ordinary change: every lane runs."
+          fi
+
   security:
     name: Security
     runs-on: ubuntu-24.04
@@ -220,7 +256,8 @@ jobs:
     # The React admin screens render a "has not been built" notice when their
     # bundle is missing, and the integration suite asserts they mount. Same
     # reason as the php job: dist/ is gitignored and a bare checkout has none.
-    needs: [build]
+    needs: [build, gate]
+    if: needs.gate.outputs.version_sync != 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -271,7 +308,8 @@ jobs:
     name: Browser E2E
     runs-on: ubuntu-24.04
     timeout-minutes: 20
-    needs: [build]
+    needs: [build, gate]
+    if: needs.gate.outputs.version_sync != 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -317,9 +355,10 @@ jobs:
     name: Package
     runs-on: ubuntu-24.04
     timeout-minutes: 10
-    needs: [release-plan, security, structure, i18n, frontend, php, coverage, wordpress, build, e2e]
+    needs: [release-plan, security, structure, i18n, frontend, php, coverage, wordpress, build, e2e, gate]
     if: >-
       always() &&
+      needs.gate.outputs.version_sync != 'true' &&
       (needs.release-plan.result == 'success' || needs.release-plan.result == 'skipped') &&
       needs.security.result == 'success' &&
       needs.structure.result == 'success' &&
@@ -467,6 +506,27 @@ jobs:
             ```bash
             pnpm version:sync
             ```
+      # Merges itself once its checks pass. The content is machine-written from
+      # the tag and re-derivable with one command, so a human clicking merge
+      # reviews nothing and only delays the repository agreeing with its own
+      # release. Auto-merge waits for the required checks either way, so the
+      # protection on master is unchanged — this removes a wait, not a gate.
+      - name: Let it merge once its checks pass
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          number="$(gh pr list --head chore/version-sync --state open \
+            --json number --jq '.[0].number // empty')"
+
+          if [[ -z "${number}" ]]; then
+            echo "No sync pull request was opened, so there is nothing to merge."
+            exit 0
+          fi
+
+          gh pr merge "${number}" --auto --squash --delete-branch
+          echo "Version sync #${number} will merge when its checks pass."
 
   # semantic-release creates the tag and a private draft from the package that
   # passed every CI lane. The version lives in the tag and is stamped into the
@@ -534,7 +594,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     if: always()
-    needs: [release-plan, security, structure, i18n, frontend, php, coverage, wordpress, build, e2e, package, release, version-sync]
+    needs: [release-plan, security, structure, i18n, frontend, php, coverage, wordpress, build, e2e, package, release, version-sync, gate]
     env:
       EVENT_NAME: ${{ github.event_name }}
       EVENT_REF: ${{ github.ref }}
@@ -552,17 +612,31 @@ jobs:
       PACKAGE: ${{ needs.package.result }}
       RELEASE: ${{ needs.release.result }}
       VERSION_SYNC: ${{ needs.version-sync.result }}
+      SYNC_ONLY: ${{ needs.gate.outputs.version_sync }}
     steps:
       - name: Require every quality and artifact lane
         run: |
           set -euo pipefail
           failed=0
+          # The machine version sync skips the lanes that cannot be affected by
+          # a version string, so those three are allowed to report skipped —
+          # but only for that one pull request shape, and only skipped. A
+          # failure still fails, and every other lane must still succeed.
           for lane in SECURITY STRUCTURE I18N FRONTEND PHP COVERAGE WORDPRESS BUILD E2E PACKAGE; do
             result="${!lane}"
             printf '%-12s %s\n' "${lane}" "${result}"
-            if [[ "${result}" != "success" ]]; then
-              failed=1
+
+            if [[ "${result}" == "success" ]]; then
+              continue
             fi
+
+            if [[ "${SYNC_ONLY}" == "true" && "${result}" == "skipped" ]]; then
+              case "${lane}" in
+                WORDPRESS|E2E|PACKAGE) continue ;;
+              esac
+            fi
+
+            failed=1
           done
 
           if [[ ( "${EVENT_NAME}" == "push" || "${EVENT_NAME}" == "workflow_dispatch" ) &&
