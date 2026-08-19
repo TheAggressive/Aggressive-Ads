@@ -355,7 +355,7 @@ jobs:
   e2e:
     name: Browser E2E
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 30
     needs: [build, gate]
     if: needs.gate.outputs.version_sync != 'true' && needs.gate.outputs.prose_only != 'true'
     steps:
@@ -377,15 +377,22 @@ jobs:
         with:
           name: dist
           path: dist/
-      # Bounded on purpose. The browsers themselves are cached above; the
-      # --with-deps half is a bare apt install with no retry, and a slow mirror
-      # once stretched this step to 19 minutes until the job's 20-minute cap
-      # killed it. That marked the job cancelled, which skipped Package and
-      # Release, so v1.2.1 never published and nothing said why. Every healthy
-      # run finishes this in well under a minute; failing fast turns a lost
-      # release into a visible error on the step that caused it.
+      # Bounded, but generously — the first bound was set from an assumption
+      # and killed a healthy run at six minutes.
+      #
+      # Measured on run 32209294408: the browser cache hits (305 MB restored in
+      # about five seconds), and then `--with-deps` installs 181 packages from
+      # apt. That is the whole cost of this step, it is real work rather than a
+      # no-op, and WebKit is why — it needs far more system libraries than
+      # Chromium. Dropping --with-deps would trade six minutes for a browser
+      # that cannot launch.
+      #
+      # So the bound exists only to catch a mirror that has actually stalled,
+      # not to police normal variance. A slow mirror once stretched this to 19
+      # minutes and the job's cap marked it cancelled, which skipped Package and
+      # Release — v1.2.1 never published and nothing said why.
       - run: pnpm test:e2e:install
-        timeout-minutes: 6
+        timeout-minutes: 12
       - run: pnpm env:start
       - run: pnpm ci:e2e
       - name: Upload browser diagnostics
