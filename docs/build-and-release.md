@@ -97,6 +97,15 @@ attempt at v1.1.0 failed because `api.github.com` returned HTTP 504 for
 twenty-six package downloads inside wp-env's Docker build — a GitHub outage,
 reported as a red build on this plugin.
 
+The browser install is the other one, and it is worth knowing where its time
+goes: the browsers themselves are cached and restore in seconds, while
+`--with-deps` installs 181 packages from apt on every run. That is real work,
+not a no-op — WebKit needs far more system libraries than Chromium, so dropping
+`--with-deps` would trade the time for a browser that cannot launch. Its step
+bound is set to catch a mirror that has stalled, not to police normal variance;
+the first attempt at that bound was set from an assumption rather than a
+measurement and killed a healthy run.
+
 `bin/ci/retry.sh` wraps such a command with exponential backoff, and `env:start`
 uses it. It lives in the pnpm script rather than the workflow step on purpose:
 `lanes.mjs` matches `run: pnpm <command>`, so wrapping the workflow line would
