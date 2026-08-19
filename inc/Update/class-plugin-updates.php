@@ -45,6 +45,34 @@ final class Plugin_Updates implements Service {
 	}
 
 	/**
+	 * Environments where a self-update is never wanted.
+	 *
+	 * `wp_get_environment_type()` is the WordPress-native signal, and it is the
+	 * one a site owner can set deliberately. It defaults to `production` when
+	 * unset, which is why it cannot be the only signal.
+	 */
+	private const DEVELOPMENT_ENVIRONMENTS = array( 'local', 'development' );
+
+	/**
+	 * The policy, with no WordPress in it.
+	 *
+	 * Separate from the lookups so it can be tested exhaustively without a
+	 * bootstrap — the interesting part is the combination of signals, not the
+	 * reading of them.
+	 *
+	 * @param bool   $is_checkout Whether the plugin root looks like a checkout.
+	 * @param string $environment WordPress environment type.
+	 * @return bool
+	 */
+	public static function should_enable( bool $is_checkout, string $environment ): bool {
+		if ( $is_checkout ) {
+			return false;
+		}
+
+		return ! in_array( $environment, self::DEVELOPMENT_ENVIRONMENTS, true );
+	}
+
+	/**
 	 * Whether the self-updater may run against this install.
 	 *
 	 * WordPress installs a plugin update through `Plugin_Upgrader`, which clears
@@ -54,19 +82,23 @@ final class Plugin_Updates implements Service {
 	 * checkout therefore replaces the checkout with the shipped subset and
 	 * destroys uncommitted work and history.
 	 *
-	 * This is not theoretical here. `AGGR_VERSION` in the checkout carries the
-	 * last released version and is not bumped automatically, so a development
-	 * install is *always* behind the newest release and is *always* offered the
-	 * update that would delete it.
+	 * Two independent signals switch it off, because they fail differently. The
+	 * environment type is what a site owner sets deliberately, but it defaults
+	 * to `production` when unset, so it is silent on most development installs.
+	 * The `.git` marker needs no configuration but exists only on a checkout.
+	 * Either alone leaves a real case uncovered.
 	 *
-	 * A checkout is detected by `.git` in the plugin root, so a development
-	 * install opts out with no configuration. Distributed copies have no `.git`
-	 * and update normally.
+	 * Tested with `file_exists`, not `is_dir`: a worktree or a submodule stores
+	 * `.git` as a *file* holding a pointer, so an `is_dir` check reads those as
+	 * distributed copies and offers them the update that deletes them.
 	 *
 	 * @return bool True when update checks and installation may proceed.
 	 */
 	public static function is_enabled(): bool {
-		$is_checkout = is_dir( trailingslashit( AGGR_PLUGIN_DIR ) . '.git' );
+		$is_checkout = file_exists( trailingslashit( AGGR_PLUGIN_DIR ) . '.git' );
+		$environment = function_exists( 'wp_get_environment_type' )
+			? wp_get_environment_type()
+			: 'production';
 
 		/**
 		 * Filters whether the GitHub self-updater is active.
@@ -74,10 +106,16 @@ final class Plugin_Updates implements Service {
 		 * Returning false unhooks the updater entirely: no update is advertised,
 		 * and no package can be installed over this plugin.
 		 *
-		 * @param bool $enabled     Whether the updater may run. False for a checkout.
-		 * @param bool $is_checkout Whether the plugin root looks like a git checkout.
+		 * @param bool   $enabled     Whether the updater may run.
+		 * @param bool   $is_checkout Whether the plugin root looks like a checkout.
+		 * @param string $environment WordPress environment type.
 		 */
-		return (bool) apply_filters( 'aggr_enable_plugin_updates', ! $is_checkout, $is_checkout );
+		return (bool) apply_filters(
+			'aggr_enable_plugin_updates',
+			self::should_enable( $is_checkout, $environment ),
+			$is_checkout,
+			$environment
+		);
 	}
 
 	/**

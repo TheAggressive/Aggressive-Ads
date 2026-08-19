@@ -125,4 +125,23 @@ final class UpdaterCheckoutGuardTest extends WP_UnitTestCase {
 
 		$this->assertTrue( $seen );
 	}
+
+	/**
+	 * A worktree stores .git as a file, and must still be refused.
+	 *
+	 * The first version of this guard used is_dir(), which reads a worktree or
+	 * a submodule as a distributed copy and offers it the update that deletes
+	 * it — the same data loss the guard exists to prevent, one level down.
+	 *
+	 * @return void
+	 */
+	public function test_a_git_file_counts_as_a_checkout(): void {
+		$root = trailingslashit( AGGR_PLUGIN_DIR ) . '.git';
+
+		$this->assertTrue(
+			file_exists( $root ),
+			'Fixture is wrong: there is no .git marker to detect.'
+		);
+		$this->assertFalse( Plugin_Updates::is_enabled() );
+	}
 }

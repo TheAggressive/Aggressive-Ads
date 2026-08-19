@@ -291,7 +291,15 @@ jobs:
         with:
           name: dist
           path: dist/
+      # Bounded on purpose. The browsers themselves are cached above; the
+      # --with-deps half is a bare apt install with no retry, and a slow mirror
+      # once stretched this step to 19 minutes until the job's 20-minute cap
+      # killed it. That marked the job cancelled, which skipped Package and
+      # Release, so v1.2.1 never published and nothing said why. Every healthy
+      # run finishes this in well under a minute; failing fast turns a lost
+      # release into a visible error on the step that caused it.
       - run: pnpm test:e2e:install
+        timeout-minutes: 6
       - run: pnpm env:start
       - run: pnpm ci:e2e
       - name: Upload browser diagnostics
