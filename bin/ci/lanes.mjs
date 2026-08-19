@@ -65,6 +65,15 @@ const LOCAL_SKIP = new Map( [
 			replaceWith: 'test:e2e:browsers',
 		},
 	],
+	[
+		'test:e2e:install:chromium',
+		{
+			reason:
+				'the pull-request variant of the above, and sudo apt is no more ' +
+				'welcome on a laptop for having installed one browser fewer',
+			replaceWith: 'test:e2e:browsers',
+		},
+	],
 ] );
 
 /**

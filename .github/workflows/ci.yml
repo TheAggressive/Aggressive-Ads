@@ -377,24 +377,43 @@ jobs:
         with:
           name: dist
           path: dist/
-      # Bounded, but generously — the first bound was set from an assumption
-      # and killed a healthy run at six minutes.
+      # Three attempts of five minutes rather than one long wait.
       #
-      # Measured on run 32209294408: the browser cache hits (305 MB restored in
-      # about five seconds), and then `--with-deps` installs 181 packages from
-      # apt. That is the whole cost of this step, it is real work rather than a
-      # no-op, and WebKit is why — it needs far more system libraries than
-      # Chromium. Dropping --with-deps would trade six minutes for a browser
-      # that cannot launch.
+      # Measured across runs: this step took four minutes, then six, then was
+      # still downloading package 92 of 181 at twelve — individual packages
+      # taking forty seconds from azure.archive.ubuntu.com. The variance is the
+      # problem, not a single stall, so a bound large enough to never fire is
+      # also large enough to waste twenty minutes before saying anything.
       #
-      # So the bound exists only to catch a mirror that has actually stalled,
-      # not to police normal variance. A slow mirror once stretched this to 19
-      # minutes and the job's cap marked it cancelled, which skipped Package and
-      # Release — v1.2.1 never published and nothing said why.
+      # apt keeps part-downloaded archives, so a retry resumes rather than
+      # restarting. Killing a crawling attempt and trying again usually lands on
+      # a mirror that is behaving.
+      #
+      # The packages are overwhelmingly WebKit's: gstreamer, libavfilter,
+      # libvisual and friends. Chromium alone would need a fraction of them, so
+      # dropping WebKit from pull requests is the lever if this keeps hurting —
+      # at the cost of the Safari coverage dialog-webkit.spec.ts exists for.
+      #
+      # The browser cache hits either way — 305 MB restored in about five
+      # seconds — so this time is entirely apt, and it is real work: without
+      # --with-deps the browsers cannot launch.
+      #
+      # The step bound clears three attempts with room to spare, so the retry
+      # gets to report rather than being cut off mid-recovery.
+      # Pull requests install Chromium only. WebKit's dependencies are the
+      # GStreamer multimedia stack, which is what was still downloading when
+      # this step timed out; Chromium needs a fraction of it. master and any
+      # publishing run install both and exercise Safari.
+      - run: pnpm test:e2e:install:chromium
+        if: github.event_name == 'pull_request'
+        timeout-minutes: 18
       - run: pnpm test:e2e:install
-        timeout-minutes: 12
+        if: github.event_name != 'pull_request'
+        timeout-minutes: 18
       - run: pnpm env:start
       - run: pnpm ci:e2e
+        env:
+          AGGR_E2E_SKIP_WEBKIT: ${{ github.event_name == 'pull_request' }}
       - name: Upload browser diagnostics
         if: ${{ failure() || cancelled() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -488,10 +507,6 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-    env:
-      # Only so the mint step can test it in `if:`, where `secrets` is not an
-      # available context.
-      AA_CI_CLIENT_ID: ${{ secrets.AA_CI_CLIENT_ID }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -515,17 +530,16 @@ jobs:
       # opens, and the guard keeps failing until somebody moves it along.
       - name: Mint a release token
         id: app-token
-        if: ${{ env.AA_CI_CLIENT_ID != '' }}
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
-          client-id: ${{ env.AA_CI_CLIENT_ID }}
+          client-id: ${{ secrets.AA_CI_CLIENT_ID }}
           private-key: ${{ secrets.AA_CI_PRIVATE_KEY }}
           permission-contents: write
           permission-pull-requests: write
       - name: Open the version sync pull request
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
-          token: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           # Commits through the API rather than with git, so GitHub signs them.
           # master refuses an unsigned commit, and an unsigned sync pull request
           # would pass every check and be refused only at the merge.
@@ -570,7 +584,7 @@ jobs:
       # protection on master is unchanged — this removes a wait, not a gate.
       - name: Let it merge once its checks pass
         env:
-          GH_TOKEN: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -euo pipefail
 
@@ -674,56 +688,11 @@ jobs:
       SYNC_ONLY: ${{ needs.gate.outputs.version_sync }}
       PROSE_ONLY: ${{ needs.gate.outputs.prose_only }}
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
       - name: Require every quality and artifact lane
-        run: |
-          set -euo pipefail
-          failed=0
-          # The machine version sync skips the lanes that cannot be affected by
-          # a version string, so those three are allowed to report skipped —
-          # but only for that one pull request shape, and only skipped. A
-          # failure still fails, and every other lane must still succeed.
-          for lane in SECURITY STRUCTURE I18N FRONTEND PHP COVERAGE WORDPRESS BUILD E2E PACKAGE; do
-            result="${!lane}"
-            printf '%-12s %s\n' "${lane}" "${result}"
-
-            if [[ "${result}" == "success" ]]; then
-              continue
-            fi
-
-            if [[ ( "${SYNC_ONLY}" == "true" || "${PROSE_ONLY}" == "true" ) && "${result}" == "skipped" ]]; then
-              case "${lane}" in
-                WORDPRESS|E2E|PACKAGE) continue ;;
-              esac
-            fi
-
-            failed=1
-          done
-
-          # Planning only runs when publishing was asked for, so an ordinary
-          # merge must see it skipped. Asserting both directions is what stops
-          # this drifting into "whatever happened is fine".
-          if [[ "${PUBLISH_REQUESTED}" == "true" && "${EVENT_REF}" == "refs/heads/master" ]]; then
-            [[ "${RELEASE_PLAN}" == "success" ]] || failed=1
-          else
-            [[ "${RELEASE_PLAN}" == "skipped" ]] || failed=1
-          fi
-
-          # One decision now, where there used to be two: a release-worthy push
-          # publishes on that same run. Nothing is written back to master, so
-          # there is no second pass to wait for.
-          # A failed sync is a failed run. Delivery is best-effort by
-          # construction, so the only thing keeping the repository honest is
-          # that nobody can miss the failure — and check-version-sync then
-          # blocks the next change until it lands.
-          if [[ "${SHOULD_RELEASE}" == "true" ]]; then
-            [[ "${RELEASE}" == "success" ]] || failed=1
-            [[ "${VERSION_SYNC}" == "success" ]] || failed=1
-          else
-            [[ "${RELEASE}" == "skipped" ]] || failed=1
-            [[ "${VERSION_SYNC}" == "skipped" ]] || failed=1
-          fi
-
-          printf '%-12s %s\n' RELEASE_PLAN "${RELEASE_PLAN}"
-          printf '%-12s %s\n' VERSION_SYNC "${VERSION_SYNC}"
-          printf '%-12s %s\n' RELEASE "${RELEASE}"
-          exit "${failed}"
+        run: node bin/ci/check-summary.mjs

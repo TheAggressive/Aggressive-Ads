@@ -106,6 +106,18 @@ bound is set to catch a mirror that has stalled, not to police normal variance;
 the first attempt at that bound was set from an assumption rather than a
 measurement and killed a healthy run.
 
+Pull requests install Chromium only and skip the `webkit-dialog` project;
+`master` and any publishing run install both browsers and exercise Safari. The
+packages that made that step unreliable were WebKit's — GStreamer, `libavfilter`
+and the rest of the multimedia stack — and every Chromium project needs a
+fraction of them.
+
+The cost is stated rather than hidden: a WebKit-only regression in the shared
+dialog is caught at merge instead of in review. Still before release, but after
+approval. WebKit is opt-*out* (`AGGR_E2E_SKIP_WEBKIT`), set only by the
+pull-request lane, so a local run and a master run both keep it — the reduced
+run is the exception, and it has to be asked for.
+
 `bin/ci/retry.sh` wraps such a command with exponential backoff, and `env:start`
 uses it. It lives in the pnpm script rather than the workflow step on purpose:
 `lanes.mjs` matches `run: pnpm <command>`, so wrapping the workflow line would
@@ -319,6 +331,24 @@ anywhere said so.
 cosmetic — nothing built is wrong when they are behind — and exists so that
 catching them up is one command rather than five files and a gate telling you
 which one you missed.
+
+### Why not release-please
+
+Its release pull request is the same shape as the sync described below, so the
+question comes up roughly whenever somebody meets this machinery. The answer is
+fixed by a constraint rather than a preference: **release-please's generated
+commits are unverified**, and `master` requires signed commits with no bypass
+actor, so its pull request could never merge here.
+
+- [release-please-action#1124](https://github.com/googleapis/release-please-action/issues/1124)
+  — open since 2025-07-06 with no comments.
+- The `signoff` option that did land is the `Signed-off-by:` DCO trailer, a line
+  of text. It is easy to mistake for a solution and does nothing for
+  `required_signatures`.
+- Changesets commits through git the same way, so it has the same problem.
+
+Adopting either means dropping signature enforcement or adding a bypass actor.
+Revisit only if release-please gains API-created commits.
 
 ### Keeping the repository honest
 
