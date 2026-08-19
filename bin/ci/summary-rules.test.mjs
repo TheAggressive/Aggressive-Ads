@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { judge, QUALITY_LANES, SKIPPABLE_LANES } from './summary-rules.mjs';
+import {
+	judge,
+	QUALITY_LANES,
+	SKIPPABLE_LANES,
+	SYNC_SKIPPABLE_LANES,
+} from './summary-rules.mjs';
 
 /**
  * An ordinary green pull request: every lane passed, nothing published.
@@ -62,34 +67,46 @@ test( 'a failure is never excused, even for the shapes that may skip', () => {
 	}
 } );
 
-test( 'the version sync may skip exactly the three lanes it cannot affect', () => {
+test( 'a prose diff may skip exactly the three lanes it cannot affect', () => {
 	const skipped = Object.fromEntries(
 		SKIPPABLE_LANES.map( ( l ) => [ l, 'skipped' ] )
 	);
 
-	assert.equal( judge( run( { syncOnly: true, ...skipped } ) ).ok, true );
 	assert.equal( judge( run( { proseOnly: true, ...skipped } ) ).ok, true );
 } );
 
-// The reason the allowance is per-shape rather than global: an ordinary pull
-// request that skipped the browser suite has not been tested, and must not be
-// waved through.
-test( 'an ordinary run may not skip those lanes', () => {
-	for ( const lane of SKIPPABLE_LANES ) {
-		assert.equal( judge( run( { [ lane ]: 'skipped' } ) ).ok, false );
-	}
-} );
-
-test( 'lanes outside the skippable three are never skippable', () => {
-	const notSkippable = QUALITY_LANES.filter(
-		( l ) => ! SKIPPABLE_LANES.includes( l )
+// The sync rewrites version strings and a catalog header, so no lane can say
+// anything about it. The workflows still trigger, so the required checks still
+// report — a workflow that never runs leaves its check pending forever, which
+// would strand the very pull request this speeds up. Only the work inside them
+// is skipped.
+test( 'the version sync may skip every lane', () => {
+	const skipped = Object.fromEntries(
+		SYNC_SKIPPABLE_LANES.map( ( l ) => [ l, 'skipped' ] )
 	);
 
-	for ( const lane of notSkippable ) {
+	assert.equal( judge( run( { syncOnly: true, ...skipped } ) ).ok, true );
+} );
+
+// The allowance is per-shape, not global. A prose diff can still touch a
+// docblock a linter reads, so it does not get the sync's blanket pass.
+test( 'a prose diff may not skip the lanes only the sync may', () => {
+	assert.equal(
+		judge( run( { proseOnly: true, PHP: 'skipped' } ) ).ok,
+		false
+	);
+	assert.equal(
+		judge( run( { proseOnly: true, FRONTEND: 'skipped' } ) ).ok,
+		false
+	);
+} );
+
+test( 'an ordinary run may not skip any lane', () => {
+	for ( const lane of QUALITY_LANES ) {
 		assert.equal(
-			judge( run( { syncOnly: true, [ lane ]: 'skipped' } ) ).ok,
+			judge( run( { [ lane ]: 'skipped' } ) ).ok,
 			false,
-			`${ lane } must not be skippable even for a version sync`
+			`${ lane } must not be skippable on an ordinary run`
 		);
 	}
 } );
