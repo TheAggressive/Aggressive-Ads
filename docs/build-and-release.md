@@ -106,6 +106,18 @@ bound is set to catch a mirror that has stalled, not to police normal variance;
 the first attempt at that bound was set from an assumption rather than a
 measurement and killed a healthy run.
 
+Pull requests install Chromium only and skip the `webkit-dialog` project;
+`master` and any publishing run install both browsers and exercise Safari. The
+packages that made that step unreliable were WebKit's — GStreamer, `libavfilter`
+and the rest of the multimedia stack — and every Chromium project needs a
+fraction of them.
+
+The cost is stated rather than hidden: a WebKit-only regression in the shared
+dialog is caught at merge instead of in review. Still before release, but after
+approval. WebKit is opt-*out* (`AGGR_E2E_SKIP_WEBKIT`), set only by the
+pull-request lane, so a local run and a master run both keep it — the reduced
+run is the exception, and it has to be asked for.
+
 `bin/ci/retry.sh` wraps such a command with exponential backoff, and `env:start`
 uses it. It lives in the pnpm script rather than the workflow step on purpose:
 `lanes.mjs` matches `run: pnpm <command>`, so wrapping the workflow line would

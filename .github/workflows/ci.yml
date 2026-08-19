@@ -400,10 +400,20 @@ jobs:
       #
       # The step bound clears three attempts with room to spare, so the retry
       # gets to report rather than being cut off mid-recovery.
+      # Pull requests install Chromium only. WebKit's dependencies are the
+      # GStreamer multimedia stack, which is what was still downloading when
+      # this step timed out; Chromium needs a fraction of it. master and any
+      # publishing run install both and exercise Safari.
+      - run: pnpm test:e2e:install:chromium
+        if: github.event_name == 'pull_request'
+        timeout-minutes: 18
       - run: pnpm test:e2e:install
+        if: github.event_name != 'pull_request'
         timeout-minutes: 18
       - run: pnpm env:start
       - run: pnpm ci:e2e
+        env:
+          AGGR_E2E_SKIP_WEBKIT: ${{ github.event_name == 'pull_request' }}
       - name: Upload browser diagnostics
         if: ${{ failure() || cancelled() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
