@@ -9,14 +9,14 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-18T07:35:40+00:00\n"
+"POT-Creation-Date: 2026-08-19T00:40:41+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
 
 #. Plugin Name of the plugin
 #: aggressive-ads.php
-#: inc/Update/class-plugin-updates.php:206
+#: inc/Update/class-plugin-updates.php:244
 msgid "Aggressive Ads"
 msgstr ""
 
@@ -2483,15 +2483,15 @@ msgstr ""
 msgid "Aggressive Ads update failed integrity verification."
 msgstr ""
 
-#: inc/Update/class-plugin-updates.php:214
+#: inc/Update/class-plugin-updates.php:252
 msgid "Live means live. White-label advertising management for WordPress."
 msgstr ""
 
-#: inc/Update/class-plugin-updates.php:216
+#: inc/Update/class-plugin-updates.php:254
 msgid "Advertisers build campaigns and staff review and publish them."
 msgstr ""
 
-#: inc/Update/class-plugin-updates.php:219
+#: inc/Update/class-plugin-updates.php:257
 msgid "No release notes were provided."
 msgstr ""
 
