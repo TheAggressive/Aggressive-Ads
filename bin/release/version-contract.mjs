@@ -44,7 +44,9 @@ import process from 'node:process';
  */
 export const DEVELOPMENT_VERSION = '0.0.0-development';
 
-export const VERSION_PATHS = Object.freeze([
+// Not exported: every caller goes through the readers below, and an exported
+// list invites somebody to iterate it and write their own reader.
+const VERSION_PATHS = Object.freeze([
 	'package.json',
 	'aggressive-ads.php',
 	'src/blocks/placement/block.json',

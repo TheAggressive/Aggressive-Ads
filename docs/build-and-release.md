@@ -348,6 +348,14 @@ still succeed. Repository contracts, PHP, frontend, security and CodeQL keep
 running, which are the lanes that would notice if the pull request contained
 something other than what it claims.
 
+A Markdown-only diff skips the same three lanes, for the same reason. The
+classifier asks whether anything **non-Markdown** changed rather than whether
+anything Markdown did: an unrecognised new file type then counts as code, where
+the other reading would silently call it prose. `workflow_dispatch` has no diff
+to read and answers for itself — a manual run wants every lane — and a workflow
+edit counts as code, because a change to the pipeline must be exercised by the
+pipeline.
+
 It fails closed: no reachable tags means the answer is unknown rather than fine,
 so a shallow clone reports that it cannot verify. The lanes that run it fetch
 tags, because fetching them is the fix and relaxing the guard is not. Tags are
@@ -372,14 +380,26 @@ Override with the `aggr_enable_plugin_updates` filter, which receives whether
 the root looked like a checkout. The Aggressive Apparel theme carries the same
 guard for the same reason.
 
-When Semantic Release plans a version, the trusted master pipeline packages,
-tags and publishes it **on that same run**. Nothing is written back to the
-repository, so there is no second pass and no credential beyond the run's own
-`GITHUB_TOKEN`.
+**Publishing is asked for, never a side effect of merging.** Merging runs the
+quality pipeline and stops. Everything merged since the last tag ships together
+when somebody runs:
 
-`workflow_dispatch` on `master` is a trusted release trigger alongside `push`,
-so a release that was missed can be started by hand. Dispatching on any other
-ref runs the quality lanes only.
+```bash
+gh workflow run "CI/CD Pipeline" --ref master -f publish=true
+```
+
+Running it when nothing is pending is harmless: planning reports no release and
+the run stops.
+
+Two reasons, and the second is not hypothetical. Every release is an update
+event on a live site, and four shipped here in a single afternoon — a cadence
+nobody chose. And a `push` run that was cancelled mid-flight took `Release` down
+with it, so v1.2.1 never published and nothing said why. A push that cannot
+publish cannot interrupt a release.
+
+When publishing is requested, the pipeline packages, tags and publishes on that
+run. Nothing is written back to the repository during it, so there is no second
+pass and no credential beyond the run's own `GITHUB_TOKEN`.
 
 ### Why the version is not committed
 
