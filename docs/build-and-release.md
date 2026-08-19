@@ -119,7 +119,12 @@ pull-request lane, so a local run and a master run both keep it — the reduced
 run is the exception, and it has to be asked for.
 
 `bin/ci/retry.sh` wraps such a command with exponential backoff, and `env:start`
-uses it. It lives in the pnpm script rather than the workflow step on purpose:
+uses it. **Never combine it with `timeout`.** `timeout` kills the command it is
+given, not the process group beneath it: wrapping `playwright install
+--with-deps` killed playwright while the `apt-get` it had spawned as root kept
+running and kept `/var/lib/apt/lists/lock`, so both remaining attempts died in
+seconds with "Could not get lock". A retry that orphans a lock holder does not
+merely fail to help — it guarantees failure. It lives in the pnpm script rather than the workflow step on purpose:
 `lanes.mjs` matches `run: pnpm <command>`, so wrapping the workflow line would
 drop the step out of the derived local lanes, and putting it in the script gives
 local runs the same resilience.

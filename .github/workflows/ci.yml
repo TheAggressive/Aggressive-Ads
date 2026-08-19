@@ -377,22 +377,22 @@ jobs:
         with:
           name: dist
           path: dist/
-      # Three attempts of five minutes rather than one long wait.
+      # A slow apt is waited out, never killed.
       #
-      # Measured across runs: this step took four minutes, then six, then was
-      # still downloading package 92 of 181 at twelve — individual packages
-      # taking forty seconds from azure.archive.ubuntu.com. The variance is the
-      # problem, not a single stall, so a bound large enough to never fire is
-      # also large enough to waste twenty minutes before saying anything.
+      # An earlier version capped each attempt at five minutes and retried.
+      # `timeout` kills the command it is given rather than the process group
+      # beneath it, so it killed playwright while the apt-get it had spawned as
+      # root kept running and kept /var/lib/apt/lists/lock. Both remaining
+      # attempts died in seconds with "Could not get lock". The retry did not
+      # merely fail to help — it guaranteed failure, on a first attempt that may
+      # well have finished given another minute.
       #
-      # apt keeps part-downloaded archives, so a retry resumes rather than
-      # restarting. Killing a crawling attempt and trying again usually lands on
-      # a mirror that is behaving.
+      # So the step bound is the only limit, and the retry is there for a
+      # genuine apt failure rather than for slowness. Slowness is not failure.
       #
-      # The packages are overwhelmingly WebKit's: gstreamer, libavfilter,
-      # libvisual and friends. Chromium alone would need a fraction of them, so
-      # dropping WebKit from pull requests is the lever if this keeps hurting —
-      # at the cost of the Safari coverage dialog-webkit.spec.ts exists for.
+      # Pull requests do not pay this at all: they install Chromium in about
+      # twenty seconds. This path is master's, where WebKit's multimedia stack —
+      # gstreamer, libavfilter and the rest — is the whole cost.
       #
       # The browser cache hits either way — 305 MB restored in about five
       # seconds — so this time is entirely apt, and it is real work: without
