@@ -93,7 +93,7 @@
 		"test:php:unit": "vendor/bin/phpunit",
 		"test:php:integration": "bash bin/ci/run-wp-tests.sh phpunit-integration.xml.dist",
 		"test:php:multisite": "bash bin/ci/run-wp-tests.sh phpunit-multisite.xml.dist",
-		"test:e2e:install": "playwright install --with-deps chromium webkit",
+		"test:e2e:install": "bash bin/ci/retry.sh 3 timeout 300 playwright install --with-deps chromium webkit",
 		"test:e2e:browsers": "playwright install chromium webkit",
 		"test:e2e": "playwright test",
 		"ci:doctor": "node bin/ci/doctor.mjs",

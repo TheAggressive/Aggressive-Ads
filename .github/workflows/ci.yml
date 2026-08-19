@@ -377,22 +377,31 @@ jobs:
         with:
           name: dist
           path: dist/
-      # Bounded, but generously — the first bound was set from an assumption
-      # and killed a healthy run at six minutes.
+      # Three attempts of five minutes rather than one long wait.
       #
-      # Measured on run 32209294408: the browser cache hits (305 MB restored in
-      # about five seconds), and then `--with-deps` installs 181 packages from
-      # apt. That is the whole cost of this step, it is real work rather than a
-      # no-op, and WebKit is why — it needs far more system libraries than
-      # Chromium. Dropping --with-deps would trade six minutes for a browser
-      # that cannot launch.
+      # Measured across runs: this step took four minutes, then six, then was
+      # still downloading package 92 of 181 at twelve — individual packages
+      # taking forty seconds from azure.archive.ubuntu.com. The variance is the
+      # problem, not a single stall, so a bound large enough to never fire is
+      # also large enough to waste twenty minutes before saying anything.
       #
-      # So the bound exists only to catch a mirror that has actually stalled,
-      # not to police normal variance. A slow mirror once stretched this to 19
-      # minutes and the job's cap marked it cancelled, which skipped Package and
-      # Release — v1.2.1 never published and nothing said why.
+      # apt keeps part-downloaded archives, so a retry resumes rather than
+      # restarting. Killing a crawling attempt and trying again usually lands on
+      # a mirror that is behaving.
+      #
+      # The packages are overwhelmingly WebKit's: gstreamer, libavfilter,
+      # libvisual and friends. Chromium alone would need a fraction of them, so
+      # dropping WebKit from pull requests is the lever if this keeps hurting —
+      # at the cost of the Safari coverage dialog-webkit.spec.ts exists for.
+      #
+      # The browser cache hits either way — 305 MB restored in about five
+      # seconds — so this time is entirely apt, and it is real work: without
+      # --with-deps the browsers cannot launch.
+      #
+      # The step bound clears three attempts with room to spare, so the retry
+      # gets to report rather than being cut off mid-recovery.
       - run: pnpm test:e2e:install
-        timeout-minutes: 12
+        timeout-minutes: 18
       - run: pnpm env:start
       - run: pnpm ci:e2e
       - name: Upload browser diagnostics
