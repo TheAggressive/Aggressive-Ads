@@ -8,6 +8,11 @@ on:
   pull_request:
     branches: [master]
   workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Cut a release from everything merged since the last tag'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -27,11 +32,22 @@ jobs:
   release-plan:
     name: Plan Release
     runs-on: ubuntu-24.04
-    # workflow_dispatch on master is the recovery path for a release that was
-    # missed — nothing writes back to master, so an ordinary push publishes on
-    # its own run. See docs/build-and-release.md.
+    # Publishing is asked for, never a side effect of merging.
+    #
+    # Fourteen releases in eighteen days on the sibling theme, three of them in
+    # one day; each is an update event on a live site. Here, four shipped in a
+    # single afternoon. Merging now runs the quality pipeline and stops, and
+    # everything merged since the last tag ships together when somebody runs:
+    #
+    #   gh workflow run "CI/CD Pipeline" --ref master -f publish=true
+    #
+    # It also removes a failure seen today: a push run cancelled mid-flight took
+    # Release down with it, so v1.2.1 never published and nothing said why. A
+    # push that cannot publish cannot interrupt a release. Running this when
+    # nothing is pending is harmless — planning reports no release and stops.
     if: >-
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      github.event_name == 'workflow_dispatch' &&
+      inputs.publish &&
       github.ref == 'refs/heads/master'
     timeout-minutes: 5
     permissions:
@@ -80,11 +96,19 @@ jobs:
     timeout-minutes: 2
     outputs:
       version_sync: ${{ steps.classify.outputs.version_sync }}
+      prose_only: ${{ steps.classify.outputs.prose_only }}
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
       - id: classify
         env:
           HEAD_REF: ${{ github.head_ref }}
           AUTHOR: ${{ github.event.pull_request.user.login }}
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
 
@@ -93,7 +117,31 @@ jobs:
             echo "Machine version sync: the browser, WordPress and package lanes are skipped."
           else
             echo "version_sync=false" >> "${GITHUB_OUTPUT}"
-            echo "Ordinary change: every lane runs."
+          fi
+
+          # Asks whether anything that is *not* Markdown changed, rather than
+          # whether anything Markdown did. The difference matters: an
+          # unrecognised new file type counts as code under this reading and
+          # would be silently classified as prose under the other.
+          #
+          # workflow_dispatch has no diff to read and answers for itself — a
+          # manual run wants every lane. A workflow edit is code by this
+          # definition, which is correct: a change to the pipeline must be
+          # exercised by the pipeline.
+          prose_only=false
+
+          if [[ "${EVENT_NAME}" == "pull_request" ]]; then
+            changed="$(git diff --name-only "${BASE_SHA}" "${HEAD_SHA}")"
+
+            if [[ -n "${changed}" ]] && ! grep -qvE '\.md$' <<< "${changed}"; then
+              prose_only=true
+            fi
+          fi
+
+          echo "prose_only=${prose_only}" >> "${GITHUB_OUTPUT}"
+
+          if [[ "${prose_only}" == "true" ]]; then
+            echo "Markdown only: the lanes that cannot read prose are skipped."
           fi
 
   security:
@@ -257,7 +305,7 @@ jobs:
     # bundle is missing, and the integration suite asserts they mount. Same
     # reason as the php job: dist/ is gitignored and a bare checkout has none.
     needs: [build, gate]
-    if: needs.gate.outputs.version_sync != 'true'
+    if: needs.gate.outputs.version_sync != 'true' && needs.gate.outputs.prose_only != 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -309,7 +357,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     needs: [build, gate]
-    if: needs.gate.outputs.version_sync != 'true'
+    if: needs.gate.outputs.version_sync != 'true' && needs.gate.outputs.prose_only != 'true'
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -359,6 +407,7 @@ jobs:
     if: >-
       always() &&
       needs.gate.outputs.version_sync != 'true' &&
+      needs.gate.outputs.prose_only != 'true' &&
       (needs.release-plan.result == 'success' || needs.release-plan.result == 'skipped') &&
       needs.security.result == 'success' &&
       needs.structure.result == 'success' &&
@@ -425,7 +474,8 @@ jobs:
     needs: [release-plan, release]
     if: >-
       success() &&
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      github.event_name == 'workflow_dispatch' &&
+      inputs.publish &&
       github.ref == 'refs/heads/master' &&
       needs.release-plan.outputs.should_release == 'true'
     permissions:
@@ -540,7 +590,8 @@ jobs:
     needs: [release-plan, package]
     if: >-
       success() &&
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      github.event_name == 'workflow_dispatch' &&
+      inputs.publish &&
       github.ref == 'refs/heads/master' &&
       needs.release-plan.outputs.should_release == 'true'
     environment: production
@@ -597,6 +648,7 @@ jobs:
     needs: [release-plan, security, structure, i18n, frontend, php, coverage, wordpress, build, e2e, package, release, version-sync, gate]
     env:
       EVENT_NAME: ${{ github.event_name }}
+      PUBLISH_REQUESTED: ${{ github.event_name == 'workflow_dispatch' && inputs.publish }}
       EVENT_REF: ${{ github.ref }}
       SHOULD_RELEASE: ${{ needs.release-plan.outputs.should_release }}
       RELEASE_PLAN: ${{ needs.release-plan.result }}
@@ -613,6 +665,7 @@ jobs:
       RELEASE: ${{ needs.release.result }}
       VERSION_SYNC: ${{ needs.version-sync.result }}
       SYNC_ONLY: ${{ needs.gate.outputs.version_sync }}
+      PROSE_ONLY: ${{ needs.gate.outputs.prose_only }}
     steps:
       - name: Require every quality and artifact lane
         run: |
@@ -630,7 +683,7 @@ jobs:
               continue
             fi
 
-            if [[ "${SYNC_ONLY}" == "true" && "${result}" == "skipped" ]]; then
+            if [[ ( "${SYNC_ONLY}" == "true" || "${PROSE_ONLY}" == "true" ) && "${result}" == "skipped" ]]; then
               case "${lane}" in
                 WORDPRESS|E2E|PACKAGE) continue ;;
               esac
@@ -639,8 +692,10 @@ jobs:
             failed=1
           done
 
-          if [[ ( "${EVENT_NAME}" == "push" || "${EVENT_NAME}" == "workflow_dispatch" ) &&
-                "${EVENT_REF}" == "refs/heads/master" ]]; then
+          # Planning only runs when publishing was asked for, so an ordinary
+          # merge must see it skipped. Asserting both directions is what stops
+          # this drifting into "whatever happened is fine".
+          if [[ "${PUBLISH_REQUESTED}" == "true" && "${EVENT_REF}" == "refs/heads/master" ]]; then
             [[ "${RELEASE_PLAN}" == "success" ]] || failed=1
           else
             [[ "${RELEASE_PLAN}" == "skipped" ]] || failed=1
