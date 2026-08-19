@@ -484,7 +484,7 @@ jobs:
     env:
       # Only so the mint step can test it in `if:`, where `secrets` is not an
       # available context.
-      AA_CI_APP_ID: ${{ secrets.AA_CI_APP_ID }}
+      AA_CI_CLIENT_ID: ${{ secrets.AA_CI_CLIENT_ID }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -508,10 +508,10 @@ jobs:
       # opens, and the guard keeps failing until somebody moves it along.
       - name: Mint a release token
         id: app-token
-        if: ${{ env.AA_CI_APP_ID != '' }}
+        if: ${{ env.AA_CI_CLIENT_ID != '' }}
         uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         with:
-          app-id: ${{ env.AA_CI_APP_ID }}
+          client-id: ${{ env.AA_CI_CLIENT_ID }}
           private-key: ${{ secrets.AA_CI_PRIVATE_KEY }}
           permission-contents: write
           permission-pull-requests: write
