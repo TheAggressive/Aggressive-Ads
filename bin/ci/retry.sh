@@ -12,6 +12,14 @@
 # fails for real reasons converts a fast failure into a slow one and hides
 # flakiness that deserves fixing, so this belongs only on steps that pull from
 # the network and are idempotent.
+#
+# Do not combine this with `timeout`. `timeout` kills the command it was given,
+# not the process group beneath it: wrapping `playwright install --with-deps`
+# killed playwright while the apt-get it had spawned as root kept running and
+# kept /var/lib/apt/lists/lock. Both remaining attempts then died in seconds
+# with "Could not get lock", so the retry did not merely fail to help — it
+# guaranteed failure, on a first attempt that may well have finished given
+# another minute.
 
 set -euo pipefail
 
