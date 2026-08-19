@@ -1,0 +1,20 @@
+{
+	"core": "https://wordpress.org/latest.zip",
+	"phpVersion": "8.4",
+	"config": {
+		"WP_DEBUG": true,
+		"WP_DEBUG_LOG": true,
+		"WP_DEBUG_DISPLAY": false,
+		"SCRIPT_DEBUG": false,
+		"WP_AUTO_UPDATE_CORE": false
+	},
+	"port": 9940,
+	"testsPort": 9941,
+	"env": {
+		"development": {
+			"mappings": {
+				"wp-content/aggr-artifacts": "../../../.cache/ci/artifact-files"
+			}
+		}
+	}
+}

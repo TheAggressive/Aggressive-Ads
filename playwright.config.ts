@@ -11,6 +11,15 @@ const outputDir = process.env.AGGR_E2E_OUTPUT_DIR ?? '.playwright-results';
  */
 const skipWebKit = 'true' === process.env.AGGR_E2E_SKIP_WEBKIT;
 
+/**
+ * Whether this run is exercising an installed release archive.
+ *
+ * The artifact project is absent otherwise, because it targets a separate
+ * WordPress on a different port. Left always-present it would fail every
+ * ordinary run by looking for a plugin nothing had installed.
+ */
+const artifactRun = 'true' === process.env.AGGR_E2E_ARTIFACT;
+
 export default defineConfig( {
 	testDir: './tests/e2e',
 	fullyParallel: false,
@@ -34,7 +43,7 @@ export default defineConfig( {
 		{
 			name: 'chromium',
 			use: { ...devices[ 'Desktop Chrome' ] },
-			testIgnore: [ /compatibility\//, /reflow\// ],
+			testIgnore: [ /compatibility\//, /reflow\//, /artifact\// ],
 		},
 		// WebKit is opt-out rather than opt-in, so a local run and a master run
 		// both get it and only the pull-request lane gives it up. Installing it
@@ -62,6 +71,15 @@ export default defineConfig( {
 			},
 			testMatch: /reflow\/.*\.spec\.ts/,
 		},
+		...( artifactRun
+			? [
+					{
+						name: 'artifact',
+						use: { ...devices[ 'Desktop Chrome' ] },
+						testMatch: /artifact\/.*\.spec\.ts/,
+					},
+			  ]
+			: [] ),
 	],
 	outputDir,
 } );

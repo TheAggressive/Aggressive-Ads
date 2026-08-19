@@ -221,6 +221,9 @@ staged_block_version=$(
 	grep -m1 -oE '"version": "[^"]+"' "${STAGING}/dist/blocks/placement/block.json" | cut -d'"' -f4
 )
 staged_readme_version=$(
+	# A literal grep pattern, not a template: the backticks are Markdown and
+	# there is nothing here for the shell to expand.
+	# shellcheck disable=SC2016
 	grep -m1 -oE '^\| Plugin \| Aggressive Ads `[^`]+`' "${STAGING}/README.md" | cut -d'`' -f2
 )
 if [[ "${staged_header_version}" != "${VERSION}" || "${staged_constant_version}" != "${VERSION}" || "${staged_block_version}" != "${VERSION}" || "${staged_readme_version}" != "${VERSION}" ]]; then
