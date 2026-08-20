@@ -169,7 +169,7 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 
 		try {
 			const created = await apiFetch< { id?: number } >( {
-				path: '/aggr/v1/campaigns',
+				path: '/aggr/v1/campaigns/for-advertiser',
 				method: 'POST',
 				data: { org_id: orgId, title },
 			} );

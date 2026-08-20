@@ -100,6 +100,19 @@ Widening the window did not widen anyone's reach: `Security\Ownership` still
 decides which campaigns a user can address at all, so an advertiser from
 another organization is refused in every status.
 
+Editing a campaign that is already serving re-checks creative coverage on
+**every** save, not only when a wizard step advances. Coverage used to be
+verified only on the way out of Step 4, which was safe while the only editable
+statuses were draft and changes — an incomplete draft is expected, and
+submission catches it later. Once staff could edit a `live` campaign that
+stopped holding: the save busts fill cache, so a placement left without a
+creative would reach the page immediately and serve nothing.
+
+The check judges the placements the save *leaves in place*, not the stored
+ones. A single request can change `placement_ids` and advance the step
+together, and reading the stored value there validates the set the campaign is
+moving away from.
+
 ### Creating for an advertiser
 
 Staff also create campaigns on an advertiser's behalf, from the review queue.
@@ -109,9 +122,22 @@ org is read off the campaign being acted on. That makes it the one place the
 rule "advertiser input must never be trusted for organization identity" has to
 be enforced rather than inherited.
 
-`Campaign_Editor::create_for_org()` therefore checks the capability itself
-rather than leaving it to the route, because the REST route and the admin
-screen both reach it and the rule must hold for both. It refuses an id that
+It has its own route — `POST /aggr/v1/campaigns/for-advertiser`, gated on
+`aggr_review_campaigns` — rather than an `org_id` parameter on the ordinary
+create. Overloading create would leave `org_id` ignored on update and
+authoritative on creation, which is the kind of asymmetry nobody remembers at
+the call site; `POST /aggr/v1/campaigns` still derives the tenant from the
+caller, and that is asserted.
+
+`Campaign_Editor::create_for_org()` checks the capability again anyway. That is
+not redundant: the admin screen reaches the editor through the same method, and
+a rule enforced at one door only holds until somebody adds another.
+
+Both gates refuse with 403, which makes them hard to tell apart in a test — the
+permission callback answers `rest_forbidden` and the editor `aggr_forbidden`,
+so the route test asserts the code rather than the status. A status-only
+assertion passes with the route's gate downgraded to any advertiser, which is
+how that test was first written. It refuses an id that
 names no organization, and an id naming a post of the wrong type — a campaign
 id and an org id are both post ids, so a transposed parameter is a plausible
 mistake, and the result would be a campaign owned by nothing that no org-scoped

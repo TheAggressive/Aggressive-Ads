@@ -252,3 +252,51 @@ test( 'a decision that needs feedback is taken in an accessible dialog', async (
 		} )
 	).toBeVisible();
 } );
+
+/**
+ * Creating a campaign for an advertiser, from the queue.
+ *
+ * The dialog is the only place in the product where a staff member chooses
+ * which organization a campaign belongs to, so the assertion that matters is
+ * that the choice actually reaches the server: the run ends on the portal
+ * wizard for a campaign that did not exist a moment ago.
+ */
+test( 'a reviewer creates a campaign for an advertiser', async ( { page } ) => {
+	await page.goto( '/wp-login.php' );
+	await page.locator( '#user_login' ).fill( 'admin' );
+	await page.locator( '#user_pass' ).fill( 'admin' );
+	await page.locator( '#wp-submit' ).click();
+
+	await page.goto( '/wp-admin/admin.php?page=aggr-review' );
+
+	await expect(
+		page.getByRole( 'heading', { level: 1, name: 'Campaign review' } )
+	).toBeVisible();
+
+	await page.getByRole( 'button', { name: 'Create campaign' } ).click();
+
+	const dialog = page.getByRole( 'dialog' );
+
+	await expect( dialog ).toBeVisible();
+
+	// The dialog is a focus trap over the screen's own overlay, and it is new
+	// markup rather than a variant of one already covered.
+	await expectAdminA11y( page );
+
+	// Nothing can be created until an advertiser is named.
+	const submit = dialog.getByRole( 'button', { name: 'Create and open' } );
+
+	await expect( submit ).toBeDisabled();
+
+	await dialog.getByLabel( 'Advertiser' ).selectOption( { index: 1 } );
+	await dialog.getByLabel( 'Campaign name' ).fill( 'Created for a client' );
+
+	await expect( submit ).toBeEnabled();
+	await submit.click();
+
+	// It lands in the advertiser's own wizard, on a campaign that now exists.
+	await expect( page ).toHaveURL( /\/campaigns\/\d+\/?$/ );
+	await expect(
+		page.getByRole( 'heading', { level: 1, name: 'Created for a client' } )
+	).toBeVisible();
+} );

@@ -13,6 +13,8 @@ use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Security\Ownership;
 use Aggressive\Ads\Security\Roles;
@@ -238,5 +240,136 @@ final class StaffEditOnBehalfTest extends WP_UnitTestCase {
 			$this->window->is_on_behalf( $campaign_id ),
 			'A reviewer inside the organization is editing their own work.'
 		);
+	}
+
+	/**
+	 * A placement with no creative cannot be added to a serving campaign.
+	 *
+	 * This is what widening the edit window to `live` put at risk. The save
+	 * busts fill cache, so an incoherent campaign reaches the page at once
+	 * rather than after a TTL — and before this check, coverage was only
+	 * verified when a wizard step advanced, which a staff edit need not do.
+	 *
+	 * @return void
+	 */
+	public function test_a_serving_campaign_cannot_lose_creative_coverage(): void {
+		$campaign_id = $this->campaign( Post_Statuses::LIVE );
+		$covered     = $this->placement( '728x90' );
+		$uncovered   = $this->placement( '300x250' );
+
+		update_post_meta( $campaign_id, Campaign_Repository::META_PLACEMENT_ID, $covered );
+		$this->creative( $campaign_id, $covered );
+
+		wp_set_current_user( $this->reviewer );
+
+		$saved = $this->editor->save(
+			$campaign_id,
+			array( 'placement_ids' => array( $covered, $uncovered ) ),
+			$this->revision( $campaign_id )
+		);
+
+		$this->assertWPError( $saved, 'A live campaign accepted a placement with no creative.' );
+		$this->assertSame( 'aggr_creatives_incomplete', $saved->get_error_code() );
+	}
+
+	/**
+	 * A serving campaign whose coverage stays whole still saves.
+	 *
+	 * Without this the check above would pass with editing simply broken for
+	 * every live campaign.
+	 *
+	 * @return void
+	 */
+	public function test_a_serving_campaign_with_full_coverage_still_saves(): void {
+		$campaign_id = $this->campaign( Post_Statuses::LIVE );
+		$covered     = $this->placement( '728x90' );
+
+		update_post_meta( $campaign_id, Campaign_Repository::META_PLACEMENT_ID, $covered );
+		$this->creative( $campaign_id, $covered );
+
+		wp_set_current_user( $this->reviewer );
+
+		$saved = $this->editor->save(
+			$campaign_id,
+			array( 'title' => 'Corrected name' ),
+			$this->revision( $campaign_id )
+		);
+
+		$this->assertIsInt( $saved, 'Staff could not edit a coherent live campaign.' );
+	}
+
+	/**
+	 * A draft is not held to it, because a draft is expected to be incomplete.
+	 *
+	 * @return void
+	 */
+	public function test_a_draft_may_still_hold_an_uncovered_placement(): void {
+		$campaign_id = $this->campaign( Post_Statuses::DRAFT );
+		$uncovered   = $this->placement( '300x250' );
+
+		wp_set_current_user( $this->advertiser );
+
+		$saved = $this->editor->save(
+			$campaign_id,
+			array( 'placement_ids' => array( $uncovered ) ),
+			$this->revision( $campaign_id )
+		);
+
+		$this->assertIsInt( $saved, 'A draft must be allowed to be incomplete.' );
+	}
+
+	/**
+	 * An active placement.
+	 *
+	 * @param string $size Placement size.
+	 * @return int
+	 */
+	private function placement( string $size ): int {
+		$placement_id = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::PLACEMENT,
+				'post_status' => 'publish',
+			)
+		);
+
+		update_post_meta( $placement_id, Placement_Repository::META_IS_ACTIVE, 1 );
+		update_post_meta( $placement_id, Placement_Repository::META_SIZE, $size );
+
+		return $placement_id;
+	}
+
+	/**
+	 * One creative filling one placement.
+	 *
+	 * @param int $campaign_id  Campaign post id.
+	 * @param int $placement_id Placement post id.
+	 * @return int
+	 */
+	private function creative( int $campaign_id, int $placement_id ): int {
+		$creative_id = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::CREATIVE,
+				'post_status' => 'publish',
+				'post_author' => $this->advertiser,
+			)
+		);
+
+		update_post_meta( $creative_id, Creative_Repository::META_CAMPAIGN_ID, $campaign_id );
+		update_post_meta( $creative_id, Creative_Repository::META_ORG_ID, $this->org_id );
+		update_post_meta( $creative_id, Creative_Repository::META_PLACEMENT_ID, $placement_id );
+
+		return $creative_id;
+	}
+
+	/**
+	 * The campaign's current autosave revision.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return int
+	 */
+	private function revision( int $campaign_id ): int {
+		return Plugin::instance()->container()
+			->get( Campaign_Repository::class )
+			->autosave_revision( $campaign_id );
 	}
 }

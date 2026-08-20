@@ -106,8 +106,30 @@ final class Campaigns_Controller implements Service {
 					'callback'            => array( $this, 'create' ),
 					'permission_callback' => array( $this, 'write_permission' ),
 					'args'                => array(
+						'title' => $this->string_arg( false ),
+					),
+				),
+			)
+		);
+
+		/*
+		 * Separate from POST /campaigns on purpose. That route derives the
+		 * tenant from the caller and must keep doing so — an org_id parameter
+		 * there would be ignored on update and authoritative on create, which
+		 * is the kind of asymmetry nobody remembers at the call site. Here
+		 * naming an advertiser is the entire point of the route, and the
+		 * permission callback says so.
+		 */
+		Creative_File_Controller::register_route(
+			'/campaigns/for-advertiser',
+			array(
+				array(
+					'methods'             => 'POST',
+					'callback'            => array( $this, 'create_for_advertiser' ),
+					'permission_callback' => array( $this, 'staff_write_permission' ),
+					'args'                => array(
 						'title'  => $this->string_arg( false ),
-						'org_id' => $this->positive_int_arg( false ),
+						'org_id' => $this->positive_int_arg( true ),
 					),
 				),
 			)
@@ -196,21 +218,48 @@ final class Campaigns_Controller implements Service {
 	 * @phpstan-param WP_REST_Request<array<string, mixed>> $request
 	 */
 	public function create( WP_REST_Request $request ) {
-		$title  = (string) ( $request->get_param( 'title' ) ?? '' );
-		$org_id = (int) ( $request->get_param( 'org_id' ) ?? 0 );
-
-		// Naming an organization is the staff path, and the editor enforces the
-		// capability rather than this route: the same rule has to hold for the
-		// admin screen, so it belongs where both callers pass through.
-		$campaign_id = $org_id > 0
-			? $this->editor->create_for_org( $org_id, $title )
-			: $this->editor->create( $title );
+		$campaign_id = $this->editor->create( (string) ( $request->get_param( 'title' ) ?? '' ) );
 
 		if ( is_wp_error( $campaign_id ) ) {
 			return $campaign_id;
 		}
 
 		return new WP_REST_Response( $this->advertised_summary( $campaign_id ), 201 );
+	}
+
+	/**
+	 * Creates a draft for an advertiser the caller names.
+	 *
+	 * The permission callback gates the route, and `create_for_org()` checks
+	 * the capability again. That is not redundant: the admin screen reaches
+	 * the editor through the same method, and a rule enforced only at one
+	 * door is a rule that holds only while nobody adds another.
+	 *
+	 * @param WP_REST_Request $request The request.
+	 * @return WP_REST_Response|WP_Error
+	 *
+	 * @phpstan-param WP_REST_Request<array<string, mixed>> $request
+	 */
+	public function create_for_advertiser( WP_REST_Request $request ) {
+		$campaign_id = $this->editor->create_for_org(
+			(int) $request->get_param( 'org_id' ),
+			(string) ( $request->get_param( 'title' ) ?? '' )
+		);
+
+		if ( is_wp_error( $campaign_id ) ) {
+			return $campaign_id;
+		}
+
+		return new WP_REST_Response( $this->advertised_summary( $campaign_id ), 201 );
+	}
+
+	/**
+	 * Whether the caller may write on an advertiser's behalf.
+	 *
+	 * @return bool
+	 */
+	public function staff_write_permission(): bool {
+		return is_user_logged_in() && current_user_can( Capabilities::REVIEW_CAMPAIGNS );
 	}
 
 	/**

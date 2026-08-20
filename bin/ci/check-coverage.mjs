@@ -1,5 +1,17 @@
 import { readFile } from 'node:fs/promises';
 
+/*
+ * This measures the UNIT suite only, which cannot load WordPress. Most of this
+ * plugin's logic is org-scoped map_meta_cap, real REST authorization, dbDelta
+ * and uploads — none of it expressible without a bootstrap, all of it covered
+ * by the integration, rest, security and upgrade suites instead. So 8% is not
+ * "barely tested"; it is the share of the codebase that is pure enough to test
+ * in milliseconds, and the floor exists to stop that share shrinking.
+ *
+ * It is a ratchet, and it sits close to the current figure on purpose: adding
+ * pure logic without a unit test trips it. If it trips on code that genuinely
+ * needs WordPress, the fix is a test in the right suite, not a lower number.
+ */
 const MIN_LINE_PERCENT = 8;
 const reportPath = process.argv[ 2 ];
 

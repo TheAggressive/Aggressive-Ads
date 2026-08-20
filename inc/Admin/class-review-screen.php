@@ -206,7 +206,10 @@ final class Review_Screen implements Service {
 			'tabs'        => $this->data->tabs(),
 			'queue'       => $campaign_id > 0 ? self::empty_queue( $page ) : $this->data->queue( $filter, $page ),
 			'campaign'    => $campaign_id > 0 ? $this->data->campaign( $campaign_id ) : null,
-			'advertisers' => $this->data->advertisers(),
+			// Only the queue offers creation, and the detail view is opened
+			// straight from a link — listing every advertiser there would put a
+			// query and a payload behind a control that is not on the screen.
+			'advertisers' => $campaign_id > 0 ? array() : $this->data->advertisers(),
 			'portalBase'  => Routes::url( 'campaigns' ),
 			'i18n'        => self::strings(),
 		);

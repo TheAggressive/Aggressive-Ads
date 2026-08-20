@@ -391,11 +391,30 @@ final class Campaign_Editor {
 			$clean['wizard_step'] = $step;
 		}
 
+		// The placements this save leaves in place, which is what everything
+		// below has to be judged against.
+		$placement_ids = $clean['placement_ids'] ?? $this->campaigns->placement_ids( $campaign_id );
+
 		if ( 'review' === ( $clean['wizard_step'] ?? '' ) ) {
-			$ready = $this->validate_schedule_completion( $campaign_id, $start, $end );
+			$ready = $this->validate_schedule_completion( $campaign_id, $start, $end, $placement_ids );
 
 			if ( is_wp_error( $ready ) ) {
 				return $ready;
+			}
+		}
+
+		/*
+		 * A campaign that is already serving has to stay coherent on every
+		 * save, not only when a wizard step advances. Staff can edit a live
+		 * campaign, and the save busts fill cache — so dropping a placement
+		 * that has no creative, or adding one, would reach the page
+		 * immediately and serve nothing.
+		 */
+		if ( in_array( $this->campaigns->status( $campaign_id ), Post_Statuses::published(), true ) ) {
+			$covered = $this->validate_creative_coverage( $campaign_id, $placement_ids );
+
+			if ( is_wp_error( $covered ) ) {
+				return $covered;
 			}
 		}
 
@@ -403,18 +422,18 @@ final class Campaign_Editor {
 	}
 
 	/**
-	 * Applies the additional invariants required to leave wizard Step 4.
+	 * One creative per selected placement, and no placement without one.
 	 *
-	 * Called only after campaign authorization and optimistic revision checks,
-	 * so coverage failures cannot reveal whether another tenant's object exists.
+	 * Checked against the placements this save leaves in place rather than the
+	 * stored ones. A single request can change `placement_ids` and advance the
+	 * step together, and reading the stored value there validates the set the
+	 * campaign is moving away from.
 	 *
-	 * @param int $campaign_id Campaign post id.
-	 * @param int $start_ts    Candidate start timestamp.
-	 * @param int $end_ts      Candidate end timestamp.
+	 * @param int             $campaign_id   Campaign post id.
+	 * @param array<int, int> $placement_ids Effective placement ids.
 	 * @return true|WP_Error
 	 */
-	private function validate_schedule_completion( int $campaign_id, int $start_ts, int $end_ts ): bool|WP_Error {
-		$placement_ids = $this->campaigns->placement_ids( $campaign_id );
+	private function validate_creative_coverage( int $campaign_id, array $placement_ids ): bool|WP_Error {
 		$creative_rows = $this->creatives->for_campaign( $campaign_id );
 		$coverage      = array();
 
@@ -431,6 +450,28 @@ final class Campaign_Editor {
 			if ( 1 !== ( $coverage[ $placement_id ] ?? 0 ) ) {
 				return $this->error( 'aggr_creatives_incomplete', __( 'Upload one creative for every package placement before scheduling.', 'aggressive-ads' ), 422, 'creatives' );
 			}
+		}
+
+		return true;
+	}
+
+	/**
+	 * Applies the additional invariants required to leave wizard Step 4.
+	 *
+	 * Called only after campaign authorization and optimistic revision checks,
+	 * so coverage failures cannot reveal whether another tenant's object exists.
+	 *
+	 * @param int             $campaign_id   Campaign post id.
+	 * @param int             $start_ts      Candidate start timestamp.
+	 * @param int             $end_ts        Candidate end timestamp.
+	 * @param array<int, int> $placement_ids Placements this save leaves in place.
+	 * @return true|WP_Error
+	 */
+	private function validate_schedule_completion( int $campaign_id, int $start_ts, int $end_ts, array $placement_ids ): bool|WP_Error {
+		$covered = $this->validate_creative_coverage( $campaign_id, $placement_ids );
+
+		if ( is_wp_error( $covered ) ) {
+			return $covered;
 		}
 
 		$window = Campaign_Rules::validate_window( $start_ts, $end_ts, time() );

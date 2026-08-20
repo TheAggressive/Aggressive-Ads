@@ -82,6 +82,13 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 	 *
 	 * @return void
 	 */
+	/**
+	 * The owner's organization, for the on-behalf routes.
+	 *
+	 * @var int
+	 */
+	private int $org_id;
+
 	public function set_up(): void {
 		parent::set_up();
 
@@ -98,6 +105,8 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 			)
 		);
 		update_post_meta( $org, Org_Repository::META_OWNER_USER, $this->owner );
+
+		$this->org_id = $org;
 
 		$other = (int) self::factory()->post->create(
 			array(
@@ -758,5 +767,147 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 		);
 
 		$this->assertGreaterThan( 0, $rows );
+	}
+
+	/**
+	 * The on-behalf route is registered.
+	 *
+	 * @return void
+	 */
+	public function test_the_on_behalf_route_is_registered(): void {
+		$routes = rest_get_server()->get_routes();
+
+		$this->assertArrayHasKey( '/aggr/v1/campaigns/for-advertiser', $routes );
+	}
+
+	/**
+	 * An advertiser cannot create a campaign for an organization.
+	 *
+	 * The route takes an org_id from whoever posts it, so this is the
+	 * assertion standing between that parameter and a campaign filed under
+	 * somebody else's organization. Dispatched through the real server rather
+	 * than called on the controller, because a permission callback that is
+	 * never wired to the route passes every direct test and refuses nobody.
+	 *
+	 * @return void
+	 */
+	public function test_an_advertiser_cannot_create_for_an_advertiser(): void {
+		wp_set_current_user( $this->owner );
+
+		$request = new WP_REST_Request( 'POST', '/aggr/v1/campaigns/for-advertiser' );
+		$request->set_body_params(
+			array(
+				'org_id' => $this->org_id,
+				'title'  => 'Not mine to make',
+			)
+		);
+
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertSame( 403, $response->get_status() );
+
+		/*
+		 * The code, not just the status. Both gates refuse with 403 — the
+		 * permission callback as `rest_forbidden`, the editor as
+		 * `aggr_forbidden` — so a status-only assertion passes with the
+		 * route's gate downgraded to any advertiser, which is how this test
+		 * was first written and how it was caught.
+		 */
+		$this->assertSame(
+			'rest_forbidden',
+			$response->get_data()['code'],
+			'The refusal came from the editor, not the route: the permission callback is not gating this route.'
+		);
+	}
+
+	/**
+	 * A logged-out caller cannot either.
+	 *
+	 * @return void
+	 */
+	public function test_a_logged_out_caller_cannot_create_for_an_advertiser(): void {
+		wp_set_current_user( 0 );
+
+		$request = new WP_REST_Request( 'POST', '/aggr/v1/campaigns/for-advertiser' );
+		$request->set_body_params( array( 'org_id' => $this->org_id ) );
+
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertSame( 401, $response->get_status() );
+	}
+
+	/**
+	 * Staff can, and the campaign belongs to the advertiser.
+	 *
+	 * @return void
+	 */
+	public function test_staff_can_create_for_an_advertiser(): void {
+		wp_set_current_user( $this->reviewer );
+
+		$request = new WP_REST_Request( 'POST', '/aggr/v1/campaigns/for-advertiser' );
+		$request->set_body_params(
+			array(
+				'org_id' => $this->org_id,
+				'title'  => 'Autumn roast',
+			)
+		);
+
+		$response = rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertSame( 201, $response->get_status() );
+		$this->assertSame( 'Autumn roast', $data['title'] );
+		$this->assertSame(
+			(string) $this->org_id,
+			(string) get_post_meta( (int) $data['id'], Campaign_Repository::META_ORG_ID, true ),
+			'The campaign must belong to the advertiser, not the reviewer.'
+		);
+	}
+
+	/**
+	 * An organization that does not exist is refused.
+	 *
+	 * @return void
+	 */
+	public function test_staff_cannot_create_for_an_unknown_advertiser(): void {
+		wp_set_current_user( $this->reviewer );
+
+		$request = new WP_REST_Request( 'POST', '/aggr/v1/campaigns/for-advertiser' );
+		$request->set_body_params( array( 'org_id' => 999999 ) );
+
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertSame( 404, $response->get_status() );
+	}
+
+	/**
+	 * Plain create still derives the tenant from the caller.
+	 *
+	 * An org_id sent here must do nothing at all — the parameter belongs to
+	 * the on-behalf route, and this is the regression test for ever teaching
+	 * this one to read it.
+	 *
+	 * @return void
+	 */
+	public function test_org_id_is_ignored_on_the_ordinary_create_route(): void {
+		wp_set_current_user( $this->stranger );
+
+		$request = new WP_REST_Request( 'POST', '/aggr/v1/campaigns' );
+		$request->set_body_params(
+			array(
+				'title'  => 'Mine',
+				'org_id' => $this->org_id,
+			)
+		);
+
+		$response = rest_get_server()->dispatch( $request );
+		$data     = $response->get_data();
+
+		$this->assertSame( 201, $response->get_status() );
+		$this->assertNotSame(
+			(string) $this->org_id,
+			(string) get_post_meta( (int) $data['id'], Campaign_Repository::META_ORG_ID, true ),
+			'An org_id on the ordinary create route named another tenant.'
+		);
 	}
 }
