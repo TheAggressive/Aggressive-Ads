@@ -53,6 +53,53 @@ Registered with `register_post_status()` as non-public, non-internal, protected,
 
 `aggr_complete` and `aggr_cancelled` have no outgoing edges. A completed campaign is duplicated into a new draft, never reopened — renew and duplicate are the same copy operation, not a transition. Nothing re-enters `aggr_draft` except a staff reopen from `aggr_rejected`. An advertiser who wants to change a submitted campaign either withdraws it (only while unclaimed) or waits for changes to be requested.
 
+Editing a completed campaign is not reopening it, and the two must not be
+confused. Staff may correct the record of a campaign in any status (see below),
+but the campaign stays where it is: a corrected `aggr_complete` campaign is
+still complete, and running it again is still a copy into a new draft. What an
+edit changes is the stored campaign, never its position in the workflow.
+
+## Editing, and the edit window
+
+Capability answers *whether* a user may touch a campaign. The edit window
+answers *when*. They fail differently on purpose — a capability failure is a
+403 and means the user should not be here, a window failure is a 409 and means
+not right now.
+
+| Actor | May edit in |
+|---|---|
+| advertiser | `aggr_draft`, `aggr_changes` |
+| staff (`aggr_review_campaigns`) | every status |
+
+`Workflow\Edit_Window` is the single answer. Six call sites gate editing — the
+campaign editor, both creative-manager paths, and the `editable` flag on the
+portal row and the REST detail — and they only agree because they all ask it.
+A screen that computed the rule itself would eventually offer a button that
+409s.
+
+Staff editing outside their own organization is an **on-behalf edit**:
+
+- it is audited as `campaign.edited_on_behalf`, not `campaign.draft_updated`,
+  because a timeline is read to answer "who changed this" and an unfamiliar
+  name against an ordinary edit event reads the same whether staff fixed a typo
+  or an account was misused;
+- it busts fill cache when the campaign is serving, so the correction reaches
+  the page immediately rather than after a TTL;
+- it drops the future-start rule, for the same reason approval does: staff edit
+  campaigns that have already started, and moving the date to satisfy the rule
+  would rewrite when the campaign actually ran;
+- it shows the advertiser's own wizard with a banner naming the organization,
+  because otherwise the only clue the edits land on someone else's live
+  campaign is an org name that reads as your own.
+
+Membership decides whether an edit is on-behalf, not capability. A reviewer who
+genuinely belongs to the organization is editing their own work, and recording
+that as on-behalf would make the timeline read as though an outsider reached in.
+
+Widening the window did not widen anyone's reach: `Security\Ownership` still
+decides which campaigns a user can address at all, so an advertiser from
+another organization is refused in every status.
+
 ## What every transition does
 
 `Campaign_State_Machine::apply( int $campaign_id, string $to, array $context ): true|WP_Error`

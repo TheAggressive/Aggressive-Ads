@@ -80,6 +80,7 @@ export type Campaign = {
 	id: number;
 	title: string;
 	org_name: string;
+	edit_url: string;
 	status: string;
 	status_text: string;
 	pill: string;

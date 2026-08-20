@@ -18,6 +18,7 @@ use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Security\Rate_Limiter;
+use Aggressive\Ads\Workflow\Edit_Window;
 use Aggressive\Ads\Workflow\Campaign_Copier;
 use Aggressive\Ads\Workflow\Campaign_Editor;
 use Aggressive\Ads\Workflow\Reporting_Read;
@@ -52,6 +53,7 @@ final class Campaigns_Controller implements Service {
 	 * @param Review_Readiness     $readiness  Safe canonical review readiness.
 	 * @param Rate_Limiter         $limiter    Autosave abuse bounding.
 	 * @param Reporting_Read       $reporting  Native rollup reads.
+	 * @param Edit_Window          $window     When editing is permitted.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -62,7 +64,8 @@ final class Campaigns_Controller implements Service {
 		private readonly Campaign_Copier $copier,
 		private readonly Review_Readiness $readiness,
 		private readonly Rate_Limiter $limiter,
-		private readonly Reporting_Read $reporting
+		private readonly Reporting_Read $reporting,
+		private readonly Edit_Window $window
 	) {
 	}
 
@@ -358,7 +361,7 @@ final class Campaigns_Controller implements Service {
 			'review_notes'     => $this->campaigns->review_notes( $campaign_id ),
 			'advertiser_notes' => $this->campaigns->advertiser_notes( $campaign_id ),
 
-			'editable'         => in_array( $status, Post_Statuses::advertiser_editable(), true ),
+			'editable'         => $this->window->allows( $campaign_id ),
 			'can_copy'         => current_user_can( Capabilities::SUBMIT_CAMPAIGN ),
 			'placement_ids'    => $this->campaigns->placement_ids( $campaign_id ),
 

@@ -255,6 +255,31 @@ endif;
 	</section>
 <?php endif; ?>
 
+<?php
+/*
+ * Staff editing a client's campaign look at exactly the screen the client
+ * would see, which is the point — and the hazard. Without this the only clue
+ * that these edits land on somebody else's live campaign is the org name in
+ * the top bar, which reads as your own.
+ */
+?>
+<?php if ( ! empty( $aggr_campaign['on_behalf'] ) ) : ?>
+	<section class="aggr-notice" aria-labelledby="aggr-on-behalf-heading">
+		<h2 id="aggr-on-behalf-heading" class="aggr-notice__head">
+			<?php esc_html_e( 'You are editing on behalf of this advertiser', 'aggressive-ads' ); ?>
+		</h2>
+		<p>
+			<?php
+			printf(
+				/* translators: %s: organization name. */
+				esc_html__( 'Changes you save here are recorded against %s and appear in their audit history as a staff edit.', 'aggressive-ads' ),
+				esc_html( (string) ( $aggr_campaign['org_name'] ?? '' ) )
+			);
+			?>
+		</p>
+	</section>
+<?php endif; ?>
+
 <?php if ( true === $aggr_campaign['editable'] ) : ?>
 	<?php
 	$aggr_wizard_id        = 'campaign-' . (int) $aggr_campaign['id'];

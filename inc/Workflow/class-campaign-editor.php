@@ -56,6 +56,8 @@ final class Campaign_Editor {
 	 * @param Placement_Repository $placements Placement validation.
 	 * @param Creative_Repository  $creatives  Creative coverage validation.
 	 * @param Audit_Repository     $audit      Audit persistence.
+	 * @param Edit_Window          $window     When editing is permitted.
+	 * @param Fill_Cache           $cache      Native fill cache.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -63,7 +65,9 @@ final class Campaign_Editor {
 		private readonly Package_Repository $packages,
 		private readonly Placement_Repository $placements,
 		private readonly Creative_Repository $creatives,
-		private readonly Audit_Repository $audit
+		private readonly Audit_Repository $audit,
+		private readonly Edit_Window $window,
+		private readonly Fill_Cache $cache
 	) {
 	}
 
@@ -175,17 +179,7 @@ final class Campaign_Editor {
 			return $this->error( 'aggr_campaign_not_saved', __( 'The campaign could not be saved. Please try again.', 'aggressive-ads' ), 500 );
 		}
 
-		$this->audit->insert(
-			new Audit_Event(
-				event: 'campaign.draft_updated',
-				object_type: 'campaign',
-				object_id: $campaign_id,
-				org_id: $this->campaigns->org_id( $campaign_id ),
-				message: 'Campaign draft updated.',
-				context: array( 'fields' => array_keys( $clean ) ),
-				actor_user_id: get_current_user_id()
-			)
-		);
+		$this->record_edit( $campaign_id, array_keys( $clean ) );
 
 		return $revision;
 	}
@@ -216,6 +210,53 @@ final class Campaign_Editor {
 	}
 
 	/**
+	 * Records an edit, and corrects delivery if the campaign is serving.
+	 *
+	 * Both halves exist because staff can now edit outside a draft.
+	 *
+	 * The audit event is different for an on-behalf edit rather than merely
+	 * carrying the actor id. A timeline is read to answer "who changed this",
+	 * and "campaign.draft_updated by a user the client has never heard of" is
+	 * the same sentence whether staff fixed a typo or an account was misused.
+	 * A distinct event makes the support action legible as a support action.
+	 *
+	 * Busting fill matters more than it looks: a live campaign is served from
+	 * cache, so without this the corrected creative or destination URL would
+	 * reach the page only after the TTL expired — which is precisely the
+	 * window in which somebody is on the phone asking why the ad still shows
+	 * the wrong thing.
+	 *
+	 * @param int                $campaign_id Campaign post id.
+	 * @param array<int, string> $fields      The field names written.
+	 * @return void
+	 */
+	private function record_edit( int $campaign_id, array $fields ): void {
+		$on_behalf = $this->window->is_on_behalf( $campaign_id );
+		$status    = $this->campaigns->status( $campaign_id );
+
+		$this->audit->insert(
+			new Audit_Event(
+				event: $on_behalf ? 'campaign.edited_on_behalf' : 'campaign.draft_updated',
+				object_type: 'campaign',
+				object_id: $campaign_id,
+				org_id: $this->campaigns->org_id( $campaign_id ),
+				message: $on_behalf
+					? 'Campaign edited by staff on the organization\'s behalf.'
+					: 'Campaign draft updated.',
+				context: array(
+					'fields' => $fields,
+					'status' => $status,
+				),
+				actor_user_id: get_current_user_id()
+			)
+		);
+
+		if ( in_array( $status, Post_Statuses::published(), true ) ) {
+			$this->cache->bust_campaign( $campaign_id );
+		}
+	}
+
+	/**
 	 * Whether the caller may edit the named campaign now.
 	 *
 	 * @param int $campaign_id Campaign post id.
@@ -226,7 +267,7 @@ final class Campaign_Editor {
 			return $this->error( 'aggr_forbidden', __( 'You do not have permission to edit that campaign.', 'aggressive-ads' ), 403 );
 		}
 
-		if ( ! in_array( $this->campaigns->status( $campaign_id ), Post_Statuses::advertiser_editable(), true ) ) {
+		if ( ! $this->window->allows( $campaign_id ) ) {
 			return $this->error( 'aggr_campaign_not_editable', __( 'This campaign cannot be changed right now.', 'aggressive-ads' ), 409 );
 		}
 
@@ -352,6 +393,14 @@ final class Campaign_Editor {
 
 		$window = Campaign_Rules::validate_window( $start_ts, $end_ts, time() );
 		$window->absorb( Campaign_Rules::validate_day_boundaries( $start_ts, $end_ts, wp_timezone()->getName() ) );
+
+		// Staff edit campaigns that have already started — that is most of what
+		// editing on a client's behalf means. Demanding a future start date
+		// would make every such campaign unfixable, and moving the date to
+		// satisfy the rule would rewrite when the campaign actually ran.
+		if ( $this->window->is_staff() ) {
+			$window = $window->without( Campaign_Rules::ERROR_START_IN_PAST );
+		}
 
 		if ( $window->is_valid() ) {
 			return true;

@@ -90,6 +90,30 @@ final class Validation_Result {
 	}
 
 	/**
+	 * The same result without one problem code.
+	 *
+	 * Subtraction rather than a second set of rules, deliberately. A caller
+	 * that needs to forgive one thing names that one thing, so a rule added
+	 * later still applies to every caller until somebody names it too. Running
+	 * a shorter list of checks instead would make the exception silently grow
+	 * every time the list it forgot to mirror gained a rule.
+	 *
+	 * @param string $code The problem code to drop.
+	 * @return self
+	 */
+	public function without( string $code ): self {
+		$kept = new self();
+
+		foreach ( $this->problems() as $problem ) {
+			if ( $problem['code'] !== $code ) {
+				$kept->add( $problem['code'], $problem['field'], $problem['context'] );
+			}
+		}
+
+		return $kept;
+	}
+
+	/**
 	 * Whether a particular problem was found.
 	 *
 	 * @param string $code Problem code.

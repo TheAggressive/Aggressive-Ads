@@ -65,6 +65,19 @@ Asserted explicitly in `tests/php/Security/RolesTest.php`:
 
 A meta cap is never granted to a role. `current_user_can( 'edit_aggr_campaign', 42 )` is translated by `map_meta_cap` into whichever primitive applies to *that object*, and the primitive is what the role holds.
 
+### Capability is not the whole answer
+
+Holding `edit_aggr_campaign` on an object does not mean it may be edited *now*.
+Status decides that, through `Workflow\Edit_Window`: an advertiser may edit a
+draft or a campaign with changes requested, while staff may edit in any status,
+acting on the client's behalf. See
+[campaign-workflow.md](campaign-workflow.md#editing-and-the-edit-window).
+
+The two gates are independent, and both still apply. Widening the window did
+not widen anyone's reach — ownership decides *which* campaigns a user can
+address, so an advertiser from another organization is refused in every status
+regardless of the window.
+
 ## Ownership is the organization, not the author
 
 **This is the part to get right, and it is the reason a `map_meta_cap` filter is mandatory rather than optional.**

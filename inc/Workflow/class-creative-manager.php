@@ -38,6 +38,7 @@ final class Creative_Manager {
 	 * @param Private_Storage      $storage    Private file storage.
 	 * @param Rate_Limiter         $limiter    Upload abuse bounding.
 	 * @param Audit_Repository     $audit      Audit persistence.
+	 * @param Edit_Window          $window     When editing is permitted.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -46,7 +47,8 @@ final class Creative_Manager {
 		private readonly Creative_Uploader $uploader,
 		private readonly Private_Storage $storage,
 		private readonly Rate_Limiter $limiter,
-		private readonly Audit_Repository $audit
+		private readonly Audit_Repository $audit,
+		private readonly Edit_Window $window
 	) {
 	}
 
@@ -242,7 +244,7 @@ final class Creative_Manager {
 
 		$campaign_id = $creative['campaign_id'];
 
-		if ( ! current_user_can( 'edit_aggr_campaign', $campaign_id ) || ! in_array( $this->campaigns->status( $campaign_id ), Post_Statuses::advertiser_editable(), true ) ) {
+		if ( ! current_user_can( 'edit_aggr_campaign', $campaign_id ) || ! $this->window->allows( $campaign_id ) ) {
 			return $this->error( 'aggr_campaign_not_editable', __( 'This campaign cannot be changed right now.', 'aggressive-ads' ), 409 );
 		}
 
@@ -303,7 +305,7 @@ final class Creative_Manager {
 			return $this->error( 'aggr_forbidden', __( 'You do not have permission to do that.', 'aggressive-ads' ), 403 );
 		}
 
-		if ( ! in_array( $this->campaigns->status( $campaign_id ), Post_Statuses::advertiser_editable(), true ) ) {
+		if ( ! $this->window->allows( $campaign_id ) ) {
 			return $this->error( 'aggr_campaign_not_editable', __( 'This campaign cannot be changed right now.', 'aggressive-ads' ), 409 );
 		}
 

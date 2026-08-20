@@ -76,6 +76,7 @@ use Aggressive\Ads\Workflow\Campaign_Change_Manager;
 use Aggressive\Ads\Workflow\Campaign_Clock;
 use Aggressive\Ads\Workflow\Campaign_Copier;
 use Aggressive\Ads\Workflow\Campaign_Editor;
+use Aggressive\Ads\Workflow\Edit_Window;
 use Aggressive\Ads\Workflow\Campaign_Validator;
 use Aggressive\Ads\Workflow\Creative_Promoter;
 use Aggressive\Ads\Workflow\Creative_Change_Manager;
@@ -380,6 +381,14 @@ final class Service_Registrar {
 		);
 
 		$container->register(
+			Edit_Window::class,
+			static fn ( Service_Container $c ): Edit_Window => new Edit_Window(
+				$c->get( Campaign_Repository::class ),
+				$c->get( Org_Repository::class )
+			)
+		);
+
+		$container->register(
 			Campaign_Editor::class,
 			static fn ( Service_Container $c ): Campaign_Editor => new Campaign_Editor(
 				$c->get( Campaign_Repository::class ),
@@ -387,7 +396,9 @@ final class Service_Registrar {
 				$c->get( Package_Repository::class ),
 				$c->get( Placement_Repository::class ),
 				$c->get( Creative_Repository::class ),
-				$c->get( Audit_Repository::class )
+				$c->get( Audit_Repository::class ),
+				$c->get( Edit_Window::class ),
+				$c->get( Fill_Cache::class )
 			)
 		);
 
@@ -545,7 +556,8 @@ final class Service_Registrar {
 				$c->get( Creative_Uploader::class ),
 				$c->get( Private_Storage::class ),
 				$c->get( Rate_Limiter::class ),
-				$c->get( Audit_Repository::class )
+				$c->get( Audit_Repository::class ),
+				$c->get( Edit_Window::class )
 			)
 		);
 
@@ -578,7 +590,8 @@ final class Service_Registrar {
 				$c->get( Email_Change::class ),
 				$c->get( Reporting_Read::class ),
 				$c->get( Campaign_Change_Manager::class ),
-				$c->get( Settings::class )
+				$c->get( Settings::class ),
+				$c->get( Edit_Window::class )
 			)
 		);
 
@@ -679,7 +692,8 @@ final class Service_Registrar {
 				$c->get( Campaign_Copier::class ),
 				$c->get( Review_Readiness::class ),
 				$c->get( Rate_Limiter::class ),
-				$c->get( Reporting_Read::class )
+				$c->get( Reporting_Read::class ),
+				$c->get( Edit_Window::class )
 			)
 		);
 
