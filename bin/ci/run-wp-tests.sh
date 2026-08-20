@@ -47,6 +47,9 @@ if [ ! -s "${report}" ]; then
 	exit 1
 fi
 
+# The body is PHP, not shell: $report and $xml are PHP variables and must not
+# be expanded by the shell before php sees them.
+# shellcheck disable=SC2016
 php -r '
 $report = $argv[1];
 $xml = @simplexml_load_file( $report );

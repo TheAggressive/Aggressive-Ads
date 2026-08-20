@@ -19,12 +19,22 @@
 #
 # ci:verify is exempt: it is the local aggregate that runs every lane, and a CI
 # job running it would run every other job again inside one.
+#
+# ci:php:forward is exempt for a different reason, and the exemption is narrow
+# on purpose. It answers "will this still work on the next PHP", which is not a
+# question worth asking on every change, so it lives on a schedule in its own
+# workflow and is deliberately absent from the local rehearsal — a lane that
+# needs a PHP the development environment does not have could not run there
+# anyway. What is asserted instead is that the scheduled workflow exists, still
+# runs on a schedule, and still calls the canonical lane rather than inlining
+# shell that nobody can run locally.
 
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
 
 WORKFLOW=.github/workflows/ci.yml
+FORWARD_WORKFLOW=.github/workflows/php-forward-compatibility.yml
 VERIFY=bin/ci/verify.sh
 
 if [ ! -f "$WORKFLOW" ]; then
@@ -46,13 +56,31 @@ lanes=$(
 		const s = require('./package.json').scripts;
 		console.log(
 			Object.keys(s)
-				.filter((k) => k.startsWith('ci:') && k !== 'ci:verify')
+				.filter((k) => k.startsWith('ci:'))
+				.filter((k) => k !== 'ci:verify' && k !== 'ci:php:forward')
 				.join('\n')
 		);
 	"
 )
 
 status=0
+
+# The forward lane's own contract, since it is exempt from the one above.
+# Without these three assertions the exemption would be a hole rather than a
+# considered exception: the workflow could be deleted, moved off its schedule,
+# or rewritten as inline shell, and nothing would notice.
+if [ ! -f "$FORWARD_WORKFLOW" ]; then
+	echo "check-ci-parity: ci:php:forward is exempt only while ${FORWARD_WORKFLOW} exists" >&2
+	status=1
+elif ! grep -q 'schedule:' "$FORWARD_WORKFLOW"; then
+	echo "check-ci-parity: ${FORWARD_WORKFLOW} must stay on a schedule — forward" >&2
+	echo "  coverage that only runs on demand is coverage nobody runs" >&2
+	status=1
+elif ! grep -qE 'pnpm ci:php:forward( |$)' "$FORWARD_WORKFLOW"; then
+	echo "check-ci-parity: ${FORWARD_WORKFLOW} must call the canonical ci:php:forward" >&2
+	echo "  lane rather than inline shell, so it stays runnable locally" >&2
+	status=1
+fi
 
 for lane in $lanes; do
 	# Anchored so ci:php does not match ci:php:wp.

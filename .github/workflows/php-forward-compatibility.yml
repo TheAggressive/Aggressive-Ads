@@ -1,0 +1,55 @@
+# Forward-compatibility PHP lane.
+#
+# Development, CI and the release gate all run PHP 8.4 on purpose — .wp-env.json,
+# ci.yml, phpstan.neon and the plugin's own floor guard agree. That parity is
+# what stops an API missing on the floor from passing locally and failing in
+# Actions, and it is worth keeping. It also means nothing in the repository ever
+# exercises a newer PHP, so a deprecation would land the day a host upgrades
+# rather than the week it was introduced.
+#
+# Hence a schedule rather than a lane on every change: this answers "will this
+# still work next year", which is not a question worth asking on every commit.
+name: PHP Forward Compatibility
+
+on:
+  schedule:
+    # Monday morning, offset off the hour so it is not queued behind every other
+    # project's midnight cron.
+    - cron: '37 5 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '24.18.1'
+
+jobs:
+  forward:
+    name: PHP ${{ matrix.php }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      # Both versions run even when the first fails: "8.5 is fine and 8.6 is
+      # not" is the useful answer, and fail-fast would hide half of it.
+      fail-fast: false
+      matrix:
+        php: ['8.5']
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The suites load compiled assets, so the build has to happen first.
+      - run: pnpm ci:build
+      - name: Run the WordPress suites on PHP ${{ matrix.php }}
+        run: pnpm ci:php:forward ${{ matrix.php }}

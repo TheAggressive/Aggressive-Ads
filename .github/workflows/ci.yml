@@ -481,6 +481,63 @@ jobs:
           retention-days: 30
 
   # ============================================================================
+  # The artifact, not the source.
+  #
+  # Everything before this proves the source tree is sound. This installs the
+  # archive a customer downloads into a WordPress that has never seen this
+  # repository, activates it, and asks whether the site still works. That is a
+  # different claim, and it is the one that matters at the moment of publishing:
+  # the package job assembles and verifies bytes, but nothing until now has
+  # asked WordPress to run them.
+  #
+  # Only on a run that intends to publish. It is the last gate before a release,
+  # not a per-change cost.
+  # ============================================================================
+  artifact:
+    name: Artifact Acceptance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    needs: [release-plan, package]
+    if: >-
+      success() &&
+      needs.release-plan.outputs.should_release == 'true'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-playwright-
+      - run: pnpm install --frozen-lockfile
+      # The archive the package job built and verified, rather than one rebuilt
+      # here — a rebuild would test different bytes from the ones published.
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: plugin-package
+          path: release/
+      - run: pnpm test:e2e:install:chromium
+        timeout-minutes: 18
+      - name: Install and exercise the release archive
+        env:
+          AGGR_RELEASE_VERSION: ${{ needs.release-plan.outputs.next_version }}
+        run: pnpm ci:artifact
+      - name: Upload artifact acceptance diagnostics
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: artifact-acceptance-diagnostics
+          path: .playwright-results-artifact/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  # ============================================================================
   # Post-release: put the published version back into the repository.
   #
   # package.sh stamps the version into the archive and deliberately leaves the
@@ -617,7 +674,7 @@ jobs:
     name: Release
     runs-on: ubuntu-24.04
     timeout-minutes: 15
-    needs: [release-plan, package]
+    needs: [release-plan, package, artifact]
     if: >-
       success() &&
       github.event_name == 'workflow_dispatch' &&
