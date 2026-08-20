@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Portal;
 
 use Aggressive\Ads\Audit\Audit_Event;
+use Aggressive\Ads\Domain\Acting_Session;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\User_Repository;
@@ -34,14 +35,6 @@ use Aggressive\Ads\Security\Capabilities;
  * it is their own — and the portal looks identical either way.
  */
 final class Acting_As {
-
-	/**
-	 * How long a session lasts without being renewed.
-	 *
-	 * Long enough for a support call, short enough that a forgotten session
-	 * does not persist across days. Expiry is enforced on read.
-	 */
-	private const LIFETIME = 4 * HOUR_IN_SECONDS;
 
 	/**
 	 * Memoized per request, because the portal rail, the view data and the
@@ -78,7 +71,7 @@ final class Acting_As {
 			return false;
 		}
 
-		$started = $this->users->store_acting_as( $user_id, $org_id, time() + self::LIFETIME );
+		$started = $this->users->store_acting_as( $user_id, $org_id, Acting_Session::expires_at( time() ) );
 
 		if ( ! $started ) {
 			return false;

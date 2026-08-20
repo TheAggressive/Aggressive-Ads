@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Repository;
 
+use Aggressive\Ads\Domain\Acting_Session;
 use Aggressive\Ads\Security\Roles;
 use WP_Error;
 use WP_User;
@@ -191,7 +192,7 @@ final class User_Repository {
 		$org_id  = (int) ( $raw['org_id'] ?? 0 );
 		$expires = (int) ( $raw['expires_at'] ?? 0 );
 
-		if ( $org_id <= 0 || $expires <= time() ) {
+		if ( $org_id <= 0 || ! Acting_Session::is_live( $expires, time() ) ) {
 			return 0;
 		}
 

@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Workflow;
 
 use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Domain\On_Behalf;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Security\Capabilities;
@@ -84,12 +85,10 @@ final class Edit_Window {
 	 * @return bool
 	 */
 	public function is_on_behalf( int $campaign_id ): bool {
-		if ( ! $this->is_staff() ) {
-			return false;
-		}
-
-		$org_id = $this->campaigns->org_id( $campaign_id );
-
-		return ! in_array( $org_id, $this->orgs->org_ids_for_user( get_current_user_id() ), true );
+		return On_Behalf::applies(
+			$this->is_staff(),
+			$this->campaigns->org_id( $campaign_id ),
+			$this->orgs->org_ids_for_user( get_current_user_id() )
+		);
 	}
 }
