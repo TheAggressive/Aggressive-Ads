@@ -44,8 +44,12 @@ export WP_ENV_PHP_VERSION="${PHP_VERSION}"
 # excludes that tree — a new top-level directory would silently become PHPCS
 # input.
 export WP_ENV_HOME="${REPO_ROOT}/.cache/ci/wp-env-forward"
-export WP_ENV_PORT=9950
-export WP_ENV_TESTS_PORT=9951
+# 9930/9931, chosen because everything nearby is taken: the plugin's own
+# environment, the artifact environment on 9940, and — the one that actually
+# bit — an unrelated LAAO site holding 9950 on this machine. A forward run that
+# collides with a developer's other project is a forward run nobody will keep.
+export WP_ENV_PORT=9930
+export WP_ENV_TESTS_PORT=9931
 
 cleanup() {
 	pnpm exec wp-env stop >/dev/null 2>&1 || true
