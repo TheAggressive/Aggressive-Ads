@@ -100,6 +100,33 @@ Widening the window did not widen anyone's reach: `Security\Ownership` still
 decides which campaigns a user can address at all, so an advertiser from
 another organization is refused in every status.
 
+### Creating for an advertiser
+
+Staff also create campaigns on an advertiser's behalf, from the review queue.
+This is the **only** place in the plugin where organization identity comes from
+input rather than from an object that already carries one — everywhere else the
+org is read off the campaign being acted on. That makes it the one place the
+rule "advertiser input must never be trusted for organization identity" has to
+be enforced rather than inherited.
+
+`Campaign_Editor::create_for_org()` therefore checks the capability itself
+rather than leaving it to the route, because the REST route and the admin
+screen both reach it and the rule must hold for both. It refuses an id that
+names no organization, and an id naming a post of the wrong type — a campaign
+id and an org id are both post ids, so a transposed parameter is a plausible
+mistake, and the result would be a campaign owned by nothing that no org-scoped
+query returns and no advertiser can reach.
+
+The draft is audited as `campaign.created_on_behalf` and opens in the
+advertiser's own wizard, from which point it is an ordinary on-behalf edit.
+
+**A copy belongs to the organization it was copied from, never the caller's.**
+For an advertiser those are the same thing, since they can only read their own
+organization's campaigns. For staff they are not: reading a client's campaign
+is allowed, so deriving the target from the caller filed the copy, its snapshot
+and its private creative bytes under whichever organization the staff member
+happened to belong to.
+
 ## What every transition does
 
 `Campaign_State_Machine::apply( int $campaign_id, string $to, array $context ): true|WP_Error`

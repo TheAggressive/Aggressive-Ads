@@ -361,7 +361,7 @@ export function CampaignView( {
 							className="aggr-button aggr-button--secondary"
 							href={ campaign.edit_url }
 						>
-							{ t( 'editOnBehalf' ) }
+							{ t( 'editCampaign' ) }
 						</a>
 
 						{ campaign.actions.map( ( action ) => (

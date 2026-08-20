@@ -106,7 +106,8 @@ final class Campaigns_Controller implements Service {
 					'callback'            => array( $this, 'create' ),
 					'permission_callback' => array( $this, 'write_permission' ),
 					'args'                => array(
-						'title' => $this->string_arg( false ),
+						'title'  => $this->string_arg( false ),
+						'org_id' => $this->positive_int_arg( false ),
 					),
 				),
 			)
@@ -195,7 +196,15 @@ final class Campaigns_Controller implements Service {
 	 * @phpstan-param WP_REST_Request<array<string, mixed>> $request
 	 */
 	public function create( WP_REST_Request $request ) {
-		$campaign_id = $this->editor->create( (string) ( $request->get_param( 'title' ) ?? '' ) );
+		$title  = (string) ( $request->get_param( 'title' ) ?? '' );
+		$org_id = (int) ( $request->get_param( 'org_id' ) ?? 0 );
+
+		// Naming an organization is the staff path, and the editor enforces the
+		// capability rather than this route: the same rule has to hold for the
+		// admin screen, so it belongs where both callers pass through.
+		$campaign_id = $org_id > 0
+			? $this->editor->create_for_org( $org_id, $title )
+			: $this->editor->create( $title );
 
 		if ( is_wp_error( $campaign_id ) ) {
 			return $campaign_id;

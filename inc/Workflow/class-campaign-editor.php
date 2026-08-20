@@ -82,13 +82,53 @@ final class Campaign_Editor {
 			return $this->error( 'aggr_forbidden', __( 'You do not have permission to create a campaign.', 'aggressive-ads' ), 403 );
 		}
 
-		$user_id = get_current_user_id();
-		$org_ids = $this->orgs->org_ids_for_user( $user_id );
+		$org_ids = $this->orgs->org_ids_for_user( get_current_user_id() );
 		$org_id  = array() === $org_ids ? 0 : $org_ids[0];
 
 		if ( $org_id <= 0 ) {
 			return $this->error( 'aggr_organization_missing', __( 'Your account is not connected to an organization.', 'aggressive-ads' ), 409 );
 		}
+
+		return $this->create_in_org( $org_id, $title, false );
+	}
+
+	/**
+	 * Creates a draft for an organization the caller names.
+	 *
+	 * Staff only, and the capability is checked here rather than left to the
+	 * route, because this is the one entry point where organization identity
+	 * is chosen by input rather than derived from the caller. Everything else
+	 * in the plugin reads the org off an object that already has one.
+	 *
+	 * @param int    $org_id Target organization post id.
+	 * @param string $title  Optional initial title.
+	 * @return int|WP_Error
+	 */
+	public function create_for_org( int $org_id, string $title = '' ): int|WP_Error {
+		if ( ! current_user_can( Capabilities::REVIEW_CAMPAIGNS ) || ! current_user_can( 'create_aggr_campaigns' ) ) {
+			return $this->error( 'aggr_forbidden', __( 'You do not have permission to create a campaign for an advertiser.', 'aggressive-ads' ), 403 );
+		}
+
+		// An id that names no organization must not become a campaign owned by
+		// nothing, which no org-scoped query would ever return and no advertiser
+		// could ever reach.
+		if ( $org_id <= 0 || ! $this->orgs->exists( $org_id ) ) {
+			return $this->error( 'aggr_organization_missing', __( 'That advertiser could not be found.', 'aggressive-ads' ), 404, 'org_id' );
+		}
+
+		return $this->create_in_org( $org_id, $title, ! in_array( $org_id, $this->orgs->org_ids_for_user( get_current_user_id() ), true ) );
+	}
+
+	/**
+	 * Creates the draft, once the organization is settled.
+	 *
+	 * @param int    $org_id    Owning organization.
+	 * @param string $title     Optional initial title.
+	 * @param bool   $on_behalf Whether staff are creating this for someone else.
+	 * @return int|WP_Error
+	 */
+	private function create_in_org( int $org_id, string $title, bool $on_behalf ): int|WP_Error {
+		$user_id = get_current_user_id();
 
 		if ( ! $this->orgs->is_active( $org_id ) ) {
 			return $this->error( 'aggr_organization_inactive', __( 'This organization cannot create campaigns. Please get in touch.', 'aggressive-ads' ), 403 );
@@ -112,12 +152,14 @@ final class Campaign_Editor {
 
 		$this->audit->insert(
 			new Audit_Event(
-				event: 'campaign.created',
+				event: $on_behalf ? 'campaign.created_on_behalf' : 'campaign.created',
 				object_type: 'campaign',
 				object_id: $campaign_id,
 				org_id: $org_id,
 				to_state: Post_Statuses::DRAFT,
-				message: 'Campaign draft created.',
+				message: $on_behalf
+					? 'Campaign draft created by staff for the organization.'
+					: 'Campaign draft created.',
 				actor_user_id: $user_id
 			)
 		);

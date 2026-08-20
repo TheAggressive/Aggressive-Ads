@@ -30,6 +30,8 @@ const EMPTY: Bootstrap = {
 	tabs: [],
 	queue: { rows: [], total: 0, pages: 1, page: 1 },
 	campaign: null,
+	advertisers: [],
+	portalBase: '',
 	i18n: {},
 };
 
@@ -151,6 +153,41 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 	 * @param body    Request body.
 	 * @param message Success notice.
 	 */
+	/**
+	 * Creates a campaign for an advertiser, then opens it in their wizard.
+	 *
+	 * Not routed through `write`, which re-reads the campaign under review;
+	 * there is no campaign on screen here, and the point of the call is to
+	 * leave for the portal with the new id.
+	 */
+	const createCampaign = async (
+		orgId: number,
+		title: string
+	): Promise< void > => {
+		setBusy( true );
+		setFlash( null );
+
+		try {
+			const created = await apiFetch< { id?: number } >( {
+				path: '/aggr/v1/campaigns',
+				method: 'POST',
+				data: { org_id: orgId, title },
+			} );
+
+			if ( created.id ) {
+				window.location.href = `${ data.portalBase }${ created.id }/`;
+
+				return;
+			}
+
+			setFlash( { type: 'error', message: errorMessage( null ) } );
+		} catch ( reason ) {
+			setFlash( { type: 'error', message: errorMessage( reason ) } );
+		} finally {
+			setBusy( false );
+		}
+	};
+
 	const write = async (
 		path: string,
 		body: Record< string, unknown >,
@@ -273,6 +310,11 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 					onFilter={ ( key ) => void loadQueue( key, 1 ) }
 					onPage={ ( page ) => void loadQueue( filter, page ) }
 					onOpen={ ( id ) => void loadCampaign( id ) }
+					advertisers={ data.advertisers }
+					busy={ busy }
+					onCreate={ ( orgId, title ) =>
+						void createCampaign( orgId, title )
+					}
 				/>
 			) }
 		</>

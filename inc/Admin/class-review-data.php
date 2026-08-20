@@ -217,6 +217,31 @@ final class Review_Data {
 	}
 
 	/**
+	 * Active advertisers, for creating a campaign on one's behalf.
+	 *
+	 * Only active organizations: an inactive one is refused by the editor, so
+	 * offering it would be offering a choice that cannot succeed.
+	 *
+	 * @return array<int, array{id: int, name: string}>
+	 */
+	public function advertisers(): array {
+		$rows = array();
+
+		foreach ( $this->orgs->all_ids() as $org_id ) {
+			if ( ! $this->orgs->is_active( $org_id ) ) {
+				continue;
+			}
+
+			$rows[] = array(
+				'id'   => $org_id,
+				'name' => $this->orgs->name( $org_id ),
+			);
+		}
+
+		return $rows;
+	}
+
+	/**
 	 * One campaign in full, for the review screen.
 	 *
 	 * @param int $campaign_id Campaign post id.
