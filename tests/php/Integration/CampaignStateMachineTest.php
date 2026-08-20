@@ -347,7 +347,7 @@ final class CampaignStateMachineTest extends WP_UnitTestCase {
 
 		$machine = $this->machine(
 			array(
-				Transition_Table::GUARD_VALIDATOR => $this->passing_guard(),
+				Transition_Table::GUARD_APPROVABLE => $this->passing_guard(),
 			),
 			array(
 				Transition_Table::EFFECT_PUBLISH => static fn (): WP_Error => new WP_Error(
@@ -380,7 +380,7 @@ final class CampaignStateMachineTest extends WP_UnitTestCase {
 
 		$machine = $this->machine(
 			array(
-				Transition_Table::GUARD_VALIDATOR => $this->passing_guard(),
+				Transition_Table::GUARD_APPROVABLE => $this->passing_guard(),
 			)
 		);
 

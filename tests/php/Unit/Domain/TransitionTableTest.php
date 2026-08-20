@@ -308,7 +308,12 @@ final class TransitionTableTest extends TestCase {
 		$approval = Transition_Table::find( Post_Statuses::REVIEW, Post_Statuses::APPROVED );
 
 		$this->assertNotNull( $approval );
-		$this->assertTrue( $approval->has_guard( Transition_Table::GUARD_VALIDATOR ) );
+		// Approval runs the approvable guard, not the submission validator. The
+		// difference is deliberate: a start date that has passed while the
+		// campaign sat in review is not a defect, and the advertiser cannot fix
+		// it because the campaign is no longer theirs to edit.
+		$this->assertTrue( $approval->has_guard( Transition_Table::GUARD_APPROVABLE ) );
+		$this->assertFalse( $approval->has_guard( Transition_Table::GUARD_VALIDATOR ) );
 		$this->assertFalse( $approval->has_guard( 'mappings_resolve' ) );
 		$this->assertTrue( $approval->has_effect( Transition_Table::EFFECT_PUBLISH ) );
 	}

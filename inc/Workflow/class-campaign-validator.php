@@ -89,6 +89,64 @@ final class Campaign_Validator {
 	}
 
 	/**
+	 * The same checks, minus the one that only makes sense before submission.
+	 *
+	 * A start date is in the future when the advertiser picks it. By the time a
+	 * reviewer reaches the campaign it may not be, and that is a fact about the
+	 * queue rather than a defect in the campaign — which the advertiser cannot
+	 * fix anyway, because a campaign in review is no longer theirs to edit.
+	 *
+	 * Everything else still applies: a campaign approved after its start date
+	 * must still have its creatives, placements, package and price.
+	 *
+	 * @return callable(int, array<string, mixed>): (true|WP_Error)
+	 */
+	public function as_approval_guard(): callable {
+		return function ( int $campaign_id ): true|WP_Error {
+			$result = $this->validate_for_approval( $campaign_id );
+
+			if ( $result->is_valid() ) {
+				return true;
+			}
+
+			return $this->to_wp_error( $result );
+		};
+	}
+
+	/**
+	 * Validation as a reviewer should see it.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return Validation_Result
+	 */
+	public function validate_for_approval( int $campaign_id ): Validation_Result {
+		return self::without( $this->validate( $campaign_id ), Campaign_Rules::ERROR_START_IN_PAST );
+	}
+
+	/**
+	 * A copy of a result with one problem code removed.
+	 *
+	 * Filtering the result rather than re-running a different set of checks, so
+	 * the two paths cannot drift: a rule added to validate() is enforced at
+	 * approval too unless it is named here.
+	 *
+	 * @param Validation_Result $result Result to copy.
+	 * @param string            $code   Problem code to drop.
+	 * @return Validation_Result
+	 */
+	private static function without( Validation_Result $result, string $code ): Validation_Result {
+		$kept = new Validation_Result();
+
+		foreach ( $result->problems() as $problem ) {
+			if ( $problem['code'] !== $code ) {
+				$kept->add( $problem['code'], $problem['field'], $problem['context'] );
+			}
+		}
+
+		return $kept;
+	}
+
+	/**
 	 * Turns a result into a WP_Error carrying every problem.
 	 *
 	 * The codes travel in the error data so a form can highlight the exact

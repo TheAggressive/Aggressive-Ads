@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-19T01:22:59+00:00\n"
+"POT-Creation-Date: 2026-08-20T00:52:55+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -1808,17 +1808,17 @@ msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:861
 #: inc/Workflow/class-campaign-editor.php:294
-#: inc/Workflow/class-campaign-validator.php:175
+#: inc/Workflow/class-campaign-validator.php:233
 msgid "The end date must be after the start date."
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:862
-#: inc/Workflow/class-campaign-validator.php:166
+#: inc/Workflow/class-campaign-validator.php:224
 msgid "Choose a start date."
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:863
-#: inc/Workflow/class-campaign-validator.php:169
+#: inc/Workflow/class-campaign-validator.php:227
 msgid "The start date has already passed. Choose a later one."
 msgstr ""
 
@@ -2701,73 +2701,73 @@ msgstr ""
 msgid "This action cannot be completed yet."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:134
+#: inc/Workflow/class-campaign-validator.php:192
 msgid "Add at least one creative before submitting."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:137
+#: inc/Workflow/class-campaign-validator.php:195
 msgid "Choose at least one placement before submitting."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:140
+#: inc/Workflow/class-campaign-validator.php:198
 msgid "One of the placements on this campaign is no longer available."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:143
+#: inc/Workflow/class-campaign-validator.php:201
 msgid "Every placement needs its own creative."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:146
+#: inc/Workflow/class-campaign-validator.php:204
 msgid "Only image creatives can be submitted."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:149
+#: inc/Workflow/class-campaign-validator.php:207
 msgid "A creative is attached to a placement this campaign has not selected."
 msgstr ""
 
 #. translators: 1: uploaded dimensions, e.g. 1200 × 400. 2: required dimensions, e.g. 1200 × 300.
-#: inc/Workflow/class-campaign-validator.php:154
+#: inc/Workflow/class-campaign-validator.php:212
 #, php-format
 msgid "Uploaded: %1$s. Required: %2$s."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:160
+#: inc/Workflow/class-campaign-validator.php:218
 msgid "Every creative needs a destination URL."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:163
+#: inc/Workflow/class-campaign-validator.php:221
 msgid "A destination URL is not a valid http or https address."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:172
+#: inc/Workflow/class-campaign-validator.php:230
 msgid "The start date must begin at midnight in the site timezone."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:178
+#: inc/Workflow/class-campaign-validator.php:236
 msgid "The end date must include the full selected day in the site timezone."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:181
+#: inc/Workflow/class-campaign-validator.php:239
 msgid "This organization cannot submit campaigns. Please get in touch."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:184
+#: inc/Workflow/class-campaign-validator.php:242
 msgid "This campaign is not connected to an organization. Please get in touch."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:187
+#: inc/Workflow/class-campaign-validator.php:245
 msgid "Choose a package before submitting."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:190
+#: inc/Workflow/class-campaign-validator.php:248
 msgid "The package on this campaign is no longer offered. Choose another one."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:193
+#: inc/Workflow/class-campaign-validator.php:251
 msgid "This campaign has no price recorded. Choose its package again."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:196
+#: inc/Workflow/class-campaign-validator.php:254
 msgid "This campaign is not ready to submit."
 msgstr ""
 
