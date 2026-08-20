@@ -22,6 +22,7 @@ re-derive it, and do not restate it here.
 | What does native fill and Inventory do? | `docs/architecture.md` |
 | What are we defending against? | `docs/threat-model.md` |
 | What is the Aggressive Ads suite build order? | `docs/suite-roadmap.md` |
+| What is the platform sequence beyond today? | `docs/platform-implementation-progress.md` |
 | What is half-finished right now, and why? | `docs/open-work.md` |
 
 Product rules live in `docs/`. Put a reversed decision in the same living
