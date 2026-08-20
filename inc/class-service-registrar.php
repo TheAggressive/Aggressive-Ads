@@ -41,6 +41,8 @@ use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Org_Access_Repository;
 use Aggressive\Ads\Repository\Package_Repository;
 use Aggressive\Ads\Repository\Rate_Limit_Repository;
+use Aggressive\Ads\Portal\Acting_Actions;
+use Aggressive\Ads\Portal\Acting_As;
 use Aggressive\Ads\Portal\Email_Change_Actions;
 use Aggressive\Ads\Portal\Router;
 use Aggressive\Ads\Portal\View_Data;
@@ -381,6 +383,22 @@ final class Service_Registrar {
 		);
 
 		$container->register(
+			Acting_Actions::class,
+			static fn ( Service_Container $c ): Acting_Actions => new Acting_Actions(
+				$c->get( Acting_As::class )
+			)
+		);
+
+		$container->register(
+			Acting_As::class,
+			static fn ( Service_Container $c ): Acting_As => new Acting_As(
+				$c->get( User_Repository::class ),
+				$c->get( Org_Repository::class ),
+				$c->get( Audit_Repository::class )
+			)
+		);
+
+		$container->register(
 			Edit_Window::class,
 			static fn ( Service_Container $c ): Edit_Window => new Edit_Window(
 				$c->get( Campaign_Repository::class ),
@@ -591,7 +609,8 @@ final class Service_Registrar {
 				$c->get( Reporting_Read::class ),
 				$c->get( Campaign_Change_Manager::class ),
 				$c->get( Settings::class ),
-				$c->get( Edit_Window::class )
+				$c->get( Edit_Window::class ),
+				$c->get( Acting_As::class )
 			)
 		);
 
@@ -693,7 +712,8 @@ final class Service_Registrar {
 				$c->get( Review_Readiness::class ),
 				$c->get( Rate_Limiter::class ),
 				$c->get( Reporting_Read::class ),
-				$c->get( Edit_Window::class )
+				$c->get( Edit_Window::class ),
+				$c->get( Acting_As::class )
 			)
 		);
 

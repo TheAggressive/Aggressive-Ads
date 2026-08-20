@@ -16,10 +16,13 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Portal\Acting_As;
+use Aggressive\Ads\Portal\Acting_Actions;
 use Aggressive\Ads\Portal\Request;
 use Aggressive\Ads\Portal\Router;
 use Aggressive\Ads\Portal\Routes;
 
+$aggr_acting  = Plugin::instance()->container()->get( Acting_As::class );
 $aggr_request = Plugin::instance()->container()->get( Router::class )->request();
 $aggr_current = null !== $aggr_request ? $aggr_request->route : '';
 
@@ -35,6 +38,30 @@ $aggr_items = array(
 	<a class="aggr-brand" href="<?php echo esc_url( Routes::url() ); ?>">
 		<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/brand.php'; ?>
 	</a>
+
+	<?php
+	/*
+	 * In the rail rather than on one screen, because the hazard is not knowing
+	 * which campaign you are looking at — it is forgetting whose portal you are
+	 * in while moving around it. The rail is the only thing on every screen.
+	 */
+	?>
+	<?php if ( $aggr_acting->active() ) : ?>
+		<div class="aggr-acting" role="status">
+			<p class="aggr-acting__label">
+				<?php esc_html_e( 'Acting for', 'aggressive-ads' ); ?>
+			</p>
+			<p class="aggr-acting__org"><?php echo esc_html( $aggr_acting->org_name() ); ?></p>
+
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="<?php echo esc_attr( Acting_Actions::LEAVE_ACTION ); ?>">
+				<?php wp_nonce_field( Acting_Actions::LEAVE_ACTION ); ?>
+				<button type="submit" class="aggr-acting__leave">
+					<?php esc_html_e( 'Stop acting', 'aggressive-ads' ); ?>
+				</button>
+			</form>
+		</div>
+	<?php endif; ?>
 
 	<nav aria-label="<?php esc_attr_e( 'Portal', 'aggressive-ads' ); ?>">
 		<ul class="aggr-nav__list">

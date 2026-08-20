@@ -154,6 +154,21 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 	 * @param message Success notice.
 	 */
 	/**
+	 * Opens an acting-as session before leaving for the portal.
+	 *
+	 * The portal is scoped by this session, so entering it is what makes the
+	 * dashboard, campaign list and organization screens show the advertiser
+	 * rather than the staff member's own empty context.
+	 */
+	const actFor = async ( orgId: number ): Promise< void > => {
+		await apiFetch( {
+			path: '/aggr/v1/acting-as',
+			method: 'POST',
+			data: { org_id: orgId },
+		} );
+	};
+
+	/**
 	 * Creates a campaign for an advertiser, then opens it in their wizard.
 	 *
 	 * Not routed through `write`, which re-reads the campaign under review;
@@ -175,6 +190,7 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 			} );
 
 			if ( created.id ) {
+				await actFor( orgId );
 				window.location.href = `${ data.portalBase }${ created.id }/`;
 
 				return;
@@ -260,6 +276,11 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 					campaign={ campaign }
 					busy={ busy }
 					onBack={ () => void loadQueue( filter, queue.page ) }
+					onEdit={ () =>
+						void actFor( campaign.org_id ).then( () => {
+							window.location.href = campaign.edit_url;
+						} )
+					}
 					onTransition={ ( to, notes ) =>
 						void write(
 							`/aggr/v1/campaigns/${ campaign.id }/transitions`,

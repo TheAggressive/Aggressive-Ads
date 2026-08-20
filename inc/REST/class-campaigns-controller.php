@@ -18,6 +18,7 @@ use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Security\Rate_Limiter;
+use Aggressive\Ads\Portal\Acting_As;
 use Aggressive\Ads\Workflow\Edit_Window;
 use Aggressive\Ads\Workflow\Campaign_Copier;
 use Aggressive\Ads\Workflow\Campaign_Editor;
@@ -54,6 +55,7 @@ final class Campaigns_Controller implements Service {
 	 * @param Rate_Limiter         $limiter    Autosave abuse bounding.
 	 * @param Reporting_Read       $reporting  Native rollup reads.
 	 * @param Edit_Window          $window     When editing is permitted.
+	 * @param Acting_As            $acting     Staff acting for an advertiser.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -65,7 +67,8 @@ final class Campaigns_Controller implements Service {
 		private readonly Review_Readiness $readiness,
 		private readonly Rate_Limiter $limiter,
 		private readonly Reporting_Read $reporting,
-		private readonly Edit_Window $window
+		private readonly Edit_Window $window,
+		private readonly Acting_As $acting
 	) {
 	}
 
@@ -107,6 +110,24 @@ final class Campaigns_Controller implements Service {
 					'permission_callback' => array( $this, 'write_permission' ),
 					'args'                => array(
 						'title' => $this->string_arg( false ),
+					),
+				),
+			)
+		);
+
+		/*
+		 * Beginning an acting-as session. Staff-gated, and a write because it
+		 * changes what every later portal request is scoped to.
+		 */
+		Creative_File_Controller::register_route(
+			'/acting-as',
+			array(
+				array(
+					'methods'             => 'POST',
+					'callback'            => array( $this, 'start_acting_as' ),
+					'permission_callback' => array( $this, 'staff_write_permission' ),
+					'args'                => array(
+						'org_id' => $this->positive_int_arg( true ),
 					),
 				),
 			)
@@ -251,6 +272,28 @@ final class Campaigns_Controller implements Service {
 		}
 
 		return new WP_REST_Response( $this->advertised_summary( $campaign_id ), 201 );
+	}
+
+	/**
+	 * Begins an acting-as session for the named advertiser.
+	 *
+	 * @param WP_REST_Request $request The request.
+	 * @return WP_REST_Response|WP_Error
+	 *
+	 * @phpstan-param WP_REST_Request<array<string, mixed>> $request
+	 */
+	public function start_acting_as( WP_REST_Request $request ) {
+		$org_id = (int) $request->get_param( 'org_id' );
+
+		if ( ! $this->acting->enter( $org_id ) ) {
+			return new WP_Error(
+				'aggr_acting_as_refused',
+				__( 'That advertiser could not be found.', 'aggressive-ads' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		return new WP_REST_Response( array( 'org_id' => $org_id ), 200 );
 	}
 
 	/**

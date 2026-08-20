@@ -51,6 +51,13 @@ final class User_Repository {
 	public const META_EMAIL_CHANGE = '_aggr_email_change';
 
 	/**
+	 * The organization a staff user is acting for, and when that lapses.
+	 *
+	 * @var string
+	 */
+	public const META_ACTING_AS = '_aggr_acting_as';
+
+	/**
 	 * Whether an email address is already attached to a WordPress account.
 	 *
 	 * @param string $email Normalized email address.
@@ -132,6 +139,74 @@ final class User_Repository {
 	public function clear_email_change( int $user_id ): void {
 		if ( $user_id > 0 ) {
 			delete_user_meta( $user_id, self::META_EMAIL_CHANGE );
+		}
+	}
+
+	/**
+	 * Records that a staff user is acting for an organization.
+	 *
+	 * @param int $user_id User id.
+	 * @param int $org_id  Organization being acted for.
+	 * @param int $expires Unix timestamp the session lapses at.
+	 * @return bool
+	 */
+	public function store_acting_as( int $user_id, int $org_id, int $expires ): bool {
+		if ( $user_id <= 0 || $org_id <= 0 || $expires <= 0 ) {
+			return false;
+		}
+
+		update_user_meta(
+			$user_id,
+			self::META_ACTING_AS,
+			array(
+				'org_id'     => $org_id,
+				'expires_at' => $expires,
+			)
+		);
+
+		return $this->acting_as( $user_id ) === $org_id;
+	}
+
+	/**
+	 * The organization a staff user is currently acting for, or 0.
+	 *
+	 * Expiry is applied on read rather than by a scheduled sweep. A session
+	 * that outlived its window must stop applying the moment it is next
+	 * consulted, and cron running late would otherwise leave it live.
+	 *
+	 * @param int $user_id User id.
+	 * @return int
+	 */
+	public function acting_as( int $user_id ): int {
+		if ( $user_id <= 0 ) {
+			return 0;
+		}
+
+		$raw = get_user_meta( $user_id, self::META_ACTING_AS, true );
+
+		if ( ! is_array( $raw ) ) {
+			return 0;
+		}
+
+		$org_id  = (int) ( $raw['org_id'] ?? 0 );
+		$expires = (int) ( $raw['expires_at'] ?? 0 );
+
+		if ( $org_id <= 0 || $expires <= time() ) {
+			return 0;
+		}
+
+		return $org_id;
+	}
+
+	/**
+	 * Ends an acting-as session.
+	 *
+	 * @param int $user_id User id.
+	 * @return void
+	 */
+	public function clear_acting_as( int $user_id ): void {
+		if ( $user_id > 0 ) {
+			delete_user_meta( $user_id, self::META_ACTING_AS );
 		}
 	}
 

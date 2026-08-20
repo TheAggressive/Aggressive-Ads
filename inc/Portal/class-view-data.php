@@ -54,6 +54,7 @@ final class View_Data {
 	 * @param Campaign_Change_Manager $changes  Running-campaign change proposals.
 	 * @param Settings                $settings   Brand and support details.
 	 * @param Edit_Window             $window     When editing is permitted.
+	 * @param Acting_As               $acting     Staff acting for an advertiser.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -68,7 +69,8 @@ final class View_Data {
 		private readonly Reporting_Read $reporting,
 		private readonly Campaign_Change_Manager $changes,
 		private readonly Settings $settings,
-		private readonly Edit_Window $window
+		private readonly Edit_Window $window,
+		private readonly Acting_As $acting
 	) {
 	}
 
@@ -78,6 +80,19 @@ final class View_Data {
 	 * @return int
 	 */
 	public function org_id(): int {
+		/*
+		 * An open acting-as session decides which organization this screen is
+		 * about. It changes scope only — every capability check and every
+		 * Ownership decision below is untouched, so this cannot show staff
+		 * anything their own capabilities did not already allow against the
+		 * client's objects.
+		 */
+		$acting = $this->acting->org_id();
+
+		if ( $acting > 0 ) {
+			return $acting;
+		}
+
 		$orgs = $this->orgs->org_ids_for_user( get_current_user_id() );
 
 		return array() === $orgs ? 0 : $orgs[0];

@@ -79,6 +79,7 @@ export type AuditEvent = {
 export type Campaign = {
 	id: number;
 	title: string;
+	org_id: number;
 	org_name: string;
 	edit_url: string;
 	status: string;

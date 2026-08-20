@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-20T04:53:08+00:00\n"
+"POT-Creation-Date: 2026-08-20T05:16:00+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -501,13 +501,13 @@ msgid "Campaign moved from %1$s to %2$s."
 msgstr ""
 
 #: inc/Admin/class-review-data.php:314
-#: inc/Portal/class-view-data.php:766
+#: inc/Portal/class-view-data.php:781
 msgid "Not scheduled"
 msgstr ""
 
 #. translators: 1: campaign start date. 2: campaign end date.
 #: inc/Admin/class-review-data.php:325
-#: inc/Portal/class-view-data.php:782
+#: inc/Portal/class-view-data.php:797
 #, php-format
 msgid "%1$s – %2$s"
 msgstr ""
@@ -538,7 +538,7 @@ msgid "Decided"
 msgstr ""
 
 #: inc/Admin/class-review-data.php:591
-#: inc/Portal/class-view-data.php:639
+#: inc/Portal/class-view-data.php:654
 msgid "Running"
 msgstr ""
 
@@ -579,7 +579,7 @@ msgid "Resume campaign"
 msgstr ""
 
 #: inc/Admin/class-review-data.php:616
-#: inc/Portal/class-view-data.php:271
+#: inc/Portal/class-view-data.php:286
 msgid "Cancel campaign"
 msgstr ""
 
@@ -750,7 +750,7 @@ msgstr ""
 #: inc/Admin/class-review-screen.php:285
 #: inc/Core/class-post-types.php:198
 #: templates/portal/organization.php:15
-#: templates/portal/partials/rail.php:29
+#: templates/portal/partials/rail.php:32
 #: templates/portal/screens/account.php:117
 #: templates/portal/screens/organization.php:27
 #: templates/portal/screens/signup.php:66
@@ -1372,7 +1372,7 @@ msgstr ""
 
 #: inc/Core/class-post-types.php:201
 #: templates/portal/campaigns.php:15
-#: templates/portal/partials/rail.php:28
+#: templates/portal/partials/rail.php:31
 #: templates/portal/screens/campaign.php:76
 #: templates/portal/screens/campaigns.php:36
 #: templates/portal/screens/organization.php:73
@@ -2208,7 +2208,7 @@ msgid "Campaign ID"
 msgstr ""
 
 #: inc/Portal/class-report-actions.php:158
-#: inc/Portal/class-view-data.php:671
+#: inc/Portal/class-view-data.php:686
 #: templates/portal/partials/campaign-table.php:38
 #: templates/portal/partials/sparkline.php:30
 #: templates/portal/screens/campaign.php:843
@@ -2216,7 +2216,7 @@ msgid "Impressions"
 msgstr ""
 
 #: inc/Portal/class-report-actions.php:159
-#: inc/Portal/class-view-data.php:675
+#: inc/Portal/class-view-data.php:690
 #: templates/portal/partials/campaign-table.php:39
 #: templates/portal/screens/campaign.php:847
 msgid "Clicks"
@@ -2248,57 +2248,57 @@ msgstr ""
 msgid "We could not create the account. Please try again later."
 msgstr ""
 
-#: inc/Portal/class-view-data.php:218
+#: inc/Portal/class-view-data.php:233
 msgid "Renew campaign"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:219
+#: inc/Portal/class-view-data.php:234
 msgid "Duplicate campaign"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:270
+#: inc/Portal/class-view-data.php:285
 msgid "Delete campaign"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:469
+#: inc/Portal/class-view-data.php:484
 #: templates/portal/partials/campaign-table.php:80
 #: templates/portal/screens/campaign.php:862
 msgid "—"
 msgstr ""
 
 #. translators: %s: click-through rate as a percentage, e.g. 1.2.
-#: inc/Portal/class-view-data.php:474
+#: inc/Portal/class-view-data.php:489
 #: templates/portal/partials/campaign-table.php:77
 #: templates/portal/screens/campaign.php:859
 #, php-format
 msgid "%s%%"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:555
+#: inc/Portal/class-view-data.php:570
 #: templates/portal/partials/campaign-ad-updates.php:64
 msgid "Waiting for review"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:556
+#: inc/Portal/class-view-data.php:571
 msgid "Changes needed"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:643
+#: inc/Portal/class-view-data.php:658
 msgid "In review"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:647
+#: inc/Portal/class-view-data.php:662
 msgid "Needs your attention"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:679
+#: inc/Portal/class-view-data.php:694
 #: templates/portal/partials/campaign-table.php:40
 #: templates/portal/screens/campaign.php:851
 msgid "CTR"
 msgstr ""
 
 #. translators: %s: campaign start date.
-#: inc/Portal/class-view-data.php:775
+#: inc/Portal/class-view-data.php:790
 #, php-format
 msgid "From %s"
 msgstr ""
@@ -2332,7 +2332,7 @@ msgstr ""
 msgid "The organization could not be renamed."
 msgstr ""
 
-#: inc/Repository/class-user-repository.php:201
+#: inc/Repository/class-user-repository.php:276
 #: inc/Workflow/class-advertiser-registration.php:154
 #: inc/Workflow/class-advertiser-registration.php:197
 #: inc/Workflow/class-advertiser-registration.php:203
@@ -2366,7 +2366,12 @@ msgstr ""
 msgid "That impression could not be recorded. Please try again."
 msgstr ""
 
-#: inc/REST/class-campaigns-controller.php:366
+#: inc/REST/class-campaigns-controller.php:291
+#: inc/Workflow/class-campaign-editor.php:116
+msgid "That advertiser could not be found."
+msgstr ""
+
+#: inc/REST/class-campaigns-controller.php:409
 #: inc/REST/class-creative-file-controller.php:185
 msgid "Not found."
 msgstr ""
@@ -2689,10 +2694,6 @@ msgstr ""
 
 #: inc/Workflow/class-campaign-editor.php:109
 msgid "You do not have permission to create a campaign for an advertiser."
-msgstr ""
-
-#: inc/Workflow/class-campaign-editor.php:116
-msgid "That advertiser could not be found."
 msgstr ""
 
 #: inc/Workflow/class-campaign-editor.php:150
@@ -3242,7 +3243,7 @@ msgid "Page not found"
 msgstr ""
 
 #: templates/portal/account.php:15
-#: templates/portal/partials/rail.php:30
+#: templates/portal/partials/rail.php:33
 #: templates/portal/screens/account.php:32
 msgid "Account"
 msgstr ""
@@ -3279,7 +3280,7 @@ msgid "Confirm your email"
 msgstr ""
 
 #: templates/portal/dashboard.php:18
-#: templates/portal/partials/rail.php:27
+#: templates/portal/partials/rail.php:30
 msgid "Dashboard"
 msgstr ""
 
@@ -3289,7 +3290,7 @@ msgid "Reset your password"
 msgstr ""
 
 #: templates/portal/help.php:15
-#: templates/portal/partials/rail.php:31
+#: templates/portal/partials/rail.php:34
 #: templates/portal/screens/help.php:29
 msgid "Help"
 msgstr ""
@@ -3551,7 +3552,15 @@ msgstr ""
 msgid "Ad update history"
 msgstr ""
 
-#: templates/portal/partials/rail.php:39
+#: templates/portal/partials/rail.php:52
+msgid "Acting for"
+msgstr ""
+
+#: templates/portal/partials/rail.php:60
+msgid "Stop acting"
+msgstr ""
+
+#: templates/portal/partials/rail.php:66
 msgid "Portal"
 msgstr ""
 

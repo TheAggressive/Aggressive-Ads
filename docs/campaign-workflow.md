@@ -53,11 +53,48 @@ Registered with `register_post_status()` as non-public, non-internal, protected,
 
 `aggr_complete` and `aggr_cancelled` have no outgoing edges. A completed campaign is duplicated into a new draft, never reopened — renew and duplicate are the same copy operation, not a transition. Nothing re-enters `aggr_draft` except a staff reopen from `aggr_rejected`. An advertiser who wants to change a submitted campaign either withdraws it (only while unclaimed) or waits for changes to be requested.
 
+### Acting for an advertiser
+
+Staff do not silently operate inside a client's portal. They enter an
+**acting-as session** from the review screen, and leave it explicitly from the
+rail, which shows the organization's name on every portal screen for as long as
+one is open. Both ends are audited (`onbehalf.session_started`,
+`onbehalf.session_ended`).
+
+**A session changes scope, never permission.** It tells `Portal\View_Data`
+which organization the screens are about; it grants nothing. Every capability
+check and every `Security\Ownership` decision is unchanged while one is open,
+so a staff member acting for a client can do exactly what their own
+capabilities already allowed against that client's objects. If entering a
+session granted anything, it would be a privilege-escalation primitive any
+reviewer could point at any organization.
+
+The session is re-authorized on **every read**, not trusted from the moment it
+started: stored state outlives the grant that allowed it, so a reviewer whose
+capability is withdrawn stops acting immediately rather than at the next
+expiry. Sessions also lapse on their own after four hours, enforced on read
+rather than by cron, because a sweep running late would leave one live.
+
+It is explicit at both ends deliberately. The failure mode of an implicit
+session is a staff member editing a client's live campaign believing it is
+their own — and the portal looks identical either way.
+
+### Editing a finished campaign
+
 Editing a completed campaign is not reopening it, and the two must not be
 confused. Staff may correct the record of a campaign in any status (see below),
 but the campaign stays where it is: a corrected `aggr_complete` campaign is
 still complete, and running it again is still a copy into a new draft. What an
 edit changes is the stored campaign, never its position in the workflow.
+
+This has a consequence worth stating plainly, because it is a deliberate
+trade-off rather than an oversight. `aggr_rollups` already holds impressions
+and clicks for a campaign that has run. Editing that campaign afterwards
+changes the stored configuration but not the recorded numbers, so the two can
+describe different things: the rollups belong to the configuration that
+actually served, which may no longer be the one on screen. The audit row for
+each on-behalf edit records who changed what and when, which is what makes the
+divergence explainable after the fact.
 
 ## Editing, and the edit window
 

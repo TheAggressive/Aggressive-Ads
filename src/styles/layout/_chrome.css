@@ -796,3 +796,51 @@
 	margin-bottom: var(--aggr-space-xs);
 }
 
+
+/*
+ * The acting-as marker.
+ *
+ * Deliberately the loudest thing in the rail. It is the only cue that the
+ * campaign on screen belongs to somebody else, and the cost of missing it is
+ * editing a client's live ad believing it is your own.
+ */
+.aggr-acting {
+	display: flex;
+	flex-direction: column;
+	gap: var(--aggr-space-xs);
+	padding: var(--aggr-space-sm);
+	border: 1px solid var(--aggr-color-rail-text);
+	border-radius: var(--aggr-radius-small);
+	background: var(--aggr-color-rail-chip);
+}
+
+.aggr-acting__label {
+	margin: 0;
+	color: var(--aggr-color-rail-text);
+	font-size: 0.75rem;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.aggr-acting__org {
+	margin: 0;
+	color: var(--aggr-color-rail-text-strong);
+	font-weight: 600;
+	overflow-wrap: anywhere;
+}
+
+.aggr-acting__leave {
+	padding: var(--aggr-space-xs) var(--aggr-space-sm);
+	border: 1px solid var(--aggr-color-rail-text);
+	border-radius: var(--aggr-radius-small);
+	background: transparent;
+	color: var(--aggr-color-rail-text-strong);
+	cursor: pointer;
+	font: inherit;
+	width: 100%;
+}
+
+.aggr-acting__leave:hover,
+.aggr-acting__leave:focus-visible {
+	background: var(--aggr-color-rail-active);
+}

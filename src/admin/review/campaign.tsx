@@ -276,6 +276,7 @@ export function CampaignView( {
 	campaign,
 	busy,
 	onBack,
+	onEdit,
 	onTransition,
 	onNotes,
 	onChanges,
@@ -285,6 +286,7 @@ export function CampaignView( {
 	campaign: Campaign;
 	busy: boolean;
 	onBack: () => void;
+	onEdit: () => void;
 	onTransition: ( to: string, notes: string ) => void;
 	onNotes: ( notes: string ) => void;
 	onChanges: ( decision: string, notes: string ) => void;
@@ -357,12 +359,14 @@ export function CampaignView( {
 						 * is the statuses where the advertiser has no
 						 * transition available.
 						 */ }
-						<a
+						<button
+							type="button"
 							className="aggr-button aggr-button--secondary"
-							href={ campaign.edit_url }
+							disabled={ busy }
+							onClick={ () => onEdit() }
 						>
 							{ t( 'editCampaign' ) }
-						</a>
+						</button>
 
 						{ campaign.actions.map( ( action ) => (
 							<button
