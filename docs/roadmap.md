@@ -10,6 +10,13 @@ Nothing here is built merely because the architecture supports it.
 **Suite direction** (white-label, unified admin, native ad serving, cache-safe
 tracking) lives in [suite-roadmap.md](suite-roadmap.md).
 
+**Platform direction** — line items, a decision engine, targeting, frequency,
+pacing, viewability, conversions, billing, forecasting and the provider registry
+— lives in
+[platform-implementation-progress.md](platform-implementation-progress.md). That
+file is the sequence beyond this one, and it carries the audit of what exists
+today rather than repeating it here.
+
 ## Phase 1 — Foundation *(complete)*
 
 Bootstrap, autoloader, container, post types and statuses, installer, schema
@@ -120,6 +127,15 @@ commit, which is why they are the last items and why nothing here claims them.
 
 ## Architected for, not planned
 
-The domain model accommodates these without redesign. None is scheduled.
+The domain model accommodates these without redesign. None is scheduled *here* —
+several are now sequenced in
+[platform-implementation-progress.md](platform-implementation-progress.md)
+instead, which is where they gained dependencies and migration notes:
+downloadable reports (P14), online payments and invoices (P19), richer creative
+formats (P17, P18), an organization-scoped role model beyond a single
+Advertising Manager (P21), and multiple providers behind `Ad_Provider_Interface`
+(P24).
 
-Campaign analytics beyond Phase 10 · downloadable reports · an Advertising Manager role · online payments and invoices · campaign templates · sponsored content · richer creative formats · notification channels beyond email · CRM integration · multiple ad providers behind `Ad_Provider_Interface` · self-service exports.
+Still architected for and still unscheduled anywhere: campaign templates ·
+sponsored content · notification channels beyond email · CRM integration ·
+self-service exports.

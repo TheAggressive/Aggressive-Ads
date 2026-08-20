@@ -34,6 +34,7 @@ Then, as needed:
 | [administration.md](administration.md) | Running the plugin: screens, capabilities, scheduled work, Site Health, uninstall |
 | [runbook.md](runbook.md) | Deploying to production, verifying each step, and rolling back |
 | [roadmap.md](roadmap.md) | Phases 1–11 (what already shipped vs remaining product) |
+| [platform-implementation-progress.md](platform-implementation-progress.md) | The platform sequence beyond the roadmap, and what exists today |
 | [suite-roadmap.md](suite-roadmap.md) | Aggressive Ads suite: identity, admin shell, native delivery, cache, tracking |
 
 ## Conventions
