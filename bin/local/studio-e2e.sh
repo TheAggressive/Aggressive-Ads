@@ -257,9 +257,14 @@ fi
 # URL captured before a run can be stale by the next one. This site stored
 # https://laartsonline.local, which resolved to 127.0.0.1 with nothing listening
 # on 443 — reachable only for the length of a test run, and "restored" to
-# unreachable afterwards. Studio is the source of truth for where a Studio site
-# is served, so the address always comes from `studio site list` and never from
-# a literal here. AGGR_STUDIO_URL overrides it.
+# unreachable afterwards.
+#
+# Following Studio is safe rather than merely convenient: a custom hostname for
+# a Studio site is configured in Studio, so `studio site list` reports it and
+# this picks it up on the next run. There is no arrangement where the right
+# address is one Studio does not know about, which is why nothing here is a
+# literal. AGGR_STUDIO_URL stays as the narrow fallback for a site Studio
+# reports no URL for at all.
 studio wp --path "${site_path}" option update home "${base_url}" >/dev/null
 studio wp --path "${site_path}" option update siteurl "${base_url}" >/dev/null
 

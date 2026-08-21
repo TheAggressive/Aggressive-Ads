@@ -188,6 +188,13 @@ this was built against stored `https://laartsonline.local`, which resolved to
 reachable for the length of a test run and unreachable again afterwards, and
 reported that as a clean restore.
 
+Following Studio is safe rather than merely convenient: a custom hostname for a
+Studio site is configured in Studio, so `studio site list` reports it and the
+next run picks it up. There is no arrangement where the correct address is one
+Studio does not know about, which is why nothing here is a literal.
+`AGGR_STUDIO_URL` remains only as the narrow fallback for a site Studio reports
+no URL for at all.
+
 The PHP integration suite does not run against Studio's SQLite database because
 its schema and `dbDelta` assertions are specifically MySQL behavior.
 
