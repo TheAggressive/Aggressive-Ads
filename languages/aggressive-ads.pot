@@ -2332,7 +2332,7 @@ msgstr ""
 msgid "The organization could not be renamed."
 msgstr ""
 
-#: inc/Repository/class-user-repository.php:276
+#: inc/Repository/class-user-repository.php:277
 #: inc/Workflow/class-advertiser-registration.php:154
 #: inc/Workflow/class-advertiser-registration.php:197
 #: inc/Workflow/class-advertiser-registration.php:203
