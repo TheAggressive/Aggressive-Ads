@@ -175,10 +175,18 @@ The site must opt in — `.aggr-e2e-site` in its root, or
 `AGGR_STUDIO_E2E_ALLOW=1` — because the setup mutates it. Two of those
 mutations are permanent: `tests/e2e/seed-users.php` resets the `admin` and
 `advertiser` passwords to the fixture values, and the seeds write fixture
-campaigns, an organization and a placement. The reversible ones — theme, `home`,
-`siteurl`, permalink structure, the mail-capture mu-plugin — are captured before
-the run and restored afterwards on success and on failure, and a failed restore
-turns a passing run red rather than reporting a site it left half-changed.
+campaigns, an organization and a placement. The reversible ones — theme,
+permalink structure, the mail-capture mu-plugin — are captured before the run and
+restored afterwards on success and on failure, and a failed restore turns a
+passing run red rather than reporting a site it left half-changed.
+
+`home` and `siteurl` are deliberately not restored. They are set from whatever
+`studio site list` reports and left there, because the value a restore would put
+back is not knowably right: Studio assigns the port and can reassign it. The site
+this was built against stored `https://laartsonline.local`, which resolved to
+127.0.0.1 with nothing listening on 443 — so the old behaviour made the site
+reachable for the length of a test run and unreachable again afterwards, and
+reported that as a clean restore.
 
 The PHP integration suite does not run against Studio's SQLite database because
 its schema and `dbDelta` assertions are specifically MySQL behavior.

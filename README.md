@@ -98,9 +98,14 @@ campaigns — and nothing puts either back:
 touch /path/to/studio/site/.aggr-e2e-site   # or: AGGR_STUDIO_E2E_ALLOW=1
 ```
 
-Theme, `home`, `siteurl`, permalink structure and the mail-capture mu-plugin
-are captured up front and restored on the way out, whether Playwright passes or
-fails.
+Theme, permalink structure and the mail-capture mu-plugin are captured up front
+and restored on the way out, whether Playwright passes or fails.
+
+`home` and `siteurl` are the exception: they are set from Studio and left that
+way. Studio assigns the port and can reassign it, so a URL captured before a run
+can be stale by the next one — restoring it would put the site back to an
+address nothing serves. Studio is the source of truth for where a Studio site
+lives; `AGGR_STUDIO_URL` overrides it.
 
 Docker Compose remains the reproducible CI environment. It mounts this
 checkout into the pinned Docker Official WordPress image and starts a

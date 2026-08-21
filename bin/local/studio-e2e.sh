@@ -199,8 +199,6 @@ if [[ "${served_plugin}" != "${repo_root}" ]]; then
 	exit 1
 fi
 
-original_home="$(studio wp --path "${site_path}" option get home | tr -d '\r\n')"
-original_siteurl="$(studio wp --path "${site_path}" option get siteurl | tr -d '\r\n')"
 original_theme="$(studio wp --path "${site_path}" option get stylesheet | tr -d '\r\n')"
 
 # global-setup.ts rewrites this with `--hard`, so it is as much this script's to
@@ -222,9 +220,6 @@ cleanup() {
 	if [[ "${current_theme}" != "${original_theme}" ]]; then
 		studio wp --path "${site_path}" theme activate "${original_theme}" >/dev/null || cleanup_failed=1
 	fi
-
-	studio wp --path "${site_path}" option update home "${original_home}" >/dev/null || cleanup_failed=1
-	studio wp --path "${site_path}" option update siteurl "${original_siteurl}" >/dev/null || cleanup_failed=1
 
 	studio wp --path "${site_path}" option update permalink_structure "${original_permalinks}" >/dev/null || cleanup_failed=1
 	studio wp --path "${site_path}" rewrite flush --hard >/dev/null || cleanup_failed=1
@@ -254,10 +249,22 @@ else
 	remove_mail_link=1
 fi
 
+# home and siteurl are set from Studio and left that way, unlike the theme and
+# the permalink structure, which are put back.
+#
+# They are not this script's to restore, because the value it would restore is
+# not knowably right: Studio assigns the port and can reassign it, so a stored
+# URL captured before a run can be stale by the next one. This site stored
+# https://laartsonline.local, which resolved to 127.0.0.1 with nothing listening
+# on 443 — reachable only for the length of a test run, and "restored" to
+# unreachable afterwards. Studio is the source of truth for where a Studio site
+# is served, so the address always comes from `studio site list` and never from
+# a literal here. AGGR_STUDIO_URL overrides it.
 studio wp --path "${site_path}" option update home "${base_url}" >/dev/null
 studio wp --path "${site_path}" option update siteurl "${base_url}" >/dev/null
 
 echo "studio-e2e: ${base_url} (${site_path})"
+echo "studio-e2e: home and siteurl now follow Studio; theme and permalinks are restored."
 
 AGGR_E2E_BASE_URL="${base_url}" \
 	AGGR_E2E_WP_PATH="${site_path}" \
