@@ -61,7 +61,7 @@ not been built.
 |           |                                      |
 | --------- | ------------------------------------ |
 | PHP       | 8.4+                                 |
-| WordPress | 6.7+ (wp-env runs 7.0.2)             |
+| WordPress | 6.7+ (tests run 7.1)                 |
 | Node      | 24.x                                 |
 | pnpm      | 11.x (`packageManager` is `11.1.2`)  |
 
@@ -74,15 +74,18 @@ production autoloader is `inc/class-autoloader.php`. See
 ```bash
 composer install      # PHPCS, PHPStan, PHPUnit — vendor/ never ships
 pnpm install          # frontend tools + staged-file Git hooks
-pnpm env:start        # dev http://localhost:9960, tests :9970
+pnpm env:start        # disposable WordPress 7.1 at http://localhost:9960
 pnpm build            # src/ → dist/
 pnpm dev:seed         # an advertiser, an org, and five campaigns
 pnpm qa:fast          # deterministic pre-push quality gate
-pnpm qa               # full release rehearsal (Docker + browser dependencies)
+pnpm qa               # every required CI gate against the current environment
+pnpm qa:fresh         # recreate the environment, then run the same rehearsal
 ```
 
-wp-env mounts this checkout at `wp-content/plugins/aggressive-ads`. Sign in as
-the seeded advertiser at `/advertiser/login/`. Staff use wp-admin.
+Docker Compose mounts this checkout into the pinned Docker Official WordPress
+image and starts a disposable MySQL database. Sign in as the seeded advertiser
+at `/advertiser/login/`; staff use wp-admin. This stack is only for testing and
+does not dictate the WordPress environment used for daily development.
 
 ## Commands
 
@@ -90,23 +93,25 @@ the seeded advertiser at `/advertiser/login/`. Staff use wp-admin.
 pnpm lint:php                # PHPCS — WordPress + VIP-Go + PHPCompatibility
 pnpm analyse:php             # PHPStan level 8, no baseline
 pnpm test:php:unit           # no WordPress, no database
-pnpm test:php:integration    # integration / security / rest / upgrade (needs wp-env)
-pnpm test:php:multisite      # colliding-id tenancy (needs wp-env)
+pnpm test:php:integration    # integration / security / rest / upgrade
+pnpm test:php:multisite      # colliding-id tenancy
 pnpm lint:js                 # ESLint on src/
 pnpm typecheck               # tsc --noEmit
 pnpm lint:css                # Stylelint on every authored CSS file under src/
 pnpm test:js                 # Jest on Interactivity helpers
 pnpm lint:files              # file length, repository boundary, permission callbacks
-pnpm ci:coverage             # combined unit + integration coverage (needs coverage-mode wp-env)
+pnpm ci:coverage             # combined unit + integration PCOV coverage
 pnpm test:e2e:browsers       # install Chromium and WebKit
 pnpm test:e2e:install        # the same, plus system libraries (needs sudo; what CI runs)
-pnpm test:e2e                # Playwright + axe (needs wp-env, after pnpm build)
+pnpm test:e2e                # Playwright + axe (after pnpm build and env:start)
 pnpm qa:fast                 # pre-push checks; needs Docker, but not browsers
-pnpm qa                      # every CI lane, serially; needs Docker
+pnpm qa                      # every CI lane, serially; requires a clean worktree
+pnpm qa:fresh                # clean database/container rehearsal
+pnpm env:stop                # remove the disposable containers and database
 ```
 
-Each `ci:*` script maps 1:1 onto a GitHub Actions job. Adding a lane means
-adding it to **both** the workflow and `bin/ci/verify.sh`.
+Each `ci:*` script maps 1:1 onto a GitHub Actions job. The local rehearsal
+derives its commands from that workflow so the two cannot drift.
 
 `pnpm install` enables the repository's Git hooks. Pre-commit formats and
 re-stages only selected files, commit-msg enforces Conventional Commits, and

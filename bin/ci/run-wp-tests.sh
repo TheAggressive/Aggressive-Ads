@@ -5,9 +5,9 @@
 # The runner's exit code is not sufficient evidence that the suite ran. Portal
 # code redirects and then calls exit(), and an exit() inside a test kills the
 # PHPUnit process itself: no summary is printed, no exit code is set, and
-# `wp-env run` reports a clean pass. Ten test classes — the whole REST suite and
-# the upgrader among them — stopped running that way, and CI stayed green for as
-# long as it took somebody to run one of them on its own.
+# a container runner can report a clean pass. Ten test classes — the whole REST
+# suite and the upgrader among them — stopped running that way, and CI stayed
+# green for as long as it took somebody to run one of them on its own.
 #
 # So the exit code is checked, and then the JUnit report is checked, because the
 # report only exists if PHPUnit reached the end of the run. A missing or
@@ -28,9 +28,18 @@ report="build/test-results/$(basename "${config}" .xml.dist).xml"
 mkdir -p "$(dirname "${report}")"
 rm -f "${report}"
 
+# PHPUnit runs as root so it can write reports into the host checkout. Restore
+# anything it creates under uploads to the same user that serves web requests.
+restore_web_ownership() {
+	bash bin/ci/environment.sh exec \
+		chown -R www-data:www-data /var/www/html/wp-content/uploads \
+		>/dev/null 2>&1 || true
+}
+trap restore_web_ownership EXIT
+
 status=0
-pnpm exec wp-env run tests-wordpress \
-	php "${plugin_path}/vendor/bin/phpunit" \
+bash bin/ci/environment.sh exec \
+	php "/var/www/html/${plugin_path}/vendor/bin/phpunit" \
 	-c "${plugin_path}/${config}" \
 	--log-junit "${plugin_path}/${report}" \
 	"$@" || status=$?
@@ -59,10 +68,11 @@ if ( false === $xml ) {
 	exit( 1 );
 }
 
-$tests = 0;
-$bad   = 0;
+$tests     = 0;
+$bad       = 0;
+$summaries = "testsuite" === $xml->getName() ? array( $xml ) : $xml->testsuite;
 
-foreach ( $xml->xpath( "//testsuite[not(testsuite)]" ) ?: array() as $suite ) {
+foreach ( $summaries as $suite ) {
 	$tests += (int) $suite["tests"];
 	$bad   += (int) $suite["failures"] + (int) $suite["errors"];
 }

@@ -17,9 +17,7 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 aggr_i18n_ensure_languages_dir
 [[ -f "${AGGR_POT_FILE}" ]] || aggr_i18n_die "Committed POT missing at languages/${AGGR_TEXT_DOMAIN}.pot. Run: pnpm i18n:pot"
 
-# Generated inside the repository rather than under /tmp on purpose: when the
-# extraction runs in the wp-env container, a host mktemp path does not exist on
-# the other side of the bind mount.
+# Generated beside the committed catalog so both paths have the same shape.
 drift_pot="${AGGR_LANGUAGES_DIR}/.drift.pot"
 work_dir="$(mktemp -d)"
 trap 'rm -f "${drift_pot}"; rm -rf "${work_dir}"' EXIT

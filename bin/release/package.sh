@@ -119,7 +119,6 @@ rsync -a \
 	--exclude='.husky/' \
 	--exclude='.prettierignore' \
 	--exclude='.prettierrc*' \
-	--exclude='.wp-env*' \
 	--exclude='.editorconfig' \
 	--exclude='.gitignore' \
 	--exclude='.phpunit.cache/' \

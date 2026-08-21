@@ -3,7 +3,7 @@
  * Seeds the local dev site with enough data to look at the portal.
  *
  * Development only, never shipped: bin/ is excluded from the release archive.
- * Run with `pnpm dev:seed`, which passes this to WP-CLI inside wp-env.
+ * Run with `pnpm dev:seed`, which passes this to WP-CLI inside the test stack.
  *
  * Idempotent by design — it looks each object up by slug before creating it,
  * so running it twice does not produce a second organization and leave the

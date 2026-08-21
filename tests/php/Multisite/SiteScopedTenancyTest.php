@@ -235,7 +235,13 @@ final class SiteScopedTenancyTest extends WP_UnitTestCase {
 		$this->on_site(
 			$blog_id,
 			static function () use ( &$exists ): void {
-				$exists = ( new Event_Repository() )->table_exists();
+				global $wpdb;
+
+				$table    = ( new Event_Repository() )->table_name();
+				$suppress = $wpdb->suppress_errors();
+				// Core makes per-test tables temporary; MySQL omits those from SHOW TABLES.
+				$exists = (bool) $wpdb->get_results( "DESCRIBE {$table}" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Test assertion must see Core's temporary table.
+				$wpdb->suppress_errors( $suppress );
 			}
 		);
 

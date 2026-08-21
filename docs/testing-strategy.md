@@ -31,12 +31,14 @@ The lesson both share: **assert your fixture is real before asserting on it.** T
 | `upgrade` | same | same | same |
 | `multisite` | `phpunit-multisite.xml.dist` | `tests/php/bootstrap-wp.php` + `WP_TESTS_MULTISITE` | same, as a network |
 | JS | `jest.config.js` | — | Node |
-| E2E | `playwright.config.ts` | — | wp-env |
+| E2E | `playwright.config.ts` | — | WordPress 7.1 Compose stack |
 
 `pnpm ci:coverage` runs both the isolated unit suite and the single-site
-WordPress suites under Xdebug in wp-env. It unions their executable `inc/`
-lines, so a statement hit by either suite counts once, and enforces a 70%
-statement floor against the measured 70.25% baseline. The separate configs and
+WordPress suites under PCOV in the official-image container. It unions their executable `inc/`
+lines, so a statement hit by either suite counts once, and enforces a 69.75%
+statement floor against the measured 69.86% PCOV baseline. The exact same run
+reports 70.25% under Xdebug because it marks 53 `global` declarations as hit
+while PCOV does not; no tested behavior differs. The separate configs and
 bootstraps remain intact: collecting the unit report in the container does not
 load WordPress into that suite.
 
@@ -50,7 +52,10 @@ A `map_meta_cap` test written with Brain\Monkey mocks `current_user_can()` — a
 
 The same holds for `dbDelta` idempotence (which depends on MySQL's own type normalization), REST authorization (needs a real `WP_REST_Server` and real nonce verification), uploads (touch GD and the filesystem), and "roles survived the upgrade" (is by definition about real `wp_options` state).
 
-Aggressive Apparel already runs PHPUnit 9.6 with `yoast/phpunit-polyfills:^4.0` against WordPress 7.0.2 in wp-env, so this is a proven combination rather than a hopeful one. It is a **test-only** constraint — no shipped code changes — and Brain\Monkey `^2.7` runs on 9.6, so unit tests are unaffected.
+The container runs WordPress 7.1 and PHP 8.4 from a digest-pinned Docker
+Official Image. `wp-phpunit/wp-phpunit:7.1.0` supplies the matching Core test
+library, and `yoast/phpunit-polyfills:^4.0` keeps the assertions compatible with
+PHPUnit 9.6. These are **test-only** constraints; no shipped code changes.
 
 ## Failure policy
 
@@ -123,7 +128,7 @@ pre- and post-write states with axe.
 
 Global setup seeds and resets deterministic data; teardown deletes the campaign,
 its private bytes, and the inventory fixtures. It also hard-flushes
-Apache rewrite rules so a rebuilt wp-env cannot turn a stale `.htaccess` file
+Apache rewrite rules so a rebuilt container cannot turn a stale `.htaccess` file
 into a misleading portal failure. Chromium runs with one worker because the
 WordPress site is shared mutable state, and retries are zero so a flaky gate
 cannot hide.
@@ -143,11 +148,14 @@ deliberately single-use.
 
 ```bash
 pnpm test:php:unit            # fast, no database
-pnpm test:php:integration     # needs wp-env + WP test suite
+pnpm env:start                # WordPress 7.1 + MySQL 8.4 at localhost:9960
+pnpm test:php:integration     # real WordPress + isolated test database
+pnpm test:php:multisite       # real multisite bootstrap
 pnpm test:php:security
 pnpm test:js
 pnpm test:e2e:browsers        # install browsers; what pnpm qa runs
 pnpm test:e2e:install         # the same, plus system libraries (needs sudo; what CI runs)
-pnpm test:e2e                 # needs wp-env running; setup seeds its own data
+pnpm test:e2e                 # needs env:start; setup seeds its own data
 pnpm ci:verify                # everything, serially, as CI would
+pnpm qa:fresh                 # recreate containers/database, then run all gates
 ```

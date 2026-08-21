@@ -21,6 +21,9 @@
 	failOnIncomplete="true"
 	cacheResultFile=".phpunit.cache/integration.result"
 	>
+	<php>
+		<env name="WP_PHPUNIT__TESTS_CONFIG" value="/var/www/html/wp-content/plugins/aggressive-ads/tests/wp-tests-config.php"/>
+	</php>
 	<testsuites>
 		<testsuite name="integration">
 			<directory suffix="Test.php">tests/php/Integration</directory>

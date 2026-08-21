@@ -31,7 +31,7 @@ AGGR_POT_FILE="${AGGR_LANGUAGES_DIR}/${AGGR_TEXT_DOMAIN}.pot"
 # where wp_set_script_translations() works normally and __() calls are real
 # catalog entries. Excluding src/ made those strings invisible to translators
 # while the code looked correct. See docs/i18n.md.
-AGGR_I18N_EXCLUDE="${AGGR_I18N_EXCLUDE:-node_modules,vendor,dist,types,tests,bin,docs,release,test-results,playwright-report,.git,.github,.husky,.wp-env,.phpunit.cache}"
+AGGR_I18N_EXCLUDE="${AGGR_I18N_EXCLUDE:-node_modules,vendor,dist,types,tests,bin,docs,release,test-results,playwright-report,.git,.github,.husky,.phpunit.cache}"
 
 # The pinned extractor, fetched by bin/ci/install-wp-cli.sh.
 AGGR_PINNED_WP_CLI="${AGGR_PLUGIN_ROOT}/.cache/ci/wp"

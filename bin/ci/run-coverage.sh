@@ -15,10 +15,10 @@ rm -f "$unit_report" "$integration_report"
 # Both reports use the same PHP build and coverage driver, avoiding a second
 # source of disagreement about executable lines. The unit suite's bootstrap
 # stays WordPress-free while its hits are unioned with the WordPress suite.
-if ! pnpm exec wp-env run tests-wordpress php -r \
-	'exit( extension_loaded( "xdebug" ) && in_array( "coverage", xdebug_info( "mode" ), true ) ? 0 : 1 );'; then
-	echo "ci:coverage: wp-env is not running with Xdebug coverage enabled." >&2
-	echo "Start it with: pnpm env:start:coverage" >&2
+if ! bash bin/ci/environment.sh exec php -r \
+	'exit( extension_loaded( "pcov" ) ? 0 : 1 );'; then
+	echo "ci:coverage: the WordPress test image does not have PCOV enabled." >&2
+	echo "Start it with: pnpm env:start" >&2
 	exit 1
 fi
 

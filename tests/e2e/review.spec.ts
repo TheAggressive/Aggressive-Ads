@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { expectAdminA11y } from './accessibility';
 import { solidPng } from './png';
-import { wp } from './wp-cli';
+import { wpPluginFile } from './wp-cli';
 
 /**
  * The review screens after the React conversion.
@@ -105,9 +105,8 @@ test( 'a tall creative stays inside its preview box', async ( { page } ) => {
 	// Seeded here rather than borrowed from whatever the queue happens to hold:
 	// no other fixture in the suite carries a creative, and depending on the
 	// wizard spec having run first would make this pass or fail by ordering.
-	const campaignId = wp(
-		'eval',
-		'require "tests/e2e/seed-review-creative.php";'
+	const campaignId = wpPluginFile(
+		'tests/e2e/seed-review-creative.php'
 	).trim();
 
 	expect( Number( campaignId ) ).toBeGreaterThan( 0 );
@@ -163,9 +162,8 @@ test( 'a decision that needs feedback is taken in an accessible dialog', async (
 	await page.locator( '#user_pass' ).fill( 'admin' );
 	await page.locator( '#wp-submit' ).click();
 
-	const campaignId = wp(
-		'eval',
-		'require "tests/e2e/seed-review-creative.php";'
+	const campaignId = wpPluginFile(
+		'tests/e2e/seed-review-creative.php'
 	).trim();
 
 	await page.goto(

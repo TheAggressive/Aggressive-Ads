@@ -279,7 +279,7 @@ jobs:
       - run: pnpm ci:php
 
   coverage:
-    name: PHP Coverage
+    name: Coverage + WordPress Integration
     needs: [build, gate]
     if: needs.gate.outputs.version_sync != 'true'
     runs-on: ubuntu-24.04
@@ -304,15 +304,15 @@ jobs:
         with:
           name: dist
           path: dist/
-      - run: pnpm env:start:coverage
+      - run: pnpm env:start
       - run: pnpm ci:coverage
 
   wordpress:
-    name: WordPress Integration
+    name: WordPress Multisite
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     # The React admin screens render a "has not been built" notice when their
-    # bundle is missing, and the integration suite asserts they mount. Same
+    # bundle is missing, and the multisite suite boots the same plugin. Same
     # reason as the php job: dist/ is gitignored and a bare checkout has none.
     needs: [build, gate]
     if: needs.gate.outputs.version_sync != 'true' && needs.gate.outputs.prose_only != 'true'

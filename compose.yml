@@ -1,0 +1,52 @@
+name: ${AGGR_COMPOSE_PROJECT:-aggressive-ads}
+
+services:
+  database:
+    image: mysql:8.4@sha256:b3b90af2a6552ae30c266fdb7d5dd55f3afb72404bb78d37fe8a23eb857fd3fb
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+      MYSQL_DATABASE: wordpress
+      MYSQL_PASSWORD: wordpress
+      MYSQL_USER: wordpress
+    healthcheck:
+      test: [ 'CMD', 'mysqladmin', 'ping', '--host=127.0.0.1', '--user=root', '--silent' ]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    tmpfs:
+      - /var/lib/mysql
+    volumes:
+      - ./tests/docker/init.sql:/docker-entrypoint-initdb.d/10-test-database.sql:ro
+
+  wordpress:
+    build:
+      context: .
+      dockerfile: tests/docker/WordPress.Dockerfile
+      args:
+        WORDPRESS_IMAGE: ${AGGR_WORDPRESS_IMAGE:-wordpress:7.1-php8.4-apache@sha256:dd1d6ff323bae668ebbfb0fce91042e1af7ee8d1568d4308f0f07ce3a4fe5140}
+        WP_CLI_IMAGE: ${AGGR_WP_CLI_IMAGE:-wordpress:cli-2.12.0-php8.4@sha256:13d152baa3c9111882d05e8ef4c32b4c84019b1bf7bf66b042c6b45e7aaba81d}
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      WORDPRESS_CONFIG_EXTRA: |
+        define( 'WP_DEBUG_LOG', true );
+        define( 'WP_DEBUG_DISPLAY', false );
+        define( 'SCRIPT_DEBUG', true );
+        define( 'WP_AUTO_UPDATE_CORE', false );
+      WORDPRESS_DB_HOST: database
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_DB_PASSWORD: wordpress
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DEBUG: '1'
+    healthcheck:
+      test: [ 'CMD', 'curl', '--fail', '--silent', 'http://localhost/' ]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+    ports:
+      - 127.0.0.1:${AGGR_WP_PORT:-9960}:80
+    volumes:
+      - ${AGGR_PLUGIN_SOURCE:-.}:${AGGR_PLUGIN_TARGET:-/var/www/html/wp-content/plugins/aggressive-ads}
+      - ./tests/fixtures/mu-plugins:/var/www/html/wp-content/mu-plugins:ro
+      - ${AGGR_ARTIFACTS_SOURCE:-./.cache/ci/artifacts-empty}:/var/www/html/wp-content/aggr-artifacts:ro

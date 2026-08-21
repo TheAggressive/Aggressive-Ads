@@ -20,12 +20,13 @@ budgets:
 Run the regression with measurements visible:
 
 ```bash
-pnpm wp-env run tests-cli --env-cwd=wp-content/plugins/aggressive-ads \
-  env AGGR_REPORT_PERFORMANCE=1 vendor/bin/phpunit \
-  -c phpunit-integration.xml.dist --filter DeliveryScaleTest
+bash bin/ci/environment.sh exec env AGGR_REPORT_PERFORMANCE=1 \
+  php /var/www/html/wp-content/plugins/aggressive-ads/vendor/bin/phpunit \
+  -c wp-content/plugins/aggressive-ads/phpunit-integration.xml.dist \
+  --filter DeliveryScaleTest
 ```
 
-Reference result from the project wp-env container on 2026-08-14:
+Reference result from the PHP 8.4 container on 2026-08-14:
 
 ```text
 1,000-ad delivery: cold=11 queries/165.29ms warm=3 queries/1.54ms validate=5 queries/1.03ms

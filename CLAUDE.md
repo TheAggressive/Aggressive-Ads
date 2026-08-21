@@ -47,7 +47,7 @@ and deeper analytics remain open. What is built:
 - `Integration\Native\Publisher` — fill-cache bust on publish/pause/resume;
   there is no downstream ads CPT
 - Advertising → Inventory creates placements (common IAB sizes or custom WxH)
-- wp-env (dev `:9960`, tests `:9970`) and the integration/security/rest/upgrade suites
+- digest-pinned WordPress 7.1 + MySQL 8.4 Compose stack and the integration/security/rest/upgrade suites
 - PHPCS / PHPStan / PHPUnit / structural guards, wired into `bin/ci/verify.sh`
 - creative upload, two-stage private storage, the promoter, and the REST routes
 - the portal route, `Portal\Router`, `Portal\View_Data`, and the screens it
@@ -141,15 +141,15 @@ Spend stays absent until billing has a source.
 composer install        # dev tooling only; vendor/ never ships
 pnpm install            # webpack / TypeScript / Playwright
 pnpm build              # src/ → dist/
-pnpm wp-env start       # dev :9960, tests :9970
+pnpm env:start          # disposable WordPress 7.1 at :9960
 pnpm dev:seed           # an advertiser, an org and five campaigns to look at
 pnpm ci:verify          # the contract for declaring a change finished
 
 pnpm lint:php           # PHPCS
 pnpm analyse:php        # PHPStan level 8, no baseline
 pnpm test:php:unit      # unit suite — no WordPress, no database
-pnpm test:php:integration  # WP integration/security/rest/upgrade (needs wp-env)
-pnpm test:php:multisite    # colliding-id tenancy; WP_TESTS_MULTISITE (needs wp-env)
+pnpm test:php:integration  # WP integration/security/rest/upgrade (needs env:start)
+pnpm test:php:multisite    # colliding-id tenancy; WP_TESTS_MULTISITE (needs env:start)
 pnpm lint:js            # ESLint on src/
 pnpm typecheck          # tsc --noEmit
 pnpm lint:css           # Stylelint on src/styles/

@@ -6,11 +6,13 @@ import { readFile } from 'node:fs/promises';
  * here: a statement covered by either suite counts once, even when different
  * runners name the same inc/ file from different checkout roots.
  *
- * The 70% floor is a ratchet just below the measured 70.25% baseline. A test
- * in either appropriate suite can advance it; splitting a WordPress rule into
- * pure PHP is no longer the only way to keep the gate green.
+ * The 69.75% floor is a ratchet just below the measured 69.86% PCOV baseline.
+ * PCOV reports `global` declarations as executable but never marks them hit;
+ * Xdebug marks the same 53 declarations hit and reports 70.25% for these exact
+ * tests. This threshold is calibrated to the CI driver, not reduced coverage.
+ * A test in either appropriate suite can advance it.
  */
-const MIN_LINE_PERCENT = 70;
+const MIN_LINE_PERCENT = 69.75;
 const reportPaths = process.argv.slice( 2 );
 
 if ( reportPaths.length === 0 ) {

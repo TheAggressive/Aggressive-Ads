@@ -6,7 +6,7 @@
 # floor, to surface deprecations before a host upgrade does.
 #
 # This exists because development, CI and the release gate deliberately run the
-# same PHP version — 8.4 in .wp-env.json, ci.yml, phpstan.neon and the plugin's
+# same PHP version — 8.4 in compose.yml, ci.yml, phpstan.neon and the plugin's
 # own floor guard. That parity is what stops an API missing on the floor from
 # passing locally and failing in Actions, and it is worth keeping. But it also
 # means nothing in the repository ever exercises a newer PHP, so a deprecation
@@ -35,28 +35,28 @@ cd "${REPO_ROOT}"
 
 echo "=== PHP ${PHP_VERSION} forward-compatibility run ==="
 
-# wp-env reads these ahead of the committed .wp-env.json, so the parity
-# configuration stays the single source of truth for everything else.
-export WP_ENV_PHP_VERSION="${PHP_VERSION}"
+case "${PHP_VERSION}" in
+	8.5)
+		export AGGR_WORDPRESS_IMAGE='wordpress:7.1-php8.5-apache@sha256:26cc4158e9665d943362bd224a0610a1e487514a1e13aa96512366b425c0cab0'
+		export AGGR_WP_CLI_IMAGE='wordpress:cli-2.12.0-php8.5@sha256:c2685291859c333b38afdbf882c5b9abdc0423703f3a8c6539bfd5ee3e7e2656'
+		;;
+	*)
+		echo "No pinned WordPress images are declared for PHP ${PHP_VERSION}." >&2
+		exit 2
+		;;
+esac
 
-# Its own home and ports, so a scheduled run can never disturb the environment
-# `pnpm qa` depends on. Under .cache/ because every scanner here already
-# excludes that tree — a new top-level directory would silently become PHPCS
-# input.
-export WP_ENV_HOME="${REPO_ROOT}/.cache/ci/wp-env-forward"
-# 9930/9931, chosen because everything nearby is taken: the plugin's own
-# environment, the artifact environment on 9940, and — the one that actually
-# bit — an unrelated LAAO site holding 9950 on this machine. A forward run that
-# collides with a developer's other project is a forward run nobody will keep.
-export WP_ENV_PORT=9930
-export WP_ENV_TESTS_PORT=9931
+# A distinct project and port keep this scheduled run away from the normal
+# local environment without maintaining a second Compose definition.
+export AGGR_COMPOSE_PROJECT=aggressive-ads-forward
+export AGGR_WP_PORT=9930
 
 cleanup() {
-	pnpm exec wp-env stop >/dev/null 2>&1 || true
+	bash bin/ci/environment.sh stop >/dev/null 2>&1 || true
 }
 trap cleanup EXIT
 
-pnpm exec wp-env start
+bash bin/ci/environment.sh start
 
 # The suites that actually load WordPress. Static analysis is pinned to the
 # floor by phpstan.neon and says nothing about a newer runtime, so running it

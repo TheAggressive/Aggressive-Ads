@@ -26,60 +26,6 @@ location ~ ^/wp-content/uploads(?:/sites/[0-9]+)?/aggr-private(?:/|$) {
 
 Adapt the prefix when `upload_url_path` or the uploads directory is customized. After deployment, open Tools → Site Health: **Unapproved advertising creative is protected** creates a random harmless probe, requests it through the public uploads URL, requires a 401/403/404/410 response, and removes it. A 2xx response is a critical failure and creative uploads must not be accepted until the server rule is corrected.
 
-## `wp-env run --env-cwd` injects a stray `--` and breaks the command
-
-**What.** On `@wordpress/env` 10.39.0, passing `--env-cwd` puts a literal `--` at the front of the container command. What the container actually receives is `-- <your command>`, and every failure that follows is reported by the *inner* program, in its own vocabulary, naming something you did not type:
-
-```
-$ wp-env run tests-cli --env-cwd=wp-content/plugins/aggressive-ads vendor/bin/phpunit …
-Error: 'vendor/bin/phpunit' is not a registered wp command. Did you mean 'cap'?
-
-$ wp-env run tests-wordpress --env-cwd=wp-content/plugins/aggressive-ads php -v
-/usr/local/bin/docker-entrypoint.sh: line 99: exec: --: invalid option
-```
-
-Drop `--env-cwd` and the same commands work.
-
-**Cost.** It cost this repository its entire WordPress lane, silently. `pnpm test:php:integration`, `pnpm test:php:multisite` and `pnpm dev:seed` all carried `--env-cwd`, so **not one integration, security, REST, upgrade or multisite test could execute** — the run failed inside wp-env before PHPUnit was ever reached, and the error talked about wp-cli commands rather than about the suite. `bin/ci/verify.sh` even fails helpfully when Docker is down, which makes the surviving failure look like an environment problem rather than a broken invocation.
-
-**Mitigation.** No `--env-cwd` anywhere. Give the container an absolute or `/var/www/html`-relative path instead, and name the interpreter explicitly:
-
-```jsonc
-// PHP in the WordPress container — its entrypoint is a shell, so name `php`.
-"test:php:integration": "wp-env run tests-wordpress php wp-content/plugins/aggressive-ads/vendor/bin/phpunit -c wp-content/plugins/aggressive-ads/phpunit-integration.xml.dist"
-
-// WP-CLI in the cli container — name `wp`.
-"cli": "wp-env run cli wp"
-```
-
-Note the container change too: `phpunit` runs in **`tests-wordpress`**, not `tests-cli`. Both would work once `--env-cwd` is gone, but `tests-wordpress` is a plain shell entrypoint, so the command you write is the command that runs.
-
-**Also.** `wp-env run` spawns with `shell: true` and concatenates arguments without escaping (it warns about this itself, via `DEP0190`). A `;` or `|` in an argument is interpreted by **your** shell, not the container's — so `wp-env run cli bash -c 'a; b'` silently runs `b` on the host. That is worth knowing while debugging, because it makes a host result look like a container result.
-
-**Status.** Upstream behaviour; nothing to fix here beyond not using the flag. Revisit if a later `@wordpress/env` fixes the parse — the flag is more readable than repeating the plugin path.
-
-## Every integration run logs two `WP_MEMORY_LIMIT` warnings
-
-**What.** The first two lines of `pnpm test:php:integration` are always:
-
-```
-PHP Warning:  Constant WP_MEMORY_LIMIT already defined in /wordpress-phpunit/includes/bootstrap.php
-PHP Warning:  Constant WP_MAX_MEMORY_LIMIT already defined in /wordpress-phpunit/includes/bootstrap.php
-```
-
-**Cause.** `@wordpress/env` writes both constants into the tests `wp-config.php`
-unconditionally, and the WordPress core test bootstrap then defines them again.
-Both sides use the same values, so nothing behaves differently.
-
-**Cost.** Noise that looks like a defect. It was mistaken for one during Phase 1
-and "fixed" twice before being measured: removing the keys from `.wp-env.json`
-entirely, and running `wp-env start --update`, both leave the constants in place,
-because they were never ours.
-
-**Status.** Not fixable from this repository. Not a PHPUnit warning either, so
-`failOnWarning` is unaffected and the suite reports honestly. Ignore the two
-lines; do not add memory constants to `.wp-env.json` trying to silence them.
-
 ## PHPUnit is pinned to 9.6
 
 **What.** The WordPress core test suite requires PHPUnit 9.x. The LAAO theme runs PHPUnit 13 and has no integration suite for exactly this reason; this plugin needs integration tests more than it needs a modern runner.
