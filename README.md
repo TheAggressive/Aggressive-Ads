@@ -97,11 +97,11 @@ pnpm typecheck               # tsc --noEmit
 pnpm lint:css                # Stylelint on every authored CSS file under src/
 pnpm test:js                 # Jest on Interactivity helpers
 pnpm lint:files              # file length, repository boundary, permission callbacks
-pnpm ci:coverage             # quantitative unit-coverage regression gate
+pnpm ci:coverage             # combined unit + integration coverage (needs coverage-mode wp-env)
 pnpm test:e2e:browsers       # install Chromium and WebKit
 pnpm test:e2e:install        # the same, plus system libraries (needs sudo; what CI runs)
 pnpm test:e2e                # Playwright + axe (needs wp-env, after pnpm build)
-pnpm qa:fast                 # pre-push checks; no Docker or browsers
+pnpm qa:fast                 # pre-push checks; needs Docker, but not browsers
 pnpm qa                      # every CI lane, serially; needs Docker
 ```
 

@@ -33,10 +33,12 @@ The lesson both share: **assert your fixture is real before asserting on it.** T
 | JS | `jest.config.js` | — | Node |
 | E2E | `playwright.config.ts` | — | wp-env |
 
-`pnpm ci:coverage` collects the isolated unit suite with PCOV, Xdebug, or
-phpdbg and enforces an 8% statement floor across `inc/`. This is a quantitative
-regression signal; it does not replace the WordPress suites whose database and
-core interactions are deliberately outside the unit bootstrap.
+`pnpm ci:coverage` runs both the isolated unit suite and the single-site
+WordPress suites under Xdebug in wp-env. It unions their executable `inc/`
+lines, so a statement hit by either suite counts once, and enforces a 70%
+statement floor against the measured 70.25% baseline. The separate configs and
+bootstraps remain intact: collecting the unit report in the container does not
+load WordPress into that suite.
 
 Separate PHPUnit configs because **PHPUnit allows exactly one bootstrap per configuration file**. That is the reason for the split, not preference — the unit suite must not load WordPress, and the WordPress suites must. Multisite is its own file so colliding-id tests cannot `markTestSkipped()` on the single-site lane.
 

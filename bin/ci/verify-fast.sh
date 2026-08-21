@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
-# Fast pre-push gate. It covers deterministic checks that do not need Docker;
-# the full WordPress, browser, package and network audit lanes still run in CI.
+# Fast pre-push gate. It omits browsers, packaging, multisite and network
+# audits; combined coverage still needs Docker-backed wp-env.
 
 set -euo pipefail
 
@@ -14,6 +14,7 @@ pnpm lint:files
 pnpm ci:frontend
 pnpm ci:build
 pnpm ci:php
+pnpm env:start:coverage
 pnpm ci:coverage
 
 echo

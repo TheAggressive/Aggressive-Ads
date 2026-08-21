@@ -1,55 +1,85 @@
 import { readFile } from 'node:fs/promises';
 
 /*
- * This measures the UNIT suite only, which cannot load WordPress. Most of this
- * plugin's logic is org-scoped map_meta_cap, real REST authorization, dbDelta
- * and uploads — none of it expressible without a bootstrap, all of it covered
- * by the integration, rest, security and upgrade suites instead. So 8% is not
- * "barely tested"; it is the share of the codebase that is pure enough to test
- * in milliseconds, and the floor exists to stop that share shrinking.
+ * Unit and WordPress coverage are separate because PHPUnit allows one
+ * bootstrap per configuration. Their executable statement lines are unioned
+ * here: a statement covered by either suite counts once, even when different
+ * runners name the same inc/ file from different checkout roots.
  *
- * It is a ratchet, and it sits close to the current figure on purpose: adding
- * pure logic without a unit test trips it. If it trips on code that genuinely
- * needs WordPress, the fix is a test in the right suite, not a lower number.
+ * The 70% floor is a ratchet just below the measured 70.25% baseline. A test
+ * in either appropriate suite can advance it; splitting a WordPress rule into
+ * pure PHP is no longer the only way to keep the gate green.
  */
-const MIN_LINE_PERCENT = 8;
-const reportPath = process.argv[ 2 ];
+const MIN_LINE_PERCENT = 70;
+const reportPaths = process.argv.slice( 2 );
 
-if ( ! reportPath ) {
-	throw new Error( 'Usage: node bin/ci/check-coverage.mjs <clover.xml>' );
-}
-
-const xml = await readFile( reportPath, 'utf8' );
-const projectMetrics = [ ...xml.matchAll( /<metrics\b([^>]*)\/>/g ) ].at(
-	-1
-)?.[ 1 ];
-
-if ( ! projectMetrics ) {
+if ( reportPaths.length === 0 ) {
 	throw new Error(
-		`ci:coverage: no project metrics found in ${ reportPath }`
+		'Usage: node bin/ci/check-coverage.mjs <clover.xml> [clover.xml...]'
 	);
 }
 
-const attributes = Object.fromEntries(
-	[ ...projectMetrics.matchAll( /(\w+)="([^"]*)"/g ) ].map( ( match ) => [
-		match[ 1 ],
-		Number( match[ 2 ] ),
-	] )
-);
-const statements = attributes.statements ?? 0;
-const coveredStatements = attributes.coveredstatements ?? 0;
+const statementsByLocation = new Map();
 
-if ( statements === 0 ) {
-	throw new Error(
-		`ci:coverage: ${ reportPath } contains no executable statements`
-	);
+for ( const reportPath of reportPaths ) {
+	const xml = await readFile( reportPath, 'utf8' );
+	let reportStatements = 0;
+
+	for ( const file of xml.matchAll(
+		/<file name="([^"]+)">([\s\S]*?)<\/file>/g
+	) ) {
+		const normalizedPath = file[ 1 ].replaceAll( '\\', '/' );
+		const incMarker = '/inc/';
+		const incIndex = normalizedPath.lastIndexOf( incMarker );
+
+		if ( incIndex < 0 ) {
+			throw new Error(
+				`ci:coverage: ${ reportPath } contains a file outside inc/: ${ file[ 1 ] }`
+			);
+		}
+
+		const sourcePath = normalizedPath.slice( incIndex + 1 );
+
+		for ( const line of file[ 2 ].matchAll( /<line\b([^>]*)\/>/g ) ) {
+			const attributes = Object.fromEntries(
+				[ ...line[ 1 ].matchAll( /(\w+)="([^"]*)"/g ) ].map(
+					( match ) => [ match[ 1 ], match[ 2 ] ]
+				)
+			);
+
+			if ( attributes.type !== 'stmt' ) {
+				continue;
+			}
+
+			reportStatements += 1;
+			const location = `${ sourcePath }:${ attributes.num }`;
+			const covered = Number( attributes.count ) > 0;
+			statementsByLocation.set(
+				location,
+				( statementsByLocation.get( location ) ?? false ) || covered
+			);
+		}
+	}
+
+	if ( reportStatements === 0 ) {
+		throw new Error(
+			`ci:coverage: ${ reportPath } contains no executable statements`
+		);
+	}
 }
+
+const statements = statementsByLocation.size;
+const coveredStatements = [ ...statementsByLocation.values() ].filter(
+	Boolean
+).length;
 
 const percent = ( coveredStatements / statements ) * 100;
 console.log(
-	`ci:coverage: ${ coveredStatements }/${ statements } statements (${ percent.toFixed(
+	`ci:coverage: ${ coveredStatements }/${ statements } statements across ${
+		reportPaths.length
+	} reports (${ percent.toFixed( 2 ) }%; minimum ${ MIN_LINE_PERCENT.toFixed(
 		2
-	) }%; minimum ${ MIN_LINE_PERCENT.toFixed( 2 ) }%)`
+	) }%)`
 );
 
 if ( percent < MIN_LINE_PERCENT ) {

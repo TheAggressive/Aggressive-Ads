@@ -10,7 +10,7 @@ composer:verify → strict manifest/lock validation + dependency dry run
 ci:build     → pnpm build
 ci:frontend  → lint:js && typecheck && lint:css && format:check && test:js
 ci:php       → lint:php && analyse:php && test:php:unit
-ci:coverage  → unit coverage collection + quantitative regression floor
+ci:coverage  → unioned unit + integration coverage + quantitative regression floor
 ci:php:wp    → test:php:integration && test:php:multisite  (needs wp-env)
 ci:e2e       → test:e2e  (consumes the build artifact)
 ci:package   → release:package && release:verify  (consumes the build artifact)
@@ -135,9 +135,10 @@ fixing, so it belongs only on network-bound, idempotent steps. Each retry emits
 a workflow warning, so a run that only passed on the second attempt still says
 so.
 
-The build job uploads one `dist/` artifact which the E2E and package jobs both
-download. This makes the browser-tested assets the packaged assets instead of
-allowing each job to compile a different tree. The E2E job installs Playwright's
+The build job uploads one `dist/` artifact which the coverage, E2E, and package
+jobs download. This makes the integration-tested, browser-tested, and packaged
+assets identical instead of allowing each job to compile a different tree. The
+E2E job installs Playwright's
 pinned Chromium and WebKit builds, starts wp-env, and runs the same
 `pnpm ci:e2e` command as local verification. Failed runs retain
 the trace, screenshot, video, and WordPress debug log; skipped specs make the
@@ -155,15 +156,15 @@ lane fail rather than quietly reducing coverage.
 | TypeScript | `strict`, `noUncheckedIndexedAccess` |
 | Stylelint | `@wordpress/stylelint-config` |
 | File length | Warn > 800, fail > 1000, no allowlist |
-| Unit coverage | **At least 8% of executable `inc/` statements** |
+| PHP coverage | **At least 70% of executable `inc/` statements across unit + integration** |
 
 **No baseline.** A baseline is a list of known problems you have agreed to stop looking at, and it only grows. Type issues get fixed as they are introduced, while the context is still in someone's head.
 
-The coverage floor is intentionally a regression guard, not a claim that 8% is
-enough coverage. The database, REST, authorization, lifecycle, and multisite
-behavior lives in the WordPress suites and cannot be measured by the isolated
-unit runner. New behavior still needs the appropriate focused test; the floor
-prevents the measurable unit-tested surface from silently shrinking.
+The coverage floor is a regression guard set just below the measured 70.25%
+baseline, not a substitute for a focused test. The checker unions statements
+from the isolated unit report and the single-site WordPress report, normalizing
+their checkout paths and counting a statement hit by either suite once.
+Multisite remains a separate behavioral gate rather than part of this metric.
 
 `lint:files` bundles the structural gates that are not really lint:
 
@@ -509,7 +510,9 @@ The hooks mirror the Aggressive theme's development cycle:
 - `commit-msg` enforces Conventional Commits so release history stays
   machine-readable.
 - `pre-push` runs `pnpm qa:fast`: toolchain and lock validation, repository
-  contracts, frontend checks, build, PHP quality/tests, and unit coverage.
+  contracts, frontend checks, build, PHP quality/tests, and combined coverage.
+  Coverage starts Docker-backed wp-env with Xdebug; browser provisioning and
+  browser tests remain outside this hook.
 - `pnpm qa` is the full release rehearsal, including Docker-backed WordPress,
   Playwright browser/system-dependency provisioning, browser tests, and the
   packaging lane.
