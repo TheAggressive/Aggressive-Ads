@@ -90,11 +90,22 @@ mapfile -t discovery < <(
 
 				if (1 === matches.length) {
 					const match = matches[0];
+
+					/*
+					 * The url Studio reports, never one assembled here.
+					 *
+					 * This used to fall back to "http://localhost:" + port,
+					 * which quietly produces the wrong scheme for a site with
+					 * enableHttps set — and a base URL that is wrong in the
+					 * scheme fails every spec for a reason none of them name.
+					 * If Studio does not say, this script does not guess.
+					 */
 					process.stdout.write(
-						"ok\n" +
+						(match.url ? "ok" : "nourl") +
+							"\n" +
 							pathOf(match) +
 							"\n" +
-							(match.url ?? "http://localhost:" + match.port) +
+							(match.url ?? "") +
 							"\n"
 					);
 					process.exit(0);
@@ -114,7 +125,18 @@ mapfile -t discovery < <(
 case "${discovery[0]:-}" in
 	ok)
 		site_path="${discovery[1]}"
-		base_url="${discovery[2]}"
+		base_url="${AGGR_STUDIO_URL:-${discovery[2]}}"
+		;;
+	nourl)
+		site_path="${discovery[1]}"
+		base_url="${AGGR_STUDIO_URL:-}"
+
+		if [[ -z "${base_url}" ]]; then
+			echo "studio-e2e: Studio reported no URL for ${discovery[1]}." >&2
+			echo "Start the site in Studio so it is assigned one, or set" >&2
+			echo "AGGR_STUDIO_URL to the address it serves." >&2
+			exit 1
+		fi
 		;;
 	ambiguous)
 		echo "studio-e2e: ${#discovery[@]} Studio sites serve this checkout:" >&2
@@ -160,7 +182,10 @@ if [[ "${AGGR_STUDIO_E2E_ALLOW:-}" != "1" && ! -e "${site_path}/.aggr-e2e-site" 
 	exit 1
 fi
 
-studio site start --path "${site_path}"
+# stdout is dropped, stderr is not. `studio site start` prints the site's admin
+# username and password on success, and this script's output ends up in qa:local
+# logs that get pasted into issues.
+studio site start --path "${site_path}" >/dev/null
 
 served_plugin="$(
 	studio wp --path "${site_path}" eval \

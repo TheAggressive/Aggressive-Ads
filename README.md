@@ -84,8 +84,11 @@ pnpm qa:fresh         # recreate the environment, then run the same rehearsal
 
 `qa:local` discovers the Studio site whose
 `wp-content/plugins/aggressive-ads` resolves to this checkout, starts it, and
-runs Playwright against its real URL. Set `AGGR_STUDIO_PATH=/path/to/site` when
-two sites serve the checkout and the runner asks you to choose.
+runs Playwright against the URL Studio reports for it — never one assembled
+from a port, which would get the scheme wrong for a site with HTTPS enabled. Set
+`AGGR_STUDIO_PATH=/path/to/site` when two sites serve the checkout and the runner
+asks you to choose, and `AGGR_STUDIO_URL` when Studio reports no address or you
+need to override the one it gives.
 
 That site has to opt in before anything runs, because the suite resets the
 `admin` and `advertiser` passwords to match its fixtures and seeds fixture

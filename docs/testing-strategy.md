@@ -167,7 +167,9 @@ pnpm qa:fresh                 # recreate containers/database, then run all gates
 
 The Studio plugin directory must resolve to this checkout; a symlink is the
 normal arrangement. `qa:local` discovers that site automatically, or accepts
-`AGGR_STUDIO_PATH=/path/to/site` when more than one site matches.
+`AGGR_STUDIO_PATH=/path/to/site` when more than one site matches. The base URL
+is whatever `studio site list` reports for that site; `AGGR_STUDIO_URL` overrides
+it, and a site Studio gives no URL for is refused rather than guessed at.
 
 The site must opt in — `.aggr-e2e-site` in its root, or
 `AGGR_STUDIO_E2E_ALLOW=1` — because the setup mutates it. Two of those
