@@ -46,6 +46,24 @@ if [ "${AGGR_TESTS_RUNNER:-docker}" = "native" ]; then
 		--log-junit "${report}" \
 		"$@" || status=$?
 else
+	# Point at the native runner rather than let Docker's own connection error
+	# be the whole answer. `test:php:integration` is the name a person reaches
+	# for first, and on a machine that deliberately has no Docker it fails with
+	# a daemon-socket message that says nothing about the suite that does run
+	# there. A no-op in CI, where the daemon is up.
+	#
+	# The probe runs in a subshell whose stderr is discarded because the docker
+	# CLI does not always fail cleanly: with Docker Desktop stopped under WSL it
+	# dies of SIGBUS, and the shell then prints "Bus error (core dumped)" over
+	# the instruction below. Redirecting docker's own output is not enough — the
+	# message comes from the shell that reaps it.
+	if ! ( docker info >/dev/null 2>&1 ) 2>/dev/null; then
+		echo "run-wp-tests: ${config} runs inside the Compose stack, and Docker is not available." >&2
+		echo "  Locally: pnpm test:php:native runs these same suites on a local MySQL." >&2
+		echo "  The containerized run is a CI lane. See docs/testing-strategy.md." >&2
+		exit 1
+	fi
+
 	# PHPUnit runs as root so it can write reports into the host checkout.
 	# Restore anything it creates under uploads to the same user that serves
 	# web requests.
