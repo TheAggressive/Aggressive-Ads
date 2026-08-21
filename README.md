@@ -74,18 +74,36 @@ production autoloader is `inc/class-autoloader.php`. See
 ```bash
 composer install      # PHPCS, PHPStan, PHPUnit — vendor/ never ships
 pnpm install          # frontend tools + staged-file Git hooks
-pnpm env:start        # disposable WordPress 7.1 at http://localhost:9960
 pnpm build            # src/ → dist/
 pnpm dev:seed         # an advertiser, an org, and five campaigns
-pnpm qa:fast          # deterministic pre-push quality gate
-pnpm qa               # every required CI gate against the current environment
+pnpm qa:fast          # Docker-free code quality and unit gate
+pnpm qa:local         # qa:fast + browser workflows against WordPress Studio
+pnpm qa               # exact containerized CI rehearsal
 pnpm qa:fresh         # recreate the environment, then run the same rehearsal
 ```
 
-Docker Compose mounts this checkout into the pinned Docker Official WordPress
-image and starts a disposable MySQL database. Sign in as the seeded advertiser
-at `/advertiser/login/`; staff use wp-admin. This stack is only for testing and
-does not dictate the WordPress environment used for daily development.
+`qa:local` discovers the Studio site whose
+`wp-content/plugins/aggressive-ads` resolves to this checkout, starts it, and
+runs Playwright against its real URL. Set `AGGR_STUDIO_PATH=/path/to/site` when
+two sites serve the checkout and the runner asks you to choose.
+
+That site has to opt in before anything runs, because the suite resets the
+`admin` and `advertiser` passwords to match its fixtures and seeds fixture
+campaigns — and nothing puts either back:
+
+```bash
+touch /path/to/studio/site/.aggr-e2e-site   # or: AGGR_STUDIO_E2E_ALLOW=1
+```
+
+Theme, `home`, `siteurl`, permalink structure and the mail-capture mu-plugin
+are captured up front and restored on the way out, whether Playwright passes or
+fails.
+
+Docker Compose remains the reproducible CI environment. It mounts this
+checkout into the pinned Docker Official WordPress image and starts a
+disposable MySQL database; local Studio uses SQLite, so MySQL integration,
+multisite, combined coverage, release-artifact, and forward-PHP checks remain
+authoritative in GitHub CI and available locally through `pnpm qa`.
 
 ## Commands
 
@@ -104,7 +122,9 @@ pnpm ci:coverage             # combined unit + integration PCOV coverage
 pnpm test:e2e:browsers       # install Chromium and WebKit
 pnpm test:e2e:install        # the same, plus system libraries (needs sudo; what CI runs)
 pnpm test:e2e                # Playwright + axe (after pnpm build and env:start)
-pnpm qa:fast                 # pre-push checks; needs Docker, but not browsers
+pnpm test:e2e:studio         # Playwright + axe against the current Studio site
+pnpm qa:fast                 # Docker-free pre-push code and unit checks
+pnpm qa:local                # qa:fast + Studio browser workflows
 pnpm qa                      # every CI lane, serially; requires a clean worktree
 pnpm qa:fresh                # clean database/container rehearsal
 pnpm env:stop                # remove the disposable containers and database
@@ -115,7 +135,9 @@ derives its commands from that workflow so the two cannot drift.
 
 `pnpm install` enables the repository's Git hooks. Pre-commit formats and
 re-stages only selected files, commit-msg enforces Conventional Commits, and
-pre-push runs `pnpm qa:fast`. The full `pnpm qa` rehearsal installs Playwright's
+pre-push runs `pnpm qa:fast`, which needs no Docker at all — ShellCheck comes
+from a checksum-pinned binary in `.cache/ci/`, the same way the i18n lane gets
+WP-CLI. Run `pnpm qa:local` when a change touches a browser workflow. The full `pnpm qa` rehearsal installs Playwright's
 browsers but not their system libraries, so it never asks for a password; CI
 installs those with `--with-deps` on a bare runner. See
 [build-and-release.md](docs/build-and-release.md) for the CI graph, release

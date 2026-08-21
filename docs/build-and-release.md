@@ -8,7 +8,7 @@
 ci:doctor    → node bin/ci/doctor.mjs
 composer:verify → strict manifest/lock validation + dependency dry run
 ci:build     → pnpm build
-ci:frontend  → lint:js && typecheck && lint:css && format:check && test:js
+ci:frontend  → lint:js && typecheck && lint:css && format:check && lint:shell && test:tools && test:js
 ci:php       → lint:php && analyse:php && test:php:unit
 ci:coverage  → one integration run + unit coverage + quantitative regression floor
 ci:php:wp    → test:php:multisite
@@ -508,10 +508,17 @@ The hooks mirror the Aggressive theme's development cycle:
   autofixes, then rejects whitespace errors.
 - `commit-msg` enforces Conventional Commits so release history stays
   machine-readable.
-- `pre-push` runs `pnpm qa:fast`: toolchain and lock validation, repository
-  contracts, frontend checks, build, PHP quality/tests, and combined coverage.
-  Coverage starts Docker-backed WordPress with PCOV; browser provisioning and
-  browser tests remain outside this hook.
+- `pre-push` runs the Docker-free `pnpm qa:fast`: toolchain and lock validation,
+  repository contracts, frontend checks, build, and PHP quality/unit tests.
+  ShellCheck runs from a checksum-pinned binary fetched into `.cache/ci/` by
+  `bin/ci/install-shellcheck.sh`; the digest-pinned container image in
+  `bin/check-shell.sh` now covers only platforms with no pinned build. Bump the
+  two versions together.
+- `pnpm qa:local` adds the real browser workflows against the Studio site that
+  serves this checkout. That site must opt in first — `.aggr-e2e-site` in its
+  root, or `AGGR_STUDIO_E2E_ALLOW=1` — because the suite resets the `admin` and
+  `advertiser` passwords there and does not put them back. MySQL integration and
+  coverage remain CI concerns.
 - `pnpm qa` is the full release rehearsal, including Docker-backed WordPress,
   Playwright browser/system-dependency provisioning, browser tests, and the
   packaging lane.

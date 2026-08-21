@@ -63,6 +63,8 @@ PACKAGE_REQUIRED=(
 	dist/blocks/placement/block.json
 	dist/blocks/placement/index.js
 	dist/blocks/placement/index.asset.php
+	dist/blocks/placement/index.css
+	dist/blocks/placement/style-index.css
 	dist/blocks/placement/view.js
 	dist/blocks/placement/view.asset.php
 	dist/styles/portal.css

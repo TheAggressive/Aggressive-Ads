@@ -7,6 +7,7 @@ import { wp } from './wp-cli';
  */
 test( 'a new advertiser requests an account without submitting a password', async ( {
 	page,
+	baseURL,
 } ) => {
 	await page.goto( '/advertiser/login/' );
 	await page.getByRole( 'link', { name: 'Create an account' } ).click();
@@ -56,10 +57,11 @@ test( 'a new advertiser requests an account without submitting a password', asyn
 		wp( 'option', 'get', 'aggr_dev_last_mail', '--format=json' ).trim()
 	) as { message: string };
 	const setupLink = mail.message.match(
-		/http:\/\/localhost:9960\/advertiser\/set-password\/\?[^\s]+/
+		/https?:\/\/[^\s]+\/advertiser\/set-password\/\?[^\s]+/
 	)?.[ 0 ];
 
 	expect( setupLink ).toBeTruthy();
+	expect( new URL( setupLink! ).origin ).toBe( new URL( baseURL! ).origin );
 	expect( setupLink ).not.toContain( 'wp-login.php' );
 
 	await page.goto( setupLink! );
@@ -156,9 +158,10 @@ test( 'a new advertiser requests an account without submitting a password', asyn
 		wp( 'option', 'get', 'aggr_dev_last_mail', '--format=json' ).trim()
 	) as { message: string };
 	const inviteLink = inviteMail.message.match(
-		/http:\/\/localhost:9960\/advertiser\/signup\/\?invite=[A-Za-z0-9_-]{43}/
+		/https?:\/\/[^\s]+\/advertiser\/signup\/\?invite=[A-Za-z0-9_-]{43}/
 	)?.[ 0 ];
 	expect( inviteLink ).toBeTruthy();
+	expect( new URL( inviteLink! ).origin ).toBe( new URL( baseURL! ).origin );
 
 	const inviteResponse = await page.goto( inviteLink! );
 	expect( inviteResponse?.headers()[ 'referrer-policy' ] ).toBe(

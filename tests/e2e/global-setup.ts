@@ -11,8 +11,7 @@ export default function globalSetup(): void {
 	wp( 'option', 'update', 'aggr_dev_mail_capture', '1' );
 	wp( 'option', 'delete', 'aggr_dev_last_mail' );
 	wpPluginFile( 'tests/e2e/seed-mappings.php' );
-	wp( 'user', 'update', 'advertiser', '--user_pass=advertiser' );
-	wp( 'user', 'update', 'admin', '--user_pass=admin' );
+	wpPluginFile( 'tests/e2e/seed-users.php' );
 	wp( 'theme', 'activate', 'twentytwentyfive' );
 	// A fresh WordPress has an empty permalink_structure. Activation hard-flushes
 	// plugin rules but does not change that setting, so Apache still has no

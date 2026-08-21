@@ -143,6 +143,7 @@ pnpm install            # webpack / TypeScript / Playwright
 pnpm build              # src/ → dist/
 pnpm env:start          # disposable WordPress 7.1 at :9960
 pnpm dev:seed           # an advertiser, an org and five campaigns to look at
+pnpm qa:local           # Docker-free checks + E2E against WordPress Studio
 pnpm ci:verify          # the contract for declaring a change finished
 
 pnpm lint:php           # PHPCS

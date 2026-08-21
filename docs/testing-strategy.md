@@ -31,7 +31,7 @@ The lesson both share: **assert your fixture is real before asserting on it.** T
 | `upgrade` | same | same | same |
 | `multisite` | `phpunit-multisite.xml.dist` | `tests/php/bootstrap-wp.php` + `WP_TESTS_MULTISITE` | same, as a network |
 | JS | `jest.config.js` | — | Node |
-| E2E | `playwright.config.ts` | — | WordPress 7.1 Compose stack |
+| E2E | `playwright.config.ts` | — | WordPress Studio locally; WordPress 7.1 Compose in CI |
 
 `pnpm ci:coverage` runs both the isolated unit suite and the single-site
 WordPress suites under PCOV in the official-image container. It unions their executable `inc/`
@@ -156,6 +156,25 @@ pnpm test:js
 pnpm test:e2e:browsers        # install browsers; what pnpm qa runs
 pnpm test:e2e:install         # the same, plus system libraries (needs sudo; what CI runs)
 pnpm test:e2e                 # needs env:start; setup seeds its own data
+pnpm test:e2e:studio          # starts/discovers Studio and runs the same browser specs
+pnpm qa:fast                  # Docker-free code quality, build and unit checks
+pnpm qa:local                 # qa:fast + the Studio browser workflow
 pnpm ci:verify                # everything, serially, as CI would
 pnpm qa:fresh                 # recreate containers/database, then run all gates
 ```
+
+The Studio plugin directory must resolve to this checkout; a symlink is the
+normal arrangement. `qa:local` discovers that site automatically, or accepts
+`AGGR_STUDIO_PATH=/path/to/site` when more than one site matches.
+
+The site must opt in — `.aggr-e2e-site` in its root, or
+`AGGR_STUDIO_E2E_ALLOW=1` — because the setup mutates it. Two of those
+mutations are permanent: `tests/e2e/seed-users.php` resets the `admin` and
+`advertiser` passwords to the fixture values, and the seeds write fixture
+campaigns, an organization and a placement. The reversible ones — theme, `home`,
+`siteurl`, permalink structure, the mail-capture mu-plugin — are captured before
+the run and restored afterwards on success and on failure, and a failed restore
+turns a passing run red rather than reporting a site it left half-changed.
+
+The PHP integration suite does not run against Studio's SQLite database because
+its schema and `dbDelta` assertions are specifically MySQL behavior.
