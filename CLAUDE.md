@@ -149,6 +149,7 @@ pnpm ci:verify          # the contract for declaring a change finished
 pnpm lint:php           # PHPCS
 pnpm analyse:php        # PHPStan level 8, no baseline
 pnpm test:php:unit      # unit suite — no WordPress, no database
+pnpm test:php:native    # the WP suites natively: local MySQL, no Docker
 pnpm test:php:integration  # WP integration/security/rest/upgrade (needs env:start)
 pnpm test:php:multisite    # colliding-id tenancy; WP_TESTS_MULTISITE (needs env:start)
 pnpm lint:js            # ESLint on src/

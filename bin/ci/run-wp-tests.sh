@@ -13,6 +13,13 @@
 # report only exists if PHPUnit reached the end of the run. A missing or
 # incomplete report is treated as a failure rather than as an absence of news.
 #
+# Two runners, one report check. AGGR_TESTS_RUNNER=native runs PHPUnit on this
+# host against bin/local/mysql.sh; anything else runs it inside the Compose
+# stack, which is what CI does and what the default stays. The verification
+# below is deliberately shared: it is the half that catches a suite dying
+# mid-run, and a runner that skipped it would be the one place that could
+# report a clean pass over ten dead test classes again.
+#
 # Usage: run-wp-tests.sh <config-file> [extra phpunit args…]
 
 set -euo pipefail
@@ -28,21 +35,33 @@ report="build/test-results/$(basename "${config}" .xml.dist).xml"
 mkdir -p "$(dirname "${report}")"
 rm -f "${report}"
 
-# PHPUnit runs as root so it can write reports into the host checkout. Restore
-# anything it creates under uploads to the same user that serves web requests.
-restore_web_ownership() {
-	bash bin/ci/environment.sh exec \
-		chown -R www-data:www-data /var/www/html/wp-content/uploads \
-		>/dev/null 2>&1 || true
-}
-trap restore_web_ownership EXIT
-
 status=0
-bash bin/ci/environment.sh exec \
-	php "/var/www/html/${plugin_path}/vendor/bin/phpunit" \
-	-c "${plugin_path}/${config}" \
-	--log-junit "${plugin_path}/${report}" \
-	"$@" || status=$?
+
+if [ "${AGGR_TESTS_RUNNER:-docker}" = "native" ]; then
+	# bin/local/wp-tests.sh has already exported AGGR_TESTS_* and pointed
+	# WP_PHPUNIT__TESTS_CONFIG at this checkout's config. Paths are host paths,
+	# and nothing here needs root, so there is no ownership to restore.
+	vendor/bin/phpunit \
+		-c "${config}" \
+		--log-junit "${report}" \
+		"$@" || status=$?
+else
+	# PHPUnit runs as root so it can write reports into the host checkout.
+	# Restore anything it creates under uploads to the same user that serves
+	# web requests.
+	restore_web_ownership() {
+		bash bin/ci/environment.sh exec \
+			chown -R www-data:www-data /var/www/html/wp-content/uploads \
+			>/dev/null 2>&1 || true
+	}
+	trap restore_web_ownership EXIT
+
+	bash bin/ci/environment.sh exec \
+		php "/var/www/html/${plugin_path}/vendor/bin/phpunit" \
+		-c "${plugin_path}/${config}" \
+		--log-junit "${plugin_path}/${report}" \
+		"$@" || status=$?
+fi
 
 if [ "${status}" -ne 0 ]; then
 	echo "run-wp-tests: ${config} failed (exit ${status})" >&2

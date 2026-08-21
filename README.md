@@ -77,7 +77,7 @@ pnpm install          # frontend tools + staged-file Git hooks
 pnpm build            # src/ → dist/
 pnpm dev:seed         # an advertiser, an org, and five campaigns
 pnpm qa:fast          # Docker-free code quality and unit gate
-pnpm qa:local         # qa:fast + browser workflows against WordPress Studio
+pnpm qa:local         # qa:fast + the WordPress suites + Studio browser workflows
 pnpm qa               # exact containerized CI rehearsal
 pnpm qa:fresh         # recreate the environment, then run the same rehearsal
 ```
@@ -122,9 +122,11 @@ pnpm ci:coverage             # combined unit + integration PCOV coverage
 pnpm test:e2e:browsers       # install Chromium and WebKit
 pnpm test:e2e:install        # the same, plus system libraries (needs sudo; what CI runs)
 pnpm test:e2e                # Playwright + axe (after pnpm build and env:start)
+pnpm test:php:native         # the WP suites natively; no Docker, no sudo
+pnpm db:local                # start|stop|status|destroy the local test MySQL
 pnpm test:e2e:studio         # Playwright + axe against the current Studio site
 pnpm qa:fast                 # Docker-free pre-push code and unit checks
-pnpm qa:local                # qa:fast + Studio browser workflows
+pnpm qa:local                # qa:fast + native WP suites + Studio browser workflows
 pnpm qa                      # every CI lane, serially; requires a clean worktree
 pnpm qa:fresh                # clean database/container rehearsal
 pnpm env:stop                # remove the disposable containers and database

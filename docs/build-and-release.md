@@ -514,8 +514,10 @@ The hooks mirror the Aggressive theme's development cycle:
   `bin/ci/install-shellcheck.sh`; the digest-pinned container image in
   `bin/check-shell.sh` now covers only platforms with no pinned build. Bump the
   two versions together.
-- `pnpm qa:local` adds the real browser workflows against the Studio site that
-  serves this checkout. That site must opt in first — `.aggr-e2e-site` in its
+- `pnpm qa:local` adds the WordPress suites on a local MySQL (`test:php:native`)
+  and the real browser workflows against the Studio site that serves this
+  checkout. Neither claims CI parity: the native runner uses the host's MySQL and
+  PHP rather than the pinned 8.4 pair, and says so at the end of every run. That site must opt in first — `.aggr-e2e-site` in its
   root, or `AGGR_STUDIO_E2E_ALLOW=1` — because the suite resets the `admin` and
   `advertiser` passwords there and does not put them back. MySQL integration and
   coverage remain CI concerns.

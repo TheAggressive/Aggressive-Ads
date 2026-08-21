@@ -156,6 +156,8 @@ pnpm test:js
 pnpm test:e2e:browsers        # install browsers; what pnpm qa runs
 pnpm test:e2e:install         # the same, plus system libraries (needs sudo; what CI runs)
 pnpm test:e2e                 # needs env:start; setup seeds its own data
+pnpm test:php:native          # the WP suites on local MySQL; no Docker, no sudo
+pnpm db:local stop            # stop that MySQL (also: start|status|destroy)
 pnpm test:e2e:studio          # starts/discovers Studio and runs the same browser specs
 pnpm qa:fast                  # Docker-free code quality, build and unit checks
 pnpm qa:local                 # qa:fast + the Studio browser workflow
@@ -178,3 +180,35 @@ turns a passing run red rather than reporting a site it left half-changed.
 
 The PHP integration suite does not run against Studio's SQLite database because
 its schema and `dbDelta` assertions are specifically MySQL behavior.
+
+### The native runner
+
+`pnpm test:php:native` runs the same integration and multisite suites on this
+host — no Docker and no sudo. `bin/local/mysql.sh` initializes a private datadir
+under `.cache/ci/mysql` and listens on port 13306, so a masked or running system
+`mysql.service` is neither required nor disturbed; `bin/local/wp-core.sh` fetches
+the WordPress release `compose.yml` pins and refuses to proceed if the two ever
+drift apart.
+
+`tests/wp-tests-config.php` is one file for both runners: every value defaults to
+the Compose stack, and the native runner overrides `AGGR_TESTS_*`. Two copies of
+a database configuration is how two runners start testing different things.
+
+`bin/ci/run-wp-tests.sh` branches on `AGGR_TESTS_RUNNER` (default `docker`) but
+shares the JUnit-report verification, because that is the half that catches a
+suite dying mid-run.
+
+**This is a feedback loop, not a CI substitute.** CI pins MySQL 8.4 and PHP 8.4;
+the native runner uses whatever the host has, and prints both versions at the end
+of every run so a local-vs-CI disagreement costs a glance rather than an
+afternoon. The schema and `dbDelta` assertions are the ones that can legitimately
+differ. `pnpm qa` against the Compose stack remains the contract for declaring a
+change finished.
+
+One requirement is not obvious: the checkout must sit inside a directory that
+looks like a plugins directory. The multisite suite calls
+`activate_plugin( plugin_basename( AGGR_PLUGIN_FILE ) )`, and `plugin_basename()`
+resolves a path only by stripping `WP_PLUGIN_DIR` — the bootstrap loads this
+plugin straight from the checkout rather than through
+`wp_register_plugin_realpath()`, so a symlink into `wp-content/plugins` does not
+help and five tests die with "Plugin file does not exist".
