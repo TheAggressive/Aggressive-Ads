@@ -1,0 +1,70 @@
+.aggr-slot__canvas[data-aggr-editor-preview] {
+	align-items: center;
+	background: color-mix( in srgb, currentcolor 4%, transparent );
+	border: 1px dashed color-mix( in srgb, currentcolor 24%, transparent );
+	box-sizing: border-box;
+	display: grid;
+	justify-items: center;
+	min-height: 120px;
+	min-width: 0;
+}
+
+.aggr-slot__canvas[data-aggr-editor-preview='configured'] {
+	border-style: solid;
+}
+
+.aggr-slot__hint {
+	color: color-mix( in srgb, currentcolor 68%, transparent );
+	font-size: 0.8em;
+	line-height: 1.4;
+	margin: 0;
+}
+
+.aggr-slot__loading {
+	display: grid;
+	padding: 2rem;
+	place-items: center;
+}
+
+.aggr-slot__picker {
+	margin-top: 1rem;
+	max-width: 28rem;
+	width: 100%;
+}
+
+.aggr-slot__preview {
+	box-sizing: border-box;
+	display: grid;
+	gap: 0.35rem;
+	justify-items: center;
+	padding: 1rem;
+	text-align: center;
+	width: 100%;
+}
+
+.aggr-slot__preview-name {
+	font-size: 0.95em;
+	font-weight: 600;
+	line-height: 1.3;
+}
+
+.aggr-slot__preview-size {
+	background: color-mix( in srgb, currentcolor 8%, transparent );
+	border-radius: 999px;
+	font-size: 0.8em;
+	font-variant-numeric: tabular-nums;
+	line-height: 1.2;
+	padding: 0.15rem 0.55rem;
+}
+
+.aggr-slot__preview-note {
+	color: color-mix( in srgb, currentcolor 68%, transparent );
+	font-size: 0.78em;
+	line-height: 1.35;
+}
+
+.aggr-slot__preview .components-notice {
+	justify-self: stretch;
+	margin-bottom: 0.35rem;
+	text-align: start;
+}

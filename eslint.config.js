@@ -1,4 +1,5 @@
 import js from '@eslint/js';
+import reactPlugin from 'eslint-plugin-react';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
 
@@ -33,6 +34,12 @@ export default [
 				URLSearchParams: 'readonly',
 				HTMLElement: 'readonly',
 			},
+		},
+		plugins: {
+			react: reactPlugin,
+		},
+		rules: {
+			'react/jsx-uses-vars': 'error',
 		},
 	},
 	{

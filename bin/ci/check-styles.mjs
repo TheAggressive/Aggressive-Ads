@@ -21,7 +21,7 @@
  * Two rules, both narrow enough to have no false positives worth an allowlist:
  *
  *   1. Every `aggr-*` class named in a `class=` or `className=` attribute
- *      resolves to a selector somewhere in `src/styles/`.
+ *      resolves to a selector in an authored stylesheet under `src/`.
  *   2. Every `var(--aggr-*)` read anywhere resolves to a declaration.
  *
  * Dynamic names are handled as prefixes: `aggr-pill--${status}` requires only
@@ -34,7 +34,7 @@ import path from 'node:path';
 import process from 'node:process';
 
 const ROOT = path.resolve( import.meta.dirname, '../..' );
-const STYLE_DIR = path.join( ROOT, 'src/styles' );
+const STYLE_ROOT = path.join( ROOT, 'src' );
 
 /** Where markup lives. Anything here may name a class. */
 const MARKUP_DIRS = [
@@ -98,7 +98,7 @@ async function declared() {
 	const classes = new Set();
 	const tokens = new Set();
 
-	for ( const file of await filesIn( STYLE_DIR, [ '.css' ] ) ) {
+	for ( const file of await filesIn( STYLE_ROOT, [ '.css' ] ) ) {
 		const css = await readFile( file, 'utf8' );
 
 		for ( const match of css.matchAll( /\.(aggr-[\w-]+)/g ) ) {
@@ -210,7 +210,7 @@ async function main() {
 			for ( const used of new Set( classesUsed( source ) ) ) {
 				if ( ! isDefined( used, classes ) ) {
 					problems.push(
-						`${ relative }: class "${ used }" has no rule in src/styles/`
+						`${ relative }: class "${ used }" has no rule under src/`
 					);
 				}
 			}
@@ -219,7 +219,7 @@ async function main() {
 
 	// Tokens are read from stylesheets and from inline styles in components.
 	const readers = [
-		...( await filesIn( STYLE_DIR, [ '.css' ] ) ),
+		...( await filesIn( STYLE_ROOT, [ '.css' ] ) ),
 		...(
 			await Promise.all(
 				MARKUP_DIRS.map( ( dir ) =>

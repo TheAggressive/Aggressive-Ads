@@ -39,6 +39,7 @@
 		"concurrently": "^9.2.4",
 		"conventional-changelog-conventionalcommits": "^10.2.1",
 		"eslint": "^9.39.5",
+		"eslint-plugin-react": "^7.37.5",
 		"fast-glob": "^3.3.3",
 		"husky": "^9.1.7",
 		"jest-environment-jsdom": "30.4.1",
@@ -97,6 +98,7 @@
 		"test:e2e:install:chromium": "bash bin/ci/retry.sh 2 playwright install --with-deps chromium",
 		"test:e2e:browsers": "playwright install chromium webkit",
 		"test:e2e": "playwright test",
+		"test:e2e:studio": "bash bin/local/studio-e2e.sh",
 		"ci:doctor": "node bin/ci/doctor.mjs",
 		"ci:coverage": "bash bin/ci/run-coverage.sh",
 		"ci:security": "node bin/ci/check-patched-dependencies.mjs && composer audit --locked --no-interaction && pnpm audit --audit-level moderate --ignore GHSA-xcpc-8h2w-3j85",
@@ -116,6 +118,7 @@
 		"qa:lanes": "node bin/ci/lanes.mjs",
 		"qa:fresh": "pnpm env:stop && pnpm env:start && pnpm ci:verify",
 		"qa:fast": "bash bin/ci/verify-fast.sh",
+		"qa:local": "bash bin/local/verify.sh",
 		"precommit": "lint-staged",
 		"ci:verify": "bash bin/ci/verify.sh"
 	},

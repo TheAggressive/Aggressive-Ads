@@ -96,6 +96,9 @@ importers:
       eslint:
         specifier: 9.39.5
         version: 9.39.5(jiti@2.6.1)
+      eslint-plugin-react:
+        specifier: ^7.37.5
+        version: 7.37.5(eslint@9.39.5(jiti@2.6.1))
       fast-glob:
         specifier: ^3.3.3
         version: 3.3.3
