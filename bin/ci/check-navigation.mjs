@@ -23,11 +23,20 @@ import path from 'node:path';
 import process from 'node:process';
 
 const ROOT = path.resolve( import.meta.dirname, '../..' );
-const SOURCE_DIR = path.join( ROOT, 'src' );
+
+/*
+ * Overridable only so this lane's own tests can point it at fixtures, the same
+ * reason bin/check-shell.sh takes AGGR_SHELL_SCAN_DIR. A guard whose sink
+ * patterns nobody exercises is a guard that rots into permitting everything,
+ * and the failure is silent by construction.
+ */
+const SOURCE_DIR =
+	process.env.AGGR_NAVIGATION_SCAN_DIR ?? path.join( ROOT, 'src' );
+
 const EXTENSIONS = [ '.ts', '.tsx', '.js', '.jsx' ];
 
-/** The only module permitted to perform a navigation. */
-const GATEWAY = 'src/admin/shared/navigate.ts';
+/** The only module permitted to perform a navigation, relative to SOURCE_DIR. */
+const GATEWAY = 'admin/shared/navigate.ts';
 
 /*
  * Assignments and calls, not reads. `new URL( window.location.href )` is fine —
@@ -72,6 +81,13 @@ async function filesIn( dir ) {
 				return [];
 			}
 
+			// isFile(), not "anything that is not a directory". A symlink
+			// reports neither, and one pointing at a directory whose name ends
+			// in .ts made this crash with EISDIR rather than report a finding.
+			if ( ! entry.isFile() ) {
+				return [];
+			}
+
 			return EXTENSIONS.includes( path.extname( entry.name ) )
 				? [ full ]
 				: [];
@@ -95,7 +111,7 @@ async function main() {
 	let gatewaySeen = false;
 
 	for ( const file of files ) {
-		const relative = path.relative( ROOT, file );
+		const relative = path.relative( SOURCE_DIR, file );
 		const source = await readFile( file, 'utf8' );
 		const lines = source.split( '\n' );
 

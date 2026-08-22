@@ -41,6 +41,7 @@ final class SettingsSchemaTest extends TestCase {
 		$this->assertSame( 30, $defaults['delivery']['fill_ttl'] );
 		$this->assertSame( Settings_Schema::HOUSE_WHEN_EMPTY, $defaults['delivery']['house_policy'] );
 		$this->assertSame( 90, $defaults['tracking']['retention_days'] );
+		$this->assertSame( 30, $defaults['creative']['retention_days'] );
 	}
 
 	/**
@@ -240,6 +241,77 @@ final class SettingsSchemaTest extends TestCase {
 		$result = Settings_Schema::validate( $input );
 
 		$this->assertFalse( $result['ok'] );
+		$this->assertContains( 'retention_days', $result['errors'] );
+	}
+
+	/**
+	 * Creative retention has its own bounds, and its own error key.
+	 *
+	 * Seven days is legal here and rejected for tracking, which is the point of
+	 * two windows rather than one: what they delete differs in kind, so their
+	 * floors do too. A shared error key would also make the settings screen
+	 * mark the wrong field.
+	 *
+	 * @return void
+	 */
+	public function test_creative_retention_bounds_differ_from_tracking(): void {
+		$input                               = Settings_Schema::defaults();
+		$input['creative']['retention_days'] = Settings_Schema::MIN_CREATIVE_RETENTION_DAYS;
+
+		$result = Settings_Schema::validate( $input );
+
+		$this->assertTrue( $result['ok'], 'Seven days is inside the creative bounds.' );
+		$this->assertSame( 7, $result['value']['creative']['retention_days'] );
+	}
+
+	/**
+	 * Below the creative floor is refused under its own key.
+	 *
+	 * @return void
+	 */
+	public function test_creative_retention_below_the_floor_is_rejected(): void {
+		$input                               = Settings_Schema::defaults();
+		$input['creative']['retention_days'] = Settings_Schema::MIN_CREATIVE_RETENTION_DAYS - 1;
+
+		$result = Settings_Schema::validate( $input );
+
+		$this->assertFalse( $result['ok'] );
+		$this->assertContains( 'creative_retention_days', $result['errors'] );
+		$this->assertNotContains( 'retention_days', $result['errors'], 'The tracking field is untouched and must not be blamed.' );
+	}
+
+	/**
+	 * Above the creative ceiling is refused too.
+	 *
+	 * @return void
+	 */
+	public function test_creative_retention_above_the_ceiling_is_rejected(): void {
+		$input                               = Settings_Schema::defaults();
+		$input['creative']['retention_days'] = Settings_Schema::MAX_CREATIVE_RETENTION_DAYS + 1;
+
+		$result = Settings_Schema::validate( $input );
+
+		$this->assertFalse( $result['ok'] );
+		$this->assertContains( 'creative_retention_days', $result['errors'] );
+	}
+
+	/**
+	 * A negative value is refused rather than read as "delete immediately".
+	 *
+	 * The settings screen offered negatives until its inputs were bounded; the
+	 * server always refused them, and this is the assertion that says so.
+	 *
+	 * @return void
+	 */
+	public function test_negative_retention_is_rejected_on_both_windows(): void {
+		$input                               = Settings_Schema::defaults();
+		$input['creative']['retention_days'] = -5;
+		$input['tracking']['retention_days'] = -5;
+
+		$result = Settings_Schema::validate( $input );
+
+		$this->assertFalse( $result['ok'] );
+		$this->assertContains( 'creative_retention_days', $result['errors'] );
 		$this->assertContains( 'retention_days', $result['errors'] );
 	}
 }
