@@ -254,6 +254,12 @@ final class Service_Registrar {
 						wp_clear_scheduled_hook( 'aggr_verify_private_storage' );
 						delete_option( 'aggr_private_storage_status' );
 					},
+					// The object index gains org_id, which for_object() also
+					// filters on. Without it the optimizer index-merges and
+					// filesorts; see Audit_Repository::migrate_object_index().
+					9 => static function () use ( $c ): void {
+						$c->get( Audit_Repository::class )->migrate_object_index();
+					},
 				)
 			)
 		);

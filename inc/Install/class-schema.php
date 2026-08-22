@@ -24,7 +24,7 @@ final class Schema {
 	 *
 	 * Drives the migration walker in Upgrader.
 	 */
-	public const DB_VERSION = 8;
+	public const DB_VERSION = 9;
 
 	/**
 	 * The audit table's name, without the site's table prefix.
@@ -159,7 +159,7 @@ final class Schema {
 	message varchar(255) NOT NULL DEFAULT '',
 	context longtext NULL,
 	PRIMARY KEY  (id),
-	KEY object (object_type,object_id,id),
+	KEY object (object_type,object_id,org_id,id),
 	KEY actor (actor_user_id,id),
 	KEY org (org_id,id),
 	KEY event (event,id),
