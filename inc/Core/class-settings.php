@@ -22,7 +22,7 @@ final class Settings {
 	/**
 	 * Merged settings document.
 	 *
-	 * @return array{modules: array<string, bool>, brand: array<string, string>, delivery: array{fill_ttl: int, house_policy: string}, tracking: array{retention_days: int}, creative: array{retention_days: int}}
+	 * @return array{modules: array<string, bool>, brand: array<string, string>, delivery: array{fill_ttl: int, house_policy: string}, tracking: array{retention_days: int}, creative: array{retention_days: int}, audit: array{retention_days: int}}
 	 */
 	public function get(): array {
 		return Settings_Schema::merge( get_option( self::OPTION, null ) );
@@ -123,6 +123,17 @@ final class Settings {
 	 */
 	public function creative_retention_days(): int {
 		return $this->get()['creative']['retention_days'];
+	}
+
+	/**
+	 * Days the audit log is kept, or zero for never delete.
+	 *
+	 * Zero is the default and the shipped behaviour: an audit log is often
+	 * required to be complete, so the plugin does not pick a compliance answer
+	 * on a publisher's behalf.
+	 */
+	public function audit_retention_days(): int {
+		return $this->get()['audit']['retention_days'];
 	}
 
 	/**

@@ -56,6 +56,37 @@ final class Settings_Screen implements Service {
 	private string $hook_suffix = '';
 
 	/**
+	 * The audit retention spans, labelled.
+	 *
+	 * Built here rather than in the schema because the schema is Domain code
+	 * and may not call WordPress, translation included. The values are the
+	 * schema's; only the words are added.
+	 *
+	 * @return array<int, array{value: int, label: string}>
+	 */
+	private static function audit_retention_choices(): array {
+		$labels = array(
+			0    => __( 'Keep forever', 'aggressive-ads' ),
+			365  => __( '1 year', 'aggressive-ads' ),
+			730  => __( '2 years', 'aggressive-ads' ),
+			1095 => __( '3 years', 'aggressive-ads' ),
+			2555 => __( '7 years', 'aggressive-ads' ),
+		);
+
+		$choices = array();
+
+		foreach ( Settings_Schema::AUDIT_RETENTION_CHOICES as $days ) {
+			$choices[] = array(
+				'value' => $days,
+				/* translators: %d: number of days. */
+				'label' => $labels[ $days ] ?? sprintf( __( '%d days', 'aggressive-ads' ), $days ),
+			);
+		}
+
+		return $choices;
+	}
+
+	/**
 	 * Registers Settings under the Advertising parent.
 	 */
 	public function register_menu(): void {
@@ -236,6 +267,10 @@ final class Settings_Screen implements Service {
 			),
 			'tracking'  => array( 'retentionDays' => (int) $settings['tracking']['retention_days'] ),
 			'creative'  => array( 'retentionDays' => (int) $settings['creative']['retention_days'] ),
+			'audit'     => array(
+				'retentionDays' => (int) $settings['audit']['retention_days'],
+				'choices'       => self::audit_retention_choices(),
+			),
 			'roster'    => $this->access->roster(),
 
 			/*
@@ -295,6 +330,8 @@ final class Settings_Screen implements Service {
 				'retentionHelp'     => __( 'How long delivery detail and unapproved artwork are kept. Reported totals are never affected.', 'aggressive-ads' ),
 				'retentionDays'     => __( 'Delivery log retention (days)', 'aggressive-ads' ),
 				'retentionDaysHelp' => __( 'How long individual impression and click rows are kept after they have been counted. Dashboard and CSV totals come from the daily rollups and survive this.', 'aggressive-ads' ),
+				'auditDays'         => __( 'Audit log retention', 'aggressive-ads' ),
+				'auditDaysHelp'     => __( 'How long the record of who approved what is kept. Refused actions are never deleted, whatever this is set to, because those are the entries an investigation needs.', 'aggressive-ads' ),
 				'creativeDays'      => __( 'Unapproved creative retention (days)', 'aggressive-ads' ),
 				'creativeDaysHelp'  => __( 'How long a finished campaign keeps artwork that was never approved. Approved artwork is removed from private storage as soon as it is approved, because the Media Library copy replaces it.', 'aggressive-ads' ),
 				'access'            => __( 'Access', 'aggressive-ads' ),

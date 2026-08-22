@@ -56,6 +56,19 @@ final class Settings_Schema {
 	 * telemetry. A week is the shortest span in which somebody can notice a
 	 * campaign was cancelled by mistake and duplicate it.
 	 */
+	/**
+	 * Audit retention is a choice, not a number.
+	 *
+	 * Zero means never delete, and is the default: today nothing prunes the audit
+	 * log, so any positive default would have the first cron run after an upgrade
+	 * silently delete history somebody may be required to hold. The rest are the
+	 * spans a records policy is actually written in. A free-text field would let
+	 * somebody type 3 and shred three years of evidence for who approved what.
+	 *
+	 * @var array<int, int>
+	 */
+	public const AUDIT_RETENTION_CHOICES = array( 0, 365, 730, 1095, 2555 );
+
 	public const MIN_CREATIVE_RETENTION_DAYS = 7;
 
 	public const MAX_CREATIVE_RETENTION_DAYS = 365;
@@ -114,7 +127,7 @@ final class Settings_Schema {
 	 * an approval is not a default anybody chose — it is one they inherited on
 	 * upgrade.
 	 *
-	 * @return array{modules: array<string, bool>, brand: array<string, string>, delivery: array{fill_ttl: int, house_policy: string}, tracking: array{retention_days: int}, creative: array{retention_days: int}, live_edits: array<string, bool>}
+	 * @return array{modules: array<string, bool>, brand: array<string, string>, delivery: array{fill_ttl: int, house_policy: string}, tracking: array{retention_days: int}, creative: array{retention_days: int}, audit: array{retention_days: int}, live_edits: array<string, bool>}
 	 */
 	public static function defaults(): array {
 		return array(
@@ -145,6 +158,9 @@ final class Settings_Schema {
 			'creative'   => array(
 				'retention_days' => 30,
 			),
+			'audit'      => array(
+				'retention_days' => 0,
+			),
 			'live_edits' => array(
 				self::EDIT_TITLE       => false,
 				self::EDIT_NOTES       => false,
@@ -159,7 +175,7 @@ final class Settings_Schema {
 	 * Merge stored values onto defaults. Unknown keys are dropped.
 	 *
 	 * @param mixed $stored Raw option value.
-	 * @return array{modules: array<string, bool>, brand: array<string, string>, delivery: array{fill_ttl: int, house_policy: string}, tracking: array{retention_days: int}, creative: array{retention_days: int}, live_edits: array<string, bool>}
+	 * @return array{modules: array<string, bool>, brand: array<string, string>, delivery: array{fill_ttl: int, house_policy: string}, tracking: array{retention_days: int}, creative: array{retention_days: int}, audit: array{retention_days: int}, live_edits: array<string, bool>}
 	 */
 	public static function merge( mixed $stored ): array {
 		$defaults = self::defaults();
@@ -173,6 +189,7 @@ final class Settings_Schema {
 		$delivery   = is_array( $stored['delivery'] ?? null ) ? $stored['delivery'] : array();
 		$tracking   = is_array( $stored['tracking'] ?? null ) ? $stored['tracking'] : array();
 		$creative   = is_array( $stored['creative'] ?? null ) ? $stored['creative'] : array();
+		$audit      = is_array( $stored['audit'] ?? null ) ? $stored['audit'] : array();
 		$live_edits = is_array( $stored['live_edits'] ?? null ) ? $stored['live_edits'] : array();
 
 		foreach ( self::edit_keys() as $key ) {
@@ -213,6 +230,10 @@ final class Settings_Schema {
 			$defaults['creative']['retention_days'] = (int) $creative['retention_days'];
 		}
 
+		if ( isset( $audit['retention_days'] ) && is_numeric( $audit['retention_days'] ) ) {
+			$defaults['audit']['retention_days'] = (int) $audit['retention_days'];
+		}
+
 		return $defaults;
 	}
 
@@ -220,7 +241,7 @@ final class Settings_Schema {
 	 * Validate and normalise a submitted document.
 	 *
 	 * @param array<string, mixed> $input Raw modules/brand/delivery/tracking/live_edits fields.
-	 * @return array{ok: true, value: array{modules: array<string, bool>, brand: array<string, string>, delivery: array{fill_ttl: int, house_policy: string}, tracking: array{retention_days: int}, creative: array{retention_days: int}, live_edits: array<string, bool>}}|array{ok: false, errors: list<string>}
+	 * @return array{ok: true, value: array{modules: array<string, bool>, brand: array<string, string>, delivery: array{fill_ttl: int, house_policy: string}, tracking: array{retention_days: int}, creative: array{retention_days: int}, audit: array{retention_days: int}, live_edits: array<string, bool>}}|array{ok: false, errors: list<string>}
 	 */
 	public static function validate( array $input ): array {
 		$defaults   = self::defaults();
@@ -229,6 +250,7 @@ final class Settings_Schema {
 		$delivery   = is_array( $input['delivery'] ?? null ) ? $input['delivery'] : array();
 		$tracking   = is_array( $input['tracking'] ?? null ) ? $input['tracking'] : array();
 		$creative   = is_array( $input['creative'] ?? null ) ? $input['creative'] : array();
+		$audit      = is_array( $input['audit'] ?? null ) ? $input['audit'] : array();
 		$live_edits = is_array( $input['live_edits'] ?? null ) ? $input['live_edits'] : array();
 		$errors     = array();
 
@@ -359,6 +381,17 @@ final class Settings_Schema {
 			$errors[] = 'creative_retention_days';
 		}
 
+		$audit_retention = isset( $audit['retention_days'] ) && is_numeric( $audit['retention_days'] )
+			? (int) $audit['retention_days']
+			: $defaults['audit']['retention_days'];
+
+		// One of the offered spans, not a range. An audit window is a policy
+		// decision with a small set of real answers, and a number nobody
+		// offered is far more likely to be a mistake than an intention.
+		if ( ! in_array( $audit_retention, self::AUDIT_RETENTION_CHOICES, true ) ) {
+			$errors[] = 'audit_retention_days';
+		}
+
 		if ( array() !== $errors ) {
 			return array(
 				'ok'     => false,
@@ -390,6 +423,9 @@ final class Settings_Schema {
 				),
 				'creative'   => array(
 					'retention_days' => $creative_retention,
+				),
+				'audit'      => array(
+					'retention_days' => $audit_retention,
 				),
 				'live_edits' => $out_live_edits,
 			),

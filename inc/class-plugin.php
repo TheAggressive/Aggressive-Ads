@@ -61,6 +61,7 @@ use Aggressive\Ads\Workflow\Campaign_Change_Manager;
 use Aggressive\Ads\Workflow\Campaign_Clock;
 use Aggressive\Ads\Workflow\Campaign_State_Machine;
 use Aggressive\Ads\Workflow\Click_Hop;
+use Aggressive\Ads\Workflow\Audit_Retention;
 use Aggressive\Ads\Workflow\Creative_Retention;
 use Aggressive\Ads\Workflow\Ending_Soon_Notifier;
 use Aggressive\Ads\Workflow\Event_Retention;
@@ -290,6 +291,7 @@ final class Plugin {
 			Campaign_Clock::class,
 			Ending_Soon_Mailer::class,
 			Ending_Soon_Notifier::class,
+			Audit_Retention::class,
 			Creative_Retention::class,
 			Rollup_Reconciler::class,
 			Event_Retention::class,

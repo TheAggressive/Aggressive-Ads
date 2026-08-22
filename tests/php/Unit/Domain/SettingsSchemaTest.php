@@ -42,6 +42,7 @@ final class SettingsSchemaTest extends TestCase {
 		$this->assertSame( Settings_Schema::HOUSE_WHEN_EMPTY, $defaults['delivery']['house_policy'] );
 		$this->assertSame( 90, $defaults['tracking']['retention_days'] );
 		$this->assertSame( 30, $defaults['creative']['retention_days'] );
+		$this->assertSame( 0, $defaults['audit']['retention_days'], 'Keep forever is the shipped audit window.' );
 	}
 
 	/**
@@ -313,5 +314,69 @@ final class SettingsSchemaTest extends TestCase {
 		$this->assertFalse( $result['ok'] );
 		$this->assertContains( 'creative_retention_days', $result['errors'] );
 		$this->assertContains( 'retention_days', $result['errors'] );
+	}
+
+	/**
+	 * Audit retention is one of the offered spans, not a range.
+	 *
+	 * @return void
+	 */
+	public function test_audit_retention_accepts_an_offered_span(): void {
+		$input                            = Settings_Schema::defaults();
+		$input['audit']['retention_days'] = 1095;
+
+		$result = Settings_Schema::validate( $input );
+
+		$this->assertTrue( $result['ok'] );
+		$this->assertSame( 1095, $result['value']['audit']['retention_days'] );
+	}
+
+	/**
+	 * A number nobody offered is refused.
+	 *
+	 * Three days would shred three years of evidence for who approved what, and
+	 * is far likelier to be a slip than an intention. Refusing it is the reason
+	 * this is a choice rather than a free-text field.
+	 *
+	 * @return void
+	 */
+	public function test_audit_retention_refuses_a_span_that_was_not_offered(): void {
+		$input                            = Settings_Schema::defaults();
+		$input['audit']['retention_days'] = 3;
+
+		$result = Settings_Schema::validate( $input );
+
+		$this->assertFalse( $result['ok'] );
+		$this->assertContains( 'audit_retention_days', $result['errors'] );
+	}
+
+	/**
+	 * Zero is offered, because keep-forever is a real answer.
+	 *
+	 * @return void
+	 */
+	public function test_audit_retention_accepts_keep_forever(): void {
+		$input                            = Settings_Schema::defaults();
+		$input['audit']['retention_days'] = 0;
+
+		$result = Settings_Schema::validate( $input );
+
+		$this->assertTrue( $result['ok'] );
+		$this->assertSame( 0, $result['value']['audit']['retention_days'] );
+	}
+
+	/**
+	 * A negative span is refused rather than read as keep-forever.
+	 *
+	 * @return void
+	 */
+	public function test_audit_retention_refuses_a_negative_span(): void {
+		$input                            = Settings_Schema::defaults();
+		$input['audit']['retention_days'] = -365;
+
+		$result = Settings_Schema::validate( $input );
+
+		$this->assertFalse( $result['ok'] );
+		$this->assertContains( 'audit_retention_days', $result['errors'] );
 	}
 }

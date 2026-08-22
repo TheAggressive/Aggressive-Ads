@@ -83,6 +83,7 @@ use Aggressive\Ads\Workflow\Campaign_Validator;
 use Aggressive\Ads\Workflow\Creative_Promoter;
 use Aggressive\Ads\Workflow\Creative_Change_Manager;
 use Aggressive\Ads\Workflow\Creative_Manager;
+use Aggressive\Ads\Workflow\Audit_Retention;
 use Aggressive\Ads\Workflow\Creative_Retention;
 use Aggressive\Ads\Workflow\Creative_Uploader;
 use Aggressive\Ads\Workflow\Ending_Soon_Notifier;
@@ -508,6 +509,14 @@ final class Service_Registrar {
 			static fn ( Service_Container $c ): Ending_Soon_Notifier => new Ending_Soon_Notifier(
 				$c->get( Campaign_Lifecycle_Repository::class ),
 				$c->get( Ending_Soon_Mailer::class )
+			)
+		);
+
+		$container->register(
+			Audit_Retention::class,
+			static fn ( Service_Container $c ): Audit_Retention => new Audit_Retention(
+				$c->get( Audit_Repository::class ),
+				$c->get( Settings::class )
 			)
 		);
 
