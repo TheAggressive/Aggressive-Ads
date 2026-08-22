@@ -14,6 +14,7 @@ use Aggressive\Ads\Repository\Event_Repository;
 use Aggressive\Ads\Repository\Org_Access_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Security\Roles;
+use Aggressive\Ads\Storage\Private_Storage;
 use Aggressive\Ads\Workflow\Campaign_Clock;
 use Aggressive\Ads\Workflow\Creative_Retention;
 use Aggressive\Ads\Workflow\Ending_Soon_Notifier;
@@ -30,6 +31,83 @@ use Aggressive\Ads\Workflow\Rollup_Reconciler;
  * wp_uninitialize_site() does not drop plugin tables.
  */
 final class Uninstaller {
+
+	/**
+	 * Removes the private creative directory and everything under it.
+	 *
+	 * Lives here rather than in uninstall.php because that file executes an
+	 * uninstall the moment it is required, so nothing in it can be reached by a
+	 * test without destroying the site running the test. This deletes an
+	 * advertiser's only remaining copy of unapproved artwork; it is the last
+	 * code in the plugin that should be taken on trust.
+	 *
+	 * Tied to the same opt-in as the content deletion beside it, not run
+	 * unconditionally. The creative posts and the bytes they point at are one
+	 * record: deleting the files while preserving the posts leaves a campaign
+	 * history whose creatives cannot be opened, which is worse than leaving
+	 * both.
+	 *
+	 * @return int Files deleted.
+	 */
+	public static function delete_private_files(): int {
+		$uploads = wp_upload_dir();
+		$base    = isset( $uploads['basedir'] ) && is_string( $uploads['basedir'] ) ? $uploads['basedir'] : '';
+
+		if ( '' === $base ) {
+			return 0;
+		}
+
+		global $wp_filesystem;
+
+		if ( ! $wp_filesystem instanceof \WP_Filesystem_Base ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+
+			WP_Filesystem();
+		}
+
+		$deleted = 0;
+
+		/*
+		 * The pre-6 name too. A site upgraded partway, or never upgraded at
+		 * all, still has bytes under it, and uninstall is the last chance to
+		 * clear them.
+		 */
+		foreach ( array( Private_Storage::DIRECTORY, Private_Storage::LEGACY_DIRECTORY ) as $directory ) {
+			$root = rtrim( $base, '/\\' ) . '/' . $directory;
+
+			if ( ! is_dir( $root ) ) {
+				continue;
+			}
+
+			$names = scandir( $root );
+
+			if ( false === $names ) {
+				continue;
+			}
+
+			foreach ( $names as $name ) {
+				if ( '.' === $name || '..' === $name ) {
+					continue;
+				}
+
+				$path = $root . '/' . $name;
+
+				if ( is_file( $path ) ) {
+					wp_delete_file( $path );
+					++$deleted;
+				}
+			}
+
+			// Left in place when anything unexpected remains: a stray
+			// directory is somebody else's, and this is not the code to decide
+			// otherwise.
+			if ( $wp_filesystem instanceof \WP_Filesystem_Base ) {
+				$wp_filesystem->rmdir( $root );
+			}
+		}
+
+		return $deleted;
+	}
 
 	/**
 	 * Whether the current site opted to delete campaign content.

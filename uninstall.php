@@ -77,73 +77,10 @@ function aggr_uninstall_delete_content(): void {
 	}
 }
 
-/**
- * Removes the private creative directory and everything under it.
- *
- * Tied to the same opt-in as the content above, not run unconditionally. The
- * creative posts and the bytes they point at are one record: deleting the files
- * while preserving the posts leaves a campaign history whose creatives cannot
- * be opened, which is worse than leaving both.
- *
- * @return void
- */
-function aggr_uninstall_delete_private_files(): void {
-	$uploads = wp_upload_dir();
-	$base    = isset( $uploads['basedir'] ) && is_string( $uploads['basedir'] ) ? $uploads['basedir'] : '';
-
-	if ( '' === $base ) {
-		return;
-	}
-
-	global $wp_filesystem;
-
-	if ( ! $wp_filesystem instanceof WP_Filesystem_Base ) {
-		require_once ABSPATH . 'wp-admin/includes/file.php';
-
-		WP_Filesystem();
-	}
-
-	$aggr_filesystem = $wp_filesystem;
-
-	// The pre-6 name too: a site upgraded partway, or never upgraded at all,
-	// still has bytes under it, and uninstall is the last chance to clear them.
-	foreach ( array( 'ads-uploads', 'aggr-private' ) as $aggr_directory ) {
-		$aggr_root = rtrim( $base, '/\\' ) . '/' . $aggr_directory;
-
-		if ( ! is_dir( $aggr_root ) ) {
-			continue;
-		}
-
-		$aggr_names = scandir( $aggr_root );
-
-		if ( false === $aggr_names ) {
-			continue;
-		}
-
-		foreach ( $aggr_names as $aggr_name ) {
-			if ( '.' === $aggr_name || '..' === $aggr_name ) {
-				continue;
-			}
-
-			$aggr_path = $aggr_root . '/' . $aggr_name;
-
-			if ( is_file( $aggr_path ) ) {
-				wp_delete_file( $aggr_path );
-			}
-		}
-
-		// Left in place when anything unexpected remains: a stray file is
-		// somebody else's, and this is not the code to decide otherwise.
-		if ( $aggr_filesystem instanceof WP_Filesystem_Base ) {
-			$aggr_filesystem->rmdir( $aggr_root );
-		}
-	}
-}
-
 $aggr_after_schema = static function ( bool $delete_content ): void {
 	if ( $delete_content ) {
 		aggr_uninstall_delete_content();
-		aggr_uninstall_delete_private_files();
+		Aggressive\Ads\Install\Uninstaller::delete_private_files();
 	}
 };
 
