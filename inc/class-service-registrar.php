@@ -99,7 +99,7 @@ use Aggressive\Ads\Security\Admin_Guard;
 use Aggressive\Ads\Security\Delivery_Health;
 use Aggressive\Ads\Security\Ownership;
 use Aggressive\Ads\Security\Private_Storage_Health;
-use Aggressive\Ads\Security\Private_Storage_Notice;
+use Aggressive\Ads\Admin\Media_Library;
 use Aggressive\Ads\Security\Rate_Limiter;
 use Aggressive\Ads\Security\Roles;
 use Aggressive\Ads\Service_Container;
@@ -235,6 +235,25 @@ final class Service_Registrar {
 					5 => static function () use ( $c ): void {
 						$c->get( Installer::class )->migrate_event_token_uniqueness();
 					},
+					// Renames the private creative directory. No admin notice:
+					// a site whose server rule still names the old path is
+					// covered because the migration leaves nothing behind it.
+					6 => static function () use ( $c ): void {
+						$c->get( Private_Storage::class )->migrate_legacy_directory();
+					},
+					// Creative promoted before the marker existed is still in
+					// the Media Library until it is marked.
+					7 => static function () use ( $c ): void {
+						$c->get( Creative_Repository::class )->backfill_creative_attachment_marks();
+					},
+					// The daily private-storage probe and its stored verdict
+					// outlived the notice they fed. Left alone they would stay
+					// on the schedule of every upgraded site forever, firing a
+					// callback nothing registers any more.
+					8 => static function (): void {
+						wp_clear_scheduled_hook( 'aggr_verify_private_storage' );
+						delete_option( 'aggr_private_storage_status' );
+					},
 				)
 			)
 		);
@@ -358,10 +377,8 @@ final class Service_Registrar {
 		);
 
 		$container->register(
-			Private_Storage_Notice::class,
-			static fn ( Service_Container $c ): Private_Storage_Notice => new Private_Storage_Notice(
-				$c->get( Private_Storage_Health::class )
-			)
+			Media_Library::class,
+			static fn (): Media_Library => new Media_Library()
 		);
 
 		$container->register(

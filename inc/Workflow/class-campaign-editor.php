@@ -140,11 +140,20 @@ final class Campaign_Editor {
 			return $this->error( 'aggr_title_too_long', __( 'Use 160 characters or fewer for the campaign name.', 'aggressive-ads' ), 422, 'title' );
 		}
 
-		if ( '' === $title ) {
+		$placeholder = '' === $title;
+
+		if ( $placeholder ) {
 			$title = __( 'Untitled campaign', 'aggressive-ads' );
 		}
 
 		$campaign_id = $this->campaigns->create_draft( $org_id, $user_id, $title );
+
+		if ( ! is_wp_error( $campaign_id ) && $placeholder ) {
+			// Recorded, not inferred: comparing the stored title against the
+			// placeholder string would stop working the moment the site
+			// language changed, and the campaign would submit unnamed.
+			$this->campaigns->set_title_is_placeholder( (int) $campaign_id, true );
+		}
 
 		if ( is_wp_error( $campaign_id ) ) {
 			return $this->error( 'aggr_campaign_not_created', __( 'The campaign could not be created. Please try again.', 'aggressive-ads' ), 500 );
@@ -219,6 +228,13 @@ final class Campaign_Editor {
 
 		if ( is_wp_error( $saved ) ) {
 			return $this->error( 'aggr_campaign_not_saved', __( 'The campaign could not be saved. Please try again.', 'aggressive-ads' ), 500 );
+		}
+
+		// A saved title is one the advertiser chose: validate_fields() has
+		// already refused an empty one, so reaching here means the placeholder
+		// is gone.
+		if ( array_key_exists( 'title', $clean ) ) {
+			$this->campaigns->set_title_is_placeholder( $campaign_id, false );
 		}
 
 		$this->record_edit( $campaign_id, array_keys( $clean ) );

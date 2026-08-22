@@ -55,7 +55,7 @@ use Aggressive\Ads\Security\Admin_Guard;
 use Aggressive\Ads\Security\Delivery_Health;
 use Aggressive\Ads\Security\Ownership;
 use Aggressive\Ads\Security\Private_Storage_Health;
-use Aggressive\Ads\Security\Private_Storage_Notice;
+use Aggressive\Ads\Admin\Media_Library;
 use Aggressive\Ads\Update\Plugin_Updates;
 use Aggressive\Ads\Workflow\Campaign_Change_Manager;
 use Aggressive\Ads\Workflow\Campaign_Clock;
@@ -271,8 +271,11 @@ final class Plugin {
 			Ownership::class,
 			Admin_Guard::class,
 			Private_Storage_Health::class,
-			Private_Storage_Notice::class,
 			Delivery_Health::class,
+
+			// Filters attachment queries, so it must be listening before any
+			// admin screen runs one.
+			Media_Library::class,
 
 			// Attaches the listener that notices a campaign status written
 			// without going through the state machine.

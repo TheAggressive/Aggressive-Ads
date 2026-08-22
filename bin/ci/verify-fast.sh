@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 #
 # Fast Docker-free pre-push gate. WordPress integration, coverage, browsers,
-# packaging and network audits remain in CI; qa:local adds browsers via Studio.
+# packaging and network audits remain in CI; qa:local adds the WordPress suites
+# on a local MySQL and the browser workflows via Studio.
 #
 # `ci:frontend` is called as a lane, never unrolled into its parts here. It once
 # was, and the copy silently lost `lint:shell` — in the same change that added
@@ -21,6 +22,14 @@ pnpm lint:files
 pnpm ci:frontend
 pnpm ci:build
 pnpm ci:php
+
+# One second, and it catches the drift that is otherwise only visible in CI.
+#
+# The POT records a source line per string, so inserting a method above one is
+# enough to make it stale — a change with no new strings in it at all. That is
+# exactly the failure worth catching before a push rather than after, and it
+# needs no Docker: the extractor is the checksum-pinned WP-CLI in .cache/ci.
+pnpm ci:i18n
 
 echo
 echo "Fast pre-push checks passed."

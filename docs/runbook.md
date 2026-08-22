@@ -27,7 +27,7 @@ Day-to-day operation is [administration.md](administration.md).
 uploaded:
 
 ```nginx
-location ~ ^/wp-content/uploads(?:/sites/[0-9]+)?/aggr-private(?:/|$) {
+location ~ ^/wp-content/uploads(?:/sites/[0-9]+)?/ads-uploads(?:/|$) {
     return 404;
 }
 ```

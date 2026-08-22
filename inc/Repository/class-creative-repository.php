@@ -33,6 +33,15 @@ final class Creative_Repository {
 	public const META_REVIEW_STATE  = '_aggr_review_state';
 	public const META_TARGET_BLANK  = '_aggr_target_blank';
 	public const META_ATTACHMENT_ID = '_aggr_attachment_id';
+
+	/**
+	 * Set on the attachment itself, marking it as delivered advertising.
+	 *
+	 * Lives on the attachment rather than being derived from META_ATTACHMENT_ID
+	 * because the Media Library filters query attachments directly and cannot
+	 * afford a lookup per row.
+	 */
+	public const META_IS_CREATIVE   = '_aggr_is_creative';
 	public const META_PROVIDER_AD   = '_aggr_adsanity_ad_id';
 	public const META_PRIVATE_PATH  = '_aggr_private_path';
 	public const META_PRIVATE_TOKEN = '_aggr_private_token';
@@ -502,6 +511,70 @@ final class Creative_Repository {
 	 */
 	public function set_attachment_alt_text( int $attachment_id, string $alt_text ): void {
 		update_post_meta( $attachment_id, '_wp_attachment_image_alt', $alt_text );
+	}
+
+	/**
+	 * Marks an attachment as advertising creative.
+	 *
+	 * Hidden from the Media Library by Admin\Media_Library, so a site running
+	 * hundreds of campaigns still has a library of the site's own media. The
+	 * file stays a normal attachment and is still served as a static file:
+	 * delivery is the highest-volume path in the plugin, and routing it through
+	 * PHP to keep the library tidy would be the wrong trade.
+	 *
+	 * @param int $attachment_id Attachment id.
+	 * @param int $creative_id   Creative the attachment came from.
+	 * @return void
+	 */
+	public function mark_attachment_as_creative( int $attachment_id, int $creative_id ): void {
+		update_post_meta( $attachment_id, self::META_IS_CREATIVE, $creative_id );
+	}
+
+	/**
+	 * Marks the attachments of creatives promoted before the marker existed.
+	 *
+	 * Walked in batches rather than with posts_per_page => -1. A site that has
+	 * been running campaigns for a year is exactly the site that needs this,
+	 * and it is also the one where an unbounded query is most likely to exhaust
+	 * memory partway and leave the job half done.
+	 *
+	 * Idempotent: marking an attachment twice writes the same value.
+	 *
+	 * @param int $batch How many creatives to read per page.
+	 * @return int Attachments marked.
+	 */
+	public function backfill_creative_attachment_marks( int $batch = 100 ): int {
+		$marked = 0;
+		$page   = 1;
+
+		do {
+			$creative_ids = get_posts(
+				array(
+					'post_type'        => Post_Types::CREATIVE,
+					'post_status'      => 'any',
+					'posts_per_page'   => $batch,
+					'paged'            => $page,
+					'fields'           => 'ids',
+					'orderby'          => 'ID',
+					'order'            => 'ASC',
+					'suppress_filters' => false,
+					'no_found_rows'    => true,
+				)
+			);
+
+			foreach ( (array) $creative_ids as $creative_id ) {
+				$attachment_id = $this->attachment_id( (int) $creative_id );
+
+				if ( $attachment_id > 0 ) {
+					$this->mark_attachment_as_creative( $attachment_id, (int) $creative_id );
+					++$marked;
+				}
+			}
+
+			++$page;
+		} while ( array() !== (array) $creative_ids );
+
+		return $marked;
 	}
 
 	/**

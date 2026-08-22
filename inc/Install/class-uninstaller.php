@@ -15,7 +15,6 @@ use Aggressive\Ads\Repository\Org_Access_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Security\Roles;
 use Aggressive\Ads\Workflow\Campaign_Clock;
-use Aggressive\Ads\Security\Private_Storage_Notice;
 use Aggressive\Ads\Workflow\Creative_Retention;
 use Aggressive\Ads\Workflow\Ending_Soon_Notifier;
 use Aggressive\Ads\Workflow\Event_Retention;
@@ -61,7 +60,15 @@ final class Uninstaller {
 		Creative_Retention::unschedule();
 		Event_Retention::unschedule();
 		Rollup_Reconciler::unschedule();
-		Private_Storage_Notice::unschedule();
+
+		/*
+		 * Legacy, and named as literals on purpose: the service that owned these
+		 * is gone. A site that ran an older version still has the daily probe on
+		 * its schedule and the verdict in its options, and uninstall is the last
+		 * chance to take them with us.
+		 */
+		wp_clear_scheduled_hook( 'aggr_verify_private_storage' );
+		delete_option( 'aggr_private_storage_status' );
 
 		foreach ( Installer::options() as $option ) {
 			delete_option( $option );

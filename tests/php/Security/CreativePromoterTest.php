@@ -207,6 +207,64 @@ final class CreativePromoterTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The private original is gone once the public copy exists.
+	 *
+	 * Private storage sits under wp-content/uploads and is web-reachable on any
+	 * server that ignores .htaccess, so an approved creative left there is a
+	 * second copy exposed for the campaign's whole life. Delivery uses the
+	 * attachment; the original has no reader left.
+	 *
+	 * @return void
+	 */
+	public function test_the_private_original_is_removed_after_promotion(): void {
+		$creative_id = $this->creative_with_file();
+		$details     = $this->creatives->storage_details( $creative_id );
+
+		$this->assertIsArray( $details );
+		$this->assertNotSame( '', $details['path'] );
+		$this->assertNotNull( $this->storage->resolve( $details['path'] ), 'Fixture must have a real file before promotion.' );
+
+		$attachment_id = $this->promoter->promote( $creative_id );
+
+		$this->assertIsInt( $attachment_id );
+		$this->assertNull( $this->storage->resolve( $details['path'] ), 'The private original must not survive promotion.' );
+	}
+
+	/**
+	 * The pointer goes with the bytes.
+	 *
+	 * A path left behind would have the retention sweep rediscovering a file
+	 * that is not there, and Campaign_Copier preferring a private original that
+	 * no longer exists over the attachment that does.
+	 *
+	 * @return void
+	 */
+	public function test_the_private_pointer_is_cleared_after_promotion(): void {
+		$creative_id = $this->creative_with_file();
+
+		$this->promoter->promote( $creative_id );
+
+		$details = $this->creatives->storage_details( $creative_id );
+
+		$this->assertTrue( null === $details || '' === $details['path'] );
+	}
+
+	/**
+	 * Promotion still succeeds when the private file is already gone.
+	 *
+	 * @return void
+	 */
+	public function test_promoting_twice_does_not_fail_on_the_missing_original(): void {
+		$creative_id = $this->creative_with_file();
+
+		$first  = $this->promoter->promote( $creative_id );
+		$second = $this->promoter->promote( $creative_id );
+
+		$this->assertIsInt( $first );
+		$this->assertSame( $first, $second );
+	}
+
+	/**
 	 * A creative with no stored file cannot be promoted.
 	 *
 	 * @return void

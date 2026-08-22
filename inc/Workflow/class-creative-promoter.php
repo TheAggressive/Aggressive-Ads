@@ -89,6 +89,10 @@ final class Creative_Promoter {
 			return $attachment_id;
 		}
 
+		// Marked before the id is recorded: an attachment that exists but is not
+		// yet linked should still be out of the library, not briefly in it.
+		$this->creatives->mark_attachment_as_creative( $attachment_id, $creative_id );
+
 		if ( ! $this->creatives->set_attachment_id( $creative_id, $attachment_id ) ) {
 			wp_delete_attachment( $attachment_id, true );
 
@@ -105,7 +109,42 @@ final class Creative_Promoter {
 			$this->creatives->set_attachment_alt_text( $attachment_id, $details['alt_text'] );
 		}
 
+		$this->drop_private_original( $creative_id, $details['path'] );
+
 		return $attachment_id;
+	}
+
+	/**
+	 * Removes the private original once the public copy is in place.
+	 *
+	 * Private storage lives under wp-content/uploads, so its contents are
+	 * web-reachable on any server that does not read .htaccess — nginx among
+	 * them. Filenames are UUIDs and nothing ever emits one, but the smallest
+	 * exposed set is the one holding only creative still awaiting review. An
+	 * approved creative is delivered from its attachment; keeping the original
+	 * left a second copy in the private directory for the campaign's whole life
+	 * plus the ninety-day retention window.
+	 *
+	 * Safe because Campaign_Copier resolves bytes from the private file *or*
+	 * the promoted attachment, so renew and duplicate keep working.
+	 *
+	 * Deliberately not fatal. The bytes are published and the approval has
+	 * happened; a file that will not delete is a retention problem for the daily
+	 * sweep, not a reason to fail an approval and leave the campaign in a state
+	 * the reviewer cannot explain.
+	 *
+	 * @param int    $creative_id Creative post id.
+	 * @param string $path        Stored private path, relative to the root.
+	 * @return void
+	 */
+	private function drop_private_original( int $creative_id, string $path ): void {
+		if ( '' === $path ) {
+			return;
+		}
+
+		if ( $this->storage->delete( $path ) ) {
+			$this->creatives->clear_private_file( $creative_id );
+		}
 	}
 
 	/**
