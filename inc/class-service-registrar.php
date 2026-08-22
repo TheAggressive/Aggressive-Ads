@@ -512,7 +512,8 @@ final class Service_Registrar {
 				$c->get( Campaign_Repository::class ),
 				$c->get( Creative_Repository::class ),
 				$c->get( Private_Storage::class ),
-				$c->get( Audit_Repository::class )
+				$c->get( Audit_Repository::class ),
+				$c->get( Settings::class )
 			)
 		);
 

@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-22T03:27:10+00:00\n"
+"POT-Creation-Date: 2026-08-22T04:47:08+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -176,7 +176,7 @@ msgid "Ownership transferred."
 msgstr ""
 
 #: inc/Admin/class-organization-screen.php:147
-#: inc/Admin/class-settings-screen.php:270
+#: inc/Admin/class-settings-screen.php:271
 #: templates/portal/screens/organization.php:154
 msgid "Remove"
 msgstr ""
@@ -253,7 +253,7 @@ msgstr ""
 #: inc/Admin/class-package-screen.php:170
 #: inc/Admin/class-placement-screen.php:173
 #: inc/Admin/class-review-screen.php:343
-#: inc/Admin/class-settings-screen.php:276
+#: inc/Admin/class-settings-screen.php:277
 msgid "Try again"
 msgstr ""
 
@@ -363,26 +363,26 @@ msgstr ""
 
 #: inc/Admin/class-package-screen.php:165
 #: inc/Admin/class-placement-screen.php:168
-#: inc/Admin/class-settings-screen.php:271
+#: inc/Admin/class-settings-screen.php:272
 msgid "Not saved yet…"
 msgstr ""
 
 #: inc/Admin/class-package-screen.php:166
 #: inc/Admin/class-placement-screen.php:169
-#: inc/Admin/class-settings-screen.php:272
+#: inc/Admin/class-settings-screen.php:273
 #: inc/Assets/class-assets.php:356
 msgid "Saving…"
 msgstr ""
 
 #: inc/Admin/class-package-screen.php:167
 #: inc/Admin/class-placement-screen.php:170
-#: inc/Admin/class-settings-screen.php:273
+#: inc/Admin/class-settings-screen.php:274
 msgid "Saved."
 msgstr ""
 
 #: inc/Admin/class-package-screen.php:168
 #: inc/Admin/class-placement-screen.php:171
-#: inc/Admin/class-settings-screen.php:274
+#: inc/Admin/class-settings-screen.php:275
 msgid "Not saved."
 msgstr ""
 
@@ -998,7 +998,7 @@ msgid "Settings"
 msgstr ""
 
 #: inc/Admin/class-settings-screen.php:161
-#: inc/Admin/class-settings-screen.php:312
+#: inc/Admin/class-settings-screen.php:318
 msgid "Advertising Settings"
 msgstr ""
 
@@ -1086,107 +1086,127 @@ msgstr ""
 msgid "Never"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:267
+#: inc/Admin/class-settings-screen.php:268
 msgid "Give access"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:268
+#: inc/Admin/class-settings-screen.php:269
 msgid "Give someone review access"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:269
+#: inc/Admin/class-settings-screen.php:270
 msgid "Username or email address. Advertiser accounts cannot be given review access — reviewing means reading every organization’s unpublished work."
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:275
+#: inc/Admin/class-settings-screen.php:276
 msgid "Those settings could not be saved."
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:277
+#: inc/Admin/class-settings-screen.php:278
 msgid "Modules"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:278
+#: inc/Admin/class-settings-screen.php:279
 msgid "Off means the route, menu, or field is not registered."
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:279
+#: inc/Admin/class-settings-screen.php:280
 msgid "Changes to running campaigns"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:280
+#: inc/Admin/class-settings-screen.php:281
 msgid "What an advertiser may ask to change on a campaign that is already scheduled, live or paused. Every change still waits for staff approval."
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:281
+#: inc/Admin/class-settings-screen.php:282
 msgid "Brand"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:282
+#: inc/Admin/class-settings-screen.php:283
 msgid "Advertiser-facing name and colours. The code prefix never changes."
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:283
+#: inc/Admin/class-settings-screen.php:284
 msgid "Product name"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:284
+#: inc/Admin/class-settings-screen.php:285
 msgid "Tagline"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:285
+#: inc/Admin/class-settings-screen.php:286
 msgid "Shown under the name on the portal rail and sign-in screens."
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:286
+#: inc/Admin/class-settings-screen.php:287
 msgid "Support email"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:287
+#: inc/Admin/class-settings-screen.php:288
 msgid "Shown to advertisers on the Help screen. Empty uses the site administration email."
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:288
+#: inc/Admin/class-settings-screen.php:289
 msgid "Logo URL"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:289
+#: inc/Admin/class-settings-screen.php:290
 msgid "Delivery and tracking"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:290
-msgid "Native fill cache, house-ad policy and event retention."
-msgstr ""
-
 #: inc/Admin/class-settings-screen.php:291
-msgid "Fill cache TTL (seconds)"
+msgid "Native fill cache and house-ad policy."
 msgstr ""
 
 #: inc/Admin/class-settings-screen.php:292
-msgid "House ads"
+msgid "Fill cache TTL (seconds)"
 msgstr ""
 
 #: inc/Admin/class-settings-screen.php:293
-msgid "Event retention (days)"
+msgid "House ads"
 msgstr ""
 
 #: inc/Admin/class-settings-screen.php:294
-msgid "Access"
+msgid "Retention"
 msgstr ""
 
 #: inc/Admin/class-settings-screen.php:295
-msgid "Who can review advertising campaigns. Access is added to the person’s existing account, so their current role is unchanged."
+msgid "How long delivery detail and unapproved artwork are kept. Reported totals are never affected."
 msgstr ""
 
 #: inc/Admin/class-settings-screen.php:296
-msgid "Nobody has been given review access yet."
+msgid "Delivery log retention (days)"
 msgstr ""
 
 #: inc/Admin/class-settings-screen.php:297
+msgid "How long individual impression and click rows are kept after they have been counted. Dashboard and CSV totals come from the daily rollups and survive this."
+msgstr ""
+
+#: inc/Admin/class-settings-screen.php:298
+msgid "Unapproved creative retention (days)"
+msgstr ""
+
+#: inc/Admin/class-settings-screen.php:299
+msgid "How long a finished campaign keeps artwork that was never approved. Approved artwork is removed from private storage as soon as it is approved, because the Media Library copy replaces it."
+msgstr ""
+
+#: inc/Admin/class-settings-screen.php:300
+msgid "Access"
+msgstr ""
+
+#: inc/Admin/class-settings-screen.php:301
+msgid "Who can review advertising campaigns. Access is added to the person’s existing account, so their current role is unchanged."
+msgstr ""
+
+#: inc/Admin/class-settings-screen.php:302
+msgid "Nobody has been given review access yet."
+msgstr ""
+
+#: inc/Admin/class-settings-screen.php:303
 msgid "Always, as an administrator"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:313
+#: inc/Admin/class-settings-screen.php:319
 msgid "Advertising settings need JavaScript enabled."
 msgstr ""
 
@@ -1391,7 +1411,7 @@ msgstr ""
 msgid "Creatives"
 msgstr ""
 
-#: inc/Core/class-settings.php:142
+#: inc/Core/class-settings.php:154
 msgid "Those settings cannot be saved."
 msgstr ""
 

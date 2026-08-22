@@ -11,6 +11,7 @@ namespace Aggressive\Ads\Workflow;
 
 use Aggressive\Ads\Audit\Audit_Event;
 use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Core\Settings;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Lifecycle_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
@@ -42,7 +43,14 @@ final class Creative_Retention implements Service {
 	/**
 	 * How long after terminal relevance a private file may remain.
 	 */
-	public const RETENTION = 90 * DAY_IN_SECONDS;
+	/**
+	 * Fallback window when no setting has been stored.
+	 *
+	 * Matches Domain\Settings_Schema's default. Kept as a constant so a sweep
+	 * that runs before any staff member opens Settings still has a bound rather
+	 * than deleting on day zero.
+	 */
+	public const RETENTION = 30 * DAY_IN_SECONDS;
 
 	/**
 	 * Campaigns examined per run.
@@ -57,14 +65,27 @@ final class Creative_Retention implements Service {
 	 * @param Creative_Repository           $creatives Creative persistence.
 	 * @param Private_Storage               $storage   Private file storage.
 	 * @param Audit_Repository              $audit     Audit persistence.
+	 * @param Settings                      $settings  Stored configuration.
 	 */
 	public function __construct(
 		private readonly Campaign_Lifecycle_Repository $lifecycle,
 		private readonly Campaign_Repository $campaigns,
 		private readonly Creative_Repository $creatives,
 		private readonly Private_Storage $storage,
-		private readonly Audit_Repository $audit
+		private readonly Audit_Repository $audit,
+		private readonly Settings $settings
 	) {
+	}
+
+	/**
+	 * The configured window, in seconds.
+	 *
+	 * @return int
+	 */
+	private function window(): int {
+		$days = $this->settings->creative_retention_days();
+
+		return $days > 0 ? $days * DAY_IN_SECONDS : self::RETENTION;
 	}
 
 	/**
@@ -120,14 +141,52 @@ final class Creative_Retention implements Service {
 	 * @return int How many private files were removed.
 	 */
 	public function purge(): int {
-		$cutoff = time() - self::RETENTION;
-		$purged = 0;
+		$cutoff = time() - $this->window();
+		$purged = $this->purge_promoted();
 
 		foreach ( $this->lifecycle->ids_terminal_before( $cutoff, self::BATCH ) as $campaign_id ) {
 			$purged += $this->purge_campaign( $campaign_id );
 		}
 
 		return $purged;
+	}
+
+	/**
+	 * Originals whose public copy already exists.
+	 *
+	 * Deliberately not governed by the retention window, because this is not a
+	 * question about age. Once a creative is promoted, the Media Library
+	 * attachment is what delivery serves and what Campaign_Copier falls back
+	 * to, so the private original has no reader left — waiting thirty days to
+	 * delete something nothing reads is a window with no purpose.
+	 *
+	 * Creative_Promoter already does this at the moment of promotion. This is
+	 * the sweep for anything promoted before it did, and the reason the
+	 * invariant is enforced continuously rather than assumed after one
+	 * migration: a future path that promotes without purging gets caught here
+	 * on the next run instead of never.
+	 *
+	 * @return int Files removed.
+	 */
+	public function purge_promoted(): int {
+		$removed = 0;
+
+		foreach ( $this->creatives->ids_promoted_with_private_file( self::BATCH ) as $creative_id ) {
+			$details = $this->creatives->storage_details( (int) $creative_id );
+
+			if ( null === $details || '' === $details['path'] ) {
+				continue;
+			}
+
+			if ( null !== $this->storage->resolve( $details['path'] ) && ! $this->storage->delete( $details['path'] ) ) {
+				continue;
+			}
+
+			$this->creatives->clear_private_file( (int) $creative_id );
+			++$removed;
+		}
+
+		return $removed;
 	}
 
 	/**

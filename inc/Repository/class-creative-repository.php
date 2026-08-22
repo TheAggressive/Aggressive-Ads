@@ -531,6 +531,45 @@ final class Creative_Repository {
 	}
 
 	/**
+	 * Creatives that have a public attachment and still hold a private file.
+	 *
+	 * The contradiction this finds is the point: once promoted, the attachment
+	 * is what delivery serves, so a surviving private original is a duplicate
+	 * of already-public bytes sitting in the directory the deny rule exists to
+	 * protect.
+	 *
+	 * @param int $limit Maximum ids to return.
+	 * @return array<int, int>
+	 */
+	public function ids_promoted_with_private_file( int $limit ): array {
+		$ids = get_posts(
+			array(
+				'post_type'      => Post_Types::CREATIVE,
+				'post_status'    => 'any',
+				'posts_per_page' => $limit,
+				'fields'         => 'ids',
+				'orderby'        => 'ID',
+				'order'          => 'ASC',
+				'no_found_rows'  => true,
+				// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Two EXISTS clauses on indexed meta keys; the pair is the condition, and there is no other way to express it.
+				'meta_query'     => array(
+					'relation' => 'AND',
+					array(
+						'key'     => self::META_ATTACHMENT_ID,
+						'compare' => 'EXISTS',
+					),
+					array(
+						'key'     => self::META_PRIVATE_PATH,
+						'compare' => 'EXISTS',
+					),
+				),
+			)
+		);
+
+		return array_map( 'intval', (array) $ids );
+	}
+
+	/**
 	 * Marks the attachments of creatives promoted before the marker existed.
 	 *
 	 * Walked in batches rather than with posts_per_page => -1. A site that has
