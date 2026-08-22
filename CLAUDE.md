@@ -84,7 +84,12 @@ and deeper analytics remain open. What is built:
   Organizations, Inventory, and the review queue and campaign detail. The
   review screens keep the plugin's own design system (`src/styles/admin.css`);
   the other four use core's component set. Organizations is additionally a
-  DataViews pilot — searchable/sortable table, writes behind row actions.
+  DataViews pilot — searchable table, writes behind row actions, and the one
+  screen that pages, searches and filters **server-side**: `GET /organizations`
+  returns one page plus the real total, and rosters arrive per-organization
+  from `/detail` rather than riding on every row. Sorting is by name only,
+  because owner/member/campaign counts are derived per row and ordering on them
+  would mean assembling every organization in order to page it.
   `@wordpress/dataviews` is **bundled, not externalised**: WordPress 7.1 uses
   DataViews internally but registers no `wp-dataviews` script or style handle,
   so externalising it builds clean and throws in the browser. The list lives in

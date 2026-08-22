@@ -1,5 +1,6 @@
 import js from '@eslint/js';
 import reactPlugin from 'eslint-plugin-react';
+import reactHooks from 'eslint-plugin-react-hooks';
 import tsPlugin from '@typescript-eslint/eslint-plugin';
 import tsParser from '@typescript-eslint/parser';
 
@@ -81,9 +82,28 @@ export default [
 		},
 		plugins: {
 			'@typescript-eslint': tsPlugin,
+			'react-hooks': reactHooks,
 		},
 		rules: {
 			...tsPlugin.configs.recommended.rules,
+
+			/*
+			 * Hook rules, which nothing checked until now.
+			 *
+			 * Their absence was invisible in the worst way: a
+			 * `react-hooks/exhaustive-deps` disable comment sat in this
+			 * codebase suppressing a rule that was never configured, so it
+			 * read as a considered exception and was a no-op. The bug it was
+			 * covering — a memo closing over stale state — was found by
+			 * reading, which is not a strategy.
+			 *
+			 * exhaustive-deps is a warning upstream. `--max-warnings 0` makes
+			 * it fail the lane here, because a stale closure is a wrong render,
+			 * not a style preference.
+			 */
+			'react-hooks/rules-of-hooks': 'error',
+			'react-hooks/exhaustive-deps': 'error',
+
 			'no-unused-vars': 'off',
 			'@typescript-eslint/no-unused-vars': [
 				'error',

@@ -23,16 +23,24 @@
 
 import type { ReactElement } from 'react';
 import apiFetch from '@wordpress/api-fetch';
-import { createRoot, useMemo, useState } from '@wordpress/element';
+import {
+	createRoot,
+	useCallback,
+	useEffect,
+	useMemo,
+	useState,
+} from '@wordpress/element';
+import { addQueryArgs } from '@wordpress/url';
 import {
 	Button,
 	Notice,
+	Spinner,
 	TextControl,
 	__experimentalHStack as HStack,
 	__experimentalText as Text,
 	__experimentalVStack as VStack,
 } from '@wordpress/components';
-import { DataViews, filterSortAndPaginate } from '@wordpress/dataviews';
+import { DataViews } from '@wordpress/dataviews';
 import type {
 	Action,
 	Field as DataField,
@@ -40,7 +48,13 @@ import type {
 } from '@wordpress/dataviews';
 import '@wordpress/dataviews/build-style/style.css';
 import './style.css';
-import { SaveError, setStrings, t, useAction } from '../shared/save';
+import {
+	errorMessage,
+	SaveError,
+	setStrings,
+	t,
+	useAction,
+} from '../shared/save';
 
 type Member = {
 	id: number;
@@ -56,12 +70,26 @@ type Organization = {
 	active: boolean;
 	owner_id: number;
 	owner_name: string;
-	member_list: Member[];
 	members: number;
 	campaigns: number;
 };
 
-type ViewPayload = { rows: Organization[] };
+/**
+ * One organization with the roster attached.
+ *
+ * The list does not carry rosters. A roster is a list of people and their
+ * email addresses, and the table shows none of them — sending every one of
+ * them to paint a page of twenty-five rows put the whole directory into the
+ * page source. It arrives from `/detail` when a modal opens.
+ */
+type OrganizationDetail = Organization & { member_list: Member[] };
+
+type ViewPayload = {
+	rows: Organization[];
+	total: number;
+	page: number;
+	perPage: number;
+};
 
 type Bootstrap = {
 	view: ViewPayload;
@@ -69,7 +97,11 @@ type Bootstrap = {
 	i18n: Record< string, string >;
 };
 
-const EMPTY: Bootstrap = { view: { rows: [] }, restPath: '', i18n: {} };
+const EMPTY: Bootstrap = {
+	view: { rows: [], total: 0, page: 1, perPage: 25 },
+	restPath: '',
+	i18n: {},
+};
 
 /**
  * A count with its own noun, chosen server-side.
@@ -107,13 +139,13 @@ function Field( { children }: { children: ReactElement } ): ReactElement {
  * what it did.
  */
 function Roster( {
-	org,
+	members: roster,
 	busy,
 	onTransfer,
 	onRemove,
 	onInvite,
 }: {
-	org: Organization;
+	members: Member[] | undefined;
 	busy: boolean;
 	onTransfer: ( member: Member ) => void;
 	onRemove: ( member: Member ) => void;
@@ -121,7 +153,13 @@ function Roster( {
 } ): ReactElement {
 	const [ email, setEmail ] = useState( '' );
 
-	const others = org.member_list.filter( ( member ) => ! member.is_owner );
+	if ( undefined === roster ) {
+		// Undefined is "not fetched yet", which is not the same fact as an
+		// empty roster, and must not render as one.
+		return <Spinner />;
+	}
+
+	const others = roster.filter( ( member ) => ! member.is_owner );
 
 	return (
 		<VStack spacing={ 4 }>
@@ -131,7 +169,7 @@ function Roster( {
 				<></>
 			) }
 
-			{ org.member_list.map( ( member ) => (
+			{ roster.map( ( member ) => (
 				<HStack key={ member.id } justify="space-between">
 					<VStack spacing={ 0 }>
 						<span>
@@ -203,11 +241,21 @@ function Roster( {
 	);
 }
 
+/**
+ * Sorting is the server's, and the server sorts by name.
+ *
+ * Owner, member count and campaign count are derived per row rather than
+ * stored, so ordering by them server-side would mean assembling every
+ * organization before paging — exactly the full scan paging exists to avoid.
+ * Marking those columns unsortable is the honest version: the previous build
+ * let you sort them, but only within whatever arbitrary 500 rows had been
+ * loaded, which looked like sorting and was not.
+ */
 const DEFAULT_VIEW: DataView = {
 	type: 'table',
 	search: '',
 	page: 1,
-	perPage: 20,
+	perPage: 25,
 	sort: { field: 'name', direction: 'asc' },
 	filters: [],
 	titleField: 'name',
@@ -215,43 +263,155 @@ const DEFAULT_VIEW: DataView = {
 	layout: {},
 };
 
+/** Reads the state filter DataViews holds, as the REST enum spells it. */
+function stateFilter( view: DataView ): string {
+	const filter = ( view.filters ?? [] ).find(
+		( entry ) => 'state' === entry.field
+	);
+	const value = filter?.value;
+
+	return 'active' === value || 'suspended' === value ? value : '';
+}
+
+type WriteResult = {
+	view: ViewPayload;
+	organization: OrganizationDetail | null;
+};
+
 function App( { data }: { data: Bootstrap } ): ReactElement {
-	const [ rows, setRows ] = useState( data.view.rows );
+	const [ payload, setPayload ] = useState< ViewPayload >( data.view );
 	const [ view, setView ] = useState< DataView >( DEFAULT_VIEW );
 	const [ done, setDone ] = useState( '' );
-	const { error, busy, run, clearError } = useAction< {
-		view: ViewPayload;
-	} >();
+	const [ loading, setLoading ] = useState( false );
+	const [ loadError, setLoadError ] = useState( '' );
 
-	const write = async (
-		options: Record< string, unknown >,
-		message: string
-	): Promise< void > => {
-		setDone( '' );
-		clearError();
+	// Rosters, by organization id, for whichever modals have been opened.
+	const [ rosters, setRosters ] = useState<
+		Record< number, Member[] | undefined >
+	>( {} );
 
-		const result = await run( () =>
-			apiFetch< { view: ViewPayload } >( options )
-		);
+	const { error, busy, run, clearError } = useAction< WriteResult >();
 
-		if ( result ) {
-			// The server's roster, not a local edit. One change moves more than
-			// it names — a transfer demotes the previous owner, a removal can
-			// strip a portal role — and only the server knows what else moved.
-			setRows( result.view.rows );
-			setDone( message );
-		}
-	};
+	const rows = payload.rows;
 
-	const change = ( org: Organization, state: string ): Promise< void > =>
-		write(
-			{
-				path: `${ data.restPath }/${ org.id }/state`,
-				method: 'POST',
-				data: { state },
-			},
-			'suspended' === state ? t( 'suspended' ) : t( 'reactivated' )
-		);
+	/** The query the current view describes, as the REST route spells it. */
+	const query = useMemo(
+		() => ( {
+			page: view.page ?? 1,
+			per_page: view.perPage ?? DEFAULT_VIEW.perPage,
+			search: view.search ?? '',
+			state: stateFilter( view ),
+		} ),
+		[ view ]
+	);
+
+	/*
+	 * Paging, search and filtering are the server's now.
+	 *
+	 * The screen used to receive every organization and sift them in the
+	 * browser, which capped silently at 500: past that, searching for an
+	 * organization returned nothing, and nothing distinguished that from the
+	 * organization not existing.
+	 */
+	useEffect( () => {
+		let live = true;
+
+		setLoading( true );
+
+		apiFetch< { view: ViewPayload } >( {
+			path: addQueryArgs( data.restPath, query ),
+		} )
+			.then( ( result ) => {
+				if ( live ) {
+					setPayload( result.view );
+					setLoadError( '' );
+				}
+			} )
+			.catch( ( reason: unknown ) => {
+				// A failed page must not leave the previous page on screen
+				// looking like the answer to the query just typed.
+				if ( live ) {
+					setLoadError( errorMessage( reason ) || t( 'loadFailed' ) );
+				}
+			} )
+			.finally( () => {
+				if ( live ) {
+					setLoading( false );
+				}
+			} );
+
+		// The guard against a slow first request overwriting a faster second.
+		return () => {
+			live = false;
+		};
+	}, [ query, data.restPath ] );
+
+	const write = useCallback(
+		async (
+			options: Record< string, unknown >,
+			message: string
+		): Promise< void > => {
+			setDone( '' );
+			clearError();
+
+			const result = await run( () =>
+				apiFetch< WriteResult >( {
+					...options,
+					path: addQueryArgs( String( options.path ), query ),
+				} )
+			);
+
+			if ( result ) {
+				// The server's roster, not a local edit. One change moves more than
+				// it names — a transfer demotes the previous owner, a removal can
+				// strip a portal role — and only the server knows what else moved.
+				setPayload( result.view );
+				setDone( message );
+
+				if ( result.organization ) {
+					setRosters( ( current ) => ( {
+						...current,
+						[ result.organization?.id ?? 0 ]:
+							result.organization?.member_list,
+					} ) );
+				}
+			}
+		},
+		[ run, clearError, query ]
+	);
+
+	/** Fetches one organization's roster the first time a modal needs it. */
+	const loadRoster = useCallback(
+		( orgId: number ): void => {
+			apiFetch< { organization: OrganizationDetail } >( {
+				path: `${ data.restPath }/${ orgId }/detail`,
+			} )
+				.then( ( result ) => {
+					setRosters( ( current ) => ( {
+						...current,
+						[ orgId ]: result.organization.member_list,
+					} ) );
+				} )
+				.catch( () => {
+					// The modal keeps its spinner rather than claiming the
+					// organization has no members, which is a different fact.
+				} );
+		},
+		[ data.restPath ]
+	);
+
+	const change = useCallback(
+		( org: Organization, state: string ): Promise< void > =>
+			write(
+				{
+					path: `${ data.restPath }/${ org.id }/state`,
+					method: 'POST',
+					data: { state },
+				},
+				'suspended' === state ? t( 'suspended' ) : t( 'reactivated' )
+			),
+		[ write, data.restPath ]
+	);
 
 	const fields: DataField< Organization >[] = useMemo(
 		() => [
@@ -263,12 +423,13 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 			},
 			{
 				id: 'owner_name',
+				enableSorting: false,
 				label: t( 'ownerColumn' ),
 				type: 'text',
-				enableGlobalSearch: true,
 			},
 			{
 				id: 'members',
+				enableSorting: false,
 				label: t( 'membersSection' ),
 				type: 'integer',
 				render: ( { item }: { item: Organization } ) =>
@@ -280,6 +441,7 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 			},
 			{
 				id: 'campaigns',
+				enableSorting: false,
 				label: t( 'campaignsColumn' ),
 				type: 'integer',
 				render: ( { item }: { item: Organization } ) =>
@@ -320,10 +482,6 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 				} ) => {
 					const selected = items[ 0 ];
 
-					if ( ! selected ) {
-						return <></>;
-					}
-
 					/*
 					 * The live row, not the one DataViews captured when the
 					 * modal opened. Every action here rewrites the roster —
@@ -332,13 +490,30 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 					 * the roster as it was before the change the user just
 					 * made.
 					 */
-					const org =
-						rows.find( ( row ) => row.id === selected.id ) ??
-						selected;
+					const org = selected
+						? rows.find( ( row ) => row.id === selected.id ) ??
+						  selected
+						: undefined;
+
+					const roster =
+						undefined !== org ? rosters[ org.id ] : undefined;
+
+					// Fetching is an effect, not something render does on the
+					// way past: a render-phase fetch fires again on every
+					// re-render the request itself causes.
+					useEffect( () => {
+						if ( undefined !== org && undefined === roster ) {
+							loadRoster( org.id );
+						}
+					}, [ org, roster ] );
+
+					if ( undefined === org ) {
+						return <></>;
+					}
 
 					return (
 						<Roster
-							org={ org }
+							members={ roster }
 							busy={ busy }
 							onTransfer={ ( member ) => {
 								void write(
@@ -505,12 +680,24 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 		 * what lets the open members modal show the roster it just rewrote —
 		 * a stale closure here would silently undo that.
 		 */
-		[ busy, rows, data.restPath ]
+		[ busy, rows, rosters, data.restPath, write, change, loadRoster ]
 	);
 
-	const { data: shown, paginationInfo } = useMemo(
-		() => filterSortAndPaginate( rows, view, fields ),
-		[ rows, view, fields ]
+	/*
+	 * The server counted, so the server's total is the one shown.
+	 *
+	 * Deriving totalPages from rows.length here would report one page however
+	 * many there are, and the pager would look correct while going nowhere.
+	 */
+	const paginationInfo = useMemo(
+		() => ( {
+			totalItems: payload.total,
+			totalPages: Math.max(
+				1,
+				Math.ceil( payload.total / Math.max( 1, payload.perPage ) )
+			),
+		} ),
+		[ payload.total, payload.perPage ]
 	);
 
 	return (
@@ -527,21 +714,32 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 				</Notice>
 			) : null }
 
-			{ 0 === rows.length ? (
-				<p>{ t( 'empty' ) }</p>
-			) : (
-				<DataViews< Organization >
-					data={ shown }
-					fields={ fields }
-					view={ view }
-					onChangeView={ setView }
-					actions={ actions }
-					paginationInfo={ paginationInfo }
-					getItemId={ ( item ) => String( item.id ) }
-					isLoading={ busy }
-					defaultLayouts={ { table: {} } }
-				/>
-			) }
+			{ loadError ? (
+				<Notice status="error" isDismissible={ false }>
+					{ loadError }
+				</Notice>
+			) : null }
+
+			{ /*
+			   DataViews owns the empty state from here. It renders its own "no
+			   results" inside the table, which keeps the search box and the
+			   filters on screen — replacing the whole table with a sentence,
+			   as this screen used to, takes away the controls needed to undo
+			   the query that emptied it.
+			*/ }
+			<DataViews< Organization >
+				data={ rows }
+				fields={ fields }
+				view={ view }
+				onChangeView={ setView }
+				actions={ actions }
+				paginationInfo={ paginationInfo }
+				getItemId={ ( item ) => String( item.id ) }
+				isLoading={ busy || loading }
+				defaultLayouts={ { table: {} } }
+				searchLabel={ t( 'searchLabel' ) }
+				empty={ <p>{ t( 'empty' ) }</p> }
+			/>
 		</VStack>
 	);
 }

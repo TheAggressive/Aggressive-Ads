@@ -68,7 +68,7 @@ final class Organizations_Controller implements Service {
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'set_state' ),
 				'permission_callback' => array( $this, 'permission' ),
-				'args'                => array(
+				'args'                => self::paging_args() + array(
 					'id'    => array(
 						'type'              => 'integer',
 						'required'          => true,
@@ -88,6 +88,16 @@ final class Organizations_Controller implements Service {
 			)
 		);
 
+		Creative_File_Controller::register_route(
+			'/organizations',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'index' ),
+				'permission_callback' => array( $this, 'permission' ),
+				'args'                => self::paging_args(),
+			)
+		);
+
 		$org = array(
 			'id' => array(
 				'type'              => 'integer',
@@ -98,12 +108,22 @@ final class Organizations_Controller implements Service {
 		);
 
 		Creative_File_Controller::register_route(
+			'/organizations/(?P<id>\\d+)/detail',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'detail' ),
+				'permission_callback' => array( $this, 'permission' ),
+				'args'                => $org,
+			)
+		);
+
+		Creative_File_Controller::register_route(
 			'/organizations/(?P<id>\\d+)',
 			array(
 				'methods'             => 'PATCH',
 				'callback'            => array( $this, 'rename' ),
 				'permission_callback' => array( $this, 'permission' ),
-				'args'                => $org + array(
+				'args'                => $org + self::paging_args() + array(
 					'name' => array(
 						'type'     => 'string',
 						'required' => true,
@@ -118,7 +138,7 @@ final class Organizations_Controller implements Service {
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'transfer' ),
 				'permission_callback' => array( $this, 'permission' ),
-				'args'                => $org + array(
+				'args'                => $org + self::paging_args() + array(
 					'user_id' => array(
 						'type'              => 'integer',
 						'required'          => true,
@@ -134,7 +154,7 @@ final class Organizations_Controller implements Service {
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'invite' ),
 				'permission_callback' => array( $this, 'permission' ),
-				'args'                => $org + array(
+				'args'                => $org + self::paging_args() + array(
 					'email' => array(
 						'type'              => 'string',
 						'required'          => true,
@@ -150,7 +170,7 @@ final class Organizations_Controller implements Service {
 				'methods'             => 'DELETE',
 				'callback'            => array( $this, 'remove_member' ),
 				'permission_callback' => array( $this, 'permission' ),
-				'args'                => $org + array(
+				'args'                => $org + self::paging_args() + array(
 					'user_id' => array(
 						'type'              => 'integer',
 						'required'          => true,
@@ -158,6 +178,102 @@ final class Organizations_Controller implements Service {
 					),
 				),
 			)
+		);
+	}
+
+	/**
+	 * Query arguments shared by the list read and every write.
+	 *
+	 * Writes take them too, so the response can carry the page the client is
+	 * actually looking at. Returning page one after a rename performed on page
+	 * four would silently move the user.
+	 *
+	 * @return array<string, array<string, mixed>>
+	 */
+	private static function paging_args(): array {
+		return array(
+			'page'     => array(
+				'type'              => 'integer',
+				'required'          => false,
+				'default'           => 1,
+				'sanitize_callback' => 'absint',
+			),
+			'per_page' => array(
+				'type'              => 'integer',
+				'required'          => false,
+				'default'           => Organization_Data::DEFAULT_PER_PAGE,
+				'sanitize_callback' => 'absint',
+			),
+			'search'   => array(
+				'type'              => 'string',
+				'required'          => false,
+				'default'           => '',
+				'sanitize_callback' => 'sanitize_text_field',
+			),
+			'state'    => array(
+				'type'              => 'string',
+				'required'          => false,
+				'default'           => '',
+				'enum'              => array(
+					'',
+					Org_Repository::STATE_ACTIVE,
+					Org_Repository::STATE_SUSPENDED,
+				),
+				'sanitize_callback' => 'sanitize_key',
+			),
+		);
+	}
+
+	/**
+	 * One page of organizations.
+	 *
+	 * @param WP_REST_Request $request The request.
+	 * @return WP_REST_Response
+	 *
+	 * @phpstan-param WP_REST_Request<array<string, mixed>> $request
+	 */
+	public function index( WP_REST_Request $request ): WP_REST_Response {
+		return new WP_REST_Response( array( 'view' => $this->page_for( $request ) ), 200 );
+	}
+
+	/**
+	 * One organization and its roster.
+	 *
+	 * @param WP_REST_Request $request The request.
+	 * @return WP_REST_Response|WP_Error
+	 *
+	 * @phpstan-param WP_REST_Request<array<string, mixed>> $request
+	 */
+	public function detail( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		$organization = $this->data->organization( (int) $request->get_param( 'id' ) );
+
+		if ( null === $organization ) {
+			return new WP_Error(
+				'aggr_org_not_found',
+				__( 'That organization no longer exists.', 'aggressive-ads' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		return new WP_REST_Response( array( 'organization' => $organization ), 200 );
+	}
+
+	/**
+	 * The page the request asked for.
+	 *
+	 * @param WP_REST_Request $request The request.
+	 * @return array<string, mixed>
+	 *
+	 * @phpstan-param WP_REST_Request<array<string, mixed>> $request
+	 */
+	private function page_for( WP_REST_Request $request ): array {
+		return $this->data->view(
+			max( 1, (int) $request->get_param( 'page' ) ),
+			(int) $request->get_param( 'per_page' ) > 0
+				? (int) $request->get_param( 'per_page' )
+				: Organization_Data::DEFAULT_PER_PAGE,
+			(string) $request->get_param( 'search' ),
+			(string) $request->get_param( 'state' )
 		);
 	}
 
@@ -198,7 +314,7 @@ final class Organizations_Controller implements Service {
 			);
 		}
 
-		return $this->refreshed();
+		return $this->refreshed( $request );
 	}
 
 	/**
@@ -215,7 +331,8 @@ final class Organizations_Controller implements Service {
 				(int) $request->get_param( 'id' ),
 				(string) $request->get_param( 'name' ),
 				get_current_user_id()
-			)
+			),
+			$request
 		);
 	}
 
@@ -233,7 +350,8 @@ final class Organizations_Controller implements Service {
 				(int) $request->get_param( 'id' ),
 				(int) $request->get_param( 'user_id' ),
 				get_current_user_id()
-			)
+			),
+			$request
 		);
 	}
 
@@ -256,7 +374,8 @@ final class Organizations_Controller implements Service {
 				(int) $request->get_param( 'id' ),
 				(string) $request->get_param( 'email' ),
 				get_current_user_id()
-			)
+			),
+			$request
 		);
 	}
 
@@ -274,27 +393,51 @@ final class Organizations_Controller implements Service {
 				(int) $request->get_param( 'id' ),
 				(int) $request->get_param( 'user_id' ),
 				get_current_user_id()
-			)
+			),
+			$request
 		);
 	}
 
 	/**
 	 * Turns a workflow result into a response, or an error with a status.
 	 *
-	 * @param true|WP_Error $result Workflow outcome.
+	 * @param true|WP_Error   $result  Workflow outcome.
+	 * @param WP_REST_Request $request The request, for the page to return.
+	 *
+	 * @phpstan-param WP_REST_Request<array<string, mixed>> $request
 	 * @return WP_REST_Response|WP_Error
 	 */
-	private function settle( bool|WP_Error $result ): WP_REST_Response|WP_Error {
-		return is_wp_error( $result ) ? self::as_response_error( $result ) : $this->refreshed();
+	private function settle( bool|WP_Error $result, WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		return is_wp_error( $result ) ? self::as_response_error( $result ) : $this->refreshed( $request );
 	}
 
 	/**
 	 * The roster as the server now holds it.
 	 *
+	 * @param WP_REST_Request $request The request, for the page to return.
 	 * @return WP_REST_Response
+	 *
+	 * @phpstan-param WP_REST_Request<array<string, mixed>> $request
 	 */
-	private function refreshed(): WP_REST_Response {
-		return new WP_REST_Response( array( 'view' => $this->data->view() ), 200 );
+	private function refreshed( WP_REST_Request $request ): WP_REST_Response {
+		$org_id = (int) $request->get_param( 'id' );
+
+		/*
+		 * Both halves, because a write moves both.
+		 *
+		 * `view` is the page the client is on, rebuilt — a rename reorders the
+		 * list, a suspension can move a row out of an active filter. The
+		 * affected organization is sent whole, roster included, because the
+		 * members modal is open on it and would otherwise be showing the
+		 * roster from before the change it just made.
+		 */
+		return new WP_REST_Response(
+			array(
+				'view'         => $this->page_for( $request ),
+				'organization' => $org_id > 0 ? $this->data->organization( $org_id ) : null,
+			),
+			200
+		);
 	}
 
 	/**

@@ -147,10 +147,16 @@ final class Organization_Screen implements Service {
 		}
 
 		$payload = array(
+
+			/*
+			 * The first page only. The bootstrap exists so the table has
+			 * something to paint before the first fetch resolves, not so the
+			 * browser holds the whole directory.
+			 */
 			'view'     => $this->data->view(),
 			'restPath' => '/' . Creative_File_Controller::NAMESPACE . '/organizations',
 			'i18n'     => array(
-				'empty'           => __( 'No organizations exist yet.', 'aggressive-ads' ),
+				'empty'           => __( 'No organizations match this search.', 'aggressive-ads' ),
 				'stateActive'     => __( 'Active', 'aggressive-ads' ),
 				'stateSuspended'  => __( 'Suspended', 'aggressive-ads' ),
 				'suspend'         => __( 'Suspend', 'aggressive-ads' ),
@@ -188,6 +194,8 @@ final class Organization_Screen implements Service {
 				'stateColumn'     => __( 'State', 'aggressive-ads' ),
 				'manageMembers'   => __( 'Manage members', 'aggressive-ads' ),
 				'cancel'          => __( 'Cancel', 'aggressive-ads' ),
+				'loadFailed'      => __( 'That list could not be loaded.', 'aggressive-ads' ),
+				'searchLabel'     => __( 'Search organizations', 'aggressive-ads' ),
 			),
 		);
 

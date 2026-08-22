@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-22T10:42:09+00:00\n"
+"POT-Creation-Date: 2026-08-22T18:14:24+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -106,7 +106,7 @@ msgstr ""
 #: inc/Admin/class-organization-screen.php:110
 #: inc/Admin/class-organization-screen.php:111
 #: inc/Admin/class-organization-screen.php:142
-#: inc/Admin/class-organization-screen.php:196
+#: inc/Admin/class-organization-screen.php:204
 #: inc/Core/class-post-types.php:198
 msgid "Organizations"
 msgstr ""
@@ -115,135 +115,135 @@ msgstr ""
 msgid "The organizations screen has not been built. Run “pnpm build” and reload."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:153
-msgid "No organizations exist yet."
+#: inc/Admin/class-organization-screen.php:159
+msgid "No organizations match this search."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:154
+#: inc/Admin/class-organization-screen.php:160
 #: inc/Admin/class-package-screen.php:160
 #: inc/Admin/class-placement-screen.php:160
 #: templates/portal/screens/organization.php:50
 msgid "Active"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:155
+#: inc/Admin/class-organization-screen.php:161
 #: templates/portal/screens/organization.php:51
 msgid "Suspended"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:156
+#: inc/Admin/class-organization-screen.php:162
 msgid "Suspend"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:157
+#: inc/Admin/class-organization-screen.php:163
 msgid "Members"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:158
+#: inc/Admin/class-organization-screen.php:164
 msgid "The owner is the only member. Ownership can only move to another member, so invite someone first."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:159
+#: inc/Admin/class-organization-screen.php:165
 #: templates/portal/screens/organization.php:81
 msgid "Organization name"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:160
+#: inc/Admin/class-organization-screen.php:166
 msgid "Rename"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:161
+#: inc/Admin/class-organization-screen.php:167
 msgid "Organization renamed."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:162
+#: inc/Admin/class-organization-screen.php:168
 msgid "owner"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:163
+#: inc/Admin/class-organization-screen.php:169
 #: templates/portal/screens/organization.php:146
 msgid "Make owner"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:164
+#: inc/Admin/class-organization-screen.php:170
 msgid "Ownership transferred."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:165
+#: inc/Admin/class-organization-screen.php:171
 #: inc/Admin/class-settings-screen.php:306
 #: templates/portal/screens/organization.php:154
 msgid "Remove"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:166
+#: inc/Admin/class-organization-screen.php:172
 msgid "Member removed."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:167
+#: inc/Admin/class-organization-screen.php:173
 msgid "Invite someone to this organization"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:168
+#: inc/Admin/class-organization-screen.php:174
 msgid "Email address. To move somebody between organizations, remove them here and invite them there — they keep no access in between."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:169
+#: inc/Admin/class-organization-screen.php:175
 #: templates/portal/screens/organization.php:183
 msgid "Send invitation"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:170
+#: inc/Admin/class-organization-screen.php:176
 #: inc/Portal/class-organization-actions.php:161
 msgid "Invitation sent."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:171
+#: inc/Admin/class-organization-screen.php:177
 msgid "Reactivate"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:172
+#: inc/Admin/class-organization-screen.php:178
 msgid "Organization suspended."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:173
+#: inc/Admin/class-organization-screen.php:179
 msgid "Organization reactivated."
 msgstr ""
 
 #. translators: %s: organization name.
-#: inc/Admin/class-organization-screen.php:175
+#: inc/Admin/class-organization-screen.php:181
 #, php-format
 msgid "Suspend %s? Every campaign it is running stops serving immediately."
 msgstr ""
 
 #. translators: %d: number of members.
-#: inc/Admin/class-organization-screen.php:177
+#: inc/Admin/class-organization-screen.php:183
 #, php-format
 msgid "%d member"
 msgstr ""
 
 #. translators: %d: number of members.
-#: inc/Admin/class-organization-screen.php:179
+#: inc/Admin/class-organization-screen.php:185
 #, php-format
 msgid "%d members"
 msgstr ""
 
 #. translators: %d: number of campaigns.
-#: inc/Admin/class-organization-screen.php:181
+#: inc/Admin/class-organization-screen.php:187
 #, php-format
 msgid "%d campaign"
 msgstr ""
 
 #. translators: %d: number of campaigns.
-#: inc/Admin/class-organization-screen.php:183
+#: inc/Admin/class-organization-screen.php:189
 #, php-format
 msgid "%d campaigns"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:184
+#: inc/Admin/class-organization-screen.php:190
 msgid "That organization could not be updated."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:185
+#: inc/Admin/class-organization-screen.php:191
 #: inc/Admin/class-package-screen.php:170
 #: inc/Admin/class-placement-screen.php:173
 #: inc/Admin/class-review-screen.php:343
@@ -251,12 +251,12 @@ msgstr ""
 msgid "Try again"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:186
+#: inc/Admin/class-organization-screen.php:192
 #: templates/portal/screens/organization.php:133
 msgid "Owner"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:187
+#: inc/Admin/class-organization-screen.php:193
 #: inc/Core/class-post-types.php:201
 #: templates/portal/campaigns.php:15
 #: templates/portal/partials/rail.php:31
@@ -266,15 +266,15 @@ msgstr ""
 msgid "Campaigns"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:188
+#: inc/Admin/class-organization-screen.php:194
 msgid "State"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:189
+#: inc/Admin/class-organization-screen.php:195
 msgid "Manage members"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:190
+#: inc/Admin/class-organization-screen.php:196
 #: inc/Admin/class-review-screen.php:327
 #: templates/portal/partials/campaign-overlays.php:198
 #: templates/portal/partials/campaign-overlays.php:239
@@ -282,6 +282,14 @@ msgid "Cancel"
 msgstr ""
 
 #: inc/Admin/class-organization-screen.php:197
+msgid "That list could not be loaded."
+msgstr ""
+
+#: inc/Admin/class-organization-screen.php:198
+msgid "Search organizations"
+msgstr ""
+
+#: inc/Admin/class-organization-screen.php:205
 msgid "The organizations screen needs JavaScript enabled."
 msgstr ""
 
@@ -2234,7 +2242,7 @@ msgid "Organization name updated."
 msgstr ""
 
 #: inc/Portal/class-organization-actions.php:167
-#: inc/Repository/class-org-repository.php:232
+#: inc/Repository/class-org-repository.php:239
 msgid "That organization name is already in use."
 msgstr ""
 
@@ -2374,24 +2382,24 @@ msgstr ""
 msgid "A request for that email is already pending."
 msgstr ""
 
-#: inc/Repository/class-org-repository.php:148
+#: inc/Repository/class-org-repository.php:155
 msgid "The organization name is not valid."
 msgstr ""
 
-#: inc/Repository/class-org-repository.php:176
+#: inc/Repository/class-org-repository.php:183
 msgid "The organization could not be created."
 msgstr ""
 
-#: inc/Repository/class-org-repository.php:204
+#: inc/Repository/class-org-repository.php:211
 msgid "The organization could not be found."
 msgstr ""
 
-#: inc/Repository/class-org-repository.php:211
+#: inc/Repository/class-org-repository.php:218
 msgid "Enter a valid organization name."
 msgstr ""
 
-#: inc/Repository/class-org-repository.php:254
-#: inc/Repository/class-org-repository.php:278
+#: inc/Repository/class-org-repository.php:261
+#: inc/Repository/class-org-repository.php:285
 msgid "The organization could not be renamed."
 msgstr ""
 
@@ -2443,7 +2451,11 @@ msgstr ""
 msgid "No such placement."
 msgstr ""
 
-#: inc/REST/class-organizations-controller.php:322
+#: inc/REST/class-organizations-controller.php:253
+msgid "That organization no longer exists."
+msgstr ""
+
+#: inc/REST/class-organizations-controller.php:465
 msgid "That change could not be made."
 msgstr ""
 
