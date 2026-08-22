@@ -154,7 +154,6 @@ final class Organization_Screen implements Service {
 				'stateActive'     => __( 'Active', 'aggressive-ads' ),
 				'stateSuspended'  => __( 'Suspended', 'aggressive-ads' ),
 				'suspend'         => __( 'Suspend', 'aggressive-ads' ),
-				'detailsSection'  => __( 'Details', 'aggressive-ads' ),
 				'membersSection'  => __( 'Members', 'aggressive-ads' ),
 				'onlyOwner'       => __( 'The owner is the only member. Ownership can only move to another member, so invite someone first.', 'aggressive-ads' ),
 				'name'            => __( 'Organization name', 'aggressive-ads' ),

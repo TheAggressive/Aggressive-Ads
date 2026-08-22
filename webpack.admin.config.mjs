@@ -6,6 +6,9 @@
  * dependency-extraction plugin writes an .asset.php naming wp-element and
  * wp-components so the browser uses the copies WordPress already loads rather
  * than a second one bundled here.
+ *
+ * The exceptions are in `bin/ci/bundled-packages.mjs`, which also tells the
+ * build's own guard which handles must never appear in the output.
  */
 
 import path from 'path';
@@ -13,39 +16,7 @@ import wpConfig from '@wordpress/scripts/config/webpack.config.js';
 import { merge } from 'webpack-merge';
 import MiniCssExtractPlugin from 'mini-css-extract-plugin';
 import DependencyExtractionWebpackPlugin from '@wordpress/dependency-extraction-webpack-plugin';
-
-/**
- * Packages WordPress does not register as a script handle, despite the name.
- *
- * The dependency-extraction plugin externalises every `@wordpress/*` import,
- * which is right for wp-components and wp-element because WordPress already
- * loads them. `@wordpress/dataviews` is different: WordPress 7.1 uses DataViews
- * internally in the Site Editor but ships no `wp-dataviews` handle and no
- * `wp-includes/js/dist/dataviews.js`. Externalising it produces a build that
- * succeeds and a screen that breaks in the browser — the .asset.php names a
- * handle WordPress cannot resolve, so the bundle loads without its dependency
- * and the mount throws. Bundle it instead.
- */
-const BUNDLE_NOT_EXTERNAL = new Set( [ '@wordpress/dataviews' ] );
-
-/**
- * True for the package itself and for anything imported out of it.
- *
- * Exact matching is not enough, and the failure is quiet: importing
- * `@wordpress/dataviews/build-style/style.css` cascades to the default, which
- * turns it into a *script* handle named `wp-dataviews/build-style/style.css`.
- * The build succeeds, no stylesheet is emitted, and WordPress is asked to
- * enqueue a script that does not exist — an unstyled table, not a build error.
- */
-function bundledLocally( request ) {
-	for ( const name of BUNDLE_NOT_EXTERNAL ) {
-		if ( request === name || request.startsWith( `${ name }/` ) ) {
-			return true;
-		}
-	}
-
-	return false;
-}
+import { isBundledPackage } from './bin/ci/bundled-packages.mjs';
 
 export default ( env = {}, argv = {} ) => {
 	const base =
@@ -124,7 +95,7 @@ export default ( env = {}, argv = {} ) => {
 			} ),
 			new DependencyExtractionWebpackPlugin( {
 				requestToExternal( request ) {
-					if ( bundledLocally( request ) ) {
+					if ( isBundledPackage( request ) ) {
 						// Defined-but-falsy, not undefined. The plugin only
 						// cascades to its `@wordpress/*` default when the
 						// return is literally `undefined`; `null` means

@@ -29,13 +29,17 @@
  * package WordPress does not register, and any bundle carrying DataViews markup
  * must ship DataViews rules beside it.
  *
- * `AGGR_BUNDLE_DIR` points the scan at another directory, for checking a staged
- * build by hand. The tests call `checkDirectory()` on a fixture directly.
+ * `AGGR_BUNDLE_DIR` points the scan at another directory; the tests use it to
+ * run this file as a subprocess against a fixture, so what they assert is the
+ * real command-line contract — exit code and message — rather than an internal
+ * function that the lane does not actually call.
  */
 
 import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
+
+import { forbiddenHandles } from './bundled-packages.mjs';
 
 const ROOT = path.resolve( import.meta.dirname, '../..' );
 
@@ -52,13 +56,24 @@ const SCAN_DIR = process.env.AGGR_BUNDLE_DIR
 const HANDLE = /^[a-z0-9][a-z0-9-]*$/;
 
 /**
+ * Entries the scan actually read.
+ *
+ * Reported on success so a passing run states its own scope. "ok" over zero
+ * entries is the failure mode this guard is most likely to develop, and the
+ * empty-directory check below is what prevents it, but printing the count
+ * means a shrinking scan is visible in the log before it reaches zero.
+ */
+const ENTRY_COUNT = new Set();
+
+/**
  * Handles that look well-formed and that WordPress still does not register.
  *
- * Keep this in step with BUNDLE_NOT_EXTERNAL in webpack.admin.config.mjs: a
- * package listed there must never appear here as an emitted dependency,
- * because listing it there is precisely the instruction to bundle it instead.
+ * Derived from the same list the webpack config bundles by, rather than
+ * restated here: a package the build compiles in must never reappear as an
+ * externalised handle, and the two facts cannot drift apart if there is only
+ * one of them.
  */
-const UNREGISTERED = new Set( [ 'wp-dataviews' ] );
+const UNREGISTERED = new Set( forbiddenHandles() );
 
 /**
  * Markup/style pairs that must travel together.
@@ -94,7 +109,7 @@ const STYLE_PAIRS = [
  * @param {string} source Contents of the .asset.php file.
  * @return {string[]} Handle names, in file order.
  */
-export function parseDependencies( source ) {
+function parseDependencies( source ) {
 	const block = source.match( /'dependencies'\s*=>\s*array\(([^)]*)\)/s );
 
 	if ( ! block ) {
@@ -111,7 +126,7 @@ export function parseDependencies( source ) {
  * @param {string} entry Entry name, without extension.
  * @return {string[]} Problems found, empty when the entry is sound.
  */
-export function checkEntry( dir, entry ) {
+function checkEntry( dir, entry ) {
 	const problems = [];
 
 	const deps = parseDependencies(
@@ -123,7 +138,7 @@ export function checkEntry( dir, entry ) {
 			problems.push(
 				`${ entry }: "${ dep }" is not a script handle. A subpath import ` +
 					`escaped externalisation; add the package to ` +
-					`BUNDLE_NOT_EXTERNAL in webpack.admin.config.mjs so it is bundled.`
+					`BUNDLED_PACKAGES in bin/ci/bundled-packages.mjs so it is bundled.`
 			);
 			continue;
 		}
@@ -183,7 +198,7 @@ export function checkEntry( dir, entry ) {
  * @param {string} dir Directory to scan.
  * @return {string[]} Problems found across every entry.
  */
-export function checkDirectory( dir ) {
+function checkDirectory( dir ) {
 	let names = [];
 
 	try {
@@ -209,23 +224,18 @@ export function checkDirectory( dir ) {
 		];
 	}
 
+	for ( const name of names ) {
+		ENTRY_COUNT.add( name );
+	}
+
 	return names.flatMap( ( name ) => checkEntry( dir, name ) );
 }
 
-// Only run when invoked directly, so the test can import the functions.
-if (
-	process.argv[ 1 ] &&
-	import.meta.url.endsWith( path.basename( process.argv[ 1 ] ) )
-) {
-	const problems = checkDirectory( SCAN_DIR );
+const problems = checkDirectory( SCAN_DIR );
 
-	if ( problems.length > 0 ) {
-		for ( const problem of problems ) {
-			process.stderr.write( `${ problem }\n` );
-		}
-
-		process.exit( 1 );
-	}
-
-	process.stdout.write( 'check-admin-bundle: ok\n' );
+if ( problems.length > 0 ) {
+	console.error( problems.join( '\n' ) );
+	process.exit( 1 );
 }
+
+console.log( `check-admin-bundle: ok (${ ENTRY_COUNT.size } entries)` );

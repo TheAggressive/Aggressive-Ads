@@ -7,31 +7,53 @@
  * silence. Both halves matter: a guard that never passes is as useless as one
  * that never fails.
  *
+ * The guard is run as a subprocess rather than imported, matching
+ * `check-navigation.test.mjs`. What the build actually invokes is a command, so
+ * what these assert is the command's contract — exit code and message. An
+ * imported function can keep returning the right array long after the file
+ * stops exiting non-zero, and the lane only ever sees the exit code.
+ *
  * The two failing shapes are not hypothetical. Both were produced by the real
  * build while converting the organizations screen to DataViews, and neither
  * caused a webpack error.
  */
 
 import { strict as assert } from 'node:assert';
-import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 
-import {
-	checkDirectory,
-	checkEntry,
-	parseDependencies,
-} from './check-admin-bundle.mjs';
+const GUARD = path.resolve( import.meta.dirname, 'check-admin-bundle.mjs' );
+
+/**
+ * Runs the guard against a fixture directory.
+ *
+ * @param {string} dir Directory to scan.
+ * @return {{status: number, stdout: string, stderr: string}} Result.
+ */
+function run( dir ) {
+	const result = spawnSync( process.execPath, [ GUARD ], {
+		encoding: 'utf8',
+		env: { ...process.env, AGGR_BUNDLE_DIR: dir },
+	} );
+
+	return {
+		status: result.status,
+		stdout: result.stdout ?? '',
+		stderr: result.stderr ?? '',
+	};
+}
 
 /**
  * Writes a fake built entry.
  *
- * @param {string}   dir  Directory to write into.
- * @param {string}   name Entry name.
- * @param {string[]} deps Dependency handles for the .asset.php.
- * @param {string}   js   Contents of the .js bundle.
- * @param {string?}  css  Contents of the .css bundle, or null to omit it.
+ * @param {string}      dir  Directory to write into.
+ * @param {string}      name Entry name.
+ * @param {string[]}    deps Dependency handles for the .asset.php.
+ * @param {string}      js   Contents of the .js bundle.
+ * @param {string|null} css  Contents of the .css bundle, or null to omit it.
  */
 function writeEntry( dir, name, deps, js, css ) {
 	const list = deps.map( ( d ) => `'${ d }'` ).join( ', ' );
@@ -67,7 +89,7 @@ function dataviewsCss( count ) {
 /**
  * The screen's own theme layer, which names a handful of DataViews classes in
  * order to restyle them. This is what made a presence check pass while the real
- * stylesheet was missing entirely.
+ * stylesheet was missing entirely, so it is the fixture for that case.
  */
 const THEME_ONLY_CSS = [
 	'.dataviews-wrapper{background:#fff}',
@@ -78,29 +100,26 @@ const THEME_ONLY_CSS = [
 	'.dataviews-view-table__primary-column-content{font-weight:600}',
 ].join( '\n' );
 
-test( 'parses handles out of a generated .asset.php', () => {
-	const deps = parseDependencies(
-		"<?php return array('dependencies' => array('wp-element', 'wp-components'), 'version' => 'x');"
-	);
+const USES_DATAVIEWS = 'className:"dataviews-view-table"';
 
-	// A count, not just membership: a regex that swallowed the version string
-	// would still contain both handles.
-	assert.equal( deps.length, 2 );
-	assert.deepEqual( deps, [ 'wp-element', 'wp-components' ] );
-} );
-
-test( 'a sound bundle reports nothing', () => {
+test( 'a sound bundle passes and reports what it scanned', () => {
 	const dir = fixture();
 
 	writeEntry(
 		dir,
 		'organizations',
 		[ 'wp-element', 'wp-components' ],
-		'className:"dataviews-view-table"',
+		USES_DATAVIEWS,
 		dataviewsCss( 166 )
 	);
+	writeEntry( dir, 'packages', [ 'wp-element' ], 'no dataviews here', null );
 
-	assert.deepEqual( checkDirectory( dir ), [] );
+	const { status, stdout } = run( dir );
+
+	assert.equal( status, 0 );
+	// The count, not just "ok": a scan that quietly stopped reading one of the
+	// two entries would still print ok.
+	assert.match( stdout, /ok \(2 entries\)/ );
 } );
 
 test( 'rejects a subpath import that escaped externalisation', () => {
@@ -112,15 +131,21 @@ test( 'rejects a subpath import that escaped externalisation', () => {
 		dir,
 		'organizations',
 		[ 'wp-element', 'wp-dataviews/build-style/style.css' ],
-		'className:"dataviews-view-table"',
+		USES_DATAVIEWS,
 		dataviewsCss( 166 )
 	);
 
-	const problems = checkDirectory( dir );
+	const { status, stderr } = run( dir );
 
-	assert.equal( problems.length, 1 );
-	assert.match( problems[ 0 ], /is not a script handle/ );
-	assert.match( problems[ 0 ], /build-style/ );
+	assert.equal( status, 1 );
+	assert.match( stderr, /is not a script handle/ );
+	assert.match( stderr, /build-style/ );
+	// The message must point at a symbol that exists, or it costs the next
+	// reader the search this one was written to save.
+	assert.match(
+		stderr,
+		/BUNDLED_PACKAGES in bin\/ci\/bundled-packages\.mjs/
+	);
 } );
 
 test( 'rejects a package WordPress does not register', () => {
@@ -130,14 +155,35 @@ test( 'rejects a package WordPress does not register', () => {
 		dir,
 		'organizations',
 		[ 'wp-element', 'wp-dataviews' ],
-		'className:"dataviews-view-table"',
+		USES_DATAVIEWS,
 		dataviewsCss( 166 )
 	);
 
-	const problems = checkDirectory( dir );
+	const { status, stderr } = run( dir );
 
-	assert.equal( problems.length, 1 );
-	assert.match( problems[ 0 ], /not registered by WordPress/ );
+	assert.equal( status, 1 );
+	assert.match( stderr, /not registered by WordPress/ );
+} );
+
+test( 'the forbidden handle is derived from the bundled-package list', async () => {
+	// Not a restatement of the constant: this asserts the two files agree,
+	// which is the whole reason the list was moved into one module.
+	const { BUNDLED_PACKAGES, forbiddenHandles, isBundledPackage } =
+		await import( './bundled-packages.mjs' );
+
+	assert.ok( BUNDLED_PACKAGES.includes( '@wordpress/dataviews' ) );
+	assert.deepEqual( forbiddenHandles(), [ 'wp-dataviews' ] );
+
+	// Subpaths count, which is the bug that shipped the bogus handle.
+	assert.equal( isBundledPackage( '@wordpress/dataviews' ), true );
+	assert.equal(
+		isBundledPackage( '@wordpress/dataviews/build-style/style.css' ),
+		true
+	);
+	// And the near-miss must not: a package merely sharing the prefix is a
+	// different package.
+	assert.equal( isBundledPackage( '@wordpress/dataviews-extra' ), false );
+	assert.equal( isBundledPackage( '@wordpress/components' ), false );
 } );
 
 test( 'rejects DataViews markup shipped without DataViews styles', () => {
@@ -149,15 +195,15 @@ test( 'rejects DataViews markup shipped without DataViews styles', () => {
 		dir,
 		'organizations',
 		[ 'wp-element' ],
-		'className:"dataviews-view-table"',
+		USES_DATAVIEWS,
 		THEME_ONLY_CSS
 	);
 
-	const problems = checkDirectory( dir );
+	const { status, stderr } = run( dir );
 
-	assert.equal( problems.length, 1 );
-	assert.match( problems[ 0 ], /ships only 5 distinct/ );
-	assert.match( problems[ 0 ], /sideEffects/ );
+	assert.equal( status, 1 );
+	assert.match( stderr, /ships only 5 distinct/ );
+	assert.match( stderr, /sideEffects/ );
 } );
 
 test( 'a stylesheet just under the threshold still fails', () => {
@@ -169,11 +215,11 @@ test( 'a stylesheet just under the threshold still fails', () => {
 		dir,
 		'organizations',
 		[ 'wp-element' ],
-		'className:"dataviews-view-table"',
+		USES_DATAVIEWS,
 		dataviewsCss( 39 )
 	);
 
-	assert.equal( checkDirectory( dir ).length, 1 );
+	assert.equal( run( dir ).status, 1 );
 } );
 
 test( 'a stylesheet exactly at the threshold passes', () => {
@@ -183,28 +229,22 @@ test( 'a stylesheet exactly at the threshold passes', () => {
 		dir,
 		'organizations',
 		[ 'wp-element' ],
-		'className:"dataviews-view-table"',
+		USES_DATAVIEWS,
 		dataviewsCss( 40 )
 	);
 
-	assert.deepEqual( checkDirectory( dir ), [] );
+	assert.equal( run( dir ).status, 0 );
 } );
 
 test( 'rejects DataViews markup with no stylesheet emitted at all', () => {
 	const dir = fixture();
 
-	writeEntry(
-		dir,
-		'organizations',
-		[ 'wp-element' ],
-		'className:"dataviews-view-table"',
-		null
-	);
+	writeEntry( dir, 'organizations', [ 'wp-element' ], USES_DATAVIEWS, null );
 
-	const problems = checkDirectory( dir );
+	const { status, stderr } = run( dir );
 
-	assert.equal( problems.length, 1 );
-	assert.match( problems[ 0 ], /ships only 0 distinct/ );
+	assert.equal( status, 1 );
+	assert.match( stderr, /ships only 0 distinct/ );
 } );
 
 test( 'a bundle that does not use DataViews needs no DataViews styles', () => {
@@ -214,25 +254,23 @@ test( 'a bundle that does not use DataViews needs no DataViews styles', () => {
 	// screens that never import DataViews.
 	writeEntry( dir, 'packages', [ 'wp-element' ], 'nothing to see', null );
 
-	assert.deepEqual( checkDirectory( dir ), [] );
+	assert.equal( run( dir ).status, 0 );
 } );
 
 test( 'an unbuilt directory fails rather than passing silently', () => {
-	const dir = fixture();
+	const { status, stderr } = run( fixture() );
 
-	const problems = checkDirectory( dir );
-
-	assert.equal( problems.length, 1 );
-	assert.match( problems[ 0 ], /no \.asset\.php files/ );
+	assert.equal( status, 1 );
+	assert.match( stderr, /no \.asset\.php files/ );
 } );
 
 test( 'a missing directory fails rather than passing silently', () => {
-	const problems = checkDirectory(
+	const { status, stderr } = run(
 		path.join( tmpdir(), 'aggr-bundle-does-not-exist' )
 	);
 
-	assert.equal( problems.length, 1 );
-	assert.match( problems[ 0 ], /not readable/ );
+	assert.equal( status, 1 );
+	assert.match( stderr, /not readable/ );
 } );
 
 test( 'a directory entry named like a bundle does not crash the guard', () => {
@@ -245,7 +283,10 @@ test( 'a directory entry named like a bundle does not crash the guard', () => {
 	// this one asserts the scan skips non-files instead of dying on them.
 	mkdirSync( path.join( dir, 'decoy.asset.php' ) );
 
-	assert.deepEqual( checkDirectory( dir ), [] );
+	const { status, stdout } = run( dir );
+
+	assert.equal( status, 0 );
+	assert.match( stdout, /ok \(1 entries\)/ );
 } );
 
 test( 'a symlinked bundle is skipped rather than crashing', () => {
@@ -261,21 +302,27 @@ test( 'a symlinked bundle is skipped rather than crashing', () => {
 		path.join( dir, 'linked.asset.php' )
 	);
 
-	assert.deepEqual( checkDirectory( dir ), [] );
+	const { status, stdout } = run( dir );
+
+	assert.equal( status, 0 );
+	assert.match( stdout, /ok \(1 entries\)/ );
 } );
 
-test( 'checkEntry reports every problem on one entry, not just the first', () => {
+test( 'reports every problem on one entry, not just the first', () => {
 	const dir = fixture();
 
 	writeEntry(
 		dir,
 		'organizations',
 		[ 'wp-dataviews', 'wp-dataviews/build-style/style.css' ],
-		'className:"dataviews-view-table"',
+		USES_DATAVIEWS,
 		THEME_ONLY_CSS
 	);
 
 	// Two bad handles and a missing stylesheet. A guard that returned early
 	// would report one and hide the rest behind a second build.
-	assert.equal( checkEntry( dir, 'organizations' ).length, 3 );
+	const { status, stderr } = run( dir );
+
+	assert.equal( status, 1 );
+	assert.equal( stderr.trim().split( '\n' ).length, 3 );
 } );

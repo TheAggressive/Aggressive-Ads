@@ -33,7 +33,11 @@ import {
 	__experimentalVStack as VStack,
 } from '@wordpress/components';
 import { DataViews, filterSortAndPaginate } from '@wordpress/dataviews';
-import type { Action, Field, View as DataView } from '@wordpress/dataviews';
+import type {
+	Action,
+	Field as DataField,
+	View as DataView,
+} from '@wordpress/dataviews';
 import '@wordpress/dataviews/build-style/style.css';
 import './style.css';
 import { SaveError, setStrings, t, useAction } from '../shared/save';
@@ -85,7 +89,7 @@ function counted( count: number, one: string, many: string ): string {
  * short button ends up narrower than one beside a long button — which is how
  * the name field came out too small to read the name it held.
  */
-function Field_( { children }: { children: ReactElement } ): ReactElement {
+function Field( { children }: { children: ReactElement } ): ReactElement {
 	return (
 		<div style={ { flex: '1 1 auto', maxWidth: '28rem' } }>
 			{ children }
@@ -170,7 +174,7 @@ function Roster( {
 
 			<VStack spacing={ 2 }>
 				<HStack justify="flex-start" alignment="flex-end" spacing={ 3 }>
-					<Field_>
+					<Field>
 						<TextControl
 							label={ t( 'inviteMember' ) }
 							type="email"
@@ -180,7 +184,7 @@ function Roster( {
 							__nextHasNoMarginBottom
 							__next40pxDefaultSize
 						/>
-					</Field_>
+					</Field>
 					<Button
 						variant="secondary"
 						__next40pxDefaultSize
@@ -249,7 +253,7 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 			'suspended' === state ? t( 'suspended' ) : t( 'reactivated' )
 		);
 
-	const fields: Field< Organization >[] = useMemo(
+	const fields: DataField< Organization >[] = useMemo(
 		() => [
 			{
 				id: 'name',
@@ -310,16 +314,27 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 				isPrimary: false,
 				RenderModal: ( {
 					items,
-					closeModal,
 				}: {
 					items: Organization[];
 					closeModal?: () => void;
 				} ) => {
-					const org = items[ 0 ];
+					const selected = items[ 0 ];
 
-					if ( ! org ) {
+					if ( ! selected ) {
 						return <></>;
 					}
+
+					/*
+					 * The live row, not the one DataViews captured when the
+					 * modal opened. Every action here rewrites the roster —
+					 * a transfer demotes the previous owner, a removal drops
+					 * a member — and rendering the captured copy would show
+					 * the roster as it was before the change the user just
+					 * made.
+					 */
+					const org =
+						rows.find( ( row ) => row.id === selected.id ) ??
+						selected;
 
 					return (
 						<Roster
@@ -334,7 +349,6 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 									},
 									t( 'ownerChanged' )
 								);
-								closeModal?.();
 							} }
 							onRemove={ ( member ) => {
 								void write(
@@ -344,7 +358,6 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 									},
 									t( 'memberRemoved' )
 								);
-								closeModal?.();
 							} }
 							onInvite={ ( email ) => {
 								void write(
@@ -355,7 +368,6 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 									},
 									t( 'invited' )
 								);
-								closeModal?.();
 							} }
 						/>
 					);
@@ -487,9 +499,13 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 				},
 			},
 		],
-		// `busy` and `write` close over current state; rebuilding the actions
-		// when either changes is what keeps a disabled button honest.
-		[ busy, data.restPath ]
+		/*
+		 * `busy`, `rows` and `write` are all closed over. Rebuilding the
+		 * actions when they change is what keeps a disabled button honest and
+		 * what lets the open members modal show the roster it just rewrote —
+		 * a stale closure here would silently undo that.
+		 */
+		[ busy, rows, data.restPath ]
 	);
 
 	const { data: shown, paginationInfo } = useMemo(

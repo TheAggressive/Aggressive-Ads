@@ -87,8 +87,8 @@ and deeper analytics remain open. What is built:
   DataViews pilot — searchable/sortable table, writes behind row actions.
   `@wordpress/dataviews` is **bundled, not externalised**: WordPress 7.1 uses
   DataViews internally but registers no `wp-dataviews` script or style handle,
-  so externalising it builds clean and throws in the browser. See
-  `BUNDLE_NOT_EXTERNAL` in `webpack.admin.config.mjs`, and
+  so externalising it builds clean and throws in the browser. The list lives in
+  `bin/ci/bundled-packages.mjs`, read by both `webpack.admin.config.mjs` and
   `bin/ci/check-admin-bundle.mjs`, which fails the build if either that or the
   `"sideEffects": false` stylesheet drop ever comes back
 - the advertiser-facing notifications for changes, rejection, approval, going
