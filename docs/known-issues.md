@@ -38,6 +38,46 @@ What is actually reachable is creative still awaiting review: approved originals
 
 If unapproved creative is commercially sensitive — embargoed campaigns, competitive artwork — the portable fix that needs no server access is encrypting the bytes at rest and decrypting only in the streaming endpoint, keyed from `wp_salt()` so the key lives in `wp-config.php` rather than the database. That has not been built.
 
+## The reviewer-queue e2e test failed once on a cold container
+
+**What.** On the v1.1.1 release run, `tests/e2e/review.spec.ts:15` took 10.8s
+against Playwright's 10s expect timeout and failed. A re-run of the same commit
+passed, and tests 7 and 8 in the same file — which drive the same screens —
+passed in both runs. It is the first test in that file to mount the admin React
+bundle after a `wp-login.php` round trip on a freshly started container.
+
+**Cost.** `Package` and `Release` depend on `e2e`, so it blocks a release until
+somebody re-runs the job. It cost the first attempt at v1.1.1.
+
+**Status.** Not reproduced since, across many consecutive green runs, so the
+open-work entry was closed rather than left as work nobody was doing. Three of
+the four candidate causes are eliminated, measured against a WordPress Studio
+site (native PHP, SQLite), which models the container only loosely:
+
+* **Not the REST round trip.** The failing assertion waits 16 ms warm. The
+  screen bootstraps from a server-rendered `data-aggr-review` attribute, so
+  React mounts synchronously and the `<h1>` never waits on a fetch.
+* **Not the server render.** Stopping and restarting the site for a genuinely
+  cold PHP process gave 0.74 s for the first review-screen response against
+  0.65 s warm — about 90 ms of cold start, not seconds.
+* **Not the login redirect,** though it looks exactly like a race: the test
+  clicks `#wp-submit` and calls `page.goto()` without awaiting navigation.
+  Playwright serialises navigations on a page, and injecting a 4 s delay into
+  the login POST still lands on the review screen with the heading visible.
+  **Do not "fix" this.**
+
+That leaves first compile and parse of the review admin bundle, and whatever
+Apache and MySQL do cold that a native-PHP SQLite site cannot reproduce.
+
+**If it returns, do not guess.** The e2e job uploads `playwright-report/`,
+`.playwright-results/` and `test-results/` on failure with seven-day retention,
+and `trace: 'retain-on-failure'` is set, so the trace carries per-step timings
+for the run that actually failed. Pull that before changing anything, and
+reopen an entry in [open-work.md](open-work.md). Do not reach for
+`bin/ci/retry.sh`: it is deliberately scoped to network-bound setup steps,
+because a retry around a test turns a fast red into a slow red and hides the
+cold-start assumption that is the actual defect.
+
 ## PHPUnit is pinned to 9.6
 
 **What.** The WordPress core test suite requires PHPUnit 9.x. The LAAO theme runs PHPUnit 13 and has no integration suite for exactly this reason; this plugin needs integration tests more than it needs a modern runner.
