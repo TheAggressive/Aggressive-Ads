@@ -53,6 +53,62 @@ final class Audit_Repository {
 	}
 
 	/**
+	 * Rebuilds the object index so it covers the organization predicate.
+	 *
+	 * The for_object() read filters on object_type, object_id *and* org_id,
+	 * then orders by id. With org_id outside the index the optimizer chose an index_merge
+	 * intersection of `object` and `org` and sorted the result: measured on a
+	 * million rows with fifty thousand on one campaign, that examined 9,645
+	 * rows and filesorted them to return fifty, at about 27ms. With org_id
+	 * inside the index it is a backward index scan that stops at fifty, about
+	 * 0.7ms — and no query hint, because the optimizer picks it unaided.
+	 *
+	 * dbDelta will not change the columns of an index that already exists, so
+	 * the old one is dropped first and dbDelta recreates it from the DDL. The
+	 * name is unchanged, so Schema::audit_index_names() still describes it.
+	 *
+	 * @return void
+	 */
+	public function migrate_object_index(): void {
+		global $wpdb;
+
+		if ( ! $this->table_exists() ) {
+			$this->install_table();
+
+			return;
+		}
+
+		$table = $this->table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Schema introspection on this plugin's own table.
+		$rows = $wpdb->get_results( "SHOW INDEX FROM {$table}", ARRAY_A );
+
+		if ( ! is_array( $rows ) ) {
+			return;
+		}
+
+		$columns = array();
+
+		foreach ( $rows as $row ) {
+			if ( isset( $row['Key_name'], $row['Column_name'] ) && 'object' === $row['Key_name'] ) {
+				$columns[] = (string) $row['Column_name'];
+			}
+		}
+
+		// Already widened, or absent entirely — dbDelta handles the absent case.
+		if ( array() === $columns || in_array( 'org_id', $columns, true ) ) {
+			$this->install_table();
+
+			return;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Dropping the pre-9 index so dbDelta can recreate it with org_id.
+		$wpdb->query( "ALTER TABLE {$table} DROP INDEX object" );
+
+		$this->install_table();
+	}
+
+	/**
 	 * Reports whether the audit table exists.
 	 *
 	 * @return bool
@@ -155,7 +211,7 @@ final class Audit_Repository {
 		$limit = min( 100, max( 1, $limit ) );
 		$table = $this->table_name();
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom append-only table, object-scoped in SQL and ordered from its composite object index.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom append-only table. Every predicate and the ordering are served by the object index, which carries org_id for exactly this query; see migrate_object_index().
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
 				'SELECT id, created_at_ts, actor_user_id, actor_role, event, from_state, to_state, outcome, message FROM %i WHERE object_type = %s AND object_id = %d AND org_id = %d ORDER BY id DESC LIMIT %d',

@@ -120,10 +120,23 @@ and its repair control are built (`Install\Rewrite_Health`). Administrator
 documentation and the production rollout runbook are written —
 [administration.md](administration.md) and [runbook.md](runbook.md).
 
+Audit-table load testing at volume is **done**, and it found something. At a
+million rows with fifty thousand on one campaign, `Audit_Repository::for_object()`
+was resolved as an index-merge intersection of `object` and `org` followed by a
+filesort: 9,645 rows examined and sorted to return fifty, about 27 ms. The
+`object` index now carries `org_id`, which the query also filters on, and the
+same read is a backward index scan that stops at fifty — about 0.7 ms, with no
+optimizer hint, because the planner chooses it unaided. Replacing the index
+rather than adding a sixth cost 13 MB per million rows. See db version 9.
+
+What that testing also established is that nothing bounds the table at all;
+[open-work.md](open-work.md) records it, because how long an audit log must be
+kept is a compliance question rather than an engineering one.
+
 Remaining: concurrent request/soak testing on production-equivalent
-infrastructure, audit-table load testing at volume, and a full
-authorization/failure-state review. All three need an environment rather than a
-commit, which is why they are the last items and why nothing here claims them.
+infrastructure, and a full authorization/failure-state review. Both need an
+environment rather than a commit, which is why they are the last items and why
+nothing here claims them.
 
 ## Architected for, not planned
 

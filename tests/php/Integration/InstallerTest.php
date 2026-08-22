@@ -187,15 +187,27 @@ final class InstallerTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Every declared index exists on the real table.
+	 * Every declared index exists on the real table, and nothing else does.
 	 *
 	 * A missing index does not break a query, it makes it slow — invisible
 	 * until the table is large, and by then nobody connects the two.
 	 *
+	 * Both sides are sorted, like the column assertion above. SHOW INDEX
+	 * reports in creation order, so an index that is dropped and recreated by a
+	 * migration moves to the end of the list — which says nothing about whether
+	 * it exists. Asserting the order made this fail the first time an index was
+	 * rebuilt, for db version 9.
+	 *
 	 * @return void
 	 */
 	public function test_every_declared_index_exists(): void {
-		$this->assertSame( Schema::audit_index_names(), $this->live_index_names() );
+		$declared = Schema::audit_index_names();
+		$live     = $this->live_index_names();
+
+		sort( $declared );
+		sort( $live );
+
+		$this->assertSame( $declared, $live );
 	}
 
 	/**
