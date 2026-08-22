@@ -99,7 +99,6 @@ use Aggressive\Ads\Security\Admin_Guard;
 use Aggressive\Ads\Security\Delivery_Health;
 use Aggressive\Ads\Security\Ownership;
 use Aggressive\Ads\Security\Private_Storage_Health;
-use Aggressive\Ads\Security\Private_Storage_Notice;
 use Aggressive\Ads\Admin\Media_Library;
 use Aggressive\Ads\Security\Rate_Limiter;
 use Aggressive\Ads\Security\Roles;
@@ -247,6 +246,14 @@ final class Service_Registrar {
 					7 => static function () use ( $c ): void {
 						$c->get( Creative_Repository::class )->backfill_creative_attachment_marks();
 					},
+					// The daily private-storage probe and its stored verdict
+					// outlived the notice they fed. Left alone they would stay
+					// on the schedule of every upgraded site forever, firing a
+					// callback nothing registers any more.
+					8 => static function (): void {
+						wp_clear_scheduled_hook( 'aggr_verify_private_storage' );
+						delete_option( 'aggr_private_storage_status' );
+					},
 				)
 			)
 		);
@@ -366,13 +373,6 @@ final class Service_Registrar {
 			Private_Storage_Health::class,
 			static fn ( Service_Container $c ): Private_Storage_Health => new Private_Storage_Health(
 				$c->get( Private_Storage::class )
-			)
-		);
-
-		$container->register(
-			Private_Storage_Notice::class,
-			static fn ( Service_Container $c ): Private_Storage_Notice => new Private_Storage_Notice(
-				$c->get( Private_Storage_Health::class )
 			)
 		);
 

@@ -100,11 +100,28 @@ final class Private_Storage_Health implements Service {
 		}
 
 		if ( $status >= 200 && $status < 300 ) {
+			/*
+			 * Recommended, not critical, and the distinction is deliberate.
+			 *
+			 * WordPress serves the media of unpublished posts from the same
+			 * uploads directory and ships no deny rule for it, so a plugin that
+			 * calls this a broken install is holding the site to a standard the
+			 * platform does not meet. What is actually reachable here is
+			 * creative still awaiting review — approved originals are deleted at
+			 * promotion — under a UUID filename no code path ever emits, in a
+			 * directory whose listing is refused. Reaching one means guessing
+			 * 122 bits.
+			 *
+			 * A red banner on every admin page for that trains people to
+			 * dismiss Site Health, which costs more than it protects. The rule
+			 * below is still worth adding; it is defence in depth rather than
+			 * the control everything rests on.
+			 */
 			return $this->result(
-				'critical',
-				__( 'Unapproved advertising creative is publicly accessible', 'aggressive-ads' ),
-				__( 'The web server returned a private-storage verification file directly. Add a deny rule for the ads-uploads uploads directory before accepting creative uploads.', 'aggressive-ads' ),
-				'<p><code>location ~ ^/wp-content/uploads(?:/sites/[0-9]+)?/ads-uploads(?:/|$) { return 404; }</code></p>'
+				'recommended',
+				__( 'Unapproved advertising creative is not denied by the web server', 'aggressive-ads' ),
+				__( 'A direct request for a private-storage verification file was served rather than refused. Files there are named with unguessable identifiers that nothing publishes, and only creative still awaiting review is kept, so this is a missing layer rather than an open door. Add the deny rule to close it.', 'aggressive-ads' ),
+				$this->remedy_html()
 			);
 		}
 
@@ -117,6 +134,83 @@ final class Private_Storage_Health implements Service {
 				$status
 			)
 		);
+	}
+
+	/**
+	 * What to actually do, for the server this site is running.
+	 *
+	 * The probe above proves the file was served; it says nothing about why.
+	 * Naming one server's syntax as though it were the answer is worse than
+	 * saying nothing: an Apache site that reaches here has a `.htaccess` this
+	 * plugin already wrote and a server configured to ignore it, and pasting an
+	 * nginx `location` block leaves creative exactly as exposed while looking
+	 * like the job is done.
+	 *
+	 * Detection is a hint, not a guarantee — SERVER_SOFTWARE can be absent or
+	 * rewritten by a proxy — so the rule for every common server is offered
+	 * underneath whichever one matched.
+	 *
+	 * @return string HTML for the Site Health actions panel.
+	 */
+	private function remedy_html(): string {
+		$software = isset( $_SERVER['SERVER_SOFTWARE'] ) && is_string( $_SERVER['SERVER_SOFTWARE'] )
+			? strtolower( sanitize_text_field( wp_unslash( $_SERVER['SERVER_SOFTWARE'] ) ) )
+			: '';
+
+		$nginx  = 'location ~ ^/wp-content/uploads(?:/sites/[0-9]+)?/ads-uploads(?:/|$) { return 404; }';
+		$caddy  = "@aggr path_regexp ^/wp-content/uploads(/sites/[0-9]+)?/ads-uploads(/|$)\nrespond @aggr 404";
+		$apache = "<Directory \"/path/to/wp-content/uploads/ads-uploads\">\n    AllowOverride All\n</Directory>";
+
+		if ( str_contains( $software, 'nginx' ) ) {
+			return $this->remedy_block(
+				__( 'This site reports nginx, which does not read the .htaccess file this plugin writes. Add the deny rule to the server block:', 'aggressive-ads' ),
+				$nginx,
+				$caddy,
+				$apache
+			);
+		}
+
+		if ( str_contains( $software, 'apache' ) || str_contains( $software, 'litespeed' ) ) {
+			return $this->remedy_block(
+				__( 'This site reports Apache or LiteSpeed, which do read .htaccess — and this plugin already wrote one in that directory. Reaching this check means the server is ignoring it, so the fix is to allow overrides there rather than to add a new rule:', 'aggressive-ads' ),
+				$apache,
+				$nginx,
+				$caddy
+			);
+		}
+
+		if ( str_contains( $software, 'caddy' ) ) {
+			return $this->remedy_block(
+				__( 'This site reports Caddy, which does not read .htaccess. Add the matcher to the site block:', 'aggressive-ads' ),
+				$caddy,
+				$nginx,
+				$apache
+			);
+		}
+
+		return $this->remedy_block(
+			__( 'The web server could not be identified from SERVER_SOFTWARE, so deny the directory using whichever of these matches your stack. The .htaccess and web.config files this plugin writes only take effect on Apache, LiteSpeed and IIS:', 'aggressive-ads' ),
+			$nginx,
+			$caddy,
+			$apache
+		);
+	}
+
+	/**
+	 * The matched rule first, the alternatives after it.
+	 *
+	 * @param string $lead      Sentence explaining the match.
+	 * @param string $primary   Rule for the detected server.
+	 * @param string $other_one First alternative.
+	 * @param string $other_two Second alternative.
+	 * @return string
+	 */
+	private function remedy_block( string $lead, string $primary, string $other_one, string $other_two ): string {
+		return '<p>' . esc_html( $lead ) . '</p>'
+			. '<pre><code>' . esc_html( $primary ) . '</code></pre>'
+			. '<p>' . esc_html__( 'If that is not your server, one of these will be:', 'aggressive-ads' ) . '</p>'
+			. '<pre><code>' . esc_html( $other_one ) . '</code></pre>'
+			. '<pre><code>' . esc_html( $other_two ) . '</code></pre>';
 	}
 
 	/**

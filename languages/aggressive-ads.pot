@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-22T02:44:27+00:00\n"
+"POT-Creation-Date: 2026-08-22T03:27:10+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -2471,38 +2471,46 @@ msgstr ""
 msgid "A direct request for a private-storage verification file was refused by the web server."
 msgstr ""
 
-#: inc/Security/class-private-storage-health.php:105
-msgid "Unapproved advertising creative is publicly accessible"
+#: inc/Security/class-private-storage-health.php:122
+msgid "Unapproved advertising creative is not denied by the web server"
 msgstr ""
 
-#: inc/Security/class-private-storage-health.php:106
-msgid "The web server returned a private-storage verification file directly. Add a deny rule for the ads-uploads uploads directory before accepting creative uploads."
+#: inc/Security/class-private-storage-health.php:123
+msgid "A direct request for a private-storage verification file was served rather than refused. Files there are named with unguessable identifiers that nothing publishes, and only creative still awaiting review is kept, so this is a missing layer rather than an open door. Add the deny rule to close it."
 msgstr ""
 
-#: inc/Security/class-private-storage-health.php:113
+#: inc/Security/class-private-storage-health.php:130
 msgid "Private creative protection needs manual verification"
 msgstr ""
 
 #. translators: %d: HTTP response status.
-#: inc/Security/class-private-storage-health.php:116
+#: inc/Security/class-private-storage-health.php:133
 #, php-format
 msgid "The verification request returned HTTP %d, which does not prove that the file was denied. Verify the uploads deny rule during deployment."
 msgstr ""
 
-#: inc/Security/class-private-storage-health.php:136
+#: inc/Security/class-private-storage-health.php:166
+msgid "This site reports nginx, which does not read the .htaccess file this plugin writes. Add the deny rule to the server block:"
+msgstr ""
+
+#: inc/Security/class-private-storage-health.php:175
+msgid "This site reports Apache or LiteSpeed, which do read .htaccess — and this plugin already wrote one in that directory. Reaching this check means the server is ignoring it, so the fix is to allow overrides there rather than to add a new rule:"
+msgstr ""
+
+#: inc/Security/class-private-storage-health.php:184
+msgid "This site reports Caddy, which does not read .htaccess. Add the matcher to the site block:"
+msgstr ""
+
+#: inc/Security/class-private-storage-health.php:192
+msgid "The web server could not be identified from SERVER_SOFTWARE, so deny the directory using whichever of these matches your stack. The .htaccess and web.config files this plugin writes only take effect on Apache, LiteSpeed and IIS:"
+msgstr ""
+
+#: inc/Security/class-private-storage-health.php:211
+msgid "If that is not your server, one of these will be:"
+msgstr ""
+
+#: inc/Security/class-private-storage-health.php:230
 msgid "Security"
-msgstr ""
-
-#: inc/Security/class-private-storage-notice.php:164
-msgid "Aggressive Ads: unapproved advertising creative is publicly accessible."
-msgstr ""
-
-#: inc/Security/class-private-storage-notice.php:165
-msgid "The web server returned a private-storage verification file directly, so anyone with the URL can download creative that has not been approved. Add a deny rule for the ads-uploads uploads directory."
-msgstr ""
-
-#: inc/Security/class-private-storage-notice.php:167
-msgid "Open Site Health for the exact rule"
 msgstr ""
 
 #: inc/Security/class-rate-limiter.php:162

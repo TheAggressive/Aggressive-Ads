@@ -28,7 +28,15 @@ location ~ ^/wp-content/uploads(?:/sites/[0-9]+)?/ads-uploads(?:/|$) {
 }
 ```
 
-Adapt the prefix when `upload_url_path` or the uploads directory is customized. After deployment, open Tools → Site Health: **Unapproved advertising creative is protected** creates a random harmless probe, requests it through the public uploads URL, requires a 401/403/404/410 response, and removes it. A 2xx response is a critical failure and creative uploads must not be accepted until the server rule is corrected.
+Adapt the prefix when `upload_url_path` or the uploads directory is customized. The Site Health test creates a random harmless probe, requests it through the public uploads URL, and removes it. It reports the rule for the server it detects from `SERVER_SOFTWARE`, with the alternatives underneath — an Apache site that reaches this state has a `.htaccess` this plugin already wrote and a server ignoring it, so the fix there is `AllowOverride`, not a new rule.
+
+**A served probe is reported as a recommendation, not a critical failure. That is a deliberate reversal.** It was critical, and there was a dedicated daily probe with an admin notice to interrupt somebody about it; both are gone.
+
+WordPress serves the media of unpublished posts from the same uploads directory and ships no deny rule for it. Calling this a broken install held the site to a standard the platform itself does not meet, and put a red banner on every admin page of any nginx, Caddy, or `AllowOverride None` site — usually in front of somebody with no server access. A warning that cannot be acted on is a warning people learn to dismiss, and that cost is paid by the next one that matters.
+
+What is actually reachable is creative still awaiting review: approved originals are deleted the moment they are promoted to an attachment. Names are UUIDs no code path emits, the directory refuses a listing, and reads go through an authorized streaming endpoint. Reaching a file means guessing 122 bits. The deny rule is worth adding and is defence in depth; it is not the control everything rests on.
+
+If unapproved creative is commercially sensitive — embargoed campaigns, competitive artwork — the portable fix that needs no server access is encrypting the bytes at rest and decrypting only in the streaming endpoint, keyed from `wp_salt()` so the key lives in `wp-config.php` rather than the database. That has not been built.
 
 ## PHPUnit is pinned to 9.6
 
