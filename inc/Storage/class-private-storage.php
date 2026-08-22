@@ -31,7 +31,15 @@ final class Private_Storage {
 	/**
 	 * Directory name under the uploads base.
 	 */
-	public const DIRECTORY = 'aggr-private';
+	/**
+	 * Previous directory name, migrated away from in db version 6.
+	 *
+	 * Kept so the migration can find what it is moving, and so a site that still
+	 * has a server rule naming the old path is not silently left holding files.
+	 */
+	public const LEGACY_DIRECTORY = 'aggr-private';
+
+	public const DIRECTORY = 'ads-uploads';
 
 	/**
 	 * The absolute path to the private root, without a trailing slash.
@@ -301,6 +309,118 @@ final class Private_Storage {
 		}
 
 		return copy( $source, $target );
+	}
+
+	/**
+	 * Moves stored creative out of the pre-6 directory name.
+	 *
+	 * Idempotent, and deliberately non-destructive: files are moved one at a
+	 * time, anything already present at the target is left alone, and the old
+	 * directory is removed only once it holds nothing but the deny files this
+	 * plugin wrote. A creative whose bytes went missing during a rename is a
+	 * campaign that cannot be reviewed, so the failure mode is "both copies
+	 * exist" rather than "neither does".
+	 *
+	 * @return int Number of files moved.
+	 */
+	public function migrate_legacy_directory(): int {
+		$uploads = wp_upload_dir();
+		$base    = isset( $uploads['basedir'] ) && is_string( $uploads['basedir'] ) ? $uploads['basedir'] : '';
+
+		if ( '' === $base ) {
+			return 0;
+		}
+
+		$legacy = rtrim( $base, '/\\' ) . '/' . self::LEGACY_DIRECTORY;
+
+		if ( ! is_dir( $legacy ) || ! $this->ensure() ) {
+			return 0;
+		}
+
+		$root  = $this->root();
+		$moved = 0;
+		$names = scandir( $legacy );
+
+		if ( false === $names ) {
+			return 0;
+		}
+
+		global $wp_filesystem;
+
+		if ( ! $wp_filesystem instanceof \WP_Filesystem_Base ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+
+			WP_Filesystem();
+		}
+
+		if ( ! $wp_filesystem instanceof \WP_Filesystem_Base ) {
+			return 0;
+		}
+
+		$own = array( '.htaccess', 'web.config', 'index.php' );
+
+		foreach ( $names as $name ) {
+			if ( '.' === $name || '..' === $name || in_array( $name, $own, true ) ) {
+				continue;
+			}
+
+			$from = $legacy . '/' . $name;
+			$to   = $root . '/' . $name;
+
+			if ( ! is_file( $from ) || file_exists( $to ) ) {
+				continue;
+			}
+
+			// Overwrite is false on purpose: the guard above already skipped an
+			// existing target, and a race that created one since is not a
+			// reason to destroy it.
+			if ( $wp_filesystem->move( $from, $to, false ) ) {
+				++$moved;
+			}
+		}
+
+		$this->remove_directory_if_only_deny_files( $legacy );
+
+		return $moved;
+	}
+
+	/**
+	 * Deletes a directory when nothing but our own deny files remain in it.
+	 *
+	 * @param string $directory Absolute path.
+	 * @return bool Whether the directory was removed.
+	 */
+	private function remove_directory_if_only_deny_files( string $directory ): bool {
+		$names = scandir( $directory );
+
+		if ( false === $names ) {
+			return false;
+		}
+
+		$own       = array( '.htaccess', 'web.config', 'index.php' );
+		$remaining = array_diff( $names, array( '.', '..' ), $own );
+
+		if ( array() !== $remaining ) {
+			return false;
+		}
+
+		foreach ( $own as $name ) {
+			$path = $directory . '/' . $name;
+
+			if ( is_file( $path ) ) {
+				wp_delete_file( $path );
+			}
+		}
+
+		global $wp_filesystem;
+
+		if ( ! $wp_filesystem instanceof \WP_Filesystem_Base ) {
+			require_once ABSPATH . 'wp-admin/includes/file.php';
+
+			WP_Filesystem();
+		}
+
+		return $wp_filesystem instanceof \WP_Filesystem_Base && $wp_filesystem->rmdir( $directory );
 	}
 
 	/**

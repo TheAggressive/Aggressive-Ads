@@ -127,7 +127,7 @@ final class PrivateStorageHealthTest extends WP_UnitTestCase {
 		$probe  = basename( (string) wp_parse_url( $requested, PHP_URL_PATH ) );
 
 		$this->assertSame( 'critical', $result['status'] );
-		$this->assertStringContainsString( 'aggr-private', (string) $result['actions'] );
+		$this->assertStringContainsString( 'ads-uploads', (string) $result['actions'] );
 		$this->assertFileDoesNotExist( $this->storage->root() . '/' . $probe );
 	}
 }

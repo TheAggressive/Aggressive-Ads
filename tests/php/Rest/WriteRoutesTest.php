@@ -477,7 +477,7 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 				Creative_Repository::META_PRIVATE_PATH,
 				Creative_Repository::META_PRIVATE_TOKEN,
 				Creative_Repository::META_SHA256,
-				'aggr-private',
+				'ads-uploads',
 			) as $secret
 		) {
 			$this->assertStringNotContainsString( $secret, $body );

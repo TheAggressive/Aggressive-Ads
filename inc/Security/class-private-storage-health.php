@@ -103,8 +103,8 @@ final class Private_Storage_Health implements Service {
 			return $this->result(
 				'critical',
 				__( 'Unapproved advertising creative is publicly accessible', 'aggressive-ads' ),
-				__( 'The web server returned a private-storage verification file directly. Add a deny rule for the aggr-private uploads directory before accepting creative uploads.', 'aggressive-ads' ),
-				'<p><code>location ~ ^/wp-content/uploads(?:/sites/[0-9]+)?/aggr-private(?:/|$) { return 404; }</code></p>'
+				__( 'The web server returned a private-storage verification file directly. Add a deny rule for the ads-uploads uploads directory before accepting creative uploads.', 'aggressive-ads' ),
+				'<p><code>location ~ ^/wp-content/uploads(?:/sites/[0-9]+)?/ads-uploads(?:/|$) { return 404; }</code></p>'
 			);
 		}
 

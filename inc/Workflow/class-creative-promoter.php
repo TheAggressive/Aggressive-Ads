@@ -89,6 +89,10 @@ final class Creative_Promoter {
 			return $attachment_id;
 		}
 
+		// Marked before the id is recorded: an attachment that exists but is not
+		// yet linked should still be out of the library, not briefly in it.
+		$this->creatives->mark_attachment_as_creative( $attachment_id, $creative_id );
+
 		if ( ! $this->creatives->set_attachment_id( $creative_id, $attachment_id ) ) {
 			wp_delete_attachment( $attachment_id, true );
 

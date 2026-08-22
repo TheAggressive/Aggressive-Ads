@@ -162,7 +162,7 @@ final class Private_Storage_Notice implements Service {
 		printf(
 			'<div class="notice notice-error"><p><strong>%1$s</strong></p><p>%2$s</p><p><a href="%3$s">%4$s</a></p></div>',
 			esc_html__( 'Aggressive Ads: unapproved advertising creative is publicly accessible.', 'aggressive-ads' ),
-			esc_html__( 'The web server returned a private-storage verification file directly, so anyone with the URL can download creative that has not been approved. Add a deny rule for the aggr-private uploads directory.', 'aggressive-ads' ),
+			esc_html__( 'The web server returned a private-storage verification file directly, so anyone with the URL can download creative that has not been approved. Add a deny rule for the ads-uploads uploads directory.', 'aggressive-ads' ),
 			esc_url( admin_url( 'site-health.php' ) ),
 			esc_html__( 'Open Site Health for the exact rule', 'aggressive-ads' )
 		);

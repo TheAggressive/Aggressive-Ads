@@ -19,7 +19,7 @@ Things that are true, annoying, and worth writing down so nobody rediscovers the
 **Mitigation.** Path unguessability (UUID filename plus a 32-char token) does not depend on server configuration, and reads go through an authorized streaming endpoint that never redirects to the raw file. Production nginx must also deny the directory directly:
 
 ```nginx
-location ~ ^/wp-content/uploads(?:/sites/[0-9]+)?/aggr-private(?:/|$) {
+location ~ ^/wp-content/uploads(?:/sites/[0-9]+)?/ads-uploads(?:/|$) {
     return 404;
 }
 ```
