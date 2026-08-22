@@ -5,8 +5,16 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [master]
+  # Every pull request, whatever it targets.
+  #
+  # This filtered on master, so a pull request stacked on another feature branch
+  # matched nothing and got no CI at all — not a lane, not CodeQL. Fourteen
+  # commits reached one such branch unchecked, carrying a ci:security lane that
+  # could not run and a high-severity js/xss-through-dom the first scan found
+  # immediately. A security scan that only runs on the last pull request in a
+  # stack is a scan the stack routes around.
   pull_request:
-    branches: [master]
+    branches: ['**']
   workflow_dispatch:
     inputs:
       publish:

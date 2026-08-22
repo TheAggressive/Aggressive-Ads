@@ -19,6 +19,7 @@ import { createRoot, useEffect, useState } from '@wordpress/element';
 import { errorMessage, setStrings, t } from '../shared/save';
 import { QueueView } from './queue';
 import { CampaignView } from './campaign';
+import { navigateSameOrigin } from '../shared/navigate';
 import type { Bootstrap, Campaign, Queue, Tab } from './types';
 
 const EMPTY: Bootstrap = {
@@ -191,9 +192,12 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 
 			if ( created.id ) {
 				await actFor( orgId );
-				window.location.href = `${ data.portalBase }${ created.id }/`;
 
-				return;
+				if (
+					navigateSameOrigin( `${ data.portalBase }${ created.id }/` )
+				) {
+					return;
+				}
 			}
 
 			setFlash( { type: 'error', message: errorMessage( null ) } );
@@ -278,7 +282,12 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 					onBack={ () => void loadQueue( filter, queue.page ) }
 					onEdit={ () =>
 						void actFor( campaign.org_id ).then( () => {
-							window.location.href = campaign.edit_url;
+							if ( ! navigateSameOrigin( campaign.edit_url ) ) {
+								setFlash( {
+									type: 'error',
+									message: errorMessage( null ),
+								} );
+							}
 						} )
 					}
 					onTransition={ ( to, notes ) =>
