@@ -39,6 +39,23 @@ final class Transition_Table {
 	public const GUARD_VALIDATOR = 'validator';
 
 	/**
+	 * Everything the submission validator checks, except that the campaign has
+	 * not started yet.
+	 *
+	 * A start date is in the future when an advertiser chooses it, and review
+	 * takes time. Failing approval because the campaign it describes was due to
+	 * begin on Tuesday punishes the reviewer for the queue length, and the
+	 * advertiser cannot fix it — the campaign is in review, so it is no longer
+	 * theirs to edit. The only route out was to reject a campaign that was
+	 * never wrong.
+	 *
+	 * The clock already expects this: MAX_HOPS exists so a campaign approved
+	 * after its own start date can cross approved → live → complete in one
+	 * sweep.
+	 */
+	public const GUARD_APPROVABLE = 'approvable';
+
+	/**
 	 * No reviewer has claimed the campaign.
 	 */
 	public const GUARD_UNCLAIMED = 'unclaimed';
@@ -167,7 +184,7 @@ final class Transition_Table {
 				Post_Statuses::APPROVED,
 				array( self::ACTOR_STAFF ),
 				array( Capabilities::REVIEW_CAMPAIGNS, Capabilities::PUBLISH_TO_ADSANITY ),
-				array( self::GUARD_VALIDATOR ),
+				array( self::GUARD_APPROVABLE ),
 				array( self::EFFECT_PUBLISH )
 			),
 
@@ -389,6 +406,7 @@ final class Transition_Table {
 	public static function guards(): array {
 		return array(
 			self::GUARD_VALIDATOR,
+			self::GUARD_APPROVABLE,
 			self::GUARD_UNCLAIMED,
 			self::GUARD_REVIEW_NOTES,
 			self::GUARD_STARTED,

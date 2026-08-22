@@ -283,7 +283,7 @@ only then commits status, submission metadata, audit, domain event, and
 notification. A double post sees `aggr_submitted` as its current state, fails the
 edge check, and is audited without repeating the successful transition.
 
-The validator runs at every advertiser-triggered submission **and again at approval**. Re-running it is not redundant: a placement can be deactivated, an organization suspended, or a start date can fall into the past while a campaign sits in the queue.
+The validator runs at every advertiser-triggered submission **and again at approval**. Re-running it is not redundant: a placement can be deactivated or an organization suspended while a campaign sits in the queue.
 
 The submission validator requires:
 
@@ -295,8 +295,26 @@ The submission validator requires:
 - the owning organization `active`
 - every selected placement `_aggr_is_active`
 
-The approval validator re-runs the same checks. There is no placement-mapping
-or third-party publisher check.
+The approval validator re-runs the same checks with one exception: a start
+date that has fallen into the past does not block approval. The date was in the
+future when the advertiser chose it, and it passed into the past because review
+took time. The advertiser cannot correct it — a campaign in review is no longer
+theirs to edit — so enforcing it here would mean rejecting a campaign that was
+never wrong, purely because of queue latency. Submission still enforces it,
+where the advertiser owns the draft and can move the date.
+
+The leniency is deliberately one rule wide. `validate_for_approval()` filters
+that single problem code out of the full submission result rather than running a
+shorter list of checks, so any rule added later is enforced at approval too
+unless somebody names it here. The approval edge carries its own guard
+(`GUARD_APPROVABLE`) instead of `GUARD_VALIDATOR` to keep the two paths
+distinguishable in `Transition_Table`.
+
+An approved campaign whose window already opened is not left behind: the clock
+crosses more than one edge in a sweep, so it moves approved → live, or approved
+→ live → complete if the window also closed.
+
+There is no placement-mapping or third-party publisher check.
 
 ## Approval, end to end
 

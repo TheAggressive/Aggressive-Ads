@@ -547,7 +547,8 @@ final class Service_Registrar {
 				return new Transition_Guards(
 					$campaigns,
 					array(
-						Transition_Table::GUARD_VALIDATOR => $c->get( Campaign_Validator::class )->as_guard(),
+						Transition_Table::GUARD_VALIDATOR  => $c->get( Campaign_Validator::class )->as_guard(),
+						Transition_Table::GUARD_APPROVABLE => $c->get( Campaign_Validator::class )->as_approval_guard(),
 					)
 				);
 			}
