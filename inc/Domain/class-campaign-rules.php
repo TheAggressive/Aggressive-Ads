@@ -18,6 +18,7 @@ namespace Aggressive\Ads\Domain;
  */
 final class Campaign_Rules {
 
+	public const ERROR_TITLE_MISSING       = 'title_missing';
 	public const ERROR_NO_CREATIVES        = 'no_creatives';
 	public const ERROR_NO_PLACEMENTS       = 'no_placements';
 	public const ERROR_PLACEMENT_INACTIVE  = 'placement_inactive';

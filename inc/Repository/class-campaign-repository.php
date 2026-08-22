@@ -42,6 +42,16 @@ final class Campaign_Repository {
 	public const META_CURRENCY             = '_aggr_currency';
 	public const META_PENDING_UPDATES      = '_aggr_pending_creative_updates';
 	public const META_PENDING_EDITS        = '_aggr_pending_edits';
+
+	/**
+	 * Set while the campaign is still carrying the name the plugin invented.
+	 *
+	 * A draft created without a name gets a placeholder so lists and the review
+	 * queue have something to render. Comparing the stored title against that
+	 * placeholder to detect it would break the moment the site language changed,
+	 * so the fact is recorded rather than inferred.
+	 */
+	public const META_TITLE_IS_PLACEHOLDER = '_aggr_title_is_placeholder';
 	public const META_PENDING_EDITS_AT     = '_aggr_pending_edits_at';
 	public const META_PENDING_EDITS_BY     = '_aggr_pending_edits_by';
 	public const META_PENDING_EDITS_SENT   = '_aggr_pending_edits_submitted';
@@ -373,6 +383,33 @@ final class Campaign_Repository {
 	 */
 	public function advertiser_notes( int $campaign_id ): string {
 		return (string) get_post_meta( $campaign_id, self::META_ADVERTISER_NOTES, true );
+	}
+
+	/**
+	 * Whether the campaign is still carrying the name the plugin invented.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return bool
+	 */
+	public function title_is_placeholder( int $campaign_id ): bool {
+		return '' !== (string) get_post_meta( $campaign_id, self::META_TITLE_IS_PLACEHOLDER, true );
+	}
+
+	/**
+	 * Records or clears the placeholder marker.
+	 *
+	 * @param int  $campaign_id Campaign post id.
+	 * @param bool $placeholder Whether the current title was generated.
+	 * @return void
+	 */
+	public function set_title_is_placeholder( int $campaign_id, bool $placeholder ): void {
+		if ( $placeholder ) {
+			update_post_meta( $campaign_id, self::META_TITLE_IS_PLACEHOLDER, '1' );
+
+			return;
+		}
+
+		delete_post_meta( $campaign_id, self::META_TITLE_IS_PLACEHOLDER );
 	}
 
 	/**

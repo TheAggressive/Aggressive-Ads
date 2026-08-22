@@ -59,6 +59,7 @@ final class Campaign_Validator {
 	public function validate( int $campaign_id ): Validation_Result {
 		$result = new Validation_Result();
 
+		$this->check_title( $campaign_id, $result );
 		$this->check_organization( $campaign_id, $result );
 		$this->check_package( $campaign_id, $result );
 		$this->check_window( $campaign_id, $result );
@@ -188,6 +189,9 @@ final class Campaign_Validator {
 	 */
 	public static function message_for( string $code, array $context = array() ): string {
 		switch ( $code ) {
+			case Campaign_Rules::ERROR_TITLE_MISSING:
+				return __( 'Give this campaign a name before submitting.', 'aggressive-ads' );
+
 			case Campaign_Rules::ERROR_NO_CREATIVES:
 				return __( 'Add at least one creative before submitting.', 'aggressive-ads' );
 
@@ -252,6 +256,32 @@ final class Campaign_Validator {
 
 			default:
 				return __( 'This campaign is not ready to submit.', 'aggressive-ads' );
+		}
+	}
+
+	/**
+	 * A campaign has to be named by the advertiser, not by the plugin.
+	 *
+	 * A draft created without a name is given a placeholder so lists and the
+	 * review queue have something to render, and that placeholder is a real
+	 * non-empty title — so requiring "not empty" here would let every unnamed
+	 * campaign through. The marker written at creation is what distinguishes
+	 * the two, because comparing against the placeholder text would stop
+	 * working the moment the site language changed.
+	 *
+	 * @param int               $campaign_id Campaign post id.
+	 * @param Validation_Result $result      Result to add to.
+	 * @return void
+	 */
+	private function check_title( int $campaign_id, Validation_Result $result ): void {
+		if ( '' === trim( $this->campaigns->title( $campaign_id ) ) ) {
+			$result->add( Campaign_Rules::ERROR_TITLE_MISSING, 'title' );
+
+			return;
+		}
+
+		if ( $this->campaigns->title_is_placeholder( $campaign_id ) ) {
+			$result->add( Campaign_Rules::ERROR_TITLE_MISSING, 'title' );
 		}
 	}
 

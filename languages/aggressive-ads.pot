@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-22T00:05:46+00:00\n"
+"POT-Creation-Date: 2026-08-22T02:01:15+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -1816,7 +1816,7 @@ msgstr ""
 #: inc/Portal/class-campaign-actions.php:559
 #: inc/Portal/class-campaign-actions.php:584
 #: inc/Portal/class-campaign-actions.php:612
-#: inc/Workflow/class-campaign-editor.php:309
+#: inc/Workflow/class-campaign-editor.php:325
 msgid "You do not have permission to edit that campaign."
 msgstr ""
 
@@ -1835,29 +1835,29 @@ msgid "You do not have permission to withdraw that campaign."
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:859
-#: inc/Workflow/class-campaign-editor.php:333
+#: inc/Workflow/class-campaign-editor.php:349
 msgid "Enter a campaign name."
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:860
 #: inc/Workflow/class-campaign-editor.php:140
-#: inc/Workflow/class-campaign-editor.php:337
+#: inc/Workflow/class-campaign-editor.php:353
 msgid "Use 160 characters or fewer for the campaign name."
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:861
-#: inc/Workflow/class-campaign-editor.php:377
-#: inc/Workflow/class-campaign-validator.php:233
+#: inc/Workflow/class-campaign-editor.php:393
+#: inc/Workflow/class-campaign-validator.php:237
 msgid "The end date must be after the start date."
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:862
-#: inc/Workflow/class-campaign-validator.php:224
+#: inc/Workflow/class-campaign-validator.php:228
 msgid "Choose a start date."
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:863
-#: inc/Workflow/class-campaign-validator.php:227
+#: inc/Workflow/class-campaign-validator.php:231
 msgid "The start date has already passed. Choose a later one."
 msgstr ""
 
@@ -1879,8 +1879,8 @@ msgid "That package is not configured completely. Choose another package or get 
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:870
-#: inc/Workflow/class-campaign-editor.php:446
-#: inc/Workflow/class-campaign-editor.php:451
+#: inc/Workflow/class-campaign-editor.php:462
+#: inc/Workflow/class-campaign-editor.php:467
 msgid "Upload one creative for every package placement before scheduling."
 msgstr ""
 
@@ -1920,7 +1920,7 @@ msgid "The campaign could not be submitted. Please try again."
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:880
-#: inc/Workflow/class-campaign-editor.php:221
+#: inc/Workflow/class-campaign-editor.php:230
 msgid "The campaign could not be saved. Please try again."
 msgstr ""
 
@@ -2061,7 +2061,7 @@ msgid "That placement is not available for this campaign."
 msgstr ""
 
 #: inc/Portal/class-creative-actions.php:276
-#: inc/Workflow/class-campaign-editor.php:313
+#: inc/Workflow/class-campaign-editor.php:329
 #: inc/Workflow/class-creative-manager.php:248
 #: inc/Workflow/class-creative-manager.php:309
 msgid "This campaign cannot be changed right now."
@@ -2476,7 +2476,7 @@ msgid "Unapproved advertising creative is publicly accessible"
 msgstr ""
 
 #: inc/Security/class-private-storage-health.php:106
-msgid "The web server returned a private-storage verification file directly. Add a deny rule for the aggr-private uploads directory before accepting creative uploads."
+msgid "The web server returned a private-storage verification file directly. Add a deny rule for the ads-uploads uploads directory before accepting creative uploads."
 msgstr ""
 
 #: inc/Security/class-private-storage-health.php:113
@@ -2498,7 +2498,7 @@ msgid "Aggressive Ads: unapproved advertising creative is publicly accessible."
 msgstr ""
 
 #: inc/Security/class-private-storage-notice.php:165
-msgid "The web server returned a private-storage verification file directly, so anyone with the URL can download creative that has not been approved. Add a deny rule for the aggr-private uploads directory."
+msgid "The web server returned a private-storage verification file directly, so anyone with the URL can download creative that has not been approved. Add a deny rule for the ads-uploads uploads directory."
 msgstr ""
 
 #: inc/Security/class-private-storage-notice.php:167
@@ -2513,9 +2513,9 @@ msgstr ""
 msgid "That is more requests than we can accept right now. Please wait a moment and try again."
 msgstr ""
 
-#: inc/Storage/class-private-storage.php:127
-#: inc/Storage/class-private-storage.php:140
-#: inc/Storage/class-private-storage.php:152
+#: inc/Storage/class-private-storage.php:135
+#: inc/Storage/class-private-storage.php:148
+#: inc/Storage/class-private-storage.php:160
 msgid "The upload could not be saved. Please try again."
 msgstr ""
 
@@ -2688,7 +2688,7 @@ msgid "You do not have permission to change that campaign."
 msgstr ""
 
 #: inc/Workflow/class-campaign-copier.php:287
-#: inc/Workflow/class-campaign-editor.php:144
+#: inc/Workflow/class-campaign-editor.php:146
 msgid "Untitled campaign"
 msgstr ""
 
@@ -2696,32 +2696,32 @@ msgstr ""
 msgid "You do not have permission to create a campaign for an advertiser."
 msgstr ""
 
-#: inc/Workflow/class-campaign-editor.php:150
+#: inc/Workflow/class-campaign-editor.php:159
 msgid "The campaign could not be created. Please try again."
 msgstr ""
 
-#: inc/Workflow/class-campaign-editor.php:190
-#: inc/Workflow/class-campaign-editor.php:210
+#: inc/Workflow/class-campaign-editor.php:199
+#: inc/Workflow/class-campaign-editor.php:219
 msgid "This campaign changed in another window. Reload it before saving again."
 msgstr ""
 
-#: inc/Workflow/class-campaign-editor.php:348
+#: inc/Workflow/class-campaign-editor.php:364
 msgid "One of the selected placements is not available."
 msgstr ""
 
-#: inc/Workflow/class-campaign-editor.php:388
+#: inc/Workflow/class-campaign-editor.php:404
 msgid "That campaign step is not valid."
 msgstr ""
 
-#: inc/Workflow/class-campaign-editor.php:531
+#: inc/Workflow/class-campaign-editor.php:547
 msgid "That package is not available."
 msgstr ""
 
-#: inc/Workflow/class-campaign-editor.php:542
+#: inc/Workflow/class-campaign-editor.php:558
 msgid "That package is not configured completely. Please choose another package or get in touch."
 msgstr ""
 
-#: inc/Workflow/class-campaign-editor.php:547
+#: inc/Workflow/class-campaign-editor.php:563
 msgid "That package includes a placement that is not available. Please choose another package or get in touch."
 msgstr ""
 
@@ -2749,73 +2749,77 @@ msgstr ""
 msgid "This action cannot be completed yet."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:192
+#: inc/Workflow/class-campaign-validator.php:193
+msgid "Give this campaign a name before submitting."
+msgstr ""
+
+#: inc/Workflow/class-campaign-validator.php:196
 msgid "Add at least one creative before submitting."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:195
+#: inc/Workflow/class-campaign-validator.php:199
 msgid "Choose at least one placement before submitting."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:198
+#: inc/Workflow/class-campaign-validator.php:202
 msgid "One of the placements on this campaign is no longer available."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:201
+#: inc/Workflow/class-campaign-validator.php:205
 msgid "Every placement needs its own creative."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:204
+#: inc/Workflow/class-campaign-validator.php:208
 msgid "Only image creatives can be submitted."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:207
+#: inc/Workflow/class-campaign-validator.php:211
 msgid "A creative is attached to a placement this campaign has not selected."
 msgstr ""
 
 #. translators: 1: uploaded dimensions, e.g. 1200 × 400. 2: required dimensions, e.g. 1200 × 300.
-#: inc/Workflow/class-campaign-validator.php:212
+#: inc/Workflow/class-campaign-validator.php:216
 #, php-format
 msgid "Uploaded: %1$s. Required: %2$s."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:218
+#: inc/Workflow/class-campaign-validator.php:222
 msgid "Every creative needs a destination URL."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:221
+#: inc/Workflow/class-campaign-validator.php:225
 msgid "A destination URL is not a valid http or https address."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:230
+#: inc/Workflow/class-campaign-validator.php:234
 msgid "The start date must begin at midnight in the site timezone."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:236
+#: inc/Workflow/class-campaign-validator.php:240
 msgid "The end date must include the full selected day in the site timezone."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:239
+#: inc/Workflow/class-campaign-validator.php:243
 msgid "This organization cannot submit campaigns. Please get in touch."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:242
+#: inc/Workflow/class-campaign-validator.php:246
 msgid "This campaign is not connected to an organization. Please get in touch."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:245
+#: inc/Workflow/class-campaign-validator.php:249
 msgid "Choose a package before submitting."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:248
+#: inc/Workflow/class-campaign-validator.php:252
 msgid "The package on this campaign is no longer offered. Choose another one."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:251
+#: inc/Workflow/class-campaign-validator.php:255
 msgid "This campaign has no price recorded. Choose its package again."
 msgstr ""
 
-#: inc/Workflow/class-campaign-validator.php:254
+#: inc/Workflow/class-campaign-validator.php:258
 msgid "This campaign is not ready to submit."
 msgstr ""
 
@@ -2959,15 +2963,15 @@ msgstr ""
 msgid "This creative’s file has changed since it was reviewed, so it has not been published."
 msgstr ""
 
-#: inc/Workflow/class-creative-promoter.php:97
+#: inc/Workflow/class-creative-promoter.php:101
 msgid "This creative could not be linked to its Media Library file."
 msgstr ""
 
-#: inc/Workflow/class-creative-promoter.php:129
+#: inc/Workflow/class-creative-promoter.php:133
 msgid "The Media Library is not writable, so this creative could not be published."
 msgstr ""
 
-#: inc/Workflow/class-creative-promoter.php:141
+#: inc/Workflow/class-creative-promoter.php:145
 msgid "This creative could not be copied into the Media Library."
 msgstr ""
 
