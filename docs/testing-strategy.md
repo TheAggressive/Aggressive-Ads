@@ -31,12 +31,16 @@ The lesson both share: **assert your fixture is real before asserting on it.** T
 | `upgrade` | same | same | same |
 | `multisite` | `phpunit-multisite.xml.dist` | `tests/php/bootstrap-wp.php` + `WP_TESTS_MULTISITE` | same, as a network |
 | JS | `jest.config.js` | — | Node |
-| E2E | `playwright.config.ts` | — | wp-env |
+| E2E | `playwright.config.ts` | — | WordPress Studio locally; WordPress 7.1 Compose in CI |
 
-`pnpm ci:coverage` collects the isolated unit suite with PCOV, Xdebug, or
-phpdbg and enforces an 8% statement floor across `inc/`. This is a quantitative
-regression signal; it does not replace the WordPress suites whose database and
-core interactions are deliberately outside the unit bootstrap.
+`pnpm ci:coverage` runs both the isolated unit suite and the single-site
+WordPress suites under PCOV in the official-image container. It unions their executable `inc/`
+lines, so a statement hit by either suite counts once, and enforces a 69.75%
+statement floor against the measured 69.86% PCOV baseline. The exact same run
+reports 70.25% under Xdebug because it marks 53 `global` declarations as hit
+while PCOV does not; no tested behavior differs. The separate configs and
+bootstraps remain intact: collecting the unit report in the container does not
+load WordPress into that suite.
 
 Separate PHPUnit configs because **PHPUnit allows exactly one bootstrap per configuration file**. That is the reason for the split, not preference — the unit suite must not load WordPress, and the WordPress suites must. Multisite is its own file so colliding-id tests cannot `markTestSkipped()` on the single-site lane.
 
@@ -48,7 +52,10 @@ A `map_meta_cap` test written with Brain\Monkey mocks `current_user_can()` — a
 
 The same holds for `dbDelta` idempotence (which depends on MySQL's own type normalization), REST authorization (needs a real `WP_REST_Server` and real nonce verification), uploads (touch GD and the filesystem), and "roles survived the upgrade" (is by definition about real `wp_options` state).
 
-Aggressive Apparel already runs PHPUnit 9.6 with `yoast/phpunit-polyfills:^4.0` against WordPress 7.0.2 in wp-env, so this is a proven combination rather than a hopeful one. It is a **test-only** constraint — no shipped code changes — and Brain\Monkey `^2.7` runs on 9.6, so unit tests are unaffected.
+The container runs WordPress 7.1 and PHP 8.4 from a digest-pinned Docker
+Official Image. `wp-phpunit/wp-phpunit:7.1.0` supplies the matching Core test
+library, and `yoast/phpunit-polyfills:^4.0` keeps the assertions compatible with
+PHPUnit 9.6. These are **test-only** constraints; no shipped code changes.
 
 ## Failure policy
 
@@ -121,7 +128,7 @@ pre- and post-write states with axe.
 
 Global setup seeds and resets deterministic data; teardown deletes the campaign,
 its private bytes, and the inventory fixtures. It also hard-flushes
-Apache rewrite rules so a rebuilt wp-env cannot turn a stale `.htaccess` file
+Apache rewrite rules so a rebuilt container cannot turn a stale `.htaccess` file
 into a misleading portal failure. Chromium runs with one worker because the
 WordPress site is shared mutable state, and retries are zero so a flaky gate
 cannot hide.
@@ -141,11 +148,84 @@ deliberately single-use.
 
 ```bash
 pnpm test:php:unit            # fast, no database
-pnpm test:php:integration     # needs wp-env + WP test suite
+pnpm env:start                # WordPress 7.1 + MySQL 8.4 at localhost:9960
+pnpm test:php:integration     # real WordPress + isolated test database
+pnpm test:php:multisite       # real multisite bootstrap
 pnpm test:php:security
 pnpm test:js
 pnpm test:e2e:browsers        # install browsers; what pnpm qa runs
 pnpm test:e2e:install         # the same, plus system libraries (needs sudo; what CI runs)
-pnpm test:e2e                 # needs wp-env running; setup seeds its own data
+pnpm test:e2e                 # needs env:start; setup seeds its own data
+pnpm test:php:native          # the WP suites on local MySQL; no Docker, no sudo
+pnpm db:local stop            # stop that MySQL (also: start|status|destroy)
+pnpm test:e2e:studio          # starts/discovers Studio and runs the same browser specs
+pnpm qa:fast                  # Docker-free code quality, build and unit checks
+pnpm qa:local                 # qa:fast + the Studio browser workflow
 pnpm ci:verify                # everything, serially, as CI would
+pnpm qa:fresh                 # recreate containers/database, then run all gates
 ```
+
+The Studio plugin directory must resolve to this checkout; a symlink is the
+normal arrangement. `qa:local` discovers that site automatically, or accepts
+`AGGR_STUDIO_PATH=/path/to/site` when more than one site matches. The base URL
+is whatever `studio site list` reports for that site; `AGGR_STUDIO_URL` overrides
+it, and a site Studio gives no URL for is refused rather than guessed at.
+
+The site must opt in — `.aggr-e2e-site` in its root, or
+`AGGR_STUDIO_E2E_ALLOW=1` — because the setup mutates it. Two of those
+mutations are permanent: `tests/e2e/seed-users.php` resets the `admin` and
+`advertiser` passwords to the fixture values, and the seeds write fixture
+campaigns, an organization and a placement. The reversible ones — theme,
+permalink structure, the mail-capture mu-plugin — are captured before the run and
+restored afterwards on success and on failure, and a failed restore turns a
+passing run red rather than reporting a site it left half-changed.
+
+`home` and `siteurl` are deliberately not restored. They are set from whatever
+`studio site list` reports and left there, because the value a restore would put
+back is not knowably right: Studio assigns the port and can reassign it. The site
+this was built against stored `https://laartsonline.local`, which resolved to
+127.0.0.1 with nothing listening on 443 — so the old behaviour made the site
+reachable for the length of a test run and unreachable again afterwards, and
+reported that as a clean restore.
+
+Following Studio is safe rather than merely convenient: a custom hostname for a
+Studio site is configured in Studio, so `studio site list` reports it and the
+next run picks it up. There is no arrangement where the correct address is one
+Studio does not know about, which is why nothing here is a literal.
+`AGGR_STUDIO_URL` remains only as the narrow fallback for a site Studio reports
+no URL for at all.
+
+The PHP integration suite does not run against Studio's SQLite database because
+its schema and `dbDelta` assertions are specifically MySQL behavior.
+
+### The native runner
+
+`pnpm test:php:native` runs the same integration and multisite suites on this
+host — no Docker and no sudo. `bin/local/mysql.sh` initializes a private datadir
+under `.cache/ci/mysql` and listens on port 13306, so a masked or running system
+`mysql.service` is neither required nor disturbed; `bin/local/wp-core.sh` fetches
+the WordPress release `compose.yml` pins and refuses to proceed if the two ever
+drift apart.
+
+`tests/wp-tests-config.php` is one file for both runners: every value defaults to
+the Compose stack, and the native runner overrides `AGGR_TESTS_*`. Two copies of
+a database configuration is how two runners start testing different things.
+
+`bin/ci/run-wp-tests.sh` branches on `AGGR_TESTS_RUNNER` (default `docker`) but
+shares the JUnit-report verification, because that is the half that catches a
+suite dying mid-run.
+
+**This is a feedback loop, not a CI substitute.** CI pins MySQL 8.4 and PHP 8.4;
+the native runner uses whatever the host has, and prints both versions at the end
+of every run so a local-vs-CI disagreement costs a glance rather than an
+afternoon. The schema and `dbDelta` assertions are the ones that can legitimately
+differ. `pnpm qa` against the Compose stack remains the contract for declaring a
+change finished.
+
+One requirement is not obvious: the checkout must sit inside a directory that
+looks like a plugins directory. The multisite suite calls
+`activate_plugin( plugin_basename( AGGR_PLUGIN_FILE ) )`, and `plugin_basename()`
+resolves a path only by stripping `WP_PLUGIN_DIR` — the bootstrap loads this
+plugin straight from the checkout rather than through
+`wp_register_plugin_realpath()`, so a symlink into `wp-content/plugins` does not
+help and five tests die with "Plugin file does not exist".

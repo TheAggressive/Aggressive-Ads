@@ -276,6 +276,7 @@ export function CampaignView( {
 	campaign,
 	busy,
 	onBack,
+	onEdit,
 	onTransition,
 	onNotes,
 	onChanges,
@@ -285,6 +286,7 @@ export function CampaignView( {
 	campaign: Campaign;
 	busy: boolean;
 	onBack: () => void;
+	onEdit: () => void;
 	onTransition: ( to: string, notes: string ) => void;
 	onNotes: ( notes: string ) => void;
 	onChanges: ( decision: string, notes: string ) => void;
@@ -348,25 +350,40 @@ export function CampaignView( {
 						<p className="aggr-lede">{ campaign.org_name }</p>
 					</div>
 
-					{ 0 === campaign.actions.length ? null : (
-						<div className="aggr-pagehead__actions">
-							{ campaign.actions.map( ( action ) => (
-								<button
-									key={ action.to }
-									type="button"
-									className={ toneClass( action ) }
-									disabled={ busy }
-									onClick={ () =>
-										action.needs_notes
-											? setPrompting( action )
-											: onTransition( action.to, '' )
-									}
-								>
-									{ action.label }
-								</button>
-							) ) }
-						</div>
-					) }
+					<div className="aggr-pagehead__actions">
+						{ /*
+						 * Editing opens the advertiser's own wizard rather than
+						 * a second editor here. It is a link, not a button,
+						 * because it leaves wp-admin — and it is always
+						 * offered, since the whole point of on-behalf editing
+						 * is the statuses where the advertiser has no
+						 * transition available.
+						 */ }
+						<button
+							type="button"
+							className="aggr-button aggr-button--secondary"
+							disabled={ busy }
+							onClick={ () => onEdit() }
+						>
+							{ t( 'editCampaign' ) }
+						</button>
+
+						{ campaign.actions.map( ( action ) => (
+							<button
+								key={ action.to }
+								type="button"
+								className={ toneClass( action ) }
+								disabled={ busy }
+								onClick={ () =>
+									action.needs_notes
+										? setPrompting( action )
+										: onTransition( action.to, '' )
+								}
+							>
+								{ action.label }
+							</button>
+						) ) }
+					</div>
 				</header>
 
 				<section

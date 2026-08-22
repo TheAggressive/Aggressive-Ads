@@ -8,10 +8,10 @@
 ci:doctor    → node bin/ci/doctor.mjs
 composer:verify → strict manifest/lock validation + dependency dry run
 ci:build     → pnpm build
-ci:frontend  → lint:js && typecheck && lint:css && format:check && test:js
+ci:frontend  → lint:js && typecheck && lint:css && format:check && lint:shell && test:tools && test:js
 ci:php       → lint:php && analyse:php && test:php:unit
-ci:coverage  → unit coverage collection + quantitative regression floor
-ci:php:wp    → test:php:integration && test:php:multisite  (needs wp-env)
+ci:coverage  → one integration run + unit coverage + quantitative regression floor
+ci:php:wp    → test:php:multisite
 ci:e2e       → test:e2e  (consumes the build artifact)
 ci:package   → release:package && release:verify  (consumes the build artifact)
 ci:verify    → bash bin/ci/verify.sh          (every current lane, serially)
@@ -84,18 +84,15 @@ pins `phpVersion`, `phpcs.xml.dist` pins `testVersion`, and `composer.json` pins
 host. The unit suite is the one thing that genuinely executes on the local
 interpreter.
 
-**Database state.** wp-env's database persists locally and is new on every CI
-run. `tests/e2e/reset.php` clears the fixtures it knows by slug and cannot clear
-a row left by some earlier failed run — which is why an e2e fixture must reuse a
-slug that file already deletes. `pnpm qa:fresh` destroys the environment and
-starts over before running the lanes, which is the closest local equivalent to
-what CI does every time.
+**Database state.** MySQL stores its data on tmpfs, so the database is disposable
+and never overlaps a developer's site. `tests/e2e/reset.php` still clears its
+fixtures between browser specs; `pnpm qa:fresh` removes and recreates the entire
+Compose project before rehearsing every lane.
 
 **Infrastructure flakes.** A fourth difference is not about inputs at all: CI
-pulls from the network and a laptop with warm caches often does not. The first
-attempt at v1.1.0 failed because `api.github.com` returned HTTP 504 for
-twenty-six package downloads inside wp-env's Docker build — a GitHub outage,
-reported as a red build on this plugin.
+pulls digest-pinned images from the network while a laptop usually has warm
+Docker layers. Environment startup is retried because image pulls are
+idempotent and network-bound.
 
 The browser install is the other one, and it is worth knowing where its time
 goes: the browsers themselves are cached and restore in seconds, while
@@ -135,10 +132,11 @@ fixing, so it belongs only on network-bound, idempotent steps. Each retry emits
 a workflow warning, so a run that only passed on the second attempt still says
 so.
 
-The build job uploads one `dist/` artifact which the E2E and package jobs both
-download. This makes the browser-tested assets the packaged assets instead of
-allowing each job to compile a different tree. The E2E job installs Playwright's
-pinned Chromium and WebKit builds, starts wp-env, and runs the same
+The build job uploads one `dist/` artifact which the coverage, E2E, and package
+jobs download. This makes the integration-tested, browser-tested, and packaged
+assets identical instead of allowing each job to compile a different tree. The
+E2E job installs Playwright's
+pinned Chromium and WebKit builds, starts the Compose stack, and runs the same
 `pnpm ci:e2e` command as local verification. Failed runs retain
 the trace, screenshot, video, and WordPress debug log; skipped specs make the
 lane fail rather than quietly reducing coverage.
@@ -155,15 +153,17 @@ lane fail rather than quietly reducing coverage.
 | TypeScript | `strict`, `noUncheckedIndexedAccess` |
 | Stylelint | `@wordpress/stylelint-config` |
 | File length | Warn > 800, fail > 1000, no allowlist |
-| Unit coverage | **At least 8% of executable `inc/` statements** |
+| PHP coverage | **At least 69.75% of executable `inc/` statements across unit + integration** |
 
 **No baseline.** A baseline is a list of known problems you have agreed to stop looking at, and it only grows. Type issues get fixed as they are introduced, while the context is still in someone's head.
 
-The coverage floor is intentionally a regression guard, not a claim that 8% is
-enough coverage. The database, REST, authorization, lifecycle, and multisite
-behavior lives in the WordPress suites and cannot be measured by the isolated
-unit runner. New behavior still needs the appropriate focused test; the floor
-prevents the measurable unit-tested surface from silently shrinking.
+The coverage floor is a regression guard set just below the measured 69.86%
+PCOV baseline, not a substitute for a focused test. The same tests report
+70.25% under Xdebug because that driver marks 53 `global` declarations as hit;
+PCOV does not. The checker unions statements from the isolated unit report and
+the single-site WordPress report, normalizing their checkout paths and counting
+a statement hit by either suite once. Multisite remains a separate behavioral
+gate rather than part of this metric.
 
 `lint:files` bundles the structural gates that are not really lint:
 
@@ -508,8 +508,19 @@ The hooks mirror the Aggressive theme's development cycle:
   autofixes, then rejects whitespace errors.
 - `commit-msg` enforces Conventional Commits so release history stays
   machine-readable.
-- `pre-push` runs `pnpm qa:fast`: toolchain and lock validation, repository
-  contracts, frontend checks, build, PHP quality/tests, and unit coverage.
+- `pre-push` runs the Docker-free `pnpm qa:fast`: toolchain and lock validation,
+  repository contracts, frontend checks, build, and PHP quality/unit tests.
+  ShellCheck runs from a checksum-pinned binary fetched into `.cache/ci/` by
+  `bin/ci/install-shellcheck.sh`; the digest-pinned container image in
+  `bin/check-shell.sh` now covers only platforms with no pinned build. Bump the
+  two versions together.
+- `pnpm qa:local` adds the WordPress suites on a local MySQL (`test:php:native`)
+  and the real browser workflows against the Studio site that serves this
+  checkout. Neither claims CI parity: the native runner uses the host's MySQL and
+  PHP rather than the pinned 8.4 pair, and says so at the end of every run. That site must opt in first — `.aggr-e2e-site` in its
+  root, or `AGGR_STUDIO_E2E_ALLOW=1` — because the suite resets the `admin` and
+  `advertiser` passwords there and does not put them back. MySQL integration and
+  coverage remain CI concerns.
 - `pnpm qa` is the full release rehearsal, including Docker-backed WordPress,
   Playwright browser/system-dependency provisioning, browser tests, and the
   packaging lane.

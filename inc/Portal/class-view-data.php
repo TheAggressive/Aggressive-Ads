@@ -21,6 +21,7 @@ use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Repository\Package_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\REST\Creative_File_Controller;
+use Aggressive\Ads\Workflow\Edit_Window;
 use Aggressive\Ads\Workflow\Campaign_Change_Manager;
 use Aggressive\Ads\Workflow\Campaign_Editor;
 use Aggressive\Ads\Workflow\Email_Change;
@@ -52,6 +53,8 @@ final class View_Data {
 	 * @param Reporting_Read          $reporting  Native rollup reads.
 	 * @param Campaign_Change_Manager $changes  Running-campaign change proposals.
 	 * @param Settings                $settings   Brand and support details.
+	 * @param Edit_Window             $window     When editing is permitted.
+	 * @param Acting_As               $acting     Staff acting for an advertiser.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -65,7 +68,9 @@ final class View_Data {
 		private readonly Email_Change $emails,
 		private readonly Reporting_Read $reporting,
 		private readonly Campaign_Change_Manager $changes,
-		private readonly Settings $settings
+		private readonly Settings $settings,
+		private readonly Edit_Window $window,
+		private readonly Acting_As $acting
 	) {
 	}
 
@@ -75,6 +80,19 @@ final class View_Data {
 	 * @return int
 	 */
 	public function org_id(): int {
+		/*
+		 * An open acting-as session decides which organization this screen is
+		 * about. It changes scope only — every capability check and every
+		 * Ownership decision below is untouched, so this cannot show staff
+		 * anything their own capabilities did not already allow against the
+		 * client's objects.
+		 */
+		$acting = $this->acting->org_id();
+
+		if ( $acting > 0 ) {
+			return $acting;
+		}
+
 		$orgs = $this->orgs->org_ids_for_user( get_current_user_id() );
 
 		return array() === $orgs ? 0 : $orgs[0];
@@ -183,27 +201,33 @@ final class View_Data {
 
 		$row = $this->reporting->attach_one( $this->campaign_row( $campaign_id ) );
 
-		$row['review_notes']        = $this->campaigns->review_notes( $campaign_id );
-		$row['revision']            = $this->campaigns->revision( $campaign_id );
-		$row['submitted_at']        = $this->campaigns->submitted_at( $campaign_id );
-		$row['creatives']           = $this->creative_rows( $campaign_id );
-		$row['creative_updates']    = $this->creative_update_rows( $campaign_id );
-		$row['creative_slots']      = $this->creative_slots( $campaign_id, $row['creatives'] );
-		$row['placement_ids']       = $this->campaigns->placement_ids( $campaign_id );
-		$row['placement_options']   = $this->placement_options();
-		$row['package_id']          = $this->campaigns->package_id( $campaign_id );
-		$row['package_name']        = $row['package_id'] > 0 ? $this->packages->name( $row['package_id'] ) : '';
-		$row['package_options']     = $this->package_options();
-		$row['budget_cents']        = $this->campaigns->budget_cents( $campaign_id );
-		$row['currency']            = $this->campaigns->currency( $campaign_id );
-		$row['package_price']       = '' === $row['currency'] ? '' : $this->format_money( $row['budget_cents'], $row['currency'] );
-		$row['wizard_step']         = $this->campaigns->wizard_step( $campaign_id );
-		$row['start_date']          = $this->date_input_value( $this->campaigns->start_ts( $campaign_id ) );
-		$row['end_date']            = $this->date_input_value( $this->campaigns->end_ts( $campaign_id ) );
-		$row['advertiser_notes']    = $this->campaigns->advertiser_notes( $campaign_id );
-		$row['autosave_rev']        = $this->campaigns->autosave_revision( $campaign_id );
-		$row['readiness']           = $this->readiness->for_campaign( $campaign_id );
-		$row['editable']            = in_array( $this->campaigns->status( $campaign_id ), Post_Statuses::advertiser_editable(), true );
+		$row['review_notes']      = $this->campaigns->review_notes( $campaign_id );
+		$row['revision']          = $this->campaigns->revision( $campaign_id );
+		$row['submitted_at']      = $this->campaigns->submitted_at( $campaign_id );
+		$row['creatives']         = $this->creative_rows( $campaign_id );
+		$row['creative_updates']  = $this->creative_update_rows( $campaign_id );
+		$row['creative_slots']    = $this->creative_slots( $campaign_id, $row['creatives'] );
+		$row['placement_ids']     = $this->campaigns->placement_ids( $campaign_id );
+		$row['placement_options'] = $this->placement_options();
+		$row['package_id']        = $this->campaigns->package_id( $campaign_id );
+		$row['package_name']      = $row['package_id'] > 0 ? $this->packages->name( $row['package_id'] ) : '';
+		$row['package_options']   = $this->package_options();
+		$row['budget_cents']      = $this->campaigns->budget_cents( $campaign_id );
+		$row['currency']          = $this->campaigns->currency( $campaign_id );
+		$row['package_price']     = '' === $row['currency'] ? '' : $this->format_money( $row['budget_cents'], $row['currency'] );
+		$row['wizard_step']       = $this->campaigns->wizard_step( $campaign_id );
+		$row['start_date']        = $this->date_input_value( $this->campaigns->start_ts( $campaign_id ) );
+		$row['end_date']          = $this->date_input_value( $this->campaigns->end_ts( $campaign_id ) );
+		$row['advertiser_notes']  = $this->campaigns->advertiser_notes( $campaign_id );
+		$row['autosave_rev']      = $this->campaigns->autosave_revision( $campaign_id );
+		$row['readiness']         = $this->readiness->for_campaign( $campaign_id );
+		$row['editable']          = $this->window->allows( $campaign_id );
+		$row['on_behalf']         = $this->window->is_on_behalf( $campaign_id );
+
+		// The campaign's organization, not the viewer's. Staff have none, so
+		// the top bar's org name is blank for them and cannot name the client
+		// whose campaign this actually is.
+		$row['org_name']            = $this->orgs->name( $this->campaigns->org_id( $campaign_id ) );
 		$row['can_copy']            = current_user_can( Capabilities::SUBMIT_CAMPAIGN );
 		$row['copy_label']          = Post_Statuses::COMPLETE === $this->campaigns->status( $campaign_id )
 			? __( 'Renew campaign', 'aggressive-ads' )

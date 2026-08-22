@@ -43,7 +43,15 @@ final class Campaign_Copier {
 	}
 
 	/**
-	 * Copies a readable campaign into a new organization-scoped draft.
+	 * Copies a readable campaign into a new draft owned by the same
+	 * organization as the campaign it copies.
+	 *
+	 * The target org is the source campaign's, never the caller's. For an
+	 * advertiser these are the same thing — they can only read their own
+	 * organization's campaigns. For staff they are not: reading a client's
+	 * campaign is allowed, so deriving the target from the caller would file
+	 * the copy, its snapshot and its private creative bytes under whichever
+	 * organization the staff member happened to belong to.
 	 *
 	 * @param int $source_id Source campaign post id.
 	 * @return int|WP_Error
@@ -58,7 +66,10 @@ final class Campaign_Copier {
 		}
 
 		$title       = $this->copied_title( $source_id );
-		$campaign_id = $this->editor->create( $title );
+		$source_org  = $this->campaigns->org_id( $source_id );
+		$campaign_id = current_user_can( Capabilities::REVIEW_CAMPAIGNS )
+			? $this->editor->create_for_org( $source_org, $title )
+			: $this->editor->create( $title );
 
 		if ( is_wp_error( $campaign_id ) ) {
 			return $campaign_id;

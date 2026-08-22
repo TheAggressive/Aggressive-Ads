@@ -1,19 +1,14 @@
-# pnpm 11 blocks dependency build scripts unless they are listed here, and
-# exits non-zero when an unlisted one is encountered. That exit code is not
-# cosmetic: `wp-env start` shells out to `pnpm install`, so an unapproved build
-# script stops the whole environment from starting.
+# pnpm 11 blocks dependency build scripts unless they are listed here.
 #
 # Keeping the list explicit means a new transitive dependency cannot silently
 # run arbitrary code at install time — adding one is a reviewable change.
 #
-# fs-ext-extra-prebuilt arrives via @wordpress/env for file locking, and ships
-# a working JavaScript fallback, so it does not need its native build.
 packages: []
 
 # WordPress tooling occasionally pins vulnerable transitive releases after a
 # patched version exists. Keep overrides narrow to the parent that introduces
 # each advisory, then remove them when upstream moves. Every override is
-# exercised by build, lint, wp-env, and Playwright in ci:verify.
+# exercised by build, lint, and Playwright in ci:verify.
 overrides:
   'markdownlint-cli>minimatch': 3.1.4
   'copy-webpack-plugin>serialize-javascript': 7.0.5
@@ -28,7 +23,6 @@ allowBuilds:
   '@parcel/watcher': false
   core-js: false
   core-js-pure: false
-  fs-ext-extra-prebuilt: false
   unrs-resolver: false
 
 patchedDependencies:

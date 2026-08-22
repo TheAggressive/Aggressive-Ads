@@ -1,6 +1,6 @@
 # Forward-compatibility PHP lane.
 #
-# Development, CI and the release gate all run PHP 8.4 on purpose — .wp-env.json,
+# Development, CI and the release gate all run PHP 8.4 on purpose — compose.yml,
 # ci.yml, phpstan.neon and the plugin's own floor guard agree. That parity is
 # what stops an API missing on the floor from passing locally and failing in
 # Actions, and it is worth keeping. It also means nothing in the repository ever

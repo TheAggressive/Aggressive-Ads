@@ -165,4 +165,59 @@ final class PostStatusesTest extends TestCase {
 		$this->assertFalse( Post_Statuses::is_valid( '' ) );
 		$this->assertFalse( Post_Statuses::is_valid( 'aggr_approved_by_me' ) );
 	}
+
+	/**
+	 * An advertiser edits a draft, or one with changes requested.
+	 *
+	 * @return void
+	 */
+	public function test_the_advertiser_window_is_draft_and_changes(): void {
+		$this->assertSame(
+			array( Post_Statuses::DRAFT, Post_Statuses::CHANGES ),
+			Post_Statuses::advertiser_editable()
+		);
+	}
+
+	/**
+	 * Staff edit in every status, acting on the client's behalf.
+	 *
+	 * Asserted against `all()` rather than a written-out list, so a twelfth
+	 * status is included by definition instead of being forgotten here.
+	 *
+	 * @return void
+	 */
+	public function test_the_staff_window_is_every_status(): void {
+		$this->assertSame( Post_Statuses::all(), Post_Statuses::staff_editable() );
+	}
+
+	/**
+	 * The resolver returns one window or the other, and nothing else.
+	 *
+	 * @return void
+	 */
+	public function test_editable_for_selects_by_role(): void {
+		$this->assertSame(
+			Post_Statuses::staff_editable(),
+			Post_Statuses::editable_for( true )
+		);
+		$this->assertSame(
+			Post_Statuses::advertiser_editable(),
+			Post_Statuses::editable_for( false )
+		);
+	}
+
+	/**
+	 * The advertiser window is a subset of the staff one.
+	 *
+	 * Staff must never be refused something an advertiser is allowed, which a
+	 * written-out list could silently break.
+	 *
+	 * @return void
+	 */
+	public function test_the_advertiser_window_is_a_subset_of_the_staff_window(): void {
+		$this->assertSame(
+			array(),
+			array_diff( Post_Statuses::advertiser_editable(), Post_Statuses::staff_editable() )
+		);
+	}
 }

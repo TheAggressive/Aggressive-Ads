@@ -18,6 +18,8 @@ use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Security\Rate_Limiter;
+use Aggressive\Ads\Portal\Acting_As;
+use Aggressive\Ads\Workflow\Edit_Window;
 use Aggressive\Ads\Workflow\Campaign_Copier;
 use Aggressive\Ads\Workflow\Campaign_Editor;
 use Aggressive\Ads\Workflow\Reporting_Read;
@@ -52,6 +54,8 @@ final class Campaigns_Controller implements Service {
 	 * @param Review_Readiness     $readiness  Safe canonical review readiness.
 	 * @param Rate_Limiter         $limiter    Autosave abuse bounding.
 	 * @param Reporting_Read       $reporting  Native rollup reads.
+	 * @param Edit_Window          $window     When editing is permitted.
+	 * @param Acting_As            $acting     Staff acting for an advertiser.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -62,7 +66,9 @@ final class Campaigns_Controller implements Service {
 		private readonly Campaign_Copier $copier,
 		private readonly Review_Readiness $readiness,
 		private readonly Rate_Limiter $limiter,
-		private readonly Reporting_Read $reporting
+		private readonly Reporting_Read $reporting,
+		private readonly Edit_Window $window,
+		private readonly Acting_As $acting
 	) {
 	}
 
@@ -104,6 +110,47 @@ final class Campaigns_Controller implements Service {
 					'permission_callback' => array( $this, 'write_permission' ),
 					'args'                => array(
 						'title' => $this->string_arg( false ),
+					),
+				),
+			)
+		);
+
+		/*
+		 * Beginning an acting-as session. Staff-gated, and a write because it
+		 * changes what every later portal request is scoped to.
+		 */
+		Creative_File_Controller::register_route(
+			'/acting-as',
+			array(
+				array(
+					'methods'             => 'POST',
+					'callback'            => array( $this, 'start_acting_as' ),
+					'permission_callback' => array( $this, 'staff_write_permission' ),
+					'args'                => array(
+						'org_id' => $this->positive_int_arg( true ),
+					),
+				),
+			)
+		);
+
+		/*
+		 * Separate from POST /campaigns on purpose. That route derives the
+		 * tenant from the caller and must keep doing so — an org_id parameter
+		 * there would be ignored on update and authoritative on create, which
+		 * is the kind of asymmetry nobody remembers at the call site. Here
+		 * naming an advertiser is the entire point of the route, and the
+		 * permission callback says so.
+		 */
+		Creative_File_Controller::register_route(
+			'/campaigns/for-advertiser',
+			array(
+				array(
+					'methods'             => 'POST',
+					'callback'            => array( $this, 'create_for_advertiser' ),
+					'permission_callback' => array( $this, 'staff_write_permission' ),
+					'args'                => array(
+						'title'  => $this->string_arg( false ),
+						'org_id' => $this->positive_int_arg( true ),
 					),
 				),
 			)
@@ -199,6 +246,63 @@ final class Campaigns_Controller implements Service {
 		}
 
 		return new WP_REST_Response( $this->advertised_summary( $campaign_id ), 201 );
+	}
+
+	/**
+	 * Creates a draft for an advertiser the caller names.
+	 *
+	 * The permission callback gates the route, and `create_for_org()` checks
+	 * the capability again. That is not redundant: the admin screen reaches
+	 * the editor through the same method, and a rule enforced only at one
+	 * door is a rule that holds only while nobody adds another.
+	 *
+	 * @param WP_REST_Request $request The request.
+	 * @return WP_REST_Response|WP_Error
+	 *
+	 * @phpstan-param WP_REST_Request<array<string, mixed>> $request
+	 */
+	public function create_for_advertiser( WP_REST_Request $request ) {
+		$campaign_id = $this->editor->create_for_org(
+			(int) $request->get_param( 'org_id' ),
+			(string) ( $request->get_param( 'title' ) ?? '' )
+		);
+
+		if ( is_wp_error( $campaign_id ) ) {
+			return $campaign_id;
+		}
+
+		return new WP_REST_Response( $this->advertised_summary( $campaign_id ), 201 );
+	}
+
+	/**
+	 * Begins an acting-as session for the named advertiser.
+	 *
+	 * @param WP_REST_Request $request The request.
+	 * @return WP_REST_Response|WP_Error
+	 *
+	 * @phpstan-param WP_REST_Request<array<string, mixed>> $request
+	 */
+	public function start_acting_as( WP_REST_Request $request ) {
+		$org_id = (int) $request->get_param( 'org_id' );
+
+		if ( ! $this->acting->enter( $org_id ) ) {
+			return new WP_Error(
+				'aggr_acting_as_refused',
+				__( 'That advertiser could not be found.', 'aggressive-ads' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		return new WP_REST_Response( array( 'org_id' => $org_id ), 200 );
+	}
+
+	/**
+	 * Whether the caller may write on an advertiser's behalf.
+	 *
+	 * @return bool
+	 */
+	public function staff_write_permission(): bool {
+		return is_user_logged_in() && current_user_can( Capabilities::REVIEW_CAMPAIGNS );
 	}
 
 	/**
@@ -358,7 +462,7 @@ final class Campaigns_Controller implements Service {
 			'review_notes'     => $this->campaigns->review_notes( $campaign_id ),
 			'advertiser_notes' => $this->campaigns->advertiser_notes( $campaign_id ),
 
-			'editable'         => in_array( $status, Post_Statuses::advertiser_editable(), true ),
+			'editable'         => $this->window->allows( $campaign_id ),
 			'can_copy'         => current_user_can( Capabilities::SUBMIT_CAMPAIGN ),
 			'placement_ids'    => $this->campaigns->placement_ids( $campaign_id ),
 

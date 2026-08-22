@@ -21,9 +21,8 @@
 #   `rm -rf dist`, so qa cannot pass on a stale bundle. Running `pnpm test:e2e`
 #   on its own can, which is a different mistake with the same shape.
 #
-#   The wp-env database persists locally and is new on every CI run.
-#   tests/e2e/reset.php clears the fixtures it knows by slug; it cannot clear a
-#   row some earlier failed run left behind. `pnpm qa:fresh` resets it first.
+#   The Compose database is disposable. `pnpm qa:fresh` recreates it before
+#   testing when a completely clean state is required.
 #
 # Set AGGR_QA_ALLOW_DIRTY=1 to run the lanes against uncommitted work — useful
 # mid-change, and never what you want before pushing.

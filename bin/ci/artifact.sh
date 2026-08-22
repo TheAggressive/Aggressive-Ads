@@ -9,19 +9,15 @@
 # package job assembles and verifies bytes; nothing until now has asked
 # WordPress to run them.
 #
-# The environment is deliberately separate from the development one: its own
-# config directory, its own WP_ENV_HOME, its own ports. A run that borrowed the
-# development environment would be exercising the mapped source tree and would
-# pass whatever the archive contained.
+# A separate Compose project and an empty plugin directory keep the source tree
+# out of this environment. The only plugin bytes it can see arrive in the ZIP.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-CONFIG_DIR="${SCRIPT_DIR}/artifact"
-WP_ENV="${REPO_ROOT}/node_modules/.bin/wp-env"
 PLAYWRIGHT="${REPO_ROOT}/node_modules/.bin/playwright"
-ARTIFACT_HOME="${REPO_ROOT}/.cache/ci/wp-env-artifact"
 ARTIFACT_FILES="${REPO_ROOT}/.cache/ci/artifact-files"
+ARTIFACT_PLUGINS="${REPO_ROOT}/.cache/ci/artifact-plugins"
 SLUG="aggressive-ads"
 
 release_version="${AGGR_RELEASE_VERSION:-}"
@@ -38,8 +34,8 @@ if [[ -z "${package_path}" || ! -f "${package_path}" ]]; then
 	exit 1
 fi
 
-if [[ ! -x "${WP_ENV}" || ! -x "${PLAYWRIGHT}" ]]; then
-	echo "wp-env or Playwright is missing. Run pnpm install --frozen-lockfile." >&2
+if [[ ! -x "${PLAYWRIGHT}" ]]; then
+	echo "Playwright is missing. Run pnpm install --frozen-lockfile." >&2
 	exit 1
 fi
 
@@ -64,30 +60,36 @@ if [[ -n "${release_version}" && "${expected_version}" != "${release_version}" ]
 	exit 1
 fi
 
-mkdir -p "${ARTIFACT_FILES}"
+mkdir -p "${ARTIFACT_FILES}" "${ARTIFACT_PLUGINS}"
 find "${ARTIFACT_FILES}" -mindepth 1 -maxdepth 1 -type f -name '*.zip' -delete
+find "${ARTIFACT_PLUGINS}" -mindepth 1 -delete
 cp "${package_path}" "${ARTIFACT_FILES}/${package_name}"
 
-artifact_wp_env() {
-	(
-		cd "${CONFIG_DIR}"
-		WP_ENV_HOME="${ARTIFACT_HOME}" CI=true "${WP_ENV}" "$@"
-	)
+export AGGR_ARTIFACTS_SOURCE="${ARTIFACT_FILES}"
+export AGGR_COMPOSE_PROJECT=aggressive-ads-artifact
+export AGGR_PLUGIN_SOURCE="${ARTIFACT_PLUGINS}"
+export AGGR_PLUGIN_TARGET=/var/www/html/wp-content/plugins
+export AGGR_SKIP_PLUGIN_ACTIVATION=1
+export AGGR_WP_PORT=9940
+export AGGR_WP_USER=root
+
+artifact_environment() {
+	bash "${REPO_ROOT}/bin/ci/environment.sh" "$@"
 }
 
 cleanup() {
-	if ! artifact_wp_env stop; then
+	artifact_environment exec chown -R "$(id -u):$(id -g)" /var/www/html/wp-content/plugins >/dev/null 2>&1 || true
+	if ! artifact_environment stop; then
 		echo "Warning: artifact containers could not be stopped." >&2
 	fi
 }
 trap cleanup EXIT
 
-artifact_wp_env start
-artifact_wp_env clean all --no-scripts
-artifact_wp_env run cli wp plugin install \
+artifact_environment start
+artifact_environment wp plugin install \
 	"/var/www/html/wp-content/aggr-artifacts/${package_name}" --activate --force
 
-actual_version="$(artifact_wp_env run cli wp plugin get "${SLUG}" --field=version | tail -n 1 | tr -d '\r')"
+actual_version="$(artifact_environment wp plugin get "${SLUG}" --field=version | tail -n 1 | tr -d '\r')"
 
 if [[ "${actual_version}" != "${expected_version}" ]]; then
 	echo "Installed version ${actual_version} does not match ${expected_version}." >&2
@@ -106,7 +108,7 @@ CI=1 \
 #
 # The single-quoted body must expand $log inside the container, not here.
 # shellcheck disable=SC2016
-artifact_wp_env run cli bash -c '
+artifact_environment exec bash -c '
 	log=/var/www/html/wp-content/debug.log
 	if [[ -f "$log" ]] && grep -E "PHP (Fatal error|Parse error)" "$log"; then
 		echo "Fatal PHP error found in the artifact smoke-test log." >&2

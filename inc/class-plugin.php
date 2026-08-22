@@ -30,6 +30,7 @@ use Aggressive\Ads\Notification\Ending_Soon_Mailer;
 use Aggressive\Ads\Notification\Notification_Service;
 use Aggressive\Ads\Notification\Request_Mailer;
 use Aggressive\Ads\Portal\Account_Actions;
+use Aggressive\Ads\Portal\Acting_Actions;
 use Aggressive\Ads\Portal\Campaign_Actions;
 use Aggressive\Ads\Portal\Creative_Actions;
 use Aggressive\Ads\Portal\Email_Change_Actions;
@@ -308,6 +309,7 @@ final class Plugin {
 			Assets::class,
 			Brand_Styles::class,
 			Campaign_Actions::class,
+			Acting_Actions::class,
 			Creative_Actions::class,
 			Account_Actions::class,
 			Email_Change_Actions::class,

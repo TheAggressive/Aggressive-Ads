@@ -24,6 +24,7 @@
 	cacheResultFile=".phpunit.cache/multisite.result"
 	>
 	<php>
+		<env name="WP_PHPUNIT__TESTS_CONFIG" value="/var/www/html/wp-content/plugins/aggressive-ads/tests/wp-tests-config.php"/>
 		<const name="WP_TESTS_MULTISITE" value="1"/>
 	</php>
 	<testsuites>

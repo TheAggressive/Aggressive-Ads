@@ -53,6 +53,143 @@ Registered with `register_post_status()` as non-public, non-internal, protected,
 
 `aggr_complete` and `aggr_cancelled` have no outgoing edges. A completed campaign is duplicated into a new draft, never reopened — renew and duplicate are the same copy operation, not a transition. Nothing re-enters `aggr_draft` except a staff reopen from `aggr_rejected`. An advertiser who wants to change a submitted campaign either withdraws it (only while unclaimed) or waits for changes to be requested.
 
+### Acting for an advertiser
+
+Staff do not silently operate inside a client's portal. They enter an
+**acting-as session** from the review screen, and leave it explicitly from the
+rail, which shows the organization's name on every portal screen for as long as
+one is open. Both ends are audited (`onbehalf.session_started`,
+`onbehalf.session_ended`).
+
+**A session changes scope, never permission.** It tells `Portal\View_Data`
+which organization the screens are about; it grants nothing. Every capability
+check and every `Security\Ownership` decision is unchanged while one is open,
+so a staff member acting for a client can do exactly what their own
+capabilities already allowed against that client's objects. If entering a
+session granted anything, it would be a privilege-escalation primitive any
+reviewer could point at any organization.
+
+The session is re-authorized on **every read**, not trusted from the moment it
+started: stored state outlives the grant that allowed it, so a reviewer whose
+capability is withdrawn stops acting immediately rather than at the next
+expiry. Sessions also lapse on their own after four hours, enforced on read
+rather than by cron, because a sweep running late would leave one live.
+
+It is explicit at both ends deliberately. The failure mode of an implicit
+session is a staff member editing a client's live campaign believing it is
+their own — and the portal looks identical either way.
+
+### Editing a finished campaign
+
+Editing a completed campaign is not reopening it, and the two must not be
+confused. Staff may correct the record of a campaign in any status (see below),
+but the campaign stays where it is: a corrected `aggr_complete` campaign is
+still complete, and running it again is still a copy into a new draft. What an
+edit changes is the stored campaign, never its position in the workflow.
+
+This has a consequence worth stating plainly, because it is a deliberate
+trade-off rather than an oversight. `aggr_rollups` already holds impressions
+and clicks for a campaign that has run. Editing that campaign afterwards
+changes the stored configuration but not the recorded numbers, so the two can
+describe different things: the rollups belong to the configuration that
+actually served, which may no longer be the one on screen. The audit row for
+each on-behalf edit records who changed what and when, which is what makes the
+divergence explainable after the fact.
+
+## Editing, and the edit window
+
+Capability answers *whether* a user may touch a campaign. The edit window
+answers *when*. They fail differently on purpose — a capability failure is a
+403 and means the user should not be here, a window failure is a 409 and means
+not right now.
+
+| Actor | May edit in |
+|---|---|
+| advertiser | `aggr_draft`, `aggr_changes` |
+| staff (`aggr_review_campaigns`) | every status |
+
+`Workflow\Edit_Window` is the single answer. Six call sites gate editing — the
+campaign editor, both creative-manager paths, and the `editable` flag on the
+portal row and the REST detail — and they only agree because they all ask it.
+A screen that computed the rule itself would eventually offer a button that
+409s.
+
+Staff editing outside their own organization is an **on-behalf edit**:
+
+- it is audited as `campaign.edited_on_behalf`, not `campaign.draft_updated`,
+  because a timeline is read to answer "who changed this" and an unfamiliar
+  name against an ordinary edit event reads the same whether staff fixed a typo
+  or an account was misused;
+- it busts fill cache when the campaign is serving, so the correction reaches
+  the page immediately rather than after a TTL;
+- it drops the future-start rule, for the same reason approval does: staff edit
+  campaigns that have already started, and moving the date to satisfy the rule
+  would rewrite when the campaign actually ran;
+- it shows the advertiser's own wizard with a banner naming the organization,
+  because otherwise the only clue the edits land on someone else's live
+  campaign is an org name that reads as your own.
+
+Membership decides whether an edit is on-behalf, not capability. A reviewer who
+genuinely belongs to the organization is editing their own work, and recording
+that as on-behalf would make the timeline read as though an outsider reached in.
+
+Widening the window did not widen anyone's reach: `Security\Ownership` still
+decides which campaigns a user can address at all, so an advertiser from
+another organization is refused in every status.
+
+Editing a campaign that is already serving re-checks creative coverage on
+**every** save, not only when a wizard step advances. Coverage used to be
+verified only on the way out of Step 4, which was safe while the only editable
+statuses were draft and changes — an incomplete draft is expected, and
+submission catches it later. Once staff could edit a `live` campaign that
+stopped holding: the save busts fill cache, so a placement left without a
+creative would reach the page immediately and serve nothing.
+
+The check judges the placements the save *leaves in place*, not the stored
+ones. A single request can change `placement_ids` and advance the step
+together, and reading the stored value there validates the set the campaign is
+moving away from.
+
+### Creating for an advertiser
+
+Staff also create campaigns on an advertiser's behalf, from the review queue.
+This is the **only** place in the plugin where organization identity comes from
+input rather than from an object that already carries one — everywhere else the
+org is read off the campaign being acted on. That makes it the one place the
+rule "advertiser input must never be trusted for organization identity" has to
+be enforced rather than inherited.
+
+It has its own route — `POST /aggr/v1/campaigns/for-advertiser`, gated on
+`aggr_review_campaigns` — rather than an `org_id` parameter on the ordinary
+create. Overloading create would leave `org_id` ignored on update and
+authoritative on creation, which is the kind of asymmetry nobody remembers at
+the call site; `POST /aggr/v1/campaigns` still derives the tenant from the
+caller, and that is asserted.
+
+`Campaign_Editor::create_for_org()` checks the capability again anyway. That is
+not redundant: the admin screen reaches the editor through the same method, and
+a rule enforced at one door only holds until somebody adds another.
+
+Both gates refuse with 403, which makes them hard to tell apart in a test — the
+permission callback answers `rest_forbidden` and the editor `aggr_forbidden`,
+so the route test asserts the code rather than the status. A status-only
+assertion passes with the route's gate downgraded to any advertiser, which is
+how that test was first written. It refuses an id that
+names no organization, and an id naming a post of the wrong type — a campaign
+id and an org id are both post ids, so a transposed parameter is a plausible
+mistake, and the result would be a campaign owned by nothing that no org-scoped
+query returns and no advertiser can reach.
+
+The draft is audited as `campaign.created_on_behalf` and opens in the
+advertiser's own wizard, from which point it is an ordinary on-behalf edit.
+
+**A copy belongs to the organization it was copied from, never the caller's.**
+For an advertiser those are the same thing, since they can only read their own
+organization's campaigns. For staff they are not: reading a client's campaign
+is allowed, so deriving the target from the caller filed the copy, its snapshot
+and its private creative bytes under whichever organization the staff member
+happened to belong to.
+
 ## What every transition does
 
 `Campaign_State_Machine::apply( int $campaign_id, string $to, array $context ): true|WP_Error`

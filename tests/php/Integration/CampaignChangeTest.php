@@ -443,7 +443,7 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 			array(
 				'title'  => 'Proposed name',
 				'end_ts' => time() + ( 30 * self::DAY ),
-			) 
+			)
 		);
 
 		$this->assertSame( 'Original name', get_post_field( 'post_title', $campaign_id ) );
@@ -467,7 +467,7 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 			array(
 				'title'  => 'Approved name',
 				'end_ts' => $new_end,
-			) 
+			)
 		);
 
 		wp_set_current_user( self::factory()->user->create( array( 'role' => Roles::REVIEWER ) ) );

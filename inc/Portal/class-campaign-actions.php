@@ -300,10 +300,10 @@ final class Campaign_Actions implements Service {
 						'edit' => '1',
 						'step' => 'review',
 					),
-					$url 
+					$url
 				),
 				'error',
-				$result 
+				$result
 			);
 		}
 

@@ -4,11 +4,7 @@
 #
 # Two things make this file worth its own script.
 #
-# It runs on the HOST, not in the wp-env cli container: that image is Alpine
-# based and ships no gettext, so running validation inside it can only ever
-# report success.
-#
-# And it uses msgfmt -c rather than `wp i18n make-mo`. make-mo is lenient — it
+# It uses msgfmt -c rather than `wp i18n make-mo`. make-mo is lenient — it
 # reports success on a msgid/msgstr placeholder mismatch, which is precisely
 # the defect that reaches a translated production site as a fatal sprintf or a
 # mangled sentence. msgfmt -c checks formats, headers and domain, and exits

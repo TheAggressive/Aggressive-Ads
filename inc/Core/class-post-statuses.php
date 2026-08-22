@@ -106,6 +106,44 @@ final class Post_Statuses implements Service {
 	}
 
 	/**
+	 * Statuses staff may edit, acting on the client's behalf.
+	 *
+	 * Every status, deliberately. Staff are the escalation path: a client on
+	 * the phone about a typo in a live ad, or a wrong destination URL on a
+	 * campaign that already completed, is a support problem rather than a
+	 * workflow one, and bouncing it through a transition the advertiser cannot
+	 * trigger themselves is slower than fixing it.
+	 *
+	 * This is wider than the transition rules, and intentionally so — it does
+	 * not create a transition. A completed campaign edited here stays
+	 * completed; it is still copied into a new draft to run again. What
+	 * changes is the record, not the position in the workflow.
+	 *
+	 * Every write through this window is audited as an on-behalf edit, and a
+	 * write against a serving campaign busts fill cache, because otherwise the
+	 * ad on the page would outlive the correction by a TTL.
+	 *
+	 * @return array<int, string>
+	 */
+	public static function staff_editable(): array {
+		return self::all();
+	}
+
+	/**
+	 * The edit window for one kind of actor.
+	 *
+	 * Both roles ask this rather than testing a list themselves: the six call
+	 * sites that gate editing must agree, and they only agree if there is one
+	 * answer to disagree with.
+	 *
+	 * @param bool $is_staff Whether the actor holds the review capability.
+	 * @return array<int, string>
+	 */
+	public static function editable_for( bool $is_staff ): array {
+		return $is_staff ? self::staff_editable() : self::advertiser_editable();
+	}
+
+	/**
 	 * Statuses whose campaigns occupy the live set native fill reads.
 	 *
 	 * @return array<int, string>

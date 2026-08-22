@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Admin;
 
+use Aggressive\Ads\Portal\Routes;
 use Aggressive\Ads\Assets\Assets;
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\REST\Creative_File_Controller;
@@ -197,15 +198,20 @@ final class Review_Screen implements Service {
 		$campaign_id = $this->request_campaign_id();
 
 		$payload = array(
-			'filter'     => $filter,
-			'paged'      => $page,
-			'campaignId' => $campaign_id,
-			'queueUrl'   => self::queue_url(),
-			'restPath'   => '/' . Creative_File_Controller::NAMESPACE . '/review',
-			'tabs'       => $this->data->tabs(),
-			'queue'      => $campaign_id > 0 ? self::empty_queue( $page ) : $this->data->queue( $filter, $page ),
-			'campaign'   => $campaign_id > 0 ? $this->data->campaign( $campaign_id ) : null,
-			'i18n'       => self::strings(),
+			'filter'      => $filter,
+			'paged'       => $page,
+			'campaignId'  => $campaign_id,
+			'queueUrl'    => self::queue_url(),
+			'restPath'    => '/' . Creative_File_Controller::NAMESPACE . '/review',
+			'tabs'        => $this->data->tabs(),
+			'queue'       => $campaign_id > 0 ? self::empty_queue( $page ) : $this->data->queue( $filter, $page ),
+			'campaign'    => $campaign_id > 0 ? $this->data->campaign( $campaign_id ) : null,
+			// Only the queue offers creation, and the detail view is opened
+			// straight from a link — listing every advertiser there would put a
+			// query and a payload behind a control that is not on the screen.
+			'advertisers' => $campaign_id > 0 ? array() : $this->data->advertisers(),
+			'portalBase'  => Routes::url( 'campaigns' ),
+			'i18n'        => self::strings(),
 		);
 
 		printf(
@@ -266,6 +272,15 @@ final class Review_Screen implements Service {
 			'colUpdates'               => __( 'Ad updates', 'aggressive-ads' ),
 			'unassigned'               => __( 'Unassigned', 'aggressive-ads' ),
 			'backToQueue'              => __( 'Back to campaign review', 'aggressive-ads' ),
+			'createCampaign'           => __( 'Create campaign', 'aggressive-ads' ),
+			'createForAdvertiser'      => __( 'Create a campaign for an advertiser', 'aggressive-ads' ),
+			'advertiserLabel'          => __( 'Advertiser', 'aggressive-ads' ),
+			'advertiserChoose'         => __( 'Choose an advertiser', 'aggressive-ads' ),
+			'campaignNameLabel'        => __( 'Campaign name', 'aggressive-ads' ),
+			'campaignNameHint'         => __( 'Optional. You can change this in the campaign.', 'aggressive-ads' ),
+			'createAndOpen'            => __( 'Create and open', 'aggressive-ads' ),
+			'noAdvertisers'            => __( 'No active advertisers yet. Add one from Organizations first.', 'aggressive-ads' ),
+			'editCampaign'             => __( 'Edit', 'aggressive-ads' ),
 			'campaignSummary'          => __( 'Campaign summary', 'aggressive-ads' ),
 			'organization'             => __( 'Organization', 'aggressive-ads' ),
 			'placements'               => __( 'Placements', 'aggressive-ads' ),

@@ -19,6 +19,7 @@ import { createRoot, useEffect, useState } from '@wordpress/element';
 import { errorMessage, setStrings, t } from '../shared/save';
 import { QueueView } from './queue';
 import { CampaignView } from './campaign';
+import { navigateSameOrigin } from '../shared/navigate';
 import type { Bootstrap, Campaign, Queue, Tab } from './types';
 
 const EMPTY: Bootstrap = {
@@ -30,6 +31,8 @@ const EMPTY: Bootstrap = {
 	tabs: [],
 	queue: { rows: [], total: 0, pages: 1, page: 1 },
 	campaign: null,
+	advertisers: [],
+	portalBase: '',
 	i18n: {},
 };
 
@@ -151,6 +154,60 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 	 * @param body    Request body.
 	 * @param message Success notice.
 	 */
+	/**
+	 * Opens an acting-as session before leaving for the portal.
+	 *
+	 * The portal is scoped by this session, so entering it is what makes the
+	 * dashboard, campaign list and organization screens show the advertiser
+	 * rather than the staff member's own empty context.
+	 */
+	const actFor = async ( orgId: number ): Promise< void > => {
+		await apiFetch( {
+			path: '/aggr/v1/acting-as',
+			method: 'POST',
+			data: { org_id: orgId },
+		} );
+	};
+
+	/**
+	 * Creates a campaign for an advertiser, then opens it in their wizard.
+	 *
+	 * Not routed through `write`, which re-reads the campaign under review;
+	 * there is no campaign on screen here, and the point of the call is to
+	 * leave for the portal with the new id.
+	 */
+	const createCampaign = async (
+		orgId: number,
+		title: string
+	): Promise< void > => {
+		setBusy( true );
+		setFlash( null );
+
+		try {
+			const created = await apiFetch< { id?: number } >( {
+				path: '/aggr/v1/campaigns/for-advertiser',
+				method: 'POST',
+				data: { org_id: orgId, title },
+			} );
+
+			if ( created.id ) {
+				await actFor( orgId );
+
+				if (
+					navigateSameOrigin( `${ data.portalBase }${ created.id }/` )
+				) {
+					return;
+				}
+			}
+
+			setFlash( { type: 'error', message: errorMessage( null ) } );
+		} catch ( reason ) {
+			setFlash( { type: 'error', message: errorMessage( reason ) } );
+		} finally {
+			setBusy( false );
+		}
+	};
+
 	const write = async (
 		path: string,
 		body: Record< string, unknown >,
@@ -223,6 +280,16 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 					campaign={ campaign }
 					busy={ busy }
 					onBack={ () => void loadQueue( filter, queue.page ) }
+					onEdit={ () =>
+						void actFor( campaign.org_id ).then( () => {
+							if ( ! navigateSameOrigin( campaign.edit_url ) ) {
+								setFlash( {
+									type: 'error',
+									message: errorMessage( null ),
+								} );
+							}
+						} )
+					}
 					onTransition={ ( to, notes ) =>
 						void write(
 							`/aggr/v1/campaigns/${ campaign.id }/transitions`,
@@ -273,6 +340,11 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 					onFilter={ ( key ) => void loadQueue( key, 1 ) }
 					onPage={ ( page ) => void loadQueue( filter, page ) }
 					onOpen={ ( id ) => void loadCampaign( id ) }
+					advertisers={ data.advertisers }
+					busy={ busy }
+					onCreate={ ( orgId, title ) =>
+						void createCampaign( orgId, title )
+					}
 				/>
 			) }
 		</>

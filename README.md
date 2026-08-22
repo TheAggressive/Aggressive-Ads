@@ -61,7 +61,7 @@ not been built.
 |           |                                      |
 | --------- | ------------------------------------ |
 | PHP       | 8.4+                                 |
-| WordPress | 6.7+ (wp-env runs 7.0.2)             |
+| WordPress | 6.7+ (tests run 7.1)                 |
 | Node      | 24.x                                 |
 | pnpm      | 11.x (`packageManager` is `11.1.2`)  |
 
@@ -74,15 +74,44 @@ production autoloader is `inc/class-autoloader.php`. See
 ```bash
 composer install      # PHPCS, PHPStan, PHPUnit — vendor/ never ships
 pnpm install          # frontend tools + staged-file Git hooks
-pnpm env:start        # dev http://localhost:9960, tests :9970
 pnpm build            # src/ → dist/
 pnpm dev:seed         # an advertiser, an org, and five campaigns
-pnpm qa:fast          # deterministic pre-push quality gate
-pnpm qa               # full release rehearsal (Docker + browser dependencies)
+pnpm qa:fast          # Docker-free code quality and unit gate
+pnpm qa:local         # qa:fast + the WordPress suites + Studio browser workflows
+pnpm qa               # exact containerized CI rehearsal
+pnpm qa:fresh         # recreate the environment, then run the same rehearsal
 ```
 
-wp-env mounts this checkout at `wp-content/plugins/aggressive-ads`. Sign in as
-the seeded advertiser at `/advertiser/login/`. Staff use wp-admin.
+`qa:local` discovers the Studio site whose
+`wp-content/plugins/aggressive-ads` resolves to this checkout, starts it, and
+runs Playwright against the URL Studio reports for it — never one assembled
+from a port, which would get the scheme wrong for a site with HTTPS enabled. Set
+`AGGR_STUDIO_PATH=/path/to/site` when two sites serve the checkout and the runner
+asks you to choose, and `AGGR_STUDIO_URL` when Studio reports no address or you
+need to override the one it gives.
+
+That site has to opt in before anything runs, because the suite resets the
+`admin` and `advertiser` passwords to match its fixtures and seeds fixture
+campaigns — and nothing puts either back:
+
+```bash
+touch /path/to/studio/site/.aggr-e2e-site   # or: AGGR_STUDIO_E2E_ALLOW=1
+```
+
+Theme, permalink structure and the mail-capture mu-plugin are captured up front
+and restored on the way out, whether Playwright passes or fails.
+
+`home` and `siteurl` are the exception: they are set from Studio and left that
+way. Studio assigns the port and can reassign it, so a URL captured before a run
+can be stale by the next one — restoring it would put the site back to an
+address nothing serves. Studio is the source of truth for where a Studio site
+lives; `AGGR_STUDIO_URL` overrides it.
+
+Docker Compose remains the reproducible CI environment. It mounts this
+checkout into the pinned Docker Official WordPress image and starts a
+disposable MySQL database; local Studio uses SQLite, so MySQL integration,
+multisite, combined coverage, release-artifact, and forward-PHP checks remain
+authoritative in GitHub CI and available locally through `pnpm qa`.
 
 ## Commands
 
@@ -90,27 +119,35 @@ the seeded advertiser at `/advertiser/login/`. Staff use wp-admin.
 pnpm lint:php                # PHPCS — WordPress + VIP-Go + PHPCompatibility
 pnpm analyse:php             # PHPStan level 8, no baseline
 pnpm test:php:unit           # no WordPress, no database
-pnpm test:php:integration    # integration / security / rest / upgrade (needs wp-env)
-pnpm test:php:multisite      # colliding-id tenancy (needs wp-env)
+pnpm test:php:integration    # integration / security / rest / upgrade
+pnpm test:php:multisite      # colliding-id tenancy
 pnpm lint:js                 # ESLint on src/
 pnpm typecheck               # tsc --noEmit
 pnpm lint:css                # Stylelint on every authored CSS file under src/
 pnpm test:js                 # Jest on Interactivity helpers
 pnpm lint:files              # file length, repository boundary, permission callbacks
-pnpm ci:coverage             # quantitative unit-coverage regression gate
+pnpm ci:coverage             # combined unit + integration PCOV coverage
 pnpm test:e2e:browsers       # install Chromium and WebKit
 pnpm test:e2e:install        # the same, plus system libraries (needs sudo; what CI runs)
-pnpm test:e2e                # Playwright + axe (needs wp-env, after pnpm build)
-pnpm qa:fast                 # pre-push checks; no Docker or browsers
-pnpm qa                      # every CI lane, serially; needs Docker
+pnpm test:e2e                # Playwright + axe (after pnpm build and env:start)
+pnpm test:php:native         # the WP suites natively; no Docker, no sudo
+pnpm db:local                # start|stop|status|destroy the local test MySQL
+pnpm test:e2e:studio         # Playwright + axe against the current Studio site
+pnpm qa:fast                 # Docker-free pre-push code and unit checks
+pnpm qa:local                # qa:fast + native WP suites + Studio browser workflows
+pnpm qa                      # every CI lane, serially; requires a clean worktree
+pnpm qa:fresh                # clean database/container rehearsal
+pnpm env:stop                # remove the disposable containers and database
 ```
 
-Each `ci:*` script maps 1:1 onto a GitHub Actions job. Adding a lane means
-adding it to **both** the workflow and `bin/ci/verify.sh`.
+Each `ci:*` script maps 1:1 onto a GitHub Actions job. The local rehearsal
+derives its commands from that workflow so the two cannot drift.
 
 `pnpm install` enables the repository's Git hooks. Pre-commit formats and
 re-stages only selected files, commit-msg enforces Conventional Commits, and
-pre-push runs `pnpm qa:fast`. The full `pnpm qa` rehearsal installs Playwright's
+pre-push runs `pnpm qa:fast`, which needs no Docker at all — ShellCheck comes
+from a checksum-pinned binary in `.cache/ci/`, the same way the i18n lane gets
+WP-CLI. Run `pnpm qa:local` when a change touches a browser workflow. The full `pnpm qa` rehearsal installs Playwright's
 browsers but not their system libraries, so it never asks for a password; CI
 installs those with `--with-deps` on a bare runner. See
 [build-and-release.md](docs/build-and-release.md) for the CI graph, release

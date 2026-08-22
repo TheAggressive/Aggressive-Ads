@@ -12,8 +12,114 @@
  */
 
 import type { ReactElement } from 'react';
+import { useState } from '@wordpress/element';
+import { Dialog } from './dialog';
 import { t } from '../shared/save';
-import type { Queue, Tab } from './types';
+import type { Advertiser, Queue, Tab } from './types';
+
+/**
+ * Creating a campaign for an advertiser.
+ *
+ * The advertiser is chosen here and nowhere else. Every other campaign write
+ * in the plugin reads the organization off an object that already has one, so
+ * this is the single point where organization identity comes from input — the
+ * reason the server re-checks the capability and the organization rather than
+ * trusting that this dialog was only shown to staff.
+ */
+function CreateDialog( {
+	open,
+	advertisers,
+	busy,
+	onClose,
+	onCreate,
+}: {
+	open: boolean;
+	advertisers: Advertiser[];
+	busy: boolean;
+	onClose: () => void;
+	onCreate: ( orgId: number, title: string ) => void;
+} ): ReactElement {
+	const [ orgId, setOrgId ] = useState( 0 );
+	const [ title, setTitle ] = useState( '' );
+
+	return (
+		<Dialog
+			open={ open }
+			title={ t( 'createForAdvertiser' ) }
+			labelId="aggr-create-campaign-title"
+			onClose={ onClose }
+		>
+			{ 0 === advertisers.length ? (
+				<p>{ t( 'noAdvertisers' ) }</p>
+			) : (
+				<div className="aggr-form">
+					<p className="aggr-field">
+						<label htmlFor="aggr-create-org">
+							{ t( 'advertiserLabel' ) }
+						</label>
+						<select
+							id="aggr-create-org"
+							value={ orgId }
+							disabled={ busy }
+							onChange={ ( event ) =>
+								setOrgId( Number( event.target.value ) )
+							}
+						>
+							<option value={ 0 }>
+								{ t( 'advertiserChoose' ) }
+							</option>
+							{ advertisers.map( ( advertiser ) => (
+								<option
+									key={ advertiser.id }
+									value={ advertiser.id }
+								>
+									{ advertiser.name }
+								</option>
+							) ) }
+						</select>
+					</p>
+
+					<p className="aggr-field">
+						<label htmlFor="aggr-create-title">
+							{ t( 'campaignNameLabel' ) }
+						</label>
+						<input
+							id="aggr-create-title"
+							type="text"
+							value={ title }
+							disabled={ busy }
+							onChange={ ( event ) =>
+								setTitle( event.target.value )
+							}
+						/>
+						<span className="aggr-hint">
+							{ t( 'campaignNameHint' ) }
+						</span>
+					</p>
+
+					<div className="aggr-overlay__actions">
+						<button
+							type="button"
+							className="aggr-button aggr-button--secondary"
+							onClick={ onClose }
+							disabled={ busy }
+						>
+							{ t( 'cancel' ) }
+						</button>
+						<button
+							type="button"
+							className="aggr-button aggr-button--positive"
+							disabled={ busy || 0 === orgId }
+							onClick={ () => onCreate( orgId, title ) }
+						>
+							{ t( 'createAndOpen' ) }
+						</button>
+					</div>
+				</div>
+			) }
+		</Dialog>
+	);
+}
 
 /**
  * The tab strip, with the count each filter is currently holding.
@@ -102,6 +208,9 @@ export function QueueView( {
 	onFilter,
 	onPage,
 	onOpen,
+	advertisers,
+	busy,
+	onCreate,
 }: {
 	tabs: Tab[];
 	queue: Queue;
@@ -109,7 +218,12 @@ export function QueueView( {
 	onFilter: ( key: string ) => void;
 	onPage: ( page: number ) => void;
 	onOpen: ( id: number ) => void;
+	advertisers: Advertiser[];
+	busy: boolean;
+	onCreate: ( orgId: number, title: string ) => void;
 } ): ReactElement {
+	const [ creating, setCreating ] = useState( false );
+
 	return (
 		<>
 			<header className="aggr-pagehead">
@@ -117,7 +231,25 @@ export function QueueView( {
 					<h1 className="aggr-title">{ t( 'queueTitle' ) }</h1>
 					<p className="aggr-lede">{ t( 'queueLede' ) }</p>
 				</div>
+
+				<div className="aggr-pagehead__actions">
+					<button
+						type="button"
+						className="aggr-button aggr-button--positive"
+						onClick={ () => setCreating( true ) }
+					>
+						{ t( 'createCampaign' ) }
+					</button>
+				</div>
 			</header>
+
+			<CreateDialog
+				open={ creating }
+				advertisers={ advertisers }
+				busy={ busy }
+				onClose={ () => setCreating( false ) }
+				onCreate={ onCreate }
+			/>
 
 			<Tabs tabs={ tabs } active={ filter } onSelect={ onFilter } />
 

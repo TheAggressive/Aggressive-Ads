@@ -197,4 +197,67 @@ final class ValidationResultTest extends TestCase {
 
 		$this->assertSame( array( 'first' ), $result->codes() );
 	}
+
+	/**
+	 * `without()` drops every instance of one code and keeps the rest.
+	 *
+	 * @return void
+	 */
+	public function test_without_drops_only_the_named_code(): void {
+		$result = new Validation_Result();
+		$result->add( 'start_date_in_past', 'start_ts' );
+		$result->add( 'creatives_missing', 'creatives' );
+		$result->add( 'start_date_in_past', 'start_ts' );
+
+		$kept = $result->without( 'start_date_in_past' );
+
+		$this->assertSame( array( 'creatives_missing' ), $kept->codes() );
+		$this->assertFalse( $kept->has( 'start_date_in_past' ) );
+	}
+
+	/**
+	 * The original is untouched.
+	 *
+	 * Callers validate once and then ask two questions of the same result, so
+	 * a mutating `without()` would have the second question change the answer
+	 * to the first.
+	 *
+	 * @return void
+	 */
+	public function test_without_does_not_mutate_the_original(): void {
+		$result = new Validation_Result();
+		$result->add( 'start_date_in_past', 'start_ts' );
+
+		$result->without( 'start_date_in_past' );
+
+		$this->assertTrue( $result->has( 'start_date_in_past' ) );
+	}
+
+	/**
+	 * Field and context survive, because the caller still renders them.
+	 *
+	 * @return void
+	 */
+	public function test_without_preserves_field_and_context(): void {
+		$result = new Validation_Result();
+		$result->add( 'creatives_missing', 'creatives', array( 'need' => 2 ) );
+
+		$problem = $result->without( 'start_date_in_past' )->problems()[0];
+
+		$this->assertSame( 'creatives', $problem['field'] );
+		$this->assertSame( array( 'need' => 2 ), $problem['context'] );
+	}
+
+	/**
+	 * Dropping the only problem leaves a valid result.
+	 *
+	 * @return void
+	 */
+	public function test_without_can_make_a_result_valid(): void {
+		$result = new Validation_Result();
+		$result->add( 'start_date_in_past', 'start_ts' );
+
+		$this->assertFalse( $result->is_valid() );
+		$this->assertTrue( $result->without( 'start_date_in_past' )->is_valid() );
+	}
 }

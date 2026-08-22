@@ -41,6 +41,8 @@ use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Org_Access_Repository;
 use Aggressive\Ads\Repository\Package_Repository;
 use Aggressive\Ads\Repository\Rate_Limit_Repository;
+use Aggressive\Ads\Portal\Acting_Actions;
+use Aggressive\Ads\Portal\Acting_As;
 use Aggressive\Ads\Portal\Email_Change_Actions;
 use Aggressive\Ads\Portal\Router;
 use Aggressive\Ads\Portal\View_Data;
@@ -76,6 +78,7 @@ use Aggressive\Ads\Workflow\Campaign_Change_Manager;
 use Aggressive\Ads\Workflow\Campaign_Clock;
 use Aggressive\Ads\Workflow\Campaign_Copier;
 use Aggressive\Ads\Workflow\Campaign_Editor;
+use Aggressive\Ads\Workflow\Edit_Window;
 use Aggressive\Ads\Workflow\Campaign_Validator;
 use Aggressive\Ads\Workflow\Creative_Promoter;
 use Aggressive\Ads\Workflow\Creative_Change_Manager;
@@ -380,6 +383,30 @@ final class Service_Registrar {
 		);
 
 		$container->register(
+			Acting_Actions::class,
+			static fn ( Service_Container $c ): Acting_Actions => new Acting_Actions(
+				$c->get( Acting_As::class )
+			)
+		);
+
+		$container->register(
+			Acting_As::class,
+			static fn ( Service_Container $c ): Acting_As => new Acting_As(
+				$c->get( User_Repository::class ),
+				$c->get( Org_Repository::class ),
+				$c->get( Audit_Repository::class )
+			)
+		);
+
+		$container->register(
+			Edit_Window::class,
+			static fn ( Service_Container $c ): Edit_Window => new Edit_Window(
+				$c->get( Campaign_Repository::class ),
+				$c->get( Org_Repository::class )
+			)
+		);
+
+		$container->register(
 			Campaign_Editor::class,
 			static fn ( Service_Container $c ): Campaign_Editor => new Campaign_Editor(
 				$c->get( Campaign_Repository::class ),
@@ -387,7 +414,9 @@ final class Service_Registrar {
 				$c->get( Package_Repository::class ),
 				$c->get( Placement_Repository::class ),
 				$c->get( Creative_Repository::class ),
-				$c->get( Audit_Repository::class )
+				$c->get( Audit_Repository::class ),
+				$c->get( Edit_Window::class ),
+				$c->get( Fill_Cache::class )
 			)
 		);
 
@@ -546,7 +575,8 @@ final class Service_Registrar {
 				$c->get( Creative_Uploader::class ),
 				$c->get( Private_Storage::class ),
 				$c->get( Rate_Limiter::class ),
-				$c->get( Audit_Repository::class )
+				$c->get( Audit_Repository::class ),
+				$c->get( Edit_Window::class )
 			)
 		);
 
@@ -579,7 +609,9 @@ final class Service_Registrar {
 				$c->get( Email_Change::class ),
 				$c->get( Reporting_Read::class ),
 				$c->get( Campaign_Change_Manager::class ),
-				$c->get( Settings::class )
+				$c->get( Settings::class ),
+				$c->get( Edit_Window::class ),
+				$c->get( Acting_As::class )
 			)
 		);
 
@@ -680,7 +712,9 @@ final class Service_Registrar {
 				$c->get( Campaign_Copier::class ),
 				$c->get( Review_Readiness::class ),
 				$c->get( Rate_Limiter::class ),
-				$c->get( Reporting_Read::class )
+				$c->get( Reporting_Read::class ),
+				$c->get( Edit_Window::class ),
+				$c->get( Acting_As::class )
 			)
 		);
 

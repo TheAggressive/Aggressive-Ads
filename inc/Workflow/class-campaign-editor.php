@@ -56,6 +56,8 @@ final class Campaign_Editor {
 	 * @param Placement_Repository $placements Placement validation.
 	 * @param Creative_Repository  $creatives  Creative coverage validation.
 	 * @param Audit_Repository     $audit      Audit persistence.
+	 * @param Edit_Window          $window     When editing is permitted.
+	 * @param Fill_Cache           $cache      Native fill cache.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -63,7 +65,9 @@ final class Campaign_Editor {
 		private readonly Package_Repository $packages,
 		private readonly Placement_Repository $placements,
 		private readonly Creative_Repository $creatives,
-		private readonly Audit_Repository $audit
+		private readonly Audit_Repository $audit,
+		private readonly Edit_Window $window,
+		private readonly Fill_Cache $cache
 	) {
 	}
 
@@ -78,13 +82,53 @@ final class Campaign_Editor {
 			return $this->error( 'aggr_forbidden', __( 'You do not have permission to create a campaign.', 'aggressive-ads' ), 403 );
 		}
 
-		$user_id = get_current_user_id();
-		$org_ids = $this->orgs->org_ids_for_user( $user_id );
+		$org_ids = $this->orgs->org_ids_for_user( get_current_user_id() );
 		$org_id  = array() === $org_ids ? 0 : $org_ids[0];
 
 		if ( $org_id <= 0 ) {
 			return $this->error( 'aggr_organization_missing', __( 'Your account is not connected to an organization.', 'aggressive-ads' ), 409 );
 		}
+
+		return $this->create_in_org( $org_id, $title, false );
+	}
+
+	/**
+	 * Creates a draft for an organization the caller names.
+	 *
+	 * Staff only, and the capability is checked here rather than left to the
+	 * route, because this is the one entry point where organization identity
+	 * is chosen by input rather than derived from the caller. Everything else
+	 * in the plugin reads the org off an object that already has one.
+	 *
+	 * @param int    $org_id Target organization post id.
+	 * @param string $title  Optional initial title.
+	 * @return int|WP_Error
+	 */
+	public function create_for_org( int $org_id, string $title = '' ): int|WP_Error {
+		if ( ! current_user_can( Capabilities::REVIEW_CAMPAIGNS ) || ! current_user_can( 'create_aggr_campaigns' ) ) {
+			return $this->error( 'aggr_forbidden', __( 'You do not have permission to create a campaign for an advertiser.', 'aggressive-ads' ), 403 );
+		}
+
+		// An id that names no organization must not become a campaign owned by
+		// nothing, which no org-scoped query would ever return and no advertiser
+		// could ever reach.
+		if ( $org_id <= 0 || ! $this->orgs->exists( $org_id ) ) {
+			return $this->error( 'aggr_organization_missing', __( 'That advertiser could not be found.', 'aggressive-ads' ), 404, 'org_id' );
+		}
+
+		return $this->create_in_org( $org_id, $title, ! in_array( $org_id, $this->orgs->org_ids_for_user( get_current_user_id() ), true ) );
+	}
+
+	/**
+	 * Creates the draft, once the organization is settled.
+	 *
+	 * @param int    $org_id    Owning organization.
+	 * @param string $title     Optional initial title.
+	 * @param bool   $on_behalf Whether staff are creating this for someone else.
+	 * @return int|WP_Error
+	 */
+	private function create_in_org( int $org_id, string $title, bool $on_behalf ): int|WP_Error {
+		$user_id = get_current_user_id();
 
 		if ( ! $this->orgs->is_active( $org_id ) ) {
 			return $this->error( 'aggr_organization_inactive', __( 'This organization cannot create campaigns. Please get in touch.', 'aggressive-ads' ), 403 );
@@ -108,12 +152,14 @@ final class Campaign_Editor {
 
 		$this->audit->insert(
 			new Audit_Event(
-				event: 'campaign.created',
+				event: $on_behalf ? 'campaign.created_on_behalf' : 'campaign.created',
 				object_type: 'campaign',
 				object_id: $campaign_id,
 				org_id: $org_id,
 				to_state: Post_Statuses::DRAFT,
-				message: 'Campaign draft created.',
+				message: $on_behalf
+					? 'Campaign draft created by staff for the organization.'
+					: 'Campaign draft created.',
 				actor_user_id: $user_id
 			)
 		);
@@ -175,17 +221,7 @@ final class Campaign_Editor {
 			return $this->error( 'aggr_campaign_not_saved', __( 'The campaign could not be saved. Please try again.', 'aggressive-ads' ), 500 );
 		}
 
-		$this->audit->insert(
-			new Audit_Event(
-				event: 'campaign.draft_updated',
-				object_type: 'campaign',
-				object_id: $campaign_id,
-				org_id: $this->campaigns->org_id( $campaign_id ),
-				message: 'Campaign draft updated.',
-				context: array( 'fields' => array_keys( $clean ) ),
-				actor_user_id: get_current_user_id()
-			)
-		);
+		$this->record_edit( $campaign_id, array_keys( $clean ) );
 
 		return $revision;
 	}
@@ -216,6 +252,53 @@ final class Campaign_Editor {
 	}
 
 	/**
+	 * Records an edit, and corrects delivery if the campaign is serving.
+	 *
+	 * Both halves exist because staff can now edit outside a draft.
+	 *
+	 * The audit event is different for an on-behalf edit rather than merely
+	 * carrying the actor id. A timeline is read to answer "who changed this",
+	 * and "campaign.draft_updated by a user the client has never heard of" is
+	 * the same sentence whether staff fixed a typo or an account was misused.
+	 * A distinct event makes the support action legible as a support action.
+	 *
+	 * Busting fill matters more than it looks: a live campaign is served from
+	 * cache, so without this the corrected creative or destination URL would
+	 * reach the page only after the TTL expired — which is precisely the
+	 * window in which somebody is on the phone asking why the ad still shows
+	 * the wrong thing.
+	 *
+	 * @param int                $campaign_id Campaign post id.
+	 * @param array<int, string> $fields      The field names written.
+	 * @return void
+	 */
+	private function record_edit( int $campaign_id, array $fields ): void {
+		$on_behalf = $this->window->is_on_behalf( $campaign_id );
+		$status    = $this->campaigns->status( $campaign_id );
+
+		$this->audit->insert(
+			new Audit_Event(
+				event: $on_behalf ? 'campaign.edited_on_behalf' : 'campaign.draft_updated',
+				object_type: 'campaign',
+				object_id: $campaign_id,
+				org_id: $this->campaigns->org_id( $campaign_id ),
+				message: $on_behalf
+					? 'Campaign edited by staff on the organization\'s behalf.'
+					: 'Campaign draft updated.',
+				context: array(
+					'fields' => $fields,
+					'status' => $status,
+				),
+				actor_user_id: get_current_user_id()
+			)
+		);
+
+		if ( in_array( $status, Post_Statuses::published(), true ) ) {
+			$this->cache->bust_campaign( $campaign_id );
+		}
+	}
+
+	/**
 	 * Whether the caller may edit the named campaign now.
 	 *
 	 * @param int $campaign_id Campaign post id.
@@ -226,7 +309,7 @@ final class Campaign_Editor {
 			return $this->error( 'aggr_forbidden', __( 'You do not have permission to edit that campaign.', 'aggressive-ads' ), 403 );
 		}
 
-		if ( ! in_array( $this->campaigns->status( $campaign_id ), Post_Statuses::advertiser_editable(), true ) ) {
+		if ( ! $this->window->allows( $campaign_id ) ) {
 			return $this->error( 'aggr_campaign_not_editable', __( 'This campaign cannot be changed right now.', 'aggressive-ads' ), 409 );
 		}
 
@@ -308,11 +391,30 @@ final class Campaign_Editor {
 			$clean['wizard_step'] = $step;
 		}
 
+		// The placements this save leaves in place, which is what everything
+		// below has to be judged against.
+		$placement_ids = $clean['placement_ids'] ?? $this->campaigns->placement_ids( $campaign_id );
+
 		if ( 'review' === ( $clean['wizard_step'] ?? '' ) ) {
-			$ready = $this->validate_schedule_completion( $campaign_id, $start, $end );
+			$ready = $this->validate_schedule_completion( $campaign_id, $start, $end, $placement_ids );
 
 			if ( is_wp_error( $ready ) ) {
 				return $ready;
+			}
+		}
+
+		/*
+		 * A campaign that is already serving has to stay coherent on every
+		 * save, not only when a wizard step advances. Staff can edit a live
+		 * campaign, and the save busts fill cache — so dropping a placement
+		 * that has no creative, or adding one, would reach the page
+		 * immediately and serve nothing.
+		 */
+		if ( in_array( $this->campaigns->status( $campaign_id ), Post_Statuses::published(), true ) ) {
+			$covered = $this->validate_creative_coverage( $campaign_id, $placement_ids );
+
+			if ( is_wp_error( $covered ) ) {
+				return $covered;
 			}
 		}
 
@@ -320,18 +422,18 @@ final class Campaign_Editor {
 	}
 
 	/**
-	 * Applies the additional invariants required to leave wizard Step 4.
+	 * One creative per selected placement, and no placement without one.
 	 *
-	 * Called only after campaign authorization and optimistic revision checks,
-	 * so coverage failures cannot reveal whether another tenant's object exists.
+	 * Checked against the placements this save leaves in place rather than the
+	 * stored ones. A single request can change `placement_ids` and advance the
+	 * step together, and reading the stored value there validates the set the
+	 * campaign is moving away from.
 	 *
-	 * @param int $campaign_id Campaign post id.
-	 * @param int $start_ts    Candidate start timestamp.
-	 * @param int $end_ts      Candidate end timestamp.
+	 * @param int             $campaign_id   Campaign post id.
+	 * @param array<int, int> $placement_ids Effective placement ids.
 	 * @return true|WP_Error
 	 */
-	private function validate_schedule_completion( int $campaign_id, int $start_ts, int $end_ts ): bool|WP_Error {
-		$placement_ids = $this->campaigns->placement_ids( $campaign_id );
+	private function validate_creative_coverage( int $campaign_id, array $placement_ids ): bool|WP_Error {
 		$creative_rows = $this->creatives->for_campaign( $campaign_id );
 		$coverage      = array();
 
@@ -350,8 +452,38 @@ final class Campaign_Editor {
 			}
 		}
 
+		return true;
+	}
+
+	/**
+	 * Applies the additional invariants required to leave wizard Step 4.
+	 *
+	 * Called only after campaign authorization and optimistic revision checks,
+	 * so coverage failures cannot reveal whether another tenant's object exists.
+	 *
+	 * @param int             $campaign_id   Campaign post id.
+	 * @param int             $start_ts      Candidate start timestamp.
+	 * @param int             $end_ts        Candidate end timestamp.
+	 * @param array<int, int> $placement_ids Placements this save leaves in place.
+	 * @return true|WP_Error
+	 */
+	private function validate_schedule_completion( int $campaign_id, int $start_ts, int $end_ts, array $placement_ids ): bool|WP_Error {
+		$covered = $this->validate_creative_coverage( $campaign_id, $placement_ids );
+
+		if ( is_wp_error( $covered ) ) {
+			return $covered;
+		}
+
 		$window = Campaign_Rules::validate_window( $start_ts, $end_ts, time() );
 		$window->absorb( Campaign_Rules::validate_day_boundaries( $start_ts, $end_ts, wp_timezone()->getName() ) );
+
+		// Staff edit campaigns that have already started — that is most of what
+		// editing on a client's behalf means. Demanding a future start date
+		// would make every such campaign unfixable, and moving the date to
+		// satisfy the rule would rewrite when the campaign actually ran.
+		if ( $this->window->is_staff() ) {
+			$window = $window->without( Campaign_Rules::ERROR_START_IN_PAST );
+		}
 
 		if ( $window->is_valid() ) {
 			return true;

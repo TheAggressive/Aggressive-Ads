@@ -1,12 +1,12 @@
 <?php
 /**
  * Plugin Name: Aggressive Ads dev mail sender
- * Description: Gives wp_mail a valid From address inside wp-env.
+ * Description: Gives wp_mail a valid From address inside the test container.
  *
  * Development fixture, never shipped: tests/fixtures/ is outside the release
  * archive and the packaging script fails if it appears.
  *
- * wp-env's default From address is `wordpress@localhost`, which PHPMailer
+ * WordPress's default From address is `wordpress@localhost`, which PHPMailer
  * rejects outright as an invalid address. Every wp_mail() call therefore failed
  * before it reached a transport, and the plugin — correctly — recorded each one
  * as a failed notification. The result was a review timeline full of red that
@@ -14,7 +14,7 @@
  * that teaches people to ignore a real failure.
  *
  * This only makes the address valid. There is still no SMTP transport in
- * wp-env, so nothing is delivered; the point is that failures now mean
+ * the test container, so nothing is delivered; the point is that failures now mean
  * something.
  *
  * @package Aggressive\Ads

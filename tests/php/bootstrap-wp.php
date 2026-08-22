@@ -15,11 +15,12 @@ declare(strict_types=1);
 
 $aggr_root = dirname( __DIR__, 2 );
 
-// wp-env mounts the WordPress PHPUnit suite here and exports WP_TESTS_DIR.
-$aggr_tests_dir = getenv( 'WP_TESTS_DIR' );
+require_once $aggr_root . '/vendor/autoload.php';
+
+$aggr_tests_dir = getenv( 'WP_PHPUNIT__DIR' );
 
 if ( ! is_string( $aggr_tests_dir ) || '' === $aggr_tests_dir ) {
-	$aggr_tests_dir = '/wordpress-phpunit';
+	$aggr_tests_dir = $aggr_root . '/vendor/wp-phpunit/wp-phpunit';
 }
 
 $aggr_tests_dir = rtrim( $aggr_tests_dir, '/\\' );
@@ -28,20 +29,18 @@ if ( ! file_exists( $aggr_tests_dir . '/includes/functions.php' ) ) {
 	fwrite(
 		STDERR,
 		"Could not find the WordPress test suite at {$aggr_tests_dir}.\n"
-		. "These suites run inside wp-env: pnpm test:php:integration\n"
+		. "Run composer install, pnpm env:start, then pnpm test:php:integration.\n"
 	);
 	exit( 1 );
 }
 
-require_once $aggr_root . '/vendor/autoload.php';
 require_once $aggr_tests_dir . '/includes/functions.php';
 
 /**
  * Loads the plugin before WordPress finishes booting.
  *
- * Guarded by the constant as well as require_once, because wp-env activates the
- * plugin in the tests environment too — loading it twice would fatal on the
- * constant definitions rather than on anything informative.
+ * Guarded by the constant as well as require_once so a bootstrap failure is
+ * reported by PHPUnit rather than as duplicate plugin constants.
  *
  * @return void
  */

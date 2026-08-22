@@ -79,7 +79,9 @@ export type AuditEvent = {
 export type Campaign = {
 	id: number;
 	title: string;
+	org_id: number;
 	org_name: string;
+	edit_url: string;
 	status: string;
 	status_text: string;
 	pill: string;
@@ -99,6 +101,11 @@ export type Campaign = {
 	audit: AuditEvent[];
 };
 
+export type Advertiser = {
+	id: number;
+	name: string;
+};
+
 export type Bootstrap = {
 	filter: string;
 	paged: number;
@@ -108,6 +115,8 @@ export type Bootstrap = {
 	tabs: Tab[];
 	queue: Queue;
 	campaign: Campaign | null;
+	advertisers: Advertiser[];
+	portalBase: string;
 	i18n: Record< string, string >;
 };
 

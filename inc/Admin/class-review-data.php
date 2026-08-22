@@ -11,6 +11,7 @@ namespace Aggressive\Ads\Admin;
 
 use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Domain\Transition_Table;
+use Aggressive\Ads\Portal\Routes;
 use Aggressive\Ads\Portal\View_Data;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
@@ -216,6 +217,31 @@ final class Review_Data {
 	}
 
 	/**
+	 * Active advertisers, for creating a campaign on one's behalf.
+	 *
+	 * Only active organizations: an inactive one is refused by the editor, so
+	 * offering it would be offering a choice that cannot succeed.
+	 *
+	 * @return array<int, array{id: int, name: string}>
+	 */
+	public function advertisers(): array {
+		$rows = array();
+
+		foreach ( $this->orgs->all_ids() as $org_id ) {
+			if ( ! $this->orgs->is_active( $org_id ) ) {
+				continue;
+			}
+
+			$rows[] = array(
+				'id'   => $org_id,
+				'name' => $this->orgs->name( $org_id ),
+			);
+		}
+
+		return $rows;
+	}
+
+	/**
 	 * One campaign in full, for the review screen.
 	 *
 	 * @param int $campaign_id Campaign post id.
@@ -391,6 +417,13 @@ final class Review_Data {
 			'pill'            => View_Data::pill_for( $status ),
 			'org_id'          => $this->campaigns->org_id( $campaign_id ),
 			'org_name'        => $this->orgs->name( $this->campaigns->org_id( $campaign_id ) ),
+
+			/*
+			 * The portal, not a wp-admin screen. Editing on a client's behalf
+			 * uses the advertiser's own wizard, so staff see the campaign the
+			 * way the client does and there is only one editor to keep correct.
+			 */
+			'edit_url'        => Routes::url( 'campaigns', $campaign_id ),
 			'placements'      => $names,
 			'submitted_at'    => $this->campaigns->submitted_at( $campaign_id ),
 
