@@ -68,7 +68,16 @@ final class Organizations_Controller implements Service {
 				'methods'             => 'POST',
 				'callback'            => array( $this, 'set_state' ),
 				'permission_callback' => array( $this, 'permission' ),
-				'args'                => self::paging_args() + array(
+
+				/*
+				 * Route arguments on the left. PHP's `+` keeps the LEFT operand
+				 * for a duplicate key, and `paging_args()` also declares
+				 * `state` — optional, defaulting to ''. Merging it first
+				 * silently replaced this route's *required* state argument, so
+				 * every suspend and reactivate arrived with an empty state and
+				 * was rejected by the workflow.
+				 */
+				'args'                => array(
 					'id'    => array(
 						'type'              => 'integer',
 						'required'          => true,
@@ -84,7 +93,7 @@ final class Organizations_Controller implements Service {
 						),
 						'sanitize_callback' => 'sanitize_key',
 					),
-				),
+				) + self::paging_args(),
 			)
 		);
 

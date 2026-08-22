@@ -18,6 +18,14 @@ use WP_Error;
  */
 final class Org_Access_Repository {
 
+	/**
+	 * Option holding the salt behind `active_key`.
+	 *
+	 * Not autoloaded: it is read on identity writes and lookups, not on every
+	 * request, and it must never be regenerated once rows exist.
+	 */
+	public const LOOKUP_SALT_OPTION = 'aggr_org_access_lookup_salt';
+
 	public const KIND_IDENTITY = 'identity';
 	public const KIND_INVITE   = 'invite';
 	public const KIND_REQUEST  = 'request';
@@ -91,7 +99,10 @@ final class Org_Access_Repository {
 		global $wpdb;
 
 		if ( $org_id <= 0 || '' === $canonical_name ) {
-			return new WP_Error( 'aggr_invalid_org_identity' );
+			return new WP_Error(
+				'aggr_invalid_org_identity',
+				__( 'Enter a valid organization name.', 'aggressive-ads' )
+			);
 		}
 
 		$key = $this->active_key( self::KIND_IDENTITY, 0, $canonical_name );
@@ -165,7 +176,10 @@ final class Org_Access_Repository {
 		global $wpdb;
 
 		if ( $org_id <= 0 || '' === $old_canonical || '' === $new_canonical ) {
-			return new WP_Error( 'aggr_invalid_org_identity' );
+			return new WP_Error(
+				'aggr_invalid_org_identity',
+				__( 'Enter a valid organization name.', 'aggressive-ads' )
+			);
 		}
 
 		if ( $old_canonical === $new_canonical ) {
@@ -173,7 +187,29 @@ final class Org_Access_Repository {
 		}
 
 		if ( $org_id !== $this->org_id_for_canonical( $old_canonical ) ) {
-			return new WP_Error( 'aggr_org_identity_mismatch' );
+			/*
+			 * No row under the old name is not always a mismatch.
+			 *
+			 * An organization can reach this point holding no identity row at
+			 * all — created before the registry existed, imported, or seeded
+			 * around the normal path. Refusing there made the organization
+			 * permanently unrenameable, with an error blaming a registry entry
+			 * that was never written.
+			 *
+			 * So a *missing* registration is repaired by making it, and only a
+			 * registration held under some other name is refused. Claiming the
+			 * new name still goes through register_identity(), whose unique
+			 * index is what stops two organizations sharing one name, so this
+			 * heals the gap without widening what may be taken.
+			 */
+			if ( 0 === $this->identity_row_count( $org_id ) ) {
+				return $this->register_identity( $org_id, $new_canonical );
+			}
+
+			return new WP_Error(
+				'aggr_org_identity_mismatch',
+				__( 'This organization is registered under a different name, so it cannot be renamed.', 'aggressive-ads' )
+			);
 		}
 
 		$registered = $this->register_identity( $org_id, $new_canonical );
@@ -196,10 +232,34 @@ final class Org_Access_Repository {
 			$this->delete_identity_name( $org_id, $new_canonical );
 			$this->register_identity( $org_id, $old_canonical );
 
-			return new WP_Error( 'aggr_org_identity_not_saved' );
+			return new WP_Error(
+				'aggr_org_identity_not_saved',
+				__( 'That organization name could not be saved.', 'aggressive-ads' )
+			);
 		}
 
 		return true;
+	}
+
+	/**
+	 * How many active identity rows one organization holds.
+	 *
+	 * @param int $org_id Organization id.
+	 * @return int
+	 */
+	private function identity_row_count( int $org_id ): int {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Indexed count in the custom identity registry.
+		return (int) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT COUNT(*) FROM %i WHERE org_id = %d AND kind = %s AND status = %s',
+				$this->table_name(),
+				$org_id,
+				self::KIND_IDENTITY,
+				self::STATUS_ACTIVE
+			)
+		);
 	}
 
 	/**
@@ -675,7 +735,130 @@ final class Org_Access_Repository {
 	 * @param string $identity Canonical name or normalized email.
 	 */
 	private function active_key( string $kind, int $org_id, string $identity ): string {
-		return $this->digest( $kind . '|' . $org_id . '|' . strtolower( $identity ) );
+		return $this->lookup_digest( $kind . '|' . $org_id . '|' . strtolower( $identity ) );
+	}
+
+	/**
+	 * Recomputes every `active_key` from the plaintext beside it.
+	 *
+	 * Repairs a registry whose keys were written under a different salt. Every
+	 * input is recoverable, which is the whole reason this is a migration and
+	 * not a data loss: an identity row stores its `canonical_name`, and an
+	 * invitation or request stores its `email`, both in the clear. Only
+	 * `token_hash` is unrecoverable, and it is deliberately left alone.
+	 *
+	 * Idempotent. Rows already keyed correctly are rewritten to the same value,
+	 * so running it twice changes nothing.
+	 *
+	 * @return int Rows rewritten.
+	 */
+	public function reindex_active_keys(): int {
+		global $wpdb;
+
+		if ( ! $this->table_exists() ) {
+			return 0;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- One-time migration over the custom registry.
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				'SELECT id, kind, org_id, canonical_name, email FROM %i',
+				$this->table_name()
+			),
+			ARRAY_A
+		);
+
+		if ( ! is_array( $rows ) ) {
+			return 0;
+		}
+
+		$rewritten = 0;
+
+		foreach ( $rows as $row ) {
+			$kind = (string) ( $row['kind'] ?? '' );
+
+			/*
+			 * The identity index is global, so it is keyed on scope 0; an
+			 * invitation is scoped to its organization. Keying either one the
+			 * other way produces a well-formed digest that matches nothing,
+			 * which is the failure this migration exists to end.
+			 */
+			$identity = self::KIND_IDENTITY === $kind
+				? (string) ( $row['canonical_name'] ?? '' )
+				: (string) ( $row['email'] ?? '' );
+
+			if ( '' === $identity ) {
+				continue;
+			}
+
+			$scope = self::KIND_IDENTITY === $kind ? 0 : (int) ( $row['org_id'] ?? 0 );
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- One-time migration over the custom registry.
+			$updated = $wpdb->update(
+				$this->table_name(),
+				array( 'active_key' => $this->active_key( $kind, $scope, $identity ) ),
+				array( 'id' => (int) ( $row['id'] ?? 0 ) ),
+				array( '%s' ),
+				array( '%d' )
+			);
+
+			if ( false !== $updated ) {
+				++$rewritten;
+			}
+		}
+
+		return $rewritten;
+	}
+
+	/**
+	 * The salt behind lookup keys, which must outlive an auth-salt rotation.
+	 *
+	 * `active_key` is an index, not a secret. It is derived from values this
+	 * table already stores in the clear beside it — `canonical_name` for an
+	 * identity, `email` for an invitation — so hashing it protects nothing that
+	 * is not already there, and it exists only to give the unique index
+	 * something fixed-width to enforce uniqueness over.
+	 *
+	 * It used to be salted with `wp_salt( 'auth' )`, and that made the index
+	 * perishable. Rotating auth salts is routine security hygiene and is what
+	 * invalidates every session; restoring a database into a site with
+	 * different AUTH_KEY/AUTH_SALT values does the same thing by accident.
+	 * Afterwards no stored key can be recomputed, so every lookup misses rows
+	 * that are sitting right there: an organization can never be renamed again,
+	 * and duplicate-name detection silently stops detecting anything.
+	 *
+	 * `token_hash` deliberately still uses `digest()` and `wp_salt( 'auth' )`.
+	 * That one *is* a secret verifier for a bearer token, and a salt rotation
+	 * invalidating outstanding invitations is correct behaviour rather than a
+	 * bug.
+	 *
+	 * @return string
+	 */
+	private function lookup_salt(): string {
+		$salt = (string) get_option( self::LOOKUP_SALT_OPTION, '' );
+
+		if ( '' !== $salt ) {
+			return $salt;
+		}
+
+		$fresh = wp_generate_password( 64, true, true );
+
+		// add_option fails when another request won the race; the re-read takes
+		// that winner's value rather than overwriting the index it just keyed.
+		add_option( self::LOOKUP_SALT_OPTION, $fresh, '', false );
+
+		$stored = (string) get_option( self::LOOKUP_SALT_OPTION, '' );
+
+		return '' !== $stored ? $stored : $fresh;
+	}
+
+	/**
+	 * Durable digest for lookup keys.
+	 *
+	 * @param string $value Value to digest.
+	 */
+	private function lookup_digest( string $value ): string {
+		return hash_hmac( 'sha256', $value, $this->lookup_salt() );
 	}
 
 	/**

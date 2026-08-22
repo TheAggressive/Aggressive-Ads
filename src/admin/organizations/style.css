@@ -32,6 +32,17 @@
 @import '../../styles/base/_admin-tokens.css';
 
 /*
+ * Modals render through a portal at the end of the body, outside `.aggr-admin`
+ * and therefore outside the block that declares `--aggr-*`. An unresolved
+ * custom property in a colour declaration is transparent, not inherited, so the
+ * modal rules below would have painted nothing. Re-declare what they use.
+ */
+.dataviews-action-modal {
+	--aggr-color-danger: #b32d2e;
+	--aggr-measure: 60ch;
+}
+
+/*
  * The heading sits directly above the table; core gives `.wrap h1` almost no
  * bottom margin because it normally precedes a nav or a notice.
  */
@@ -86,18 +97,25 @@
  * danger colour, and the token is already contrast-measured against the
  * surface it sits on.
  */
-.wrap.aggr-admin
-	.dataviews-action-modal
-	.components-button.is-destructive:not(:disabled) {
+.dataviews-action-modal .components-button.is-destructive:not(:disabled) {
 	color: var(--aggr-color-danger);
 }
 
 /*
- * The action modals hold a short form or one sentence of confirmation. Without
- * a measure the confirmation sentence runs the full dialog width, which is the
- * one place on this screen where prose length actually matters.
+ * The action modals size to what they hold.
+ *
+ * Two things were wrong here. `.wrap.aggr-admin .dataviews-action-modal` never
+ * matched at all — a modal renders through a portal at the end of the body, not
+ * inside our `.wrap` — so the only rule taking effect capped the *content* while
+ * the frame kept core's fixed width, which is what left a narrow field floating
+ * in a wide dialog.
+ *
+ * So the frame is sized to its content, with a floor so the roster's loading
+ * state is not a tiny box, and a ceiling that keeps the one sentence of
+ * confirmation inside a readable measure.
  */
-.wrap.aggr-admin .dataviews-action-modal,
-.dataviews-action-modal .components-modal__content {
-	max-width: var(--aggr-measure, 60ch);
+.dataviews-action-modal .components-modal__frame {
+	width: fit-content;
+	min-width: min(90vw, 26rem);
+	max-width: min(90vw, var(--aggr-measure, 60ch));
 }

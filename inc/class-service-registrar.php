@@ -227,39 +227,47 @@ final class Service_Registrar {
 				$c->get( Installer::class ),
 				$c->get( Audit_Repository::class ),
 				array(
-					2 => static function () use ( $c ): void {
+					2  => static function () use ( $c ): void {
 						$c->get( Installer::class )->install_org_access();
 					},
-					4 => static function () use ( $c ): void {
+					4  => static function () use ( $c ): void {
 						$c->get( Installer::class )->install_delivery_tables();
 					},
-					5 => static function () use ( $c ): void {
+					5  => static function () use ( $c ): void {
 						$c->get( Installer::class )->migrate_event_token_uniqueness();
 					},
 					// Renames the private creative directory. No admin notice:
 					// a site whose server rule still names the old path is
 					// covered because the migration leaves nothing behind it.
-					6 => static function () use ( $c ): void {
+					6  => static function () use ( $c ): void {
 						$c->get( Private_Storage::class )->migrate_legacy_directory();
 					},
 					// Creative promoted before the marker existed is still in
 					// the Media Library until it is marked.
-					7 => static function () use ( $c ): void {
+					7  => static function () use ( $c ): void {
 						$c->get( Creative_Repository::class )->backfill_creative_attachment_marks();
 					},
 					// The daily private-storage probe and its stored verdict
 					// outlived the notice they fed. Left alone they would stay
 					// on the schedule of every upgraded site forever, firing a
 					// callback nothing registers any more.
-					8 => static function (): void {
+					8  => static function (): void {
 						wp_clear_scheduled_hook( 'aggr_verify_private_storage' );
 						delete_option( 'aggr_private_storage_status' );
 					},
 					// The object index gains org_id, which for_object() also
 					// filters on. Without it the optimizer index-merges and
 					// filesorts; see Audit_Repository::migrate_object_index().
-					9 => static function () use ( $c ): void {
+					9  => static function () use ( $c ): void {
 						$c->get( Audit_Repository::class )->migrate_object_index();
+					},
+					// Lookup keys move off wp_salt( 'auth' ) onto a salt that
+					// does not rotate. Until this runs, a site whose auth salts
+					// ever changed cannot rename an organization and is not
+					// detecting duplicate names at all. Recomputed from the
+					// plaintext the same rows already carry, so nothing is lost.
+					10 => static function () use ( $c ): void {
+						$c->get( Org_Access_Repository::class )->reindex_active_keys();
 					},
 				)
 			)

@@ -410,6 +410,36 @@ final class OrganizationsWriteTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Reproduces the browser's rename: query args plus a JSON body.
+	 *
+	 * @return void
+	 */
+	public function test_probe_rename_with_query_args(): void {
+		wp_set_current_user( $this->administrator );
+
+		$request = new WP_REST_Request( 'PATCH', '/aggr/v1/organizations/' . $this->org_id );
+		$request->set_query_params(
+			array(
+				'page'     => '1',
+				'per_page' => '25',
+				'search'   => '',
+				'state'    => '',
+			)
+		);
+		$request->set_header( 'content-type', 'application/json' );
+		$request->set_body( (string) wp_json_encode( array( 'name' => 'Probe Renamed' ) ) );
+
+		$response = rest_get_server()->dispatch( $request );
+
+		if ( 200 !== $response->get_status() ) {
+			$data = $response->get_data();
+			$this->fail( 'status ' . $response->get_status() . ' :: ' . wp_json_encode( $data ) );
+		}
+
+		$this->assertSame( 200, $response->get_status() );
+	}
+
+	/**
 	 * Every organization the repository holds, counted independently.
 	 *
 	 * @return int

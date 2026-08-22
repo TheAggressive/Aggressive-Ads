@@ -135,6 +135,13 @@ and deeper analytics remain open. What is built:
   network-active installs run on `wp_initialize_site`; a dedicated multisite
   PHPUnit config proves colliding post ids cannot cross sites. Network-wide
   organizations are out of scope.
+- organization name lookups survive a salt rotation (schema v10). `active_key`
+  is an index over plaintext the same row already stores, so it is salted with
+  a plugin-owned option rather than `wp_salt( 'auth' )`, which rotates and used
+  to orphan the whole registry — no renames, and no duplicate-name detection.
+  `token_hash` still uses `wp_salt( 'auth' )` on purpose: it verifies a bearer
+  token, so a rotation *should* invalidate it. An organization holding no
+  identity row registers one on first rename instead of being refused forever
 - CSV reporting — `Portal\Report_Actions` streams a rollup export for the
   acting organization
 - i18n tooling — `bin/i18n/` (pot, sync, compile, status, check, locale,

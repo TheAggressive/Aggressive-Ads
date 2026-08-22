@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-22T18:14:24+00:00\n"
+"POT-Creation-Date: 2026-08-22T18:45:43+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -2171,7 +2171,7 @@ msgstr ""
 
 #: inc/Portal/class-email-change-actions.php:144
 #: inc/Workflow/class-email-change.php:60
-#: inc/Workflow/class-organization-membership.php:116
+#: inc/Workflow/class-organization-membership.php:119
 msgid "Enter a valid email address."
 msgstr ""
 
@@ -2378,7 +2378,21 @@ msgstr ""
 msgid "The campaign changes could not be saved completely."
 msgstr ""
 
-#: inc/Repository/class-org-access-repository.php:625
+#: inc/Repository/class-org-access-repository.php:104
+#: inc/Repository/class-org-access-repository.php:181
+#: inc/Repository/class-org-repository.php:218
+msgid "Enter a valid organization name."
+msgstr ""
+
+#: inc/Repository/class-org-access-repository.php:211
+msgid "This organization is registered under a different name, so it cannot be renamed."
+msgstr ""
+
+#: inc/Repository/class-org-access-repository.php:237
+msgid "That organization name could not be saved."
+msgstr ""
+
+#: inc/Repository/class-org-access-repository.php:685
 msgid "A request for that email is already pending."
 msgstr ""
 
@@ -2392,10 +2406,6 @@ msgstr ""
 
 #: inc/Repository/class-org-repository.php:211
 msgid "The organization could not be found."
-msgstr ""
-
-#: inc/Repository/class-org-repository.php:218
-msgid "Enter a valid organization name."
 msgstr ""
 
 #: inc/Repository/class-org-repository.php:261
@@ -2451,11 +2461,11 @@ msgstr ""
 msgid "No such placement."
 msgstr ""
 
-#: inc/REST/class-organizations-controller.php:253
+#: inc/REST/class-organizations-controller.php:262
 msgid "That organization no longer exists."
 msgstr ""
 
-#: inc/REST/class-organizations-controller.php:465
+#: inc/REST/class-organizations-controller.php:474
 msgid "That change could not be made."
 msgstr ""
 
@@ -3092,51 +3102,60 @@ msgstr ""
 msgid "The confirmation email could not be sent."
 msgstr ""
 
-#: inc/Workflow/class-organization-membership.php:124
+#: inc/Workflow/class-organization-membership.php:113
+#: inc/Workflow/class-organization-membership.php:209
+#: inc/Workflow/class-organization-membership.php:264
+#: inc/Workflow/class-organization-membership.php:324
+#: inc/Workflow/class-organization-membership.php:378
+#: inc/Workflow/class-organization-membership.php:451
+msgid "You cannot manage that organization."
+msgstr ""
+
+#: inc/Workflow/class-organization-membership.php:127
 msgid "That person already belongs to this organization."
 msgstr ""
 
-#: inc/Workflow/class-organization-membership.php:128
+#: inc/Workflow/class-organization-membership.php:131
 msgid "That account already belongs to another organization."
 msgstr ""
 
-#: inc/Workflow/class-organization-membership.php:133
+#: inc/Workflow/class-organization-membership.php:136
 msgid "That person already has an access request waiting below."
 msgstr ""
 
-#: inc/Workflow/class-organization-membership.php:152
+#: inc/Workflow/class-organization-membership.php:155
 msgid "The invitation email could not be sent."
 msgstr ""
 
-#: inc/Workflow/class-organization-membership.php:260
 #: inc/Workflow/class-organization-membership.php:269
-#: inc/Workflow/class-organization-membership.php:384
-#: inc/Workflow/class-organization-membership.php:394
+#: inc/Workflow/class-organization-membership.php:278
+#: inc/Workflow/class-organization-membership.php:399
+#: inc/Workflow/class-organization-membership.php:409
 msgid "That person is not a member of this organization."
 msgstr ""
 
-#: inc/Workflow/class-organization-membership.php:264
+#: inc/Workflow/class-organization-membership.php:273
 msgid "The organization owner cannot be removed. Transfer ownership first."
 msgstr ""
 
-#: inc/Workflow/class-organization-membership.php:273
+#: inc/Workflow/class-organization-membership.php:282
 msgid "The member could not be removed."
 msgstr ""
 
-#: inc/Workflow/class-organization-membership.php:376
+#: inc/Workflow/class-organization-membership.php:391
 msgid "This organization has no owner to transfer from."
 msgstr ""
 
-#: inc/Workflow/class-organization-membership.php:380
-#: inc/Workflow/class-organization-membership.php:388
+#: inc/Workflow/class-organization-membership.php:395
+#: inc/Workflow/class-organization-membership.php:403
 msgid "Choose a different member to become the owner."
 msgstr ""
 
-#: inc/Workflow/class-organization-membership.php:398
+#: inc/Workflow/class-organization-membership.php:413
 msgid "Ownership could not be transferred."
 msgstr ""
 
-#: inc/Workflow/class-organization-membership.php:468
+#: inc/Workflow/class-organization-membership.php:486
 msgid "This invitation is invalid or has expired."
 msgstr ""
 

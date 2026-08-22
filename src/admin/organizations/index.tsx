@@ -24,8 +24,10 @@
 import type { ReactElement } from 'react';
 import apiFetch from '@wordpress/api-fetch';
 import {
+	createContext,
 	createRoot,
 	useCallback,
+	useContext,
 	useEffect,
 	useMemo,
 	useState,
@@ -251,6 +253,263 @@ function Roster( {
  * let you sort them, but only within whatever arbitrary 500 rows had been
  * loaded, which looked like sorting and was not.
  */
+/**
+ * What the action modals need, reached by context rather than by closure.
+ *
+ * DataViews stores the action *object* when a modal opens
+ * (`setActiveModalAction( action )`) and keeps rendering that same object until
+ * the modal closes. So a `RenderModal` defined inside a `useMemo` is frozen at
+ * the moment of the click: rebuilding the actions array afterwards produces a
+ * new object DataViews never looks at, and the modal on screen goes on reading
+ * the state as it was when it opened.
+ *
+ * That is not theoretical — it shipped. "Manage members" fetched its roster,
+ * the fetch resolved, the state updated, and the modal spun forever because the
+ * copy being rendered had captured an empty roster map and could not be
+ * reached by any subsequent render.
+ *
+ * The fix has two halves, and both are required. Every RenderModal below is a
+ * module-level component, so its identity never changes and the object
+ * DataViews froze still points at the live component. And everything volatile
+ * arrives through this context, which re-renders consumers normally, instead of
+ * through a closure that cannot be refreshed.
+ */
+type Screen = {
+	restPath: string;
+	busy: boolean;
+	write: (
+		options: Record< string, unknown >,
+		message: string
+	) => Promise< WriteResult | null >;
+};
+
+const ScreenContext = createContext< Screen | null >( null );
+
+/** The screen context, or a throw naming the mistake rather than a null crash. */
+function useScreen(): Screen {
+	const screen = useContext( ScreenContext );
+
+	if ( null === screen ) {
+		throw new Error(
+			'Organization modals must render inside ScreenContext.'
+		);
+	}
+
+	return screen;
+}
+
+/**
+ * The roster modal, which owns the roster it shows.
+ *
+ * It fetches on mount rather than reading a map held by the screen, because
+ * the screen cannot hand anything to a modal DataViews has already frozen.
+ */
+function MembersModal( {
+	items,
+}: {
+	items: Organization[];
+	closeModal?: () => void;
+} ): ReactElement {
+	const { restPath, busy, write } = useScreen();
+	const org = items[ 0 ];
+	const orgId = org?.id ?? 0;
+
+	const [ roster, setRoster ] = useState< Member[] | undefined >( undefined );
+	const [ failed, setFailed ] = useState( '' );
+
+	useEffect( () => {
+		if ( orgId <= 0 ) {
+			return;
+		}
+
+		let live = true;
+
+		setFailed( '' );
+
+		apiFetch< { organization: OrganizationDetail } >( {
+			path: `${ restPath }/${ orgId }/detail`,
+		} )
+			.then( ( result ) => {
+				if ( live ) {
+					setRoster( result.organization.member_list );
+				}
+			} )
+			.catch( ( reason: unknown ) => {
+				// A spinner that never resolves says nothing. This is the
+				// failure the first version of this screen shipped: the catch
+				// was empty, so a failed fetch and a slow one looked identical.
+				if ( live ) {
+					setFailed( errorMessage( reason ) || t( 'loadFailed' ) );
+				}
+			} );
+
+		return () => {
+			live = false;
+		};
+	}, [ restPath, orgId ] );
+
+	if ( ! org ) {
+		return <></>;
+	}
+
+	if ( '' !== failed ) {
+		return (
+			<Notice status="error" isDismissible={ false }>
+				{ failed }
+			</Notice>
+		);
+	}
+
+	/** Applies a membership change and adopts the roster the server returns. */
+	const apply = async (
+		options: Record< string, unknown >,
+		message: string
+	): Promise< void > => {
+		const result = await write( options, message );
+
+		if ( result?.organization ) {
+			setRoster( result.organization.member_list );
+		}
+	};
+
+	return (
+		<Roster
+			members={ roster }
+			busy={ busy }
+			onTransfer={ ( member ) => {
+				void apply(
+					{
+						path: `${ restPath }/${ org.id }/owner`,
+						method: 'POST',
+						data: { user_id: member.id },
+					},
+					t( 'ownerChanged' )
+				);
+			} }
+			onRemove={ ( member ) => {
+				void apply(
+					{
+						path: `${ restPath }/${ org.id }/members/${ member.id }`,
+						method: 'DELETE',
+					},
+					t( 'memberRemoved' )
+				);
+			} }
+			onInvite={ ( email ) => {
+				void apply(
+					{
+						path: `${ restPath }/${ org.id }/members`,
+						method: 'POST',
+						data: { email },
+					},
+					t( 'invited' )
+				);
+			} }
+		/>
+	);
+}
+
+/** Renaming, which closes on success because the row it edits is behind it. */
+function RenameModal( {
+	items,
+	closeModal,
+}: {
+	items: Organization[];
+	closeModal?: () => void;
+} ): ReactElement {
+	const { restPath, busy, write } = useScreen();
+	const org = items[ 0 ];
+	const [ name, setName ] = useState( org?.name ?? '' );
+
+	if ( ! org ) {
+		return <></>;
+	}
+
+	return (
+		<VStack spacing={ 4 }>
+			<TextControl
+				label={ t( 'name' ) }
+				value={ name }
+				onChange={ setName }
+				__nextHasNoMarginBottom
+				__next40pxDefaultSize
+			/>
+			<HStack justify="flex-end">
+				<Button variant="tertiary" onClick={ closeModal }>
+					{ t( 'cancel' ) }
+				</Button>
+				<Button
+					variant="primary"
+					__next40pxDefaultSize
+					disabled={ busy || name.trim() === org.name }
+					onClick={ () => {
+						void write(
+							{
+								path: `${ restPath }/${ org.id }`,
+								method: 'PATCH',
+								data: { name: name.trim() },
+							},
+							t( 'renamed' )
+						);
+						closeModal?.();
+					} }
+				>
+					{ t( 'rename' ) }
+				</Button>
+			</HStack>
+		</VStack>
+	);
+}
+
+/*
+ * Suspension confirms; reactivation does not. The asymmetry is the point: one
+ * stops live advertising for a paying customer, the other restores it, and only
+ * one of those is worth a second thought.
+ */
+function SuspendModal( {
+	items,
+	closeModal,
+}: {
+	items: Organization[];
+	closeModal?: () => void;
+} ): ReactElement {
+	const { restPath, write } = useScreen();
+	const org = items[ 0 ];
+
+	if ( ! org ) {
+		return <></>;
+	}
+
+	return (
+		<VStack spacing={ 4 }>
+			<Text>{ t( 'confirmSuspend' ).replace( '%s', org.name ) }</Text>
+			<HStack justify="flex-end">
+				<Button variant="tertiary" onClick={ closeModal }>
+					{ t( 'cancel' ) }
+				</Button>
+				<Button
+					variant="primary"
+					isDestructive
+					__next40pxDefaultSize
+					onClick={ () => {
+						void write(
+							{
+								path: `${ restPath }/${ org.id }/state`,
+								method: 'POST',
+								data: { state: 'suspended' },
+							},
+							t( 'suspended' )
+						);
+						closeModal?.();
+					} }
+				>
+					{ t( 'suspend' ) }
+				</Button>
+			</HStack>
+		</VStack>
+	);
+}
+
 const DEFAULT_VIEW: DataView = {
 	type: 'table',
 	search: '',
@@ -284,11 +543,6 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 	const [ done, setDone ] = useState( '' );
 	const [ loading, setLoading ] = useState( false );
 	const [ loadError, setLoadError ] = useState( '' );
-
-	// Rosters, by organization id, for whichever modals have been opened.
-	const [ rosters, setRosters ] = useState<
-		Record< number, Member[] | undefined >
-	>( {} );
 
 	const { error, busy, run, clearError } = useAction< WriteResult >();
 
@@ -350,7 +604,7 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 		async (
 			options: Record< string, unknown >,
 			message: string
-		): Promise< void > => {
+		): Promise< WriteResult | null > => {
 			setDone( '' );
 			clearError();
 
@@ -367,41 +621,15 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 				// strip a portal role — and only the server knows what else moved.
 				setPayload( result.view );
 				setDone( message );
-
-				if ( result.organization ) {
-					setRosters( ( current ) => ( {
-						...current,
-						[ result.organization?.id ?? 0 ]:
-							result.organization?.member_list,
-					} ) );
-				}
 			}
+
+			return result;
 		},
 		[ run, clearError, query ]
 	);
 
-	/** Fetches one organization's roster the first time a modal needs it. */
-	const loadRoster = useCallback(
-		( orgId: number ): void => {
-			apiFetch< { organization: OrganizationDetail } >( {
-				path: `${ data.restPath }/${ orgId }/detail`,
-			} )
-				.then( ( result ) => {
-					setRosters( ( current ) => ( {
-						...current,
-						[ orgId ]: result.organization.member_list,
-					} ) );
-				} )
-				.catch( () => {
-					// The modal keeps its spinner rather than claiming the
-					// organization has no members, which is a different fact.
-				} );
-		},
-		[ data.restPath ]
-	);
-
 	const change = useCallback(
-		( org: Organization, state: string ): Promise< void > =>
+		( org: Organization, state: string ): Promise< unknown > =>
 			write(
 				{
 					path: `${ data.restPath }/${ org.id }/state`,
@@ -468,198 +696,31 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 		[]
 	);
 
+	/*
+	 * Every RenderModal here is a module-level component, and that is load
+	 * bearing rather than tidy. DataViews freezes the action object when the
+	 * modal opens, so a component defined inline would be frozen with it and
+	 * could never see another render's state. See ScreenContext above.
+	 */
 	const actions: Action< Organization >[] = useMemo(
 		() => [
 			{
 				id: 'members',
 				label: t( 'manageMembers' ),
 				isPrimary: false,
-				RenderModal: ( {
-					items,
-				}: {
-					items: Organization[];
-					closeModal?: () => void;
-				} ) => {
-					const selected = items[ 0 ];
-
-					/*
-					 * The live row, not the one DataViews captured when the
-					 * modal opened. Every action here rewrites the roster —
-					 * a transfer demotes the previous owner, a removal drops
-					 * a member — and rendering the captured copy would show
-					 * the roster as it was before the change the user just
-					 * made.
-					 */
-					const org = selected
-						? rows.find( ( row ) => row.id === selected.id ) ??
-						  selected
-						: undefined;
-
-					const roster =
-						undefined !== org ? rosters[ org.id ] : undefined;
-
-					// Fetching is an effect, not something render does on the
-					// way past: a render-phase fetch fires again on every
-					// re-render the request itself causes.
-					useEffect( () => {
-						if ( undefined !== org && undefined === roster ) {
-							loadRoster( org.id );
-						}
-					}, [ org, roster ] );
-
-					if ( undefined === org ) {
-						return <></>;
-					}
-
-					return (
-						<Roster
-							members={ roster }
-							busy={ busy }
-							onTransfer={ ( member ) => {
-								void write(
-									{
-										path: `${ data.restPath }/${ org.id }/owner`,
-										method: 'POST',
-										data: { user_id: member.id },
-									},
-									t( 'ownerChanged' )
-								);
-							} }
-							onRemove={ ( member ) => {
-								void write(
-									{
-										path: `${ data.restPath }/${ org.id }/members/${ member.id }`,
-										method: 'DELETE',
-									},
-									t( 'memberRemoved' )
-								);
-							} }
-							onInvite={ ( email ) => {
-								void write(
-									{
-										path: `${ data.restPath }/${ org.id }/members`,
-										method: 'POST',
-										data: { email },
-									},
-									t( 'invited' )
-								);
-							} }
-						/>
-					);
-				},
+				RenderModal: MembersModal,
 			},
 			{
 				id: 'rename',
 				label: t( 'rename' ),
-				RenderModal: ( {
-					items,
-					closeModal,
-				}: {
-					items: Organization[];
-					closeModal?: () => void;
-				} ) => {
-					const org = items[ 0 ];
-					const [ name, setName ] = useState( org?.name ?? '' );
-
-					if ( ! org ) {
-						return <></>;
-					}
-
-					return (
-						<VStack spacing={ 4 }>
-							<TextControl
-								label={ t( 'name' ) }
-								value={ name }
-								onChange={ setName }
-								__nextHasNoMarginBottom
-								__next40pxDefaultSize
-							/>
-							<HStack justify="flex-end">
-								<Button
-									variant="tertiary"
-									onClick={ closeModal }
-								>
-									{ t( 'cancel' ) }
-								</Button>
-								<Button
-									variant="primary"
-									__next40pxDefaultSize
-									disabled={
-										busy || name.trim() === org.name
-									}
-									onClick={ () => {
-										void write(
-											{
-												path: `${ data.restPath }/${ org.id }`,
-												method: 'PATCH',
-												data: { name: name.trim() },
-											},
-											t( 'renamed' )
-										);
-										closeModal?.();
-									} }
-								>
-									{ t( 'rename' ) }
-								</Button>
-							</HStack>
-						</VStack>
-					);
-				},
+				RenderModal: RenameModal,
 			},
 			{
 				id: 'suspend',
 				label: t( 'suspend' ),
 				isDestructive: true,
 				isEligible: ( org: Organization ) => org.active,
-				/*
-				   Suspension confirms; reactivation does not. The asymmetry is
-				   the point: one stops live advertising for a paying customer,
-				   the other restores it, and only one of those is worth a
-				   second thought.
-				*/
-				RenderModal: ( {
-					items,
-					closeModal,
-				}: {
-					items: Organization[];
-					closeModal?: () => void;
-				} ) => {
-					const org = items[ 0 ];
-
-					if ( ! org ) {
-						return <></>;
-					}
-
-					return (
-						<VStack spacing={ 4 }>
-							<Text>
-								{ t( 'confirmSuspend' ).replace(
-									'%s',
-									org.name
-								) }
-							</Text>
-							<HStack justify="flex-end">
-								<Button
-									variant="tertiary"
-									onClick={ closeModal }
-								>
-									{ t( 'cancel' ) }
-								</Button>
-								<Button
-									variant="primary"
-									isDestructive
-									__next40pxDefaultSize
-									onClick={ () => {
-										void change( org, 'suspended' );
-										closeModal?.();
-									} }
-								>
-									{ t( 'suspend' ) }
-								</Button>
-							</HStack>
-						</VStack>
-					);
-				},
+				RenderModal: SuspendModal,
 			},
 			{
 				id: 'reactivate',
@@ -674,21 +735,11 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 				},
 			},
 		],
-		/*
-		 * `busy`, `rows` and `write` are all closed over. Rebuilding the
-		 * actions when they change is what keeps a disabled button honest and
-		 * what lets the open members modal show the roster it just rewrote —
-		 * a stale closure here would silently undo that.
-		 */
-		[ busy, rows, rosters, data.restPath, write, change, loadRoster ]
+		// A `callback` runs from the current render's array, so it is safe to
+		// depend on `change`; the modals reach their state through context.
+		[ change ]
 	);
 
-	/*
-	 * The server counted, so the server's total is the one shown.
-	 *
-	 * Deriving totalPages from rows.length here would report one page however
-	 * many there are, and the pager would look correct while going nowhere.
-	 */
 	const paginationInfo = useMemo(
 		() => ( {
 			totalItems: payload.total,
@@ -700,47 +751,54 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 		[ payload.total, payload.perPage ]
 	);
 
+	const screen = useMemo(
+		() => ( { restPath: data.restPath, busy, write } ),
+		[ data.restPath, busy, write ]
+	);
+
 	return (
-		<VStack spacing={ 4 }>
-			<SaveError message={ error } onRetry={ undefined } />
+		<ScreenContext.Provider value={ screen }>
+			<VStack spacing={ 4 }>
+				<SaveError message={ error } onRetry={ undefined } />
 
-			{ done ? (
-				<Notice
-					status="success"
-					isDismissible
-					onRemove={ () => setDone( '' ) }
-				>
-					{ done }
-				</Notice>
-			) : null }
+				{ done ? (
+					<Notice
+						status="success"
+						isDismissible
+						onRemove={ () => setDone( '' ) }
+					>
+						{ done }
+					</Notice>
+				) : null }
 
-			{ loadError ? (
-				<Notice status="error" isDismissible={ false }>
-					{ loadError }
-				</Notice>
-			) : null }
+				{ loadError ? (
+					<Notice status="error" isDismissible={ false }>
+						{ loadError }
+					</Notice>
+				) : null }
 
-			{ /*
+				{ /*
 			   DataViews owns the empty state from here. It renders its own "no
 			   results" inside the table, which keeps the search box and the
 			   filters on screen — replacing the whole table with a sentence,
 			   as this screen used to, takes away the controls needed to undo
 			   the query that emptied it.
 			*/ }
-			<DataViews< Organization >
-				data={ rows }
-				fields={ fields }
-				view={ view }
-				onChangeView={ setView }
-				actions={ actions }
-				paginationInfo={ paginationInfo }
-				getItemId={ ( item ) => String( item.id ) }
-				isLoading={ busy || loading }
-				defaultLayouts={ { table: {} } }
-				searchLabel={ t( 'searchLabel' ) }
-				empty={ <p>{ t( 'empty' ) }</p> }
-			/>
-		</VStack>
+				<DataViews< Organization >
+					data={ rows }
+					fields={ fields }
+					view={ view }
+					onChangeView={ setView }
+					actions={ actions }
+					paginationInfo={ paginationInfo }
+					getItemId={ ( item ) => String( item.id ) }
+					isLoading={ busy || loading }
+					defaultLayouts={ { table: {} } }
+					searchLabel={ t( 'searchLabel' ) }
+					empty={ <p>{ t( 'empty' ) }</p> }
+				/>
+			</VStack>
+		</ScreenContext.Provider>
 	);
 }
 
