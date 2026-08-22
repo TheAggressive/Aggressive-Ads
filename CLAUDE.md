@@ -229,8 +229,11 @@ sabotage test is the only thing standing between `rmdir( $root )` and
 never created.
 
 A guard that stops matching does not fail. It reports success over code it is no
-longer reading, which is why the guards themselves are tested and wired into
-`test:tools`.
+longer reading. `check-navigation.mjs`, `check-coverage.mjs` and the rules behind
+`check-summary.mjs` carry tests in `test:tools` for that reason. **The other
+eleven guards under `bin/ci/` do not**, and that is a gap rather than a decision
+— `check-permission-callbacks.sh` and `check-repository-boundary.sh` are the two
+worth doing first, because both police security boundaries.
 
 Two habits that earn their keep:
 
