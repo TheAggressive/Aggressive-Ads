@@ -86,6 +86,7 @@ type Doc = {
 	brand: Brand;
 	delivery: { fillTtl: string; housePolicy: string };
 	tracking: { retentionDays: string };
+	creative: { retentionDays: string };
 };
 
 type Bootstrap = {
@@ -98,6 +99,7 @@ type Bootstrap = {
 		houseOptions: { value: string; label: string }[];
 	};
 	tracking: { retentionDays: number };
+	creative: { retentionDays: number };
 	roster: Person[];
 	i18n: Record< string, string >;
 	restPath: string;
@@ -115,6 +117,7 @@ const EMPTY: Bootstrap = {
 	},
 	delivery: { fillTtl: 30, housePolicy: '', houseOptions: [] },
 	tracking: { retentionDays: 90 },
+	creative: { retentionDays: 30 },
 	roster: [],
 	i18n: {},
 	restPath: '',
@@ -147,6 +150,7 @@ function payload( doc: Doc ): Record< string, unknown > {
 			house_policy: doc.delivery.housePolicy,
 		},
 		tracking: { retention_days: doc.tracking.retentionDays },
+		creative: { retention_days: doc.creative.retentionDays },
 	};
 }
 
@@ -297,22 +301,20 @@ function BrandFields( {
 
 function Delivery( {
 	delivery,
-	tracking,
 	houseOptions,
 	onDelivery,
-	onTracking,
 }: {
 	delivery: Doc[ 'delivery' ];
-	tracking: Doc[ 'tracking' ];
 	houseOptions: { value: string; label: string }[];
 	onDelivery: ( patch: Partial< Doc[ 'delivery' ] >, delay: number ) => void;
-	onTracking: ( patch: Partial< Doc[ 'tracking' ] > ) => void;
 } ): ReactElement {
 	return (
 		<VStack spacing={ 4 }>
 			<TextControl
 				label={ t( 'fillTtl' ) }
 				type="number"
+				min={ 0 }
+				step={ 1 }
 				value={ delivery.fillTtl }
 				onChange={ ( fillTtl: string ) =>
 					onDelivery( { fillTtl }, AFTER_TYPING )
@@ -330,12 +332,60 @@ function Delivery( {
 				__nextHasNoMarginBottom
 				__next40pxDefaultSize
 			/>
+		</VStack>
+	);
+}
+
+/**
+ * Both retention windows, read together.
+ *
+ * They are separate values on purpose. Deleting a delivery row costs per-event
+ * detail that the rollups already summarised; deleting creative destroys the
+ * only remaining copy of artwork nobody approved. One control for both would
+ * let a decision about audit depth quietly decide when an advertiser's file is
+ * gone.
+ *
+ * Bounds mirror Domain\Settings_Schema. The server is still the authority —
+ * these stop the field offering a value it will refuse, which is how it came to
+ * accept a negative number of days.
+ */
+function Retention( {
+	tracking,
+	creative,
+	onTracking,
+	onCreative,
+}: {
+	tracking: Doc[ 'tracking' ];
+	creative: Doc[ 'creative' ];
+	onTracking: ( patch: Partial< Doc[ 'tracking' ] > ) => void;
+	onCreative: ( patch: Partial< Doc[ 'creative' ] > ) => void;
+} ): ReactElement {
+	return (
+		<VStack spacing={ 4 }>
 			<TextControl
 				label={ t( 'retentionDays' ) }
+				help={ t( 'retentionDaysHelp' ) }
 				type="number"
+				min={ 30 }
+				max={ 730 }
+				step={ 1 }
 				value={ tracking.retentionDays }
 				onChange={ ( retentionDays: string ) =>
 					onTracking( { retentionDays } )
+				}
+				__nextHasNoMarginBottom
+				__next40pxDefaultSize
+			/>
+			<TextControl
+				label={ t( 'creativeDays' ) }
+				help={ t( 'creativeDaysHelp' ) }
+				type="number"
+				min={ 7 }
+				max={ 365 }
+				step={ 1 }
+				value={ creative.retentionDays }
+				onChange={ ( retentionDays: string ) =>
+					onCreative( { retentionDays } )
 				}
 				__nextHasNoMarginBottom
 				__next40pxDefaultSize
@@ -485,6 +535,7 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 			housePolicy: data.delivery.housePolicy,
 		},
 		tracking: { retentionDays: String( data.tracking.retentionDays ) },
+		creative: { retentionDays: String( data.creative.retentionDays ) },
 	} );
 
 	const { status, error, schedule, retry } = useAutosave< Doc >( ( next ) =>
@@ -567,7 +618,6 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 			<Section title={ t( 'delivery' ) } help={ t( 'deliveryHelp' ) }>
 				<Delivery
 					delivery={ doc.delivery }
-					tracking={ doc.tracking }
 					houseOptions={ data.delivery.houseOptions }
 					onDelivery={ ( patch, delay ) =>
 						edit(
@@ -578,11 +628,27 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 							delay
 						)
 					}
+				/>
+			</Section>
+
+			<Section title={ t( 'retention' ) } help={ t( 'retentionHelp' ) }>
+				<Retention
+					tracking={ doc.tracking }
+					creative={ doc.creative }
 					onTracking={ ( patch ) =>
 						edit(
 							( current ) => ( {
 								...current,
 								tracking: { ...current.tracking, ...patch },
+							} ),
+							AFTER_TYPING
+						)
+					}
+					onCreative={ ( patch ) =>
+						edit(
+							( current ) => ( {
+								...current,
+								creative: { ...current.creative, ...patch },
 							} ),
 							AFTER_TYPING
 						)

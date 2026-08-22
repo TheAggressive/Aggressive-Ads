@@ -47,7 +47,19 @@ final class Settings_Schema {
 	public const MIN_FILL_TTL       = 5;
 	public const MAX_FILL_TTL       = 300;
 	public const MIN_RETENTION_DAYS = 30;
-	public const MAX_RETENTION_DAYS = 730;
+
+	/**
+	 * Bounds for the private creative window.
+	 *
+	 * Narrower at the bottom than tracking's, because what this deletes is the
+	 * only remaining copy of an advertiser's artwork rather than a row of
+	 * telemetry. A week is the shortest span in which somebody can notice a
+	 * campaign was cancelled by mistake and duplicate it.
+	 */
+	public const MIN_CREATIVE_RETENTION_DAYS = 7;
+
+	public const MAX_CREATIVE_RETENTION_DAYS = 365;
+	public const MAX_RETENTION_DAYS          = 730;
 
 	/**
 	 * Module keys in display order.
@@ -102,7 +114,7 @@ final class Settings_Schema {
 	 * an approval is not a default anybody chose — it is one they inherited on
 	 * upgrade.
 	 *
-	 * @return array{modules: array<string, bool>, brand: array<string, string>, delivery: array{fill_ttl: int, house_policy: string}, tracking: array{retention_days: int}, live_edits: array<string, bool>}
+	 * @return array{modules: array<string, bool>, brand: array<string, string>, delivery: array{fill_ttl: int, house_policy: string}, tracking: array{retention_days: int}, creative: array{retention_days: int}, live_edits: array<string, bool>}
 	 */
 	public static function defaults(): array {
 		return array(
@@ -130,6 +142,9 @@ final class Settings_Schema {
 			'tracking'   => array(
 				'retention_days' => 90,
 			),
+			'creative'   => array(
+				'retention_days' => 30,
+			),
 			'live_edits' => array(
 				self::EDIT_TITLE       => false,
 				self::EDIT_NOTES       => false,
@@ -144,7 +159,7 @@ final class Settings_Schema {
 	 * Merge stored values onto defaults. Unknown keys are dropped.
 	 *
 	 * @param mixed $stored Raw option value.
-	 * @return array{modules: array<string, bool>, brand: array<string, string>, delivery: array{fill_ttl: int, house_policy: string}, tracking: array{retention_days: int}, live_edits: array<string, bool>}
+	 * @return array{modules: array<string, bool>, brand: array<string, string>, delivery: array{fill_ttl: int, house_policy: string}, tracking: array{retention_days: int}, creative: array{retention_days: int}, live_edits: array<string, bool>}
 	 */
 	public static function merge( mixed $stored ): array {
 		$defaults = self::defaults();
@@ -157,6 +172,7 @@ final class Settings_Schema {
 		$brand      = is_array( $stored['brand'] ?? null ) ? $stored['brand'] : array();
 		$delivery   = is_array( $stored['delivery'] ?? null ) ? $stored['delivery'] : array();
 		$tracking   = is_array( $stored['tracking'] ?? null ) ? $stored['tracking'] : array();
+		$creative   = is_array( $stored['creative'] ?? null ) ? $stored['creative'] : array();
 		$live_edits = is_array( $stored['live_edits'] ?? null ) ? $stored['live_edits'] : array();
 
 		foreach ( self::edit_keys() as $key ) {
@@ -193,6 +209,10 @@ final class Settings_Schema {
 			$defaults['tracking']['retention_days'] = (int) $tracking['retention_days'];
 		}
 
+		if ( isset( $creative['retention_days'] ) && is_numeric( $creative['retention_days'] ) ) {
+			$defaults['creative']['retention_days'] = (int) $creative['retention_days'];
+		}
+
 		return $defaults;
 	}
 
@@ -200,7 +220,7 @@ final class Settings_Schema {
 	 * Validate and normalise a submitted document.
 	 *
 	 * @param array<string, mixed> $input Raw modules/brand/delivery/tracking/live_edits fields.
-	 * @return array{ok: true, value: array{modules: array<string, bool>, brand: array<string, string>, delivery: array{fill_ttl: int, house_policy: string}, tracking: array{retention_days: int}, live_edits: array<string, bool>}}|array{ok: false, errors: list<string>}
+	 * @return array{ok: true, value: array{modules: array<string, bool>, brand: array<string, string>, delivery: array{fill_ttl: int, house_policy: string}, tracking: array{retention_days: int}, creative: array{retention_days: int}, live_edits: array<string, bool>}}|array{ok: false, errors: list<string>}
 	 */
 	public static function validate( array $input ): array {
 		$defaults   = self::defaults();
@@ -208,6 +228,7 @@ final class Settings_Schema {
 		$brand      = is_array( $input['brand'] ?? null ) ? $input['brand'] : array();
 		$delivery   = is_array( $input['delivery'] ?? null ) ? $input['delivery'] : array();
 		$tracking   = is_array( $input['tracking'] ?? null ) ? $input['tracking'] : array();
+		$creative   = is_array( $input['creative'] ?? null ) ? $input['creative'] : array();
 		$live_edits = is_array( $input['live_edits'] ?? null ) ? $input['live_edits'] : array();
 		$errors     = array();
 
@@ -327,6 +348,17 @@ final class Settings_Schema {
 			$errors[] = 'retention_days';
 		}
 
+		$creative_retention = isset( $creative['retention_days'] ) && is_numeric( $creative['retention_days'] )
+			? (int) $creative['retention_days']
+			: $defaults['creative']['retention_days'];
+
+		if (
+			$creative_retention < self::MIN_CREATIVE_RETENTION_DAYS
+			|| $creative_retention > self::MAX_CREATIVE_RETENTION_DAYS
+		) {
+			$errors[] = 'creative_retention_days';
+		}
+
 		if ( array() !== $errors ) {
 			return array(
 				'ok'     => false,
@@ -355,6 +387,9 @@ final class Settings_Schema {
 				),
 				'tracking'   => array(
 					'retention_days' => $retention,
+				),
+				'creative'   => array(
+					'retention_days' => $creative_retention,
 				),
 				'live_edits' => $out_live_edits,
 			),

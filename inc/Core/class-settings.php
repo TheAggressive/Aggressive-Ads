@@ -22,7 +22,7 @@ final class Settings {
 	/**
 	 * Merged settings document.
 	 *
-	 * @return array{modules: array<string, bool>, brand: array<string, string>, delivery: array{fill_ttl: int, house_policy: string}, tracking: array{retention_days: int}}
+	 * @return array{modules: array<string, bool>, brand: array<string, string>, delivery: array{fill_ttl: int, house_policy: string}, tracking: array{retention_days: int}, creative: array{retention_days: int}}
 	 */
 	public function get(): array {
 		return Settings_Schema::merge( get_option( self::OPTION, null ) );
@@ -111,6 +111,18 @@ final class Settings {
 	 */
 	public function retention_days(): int {
 		return $this->get()['tracking']['retention_days'];
+	}
+
+	/**
+	 * Days a terminal campaign keeps private creative that was never approved.
+	 *
+	 * Only unapproved artwork is governed by this. An approved creative loses
+	 * its private original the moment it is promoted to a Media Library
+	 * attachment, because the attachment is then the copy everything reads.
+	 * See Workflow\Creative_Retention.
+	 */
+	public function creative_retention_days(): int {
+		return $this->get()['creative']['retention_days'];
 	}
 
 	/**

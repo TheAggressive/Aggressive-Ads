@@ -238,4 +238,89 @@ final class CreativeRetentionTest extends WP_UnitTestCase {
 
 		return $creative_id;
 	}
+
+	/**
+	 * A promoted creative loses its original regardless of the window.
+	 *
+	 * Not a question about age: once the attachment exists it is what delivery
+	 * serves and what Campaign_Copier falls back to, so the original has no
+	 * reader. A campaign that finished yesterday is still swept.
+	 *
+	 * @return void
+	 */
+	public function test_a_promoted_original_is_swept_whatever_the_window(): void {
+		$campaign  = $this->campaign( Post_Statuses::COMPLETE, time() );
+		$creative  = $this->creative_with_private_file( $campaign );
+		$creatives = Plugin::instance()->container()->get( Creative_Repository::class );
+
+		$creatives->set_attachment_id( $creative, 4321 );
+
+		$details = $creatives->storage_details( $creative );
+		$this->assertIsArray( $details );
+		$this->assertNotSame( '', $details['path'], 'Fixture must have a stored file.' );
+
+		// Through purge(), not purge_promoted(). Calling the method directly
+		// proved the method worked and nothing about whether the sweep runs it
+		// — deleting the call from purge() left this test green.
+		$removed = $this->retention->purge();
+
+		$this->assertGreaterThan( 0, $removed );
+		$after = $creatives->storage_details( $creative );
+		$this->assertTrue( null === $after || '' === $after['path'] );
+	}
+
+	/**
+	 * A creative with no attachment is left to the time-based rule.
+	 *
+	 * This is the irreversible case — nobody approved it, so no public copy
+	 * exists — and it is exactly the one the configurable window governs.
+	 *
+	 * @return void
+	 */
+	public function test_an_unapproved_original_is_not_swept_by_the_state_pass(): void {
+		$campaign  = $this->campaign( Post_Statuses::CANCELLED, time() );
+		$creative  = $this->creative_with_private_file( $campaign );
+		$creatives = Plugin::instance()->container()->get( Creative_Repository::class );
+
+		$this->retention->purge_promoted();
+
+		$after = $creatives->storage_details( $creative );
+		$this->assertIsArray( $after );
+		$this->assertNotSame( '', $after['path'], 'Artwork nobody approved must survive the state pass.' );
+	}
+
+	/**
+	 * The configured window is what the sweep uses.
+	 *
+	 * A campaign twenty days terminal survives the thirty-day default and does
+	 * not survive a seven-day setting. Asserting both directions, because a
+	 * sweep that ignored the setting and always deleted would pass a test that
+	 * only checked the short window.
+	 *
+	 * @return void
+	 */
+	public function test_the_configured_window_drives_the_sweep(): void {
+		$campaign  = $this->campaign( Post_Statuses::COMPLETE, time() - ( 20 * DAY_IN_SECONDS ) );
+		$creative  = $this->creative_with_private_file( $campaign );
+		$creatives = Plugin::instance()->container()->get( Creative_Repository::class );
+
+		$this->retention->purge();
+
+		$details = $creatives->storage_details( $creative );
+		$this->assertIsArray( $details );
+		$this->assertNotSame( '', $details['path'], 'Twenty days is inside the thirty-day default.' );
+
+		update_option(
+			'aggr_settings',
+			array_merge(
+				(array) get_option( 'aggr_settings', array() ),
+				array( 'creative' => array( 'retention_days' => 7 ) )
+			)
+		);
+
+		$this->retention->purge();
+
+		$after = $creatives->storage_details( $creative );
+		$this->assertTrue( null === $after || '' === $after['path'], 'Seven days must sweep a campaign terminal for twenty.' );
+	}
 }
