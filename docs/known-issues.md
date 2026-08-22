@@ -16,7 +16,11 @@ Things that are true, annoying, and worth writing down so nobody rediscovers the
 
 **Cost.** Defence in depth is one layer thinner than it looks.
 
-**Mitigation.** Path unguessability (UUID filename plus a 32-char token) does not depend on server configuration, and reads go through an authorized streaming endpoint that never redirects to the raw file. Production nginx must also deny the directory directly:
+**Mitigation.** Path unguessability (UUID filename plus a 32-char token) does not depend on server configuration, and reads go through an authorized streaming endpoint that never redirects to the raw file. Directory listing is refused by the `index.php` the directory carries, so filenames cannot be enumerated either.
+
+The exposed set is also kept as small as it can be: the private original is deleted the moment a creative is promoted to its Media Library attachment, so the directory holds only creative still awaiting review rather than every creative the site has ever run. That is what shrank the window from "the campaign's whole life plus ninety days" to "until a reviewer decides". `Campaign_Copier` resolves bytes from the private file *or* the attachment, so renew and duplicate are unaffected.
+
+Production nginx must also deny the directory directly:
 
 ```nginx
 location ~ ^/wp-content/uploads(?:/sites/[0-9]+)?/ads-uploads(?:/|$) {
