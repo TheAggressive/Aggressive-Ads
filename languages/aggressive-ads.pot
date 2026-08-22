@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-22T09:18:08+00:00\n"
+"POT-Creation-Date: 2026-08-22T10:21:07+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -95,7 +95,7 @@ msgid "That campaign-change decision is not valid."
 msgstr ""
 
 #: inc/Admin/class-menu.php:181
-#: inc/Admin/class-organization-screen.php:105
+#: inc/Admin/class-organization-screen.php:124
 #: inc/Admin/class-package-screen.php:116
 #: inc/Admin/class-placement-screen.php:116
 #: inc/Admin/class-review-screen.php:167
@@ -103,153 +103,153 @@ msgstr ""
 msgid "You do not have permission to view this page."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:86
-#: inc/Admin/class-organization-screen.php:87
-#: inc/Admin/class-organization-screen.php:123
-#: inc/Admin/class-organization-screen.php:173
+#: inc/Admin/class-organization-screen.php:110
+#: inc/Admin/class-organization-screen.php:111
+#: inc/Admin/class-organization-screen.php:142
+#: inc/Admin/class-organization-screen.php:197
 #: inc/Core/class-post-types.php:198
 msgid "Organizations"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:124
+#: inc/Admin/class-organization-screen.php:143
 msgid "The organizations screen has not been built. Run “pnpm build” and reload."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:134
+#: inc/Admin/class-organization-screen.php:153
 msgid "No organizations exist yet."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:135
+#: inc/Admin/class-organization-screen.php:154
 #: inc/Admin/class-package-screen.php:160
 #: inc/Admin/class-placement-screen.php:160
 #: templates/portal/screens/organization.php:50
 msgid "Active"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:136
+#: inc/Admin/class-organization-screen.php:155
 #: templates/portal/screens/organization.php:51
 msgid "Suspended"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:137
+#: inc/Admin/class-organization-screen.php:156
 msgid "Suspend"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:138
+#: inc/Admin/class-organization-screen.php:157
 #: templates/portal/partials/campaign-changes.php:69
 #: templates/portal/screens/campaign.php:334
 msgid "Details"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:139
+#: inc/Admin/class-organization-screen.php:158
 msgid "Members"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:140
+#: inc/Admin/class-organization-screen.php:159
 msgid "The owner is the only member. Ownership can only move to another member, so invite someone first."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:141
+#: inc/Admin/class-organization-screen.php:160
 #: templates/portal/screens/organization.php:81
 msgid "Organization name"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:142
+#: inc/Admin/class-organization-screen.php:161
 msgid "Rename"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:143
+#: inc/Admin/class-organization-screen.php:162
 msgid "Organization renamed."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:144
+#: inc/Admin/class-organization-screen.php:163
 msgid "owner"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:145
+#: inc/Admin/class-organization-screen.php:164
 #: templates/portal/screens/organization.php:146
 msgid "Make owner"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:146
+#: inc/Admin/class-organization-screen.php:165
 msgid "Ownership transferred."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:147
+#: inc/Admin/class-organization-screen.php:166
 #: inc/Admin/class-settings-screen.php:306
 #: templates/portal/screens/organization.php:154
 msgid "Remove"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:148
+#: inc/Admin/class-organization-screen.php:167
 msgid "Member removed."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:149
+#: inc/Admin/class-organization-screen.php:168
 msgid "Invite someone to this organization"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:150
+#: inc/Admin/class-organization-screen.php:169
 msgid "Email address. To move somebody between organizations, remove them here and invite them there — they keep no access in between."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:151
+#: inc/Admin/class-organization-screen.php:170
 #: templates/portal/screens/organization.php:183
 msgid "Send invitation"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:152
+#: inc/Admin/class-organization-screen.php:171
 #: inc/Portal/class-organization-actions.php:161
 msgid "Invitation sent."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:153
+#: inc/Admin/class-organization-screen.php:172
 msgid "Reactivate"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:154
+#: inc/Admin/class-organization-screen.php:173
 msgid "Organization suspended."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:155
+#: inc/Admin/class-organization-screen.php:174
 msgid "Organization reactivated."
 msgstr ""
 
 #. translators: %s: organization name.
-#: inc/Admin/class-organization-screen.php:157
+#: inc/Admin/class-organization-screen.php:176
 #, php-format
 msgid "Suspend %s? Every campaign it is running stops serving immediately."
 msgstr ""
 
 #. translators: %d: number of members.
-#: inc/Admin/class-organization-screen.php:159
+#: inc/Admin/class-organization-screen.php:178
 #, php-format
 msgid "%d member"
 msgstr ""
 
 #. translators: %d: number of members.
-#: inc/Admin/class-organization-screen.php:161
+#: inc/Admin/class-organization-screen.php:180
 #, php-format
 msgid "%d members"
 msgstr ""
 
 #. translators: %d: number of campaigns.
-#: inc/Admin/class-organization-screen.php:163
+#: inc/Admin/class-organization-screen.php:182
 #, php-format
 msgid "%d campaign"
 msgstr ""
 
 #. translators: %d: number of campaigns.
-#: inc/Admin/class-organization-screen.php:165
+#: inc/Admin/class-organization-screen.php:184
 #, php-format
 msgid "%d campaigns"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:166
+#: inc/Admin/class-organization-screen.php:185
 msgid "That organization could not be updated."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:167
+#: inc/Admin/class-organization-screen.php:186
 #: inc/Admin/class-package-screen.php:170
 #: inc/Admin/class-placement-screen.php:173
 #: inc/Admin/class-review-screen.php:343
@@ -257,7 +257,37 @@ msgstr ""
 msgid "Try again"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:174
+#: inc/Admin/class-organization-screen.php:187
+#: templates/portal/screens/organization.php:133
+msgid "Owner"
+msgstr ""
+
+#: inc/Admin/class-organization-screen.php:188
+#: inc/Core/class-post-types.php:201
+#: templates/portal/campaigns.php:15
+#: templates/portal/partials/rail.php:31
+#: templates/portal/screens/campaign.php:76
+#: templates/portal/screens/campaigns.php:36
+#: templates/portal/screens/organization.php:73
+msgid "Campaigns"
+msgstr ""
+
+#: inc/Admin/class-organization-screen.php:189
+msgid "State"
+msgstr ""
+
+#: inc/Admin/class-organization-screen.php:190
+msgid "Manage members"
+msgstr ""
+
+#: inc/Admin/class-organization-screen.php:191
+#: inc/Admin/class-review-screen.php:327
+#: templates/portal/partials/campaign-overlays.php:198
+#: templates/portal/partials/campaign-overlays.php:239
+msgid "Cancel"
+msgstr ""
+
+#: inc/Admin/class-organization-screen.php:198
 msgid "The organizations screen needs JavaScript enabled."
 msgstr ""
 
@@ -925,12 +955,6 @@ msgstr ""
 msgid "Feedback the advertiser will see"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:327
-#: templates/portal/partials/campaign-overlays.php:198
-#: templates/portal/partials/campaign-overlays.php:239
-msgid "Cancel"
-msgstr ""
-
 #: inc/Admin/class-review-screen.php:328
 #: templates/portal/partials/campaign-overlays.php:164
 msgid "Close"
@@ -1422,15 +1446,6 @@ msgstr[1] ""
 #: templates/portal/screens/campaign.php:721
 #: templates/portal/screens/campaign.php:775
 msgid "Package"
-msgstr ""
-
-#: inc/Core/class-post-types.php:201
-#: templates/portal/campaigns.php:15
-#: templates/portal/partials/rail.php:31
-#: templates/portal/screens/campaign.php:76
-#: templates/portal/screens/campaigns.php:36
-#: templates/portal/screens/organization.php:73
-msgid "Campaigns"
 msgstr ""
 
 #: inc/Core/class-post-types.php:202
@@ -4347,10 +4362,6 @@ msgstr ""
 
 #: templates/portal/screens/organization.php:126
 msgid "You"
-msgstr ""
-
-#: templates/portal/screens/organization.php:133
-msgid "Owner"
 msgstr ""
 
 #: templates/portal/screens/organization.php:134

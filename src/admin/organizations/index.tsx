@@ -1,11 +1,21 @@
 /**
- * The organization roster, in core's component set.
+ * The organization roster, in DataViews.
  *
- * Read-mostly. The only write is suspend or reactivate, and suspension is the
- * most consequential button on any staff screen: it stops every campaign an
- * organization is running. So it confirms first, and it is never a toggle —
- * a switch invites a stray click, and there is no undo that un-shows the ads
- * that stopped serving in the meantime.
+ * The previous version rendered one expanded Card per organization: name field,
+ * full member list and invite box, all open at once. That reads fine at five
+ * organizations and stops reading at fifty, because there is no way to find one
+ * except scrolling, and every consequential control is on screen at all times.
+ *
+ * DataViews inverts it. The list is a table you can search, sort and filter, and
+ * the writes move behind explicit actions. Suspension keeps its confirmation —
+ * it is still the most consequential button on any staff screen, because it
+ * stops every campaign an organization is running, and there is no undo that
+ * un-shows the ads that stopped serving in the meantime. It is never a toggle.
+ *
+ * `@wordpress/dataviews` is bundled, not externalised. WordPress 7.1 uses
+ * DataViews in the Site Editor but registers no `wp-dataviews` script handle,
+ * so externalising it yields a build that succeeds and a screen that throws.
+ * See the BUNDLE_NOT_EXTERNAL note in webpack.admin.config.mjs.
  *
  * Strings arrive from PHP. `wp i18n make-pot` does not parse .tsx, so an __()
  * call here would compile, run, and produce no catalog entry at all.
@@ -13,21 +23,19 @@
 
 import type { ReactElement } from 'react';
 import apiFetch from '@wordpress/api-fetch';
-import { createRoot, useState } from '@wordpress/element';
+import { createRoot, useMemo, useState } from '@wordpress/element';
 import {
 	Button,
-	Card,
-	CardBody,
-	CardDivider,
-	CardHeader,
 	Notice,
 	TextControl,
-	__experimentalConfirmDialog as ConfirmDialog,
 	__experimentalHStack as HStack,
-	__experimentalHeading as Heading,
 	__experimentalText as Text,
 	__experimentalVStack as VStack,
 } from '@wordpress/components';
+import { DataViews, filterSortAndPaginate } from '@wordpress/dataviews';
+import type { Action, Field, View as DataView } from '@wordpress/dataviews';
+import '@wordpress/dataviews/build-style/style.css';
+import './style.css';
 import { SaveError, setStrings, t, useAction } from '../shared/save';
 
 type Member = {
@@ -49,10 +57,10 @@ type Organization = {
 	campaigns: number;
 };
 
-type View = { rows: Organization[] };
+type ViewPayload = { rows: Organization[] };
 
 type Bootstrap = {
-	view: View;
+	view: ViewPayload;
 	restPath: string;
 	i18n: Record< string, string >;
 };
@@ -71,7 +79,22 @@ function counted( count: number, one: string, many: string ): string {
 }
 
 /**
- * The roster, with the two corrections staff actually need.
+ * A control that keeps its width next to a button.
+ *
+ * HStack shares space between its children, so a bare TextControl beside a
+ * short button ends up narrower than one beside a long button — which is how
+ * the name field came out too small to read the name it held.
+ */
+function Field_( { children }: { children: ReactElement } ): ReactElement {
+	return (
+		<div style={ { flex: '1 1 auto', maxWidth: '28rem' } }>
+			{ children }
+		</div>
+	);
+}
+
+/**
+ * The two corrections staff actually need, inside the members modal.
  *
  * Moving somebody between organizations is remove-here then invite-there. There
  * is no single "move": a portal account belongs to exactly one organization, so
@@ -97,7 +120,7 @@ function Roster( {
 	const others = org.member_list.filter( ( member ) => ! member.is_owner );
 
 	return (
-		<VStack spacing={ 3 }>
+		<VStack spacing={ 4 }>
 			{ 0 === others.length ? (
 				<Text variant="muted">{ t( 'onlyOwner' ) }</Text>
 			) : (
@@ -147,7 +170,7 @@ function Roster( {
 
 			<VStack spacing={ 2 }>
 				<HStack justify="flex-start" alignment="flex-end" spacing={ 3 }>
-					<Field>
+					<Field_>
 						<TextControl
 							label={ t( 'inviteMember' ) }
 							type="email"
@@ -157,7 +180,7 @@ function Roster( {
 							__nextHasNoMarginBottom
 							__next40pxDefaultSize
 						/>
-					</Field>
+					</Field_>
 					<Button
 						variant="secondary"
 						__next40pxDefaultSize
@@ -176,157 +199,25 @@ function Roster( {
 	);
 }
 
-/**
- * One titled block inside a card.
- *
- * The first version of this screen stacked a name field, a member list and an
- * invite box with nothing between them, and it read as one long form where
- * every control looked equally consequential. Renaming and removing somebody
- * are not equally consequential.
- */
-function Section( {
-	title,
-	children,
-}: {
-	title: string;
-	children: ReactElement | ReactElement[];
-} ): ReactElement {
-	return (
-		<VStack spacing={ 3 }>
-			<Heading level={ 4 }>{ title }</Heading>
-			{ children }
-		</VStack>
-	);
-}
-
-/**
- * A control that keeps its width next to a button.
- *
- * HStack shares space between its children, so a bare TextControl beside a
- * short button ends up narrower than one beside a long button — which is how
- * the name field came out too small to read the name it held.
- */
-function Field( { children }: { children: ReactElement } ): ReactElement {
-	return (
-		<div style={ { flex: '1 1 auto', maxWidth: '28rem' } }>
-			{ children }
-		</div>
-	);
-}
-
-function Row( {
-	org,
-	busy,
-	onSuspend,
-	onReactivate,
-	onRename,
-	roster,
-}: {
-	org: Organization;
-	busy: boolean;
-	onSuspend: () => void;
-	onReactivate: () => void;
-	onRename: ( name: string ) => void;
-	roster: ReactElement;
-} ): ReactElement {
-	const [ name, setName ] = useState( org.name );
-	return (
-		<Card>
-			<CardHeader>
-				<HStack justify="space-between" alignment="center">
-					<VStack spacing={ 0 }>
-						<Heading level={ 3 }>{ org.name }</Heading>
-						<Text variant="muted">
-							{ counted(
-								org.members,
-								t( 'memberOne' ),
-								t( 'memberMany' )
-							) }
-							{ ' \u00b7 ' }
-							{ counted(
-								org.campaigns,
-								t( 'campaignOne' ),
-								t( 'campaignMany' )
-							) }
-							{ ' \u00b7 ' }
-							{ org.active
-								? t( 'stateActive' )
-								: t( 'stateSuspended' ) }
-						</Text>
-					</VStack>
-
-					{ org.active ? (
-						<Button
-							variant="secondary"
-							isDestructive
-							disabled={ busy }
-							// The button says "Suspend"; without the name a
-							// screen reader moving control to control cannot
-							// tell which organization it would suspend.
-							aria-label={ `${ t( 'suspend' ) }: ${ org.name }` }
-							onClick={ onSuspend }
-						>
-							{ t( 'suspend' ) }
-						</Button>
-					) : (
-						<Button
-							variant="secondary"
-							disabled={ busy }
-							aria-label={ `${ t( 'reactivate' ) }: ${
-								org.name
-							}` }
-							onClick={ onReactivate }
-						>
-							{ t( 'reactivate' ) }
-						</Button>
-					) }
-				</HStack>
-			</CardHeader>
-
-			<CardBody>
-				<Section title={ t( 'detailsSection' ) }>
-					<HStack
-						justify="flex-start"
-						alignment="flex-end"
-						spacing={ 3 }
-					>
-						<Field>
-							<TextControl
-								label={ t( 'name' ) }
-								value={ name }
-								onChange={ setName }
-								__nextHasNoMarginBottom
-								__next40pxDefaultSize
-							/>
-						</Field>
-						<Button
-							variant="secondary"
-							__next40pxDefaultSize
-							disabled={ busy || name.trim() === org.name }
-							onClick={ () => onRename( name.trim() ) }
-						>
-							{ t( 'rename' ) }
-						</Button>
-					</HStack>
-				</Section>
-			</CardBody>
-
-			<CardDivider />
-
-			<CardBody>
-				<Section title={ t( 'membersSection' ) }>{ roster }</Section>
-			</CardBody>
-		</Card>
-	);
-}
+const DEFAULT_VIEW: DataView = {
+	type: 'table',
+	search: '',
+	page: 1,
+	perPage: 20,
+	sort: { field: 'name', direction: 'asc' },
+	filters: [],
+	titleField: 'name',
+	fields: [ 'owner_name', 'members', 'campaigns', 'state' ],
+	layout: {},
+};
 
 function App( { data }: { data: Bootstrap } ): ReactElement {
-	const [ view, setView ] = useState( data.view );
+	const [ rows, setRows ] = useState( data.view.rows );
+	const [ view, setView ] = useState< DataView >( DEFAULT_VIEW );
 	const [ done, setDone ] = useState( '' );
-	const [ confirming, setConfirming ] = useState< Organization | null >(
-		null
-	);
-	const { error, busy, run, clearError } = useAction< { view: View } >();
+	const { error, busy, run, clearError } = useAction< {
+		view: ViewPayload;
+	} >();
 
 	const write = async (
 		options: Record< string, unknown >,
@@ -335,13 +226,15 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 		setDone( '' );
 		clearError();
 
-		const result = await run( () => apiFetch< { view: View } >( options ) );
+		const result = await run( () =>
+			apiFetch< { view: ViewPayload } >( options )
+		);
 
 		if ( result ) {
 			// The server's roster, not a local edit. One change moves more than
 			// it names — a transfer demotes the previous owner, a removal can
 			// strip a portal role — and only the server knows what else moved.
-			setView( result.view );
+			setRows( result.view.rows );
 			setDone( message );
 		}
 	};
@@ -355,6 +248,254 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 			},
 			'suspended' === state ? t( 'suspended' ) : t( 'reactivated' )
 		);
+
+	const fields: Field< Organization >[] = useMemo(
+		() => [
+			{
+				id: 'name',
+				label: t( 'name' ),
+				type: 'text',
+				enableGlobalSearch: true,
+			},
+			{
+				id: 'owner_name',
+				label: t( 'ownerColumn' ),
+				type: 'text',
+				enableGlobalSearch: true,
+			},
+			{
+				id: 'members',
+				label: t( 'membersSection' ),
+				type: 'integer',
+				render: ( { item }: { item: Organization } ) =>
+					counted(
+						item.members,
+						t( 'memberOne' ),
+						t( 'memberMany' )
+					),
+			},
+			{
+				id: 'campaigns',
+				label: t( 'campaignsColumn' ),
+				type: 'integer',
+				render: ( { item }: { item: Organization } ) =>
+					counted(
+						item.campaigns,
+						t( 'campaignOne' ),
+						t( 'campaignMany' )
+					),
+			},
+			{
+				id: 'state',
+				label: t( 'stateColumn' ),
+				// Elements give the filter its options and the cell its label
+				// in one declaration, so a new state cannot appear in the table
+				// without also appearing in the filter.
+				elements: [
+					{ value: 'active', label: t( 'stateActive' ) },
+					{ value: 'suspended', label: t( 'stateSuspended' ) },
+				],
+				getValue: ( { item }: { item: Organization } ) =>
+					item.active ? 'active' : 'suspended',
+			},
+		],
+		[]
+	);
+
+	const actions: Action< Organization >[] = useMemo(
+		() => [
+			{
+				id: 'members',
+				label: t( 'manageMembers' ),
+				isPrimary: false,
+				RenderModal: ( {
+					items,
+					closeModal,
+				}: {
+					items: Organization[];
+					closeModal?: () => void;
+				} ) => {
+					const org = items[ 0 ];
+
+					if ( ! org ) {
+						return <></>;
+					}
+
+					return (
+						<Roster
+							org={ org }
+							busy={ busy }
+							onTransfer={ ( member ) => {
+								void write(
+									{
+										path: `${ data.restPath }/${ org.id }/owner`,
+										method: 'POST',
+										data: { user_id: member.id },
+									},
+									t( 'ownerChanged' )
+								);
+								closeModal?.();
+							} }
+							onRemove={ ( member ) => {
+								void write(
+									{
+										path: `${ data.restPath }/${ org.id }/members/${ member.id }`,
+										method: 'DELETE',
+									},
+									t( 'memberRemoved' )
+								);
+								closeModal?.();
+							} }
+							onInvite={ ( email ) => {
+								void write(
+									{
+										path: `${ data.restPath }/${ org.id }/members`,
+										method: 'POST',
+										data: { email },
+									},
+									t( 'invited' )
+								);
+								closeModal?.();
+							} }
+						/>
+					);
+				},
+			},
+			{
+				id: 'rename',
+				label: t( 'rename' ),
+				RenderModal: ( {
+					items,
+					closeModal,
+				}: {
+					items: Organization[];
+					closeModal?: () => void;
+				} ) => {
+					const org = items[ 0 ];
+					const [ name, setName ] = useState( org?.name ?? '' );
+
+					if ( ! org ) {
+						return <></>;
+					}
+
+					return (
+						<VStack spacing={ 4 }>
+							<TextControl
+								label={ t( 'name' ) }
+								value={ name }
+								onChange={ setName }
+								__nextHasNoMarginBottom
+								__next40pxDefaultSize
+							/>
+							<HStack justify="flex-end">
+								<Button
+									variant="tertiary"
+									onClick={ closeModal }
+								>
+									{ t( 'cancel' ) }
+								</Button>
+								<Button
+									variant="primary"
+									__next40pxDefaultSize
+									disabled={
+										busy || name.trim() === org.name
+									}
+									onClick={ () => {
+										void write(
+											{
+												path: `${ data.restPath }/${ org.id }`,
+												method: 'PATCH',
+												data: { name: name.trim() },
+											},
+											t( 'renamed' )
+										);
+										closeModal?.();
+									} }
+								>
+									{ t( 'rename' ) }
+								</Button>
+							</HStack>
+						</VStack>
+					);
+				},
+			},
+			{
+				id: 'suspend',
+				label: t( 'suspend' ),
+				isDestructive: true,
+				isEligible: ( org: Organization ) => org.active,
+				/*
+				   Suspension confirms; reactivation does not. The asymmetry is
+				   the point: one stops live advertising for a paying customer,
+				   the other restores it, and only one of those is worth a
+				   second thought.
+				*/
+				RenderModal: ( {
+					items,
+					closeModal,
+				}: {
+					items: Organization[];
+					closeModal?: () => void;
+				} ) => {
+					const org = items[ 0 ];
+
+					if ( ! org ) {
+						return <></>;
+					}
+
+					return (
+						<VStack spacing={ 4 }>
+							<Text>
+								{ t( 'confirmSuspend' ).replace(
+									'%s',
+									org.name
+								) }
+							</Text>
+							<HStack justify="flex-end">
+								<Button
+									variant="tertiary"
+									onClick={ closeModal }
+								>
+									{ t( 'cancel' ) }
+								</Button>
+								<Button
+									variant="primary"
+									isDestructive
+									__next40pxDefaultSize
+									onClick={ () => {
+										void change( org, 'suspended' );
+										closeModal?.();
+									} }
+								>
+									{ t( 'suspend' ) }
+								</Button>
+							</HStack>
+						</VStack>
+					);
+				},
+			},
+			{
+				id: 'reactivate',
+				label: t( 'reactivate' ),
+				isEligible: ( org: Organization ) => ! org.active,
+				callback: ( items: Organization[] ) => {
+					const org = items[ 0 ];
+
+					if ( org ) {
+						void change( org, 'active' );
+					}
+				},
+			},
+		],
+		// `busy` and `write` close over current state; rebuilding the actions
+		// when either changes is what keeps a disabled button honest.
+		[ busy, data.restPath ]
+	);
+
+	const { data: shown, paginationInfo } = useMemo(
+		() => filterSortAndPaginate( rows, view, fields ),
+		[ rows, view, fields ]
+	);
 
 	return (
 		<VStack spacing={ 4 }>
@@ -370,87 +511,21 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 				</Notice>
 			) : null }
 
-			{ 0 === view.rows.length ? (
+			{ 0 === rows.length ? (
 				<p>{ t( 'empty' ) }</p>
 			) : (
-				view.rows.map( ( org ) => (
-					<Row
-						key={ `${ org.id }-${ org.name }-${ org.owner_id }` }
-						org={ org }
-						busy={ busy }
-						onSuspend={ () => setConfirming( org ) }
-						onReactivate={ () => void change( org, 'active' ) }
-						onRename={ ( name ) =>
-							void write(
-								{
-									path: `${ data.restPath }/${ org.id }`,
-									method: 'PATCH',
-									data: { name },
-								},
-								t( 'renamed' )
-							)
-						}
-						roster={
-							<Roster
-								org={ org }
-								busy={ busy }
-								onTransfer={ ( member ) =>
-									void write(
-										{
-											path: `${ data.restPath }/${ org.id }/owner`,
-											method: 'POST',
-											data: { user_id: member.id },
-										},
-										t( 'ownerChanged' )
-									)
-								}
-								onRemove={ ( member ) =>
-									void write(
-										{
-											path: `${ data.restPath }/${ org.id }/members/${ member.id }`,
-											method: 'DELETE',
-										},
-										t( 'memberRemoved' )
-									)
-								}
-								onInvite={ ( email ) =>
-									void write(
-										{
-											path: `${ data.restPath }/${ org.id }/members`,
-											method: 'POST',
-											data: { email },
-										},
-										t( 'invited' )
-									)
-								}
-							/>
-						}
-					/>
-				) )
+				<DataViews< Organization >
+					data={ shown }
+					fields={ fields }
+					view={ view }
+					onChangeView={ setView }
+					actions={ actions }
+					paginationInfo={ paginationInfo }
+					getItemId={ ( item ) => String( item.id ) }
+					isLoading={ busy }
+					defaultLayouts={ { table: {} } }
+				/>
 			) }
-
-			{ /*
-			   Suspension confirms; reactivation does not. The asymmetry is the
-			   point: one stops live advertising for a paying customer, the other
-			   restores it, and only one of those is worth a second thought.
-			*/ }
-			<ConfirmDialog
-				isOpen={ null !== confirming }
-				onConfirm={ () => {
-					const org = confirming;
-					setConfirming( null );
-
-					if ( org ) {
-						void change( org, 'suspended' );
-					}
-				} }
-				onCancel={ () => setConfirming( null ) }
-				confirmButtonText={ t( 'suspend' ) }
-			>
-				{ confirming
-					? t( 'confirmSuspend' ).replace( '%s', confirming.name )
-					: '' }
-			</ConfirmDialog>
 		</VStack>
 	);
 }

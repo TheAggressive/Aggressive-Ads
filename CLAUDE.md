@@ -83,7 +83,14 @@ and deeper analytics remain open. What is built:
 - every wp-admin screen is now React over REST: Settings, Packages,
   Organizations, Inventory, and the review queue and campaign detail. The
   review screens keep the plugin's own design system (`src/styles/admin.css`);
-  the other four use core's component set
+  the other four use core's component set. Organizations is additionally a
+  DataViews pilot — searchable/sortable table, writes behind row actions.
+  `@wordpress/dataviews` is **bundled, not externalised**: WordPress 7.1 uses
+  DataViews internally but registers no `wp-dataviews` script or style handle,
+  so externalising it builds clean and throws in the browser. See
+  `BUNDLE_NOT_EXTERNAL` in `webpack.admin.config.mjs`, and
+  `bin/ci/check-admin-bundle.mjs`, which fails the build if either that or the
+  `"sideEffects": false` stylesheet drop ever comes back
 - the advertiser-facing notifications for changes, rejection, approval, going
   live and completion
 - pause, resume and cancel, which need no new UI: the review screen's buttons
