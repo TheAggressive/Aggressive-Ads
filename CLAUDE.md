@@ -214,6 +214,33 @@ unit suite must not load WordPress; the integration suite must.
 `failOnWarning`, `failOnRisky`, `failOnSkipped` and `failOnIncomplete` are all
 true. A skipped security test is a security test that is not running.
 
+### Test the dangerous things first
+
+Anything that **deletes, grants, denies, or guards** gets a test before it is
+called done. Hand verification does not count, however obvious the code looks.
+
+Two paths shipped without one. `bin/ci/check-navigation.mjs` is the guard that
+keeps the `js/xss-through-dom` sink CodeQL found from returning, and it had no
+test — writing one immediately found an `EISDIR` crash in the guard itself, on a
+branch hand-checking never reached. `Uninstaller::delete_private_files()`
+removes an advertiser's only remaining copy of unapproved artwork, and its
+sabotage test is the only thing standing between `rmdir( $root )` and
+`rmdir( $root, true )`, which would silently destroy a directory this plugin
+never created.
+
+A guard that stops matching does not fail. It reports success over code it is no
+longer reading, which is why the guards themselves are tested and wired into
+`test:tools`.
+
+Two habits that earn their keep:
+
+- **Assert a count, not just absence.** Three fixtures in one session were not
+  what they looked like — 351 files left by an earlier run, a table that was not
+  fresh, 26 deletions where one was expected. The count caught all three; "the
+  file is gone" would have passed whether it deleted one file or the directory.
+- **Assert the negatives.** For destructive code, what it must *not* touch is
+  usually the more valuable half of the test.
+
 ### Prove the test works
 
 Write it, watch it pass, **break the implementation deliberately**, watch it
