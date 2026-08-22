@@ -62,27 +62,3 @@ uploads `playwright-report/`, `.playwright-results/` and `test-results/` on
 failure with seven-day retention, and `trace: 'retain-on-failure'` is set, so
 the trace carries per-step timings for the run that actually failed. Pull it
 before changing anything.
-
-## 2. The audit log has no retention
-
-`aggr_audit_log` is append-only and nothing ever deletes from it.
-`Audit_Repository` exposes `insert()` and `for_object()`; the only `DELETE` is
-`drop_table()` at uninstall. Delivery events have `Event_Retention` — hourly,
-batched, configurable — and the audit log has no equivalent.
-
-Measured at a million rows on MySQL 8.0: **272 MB data, 161 MB index, ~450 bytes
-per row.** Growth follows workflow volume rather than traffic, so it accumulates
-slowly, but nothing bounds it and backup and restore times follow the table.
-
-**Deliberately not fixed.** An audit log is frequently required to be complete,
-and how long a publisher must keep evidence of who approved what is a compliance
-question rather than an engineering one. Options, in the order they get harder:
-
-* leave it, and say so in the administrator documentation, so the growth is a
-  known property rather than a surprise;
-* a configurable window like the other two, defaulting long — the shape already
-  exists in `Settings_Schema` and `Creative_Retention`;
-* archive-then-prune, which needs somewhere to archive to.
-
-Whoever picks one should also decide whether `outcome = denied` rows outlive the
-rest. Those are the ones an investigation actually wants.

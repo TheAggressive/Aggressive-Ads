@@ -53,6 +53,44 @@ final class Audit_Repository {
 	}
 
 	/**
+	 * Deletes audit rows older than a cutoff, in one bounded batch.
+	 *
+	 * Refusals survive. `outcome = denied` is the record of somebody
+	 * attempting what they were not allowed to, which is the row an
+	 * investigation opens the log for; a retention window is about volume, and
+	 * refusals are the part with none.
+	 *
+	 * Bounded and repeatable rather than a single unbounded DELETE: the sweep
+	 * runs on a schedule, so it can take several passes, and a statement that
+	 * locks a table of millions for the duration is how a retention policy
+	 * takes a site down.
+	 *
+	 * @param int $cutoff_ts Delete rows created strictly before this timestamp.
+	 * @param int $limit     Maximum rows to remove in this pass.
+	 * @return int Rows deleted.
+	 */
+	public function delete_before( int $cutoff_ts, int $limit ): int {
+		global $wpdb;
+
+		if ( $cutoff_ts <= 0 || $limit <= 0 || ! $this->table_exists() ) {
+			return 0;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom append-only table; the cutoff uses the created index and the limit bounds the lock.
+		$deleted = $wpdb->query(
+			$wpdb->prepare(
+				'DELETE FROM %i WHERE created_at_ts > 0 AND created_at_ts < %d AND outcome != %s ORDER BY id ASC LIMIT %d',
+				$this->table_name(),
+				$cutoff_ts,
+				Audit_Event::OUTCOME_DENIED,
+				$limit
+			)
+		);
+
+		return is_int( $deleted ) ? $deleted : 0;
+	}
+
+	/**
 	 * Rebuilds the object index so it covers the organization predicate.
 	 *
 	 * The for_object() read filters on object_type, object_id *and* org_id,

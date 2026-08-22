@@ -129,9 +129,12 @@ same read is a backward index scan that stops at fifty — about 0.7 ms, with no
 optimizer hint, because the planner chooses it unaided. Replacing the index
 rather than adding a sixth cost 13 MB per million rows. See db version 9.
 
-What that testing also established is that nothing bounds the table at all;
-[open-work.md](open-work.md) records it, because how long an audit log must be
-kept is a compliance question rather than an engineering one.
+What that testing also established is that nothing bounded the table at all.
+That is now a setting — **Settings → Retention → Audit log retention** — offering
+keep forever (the default and the shipped behaviour), 1, 2, 3 or 7 years. A
+choice rather than a number, because an audit window has a small set of real
+answers and a free-text field would let somebody type 3. Refusals outlive any
+window: `outcome = denied` is the row an investigation opens the log for.
 
 Remaining: concurrent request/soak testing on production-equivalent
 infrastructure, and a full authorization/failure-state review. Both need an

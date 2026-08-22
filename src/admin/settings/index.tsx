@@ -87,6 +87,7 @@ type Doc = {
 	delivery: { fillTtl: string; housePolicy: string };
 	tracking: { retentionDays: string };
 	creative: { retentionDays: string };
+	audit: { retentionDays: string };
 };
 
 type Bootstrap = {
@@ -100,6 +101,10 @@ type Bootstrap = {
 	};
 	tracking: { retentionDays: number };
 	creative: { retentionDays: number };
+	audit: {
+		retentionDays: number;
+		choices: { value: number; label: string }[];
+	};
 	roster: Person[];
 	i18n: Record< string, string >;
 	restPath: string;
@@ -118,6 +123,7 @@ const EMPTY: Bootstrap = {
 	delivery: { fillTtl: 30, housePolicy: '', houseOptions: [] },
 	tracking: { retentionDays: 90 },
 	creative: { retentionDays: 30 },
+	audit: { retentionDays: 0, choices: [] },
 	roster: [],
 	i18n: {},
 	restPath: '',
@@ -151,6 +157,7 @@ function payload( doc: Doc ): Record< string, unknown > {
 		},
 		tracking: { retention_days: doc.tracking.retentionDays },
 		creative: { retention_days: doc.creative.retentionDays },
+		audit: { retention_days: doc.audit.retentionDays },
 	};
 }
 
@@ -352,13 +359,19 @@ function Delivery( {
 function Retention( {
 	tracking,
 	creative,
+	audit,
+	auditChoices,
 	onTracking,
 	onCreative,
+	onAudit,
 }: {
 	tracking: Doc[ 'tracking' ];
 	creative: Doc[ 'creative' ];
+	audit: Doc[ 'audit' ];
+	auditChoices: { value: number; label: string }[];
 	onTracking: ( patch: Partial< Doc[ 'tracking' ] > ) => void;
 	onCreative: ( patch: Partial< Doc[ 'creative' ] > ) => void;
+	onAudit: ( patch: Partial< Doc[ 'audit' ] > ) => void;
 } ): ReactElement {
 	return (
 		<VStack spacing={ 4 }>
@@ -386,6 +399,27 @@ function Retention( {
 				value={ creative.retentionDays }
 				onChange={ ( retentionDays: string ) =>
 					onCreative( { retentionDays } )
+				}
+				__nextHasNoMarginBottom
+				__next40pxDefaultSize
+			/>
+			{ /*
+			 * A choice, not a number. An audit window is a policy decision with
+			 * a small set of real answers, and a free-text field would let
+			 * somebody type 3 and shred three years of evidence for who
+			 * approved what. "Keep forever" is the default and the first
+			 * option.
+			 */ }
+			<SelectControl
+				label={ t( 'auditDays' ) }
+				help={ t( 'auditDaysHelp' ) }
+				value={ audit.retentionDays }
+				options={ auditChoices.map( ( choice ) => ( {
+					value: String( choice.value ),
+					label: choice.label,
+				} ) ) }
+				onChange={ ( retentionDays: string ) =>
+					onAudit( { retentionDays } )
 				}
 				__nextHasNoMarginBottom
 				__next40pxDefaultSize
@@ -536,6 +570,7 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 		},
 		tracking: { retentionDays: String( data.tracking.retentionDays ) },
 		creative: { retentionDays: String( data.creative.retentionDays ) },
+		audit: { retentionDays: String( data.audit.retentionDays ) },
 	} );
 
 	const { status, error, schedule, retry } = useAutosave< Doc >( ( next ) =>
@@ -635,6 +670,8 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 				<Retention
 					tracking={ doc.tracking }
 					creative={ doc.creative }
+					audit={ doc.audit }
+					auditChoices={ data.audit.choices }
 					onTracking={ ( patch ) =>
 						edit(
 							( current ) => ( {
@@ -651,6 +688,15 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 								creative: { ...current.creative, ...patch },
 							} ),
 							AFTER_TYPING
+						)
+					}
+					onAudit={ ( patch ) =>
+						edit(
+							( current ) => ( {
+								...current,
+								audit: { ...current.audit, ...patch },
+							} ),
+							AT_ONCE
 						)
 					}
 				/>

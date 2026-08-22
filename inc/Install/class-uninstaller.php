@@ -16,6 +16,7 @@ use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Security\Roles;
 use Aggressive\Ads\Storage\Private_Storage;
 use Aggressive\Ads\Workflow\Campaign_Clock;
+use Aggressive\Ads\Workflow\Audit_Retention;
 use Aggressive\Ads\Workflow\Creative_Retention;
 use Aggressive\Ads\Workflow\Ending_Soon_Notifier;
 use Aggressive\Ads\Workflow\Event_Retention;
@@ -136,6 +137,7 @@ final class Uninstaller {
 		Campaign_Clock::unschedule();
 		Ending_Soon_Notifier::unschedule();
 		Creative_Retention::unschedule();
+		Audit_Retention::unschedule();
 		Event_Retention::unschedule();
 		Rollup_Reconciler::unschedule();
 
