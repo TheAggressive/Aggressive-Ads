@@ -123,12 +123,26 @@ and deeper analytics remain open. What is built:
   network-active installs run on `wp_initialize_site`; a dedicated multisite
   PHPUnit config proves colliding post ids cannot cross sites. Network-wide
   organizations are out of scope.
+- CSV reporting — `Portal\Report_Actions` streams a rollup export for the
+  acting organization
+- i18n tooling — `bin/i18n/` (pot, sync, compile, status, check, locale,
+  validate-po) behind the `ci:i18n` lane, which `qa:fast` also runs so POT
+  drift fails a push rather than a pull request
+- private creative lives in `uploads/ads-uploads/`, and the original is deleted
+  the moment a creative is promoted to its Media Library attachment, so only
+  work awaiting review is on disk. Promoted attachments carry
+  `_aggr_is_creative` and `Admin\Media_Library` keeps them out of the library
+- a campaign cannot be submitted carrying the name the plugin invented for it:
+  `create()` records `_aggr_title_is_placeholder`, and the validator refuses it
+- the WordPress suites run natively as well as in Docker —
+  `pnpm test:php:native` against `bin/local/mysql.sh`, and
+  `pnpm test:e2e:studio` against a consenting WordPress Studio site.
+  `AGGR_TESTS_RUNNER` selects the runner; Docker stays the CI contract
 
-What does **not** exist yet, despite being described in `docs/`: CSV reporting
-and i18n tooling.
-`docs/` describes the design; `docs/roadmap.md` says which phase builds it. If a
-doc describes something you cannot find, it has not been built — that is
-expected, not a bug.
+Everything `docs/` describes is now built. `docs/roadmap.md` says which phase
+built it, and `docs/open-work.md` is the list of what is started and unfinished.
+If a doc describes something you cannot find, check those two before assuming it
+is missing.
 
 The screens that exist are the ones with real data behind them. Impression,
 click and CTR tiles, a seven-day sparkline, and table CTR appear only when

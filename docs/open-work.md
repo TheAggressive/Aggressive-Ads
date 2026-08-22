@@ -35,3 +35,30 @@ Worth measuring before choosing: whether the delay is bundle compile/parse, the
 REST round trip behind the queue, or the login redirect. A longer timeout on
 that one assertion is the cheap answer; warming the screen once in a fixture is
 the honest one.
+
+### Measured so far, so nobody repeats it
+
+Against a WordPress Studio site (native PHP, SQLite) — which models the CI
+container only loosely, and that caveat is the reason this entry is still open.
+
+* **The REST round trip is not it.** The assertion that fails waits 16 ms warm.
+  The screen's bootstrap arrives in a server-rendered `data-aggr-review`
+  attribute, so React mounts synchronously and the `<h1>` does not wait on a
+  fetch. Nothing plausible turns 16 ms into 10.8 s.
+* **The server render is not it.** Stopping and restarting the site to get a
+  genuinely cold PHP process: 0.74 s for the first review-screen response
+  against 0.65 s warm. Cold start costs about 90 ms there, not seconds.
+* **The login redirect is not a race, though it looks like one.** The test
+  clicks `#wp-submit` and calls `page.goto()` without awaiting the navigation,
+  which reads like a bug. It is not: Playwright serialises navigations on a
+  page. Injecting a 4 s delay into the login POST still lands on the review
+  screen with the heading visible. Do not "fix" this.
+
+That leaves first compile and parse of the review admin bundle, and whatever
+Apache and MySQL do cold that a native-PHP SQLite site cannot reproduce.
+
+**The next occurrence is already diagnosable — do not guess again.** The e2e job
+uploads `playwright-report/`, `.playwright-results/` and `test-results/` on
+failure with seven-day retention, and `trace: 'retain-on-failure'` is set, so
+the trace carries per-step timings for the run that actually failed. Pull it
+before changing anything.
