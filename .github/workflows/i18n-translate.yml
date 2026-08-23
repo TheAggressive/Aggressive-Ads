@@ -52,6 +52,16 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Installed explicitly rather than left to the runner image, for the same
+      # reason ci.yml does it: this job cannot work without it. Drafting runs
+      # `sync.sh` first, which merges the new POT into every catalog with
+      # `msgmerge`, and validation then reads them with `msgfmt`. Neither is on
+      # ubuntu-24.04 by default, so the job died on the first line of real work
+      # — before it had translated anything, and long before the commit it is
+      # named for.
+      - name: Install gettext
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq gettext
+
       # No-op rather than fail when no locale exists yet: this workflow fires on
       # every POT change, and a repository with no catalogs is a normal state.
       - id: catalogs
