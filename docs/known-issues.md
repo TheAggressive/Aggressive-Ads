@@ -13,3 +13,43 @@ Things that are true, annoying, and worth writing down so nobody rediscovers the
 **What removing the hydration would take,** in order: raise `AGGR_MIN_WP` to `7.0` and the plugin header with it; call `set_translations()` for each registered module in `Assets\Assets`; produce the module JSON catalogs in `bin/i18n/compile.sh`; then delete the string members from the `wp_interactivity_state()` payloads and let TypeScript hold the literals.
 
 Raising the floor is the whole cost, and it is not a translation decision — it decides which sites can install the plugin at all. Until somebody wants to make that call, the hydration convention stays and is not a workaround for a gap so much as the price of supporting 6.7. See [interactivity-stores.md](interactivity-stores.md).
+
+## The reviewer-queue e2e test failed once on a cold container
+
+**What.** On the v1.1.1 release run, `tests/e2e/review.spec.ts:15` took 10.8s
+against Playwright's 10s expect timeout and failed. A re-run of the same commit
+passed, and tests 7 and 8 in the same file — which drive the same screens —
+passed in both runs. It is the first test in that file to mount the admin React
+bundle after a `wp-login.php` round trip on a freshly started container.
+
+**Cost.** `Package` and `Release` depend on `e2e`, so it blocks a release until
+somebody re-runs the job. It cost the first attempt at v1.1.1.
+
+**Status.** Not reproduced since, across many consecutive green runs, so the
+open-work entry was closed rather than left as work nobody was doing. Three of
+the four candidate causes are eliminated, measured against a WordPress Studio
+site (native PHP, SQLite), which models the container only loosely:
+
+* **Not the REST round trip.** The failing assertion waits 16 ms warm. The
+  screen bootstraps from a server-rendered `data-aggr-review` attribute, so
+  React mounts synchronously and the `<h1>` never waits on a fetch.
+* **Not the server render.** Stopping and restarting the site for a genuinely
+  cold PHP process gave 0.74 s for the first review-screen response against
+  0.65 s warm — about 90 ms of cold start, not seconds.
+* **Not the login redirect,** though it looks exactly like a race: the test
+  clicks `#wp-submit` and calls `page.goto()` without awaiting navigation.
+  Playwright serialises navigations on a page, and injecting a 4 s delay into
+  the login POST still lands on the review screen with the heading visible.
+  **Do not "fix" this.**
+
+That leaves first compile and parse of the review admin bundle, and whatever
+Apache and MySQL do cold that a native-PHP SQLite site cannot reproduce.
+
+**If it returns, do not guess.** The e2e job uploads `playwright-report/`,
+`.playwright-results/` and `test-results/` on failure with seven-day retention,
+and `trace: 'retain-on-failure'` is set, so the trace carries per-step timings
+for the run that actually failed. Pull that before changing anything, and
+reopen an entry in [open-work.md](open-work.md). Do not reach for
+`bin/ci/retry.sh`: it is deliberately scoped to network-bound setup steps,
+because a retry around a test turns a fast red into a slow red and hides the
+cold-start assumption that is the actual defect.
