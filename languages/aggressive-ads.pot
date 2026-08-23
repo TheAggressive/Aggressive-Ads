@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-23T19:01:27+00:00\n"
+"POT-Creation-Date: 2026-08-23T23:30:54+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -106,7 +106,7 @@ msgstr ""
 #: inc/Admin/class-organization-screen.php:113
 #: inc/Admin/class-organization-screen.php:114
 #: inc/Admin/class-organization-screen.php:145
-#: inc/Admin/class-organization-screen.php:207
+#: inc/Admin/class-organization-screen.php:216
 #: inc/Core/class-post-types.php:198
 msgid "Organizations"
 msgstr ""
@@ -266,30 +266,31 @@ msgstr ""
 msgid "Campaigns"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:197
+#: inc/Admin/class-organization-screen.php:206
+msgctxt "organization status column heading"
 msgid "State"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:198
+#: inc/Admin/class-organization-screen.php:207
 msgid "Manage members"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:199
+#: inc/Admin/class-organization-screen.php:208
 #: inc/Admin/class-review-screen.php:333
 #: templates/portal/partials/campaign-overlays.php:198
 #: templates/portal/partials/campaign-overlays.php:239
 msgid "Cancel"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:200
+#: inc/Admin/class-organization-screen.php:209
 msgid "That list could not be loaded."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:201
+#: inc/Admin/class-organization-screen.php:210
 msgid "Search organizations"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:208
+#: inc/Admin/class-organization-screen.php:217
 msgid "The organizations screen needs JavaScript enabled."
 msgstr ""
 
