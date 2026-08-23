@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Tests\Unit\Domain;
 
 use Aggressive\Ads\Domain\On_Behalf;
-use Yoast\PHPUnitPolyfills\TestCases\TestCase;
+use PHPUnit\Framework\TestCase;
 
 /**
  * Membership decides, not capability.

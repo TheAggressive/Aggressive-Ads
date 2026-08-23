@@ -129,6 +129,13 @@ Read left to right for any route. Every REST route and portal screen must satisf
 
 Missing the third column is how IDOR happens, and it is the easiest one to skip because the first two already returned true.
 
+Organization membership forms keep the same separation. The delivery handler
+requires `aggr_access_portal`; `Organization_Membership` then independently
+requires ownership of that organization or `aggr_manage_orgs`. A nonce proves
+request intent, not either kind of authority. The Phase 11 audit and its
+revocation tests are recorded in
+[authorization-failure-review.md](authorization-failure-review.md).
+
 ## Never trusted from the client
 
 `org_id` is **never** read from request input — not from a body field, not a query arg, not a hidden input. It is always derived server-side from the authenticated user.

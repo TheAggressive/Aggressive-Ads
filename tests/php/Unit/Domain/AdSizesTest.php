@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Tests\Unit\Domain;
 
 use Aggressive\Ads\Domain\Ad_Sizes;
-use Yoast\PHPUnitPolyfills\TestCases\TestCase;
+use PHPUnit\Framework\TestCase;
 
 /**
  * Common sizes are a catalogue; custom is still `{width}x{height}`.

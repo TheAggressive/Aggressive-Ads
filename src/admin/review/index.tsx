@@ -15,7 +15,12 @@
 
 import type { ReactElement } from 'react';
 import apiFetch from '@wordpress/api-fetch';
-import { createRoot, useEffect, useState } from '@wordpress/element';
+import {
+	createRoot,
+	useCallback,
+	useEffect,
+	useState,
+} from '@wordpress/element';
 import { errorMessage, setStrings, t } from '../shared/save';
 import { QueueView } from './queue';
 import { CampaignView } from './campaign';
@@ -69,7 +74,7 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 	 *
 	 * @param next Query parameters for the view being shown.
 	 */
-	const push = ( next: Record< string, string > ): void => {
+	const push = useCallback( ( next: Record< string, string > ): void => {
 		const url = new URL( window.location.href );
 
 		url.searchParams.set( 'page', 'aggr-review' );
@@ -82,78 +87,87 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 		);
 
 		window.history.pushState( next, '', url.toString() );
-	};
+	}, [] );
 
-	const loadQueue = async (
-		nextFilter: string,
-		page: number,
-		navigate = true
-	): Promise< void > => {
-		setBusy( true );
+	const loadQueue = useCallback(
+		async (
+			nextFilter: string,
+			page: number,
+			navigate = true
+		): Promise< void > => {
+			setBusy( true );
 
-		try {
-			const result = await apiFetch< {
-				filter: string;
-				tabs: Tab[];
-				queue: Queue;
-			} >( {
-				path: `${ data.restPath }/queue?filter=${ encodeURIComponent(
-					nextFilter
-				) }&paged=${ page }`,
-			} );
-
-			setFilter( result.filter );
-			setTabs( result.tabs );
-			setQueue( result.queue );
-			setCampaign( null );
-
-			if ( navigate ) {
-				push( {
-					filter: result.filter,
-					paged: String( result.queue.page ),
+			try {
+				const result = await apiFetch< {
+					filter: string;
+					tabs: Tab[];
+					queue: Queue;
+				} >( {
+					path: `${
+						data.restPath
+					}/queue?filter=${ encodeURIComponent(
+						nextFilter
+					) }&paged=${ page }`,
 				} );
+
+				setFilter( result.filter );
+				setTabs( result.tabs );
+				setQueue( result.queue );
+				setCampaign( null );
+
+				if ( navigate ) {
+					push( {
+						filter: result.filter,
+						paged: String( result.queue.page ),
+					} );
+				}
+			} catch ( reason ) {
+				setFlash( { type: 'error', message: errorMessage( reason ) } );
+			} finally {
+				setBusy( false );
 			}
-		} catch ( reason ) {
-			setFlash( { type: 'error', message: errorMessage( reason ) } );
-		} finally {
-			setBusy( false );
-		}
-	};
+		},
+		[ data.restPath, push ]
+	);
 
-	const loadCampaign = async (
-		id: number,
-		navigate = true
-	): Promise< void > => {
-		setBusy( true );
-
-		try {
-			const result = await apiFetch< { campaign: Campaign } >( {
-				path: `${ data.restPath }/campaigns/${ id }`,
-			} );
-
-			setCampaign( result.campaign );
-
-			if ( navigate ) {
-				push( {
-					campaign: String( id ),
-					filter,
-					paged: String( queue.page ),
-				} );
-			}
-		} catch ( reason ) {
-			setFlash( { type: 'error', message: errorMessage( reason ) } );
-		} finally {
-			setBusy( false );
-		}
-	};
-
-	/**
-	 * Posts one decision and adopts whatever the server sends back.
+	/*
+	 * `filter` and `queue.page` are read here, and they change.
 	 *
-	 * @param path    Route below the review namespace.
-	 * @param body    Request body.
-	 * @param message Success notice.
+	 * That matters more than it looks. The popstate listener below was bound
+	 * with an empty dependency list under a comment asserting this function
+	 * closed over nothing that changes — which was true of loadQueue and false
+	 * of this one. It happened not to bite, because popstate calls it with
+	 * navigate=false and the stale values are only read inside that branch.
+	 * Naming the dependencies is what makes that a fact rather than an
+	 * argument the next edit can quietly invalidate.
 	 */
+	const loadCampaign = useCallback(
+		async ( id: number, navigate = true ): Promise< void > => {
+			setBusy( true );
+
+			try {
+				const result = await apiFetch< { campaign: Campaign } >( {
+					path: `${ data.restPath }/campaigns/${ id }`,
+				} );
+
+				setCampaign( result.campaign );
+
+				if ( navigate ) {
+					push( {
+						campaign: String( id ),
+						filter,
+						paged: String( queue.page ),
+					} );
+				}
+			} catch ( reason ) {
+				setFlash( { type: 'error', message: errorMessage( reason ) } );
+			} finally {
+				setBusy( false );
+			}
+		},
+		[ data.restPath, push, filter, queue.page ]
+	);
+
 	/**
 	 * Opens an acting-as session before leaving for the portal.
 	 *
@@ -208,6 +222,13 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 		}
 	};
 
+	/**
+	 * Posts one decision and adopts whatever the server sends back.
+	 *
+	 * @param path    Route below the review namespace.
+	 * @param body    Request body.
+	 * @param message Success notice.
+	 */
 	const write = async (
 		path: string,
 		body: Record< string, unknown >,
@@ -263,13 +284,15 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 		return () => window.removeEventListener( 'popstate', onPop );
 
 		/*
-		 * Bound once, and the empty dependency list is correct rather than an
-		 * oversight. The handler reads the URL and passes everything it needs as
-		 * arguments with navigate=false, so it closes over nothing that changes;
-		 * re-binding on every state change would add and remove a listener on
-		 * each keystroke in the notes box for no behavioural difference.
+		 * The handler reads the URL and passes what it needs as arguments with
+		 * navigate=false, so it never reads the stale halves of these
+		 * closures. This list used to be empty with a comment saying so, which
+		 * was an argument rather than a guarantee — nothing would have noticed
+		 * a later edit making it false. Both loaders are useCallback'd now, so
+		 * naming them re-binds the listener only when the filter or the page
+		 * actually changes, not on every keystroke in the notes box.
 		 */
-	}, [] );
+	}, [ loadCampaign, loadQueue, data.filter ] );
 
 	return (
 		<>

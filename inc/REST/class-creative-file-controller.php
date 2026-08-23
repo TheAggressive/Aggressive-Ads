@@ -60,11 +60,16 @@ final class Creative_File_Controller implements Service {
 	}
 
 	/**
-	 * Absolute path to serve once the response has been approved.
+	 * Stored relative path to serve once the response has been approved.
 	 *
 	 * Held on the instance rather than passed through the response, because a
 	 * response header is sent to the client and the private root is the one
 	 * secret protecting unapproved artwork.
+	 *
+	 * Relative rather than absolute so that the containment check in
+	 * `Private_Storage::resolve()` runs again at the moment the bytes are
+	 * read, instead of the streaming half trusting a path the authorizing
+	 * half resolved on an earlier hook.
 	 *
 	 * @var string
 	 */
@@ -172,7 +177,7 @@ final class Creative_File_Controller implements Service {
 	 * security consequences — is testable without emitting bytes.
 	 *
 	 * @param int $creative_id Creative post id.
-	 * @return array{path: string, mime: string, filename: string, bytes: int}|WP_Error
+	 * @return array{path: string, mime: string, filename: string, bytes: int}|WP_Error Path is relative to the private root.
 	 */
 	public function prepare( int $creative_id ) {
 		/*
@@ -208,13 +213,16 @@ final class Creative_File_Controller implements Service {
 			return $denied;
 		}
 
-		$bytes = filesize( $path );
+		// The plaintext length, not the file's. Stored creative is encrypted, so
+		// filesize() describes the ciphertext and would send a Content-Length
+		// the body cannot match.
+		$bytes = $this->storage->plaintext_bytes( $details['path'] );
 
 		return array(
-			'path'     => $path,
+			'path'     => $details['path'],
 			'mime'     => $mime,
 			'filename' => $this->safe_filename( $details['name'], $mime ),
-			'bytes'    => false === $bytes ? 0 : (int) $bytes,
+			'bytes'    => null === $bytes ? 0 : $bytes,
 		);
 	}
 
@@ -236,12 +244,24 @@ final class Creative_File_Controller implements Service {
 		// cannot inherit a path somebody else was authorized for.
 		$this->pending_path = '';
 
-		if ( 200 !== $result->get_status() || ! is_file( $path ) ) {
+		if ( 200 !== $result->get_status() ) {
 			return $served;
 		}
 
-		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_readfile -- Streaming bytes to the client. WP_Filesystem reads the whole file into memory to hand it back, which is the opposite of what this endpoint is for.
-		readfile( $path );
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- The response body. Opened as a stream so the creative is decrypted a chunk at a time rather than assembled in memory.
+		$out = fopen( 'php://output', 'wb' );
+
+		if ( false === $out ) {
+			return $served;
+		}
+
+		// A failure here is a file that could not be decrypted — a lost key, a
+		// truncated file, a tampered one. The headers are already sent, so
+		// there is nothing to turn it into: the body simply stops, which is the
+		// honest outcome and is what a client sees as a broken transfer.
+		$this->storage->copy_to( $path, $out );
+
+		fclose( $out );
 
 		return true;
 	}

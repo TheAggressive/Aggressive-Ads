@@ -16,6 +16,7 @@ use Aggressive\Ads\Portal\Organization_Actions;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Org_Access_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Security\Ownership;
 use Aggressive\Ads\Security\Roles;
 use Aggressive\Ads\Tests\Redirect_Trap;
@@ -25,12 +26,11 @@ use WP_UnitTestCase;
 /**
  * The delivery layer for invite, approve, deny, remove, transfer and rename.
  *
- * These six handlers check no capability inline. That is legitimate, because
- * every `Organization_Membership` method they call checks `can_manage()` — but
- * legitimate by delegation is not the same as covered, and nothing reached
- * these handlers at all: their CSRF checks could all six be deleted with the
- * whole suite green, and so could the derivation that decides *which*
- * organization a request acts on.
+ * The delivery layer requires portal access, and the workflow independently
+ * requires organization ownership or the staff override. Both are covered:
+ * losing the feature capability must close the endpoint even if the ownership
+ * record remains, while a portal member still cannot manage an organization
+ * they do not own.
  */
 final class PortalOrganizationActionsTest extends WP_UnitTestCase {
 	use Redirect_Trap;
@@ -272,6 +272,57 @@ final class PortalOrganizationActionsTest extends WP_UnitTestCase {
 		$this->expectException( 'WPDieException' );
 
 		$this->actions->handle_remove();
+	}
+
+	/**
+	 * **Revoking portal access closes every organization mutation.**
+	 *
+	 * Ownership is durable business data and can outlive a role correction or
+	 * suspension. A valid nonce proves request intent, not feature authority, so
+	 * neither fact may let a revoked account keep changing its tenant.
+	 *
+	 * @dataProvider handler_provider
+	 * @param string $handler Handler method name.
+	 * @param string $action  Nonce action it requires.
+	 * @return void
+	 */
+	public function test_every_handler_refuses_an_owner_without_portal_access( string $handler, string $action ): void {
+		$user = get_userdata( $this->owner );
+		$this->assertNotFalse( $user );
+		$user->add_cap( Capabilities::ACCESS_PORTAL, false );
+
+		wp_set_current_user( $this->owner );
+		$this->assertTrue( $this->organizations->is_owner( $this->org, $this->owner ) );
+		$this->assertFalse( current_user_can( Capabilities::ACCESS_PORTAL ) );
+
+		$this->submit(
+			array(
+				'email'             => 'blocked@example.test',
+				'user_id'           => (string) $this->member,
+				'access_id'         => '1',
+				'organization_name' => 'Unauthorized rename',
+				'_wpnonce'          => wp_create_nonce( $action ),
+			)
+		);
+
+		$before_pending = $this->access->pending_for_org( $this->org );
+		$before_members = $this->organizations->user_ids_for_org( $this->org );
+		$before_name    = $this->organizations->name( $this->org );
+
+		$denied = false;
+
+		try {
+			$this->actions->{$handler}();
+			$this->fail( $handler . ' accepted an owner whose portal access was revoked.' );
+		} catch ( \WPDieException ) {
+			$denied = true;
+		}
+
+		$this->assertTrue( $denied, $handler . ' did not terminate with a denial.' );
+		$this->assertSame( $before_pending, $this->access->pending_for_org( $this->org ) );
+		$this->assertSame( $before_members, $this->organizations->user_ids_for_org( $this->org ) );
+		$this->assertSame( $before_name, $this->organizations->name( $this->org ) );
+		$this->assertTrue( $this->organizations->is_owner( $this->org, $this->owner ) );
 	}
 
 	/**

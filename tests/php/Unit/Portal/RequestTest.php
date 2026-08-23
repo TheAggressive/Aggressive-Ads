@@ -10,7 +10,8 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Tests\Unit\Portal;
 
 use Aggressive\Ads\Portal\Request;
-use Yoast\PHPUnitPolyfills\TestCases\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
 
 /**
  * The grammar decides whether a request is real at all, before a controller
@@ -104,9 +105,8 @@ final class RequestTest extends TestCase {
 	 * @param string $route          Route segment.
 	 * @param string $object_segment Object segment.
 	 * @return void
-	 *
-	 * @dataProvider data_hostile_segments
 	 */
+	#[DataProvider( 'data_hostile_segments' )]
 	public function test_hostile_segments_are_refused( string $route, string $object_segment ): void {
 		$this->assertNull( Request::from( $route, $object_segment ) );
 	}

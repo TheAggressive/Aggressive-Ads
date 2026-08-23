@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Tests\Unit\Workflow;
 
 use Aggressive\Ads\Workflow\Delivery_Request;
-use Yoast\PHPUnitPolyfills\TestCases\TestCase;
+use PHPUnit\Framework\TestCase;
 
 /**
  * Cooperative browser signals improve reporting without becoming an abuse
@@ -23,10 +23,10 @@ final class DeliveryRequestTest extends TestCase {
 	 *
 	 * @return void
 	 */
-	protected function tear_down(): void {
+	protected function tearDown(): void {
 		unset( $_SERVER['HTTP_PURPOSE'], $_SERVER['HTTP_SEC_PURPOSE'], $_SERVER['HTTP_USER_AGENT'] );
 
-		parent::tear_down();
+		parent::tearDown();
 	}
 
 	/**

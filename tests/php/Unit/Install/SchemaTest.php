@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Tests\Unit\Install;
 
 use Aggressive\Ads\Install\Schema;
-use Yoast\PHPUnitPolyfills\TestCases\TestCase;
+use PHPUnit\Framework\TestCase;
 
 /**
  * The DDL's *formatting* is functional, because dbDelta parses SQL with regular
@@ -33,7 +33,7 @@ final class SchemaTest extends TestCase {
 	 *
 	 * @return void
 	 */
-	protected function set_up(): void {
+	protected function setUp(): void {
 		$this->ddl = Schema::audit_table_ddl( 'wp_aggr_audit_log', 'DEFAULT CHARACTER SET utf8mb4' );
 	}
 
@@ -230,6 +230,26 @@ final class SchemaTest extends TestCase {
 				'/^\s*(?:UNIQUE )?KEY ' . preg_quote( $index, '/' ) . ' \(/mi',
 				$ddl
 			);
+		}
+	}
+
+	/** Line items carry the future-safe default uniqueness and hot-path indexes. */
+	public function test_line_item_schema_has_declared_columns_and_indexes(): void {
+		$ddl = Schema::line_items_table_ddl( 'wp_aggr_line_items', 'DEFAULT CHARACTER SET utf8mb4' );
+
+		$this->assertStringContainsString( 'PRIMARY KEY  (id)', $ddl );
+		$this->assertStringContainsString( 'UNIQUE KEY campaign_default (campaign_id,default_key)', $ddl );
+		$this->assertStringContainsString( 'default_key tinyint(1) unsigned NULL DEFAULT NULL', $ddl );
+
+		foreach ( Schema::line_items_columns() as $column ) {
+			$this->assertMatchesRegularExpression( '/^\s*' . preg_quote( $column, '/' ) . '\s/mi', $ddl );
+		}
+
+		foreach ( Schema::line_items_index_names() as $index ) {
+			if ( 'PRIMARY' === $index ) {
+				continue;
+			}
+			$this->assertMatchesRegularExpression( '/^\s*(?:UNIQUE )?KEY ' . preg_quote( $index, '/' ) . ' \(/mi', $ddl );
 		}
 	}
 }

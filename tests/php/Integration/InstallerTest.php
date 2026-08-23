@@ -15,6 +15,8 @@ use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Event_Repository;
 use Aggressive\Ads\Repository\Org_Access_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
+use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Line_Item_Repository;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Security\Roles;
 use WP_UnitTestCase;
@@ -71,6 +73,27 @@ final class InstallerTest extends WP_UnitTestCase {
 		$this->assertTrue( $this->org_access->table_exists() );
 		$this->assertTrue( ( new Event_Repository() )->table_exists() );
 		$this->assertTrue( ( new Rollup_Repository() )->table_exists() );
+		$this->assertTrue( ( new Line_Item_Repository( new Campaign_Repository() ) )->table_exists() );
+	}
+
+	/** The line-item table has the exact declared physical shape. */
+	public function test_the_line_item_table_matches_the_schema(): void {
+		global $wpdb;
+		$repository = new Line_Item_Repository( new Campaign_Repository() );
+		$this->installer->install_line_items();
+		$table = $repository->table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Integration schema assertion.
+		$columns          = $wpdb->get_col( "SHOW COLUMNS FROM {$table}" );
+		$declared_columns = Schema::line_items_columns();
+		sort( $columns );
+		sort( $declared_columns );
+		$this->assertSame( $declared_columns, $columns );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Integration schema assertion.
+		$rows    = $wpdb->get_results( "SHOW INDEX FROM {$table}", ARRAY_A );
+		$indexes = array_values( array_unique( array_column( $rows, 'Key_name' ) ) );
+		$this->assertSame( Schema::line_items_index_names(), $indexes );
 	}
 
 	/** The organization access table has every declared column and index. */

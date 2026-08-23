@@ -21,6 +21,7 @@ use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Core\Settings;
 use Aggressive\Ads\Install\Installer;
+use Aggressive\Ads\Install\Line_Item_Migrator;
 use Aggressive\Ads\Install\Rewrite_Flusher;
 use Aggressive\Ads\Install\Site_Lifecycle;
 use Aggressive\Ads\Install\Upgrader;
@@ -34,6 +35,7 @@ use Aggressive\Ads\Notification\Organization_Notification;
 use Aggressive\Ads\Notification\Password_Notification;
 use Aggressive\Ads\Notification\Request_Mailer;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Line_Item_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Delivery_Repository;
 use Aggressive\Ads\Repository\Event_Repository;
@@ -55,6 +57,7 @@ use Aggressive\Ads\Portal\Report_Actions;
 use Aggressive\Ads\Portal\Signup_Actions;
 use Aggressive\Ads\Portal\Creative_Actions;
 use Aggressive\Ads\REST\Campaigns_Controller;
+use Aggressive\Ads\REST\Line_Items_Controller;
 use Aggressive\Ads\REST\Creative_Controller;
 use Aggressive\Ads\REST\Creative_File_Controller;
 use Aggressive\Ads\REST\Placements_Controller;
@@ -65,6 +68,7 @@ use Aggressive\Ads\REST\Transitions_Controller;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Repository\User_Repository;
+use Aggressive\Ads\Storage\Creative_Cipher;
 use Aggressive\Ads\Storage\Private_Storage;
 use Aggressive\Ads\Update\Package_Verifier;
 use Aggressive\Ads\Update\Plugin_Updates;
@@ -78,6 +82,9 @@ use Aggressive\Ads\Workflow\Campaign_Change_Manager;
 use Aggressive\Ads\Workflow\Campaign_Clock;
 use Aggressive\Ads\Workflow\Campaign_Copier;
 use Aggressive\Ads\Workflow\Campaign_Editor;
+use Aggressive\Ads\Workflow\Line_Item_Editor;
+use Aggressive\Ads\Workflow\Line_Item_Lifecycle;
+use Aggressive\Ads\Workflow\Line_Item_Validator;
 use Aggressive\Ads\Workflow\Edit_Window;
 use Aggressive\Ads\Workflow\Campaign_Validator;
 use Aggressive\Ads\Workflow\Creative_Promoter;
@@ -206,7 +213,8 @@ final class Service_Registrar {
 			Installer::class,
 			static fn ( Service_Container $c ): Installer => new Installer(
 				$c->get( Audit_Repository::class ),
-				$c->get( Roles::class )
+				$c->get( Roles::class ),
+				$c->get( Line_Item_Repository::class )
 			)
 		);
 
@@ -227,39 +235,68 @@ final class Service_Registrar {
 				$c->get( Installer::class ),
 				$c->get( Audit_Repository::class ),
 				array(
-					2 => static function () use ( $c ): void {
+					2  => static function () use ( $c ): void {
 						$c->get( Installer::class )->install_org_access();
 					},
-					4 => static function () use ( $c ): void {
+					4  => static function () use ( $c ): void {
 						$c->get( Installer::class )->install_delivery_tables();
 					},
-					5 => static function () use ( $c ): void {
+					5  => static function () use ( $c ): void {
 						$c->get( Installer::class )->migrate_event_token_uniqueness();
 					},
 					// Renames the private creative directory. No admin notice:
 					// a site whose server rule still names the old path is
 					// covered because the migration leaves nothing behind it.
-					6 => static function () use ( $c ): void {
+					6  => static function () use ( $c ): void {
 						$c->get( Private_Storage::class )->migrate_legacy_directory();
 					},
 					// Creative promoted before the marker existed is still in
 					// the Media Library until it is marked.
-					7 => static function () use ( $c ): void {
+					7  => static function () use ( $c ): void {
 						$c->get( Creative_Repository::class )->backfill_creative_attachment_marks();
 					},
 					// The daily private-storage probe and its stored verdict
 					// outlived the notice they fed. Left alone they would stay
 					// on the schedule of every upgraded site forever, firing a
 					// callback nothing registers any more.
-					8 => static function (): void {
+					8  => static function (): void {
 						wp_clear_scheduled_hook( 'aggr_verify_private_storage' );
 						delete_option( 'aggr_private_storage_status' );
 					},
 					// The object index gains org_id, which for_object() also
 					// filters on. Without it the optimizer index-merges and
 					// filesorts; see Audit_Repository::migrate_object_index().
-					9 => static function () use ( $c ): void {
+					9  => static function () use ( $c ): void {
 						$c->get( Audit_Repository::class )->migrate_object_index();
+					},
+					// Lookup keys move off wp_salt( 'auth' ) onto a salt that
+					// does not rotate. Until this runs, a site whose auth salts
+					// ever changed cannot rename an organization and is not
+					// detecting duplicate names at all. Recomputed from the
+					// plaintext the same rows already carry, so nothing is lost.
+					10 => static function () use ( $c ): void {
+						$c->get( Org_Access_Repository::class )->reindex_active_keys();
+					},
+					// Creative uploaded before encryption at rest is still
+					// plaintext on disk. Non-destructive and resumable: a file
+					// that will not encrypt cleanly stays as it was, and reads
+					// pass an unencrypted file through, so an interrupted run
+					// leaves a working mixture rather than a broken queue.
+					11 => static function () use ( $c ): void {
+						$c->get( Private_Storage::class )->encrypt_existing_files();
+					},
+					12 => static function () use ( $c ): void {
+						$c->get( Installer::class )->install_line_items();
+						$c->get( Line_Item_Migrator::class )->start();
+					},
+					// The default line item's name is derived from the campaign
+					// title, and nothing re-derived it after a rename. Adding
+					// the column gives every existing row the "derived"
+					// default, which is wrong for any line item a publisher
+					// renamed, so the rows are classified rather than assumed.
+					13 => static function () use ( $c ): void {
+						$c->get( Installer::class )->install_line_items();
+						$c->get( Line_Item_Migrator::class )->start_name_provenance();
 					},
 				)
 			)
@@ -287,6 +324,21 @@ final class Service_Registrar {
 		$container->register(
 			Campaign_Repository::class,
 			static fn (): Campaign_Repository => new Campaign_Repository()
+		);
+
+		$container->register(
+			Line_Item_Repository::class,
+			static fn ( Service_Container $c ): Line_Item_Repository => new Line_Item_Repository(
+				$c->get( Campaign_Repository::class )
+			)
+		);
+
+		$container->register(
+			Line_Item_Migrator::class,
+			static fn ( Service_Container $c ): Line_Item_Migrator => new Line_Item_Migrator(
+				$c->get( Line_Item_Repository::class ),
+				$c->get( Campaign_Repository::class )
+			)
 		);
 
 		$container->register(
@@ -440,7 +492,28 @@ final class Service_Registrar {
 				$c->get( Creative_Repository::class ),
 				$c->get( Audit_Repository::class ),
 				$c->get( Edit_Window::class ),
-				$c->get( Fill_Cache::class )
+				$c->get( Fill_Cache::class ),
+				$c->get( Line_Item_Repository::class )
+			)
+		);
+
+		$container->register( Line_Item_Validator::class, static fn (): Line_Item_Validator => new Line_Item_Validator() );
+
+		$container->register(
+			Line_Item_Editor::class,
+			static fn ( Service_Container $c ): Line_Item_Editor => new Line_Item_Editor(
+				$c->get( Line_Item_Repository::class ),
+				$c->get( Campaign_Repository::class ),
+				$c->get( Line_Item_Validator::class ),
+				$c->get( Audit_Repository::class ),
+				$c->get( Edit_Window::class )
+			)
+		);
+
+		$container->register(
+			Line_Item_Lifecycle::class,
+			static fn ( Service_Container $c ): Line_Item_Lifecycle => new Line_Item_Lifecycle(
+				$c->get( Line_Item_Repository::class )
 			)
 		);
 
@@ -451,7 +524,8 @@ final class Service_Registrar {
 				$c->get( Campaign_Repository::class ),
 				$c->get( Creative_Repository::class ),
 				$c->get( Private_Storage::class ),
-				$c->get( Audit_Repository::class )
+				$c->get( Audit_Repository::class ),
+				$c->get( Line_Item_Repository::class )
 			)
 		);
 
@@ -588,8 +662,15 @@ final class Service_Registrar {
 		);
 
 		$container->register(
+			Creative_Cipher::class,
+			static fn (): Creative_Cipher => new Creative_Cipher()
+		);
+
+		$container->register(
 			Private_Storage::class,
-			static fn (): Private_Storage => new Private_Storage()
+			static fn ( Service_Container $c ): Private_Storage => new Private_Storage(
+				$c->get( Creative_Cipher::class )
+			)
 		);
 
 		$container->register(
@@ -644,7 +725,8 @@ final class Service_Registrar {
 				$c->get( Campaign_Change_Manager::class ),
 				$c->get( Settings::class ),
 				$c->get( Edit_Window::class ),
-				$c->get( Acting_As::class )
+				$c->get( Acting_As::class ),
+				$c->get( Line_Item_Repository::class )
 			)
 		);
 
@@ -747,7 +829,18 @@ final class Service_Registrar {
 				$c->get( Rate_Limiter::class ),
 				$c->get( Reporting_Read::class ),
 				$c->get( Edit_Window::class ),
-				$c->get( Acting_As::class )
+				$c->get( Acting_As::class ),
+				$c->get( Line_Item_Repository::class )
+			)
+		);
+
+		$container->register(
+			Line_Items_Controller::class,
+			static fn ( Service_Container $c ): Line_Items_Controller => new Line_Items_Controller(
+				$c->get( Line_Item_Repository::class ),
+				$c->get( Campaign_Repository::class ),
+				$c->get( Line_Item_Editor::class ),
+				$c->get( Rate_Limiter::class )
 			)
 		);
 

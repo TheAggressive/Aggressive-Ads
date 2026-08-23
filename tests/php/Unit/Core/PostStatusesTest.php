@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Tests\Unit\Core;
 
 use Aggressive\Ads\Core\Post_Statuses;
-use Yoast\PHPUnitPolyfills\TestCases\TestCase;
+use PHPUnit\Framework\TestCase;
 
 /**
  * The eleven statuses and the flags that keep them off the front end.

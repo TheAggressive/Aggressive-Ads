@@ -171,3 +171,53 @@ aggr_i18n_locale_from_po() {
 aggr_i18n_mo_path() {
 	printf '%s/%s-%s.mo\n' "${AGGR_LANGUAGES_DIR}" "${AGGR_TEXT_DOMAIN}" "$1"
 }
+
+# Loads machine-translation credentials from a gitignored dotenv file.
+#
+# Deliberately a parser rather than `source`, which is what the theme scripts
+# this was adapted from do. Sourcing means any line in .env.local runs as shell
+# on every `pnpm i18n:translate` — a surprising amount of power for a file whose
+# entire job is holding an API key, and one nobody would think to audit.
+#
+# Only KEY=value with a plausible key name is exported. Anything else is
+# reported and skipped rather than silently ignored, because a key that did not
+# load looks exactly like a key that is wrong.
+aggr_i18n_load_dotenv() {
+	local env_file env_name line key value
+
+	for env_file in "${AGGR_PLUGIN_ROOT}/.env.local" "${AGGR_PLUGIN_ROOT}/.env"; do
+		[[ -f "${env_file}" ]] || continue
+
+		# Resolved before the loop, not inside it: naming the file being read
+		# from within a block redirected out of that same file is what
+		# ShellCheck's SC2094 is for, and it is right that it looks wrong.
+		env_name="$(basename "${env_file}")"
+
+		while IFS= read -r line || [[ -n "${line}" ]]; do
+			# Comments, blanks, and an optional leading `export`.
+			line="${line#"${line%%[![:space:]]*}"}"
+			[[ -z "${line}" || "${line}" == \#* ]] && continue
+			line="${line#export }"
+
+			if [[ ! "${line}" =~ ^([A-Za-z_][A-Za-z0-9_]*)=(.*)$ ]]; then
+				aggr_i18n_info "Ignoring unparseable line in ${env_name}: ${line%%=*}"
+				continue
+			fi
+
+			key="${BASH_REMATCH[1]}"
+			value="${BASH_REMATCH[2]}"
+
+			# Strip one layer of matching quotes; leave the value otherwise
+			# untouched, including any '#' that is part of a real key.
+			if [[ "${value}" == \"*\" || "${value}" == \'*\' ]]; then
+				value="${value:1:${#value}-2}"
+			fi
+
+			# The shell and CI environment win, so a repository secret is never
+			# shadowed by a stale local file.
+			[[ -n "${!key-}" ]] && continue
+
+			export "${key}=${value}"
+		done < "${env_file}"
+	done
+}

@@ -197,6 +197,19 @@ test( 'advertiser completes and submits the accessible six-step wizard', async (
 		page.getByRole( 'button', { name: 'Submit campaign for review' } )
 	).toHaveCount( 0 );
 	await expect( page.getByLabel( 'Campaign name' ) ).toHaveCount( 0 );
+	const deliveryStrategy = page.getByRole( 'region', {
+		name: 'Delivery strategy',
+	} );
+	await expect( deliveryStrategy ).toBeVisible();
+	await expect(
+		deliveryStrategy.getByText( title, { exact: true } )
+	).toBeVisible();
+	await expect(
+		deliveryStrategy
+			.locator( '.aggr-fact' )
+			.filter( { hasText: 'Pricing' } )
+			.getByText( 'FLAT', { exact: true } )
+	).toBeVisible();
 
 	await page.reload();
 	await expect(

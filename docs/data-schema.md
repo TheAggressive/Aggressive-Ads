@@ -119,6 +119,64 @@ days exactly after a ten-minute midnight grace period and stores its non-autoloa
 deletes and never purges beyond that watermark. Rollups are not purged with
 events. See [delivery-performance.md](delivery-performance.md).
 
+## Campaign line items
+
+`{$wpdb->prefix}aggr_line_items` stores delivery strategy beneath a Campaign.
+It is a dedicated table because line items are selected and updated on the
+serving path; representing them as postmeta would turn bounded indexed reads
+into meta joins and make optimistic updates unnecessarily fragile.
+
+Every row carries its campaign and organization, lifecycle status, UTC
+schedule, pricing and goal models, integer-cent budget, daily and lifetime
+caps, priority, pacing mode, weight, JSON policy fields, revision, and UTC
+timestamps. The public repository normalizes policy JSON to arrays and never
+exposes the internal compatibility key.
+
+The P1 compatibility row has `default_key = 1`. A unique
+`(campaign_id, default_key)` index guarantees exactly one default even when a
+background migration and a live read race. Future non-default line items use
+`NULL`, which MySQL permits more than once in a unique index. Campaign/status,
+organization/status and schedule indexes support the next serving phases
+without putting those phases into P1.
+
+### Who owns the name
+
+Every projected field is campaign-owned: `sync_default_from_campaign()` copies
+organization, lifecycle status, schedule and budget from the Campaign, and
+nothing else may write them. `name` is the one field with two possible owners —
+derived from the campaign title by default, and renameable on the line item
+itself — so provenance is a stored fact rather than an inference.
+`name_is_derived` starts at 1, and `Line_Item_Repository::update()` clears it the
+moment a write includes `name`. The projection re-derives the name only while
+the flag is set.
+
+This exists because a campaign renamed after its first detail view kept the
+placeholder title the wizard invented. The default line item is created on that
+first view, while the title is still "Untitled campaign", and nothing re-derived
+it afterwards — so the advertiser's Delivery strategy panel showed a name they
+had already changed. The browser suite caught it.
+
+**Provenance is not inferrable from `revision`.** Any edit increments it, so a
+line item whose pacing somebody adjusted would have its name frozen forever;
+that heuristic was written, rejected, and is pinned against by
+`test_an_edit_that_is_not_a_rename_leaves_the_name_derived`.
+
+Database version 13 adds the column and classifies the rows already on disk,
+comparing each stored name against the one the repository would generate today.
+The comparison calls `default_name()` rather than approximating it in SQL,
+because the two must agree exactly: a row misread as derived has a publisher's
+rename overwritten on the next projection, and a row misread as overridden keeps
+a stale name forever. It is bounded and cursor-driven like the pass before it,
+and runs after that pass, since a row must exist before its name can be
+classified.
+
+Database version 12 starts a restartable 100-campaign cron backfill. Its
+non-autoloaded cursor advances only after the line item exists, or after the
+source Campaign was concurrently deleted. Reads also create the default row
+idempotently, so an active campaign never waits for the backfill before it can
+be viewed. Native serving continues to read the Campaign during P1; switching
+the hot path happens only after the creative and decision models exist.
+
 ## Options
 
 | Option | Type | Autoload | Purpose |
@@ -132,9 +190,23 @@ events. See [delivery-performance.md](delivery-performance.md).
 | `aggr_settings` | array | yes | The settings schema's storage |
 | `aggr_delivery_rewrite_version` | int | yes | Bumped when the click-hop rule changes; triggers one flush |
 | `aggr_rollups_reconciled_through` | `Y-m-d` | **no** | Last closed UTC event day exactly projected into rollups |
+| `aggr_line_item_migration_cursor` | int | **no** | Last Campaign id successfully visited by the restartable P1 backfill |
+| `aggr_line_item_migration_done` | bool | **no** | Completion marker for the P1 compatibility-row backfill |
 | `aggr_delete_data_on_uninstall` | bool | yes | Opt-in; default off |
+| `aggr_org_lookup_salt` | string | **no** | Plugin-owned salt for the organization name index |
+| `aggr_creative_key` | string | **no** | Base64 key encrypting creative at rest, when `AGGR_CREATIVE_KEY` is not defined |
 
-Version options autoload because they are read on every request. `aggr_upgrade_lock` does not, because it is written and deleted rather than read, and an autoloaded option that churns is a cache-invalidation cost for nothing.
+Version options autoload because they are read on every request. `aggr_upgrade_lock` does not, because it is written and deleted rather than read, and an autoloaded option that churns is a cache-invalidation cost for nothing. `aggr_creative_key` does not, because an autoloaded secret is one that sits in the object cache of every request on the site, including requests that will never touch a creative.
+
+### The creative key
+
+Creative awaiting review is encrypted at rest. The key is read from the `AGGR_CREATIVE_KEY` constant when wp-config.php defines it — 32 bytes, base64 or hex — and otherwise from `aggr_creative_key`, which is generated on first use.
+
+Defining the constant is the stronger arrangement, and the reason is narrow: it removes the database from the set of things that carry the means to decrypt. A leaked dump, a support copy, or a SQL injection then yields ciphertext and no key. Without the constant the key travels with the database, which still defeats a server that serves the uploads directory, a filesystem backup, or a copy of `wp-content` — but not a full dump.
+
+**It is deliberately not derived from `wp_salt()`.** Salts rotate; that is what they are for. This plugin has already paid for keying durable data with one — the organization name registry was orphaned by a rotation and had to be rekeyed in db version 10 — and a rotation that silently makes every creative awaiting review undecryptable is the same defect over bytes that cannot be rebuilt from anything else the site holds.
+
+**Losing the key means losing the artwork.** Whatever holds it belongs in the backup: the database, or `wp-config.php`, or both. Changing it does not re-encrypt anything; existing files keep the fingerprint of the key that wrote them and report as unreadable, which is why the fingerprint is in the header at all.
 
 Nothing calls `get_option( 'aggr_settings' )` outside `inc/Core/class-settings.php`. The shape is declared once in `Domain\Settings_Schema` and written only through `Core\Settings::save()`, which rejects the whole payload on any error. The WordPress Settings API (`register_setting` / `options.php`) is not used: that screen is gated on `manage_options`, and ours is `aggr_manage_settings`.
 
@@ -150,6 +222,7 @@ array(
     2 => install_org_access,
     4 => install_delivery_tables,  // aggr_events + aggr_rollups
     5 => migrate_event_token_uniqueness,
+    12 => install_line_items_and_start_backfill,
 )
 ```
 
@@ -176,7 +249,7 @@ index against live `SHOW COLUMNS` / `SHOW INDEX` results after install.
 ## Uninstall
 
 `uninstall.php` runs only on a real uninstall, never on deactivation. It drops
-the audit, organization-access, events, and rollups tables, removes both roles and all granted
+the audit, organization-access, line-item, events, and rollups tables, removes both roles and all granted
 capabilities, and deletes every `aggr_*` option. Dropping access rows removes
 outstanding bearer invitations and pending personal data. If business content
 is preserved and the plugin is later reinstalled, canonical identities are

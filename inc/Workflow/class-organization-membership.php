@@ -108,7 +108,10 @@ final class Organization_Membership {
 	 */
 	public function invite( int $org_id, string $email, int $actor_id ): bool|WP_Error {
 		if ( ! $this->can_manage( $org_id, $actor_id ) || ! $this->organizations->is_active( $org_id ) ) {
-			return new WP_Error( 'aggr_org_access_denied' );
+			return new WP_Error(
+				'aggr_org_access_denied',
+				__( 'You cannot manage that organization.', 'aggressive-ads' )
+			);
 		}
 
 		$email = strtolower( sanitize_email( $email ) );
@@ -201,7 +204,10 @@ final class Organization_Membership {
 	 */
 	public function approve( int $request_id, int $org_id, int $actor_id ): bool|WP_Error {
 		if ( ! $this->can_manage( $org_id, $actor_id ) ) {
-			return new WP_Error( 'aggr_org_access_denied' );
+			return new WP_Error(
+				'aggr_org_access_denied',
+				__( 'You cannot manage that organization.', 'aggressive-ads' )
+			);
 		}
 
 		$row = $this->access->pending( $request_id, $org_id, Org_Access_Repository::KIND_REQUEST );
@@ -253,7 +259,10 @@ final class Organization_Membership {
 	 */
 	public function remove( int $org_id, int $user_id, int $actor_id ): bool|WP_Error {
 		if ( ! $this->can_manage( $org_id, $actor_id ) ) {
-			return new WP_Error( 'aggr_org_access_denied' );
+			return new WP_Error(
+				'aggr_org_access_denied',
+				__( 'You cannot manage that organization.', 'aggressive-ads' )
+			);
 		}
 
 		if ( $user_id <= 0 || ! in_array( $user_id, $this->organizations->user_ids_for_org( $org_id ), true ) ) {
@@ -310,7 +319,10 @@ final class Organization_Membership {
 	 */
 	public function deny( int $row_id, int $org_id, int $actor_id ): bool|WP_Error {
 		if ( ! $this->can_manage( $org_id, $actor_id ) ) {
-			return new WP_Error( 'aggr_org_access_denied' );
+			return new WP_Error(
+				'aggr_org_access_denied',
+				__( 'You cannot manage that organization.', 'aggressive-ads' )
+			);
 		}
 
 		$row = $this->access->pending( $row_id, $org_id, Org_Access_Repository::KIND_REQUEST )
@@ -361,7 +373,10 @@ final class Organization_Membership {
 	 */
 	public function transfer( int $org_id, int $new_owner_id, int $actor_id ): bool|WP_Error {
 		if ( ! $this->can_manage( $org_id, $actor_id ) ) {
-			return new WP_Error( 'aggr_org_access_denied' );
+			return new WP_Error(
+				'aggr_org_access_denied',
+				__( 'You cannot manage that organization.', 'aggressive-ads' )
+			);
 		}
 
 		$current_owner = 0;
@@ -431,7 +446,10 @@ final class Organization_Membership {
 	 */
 	public function rename( int $org_id, string $name, int $actor_id ): bool|WP_Error {
 		if ( ! $this->can_manage( $org_id, $actor_id ) ) {
-			return new WP_Error( 'aggr_org_access_denied' );
+			return new WP_Error(
+				'aggr_org_access_denied',
+				__( 'You cannot manage that organization.', 'aggressive-ads' )
+			);
 		}
 
 		$result = $this->organizations->rename( $org_id, $name );

@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Tests\Unit\Domain;
 
 use Aggressive\Ads\Domain\Settings_Schema;
-use Yoast\PHPUnitPolyfills\TestCases\TestCase;
+use PHPUnit\Framework\TestCase;
 
 /**
  * Defaults, merge, and the rejections Brand save depends on. No WordPress:

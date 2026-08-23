@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Tests\Rest;
 
+use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\REST\Organizations_Controller;
@@ -282,24 +283,289 @@ final class OrganizationsWriteTest extends WP_UnitTestCase {
 	/**
 	 * The roster travels back with every membership change.
 	 *
+	 * It rides on `organization`, not on the list rows. The list is paged and
+	 * shows a member count, so shipping every row's roster to render it sent
+	 * the whole directory — names and email addresses — on every read. The
+	 * affected organization still comes back whole, because the modal that
+	 * made the change is open on it.
+	 *
 	 * @return void
 	 */
 	public function test_the_response_carries_the_member_list(): void {
 		wp_set_current_user( $this->administrator );
 
 		$data = $this->call( 'PATCH', '/aggr/v1/organizations/' . $this->org_id, array( 'name' => 'Renamed' ) )->get_data();
-		$row  = null;
 
+		$this->assertIsArray( $data['organization'] );
+		$this->assertSame( $this->org_id, $data['organization']['id'] );
+		$this->assertSame( array( $this->advertiser ), array_column( $data['organization']['member_list'], 'id' ) );
+		$this->assertTrue( $data['organization']['member_list'][0]['is_owner'] );
+
+		// And the list rows must not carry it, which is the point of the change.
 		foreach ( $data['view']['rows'] as $candidate ) {
-			if ( $this->org_id === $candidate['id'] ) {
-				$row = $candidate;
-				break;
-			}
+			$this->assertArrayNotHasKey( 'member_list', $candidate );
+		}
+	}
+
+	/**
+	 * The list pages, and reports the total it paged through.
+	 *
+	 * The screen used to receive every organization and sift them in the
+	 * browser, capped at 500 with nothing in the payload saying so. A search
+	 * for the 501st returned nothing, which reads as "no such organization".
+	 *
+	 * @return void
+	 */
+	public function test_the_list_pages_and_reports_the_real_total(): void {
+		wp_set_current_user( $this->administrator );
+
+		/*
+		 * Organizations, not invitations.
+		 *
+		 * The first version of this created three *members* of the one existing
+		 * organization, so it ran against a single row and passed with paging
+		 * deleted outright — `per_page => 1` cannot be seen to work against a
+		 * one-row table.
+		 */
+		for ( $i = 0; $i < 3; $i++ ) {
+			self::factory()->post->create(
+				array(
+					'post_type'  => Post_Types::ORGANIZATION,
+					'post_title' => 'PAGING FIXTURE ' . $i,
+				)
+			);
 		}
 
-		$this->assertIsArray( $row );
-		$this->assertSame( array( $this->advertiser ), array_column( $row['member_list'], 'id' ) );
-		$this->assertTrue( $row['member_list'][0]['is_owner'] );
+		$total = $this->count_all_organizations();
+
+		// Assert the fixture is real before asserting on it.
+		$this->assertGreaterThanOrEqual( 4, $total );
+
+		$first = $this->call(
+			'GET',
+			'/aggr/v1/organizations',
+			array(
+				'per_page' => 1,
+				'page'     => 1,
+			)
+		);
+
+		$this->assertSame( 200, $first->get_status() );
+
+		$view = $first->get_data()['view'];
+
+		// One row out of four or more. A per_page the query ignored would
+		// return every organization and still look like a successful page.
+		$this->assertCount( 1, $view['rows'] );
+		$this->assertSame( 1, $view['page'] );
+		$this->assertSame( $total, $view['total'] );
+
+		// And page two must hold a different organization, or "paging" is one
+		// page repeated.
+		$second = $this->call(
+			'GET',
+			'/aggr/v1/organizations',
+			array(
+				'per_page' => 1,
+				'page'     => 2,
+			)
+		);
+
+		$second_view = $second->get_data()['view'];
+
+		$this->assertCount( 1, $second_view['rows'] );
+		$this->assertNotSame( $view['rows'][0]['id'], $second_view['rows'][0]['id'] );
+	}
+
+	/**
+	 * Sort direction reaches the query.
+	 *
+	 * The client can only sort by name, and the server used to hardcode ASC, so
+	 * clicking the header flipped the arrow and returned the same page.
+	 *
+	 * @return void
+	 */
+	public function test_sort_direction_is_honoured(): void {
+		wp_set_current_user( $this->administrator );
+
+		foreach ( array( 'AAA PAGING FIRST', 'ZZZ PAGING LAST' ) as $name ) {
+			self::factory()->post->create(
+				array(
+					'post_type'  => Post_Types::ORGANIZATION,
+					'post_title' => $name,
+				)
+			);
+		}
+
+		$ascending = $this->call(
+			'GET',
+			'/aggr/v1/organizations',
+			array(
+				'order'    => 'asc',
+				'per_page' => 1,
+			)
+		);
+
+		$descending = $this->call(
+			'GET',
+			'/aggr/v1/organizations',
+			array(
+				'order'    => 'desc',
+				'per_page' => 1,
+			)
+		);
+
+		$this->assertSame( 'AAA PAGING FIRST', $ascending->get_data()['view']['rows'][0]['name'] );
+		$this->assertSame( 'ZZZ PAGING LAST', $descending->get_data()['view']['rows'][0]['name'] );
+	}
+
+	/**
+	 * A write does not filter the page it returns.
+	 *
+	 * `POST /organizations/{id}/state` carries the new state in its body, and a
+	 * body parameter outranks the query string. While the list filter was also
+	 * called `state`, suspending from an unfiltered list came back as a
+	 * suspended-only page with a suspended-only total, and the client adopted
+	 * it — so the table appeared to collapse to a single row.
+	 *
+	 * @return void
+	 */
+	public function test_suspending_does_not_filter_the_returned_page(): void {
+		wp_set_current_user( $this->administrator );
+
+		self::factory()->post->create(
+			array(
+				'post_type'  => Post_Types::ORGANIZATION,
+				'post_title' => 'STILL ACTIVE ELSEWHERE',
+			)
+		);
+
+		$total = $this->count_all_organizations();
+		$this->assertGreaterThanOrEqual( 2, $total );
+
+		$response = $this->call(
+			'POST',
+			'/aggr/v1/organizations/' . $this->org_id . '/state',
+			array( 'state' => 'suspended' )
+		);
+
+		$this->assertSame( 200, $response->get_status() );
+
+		// The whole list, not the suspended slice of it.
+		$this->assertSame( $total, $response->get_data()['view']['total'] );
+	}
+
+	/**
+	 * An organization with no state meta still counts as active.
+	 *
+	 * `Org_Repository::state()` returns active for anything that is not
+	 * literally 'suspended', missing meta included. A filter written as
+	 * `state = 'active'` would agree with it everywhere except on rows created
+	 * before the meta existed, which would then vanish from the active list
+	 * while continuing to report themselves active on every other screen —
+	 * a disappearance with no error anywhere.
+	 *
+	 * @return void
+	 */
+	public function test_active_filter_includes_organizations_with_no_state_meta(): void {
+		wp_set_current_user( $this->administrator );
+
+		delete_post_meta( $this->org_id, Org_Repository::META_ORG_STATE );
+
+		// Assert the fixture is really in the state the test is about, before
+		// asserting anything on top of it.
+		$this->assertSame( '', (string) get_post_meta( $this->org_id, Org_Repository::META_ORG_STATE, true ) );
+		$this->assertSame( Org_Repository::STATE_ACTIVE, $this->organizations->state( $this->org_id ) );
+
+		$response = $this->call( 'GET', '/aggr/v1/organizations', array( 'filter_state' => Org_Repository::STATE_ACTIVE ) );
+
+		$this->assertSame( 200, $response->get_status() );
+
+		$ids = array_column( $response->get_data()['view']['rows'], 'id' );
+
+		$this->assertContains( $this->org_id, $ids );
+	}
+
+	/**
+	 * Suspended filtering returns only the suspended.
+	 *
+	 * The negative half: a filter that matched everything would pass the test
+	 * above and be useless.
+	 *
+	 * @return void
+	 */
+	public function test_suspended_filter_excludes_active_organizations(): void {
+		wp_set_current_user( $this->administrator );
+
+		$before = array_column(
+			$this->call( 'GET', '/aggr/v1/organizations', array( 'filter_state' => Org_Repository::STATE_SUSPENDED ) )->get_data()['view']['rows'],
+			'id'
+		);
+
+		$this->assertNotContains( $this->org_id, $before );
+
+		$this->assertTrue( $this->organizations->set_state( $this->org_id, Org_Repository::STATE_SUSPENDED ) );
+
+		$after = array_column(
+			$this->call( 'GET', '/aggr/v1/organizations', array( 'filter_state' => Org_Repository::STATE_SUSPENDED ) )->get_data()['view']['rows'],
+			'id'
+		);
+
+		$this->assertContains( $this->org_id, $after );
+	}
+
+	/**
+	 * Reproduces the browser's rename: query args plus a JSON body.
+	 *
+	 * @return void
+	 */
+	public function test_probe_rename_with_query_args(): void {
+		wp_set_current_user( $this->administrator );
+
+		$request = new WP_REST_Request( 'PATCH', '/aggr/v1/organizations/' . $this->org_id );
+		$request->set_query_params(
+			array(
+				'page'     => '1',
+				'per_page' => '25',
+				'search'   => '',
+				'state'    => '',
+			)
+		);
+		$request->set_header( 'content-type', 'application/json' );
+		$request->set_body( (string) wp_json_encode( array( 'name' => 'Probe Renamed' ) ) );
+
+		$response = rest_get_server()->dispatch( $request );
+
+		if ( 200 !== $response->get_status() ) {
+			$data = $response->get_data();
+			$this->fail( 'status ' . $response->get_status() . ' :: ' . wp_json_encode( $data ) );
+		}
+
+		$this->assertSame( 200, $response->get_status() );
+	}
+
+	/**
+	 * Every organization the repository holds, counted independently.
+	 *
+	 * @return int
+	 */
+	private function count_all_organizations(): int {
+		// found_posts rather than a big numberposts: the count must be the real
+		// one, and asking for a page of rows to count them is the bug this
+		// test exists to catch.
+		$query = new \WP_Query(
+			array(
+				// The constant, not the literal: guessing the slug here counted
+				// zero organizations and the assertion still read as a real
+				// comparison against the route's total.
+				'post_type'      => Post_Types::ORGANIZATION,
+				'post_status'    => 'any',
+				'posts_per_page' => 1,
+				'fields'         => 'ids',
+			)
+		);
+
+		return (int) $query->found_posts;
 	}
 
 	/**

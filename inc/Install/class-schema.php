@@ -24,7 +24,7 @@ final class Schema {
 	 *
 	 * Drives the migration walker in Upgrader.
 	 */
-	public const DB_VERSION = 9;
+	public const DB_VERSION = 13;
 
 	/**
 	 * The audit table's name, without the site's table prefix.
@@ -39,6 +39,97 @@ final class Schema {
 
 	/** Campaign/placement/day counters. Reporting reads this, never the event log. */
 	public const ROLLUPS_TABLE = 'aggr_rollups';
+
+	/** Delivery strategies owned by campaigns. */
+	public const LINE_ITEMS_TABLE = 'aggr_line_items';
+
+	/**
+	 * Campaign line items.
+	 *
+	 * `default_key` is 1 only for the compatibility line item and NULL for all
+	 * future siblings. MySQL permits multiple NULL values in a unique index, so
+	 * this prevents two default rows without preventing P2 from adding multiple
+	 * ordinary line items beneath the same campaign.
+	 *
+	 * @param string $table_name      Fully prefixed table name.
+	 * @param string $charset_collate Database charset and collation.
+	 */
+	public static function line_items_table_ddl( string $table_name, string $charset_collate ): string {
+		return "CREATE TABLE {$table_name} (
+	id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	campaign_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	organization_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	name varchar(191) NOT NULL DEFAULT '',
+	name_is_derived tinyint(1) unsigned NOT NULL DEFAULT 1,
+	status varchar(16) NOT NULL DEFAULT 'draft',
+	start_at_ts bigint(20) unsigned NOT NULL DEFAULT 0,
+	end_at_ts bigint(20) unsigned NOT NULL DEFAULT 0,
+	pricing_model varchar(20) NOT NULL DEFAULT 'flat',
+	goal_type varchar(20) NOT NULL DEFAULT 'none',
+	goal_amount bigint(20) unsigned NOT NULL DEFAULT 0,
+	budget_cents bigint(20) unsigned NOT NULL DEFAULT 0,
+	daily_cap bigint(20) unsigned NOT NULL DEFAULT 0,
+	lifetime_cap bigint(20) unsigned NOT NULL DEFAULT 0,
+	priority smallint(5) unsigned NOT NULL DEFAULT 100,
+	pacing_mode varchar(16) NOT NULL DEFAULT 'even',
+	weight int(10) unsigned NOT NULL DEFAULT 100,
+	targeting_rules longtext NULL,
+	frequency_policy longtext NULL,
+	delivery_settings longtext NULL,
+	revision bigint(20) unsigned NOT NULL DEFAULT 1,
+	default_key tinyint(1) unsigned NULL DEFAULT NULL,
+	created_at_ts bigint(20) unsigned NOT NULL DEFAULT 0,
+	updated_at_ts bigint(20) unsigned NOT NULL DEFAULT 0,
+	PRIMARY KEY  (id),
+	UNIQUE KEY campaign_default (campaign_id,default_key),
+	KEY campaign_status (campaign_id,status,id),
+	KEY organization_status (organization_id,status,id),
+	KEY delivery_window (status,start_at_ts,end_at_ts,id)
+) {$charset_collate};";
+	}
+
+	/**
+	 * Line-item table columns.
+	 *
+	 * @return array<int, string>
+	 */
+	public static function line_items_columns(): array {
+		return array(
+			'id',
+			'campaign_id',
+			'organization_id',
+			'name',
+			'name_is_derived',
+			'status',
+			'start_at_ts',
+			'end_at_ts',
+			'pricing_model',
+			'goal_type',
+			'goal_amount',
+			'budget_cents',
+			'daily_cap',
+			'lifetime_cap',
+			'priority',
+			'pacing_mode',
+			'weight',
+			'targeting_rules',
+			'frequency_policy',
+			'delivery_settings',
+			'revision',
+			'default_key',
+			'created_at_ts',
+			'updated_at_ts',
+		);
+	}
+
+	/**
+	 * Line-item table indexes.
+	 *
+	 * @return array<int, string>
+	 */
+	public static function line_items_index_names(): array {
+		return array( 'PRIMARY', 'campaign_default', 'campaign_status', 'organization_status', 'delivery_window' );
+	}
 
 	/**
 	 * Organization identity and access workflow table.

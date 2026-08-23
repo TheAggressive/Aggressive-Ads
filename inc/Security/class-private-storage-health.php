@@ -103,24 +103,25 @@ final class Private_Storage_Health implements Service {
 			/*
 			 * Recommended, not critical, and the distinction is deliberate.
 			 *
-			 * WordPress serves the media of unpublished posts from the same
-			 * uploads directory and ships no deny rule for it, so a plugin that
-			 * calls this a broken install is holding the site to a standard the
-			 * platform does not meet. What is actually reachable here is
-			 * creative still awaiting review — approved originals are deleted at
-			 * promotion — under a UUID filename no code path ever emits, in a
-			 * directory whose listing is refused. Reaching one means guessing
-			 * 122 bits.
+			 * **What is served is ciphertext.** Stored creative is encrypted at
+			 * rest with a key that is not in the uploads directory, so a server
+			 * that hands out this file hands out an authenticated blob. That is
+			 * the reason this reads as a missing layer rather than an exposure,
+			 * and it is a stronger reason than the ones that used to be here:
+			 * the UUID filename, the refused directory listing and the deletion
+			 * of approved originals all still hold, but none of them would
+			 * matter if the bytes themselves were readable.
 			 *
-			 * A red banner on every admin page for that trains people to
-			 * dismiss Site Health, which costs more than it protects. The rule
-			 * below is still worth adding; it is defence in depth rather than
-			 * the control everything rests on.
+			 * WordPress also serves the media of unpublished posts from the
+			 * same directory and ships no deny rule for it, so calling this a
+			 * broken install holds the site to a standard the platform does not
+			 * meet. A red banner on every admin page for that trains people to
+			 * dismiss Site Health, which costs more than it protects.
 			 */
 			return $this->result(
 				'recommended',
 				__( 'Unapproved advertising creative is not denied by the web server', 'aggressive-ads' ),
-				__( 'A direct request for a private-storage verification file was served rather than refused. Files there are named with unguessable identifiers that nothing publishes, and only creative still awaiting review is kept, so this is a missing layer rather than an open door. Add the deny rule to close it.', 'aggressive-ads' ),
+				__( 'A direct request for a private-storage verification file was served rather than refused. Creative stored there is encrypted at rest, so what a request would return is unreadable without a key the directory does not contain — this is a missing layer rather than an open door. Add the deny rule to close it.', 'aggressive-ads' ),
 				$this->remedy_html()
 			);
 		}

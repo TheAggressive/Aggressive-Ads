@@ -10,7 +10,8 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Tests\Unit\Domain;
 
 use Aggressive\Ads\Domain\Campaign_Rules;
-use Yoast\PHPUnitPolyfills\TestCases\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
 
 /**
  * Value-level rules, with `now` passed in so nothing here behaves differently
@@ -23,9 +24,8 @@ final class CampaignRulesTest extends TestCase {
 	 *
 	 * @param string $url A URL an advertiser would legitimately enter.
 	 * @return void
-	 *
-	 * @dataProvider data_valid_urls
 	 */
+	#[DataProvider( 'data_valid_urls' )]
 	public function test_valid_click_urls_are_accepted( string $url ): void {
 		$this->assertTrue( Campaign_Rules::is_valid_click_url( $url ), "Rejected a legitimate URL: {$url}" );
 	}
@@ -57,9 +57,8 @@ final class CampaignRulesTest extends TestCase {
 	 *
 	 * @param string $url A URL that must not be accepted.
 	 * @return void
-	 *
-	 * @dataProvider data_invalid_urls
 	 */
+	#[DataProvider( 'data_invalid_urls' )]
 	public function test_invalid_click_urls_are_refused( string $url ): void {
 		$this->assertFalse( Campaign_Rules::is_valid_click_url( $url ), "Accepted a URL it should not: {$url}" );
 	}
@@ -106,7 +105,7 @@ final class CampaignRulesTest extends TestCase {
 	 * The live ad-group taxonomy contains a term named with U+00D7, and every
 	 * other one uses the letter. Accepting it here would let a size that looks
 	 * right flow through to a placement that never matches — a bug that reads
-	 * as a typo. See docs/known-issues.md.
+	 * as a typo. The stored grammar is ASCII `x`; see docs/architecture.md.
 	 *
 	 * @return void
 	 */
@@ -120,9 +119,8 @@ final class CampaignRulesTest extends TestCase {
 	 *
 	 * @param string $size A size string that is not one.
 	 * @return void
-	 *
-	 * @dataProvider data_invalid_sizes
 	 */
+	#[DataProvider( 'data_invalid_sizes' )]
 	public function test_invalid_sizes_are_refused( string $size ): void {
 		$this->assertNull( Campaign_Rules::parse_size( $size ) );
 	}

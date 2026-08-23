@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Install;
 
 use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Portal\Router;
 use Aggressive\Ads\Portal\Routes;
 use Aggressive\Ads\Workflow\Click_Hop;
 
@@ -25,7 +26,9 @@ use Aggressive\Ads\Workflow\Click_Hop;
  * portal 404ing with nothing in any log.
  *
  * So this asserts the end state rather than the procedure, and offers the one
- * repair that fixes every cause. See docs/known-issues.md.
+ * repair that fixes every cause. `bin/ci/check-rewrite-version.php` is the
+ * other half — it refuses a rule change that forgets the version bump before
+ * it is pushed. See docs/portal-routing-and-ui.md.
  */
 final class Rewrite_Health implements Service {
 
@@ -114,7 +117,7 @@ final class Rewrite_Health implements Service {
 			__( 'The advertiser portal is not reachable', 'aggressive-ads' ),
 			sprintf(
 				/* translators: %s: comma-separated list of URL paths, already translated and escaped by the caller. */
-				__( 'These paths have no rewrite rule and will return 404: %s. This normally follows a deployment that changed files without reactivating the plugin.', 'aggressive-ads' ),
+				__( 'These paths are not served by the rewrite rules currently installed, and will return 404: %s. This normally follows a deployment that changed files without reactivating the plugin.', 'aggressive-ads' ),
 				implode( ', ', $missing )
 			),
 			$this->repair_button()
@@ -122,7 +125,7 @@ final class Rewrite_Health implements Service {
 	}
 
 	/**
-	 * The advertised paths that no installed rule would match.
+	 * The advertised paths the installed rules do not actually serve.
 	 *
 	 * Reads the stored rules rather than the declared version, because the
 	 * version only records that a flush was *attempted*. A restored database,
@@ -130,56 +133,47 @@ final class Rewrite_Health implements Service {
 	 * the version current and the rules gone — and that is the state the
 	 * administrator is actually looking at.
 	 *
+	 * Every declared rule is compared by key **and by target**, against
+	 * `Router::rules()` and `Click_Hop::rules()` rather than a copy of the
+	 * grammar kept here. Two earlier versions were weaker in ways that both
+	 * reported "fine" during the outage they exist to detect:
+	 *
+	 * - The first concatenated every rule key and searched for the base as a
+	 *   substring, so an ordinary page at /advertiser-terms/ satisfied it while
+	 *   every /advertiser/ URL 404ed.
+	 * - The second matched the base as a whole segment, which fixed that but
+	 *   still asked only whether *some* rule opened with the path. A deploy
+	 *   that added a rule, or changed where one points, leaves that check green
+	 *   and the new URLs 404ing — which is the far likelier stale-rules deploy,
+	 *   because it is the one where somebody edited the routing code.
+	 *
 	 * @return array<int, string> Human-readable paths, or an empty array.
 	 */
 	private function missing_rules(): array {
-		$rules = get_option( 'rewrite_rules', array() );
-		$rules = is_array( $rules ) ? $rules : array();
+		$installed = get_option( 'rewrite_rules', array() );
+		$installed = is_array( $installed ) ? $installed : array();
+
+		$declared = array(
+			'/' . Routes::base() . '/'  => Router::rules( Routes::base() ),
+			'/' . Click_Hop::PATH . '/' => Click_Hop::rules(),
+		);
 
 		$missing = array();
 
-		foreach ( array( Routes::base(), Click_Hop::PATH ) as $base ) {
-			if ( ! self::has_rule_for( $rules, (string) $base ) ) {
-				$missing[] = '/' . $base . '/';
+		foreach ( $declared as $path => $rules ) {
+			foreach ( $rules as $rule ) {
+				if (
+					! isset( $installed[ $rule['regex'] ] )
+					|| (string) $installed[ $rule['regex'] ] !== $rule['query']
+				) {
+					$missing[] = (string) $path;
+
+					break;
+				}
 			}
 		}
 
 		return $missing;
-	}
-
-	/**
-	 * Whether any installed rule actually opens with this path segment.
-	 *
-	 * The first version concatenated every rule key and looked for the base as a
-	 * substring, which any unrelated rule containing the word would satisfy: a
-	 * page at /advertiser-terms/ produced a rule whose key contains
-	 * "advertiser", so the check reported the portal reachable while every
-	 * /advertiser/ URL returned a 404. A health check that answers "fine" during
-	 * the outage it exists to detect is worse than no check.
-	 *
-	 * Rule keys are regular expressions anchored at the start of the path, so
-	 * the segment is matched as a whole one — followed by a separator, an end of
-	 * pattern, or a regex construct — rather than by any prefix that shares its
-	 * letters.
-	 *
-	 * @param array<string, mixed> $rules Installed rewrite rules.
-	 * @param string               $base  Path segment the plugin advertises.
-	 * @return bool
-	 */
-	private static function has_rule_for( array $rules, string $base ): bool {
-		if ( '' === $base ) {
-			return false;
-		}
-
-		$expected = '#^\^?' . preg_quote( $base, '#' ) . '(?:/|\\|\$|\(|\[|$)#';
-
-		foreach ( array_keys( $rules ) as $key ) {
-			if ( 1 === preg_match( $expected, (string) $key ) ) {
-				return true;
-			}
-		}
-
-		return false;
 	}
 
 	/**

@@ -41,6 +41,13 @@ PACKAGE_FORBIDDEN=(
 	test-results
 	playwright-report
 	playwright.config.ts
+	# Dev artifacts rather than directories, and the reason they are listed:
+	# package.sh rsyncs the working tree, not `git ls-files`, so a gitignored
+	# file still reaches the archive. .phpunit.result.cache did — 109 KB of
+	# PHPUnit's result cache — and made the "reproducible archive" claim false,
+	# because its contents depend on which tests that machine last ran.
+	.phpunit.result.cache
+	.phpunit.cache
 )
 
 # Files with no import graph pointing at them, so nothing else notices when one
@@ -257,12 +264,22 @@ while IFS= read -r file; do
 	php -l "${file}" >/dev/null 2>&1 || fail "syntax error in ${file#"${root}/"}"
 done < <(find "${root}" -name '*.php')
 
-# 7. Every translation has been compiled. Skipping the compile step is
-#    invisible: the site simply renders English, and the first report arrives
-#    weeks later from a user.
+# 7. Every locale the repository carries reached the archive compiled.
+#
+#    Skipping the compile step is invisible: the site simply renders English,
+#    and the first report arrives weeks later from a user.
+#
+#    Deliberately iterating the **source** catalogs rather than the archive's.
+#    The archive no longer ships .po files — WordPress never reads one — and a
+#    loop over `find "${root}" -name '*.po'` would then match nothing and report
+#    success over a release with no translations in it at all. Anchoring on the
+#    committed catalogs also catches the case the old form could not: a locale
+#    whose .mo never made it into the package, where both files are absent from
+#    the archive and there is nothing left to notice.
 while IFS= read -r po; do
-	[ -f "${po%.po}.mo" ] || fail "no compiled .mo for ${po#"${root}/"}"
-done < <(find "${root}" -name '*.po' 2>/dev/null)
+	locale="$(basename "${po}" .po)"
+	[ -f "${root}/languages/${locale}.mo" ] || fail "languages/${locale}.mo is missing from the archive"
+done < <(find languages -maxdepth 1 -name '*.po' 2>/dev/null)
 
 # 8. Built assets are present whenever there are sources to build them from.
 #    Tied to a real fact rather than skipped: the day src/ appears, this starts

@@ -12,7 +12,8 @@ namespace Aggressive\Ads\Tests\Unit\Security;
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Security\Roles;
-use Yoast\PHPUnitPolyfills\TestCases\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
 
 /**
  * The declared matrix. That the matrix is actually applied to real WP_User
@@ -45,9 +46,8 @@ final class RolesMatrixTest extends TestCase {
 	 *
 	 * @param string $forbidden A capability advertisers must never hold.
 	 * @return void
-	 *
-	 * @dataProvider data_forbidden_advertiser_capabilities
 	 */
+	#[DataProvider( 'data_forbidden_advertiser_capabilities' )]
 	public function test_advertiser_lacks_dangerous_core_capabilities( string $forbidden ): void {
 		$caps = Roles::definitions()['aggr_advertiser']['capabilities'];
 

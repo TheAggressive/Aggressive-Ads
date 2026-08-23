@@ -1,0 +1,133 @@
+name: 🌐 i18n MT drafts
+
+# Machine-translates empty and fuzzy catalog entries and opens a pull request.
+#
+# It never pushes to a protected branch, and it is never part of `build` or
+# `release`. Unreviewed machine output must not reach a site: the review gate is
+# the pull request, and it is the point of the whole workflow.
+#
+# No third-party pull-request action. `gh` is preinstalled on the runner, and
+# adding a marketplace action here would mean one more pinned SHA to keep
+# current for a job that runs `gh pr create` once.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'languages/*.pot'
+  workflow_dispatch:
+    inputs:
+      locale:
+        description: 'Single locale (e.g. fr_FR). Blank does every catalog.'
+        required: false
+        type: string
+
+# The default token is read-only; this job needs to push a branch and open a PR.
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: i18n-translate
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '24'
+
+jobs:
+  draft:
+    name: Draft translations
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: true
+
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # No-op rather than fail when no locale exists yet: this workflow fires on
+      # every POT change, and a repository with no catalogs is a normal state.
+      - id: catalogs
+        run: |
+          if ls languages/*.po > /dev/null 2>&1; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "No locale .po files. Scaffold one with: pnpm i18n:locale -- fr_FR"
+          fi
+
+      - name: Machine-translate empty and fuzzy entries
+        if: steps.catalogs.outputs.present == 'true'
+        env:
+          DEEPL_AUTH_KEY: ${{ secrets.DEEPL_AUTH_KEY }}
+          I18N_MT_EMAIL: ${{ secrets.I18N_MT_EMAIL }}
+          # Through the environment, never interpolated into the script body: a
+          # workflow_dispatch input expanded inline is a shell injection anyone
+          # who can start the workflow controls.
+          INPUT_LOCALE: ${{ inputs.locale }}
+        run: |
+          if [ -n "${INPUT_LOCALE}" ]; then
+            pnpm i18n:translate -- --locale="${INPUT_LOCALE}"
+          else
+            pnpm i18n:translate
+          fi
+
+      # The same gate CI runs. Machine output that drops a placeholder must fail
+      # here rather than arrive in a pull request looking reviewed.
+      - name: Validate the catalogs
+        if: steps.catalogs.outputs.present == 'true'
+        run: node bin/i18n/lint-placeholders.mjs
+
+      - name: Open a pull request
+        if: steps.catalogs.outputs.present == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if git diff --quiet -- languages; then
+            echo "No catalog changes to propose."
+            exit 0
+          fi
+
+          branch="i18n/mt-drafts"
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "${branch}"
+          git add languages
+          # chore(i18n) on purpose: semantic-release must not cut a version for
+          # a translation draft. Merged catalogs ride the next feat/fix release.
+          git commit -m "chore(i18n): machine-translated draft catalogs"
+          git push --force-with-lease origin "${branch}"
+
+          if [ -z "$(gh pr list --head "${branch}" --state open --json number --jq '.[].number')" ]; then
+            cat > /tmp/pr-body.md <<'BODY'
+          Machine translation filled empty and fuzzy entries. Every filled entry is
+          flagged `aggr-mt` and carries a review comment naming the provider.
+
+          **Skim before merging.** Machine output is a draft: check placeholders,
+          product names, and the register of short UI labels. Without a
+          `DEEPL_AUTH_KEY` secret this ran on MyMemory, which is noticeably rougher
+          on the short labels this plugin is mostly made of.
+
+          Compiled catalogs are not committed. The release job builds them from
+          whatever `.po` is on `master`, so merged translations ride the next
+          feat/fix release without a version bump of their own.
+          BODY
+            sed -i 's/^          //' /tmp/pr-body.md
+
+            gh pr create \
+              --head "${branch}" \
+              --base master \
+              --title "chore(i18n): machine-translated draft catalogs" \
+              --body-file /tmp/pr-body.md
+          else
+            echo "Pull request already open for ${branch}; pushed an update to it."
+          fi

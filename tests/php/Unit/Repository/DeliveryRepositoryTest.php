@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Tests\Unit\Repository;
 
 use Aggressive\Ads\Repository\Delivery_Repository;
-use Yoast\PHPUnitPolyfills\TestCases\TestCase;
+use PHPUnit\Framework\TestCase;
 
 /** Invalid identifiers never reach WordPress or SQL. */
 final class DeliveryRepositoryTest extends TestCase {

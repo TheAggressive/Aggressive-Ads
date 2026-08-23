@@ -11,6 +11,9 @@ namespace Aggressive\Ads\Tests\Security;
 
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Portal\Login_Actions;
+use Aggressive\Ads\Portal\Password_Actions;
+use Aggressive\Ads\Portal\Signup_Actions;
 use Aggressive\Ads\Security\Admin_Guard;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Security\Roles;
@@ -61,6 +64,39 @@ final class AttackSurfaceTest extends WP_UnitTestCase {
 		}
 
 		$this->assertSame( array(), $found, 'The plugin registered an admin-ajax handler.' );
+	}
+
+	/**
+	 * Public admin-post handlers are an explicit, closed allowlist.
+	 *
+	 * A newly registered `admin_post_nopriv_aggr_*` hook is a public mutation
+	 * surface. Failing closed here forces its authentication, rate-limit and
+	 * non-enumeration contract to be reviewed before the route can ship.
+	 *
+	 * @return void
+	 */
+	public function test_public_admin_post_handlers_are_allowlisted(): void {
+		global $wp_filter;
+
+		$found = array();
+
+		foreach ( array_keys( $wp_filter ) as $hook ) {
+			if ( is_string( $hook ) && str_starts_with( $hook, 'admin_post_nopriv_aggr_' ) ) {
+				$found[] = $hook;
+			}
+		}
+
+		$expected = array(
+			'admin_post_nopriv_' . Login_Actions::LOGIN_ACTION,
+			'admin_post_nopriv_' . Password_Actions::REQUEST_ACTION,
+			'admin_post_nopriv_' . Password_Actions::SET_ACTION,
+			'admin_post_nopriv_' . Signup_Actions::SIGNUP_ACTION,
+		);
+
+		sort( $found );
+		sort( $expected );
+
+		$this->assertSame( $expected, $found );
 	}
 
 	/**

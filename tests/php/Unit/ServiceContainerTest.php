@@ -13,7 +13,7 @@ use ArrayObject;
 use Aggressive\Ads\Container_Exception;
 use Aggressive\Ads\Service_Container;
 use stdClass;
-use Yoast\PHPUnitPolyfills\TestCases\TestCase;
+use PHPUnit\Framework\TestCase;
 
 /**
  * The container's contract: lazy, singleton, explicit, and loud about mistakes.
@@ -32,7 +32,7 @@ final class ServiceContainerTest extends TestCase {
 	 *
 	 * @return void
 	 */
-	protected function set_up(): void {
+	protected function setUp(): void {
 		$this->container = new Service_Container();
 	}
 

@@ -1,0 +1,9 @@
+# Compiled catalogs are build output: produced by `pnpm i18n:compile` and
+# shipped by bin/release/package.sh, never committed. The .po files beside them
+# are the source of record and ARE committed.
+#
+# bin/release/verify-package.sh refuses an archive containing a .po without its
+# .mo, which is the check that catches a release that skipped compilation —
+# a failure that is otherwise invisible, because the site just renders English.
+*.mo
+*.json

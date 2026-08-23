@@ -102,6 +102,31 @@ final class TrackingDurabilityTest extends WP_UnitTestCase {
 		$this->assertSame( 15, $remaining );
 	}
 
+	/** Repository diagnostics never alter the caller's database error policy. */
+	public function test_event_writes_and_replay_checks_restore_database_error_suppression(): void {
+		global $wpdb;
+
+		$token = hash( 'sha256', 'suppression-state' );
+		$ip    = str_repeat( 'e', 64 );
+		$prior = $wpdb->suppress_errors( true );
+
+		try {
+			$this->assertTrue( $this->events->insert( Event_Repository::TYPE_IMPRESSION, 51, 52, 53, $token, $ip ) );
+			$this->assertTrue( $wpdb->suppress_errors, 'A successful insert changed the caller\'s suppression state.' );
+			$this->assertTrue( $this->events->exists( Event_Repository::TYPE_IMPRESSION, $token ) );
+			$this->assertTrue( $wpdb->suppress_errors, 'A replay check changed the caller\'s suppression state.' );
+
+			$wpdb->suppress_errors( false );
+
+			$this->assertFalse( $this->events->insert( Event_Repository::TYPE_IMPRESSION, 51, 52, 53, $token, $ip ) );
+			$this->assertFalse( $wpdb->suppress_errors, 'A duplicate insert changed the caller\'s suppression state.' );
+			$this->assertTrue( $this->events->exists( Event_Repository::TYPE_IMPRESSION, $token ) );
+			$this->assertFalse( $wpdb->suppress_errors, 'A replay check enabled suppression for its caller.' );
+		} finally {
+			$wpdb->suppress_errors( $prior );
+		}
+	}
+
 	/** Retention cannot overtake the last day known to match the ledger. */
 	public function test_retention_waits_for_the_reconciliation_watermark(): void {
 		global $wpdb;

@@ -65,25 +65,53 @@ final class Creative_Promoter {
 			);
 		}
 
-		$path = $this->storage->resolve( $details['path'] );
-
-		if ( null === $path ) {
+		if ( null === $this->storage->resolve( $details['path'] ) ) {
 			return new WP_Error(
 				'aggr_creative_file_missing',
 				__( 'This creative’s file could not be found.', 'aggressive-ads' )
 			);
 		}
 
+		$actual = $this->storage->checksum( $details['path'] );
+
+		// Two failures, deliberately told apart. "The bytes changed" sends a
+		// reviewer looking for who replaced the artwork; "the bytes cannot be
+		// read" is a lost encryption key or a damaged file, and no amount of
+		// looking at the campaign will explain it.
+		if ( null === $actual ) {
+			return new WP_Error(
+				'aggr_creative_unreadable',
+				__( 'This creative’s file could not be read, so it has not been published. Its stored copy may be damaged, or the site’s creative encryption key may have changed.', 'aggressive-ads' )
+			);
+		}
+
 		// The bytes about to go on a public site must be the bytes somebody
 		// approved.
-		if ( ! $this->storage->matches_checksum( $details['path'], $details['sha256'] ) ) {
+		if ( '' === $details['sha256'] || ! hash_equals( $details['sha256'], $actual ) ) {
 			return new WP_Error(
 				'aggr_creative_changed',
 				__( 'This creative’s file has changed since it was reviewed, so it has not been published.', 'aggressive-ads' )
 			);
 		}
 
-		$attachment_id = $this->sideload( $path, $creative_id, $details );
+		// Stored creative is encrypted, and the Media Library sideload wants a
+		// path it can read. The plaintext exists outside private storage for
+		// the length of this call and no longer — which is why the delete is in
+		// a finally rather than after the happy path.
+		$plaintext = $this->storage->export( $details['path'] );
+
+		if ( null === $plaintext ) {
+			return new WP_Error(
+				'aggr_creative_unreadable',
+				__( 'This creative’s file could not be read, so it has not been published. Its stored copy may be damaged, or the site’s creative encryption key may have changed.', 'aggressive-ads' )
+			);
+		}
+
+		try {
+			$attachment_id = $this->sideload( $plaintext, $creative_id, $details );
+		} finally {
+			wp_delete_file( $plaintext );
+		}
 
 		if ( is_wp_error( $attachment_id ) ) {
 			return $attachment_id;
@@ -150,7 +178,7 @@ final class Creative_Promoter {
 	/**
 	 * Copies the private file into the Media Library.
 	 *
-	 * @param string                                                                            $path        Absolute path to the private file.
+	 * @param string                                                                            $path        Absolute path to readable plaintext bytes.
 	 * @param int                                                                               $creative_id Creative post id.
 	 * @param array{path: string, sha256: string, mime: string, alt_text: string, name: string} $details     Stored details.
 	 * @return int|WP_Error
@@ -171,7 +199,12 @@ final class Creative_Promoter {
 
 		// A name generated from what the file is, never from what it was
 		// called: the original name is a display string and stays one.
-		$filename = wp_unique_filename( $uploads['path'], basename( $path ) );
+		//
+		// Taken from the *stored* name rather than from $path, which is a
+		// decrypted temporary file and therefore ends in .tmp. Deriving the
+		// Media Library filename from it would publish every creative with the
+		// wrong extension.
+		$filename = wp_unique_filename( $uploads['path'], basename( $details['path'] ) );
 		$target   = trailingslashit( $uploads['path'] ) . $filename;
 
 		if ( ! copy( $path, $target ) ) {

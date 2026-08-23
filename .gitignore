@@ -1,6 +1,10 @@
 # Dependencies — never committed, never shipped.
 # vendor/ is dev tooling only; it never ships.
 /vendor/
+
+# The WordPress suites' own PHPUnit 9.6, installed by bin/ci/install-wp-runner.sh.
+# Its composer.json and composer.lock are tracked; the packages are not.
+/tests/wp/vendor/
 /node_modules/
 
 # Build output

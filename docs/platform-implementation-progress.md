@@ -27,6 +27,7 @@ Audited against the source rather than against the documentation.
 | Provider abstraction | Built, one implementation | `Integration\Ad_Provider_Interface` |
 | Packages, inventory placements, organizations | Built | `Admin\*_Screen`, `Repository\Placement_Repository` |
 | Audit trail on business transitions | Built | `Repository\Audit_Repository` |
+| Line-item delivery strategy beneath Campaign | Built; serving cutover waits for P3 | `Repository\Line_Item_Repository`, `Workflow\Line_Item_Editor` |
 
 ### What is thinner than it looks
 
@@ -36,8 +37,9 @@ Audited against the source rather than against the documentation.
 - **Two event types.** `TYPE_IMPRESSION` and `TYPE_CLICK`. There is no request,
   fill, no-fill, served, viewable or conversion event, so fill rate and
   viewability cannot be computed from the ledger at all.
-- **Campaign is the delivery unit.** There is no line item, so delivery strategy
-  and the advertiser's commercial campaign are the same object.
+- **Serving still selects Campaigns.** P1 models line-item delivery strategy,
+  while the native hot path intentionally stays campaign-based until P3 can
+  cut it over to the decision engine as one tested change.
 - **One creative per placement** is assumed by campaign validation.
 - **"Billing" is a settings label**, not a domain. No orders, invoices, payments
   or ledger exist.
@@ -52,17 +54,18 @@ earlier one creates.
 
 ### Foundations
 
-- [ ] **P0 — Baseline and regression safety.** Record the current state of every
-      lane, then add regression coverage around campaign lifecycle, creative
-      approval and replacement, tenant isolation, native fill, click redirect,
-      event recording, signed tokens, cached fills, block rendering and
-      organization permissions. Existing failures documented separately rather
-      than quietly fixed.
-- [ ] **P1 — Line item domain.** The delivery unit beneath Campaign. Dedicated
+- [x] **P0 — Baseline and regression safety.** Every named behavior maps to
+      focused executable coverage, and the PHP, WordPress, multisite, browser,
+      accessibility, static-analysis, build, workflow and dependency-security
+      baselines are green. Environment/version caveats and the existing
+      non-failing advisories are recorded rather than hidden. See
+      [platform-p0-baseline.md](platform-p0-baseline.md).
+- [~] **P1 — Line item domain.** The delivery unit beneath Campaign. Dedicated
       table rather than postmeta; pricing models, goal types, pacing modes,
       priority, weight, targeting rules and frequency policy as columns.
       *Migration: every existing campaign must behave as one default line item
-      without recreating anything, and without interrupting a serving ad.*
+      without recreating anything, and without interrupting a serving ad.* See
+      [data-schema.md](data-schema.md#campaign-line-items).
 - [ ] **P2 — Creative model refactor.** Many creatives per line item and
       placement, with weight, dates, status and revision history. Campaign
       validation stops failing on a second creative and starts requiring one
@@ -140,7 +143,7 @@ earlier one creates.
 - [ ] **P21 — Organization-scoped RBAC.** Owner, admin, campaign manager,
       creative manager, analyst, billing, viewer — scoped per organization, one
       user in several. Layers on top of WordPress capabilities rather than
-      replacing them. *This relaxes invariant 8 in `domain-model.md`; that
+      replacing them. *This relaxes invariant 9 in `domain-model.md`; that
       invariant and its four `$org_ids[0]` call sites must be revisited
       deliberately, not incidentally.*
 - [ ] **P22 — Public API and service accounts.** Versioned surface, scoped

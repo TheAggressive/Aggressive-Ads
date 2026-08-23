@@ -1,0 +1,23 @@
+{
+	"note": "Append-only. A rule change means a new entry with a higher version and the new hash, plus the matching bump to the class constant. Never re-record a hash under a version that is already here: that is the mistake bin/ci/check-rewrite-version.php exists to stop. History starts where the guard does; versions 1 of both sets predate it.",
+	"portal": {
+		"installer": "inc/Portal/class-router.php",
+		"option": "aggr_rewrite_version",
+		"history": [
+			{
+				"version": 2,
+				"hash": "b6b3f98e7090de8164173bd18b04979c3196987b2c61bc2b0919f0c522b0b8a0"
+			}
+		]
+	},
+	"delivery": {
+		"installer": "inc/Workflow/class-click-hop.php",
+		"option": "aggr_delivery_rewrite_version",
+		"history": [
+			{
+				"version": 2,
+				"hash": "f3ff855944c2083df5e26c28e282ca42e9fe3814798bb8c894a2cc4059b88aef"
+			}
+		]
+	}
+}

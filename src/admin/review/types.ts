@@ -76,6 +76,17 @@ export type AuditEvent = {
 	outcome: string;
 };
 
+export type LineItem = {
+	id: number;
+	name: string;
+	status: string;
+	pricing_model: string;
+	goal_type: string;
+	pacing_mode: string;
+	priority: number;
+	weight: number;
+};
+
 export type Campaign = {
 	id: number;
 	title: string;
@@ -99,6 +110,7 @@ export type Campaign = {
 	actions: ReviewAction[];
 	can_view_audit: boolean;
 	audit: AuditEvent[];
+	line_items: LineItem[];
 };
 
 export type Advertiser = {

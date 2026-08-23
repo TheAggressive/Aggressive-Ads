@@ -18,6 +18,9 @@ use Aggressive\Ads\Repository\User_Repository;
  */
 final class Organization_Data {
 
+	/** Rows per page when the client does not say. */
+	public const DEFAULT_PER_PAGE = 25;
+
 	/**
 	 * Constructor.
 	 *
@@ -33,58 +36,103 @@ final class Organization_Data {
 	}
 
 	/**
-	 * Complete organizations-screen state.
+	 * One page of organization rows.
 	 *
-	 * @return array{rows: array<int, array<string, mixed>>}
+	 * Rows carry a member *count*, not the roster. The roster is a list of
+	 * people with their email addresses, and shipping every organization's
+	 * roster to render a table that shows none of them put the whole directory
+	 * into an HTML attribute on every page load. It is fetched per organization
+	 * by `organization()`, when a staff member actually opens one.
+	 *
+	 * @param int    $page     One-based page number.
+	 * @param int    $per_page Rows per page.
+	 * @param string $search   Free-text match against the organization name.
+	 * @param string $state    Org_Repository::STATE_* or '' for all.
+	 * @param string $order    'ASC' or 'DESC', applied to the name.
+	 * @return array{rows: array<int, array<string, mixed>>, total: int, page: int, perPage: int}
 	 */
-	public function view(): array {
-		$rows = array();
+	public function view( int $page = 1, int $per_page = self::DEFAULT_PER_PAGE, string $search = '', string $state = '', string $order = 'ASC' ): array {
+		$found = $this->organizations->page( $page, $per_page, $search, $state, $order );
+		$rows  = array();
 
-		foreach ( $this->organizations->all_ids() as $org_id ) {
-			$owner_id = $this->organizations->owner_user_id( $org_id );
-			$owner    = $owner_id > 0 ? $this->users->by_id( $owner_id ) : null;
-			$list     = $this->campaigns->for_org( $org_id, 1 );
-			$state    = $this->organizations->state( $org_id );
+		foreach ( $found['ids'] as $org_id ) {
+			$rows[] = $this->row( $org_id );
+		}
 
-			/*
-			 * The roster is listed, not counted.
-			 *
-			 * Staff need to act on a specific person — transfer ownership to
-			 * them, or remove them — and a count identifies nobody. The owner is
-			 * marked here rather than compared in the browser, because the rule
-			 * that an owner cannot be removed is the server's and the screen
-			 * should not be re-deriving it.
-			 */
-			$members = array();
+		return array(
+			'rows'    => $rows,
+			'total'   => $found['total'],
+			'page'    => max( 1, $page ),
+			'perPage' => $per_page,
+		);
+	}
 
-			foreach ( $this->organizations->user_ids_for_org( $org_id ) as $member_id ) {
-				$member = $this->users->by_id( $member_id );
+	/**
+	 * One organization, with the roster staff act on.
+	 *
+	 * @param int $org_id Organization post id.
+	 * @return array<string, mixed>|null Null when no such organization exists.
+	 */
+	public function organization( int $org_id ): ?array {
+		if ( ! $this->organizations->exists( $org_id ) ) {
+			return null;
+		}
 
-				if ( null === $member ) {
-					continue;
-				}
+		$row      = $this->row( $org_id );
+		$owner_id = (int) $row['owner_id'];
 
-				$members[] = array(
-					'id'       => $member_id,
-					'name'     => (string) $member->display_name,
-					'email'    => (string) $member->user_email,
-					'is_owner' => $member_id === $owner_id,
-				);
+		/*
+		 * The roster is listed, not counted.
+		 *
+		 * Staff need to act on a specific person — transfer ownership to them,
+		 * or remove them — and a count identifies nobody. The owner is marked
+		 * here rather than compared in the browser, because the rule that an
+		 * owner cannot be removed is the server's and the screen should not be
+		 * re-deriving it.
+		 */
+		$members = array();
+
+		foreach ( $this->organizations->user_ids_for_org( $org_id ) as $member_id ) {
+			$member = $this->users->by_id( $member_id );
+
+			if ( null === $member ) {
+				continue;
 			}
 
-			$rows[] = array(
-				'id'          => $org_id,
-				'name'        => $this->organizations->name( $org_id ),
-				'state'       => $state,
-				'active'      => Org_Repository::STATE_ACTIVE === $state,
-				'owner_id'    => $owner_id,
-				'owner_name'  => null !== $owner ? (string) $owner->display_name : '',
-				'member_list' => $members,
-				'members'     => count( $members ),
-				'campaigns'   => (int) ( $list['total'] ?? 0 ),
+			$members[] = array(
+				'id'       => $member_id,
+				'name'     => (string) $member->display_name,
+				'email'    => (string) $member->user_email,
+				'is_owner' => $member_id === $owner_id,
 			);
 		}
 
-		return array( 'rows' => $rows );
+		$row['member_list'] = $members;
+
+		return $row;
+	}
+
+	/**
+	 * The list-level fields for one organization.
+	 *
+	 * @param int $org_id Organization post id.
+	 * @return array<string, mixed>
+	 */
+	private function row( int $org_id ): array {
+		$owner_id = $this->organizations->owner_user_id( $org_id );
+		$owner    = $owner_id > 0 ? $this->users->by_id( $owner_id ) : null;
+		$list     = $this->campaigns->for_org( $org_id, 1 );
+		$state    = $this->organizations->state( $org_id );
+
+		return array(
+			'id'         => $org_id,
+			'name'       => $this->organizations->name( $org_id ),
+			'state'      => $state,
+			'active'     => Org_Repository::STATE_ACTIVE === $state,
+			'owner_id'   => $owner_id,
+			'owner_name' => null !== $owner ? (string) $owner->display_name : '',
+			'members'    => count( $this->organizations->user_ids_for_org( $org_id ) ),
+			'campaigns'  => (int) ( $list['total'] ?? 0 ),
+		);
 	}
 }

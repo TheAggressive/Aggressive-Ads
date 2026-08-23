@@ -36,6 +36,7 @@ use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Package_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
+use Aggressive\Ads\Repository\Line_Item_Repository;
 use Aggressive\Ads\Repository\User_Repository;
 use Aggressive\Ads\REST\Beacon_Controller;
 use Aggressive\Ads\REST\Fill_Controller;
@@ -98,7 +99,8 @@ final class Runtime_Service_Registrar {
 				$c->get( Placement_Repository::class ),
 				$c->get( Org_Repository::class ),
 				$c->get( Audit_Repository::class ),
-				$c->get( Campaign_Change_Manager::class )
+				$c->get( Campaign_Change_Manager::class ),
+				$c->get( Line_Item_Repository::class )
 			)
 		);
 

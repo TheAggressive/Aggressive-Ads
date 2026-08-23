@@ -11,6 +11,8 @@ namespace Aggressive\Ads\Repository;
 
 use Aggressive\Ads\Core\Post_Types;
 use WP_Error;
+use WP_Post;
+use WP_Query;
 
 /**
  * Resolves who belongs to which organization, and which organization owns an
@@ -38,6 +40,11 @@ final class Org_Repository {
 
 	/** Bounded staff organization catalogue size. */
 	private const MAX_ADMIN_ORGS = 500;
+
+	/**
+	 * Ceiling on a single page, so a crafted per_page cannot ask for the table.
+	 */
+	public const MAX_PER_PAGE = 100;
 
 	public const STATE_ACTIVE    = 'active';
 	public const STATE_SUSPENDED = 'suspended';
@@ -647,6 +654,90 @@ final class Org_Repository {
 	 */
 	public function exists( int $org_id ): bool {
 		return $org_id > 0 && Post_Types::ORGANIZATION === get_post_type( $org_id );
+	}
+
+	/**
+	 * One page of organization ids, with the total the filter actually matched.
+	 *
+	 * `all_ids()` returns a bounded catalogue, and the bound is invisible to
+	 * whoever reads it: past MAX_ADMIN_ORGS the extra organizations simply are
+	 * not there, with nothing in the payload saying so. That was survivable
+	 * while the screen rendered an obvious dump, and stopped being survivable
+	 * when it became a table with a search box — searching for the 501st
+	 * organization returns nothing, which reads as "no such organization"
+	 * rather than "not loaded". So paging happens in the query, and the caller
+	 * is told the real total.
+	 *
+	 * @param int    $page     One-based page number.
+	 * @param int    $per_page Rows per page.
+	 * @param string $search   Free-text match against the organization name.
+	 * @param string $state    self::STATE_ACTIVE, self::STATE_SUSPENDED, or ''.
+	 * @param string $order    'ASC' or 'DESC', applied to the name.
+	 * @return array{ids: array<int, int>, total: int}
+	 */
+	public function page( int $page, int $per_page, string $search = '', string $state = '', string $order = 'ASC' ): array {
+		$page     = max( 1, $page );
+		$per_page = max( 1, min( self::MAX_PER_PAGE, $per_page ) );
+
+		$args = array(
+			'post_type'              => Post_Types::ORGANIZATION,
+			'post_status'            => 'any',
+			'posts_per_page'         => $per_page,
+			'paged'                  => $page,
+			'fields'                 => 'ids',
+			'orderby'                => 'title',
+			'order'                  => 'DESC' === strtoupper( $order ) ? 'DESC' : 'ASC',
+			'update_post_term_cache' => false,
+			'update_post_meta_cache' => false,
+		);
+
+		if ( '' !== $search ) {
+			$args['s'] = $search;
+		}
+
+		if ( self::STATE_SUSPENDED === $state ) {
+			$args['meta_query'] = array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- One indexed meta key, on a paged staff query.
+				array(
+					'key'   => self::META_ORG_STATE,
+					'value' => self::STATE_SUSPENDED,
+				),
+			);
+		} elseif ( self::STATE_ACTIVE === $state ) {
+			/*
+			 * Active is everything that is not suspended, including rows whose
+			 * state meta was never written. `state()` already reads it that
+			 * way, and a filter that tested `= 'active'` instead would agree
+			 * with it on every organization except the ones created before the
+			 * meta existed — which would then vanish from the active list while
+			 * still reporting themselves active everywhere else.
+			 */
+			$args['meta_query'] = array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- One indexed meta key, on a paged staff query.
+				'relation' => 'OR',
+				array(
+					'key'     => self::META_ORG_STATE,
+					'compare' => 'NOT EXISTS',
+				),
+				array(
+					'key'     => self::META_ORG_STATE,
+					'value'   => self::STATE_SUSPENDED,
+					'compare' => '!=',
+				),
+			);
+		}
+
+		$query = new WP_Query( $args );
+		$ids   = array();
+
+		// `fields => 'ids'` yields integers, but WP_Query's own type is the
+		// union, so the cast covers both rather than trusting the argument.
+		foreach ( $query->posts as $post ) {
+			$ids[] = $post instanceof WP_Post ? (int) $post->ID : (int) $post;
+		}
+
+		return array(
+			'ids'   => $ids,
+			'total' => (int) $query->found_posts,
+		);
 	}
 
 	/**

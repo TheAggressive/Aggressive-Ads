@@ -44,18 +44,62 @@ load WordPress into that suite.
 
 Separate PHPUnit configs because **PHPUnit allows exactly one bootstrap per configuration file**. That is the reason for the split, not preference — the unit suite must not load WordPress, and the WordPress suites must. Multisite is its own file so colliding-id tests cannot `markTestSkipped()` on the single-site lane.
 
-## PHPUnit 9.6, not 13
+## Two PHPUnits, chosen by config file
 
-The LAAO theme runs PHPUnit 13 with Brain\Monkey only, deliberately avoiding the WordPress test suite's version ceiling. This plugin goes the other way, and the reason is specific: **the assertions this plugin needs are not expressible under Brain\Monkey.**
+| Suite | Config | Runner | Installed by |
+|---|---|---|---|
+| `tests/php/Unit` | `phpunit.xml.dist` | **PHPUnit 13** — `vendor/bin/phpunit` | `composer install` |
+| `Integration`, `Security`, `Rest`, `Upgrade` | `phpunit-integration.xml.dist` | **PHPUnit 9.6** — `tests/wp/vendor/bin/phpunit` | `bin/ci/install-wp-runner.sh` |
+| the same, multisite | `phpunit-multisite.xml.dist` | **PHPUnit 9.6** | `bin/ci/install-wp-runner.sh` |
+
+`bin/ci/run-wp-tests.sh` picks the binary from the config file. No caller — not
+`verify.sh`, not `run-coverage.sh`, not a person typing a command — has to know
+which suite sits on which major, and `pnpm test:php:unit` and
+`pnpm test:php:integration` are unchanged.
+
+### Why the WordPress suites cannot move
+
+`WP_UnitTestCase_Base` calls `PHPUnit\Util\Test::parseTestMethodAnnotations()`
+from its constructor, and PHPUnit removed `PHPUnit\Util\Test` in 10. Measured,
+not assumed: `wp-phpunit/wp-phpunit` 7.1.0 on PHPUnit 12.5.33 errors on **every**
+integration test before its first assertion. `yoast/phpunit-polyfills` 4.x
+declaring support for PHPUnit 11 and 12 is a red herring — it covers the
+assertion API, not the annotation parser core's base class reaches for.
+
+The check for when this can be deleted is a grep, recorded in
+`tests/wp/README.md`:
+
+```bash
+grep -rn "parseTestMethodAnnotations" tests/wp/vendor/wp-phpunit/
+```
+
+### Why not simply follow LAAO
+
+The LAAO theme runs PHPUnit 13 with Brain\Monkey only, avoiding the WordPress
+test suite's version ceiling by not having a WordPress test suite. This plugin
+cannot, and the reason is specific: **the assertions this plugin needs are not
+expressible under Brain\Monkey.**
 
 A `map_meta_cap` test written with Brain\Monkey mocks `current_user_can()` — and then proves that the mock returns what it was told to return. The actual question is whether core's capability pipeline, with our filter attached at priority 10 taking four arguments, denies advertiser B on advertiser A's campaign. Answering it needs a real `WP_User`, a real `$wp_filter`, and real `map_meta_cap()`.
 
 The same holds for `dbDelta` idempotence (which depends on MySQL's own type normalization), REST authorization (needs a real `WP_REST_Server` and real nonce verification), uploads (touch GD and the filesystem), and "roles survived the upgrade" (is by definition about real `wp_options` state).
 
-The container runs WordPress 7.1 and PHP 8.4 from a digest-pinned Docker
-Official Image. `wp-phpunit/wp-phpunit:7.1.0` supplies the matching Core test
-library, and `yoast/phpunit-polyfills:^4.0` keeps the assertions compatible with
-PHPUnit 9.6. These are **test-only** constraints; no shipped code changes.
+So the pin was moved rather than removed. It now sits on the runner that is
+actually constrained, in `tests/wp/composer.json`, instead of holding back the
+suite that has no reason to be held back. The container runs WordPress 7.1 and
+PHP 8.4 from a digest-pinned Docker Official Image, and
+`wp-phpunit/wp-phpunit:7.1.0` supplies the matching Core test library. All of
+this is **test-only**; no shipped code changes.
+
+### What the unit suite gave up to move
+
+`yoast/phpunit-polyfills` is gone from the unit suite: its `set_up()` /
+`tear_down()` naming existed to bridge PHPUnit majors, and on 13 alone there is
+nothing to bridge. Unit tests extend `PHPUnit\Framework\TestCase` and use
+`setUp()` / `tearDown()`. Doc-comment metadata is gone too — `@dataProvider` is
+now `#[DataProvider]`, because PHPUnit 13 reads attributes and no longer reads
+the docblock. The WordPress suites still use the polyfills, via
+`WP_UnitTestCase`, out of `tests/wp/vendor`.
 
 ## Failure policy
 
@@ -92,7 +136,7 @@ budgets. `TrackingDurabilityTest` proves closed-day rollup repair is exact and
 idempotent and retention deletes are bounded. Measured baselines and the
 reporting command live in [delivery-performance.md](delivery-performance.md).
 
-**security** — every IDOR surface in [threat-model.md](threat-model.md) with a Phase-1 endpoint; advertiser A denied on B's campaign **and a co-member of A's org allowed** (the case that proves ownership is org-scoped rather than accidentally author-scoped); deleted objects mapping to `do_not_allow`; nonce-missing and nonce-forged raising `WPDieException`; signup non-enumeration, anonymous rate limiting, unprivileged-before-ownership ordering and mail-failure rollback; private canonical organization matching, no duplicate tenant, pending users without portal capability, owner-only pending emails, cross-tenant approval denial, email-bound and single-use invitation consumption; owner-scoped member removal with the last-owner guard, cross-tenant removal denial, and advertiser-role cleanup that preserves unrelated WordPress roles; ownership transfer only to an existing member, with cross-tenant denial and former-owner demotion to member; organization rename with destination `active_key` reservation, cross-tenant denial, and exact identity collision refusal; staff organization suspend/reactivate requiring `aggr_manage_orgs`, with advertiser denial and audited read-back; portal-owned email change with HMAC token, single-use confirm, taken-address suppression, and details-save still unable to set email/role; portal-only setup and recovery URLs, core reset-key validation, minimum password policy and single-use consumption; the advertiser holding none of `upload_files` / `edit_posts` / `unfiltered_html`; no `wp_ajax_laao_ads*` action registered.
+**security** — the closed REST inventory and default-deny contract; the explicit public `admin-post` allowlist; every IDOR surface in [threat-model.md](threat-model.md) with a Phase-1 endpoint; advertiser A denied on B's campaign **and a co-member of A's org allowed** (the case that proves ownership is org-scoped rather than accidentally author-scoped); deleted objects mapping to `do_not_allow`; nonce-missing and nonce-forged raising `WPDieException`; revoked portal access closing every owner organization mutation without side effects; signup non-enumeration, anonymous rate limiting, unprivileged-before-ownership ordering and mail-failure rollback; private canonical organization matching, no duplicate tenant, pending users without portal capability, owner-only pending emails, cross-tenant approval denial, email-bound and single-use invitation consumption; owner-scoped member removal with the last-owner guard, cross-tenant removal denial, and advertiser-role cleanup that preserves unrelated WordPress roles; ownership transfer only to an existing member, with cross-tenant denial and former-owner demotion to member; organization rename with destination `active_key` reservation, cross-tenant denial, and exact identity collision refusal; staff organization suspend/reactivate requiring `aggr_manage_orgs`, with advertiser denial and audited read-back; portal-owned email change with HMAC token, single-use confirm, taken-address suppression, and details-save still unable to set email/role; portal-only setup and recovery URLs, core reset-key validation, minimum password policy and single-use consumption; the advertiser holding none of `upload_files` / `edit_posts` / `unfiltered_html`; no `wp_ajax_laao_ads*` action registered. The completed audit is [authorization-failure-review.md](authorization-failure-review.md).
 
 **rest** — every route's permission callback, schema validation, sanitization, and the 404-not-403 rule.
 

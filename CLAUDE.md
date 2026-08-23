@@ -6,7 +6,8 @@ Architectural patterns are adapted from the LAAO and Aggressive Apparel themes.
 **Nothing is inherited at runtime**, and where the three differ, this file is
 authoritative here. In particular: this is a plugin, not a theme; there is no
 WooCommerce, no Tailwind history, the only public block is `aggr/placement`,
-and the test stack is deliberately older than LAAO's.
+and the WordPress test suites run an older PHPUnit than LAAO's — the unit suite
+does not.
 
 ## Read the docs first
 
@@ -75,6 +76,11 @@ and deeper analytics remain open. What is built:
   and its own `_aggr_request_revision` counter, because a request is a meta
   write rather than a transition
 - release packaging and independent archive verification
+- rewrite rules are declared as data — `Router::rules()` and `Click_Hop::rules()`
+  are pure and static — so one definition serves the installer, the Site Health
+  assertion and `bin/ci/check-rewrite-version.php`, which fingerprints them
+  against an append-only contract and fails the build on a rule change that
+  forgets its `REWRITE_VERSION` bump
 - `Workflow\Campaign_Clock` — the hourly reconcile that drives approved →
   scheduled → live → complete, without which status freezes at approval
 - `Workflow\Ending_Soon_Notifier` and `Notification\Ending_Soon_Mailer` — the
@@ -83,7 +89,19 @@ and deeper analytics remain open. What is built:
 - every wp-admin screen is now React over REST: Settings, Packages,
   Organizations, Inventory, and the review queue and campaign detail. The
   review screens keep the plugin's own design system (`src/styles/admin.css`);
-  the other four use core's component set
+  the other four use core's component set. Organizations is additionally a
+  DataViews pilot — searchable table, writes behind row actions, and the one
+  screen that pages, searches and filters **server-side**: `GET /organizations`
+  returns one page plus the real total, and rosters arrive per-organization
+  from `/detail` rather than riding on every row. Sorting is by name only,
+  because owner/member/campaign counts are derived per row and ordering on them
+  would mean assembling every organization in order to page it.
+  `@wordpress/dataviews` is **bundled, not externalised**: WordPress 7.1 uses
+  DataViews internally but registers no `wp-dataviews` script or style handle,
+  so externalising it builds clean and throws in the browser. The list lives in
+  `bin/ci/bundled-packages.mjs`, read by both `webpack.admin.config.mjs` and
+  `bin/ci/check-admin-bundle.mjs`, which fails the build if either that or the
+  `"sideEffects": false` stylesheet drop ever comes back
 - the advertiser-facing notifications for changes, rejection, approval, going
   live and completion
 - pause, resume and cancel, which need no new UI: the review screen's buttons
@@ -123,15 +141,39 @@ and deeper analytics remain open. What is built:
   network-active installs run on `wp_initialize_site`; a dedicated multisite
   PHPUnit config proves colliding post ids cannot cross sites. Network-wide
   organizations are out of scope.
+- organization name lookups survive a salt rotation (schema v10). `active_key`
+  is an index over plaintext the same row already stores, so it is salted with
+  a plugin-owned option rather than `wp_salt( 'auth' )`, which rotates and used
+  to orphan the whole registry — no renames, and no duplicate-name detection.
+  `token_hash` still uses `wp_salt( 'auth' )` on purpose: it verifies a bearer
+  token, so a rotation *should* invalidate it. An organization holding no
+  identity row registers one on first rename instead of being refused forever
 - CSV reporting — `Portal\Report_Actions` streams a rollup export for the
   acting organization
 - i18n tooling — `bin/i18n/` (pot, sync, compile, status, check, locale,
-  validate-po) behind the `ci:i18n` lane, which `qa:fast` also runs so POT
-  drift fails a push rather than a pull request
-- private creative lives in `uploads/ads-uploads/`, and the original is deleted
-  the moment a creative is promoted to its Media Library attachment, so only
-  work awaiting review is on disk. Promoted attachments carry
-  `_aggr_is_creative` and `Admin\Media_Library` keeps them out of the library
+  validate-po, translate, lint-placeholders) behind the `ci:i18n` lane, which
+  `qa:fast` also runs so POT drift fails a push rather than a pull request.
+  Four locale catalogs (de_DE, es_ES, fr_FR, it_IT) are committed as `.po`;
+  `.mo` is build output. Machine translation is DeepL with a MyMemory fallback,
+  and it only ever opens a pull request — `.github/workflows/i18n-translate.yml`
+  — because unreviewed machine output must not reach a publisher.
+  **Two silent failures are covered by `TranslationLoadingTest`:** a plugin's
+  `.mo` keeps the `aggressive-ads-` prefix (the theme's rename is deliberately
+  not ported), and JIT loading never searches a plugin's own folder, so
+  `Plugin::load_translations()` must call `load_plugin_textdomain()` on `init`.
+  Both render English with every other signal green
+- private creative lives in `uploads/ads-uploads/` and is **encrypted at rest**
+  — `Storage\Creative_Cipher`, XChaCha20-Poly1305 secretstream, chunked so
+  reads stay constant-memory and a truncation is a read failure rather than
+  half an image. The key comes from `AGGR_CREATIVE_KEY` in wp-config.php when
+  it is defined and from the `aggr_creative_key` option otherwise; it is
+  deliberately **not** derived from `wp_salt()`, for the reason schema v10
+  already recorded. A file without the magic is passed through as plaintext, so
+  db version 11 can migrate an existing install a file at a time without taking
+  the review queue down. The original is deleted the moment a creative is
+  promoted to its Media Library attachment, so only work awaiting review is on
+  disk. Promoted attachments carry `_aggr_is_creative` and
+  `Admin\Media_Library` keeps them out of the library
 - a campaign cannot be submitted carrying the name the plugin invented for it:
   `create()` records `_aggr_title_is_placeholder`, and the validator refuses it
 - the WordPress suites run natively as well as in Docker —
@@ -154,6 +196,7 @@ Spend stays absent until billing has a source.
 ```bash
 composer install        # dev tooling only; vendor/ never ships
 pnpm install            # webpack / TypeScript / Playwright
+bash bin/ci/install-wp-runner.sh   # PHPUnit 9.6 for the WordPress suites
 pnpm build              # src/ → dist/
 pnpm env:start          # disposable WordPress 7.1 at :9960
 pnpm dev:seed           # an advertiser, an org and five campaigns to look at
@@ -162,9 +205,9 @@ pnpm ci:verify          # the contract for declaring a change finished
 
 pnpm lint:php           # PHPCS
 pnpm analyse:php        # PHPStan level 8, no baseline
-pnpm test:php:unit      # unit suite — no WordPress, no database
+pnpm test:php:unit      # unit suite — PHPUnit 13, no WordPress, no database
 pnpm test:php:native    # the WP suites natively: local MySQL, no Docker
-pnpm test:php:integration  # WP integration/security/rest/upgrade (needs env:start)
+pnpm test:php:integration  # WP integration/security/rest/upgrade, PHPUnit 9.6 (needs env:start)
 pnpm test:php:multisite    # colliding-id tenancy; WP_TESTS_MULTISITE (needs env:start)
 pnpm lint:js            # ESLint on src/
 pnpm typecheck          # tsc --noEmit
@@ -205,11 +248,24 @@ affordable to test them exhaustively.
 
 ## Testing
 
-PHPUnit is pinned to **9.6**, not 13 like the LAAO theme. This is deliberate and
-test-only: the assertions that matter here — org-scoped `map_meta_cap`, `dbDelta`
-idempotence, real REST authorization, real uploads — are not expressible under
-Brain\Monkey, and the WordPress core test suite requires 9.x. Two config files because **PHPUnit allows exactly one bootstrap per file**. The
-unit suite must not load WordPress; the integration suite must.
+**Two PHPUnits, and the config file picks which.** The unit suite runs
+PHPUnit 13 from `vendor/`, matching the LAAO theme. The suites that load real
+WordPress run PHPUnit 9.6 from `tests/wp/vendor/`, installed by
+`bin/ci/install-wp-runner.sh`, because `WP_UnitTestCase_Base` calls
+`PHPUnit\Util\Test::parseTestMethodAnnotations()` and PHPUnit removed that class
+in 10 — measured, not assumed. `bin/ci/run-wp-tests.sh` selects the binary, so
+no caller knows which suite is on which major. See `tests/wp/README.md`.
+
+The WordPress suites exist at all because the assertions that matter here —
+org-scoped `map_meta_cap`, `dbDelta` idempotence, real REST authorization, real
+uploads — are not expressible under Brain\Monkey. Separate config files because
+**PHPUnit allows exactly one bootstrap per file**: the unit suite must not load
+WordPress; the integration suite must.
+
+Unit tests extend `PHPUnit\Framework\TestCase` with `setUp()` / `tearDown()`
+and `#[DataProvider]` attributes. The polyfills and `@dataProvider` docblocks
+are gone from `tests/php/Unit` — PHPUnit 13 reads attributes, not doc comments.
+The WordPress suites still use the polyfills through `WP_UnitTestCase`.
 
 `failOnWarning`, `failOnRisky`, `failOnSkipped` and `failOnIncomplete` are all
 true. A skipped security test is a security test that is not running.
@@ -229,11 +285,17 @@ sabotage test is the only thing standing between `rmdir( $root )` and
 never created.
 
 A guard that stops matching does not fail. It reports success over code it is no
-longer reading. `check-navigation.mjs`, `check-coverage.mjs` and the rules behind
-`check-summary.mjs` carry tests in `test:tools` for that reason. **The other
-eleven guards under `bin/ci/` do not**, and that is a gap rather than a decision
-— `check-permission-callbacks.sh` and `check-repository-boundary.sh` are the two
-worth doing first, because both police security boundaries.
+longer reading. `check-navigation.mjs`, `check-coverage.mjs`, `check-rewrite-version.php` and
+the rules behind `check-summary.mjs` carry tests in `test:tools` for that
+reason. **The other eleven guards under `bin/ci/` do not**, and that is a gap
+rather than a decision — `check-permission-callbacks.sh` and
+`check-repository-boundary.sh` are the two worth doing first, because both
+police security boundaries.
+
+`check-rewrite-version.php` is the worked example: its own test found that the
+lookbehind distinguishing a call from a declaration read `$tokens[$i - 1]`,
+which is the whitespace before `function`. The guard was reporting a
+declaration as an installation, on a branch no hand-check had reached.
 
 Two habits that earn their keep:
 

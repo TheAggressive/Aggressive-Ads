@@ -123,11 +123,29 @@ installation rather than a recommendation.
 
 **Unapproved advertising creative is protected.** Creates a harmless random
 probe, requests it through the public uploads URL, and requires a 401/403/404/410.
-A 2xx is critical: unreleased creative is downloadable by anyone with the URL,
-and **uploads must not be accepted until the server rule is corrected**. nginx
-ignores the `.htaccess` the plugin writes, so nginx sites need an explicit deny
-rule — the check tells you so, and [known-issues.md](known-issues.md) has the
-rule.
+
+A 2xx is reported as a **recommendation, not a failure**, because stored creative
+is encrypted at rest: a server that hands out the file hands out an authenticated
+blob, and the key is not in the directory. It is a missing layer rather than an
+open door, and WordPress itself serves the media of unpublished posts from the
+same directory with no deny rule at all. A red banner on every admin page of
+every nginx site — usually in front of somebody with no server access — teaches
+people to dismiss Site Health, and that cost is paid by the next warning that
+matters.
+
+The rule is still worth adding. The check prints the one for the server it
+detects, with the alternatives underneath; for nginx it is:
+
+```nginx
+location ~ ^/wp-content/uploads(?:/sites/[0-9]+)?/ads-uploads(?:/|$) {
+    return 404;
+}
+```
+
+Adapt the prefix if `upload_url_path` or the uploads directory is customized. On
+Apache the plugin already wrote a `.htaccess` that says this, so a site reaching
+this state has a server told to ignore it — the fix there is `AllowOverride`, not
+a new rule.
 
 **The advertiser portal is reachable.** Reads the installed rewrite rules and
 names any path that would 404. Offers administrators a button to reinstall them.

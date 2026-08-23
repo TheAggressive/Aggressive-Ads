@@ -34,8 +34,9 @@ Reference result from the PHP 8.4 container on 2026-08-14:
 
 Elapsed time is reported, not asserted, because shared CI hardware is noisy.
 The deterministic gate is query count: it catches a return to campaign-by-
-campaign reads. Production acceptance still requires concurrent p50/p95/p99
-load tests at the expected request rate.
+campaign reads. The repeatable Phase 11 concurrent p50/p95/p99 gate, reference
+traffic profile and exact ledger/rollup acceptance check are documented in
+[load-and-soak-testing.md](load-and-soak-testing.md).
 
 ## Serving path
 

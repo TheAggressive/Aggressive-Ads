@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Tests\Unit\Domain;
 
 use Aggressive\Ads\Domain\Fill_Rotation;
-use Yoast\PHPUnitPolyfills\TestCases\TestCase;
+use PHPUnit\Framework\TestCase;
 
 /**
  * The draw selects a member; an empty set is not a fake first item.

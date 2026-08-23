@@ -22,6 +22,7 @@ use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Install\Installer;
+use Aggressive\Ads\Install\Line_Item_Migrator;
 use Aggressive\Ads\Install\Rewrite_Flusher;
 use Aggressive\Ads\Install\Rewrite_Health;
 use Aggressive\Ads\Install\Site_Lifecycle;
@@ -42,6 +43,7 @@ use Aggressive\Ads\Portal\Router;
 use Aggressive\Ads\Portal\Signup_Actions;
 use Aggressive\Ads\REST\Beacon_Controller;
 use Aggressive\Ads\REST\Campaigns_Controller;
+use Aggressive\Ads\REST\Line_Items_Controller;
 use Aggressive\Ads\REST\Creative_Controller;
 use Aggressive\Ads\REST\Creative_File_Controller;
 use Aggressive\Ads\REST\Fill_Controller;
@@ -60,6 +62,7 @@ use Aggressive\Ads\Update\Plugin_Updates;
 use Aggressive\Ads\Workflow\Campaign_Change_Manager;
 use Aggressive\Ads\Workflow\Campaign_Clock;
 use Aggressive\Ads\Workflow\Campaign_State_Machine;
+use Aggressive\Ads\Workflow\Line_Item_Lifecycle;
 use Aggressive\Ads\Workflow\Click_Hop;
 use Aggressive\Ads\Workflow\Audit_Retention;
 use Aggressive\Ads\Workflow\Creative_Retention;
@@ -161,6 +164,40 @@ final class Plugin {
 		// run on a file-only deploy, an in-place update, or a database restore.
 		add_action( 'plugins_loaded', array( $this, 'run_upgrade_check' ), 5 );
 		add_action( 'plugins_loaded', array( $this, 'init_services' ), 10 );
+
+		// On `init`, not earlier: since WordPress 6.7 loading a text domain
+		// before `init` is a _doing_it_wrong notice, because the locale is not
+		// settled until then.
+		add_action( 'init', array( $this, 'load_translations' ) );
+	}
+
+	/**
+	 * Registers the directory this plugin ships its own catalogs in.
+	 *
+	 * **Without this call the catalogs are never loaded.** Just-in-time loading
+	 * does not search a plugin's own folder: `WP_Textdomain_Registry` looks in
+	 * `WP_LANG_DIR/plugins`, `WP_LANG_DIR/themes`, and a custom path that is
+	 * only ever set by `load_plugin_textdomain()` / `load_theme_textdomain()`.
+	 * A plugin that ships `languages/` and calls neither gets translations from
+	 * wp-content/languages if a language pack happens to be installed there,
+	 * and English otherwise.
+	 *
+	 * That failure is completely silent. `load_plugin_textdomain()` returns
+	 * true whether or not a catalog was found, every string simply falls back
+	 * to its source text, and the POT, the catalogs and the compiled .mo can
+	 * all be perfectly valid the whole time. `TranslationLoadingTest` asserts
+	 * on `__()` output for that reason — never on the return value here.
+	 *
+	 * Public because it is an `add_action` callback.
+	 *
+	 * @return void
+	 */
+	public function load_translations(): void {
+		load_plugin_textdomain(
+			'aggressive-ads',
+			false,
+			dirname( plugin_basename( AGGR_PLUGIN_FILE ) ) . '/languages'
+		);
 	}
 
 	/**
@@ -281,6 +318,8 @@ final class Plugin {
 			// Attaches the listener that notices a campaign status written
 			// without going through the state machine.
 			Campaign_State_Machine::class,
+			Line_Item_Lifecycle::class,
+			Line_Item_Migrator::class,
 
 			// After the state machine, whose transition action it listens to.
 			Campaign_Change_Manager::class,
@@ -329,6 +368,7 @@ final class Plugin {
 			Transitions_Controller::class,
 			Review_Controller::class,
 			Campaigns_Controller::class,
+			Line_Items_Controller::class,
 			Placements_Controller::class,
 			Packages_Controller::class,
 			Organizations_Controller::class,

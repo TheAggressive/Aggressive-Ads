@@ -18,6 +18,7 @@ use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
+use Aggressive\Ads\Repository\Line_Item_Repository;
 use Aggressive\Ads\REST\Creative_File_Controller;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Workflow\Campaign_Change_Manager;
@@ -81,6 +82,7 @@ final class Review_Data {
 	 * @param Org_Repository          $orgs       Organization lookups.
 	 * @param Audit_Repository        $audit      Audit history.
 	 * @param Campaign_Change_Manager $changes    Running-campaign change proposals.
+	 * @param Line_Item_Repository    $line_items Campaign delivery strategies.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -88,7 +90,8 @@ final class Review_Data {
 		private readonly Placement_Repository $placements,
 		private readonly Org_Repository $orgs,
 		private readonly Audit_Repository $audit,
-		private readonly Campaign_Change_Manager $changes
+		private readonly Campaign_Change_Manager $changes,
+		private readonly Line_Item_Repository $line_items
 	) {
 	}
 
@@ -262,6 +265,8 @@ final class Review_Data {
 		$row['internal_notes']   = $this->campaigns->internal_notes( $campaign_id );
 		$row['can_view_audit']   = current_user_can( Capabilities::VIEW_AUDIT_LOG );
 		$row['audit']            = $row['can_view_audit'] ? $this->audit_rows( $campaign_id ) : array();
+		$this->line_items->ensure_default( $campaign_id );
+		$row['line_items'] = $this->line_items->for_campaign( $campaign_id );
 
 		return $row;
 	}

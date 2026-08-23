@@ -1,0 +1,121 @@
+/*
+ * The organizations screen, given the same surface as the rest of wp-admin.
+ *
+ * DataViews arrives styled — it is core's own component and already speaks
+ * core's visual language — so this file does not recolour it. What it does not
+ * arrive with is a *container*: dropped into a `.wrap`, the table sits flat on
+ * the admin's grey canvas with no edge, no padding and no separation from the
+ * heading, which is what made the first render read as broken markup rather
+ * than as a list.
+ *
+ * So this is the same restraint `admin-native.css` states: surface, rhythm and
+ * measure only. No buttons, no notices, no control states, no palette.
+ *
+ * One difference from that file is worth writing down, because it changes what
+ * is safe here. `admin-native.css` avoids restyling core components because
+ * core ships them and they move underneath us on every WordPress release.
+ * DataViews does not move underneath us: it is bundled from a pinned
+ * `@wordpress/dataviews` version, so its markup changes only when we change
+ * the dependency. Structural selectors are therefore honest here in a way they
+ * would not be against core's own list tables.
+ */
+
+/*
+ * Tokens must be imported, not assumed.
+ *
+ * This bundle is enqueued on its own, without admin.css, so nothing else on
+ * the page declares `--aggr-*`. An unresolved custom property in a colour
+ * declaration is not a degraded look — it is transparent text on a transparent
+ * background. `_admin-tokens.css` scopes its block to `.aggr-admin`, which the
+ * screen's wrap already carries.
+ */
+@import '../../styles/base/_admin-tokens.css';
+
+/*
+ * Modals render through a portal at the end of the body, outside `.aggr-admin`
+ * and therefore outside the block that declares `--aggr-*`. An unresolved
+ * custom property in a colour declaration is transparent, not inherited, so the
+ * modal rules below would have painted nothing. Re-declare what they use.
+ */
+.dataviews-action-modal {
+	--aggr-color-danger: #b32d2e;
+	--aggr-measure: 60ch;
+}
+
+/*
+ * The heading sits directly above the table; core gives `.wrap h1` almost no
+ * bottom margin because it normally precedes a nav or a notice.
+ */
+.wrap.aggr-admin .dataviews-wrapper,
+.wrap.aggr-admin .dataviews-layout__container {
+	margin-top: 16px;
+}
+
+/*
+ * The card. Core's own list tables carry a white surface, a hairline and a
+ * one-pixel radius; matching those three values is what makes this screen read
+ * as part of wp-admin rather than as an embedded application.
+ */
+.wrap.aggr-admin .dataviews-wrapper {
+	background: var(--aggr-color-surface);
+	border: 1px solid var(--aggr-border-color);
+	border-radius: var(--aggr-radius-panel, 4px);
+	box-sizing: border-box;
+	overflow: hidden;
+}
+
+/*
+ * Breathing room for the toolbar. Search, filters and the view-config gear are
+ * a control strip, and core separates control strips from content with a rule
+ * rather than with whitespace alone.
+ */
+.wrap.aggr-admin .dataviews-filters__container {
+	padding: 12px 16px;
+}
+
+/*
+ * Cells need horizontal padding to stop long names from touching the column
+ * beside them, which is what made the owner column collide with the member
+ * count at narrow widths.
+ */
+.wrap.aggr-admin .dataviews-view-table td,
+.wrap.aggr-admin .dataviews-view-table th {
+	padding-inline: 16px;
+}
+
+/*
+ * A name is the row's identity and should read as heavier than the counts
+ * beside it. This is weight only; the colour stays whatever DataViews chose.
+ */
+.wrap.aggr-admin .dataviews-view-table__primary-column-content {
+	font-weight: 600;
+}
+
+/*
+ * Suspension is the one destructive action on this screen and the menu gives
+ * it no visual weight of its own. Core marks destructive controls in its
+ * danger colour, and the token is already contrast-measured against the
+ * surface it sits on.
+ */
+.dataviews-action-modal .components-button.is-destructive:not(:disabled) {
+	color: var(--aggr-color-danger);
+}
+
+/*
+ * The action modals size to what they hold.
+ *
+ * Two things were wrong here. `.wrap.aggr-admin .dataviews-action-modal` never
+ * matched at all — a modal renders through a portal at the end of the body, not
+ * inside our `.wrap` — so the only rule taking effect capped the *content* while
+ * the frame kept core's fixed width, which is what left a narrow field floating
+ * in a wide dialog.
+ *
+ * So the frame is sized to its content, with a floor so the roster's loading
+ * state is not a tiny box, and a ceiling that keeps the one sentence of
+ * confirmation inside a readable measure.
+ */
+.dataviews-action-modal .components-modal__frame {
+	width: fit-content;
+	min-width: min(90vw, 26rem);
+	max-width: min(90vw, var(--aggr-measure, 60ch));
+}

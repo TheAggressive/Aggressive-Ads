@@ -5,22 +5,38 @@
  * Loads real WordPress from the core test suite. The assertions these suites
  * carry — org-scoped map_meta_cap, dbDelta idempotence, real REST
  * authorization — are not expressible against mocks, which is the entire
- * reason PHPUnit is pinned to 9.6 here. See
- * docs/testing-strategy.md.
+ * reason these suites still run on PHPUnit 9.6. See docs/testing-strategy.md.
+ *
+ * **The autoloader is tests/wp/vendor, not the plugin's.** The plugin runs
+ * PHPUnit 13 and this runner runs 9.6; registering both autoloaders would let a
+ * `PHPUnit\…` class that is not already declared resolve out of 13 in the
+ * middle of a 9.6 run. tests/wp/composer.json maps the test namespace at
+ * ../php/ for this reason, so one autoloader serves the whole run. See
+ * tests/wp/README.md.
  *
  * @package Aggressive\Ads
  */
 
 declare(strict_types=1);
 
-$aggr_root = dirname( __DIR__, 2 );
+$aggr_root   = dirname( __DIR__, 2 );
+$aggr_runner = $aggr_root . '/tests/wp/vendor/autoload.php';
 
-require_once $aggr_root . '/vendor/autoload.php';
+if ( ! is_file( $aggr_runner ) ) {
+	fwrite(
+		STDERR,
+		"The WordPress test runner is not installed.\n"
+		. "Run: bash bin/ci/install-wp-runner.sh\n"
+	);
+	exit( 1 );
+}
+
+require_once $aggr_runner;
 
 $aggr_tests_dir = getenv( 'WP_PHPUNIT__DIR' );
 
 if ( ! is_string( $aggr_tests_dir ) || '' === $aggr_tests_dir ) {
-	$aggr_tests_dir = $aggr_root . '/vendor/wp-phpunit/wp-phpunit';
+	$aggr_tests_dir = $aggr_root . '/tests/wp/vendor/wp-phpunit/wp-phpunit';
 }
 
 $aggr_tests_dir = rtrim( $aggr_tests_dir, '/\\' );
@@ -29,7 +45,7 @@ if ( ! file_exists( $aggr_tests_dir . '/includes/functions.php' ) ) {
 	fwrite(
 		STDERR,
 		"Could not find the WordPress test suite at {$aggr_tests_dir}.\n"
-		. "Run composer install, pnpm env:start, then pnpm test:php:integration.\n"
+		. "Run bash bin/ci/install-wp-runner.sh, pnpm env:start, then pnpm test:php:integration.\n"
 	);
 	exit( 1 );
 }

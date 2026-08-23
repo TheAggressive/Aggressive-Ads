@@ -10,7 +10,8 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Tests\Unit;
 
 use Aggressive\Ads\Autoloader;
-use Yoast\PHPUnitPolyfills\TestCases\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
 
 /**
  * The class-name-to-filename mapping is the part that is easy to get subtly
@@ -37,7 +38,7 @@ final class AutoloaderTest extends TestCase {
 	 *
 	 * @return void
 	 */
-	protected function set_up(): void {
+	protected function setUp(): void {
 		$this->inc_dir    = dirname( __DIR__, 3 ) . '/inc';
 		$this->autoloader = new Autoloader( $this->inc_dir );
 	}
@@ -115,9 +116,8 @@ final class AutoloaderTest extends TestCase {
 	 *
 	 * @param string $fqcn A hostile class name.
 	 * @return void
-	 *
-	 * @dataProvider data_hostile_class_names
 	 */
+	#[DataProvider( 'data_hostile_class_names' )]
 	public function test_refuses_segments_that_are_not_identifiers( string $fqcn ): void {
 		$this->assertNull( $this->autoloader->resolve( $fqcn ) );
 	}

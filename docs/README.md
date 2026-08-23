@@ -25,6 +25,8 @@ Then, as needed:
 | [rest-api.md](rest-api.md) | Route table, auth model, the 404-not-403 rule |
 | [notifications.md](notifications.md) | Capability-driven recipients, private fan-out, deduplication and failure policy |
 | [threat-model.md](threat-model.md) | Attack surfaces, mitigations, and the test proving each |
+| [authorization-failure-review.md](authorization-failure-review.md) | Phase 11 authorization and failure-state audit, findings and executable evidence |
+| [load-and-soak-testing.md](load-and-soak-testing.md) | Phase 11 HTTP capacity criteria, environment contract and durability evidence |
 | [testing-strategy.md](testing-strategy.md) | Five suites, two PHPUnit configs, and why |
 | [build-and-release.md](build-and-release.md) | CI lanes, packaging policy, semantic-release |
 | [accessibility.md](accessibility.md) | WCAG target, dialog contract, creative alt text |
@@ -35,6 +37,7 @@ Then, as needed:
 | [runbook.md](runbook.md) | Deploying to production, verifying each step, and rolling back |
 | [roadmap.md](roadmap.md) | Phases 1–11 (what already shipped vs remaining product) |
 | [platform-implementation-progress.md](platform-implementation-progress.md) | The platform sequence beyond the roadmap, and what exists today |
+| [platform-p0-baseline.md](platform-p0-baseline.md) | Platform regression matrix, executed quality baseline and P0 exit evidence |
 | [suite-roadmap.md](suite-roadmap.md) | Aggressive Ads suite: identity, admin shell, native delivery, cache, tracking |
 
 ## Conventions

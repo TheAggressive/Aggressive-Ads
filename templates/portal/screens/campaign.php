@@ -49,6 +49,7 @@ $aggr_creative_error_for = Creative_Actions::error_target( $aggr_creative_error,
 $aggr_min_start_date     = ( new \DateTimeImmutable( 'tomorrow', wp_timezone() ) )->format( 'Y-m-d' );
 $aggr_creative_ready     = array() !== $aggr_slots;
 $aggr_overlays           = array();
+$aggr_line_items         = is_array( $aggr_campaign['line_items'] ?? null ) ? $aggr_campaign['line_items'] : array();
 
 foreach ( $aggr_slots as $aggr_slot ) {
 	if ( ! $aggr_slot['active'] || 1 !== count( $aggr_slot['creatives'] ) ) {
@@ -252,6 +253,23 @@ endif;
 			<?php esc_html_e( 'Notes from the review team', 'aggressive-ads' ); ?>
 		</h2>
 		<p><?php echo esc_html( $aggr_notes ); ?></p>
+	</section>
+<?php endif; ?>
+
+<?php if ( array() !== $aggr_line_items ) : ?>
+	<section class="aggr-panel" aria-labelledby="aggr-delivery-strategy-heading">
+		<h2 id="aggr-delivery-strategy-heading" class="aggr-panel__head">
+			<?php esc_html_e( 'Delivery strategy', 'aggressive-ads' ); ?>
+		</h2>
+		<?php foreach ( $aggr_line_items as $aggr_line_item ) : ?>
+			<dl class="aggr-facts">
+				<div class="aggr-fact"><dt><?php esc_html_e( 'Line item', 'aggressive-ads' ); ?></dt><dd><?php echo esc_html( (string) $aggr_line_item['name'] ); ?></dd></div>
+				<div class="aggr-fact"><dt><?php esc_html_e( 'Status', 'aggressive-ads' ); ?></dt><dd><?php echo esc_html( ucwords( str_replace( '_', ' ', (string) $aggr_line_item['status'] ) ) ); ?></dd></div>
+				<div class="aggr-fact"><dt><?php esc_html_e( 'Pricing', 'aggressive-ads' ); ?></dt><dd><?php echo esc_html( strtoupper( (string) $aggr_line_item['pricing_model'] ) ); ?></dd></div>
+				<div class="aggr-fact"><dt><?php esc_html_e( 'Goal', 'aggressive-ads' ); ?></dt><dd><?php echo esc_html( ucwords( str_replace( '_', ' ', (string) $aggr_line_item['goal_type'] ) ) ); ?></dd></div>
+				<div class="aggr-fact"><dt><?php esc_html_e( 'Pacing', 'aggressive-ads' ); ?></dt><dd><?php echo esc_html( ucwords( (string) $aggr_line_item['pacing_mode'] ) ); ?></dd></div>
+			</dl>
+		<?php endforeach; ?>
 	</section>
 <?php endif; ?>
 

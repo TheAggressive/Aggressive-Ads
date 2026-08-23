@@ -251,6 +251,8 @@ release reaches GitHub.
 
 It **hard-fails** if `node_modules`, `src`, `tests`, `vendor`, or `bin` reached the staging directory. A stray `src/` or `node_modules/` is historically how a 4 MB plugin becomes a 400 MB one.
 
+The denylist also names two files rather than directories, `.phpunit.result.cache` and `.phpunit.cache`, and the reason is worth keeping: **packaging rsyncs the working tree, not `git ls-files`, so being gitignored does not keep a file out of the archive.** `.phpunit.result.cache` shipped that way — 109 KB of PHPUnit's result cache — and it also made "reproducible archive" untrue, because its contents depend on which tests that machine last ran. Anything a local run drops in the repository root is a candidate; the check after staging is what catches the next one.
+
 `bin/release/verify-package.sh` asserts against the **actual ZIP**, not the staging directory — because the staging directory is what the script that just ran believes it produced, and the ZIP is what a user installs:
 
 - checksum matches the sidecar
@@ -259,13 +261,15 @@ It **hard-fails** if `node_modules`, `src`, `tests`, `vendor`, or `bin` reached 
 - no excluded path leaked in
 - `inc/class-autoloader.php` is present (`PACKAGE_REQUIRED` — the production autoloader can never be dropped)
 - `dist/` assets exist
-- **every `languages/*.po` has a compiled `.mo`**
+- **every committed `languages/*.po` has its compiled `.mo` in the archive**
 
 That last check catches a failure that is otherwise invisible: skip `pnpm i18n:compile` and the site just renders English, with the first report arriving weeks later from a user.
 
+It reads the **committed** catalogs rather than the archive's, and that direction matters. The archive does not ship `.po` files — WordPress never reads one, and four locales of source catalogue is half a megabyte in every install, growing with each language. A check that iterated the archive would then match nothing and pass over a release containing no translations at all. Anchoring on the repository also catches what the old form could not: a locale whose `.mo` never made it into the package, where both files are absent from the archive and there is nothing left to notice. `languages/` is the one directory that ships selectively — compiled `.mo` and `.json` go, the `.po` sources and the directory's own README stay behind, and the `.pot` ships because that is the file a translator starts from.
+
 ## `vendor/` never ships
 
-`composer.json` `require` is `{"php": ">=8.4"}` and nothing else. Composer is dev-only tooling.
+`composer.json` `require` is `{"php": ">=8.4"}` and nothing else. Composer is dev-only tooling. There are two Composer projects — the plugin's, and `tests/wp/` holding the PHPUnit 9.6 the WordPress suites need — and neither ships: `tests/` is on the denylist above, which covers the second one twice over.
 
 The decisive argument is not payload size — **WordPress has no dependency isolation.** Two plugins each shipping `vendor/autoload.php` with different versions of the same package produce a fatal attributed to whichever loaded second, and the site owner has no way to fix it. Shipping nothing means this plugin can never be the one that broke the site.
 

@@ -19,14 +19,28 @@ use WP_Error;
  * Putting it in the Media Library would give it a public URL that needs no
  * authentication and can be guessed from a date directory and a filename.
  *
- * **The layer that actually holds is path unguessability**, because it does
- * not depend on server configuration. The deny files are written too, but
- * nginx reads none of them: if production runs nginx that layer contributes
- * nothing, which is recorded in docs/known-issues.md rather than assumed away.
- * Reads go through an authorized endpoint that streams bytes and never
- * redirects. See docs/domain-model.md.
+ * **The bytes are encrypted at rest**, so none of the layers below carries
+ * the whole weight on its own. The deny files are written, but nginx reads
+ * none of them; the path is unguessable, but a backup does not care; reads go
+ * through an authorized streaming endpoint, but a filesystem copy goes around
+ * it. Encryption is the one control that survives a server misconfiguration,
+ * a database dump, a restore handed to the wrong person, and a copy of the
+ * uploads directory on somebody's laptop. See `Creative_Cipher`,
+ * docs/domain-model.md and docs/threat-model.md.
  */
 final class Private_Storage {
+
+	/**
+	 * Constructor.
+	 *
+	 * The default exists so the tests that construct this directly keep
+	 * working; the container injects the shared instance, which caches the
+	 * resolved key for the request rather than reading it per file.
+	 *
+	 * @param Creative_Cipher $cipher Encryption for stored bytes.
+	 */
+	public function __construct( private readonly Creative_Cipher $cipher = new Creative_Cipher() ) {
+	}
 
 	/**
 	 * Directory name under the uploads base.
@@ -40,6 +54,17 @@ final class Private_Storage {
 	public const LEGACY_DIRECTORY = 'aggr-private';
 
 	public const DIRECTORY = 'ads-uploads';
+
+	/**
+	 * The files this plugin writes into the private root itself.
+	 *
+	 * Named once because three walkers skip them, and a walker holding its
+	 * own copy of the list is one that encrypts, moves or counts a deny file
+	 * as though it were somebody's artwork.
+	 *
+	 * @var array<int, string>
+	 */
+	public const DENY_FILES = array( '.htaccess', 'web.config', 'index.php' );
 
 	/**
 	 * The absolute path to the private root, without a trailing slash.
@@ -136,24 +161,42 @@ final class Private_Storage {
 			);
 		}
 
-		// A token as well as a UUID, so knowing one filename tells an attacker
-		// nothing about the next. Both are generated server-side.
-		$token    = bin2hex( random_bytes( 16 ) );
-		$relative = wp_generate_uuid4() . '.' . $extension;
-		$target   = $this->root() . '/' . $relative;
+		// Fail closed. Storing plaintext because the crypto library is absent
+		// would put unapproved artwork on disk in exactly the state this
+		// exists to prevent, and it would do it without telling anybody.
+		if ( ! $this->cipher->is_available() ) {
+			return new WP_Error(
+				'aggr_storage_unavailable',
+				__( 'The upload could not be saved. Please try again.', 'aggressive-ads' )
+			);
+		}
 
-		if ( ! $this->move( $source_path, $target ) ) {
+		// Taken from the source rather than the target: both describe what the
+		// advertiser uploaded, and the target is now ciphertext. Hashing the
+		// target would record a digest no later comparison could reproduce.
+		$checksum = hash_file( 'sha256', $source_path );
+		$bytes    = filesize( $source_path );
+
+		if ( false === $checksum || false === $bytes ) {
 			return new WP_Error(
 				'aggr_storage_write_failed',
 				__( 'The upload could not be saved. Please try again.', 'aggressive-ads' )
 			);
 		}
 
-		$checksum = hash_file( 'sha256', $target );
-		$bytes    = filesize( $target );
+		// A token as well as a UUID, so knowing one filename tells an attacker
+		// nothing about the next. Both are generated server-side.
+		$token    = bin2hex( random_bytes( 16 ) );
+		$relative = wp_generate_uuid4() . '.' . $extension;
+		$target   = $this->root() . '/' . $relative;
 
-		if ( false === $checksum || false === $bytes ) {
-			$this->delete( $relative );
+		if ( ! $this->cipher->encrypt( $source_path, $target ) ) {
+			// A partial encrypt leaves a file that resolves, carries the magic
+			// and cannot be read. Removing it is what keeps "the file exists"
+			// and "the creative can be reviewed" from disagreeing.
+			if ( is_file( $target ) ) {
+				wp_delete_file( $target );
+			}
 
 			return new WP_Error(
 				'aggr_storage_write_failed',
@@ -216,15 +259,101 @@ final class Private_Storage {
 	 * @return bool
 	 */
 	public function matches_checksum( string $relative, string $expected ): bool {
-		$path = $this->resolve( $relative );
-
-		if ( null === $path || '' === $expected ) {
+		if ( '' === $expected ) {
 			return false;
 		}
 
-		$actual = hash_file( 'sha256', $path );
+		$actual = $this->checksum( $relative );
 
-		return is_string( $actual ) && hash_equals( $expected, $actual );
+		return null !== $actual && hash_equals( $expected, $actual );
+	}
+
+	/**
+	 * The sha256 of a stored file's plaintext, or null when it cannot be read.
+	 *
+	 * Distinct from `matches_checksum()` on purpose: "the bytes changed" and
+	 * "the bytes cannot be decrypted" are different incidents with different
+	 * remedies, and a caller that can only see false reports the wrong one.
+	 *
+	 * @param string $relative Stored relative path.
+	 * @return string|null
+	 */
+	public function checksum( string $relative ): ?string {
+		$path = $this->resolve( $relative );
+
+		return null === $path ? null : $this->cipher->checksum( $path );
+	}
+
+	/**
+	 * The plaintext length of a stored file.
+	 *
+	 * @param string $relative Stored relative path.
+	 * @return int|null
+	 */
+	public function plaintext_bytes( string $relative ): ?int {
+		$path = $this->resolve( $relative );
+
+		return null === $path ? null : $this->cipher->plaintext_bytes( $path );
+	}
+
+	/**
+	 * Writes a stored file's plaintext into an open stream.
+	 *
+	 * @param string   $relative Stored relative path.
+	 * @param resource $target   Open, writable stream.
+	 * @return bool
+	 */
+	public function copy_to( string $relative, $target ): bool {
+		$path = $this->resolve( $relative );
+
+		return null !== $path && $this->cipher->copy_to( $path, $target );
+	}
+
+	/**
+	 * Materialises a stored file's plaintext in a temporary file.
+	 *
+	 * For the two callers that hand a path to code which cannot be given a
+	 * stream: the promoter, which sideloads into the Media Library, and the
+	 * copier, which re-stores the bytes under a new creative. **The caller
+	 * must delete the returned path**, and should do so in a finally block —
+	 * it is unapproved creative sitting outside private storage.
+	 *
+	 * @param string $relative Stored relative path.
+	 * @return string|null Absolute temporary path, or null.
+	 */
+	public function export( string $relative ): ?string {
+		$path = $this->resolve( $relative );
+
+		if ( null === $path ) {
+			return null;
+		}
+
+		$temp = wp_tempnam( basename( $relative ) );
+
+		if ( '' === $temp ) {
+			return null;
+		}
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- Streaming a decrypt into a temporary file. WP_Filesystem would hold the whole creative in memory to do it.
+		$handle = fopen( $temp, 'wb' );
+
+		if ( false === $handle ) {
+			wp_delete_file( $temp );
+
+			return null;
+		}
+
+		$ok = $this->cipher->copy_to( $path, $handle );
+
+		fclose( $handle );
+
+		if ( ! $ok ) {
+			wp_delete_file( $temp );
+
+			return null;
+		}
+
+		return $temp;
 	}
 
 	/**
@@ -291,24 +420,101 @@ final class Private_Storage {
 	}
 
 	/**
-	 * Moves a file into place.
+	 * Encrypts stored creative that predates encryption at rest.
 	 *
-	 * @param string $source Absolute source path.
-	 * @param string $target Absolute target path.
+	 * Idempotent, resumable and deliberately non-destructive. Each file is
+	 * encrypted into a sibling, the sibling is decrypted back and compared
+	 * against the original's digest, and only then does it replace the
+	 * original in a single rename. A file that fails at any step is left
+	 * exactly as it was and the walk carries on, because the failure mode
+	 * has to be "still plaintext" and never "an advertiser's only copy of
+	 * their artwork is now unreadable".
+	 *
+	 * Reads keep working throughout: `Creative_Cipher::read()` passes a file
+	 * without the magic through unchanged, so a half-finished migration is a
+	 * mix of both and the review queue never notices.
+	 *
+	 * @return int Number of files encrypted.
+	 */
+	public function encrypt_existing_files(): int {
+		if ( ! $this->cipher->is_available() || ! is_dir( $this->root() ) ) {
+			return 0;
+		}
+
+		$root  = $this->root();
+		$names = scandir( $root );
+
+		if ( false === $names ) {
+			return 0;
+		}
+
+		$encrypted = 0;
+
+		foreach ( $names as $name ) {
+			if ( '.' === $name || '..' === $name || in_array( $name, self::DENY_FILES, true ) ) {
+				continue;
+			}
+
+			$path = $root . '/' . $name;
+
+			if ( ! is_file( $path ) || $this->cipher->is_encrypted( $path ) ) {
+				continue;
+			}
+
+			if ( $this->encrypt_in_place( $path ) ) {
+				++$encrypted;
+			}
+		}
+
+		return $encrypted;
+	}
+
+	/**
+	 * Encrypts one file, replacing it only once the result reads back.
+	 *
+	 * @param string $path Absolute path to a plaintext file inside the root.
 	 * @return bool
 	 */
-	private function move( string $source, string $target ): bool {
-		if ( ! is_file( $source ) ) {
+	private function encrypt_in_place( string $path ): bool {
+		// Checked before hashing rather than after. This walks a whole
+		// directory unattended, and hash_file() on a file it cannot open is a
+		// PHP warning per file — a log full of them is how a migration that
+		// skipped something looks exactly like one that worked.
+		if ( ! is_readable( $path ) ) {
 			return false;
 		}
 
-		// An uploaded file is moved with the function that verifies it really
-		// was uploaded; anything else — a sideload, a test fixture — is copied.
-		if ( is_uploaded_file( $source ) ) {
-			return move_uploaded_file( $source, $target );
+		$digest = hash_file( 'sha256', $path );
+
+		if ( false === $digest ) {
+			return false;
 		}
 
-		return copy( $source, $target );
+		$temp = $path . '.aggr-encrypting-' . wp_generate_uuid4();
+
+		if ( ! $this->cipher->encrypt( $path, $temp ) ) {
+			if ( is_file( $temp ) ) {
+				wp_delete_file( $temp );
+			}
+
+			return false;
+		}
+
+		// Read the new file back before trusting it. Asserting that encrypt()
+		// returned true only asserts that it was called; what matters is that
+		// the bytes come out the same, and the one moment that is cheap to
+		// check is while the plaintext is still there to compare against.
+		$readback = $this->cipher->checksum( $temp );
+
+		if ( null === $readback || ! hash_equals( $digest, $readback ) ) {
+			wp_delete_file( $temp );
+
+			return false;
+		}
+
+		// One rename, so there is no instant where the path holds neither the
+		// old file nor the new one.
+		return rename( $temp, $path ); // phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.file_ops_rename -- Both paths are inside the uploads-backed private root, and an atomic replace is the only way to migrate a file without a window in which it is absent.
 	}
 
 	/**
@@ -357,10 +563,8 @@ final class Private_Storage {
 			return 0;
 		}
 
-		$own = array( '.htaccess', 'web.config', 'index.php' );
-
 		foreach ( $names as $name ) {
-			if ( '.' === $name || '..' === $name || in_array( $name, $own, true ) ) {
+			if ( '.' === $name || '..' === $name || in_array( $name, self::DENY_FILES, true ) ) {
 				continue;
 			}
 
@@ -397,14 +601,13 @@ final class Private_Storage {
 			return false;
 		}
 
-		$own       = array( '.htaccess', 'web.config', 'index.php' );
-		$remaining = array_diff( $names, array( '.', '..' ), $own );
+		$remaining = array_diff( $names, array( '.', '..' ), self::DENY_FILES );
 
 		if ( array() !== $remaining ) {
 			return false;
 		}
 
-		foreach ( $own as $name ) {
+		foreach ( self::DENY_FILES as $name ) {
 			$path = $directory . '/' . $name;
 
 			if ( is_file( $path ) ) {

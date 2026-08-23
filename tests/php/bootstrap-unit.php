@@ -2,9 +2,10 @@
 /**
  * Bootstrap for the unit suite.
  *
- * Loads Composer's dev autoloader (PHPUnit, polyfills, Brain\Monkey) and the
- * plugin's own production autoloader. WordPress is deliberately absent — a
- * unit test that needs it belongs in the integration suite.
+ * Loads Composer's dev autoloader (PHPUnit 13) and the plugin's own production
+ * autoloader. WordPress is deliberately absent — a unit test that needs it
+ * belongs in the integration suite, which runs on its own PHPUnit 9.6 out of
+ * tests/wp/ because wp-phpunit cannot run on 10 or later.
  *
  * @package Aggressive\Ads
  */

@@ -43,6 +43,19 @@ test( 'a reviewer works the queue, claims a campaign and writes notes', async ( 
 		page.getByRole( 'heading', { level: 1, name: title } )
 	).toBeVisible();
 	await expect( page ).toHaveURL( /campaign=\d+/ );
+	const deliveryStrategy = page.getByRole( 'region', {
+		name: 'Delivery strategy',
+	} );
+	await expect( deliveryStrategy ).toBeVisible();
+	await expect(
+		deliveryStrategy.getByText( title, { exact: true } )
+	).toBeVisible();
+	await expect(
+		deliveryStrategy
+			.locator( '.aggr-fact' )
+			.filter( { hasText: 'Pricing' } )
+			.getByText( 'FLAT', { exact: true } )
+	).toBeVisible();
 	await expectAdminA11y( page );
 
 	const campaignUrl = page.url();

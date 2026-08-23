@@ -24,6 +24,11 @@ STAGING="${BUILD_DIR}/${SLUG}"
 
 # Paths that must never reach the package. Checked after staging, not merely
 # excluded before it.
+#
+# languages/ is the one directory that ships selectively: the compiled .mo and
+# .json go, the .po sources and the directory's own README stay behind.
+# WordPress reads a .po at no point, and four locales of source catalogue is
+# half a megabyte in every install, growing with each language added.
 PACKAGE_FORBIDDEN=(
 	node_modules
 	vendor
@@ -43,6 +48,13 @@ PACKAGE_FORBIDDEN=(
 	CLAUDE.md
 	test-results
 	playwright-report
+	# A dev artifact rather than a directory, and the reason it is listed:
+	# package.sh rsyncs the working tree, not `git ls-files`, so a gitignored
+	# file still reaches the archive. This one shipped — 109 KB of PHPUnit's
+	# result cache — and made the "reproducible archive" claim false, because
+	# its contents depend on which tests that machine last ran.
+	.phpunit.result.cache
+	.phpunit.cache
 )
 
 # Files without which the plugin does not work. inc/class-autoloader.php is
@@ -124,6 +136,10 @@ rsync -a \
 	--exclude='.editorconfig' \
 	--exclude='.gitignore' \
 	--exclude='.phpunit.cache/' \
+	--exclude='.phpunit.result.cache' \
+	--exclude='languages/*.po' \
+	--exclude='languages/README.md' \
+	--exclude='languages/.gitignore' \
 	--exclude='node_modules/' \
 	--exclude='.pnpm-store/' \
 	--exclude='vendor/' \
