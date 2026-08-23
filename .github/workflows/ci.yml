@@ -487,6 +487,12 @@ jobs:
         with:
           name: dist
           path: dist/
+      # Packaging compiles the locale catalogs into the archive, and the
+      # extractor has to be the pinned WP-CLI rather than whatever is on PATH.
+      # This job did not need it while languages/ held only a POT: compile.sh
+      # short-circuits with "no .po files", so the first committed catalog is
+      # what turned packaging into a step that needs the tool.
+      - run: bash bin/ci/install-wp-cli.sh
       - name: Build reproducible verified package
         env:
           AGGR_RELEASE_VERSION: ${{ needs.release-plan.outputs.next_version }}
@@ -544,6 +550,12 @@ jobs:
           path: release/
       - run: pnpm test:e2e:install:chromium
         timeout-minutes: 18
+      # Packaging compiles the locale catalogs into the archive, and the
+      # extractor has to be the pinned WP-CLI rather than whatever is on PATH.
+      # This job did not need it while languages/ held only a POT: compile.sh
+      # short-circuits with "no .po files", so the first committed catalog is
+      # what turned packaging into a step that needs the tool.
+      - run: bash bin/ci/install-wp-cli.sh
       - name: Install and exercise the release archive
         env:
           AGGR_RELEASE_VERSION: ${{ needs.release-plan.outputs.next_version }}
