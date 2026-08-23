@@ -48,7 +48,6 @@ import type {
 	Field as DataField,
 	View as DataView,
 } from '@wordpress/dataviews';
-import '@wordpress/dataviews/build-style/style.css';
 import './style.css';
 import {
 	errorMessage,

@@ -66,7 +66,7 @@
 		"build:modules": "wp-scripts build --config webpack.modules.config.mjs",
 		"build:assets": "wp-scripts build --config webpack.assets.config.mjs",
 		"build:blocks": "wp-scripts build --webpack-src-dir=./src/blocks --output-path=./dist/blocks --experimental-modules",
-		"build:admin": "wp-scripts build --config webpack.admin.config.mjs && node bin/ci/check-admin-bundle.mjs",
+		"build:admin": "pnpm build:dataviews && wp-scripts build --config webpack.admin.config.mjs && node bin/ci/check-admin-bundle.mjs",
 		"start": "concurrently -k -n modules,assets,blocks -c blue,magenta,green \"pnpm start:modules\" \"pnpm start:assets\" \"pnpm start:blocks\"",
 		"start:modules": "wp-scripts start --config webpack.modules.config.mjs",
 		"start:assets": "wp-scripts start --config webpack.assets.config.mjs",
@@ -131,7 +131,8 @@
 		"qa:fast": "bash bin/ci/verify-fast.sh",
 		"qa:local": "bash bin/local/verify.sh",
 		"precommit": "lint-staged",
-		"ci:verify": "bash bin/ci/verify.sh"
+		"ci:verify": "bash bin/ci/verify.sh",
+		"build:dataviews": "wp-scripts build --config webpack.dataviews.config.mjs"
 	},
 	"lint-staged": {
 		"src/**/*.{js,ts,tsx}": [

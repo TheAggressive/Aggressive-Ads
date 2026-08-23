@@ -68,6 +68,11 @@ final class Organization_Screen implements Service {
 
 		$version = is_string( $meta['version'] ?? null ) ? $meta['version'] : AGGR_VERSION;
 
+		// The bundle's .asset.php names aggr-dataviews as a dependency, because
+		// the build rewrote its @wordpress/dataviews import onto the shared
+		// copy. Registering it here is what lets WordPress resolve that.
+		Shared_Assets::register();
+
 		wp_enqueue_script(
 			'aggr-organizations',
 			AGGR_PLUGIN_URL . 'dist/admin/organizations.js',
@@ -79,20 +84,18 @@ final class Organization_Screen implements Service {
 		wp_enqueue_style( 'wp-components' );
 
 		/*
-		 * DataViews ships its own stylesheet, and it is not optional.
+		 * The shared DataViews stylesheet, named as a dependency rather than
+		 * enqueued beside this one, so it always loads first: this screen's
+		 * rules restyle DataViews components and would lose to them otherwise.
 		 *
-		 * WordPress registers no `wp-dataviews` style handle any more than it
-		 * registers the script one, so the bundle carries its own copy. Without
-		 * it the table renders as unstyled markup that still technically works
-		 * — which is the failure mode worth naming, because nothing errors.
-		 *
-		 * `wp-components` is listed as a dependency so core's variables and
-		 * resets load first and DataViews can override them, not the reverse.
+		 * A script dependency does not bring a stylesheet — WordPress resolves
+		 * script and style handles separately — so this is the only thing that
+		 * puts it on the page.
 		 */
 		wp_enqueue_style(
 			'aggr-organizations',
 			AGGR_PLUGIN_URL . 'dist/admin/organizations.css',
-			array( 'wp-components' ),
+			array( 'wp-components', Shared_Assets::DATAVIEWS ),
 			$version
 		);
 

@@ -82,6 +82,21 @@ test( 'the table mounts, sorts on the server and stays accessible', async ( {
 	await openScreen( page );
 	await expectAdminA11y( page );
 
+	/*
+	 * The shared bundle's stylesheet reached the page.
+	 *
+	 * DataViews is compiled once and registered as `aggr-dataviews`, and a
+	 * script dependency does not carry a stylesheet — WordPress resolves script
+	 * and style handles separately. Losing it renders a table that is unstyled
+	 * and still entirely functional, so nothing else here would notice: every
+	 * assertion below passes against naked markup.
+	 */
+	await expect(
+		page.locator(
+			'link[rel="stylesheet"][href*="dist/admin/dataviews.css"]'
+		)
+	).toHaveCount( 1 );
+
 	const ascending = await names( page );
 
 	// The fixture must actually contain something to order, or the assertion
