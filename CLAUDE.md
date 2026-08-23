@@ -75,6 +75,11 @@ and deeper analytics remain open. What is built:
   and its own `_aggr_request_revision` counter, because a request is a meta
   write rather than a transition
 - release packaging and independent archive verification
+- rewrite rules are declared as data — `Router::rules()` and `Click_Hop::rules()`
+  are pure and static — so one definition serves the installer, the Site Health
+  assertion and `bin/ci/check-rewrite-version.php`, which fingerprints them
+  against an append-only contract and fails the build on a rule change that
+  forgets its `REWRITE_VERSION` bump
 - `Workflow\Campaign_Clock` — the hourly reconcile that drives approved →
   scheduled → live → complete, without which status freezes at approval
 - `Workflow\Ending_Soon_Notifier` and `Notification\Ending_Soon_Mailer` — the
@@ -248,11 +253,17 @@ sabotage test is the only thing standing between `rmdir( $root )` and
 never created.
 
 A guard that stops matching does not fail. It reports success over code it is no
-longer reading. `check-navigation.mjs`, `check-coverage.mjs` and the rules behind
-`check-summary.mjs` carry tests in `test:tools` for that reason. **The other
-eleven guards under `bin/ci/` do not**, and that is a gap rather than a decision
-— `check-permission-callbacks.sh` and `check-repository-boundary.sh` are the two
-worth doing first, because both police security boundaries.
+longer reading. `check-navigation.mjs`, `check-coverage.mjs`, `check-rewrite-version.php` and
+the rules behind `check-summary.mjs` carry tests in `test:tools` for that
+reason. **The other eleven guards under `bin/ci/` do not**, and that is a gap
+rather than a decision — `check-permission-callbacks.sh` and
+`check-repository-boundary.sh` are the two worth doing first, because both
+police security boundaries.
+
+`check-rewrite-version.php` is the worked example: its own test found that the
+lookbehind distinguishing a call from a declaration read `$tokens[$i - 1]`,
+which is the whitespace before `function`. The guard was reporting a
+declaration as an installation, on a branch no hand-check had reached.
 
 Two habits that earn their keep:
 

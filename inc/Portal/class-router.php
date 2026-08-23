@@ -79,30 +79,53 @@ final class Router implements Service {
 	}
 
 	/**
-	 * Registers the three rules.
+	 * The rules this router declares, as data.
+	 *
+	 * Pure and static so three callers can agree on one definition without a
+	 * bootstrap: `register_rules()` installs them, `Rewrite_Health` compares
+	 * them against what is actually in the database, and
+	 * `bin/ci/check-rewrite-version.php` hashes them to refuse a rule change
+	 * that forgets to bump REWRITE_VERSION. A health check or a guard carrying
+	 * its own copy of the grammar is one that passes after the grammar moves.
+	 *
+	 * The default is the declared base rather than the filtered one, because
+	 * the guard runs without WordPress and a site's own `aggr_portal_base`
+	 * filter is not part of what this repository ships.
+	 *
+	 * @param string $base Portal base segment, unquoted.
+	 * @return array<int, array{regex: string, query: string, position: 'bottom'|'top'}>
+	 */
+	public static function rules( string $base = Routes::DEFAULT_BASE ): array {
+		$quoted = preg_quote( $base, '/' );
+
+		return array(
+			array(
+				'regex'    => '^' . $quoted . '/?$',
+				'query'    => 'index.php?' . self::QUERY_PORTAL . '=1&' . self::QUERY_ROUTE . '=' . Request::ROUTE_DASHBOARD,
+				'position' => 'top',
+			),
+			array(
+				'regex'    => '^' . $quoted . '/([^/]+)/?$',
+				'query'    => 'index.php?' . self::QUERY_PORTAL . '=1&' . self::QUERY_ROUTE . '=$matches[1]',
+				'position' => 'top',
+			),
+			array(
+				'regex'    => '^' . $quoted . '/([^/]+)/([^/]+)/?$',
+				'query'    => 'index.php?' . self::QUERY_PORTAL . '=1&' . self::QUERY_ROUTE . '=$matches[1]&' . self::QUERY_OBJECT . '=$matches[2]',
+				'position' => 'top',
+			),
+		);
+	}
+
+	/**
+	 * Installs the declared rules.
 	 *
 	 * @return void
 	 */
 	public function register_rules(): void {
-		$base = preg_quote( Routes::base(), '/' );
-
-		add_rewrite_rule(
-			'^' . $base . '/?$',
-			'index.php?' . self::QUERY_PORTAL . '=1&' . self::QUERY_ROUTE . '=' . Request::ROUTE_DASHBOARD,
-			'top'
-		);
-
-		add_rewrite_rule(
-			'^' . $base . '/([^/]+)/?$',
-			'index.php?' . self::QUERY_PORTAL . '=1&' . self::QUERY_ROUTE . '=$matches[1]',
-			'top'
-		);
-
-		add_rewrite_rule(
-			'^' . $base . '/([^/]+)/([^/]+)/?$',
-			'index.php?' . self::QUERY_PORTAL . '=1&' . self::QUERY_ROUTE . '=$matches[1]&' . self::QUERY_OBJECT . '=$matches[2]',
-			'top'
-		);
+		foreach ( self::rules( Routes::base() ) as $rule ) {
+			add_rewrite_rule( $rule['regex'], $rule['query'], $rule['position'] );
+		}
 	}
 
 	/**

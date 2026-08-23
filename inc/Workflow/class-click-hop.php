@@ -67,14 +67,31 @@ final class Click_Hop implements Service {
 	}
 
 	/**
-	 * Registers the hop rule.
+	 * The rules the hop declares, as data.
+	 *
+	 * Pure and static for the same reason as `Router::rules()`: the installer,
+	 * the Site Health assertion and the CI version guard all read this one
+	 * definition rather than each keeping a copy that can quietly disagree.
+	 *
+	 * @return array<int, array{regex: string, query: string, position: 'bottom'|'top'}>
+	 */
+	public static function rules(): array {
+		return array(
+			array(
+				'regex'    => '^' . self::PATH . '/([^/]+)/?$',
+				'query'    => 'index.php?' . self::QUERY_VAR . '=$matches[1]',
+				'position' => 'top',
+			),
+		);
+	}
+
+	/**
+	 * Installs the declared rules.
 	 */
 	public function register_rules(): void {
-		add_rewrite_rule(
-			'^' . self::PATH . '/([^/]+)/?$',
-			'index.php?' . self::QUERY_VAR . '=$matches[1]',
-			'top'
-		);
+		foreach ( self::rules() as $rule ) {
+			add_rewrite_rule( $rule['regex'], $rule['query'], $rule['position'] );
+		}
 	}
 
 	/**
