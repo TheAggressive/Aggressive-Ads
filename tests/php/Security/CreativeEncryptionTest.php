@@ -556,15 +556,28 @@ final class CreativeEncryptionTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A file the migration cannot verify is left as plaintext, not replaced.
+	 * **A file the migration cannot encrypt is left as plaintext, not replaced.**
 	 *
-	 * The failure mode has to be "still readable" rather than "now
-	 * unreadable", because nobody is watching an unattended migration and the
-	 * bytes cannot be rebuilt from anything else the site holds.
+	 * The failure mode has to be "still readable" rather than "now unreadable",
+	 * because nobody is watching an unattended migration and the bytes cannot
+	 * be rebuilt from anything else the site holds.
+	 *
+	 * Failure is induced through the key rather than through file permissions.
+	 * The first version of this chmod'd the source to 0000, which works as a
+	 * developer and does nothing at all in CI, where PHPUnit runs as root and
+	 * root ignores the permission bits — the migration cheerfully encrypted the
+	 * file and the test failed on the count. An unreadable *key* fails
+	 * identically for every user, which is the point: the assertion is about
+	 * what the migration does when encryption fails, not about how it failed.
 	 *
 	 * @return void
 	 */
-	public function test_a_file_that_cannot_be_read_is_left_untouched(): void {
+	public function test_a_file_that_cannot_be_encrypted_is_left_untouched(): void {
+		$this->assertFalse(
+			defined( Creative_Cipher::KEY_CONSTANT ),
+			'This test induces failure through the stored key, which the constant would override.'
+		);
+
 		$this->storage->ensure();
 
 		$bytes    = $this->png();
@@ -574,16 +587,37 @@ final class CreativeEncryptionTest extends WP_UnitTestCase {
 		file_put_contents( $path, $bytes );
 		$this->stored[] = $relative;
 
-		// The source is made unreadable, which is the shape every real failure
-		// takes from the migration's point of view: it cannot get the bytes.
-		// What matters is not why, but that the original is still there after.
-		chmod( $path, 0000 );
+		// Not decodable as 32 bytes, so key() fails closed rather than
+		// generating a replacement — add_option() cannot overwrite a row that
+		// already exists.
+		update_option( Creative_Cipher::KEY_OPTION, 'not-a-usable-key' );
 
-		$encrypted = $this->storage->encrypt_existing_files();
+		// Fresh instances: the cipher caches the resolved key per request.
+		$cipher  = new Creative_Cipher();
+		$storage = new Private_Storage( $cipher );
 
-		chmod( $path, 0644 );
+		$this->assertInstanceOf(
+			WP_Error::class,
+			$cipher->key(),
+			'The fixture must actually break the key before anything is asserted about the migration.'
+		);
+
+		$encrypted = $storage->encrypt_existing_files();
 
 		$this->assertSame( 0, $encrypted );
-		$this->assertSame( $bytes, (string) file_get_contents( $path ), 'The original must survive a failed migration untouched.' );
+		$this->assertSame(
+			$bytes,
+			(string) file_get_contents( $path ),
+			'The original must survive a failed migration byte for byte.'
+		);
+		$this->assertFalse(
+			$cipher->is_encrypted( $path ),
+			'A half-written encrypt must not be left where a reader would find it.'
+		);
+
+		// Nothing partially written alongside it either.
+		$leftovers = glob( $this->storage->root() . '/*.aggr-encrypting-*' );
+
+		$this->assertSame( array(), false === $leftovers ? array() : $leftovers );
 	}
 }
