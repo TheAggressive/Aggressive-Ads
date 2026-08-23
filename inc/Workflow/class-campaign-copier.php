@@ -160,7 +160,16 @@ final class Campaign_Copier {
 				continue;
 			}
 
-			$stored = $this->storage->store( $file['path'], $file['extension'] );
+			try {
+				$stored = $this->storage->store( $file['path'], $file['extension'] );
+			} finally {
+				// A decrypted copy of unapproved artwork, outside private
+				// storage. It exists for one store() call and is removed
+				// whether that call succeeded, failed or threw.
+				if ( $file['temporary'] ) {
+					wp_delete_file( $file['path'] );
+				}
+			}
 
 			if ( is_wp_error( $stored ) ) {
 				return $this->failed( $campaign_id );
@@ -213,8 +222,13 @@ final class Campaign_Copier {
 	/**
 	 * Resolves bytes to copy: private file first, then the promoted attachment.
 	 *
+	 * The private file is encrypted, so it is decrypted into a temporary file
+	 * the caller must delete; the promoted attachment is ordinary Media Library
+	 * bytes and is read where it lies. `temporary` says which of the two this
+	 * is, because deleting the wrong one destroys a published creative.
+	 *
 	 * @param int $creative_id Source creative.
-	 * @return array{path: string, extension: string, mime: string, sha256: string, name: string}|null
+	 * @return array{path: string, extension: string, mime: string, sha256: string, name: string, temporary: bool}|null
 	 */
 	private function source_file( int $creative_id ): ?array {
 		$details = $this->creatives->storage_details( $creative_id );
@@ -223,9 +237,12 @@ final class Campaign_Copier {
 			return null;
 		}
 
-		$path = '' !== $details['path'] ? $this->storage->resolve( $details['path'] ) : null;
+		$temporary = false;
+		$path      = '' !== $details['path'] ? $this->storage->export( $details['path'] ) : null;
 
-		if ( null === $path ) {
+		if ( null !== $path ) {
+			$temporary = true;
+		} else {
 			$attachment = $this->creatives->attachment_file( $creative_id );
 			$path       = '' !== $attachment && is_readable( $attachment ) ? $attachment : null;
 		}
@@ -238,10 +255,18 @@ final class Campaign_Copier {
 		$ext  = Upload_Rules::extension_for_mime( $mime );
 
 		if ( '' === $ext ) {
-			$ext = strtolower( (string) pathinfo( $path, PATHINFO_EXTENSION ) );
+			// From the stored name when the bytes are a decrypted temporary
+			// file, because that file is named .tmp and always would be.
+			$ext = strtolower(
+				(string) pathinfo( $temporary ? $details['path'] : $path, PATHINFO_EXTENSION )
+			);
 		}
 
 		if ( ! Upload_Rules::is_allowed_extension( $ext ) || ! Upload_Rules::is_allowed_mime( $mime ) ) {
+			if ( $temporary ) {
+				wp_delete_file( $path );
+			}
+
 			return null;
 		}
 
@@ -251,6 +276,7 @@ final class Campaign_Copier {
 			'mime'      => $mime,
 			'sha256'    => $details['sha256'],
 			'name'      => $details['name'],
+			'temporary' => $temporary,
 		);
 	}
 

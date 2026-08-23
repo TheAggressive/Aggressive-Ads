@@ -133,8 +133,20 @@ events. See [delivery-performance.md](delivery-performance.md).
 | `aggr_delivery_rewrite_version` | int | yes | Bumped when the click-hop rule changes; triggers one flush |
 | `aggr_rollups_reconciled_through` | `Y-m-d` | **no** | Last closed UTC event day exactly projected into rollups |
 | `aggr_delete_data_on_uninstall` | bool | yes | Opt-in; default off |
+| `aggr_org_lookup_salt` | string | **no** | Plugin-owned salt for the organization name index |
+| `aggr_creative_key` | string | **no** | Base64 key encrypting creative at rest, when `AGGR_CREATIVE_KEY` is not defined |
 
-Version options autoload because they are read on every request. `aggr_upgrade_lock` does not, because it is written and deleted rather than read, and an autoloaded option that churns is a cache-invalidation cost for nothing.
+Version options autoload because they are read on every request. `aggr_upgrade_lock` does not, because it is written and deleted rather than read, and an autoloaded option that churns is a cache-invalidation cost for nothing. `aggr_creative_key` does not, because an autoloaded secret is one that sits in the object cache of every request on the site, including requests that will never touch a creative.
+
+### The creative key
+
+Creative awaiting review is encrypted at rest. The key is read from the `AGGR_CREATIVE_KEY` constant when wp-config.php defines it — 32 bytes, base64 or hex — and otherwise from `aggr_creative_key`, which is generated on first use.
+
+Defining the constant is the stronger arrangement, and the reason is narrow: it removes the database from the set of things that carry the means to decrypt. A leaked dump, a support copy, or a SQL injection then yields ciphertext and no key. Without the constant the key travels with the database, which still defeats a server that serves the uploads directory, a filesystem backup, or a copy of `wp-content` — but not a full dump.
+
+**It is deliberately not derived from `wp_salt()`.** Salts rotate; that is what they are for. This plugin has already paid for keying durable data with one — the organization name registry was orphaned by a rotation and had to be rekeyed in db version 10 — and a rotation that silently makes every creative awaiting review undecryptable is the same defect over bytes that cannot be rebuilt from anything else the site holds.
+
+**Losing the key means losing the artwork.** Whatever holds it belongs in the backup: the database, or `wp-config.php`, or both. Changing it does not re-encrypt anything; existing files keep the fingerprint of the key that wrote them and report as unreadable, which is why the fingerprint is in the header at all.
 
 Nothing calls `get_option( 'aggr_settings' )` outside `inc/Core/class-settings.php`. The shape is declared once in `Domain\Settings_Schema` and written only through `Core\Settings::save()`, which rejects the whole payload on any error. The WordPress Settings API (`register_setting` / `options.php`) is not used: that screen is gated on `manage_options`, and ours is `aggr_manage_settings`.
 

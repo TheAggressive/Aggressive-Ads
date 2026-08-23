@@ -95,7 +95,7 @@ All meta is `_aggr_`-prefixed and leading-underscore. The underscore is load-bea
 | `_aggr_placement_id` | int | |
 | `_aggr_size` | string | `{width}x{height}` with ASCII `x`; must match the placement |
 | `_aggr_kind` | enum | `image` \| `code` \| `text` \| `html5`. **Advertisers may only set `image`** |
-| `_aggr_private_path` | string | Relative to the private root. Never absolute, never a URL |
+| `_aggr_private_path` | string | Relative to the private root. Never absolute, never a URL. The file it names is **encrypted at rest**; `_aggr_sha256` and `_aggr_filesize` describe the plaintext |
 | `_aggr_private_token` | string | 32 hex chars |
 | `_aggr_mime` | string | Server-detected, never the browser's claim |
 | `_aggr_width` / `_height` | int | From `getimagesize()`, not from the client |

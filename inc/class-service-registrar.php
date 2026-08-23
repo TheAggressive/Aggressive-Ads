@@ -65,6 +65,7 @@ use Aggressive\Ads\REST\Transitions_Controller;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Repository\User_Repository;
+use Aggressive\Ads\Storage\Creative_Cipher;
 use Aggressive\Ads\Storage\Private_Storage;
 use Aggressive\Ads\Update\Package_Verifier;
 use Aggressive\Ads\Update\Plugin_Updates;
@@ -268,6 +269,14 @@ final class Service_Registrar {
 					// plaintext the same rows already carry, so nothing is lost.
 					10 => static function () use ( $c ): void {
 						$c->get( Org_Access_Repository::class )->reindex_active_keys();
+					},
+					// Creative uploaded before encryption at rest is still
+					// plaintext on disk. Non-destructive and resumable: a file
+					// that will not encrypt cleanly stays as it was, and reads
+					// pass an unencrypted file through, so an interrupted run
+					// leaves a working mixture rather than a broken queue.
+					11 => static function () use ( $c ): void {
+						$c->get( Private_Storage::class )->encrypt_existing_files();
 					},
 				)
 			)
@@ -596,8 +605,15 @@ final class Service_Registrar {
 		);
 
 		$container->register(
+			Creative_Cipher::class,
+			static fn (): Creative_Cipher => new Creative_Cipher()
+		);
+
+		$container->register(
 			Private_Storage::class,
-			static fn (): Private_Storage => new Private_Storage()
+			static fn ( Service_Container $c ): Private_Storage => new Private_Storage(
+				$c->get( Creative_Cipher::class )
+			)
 		);
 
 		$container->register(

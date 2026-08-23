@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-22T18:45:43+00:00\n"
+"POT-Creation-Date: 2026-08-23T01:03:07+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -1466,54 +1466,54 @@ msgstr ""
 msgid "Those settings cannot be saved."
 msgstr ""
 
-#: inc/Install/class-rewrite-health.php:73
-#: inc/Install/class-rewrite-health.php:107
+#: inc/Install/class-rewrite-health.php:76
+#: inc/Install/class-rewrite-health.php:110
 msgid "The advertiser portal is reachable"
 msgstr ""
 
-#: inc/Install/class-rewrite-health.php:92
+#: inc/Install/class-rewrite-health.php:95
 msgid "The advertiser portal cannot be reached"
 msgstr ""
 
-#: inc/Install/class-rewrite-health.php:93
+#: inc/Install/class-rewrite-health.php:96
 msgid "This site uses plain permalinks, and the advertiser portal needs pretty permalinks to resolve. Choose any other option under Settings → Permalinks."
 msgstr ""
 
-#: inc/Install/class-rewrite-health.php:97
+#: inc/Install/class-rewrite-health.php:100
 msgid "Open Permalink Settings"
 msgstr ""
 
-#: inc/Install/class-rewrite-health.php:108
+#: inc/Install/class-rewrite-health.php:111
 msgid "The portal and click-tracking rewrite rules are installed and current."
 msgstr ""
 
-#: inc/Install/class-rewrite-health.php:114
+#: inc/Install/class-rewrite-health.php:117
 msgid "The advertiser portal is not reachable"
 msgstr ""
 
 #. translators: %s: comma-separated list of URL paths, already translated and escaped by the caller.
-#: inc/Install/class-rewrite-health.php:117
+#: inc/Install/class-rewrite-health.php:120
 #, php-format
-msgid "These paths have no rewrite rule and will return 404: %s. This normally follows a deployment that changed files without reactivating the plugin."
+msgid "These paths are not served by the rewrite rules currently installed, and will return 404: %s. This normally follows a deployment that changed files without reactivating the plugin."
 msgstr ""
 
-#: inc/Install/class-rewrite-health.php:204
+#: inc/Install/class-rewrite-health.php:198
 msgid "Reinstall advertising rewrite rules"
 msgstr ""
 
-#: inc/Install/class-rewrite-health.php:221
+#: inc/Install/class-rewrite-health.php:215
 msgid "You are not allowed to reinstall rewrite rules on this site."
 msgstr ""
 
-#: inc/Install/class-rewrite-health.php:261
+#: inc/Install/class-rewrite-health.php:255
 msgid "Advertising rewrite rules reinstalled. The advertiser portal is reachable."
 msgstr ""
 
-#: inc/Install/class-rewrite-health.php:268
+#: inc/Install/class-rewrite-health.php:262
 msgid "The advertising rewrite rules could not be written. Open Settings → Permalinks and save, then run this check again."
 msgstr ""
 
-#: inc/Install/class-rewrite-health.php:287
+#: inc/Install/class-rewrite-health.php:281
 msgid "Advertising"
 msgstr ""
 
@@ -1978,7 +1978,7 @@ msgid "This campaign has already been submitted or cannot be submitted right now
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:876
-#: inc/Workflow/class-campaign-copier.php:357
+#: inc/Workflow/class-campaign-copier.php:383
 msgid "The campaign could not be copied. Please try again."
 msgstr ""
 
@@ -2453,7 +2453,7 @@ msgid "That advertiser could not be found."
 msgstr ""
 
 #: inc/REST/class-campaigns-controller.php:409
-#: inc/REST/class-creative-file-controller.php:185
+#: inc/REST/class-creative-file-controller.php:190
 msgid "Not found."
 msgstr ""
 
@@ -2461,11 +2461,11 @@ msgstr ""
 msgid "No such placement."
 msgstr ""
 
-#: inc/REST/class-organizations-controller.php:262
+#: inc/REST/class-organizations-controller.php:285
 msgid "That organization no longer exists."
 msgstr ""
 
-#: inc/REST/class-organizations-controller.php:474
+#: inc/REST/class-organizations-controller.php:498
 msgid "That change could not be made."
 msgstr ""
 
@@ -2556,45 +2556,45 @@ msgstr ""
 msgid "A direct request for a private-storage verification file was refused by the web server."
 msgstr ""
 
-#: inc/Security/class-private-storage-health.php:122
+#: inc/Security/class-private-storage-health.php:123
 msgid "Unapproved advertising creative is not denied by the web server"
 msgstr ""
 
-#: inc/Security/class-private-storage-health.php:123
-msgid "A direct request for a private-storage verification file was served rather than refused. Files there are named with unguessable identifiers that nothing publishes, and only creative still awaiting review is kept, so this is a missing layer rather than an open door. Add the deny rule to close it."
+#: inc/Security/class-private-storage-health.php:124
+msgid "A direct request for a private-storage verification file was served rather than refused. Creative stored there is encrypted at rest, so what a request would return is unreadable without a key the directory does not contain — this is a missing layer rather than an open door. Add the deny rule to close it."
 msgstr ""
 
-#: inc/Security/class-private-storage-health.php:130
+#: inc/Security/class-private-storage-health.php:131
 msgid "Private creative protection needs manual verification"
 msgstr ""
 
 #. translators: %d: HTTP response status.
-#: inc/Security/class-private-storage-health.php:133
+#: inc/Security/class-private-storage-health.php:134
 #, php-format
 msgid "The verification request returned HTTP %d, which does not prove that the file was denied. Verify the uploads deny rule during deployment."
 msgstr ""
 
-#: inc/Security/class-private-storage-health.php:166
+#: inc/Security/class-private-storage-health.php:167
 msgid "This site reports nginx, which does not read the .htaccess file this plugin writes. Add the deny rule to the server block:"
 msgstr ""
 
-#: inc/Security/class-private-storage-health.php:175
+#: inc/Security/class-private-storage-health.php:176
 msgid "This site reports Apache or LiteSpeed, which do read .htaccess — and this plugin already wrote one in that directory. Reaching this check means the server is ignoring it, so the fix is to allow overrides there rather than to add a new rule:"
 msgstr ""
 
-#: inc/Security/class-private-storage-health.php:184
+#: inc/Security/class-private-storage-health.php:185
 msgid "This site reports Caddy, which does not read .htaccess. Add the matcher to the site block:"
 msgstr ""
 
-#: inc/Security/class-private-storage-health.php:192
+#: inc/Security/class-private-storage-health.php:193
 msgid "The web server could not be identified from SERVER_SOFTWARE, so deny the directory using whichever of these matches your stack. The .htaccess and web.config files this plugin writes only take effect on Apache, LiteSpeed and IIS:"
 msgstr ""
 
-#: inc/Security/class-private-storage-health.php:211
+#: inc/Security/class-private-storage-health.php:212
 msgid "If that is not your server, one of these will be:"
 msgstr ""
 
-#: inc/Security/class-private-storage-health.php:230
+#: inc/Security/class-private-storage-health.php:231
 msgid "Security"
 msgstr ""
 
@@ -2606,9 +2606,18 @@ msgstr ""
 msgid "That is more requests than we can accept right now. Please wait a moment and try again."
 msgstr ""
 
-#: inc/Storage/class-private-storage.php:135
-#: inc/Storage/class-private-storage.php:148
+#: inc/Storage/class-creative-cipher.php:146
+msgid "The creative encryption key is not valid. It must be 32 bytes, base64 or hex encoded."
+msgstr ""
+
+#: inc/Storage/class-creative-cipher.php:171
+msgid "The creative encryption key could not be read or created."
+msgstr ""
+
 #: inc/Storage/class-private-storage.php:160
+#: inc/Storage/class-private-storage.php:170
+#: inc/Storage/class-private-storage.php:183
+#: inc/Storage/class-private-storage.php:203
 msgid "The upload could not be saved. Please try again."
 msgstr ""
 
@@ -2780,7 +2789,7 @@ msgstr ""
 msgid "You do not have permission to change that campaign."
 msgstr ""
 
-#: inc/Workflow/class-campaign-copier.php:287
+#: inc/Workflow/class-campaign-copier.php:313
 #: inc/Workflow/class-campaign-editor.php:146
 msgid "Untitled campaign"
 msgstr ""
@@ -3048,23 +3057,28 @@ msgstr ""
 msgid "This creative has no file to publish."
 msgstr ""
 
-#: inc/Workflow/class-creative-promoter.php:73
+#: inc/Workflow/class-creative-promoter.php:71
 msgid "This creative’s file could not be found."
 msgstr ""
 
-#: inc/Workflow/class-creative-promoter.php:82
+#: inc/Workflow/class-creative-promoter.php:84
+#: inc/Workflow/class-creative-promoter.php:106
+msgid "This creative’s file could not be read, so it has not been published. Its stored copy may be damaged, or the site’s creative encryption key may have changed."
+msgstr ""
+
+#: inc/Workflow/class-creative-promoter.php:93
 msgid "This creative’s file has changed since it was reviewed, so it has not been published."
 msgstr ""
 
-#: inc/Workflow/class-creative-promoter.php:101
+#: inc/Workflow/class-creative-promoter.php:129
 msgid "This creative could not be linked to its Media Library file."
 msgstr ""
 
-#: inc/Workflow/class-creative-promoter.php:168
+#: inc/Workflow/class-creative-promoter.php:196
 msgid "The Media Library is not writable, so this creative could not be published."
 msgstr ""
 
-#: inc/Workflow/class-creative-promoter.php:180
+#: inc/Workflow/class-creative-promoter.php:213
 msgid "This creative could not be copied into the Media Library."
 msgstr ""
 

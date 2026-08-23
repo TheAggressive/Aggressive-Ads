@@ -221,6 +221,16 @@
 	<rule ref="WordPressVIPMinimum.Functions.RestrictedFunctions.file_ops_unlink">
 		<exclude-pattern>tests/php/*</exclude-pattern>
 	</rule>
+	<!--
+		Same rationale, one step further: the only way to assert that the
+		creative-encryption migration leaves a file it cannot read exactly as it
+		found it is to make a fixture unreadable. That branch is the one
+		standing between an unattended migration and an advertiser's only copy
+		of unapproved artwork, so it gets a test rather than an assumption.
+	-->
+	<rule ref="WordPressVIPMinimum.Functions.RestrictedFunctions.chmod_chmod">
+		<exclude-pattern>tests/php/*</exclude-pattern>
+	</rule>
 	<rule ref="WordPressVIPMinimum.Functions.RestrictedFunctions.file_ops_fwrite">
 		<exclude-pattern>tests/php/*</exclude-pattern>
 	</rule>
@@ -295,5 +305,22 @@
 	<!-- Test doubles live alongside the test that uses them. -->
 	<rule ref="Generic.Files.OneObjectStructurePerFile">
 		<exclude-pattern>tests/php/*</exclude-pattern>
+	</rule>
+	<!--
+		Chunked, authenticated decryption of private creative.
+
+		WP_Filesystem has no partial read: get_contents() loads a whole file to
+		hand it back, which is the opposite of what a streaming cipher is for.
+		A 10 MB creative would become 10 MB of PHP memory on every reviewer
+		request, and a truncated file could not be told from a complete one
+		without holding both ends at once.
+
+		Scoped to the one sniff and the one class. Every other file operation in
+		shipped code keeps the sniff, the writes in this class carry their own
+		inline reasons, and nothing here reaches the network — the remote-data
+		concern the WP_Filesystem rule also serves does not apply.
+	-->
+	<rule ref="WordPress.WP.AlternativeFunctions.file_system_operations_fread">
+		<exclude-pattern>inc/Storage/class-creative-cipher.php</exclude-pattern>
 	</rule>
 </ruleset>

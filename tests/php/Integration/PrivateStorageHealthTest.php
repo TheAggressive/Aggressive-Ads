@@ -99,10 +99,12 @@ final class PrivateStorageHealthTest extends WP_UnitTestCase {
 	/**
 	 * A successful direct fetch is a recommendation, not a broken install.
 	 *
-	 * WordPress serves the media of unpublished posts from the same uploads
-	 * directory, so calling this critical would hold the site to a standard the
-	 * platform does not meet. What is reachable is pending creative under an
-	 * unguessable name nothing publishes. See docs/known-issues.md.
+	 * What a served request returns is ciphertext: stored creative is encrypted
+	 * at rest with a key the directory does not contain, so this is a missing
+	 * layer rather than an exposure. WordPress also serves the media of
+	 * unpublished posts from the same directory with no deny rule at all, so
+	 * calling this critical would hold the site to a standard the platform does
+	 * not meet. See docs/threat-model.md.
 	 *
 	 * @return void
 	 */

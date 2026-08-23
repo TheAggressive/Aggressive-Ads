@@ -152,10 +152,18 @@ and deeper analytics remain open. What is built:
 - i18n tooling — `bin/i18n/` (pot, sync, compile, status, check, locale,
   validate-po) behind the `ci:i18n` lane, which `qa:fast` also runs so POT
   drift fails a push rather than a pull request
-- private creative lives in `uploads/ads-uploads/`, and the original is deleted
-  the moment a creative is promoted to its Media Library attachment, so only
-  work awaiting review is on disk. Promoted attachments carry
-  `_aggr_is_creative` and `Admin\Media_Library` keeps them out of the library
+- private creative lives in `uploads/ads-uploads/` and is **encrypted at rest**
+  — `Storage\Creative_Cipher`, XChaCha20-Poly1305 secretstream, chunked so
+  reads stay constant-memory and a truncation is a read failure rather than
+  half an image. The key comes from `AGGR_CREATIVE_KEY` in wp-config.php when
+  it is defined and from the `aggr_creative_key` option otherwise; it is
+  deliberately **not** derived from `wp_salt()`, for the reason schema v10
+  already recorded. A file without the magic is passed through as plaintext, so
+  db version 11 can migrate an existing install a file at a time without taking
+  the review queue down. The original is deleted the moment a creative is
+  promoted to its Media Library attachment, so only work awaiting review is on
+  disk. Promoted attachments carry `_aggr_is_creative` and
+  `Admin\Media_Library` keeps them out of the library
 - a campaign cannot be submitted carrying the name the plugin invented for it:
   `create()` records `_aggr_title_is_placeholder`, and the validator refuses it
 - the WordPress suites run natively as well as in Docker —
