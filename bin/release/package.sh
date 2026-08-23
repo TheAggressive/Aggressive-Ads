@@ -24,6 +24,11 @@ STAGING="${BUILD_DIR}/${SLUG}"
 
 # Paths that must never reach the package. Checked after staging, not merely
 # excluded before it.
+#
+# languages/ is the one directory that ships selectively: the compiled .mo and
+# .json go, the .po sources and the directory's own README stay behind.
+# WordPress reads a .po at no point, and four locales of source catalogue is
+# half a megabyte in every install, growing with each language added.
 PACKAGE_FORBIDDEN=(
 	node_modules
 	vendor
@@ -132,6 +137,9 @@ rsync -a \
 	--exclude='.gitignore' \
 	--exclude='.phpunit.cache/' \
 	--exclude='.phpunit.result.cache' \
+	--exclude='languages/*.po' \
+	--exclude='languages/README.md' \
+	--exclude='languages/.gitignore' \
 	--exclude='node_modules/' \
 	--exclude='.pnpm-store/' \
 	--exclude='vendor/' \

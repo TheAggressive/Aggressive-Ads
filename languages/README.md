@@ -116,9 +116,15 @@ machine output straight to publishers.
 | `aggressive-ads-<locale>.mo` | Compiled catalog (**gitignored**, shipped) |
 | `aggressive-ads-<locale>-*.json` | Classic-script translations (**gitignored**) |
 
-`bin/release/verify-package.sh` refuses an archive containing a `.po` without
-its `.mo`, which is what catches a release that skipped compilation — otherwise
-invisible, because the site just renders English.
+The archive ships the compiled `.mo` and `.json` and the `.pot`, and **not** the
+`.po` sources or this README: WordPress never reads a `.po`, and four locales of
+source catalogue is half a megabyte in every install.
+
+`bin/release/verify-package.sh` requires every committed `.po` to have its `.mo`
+in the archive — reading the repository, not the archive, so that dropping the
+`.po` from the package cannot turn the check into one that matches nothing and
+passes. That is what catches a release which skipped compilation, otherwise
+invisible because the site just renders English.
 
 Interactivity API modules cannot use `wp_set_script_translations()`; their
 strings are translated in PHP and hydrated through `wp_interactivity_state()`.

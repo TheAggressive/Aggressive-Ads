@@ -261,9 +261,11 @@ The denylist also names two files rather than directories, `.phpunit.result.cach
 - no excluded path leaked in
 - `inc/class-autoloader.php` is present (`PACKAGE_REQUIRED` — the production autoloader can never be dropped)
 - `dist/` assets exist
-- **every `languages/*.po` has a compiled `.mo`**
+- **every committed `languages/*.po` has its compiled `.mo` in the archive**
 
 That last check catches a failure that is otherwise invisible: skip `pnpm i18n:compile` and the site just renders English, with the first report arriving weeks later from a user.
+
+It reads the **committed** catalogs rather than the archive's, and that direction matters. The archive does not ship `.po` files — WordPress never reads one, and four locales of source catalogue is half a megabyte in every install, growing with each language. A check that iterated the archive would then match nothing and pass over a release containing no translations at all. Anchoring on the repository also catches what the old form could not: a locale whose `.mo` never made it into the package, where both files are absent from the archive and there is nothing left to notice. `languages/` is the one directory that ships selectively — compiled `.mo` and `.json` go, the `.po` sources and the directory's own README stay behind, and the `.pot` ships because that is the file a translator starts from.
 
 ## `vendor/` never ships
 
