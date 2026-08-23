@@ -174,7 +174,13 @@ test( 'the members modal loads its roster instead of spinning', async ( {
 	// The roster arrives from a second request. Asserting a member is present
 	// is the whole point: the modal used to render, fetch, receive the roster
 	// and never see it, so it stayed on its spinner indefinitely.
-	await expect( modal.getByText( 'advertiser@example.test' ) ).toBeVisible();
+	//
+	// Its own owner, not the base seed's advertiser. Fixture organizations get
+	// dedicated owners because a portal account belongs to exactly one
+	// organization, and giving the advertiser three broke the campaign wizard.
+	await expect(
+		modal.getByText( 'zephyr-owner@example.test' )
+	).toBeVisible();
 	await expect( modal.getByText( '— owner' ) ).toBeVisible();
 	await expect( modal.locator( '.components-spinner' ) ).toHaveCount( 0 );
 
