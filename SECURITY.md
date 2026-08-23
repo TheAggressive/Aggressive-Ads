@@ -83,6 +83,16 @@ headers are not trusted by the plugin. See
 - Composer and pnpm lockfiles are installed frozen and audited. Audit exceptions
   require a local source-level regression check and a documented removal
   condition.
+- One WordPress package ships **inside** the plugin rather than being loaded from
+  core. WordPress 7.1 uses DataViews internally but registers no `wp-dataviews`
+  script or style handle, so `@wordpress/dataviews` is compiled once into
+  `dist/admin/dataviews.*` and registered as the plugin-owned `aggr-dataviews`.
+  It is a lockfile-pinned development dependency and is therefore covered by
+  `pnpm ci:security` like any other. `bin/ci/check-admin-bundle.mjs` fails the
+  build if an admin screen compiles its own private copy, reads the shared
+  global without declaring the handle, or is pointed at a `wp-dataviews` handle
+  that does not exist — the last of which builds cleanly and throws in the
+  browser.
 - The release workflow never rebuilds the plugin. It downloads the exact ZIP
   accepted by the successful `master` CI run, verifies its SHA-256 sidecar,
   creates a provenance attestation, compares the uploaded assets byte-for-byte,
@@ -93,6 +103,31 @@ headers are not trusted by the plugin. See
 
 The implementation and operator procedure are documented in
 [build-and-release.md](docs/build-and-release.md).
+
+## Two hashes, two different lifetimes
+
+`Org_Access_Repository` stores two digests, and they are deliberately salted
+differently. Getting this backwards has already cost real damage, so it is
+written down rather than left to be inferred.
+
+- **`token_hash` verifies a bearer token** — an invitation or a request link. It
+  is an HMAC over `wp_salt( 'auth' )`, and rotating auth salts invalidating every
+  outstanding link is *correct behaviour*, the same property that logs everyone
+  out.
+- **`active_key` is a lookup index**, derived from values the same row already
+  stores in the clear: an organization's canonical name, or an invitation's email
+  address. It is salted with a plugin-owned option instead, because it has to
+  survive what `token_hash` is supposed to die from.
+
+While `active_key` used `wp_salt( 'auth' )`, any auth-salt rotation — routine
+hygiene, or a database restored into a site with different `AUTH_KEY`/`AUTH_SALT`
+values — made every stored key unreproducible. Lookups then missed rows that were
+sitting right there: organizations could never be renamed again, and
+**duplicate-name detection silently stopped detecting anything**, so two
+organizations could take one name with nothing objecting. Schema version 10
+recomputes the keys from the plaintext beside them, and deliberately leaves the
+sentinel keys on resolved and expired rows alone — those are random by design, so
+that an address which once declined an invitation can be invited again.
 
 ## Patched development dependency
 
