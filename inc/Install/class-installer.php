@@ -16,6 +16,7 @@ use Aggressive\Ads\Repository\Event_Repository;
 use Aggressive\Ads\Repository\Org_Access_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
+use Aggressive\Ads\Storage\Creative_Cipher;
 use Aggressive\Ads\Security\Roles;
 use Aggressive\Ads\Workflow\Click_Hop;
 use Aggressive\Ads\Workflow\Rollup_Reconciler;
@@ -56,6 +57,11 @@ final class Installer {
 			'aggr_settings',
 			Click_Hop::OPTION_REWRITE,
 			Rollup_Reconciler::OPTION,
+			Org_Access_Repository::LOOKUP_SALT_OPTION,
+			// Removed last, and only on a data-deleting uninstall: the private
+			// files it decrypts are deleted in the same run, so leaving it
+			// behind would keep a secret for bytes that no longer exist.
+			Creative_Cipher::KEY_OPTION,
 		);
 	}
 

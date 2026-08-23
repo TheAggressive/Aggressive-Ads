@@ -185,6 +185,88 @@ final class OrgAccessReindexTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A resolved invitation keeps its sentinel key.
+	 *
+	 * `resolve()` deliberately replaces `active_key` with a random value so the
+	 * unique index stops reserving that address — which is what lets somebody
+	 * who declined an invitation be invited again. Recomputing it would
+	 * re-reserve every address ever invited, and the second invitation would
+	 * come back as "already pending" forever.
+	 */
+	public function test_reindex_leaves_resolved_rows_alone(): void {
+		$invite = $this->access->create_invite( $this->org_id, 'resolved@example.test', 1 );
+
+		$this->assertIsArray( $invite );
+
+		$row_id = (int) $invite['id'];
+
+		// resolve() only moves a row out of `processing`, which claim() is what
+		// puts it into. Calling resolve() directly returns false and would have
+		// left this test asserting against a still-pending row.
+		$this->assertTrue( $this->access->claim( $row_id ) );
+		$this->assertTrue( $this->access->resolve( $row_id, 'accepted', 1 ) );
+
+		$sentinel = $this->active_key_of( $row_id );
+
+		// Assert the fixture is what the test is about: a resolved row whose
+		// key is a sentinel, not the lookup key for its address.
+		$this->assertNotSame( '', $sentinel );
+
+		$this->access->reindex_active_keys();
+
+		$this->assertSame(
+			$sentinel,
+			$this->active_key_of( $row_id ),
+			'A resolved row must keep the sentinel that frees its address.'
+		);
+
+		// The point of the sentinel: the address can be invited again.
+		$again = $this->access->create_invite( $this->org_id, 'resolved@example.test', 1 );
+
+		$this->assertIsArray( $again );
+	}
+
+	/**
+	 * A pending invitation is reindexed, because its key is a real lookup key.
+	 *
+	 * The positive half of the status filter. Excluding too much would leave
+	 * pending invitations unresolvable after a salt rotation.
+	 */
+	public function test_reindex_repairs_a_pending_invitation(): void {
+		$invite = $this->access->create_invite( $this->org_id, 'pending@example.test', 1 );
+
+		$this->assertIsArray( $invite );
+
+		$row_id = (int) $invite['id'];
+		$before = $this->active_key_of( $row_id );
+
+		$this->orphan_key( $row_id );
+		$this->assertNotSame( $before, $this->active_key_of( $row_id ) );
+
+		$this->access->reindex_active_keys();
+
+		$this->assertSame( $before, $this->active_key_of( $row_id ) );
+	}
+
+	/**
+	 * One row's active_key.
+	 *
+	 * @param int $row_id Registry row id.
+	 * @return string
+	 */
+	private function active_key_of( int $row_id ): string {
+		global $wpdb;
+
+		return (string) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT active_key FROM %i WHERE id = %d',
+				$this->access->table_name(),
+				$row_id
+			)
+		);
+	}
+
+	/**
 	 * An organization holding no identity row can still be renamed.
 	 *
 	 * Rows predating the registry, imported sites and seeded fixtures all

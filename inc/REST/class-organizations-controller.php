@@ -201,25 +201,35 @@ final class Organizations_Controller implements Service {
 	 */
 	private static function paging_args(): array {
 		return array(
-			'page'     => array(
+			'page'         => array(
 				'type'              => 'integer',
 				'required'          => false,
 				'default'           => 1,
 				'sanitize_callback' => 'absint',
 			),
-			'per_page' => array(
+			'per_page'     => array(
 				'type'              => 'integer',
 				'required'          => false,
 				'default'           => Organization_Data::DEFAULT_PER_PAGE,
 				'sanitize_callback' => 'absint',
 			),
-			'search'   => array(
+			'search'       => array(
 				'type'              => 'string',
 				'required'          => false,
 				'default'           => '',
 				'sanitize_callback' => 'sanitize_text_field',
 			),
-			'state'    => array(
+			/*
+			 * Named `filter_state`, not `state`, and that is not cosmetic.
+			 *
+			 * `POST /organizations/{id}/state` carries the state being *written*
+			 * in its body, and a body parameter outranks the query string. When
+			 * both were called `state`, suspending an organization from an
+			 * unfiltered list made the response page filter itself to suspended
+			 * rows — with a suspended-only total — and the client adopted it,
+			 * so the table appeared to collapse to a single row.
+			 */
+			'filter_state' => array(
 				'type'              => 'string',
 				'required'          => false,
 				'default'           => '',
@@ -228,6 +238,19 @@ final class Organizations_Controller implements Service {
 					Org_Repository::STATE_ACTIVE,
 					Org_Repository::STATE_SUSPENDED,
 				),
+				'sanitize_callback' => 'sanitize_key',
+			),
+
+			/*
+			 * Only the name is sortable, so this is a direction rather than a
+			 * column. Without it the server always answered ascending while the
+			 * table drew a descending arrow.
+			 */
+			'order'        => array(
+				'type'              => 'string',
+				'required'          => false,
+				'default'           => 'asc',
+				'enum'              => array( 'asc', 'desc' ),
 				'sanitize_callback' => 'sanitize_key',
 			),
 		);
@@ -282,7 +305,8 @@ final class Organizations_Controller implements Service {
 				? (int) $request->get_param( 'per_page' )
 				: Organization_Data::DEFAULT_PER_PAGE,
 			(string) $request->get_param( 'search' ),
-			(string) $request->get_param( 'state' )
+			(string) $request->get_param( 'filter_state' ),
+			'desc' === (string) $request->get_param( 'order' ) ? 'DESC' : 'ASC'
 		);
 	}
 

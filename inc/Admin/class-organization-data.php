@@ -48,10 +48,11 @@ final class Organization_Data {
 	 * @param int    $per_page Rows per page.
 	 * @param string $search   Free-text match against the organization name.
 	 * @param string $state    Org_Repository::STATE_* or '' for all.
+	 * @param string $order    'ASC' or 'DESC', applied to the name.
 	 * @return array{rows: array<int, array<string, mixed>>, total: int, page: int, perPage: int}
 	 */
-	public function view( int $page = 1, int $per_page = self::DEFAULT_PER_PAGE, string $search = '', string $state = '' ): array {
-		$found = $this->organizations->page( $page, $per_page, $search, $state );
+	public function view( int $page = 1, int $per_page = self::DEFAULT_PER_PAGE, string $search = '', string $state = '', string $order = 'ASC' ): array {
+		$found = $this->organizations->page( $page, $per_page, $search, $state, $order );
 		$rows  = array();
 
 		foreach ( $found['ids'] as $org_id ) {

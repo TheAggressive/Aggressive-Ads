@@ -277,6 +277,17 @@ function Roster( {
 type Screen = {
 	restPath: string;
 	busy: boolean;
+
+	/**
+	 * The last write failure, or ''.
+	 *
+	 * Modals need their own copy. `SaveError` renders in the page, and a
+	 * DataViews action modal is a portal painted on top of it, so a rejected
+	 * removal used to leave the modal open, the roster unchanged, and the
+	 * explanation hidden behind the overlay.
+	 */
+	error: string;
+
 	write: (
 		options: Record< string, unknown >,
 		message: string
@@ -296,6 +307,21 @@ function useScreen(): Screen {
 	}
 
 	return screen;
+}
+
+/** The write failure, rendered where the modal can actually be seen. */
+function ModalError(): ReactElement | null {
+	const { error } = useScreen();
+
+	if ( '' === error ) {
+		return null;
+	}
+
+	return (
+		<Notice status="error" isDismissible={ false }>
+			{ error }
+		</Notice>
+	);
 }
 
 /**
@@ -373,43 +399,46 @@ function MembersModal( {
 	};
 
 	return (
-		<Roster
-			members={ roster }
-			busy={ busy }
-			onTransfer={ ( member ) => {
-				void apply(
-					{
-						path: `${ restPath }/${ org.id }/owner`,
-						method: 'POST',
-						data: { user_id: member.id },
-					},
-					t( 'ownerChanged' )
-				);
-			} }
-			onRemove={ ( member ) => {
-				void apply(
-					{
-						path: `${ restPath }/${ org.id }/members/${ member.id }`,
-						method: 'DELETE',
-					},
-					t( 'memberRemoved' )
-				);
-			} }
-			onInvite={ ( email ) => {
-				void apply(
-					{
-						path: `${ restPath }/${ org.id }/members`,
-						method: 'POST',
-						data: { email },
-					},
-					t( 'invited' )
-				);
-			} }
-		/>
+		<VStack spacing={ 4 }>
+			<ModalError />
+			<Roster
+				members={ roster }
+				busy={ busy }
+				onTransfer={ ( member ) => {
+					void apply(
+						{
+							path: `${ restPath }/${ org.id }/owner`,
+							method: 'POST',
+							data: { user_id: member.id },
+						},
+						t( 'ownerChanged' )
+					);
+				} }
+				onRemove={ ( member ) => {
+					void apply(
+						{
+							path: `${ restPath }/${ org.id }/members/${ member.id }`,
+							method: 'DELETE',
+						},
+						t( 'memberRemoved' )
+					);
+				} }
+				onInvite={ ( email ) => {
+					void apply(
+						{
+							path: `${ restPath }/${ org.id }/members`,
+							method: 'POST',
+							data: { email },
+						},
+						t( 'invited' )
+					);
+				} }
+			/>
+		</VStack>
 	);
 }
 
-/** Renaming, which closes on success because the row it edits is behind it. */
+/** Renaming, which closes only on success — a refusal must stay readable. */
 function RenameModal( {
 	items,
 	closeModal,
@@ -427,6 +456,7 @@ function RenameModal( {
 
 	return (
 		<VStack spacing={ 4 }>
+			<ModalError />
 			<TextControl
 				label={ t( 'name' ) }
 				value={ name }
@@ -450,8 +480,13 @@ function RenameModal( {
 								data: { name: name.trim() },
 							},
 							t( 'renamed' )
-						);
-						closeModal?.();
+						).then( ( result ) => {
+							// Only on success. Closing regardless dismissed the
+							// dialog over its own error message.
+							if ( result ) {
+								closeModal?.();
+							}
+						} );
 					} }
 				>
 					{ t( 'rename' ) }
@@ -473,7 +508,7 @@ function SuspendModal( {
 	items: Organization[];
 	closeModal?: () => void;
 } ): ReactElement {
-	const { restPath, write } = useScreen();
+	const { restPath, busy, write } = useScreen();
 	const org = items[ 0 ];
 
 	if ( ! org ) {
@@ -482,6 +517,7 @@ function SuspendModal( {
 
 	return (
 		<VStack spacing={ 4 }>
+			<ModalError />
 			<Text>{ t( 'confirmSuspend' ).replace( '%s', org.name ) }</Text>
 			<HStack justify="flex-end">
 				<Button variant="tertiary" onClick={ closeModal }>
@@ -491,6 +527,7 @@ function SuspendModal( {
 					variant="primary"
 					isDestructive
 					__next40pxDefaultSize
+					disabled={ busy }
 					onClick={ () => {
 						void write(
 							{
@@ -499,8 +536,11 @@ function SuspendModal( {
 								data: { state: 'suspended' },
 							},
 							t( 'suspended' )
-						);
-						closeModal?.();
+						).then( ( result ) => {
+							if ( result ) {
+								closeModal?.();
+							}
+						} );
 					} }
 				>
 					{ t( 'suspend' ) }
@@ -522,12 +562,26 @@ const DEFAULT_VIEW: DataView = {
 	layout: {},
 };
 
-/** Reads the state filter DataViews holds, as the REST enum spells it. */
+/**
+ * Reads the state filter DataViews holds, as the REST enum spells it.
+ *
+ * The operator is checked, not assumed. A field with elements and no declared
+ * operators gets `is` *and* `isNot` from DataViews, and reading only `value`
+ * turned "State is not Active" into `filter_state=active` — a filter that
+ * returned precisely the rows the user asked to exclude. The field now declares
+ * `is` alone, and this refuses to translate anything else, so the two cannot
+ * drift back apart silently.
+ */
 function stateFilter( view: DataView ): string {
 	const filter = ( view.filters ?? [] ).find(
 		( entry ) => 'state' === entry.field
 	);
-	const value = filter?.value;
+
+	if ( ! filter || ( filter.operator && 'is' !== filter.operator ) ) {
+		return '';
+	}
+
+	const value = filter.value;
 
 	return 'active' === value || 'suspended' === value ? value : '';
 }
@@ -554,7 +608,11 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 			page: view.page ?? 1,
 			per_page: view.perPage ?? DEFAULT_VIEW.perPage,
 			search: view.search ?? '',
-			state: stateFilter( view ),
+			filter_state: stateFilter( view ),
+			// Only the name is sortable, so this is a direction rather than a
+			// column. Omitting it left the server answering ascending while the
+			// header drew a descending arrow.
+			order: 'desc' === view.sort?.direction ? 'desc' : 'asc',
 		} ),
 		[ view ]
 	);
@@ -689,6 +747,10 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 					{ value: 'active', label: t( 'stateActive' ) },
 					{ value: 'suspended', label: t( 'stateSuspended' ) },
 				],
+				// `is` only. With two mutually exclusive states, "is not
+				// Active" says nothing "is Suspended" does not, and offering it
+				// means the server has to answer a negation it cannot express.
+				filterBy: { operators: [ 'is' ] },
 				getValue: ( { item }: { item: Organization } ) =>
 					item.active ? 'active' : 'suspended',
 			},
@@ -752,8 +814,8 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 	);
 
 	const screen = useMemo(
-		() => ( { restPath: data.restPath, busy, write } ),
-		[ data.restPath, busy, write ]
+		() => ( { restPath: data.restPath, busy, error, write } ),
+		[ data.restPath, busy, error, write ]
 	);
 
 	return (

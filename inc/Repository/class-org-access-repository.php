@@ -747,6 +747,19 @@ final class Org_Access_Repository {
 	 * invitation or request stores its `email`, both in the clear. Only
 	 * `token_hash` is unrecoverable, and it is deliberately left alone.
 	 *
+	 * **Only live rows.** `active_key` means two different things depending on
+	 * status. On an active identity or a pending invitation it is the lookup
+	 * key. On anything resolved or expired it is a random sentinel, written by
+	 * `resolve()` and the expiry sweep precisely so the unique index stops
+	 * reserving that name or address — which is what lets somebody who once
+	 * declined an invitation be invited again.
+	 *
+	 * Recomputing those would re-reserve every address ever invited, so a
+	 * second invitation to any of them would come back as "already pending".
+	 * Worse, where a pending row for the same address already existed, the
+	 * UPDATE would collide with the unique index, fail, and leave that row on
+	 * its unreproducible key with nothing reporting it.
+	 *
 	 * Idempotent. Rows already keyed correctly are rewritten to the same value,
 	 * so running it twice changes nothing.
 	 *
@@ -762,8 +775,10 @@ final class Org_Access_Repository {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- One-time migration over the custom registry.
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
-				'SELECT id, kind, org_id, canonical_name, email FROM %i',
-				$this->table_name()
+				'SELECT id, kind, org_id, canonical_name, email FROM %i WHERE status IN ( %s, %s )',
+				$this->table_name(),
+				self::STATUS_ACTIVE,
+				self::STATUS_PENDING
 			),
 			ARRAY_A
 		);
@@ -804,10 +819,46 @@ final class Org_Access_Repository {
 
 			if ( false !== $updated ) {
 				++$rewritten;
+
+				continue;
 			}
+
+			/*
+			 * A refused UPDATE leaves the row on a key nothing can reproduce,
+			 * and a migration that swallows that is a migration that reports
+			 * success over data it did not repair. It cannot happen while the
+			 * status filter above holds — two live rows cannot share a key,
+			 * because the unique index would not have accepted them — so
+			 * reaching here means an assumption broke and is worth the notice.
+			 */
+			$this->audit_reindex_failure( (int) ( $row['id'] ?? 0 ) );
 		}
 
 		return $rewritten;
+	}
+
+	/**
+	 * Records a row the reindex could not rewrite.
+	 *
+	 * Deliberately not a WP_Error: this runs inside a migration step whose
+	 * caller is the upgrade walker, and failing the whole upgrade over one
+	 * unreachable row would leave the rest of the registry unrepaired.
+	 *
+	 * @param int $row_id Registry row id.
+	 * @return void
+	 */
+	private function audit_reindex_failure( int $row_id ): void {
+		if ( ! defined( 'WP_DEBUG' ) || ! WP_DEBUG ) {
+			return;
+		}
+
+		// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Debug-only diagnostic for a migration that cannot fail loudly.
+		error_log(
+			sprintf(
+				'aggr: org access row %d kept an unreproducible active_key; its lookup will not resolve.',
+				$row_id
+			)
+		);
 	}
 
 	/**

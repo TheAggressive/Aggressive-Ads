@@ -672,9 +672,10 @@ final class Org_Repository {
 	 * @param int    $per_page Rows per page.
 	 * @param string $search   Free-text match against the organization name.
 	 * @param string $state    self::STATE_ACTIVE, self::STATE_SUSPENDED, or ''.
+	 * @param string $order    'ASC' or 'DESC', applied to the name.
 	 * @return array{ids: array<int, int>, total: int}
 	 */
-	public function page( int $page, int $per_page, string $search = '', string $state = '' ): array {
+	public function page( int $page, int $per_page, string $search = '', string $state = '', string $order = 'ASC' ): array {
 		$page     = max( 1, $page );
 		$per_page = max( 1, min( self::MAX_PER_PAGE, $per_page ) );
 
@@ -685,7 +686,7 @@ final class Org_Repository {
 			'paged'                  => $page,
 			'fields'                 => 'ids',
 			'orderby'                => 'title',
-			'order'                  => 'ASC',
+			'order'                  => 'DESC' === strtoupper( $order ) ? 'DESC' : 'ASC',
 			'update_post_term_cache' => false,
 			'update_post_meta_cache' => false,
 		);

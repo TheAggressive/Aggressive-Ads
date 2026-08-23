@@ -319,14 +319,27 @@ final class OrganizationsWriteTest extends WP_UnitTestCase {
 	public function test_the_list_pages_and_reports_the_real_total(): void {
 		wp_set_current_user( $this->administrator );
 
-		// Three more, so there is something to page through.
+		/*
+		 * Organizations, not invitations.
+		 *
+		 * The first version of this created three *members* of the one existing
+		 * organization, so it ran against a single row and passed with paging
+		 * deleted outright — `per_page => 1` cannot be seen to work against a
+		 * one-row table.
+		 */
 		for ( $i = 0; $i < 3; $i++ ) {
-			$this->call(
-				'POST',
-				'/aggr/v1/organizations/' . $this->org_id . '/members',
-				array( 'email' => 'paging' . $i . '@example.test' )
+			self::factory()->post->create(
+				array(
+					'post_type'  => Post_Types::ORGANIZATION,
+					'post_title' => 'PAGING FIXTURE ' . $i,
+				)
 			);
 		}
+
+		$total = $this->count_all_organizations();
+
+		// Assert the fixture is real before asserting on it.
+		$this->assertGreaterThanOrEqual( 4, $total );
 
 		$first = $this->call(
 			'GET',
@@ -341,13 +354,105 @@ final class OrganizationsWriteTest extends WP_UnitTestCase {
 
 		$view = $first->get_data()['view'];
 
+		// One row out of four or more. A per_page the query ignored would
+		// return every organization and still look like a successful page.
 		$this->assertCount( 1, $view['rows'] );
 		$this->assertSame( 1, $view['page'] );
+		$this->assertSame( $total, $view['total'] );
 
-		// A count, not just "some rows": a per_page the query ignored would
-		// return everything and still look like a successful page.
-		$this->assertGreaterThanOrEqual( 1, $view['total'] );
-		$this->assertSame( $view['total'], $this->count_all_organizations() );
+		// And page two must hold a different organization, or "paging" is one
+		// page repeated.
+		$second = $this->call(
+			'GET',
+			'/aggr/v1/organizations',
+			array(
+				'per_page' => 1,
+				'page'     => 2,
+			)
+		);
+
+		$second_view = $second->get_data()['view'];
+
+		$this->assertCount( 1, $second_view['rows'] );
+		$this->assertNotSame( $view['rows'][0]['id'], $second_view['rows'][0]['id'] );
+	}
+
+	/**
+	 * Sort direction reaches the query.
+	 *
+	 * The client can only sort by name, and the server used to hardcode ASC, so
+	 * clicking the header flipped the arrow and returned the same page.
+	 *
+	 * @return void
+	 */
+	public function test_sort_direction_is_honoured(): void {
+		wp_set_current_user( $this->administrator );
+
+		foreach ( array( 'AAA PAGING FIRST', 'ZZZ PAGING LAST' ) as $name ) {
+			self::factory()->post->create(
+				array(
+					'post_type'  => Post_Types::ORGANIZATION,
+					'post_title' => $name,
+				)
+			);
+		}
+
+		$ascending = $this->call(
+			'GET',
+			'/aggr/v1/organizations',
+			array(
+				'order'    => 'asc',
+				'per_page' => 1,
+			)
+		);
+
+		$descending = $this->call(
+			'GET',
+			'/aggr/v1/organizations',
+			array(
+				'order'    => 'desc',
+				'per_page' => 1,
+			)
+		);
+
+		$this->assertSame( 'AAA PAGING FIRST', $ascending->get_data()['view']['rows'][0]['name'] );
+		$this->assertSame( 'ZZZ PAGING LAST', $descending->get_data()['view']['rows'][0]['name'] );
+	}
+
+	/**
+	 * A write does not filter the page it returns.
+	 *
+	 * `POST /organizations/{id}/state` carries the new state in its body, and a
+	 * body parameter outranks the query string. While the list filter was also
+	 * called `state`, suspending from an unfiltered list came back as a
+	 * suspended-only page with a suspended-only total, and the client adopted
+	 * it — so the table appeared to collapse to a single row.
+	 *
+	 * @return void
+	 */
+	public function test_suspending_does_not_filter_the_returned_page(): void {
+		wp_set_current_user( $this->administrator );
+
+		self::factory()->post->create(
+			array(
+				'post_type'  => Post_Types::ORGANIZATION,
+				'post_title' => 'STILL ACTIVE ELSEWHERE',
+			)
+		);
+
+		$total = $this->count_all_organizations();
+		$this->assertGreaterThanOrEqual( 2, $total );
+
+		$response = $this->call(
+			'POST',
+			'/aggr/v1/organizations/' . $this->org_id . '/state',
+			array( 'state' => 'suspended' )
+		);
+
+		$this->assertSame( 200, $response->get_status() );
+
+		// The whole list, not the suspended slice of it.
+		$this->assertSame( $total, $response->get_data()['view']['total'] );
 	}
 
 	/**
@@ -372,7 +477,7 @@ final class OrganizationsWriteTest extends WP_UnitTestCase {
 		$this->assertSame( '', (string) get_post_meta( $this->org_id, Org_Repository::META_ORG_STATE, true ) );
 		$this->assertSame( Org_Repository::STATE_ACTIVE, $this->organizations->state( $this->org_id ) );
 
-		$response = $this->call( 'GET', '/aggr/v1/organizations', array( 'state' => Org_Repository::STATE_ACTIVE ) );
+		$response = $this->call( 'GET', '/aggr/v1/organizations', array( 'filter_state' => Org_Repository::STATE_ACTIVE ) );
 
 		$this->assertSame( 200, $response->get_status() );
 
@@ -393,7 +498,7 @@ final class OrganizationsWriteTest extends WP_UnitTestCase {
 		wp_set_current_user( $this->administrator );
 
 		$before = array_column(
-			$this->call( 'GET', '/aggr/v1/organizations', array( 'state' => Org_Repository::STATE_SUSPENDED ) )->get_data()['view']['rows'],
+			$this->call( 'GET', '/aggr/v1/organizations', array( 'filter_state' => Org_Repository::STATE_SUSPENDED ) )->get_data()['view']['rows'],
 			'id'
 		);
 
@@ -402,7 +507,7 @@ final class OrganizationsWriteTest extends WP_UnitTestCase {
 		$this->assertTrue( $this->organizations->set_state( $this->org_id, Org_Repository::STATE_SUSPENDED ) );
 
 		$after = array_column(
-			$this->call( 'GET', '/aggr/v1/organizations', array( 'state' => Org_Repository::STATE_SUSPENDED ) )->get_data()['view']['rows'],
+			$this->call( 'GET', '/aggr/v1/organizations', array( 'filter_state' => Org_Repository::STATE_SUSPENDED ) )->get_data()['view']['rows'],
 			'id'
 		);
 
