@@ -96,12 +96,22 @@ and deeper analytics remain open. What is built:
   from `/detail` rather than riding on every row. Sorting is by name only,
   because owner/member/campaign counts are derived per row and ordering on them
   would mean assembling every organization in order to page it.
-  `@wordpress/dataviews` is **bundled, not externalised**: WordPress 7.1 uses
-  DataViews internally but registers no `wp-dataviews` script or style handle,
-  so externalising it builds clean and throws in the browser. The list lives in
-  `bin/ci/bundled-packages.mjs`, read by both `webpack.admin.config.mjs` and
-  `bin/ci/check-admin-bundle.mjs`, which fails the build if either that or the
-  `"sideEffects": false` stylesheet drop ever comes back
+  `@wordpress/dataviews` is **compiled once and shared**, never externalised to
+  core and never compiled per screen: WordPress 7.1 uses DataViews internally
+  but registers no `wp-dataviews` script or style handle, so externalising it
+  builds clean and throws in the browser — while compiling it per screen costs
+  490 KB of script and 90 KB of CSS *each*, because admin entries share nothing
+  (`splitChunks` is off and every `.asset.php` is its own enqueue).
+  `webpack.dataviews.config.mjs` builds it into `dist/admin/dataviews.*`,
+  `Admin\Shared_Assets` registers it as `aggr-dataviews`, and
+  `webpack.admin.config.mjs` rewrites each screen's ordinary
+  `@wordpress/dataviews` import onto that global and handle — so a screen
+  imports the package normally and knows nothing about the arrangement. The
+  registry is `bin/ci/bundled-packages.mjs`, read by both configs and by
+  `bin/ci/check-admin-bundle.mjs`, which fails the build if a screen compiles
+  its own copy, reads the global without declaring the handle, names a
+  `wp-dataviews` handle core does not have, or drops the stylesheet to
+  `"sideEffects": false` again
 - the advertiser-facing notifications for changes, rejection, approval, going
   live and completion
 - pause, resume and cancel, which need no new UI: the review screen's buttons

@@ -7,8 +7,10 @@
  * wp-components so the browser uses the copies WordPress already loads rather
  * than a second one bundled here.
  *
- * The exceptions are in `bin/ci/bundled-packages.mjs`, which also tells the
- * build's own guard which handles must never appear in the output.
+ * The exceptions are in `bin/ci/bundled-packages.mjs`: packages WordPress does
+ * not register, which this plugin compiles once into its own bundle and shares
+ * under a handle of its own. Screens import them by their ordinary package
+ * name; the rewrite below is the only thing that knows otherwise.
  */
 
 import path from 'path';
@@ -16,7 +18,7 @@ import wpConfig from '@wordpress/scripts/config/webpack.config.js';
 import { merge } from 'webpack-merge';
 import MiniCssExtractPlugin from 'mini-css-extract-plugin';
 import DependencyExtractionWebpackPlugin from '@wordpress/dependency-extraction-webpack-plugin';
-import { isBundledPackage } from './bin/ci/bundled-packages.mjs';
+import { sharedPackageFor } from './bin/ci/bundled-packages.mjs';
 
 export default ( env = {}, argv = {} ) => {
 	const base =
@@ -94,18 +96,22 @@ export default ( env = {}, argv = {} ) => {
 				chunkFilename: '[name].css',
 			} ),
 			new DependencyExtractionWebpackPlugin( {
+				/*
+				 * Shared packages resolve to a global this plugin ships, not to
+				 * a `wp-*` handle WordPress does not have and not to a private
+				 * copy compiled into every screen.
+				 */
 				requestToExternal( request ) {
-					if ( isBundledPackage( request ) ) {
-						// Defined-but-falsy, not undefined. The plugin only
-						// cascades to its `@wordpress/*` default when the
-						// return is literally `undefined`; `null` means
-						// "decided: not external", so webpack bundles it.
-						return null;
-					}
+					const shared = sharedPackageFor( request );
 
 					// Undefined cascades to the default, which is what every
 					// other @wordpress import should get.
-					return undefined;
+					return shared ? shared.global : undefined;
+				},
+				requestToHandle( request ) {
+					const shared = sharedPackageFor( request );
+
+					return shared ? shared.handle : undefined;
 				},
 			} ),
 		],

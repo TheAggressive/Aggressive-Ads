@@ -100,17 +100,30 @@ const THEME_ONLY_CSS = [
 	'.dataviews-view-table__primary-column-content{font-weight:600}',
 ].join( '\n' );
 
-const USES_DATAVIEWS = 'className:"dataviews-view-table"';
+/** JS that only a bundle with DataViews compiled into it would contain. */
+const COMPILES_DATAVIEWS = 'className:"dataviews-view-table"';
 
-test( 'a sound bundle passes and reports what it scanned', () => {
+/** JS that reads the shared global, as a consuming screen's bundle does. */
+const USES_SHARED = 'const{DataViews}=window.aggrDataViews;';
+
+const SHARED_HANDLE = 'aggr-dataviews';
+
+test( 'a shared bundle and its consumer pass together', () => {
 	const dir = fixture();
 
 	writeEntry(
 		dir,
-		'organizations',
+		'dataviews',
 		[ 'wp-element', 'wp-components' ],
-		USES_DATAVIEWS,
+		COMPILES_DATAVIEWS,
 		dataviewsCss( 166 )
+	);
+	writeEntry(
+		dir,
+		'organizations',
+		[ 'wp-element', SHARED_HANDLE ],
+		USES_SHARED,
+		THEME_ONLY_CSS
 	);
 	writeEntry( dir, 'packages', [ 'wp-element' ], 'no dataviews here', null );
 
@@ -118,8 +131,51 @@ test( 'a sound bundle passes and reports what it scanned', () => {
 
 	assert.equal( status, 0 );
 	// The count, not just "ok": a scan that quietly stopped reading one of the
-	// two entries would still print ok.
-	assert.match( stdout, /ok \(2 entries\)/ );
+	// three entries would still print ok.
+	assert.match( stdout, /ok \(3 entries\)/ );
+} );
+
+test( 'a screen that compiles its own copy is refused', () => {
+	const dir = fixture();
+
+	writeEntry(
+		dir,
+		'dataviews',
+		[ 'wp-element' ],
+		COMPILES_DATAVIEWS,
+		dataviewsCss( 166 )
+	);
+	// The regression this exists for: it works, and costs 490 KB per screen.
+	writeEntry(
+		dir,
+		'organizations',
+		[ 'wp-element' ],
+		COMPILES_DATAVIEWS,
+		dataviewsCss( 166 )
+	);
+
+	const { status, stderr } = run( dir );
+
+	assert.equal( status, 1 );
+	assert.match( stderr, /compiles @wordpress\/dataviews into itself/ );
+} );
+
+test( 'a consumer that does not declare the shared handle is refused', () => {
+	const dir = fixture();
+
+	writeEntry(
+		dir,
+		'dataviews',
+		[ 'wp-element' ],
+		COMPILES_DATAVIEWS,
+		dataviewsCss( 166 )
+	);
+	writeEntry( dir, 'organizations', [ 'wp-element' ], USES_SHARED, null );
+
+	const { status, stderr } = run( dir );
+
+	assert.equal( status, 1 );
+	assert.match( stderr, /does not depend on "aggr-dataviews"/ );
 } );
 
 test( 'rejects a subpath import that escaped externalisation', () => {
@@ -131,7 +187,7 @@ test( 'rejects a subpath import that escaped externalisation', () => {
 		dir,
 		'organizations',
 		[ 'wp-element', 'wp-dataviews/build-style/style.css' ],
-		USES_DATAVIEWS,
+		COMPILES_DATAVIEWS,
 		dataviewsCss( 166 )
 	);
 
@@ -155,7 +211,7 @@ test( 'rejects a package WordPress does not register', () => {
 		dir,
 		'organizations',
 		[ 'wp-element', 'wp-dataviews' ],
-		USES_DATAVIEWS,
+		COMPILES_DATAVIEWS,
 		dataviewsCss( 166 )
 	);
 
@@ -165,37 +221,51 @@ test( 'rejects a package WordPress does not register', () => {
 	assert.match( stderr, /not registered by WordPress/ );
 } );
 
-test( 'the forbidden handle is derived from the bundled-package list', async () => {
-	// Not a restatement of the constant: this asserts the two files agree,
-	// which is the whole reason the list was moved into one module.
-	const { BUNDLED_PACKAGES, forbiddenHandles, isBundledPackage } =
-		await import( './bundled-packages.mjs' );
+test( 'the shared-package registry drives the handles and the rewrite', async () => {
+	// Not a restatement of the constants: this asserts every file that acts on
+	// the registry agrees with it, which is the whole reason it is one module.
+	const {
+		SHARED_PACKAGES,
+		forbiddenHandles,
+		sharedHandles,
+		sharedPackageFor,
+	} = await import( './bundled-packages.mjs' );
 
-	assert.ok( BUNDLED_PACKAGES.includes( '@wordpress/dataviews' ) );
+	const dataviews = SHARED_PACKAGES.find(
+		( pkg ) => '@wordpress/dataviews' === pkg.request
+	);
+
+	assert.ok( dataviews );
+	assert.equal( dataviews.global, 'aggrDataViews' );
+	assert.equal( dataviews.handle, 'aggr-dataviews' );
+
+	// The handle core does not have must stay forbidden; the one this plugin
+	// ships must be the one screens are pointed at.
 	assert.deepEqual( forbiddenHandles(), [ 'wp-dataviews' ] );
+	assert.deepEqual( sharedHandles(), [ 'aggr-dataviews' ] );
 
 	// Subpaths count, which is the bug that shipped the bogus handle.
-	assert.equal( isBundledPackage( '@wordpress/dataviews' ), true );
+	assert.equal( sharedPackageFor( '@wordpress/dataviews' ), dataviews );
 	assert.equal(
-		isBundledPackage( '@wordpress/dataviews/build-style/style.css' ),
-		true
+		sharedPackageFor( '@wordpress/dataviews/build-style/style.css' ),
+		dataviews
 	);
 	// And the near-miss must not: a package merely sharing the prefix is a
 	// different package.
-	assert.equal( isBundledPackage( '@wordpress/dataviews-extra' ), false );
-	assert.equal( isBundledPackage( '@wordpress/components' ), false );
+	assert.equal( sharedPackageFor( '@wordpress/dataviews-extra' ), null );
+	assert.equal( sharedPackageFor( '@wordpress/components' ), null );
 } );
 
-test( 'rejects DataViews markup shipped without DataViews styles', () => {
+test( 'rejects a shared bundle shipped without DataViews styles', () => {
 	const dir = fixture();
 
 	// The tree-shaken stylesheet: JS carries the class, CSS exists but holds
-	// only our own rules, because "sideEffects": false deleted the import.
+	// only theme-layer rules, because "sideEffects": false deleted the import.
 	writeEntry(
 		dir,
-		'organizations',
+		'dataviews',
 		[ 'wp-element' ],
-		USES_DATAVIEWS,
+		COMPILES_DATAVIEWS,
 		THEME_ONLY_CSS
 	);
 
@@ -213,9 +283,9 @@ test( 'a stylesheet just under the threshold still fails', () => {
 	// tested at its edge is a threshold nobody knows the value of.
 	writeEntry(
 		dir,
-		'organizations',
+		'dataviews',
 		[ 'wp-element' ],
-		USES_DATAVIEWS,
+		COMPILES_DATAVIEWS,
 		dataviewsCss( 39 )
 	);
 
@@ -227,9 +297,9 @@ test( 'a stylesheet exactly at the threshold passes', () => {
 
 	writeEntry(
 		dir,
-		'organizations',
+		'dataviews',
 		[ 'wp-element' ],
-		USES_DATAVIEWS,
+		COMPILES_DATAVIEWS,
 		dataviewsCss( 40 )
 	);
 
@@ -239,7 +309,7 @@ test( 'a stylesheet exactly at the threshold passes', () => {
 test( 'rejects DataViews markup with no stylesheet emitted at all', () => {
 	const dir = fixture();
 
-	writeEntry( dir, 'organizations', [ 'wp-element' ], USES_DATAVIEWS, null );
+	writeEntry( dir, 'dataviews', [ 'wp-element' ], COMPILES_DATAVIEWS, null );
 
 	const { status, stderr } = run( dir );
 
@@ -315,7 +385,7 @@ test( 'reports every problem on one entry, not just the first', () => {
 		dir,
 		'organizations',
 		[ 'wp-dataviews', 'wp-dataviews/build-style/style.css' ],
-		USES_DATAVIEWS,
+		COMPILES_DATAVIEWS,
 		THEME_ONLY_CSS
 	);
 

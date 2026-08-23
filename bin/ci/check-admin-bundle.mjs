@@ -39,7 +39,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
-import { forbiddenHandles } from './bundled-packages.mjs';
+import { forbiddenHandles, SHARED_PACKAGES } from './bundled-packages.mjs';
 
 const ROOT = path.resolve( import.meta.dirname, '../..' );
 
@@ -76,28 +76,57 @@ const ENTRY_COUNT = new Set();
 const UNREGISTERED = new Set( forbiddenHandles() );
 
 /**
- * Markup/style pairs that must travel together.
+ * What each shared package looks like once compiled, and where.
  *
- * `marker` is a class name the compiled JS emits; `prefix` is the selector
- * family its stylesheet must define; `minimum` is how many distinct selectors
- * in that family a real stylesheet carries.
+ * `marker` is a class name that appears in the JS only when the package itself
+ * was compiled in. `prefix`/`pattern`/`minimum` describe the stylesheet that
+ * must travel with it.
  *
  * The count is the whole point, and asserting presence instead is a mistake
  * this guard has already made. Checking that the CSS merely *contained*
  * `.dataviews-view-table` passed with the stylesheet fully tree-shaken away,
- * because the screen's own small theme layer names that class in order to pad
- * its cells. Six selectors came from us and none from DataViews, and the guard
+ * because the consuming screen's own theme layer names that class in order to
+ * restyle it. Six selectors came from us and none from DataViews, and the guard
  * called it fine. The real stylesheet defines 166.
  */
-const STYLE_PAIRS = [
+const SHARED_SHAPES = [
 	{
-		name: '@wordpress/dataviews',
+		request: '@wordpress/dataviews',
+		// The entry that is allowed to contain it, from SHARED_PACKAGES.
+		entry: 'dataviews',
+		global: 'aggrDataViews',
+		handle: 'aggr-dataviews',
 		marker: 'dataviews-view-table',
 		prefix: '.dataviews-',
 		pattern: /\.dataviews[a-zA-Z0-9_-]*/g,
 		minimum: 40,
 	},
 ];
+
+/**
+ * The shared shapes, checked against the list the build actually uses.
+ *
+ * Restating a global or a handle here would be a second hand-maintained list,
+ * so this fails loudly rather than drifting: a guard describing a bundle nobody
+ * builds any more reports success over output it is no longer reading.
+ */
+for ( const shape of SHARED_SHAPES ) {
+	const declared = SHARED_PACKAGES.find(
+		( pkg ) => pkg.request === shape.request
+	);
+
+	if (
+		! declared ||
+		declared.global !== shape.global ||
+		declared.handle !== shape.handle ||
+		! declared.name.endsWith( `/${ shape.entry }` )
+	) {
+		throw new Error(
+			`check-admin-bundle: the shape declared for ${ shape.request } no ` +
+				'longer matches SHARED_PACKAGES in bundled-packages.mjs.'
+		);
+	}
+}
 
 /**
  * Reads the `dependencies` array out of a generated .asset.php.
@@ -161,8 +190,45 @@ function checkEntry( dir, entry ) {
 		return problems;
 	}
 
-	for ( const pair of STYLE_PAIRS ) {
-		if ( ! js.includes( pair.marker ) ) {
+	for ( const shape of SHARED_SHAPES ) {
+		const isSharedEntry = entry === shape.entry;
+		const compiledIn = js.includes( shape.marker );
+
+		/*
+		 * Only the shared entry may contain the package.
+		 *
+		 * A screen that compiles its own copy still works, which is what makes
+		 * this worth failing over: nothing is shared between admin entries, so
+		 * the regression is invisible until you weigh the output. The first
+		 * consumer cost 490 KB of script and 90 KB of CSS on its own.
+		 */
+		if ( compiledIn && ! isSharedEntry ) {
+			problems.push(
+				`${ entry }: compiles ${ shape.request } into itself instead of ` +
+					`depending on "${ shape.handle }". Screens import it ` +
+					`normally; webpack.admin.config.mjs rewrites that onto the ` +
+					`shared bundle.`
+			);
+		}
+
+		/*
+		 * And a consumer must name the handle. Reading the global without
+		 * declaring the dependency loads a screen whose global is undefined,
+		 * which throws at mount rather than at build.
+		 */
+		if (
+			! isSharedEntry &&
+			js.includes( shape.global ) &&
+			! deps.includes( shape.handle )
+		) {
+			problems.push(
+				`${ entry }: reads the ${ shape.global } global but does not ` +
+					`depend on "${ shape.handle }", so nothing guarantees the ` +
+					`shared bundle loads first.`
+			);
+		}
+
+		if ( ! isSharedEntry ) {
 			continue;
 		}
 
@@ -174,17 +240,17 @@ function checkEntry( dir, entry ) {
 			css = '';
 		}
 
-		const found = new Set( css.match( pair.pattern ) ?? [] );
+		const found = new Set( css.match( shape.pattern ) ?? [] );
 
-		if ( found.size < pair.minimum ) {
+		if ( found.size < shape.minimum ) {
 			problems.push(
-				`${ entry }: bundles ${ pair.name } but ships only ` +
-					`${ found.size } distinct "${ pair.prefix }" selectors, ` +
-					`below the ${ pair.minimum } a real stylesheet carries. Its ` +
-					`package.json says "sideEffects": false, so webpack drops the ` +
-					`stylesheet import unless the css rule in ` +
-					`webpack.admin.config.mjs marks node_modules CSS as having ` +
-					`side effects.`
+				`${ entry }: is the shared ${ shape.request } bundle but ships ` +
+					`only ${ found.size } distinct "${ shape.prefix }" ` +
+					`selectors, below the ${ shape.minimum } a real stylesheet ` +
+					`carries. Its package.json says "sideEffects": false, so ` +
+					`webpack drops the stylesheet import unless the css rule in ` +
+					`webpack.dataviews.config.mjs marks node_modules CSS as ` +
+					`having side effects.`
 			);
 		}
 	}
