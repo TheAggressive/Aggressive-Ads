@@ -289,6 +289,15 @@ final class Service_Registrar {
 						$c->get( Installer::class )->install_line_items();
 						$c->get( Line_Item_Migrator::class )->start();
 					},
+					// The default line item's name is derived from the campaign
+					// title, and nothing re-derived it after a rename. Adding
+					// the column gives every existing row the "derived"
+					// default, which is wrong for any line item a publisher
+					// renamed, so the rows are classified rather than assumed.
+					13 => static function () use ( $c ): void {
+						$c->get( Installer::class )->install_line_items();
+						$c->get( Line_Item_Migrator::class )->start_name_provenance();
+					},
 				)
 			)
 		);

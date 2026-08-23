@@ -60,6 +60,8 @@ final class Installer {
 			Click_Hop::OPTION_REWRITE,
 			Rollup_Reconciler::OPTION,
 			Line_Item_Migrator::OPTION_CURSOR,
+			Line_Item_Migrator::OPTION_NAME_CURSOR,
+			Line_Item_Migrator::OPTION_NAME_DONE,
 			Line_Item_Migrator::OPTION_DONE,
 			Org_Access_Repository::LOOKUP_SALT_OPTION,
 			// Removed last, and only on a data-deleting uninstall: the private

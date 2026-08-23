@@ -40,12 +40,16 @@ final class LineItemRepositoryTest extends WP_UnitTestCase {
 		$this->line_items->install_table();
 		delete_option( Line_Item_Migrator::OPTION_CURSOR );
 		delete_option( Line_Item_Migrator::OPTION_DONE );
+		delete_option( Line_Item_Migrator::OPTION_NAME_CURSOR );
+		delete_option( Line_Item_Migrator::OPTION_NAME_DONE );
 		wp_clear_scheduled_hook( Line_Item_Migrator::HOOK );
 	}
 
 	public function tear_down(): void {
 		delete_option( Line_Item_Migrator::OPTION_CURSOR );
 		delete_option( Line_Item_Migrator::OPTION_DONE );
+		delete_option( Line_Item_Migrator::OPTION_NAME_CURSOR );
+		delete_option( Line_Item_Migrator::OPTION_NAME_DONE );
 		wp_clear_scheduled_hook( Line_Item_Migrator::HOOK );
 		parent::tear_down();
 	}
@@ -165,5 +169,181 @@ final class LineItemRepositoryTest extends WP_UnitTestCase {
 		update_post_meta( $campaign, Campaign_Repository::META_ORG_ID, $org_id );
 
 		return $campaign;
+	}
+
+	/**
+	 * **A campaign renamed after its first detail view takes the name with it.**
+	 *
+	 * The bug this closes, in the sequence that produced it. The wizard creates
+	 * a campaign under a placeholder title; the first detail view creates the
+	 * default line item and freezes that placeholder into its name; the
+	 * advertiser then names the campaign properly. Before the projection
+	 * carried the name, the Delivery strategy panel showed "Untitled campaign"
+	 * for the rest of the campaign's life, and the browser suite caught it.
+	 *
+	 * @return void
+	 */
+	public function test_a_default_line_item_follows_a_campaign_rename(): void {
+		$campaign = $this->campaign( 'Untitled campaign', Post_Statuses::DRAFT, 4 );
+
+		$this->line_items->ensure_default( $campaign );
+
+		$this->assertSame(
+			'Untitled campaign',
+			$this->line_items->default_for_campaign( $campaign )['name'],
+			'The fixture must start from the placeholder, or it is not testing the rename.'
+		);
+
+		wp_update_post(
+			array(
+				'ID'         => $campaign,
+				'post_title' => 'Spring season launch',
+			)
+		);
+
+		$this->assertTrue( $this->line_items->sync_default_from_campaign( $campaign ) );
+
+		$row = $this->line_items->default_for_campaign( $campaign );
+
+		$this->assertSame( 'Spring season launch', $row['name'] );
+		$this->assertTrue( $row['name_is_derived'] );
+	}
+
+	/**
+	 * **A publisher's own name is never overwritten by a later rename.**
+	 *
+	 * The other half, and the reason the flag exists rather than a comparison
+	 * against the revision counter: any edit bumps the revision, so inferring
+	 * provenance from it would freeze the name of every line item whose pacing
+	 * somebody adjusted, and re-deriving unconditionally would throw away a
+	 * deliberate rename.
+	 *
+	 * @return void
+	 */
+	public function test_a_renamed_line_item_stops_following_the_campaign(): void {
+		$campaign = $this->campaign( 'Untitled campaign', Post_Statuses::DRAFT, 4 );
+		$row      = $this->line_items->ensure_default( $campaign );
+
+		$revision = $this->line_items->update(
+			(int) $row['id'],
+			$campaign,
+			array( 'name' => 'Retargeting, week 2' ),
+			(int) $row['revision']
+		);
+
+		$this->assertIsInt( $revision );
+		$this->assertFalse( $this->line_items->default_for_campaign( $campaign )['name_is_derived'] );
+
+		wp_update_post(
+			array(
+				'ID'         => $campaign,
+				'post_title' => 'Spring season launch',
+			)
+		);
+
+		$this->line_items->sync_default_from_campaign( $campaign );
+
+		$after = $this->line_items->default_for_campaign( $campaign );
+
+		$this->assertSame( 'Retargeting, week 2', $after['name'] );
+		$this->assertFalse( $after['name_is_derived'] );
+	}
+
+	/**
+	 * An unrelated edit does not stop the name following the campaign.
+	 *
+	 * Pins the distinction the revision counter could not make.
+	 *
+	 * @return void
+	 */
+	public function test_an_edit_that_is_not_a_rename_leaves_the_name_derived(): void {
+		$campaign = $this->campaign( 'Untitled campaign', Post_Statuses::DRAFT, 4 );
+		$row      = $this->line_items->ensure_default( $campaign );
+
+		$this->line_items->update(
+			(int) $row['id'],
+			$campaign,
+			array( 'pacing_mode' => 'asap' ),
+			(int) $row['revision']
+		);
+
+		wp_update_post(
+			array(
+				'ID'         => $campaign,
+				'post_title' => 'Spring season launch',
+			)
+		);
+
+		$this->line_items->sync_default_from_campaign( $campaign );
+
+		$after = $this->line_items->default_for_campaign( $campaign );
+
+		$this->assertSame( 'asap', $after['pacing_mode'] );
+		$this->assertSame( 'Spring season launch', $after['name'] );
+		$this->assertTrue( $after['name_is_derived'] );
+	}
+
+	/**
+	 * **The backfill classifies existing rows instead of assuming.**
+	 *
+	 * Adding the column gives every row already on disk the "derived" default.
+	 * That is right for rows nobody renamed and wrong for the rest, and getting
+	 * it wrong in that direction silently overwrites a publisher's rename on
+	 * the next projection.
+	 *
+	 * Asserted by count as well as by flag, so "it corrected something" cannot
+	 * pass for "it corrected the right row".
+	 *
+	 * @return void
+	 */
+	public function test_the_backfill_separates_derived_names_from_renamed_ones(): void {
+		$derived  = $this->campaign( 'Left alone', Post_Statuses::DRAFT, 4 );
+		$renamed  = $this->campaign( 'Also left alone', Post_Statuses::DRAFT, 4 );
+		$expected = $this->line_items->ensure_default( $derived );
+		$other    = $this->line_items->ensure_default( $renamed );
+
+		$this->assertNotNull( $expected );
+		$this->assertNotNull( $other );
+
+		// Put both rows in the state an upgrade produces: a name somebody
+		// changed, and the column default claiming both are still ours.
+		global $wpdb;
+		$table = $this->line_items->table_name();
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- Test fixture writing the pre-upgrade state directly.
+		$wpdb->query( $wpdb->prepare( "UPDATE {$table} SET name = %s, name_is_derived = 1 WHERE id = %d", 'Hand-written name', (int) $other['id'] ) );
+
+		$result = $this->line_items->backfill_name_provenance( 0, 100 );
+
+		$this->assertSame( 2, $result['examined'] );
+		$this->assertSame( 1, $result['corrected'], 'Exactly the renamed row should have been corrected.' );
+		$this->assertTrue( $this->line_items->default_for_campaign( $derived )['name_is_derived'] );
+		$this->assertFalse( $this->line_items->default_for_campaign( $renamed )['name_is_derived'] );
+	}
+
+	/**
+	 * The backfill is bounded and resumes from its cursor.
+	 *
+	 * @return void
+	 */
+	public function test_the_backfill_is_bounded_and_restartable(): void {
+		$campaigns = array();
+
+		for ( $i = 0; $i < 5; $i++ ) {
+			$campaigns[] = $this->campaign( 'Campaign ' . $i, Post_Statuses::DRAFT, 4 );
+		}
+
+		foreach ( $campaigns as $campaign ) {
+			$this->line_items->ensure_default( $campaign );
+		}
+
+		$first = $this->line_items->backfill_name_provenance( 0, 2 );
+
+		$this->assertSame( 2, $first['examined'] );
+		$this->assertGreaterThan( 0, $first['cursor'] );
+
+		$second = $this->line_items->backfill_name_provenance( $first['cursor'], 100 );
+
+		$this->assertSame( 3, $second['examined'], 'The second pass must resume, not restart.' );
+		$this->assertSame( 0, $this->line_items->backfill_name_provenance( $second['cursor'], 100 )['examined'] );
 	}
 }

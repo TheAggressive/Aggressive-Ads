@@ -117,6 +117,7 @@ final class Line_Item_Repository {
 					'campaign_id'       => $campaign_id,
 					'organization_id'   => $this->campaigns->org_id( $campaign_id ),
 					'name'              => $this->default_name( $campaign_id ),
+					'name_is_derived'   => 1,
 					'status'            => Line_Item_Rules::status_for_campaign( $this->campaigns->status( $campaign_id ) ),
 					'start_at_ts'       => $this->campaigns->start_ts( $campaign_id ),
 					'end_at_ts'         => $this->campaigns->end_ts( $campaign_id ),
@@ -137,7 +138,7 @@ final class Line_Item_Repository {
 					'created_at_ts'     => $now,
 					'updated_at_ts'     => $now,
 				),
-				array( '%d', '%d', '%s', '%s', '%d', '%d', '%s', '%s', '%d', '%d', '%d', '%d', '%d', '%s', '%d', '%s', '%s', '%s', '%d', '%d', '%d', '%d' )
+				array( '%d', '%d', '%s', '%d', '%s', '%d', '%d', '%s', '%s', '%d', '%d', '%d', '%d', '%d', '%s', '%d', '%s', '%s', '%s', '%d', '%d', '%d', '%d' )
 			);
 		} finally {
 			$wpdb->suppress_errors( $was_suppressing );
@@ -224,6 +225,16 @@ final class Line_Item_Repository {
 			return $expected_revision;
 		}
 
+		// Writing a name is what makes it the publisher's rather than ours, so
+		// the provenance flag is cleared at the moment the override happens
+		// instead of being inferred later from the revision counter. Any edit
+		// bumps that counter, so inferring from it would freeze the name of
+		// every line item whose pacing somebody adjusted.
+		if ( array_key_exists( 'name', $fields ) ) {
+			$sets[]   = 'name_is_derived = %d';
+			$values[] = 0;
+		}
+
 		$next     = $expected_revision + 1;
 		$sets[]   = 'revision = %d';
 		$values[] = $next;
@@ -262,6 +273,19 @@ final class Line_Item_Repository {
 		);
 		$formats = array( '%d', '%s', '%d' );
 
+		// The name follows the campaign only while it is still ours.
+		//
+		// Every other field here is campaign-owned and always projected. The
+		// name is the one field with two possible owners, and leaving it out of
+		// the projection is what let a campaign renamed after its first detail
+		// view keep showing the placeholder the wizard invented: the default
+		// line item is created on that first view, while the title is still
+		// "Untitled campaign", and nothing re-derived it afterwards.
+		if ( true === ( $row['name_is_derived'] ?? false ) ) {
+			$fields['name'] = $this->default_name( $campaign_id );
+			$formats[]      = '%s';
+		}
+
 		if ( $sync_commercial ) {
 			$fields['start_at_ts']  = $this->campaigns->start_ts( $campaign_id );
 			$fields['end_at_ts']    = $this->campaigns->end_ts( $campaign_id );
@@ -279,6 +303,86 @@ final class Line_Item_Repository {
 		);
 
 		return false !== $written;
+	}
+
+	/**
+	 * Classifies the provenance of names written before the flag existed.
+	 *
+	 * Rows already on disk when the column arrives all take its default, which
+	 * says "derived" — right for the ones nobody renamed and wrong for the
+	 * rest. This walks them and clears the flag wherever the stored name is not
+	 * the one this class would generate today.
+	 *
+	 * The comparison calls `default_name()` rather than approximating it in
+	 * SQL, because the two have to agree exactly: a row misread as derived has
+	 * a publisher's rename silently overwritten on the next projection, and a
+	 * row misread as overridden keeps a stale name forever. `default_name()`
+	 * strips tags, trims, falls back for an empty title and truncates to the
+	 * column width; a `LEFT(post_title, 191)` comparison disagrees on all four.
+	 *
+	 * Bounded and restartable: the caller passes the last id it finished and
+	 * gets the next cursor back, so an interrupted run resumes instead of
+	 * starting over.
+	 *
+	 * @param int $cursor Highest line-item id already classified.
+	 * @param int $limit  Rows to examine in this batch.
+	 * @return array{cursor: int, examined: int, corrected: int}
+	 */
+	public function backfill_name_provenance( int $cursor, int $limit ): array {
+		global $wpdb;
+
+		$limit  = max( 1, min( 500, $limit ) );
+		$cursor = max( 0, $cursor );
+
+		if ( ! $this->table_exists() ) {
+			return array(
+				'cursor'    => $cursor,
+				'examined'  => 0,
+				'corrected' => 0,
+			);
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Bounded primary-key migration scan owned by the persistence layer.
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				'SELECT id, campaign_id, name FROM %i WHERE id > %d ORDER BY id ASC LIMIT %d',
+				$this->table_name(),
+				$cursor,
+				$limit
+			),
+			ARRAY_A
+		);
+
+		$rows      = is_array( $rows ) ? $rows : array();
+		$examined  = 0;
+		$corrected = 0;
+
+		foreach ( $rows as $row ) {
+			$id     = (int) ( $row['id'] ?? 0 );
+			$cursor = $id;
+			++$examined;
+
+			if ( (string) ( $row['name'] ?? '' ) === $this->default_name( (int) ( $row['campaign_id'] ?? 0 ) ) ) {
+				continue;
+			}
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Migration write in the custom table.
+			$wpdb->update(
+				$this->table_name(),
+				array( 'name_is_derived' => 0 ),
+				array( 'id' => $id ),
+				array( '%d' ),
+				array( '%d' )
+			);
+
+			++$corrected;
+		}
+
+		return array(
+			'cursor'    => $cursor,
+			'examined'  => $examined,
+			'corrected' => $corrected,
+		);
 	}
 
 	/**
@@ -330,7 +434,8 @@ final class Line_Item_Repository {
 			$row[ $field ] = (int) ( $row[ $field ] ?? 0 );
 		}
 
-		$row['is_default'] = 1 === (int) ( $row['default_key'] ?? 0 );
+		$row['is_default']      = 1 === (int) ( $row['default_key'] ?? 0 );
+		$row['name_is_derived'] = 1 === (int) ( $row['name_is_derived'] ?? 0 );
 		unset( $row['default_key'] );
 
 		foreach ( array( 'targeting_rules', 'frequency_policy', 'delivery_settings' ) as $field ) {

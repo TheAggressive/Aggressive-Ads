@@ -139,6 +139,37 @@ background migration and a live read race. Future non-default line items use
 organization/status and schedule indexes support the next serving phases
 without putting those phases into P1.
 
+### Who owns the name
+
+Every projected field is campaign-owned: `sync_default_from_campaign()` copies
+organization, lifecycle status, schedule and budget from the Campaign, and
+nothing else may write them. `name` is the one field with two possible owners —
+derived from the campaign title by default, and renameable on the line item
+itself — so provenance is a stored fact rather than an inference.
+`name_is_derived` starts at 1, and `Line_Item_Repository::update()` clears it the
+moment a write includes `name`. The projection re-derives the name only while
+the flag is set.
+
+This exists because a campaign renamed after its first detail view kept the
+placeholder title the wizard invented. The default line item is created on that
+first view, while the title is still "Untitled campaign", and nothing re-derived
+it afterwards — so the advertiser's Delivery strategy panel showed a name they
+had already changed. The browser suite caught it.
+
+**Provenance is not inferrable from `revision`.** Any edit increments it, so a
+line item whose pacing somebody adjusted would have its name frozen forever;
+that heuristic was written, rejected, and is pinned against by
+`test_an_edit_that_is_not_a_rename_leaves_the_name_derived`.
+
+Database version 13 adds the column and classifies the rows already on disk,
+comparing each stored name against the one the repository would generate today.
+The comparison calls `default_name()` rather than approximating it in SQL,
+because the two must agree exactly: a row misread as derived has a publisher's
+rename overwritten on the next projection, and a row misread as overridden keeps
+a stale name forever. It is bounded and cursor-driven like the pass before it,
+and runs after that pass, since a row must exist before its name can be
+classified.
+
 Database version 12 starts a restartable 100-campaign cron backfill. Its
 non-autoloaded cursor advances only after the line item exists, or after the
 source Campaign was concurrently deleted. Reads also create the default row

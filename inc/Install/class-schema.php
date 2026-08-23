@@ -24,7 +24,7 @@ final class Schema {
 	 *
 	 * Drives the migration walker in Upgrader.
 	 */
-	public const DB_VERSION = 12;
+	public const DB_VERSION = 13;
 
 	/**
 	 * The audit table's name, without the site's table prefix.
@@ -60,6 +60,7 @@ final class Schema {
 	campaign_id bigint(20) unsigned NOT NULL DEFAULT 0,
 	organization_id bigint(20) unsigned NOT NULL DEFAULT 0,
 	name varchar(191) NOT NULL DEFAULT '',
+	name_is_derived tinyint(1) unsigned NOT NULL DEFAULT 1,
 	status varchar(16) NOT NULL DEFAULT 'draft',
 	start_at_ts bigint(20) unsigned NOT NULL DEFAULT 0,
 	end_at_ts bigint(20) unsigned NOT NULL DEFAULT 0,
@@ -98,6 +99,7 @@ final class Schema {
 			'campaign_id',
 			'organization_id',
 			'name',
+			'name_is_derived',
 			'status',
 			'start_at_ts',
 			'end_at_ts',
