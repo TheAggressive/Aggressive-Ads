@@ -41,6 +41,13 @@ PACKAGE_FORBIDDEN=(
 	test-results
 	playwright-report
 	playwright.config.ts
+	# Dev artifacts rather than directories, and the reason they are listed:
+	# package.sh rsyncs the working tree, not `git ls-files`, so a gitignored
+	# file still reaches the archive. .phpunit.result.cache did — 109 KB of
+	# PHPUnit's result cache — and made the "reproducible archive" claim false,
+	# because its contents depend on which tests that machine last ran.
+	.phpunit.result.cache
+	.phpunit.cache
 )
 
 # Files with no import graph pointing at them, so nothing else notices when one

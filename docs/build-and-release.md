@@ -251,6 +251,8 @@ release reaches GitHub.
 
 It **hard-fails** if `node_modules`, `src`, `tests`, `vendor`, or `bin` reached the staging directory. A stray `src/` or `node_modules/` is historically how a 4 MB plugin becomes a 400 MB one.
 
+The denylist also names two files rather than directories, `.phpunit.result.cache` and `.phpunit.cache`, and the reason is worth keeping: **packaging rsyncs the working tree, not `git ls-files`, so being gitignored does not keep a file out of the archive.** `.phpunit.result.cache` shipped that way — 109 KB of PHPUnit's result cache — and it also made "reproducible archive" untrue, because its contents depend on which tests that machine last ran. Anything a local run drops in the repository root is a candidate; the check after staging is what catches the next one.
+
 `bin/release/verify-package.sh` asserts against the **actual ZIP**, not the staging directory — because the staging directory is what the script that just ran believes it produced, and the ZIP is what a user installs:
 
 - checksum matches the sidecar

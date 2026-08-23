@@ -43,6 +43,13 @@ PACKAGE_FORBIDDEN=(
 	CLAUDE.md
 	test-results
 	playwright-report
+	# A dev artifact rather than a directory, and the reason it is listed:
+	# package.sh rsyncs the working tree, not `git ls-files`, so a gitignored
+	# file still reaches the archive. This one shipped — 109 KB of PHPUnit's
+	# result cache — and made the "reproducible archive" claim false, because
+	# its contents depend on which tests that machine last ran.
+	.phpunit.result.cache
+	.phpunit.cache
 )
 
 # Files without which the plugin does not work. inc/class-autoloader.php is
@@ -124,6 +131,7 @@ rsync -a \
 	--exclude='.editorconfig' \
 	--exclude='.gitignore' \
 	--exclude='.phpunit.cache/' \
+	--exclude='.phpunit.result.cache' \
 	--exclude='node_modules/' \
 	--exclude='.pnpm-store/' \
 	--exclude='vendor/' \
