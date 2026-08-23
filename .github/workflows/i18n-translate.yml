@@ -38,7 +38,17 @@ jobs:
   draft:
     name: Draft translations
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    # Measured, not guessed. The first run that got far enough to translate
+    # anything did de_DE in 10m46s and es_ES in 10m51s — 1014 entries each,
+    # through DeepL — and was cut off partway through the third locale by a
+    # 30-minute ceiling. Four locales need roughly 43 minutes of translation
+    # plus a couple for setup and msgmerge.
+    #
+    # That full pass is a first-run cost: the catalogs were empty, so every
+    # entry was new. Later runs only touch what the POT actually changed, which
+    # is usually a handful. The ceiling is sized for the bootstrap because a job
+    # that can never finish its first run can never produce a second.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
