@@ -194,7 +194,16 @@ final class Organization_Screen implements Service {
 				'retry'           => __( 'Try again', 'aggressive-ads' ),
 				'ownerColumn'     => __( 'Owner', 'aggressive-ads' ),
 				'campaignsColumn' => __( 'Campaigns', 'aggressive-ads' ),
-				'stateColumn'     => __( 'State', 'aggressive-ads' ),
+
+				/*
+				 * Context, because "State" is ambiguous in English and the
+				 * ambiguity is not academic. Machine translation rendered this
+				 * bare string into German as "Bundesland" — a federal state —
+				 * over a column showing Active and Suspended. A human
+				 * translator working from a string list has exactly the same
+				 * problem, so the fix belongs here rather than in a review.
+				 */
+				'stateColumn'     => _x( 'State', 'organization status column heading', 'aggressive-ads' ),
 				'manageMembers'   => __( 'Manage members', 'aggressive-ads' ),
 				'cancel'          => __( 'Cancel', 'aggressive-ads' ),
 				'loadFailed'      => __( 'That list could not be loaded.', 'aggressive-ads' ),
