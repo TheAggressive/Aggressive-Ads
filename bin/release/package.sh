@@ -7,9 +7,22 @@
 # a stray src/ or node_modules/ is historically how a 4 MB plugin becomes a
 # 400 MB one, and a committed .env is how a secret ships.
 #
-# So the excludes are a denylist *and* the result is checked against a
-# hard-fail list afterwards. A denylist alone fails silently when somebody adds
-# a directory nobody thought to exclude.
+# So the archive is built from an *allowlist*: the paths below are copied, and
+# nothing else can reach it. The result is still checked against a hard-fail
+# list afterwards, as a second opinion rather than as the only one.
+#
+# It was a denylist until v1.4.0, and this file already warned why that was
+# wrong — "a denylist alone fails silently when somebody adds a directory
+# nobody thought to exclude". It then did exactly that, five times over: the
+# 1.4.0 archive shipped `.playwright-results-artifact/` (browser traces from
+# the artifact-acceptance run), `junit.xml`, `compose.yml`, `.releaserc.json`
+# and `patches/`. None was excluded because none existed when the list was
+# written, and the hard-fail list could not catch them either, being a list of
+# names somebody had already thought of.
+#
+# An allowlist inverts the failure. Forgetting to add a new plugin directory
+# means it is missing from the archive, which PACKAGE_REQUIRED catches loudly;
+# forgetting to exclude a new dev file means nothing at all.
 #
 # Usage: bin/release/package.sh [version]
 
@@ -55,6 +68,23 @@ PACKAGE_FORBIDDEN=(
 	# its contents depend on which tests that machine last ran.
 	.phpunit.result.cache
 	.phpunit.cache
+)
+
+# Everything the archive is built from. Nothing outside this list can ship.
+#
+# `languages/` is deliberately absent: it is the one directory that ships
+# selectively, and it is copied by the explicit rule further down. WordPress
+# reads a .po at no point, and four locales of source catalogue is half a
+# megabyte in every install, growing with each language added.
+PACKAGE_CONTENTS=(
+	"${PLUGIN_FILE}"
+	uninstall.php
+	README.md
+	SECURITY.md
+	inc
+	templates
+	dist
+	assets
 )
 
 # Files without which the plugin does not work. inc/class-autoloader.php is
@@ -126,53 +156,46 @@ mkdir -p "${STAGING}"
 
 # A single top-level directory named for the slug, because that is what
 # WordPress unpacks and what determines the installed folder name.
-rsync -a \
-	--exclude='.cache/' \
-	--exclude='.git/' \
-	--exclude='.github/' \
-	--exclude='.husky/' \
-	--exclude='.prettierignore' \
-	--exclude='.prettierrc*' \
-	--exclude='.editorconfig' \
-	--exclude='.gitignore' \
-	--exclude='.phpunit.cache/' \
-	--exclude='.phpunit.result.cache' \
-	--exclude='languages/*.po' \
-	--exclude='languages/README.md' \
-	--exclude='languages/.gitignore' \
-	--exclude='node_modules/' \
-	--exclude='.pnpm-store/' \
-	--exclude='vendor/' \
-	--exclude='tests/' \
-	--exclude='test-results/' \
-	--exclude='playwright-report/' \
-	--exclude='bin/' \
-	--exclude='src/' \
-	--exclude='types/' \
-	--exclude='docs/' \
-	--exclude='CLAUDE.md' \
-	--exclude='release/' \
-	--exclude='composer.*' \
-	--exclude='commitlint.config.*' \
-	--exclude='package.json' \
-	--exclude='pnpm-*' \
-	--exclude='.npmrc' \
-	--exclude='phpcs.xml*' \
-	--exclude='phpstan.neon*' \
-	--exclude='phpunit*.xml*' \
-	--exclude='playwright.config.ts' \
-	--exclude='tsconfig.json' \
-	--exclude='jest.config.js' \
-	--exclude='eslint.config.js' \
-	--exclude='.stylelintrc.json' \
-	--exclude='webpack*.mjs' \
-	--exclude='*.zip' \
-	--exclude='*.sha256' \
-	--exclude='.env*' \
-	--exclude='*.log' \
-	./ "${STAGING}/"
+# Copy the allowlist, and nothing else. A path that is not named here cannot
+# reach the archive by being forgotten.
+for entry in "${PACKAGE_CONTENTS[@]}"; do
+	if [ ! -e "${entry}" ]; then
+		echo "Missing packaged path: ${entry}" >&2
+		exit 2
+	fi
+
+	rsync -a --relative "./${entry}" "${STAGING}/"
+done
+
+# languages/ ships selectively: the compiled catalogs WordPress reads, and the
+# POT translators start from. The .po sources stay behind — WordPress reads one
+# at no point, and they are half a megabyte per four locales.
+#
+# `find -exec cp` rather than a glob, so a locale that has not been compiled
+# yet leaves the loop empty instead of copying a literal `*.mo`.
+mkdir -p "${STAGING}/languages"
+find languages -maxdepth 1 -type f \
+	\( -name '*.mo' -o -name '*.json' -o -name '*.pot' \) \
+	-exec cp {} "${STAGING}/languages/" \;
 
 failed=0
+
+# Nothing outside the allowlist, asserted rather than assumed.
+#
+# The copy above cannot bring an unlisted path in, so this is guarding against
+# a different mistake: something *else* writing into the staging directory —
+# a build step, a stray redirect — between the copy and the zip. It costs one
+# `ls` and it is the check that would have caught the 1.4.0 leaks whatever
+# their cause.
+allowed=$(printf '%s\n' "${PACKAGE_CONTENTS[@]}" languages | sort -u)
+staged=$(find "${STAGING}" -mindepth 1 -maxdepth 1 -exec basename {} \; | sort -u)
+
+while IFS= read -r entry; do
+	if ! grep -qxF "${entry}" <<< "${allowed}"; then
+		echo "UNEXPECTED path reached the package: ${entry}" >&2
+		failed=1
+	fi
+done <<< "${staged}"
 
 for path in "${PACKAGE_FORBIDDEN[@]}"; do
 	if [ -e "${STAGING}/${path}" ]; then
