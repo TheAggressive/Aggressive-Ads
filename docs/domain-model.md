@@ -1,13 +1,17 @@
 # Domain model
 
-Five entities, all stored as private custom post types, all reached through repository classes. Custom tables are reserved for the audit log, events, and rollups.
+Five business records are stored as private custom post types. Line Item, the
+delivery strategy beneath Campaign, is stored in a dedicated custom table. All
+six are reached through repository classes; custom tables also hold the audit
+log, organization access, events, and rollups.
 
 ```
-Organization 1 ──── * Campaign 1 ──── * Creative
-     │                   │                  │
-     │                   │ * ──── * Placement
-     │                   │              (also referenced by Package)
-     └── * member users  └── 1 Package ─ * Placement
+Organization 1 ──── * Campaign
+     │                   ├── * Line Item
+     │                   ├── * Creative ──── 1 Placement
+     │                   ├── * Placement
+     │                   └── 1 Package ──── * Placement
+     └── * member users
 ```
 
 ## Registration baseline
@@ -86,6 +90,28 @@ All meta is `_aggr_`-prefixed and leading-underscore. The underscore is load-bea
 | `_aggr_autosave_rev` | int | Optimistic-concurrency token for wizard autosave |
 | `_aggr_wizard_step` | string | Resume point; advancing to `review` requires complete creative coverage and a submission-grade date window. Review itself is read-only; submit is a state transition, not another persisted edit step. |
 
+### Line Item — `aggr_line_items` custom table
+
+A Line Item is the delivery unit beneath a Campaign. P1 creates one default
+line item for every existing and new Campaign without changing the serving
+path. Its organization, status, initial schedule, and initial budget are
+derived from the parent Campaign; no client may choose the organization id.
+
+Statuses are `draft|ready|scheduled|live|paused|completed|cancelled`. Pricing
+models are `flat|cpm|cpc|cpa|share_of_voice`; goals are
+`none|impressions|clicks|conversions|spend|share_of_voice`; pacing is
+`even|asap`. Amounts and caps are non-negative integers, priority and weight
+are positive integers, a non-`none` goal needs a positive amount, and a daily
+cap cannot exceed a non-zero lifetime cap.
+
+Updates use an integer revision in the SQL `WHERE` clause, so two editors
+cannot silently overwrite each other. The nested REST routes independently
+verify the line-item id, parent Campaign id, organization ownership,
+capability, and edit window. Targeting, frequency, and delivery settings are
+schema-ready empty JSON objects in P1; later phases define their executable
+semantics. Deleting a Campaign removes its line-item rows at the application
+boundary.
+
 ### Creative — `aggr_creative`
 
 | Key | Type | Notes |
@@ -150,10 +176,11 @@ These hold at all times and are asserted in the repositories, not merely assumed
 2. **A Campaign's placements are all `_aggr_is_active`.** Checked at submission and re-checked at approval, because a placement can be deactivated while a campaign sits in the queue.
 3. **`org_id` is never read from client input.** It is derived server-side from the authenticated user on every request without exception. This one rule collapses most of the IDOR surface — see [threat-model.md](threat-model.md).
 4. **A campaign's `post_status` is only ever written by `Campaign_State_Machine::apply()`.** See [campaign-workflow.md](campaign-workflow.md).
-5. **Timestamps are UTC Unix integers everywhere.** No date strings, no site-local times, no `DateTime` in storage. Formatting happens at the display layer via `wp_date()`.
-6. **Package selection creates a campaign snapshot.** The selected package must be active and completely configured, and every included placement must be active. Its package id, repeated placement ids, integer-cent price, and currency are copied onto the campaign in one editor operation. Later package edits never mutate an existing campaign implicitly.
-7. **An editable campaign has at most one creative per selected placement.** Upload validates exact dimensions before creating the record. Removal deletes private bytes before the record, and neither operation is allowed after the campaign leaves an advertiser-editable state.
-8. **A portal account belongs to exactly one organization**, enforced by `Organization_Membership::eligible_for_org()`. Staff correct a mis-assignment by removing the member and inviting them to the other organization, and the screen says so rather than offering a "move" button.
+5. **Every Campaign has exactly one default Line Item after lazy self-healing.** Its organization always equals the Campaign organization, and its P1 lifecycle mirrors the Campaign lifecycle. A unique database key makes concurrent creation safe.
+6. **Timestamps are UTC Unix integers everywhere.** No date strings, no site-local times, no `DateTime` in storage. Formatting happens at the display layer via `wp_date()`.
+7. **Package selection creates a campaign snapshot.** The selected package must be active and completely configured, and every included placement must be active. Its package id, repeated placement ids, integer-cent price, and currency are copied onto the campaign in one editor operation. Later package edits never mutate an existing campaign implicitly.
+8. **An editable campaign has at most one creative per selected placement.** Upload validates exact dimensions before creating the record. Removal deletes private bytes before the record, and neither operation is allowed after the campaign leaves an advertiser-editable state.
+9. **A portal account belongs to exactly one organization**, enforced by `Organization_Membership::eligible_for_org()`. Staff correct a mis-assignment by removing the member and inviting them to the other organization, and the screen says so rather than offering a "move" button.
 
     This is the invariant most likely to be mistaken for a missing feature, so it is worth being precise about what relaxing it would cost — because the cost is *not* where it looks. `Ownership::map()` already tolerates a list: it asks `in_array( $context['org_id'], $this->orgs->org_ids_for_user( $user_id ) )`, which answers correctly for a user in five organizations. Authorization is not the problem.
 

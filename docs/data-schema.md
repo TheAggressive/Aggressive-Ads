@@ -119,6 +119,33 @@ days exactly after a ten-minute midnight grace period and stores its non-autoloa
 deletes and never purges beyond that watermark. Rollups are not purged with
 events. See [delivery-performance.md](delivery-performance.md).
 
+## Campaign line items
+
+`{$wpdb->prefix}aggr_line_items` stores delivery strategy beneath a Campaign.
+It is a dedicated table because line items are selected and updated on the
+serving path; representing them as postmeta would turn bounded indexed reads
+into meta joins and make optimistic updates unnecessarily fragile.
+
+Every row carries its campaign and organization, lifecycle status, UTC
+schedule, pricing and goal models, integer-cent budget, daily and lifetime
+caps, priority, pacing mode, weight, JSON policy fields, revision, and UTC
+timestamps. The public repository normalizes policy JSON to arrays and never
+exposes the internal compatibility key.
+
+The P1 compatibility row has `default_key = 1`. A unique
+`(campaign_id, default_key)` index guarantees exactly one default even when a
+background migration and a live read race. Future non-default line items use
+`NULL`, which MySQL permits more than once in a unique index. Campaign/status,
+organization/status and schedule indexes support the next serving phases
+without putting those phases into P1.
+
+Database version 12 starts a restartable 100-campaign cron backfill. Its
+non-autoloaded cursor advances only after the line item exists, or after the
+source Campaign was concurrently deleted. Reads also create the default row
+idempotently, so an active campaign never waits for the backfill before it can
+be viewed. Native serving continues to read the Campaign during P1; switching
+the hot path happens only after the creative and decision models exist.
+
 ## Options
 
 | Option | Type | Autoload | Purpose |
@@ -132,6 +159,8 @@ events. See [delivery-performance.md](delivery-performance.md).
 | `aggr_settings` | array | yes | The settings schema's storage |
 | `aggr_delivery_rewrite_version` | int | yes | Bumped when the click-hop rule changes; triggers one flush |
 | `aggr_rollups_reconciled_through` | `Y-m-d` | **no** | Last closed UTC event day exactly projected into rollups |
+| `aggr_line_item_migration_cursor` | int | **no** | Last Campaign id successfully visited by the restartable P1 backfill |
+| `aggr_line_item_migration_done` | bool | **no** | Completion marker for the P1 compatibility-row backfill |
 | `aggr_delete_data_on_uninstall` | bool | yes | Opt-in; default off |
 | `aggr_org_lookup_salt` | string | **no** | Plugin-owned salt for the organization name index |
 | `aggr_creative_key` | string | **no** | Base64 key encrypting creative at rest, when `AGGR_CREATIVE_KEY` is not defined |
@@ -162,6 +191,7 @@ array(
     2 => install_org_access,
     4 => install_delivery_tables,  // aggr_events + aggr_rollups
     5 => migrate_event_token_uniqueness,
+    12 => install_line_items_and_start_backfill,
 )
 ```
 
@@ -188,7 +218,7 @@ index against live `SHOW COLUMNS` / `SHOW INDEX` results after install.
 ## Uninstall
 
 `uninstall.php` runs only on a real uninstall, never on deactivation. It drops
-the audit, organization-access, events, and rollups tables, removes both roles and all granted
+the audit, organization-access, line-item, events, and rollups tables, removes both roles and all granted
 capabilities, and deletes every `aggr_*` option. Dropping access rows removes
 outstanding bearer invitations and pending personal data. If business content
 is preserved and the plugin is later reinstalled, canonical identities are

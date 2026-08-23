@@ -13,6 +13,8 @@ use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Event_Repository;
 use Aggressive\Ads\Repository\Org_Access_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
+use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Line_Item_Repository;
 use Aggressive\Ads\Security\Roles;
 use Aggressive\Ads\Storage\Private_Storage;
 use Aggressive\Ads\Workflow\Campaign_Clock;
@@ -133,6 +135,7 @@ final class Uninstaller {
 		( new Org_Access_Repository() )->drop_table();
 		( new Event_Repository() )->drop_table();
 		( new Rollup_Repository() )->drop_table();
+		( new Line_Item_Repository( new Campaign_Repository() ) )->drop_table();
 
 		Campaign_Clock::unschedule();
 		Ending_Soon_Notifier::unschedule();
@@ -140,6 +143,7 @@ final class Uninstaller {
 		Audit_Retention::unschedule();
 		Event_Retention::unschedule();
 		Rollup_Reconciler::unschedule();
+		Line_Item_Migrator::unschedule();
 
 		/*
 		 * Legacy, and named as literals on purpose: the service that owned these

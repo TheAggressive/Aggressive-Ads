@@ -20,6 +20,7 @@ use Aggressive\Ads\Repository\Org_Access_Repository;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Repository\Package_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
+use Aggressive\Ads\Repository\Line_Item_Repository;
 use Aggressive\Ads\REST\Creative_File_Controller;
 use Aggressive\Ads\Workflow\Edit_Window;
 use Aggressive\Ads\Workflow\Campaign_Change_Manager;
@@ -55,6 +56,7 @@ final class View_Data {
 	 * @param Settings                $settings   Brand and support details.
 	 * @param Edit_Window             $window     When editing is permitted.
 	 * @param Acting_As               $acting     Staff acting for an advertiser.
+	 * @param Line_Item_Repository    $line_items Campaign delivery strategies.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -70,7 +72,8 @@ final class View_Data {
 		private readonly Campaign_Change_Manager $changes,
 		private readonly Settings $settings,
 		private readonly Edit_Window $window,
-		private readonly Acting_As $acting
+		private readonly Acting_As $acting,
+		private readonly Line_Item_Repository $line_items
 	) {
 	}
 
@@ -223,6 +226,8 @@ final class View_Data {
 		$row['readiness']         = $this->readiness->for_campaign( $campaign_id );
 		$row['editable']          = $this->window->allows( $campaign_id );
 		$row['on_behalf']         = $this->window->is_on_behalf( $campaign_id );
+		$this->line_items->ensure_default( $campaign_id );
+		$row['line_items'] = $this->line_items->for_campaign( $campaign_id );
 
 		// The campaign's organization, not the viewer's. Staff have none, so
 		// the top bar's org name is blank for them and cannot name the client

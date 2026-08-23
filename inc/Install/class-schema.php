@@ -87,19 +87,44 @@ final class Schema {
 ) {$charset_collate};";
 	}
 
-	/** @return array<int, string> */
+	/**
+	 * Line-item table columns.
+	 *
+	 * @return array<int, string>
+	 */
 	public static function line_items_columns(): array {
 		return array(
-			'id', 'campaign_id', 'organization_id', 'name', 'status',
-			'start_at_ts', 'end_at_ts', 'pricing_model', 'goal_type',
-			'goal_amount', 'budget_cents', 'daily_cap', 'lifetime_cap',
-			'priority', 'pacing_mode', 'weight', 'targeting_rules',
-			'frequency_policy', 'delivery_settings', 'revision',
-			'default_key', 'created_at_ts', 'updated_at_ts',
+			'id',
+			'campaign_id',
+			'organization_id',
+			'name',
+			'status',
+			'start_at_ts',
+			'end_at_ts',
+			'pricing_model',
+			'goal_type',
+			'goal_amount',
+			'budget_cents',
+			'daily_cap',
+			'lifetime_cap',
+			'priority',
+			'pacing_mode',
+			'weight',
+			'targeting_rules',
+			'frequency_policy',
+			'delivery_settings',
+			'revision',
+			'default_key',
+			'created_at_ts',
+			'updated_at_ts',
 		);
 	}
 
-	/** @return array<int, string> */
+	/**
+	 * Line-item table indexes.
+	 *
+	 * @return array<int, string>
+	 */
 	public static function line_items_index_names(): array {
 		return array( 'PRIMARY', 'campaign_default', 'campaign_status', 'organization_status', 'delivery_window' );
 	}

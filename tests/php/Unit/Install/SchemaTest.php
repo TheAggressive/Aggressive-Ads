@@ -232,4 +232,24 @@ final class SchemaTest extends TestCase {
 			);
 		}
 	}
+
+	/** Line items carry the future-safe default uniqueness and hot-path indexes. */
+	public function test_line_item_schema_has_declared_columns_and_indexes(): void {
+		$ddl = Schema::line_items_table_ddl( 'wp_aggr_line_items', 'DEFAULT CHARACTER SET utf8mb4' );
+
+		$this->assertStringContainsString( 'PRIMARY KEY  (id)', $ddl );
+		$this->assertStringContainsString( 'UNIQUE KEY campaign_default (campaign_id,default_key)', $ddl );
+		$this->assertStringContainsString( 'default_key tinyint(1) unsigned NULL DEFAULT NULL', $ddl );
+
+		foreach ( Schema::line_items_columns() as $column ) {
+			$this->assertMatchesRegularExpression( '/^\s*' . preg_quote( $column, '/' ) . '\s/mi', $ddl );
+		}
+
+		foreach ( Schema::line_items_index_names() as $index ) {
+			if ( 'PRIMARY' === $index ) {
+				continue;
+			}
+			$this->assertMatchesRegularExpression( '/^\s*(?:UNIQUE )?KEY ' . preg_quote( $index, '/' ) . ' \(/mi', $ddl );
+		}
+	}
 }

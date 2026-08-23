@@ -15,6 +15,7 @@ use Aggressive\Ads\Domain\Upload_Rules;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Repository\Line_Item_Repository;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Storage\Private_Storage;
 use WP_Error;
@@ -27,18 +28,20 @@ final class Campaign_Copier {
 	/**
 	 * Constructor.
 	 *
-	 * @param Campaign_Editor     $editor    Draft allocation.
-	 * @param Campaign_Repository $campaigns Campaign persistence.
-	 * @param Creative_Repository $creatives Creative persistence.
-	 * @param Private_Storage     $storage   Private file storage.
-	 * @param Audit_Repository    $audit     Audit persistence.
+	 * @param Campaign_Editor           $editor    Draft allocation.
+	 * @param Campaign_Repository       $campaigns Campaign persistence.
+	 * @param Creative_Repository       $creatives Creative persistence.
+	 * @param Private_Storage           $storage   Private file storage.
+	 * @param Audit_Repository          $audit     Audit persistence.
+	 * @param Line_Item_Repository|null $line_items Line-item compatibility persistence.
 	 */
 	public function __construct(
 		private readonly Campaign_Editor $editor,
 		private readonly Campaign_Repository $campaigns,
 		private readonly Creative_Repository $creatives,
 		private readonly Private_Storage $storage,
-		private readonly Audit_Repository $audit
+		private readonly Audit_Repository $audit,
+		private readonly ?Line_Item_Repository $line_items = null
 	) {
 	}
 
@@ -116,6 +119,10 @@ final class Campaign_Copier {
 				actor_user_id: get_current_user_id()
 			)
 		);
+
+		if ( null !== $this->line_items ) {
+			$this->line_items->sync_default_from_campaign( $campaign_id );
+		}
 
 		return $campaign_id;
 	}

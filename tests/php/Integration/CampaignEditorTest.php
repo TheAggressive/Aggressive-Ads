@@ -19,6 +19,7 @@ use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Package_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
+use Aggressive\Ads\Repository\Line_Item_Repository;
 use Aggressive\Ads\Security\Ownership;
 use Aggressive\Ads\Security\Roles;
 use Aggressive\Ads\Workflow\Campaign_Editor;
@@ -160,6 +161,10 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 		$this->assertSame( $this->org_id, (int) get_post_meta( $campaign_id, Campaign_Repository::META_ORG_ID, true ) );
 		$this->assertSame( $this->advertiser, (int) get_post_field( 'post_author', $campaign_id ) );
 		$this->assertSame( 'details', get_post_meta( $campaign_id, Campaign_Repository::META_WIZARD_STEP, true ) );
+		$line_item = Plugin::instance()->container()->get( Line_Item_Repository::class )->default_for_campaign( $campaign_id );
+		$this->assertNotNull( $line_item );
+		$this->assertSame( $campaign_id, $line_item['campaign_id'] );
+		$this->assertSame( 'draft', $line_item['status'] );
 	}
 
 	/**

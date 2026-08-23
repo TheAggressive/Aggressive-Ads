@@ -22,6 +22,7 @@ use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Install\Installer;
+use Aggressive\Ads\Install\Line_Item_Migrator;
 use Aggressive\Ads\Install\Rewrite_Flusher;
 use Aggressive\Ads\Install\Rewrite_Health;
 use Aggressive\Ads\Install\Site_Lifecycle;
@@ -42,6 +43,7 @@ use Aggressive\Ads\Portal\Router;
 use Aggressive\Ads\Portal\Signup_Actions;
 use Aggressive\Ads\REST\Beacon_Controller;
 use Aggressive\Ads\REST\Campaigns_Controller;
+use Aggressive\Ads\REST\Line_Items_Controller;
 use Aggressive\Ads\REST\Creative_Controller;
 use Aggressive\Ads\REST\Creative_File_Controller;
 use Aggressive\Ads\REST\Fill_Controller;
@@ -60,6 +62,7 @@ use Aggressive\Ads\Update\Plugin_Updates;
 use Aggressive\Ads\Workflow\Campaign_Change_Manager;
 use Aggressive\Ads\Workflow\Campaign_Clock;
 use Aggressive\Ads\Workflow\Campaign_State_Machine;
+use Aggressive\Ads\Workflow\Line_Item_Lifecycle;
 use Aggressive\Ads\Workflow\Click_Hop;
 use Aggressive\Ads\Workflow\Audit_Retention;
 use Aggressive\Ads\Workflow\Creative_Retention;
@@ -281,6 +284,8 @@ final class Plugin {
 			// Attaches the listener that notices a campaign status written
 			// without going through the state machine.
 			Campaign_State_Machine::class,
+			Line_Item_Lifecycle::class,
+			Line_Item_Migrator::class,
 
 			// After the state machine, whose transition action it listens to.
 			Campaign_Change_Manager::class,
@@ -329,6 +334,7 @@ final class Plugin {
 			Transitions_Controller::class,
 			Review_Controller::class,
 			Campaigns_Controller::class,
+			Line_Items_Controller::class,
 			Placements_Controller::class,
 			Packages_Controller::class,
 			Organizations_Controller::class,

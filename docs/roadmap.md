@@ -66,7 +66,7 @@ a successful submission. See [notifications.md](notifications.md).
 
 `Ad_Provider_Interface` is implemented by `Integration\Native\Publisher`. Inventory is the placement catalogue (common IAB sizes plus custom WxH). There is no AdSanity adapter.
 
-## Phase 7 — Lifecycle automation
+## Phase 7 — Lifecycle automation *(complete)*
 
 `Campaign_Clock` and its hourly reconcile event are **built**: approved → scheduled → live → complete, driven by the guards rather than by the reconciler, with the sweep's source statuses derived from `Transition_Table::system_sources()`.
 
@@ -136,10 +136,23 @@ choice rather than a number, because an audit window has a small set of real
 answers and a free-text field would let somebody type 3. Refusals outlive any
 window: `outcome = denied` is the row an investigation opens the log for.
 
-Remaining: concurrent request/soak testing on production-equivalent
-infrastructure, and a full authorization/failure-state review. Both need an
-environment rather than a commit, which is why they are the last items and why
-nothing here claims them.
+The full authorization/failure-state review is **complete**. It inventoried the
+REST, form, portal, staff, public-delivery and scheduled surfaces; traced
+partial-failure behavior through their workflows; added closed REST and public
+form authorization contracts; and found and fixed both a revoked-capability gap
+in the organization form handlers and a database-error disclosure during event
+ledger failure. See
+[authorization-failure-review.md](authorization-failure-review.md).
+
+Concurrent request/soak testing is **complete** for the recorded reference
+profile. A 15-minute, 64-client run against 1,000 eligible ads sustained 463.22
+complete views per second with a 94.31 ms p95 and 132.55 ms p99, zero request
+errors, and an exact 416,936-row match between acknowledged beacons, the durable
+ledger and the reporting projection. No duplicate event pairs or new InnoDB
+deadlocks were observed. The checked-in, fail-closed harness and the qualified
+infrastructure profile are documented in
+[load-and-soak-testing.md](load-and-soak-testing.md). This completes Phase 11;
+each production topology still needs its own qualification before launch.
 
 ## Architected for, not planned
 

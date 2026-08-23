@@ -423,6 +423,43 @@ export function CampaignView( {
 					</dl>
 				</section>
 
+				<section
+					className="aggr-panel"
+					aria-labelledby="aggr-review-line-items"
+				>
+					<h2
+						id="aggr-review-line-items"
+						className="aggr-panel__head"
+					>
+						{ t( 'deliveryStrategy' ) }
+					</h2>
+					{ campaign.line_items.map( ( item ) => (
+						<dl className="aggr-facts" key={ item.id }>
+							{ [
+								[ t( 'lineItem' ), item.name ],
+								[
+									t( 'status' ),
+									item.status.replaceAll( '_', ' ' ),
+								],
+								[
+									t( 'pricing' ),
+									item.pricing_model.toUpperCase(),
+								],
+								[
+									t( 'goal' ),
+									item.goal_type.replaceAll( '_', ' ' ),
+								],
+								[ t( 'pacing' ), item.pacing_mode ],
+							].map( ( [ term, detail ] ) => (
+								<div className="aggr-fact" key={ term }>
+									<dt>{ term }</dt>
+									<dd>{ detail }</dd>
+								</div>
+							) ) }
+						</dl>
+					) ) }
+				</section>
+
 				{ '' === campaign.review_notes ? null : (
 					<section
 						className="aggr-notice"

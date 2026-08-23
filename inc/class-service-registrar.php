@@ -21,6 +21,7 @@ use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Core\Settings;
 use Aggressive\Ads\Install\Installer;
+use Aggressive\Ads\Install\Line_Item_Migrator;
 use Aggressive\Ads\Install\Rewrite_Flusher;
 use Aggressive\Ads\Install\Site_Lifecycle;
 use Aggressive\Ads\Install\Upgrader;
@@ -34,6 +35,7 @@ use Aggressive\Ads\Notification\Organization_Notification;
 use Aggressive\Ads\Notification\Password_Notification;
 use Aggressive\Ads\Notification\Request_Mailer;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Line_Item_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Delivery_Repository;
 use Aggressive\Ads\Repository\Event_Repository;
@@ -55,6 +57,7 @@ use Aggressive\Ads\Portal\Report_Actions;
 use Aggressive\Ads\Portal\Signup_Actions;
 use Aggressive\Ads\Portal\Creative_Actions;
 use Aggressive\Ads\REST\Campaigns_Controller;
+use Aggressive\Ads\REST\Line_Items_Controller;
 use Aggressive\Ads\REST\Creative_Controller;
 use Aggressive\Ads\REST\Creative_File_Controller;
 use Aggressive\Ads\REST\Placements_Controller;
@@ -79,6 +82,9 @@ use Aggressive\Ads\Workflow\Campaign_Change_Manager;
 use Aggressive\Ads\Workflow\Campaign_Clock;
 use Aggressive\Ads\Workflow\Campaign_Copier;
 use Aggressive\Ads\Workflow\Campaign_Editor;
+use Aggressive\Ads\Workflow\Line_Item_Editor;
+use Aggressive\Ads\Workflow\Line_Item_Lifecycle;
+use Aggressive\Ads\Workflow\Line_Item_Validator;
 use Aggressive\Ads\Workflow\Edit_Window;
 use Aggressive\Ads\Workflow\Campaign_Validator;
 use Aggressive\Ads\Workflow\Creative_Promoter;
@@ -207,7 +213,8 @@ final class Service_Registrar {
 			Installer::class,
 			static fn ( Service_Container $c ): Installer => new Installer(
 				$c->get( Audit_Repository::class ),
-				$c->get( Roles::class )
+				$c->get( Roles::class ),
+				$c->get( Line_Item_Repository::class )
 			)
 		);
 
@@ -278,6 +285,10 @@ final class Service_Registrar {
 					11 => static function () use ( $c ): void {
 						$c->get( Private_Storage::class )->encrypt_existing_files();
 					},
+					12 => static function () use ( $c ): void {
+						$c->get( Installer::class )->install_line_items();
+						$c->get( Line_Item_Migrator::class )->start();
+					},
 				)
 			)
 		);
@@ -304,6 +315,21 @@ final class Service_Registrar {
 		$container->register(
 			Campaign_Repository::class,
 			static fn (): Campaign_Repository => new Campaign_Repository()
+		);
+
+		$container->register(
+			Line_Item_Repository::class,
+			static fn ( Service_Container $c ): Line_Item_Repository => new Line_Item_Repository(
+				$c->get( Campaign_Repository::class )
+			)
+		);
+
+		$container->register(
+			Line_Item_Migrator::class,
+			static fn ( Service_Container $c ): Line_Item_Migrator => new Line_Item_Migrator(
+				$c->get( Line_Item_Repository::class ),
+				$c->get( Campaign_Repository::class )
+			)
 		);
 
 		$container->register(
@@ -457,7 +483,28 @@ final class Service_Registrar {
 				$c->get( Creative_Repository::class ),
 				$c->get( Audit_Repository::class ),
 				$c->get( Edit_Window::class ),
-				$c->get( Fill_Cache::class )
+				$c->get( Fill_Cache::class ),
+				$c->get( Line_Item_Repository::class )
+			)
+		);
+
+		$container->register( Line_Item_Validator::class, static fn (): Line_Item_Validator => new Line_Item_Validator() );
+
+		$container->register(
+			Line_Item_Editor::class,
+			static fn ( Service_Container $c ): Line_Item_Editor => new Line_Item_Editor(
+				$c->get( Line_Item_Repository::class ),
+				$c->get( Campaign_Repository::class ),
+				$c->get( Line_Item_Validator::class ),
+				$c->get( Audit_Repository::class ),
+				$c->get( Edit_Window::class )
+			)
+		);
+
+		$container->register(
+			Line_Item_Lifecycle::class,
+			static fn ( Service_Container $c ): Line_Item_Lifecycle => new Line_Item_Lifecycle(
+				$c->get( Line_Item_Repository::class )
 			)
 		);
 
@@ -468,7 +515,8 @@ final class Service_Registrar {
 				$c->get( Campaign_Repository::class ),
 				$c->get( Creative_Repository::class ),
 				$c->get( Private_Storage::class ),
-				$c->get( Audit_Repository::class )
+				$c->get( Audit_Repository::class ),
+				$c->get( Line_Item_Repository::class )
 			)
 		);
 
@@ -668,7 +716,8 @@ final class Service_Registrar {
 				$c->get( Campaign_Change_Manager::class ),
 				$c->get( Settings::class ),
 				$c->get( Edit_Window::class ),
-				$c->get( Acting_As::class )
+				$c->get( Acting_As::class ),
+				$c->get( Line_Item_Repository::class )
 			)
 		);
 
@@ -771,7 +820,18 @@ final class Service_Registrar {
 				$c->get( Rate_Limiter::class ),
 				$c->get( Reporting_Read::class ),
 				$c->get( Edit_Window::class ),
-				$c->get( Acting_As::class )
+				$c->get( Acting_As::class ),
+				$c->get( Line_Item_Repository::class )
+			)
+		);
+
+		$container->register(
+			Line_Items_Controller::class,
+			static fn ( Service_Container $c ): Line_Items_Controller => new Line_Items_Controller(
+				$c->get( Line_Item_Repository::class ),
+				$c->get( Campaign_Repository::class ),
+				$c->get( Line_Item_Editor::class ),
+				$c->get( Rate_Limiter::class )
 			)
 		);
 

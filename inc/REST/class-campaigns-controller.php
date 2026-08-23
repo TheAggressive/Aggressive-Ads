@@ -16,6 +16,7 @@ use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
+use Aggressive\Ads\Repository\Line_Item_Repository;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Security\Rate_Limiter;
 use Aggressive\Ads\Portal\Acting_As;
@@ -56,6 +57,7 @@ final class Campaigns_Controller implements Service {
 	 * @param Reporting_Read       $reporting  Native rollup reads.
 	 * @param Edit_Window          $window     When editing is permitted.
 	 * @param Acting_As            $acting     Staff acting for an advertiser.
+	 * @param Line_Item_Repository $line_items Campaign delivery strategies.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -68,7 +70,8 @@ final class Campaigns_Controller implements Service {
 		private readonly Rate_Limiter $limiter,
 		private readonly Reporting_Read $reporting,
 		private readonly Edit_Window $window,
-		private readonly Acting_As $acting
+		private readonly Acting_As $acting,
+		private readonly Line_Item_Repository $line_items
 	) {
 	}
 
@@ -469,7 +472,25 @@ final class Campaigns_Controller implements Service {
 			// What this advertiser could do next, so a UI does not have to
 			// reimplement the transition table to decide which buttons to draw.
 			'actions'          => $this->actions( $campaign_id, $status ),
+			'line_items'       => $this->line_item_rows( $campaign_id ),
 		);
+	}
+
+	/**
+	 * Returns safe line-item rows for one campaign response.
+	 *
+	 * @param int $campaign_id Campaign id.
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function line_item_rows( int $campaign_id ): array {
+		$this->line_items->ensure_default( $campaign_id );
+		$rows = $this->line_items->for_campaign( $campaign_id );
+
+		foreach ( $rows as &$row ) {
+			unset( $row['organization_id'], $row['created_at_ts'], $row['updated_at_ts'] );
+		}
+
+		return $rows;
 	}
 
 	/**

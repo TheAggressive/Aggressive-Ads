@@ -16,6 +16,8 @@ use Aggressive\Ads\Repository\Event_Repository;
 use Aggressive\Ads\Repository\Org_Access_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
+use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Line_Item_Repository;
 use Aggressive\Ads\Storage\Creative_Cipher;
 use Aggressive\Ads\Security\Roles;
 use Aggressive\Ads\Workflow\Click_Hop;
@@ -57,6 +59,8 @@ final class Installer {
 			'aggr_settings',
 			Click_Hop::OPTION_REWRITE,
 			Rollup_Reconciler::OPTION,
+			Line_Item_Migrator::OPTION_CURSOR,
+			Line_Item_Migrator::OPTION_DONE,
 			Org_Access_Repository::LOOKUP_SALT_OPTION,
 			// Removed last, and only on a data-deleting uninstall: the private
 			// files it decrypts are deleted in the same run, so leaving it
@@ -109,12 +113,14 @@ final class Installer {
 	/**
 	 * Constructor.
 	 *
-	 * @param Audit_Repository $audit_repository Audit persistence.
-	 * @param Roles            $roles            Role installer.
+	 * @param Audit_Repository          $audit_repository Audit persistence.
+	 * @param Roles                     $roles            Role installer.
+	 * @param Line_Item_Repository|null $line_items Line-item persistence.
 	 */
 	public function __construct(
 		private readonly Audit_Repository $audit_repository,
-		private readonly Roles $roles
+		private readonly Roles $roles,
+		private readonly ?Line_Item_Repository $line_items = null
 	) {
 	}
 
@@ -131,6 +137,7 @@ final class Installer {
 		$this->audit_repository->install_table();
 		$this->install_org_access();
 		$this->install_delivery_tables();
+		$this->install_line_items();
 
 		$this->install_roles();
 
@@ -172,6 +179,16 @@ final class Installer {
 	public function install_delivery_tables(): void {
 		( new Event_Repository() )->install_table();
 		( new Rollup_Repository() )->install_table();
+	}
+
+	/** Creates or repairs the campaign line-item table. */
+	public function install_line_items(): void {
+		$this->line_items()->install_table();
+	}
+
+	/** Repository supplied by the container, with a standalone-test fallback. */
+	private function line_items(): Line_Item_Repository {
+		return $this->line_items ?? new Line_Item_Repository( new Campaign_Repository() );
 	}
 
 	/**

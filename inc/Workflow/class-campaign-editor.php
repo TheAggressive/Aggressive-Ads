@@ -20,6 +20,7 @@ use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Package_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
+use Aggressive\Ads\Repository\Line_Item_Repository;
 use Aggressive\Ads\Security\Capabilities;
 use WP_Error;
 
@@ -50,14 +51,15 @@ final class Campaign_Editor {
 	/**
 	 * Constructor.
 	 *
-	 * @param Campaign_Repository  $campaigns  Campaign persistence.
-	 * @param Org_Repository       $orgs       Organization resolution.
-	 * @param Package_Repository   $packages   Package validation.
-	 * @param Placement_Repository $placements Placement validation.
-	 * @param Creative_Repository  $creatives  Creative coverage validation.
-	 * @param Audit_Repository     $audit      Audit persistence.
-	 * @param Edit_Window          $window     When editing is permitted.
-	 * @param Fill_Cache           $cache      Native fill cache.
+	 * @param Campaign_Repository       $campaigns  Campaign persistence.
+	 * @param Org_Repository            $orgs       Organization resolution.
+	 * @param Package_Repository        $packages   Package validation.
+	 * @param Placement_Repository      $placements Placement validation.
+	 * @param Creative_Repository       $creatives  Creative coverage validation.
+	 * @param Audit_Repository          $audit      Audit persistence.
+	 * @param Edit_Window               $window     When editing is permitted.
+	 * @param Fill_Cache                $cache      Native fill cache.
+	 * @param Line_Item_Repository|null $line_items Line-item compatibility persistence.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -67,7 +69,8 @@ final class Campaign_Editor {
 		private readonly Creative_Repository $creatives,
 		private readonly Audit_Repository $audit,
 		private readonly Edit_Window $window,
-		private readonly Fill_Cache $cache
+		private readonly Fill_Cache $cache,
+		private readonly ?Line_Item_Repository $line_items = null
 	) {
 	}
 
@@ -159,6 +162,12 @@ final class Campaign_Editor {
 			return $this->error( 'aggr_campaign_not_created', __( 'The campaign could not be created. Please try again.', 'aggressive-ads' ), 500 );
 		}
 
+		if ( null !== $this->line_items && null === $this->line_items->ensure_default( (int) $campaign_id ) ) {
+			$this->campaigns->delete( (int) $campaign_id );
+
+			return $this->error( 'aggr_line_item_not_created', __( 'The campaign delivery strategy could not be created. Please try again.', 'aggressive-ads' ), 500 );
+		}
+
 		$this->audit->insert(
 			new Audit_Event(
 				event: $on_behalf ? 'campaign.created_on_behalf' : 'campaign.created',
@@ -235,6 +244,10 @@ final class Campaign_Editor {
 		// is gone.
 		if ( array_key_exists( 'title', $clean ) ) {
 			$this->campaigns->set_title_is_placeholder( $campaign_id, false );
+		}
+
+		if ( null !== $this->line_items && array_intersect( array( 'start_ts', 'end_ts', 'package_id', 'budget_cents' ), array_keys( $clean ) ) ) {
+			$this->line_items->sync_default_from_campaign( $campaign_id );
 		}
 
 		$this->record_edit( $campaign_id, array_keys( $clean ) );

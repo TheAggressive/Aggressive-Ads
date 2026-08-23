@@ -1,0 +1,203 @@
+<?php
+/**
+ * Campaign-scoped line-item REST API.
+ *
+ * @package Aggressive\Ads
+ */
+
+declare(strict_types=1);
+
+namespace Aggressive\Ads\REST;
+
+use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Line_Item_Repository;
+use Aggressive\Ads\Security\Capabilities;
+use Aggressive\Ads\Security\Rate_Limiter;
+use Aggressive\Ads\Workflow\Line_Item_Editor;
+use WP_Error;
+use WP_REST_Request;
+use WP_REST_Response;
+
+/** Reads and edits delivery strategies only through their parent campaign. */
+final class Line_Items_Controller implements Service {
+
+	/**
+	 * Builds the line-item controller.
+	 *
+	 * @param Line_Item_Repository $line_items Line-item persistence.
+	 * @param Campaign_Repository  $campaigns  Campaign persistence.
+	 * @param Line_Item_Editor     $editor     Authorized editor.
+	 * @param Rate_Limiter         $limiter    Write rate limiter.
+	 */
+	public function __construct(
+		private readonly Line_Item_Repository $line_items,
+		private readonly Campaign_Repository $campaigns,
+		private readonly Line_Item_Editor $editor,
+		private readonly Rate_Limiter $limiter
+	) {
+	}
+
+	/** Attaches route registration. */
+	public function init(): void {
+		add_action( 'rest_api_init', array( $this, 'register_routes' ) );
+	}
+
+	/** Registers campaign-scoped line-item routes. */
+	public function register_routes(): void {
+		Creative_File_Controller::register_route(
+			'/campaigns/(?P<campaign_id>\d+)/line-items',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'index' ),
+				'permission_callback' => array( $this, 'permission' ),
+				'args'                => array( 'campaign_id' => $this->positive_int_arg( true ) ),
+			)
+		);
+
+		Creative_File_Controller::register_route(
+			'/campaigns/(?P<campaign_id>\d+)/line-items/(?P<id>\d+)',
+			array(
+				'methods'             => 'PATCH',
+				'callback'            => array( $this, 'update' ),
+				'permission_callback' => array( $this, 'write_permission' ),
+				'args'                => array(
+					'campaign_id'   => $this->positive_int_arg( true ),
+					'id'            => $this->positive_int_arg( true ),
+					'revision'      => $this->positive_int_arg( true ),
+					'name'          => $this->string_arg(),
+					'pricing_model' => $this->string_arg(),
+					'goal_type'     => $this->string_arg(),
+					'goal_amount'   => $this->nonnegative_int_arg(),
+					'budget_cents'  => $this->nonnegative_int_arg(),
+					'daily_cap'     => $this->nonnegative_int_arg(),
+					'lifetime_cap'  => $this->nonnegative_int_arg(),
+					'priority'      => $this->positive_int_arg( false ),
+					'pacing_mode'   => $this->string_arg(),
+					'weight'        => $this->positive_int_arg( false ),
+				),
+			)
+		);
+	}
+
+	/** Whether the caller may read the advertiser portal. */
+	public function permission(): bool {
+		return is_user_logged_in() && current_user_can( Capabilities::ACCESS_PORTAL );
+	}
+
+	/** Whether the caller may reach a line-item write workflow. */
+	public function write_permission(): bool {
+		return is_user_logged_in() && current_user_can( Capabilities::SUBMIT_CAMPAIGN );
+	}
+
+	/**
+	 * Lists a readable campaign's line items.
+	 *
+	 * @param WP_REST_Request $request REST request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function index( WP_REST_Request $request ) {
+		$campaign_id = (int) $request->get_param( 'campaign_id' );
+		if ( ! $this->campaigns->exists( $campaign_id ) || ! current_user_can( 'read_aggr_campaign', $campaign_id ) ) {
+			return $this->not_found();
+		}
+
+		$this->line_items->ensure_default( $campaign_id );
+
+		return new WP_REST_Response(
+			array( 'line_items' => array_map( array( $this, 'present' ), $this->line_items->for_campaign( $campaign_id ) ) ),
+			200
+		);
+	}
+
+	/**
+	 * Updates one campaign-scoped line item.
+	 *
+	 * @param WP_REST_Request $request REST request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function update( WP_REST_Request $request ) {
+		$allowed = $this->limiter->attempt( Rate_Limiter::ACTION_AUTOSAVE, get_current_user_id() );
+		if ( is_wp_error( $allowed ) ) {
+			return $allowed;
+		}
+
+		$fields = array();
+		foreach ( array( 'name', 'pricing_model', 'goal_type', 'goal_amount', 'budget_cents', 'daily_cap', 'lifetime_cap', 'priority', 'pacing_mode', 'weight' ) as $field ) {
+			if ( $request->has_param( $field ) ) {
+				$fields[ $field ] = $request->get_param( $field );
+			}
+		}
+
+		$campaign_id = (int) $request->get_param( 'campaign_id' );
+		$id          = (int) $request->get_param( 'id' );
+		$result      = $this->editor->update( $campaign_id, $id, $fields, (int) $request->get_param( 'revision' ) );
+
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		$row = $this->line_items->default_for_campaign( $campaign_id );
+
+		return null === $row ? $this->not_found() : new WP_REST_Response( $this->present( $row ), 200 );
+	}
+
+	/**
+	 * Removes persistence-only fields from a response row.
+	 *
+	 * @param array<string, mixed> $row Stored row.
+	 * @return array<string, mixed>
+	 */
+	public function present( array $row ): array {
+		unset( $row['organization_id'], $row['created_at_ts'], $row['updated_at_ts'] );
+
+		return $row;
+	}
+
+	/** Returns the route's non-enumerating object refusal. */
+	private function not_found(): WP_Error {
+		return new WP_Error( 'aggr_not_found', __( 'Not found.', 'aggressive-ads' ), array( 'status' => 404 ) );
+	}
+
+	/**
+	 * Builds a positive integer argument.
+	 *
+	 * @param bool $required Whether required.
+	 * @return array<string, mixed>
+	 */
+	private function positive_int_arg( bool $required ): array {
+		return array(
+			'type'              => 'integer',
+			'required'          => $required,
+			'sanitize_callback' => 'absint',
+			'validate_callback' => static fn ( $value ): bool => is_numeric( $value ) && (int) $value > 0,
+		);
+	}
+
+	/**
+	 * Builds a non-negative integer argument.
+	 *
+	 * @return array<string, mixed>
+	 */
+	private function nonnegative_int_arg(): array {
+		return array(
+			'type'              => 'integer',
+			'required'          => false,
+			'sanitize_callback' => 'absint',
+			'validate_callback' => static fn ( $value ): bool => is_numeric( $value ) && (int) $value >= 0,
+		);
+	}
+
+	/**
+	 * Builds an optional string argument.
+	 *
+	 * @return array<string, mixed>
+	 */
+	private function string_arg(): array {
+		return array(
+			'type'              => 'string',
+			'required'          => false,
+			'validate_callback' => static fn ( $value ): bool => is_string( $value ),
+		);
+	}
+}
