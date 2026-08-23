@@ -32,7 +32,23 @@ export default defineConfig( {
 	forbidOnly: Boolean( process.env.CI ),
 	globalSetup: './tests/e2e/global-setup.ts',
 	globalTeardown: './tests/e2e/global-teardown.ts',
-	reporter: [ [ 'list' ], [ './tests/e2e/no-skipped-reporter.ts' ] ],
+	/*
+	 * `list` for the log, `html` for the artifact, and the custom one for the
+	 * skip rule.
+	 *
+	 * The HTML report exists so a failed CI run leaves something a human can
+	 * open. Without it `playwright-report/` was never created, and the job's
+	 * upload step listed a path that could not exist — which is half of why a
+	 * flake during the v1.4.0 release left nothing to diagnose.
+	 *
+	 * `open: 'never'` because CI has no browser to open it in, and a local run
+	 * that pops a report server after every failure is a nuisance.
+	 */
+	reporter: [
+		[ 'list' ],
+		[ 'html', { open: 'never', outputFolder: 'playwright-report' } ],
+		[ './tests/e2e/no-skipped-reporter.ts' ],
+	],
 	use: {
 		baseURL,
 		trace: 'retain-on-failure',

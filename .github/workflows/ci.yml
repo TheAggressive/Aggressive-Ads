@@ -440,6 +440,23 @@ jobs:
       - run: pnpm ci:e2e
         env:
           AGGR_E2E_SKIP_WEBKIT: ${{ github.event_name == 'pull_request' }}
+      # The diagnostics a failure is investigated from, and they have to
+      # actually arrive.
+      #
+      # They did not, for three compounding reasons, and a flake during the
+      # v1.4.0 release run left nothing to look at:
+      #
+      #   * `include-hidden-files` defaults to false, and `.playwright-results/`
+      #     is a hidden directory. Playwright wrote every trace; the upload
+      #     silently dropped all of them.
+      #   * `playwright-report/` did not exist, because no HTML reporter was
+      #     configured. It is now.
+      #   * `if-no-files-found` defaults to `warn`, so losing the lot produced
+      #     a yellow annotation nobody reads rather than a failure.
+      #
+      # `error` is deliberate. A failing job that also cannot say why is worth
+      # a second red mark; if this ever fires on a run that died before
+      # Playwright started, read the step above it rather than this one.
       - name: Upload browser diagnostics
         if: ${{ failure() || cancelled() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -449,6 +466,8 @@ jobs:
             playwright-report/
             .playwright-results/
             test-results/
+          include-hidden-files: true
+          if-no-files-found: error
           retention-days: 7
 
   package:
