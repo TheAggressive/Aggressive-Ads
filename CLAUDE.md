@@ -151,8 +151,17 @@ and deeper analytics remain open. What is built:
 - CSV reporting — `Portal\Report_Actions` streams a rollup export for the
   acting organization
 - i18n tooling — `bin/i18n/` (pot, sync, compile, status, check, locale,
-  validate-po) behind the `ci:i18n` lane, which `qa:fast` also runs so POT
-  drift fails a push rather than a pull request
+  validate-po, translate, lint-placeholders) behind the `ci:i18n` lane, which
+  `qa:fast` also runs so POT drift fails a push rather than a pull request.
+  Four locale catalogs (de_DE, es_ES, fr_FR, it_IT) are committed as `.po`;
+  `.mo` is build output. Machine translation is DeepL with a MyMemory fallback,
+  and it only ever opens a pull request — `.github/workflows/i18n-translate.yml`
+  — because unreviewed machine output must not reach a publisher.
+  **Two silent failures are covered by `TranslationLoadingTest`:** a plugin's
+  `.mo` keeps the `aggressive-ads-` prefix (the theme's rename is deliberately
+  not ported), and JIT loading never searches a plugin's own folder, so
+  `Plugin::load_translations()` must call `load_plugin_textdomain()` on `init`.
+  Both render English with every other signal green
 - private creative lives in `uploads/ads-uploads/` and is **encrypted at rest**
   — `Storage\Creative_Cipher`, XChaCha20-Poly1305 secretstream, chunked so
   reads stay constant-memory and a truncation is a read failure rather than

@@ -54,4 +54,10 @@ case "${AGGR_I18N_PO_VALIDATOR:-auto}" in
 		;;
 esac
 
+# Placeholder parity, which msgfmt does not fully cover: it rejects a printf
+# mismatch only on entries gettext flagged `php-format`, and knows nothing about
+# brace tokens. A catalog that translates the token itself compiles cleanly and
+# then prints it literally on the page.
+node "${AGGR_I18N_DIR}/lint-placeholders.mjs"
+
 aggr_i18n_info "i18n check passed."
