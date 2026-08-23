@@ -194,6 +194,46 @@ final class FillRoutesTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A ledger outage is explicit for a beacon and never breaks click-through.
+	 *
+	 * The impression caller must not receive a false success when the durable
+	 * write failed. A paid click has the opposite availability requirement: its
+	 * destination remains useful even when measurement is temporarily down.
+	 *
+	 * @return void
+	 */
+	public function test_event_ledger_failure_reports_unavailable_without_breaking_the_click(): void {
+		global $wpdb;
+
+		$this->enable_native();
+
+		$events  = new Event_Repository();
+		$table   = $events->table_name();
+		$offline = $table . '_authorization_test_offline';
+		$token   = ( new Fill_Token() )->mint( $this->placement_id, 0, 0 )['token'];
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Failure injection against the isolated test ledger; the finally block restores the exact table before this test returns.
+		$this->assertTrue( false !== $wpdb->query( "RENAME TABLE {$table} TO {$offline}" ), 'Could not take the test event ledger offline.' );
+
+		try {
+			$request = new WP_REST_Request( 'POST', '/aggr/v1/i' );
+			$request->set_body_params( array( 'token' => $token ) );
+
+			ob_start();
+			$response = rest_get_server()->dispatch( $request );
+			$output   = (string) ob_get_clean();
+
+			$this->assertSame( 503, $response->get_status() );
+			$this->assertSame( 'aggr_beacon_unavailable', $response->get_data()['code'] );
+			$this->assertSame( '', $output, 'The ledger failure exposed a raw database error.' );
+			$this->assertSame( 'https://example.com/house', $this->hop_location( $token ) );
+		} finally {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Restores the table renamed above even when an assertion fails.
+			$wpdb->query( "RENAME TABLE {$offline} TO {$table}" );
+		}
+	}
+
+	/**
 	 * A valid click token 302s to the house destination.
 	 *
 	 * @return void

@@ -118,22 +118,26 @@ final class Event_Repository {
 			return false;
 		}
 
-		$wpdb->suppress_errors( true );
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Custom table; $wpdb->insert with a format array is the write path. Duplicate (token_hash, event) is the replay refusal.
-		$written = $wpdb->insert(
-			$this->table_name(),
-			array(
-				'created_at_ts' => time(),
-				'event'         => $type,
-				'placement_id'  => $placement_id,
-				'campaign_id'   => $campaign_id,
-				'creative_id'   => $creative_id,
-				'token_hash'    => $token_hash,
-				'ip_hash'       => $ip_hash,
-			),
-			array( '%d', '%s', '%d', '%d', '%d', '%s', '%s' )
-		);
-		$wpdb->suppress_errors( false );
+		$was_suppressing = $wpdb->suppress_errors( true );
+
+		try {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery -- Custom table; $wpdb->insert with a format array is the write path. Duplicate (token_hash, event) is the replay refusal.
+			$written = $wpdb->insert(
+				$this->table_name(),
+				array(
+					'created_at_ts' => time(),
+					'event'         => $type,
+					'placement_id'  => $placement_id,
+					'campaign_id'   => $campaign_id,
+					'creative_id'   => $creative_id,
+					'token_hash'    => $token_hash,
+					'ip_hash'       => $ip_hash,
+				),
+				array( '%d', '%s', '%d', '%d', '%d', '%s', '%s' )
+			);
+		} finally {
+			$wpdb->suppress_errors( $was_suppressing );
+		}
 
 		return false !== $written;
 	}
@@ -156,8 +160,14 @@ final class Event_Repository {
 
 		$table = $this->table_name();
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Exact unique-key diagnostic after a failed ledger insert.
-		$id = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table} WHERE token_hash = %s AND event = %s LIMIT 1", $token_hash, $type ) );
+		$was_suppressing = $wpdb->suppress_errors( true );
+
+		try {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Exact unique-key diagnostic after a failed ledger insert.
+			$id = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table} WHERE token_hash = %s AND event = %s LIMIT 1", $token_hash, $type ) );
+		} finally {
+			$wpdb->suppress_errors( $was_suppressing );
+		}
 
 		return is_numeric( $id ) && (int) $id > 0;
 	}

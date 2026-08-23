@@ -254,15 +254,12 @@ window was exposed.
 
 ---
 
-## What this runbook does not cover
+## Deployment-specific qualification
 
-Three Phase 11 items need an environment rather than a commit, and none of them
-have been done:
-
-- concurrent request and soak testing on production-equivalent infrastructure
-- audit-table load testing at realistic volume
-- a full authorization and failure-state review
-
-Until they are, treat the delivery figures in
-[delivery-performance.md](delivery-performance.md) as modelled rather than
-measured on your hardware.
+The Phase 11 authorization review, audit-table volume test, and reference HTTP
+load/soak qualification are complete. The recorded result in
+[load-and-soak-testing.md](load-and-soak-testing.md) proves the reference stack,
+not this deployment. Before launch, run the same fail-closed harness against an
+isolated staging clone of the actual web tier, PHP worker pool, object cache and
+database topology. Record that result with the release evidence, and do not
+extrapolate the reference throughput to materially different hardware.

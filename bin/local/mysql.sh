@@ -24,7 +24,7 @@ DATA_DIR="${DATA_ROOT}/data"
 PID_FILE="${DATA_ROOT}/mysqld.pid"
 LOG_FILE="${DATA_ROOT}/error.log"
 PORT="${AGGR_TESTS_DB_PORT:-13306}"
-SOCKET="/tmp/aggr-mysqld-$(id -u).sock"
+SOCKET="/tmp/aggr-mysqld-$(id -u)-${PORT}.sock"
 
 DB_NAME="${AGGR_TESTS_DB_NAME:-wordpress_test}"
 DB_USER="${AGGR_TESTS_DB_USER:-wordpress}"
