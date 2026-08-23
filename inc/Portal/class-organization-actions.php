@@ -11,6 +11,7 @@ namespace Aggressive\Ads\Portal;
 
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Security\Rate_Limiter;
 use Aggressive\Ads\Workflow\Organization_Membership;
 use WP_Error;
@@ -53,6 +54,7 @@ final class Organization_Actions implements Service {
 
 	/** Send an expiring invitation. */
 	public function handle_invite(): void {
+		$this->assert_portal_access();
 		check_admin_referer( self::INVITE_ACTION );
 
 		$user_id = get_current_user_id();
@@ -72,6 +74,7 @@ final class Organization_Actions implements Service {
 
 	/** Approve a pending duplicate-name request. */
 	public function handle_approve(): void {
+		$this->assert_portal_access();
 		check_admin_referer( self::APPROVE_ACTION );
 
 		$result = $this->memberships->approve(
@@ -85,6 +88,7 @@ final class Organization_Actions implements Service {
 
 	/** Deny a request or revoke a pending invitation. */
 	public function handle_deny(): void {
+		$this->assert_portal_access();
 		check_admin_referer( self::DENY_ACTION );
 
 		$result = $this->memberships->deny(
@@ -98,6 +102,7 @@ final class Organization_Actions implements Service {
 
 	/** Remove an existing non-owner member. */
 	public function handle_remove(): void {
+		$this->assert_portal_access();
 		check_admin_referer( self::REMOVE_ACTION );
 
 		$result = $this->memberships->remove(
@@ -111,6 +116,7 @@ final class Organization_Actions implements Service {
 
 	/** Transfer ownership to an existing member. */
 	public function handle_transfer(): void {
+		$this->assert_portal_access();
 		check_admin_referer( self::TRANSFER_ACTION );
 
 		$result = $this->memberships->transfer(
@@ -124,6 +130,7 @@ final class Organization_Actions implements Service {
 
 	/** Rename the authenticated user's organization. */
 	public function handle_rename(): void {
+		$this->assert_portal_access();
 		check_admin_referer( self::RENAME_ACTION );
 
 		$result = $this->memberships->rename(
@@ -203,6 +210,19 @@ final class Organization_Actions implements Service {
 		$value = isset( $_POST['organization_name'] ) && is_string( $_POST['organization_name'] ) ? wp_unslash( $_POST['organization_name'] ) : '';
 
 		return strlen( $value ) <= Org_Repository::MAX_NAME_LENGTH ? sanitize_text_field( $value ) : '';
+	}
+
+	/** Refuse authenticated callers whose portal access has been revoked. */
+	private function assert_portal_access(): void {
+		if ( is_user_logged_in() && current_user_can( Capabilities::ACCESS_PORTAL ) ) {
+			return;
+		}
+
+		wp_die(
+			esc_html__( 'You do not have permission to do that.', 'aggressive-ads' ),
+			'',
+			array( 'response' => 403 )
+		);
 	}
 
 	/**

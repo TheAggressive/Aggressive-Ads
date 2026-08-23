@@ -219,6 +219,7 @@ final class Organizations_Controller implements Service {
 				'default'           => '',
 				'sanitize_callback' => 'sanitize_text_field',
 			),
+
 			/*
 			 * Named `filter_state`, not `state`, and that is not cosmetic.
 			 *
