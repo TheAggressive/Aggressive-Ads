@@ -105,10 +105,20 @@ jobs:
         if: steps.catalogs.outputs.present == 'true'
         run: node bin/i18n/lint-placeholders.mjs
 
+      # HUSKY=0 for the same reason ci.yml sets it around its own git writes:
+      # the repository installs git hooks for people, and this job is not one.
+      # Without it `git push` runs .husky/pre-push, which runs `pnpm qa:fast`,
+      # which runs doctor.mjs — and doctor fails a runner whose PHP and Node
+      # differ from the pinned CI versions. That is a correct thing to tell a
+      # developer and a nonsense thing to tell a job that is already inside CI.
+      #
+      # It cost a full 41-minute translation run: everything succeeded, the
+      # commit was made, and the push was refused by a hook meant for laptops.
       - name: Open a pull request
         if: steps.catalogs.outputs.present == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HUSKY: '0'
         run: |
           set -euo pipefail
 
