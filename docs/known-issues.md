@@ -25,8 +25,12 @@ bundle after a `wp-login.php` round trip on a freshly started container.
 **Cost.** `Package` and `Release` depend on `e2e`, so it blocks a release until
 somebody re-runs the job. It cost the first attempt at v1.1.1.
 
-**Status.** Not reproduced since, across many consecutive green runs, so the
-open-work entry was closed rather than left as work nobody was doing. Three of
+**Status.** Reproduced once more, on the v1.4.0 release run of 2026-08-23, on a
+*different* spec: `placement-mapping.spec.ts` waiting for the Inventory heading.
+Same shape — the first mount of an admin React bundle on a freshly started
+container — and a re-run of the same commit went green, which is what let the
+release finish. So this is a class rather than one test, and the entry stays
+open. Three of
 the four candidate causes are eliminated, measured against a WordPress Studio
 site (native PHP, SQLite), which models the container only loosely:
 
@@ -48,7 +52,20 @@ Apache and MySQL do cold that a native-PHP SQLite site cannot reproduce.
 **If it returns, do not guess.** The e2e job uploads `playwright-report/`,
 `.playwright-results/` and `test-results/` on failure with seven-day retention,
 and `trace: 'retain-on-failure'` is set, so the trace carries per-step timings
-for the run that actually failed. Pull that before changing anything, and
+for the run that actually failed.
+
+That instruction was unfollowable until 2026-08-23, and the v1.4.0 recurrence is
+how it was discovered: the run uploaded nothing. Three causes compounded.
+`actions/upload-artifact` excludes hidden files unless told otherwise, and
+`.playwright-results/` is hidden, so every trace Playwright wrote was dropped.
+`playwright-report/` never existed at all, because no HTML reporter was
+configured. And `if-no-files-found` defaults to `warn`, so losing all of it
+produced a yellow annotation rather than a failure. All three are fixed —
+`include-hidden-files: true`, an `html` reporter, and `if-no-files-found: error`
+— so the next occurrence leaves evidence, and a run that somehow leaves none
+fails loudly instead of looking fine.
+
+Pull that before changing anything, and
 reopen an entry in [open-work.md](open-work.md). Do not reach for
 `bin/ci/retry.sh`: it is deliberately scoped to network-bound setup steps,
 because a retry around a test turns a fast red into a slow red and hides the
