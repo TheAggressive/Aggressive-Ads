@@ -11,7 +11,8 @@ namespace Aggressive\Ads\Tests\Unit\Security;
 
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Security\Capabilities;
-use Yoast\PHPUnitPolyfills\TestCases\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
 
 /**
  * The capability names are the vocabulary every permission check speaks. A
@@ -78,9 +79,8 @@ final class CapabilitiesTest extends TestCase {
 	 *
 	 * @param string $post_type Post type slug.
 	 * @return void
-	 *
-	 * @dataProvider data_post_types
 	 */
+	#[DataProvider( 'data_post_types' )]
 	public function test_generated_primitives_cover_the_full_set( string $post_type ): void {
 		$plural   = Post_Types::capability_names()[ $post_type ]['plural'];
 		$expected = array(
@@ -106,9 +106,8 @@ final class CapabilitiesTest extends TestCase {
 	 *
 	 * @param string $post_type Post type slug.
 	 * @return void
-	 *
-	 * @dataProvider data_post_types
 	 */
+	#[DataProvider( 'data_post_types' )]
 	public function test_meta_capabilities_are_never_grantable( string $post_type ): void {
 		$meta = Capabilities::meta_for( $post_type );
 

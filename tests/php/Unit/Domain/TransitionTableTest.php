@@ -12,7 +12,7 @@ namespace Aggressive\Ads\Tests\Unit\Domain;
 use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Domain\Transition_Table;
 use Aggressive\Ads\Security\Capabilities;
-use Yoast\PHPUnitPolyfills\TestCases\TestCase;
+use PHPUnit\Framework\TestCase;
 
 /**
  * Exhaustive, because it is affordable to be.

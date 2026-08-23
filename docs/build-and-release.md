@@ -265,7 +265,7 @@ That last check catches a failure that is otherwise invisible: skip `pnpm i18n:c
 
 ## `vendor/` never ships
 
-`composer.json` `require` is `{"php": ">=8.4"}` and nothing else. Composer is dev-only tooling.
+`composer.json` `require` is `{"php": ">=8.4"}` and nothing else. Composer is dev-only tooling. There are two Composer projects — the plugin's, and `tests/wp/` holding the PHPUnit 9.6 the WordPress suites need — and neither ships: `tests/` is on the denylist above, which covers the second one twice over.
 
 The decisive argument is not payload size — **WordPress has no dependency isolation.** Two plugins each shipping `vendor/autoload.php` with different versions of the same package produce a fatal attributed to whichever loaded second, and the site owner has no way to fix it. Shipping nothing means this plugin can never be the one that broke the site.
 

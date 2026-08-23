@@ -10,7 +10,8 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Tests\Unit\Core;
 
 use Aggressive\Ads\Core\Post_Types;
-use Yoast\PHPUnitPolyfills\TestCases\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
 
 /**
  * The privacy baseline is the security boundary for every business entity in
@@ -66,9 +67,8 @@ final class PostTypesTest extends TestCase {
 	 *
 	 * @param string $slug Post type slug.
 	 * @return void
-	 *
-	 * @dataProvider data_post_types
 	 */
+	#[DataProvider( 'data_post_types' )]
 	public function test_privacy_baseline_holds( string $slug ): void {
 		$args = Post_Types::registration_args()[ $slug ];
 
@@ -88,9 +88,8 @@ final class PostTypesTest extends TestCase {
 	 *
 	 * @param string $slug Post type slug.
 	 * @return void
-	 *
-	 * @dataProvider data_post_types
 	 */
+	#[DataProvider( 'data_post_types' )]
 	public function test_content_survives_user_deletion( string $slug ): void {
 		$this->assertFalse( Post_Types::registration_args()[ $slug ]['delete_with_user'] );
 	}
@@ -102,9 +101,8 @@ final class PostTypesTest extends TestCase {
 	 *
 	 * @param string $slug Post type slug.
 	 * @return void
-	 *
-	 * @dataProvider data_post_types
 	 */
+	#[DataProvider( 'data_post_types' )]
 	public function test_meta_cap_mapping_is_enabled( string $slug ): void {
 		$this->assertTrue( Post_Types::registration_args()[ $slug ]['map_meta_cap'] );
 	}

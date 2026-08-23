@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Tests\Unit\Domain;
 
 use Aggressive\Ads\Domain\Upload_Rules;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -99,11 +100,10 @@ final class UploadRulesTest extends TestCase {
 	/**
 	 * An image type the product supports is accepted.
 	 *
-	 * @dataProvider allowed_mimes
-	 *
 	 * @param string $mime Candidate type.
 	 * @return void
 	 */
+	#[DataProvider( 'allowed_mimes' )]
 	public function test_an_allowed_mime_is_accepted( string $mime ): void {
 		$this->assertTrue( Upload_Rules::is_allowed_mime( $mime ) );
 	}
@@ -111,11 +111,10 @@ final class UploadRulesTest extends TestCase {
 	/**
 	 * A scriptable or unrecognised type never becomes a creative.
 	 *
-	 * @dataProvider refused_mimes
-	 *
 	 * @param string $mime Candidate type.
 	 * @return void
 	 */
+	#[DataProvider( 'refused_mimes' )]
 	public function test_a_refused_mime_is_rejected( string $mime ): void {
 		$this->assertFalse( Upload_Rules::is_allowed_mime( $mime ) );
 	}
@@ -133,11 +132,10 @@ final class UploadRulesTest extends TestCase {
 	/**
 	 * An image extension the product supports is accepted.
 	 *
-	 * @dataProvider allowed_extensions
-	 *
 	 * @param string $extension Candidate extension.
 	 * @return void
 	 */
+	#[DataProvider( 'allowed_extensions' )]
 	public function test_an_allowed_extension_is_accepted( string $extension ): void {
 		$this->assertTrue( Upload_Rules::is_allowed_extension( $extension ) );
 	}
@@ -145,11 +143,10 @@ final class UploadRulesTest extends TestCase {
 	/**
 	 * An extension a misconfigured server would execute is refused.
 	 *
-	 * @dataProvider refused_extensions
-	 *
 	 * @param string $extension Candidate extension.
 	 * @return void
 	 */
+	#[DataProvider( 'refused_extensions' )]
 	public function test_a_refused_extension_is_rejected( string $extension ): void {
 		$this->assertFalse( Upload_Rules::is_allowed_extension( $extension ) );
 	}

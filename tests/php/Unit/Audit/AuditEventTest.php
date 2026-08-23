@@ -11,7 +11,8 @@ namespace Aggressive\Ads\Tests\Unit\Audit;
 
 use InvalidArgumentException;
 use Aggressive\Ads\Audit\Audit_Event;
-use Yoast\PHPUnitPolyfills\TestCases\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
 
 /**
  * The audit log is retained longer than most of what could be written into it,
@@ -55,9 +56,8 @@ final class AuditEventTest extends TestCase {
 	 *
 	 * @param string $name A name that is not one.
 	 * @return void
-	 *
-	 * @dataProvider data_empty_names
 	 */
+	#[DataProvider( 'data_empty_names' )]
 	public function test_an_event_must_be_named( string $name ): void {
 		$this->expectException( InvalidArgumentException::class );
 
@@ -83,9 +83,8 @@ final class AuditEventTest extends TestCase {
 	 *
 	 * @param string $key A key that must never be logged.
 	 * @return void
-	 *
-	 * @dataProvider data_forbidden_keys
 	 */
+	#[DataProvider( 'data_forbidden_keys' )]
 	public function test_forbidden_context_keys_are_rejected( string $key ): void {
 		$this->expectException( InvalidArgumentException::class );
 		$this->expectExceptionMessage( 'Audit context may not contain' );

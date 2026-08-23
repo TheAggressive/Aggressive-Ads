@@ -13,9 +13,11 @@
 # report only exists if PHPUnit reached the end of the run. A missing or
 # incomplete report is treated as a failure rather than as an absence of news.
 #
-# Two runners, one report check. AGGR_TESTS_RUNNER=native runs PHPUnit on this
-# host against bin/local/mysql.sh; anything else runs it inside the Compose
-# stack, which is what CI does and what the default stays. The verification
+# Two environments and two PHPUnits, one report check. AGGR_TESTS_RUNNER=native
+# runs on this host against bin/local/mysql.sh; anything else runs inside the
+# Compose stack, which is what CI does and what the default stays. Separately,
+# the config file selects the PHPUnit major — 13 for the unit suite, 9.6 for the
+# WordPress suites — for the reason in tests/wp/README.md. The verification
 # below is deliberately shared: it is the half that catches a suite dying
 # mid-run, and a runner that skipped it would be the one place that could
 # report a clean pass over ten dead test classes again.
@@ -35,13 +37,35 @@ report="build/test-results/$(basename "${config}" .xml.dist).xml"
 mkdir -p "$(dirname "${report}")"
 rm -f "${report}"
 
+# Which PHPUnit runs is decided by the config file, and by nothing else.
+#
+# The unit config runs on the plugin's own PHPUnit 13; the WordPress configs run
+# on the 9.6 quarantined in tests/wp/, because wp-phpunit cannot run on 10 or
+# later. Deciding it here means no caller — not verify.sh, not run-coverage.sh,
+# not a person typing a command — has to know which suite is on which major.
+# See tests/wp/README.md.
+case "${config}" in
+	*integration*|*multisite*)
+		bash bin/ci/install-wp-runner.sh >/dev/null
+		phpunit_bin="tests/wp/vendor/bin/phpunit"
+		;;
+	*)
+		phpunit_bin="vendor/bin/phpunit"
+		;;
+esac
+
+if [ ! -x "${phpunit_bin}" ]; then
+	echo "run-wp-tests: ${phpunit_bin} is missing. Run composer install." >&2
+	exit 1
+fi
+
 status=0
 
 if [ "${AGGR_TESTS_RUNNER:-docker}" = "native" ]; then
 	# bin/local/wp-tests.sh has already exported AGGR_TESTS_* and pointed
 	# WP_PHPUNIT__TESTS_CONFIG at this checkout's config. Paths are host paths,
 	# and nothing here needs root, so there is no ownership to restore.
-	vendor/bin/phpunit \
+	"${phpunit_bin}" \
 		-c "${config}" \
 		--log-junit "${report}" \
 		"$@" || status=$?
@@ -75,7 +99,7 @@ else
 	trap restore_web_ownership EXIT
 
 	bash bin/ci/environment.sh exec \
-		php "/var/www/html/${plugin_path}/vendor/bin/phpunit" \
+		php "/var/www/html/${plugin_path}/${phpunit_bin}" \
 		-c "${plugin_path}/${config}" \
 		--log-junit "${plugin_path}/${report}" \
 		"$@" || status=$?

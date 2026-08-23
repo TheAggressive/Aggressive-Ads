@@ -13,7 +13,8 @@ use FilesystemIterator;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use SplFileInfo;
-use Yoast\PHPUnitPolyfills\TestCases\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
 
 /**
  * Screens register submenus against Menu::PARENT_SLUG. A second add_menu_page
@@ -65,9 +66,8 @@ final class MenuStructureTest extends TestCase {
 	 *
 	 * @param string $relative Path under the plugin root.
 	 * @return void
-	 *
-	 * @dataProvider data_staff_screens
 	 */
+	#[DataProvider( 'data_staff_screens' )]
 	public function test_staff_screens_register_submenus( string $relative ): void {
 		$source = (string) file_get_contents( dirname( __DIR__, 4 ) . '/' . $relative );
 

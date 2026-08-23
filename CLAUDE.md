@@ -6,7 +6,8 @@ Architectural patterns are adapted from the LAAO and Aggressive Apparel themes.
 **Nothing is inherited at runtime**, and where the three differ, this file is
 authoritative here. In particular: this is a plugin, not a theme; there is no
 WooCommerce, no Tailwind history, the only public block is `aggr/placement`,
-and the test stack is deliberately older than LAAO's.
+and the WordPress test suites run an older PHPUnit than LAAO's — the unit suite
+does not.
 
 ## Read the docs first
 
@@ -186,6 +187,7 @@ Spend stays absent until billing has a source.
 ```bash
 composer install        # dev tooling only; vendor/ never ships
 pnpm install            # webpack / TypeScript / Playwright
+bash bin/ci/install-wp-runner.sh   # PHPUnit 9.6 for the WordPress suites
 pnpm build              # src/ → dist/
 pnpm env:start          # disposable WordPress 7.1 at :9960
 pnpm dev:seed           # an advertiser, an org and five campaigns to look at
@@ -194,9 +196,9 @@ pnpm ci:verify          # the contract for declaring a change finished
 
 pnpm lint:php           # PHPCS
 pnpm analyse:php        # PHPStan level 8, no baseline
-pnpm test:php:unit      # unit suite — no WordPress, no database
+pnpm test:php:unit      # unit suite — PHPUnit 13, no WordPress, no database
 pnpm test:php:native    # the WP suites natively: local MySQL, no Docker
-pnpm test:php:integration  # WP integration/security/rest/upgrade (needs env:start)
+pnpm test:php:integration  # WP integration/security/rest/upgrade, PHPUnit 9.6 (needs env:start)
 pnpm test:php:multisite    # colliding-id tenancy; WP_TESTS_MULTISITE (needs env:start)
 pnpm lint:js            # ESLint on src/
 pnpm typecheck          # tsc --noEmit
@@ -237,11 +239,24 @@ affordable to test them exhaustively.
 
 ## Testing
 
-PHPUnit is pinned to **9.6**, not 13 like the LAAO theme. This is deliberate and
-test-only: the assertions that matter here — org-scoped `map_meta_cap`, `dbDelta`
-idempotence, real REST authorization, real uploads — are not expressible under
-Brain\Monkey, and the WordPress core test suite requires 9.x. Two config files because **PHPUnit allows exactly one bootstrap per file**. The
-unit suite must not load WordPress; the integration suite must.
+**Two PHPUnits, and the config file picks which.** The unit suite runs
+PHPUnit 13 from `vendor/`, matching the LAAO theme. The suites that load real
+WordPress run PHPUnit 9.6 from `tests/wp/vendor/`, installed by
+`bin/ci/install-wp-runner.sh`, because `WP_UnitTestCase_Base` calls
+`PHPUnit\Util\Test::parseTestMethodAnnotations()` and PHPUnit removed that class
+in 10 — measured, not assumed. `bin/ci/run-wp-tests.sh` selects the binary, so
+no caller knows which suite is on which major. See `tests/wp/README.md`.
+
+The WordPress suites exist at all because the assertions that matter here —
+org-scoped `map_meta_cap`, `dbDelta` idempotence, real REST authorization, real
+uploads — are not expressible under Brain\Monkey. Separate config files because
+**PHPUnit allows exactly one bootstrap per file**: the unit suite must not load
+WordPress; the integration suite must.
+
+Unit tests extend `PHPUnit\Framework\TestCase` with `setUp()` / `tearDown()`
+and `#[DataProvider]` attributes. The polyfills and `@dataProvider` docblocks
+are gone from `tests/php/Unit` — PHPUnit 13 reads attributes, not doc comments.
+The WordPress suites still use the polyfills through `WP_UnitTestCase`.
 
 `failOnWarning`, `failOnRisky`, `failOnSkipped` and `failOnIncomplete` are all
 true. A skipped security test is a security test that is not running.

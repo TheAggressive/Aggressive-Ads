@@ -11,7 +11,7 @@ namespace Aggressive\Ads\Tests\Unit\Domain;
 
 use Aggressive\Ads\Domain\Contrast;
 use Aggressive\Ads\Domain\Settings_Schema;
-use Yoast\PHPUnitPolyfills\TestCases\TestCase;
+use PHPUnit\Framework\TestCase;
 
 /**
  * Brand save and the stylesheet test share this class. A palette that passes

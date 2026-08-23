@@ -3,10 +3,14 @@
 	The unit suite. No WordPress, no database, no bootstrap beyond Composer and
 	the plugin's own autoloader.
 
-	The integration, security, rest and upgrade suites live in
-	phpunit-integration.xml.dist, because PHPUnit allows exactly one bootstrap
-	per configuration file. That is the reason for the split, not preference.
-	See docs/testing-strategy.md.
+	**PHPUnit 13**, matching the LAAO theme. The suites that load real WordPress
+	run on 9.6 from tests/wp/, because wp-phpunit cannot run on PHPUnit 10 or
+	later — see tests/wp/README.md. `bin/ci/run-wp-tests.sh` picks the binary
+	from the config file, so no caller has to know which is which.
+
+	Separate from phpunit-integration.xml.dist because PHPUnit allows exactly
+	one bootstrap per configuration file. That was the reason for the split
+	before the runners diverged, and it still is. See docs/testing-strategy.md.
 -->
 <phpunit
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -15,12 +19,18 @@
 	colors="true"
 	beStrictAboutTestsThatDoNotTestAnything="true"
 	beStrictAboutOutputDuringTests="true"
-	convertDeprecationsToExceptions="true"
 	failOnWarning="true"
 	failOnRisky="true"
 	failOnSkipped="true"
 	failOnIncomplete="true"
-	cacheResultFile=".phpunit.cache/unit.result"
+	failOnNotice="true"
+	failOnDeprecation="true"
+	failOnPhpunitDeprecation="true"
+	displayDetailsOnTestsThatTriggerErrors="true"
+	displayDetailsOnTestsThatTriggerWarnings="true"
+	displayDetailsOnTestsThatTriggerDeprecations="true"
+	displayDetailsOnPhpunitDeprecations="true"
+	cacheDirectory=".phpunit.cache"
 	>
 	<testsuites>
 		<testsuite name="unit">
@@ -28,9 +38,9 @@
 		</testsuite>
 	</testsuites>
 
-	<coverage>
+	<source>
 		<include>
 			<directory suffix=".php">inc</directory>
 		</include>
-	</coverage>
+	</source>
 </phpunit>

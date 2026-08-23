@@ -12,6 +12,7 @@ namespace Aggressive\Ads\Tests\Unit\Portal;
 use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Portal\View_Data;
 use Aggressive\Ads\Tests\Unit\Assets\Portal_Styles;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -52,12 +53,11 @@ final class ViewDataPillTest extends TestCase {
 	/**
 	 * Each status maps to the colour it was assigned.
 	 *
-	 * @dataProvider status_provider
-	 *
 	 * @param string $status   Status slug.
 	 * @param string $expected Expected pill modifier.
 	 * @return void
 	 */
+	#[DataProvider( 'status_provider' )]
 	public function test_status_maps_to_its_pill( string $status, string $expected ): void {
 		$this->assertSame( $expected, View_Data::pill_for( $status ) );
 	}

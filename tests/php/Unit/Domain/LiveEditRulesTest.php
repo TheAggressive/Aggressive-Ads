@@ -11,7 +11,7 @@ namespace Aggressive\Ads\Tests\Unit\Domain;
 
 use Aggressive\Ads\Domain\Live_Edit_Rules;
 use Aggressive\Ads\Domain\Settings_Schema;
-use Yoast\PHPUnitPolyfills\TestCases\TestCase;
+use PHPUnit\Framework\TestCase;
 
 /**
  * The allowlist is a permission boundary, so it is asserted as one: a field

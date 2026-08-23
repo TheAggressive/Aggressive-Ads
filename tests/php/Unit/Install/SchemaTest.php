@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Tests\Unit\Install;
 
 use Aggressive\Ads\Install\Schema;
-use Yoast\PHPUnitPolyfills\TestCases\TestCase;
+use PHPUnit\Framework\TestCase;
 
 /**
  * The DDL's *formatting* is functional, because dbDelta parses SQL with regular
@@ -33,7 +33,7 @@ final class SchemaTest extends TestCase {
 	 *
 	 * @return void
 	 */
-	protected function set_up(): void {
+	protected function setUp(): void {
 		$this->ddl = Schema::audit_table_ddl( 'wp_aggr_audit_log', 'DEFAULT CHARACTER SET utf8mb4' );
 	}
 

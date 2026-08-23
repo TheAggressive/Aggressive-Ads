@@ -10,7 +10,8 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Tests\Unit\Domain;
 
 use Aggressive\Ads\Domain\Csv_Writer;
-use Yoast\PHPUnitPolyfills\TestCases\TestCase;
+use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\TestCase;
 
 /**
  * The quoting rules decide whether the file parses; the neutralization rules
@@ -72,11 +73,10 @@ final class CsvWriterTest extends TestCase {
 	 * Every one of these is a legal campaign name this plugin accepts, and each
 	 * would execute on open in Excel, LibreOffice or Sheets without the prefix.
 	 *
-	 * @dataProvider formula_provider
-	 *
 	 * @param string $payload Attacker-controlled field.
 	 * @return void
 	 */
+	#[DataProvider( 'formula_provider' )]
 	public function test_formula_leading_fields_are_neutralized( string $payload ): void {
 		// Parsed back rather than string-matched: quoting doubles any `"` in
 		// the payload, so the raw bytes legitimately differ from the input
