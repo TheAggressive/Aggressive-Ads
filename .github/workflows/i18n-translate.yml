@@ -135,7 +135,29 @@ jobs:
           # chore(i18n) on purpose: semantic-release must not cut a version for
           # a translation draft. Merged catalogs ride the next feat/fix release.
           git commit -m "chore(i18n): machine-translated draft catalogs"
-          git push --force-with-lease origin "${branch}"
+
+          # The lease needs something to lease against.
+          #
+          # `actions/checkout` fetches only the ref that triggered the run, so
+          # `origin/${branch}` does not exist here and a bare
+          # `--force-with-lease` is refused outright: "stale info". It is not a
+          # conflict — git simply has no recorded remote state to compare, and
+          # declines rather than guess.
+          #
+          # That made this step work exactly once. The first run created the
+          # branch, and pushing a branch that does not exist remotely has
+          # nothing to lease against, so it succeeded; every run afterwards was
+          # rejected by a check that could never pass.
+          #
+          # So the branch is fetched and its head passed explicitly. An empty
+          # value is the correct expectation when the branch does not exist,
+          # and the guarantee is unchanged: if anyone else moved the branch
+          # between the fetch and the push, the lease still refuses.
+          git remote set-branches --add origin "${branch}"
+          git fetch --quiet origin "${branch}" || true
+          remote_head="$(git rev-parse "refs/remotes/origin/${branch}" 2>/dev/null || echo '')"
+
+          git push --force-with-lease="${branch}:${remote_head}" origin "${branch}"
 
           if [ -z "$(gh pr list --head "${branch}" --state open --json number --jq '.[].number')" ]; then
             cat > /tmp/pr-body.md <<'BODY'

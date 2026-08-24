@@ -37,7 +37,15 @@ Then, as needed:
 | [runbook.md](runbook.md) | Deploying to production, verifying each step, and rolling back |
 | [roadmap.md](roadmap.md) | Phases 1–11 (what already shipped vs remaining product) |
 | [platform-implementation-progress.md](platform-implementation-progress.md) | The platform sequence beyond the roadmap, and what exists today |
+| [platform-phase-definition-template.md](platform-phase-definition-template.md) | Required structure for implementation-ready phase definitions and exit evidence |
 | [platform-p0-baseline.md](platform-p0-baseline.md) | Platform regression matrix, executed quality baseline and P0 exit evidence |
+| [platform-p1-line-item-closeout.md](platform-p1-line-item-closeout.md) | Remaining P1 correctness, migration and evidence required for completion |
+| [platform-p2-creative-model.md](platform-p2-creative-model.md) | P2 creative asset, revision, assignment, migration and enterprise exit contract |
+| [platform-serving-contract.md](platform-serving-contract.md) | Shared decisioning, privacy, performance and exit contract for P3–P9 |
+| [platform-measurement-contract.md](platform-measurement-contract.md) | Shared event, attribution, analytics and reporting contract for P10–P14 |
+| [platform-inventory-commerce-contract.md](platform-inventory-commerce-contract.md) | Shared inventory, forecasting, creative-format, billing and workflow contract for P15–P20 |
+| [platform-api-privacy-contract.md](platform-api-privacy-contract.md) | Shared RBAC, API, webhook, provider, consent and traffic-quality contract for P21–P28 |
+| [platform-scale-assurance-contract.md](platform-scale-assurance-contract.md) | Shared scale, ingestion, observability, performance, accessibility and intelligence contract for P29–P34 |
 | [suite-roadmap.md](suite-roadmap.md) | Aggressive Ads suite: identity, admin shell, native delivery, cache, tracking |
 
 ## Conventions
