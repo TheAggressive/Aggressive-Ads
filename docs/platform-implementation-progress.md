@@ -65,13 +65,20 @@ earlier one creates.
       priority, weight, targeting rules and frequency policy as columns.
       *Migration: every existing campaign must behave as one default line item
       without recreating anything, and without interrupting a serving ad.* See
-      [data-schema.md](data-schema.md#campaign-line-items).
+      [data-schema.md](data-schema.md#campaign-line-items). Remaining exit work
+      and evidence are defined in
+      [platform-p1-line-item-closeout.md](platform-p1-line-item-closeout.md).
 - [ ] **P2 — Creative model refactor.** Many creatives per line item and
       placement, with weight, dates, status and revision history. Campaign
       validation stops failing on a second creative and starts requiring one
-      eligible approved creative per required combination.
+      eligible approved creative per required combination. Scope, migration,
+      invariants and exit evidence are defined in
+      [platform-p2-creative-model.md](platform-p2-creative-model.md).
 
 ### Serving
+
+Shared boundaries and group exit criteria:
+[platform-serving-contract.md](platform-serving-contract.md).
 
 - [ ] **P3 — Decision engine.** Replaces rotation. Request, context, candidate,
       result and trace; eligibility, targeting, frequency, pacing, priority,
@@ -99,6 +106,9 @@ earlier one creates.
 
 ### Measurement
 
+Shared boundaries and group exit criteria:
+[platform-measurement-contract.md](platform-measurement-contract.md).
+
 - [ ] **P10 — Measurement model.** Split the lifecycle into request, fill,
       no_fill, served, viewable, click and conversion, with explicit no-fill
       reasons. *Migration: today's `impression` becomes `served` without losing
@@ -118,6 +128,9 @@ earlier one creates.
       architecture for scheduled email.
 
 ### Inventory and commerce
+
+Shared boundaries and group exit criteria:
+[platform-inventory-commerce-contract.md](platform-inventory-commerce-contract.md).
 
 - [ ] **P15 — Inventory management.** Placement groups, responsive multi-size
       mapping, categories, house and refresh policy, utilisation dashboard.
@@ -139,6 +152,9 @@ earlier one creates.
       advertiser messages stay distinct.
 
 ### Platform
+
+Shared boundaries and group exit criteria:
+[platform-api-privacy-contract.md](platform-api-privacy-contract.md).
 
 - [ ] **P21 — Organization-scoped RBAC.** Owner, admin, campaign manager,
       creative manager, analyst, billing, viewer — scoped per organization, one
@@ -165,6 +181,9 @@ earlier one creates.
       detection, and dashboards that separate raw from valid.
 
 ### Scale and assurance
+
+Shared boundaries and group exit criteria:
+[platform-scale-assurance-contract.md](platform-scale-assurance-contract.md).
 
 - [ ] **P29 — Scalability abstractions.** Interfaces only where scale demands
       them; MySQL and the object cache remain the default and nothing new

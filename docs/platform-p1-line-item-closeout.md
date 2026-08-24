@@ -1,0 +1,146 @@
+# Platform P1 line-item closeout
+
+P1 establishes the delivery unit beneath Campaign without changing the native
+serving authority. Most of the model is implemented; this document records the
+remaining work and evidence required before
+[platform-implementation-progress.md](platform-implementation-progress.md) may
+change P1 from `[~]` to `[x]`.
+
+It is a closeout contract, not a claim that the remaining findings are fixed.
+
+## Outcome
+
+Every existing and new Campaign behaves as one default line item backed by the
+dedicated line-item table. Delivery strategy can be read and safely edited,
+Campaign-owned projections stay coherent, and a bounded migration cannot
+interrupt an ad that already serves.
+
+P1 stores targeting, frequency and delivery policy JSON but does not interpret
+it. Native serving continues to select Campaigns until P3; this is compatibility
+behavior, not unfinished P1 decisioning.
+
+## Implemented foundation
+
+The current implementation includes:
+
+- dedicated DDL with a database-enforced unique default row, serving-oriented
+  indexes and schema-shape tests;
+- the pricing, goal, pacing, priority, weight, cap and policy fields named by
+  the phase;
+- a normalized repository with idempotent lazy creation and optimistic updates;
+- bounded default-row and name-provenance backfills;
+- Campaign creation, copy, edit, transition and deletion integration;
+- Campaign-scoped REST reads and writes with ownership and edit-window checks;
+- advertiser and staff presentation;
+- audit insertion for line-item edits; and
+- continued native delivery from Campaign records during migration.
+
+The detailed model and migration design remain documented in
+[domain-model.md](domain-model.md#line-item--aggr_line_items-custom-table) and
+[data-schema.md](data-schema.md#campaign-line-items).
+
+## Required closure work
+
+### Reject lossy REST coercion
+
+Line-item amounts, caps, priority, weight and revision are whole-number domain
+values. Route validation must reject decimal and exponent forms rather than
+accepting `is_numeric()` input and truncating it through `absint()`. Tests must
+send malformed values through the registered REST route; calling
+`Line_Item_Validator` directly does not prove the transport preserves the raw
+value.
+
+### Resolve budget ownership
+
+One writer must own `budget_cents`. The schema documentation currently calls it
+a Campaign-owned projected field, while the public line-item update path also
+permits writes. P1 must choose and enforce one contract:
+
+- keep Campaign ownership and remove line-item writes; or
+- transfer ownership deliberately, update Campaign compatibility behavior and
+  document when the legacy field stops projecting.
+
+The chosen rule needs a regression test proving that a later Campaign save
+cannot silently discard an accepted line-item edit.
+
+### Repair every incomplete migration pass
+
+Runtime initialization must reschedule work when either the default-row pass or
+the name-provenance pass is incomplete. A lost cron event after the first pass
+finishes may not strand the second pass. Completion markers must be written only
+after the corresponding primary-key space is exhausted.
+
+All four non-autoloaded migration options—the two cursors and two completion
+markers—must be listed in `data-schema.md` and removed by destructive uninstall.
+
+### Prove production upgrade wiring
+
+The component tests for the repository and migrator must be joined by a test of
+the actual container migration map. Starting from a representative database
+version before P1, it must prove that versions 12 and 13 run in order, install
+the physical schema, start both passes, stamp versions correctly and resume
+after interruption.
+
+### Prove serving continuity
+
+An integration test must leave at least one live legacy Campaign ahead of the
+migration cursor and prove that native fill still succeeds. The same assertion
+must hold with a missing compatibility row and after one injected migration
+failure. This is the central P1 migration promise and cannot remain an inference
+from the fact that serving currently reads Campaigns.
+
+### Tighten claimed evidence
+
+Tests whose names promise an audited update must query and assert the audit row,
+including actor, organization, object id, changed fields and revision. Multisite
+coverage must also assert creation and removal of the line-item table rather
+than only using the event table as a proxy for plugin schema installation.
+
+## Invariants at exit
+
+- A Campaign has at most one default line item by database constraint and at
+  least one after migration or an authorized lazy read.
+- Campaign and default line item always share organization and lifecycle state.
+- Projected schedule and commercial fields have one documented writer.
+- A publisher-renamed line item never resumes following the Campaign title;
+  a derived name continues to follow it.
+- Every public id is verified against Campaign, organization and capability.
+- Whole-number fields reject lossy representations at the REST boundary.
+- Optimistic concurrency prevents two editors from silently overwriting each
+  other.
+- Campaign deletion removes its line items; destructive uninstall removes the
+  table, options and hook only under the existing opt-in policy.
+- A partial or failed P1 migration does not prevent viewing, editing or native
+  serving of a valid Campaign.
+
+## Required exit evidence
+
+P1 needs green, explicit evidence for:
+
+- exact columns and indexes on the authoritative MySQL version;
+- default creation under lazy-read and background-migration races;
+- new Campaign, copy, rename, commercial edit, lifecycle and deletion paths;
+- every Campaign-to-line-item status mapping and declared transition edge;
+- validation of enumerations, bounds, cross-field rules and raw REST input;
+- tenant isolation, non-enumerating failures, edit windows and concurrency;
+- actual audit persistence rather than only a successful response;
+- bounded restart, missing-schedule repair and actual v11-to-v13 wiring;
+- native fill during pending and failed migration;
+- single-site, multisite, new-site and site-deletion behavior;
+- advertiser and staff presentation with existing accessibility coverage; and
+- the complete P0 baseline in its authoritative environments.
+
+## Exit criteria
+
+P1 may move to `[x]` only when:
+
+1. Every closure item above is resolved in implementation and documentation.
+2. Existing Campaigns migrate without recreation, serving interruption or
+   ownership ambiguity.
+3. The line-item contract is stable enough for P2 to attach creative
+   assignments without compatibility guesses.
+4. The focused P1 evidence and complete P0 baseline are green.
+5. `domain-model.md`, `data-schema.md`, `rest-api.md`, `administration.md` and
+   `runbook.md` describe the behavior that actually shipped.
+
+The current `[~]` status remains correct until that evidence exists.
