@@ -155,7 +155,15 @@ jobs:
           # between the fetch and the push, the lease still refuses.
           git remote set-branches --add origin "${branch}"
           git fetch --quiet origin "${branch}" || true
-          remote_head="$(git rev-parse "refs/remotes/origin/${branch}" 2>/dev/null || echo '')"
+          # --verify --quiet, because a bare `git rev-parse` on a ref that does
+          # not exist prints the ref *name* to stdout and exits non-zero. With
+          # stderr silenced the `|| echo ''` never fires, and the lease is
+          # handed the literal string "refs/remotes/origin/i18n/mt-drafts",
+          # which git rejects: "cannot parse expected object name".
+          #
+          # That is the branch-does-not-exist path, and it is the one the first
+          # version of this fix was not tested against.
+          remote_head="$(git rev-parse --verify --quiet "refs/remotes/origin/${branch}" || echo '')"
 
           git push --force-with-lease="${branch}:${remote_head}" origin "${branch}"
 
