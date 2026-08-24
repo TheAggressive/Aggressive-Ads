@@ -4,16 +4,16 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
+"POT-Creation-Date: 2026-08-23T23:30:54+00:00\n"
+"PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
+"Language: fr\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-23T06:42:20+00:00\n"
-"PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
-"Language: fr\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
 #. Plugin Name of the plugin
@@ -100,7 +100,7 @@ msgstr ""
 msgid "That campaign-change decision is not valid."
 msgstr ""
 
-#: inc/Admin/class-menu.php:181 inc/Admin/class-organization-screen.php:124
+#: inc/Admin/class-menu.php:181 inc/Admin/class-organization-screen.php:127
 #: inc/Admin/class-package-screen.php:116
 #: inc/Admin/class-placement-screen.php:116
 #: inc/Admin/class-review-screen.php:167
@@ -108,152 +108,152 @@ msgstr ""
 msgid "You do not have permission to view this page."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:110
-#: inc/Admin/class-organization-screen.php:111
-#: inc/Admin/class-organization-screen.php:142
-#: inc/Admin/class-organization-screen.php:204
+#: inc/Admin/class-organization-screen.php:113
+#: inc/Admin/class-organization-screen.php:114
+#: inc/Admin/class-organization-screen.php:145
+#: inc/Admin/class-organization-screen.php:216
 #: inc/Core/class-post-types.php:198
 msgid "Organizations"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:143
+#: inc/Admin/class-organization-screen.php:146
 msgid ""
 "The organizations screen has not been built. Run “pnpm build” and reload."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:159
+#: inc/Admin/class-organization-screen.php:162
 msgid "No organizations match this search."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:160
+#: inc/Admin/class-organization-screen.php:163
 #: inc/Admin/class-package-screen.php:160
 #: inc/Admin/class-placement-screen.php:160
 #: templates/portal/screens/organization.php:50
 msgid "Active"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:161
+#: inc/Admin/class-organization-screen.php:164
 #: templates/portal/screens/organization.php:51
 msgid "Suspended"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:162
+#: inc/Admin/class-organization-screen.php:165
 msgid "Suspend"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:163
+#: inc/Admin/class-organization-screen.php:166
 msgid "Members"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:164
+#: inc/Admin/class-organization-screen.php:167
 msgid ""
 "The owner is the only member. Ownership can only move to another member, so "
 "invite someone first."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:165
+#: inc/Admin/class-organization-screen.php:168
 #: templates/portal/screens/organization.php:81
 msgid "Organization name"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:166
+#: inc/Admin/class-organization-screen.php:169
 msgid "Rename"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:167
+#: inc/Admin/class-organization-screen.php:170
 msgid "Organization renamed."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:168
+#: inc/Admin/class-organization-screen.php:171
 msgid "owner"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:169
+#: inc/Admin/class-organization-screen.php:172
 #: templates/portal/screens/organization.php:146
 msgid "Make owner"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:170
+#: inc/Admin/class-organization-screen.php:173
 msgid "Ownership transferred."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:171
+#: inc/Admin/class-organization-screen.php:174
 #: inc/Admin/class-settings-screen.php:306
 #: templates/portal/screens/organization.php:154
 msgid "Remove"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:172
+#: inc/Admin/class-organization-screen.php:175
 msgid "Member removed."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:173
+#: inc/Admin/class-organization-screen.php:176
 msgid "Invite someone to this organization"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:174
+#: inc/Admin/class-organization-screen.php:177
 msgid ""
 "Email address. To move somebody between organizations, remove them here and "
 "invite them there — they keep no access in between."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:175
+#: inc/Admin/class-organization-screen.php:178
 #: templates/portal/screens/organization.php:183
 msgid "Send invitation"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:176
+#: inc/Admin/class-organization-screen.php:179
 #: inc/Portal/class-organization-actions.php:168
 msgid "Invitation sent."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:177
+#: inc/Admin/class-organization-screen.php:180
 msgid "Reactivate"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:178
+#: inc/Admin/class-organization-screen.php:181
 msgid "Organization suspended."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:179
+#: inc/Admin/class-organization-screen.php:182
 msgid "Organization reactivated."
 msgstr ""
 
 #. translators: %s: organization name.
-#: inc/Admin/class-organization-screen.php:181
+#: inc/Admin/class-organization-screen.php:184
 #, php-format
 msgid "Suspend %s? Every campaign it is running stops serving immediately."
 msgstr ""
 
 #. translators: %d: number of members.
-#: inc/Admin/class-organization-screen.php:183
+#: inc/Admin/class-organization-screen.php:186
 #, php-format
 msgid "%d member"
 msgstr ""
 
 #. translators: %d: number of members.
-#: inc/Admin/class-organization-screen.php:185
+#: inc/Admin/class-organization-screen.php:188
 #, php-format
 msgid "%d members"
 msgstr ""
 
 #. translators: %d: number of campaigns.
-#: inc/Admin/class-organization-screen.php:187
+#: inc/Admin/class-organization-screen.php:190
 #, php-format
 msgid "%d campaign"
 msgstr ""
 
 #. translators: %d: number of campaigns.
-#: inc/Admin/class-organization-screen.php:189
+#: inc/Admin/class-organization-screen.php:192
 #, php-format
 msgid "%d campaigns"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:190
+#: inc/Admin/class-organization-screen.php:193
 msgid "That organization could not be updated."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:191
+#: inc/Admin/class-organization-screen.php:194
 #: inc/Admin/class-package-screen.php:170
 #: inc/Admin/class-placement-screen.php:173
 #: inc/Admin/class-review-screen.php:349
@@ -261,12 +261,12 @@ msgstr ""
 msgid "Try again"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:192
+#: inc/Admin/class-organization-screen.php:195
 #: templates/portal/screens/organization.php:133
 msgid "Owner"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:193
+#: inc/Admin/class-organization-screen.php:196
 #: inc/Core/class-post-types.php:201 templates/portal/campaigns.php:15
 #: templates/portal/partials/rail.php:31
 #: templates/portal/screens/campaign.php:77
@@ -275,30 +275,31 @@ msgstr ""
 msgid "Campaigns"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:194
+#: inc/Admin/class-organization-screen.php:206
+msgctxt "organization status column heading"
 msgid "State"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:195
+#: inc/Admin/class-organization-screen.php:207
 msgid "Manage members"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:196
+#: inc/Admin/class-organization-screen.php:208
 #: inc/Admin/class-review-screen.php:333
 #: templates/portal/partials/campaign-overlays.php:198
 #: templates/portal/partials/campaign-overlays.php:239
 msgid "Cancel"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:197
+#: inc/Admin/class-organization-screen.php:209
 msgid "That list could not be loaded."
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:198
+#: inc/Admin/class-organization-screen.php:210
 msgid "Search organizations"
 msgstr ""
 
-#: inc/Admin/class-organization-screen.php:205
+#: inc/Admin/class-organization-screen.php:217
 msgid "The organizations screen needs JavaScript enabled."
 msgstr ""
 
@@ -2725,9 +2726,9 @@ msgstr ""
 #: inc/Security/class-private-storage-health.php:193
 msgid ""
 "The web server could not be identified from SERVER_SOFTWARE, so deny the "
-"directory using whichever of these matches your stack. The .htaccess and "
-"web.config files this plugin writes only take effect on Apache, LiteSpeed "
-"and IIS:"
+"directory using whichever of these matches your stack. The .htaccess and web."
+"config files this plugin writes only take effect on Apache, LiteSpeed and "
+"IIS:"
 msgstr ""
 
 #: inc/Security/class-private-storage-health.php:212
