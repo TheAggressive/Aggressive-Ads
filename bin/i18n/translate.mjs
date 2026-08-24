@@ -340,7 +340,25 @@ async function translateMyMemory( text, lang ) {
 	return translated;
 }
 
-async function translateDeepL( text, lang ) {
+/**
+ * Translate one string through DeepL.
+ *
+ * `context` is the entry's msgctxt when it has one. DeepL uses it to
+ * disambiguate and neither translates nor bills it, which is exactly what a
+ * gettext context is for.
+ *
+ * Without it, `_x()` disambiguation is invisible to machine translation: the
+ * context reaches the .po file and the human reading it, and never reaches the
+ * translator. "State" on the organizations screen is why this exists — with a
+ * context of "organization status column heading" already in the catalogue,
+ * DeepL still returned "Bundesland", a federal state, because nothing sent it.
+ *
+ * @param {string}      text    Source string, placeholders already protected.
+ * @param {string}      lang    DeepL target language code.
+ * @param {string|null} context Gettext msgctxt, or null.
+ * @return {Promise<string>} Translated text.
+ */
+async function translateDeepL( text, lang, context = null ) {
 	const key = process.env.DEEPL_AUTH_KEY;
 	if ( ! key ) {
 		throw new Error( 'DEEPL_AUTH_KEY is not set' );
@@ -353,6 +371,10 @@ async function translateDeepL( text, lang ) {
 	body.set( 'source_lang', 'EN' );
 	body.set( 'target_lang', lang );
 	body.set( 'preserve_formatting', '1' );
+
+	if ( context ) {
+		body.set( 'context', context );
+	}
 
 	const res = await fetch( endpoint, {
 		method: 'POST',
@@ -397,7 +419,7 @@ function resolveProviderMode() {
  * @param {string} locale
  * @returns {Promise<{ text: string, via: string }>}
  */
-async function mt( text, localeCodes, mode, locale ) {
+async function mt( text, localeCodes, mode, locale, context = null ) {
 	const { protectedText, tokens: ph } = protectPlaceholders( text );
 	const brand = protectBrandTerms( protectedText );
 	let out;
@@ -406,11 +428,15 @@ async function mt( text, localeCodes, mode, locale ) {
 	const hasDeeplKey = Boolean( process.env.DEEPL_AUTH_KEY );
 
 	if ( mode === 'deepl' ) {
-		out = await translateDeepL( brand.text, localeCodes.deepl );
+		out = await translateDeepL( brand.text, localeCodes.deepl, context );
 		via = 'deepl';
 	} else if ( mode === 'auto' && hasDeeplKey ) {
 		try {
-			out = await translateDeepL( brand.text, localeCodes.deepl );
+			out = await translateDeepL(
+				brand.text,
+				localeCodes.deepl,
+				context
+			);
 			via = 'deepl';
 		} catch ( err ) {
 			console.warn(
@@ -430,7 +456,11 @@ async function mt( text, localeCodes, mode, locale ) {
 			console.warn(
 				`\ni18n:translate: MyMemory failed (${ err.message }); falling back to DeepL`
 			);
-			out = await translateDeepL( brand.text, localeCodes.deepl );
+			out = await translateDeepL(
+				brand.text,
+				localeCodes.deepl,
+				context
+			);
 			via = 'deepl-fallback';
 		}
 	}
@@ -512,19 +542,32 @@ async function translatePoFile( file, opts ) {
 
 		try {
 			if ( entry.msgidPlural !== null ) {
-				const singular = await mt( entry.msgid, codes, mode, locale );
+				const singular = await mt(
+					entry.msgid,
+					codes,
+					mode,
+					locale,
+					entry.msgctxt
+				);
 				await sleep( delay );
 				const plural = await mt(
 					entry.msgidPlural,
 					codes,
 					mode,
-					locale
+					locale,
+					entry.msgctxt
 				);
 				entry.msgstrs[ 'msgstr[0]' ] = singular.text;
 				entry.msgstrs[ 'msgstr[1]' ] = plural.text;
 				lastVia = plural.via;
 			} else {
-				const result = await mt( entry.msgid, codes, mode, locale );
+				const result = await mt(
+					entry.msgid,
+					codes,
+					mode,
+					locale,
+					entry.msgctxt
+				);
 				entry.msgstrs.msgstr = result.text;
 				lastVia = result.via;
 			}
