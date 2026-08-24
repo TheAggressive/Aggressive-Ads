@@ -160,6 +160,33 @@ final class Line_Items_Controller implements Service {
 	}
 
 	/**
+	 * Whether a transported value is a whole number, in the form it arrived.
+	 *
+	 * Every numeric field on this route — amounts, caps, priority, weight,
+	 * revision — is a whole-number domain value. `is_numeric()` is the wrong
+	 * gate for that: it accepts `"1.5"`, `"1e3"` and `" 12 "`, and `absint()`
+	 * then quietly turns them into 1, 1000 and 12. A client that sends a budget
+	 * of 10.99 gets 10 stored and a 200 back, which is a lossy write reported
+	 * as a successful one.
+	 *
+	 * So the raw value is checked before anything coerces it. An integer passes;
+	 * a string passes only if it is digits and nothing else. A float never
+	 * passes, `1.0` included — JSON that meant a whole number would have sent
+	 * one, and accepting the decimal form is how the truncation gets back in.
+	 *
+	 * @param mixed $value Raw request value, before sanitisation.
+	 * @return bool
+	 */
+	private static function is_whole_number( mixed $value ): bool {
+		if ( is_int( $value ) ) {
+			return true;
+		}
+
+		// Not is_numeric(): that is the check this replaces.
+		return is_string( $value ) && 1 === preg_match( '/^[0-9]+$/', $value );
+	}
+
+	/**
 	 * Builds a positive integer argument.
 	 *
 	 * @param bool $required Whether required.
@@ -170,7 +197,7 @@ final class Line_Items_Controller implements Service {
 			'type'              => 'integer',
 			'required'          => $required,
 			'sanitize_callback' => 'absint',
-			'validate_callback' => static fn ( $value ): bool => is_numeric( $value ) && (int) $value > 0,
+			'validate_callback' => static fn ( $value ): bool => self::is_whole_number( $value ) && (int) $value > 0,
 		);
 	}
 
@@ -184,7 +211,7 @@ final class Line_Items_Controller implements Service {
 			'type'              => 'integer',
 			'required'          => false,
 			'sanitize_callback' => 'absint',
-			'validate_callback' => static fn ( $value ): bool => is_numeric( $value ) && (int) $value >= 0,
+			'validate_callback' => static fn ( $value ): bool => self::is_whole_number( $value ) && (int) $value >= 0,
 		);
 	}
 
