@@ -19,15 +19,25 @@ GitHub bundles creation and approval under one switch; the release workflow
 does not approve reviews. Default workflow permissions remain read-only, and
 only the isolated version-PR job receives scoped write permissions.
 
-`.github/workflows/dependabot-auto-merge.yml` registers squash auto-merge only
-for genuine Dependabot minor/patch updates after all PR checks are green. Major,
-conflicting, stale, unrecognized, or incompletely checked updates remain open.
+`.github/workflows/pr-policy.yml` classifies every pull request and registers
+squash auto-merge for the ones that qualify — Dependabot minor/patch updates,
+and human pull requests explicitly labelled `automerge` by a permitted account.
+Major, conflicting, stale, unrecognized, incompletely checked and **every
+high-risk** pull request remains open. It replaced
+`dependabot-auto-merge.yml`, whose properties it keeps and now tests. See
+[docs/pull-request-automation.md](../../docs/pull-request-automation.md).
 
-## Why only four required checks
+## Why only five required checks
 
 The ruleset requires `CI Summary`, `Analyze (JavaScript/TypeScript)`,
-`Actionlint` and `Zizmor` — not the ten quality lanes the pipeline actually
-runs. That is deliberate, and it is not a gap.
+`Actionlint`, `Zizmor` and `PR Title` — not the ten quality lanes the pipeline
+actually runs.
+
+`PR Title` is there because `squash_merge_commit_title` is `PR_TITLE`: the title
+becomes the squash subject, and semantic-release reads that subject to decide
+what ships. An unparseable title is a release that silently does not happen with
+every other lane green, which is precisely the class of failure a required check
+exists for. It is deliberately cheap — no install, no build, no WordPress. That is deliberate, and it is not a gap.
 
 `CI Summary` is an aggregate. `bin/ci/check-summary.mjs` reads every lane's
 result and fails unless each one in `QUALITY_LANES` reported success or was
@@ -57,7 +67,21 @@ gh api repos/TheAggressive/Aggressive-Ads/rulesets/20884246 \
 ```
 
 Verified against the live ruleset on 2026-08-23: the rules and the four required
-check names match this directory's JSON exactly.
+check names matched this directory's JSON exactly.
+
+**Two rules added on 2026-08-25 are in the JSON and not yet live**, because
+GitHub does not apply committed ruleset JSON automatically:
+
+1. `PR Title` as a required status check.
+2. A native `code_scanning` rule.
+
+The second is a security improvement rather than a rename. The existing
+`Analyze (JavaScript/TypeScript)` status check proves only that the scan *ran* —
+`github/codeql-action/analyze` does not fail its job on new alerts. The native
+rule requires code scanning to have results for both the commit and the ref
+being updated, and blocks on alert severity (`errors` /
+`high_or_higher`). Keep both: the status check proves the workflow ran, the rule
+proves what it found. Re-run the verification command above after applying.
 
 When recreating the repository, import the JSON and verify each required check
 name after its first successful run — a required check that never reports is
