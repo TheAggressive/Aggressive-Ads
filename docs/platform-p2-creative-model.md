@@ -52,6 +52,61 @@ asset must never make an edit for one assignment silently alter another live
 assignment. Approved bytes, detected MIME type, dimensions, checksum and file
 size are revision facts and may not be edited in place.
 
+### Decision: everything reviewed belongs to the revision
+
+**The revision owns the bytes, the click URL and the alternative text. The
+assignment owns only delivery scheduling — weight, window and status. The asset
+owns identity and nothing renderable.**
+
+The forcing question is what a publisher is agreeing to when they approve. They
+are not approving an image; they are approving *an ad* — this artwork, pointing
+at this destination, described this way. A model that lets any of those three
+change after approval without re-review is a model where approval means less
+than the publisher thinks it does. Repointing a destination URL after approval
+is the classic bait-and-switch, and it is the single most valuable thing an
+advertiser could do to a publisher on this system.
+
+So the three candidate owners resolve like this:
+
+- **Asset-owned** fails the contract's own constraint outright. One click URL
+  shared across assignments means editing it for one live ad silently changes
+  another.
+- **Assignment-owned** passes that constraint and fails the more important one.
+  Per-assignment metadata is mutable by definition, so the reviewed destination
+  and the served destination come apart, and the approval no longer describes
+  what is being delivered.
+- **Revision-owned** satisfies both, and it does so without a rule anyone has to
+  remember. Revisions are immutable, so "editing" a click URL is creating a new
+  revision. Another assignment still points at the old one, so nothing leaks
+  across assignments — not because a copy was made, but because there was never
+  anything shared and mutable to leak.
+
+Immutability is what makes reuse safe. That is worth stating plainly, because
+the intuitive fix for cross-assignment leakage is to copy the metadata onto each
+assignment, and that is the option that quietly breaks review.
+
+**This is continuous with what already ships, not a new restriction.** Today a
+click-URL change on a live ad goes through `Creative_Change_Manager::request()`,
+which stages a replacement and sends it back for review. P2 renames that
+mechanism rather than inventing one: a replacement becomes a revision, and the
+`_aggr_replaces_creative_id` / `_aggr_replaced_by_creative_id` chain becomes the
+revision history it was already approximating.
+
+**The cost, stated so it is not discovered later.** A typo in alternative text
+requires a new revision and another review, even though no byte changed. That is
+a real cost and it is accepted deliberately: the alternative is a field the
+publisher approved and the advertiser can edit afterwards, which is the property
+being protected. A later phase may add a narrow "text-only revision" review path
+that a publisher can approve at a glance — but it will still be a revision, and
+it will still be reviewed.
+
+**What the assignment owns, and why those are safe.** Weight, start and end
+timestamps, and status are scheduling facts, not claims about the ad. A
+publisher approving a creative is not approving the hours it runs — the parent
+line item and campaign already bound that window, and the invariants below keep
+an assignment from expanding it. Changing them cannot misrepresent what is
+served, only when.
+
 The assignment model must carry at least:
 
 - line-item, campaign, organization, creative revision and placement ids;

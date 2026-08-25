@@ -11,7 +11,20 @@ Delete an entry when it ships. An entry that has been here through three
 releases is either not real or not wanted — say which, in the entry, and then
 delete it.
 
-## Nothing is open
+## P2 — creative model
+
+Started 2026-08-25. The ownership decision the contract requires before schema
+work is recorded in
+[platform-p2-creative-model.md](platform-p2-creative-model.md#decision-everything-reviewed-belongs-to-the-revision):
+the revision owns the bytes, click URL and alternative text; the assignment owns
+weight, window and status; the asset owns identity.
+
+Nothing is built yet. The next step is the DDL for the revision and assignment
+tables in [data-schema.md](data-schema.md), derived from the P3 read contract's
+lookup — line item, placement, status and delivery window — rather than from the
+shape of the current Creative post.
+
+## Nothing else is open
 
 Every entry that was here has shipped or been closed. That is the intended
 resting state, not a sign the file is unused — an entry is added the moment work
