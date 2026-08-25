@@ -160,6 +160,16 @@ first view, while the title is still "Untitled campaign", and nothing re-derived
 it afterwards — so the advertiser's Delivery strategy panel showed a name they
 had already changed. The browser suite caught it.
 
+The migration that sets `name_is_derived` on existing rows is a *second* pass,
+after the one that creates the default rows: a row has to exist before its name
+can be classified. That makes "the migration is finished" two facts, and each
+has its own cursor and completion marker — four non-autoloaded options in the
+table above. Runtime initialization resumes whichever pass is outstanding,
+because the first pass clears the scheduled hook when it completes and a lost
+cron event would otherwise strand the second one silently. Its symptom would be
+a line item still showing the placeholder name the wizard invented, which reads
+as a display bug rather than a stranded migration.
+
 **Provenance is not inferrable from `revision`.** Any edit increments it, so a
 line item whose pacing somebody adjusted would have its name frozen forever;
 that heuristic was written, rejected, and is pinned against by
@@ -196,6 +206,8 @@ the hot path happens only after the creative and decision models exist.
 | `aggr_rollups_reconciled_through` | `Y-m-d` | **no** | Last closed UTC event day exactly projected into rollups |
 | `aggr_line_item_migration_cursor` | int | **no** | Last Campaign id successfully visited by the restartable P1 backfill |
 | `aggr_line_item_migration_done` | bool | **no** | Completion marker for the P1 compatibility-row backfill |
+| `aggr_line_item_name_cursor` | int | **no** | Last line-item id visited by the P1 name-provenance backfill |
+| `aggr_line_item_name_done` | bool | **no** | Completion marker for the P1 name-provenance backfill |
 | `aggr_delete_data_on_uninstall` | bool | yes | Opt-in; default off |
 | `aggr_org_lookup_salt` | string | **no** | Plugin-owned salt for the organization name index |
 | `aggr_creative_key` | string | **no** | Base64 key encrypting creative at rest, when `AGGR_CREATIVE_KEY` is not defined |

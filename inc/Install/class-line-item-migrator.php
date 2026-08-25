@@ -47,7 +47,26 @@ final class Line_Item_Migrator implements Service {
 	public function init(): void {
 		add_action( self::HOOK, array( $this, 'run' ) );
 
-		if ( $this->line_items->table_exists() && ! $this->is_complete() ) {
+		/*
+		 * Either pass, not just the first.
+		 *
+		 * This asked only about the default-row pass, and `run_batch()` clears
+		 * the scheduled hook the moment that pass finishes. The name-provenance
+		 * pass reschedules itself while it still has rows, so the two agreed
+		 * for as long as every cron event actually fired.
+		 *
+		 * A lost event broke that permanently. Once the first pass was marked
+		 * done, this saw a complete migration and scheduled nothing, while the
+		 * second pass sat unfinished with no way to be woken — and its symptom
+		 * is a line item still showing the placeholder name the wizard
+		 * invented, which reads as a display bug rather than a stranded
+		 * migration.
+		 */
+		if ( ! $this->line_items->table_exists() ) {
+			return;
+		}
+
+		if ( ! $this->is_complete() || ! $this->name_provenance_is_complete() ) {
 			$this->schedule();
 		}
 	}
@@ -168,6 +187,11 @@ final class Line_Item_Migrator implements Service {
 		if ( $result['examined'] < self::BATCH_SIZE ) {
 			update_option( self::OPTION_NAME_DONE, 1, false );
 			delete_option( self::OPTION_NAME_CURSOR );
+
+			// The first pass clears the hook when it finishes; this is the
+			// matching release for the second, so a completed migration leaves
+			// nothing on the schedule for either half.
+			wp_clear_scheduled_hook( self::HOOK );
 		} else {
 			$this->schedule();
 		}
