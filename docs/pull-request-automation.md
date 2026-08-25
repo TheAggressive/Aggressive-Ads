@@ -140,16 +140,18 @@ handling for the case it deliberately preserves: a security update may cross a
 major, so `pr-policy.mjs` detects a major from Dependabot's own title, labels it
 `dependency-major`, and refuses to merge it. It arrives, and it waits for you.
 
-## Ruleset changes that need applying by hand
+## The two ruleset rules, now live
 
-GitHub does not read `release-branches.json` automatically. Two rules were added
-to it and must be applied in **Settings → Rules → Rulesets**:
+Applied to the live ruleset on 2026-08-25 and verified by re-reading it from the
+API. GitHub does not read `release-branches.json` automatically, so if you ever
+recreate the repository these must be applied by hand again — see
+[.github/rulesets/README.md](../.github/rulesets/README.md).
 
 **1. `PR Title` as a required status check.** Without it the title check runs
 and reports but does not block, so an unparseable title can still merge.
 
-**2. A native `code_scanning` rule.** The ruleset currently requires the status
-check named `Analyze (JavaScript/TypeScript)`, which only proves the scan *ran* —
+**2. A native `code_scanning` rule.** The ruleset also requires the status check
+named `Analyze (JavaScript/TypeScript)`, which only proves the scan *ran* —
 `github/codeql-action/analyze` does not fail its job on new alerts. The native
 rule requires code scanning to have results for both the commit and the target
 ref, and blocks on alert severity:
@@ -168,9 +170,12 @@ ref, and blocks on alert severity:
 ```
 
 This is strictly stronger than the job-name check and survives a rename, so
-keep both: the status check proves the workflow ran, the rule proves what it
-found. Re-verify with the command in
-[.github/rulesets/README.md](../.github/rulesets/README.md) after applying.
+both are kept: the status check proves the workflow ran, the rule proves what it
+found.
+
+Nothing else about the ruleset changed. Enforcement is still active with zero
+bypass actors, `strict_required_status_checks_policy` is still true, and squash
+is still the only permitted merge method.
 
 ## Turning it off
 
