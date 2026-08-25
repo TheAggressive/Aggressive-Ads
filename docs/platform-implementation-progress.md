@@ -70,12 +70,14 @@ earlier one creates.
       [platform-p1-line-item-closeout.md](platform-p1-line-item-closeout.md).
       Serving still selects Campaigns, deliberately: the line item is a
       projection until P3 cuts the hot path over as one tested change.
-- [ ] **P2 — Creative model refactor.** Many creatives per line item and
+- [~] **P2 — Creative model refactor.** Many creatives per line item and
       placement, with weight, dates, status and revision history. Campaign
       validation stops failing on a second creative and starts requiring one
       eligible approved creative per required combination. Scope, migration,
       invariants and exit evidence are defined in
-      [platform-p2-creative-model.md](platform-p2-creative-model.md).
+      [platform-p2-creative-model.md](platform-p2-creative-model.md). The
+      metadata-ownership decision that document requires before schema work is
+      recorded there; nothing is built yet.
 
 ### Serving
 
