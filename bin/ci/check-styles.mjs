@@ -33,7 +33,13 @@ import { readdir, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 
-const ROOT = path.resolve( import.meta.dirname, '../..' );
+/*
+ * Overridable so the guard can be pointed at a fixture. See
+ * check-styles.test.mjs — a gate with no test is a gate nobody has seen work.
+ */
+const ROOT =
+	process.env.AGGR_STYLES_SCAN_DIR ??
+	path.resolve( import.meta.dirname, '../..' );
 const STYLE_ROOT = path.join( ROOT, 'src' );
 
 /** Where markup lives. Anything here may name a class. */
@@ -196,6 +202,18 @@ function isDefined( used, classes ) {
  * @return {Promise<void>} Resolves after reporting.
  */
 async function main() {
+	// Collected up front so the empty-scan assertions at the end have something
+	// to count. Both are re-walked below rather than threaded through, which is
+	// cheap and keeps the two rules readable.
+	const stylesheets = await filesIn( STYLE_ROOT, [ '.css' ] );
+	const markupFiles = (
+		await Promise.all(
+			MARKUP_DIRS.map( ( dir ) =>
+				filesIn( path.join( ROOT, dir ), MARKUP_EXTENSIONS )
+			)
+		)
+	).flat();
+
 	const { classes, tokens } = await declared();
 	const problems = [];
 
@@ -246,6 +264,33 @@ async function main() {
 		}
 	}
 
+	/*
+	 * `filesIn()` answers a missing directory with an empty list, which is the
+	 * right shape for an optional subdirectory and the wrong one for the roots.
+	 * With no stylesheets there are no definitions, with no markup there are no
+	 * uses, and "nothing is undefined" is trivially true of both — so a renamed
+	 * or moved src/ turned this gate off and printed "ok".
+	 */
+	if ( 0 === stylesheets.length ) {
+		console.error(
+			`check-styles: no stylesheets found under ${ STYLE_ROOT }`
+		);
+		console.error(
+			'A gate that reads nothing reports success over nothing. See CLAUDE.md.'
+		);
+		process.exit( 1 );
+	}
+
+	if ( 0 === markupFiles.length ) {
+		console.error(
+			'check-styles: no markup found in ' + MARKUP_DIRS.join( ', ' )
+		);
+		console.error(
+			'A gate that reads nothing reports success over nothing. See CLAUDE.md.'
+		);
+		process.exit( 1 );
+	}
+
 	if ( 0 !== problems.length ) {
 		problems.sort().forEach( ( problem ) => console.error( problem ) );
 		console.error(
@@ -254,7 +299,9 @@ async function main() {
 		process.exit( 1 );
 	}
 
-	console.log( 'check-styles: ok' );
+	console.log(
+		`check-styles: ok (${ stylesheets.length } stylesheets, ${ markupFiles.length } markup files)`
+	);
 }
 
 await main();

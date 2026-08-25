@@ -31,7 +31,10 @@
 
 set -euo pipefail
 
-cd "$(dirname "$0")/../.."
+# Overridable so the guard can be pointed at a fixture tree. See
+# check-ci-parity.test.mjs — the parity claim this enforces was itself an
+# unchecked claim for a long time, which is the argument for checking it.
+cd "${AGGR_CI_PARITY_ROOT:-$(dirname "$0")/../..}"
 
 WORKFLOW=.github/workflows/ci.yml
 FORWARD_WORKFLOW=.github/workflows/php-forward-compatibility.yml
@@ -49,7 +52,10 @@ if ! grep -q 'bin/ci/lanes.mjs' "$VERIFY"; then
 	exit 1
 fi
 
-local_lanes=$( node bin/ci/lanes.mjs | cut -f2 )
+# lanes.mjs lives beside this script, not in the tree being checked, so a
+# fixture run still uses the real parser against the fixture's workflow.
+LANES_PARSER="$(cd "$(dirname "$0")" && pwd)/lanes.mjs"
+local_lanes=$( AGGR_LANES_ROOT="$(pwd)" node "$LANES_PARSER" | cut -f2 )
 
 lanes=$(
 	node -e "

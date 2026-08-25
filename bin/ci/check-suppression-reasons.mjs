@@ -38,7 +38,14 @@ const SECURITY_SNIFFS = [
 /** Shorter than this is a shrug, not a reason. */
 const MIN_REASON = 15;
 
-const ROOTS = [ 'inc', 'templates' ];
+/*
+ * Overridable so the guard can be pointed at a fixture. See
+ * check-suppression-reasons.test.mjs.
+ */
+const SCAN_ROOT = process.env.AGGR_SUPPRESSION_SCAN_DIR ?? '.';
+const ROOTS = [ 'inc', 'templates' ].map( ( dir ) =>
+	path.join( SCAN_ROOT, dir )
+);
 
 async function phpFiles( root ) {
 	const found = [];
@@ -62,6 +69,55 @@ function offences( file, contents ) {
 	const lines = contents.split( '\n' );
 
 	for ( const [ index, line ] of lines.entries() ) {
+		/*
+		 * The deprecated form states nothing and cannot.
+		 *
+		 * `@codingStandardsIgnoreFile|Start|Line` has no `--` reason syntax at
+		 * all, so a suppression written this way can never justify itself. It
+		 * was deprecated in PHPCS 3.2.0 and removed in 4.0, but this project
+		 * runs 3.13, where it still silences everything it covers — including
+		 * every sniff in SECURITY_SNIFFS. The old regex required whitespace
+		 * after `ignore`, so none of these matched.
+		 */
+		const legacy = /@codingStandardsIgnore(File|Start|Line)/u.exec( line );
+
+		if ( legacy ) {
+			found.push( {
+				file,
+				line: index + 1,
+				directive: `@codingStandardsIgnore${ legacy[ 1 ] } — deprecated, and cannot state a reason`,
+			} );
+
+			continue;
+		}
+
+		/*
+		 * `phpcs:ignoreFile` turns off *every* sniff for the whole file, which
+		 * is strictly broader than suppressing a named security sniff — and the
+		 * old pattern missed it for the same whitespace reason, because the
+		 * directive is followed by `File` rather than a space.
+		 */
+		const wholeFile = /phpcs:ignoreFile\b(.*)$/u.exec( line );
+
+		if ( wholeFile ) {
+			const separator = wholeFile[ 1 ].indexOf( '--' );
+			const why =
+				-1 === separator
+					? ''
+					: wholeFile[ 1 ].slice( separator + 2 ).trim();
+
+			if ( why.length < MIN_REASON ) {
+				found.push( {
+					file,
+					line: index + 1,
+					directive:
+						'phpcs:ignoreFile — disables every sniff in this file',
+				} );
+			}
+
+			continue;
+		}
+
 		const match = /phpcs:(?:ignore|disable)\s+(.*)$/u.exec( line );
 
 		if ( ! match ) {
@@ -93,6 +149,23 @@ function offences( file, contents ) {
 }
 
 const files = ( await Promise.all( ROOTS.map( phpFiles ) ) ).flat();
+
+/*
+ * Zero files is not "no unjustified suppressions", it is a guard that read
+ * nothing. `phpFiles` throws on a missing root, which fails loudly and is
+ * correct; this covers roots that exist and are empty.
+ */
+if ( 0 === files.length ) {
+	console.error(
+		`check-suppression-reasons: no PHP files found under ${ ROOTS.join(
+			', '
+		) }`
+	);
+	console.error(
+		'A gate that reads nothing reports success over nothing. See CLAUDE.md.'
+	);
+	process.exit( 1 );
+}
 const contents = await Promise.all(
 	files.map( ( file ) => readFile( file, 'utf8' ) )
 );

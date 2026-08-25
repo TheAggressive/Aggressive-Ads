@@ -29,7 +29,9 @@
 
 set -euo pipefail
 
-cd "$(dirname "$0")/../.."
+# Overridable so the guard can be pointed at a fixture repository. See
+# check-worktree.test.mjs.
+cd "${AGGR_WORKTREE_REPO:-$(dirname "$0")/../..}"
 
 if [ "${AGGR_QA_ALLOW_DIRTY:-0}" = "1" ]; then
 	echo "check-worktree: skipped (AGGR_QA_ALLOW_DIRTY=1) — this run does not represent the commit."
