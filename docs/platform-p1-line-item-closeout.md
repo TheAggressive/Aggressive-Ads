@@ -104,6 +104,17 @@ must hold with a missing compatibility row and after one injected migration
 failure. This is the central P1 migration promise and cannot remain an inference
 from the fact that serving currently reads Campaigns.
 
+**Done.** `MigrationServingContinuityTest` covers all three states through the
+real `Fill_Service`, plus a migrated campaign as the negative half — without it
+every assertion would still pass on a site where serving had broken for
+*migrated* campaigns instead, which is the same promise failing from the other
+direction.
+
+The injected failure is a dropped line-item table, the bluntest form the real
+thing takes. Proven by sabotage: making the delivery query join the line-item
+table fails exactly the three unmigrated cases and leaves the migrated one
+passing, which is the regression this exists to catch.
+
 ### Tighten claimed evidence
 
 Tests whose names promise an audited update must query and assert the audit row,
