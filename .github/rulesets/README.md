@@ -69,11 +69,14 @@ gh api repos/TheAggressive/Aggressive-Ads/rulesets/20884246 \
 Verified against the live ruleset on 2026-08-23: the rules and the four required
 check names matched this directory's JSON exactly.
 
-**Two rules added on 2026-08-25 are in the JSON and not yet live**, because
-GitHub does not apply committed ruleset JSON automatically:
+**Two rules were added on 2026-08-25 and applied to the live ruleset the same
+day**, then verified by re-reading it from the API:
 
 1. `PR Title` as a required status check.
 2. A native `code_scanning` rule.
+
+GitHub does not apply committed ruleset JSON automatically, so on a rebuild they
+must be applied by hand again along with everything else here.
 
 The second is a security improvement rather than a rename. The existing
 `Analyze (JavaScript/TypeScript)` status check proves only that the scan *ran* —
