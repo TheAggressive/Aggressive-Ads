@@ -19,6 +19,7 @@ use Aggressive\Ads\Repository\Line_Item_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Security\Ownership;
 use Aggressive\Ads\Security\Roles;
+use Aggressive\Ads\Workflow\Campaign_Editor;
 use Aggressive\Ads\Workflow\Line_Item_Validator;
 use WP_REST_Request;
 use WP_UnitTestCase;
@@ -201,17 +202,21 @@ final class LineItemsRoutesTest extends WP_UnitTestCase {
 
 		$row = $this->line_items->ensure_default( $this->campaign );
 
-		// Assert the fixture is real before asserting on it: a budget that
-		// already equalled the coerced value would pass the final check for the
-		// wrong reason.
-		$this->assertNotSame( $coerced, (int) $row['budget_cents'] );
+		// daily_cap rather than budget_cents: the budget is campaign-owned and
+		// the route no longer accepts it, so it cannot carry this assertion.
+		// Both use nonnegative_int_arg(), so the validator under test is the same.
+		//
+		// Assert the fixture is real before asserting on it: a cap that already
+		// equalled the coerced value would pass the final check for the wrong
+		// reason.
+		$this->assertNotSame( $coerced, (int) $row['daily_cap'] );
 
 		$response = $this->request(
 			'PATCH',
 			"/campaigns/{$this->campaign}/line-items/{$row['id']}",
 			array(
-				'revision'     => (int) $row['revision'],
-				'budget_cents' => $sent,
+				'revision'  => (int) $row['revision'],
+				'daily_cap' => $sent,
 			)
 		);
 
@@ -222,7 +227,7 @@ final class LineItemsRoutesTest extends WP_UnitTestCase {
 		// rejected the request after already storing the truncated value.
 		$after = $this->line_items->ensure_default( $this->campaign );
 
-		$this->assertSame( (int) $row['budget_cents'], (int) $after['budget_cents'] );
+		$this->assertSame( (int) $row['daily_cap'], (int) $after['daily_cap'] );
 		$this->assertSame( (int) $row['revision'], (int) $after['revision'] );
 	}
 
@@ -240,7 +245,6 @@ final class LineItemsRoutesTest extends WP_UnitTestCase {
 
 		$fields = array(
 			'goal_amount',
-			'budget_cents',
 			'daily_cap',
 			'lifetime_cap',
 			'priority',
@@ -297,8 +301,8 @@ final class LineItemsRoutesTest extends WP_UnitTestCase {
 				'PATCH',
 				"/campaigns/{$this->campaign}/line-items/{$row['id']}",
 				array(
-					'revision'     => (int) $row['revision'],
-					'budget_cents' => $sent,
+					'revision'  => (int) $row['revision'],
+					'daily_cap' => $sent,
 				)
 			);
 
@@ -306,8 +310,127 @@ final class LineItemsRoutesTest extends WP_UnitTestCase {
 
 			$after = $this->line_items->ensure_default( $this->campaign );
 
-			$this->assertSame( (int) $sent, (int) $after['budget_cents'] );
+			$this->assertSame( (int) $sent, (int) $after['daily_cap'] );
 		}
+	}
+
+	/**
+	 * The budget has one owner, and the route is not it.
+	 *
+	 * `data-schema.md`: every projected field is campaign-owned,
+	 * `sync_default_from_campaign()` copies the budget from the Campaign, and
+	 * nothing else may write it. The route accepted it anyway, so the
+	 * documented owner and the actual writers disagreed.
+	 */
+	public function test_the_route_refuses_to_write_the_campaign_owned_budget(): void {
+		wp_set_current_user( $this->owner );
+
+		$row    = $this->line_items->ensure_default( $this->campaign );
+		$before = (int) $row['budget_cents'];
+
+		$response = $this->request(
+			'PATCH',
+			"/campaigns/{$this->campaign}/line-items/{$row['id']}",
+			array(
+				'revision'     => (int) $row['revision'],
+				'budget_cents' => $before + 5000,
+			)
+		);
+
+		// Nothing else was sent, so there is no accepted field to act on.
+		$this->assertSame( 422, $response->get_status() );
+		$this->assertSame( 'aggr_line_item_fields_required', $response->get_data()['code'] );
+
+		$after = $this->line_items->ensure_default( $this->campaign );
+
+		$this->assertSame( $before, (int) $after['budget_cents'] );
+	}
+
+	/**
+	 * A budget sent beside a real edit is ignored, not smuggled through.
+	 *
+	 * The dangerous shape: one accepted field carries the request past the
+	 * empty-update guard, and an unowned field rides along beside it.
+	 */
+	public function test_a_budget_sent_beside_an_accepted_field_is_ignored(): void {
+		wp_set_current_user( $this->owner );
+
+		$row    = $this->line_items->ensure_default( $this->campaign );
+		$before = (int) $row['budget_cents'];
+
+		$response = $this->request(
+			'PATCH',
+			"/campaigns/{$this->campaign}/line-items/{$row['id']}",
+			array(
+				'revision'     => (int) $row['revision'],
+				'priority'     => 4,
+				'budget_cents' => $before + 5000,
+			)
+		);
+
+		$this->assertSame( 200, $response->get_status() );
+
+		$after = $this->line_items->ensure_default( $this->campaign );
+
+		// The owned field took, the unowned one did not.
+		$this->assertSame( 4, (int) $after['priority'] );
+		$this->assertSame( $before, (int) $after['budget_cents'] );
+	}
+
+	/**
+	 * A later Campaign save cannot silently discard an accepted line-item edit.
+	 *
+	 * The regression the closure contract asks for by name. Editing a campaign's
+	 * schedule calls `sync_default_from_campaign()`, which rewrites the default
+	 * line item. That projection must carry the campaign-owned fields and leave
+	 * the line-item-owned ones exactly as the advertiser last set them.
+	 *
+	 * Both halves are asserted. Only checking that the cap survived would pass
+	 * against a projection that had stopped running altogether, which would
+	 * break the ownership rule in the other direction.
+	 */
+	public function test_a_campaign_save_keeps_line_item_edits_and_still_projects(): void {
+		wp_set_current_user( $this->owner );
+
+		$row = $this->line_items->ensure_default( $this->campaign );
+
+		$accepted = $this->request(
+			'PATCH',
+			"/campaigns/{$this->campaign}/line-items/{$row['id']}",
+			array(
+				'revision'  => (int) $row['revision'],
+				'daily_cap' => 777,
+				'priority'  => 3,
+			)
+		);
+
+		$this->assertSame( 200, $accepted->get_status() );
+
+		// Assert the fixture is real before asserting on it: a campaign whose
+		// schedule already held these values would prove nothing below.
+		$edited = $this->line_items->ensure_default( $this->campaign );
+		$this->assertSame( 777, (int) $edited['daily_cap'] );
+		$this->assertNotSame( 1893456000, (int) $edited['start_at_ts'] );
+
+		// Now a Campaign save that re-projects: a schedule change is one of the
+		// four keys that trigger sync_default_from_campaign().
+		$editor = Plugin::instance()->container()->get( Campaign_Editor::class );
+		$saved  = $editor->save(
+			$this->campaign,
+			array( 'start_ts' => 1893456000 ),
+			0
+		);
+
+		$this->assertNotWPError( $saved );
+
+		$after = $this->line_items->ensure_default( $this->campaign );
+
+		// The advertiser's edits survived.
+		$this->assertSame( 777, (int) $after['daily_cap'] );
+		$this->assertSame( 3, (int) $after['priority'] );
+
+		// And the campaign-owned field did project, so the rule holds both ways.
+		$this->assertSame( 1893456000, (int) $after['start_at_ts'] );
 	}
 
 	private function campaign_for( int $user_id, string $title ): int {

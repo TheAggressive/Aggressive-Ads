@@ -63,6 +63,21 @@ permits writes. P1 must choose and enforce one contract:
 The chosen rule needs a regression test proving that a later Campaign save
 cannot silently discard an accepted line-item edit.
 
+**Decision: Campaign ownership is kept, and the line-item write is removed.**
+`data-schema.md` had already stated the contract — every projected field is
+campaign-owned and nothing else may write it — so the REST route was the half
+that disagreed, not the documentation. Transferring ownership would be a larger
+change than P1 wants: the line item is still a projection here, and the moment
+it stops being one belongs to P2 and P3, when the model genuinely diverges.
+
+The route no longer accepts `budget_cents`. Sending it alone is refused as an
+empty update; sending it beside an accepted field is ignored rather than
+smuggled through. `LineItemsRoutesTest` covers both, plus the regression the
+paragraph above asks for: an accepted `daily_cap` and `priority` edit survives a
+Campaign save that re-projects, and the campaign-owned `start_at_ts` still
+projects in the same assertion — because a projection that had simply stopped
+running would otherwise pass.
+
 ### Repair every incomplete migration pass
 
 Runtime initialization must reschedule work when either the default-row pass or

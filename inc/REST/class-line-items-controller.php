@@ -69,7 +69,6 @@ final class Line_Items_Controller implements Service {
 					'pricing_model' => $this->string_arg(),
 					'goal_type'     => $this->string_arg(),
 					'goal_amount'   => $this->nonnegative_int_arg(),
-					'budget_cents'  => $this->nonnegative_int_arg(),
 					'daily_cap'     => $this->nonnegative_int_arg(),
 					'lifetime_cap'  => $this->nonnegative_int_arg(),
 					'priority'      => $this->positive_int_arg( false ),
@@ -122,8 +121,28 @@ final class Line_Items_Controller implements Service {
 			return $allowed;
 		}
 
+		/*
+		 * `budget_cents` is deliberately absent, and its absence is the contract.
+		 *
+		 * data-schema.md states it plainly: every projected field is
+		 * campaign-owned, `sync_default_from_campaign()` copies the budget from
+		 * the Campaign, and nothing else may write it. This route accepted it
+		 * anyway, which made the documented owner and the actual writers
+		 * disagree — and the Campaign always won in the end, because any later
+		 * edit touching the schedule or the package re-projects and overwrites.
+		 *
+		 * So an advertiser could set a line-item budget, get a 200, see it
+		 * stored, and lose it on their next unrelated save with nothing
+		 * reporting the loss. Refusing the write is the honest answer: there is
+		 * one owner, and it is the Campaign until a later phase moves it
+		 * deliberately.
+		 *
+		 * `name` remains the one field with two owners; `name_is_derived`
+		 * records which one wrote last, which is why it can be shared safely
+		 * and the budget cannot.
+		 */
 		$fields = array();
-		foreach ( array( 'name', 'pricing_model', 'goal_type', 'goal_amount', 'budget_cents', 'daily_cap', 'lifetime_cap', 'priority', 'pacing_mode', 'weight' ) as $field ) {
+		foreach ( array( 'name', 'pricing_model', 'goal_type', 'goal_amount', 'daily_cap', 'lifetime_cap', 'priority', 'pacing_mode', 'weight' ) as $field ) {
 			if ( $request->has_param( $field ) ) {
 				$fields[ $field ] = $request->get_param( $field );
 			}

@@ -143,7 +143,11 @@ without putting those phases into P1.
 
 Every projected field is campaign-owned: `sync_default_from_campaign()` copies
 organization, lifecycle status, schedule and budget from the Campaign, and
-nothing else may write them. `name` is the one field with two possible owners —
+nothing else may write them. The line-item REST route once accepted
+`budget_cents` anyway, which made this paragraph and the code disagree — and the
+Campaign won in the end regardless, because any later edit touching the schedule
+or the package re-projects over it. An advertiser could set a budget, get a 200,
+and lose it on their next unrelated save. The route refuses it now. `name` is the one field with two possible owners —
 derived from the campaign title by default, and renameable on the line item
 itself — so provenance is a stored fact rather than an inference.
 `name_is_derived` starts at 1, and `Line_Item_Repository::update()` clears it the
