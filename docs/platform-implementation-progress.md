@@ -60,14 +60,16 @@ earlier one creates.
       baselines are green. Environment/version caveats and the existing
       non-failing advisories are recorded rather than hidden. See
       [platform-p0-baseline.md](platform-p0-baseline.md).
-- [~] **P1 — Line item domain.** The delivery unit beneath Campaign. Dedicated
+- [x] **P1 — Line item domain.** The delivery unit beneath Campaign. Dedicated
       table rather than postmeta; pricing models, goal types, pacing modes,
       priority, weight, targeting rules and frequency policy as columns.
       *Migration: every existing campaign must behave as one default line item
       without recreating anything, and without interrupting a serving ad.* See
-      [data-schema.md](data-schema.md#campaign-line-items). Remaining exit work
-      and evidence are defined in
+      [data-schema.md](data-schema.md#campaign-line-items). The six closure
+      items, their evidence, and the exit criteria they satisfy are recorded in
       [platform-p1-line-item-closeout.md](platform-p1-line-item-closeout.md).
+      Serving still selects Campaigns, deliberately: the line item is a
+      projection until P3 cuts the hot path over as one tested change.
 - [ ] **P2 — Creative model refactor.** Many creatives per line item and
       placement, with weight, dates, status and revision history. Campaign
       validation stops failing on a second creative and starts requiring one

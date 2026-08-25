@@ -99,9 +99,9 @@ down.
 
 ## What runs on a schedule
 
-Six recurring events. If none of them are firing, the symptom is that campaigns
-stop changing status by themselves — which looks like a bug in approval, not a
-cron problem.
+Six recurring events, plus one that runs only while an upgrade is finishing. If
+none of them are firing, the symptom is that campaigns stop changing status by
+themselves — which looks like a bug in approval, not a cron problem.
 
 | Hook | Runs | Does |
 |---|---|---|
@@ -111,6 +111,7 @@ cron problem.
 | `aggr_purge_fill_events` | hourly | Bounded deletion of raw events past retention, never beyond the last reconciled day |
 | `aggr_purge_private_creatives` | daily | Deletes private creative bytes for terminal campaigns older than ninety days. Records, checksums and Media Library attachments remain |
 | `aggr_verify_private_storage` | daily | Re-runs the private-storage probe and raises an admin notice if creative became publicly reachable |
+| `aggr_migrate_line_items` | one-off, re-queued a minute after each batch | The P1 backfill. Not recurring: each batch schedules the next, and the last one schedules nothing, so a settled site does not carry it |
 
 WordPress cron is request-driven. On a low-traffic site these fire late; on a
 site with `DISABLE_WP_CRON` and no real cron they never fire at all. See
@@ -178,6 +179,30 @@ front of the REST route, which must never be cached.
 
 **Reviewers cannot see the Review screen.** Check the capability, not the role.
 `aggr_access_staff` is derived and cannot be granted.
+
+**A campaign's delivery settings show a name nobody chose.** Every campaign has
+one line item — its delivery strategy — and by default the line item's name
+follows the campaign title. Renaming the line item breaks that link on purpose:
+from then on it keeps the publisher's name and stops following the campaign.
+There is no way to re-link it from the UI, because a rename is a deliberate act
+and silently undoing it would be worse than leaving it.
+
+On a site upgraded to this version, names catch up in the background rather than
+at once — see the note on the line-item migration below.
+
+**The line-item migration seems stuck.** Upgrading creates one line item per
+existing campaign, a batch at a time on `aggr_migrate_line_items`, then makes a
+second pass to work out which names were chosen and which were inherited. On a
+large catalogue that is many cron ticks. Nothing about it is urgent: serving,
+editing and reporting all read campaigns and do not wait for it, so a
+half-finished migration is invisible except that some line items still show the
+name the wizard invented.
+
+Its progress lives in four options — `aggr_line_item_migration_cursor`,
+`aggr_line_item_migration_done`, `aggr_line_item_name_cursor` and
+`aggr_line_item_name_done`. If the hook is not scheduled and the two `_done`
+markers are not both set, cron is not running; the next admin request repairs
+the schedule on its own once it is.
 
 **Translations are not appearing.** A plugin's catalog must be named
 `aggressive-ads-<locale>.mo`. The unprefixed `<locale>.mo` naming is correct for

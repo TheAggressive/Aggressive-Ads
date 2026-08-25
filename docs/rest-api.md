@@ -29,6 +29,8 @@ Routes marked “planned” remain contracts for later phases. Every other row i
 | `GET` | `/campaigns/{id}` | `read_aggr_campaign` | 404 when not owned. Same metric fields as the list, same module gate |
 | `PATCH` | `/campaigns/{id}` | `edit_aggr_campaign` | Autosave; allowlisted fields; `_aggr_autosave_rev` for optimistic concurrency |
 | `POST` | `/campaigns/{id}/copy` | `aggr_submit_campaign` | New draft; source is read, not edited. No `org_id`. Rate-limited |
+| `GET` | `/campaigns/{id}/line-items` | `aggr_access_portal` + `read_aggr_campaign` | The campaign's delivery strategy. Creates the default row on first read. Omits `organization_id` and the timestamps |
+| `PATCH` | `/campaigns/{id}/line-items/{line_item_id}` | `aggr_submit_campaign` + `edit_aggr_campaign` | Whole-number fields reject decimal and exponent forms. `revision` is required. `budget_cents` is not accepted |
 | `POST` | `/campaigns/{id}/transitions` | varies by target | Body carries `to`; the state machine authorizes the specific edge |
 | `POST` | `/campaigns/{id}/creatives` | `aggr_upload_creative` | Multipart. Rate-limited |
 | `GET` | `/creatives/{id}/file` | `read_aggr_creative` | **Streams bytes. Never redirects** |
@@ -106,6 +108,44 @@ uses the transition rate limiter, and calls the same state machine with
 `PATCH /campaigns/{id}` cannot persist it as `wizard_step`. Replayed form or
 REST submissions are refused by the current-state edge check and recorded as
 denied transitions.
+
+## Line items
+
+`GET /campaigns/{id}/line-items` returns the campaign's delivery strategy. Every
+campaign has exactly one line item today — the compatibility row — and the route
+creates it on first read rather than 404ing, so a campaign predating P1 answers
+the same as one created after it. The response omits `organization_id` and both
+timestamps: the tenant is already implied by the campaign the caller reached
+through, and re-stating it only widens what a leak would carry.
+
+`PATCH` takes a `revision` and the fields to change. It refuses an empty update
+(`aggr_line_item_fields_required`), and a stale revision is a `409` carrying
+`current_revision` so a client can reconcile without a second request.
+
+Two refusals are worth stating, because both look like the route being awkward:
+
+**Whole-number fields reject decimal and exponent forms.** `goal_amount`,
+`daily_cap`, `lifetime_cap`, `priority`, `weight` and `revision` are whole-number
+domain values, and `is_numeric()` is the wrong gate for them — it accepts `1.5`,
+`"1e3"` and `" 12 "`, which `absint()` then turns into 1, 1000 and 12. A client
+sending a cap of `10.99` would get 10 stored and a `200` back, which is a lossy
+write reported as a successful one. So the raw value is checked before anything
+coerces it: an integer passes, a string passes only if it is digits and nothing
+else, and a float never passes — `1.0` included, because JSON that meant a whole
+number would have sent one. The refusal is `422 aggr_line_item_value_invalid`.
+
+**`budget_cents` is not accepted here.** It is a projected field, and
+`data-schema.md` names its writer: the Campaign. The route used to take it
+anyway, so an advertiser could set a line-item budget, get a `200`, see it
+stored, and lose it on their next unrelated save when a schedule or package edit
+re-projected — with nothing reporting the loss. Sending it alone is refused as
+an empty update; sending it beside an accepted field is ignored rather than
+smuggled through.
+
+Unauthorized and non-existent are the same answer. A campaign belonging to
+another organization returns the same `404` body as one that does not exist, and
+a line-item id belonging to a different campaign is `404` rather than `403`, so
+neither can be used to enumerate.
 
 ## The file-stream route
 
