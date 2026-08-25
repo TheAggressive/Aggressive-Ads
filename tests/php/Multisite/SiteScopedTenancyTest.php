@@ -12,7 +12,12 @@ namespace Aggressive\Ads\Tests\Multisite;
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Install\Site_Lifecycle;
 use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Event_Repository;
+use Aggressive\Ads\Repository\Line_Item_Repository;
+use Aggressive\Ads\Repository\Org_Access_Repository;
+use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Workflow\Fill_Cache;
 use Aggressive\Ads\Workflow\Fill_Token;
@@ -62,7 +67,11 @@ final class SiteScopedTenancyTest extends WP_UnitTestCase {
 
 		$blog_id = (int) self::factory()->blog->create();
 
-		$this->assertFalse( $this->events_table_exists_on( $blog_id ) );
+		$this->assertSame(
+			$this->all_tables( false ),
+			$this->plugin_tables_on( $blog_id ),
+			'A site created while the plugin was not network-active received plugin tables.'
+		);
 	}
 
 	/**
@@ -75,7 +84,11 @@ final class SiteScopedTenancyTest extends WP_UnitTestCase {
 
 		$blog_id = (int) self::factory()->blog->create();
 
-		$this->assertTrue( $this->events_table_exists_on( $blog_id ) );
+		$this->assertSame(
+			$this->all_tables( true ),
+			$this->plugin_tables_on( $blog_id ),
+			'A network-active install did not create every plugin table on the new site.'
+		);
 		$this->assertNotSame( get_current_blog_id(), $blog_id );
 	}
 
@@ -182,14 +195,22 @@ final class SiteScopedTenancyTest extends WP_UnitTestCase {
 		$this->network_activate();
 
 		$blog_id = (int) self::factory()->blog->create();
-		$this->assertTrue( $this->events_table_exists_on( $blog_id ) );
+		$this->assertSame(
+			$this->all_tables( true ),
+			$this->plugin_tables_on( $blog_id ),
+			'A network-active install did not create every plugin table on the new site.'
+		);
 
 		$site = get_site( $blog_id );
 		$this->assertInstanceOf( \WP_Site::class, $site );
 
 		Plugin::instance()->container()->get( Site_Lifecycle::class )->uninitialize_site( $site );
 
-		$this->assertFalse( $this->events_table_exists_on( $blog_id ) );
+		$this->assertSame(
+			$this->all_tables( false ),
+			$this->plugin_tables_on( $blog_id ),
+			'Deleting a site left plugin tables — and the tenant rows in them — behind.'
+		);
 	}
 
 	/**
@@ -225,27 +246,65 @@ final class SiteScopedTenancyTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Whether aggr_events exists on a blog.
+	 * Which of this plugin's tables exist on a blog, keyed by a readable name.
+	 *
+	 * This used to ask about `aggr_events` alone and stand in for the rest. That
+	 * is a proxy, and a proxy only reports on the thing it proxies: a table
+	 * added to `Installer::install()` and forgotten in the uninstaller would
+	 * leave one tenant's rows behind on a deleted site with this suite green.
+	 * The line-item table was exactly that shape — installed per site, dropped
+	 * per site, and asserted by nothing.
+	 *
+	 * So every table is named, and the assertions compare whole sets. A new
+	 * table is one line here, and then it has to satisfy both directions.
 	 *
 	 * @param int $blog_id Site id.
+	 * @return array<string, bool> Table label to existence.
 	 */
-	private function events_table_exists_on( int $blog_id ): bool {
-		$exists = false;
+	private function plugin_tables_on( int $blog_id ): array {
+		$found = array();
 
 		$this->on_site(
 			$blog_id,
-			static function () use ( &$exists ): void {
+			static function () use ( &$found ): void {
 				global $wpdb;
 
-				$table    = ( new Event_Repository() )->table_name();
+				$tables = array(
+					'audit'      => ( new Audit_Repository() )->table_name(),
+					'org_access' => ( new Org_Access_Repository() )->table_name(),
+					'events'     => ( new Event_Repository() )->table_name(),
+					'rollups'    => ( new Rollup_Repository() )->table_name(),
+					'line_items' => ( new Line_Item_Repository( new Campaign_Repository() ) )->table_name(),
+				);
+
 				$suppress = $wpdb->suppress_errors();
-				// Core makes per-test tables temporary; MySQL omits those from SHOW TABLES.
-				$exists = (bool) $wpdb->get_results( "DESCRIBE {$table}" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Test assertion must see Core's temporary table.
+
+				foreach ( $tables as $label => $table ) {
+					// Core makes per-test tables temporary; MySQL omits those from SHOW TABLES.
+					$found[ $label ] = (bool) $wpdb->get_results( "DESCRIBE {$table}" ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Test assertion must see Core's temporary table.
+				}
+
 				$wpdb->suppress_errors( $suppress );
 			}
 		);
 
-		return $exists;
+		return $found;
+	}
+
+	/**
+	 * Every plugin table, mapped to whether it should exist.
+	 *
+	 * @param bool $expected Expected existence for all of them.
+	 * @return array<string, bool>
+	 */
+	private function all_tables( bool $expected ): array {
+		return array(
+			'audit'      => $expected,
+			'org_access' => $expected,
+			'events'     => $expected,
+			'rollups'    => $expected,
+			'line_items' => $expected,
+		);
 	}
 
 	/**
