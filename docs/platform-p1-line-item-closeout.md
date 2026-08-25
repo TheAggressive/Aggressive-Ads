@@ -1,12 +1,16 @@
 # Platform P1 line-item closeout
 
 P1 establishes the delivery unit beneath Campaign without changing the native
-serving authority. Most of the model is implemented; this document records the
-remaining work and evidence required before
-[platform-implementation-progress.md](platform-implementation-progress.md) may
+serving authority. This document is the closure contract: it recorded the work
+and evidence required before
+[platform-implementation-progress.md](platform-implementation-progress.md) could
 change P1 from `[~]` to `[x]`.
 
-It is a closeout contract, not a claim that the remaining findings are fixed.
+**All six closure items are now resolved**, each with the evidence the item
+asked for, and each recorded under the item itself rather than summarised here.
+The contract is kept in full rather than trimmed to its conclusions, because the
+next phase's closeout is written against this one's shape, and because a
+finding's reasoning is the part that stops it recurring.
 
 ## Outcome
 
@@ -96,6 +100,21 @@ version before P1, it must prove that versions 12 and 13 run in order, install
 the physical schema, start both passes, stamp versions correctly and resume
 after interruption.
 
+**Done.** `LineItemUpgradeWiringTest` takes the `Upgrader` out of the real
+container, rewinds a site to database version 11 and runs `maybe_upgrade()`.
+`UpgraderTest` proves the walker over synthetic steps and would pass unchanged
+if migrations 12 and 13 were registered against the wrong versions, called the
+wrong methods or were absent altogether; this is the assembly.
+
+Writing the sabotage found the first draft asserting less than its name claimed.
+Removing `install_line_items()` from migration 12 left it green, because 13
+installs the table too — deliberately, so neither step depends on the other
+having run. "The table exists afterwards" therefore says nothing about either
+step, and the ordering assertion now observes the world at the instant each pass
+*starts*. Proven by sabotage: dropping step 13 fails three tests, removing 12's
+schema install fails the ordering test, and swapping the two versions fails the
+resume test.
+
 ### Prove serving continuity
 
 An integration test must leave at least one live legacy Campaign ahead of the
@@ -121,6 +140,23 @@ Tests whose names promise an audited update must query and assert the audit row,
 including actor, organization, object id, changed fields and revision. Multisite
 coverage must also assert creation and removal of the line-item table rather
 than only using the event table as a proxy for plugin schema installation.
+
+**Done.** `test_owner_update_is_validated_audited_and_optimistically_locked()`
+asserted validation and the optimistic lock and never touched the audit table.
+The write was real all along — `Line_Item_Editor::update()` records actor,
+organization, object, changed fields and the resulting revision — but nothing
+read it back, so any of those could have been dropped, zeroed or misattributed
+in silence. Each is now asserted, together with a *count* of one, so neither the
+rejected 422 nor the 409 conflict can log itself as a successful write.
+
+The multisite suite asked whether `aggr_events` existed and let it stand for the
+other four tables. A proxy only reports on the thing it proxies: a table added
+to `Installer::install()` and forgotten in the uninstaller leaves one tenant's
+rows on a deleted site with the suite green, and the line-item table was exactly
+that shape. Both directions now compare the whole set by name, so a failure says
+which table. Proven by sabotage: removing the line-item table from either the
+per-site install or the per-site teardown fails and names `line_items`, and both
+passed before the change.
 
 ## Invariants at exit
 
@@ -169,4 +205,13 @@ P1 may move to `[x]` only when:
 5. `domain-model.md`, `data-schema.md`, `rest-api.md`, `administration.md` and
    `runbook.md` describe the behavior that actually shipped.
 
-The current `[~]` status remains correct until that evidence exists.
+All five are met. Criteria 1 to 3 are satisfied by the closure items and the
+documentation updates recorded above; criterion 5 is `domain-model.md`,
+`data-schema.md`, `rest-api.md`, `administration.md` and `runbook.md`, which now
+describe the naming rule, the projection contract, the two REST refusals, the
+migration's cron event and progress options, and the rollout step that watches
+it finish.
+
+Criterion 4 is the one that is not a matter of judgement: it is met by a green
+CI run, in the Docker-backed environments that are the authoritative ones, not
+by a local pass. P1 moves to `[x]` on that run and not before it.

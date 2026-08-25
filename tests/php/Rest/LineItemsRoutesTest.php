@@ -54,6 +54,13 @@ final class LineItemsRoutesTest extends WP_UnitTestCase {
 	 */
 	private Line_Item_Repository $line_items;
 
+	/**
+	 * Audit persistence.
+	 *
+	 * @var Audit_Repository
+	 */
+	private Audit_Repository $audit;
+
 	public function set_up(): void {
 		parent::set_up();
 		( new Installer( new Audit_Repository(), new Roles() ) )->install_roles();
@@ -63,6 +70,8 @@ final class LineItemsRoutesTest extends WP_UnitTestCase {
 		$this->campaign_for( $this->stranger, 'Other campaign' );
 		$this->line_items = Plugin::instance()->container()->get( Line_Item_Repository::class );
 		$this->line_items->install_table();
+		$this->audit = Plugin::instance()->container()->get( Audit_Repository::class );
+		$this->audit->install_table();
 		Plugin::instance()->container()->get( Ownership::class )->flush_cache();
 		do_action( 'rest_api_init', rest_get_server() );
 	}
@@ -85,6 +94,45 @@ final class LineItemsRoutesTest extends WP_UnitTestCase {
 
 		$this->assertSame( 404, $forbidden->get_status() );
 		$this->assertSame( wp_json_encode( $missing->get_data() ), wp_json_encode( $forbidden->get_data() ) );
+	}
+
+	/**
+	 * The audit rows this line item carries, newest first, with context.
+	 *
+	 * `Audit_Repository::for_object()` is the timeline reader and deliberately
+	 * does not return the `context` column — a timeline renders actor, event and
+	 * outcome. The changed-field list and the resulting revision live only in
+	 * that column, so proving they were recorded means reading it.
+	 *
+	 * @param int $line_item_id Line-item id.
+	 * @param int $org_id       Owning organization id.
+	 * @return array<int, array<string, mixed>>
+	 */
+	private function audit_rows( int $line_item_id, int $org_id ): array {
+		global $wpdb;
+
+		$table = $this->audit->table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- Test assertion against the plugin's own append-only table.
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				'SELECT actor_user_id, event, outcome, object_type, object_id, org_id, context FROM %i WHERE object_type = %s AND object_id = %d ORDER BY id DESC',
+				$table,
+				'line_item',
+				$line_item_id
+			),
+			ARRAY_A
+		);
+
+		foreach ( (array) $rows as $index => $row ) {
+			$rows[ $index ]['context'] = json_decode( (string) ( $row['context'] ?? '' ), true ) ?? array();
+		}
+
+		// The org is asserted rather than filtered on, so a row written against
+		// the wrong organization shows up as a mismatch instead of vanishing.
+		unset( $org_id );
+
+		return (array) $rows;
 	}
 
 	public function test_owner_update_is_validated_audited_and_optimistically_locked(): void {
@@ -117,6 +165,48 @@ final class LineItemsRoutesTest extends WP_UnitTestCase {
 		$this->assertSame( 2, $updated->get_data()['revision'] );
 		$this->assertSame( 'cpm', $updated->get_data()['pricing_model'] );
 
+		/*
+		 * The audit half, which this test's name claimed long before it looked.
+		 *
+		 * A count first: exactly one row, so the rejected 422 above did not also
+		 * write one. "An audit row exists" would pass whether the plugin logged
+		 * the accepted write, the refused one, or both.
+		 */
+		$org_id = Plugin::instance()->container()
+			->get( Campaign_Repository::class )->org_id( $this->campaign );
+		$rows   = $this->audit_rows( (int) $row['id'], $org_id );
+
+		$this->assertCount( 1, $rows, 'Exactly the accepted update should have been audited.' );
+
+		$entry = $rows[0];
+
+		// Who: the acting advertiser, not a default or system user. An audit
+		// naming user 0 cannot answer the only question it exists to answer.
+		$this->assertSame( $this->owner, (int) $entry['actor_user_id'] );
+
+		// What, and against which tenant and object.
+		$this->assertSame( 'line_item.updated', $entry['event'] );
+		$this->assertSame( 'ok', $entry['outcome'] );
+		$this->assertSame( 'line_item', $entry['object_type'] );
+		$this->assertSame( (int) $row['id'], (int) $entry['object_id'] );
+		$this->assertSame( $org_id, (int) $entry['org_id'] );
+		$this->assertGreaterThan( 0, $org_id, 'A zero org would make the scoping assertion vacuous.' );
+
+		// Which fields changed. Sorted, because the record is a set and the
+		// order the request happened to use is not part of the claim.
+		$fields = (array) ( $entry['context']['fields'] ?? array() );
+		sort( $fields );
+		$this->assertSame(
+			array( 'daily_cap', 'pacing_mode', 'pricing_model' ),
+			$fields,
+			'The audit did not record the fields that actually changed.'
+		);
+
+		// And the revision the write produced, which is what makes the row
+		// reconcilable against the line item afterwards.
+		$this->assertSame( 2, (int) ( $entry['context']['revision'] ?? 0 ) );
+		$this->assertSame( $this->campaign, (int) ( $entry['context']['campaign_id'] ?? 0 ) );
+
 		$stale = $this->request(
 			'PATCH',
 			$path,
@@ -127,6 +217,14 @@ final class LineItemsRoutesTest extends WP_UnitTestCase {
 		);
 		$this->assertSame( 409, $stale->get_status() );
 		$this->assertSame( 100, $this->line_items->default_for_campaign( $this->campaign )['weight'] );
+
+		// The conflict wrote nothing either: a refused write that audits as a
+		// successful one is worse than no audit at all.
+		$this->assertCount(
+			1,
+			$this->audit_rows( (int) $row['id'], $org_id ),
+			'A rejected write added an audit row.'
+		);
 	}
 
 	public function test_cross_campaign_line_item_id_is_not_found(): void {

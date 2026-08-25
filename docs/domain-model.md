@@ -112,6 +112,19 @@ schema-ready empty JSON objects in P1; later phases define their executable
 semantics. Deleting a Campaign removes its line-item rows at the application
 boundary.
 
+A line item's name has two possible writers, which is why it carries
+`name_is_derived` to record which one wrote last. A new line item's name follows
+the Campaign title and keeps following it. The moment a person renames it, the
+flag clears and the link is broken permanently: nothing re-derives a name that
+somebody chose, and there is no way back from the UI, because a rename is
+deliberate and silently undoing it would be the worse failure.
+
+`budget_cents` is the field that is *not* shared. It is projected from the
+Campaign and the Campaign is its only writer — the line-item route refuses it
+outright. A projected field with two writers is not a merge conflict, it is
+silent data loss: the projection wins on the next unrelated save, so an accepted
+write disappears with nothing reporting it.
+
 ### Creative — `aggr_creative`
 
 | Key | Type | Notes |
@@ -177,6 +190,8 @@ These hold at all times and are asserted in the repositories, not merely assumed
 3. **`org_id` is never read from client input.** It is derived server-side from the authenticated user on every request without exception. This one rule collapses most of the IDOR surface — see [threat-model.md](threat-model.md).
 4. **A campaign's `post_status` is only ever written by `Campaign_State_Machine::apply()`.** See [campaign-workflow.md](campaign-workflow.md).
 5. **Every Campaign has exactly one default Line Item after lazy self-healing.** Its organization always equals the Campaign organization, and its P1 lifecycle mirrors the Campaign lifecycle. A unique database key makes concurrent creation safe.
+
+    Two consequences worth stating separately, because both are load-bearing during an upgrade. **A renamed Line Item never resumes following its Campaign title**, while a derived name keeps following it — `name_is_derived` is the record of which writer wrote last, and the migration that backfills it only ever clears the flag, never sets it. And **a Campaign with no Line Item yet still works**: it can be viewed, edited and served, because nothing on those paths reads the table. That is what lets the backfill run in batches on a live site instead of during activation.
 6. **Timestamps are UTC Unix integers everywhere.** No date strings, no site-local times, no `DateTime` in storage. Formatting happens at the display layer via `wp_date()`.
 7. **Package selection creates a campaign snapshot.** The selected package must be active and completely configured, and every included placement must be active. Its package id, repeated placement ids, integer-cent price, and currency are copied onto the campaign in one editor operation. Later package edits never mutate an existing campaign implicitly.
 8. **An editable campaign has at most one creative per selected placement.** Upload validates exact dimensions before creating the record. Removal deletes private bytes before the record, and neither operation is allowed after the campaign leaves an advertiser-editable state.

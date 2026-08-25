@@ -133,6 +133,10 @@ Expect six: `aggr_reconcile_campaigns`, `aggr_notify_ending_soon`,
 `aggr_reconcile_fill_rollups`, `aggr_purge_fill_events`,
 `aggr_purge_private_creatives`, `aggr_verify_private_storage`.
 
+A seventh, `aggr_migrate_line_items`, appears only while the line-item backfill
+is still running and disappears when it finishes — see step 5a. Its absence on a
+long-established site is the expected state, not a fault.
+
 If `DISABLE_WP_CRON` is set — and on any site with real traffic it should be —
 confirm the system cron actually runs:
 
@@ -145,6 +149,52 @@ confirm the system cron actually runs:
 ```bash
 wp cron event run aggr_reconcile_campaigns
 ```
+
+---
+
+## 5a. Let the line-item backfill finish (upgrades only)
+
+Skip this on a fresh install: there is nothing to migrate, and both markers are
+set by the installer.
+
+Upgrading gives every existing campaign a line item — the delivery strategy that
+sits beneath it — and then makes a second pass working out which line-item names
+were chosen by a person and which were inherited from the campaign title. Both
+run in batches on cron so neither holds a request open.
+
+**Nothing waits for this.** Serving, editing, reporting and review all read
+campaigns, and a campaign with no line item yet behaves exactly as it did
+before. That is the migration's central promise, and it is asserted rather than
+assumed. So this step is a check, not a gate: you can complete the rest of the
+rollout while it runs.
+
+```bash
+wp option get aggr_line_item_migration_done
+wp option get aggr_line_item_name_done
+```
+
+Both returning `1` means it is finished. While it is running, watch it move:
+
+```bash
+wp option get aggr_line_item_migration_cursor   # rises toward your highest campaign id
+wp cron event list --fields=hook,next_run_relative | grep aggr_migrate_line_items
+```
+
+**If the cursor is not moving and no event is scheduled**, cron is not running —
+go back to step 5. The next admin request repairs the schedule by itself once
+cron works again, so there is nothing to re-run by hand.
+
+**Do not delete the four options to "start over."** Clearing the cursors makes
+the backfill re-walk everything from zero, and on a large catalogue that costs
+hours for no benefit.
+
+It will not corrupt anything, and it is worth knowing why, because the reason is
+what makes an interrupted migration safe to resume at all. Creating a line item
+for a campaign that already has one is a no-op the unique
+`(campaign_id, default_key)` key enforces. The name pass only ever *clears* the
+derived flag on a row whose name has diverged from its campaign title — it never
+sets the flag and never writes a name — so a line item a publisher renamed stays
+renamed however many times the pass visits it.
 
 ---
 
@@ -237,6 +287,12 @@ To return to a previous version, deactivate, install the older ZIP, and
 reactivate. Note that **schema migrations are forward-only**: an older build
 against a newer database is not a supported configuration, so restore the
 database from backup if the version you are returning to predates a migration.
+
+The line-item work is one such migration — database version 13. A build older
+than it does not read `aggr_line_items` at all, so the table and its four
+progress options simply sit unused; nothing breaks and nothing is lost. Coming
+forward again resumes where the cursors left off rather than restarting, which
+is the one reason not to clear them while a rollback is in progress.
 
 ### If the portal 404s after a deploy
 
