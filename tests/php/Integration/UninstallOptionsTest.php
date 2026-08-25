@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Tests\Integration;
 
 use Aggressive\Ads\Install\Installer;
+use Aggressive\Ads\Install\Line_Item_Migrator;
 use Aggressive\Ads\Repository\Org_Access_Repository;
 use WP_UnitTestCase;
 
@@ -69,6 +70,24 @@ final class UninstallOptionsTest extends WP_UnitTestCase {
 		 */
 		( new Org_Access_Repository() )->org_id_for_canonical( 'ANY NAME' );
 
+		/*
+		 * The migration's four options are written by a cron pass, not by
+		 * install, so a sweep of a freshly installed site never sees them. They
+		 * are put in place here deliberately: the point of this test is that
+		 * every option a *used* site holds is declared, and a site part-way
+		 * through the P1 backfill holds these.
+		 */
+		foreach (
+			array(
+				Line_Item_Migrator::OPTION_CURSOR,
+				Line_Item_Migrator::OPTION_DONE,
+				Line_Item_Migrator::OPTION_NAME_CURSOR,
+				Line_Item_Migrator::OPTION_NAME_DONE,
+			) as $migration_option
+		) {
+			update_option( $migration_option, 1, false );
+		}
+
 		$stored   = $this->stored_plugin_options();
 		$declared = Installer::options();
 
@@ -80,6 +99,7 @@ final class UninstallOptionsTest extends WP_UnitTestCase {
 			'The fixture must hold real options, or the assertion below is vacuous.'
 		);
 		$this->assertContains( Org_Access_Repository::LOOKUP_SALT_OPTION, $stored );
+		$this->assertContains( Line_Item_Migrator::OPTION_NAME_CURSOR, $stored );
 
 		$undeclared = array_values( array_diff( $stored, $declared ) );
 
