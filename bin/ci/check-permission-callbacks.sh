@@ -2,29 +2,17 @@
 #
 # REST permission gate.
 #
-# Every route needs a real permission_callback. '__return_true' is banned
-# because it is a thing people write while debugging and then commit, and the
-# result is an unauthenticated endpoint on a system whose highest-value asset
-# is another organization's unpublished creative.
+# The rules and their reasoning live in bin/ci/check-permission-callbacks.php,
+# which uses PHP's tokenizer rather than grep. This wrapper exists so the lane
+# keeps the name package.json and the CI workflow already know.
 #
-# See docs/rest-api.md and docs/threat-model.md.
+# The first version of this check was pure grep and matched exactly one
+# spelling. Testing it found four ways past — a wrapped line, an arrow
+# function, a closure, and a route with no permission_callback at all — plus a
+# missing scan directory that made the whole gate pass over nothing.
 
 set -euo pipefail
 
 cd "$(dirname "$0")/../.."
 
-hits=$(
-	grep -rInE "'permission_callback'[[:space:]]*=>[[:space:]]*'__return_true'|\"permission_callback\"[[:space:]]*=>[[:space:]]*\"__return_true\"" inc \
-		--include='*.php' \
-		2>/dev/null || true
-)
-
-if [ -n "$hits" ]; then
-	echo "permission_callback => '__return_true' found:" >&2
-	echo "$hits" >&2
-	echo >&2
-	echo "Every REST route needs a real permission callback. See docs/rest-api.md." >&2
-	exit 1
-fi
-
-echo "check-permission-callbacks: ok"
+exec php bin/ci/check-permission-callbacks.php

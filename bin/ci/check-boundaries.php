@@ -24,12 +24,26 @@
 
 declare(strict_types=1);
 
-$root  = dirname( __DIR__, 2 );
+$root = dirname( __DIR__, 2 );
+$scan = getenv( 'AGGR_BOUNDARY_SCAN_DIR' );
+$root = is_string( $scan ) && '' !== $scan ? rtrim( $scan, '/' ) : $root;
+
 $roots = array_values( array_filter( array( $root . '/inc', $root . '/templates' ), 'is_dir' ) );
 
+/*
+ * This used to print "ok (nothing to scan yet)" and exit 0.
+ *
+ * That was written when inc/ genuinely did not exist yet, and it long outlived
+ * the condition it was for: from the moment the directory appeared, the branch
+ * could only ever be reached by inc/ and templates/ *both* going missing —
+ * a rename, a move, a bad merge — and its answer to that was to report success.
+ * A guard that stops finding the code it guards has failed, not passed.
+ */
 if ( array() === $roots ) {
-	echo "check-boundaries: ok (nothing to scan yet)\n";
-	exit( 0 );
+	fwrite( STDERR, "check-boundaries: neither {$root}/inc nor {$root}/templates exists\n" );
+	fwrite( STDERR, "A gate that cannot find the code it guards must fail, not pass. See CLAUDE.md.\n" );
+
+	exit( 1 );
 }
 
 /**
@@ -112,6 +126,13 @@ $paths = array();
 
 foreach ( $roots as $dir ) {
 	$paths = array_merge( $paths, php_files( $dir ) );
+}
+
+if ( array() === $paths ) {
+	fwrite( STDERR, "check-boundaries: no PHP files found under {$root}\n" );
+	fwrite( STDERR, "A gate that reads nothing reports success over nothing. See CLAUDE.md.\n" );
+
+	exit( 1 );
 }
 
 foreach ( $paths as $path ) {
@@ -253,5 +274,5 @@ if ( array() !== $violations ) {
 	exit( 1 );
 }
 
-echo "check-boundaries: ok\n";
+printf( "check-boundaries: ok (%d files)\n", count( $paths ) );
 exit( 0 );

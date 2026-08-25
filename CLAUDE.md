@@ -295,12 +295,20 @@ sabotage test is the only thing standing between `rmdir( $root )` and
 never created.
 
 A guard that stops matching does not fail. It reports success over code it is no
-longer reading. `check-navigation.mjs`, `check-coverage.mjs`, `check-rewrite-version.php` and
-the rules behind `check-summary.mjs` carry tests in `test:tools` for that
-reason. **The other eleven guards under `bin/ci/` do not**, and that is a gap
-rather than a decision — `check-permission-callbacks.sh` and
-`check-repository-boundary.sh` are the two worth doing first, because both
-police security boundaries.
+longer reading. `check-navigation.mjs`, `check-coverage.mjs`, `check-rewrite-version.php`,
+`check-boundaries.php`, `check-permission-callbacks.php` and the rules behind
+`check-summary.mjs` carry tests in `test:tools` for that reason. **The other
+nine guards under `bin/ci/` do not**, and that is a gap rather than a decision.
+
+The two security guards were done first, and both were broken. The permission
+gate was a grep matching one spelling of one mistake: the same `__return_true`
+wrapped onto a second line got through, so did `fn () => true` and
+`function () { return true; }`, and so did a route with no `permission_callback`
+key at all — which leaves nothing in the source to grep for and which WordPress
+still registers as public. Both guards also passed over a *missing* directory,
+because `|| true` and an "ok (nothing to scan yet)" branch each turned "I cannot
+find the code I guard" into success. Both are now tokenizer-based, both fail on
+an empty scan, and both print the file count so a vacuous run is visible.
 
 `check-rewrite-version.php` is the worked example: its own test found that the
 lookbehind distinguishing a call from a declaration read `$tokens[$i - 1]`,
