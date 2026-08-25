@@ -298,11 +298,10 @@ never created.
 A guard that stops matching does not fail. It reports success over code it is no
 longer reading. `check-navigation.mjs`, `check-coverage.mjs`, `check-rewrite-version.php`,
 `check-boundaries.php`, `check-permission-callbacks.php` and the rules behind
-`check-summary.mjs`, `check-action-pins.sh`, the patched-dependency rules and
-the pull-request policy carry tests in `test:tools` for that reason. **The
-remaining `bin/ci/` guards do not** — `check-ci-parity.sh`,
-`check-styles.mjs`, `check-suppression-reasons.mjs` and `check-worktree.sh` —
-and that is a gap rather than a decision.
+`check-summary.mjs`, `check-action-pins.sh`, `check-ci-parity.sh`,
+`check-styles.mjs`, `check-suppression-reasons.mjs`, `check-worktree.sh`, the
+patched-dependency rules and the pull-request policy **all carry tests in
+`test:tools`**. Every guard in `bin/ci/` is now covered.
 
 The two security guards were done first, and both were broken. The permission
 gate was a grep matching one spelling of one mistake: the same `__return_true`
@@ -323,9 +322,16 @@ always passed the gate whose only job is stopping one.
 skipped every assertion and left a round-trip smoke test that passes on
 *unpatched* adm-zip too.
 
-**The pattern across all five is one thing: a guard that stops matching reports
-success.** When touching one, check what it actually reads before trusting what
-it says — and make it print a count.
+The last four came next, and the same shape was in three of them: a missing or
+empty scan root produced "ok" over nothing. `check-suppression-reasons.mjs` also
+never matched `phpcs:ignoreFile`, which disables *every* sniff in a file, nor
+the deprecated `@codingStandardsIgnoreFile|Start|Line`, which PHPCS 3.13 still
+honours and which has no `--` reason syntax at all — so a suppression written
+that way could never justify itself and was never asked to.
+
+**The pattern across all of them is one thing: a guard that stops matching
+reports success.** When touching one, check what it actually reads before
+trusting what it says — and make it print a count. Every guard now does.
 
 `check-rewrite-version.php` is the worked example: its own test found that the
 lookbehind distinguishing a call from a declaration read `$tokens[$i - 1]`,

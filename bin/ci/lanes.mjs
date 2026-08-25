@@ -25,7 +25,14 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 
-const ROOT = path.resolve( import.meta.dirname, '../..' );
+/*
+ * Overridable so check-ci-parity can point the real parser at a fixture tree.
+ * Without this a fixture run reads this repository's own workflow, and the
+ * "the workflow runs it but lanes.mjs does not reach it" branch could never be
+ * exercised by a test.
+ */
+const ROOT =
+	process.env.AGGR_LANES_ROOT ?? path.resolve( import.meta.dirname, '../..' );
 const WORKFLOW = path.join( ROOT, '.github/workflows/ci.yml' );
 
 /**
