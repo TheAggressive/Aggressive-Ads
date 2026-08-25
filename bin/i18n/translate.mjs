@@ -27,6 +27,8 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+
+import { judgeRun } from './run-completeness.mjs';
 import { fileURLToPath } from 'node:url';
 
 import { PLACEHOLDER_PATTERN, parsePo, placeholdersIntact } from './po.mjs';
@@ -519,7 +521,13 @@ async function translatePoFile( file, opts ) {
 		console.warn(
 			`i18n:translate: skip ${ locale } (add mapping in translate.mjs LOCALE_MAP)`
 		);
-		return { locale, updated: 0, skipped: 0 };
+		return {
+			locale,
+			updated: 0,
+			skipped: 0,
+			remaining: 0,
+			truncated: false,
+		};
 	}
 
 	const mode = resolveProviderMode();
@@ -530,6 +538,7 @@ async function translatePoFile( file, opts ) {
 	let updated = 0;
 	let skipped = 0;
 	let lastVia = mode;
+	let truncated = false;
 
 	for ( const entry of entries ) {
 		if ( ! needsTranslation( entry ) ) {
@@ -596,10 +605,19 @@ async function translatePoFile( file, opts ) {
 					60
 				) }…" → ${ err.message }`
 			);
-			// Stop this file on quota / hard errors so a partial PR can still open.
+			/*
+			 * Stop this locale on a quota or hard error, so whatever was
+			 * translated is still written rather than lost.
+			 *
+			 * The stop is deliberate; reporting success afterwards was not.
+			 * `judgeRun()` turns a truncated locale into a failure once every
+			 * file has been written, so the work survives and the claim does
+			 * not. See bin/i18n/run-completeness.mjs.
+			 */
 			if (
 				/HTTP 4\d\d|LIMIT|quota|MYMEMORY WARNING/i.test( String( err ) )
 			) {
+				truncated = true;
 				break;
 			}
 		}
@@ -613,7 +631,13 @@ async function translatePoFile( file, opts ) {
 		fs.writeFileSync( file, serializePo( header, entries ), 'utf8' );
 	}
 
-	return { locale, updated, skipped, provider: mode };
+	// Counted from the entries as they now stand, not inferred from arithmetic:
+	// a `break` leaves the two out of step, and the count is the whole point.
+	const remaining = entries.filter( ( entry ) =>
+		needsTranslation( entry )
+	).length;
+
+	return { locale, updated, skipped, remaining, truncated, provider: mode };
 }
 
 async function main() {
@@ -652,17 +676,44 @@ async function main() {
 	);
 
 	let total = 0;
+	const results = [];
+
 	for ( const file of files ) {
 		const result = await translatePoFile( file, opts );
 		console.log(
-			`i18n:translate: ${ result.locale }: updated=${ result.updated } already-ok=${ result.skipped }`
+			`i18n:translate: ${ result.locale }: updated=${ result.updated } already-ok=${ result.skipped } remaining=${ result.remaining }`
 		);
 		total += result.updated;
+		results.push( result );
 	}
 
 	console.log( `i18n:translate: Done. ${ total } string(s) filled.` );
 	if ( opts.dryRun && total > 0 ) {
 		console.log( 'i18n:translate: dry-run — no files written.' );
+	}
+
+	/*
+	 * Every file is written by now, so failing here keeps the work and drops
+	 * only the claim that the run finished. A partial set of catalogs opening a
+	 * pull request that looks complete is the failure this prevents.
+	 */
+	const verdict = judgeRun( results, {
+		limited: Number.isFinite( opts.limit ),
+	} );
+
+	if ( ! verdict.ok ) {
+		console.error( '\ni18n:translate: the run did not finish.' );
+
+		for ( const problem of verdict.problems ) {
+			console.error( `  ${ problem }` );
+		}
+
+		console.error(
+			'\nRe-run once the provider quota allows it. Translation is ' +
+				'incremental, so a re-run only fills what is still missing.'
+		);
+
+		process.exit( 1 );
 	}
 }
 
