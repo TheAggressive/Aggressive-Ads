@@ -1,0 +1,111 @@
+name: PR Policy
+
+# Classify every pull request, and let the safe ones merge themselves.
+#
+# Two jobs, deliberately split by whether they need write access:
+#
+#   `title` runs on `pull_request` with a read-only token. It validates the
+#   title and nothing else, so it can be a required check without ever holding
+#   a credential worth stealing.
+#
+#   `policy` runs on `workflow_run`, where the token is write-capable and no
+#   pull-request code is ever checked out or executed. It classifies, labels,
+#   and registers *native* auto-merge.
+#
+# `pull_request_target` is not used anywhere here. It would run with a
+# write-capable token in the context of the base branch while the pull request's
+# own code sits in the workspace, which is the exact pattern that turns a fork
+# pull request into repository write access.
+#
+# The policy job reads every fact it judges from the API, never from the event
+# payload: a label, a branch name and a title are all things a person sets, and
+# on a fork the payload is attacker-controlled. They can withhold permission;
+# they can never grant it.
+
+on: # zizmor: ignore[dangerous-triggers] the workflow_run job never checks out or executes pull-request code; every fact is read from the API
+  pull_request:
+    branches: ['**']
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+  workflow_run:
+    workflows: ['CI/CD Pipeline', 'CodeQL', 'Workflow Security']
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  # --------------------------------------------------------------------------
+  # A required check, and cheap enough to be one: no dependency install, no
+  # WordPress, no build. Squash titles feed semantic-release, so an unparsed
+  # title is a release that silently does not happen.
+  # --------------------------------------------------------------------------
+  title:
+    name: PR Title
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24.18.1'
+      - name: Validate the pull request title
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: node bin/ci/check-pr-title.mjs
+
+  # --------------------------------------------------------------------------
+  # Classification, labelling and auto-merge.
+  #
+  # `workflow_run` so the token can write, and so this runs *after* the check
+  # suites have something to report. Nothing from the pull request is checked
+  # out: the repository is cloned at the workflow_run's own commit, and the only
+  # pull-request data that reaches the script comes from authenticated API
+  # reads.
+  # --------------------------------------------------------------------------
+  policy:
+    name: PR Policy
+    if: >-
+      github.event_name == 'workflow_run' &&
+      github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    # One run at a time per branch, so a re-run cannot race a merge with an
+    # update-branch. Not cancel-in-progress: a cancelled policy run would leave
+    # labels half-applied.
+    concurrency:
+      group: pr-policy-${{ github.event.workflow_run.head_branch }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '24.18.1'
+      - name: Classify, label and decide
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          # Who may use the `automerge` label. The label says what to do; this
+          # says whose request counts. Checking only the label would let anyone
+          # able to label a pull request merge one.
+          AGGR_AUTOMERGE_ACTORS: ${{ vars.AGGR_AUTOMERGE_ACTORS || github.repository_owner }}
+        run: |
+          set -euo pipefail
+
+          number="$(gh pr list --head "${HEAD_BRANCH}" --state open \
+            --json number --jq '.[0].number // empty')"
+
+          if [[ -z "${number}" ]]; then
+            echo "No open pull request for ${HEAD_BRANCH}; nothing to do."
+            exit 0
+          fi
+
+          node bin/ci/pr-policy.mjs "${number}"
