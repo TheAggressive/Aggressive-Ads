@@ -21,6 +21,10 @@ use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Core\Settings;
 use Aggressive\Ads\Install\Installer;
+use Aggressive\Ads\Install\Migration_Map;
+use Aggressive\Ads\Repository\Creative_Assignment_Repository;
+use Aggressive\Ads\Repository\Creative_Asset_Repository;
+use Aggressive\Ads\Install\Creative_Assignment_Migrator;
 use Aggressive\Ads\Install\Line_Item_Migrator;
 use Aggressive\Ads\Install\Rewrite_Flusher;
 use Aggressive\Ads\Install\Site_Lifecycle;
@@ -234,83 +238,7 @@ final class Service_Registrar {
 			static fn ( Service_Container $c ): Upgrader => new Upgrader(
 				$c->get( Installer::class ),
 				$c->get( Audit_Repository::class ),
-				array(
-					2  => static function () use ( $c ): void {
-						$c->get( Installer::class )->install_org_access();
-					},
-					4  => static function () use ( $c ): void {
-						$c->get( Installer::class )->install_delivery_tables();
-					},
-					5  => static function () use ( $c ): void {
-						$c->get( Installer::class )->migrate_event_token_uniqueness();
-					},
-					// Renames the private creative directory. No admin notice:
-					// a site whose server rule still names the old path is
-					// covered because the migration leaves nothing behind it.
-					6  => static function () use ( $c ): void {
-						$c->get( Private_Storage::class )->migrate_legacy_directory();
-					},
-					// Creative promoted before the marker existed is still in
-					// the Media Library until it is marked.
-					7  => static function () use ( $c ): void {
-						$c->get( Creative_Repository::class )->backfill_creative_attachment_marks();
-					},
-					// The daily private-storage probe and its stored verdict
-					// outlived the notice they fed. Left alone they would stay
-					// on the schedule of every upgraded site forever, firing a
-					// callback nothing registers any more.
-					8  => static function (): void {
-						wp_clear_scheduled_hook( 'aggr_verify_private_storage' );
-						delete_option( 'aggr_private_storage_status' );
-					},
-					// The object index gains org_id, which for_object() also
-					// filters on. Without it the optimizer index-merges and
-					// filesorts; see Audit_Repository::migrate_object_index().
-					9  => static function () use ( $c ): void {
-						$c->get( Audit_Repository::class )->migrate_object_index();
-					},
-					// Lookup keys move off wp_salt( 'auth' ) onto a salt that
-					// does not rotate. Until this runs, a site whose auth salts
-					// ever changed cannot rename an organization and is not
-					// detecting duplicate names at all. Recomputed from the
-					// plaintext the same rows already carry, so nothing is lost.
-					10 => static function () use ( $c ): void {
-						$c->get( Org_Access_Repository::class )->reindex_active_keys();
-					},
-					// Creative uploaded before encryption at rest is still
-					// plaintext on disk. Non-destructive and resumable: a file
-					// that will not encrypt cleanly stays as it was, and reads
-					// pass an unencrypted file through, so an interrupted run
-					// leaves a working mixture rather than a broken queue.
-					11 => static function () use ( $c ): void {
-						$c->get( Private_Storage::class )->encrypt_existing_files();
-					},
-					12 => static function () use ( $c ): void {
-						$c->get( Installer::class )->install_line_items();
-						$c->get( Line_Item_Migrator::class )->start();
-					},
-					// The default line item's name is derived from the campaign
-					// title, and nothing re-derived it after a rename. Adding
-					// the column gives every existing row the "derived"
-					// default, which is wrong for any line item a publisher
-					// renamed, so the rows are classified rather than assumed.
-					13 => static function () use ( $c ): void {
-						$c->get( Installer::class )->install_line_items();
-						$c->get( Line_Item_Migrator::class )->start_name_provenance();
-					},
-
-					/*
-					 * P2 schema only. No backfill runs here: the tables are
-					 * empty and nothing reads them yet, so a site upgrading to
-					 * 14 gains two tables and no behaviour. The migration that
-					 * fills them ships with the code that reads them, so a
-					 * half-migrated site is never a site serving from a table
-					 * nobody has finished writing.
-					 */
-					14 => static function () use ( $c ): void {
-						$c->get( Installer::class )->install_creative_model();
-					},
-				)
+				Migration_Map::steps( $c )
 			)
 		);
 
@@ -348,6 +276,27 @@ final class Service_Registrar {
 		$container->register(
 			Line_Item_Migrator::class,
 			static fn ( Service_Container $c ): Line_Item_Migrator => new Line_Item_Migrator(
+				$c->get( Line_Item_Repository::class ),
+				$c->get( Campaign_Repository::class )
+			)
+		);
+
+		$container->register(
+			Creative_Asset_Repository::class,
+			static fn (): Creative_Asset_Repository => new Creative_Asset_Repository()
+		);
+
+		$container->register(
+			Creative_Assignment_Repository::class,
+			static fn (): Creative_Assignment_Repository => new Creative_Assignment_Repository()
+		);
+
+		$container->register(
+			Creative_Assignment_Migrator::class,
+			static fn ( Service_Container $c ): Creative_Assignment_Migrator => new Creative_Assignment_Migrator(
+				$c->get( Creative_Repository::class ),
+				$c->get( Creative_Asset_Repository::class ),
+				$c->get( Creative_Assignment_Repository::class ),
 				$c->get( Line_Item_Repository::class ),
 				$c->get( Campaign_Repository::class )
 			)
@@ -525,7 +474,8 @@ final class Service_Registrar {
 		$container->register(
 			Line_Item_Lifecycle::class,
 			static fn ( Service_Container $c ): Line_Item_Lifecycle => new Line_Item_Lifecycle(
-				$c->get( Line_Item_Repository::class )
+				$c->get( Line_Item_Repository::class ),
+				$c->get( Creative_Assignment_Repository::class )
 			)
 		);
 

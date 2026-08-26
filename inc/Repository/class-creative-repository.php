@@ -282,6 +282,89 @@ final class Creative_Repository {
 	 * @param int $creative_id Creative id.
 	 * @return bool
 	 */
+	/**
+	 * A creative's title.
+	 *
+	 * Here rather than at the call site because reading a post is data access,
+	 * and `check-boundaries.php` is right to refuse it anywhere else — it
+	 * caught this one.
+	 *
+	 * @param int $creative_id Creative post id.
+	 * @return string
+	 */
+	public function title( int $creative_id ): string {
+		return $creative_id > 0 ? (string) get_the_title( $creative_id ) : '';
+	}
+
+	/**
+	 * Creative ids after a cursor, in primary-key order.
+	 *
+	 * The migration walks the id space rather than querying by campaign, so it
+	 * is resumable from a single integer and cannot revisit or skip a row when
+	 * campaigns are created or deleted mid-run.
+	 *
+	 * @param int $cursor Last id already visited.
+	 * @param int $limit  Batch size.
+	 * @return array<int, int>
+	 */
+	public function creative_ids_after( int $cursor, int $limit ): array {
+		global $wpdb;
+
+		$limit  = max( 1, min( 500, $limit ) );
+		$cursor = max( 0, $cursor );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Bounded primary-key migration scan owned by the persistence layer.
+		$ids = $wpdb->get_col(
+			$wpdb->prepare(
+				"SELECT ID FROM {$wpdb->posts} WHERE post_type = %s AND ID > %d ORDER BY ID ASC LIMIT %d",
+				Post_Types::CREATIVE,
+				$cursor,
+				$limit
+			)
+		);
+
+		return array_map( 'intval', is_array( $ids ) ? $ids : array() );
+	}
+
+	/**
+	 * The oldest creative in a replacement chain.
+	 *
+	 * One logical piece of artwork can already be several Creative posts, linked
+	 * by `_aggr_replaces_creative_id` when a replacement was approved. That
+	 * chain is the asset the P2 model names, so its root is the stable identity
+	 * every revision of the same artwork shares.
+	 *
+	 * Bounded rather than trusting the data: a chain that loops — which nothing
+	 * should create and a corrupted meta pair could — would otherwise hang the
+	 * migration on one row.
+	 *
+	 * @param int $creative_id Any creative in the chain.
+	 * @return int Root creative id.
+	 */
+	public function chain_root( int $creative_id ): int {
+		$seen = array();
+
+		while ( $creative_id > 0 && ! isset( $seen[ $creative_id ] ) ) {
+			$seen[ $creative_id ] = true;
+
+			$previous = (int) get_post_meta( $creative_id, self::META_REPLACES_ID, true );
+
+			if ( $previous <= 0 || isset( $seen[ $previous ] ) ) {
+				break;
+			}
+
+			$creative_id = $previous;
+		}
+
+		return $creative_id;
+	}
+
+	/**
+	 * Whether a creative is the current one rather than a superseded revision.
+	 *
+	 * @param int $creative_id Creative post id.
+	 * @return bool
+	 */
 	public function is_active( int $creative_id ): bool {
 		return null !== $this->details( $creative_id )
 			&& 0 === $this->replacement_target_id( $creative_id )
