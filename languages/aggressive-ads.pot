@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-25T00:57:34+00:00\n"
+"POT-Creation-Date: 2026-08-26T02:30:53+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -528,91 +528,91 @@ msgid "The inventory screen needs JavaScript enabled."
 msgstr ""
 
 #. translators: 1: previous campaign status, already translated. 2: new campaign status, already translated.
-#: inc/Admin/class-review-data.php:304
+#: inc/Admin/class-review-data.php:307
 #, php-format
 msgid "Campaign moved from %1$s to %2$s."
 msgstr ""
 
-#: inc/Admin/class-review-data.php:319
-#: inc/Portal/class-view-data.php:786
+#: inc/Admin/class-review-data.php:322
+#: inc/Portal/class-view-data.php:804
 msgid "Not scheduled"
 msgstr ""
 
 #. translators: 1: campaign start date. 2: campaign end date.
-#: inc/Admin/class-review-data.php:330
-#: inc/Portal/class-view-data.php:802
+#: inc/Admin/class-review-data.php:333
+#: inc/Portal/class-view-data.php:820
 #, php-format
 msgid "%1$s – %2$s"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:545
+#: inc/Admin/class-review-data.php:557
 msgid "System"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:591
+#: inc/Admin/class-review-data.php:603
 msgid "Needs review"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:592
+#: inc/Admin/class-review-data.php:604
 #: inc/Admin/class-review-screen.php:272
 msgid "Ad updates"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:593
+#: inc/Admin/class-review-data.php:605
 msgid "Advertiser requests"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:594
+#: inc/Admin/class-review-data.php:606
 msgid "With the advertiser"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:595
+#: inc/Admin/class-review-data.php:607
 msgid "Decided"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:596
-#: inc/Portal/class-view-data.php:659
+#: inc/Admin/class-review-data.php:608
+#: inc/Portal/class-view-data.php:677
 msgid "Running"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:597
+#: inc/Admin/class-review-data.php:609
 msgid "Finished"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:613
+#: inc/Admin/class-review-data.php:625
 msgid "Start review"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:614
+#: inc/Admin/class-review-data.php:626
 msgid "Release back to the queue"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:615
+#: inc/Admin/class-review-data.php:627
 msgid "Request changes"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:616
+#: inc/Admin/class-review-data.php:628
 msgid "Reject"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:617
+#: inc/Admin/class-review-data.php:629
 msgid "Approve and publish"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:618
+#: inc/Admin/class-review-data.php:630
 msgid "Reopen as a draft"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:619
+#: inc/Admin/class-review-data.php:631
 msgid "Pause campaign"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:620
+#: inc/Admin/class-review-data.php:632
 msgid "Resume campaign"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:621
-#: inc/Portal/class-view-data.php:291
+#: inc/Admin/class-review-data.php:633
+#: inc/Portal/class-view-data.php:294
 msgid "Cancel campaign"
 msgstr ""
 
@@ -1494,6 +1494,48 @@ msgstr ""
 msgid "Those settings cannot be saved."
 msgstr ""
 
+#: inc/Install/class-assignment-health.php:68
+#: inc/Install/class-assignment-health.php:94
+msgid "Every creative has a delivery assignment"
+msgstr ""
+
+#: inc/Install/class-assignment-health.php:84
+msgid "The creative assignment table is missing"
+msgstr ""
+
+#: inc/Install/class-assignment-health.php:85
+msgid "A database upgrade has not completed. Deactivating and reactivating the plugin runs it again."
+msgstr ""
+
+#: inc/Install/class-assignment-health.php:95
+msgid "The delivery model upgrade has covered every creative on this site."
+msgstr ""
+
+#: inc/Install/class-assignment-health.php:109
+msgid "The delivery model upgrade is still running"
+msgstr ""
+
+#. translators: %d: number of creatives not yet migrated.
+#: inc/Install/class-assignment-health.php:112
+#, php-format
+msgid "%d creatives are waiting. This runs in the background and nothing is affected while it does — advertising continues to serve normally."
+msgstr ""
+
+#: inc/Install/class-assignment-health.php:120
+msgid "Some creatives have no delivery assignment"
+msgstr ""
+
+#. translators: %d: number of creatives left behind.
+#: inc/Install/class-assignment-health.php:123
+#, php-format
+msgid "%d creatives were skipped by the delivery model upgrade, which reports itself finished. Advertising still serves normally. A creative with no campaign or placement is expected here; anything else is worth reporting."
+msgstr ""
+
+#: inc/Install/class-assignment-health.php:142
+#: inc/Install/class-rewrite-health.php:281
+msgid "Advertising"
+msgstr ""
+
 #: inc/Install/class-rewrite-health.php:76
 #: inc/Install/class-rewrite-health.php:110
 msgid "The advertiser portal is reachable"
@@ -1539,10 +1581,6 @@ msgstr ""
 
 #: inc/Install/class-rewrite-health.php:262
 msgid "The advertising rewrite rules could not be written. Open Settings → Permalinks and save, then run this check again."
-msgstr ""
-
-#: inc/Install/class-rewrite-health.php:281
-msgid "Advertising"
 msgstr ""
 
 #: inc/Notification/class-email-change-notification.php:41
@@ -2309,7 +2347,7 @@ msgid "Campaign ID"
 msgstr ""
 
 #: inc/Portal/class-report-actions.php:158
-#: inc/Portal/class-view-data.php:691
+#: inc/Portal/class-view-data.php:709
 #: templates/portal/partials/campaign-table.php:38
 #: templates/portal/partials/sparkline.php:30
 #: templates/portal/screens/campaign.php:861
@@ -2317,7 +2355,7 @@ msgid "Impressions"
 msgstr ""
 
 #: inc/Portal/class-report-actions.php:159
-#: inc/Portal/class-view-data.php:695
+#: inc/Portal/class-view-data.php:713
 #: templates/portal/partials/campaign-table.php:39
 #: templates/portal/screens/campaign.php:865
 msgid "Clicks"
@@ -2349,57 +2387,57 @@ msgstr ""
 msgid "We could not create the account. Please try again later."
 msgstr ""
 
-#: inc/Portal/class-view-data.php:238
+#: inc/Portal/class-view-data.php:241
 msgid "Renew campaign"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:239
+#: inc/Portal/class-view-data.php:242
 msgid "Duplicate campaign"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:290
+#: inc/Portal/class-view-data.php:293
 msgid "Delete campaign"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:489
+#: inc/Portal/class-view-data.php:492
 #: templates/portal/partials/campaign-table.php:80
 #: templates/portal/screens/campaign.php:880
 msgid "—"
 msgstr ""
 
 #. translators: %s: click-through rate as a percentage, e.g. 1.2.
-#: inc/Portal/class-view-data.php:494
+#: inc/Portal/class-view-data.php:497
 #: templates/portal/partials/campaign-table.php:77
 #: templates/portal/screens/campaign.php:877
 #, php-format
 msgid "%s%%"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:575
+#: inc/Portal/class-view-data.php:593
 #: templates/portal/partials/campaign-ad-updates.php:64
 msgid "Waiting for review"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:576
+#: inc/Portal/class-view-data.php:594
 msgid "Changes needed"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:663
+#: inc/Portal/class-view-data.php:681
 msgid "In review"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:667
+#: inc/Portal/class-view-data.php:685
 msgid "Needs your attention"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:699
+#: inc/Portal/class-view-data.php:717
 #: templates/portal/partials/campaign-table.php:40
 #: templates/portal/screens/campaign.php:869
 msgid "CTR"
 msgstr ""
 
 #. translators: %s: campaign start date.
-#: inc/Portal/class-view-data.php:795
+#: inc/Portal/class-view-data.php:813
 #, php-format
 msgid "From %s"
 msgstr ""

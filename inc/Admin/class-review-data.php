@@ -16,6 +16,7 @@ use Aggressive\Ads\Portal\View_Data;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Workflow\Assigned_Creatives;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Repository\Line_Item_Repository;
@@ -78,6 +79,7 @@ final class Review_Data {
 	 *
 	 * @param Campaign_Repository     $campaigns  Campaign persistence.
 	 * @param Creative_Repository     $creatives  Creative persistence.
+	 * @param Assigned_Creatives      $assigned   What is assigned where.
 	 * @param Placement_Repository    $placements Placement persistence.
 	 * @param Org_Repository          $orgs       Organization lookups.
 	 * @param Audit_Repository        $audit      Audit history.
@@ -87,6 +89,7 @@ final class Review_Data {
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
 		private readonly Creative_Repository $creatives,
+		private readonly Assigned_Creatives $assigned,
 		private readonly Placement_Repository $placements,
 		private readonly Org_Repository $orgs,
 		private readonly Audit_Repository $audit,
@@ -507,7 +510,16 @@ final class Review_Data {
 	private function creative_rows( int $campaign_id ): array {
 		$rows = array();
 
-		foreach ( $this->creatives->for_campaign( $campaign_id ) as $creative ) {
+		// Structure from the assignment table, values from the revision. See
+		// `Assigned_Creatives` for why the denormalized columns are not read
+		// on a screen where the underlying creative is still editable.
+		foreach ( $this->assigned->revision_ids( $campaign_id ) as $revision_id ) {
+			$creative = $this->creatives->details( $revision_id );
+
+			if ( null === $creative || ! $this->creatives->is_active( $revision_id ) ) {
+				continue;
+			}
+
 			$rows[] = array(
 				'id'         => $creative['id'],
 				'placement'  => $this->placements->name( $creative['placement_id'] ),

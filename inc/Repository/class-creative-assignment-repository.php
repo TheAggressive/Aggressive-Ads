@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Repository;
 
+use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Install\Schema;
 
 /**
@@ -182,6 +183,34 @@ final class Creative_Assignment_Repository {
 		);
 
 		return is_array( $rows ) ? $rows : array();
+	}
+
+	/**
+	 * How many creatives have no assignment at all.
+	 *
+	 * A left join rather than two counts: a creative can legitimately have no
+	 * assignment (no campaign, no placement), and subtracting totals would
+	 * report a wrong number the moment one row is assigned twice — which the
+	 * schema permits by design, since many creatives per placement is the point.
+	 *
+	 * @return int
+	 */
+	public function creatives_without_assignment(): int {
+		if ( ! $this->table_exists() ) {
+			return 0;
+		}
+
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Site Health diagnostic over this plugin's own table.
+		return (int) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT COUNT(*) FROM %i p LEFT JOIN %i a ON a.revision_id = p.ID WHERE p.post_type = %s AND a.id IS NULL',
+				$wpdb->posts,
+				$this->table_name(),
+				Post_Types::CREATIVE
+			)
+		);
 	}
 
 	/**

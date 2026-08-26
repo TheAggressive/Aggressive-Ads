@@ -15,6 +15,7 @@ use Aggressive\Ads\Domain\Reporting_Rules;
 use Aggressive\Ads\Domain\Transition_Table;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Workflow\Assigned_Creatives;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Org_Access_Repository;
 use Aggressive\Ads\Security\Capabilities;
@@ -45,6 +46,7 @@ final class View_Data {
 	 * @param Campaign_Repository     $campaigns  Campaign persistence.
 	 * @param Placement_Repository    $placements Placement persistence.
 	 * @param Creative_Repository     $creatives  Creative persistence.
+	 * @param Assigned_Creatives      $assigned   What is assigned where.
 	 * @param Org_Repository          $orgs       Organization lookups.
 	 * @param Org_Access_Repository   $org_access Organization access persistence.
 	 * @param Package_Repository      $packages   Package persistence.
@@ -62,6 +64,7 @@ final class View_Data {
 		private readonly Campaign_Repository $campaigns,
 		private readonly Placement_Repository $placements,
 		private readonly Creative_Repository $creatives,
+		private readonly Assigned_Creatives $assigned,
 		private readonly Org_Repository $orgs,
 		private readonly Org_Access_Repository $org_access,
 		private readonly Package_Repository $packages,
@@ -519,7 +522,22 @@ final class View_Data {
 	private function creative_rows( int $campaign_id ): array {
 		$rows = array();
 
-		foreach ( $this->creatives->for_campaign( $campaign_id ) as $creative ) {
+		/*
+		 * Structure from the assignment table, values from the revision.
+		 *
+		 * The assignment answers which revisions are assigned to this campaign;
+		 * `details()` answers what each one contains. The assignment's own
+		 * `click_url` and `alt_text` are deliberately not read here — see
+		 * `Assigned_Creatives` for why a snapshot is right for serving and
+		 * wrong for an editing screen.
+		 */
+		foreach ( $this->assigned->revision_ids( $campaign_id ) as $revision_id ) {
+			$creative = $this->creatives->details( $revision_id );
+
+			if ( null === $creative || ! $this->creatives->is_active( $revision_id ) ) {
+				continue;
+			}
+
 			$stored = $this->creatives->storage_details( $creative['id'] );
 
 			$rows[] = array(
