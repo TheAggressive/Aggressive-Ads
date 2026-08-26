@@ -24,7 +24,7 @@ final class Schema {
 	 *
 	 * Drives the migration walker in Upgrader.
 	 */
-	public const DB_VERSION = 14;
+	public const DB_VERSION = 15;
 
 	/**
 	 * The audit table's name, without the site's table prefix.
@@ -108,12 +108,14 @@ final class Schema {
 	public static function creative_assets_table_ddl( string $table_name, string $charset_collate ): string {
 		return "CREATE TABLE {$table_name} (
 	id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	root_creative_id bigint(20) unsigned NOT NULL DEFAULT 0,
 	organization_id bigint(20) unsigned NOT NULL DEFAULT 0,
 	blog_id bigint(20) unsigned NOT NULL DEFAULT 0,
 	name varchar(191) NOT NULL DEFAULT '',
 	created_at_ts bigint(20) unsigned NOT NULL DEFAULT 0,
 	updated_at_ts bigint(20) unsigned NOT NULL DEFAULT 0,
 	PRIMARY KEY  (id),
+	UNIQUE KEY root_site (root_creative_id,blog_id),
 	KEY organization_site (organization_id,blog_id,id)
 ) {$charset_collate};";
 	}
@@ -126,6 +128,7 @@ final class Schema {
 	public static function creative_assets_columns(): array {
 		return array(
 			'id',
+			'root_creative_id',
 			'organization_id',
 			'blog_id',
 			'name',

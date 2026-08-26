@@ -296,12 +296,18 @@ was asked about.
 | Column | Type | Notes |
 |---|---|---|
 | `id` | bigint unsigned | |
+| `root_creative_id` | bigint unsigned | Oldest creative in the replacement chain — the stable identity every revision of one artwork shares |
 | `organization_id` | bigint unsigned | Owning tenant |
 | `blog_id` | bigint unsigned | Site scope, matching the fill-token convention |
 | `name` | varchar(191) | Advertiser-facing label |
 | `created_at_ts` / `updated_at_ts` | bigint unsigned | UTC Unix seconds |
 
-Index: `organization_site (organization_id, blog_id, id)`.
+Indexes: `root_site (root_creative_id, blog_id)` UNIQUE,
+`organization_site (organization_id, blog_id, id)`.
+
+The unique key is what makes the backfill and lazy self-healing safe to run at
+the same time: two requests resolving the same artwork race to insert, one wins,
+and the loser reads the winner's row instead of failing.
 
 ### `aggr_creative_assignments`
 
@@ -346,3 +352,15 @@ while every other row stays unconstrained. That is what allows many creatives
 per placement — the P1 limitation P2 exists to remove — while still making
 concurrent lazy creation and the background backfill idempotent by database rule
 rather than by application care.
+
+
+### Backfill options
+
+| Option | Autoloaded | Purpose |
+|---|---|---|
+| `aggr_creative_assignment_cursor` | **no** | Last creative id visited by the P2 backfill |
+| `aggr_creative_assignment_done` | **no** | Completion marker for the P2 backfill |
+
+Both are removed by a destructive uninstall, and the backfill runs on
+`aggr_migrate_creative_assignments` — a single event re-queued a minute after
+each batch, which schedules nothing once finished.

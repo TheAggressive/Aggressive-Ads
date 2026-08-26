@@ -25,7 +25,17 @@ screen. The classification is derived from a SHA-256 comparison server-side and
 must never be client-supplied — that is the property that keeps it a review lane
 rather than an exemption.
 
-Nothing is built yet. The next step is the DDL for the revision and assignment
+**Built:** the asset and assignment tables (db 14), and the backfill that fills
+them (db 15). Nothing on the serving path reads them — native fill still selects
+Campaigns and Creative posts — so a half-finished backfill cannot blank an ad
+slot.
+
+**Next:** the portal and review screens read assignments instead of creative
+post meta, with lazy self-healing through `Creative_Assignment_Migrator::migrate_one()`
+for any campaign the backfill has not reached. After that, the coverage service
+and many-creatives-per-placement.
+
+The original next step, now done, was the DDL for the revision and assignment
 tables in [data-schema.md](data-schema.md), derived from the P3 read contract's
 lookup — line item, placement, status and delivery window — rather than from the
 shape of the current Creative post.

@@ -22,6 +22,7 @@ use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Install\Installer;
+use Aggressive\Ads\Install\Creative_Assignment_Migrator;
 use Aggressive\Ads\Install\Line_Item_Migrator;
 use Aggressive\Ads\Install\Rewrite_Flusher;
 use Aggressive\Ads\Install\Rewrite_Health;
@@ -320,6 +321,7 @@ final class Plugin {
 			Campaign_State_Machine::class,
 			Line_Item_Lifecycle::class,
 			Line_Item_Migrator::class,
+			Creative_Assignment_Migrator::class,
 
 			// After the state machine, whose transition action it listens to.
 			Campaign_Change_Manager::class,
