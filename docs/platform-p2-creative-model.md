@@ -92,13 +92,41 @@ mechanism rather than inventing one: a replacement becomes a revision, and the
 `_aggr_replaces_creative_id` / `_aggr_replaced_by_creative_id` chain becomes the
 revision history it was already approximating.
 
-**The cost, stated so it is not discovered later.** A typo in alternative text
-requires a new revision and another review, even though no byte changed. That is
-a real cost and it is accepted deliberately: the alternative is a field the
-publisher approved and the advertiser can edit afterwards, which is the property
-being protected. A later phase may add a narrow "text-only revision" review path
-that a publisher can approve at a glance — but it will still be a revision, and
-it will still be reviewed.
+**The cost, and what P2 does about it.** A typo in alternative text requires a
+new revision and another review, even though no byte changed. Left alone that is
+heavy enough that people route around it, so P2 answers it directly rather than
+deferring: see *Text-only revisions* below. The answer shrinks the ceremony and
+does not touch the guarantee.
+
+### Text-only revisions
+
+A revision whose bytes are byte-for-byte identical to its predecessor is
+classified `text_only`. It is still an immutable revision, still requires the
+same capability to approve, and still cannot serve until approved — the only
+thing that changes is what the reviewer is shown: a diff of the click URL and
+alternative text, rather than the full creative-review screen. The live ad keeps
+serving the last approved revision throughout.
+
+**The classification is derived, never supplied.** It is computed server-side by
+comparing the new revision's SHA-256 against its predecessor's. This is the
+whole security property, and it is worth stating as a rule rather than leaving
+it to the implementation: a client-supplied "this is only a text change" flag
+would let somebody swap the artwork and claim the one-click path. Nothing the
+caller sends may influence which review lane a revision lands in.
+
+Two consequences follow, and both are requirements rather than notes:
+
+- A revision identical to its predecessor in **both** bytes and text is a no-op
+  and must be refused, not fast-tracked. Otherwise the queue fills with
+  revisions that say nothing.
+- `text_only` is a property of a revision *relative to a specific predecessor*,
+  so it must be recorded on the revision at creation and never recomputed later.
+  A predecessor that is superseded or deleted must not be able to change how an
+  already-reviewed revision was classified.
+
+This is a review lane, not an exemption. If the distinction ever blurs — if
+`text_only` starts meaning "needs less authorization" rather than "shows a
+smaller diff" — it has become the thing this section exists to avoid.
 
 **What the assignment owns, and why those are safe.** Weight, start and end
 timestamps, and status are scheduling facts, not claims about the ad. A

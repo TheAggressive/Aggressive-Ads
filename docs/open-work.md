@@ -19,6 +19,12 @@ work is recorded in
 the revision owns the bytes, click URL and alternative text; the assignment owns
 weight, window and status; the asset owns identity.
 
+A second decision followed: a revision whose bytes are unchanged is classified
+`text_only` and gets a one-click diff review rather than the full creative
+screen. The classification is derived from a SHA-256 comparison server-side and
+must never be client-supplied — that is the property that keeps it a review lane
+rather than an exemption.
+
 Nothing is built yet. The next step is the DDL for the revision and assignment
 tables in [data-schema.md](data-schema.md), derived from the P3 read contract's
 lookup — line item, placement, status and delivery window — rather than from the
