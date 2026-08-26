@@ -16,6 +16,7 @@ use Aggressive\Ads\Portal\View_Data;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Repository\Creative_Revision_Repository;
 use Aggressive\Ads\Workflow\Assigned_Creatives;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
@@ -77,18 +78,20 @@ final class Review_Data {
 	/**
 	 * Constructor.
 	 *
-	 * @param Campaign_Repository     $campaigns  Campaign persistence.
-	 * @param Creative_Repository     $creatives  Creative persistence.
-	 * @param Assigned_Creatives      $assigned   What is assigned where.
-	 * @param Placement_Repository    $placements Placement persistence.
-	 * @param Org_Repository          $orgs       Organization lookups.
-	 * @param Audit_Repository        $audit      Audit history.
-	 * @param Campaign_Change_Manager $changes    Running-campaign change proposals.
-	 * @param Line_Item_Repository    $line_items Campaign delivery strategies.
+	 * @param Campaign_Repository          $campaigns  Campaign persistence.
+	 * @param Creative_Repository          $creatives  Creative persistence.
+	 * @param Creative_Revision_Repository $revisions Revision chain persistence.
+	 * @param Assigned_Creatives           $assigned   What is assigned where.
+	 * @param Placement_Repository         $placements Placement persistence.
+	 * @param Org_Repository               $orgs       Organization lookups.
+	 * @param Audit_Repository             $audit      Audit history.
+	 * @param Campaign_Change_Manager      $changes    Running-campaign change proposals.
+	 * @param Line_Item_Repository         $line_items Campaign delivery strategies.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
 		private readonly Creative_Repository $creatives,
+		private readonly Creative_Revision_Repository $revisions,
 		private readonly Assigned_Creatives $assigned,
 		private readonly Placement_Repository $placements,
 		private readonly Org_Repository $orgs,
@@ -486,6 +489,14 @@ final class Review_Data {
 				'current_url'  => $current['click_url'],
 				'current_alt'  => $current['alt_text'],
 				'requested_at' => $this->creatives->requested_at( $creative['id'] ),
+
+				/*
+				 * Derived from the two checksums, never from the request that
+				 * created the revision. A reviewer seeing "artwork unchanged"
+				 * is being told something the server verified, which is the
+				 * whole basis for approving it at a glance.
+				 */
+				'text_only'    => $this->revisions->is_text_only_revision( (int) $creative['id'] ),
 				'preview'      => add_query_arg(
 					'_wpnonce',
 					wp_create_nonce( 'wp_rest' ),

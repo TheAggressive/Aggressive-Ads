@@ -28,6 +28,17 @@ function CreativeCard( {
 } ): ReactElement {
 	const update = 'current_url' in creative ? creative : null;
 
+	/*
+	 * A text-only revision is the same artwork with different words, and the
+	 * server has verified that from the two checksums rather than taking the
+	 * request's word for it. Saying so is what makes approving one at a glance
+	 * a reasonable thing to do — and showing "uploaded size" twice for an image
+	 * that did not change is noise that hides the one line that did.
+	 */
+	const textOnly = update?.text_only === true;
+	const urlChanged = update ? update.current_url !== update.click_url : false;
+	const altChanged = update ? update.current_alt !== update.alt_text : false;
+
 	return (
 		<article className="aggr-creative">
 			<div className="aggr-creative__preview">
@@ -39,37 +50,54 @@ function CreativeCard( {
 			</div>
 			<div className="aggr-creative__body">
 				<h3>{ creative.placement }</h3>
+				{ textOnly && (
+					<p className="aggr-creative__badge">
+						{ t( 'artworkUnchanged' ) }
+					</p>
+				) }
 				<dl>
-					<div>
-						<dt>{ t( 'requiredSize' ) }</dt>
-						<dd>{ creative.size }</dd>
-					</div>
-					<div>
-						<dt>{ t( 'uploadedSize' ) }</dt>
-						<dd>{ creative.dimensions }</dd>
-					</div>
-					{ update ? (
+					{ ! textOnly && (
 						<>
 							<div>
-								<dt>{ t( 'currentDestination' ) }</dt>
-								<dd className="aggr-table__url">
-									{ update.current_url }
-								</dd>
+								<dt>{ t( 'requiredSize' ) }</dt>
+								<dd>{ creative.size }</dd>
 							</div>
 							<div>
-								<dt>{ t( 'proposedDestination' ) }</dt>
-								<dd className="aggr-table__url">
-									{ update.click_url }
-								</dd>
+								<dt>{ t( 'uploadedSize' ) }</dt>
+								<dd>{ creative.dimensions }</dd>
 							</div>
-							<div>
-								<dt>{ t( 'currentAlt' ) }</dt>
-								<dd>{ update.current_alt }</dd>
-							</div>
-							<div>
-								<dt>{ t( 'proposedAlt' ) }</dt>
-								<dd>{ update.alt_text }</dd>
-							</div>
+						</>
+					) }
+					{ update ? (
+						<>
+							{ ( ! textOnly || urlChanged ) && (
+								<>
+									<div>
+										<dt>{ t( 'currentDestination' ) }</dt>
+										<dd className="aggr-table__url">
+											{ update.current_url }
+										</dd>
+									</div>
+									<div>
+										<dt>{ t( 'proposedDestination' ) }</dt>
+										<dd className="aggr-table__url">
+											{ update.click_url }
+										</dd>
+									</div>
+								</>
+							) }
+							{ ( ! textOnly || altChanged ) && (
+								<>
+									<div>
+										<dt>{ t( 'currentAlt' ) }</dt>
+										<dd>{ update.current_alt }</dd>
+									</div>
+									<div>
+										<dt>{ t( 'proposedAlt' ) }</dt>
+										<dd>{ update.alt_text }</dd>
+									</div>
+								</>
+							) }
 						</>
 					) : (
 						<>

@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-26T03:31:27+00:00\n"
+"POT-Creation-Date: 2026-08-26T04:03:37+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -246,7 +246,7 @@ msgstr ""
 #: inc/Admin/class-organization-screen.php:194
 #: inc/Admin/class-package-screen.php:170
 #: inc/Admin/class-placement-screen.php:173
-#: inc/Admin/class-review-screen.php:349
+#: inc/Admin/class-review-screen.php:350
 #: inc/Admin/class-settings-screen.php:312
 msgid "Try again"
 msgstr ""
@@ -276,7 +276,7 @@ msgid "Manage members"
 msgstr ""
 
 #: inc/Admin/class-organization-screen.php:208
-#: inc/Admin/class-review-screen.php:333
+#: inc/Admin/class-review-screen.php:334
 #: templates/portal/partials/campaign-overlays.php:198
 #: templates/portal/partials/campaign-overlays.php:239
 msgid "Cancel"
@@ -528,90 +528,90 @@ msgid "The inventory screen needs JavaScript enabled."
 msgstr ""
 
 #. translators: 1: previous campaign status, already translated. 2: new campaign status, already translated.
-#: inc/Admin/class-review-data.php:307
+#: inc/Admin/class-review-data.php:310
 #, php-format
 msgid "Campaign moved from %1$s to %2$s."
 msgstr ""
 
-#: inc/Admin/class-review-data.php:322
+#: inc/Admin/class-review-data.php:325
 #: inc/Portal/class-view-data.php:804
 msgid "Not scheduled"
 msgstr ""
 
 #. translators: 1: campaign start date. 2: campaign end date.
-#: inc/Admin/class-review-data.php:333
+#: inc/Admin/class-review-data.php:336
 #: inc/Portal/class-view-data.php:820
 #, php-format
 msgid "%1$s – %2$s"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:557
+#: inc/Admin/class-review-data.php:568
 msgid "System"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:603
+#: inc/Admin/class-review-data.php:614
 msgid "Needs review"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:604
+#: inc/Admin/class-review-data.php:615
 #: inc/Admin/class-review-screen.php:272
 msgid "Ad updates"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:605
+#: inc/Admin/class-review-data.php:616
 msgid "Advertiser requests"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:606
+#: inc/Admin/class-review-data.php:617
 msgid "With the advertiser"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:607
+#: inc/Admin/class-review-data.php:618
 msgid "Decided"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:608
+#: inc/Admin/class-review-data.php:619
 #: inc/Portal/class-view-data.php:677
 msgid "Running"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:609
+#: inc/Admin/class-review-data.php:620
 msgid "Finished"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:625
+#: inc/Admin/class-review-data.php:636
 msgid "Start review"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:626
+#: inc/Admin/class-review-data.php:637
 msgid "Release back to the queue"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:627
+#: inc/Admin/class-review-data.php:638
 msgid "Request changes"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:628
+#: inc/Admin/class-review-data.php:639
 msgid "Reject"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:629
+#: inc/Admin/class-review-data.php:640
 msgid "Approve and publish"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:630
+#: inc/Admin/class-review-data.php:641
 msgid "Reopen as a draft"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:631
+#: inc/Admin/class-review-data.php:642
 msgid "Pause campaign"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:632
+#: inc/Admin/class-review-data.php:643
 msgid "Resume campaign"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:633
+#: inc/Admin/class-review-data.php:644
 #: inc/Portal/class-view-data.php:294
 msgid "Cancel campaign"
 msgstr ""
@@ -863,186 +863,190 @@ msgid "Uploaded size"
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:304
-msgid "Alt text"
+msgid "Artwork unchanged — only the text differs"
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:305
+msgid "Alt text"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:306
 #: inc/Workflow/class-campaign-change-manager.php:766
 #: templates/portal/partials/campaign-changes.php:77
 #: templates/portal/screens/campaign.php:917
 msgid "Destination"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:306
+#: inc/Admin/class-review-screen.php:307
 msgid "Current destination"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:307
+#: inc/Admin/class-review-screen.php:308
 msgid "Proposed destination"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:308
+#: inc/Admin/class-review-screen.php:309
 msgid "Current alt text"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:309
+#: inc/Admin/class-review-screen.php:310
 msgid "Proposed alt text"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:310
+#: inc/Admin/class-review-screen.php:311
 msgid "The advertiser has asked for something"
 msgstr ""
 
 #. translators: %s: the requested action, already translated.
-#: inc/Admin/class-review-screen.php:312
+#: inc/Admin/class-review-screen.php:313
 #: inc/Notification/class-request-mailer.php:338
 #, php-format
 msgid "Requested: %s"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:313
+#: inc/Admin/class-review-screen.php:314
 msgid "Use the review actions below to carry this out. The request clears itself once the campaign moves, or you can decline it with an explanation."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:314
+#: inc/Admin/class-review-screen.php:315
 msgid "Explanation for the advertiser"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:315
+#: inc/Admin/class-review-screen.php:316
 msgid "Decline request"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:316
+#: inc/Admin/class-review-screen.php:317
 msgid "Requested campaign changes"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:317
+#: inc/Admin/class-review-screen.php:318
 msgid "The campaign keeps running exactly as approved until you decide. Approving writes these values and refreshes delivery immediately."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:318
+#: inc/Admin/class-review-screen.php:319
 #: templates/portal/partials/campaign-changes-pending.php:41
 #: templates/portal/partials/campaign-changes.php:95
 msgid "Field"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:319
+#: inc/Admin/class-review-screen.php:320
 #: templates/portal/partials/campaign-changes-pending.php:42
 #: templates/portal/partials/campaign-changes.php:96
 msgid "Currently"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:320
+#: inc/Admin/class-review-screen.php:321
 #: templates/portal/partials/campaign-changes-pending.php:43
 msgid "Requested"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:321
+#: inc/Admin/class-review-screen.php:322
 msgid "This change alters the placements."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:322
+#: inc/Admin/class-review-screen.php:323
 msgid "The existing creative will no longer match the required size, and the campaign will not serve until a new one is uploaded and reviewed."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:323
+#: inc/Admin/class-review-screen.php:324
 msgid "Approve changes"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:324
+#: inc/Admin/class-review-screen.php:325
 msgid "Reject changes"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:325
+#: inc/Admin/class-review-screen.php:326
 msgid "Feedback required when rejecting"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:326
+#: inc/Admin/class-review-screen.php:327
 msgid "Pending ad updates"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:327
+#: inc/Admin/class-review-screen.php:328
 msgid "The current ads remain in rotation until an update below is approved."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:328
+#: inc/Admin/class-review-screen.php:329
 msgid "Approve and replace"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:329
+#: inc/Admin/class-review-screen.php:330
 msgid "Reject update"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:330
+#: inc/Admin/class-review-screen.php:331
 msgid "Review actions"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:331
+#: inc/Admin/class-review-screen.php:332
 msgid "No staff action is available from this status."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:332
+#: inc/Admin/class-review-screen.php:333
 msgid "Feedback the advertiser will see"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:334
+#: inc/Admin/class-review-screen.php:335
 #: templates/portal/partials/campaign-overlays.php:164
 msgid "Close"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:335
+#: inc/Admin/class-review-screen.php:336
 msgid "Internal notes"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:336
+#: inc/Admin/class-review-screen.php:337
 msgid "Visible to staff only"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:337
+#: inc/Admin/class-review-screen.php:338
 msgid "Save internal notes"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:338
+#: inc/Admin/class-review-screen.php:339
 msgid "Audit timeline"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:339
+#: inc/Admin/class-review-screen.php:340
 msgid "No audit events have been recorded for this campaign."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:340
+#: inc/Admin/class-review-screen.php:341
 msgid "Unknown user"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:341
+#: inc/Admin/class-review-screen.php:342
 msgid "Campaign updated."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:342
+#: inc/Admin/class-review-screen.php:343
 msgid "Internal notes saved."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:343
+#: inc/Admin/class-review-screen.php:344
 msgid "Campaign changes approved."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:344
+#: inc/Admin/class-review-screen.php:345
 msgid "Campaign changes rejected."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:345
+#: inc/Admin/class-review-screen.php:346
 msgid "The advertiser request was declined."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:346
+#: inc/Admin/class-review-screen.php:347
 msgid "Ad update approved."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:347
+#: inc/Admin/class-review-screen.php:348
 msgid "Ad update rejected."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:348
+#: inc/Admin/class-review-screen.php:349
 msgid "That change could not be saved."
 msgstr ""
 

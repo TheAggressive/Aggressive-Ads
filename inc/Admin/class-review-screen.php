@@ -301,6 +301,7 @@ final class Review_Screen implements Service {
 			'noCreativeBody'           => __( 'This campaign cannot be approved until every placement has creative.', 'aggressive-ads' ),
 			'requiredSize'             => __( 'Required size', 'aggressive-ads' ),
 			'uploadedSize'             => __( 'Uploaded size', 'aggressive-ads' ),
+			'artworkUnchanged'         => __( 'Artwork unchanged — only the text differs', 'aggressive-ads' ),
 			'altText'                  => __( 'Alt text', 'aggressive-ads' ),
 			'destination'              => __( 'Destination', 'aggressive-ads' ),
 			'currentDestination'       => __( 'Current destination', 'aggressive-ads' ),

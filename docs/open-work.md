@@ -70,9 +70,13 @@ own paid placement off the site. Approval and rejection are the existing
 replacement flow unchanged, because `Creative_Promoter::promote()` is already a
 no-op for a revision that carries an attachment.
 
-**Next:** the review screen showing a text diff rather than the full creative
-screen for a `text_only` revision, then the coverage service and
-many-creatives-per-placement.
+The review screen now says **"Artwork unchanged — only the text differs"** on a
+`text_only` revision and hides the size comparison, so a reviewer sees the one
+line that changed rather than four that did not. The flag is the server-derived
+one; the screen never computes it.
+
+**Next:** the coverage service and many-creatives-per-placement — the P2
+headline, and the change that touches campaign validation and submission.
 
 The original next step, now done, was the DDL for the revision and assignment
 tables in [data-schema.md](data-schema.md), derived from the P3 read contract's
