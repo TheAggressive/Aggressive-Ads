@@ -18,6 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use Aggressive\Ads\Assets\Assets;
+use Aggressive\Ads\Workflow\Creative_Manager;
 use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Portal\Request;
 use Aggressive\Ads\Portal\Routes;
@@ -535,7 +536,7 @@ endif;
 									<div class="aggr-alert aggr-alert--error" role="alert">
 										<p><?php esc_html_e( 'This placement is no longer available. Return to the package step and choose an available package.', 'aggressive-ads' ); ?></p>
 									</div>
-								<?php elseif ( array() !== $aggr_slot['creatives'] ) : ?>
+								<?php else : ?>
 									<?php foreach ( $aggr_slot['creatives'] as $aggr_creative ) : ?>
 										<?php
 										$aggr_preview_id = 'aggr-preview-' . (int) $aggr_creative['id'];
@@ -580,7 +581,32 @@ endif;
 											</div>
 										</div>
 									<?php endforeach; ?>
-								<?php else : ?>
+
+									<?php
+									/*
+									 * The form stays, alongside whatever is
+									 * already uploaded.
+									 *
+									 * It used to be shown *instead of* the
+									 * creatives, which was the interface half
+									 * of the one-per-placement rule: once
+									 * something existed there was no way to add
+									 * another. A placement may now hold several,
+									 * so the only thing that closes the form is
+									 * reaching the backstop.
+									 */
+									?>
+									<?php if ( count( $aggr_slot['creatives'] ) >= Creative_Manager::MAX_CREATIVES_PER_PLACEMENT ) : ?>
+										<p class="aggr-hint">
+											<?php
+											printf(
+												/* translators: %d: maximum creatives allowed on one placement. */
+												esc_html__( 'This placement has the maximum of %d creatives. Remove one to add another.', 'aggressive-ads' ),
+												(int) Creative_Manager::MAX_CREATIVES_PER_PLACEMENT
+											);
+											?>
+										</p>
+									<?php else : ?>
 									<form
 										class="aggr-upload-form"
 										method="post"
@@ -616,6 +642,7 @@ endif;
 
 										<button class="aggr-button" type="submit"><?php esc_html_e( 'Upload creative', 'aggressive-ads' ); ?></button>
 									</form>
+									<?php endif; ?>
 								<?php endif; ?>
 							</section>
 						<?php endforeach; ?>

@@ -260,11 +260,17 @@ final class CreativeManagerTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * One placement cannot accumulate ambiguous duplicate creatives.
+	 * A second creative on one placement is accepted.
+	 *
+	 * The P1 limitation P2 exists to remove, and the assertion is inverted from
+	 * what it used to be: this test previously proved the refusal. Keeping it
+	 * pointed at the same shape rather than deleting it is deliberate — the
+	 * behaviour changed, so the test that described the old behaviour is the
+	 * right place to describe the new one.
 	 *
 	 * @return void
 	 */
-	public function test_a_second_creative_for_the_same_placement_is_refused(): void {
+	public function test_a_second_creative_for_the_same_placement_is_accepted(): void {
 		wp_set_current_user( $this->owner );
 
 		$first = $this->manager->upload(
@@ -288,9 +294,133 @@ final class CreativeManagerTest extends WP_UnitTestCase {
 			'Replacement exhibition creative'
 		);
 
-		$this->assertWPError( $second );
-		$this->assertSame( 'aggr_creative_already_exists', $second->get_error_code() );
-		$this->assertCount( 1, Plugin::instance()->container()->get( Creative_Repository::class )->for_campaign( $this->campaign_id ) );
+		$this->assertIsArray( $second, 'A second creative on one placement was refused.' );
+
+		$stored_second = Plugin::instance()->container()->get( Creative_Repository::class )->storage_details( (int) $second['id'] );
+		$this->assertIsArray( $stored_second );
+		$this->stored[] = $stored_second['path'];
+
+		// A count, not a presence check: "a second was accepted" would pass
+		// whether the first survived or was silently replaced.
+		$this->assertCount(
+			2,
+			Plugin::instance()->container()->get( Creative_Repository::class )->for_campaign( $this->campaign_id ),
+			'The second upload replaced the first rather than joining it.'
+		);
+	}
+
+	/**
+	 * The cap is per placement, not per campaign.
+	 *
+	 * This exists because sabotage found the gap: counting every creative on
+	 * the campaign rather than the ones on this placement left every other test
+	 * green, since they all use a single placement. On a real campaign with
+	 * several placements it would have refused an upload to an empty slot
+	 * because a *different* slot was full — an error naming the wrong thing,
+	 * about a limit the advertiser had not reached.
+	 *
+	 * @return void
+	 */
+	public function test_the_cap_counts_only_the_placement_being_uploaded_to(): void {
+		wp_set_current_user( $this->owner );
+
+		$second_placement = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::PLACEMENT,
+				'post_status' => 'publish',
+				'post_title'  => 'Sidebar',
+			)
+		);
+
+		update_post_meta( $second_placement, Placement_Repository::META_IS_ACTIVE, 1 );
+		update_post_meta( $second_placement, Placement_Repository::META_SIZE, '728x90' );
+		add_post_meta( $this->campaign_id, Campaign_Repository::META_PLACEMENT_ID, $second_placement );
+
+		// Fill the first placement to its limit.
+		for ( $i = 0; $i < Creative_Manager::MAX_CREATIVES_PER_PLACEMENT; $i++ ) {
+			$made = $this->manager->upload(
+				$this->campaign_id,
+				$this->placement_id,
+				$this->image_file( 728, 90 ),
+				'https://example.com/' . $i,
+				'Leaderboard ' . $i
+			);
+
+			$stored = Plugin::instance()->container()->get( Creative_Repository::class )->storage_details( (int) $made['id'] );
+
+			if ( is_array( $stored ) ) {
+				$this->stored[] = $stored['path'];
+			}
+		}
+
+		// The other placement is empty and must still accept one.
+		$other = $this->manager->upload(
+			$this->campaign_id,
+			$second_placement,
+			$this->image_file( 728, 90 ),
+			'https://example.com/sidebar',
+			'Sidebar creative'
+		);
+
+		$this->assertIsArray(
+			$other,
+			'A full placement blocked an upload to a different, empty one.'
+		);
+
+		$stored_other = Plugin::instance()->container()->get( Creative_Repository::class )->storage_details( (int) $other['id'] );
+
+		if ( is_array( $stored_other ) ) {
+			$this->stored[] = $stored_other['path'];
+		}
+	}
+
+	/**
+	 * The backstop refuses the eleventh, and says why.
+	 *
+	 * Not a product constraint — ten is high enough that no honest rotation
+	 * meets it. It exists because the cost of a runaway lands on the publisher
+	 * reviewing them, and rate limiting bounds how fast creatives arrive
+	 * without bounding how many there are.
+	 *
+	 * @return void
+	 */
+	public function test_the_eleventh_creative_on_one_placement_is_refused(): void {
+		wp_set_current_user( $this->owner );
+
+		for ( $i = 0; $i < Creative_Manager::MAX_CREATIVES_PER_PLACEMENT; $i++ ) {
+			$made = $this->manager->upload(
+				$this->campaign_id,
+				$this->placement_id,
+				$this->image_file( 728, 90 ),
+				'https://example.com/' . $i,
+				'Rotation creative ' . $i
+			);
+
+			$this->assertIsArray( $made, 'The cap refused an upload below its own limit.' );
+
+			$stored = Plugin::instance()->container()->get( Creative_Repository::class )->storage_details( (int) $made['id'] );
+
+			if ( is_array( $stored ) ) {
+				$this->stored[] = $stored['path'];
+			}
+		}
+
+		$over = $this->manager->upload(
+			$this->campaign_id,
+			$this->placement_id,
+			$this->image_file( 728, 90 ),
+			'https://example.com/over',
+			'One too many'
+		);
+
+		$this->assertWPError( $over );
+		$this->assertSame( 'aggr_creative_limit_reached', $over->get_error_code() );
+
+		// And nothing was stored for the refused one.
+		$this->assertCount(
+			Creative_Manager::MAX_CREATIVES_PER_PLACEMENT,
+			Plugin::instance()->container()->get( Creative_Repository::class )->for_campaign( $this->campaign_id )
+		);
 	}
 
 	/**
