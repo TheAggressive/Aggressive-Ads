@@ -16,6 +16,7 @@ use Aggressive\Ads\Integration\Ad_Provider_Interface;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Repository\Creative_Revision_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Security\Rate_Limiter;
@@ -32,18 +33,20 @@ final class Creative_Change_Manager {
 	/**
 	 * Constructor.
 	 *
-	 * @param Campaign_Repository   $campaigns Campaign persistence.
-	 * @param Creative_Repository   $creatives Creative persistence.
-	 * @param Placement_Repository  $placements Placement persistence.
-	 * @param Creative_Uploader     $uploader   Hostile-file validation.
-	 * @param Private_Storage       $storage    Private file storage.
-	 * @param Rate_Limiter          $limiter    Upload abuse bounding.
-	 * @param Ad_Provider_Interface $provider   Public delivery projection.
-	 * @param Audit_Repository      $audit      Audit persistence.
+	 * @param Campaign_Repository          $campaigns Campaign persistence.
+	 * @param Creative_Repository          $creatives Creative persistence.
+	 * @param Creative_Revision_Repository $revisions  Revision chain persistence.
+	 * @param Placement_Repository         $placements Placement persistence.
+	 * @param Creative_Uploader            $uploader   Hostile-file validation.
+	 * @param Private_Storage              $storage    Private file storage.
+	 * @param Rate_Limiter                 $limiter    Upload abuse bounding.
+	 * @param Ad_Provider_Interface        $provider   Public delivery projection.
+	 * @param Audit_Repository             $audit      Audit persistence.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
 		private readonly Creative_Repository $creatives,
+		private readonly Creative_Revision_Repository $revisions,
 		private readonly Placement_Repository $placements,
 		private readonly Creative_Uploader $uploader,
 		private readonly Private_Storage $storage,
@@ -51,6 +54,129 @@ final class Creative_Change_Manager {
 		private readonly Ad_Provider_Interface $provider,
 		private readonly Audit_Repository $audit
 	) {
+	}
+
+	/**
+	 * Stages a text-only change, leaving the currently serving ad alone.
+	 *
+	 * The same review flow as a full replacement, entered without a file. The
+	 * revision carries the predecessor's bytes by reference, so
+	 * `is_text_only_revision()` classifies it from the two checksums matching —
+	 * derived, never asserted, which is what stops the one-click lane becoming
+	 * a way to smuggle in new artwork.
+	 *
+	 * The live ad keeps serving throughout. That is the existing behaviour of
+	 * this class rather than a new rule, and it is the deliberate answer to
+	 * "what happens while the edit waits": an advertiser fixing a typo must not
+	 * be able to take their own paid placement off the site.
+	 *
+	 * @param int    $creative_id Current creative id.
+	 * @param string $click_url   New destination.
+	 * @param string $alt_text    New alternative text.
+	 * @return array<string, mixed>|WP_Error
+	 */
+	public function request_text_change( int $creative_id, string $click_url, string $alt_text ): array|WP_Error {
+		if ( ! current_user_can( Capabilities::UPLOAD_CREATIVE ) ) {
+			return $this->error( 'aggr_forbidden', __( 'You do not have permission to request an ad update.', 'aggressive-ads' ), 403 );
+		}
+
+		$allowed = $this->limiter->attempt( Rate_Limiter::ACTION_UPLOAD, get_current_user_id() );
+
+		if ( is_wp_error( $allowed ) ) {
+			return $allowed;
+		}
+
+		$current = $this->authorize_current( $creative_id );
+
+		if ( is_wp_error( $current ) ) {
+			return $current;
+		}
+
+		$clean = $this->validate_text( $click_url, $alt_text );
+
+		if ( is_wp_error( $clean ) ) {
+			return $clean;
+		}
+
+		/*
+		 * A change that changes nothing is refused rather than queued.
+		 *
+		 * Otherwise a reviewer is asked to approve a revision that says exactly
+		 * what its predecessor said, which the contract rules out and which
+		 * would fill the queue with work that means nothing.
+		 */
+		if (
+			$clean['click_url'] === (string) $current['click_url']
+			&& $clean['alt_text'] === (string) $current['alt_text']
+		) {
+			return $this->error( 'aggr_replacement_unchanged', __( 'Change the destination or description before requesting an update.', 'aggressive-ads' ), 422 );
+		}
+
+		$lock = $this->creatives->claim_change_lock( $creative_id );
+
+		if ( '' === $lock ) {
+			return $this->error( 'aggr_replacement_busy', __( 'Another update is already being saved for this ad. Try again.', 'aggressive-ads' ), 409 );
+		}
+
+		try {
+			if ( $this->creatives->pending_replacement_id( $creative_id ) > 0 ) {
+				return $this->error( 'aggr_replacement_pending', __( 'This ad already has an update waiting for review.', 'aggressive-ads' ), 409 );
+			}
+
+			$replacement_id = $this->revisions->create_pending_text_revision(
+				$creative_id,
+				$clean['click_url'],
+				$clean['alt_text']
+			);
+
+			if ( 0 === $replacement_id ) {
+				return $this->error( 'aggr_replacement_not_created', __( 'The ad update could not be saved. Please try again.', 'aggressive-ads' ), 500 );
+			}
+
+			$this->sync_pending_count( (int) $current['campaign_id'] );
+			$this->audit( 'creative.text_change_requested', (int) $current['campaign_id'], $replacement_id, $creative_id, 'Text-only ad update requested.' );
+
+			return array(
+				'id'        => $replacement_id,
+				'text_only' => true,
+			);
+		} finally {
+			$this->creatives->release_change_lock( $creative_id, $lock );
+		}
+	}
+
+	/**
+	 * Validates a destination and description without touching a file.
+	 *
+	 * The same rules `accept()` applies, extracted so the two entry points
+	 * cannot disagree about what a valid destination is.
+	 *
+	 * @param string $click_url Raw destination.
+	 * @param string $alt_text  Raw description.
+	 * @return array{click_url: string, alt_text: string}|WP_Error
+	 */
+	private function validate_text( string $click_url, string $alt_text ): array|WP_Error {
+		$click_url = trim( $click_url );
+
+		if ( '' === $click_url ) {
+			return $this->error( 'aggr_click_url_required', __( 'Enter the destination URL for this creative.', 'aggressive-ads' ), 422, 'click_url' );
+		}
+
+		if ( ! Campaign_Rules::is_valid_click_url( $click_url ) || false === wp_http_validate_url( $click_url ) ) {
+			return $this->error( 'aggr_click_url_invalid', __( 'Enter a valid http or https destination URL without embedded credentials.', 'aggressive-ads' ), 422, 'click_url' );
+		}
+
+		$alt_text = trim( sanitize_text_field( $alt_text ) );
+		$alt_text = '' === $alt_text ? Creative_Manager::automatic_alt_text( $click_url ) : $alt_text;
+
+		if ( mb_strlen( $alt_text ) > Creative_Manager::MAX_ALT_TEXT_LENGTH ) {
+			return $this->error( 'aggr_alt_text_too_long', __( 'Use 500 characters or fewer for the ad creative description.', 'aggressive-ads' ), 422, 'alt_text' );
+		}
+
+		return array(
+			'click_url' => $click_url,
+			'alt_text'  => $alt_text,
+		);
 	}
 
 	/**

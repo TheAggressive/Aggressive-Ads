@@ -57,11 +57,22 @@ It now revises.
 walked `_aggr_replaces_creative_id` backward, and `activate_replacement()`
 deletes that key the moment a replacement goes live, so on real data every
 approved revision looked like its own root and would have been given its own
-asset. `Creative_Repository::predecessor_of()` now reads the durable forward
-link instead.
+asset. `Creative_Revision_Repository::predecessor_of()` now reads the durable
+forward link instead — the revision chain moved out of `Creative_Repository`
+when the file-length guard fired on it.
 
-**Next:** the advertiser-initiated text edit using the `text_only` review lane,
-then the coverage service and many-creatives-per-placement.
+An advertiser can now correct a destination or description without
+re-uploading artwork. `Creative_Change_Manager::request_text_change()` stages a
+pending revision carrying the predecessor's bytes, so it classifies as
+`text_only` from the two checksums matching, and **the live ad keeps serving
+until a reviewer decides** — a typo fix must not let an advertiser take their
+own paid placement off the site. Approval and rejection are the existing
+replacement flow unchanged, because `Creative_Promoter::promote()` is already a
+no-op for a revision that carries an attachment.
+
+**Next:** the review screen showing a text diff rather than the full creative
+screen for a `text_only` revision, then the coverage service and
+many-creatives-per-placement.
 
 The original next step, now done, was the DDL for the revision and assignment
 tables in [data-schema.md](data-schema.md), derived from the P3 read contract's
