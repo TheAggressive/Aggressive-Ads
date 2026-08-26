@@ -44,6 +44,8 @@ export type Creative = {
 
 export type CreativeUpdate = Creative & {
 	current_url: string;
+	/** Server-derived: the artwork is byte-identical to the current revision. */
+	text_only: boolean;
 	current_alt: string;
 };
 

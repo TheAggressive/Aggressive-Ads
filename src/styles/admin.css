@@ -306,6 +306,23 @@
 		font-size: 16px;
 	}
 
+	/*
+	 * The "artwork unchanged" badge.
+	 *
+	 * Uses the live tint rather than the accent: this is a statement of fact
+	 * the server verified, not a call to action. A reviewer should read it and
+	 * relax, not read it and click.
+	 */
+	.aggr-creative__badge {
+		display: inline-block;
+		margin: 0 0 var(--aggr-space-md);
+		padding: var(--aggr-space-2xs) var(--aggr-space-sm);
+		border-radius: var(--aggr-radius-pill);
+		background: var(--aggr-color-live-tint);
+		color: var(--aggr-color-text-body);
+		font-size: 13px;
+	}
+
 	.aggr-creative__body dl {
 		display: grid;
 		gap: var(--aggr-space-sm);

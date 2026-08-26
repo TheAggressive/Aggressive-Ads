@@ -231,6 +231,47 @@ final class TextOnlyChangeTest extends WP_UnitTestCase {
 		);
 	}
 
+	/**
+	 * The review screen is told the artwork is unchanged, and told the truth.
+	 *
+	 * The badge a reviewer approves at a glance rests entirely on this flag, so
+	 * it is asserted from the screen's own data rather than from the repository
+	 * that computes it — a correct classification that never reaches the screen
+	 * is the same as a wrong one.
+	 *
+	 * The negative half matters more: a revision whose bytes were swapped must
+	 * lose the badge, or the one-click lane becomes the way to smuggle artwork
+	 * past a reviewer who was told they did not need to look.
+	 */
+	public function test_the_review_screen_is_told_whether_the_artwork_changed(): void {
+		$made   = $this->serving_creative();
+		$result = $this->changes->request_text_change( $made['creative'], 'https://example.com/new', 'New copy' );
+
+		$staff = (int) self::factory()->user->create( array( 'role' => Roles::REVIEWER ) );
+		wp_set_current_user( $staff );
+
+		$data = Plugin::instance()->container()
+			->get( \Aggressive\Ads\Admin\Review_Data::class )
+			->campaign( $made['campaign'] );
+
+		$updates = $data['creative_updates'] ?? array();
+
+		$this->assertCount( 1, $updates, 'The pending change did not reach the review screen.' );
+		$this->assertTrue( $updates[0]['text_only'], 'The reviewer was not told the artwork is unchanged.' );
+
+		// Swap the bytes; the badge must disappear.
+		update_post_meta( (int) $result['id'], Creative_Repository::META_SHA256, str_repeat( 'e', 64 ) );
+
+		$again = Plugin::instance()->container()
+			->get( \Aggressive\Ads\Admin\Review_Data::class )
+			->campaign( $made['campaign'] );
+
+		$this->assertFalse(
+			$again['creative_updates'][0]['text_only'],
+			'A revision with swapped artwork still told the reviewer nothing had changed.'
+		);
+	}
+
 	/** A change that changes nothing is refused rather than queued. */
 	public function test_an_unchanged_request_is_refused(): void {
 		$made = $this->serving_creative();

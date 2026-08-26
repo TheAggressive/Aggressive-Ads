@@ -30,6 +30,7 @@ use Aggressive\Ads\Portal\Router;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Repository\Creative_Revision_Repository;
 use Aggressive\Ads\Workflow\Assigned_Creatives;
 use Aggressive\Ads\Repository\Delivery_Repository;
 use Aggressive\Ads\Repository\Event_Repository;
@@ -97,6 +98,7 @@ final class Runtime_Service_Registrar {
 			static fn ( Service_Container $c ): Review_Data => new Review_Data(
 				$c->get( Campaign_Repository::class ),
 				$c->get( Creative_Repository::class ),
+				$c->get( Creative_Revision_Repository::class ),
 				$c->get( Assigned_Creatives::class ),
 				$c->get( Placement_Repository::class ),
 				$c->get( Org_Repository::class ),
