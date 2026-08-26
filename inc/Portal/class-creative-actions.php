@@ -256,7 +256,7 @@ final class Creative_Actions implements Service {
 			'aggr_alt_text_required'        => __( 'Describe the ad creative for people who cannot see it.', 'aggressive-ads' ),
 			'aggr_alt_text_too_long'        => __( 'Use 500 characters or fewer for the ad creative description.', 'aggressive-ads' ),
 			'aggr_creative_size_mismatch'   => __( 'The uploaded dimensions do not match this placement. Resize the ad creative to the required dimensions and try again.', 'aggressive-ads' ),
-			'aggr_creative_already_exists'  => __( 'That placement already has a creative. Remove it before uploading a replacement.', 'aggressive-ads' ),
+			'aggr_creative_limit_reached'   => __( 'This placement already has the maximum number of creatives. Remove one before uploading another.', 'aggressive-ads' ),
 			'aggr_replacement_pending'       => __( 'This ad already has an update waiting for review.', 'aggressive-ads' ),
 			'aggr_replacement_unavailable'   => __( 'Only an ad in a scheduled or live campaign can be updated.', 'aggressive-ads' ),
 			'aggr_replacement_busy'          => __( 'Another update is already being saved for this ad. Try again.', 'aggressive-ads' ),

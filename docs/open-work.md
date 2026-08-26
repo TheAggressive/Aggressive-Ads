@@ -94,10 +94,45 @@ wrong: the backfill walks the creative id space globally, so one campaign's
 creatives can sit either side of the cursor and stay that way. A campaign would
 have shown some of its artwork and not the rest. Healing is now per creative.
 
-**Next:** remove the upload cap (`aggr_creative_already_exists`) so a placement
-may hold more than one creative. Validation is already ready for it — the
-coverage model treats a placement as covered once, however many creatives cover
-it.
+A placement may now hold up to ten creatives.
+`Creative_Manager::MAX_CREATIVES_PER_PLACEMENT` is a backstop rather than a
+product constraint: rate limiting bounds how fast creatives arrive and nothing
+bounded the total, and the cost of a runaway lands on the publisher reviewing
+them. Deliberately a constant — a setting whose default nobody changes is a
+constant with more moving parts, and shipping this first is what would say what
+range a setting should offer.
+
+The portal keeps the upload form alongside whatever is already uploaded. It used
+to be shown *instead of* the creatives, which was the interface half of the
+one-per-placement rule.
+
+### What P2 still needs before it can close
+
+The contract is explicit that new tables and classes are not evidence of
+completion, and four of its eight exit criteria are genuinely open:
+
+- **Criterion 4 — the lifecycle end to end.** Assignment and unassignment,
+  weight and date changes, and pause/resume are schema columns with no workflow
+  behind them. Nothing writes `weight`, `start_at_ts` or `end_at_ts` on an
+  assignment, and nothing changes an assignment's status independently of its
+  campaign.
+- **Criterion 5 — the P3 read contract.** There is no documented, indexed,
+  performance-tested candidate query, and no recorded query plans or cold/warm
+  counts against realistic fixtures.
+- **Criterion 6 — cleanup and rollback.** Campaign deletion is tested. Placement
+  deletion, reference-aware private-file and attachment cleanup, operational
+  recovery and rollback are not.
+- **Criterion 8 — documentation.** `data-schema.md` describes the tables.
+  `domain-model.md`, `rest-api.md`, `roles-and-capabilities.md`,
+  `administration.md` and `runbook.md` do not yet describe the creative model
+  that shipped.
+
+Criterion 3 is also only half met: validation accepts multiple creatives, but
+"one eligible **approved** assignment per required combination" is the delivery
+threshold, and nothing evaluates it yet — `Coverage_Service` defines the states
+and P3's threshold is not written.
+
+## Nothing else is open
 
 The original next step, now done, was the DDL for the revision and assignment
 tables in [data-schema.md](data-schema.md), derived from the P3 read contract's

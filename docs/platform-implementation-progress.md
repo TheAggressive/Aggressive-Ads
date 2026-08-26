@@ -76,8 +76,12 @@ earlier one creates.
       eligible approved creative per required combination. Scope, migration,
       invariants and exit evidence are defined in
       [platform-p2-creative-model.md](platform-p2-creative-model.md). The
-      metadata-ownership decision that document requires before schema work is
-      recorded there; nothing is built yet.
+      metadata-ownership decision, the text-only review lane, the schema, the
+      backfill, the freeze-at-approval write path, the coverage service and
+      many-creatives-per-placement are recorded there. Native serving still
+      selects Campaigns until P3, which is compatibility behaviour rather than
+      unfinished P2 work. Exit criteria 4, 5, 6 and 8 remain open — see
+      [open-work.md](open-work.md).
 
 ### Serving
 

@@ -29,6 +29,26 @@ final class Creative_Manager {
 	public const MAX_ALT_TEXT_LENGTH = 500;
 
 	/**
+	 * How many creatives one placement may hold on a campaign.
+	 *
+	 * A backstop, not a product constraint. P2 exists to allow several
+	 * creatives per placement — a rotation, a seasonal set — and ten is high
+	 * enough that no honest use meets it.
+	 *
+	 * There is a limit at all because the cost of a runaway lands on the wrong
+	 * person. Rate limiting bounds how fast an advertiser can upload and
+	 * nothing bounds the total, so fifty creatives on one placement is fifty
+	 * things a publisher has to review and, once P3 arrives, fifty candidates
+	 * on a fill. Both fail gradually and neither points at its cause.
+	 *
+	 * Deliberately a constant rather than a setting. A setting whose default
+	 * nobody changes is a constant with more moving parts, and shipping this
+	 * first tells us whether anyone ever reaches it — which is what would say
+	 * what range a setting should offer.
+	 */
+	public const MAX_CREATIVES_PER_PLACEMENT = 10;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param Campaign_Repository  $campaigns  Campaign persistence.
@@ -79,10 +99,35 @@ final class Creative_Manager {
 			return $authorized;
 		}
 
+		/*
+		 * Several creatives per placement, up to a backstop.
+		 *
+		 * This used to refuse the second one outright, which is the P1
+		 * limitation P2 exists to remove. Coverage was switched to
+		 * `Coverage_Service` first precisely so this could be a small change:
+		 * a placement counts as covered once, however many creatives cover it,
+		 * so lifting the cap changes what may be uploaded and nothing about
+		 * what may be submitted.
+		 */
+		$on_this_placement = 0;
+
 		foreach ( $this->creatives->for_campaign( $campaign_id ) as $creative ) {
 			if ( $placement_id === $creative['placement_id'] ) {
-				return $this->error( 'aggr_creative_already_exists', __( 'That placement already has a creative. Remove it before uploading a replacement.', 'aggressive-ads' ), 409, 'file' );
+				++$on_this_placement;
 			}
+		}
+
+		if ( $on_this_placement >= self::MAX_CREATIVES_PER_PLACEMENT ) {
+			return $this->error(
+				'aggr_creative_limit_reached',
+				sprintf(
+					/* translators: %d: maximum creatives allowed on one placement. */
+					__( 'This placement already has the maximum of %d creatives. Remove one before uploading another.', 'aggressive-ads' ),
+					self::MAX_CREATIVES_PER_PLACEMENT
+				),
+				409,
+				'file'
+			);
 		}
 
 		$click_url = trim( $click_url );
