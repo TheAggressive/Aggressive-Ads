@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-26T03:04:55+00:00\n"
+"POT-Creation-Date: 2026-08-26T03:31:27+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -2119,13 +2119,15 @@ msgid "Cancelled and no longer running."
 msgstr ""
 
 #: inc/Portal/class-creative-actions.php:254
-#: inc/Workflow/class-creative-change-manager.php:371
+#: inc/Workflow/class-creative-change-manager.php:162
+#: inc/Workflow/class-creative-change-manager.php:497
 #: inc/Workflow/class-creative-manager.php:91
 msgid "Enter the destination URL for this creative."
 msgstr ""
 
 #: inc/Portal/class-creative-actions.php:255
-#: inc/Workflow/class-creative-change-manager.php:375
+#: inc/Workflow/class-creative-change-manager.php:166
+#: inc/Workflow/class-creative-change-manager.php:501
 #: inc/Workflow/class-creative-manager.php:95
 msgid "Enter a valid http or https destination URL without embedded credentials."
 msgstr ""
@@ -2135,7 +2137,8 @@ msgid "Describe the ad creative for people who cannot see it."
 msgstr ""
 
 #: inc/Portal/class-creative-actions.php:257
-#: inc/Workflow/class-creative-change-manager.php:382
+#: inc/Workflow/class-creative-change-manager.php:173
+#: inc/Workflow/class-creative-change-manager.php:508
 #: inc/Workflow/class-creative-manager.php:102
 msgid "Use 500 characters or fewer for the ad creative description."
 msgstr ""
@@ -2150,17 +2153,19 @@ msgid "That placement already has a creative. Remove it before uploading a repla
 msgstr ""
 
 #: inc/Portal/class-creative-actions.php:260
-#: inc/Workflow/class-creative-change-manager.php:90
+#: inc/Workflow/class-creative-change-manager.php:123
+#: inc/Workflow/class-creative-change-manager.php:216
 msgid "This ad already has an update waiting for review."
 msgstr ""
 
 #: inc/Portal/class-creative-actions.php:261
-#: inc/Workflow/class-creative-change-manager.php:322
+#: inc/Workflow/class-creative-change-manager.php:448
 msgid "Only an ad in a scheduled or live campaign can be updated."
 msgstr ""
 
 #: inc/Portal/class-creative-actions.php:262
-#: inc/Workflow/class-creative-change-manager.php:85
+#: inc/Workflow/class-creative-change-manager.php:118
+#: inc/Workflow/class-creative-change-manager.php:211
 msgid "Another update is already being saved for this ad. Try again."
 msgstr ""
 
@@ -3000,85 +3005,91 @@ msgstr ""
 msgid "This campaign is not ready to submit."
 msgstr ""
 
-#: inc/Workflow/class-creative-change-manager.php:67
+#: inc/Workflow/class-creative-change-manager.php:80
+#: inc/Workflow/class-creative-change-manager.php:193
 msgid "You do not have permission to request an ad update."
 msgstr ""
 
 #: inc/Workflow/class-creative-change-manager.php:112
+msgid "Change the destination or description before requesting an update."
+msgstr ""
+
+#: inc/Workflow/class-creative-change-manager.php:133
+#: inc/Workflow/class-creative-change-manager.php:238
 msgid "The ad update could not be saved. Please try again."
 msgstr ""
 
-#: inc/Workflow/class-creative-change-manager.php:121
+#: inc/Workflow/class-creative-change-manager.php:247
 msgid "The ad update could not be verified. Please try again."
 msgstr ""
 
-#: inc/Workflow/class-creative-change-manager.php:150
+#: inc/Workflow/class-creative-change-manager.php:276
 msgid "You do not have permission to approve ad updates."
 msgstr ""
 
-#: inc/Workflow/class-creative-change-manager.php:160
+#: inc/Workflow/class-creative-change-manager.php:286
 msgid "Only a scheduled or live campaign can apply an ad update."
 msgstr ""
 
-#: inc/Workflow/class-creative-change-manager.php:166
-#: inc/Workflow/class-creative-change-manager.php:233
+#: inc/Workflow/class-creative-change-manager.php:292
+#: inc/Workflow/class-creative-change-manager.php:359
 msgid "Another review action is already updating this ad. Try again."
 msgstr ""
 
-#: inc/Workflow/class-creative-change-manager.php:186
+#: inc/Workflow/class-creative-change-manager.php:312
 msgid "The update could not be recorded or rolled back. Pause the campaign and inspect the provider ad."
 msgstr ""
 
-#: inc/Workflow/class-creative-change-manager.php:187
+#: inc/Workflow/class-creative-change-manager.php:313
 msgid "The update could not be recorded. The current ad was restored."
 msgstr ""
 
-#: inc/Workflow/class-creative-change-manager.php:211
+#: inc/Workflow/class-creative-change-manager.php:337
 msgid "You do not have permission to reject ad updates."
 msgstr ""
 
-#: inc/Workflow/class-creative-change-manager.php:217
+#: inc/Workflow/class-creative-change-manager.php:343
 msgid "Explain why this ad update needs changes."
 msgstr ""
 
-#: inc/Workflow/class-creative-change-manager.php:221
+#: inc/Workflow/class-creative-change-manager.php:347
 msgid "Use 2,000 characters or fewer for update feedback."
 msgstr ""
 
-#: inc/Workflow/class-creative-change-manager.php:238
+#: inc/Workflow/class-creative-change-manager.php:364
 msgid "The update decision could not be saved. Please try again."
 msgstr ""
 
-#: inc/Workflow/class-creative-change-manager.php:260
-#: inc/Workflow/class-creative-change-manager.php:264
+#: inc/Workflow/class-creative-change-manager.php:386
+#: inc/Workflow/class-creative-change-manager.php:390
 msgid "You do not have permission to withdraw that ad update."
 msgstr ""
 
-#: inc/Workflow/class-creative-change-manager.php:270
+#: inc/Workflow/class-creative-change-manager.php:396
 msgid "Another action is already updating this ad. Try again."
 msgstr ""
 
-#: inc/Workflow/class-creative-change-manager.php:281
+#: inc/Workflow/class-creative-change-manager.php:407
 msgid "The update file could not be removed. Please try again."
 msgstr ""
 
-#: inc/Workflow/class-creative-change-manager.php:287
+#: inc/Workflow/class-creative-change-manager.php:413
 msgid "The update record and file could not be reconciled. Please contact an administrator."
 msgstr ""
 
-#: inc/Workflow/class-creative-change-manager.php:290
+#: inc/Workflow/class-creative-change-manager.php:416
 msgid "The update could not be withdrawn. Please try again."
 msgstr ""
 
-#: inc/Workflow/class-creative-change-manager.php:316
+#: inc/Workflow/class-creative-change-manager.php:442
 msgid "You do not have permission to update that ad."
 msgstr ""
 
-#: inc/Workflow/class-creative-change-manager.php:349
+#: inc/Workflow/class-creative-change-manager.php:475
 msgid "That ad update is no longer available."
 msgstr ""
 
-#: inc/Workflow/class-creative-change-manager.php:398
+#: inc/Workflow/class-creative-change-manager.php:524
 msgid "The uploaded dimensions do not match this placement."
 msgstr ""
 

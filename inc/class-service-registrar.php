@@ -938,6 +938,7 @@ final class Service_Registrar {
 			static fn ( Service_Container $c ): Creative_Change_Manager => new Creative_Change_Manager(
 				$c->get( Campaign_Repository::class ),
 				$c->get( Creative_Repository::class ),
+				$c->get( Creative_Revision_Repository::class ),
 				$c->get( Placement_Repository::class ),
 				$c->get( Creative_Uploader::class ),
 				$c->get( Private_Storage::class ),

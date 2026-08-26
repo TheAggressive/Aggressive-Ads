@@ -123,6 +123,75 @@ final class Creative_Revision_Repository {
 	 * @return int New creative id, or 0 on failure.
 	 */
 	public function create_text_revision( int $creative_id, string $click_url, string $alt_text ): int {
+		$revision_id = $this->stage_text_revision( $creative_id, $click_url, $alt_text );
+
+		if ( $revision_id <= 0 ) {
+			return 0;
+		}
+
+		/*
+		 * Linked the way an *approved* replacement is linked, because that is
+		 * what this is: staff approved the campaign change that proposed this
+		 * text, so the revision arrives live rather than pending.
+		 *
+		 * That means the forward link only. Leaving `META_REPLACES_ID` on the
+		 * new revision would make `is_active()` treat it as an unapproved
+		 * replacement, and the campaign would show no current creative at all.
+		 */
+		update_post_meta( $creative_id, Creative_Repository::META_REPLACED_BY, $revision_id );
+		update_post_meta( $creative_id, Creative_Repository::META_REVIEW_STATE, 'replaced' );
+		update_post_meta( $revision_id, Creative_Repository::META_REVIEW_STATE, 'approved' );
+		update_post_meta( $revision_id, Creative_Repository::META_CHANGE_STATE, Creative_Repository::CHANGE_APPLIED );
+
+		return $revision_id;
+	}
+
+	/**
+	 * Stages a text revision for review, leaving the current ad serving.
+	 *
+	 * The pending shape, and the difference from the method above is the whole
+	 * point: `META_REPLACES_ID` stays on the new revision, which is what
+	 * `is_active()` reads as "not live yet". The approved creative keeps
+	 * serving until a reviewer decides, so an advertiser correcting a typo
+	 * cannot take their own placement off the site.
+	 *
+	 * Everything after that is the existing replacement flow unchanged —
+	 * `Creative_Change_Manager::approve()` and `reject()` already handle a
+	 * pending revision, and `Creative_Promoter::promote()` is a no-op for one
+	 * that already carries an attachment, which a text revision does.
+	 *
+	 * @param int    $creative_id Superseded creative id.
+	 * @param string $click_url   New destination.
+	 * @param string $alt_text    New alternative text.
+	 * @return int New creative id, or 0 on failure.
+	 */
+	public function create_pending_text_revision( int $creative_id, string $click_url, string $alt_text ): int {
+		$revision_id = $this->stage_text_revision( $creative_id, $click_url, $alt_text );
+
+		if ( $revision_id <= 0 ) {
+			return 0;
+		}
+
+		update_post_meta( $revision_id, Creative_Repository::META_REPLACES_ID, $creative_id );
+		update_post_meta( $revision_id, Creative_Repository::META_CHANGE_STATE, Creative_Repository::CHANGE_PENDING );
+		update_post_meta( $revision_id, Creative_Repository::META_REQUESTED_AT, time() );
+
+		return $revision_id;
+	}
+
+	/**
+	 * Creates the revision post and carries the predecessor's bytes across.
+	 *
+	 * Shared by both shapes so the byte-copying — the thing that makes
+	 * `is_text_only_revision()` derivable rather than asserted — cannot drift
+	 * between them.
+	 *
+	 * @param int    $creative_id Superseded creative id.
+	 * @param string $click_url   New destination.
+	 * @param string $alt_text    New alternative text.
+	 * @return int New creative id, or 0 on failure.
+	 */
+	private function stage_text_revision( int $creative_id, string $click_url, string $alt_text ): int {
 		$source = get_post( $creative_id );
 
 		if ( ! $source instanceof \WP_Post ) {
@@ -171,20 +240,6 @@ final class Creative_Revision_Repository {
 
 		update_post_meta( $revision_id, Creative_Repository::META_CLICK_URL, $click_url );
 		update_post_meta( $revision_id, Creative_Repository::META_ALT_TEXT, $alt_text );
-
-		/*
-		 * Linked the way an *approved* replacement is linked, because that is
-		 * what this is: staff approved the campaign change that proposed this
-		 * text, so the revision arrives live rather than pending.
-		 *
-		 * That means the forward link only. Leaving `META_REPLACES_ID` on the
-		 * new revision would make `is_active()` treat it as an unapproved
-		 * replacement, and the campaign would show no current creative at all.
-		 */
-		update_post_meta( $creative_id, Creative_Repository::META_REPLACED_BY, $revision_id );
-		update_post_meta( $creative_id, Creative_Repository::META_REVIEW_STATE, 'replaced' );
-		update_post_meta( $revision_id, Creative_Repository::META_REVIEW_STATE, 'approved' );
-		update_post_meta( $revision_id, Creative_Repository::META_CHANGE_STATE, Creative_Repository::CHANGE_APPLIED );
 
 		return $revision_id;
 	}

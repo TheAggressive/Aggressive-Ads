@@ -242,12 +242,28 @@ final class Creative_Controller implements Service {
 		$files = $request->get_file_params();
 		$file  = isset( $files['file'] ) && is_array( $files['file'] ) ? $files['file'] : array();
 
-		$result = $this->changes->request(
-			(int) $request->get_param( 'id' ),
-			$file,
-			(string) ( $request->get_param( 'click_url' ) ?? '' ),
-			(string) ( $request->get_param( 'alt_text' ) ?? '' )
-		);
+		/*
+		 * No file means a text-only change.
+		 *
+		 * The route already tolerated an absent file and passed an empty array
+		 * straight into the uploader, which refused it. Routing it to the
+		 * text-only path instead is what lets an advertiser correct a typo
+		 * without re-uploading artwork that has not changed — and the revision
+		 * it creates is still reviewed, still immutable, and still keeps the
+		 * current ad serving while it waits.
+		 */
+		$result = array() === $file
+			? $this->changes->request_text_change(
+				(int) $request->get_param( 'id' ),
+				(string) ( $request->get_param( 'click_url' ) ?? '' ),
+				(string) ( $request->get_param( 'alt_text' ) ?? '' )
+			)
+			: $this->changes->request(
+				(int) $request->get_param( 'id' ),
+				$file,
+				(string) ( $request->get_param( 'click_url' ) ?? '' ),
+				(string) ( $request->get_param( 'alt_text' ) ?? '' )
+			);
 
 		return is_wp_error( $result ) ? $result : new WP_REST_Response( $result, 202 );
 	}
