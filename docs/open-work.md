@@ -43,8 +43,25 @@ for editing, because an advertiser editing a draft still updates post meta in
 place. That distinction disappears when the write path creates a revision per
 edit, and `Assigned_Creatives` says so.
 
-**Next:** the write path (edits create revisions), then the coverage service and
-many-creatives-per-placement.
+The write path now freezes a creative at **approval**, not at creation. A draft
+edits in place; an approved creative is revised, its predecessor preserved with
+the text a publisher actually signed off. `Workflow\Revision_Policy::is_frozen()`
+is the single authority and every write site asks it.
+
+`Campaign_Change_Manager` used to call `set_click_url()` on an approved, serving
+ad when staff approved a destination change — the exact mutation the ownership
+decision exists to prevent, arriving through a door marked "approved by staff".
+It now revises.
+
+**A defect in the shipped backfill was found here and fixed.** `chain_root()`
+walked `_aggr_replaces_creative_id` backward, and `activate_replacement()`
+deletes that key the moment a replacement goes live, so on real data every
+approved revision looked like its own root and would have been given its own
+asset. `Creative_Repository::predecessor_of()` now reads the durable forward
+link instead.
+
+**Next:** the advertiser-initiated text edit using the `text_only` review lane,
+then the coverage service and many-creatives-per-placement.
 
 The original next step, now done, was the DDL for the revision and assignment
 tables in [data-schema.md](data-schema.md), derived from the P3 read contract's

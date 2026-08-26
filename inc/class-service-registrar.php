@@ -42,6 +42,7 @@ use Aggressive\Ads\Notification\Request_Mailer;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Line_Item_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Repository\Creative_Revision_Repository;
 use Aggressive\Ads\Repository\Delivery_Repository;
 use Aggressive\Ads\Repository\Event_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
@@ -102,6 +103,7 @@ use Aggressive\Ads\Workflow\Creative_Uploader;
 use Aggressive\Ads\Workflow\Ending_Soon_Notifier;
 use Aggressive\Ads\Workflow\Fill_Cache;
 use Aggressive\Ads\Workflow\Reporting_Read;
+use Aggressive\Ads\Workflow\Revision_Policy;
 use Aggressive\Ads\Workflow\Reviewer_Access;
 use Aggressive\Ads\Workflow\Review_Readiness;
 use Aggressive\Ads\Workflow\Placement_Manager;
@@ -300,7 +302,8 @@ final class Service_Registrar {
 				$c->get( Creative_Asset_Repository::class ),
 				$c->get( Creative_Assignment_Repository::class ),
 				$c->get( Line_Item_Repository::class ),
-				$c->get( Campaign_Repository::class )
+				$c->get( Campaign_Repository::class ),
+				$c->get( Creative_Revision_Repository::class )
 			)
 		);
 
@@ -309,6 +312,21 @@ final class Service_Registrar {
 			static fn ( Service_Container $c ): Assignment_Health => new Assignment_Health(
 				$c->get( Creative_Assignment_Repository::class ),
 				$c->get( Creative_Assignment_Migrator::class )
+			)
+		);
+
+		$container->register(
+			Creative_Revision_Repository::class,
+			static fn (): Creative_Revision_Repository => new Creative_Revision_Repository()
+		);
+
+		$container->register(
+			Revision_Policy::class,
+			static fn ( Service_Container $c ): Revision_Policy => new Revision_Policy(
+				$c->get( Creative_Repository::class ),
+				$c->get( Creative_Revision_Repository::class ),
+				$c->get( Creative_Assignment_Repository::class ),
+				$c->get( Line_Item_Repository::class )
 			)
 		);
 
@@ -949,6 +967,7 @@ final class Service_Registrar {
 			static fn ( Service_Container $c ): Campaign_Change_Manager => new Campaign_Change_Manager(
 				$c->get( Campaign_Repository::class ),
 				$c->get( Creative_Repository::class ),
+				$c->get( Revision_Policy::class ),
 				$c->get( Placement_Repository::class ),
 				$c->get( Settings::class ),
 				$c->get( Fill_Cache::class ),

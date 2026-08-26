@@ -48,6 +48,7 @@ final class Campaign_Change_Manager implements Service {
 	 *
 	 * @param Campaign_Repository  $campaigns  Campaign persistence.
 	 * @param Creative_Repository  $creatives  Creative persistence.
+	 * @param Revision_Policy      $revisions  Immutability policy for approved creatives.
 	 * @param Placement_Repository $placements Placement names for the change summary.
 	 * @param Settings             $settings   Site policy.
 	 * @param Fill_Cache           $fill       Delivery cache.
@@ -57,6 +58,7 @@ final class Campaign_Change_Manager implements Service {
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
 		private readonly Creative_Repository $creatives,
+		private readonly Revision_Policy $revisions,
 		private readonly Placement_Repository $placements,
 		private readonly Settings $settings,
 		private readonly Fill_Cache $fill,
@@ -875,7 +877,16 @@ final class Campaign_Change_Manager implements Service {
 			$id = (int) $creative_id;
 
 			if ( isset( $owned[ $id ] ) && is_string( $url ) ) {
-				$this->creatives->set_click_url( $id, $url );
+				/*
+				 * A frozen creative is revised, not rewritten.
+				 *
+				 * This used to call `set_click_url()`, which repointed the
+				 * destination of an ad a publisher had already approved and
+				 * that was already serving — the exact mutation P2's
+				 * immutability rule exists to stop. The policy decides which it
+				 * is; nothing here re-derives that condition.
+				 */
+				$this->revisions->apply_text_change( $id, $url );
 			}
 		}
 

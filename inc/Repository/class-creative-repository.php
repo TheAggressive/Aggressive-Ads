@@ -326,38 +326,9 @@ final class Creative_Repository {
 		return array_map( 'intval', is_array( $ids ) ? $ids : array() );
 	}
 
-	/**
-	 * The oldest creative in a replacement chain.
-	 *
-	 * One logical piece of artwork can already be several Creative posts, linked
-	 * by `_aggr_replaces_creative_id` when a replacement was approved. That
-	 * chain is the asset the P2 model names, so its root is the stable identity
-	 * every revision of the same artwork shares.
-	 *
-	 * Bounded rather than trusting the data: a chain that loops — which nothing
-	 * should create and a corrupted meta pair could — would otherwise hang the
-	 * migration on one row.
-	 *
-	 * @param int $creative_id Any creative in the chain.
-	 * @return int Root creative id.
-	 */
-	public function chain_root( int $creative_id ): int {
-		$seen = array();
 
-		while ( $creative_id > 0 && ! isset( $seen[ $creative_id ] ) ) {
-			$seen[ $creative_id ] = true;
 
-			$previous = (int) get_post_meta( $creative_id, self::META_REPLACES_ID, true );
 
-			if ( $previous <= 0 || isset( $seen[ $previous ] ) ) {
-				break;
-			}
-
-			$creative_id = $previous;
-		}
-
-		return $creative_id;
-	}
 
 	/**
 	 * Whether a creative is the current one rather than a superseded revision.
@@ -797,6 +768,28 @@ final class Creative_Repository {
 	public function set_click_url( int $creative_id, string $click_url ): void {
 		update_post_meta( $creative_id, self::META_CLICK_URL, $click_url );
 	}
+
+	/**
+	 * Writes both text fields on an editable creative.
+	 *
+	 * Callers ask `Revision_Policy::is_frozen()` first. This layer does not
+	 * judge whether the write is allowed, in keeping with the rest of the
+	 * repository — but it is worth knowing that calling it on a promoted
+	 * creative is the mistake the policy exists to prevent.
+	 *
+	 * @param int    $creative_id Creative post id.
+	 * @param string $click_url   Validated destination.
+	 * @param string $alt_text    Alternative text.
+	 * @return void
+	 */
+	public function set_text( int $creative_id, string $click_url, string $alt_text ): void {
+		update_post_meta( $creative_id, self::META_CLICK_URL, $click_url );
+		update_post_meta( $creative_id, self::META_ALT_TEXT, $alt_text );
+	}
+
+
+
+
 
 	/**
 	 * Every creative on a campaign, with details.

@@ -14,6 +14,7 @@ use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Creative_Asset_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Repository\Creative_Revision_Repository;
 use Aggressive\Ads\Repository\Line_Item_Repository;
 
 /**
@@ -46,13 +47,15 @@ final class Creative_Assignment_Migrator implements Service {
 	 * @param Creative_Assignment_Repository $assignments Assignment persistence.
 	 * @param Line_Item_Repository           $line_items  Line-item persistence.
 	 * @param Campaign_Repository            $campaigns   Campaign persistence.
+	 * @param Creative_Revision_Repository   $revisions   Revision chain persistence.
 	 */
 	public function __construct(
 		private readonly Creative_Repository $creatives,
 		private readonly Creative_Asset_Repository $assets,
 		private readonly Creative_Assignment_Repository $assignments,
 		private readonly Line_Item_Repository $line_items,
-		private readonly Campaign_Repository $campaigns
+		private readonly Campaign_Repository $campaigns,
+		private readonly Creative_Revision_Repository $revisions
 	) {
 	}
 
@@ -172,7 +175,7 @@ final class Creative_Assignment_Migrator implements Service {
 			return null;
 		}
 
-		$root  = $this->creatives->chain_root( $creative_id );
+		$root  = $this->revisions->chain_root( $creative_id );
 		$asset = $this->assets->ensure_for_root(
 			$root,
 			(int) ( $details['org_id'] ?? 0 ),
