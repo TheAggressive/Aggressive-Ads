@@ -13,6 +13,7 @@ use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Domain\Campaign_Rules;
 use Aggressive\Ads\Install\Installer;
+use Aggressive\Ads\Install\Creative_Assignment_Migrator;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
@@ -357,6 +358,74 @@ final class CampaignValidatorTest extends WP_UnitTestCase {
 
 		$this->assertTrue(
 			$this->validator->validate( $campaign )->has( Campaign_Rules::ERROR_PLACEMENT_UNCOVERED )
+		);
+	}
+
+	/**
+	 * A superseded creative does not cover its placement.
+	 *
+	 * The validator reads assessed assignments now rather than creatives, and
+	 * this is the case that makes the two differ. `for_campaign()` returned
+	 * only *active* creatives, so a replaced one was invisible and its
+	 * placement counted as uncovered. The assignment table has no such filter —
+	 * the row survives the revision being superseded — so the state has to do
+	 * that work instead.
+	 *
+	 * Without it a campaign whose only artwork was replaced would pass
+	 * validation and go to review with nothing to show, and the change would be
+	 * invisible because every other test creates only current creatives. It was
+	 * invisible: removing the filter left the whole suite green until this.
+	 *
+	 * @return void
+	 */
+	public function test_a_superseded_creative_leaves_its_placement_uncovered(): void {
+		/*
+		 * Two placements, so the campaign still has one live creative.
+		 *
+		 * A campaign whose *only* creative is superseded reports
+		 * ERROR_NO_CREATIVES and returns before coverage is considered, which
+		 * is today's behaviour and not what this is about. The filter only
+		 * matters when there is something else to keep the validator going.
+		 */
+		$second   = $this->placement( '300x250', true );
+		$campaign = $this->campaign( array( $this->placement_id, $second ) );
+
+		$this->creative( $campaign );
+		$stale = $this->creative(
+			$campaign,
+			array(
+				Creative_Repository::META_PLACEMENT_ID => $second,
+				Creative_Repository::META_WIDTH        => 300,
+				Creative_Repository::META_HEIGHT       => 250,
+			)
+		);
+
+		$replacement = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::CREATIVE,
+				'post_status' => 'publish',
+			)
+		);
+
+		/*
+		 * Migrated *before* being superseded, which is the only order that
+		 * reaches the filter.
+		 *
+		 * Healing walks active creatives, so one replaced before the backfill
+		 * ran never gets an assignment row and is invisible for a different
+		 * reason. The row has to exist and then go stale — which is exactly
+		 * what happens on a live site when an advertiser replaces artwork.
+		 * Without this ordering the test passes with the filter deleted.
+		 */
+		Plugin::instance()->container()
+			->get( Creative_Assignment_Migrator::class )
+			->migrate_one( $stale );
+
+		update_post_meta( $stale, Creative_Repository::META_REPLACED_BY, $replacement );
+
+		$this->assertTrue(
+			$this->validator->validate( $campaign )->has( Campaign_Rules::ERROR_PLACEMENT_UNCOVERED ),
+			'A placement whose artwork was replaced was reported as covered.'
 		);
 	}
 

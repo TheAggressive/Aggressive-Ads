@@ -70,11 +70,7 @@ final class Assigned_Creatives {
 			return array();
 		}
 
-		$rows = $this->assignments->for_campaign( $campaign_id );
-
-		if ( array() === $rows ) {
-			$rows = $this->heal( $campaign_id );
-		}
+		$rows = $this->heal( $campaign_id );
 
 		$ids = array();
 
@@ -90,22 +86,46 @@ final class Assigned_Creatives {
 	}
 
 	/**
-	 * Creates the missing assignments for a campaign's active creatives.
+	 * Creates whichever assignments a campaign is missing.
 	 *
-	 * Only reached when a campaign has no assignments at all, which is the
-	 * backfill not having got here yet. A campaign with *some* assignments is
-	 * left alone: the backfill visits creatives in id order, so a partial
-	 * result means it is mid-campaign, and racing it would create nothing the
-	 * unique key does not already prevent while doing the work twice.
+	 * **Per creative, not all-or-nothing.** The first version healed only when
+	 * a campaign had *no* assignments, on the reasoning that a partial result
+	 * meant the backfill was mid-campaign and would finish on its own. That
+	 * reasoning was wrong: the backfill walks the *creative* id space globally,
+	 * not campaign by campaign, so one campaign's creatives can sit either side
+	 * of the cursor and stay that way for as long as the backfill takes.
+	 *
+	 * The symptom was quiet and would have been blamed on something else — a
+	 * campaign showing some of its artwork and not the rest, on a screen that
+	 * had no reason to be wrong.
+	 *
+	 * Skipping the ones already assigned keeps the ordinary read free of
+	 * writes; only the genuinely missing are created.
 	 *
 	 * @param int $campaign_id Campaign post id.
 	 * @return array<int, array<string, mixed>>
 	 */
 	private function heal( int $campaign_id ): array {
-		foreach ( $this->creatives->for_campaign( $campaign_id ) as $creative ) {
-			$this->migrator->migrate_one( (int) $creative['id'] );
+		$rows     = $this->assignments->for_campaign( $campaign_id );
+		$assigned = array();
+
+		foreach ( $rows as $row ) {
+			$assigned[ (int) ( $row['revision_id'] ?? 0 ) ] = true;
 		}
 
-		return $this->assignments->for_campaign( $campaign_id );
+		$created = false;
+
+		foreach ( $this->creatives->for_campaign( $campaign_id ) as $creative ) {
+			$creative_id = (int) $creative['id'];
+
+			if ( isset( $assigned[ $creative_id ] ) ) {
+				continue;
+			}
+
+			$this->migrator->migrate_one( $creative_id );
+			$created = true;
+		}
+
+		return $created ? $this->assignments->for_campaign( $campaign_id ) : $rows;
 	}
 }

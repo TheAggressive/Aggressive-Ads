@@ -75,8 +75,29 @@ The review screen now says **"Artwork unchanged — only the text differs"** on 
 line that changed rather than four that did not. The flag is the server-derived
 one; the screen never computes it.
 
-**Next:** the coverage service and many-creatives-per-placement — the P2
-headline, and the change that touches campaign validation and submission.
+`Workflow\Coverage_Service` is the one definition of whether a creative can
+run, and campaign validation now reads it instead of creatives. The source
+moved; the answers did not — the twenty existing validator tests pass unchanged,
+which is what makes the switch verifiable rather than hopeful.
+
+Classification and threshold are separate. `classify()` names the state;
+`covers_for_submission()` says which states count as present on a placement, and
+is deliberately looser than `usable` — a wrongly sized creative reports "wrong
+size", not "no creative", because telling somebody both points them at the wrong
+fix. P3 adds a stricter threshold over the same states rather than a second
+meaning of eligible.
+
+**A defect shipped in the portal-reads slice was found here and fixed.**
+`Assigned_Creatives::heal()` healed only when a campaign had *no* assignments,
+justified by "a partial result means the backfill is mid-campaign". That was
+wrong: the backfill walks the creative id space globally, so one campaign's
+creatives can sit either side of the cursor and stay that way. A campaign would
+have shown some of its artwork and not the rest. Healing is now per creative.
+
+**Next:** remove the upload cap (`aggr_creative_already_exists`) so a placement
+may hold more than one creative. Validation is already ready for it — the
+coverage model treats a placement as covered once, however many creatives cover
+it.
 
 The original next step, now done, was the DDL for the revision and assignment
 tables in [data-schema.md](data-schema.md), derived from the P3 read contract's

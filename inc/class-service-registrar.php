@@ -94,6 +94,7 @@ use Aggressive\Ads\Workflow\Line_Item_Validator;
 use Aggressive\Ads\Workflow\Assigned_Creatives;
 use Aggressive\Ads\Workflow\Edit_Window;
 use Aggressive\Ads\Workflow\Campaign_Validator;
+use Aggressive\Ads\Workflow\Coverage_Service;
 use Aggressive\Ads\Workflow\Creative_Promoter;
 use Aggressive\Ads\Workflow\Creative_Change_Manager;
 use Aggressive\Ads\Workflow\Creative_Manager;
@@ -321,6 +322,16 @@ final class Service_Registrar {
 		);
 
 		$container->register(
+			Coverage_Service::class,
+			static fn ( Service_Container $c ): Coverage_Service => new Coverage_Service(
+				$c->get( Assigned_Creatives::class ),
+				$c->get( Creative_Assignment_Repository::class ),
+				$c->get( Creative_Repository::class ),
+				$c->get( Placement_Repository::class )
+			)
+		);
+
+		$container->register(
 			Revision_Policy::class,
 			static fn ( Service_Container $c ): Revision_Policy => new Revision_Policy(
 				$c->get( Creative_Repository::class ),
@@ -540,8 +551,8 @@ final class Service_Registrar {
 			Campaign_Validator::class,
 			static fn ( Service_Container $c ): Campaign_Validator => new Campaign_Validator(
 				$c->get( Campaign_Repository::class ),
-				$c->get( Creative_Repository::class ),
 				$c->get( Placement_Repository::class ),
+				$c->get( Coverage_Service::class ),
 				$c->get( Org_Repository::class ),
 				$c->get( Package_Repository::class )
 			)

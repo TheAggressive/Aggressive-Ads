@@ -12,7 +12,6 @@ namespace Aggressive\Ads\Workflow;
 use Aggressive\Ads\Domain\Campaign_Rules;
 use Aggressive\Ads\Domain\Validation_Result;
 use Aggressive\Ads\Repository\Campaign_Repository;
-use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Package_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
@@ -36,15 +35,15 @@ final class Campaign_Validator {
 	 * Constructor.
 	 *
 	 * @param Campaign_Repository  $campaigns  Campaign persistence.
-	 * @param Creative_Repository  $creatives  Creative persistence.
 	 * @param Placement_Repository $placements Placement persistence.
+	 * @param Coverage_Service     $coverage   One definition of usable coverage.
 	 * @param Org_Repository       $orgs       Organization persistence.
 	 * @param Package_Repository   $packages   Package persistence.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
-		private readonly Creative_Repository $creatives,
 		private readonly Placement_Repository $placements,
+		private readonly Coverage_Service $coverage,
 		private readonly Org_Repository $orgs,
 		private readonly Package_Repository $packages
 	) {
@@ -408,9 +407,25 @@ final class Campaign_Validator {
 	 * @return void
 	 */
 	private function check_creatives( int $campaign_id, array $placement_ids, Validation_Result $result ): void {
-		$creatives = $this->creatives->for_campaign( $campaign_id );
+		/*
+		 * One source, assessed once.
+		 *
+		 * The emptiness guard used to read `for_campaign()` while the loop read
+		 * assessments. The two agree today — an assignment exists for every
+		 * active creative — but "agree today" is how a validator ends up
+		 * answering from one set and reporting from another the first time they
+		 * diverge.
+		 */
+		$present = array_values(
+			array_filter(
+				$this->coverage->assess( $campaign_id ),
+				static fn ( array $entry ): bool =>
+					Coverage_Service::covers_for_submission( $entry['state'] )
+					&& null !== $entry['creative']
+			)
+		);
 
-		if ( array() === $creatives ) {
+		if ( array() === $present ) {
 			$result->add( Campaign_Rules::ERROR_NO_CREATIVES, 'creatives' );
 
 			return;
@@ -418,8 +433,19 @@ final class Campaign_Validator {
 
 		$covered = array();
 
-		foreach ( $creatives as $creative ) {
-			$field = 'creative:' . $creative['id'];
+		/*
+		 * Assessed assignments rather than creatives, and the states decide
+		 * which ones the validator may see at all.
+		 *
+		 * The source moved; the answers did not. `covers_for_submission()` is
+		 * exactly the set the old `for_campaign()` returned — it filtered to
+		 * active creatives, which is superseded and deleted revisions excluded.
+		 * Reporting a size error against artwork the advertiser already
+		 * replaced would be new behaviour, and worse behaviour.
+		 */
+		foreach ( $present as $entry ) {
+			$creative = $entry['creative'];
+			$field    = 'creative:' . $creative['id'];
 
 			if ( Campaign_Rules::ADVERTISER_CREATIVE_KIND !== $creative['kind'] ) {
 				$result->add( Campaign_Rules::ERROR_CREATIVE_KIND, $field, array( 'kind' => $creative['kind'] ) );
