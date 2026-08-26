@@ -30,10 +30,21 @@ them (db 15). Nothing on the serving path reads them — native fill still selec
 Campaigns and Creative posts — so a half-finished backfill cannot blank an ad
 slot.
 
-**Next:** the portal and review screens read assignments instead of creative
-post meta, with lazy self-healing through `Creative_Assignment_Migrator::migrate_one()`
-for any campaign the backfill has not reached. After that, the coverage service
-and many-creatives-per-placement.
+The portal and review screens now read assignments, healing lazily through
+`Creative_Assignment_Migrator::migrate_one()` for any campaign the backfill has
+not reached. A Site Health check reports creatives with no assignment, and
+distinguishes a backfill still running from one that finished and left rows
+behind.
+
+They read **structure** from the assignment and **values** from the revision.
+The denormalized `click_url` / `alt_text` columns are a snapshot whose
+correctness rests on the source being immutable — true for serving, not yet true
+for editing, because an advertiser editing a draft still updates post meta in
+place. That distinction disappears when the write path creates a revision per
+edit, and `Assigned_Creatives` says so.
+
+**Next:** the write path (edits create revisions), then the coverage service and
+many-creatives-per-placement.
 
 The original next step, now done, was the DDL for the revision and assignment
 tables in [data-schema.md](data-schema.md), derived from the P3 read contract's

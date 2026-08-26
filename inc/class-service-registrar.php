@@ -24,6 +24,7 @@ use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Install\Migration_Map;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Creative_Asset_Repository;
+use Aggressive\Ads\Install\Assignment_Health;
 use Aggressive\Ads\Install\Creative_Assignment_Migrator;
 use Aggressive\Ads\Install\Line_Item_Migrator;
 use Aggressive\Ads\Install\Rewrite_Flusher;
@@ -89,6 +90,7 @@ use Aggressive\Ads\Workflow\Campaign_Editor;
 use Aggressive\Ads\Workflow\Line_Item_Editor;
 use Aggressive\Ads\Workflow\Line_Item_Lifecycle;
 use Aggressive\Ads\Workflow\Line_Item_Validator;
+use Aggressive\Ads\Workflow\Assigned_Creatives;
 use Aggressive\Ads\Workflow\Edit_Window;
 use Aggressive\Ads\Workflow\Campaign_Validator;
 use Aggressive\Ads\Workflow\Creative_Promoter;
@@ -299,6 +301,23 @@ final class Service_Registrar {
 				$c->get( Creative_Assignment_Repository::class ),
 				$c->get( Line_Item_Repository::class ),
 				$c->get( Campaign_Repository::class )
+			)
+		);
+
+		$container->register(
+			Assignment_Health::class,
+			static fn ( Service_Container $c ): Assignment_Health => new Assignment_Health(
+				$c->get( Creative_Assignment_Repository::class ),
+				$c->get( Creative_Assignment_Migrator::class )
+			)
+		);
+
+		$container->register(
+			Assigned_Creatives::class,
+			static fn ( Service_Container $c ): Assigned_Creatives => new Assigned_Creatives(
+				$c->get( Creative_Assignment_Repository::class ),
+				$c->get( Creative_Repository::class ),
+				$c->get( Creative_Assignment_Migrator::class )
 			)
 		);
 
@@ -677,6 +696,7 @@ final class Service_Registrar {
 				$c->get( Campaign_Repository::class ),
 				$c->get( Placement_Repository::class ),
 				$c->get( Creative_Repository::class ),
+				$c->get( Assigned_Creatives::class ),
 				$c->get( Org_Repository::class ),
 				$c->get( Org_Access_Repository::class ),
 				$c->get( Package_Repository::class ),
