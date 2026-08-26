@@ -186,6 +186,51 @@ final class Creative_Assignment_Repository {
 	}
 
 	/**
+	 * Moves a compatibility assignment onto a newer revision.
+	 *
+	 * The snapshot columns move with the pointer, because they describe the
+	 * revision being pointed at. Leaving them behind would be worse than not
+	 * denormalizing at all: the row would name one revision and describe
+	 * another, and nothing would say which was right.
+	 *
+	 * @param int                  $line_item_id Line-item id.
+	 * @param int                  $placement_id Placement id.
+	 * @param int                  $revision_id  New revision id.
+	 * @param array<string, mixed> $snapshot     Delivery fields to refresh.
+	 * @return bool Whether a row was moved.
+	 */
+	public function point_at_revision( int $line_item_id, int $placement_id, int $revision_id, array $snapshot ): bool {
+		if ( $line_item_id <= 0 || $placement_id <= 0 || $revision_id <= 0 || ! $this->table_exists() ) {
+			return false;
+		}
+
+		$current = $this->compatibility_row( $line_item_id, $placement_id );
+
+		if ( null === $current ) {
+			return false;
+		}
+
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom-table update owned by this repository.
+		$updated = $wpdb->update(
+			$this->table_name(),
+			array(
+				'revision_id'   => $revision_id,
+				'click_url'     => (string) ( $snapshot['click_url'] ?? $current['click_url'] ),
+				'alt_text'      => mb_substr( (string) ( $snapshot['alt_text'] ?? $current['alt_text'] ), 0, 255 ),
+				'revision'      => (int) $current['revision'] + 1,
+				'updated_at_ts' => time(),
+			),
+			array( 'id' => (int) $current['id'] ),
+			array( '%d', '%s', '%s', '%d', '%d' ),
+			array( '%d' )
+		);
+
+		return false !== $updated;
+	}
+
+	/**
 	 * How many creatives have no assignment at all.
 	 *
 	 * A left join rather than two counts: a creative can legitimately have no
