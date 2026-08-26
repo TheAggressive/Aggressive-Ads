@@ -298,6 +298,18 @@ final class Service_Registrar {
 						$c->get( Installer::class )->install_line_items();
 						$c->get( Line_Item_Migrator::class )->start_name_provenance();
 					},
+
+					/*
+					 * P2 schema only. No backfill runs here: the tables are
+					 * empty and nothing reads them yet, so a site upgrading to
+					 * 14 gains two tables and no behaviour. The migration that
+					 * fills them ships with the code that reads them, so a
+					 * half-migrated site is never a site serving from a table
+					 * nobody has finished writing.
+					 */
+					14 => static function () use ( $c ): void {
+						$c->get( Installer::class )->install_creative_model();
+					},
 				)
 			)
 		);

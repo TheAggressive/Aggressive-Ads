@@ -17,6 +17,8 @@ use Aggressive\Ads\Repository\Org_Access_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Creative_Asset_Repository;
+use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Line_Item_Repository;
 use Aggressive\Ads\Storage\Creative_Cipher;
 use Aggressive\Ads\Security\Roles;
@@ -140,6 +142,7 @@ final class Installer {
 		$this->install_org_access();
 		$this->install_delivery_tables();
 		$this->install_line_items();
+		$this->install_creative_model();
 
 		$this->install_roles();
 
@@ -186,6 +189,12 @@ final class Installer {
 	/** Creates or repairs the campaign line-item table. */
 	public function install_line_items(): void {
 		$this->line_items()->install_table();
+	}
+
+	/** Creates or repairs the P2 creative asset and assignment tables. */
+	public function install_creative_model(): void {
+		( new Creative_Asset_Repository() )->install_table();
+		( new Creative_Assignment_Repository() )->install_table();
 	}
 
 	/** Repository supplied by the container, with a standalone-test fallback. */

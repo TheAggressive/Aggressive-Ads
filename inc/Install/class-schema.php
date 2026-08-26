@@ -24,7 +24,7 @@ final class Schema {
 	 *
 	 * Drives the migration walker in Upgrader.
 	 */
-	public const DB_VERSION = 13;
+	public const DB_VERSION = 14;
 
 	/**
 	 * The audit table's name, without the site's table prefix.
@@ -86,6 +86,149 @@ final class Schema {
 	KEY organization_status (organization_id,status,id),
 	KEY delivery_window (status,start_at_ts,end_at_ts,id)
 ) {$charset_collate};";
+	}
+
+	/**
+	 * P2 creative asset: tenant-owned identity, and nothing renderable.
+	 *
+	 * Deliberately thin. The asset exists so that "the same artwork, reused"
+	 * has something concrete to point at — every revision of one piece of
+	 * artwork shares an asset id — and so organization and site ownership have
+	 * one home rather than being re-derived from whichever revision was asked
+	 * about.
+	 *
+	 * Nothing renderable lives here on purpose. Bytes, click URL and alternative
+	 * text belong to the revision, because those are what a publisher approves;
+	 * see docs/platform-p2-creative-model.md.
+	 *
+	 * @param string $table_name      Prefixed table name.
+	 * @param string $charset_collate Charset clause from wpdb.
+	 * @return string
+	 */
+	public static function creative_assets_table_ddl( string $table_name, string $charset_collate ): string {
+		return "CREATE TABLE {$table_name} (
+	id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	organization_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	blog_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	name varchar(191) NOT NULL DEFAULT '',
+	created_at_ts bigint(20) unsigned NOT NULL DEFAULT 0,
+	updated_at_ts bigint(20) unsigned NOT NULL DEFAULT 0,
+	PRIMARY KEY  (id),
+	KEY organization_site (organization_id,blog_id,id)
+) {$charset_collate};";
+	}
+
+	/**
+	 * Creative asset table columns.
+	 *
+	 * @return array<int, string>
+	 */
+	public static function creative_assets_columns(): array {
+		return array(
+			'id',
+			'organization_id',
+			'blog_id',
+			'name',
+			'created_at_ts',
+			'updated_at_ts',
+		);
+	}
+
+	/**
+	 * P2 creative assignment: one approved revision, on one line item and slot.
+	 *
+	 * This is the serving-path table, and its shape is derived from the query
+	 * P3 will run rather than from what a creative happens to look like: line
+	 * item, placement, status and delivery window, with a stable id last so
+	 * ordering and pagination are deterministic.
+	 *
+	 * **The denormalized delivery columns are the point.** Native fill today
+	 * reaches the same facts through seven-plus postmeta joins per ad, which is
+	 * exactly what the P3 read contract forbids. Copying them onto the
+	 * assignment at approval collapses that into one indexed row read.
+	 *
+	 * Duplication is normally how data drifts, and here it cannot: the source is
+	 * an immutable revision. A revision's bytes, click URL and alternative text
+	 * can never change, so a copy taken at approval is correct for as long as
+	 * the assignment points at that revision. Editing means a new revision,
+	 * which means a new approval, which writes a new copy.
+	 *
+	 * `start_at_ts` / `end_at_ts` of 0 mean "inherit the line item's window".
+	 * A non-zero value must fall *within* the parent window and can only narrow
+	 * it — an assignment may not extend delivery past what the campaign and line
+	 * item authorize, which is an invariant rather than a validation nicety.
+	 *
+	 * `compat_key` is the nullable-unique trick `campaign_default` already uses
+	 * on the line-item table: NULL values do not collide in a UNIQUE index, so
+	 * one row per (line item, placement) can be marked as the compatibility
+	 * assignment while everything else stays unconstrained. It makes concurrent
+	 * lazy creation and the background migration idempotent by database rule
+	 * rather than by application care.
+	 *
+	 * @param string $table_name      Prefixed table name.
+	 * @param string $charset_collate Charset clause from wpdb.
+	 * @return string
+	 */
+	public static function creative_assignments_table_ddl( string $table_name, string $charset_collate ): string {
+		return "CREATE TABLE {$table_name} (
+	id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	line_item_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	campaign_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	organization_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	asset_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	revision_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	placement_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	status varchar(16) NOT NULL DEFAULT 'draft',
+	weight int(10) unsigned NOT NULL DEFAULT 100,
+	start_at_ts bigint(20) unsigned NOT NULL DEFAULT 0,
+	end_at_ts bigint(20) unsigned NOT NULL DEFAULT 0,
+	click_url text NULL,
+	alt_text varchar(255) NOT NULL DEFAULT '',
+	width smallint(5) unsigned NOT NULL DEFAULT 0,
+	height smallint(5) unsigned NOT NULL DEFAULT 0,
+	attachment_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	revision bigint(20) unsigned NOT NULL DEFAULT 1,
+	compat_key tinyint(1) unsigned NULL DEFAULT NULL,
+	created_at_ts bigint(20) unsigned NOT NULL DEFAULT 0,
+	updated_at_ts bigint(20) unsigned NOT NULL DEFAULT 0,
+	PRIMARY KEY  (id),
+	UNIQUE KEY line_item_placement_compat (line_item_id,placement_id,compat_key),
+	KEY delivery (placement_id,status,start_at_ts,end_at_ts,id),
+	KEY line_item_status (line_item_id,status,id),
+	KEY campaign_status (campaign_id,status,id),
+	KEY organization_status (organization_id,status,id),
+	KEY revision_lookup (revision_id,id)
+) {$charset_collate};";
+	}
+
+	/**
+	 * Creative assignment table columns.
+	 *
+	 * @return array<int, string>
+	 */
+	public static function creative_assignments_columns(): array {
+		return array(
+			'id',
+			'line_item_id',
+			'campaign_id',
+			'organization_id',
+			'asset_id',
+			'revision_id',
+			'placement_id',
+			'status',
+			'weight',
+			'start_at_ts',
+			'end_at_ts',
+			'click_url',
+			'alt_text',
+			'width',
+			'height',
+			'attachment_id',
+			'revision',
+			'compat_key',
+			'created_at_ts',
+			'updated_at_ts',
+		);
 	}
 
 	/**

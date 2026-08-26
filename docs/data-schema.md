@@ -272,3 +272,77 @@ is preserved and the plugin is later reinstalled, canonical identities are
 rebuilt idempotently from the retained organizations.
 
 **It preserves campaign, creative, and organization content** unless `aggr_delete_data_on_uninstall` is explicitly set. Deleting a plugin should not silently destroy the record of what a business ran and billed for. Someone who genuinely wants that has to ask for it.
+
+
+## Creative assets and assignments — P2
+
+Two tables, added at database version 14. **Empty on arrival**: nothing reads
+them yet, and the backfill that fills them ships with the code that reads them.
+That ordering is deliberate — a table filled in one release and read in another
+is never a site serving from a migration that has not finished.
+
+Ownership of the fields is decided in
+[platform-p2-creative-model.md](platform-p2-creative-model.md#decision-everything-reviewed-belongs-to-the-revision):
+the revision owns bytes, click URL and alternative text; the assignment owns
+weight, window and status; the asset owns identity.
+
+### `aggr_creative_assets`
+
+Tenant-owned identity, and nothing renderable. It exists so "the same artwork,
+reused" has something concrete to point at, and so organization and site
+ownership have one home rather than being re-derived from whichever revision
+was asked about.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | bigint unsigned | |
+| `organization_id` | bigint unsigned | Owning tenant |
+| `blog_id` | bigint unsigned | Site scope, matching the fill-token convention |
+| `name` | varchar(191) | Advertiser-facing label |
+| `created_at_ts` / `updated_at_ts` | bigint unsigned | UTC Unix seconds |
+
+Index: `organization_site (organization_id, blog_id, id)`.
+
+### `aggr_creative_assignments`
+
+The serving-path table. Its shape is derived from the query P3 will run —
+placement, status, delivery window, with a stable id last so ordering and
+pagination are deterministic — rather than from what a creative happens to look
+like.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | bigint unsigned | |
+| `line_item_id`, `campaign_id`, `organization_id` | bigint unsigned | Scope, all server-derived |
+| `asset_id`, `revision_id`, `placement_id` | bigint unsigned | What is served, and where |
+| `status` | varchar(16) | Assignment lifecycle |
+| `weight` | int unsigned | Positive. P2 stores it; P3 defines how it competes |
+| `start_at_ts` / `end_at_ts` | bigint unsigned | **0 means inherit the line item's window.** A non-zero value must fall *within* the parent and may only narrow it |
+| `click_url`, `alt_text`, `width`, `height`, `attachment_id` | — | **Denormalized from the approved revision at approval time** |
+| `revision` | bigint unsigned | Optimistic concurrency |
+| `compat_key` | tinyint unsigned **NULL** | Nullable-unique compatibility marker |
+| `created_at_ts` / `updated_at_ts` | bigint unsigned | UTC Unix seconds |
+
+Indexes: `line_item_placement_compat (line_item_id, placement_id, compat_key)`
+UNIQUE, `delivery (placement_id, status, start_at_ts, end_at_ts, id)`,
+`line_item_status`, `campaign_status`, `organization_status`,
+`revision_lookup`.
+
+**Why the delivery columns are duplicated.** Native fill reaches the same facts
+today through seven-plus postmeta joins per ad, which is exactly what the P3
+read contract forbids. Copying them onto the assignment at approval collapses
+that into one indexed row read.
+
+Duplication is normally how data drifts, and here it cannot: the source is an
+immutable revision. A revision's bytes, click URL and alternative text can never
+change, so a copy taken at approval stays correct for as long as the assignment
+points at that revision. Editing means a new revision, which means a new
+approval, which writes a new copy.
+
+**Why `compat_key` is nullable.** The same trick `campaign_default` uses on the
+line-item table: NULL values do not collide in a UNIQUE index, so exactly one
+row per (line item, placement) can be marked as the compatibility assignment
+while every other row stays unconstrained. That is what allows many creatives
+per placement — the P1 limitation P2 exists to remove — while still making
+concurrent lazy creation and the background backfill idempotent by database rule
+rather than by application care.

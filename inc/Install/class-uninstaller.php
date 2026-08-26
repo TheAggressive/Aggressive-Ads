@@ -14,6 +14,8 @@ use Aggressive\Ads\Repository\Event_Repository;
 use Aggressive\Ads\Repository\Org_Access_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Creative_Asset_Repository;
+use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Line_Item_Repository;
 use Aggressive\Ads\Security\Roles;
 use Aggressive\Ads\Storage\Private_Storage;
@@ -136,6 +138,8 @@ final class Uninstaller {
 		( new Event_Repository() )->drop_table();
 		( new Rollup_Repository() )->drop_table();
 		( new Line_Item_Repository( new Campaign_Repository() ) )->drop_table();
+		( new Creative_Assignment_Repository() )->drop_table();
+		( new Creative_Asset_Repository() )->drop_table();
 
 		Campaign_Clock::unschedule();
 		Ending_Soon_Notifier::unschedule();
