@@ -117,9 +117,12 @@ completion, and four of its eight exit criteria are genuinely open:
   narrow its parent's window and never widen it, refused rather than clamped.
   Withdrawal retires the row and frees the compatibility slot rather than
   deleting history, and a retired assignment stops covering its placement.
-- **Criterion 5 — the P3 read contract.** There is no documented, indexed,
-  performance-tested candidate query, and no recorded query plans or cold/warm
-  counts against realistic fixtures.
+- **Criterion 5 — the P3 read contract.** *Done.*
+  `Creative_Assignment_Repository::candidates_for_placement()` is the query P3
+  consumes, documented in [data-schema.md](data-schema.md#the-p3-candidate-read-contract):
+  inputs, output shape, visibility, ordering and cost. One query whatever the
+  candidate count, `EXPLAIN` asserted to choose the `delivery` index, measured
+  against 1,000 rows. Serving still selects Campaigns; the cutover is P3's.
 - **Criterion 6 — cleanup and rollback.** Campaign deletion is tested. Placement
   deletion, reference-aware private-file and attachment cleanup, operational
   recovery and rollback are not.

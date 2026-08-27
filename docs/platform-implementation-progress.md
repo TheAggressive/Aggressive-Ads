@@ -80,7 +80,7 @@ earlier one creates.
       backfill, the freeze-at-approval write path, the coverage service and
       many-creatives-per-placement are recorded there. Native serving still
       selects Campaigns until P3, which is compatibility behaviour rather than
-      unfinished P2 work. Exit criteria 5, 6 and 8 remain open — see
+      unfinished P2 work. Exit criteria 6 and 8 remain open — see
       [open-work.md](open-work.md).
 
 ### Serving

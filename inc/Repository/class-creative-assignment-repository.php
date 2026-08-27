@@ -317,6 +317,65 @@ final class Creative_Assignment_Repository {
 	}
 
 	/**
+	 * Delivery candidates for one placement, in one indexed query.
+	 *
+	 * **The P3 read contract.** Inputs, output shape, ordering and visibility
+	 * are documented in docs/data-schema.md; P3 consumes this rather than
+	 * writing its own, so a second definition of "deliverable" cannot appear.
+	 *
+	 * One query, no postmeta joins, no per-candidate read. Everything a
+	 * decision needs is on the row because approval denormalized it from an
+	 * immutable revision — which is what the assignment table is for.
+	 *
+	 * `delivery (placement_id, status, start_at_ts, end_at_ts, id)` serves the
+	 * whole predicate and the ordering. The trailing `id` is what makes paging
+	 * deterministic when several rows share a window.
+	 *
+	 * Zero start or end means "inherit the parent", so an unset bound is open
+	 * here and narrowed by whoever knows the parent — this layer does not judge
+	 * a window it cannot see the parent of.
+	 *
+	 * @param int $placement_id Placement to fill.
+	 * @param int $now          Evaluation time, UTC seconds.
+	 * @param int $limit        Maximum candidates.
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function candidates_for_placement( int $placement_id, int $now, int $limit = 100 ): array {
+		if ( $placement_id <= 0 || ! $this->table_exists() ) {
+			return array();
+		}
+
+		global $wpdb;
+
+		$limit = max( 1, min( 500, $limit ) );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- The candidate read is the hot path; caching belongs to the caller, which knows the fill window.
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				'SELECT id, line_item_id, campaign_id, organization_id, asset_id, revision_id,
+					placement_id, status, weight, start_at_ts, end_at_ts,
+					click_url, alt_text, width, height, attachment_id
+				FROM %i
+				WHERE placement_id = %d
+					AND status = %s
+					AND ( start_at_ts = 0 OR start_at_ts <= %d )
+					AND ( end_at_ts = 0 OR end_at_ts > %d )
+				ORDER BY id ASC
+				LIMIT %d',
+				$this->table_name(),
+				$placement_id,
+				Assignment_Rules::LIVE,
+				$now,
+				$now,
+				$limit
+			),
+			ARRAY_A
+		);
+
+		return is_array( $rows ) ? $rows : array();
+	}
+
+	/**
 	 * Withdraws an assignment, keeping the row.
 	 *
 	 * Cancelled rather than deleted: the contract is explicit that deletion,
