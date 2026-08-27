@@ -141,9 +141,25 @@ final class CoverageServiceTest extends WP_UnitTestCase {
 		return $assessed[0]['state'];
 	}
 
-	public function test_a_correctly_sized_current_creative_is_usable(): void {
+	/**
+	 * Correct artwork nobody has approved yet is `unapproved`, and still covers.
+	 *
+	 * This test used to assert `usable` for the same fixture, which was the
+	 * vocabulary conflating "nothing is wrong with it" with "a publisher said
+	 * yes". P3's delivery threshold is `usable`, so that conflation would have
+	 * let unreviewed artwork clear the bar meant to stop it.
+	 */
+	public function test_a_correctly_sized_current_creative_is_unapproved_until_reviewed(): void {
 		$made = $this->fixture();
 		$this->migrator->migrate_one( $made['creative'] );
+
+		$this->assertSame( Coverage_Service::STATE_UNAPPROVED, $this->only_state( $made['campaign'] ) );
+		$this->assertTrue(
+			Coverage_Service::covers_for_submission( Coverage_Service::STATE_UNAPPROVED ),
+			'Submission must count an unapproved creative: approval follows review, review follows submission.'
+		);
+
+		update_post_meta( $made['creative'], Creative_Repository::META_REVIEW_STATE, 'approved' );
 
 		$this->assertSame( Coverage_Service::STATE_USABLE, $this->only_state( $made['campaign'] ) );
 		$this->assertSame(
@@ -268,6 +284,11 @@ final class CoverageServiceTest extends WP_UnitTestCase {
 
 		$this->migrator->migrate_one( $second );
 
+		// Approved, so this stays a test about two creatives on one placement
+		// rather than an accidental test of the review state.
+		update_post_meta( $made['creative'], Creative_Repository::META_REVIEW_STATE, 'approved' );
+		update_post_meta( $second, Creative_Repository::META_REVIEW_STATE, 'approved' );
+
 		$assessed = $this->coverage->assess( $made['campaign'] );
 
 		$this->assertGreaterThanOrEqual( 1, count( $assessed ) );
@@ -281,6 +302,167 @@ final class CoverageServiceTest extends WP_UnitTestCase {
 			array( $made['placement'] ),
 			$this->coverage->covered_placements( $made['campaign'] )
 		);
+	}
+
+	/**
+	 * Puts a window on the campaign's only assignment.
+	 *
+	 * @param int $campaign_id Campaign id.
+	 * @param int $start       Start timestamp, 0 to inherit.
+	 * @param int $end         End timestamp, 0 to inherit.
+	 * @return void
+	 */
+	private function set_window( int $campaign_id, int $start, int $end ): void {
+		global $wpdb;
+
+		$rows = $this->assignments->for_campaign( $campaign_id );
+
+		$this->assertCount( 1, $rows, 'The fixture did not produce exactly one assignment.' );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Test fixture.
+		$wpdb->update(
+			$wpdb->prefix . 'aggr_creative_assignments',
+			array(
+				'start_at_ts' => $start,
+				'end_at_ts'   => $end,
+			),
+			array( 'id' => (int) $rows[0]['id'] ),
+			array( '%d', '%d' ),
+			array( '%d' )
+		);
+	}
+
+	/**
+	 * An assignment whose window has closed covers nothing.
+	 *
+	 * The defect this vocabulary was extended for. It used to classify `usable`
+	 * — correct artwork, on the right campaign, that can never run again — so a
+	 * campaign reported a placement covered by a creative whose window had
+	 * passed. Nothing in the old vocabulary could express it.
+	 */
+	public function test_an_expired_assignment_does_not_cover_its_placement(): void {
+		$made = $this->fixture();
+		$this->migrator->migrate_one( $made['creative'] );
+		update_post_meta( $made['creative'], Creative_Repository::META_REVIEW_STATE, 'approved' );
+
+		$now = 1000000;
+		$this->set_window( $made['campaign'], 0, $now - 1 );
+
+		$this->assertSame(
+			Coverage_Service::STATE_EXPIRED,
+			$this->coverage->assess( $made['campaign'], $now )[0]['state']
+		);
+		$this->assertSame(
+			array(),
+			$this->coverage->covered_placements( $made['campaign'], $now ),
+			'A placement was reported covered by a creative that can never run again.'
+		);
+	}
+
+	/**
+	 * The end is exclusive, matching the P2 read contract.
+	 *
+	 * Asserted at the boundary rather than a day either side: an off-by-one here
+	 * means a creative serves for one extra second or stops one early, and both
+	 * sides of that are invisible in a test that uses round numbers.
+	 */
+	public function test_an_assignment_ending_exactly_now_has_expired(): void {
+		$made = $this->fixture();
+		$this->migrator->migrate_one( $made['creative'] );
+		update_post_meta( $made['creative'], Creative_Repository::META_REVIEW_STATE, 'approved' );
+
+		$now = 1000000;
+		$this->set_window( $made['campaign'], 0, $now );
+
+		$this->assertSame(
+			Coverage_Service::STATE_EXPIRED,
+			$this->coverage->assess( $made['campaign'], $now )[0]['state']
+		);
+
+		$this->assertSame(
+			Coverage_Service::STATE_USABLE,
+			$this->coverage->assess( $made['campaign'], $now - 1 )[0]['state'],
+			'One second before its end, the assignment is still usable.'
+		);
+	}
+
+	/**
+	 * A window that has not opened is legitimate and still covers.
+	 *
+	 * A campaign scheduled for next month must be submittable. This is the state
+	 * that would have been wrong to treat like an expiry, which is why the two
+	 * are separate states rather than one "outside its window".
+	 */
+	public function test_an_assignment_starting_later_still_covers(): void {
+		$made = $this->fixture();
+		$this->migrator->migrate_one( $made['creative'] );
+		update_post_meta( $made['creative'], Creative_Repository::META_REVIEW_STATE, 'approved' );
+
+		$now = 1000000;
+		$this->set_window( $made['campaign'], $now + 60, 0 );
+
+		$this->assertSame(
+			Coverage_Service::STATE_NOT_STARTED,
+			$this->coverage->assess( $made['campaign'], $now )[0]['state']
+		);
+		$this->assertSame(
+			array( $made['placement'] ),
+			$this->coverage->covered_placements( $made['campaign'], $now ),
+			'A campaign scheduled for later reported no coverage.'
+		);
+	}
+
+	/**
+	 * A zero bound inherits the parent rather than meaning 1970.
+	 *
+	 * The negative that makes the two tests above mean something: if zero were
+	 * compared literally, every inherited window would read as expired.
+	 */
+	public function test_a_zero_window_is_inherited_not_expired(): void {
+		$made = $this->fixture();
+		$this->migrator->migrate_one( $made['creative'] );
+		update_post_meta( $made['creative'], Creative_Repository::META_REVIEW_STATE, 'approved' );
+
+		$this->set_window( $made['campaign'], 0, 0 );
+
+		$this->assertSame(
+			Coverage_Service::STATE_USABLE,
+			$this->coverage->assess( $made['campaign'], 1000000 )[0]['state']
+		);
+	}
+
+	/**
+	 * An assignment and revision that disagree about their parents cover nothing.
+	 *
+	 * Written by different paths, so a disagreement is a repair job rather than
+	 * an advertiser's mistake — and reporting it as coverage would hide it.
+	 */
+	public function test_an_assignment_disagreeing_with_its_revision_covers_nothing(): void {
+		$made = $this->fixture();
+		$this->migrator->migrate_one( $made['creative'] );
+
+		// The revision now claims a different placement than its assignment.
+		update_post_meta( $made['creative'], Creative_Repository::META_PLACEMENT_ID, $made['placement'] + 1000 );
+
+		$this->assertSame( Coverage_Service::STATE_WRONG_PARENT, $this->only_state( $made['campaign'] ) );
+		$this->assertSame( array(), $this->coverage->covered_placements( $made['campaign'] ) );
+	}
+
+	/**
+	 * The organization half of the same check.
+	 *
+	 * Written after a sabotage run passed with the organization comparison
+	 * deleted: the test above mutates the placement, so the other side of the
+	 * `||` was carrying it and the tenancy half was never exercised.
+	 */
+	public function test_an_assignment_disagreeing_about_its_organization_covers_nothing(): void {
+		$made = $this->fixture();
+		$this->migrator->migrate_one( $made['creative'] );
+
+		update_post_meta( $made['creative'], Creative_Repository::META_ORG_ID, 987654 );
+
+		$this->assertSame( Coverage_Service::STATE_WRONG_PARENT, $this->only_state( $made['campaign'] ) );
+		$this->assertSame( array(), $this->coverage->covered_placements( $made['campaign'] ) );
 	}
 
 	/**
@@ -298,6 +480,8 @@ final class CoverageServiceTest extends WP_UnitTestCase {
 				Coverage_Service::STATE_USABLE,
 				Coverage_Service::STATE_WRONG_SIZE,
 				Coverage_Service::STATE_WRONG_KIND,
+				Coverage_Service::STATE_UNAPPROVED,
+				Coverage_Service::STATE_NOT_STARTED,
 			) as $state
 		) {
 			$this->assertTrue( Coverage_Service::covers_for_submission( $state ), $state );
@@ -310,6 +494,9 @@ final class CoverageServiceTest extends WP_UnitTestCase {
 				Coverage_Service::STATE_SUPERSEDED,
 				Coverage_Service::STATE_MISSING_REVISION,
 				Coverage_Service::STATE_WRONG_CAMPAIGN,
+				Coverage_Service::STATE_WRONG_PARENT,
+				Coverage_Service::STATE_EXPIRED,
+				Coverage_Service::STATE_RETIRED,
 			) as $state
 		) {
 			$this->assertFalse( Coverage_Service::covers_for_submission( $state ), $state );

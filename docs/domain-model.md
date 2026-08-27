@@ -145,7 +145,7 @@ write disappears with nothing reporting it.
 | `_aggr_alt_text` | string | Becomes `_wp_attachment_image_alt` on promotion |
 | `_aggr_attachment_id` | int | `0` until approval |
 | `_aggr_adsanity_ad_id` | int | Unused. Former provider-object id. Native fill reads the creative record. |
-| `_aggr_review_state` | enum | `pending` \| `approved` \| `rejected` |
+| `_aggr_review_state` | enum | `pending` \| `approved` \| `replaced`. **Never `rejected`** — rejection is a campaign status, not a creative one. `replaced` is an approved revision a later one superseded |
 
 ### Creative Asset and Creative Assignment — custom tables
 
@@ -193,7 +193,14 @@ Deleting a placement retires its assignments for the same reason: the row still
 explains what ran there.
 
 `Workflow\Coverage_Service` is the one definition of whether a creative can run,
-and campaign validation reads it. Classification and threshold are separate —
+and campaign validation reads it. It classifies an assignment as one of
+`usable`, `unapproved`, `not_started`, `expired`, `wrong_size`, `wrong_kind`,
+`wrong_parent`, `wrong_campaign`, `superseded`, `missing_revision` or `retired`.
+
+Two of those are about time and are deliberately separate states rather than one
+"outside its window": a campaign scheduled for next month is legitimate and still
+covers its placements, while an assignment whose window has closed can never run
+again and covers nothing. The end is exclusive, matching the P2 read contract. Classification and threshold are separate —
 `classify()` names the state, `covers_for_submission()` says which states count
 as present on a placement — because a wrongly sized creative should report
 "wrong size" rather than "no creative". Telling somebody the second points them

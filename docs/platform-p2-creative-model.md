@@ -254,7 +254,16 @@ same definitions in its separable eligibility stage rather than create a second
 meaning of "eligible."
 
 **As built.** `Workflow\Coverage_Service` is that service, and campaign
-validation reads it instead of counting Creative posts. The source moved and the
+validation reads it instead of counting Creative posts. It classifies every case
+listed above: approval (`unapproved` against `usable`), the window (`not_started`
+and `expired`, kept separate because only one of them is a fault), parent
+mismatch (`wrong_campaign` and `wrong_parent`), dimensions and kind
+(`wrong_size`, `wrong_kind`), and concurrent deletion or replacement
+(`missing_revision`, `superseded`, `retired`).
+
+The window states were added last and found a defect: an assignment whose window
+had closed classified `usable`, so a campaign reported a placement covered by a
+creative that could never run again. The old vocabulary had no way to say it. The source moved and the
 answers did not — the twenty existing validator tests pass unchanged, which is
 what made the switch verifiable rather than hopeful.
 
