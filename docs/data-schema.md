@@ -364,3 +364,40 @@ rather than by application care.
 Both are removed by a destructive uninstall, and the backfill runs on
 `aggr_migrate_creative_assignments` — a single event re-queued a minute after
 each batch, which schedules nothing once finished.
+
+
+## The P3 candidate read contract
+
+`Creative_Assignment_Repository::candidates_for_placement( $placement_id, $now, $limit )`
+is the query P3's decision engine consumes. It is documented here rather than
+left to be inferred, so P3 does not grow a second definition of "deliverable".
+
+**Inputs.** A placement id, an evaluation time in UTC seconds, and a limit
+(clamped to 500). Nothing else — the caller supplies the clock so a decision can
+be replayed.
+
+**Output.** One row per candidate, carrying `id`, `line_item_id`, `campaign_id`,
+`organization_id`, `asset_id`, `revision_id`, `placement_id`, `status`,
+`weight`, `start_at_ts`, `end_at_ts`, `click_url`, `alt_text`, `width`,
+`height`, `attachment_id`. Everything a decision needs is on the row, because
+approval denormalized it from an immutable revision — P3 never fetches a
+creative to learn its size or destination.
+
+**Visibility.** Only `live` assignments whose window contains the given time. A
+zero bound means "inherit the parent" and is open here; the end is exclusive, so
+an assignment ending exactly now has stopped. Every other status — `draft`,
+`ready`, `paused`, `completed`, `cancelled` — is excluded.
+
+**Ordering.** Ascending `id`, which is stable across reads. P3 pages this, and
+without a stable trailing key two rows sharing a window can swap between pages
+so a candidate is seen twice or not at all.
+
+**Cost.** One query, whatever the candidate count. `delivery
+(placement_id, status, start_at_ts, end_at_ts, id)` serves the whole predicate
+and the ordering; `EXPLAIN` is asserted to choose it. Measured against 1,000
+rows: two queries cold — the second being the memoised `SHOW TABLES` existence
+check — and one warm, with no per-candidate read.
+
+**Not yet wired.** Native fill still selects Campaigns. The cutover belongs to
+P3, where line-item and creative selection change together and can be tested as
+one behaviour.
