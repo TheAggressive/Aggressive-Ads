@@ -292,9 +292,28 @@ final class ReadRoutesTest extends WP_UnitTestCase {
 		$this->assertSame( 200, $response->get_status() );
 		$this->assertStringContainsString( 'Homepage Leaderboard', $body );
 		$this->assertStringNotContainsString( 'adgroup', $body );
-		$this->assertStringNotContainsString( '99', $body );
 
 		$first = $response->get_data()['placements'][0];
+
+		/*
+		 * The ad-group id is asserted absent by *key*, not by substring.
+		 *
+		 * This read `assertStringNotContainsString( '99', $body )`, which is
+		 * true only while no id in the payload happens to contain those digits.
+		 * Adding tests elsewhere in the suite pushed post ids past 3996 and the
+		 * assertion failed on an id, not a leak — a test that fails for a
+		 * reason unrelated to what it names is worse than one that does not
+		 * exist, because it sends somebody hunting in the wrong file.
+		 *
+		 * Comparing values by key says the same thing and cannot collide.
+		 */
+		foreach ( $first as $key => $value ) {
+			$this->assertNotSame(
+				99,
+				$value,
+				"The placement payload exposes the ad-group id through {$key}."
+			);
+		}
 
 		$this->assertSame( 728, $first['width'] );
 		$this->assertSame( 90, $first['height'] );

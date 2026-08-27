@@ -92,6 +92,7 @@ use Aggressive\Ads\Workflow\Line_Item_Editor;
 use Aggressive\Ads\Workflow\Line_Item_Lifecycle;
 use Aggressive\Ads\Workflow\Line_Item_Validator;
 use Aggressive\Ads\Workflow\Assigned_Creatives;
+use Aggressive\Ads\Workflow\Assignment_Editor;
 use Aggressive\Ads\Workflow\Edit_Window;
 use Aggressive\Ads\Workflow\Campaign_Validator;
 use Aggressive\Ads\Workflow\Coverage_Service;
@@ -319,6 +320,17 @@ final class Service_Registrar {
 		$container->register(
 			Creative_Revision_Repository::class,
 			static fn (): Creative_Revision_Repository => new Creative_Revision_Repository()
+		);
+
+		$container->register(
+			Assignment_Editor::class,
+			static fn ( Service_Container $c ): Assignment_Editor => new Assignment_Editor(
+				$c->get( Creative_Assignment_Repository::class ),
+				$c->get( Line_Item_Repository::class ),
+				$c->get( Campaign_Repository::class ),
+				$c->get( Audit_Repository::class ),
+				$c->get( Edit_Window::class )
+			)
 		);
 
 		$container->register(
@@ -828,71 +840,6 @@ final class Service_Registrar {
 		);
 
 		$container->register(
-			Campaigns_Controller::class,
-			static fn ( Service_Container $c ): Campaigns_Controller => new Campaigns_Controller(
-				$c->get( Campaign_Repository::class ),
-				$c->get( Creative_Repository::class ),
-				$c->get( Placement_Repository::class ),
-				$c->get( Org_Repository::class ),
-				$c->get( Campaign_Editor::class ),
-				$c->get( Campaign_Copier::class ),
-				$c->get( Review_Readiness::class ),
-				$c->get( Rate_Limiter::class ),
-				$c->get( Reporting_Read::class ),
-				$c->get( Edit_Window::class ),
-				$c->get( Acting_As::class ),
-				$c->get( Line_Item_Repository::class )
-			)
-		);
-
-		$container->register(
-			Line_Items_Controller::class,
-			static fn ( Service_Container $c ): Line_Items_Controller => new Line_Items_Controller(
-				$c->get( Line_Item_Repository::class ),
-				$c->get( Campaign_Repository::class ),
-				$c->get( Line_Item_Editor::class ),
-				$c->get( Rate_Limiter::class )
-			)
-		);
-
-		$container->register(
-			Placements_Controller::class,
-			static fn ( Service_Container $c ): Placements_Controller => new Placements_Controller(
-				$c->get( Placement_Repository::class ),
-				$c->get( Placement_Manager::class ),
-				$c->get( Placement_Data::class )
-			)
-		);
-
-		$container->register(
-			Packages_Controller::class,
-			static fn ( Service_Container $c ): Packages_Controller => new Packages_Controller(
-				$c->get( Package_Repository::class ),
-				$c->get( Placement_Repository::class ),
-				$c->get( Campaign_Editor::class ),
-				$c->get( Package_Manager::class ),
-				$c->get( Package_Data::class )
-			)
-		);
-
-		$container->register(
-			Organizations_Controller::class,
-			static fn ( Service_Container $c ): Organizations_Controller => new Organizations_Controller(
-				$c->get( Organization_State_Manager::class ),
-				$c->get( Organization_Data::class ),
-				$c->get( Organization_Membership::class )
-			)
-		);
-
-		$container->register(
-			Settings_Controller::class,
-			static fn ( Service_Container $c ): Settings_Controller => new Settings_Controller(
-				$c->get( Settings::class ),
-				$c->get( Reviewer_Access::class )
-			)
-		);
-
-		$container->register(
 			Rate_Limit_Repository::class,
 			static fn (): Rate_Limit_Repository => new Rate_Limit_Repository()
 		);
@@ -902,31 +849,6 @@ final class Service_Registrar {
 			static fn ( Service_Container $c ): Rate_Limiter => new Rate_Limiter(
 				$c->get( Audit_Repository::class ),
 				$c->get( Rate_Limit_Repository::class )
-			)
-		);
-
-		$container->register(
-			Creative_Controller::class,
-			static fn ( Service_Container $c ): Creative_Controller => new Creative_Controller(
-				$c->get( Creative_Manager::class ),
-				$c->get( Creative_Change_Manager::class )
-			)
-		);
-
-		$container->register(
-			Transitions_Controller::class,
-			static fn ( Service_Container $c ): Transitions_Controller => new Transitions_Controller(
-				$c->get( Campaign_State_Machine::class ),
-				$c->get( Campaign_Repository::class ),
-				$c->get( Rate_Limiter::class )
-			)
-		);
-
-		$container->register(
-			Creative_File_Controller::class,
-			static fn ( Service_Container $c ): Creative_File_Controller => new Creative_File_Controller(
-				$c->get( Creative_Repository::class ),
-				$c->get( Private_Storage::class )
 			)
 		);
 
