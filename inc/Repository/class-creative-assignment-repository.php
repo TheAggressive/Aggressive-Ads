@@ -419,6 +419,42 @@ final class Creative_Assignment_Repository {
 	}
 
 	/**
+	 * Retires every live assignment on a deleted placement.
+	 *
+	 * Retired rather than removed, so the row still explains what ran there.
+	 * Left live it stays a delivery candidate for a slot that no longer exists.
+	 *
+	 * Scoped to rows that are not already terminal, so running it twice is a
+	 * no-op rather than a second write.
+	 *
+	 * @param int $placement_id Placement id.
+	 * @return int Rows retired.
+	 */
+	public function retire_for_placement( int $placement_id ): int {
+		if ( $placement_id <= 0 || ! $this->table_exists() ) {
+			return 0;
+		}
+
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- Query values are prepared; the identifier is this repository's own table.
+		$written = $wpdb->query(
+			$wpdb->prepare(
+				'UPDATE %i SET status = %s, compat_key = NULL, revision = revision + 1, updated_at_ts = %d
+				WHERE placement_id = %d AND status NOT IN ( %s, %s )',
+				$this->table_name(),
+				Assignment_Rules::CANCELLED,
+				time(),
+				$placement_id,
+				Assignment_Rules::CANCELLED,
+				Assignment_Rules::COMPLETED
+			)
+		);
+
+		return is_int( $written ) ? $written : 0;
+	}
+
+	/**
 	 * How many creatives have no assignment at all.
 	 *
 	 * A left join rather than two counts: a creative can legitimately have no

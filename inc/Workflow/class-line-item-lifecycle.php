@@ -33,6 +33,7 @@ final class Line_Item_Lifecycle implements Service {
 	public function init(): void {
 		add_action( 'aggr_campaign_transitioned', array( $this, 'sync' ), 5, 1 );
 		add_action( 'before_delete_post', array( $this, 'delete_campaign' ), 10, 2 );
+		add_action( 'before_delete_post', array( $this, 'delete_placement' ), 10, 2 );
 	}
 
 	/**
@@ -42,6 +43,24 @@ final class Line_Item_Lifecycle implements Service {
 	 */
 	public function sync( int $campaign_id ): void {
 		$this->line_items->sync_default_from_campaign( $campaign_id, false );
+	}
+
+	/**
+	 * Removes child rows with their parent campaign.
+	 *
+	 * @param int      $post_id Deleted post id.
+	 * @param \WP_Post $post    Deleted post.
+	 */
+	/**
+	 * Retires assignments whose placement has been deleted.
+	 *
+	 * @param int      $post_id Deleted post id.
+	 * @param \WP_Post $post    Deleted post.
+	 */
+	public function delete_placement( int $post_id, \WP_Post $post ): void {
+		if ( Post_Types::PLACEMENT === $post->post_type ) {
+			$this->assignments->retire_for_placement( $post_id );
+		}
 	}
 
 	/**

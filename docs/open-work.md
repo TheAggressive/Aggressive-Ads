@@ -123,9 +123,13 @@ completion, and four of its eight exit criteria are genuinely open:
   inputs, output shape, visibility, ordering and cost. One query whatever the
   candidate count, `EXPLAIN` asserted to choose the `delivery` index, measured
   against 1,000 rows. Serving still selects Campaigns; the cutover is P3's.
-- **Criterion 6 — cleanup and rollback.** Campaign deletion is tested. Placement
-  deletion, reference-aware private-file and attachment cleanup, operational
-  recovery and rollback are not.
+- **Criterion 6 — cleanup and rollback.** *Mostly done.* Campaign and placement
+  deletion, shared-byte safety and repeat-safe recovery are tested, and the
+  destructive uninstall now clears the P2 migration hook it was leaving
+  scheduled. Deleting a placement retires its assignments rather than removing
+  them, so the row still explains what ran there. **Rollback is still open** —
+  there is no tested downgrade path, and one would need a deliberate
+  older-version install to exercise.
 - **Criterion 8 — documentation.** `data-schema.md` describes the tables.
   `domain-model.md`, `rest-api.md`, `roles-and-capabilities.md`,
   `administration.md` and `runbook.md` do not yet describe the creative model
