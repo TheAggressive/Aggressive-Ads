@@ -52,16 +52,8 @@ use Aggressive\Ads\Workflow\Reviewer_Access;
 /**
  * The HTTP surface, separated from the services behind it.
  *
- * Split out of `Service_Registrar` when it crossed the thousand-line limit for
- * the second time. The boundary is a real one rather than a convenient cut:
- * every entry here is a route table with a permission callback, and every entry
- * left behind is a domain service that knows nothing about HTTP. They are
- * reviewed differently — a mistake in one exposes an endpoint, a mistake in the
- * other throws on boot — which is the same reasoning that moved the migration
- * map out first.
- *
- * Registration still stores a closure and runs nothing; routes are registered
- * when `Plugin::init_services()` reaches each controller.
+ * A mistake here exposes an endpoint; a mistake in `Service_Registrar` throws on
+ * boot. Registration still stores a closure and runs nothing.
  */
 final class Rest_Service_Registrar {
 

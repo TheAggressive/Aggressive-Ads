@@ -19,18 +19,10 @@ use Aggressive\Ads\Storage\Private_Storage;
 /**
  * What each database version does, in one place.
  *
- * Extracted from `Service_Registrar`, which crossed the thousand-line limit when
- * P2 added its steps. The split is by responsibility rather than by size: every
- * other entry in the registrar answers "what service is this and what does it
- * need", while this answers "what has to happen to an existing site" — a
- * question with a different audience, a different review standard and a
- * different failure mode. A wrong factory throws on boot; a wrong migration
- * runs once against real data and cannot be taken back.
- *
- * The map stays a map. Each step is a closure that names the service doing the
- * work, so the migration history reads as a list of decisions rather than as
- * implementation, and `LineItemUpgradeWiringTest` can exercise the real thing
- * instead of a copy.
+ * Separate from `Service_Registrar` because a wrong factory throws on boot while
+ * a wrong migration runs once against real data. Each step names the service
+ * doing the work, so the history reads as decisions rather than implementation
+ * and `LineItemUpgradeWiringTest` exercises the real map.
  */
 final class Migration_Map {
 

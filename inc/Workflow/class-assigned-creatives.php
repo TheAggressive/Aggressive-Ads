@@ -14,29 +14,17 @@ use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 
 /**
- * The assignment table answers *which* revisions are assigned; not what they contain.
+ * Structure from the assignment; values from the revision.
  *
- * That split is the whole design of this class and it is easy to get wrong in
- * the tempting direction. The assignment carries denormalized `click_url`,
- * `alt_text`, `width` and `height`, and reading them here would collapse a
- * second query — but those columns are a snapshot taken at approval, and their
- * correctness rests on the source being an *immutable* revision.
+ * The assignment's denormalized `click_url` and `alt_text` are a snapshot taken
+ * at approval, correct only while the source is immutable. That holds for
+ * serving. It does not hold for editing surfaces, where a draft creative is
+ * still edited in place — reading the snapshot there would show an advertiser
+ * their own edit ignored. The distinction goes away when every edit creates a
+ * revision.
  *
- * That holds for serving, which only ever shows approved revisions. It does not
- * hold yet for the editing surfaces: an advertiser editing a draft creative
- * still updates post meta in place, because the write path has not been
- * converted to create a revision per edit. Reading the snapshot on a portal
- * screen would therefore show the value as it was when the backfill ran, and
- * the advertiser would see their own edit ignored.
- *
- * So structure comes from the assignment and values come from the revision, and
- * that stays true until editing creates revisions. When it does, the two are
- * the same answer and this class can stop making the distinction.
- *
- * Missing rows are healed on the way past, through the same operation the
- * backfill uses. A campaign somebody opens should not have to wait for cron,
- * and a second code path would mean two definitions of what a compatibility
- * assignment is.
+ * Missing rows heal on the way past, through the same operation the backfill
+ * uses, so there is one definition of a compatibility assignment.
  */
 final class Assigned_Creatives {
 
@@ -57,9 +45,8 @@ final class Assigned_Creatives {
 	/**
 	 * Revision ids assigned to a campaign, healing anything missing.
 	 *
-	 * The caller has already authorized the campaign; this adds no gate of its
-	 * own and must not be reached from an unauthenticated path. Healing writes,
-	 * and a write on an unauthorized read is how a lazy migration becomes a
+	 * Adds no gate of its own: the caller must have authorized the campaign
+	 * already. Healing writes, and a write on an unauthorized read is a
 	 * denial-of-service vector.
 	 *
 	 * @param int $campaign_id Campaign post id.
@@ -88,19 +75,10 @@ final class Assigned_Creatives {
 	/**
 	 * Creates whichever assignments a campaign is missing.
 	 *
-	 * **Per creative, not all-or-nothing.** The first version healed only when
-	 * a campaign had *no* assignments, on the reasoning that a partial result
-	 * meant the backfill was mid-campaign and would finish on its own. That
-	 * reasoning was wrong: the backfill walks the *creative* id space globally,
-	 * not campaign by campaign, so one campaign's creatives can sit either side
-	 * of the cursor and stay that way for as long as the backfill takes.
-	 *
-	 * The symptom was quiet and would have been blamed on something else — a
-	 * campaign showing some of its artwork and not the rest, on a screen that
-	 * had no reason to be wrong.
-	 *
-	 * Skipping the ones already assigned keeps the ordinary read free of
-	 * writes; only the genuinely missing are created.
+	 * Per creative, not all-or-nothing. Healing only when a campaign had *no*
+	 * assignments was wrong: the backfill walks the creative id space globally,
+	 * so one campaign's creatives can sit either side of the cursor and stay
+	 * there — showing some of its artwork and not the rest.
 	 *
 	 * @param int $campaign_id Campaign post id.
 	 * @return array<int, array<string, mixed>>

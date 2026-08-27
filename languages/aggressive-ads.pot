@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-27T00:29:28+00:00\n"
+"POT-Creation-Date: 2026-08-27T00:57:38+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -1498,44 +1498,44 @@ msgstr ""
 msgid "Those settings cannot be saved."
 msgstr ""
 
-#: inc/Install/class-assignment-health.php:68
-#: inc/Install/class-assignment-health.php:94
+#: inc/Install/class-assignment-health.php:57
+#: inc/Install/class-assignment-health.php:83
 msgid "Every creative has a delivery assignment"
 msgstr ""
 
-#: inc/Install/class-assignment-health.php:84
+#: inc/Install/class-assignment-health.php:73
 msgid "The creative assignment table is missing"
 msgstr ""
 
-#: inc/Install/class-assignment-health.php:85
+#: inc/Install/class-assignment-health.php:74
 msgid "A database upgrade has not completed. Deactivating and reactivating the plugin runs it again."
 msgstr ""
 
-#: inc/Install/class-assignment-health.php:95
+#: inc/Install/class-assignment-health.php:84
 msgid "The delivery model upgrade has covered every creative on this site."
 msgstr ""
 
-#: inc/Install/class-assignment-health.php:109
+#: inc/Install/class-assignment-health.php:93
 msgid "The delivery model upgrade is still running"
 msgstr ""
 
 #. translators: %d: number of creatives not yet migrated.
-#: inc/Install/class-assignment-health.php:112
+#: inc/Install/class-assignment-health.php:96
 #, php-format
 msgid "%d creatives are waiting. This runs in the background and nothing is affected while it does — advertising continues to serve normally."
 msgstr ""
 
-#: inc/Install/class-assignment-health.php:120
+#: inc/Install/class-assignment-health.php:104
 msgid "Some creatives have no delivery assignment"
 msgstr ""
 
 #. translators: %d: number of creatives left behind.
-#: inc/Install/class-assignment-health.php:123
+#: inc/Install/class-assignment-health.php:107
 #, php-format
 msgid "%d creatives were skipped by the delivery model upgrade, which reports itself finished. Advertising still serves normally. A creative with no campaign or placement is expected here; anything else is worth reporting."
 msgstr ""
 
-#: inc/Install/class-assignment-health.php:142
+#: inc/Install/class-assignment-health.php:126
 #: inc/Install/class-rewrite-health.php:281
 msgid "Advertising"
 msgstr ""
@@ -2207,7 +2207,7 @@ msgid "That placement is not available for this campaign."
 msgstr ""
 
 #: inc/Portal/class-creative-actions.php:276
-#: inc/Workflow/class-assignment-editor.php:93
+#: inc/Workflow/class-assignment-editor.php:79
 #: inc/Workflow/class-campaign-editor.php:342
 #: inc/Workflow/class-creative-manager.php:293
 #: inc/Workflow/class-creative-manager.php:354
@@ -2532,7 +2532,7 @@ msgstr ""
 #: inc/REST/class-campaigns-controller.php:412
 #: inc/REST/class-creative-file-controller.php:190
 #: inc/REST/class-line-items-controller.php:306
-#: inc/Workflow/class-assignment-editor.php:255
+#: inc/Workflow/class-assignment-editor.php:238
 #: inc/Workflow/class-line-item-editor.php:69
 #: inc/Workflow/class-line-item-editor.php:78
 msgid "Not found."
@@ -2726,26 +2726,26 @@ msgstr ""
 msgid "Account registration is not available."
 msgstr ""
 
-#: inc/Workflow/class-assignment-editor.php:107
-#: inc/Workflow/class-assignment-editor.php:128
+#: inc/Workflow/class-assignment-editor.php:93
+#: inc/Workflow/class-assignment-editor.php:114
 msgid "This creative changed in another window. Reload it before saving again."
 msgstr ""
 
-#: inc/Workflow/class-assignment-editor.php:177
+#: inc/Workflow/class-assignment-editor.php:163
 msgid "Change at least one delivery setting before saving."
 msgstr ""
 
 #. translators: 1: minimum weight, 2: maximum weight.
-#: inc/Workflow/class-assignment-editor.php:187
+#: inc/Workflow/class-assignment-editor.php:173
 #, php-format
 msgid "Use a whole number between %1$d and %2$d for the rotation weight."
 msgstr ""
 
-#: inc/Workflow/class-assignment-editor.php:201
+#: inc/Workflow/class-assignment-editor.php:187
 msgid "This creative cannot move to that state from where it is now."
 msgstr ""
 
-#: inc/Workflow/class-assignment-editor.php:216
+#: inc/Workflow/class-assignment-editor.php:202
 msgid "Creative dates must fall inside the campaign’s own dates."
 msgstr ""
 

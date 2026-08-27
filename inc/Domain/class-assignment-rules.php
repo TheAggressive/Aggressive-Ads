@@ -9,14 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Domain;
 
-/**
- * The assignment's own rules, with no WordPress in sight.
- *
- * `inc/Domain/` calls no WordPress function at all, which is what makes these
- * assertable exhaustively in milliseconds — and exhaustive is what the window
- * rule needs, because it is the one an advertiser could otherwise use to run an
- * ad outside the period a publisher sold them.
- */
+/** The assignment's own rules. See docs/architecture.md for why Domain is pure. */
 final class Assignment_Rules {
 
 	public const DRAFT     = 'draft';
@@ -29,13 +22,7 @@ final class Assignment_Rules {
 	/** Weight is a share, not a percentage: any positive whole number. */
 	public const MIN_WEIGHT = 1;
 
-	/**
-	 * An upper bound so one assignment cannot swamp arithmetic later.
-	 *
-	 * P3 divides by the sum of weights in a rotation. A weight of PHP_INT_MAX
-	 * beside a weight of one is not a preference, it is an overflow waiting for
-	 * a second competitor.
-	 */
+	/** P3 divides by the sum of weights; PHP_INT_MAX beside 1 is an overflow. */
 	public const MAX_WEIGHT = 10000;
 
 	/**
@@ -67,15 +54,9 @@ final class Assignment_Rules {
 	/**
 	 * The edges a person may move an assignment along.
 	 *
-	 * Declared as a table rather than as conditions at call sites, for the
-	 * reason `Transition_Table` already records for campaigns: a rule spread
-	 * across call sites is a rule with no single answer, and the first
-	 * disagreement is silent.
-	 *
-	 * Pause and resume are the pair this exists for. `completed` and
-	 * `cancelled` are terminal: an assignment that finished its run or was
-	 * withdrawn does not come back, because the thing that would come back is
-	 * not the thing that was approved.
+	 * A table rather than conditions at call sites, for the reason
+	 * `Transition_Table` records for campaigns. Pause and resume are the pair
+	 * this exists for; `completed` and `cancelled` are terminal.
 	 *
 	 * @return array<string, array<int, string>>
 	 */
@@ -91,10 +72,8 @@ final class Assignment_Rules {
 	}
 
 	/**
-	 * Whether one status may become another.
-	 *
-	 * A status may always stay itself: a write that changes weight and leaves
-	 * status alone must not be refused for not being a transition.
+	 * Whether one status may become another. A status may stay itself, so a
+	 * weight-only write is not refused for not being a transition.
 	 *
 	 * @param string $from Current status.
 	 * @param string $to   Requested status.
@@ -123,15 +102,11 @@ final class Assignment_Rules {
 	/**
 	 * Whether a delivery window is valid inside its parent's.
 	 *
-	 * **An assignment may only narrow.** This is the rule that matters most
-	 * here: a campaign sold for June must not carry a creative that runs into
-	 * July because somebody typed a later end date. Widening is refused rather
-	 * than clamped, so the answer a person gets is "that is outside the
-	 * campaign" rather than a silently different date they did not ask for.
+	 * **An assignment may only narrow.** A campaign sold for June must not carry
+	 * a creative running into July. Widening is refused rather than clamped, so
+	 * nobody gets a silently different date than they submitted.
 	 *
-	 * Zero means "inherit the parent", on both ends independently — a creative
-	 * may start late and run to the end of the campaign without restating the
-	 * end date, which is the common case for a mid-flight addition.
+	 * Zero inherits the parent, on each end independently.
 	 *
 	 * @param int $start        Requested start, or 0 to inherit.
 	 * @param int $end          Requested end, or 0 to inherit.
@@ -156,11 +131,7 @@ final class Assignment_Rules {
 			return false;
 		}
 
-		/*
-		 * A start after the parent ends, or an end before it begins, is a
-		 * window that can never deliver. Refusing it is kinder than storing a
-		 * creative that will simply never appear and reports nothing wrong.
-		 */
+		// A window that can never deliver is refused rather than stored silently.
 		if ( 0 !== $start && 0 !== $parent_end && $start >= $parent_end ) {
 			return false;
 		}

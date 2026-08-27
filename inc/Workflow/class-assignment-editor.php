@@ -21,26 +21,18 @@ use WP_Error;
 /**
  * Owns authorization, validation, concurrency and audit for assignments.
  *
- * Deliberately the same shape as `Line_Item_Editor`, which already answers the
- * same questions for the layer above: is the caller allowed, is the campaign
- * editable, did somebody else change this first, and what exactly changed. A
- * second arrangement of those four would be a second place for one of them to
- * be forgotten.
+ * The same shape as `Line_Item_Editor` — authorize, check the edit window, check
+ * the revision, audit — because a second arrangement of those four is a second
+ * place to forget one.
  *
- * The one rule that is this class's own is the window. An assignment may narrow
- * its parent's delivery window and may never widen it — a campaign sold for
- * June must not carry a creative that runs into July. `Assignment_Rules` states
- * it; this supplies the parent to state it against.
+ * Its own rule is the window: an assignment may narrow its parent's and never
+ * widen it. `Assignment_Rules` states it; this supplies the parent.
  */
 final class Assignment_Editor {
 
 	/**
-	 * Fields a caller may change.
-	 *
-	 * Everything else on the row is derived, projected or structural.
-	 * `revision_id` in particular is not here: pointing an assignment at
-	 * different artwork is a revision decision that goes through review, not a
-	 * field edit.
+	 * Fields a caller may change. `revision_id` is absent deliberately: pointing
+	 * at different artwork goes through review, not a field edit.
 	 */
 	private const WRITABLE = array( 'weight', 'start_at_ts', 'end_at_ts', 'status' );
 
@@ -72,13 +64,7 @@ final class Assignment_Editor {
 	 * @return int|WP_Error New assignment revision.
 	 */
 	public function update( int $campaign_id, int $assignment_id, array $fields, int $expected_revision ): int|WP_Error {
-		/*
-		 * Missing and forbidden are the same answer.
-		 *
-		 * An assignment id belonging to another organization must not be
-		 * distinguishable from one that does not exist, or the route becomes a
-		 * way to count somebody else's creatives.
-		 */
+		// Missing and forbidden answer alike, or the route counts other tenants.
 		if (
 			! current_user_can( Capabilities::SUBMIT_CAMPAIGN )
 			|| ! $this->campaigns->exists( $campaign_id )
@@ -225,11 +211,8 @@ final class Assignment_Editor {
 	/**
 	 * The window an assignment must fit inside.
 	 *
-	 * The line item's, falling back to the campaign's. The line item is the
-	 * assignment's immediate parent and carries a projected copy of the
-	 * campaign schedule, so asking it first keeps the answer consistent with
-	 * what the advertiser is shown — and asking the campaign when there is no
-	 * line item keeps a campaign mid-migration from being unbounded.
+	 * The line item's, falling back to the campaign's — so a campaign
+	 * mid-migration is not treated as unbounded.
 	 *
 	 * @param int $campaign_id Campaign id.
 	 * @return array{start: int, end: int}

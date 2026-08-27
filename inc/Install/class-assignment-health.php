@@ -15,24 +15,13 @@ use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 /**
  * The one thing watching a migration nothing else reads yet.
  *
- * Native fill still selects Campaigns and Creative posts, which is what makes
- * the backfill safe to run on a live site — and also what makes it invisible.
- * A backfill that stalls, or that skips rows it should not, produces no symptom
- * at all until something depends on it, and by then the cause is several
- * releases old.
+ * Serving still reads Campaigns, which is what makes the backfill safe and also
+ * what makes a stall invisible. This counts the gap so a publisher can see it
+ * without a shadow-read.
  *
- * So this counts. A gap is a number a publisher can see in Tools → Site Health
- * without knowing what a compatibility assignment is, and without anybody
- * having to build a shadow-read to find it.
- *
- * **What it does not do**, stated so nobody assumes otherwise: it compares
- * counts, not field values. It will notice a creative with no assignment; it
- * will not notice an assignment whose denormalized columns disagree with its
- * revision. That is deliberate for now — the editing surfaces read values from
- * the revision rather than the snapshot, so a disagreement has no consequence
- * until the write path creates revisions and serving reads this table. When
- * that changes, this check has to grow a field comparison, and that is the
- * moment to add it rather than now.
+ * It compares counts, not field values: a snapshot disagreeing with its revision
+ * has no consequence until serving reads this table, and that is when to add the
+ * comparison.
  */
 final class Assignment_Health implements Service {
 
@@ -96,13 +85,8 @@ final class Assignment_Health implements Service {
 			);
 		}
 
-		/*
-		 * Unfinished is not a fault. The backfill runs in batches on cron and a
-		 * large catalogue legitimately takes many ticks, so a site part-way
-		 * through is working exactly as designed and must not be told it has a
-		 * problem. A *stalled* one is a different matter, and the difference is
-		 * whether the backfill still considers itself running.
-		 */
+		// Unfinished is not a fault — a large catalogue takes many cron ticks.
+		// Finished-but-incomplete is a different matter.
 		if ( ! $this->migrator->is_complete() ) {
 			return $this->result(
 				'recommended',
