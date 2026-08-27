@@ -231,6 +231,91 @@ final class Creative_Assignment_Repository {
 	}
 
 	/**
+	 * One assignment, scoped to the campaign that must own it.
+	 *
+	 * The campaign is part of the lookup rather than checked afterwards. A
+	 * caller supplies both ids and neither is trusted: an assignment id from
+	 * another tenant simply does not resolve, so the route answers "not found"
+	 * without ever having to decide whether to say "forbidden".
+	 *
+	 * @param int $assignment_id Assignment id.
+	 * @param int $campaign_id   Campaign that must own it.
+	 * @return array<string, mixed>|null
+	 */
+	public function find_for_campaign( int $assignment_id, int $campaign_id ): ?array {
+		if ( $assignment_id <= 0 || $campaign_id <= 0 || ! $this->table_exists() ) {
+			return null;
+		}
+
+		global $wpdb;
+		$table = $this->table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom-table read owned by this repository.
+		$row = $wpdb->get_row(
+			$wpdb->prepare( 'SELECT * FROM %i WHERE id = %d AND campaign_id = %d LIMIT 1', $table, $assignment_id, $campaign_id ),
+			ARRAY_A
+		);
+
+		return is_array( $row ) ? $row : null;
+	}
+
+	/**
+	 * Applies validated changes under optimistic concurrency.
+	 *
+	 * The expected revision is in the `WHERE`, not read and compared first.
+	 * Two editors saving the same assignment at the same moment both pass a
+	 * check-then-write; only one satisfies a conditional update, and the loser
+	 * is told rather than silently overwriting.
+	 *
+	 * @param int                  $assignment_id     Assignment id.
+	 * @param int                  $campaign_id       Owning campaign.
+	 * @param array<string, mixed> $fields            Validated values.
+	 * @param int                  $expected_revision Last-seen revision.
+	 * @return int|false New revision, or false when someone else won.
+	 */
+	public function update( int $assignment_id, int $campaign_id, array $fields, int $expected_revision ): int|false {
+		if ( $assignment_id <= 0 || array() === $fields || ! $this->table_exists() ) {
+			return false;
+		}
+
+		global $wpdb;
+
+		$next    = $expected_revision + 1;
+		$columns = array( 'weight', 'start_at_ts', 'end_at_ts', 'status' );
+		$set     = array();
+		$values  = array();
+
+		foreach ( $columns as $column ) {
+			if ( ! array_key_exists( $column, $fields ) ) {
+				continue;
+			}
+
+			$set[]    = 'status' === $column ? "{$column} = %s" : "{$column} = %d";
+			$values[] = 'status' === $column ? (string) $fields[ $column ] : (int) $fields[ $column ];
+		}
+
+		if ( array() === $set ) {
+			return false;
+		}
+
+		$set[]    = 'revision = %d';
+		$values[] = $next;
+		$set[]    = 'updated_at_ts = %d';
+		$values[] = time();
+
+		$values[] = $assignment_id;
+		$values[] = $campaign_id;
+		$values[] = $expected_revision;
+
+		// Identifiers come only from the fixed allowlist above.
+		$sql = 'UPDATE %i SET ' . implode( ', ', $set ) . ' WHERE id = %d AND campaign_id = %d AND revision = %d';
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- Query values are prepared; identifiers come from the fixed allowlist above.
+		$updated = $wpdb->query( $wpdb->prepare( $sql, $this->table_name(), ...$values ) );
+
+		return 1 === $updated ? $next : false;
+	}
+
+	/**
 	 * How many creatives have no assignment at all.
 	 *
 	 * A left join rather than two counts: a creative can legitimately have no

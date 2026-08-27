@@ -240,6 +240,14 @@ aggressive-ads.php   header, constants, floor guard, hand-off. Never a fifth job
       └ inc/class-service-registrar.php   register() factories — instantiates nothing
 ```
 
+Registrars are split by responsibility, not size: `Service_Registrar` holds
+domain services, `Rest_Service_Registrar` the HTTP surface,
+`Runtime_Service_Registrar` the hooked admin/delivery/lifecycle services, and
+`Install\Migration_Map` the version-to-migration map. A mistake in a route
+table exposes an endpoint; a mistake in a factory throws on boot; a mistake in a
+migration runs once against real data. Different review standards, different
+files.
+
 Registration stores a closure and runs nothing. Behaviour begins only at
 `init_services()`. Adding a service costs two greppable edits: one
 `Service_Registrar::register()` line and, when hooks are needed, one entry in

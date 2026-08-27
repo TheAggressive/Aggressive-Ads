@@ -17,21 +17,12 @@ use Aggressive\Ads\Repository\Line_Item_Repository;
 /**
  * One function answers "is this frozen", and every write site asks it.
  *
- * That is deliberate and it is the main risk this class exists to remove. The
- * rule — a draft may be edited in place, an approved revision may not — is
- * simple to state and easy to re-derive slightly differently at each call site,
- * and a single call site that gets it wrong mutates artwork a publisher already
- * approved. So the condition lives here once.
+ * Freezing begins at approval, not creation: a draft has never been approved, so
+ * a revision per autosave would fill the history with rows nobody reads. See
+ * docs/platform-p2-creative-model.md.
  *
- * **Freezing begins at approval, not at creation.** A draft has never been
- * approved, so there is nothing to protect and nothing to preserve: editing one
- * costs nothing and creating a revision for every autosave would fill the
- * history with rows nobody will ever look at. `docs/platform-p2-creative-model.md`
- * scopes immutability to *approved* revisions for exactly this reason.
- *
- * Promotion to the Media Library is the observable form of "approved": the
- * private original is deleted the moment a creative is promoted, so an
- * attachment is the artwork a publisher signed off and the one being served.
+ * Promotion to the Media Library is the observable form of "approved" — the
+ * private original is deleted at that moment.
  */
 final class Revision_Policy {
 
@@ -52,10 +43,8 @@ final class Revision_Policy {
 	}
 
 	/**
-	 * Whether this creative may no longer be edited in place.
-	 *
-	 * The single authority. Anything that writes creative text asks this first,
-	 * and nothing re-derives it.
+	 * Whether this creative may no longer be edited in place. The single
+	 * authority; nothing re-derives it.
 	 *
 	 * @param int $creative_id Creative post id.
 	 * @return bool
@@ -67,16 +56,10 @@ final class Revision_Policy {
 	/**
 	 * Applies a text change, revising rather than mutating when frozen.
 	 *
-	 * The caller has already authorized the change and, when the creative is
-	 * frozen, a person has already approved this exact text — a destination
-	 * edit reaches here only after staff approve the campaign change that
-	 * proposed it. So the revision this creates is approved on arrival rather
-	 * than re-entering the review queue: sending it back would ask the same
-	 * reviewer to approve the thing they just approved, and the campaign would
-	 * sit in review over a change already decided.
-	 *
-	 * That is the one place this differs from an advertiser-initiated edit,
-	 * which will create a pending revision and use the text-only review lane.
+	 * The revision arrives approved rather than pending: a destination edit only
+	 * reaches here after staff approve the campaign change that proposed it, so
+	 * re-queueing it would ask the same reviewer to approve what they just did.
+	 * An advertiser-initiated edit differs — that one stages a pending revision.
 	 *
 	 * @param int         $creative_id Creative post id.
 	 * @param string|null $click_url   New destination, or null to keep.
@@ -95,13 +78,8 @@ final class Revision_Policy {
 		$next_url = null === $click_url ? (string) $current['click_url'] : $click_url;
 		$next_alt = null === $alt_text ? (string) $current['alt_text'] : $alt_text;
 
-		/*
-		 * A change that changes nothing is refused rather than recorded.
-		 *
-		 * The contract asks for this explicitly: a revision identical to its
-		 * predecessor in both bytes and text says nothing, and a queue full of
-		 * them is worse than no history at all.
-		 */
+		// A revision identical in bytes and text says nothing; a queue full of
+		// them is worse than no history.
 		if ( $next_url === (string) $current['click_url'] && $next_alt === (string) $current['alt_text'] ) {
 			return 0;
 		}
@@ -125,12 +103,9 @@ final class Revision_Policy {
 	}
 
 	/**
-	 * Moves the campaign's assignment onto the new revision.
-	 *
-	 * Without this the assignment still names the superseded revision, and the
-	 * screens that read structure from assignments would show the old artwork
-	 * record for a campaign whose destination has changed. The snapshot columns
-	 * move with it, because they describe the revision being pointed at.
+	 * Moves the campaign's assignment onto the new revision, snapshot and all —
+	 * a row naming one revision and describing another is worse than not
+	 * denormalizing at all.
 	 *
 	 * @param array<string, mixed> $current     Superseded creative details.
 	 * @param int                  $revision_id New revision id.

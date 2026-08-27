@@ -12,14 +12,8 @@ namespace Aggressive\Ads;
 /**
  * Lazy singletons, keyed by class name, with no reflection and no autowiring.
  *
- * Registration stores a factory closure and instantiates nothing. A service
- * comes into existence the first time something asks for it, and exactly once
- * after that.
- *
- * Autowiring was deliberately not built. Wiring stays greppable: every
- * dependency a service takes is visible in the one file that registers it,
- * which is what you want at 2am and not what a reflection-based container
- * gives you.
+ * Registration stores a factory and instantiates nothing. See
+ * docs/architecture.md for why autowiring was not built.
  */
 final class Service_Container {
 

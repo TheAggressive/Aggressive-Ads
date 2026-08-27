@@ -11,6 +11,8 @@ namespace Aggressive\Ads\REST;
 
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Workflow\Assignment_Editor;
+use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Line_Item_Repository;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Security\Rate_Limiter;
@@ -25,16 +27,20 @@ final class Line_Items_Controller implements Service {
 	/**
 	 * Builds the line-item controller.
 	 *
-	 * @param Line_Item_Repository $line_items Line-item persistence.
-	 * @param Campaign_Repository  $campaigns  Campaign persistence.
-	 * @param Line_Item_Editor     $editor     Authorized editor.
-	 * @param Rate_Limiter         $limiter    Write rate limiter.
+	 * @param Line_Item_Repository           $line_items Line-item persistence.
+	 * @param Campaign_Repository            $campaigns  Campaign persistence.
+	 * @param Line_Item_Editor               $editor     Authorized editor.
+	 * @param Rate_Limiter                   $limiter    Write rate limiter.
+	 * @param Creative_Assignment_Repository $assignments       Assignment persistence.
+	 * @param Assignment_Editor              $assignment_editor Authorized assignment editor.
 	 */
 	public function __construct(
 		private readonly Line_Item_Repository $line_items,
 		private readonly Campaign_Repository $campaigns,
 		private readonly Line_Item_Editor $editor,
-		private readonly Rate_Limiter $limiter
+		private readonly Rate_Limiter $limiter,
+		private readonly Creative_Assignment_Repository $assignments,
+		private readonly Assignment_Editor $assignment_editor
 	) {
 	}
 
@@ -45,6 +51,8 @@ final class Line_Items_Controller implements Service {
 
 	/** Registers campaign-scoped line-item routes. */
 	public function register_routes(): void {
+		$this->register_assignment_routes();
+
 		Creative_File_Controller::register_route(
 			'/campaigns/(?P<campaign_id>\d+)/line-items',
 			array(
@@ -77,6 +85,126 @@ final class Line_Items_Controller implements Service {
 				),
 			)
 		);
+	}
+
+	/**
+	 * Registers the creative-assignment routes.
+	 *
+	 * On this controller rather than a new one because it already owns the
+	 * campaign-scoped delivery surface, and because both routes share the same
+	 * whole-number argument helpers — a second controller would mean a second
+	 * copy of the rule that rejects `"1.5"` before `absint()` sees it.
+	 */
+	private function register_assignment_routes(): void {
+		Creative_File_Controller::register_route(
+			'/campaigns/(?P<campaign_id>\d+)/creative-assignments',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'assignments' ),
+				'permission_callback' => array( $this, 'permission' ),
+				'args'                => array( 'campaign_id' => $this->positive_int_arg( true ) ),
+			)
+		);
+
+		Creative_File_Controller::register_route(
+			'/campaigns/(?P<campaign_id>\d+)/creative-assignments/(?P<id>\d+)',
+			array(
+				'methods'             => 'PATCH',
+				'callback'            => array( $this, 'update_assignment' ),
+				'permission_callback' => array( $this, 'write_permission' ),
+				'args'                => array(
+					'campaign_id' => $this->positive_int_arg( true ),
+					'id'          => $this->positive_int_arg( true ),
+					'revision'    => $this->positive_int_arg( true ),
+					'weight'      => $this->positive_int_arg( false ),
+					'start_at_ts' => $this->nonnegative_int_arg(),
+					'end_at_ts'   => $this->nonnegative_int_arg(),
+					'status'      => $this->string_arg(),
+				),
+			)
+		);
+	}
+
+	/**
+	 * Lists a readable campaign's creative assignments.
+	 *
+	 * @param WP_REST_Request $request REST request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function assignments( WP_REST_Request $request ) {
+		$campaign_id = (int) $request->get_param( 'campaign_id' );
+
+		if ( ! $this->campaigns->exists( $campaign_id ) || ! current_user_can( 'read_aggr_campaign', $campaign_id ) ) {
+			return $this->not_found();
+		}
+
+		$rows = array();
+
+		foreach ( $this->assignments->for_campaign( $campaign_id ) as $row ) {
+			$rows[] = $this->present_assignment( $row );
+		}
+
+		return new WP_REST_Response( array( 'creative_assignments' => $rows ), 200 );
+	}
+
+	/**
+	 * Updates one creative assignment.
+	 *
+	 * @param WP_REST_Request $request REST request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function update_assignment( WP_REST_Request $request ) {
+		$allowed = $this->limiter->attempt( Rate_Limiter::ACTION_AUTOSAVE, get_current_user_id() );
+
+		if ( is_wp_error( $allowed ) ) {
+			return $allowed;
+		}
+
+		$fields = array();
+
+		foreach ( array( 'weight', 'start_at_ts', 'end_at_ts', 'status' ) as $field ) {
+			if ( $request->has_param( $field ) ) {
+				$fields[ $field ] = $request->get_param( $field );
+			}
+		}
+
+		$campaign_id = (int) $request->get_param( 'campaign_id' );
+		$result      = $this->assignment_editor->update(
+			$campaign_id,
+			(int) $request->get_param( 'id' ),
+			$fields,
+			(int) $request->get_param( 'revision' )
+		);
+
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		$row = $this->assignments->find_for_campaign( (int) $request->get_param( 'id' ), $campaign_id );
+
+		return new WP_REST_Response( $this->present_assignment( (array) $row ), 200 );
+	}
+
+	/**
+	 * The advertiser-facing shape of an assignment.
+	 *
+	 * Storage and tenancy columns are removed rather than allowlisted in,
+	 * matching `present()` above: `organization_id` is already implied by the
+	 * campaign the caller reached through, and `compat_key` is a migration
+	 * detail no client has any business knowing about.
+	 *
+	 * @param array<string, mixed> $row Assignment row.
+	 * @return array<string, mixed>
+	 */
+	private function present_assignment( array $row ): array {
+		unset(
+			$row['organization_id'],
+			$row['compat_key'],
+			$row['created_at_ts'],
+			$row['updated_at_ts']
+		);
+
+		return $row;
 	}
 
 	/** Whether the caller may read the advertiser portal. */

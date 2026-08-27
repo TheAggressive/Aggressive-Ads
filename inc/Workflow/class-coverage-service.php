@@ -15,24 +15,15 @@ use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 
 /**
- * One definition of "eligible", so P3 does not have to invent a second.
+ * One definition of "eligible", so P3 does not invent a second.
  *
- * The contract is explicit that P3's decision engine reuses these definitions
- * rather than creating its own, which is the whole reason this is a service and
- * not a condition inside the validator. Two answers to "may this creative run"
- * is how a campaign passes review and then serves nothing.
+ * `classify()` names the state; the thresholds decide what each state is good
+ * enough for. P3 adds its own threshold over the same states rather than its own
+ * states — two answers to "may this creative run" is how a campaign passes
+ * review and then serves nothing.
  *
- * **Classification and threshold are separate on purpose.** `classify()` says
- * what state an assignment is in; `covers_for_submission()` says which of those
- * states are good enough to submit a campaign. P3 will add its own threshold
- * over the same states — a delivery decision cares about the window and the
- * approval, a submission does not.
- *
- * That split is what keeps this from breaking submission. Requiring an
- * *approved* assignment to submit would be circular: approval happens after
- * review, review happens after submission, so nothing could ever be sent. The
- * contract's "eligible approved assignment" describes the state a campaign
- * reaches on its way to serving, not the gate on the way in.
+ * Submission cannot require an *approved* assignment: approval follows review,
+ * review follows submission.
  */
 final class Coverage_Service {
 
@@ -73,15 +64,12 @@ final class Coverage_Service {
 	/**
 	 * Every assignment on a campaign, classified.
 	 *
-	 * Read through the healing reader rather than the repository directly. A
-	 * campaign the backfill has not reached yet has no assignments, and asking
-	 * the table straight would report it as covering nothing — an advertiser
-	 * would be told their artwork is missing during an upgrade they cannot see.
+	 * Read through the healing reader: a campaign the backfill has not reached
+	 * has no assignments, and would otherwise report as covering nothing.
 	 *
-	 * The creative details are returned alongside the state because `classify()`
-	 * has already loaded them. A caller that needs both — the validator does,
-	 * for its per-creative messages — would otherwise read every creative twice
-	 * and, worse, could read a different one than the state was computed from.
+	 * Details come back alongside the state because `classify()` has already
+	 * loaded them, and re-reading risks judging a different row than was
+	 * classified.
 	 *
 	 * @param int $campaign_id Campaign post id.
 	 * @return array<int, array{revision_id: int, placement_id: int, state: string, creative: array<string, mixed>|null}>
@@ -132,21 +120,11 @@ final class Coverage_Service {
 	/**
 	 * Which states count as *present* on a placement.
 	 *
-	 * Deliberately looser than `usable`, and the difference is worth being
-	 * exact about because getting it wrong changes what an advertiser is told.
-	 *
-	 * A wrongly sized or non-image creative is still attached to its placement:
-	 * the campaign reports "this creative is the wrong size", not "this
-	 * placement has no creative". Telling somebody both is telling them the
-	 * same problem twice and sending them to fix the wrong one.
-	 *
-	 * A superseded or deleted revision is genuinely absent — the old validator
-	 * never saw them either, because it read only active creatives — so those
-	 * do leave a placement uncovered.
-	 *
-	 * P3's threshold is `STATE_USABLE` and is stricter than this on purpose: a
-	 * wrongly sized creative may be submitted with an error against it, and may
-	 * never be served.
+	 * Looser than `usable`: a wrong-size or non-image creative is still attached,
+	 * so the campaign reports "wrong size" rather than "no creative" — reporting
+	 * both points at the wrong fix. Superseded and deleted revisions are absent,
+	 * matching what the old creative-based validator could see. P3's delivery
+	 * threshold is `STATE_USABLE`.
 	 *
 	 * @param string $state One of the STATE_* constants.
 	 * @return bool
@@ -162,9 +140,7 @@ final class Coverage_Service {
 	/**
 	 * What state one assignment is in.
 	 *
-	 * Ordered most-specific first, so the reported reason is the one a person
-	 * can act on: "this artwork was replaced" is more useful than "wrong size"
-	 * for a superseded revision that also happens not to fit.
+	 * Most-specific first, so the reported reason is the one a person can act on.
 	 *
 	 * @param array<string, mixed>      $row         Assignment row.
 	 * @param int                       $campaign_id Campaign being asked about.
@@ -182,15 +158,9 @@ final class Coverage_Service {
 			return self::STATE_MISSING_REVISION;
 		}
 
-		/*
-		 * A superseded revision is not the current artwork.
-		 *
-		 * Asked of the creative rather than the assignment because the
-		 * replacement flow supersedes revisions without touching assignments —
-		 * `Revision_Policy` repoints the compatibility row, but a pending
-		 * replacement deliberately does not, since the old one is still what
-		 * serves.
-		 */
+		// Asked of the creative, not the assignment: a pending replacement
+		// supersedes a revision without repointing the row, because the old one
+		// is still what serves.
 		if ( ! $this->creatives->is_active( $revision_id ) ) {
 			return self::STATE_SUPERSEDED;
 		}
