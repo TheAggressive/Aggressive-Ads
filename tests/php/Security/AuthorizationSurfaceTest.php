@@ -31,6 +31,7 @@ final class AuthorizationSurfaceTest extends WP_UnitTestCase {
 	 */
 	private static function expected_handlers(): array {
 		return array(
+			'DELETE /aggr/v1/campaigns/(?P<campaign_id>\d+)/creative-assignments/(?P<id>\d+)/assignment',
 			'DELETE /aggr/v1/creative-replacements/(?P<id>\d+)',
 			'DELETE /aggr/v1/creatives/(?P<id>\d+)',
 			'DELETE /aggr/v1/organizations/(?P<id>\d+)/members/(?P<user_id>\d+)',

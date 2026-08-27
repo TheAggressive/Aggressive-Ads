@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Repository;
 
 use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Domain\Assignment_Rules;
 use Aggressive\Ads\Install\Schema;
 
 /**
@@ -313,6 +314,49 @@ final class Creative_Assignment_Repository {
 		$updated = $wpdb->query( $wpdb->prepare( $sql, $this->table_name(), ...$values ) );
 
 		return 1 === $updated ? $next : false;
+	}
+
+	/**
+	 * Withdraws an assignment, keeping the row.
+	 *
+	 * Cancelled rather than deleted: the contract is explicit that deletion,
+	 * supersession and withdrawal have distinct meanings and none is a silent
+	 * removal of history.
+	 *
+	 * `compat_key` is cleared to NULL, which frees the unique slot so the same
+	 * placement can take a new compatibility assignment later. A retired row
+	 * holding the slot would refuse every future upload to that placement and
+	 * look like a database bug.
+	 *
+	 * @param int $assignment_id     Assignment id.
+	 * @param int $campaign_id       Owning campaign.
+	 * @param int $expected_revision Last-seen revision.
+	 * @return int|false New revision, or false when someone else won.
+	 */
+	public function retire( int $assignment_id, int $campaign_id, int $expected_revision ): int|false {
+		if ( $assignment_id <= 0 || $campaign_id <= 0 || ! $this->table_exists() ) {
+			return false;
+		}
+
+		global $wpdb;
+
+		$next = $expected_revision + 1;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- Query values are prepared; the identifier is this repository's own table.
+		$written = $wpdb->query(
+			$wpdb->prepare(
+				'UPDATE %i SET status = %s, compat_key = NULL, revision = %d, updated_at_ts = %d WHERE id = %d AND campaign_id = %d AND revision = %d',
+				$this->table_name(),
+				Assignment_Rules::CANCELLED,
+				$next,
+				time(),
+				$assignment_id,
+				$campaign_id,
+				$expected_revision
+			)
+		);
+
+		return 1 === $written ? $next : false;
 	}
 
 	/**

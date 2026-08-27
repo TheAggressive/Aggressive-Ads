@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Workflow;
 
+use Aggressive\Ads\Domain\Assignment_Rules;
 use Aggressive\Ads\Domain\Campaign_Rules;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
@@ -41,6 +42,9 @@ final class Coverage_Service {
 
 	/** The assignment belongs to a different campaign than the one asked about. */
 	public const STATE_WRONG_CAMPAIGN = 'wrong_campaign';
+
+	/** Withdrawn or finished: the row is history, not delivery. */
+	public const STATE_RETIRED = 'retired';
 
 	/** Usable: the current artwork, correctly sized, on the right campaign. */
 	public const STATE_USABLE = 'usable';
@@ -122,9 +126,8 @@ final class Coverage_Service {
 	 *
 	 * Looser than `usable`: a wrong-size or non-image creative is still attached,
 	 * so the campaign reports "wrong size" rather than "no creative" — reporting
-	 * both points at the wrong fix. Superseded and deleted revisions are absent,
-	 * matching what the old creative-based validator could see. P3's delivery
-	 * threshold is `STATE_USABLE`.
+	 * both points at the wrong fix. Superseded, deleted and retired assignments
+	 * are absent. P3's delivery threshold is `STATE_USABLE`.
 	 *
 	 * @param string $state One of the STATE_* constants.
 	 * @return bool
@@ -132,7 +135,12 @@ final class Coverage_Service {
 	public static function covers_for_submission( string $state ): bool {
 		return ! in_array(
 			$state,
-			array( self::STATE_SUPERSEDED, self::STATE_MISSING_REVISION, self::STATE_WRONG_CAMPAIGN ),
+			array(
+				self::STATE_SUPERSEDED,
+				self::STATE_MISSING_REVISION,
+				self::STATE_WRONG_CAMPAIGN,
+				self::STATE_RETIRED,
+			),
 			true
 		);
 	}
@@ -150,6 +158,16 @@ final class Coverage_Service {
 	private function classify( array $row, int $campaign_id, ?array $details ): string {
 		if ( (int) ( $row['campaign_id'] ?? 0 ) !== $campaign_id ) {
 			return self::STATE_WRONG_CAMPAIGN;
+		}
+
+		/*
+		 * A withdrawn assignment covers nothing, whatever its artwork is like.
+		 * Checked before the revision, so unassigning the last creative on a
+		 * placement reports that placement uncovered rather than reporting the
+		 * artwork fine.
+		 */
+		if ( in_array( (string) ( $row['status'] ?? '' ), array( Assignment_Rules::CANCELLED, Assignment_Rules::COMPLETED ), true ) ) {
+			return self::STATE_RETIRED;
 		}
 
 		$revision_id = (int) ( $row['revision_id'] ?? 0 );

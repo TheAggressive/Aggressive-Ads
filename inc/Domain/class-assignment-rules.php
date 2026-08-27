@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Domain;
 
+use Aggressive\Ads\Core\Post_Statuses;
+
 /** The assignment's own rules. See docs/architecture.md for why Domain is pure. */
 final class Assignment_Rules {
 
@@ -39,6 +41,31 @@ final class Assignment_Rules {
 			self::COMPLETED,
 			self::CANCELLED,
 		);
+	}
+
+	/**
+	 * The assignment status a campaign status implies.
+	 *
+	 * An assignment has its own vocabulary. Writing a campaign status straight
+	 * into the column produced values like `aggr_draft`, which no transition
+	 * accepts — every pause, resume and withdrawal was refused, and the fixture
+	 * looked fine. Found by a test, not by inspection.
+	 *
+	 * There is no `scheduled` here: an assignment inside a campaign that has not
+	 * started is simply `ready`.
+	 *
+	 * @param string $status Campaign post status.
+	 * @return string
+	 */
+	public static function status_for_campaign( string $status ): string {
+		return match ( $status ) {
+			Post_Statuses::APPROVED, Post_Statuses::SCHEDULED => self::READY,
+			Post_Statuses::LIVE      => self::LIVE,
+			Post_Statuses::PAUSED    => self::PAUSED,
+			Post_Statuses::COMPLETE  => self::COMPLETED,
+			Post_Statuses::CANCELLED => self::CANCELLED,
+			default                  => self::DRAFT,
+		};
 	}
 
 	/**

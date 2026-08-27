@@ -111,14 +111,12 @@ one-per-placement rule.
 The contract is explicit that new tables and classes are not evidence of
 completion, and four of its eight exit criteria are genuinely open:
 
-- **Criterion 4 — the lifecycle end to end.** *Mostly done.* Weight, dates and
-  pause/resume now have a workflow: `Domain\Assignment_Rules` states the rules,
-  `Workflow\Assignment_Editor` authorizes and audits them, and
-  `PATCH /campaigns/{id}/creative-assignments/{id}` is the transport. An
-  assignment may narrow its parent's delivery window and may never widen it,
-  refused rather than clamped. **Assignment and unassignment are still open** —
-  an assignment is created by upload or backfill and removed with its creative;
-  there is no way to detach one creative from a placement while keeping it.
+- **Criterion 4 — the lifecycle end to end.** *Done.* Weight, dates,
+  pause/resume and unassignment all have workflows behind them, authorized,
+  versioned and audited through `Workflow\Assignment_Editor`. An assignment may
+  narrow its parent's window and never widen it, refused rather than clamped.
+  Withdrawal retires the row and frees the compatibility slot rather than
+  deleting history, and a retired assignment stops covering its placement.
 - **Criterion 5 — the P3 read contract.** There is no documented, indexed,
   performance-tested candidate query, and no recorded query plans or cold/warm
   counts against realistic fixtures.
