@@ -99,7 +99,7 @@ down.
 
 ## What runs on a schedule
 
-Six recurring events, plus one that runs only while an upgrade is finishing. If
+Six recurring events, plus two that run only while an upgrade is finishing. If
 none of them are firing, the symptom is that campaigns stop changing status by
 themselves — which looks like a bug in approval, not a cron problem.
 
@@ -112,6 +112,7 @@ themselves — which looks like a bug in approval, not a cron problem.
 | `aggr_purge_private_creatives` | daily | Deletes private creative bytes for terminal campaigns older than ninety days. Records, checksums and Media Library attachments remain |
 | `aggr_verify_private_storage` | daily | Re-runs the private-storage probe and raises an admin notice if creative became publicly reachable |
 | `aggr_migrate_line_items` | one-off, re-queued a minute after each batch | The P1 backfill. Not recurring: each batch schedules the next, and the last one schedules nothing, so a settled site does not carry it |
+| `aggr_migrate_creative_assignments` | one-off, same shape | The P2 backfill: an asset and an assignment row for every existing creative. Nothing serving reads them yet, so an unfinished walk cannot blank a slot |
 
 WordPress cron is request-driven. On a low-traffic site these fire late; on a
 site with `DISABLE_WP_CRON` and no real cron they never fire at all. See
@@ -119,7 +120,7 @@ site with `DISABLE_WP_CRON` and no real cron they never fire at all. See
 
 ## Site Health
 
-Three checks under **Tools → Site Health**. Each states a fact about this
+Four checks under **Tools → Site Health**. Each states a fact about this
 installation rather than a recommendation.
 
 **Unapproved advertising creative is protected.** Creates a harmless random
@@ -154,6 +155,13 @@ It deliberately does not trust the recorded rewrite version, because a restored
 database leaves that version current and the rules gone.
 
 **Delivery dependencies.** The tables and services native fill needs.
+
+**Every creative has a delivery assignment.** Counts creatives with no assignment
+row, and — the part that makes it useful — distinguishes a backfill still running
+from one that finished and left creatives behind. The first is progress and needs
+nothing; the second is the only version worth investigating. A check that
+reported both as the same number would be noise for however many hours the walk
+takes, and noise is what teaches people to stop reading Site Health.
 
 ## When something looks wrong
 

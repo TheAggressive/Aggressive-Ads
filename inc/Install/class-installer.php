@@ -148,7 +148,11 @@ final class Installer {
 
 		$this->install_roles();
 
-		update_option( self::OPTION_DB_VERSION, Schema::DB_VERSION, true );
+		// Never lower. The marker records how far the *database* has been taken,
+		// and dbDelta drops nothing, so an older build reactivating over a newer
+		// schema would stamp a version its own tables contradict — and on the way
+		// forward re-run migrations whose backfills would restart from zero.
+		update_option( self::OPTION_DB_VERSION, max( self::stored_db_version(), Schema::DB_VERSION ), true );
 		update_option( self::OPTION_PLUGIN_VERSION, AGGR_VERSION, true );
 
 		$this->audit_repository->insert(

@@ -80,8 +80,13 @@ earlier one creates.
       backfill, the freeze-at-approval write path, the coverage service and
       many-creatives-per-placement are recorded there. Native serving still
       selects Campaigns until P3, which is compatibility behaviour rather than
-      unfinished P2 work. Exit criteria 6 and 8 remain open — see
-      [open-work.md](open-work.md).
+      unfinished P2 work. Every exit criterion the phase owns is now met: cleanup,
+      rollback and the five documents closed last, and rollback work found and
+      fixed an installer that stamped its database version downward on a
+      reactivated older build. The one remaining half — "one eligible approved
+      assignment per required combination" — is a delivery threshold the
+      contract gives to P3, which is why this stays `[~]` rather than `[x]`.
+      See [open-work.md](open-work.md).
 
 ### Serving
 

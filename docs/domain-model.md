@@ -147,6 +147,63 @@ write disappears with nothing reporting it.
 | `_aggr_adsanity_ad_id` | int | Unused. Former provider-object id. Native fill reads the creative record. |
 | `_aggr_review_state` | enum | `pending` \| `approved` \| `rejected` |
 
+### Creative Asset and Creative Assignment — custom tables
+
+P2 splits what a Creative post used to hold into three owners, because a single
+row could not answer both "is this the artwork a publisher approved?" and "where
+is it running now?" without one of the answers being wrong after an edit.
+
+| Owner | Owns | Table |
+|---|---|---|
+| **Asset** | identity across revisions | `aggr_creative_assets` |
+| **Revision** | bytes, click URL, alternative text | the `aggr_creative` post |
+| **Assignment** | weight, window, status on one placement | `aggr_creative_assignments` |
+
+The rule that follows from it: **everything a publisher reviewed belongs to the
+revision.** A revision is immutable once approved, so an approved creative is
+never edited — it is superseded, and the superseded row keeps the text somebody
+actually signed off. `Workflow\Revision_Policy::is_frozen()` is the single
+authority, and every write site asks it rather than testing a status itself.
+
+A revision whose bytes are unchanged is classified `text_only` and gets a
+one-line diff review instead of the full creative screen. The classification is
+derived server-side from comparing two SHA-256 checksums and **is never
+client-supplied** — that is the property that keeps it a review lane rather than
+an exemption from review.
+
+Assignment statuses are `draft|ready|live|paused|completed|cancelled`, and
+`completed` and `cancelled` are terminal. Weight is a share rather than a
+percentage: any whole number from 1 to 10000, bounded because a later phase
+divides by the sum of the weights on a placement.
+
+An assignment's delivery window **may only narrow its parent's, never widen it**,
+and a widening is refused rather than clamped. A campaign sold for June must not
+carry a creative running into July, and silently storing a date other than the
+one submitted is how an advertiser finds out months later that their creative
+never ran when they thought it did.
+
+Reads take **structure from the assignment and values from the revision**. The
+denormalized `click_url` and `alt_text` columns are a snapshot whose correctness
+rests on the source being immutable — true for serving, and not yet true for
+editing, because an advertiser editing a draft still updates post meta in place.
+
+Withdrawing a creative retires its assignment and frees the compatibility slot
+rather than deleting the row; a retired assignment stops covering its placement.
+Deleting a placement retires its assignments for the same reason: the row still
+explains what ran there.
+
+`Workflow\Coverage_Service` is the one definition of whether a creative can run,
+and campaign validation reads it. Classification and threshold are separate —
+`classify()` names the state, `covers_for_submission()` says which states count
+as present on a placement — because a wrongly sized creative should report
+"wrong size" rather than "no creative". Telling somebody the second points them
+at the wrong fix.
+
+A placement holds at most `Creative_Manager::MAX_CREATIVES_PER_PLACEMENT`
+creatives. It is a backstop rather than a product rule: rate limiting bounds how
+fast creatives arrive and nothing bounded the total, and the cost of a runaway
+lands on whoever reviews them.
+
 ### Organization — `aggr_org`
 
 `_aggr_owner_user_id` int · `_aggr_member_user_id` int **repeated** · `_aggr_canonical_name` string · `_aggr_billing_email` string · `_aggr_contact_phone` string · `_aggr_website_url` string · `_aggr_org_state` enum `active|suspended`
