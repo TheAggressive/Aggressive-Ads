@@ -147,6 +147,47 @@ another organization returns the same `404` body as one that does not exist, and
 a line-item id belonging to a different campaign is `404` rather than `403`, so
 neither can be used to enumerate.
 
+## Creative assignments
+
+Three routes, nested under the campaign so tenancy is decided by the campaign the
+caller reached through rather than by an id they supplied.
+
+| Route | Method | Capability |
+|---|---|---|
+| `/campaigns/{campaign_id}/creative-assignments` | `GET` | `aggr_access_portal` |
+| `/campaigns/{campaign_id}/creative-assignments/{id}` | `PATCH` | `aggr_submit_campaign` |
+| `/campaigns/{campaign_id}/creative-assignments/{id}/assignment` | `DELETE` | `aggr_submit_campaign` |
+
+`PATCH` accepts `weight`, `start_at_ts`, `end_at_ts` and `status`, and takes a
+`revision` like every other write here — the same optimistic-concurrency
+mechanism, checked in the SQL `WHERE` rather than read-then-written.
+
+`DELETE` withdraws the creative from its placement and keeps the creative. It
+retires the assignment and frees the compatibility slot rather than removing the
+row, so the history of what ran there survives the withdrawal. Withdrawing an
+already-withdrawn assignment is refused rather than answered `200`: a status may
+legally stay itself, so the "is this a legal transition?" question alone would
+have accepted a second withdrawal.
+
+Two refusals worth knowing:
+
+**A window may only narrow the campaign's.** Widening is `422`, not a clamp, for
+the reason `domain-model.md` gives — a silently different date is worse than a
+rejection.
+
+**A status change must be a legal edge.** `completed` and `cancelled` are
+terminal, so nothing leaves them.
+
+The response omits `organization_id` and `compat_key`. The tenant is implied by
+the campaign, and `compat_key` is a migration detail no client has any business
+knowing — removed by subtraction rather than allowlisted in, matching the
+line-item presenter.
+
+Unauthorized and non-existent are again the same answer: a campaign belonging to
+another organization and an assignment id belonging to a different campaign both
+return the same `404`, so neither can be used to enumerate. Both write routes are
+rate limited on the autosave bucket.
+
 ## The file-stream route
 
 The highest-value endpoint in the system, so its contract is explicit.

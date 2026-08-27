@@ -106,10 +106,10 @@ The portal keeps the upload form alongside whatever is already uploaded. It used
 to be shown *instead of* the creatives, which was the interface half of the
 one-per-placement rule.
 
-### What P2 still needs before it can close
+### The four criteria that were open
 
 The contract is explicit that new tables and classes are not evidence of
-completion, and four of its eight exit criteria are genuinely open:
+completion. All four criteria that were open are now closed:
 
 - **Criterion 4 — the lifecycle end to end.** *Done.* Weight, dates,
   pause/resume and unassignment all have workflows behind them, authorized,
@@ -123,29 +123,32 @@ completion, and four of its eight exit criteria are genuinely open:
   inputs, output shape, visibility, ordering and cost. One query whatever the
   candidate count, `EXPLAIN` asserted to choose the `delivery` index, measured
   against 1,000 rows. Serving still selects Campaigns; the cutover is P3's.
-- **Criterion 6 — cleanup and rollback.** *Mostly done.* Campaign and placement
+- **Criterion 6 — cleanup and rollback.** *Done.* Campaign and placement
   deletion, shared-byte safety and repeat-safe recovery are tested, and the
   destructive uninstall now clears the P2 migration hook it was leaving
   scheduled. Deleting a placement retires its assignments rather than removing
-  them, so the row still explains what ran there. **Rollback is still open** —
-  there is no tested downgrade path, and one would need a deliberate
-  older-version install to exercise.
-- **Criterion 8 — documentation.** `data-schema.md` describes the tables.
-  `domain-model.md`, `rest-api.md`, `roles-and-capabilities.md`,
-  `administration.md` and `runbook.md` do not yet describe the creative model
-  that shipped.
+  them, so the row still explains what ran there. Rollback is documented in
+  [runbook.md](runbook.md#rollback) and, more usefully, **a defect in it was
+  found and fixed**: `Installer::install()` stamped its own database version
+  unconditionally, so reactivating an older ZIP claimed a schema older than the
+  one on disk and re-ran migrations on the way forward — restarting a finished
+  backfill from zero. The marker is now never lowered. The residual case is
+  recorded rather than chased: an older build cannot be given the fix
+  retroactively, so a rollback across that boundary still re-walks. It costs
+  time, not data, and the runbook says so and gives the check for it.
+- **Criterion 8 — documentation.** *Done.* `domain-model.md` describes the
+  three owners and the rules that follow from them, `rest-api.md` the three
+  assignment routes, `roles-and-capabilities.md` why they add no capability and
+  borrow the parent campaign's, `administration.md` the cron event and the
+  fourth Site Health check, and `runbook.md` sections 5b and Rollback.
 
-Criterion 3 is also only half met: validation accepts multiple creatives, but
-"one eligible **approved** assignment per required combination" is the delivery
-threshold, and nothing evaluates it yet — `Coverage_Service` defines the states
-and P3's threshold is not written.
+Criterion 3 remains half met, and deliberately so. Validation accepts multiple
+creatives, but "one eligible **approved** assignment per required combination" is
+a *delivery* threshold, and the contract gives delivery to P3.
+`Coverage_Service` defines the states it will be expressed over, so P3 adds a
+stricter threshold rather than a second meaning of eligible.
 
-## Nothing else is open
-
-The original next step, now done, was the DDL for the revision and assignment
-tables in [data-schema.md](data-schema.md), derived from the P3 read contract's
-lookup — line item, placement, status and delivery window — rather than from the
-shape of the current Creative post.
+**That is the only thing between P2 and closed**, and it is not P2's to do.
 
 ## Nothing else is open
 

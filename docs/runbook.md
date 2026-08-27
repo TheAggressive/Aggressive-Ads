@@ -198,6 +198,41 @@ renamed however many times the pass visits it.
 
 ---
 
+## 5b. Let the creative-model backfill finish (upgrades only)
+
+Also skippable on a fresh install, and for the same reason.
+
+Database versions 14 and 15 give every creative two rows beside it: an **asset**,
+which is its identity across revisions, and an **assignment**, which is its
+weight, window and status on one placement. Version 14 creates the tables;
+version 15 walks the existing catalogue in cron batches.
+
+**Nothing waits for this either, and the reason is stronger than 5a's.** Nothing
+on the serving path reads the new tables at all — native fill still selects
+Campaigns and Creative posts — so a half-finished backfill cannot blank an ad
+slot. The portal and review screens do read assignments, and heal any campaign
+the walk has not reached the moment somebody opens it.
+
+```bash
+wp option get aggr_creative_assignment_done
+wp option get aggr_creative_assignment_cursor
+wp cron event list --fields=hook,next_run_relative | grep aggr_migrate_creative_assignments
+```
+
+`aggr_creative_assignment_done` returning `1` means finished. The cursor is
+**deleted** on completion rather than left at the last id, so an absent cursor
+beside a set marker is the finished state, not a lost one.
+
+Tools → Site Health gives the same answer without a shell. **"Every creative has
+a delivery assignment"** deliberately distinguishes a backfill still running from
+one that finished and left creatives behind: the first is progress, the second is
+worth investigating.
+
+If the cursor is not moving and no event is scheduled, cron is not running — go
+back to step 5.
+
+---
+
 ## 6. Configure, then verify the configuration took
 
 Advertising → Settings.
@@ -293,6 +328,41 @@ than it does not read `aggr_line_items` at all, so the table and its four
 progress options simply sit unused; nothing breaks and nothing is lost. Coming
 forward again resumes where the cursors left off rather than restarting, which
 is the one reason not to clear them while a rollback is in progress.
+
+The creative model is the other, database versions 14 and 15. A build older than
+14 does not read `aggr_creative_assets` or `aggr_creative_assignments` at all, so
+they sit unused the same way. This is the least eventful of the three rollbacks,
+because nothing on the serving path has been cut over to them yet.
+
+### Rolling back across the version-marker fix
+
+**Expect the backfill to run again. It costs time, not data**, and there is
+nothing the newer build can do about it, which is why it is written down rather
+than fixed.
+
+Reactivating an older ZIP runs *that build's* installer, and installers before
+this fix stamped their own database version unconditionally — a version the
+schema on disk has already passed, since dbDelta drops nothing and the newer
+tables are still sitting there. Coming forward, every migration between the two
+versions re-runs. They are idempotent, so nothing is corrupted; but a backfill
+that had finished deleted its cursor when it completed, so starting it again
+walks the whole catalogue from zero. On a large catalogue that is hours of cron.
+
+You do not need to know which builds are affected. Read the marker before and
+after reactivating the older ZIP:
+
+```bash
+wp option get aggr_db_version
+```
+
+**If the number dropped, the older build has the old behaviour** and the
+backfill will re-walk when you come forward. If it held, it does not. Builds
+carrying the fix never lower it, so a rollback between two of them re-runs no
+migration at all.
+
+Either way, use 5b to watch the backfill rather than assuming it has wedged — a
+cursor climbing from zero on a site that was already migrated is this, not a
+fault.
 
 ### If the portal 404s after a deploy
 

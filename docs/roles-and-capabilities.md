@@ -116,6 +116,30 @@ So `Ownership::map()` owns `edit_post`, `read_post` and `delete_post`, and retur
 
 **Map missing and deleted posts to `do_not_allow`, explicitly.** If the object cannot be loaded, do not fall through to core — core compares `$post->post_author` against the user ID, and on a `null` post that comparison can grant. A deleted campaign must deny, not default.
 
+## Creative assignments add no capability
+
+The creative model introduces two custom tables and no new capability, which is
+deliberate. Reads take `aggr_access_portal` and writes take
+`aggr_submit_campaign` — the same primitives the campaign itself uses.
+
+The third column of the audit below is what actually decides an assignment, and
+it is answered on the **parent campaign**, never on the assignment row: an
+assignment is only reachable through `edit_aggr_campaign` on the campaign it
+belongs to, which resolves through `Ownership::map()` to the organization. A row
+in a custom table has no post to hang a meta cap on, so borrowing the parent's is
+what keeps assignments inside the same ownership model as everything else rather
+than beside it.
+
+Two consequences worth stating:
+
+**An assignment id from another campaign is a `404`.** Not a `403` — the id is
+verified against the parent, so it cannot be used to confirm that a row exists
+somewhere else.
+
+**`Workflow\Edit_Window` still applies.** Holding the capability does not mean an
+assignment may be changed now; a campaign outside its edit window refuses the
+write with `409` regardless of who is asking.
+
 ## The capability audit
 
 Read left to right for any route. Every REST route and portal screen must satisfy all four columns.
