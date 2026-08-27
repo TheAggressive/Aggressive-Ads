@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Install;
 
 use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Domain\Assignment_Rules;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Creative_Asset_Repository;
@@ -190,7 +191,7 @@ final class Creative_Assignment_Migrator implements Service {
 				'asset_id'        => $asset,
 				'revision_id'     => $creative_id,
 				'placement_id'    => $placement_id,
-				'status'          => $this->campaigns->status( $campaign_id ),
+				'status'          => Assignment_Rules::status_for_campaign( $this->campaigns->status( $campaign_id ) ),
 				'click_url'       => (string) ( $details['click_url'] ?? '' ),
 				'alt_text'        => (string) ( $details['alt_text'] ?? '' ),
 				'width'           => (int) ( $details['width'] ?? 0 ),

@@ -123,6 +123,20 @@ final class Line_Items_Controller implements Service {
 				),
 			)
 		);
+
+		Creative_File_Controller::register_route(
+			'/campaigns/(?P<campaign_id>\d+)/creative-assignments/(?P<id>\d+)/assignment',
+			array(
+				'methods'             => 'DELETE',
+				'callback'            => array( $this, 'unassign' ),
+				'permission_callback' => array( $this, 'write_permission' ),
+				'args'                => array(
+					'campaign_id' => $this->positive_int_arg( true ),
+					'id'          => $this->positive_int_arg( true ),
+					'revision'    => $this->positive_int_arg( true ),
+				),
+			)
+		);
 	}
 
 	/**
@@ -173,6 +187,35 @@ final class Line_Items_Controller implements Service {
 			$campaign_id,
 			(int) $request->get_param( 'id' ),
 			$fields,
+			(int) $request->get_param( 'revision' )
+		);
+
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+
+		$row = $this->assignments->find_for_campaign( (int) $request->get_param( 'id' ), $campaign_id );
+
+		return new WP_REST_Response( $this->present_assignment( (array) $row ), 200 );
+	}
+
+	/**
+	 * Withdraws one creative from its placement, keeping the creative.
+	 *
+	 * @param WP_REST_Request $request REST request.
+	 * @return WP_REST_Response|WP_Error
+	 */
+	public function unassign( WP_REST_Request $request ) {
+		$allowed = $this->limiter->attempt( Rate_Limiter::ACTION_AUTOSAVE, get_current_user_id() );
+
+		if ( is_wp_error( $allowed ) ) {
+			return $allowed;
+		}
+
+		$campaign_id = (int) $request->get_param( 'campaign_id' );
+		$result      = $this->assignment_editor->unassign(
+			$campaign_id,
+			(int) $request->get_param( 'id' ),
 			(int) $request->get_param( 'revision' )
 		);
 

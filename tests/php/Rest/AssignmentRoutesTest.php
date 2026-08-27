@@ -489,6 +489,151 @@ final class AssignmentRoutesTest extends WP_UnitTestCase {
 		$this->assertSame( 100, (int) $row['weight'] );
 	}
 
+	/** The path that withdraws this assignment. */
+	private function unassign_path(): string {
+		return $this->path() . '/assignment';
+	}
+
+	/**
+	 * Withdrawing keeps the creative and retires the row.
+	 *
+	 * The gap this closes: removing a creative deleted the artwork, so an
+	 * advertiser running several on a placement could not drop one without
+	 * losing it. History is kept rather than deleted, which the contract
+	 * requires — withdrawal and deletion are different things.
+	 */
+	public function test_unassigning_retires_the_row_and_keeps_the_creative(): void {
+		wp_set_current_user( $this->owner );
+
+		$before   = $this->assignments->find_for_campaign( $this->assignment, $this->campaign );
+		$creative = (int) $before['revision_id'];
+
+		$response = $this->request( 'DELETE', $this->unassign_path(), array( 'revision' => 1 ) );
+
+		$this->assertSame( 200, $response->get_status() );
+
+		$after = $this->assignments->find_for_campaign( $this->assignment, $this->campaign );
+
+		$this->assertIsArray( $after, 'The row was deleted rather than retired.' );
+		$this->assertSame( Assignment_Rules::CANCELLED, (string) $after['status'] );
+		$this->assertSame( $creative, (int) $after['revision_id'], 'The withdrawn row forgot its creative.' );
+
+		// And the artwork itself survives.
+		$this->assertInstanceOf( \WP_Post::class, get_post( $creative ) );
+	}
+
+	/**
+	 * The compatibility slot is freed, so the placement can take another.
+	 *
+	 * `compat_key` is part of a unique key. A retired row holding the slot
+	 * would refuse every future upload to that placement and present as a
+	 * database fault rather than a policy.
+	 */
+	public function test_withdrawing_frees_the_compatibility_slot(): void {
+		wp_set_current_user( $this->owner );
+
+		$this->request( 'DELETE', $this->unassign_path(), array( 'revision' => 1 ) );
+
+		$row = $this->assignments->find_for_campaign( $this->assignment, $this->campaign );
+
+		$this->assertNull( $row['compat_key'], 'The retired row still holds the compatibility slot.' );
+	}
+
+	/**
+	 * A withdrawn creative stops covering its placement.
+	 *
+	 * The consequence that matters. `Coverage_Service` classified on the
+	 * revision alone, so a cancelled assignment still read as usable — and
+	 * withdrawing the only creative would have left the campaign passing
+	 * validation with nothing to serve.
+	 */
+	public function test_a_withdrawn_creative_no_longer_covers_its_placement(): void {
+		wp_set_current_user( $this->owner );
+
+		$coverage = Plugin::instance()->container()->get( \Aggressive\Ads\Workflow\Coverage_Service::class );
+
+		$this->assertNotSame( array(), $coverage->covered_placements( $this->campaign ), 'The fixture covered nothing to begin with.' );
+
+		$this->request( 'DELETE', $this->unassign_path(), array( 'revision' => 1 ) );
+
+		$this->assertSame(
+			array(),
+			$coverage->covered_placements( $this->campaign ),
+			'A withdrawn creative still counted as covering its placement.'
+		);
+	}
+
+	/** Withdrawing twice is refused rather than repeated. */
+	public function test_withdrawing_an_already_withdrawn_assignment_is_refused(): void {
+		wp_set_current_user( $this->owner );
+
+		$this->assertSame( 200, $this->request( 'DELETE', $this->unassign_path(), array( 'revision' => 1 ) )->get_status() );
+
+		$again = $this->request( 'DELETE', $this->unassign_path(), array( 'revision' => 2 ) );
+
+		$this->assertSame( 409, $again->get_status() );
+		$this->assertSame( 'aggr_assignment_transition_invalid', $again->get_data()['code'] );
+	}
+
+	/** A stranger cannot withdraw, and cannot tell that from missing. */
+	public function test_a_stranger_cannot_withdraw(): void {
+		wp_set_current_user( $this->stranger );
+
+		$response = $this->request( 'DELETE', $this->unassign_path(), array( 'revision' => 1 ) );
+
+		$this->assertSame( 404, $response->get_status() );
+
+		$row = $this->assignments->find_for_campaign( $this->assignment, $this->campaign );
+		$this->assertNotSame( Assignment_Rules::CANCELLED, (string) $row['status'] );
+	}
+
+	/** A stale revision loses the withdrawal too. */
+	public function test_withdrawing_with_a_stale_revision_conflicts(): void {
+		wp_set_current_user( $this->owner );
+
+		$this->request(
+			'PATCH',
+			$this->path(),
+			array(
+				'revision' => 1,
+				'weight'   => 200,
+			) 
+		);
+
+		$response = $this->request( 'DELETE', $this->unassign_path(), array( 'revision' => 1 ) );
+
+		$this->assertSame( 409, $response->get_status() );
+
+		$row = $this->assignments->find_for_campaign( $this->assignment, $this->campaign );
+		$this->assertNotSame( Assignment_Rules::CANCELLED, (string) $row['status'] );
+	}
+
+	/** The withdrawal is audited as its own event. */
+	public function test_the_withdrawal_is_audited(): void {
+		wp_set_current_user( $this->owner );
+
+		$this->request( 'DELETE', $this->unassign_path(), array( 'revision' => 1 ) );
+
+		global $wpdb;
+		$table = Plugin::instance()->container()->get( Audit_Repository::class )->table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Test assertion against this plugin's own table.
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				'SELECT actor_user_id, event, to_state FROM %i WHERE object_type = %s AND object_id = %d',
+				$table,
+				'creative_assignment',
+				$this->assignment
+			),
+			ARRAY_A
+		);
+
+		$this->assertCount( 1, $rows );
+		$this->assertSame( 'creative_assignment.unassigned', $rows[0]['event'] );
+		$this->assertSame( Assignment_Rules::CANCELLED, $rows[0]['to_state'] );
+		$this->assertSame( $this->owner, (int) $rows[0]['actor_user_id'] );
+	}
+
 	/**
 	 * The change is audited, with what changed and who changed it.
 	 *

@@ -64,6 +64,119 @@ final class Assignment_Editor {
 	 * @return int|WP_Error New assignment revision.
 	 */
 	public function update( int $campaign_id, int $assignment_id, array $fields, int $expected_revision ): int|WP_Error {
+		$current = $this->authorize( $campaign_id, $assignment_id, $expected_revision );
+
+		if ( is_wp_error( $current ) ) {
+			return $current;
+		}
+
+		$clean = $this->validate( $fields, $current, $campaign_id );
+
+		if ( is_wp_error( $clean ) ) {
+			return $clean;
+		}
+
+		$revision = $this->assignments->update( $assignment_id, $campaign_id, $clean, $expected_revision );
+
+		if ( false === $revision ) {
+			return $this->conflict( $assignment_id, $campaign_id );
+		}
+
+		$this->audit->insert(
+			new Audit_Event(
+				event: 'creative_assignment.updated',
+				object_type: 'creative_assignment',
+				object_id: $assignment_id,
+				org_id: $this->campaigns->org_id( $campaign_id ),
+				from_state: (string) $current['status'],
+				to_state: (string) ( $clean['status'] ?? $current['status'] ),
+				message: 'Creative delivery settings updated.',
+				context: array(
+					'campaign_id' => $campaign_id,
+					'fields'      => array_keys( $clean ),
+					'revision'    => $revision,
+				),
+				actor_user_id: get_current_user_id()
+			)
+		);
+
+		return $revision;
+	}
+
+	/**
+	 * Withdraws one creative from its placement, keeping the creative.
+	 *
+	 * The gap this closes: removing a creative deleted the artwork, so an
+	 * advertiser running three on a placement could not drop one without
+	 * losing it.
+	 *
+	 * @param int $campaign_id       Campaign id.
+	 * @param int $assignment_id     Assignment id.
+	 * @param int $expected_revision Last-seen revision.
+	 * @return int|WP_Error New assignment revision.
+	 */
+	public function unassign( int $campaign_id, int $assignment_id, int $expected_revision ): int|WP_Error {
+		$current = $this->authorize( $campaign_id, $assignment_id, $expected_revision );
+
+		if ( is_wp_error( $current ) ) {
+			return $current;
+		}
+
+		/*
+		 * Already withdrawn is refused, not repeated.
+		 *
+		 * `can_transition()` allows a status to stay itself, so a weight-only
+		 * write is not rejected for failing to be a transition — which makes
+		 * `cancelled → cancelled` legal there and wrong here. A second
+		 * withdrawal would otherwise return 200 and bump the revision.
+		 */
+		if (
+			Assignment_Rules::CANCELLED === (string) $current['status']
+			|| ! Assignment_Rules::can_transition( (string) $current['status'], Assignment_Rules::CANCELLED )
+		) {
+			return new WP_Error(
+				'aggr_assignment_transition_invalid',
+				__( 'This creative cannot be withdrawn from where it is now.', 'aggressive-ads' ),
+				array( 'status' => 409 )
+			);
+		}
+
+		$revision = $this->assignments->retire( $assignment_id, $campaign_id, $expected_revision );
+
+		if ( false === $revision ) {
+			return $this->conflict( $assignment_id, $campaign_id );
+		}
+
+		$this->audit->insert(
+			new Audit_Event(
+				event: 'creative_assignment.unassigned',
+				object_type: 'creative_assignment',
+				object_id: $assignment_id,
+				org_id: $this->campaigns->org_id( $campaign_id ),
+				from_state: (string) $current['status'],
+				to_state: Assignment_Rules::CANCELLED,
+				message: 'Creative withdrawn from its placement.',
+				context: array(
+					'campaign_id' => $campaign_id,
+					'revision_id' => (int) $current['revision_id'],
+					'revision'    => $revision,
+				),
+				actor_user_id: get_current_user_id()
+			)
+		);
+
+		return $revision;
+	}
+
+	/**
+	 * Shared authorization, edit-window and revision checks.
+	 *
+	 * @param int $campaign_id       Campaign id.
+	 * @param int $assignment_id     Assignment id.
+	 * @param int $expected_revision Last-seen revision.
+	 * @return array<string, mixed>|WP_Error
+	 */
+	private function authorize( int $campaign_id, int $assignment_id, int $expected_revision ): array|WP_Error {
 		// Missing and forbidden answer alike, or the route counts other tenants.
 		if (
 			! current_user_can( Capabilities::SUBMIT_CAMPAIGN )
@@ -88,56 +201,30 @@ final class Assignment_Editor {
 		}
 
 		if ( $expected_revision < 1 || $expected_revision !== (int) $current['revision'] ) {
-			return new WP_Error(
-				'aggr_assignment_conflict',
-				__( 'This creative changed in another window. Reload it before saving again.', 'aggressive-ads' ),
-				array(
-					'status'           => 409,
-					'current_revision' => (int) $current['revision'],
-				)
-			);
+			return $this->conflict( $assignment_id, $campaign_id );
 		}
 
-		$clean = $this->validate( $fields, $current, $campaign_id );
+		return $current;
+	}
 
-		if ( is_wp_error( $clean ) ) {
-			return $clean;
-		}
+	/**
+	 * The stale-revision refusal, carrying the current one.
+	 *
+	 * @param int $assignment_id Assignment id.
+	 * @param int $campaign_id   Campaign id.
+	 * @return WP_Error
+	 */
+	private function conflict( int $assignment_id, int $campaign_id ): WP_Error {
+		$fresh = $this->assignments->find_for_campaign( $assignment_id, $campaign_id );
 
-		$revision = $this->assignments->update( $assignment_id, $campaign_id, $clean, $expected_revision );
-
-		if ( false === $revision ) {
-			$fresh = $this->assignments->find_for_campaign( $assignment_id, $campaign_id );
-
-			return new WP_Error(
-				'aggr_assignment_conflict',
-				__( 'This creative changed in another window. Reload it before saving again.', 'aggressive-ads' ),
-				array(
-					'status'           => 409,
-					'current_revision' => (int) ( $fresh['revision'] ?? 0 ),
-				)
-			);
-		}
-
-		$this->audit->insert(
-			new Audit_Event(
-				event: 'creative_assignment.updated',
-				object_type: 'creative_assignment',
-				object_id: $assignment_id,
-				org_id: $this->campaigns->org_id( $campaign_id ),
-				from_state: (string) $current['status'],
-				to_state: (string) ( $clean['status'] ?? $current['status'] ),
-				message: 'Creative delivery settings updated.',
-				context: array(
-					'campaign_id' => $campaign_id,
-					'fields'      => array_keys( $clean ),
-					'revision'    => $revision,
-				),
-				actor_user_id: get_current_user_id()
+		return new WP_Error(
+			'aggr_assignment_conflict',
+			__( 'This creative changed in another window. Reload it before saving again.', 'aggressive-ads' ),
+			array(
+				'status'           => 409,
+				'current_revision' => (int) ( $fresh['revision'] ?? 0 ),
 			)
 		);
-
-		return $revision;
 	}
 
 	/**

@@ -87,6 +87,50 @@ final class AssignmentRulesTest extends TestCase {
 	}
 
 	/**
+	 * Every campaign status maps to one this vocabulary recognises.
+	 *
+	 * The defect this covers shipped in the backfill: campaign statuses were
+	 * written straight into the assignment column, producing values like
+	 * `aggr_draft` that no transition accepts — so pause, resume and withdrawal
+	 * were all refused and the row looked ordinary.
+	 *
+	 * @return array<string, array{string}>
+	 */
+	public static function campaign_statuses(): array {
+		$cases = array();
+
+		foreach ( \Aggressive\Ads\Core\Post_Statuses::all() as $status ) {
+			$cases[ $status ] = array( $status );
+		}
+
+		$cases['an unknown status'] = array( 'something_else' );
+
+		return $cases;
+	}
+
+	#[DataProvider( 'campaign_statuses' )]
+	public function test_every_campaign_status_maps_to_a_real_assignment_status( string $status ): void {
+		$mapped = Assignment_Rules::status_for_campaign( $status );
+
+		$this->assertTrue(
+			Assignment_Rules::is_status( $mapped ),
+			"{$status} mapped to {$mapped}, which is not an assignment status"
+		);
+	}
+
+	/** A live campaign's creative is live; a draft campaign's is a draft. */
+	public function test_the_mapping_preserves_the_obvious_cases(): void {
+		$this->assertSame(
+			Assignment_Rules::LIVE,
+			Assignment_Rules::status_for_campaign( \Aggressive\Ads\Core\Post_Statuses::LIVE )
+		);
+		$this->assertSame(
+			Assignment_Rules::DRAFT,
+			Assignment_Rules::status_for_campaign( \Aggressive\Ads\Core\Post_Statuses::DRAFT )
+		);
+	}
+
+	/**
 	 * Weights.
 	 *
 	 * @return array<string, array{int, bool}>
