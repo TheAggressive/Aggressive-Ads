@@ -331,6 +331,24 @@ final class Creative_Repository {
 
 
 	/**
+	 * Whether a publisher has approved this revision.
+	 *
+	 * `approved` and `replaced` both mean a publisher said yes to these bytes;
+	 * `replaced` is an approved revision that a later one superseded, and a
+	 * superseded revision is caught by `is_active()` rather than here.
+	 *
+	 * @param int $creative_id Creative revision id.
+	 * @return bool
+	 */
+	public function is_approved( int $creative_id ): bool {
+		return in_array(
+			(string) get_post_meta( $creative_id, self::META_REVIEW_STATE, true ),
+			array( 'approved', 'replaced' ),
+			true
+		);
+	}
+
+	/**
 	 * Whether a creative is the current one rather than a superseded revision.
 	 *
 	 * @param int $creative_id Creative post id.

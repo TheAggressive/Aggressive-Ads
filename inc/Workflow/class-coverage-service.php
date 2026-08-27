@@ -46,7 +46,19 @@ final class Coverage_Service {
 	/** Withdrawn or finished: the row is history, not delivery. */
 	public const STATE_RETIRED = 'retired';
 
-	/** Usable: the current artwork, correctly sized, on the right campaign. */
+	/** The assignment and the revision disagree about their organization or placement. */
+	public const STATE_WRONG_PARENT = 'wrong_parent';
+
+	/** The delivery window has ended: this can never run again. */
+	public const STATE_EXPIRED = 'expired';
+
+	/** The delivery window has not opened yet. Legitimate, and not yet running. */
+	public const STATE_NOT_STARTED = 'not_started';
+
+	/** Attached and correct, but no publisher has approved it yet. */
+	public const STATE_UNAPPROVED = 'unapproved';
+
+	/** Usable: current, approved, correctly sized artwork inside its window. */
 	public const STATE_USABLE = 'usable';
 
 	/**
@@ -75,13 +87,16 @@ final class Coverage_Service {
 	 * loaded them, and re-reading risks judging a different row than was
 	 * classified.
 	 *
-	 * @param int $campaign_id Campaign post id.
+	 * @param int      $campaign_id Campaign post id.
+	 * @param int|null $now         Evaluation time in UTC seconds; null for now.
 	 * @return array<int, array{revision_id: int, placement_id: int, state: string, creative: array<string, mixed>|null}>
 	 */
-	public function assess( int $campaign_id ): array {
+	public function assess( int $campaign_id, ?int $now = null ): array {
 		if ( $campaign_id <= 0 ) {
 			return array();
 		}
+
+		$now ??= time();
 
 		// Heals first, so the rows below exist for a campaign mid-migration.
 		$this->assigned->revision_ids( $campaign_id );
@@ -95,7 +110,7 @@ final class Coverage_Service {
 			$assessed[] = array(
 				'revision_id'  => $revision_id,
 				'placement_id' => (int) ( $row['placement_id'] ?? 0 ),
-				'state'        => $this->classify( $row, $campaign_id, $details ),
+				'state'        => $this->classify( $row, $campaign_id, $details, $now ),
 				'creative'     => $details,
 			);
 		}
@@ -106,13 +121,14 @@ final class Coverage_Service {
 	/**
 	 * Placement ids a campaign currently covers well enough to submit.
 	 *
-	 * @param int $campaign_id Campaign post id.
+	 * @param int      $campaign_id Campaign post id.
+	 * @param int|null $now         Evaluation time in UTC seconds; null for now.
 	 * @return array<int, int>
 	 */
-	public function covered_placements( int $campaign_id ): array {
+	public function covered_placements( int $campaign_id, ?int $now = null ): array {
 		$covered = array();
 
-		foreach ( $this->assess( $campaign_id ) as $entry ) {
+		foreach ( $this->assess( $campaign_id, $now ) as $entry ) {
 			if ( self::covers_for_submission( $entry['state'] ) && ! in_array( $entry['placement_id'], $covered, true ) ) {
 				$covered[] = $entry['placement_id'];
 			}
@@ -139,6 +155,8 @@ final class Coverage_Service {
 				self::STATE_SUPERSEDED,
 				self::STATE_MISSING_REVISION,
 				self::STATE_WRONG_CAMPAIGN,
+				self::STATE_WRONG_PARENT,
+				self::STATE_EXPIRED,
 				self::STATE_RETIRED,
 			),
 			true
@@ -153,9 +171,10 @@ final class Coverage_Service {
 	 * @param array<string, mixed>      $row         Assignment row.
 	 * @param int                       $campaign_id Campaign being asked about.
 	 * @param array<string, mixed>|null $details     Already-loaded creative details.
+	 * @param int                       $now         Evaluation time in UTC seconds.
 	 * @return string
 	 */
-	private function classify( array $row, int $campaign_id, ?array $details ): string {
+	private function classify( array $row, int $campaign_id, ?array $details, int $now ): string {
 		if ( (int) ( $row['campaign_id'] ?? 0 ) !== $campaign_id ) {
 			return self::STATE_WRONG_CAMPAIGN;
 		}
@@ -176,11 +195,41 @@ final class Coverage_Service {
 			return self::STATE_MISSING_REVISION;
 		}
 
+		/*
+		 * The assignment and the revision must agree about whose creative this
+		 * is and where it runs. They are written by different paths, so a
+		 * disagreement is a repair job rather than an advertiser's mistake — and
+		 * it must not be reported as coverage.
+		 */
+		if (
+			(int) ( $row['organization_id'] ?? 0 ) !== (int) ( $details['org_id'] ?? 0 )
+			|| (int) ( $row['placement_id'] ?? 0 ) !== (int) ( $details['placement_id'] ?? 0 )
+		) {
+			return self::STATE_WRONG_PARENT;
+		}
+
 		// Asked of the creative, not the assignment: a pending replacement
 		// supersedes a revision without repointing the row, because the old one
 		// is still what serves.
 		if ( ! $this->creatives->is_active( $revision_id ) ) {
 			return self::STATE_SUPERSEDED;
+		}
+
+		/*
+		 * Window before artwork: a size complaint about something that can
+		 * never run again sends somebody to fix the wrong thing. Zero inherits
+		 * the parent, and the end is exclusive, matching the P2 read contract.
+		 */
+		$end = (int) ( $row['end_at_ts'] ?? 0 );
+
+		if ( 0 !== $end && $end <= $now ) {
+			return self::STATE_EXPIRED;
+		}
+
+		$start = (int) ( $row['start_at_ts'] ?? 0 );
+
+		if ( 0 !== $start && $start > $now ) {
+			return self::STATE_NOT_STARTED;
 		}
 
 		if ( Campaign_Rules::ADVERTISER_CREATIVE_KIND !== (string) ( $details['kind'] ?? '' ) ) {
@@ -195,6 +244,16 @@ final class Coverage_Service {
 			&& ! Campaign_Rules::size_matches( (int) $details['width'], (int) $details['height'], $expected )
 		) {
 			return self::STATE_WRONG_SIZE;
+		}
+
+		/*
+		 * Last, because it is the weakest complaint: everything about this
+		 * creative is right except that nobody has said yes yet. Submission
+		 * must still count it — approval follows review, review follows
+		 * submission — which is why this is a state rather than a refusal.
+		 */
+		if ( ! $this->creatives->is_approved( $revision_id ) ) {
+			return self::STATE_UNAPPROVED;
 		}
 
 		return self::STATE_USABLE;
