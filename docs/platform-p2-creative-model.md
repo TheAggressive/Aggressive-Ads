@@ -98,6 +98,18 @@ heavy enough that people route around it, so P2 answers it directly rather than
 deferring: see *Text-only revisions* below. The answer shrinks the ceremony and
 does not touch the guarantee.
 
+**When the freeze applies.** At **approval**, not at creation. A draft edits in
+place; an approved creative is revised, and its predecessor is preserved carrying
+the text a publisher actually signed off.
+`Workflow\Revision_Policy::is_frozen()` is the single authority and every write
+site asks it rather than testing a status itself.
+
+This is what makes the denormalized `click_url` and `alt_text` on an assignment
+safe to serve from: only `live` assignments are delivery candidates, and a live
+assignment's revision is approved and therefore frozen, so the snapshot cannot
+drift from its source. Editing a draft in place is harmless precisely because a
+draft is never a candidate.
+
 ### Text-only revisions
 
 A revision whose bytes are byte-for-byte identical to its predecessor is
@@ -177,6 +189,17 @@ The implementation must enforce all of these at the application boundary:
 Any database foreign keys that are deliberately omitted for WordPress
 compatibility must have equivalent write validation and deletion tests.
 
+### How many creatives a placement may hold
+
+`Creative_Manager::MAX_CREATIVES_PER_PLACEMENT` caps it at ten. This is a
+backstop, not a product rule: rate limiting bounds how fast creatives arrive and
+nothing bounded the total, and the cost of a runaway lands on whoever has to
+review them.
+
+Deliberately a constant rather than a setting. A setting whose default nobody
+changes is a constant with more moving parts, and shipping the constant first is
+what will say what range a setting should offer if one is ever wanted.
+
 ## Migration contract
 
 Every current Creative must remain recognizable without an advertiser or
@@ -229,6 +252,18 @@ The service must explicitly classify at least these cases:
 P2 may evaluate these rules for validation and presentation. P3 will reuse the
 same definitions in its separable eligibility stage rather than create a second
 meaning of "eligible."
+
+**As built.** `Workflow\Coverage_Service` is that service, and campaign
+validation reads it instead of counting Creative posts. The source moved and the
+answers did not — the twenty existing validator tests pass unchanged, which is
+what made the switch verifiable rather than hopeful.
+
+Classification and threshold are kept separate inside it. `classify()` names the
+state; `covers_for_submission()` says which states count as present on a
+placement, and is deliberately looser than `usable`: a wrongly sized creative
+must report "wrong size", not "no creative", because the second points somebody
+at the wrong fix. P3's stricter delivery threshold is expressed over the same
+states.
 
 ## Workflows and API
 

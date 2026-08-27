@@ -96,7 +96,13 @@ Shared boundaries and group exit criteria:
 - [ ] **P3 — Decision engine.** Replaces rotation. Request, context, candidate,
       result and trace; eligibility, targeting, frequency, pacing, priority,
       creative selection and competition as separable services. Must explain
-      exclusions. Traces are staff-only.
+      exclusions. Traces are staff-only. **Inherits P2's exit criterion 3**: the
+      delivery threshold of one eligible approved assignment per required
+      line-item and placement combination is expressed here, over the states
+      `Workflow\Coverage_Service` already defines — a stricter threshold, not a
+      second meaning of eligible. It is the one P2 criterion the contract does
+      not give to P2. Scope, boundaries and exit criteria are defined in
+      [platform-p3-decision-engine.md](platform-p3-decision-engine.md).
 - [ ] **P4 — Exact scheduling.** Serve-time timestamp evaluation with timezone
       and daypart support. Cron reconciliation stays for lifecycle state, but
       stops being the serving authority — a line item ending at 10:30 stops at

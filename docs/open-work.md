@@ -11,153 +11,25 @@ Delete an entry when it ships. An entry that has been here through three
 releases is either not real or not wanted — say which, in the entry, and then
 delete it.
 
-## P2 — creative model
-
-Started 2026-08-25. The ownership decision the contract requires before schema
-work is recorded in
-[platform-p2-creative-model.md](platform-p2-creative-model.md#decision-everything-reviewed-belongs-to-the-revision):
-the revision owns the bytes, click URL and alternative text; the assignment owns
-weight, window and status; the asset owns identity.
-
-A second decision followed: a revision whose bytes are unchanged is classified
-`text_only` and gets a one-click diff review rather than the full creative
-screen. The classification is derived from a SHA-256 comparison server-side and
-must never be client-supplied — that is the property that keeps it a review lane
-rather than an exemption.
-
-**Built:** the asset and assignment tables (db 14), and the backfill that fills
-them (db 15). Nothing on the serving path reads them — native fill still selects
-Campaigns and Creative posts — so a half-finished backfill cannot blank an ad
-slot.
-
-The portal and review screens now read assignments, healing lazily through
-`Creative_Assignment_Migrator::migrate_one()` for any campaign the backfill has
-not reached. A Site Health check reports creatives with no assignment, and
-distinguishes a backfill still running from one that finished and left rows
-behind.
-
-They read **structure** from the assignment and **values** from the revision.
-The denormalized `click_url` / `alt_text` columns are a snapshot whose
-correctness rests on the source being immutable — true for serving, not yet true
-for editing, because an advertiser editing a draft still updates post meta in
-place. That distinction disappears when the write path creates a revision per
-edit, and `Assigned_Creatives` says so.
-
-The write path now freezes a creative at **approval**, not at creation. A draft
-edits in place; an approved creative is revised, its predecessor preserved with
-the text a publisher actually signed off. `Workflow\Revision_Policy::is_frozen()`
-is the single authority and every write site asks it.
-
-`Campaign_Change_Manager` used to call `set_click_url()` on an approved, serving
-ad when staff approved a destination change — the exact mutation the ownership
-decision exists to prevent, arriving through a door marked "approved by staff".
-It now revises.
-
-**A defect in the shipped backfill was found here and fixed.** `chain_root()`
-walked `_aggr_replaces_creative_id` backward, and `activate_replacement()`
-deletes that key the moment a replacement goes live, so on real data every
-approved revision looked like its own root and would have been given its own
-asset. `Creative_Revision_Repository::predecessor_of()` now reads the durable
-forward link instead — the revision chain moved out of `Creative_Repository`
-when the file-length guard fired on it.
-
-An advertiser can now correct a destination or description without
-re-uploading artwork. `Creative_Change_Manager::request_text_change()` stages a
-pending revision carrying the predecessor's bytes, so it classifies as
-`text_only` from the two checksums matching, and **the live ad keeps serving
-until a reviewer decides** — a typo fix must not let an advertiser take their
-own paid placement off the site. Approval and rejection are the existing
-replacement flow unchanged, because `Creative_Promoter::promote()` is already a
-no-op for a revision that carries an attachment.
-
-The review screen now says **"Artwork unchanged — only the text differs"** on a
-`text_only` revision and hides the size comparison, so a reviewer sees the one
-line that changed rather than four that did not. The flag is the server-derived
-one; the screen never computes it.
-
-`Workflow\Coverage_Service` is the one definition of whether a creative can
-run, and campaign validation now reads it instead of creatives. The source
-moved; the answers did not — the twenty existing validator tests pass unchanged,
-which is what makes the switch verifiable rather than hopeful.
-
-Classification and threshold are separate. `classify()` names the state;
-`covers_for_submission()` says which states count as present on a placement, and
-is deliberately looser than `usable` — a wrongly sized creative reports "wrong
-size", not "no creative", because telling somebody both points them at the wrong
-fix. P3 adds a stricter threshold over the same states rather than a second
-meaning of eligible.
-
-**A defect shipped in the portal-reads slice was found here and fixed.**
-`Assigned_Creatives::heal()` healed only when a campaign had *no* assignments,
-justified by "a partial result means the backfill is mid-campaign". That was
-wrong: the backfill walks the creative id space globally, so one campaign's
-creatives can sit either side of the cursor and stay that way. A campaign would
-have shown some of its artwork and not the rest. Healing is now per creative.
-
-A placement may now hold up to ten creatives.
-`Creative_Manager::MAX_CREATIVES_PER_PLACEMENT` is a backstop rather than a
-product constraint: rate limiting bounds how fast creatives arrive and nothing
-bounded the total, and the cost of a runaway lands on the publisher reviewing
-them. Deliberately a constant — a setting whose default nobody changes is a
-constant with more moving parts, and shipping this first is what would say what
-range a setting should offer.
-
-The portal keeps the upload form alongside whatever is already uploaded. It used
-to be shown *instead of* the creatives, which was the interface half of the
-one-per-placement rule.
-
-### The four criteria that were open
-
-The contract is explicit that new tables and classes are not evidence of
-completion. All four criteria that were open are now closed:
-
-- **Criterion 4 — the lifecycle end to end.** *Done.* Weight, dates,
-  pause/resume and unassignment all have workflows behind them, authorized,
-  versioned and audited through `Workflow\Assignment_Editor`. An assignment may
-  narrow its parent's window and never widen it, refused rather than clamped.
-  Withdrawal retires the row and frees the compatibility slot rather than
-  deleting history, and a retired assignment stops covering its placement.
-- **Criterion 5 — the P3 read contract.** *Done.*
-  `Creative_Assignment_Repository::candidates_for_placement()` is the query P3
-  consumes, documented in [data-schema.md](data-schema.md#the-p3-candidate-read-contract):
-  inputs, output shape, visibility, ordering and cost. One query whatever the
-  candidate count, `EXPLAIN` asserted to choose the `delivery` index, measured
-  against 1,000 rows. Serving still selects Campaigns; the cutover is P3's.
-- **Criterion 6 — cleanup and rollback.** *Done.* Campaign and placement
-  deletion, shared-byte safety and repeat-safe recovery are tested, and the
-  destructive uninstall now clears the P2 migration hook it was leaving
-  scheduled. Deleting a placement retires its assignments rather than removing
-  them, so the row still explains what ran there. Rollback is documented in
-  [runbook.md](runbook.md#rollback) and, more usefully, **a defect in it was
-  found and fixed**: `Installer::install()` stamped its own database version
-  unconditionally, so reactivating an older ZIP claimed a schema older than the
-  one on disk and re-ran migrations on the way forward — restarting a finished
-  backfill from zero. The marker is now never lowered. The residual case is
-  recorded rather than chased: an older build cannot be given the fix
-  retroactively, so a rollback across that boundary still re-walks. It costs
-  time, not data, and the runbook says so and gives the check for it.
-- **Criterion 8 — documentation.** *Done.* `domain-model.md` describes the
-  three owners and the rules that follow from them, `rest-api.md` the three
-  assignment routes, `roles-and-capabilities.md` why they add no capability and
-  borrow the parent campaign's, `administration.md` the cron event and the
-  fourth Site Health check, and `runbook.md` sections 5b and Rollback.
-
-Criterion 3 remains half met, and deliberately so. Validation accepts multiple
-creatives, but "one eligible **approved** assignment per required combination" is
-a *delivery* threshold, and the contract gives delivery to P3.
-`Coverage_Service` defines the states it will be expressed over, so P3 adds a
-stricter threshold rather than a second meaning of eligible.
-
-**That is the only thing between P2 and closed**, and it is not P2's to do.
-
 ## Nothing else is open
 
 Every entry that was here has shipped or been closed. That is the intended
 resting state, not a sign the file is unused — an entry is added the moment work
 is started and understood but not finished, and deleted the moment it ships.
 
-The last one closed was the cold-start flake in the reviewer-queue browser test,
-which stopped reproducing. What was learned eliminating three of its four
-candidate causes moved to [known-issues.md](known-issues.md), along with the
-instruction to pull the Playwright trace rather than guess if it returns. Open a
-new entry here when it does.
+The last one closed was P2, the creative model. Its design, decisions and the
+defects found building it are in
+[platform-p2-creative-model.md](platform-p2-creative-model.md); which phase built
+what is in [platform-implementation-progress.md](platform-implementation-progress.md).
+
+P2's one unmet exit criterion is not P2's: "one eligible **approved** assignment
+per required combination" is a *delivery* threshold, and the contract gives
+delivery to P3. `Workflow\Coverage_Service` already defines the states it will be
+expressed over, so P3 adds a stricter threshold rather than a second meaning of
+eligible. It is tracked as P3 scope, not as work left behind here.
+
+Before that it was the cold-start flake in the reviewer-queue browser test, which
+stopped reproducing. What was learned eliminating three of its four candidate
+causes moved to [known-issues.md](known-issues.md), along with the instruction to
+pull the Playwright trace rather than guess if it returns. Open a new entry here
+when it does.
