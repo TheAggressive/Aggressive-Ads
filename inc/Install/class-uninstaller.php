@@ -148,6 +148,7 @@ final class Uninstaller {
 		Event_Retention::unschedule();
 		Rollup_Reconciler::unschedule();
 		Line_Item_Migrator::unschedule();
+		Creative_Assignment_Migrator::unschedule();
 
 		/*
 		 * Legacy, and named as literals on purpose: the service that owned these
