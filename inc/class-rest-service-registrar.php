@@ -18,6 +18,7 @@ use Aggressive\Ads\REST\Campaigns_Controller;
 use Aggressive\Ads\REST\Creative_Controller;
 use Aggressive\Ads\REST\Creative_File_Controller;
 use Aggressive\Ads\REST\Decision_Trace_Controller;
+use Aggressive\Ads\REST\Decisions_Controller;
 use Aggressive\Ads\REST\Line_Items_Controller;
 use Aggressive\Ads\REST\Organizations_Controller;
 use Aggressive\Ads\REST\Packages_Controller;
@@ -154,6 +155,12 @@ final class Rest_Service_Registrar {
 			static fn ( Service_Container $c ): Decision_Trace_Controller => new Decision_Trace_Controller(
 				$c->get( Decision_Engine::class ),
 				$c->get( Placement_Repository::class )
+			)
+		);
+		$container->register(
+			Decisions_Controller::class,
+			static fn ( Service_Container $c ): Decisions_Controller => new Decisions_Controller(
+				$c->get( \Aggressive\Ads\Workflow\Fill_Service::class )
 			)
 		);
 	}

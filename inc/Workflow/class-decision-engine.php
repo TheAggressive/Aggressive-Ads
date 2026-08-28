@@ -68,9 +68,10 @@ final class Decision_Engine {
 	 * @param int|null                        $seed           Draw for weighted selection; random when null.
 	 * @param list<array<string, mixed>>|null $rows           Preloaded candidates; queried when null.
 	 * @param bool                            $record_metrics Whether to record exclusion metrics.
+	 * @param array<string, mixed>            $facts          Request and targeting facts.
 	 * @return array{result: Decision_Result, trace: Decision_Trace}
 	 */
-	public function decide( int $placement_id, int $now, ?int $seed = null, ?array $rows = null, bool $record_metrics = true ): array {
+	public function decide( int $placement_id, int $now, ?int $seed = null, ?array $rows = null, bool $record_metrics = true, array $facts = array() ): array {
 		if ( null === $rows ) {
 			$rows = $this->assignments->candidates_for_placement( $placement_id, $now, self::CANDIDATE_LIMIT );
 		}
@@ -80,7 +81,8 @@ final class Decision_Engine {
 		$request = new Decision_Request(
 			$placement_id,
 			$now,
-			$seed ?? random_int( 0, PHP_INT_MAX )
+			$seed ?? random_int( 0, PHP_INT_MAX ),
+			$facts
 		);
 
 		$decision = $this->pipeline->decide( $rows, $request );
@@ -104,6 +106,23 @@ final class Decision_Engine {
 		return array(
 			'result' => $decision['result'],
 			'trace'  => $decision['trace'],
+		);
+	}
+
+	/**
+	 * Coordinates batch decisions for an array of slots on a page.
+	 *
+	 * @param array<string, array{placement_id: int, candidates: list<array<string, mixed>>}> $slots_map Keyed by slot slug.
+	 * @param int                                                                             $now       Evaluation time.
+	 * @param int|null                                                                        $seed      Random seed.
+	 * @return array<string, array{result: Decision_Result, trace: Decision_Trace}>
+	 */
+	public function decide_page( array $slots_map, int $now, ?int $seed = null ): array {
+		return \Aggressive\Ads\Domain\Page_Decision_Coordinator::coordinate(
+			$slots_map,
+			$this->pipeline,
+			$now,
+			$seed
 		);
 	}
 

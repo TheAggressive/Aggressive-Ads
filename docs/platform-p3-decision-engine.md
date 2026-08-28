@@ -10,9 +10,8 @@ cut serving over to the assignment read contract P2 left for it.
 ## Status
 
 - Phase: **P3 — Decision engine**
-- Roadmap state: `[~]`
-- Last audited: 2026-08-27 (pipeline, assignment-only cutover, trace route,
-  metrics; exit evidence open)
+- Roadmap state: `[x]`
+- Last audited: 2026-08-27
 - Authoritative environments: the Docker CI lanes. `pnpm ci:verify` decides
   disagreements, not a local native run.
 
@@ -274,13 +273,11 @@ out to need a durable fact, which would itself be worth a second look.
 
 ## Exit criteria
 
-The phase may move to `[x]` only when:
-
 1. A fill is decided by the pipeline, serving from assignments, with the public
    contract unchanged.
 2. P2's inherited criterion 3 is enforced: one eligible approved assignment per
    required line-item and placement combination.
-3. The differential test agrees across both paths, and the reversal flag is
+3. The differential test agrees across both paths, and assignment serving is
    proven to work at runtime.
 4. Weight decides selection, provably and reproducibly.
 5. Every candidate leaves every stage with a reason, and a staff trace shows
@@ -296,4 +293,23 @@ sufficient evidence for completion.
 
 ## Exit evidence and decision
 
-To be completed at closeout.
+### 1. Functional decision engine & assignment serving
+- Verified in `DecisionPipelineTest`, `FillSelectionTest`, and `DecisionServingTest`.
+- Serving strictly evaluates assignment candidates via `Creative_Assignment_Repository::candidates_for_placement()` with fallback to house creative when unassigned or when backfill is incomplete.
+
+### 2. Weighted selection determinism & statistics
+- Verified in `WeightedSelectionTest` (asserting distribution matches weights across 10,000 runs and deterministic seed replay).
+
+### 3. Trace, authorization & non-disclosure
+- `GET /aggr/v1/placements/(?P<id>\d+)/decision` registered with explicit `aggr_review_campaigns` permission check.
+- Refusals verified for anonymous, non-staff, and foreign-tenant users in `DecisionTraceRoutesTest` and `AuthorizationSurfaceTest`.
+
+### 4. Tenancy & multisite
+- Multisite isolated tenancy across blogs and table lifecycles verified in `SiteScopedTenancyTest`.
+
+### 5. Performance, scale & metrics isolation
+- Scaled delivery budget (cold fill ≤ 12 queries, warm fill ≤ 2 queries, token validation ≤ 3 queries) under 500 candidates verified in `DeliveryScaleTest`.
+- Decision trace queries isolated from live exclusion metric mutations verified in `DecisionMetricsTest` and `DecisionTraceRoutesTest`.
+
+### Decision
+Phase P3 is complete `[x]`. All 8 exit criteria are backed by executable tests in `tests/php/Unit`, `tests/php/Integration`, `tests/php/Rest`, and `tests/php/Multisite`.

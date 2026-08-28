@@ -93,6 +93,80 @@ final class Fill_Service {
 	}
 
 	/**
+	 * Batch fill payloads for multiple placement slugs on a single page view.
+	 *
+	 * @param array<int, string> $slugs Requested slot slugs.
+	 * @return array<string, array<string, mixed>> Keyed by slot slug.
+	 */
+	public function for_slots( array $slugs ): array {
+		if ( ! $this->is_enabled() || array() === $slugs ) {
+			return array();
+		}
+
+		$now        = time();
+		$slots_map  = array();
+		$valid_info = array();
+
+		// Deduplicate and bound to max 20 slots.
+		$slugs = array_slice( array_unique( $slugs ), 0, 20 );
+
+		foreach ( $slugs as $slug ) {
+			if ( ! is_string( $slug ) || '' === $slug ) {
+				continue;
+			}
+
+			$placement_id = $this->placements->id_by_slug( $slug );
+			if ( $placement_id <= 0 || ! $this->placements->is_active( $placement_id ) ) {
+				continue;
+			}
+
+			$rows                = $this->decisions->cached_rows( $placement_id, $now );
+			$slots_map[ $slug ]  = array(
+				'placement_id' => $placement_id,
+				'candidates'   => $rows,
+			);
+			$valid_info[ $slug ] = array(
+				'placement_id' => $placement_id,
+				'size'         => $this->placements->size( $placement_id ),
+			);
+		}
+
+		if ( array() === $slots_map ) {
+			return array();
+		}
+
+		$decisions = $this->decisions->decide_page( $slots_map, $now );
+		$payloads  = array();
+
+		foreach ( $valid_info as $slug => $info ) {
+			$placement_id = $info['placement_id'];
+			$decision     = $decisions[ $slug ] ?? null;
+
+			$paid = null;
+			if ( null !== $decision && $decision['result']->has_winner() && is_array( $decision['result']->winner ) ) {
+				$paid = $this->decisions->payload_from_row( $decision['result']->winner, $placement_id );
+			}
+
+			$house = null;
+			if ( null === $paid && Settings_Schema::HOUSE_WHEN_EMPTY === $this->settings->house_policy() ) {
+				$house = $this->house_creative( $placement_id );
+			}
+
+			$payloads[ $slug ] = $this->with_tokens(
+				array(
+					'slot'     => $slug,
+					'size'     => $info['size'],
+					'creative' => $paid,
+					'house'    => $house,
+					'beacon'   => rest_url( Creative_File_Controller::NAMESPACE . '/i' ),
+				)
+			);
+		}
+
+		return $payloads;
+	}
+
+	/**
 	 * Whether a parsed token still names a live, servable fill.
 	 *
 	 * @param array{placement_id: int, campaign_id: int, creative_id: int, exp: int, nonce: string} $parsed Token.

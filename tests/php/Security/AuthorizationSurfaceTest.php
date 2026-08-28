@@ -63,6 +63,7 @@ final class AuthorizationSurfaceTest extends WP_UnitTestCase {
 			'POST /aggr/v1/campaigns/(?P<id>\d+)/transitions',
 			'POST /aggr/v1/creative-replacements/(?P<id>\d+)/decision',
 			'POST /aggr/v1/creatives/(?P<id>\d+)/replacement',
+			'POST /aggr/v1/decisions',
 			'POST /aggr/v1/i',
 			'POST /aggr/v1/organizations/(?P<id>\d+)/members',
 			'POST /aggr/v1/organizations/(?P<id>\d+)/owner',
