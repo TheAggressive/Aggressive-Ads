@@ -289,7 +289,7 @@ final class Request_Mailer implements Service {
 				$message = $this->message( $campaign_id, $kind );
 
 				// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.wp_mail_wp_mail -- Transactional notification to individually authorized staff, not bulk or marketing email.
-				return wp_mail( $email, $message['subject'], $message['body'] );
+				return wp_mail( $email, $message['subject'], $message['body'], Notification_Delivery::sender_headers() );
 			}
 		);
 

@@ -282,7 +282,7 @@ final class Ending_Soon_Mailer implements Service {
 				);
 
 				// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.wp_mail_wp_mail -- Transactional notification to a member of the owning organization, not bulk or marketing email.
-				return wp_mail( $email, $subject, $body );
+				return wp_mail( $email, $subject, $body, Notification_Delivery::sender_headers() );
 			}
 		);
 

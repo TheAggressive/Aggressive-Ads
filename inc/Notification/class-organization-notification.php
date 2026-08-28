@@ -173,6 +173,6 @@ final class Organization_Notification {
 		}
 
 		// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.wp_mail_wp_mail -- Transactional single-recipient membership notification.
-		return wp_mail( $email, $subject, $body );
+		return wp_mail( $email, $subject, $body, Notification_Delivery::sender_headers() );
 	}
 }
