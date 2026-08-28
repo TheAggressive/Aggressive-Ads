@@ -473,7 +473,7 @@ final class Notification_Service implements Service {
 				$message = $this->advertiser_message( $campaign_id, $status );
 
 				// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.wp_mail_wp_mail -- Transactional notification to a member of the owning organization, not bulk or marketing email.
-				return wp_mail( $email, $message['subject'], $message['body'] );
+				return wp_mail( $email, $message['subject'], $message['body'], Notification_Delivery::sender_headers() );
 			}
 		);
 
@@ -561,7 +561,7 @@ final class Notification_Service implements Service {
 				$message = $this->submission_message( $campaign_id, $revision );
 
 				// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.wp_mail_wp_mail -- Transactional notification to individually authorized staff, not bulk or marketing email.
-				return wp_mail( $email, $message['subject'], $message['body'] );
+				return wp_mail( $email, $message['subject'], $message['body'], Notification_Delivery::sender_headers() );
 			}
 		);
 
