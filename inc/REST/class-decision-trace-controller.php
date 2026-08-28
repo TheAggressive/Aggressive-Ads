@@ -111,7 +111,7 @@ final class Decision_Trace_Controller implements Service {
 		$seed = $request->get_param( 'seed' );
 		$seed = is_numeric( $seed ) ? (int) $seed : random_int( 0, PHP_INT_MAX );
 
-		$decision = $this->engine->decide( $placement_id, $now, $seed );
+		$decision = $this->engine->decide( $placement_id, $now, $seed, null, false );
 		$result   = $decision['result'];
 		$trace    = $decision['trace'];
 

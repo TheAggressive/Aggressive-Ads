@@ -7,9 +7,9 @@ separate dimensions and must be measured on production-equivalent hardware.
 
 ## Measured query budget
 
-`DeliveryScaleTest` builds 1,000 real campaign posts, creative posts, and meta
-relationships in MySQL. It asserts all 1,000 remain eligible and enforces these
-budgets:
+`DeliveryScaleTest` builds 1,000 real campaign posts, creative posts, and
+assignments in MySQL. It exercises the candidate read cap (up to 500 candidates)
+and enforces these budgets:
 
 | Operation | Maximum database queries |
 |---|---:|
@@ -40,19 +40,24 @@ traffic profile and exact ledger/rollup acceptance check are documented in
 
 ## Serving path
 
-The source of truth remains campaign and creative posts. A cache miss performs
-two index-led reads: live campaign ids for the placement, then active creative
-id/campaign pairs. Their integer sets are intersected in PHP. The placement
-cache stores only the resulting id vector; each selected creative has its own
-small token-free payload key. A fresh signed token is always minted per fill.
+The serving path reads from the `aggr_creative_assignments` custom table via
+`Creative_Assignment_Repository::candidates_for_placement()`, capped at 500
+candidates by index. A cache miss performs one indexed read for the placement's
+live assignments, cached under `assignment_rows`. The `Decision_Engine` executes
+the decision pipeline (`Decision_Pipeline`) over these candidates:
+evaluating row-level eligibility, pass-through seams (targeting, frequency,
+pacing, priority), and deterministic weighted selection (`Weighted_Selection`).
+The winning assignment row is mapped to a token-free payload; a fresh signed
+token is always minted per fill.
 
-This avoids both the former N+1 query shape and transferring/deserializing all
-creative URLs and alt text on every request. A short object-cache mutex limits
-concurrent rebuilds. Waiters poll for at most 200ms and then render no paid ad
-instead of independently rebuilding and stampeding MySQL. A token presented to
-the impression or click route is validated by one exact
-creative-id/campaign-id/placement-id query against the current live status, so
-pause and completion do not depend on cached identity.
+This avoids both N+1 query patterns and cross-tenant data leaks. A short
+object-cache mutex limits concurrent rebuilds. Waiters poll for at most 200ms
+and then render no paid ad instead of independently rebuilding and stampeding
+MySQL. A token presented to the impression or click route is validated by one
+exact creative-id/campaign-id/placement-id candidate query against current live
+status via `Delivery_Repository::candidate()`, so pause and completion do not
+depend on cached identity. Staff trace inspection (`GET /placements/{id}/decision`)
+evaluates decisions on demand with exclusion metric recording bypassed.
 
 ## Production requirements
 
