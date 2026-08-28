@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
-"POT-Creation-Date: 2026-08-28T08:46:18+00:00\n"
+"POT-Creation-Date: 2026-08-28T09:20:14+00:00\n"
 "PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -2610,31 +2610,31 @@ msgstr ""
 msgid "The account could not be created."
 msgstr ""
 
-#: inc/REST/class-beacon-controller.php:84
+#: inc/REST/class-beacon-controller.php:85
 #: inc/REST/class-decisions-controller.php:85
 #: inc/REST/class-fill-controller.php:71
 msgid "Native delivery is off."
 msgstr ""
 
-#: inc/REST/class-beacon-controller.php:92
+#: inc/REST/class-beacon-controller.php:93
 #: inc/REST/class-decisions-controller.php:93
 #: inc/REST/class-fill-controller.php:79
 msgid "That request is not allowed from this origin."
 msgstr ""
 
-#: inc/REST/class-beacon-controller.php:112
+#: inc/REST/class-beacon-controller.php:113
 msgid "Automated fetches are not impressions."
 msgstr ""
 
-#: inc/REST/class-beacon-controller.php:129
+#: inc/REST/class-beacon-controller.php:130
 msgid "That token is not valid."
 msgstr ""
 
-#: inc/REST/class-beacon-controller.php:142
+#: inc/REST/class-beacon-controller.php:143
 msgid "That token has already been used."
 msgstr ""
 
-#: inc/REST/class-beacon-controller.php:150
+#: inc/REST/class-beacon-controller.php:151
 msgid "That impression could not be recorded. Please try again."
 msgstr ""
 

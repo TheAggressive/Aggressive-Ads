@@ -40,7 +40,7 @@ final class Event_Recorder {
 	 * A failed projection does not discard or replay the accepted event. The
 	 * closed-day reconciler rebuilds exact counters from the ledger.
 	 *
-	 * @param string $type         impression|click.
+	 * @param string $type         Measurement event type (e.g. served, click, impression).
 	 * @param int    $placement_id Placement post id.
 	 * @param int    $campaign_id  Campaign post id, or 0 for house.
 	 * @param int    $creative_id  Creative post id, or 0 for house.
@@ -53,7 +53,8 @@ final class Event_Recorder {
 			return $this->events->exists( $type, $token_hash ) ? self::REPLAY : self::FAILED;
 		}
 
-		$column = Event_Repository::TYPE_IMPRESSION === $type ? 'impressions' : 'clicks';
+		$is_served = in_array( $type, array( Event_Repository::TYPE_SERVED, Event_Repository::TYPE_IMPRESSION ), true );
+		$column    = $is_served ? 'impressions' : 'clicks';
 
 		return $this->rollups->increment( $column, $placement_id, $campaign_id )
 			? self::RECORDED

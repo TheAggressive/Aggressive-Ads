@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\REST;
 
 use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Repository\Event_Repository;
 use Aggressive\Ads\Security\Rate_Limiter;
 use Aggressive\Ads\Workflow\Delivery_Request;
 use Aggressive\Ads\Workflow\Event_Recorder;
@@ -134,7 +135,7 @@ final class Beacon_Controller implements Service {
 		$hash = $this->tokens->hash( $token );
 		$ip   = $this->tokens->ip_hash( Delivery_Request::client_ip() );
 
-		$recorded = $this->recorder->record( 'impression', $parsed['placement_id'], $parsed['campaign_id'], $parsed['creative_id'], $hash, $ip );
+		$recorded = $this->recorder->record( Event_Repository::TYPE_SERVED, $parsed['placement_id'], $parsed['campaign_id'], $parsed['creative_id'], $hash, $ip );
 
 		if ( Event_Recorder::REPLAY === $recorded ) {
 			return new WP_Error(
