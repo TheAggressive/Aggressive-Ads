@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Tests\Integration;
 
+use Aggressive\Ads\Domain\Measurement_Event_Type;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Event_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
@@ -237,8 +238,9 @@ final class TrackingDurabilityTest extends WP_UnitTestCase {
 			'Could not insert event fixture ' . $seed . ': ' . $wpdb->last_error
 		);
 
-		$table = $this->events->table_name();
+		$table      = $this->events->table_name();
+		$normalized = Measurement_Event_Type::normalize( $type ) ?? $type;
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Test fixture moves the repository-written row to a closed UTC day.
-		$wpdb->query( $wpdb->prepare( "UPDATE {$table} SET created_at_ts = %d WHERE token_hash = %s AND event = %s", $timestamp, $token, $type ) );
+		$wpdb->query( $wpdb->prepare( "UPDATE {$table} SET created_at_ts = %d WHERE token_hash = %s AND event = %s", $timestamp, $token, $normalized ) );
 	}
 }
