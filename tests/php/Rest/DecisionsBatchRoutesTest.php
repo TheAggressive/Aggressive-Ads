@@ -69,15 +69,13 @@ final class DecisionsBatchRoutesTest extends WP_UnitTestCase {
 		do_action( 'rest_api_init', rest_get_server() );
 	}
 
-	public function test_post_decisions_returns_forbidden_when_native_delivery_disabled(): void {
-		$this->disable_native();
-
+	public function test_decisions_is_available_without_enabling_a_module(): void {
 		$request = new WP_REST_Request( 'POST', '/aggr/v1/decisions' );
 		$request->set_header( 'content-type', 'application/json' );
 		$request->set_body( wp_json_encode( array( 'slots' => array( 'header-slot' ) ) ) );
 
 		$response = rest_get_server()->dispatch( $request );
-		$this->assertSame( 404, $response->get_status() );
+		$this->assertSame( 200, $response->get_status() );
 	}
 
 	public function test_post_decisions_validates_slots_input(): void {
@@ -149,12 +147,6 @@ final class DecisionsBatchRoutesTest extends WP_UnitTestCase {
 	private function enable_native(): void {
 		$document = $this->settings->get();
 		$document['modules'][ Settings_Schema::MODULE_NATIVE_DELIVERY ] = true;
-		$this->settings->save( $document );
-	}
-
-	private function disable_native(): void {
-		$document = $this->settings->get();
-		$document['modules'][ Settings_Schema::MODULE_NATIVE_DELIVERY ] = false;
 		$this->settings->save( $document );
 	}
 }
