@@ -18,8 +18,8 @@ and object-cache implementations without persistent fingerprinting.
 1. **Multi-Level Frequency Capping**: Cap delivery at `campaign`, `line_item`, or `creative` scopes.
 2. **Flexible Time Windows**:
    - `session`: Current browser / request session;
-   - `hour`: 1-hour rolling or clock-hour window (3,600s);
-   - `day`: 24-hour rolling or calendar-day window (86,400s); and
+   - `hour`: fixed clock-hour window (3,600s);
+   - `day`: fixed UTC-day window (86,400s); and
    - `custom`: Configurable window in seconds.
 3. **Pluggable Expiring Storage**:
    - `Frequency_Store` interface defining `get_count()`, `record_impression()`, and `reset()`.
@@ -62,7 +62,32 @@ Frequency capping criteria are stored under `delivery_settings['frequency_cappin
 
 ### Invariants
 
-1. **Expiring Keys**: All frequency counts are stored with strict TTL expiration matching the window length.
+1. **Bucketed keys, not sliding TTLs.** The storage key carries the window it
+   belongs to — `intdiv( now, window_seconds )` — so the boundary is absolute.
+   The TTL only reclaims storage.
+
+   The first implementation left the bucket out and relied on the TTL alone.
+   Every write refreshed it, so the window slid: a visitor who saw an ad at
+   least once an hour never expired, and an hourly cap behaved as a lifetime
+   cap. `test_a_late_delivery_does_not_extend_the_window` is the regression.
+
+2. **Counting is wired to serving, not deciding.** `Frequency_Rules::record_delivery()`
+   is called by `Fill_Service` once an ad is actually returned, so a staff
+   decision trace does not spend a visitor's impressions.
+
+   This was the defect that made the whole stage inert on release: nothing
+   called `increment()` anywhere in the plugin, so `get_count()` always returned
+   zero and no configured cap ever excluded a candidate. Every test passed
+   because each arranged its own count. `test_recorded_deliveries_are_what_the_cap_counts`
+   is the round trip that now has to hold.
+
+3. **Increments are atomic where they can be.** `wp_cache_incr()` under a
+   persistent object cache; read-then-write on the transient fallback, which is
+   best-effort by design and documented as such — a lost count serves one extra
+   impression, and the phase fails open anyway.
+
+4. **Expiring Keys**: counts are stored with a TTL matching the window length,
+   floored at one second so a nonsensical configuration still counts.
 2. **Zero Fingerprinting**: Keys are hashed combinations of `(blog_id, level, entity_id, ephemeral_viewer_id)`.
 3. **Fail-Open on Storage Errors**: If external cache / Redis is unavailable, the pipeline allows delivery rather than starving publishers of ads.
 4. **Deterministic Evaluation**: Given the same frequency count and candidate limits, evaluation is 100% deterministic.
@@ -71,4 +96,7 @@ Frequency capping criteria are stored under `delivery_settings['frequency_cappin
 
 1. `Frequency_Rules`, `Frequency_Stage`, and `Frequency_Store` implement pure domain contracts and integrate into `Decision_Pipeline::standard()`.
 2. Unit tests verify campaign, line-item, and creative level limits across session, hour, day, and custom windows.
+3. `FrequencyStoreTest` exercises `Transient_Frequency_Store` against real
+   WordPress. The unit suite covers only the in-memory store, so without this
+   the class that actually runs in production was executed by nothing.
 3. Static analysis (PHPStan Level 8) and coding standards (PHPCS) pass with 0 errors.

@@ -135,7 +135,8 @@ final class Fill_Service {
 			return array();
 		}
 
-		$decisions = $this->decisions->decide_page( $slots_map, $now );
+		$facts     = $this->request_facts();
+		$decisions = $this->decisions->decide_page( $slots_map, $now, null, $facts );
 		$payloads  = array();
 
 		foreach ( $valid_info as $slug => $info ) {
@@ -144,7 +145,11 @@ final class Fill_Service {
 
 			$paid = null;
 			if ( null !== $decision && $decision['result']->has_winner() && is_array( $decision['result']->winner ) ) {
-				$paid = $this->decisions->payload_from_row( $decision['result']->winner, $placement_id );
+				$winner = $decision['result']->winner;
+
+				$this->decisions->record_delivery( $winner, $now, $facts );
+
+				$paid = $this->decisions->payload_from_row( $winner, $placement_id );
 			}
 
 			$house = null;
@@ -231,14 +236,43 @@ final class Fill_Service {
 		}
 
 		$now      = time();
+		$facts    = $this->request_facts();
 		$rows     = $this->decisions->cached_rows( $placement_id, $now );
-		$decision = $this->decisions->decide( $placement_id, $now, null, $rows );
+		$decision = $this->decisions->decide( $placement_id, $now, null, $rows, true, $facts );
 
 		if ( ! $decision['result']->has_winner() || ! is_array( $decision['result']->winner ) ) {
 			return null;
 		}
 
-		return $this->decisions->payload_from_row( $decision['result']->winner, $placement_id );
+		$winner = $decision['result']->winner;
+
+		$this->decisions->record_delivery( $winner, $now, $facts );
+
+		return $this->decisions->payload_from_row( $winner, $placement_id );
+	}
+
+	/**
+	 * Request facts the decision stages are allowed to see.
+	 *
+	 * The visitor identity is the same daily client digest the event ledger
+	 * already stores — HMAC of the IP, salted and rotated per UTC day. Frequency
+	 * capping needs to recognise a returning visitor for the length of a window
+	 * and nothing more, so reusing an identifier the plugin already accepts is
+	 * better than minting a second, longer-lived one.
+	 *
+	 * Returns no visitor id when the address is unusable, which fails open:
+	 * `Frequency_Rules` caps nobody it cannot identify.
+	 *
+	 * @return array<string, mixed>
+	 */
+	private function request_facts(): array {
+		$ip = Delivery_Request::client_ip();
+
+		if ( '' === $ip ) {
+			return array();
+		}
+
+		return array( 'visitor_id' => $this->tokens->ip_hash( $ip ) );
 	}
 
 	/**

@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\REST;
 
 use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Security\Rate_Limiter;
 use Aggressive\Ads\Workflow\Delivery_Request;
 use Aggressive\Ads\Workflow\Fill_Service;
 use WP_Error;
@@ -26,9 +27,13 @@ final class Decisions_Controller implements Service {
 	/**
 	 * Constructor.
 	 *
-	 * @param Fill_Service $fill Native fill.
+	 * @param Fill_Service $fill    Native fill.
+	 * @param Rate_Limiter $limiter Anonymous batch bound.
 	 */
-	public function __construct( private readonly Fill_Service $fill ) {
+	public function __construct(
+		private readonly Fill_Service $fill,
+		private readonly Rate_Limiter $limiter
+	) {
 	}
 
 	/**
@@ -93,6 +98,18 @@ final class Decisions_Controller implements Service {
 				__( 'That request is not allowed from this origin.', 'aggressive-ads' ),
 				array( 'status' => 403 )
 			);
+		}
+
+		/*
+		 * Bounded per client because this route is unauthenticated and resolves
+		 * up to twenty decisions per request — twenty times what the single-slot
+		 * route costs. The beacon and click hop were already bounded; this one
+		 * was the way around them.
+		 */
+		$limited = $this->limiter->attempt_for( Rate_Limiter::ACTION_DECISIONS, Rate_Limiter::client_subject() );
+
+		if ( is_wp_error( $limited ) ) {
+			return $limited;
 		}
 
 		return true;

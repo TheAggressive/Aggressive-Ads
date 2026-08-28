@@ -9,11 +9,14 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Workflow;
 
+use Aggressive\Ads\Domain\Decision_Context;
 use Aggressive\Ads\Domain\Decision_Pipeline;
 use Aggressive\Ads\Domain\Decision_Request;
 use Aggressive\Ads\Domain\Decision_Result;
 use Aggressive\Ads\Domain\Decision_Trace;
 use Aggressive\Ads\Domain\Exclusion_Reason;
+use Aggressive\Ads\Domain\Frequency_Rules;
+use Aggressive\Ads\Domain\Frequency_Store;
 use Aggressive\Ads\Install\Creative_Assignment_Migrator;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 
@@ -36,14 +39,42 @@ final class Decision_Engine {
 	 * @param Decision_Metrics               $metrics     Exclusion counters.
 	 * @param Decision_Pipeline              $pipeline    Pure stages.
 	 * @param Fill_Cache                     $cache       Short-TTL candidate cache.
+	 * @param Frequency_Store                $frequency   Visitor frequency counts.
 	 */
 	public function __construct(
 		private readonly Creative_Assignment_Repository $assignments,
 		private readonly Creative_Assignment_Migrator $migrator,
 		private readonly Decision_Metrics $metrics,
 		private readonly Decision_Pipeline $pipeline,
-		private readonly Fill_Cache $cache
+		private readonly Fill_Cache $cache,
+		private readonly Frequency_Store $frequency
 	) {
+	}
+
+	/**
+	 * Counts one delivery against the winner's frequency caps.
+	 *
+	 * Called when an ad is actually served rather than when it is decided, so a
+	 * staff trace does not spend a visitor's impressions. Nothing called this
+	 * before: the frequency stage read a counter no code ever wrote, so a
+	 * configured cap excluded nobody.
+	 *
+	 * @param array<string, mixed> $winner Winning candidate row.
+	 * @param int                  $now    Evaluation time in UTC seconds.
+	 * @param array<string, mixed> $facts  Request facts, including the visitor id.
+	 * @return void
+	 */
+	public function record_delivery( array $winner, int $now, array $facts ): void {
+		if ( array() === $facts ) {
+			return;
+		}
+
+		Frequency_Rules::record_delivery(
+			$winner,
+			new Decision_Context( 0, $now, $facts ),
+			$this->frequency,
+			$now
+		);
 	}
 
 	/**
@@ -115,14 +146,16 @@ final class Decision_Engine {
 	 * @param array<string, array{placement_id: int, candidates: list<array<string, mixed>>}> $slots_map Keyed by slot slug.
 	 * @param int                                                                             $now       Evaluation time.
 	 * @param int|null                                                                        $seed      Random seed.
+	 * @param array<string, mixed>                                                            $facts     Request facts.
 	 * @return array<string, array{result: Decision_Result, trace: Decision_Trace}>
 	 */
-	public function decide_page( array $slots_map, int $now, ?int $seed = null ): array {
+	public function decide_page( array $slots_map, int $now, ?int $seed = null, array $facts = array() ): array {
 		return \Aggressive\Ads\Domain\Page_Decision_Coordinator::coordinate(
 			$slots_map,
 			$this->pipeline,
 			$now,
-			$seed
+			$seed,
+			$facts
 		);
 	}
 

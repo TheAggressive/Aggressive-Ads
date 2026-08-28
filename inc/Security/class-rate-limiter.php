@@ -39,6 +39,7 @@ final class Rate_Limiter {
 	public const ACTION_EMAIL_CHANGE   = 'email_change';
 	public const ACTION_BEACON         = 'beacon';
 	public const ACTION_CLICK          = 'click';
+	public const ACTION_DECISIONS      = 'decisions';
 
 	/**
 	 * Limits per action, as attempts per window.
@@ -95,6 +96,18 @@ final class Rate_Limiter {
 		 * not limited. Beacon and click writes are.
 		 */
 		self::ACTION_BEACON         => array(
+			'limit'  => 300,
+			'window' => HOUR_IN_SECONDS,
+		),
+
+		/*
+		 * One batch request per page view, each resolving up to twenty slots.
+		 * Matched to the beacon's ceiling because a page that fills ads also
+		 * reports them, so a visitor tripping this would already have tripped
+		 * that. The point is bounding the amplification an unauthenticated POST
+		 * can buy, not policing ordinary browsing.
+		 */
+		self::ACTION_DECISIONS      => array(
 			'limit'  => 300,
 			'window' => HOUR_IN_SECONDS,
 		),

@@ -59,7 +59,7 @@ final class Frequency_Rules {
 			$entity_id = self::resolve_entity_id( $level, $row );
 			$window    = (string) ( $config['window'] ?? self::WINDOW_DAY );
 
-			$key   = self::build_key( $level, $entity_id, $visitor_id, $window );
+			$key   = self::build_key( $level, $entity_id, $visitor_id, $window, $context->now, $config );
 			$count = $store->get_count( $key );
 
 			if ( $count >= $max_impressions ) {
@@ -73,15 +73,105 @@ final class Frequency_Rules {
 	}
 
 	/**
+	 * Counts one delivery against every cap that applies to it.
+	 *
+	 * The half that was missing: `evaluate_candidate()` read a counter nothing
+	 * ever wrote, so no candidate was capped however the policy was configured.
+	 * Called when an ad is actually served, not when it is decided, so a staff
+	 * trace does not spend a visitor's impressions.
+	 *
+	 * @param array<string, mixed> $row     Winning candidate row.
+	 * @param Decision_Context     $context Decision context.
+	 * @param Frequency_Store      $store   Frequency count store.
+	 * @param int                  $now     Evaluation time in UTC seconds.
+	 * @return bool Whether a cap was counted.
+	 */
+	public static function record_delivery( array $row, Decision_Context $context, Frequency_Store $store, int $now ): bool {
+		$config = self::extract_frequency_config( $row );
+
+		if ( null === $config || empty( $config['enabled'] ) ) {
+			return false;
+		}
+
+		if ( (int) ( $config['max_impressions'] ?? 0 ) <= 0 ) {
+			return false;
+		}
+
+		$visitor_id = self::extract_visitor_id( $context );
+
+		if ( '' === $visitor_id ) {
+			return false;
+		}
+
+		try {
+			$level     = (string) ( $config['level'] ?? self::LEVEL_LINE_ITEM );
+			$window    = (string) ( $config['window'] ?? self::WINDOW_DAY );
+			$entity_id = self::resolve_entity_id( $level, $row );
+			$key       = self::build_key( $level, $entity_id, $visitor_id, $window, $now, $config );
+
+			$store->increment( $key, self::resolve_window_ttl( $config ) );
+
+			return true;
+		} catch ( Throwable ) {
+			// Storage failures fail open: losing a count serves one ad too many,
+			// while throwing here would lose the ad entirely.
+			return false;
+		}
+	}
+
+	/**
 	 * Builds an opaque frequency storage key.
 	 *
-	 * @param string $level      Scope level.
-	 * @param int    $entity_id  Entity ID.
-	 * @param string $visitor_id Ephemeral visitor token.
-	 * @param string $window     Time window.
+	 * @param string               $level      Scope level.
+	 * @param int                  $entity_id  Entity ID.
+	 * @param string               $visitor_id Ephemeral visitor token.
+	 * @param string               $window     Time window.
+	 * @param int                  $now        Evaluation time in UTC seconds.
+	 * @param array<string, mixed> $config     Frequency configuration.
+	 * @return string
 	 */
-	public static function build_key( string $level, int $entity_id, string $visitor_id, string $window ): string {
-		return sprintf( '%s:%d:%s:%s', $level, $entity_id, $window, hash( 'sha256', $visitor_id ) );
+	public static function build_key(
+		string $level,
+		int $entity_id,
+		string $visitor_id,
+		string $window,
+		int $now = 0,
+		array $config = array()
+	): string {
+		return sprintf(
+			'%s:%d:%s:%s:%s',
+			$level,
+			$entity_id,
+			$window,
+			self::window_bucket( $window, $now, $config ),
+			hash( 'sha256', $visitor_id )
+		);
+	}
+
+	/**
+	 * The fixed window this instant falls in.
+	 *
+	 * Without it the key is stable and the window is enforced only by the
+	 * store's TTL, which every write refreshes — so an "hourly" cap never
+	 * expires for a visitor who sees an ad at least once an hour, and behaves
+	 * as a lifetime cap. Bucketing makes the boundary absolute: the key changes
+	 * on the hour whatever the traffic looks like.
+	 *
+	 * A session is already scoped by its own identifier and has no clock.
+	 *
+	 * @param string               $window Window name.
+	 * @param int                  $now    Evaluation time in UTC seconds.
+	 * @param array<string, mixed> $config Frequency configuration.
+	 * @return string
+	 */
+	public static function window_bucket( string $window, int $now, array $config = array() ): string {
+		if ( self::WINDOW_SESSION === $window ) {
+			return 'session';
+		}
+
+		$ttl = self::resolve_window_ttl( array( 'window' => $window ) + $config );
+
+		return (string) intdiv( max( 0, $now ), max( 1, $ttl ) );
 	}
 
 	/**

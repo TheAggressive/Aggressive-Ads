@@ -235,7 +235,8 @@ final class Runtime_Service_Registrar {
 				$c->get( Creative_Assignment_Migrator::class ),
 				$c->get( Decision_Metrics::class ),
 				$c->get( Decision_Pipeline::class ),
-				$c->get( Fill_Cache::class )
+				$c->get( Fill_Cache::class ),
+				$c->get( Frequency_Store::class )
 			)
 		);
 
