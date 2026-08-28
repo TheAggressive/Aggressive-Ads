@@ -64,6 +64,25 @@ final class DecisionMetricsTest extends WP_UnitTestCase {
 		);
 	}
 
+	public function test_record_exclusions_batches_one_option_write(): void {
+		$this->metrics->record_exclusions(
+			42,
+			array(
+				Exclusion_Reason::NO_FILL          => 2,
+				Exclusion_Reason::COMPETITION_LOST => 3,
+				''                                 => 1,
+			)
+		);
+
+		$stored = get_option( Decision_Metrics::OPTION_EXCLUSIONS, array() );
+
+		$this->assertIsArray( $stored );
+		$this->assertSame( 2, $stored['aggregate'][ Exclusion_Reason::NO_FILL ] ?? 0 );
+		$this->assertSame( 3, $stored['aggregate'][ Exclusion_Reason::COMPETITION_LOST ] ?? 0 );
+		$this->assertSame( 2, $stored['placements']['42'][ Exclusion_Reason::NO_FILL ] ?? 0 );
+		$this->assertSame( 3, $stored['placements']['42'][ Exclusion_Reason::COMPETITION_LOST ] ?? 0 );
+	}
+
 	public function test_record_exclusion_ignores_invalid_input(): void {
 		$this->metrics->record_exclusion( 0, Exclusion_Reason::NO_FILL );
 		$this->metrics->record_exclusion( 5, '' );

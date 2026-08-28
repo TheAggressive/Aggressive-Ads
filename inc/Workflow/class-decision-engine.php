@@ -84,15 +84,19 @@ final class Decision_Engine {
 
 		$decision = $this->pipeline->decide( $rows, $request );
 
+		$exclusions = array();
+
 		foreach ( $decision['candidates'] as $candidate ) {
 			if ( ! $candidate->is_eligible() && is_string( $candidate->exclusion_reason ) ) {
-				$this->metrics->record_exclusion( $placement_id, $candidate->exclusion_reason );
+				$exclusions[ $candidate->exclusion_reason ] = ( $exclusions[ $candidate->exclusion_reason ] ?? 0 ) + 1;
 			}
 		}
 
 		if ( ! $decision['result']->has_winner() && is_string( $decision['result']->reason ) ) {
-			$this->metrics->record_exclusion( $placement_id, $decision['result']->reason );
+			$exclusions[ $decision['result']->reason ] = ( $exclusions[ $decision['result']->reason ] ?? 0 ) + 1;
 		}
+
+		$this->metrics->record_exclusions( $placement_id, $exclusions );
 
 		return array(
 			'result' => $decision['result'],

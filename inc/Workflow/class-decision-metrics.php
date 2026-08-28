@@ -23,7 +23,37 @@ final class Decision_Metrics {
 	 * @param string $reason       One of Domain\Exclusion_Reason.
 	 */
 	public function record_exclusion( int $placement_id, string $reason ): void {
-		if ( $placement_id <= 0 || '' === $reason ) {
+		$this->record_exclusions( $placement_id, array( $reason => 1 ) );
+	}
+
+	/**
+	 * Increments multiple exclusion reasons in one option read/write.
+	 *
+	 * @param int                $placement_id Placement post id.
+	 * @param array<string, int> $increments   Reason code => count.
+	 */
+	public function record_exclusions( int $placement_id, array $increments ): void {
+		if ( $placement_id <= 0 || array() === $increments ) {
+			return;
+		}
+
+		$normalized = array();
+
+		foreach ( $increments as $reason => $count ) {
+			if ( ! is_string( $reason ) || '' === $reason ) {
+				continue;
+			}
+
+			$amount = (int) $count;
+
+			if ( $amount <= 0 ) {
+				continue;
+			}
+
+			$normalized[ $reason ] = ( $normalized[ $reason ] ?? 0 ) + $amount;
+		}
+
+		if ( array() === $normalized ) {
 			return;
 		}
 
@@ -47,8 +77,10 @@ final class Decision_Metrics {
 			$counts['placements'][ $placement_key ] = array();
 		}
 
-		$counts['aggregate'][ $reason ]                    = (int) ( $counts['aggregate'][ $reason ] ?? 0 ) + 1;
-		$counts['placements'][ $placement_key ][ $reason ] = (int) ( $counts['placements'][ $placement_key ][ $reason ] ?? 0 ) + 1;
+		foreach ( $normalized as $reason => $amount ) {
+			$counts['aggregate'][ $reason ]                    = (int) ( $counts['aggregate'][ $reason ] ?? 0 ) + $amount;
+			$counts['placements'][ $placement_key ][ $reason ] = (int) ( $counts['placements'][ $placement_key ][ $reason ] ?? 0 ) + $amount;
+		}
 
 		update_option( self::OPTION_EXCLUSIONS, $counts, false );
 	}
