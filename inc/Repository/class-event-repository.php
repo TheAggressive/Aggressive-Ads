@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Repository;
 
+use Aggressive\Ads\Domain\Measurement_Event_Type;
+use Aggressive\Ads\Domain\Measurement_Rules;
 use Aggressive\Ads\Install\Schema;
 
 /**
@@ -16,8 +18,15 @@ use Aggressive\Ads\Install\Schema;
  */
 final class Event_Repository {
 
-	public const TYPE_IMPRESSION = 'impression';
-	public const TYPE_CLICK      = 'click';
+	public const TYPE_SERVED     = Measurement_Event_Type::TYPE_SERVED;
+	public const TYPE_CLICK      = Measurement_Event_Type::TYPE_CLICK;
+	public const TYPE_REQUEST    = Measurement_Event_Type::TYPE_REQUEST;
+	public const TYPE_FILL       = Measurement_Event_Type::TYPE_FILL;
+	public const TYPE_NO_FILL    = Measurement_Event_Type::TYPE_NO_FILL;
+	public const TYPE_VIEWABLE   = Measurement_Event_Type::TYPE_VIEWABLE;
+	public const TYPE_CONVERSION = Measurement_Event_Type::TYPE_CONVERSION;
+
+	public const TYPE_IMPRESSION = Measurement_Event_Type::LEGACY_IMPRESSION;
 
 	/**
 	 * Fully prefixed table name.
@@ -98,9 +107,9 @@ final class Event_Repository {
 	}
 
 	/**
-	 * Records one impression or click. Duplicate (token_hash, event) returns false.
+	 * Records one measurement event. Duplicate (token_hash, event) returns false.
 	 *
-	 * @param string $type         impression|click.
+	 * @param string $type         Measurement event type (canonical or legacy alias).
 	 * @param int    $placement_id Placement id.
 	 * @param int    $campaign_id  Campaign id, or 0 for house.
 	 * @param int    $creative_id  Creative id, or 0 for house.
@@ -110,11 +119,12 @@ final class Event_Repository {
 	public function insert( string $type, int $placement_id, int $campaign_id, int $creative_id, string $token_hash, string $ip_hash ): bool {
 		global $wpdb;
 
-		if ( ! in_array( $type, array( self::TYPE_IMPRESSION, self::TYPE_CLICK ), true ) ) {
+		$normalized = Measurement_Event_Type::normalize( $type );
+		if ( null === $normalized ) {
 			return false;
 		}
 
-		if ( 1 !== preg_match( '/^[a-f0-9]{64}$/', $token_hash ) || 1 !== preg_match( '/^[a-f0-9]{64}$/', $ip_hash ) ) {
+		if ( ! Measurement_Rules::is_valid_token_hash( $token_hash ) || ! Measurement_Rules::is_valid_ip_hash( $ip_hash ) ) {
 			return false;
 		}
 
@@ -126,7 +136,7 @@ final class Event_Repository {
 				$this->table_name(),
 				array(
 					'created_at_ts' => time(),
-					'event'         => $type,
+					'event'         => $normalized,
 					'placement_id'  => $placement_id,
 					'campaign_id'   => $campaign_id,
 					'creative_id'   => $creative_id,
@@ -148,13 +158,14 @@ final class Event_Repository {
 	 * Used only to distinguish an expected replay from an infrastructure write
 	 * failure after insert() returns false.
 	 *
-	 * @param string $type       impression|click.
+	 * @param string $type       Measurement event type.
 	 * @param string $token_hash 64-char digest.
 	 */
 	public function exists( string $type, string $token_hash ): bool {
 		global $wpdb;
 
-		if ( ! in_array( $type, array( self::TYPE_IMPRESSION, self::TYPE_CLICK ), true ) || 1 !== preg_match( '/^[a-f0-9]{64}$/', $token_hash ) ) {
+		$normalized = Measurement_Event_Type::normalize( $type );
+		if ( null === $normalized || ! Measurement_Rules::is_valid_token_hash( $token_hash ) ) {
 			return false;
 		}
 
@@ -163,8 +174,13 @@ final class Event_Repository {
 		$was_suppressing = $wpdb->suppress_errors( true );
 
 		try {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Exact unique-key diagnostic after a failed ledger insert.
-			$id = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table} WHERE token_hash = %s AND event = %s LIMIT 1", $token_hash, $type ) );
+			if ( Measurement_Event_Type::TYPE_SERVED === $normalized ) {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Exact unique-key diagnostic with legacy impression alias.
+				$id = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table} WHERE token_hash = %s AND event IN (%s, %s) LIMIT 1", $token_hash, Measurement_Event_Type::TYPE_SERVED, Measurement_Event_Type::LEGACY_IMPRESSION ) );
+			} else {
+				// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Exact unique-key diagnostic after a failed ledger insert.
+				$id = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$table} WHERE token_hash = %s AND event = %s LIMIT 1", $token_hash, $normalized ) );
+			}
 		} finally {
 			$wpdb->suppress_errors( $was_suppressing );
 		}

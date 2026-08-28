@@ -128,13 +128,14 @@ final class Rollup_Repository {
 			$wpdb->prepare(
 				"INSERT INTO {$rollups} (day_utc, placement_id, campaign_id, impressions, clicks)
 				SELECT %s, placement_id, campaign_id,
-					SUM(CASE WHEN event = %s THEN 1 ELSE 0 END),
+					SUM(CASE WHEN event IN (%s, %s) THEN 1 ELSE 0 END),
 					SUM(CASE WHEN event = %s THEN 1 ELSE 0 END)
 				FROM {$events}
 				WHERE created_at_ts >= %d AND created_at_ts < %d
 				GROUP BY placement_id, campaign_id
 				ON DUPLICATE KEY UPDATE impressions = VALUES(impressions), clicks = VALUES(clicks)",
 				$day_utc,
+				Event_Repository::TYPE_SERVED,
 				Event_Repository::TYPE_IMPRESSION,
 				Event_Repository::TYPE_CLICK,
 				$start,

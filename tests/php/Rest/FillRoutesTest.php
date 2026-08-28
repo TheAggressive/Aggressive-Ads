@@ -289,7 +289,7 @@ final class FillRoutesTest extends WP_UnitTestCase {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Test assertion against this plugin's table.
 		$events = $wpdb->get_col( $wpdb->prepare( "SELECT event FROM {$table} WHERE token_hash = %s ORDER BY event ASC", $hash ) );
 
-		$this->assertSame( array( Event_Repository::TYPE_CLICK, Event_Repository::TYPE_IMPRESSION ), $events );
+		$this->assertSame( array( Event_Repository::TYPE_CLICK, Event_Repository::TYPE_SERVED ), $events );
 	}
 
 	/**

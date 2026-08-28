@@ -162,6 +162,60 @@ final class TrackingDurabilityTest extends WP_UnitTestCase {
 		$this->assertSame( Event_Retention::RECURRENCE, wp_get_schedule( Event_Retention::HOOK ) );
 	}
 
+	/** Served and legacy impression events are both recognized and reconciled into rollups. */
+	public function test_served_and_impression_events_are_both_recognized_and_reconciled(): void {
+		$day       = gmdate( 'Y-m-d', time() - ( 2 * DAY_IN_SECONDS ) );
+		$timestamp = (int) strtotime( $day . ' 14:00:00 UTC' );
+
+		$token_served     = hash( 'sha256', 'served-test' );
+		$token_impression = hash( 'sha256', 'impression-test' );
+		$ip               = str_repeat( 'a', 64 );
+
+		$this->assertTrue( $this->events->insert( Event_Repository::TYPE_SERVED, 71, 72, 73, $token_served, $ip ) );
+		$this->assertTrue( $this->events->insert( Event_Repository::TYPE_IMPRESSION, 71, 72, 73, $token_impression, $ip ) );
+
+		// Both are queryable via exists() under served and impression aliases.
+		$this->assertTrue( $this->events->exists( Event_Repository::TYPE_SERVED, $token_served ) );
+		$this->assertTrue( $this->events->exists( Event_Repository::TYPE_IMPRESSION, $token_served ) );
+		$this->assertTrue( $this->events->exists( Event_Repository::TYPE_SERVED, $token_impression ) );
+		$this->assertTrue( $this->events->exists( Event_Repository::TYPE_IMPRESSION, $token_impression ) );
+
+		// Reconcile and assert projection totals.
+		$table = $this->events->table_name();
+		global $wpdb;
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Move fixture timestamps for reconciliation test.
+		$wpdb->query( $wpdb->prepare( "UPDATE {$table} SET created_at_ts = %d WHERE token_hash IN (%s, %s)", $timestamp, $token_served, $token_impression ) );
+
+		$this->assertTrue( $this->rollups->reconcile_day( $day ) );
+		$totals = $this->rollups->totals_for_campaigns( array( 72 ) );
+		$this->assertSame( 2, $totals[72]['impressions'] );
+	}
+
+	/** Canonical measurement event types are accepted and enforce replay refusal. */
+	public function test_canonical_event_types_acceptance_and_replay_protection(): void {
+		$canonical_types = array(
+			Event_Repository::TYPE_REQUEST,
+			Event_Repository::TYPE_FILL,
+			Event_Repository::TYPE_NO_FILL,
+			Event_Repository::TYPE_SERVED,
+			Event_Repository::TYPE_VIEWABLE,
+			Event_Repository::TYPE_CLICK,
+			Event_Repository::TYPE_CONVERSION,
+		);
+
+		$ip = str_repeat( 'b', 64 );
+
+		foreach ( $canonical_types as $index => $type ) {
+			$token = hash( 'sha256', 'canonical-event-' . $type . '-' . $index );
+
+			$this->assertTrue( $this->events->insert( $type, 81, 82, 83, $token, $ip ) );
+			$this->assertTrue( $this->events->exists( $type, $token ) );
+
+			// Duplicate insert must be refused.
+			$this->assertFalse( $this->events->insert( $type, 81, 82, 83, $token, $ip ) );
+		}
+	}
+
 	/**
 	 * Inserts a valid event and moves it to an explicit test timestamp.
 	 *

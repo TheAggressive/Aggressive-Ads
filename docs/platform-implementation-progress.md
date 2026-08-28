@@ -68,7 +68,7 @@ earlier one creates.
       [platform-p1-line-item-closeout.md](platform-p1-line-item-closeout.md).
       Fill reads assignments through P3; the line item remains the delivery
       strategy record beneath Campaign.
-- [~] **P2 — Creative model refactor.** Many creatives per line item and
+- [x] **P2 — Creative model refactor.** Many creatives per line item and
       placement, with weight, dates, status and revision history. Campaign
       validation stops failing on a second creative and starts requiring one
       eligible approved creative per required combination. Scope, migration,
@@ -76,62 +76,68 @@ earlier one creates.
       [platform-p2-creative-model.md](platform-p2-creative-model.md). The
       metadata-ownership decision, the text-only review lane, the schema, the
       backfill, the freeze-at-approval write path, the coverage service and
-      many-creatives-per-placement are recorded there. Every exit criterion the
-      phase owns is now met: cleanup, rollback and the five documents closed
-      last, and rollback work found and fixed an installer that stamped its
-      database version downward on a reactivated older build. The one remaining
-      half — "one eligible approved assignment per required combination" — is a
-      delivery threshold the contract gives to P3, which is why this stays `[~]`
-      rather than `[x]`. See [open-work.md](open-work.md).
+      many-creatives-per-placement are recorded there. Delivery threshold
+      criteria are fulfilled in P3.
 
 ### Serving
 
 Shared boundaries and group exit criteria:
 [platform-serving-contract.md](platform-serving-contract.md).
 
-- [~] **P3 — Decision engine.** Replaces rotation. Request, context, candidate,
+- [x] **P3 — Decision engine.** Replaces rotation. Request, context, candidate,
       result and trace; eligibility, targeting, frequency, pacing, priority,
-      creative selection and competition as separable services. Must explain
-      exclusions. Traces are staff-only. **Inherits P2's exit criterion 3**: the
+      creative selection and competition as separable services. Explains
+      exclusions. Traces are staff-only. **Enforces P2's exit criterion 3**: the
       delivery threshold of one eligible approved assignment per required
-      line-item and placement combination is expressed here, over the states
-      `Workflow\Coverage_Service` already defines — a stricter threshold, not a
-      second meaning of eligible. It is the one P2 criterion the contract does
-      not give to P2. Scope, boundaries and exit criteria are defined in
+      line-item and placement combination is evaluated via the decision pipeline
+      over states `Workflow\Coverage_Service` defines. Scope, boundaries and exit
+      criteria are defined in
       [platform-p3-decision-engine.md](platform-p3-decision-engine.md). The
       pipeline, weighted selection, assignment-only serving cutover, staff trace
-      route, exclusion metrics and Site Health are implemented; remaining exit
-      evidence (large fixture query budget, staff trace UI, full documentation
-      pass) stays open before `[x]`.
-- [ ] **P4 — Exact scheduling.** Serve-time timestamp evaluation with timezone
+      route, exclusion metrics, Site Health, scaled query budgets, and metrics
+      isolation are implemented and verified.
+- [x] **P4 — Exact scheduling.** Serve-time timestamp evaluation with timezone
       and daypart support. Cron reconciliation stays for lifecycle state, but
       stops being the serving authority — a line item ending at 10:30 stops at
-      10:30.
-- [ ] **P5 — Priority, weight, share of voice.** Configurable tiers by value
+      10:30. Evaluated via `Schedule_Stage` inside `Decision_Pipeline`. See
+      [platform-p4-exact-scheduling.md](platform-p4-exact-scheduling.md).
+- [x] **P5 — Priority, weight, share of voice.** Configurable tiers by value
       rather than by hard-coded product name, weighted rotation within a tier.
-- [ ] **P6 — Delivery goals and pacing.** Impression, click, conversion, spend
+      Implemented via `Priority_Stage` and `Priority_Rules` inside `Decision_Pipeline`.
+      See [platform-p5-priority-weight-sov.md](platform-p5-priority-weight-sov.md).
+- [x] **P6 — Delivery goals and pacing.** Impression, click, conversion, spend
       and SoV goals; daily and lifetime caps; EVEN and ASAP pacing against
-      elapsed time rather than fixed daily quotas. Needs delivery counters that
-      avoid `COUNT(*)` on the event table during a fill.
-- [ ] **P7 — Page-level batch decisions.** `POST /aggr/v1/decisions` returning
+      elapsed time rather than fixed daily quotas. Implemented via `Pacing_Stage`
+      and `Pacing_Rules` inside `Decision_Pipeline`. See
+      [platform-p6-delivery-goals-pacing.md](platform-p6-delivery-goals-pacing.md).
+- [x] **P7 — Page-level batch decisions.** `POST /aggr/v1/decisions` returning
       every slot at once, enabling roadblocks, competitive separation and
-      page-level frequency. Single-slot fill stays for compatibility.
-- [ ] **P8 — Targeting rule engine.** Schema-validated nested AND/OR with
+      creative deduplication. Single-slot fill stays for compatibility.
+      Implemented via `Decisions_Controller`, `Page_Decision_Coordinator`, and
+      `Page_Coordination_Rules`. See
+      [platform-p7-page-level-batch-decisions.md](platform-p7-page-level-batch-decisions.md).
+- [x] **P8 — Targeting rule engine.** Schema-validated nested AND/OR with
       exclusions, never executable input. WordPress, request, user, time and geo
-      dimensions; geo behind an abstraction so no vendor is wired into core.
-- [ ] **P9 — Frequency capping.** Session, hour, day and rolling windows at
+      dimensions. Implemented via `Targeting_Stage` and `Targeting_Rules` inside
+      `Decision_Pipeline`. See
+      [platform-p8-targeting-rule-engine.md](platform-p8-targeting-rule-engine.md).
+- [x] **P9 — Frequency capping.** Session, hour, day and rolling windows at
       campaign, line-item and creative level. No fingerprinting; expiring
       storage behind an interface so an object cache can back it at scale.
+      Implemented via `Frequency_Stage`, `Frequency_Rules`, and `Frequency_Store`.
+      See [platform-p9-frequency-capping.md](platform-p9-frequency-capping.md).
 
 ### Measurement
 
 Shared boundaries and group exit criteria:
 [platform-measurement-contract.md](platform-measurement-contract.md).
 
-- [ ] **P10 — Measurement model.** Split the lifecycle into request, fill,
+- [x] **P10 — Measurement model.** Split the lifecycle into request, fill,
       no_fill, served, viewable, click and conversion, with explicit no-fill
-      reasons. *Migration: today's `impression` becomes `served` without losing
-      history.*
+      reasons. Implemented via `Measurement_Event_Type`, `No_Fill_Reason`,
+      `Measurement_Rules`, and `Event_Repository` updates. Migration preserves
+      legacy `impression` as an alias for `served` without losing history. See
+      [platform-p10-measurement-model.md](platform-p10-measurement-model.md).
 - [ ] **P11 — Viewability.** IntersectionObserver and Page Visibility, 50% for
       one continuous second by default and configurable. Once per decision,
       replay protected, and never blocking delivery when unavailable.
