@@ -19,6 +19,8 @@ use Aggressive\Ads\Domain\Frequency_Rules;
 use Aggressive\Ads\Domain\Frequency_Store;
 use Aggressive\Ads\Install\Creative_Assignment_Migrator;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
+use Aggressive\Ads\Repository\Line_Item_Repository;
+use Aggressive\Ads\Repository\Rollup_Repository;
 
 /**
  * Loads assignment candidates, runs the pipeline, and exposes traces for staff.
@@ -40,6 +42,8 @@ final class Decision_Engine {
 	 * @param Decision_Pipeline              $pipeline    Pure stages.
 	 * @param Fill_Cache                     $cache       Short-TTL candidate cache.
 	 * @param Frequency_Store                $frequency   Visitor frequency counts.
+	 * @param Line_Item_Repository           $line_items  Delivery policy reads.
+	 * @param Rollup_Repository              $rollups     Delivered counters.
 	 */
 	public function __construct(
 		private readonly Creative_Assignment_Repository $assignments,
@@ -47,8 +51,71 @@ final class Decision_Engine {
 		private readonly Decision_Metrics $metrics,
 		private readonly Decision_Pipeline $pipeline,
 		private readonly Fill_Cache $cache,
-		private readonly Frequency_Store $frequency
+		private readonly Frequency_Store $frequency,
+		private readonly Line_Item_Repository $line_items,
+		private readonly Rollup_Repository $rollups
 	) {
+	}
+
+	/**
+	 * Attaches the delivery policy and counters the stages read.
+	 *
+	 * `candidates_for_placement()` returns the assignment's own columns and
+	 * nothing else — no priority, pacing, caps, targeting or frequency policy,
+	 * because all of those belong to the line item. Every stage therefore fell
+	 * back to its default, and a configured policy changed nothing at serve
+	 * time. Five phases were `[x]` in that state.
+	 *
+	 * Two bounded queries for the whole candidate set, never one per candidate,
+	 * and only on a cache miss: the enriched rows are what gets cached.
+	 *
+	 * Pacing counters are consequently as fresh as the fill cache, which is the
+	 * right trade for a cap that is a budget rather than a hard limit — an exact
+	 * count would mean reading the ledger on every fill.
+	 *
+	 * @param list<array<string, mixed>> $rows Candidate rows.
+	 * @param int                        $now  Evaluation time in UTC seconds.
+	 * @return list<array<string, mixed>>
+	 */
+	private function enrich( array $rows, int $now ): array {
+		if ( array() === $rows ) {
+			return $rows;
+		}
+
+		$line_item_ids = array();
+		$campaign_ids  = array();
+
+		foreach ( $rows as $row ) {
+			$line_item_ids[] = (int) ( $row['line_item_id'] ?? 0 );
+			$campaign_ids[]  = (int) ( $row['campaign_id'] ?? 0 );
+		}
+
+		$policies = $this->line_items->delivery_policies_for( $line_item_ids );
+		$totals   = $this->rollups->delivery_totals_for_campaigns( $campaign_ids, gmdate( 'Y-m-d', $now ) );
+
+		foreach ( $rows as $index => $row ) {
+			$policy = $policies[ (int) ( $row['line_item_id'] ?? 0 ) ] ?? array();
+			$total  = $totals[ (int) ( $row['campaign_id'] ?? 0 ) ] ?? array(
+				'lifetime' => 0,
+				'today'    => 0,
+			);
+
+			/*
+			 * The assignment wins on any key it already owns. Its window is
+			 * narrower than the line item's by construction, and overwriting it
+			 * here would silently widen what an advertiser was refused.
+			 */
+			$rows[ $index ] = array_merge(
+				$policy,
+				array(
+					'delivered_lifetime' => $total['lifetime'],
+					'delivered_today'    => $total['today'],
+				),
+				$row
+			);
+		}
+
+		return $rows;
 	}
 
 	/**
@@ -104,7 +171,10 @@ final class Decision_Engine {
 	 */
 	public function decide( int $placement_id, int $now, ?int $seed = null, ?array $rows = null, bool $record_metrics = true, array $facts = array() ): array {
 		if ( null === $rows ) {
-			$rows = $this->assignments->candidates_for_placement( $placement_id, $now, self::CANDIDATE_LIMIT );
+			$rows = $this->enrich(
+				array_values( $this->assignments->candidates_for_placement( $placement_id, $now, self::CANDIDATE_LIMIT ) ),
+				$now
+			);
 		}
 
 		$rows = array_values( $rows );
@@ -189,8 +259,11 @@ final class Decision_Engine {
 		}
 
 		try {
-			$rows = array_values(
-				$this->assignments->candidates_for_placement( $placement_id, $now, self::CANDIDATE_LIMIT )
+			$rows = $this->enrich(
+				array_values(
+					$this->assignments->candidates_for_placement( $placement_id, $now, self::CANDIDATE_LIMIT )
+				),
+				$now
 			);
 			$this->cache->put(
 				$placement_id,

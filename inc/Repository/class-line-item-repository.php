@@ -174,6 +174,94 @@ final class Line_Item_Repository {
 	 * @param int $campaign_id Campaign id.
 	 * @return array<int, array<string, mixed>>
 	 */
+	/**
+	 * Delivery policy for a set of line items, keyed by line-item id.
+	 *
+	 * The decision stages read priority, pacing, caps, targeting and frequency
+	 * from the candidate row, and the P2 candidate query selects none of them —
+	 * it returns the assignment's own columns only. Without this every stage
+	 * fell back to its default, so a configured priority, cap, targeting rule or
+	 * frequency policy changed nothing at serve time.
+	 *
+	 * Deliberately a separate read rather than a join onto
+	 * `candidates_for_placement()`: that query is P2's documented contract with
+	 * an asserted plan, and widening it to carry policy would change what
+	 * `EXPLAIN` chooses. One bounded query for the whole set keeps the decision
+	 * path free of per-candidate work either way.
+	 *
+	 * @param array<int, int> $line_item_ids Line-item ids.
+	 * @return array<int, array<string, mixed>> Keyed by line-item id.
+	 */
+	public function delivery_policies_for( array $line_item_ids ): array {
+		$ids = array();
+
+		foreach ( $line_item_ids as $line_item_id ) {
+			$id = (int) $line_item_id;
+
+			if ( $id > 0 ) {
+				$ids[ $id ] = $id;
+			}
+		}
+
+		$ids = array_values( $ids );
+
+		if ( array() === $ids || ! $this->table_exists() ) {
+			return array();
+		}
+
+		global $wpdb;
+
+		$table        = $this->table_name();
+		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Table name is prefix+constant; placeholders are a fixed %d list matching $ids.
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT id, priority, pacing_mode, goal_type, goal_amount,
+					daily_cap, lifetime_cap, targeting_rules, frequency_policy,
+					delivery_settings
+				FROM {$table}
+				WHERE id IN ({$placeholders})",
+				...$ids
+			),
+			ARRAY_A
+		);
+		// phpcs:enable
+
+		$policies = array();
+
+		if ( is_array( $rows ) ) {
+			foreach ( $rows as $row ) {
+				if ( ! is_array( $row ) ) {
+					continue;
+				}
+
+				$policies[ (int) ( $row['id'] ?? 0 ) ] = array(
+					'priority'          => (int) ( $row['priority'] ?? 0 ),
+					'pacing_mode'       => (string) ( $row['pacing_mode'] ?? '' ),
+					'goal_type'         => (string) ( $row['goal_type'] ?? '' ),
+					'goal_amount'       => (int) ( $row['goal_amount'] ?? 0 ),
+					'daily_cap'         => (int) ( $row['daily_cap'] ?? 0 ),
+					'lifetime_cap'      => (int) ( $row['lifetime_cap'] ?? 0 ),
+					'targeting_rules'   => $row['targeting_rules'] ?? null,
+					// The column is `frequency_policy`; the stage reads
+					// `frequency_rules`. Renamed here so neither has to know
+					// about the other.
+					'frequency_rules'   => $row['frequency_policy'] ?? null,
+					'delivery_settings' => $row['delivery_settings'] ?? null,
+				);
+			}
+		}
+
+		return $policies;
+	}
+
+	/**
+	 * Every line item on a campaign, oldest first.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return array<int, array<string, mixed>>
+	 */
 	public function for_campaign( int $campaign_id ): array {
 		global $wpdb;
 		if ( $campaign_id <= 0 || ! $this->table_exists() ) {

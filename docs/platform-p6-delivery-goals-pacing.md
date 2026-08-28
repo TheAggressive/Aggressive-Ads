@@ -72,3 +72,26 @@ Pacing reads goal and delivery settings from candidate line-item and assignment 
 3. `EVEN` pacing throttles candidates that are ahead of schedule over flight duration.
 4. `ASAP` pacing passes candidates until caps/goals are reached.
 5. All tests pass with 100% pure domain decoupling, PHPCS, PHPStan Level 8, and unit test suites.
+
+## How the policy reaches the stage
+
+`candidates_for_placement()` returns the **assignment's** columns only. Every
+field this phase evaluates lives on `aggr_line_items`, and delivered counters
+come from `aggr_rollups`. `Decision_Engine::enrich()` attaches both to each
+candidate row before the pipeline runs and before the result is cached — two
+bounded queries for the whole set, never one per candidate, and only on a cache
+miss.
+
+This is recorded because the phase originally shipped without it: the stage read
+its configuration from a row that never carried it, so it fell back to defaults
+and a configured policy changed nothing at serve time. The unit tests passed
+throughout, because each built a row by hand with keys the real query does not
+return. `DecisionPolicyInputsTest` goes through the engine so a dropped field
+fails.
+
+Adding a field this stage reads means adding it to `delivery_policies_for()` in
+the same change.
+
+Pacing counters are as fresh as the fill cache rather than exact. A cap here
+is a budget, not a hard limit; reading the event ledger on every fill would cost
+more than the overshoot it prevents.

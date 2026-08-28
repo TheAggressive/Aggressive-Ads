@@ -37,6 +37,12 @@ The highest-value targets, in order:
    one org-scoped `map_meta_cap` filter; controllers never compare ids.
 3. **The approval action.** Publishing writes to a public website and can bill
    a customer, and is a separate capability from reviewing.
+4. **The decision trace.** It names every candidate that competed for a slot,
+   their weights and why each lost — commercially sensitive across tenants by
+   construction. `GET /aggr/v1/placements/{id}/decision` requires
+   `aggr_review_campaigns`, answers a refusal with `404` rather than `403` so it
+   cannot enumerate, and is sent `no-store`. It is the one surface here where a
+   capability check is the whole boundary.
 
 ## What is out of scope
 
@@ -64,6 +70,16 @@ Named so their absence is deliberate rather than overlooked:
 - Tests are verified by breaking the implementation and confirming they fail.
   Several controls in this codebase were found to be untested that way, having
   looked fully covered.
+
+## Unauthenticated delivery endpoints
+
+Fill, the beacon, the click hop and page-level decisions are public by design —
+they serve visitors who have no account. Each is bounded per client, because the
+cost of a request is not the same as the cost of serving it:
+`POST /aggr/v1/decisions` resolves up to twenty slots per call, so it is rate
+limited at the same ceiling as the beacon rather than left as a cheaper route to
+twenty times the work. Cross-origin requests are refused, and every one of these
+routes 404s rather than prompting when native delivery is off.
 
 ## Production delivery controls
 

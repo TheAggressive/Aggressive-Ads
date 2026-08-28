@@ -33,9 +33,16 @@ custom W×H). Packages are staff-written; campaigns keep snapshots.
 **Native delivery** is always on, not a Modules checkbox. Editors place
 `aggr/placement` (or `aggr_placement( 'header-728x90' )` / the shortcode).
 Cached HTML is a reserved slot. After paint: `GET /aggr/v1/fill/{slot}`,
-`POST /aggr/v1/i` beacon, first-party click hop `/ads/c/{token}`. Weighted
-selection among live creative assignments on a slot; impressions and clicks
-follow the filled token.
+`POST /aggr/v1/i` beacon, first-party click hop `/ads/c/{token}`. Impressions
+and clicks follow the filled token.
+
+**The decision engine** picks what fills a slot. An ordered pipeline of pure
+stages — eligibility, exact schedule and dayparts, targeting, frequency, pacing,
+priority, weighted selection — and every candidate leaves every stage with a
+reason, so "why is this ad here?" has an answer. `POST /aggr/v1/decisions`
+decides a whole page at once with competitive separation.
+`GET /aggr/v1/placements/{id}/decision` returns the decision and its full trace
+to staff only, replayable from a supplied clock and seed.
 
 **Reporting** (when the Reporting module is on) reads `aggr_rollups`: dashboard
 tiles, a seven-day sparkline, campaign list/detail columns, REST
@@ -50,9 +57,11 @@ functional without that.
 
 Built: campaign domain (eleven statuses, 22 legal edges), org-scoped ownership,
 private creative storage, portal and staff UI, notifications, campaign clock
-(approved → scheduled → live → complete), assignment-based native fill, CSV
-reporting export, i18n tooling and four locale catalogs, site-scoped tenancy,
-GitHub updater with SHA-256 verification, Playwright + axe.
+(approved → scheduled → live → complete), assignment-based native fill, the
+decision engine with targeting, frequency, pacing and priority stages plus
+staff-only traces, the request-to-conversion measurement model, CSV reporting
+export, i18n tooling and four locale catalogs, site-scoped tenancy, GitHub
+updater with SHA-256 verification, Playwright + axe.
 
 Not built, even where `docs/` describes the design: spend/billing. If a doc
 describes something you cannot find, it has not been built.
@@ -179,6 +188,7 @@ Start with [docs/README.md](docs/README.md). Short version:
 | [campaign-workflow.md](docs/campaign-workflow.md) | The state machine every status write goes through |
 | [roles-and-capabilities.md](docs/roles-and-capabilities.md) | Who may do what |
 | [threat-model.md](docs/threat-model.md) | Attack surfaces and the test proving each |
+| [platform-p3-decision-engine.md](docs/platform-p3-decision-engine.md) | The serving pipeline, its stages and trace contract |
 | [roadmap.md](docs/roadmap.md) | What shipped vs remaining product |
 | [suite-roadmap.md](docs/suite-roadmap.md) | Suite build order |
 

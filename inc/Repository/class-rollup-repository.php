@@ -208,6 +208,82 @@ final class Rollup_Repository {
 	 * @param array<int, int> $campaign_ids Campaign post ids.
 	 * @return array<int, array{impressions: int, clicks: int}>
 	 */
+	/**
+	 * Lifetime and same-day impressions per campaign, for pacing.
+	 *
+	 * One query for the whole candidate set rather than one per candidate: the
+	 * decision path may not do work proportional to the number of candidates.
+	 *
+	 * The day is UTC, matching how rollups are keyed, so "today" means the same
+	 * thing here as it does in the row being read.
+	 *
+	 * @param array<int, int> $campaign_ids Campaign post ids.
+	 * @param string          $day_utc      UTC day, `Y-m-d`; defaults to today.
+	 * @return array<int, array{lifetime: int, today: int}> Keyed by campaign id.
+	 */
+	public function delivery_totals_for_campaigns( array $campaign_ids, string $day_utc = '' ): array {
+		$ids = array();
+
+		foreach ( $campaign_ids as $campaign_id ) {
+			$id = (int) $campaign_id;
+
+			if ( $id > 0 ) {
+				$ids[ $id ] = $id;
+			}
+		}
+
+		$ids = array_values( $ids );
+
+		if ( array() === $ids ) {
+			return array();
+		}
+
+		global $wpdb;
+
+		$table        = $this->table_name();
+		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+		$day          = '' !== $day_utc ? $day_utc : gmdate( 'Y-m-d' );
+		$args         = array_merge( array( $day ), $ids );
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Table name is prefix+constant; placeholders are a fixed %d list matching $ids.
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT campaign_id,
+					SUM(impressions) AS lifetime,
+					SUM(CASE WHEN day_utc = %s THEN impressions ELSE 0 END) AS today
+				FROM {$table}
+				WHERE campaign_id IN ({$placeholders})
+				GROUP BY campaign_id",
+				...$args
+			),
+			ARRAY_A
+		);
+		// phpcs:enable
+
+		$totals = array();
+
+		if ( is_array( $rows ) ) {
+			foreach ( $rows as $row ) {
+				if ( ! is_array( $row ) ) {
+					continue;
+				}
+
+				$totals[ (int) ( $row['campaign_id'] ?? 0 ) ] = array(
+					'lifetime' => max( 0, (int) ( $row['lifetime'] ?? 0 ) ),
+					'today'    => max( 0, (int) ( $row['today'] ?? 0 ) ),
+				);
+			}
+		}
+
+		return $totals;
+	}
+
+	/**
+	 * Lifetime impressions and clicks per campaign.
+	 *
+	 * @param array<int, int> $campaign_ids Campaign post ids.
+	 * @return array<int, array{impressions: int, clicks: int}> Keyed by campaign id.
+	 */
 	public function totals_for_campaigns( array $campaign_ids ): array {
 		$ids = array();
 
