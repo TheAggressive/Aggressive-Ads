@@ -46,6 +46,7 @@ final class AuthorizationSurfaceTest extends WP_UnitTestCase {
 			'GET /aggr/v1/organizations/(?P<id>\d+)/detail',
 			'GET /aggr/v1/packages',
 			'GET /aggr/v1/placements',
+			'GET /aggr/v1/placements/(?P<id>\d+)/decision',
 			'GET /aggr/v1/review/campaigns/(?P<id>\d+)',
 			'GET /aggr/v1/review/queue',
 			'PATCH /aggr/v1/campaigns/(?P<id>\d+)',

@@ -18,32 +18,25 @@ use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\REST\Creative_File_Controller;
 
 /**
- * Native fill. The live set is campaign status, not an ads CPT.
+ * Native fill. Paid creatives are chosen by the assignment decision engine.
  */
 final class Fill_Service {
-
-	/** A corrupt candidate cannot turn a large slot into another linear scan. */
-	private const MAX_CANDIDATE_ATTEMPTS = 5;
-
-	/** Bounded wait for the request currently rebuilding a placement. */
-	private const REBUILD_WAIT_ATTEMPTS     = 10;
-	private const REBUILD_WAIT_MICROSECONDS = 20_000;
 
 	/**
 	 * Constructor.
 	 *
 	 * @param Settings             $settings   Module and delivery flags.
 	 * @param Placement_Repository $placements Slot catalogue.
-	 * @param Delivery_Repository  $delivery   Indexed live creative reads.
-	 * @param Fill_Cache           $cache      Short-TTL payload cache.
+	 * @param Delivery_Repository  $delivery   Token validation reads.
 	 * @param Fill_Token           $tokens     Signed beacon/click tokens.
+	 * @param Decision_Engine      $decisions  Assignment decision engine.
 	 */
 	public function __construct(
 		private readonly Settings $settings,
 		private readonly Placement_Repository $placements,
 		private readonly Delivery_Repository $delivery,
-		private readonly Fill_Cache $cache,
-		private readonly Fill_Token $tokens
+		private readonly Fill_Token $tokens,
+		private readonly Decision_Engine $decisions
 	) {
 	}
 
@@ -65,9 +58,7 @@ final class Fill_Service {
 	/**
 	 * Fill payload for a placement slug, or null when the slot does not exist.
 	 *
-	 * The candidate id vector and individual payloads are cached separately.
-	 * The winner and token are chosen per request, so a hit is neither a replay
-	 * of the previous visitor's impression nor a frozen rotation.
+	 * The candidate set is cached; the winner is chosen per request.
 	 *
 	 * @param string $slug Placement post_name.
 	 * @return array<string, mixed>|null
@@ -104,9 +95,6 @@ final class Fill_Service {
 	/**
 	 * Whether a parsed token still names a live, servable fill.
 	 *
-	 * Pause, complete, and house removal must stop leftover tokens within
-	 * the five-minute TTL, not at the next cache bust.
-	 *
 	 * @param array{placement_id: int, campaign_id: int, creative_id: int, exp: int, nonce: string} $parsed Token.
 	 */
 	public function accepts( array $parsed ): bool {
@@ -115,9 +103,6 @@ final class Fill_Service {
 
 	/**
 	 * Destination for an exact, still-live token identity.
-	 *
-	 * This primary-id read is shared by beacon validation and the click hop so
-	 * a click does not resolve and validate the same creative twice.
 	 *
 	 * @param array{placement_id: int, campaign_id: int, creative_id: int, exp: int, nonce: string} $parsed Token.
 	 */
@@ -161,35 +146,25 @@ final class Fill_Service {
 	}
 
 	/**
-	 * Chooses one creative from a compact cached id vector.
-	 *
-	 * Candidate payloads have separate keys, so a 1,000-ad placement does not
-	 * transfer and deserialize 1,000 image URLs and alt strings on every fill.
+	 * Chooses one creative through the assignment decision engine.
 	 *
 	 * @param int $placement_id Placement post id.
 	 * @return array<string, mixed>|null
 	 */
 	private function paid_creative( int $placement_id ): ?array {
-		$ids   = $this->candidate_ids( $placement_id );
-		$count = count( $ids );
-
-		if ( 0 === $count ) {
+		if ( ! $this->decisions->serving_ready() ) {
 			return null;
 		}
 
-		$start    = random_int( 0, $count - 1 );
-		$attempts = min( $count, self::MAX_CANDIDATE_ATTEMPTS );
+		$now      = time();
+		$rows     = $this->decisions->cached_rows( $placement_id, $now );
+		$decision = $this->decisions->decide( $placement_id, $now, null, $rows );
 
-		for ( $offset = 0; $offset < $attempts; ++$offset ) {
-			$creative_id = $ids[ ( $start + $offset ) % $count ];
-			$candidate   = $this->candidate_payload( $creative_id, $placement_id );
-
-			if ( null !== $candidate ) {
-				return $candidate;
-			}
+		if ( ! $decision['result']->has_winner() || ! is_array( $decision['result']->winner ) ) {
+			return null;
 		}
 
-		return null;
+		return $this->decisions->payload_from_row( $decision['result']->winner, $placement_id );
 	}
 
 	/**
@@ -219,110 +194,6 @@ final class Fill_Service {
 		}
 
 		return $payload;
-	}
-
-	/**
-	 * Cached creative ids, rebuilt by one request per placement on a miss.
-	 *
-	 * @param int $placement_id Placement post id.
-	 * @return list<int>
-	 */
-	private function candidate_ids( int $placement_id ): array {
-		$cached = $this->cache->get( $placement_id );
-
-		if ( is_array( $cached ) && isset( $cached['candidate_ids'] ) && is_array( $cached['candidate_ids'] ) ) {
-			return $this->positive_ids( $cached['candidate_ids'] );
-		}
-
-		$owner = $this->cache->claim_rebuild( $placement_id );
-
-		if ( '' === $owner ) {
-			for ( $attempt = 0; $attempt < self::REBUILD_WAIT_ATTEMPTS; ++$attempt ) {
-				usleep( self::REBUILD_WAIT_MICROSECONDS );
-				$cached = $this->cache->get( $placement_id );
-
-				if ( is_array( $cached ) && isset( $cached['candidate_ids'] ) && is_array( $cached['candidate_ids'] ) ) {
-					return $this->positive_ids( $cached['candidate_ids'] );
-				}
-			}
-
-			/*
-			 * Do not turn a slow cache rebuild or cache outage into a database
-			 * stampede. This request can safely render no paid ad; the lock owner
-			 * will populate the short-lived candidate vector for later requests.
-			 */
-			return array();
-		}
-
-		try {
-			$ids = $this->delivery->candidate_ids( $placement_id );
-			$this->cache->put( $placement_id, array( 'candidate_ids' => $ids ) );
-
-			return $ids;
-		} finally {
-			$this->cache->release_rebuild( $placement_id, $owner );
-		}
-	}
-
-	/**
-	 * One token-free candidate payload.
-	 *
-	 * @param int $creative_id Creative post id.
-	 * @param int $placement_id Placement post id.
-	 * @return array<string, mixed>|null
-	 */
-	private function candidate_payload( int $creative_id, int $placement_id ): ?array {
-		$cached = $this->cache->get_candidate( $creative_id );
-
-		if ( is_array( $cached ) && (int) ( $cached['placement'] ?? 0 ) === $placement_id ) {
-			return $cached;
-		}
-
-		$row = $this->delivery->candidate( $creative_id, $placement_id );
-
-		if ( ! is_array( $row ) || ! Campaign_Rules::is_valid_click_url( $row['click_url'] ) ) {
-			return null;
-		}
-
-		$image = wp_get_attachment_image_url( $row['attachment_id'], 'full' );
-
-		if ( ! is_string( $image ) || '' === $image ) {
-			return null;
-		}
-
-		$payload = array(
-			'image'     => $image,
-			'alt'       => $row['alt_text'],
-			'width'     => $row['width'],
-			'height'    => $row['height'],
-			'placement' => $placement_id,
-			'campaign'  => $row['campaign_id'],
-			'creative'  => $row['creative_id'],
-		);
-
-		$this->cache->put_candidate( $creative_id, $payload );
-
-		return $payload;
-	}
-
-	/**
-	 * Normalizes a cache value into unique positive ids.
-	 *
-	 * @param array<int, mixed> $values Cached values.
-	 * @return list<int>
-	 */
-	private function positive_ids( array $values ): array {
-		$ids = array();
-
-		foreach ( $values as $value ) {
-			$id = (int) $value;
-
-			if ( $id > 0 ) {
-				$ids[ $id ] = $id;
-			}
-		}
-
-		return array_values( $ids );
 	}
 
 	/**

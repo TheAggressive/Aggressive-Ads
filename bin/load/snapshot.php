@@ -8,7 +8,7 @@
 declare(strict_types=1);
 
 use Aggressive\Ads\Plugin;
-use Aggressive\Ads\Repository\Delivery_Repository;
+use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Event_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Workflow\Event_Retention;
@@ -29,7 +29,7 @@ if ( ! is_array( $fixture ) || (int) ( $fixture['placement_id'] ?? 0 ) <= 0 ) {
 $container    = Plugin::instance()->container();
 $events       = $container->get( Event_Repository::class );
 $rollups      = $container->get( Rollup_Repository::class );
-$delivery     = $container->get( Delivery_Repository::class );
+$assignments  = $container->get( Creative_Assignment_Repository::class );
 $event_table  = $events->table_name();
 $rollup_table = $rollups->table_name();
 $placement_id = (int) $fixture['placement_id'];
@@ -59,7 +59,7 @@ $snapshot = array(
 	'php_version'          => PHP_VERSION,
 	'database_version'     => $wpdb->db_version(),
 	'fixture_ads'          => (int) ( $fixture['ads'] ?? 0 ),
-	'candidate_count'      => count( $delivery->candidate_ids( $placement_id ) ),
+	'candidate_count'      => count( $assignments->candidates_for_placement( $placement_id, time() ) ),
 	'event_count'          => $event_count,
 	'rollup_count'         => $rollup_count,
 	'duplicate_count'      => $duplicate_count,

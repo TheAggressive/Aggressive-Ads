@@ -103,8 +103,8 @@ Public fill, beacon, and click hop are always registered. Native delivery is not
 | Beacon/click flood | Per-client rate limits (`ACTION_BEACON` 300/hour, `ACTION_CLICK` 120/hour). Persistent caches use atomic increment; the database-lock fallback is a degraded mode surfaced in Site Health. Over-limit clicks still redirect and do not count | `RateLimitRepositoryTest` |
 | Prefetch counted as a view | `Sec-Purpose` and `Purpose` | `FillRoutesTest` prefetch tests |
 | Cooperative crawler counted as a person | Conservative known-bot User-Agent tokens refuse beacons and suppress click counts; edge bot management remains required for hostile clients | `FillRoutesTest::test_beacon_rejects_an_obvious_bot` |
-| Fill JSON as an ID oracle | Public payload unsets `placement`, `campaign`, `creative` after minting; candidate set never leaves the cache | `FillRoutesTest::test_fill_json_omits_internal_ids`, `FillRotationTest::test_fill_rotates_and_omits_the_candidate_set` |
-| Rotation credits the wrong advertiser | Token binds campaign+creative at fill; beacon/hop increment that row, not the current winner | `FillRotationTest::test_beacon_credits_the_filled_campaign_not_the_oldest` |
+| Fill JSON as an ID oracle | Public payload unsets `placement`, `campaign`, `creative` after minting; candidate set never leaves the cache | `FillRoutesTest::test_fill_json_omits_internal_ids`, `FillSelectionTest::test_fill_selects_and_omits_the_candidate_set` |
+| Fill credits the wrong advertiser | Token binds campaign+creative at fill; beacon/hop increment that row, not another live assignment | `FillSelectionTest::test_beacon_credits_the_filled_campaign_not_the_oldest` |
 | Cross-site fill token (multisite) | Token HMAC includes `blog_id`; parse rejects a valid token bound to another site. Post ids restart per blog and `wp_salt( 'aggr_fill' )` is network-wide | `FillTokenTest`, `SiteScopedTenancyTest` |
 | House SVG / `javascript:` URL | Same MIME and URL rules as creatives | `PlacementMappingAdminTest` house tests |
 

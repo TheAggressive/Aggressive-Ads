@@ -398,6 +398,6 @@ and the ordering; `EXPLAIN` is asserted to choose it. Measured against 1,000
 rows: two queries cold — the second being the memoised `SHOW TABLES` existence
 check — and one warm, with no per-candidate read.
 
-**Not yet wired.** Native fill still selects Campaigns. The cutover belongs to
-P3, where line-item and creative selection change together and can be tested as
-one behaviour.
+**Wired.** Native fill reads this contract through `Workflow\Decision_Engine`
+after the P2 assignment backfill completes. Token validation still re-reads the
+winning creative through `Delivery_Repository::candidate()`.

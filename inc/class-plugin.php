@@ -23,6 +23,7 @@ use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Install\Assignment_Health;
+use Aggressive\Ads\Install\Decision_Health;
 use Aggressive\Ads\Install\Creative_Assignment_Migrator;
 use Aggressive\Ads\Install\Line_Item_Migrator;
 use Aggressive\Ads\Install\Rewrite_Flusher;
@@ -48,6 +49,7 @@ use Aggressive\Ads\REST\Campaigns_Controller;
 use Aggressive\Ads\REST\Line_Items_Controller;
 use Aggressive\Ads\REST\Creative_Controller;
 use Aggressive\Ads\REST\Creative_File_Controller;
+use Aggressive\Ads\REST\Decision_Trace_Controller;
 use Aggressive\Ads\REST\Fill_Controller;
 use Aggressive\Ads\REST\Packages_Controller;
 use Aggressive\Ads\REST\Organizations_Controller;
@@ -325,6 +327,7 @@ final class Plugin {
 			Line_Item_Migrator::class,
 			Creative_Assignment_Migrator::class,
 			Assignment_Health::class,
+			Decision_Health::class,
 
 			// After the state machine, whose transition action it listens to.
 			Campaign_Change_Manager::class,
@@ -379,6 +382,7 @@ final class Plugin {
 			Organizations_Controller::class,
 			Settings_Controller::class,
 			Fill_Controller::class,
+			Decision_Trace_Controller::class,
 			Beacon_Controller::class,
 			Click_Hop::class,
 

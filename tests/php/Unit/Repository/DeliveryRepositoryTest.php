@@ -15,14 +15,6 @@ use PHPUnit\Framework\TestCase;
 /** Invalid identifiers never reach WordPress or SQL. */
 final class DeliveryRepositoryTest extends TestCase {
 
-	/** Zero and negative placement ids have no candidate set. */
-	public function test_candidate_ids_rejects_nonpositive_placements(): void {
-		$repository = new Delivery_Repository();
-
-		$this->assertSame( array(), $repository->candidate_ids( 0 ) );
-		$this->assertSame( array(), $repository->candidate_ids( -1 ) );
-	}
-
 	/** An invalid exact identity cannot become a database lookup. */
 	public function test_candidate_rejects_invalid_identity_parts(): void {
 		$repository = new Delivery_Repository();

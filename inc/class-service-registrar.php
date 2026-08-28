@@ -25,6 +25,7 @@ use Aggressive\Ads\Install\Migration_Map;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Creative_Asset_Repository;
 use Aggressive\Ads\Install\Assignment_Health;
+use Aggressive\Ads\Install\Decision_Health;
 use Aggressive\Ads\Install\Creative_Assignment_Migrator;
 use Aggressive\Ads\Install\Line_Item_Migrator;
 use Aggressive\Ads\Install\Rewrite_Flusher;
@@ -96,6 +97,8 @@ use Aggressive\Ads\Workflow\Assignment_Editor;
 use Aggressive\Ads\Workflow\Edit_Window;
 use Aggressive\Ads\Workflow\Campaign_Validator;
 use Aggressive\Ads\Workflow\Coverage_Service;
+use Aggressive\Ads\Workflow\Decision_Engine;
+use Aggressive\Ads\Workflow\Decision_Metrics;
 use Aggressive\Ads\Workflow\Creative_Promoter;
 use Aggressive\Ads\Workflow\Creative_Change_Manager;
 use Aggressive\Ads\Workflow\Creative_Manager;
@@ -313,6 +316,14 @@ final class Service_Registrar {
 			Assignment_Health::class,
 			static fn ( Service_Container $c ): Assignment_Health => new Assignment_Health(
 				$c->get( Creative_Assignment_Repository::class ),
+				$c->get( Creative_Assignment_Migrator::class )
+			)
+		);
+
+		$container->register(
+			Decision_Health::class,
+			static fn ( Service_Container $c ): Decision_Health => new Decision_Health(
+				$c->get( Decision_Engine::class ),
 				$c->get( Creative_Assignment_Migrator::class )
 			)
 		);

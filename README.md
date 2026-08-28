@@ -33,8 +33,9 @@ custom W×H). Packages are staff-written; campaigns keep snapshots.
 **Native delivery** is always on, not a Modules checkbox. Editors place
 `aggr/placement` (or `aggr_placement( 'header-728x90' )` / the shortcode).
 Cached HTML is a reserved slot. After paint: `GET /aggr/v1/fill/{slot}`,
-`POST /aggr/v1/i` beacon, first-party click hop `/ads/c/{token}`. Equal rotation
-among live campaigns on a slot; impressions and clicks follow the filled token.
+`POST /aggr/v1/i` beacon, first-party click hop `/ads/c/{token}`. Weighted
+selection among live creative assignments on a slot; impressions and clicks
+follow the filled token.
 
 **Reporting** (when the Reporting module is on) reads `aggr_rollups`: dashboard
 tiles, a seven-day sparkline, campaign list/detail columns, REST
@@ -49,12 +50,12 @@ functional without that.
 
 Built: campaign domain (eleven statuses, 22 legal edges), org-scoped ownership,
 private creative storage, portal and staff UI, notifications, campaign clock
-(approved → scheduled → live → complete), native fill, site-scoped tenancy,
+(approved → scheduled → live → complete), assignment-based native fill, CSV
+reporting export, i18n tooling and four locale catalogs, site-scoped tenancy,
 GitHub updater with SHA-256 verification, Playwright + axe.
 
-Not built, even where `docs/` describes the design: CSV reporting, i18n
-tooling, spend/billing. If a doc describes something you cannot find, it has
-not been built.
+Not built, even where `docs/` describes the design: spend/billing. If a doc
+describes something you cannot find, it has not been built.
 
 ## Requirements
 

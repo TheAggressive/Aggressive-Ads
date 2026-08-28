@@ -13,11 +13,11 @@ use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 
 /**
- * The one thing watching a migration nothing else reads yet.
+ * The one thing watching whether P2 backfill has finished.
  *
- * Serving still reads Campaigns, which is what makes the backfill safe and also
- * what makes a stall invisible. This counts the gap so a publisher can see it
- * without a shadow-read.
+ * Fill reads assignments only after the completion marker is set, so a stalled
+ * backfill shows up as empty paid slots rather than as silent wrong ads. This
+ * counts the gap so a publisher can see it without reading logs.
  *
  * It compares counts, not field values: a snapshot disagreeing with its revision
  * has no consequence until serving reads this table, and that is when to add the

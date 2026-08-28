@@ -139,9 +139,9 @@ and deeper analytics remain open. What is built:
   “Advertising”), optional logo, and optional tagline
 - native delivery (always on, not a Modules checkbox): reserved placement slot, `GET /aggr/v1/fill/{slot}`,
   `POST /aggr/v1/i` beacon, first-party click hop `/ads/c/{token}`, events and
-  rollup tables (schema v5). Native is the only publisher. Equal rotation among live
-  campaigns on a slot; impressions and clicks follow the filled token, not the
-  oldest live row.
+  rollup tables (schema v5). Native is the only publisher. Weighted selection among
+  live creative assignments on a slot; impressions and clicks follow the filled
+  token, not whichever campaign happened to be queried first.
 - campaign copy: renew (completed) and duplicate (any readable campaign) create
   a new draft with the stored snapshot and private creative bytes, never a
   backwards transition. HTML form and `POST /aggr/v1/campaigns/{id}/copy`

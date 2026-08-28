@@ -1,21 +1,18 @@
 # Platform P3 decision engine
 
-P3 replaces rotation with a decision. Today a slot is filled by choosing a
-uniformly random element of a cached id vector; there is no way to ask why one
-creative won, and no seam where targeting, frequency, pacing or priority could
-be added without each one growing its own branch inside the same function.
+P3 replaced equal campaign rotation with a decision. A slot is filled by loading
+live creative assignments, running them through a fixed pipeline, and choosing
+one winner with a stated reason when none survive.
 
-This phase builds the pipeline and the vocabulary those later phases plug into,
-and cuts serving over to the assignment read contract P2 left for it.
-
-This document defines the work and exit criteria. It does not claim that P3 has
-started or that any item below is implemented.
+This phase built the pipeline and the vocabulary later phases plug into, and
+cut serving over to the assignment read contract P2 left for it.
 
 ## Status
 
 - Phase: **P3 — Decision engine**
-- Roadmap state: `[ ]`
-- Last audited: 2026-08-26 (definition only; no implementation)
+- Roadmap state: `[~]`
+- Last audited: 2026-08-27 (pipeline, assignment-only cutover, trace route,
+  metrics; exit evidence open)
 - Authoritative environments: the Docker CI lanes. `pnpm ci:verify` decides
   disagreements, not a local native run.
 
@@ -41,8 +38,7 @@ place to add a rule without touching selection.
   the first thing that stops being uniform random;
 - **competition** — one winner per slot, and why the others lost;
 - the **serving cutover**: native fill selects through
-  `Creative_Assignment_Repository::candidates_for_placement()` rather than
-  `Delivery_Repository::candidate_ids()`; and
+  `Creative_Assignment_Repository::candidates_for_placement()` only; and
 - the staff-only trace surface.
 
 **This phase does not own:**
@@ -68,8 +64,12 @@ pipeline. The stages exist here, in order, traced, and pass by default.
 
 **Compatibility behavior that must remain:** `GET /aggr/v1/fill/{slot}` keeps
 its request and response contract, the signed token identity keeps its meaning,
-and a placement with no eligible assignment falls back exactly as it does now.
+and a placement with no eligible assignment falls back to house when configured.
 A visitor must not be able to tell from the response that the engine changed.
+
+**Local-dev cutover:** this repository no longer ships the campaign-meta
+rotation path or a runtime rollback flag. Paid fill requires the P2 assignment
+backfill to be complete.
 
 ## Entry criteria
 
@@ -78,8 +78,8 @@ A visitor must not be able to tell from the response that the engine changed.
   [platform-p2-creative-model.md](platform-p2-creative-model.md) and
   [data-schema.md](data-schema.md#the-p3-candidate-read-contract).
 - Every creative has an assignment, or the backfill's completion marker is set.
-  The engine reads assignments only; a site mid-backfill must keep serving
-  through the compatibility path rather than under-fill.
+  The engine reads assignments only; a site mid-backfill serves house when
+  configured and otherwise returns no paid creative.
 - The complete P0 regression baseline is green before implementation starts.
 
 ## Canonical model and ownership
@@ -132,27 +132,16 @@ There are no new foreign keys because there are no new tables. The tenancy
 invariant is carried by the P2 candidate query and must be asserted against a
 real multisite fixture with colliding ids, as P2's already is.
 
-## Migration and compatibility contract
+## Migration and cutover contract
 
 **No durable data changes.** The migration here is a *read* cutover, which is
 the riskier kind: it changes what appears on a page without changing anything
 that can be inspected afterwards.
 
-- **Source:** `Delivery_Repository::candidate_ids()`, over Campaign and Creative
-  posts and their meta. **Destination:**
-  `candidates_for_placement()`, over `aggr_creative_assignments`.
-- **The two must be proven to agree before either is trusted alone.** A
-  differential test over a realistic fixture — same placement, same clock — must
-  show the same candidate identities from both paths. A disagreement is a P2
-  defect surfacing, not a P3 rounding error, and must be fixed at the source.
-- **While the backfill is incomplete**, the engine must serve through the
-  compatibility path. The completion marker, not a row count, is the signal.
-- **Rollback is a settings flag, not a deploy.** The cutover must be reversible
-  at runtime, because the failure mode is "the right ad stopped appearing" and
-  that is discovered by a publisher rather than by a test.
-- **Compatibility code retires** when the assignment path has served without a
-  differential failure for one full retention window, and the runbook records
-  the date. Not before, and not on the strength of the test suite alone.
+- **Source of truth:** `candidates_for_placement()`, over
+  `aggr_creative_assignments`.
+- **While the backfill is incomplete**, paid fill is withheld. The completion
+  marker, not a row count, is the signal.
 - **Multisite:** no new install, upgrade or deletion behavior. The existing
   site-scoped fill token and cache key rules cover it.
 
@@ -200,8 +189,8 @@ Every mitigation above must map to a test or to a named operational control.
 The fill path has one stated behavior per dependency, and none of them is an
 uncaught exception:
 
-- **The assignment query fails** → fall back to the compatibility path, record
-  it, serve. A database blip must not blank every ad on the site.
+- **The assignment query fails** → exclude candidates with a reason, continue.
+  A database blip must not blank every ad on the site when house is configured.
 - **A stage throws** → exclude that candidate with a reason, continue. One bad
   row must not lose a slot that has nine good ones.
 - **No candidate survives** → house ad if the house policy allows it, otherwise
@@ -236,15 +225,12 @@ needs one placement's.
 
 ## Observability and operations
 
-- A Site Health check reporting which path is serving — compatibility or
-  assignments — because "we cut over" and "the cutover is live" are different
-  facts and the second is the one that matters during an incident.
-- A counter of decisions that fell back to the compatibility path. Non-zero is
-  the signal to investigate, and it must be visible without reading a log.
+- A Site Health check reporting whether assignment serving is ready, because
+  "we cut over" and "the backfill is live" are different facts and the second
+  is the one that matters during an incident.
 - Exclusion-reason counts, aggregate and per placement. "Nothing is serving" and
   "everything is being excluded for wrong size" look identical from the outside.
-- Runbook: how to read a trace, how to reverse the cutover, and what a
-  non-zero fallback counter means.
+- Runbook: how to read a trace and what a non-ready backfill means.
 - **Never logged:** anything identifying a visitor.
 
 ## Accessibility and internationalization

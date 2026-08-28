@@ -22,24 +22,22 @@ Audited against the source rather than against the documentation.
 | Campaign lifecycle, 11 statuses, 22 legal edges | Built | `Domain\Transition_Table`, `Workflow\Campaign_State_Machine` |
 | Org-scoped tenancy and `map_meta_cap` ownership | Built | `Security\Ownership`, `Repository\Org_Repository` |
 | Private creative storage, two-stage promotion | Built | `Workflow\Creative_Manager` |
-| Native delivery, fill cache, signed click hop | Built | `Integration\Native\Publisher`, `Domain\Fill_Rotation` |
+| Native delivery, fill cache, signed click hop | Built | `Integration\Native\Publisher`, `Workflow\Decision_Engine` |
 | Append-first event ledger with rollup projections | Built | `Repository\Event_Repository`, `Workflow\Reporting_Read` |
 | Provider abstraction | Built, one implementation | `Integration\Ad_Provider_Interface` |
 | Packages, inventory placements, organizations | Built | `Admin\*_Screen`, `Repository\Placement_Repository` |
 | Audit trail on business transitions | Built | `Repository\Audit_Repository` |
-| Line-item delivery strategy beneath Campaign | Built; serving cutover waits for P3 | `Repository\Line_Item_Repository`, `Workflow\Line_Item_Editor` |
+| Line-item delivery strategy beneath Campaign | Built | `Repository\Line_Item_Repository`, `Workflow\Line_Item_Editor` |
 
 ### What is thinner than it looks
 
-- **Rotation is not decisioning.** `Fill_Rotation` selects equally among live
-  campaigns on a slot. There is no eligibility pipeline, no targeting, no
-  frequency, no pacing, and no way to ask why a candidate lost.
+- **Serving is assignment-only.** Native fill reads
+  `Creative_Assignment_Repository::candidates_for_placement()` through the
+  decision engine. Paid slots stay empty until the P2 backfill finishes; there
+  is no campaign-meta rotation path.
 - **Two event types.** `TYPE_IMPRESSION` and `TYPE_CLICK`. There is no request,
   fill, no-fill, served, viewable or conversion event, so fill rate and
   viewability cannot be computed from the ledger at all.
-- **Serving still selects Campaigns.** P1 models line-item delivery strategy,
-  while the native hot path intentionally stays campaign-based until P3 can
-  cut it over to the decision engine as one tested change.
 - **One creative per placement** is assumed by campaign validation.
 - **"Billing" is a settings label**, not a domain. No orders, invoices, payments
   or ledger exist.
@@ -68,8 +66,8 @@ earlier one creates.
       [data-schema.md](data-schema.md#campaign-line-items). The six closure
       items, their evidence, and the exit criteria they satisfy are recorded in
       [platform-p1-line-item-closeout.md](platform-p1-line-item-closeout.md).
-      Serving still selects Campaigns, deliberately: the line item is a
-      projection until P3 cuts the hot path over as one tested change.
+      Fill reads assignments through P3; the line item remains the delivery
+      strategy record beneath Campaign.
 - [~] **P2 — Creative model refactor.** Many creatives per line item and
       placement, with weight, dates, status and revision history. Campaign
       validation stops failing on a second creative and starts requiring one
@@ -78,22 +76,20 @@ earlier one creates.
       [platform-p2-creative-model.md](platform-p2-creative-model.md). The
       metadata-ownership decision, the text-only review lane, the schema, the
       backfill, the freeze-at-approval write path, the coverage service and
-      many-creatives-per-placement are recorded there. Native serving still
-      selects Campaigns until P3, which is compatibility behaviour rather than
-      unfinished P2 work. Every exit criterion the phase owns is now met: cleanup,
-      rollback and the five documents closed last, and rollback work found and
-      fixed an installer that stamped its database version downward on a
-      reactivated older build. The one remaining half — "one eligible approved
-      assignment per required combination" — is a delivery threshold the
-      contract gives to P3, which is why this stays `[~]` rather than `[x]`.
-      See [open-work.md](open-work.md).
+      many-creatives-per-placement are recorded there. Every exit criterion the
+      phase owns is now met: cleanup, rollback and the five documents closed
+      last, and rollback work found and fixed an installer that stamped its
+      database version downward on a reactivated older build. The one remaining
+      half — "one eligible approved assignment per required combination" — is a
+      delivery threshold the contract gives to P3, which is why this stays `[~]`
+      rather than `[x]`. See [open-work.md](open-work.md).
 
 ### Serving
 
 Shared boundaries and group exit criteria:
 [platform-serving-contract.md](platform-serving-contract.md).
 
-- [ ] **P3 — Decision engine.** Replaces rotation. Request, context, candidate,
+- [~] **P3 — Decision engine.** Replaces rotation. Request, context, candidate,
       result and trace; eligibility, targeting, frequency, pacing, priority,
       creative selection and competition as separable services. Must explain
       exclusions. Traces are staff-only. **Inherits P2's exit criterion 3**: the
@@ -102,7 +98,11 @@ Shared boundaries and group exit criteria:
       `Workflow\Coverage_Service` already defines — a stricter threshold, not a
       second meaning of eligible. It is the one P2 criterion the contract does
       not give to P2. Scope, boundaries and exit criteria are defined in
-      [platform-p3-decision-engine.md](platform-p3-decision-engine.md).
+      [platform-p3-decision-engine.md](platform-p3-decision-engine.md). The
+      pipeline, weighted selection, assignment-only serving cutover, staff trace
+      route, exclusion metrics and Site Health are implemented; remaining exit
+      evidence (large fixture query budget, staff trace UI, full documentation
+      pass) stays open before `[x]`.
 - [ ] **P4 — Exact scheduling.** Serve-time timestamp evaluation with timezone
       and daypart support. Cron reconciliation stays for lifecycle state, but
       stops being the serving authority — a line item ending at 10:30 stops at

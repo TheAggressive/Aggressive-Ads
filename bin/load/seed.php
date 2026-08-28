@@ -9,7 +9,11 @@ declare(strict_types=1);
 
 use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Domain\Assignment_Rules;
+use Aggressive\Ads\Install\Creative_Assignment_Migrator;
+use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 
@@ -94,6 +98,10 @@ $placement_id = aggr_load_insert_post(
 update_post_meta( $placement_id, Placement_Repository::META_IS_ACTIVE, 1 );
 update_post_meta( $placement_id, Placement_Repository::META_SIZE, '728x90' );
 
+$assignments = Plugin::instance()->container()->get( Creative_Assignment_Repository::class );
+$assignments->install_table();
+update_option( Creative_Assignment_Migrator::OPTION_DONE, 1 );
+
 wp_defer_term_counting( true );
 wp_defer_comment_counting( true );
 wp_suspend_cache_invalidation( true );
@@ -129,6 +137,27 @@ try {
 		update_post_meta( $creative_id, Creative_Repository::META_ALT_TEXT, 'Load-test advertisement' );
 		update_post_meta( $creative_id, Creative_Repository::META_WIDTH, 728 );
 		update_post_meta( $creative_id, Creative_Repository::META_HEIGHT, 90 );
+
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Load-test fixture for this plugin's own table.
+		$wpdb->insert(
+			$assignments->table_name(),
+			array(
+				'line_item_id'  => $index,
+				'campaign_id'   => $campaign_id,
+				'placement_id'  => $placement_id,
+				'revision_id'   => $creative_id,
+				'status'        => Assignment_Rules::LIVE,
+				'weight'        => 100,
+				'click_url'     => 'https://example.com/load/' . $index,
+				'attachment_id' => $attachment_id,
+				'alt_text'      => 'Load-test advertisement',
+				'width'         => 728,
+				'height'        => 90,
+				'revision'      => 1,
+			)
+		);
 
 		$first_campaign_id = 0 === $first_campaign_id ? $campaign_id : $first_campaign_id;
 		$first_creative_id = 0 === $first_creative_id ? $creative_id : $first_creative_id;

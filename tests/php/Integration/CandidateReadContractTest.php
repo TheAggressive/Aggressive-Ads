@@ -165,7 +165,7 @@ final class CandidateReadContractTest extends WP_UnitTestCase {
 	 *
 	 * P3 pages this. Without a stable trailing sort key, two rows sharing a
 	 * window can swap between pages and a candidate is seen twice or not at
-	 * all — a bug that shows up as a rotation nobody can reproduce.
+	 * all — a bug that shows up as unstable fill nobody can reproduce.
 	 */
 	public function test_ordering_is_stable_and_by_id(): void {
 		/*

@@ -11,10 +11,12 @@ namespace Aggressive\Ads\Tests\Integration;
 
 use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Domain\Assignment_Rules;
+use Aggressive\Ads\Install\Creative_Assignment_Migrator;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
-use Aggressive\Ads\Repository\Delivery_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Workflow\Fill_Cache;
 use Aggressive\Ads\Workflow\Fill_Service;
@@ -39,6 +41,12 @@ final class DeliveryScaleTest extends WP_UnitTestCase {
 		global $wpdb;
 
 		$placement_id = $this->placement();
+
+		$container   = Plugin::instance()->container();
+		$assignments = $container->get( Creative_Assignment_Repository::class );
+		$assignments->install_table();
+		update_option( Creative_Assignment_Migrator::OPTION_DONE, 1 );
+
 		$this->seed_live_ads( $placement_id, self::ACTIVE_ADS );
 
 		add_filter(
@@ -46,10 +54,12 @@ final class DeliveryScaleTest extends WP_UnitTestCase {
 			static fn (): array => array( 'https://example.org/creative.png', 728, 90, false )
 		);
 
-		$container = Plugin::instance()->container();
-		$fill      = $container->get( Fill_Service::class );
+		$fill = $container->get( Fill_Service::class );
 		$container->get( Fill_Cache::class )->delete( $placement_id );
-		$this->assertCount( self::ACTIVE_ADS, $container->get( Delivery_Repository::class )->candidate_ids( $placement_id ) );
+		$this->assertCount(
+			min( self::ACTIVE_ADS, 500 ),
+			$assignments->candidates_for_placement( $placement_id, time(), 500 )
+		);
 
 		$cold_start_queries = $wpdb->num_queries;
 		$cold_start_time    = hrtime( true );
@@ -134,6 +144,10 @@ final class DeliveryScaleTest extends WP_UnitTestCase {
 	 * @param int $count        Number of active ads.
 	 */
 	private function seed_live_ads( int $placement_id, int $count ): void {
+		global $wpdb;
+
+		$assignments = Plugin::instance()->container()->get( Creative_Assignment_Repository::class );
+
 		for ( $index = 0; $index < $count; ++$index ) {
 			$campaign_id = (int) self::factory()->post->create(
 				array(
@@ -156,6 +170,25 @@ final class DeliveryScaleTest extends WP_UnitTestCase {
 			update_post_meta( $creative_id, Creative_Repository::META_ALT_TEXT, 'Advertisement' );
 			update_post_meta( $creative_id, Creative_Repository::META_WIDTH, 728 );
 			update_post_meta( $creative_id, Creative_Repository::META_HEIGHT, 90 );
+
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Test fixture for this plugin's own table.
+			$wpdb->insert(
+				$assignments->table_name(),
+				array(
+					'line_item_id'  => $index + 1,
+					'campaign_id'   => $campaign_id,
+					'placement_id'  => $placement_id,
+					'revision_id'   => $creative_id,
+					'status'        => Assignment_Rules::LIVE,
+					'weight'        => 100,
+					'click_url'     => 'https://example.com/ad/' . $index,
+					'attachment_id' => 1,
+					'alt_text'      => 'Advertisement',
+					'width'         => 728,
+					'height'        => 90,
+					'revision'      => 1,
+				)
+			);
 		}
 	}
 }

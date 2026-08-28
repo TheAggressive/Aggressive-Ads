@@ -1,0 +1,183 @@
+<?php
+/**
+ * Assignment decision engine.
+ *
+ * @package Aggressive\Ads
+ */
+
+declare(strict_types=1);
+
+namespace Aggressive\Ads\Workflow;
+
+use Aggressive\Ads\Domain\Decision_Pipeline;
+use Aggressive\Ads\Domain\Decision_Request;
+use Aggressive\Ads\Domain\Decision_Result;
+use Aggressive\Ads\Domain\Decision_Trace;
+use Aggressive\Ads\Domain\Exclusion_Reason;
+use Aggressive\Ads\Install\Creative_Assignment_Migrator;
+use Aggressive\Ads\Repository\Creative_Assignment_Repository;
+
+/**
+ * Loads assignment candidates, runs the pipeline, and exposes traces for staff.
+ */
+final class Decision_Engine {
+
+	private const CANDIDATE_LIMIT = 500;
+
+	/** Bounded wait for the request currently rebuilding a placement. */
+	private const REBUILD_WAIT_ATTEMPTS     = 10;
+	private const REBUILD_WAIT_MICROSECONDS = 20_000;
+
+	/**
+	 * Builds the engine.
+	 *
+	 * @param Creative_Assignment_Repository $assignments Candidate reads.
+	 * @param Creative_Assignment_Migrator   $migrator    Backfill completion.
+	 * @param Decision_Metrics               $metrics     Exclusion counters.
+	 * @param Decision_Pipeline              $pipeline    Pure stages.
+	 * @param Fill_Cache                     $cache       Short-TTL candidate cache.
+	 */
+	public function __construct(
+		private readonly Creative_Assignment_Repository $assignments,
+		private readonly Creative_Assignment_Migrator $migrator,
+		private readonly Decision_Metrics $metrics,
+		private readonly Decision_Pipeline $pipeline,
+		private readonly Fill_Cache $cache
+	) {
+	}
+
+	/**
+	 * Whether the assignment backfill has finished and fill may read it.
+	 */
+	public function serving_ready(): bool {
+		return $this->migrator->is_complete() && $this->assignments->table_exists();
+	}
+
+	/**
+	 * Serving status for observability surfaces.
+	 */
+	public function serving_status(): string {
+		return $this->serving_ready() ? 'assignments' : 'backfill_pending';
+	}
+
+	/**
+	 * Runs the pipeline for one placement and clock.
+	 *
+	 * @param int                             $placement_id Placement post id.
+	 * @param int                             $now          Evaluation time, UTC seconds.
+	 * @param int|null                        $seed         Draw for weighted selection; random when null.
+	 * @param list<array<string, mixed>>|null $rows       Preloaded candidates; queried when null.
+	 * @return array{result: Decision_Result, trace: Decision_Trace}
+	 */
+	public function decide( int $placement_id, int $now, ?int $seed = null, ?array $rows = null ): array {
+		if ( null === $rows ) {
+			$rows = $this->assignments->candidates_for_placement( $placement_id, $now, self::CANDIDATE_LIMIT );
+		}
+
+		$rows = array_values( $rows );
+
+		$request = new Decision_Request(
+			$placement_id,
+			$now,
+			$seed ?? random_int( 0, PHP_INT_MAX )
+		);
+
+		$decision = $this->pipeline->decide( $rows, $request );
+
+		$exclusions = array();
+
+		foreach ( $decision['candidates'] as $candidate ) {
+			if ( ! $candidate->is_eligible() && is_string( $candidate->exclusion_reason ) ) {
+				$exclusions[ $candidate->exclusion_reason ] = ( $exclusions[ $candidate->exclusion_reason ] ?? 0 ) + 1;
+			}
+		}
+
+		if ( ! $decision['result']->has_winner() && is_string( $decision['result']->reason ) ) {
+			$exclusions[ $decision['result']->reason ] = ( $exclusions[ $decision['result']->reason ] ?? 0 ) + 1;
+		}
+
+		$this->metrics->record_exclusions( $placement_id, $exclusions );
+
+		return array(
+			'result' => $decision['result'],
+			'trace'  => $decision['trace'],
+		);
+	}
+
+	/**
+	 * Cached assignment candidates for one placement.
+	 *
+	 * @param int $placement_id Placement post id.
+	 * @param int $now          Evaluation time.
+	 * @return list<array<string, mixed>>
+	 */
+	public function cached_rows( int $placement_id, int $now ): array {
+		$cached = $this->cache->get( $placement_id );
+
+		if ( is_array( $cached ) && isset( $cached['assignment_rows'] ) && is_array( $cached['assignment_rows'] ) ) {
+			return array_values( $cached['assignment_rows'] );
+		}
+
+		$owner = $this->cache->claim_rebuild( $placement_id );
+
+		if ( '' === $owner ) {
+			for ( $attempt = 0; $attempt < self::REBUILD_WAIT_ATTEMPTS; ++$attempt ) {
+				usleep( self::REBUILD_WAIT_MICROSECONDS );
+				$cached = $this->cache->get( $placement_id );
+
+				if ( is_array( $cached ) && isset( $cached['assignment_rows'] ) && is_array( $cached['assignment_rows'] ) ) {
+					return array_values( $cached['assignment_rows'] );
+				}
+			}
+
+			return array();
+		}
+
+		try {
+			$rows = array_values(
+				$this->assignments->candidates_for_placement( $placement_id, $now, self::CANDIDATE_LIMIT )
+			);
+			$this->cache->put(
+				$placement_id,
+				array( 'assignment_rows' => $rows )
+			);
+
+			return $rows;
+		} finally {
+			$this->cache->release_rebuild( $placement_id, $owner );
+		}
+	}
+
+	/**
+	 * Maps a winning assignment row to a token-free fill payload.
+	 *
+	 * @param array<string, mixed> $row          Winning assignment row.
+	 * @param int                  $placement_id Placement post id.
+	 * @return array<string, mixed>|null
+	 */
+	public function payload_from_row( array $row, int $placement_id ): ?array {
+		$attachment_id = (int) ( $row['attachment_id'] ?? 0 );
+		$image         = wp_get_attachment_image_url( $attachment_id, 'full' );
+
+		if ( ! is_string( $image ) || '' === $image ) {
+			return null;
+		}
+
+		return array(
+			'image'     => $image,
+			'alt'       => (string) ( $row['alt_text'] ?? '' ),
+			'width'     => (int) ( $row['width'] ?? 0 ),
+			'height'    => (int) ( $row['height'] ?? 0 ),
+			'placement' => $placement_id,
+			'campaign'  => (int) ( $row['campaign_id'] ?? 0 ),
+			'creative'  => (int) ( $row['revision_id'] ?? 0 ),
+		);
+	}
+
+	/**
+	 * No-fill reason when no assignment survives the pipeline.
+	 */
+	public static function no_fill_reason(): string {
+		return Exclusion_Reason::NO_FILL;
+	}
+}
