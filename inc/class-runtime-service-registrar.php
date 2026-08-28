@@ -29,6 +29,9 @@ use Aggressive\Ads\Notification\Notification_Service;
 use Aggressive\Ads\Portal\Router;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Domain\Decision_Pipeline;
+use Aggressive\Ads\Install\Creative_Assignment_Migrator;
+use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Creative_Revision_Repository;
 use Aggressive\Ads\Workflow\Assigned_Creatives;
@@ -49,6 +52,8 @@ use Aggressive\Ads\Workflow\Click_Hop;
 use Aggressive\Ads\Workflow\Creative_Change_Manager;
 use Aggressive\Ads\Workflow\Event_Recorder;
 use Aggressive\Ads\Workflow\Event_Retention;
+use Aggressive\Ads\Workflow\Decision_Engine;
+use Aggressive\Ads\Workflow\Decision_Metrics;
 use Aggressive\Ads\Workflow\Fill_Cache;
 use Aggressive\Ads\Workflow\Fill_Service;
 use Aggressive\Ads\Workflow\Fill_Token;
@@ -205,13 +210,34 @@ final class Runtime_Service_Registrar {
 		);
 
 		$container->register(
+			Decision_Metrics::class,
+			static fn (): Decision_Metrics => new Decision_Metrics()
+		);
+
+		$container->register(
+			Decision_Pipeline::class,
+			static fn (): Decision_Pipeline => Decision_Pipeline::standard()
+		);
+
+		$container->register(
+			Decision_Engine::class,
+			static fn ( Service_Container $c ): Decision_Engine => new Decision_Engine(
+				$c->get( Creative_Assignment_Repository::class ),
+				$c->get( Creative_Assignment_Migrator::class ),
+				$c->get( Decision_Metrics::class ),
+				$c->get( Decision_Pipeline::class ),
+				$c->get( Fill_Cache::class )
+			)
+		);
+
+		$container->register(
 			Fill_Service::class,
 			static fn ( Service_Container $c ): Fill_Service => new Fill_Service(
 				$c->get( Settings::class ),
 				$c->get( Placement_Repository::class ),
 				$c->get( Delivery_Repository::class ),
-				$c->get( Fill_Cache::class ),
-				$c->get( Fill_Token::class )
+				$c->get( Fill_Token::class ),
+				$c->get( Decision_Engine::class )
 			)
 		);
 

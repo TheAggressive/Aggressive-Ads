@@ -35,8 +35,8 @@ remain server-side and staff-only.
 - P10 and P13 must provide the counters P6 needs before goal-based pacing is
   considered complete.
 
-No later serving phase may patch the legacy `Fill_Rotation` path and call that
-the new behavior. There must be one decision pipeline.
+No later serving phase may add a second fill selector beside the decision
+pipeline and call that the new behavior. There must be one decision pipeline.
 
 ## Shared decision model
 
@@ -84,8 +84,8 @@ durable/event flows defined by their owning phases.
 ### P3 — Decision engine
 
 Owns the pipeline, stable objects, exclusion taxonomy, trace authorization,
-candidate query and compatibility cutover from Campaign rotation. It must
-produce a correct winner or no-fill result before later policies become rich.
+and the assignment candidate query. It must produce a correct winner or no-fill
+result before later policies become rich.
 
 ### P4 — Exact scheduling
 

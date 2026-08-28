@@ -17,6 +17,7 @@ use Aggressive\Ads\Portal\Acting_As;
 use Aggressive\Ads\REST\Campaigns_Controller;
 use Aggressive\Ads\REST\Creative_Controller;
 use Aggressive\Ads\REST\Creative_File_Controller;
+use Aggressive\Ads\REST\Decision_Trace_Controller;
 use Aggressive\Ads\REST\Line_Items_Controller;
 use Aggressive\Ads\REST\Organizations_Controller;
 use Aggressive\Ads\REST\Packages_Controller;
@@ -38,6 +39,7 @@ use Aggressive\Ads\Workflow\Campaign_Editor;
 use Aggressive\Ads\Workflow\Campaign_State_Machine;
 use Aggressive\Ads\Workflow\Creative_Change_Manager;
 use Aggressive\Ads\Workflow\Creative_Manager;
+use Aggressive\Ads\Workflow\Decision_Engine;
 use Aggressive\Ads\Workflow\Edit_Window;
 use Aggressive\Ads\Workflow\Line_Item_Editor;
 use Aggressive\Ads\Workflow\Organization_Membership;
@@ -145,6 +147,13 @@ final class Rest_Service_Registrar {
 			static fn ( Service_Container $c ): Creative_File_Controller => new Creative_File_Controller(
 				$c->get( Creative_Repository::class ),
 				$c->get( Private_Storage::class )
+			)
+		);
+		$container->register(
+			Decision_Trace_Controller::class,
+			static fn ( Service_Container $c ): Decision_Trace_Controller => new Decision_Trace_Controller(
+				$c->get( Decision_Engine::class ),
+				$c->get( Placement_Repository::class )
 			)
 		);
 	}

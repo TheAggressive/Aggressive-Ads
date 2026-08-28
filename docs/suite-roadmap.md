@@ -141,10 +141,10 @@ outside this repository.
 
 ### Phase E — Suite depth
 
-Staff package admin is **shipped** (Advertising → Packages). Equal rotation
-among live campaigns on a slot is **shipped**.
-Fill dashboard and weighted rotation remain. Geo / frequency cap only when a
-buyer needs them. Payments only behind the Billing module and a real PCI story.
+Staff package admin is **shipped** (Advertising → Packages). Assignment-based
+weighted fill is **shipped**. Fill dashboard and richer tiering remain. Geo /
+frequency cap only when a buyer needs them. Payments only behind the Billing
+module and a real PCI story.
 
 ---
 

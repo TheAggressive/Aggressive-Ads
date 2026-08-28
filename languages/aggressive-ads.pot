@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-27T05:27:51+00:00\n"
+"POT-Creation-Date: 2026-08-28T01:06:58+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -1536,8 +1536,37 @@ msgid "%d creatives were skipped by the delivery model upgrade, which reports it
 msgstr ""
 
 #: inc/Install/class-assignment-health.php:126
+#: inc/Install/class-decision-health.php:98
 #: inc/Install/class-rewrite-health.php:281
 msgid "Advertising"
+msgstr ""
+
+#: inc/Install/class-decision-health.php:49
+msgid "Advertising serving path"
+msgstr ""
+
+#: inc/Install/class-decision-health.php:65
+msgid "Native fill is serving from creative assignments"
+msgstr ""
+
+#: inc/Install/class-decision-health.php:66
+msgid "The assignment backfill has finished and the decision engine is the only serving path."
+msgstr ""
+
+#: inc/Install/class-decision-health.php:73
+msgid "The assignment backfill is still running"
+msgstr ""
+
+#: inc/Install/class-decision-health.php:74
+msgid "Paid slots stay empty until every creative has a delivery assignment. House ads still serve when configured."
+msgstr ""
+
+#: inc/Install/class-decision-health.php:80
+msgid "The creative assignment table is not ready"
+msgstr ""
+
+#: inc/Install/class-decision-health.php:81
+msgid "The assignment backfill reports finished but the serving table is missing. Deactivate and reactivate the plugin to repair the schema."
 msgstr ""
 
 #: inc/Install/class-rewrite-health.php:76
@@ -2536,6 +2565,35 @@ msgstr ""
 #: inc/Workflow/class-line-item-editor.php:69
 #: inc/Workflow/class-line-item-editor.php:78
 msgid "Not found."
+msgstr ""
+
+#: inc/REST/class-decision-trace-controller.php:83
+#: inc/REST/class-decision-trace-controller.php:105
+msgid "That decision is not available."
+msgstr ""
+
+#: inc/REST/class-decision-trace-controller.php:147
+msgid "Invalid click URL"
+msgstr ""
+
+#: inc/REST/class-decision-trace-controller.php:148
+msgid "Missing attachment"
+msgstr ""
+
+#: inc/REST/class-decision-trace-controller.php:149
+msgid "Invalid weight"
+msgstr ""
+
+#: inc/REST/class-decision-trace-controller.php:150
+msgid "Stage error"
+msgstr ""
+
+#: inc/REST/class-decision-trace-controller.php:151
+msgid "Lost competition"
+msgstr ""
+
+#: inc/REST/class-decision-trace-controller.php:152
+msgid "No eligible assignment"
 msgstr ""
 
 #: inc/REST/class-fill-controller.php:102

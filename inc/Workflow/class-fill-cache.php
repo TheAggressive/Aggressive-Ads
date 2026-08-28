@@ -14,8 +14,8 @@ use Aggressive\Ads\Core\Settings;
 use Aggressive\Ads\Repository\Campaign_Repository;
 
 /**
- * Object-cache wrapper. A miss rebuilds a compact creative-id vector; selected
- * payloads are separate and tokens are always minted per request.
+ * Object-cache wrapper. A miss rebuilds the assignment candidate set; the
+ * winner is still chosen per request.
  */
 final class Fill_Cache implements Service {
 
@@ -45,10 +45,10 @@ final class Fill_Cache implements Service {
 	}
 
 	/**
-	 * Stores the candidate-id vector for one placement.
+	 * Stores the assignment candidate set for one placement.
 	 *
 	 * @param int                  $placement_id Placement post id.
-	 * @param array<string, mixed> $payload      Fill identity without tokens.
+	 * @param array<string, mixed> $payload      Cached assignment rows.
 	 */
 	public function put( int $placement_id, array $payload ): bool {
 		// phpcs:ignore WordPressVIPMinimum.Performance.LowExpiryCacheTime.CacheTimeUndetermined -- Fill TTL is 5–300s by design; a 300s floor is the paused-campaign-still-showing bug.
@@ -63,29 +63,6 @@ final class Fill_Cache implements Service {
 	 */
 	public function get( int $placement_id ): ?array {
 		$cached = wp_cache_get( $this->key( $placement_id ), self::GROUP );
-
-		return is_array( $cached ) ? $cached : null;
-	}
-
-	/**
-	 * Stores one small candidate payload separately from the placement id list.
-	 *
-	 * @param int                  $creative_id Creative post id.
-	 * @param array<string, mixed> $payload     Token-free candidate identity.
-	 */
-	public function put_candidate( int $creative_id, array $payload ): bool {
-		// phpcs:ignore WordPressVIPMinimum.Performance.LowExpiryCacheTime.CacheTimeUndetermined -- Same bounded consistency window as the placement candidate list.
-		return wp_cache_set( $this->candidate_key( $creative_id ), $payload, self::GROUP, $this->settings->fill_ttl() );
-	}
-
-	/**
-	 * Cached token-free identity for one creative.
-	 *
-	 * @param int $creative_id Creative post id.
-	 * @return array<string, mixed>|null
-	 */
-	public function get_candidate( int $creative_id ): ?array {
-		$cached = wp_cache_get( $this->candidate_key( $creative_id ), self::GROUP );
 
 		return is_array( $cached ) ? $cached : null;
 	}
@@ -151,17 +128,6 @@ final class Fill_Cache implements Service {
 		$blog_id = $blog_id > 0 ? $blog_id : 1;
 
 		return 'aggr_fill_' . $blog_id . '_' . $placement_id;
-	}
-
-	/**
-	 * One creative payload on the current site.
-	 *
-	 * @param int $creative_id Creative post id.
-	 */
-	private function candidate_key( int $creative_id ): string {
-		$blog_id = max( 1, get_current_blog_id() );
-
-		return 'aggr_candidate_' . $blog_id . '_' . $creative_id;
 	}
 
 	/**

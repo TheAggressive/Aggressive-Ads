@@ -1,6 +1,6 @@
 <?php
 /**
- * Rotation fill and rollup attribution.
+ * Assignment-based fill and rollup attribution.
  *
  * @package Aggressive\Ads
  */
@@ -12,11 +12,14 @@ namespace Aggressive\Ads\Tests\Rest;
 use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Core\Settings;
+use Aggressive\Ads\Domain\Assignment_Rules;
 use Aggressive\Ads\Domain\Settings_Schema;
+use Aggressive\Ads\Install\Creative_Assignment_Migrator;
 use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
@@ -27,9 +30,9 @@ use WP_REST_Request;
 use WP_UnitTestCase;
 
 /**
- * Two live campaigns on one slot rotate; counts follow the filled token.
+ * Two live assignments on one slot compete; counts follow the filled token.
  */
-final class FillRotationTest extends WP_UnitTestCase {
+final class FillSelectionTest extends WP_UnitTestCase {
 
 	/**
 	 * Settings document.
@@ -68,6 +71,9 @@ final class FillRotationTest extends WP_UnitTestCase {
 
 		update_post_meta( $this->placement_id, Placement_Repository::META_IS_ACTIVE, 1 );
 		update_post_meta( $this->placement_id, Placement_Repository::META_SIZE, '728x90' );
+
+		Plugin::instance()->container()->get( Creative_Assignment_Repository::class )->install_table();
+		update_option( Creative_Assignment_Migrator::OPTION_DONE, 1 );
 
 		do_action( 'rest_api_init', rest_get_server() );
 	}
@@ -111,11 +117,11 @@ final class FillRotationTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Fill rotates among live campaigns and never leaks the candidate set.
+	 * Fill competes among live assignments and never leaks the candidate set.
 	 *
 	 * @return void
 	 */
-	public function test_fill_rotates_and_omits_the_candidate_set(): void {
+	public function test_fill_selects_and_omits_the_candidate_set(): void {
 		$this->enable_native();
 		$this->stub_images();
 
@@ -148,31 +154,6 @@ final class FillRotationTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Every live campaign remains eligible when a placement exceeds twenty rows.
-	 *
-	 * @return void
-	 */
-	public function test_live_candidate_lookup_does_not_drop_the_twenty_first_campaign(): void {
-		$expected = array();
-
-		for ( $i = 0; $i < 21; $i++ ) {
-			$campaign_id = (int) self::factory()->post->create(
-				array(
-					'post_type'   => Post_Types::CAMPAIGN,
-					'post_status' => Post_Statuses::LIVE,
-				)
-			);
-			add_post_meta( $campaign_id, Campaign_Repository::META_PLACEMENT_ID, $this->placement_id );
-			$expected[] = $campaign_id;
-		}
-
-		$this->assertSame(
-			$expected,
-			Plugin::instance()->container()->get( Campaign_Repository::class )->live_ids_for_placement( $this->placement_id )
-		);
-	}
-
-	/**
 	 * Turns native delivery on for this request.
 	 */
 	private function enable_native(): void {
@@ -201,6 +182,8 @@ final class FillRotationTest extends WP_UnitTestCase {
 	 * @return array{campaign: int, creative: int}
 	 */
 	private function live_campaign( string $click ): array {
+		global $wpdb;
+
 		$campaign_id = (int) self::factory()->post->create(
 			array(
 				'post_type'   => Post_Types::CAMPAIGN,
@@ -228,6 +211,27 @@ final class FillRotationTest extends WP_UnitTestCase {
 		update_post_meta( $creative_id, Creative_Repository::META_CLICK_URL, $click );
 		update_post_meta( $creative_id, Creative_Repository::META_ALT_TEXT, 'Paid' );
 		update_post_meta( $creative_id, Creative_Repository::META_ATTACHMENT_ID, $attachment_id );
+
+		$assignments = Plugin::instance()->container()->get( Creative_Assignment_Repository::class );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Test fixture for this plugin's own table.
+		$wpdb->insert(
+			$assignments->table_name(),
+			array(
+				'line_item_id'  => $campaign_id,
+				'campaign_id'   => $campaign_id,
+				'placement_id'  => $this->placement_id,
+				'revision_id'   => $creative_id,
+				'status'        => Assignment_Rules::LIVE,
+				'weight'        => 100,
+				'click_url'     => $click,
+				'attachment_id' => $attachment_id,
+				'alt_text'      => 'Paid',
+				'width'         => 728,
+				'height'        => 90,
+				'revision'      => 1,
+			)
+		);
 
 		return array(
 			'campaign' => $campaign_id,

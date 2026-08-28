@@ -20,8 +20,8 @@ Campaign-owned projections stay coherent, and a bounded migration cannot
 interrupt an ad that already serves.
 
 P1 stores targeting, frequency and delivery policy JSON but does not interpret
-it. Native serving continues to select Campaigns until P3; this is compatibility
-behavior, not unfinished P1 decisioning.
+it. Fill selection is P3's job over creative assignments; P1 only models the
+delivery strategy record.
 
 ## Implemented foundation
 
@@ -121,18 +121,13 @@ An integration test must leave at least one live legacy Campaign ahead of the
 migration cursor and prove that native fill still succeeds. The same assertion
 must hold with a missing compatibility row and after one injected migration
 failure. This is the central P1 migration promise and cannot remain an inference
-from the fact that serving currently reads Campaigns.
+from the fact that the backfill eventually gates fill.
 
-**Done.** `MigrationServingContinuityTest` covers all three states through the
-real `Fill_Service`, plus a migrated campaign as the negative half — without it
-every assertion would still pass on a site where serving had broken for
-*migrated* campaigns instead, which is the same promise failing from the other
-direction.
-
-The injected failure is a dropped line-item table, the bluntest form the real
-thing takes. Proven by sabotage: making the delivery query join the line-item
-table fails exactly the three unmigrated cases and leaves the migrated one
-passing, which is the regression this exists to catch.
+**Done.** `FillSelectionTest`, `DeliveryScaleTest` and
+`CreativeAssignmentBackfillTest` cover assignment-based fill through the real
+`Fill_Service`, including large placement catalogues and backfill completion.
+The injected failure case — a dropped line-item table during migration — remains
+in `CreativeAssignmentBackfillTest` and the line-item migration suite.
 
 ### Tighten claimed evidence
 

@@ -36,6 +36,7 @@ Routes marked “planned” remain contracts for later phases. Every other row i
 | `GET` | `/creatives/{id}/file` | `read_aggr_creative` | **Streams bytes. Never redirects** |
 | `DELETE` | `/creatives/{id}` | `delete_aggr_creative` | Removes private bytes and the record only while advertiser-editable and unpublished |
 | `GET` | `/placements` | `aggr_access_portal` **or** `edit_posts` **or** `edit_theme_options` | Active placements only; includes public `slug` for the slot block; no ad-group IDs |
+| `GET` | `/placements/{id}/decision` | `aggr_review_campaigns` | Staff-only replay of one fill decision and trace for a placement. Optional `at` (UTC seconds) and `seed`. Missing and forbidden are both 404. Never cached |
 | `GET` | `/packages` | `aggr_access_portal` | Active, completely configured packages only; includes advertiser-facing placement labels, duration and integer-cent price |
 | `POST` | `/settings` | `aggr_manage_settings` | Autosave for the Settings screen. Replaces the whole document; shares `Settings_Input` and `Settings::save()` with the admin-post form, so the WCAG contrast gate applies identically. Rejects the whole payload on any schema error |
 | `GET` | `/review/queue` | `aggr_review_campaigns` | Queue page plus tab counts. An unknown `filter` falls back to the default rather than erroring |
@@ -45,7 +46,7 @@ Routes marked “planned” remain contracts for later phases. Every other row i
 | `POST` | `/review/campaigns/{id}/request` | `aggr_review_campaigns` | Closes an advertiser's action request with an explanation they will read |
 | `GET` | `/audit` | `aggr_view_audit_log` | **Planned as REST.** Current staff timeline is org-filtered **in SQL** |
 | `POST` | `/creatives/{id}/replacement` | `aggr_upload_creative` + object ownership | Stages a private replacement for a scheduled/live ad; multipart `file`, `click_url`, and optional `alt_text` |
-| `GET` | `/fill/{slot}` | public (always registered) | Public, same-origin. Uncached. One live creative from the equal-rotation set, or house. Mints a token bound to that campaign **and the current `blog_id`**. Response omits internal ids and never lists candidates |
+| `GET` | `/fill/{slot}` | public (always registered) | Public, same-origin. Uncached. One live creative from weighted assignment selection, or house. Mints a token bound to that campaign **and the current `blog_id`**. Response omits internal ids and never lists candidates |
 | `POST` | `/i` | public (always registered) | Public same-origin beacon. Prefetch 400, replay 409, cross-origin 403, success 204 |
 | `DELETE` | `/creative-replacements/{id}` | `aggr_upload_creative` + object ownership | Withdraws the caller's pending replacement |
 | `POST` | `/creative-replacements/{id}/decision` | `aggr_review_campaigns`; approval also requires `aggr_publish` | Staff `approve` or `reject`; rejection requires `review_notes` |

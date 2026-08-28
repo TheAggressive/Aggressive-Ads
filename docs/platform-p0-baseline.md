@@ -13,7 +13,7 @@ not add duplicate tests merely to increase the test count.
 | Creative approval | review workflow, promotion and private storage | `AdminReviewTest`, `CreativeManagerTest`, `CreativePromoterTest` |
 | Creative replacement | `Creative_Change_Manager`, repository locks and promotion rollback | `CreativeChangeManagerTest`, `CreativeRepositoryLockTest`, `CampaignChangeTest` |
 | Tenant isolation | `Ownership`, organization access repository and multisite scoping | `OwnershipTest`, `AuthorizationSurfaceTest`, `SiteScopedTenancyTest` |
-| Native fill | fill REST controller, delivery repository and native publisher | `FillRoutesTest`, `FillRotationTest`, `NativePublisherTest`, `DeliveryScaleTest` |
+| Native fill | fill REST controller, decision engine, assignment repository and native publisher | `FillRoutesTest`, `FillSelectionTest`, `NativePublisherTest`, `DeliveryScaleTest` |
 | Click redirect | signed click hop, destination resolution and replay handling | `FillRoutesTest::test_click_hop_redirects_to_the_house_url`, impression/click replay test |
 | Impression/event recording | append-first event repository, replay key and rollup projection | `FillRoutesTest`, `TrackingDurabilityTest`, reporting reconciliation tests |
 | Signed tokens | blog-bound HMAC token mint/parse and current-live validation | `FillTokenTest`, `FillRoutesTest`, multisite cross-site token refusal |
