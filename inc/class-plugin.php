@@ -50,6 +50,7 @@ use Aggressive\Ads\REST\Line_Items_Controller;
 use Aggressive\Ads\REST\Creative_Controller;
 use Aggressive\Ads\REST\Creative_File_Controller;
 use Aggressive\Ads\REST\Decision_Trace_Controller;
+use Aggressive\Ads\REST\Decisions_Controller;
 use Aggressive\Ads\REST\Fill_Controller;
 use Aggressive\Ads\REST\Packages_Controller;
 use Aggressive\Ads\REST\Organizations_Controller;
@@ -382,6 +383,7 @@ final class Plugin {
 			Organizations_Controller::class,
 			Settings_Controller::class,
 			Fill_Controller::class,
+			Decisions_Controller::class,
 			Decision_Trace_Controller::class,
 			Beacon_Controller::class,
 			Click_Hop::class,

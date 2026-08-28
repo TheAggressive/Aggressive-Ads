@@ -14,6 +14,7 @@ namespace Aggressive\Ads\Domain;
  */
 final class Decision_Pipeline {
 
+	public const STAGE_SCHEDULE  = 'schedule';
 	public const STAGE_TARGETING = 'targeting';
 	public const STAGE_FREQUENCY = 'frequency';
 	public const STAGE_PACING    = 'pacing';
@@ -31,16 +32,19 @@ final class Decision_Pipeline {
 	}
 
 	/**
-	 * Default P3 pipeline: eligibility, pass-through seams, weighted selection.
+	 * Standard pipeline: eligibility, exact schedule, targeting, frequency, pacing, priority, weighted selection.
+	 *
+	 * @param Frequency_Store|null $frequency_store Frequency storage backend.
 	 */
-	public static function standard(): self {
+	public static function standard( ?Frequency_Store $frequency_store = null ): self {
 		return new self(
 			array(
 				new Eligibility_Stage(),
-				new Pass_Through_Stage( self::STAGE_TARGETING ),
-				new Pass_Through_Stage( self::STAGE_FREQUENCY ),
-				new Pass_Through_Stage( self::STAGE_PACING ),
-				new Pass_Through_Stage( self::STAGE_PRIORITY ),
+				new Schedule_Stage(),
+				new Targeting_Stage(),
+				new Frequency_Stage( $frequency_store ?? new Array_Frequency_Store() ),
+				new Pacing_Stage(),
+				new Priority_Stage(),
 			)
 		);
 	}
@@ -53,7 +57,7 @@ final class Decision_Pipeline {
 	 * @return array{result: Decision_Result, trace: Decision_Trace, candidates: array<int, Decision_Candidate>}
 	 */
 	public function decide( array $rows, Decision_Request $request ): array {
-		$context    = new Decision_Context( $request->placement_id, $request->now );
+		$context    = new Decision_Context( $request->placement_id, $request->now, $request->facts );
 		$candidates = array_map(
 			static fn ( array $row ): Decision_Candidate => new Decision_Candidate( $row ),
 			$rows

@@ -71,4 +71,38 @@ final class WeightedSelectionTest extends TestCase {
 		$this->assertGreaterThan( $wins[2], $wins[1] );
 		$this->assertGreaterThan( 700, $wins[1] );
 	}
+
+	public function test_multi_candidate_share_of_voice_matches_proportions(): void {
+		// 50% (500), 30% (300), 20% (200) share of voice.
+		$candidates = array(
+			$this->candidate( 1, 500 ),
+			$this->candidate( 2, 300 ),
+			$this->candidate( 3, 200 ),
+		);
+
+		$wins = array(
+			1 => 0,
+			2 => 0,
+			3 => 0,
+		);
+
+		$draws = 10000;
+		for ( $seed = 0; $seed < $draws; $seed++ ) {
+			$result = Weighted_Selection::choose( $candidates, $seed );
+			$this->assertNotNull( $result['winner'] );
+			++$wins[ $result['winner']->id() ];
+		}
+
+		// Candidate 1 (50% target = 5000 wins): strictly between 4800 and 5200.
+		$this->assertGreaterThanOrEqual( 4800, $wins[1] );
+		$this->assertLessThanOrEqual( 5200, $wins[1] );
+
+		// Candidate 2 (30% target = 3000 wins): strictly between 2800 and 3200.
+		$this->assertGreaterThanOrEqual( 2800, $wins[2] );
+		$this->assertLessThanOrEqual( 3200, $wins[2] );
+
+		// Candidate 3 (20% target = 2000 wins): strictly between 1800 and 2200.
+		$this->assertGreaterThanOrEqual( 1800, $wins[3] );
+		$this->assertLessThanOrEqual( 2200, $wins[3] );
+	}
 }

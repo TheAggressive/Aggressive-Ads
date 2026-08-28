@@ -14,6 +14,8 @@ use Aggressive\Ads\Install\Site_Lifecycle;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Creative_Asset_Repository;
+use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Event_Repository;
 use Aggressive\Ads\Repository\Line_Item_Repository;
 use Aggressive\Ads\Repository\Org_Access_Repository;
@@ -270,11 +272,13 @@ final class SiteScopedTenancyTest extends WP_UnitTestCase {
 				global $wpdb;
 
 				$tables = array(
-					'audit'      => ( new Audit_Repository() )->table_name(),
-					'org_access' => ( new Org_Access_Repository() )->table_name(),
-					'events'     => ( new Event_Repository() )->table_name(),
-					'rollups'    => ( new Rollup_Repository() )->table_name(),
-					'line_items' => ( new Line_Item_Repository( new Campaign_Repository() ) )->table_name(),
+					'audit'                => ( new Audit_Repository() )->table_name(),
+					'org_access'           => ( new Org_Access_Repository() )->table_name(),
+					'events'               => ( new Event_Repository() )->table_name(),
+					'rollups'              => ( new Rollup_Repository() )->table_name(),
+					'line_items'           => ( new Line_Item_Repository( new Campaign_Repository() ) )->table_name(),
+					'creative_assets'      => ( new Creative_Asset_Repository() )->table_name(),
+					'creative_assignments' => ( new Creative_Assignment_Repository() )->table_name(),
 				);
 
 				$suppress = $wpdb->suppress_errors();
@@ -299,11 +303,13 @@ final class SiteScopedTenancyTest extends WP_UnitTestCase {
 	 */
 	private function all_tables( bool $expected ): array {
 		return array(
-			'audit'      => $expected,
-			'org_access' => $expected,
-			'events'     => $expected,
-			'rollups'    => $expected,
-			'line_items' => $expected,
+			'audit'                => $expected,
+			'org_access'           => $expected,
+			'events'               => $expected,
+			'rollups'              => $expected,
+			'line_items'           => $expected,
+			'creative_assets'      => $expected,
+			'creative_assignments' => $expected,
 		);
 	}
 

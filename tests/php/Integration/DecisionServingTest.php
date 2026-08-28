@@ -117,6 +117,30 @@ final class DecisionServingTest extends WP_UnitTestCase {
 		$this->assertSame( 'https://example.org/creative.png', $data['creative']['image'] );
 	}
 
+	public function test_expired_schedule_withholds_paid_fill(): void {
+		update_option( Creative_Assignment_Migrator::OPTION_DONE, 1 );
+
+		global $wpdb;
+		$assignments = Plugin::instance()->container()->get( Creative_Assignment_Repository::class );
+
+		// Set end_at_ts in the past.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Test fixture mutation.
+		$wpdb->update(
+			$assignments->table_name(),
+			array(
+				'start_at_ts' => 1_000_000,
+				'end_at_ts'   => 1_500_000,
+			),
+			array( 'placement_id' => $this->placement_id )
+		);
+
+		$fill = Plugin::instance()->container()->get( Fill_Service::class );
+		$data = $fill->for_slug( 'decision-gate' );
+
+		$this->assertIsArray( $data );
+		$this->assertNull( $data['creative'] );
+	}
+
 	private function enable_native(): void {
 		$document = $this->settings->get();
 		$document['modules'][ Settings_Schema::MODULE_NATIVE_DELIVERY ] = true;

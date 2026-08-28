@@ -207,10 +207,9 @@ which is its identity across revisions, and an **assignment**, which is its
 weight, window and status on one placement. Version 14 creates the tables;
 version 15 walks the existing catalogue in cron batches.
 
-**Nothing waits for this either, and the reason is stronger than 5a's.** Nothing
-on the serving path reads the new tables at all — native fill still selects
-Campaigns and Creative posts — so a half-finished backfill cannot blank an ad
-slot. The portal and review screens do read assignments, and heal any campaign
+Under P3, native fill is assignment-driven. While the backfill runs, placements
+with unbackfilled creatives serve house creative when configured or empty fill
+until the backfill completes. The portal and review screens heal any campaign
 the walk has not reached the moment somebody opens it.
 
 ```bash
@@ -224,9 +223,8 @@ wp cron event list --fields=hook,next_run_relative | grep aggr_migrate_creative_
 beside a set marker is the finished state, not a lost one.
 
 Tools → Site Health gives the same answer without a shell. **"Every creative has
-a delivery assignment"** deliberately distinguishes a backfill still running from
-one that finished and left creatives behind: the first is progress, the second is
-worth investigating.
+a delivery assignment"** and **"Native ad serving path is active"** confirm the
+backfill state and serving readiness.
 
 If the cursor is not moving and no event is scheduled, cron is not running — go
 back to step 5.

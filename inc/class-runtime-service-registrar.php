@@ -30,6 +30,8 @@ use Aggressive\Ads\Portal\Router;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Domain\Decision_Pipeline;
+use Aggressive\Ads\Domain\Frequency_Store;
+use Aggressive\Ads\Workflow\Transient_Frequency_Store;
 use Aggressive\Ads\Install\Creative_Assignment_Migrator;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
@@ -215,8 +217,15 @@ final class Runtime_Service_Registrar {
 		);
 
 		$container->register(
+			Frequency_Store::class,
+			static fn (): Frequency_Store => new Transient_Frequency_Store()
+		);
+
+		$container->register(
 			Decision_Pipeline::class,
-			static fn (): Decision_Pipeline => Decision_Pipeline::standard()
+			static fn ( Service_Container $c ): Decision_Pipeline => Decision_Pipeline::standard(
+				$c->get( Frequency_Store::class )
+			)
 		);
 
 		$container->register(
