@@ -15,6 +15,7 @@ use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Security\Roles;
+use Aggressive\Ads\Workflow\Decision_Metrics;
 use WP_REST_Request;
 use WP_UnitTestCase;
 
@@ -89,5 +90,6 @@ final class DecisionTraceRoutesTest extends WP_UnitTestCase {
 		$this->assertSame( $this->placement_id, (int) ( $data['placement_id'] ?? 0 ) );
 		$this->assertArrayHasKey( 'trace', $data );
 		$this->assertArrayHasKey( 'entries', $data['trace'] );
+		$this->assertFalse( get_option( Decision_Metrics::OPTION_EXCLUSIONS, false ) );
 	}
 }

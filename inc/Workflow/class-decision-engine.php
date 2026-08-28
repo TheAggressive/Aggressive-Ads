@@ -63,13 +63,14 @@ final class Decision_Engine {
 	/**
 	 * Runs the pipeline for one placement and clock.
 	 *
-	 * @param int                             $placement_id Placement post id.
-	 * @param int                             $now          Evaluation time, UTC seconds.
-	 * @param int|null                        $seed         Draw for weighted selection; random when null.
-	 * @param list<array<string, mixed>>|null $rows       Preloaded candidates; queried when null.
+	 * @param int                             $placement_id   Placement post id.
+	 * @param int                             $now            Evaluation time, UTC seconds.
+	 * @param int|null                        $seed           Draw for weighted selection; random when null.
+	 * @param list<array<string, mixed>>|null $rows           Preloaded candidates; queried when null.
+	 * @param bool                            $record_metrics Whether to record exclusion metrics.
 	 * @return array{result: Decision_Result, trace: Decision_Trace}
 	 */
-	public function decide( int $placement_id, int $now, ?int $seed = null, ?array $rows = null ): array {
+	public function decide( int $placement_id, int $now, ?int $seed = null, ?array $rows = null, bool $record_metrics = true ): array {
 		if ( null === $rows ) {
 			$rows = $this->assignments->candidates_for_placement( $placement_id, $now, self::CANDIDATE_LIMIT );
 		}
@@ -84,19 +85,21 @@ final class Decision_Engine {
 
 		$decision = $this->pipeline->decide( $rows, $request );
 
-		$exclusions = array();
+		if ( $record_metrics ) {
+			$exclusions = array();
 
-		foreach ( $decision['candidates'] as $candidate ) {
-			if ( ! $candidate->is_eligible() && is_string( $candidate->exclusion_reason ) ) {
-				$exclusions[ $candidate->exclusion_reason ] = ( $exclusions[ $candidate->exclusion_reason ] ?? 0 ) + 1;
+			foreach ( $decision['candidates'] as $candidate ) {
+				if ( ! $candidate->is_eligible() && is_string( $candidate->exclusion_reason ) ) {
+					$exclusions[ $candidate->exclusion_reason ] = ( $exclusions[ $candidate->exclusion_reason ] ?? 0 ) + 1;
+				}
 			}
-		}
 
-		if ( ! $decision['result']->has_winner() && is_string( $decision['result']->reason ) ) {
-			$exclusions[ $decision['result']->reason ] = ( $exclusions[ $decision['result']->reason ] ?? 0 ) + 1;
-		}
+			if ( ! $decision['result']->has_winner() && is_string( $decision['result']->reason ) ) {
+				$exclusions[ $decision['result']->reason ] = ( $exclusions[ $decision['result']->reason ] ?? 0 ) + 1;
+			}
 
-		$this->metrics->record_exclusions( $placement_id, $exclusions );
+			$this->metrics->record_exclusions( $placement_id, $exclusions );
+		}
 
 		return array(
 			'result' => $decision['result'],

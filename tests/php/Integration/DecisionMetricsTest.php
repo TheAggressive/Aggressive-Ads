@@ -128,4 +128,39 @@ final class DecisionMetricsTest extends WP_UnitTestCase {
 		);
 		$this->assertSame( 1, $metrics->exclusion_counts()[ Exclusion_Reason::NO_FILL ] ?? 0 );
 	}
+
+	public function test_decide_skips_recording_when_disabled(): void {
+		Plugin::instance()->container()->get( Creative_Assignment_Repository::class )->install_table();
+		update_option( Creative_Assignment_Migrator::OPTION_DONE, 1 );
+
+		$container = Plugin::instance()->container();
+		$metrics   = new Decision_Metrics();
+		$engine    = new Decision_Engine(
+			$container->get( Creative_Assignment_Repository::class ),
+			$container->get( Creative_Assignment_Migrator::class ),
+			$metrics,
+			Decision_Pipeline::standard(),
+			$container->get( Fill_Cache::class )
+		);
+
+		$engine->decide(
+			99,
+			time(),
+			1,
+			array(
+				array(
+					'id'            => 1,
+					'line_item_id'  => 1,
+					'campaign_id'   => 1,
+					'revision_id'   => 1,
+					'weight'        => 100,
+					'attachment_id' => 0,
+					'click_url'     => 'https://example.com/ad',
+				),
+			),
+			false
+		);
+
+		$this->assertSame( array(), $metrics->exclusion_counts() );
+	}
 }
