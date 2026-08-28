@@ -236,7 +236,9 @@ final class Runtime_Service_Registrar {
 				$c->get( Decision_Metrics::class ),
 				$c->get( Decision_Pipeline::class ),
 				$c->get( Fill_Cache::class ),
-				$c->get( Frequency_Store::class )
+				$c->get( Frequency_Store::class ),
+				$c->get( \Aggressive\Ads\Repository\Line_Item_Repository::class ),
+				$c->get( \Aggressive\Ads\Repository\Rollup_Repository::class )
 			)
 		);
 

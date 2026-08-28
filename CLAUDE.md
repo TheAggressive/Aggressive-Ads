@@ -139,9 +139,19 @@ and deeper analytics remain open. What is built:
   “Advertising”), optional logo, and optional tagline
 - native delivery (always on, not a Modules checkbox): reserved placement slot, `GET /aggr/v1/fill/{slot}`,
   `POST /aggr/v1/i` beacon, first-party click hop `/ads/c/{token}`, events and
-  rollup tables (schema v5). Native is the only publisher. Weighted selection among
-  live creative assignments on a slot; impressions and clicks follow the filled
-  token, not whichever campaign happened to be queried first.
+  rollup tables. Native is the only publisher, and impressions and clicks follow
+  the filled token, not whichever campaign happened to be queried first
+- the **decision engine** (P3–P9) replaces rotation. `Workflow\Decision_Engine`
+  runs an ordered pipeline of pure `inc/Domain/` stages — eligibility, exact
+  schedule and dayparts, targeting, frequency, pacing, priority, weighted
+  selection — over `candidates_for_placement()`, and every candidate leaves
+  every stage with a reason. `POST /aggr/v1/decisions` decides a whole page at
+  once with competitive separation; `GET /aggr/v1/placements/{id}/decision` is
+  the staff-only trace, `no-store`, replayable from a supplied clock and seed.
+  See `docs/platform-p3-decision-engine.md`
+- the **measurement model** (P10): `request`, `fill`, `no_fill`, `served`,
+  `viewable`, `click`, `conversion`. `served` replaced `impression`; rollups
+  count both, so history predating the rename still aggregates
 - campaign copy: renew (completed) and duplicate (any readable campaign) create
   a new draft with the stored snapshot and private creative bytes, never a
   backwards transition. HTML form and `POST /aggr/v1/campaigns/{id}/copy`
@@ -404,6 +414,23 @@ produces confidence. Assert your fixture is real before asserting on it.
 - **Exception messages are exempt from the escaping sniff**, narrowly and with a
   reason in `phpcs.xml.dist`: they are boot-time developer diagnostics, never
   rendered. Anything a user can cause returns `WP_Error` instead.
+- **A decision stage reads the candidate row, and that row is not the query.**
+  `candidates_for_placement()` returns the *assignment's* columns. Priority,
+  pacing, caps, targeting and frequency policy all live on `aggr_line_items`,
+  and delivered counters come from `aggr_rollups` — `Decision_Engine::enrich()`
+  attaches them before the pipeline runs and before the result is cached.
+
+  Adding a stage input means adding it there too. P5, P6, P8 and P9 all shipped
+  `[x]`, with passing tests, reading defaults for fields nothing supplied:
+  every stage was unit-tested against a hand-built row carrying keys the real
+  query never returns. **If a stage reads a key, something must be proven to put
+  it there** — `DecisionPolicyInputsTest` goes through the engine for that
+  reason.
+- **A read half and a write half have to meet in a test.** Frequency capping
+  shipped complete and capped nobody: `get_count()` was correct, and nothing
+  anywhere called `increment()`. Every test arranged its own count, so all of
+  them passed. A counter test that never writes through the production path is
+  testing arithmetic.
 
 ## Working style
 
