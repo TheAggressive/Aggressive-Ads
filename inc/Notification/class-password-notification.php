@@ -204,7 +204,7 @@ final class Password_Notification {
 	private function deliver( WP_User $user, string $subject, string $body ): bool {
 
 		// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.wp_mail_wp_mail -- Transactional, single-recipient account access or recovery message.
-		return wp_mail( $user->user_email, $subject, $body );
+		return wp_mail( $user->user_email, $subject, $body, Notification_Delivery::sender_headers() );
 	}
 
 	/**

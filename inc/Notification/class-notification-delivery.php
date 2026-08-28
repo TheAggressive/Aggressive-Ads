@@ -139,4 +139,30 @@ final class Notification_Delivery {
 			default => 2 * HOUR_IN_SECONDS,
 		};
 	}
+
+	/**
+	 * Builds valid email sender headers, avoiding invalid localhost addresses in local environments.
+	 *
+	 * @return list<string>
+	 */
+	public static function sender_headers(): array {
+		$admin_email = get_option( 'admin_email' );
+		$from_email  = is_string( $admin_email ) && is_email( $admin_email ) ? $admin_email : '';
+
+		if ( '' === $from_email || str_ends_with( $from_email, '@localhost' ) ) {
+			$parsed_host = wp_parse_url( home_url(), PHP_URL_HOST );
+			$host        = is_string( $parsed_host ) && '' !== $parsed_host ? $parsed_host : 'localhost';
+			$domain      = ( 'localhost' === $host || ! str_contains( $host, '.' ) ) ? 'localhost.localdomain' : $host;
+			$from_email  = 'no-reply@' . $domain;
+		}
+
+		$site_name = sanitize_text_field( wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES ) );
+		if ( '' === $site_name ) {
+			$site_name = 'Advertising';
+		}
+
+		return array(
+			sprintf( 'From: %s <%s>', $site_name, $from_email ),
+		);
+	}
 }

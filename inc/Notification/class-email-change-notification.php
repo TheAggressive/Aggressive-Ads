@@ -47,6 +47,6 @@ final class Email_Change_Notification {
 		);
 
 		// phpcs:ignore WordPressVIPMinimum.Functions.RestrictedFunctions.wp_mail_wp_mail -- Transactional single-recipient confirmation to the requested new address.
-		return wp_mail( $email, $subject, $body );
+		return wp_mail( $email, $subject, $body, Notification_Delivery::sender_headers() );
 	}
 }
