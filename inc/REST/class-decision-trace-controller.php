@@ -107,7 +107,11 @@ final class Decision_Trace_Controller implements Service {
 			);
 		}
 
-		$now  = (int) ( $request->get_param( 'at' ) ?? time() );
+		// A replayable clock is the point of this route, but an absurd one is a
+		// typo rather than a request: every window comparison downstream takes
+		// it at face value.
+		$at   = $request->get_param( 'at' );
+		$now  = is_numeric( $at ) && (int) $at > 0 ? (int) $at : time();
 		$seed = $request->get_param( 'seed' );
 		$seed = is_numeric( $seed ) ? (int) $seed : random_int( 0, PHP_INT_MAX );
 

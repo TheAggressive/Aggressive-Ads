@@ -21,13 +21,15 @@ final class Page_Decision_Coordinator {
 	 * @param Decision_Pipeline                                                               $pipeline  Standard decision pipeline.
 	 * @param int                                                                             $now       Current timestamp.
 	 * @param int|null                                                                        $seed      Random seed.
+	 * @param array<string, mixed>                                                            $facts     Request facts.
 	 * @return array<string, array{result: Decision_Result, trace: Decision_Trace}>
 	 */
 	public static function coordinate(
 		array $slots_map,
 		Decision_Pipeline $pipeline,
 		int $now,
-		?int $seed = null
+		?int $seed = null,
+		array $facts = array()
 	): array {
 		$results        = array();
 		$served_assets  = array();
@@ -93,7 +95,7 @@ final class Page_Decision_Coordinator {
 			}
 
 			// 2. Decide using the standard pipeline.
-			$request  = new Decision_Request( $placement_id, $now, $current_seed++ );
+			$request  = new Decision_Request( $placement_id, $now, $current_seed++, $facts );
 			$decision = $pipeline->decide( $eligible_candidates, $request );
 
 			$winner = $decision['result']->winner;

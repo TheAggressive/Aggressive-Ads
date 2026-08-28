@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Tests\Integration;
 
+use Aggressive\Ads\Domain\Array_Frequency_Store;
 use Aggressive\Ads\Domain\Decision_Pipeline;
 use Aggressive\Ads\Install\Creative_Assignment_Migrator;
 use Aggressive\Ads\Install\Decision_Health;
@@ -86,7 +87,8 @@ final class DecisionHealthTest extends WP_UnitTestCase {
 				$container->get( Creative_Assignment_Migrator::class ),
 				new Decision_Metrics(),
 				Decision_Pipeline::standard(),
-				$container->get( Fill_Cache::class )
+				$container->get( Fill_Cache::class ),
+				new Array_Frequency_Store()
 			);
 			$health = new Decision_Health( $engine, $container->get( Creative_Assignment_Migrator::class ) );
 			$result = $health->run_test();

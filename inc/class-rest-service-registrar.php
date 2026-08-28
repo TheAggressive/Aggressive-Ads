@@ -160,7 +160,8 @@ final class Rest_Service_Registrar {
 		$container->register(
 			Decisions_Controller::class,
 			static fn ( Service_Container $c ): Decisions_Controller => new Decisions_Controller(
-				$c->get( \Aggressive\Ads\Workflow\Fill_Service::class )
+				$c->get( \Aggressive\Ads\Workflow\Fill_Service::class ),
+				$c->get( \Aggressive\Ads\Security\Rate_Limiter::class )
 			)
 		);
 	}
