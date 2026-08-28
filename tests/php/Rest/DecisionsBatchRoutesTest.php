@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Tests\Rest;
 
+use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Core\Settings;
 use Aggressive\Ads\Domain\Settings_Schema;
 use Aggressive\Ads\Install\Installer;
@@ -43,36 +44,38 @@ final class DecisionsBatchRoutesTest extends WP_UnitTestCase {
 		$this->settings = Plugin::instance()->container()->get( Settings::class );
 		$this->enable_native();
 
-		$placements = Plugin::instance()->container()->get( Placement_Repository::class );
-		$placements->create_catalogue_placement(
+		$header_id = (int) self::factory()->post->create(
 			array(
-				'title'  => 'Header Slot',
-				'slug'   => 'header-slot',
-				'width'  => 728,
-				'height' => 90,
+				'post_type'   => Post_Types::PLACEMENT,
+				'post_name'   => 'header-slot',
+				'post_status' => 'publish',
+				'post_title'  => 'Header Slot',
 			)
 		);
-		$placements->create_catalogue_placement(
+		update_post_meta( $header_id, Placement_Repository::META_IS_ACTIVE, 1 );
+		update_post_meta( $header_id, Placement_Repository::META_SIZE, '728x90' );
+
+		$sidebar_id = (int) self::factory()->post->create(
 			array(
-				'title'  => 'Sidebar Slot',
-				'slug'   => 'sidebar-slot',
-				'width'  => 300,
-				'height' => 250,
+				'post_type'   => Post_Types::PLACEMENT,
+				'post_name'   => 'sidebar-slot',
+				'post_status' => 'publish',
+				'post_title'  => 'Sidebar Slot',
 			)
 		);
+		update_post_meta( $sidebar_id, Placement_Repository::META_IS_ACTIVE, 1 );
+		update_post_meta( $sidebar_id, Placement_Repository::META_SIZE, '300x250' );
 
 		do_action( 'rest_api_init', rest_get_server() );
 	}
 
-	public function test_post_decisions_returns_forbidden_when_native_delivery_disabled(): void {
-		$this->disable_native();
-
+	public function test_decisions_is_available_without_enabling_a_module(): void {
 		$request = new WP_REST_Request( 'POST', '/aggr/v1/decisions' );
 		$request->set_header( 'content-type', 'application/json' );
 		$request->set_body( wp_json_encode( array( 'slots' => array( 'header-slot' ) ) ) );
 
 		$response = rest_get_server()->dispatch( $request );
-		$this->assertSame( 404, $response->get_status() );
+		$this->assertSame( 200, $response->get_status() );
 	}
 
 	public function test_post_decisions_validates_slots_input(): void {
@@ -144,12 +147,6 @@ final class DecisionsBatchRoutesTest extends WP_UnitTestCase {
 	private function enable_native(): void {
 		$document = $this->settings->get();
 		$document['modules'][ Settings_Schema::MODULE_NATIVE_DELIVERY ] = true;
-		$this->settings->update( $document );
-	}
-
-	private function disable_native(): void {
-		$document = $this->settings->get();
-		$document['modules'][ Settings_Schema::MODULE_NATIVE_DELIVERY ] = false;
-		$this->settings->update( $document );
+		$this->settings->save( $document );
 	}
 }
