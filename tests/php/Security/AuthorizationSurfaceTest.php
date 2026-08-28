@@ -132,6 +132,7 @@ final class AuthorizationSurfaceTest extends WP_UnitTestCase {
 	public function test_default_deny_for_anonymous_and_bare_authenticated_callers(): void {
 		$public = array(
 			'GET /aggr/v1/fill/(?P<slot>[a-z0-9-]+)',
+			'POST /aggr/v1/decisions',
 			'POST /aggr/v1/i',
 		);
 

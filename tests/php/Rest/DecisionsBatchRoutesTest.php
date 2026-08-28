@@ -144,12 +144,12 @@ final class DecisionsBatchRoutesTest extends WP_UnitTestCase {
 	private function enable_native(): void {
 		$document = $this->settings->get();
 		$document['modules'][ Settings_Schema::MODULE_NATIVE_DELIVERY ] = true;
-		$this->settings->update( $document );
+		$this->settings->save( $document );
 	}
 
 	private function disable_native(): void {
 		$document = $this->settings->get();
 		$document['modules'][ Settings_Schema::MODULE_NATIVE_DELIVERY ] = false;
-		$this->settings->update( $document );
+		$this->settings->save( $document );
 	}
 }
