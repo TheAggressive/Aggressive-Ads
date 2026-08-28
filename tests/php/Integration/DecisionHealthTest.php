@@ -73,17 +73,12 @@ final class DecisionHealthTest extends WP_UnitTestCase {
 	}
 
 	public function test_finished_backfill_without_table_is_critical(): void {
-		global $wpdb;
-
 		$container   = Plugin::instance()->container();
 		$assignments = new Creative_Assignment_Repository();
 		$assignments->install_table();
 		update_option( Creative_Assignment_Migrator::OPTION_DONE, 1 );
 
-		$table = $assignments->table_name();
-
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Simulates a missing serving table after a reported-complete backfill.
-		$wpdb->query( "DROP TABLE IF EXISTS {$table}" );
+		$assignments->drop_table();
 
 		try {
 			$engine = new Decision_Engine(

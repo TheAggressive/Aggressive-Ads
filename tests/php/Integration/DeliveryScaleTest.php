@@ -57,8 +57,8 @@ final class DeliveryScaleTest extends WP_UnitTestCase {
 		$fill = $container->get( Fill_Service::class );
 		$container->get( Fill_Cache::class )->delete( $placement_id );
 		$this->assertCount(
-			self::ACTIVE_ADS,
-			$assignments->candidates_for_placement( $placement_id, time() )
+			min( self::ACTIVE_ADS, 500 ),
+			$assignments->candidates_for_placement( $placement_id, time(), 500 )
 		);
 
 		$cold_start_queries = $wpdb->num_queries;
