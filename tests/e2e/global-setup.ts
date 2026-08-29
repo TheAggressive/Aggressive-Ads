@@ -14,6 +14,8 @@ export default function globalSetup(): void {
 	wpPluginFile( 'tests/e2e/seed-users.php' );
 	// After seed-users, because the fixture organizations hang off its advertiser.
 	wpPluginFile( 'tests/e2e/seed-organizations.php' );
+	// After the organizations, which the live advertisement is owned by.
+	wpPluginFile( 'tests/e2e/seed-live-ad.php' );
 	wp( 'theme', 'activate', 'twentytwentyfive' );
 	// A fresh WordPress has an empty permalink_structure. Activation hard-flushes
 	// plugin rules but does not change that setting, so Apache still has no
