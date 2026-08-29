@@ -2,6 +2,8 @@
  * Fills reserved placement slots after paint and beacons one impression.
  */
 
+import { observeViewability } from './viewability.js';
+
 const SLOT_SELECTOR = '[data-aggr-slot][data-aggr-fill]';
 
 export const fillSlot = async ( root ) => {
@@ -64,6 +66,17 @@ export const fillSlot = async ( root ) => {
 				payload.beacon,
 				new URLSearchParams( { token: creative.token } )
 			);
+
+			// Observation starts after the ad is in the document, so the first
+			// measurement describes something a person could actually see.
+			if ( payload.viewability ) {
+				observeViewability( canvas ?? root, {
+					ratio: payload.viewability.ratio,
+					dwellMs: payload.viewability.dwell_ms,
+					beacon: payload.beacon,
+					token: creative.token,
+				} );
+			}
 		}
 	} catch {
 		root.dataset.aggrFilled = '0';

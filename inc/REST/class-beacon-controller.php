@@ -28,16 +28,18 @@ final class Beacon_Controller implements Service {
 	/**
 	 * Constructor.
 	 *
-	 * @param Fill_Service   $fill    Module gate and live check.
-	 * @param Fill_Token     $tokens  Token parser.
-	 * @param Rate_Limiter   $limiter Anonymous beacon bound.
-	 * @param Event_Recorder $recorder Durable event and projection write.
+	 * @param Fill_Service     $fill     Module gate and live check.
+	 * @param Fill_Token       $tokens   Token parser.
+	 * @param Rate_Limiter     $limiter  Anonymous beacon bound.
+	 * @param Event_Recorder   $recorder Durable event and projection write.
+	 * @param Event_Repository $events   Lifecycle ordering checks.
 	 */
 	public function __construct(
 		private readonly Fill_Service $fill,
 		private readonly Fill_Token $tokens,
 		private readonly Rate_Limiter $limiter,
-		private readonly Event_Recorder $recorder
+		private readonly Event_Recorder $recorder,
+		private readonly Event_Repository $events
 	) {
 	}
 
@@ -66,6 +68,27 @@ final class Beacon_Controller implements Service {
 						'validate_callback' => static fn ( mixed $value ): bool => is_string( $value )
 							&& strlen( $value ) <= Fill_Token::MAX_LENGTH
 							&& 1 === preg_match( '/^[0-9a-f.]+$/', $value ),
+					),
+
+					/*
+					 * Optional, and absent means `served`. A page cached with
+					 * the previous script sends no event type and must keep
+					 * reporting impressions rather than failing validation.
+					 *
+					 * Allowlisted to the two a browser may report. The rest of
+					 * the lifecycle — request, fill, no_fill, conversion — is
+					 * written by the server or by a later phase, and none of it
+					 * is a client's to claim.
+					 */
+					'event' => array(
+						'type'              => 'string',
+						'required'          => false,
+						'sanitize_callback' => 'sanitize_key',
+						'validate_callback' => static fn ( mixed $value ): bool => in_array(
+							$value,
+							array( Event_Repository::TYPE_SERVED, Event_Repository::TYPE_VIEWABLE ),
+							true
+						),
 					),
 				),
 			)
@@ -121,8 +144,12 @@ final class Beacon_Controller implements Service {
 			return $limited;
 		}
 
-		$token  = (string) $request->get_param( 'token' );
-		$parsed = $this->tokens->parse( $token );
+		$token = (string) $request->get_param( 'token' );
+		$event = (string) ( $request->get_param( 'event' ) ?? Event_Repository::TYPE_SERVED );
+
+		// A view legitimately arrives after the token's window; a delivery does
+		// not. See `Fill_Token::parse()` for why that is safe.
+		$parsed = $this->tokens->parse( $token, Event_Repository::TYPE_VIEWABLE === $event );
 
 		if ( null === $parsed || ! $this->fill->accepts( $parsed ) ) {
 			return new WP_Error(
@@ -135,7 +162,26 @@ final class Beacon_Controller implements Service {
 		$hash = $this->tokens->hash( $token );
 		$ip   = $this->tokens->ip_hash( Delivery_Request::client_ip() );
 
-		$recorded = $this->recorder->record( Event_Repository::TYPE_SERVED, $parsed['placement_id'], $parsed['campaign_id'], $parsed['creative_id'], $hash, $ip );
+		/*
+		 * A view implies a delivery, so an early one records both rather than
+		 * being refused.
+		 *
+		 * The two beacons are independent fire-and-forget requests and nothing
+		 * orders them. Refusing a view that overtook its own delivery lost it
+		 * permanently — `sendBeacon` reports nothing back, so the client cannot
+		 * know to retry.
+		 *
+		 * This grants no leverage. Viewability is client-attested either way,
+		 * and a client that wanted to inflate impressions could always beacon
+		 * the delivery directly. The token still has to be ours, and each event
+		 * is still spent once against `(token_hash, event)`.
+		 */
+		if ( Event_Repository::TYPE_VIEWABLE === $event
+			&& ! $this->events->exists( Event_Repository::TYPE_SERVED, $hash ) ) {
+			$this->recorder->record( Event_Repository::TYPE_SERVED, $parsed['placement_id'], $parsed['campaign_id'], $parsed['creative_id'], $hash, $ip );
+		}
+
+		$recorded = $this->recorder->record( $event, $parsed['placement_id'], $parsed['campaign_id'], $parsed['creative_id'], $hash, $ip );
 
 		if ( Event_Recorder::REPLAY === $recorded ) {
 			return new WP_Error(

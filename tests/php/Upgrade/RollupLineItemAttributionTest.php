@@ -288,4 +288,252 @@ final class RollupLineItemAttributionTest extends WP_UnitTestCase {
 			'The pacing read scans the rollup table, which grows every day and is never purged with events.'
 		);
 	}
+
+	/** The stored `viewables` for one slot and day, or null when unmeasured. */
+	private function viewables( int $placement_id, string $day ): ?int {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Reading this plugin's own table in a test.
+		$value = $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT viewables FROM %i WHERE placement_id = %d AND day_utc = %s',
+				$this->rollups->table_name(),
+				$placement_id,
+				$day
+			)
+		);
+
+		return null === $value ? null : (int) $value;
+	}
+
+	/**
+	 * A day with impressions but no views reads zero, not null.
+	 *
+	 * The distinction the column exists for. Zero means the page was measuring
+	 * and nothing qualified; null means nobody was looking. Reporting has to
+	 * tell those apart, and an impression is what proves measurement was on.
+	 */
+	public function test_a_measured_day_with_no_views_reads_zero(): void {
+		$this->rollups->increment( 'impressions', 61, 610, '2026-04-01', 6100 );
+
+		$this->assertSame( 0, $this->viewables( 61, '2026-04-01' ) );
+	}
+
+	/**
+	 * A row written before the column existed stays null.
+	 *
+	 * Projecting zero onto history would make "viewability was not implemented"
+	 * look exactly like "not one ad was seen all day" — the more alarming
+	 * reading, and the wrong one.
+	 */
+	public function test_history_is_left_unmeasured_rather_than_zeroed(): void {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Recreating the pre-v17 row shape.
+		$wpdb->insert(
+			$this->rollups->table_name(),
+			array(
+				'day_utc'      => '2026-04-02',
+				'placement_id' => 62,
+				'campaign_id'  => 620,
+				'line_item_id' => 6200,
+				'impressions'  => 40,
+				'clicks'       => 2,
+			)
+		);
+
+		$this->assertNull(
+			$this->viewables( 62, '2026-04-02' ),
+			'A day from before measurement existed was projected as zero views.'
+		);
+	}
+
+	/**
+	 * A recorded view lands on `viewables`, and its delivery on `impressions`.
+	 *
+	 * Driven through `Event_Recorder`, which is where an event type becomes a
+	 * column. Every other test here calls the repository directly and names the
+	 * column itself, so a sabotage projecting views onto `clicks` left all of
+	 * them green — the mapping was the one part nothing exercised.
+	 */
+	public function test_the_recorder_projects_a_view_onto_the_right_column(): void {
+		global $wpdb;
+
+		$assignments = Plugin::instance()->container()->get( \Aggressive\Ads\Repository\Creative_Assignment_Repository::class );
+		$assignments->install_table();
+
+		$placement_id = 7373;
+		$revision_id  = 7474;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Test fixture for this plugin's own table.
+		$wpdb->insert(
+			$assignments->table_name(),
+			array(
+				'line_item_id' => 7575,
+				'campaign_id'  => 7676,
+				'placement_id' => $placement_id,
+				'revision_id'  => $revision_id,
+				'status'       => \Aggressive\Ads\Domain\Assignment_Rules::LIVE,
+				'weight'       => 100,
+				'revision'     => 1,
+			)
+		);
+
+		$recorder = Plugin::instance()->container()->get( \Aggressive\Ads\Workflow\Event_Recorder::class );
+		$today    = gmdate( 'Y-m-d' );
+
+		$recorder->record(
+			\Aggressive\Ads\Repository\Event_Repository::TYPE_SERVED,
+			$placement_id,
+			7676,
+			$revision_id,
+			str_repeat( 'c', 64 ),
+			str_repeat( 'd', 64 )
+		);
+
+		$this->assertSame(
+			0,
+			$this->viewables( $placement_id, $today ),
+			'A delivery must mark the day measured rather than leaving it unknown.'
+		);
+
+		$recorder->record(
+			\Aggressive\Ads\Repository\Event_Repository::TYPE_VIEWABLE,
+			$placement_id,
+			7676,
+			$revision_id,
+			str_repeat( 'c', 64 ),
+			str_repeat( 'd', 64 )
+		);
+
+		$this->assertSame(
+			1,
+			$this->viewables( $placement_id, $today ),
+			'A recorded view did not reach the viewables column.'
+		);
+	}
+
+	/** A recorded view increments the day's counter. */
+	public function test_a_view_is_counted(): void {
+		$this->rollups->increment( 'impressions', 63, 630, '2026-04-03', 6300 );
+		$this->rollups->increment( 'viewables', 63, 630, '2026-04-03', 6300 );
+		$this->rollups->increment( 'viewables', 63, 630, '2026-04-03', 6300 );
+
+		$this->assertSame( 2, $this->viewables( 63, '2026-04-03' ) );
+	}
+
+	/**
+	 * A view against an unmeasured row starts at one rather than staying null.
+	 *
+	 * `NULL + 1` is NULL in SQL, so without the COALESCE on update a row
+	 * carried over from before the column existed would silently swallow every
+	 * view recorded against it.
+	 */
+	public function test_a_view_on_a_pre_existing_row_counts_from_zero(): void {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Recreating the pre-v17 row shape.
+		$wpdb->insert(
+			$this->rollups->table_name(),
+			array(
+				'day_utc'      => '2026-04-04',
+				'placement_id' => 64,
+				'campaign_id'  => 640,
+				'line_item_id' => 6400,
+				'impressions'  => 5,
+			)
+		);
+
+		$this->rollups->increment( 'viewables', 64, 640, '2026-04-04', 6400 );
+
+		$this->assertSame( 1, $this->viewables( 64, '2026-04-04' ) );
+	}
+
+	/**
+	 * Reconciling a pre-measurement day leaves it unmeasured.
+	 *
+	 * The reconciler walks from the earliest ledger day whenever it has no
+	 * watermark, and no pre-P11 day has viewable events — so a plain
+	 * `viewables = VALUES(viewables)` rewrites every one of them from NULL to
+	 * zero. History would silently change from "nobody was measuring" to "not
+	 * one ad was seen", which is the alarming reading and the false one.
+	 */
+	public function test_reconciling_history_does_not_invent_zero_views(): void {
+		global $wpdb;
+
+		update_option( Rollup_Repository::OPTION_VIEWABILITY_SINCE, '2026-06-01' );
+
+		$events = Plugin::instance()->container()->get( \Aggressive\Ads\Repository\Event_Repository::class );
+		$events->install_table();
+
+		$day   = '2026-05-20';
+		$start = (int) strtotime( $day . ' 00:00:00 UTC' );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Ledger fixture for this plugin's own table.
+		$wpdb->insert(
+			$events->table_name(),
+			array(
+				'created_at_ts' => $start + 60,
+				'event'         => \Aggressive\Ads\Repository\Event_Repository::TYPE_SERVED,
+				'placement_id'  => 81,
+				'campaign_id'   => 810,
+				'creative_id'   => 8100,
+				'token_hash'    => str_repeat( '1', 64 ),
+				'ip_hash'       => str_repeat( '2', 64 ),
+			)
+		);
+
+		$this->assertTrue( $this->rollups->reconcile_day( $day ) );
+
+		$this->assertNull(
+			$this->viewables( 81, $day ),
+			'Reconciling a day from before measurement rewrote it as zero views.'
+		);
+
+		delete_option( Rollup_Repository::OPTION_VIEWABILITY_SINCE );
+	}
+
+	/**
+	 * A day after measurement began reconciles to a real number.
+	 *
+	 * The positive half: a rule that returned NULL for every day would satisfy
+	 * the test above while making viewability permanently unreportable.
+	 */
+	public function test_reconciling_a_measured_day_counts_its_views(): void {
+		global $wpdb;
+
+		update_option( Rollup_Repository::OPTION_VIEWABILITY_SINCE, '2026-06-01' );
+
+		$events = Plugin::instance()->container()->get( \Aggressive\Ads\Repository\Event_Repository::class );
+		$events->install_table();
+
+		$day   = '2026-06-10';
+		$start = (int) strtotime( $day . ' 00:00:00 UTC' );
+
+		foreach ( array( \Aggressive\Ads\Repository\Event_Repository::TYPE_SERVED, \Aggressive\Ads\Repository\Event_Repository::TYPE_VIEWABLE ) as $index => $event ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Ledger fixture for this plugin's own table.
+			$wpdb->insert(
+				$events->table_name(),
+				array(
+					'created_at_ts' => $start + 60,
+					'event'         => $event,
+					'placement_id'  => 82,
+					'campaign_id'   => 820,
+					'creative_id'   => 8200,
+					'token_hash'    => str_repeat( '3', 64 ),
+					'ip_hash'       => str_repeat( '4', 64 ),
+				)
+			);
+		}
+
+		$this->assertTrue( $this->rollups->reconcile_day( $day ) );
+
+		$this->assertSame(
+			1,
+			$this->viewables( 82, $day ),
+			'A measured day did not reconcile its views.'
+		);
+
+		delete_option( Rollup_Repository::OPTION_VIEWABILITY_SINCE );
+	}
 }

@@ -702,6 +702,29 @@ final class Creative_Repository {
 	}
 
 	/**
+	 * Public URL of a promoted creative's Media Library file, or empty.
+	 *
+	 * Approval deletes the private original, so the authenticated file route
+	 * answers 404 for anything approved — correctly, since there is nothing
+	 * left to stream. Anything showing a creative has to follow it here once it
+	 * has an attachment.
+	 *
+	 * @param int $creative_id Creative post id.
+	 * @return string
+	 */
+	public function attachment_url( int $creative_id ): string {
+		$attachment_id = $this->attachment_id( $creative_id );
+
+		if ( $attachment_id <= 0 ) {
+			return '';
+		}
+
+		$url = wp_get_attachment_url( $attachment_id );
+
+		return is_string( $url ) ? $url : '';
+	}
+
+	/**
 	 * The Media Library attachment backing a creative, or 0.
 	 *
 	 * Zero until the creative is promoted at approval: uploads live in private

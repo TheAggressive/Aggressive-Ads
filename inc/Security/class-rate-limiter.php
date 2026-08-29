@@ -96,7 +96,15 @@ final class Rate_Limiter {
 		 * not limited. Beacon and click writes are.
 		 */
 		self::ACTION_BEACON         => array(
-			'limit'  => 300,
+
+			/*
+			 * Two per fill since viewability: the delivery and the view. The
+			 * ceiling doubled with it, because the limiter runs before the
+			 * token is parsed — a client that tripped it would stop recording
+			 * impressions too, and an under-counted impression is worse than
+			 * an unmeasured view.
+			 */
+			'limit'  => 600,
 			'window' => HOUR_IN_SECONDS,
 		),
 

@@ -131,6 +131,20 @@ final class Migration_Map {
 			16 => static function () use ( $c ): void {
 				$c->get( Rollup_Repository::class )->migrate_line_item_attribution();
 			},
+
+			/*
+			 * Additive only. History is deliberately left NULL — a day before
+			 * measurement existed has no viewability, and writing zero would
+			 * read as "nothing was seen" rather than "nobody was looking".
+			 */
+			17 => static function () use ( $c ): void {
+				$c->get( Rollup_Repository::class )->install_table();
+
+				// The boundary between "nobody was measuring" and "nothing was
+				// seen". Recorded once, so the reconciler can tell days either
+				// side of it apart rather than zeroing history.
+				add_option( Rollup_Repository::OPTION_VIEWABILITY_SINCE, gmdate( 'Y-m-d' ), '', false );
+			},
 		);
 	}
 }

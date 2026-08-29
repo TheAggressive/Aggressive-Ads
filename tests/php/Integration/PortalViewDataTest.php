@@ -410,6 +410,36 @@ final class PortalViewDataTest extends WP_UnitTestCase {
 		$this->assertStringContainsString( '/creatives/' . $creative_id . '/file', urldecode( $creative['preview'] ) );
 		$this->assertStringContainsString( '_wpnonce=', $creative['preview'] );
 		$this->assertArrayNotHasKey( 'path', $creative );
+
+		/*
+		 * Once approved the artwork moves to the Media Library and the private
+		 * original is deleted, so the authenticated route answers 404 — the
+		 * campaign screen has to follow the attachment or every approved
+		 * creative renders as a broken image, which is how this was found.
+		 */
+		$attachment_id = (int) self::factory()->attachment->create_object(
+			array(
+				'file'           => 'fall-gallery.png',
+				'post_mime_type' => 'image/png',
+			)
+		);
+
+		update_post_meta( $creative_id, Creative_Repository::META_ATTACHMENT_ID, $attachment_id );
+		$creatives->clear_private_file( $creative_id );
+
+		$approved = $this->view->campaign( $mine )['creative_slots'][0]['creatives'][0];
+
+		$this->assertTrue( $approved['approved'] );
+		$this->assertSame(
+			wp_get_attachment_url( $attachment_id ),
+			$approved['preview'],
+			'An approved creative still pointed at the deleted private original.'
+		);
+		$this->assertStringNotContainsString(
+			'/file',
+			$approved['preview'],
+			'An approved creative was sent to a route that can only answer 404.'
+		);
 		$this->assertArrayNotHasKey( 'token', $creative );
 		$this->assertStringNotContainsString( 'private-artwork.png', wp_json_encode( $campaign ) );
 		$this->assertStringNotContainsString( 'server-secret-token', wp_json_encode( $campaign ) );

@@ -50,11 +50,16 @@ final class Fill_Token {
 	 * @param int $placement_id Placement post id.
 	 * @param int $campaign_id  Campaign post id, or 0 for house.
 	 * @param int $creative_id  Creative post id, or 0 for house.
+	 * @param int $ttl          Lifetime in seconds. Explicit so expiry
+	 *                          behaviour is reachable from a test; every
+	 *                          production caller takes the default.
 	 * @return array{blog_id: int, placement_id: int, campaign_id: int, creative_id: int, exp: int, nonce: string, token: string}
 	 */
-	public function mint_on_site( int $blog_id, int $placement_id, int $campaign_id, int $creative_id ): array {
+	public function mint_on_site( int $blog_id, int $placement_id, int $campaign_id, int $creative_id, int $ttl = self::TTL_SECONDS ): array {
 		$nonce = bin2hex( random_bytes( 8 ) );
-		$exp   = time() + self::TTL_SECONDS;
+		// Explicit rather than fixed, so expiry behaviour is reachable from a
+		// test. Every caller uses the default.
+		$exp = time() + $ttl;
 
 		return array(
 			'blog_id'      => $blog_id,
@@ -70,10 +75,12 @@ final class Fill_Token {
 	/**
 	 * Parses a token. Null if expired, truncated, bound to another site, or the HMAC does not match.
 	 *
-	 * @param string $token Full token string.
+	 * @param string $token         Serialized token.
+	 * @param bool   $allow_expired Accept a token past its expiry, for the one
+	 *                              event that legitimately arrives late.
 	 * @return array{blog_id: int, placement_id: int, campaign_id: int, creative_id: int, exp: int, nonce: string}|null
 	 */
-	public function parse( string $token ): ?array {
+	public function parse( string $token, bool $allow_expired = false ): ?array {
 		if ( strlen( $token ) > self::MAX_LENGTH ) {
 			return null;
 		}
@@ -104,7 +111,19 @@ final class Fill_Token {
 			return null;
 		}
 
-		if ( $exp < time() ) {
+		/*
+		 * Expiry bounds how long a token may *start* reporting, and a view is
+		 * the one event that legitimately arrives late: an ad below the fold is
+		 * delivered at load and becomes viewable when somebody scrolls to it,
+		 * which can be well past the five-minute window. Refusing those drops
+		 * exactly the inventory viewability exists to measure while the
+		 * impression still counts in the denominator.
+		 *
+		 * Authenticity is unaffected — the HMAC above is what proves the token
+		 * is ours — and replay is bounded by the unique `(token_hash, event)`
+		 * key rather than by the clock.
+		 */
+		if ( ! $allow_expired && $exp < time() ) {
 			return null;
 		}
 
