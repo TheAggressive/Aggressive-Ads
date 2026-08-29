@@ -28,16 +28,18 @@ final class Beacon_Controller implements Service {
 	/**
 	 * Constructor.
 	 *
-	 * @param Fill_Service   $fill    Module gate and live check.
-	 * @param Fill_Token     $tokens  Token parser.
-	 * @param Rate_Limiter   $limiter Anonymous beacon bound.
-	 * @param Event_Recorder $recorder Durable event and projection write.
+	 * @param Fill_Service     $fill     Module gate and live check.
+	 * @param Fill_Token       $tokens   Token parser.
+	 * @param Rate_Limiter     $limiter  Anonymous beacon bound.
+	 * @param Event_Recorder   $recorder Durable event and projection write.
+	 * @param Event_Repository $events   Lifecycle ordering checks.
 	 */
 	public function __construct(
 		private readonly Fill_Service $fill,
 		private readonly Fill_Token $tokens,
 		private readonly Rate_Limiter $limiter,
-		private readonly Event_Recorder $recorder
+		private readonly Event_Recorder $recorder,
+		private readonly Event_Repository $events
 	) {
 	}
 
@@ -66,6 +68,27 @@ final class Beacon_Controller implements Service {
 						'validate_callback' => static fn ( mixed $value ): bool => is_string( $value )
 							&& strlen( $value ) <= Fill_Token::MAX_LENGTH
 							&& 1 === preg_match( '/^[0-9a-f.]+$/', $value ),
+					),
+
+					/*
+					 * Optional, and absent means `served`. A page cached with
+					 * the previous script sends no event type and must keep
+					 * reporting impressions rather than failing validation.
+					 *
+					 * Allowlisted to the two a browser may report. The rest of
+					 * the lifecycle — request, fill, no_fill, conversion — is
+					 * written by the server or by a later phase, and none of it
+					 * is a client's to claim.
+					 */
+					'event' => array(
+						'type'              => 'string',
+						'required'          => false,
+						'sanitize_callback' => 'sanitize_key',
+						'validate_callback' => static fn ( mixed $value ): bool => in_array(
+							$value,
+							array( Event_Repository::TYPE_SERVED, Event_Repository::TYPE_VIEWABLE ),
+							true
+						),
 					),
 				),
 			)
@@ -135,7 +158,27 @@ final class Beacon_Controller implements Service {
 		$hash = $this->tokens->hash( $token );
 		$ip   = $this->tokens->ip_hash( Delivery_Request::client_ip() );
 
-		$recorded = $this->recorder->record( Event_Repository::TYPE_SERVED, $parsed['placement_id'], $parsed['campaign_id'], $parsed['creative_id'], $hash, $ip );
+		$event = (string) ( $request->get_param( 'event' ) ?? Event_Repository::TYPE_SERVED );
+
+		/*
+		 * A view has to follow a delivery, checked against this exact token.
+		 *
+		 * Viewability is client-attested — the browser is the only thing that
+		 * knows what was on screen — so the server's job is not to verify the
+		 * observation but to bound what a claim can be made about: a fill that
+		 * really happened, once. Without this a client could report views for
+		 * ads it never painted, and the number would measure nothing.
+		 */
+		if ( Event_Repository::TYPE_VIEWABLE === $event
+			&& ! $this->events->exists( Event_Repository::TYPE_SERVED, $hash ) ) {
+			return new WP_Error(
+				'aggr_beacon_out_of_order',
+				__( 'That token has not been delivered.', 'aggressive-ads' ),
+				array( 'status' => 409 )
+			);
+		}
+
+		$recorded = $this->recorder->record( $event, $parsed['placement_id'], $parsed['campaign_id'], $parsed['creative_id'], $hash, $ip );
 
 		if ( Event_Recorder::REPLAY === $recorded ) {
 			return new WP_Error(

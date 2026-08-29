@@ -441,4 +441,160 @@ final class FillRoutesTest extends WP_UnitTestCase {
 
 		return $redirected;
 	}
+
+	/**
+	 * A view has to follow a delivery, on the same token.
+	 *
+	 * Viewability is client-attested: the browser is the only thing that knows
+	 * what was on screen, so the server cannot verify the observation. What it
+	 * can do is bound what a claim may be made about — a fill that really
+	 * happened. Without this a client could report views for ads it never
+	 * painted and the number would measure nothing at all.
+	 *
+	 * @return void
+	 */
+	public function test_a_view_is_refused_before_the_delivery_it_claims(): void {
+		$this->enable_native();
+
+		$token   = ( new Fill_Token() )->mint( $this->placement_id, 0, 0 )['token'];
+		$request = new WP_REST_Request( 'POST', '/aggr/v1/i' );
+		$request->set_body_params(
+			array(
+				'token' => $token,
+				'event' => 'viewable',
+			)
+		);
+
+		$this->assertSame(
+			409,
+			rest_get_server()->dispatch( $request )->get_status(),
+			'A viewable was accepted for a token that never recorded a delivery.'
+		);
+	}
+
+	/**
+	 * After the delivery, the same token may report one view.
+	 *
+	 * The positive half. A gate that refused every viewable would satisfy the
+	 * test above and measure nothing, which is the failure this whole phase is
+	 * about.
+	 *
+	 * @return void
+	 */
+	public function test_a_view_is_accepted_once_after_its_delivery(): void {
+		$this->enable_native();
+
+		$token = ( new Fill_Token() )->mint( $this->placement_id, 0, 0 )['token'];
+
+		$served = new WP_REST_Request( 'POST', '/aggr/v1/i' );
+		$served->set_body_params( array( 'token' => $token ) );
+		$this->assertSame( 204, rest_get_server()->dispatch( $served )->get_status() );
+
+		$viewable = new WP_REST_Request( 'POST', '/aggr/v1/i' );
+		$viewable->set_body_params(
+			array(
+				'token' => $token,
+				'event' => 'viewable',
+			)
+		);
+
+		$this->assertSame(
+			204,
+			rest_get_server()->dispatch( $viewable )->get_status(),
+			'A view was refused for a token that had already been delivered.'
+		);
+
+		$this->assertSame(
+			409,
+			rest_get_server()->dispatch( $viewable )->get_status(),
+			'The same token reported a second view, so the count is not once per fill.'
+		);
+	}
+
+	/**
+	 * A delivery and a view are separate rows, not one another.
+	 *
+	 * The replay key is `(token_hash, event)`. If it were the token alone, the
+	 * view above would be refused as a duplicate delivery; if the event were
+	 * ignored, a view would overwrite the impression.
+	 *
+	 * @return void
+	 */
+	public function test_a_delivery_is_not_consumed_by_its_view(): void {
+		$this->enable_native();
+
+		$token = ( new Fill_Token() )->mint( $this->placement_id, 0, 0 )['token'];
+
+		$served = new WP_REST_Request( 'POST', '/aggr/v1/i' );
+		$served->set_body_params( array( 'token' => $token ) );
+		rest_get_server()->dispatch( $served );
+
+		$viewable = new WP_REST_Request( 'POST', '/aggr/v1/i' );
+		$viewable->set_body_params(
+			array(
+				'token' => $token,
+				'event' => 'viewable',
+			)
+		);
+		rest_get_server()->dispatch( $viewable );
+
+		$events = Plugin::instance()->container()->get( Event_Repository::class );
+		$hash   = ( new Fill_Token() )->hash( $token );
+
+		$this->assertTrue( $events->exists( Event_Repository::TYPE_SERVED, $hash ) );
+		$this->assertTrue( $events->exists( Event_Repository::TYPE_VIEWABLE, $hash ) );
+	}
+
+	/**
+	 * The client may only claim the two events a browser can observe.
+	 *
+	 * `request`, `fill` and `no_fill` are the server's own account of what it
+	 * did, and `conversion` is P12's. A client that could write any of them
+	 * could rewrite the funnel it is supposed to be measured by.
+	 *
+	 * @return void
+	 */
+	public function test_the_client_cannot_claim_a_server_owned_event(): void {
+		$this->enable_native();
+
+		foreach ( array( 'request', 'fill', 'no_fill', 'conversion', 'anything' ) as $event ) {
+			$token   = ( new Fill_Token() )->mint( $this->placement_id, 0, 0 )['token'];
+			$request = new WP_REST_Request( 'POST', '/aggr/v1/i' );
+			$request->set_body_params(
+				array(
+					'token' => $token,
+					'event' => $event,
+				)
+			);
+
+			$this->assertSame(
+				400,
+				rest_get_server()->dispatch( $request )->get_status(),
+				"The beacon accepted {$event}, which no client is entitled to write."
+			);
+		}
+	}
+
+	/**
+	 * A page cached with the previous script keeps reporting impressions.
+	 *
+	 * The compatibility promise the contract makes: absent means `served`.
+	 *
+	 * @return void
+	 */
+	public function test_a_beacon_without_an_event_still_records_a_delivery(): void {
+		$this->enable_native();
+
+		$token   = ( new Fill_Token() )->mint( $this->placement_id, 0, 0 )['token'];
+		$request = new WP_REST_Request( 'POST', '/aggr/v1/i' );
+		$request->set_body_params( array( 'token' => $token ) );
+
+		$this->assertSame( 204, rest_get_server()->dispatch( $request )->get_status() );
+
+		$events = Plugin::instance()->container()->get( Event_Repository::class );
+
+		$this->assertTrue(
+			$events->exists( Event_Repository::TYPE_SERVED, ( new Fill_Token() )->hash( $token ) )
+		);
+	}
 }

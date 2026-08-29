@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-29T00:48:56+00:00\n"
+"POT-Creation-Date: 2026-08-29T09:51:25+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -2588,31 +2588,35 @@ msgstr ""
 msgid "The account could not be created."
 msgstr ""
 
-#: inc/REST/class-beacon-controller.php:85
+#: inc/REST/class-beacon-controller.php:108
 #: inc/REST/class-decisions-controller.php:90
 #: inc/REST/class-fill-controller.php:71
 msgid "Native delivery is off."
 msgstr ""
 
-#: inc/REST/class-beacon-controller.php:93
+#: inc/REST/class-beacon-controller.php:116
 #: inc/REST/class-decisions-controller.php:98
 #: inc/REST/class-fill-controller.php:79
 msgid "That request is not allowed from this origin."
 msgstr ""
 
-#: inc/REST/class-beacon-controller.php:113
+#: inc/REST/class-beacon-controller.php:136
 msgid "Automated fetches are not impressions."
 msgstr ""
 
-#: inc/REST/class-beacon-controller.php:130
+#: inc/REST/class-beacon-controller.php:153
 msgid "That token is not valid."
 msgstr ""
 
-#: inc/REST/class-beacon-controller.php:143
+#: inc/REST/class-beacon-controller.php:176
+msgid "That token has not been delivered."
+msgstr ""
+
+#: inc/REST/class-beacon-controller.php:186
 msgid "That token has already been used."
 msgstr ""
 
-#: inc/REST/class-beacon-controller.php:151
+#: inc/REST/class-beacon-controller.php:194
 msgid "That impression could not be recorded. Please try again."
 msgstr ""
 

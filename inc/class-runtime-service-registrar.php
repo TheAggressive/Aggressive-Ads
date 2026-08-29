@@ -289,7 +289,8 @@ final class Runtime_Service_Registrar {
 				$c->get( Fill_Service::class ),
 				$c->get( Fill_Token::class ),
 				$c->get( Rate_Limiter::class ),
-				$c->get( Event_Recorder::class )
+				$c->get( Event_Recorder::class ),
+				$c->get( Event_Repository::class )
 			)
 		);
 
