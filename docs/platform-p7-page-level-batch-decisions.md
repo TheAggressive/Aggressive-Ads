@@ -72,3 +72,29 @@ remains fully supported for backward compatibility.
 2. Unit tests verify roadblock coordination, competitive separation, and creative deduplication.
 3. REST tests verify permission gates, input validation, and single-roundtrip batch responses.
 4. CI verification (`pnpm ci:verify`) and all static analysis gates pass cleanly.
+
+## How the coordination settings reach the page
+
+Roadblocks, competitive separation and category exclusivity are all configured
+inside `delivery_settings` — `roadblock`, `category`, `exclusive_category`,
+`competing_orgs`. That column is not returned by `candidates_for_placement()`,
+so until `Decision_Engine::enrich()` began carrying it, **none of these three
+rules could fire however they were configured**.
+
+Asset deduplication is the exception, and the reason the gap was easy to miss:
+it reads `asset_id`, which the candidate query has always returned, so one page
+rule worked while the other three did not.
+
+The unit tests did not show it. Each built a candidate row by hand with
+`delivery_settings` already on it — the shape the production query does not
+produce. `PageCoordinationInputsTest` goes through `Fill_Service::for_slots()`
+instead, so a settings column that stops reaching the row fails.
+
+### Determinism is asserted where it can be exact
+
+`coordinate()` is compared against `Weighted_Selection::choose()` for the same
+seed rather than by calling it twice and checking the answers match. Two calls
+agreeing proves nothing when the seed is ignored: the winner still matches
+whenever chance lands the same way, which for a small candidate set is most of
+the time. A first version of that test did exactly this and passed with the seed
+deliberately discarded.
