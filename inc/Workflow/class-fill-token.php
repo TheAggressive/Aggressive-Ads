@@ -99,8 +99,39 @@ final class Fill_Token {
 		$nonce        = $parts[5];
 		$hmac         = $parts[6];
 
-		if ( $blog_id <= 0 || $placement_id <= 0 || $exp <= 0 || 1 !== preg_match( '/^[a-f0-9]{16}$/', $nonce ) || 1 !== preg_match( '/^[a-f0-9]{32}$/', $hmac ) ) {
+		if ( $blog_id <= 0 || $placement_id <= 0 || $exp <= 0 || 1 !== preg_match( '/^[a-f0-9]{16}\z/', $nonce ) || 1 !== preg_match( '/^[a-f0-9]{32}\z/', $hmac ) ) {
 			return null;
+		}
+
+		/*
+		 * The signature must cover the bytes presented, not the bytes we chose
+		 * to read.
+		 *
+		 * `sign()` re-serializes the *cast* integers, so without this every
+		 * numeric segment is malleable: `(int) '1<img src=x>'` is 1, and
+		 * `1<img src=x>.42.7.9.<exp>.<nonce>.<hmac>` therefore produces the same
+		 * digest as the canonical token and passes `hash_equals()` untouched.
+		 * Only the nonce and the HMAC were ever charset-constrained.
+		 *
+		 * That was not exploitable — the REST routes gate on `[0-9a-f.]`, and
+		 * the click hop percent-encodes what it forwards — but the click hop is
+		 * now the thing that hands this token to an advertiser's page, and a
+		 * signed value whose signature does not cover its own serialization is
+		 * not something to publish. It also meant one fill could produce
+		 * unlimited distinct `token_hash` values, since the hash is taken over
+		 * the string rather than the payload.
+		 *
+		 * Comparing the round trip rather than running another regex, because
+		 * this rejects exactly what `encode()` would never emit — leading
+		 * zeros, a leading `+`, surrounding whitespace, trailing text — without
+		 * a second definition of "numeric" that could drift from the first.
+		 */
+		$canonical = array( $blog_id, $placement_id, $campaign_id, $creative_id, $exp );
+
+		foreach ( $canonical as $index => $value ) {
+			if ( (string) $value !== $parts[ $index ] ) {
+				return null;
+			}
 		}
 
 		if ( ( 0 === $campaign_id ) !== ( 0 === $creative_id ) ) {
