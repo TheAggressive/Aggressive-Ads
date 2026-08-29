@@ -127,7 +127,7 @@ final class Settings_Schema {
 	 * an approval is not a default anybody chose — it is one they inherited on
 	 * upgrade.
 	 *
-	 * @return array{modules: array<string, bool>, brand: array<string, string>, delivery: array{fill_ttl: int, house_policy: string}, tracking: array{retention_days: int}, creative: array{retention_days: int}, audit: array{retention_days: int}, live_edits: array<string, bool>}
+	 * @return array{modules: array<string, bool>, brand: array<string, string>, delivery: array{fill_ttl: int, house_policy: string, viewable_ratio: int, viewable_dwell_ms: int}, tracking: array{retention_days: int}, creative: array{retention_days: int}, audit: array{retention_days: int}, live_edits: array<string, bool>}
 	 */
 	public static function defaults(): array {
 		return array(
@@ -149,8 +149,10 @@ final class Settings_Schema {
 				'text'          => '#111214',
 			),
 			'delivery'   => array(
-				'fill_ttl'     => 30,
-				'house_policy' => self::HOUSE_WHEN_EMPTY,
+				'fill_ttl'          => 30,
+				'house_policy'      => self::HOUSE_WHEN_EMPTY,
+				'viewable_ratio'    => Viewability_Rules::DEFAULT_RATIO_PERCENT,
+				'viewable_dwell_ms' => Viewability_Rules::DEFAULT_DWELL_MS,
 			),
 			'tracking'   => array(
 				'retention_days' => 90,
@@ -175,7 +177,7 @@ final class Settings_Schema {
 	 * Merge stored values onto defaults. Unknown keys are dropped.
 	 *
 	 * @param mixed $stored Raw option value.
-	 * @return array{modules: array<string, bool>, brand: array<string, string>, delivery: array{fill_ttl: int, house_policy: string}, tracking: array{retention_days: int}, creative: array{retention_days: int}, audit: array{retention_days: int}, live_edits: array<string, bool>}
+	 * @return array{modules: array<string, bool>, brand: array<string, string>, delivery: array{fill_ttl: int, house_policy: string, viewable_ratio: int, viewable_dwell_ms: int}, tracking: array{retention_days: int}, creative: array{retention_days: int}, audit: array{retention_days: int}, live_edits: array<string, bool>}
 	 */
 	public static function merge( mixed $stored ): array {
 		$defaults = self::defaults();
@@ -218,6 +220,21 @@ final class Settings_Schema {
 			$defaults['delivery']['fill_ttl'] = (int) $delivery['fill_ttl'];
 		}
 
+		/*
+		 * Clamped by the rules that evaluate them rather than range-checked
+		 * here, so the accepted values have one definition. Without these two
+		 * arms `merge()` drops the keys and the threshold is permanently the
+		 * default — the shape of defect that had four delivery stages reading
+		 * configuration nothing supplied.
+		 */
+		if ( isset( $delivery['viewable_ratio'] ) ) {
+			$defaults['delivery']['viewable_ratio'] = Viewability_Rules::ratio_percent( $delivery['viewable_ratio'] );
+		}
+
+		if ( isset( $delivery['viewable_dwell_ms'] ) ) {
+			$defaults['delivery']['viewable_dwell_ms'] = Viewability_Rules::dwell_ms( $delivery['viewable_dwell_ms'] );
+		}
+
 		if ( isset( $delivery['house_policy'] ) && is_string( $delivery['house_policy'] ) ) {
 			$defaults['delivery']['house_policy'] = $delivery['house_policy'];
 		}
@@ -241,7 +258,7 @@ final class Settings_Schema {
 	 * Validate and normalise a submitted document.
 	 *
 	 * @param array<string, mixed> $input Raw modules/brand/delivery/tracking/live_edits fields.
-	 * @return array{ok: true, value: array{modules: array<string, bool>, brand: array<string, string>, delivery: array{fill_ttl: int, house_policy: string}, tracking: array{retention_days: int}, creative: array{retention_days: int}, audit: array{retention_days: int}, live_edits: array<string, bool>}}|array{ok: false, errors: list<string>}
+	 * @return array{ok: true, value: array{modules: array<string, bool>, brand: array<string, string>, delivery: array{fill_ttl: int, house_policy: string, viewable_ratio: int, viewable_dwell_ms: int}, tracking: array{retention_days: int}, creative: array{retention_days: int}, audit: array{retention_days: int}, live_edits: array<string, bool>}}|array{ok: false, errors: list<string>}
 	 */
 	public static function validate( array $input ): array {
 		$defaults   = self::defaults();
@@ -350,6 +367,20 @@ final class Settings_Schema {
 			? (int) $delivery['fill_ttl']
 			: $defaults['delivery']['fill_ttl'];
 
+		/*
+		 * Clamped rather than refused, matching how they are read: a stored
+		 * value outside the range must still produce a working threshold, since
+		 * treating it as "no threshold" would leave viewability reading zero
+		 * and look exactly like nobody seeing any ads.
+		 */
+		$viewable_ratio = Viewability_Rules::ratio_percent(
+			$delivery['viewable_ratio'] ?? $defaults['delivery']['viewable_ratio']
+		);
+
+		$viewable_dwell_ms = Viewability_Rules::dwell_ms(
+			$delivery['viewable_dwell_ms'] ?? $defaults['delivery']['viewable_dwell_ms']
+		);
+
 		if ( $fill_ttl < self::MIN_FILL_TTL || $fill_ttl > self::MAX_FILL_TTL ) {
 			$errors[] = 'fill_ttl';
 		}
@@ -415,8 +446,10 @@ final class Settings_Schema {
 					'text'          => $colours['text'],
 				),
 				'delivery'   => array(
-					'fill_ttl'     => $fill_ttl,
-					'house_policy' => $house_policy,
+					'fill_ttl'          => $fill_ttl,
+					'house_policy'      => $house_policy,
+					'viewable_ratio'    => $viewable_ratio,
+					'viewable_dwell_ms' => $viewable_dwell_ms,
 				),
 				'tracking'   => array(
 					'retention_days' => $retention,

@@ -443,17 +443,19 @@ final class FillRoutesTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A view has to follow a delivery, on the same token.
+	 * A view that overtakes its own delivery records both.
 	 *
-	 * Viewability is client-attested: the browser is the only thing that knows
-	 * what was on screen, so the server cannot verify the observation. What it
-	 * can do is bound what a claim may be made about — a fill that really
-	 * happened. Without this a client could report views for ads it never
-	 * painted and the number would measure nothing at all.
+	 * The two beacons are independent fire-and-forget requests and nothing
+	 * orders them. Refusing the early one lost it permanently — `sendBeacon`
+	 * reports nothing back, so the client cannot know to retry.
+	 *
+	 * No leverage is granted: the token still has to be ours, a client wanting
+	 * to inflate impressions could always beacon the delivery directly, and
+	 * each event is spent once against `(token_hash, event)`.
 	 *
 	 * @return void
 	 */
-	public function test_a_view_is_refused_before_the_delivery_it_claims(): void {
+	public function test_a_view_arriving_first_records_its_delivery_too(): void {
 		$this->enable_native();
 
 		$token   = ( new Fill_Token() )->mint( $this->placement_id, 0, 0 )['token'];
@@ -465,11 +467,16 @@ final class FillRoutesTest extends WP_UnitTestCase {
 			)
 		);
 
-		$this->assertSame(
-			409,
-			rest_get_server()->dispatch( $request )->get_status(),
-			'A viewable was accepted for a token that never recorded a delivery.'
+		$this->assertSame( 204, rest_get_server()->dispatch( $request )->get_status() );
+
+		$events = Plugin::instance()->container()->get( Event_Repository::class );
+		$hash   = ( new Fill_Token() )->hash( $token );
+
+		$this->assertTrue(
+			$events->exists( Event_Repository::TYPE_SERVED, $hash ),
+			'A view was recorded without the delivery it implies.'
 		);
+		$this->assertTrue( $events->exists( Event_Repository::TYPE_VIEWABLE, $hash ) );
 	}
 
 	/**
@@ -595,6 +602,63 @@ final class FillRoutesTest extends WP_UnitTestCase {
 
 		$this->assertTrue(
 			$events->exists( Event_Repository::TYPE_SERVED, ( new Fill_Token() )->hash( $token ) )
+		);
+	}
+
+	/**
+	 * A view is accepted after the token's window has closed.
+	 *
+	 * An ad below the fold is delivered at page load and becomes viewable when
+	 * somebody scrolls to it, routinely past the five-minute token window.
+	 * Refusing those dropped exactly the inventory viewability exists to
+	 * measure while the impression stayed in the denominator — a systematic
+	 * under-count that reads as "our below-the-fold ads are never seen".
+	 *
+	 * @return void
+	 */
+	public function test_a_late_view_is_still_accepted(): void {
+		$this->enable_native();
+
+		$tokens = new Fill_Token();
+		$token  = $tokens->mint_on_site( get_current_blog_id(), $this->placement_id, 0, 0, -60 )['token'];
+
+		$this->assertNull( $tokens->parse( $token ), 'The fixture token was not actually expired.' );
+
+		$request = new WP_REST_Request( 'POST', '/aggr/v1/i' );
+		$request->set_body_params(
+			array(
+				'token' => $token,
+				'event' => 'viewable',
+			)
+		);
+
+		$this->assertSame(
+			204,
+			rest_get_server()->dispatch( $request )->get_status(),
+			'A view arriving after the token window was dropped.'
+		);
+	}
+
+	/**
+	 * A delivery gets no such tolerance.
+	 *
+	 * The negative half, and the one that matters: expiry still bounds how long
+	 * a token may report an impression, which is what keeps a harvested token
+	 * from counting inventory hours later.
+	 *
+	 * @return void
+	 */
+	public function test_a_late_delivery_is_still_refused(): void {
+		$this->enable_native();
+
+		$token   = ( new Fill_Token() )->mint_on_site( get_current_blog_id(), $this->placement_id, 0, 0, -60 )['token'];
+		$request = new WP_REST_Request( 'POST', '/aggr/v1/i' );
+		$request->set_body_params( array( 'token' => $token ) );
+
+		$this->assertSame(
+			400,
+			rest_get_server()->dispatch( $request )->get_status(),
+			'An expired token recorded an impression.'
 		);
 	}
 }

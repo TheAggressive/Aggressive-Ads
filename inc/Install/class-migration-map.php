@@ -139,6 +139,11 @@ final class Migration_Map {
 			 */
 			17 => static function () use ( $c ): void {
 				$c->get( Rollup_Repository::class )->install_table();
+
+				// The boundary between "nobody was measuring" and "nothing was
+				// seen". Recorded once, so the reconciler can tell days either
+				// side of it apart rather than zeroing history.
+				add_option( Rollup_Repository::OPTION_VIEWABILITY_SINCE, gmdate( 'Y-m-d' ), '', false );
 			},
 		);
 	}

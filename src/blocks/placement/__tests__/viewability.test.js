@@ -51,6 +51,27 @@ describe( 'viewability observation', () => {
 	let element;
 	let sendBeacon;
 
+	/*
+	 * Teardowns from every observer started in a test.
+	 *
+	 * An observer that never reports never tears itself down — it is still
+	 * waiting — so its `visibilitychange` listener stays on the shared
+	 * `document`. Without collecting them, a later test dispatching that event
+	 * wakes every earlier test's observer and counts their beacons too.
+	 */
+	const started = [];
+
+	/** Starts an observer and remembers how to stop it. */
+	const observe = ( ...args ) => {
+		const teardown = observeViewability( ...args );
+
+		if ( teardown ) {
+			started.push( teardown );
+		}
+
+		return teardown;
+	};
+
 	beforeEach( () => {
 		jest.useFakeTimers();
 		setVisibility( 'visible' );
@@ -63,6 +84,7 @@ describe( 'viewability observation', () => {
 	} );
 
 	afterEach( () => {
+		started.splice( 0 ).forEach( ( teardown ) => teardown() );
 		jest.useRealTimers();
 		document.body.replaceChildren();
 		delete window.IntersectionObserver;
@@ -71,7 +93,7 @@ describe( 'viewability observation', () => {
 
 	it( 'reports once after the threshold is held for the full duration', () => {
 		const observer = installObserver();
-		observeViewability( element, options() );
+		observe( element, options() );
 
 		observer.fire( 0.5 );
 		jest.advanceTimersByTime( 1000 );
@@ -87,7 +109,7 @@ describe( 'viewability observation', () => {
 
 	it( 'does not report one millisecond early', () => {
 		const observer = installObserver();
-		observeViewability( element, options() );
+		observe( element, options() );
 
 		observer.fire( 1 );
 		jest.advanceTimersByTime( 999 );
@@ -97,7 +119,7 @@ describe( 'viewability observation', () => {
 
 	it( 'does not report below the ratio, however long it stays', () => {
 		const observer = installObserver();
-		observeViewability( element, options() );
+		observe( element, options() );
 
 		observer.fire( 0.49 );
 		jest.advanceTimersByTime( 60000 );
@@ -107,7 +129,7 @@ describe( 'viewability observation', () => {
 
 	it( 'restarts the clock when the ad scrolls back out', () => {
 		const observer = installObserver();
-		observeViewability( element, options() );
+		observe( element, options() );
 
 		observer.fire( 1 );
 		jest.advanceTimersByTime( 900 );
@@ -126,7 +148,7 @@ describe( 'viewability observation', () => {
 
 	it( 'does not count a second spent in a hidden tab', () => {
 		const observer = installObserver();
-		observeViewability( element, options() );
+		observe( element, options() );
 
 		observer.fire( 1 );
 		jest.advanceTimersByTime( 500 );
@@ -150,7 +172,7 @@ describe( 'viewability observation', () => {
 		const observer = installObserver();
 		setVisibility( 'hidden' );
 
-		observeViewability( element, options() );
+		observe( element, options() );
 
 		observer.fire( 1 );
 		jest.advanceTimersByTime( 5000 );
@@ -158,9 +180,55 @@ describe( 'viewability observation', () => {
 		expect( sendBeacon ).not.toHaveBeenCalled();
 	} );
 
+	/**
+	 * Coming back to the tab resumes measurement.
+	 *
+	 * Returning to a visible tab is not a threshold crossing, so the observer
+	 * never fires again — an ad still on screen would have been stranded, and
+	 * the previous test only proved the hide direction. Below-the-fold
+	 * inventory is exactly what a reader tabs away from and back to.
+	 */
+	it( 'measures again when the tab comes back', () => {
+		const observer = installObserver();
+		observe( element, options() );
+
+		observer.fire( 1 );
+		jest.advanceTimersByTime( 500 );
+
+		setVisibility( 'hidden' );
+		document.dispatchEvent( new Event( 'visibilitychange' ) );
+		jest.advanceTimersByTime( 5000 );
+
+		expect( sendBeacon ).not.toHaveBeenCalled();
+
+		setVisibility( 'visible' );
+		document.dispatchEvent( new Event( 'visibilitychange' ) );
+		jest.advanceTimersByTime( 1000 );
+
+		expect( sendBeacon ).toHaveBeenCalledTimes( 1 );
+	} );
+
+	/** An ad scrolled out before the tab was hidden does not resume. */
+	it( 'does not resume for an ad that is no longer on screen', () => {
+		const observer = installObserver();
+		observe( element, options() );
+
+		observer.fire( 1 );
+		observer.fire( 0 );
+
+		setVisibility( 'hidden' );
+		document.dispatchEvent( new Event( 'visibilitychange' ) );
+		setVisibility( 'visible' );
+		document.dispatchEvent( new Event( 'visibilitychange' ) );
+
+		jest.advanceTimersByTime( 5000 );
+
+		expect( sendBeacon ).not.toHaveBeenCalled();
+	} );
+
 	it( 'reports at most once and then stops observing', () => {
 		const observer = installObserver();
-		observeViewability( element, options() );
+		observe( element, options() );
 
 		observer.fire( 1 );
 		jest.advanceTimersByTime( 1000 );
@@ -179,7 +247,7 @@ describe( 'viewability observation', () => {
 
 	it( 'honours a threshold other than the default', () => {
 		const observer = installObserver();
-		observeViewability( element, options( { ratio: 0.3, dwellMs: 2000 } ) );
+		observe( element, options( { ratio: 0.3, dwellMs: 2000 } ) );
 
 		observer.fire( 0.3 );
 		jest.advanceTimersByTime( 1999 );
@@ -204,12 +272,8 @@ describe( 'viewability observation', () => {
 	it( 'does nothing without a token or a beacon', () => {
 		installObserver();
 
-		expect(
-			observeViewability( element, options( { token: '' } ) )
-		).toBeNull();
-		expect(
-			observeViewability( element, options( { beacon: '' } ) )
-		).toBeNull();
+		expect( observe( element, options( { token: '' } ) ) ).toBeNull();
+		expect( observe( element, options( { beacon: '' } ) ) ).toBeNull();
 		expect( observeViewability( null, options() ) ).toBeNull();
 	} );
 
@@ -228,7 +292,7 @@ describe( 'viewability observation', () => {
 		const observer = installObserver();
 		delete window.navigator.sendBeacon;
 
-		observeViewability( element, options() );
+		observe( element, options() );
 		observer.fire( 1 );
 
 		expect( () => jest.advanceTimersByTime( 1000 ) ).not.toThrow();

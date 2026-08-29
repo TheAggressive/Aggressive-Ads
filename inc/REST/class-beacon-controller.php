@@ -144,8 +144,12 @@ final class Beacon_Controller implements Service {
 			return $limited;
 		}
 
-		$token  = (string) $request->get_param( 'token' );
-		$parsed = $this->tokens->parse( $token );
+		$token = (string) $request->get_param( 'token' );
+		$event = (string) ( $request->get_param( 'event' ) ?? Event_Repository::TYPE_SERVED );
+
+		// A view legitimately arrives after the token's window; a delivery does
+		// not. See `Fill_Token::parse()` for why that is safe.
+		$parsed = $this->tokens->parse( $token, Event_Repository::TYPE_VIEWABLE === $event );
 
 		if ( null === $parsed || ! $this->fill->accepts( $parsed ) ) {
 			return new WP_Error(
@@ -158,24 +162,23 @@ final class Beacon_Controller implements Service {
 		$hash = $this->tokens->hash( $token );
 		$ip   = $this->tokens->ip_hash( Delivery_Request::client_ip() );
 
-		$event = (string) ( $request->get_param( 'event' ) ?? Event_Repository::TYPE_SERVED );
-
 		/*
-		 * A view has to follow a delivery, checked against this exact token.
+		 * A view implies a delivery, so an early one records both rather than
+		 * being refused.
 		 *
-		 * Viewability is client-attested — the browser is the only thing that
-		 * knows what was on screen — so the server's job is not to verify the
-		 * observation but to bound what a claim can be made about: a fill that
-		 * really happened, once. Without this a client could report views for
-		 * ads it never painted, and the number would measure nothing.
+		 * The two beacons are independent fire-and-forget requests and nothing
+		 * orders them. Refusing a view that overtook its own delivery lost it
+		 * permanently — `sendBeacon` reports nothing back, so the client cannot
+		 * know to retry.
+		 *
+		 * This grants no leverage. Viewability is client-attested either way,
+		 * and a client that wanted to inflate impressions could always beacon
+		 * the delivery directly. The token still has to be ours, and each event
+		 * is still spent once against `(token_hash, event)`.
 		 */
 		if ( Event_Repository::TYPE_VIEWABLE === $event
 			&& ! $this->events->exists( Event_Repository::TYPE_SERVED, $hash ) ) {
-			return new WP_Error(
-				'aggr_beacon_out_of_order',
-				__( 'That token has not been delivered.', 'aggressive-ads' ),
-				array( 'status' => 409 )
-			);
+			$this->recorder->record( Event_Repository::TYPE_SERVED, $parsed['placement_id'], $parsed['campaign_id'], $parsed['creative_id'], $hash, $ip );
 		}
 
 		$recorded = $this->recorder->record( $event, $parsed['placement_id'], $parsed['campaign_id'], $parsed['creative_id'], $hash, $ip );

@@ -40,6 +40,11 @@ export const observeViewability = ( element, options ) => {
 	let done = false;
 	let observer = null;
 
+	// The last ratio the observer reported. Kept because returning to a visible
+	// tab is not a threshold crossing, so the observer will not fire again —
+	// without this, an ad still on screen after a tab switch is never measured.
+	let lastRatio = 0;
+
 	const stopTimer = () => {
 		if ( timer !== null ) {
 			window.clearTimeout( timer );
@@ -92,11 +97,20 @@ export const observeViewability = ( element, options ) => {
 			// second, and resuming a part-served timer would count a second
 			// split across a tab switch.
 			stopTimer();
+
+			return;
+		}
+
+		// Back on screen, and still visible enough: start a fresh second.
+		if ( lastRatio >= ratio ) {
+			startTimer();
 		}
 	};
 
 	const onIntersect = ( entries ) => {
 		for ( const entry of entries ) {
+			lastRatio = entry.isIntersecting ? entry.intersectionRatio : 0;
+
 			const visibleEnough =
 				entry.isIntersecting &&
 				entry.intersectionRatio >= ratio &&

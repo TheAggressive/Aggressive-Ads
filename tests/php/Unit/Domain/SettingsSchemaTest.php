@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Tests\Unit\Domain;
 
 use Aggressive\Ads\Domain\Settings_Schema;
+use Aggressive\Ads\Domain\Viewability_Rules;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -378,5 +379,78 @@ final class SettingsSchemaTest extends TestCase {
 
 		$this->assertFalse( $result['ok'] );
 		$this->assertContains( 'audit_retention_days', $result['errors'] );
+	}
+
+	/**
+	 * A stored viewability threshold survives being read back.
+	 *
+	 * `merge()` builds from defaults and copies only the keys it knows, so a
+	 * setting absent from this class is dropped silently. That is how the
+	 * threshold shipped configurable-in-name-only: the rules clamped it, the
+	 * unit tests covered the clamping, and no stored value ever reached them.
+	 */
+	public function test_a_stored_viewability_threshold_is_read_back(): void {
+		$merged = Settings_Schema::merge(
+			array(
+				'delivery' => array(
+					'viewable_ratio'    => 30,
+					'viewable_dwell_ms' => 2000,
+				),
+			)
+		);
+
+		$this->assertSame( 30, $merged['delivery']['viewable_ratio'] );
+		$this->assertSame( 2000, $merged['delivery']['viewable_dwell_ms'] );
+	}
+
+	/** An unset threshold falls back to the standard rather than to nothing. */
+	public function test_the_threshold_defaults_to_the_standard(): void {
+		$merged = Settings_Schema::merge( array() );
+
+		$this->assertSame(
+			Viewability_Rules::DEFAULT_RATIO_PERCENT,
+			$merged['delivery']['viewable_ratio']
+		);
+		$this->assertSame(
+			Viewability_Rules::DEFAULT_DWELL_MS,
+			$merged['delivery']['viewable_dwell_ms']
+		);
+	}
+
+	/**
+	 * A saved threshold survives validation too.
+	 *
+	 * `validate()` builds its own delivery array rather than reusing the merged
+	 * one, so a key added to `merge()` alone is still dropped on the way in.
+	 */
+	public function test_a_submitted_threshold_survives_validation(): void {
+		$result = Settings_Schema::validate(
+			array(
+				'delivery' => array(
+					'viewable_ratio'    => 70,
+					'viewable_dwell_ms' => 1500,
+				),
+			)
+		);
+
+		$this->assertTrue( $result['ok'] );
+		$this->assertSame( 70, $result['value']['delivery']['viewable_ratio'] );
+		$this->assertSame( 1500, $result['value']['delivery']['viewable_dwell_ms'] );
+	}
+
+	/** An out-of-range threshold is clamped rather than refusing the save. */
+	public function test_an_out_of_range_threshold_is_clamped_not_refused(): void {
+		$result = Settings_Schema::validate(
+			array(
+				'delivery' => array(
+					'viewable_ratio'    => 500,
+					'viewable_dwell_ms' => -1,
+				),
+			)
+		);
+
+		$this->assertTrue( $result['ok'], 'An impossible threshold refused the whole save.' );
+		$this->assertSame( 100, $result['value']['delivery']['viewable_ratio'] );
+		$this->assertSame( Viewability_Rules::MIN_DWELL_MS, $result['value']['delivery']['viewable_dwell_ms'] );
 	}
 }

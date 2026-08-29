@@ -448,4 +448,92 @@ final class RollupLineItemAttributionTest extends WP_UnitTestCase {
 
 		$this->assertSame( 1, $this->viewables( 64, '2026-04-04' ) );
 	}
+
+	/**
+	 * Reconciling a pre-measurement day leaves it unmeasured.
+	 *
+	 * The reconciler walks from the earliest ledger day whenever it has no
+	 * watermark, and no pre-P11 day has viewable events — so a plain
+	 * `viewables = VALUES(viewables)` rewrites every one of them from NULL to
+	 * zero. History would silently change from "nobody was measuring" to "not
+	 * one ad was seen", which is the alarming reading and the false one.
+	 */
+	public function test_reconciling_history_does_not_invent_zero_views(): void {
+		global $wpdb;
+
+		update_option( Rollup_Repository::OPTION_VIEWABILITY_SINCE, '2026-06-01' );
+
+		$events = Plugin::instance()->container()->get( \Aggressive\Ads\Repository\Event_Repository::class );
+		$events->install_table();
+
+		$day   = '2026-05-20';
+		$start = (int) strtotime( $day . ' 00:00:00 UTC' );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Ledger fixture for this plugin's own table.
+		$wpdb->insert(
+			$events->table_name(),
+			array(
+				'created_at_ts' => $start + 60,
+				'event'         => \Aggressive\Ads\Repository\Event_Repository::TYPE_SERVED,
+				'placement_id'  => 81,
+				'campaign_id'   => 810,
+				'creative_id'   => 8100,
+				'token_hash'    => str_repeat( '1', 64 ),
+				'ip_hash'       => str_repeat( '2', 64 ),
+			)
+		);
+
+		$this->assertTrue( $this->rollups->reconcile_day( $day ) );
+
+		$this->assertNull(
+			$this->viewables( 81, $day ),
+			'Reconciling a day from before measurement rewrote it as zero views.'
+		);
+
+		delete_option( Rollup_Repository::OPTION_VIEWABILITY_SINCE );
+	}
+
+	/**
+	 * A day after measurement began reconciles to a real number.
+	 *
+	 * The positive half: a rule that returned NULL for every day would satisfy
+	 * the test above while making viewability permanently unreportable.
+	 */
+	public function test_reconciling_a_measured_day_counts_its_views(): void {
+		global $wpdb;
+
+		update_option( Rollup_Repository::OPTION_VIEWABILITY_SINCE, '2026-06-01' );
+
+		$events = Plugin::instance()->container()->get( \Aggressive\Ads\Repository\Event_Repository::class );
+		$events->install_table();
+
+		$day   = '2026-06-10';
+		$start = (int) strtotime( $day . ' 00:00:00 UTC' );
+
+		foreach ( array( \Aggressive\Ads\Repository\Event_Repository::TYPE_SERVED, \Aggressive\Ads\Repository\Event_Repository::TYPE_VIEWABLE ) as $index => $event ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Ledger fixture for this plugin's own table.
+			$wpdb->insert(
+				$events->table_name(),
+				array(
+					'created_at_ts' => $start + 60,
+					'event'         => $event,
+					'placement_id'  => 82,
+					'campaign_id'   => 820,
+					'creative_id'   => 8200,
+					'token_hash'    => str_repeat( '3', 64 ),
+					'ip_hash'       => str_repeat( '4', 64 ),
+				)
+			);
+		}
+
+		$this->assertTrue( $this->rollups->reconcile_day( $day ) );
+
+		$this->assertSame(
+			1,
+			$this->viewables( 82, $day ),
+			'A measured day did not reconcile its views.'
+		);
+
+		delete_option( Rollup_Repository::OPTION_VIEWABILITY_SINCE );
+	}
 }
