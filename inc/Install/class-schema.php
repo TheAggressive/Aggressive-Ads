@@ -24,7 +24,7 @@ final class Schema {
 	 *
 	 * Drives the migration walker in Upgrader.
 	 */
-	public const DB_VERSION = 15;
+	public const DB_VERSION = 16;
 
 	/**
 	 * The audit table's name, without the site's table prefix.
@@ -510,11 +510,13 @@ final class Schema {
 	day_utc date NOT NULL,
 	placement_id bigint(20) unsigned NOT NULL DEFAULT 0,
 	campaign_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	line_item_id bigint(20) unsigned NOT NULL DEFAULT 0,
 	impressions bigint(20) unsigned NOT NULL DEFAULT 0,
 	clicks bigint(20) unsigned NOT NULL DEFAULT 0,
 	PRIMARY KEY  (id),
-	UNIQUE KEY slot_day (placement_id,campaign_id,day_utc),
-	KEY campaign_day (campaign_id,day_utc)
+	UNIQUE KEY slot_line_day (placement_id,campaign_id,line_item_id,day_utc),
+	KEY campaign_day (campaign_id,day_utc),
+	KEY line_item_day (line_item_id,day_utc)
 ) {$charset_collate};";
 	}
 
@@ -529,6 +531,7 @@ final class Schema {
 			'day_utc',
 			'placement_id',
 			'campaign_id',
+			'line_item_id',
 			'impressions',
 			'clicks',
 		);
@@ -540,6 +543,6 @@ final class Schema {
 	 * @return array<int, string>
 	 */
 	public static function rollups_index_names(): array {
-		return array( 'PRIMARY', 'slot_day', 'campaign_day' );
+		return array( 'PRIMARY', 'slot_line_day', 'campaign_day', 'line_item_day' );
 	}
 }

@@ -192,7 +192,8 @@ final class Runtime_Service_Registrar {
 			Event_Recorder::class,
 			static fn ( Service_Container $c ): Event_Recorder => new Event_Recorder(
 				$c->get( Event_Repository::class ),
-				$c->get( Rollup_Repository::class )
+				$c->get( Rollup_Repository::class ),
+				$c->get( Creative_Assignment_Repository::class )
 			)
 		);
 		$container->register(

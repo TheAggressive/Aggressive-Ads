@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Workflow;
 
+use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Event_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 
@@ -25,12 +26,14 @@ final class Event_Recorder {
 	/**
 	 * Constructor.
 	 *
-	 * @param Event_Repository  $events  Durable event ledger.
-	 * @param Rollup_Repository $rollups Repairable reporting projection.
+	 * @param Event_Repository               $events      Durable event ledger.
+	 * @param Rollup_Repository              $rollups     Repairable reporting projection.
+	 * @param Creative_Assignment_Repository $assignments Line-item attribution.
 	 */
 	public function __construct(
 		private readonly Event_Repository $events,
-		private readonly Rollup_Repository $rollups
+		private readonly Rollup_Repository $rollups,
+		private readonly Creative_Assignment_Repository $assignments
 	) {
 	}
 
@@ -56,7 +59,17 @@ final class Event_Recorder {
 		$is_served = in_array( $type, array( Event_Repository::TYPE_SERVED, Event_Repository::TYPE_IMPRESSION ), true );
 		$column    = $is_served ? 'impressions' : 'clicks';
 
-		return $this->rollups->increment( $column, $placement_id, $campaign_id )
+		/*
+		 * A cap belongs to the line item, so the counter has to as well. The
+		 * ledger records the creative, not the line item, so it is resolved
+		 * from the assignment that served it — one indexed read beside a write
+		 * that was already happening. An unattributable event counts against
+		 * line item 0 rather than being dropped: the ledger stays the truth and
+		 * the daily reconcile repairs the projection.
+		 */
+		$line_item_id = $this->assignments->line_item_for( $creative_id, $placement_id );
+
+		return $this->rollups->increment( $column, $placement_id, $campaign_id, '', $line_item_id )
 			? self::RECORDED
 			: self::RECORDED_PENDING;
 	}
