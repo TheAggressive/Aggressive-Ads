@@ -145,18 +145,26 @@ Shared boundaries and group exit criteria:
       [platform-p11-viewability.md](platform-p11-viewability.md). The signal is
       client-attested and the contract says so: the server's controls are that
       a `viewable` must carry a signed token that already recorded a `served`,
-      and can be spent once. **Partly built:** the threshold, the observer, the
-      beacon, the projection and the reporting tile have shipped; the browser
-      evidence the contract asks for in the Playwright lane has not, so the
-      phase is complete. The browser evidence exists — `viewability.spec.ts`
-      watches a real advertisement enter a real viewport, and both halves of it
-      fail under sabotage. The Site Health ratio from the contract's
-      observability section shipped with it, so nothing from that document
-      remains outstanding.
+      and can be spent once. The threshold, the observer, the beacon, the
+      projection and the reporting tile shipped first; the browser evidence the
+      contract asks for in the Playwright lane followed —
+      `viewability.spec.ts` watches a real advertisement enter a real viewport,
+      and both halves of it fail under sabotage. The Site Health ratio from the
+      contract's observability section shipped with it, so nothing from that
+      document remains outstanding.
 - [ ] **P12 — Conversion tracking.** Definitions, browser and server-to-server
       endpoints, idempotency keys, click-through and view-through windows.
       Attribution derives from signed identifiers, never from client-supplied
-      campaign ids. WooCommerce adapter optional, never a dependency.
+      campaign ids. WooCommerce adapter optional, never a dependency. Scope,
+      boundaries and exit criteria are defined in
+      [platform-p12-conversion-tracking.md](platform-p12-conversion-tracking.md).
+      Two decisions are settled there before any code: a conversion gets its own
+      append-only table rather than a row in `aggr_events`, whose
+      `(token_hash, event)` unique key would permit exactly one conversion per
+      fill for all time; and **view-through attribution is defined but not
+      shipped**, because it requires the cross-visit identifier P11 explicitly
+      declined to invent and P27 exists to gate. Click-through needs none — the
+      signed token travels in the destination URL.
 - [ ] **P13 — Event and analytics schema.** Normalized dimensions and schema
       versioning on the existing append-first ledger. Indexes from real query
       patterns; write amplification reviewed rather than assumed.
