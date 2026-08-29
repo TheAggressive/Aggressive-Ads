@@ -271,13 +271,17 @@ final class Rollup_Repository {
 	 * would under-count as soon as the dashboard is paged, and house rows
 	 * (campaign_id = 0) never have organization meta so they cannot leak in.
 	 *
+	 * `viewables` is deliberately nullable all the way out: summing it with
+	 * `COALESCE` would turn "no day was measured" into "nothing was seen".
+	 *
 	 * @param int $org_id Owning organization.
-	 * @return array{impressions: int, clicks: int}
+	 * @return array{impressions: int, clicks: int, viewables: int|null}
 	 */
 	public function totals_for_org( int $org_id ): array {
 		$empty = array(
 			'impressions' => 0,
 			'clicks'      => 0,
+			'viewables'   => null,
 		);
 
 		if ( $org_id <= 0 ) {
@@ -292,7 +296,8 @@ final class Rollup_Repository {
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table names are prefix+constant / core postmeta; org id is prepared.
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
-				"SELECT COALESCE(SUM(r.impressions), 0) AS impressions, COALESCE(SUM(r.clicks), 0) AS clicks
+				"SELECT COALESCE(SUM(r.impressions), 0) AS impressions, COALESCE(SUM(r.clicks), 0) AS clicks,
+					SUM(r.viewables) AS viewables
 				FROM {$table} r
 				INNER JOIN {$meta} m
 					ON m.post_id = r.campaign_id
@@ -313,6 +318,10 @@ final class Rollup_Repository {
 		return array(
 			'impressions' => (int) $row['impressions'],
 			'clicks'      => (int) $row['clicks'],
+
+			// `SUM` of all-NULL is NULL, which is exactly the answer wanted:
+			// no measured day contributed, so there is no rate to report.
+			'viewables'   => null === $row['viewables'] ? null : (int) $row['viewables'],
 		);
 	}
 

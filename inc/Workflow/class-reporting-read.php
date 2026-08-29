@@ -46,13 +46,16 @@ final class Reporting_Read {
 	 * Organization totals, or zeros when the surface is off.
 	 *
 	 * @param int $org_id Owning organization.
-	 * @return array{impressions: int, clicks: int}
+	 * @return array{impressions: int, clicks: int, viewables: int|null}
 	 */
 	public function totals_for_org( int $org_id ): array {
 		if ( ! $this->surfaces() ) {
+			// Null rather than 0, matching the rest of the contract: Reporting
+			// being off is not a claim that nothing was seen.
 			return array(
 				'impressions' => 0,
 				'clicks'      => 0,
+				'viewables'   => null,
 			);
 		}
 

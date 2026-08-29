@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-29T10:48:39+00:00\n"
+"POT-Creation-Date: 2026-08-29T11:07:25+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -534,13 +534,13 @@ msgid "Campaign moved from %1$s to %2$s."
 msgstr ""
 
 #: inc/Admin/class-review-data.php:325
-#: inc/Portal/class-view-data.php:830
+#: inc/Portal/class-view-data.php:866
 msgid "Not scheduled"
 msgstr ""
 
 #. translators: 1: campaign start date. 2: campaign end date.
 #: inc/Admin/class-review-data.php:336
-#: inc/Portal/class-view-data.php:846
+#: inc/Portal/class-view-data.php:882
 #, php-format
 msgid "%1$s – %2$s"
 msgstr ""
@@ -2499,13 +2499,16 @@ msgid "Delete campaign"
 msgstr ""
 
 #: inc/Portal/class-view-data.php:492
+#: inc/Portal/class-view-data.php:775
 #: templates/portal/partials/campaign-table.php:80
 #: templates/portal/screens/campaign.php:907
 msgid "—"
 msgstr ""
 
 #. translators: %s: click-through rate as a percentage, e.g. 1.2.
+#. translators: %s: share of impressions that were viewable, e.g. 62.5.
 #: inc/Portal/class-view-data.php:497
+#: inc/Portal/class-view-data.php:780
 #: templates/portal/partials/campaign-table.php:77
 #: templates/portal/screens/campaign.php:904
 #, php-format
@@ -2535,8 +2538,16 @@ msgstr ""
 msgid "CTR"
 msgstr ""
 
+#: inc/Portal/class-view-data.php:747
+msgid "Viewable"
+msgstr ""
+
+#: inc/Portal/class-view-data.php:769
+msgid "Not measured"
+msgstr ""
+
 #. translators: %s: campaign start date.
-#: inc/Portal/class-view-data.php:839
+#: inc/Portal/class-view-data.php:875
 #, php-format
 msgid "From %s"
 msgstr ""
