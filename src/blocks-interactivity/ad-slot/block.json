@@ -7,13 +7,7 @@
 	"category": "widgets",
 	"icon": "megaphone",
 	"description": "A reserved slot filled at request time, optionally rotating. Editors place a slot, never a campaign.",
-	"keywords": [
-		"ad",
-		"advertising",
-		"slot",
-		"rotate",
-		"banner"
-	],
+	"keywords": [ "ad", "advertising", "slot", "rotate", "banner" ],
 	"textdomain": "aggressive-ads",
 	"attributes": {
 		"slot": {
@@ -32,13 +26,7 @@
 	"supports": {
 		"html": false,
 		"anchor": true,
-		"align": [
-			"left",
-			"center",
-			"right",
-			"wide",
-			"full"
-		],
+		"align": [ "left", "center", "right", "wide", "full" ],
 		"color": {
 			"background": true,
 			"text": false
