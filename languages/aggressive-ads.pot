@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-29T15:59:38+00:00\n"
+"POT-Creation-Date: 2026-08-29T19:02:56+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -3209,6 +3209,28 @@ msgstr ""
 
 #: inc/Workflow/class-campaign-validator.php:257
 msgid "This campaign is not ready to submit."
+msgstr ""
+
+#: inc/Workflow/class-conversion-definition-manager.php:55
+#: inc/Workflow/class-conversion-definition-manager.php:105
+msgid "You do not have permission to manage conversion definitions."
+msgstr ""
+
+#: inc/Workflow/class-conversion-definition-manager.php:72
+msgid "The conversion definition could not be created."
+msgstr ""
+
+#: inc/Workflow/class-conversion-definition-manager.php:114
+#: inc/Workflow/class-conversion-definition-manager.php:145
+msgid "That conversion definition no longer exists."
+msgstr ""
+
+#: inc/Workflow/class-conversion-definition-manager.php:137
+msgid "Somebody else changed this conversion definition. Reload and try again."
+msgstr ""
+
+#: inc/Workflow/class-conversion-definition-manager.php:193
+msgid "That conversion definition is not valid."
 msgstr ""
 
 #: inc/Workflow/class-creative-change-manager.php:80

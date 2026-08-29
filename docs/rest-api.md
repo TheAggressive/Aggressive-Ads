@@ -38,6 +38,9 @@ Routes marked “planned” remain contracts for later phases. Every other row i
 | `GET` | `/placements` | `aggr_access_portal` **or** `edit_posts` **or** `edit_theme_options` | Active placements only; includes public `slug` for the slot block; no ad-group IDs |
 | `GET` | `/placements/{id}/decision` | `aggr_review_campaigns` | Staff-only replay of one fill decision and trace for a placement. Optional `at` (UTC seconds) and `seed`. Missing and forbidden are both 404. Never cached |
 | `GET` | `/packages` | `aggr_access_portal` | Active, completely configured packages only; includes advertiser-facing placement labels, duration and integer-cent price |
+| `GET` | `/conversion-definitions` | `aggr_manage_settings` | Every definition, unpaged and bounded at 200. **`no-store`** — the response carries the public keys pages report against |
+| `POST` | `/conversion-definitions` | `aggr_manage_settings` | Creates one. `public_key`, `id` and `revision` are server-owned and ignored if sent. `no-store` |
+| `PATCH` | `/conversion-definitions/{id}` | `aggr_manage_settings` | `revision` is required; a stale one is `409`. A missing definition is `404`, not enumerable. `no-store` |
 | `POST` | `/settings` | `aggr_manage_settings` | Autosave for the Settings screen. Replaces the whole document; shares `Settings_Input` and `Settings::save()` with the admin-post form, so the WCAG contrast gate applies identically. Rejects the whole payload on any schema error |
 | `GET` | `/review/queue` | `aggr_review_campaigns` | Queue page plus tab counts. An unknown `filter` falls back to the default rather than erroring |
 | `GET` | `/review/campaigns/{id}` | `aggr_review_campaigns` | The staff view: internal notes, private creative previews, audit timeline. **The capability check on this route is the only gate** — `Review_Data` holds none |
@@ -56,6 +59,27 @@ They never accept a campaign, organization, placement, provider-ad, or current
 creative relationship from the caller; every relationship is derived from the
 authorized creative record. Approval busts fill cache and swaps our creative
 records; there is no downstream ad to rewrite.
+
+## Conversion definitions
+
+One capability for reading and writing, unlike packages. A definition is not a
+catalogue an advertiser browses: it carries the `public_key` a page presents to
+report a conversion, so reading one is as sensitive as writing one. An
+advertiser and a reviewer are both refused every verb.
+
+Value, currency and the attribution window live here rather than on a report,
+which is what stops an anonymous browser declaring what an outcome was worth.
+
+`public_key` is minted by the server and cannot be chosen. Three layers refuse a
+supplied one — the field allowlist, the domain validator's fixed return shape,
+and the repository — and only the repository is load-bearing, which is where the
+assertion lives.
+
+A denied request never reaches the workflow, because `permission_callback`
+answers first. That is deliberate: an unauthenticated probe that wrote an audit
+row on every attempt would be an unbounded write anybody could drive. The
+workflow keeps its own capability check and its own denial audit for internal
+callers, and those are asserted where they actually run.
 
 ## Draft creation and autosave
 

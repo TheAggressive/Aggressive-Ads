@@ -264,6 +264,7 @@ array(
     16 => migrate_line_item_attribution,  // rollups gain line_item_id
     17 => install_delivery_tables,        // rollups gain viewables (additive)
     18 => install_conversions,            // aggr_conversions + rollups gain conversions
+    19 => install_conversions,            // aggr_conversion_definitions
 )
 ```
 
@@ -434,6 +435,39 @@ attribution remains true. Reading one as the other would expire every conversion
 Conversion SQL lives in `Conversion_Repository`. As of schema 18 the table ships
 empty and nothing writes it — the code that fills it lands with the code that
 reads it, the same staging version 14 used for the creative model.
+
+### `aggr_conversion_definitions`
+
+Schema 19, and the trusted half of conversion tracking. Value, currency and the
+attribution window are read from here and never from a request, which is what
+stops an anonymous browser declaring what an outcome was worth or how long a
+click stays creditable.
+
+`public_key` is a random 128-bit hex identifier, **not** the row id. The
+reporting endpoint is public, and a sequential id invites walking the table to
+discover which definitions exist. Unique, so a lookup is one indexed read;
+unguessable, so "no such definition" and "not your definition" can return the
+same answer without either being a lie. It is minted by
+`Conversion_Definition_Repository::create()` and is not in any write path a
+client can reach — asserted directly, because it is the one guard that actually
+holds: the REST field allowlist and the domain validator's fixed return shape
+both refuse it too, and deleting either leaves the behaviour correct.
+
+The key is deliberately absent from every audit context. It is a credential, and
+an audit log is read by more people and kept longer than the screen that shows
+it.
+
+`status` is `varchar(16)`; its longest value is `archived`, at eight. Definitions
+are archived rather than deleted, because `aggr_conversions.definition_id` points
+here and deleting a row would strand every conversion it recorded.
+
+`revision` is optimistic concurrency, the same mechanism line items use. The
+check is part of the `WHERE` clause, never a read-then-write: two staff saving
+one definition would both read revision 4 and both believe they were current.
+
+`MAX_DEFINITIONS` bounds the table at 200. Not a licence limit — it is what makes
+the unpaged staff listing and the per-request public lookup safe without either
+growing a pagination story.
 
 ## The P3 candidate read contract
 
