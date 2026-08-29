@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-29T00:03:45+00:00\n"
+"POT-Creation-Date: 2026-08-29T00:13:29+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -246,7 +246,7 @@ msgstr ""
 #: inc/Admin/class-organization-screen.php:194
 #: inc/Admin/class-package-screen.php:170
 #: inc/Admin/class-placement-screen.php:173
-#: inc/Admin/class-review-screen.php:350
+#: inc/Admin/class-review-screen.php:366
 #: inc/Admin/class-settings-screen.php:312
 msgid "Try again"
 msgstr ""
@@ -803,6 +803,7 @@ msgid "Goal"
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:290
+#: inc/Admin/class-review-screen.php:338
 #: templates/portal/screens/campaign.php:271
 msgid "Pacing"
 msgstr ""
@@ -995,58 +996,118 @@ msgid "Close"
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:336
-msgid "Internal notes"
+msgid "Delivery policy"
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:337
-msgid "Visible to staff only"
-msgstr ""
-
-#: inc/Admin/class-review-screen.php:338
-msgid "Save internal notes"
+msgid "Priority (lower wins)"
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:339
-msgid "Audit timeline"
+msgid "Even"
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:340
-msgid "No audit events have been recorded for this campaign."
+msgid "As fast as possible"
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:341
-msgid "Unknown user"
+msgid "Daily impression cap (0 for none)"
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:342
-msgid "Campaign updated."
+msgid "Lifetime impression cap (0 for none)"
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:343
-msgid "Internal notes saved."
+msgid "Targeting rules (JSON)"
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:344
-msgid "Campaign changes approved."
+msgid "Leave empty to target everyone. A rule needs a dimension, an operator and a value."
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:345
-msgid "Campaign changes rejected."
+msgid "Frequency capping (JSON)"
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:346
-msgid "The advertiser request was declined."
+msgid "Leave empty for no cap. Set enabled, max_impressions, window and level."
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:347
-msgid "Ad update approved."
+msgid "Dayparts and timezone (JSON)"
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:348
-msgid "Ad update rejected."
+msgid "Leave empty to run at any hour. Set dayparts and an optional timezone."
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:349
+msgid "Save delivery policy"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:350
+msgid "Delivery policy saved."
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:351
+msgid "One of the JSON fields is not valid JSON. Fix it and save again."
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:352
+msgid "Internal notes"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:353
+msgid "Visible to staff only"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:354
+msgid "Save internal notes"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:355
+msgid "Audit timeline"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:356
+msgid "No audit events have been recorded for this campaign."
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:357
+msgid "Unknown user"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:358
+msgid "Campaign updated."
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:359
+msgid "Internal notes saved."
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:360
+msgid "Campaign changes approved."
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:361
+msgid "Campaign changes rejected."
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:362
+msgid "The advertiser request was declined."
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:363
+msgid "Ad update approved."
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:364
+msgid "Ad update rejected."
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:365
 msgid "That change could not be saved."
 msgstr ""
 

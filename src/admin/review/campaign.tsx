@@ -14,6 +14,7 @@
 import type { ReactElement } from 'react';
 import { useState } from '@wordpress/element';
 import { Dialog } from './dialog';
+import { DeliveryPolicy } from './delivery';
 import { t } from '../shared/save';
 import type { Campaign, Creative, CreativeUpdate, ReviewAction } from './types';
 import { requestOf } from './types';
@@ -310,6 +311,7 @@ export function CampaignView( {
 	onChanges,
 	onDeclineRequest,
 	onReplacement,
+	onDeliveryPolicy,
 }: {
 	campaign: Campaign;
 	busy: boolean;
@@ -320,6 +322,11 @@ export function CampaignView( {
 	onChanges: ( decision: string, notes: string ) => void;
 	onDeclineRequest: ( notes: string ) => void;
 	onReplacement: ( id: number, decision: string, notes: string ) => void;
+	onDeliveryPolicy: (
+		id: number,
+		revision: number,
+		fields: Record< string, unknown >
+	) => void;
 } ): ReactElement {
 	const request = requestOf( campaign );
 	const changesPlacements = campaign.pending_edits.some(
@@ -681,6 +688,18 @@ export function CampaignView( {
 					busy={ busy }
 					onSave={ onNotes }
 				/>
+
+				{ campaign.line_items.map( ( lineItem ) => (
+					<DeliveryPolicy
+						// Remounted on the stored revision for the same reason
+						// the notes box is: a save that was refused must leave
+						// the boxes showing what the server actually holds.
+						key={ `${ lineItem.id }-${ lineItem.revision }` }
+						lineItem={ lineItem }
+						busy={ busy }
+						onSave={ onDeliveryPolicy }
+					/>
+				) ) }
 
 				{ campaign.can_view_audit ? (
 					<section
