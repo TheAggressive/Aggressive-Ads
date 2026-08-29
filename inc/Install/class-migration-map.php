@@ -145,6 +145,24 @@ final class Migration_Map {
 				// side of it apart rather than zeroing history.
 				add_option( Rollup_Repository::OPTION_VIEWABILITY_SINCE, gmdate( 'Y-m-d' ), '', false );
 			},
+
+			/*
+			 * P12 storage only. The conversion ledger is created empty and
+			 * nothing writes it yet, so a site upgrading to 18 gains a table,
+			 * a nullable column and no behaviour — the same staging that
+			 * version 14 used for the creative model, and for the same reason:
+			 * the code that fills a table must ship with the code that reads
+			 * it, or a half-migrated site is a site serving from a table
+			 * nobody has finished writing.
+			 *
+			 * `conversions` is left NULL on history for P11's reason one phase
+			 * on. A day before conversions were measured did not convert
+			 * nobody; nobody was counting.
+			 */
+			18 => static function () use ( $c ): void {
+				$c->get( Installer::class )->install_conversions();
+				$c->get( Rollup_Repository::class )->install_table();
+			},
 		);
 	}
 }

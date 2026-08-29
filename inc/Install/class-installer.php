@@ -16,6 +16,7 @@ use Aggressive\Ads\Repository\Event_Repository;
 use Aggressive\Ads\Repository\Org_Access_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
+use Aggressive\Ads\Repository\Conversion_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Asset_Repository;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
@@ -143,6 +144,7 @@ final class Installer {
 		$this->audit_repository->install_table();
 		$this->install_org_access();
 		$this->install_delivery_tables();
+		$this->install_conversions();
 		$this->install_line_items();
 		$this->install_creative_model();
 
@@ -190,6 +192,11 @@ final class Installer {
 	public function install_delivery_tables(): void {
 		( new Event_Repository() )->install_table();
 		( new Rollup_Repository() )->install_table();
+	}
+
+	/** Creates or repairs the attributed-conversion ledger. */
+	public function install_conversions(): void {
+		( new Conversion_Repository() )->install_table();
 	}
 
 	/** Creates or repairs the campaign line-item table. */
