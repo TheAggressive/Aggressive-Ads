@@ -287,16 +287,23 @@ final class Line_Item_Repository {
 		global $wpdb;
 
 		$formats = array(
-			'name'          => '%s',
-			'pricing_model' => '%s',
-			'goal_type'     => '%s',
-			'goal_amount'   => '%d',
-			'budget_cents'  => '%d',
-			'daily_cap'     => '%d',
-			'lifetime_cap'  => '%d',
-			'priority'      => '%d',
-			'pacing_mode'   => '%s',
-			'weight'        => '%d',
+			'name'              => '%s',
+			'pricing_model'     => '%s',
+			'goal_type'         => '%s',
+			'goal_amount'       => '%d',
+			'budget_cents'      => '%d',
+			'daily_cap'         => '%d',
+			'lifetime_cap'      => '%d',
+			'priority'          => '%d',
+			'pacing_mode'       => '%s',
+			'weight'            => '%d',
+
+			// Stored as the JSON text the validator produced. The columns
+			// existed from P1 and nothing could write them until the delivery
+			// stages that read them had a configuration surface.
+			'targeting_rules'   => '%s',
+			'frequency_policy'  => '%s',
+			'delivery_settings' => '%s',
 		);
 		$sets    = array();
 		$values  = array();

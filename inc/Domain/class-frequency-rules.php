@@ -73,6 +73,56 @@ final class Frequency_Rules {
 	}
 
 	/**
+	 * Whether a frequency policy is one this engine can enforce.
+	 *
+	 * Refused at the write boundary rather than ignored at serve time. A policy
+	 * naming a window or level the evaluator does not know would read as "no
+	 * cap" — indistinguishable from having configured nothing, which is the
+	 * shape of bug that let this whole stage sit inert.
+	 *
+	 * @param mixed $config Decoded frequency policy.
+	 * @return array<int, string> Human-readable problems; empty when valid.
+	 */
+	public static function validate( mixed $config ): array {
+		if ( ! is_array( $config ) ) {
+			return array( 'Frequency policy must be an object.' );
+		}
+
+		// No policy is the default and valid; capping is opt-in.
+		if ( array() === $config ) {
+			return array();
+		}
+
+		$errors = array();
+		$window = (string) ( $config['window'] ?? self::WINDOW_DAY );
+		$level  = (string) ( $config['level'] ?? self::LEVEL_LINE_ITEM );
+
+		if ( ! in_array( $window, array( self::WINDOW_SESSION, self::WINDOW_HOUR, self::WINDOW_DAY, self::WINDOW_CUSTOM ), true ) ) {
+			$errors[] = sprintf( '"%s" is not a frequency window.', $window );
+		}
+
+		if ( ! in_array( $level, array( self::LEVEL_CAMPAIGN, self::LEVEL_LINE_ITEM, self::LEVEL_CREATIVE ), true ) ) {
+			$errors[] = sprintf( '"%s" is not a capping level.', $level );
+		}
+
+		$max = $config['max_impressions'] ?? null;
+
+		if ( ! empty( $config['enabled'] ) && ( ! is_int( $max ) || $max <= 0 ) ) {
+			$errors[] = 'An enabled frequency policy needs a positive whole "max_impressions".';
+		}
+
+		if ( self::WINDOW_CUSTOM === $window ) {
+			$seconds = $config['window_seconds'] ?? null;
+
+			if ( ! is_int( $seconds ) || $seconds <= 0 ) {
+				$errors[] = 'A custom window needs a positive whole "window_seconds".';
+			}
+		}
+
+		return $errors;
+	}
+
+	/**
 	 * Counts one delivery against every cap that applies to it.
 	 *
 	 * The half that was missing: `evaluate_candidate()` read a counter nothing

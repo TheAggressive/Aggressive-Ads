@@ -223,6 +223,51 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 	};
 
 	/**
+	 * Saves delivery policy on one line item.
+	 *
+	 * Its own handler rather than `write`, which posts: the line-item route is
+	 * a PATCH carrying the revision it expects, so a second window that changed
+	 * the same policy is answered with a conflict instead of being overwritten.
+	 *
+	 * The campaign is re-read afterwards so the panel redraws from the stored
+	 * policy — a refused save must not leave the boxes showing what was typed.
+	 *
+	 * @param lineItemId Line item to write.
+	 * @param revision   Revision the panel was drawn from.
+	 * @param fields     Policy fields to store.
+	 */
+	const saveDeliveryPolicy = async (
+		lineItemId: number,
+		revision: number,
+		fields: Record< string, unknown >
+	): Promise< void > => {
+		if ( ! campaign ) {
+			return;
+		}
+
+		setBusy( true );
+		setFlash( null );
+
+		try {
+			await apiFetch( {
+				path: `/aggr/v1/campaigns/${ campaign.id }/line-items/${ lineItemId }`,
+				method: 'PATCH',
+				data: { ...fields, revision },
+			} );
+
+			setFlash( {
+				type: 'success',
+				message: t( 'deliveryPolicySaved' ),
+			} );
+		} catch ( reason ) {
+			setFlash( { type: 'error', message: errorMessage( reason ) } );
+		} finally {
+			setBusy( false );
+			await loadCampaign( campaign.id, false );
+		}
+	};
+
+	/**
 	 * Posts one decision and adopts whatever the server sends back.
 	 *
 	 * @param path    Route below the review namespace.
@@ -321,6 +366,9 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 								: { to, review_notes: notes },
 							t( 'transitioned' )
 						).then( () => loadCampaign( campaign.id, false ) )
+					}
+					onDeliveryPolicy={ ( id, revision, fields ) =>
+						void saveDeliveryPolicy( id, revision, fields )
 					}
 					onNotes={ ( notes ) =>
 						void write(

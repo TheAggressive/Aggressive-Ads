@@ -9,7 +9,10 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Workflow;
 
+use Aggressive\Ads\Domain\Frequency_Rules;
 use Aggressive\Ads\Domain\Line_Item_Rules;
+use Aggressive\Ads\Domain\Schedule_Rules;
+use Aggressive\Ads\Domain\Targeting_Rules;
 use WP_Error;
 
 /** Normalizes the public line-item editing allowlist. */
@@ -38,6 +41,14 @@ final class Line_Item_Validator {
 			}
 			$clean['name'] = $name;
 		}
+
+		$policy = $this->validate_policies( $fields );
+
+		if ( is_wp_error( $policy ) ) {
+			return $policy;
+		}
+
+		$clean = array_merge( $clean, $policy );
 
 		foreach ( array(
 			'pricing_model' => Line_Item_Rules::PRICING_MODELS,
@@ -135,5 +146,72 @@ final class Line_Item_Validator {
 				'field'  => $field,
 			)
 		);
+	}
+
+	/**
+	 * Validates the three JSON delivery-policy fields.
+	 *
+	 * These had no write path at all: the columns existed, defaulted to `{}`,
+	 * and no route accepted them — so targeting, frequency capping and dayparts
+	 * were reachable only by writing SQL by hand. Three phases were `[x]` and
+	 * impossible to configure.
+	 *
+	 * Each shape is validated by the Domain class that evaluates it, so the
+	 * accepted vocabulary has exactly one definition. Serve time stays
+	 * permissive on purpose — refusing a malformed rule mid-fill would blank
+	 * live inventory over a typo — which is precisely why the save has to be
+	 * strict. A rule this engine cannot read must not be storable.
+	 *
+	 * @param array<string, mixed> $fields Submitted fields.
+	 * @return array<string, mixed>|WP_Error Clean values, encoded for storage.
+	 */
+	private function validate_policies( array $fields ): array|WP_Error {
+		$clean = array();
+
+		$shapes = array(
+			'targeting_rules'   => static fn ( mixed $value ): array => Targeting_Rules::validate( $value ),
+			'frequency_policy'  => static fn ( mixed $value ): array => Frequency_Rules::validate( $value ),
+			'delivery_settings' => static fn ( mixed $value ): array => Schedule_Rules::validate_delivery_settings( $value ),
+		);
+
+		foreach ( $shapes as $field => $check ) {
+			if ( ! array_key_exists( $field, $fields ) ) {
+				continue;
+			}
+
+			$value = $fields[ $field ];
+
+			// Accepted as an object or as the JSON text an HTML form would send.
+			if ( is_string( $value ) ) {
+				$decoded = json_decode( $value, true );
+
+				if ( ! is_array( $decoded ) ) {
+					return $this->error(
+						'aggr_line_item_policy_invalid',
+						__( 'That delivery policy is not valid JSON.', 'aggressive-ads' ),
+						$field
+					);
+				}
+
+				$value = $decoded;
+			}
+
+			$problems = $check( $value );
+
+			if ( array() !== $problems ) {
+				return $this->error(
+					'aggr_line_item_policy_invalid',
+					/* translators: %s: the reason the policy was refused. */
+					sprintf( __( 'That delivery policy cannot be used: %s', 'aggressive-ads' ), implode( ' ', $problems ) ),
+					$field
+				);
+			}
+
+			$encoded = wp_json_encode( $value );
+
+			$clean[ $field ] = is_string( $encoded ) ? $encoded : '{}';
+		}
+
+		return $clean;
 	}
 }

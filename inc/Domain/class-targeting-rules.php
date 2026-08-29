@@ -29,6 +29,132 @@ final class Targeting_Rules {
 	public const CMP_EXISTS       = 'exists';
 	public const CMP_NOT_EXISTS   = 'not_exists';
 
+	/** Bounds on a stored tree, so one bad save cannot make every fill expensive. */
+	public const MAX_DEPTH = 10;
+	public const MAX_RULES = 50;
+
+	/**
+	 * Whether a targeting tree is one this engine can evaluate.
+	 *
+	 * Validation lives at the write boundary on purpose. `evaluate_node()` lets
+	 * a node it does not recognise pass, because refusing at serve time would
+	 * blank live inventory over a configuration typo — but that also means a
+	 * malformed rule targets nobody, silently, forever. Refusing the save is
+	 * where that becomes visible, and it is what the phase contract means by
+	 * "schema-validated".
+	 *
+	 * @param mixed $tree  Decoded targeting tree.
+	 * @param int   $depth Current recursion depth.
+	 * @return array<int, string> Human-readable problems; empty when valid.
+	 */
+	public static function validate( mixed $tree, int $depth = 0 ): array {
+		if ( ! is_array( $tree ) ) {
+			return array( 'Targeting rules must be an object.' );
+		}
+
+		// An empty tree is "no targeting", which is the default and valid.
+		if ( array() === $tree ) {
+			return array();
+		}
+
+		if ( $depth > self::MAX_DEPTH ) {
+			return array( sprintf( 'Targeting rules may not nest deeper than %d levels.', self::MAX_DEPTH ) );
+		}
+
+		if ( isset( $tree['rules'] ) ) {
+			return self::validate_group( $tree, $depth );
+		}
+
+		if ( isset( $tree['dimension'] ) ) {
+			return self::validate_leaf( $tree );
+		}
+
+		return array( 'A targeting node must have either "rules" or "dimension".' );
+	}
+
+	/**
+	 * Validates a group node.
+	 *
+	 * @param array<string, mixed> $node  Group node.
+	 * @param int                  $depth Current depth.
+	 * @return array<int, string>
+	 */
+	private static function validate_group( array $node, int $depth ): array {
+		$errors = array();
+
+		if ( ! is_array( $node['rules'] ) ) {
+			return array( '"rules" must be a list of targeting nodes.' );
+		}
+
+		$operator = strtoupper( (string) ( $node['operator'] ?? self::OP_AND ) );
+
+		if ( ! in_array( $operator, array( self::OP_AND, self::OP_OR, self::OP_NOT ), true ) ) {
+			$errors[] = sprintf( '"%s" is not a group operator.', $operator );
+		}
+
+		if ( count( $node['rules'] ) > self::MAX_RULES ) {
+			$errors[] = sprintf( 'A group may not hold more than %d rules.', self::MAX_RULES );
+		}
+
+		foreach ( $node['rules'] as $child ) {
+			$errors = array_merge( $errors, self::validate( $child, $depth + 1 ) );
+		}
+
+		return $errors;
+	}
+
+	/**
+	 * Validates a leaf comparison.
+	 *
+	 * @param array<string, mixed> $node Leaf node.
+	 * @return array<int, string>
+	 */
+	private static function validate_leaf( array $node ): array {
+		$errors = array();
+
+		if ( ! is_string( $node['dimension'] ) || '' === trim( $node['dimension'] ) ) {
+			$errors[] = 'A rule needs a non-empty "dimension".';
+		}
+
+		$operator = strtolower( (string) ( $node['operator'] ?? self::CMP_EQ ) );
+
+		if ( ! in_array( $operator, self::comparison_operators(), true ) ) {
+			return array_merge( $errors, array( sprintf( '"%s" is not a comparison operator.', $operator ) ) );
+		}
+
+		$presence = array( self::CMP_EXISTS, self::CMP_NOT_EXISTS );
+		$listwise = array( self::CMP_IN, self::CMP_NOT_IN );
+
+		if ( in_array( $operator, $listwise, true ) && ! is_array( $node['value'] ?? null ) ) {
+			$errors[] = sprintf( '"%s" needs a list of values.', $operator );
+		}
+
+		if ( ! in_array( $operator, $presence, true ) && ! array_key_exists( 'value', $node ) ) {
+			$errors[] = sprintf( '"%s" needs a "value".', $operator );
+		}
+
+		return $errors;
+	}
+
+	/**
+	 * Every comparison operator the evaluator implements.
+	 *
+	 * @return array<int, string>
+	 */
+	public static function comparison_operators(): array {
+		return array(
+			self::CMP_EQ,
+			self::CMP_NEQ,
+			self::CMP_IN,
+			self::CMP_NOT_IN,
+			self::CMP_CONTAINS,
+			self::CMP_NOT_CONTAINS,
+			self::CMP_EXISTS,
+			self::CMP_NOT_EXISTS,
+		);
+	}
+
+
 	/**
 	 * Evaluates candidate row against request context facts.
 	 *

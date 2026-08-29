@@ -87,6 +87,13 @@ export type LineItem = {
 	pacing_mode: string;
 	priority: number;
 	weight: number;
+	revision: number;
+	daily_cap: number;
+	lifetime_cap: number;
+	/* Decoded server-side; the panel edits them as JSON text. */
+	targeting_rules: Record< string, unknown >;
+	frequency_policy: Record< string, unknown >;
+	delivery_settings: Record< string, unknown >;
 };
 
 export type Campaign = {

@@ -152,6 +152,18 @@ and deeper analytics remain open. What is built:
 - the **measurement model** (P10): `request`, `fill`, `no_fill`, `served`,
   `viewable`, `click`, `conversion`. `served` replaced `impression`; rollups
   count both, so history predating the rename still aggregates
+- the staff campaign review screen carries a **delivery policy panel** per line
+  item — priority, pacing, caps, and the three JSON fields. The JSON is edited
+  as text on purpose: the server validates every shape and names the problem, so
+  a rule builder can arrive later without changing what is stored.
+  `ReviewStringsTest` guards the catalog, because `t()` answers a missing key
+  with an empty string and an unlabelled input looks merely unfinished
+- delivery policy is **configurable and validated**: `targeting_rules`,
+  `frequency_policy` and `delivery_settings` are accepted on the line-item
+  route and checked by the Domain class that evaluates each shape. The save is
+  strict *because* serve time is permissive — an unrecognised targeting node
+  passes during a fill rather than blanking inventory, so a malformed rule that
+  reached storage would target nobody forever
 - campaign copy: renew (completed) and duplicate (any readable campaign) create
   a new draft with the stored snapshot and private creative bytes, never a
   backwards transition. HTML form and `POST /aggr/v1/campaigns/{id}/copy`

@@ -296,4 +296,70 @@ final class DecisionPolicyInputsTest extends WP_UnitTestCase {
 			);
 		}
 	}
+
+	/**
+	 * A targeting rule saved through the editor reaches the engine.
+	 *
+	 * The round trip that was impossible: the column existed, the stage read
+	 * it, and no route accepted it — so the only way to configure targeting was
+	 * to write SQL by hand. Written through `Line_Item_Editor` rather than into
+	 * the table, so the validator and the persistence path are both exercised.
+	 */
+	public function test_a_saved_targeting_rule_reaches_the_engine(): void {
+		$editor = Plugin::instance()->container()->get( \Aggressive\Ads\Workflow\Line_Item_Editor::class );
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$saved = $editor->update(
+			$this->campaign_id,
+			$this->line_item_id,
+			array(
+				'targeting_rules' => array(
+					'operator' => 'AND',
+					'rules'    => array(
+						array(
+							'dimension' => 'country',
+							'operator'  => 'eq',
+							'value'     => 'ZZ',
+						),
+					),
+				),
+			),
+			1
+		);
+
+		$this->assertNotWPError( $saved, 'A valid targeting rule was refused.' );
+		$this->assertFalse(
+			$this->decide( time() )['result']->has_winner(),
+			'A targeting rule saved through the editor did not reach the decision.'
+		);
+	}
+
+	/**
+	 * A malformed rule is refused at the save rather than ignored at serve time.
+	 *
+	 * `field` instead of `dimension` is the natural typo, and the evaluator
+	 * passes a node it does not recognise — so without this the rule would
+	 * store cleanly and target nobody, indefinitely.
+	 */
+	public function test_a_malformed_targeting_rule_cannot_be_saved(): void {
+		$editor = Plugin::instance()->container()->get( \Aggressive\Ads\Workflow\Line_Item_Editor::class );
+
+		wp_set_current_user( self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$result = $editor->update(
+			$this->campaign_id,
+			$this->line_item_id,
+			array(
+				'targeting_rules' => array(
+					'operator' => 'AND',
+					'rules'    => array( array( 'field' => 'country' ) ),
+				),
+			),
+			1
+		);
+
+		$this->assertWPError( $result, 'A malformed targeting rule was stored.' );
+		$this->assertSame( 'aggr_line_item_policy_invalid', $result->get_error_code() );
+	}
 }

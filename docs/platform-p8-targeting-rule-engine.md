@@ -107,6 +107,11 @@ Adding a field this stage reads means adding it to `delivery_policies_for()` in
 the same change.
 
 A leaf node the evaluator does not recognise passes rather than excluding, so a
-malformed rule serves rather than blanking inventory. That is the same fail-open
-choice the rest of the pipeline makes, and it means a typo in a rule is visible
-as *no targeting* rather than as an error.
+malformed rule serves rather than blanking inventory — the same fail-open choice
+the rest of the pipeline makes.
+
+**The cost of that choice is paid at the write boundary instead.**
+`Targeting_Rules::validate()` refuses any node this engine cannot evaluate, so a
+rule that would silently target nobody cannot be stored. Serve time stays
+permissive; the save is strict. Depth and rule count are bounded there too, so
+one bad save cannot make every subsequent fill expensive.
