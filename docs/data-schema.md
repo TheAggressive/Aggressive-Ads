@@ -432,9 +432,29 @@ never against the fill token's `exp`. `Fill_Token::TTL_SECONDS` is five minutes
 and bounds when reporting may *start*; a window is days and bounds how long
 attribution remains true. Reading one as the other would expire every conversion.
 
-Conversion SQL lives in `Conversion_Repository`. As of schema 18 the table ships
-empty and nothing writes it — the code that fills it lands with the code that
-reads it, the same staging version 14 used for the creative model.
+Conversion SQL lives in `Conversion_Repository`. `Workflow\Conversion_Recorder`
+is the only thing that writes it, from `POST /aggr/v1/conversions`.
+
+The rollup's `conversions` column is projected on the write and repaired by
+`Rollup_Repository::reconcile_day()`, which runs a **second statement** against
+this table rather than widening the event reconcile's join. Two ledgers with
+different grains in one aggregate would multiply the impression counts by the
+number of conversions — the classic fan-out, and it would silently inflate every
+other column.
+
+**That repair needs no measurement-boundary option, and the asymmetry with
+viewability is worth knowing.** The event reconcile writes a row for every day
+that has *events*, so a pre-P11 day was swept up and its `viewables` set to a
+measured zero — hence `aggr_viewability_since`. The conversion reconcile selects
+from the conversion ledger, so a day with none produces no rows, fires no
+`ON DUPLICATE KEY UPDATE`, and leaves an existing NULL exactly as it was. A
+boundary option was written and then deleted, because sabotaging it changed no
+test: a guard that cannot fail is not protecting anything.
+
+A conversion also leaves `viewables` NULL rather than 0, which is the subtle
+half. It is attributed to the day the outcome happened, routinely days after the
+click, so it can create a row for a day this site served nothing — and writing 0
+there would invent a day of impressions nobody saw.
 
 ### `aggr_conversion_definitions`
 

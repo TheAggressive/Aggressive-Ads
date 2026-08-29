@@ -189,6 +189,54 @@ final class Event_Repository {
 	}
 
 	/**
+	 * The interaction a conversion may be credited to, for one fill token.
+	 *
+	 * A click outranks a view: both are attributable, and last-click is the
+	 * model, so a fill that was seen and then clicked attributes to the click.
+	 * `ORDER BY` rather than two queries because the unique key is
+	 * `(token_hash, event)`, so both candidate rows sit together under one seek.
+	 *
+	 * Returns the server-recorded timestamp, which is what the attribution
+	 * window is measured against — never the token's own expiry, which is five
+	 * minutes and bounds something else entirely.
+	 *
+	 * @param string $token_hash 64-char digest.
+	 * @return array{event: string, created_at_ts: int}|null
+	 */
+	public function interaction_for_token( string $token_hash ): ?array {
+		global $wpdb;
+
+		if ( ! Measurement_Rules::is_valid_token_hash( $token_hash ) ) {
+			return null;
+		}
+
+		$table = $this->table_name();
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Single seek on the (token_hash, event) unique key; the table name is prefix + constant and every value is a placeholder.
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT event, created_at_ts FROM {$table} WHERE token_hash = %s AND event IN (%s, %s) ORDER BY FIELD(event, %s, %s) LIMIT 1",
+				$token_hash,
+				Measurement_Event_Type::TYPE_CLICK,
+				Measurement_Event_Type::TYPE_VIEWABLE,
+				Measurement_Event_Type::TYPE_CLICK,
+				Measurement_Event_Type::TYPE_VIEWABLE
+			),
+			ARRAY_A
+		);
+		// phpcs:enable
+
+		if ( ! is_array( $row ) ) {
+			return null;
+		}
+
+		return array(
+			'event'         => (string) $row['event'],
+			'created_at_ts' => (int) $row['created_at_ts'],
+		);
+	}
+
+	/**
 	 * Oldest event day in a closed UTC range.
 	 *
 	 * @param int $after_ts  Inclusive lower Unix timestamp.

@@ -18,23 +18,29 @@ inserts a row, and that is the intended intermediate state: the code that fills 
 table ships with the code that reads it, the same staging version 14 used for the
 creative model.
 
-Conversion definitions landed with schema 19: the table, validation, staff REST
-routes behind `aggr_manage_settings`, optimistic concurrency and an audit trail.
-`definition_id` now points at something.
+**Click-through conversions work end to end.** A publisher defines a conversion,
+the click hop carries the signed token to the advertiser's page, that page reports
+the outcome, and it lands in the ledger and the rollup. Definitions, the carrier,
+browser ingestion, the projection and its reconcile have all shipped.
 
-What is defined and not built, in the order it should be built:
+What is defined and not built:
 
-1. **The click-through carrier.** `Click_Hop` must append the signed token to
-   the destination URL. It sets `Referrer-Policy: no-referrer`, so the landing
-   page has no other way to learn the click — which is correct, and is why the
-   carrier has to be explicit rather than incidental.
-2. **Browser and server-to-server ingestion**, on their own rate-limit bucket
-   rather than the beacon's, with a scoped revocable credential for the second.
-   The definition's org must be checked against the token's campaign org, and an
-   unknown definition and a foreign one must answer identically.
-3. **The rollup projection and reconcile** for the new column.
-4. **A staff screen.** The routes exist and nothing in wp-admin calls them yet,
-   so a definition can only be created over REST.
+1. **Server-to-server ingestion.** The definition already carries `allow_s2s`,
+   and nothing reads it. It needs a scoped, revocable organization credential —
+   its own issue/revoke surface — and it is the one place a reporter may state
+   value and currency, bounded by the definition. Until it exists, `allow_s2s`
+   is a checkbox that does nothing, which is worth fixing or removing.
+2. **A staff screen.** The definition routes exist and nothing in wp-admin calls
+   them, so a definition can only be created over REST today.
+3. **Reporting surfaces.** The `conversions` column is populated and no screen
+   reads it. That is P14's, not a gap here.
+4. **Operator counters.** `Conversion_Attribution` keeps refusal reasons apart —
+   invalid lineage from out-of-window — exactly as the measurement contract
+   requires, and nothing yet counts them into Site Health.
+
+**View-through attribution remains defined and deliberately unbuilt.** It needs
+the cross-visit identifier P11 declined to invent, and P27 is its gate.
+Click-through needs none.
 
 Scope, boundaries and exit criteria are in
 [platform-p12-conversion-tracking.md](platform-p12-conversion-tracking.md).

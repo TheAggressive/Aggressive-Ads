@@ -226,7 +226,7 @@ final class FillRoutesTest extends WP_UnitTestCase {
 			$this->assertSame( 503, $response->get_status() );
 			$this->assertSame( 'aggr_beacon_unavailable', $response->get_data()['code'] );
 			$this->assertSame( '', $output, 'The ledger failure exposed a raw database error.' );
-			$this->assertSame( 'https://example.com/house', $this->hop_location( $token ) );
+			$this->assertSame( 'https://example.com/house', $this->hop_destination( $token ) );
 		} finally {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Restores the table renamed above even when an assertion fails.
 			$wpdb->query( "RENAME TABLE {$offline} TO {$table}" );
@@ -261,7 +261,7 @@ final class FillRoutesTest extends WP_UnitTestCase {
 			$this->assertSame( 'redirect', $e->getMessage() );
 		}
 
-		$this->assertSame( 'https://example.com/house', $redirected );
+		$this->assertSame( 'https://example.com/house', remove_query_arg( Click_Hop::TOKEN_PARAM, $redirected ) );
 		$this->assertSame( 'no-referrer', Click_Hop::REFERRER_POLICY );
 	}
 
@@ -283,13 +283,116 @@ final class FillRoutesTest extends WP_UnitTestCase {
 		$request->set_body_params( array( 'token' => $token ) );
 		$this->assertSame( 204, rest_get_server()->dispatch( $request )->get_status() );
 
-		$this->assertSame( 'https://example.com/house', $this->hop_location( $token ) );
-		$this->assertSame( 'https://example.com/house', $this->hop_location( $token ) );
+		$this->assertSame( 'https://example.com/house', $this->hop_destination( $token ) );
+		$this->assertSame( 'https://example.com/house', $this->hop_destination( $token ) );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Test assertion against this plugin's table.
 		$events = $wpdb->get_col( $wpdb->prepare( "SELECT event FROM {$table} WHERE token_hash = %s ORDER BY event ASC", $hash ) );
 
 		$this->assertSame( array( Event_Repository::TYPE_CLICK, Event_Repository::TYPE_SERVED ), $events );
+	}
+
+	/**
+	 * **The click hop carries the token onto the destination.**
+	 *
+	 * Without this a conversion cannot be attributed at all: the hop sets
+	 * `Referrer-Policy: no-referrer`, so the advertiser's landing page has no
+	 * other way to learn which click brought the visitor. That header is
+	 * correct and stays; the carrier is what makes attribution possible
+	 * alongside it.
+	 *
+	 * Asserted by parsing the token back out and checking it resolves to the
+	 * same fill, rather than by string comparison — that is what the reporting
+	 * endpoint will actually do with it, and it settles whether the value
+	 * survives URL encoding intact.
+	 */
+	public function test_the_click_hop_carries_the_token_to_the_destination(): void {
+		$this->enable_native();
+
+		$token    = ( new Fill_Token() )->mint( $this->placement_id, 0, 0 )['token'];
+		$location = $this->hop_location( $token );
+
+		$query = array();
+		parse_str( (string) wp_parse_url( $location, PHP_URL_QUERY ), $query );
+
+		$this->assertArrayHasKey( Click_Hop::TOKEN_PARAM, $query, 'The destination carries no click token.' );
+
+		$carried = (string) $query[ Click_Hop::TOKEN_PARAM ];
+
+		$this->assertSame( $token, $carried, 'The token must survive the round trip through the URL unchanged.' );
+
+		$parsed = ( new Fill_Token() )->parse( $carried, true );
+
+		$this->assertIsArray( $parsed, 'The carried token must still verify.' );
+		$this->assertSame( $this->placement_id, $parsed['placement_id'] );
+	}
+
+	/**
+	 * A destination that already has a query string keeps it.
+	 */
+	public function test_the_carrier_preserves_an_existing_query_string(): void {
+		$this->enable_native();
+
+		update_post_meta( $this->placement_id, Placement_Repository::META_HOUSE_CLICK_URL, 'https://example.com/house?utm_source=news&page=2' );
+
+		$token    = ( new Fill_Token() )->mint( $this->placement_id, 0, 0 )['token'];
+		$location = $this->hop_location( $token );
+
+		$query = array();
+		parse_str( (string) wp_parse_url( $location, PHP_URL_QUERY ), $query );
+
+		$this->assertSame( 'news', $query['utm_source'] ?? null );
+		$this->assertSame( '2', $query['page'] ?? null );
+		$this->assertArrayHasKey( Click_Hop::TOKEN_PARAM, $query );
+	}
+
+	/**
+	 * A destination already carrying the parameter gets this click's token, once.
+	 *
+	 * A URL copied from a previous click, or one an advertiser pasted into their
+	 * own campaign settings, must not end up with two values for one parameter
+	 * — the landing page would be choosing which click to credit.
+	 */
+	public function test_the_carrier_replaces_rather_than_duplicates(): void {
+		$this->enable_native();
+
+		update_post_meta( $this->placement_id, Placement_Repository::META_HOUSE_CLICK_URL, 'https://example.com/house?' . Click_Hop::TOKEN_PARAM . '=stale' );
+
+		$token    = ( new Fill_Token() )->mint( $this->placement_id, 0, 0 )['token'];
+		$location = $this->hop_location( $token );
+
+		$this->assertSame(
+			1,
+			substr_count( $location, Click_Hop::TOKEN_PARAM . '=' ),
+			'The destination must carry exactly one click token.'
+		);
+
+		$query = array();
+		parse_str( (string) wp_parse_url( $location, PHP_URL_QUERY ), $query );
+
+		$this->assertSame( $token, $query[ Click_Hop::TOKEN_PARAM ] ?? null, 'The stale token must have been replaced.' );
+	}
+
+	/**
+	 * A destination with a fragment keeps it, and keeps it last.
+	 *
+	 * A carrier appended after the `#` would be part of the fragment and never
+	 * reach the server, so the conversion could not be attributed at all.
+	 */
+	public function test_the_carrier_preserves_a_fragment(): void {
+		$this->enable_native();
+
+		update_post_meta( $this->placement_id, Placement_Repository::META_HOUSE_CLICK_URL, 'https://example.com/house#offer' );
+
+		$token    = ( new Fill_Token() )->mint( $this->placement_id, 0, 0 )['token'];
+		$location = $this->hop_location( $token );
+
+		$this->assertSame( 'offer', wp_parse_url( $location, PHP_URL_FRAGMENT ) );
+
+		$query = array();
+		parse_str( (string) wp_parse_url( $location, PHP_URL_QUERY ), $query );
+
+		$this->assertSame( $token, $query[ Click_Hop::TOKEN_PARAM ] ?? null, 'The token must be in the query, not the fragment.' );
 	}
 
 	/**
@@ -419,6 +522,20 @@ final class FillRoutesTest extends WP_UnitTestCase {
 	 *
 	 * @param string $token Fill token.
 	 */
+	/**
+	 * The destination the hop chose, with the click-through carrier stripped.
+	 *
+	 * The hop appends `aggr_ct` so the advertiser's page can report a
+	 * conversion — its own `Referrer-Policy: no-referrer` is why nothing else
+	 * can tell that page which click arrived. Tests about *which* destination
+	 * was chosen use this; the carrier itself is asserted separately.
+	 *
+	 * @param string $token Full signed token.
+	 */
+	private function hop_destination( string $token ): string {
+		return remove_query_arg( Click_Hop::TOKEN_PARAM, $this->hop_location( $token ) );
+	}
+
 	private function hop_location( string $token ): string {
 		set_query_var( Click_Hop::QUERY_VAR, $token );
 

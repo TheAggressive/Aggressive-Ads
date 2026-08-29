@@ -191,6 +191,17 @@ final class Runtime_Service_Registrar {
 		$container->register( Conversion_Repository::class, static fn (): Conversion_Repository => new Conversion_Repository() );
 		$container->register( Conversion_Definition_Repository::class, static fn (): Conversion_Definition_Repository => new Conversion_Definition_Repository() );
 		$container->register(
+			\Aggressive\Ads\Workflow\Conversion_Recorder::class,
+			static fn ( Service_Container $c ): \Aggressive\Ads\Workflow\Conversion_Recorder => new \Aggressive\Ads\Workflow\Conversion_Recorder(
+				$c->get( Conversion_Repository::class ),
+				$c->get( Conversion_Definition_Repository::class ),
+				$c->get( Event_Repository::class ),
+				$c->get( Rollup_Repository::class ),
+				$c->get( \Aggressive\Ads\Repository\Campaign_Repository::class ),
+				$c->get( Creative_Assignment_Repository::class )
+			)
+		);
+		$container->register(
 			\Aggressive\Ads\Workflow\Conversion_Definition_Manager::class,
 			static fn ( Service_Container $c ): \Aggressive\Ads\Workflow\Conversion_Definition_Manager => new \Aggressive\Ads\Workflow\Conversion_Definition_Manager(
 				$c->get( Conversion_Definition_Repository::class ),
