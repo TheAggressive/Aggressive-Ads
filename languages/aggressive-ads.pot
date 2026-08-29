@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-29T23:39:12+00:00\n"
+"POT-Creation-Date: 2026-08-29T23:47:26+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -4946,32 +4946,32 @@ msgstr ""
 msgid "Seconds between ads"
 msgstr ""
 
-#: src/blocks-interactivity/ad-slot/edit.js:186
+#: src/blocks-interactivity/ad-slot/edit.js:189
 msgid "Rotation pauses while the slot is off screen or the tab is in the background, because each rotation counts as an impression."
 msgstr ""
 
-#: src/blocks-interactivity/ad-slot/edit.js:224
-#: src/blocks-interactivity/ad-slot/edit.js:235
+#: src/blocks-interactivity/ad-slot/edit.js:227
+#: src/blocks-interactivity/ad-slot/edit.js:238
 msgid "Ad placement"
 msgstr ""
 
-#: src/blocks-interactivity/ad-slot/edit.js:225
+#: src/blocks-interactivity/ad-slot/edit.js:228
 msgid "Placements could not be loaded. Try again after refreshing the editor."
 msgstr ""
 
-#: src/blocks-interactivity/ad-slot/edit.js:236
+#: src/blocks-interactivity/ad-slot/edit.js:239
 msgid "Choose a slot to reserve space on the page. The live creative fills after publish."
 msgstr ""
 
-#: src/blocks-interactivity/ad-slot/edit.js:246
+#: src/blocks-interactivity/ad-slot/edit.js:249
 msgid "No active placements yet. Create one under Advertising → Inventory."
 msgstr ""
 
-#: src/blocks-interactivity/ad-slot/edit.js:274
+#: src/blocks-interactivity/ad-slot/edit.js:277
 msgid "This placement is no longer active. Choose another slot."
 msgstr ""
 
-#: src/blocks-interactivity/ad-slot/edit.js:292
+#: src/blocks-interactivity/ad-slot/edit.js:295
 msgid "Filled at request time"
 msgstr ""
 
