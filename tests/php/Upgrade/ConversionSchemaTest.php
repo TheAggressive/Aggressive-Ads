@@ -12,6 +12,7 @@ namespace Aggressive\Ads\Tests\Upgrade;
 use Aggressive\Ads\Install\Migration_Map;
 use Aggressive\Ads\Install\Schema;
 use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Repository\Conversion_Definition_Repository;
 use Aggressive\Ads\Repository\Conversion_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use WP_UnitTestCase;
@@ -51,6 +52,9 @@ final class ConversionSchemaTest extends WP_UnitTestCase {
 
 	/** The database version that installs the conversion ledger. */
 	private const CONVERSIONS_VERSION = 18;
+
+	/** The database version that installs its definitions. */
+	private const DEFINITIONS_VERSION = 19;
 
 	/**
 	 * Conversion ledger persistence.
@@ -92,10 +96,16 @@ final class ConversionSchemaTest extends WP_UnitTestCase {
 			'The conversion ledger is declared but no database version installs it.'
 		);
 
+		$this->assertArrayHasKey(
+			self::DEFINITIONS_VERSION,
+			$steps,
+			'The definitions table is declared but no database version installs it.'
+		);
+
 		$this->assertSame(
-			self::CONVERSIONS_VERSION,
+			self::DEFINITIONS_VERSION,
 			max( array_keys( $steps ) ),
-			'Migration 18 must be the newest step, or a later one is missing from this assertion.'
+			'Migration 19 must be the newest step, or a later one is missing from this assertion.'
 		);
 
 		$this->assertSame(
@@ -166,6 +176,77 @@ final class ConversionSchemaTest extends WP_UnitTestCase {
 			( new Conversion_Repository() )->table_exists(),
 			'Migration 18 did not install the conversion ledger, so no upgrading site would have one.'
 		);
+	}
+
+	/**
+	 * Migration 19 installs the definitions table, by the same reasoning.
+	 *
+	 * The ledger's `definition_id` points here. A site that upgraded to 19 and
+	 * did not get this table would accept no conversion at all, because every
+	 * report resolves a definition first.
+	 */
+	public function test_migration_19_installs_the_definitions_table(): void {
+		global $wpdb;
+
+		$definitions = new Conversion_Definition_Repository();
+		$table       = $definitions->table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Deliberately un-rewritten drop; see the class docblock.
+		$wpdb->query( "/* real drop */ DROP TABLE IF EXISTS {$table}" );
+
+		$this->assertFalse(
+			( new Conversion_Definition_Repository() )->table_exists(),
+			'The fixture table survived the drop, so the migration below would prove nothing.'
+		);
+
+		$steps = Migration_Map::steps( Plugin::instance()->container() );
+
+		remove_filter( 'query', array( $this, '_create_temporary_tables' ) );
+
+		try {
+			$steps[ self::DEFINITIONS_VERSION ]();
+		} finally {
+			add_filter( 'query', array( $this, '_create_temporary_tables' ) );
+		}
+
+		$this->assertTrue(
+			( new Conversion_Definition_Repository() )->table_exists(),
+			'Migration 19 did not install the definitions table.'
+		);
+	}
+
+	/**
+	 * The definitions table's shape is the shape the schema declares.
+	 */
+	public function test_the_definitions_table_matches_the_declared_schema(): void {
+		global $wpdb;
+
+		$definitions = new Conversion_Definition_Repository();
+		$definitions->install_table();
+
+		$table = $definitions->table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Schema introspection in a test.
+		$columns = $wpdb->get_col( "SHOW COLUMNS FROM {$table}" );
+
+		$this->assertNotEmpty( $columns, 'The fixture table must exist before its shape is asserted.' );
+
+		sort( $columns );
+		$declared = Schema::conversion_definitions_columns();
+		sort( $declared );
+
+		$this->assertSame( $declared, $columns );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Schema introspection in a test.
+		$rows = $wpdb->get_results( "SHOW INDEX FROM {$table}", ARRAY_A );
+
+		$key = array_values( array_filter( $rows, static fn ( array $row ): bool => 'public_key' === $row['Key_name'] ) );
+
+		$this->assertNotEmpty( $key, 'The public key must be indexed before its uniqueness means anything.' );
+
+		foreach ( $key as $part ) {
+			$this->assertSame( '0', (string) $part['Non_unique'], 'public_key must be UNIQUE, or two definitions could share a reporting credential.' );
+		}
 	}
 
 	/**

@@ -52,6 +52,7 @@ use Aggressive\Ads\REST\Creative_File_Controller;
 use Aggressive\Ads\REST\Decision_Trace_Controller;
 use Aggressive\Ads\REST\Decisions_Controller;
 use Aggressive\Ads\REST\Fill_Controller;
+use Aggressive\Ads\REST\Conversion_Definitions_Controller;
 use Aggressive\Ads\REST\Packages_Controller;
 use Aggressive\Ads\REST\Organizations_Controller;
 use Aggressive\Ads\REST\Settings_Controller;
@@ -380,6 +381,7 @@ final class Plugin {
 			Campaigns_Controller::class,
 			Line_Items_Controller::class,
 			Placements_Controller::class,
+			Conversion_Definitions_Controller::class,
 			Packages_Controller::class,
 			Organizations_Controller::class,
 			Settings_Controller::class,

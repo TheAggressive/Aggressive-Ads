@@ -21,6 +21,7 @@ use Aggressive\Ads\REST\Decision_Trace_Controller;
 use Aggressive\Ads\REST\Decisions_Controller;
 use Aggressive\Ads\REST\Line_Items_Controller;
 use Aggressive\Ads\REST\Organizations_Controller;
+use Aggressive\Ads\REST\Conversion_Definitions_Controller;
 use Aggressive\Ads\REST\Packages_Controller;
 use Aggressive\Ads\REST\Placements_Controller;
 use Aggressive\Ads\REST\Settings_Controller;
@@ -103,6 +104,14 @@ final class Rest_Service_Registrar {
 				$c->get( Placement_Data::class )
 			)
 		);
+		$container->register(
+			Conversion_Definitions_Controller::class,
+			static fn ( Service_Container $c ): Conversion_Definitions_Controller => new Conversion_Definitions_Controller(
+				$c->get( \Aggressive\Ads\Repository\Conversion_Definition_Repository::class ),
+				$c->get( \Aggressive\Ads\Workflow\Conversion_Definition_Manager::class )
+			)
+		);
+
 		$container->register(
 			Packages_Controller::class,
 			static fn ( Service_Container $c ): Packages_Controller => new Packages_Controller(

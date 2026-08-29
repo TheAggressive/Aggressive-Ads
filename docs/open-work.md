@@ -18,18 +18,23 @@ inserts a row, and that is the intended intermediate state: the code that fills 
 table ships with the code that reads it, the same staging version 14 used for the
 creative model.
 
+Conversion definitions landed with schema 19: the table, validation, staff REST
+routes behind `aggr_manage_settings`, optimistic concurrency and an audit trail.
+`definition_id` now points at something.
+
 What is defined and not built, in the order it should be built:
 
-1. **Conversion definitions.** The publisher-owned record the ledger's
-   `definition_id` points at. Until it exists, `definition_id` is an integer
-   pointing at nothing.
-2. **The click-through carrier.** `Click_Hop` must append the signed token to
+1. **The click-through carrier.** `Click_Hop` must append the signed token to
    the destination URL. It sets `Referrer-Policy: no-referrer`, so the landing
    page has no other way to learn the click — which is correct, and is why the
    carrier has to be explicit rather than incidental.
-3. **Browser and server-to-server ingestion**, on their own rate-limit bucket
+2. **Browser and server-to-server ingestion**, on their own rate-limit bucket
    rather than the beacon's, with a scoped revocable credential for the second.
-4. **The rollup projection and reconcile** for the new column.
+   The definition's org must be checked against the token's campaign org, and an
+   unknown definition and a foreign one must answer identically.
+3. **The rollup projection and reconcile** for the new column.
+4. **A staff screen.** The routes exist and nothing in wp-admin calls them yet,
+   so a definition can only be created over REST.
 
 Scope, boundaries and exit criteria are in
 [platform-p12-conversion-tracking.md](platform-p12-conversion-tracking.md).
@@ -42,6 +47,11 @@ Two traps found building the storage, recorded so they are not rediscovered:
 - **`aggr_events` cannot hold a conversion**, for the reason now written into
   `data-schema.md` and asserted by `ConversionLedgerTest`. If that test is ever
   seen failing, read it before changing it.
+- **A REST `permission_callback` answers before the workflow does**, so a
+  denied request never reaches the manager and never writes the audit row the
+  manager would write. That is intended — an unauthenticated probe that audited
+  every attempt would be an unbounded write anybody could drive — but it means a
+  denial-audit assertion belongs in a manager test, not a route test.
 - **This suite cannot prove a table was created by dropping it first.**
   `WP_UnitTestCase` rewrites `CREATE TABLE` and `DROP TABLE` into their
   `TEMPORARY` forms, so a repository's `drop_table()` drops nothing and

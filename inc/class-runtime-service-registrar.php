@@ -38,6 +38,7 @@ use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Creative_Revision_Repository;
 use Aggressive\Ads\Workflow\Assigned_Creatives;
 use Aggressive\Ads\Repository\Delivery_Repository;
+use Aggressive\Ads\Repository\Conversion_Definition_Repository;
 use Aggressive\Ads\Repository\Conversion_Repository;
 use Aggressive\Ads\Repository\Event_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
@@ -188,6 +189,14 @@ final class Runtime_Service_Registrar {
 
 		$container->register( Event_Repository::class, static fn (): Event_Repository => new Event_Repository() );
 		$container->register( Conversion_Repository::class, static fn (): Conversion_Repository => new Conversion_Repository() );
+		$container->register( Conversion_Definition_Repository::class, static fn (): Conversion_Definition_Repository => new Conversion_Definition_Repository() );
+		$container->register(
+			\Aggressive\Ads\Workflow\Conversion_Definition_Manager::class,
+			static fn ( Service_Container $c ): \Aggressive\Ads\Workflow\Conversion_Definition_Manager => new \Aggressive\Ads\Workflow\Conversion_Definition_Manager(
+				$c->get( Conversion_Definition_Repository::class ),
+				$c->get( \Aggressive\Ads\Repository\Audit_Repository::class )
+			)
+		);
 		$container->register( Rollup_Repository::class, static fn (): Rollup_Repository => new Rollup_Repository() );
 		$container->register( Fill_Token::class, static fn (): Fill_Token => new Fill_Token() );
 		$container->register(

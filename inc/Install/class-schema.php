@@ -24,7 +24,7 @@ final class Schema {
 	 *
 	 * Drives the migration walker in Upgrader.
 	 */
-	public const DB_VERSION = 18;
+	public const DB_VERSION = 19;
 
 	/**
 	 * The audit table's name, without the site's table prefix.
@@ -42,6 +42,9 @@ final class Schema {
 
 	/** Append-only attributed conversions. Deliberately not a row in aggr_events. */
 	public const CONVERSIONS_TABLE = 'aggr_conversions';
+
+	/** What a publisher declares a conversion to be. Trusted server configuration. */
+	public const CONVERSION_DEFINITIONS_TABLE = 'aggr_conversion_definitions';
 
 	/** Delivery strategies owned by campaigns. */
 	public const LINE_ITEMS_TABLE = 'aggr_line_items';
@@ -647,5 +650,83 @@ final class Schema {
 	 */
 	public static function conversions_index_names(): array {
 		return array( 'PRIMARY', 'definition_key', 'created', 'campaign_day', 'token_definition' );
+	}
+
+	/**
+	 * Conversion definitions.
+	 *
+	 * The trusted half of conversion tracking. Value, currency and the
+	 * attribution window are read from here and never from the request, which is
+	 * what stops an anonymous browser declaring what an outcome was worth.
+	 *
+	 * `public_key` is a random 128-bit hex identifier rather than the row id,
+	 * because the reporting endpoint is public and a sequential id invites
+	 * walking the table to discover which definitions exist. It is unique so a
+	 * lookup is one indexed read, and unguessable so "no such definition" and
+	 * "not your definition" can return the same thing without either being a
+	 * lie.
+	 *
+	 * `status` is `varchar(16)` and its longest value is `archived`, at eight.
+	 * Definitions are archived rather than deleted: `aggr_conversions.definition_id`
+	 * points here, and deleting a row would strand every conversion it ever
+	 * recorded.
+	 *
+	 * `revision` is the optimistic-concurrency counter, the same mechanism line
+	 * items use — two staff editing one definition must not silently overwrite
+	 * each other's window.
+	 *
+	 * @param string $table_name      Fully prefixed table name.
+	 * @param string $charset_collate Database charset and collation.
+	 * @return string
+	 */
+	public static function conversion_definitions_table_ddl( string $table_name, string $charset_collate ): string {
+		return "CREATE TABLE {$table_name} (
+	id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	created_at_ts bigint(20) unsigned NOT NULL DEFAULT 0,
+	updated_at_ts bigint(20) unsigned NOT NULL DEFAULT 0,
+	org_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	public_key char(32) NOT NULL DEFAULT '',
+	name varchar(191) NOT NULL DEFAULT '',
+	window_seconds int(10) unsigned NOT NULL DEFAULT 0,
+	default_value_micros bigint(20) unsigned NOT NULL DEFAULT 0,
+	currency char(3) NOT NULL DEFAULT '',
+	allow_s2s tinyint(1) NOT NULL DEFAULT 0,
+	status varchar(16) NOT NULL DEFAULT 'active',
+	revision int(10) unsigned NOT NULL DEFAULT 1,
+	PRIMARY KEY  (id),
+	UNIQUE KEY public_key (public_key),
+	KEY org_status (org_id,status)
+) {$charset_collate};";
+	}
+
+	/**
+	 * Conversion definition columns.
+	 *
+	 * @return array<int, string>
+	 */
+	public static function conversion_definitions_columns(): array {
+		return array(
+			'id',
+			'created_at_ts',
+			'updated_at_ts',
+			'org_id',
+			'public_key',
+			'name',
+			'window_seconds',
+			'default_value_micros',
+			'currency',
+			'allow_s2s',
+			'status',
+			'revision',
+		);
+	}
+
+	/**
+	 * Conversion definition indexes.
+	 *
+	 * @return array<int, string>
+	 */
+	public static function conversion_definitions_index_names(): array {
+		return array( 'PRIMARY', 'public_key', 'org_status' );
 	}
 }
