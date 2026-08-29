@@ -34,6 +34,22 @@ final class Click_Hop implements Service {
 	public const PATH = 'ads/c';
 
 	/**
+	 * The query parameter that carries the click onto the advertiser's page.
+	 *
+	 * Attribution needs the landing page to know which click brought the
+	 * visitor, and this hop is the only place that can tell it. The redirect
+	 * sets `Referrer-Policy: no-referrer` on purpose, so the destination learns
+	 * nothing otherwise — which is correct, and is exactly why the carrier has
+	 * to be explicit rather than incidental.
+	 *
+	 * The value is the same signed fill token the beacon uses. It is worth
+	 * nothing except attribution: it names a placement, campaign and creative,
+	 * carries no visitor identity, and can only be spent against a definition
+	 * the campaign's organization owns.
+	 */
+	public const TOKEN_PARAM = 'aggr_ct';
+
+	/**
 	 * Constructor.
 	 *
 	 * @param Fill_Service   $fill       Module gate and live check.
@@ -147,9 +163,33 @@ final class Click_Hop implements Service {
 		}
 
 		// phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect -- First-party hop to an advertiser destination. wp_safe_redirect would refuse every paid click that leaves this host.
-		wp_redirect( $dest, 302 );
+		wp_redirect( self::with_token( $dest, $token ), 302 );
 
 		exit;
+	}
+
+	/**
+	 * Puts the click token on the destination URL.
+	 *
+	 * `add_query_arg` replaces an existing parameter of the same name rather
+	 * than appending a second, which is the behaviour that matters: a
+	 * destination already carrying `aggr_ct` — a URL copied from a previous
+	 * click, or an advertiser who pasted one into their own campaign settings —
+	 * must end up with this click's token and no other. Two values for one
+	 * parameter would leave the landing page choosing which click to credit.
+	 *
+	 * It also preserves an existing query string and fragment, so a destination
+	 * with either survives intact. Both are asserted rather than assumed.
+	 *
+	 * @param string $destination Advertiser destination, already validated.
+	 * @param string $token       Full signed token.
+	 */
+	public static function with_token( string $destination, string $token ): string {
+		if ( '' === $token ) {
+			return $destination;
+		}
+
+		return add_query_arg( self::TOKEN_PARAM, rawurlencode( $token ), $destination );
 	}
 
 	/**

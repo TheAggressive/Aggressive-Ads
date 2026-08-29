@@ -64,6 +64,7 @@ final class AuthorizationSurfaceTest extends WP_UnitTestCase {
 			'POST /aggr/v1/campaigns/(?P<id>\d+)/creatives',
 			'POST /aggr/v1/campaigns/(?P<id>\d+)/transitions',
 			'POST /aggr/v1/conversion-definitions',
+			'POST /aggr/v1/conversions',
 			'POST /aggr/v1/creative-replacements/(?P<id>\d+)/decision',
 			'POST /aggr/v1/creatives/(?P<id>\d+)/replacement',
 			'POST /aggr/v1/decisions',
@@ -137,6 +138,16 @@ final class AuthorizationSurfaceTest extends WP_UnitTestCase {
 			'GET /aggr/v1/fill/(?P<slot>[a-z0-9-]+)',
 			'POST /aggr/v1/decisions',
 			'POST /aggr/v1/i',
+
+			/*
+			 * Reported by the advertiser's own page, so it cannot use a
+			 * WordPress session either — and unlike the beacon it is not even
+			 * same-origin. What protects it is not authentication: the request
+			 * carries a signed token it cannot forge, spends one outcome
+			 * exactly once against a database unique key, and can only credit a
+			 * definition the campaign's organization owns.
+			 */
+			'POST /aggr/v1/conversions',
 		);
 
 		foreach ( array( 0, self::factory()->user->create( array( 'role' => 'subscriber' ) ) ) as $user_id ) {

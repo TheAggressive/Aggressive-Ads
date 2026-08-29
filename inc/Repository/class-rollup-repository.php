@@ -143,7 +143,7 @@ final class Rollup_Repository {
 	/**
 	 * Increments today's counter for one slot, campaign and line item.
 	 *
-	 * @param string $column       impressions|clicks.
+	 * @param string $column       impressions|clicks|viewables|conversions.
 	 * @param int    $placement_id Placement id.
 	 * @param int    $campaign_id  Campaign id, or 0 for house.
 	 * @param string $day_utc      Optional UTC Y-m-d. Invalid values use today.
@@ -153,7 +153,7 @@ final class Rollup_Repository {
 	public function increment( string $column, int $placement_id, int $campaign_id, string $day_utc = '', int $line_item_id = 0 ): bool {
 		global $wpdb;
 
-		if ( ! in_array( $column, array( 'impressions', 'clicks', 'viewables' ), true ) ) {
+		if ( ! in_array( $column, array( 'impressions', 'clicks', 'viewables', 'conversions' ), true ) ) {
 			return false;
 		}
 
@@ -161,25 +161,46 @@ final class Rollup_Repository {
 		$day   = 1 === preg_match( '/^\d{4}-\d{2}-\d{2}$/', $day_utc ) ? $day_utc : gmdate( 'Y-m-d' );
 
 		/*
-		 * `viewables` starts at 0 on any row an impression touches, so the day
-		 * is marked as measured even before anything is seen — NULL has to keep
-		 * meaning "nobody was measuring" rather than "nothing seen yet today".
+		 * Both nullable columns exist to keep "nobody was measuring" apart from
+		 * "nothing happened", and each is written the way that preserves it.
 		 *
-		 * COALESCE on update for the same reason: a row carried over from
-		 * before the column existed becomes 0, not NULL + 1.
+		 * `viewables` starts at 0 on any row a delivery, click or view touches,
+		 * so the day is marked as measured even before anything is seen.
+		 * COALESCE on update for the same reason: a row carried over from before
+		 * the column existed becomes 0, not NULL + 1.
+		 *
+		 * `conversions` stays NULL unless this call *is* a conversion. Unlike
+		 * viewability, a delivery is no evidence that conversion tracking is
+		 * running — the publisher may have defined no conversion at all — so an
+		 * impression must not mark the day as measured.
+		 *
+		 * And a conversion leaves `viewables` NULL rather than 0, which is the
+		 * subtle half. A conversion is attributed to the day the outcome
+		 * happened, routinely days after the click, so it can create a row for a
+		 * day this site served nothing. Writing 0 there would invent a day of
+		 * impressions nobody saw.
+		 *
+		 * Both are SQL literals rather than placeholders because
+		 * `$wpdb->prepare()` cannot emit a real NULL: a null handed to `%s`
+		 * becomes the empty string, which an unsigned bigint stores as 0 — the
+		 * one value this is all avoiding. Neither literal is input; both come
+		 * from comparing an already-allowlisted column name.
 		 */
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is prefix+constant; column is allowlisted to impressions|clicks|viewables.
+		$viewables_value   = 'conversions' === $column ? 'NULL' : (string) ( 'viewables' === $column ? 1 : 0 );
+		$conversions_value = 'conversions' === $column ? '1' : 'NULL';
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is prefix+constant; column and the two literals are allowlisted to impressions|clicks|viewables|conversions.
 		$written = $wpdb->query(
 			$wpdb->prepare(
-				"INSERT INTO {$table} (day_utc, placement_id, campaign_id, line_item_id, impressions, clicks, viewables) VALUES (%s, %d, %d, %d, %d, %d, %d)
+				"INSERT INTO {$table} (day_utc, placement_id, campaign_id, line_item_id, impressions, clicks, viewables, conversions)
+				VALUES (%s, %d, %d, %d, %d, %d, {$viewables_value}, {$conversions_value})
 				ON DUPLICATE KEY UPDATE {$column} = COALESCE({$column}, 0) + 1",
 				$day,
 				$placement_id,
 				$campaign_id,
 				$line_item_id,
 				'impressions' === $column ? 1 : 0,
-				'clicks' === $column ? 1 : 0,
-				'viewables' === $column ? 1 : 0
+				'clicks' === $column ? 1 : 0
 			)
 		);
 		// phpcs:enable
@@ -255,6 +276,67 @@ final class Rollup_Repository {
 				$day_utc,
 				$since,
 				Event_Repository::TYPE_VIEWABLE,
+				$start,
+				$end
+			)
+		);
+		// phpcs:enable
+
+		return false !== $written && $this->reconcile_conversions( $day_utc, $start, $end );
+	}
+
+	/**
+	 * Rebuilds one day's conversion counter from the conversion ledger.
+	 *
+	 * A second statement rather than a wider join, because conversions do not
+	 * live in `aggr_events` and cannot: that table is unique on
+	 * `(token_hash, event)`, which would permit one conversion per fill for all
+	 * time. Joining two ledgers with different grains in one aggregate would
+	 * multiply the impression counts by the number of conversions, which is the
+	 * classic fan-out bug and would silently inflate every other column.
+	 *
+	 * Counted by `occurred_at_ts`, so a report that arrives late still lands on
+	 * the day the outcome happened rather than the day the reporter sent it.
+	 *
+	 * **No measurement-boundary option, unlike viewability, and the asymmetry is
+	 * the point.** That reconcile writes a row for every day that has *events*,
+	 * so a pre-P11 day would be swept up and its `viewables` set to a measured
+	 * zero — hence `OPTION_VIEWABILITY_SINCE`. This one selects from the
+	 * conversion ledger, so a day with no conversions produces no rows, fires no
+	 * `ON DUPLICATE KEY UPDATE`, and leaves an existing NULL exactly as it was.
+	 * History is protected by the shape of the query rather than by a flag.
+	 *
+	 * A boundary option was written first and then deleted, because sabotaging
+	 * it changed nothing: a guard that cannot fail is not protecting anything,
+	 * and shipping one would have implied a safety this does not need.
+	 *
+	 * @param string $day_utc Closed UTC Y-m-d.
+	 * @param int    $start   Inclusive lower Unix bound.
+	 * @param int    $end     Exclusive upper Unix bound.
+	 */
+	private function reconcile_conversions( string $day_utc, int $start, int $end ): bool {
+		global $wpdb;
+
+		$rollups     = $this->table_name();
+		$conversions = $wpdb->prefix . Schema::CONVERSIONS_TABLE;
+
+		/*
+		 * `line_item_id` is stored on the conversion row rather than recovered
+		 * by a join, because it was resolved at ingestion from the assignment
+		 * that served the fill. Re-deriving it here could disagree with the
+		 * live projection if the assignment moved in between, and a reconcile
+		 * that disagrees with the counter it repairs is worse than no reconcile.
+		 */
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Idempotent projection repair between this plugin's two custom tables.
+		$written = $wpdb->query(
+			$wpdb->prepare(
+				"INSERT INTO {$rollups} (day_utc, placement_id, campaign_id, line_item_id, impressions, clicks, viewables, conversions)
+				SELECT %s, c.placement_id, c.campaign_id, c.line_item_id, 0, 0, NULL, COUNT(*)
+				FROM {$conversions} c
+				WHERE c.occurred_at_ts >= %d AND c.occurred_at_ts < %d
+				GROUP BY c.placement_id, c.campaign_id, c.line_item_id
+				ON DUPLICATE KEY UPDATE conversions = VALUES(conversions)",
+				$day_utc,
 				$start,
 				$end
 			)

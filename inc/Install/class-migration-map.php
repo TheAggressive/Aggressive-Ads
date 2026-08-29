@@ -166,10 +166,13 @@ final class Migration_Map {
 
 			/*
 			 * The definitions table, which version 18's ledger points at by id.
-			 * Storage again, and still nothing writes either: a definition is
-			 * created by staff, so an upgraded site has none until somebody
-			 * makes one. `install_conversions()` creates both, so a repair
-			 * install heals a site whose upgrade stopped between them.
+			 * A definition is created by staff, so an upgraded site has none
+			 * until somebody makes one — and with no definition, ingestion
+			 * accepts nothing, which is the correct default for a site that has
+			 * not asked to measure conversions.
+			 *
+			 * `install_conversions()` creates both tables, so a repair install
+			 * heals a site whose upgrade stopped between them.
 			 */
 			19 => static function () use ( $c ): void {
 				$c->get( Installer::class )->install_conversions();

@@ -171,7 +171,7 @@ final class Conversion_Definition_Repository {
 	 * One definition by id, or null.
 	 *
 	 * @param int $id Definition id.
-	 * @return array<string, mixed>|null
+	 * @return array{id: int, created_at_ts: int, updated_at_ts: int, org_id: int, public_key: string, name: string, window_seconds: int, default_value_micros: int, currency: string, allow_s2s: bool, status: string, revision: int}|null
 	 */
 	public function find( int $id ): ?array {
 		global $wpdb;
@@ -195,7 +195,7 @@ final class Conversion_Definition_Repository {
 	 * one that never reaches MySQL.
 	 *
 	 * @param string $public_key 32-hex identifier.
-	 * @return array<string, mixed>|null
+	 * @return array{id: int, created_at_ts: int, updated_at_ts: int, org_id: int, public_key: string, name: string, window_seconds: int, default_value_micros: int, currency: string, allow_s2s: bool, status: string, revision: int}|null
 	 */
 	public function find_by_public_key( string $public_key ): ?array {
 		global $wpdb;
@@ -215,7 +215,7 @@ final class Conversion_Definition_Repository {
 	 *
 	 * Unpaged on purpose, and safe because `MAX_DEFINITIONS` bounds the table.
 	 *
-	 * @return list<array<string, mixed>>
+	 * @return list<array{id: int, created_at_ts: int, updated_at_ts: int, org_id: int, public_key: string, name: string, window_seconds: int, default_value_micros: int, currency: string, allow_s2s: bool, status: string, revision: int}>
 	 */
 	public function all(): array {
 		global $wpdb;
@@ -258,7 +258,7 @@ final class Conversion_Definition_Repository {
 	 * matching, so the shaping happens once, here.
 	 *
 	 * @param array<string, mixed> $row Raw row.
-	 * @return array<string, mixed>
+	 * @return array{id: int, created_at_ts: int, updated_at_ts: int, org_id: int, public_key: string, name: string, window_seconds: int, default_value_micros: int, currency: string, allow_s2s: bool, status: string, revision: int}
 	 */
 	private static function shape( array $row ): array {
 		return array(

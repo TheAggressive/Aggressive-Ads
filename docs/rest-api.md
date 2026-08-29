@@ -50,6 +50,7 @@ Routes marked “planned” remain contracts for later phases. Every other row i
 | `GET` | `/audit` | `aggr_view_audit_log` | **Planned as REST.** Current staff timeline is org-filtered **in SQL** |
 | `POST` | `/creatives/{id}/replacement` | `aggr_upload_creative` + object ownership | Stages a private replacement for a scheduled/live ad; multipart `file`, `click_url`, and optional `alt_text` |
 | `GET` | `/fill/{slot}` | public (always registered) | Public, same-origin. Uncached. One live creative from weighted assignment selection, or house. Mints a token bound to that campaign **and the current `blog_id`**. Response omits internal ids and never lists candidates |
+| `POST` | `/conversions` | public (always registered) | **Not same-origin**, unlike `/i` — a conversion is reported by the advertiser's site. Carries the fill token, a definition `public_key` and an idempotency key. Duplicate is `200`, first is `201`, every refusal is one identical `400`. Own rate-limit bucket. `no-store` |
 | `POST` | `/i` | public (always registered) | Public same-origin beacon. Prefetch 400, replay 409, cross-origin 403, success 204 |
 | `DELETE` | `/creative-replacements/{id}` | `aggr_upload_creative` + object ownership | Withdraws the caller's pending replacement |
 | `POST` | `/creative-replacements/{id}/decision` | `aggr_review_campaigns`; approval also requires `aggr_publish` | Staff `approve` or `reject`; rejection requires `review_notes` |
@@ -224,6 +225,50 @@ Unauthorized and non-existent are again the same answer: a campaign belonging to
 another organization and an assignment id belonging to a different campaign both
 return the same `404`, so neither can be used to enumerate. Both write routes are
 rate limited on the autosave bucket.
+
+## Conversions
+
+`POST /aggr/v1/conversions` is the only public write besides the beacon and the
+click hop, and it is the only one that is **deliberately not same-origin**. A
+conversion is reported from the advertiser's own site; the cross-origin refusal
+that protects `/i` would refuse every real report. Origin was never what
+protected this — the request carries a signed token it cannot forge, spends one
+outcome exactly once against a database unique key, and can only credit a
+definition the campaign's organization owns.
+
+**Nothing a client sends decides attribution.** The token is signed, the
+interaction is a row the server wrote, the window and the value come from the
+definition, and the organization comes from the campaign. The only client input
+that survives is *which* definition and *when* the outcome happened, and the
+second is bounded to a day either side of now.
+
+**Expired tokens are accepted, and must be.** `Fill_Token::TTL_SECONDS` is five
+minutes and bounds when reporting may *start*; an attribution window is days.
+Refusing an expired token would refuse every conversion that is not immediate.
+Authenticity is the HMAC, not the clock.
+
+**Every refusal is one answer.** An unknown definition, an archived one, one
+belonging to another organization, a token that never clicked, and a report past
+its window are five different reasons internally — `Conversion_Attribution` keeps
+them apart for the operator — and one identical `400` externally. Distinguishing
+them would turn the endpoint into an oracle for which definitions exist and who
+owns them, which is why `public_key` is unguessable in the first place.
+
+**A duplicate is `200`, not `409`.** A retried beacon and a reloaded thank-you
+page are the normal way this endpoint is used; answering with a conflict would
+make every correct integration look broken.
+
+The accepted response body is `{"ok": true}` and says nothing about what was
+credited — not the campaign, not the value, not the definition's name.
+
+### The click-through carrier
+
+`Click_Hop` appends the signed token to the destination as `aggr_ct`. It has to:
+the hop sets `Referrer-Policy: no-referrer`, so the advertiser's landing page
+learns nothing about the click otherwise. `add_query_arg` replaces an existing
+parameter rather than appending a second, so a destination already carrying one
+ends up with this click's token and no other; existing query strings and
+fragments survive.
 
 ## The impression beacon
 

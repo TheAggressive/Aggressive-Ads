@@ -40,6 +40,7 @@ final class Rate_Limiter {
 	public const ACTION_BEACON         = 'beacon';
 	public const ACTION_CLICK          = 'click';
 	public const ACTION_DECISIONS      = 'decisions';
+	public const ACTION_CONVERSION     = 'conversion';
 
 	/**
 	 * Limits per action, as attempts per window.
@@ -121,6 +122,22 @@ final class Rate_Limiter {
 		),
 		self::ACTION_CLICK          => array(
 			'limit'  => 120,
+			'window' => HOUR_IN_SECONDS,
+		),
+
+		/*
+		 * Its own bucket, deliberately not shared with the beacon.
+		 *
+		 * Sharing would couple two unrelated volumes: a visitor browsing a page
+		 * full of ads spends the beacon budget, and if conversions drew from the
+		 * same pool that visitor could exhaust it and have their purchase go
+		 * unrecorded. A conversion is also far rarer than an impression — one
+		 * per outcome, not one per fill — so the ceiling is low enough to bound
+		 * what an unauthenticated POST can buy and still far past anything a
+		 * real shopper produces.
+		 */
+		self::ACTION_CONVERSION     => array(
+			'limit'  => 60,
 			'window' => HOUR_IN_SECONDS,
 		),
 	);
