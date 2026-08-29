@@ -317,6 +317,39 @@ final class Creative_Assignment_Repository {
 	}
 
 	/**
+	 * The line item that served one creative on one placement.
+	 *
+	 * Read on the beacon path, beside a write that was already happening, so a
+	 * delivery counts against the line item whose cap it spends. Retired rows
+	 * are included deliberately: an impression recorded moments after a
+	 * withdrawal still belongs to what served it, and dropping the attribution
+	 * would silently move it to line item 0.
+	 *
+	 * @param int $revision_id  Creative revision id.
+	 * @param int $placement_id Placement post id.
+	 * @return int Line-item id, or 0 when nothing matches.
+	 */
+	public function line_item_for( int $revision_id, int $placement_id ): int {
+		global $wpdb;
+
+		if ( $revision_id <= 0 || $placement_id <= 0 || ! $this->table_exists() ) {
+			return 0;
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Bounded lookup on this plugin's own table.
+		$found = $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT line_item_id FROM %i WHERE revision_id = %d AND placement_id = %d ORDER BY id ASC LIMIT 1',
+				$this->table_name(),
+				$revision_id,
+				$placement_id
+			)
+		);
+
+		return null === $found ? 0 : (int) $found;
+	}
+
+	/**
 	 * Delivery candidates for one placement, in one indexed query.
 	 *
 	 * **The P3 read contract.** Inputs, output shape, ordering and visibility

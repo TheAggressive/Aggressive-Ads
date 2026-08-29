@@ -95,3 +95,11 @@ the same change.
 Pacing counters are as fresh as the fill cache rather than exact. A cap here
 is a budget, not a hard limit; reading the event ledger on every fill would cost
 more than the overshoot it prevents.
+
+They are keyed by **line item**, which is what carries the cap (schema 16).
+Keying them by campaign was correct only while a campaign had exactly one line
+item; a second would have counted its sibling's deliveries against its own cap
+and stopped delivering early, with nothing reporting why. The live counter
+resolves the line item from the assignment that served the fill; the daily
+reconcile recovers the same attribution with a join, which is durable because
+withdrawal retires an assignment rather than deleting it.

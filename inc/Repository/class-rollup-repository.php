@@ -35,6 +35,7 @@ final class Rollup_Repository {
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
 		dbDelta( Schema::rollups_table_ddl( $this->table_name(), $wpdb->get_charset_collate() ) );
+		$this->drop_legacy_slot_day_index();
 	}
 
 	/**
@@ -64,14 +65,83 @@ final class Rollup_Repository {
 	}
 
 	/**
-	 * Increments today's counter for one slot and campaign.
+	 * Adds the line-item column and re-keys the table.
+	 *
+	 * `dbDelta` adds the column and the new unique key, and drops neither the
+	 * old `slot_day` unique nor its meaning: left in place it would refuse a
+	 * second line item's row for the same slot and day, which is exactly the
+	 * case this migration exists to allow. The same shape as the v5 token index.
+	 *
+	 * Existing rows are attributed to the campaign's default line item, which is
+	 * correct because until now a campaign had exactly one — that assumption is
+	 * what made counting by campaign work, and it is what makes the backfill
+	 * safe.
+	 *
+	 * @return void
+	 */
+	public function migrate_line_item_attribution(): void {
+		global $wpdb;
+
+		// Creates the column and drops the pre-v16 unique.
+		$this->install_table();
+
+		if ( ! $this->table_exists() ) {
+			return;
+		}
+
+		$table      = $this->table_name();
+		$line_items = $wpdb->prefix . Schema::LINE_ITEMS_TABLE;
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Both table names are prefix+constant; there is no caller input in this statement.
+		$wpdb->query(
+			"UPDATE {$table} r
+			JOIN {$line_items} l ON l.campaign_id = r.campaign_id AND l.default_key = 1
+			SET r.line_item_id = l.id
+			WHERE r.line_item_id = 0"
+		);
+		// phpcs:enable
+	}
+
+	/**
+	 * `dbDelta` adds `slot_line_day` but will not drop the pre-v16 `slot_day`.
+	 *
+	 * Left in place it refuses a second line item's row for the same slot and
+	 * day — exactly the case the new key exists to allow. Dropped here rather
+	 * than only in the migration so a repair install heals it too, matching how
+	 * the events table handles its own superseded unique.
+	 *
+	 * @return void
+	 */
+	private function drop_legacy_slot_day_index(): void {
+		global $wpdb;
+
+		if ( ! $this->table_exists() ) {
+			return;
+		}
+
+		$table = $this->table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Schema introspection on this plugin's table.
+		$rows  = $wpdb->get_results( "SHOW INDEX FROM {$table}", ARRAY_A );
+		$names = is_array( $rows ) ? array_values( array_unique( array_column( $rows, 'Key_name' ) ) ) : array();
+
+		if ( in_array( 'slot_day', $names, true ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Dropping the pre-v16 unique so a second line item can hold its own row.
+			$wpdb->query( "ALTER TABLE {$table} DROP INDEX slot_day" );
+		}
+	}
+
+	/**
+	 * Increments today's counter for one slot, campaign and line item.
 	 *
 	 * @param string $column       impressions|clicks.
 	 * @param int    $placement_id Placement id.
 	 * @param int    $campaign_id  Campaign id, or 0 for house.
 	 * @param string $day_utc      Optional UTC Y-m-d. Invalid values use today.
+	 * @param int    $line_item_id Line item the delivery is spent against, or 0.
+	 * @return bool
 	 */
-	public function increment( string $column, int $placement_id, int $campaign_id, string $day_utc = '' ): bool {
+	public function increment( string $column, int $placement_id, int $campaign_id, string $day_utc = '', int $line_item_id = 0 ): bool {
 		global $wpdb;
 
 		if ( ! in_array( $column, array( 'impressions', 'clicks' ), true ) ) {
@@ -84,11 +154,12 @@ final class Rollup_Repository {
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is prefix+constant; column is allowlisted to impressions|clicks.
 		$written = $wpdb->query(
 			$wpdb->prepare(
-				"INSERT INTO {$table} (day_utc, placement_id, campaign_id, impressions, clicks) VALUES (%s, %d, %d, %d, %d)
+				"INSERT INTO {$table} (day_utc, placement_id, campaign_id, line_item_id, impressions, clicks) VALUES (%s, %d, %d, %d, %d, %d)
 				ON DUPLICATE KEY UPDATE {$column} = {$column} + 1",
 				$day,
 				$placement_id,
 				$campaign_id,
+				$line_item_id,
 				'impressions' === $column ? 1 : 0,
 				'clicks' === $column ? 1 : 0
 			)
@@ -123,16 +194,26 @@ final class Rollup_Repository {
 		$events  = $wpdb->prefix . Schema::EVENTS_TABLE;
 		$end     = $start + DAY_IN_SECONDS;
 
+		/*
+		 * The event ledger records the creative, not the line item, so the
+		 * attribution is recovered by joining the assignment that served it.
+		 * That join is durable because withdrawal retires an assignment rather
+		 * than deleting it — history keeps something to point at.
+		 */
+		$assignments = $wpdb->prefix . 'aggr_creative_assignments';
+
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Idempotent projection repair between this plugin's two custom tables.
 		$written = $wpdb->query(
 			$wpdb->prepare(
-				"INSERT INTO {$rollups} (day_utc, placement_id, campaign_id, impressions, clicks)
-				SELECT %s, placement_id, campaign_id,
-					SUM(CASE WHEN event IN (%s, %s) THEN 1 ELSE 0 END),
-					SUM(CASE WHEN event = %s THEN 1 ELSE 0 END)
-				FROM {$events}
-				WHERE created_at_ts >= %d AND created_at_ts < %d
-				GROUP BY placement_id, campaign_id
+				"INSERT INTO {$rollups} (day_utc, placement_id, campaign_id, line_item_id, impressions, clicks)
+				SELECT %s, e.placement_id, e.campaign_id, COALESCE(a.line_item_id, 0),
+					SUM(CASE WHEN e.event IN (%s, %s) THEN 1 ELSE 0 END),
+					SUM(CASE WHEN e.event = %s THEN 1 ELSE 0 END)
+				FROM {$events} e
+				LEFT JOIN {$assignments} a
+					ON a.revision_id = e.creative_id AND a.placement_id = e.placement_id
+				WHERE e.created_at_ts >= %d AND e.created_at_ts < %d
+				GROUP BY e.placement_id, e.campaign_id, COALESCE(a.line_item_id, 0)
 				ON DUPLICATE KEY UPDATE impressions = VALUES(impressions), clicks = VALUES(clicks)",
 				$day_utc,
 				Event_Repository::TYPE_SERVED,
@@ -209,7 +290,12 @@ final class Rollup_Repository {
 	 * @return array<int, array{impressions: int, clicks: int}>
 	 */
 	/**
-	 * Lifetime and same-day impressions per campaign, for pacing.
+	 * Lifetime and same-day impressions per line item, for pacing.
+	 *
+	 * Keyed by line item because that is what carries a cap. Counting by
+	 * campaign was correct only while every campaign had exactly one line item —
+	 * the moment a second exists, each would count its siblings' impressions
+	 * against its own cap and stop delivering early.
 	 *
 	 * One query for the whole candidate set rather than one per candidate: the
 	 * decision path may not do work proportional to the number of candidates.
@@ -217,15 +303,15 @@ final class Rollup_Repository {
 	 * The day is UTC, matching how rollups are keyed, so "today" means the same
 	 * thing here as it does in the row being read.
 	 *
-	 * @param array<int, int> $campaign_ids Campaign post ids.
-	 * @param string          $day_utc      UTC day, `Y-m-d`; defaults to today.
-	 * @return array<int, array{lifetime: int, today: int}> Keyed by campaign id.
+	 * @param array<int, int> $line_item_ids Line-item ids.
+	 * @param string          $day_utc       UTC day, `Y-m-d`; defaults to today.
+	 * @return array<int, array{lifetime: int, today: int}> Keyed by line-item id.
 	 */
-	public function delivery_totals_for_campaigns( array $campaign_ids, string $day_utc = '' ): array {
+	public function delivery_totals_for_line_items( array $line_item_ids, string $day_utc = '' ): array {
 		$ids = array();
 
-		foreach ( $campaign_ids as $campaign_id ) {
-			$id = (int) $campaign_id;
+		foreach ( $line_item_ids as $line_item_id ) {
+			$id = (int) $line_item_id;
 
 			if ( $id > 0 ) {
 				$ids[ $id ] = $id;
@@ -248,12 +334,12 @@ final class Rollup_Repository {
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Table name is prefix+constant; placeholders are a fixed %d list matching $ids.
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT campaign_id,
+				"SELECT line_item_id,
 					SUM(impressions) AS lifetime,
 					SUM(CASE WHEN day_utc = %s THEN impressions ELSE 0 END) AS today
 				FROM {$table}
-				WHERE campaign_id IN ({$placeholders})
-				GROUP BY campaign_id",
+				WHERE line_item_id IN ({$placeholders})
+				GROUP BY line_item_id",
 				...$args
 			),
 			ARRAY_A
@@ -268,7 +354,7 @@ final class Rollup_Repository {
 					continue;
 				}
 
-				$totals[ (int) ( $row['campaign_id'] ?? 0 ) ] = array(
+				$totals[ (int) ( $row['line_item_id'] ?? 0 ) ] = array(
 					'lifetime' => max( 0, (int) ( $row['lifetime'] ?? 0 ) ),
 					'today'    => max( 0, (int) ( $row['today'] ?? 0 ) ),
 				);

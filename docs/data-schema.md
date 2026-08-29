@@ -104,9 +104,19 @@ replay of the same event is a database refusal, while one fill may still
 record both an impression and a click. `ip_hash` is `HMAC(IP + daily salt)`, never a
 raw address. House fills store campaign_id and creative_id as 0.
 
-`{$wpdb->prefix}aggr_rollups` is the reporting source: unique
-`(placement_id, campaign_id, day_utc)`. Advertiser tiles appear only when
-the reporting module is on.
+`{$wpdb->prefix}aggr_rollups` is the reporting source and the pacing counter:
+unique `(placement_id, campaign_id, line_item_id, day_utc)`. Advertiser tiles
+appear only when the reporting module is on.
+
+**`line_item_id` is schema 16, and it exists because a cap belongs to a line
+item.** Counting deliveries per campaign was correct only while a campaign had
+exactly one line item — true then, and not a property to build on: a second
+would have spent its sibling's impressions against its own cap and stopped
+delivering early with nothing reporting why. The event ledger records the
+creative rather than the line item, so the live counter resolves it from the
+assignment that served the fill, and the daily reconcile recovers the same
+attribution with a join. That join is durable because withdrawal retires an
+assignment rather than deleting it.
 House rows
 (`campaign_id = 0`) are never attributed to an organization. Org totals are
 filtered in SQL against campaign `_aggr_org_id`.
@@ -239,6 +249,7 @@ array(
     4 => install_delivery_tables,  // aggr_events + aggr_rollups
     5 => migrate_event_token_uniqueness,
     12 => install_line_items_and_start_backfill,
+    16 => migrate_line_item_attribution,  // rollups gain line_item_id
 )
 ```
 

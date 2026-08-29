@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Install;
 
 use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Org_Access_Repository;
 use Aggressive\Ads\Security\Ownership;
@@ -120,6 +121,15 @@ final class Migration_Map {
 			15 => static function () use ( $c ): void {
 				$c->get( Installer::class )->install_creative_model();
 				$c->get( Creative_Assignment_Migrator::class )->start();
+			},
+
+			/*
+			 * A cap belongs to the line item, so its counter must too. Counting
+			 * by campaign was right only while a campaign had exactly one line
+			 * item; a second would have spent its sibling's impressions.
+			 */
+			16 => static function () use ( $c ): void {
+				$c->get( Rollup_Repository::class )->migrate_line_item_attribution();
 			},
 		);
 	}

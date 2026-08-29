@@ -69,6 +69,11 @@ final class Decision_Engine {
 	 * Two bounded queries for the whole candidate set, never one per candidate,
 	 * and only on a cache miss: the enriched rows are what gets cached.
 	 *
+	 * Counters are keyed by line item, which is what carries a cap. Keying them
+	 * by campaign was correct only while every campaign had exactly one line
+	 * item; a second would have counted its sibling's impressions against its
+	 * own cap.
+	 *
 	 * Pacing counters are consequently as fresh as the fill cache, which is the
 	 * right trade for a cap that is a budget rather than a hard limit — an exact
 	 * count would mean reading the ledger on every fill.
@@ -83,19 +88,18 @@ final class Decision_Engine {
 		}
 
 		$line_item_ids = array();
-		$campaign_ids  = array();
 
 		foreach ( $rows as $row ) {
 			$line_item_ids[] = (int) ( $row['line_item_id'] ?? 0 );
-			$campaign_ids[]  = (int) ( $row['campaign_id'] ?? 0 );
 		}
 
 		$policies = $this->line_items->delivery_policies_for( $line_item_ids );
-		$totals   = $this->rollups->delivery_totals_for_campaigns( $campaign_ids, gmdate( 'Y-m-d', $now ) );
+		$totals   = $this->rollups->delivery_totals_for_line_items( $line_item_ids, gmdate( 'Y-m-d', $now ) );
 
 		foreach ( $rows as $index => $row ) {
-			$policy = $policies[ (int) ( $row['line_item_id'] ?? 0 ) ] ?? array();
-			$total  = $totals[ (int) ( $row['campaign_id'] ?? 0 ) ] ?? array(
+			$line_item_id = (int) ( $row['line_item_id'] ?? 0 );
+			$policy       = $policies[ $line_item_id ] ?? array();
+			$total        = $totals[ $line_item_id ] ?? array(
 				'lifetime' => 0,
 				'today'    => 0,
 			);

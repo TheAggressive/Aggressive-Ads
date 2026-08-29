@@ -194,7 +194,7 @@ final class DecisionPolicyInputsTest extends WP_UnitTestCase {
 		$this->set_policy( array( 'lifetime_cap' => 5 ) );
 
 		Plugin::instance()->container()->get( Rollup_Repository::class )
-			->increment( 'impressions', $this->placement_id, $this->campaign_id );
+			->increment( 'impressions', $this->placement_id, $this->campaign_id, '', $this->line_item_id );
 
 		$this->assertTrue(
 			$this->decide( time() )['result']->has_winner(),
@@ -203,7 +203,7 @@ final class DecisionPolicyInputsTest extends WP_UnitTestCase {
 
 		for ( $i = 0; $i < 4; $i++ ) {
 			Plugin::instance()->container()->get( Rollup_Repository::class )
-				->increment( 'impressions', $this->placement_id, $this->campaign_id );
+				->increment( 'impressions', $this->placement_id, $this->campaign_id, '', $this->line_item_id );
 		}
 
 		$this->assertFalse(

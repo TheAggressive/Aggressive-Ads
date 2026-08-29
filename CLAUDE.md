@@ -426,6 +426,13 @@ produces confidence. Assert your fixture is real before asserting on it.
 - **Exception messages are exempt from the escaping sniff**, narrowly and with a
   reason in `phpcs.xml.dist`: they are boot-time developer diagnostics, never
   rendered. Anything a user can cause returns `WP_Error` instead.
+- **`dbDelta` adds an index and never drops one.** A key whose definition
+  changes leaves the old one in place, still enforcing the old rule. `slot_day`
+  on `aggr_rollups` and `token_hash` on `aggr_events` are both dropped
+  explicitly, from `install_table()` rather than only from the migration, so a
+  repair install heals a site the upgrade missed. A test that asserts the old
+  key is gone must **recreate it first** — a fresh table never had it, and the
+  assertion passes over a migration that does nothing.
 - **A decision stage reads the candidate row, and that row is not the query.**
   `candidates_for_placement()` returns the *assignment's* columns. Priority,
   pacing, caps, targeting and frequency policy all live on `aggr_line_items`,
