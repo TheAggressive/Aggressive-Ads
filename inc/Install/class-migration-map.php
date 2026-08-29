@@ -11,6 +11,7 @@ namespace Aggressive\Ads\Install;
 
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
+use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Org_Access_Repository;
 use Aggressive\Ads\Security\Ownership;
@@ -176,6 +177,25 @@ final class Migration_Map {
 			 */
 			19 => static function () use ( $c ): void {
 				$c->get( Installer::class )->install_conversions();
+			},
+
+			/*
+			 * Repairs assignments whose denormalized snapshot went stale.
+			 *
+			 * `candidates_for_placement()` selects on `status = 'live'` and
+			 * reads `attachment_id` off the row. The only code that ever wrote
+			 * either from the campaign was version 15's backfill, so a campaign
+			 * that went live afterwards kept assignments at `draft` and could
+			 * never serve — and `Assignment_Projection` only fixes that from
+			 * the next transition onwards. Existing rows need this.
+			 *
+			 * Data, not schema, and the first migration here that changes what
+			 * delivers. It is idempotent and derives from the campaign rather
+			 * than stepping from the current value, so a re-run reaches the same
+			 * state; terminal rows are excluded, so a withdrawal survives.
+			 */
+			20 => static function () use ( $c ): void {
+				$c->get( Creative_Assignment_Repository::class )->reproject_all();
 			},
 		);
 	}

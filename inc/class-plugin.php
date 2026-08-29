@@ -69,6 +69,7 @@ use Aggressive\Ads\Update\Plugin_Updates;
 use Aggressive\Ads\Workflow\Campaign_Change_Manager;
 use Aggressive\Ads\Workflow\Campaign_Clock;
 use Aggressive\Ads\Workflow\Campaign_State_Machine;
+use Aggressive\Ads\Workflow\Assignment_Projection;
 use Aggressive\Ads\Workflow\Line_Item_Lifecycle;
 use Aggressive\Ads\Workflow\Click_Hop;
 use Aggressive\Ads\Workflow\Audit_Retention;
@@ -327,6 +328,7 @@ final class Plugin {
 			// without going through the state machine.
 			Campaign_State_Machine::class,
 			Line_Item_Lifecycle::class,
+			Assignment_Projection::class,
 			Line_Item_Migrator::class,
 			Creative_Assignment_Migrator::class,
 			Assignment_Health::class,

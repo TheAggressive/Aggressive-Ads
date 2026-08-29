@@ -24,7 +24,7 @@ final class Schema {
 	 *
 	 * Drives the migration walker in Upgrader.
 	 */
-	public const DB_VERSION = 19;
+	public const DB_VERSION = 20;
 
 	/**
 	 * The audit table's name, without the site's table prefix.

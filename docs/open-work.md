@@ -67,6 +67,41 @@ Two traps found building the storage, recorded so they are not rediscovered:
   transaction rollback in the object cache and silently disables a later test's
   upgrade.
 
+## Assignment status was never projected, and delivery never worked
+
+Fixed, but the shape is worth keeping. `candidates_for_placement()` selects on
+`status = 'live'` and reads `attachment_id` off the assignment row, because a
+fill must be one indexed read rather than a join back to the campaign and the
+creative. That denormalization is only correct while something refreshes it, and
+nothing did: `Assignment_Rules::status_for_campaign()` existed, was correct, and
+had exactly one production caller — the one-time P2 backfill. Every campaign that
+went live afterwards kept its assignments at `draft`, matched no candidate, and
+served nothing.
+
+`Assignment_Projection` now runs on `aggr_campaign_transitioned`, and migration
+20 repairs rows that froze earlier.
+
+**Every test in the suite was green throughout**, because each one wrote
+`'status' => Assignment_Rules::LIVE` into its own fixture — twelve PHP tests and
+the browser fixture alike. `tests/e2e/seed-live-ad.php` was the worst of them: it
+created the campaign already `aggr_live` and `$wpdb->insert`ed the assignment
+already `live` with its attachment already set, so the one test that watches a
+real ad in a real browser was only ever testing the renderer. It now starts the
+campaign one legal edge short of live and drives the real transition, and it
+throws if the fixture does not end up serving.
+
+Two things still open from it:
+
+1. **An individually paused assignment is resumed when its campaign resumes.**
+   Terminal states are protected; `paused` is not, because nothing distinguishes
+   "paused with its campaign" from "paused on its own". Protecting it would strand
+   assignments paused by a campaign pause, which is worse. It needs an ownership
+   flag on the row, not a cleverer rule.
+2. **Nothing asserts that a fixture's status came from production code.** The
+   rule that would have caught this — a delivery test may not write
+   `Assignment_Rules::LIVE` itself — is a guard `bin/ci/` could enforce, in the
+   spirit of the other structural checks.
+
 ## Nothing else is open
 
 Every other entry that was here has shipped or been closed. That is the intended

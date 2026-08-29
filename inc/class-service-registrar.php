@@ -90,6 +90,7 @@ use Aggressive\Ads\Workflow\Campaign_Clock;
 use Aggressive\Ads\Workflow\Campaign_Copier;
 use Aggressive\Ads\Workflow\Campaign_Editor;
 use Aggressive\Ads\Workflow\Line_Item_Editor;
+use Aggressive\Ads\Workflow\Assignment_Projection;
 use Aggressive\Ads\Workflow\Line_Item_Lifecycle;
 use Aggressive\Ads\Workflow\Line_Item_Validator;
 use Aggressive\Ads\Workflow\Assigned_Creatives;
@@ -546,6 +547,15 @@ final class Service_Registrar {
 				$c->get( Line_Item_Validator::class ),
 				$c->get( Audit_Repository::class ),
 				$c->get( Edit_Window::class )
+			)
+		);
+
+		$container->register(
+			Assignment_Projection::class,
+			static fn ( Service_Container $c ): Assignment_Projection => new Assignment_Projection(
+				$c->get( \Aggressive\Ads\Repository\Campaign_Repository::class ),
+				$c->get( \Aggressive\Ads\Repository\Creative_Assignment_Repository::class ),
+				$c->get( \Aggressive\Ads\Repository\Creative_Repository::class )
 			)
 		);
 
