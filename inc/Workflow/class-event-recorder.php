@@ -57,7 +57,12 @@ final class Event_Recorder {
 		}
 
 		$is_served = in_array( $type, array( Event_Repository::TYPE_SERVED, Event_Repository::TYPE_IMPRESSION ), true );
-		$column    = $is_served ? 'impressions' : 'clicks';
+
+		$column = match ( true ) {
+			$is_served => 'impressions',
+			Event_Repository::TYPE_VIEWABLE === $type => 'viewables',
+			default => 'clicks',
+		};
 
 		/*
 		 * A cap belongs to the line item, so the counter has to as well. The

@@ -144,24 +144,33 @@ final class Rollup_Repository {
 	public function increment( string $column, int $placement_id, int $campaign_id, string $day_utc = '', int $line_item_id = 0 ): bool {
 		global $wpdb;
 
-		if ( ! in_array( $column, array( 'impressions', 'clicks' ), true ) ) {
+		if ( ! in_array( $column, array( 'impressions', 'clicks', 'viewables' ), true ) ) {
 			return false;
 		}
 
 		$table = $this->table_name();
 		$day   = 1 === preg_match( '/^\d{4}-\d{2}-\d{2}$/', $day_utc ) ? $day_utc : gmdate( 'Y-m-d' );
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is prefix+constant; column is allowlisted to impressions|clicks.
+		/*
+		 * `viewables` starts at 0 on any row an impression touches, so the day
+		 * is marked as measured even before anything is seen — NULL has to keep
+		 * meaning "nobody was measuring" rather than "nothing seen yet today".
+		 *
+		 * COALESCE on update for the same reason: a row carried over from
+		 * before the column existed becomes 0, not NULL + 1.
+		 */
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is prefix+constant; column is allowlisted to impressions|clicks|viewables.
 		$written = $wpdb->query(
 			$wpdb->prepare(
-				"INSERT INTO {$table} (day_utc, placement_id, campaign_id, line_item_id, impressions, clicks) VALUES (%s, %d, %d, %d, %d, %d)
-				ON DUPLICATE KEY UPDATE {$column} = {$column} + 1",
+				"INSERT INTO {$table} (day_utc, placement_id, campaign_id, line_item_id, impressions, clicks, viewables) VALUES (%s, %d, %d, %d, %d, %d, %d)
+				ON DUPLICATE KEY UPDATE {$column} = COALESCE({$column}, 0) + 1",
 				$day,
 				$placement_id,
 				$campaign_id,
 				$line_item_id,
 				'impressions' === $column ? 1 : 0,
-				'clicks' === $column ? 1 : 0
+				'clicks' === $column ? 1 : 0,
+				'viewables' === $column ? 1 : 0
 			)
 		);
 		// phpcs:enable
@@ -205,20 +214,22 @@ final class Rollup_Repository {
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Idempotent projection repair between this plugin's two custom tables.
 		$written = $wpdb->query(
 			$wpdb->prepare(
-				"INSERT INTO {$rollups} (day_utc, placement_id, campaign_id, line_item_id, impressions, clicks)
+				"INSERT INTO {$rollups} (day_utc, placement_id, campaign_id, line_item_id, impressions, clicks, viewables)
 				SELECT %s, e.placement_id, e.campaign_id, COALESCE(a.line_item_id, 0),
 					SUM(CASE WHEN e.event IN (%s, %s) THEN 1 ELSE 0 END),
+					SUM(CASE WHEN e.event = %s THEN 1 ELSE 0 END),
 					SUM(CASE WHEN e.event = %s THEN 1 ELSE 0 END)
 				FROM {$events} e
 				LEFT JOIN {$assignments} a
 					ON a.revision_id = e.creative_id AND a.placement_id = e.placement_id
 				WHERE e.created_at_ts >= %d AND e.created_at_ts < %d
 				GROUP BY e.placement_id, e.campaign_id, COALESCE(a.line_item_id, 0)
-				ON DUPLICATE KEY UPDATE impressions = VALUES(impressions), clicks = VALUES(clicks)",
+				ON DUPLICATE KEY UPDATE impressions = VALUES(impressions), clicks = VALUES(clicks), viewables = VALUES(viewables)",
 				$day_utc,
 				Event_Repository::TYPE_SERVED,
 				Event_Repository::TYPE_IMPRESSION,
 				Event_Repository::TYPE_CLICK,
+				Event_Repository::TYPE_VIEWABLE,
 				$start,
 				$end
 			)

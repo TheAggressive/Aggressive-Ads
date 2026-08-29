@@ -24,7 +24,7 @@ final class Schema {
 	 *
 	 * Drives the migration walker in Upgrader.
 	 */
-	public const DB_VERSION = 16;
+	public const DB_VERSION = 17;
 
 	/**
 	 * The audit table's name, without the site's table prefix.
@@ -500,6 +500,12 @@ final class Schema {
 	/**
 	 * Per-day counters. Reporting reads this, never the event log.
 	 *
+	 * `viewables` is nullable on purpose, and it carries the whole reporting
+	 * distinction: NULL means nobody was measuring, which is every row written
+	 * before P11, while zero means we were and saw none. Projecting zero onto
+	 * history would make an unimplemented feature look identical to a day on
+	 * which not one ad was seen — the more alarming reading, and the wrong one.
+	 *
 	 * @param string $table_name      Fully prefixed table name.
 	 * @param string $charset_collate Database charset and collation.
 	 * @return string
@@ -513,6 +519,7 @@ final class Schema {
 	line_item_id bigint(20) unsigned NOT NULL DEFAULT 0,
 	impressions bigint(20) unsigned NOT NULL DEFAULT 0,
 	clicks bigint(20) unsigned NOT NULL DEFAULT 0,
+	viewables bigint(20) unsigned NULL DEFAULT NULL,
 	PRIMARY KEY  (id),
 	UNIQUE KEY slot_line_day (placement_id,campaign_id,line_item_id,day_utc),
 	KEY campaign_day (campaign_id,day_utc),
@@ -534,6 +541,7 @@ final class Schema {
 			'line_item_id',
 			'impressions',
 			'clicks',
+			'viewables',
 		);
 	}
 

@@ -131,6 +131,15 @@ final class Migration_Map {
 			16 => static function () use ( $c ): void {
 				$c->get( Rollup_Repository::class )->migrate_line_item_attribution();
 			},
+
+			/*
+			 * Additive only. History is deliberately left NULL — a day before
+			 * measurement existed has no viewability, and writing zero would
+			 * read as "nothing was seen" rather than "nobody was looking".
+			 */
+			17 => static function () use ( $c ): void {
+				$c->get( Rollup_Repository::class )->install_table();
+			},
 		);
 	}
 }

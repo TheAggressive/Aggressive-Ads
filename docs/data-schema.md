@@ -108,6 +108,13 @@ raw address. House fills store campaign_id and creative_id as 0.
 unique `(placement_id, campaign_id, line_item_id, day_utc)`. Advertiser tiles
 appear only when the reporting module is on.
 
+**`viewables` is schema 17, and it is nullable on purpose.** NULL means nobody
+was measuring — every row written before P11 — while zero means we were and saw
+none. Projecting zero onto history would make an unimplemented feature look
+identical to a day on which not one ad was seen, which is the more alarming
+reading and the wrong one. An impression sets the column to zero, so a delivery
+is what marks a day as measured.
+
 **`line_item_id` is schema 16, and it exists because a cap belongs to a line
 item.** Counting deliveries per campaign was correct only while a campaign had
 exactly one line item — true then, and not a property to build on: a second
@@ -250,6 +257,7 @@ array(
     5 => migrate_event_token_uniqueness,
     12 => install_line_items_and_start_backfill,
     16 => migrate_line_item_attribution,  // rollups gain line_item_id
+    17 => install_delivery_tables,        // rollups gain viewables (additive)
 )
 ```
 
