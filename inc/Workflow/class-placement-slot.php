@@ -20,7 +20,7 @@ use Aggressive\Ads\REST\Creative_File_Controller;
 final class Placement_Slot implements Service {
 
 	public const SHORTCODE = 'aggr_placement';
-	public const BLOCK = 'aggr/ad-slot';
+	public const BLOCK     = 'aggr/ad-slot';
 
 	/**
 	 * The name this block shipped under until 1.6.0.
@@ -226,9 +226,9 @@ final class Placement_Slot implements Service {
 		}
 
 		$extra = array(
-			'class'          => 'aggr-slot',
-			'data-aggr-slot' => $slug,
-			'data-aggr-fill' => $fill,
+			'class'               => 'aggr-slot',
+			'data-aggr-slot'      => $slug,
+			'data-aggr-fill'      => $fill,
 
 			/*
 			 * The Interactivity API directives. `data-wp-init` rather than a
