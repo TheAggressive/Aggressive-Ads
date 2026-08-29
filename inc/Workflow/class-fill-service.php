@@ -12,6 +12,7 @@ namespace Aggressive\Ads\Workflow;
 use Aggressive\Ads\Core\Settings;
 use Aggressive\Ads\Domain\Campaign_Rules;
 use Aggressive\Ads\Domain\Settings_Schema;
+use Aggressive\Ads\Domain\Viewability_Rules;
 use Aggressive\Ads\Domain\Upload_Rules;
 use Aggressive\Ads\Repository\Delivery_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
@@ -83,12 +84,31 @@ final class Fill_Service {
 
 		return $this->with_tokens(
 			array(
-				'slot'     => $slug,
-				'size'     => $this->placements->size( $placement_id ),
-				'creative' => $paid,
-				'house'    => $house,
-				'beacon'   => rest_url( Creative_File_Controller::NAMESPACE . '/i' ),
+				'slot'        => $slug,
+				'size'        => $this->placements->size( $placement_id ),
+				'creative'    => $paid,
+				'house'       => $house,
+				'beacon'      => rest_url( Creative_File_Controller::NAMESPACE . '/i' ),
+				'viewability' => $this->viewability(),
 			)
+		);
+	}
+
+	/**
+	 * The threshold the client measures against.
+	 *
+	 * Sent with the fill rather than compiled into the script, so changing it
+	 * takes effect on the next fill instead of the next release — and so the
+	 * browser never converts a percentage the server already converted.
+	 *
+	 * @return array{ratio: float, dwell_ms: int}
+	 */
+	private function viewability(): array {
+		$delivery = $this->settings->get()['delivery'] ?? array();
+
+		return Viewability_Rules::for_client(
+			$delivery['viewable_ratio'] ?? null,
+			$delivery['viewable_dwell_ms'] ?? null
 		);
 	}
 
@@ -159,11 +179,12 @@ final class Fill_Service {
 
 			$payloads[ $slug ] = $this->with_tokens(
 				array(
-					'slot'     => $slug,
-					'size'     => $info['size'],
-					'creative' => $paid,
-					'house'    => $house,
-					'beacon'   => rest_url( Creative_File_Controller::NAMESPACE . '/i' ),
+					'slot'        => $slug,
+					'size'        => $info['size'],
+					'creative'    => $paid,
+					'house'       => $house,
+					'beacon'      => rest_url( Creative_File_Controller::NAMESPACE . '/i' ),
+					'viewability' => $this->viewability(),
 				)
 			);
 		}
