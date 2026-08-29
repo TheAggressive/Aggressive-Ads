@@ -335,6 +335,55 @@ final class Rollup_Repository {
 	 * @return array<int, array{impressions: int, clicks: int}>
 	 */
 	/**
+	 * Site-wide delivered and viewable counts for one UTC day.
+	 *
+	 * Not organization-scoped: this answers an operator's question about whether
+	 * measurement is working at all, which is a property of the site rather than
+	 * of a tenant.
+	 *
+	 * `viewables` stays nullable for the reason it is nullable everywhere else —
+	 * a day nobody measured is not a day nothing was seen.
+	 *
+	 * @param string $day_utc UTC day, `Y-m-d`.
+	 * @return array{impressions: int, viewables: int|null}
+	 */
+	public function day_viewability( string $day_utc ): array {
+		$empty = array(
+			'impressions' => 0,
+			'viewables'   => null,
+		);
+
+		if ( 1 !== preg_match( '/^\d{4}-\d{2}-\d{2}$/', $day_utc ) || ! $this->table_exists() ) {
+			return $empty;
+		}
+
+		global $wpdb;
+
+		$table = $this->table_name();
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is prefix+constant; the day is prepared.
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT COALESCE(SUM(impressions), 0) AS impressions, SUM(viewables) AS viewables
+				FROM {$table}
+				WHERE day_utc = %s",
+				$day_utc
+			),
+			ARRAY_A
+		);
+		// phpcs:enable
+
+		if ( ! is_array( $row ) ) {
+			return $empty;
+		}
+
+		return array(
+			'impressions' => (int) $row['impressions'],
+			'viewables'   => null === $row['viewables'] ? null : (int) $row['viewables'],
+		);
+	}
+
+	/**
 	 * Lifetime and same-day impressions per line item, for pacing.
 	 *
 	 * Keyed by line item because that is what carries a cap. Counting by

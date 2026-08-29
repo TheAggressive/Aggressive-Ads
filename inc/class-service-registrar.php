@@ -321,6 +321,13 @@ final class Service_Registrar {
 		);
 
 		$container->register(
+			\Aggressive\Ads\Install\Viewability_Health::class,
+			static fn ( Service_Container $c ): \Aggressive\Ads\Install\Viewability_Health => new \Aggressive\Ads\Install\Viewability_Health(
+				$c->get( \Aggressive\Ads\Repository\Rollup_Repository::class )
+			)
+		);
+
+		$container->register(
 			Decision_Health::class,
 			static fn ( Service_Container $c ): Decision_Health => new Decision_Health(
 				$c->get( Decision_Engine::class ),

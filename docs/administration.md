@@ -120,7 +120,7 @@ site with `DISABLE_WP_CRON` and no real cron they never fire at all. See
 
 ## Site Health
 
-Four checks under **Tools → Site Health**. Each states a fact about this
+Five checks under **Tools → Site Health**. Each states a fact about this
 installation rather than a recommendation.
 
 **Unapproved advertising creative is protected.** Creates a harmless random
@@ -155,6 +155,15 @@ It deliberately does not trust the recorded rewrite version, because a restored
 database leaves that version current and the rules gone.
 
 **Delivery dependencies.** The tables and services native fill needs.
+
+**Advertising viewability is being measured.** Reports the viewable-to-served
+ratio for the last closed UTC day, and is the only place that can tell a dead
+measuring script from a day nobody looked — the portal tile shows `0.0%` for
+both. Four answers and one warning: nothing delivered and nothing measured are
+ordinary states, a real rate is reported as the number, and a whole day of
+impressions with no views at all is the one worth chasing. Across a day that is
+almost never "nobody looked"; it is usually JavaScript being stripped by a cache
+or an optimizer.
 
 **Every creative has a delivery assignment.** Counts creatives with no assignment
 row, and — the part that makes it useful — distinguishes a backfill still running
