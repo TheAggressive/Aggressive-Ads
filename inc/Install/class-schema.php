@@ -24,7 +24,7 @@ final class Schema {
 	 *
 	 * Drives the migration walker in Upgrader.
 	 */
-	public const DB_VERSION = 17;
+	public const DB_VERSION = 18;
 
 	/**
 	 * The audit table's name, without the site's table prefix.
@@ -39,6 +39,9 @@ final class Schema {
 
 	/** Campaign/placement/day counters. Reporting reads this, never the event log. */
 	public const ROLLUPS_TABLE = 'aggr_rollups';
+
+	/** Append-only attributed conversions. Deliberately not a row in aggr_events. */
+	public const CONVERSIONS_TABLE = 'aggr_conversions';
 
 	/** Delivery strategies owned by campaigns. */
 	public const LINE_ITEMS_TABLE = 'aggr_line_items';
@@ -506,6 +509,10 @@ final class Schema {
 	 * history would make an unimplemented feature look identical to a day on
 	 * which not one ad was seen — the more alarming reading, and the wrong one.
 	 *
+	 * `conversions` is nullable for exactly that reason, one phase later. A day
+	 * before P12 has no conversions to have counted, and a campaign reported as
+	 * converting nobody is a different statement from one nobody was measuring.
+	 *
 	 * @param string $table_name      Fully prefixed table name.
 	 * @param string $charset_collate Database charset and collation.
 	 * @return string
@@ -520,6 +527,7 @@ final class Schema {
 	impressions bigint(20) unsigned NOT NULL DEFAULT 0,
 	clicks bigint(20) unsigned NOT NULL DEFAULT 0,
 	viewables bigint(20) unsigned NULL DEFAULT NULL,
+	conversions bigint(20) unsigned NULL DEFAULT NULL,
 	PRIMARY KEY  (id),
 	UNIQUE KEY slot_line_day (placement_id,campaign_id,line_item_id,day_utc),
 	KEY campaign_day (campaign_id,day_utc),
@@ -542,6 +550,7 @@ final class Schema {
 			'impressions',
 			'clicks',
 			'viewables',
+			'conversions',
 		);
 	}
 
@@ -552,5 +561,91 @@ final class Schema {
 	 */
 	public static function rollups_index_names(): array {
 		return array( 'PRIMARY', 'slot_line_day', 'campaign_day', 'line_item_day' );
+	}
+
+	/**
+	 * Attributed conversions.
+	 *
+	 * **Why this is not a row in `aggr_events`.** That table is unique on
+	 * `(token_hash, event)`, which is what makes a replay a database refusal
+	 * for every other event type and is exactly wrong here: it would permit one
+	 * conversion per fill for all time, so a signup and a purchase from the
+	 * same click would see the second silently refused as a duplicate. The
+	 * obvious escape — a per-definition event type — is worse, because `event`
+	 * is `varchar(16)` and `conversion_purchase` is nineteen characters, so it
+	 * would truncate on write and never match on read.
+	 *
+	 * Uniqueness is therefore `(definition_id, idempotency_key)`: the same
+	 * atomic duplicate refusal, on the key that actually identifies an outcome.
+	 *
+	 * `occurred_at_ts` is separate from `created_at_ts` on purpose. A
+	 * server-to-server report arrives long after the outcome it describes, and
+	 * attributing it to receipt time would put a Monday purchase in Thursday's
+	 * report. Receipt is what we observed; occurrence is what the reporter
+	 * claims, and the two are not the same fact.
+	 *
+	 * `value_micros` is an integer for the ordinary reason — money in a float
+	 * loses cents — and micros rather than cents because a per-click value is
+	 * routinely smaller than one cent.
+	 *
+	 * @param string $table_name      Fully prefixed table name.
+	 * @param string $charset_collate Database charset and collation.
+	 * @return string
+	 */
+	public static function conversions_table_ddl( string $table_name, string $charset_collate ): string {
+		return "CREATE TABLE {$table_name} (
+	id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	created_at_ts bigint(20) unsigned NOT NULL DEFAULT 0,
+	occurred_at_ts bigint(20) unsigned NOT NULL DEFAULT 0,
+	definition_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	idempotency_key varchar(64) NOT NULL DEFAULT '',
+	placement_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	campaign_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	creative_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	line_item_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	token_hash char(64) NOT NULL DEFAULT '',
+	attributed_event varchar(16) NOT NULL DEFAULT '',
+	value_micros bigint(20) unsigned NOT NULL DEFAULT 0,
+	currency char(3) NOT NULL DEFAULT '',
+	source varchar(16) NOT NULL DEFAULT '',
+	PRIMARY KEY  (id),
+	UNIQUE KEY definition_key (definition_id,idempotency_key),
+	KEY created (created_at_ts,id),
+	KEY campaign_day (campaign_id,occurred_at_ts,id),
+	KEY token_definition (token_hash,definition_id)
+) {$charset_collate};";
+	}
+
+	/**
+	 * Conversions table columns.
+	 *
+	 * @return array<int, string>
+	 */
+	public static function conversions_columns(): array {
+		return array(
+			'id',
+			'created_at_ts',
+			'occurred_at_ts',
+			'definition_id',
+			'idempotency_key',
+			'placement_id',
+			'campaign_id',
+			'creative_id',
+			'line_item_id',
+			'token_hash',
+			'attributed_event',
+			'value_micros',
+			'currency',
+			'source',
+		);
+	}
+
+	/**
+	 * Conversions table indexes.
+	 *
+	 * @return array<int, string>
+	 */
+	public static function conversions_index_names(): array {
+		return array( 'PRIMARY', 'definition_key', 'created', 'campaign_day', 'token_definition' );
 	}
 }

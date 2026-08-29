@@ -115,6 +115,11 @@ identical to a day on which not one ad was seen, which is the more alarming
 reading and the wrong one. An impression sets the column to zero, so a delivery
 is what marks a day as measured.
 
+**`conversions` is schema 18, and it is nullable for the same reason one phase
+later.** A day before conversions were measured did not convert nobody; nobody
+was counting. See [Attributed conversions — P12](#attributed-conversions--p12)
+for why a conversion is not an `aggr_events` row.
+
 **`line_item_id` is schema 16, and it exists because a cap belongs to a line
 item.** Counting deliveries per campaign was correct only while a campaign had
 exactly one line item — true then, and not a property to build on: a second
@@ -258,6 +263,7 @@ array(
     12 => install_line_items_and_start_backfill,
     16 => migrate_line_item_attribution,  // rollups gain line_item_id
     17 => install_delivery_tables,        // rollups gain viewables (additive)
+    18 => install_conversions,            // aggr_conversions + rollups gain conversions
 )
 ```
 
@@ -384,6 +390,50 @@ Both are removed by a destructive uninstall, and the backfill runs on
 `aggr_migrate_creative_assignments` — a single event re-queued a minute after
 each batch, which schedules nothing once finished.
 
+
+## Attributed conversions — P12
+
+`{$wpdb->prefix}aggr_conversions` is append-only, schema 18, and it is
+deliberately **not** a row in `aggr_events`.
+
+That table is unique on `(token_hash, event)`. The key is what makes a replay a
+database refusal for every other event type, and it is exactly wrong for a
+conversion: it would permit **one conversion per fill for all time**, so a signup
+and a purchase from the same click would see the second silently refused as a
+duplicate — indistinguishable, in the code and in the logs, from correct
+deduplication.
+
+The obvious escape is worse. `aggr_events.event` is `varchar(16)`, and
+`conversion_purchase` is nineteen characters, so a per-definition event type
+would truncate on write and never match on read: the `varchar(20)` trap recorded
+below, one size smaller.
+
+So uniqueness here is `(definition_id, idempotency_key)` — the same atomic
+duplicate refusal, on the key that actually identifies an outcome. Two
+definitions from one click both count; the same outcome reported twice does not.
+`ConversionLedgerTest` asserts both, and the first of those is the assertion that
+fails if conversions are ever moved back.
+
+| Column | Why |
+|---|---|
+| `created_at_ts` | Server receipt. What we observed. |
+| `occurred_at_ts` | When the reporter says it happened. A server-to-server report arrives long after the outcome, and counting by receipt would move a Monday purchase into Thursday. Reporting counts on this one. |
+| `definition_id` | Which conversion definition. Half the unique key. |
+| `idempotency_key` | `varchar(64)`, and validated in `Domain\Conversion_Rules` before any write — outside strict mode MySQL truncates an over-long value rather than refusing it, which would collapse two different outcomes onto one key. |
+| `token_hash` | The fill this is attributed to. Attribution derives from the signed token, never from a client-supplied campaign id. |
+| `attributed_event` | `click` or `viewable`, the interaction that opened the window. |
+| `value_micros` | Millionths of a currency unit. An integer, because money in a float loses cents; micros rather than cents, because a per-click value is routinely smaller than one cent. |
+| `currency` | ISO 4217, or empty for a valueless conversion such as a signup. |
+| `source` | `browser` or `s2s`. Each is authorized differently. |
+
+The attribution **window is measured against the server-recorded interaction**,
+never against the fill token's `exp`. `Fill_Token::TTL_SECONDS` is five minutes
+and bounds when reporting may *start*; a window is days and bounds how long
+attribution remains true. Reading one as the other would expire every conversion.
+
+Conversion SQL lives in `Conversion_Repository`. As of schema 18 the table ships
+empty and nothing writes it — the code that fills it lands with the code that
+reads it, the same staging version 14 used for the creative model.
 
 ## The P3 candidate read contract
 
