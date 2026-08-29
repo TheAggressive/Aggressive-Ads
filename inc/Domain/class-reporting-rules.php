@@ -19,6 +19,26 @@ namespace Aggressive\Ads\Domain;
 final class Reporting_Rules {
 
 	/**
+	 * Share of delivered impressions that were seen, or null.
+	 *
+	 * Null covers two different absences, and the caller has to tell them
+	 * apart: `$viewables` being null means no day in range was measured, while
+	 * zero impressions means there is nothing to take a share of. Reporting
+	 * that showed either as `0%` would claim nobody saw the ads.
+	 *
+	 * @param int      $impressions Delivered impressions.
+	 * @param int|null $viewables   Views recorded, or null when unmeasured.
+	 * @return float|null Rate between 0 and 1.
+	 */
+	public static function viewability( int $impressions, ?int $viewables ): ?float {
+		if ( null === $viewables || $impressions <= 0 ) {
+			return null;
+		}
+
+		return max( 0.0, min( 1.0, $viewables / $impressions ) );
+	}
+
+	/**
 	 * Clicks per impression, or null when impressions are not positive.
 	 *
 	 * @param int $impressions Counted views.

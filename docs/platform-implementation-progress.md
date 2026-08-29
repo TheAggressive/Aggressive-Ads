@@ -145,7 +145,10 @@ Shared boundaries and group exit criteria:
       [platform-p11-viewability.md](platform-p11-viewability.md). The signal is
       client-attested and the contract says so: the server's controls are that
       a `viewable` must carry a signed token that already recorded a `served`,
-      and can be spent once.
+      and can be spent once. **Partly built:** the threshold, the observer, the
+      beacon, the projection and the reporting tile have shipped; the browser
+      evidence the contract asks for in the Playwright lane has not, so the
+      phase stays open.
 - [ ] **P12 — Conversion tracking.** Definitions, browser and server-to-server
       endpoints, idempotency keys, click-through and view-through windows.
       Attribution derives from signed identifiers, never from client-supplied

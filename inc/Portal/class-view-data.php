@@ -743,6 +743,42 @@ final class View_Data {
 				'label' => __( 'CTR', 'aggressive-ads' ),
 				'value' => $this->format_ctr( $ctr ),
 			),
+			array(
+				'label' => __( 'Viewable', 'aggressive-ads' ),
+				'value' => $this->format_viewability( $totals['impressions'], $totals['viewables'] ),
+			),
+		);
+	}
+
+	/**
+	 * Viewability as a percentage, or which kind of absence it is.
+	 *
+	 * Three answers, and collapsing any two of them would mislead. **Not
+	 * measured** is a day before viewability shipped, or one where the script
+	 * never ran — reporting it as `0%` claims nobody saw the ads, which is the
+	 * alarming reading and the false one. An em dash is the ordinary "nothing
+	 * delivered yet". `0.0%` is a real measurement of nothing being seen, and
+	 * is the one worth investigating.
+	 *
+	 * @param int      $impressions Delivered impressions.
+	 * @param int|null $viewables   Views recorded, or null when unmeasured.
+	 * @return string
+	 */
+	private function format_viewability( int $impressions, ?int $viewables ): string {
+		if ( null === $viewables ) {
+			return __( 'Not measured', 'aggressive-ads' );
+		}
+
+		$rate = Reporting_Rules::viewability( $impressions, $viewables );
+
+		if ( null === $rate ) {
+			return __( '—', 'aggressive-ads' );
+		}
+
+		return sprintf(
+			/* translators: %s: share of impressions that were viewable, e.g. 62.5. */
+			__( '%s%%', 'aggressive-ads' ),
+			number_format_i18n( $rate * 100, 1 )
 		);
 	}
 

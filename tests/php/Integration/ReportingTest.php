@@ -382,4 +382,80 @@ final class ReportingTest extends WP_UnitTestCase {
 
 		return $campaign_id;
 	}
+
+	/**
+	 * The viewability tile tells three answers apart.
+	 *
+	 * A day nobody measured, a day measured with nothing seen, and a real rate
+	 * are three different facts, and collapsing any two of them misleads. Zero
+	 * per cent is the one worth investigating — usually the script is not
+	 * running — and it is indistinguishable from history if unmeasured days
+	 * report zero too.
+	 *
+	 * @return void
+	 */
+	public function test_the_viewability_tile_separates_unmeasured_from_zero(): void {
+		$this->enable_reporting( true );
+		wp_set_current_user( $this->advertiser_a );
+
+		// Impressions recorded before viewability existed: the column is NULL.
+		$this->bump( $this->campaign_a, 4, 0 );
+
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Recreating a pre-P11 row in this plugin's own table.
+		$wpdb->query(
+			$wpdb->prepare(
+				'UPDATE %i SET viewables = NULL WHERE campaign_id = %d',
+				$this->rollups->table_name(),
+				$this->campaign_a
+			)
+		);
+
+		$tile = $this->view->delivery_counts()[3];
+
+		$this->assertSame( 'Viewable', $tile['label'] );
+		$this->assertSame(
+			'Not measured',
+			$tile['value'],
+			'History was reported as a viewability rate rather than as unmeasured.'
+		);
+
+		// Now measured, and nothing seen.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Same fixture.
+		$wpdb->query(
+			$wpdb->prepare(
+				'UPDATE %i SET viewables = 0 WHERE campaign_id = %d',
+				$this->rollups->table_name(),
+				$this->campaign_a
+			)
+		);
+
+		$this->assertSame(
+			'0.0%',
+			$this->view->delivery_counts()[3]['value'],
+			'A measured day with no views must read zero, which is the number worth chasing.'
+		);
+
+		// And a real rate.
+		$this->bump_viewables( $this->campaign_a, 1 );
+
+		$this->assertSame(
+			'25.0%',
+			$this->view->delivery_counts()[3]['value']
+		);
+	}
+
+	/**
+	 * Records views against a campaign.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @param int $viewables   How many views to record.
+	 * @return void
+	 */
+	private function bump_viewables( int $campaign_id, int $viewables ): void {
+		for ( $i = 0; $i < $viewables; $i++ ) {
+			$this->rollups->increment( 'viewables', $this->placement_id, $campaign_id );
+		}
+	}
 }
