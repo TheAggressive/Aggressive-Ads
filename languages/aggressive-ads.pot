@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-28T23:25:33+00:00\n"
+"POT-Creation-Date: 2026-08-29T00:03:45+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -2562,7 +2562,7 @@ msgstr ""
 
 #: inc/REST/class-campaigns-controller.php:412
 #: inc/REST/class-creative-file-controller.php:190
-#: inc/REST/class-line-items-controller.php:349
+#: inc/REST/class-line-items-controller.php:358
 #: inc/Workflow/class-assignment-editor.php:325
 #: inc/Workflow/class-line-item-editor.php:69
 #: inc/Workflow/class-line-item-editor.php:78
@@ -3312,32 +3312,42 @@ msgstr ""
 msgid "This line item changed in another window. Reload it before saving again."
 msgstr ""
 
-#: inc/Workflow/class-line-item-validator.php:29
+#: inc/Workflow/class-line-item-validator.php:32
 msgid "Provide at least one line item field to update."
 msgstr ""
 
-#: inc/Workflow/class-line-item-validator.php:37
+#: inc/Workflow/class-line-item-validator.php:40
 msgid "Enter a line item name of 191 characters or fewer."
 msgstr ""
 
-#: inc/Workflow/class-line-item-validator.php:53
+#: inc/Workflow/class-line-item-validator.php:64
 msgid "Choose a supported delivery setting."
 msgstr ""
 
-#: inc/Workflow/class-line-item-validator.php:62
+#: inc/Workflow/class-line-item-validator.php:73
 msgid "Use a non-negative whole number."
 msgstr ""
 
-#: inc/Workflow/class-line-item-validator.php:75
+#: inc/Workflow/class-line-item-validator.php:86
 msgid "Use a supported positive whole number."
 msgstr ""
 
-#: inc/Workflow/class-line-item-validator.php:90
+#: inc/Workflow/class-line-item-validator.php:101
 msgid "The daily cap cannot exceed the lifetime cap."
 msgstr ""
 
-#: inc/Workflow/class-line-item-validator.php:94
+#: inc/Workflow/class-line-item-validator.php:105
 msgid "Enter a positive goal amount for this goal."
+msgstr ""
+
+#: inc/Workflow/class-line-item-validator.php:191
+msgid "That delivery policy is not valid JSON."
+msgstr ""
+
+#. translators: %s: the reason the policy was refused.
+#: inc/Workflow/class-line-item-validator.php:205
+#, php-format
+msgid "That delivery policy cannot be used: %s"
 msgstr ""
 
 #: inc/Workflow/class-organization-membership.php:113

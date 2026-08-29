@@ -70,18 +70,27 @@ final class Line_Items_Controller implements Service {
 				'callback'            => array( $this, 'update' ),
 				'permission_callback' => array( $this, 'write_permission' ),
 				'args'                => array(
-					'campaign_id'   => $this->positive_int_arg( true ),
-					'id'            => $this->positive_int_arg( true ),
-					'revision'      => $this->positive_int_arg( true ),
-					'name'          => $this->string_arg(),
-					'pricing_model' => $this->string_arg(),
-					'goal_type'     => $this->string_arg(),
-					'goal_amount'   => $this->nonnegative_int_arg(),
-					'daily_cap'     => $this->nonnegative_int_arg(),
-					'lifetime_cap'  => $this->nonnegative_int_arg(),
-					'priority'      => $this->positive_int_arg( false ),
-					'pacing_mode'   => $this->string_arg(),
-					'weight'        => $this->positive_int_arg( false ),
+					'campaign_id'       => $this->positive_int_arg( true ),
+					'id'                => $this->positive_int_arg( true ),
+					'revision'          => $this->positive_int_arg( true ),
+					'name'              => $this->string_arg(),
+					'pricing_model'     => $this->string_arg(),
+					'goal_type'         => $this->string_arg(),
+					'goal_amount'       => $this->nonnegative_int_arg(),
+					'daily_cap'         => $this->nonnegative_int_arg(),
+					'lifetime_cap'      => $this->nonnegative_int_arg(),
+					'priority'          => $this->positive_int_arg( false ),
+					'pacing_mode'       => $this->string_arg(),
+					'weight'            => $this->positive_int_arg( false ),
+
+					/*
+					 * Passed through as given and validated in the domain, so
+					 * the accepted vocabulary has one definition rather than a
+					 * REST schema that can drift from the evaluator.
+					 */
+					'targeting_rules'   => array( 'required' => false ),
+					'frequency_policy'  => array( 'required' => false ),
+					'delivery_settings' => array( 'required' => false ),
 				),
 			)
 		);

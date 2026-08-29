@@ -135,6 +135,18 @@ coerces it: an integer passes, a string passes only if it is digits and nothing
 else, and a float never passes — `1.0` included, because JSON that meant a whole
 number would have sent one. The refusal is `422 aggr_line_item_value_invalid`.
 
+**Delivery policy is validated by the code that evaluates it.** `targeting_rules`,
+`frequency_policy` and `delivery_settings` are accepted as an object or as JSON
+text, and each shape is checked by its own Domain class — `Targeting_Rules`,
+`Frequency_Rules`, `Schedule_Rules` — so the accepted vocabulary has one
+definition rather than a REST schema that can drift from the evaluator. A
+refusal is `422 aggr_line_item_policy_invalid` naming the problem.
+
+The save is strict because serve time is not. An unrecognised targeting node
+passes during a fill, since refusing there would blank live inventory over a
+typo — which means a malformed rule targets nobody, silently and indefinitely.
+`field` instead of `dimension` is the natural mistake and is refused here.
+
 **`budget_cents` is not accepted here.** It is a projected field, and
 `data-schema.md` names its writer: the Campaign. The route used to take it
 anyway, so an advertiser could set a line-item budget, get a `200`, see it

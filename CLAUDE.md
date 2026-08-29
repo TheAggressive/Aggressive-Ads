@@ -152,6 +152,12 @@ and deeper analytics remain open. What is built:
 - the **measurement model** (P10): `request`, `fill`, `no_fill`, `served`,
   `viewable`, `click`, `conversion`. `served` replaced `impression`; rollups
   count both, so history predating the rename still aggregates
+- delivery policy is **configurable and validated**: `targeting_rules`,
+  `frequency_policy` and `delivery_settings` are accepted on the line-item
+  route and checked by the Domain class that evaluates each shape. The save is
+  strict *because* serve time is permissive — an unrecognised targeting node
+  passes during a fill rather than blanking inventory, so a malformed rule that
+  reached storage would target nobody forever
 - campaign copy: renew (completed) and duplicate (any readable campaign) create
   a new draft with the stored snapshot and private creative bytes, never a
   backwards transition. HTML form and `POST /aggr/v1/campaigns/{id}/copy`

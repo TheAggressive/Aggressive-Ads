@@ -24,6 +24,89 @@ final class Schedule_Rules {
 	public const MINUTES_PER_DAY = 1440;
 
 	/**
+	 * Whether delivery settings carry a schedule this engine can evaluate.
+	 *
+	 * Only the keys this phase owns — dayparts and timezone. Other stages
+	 * validate their own corner of the same blob, so nothing here rejects a key
+	 * it does not recognise.
+	 *
+	 * @param mixed $settings Decoded delivery settings.
+	 * @return array<int, string> Human-readable problems; empty when valid.
+	 */
+	public static function validate_delivery_settings( mixed $settings ): array {
+		if ( ! is_array( $settings ) ) {
+			return array( 'Delivery settings must be an object.' );
+		}
+
+		$errors = array();
+
+		if ( isset( $settings['timezone'] ) ) {
+			$timezone = $settings['timezone'];
+
+			if ( ! is_string( $timezone ) || ! in_array( $timezone, timezone_identifiers_list(), true ) ) {
+				$errors[] = 'Timezone must be a recognised identifier, such as "America/New_York".';
+			}
+		}
+
+		if ( ! isset( $settings['dayparts'] ) ) {
+			return $errors;
+		}
+
+		if ( ! is_array( $settings['dayparts'] ) ) {
+			return array_merge( $errors, array( '"dayparts" must be a list of rules.' ) );
+		}
+
+		foreach ( $settings['dayparts'] as $index => $rule ) {
+			$errors = array_merge( $errors, self::validate_daypart( $rule, (int) $index ) );
+		}
+
+		return $errors;
+	}
+
+	/**
+	 * Validates one daypart rule.
+	 *
+	 * @param mixed $rule  Daypart rule.
+	 * @param int   $index Position, for a message a person can act on.
+	 * @return array<int, string>
+	 */
+	private static function validate_daypart( mixed $rule, int $index ): array {
+		if ( ! is_array( $rule ) ) {
+			return array( sprintf( 'Daypart %d must be an object.', $index + 1 ) );
+		}
+
+		$errors = array();
+		$days   = $rule['days'] ?? null;
+
+		if ( null !== $days ) {
+			if ( ! is_array( $days ) ) {
+				$errors[] = sprintf( 'Daypart %d: "days" must be a list.', $index + 1 );
+			} else {
+				foreach ( $days as $day ) {
+					if ( ! is_int( $day ) || $day < 0 || $day > 7 ) {
+						$errors[] = sprintf( 'Daypart %d: days are 0-7.', $index + 1 );
+						break;
+					}
+				}
+			}
+		}
+
+		foreach ( array( 'start_minute', 'end_minute' ) as $key ) {
+			if ( ! isset( $rule[ $key ] ) ) {
+				continue;
+			}
+
+			$minute = $rule[ $key ];
+
+			if ( ! is_int( $minute ) || $minute < 0 || $minute > self::MINUTES_PER_DAY ) {
+				$errors[] = sprintf( 'Daypart %d: "%s" is a minute of the day, 0-%d.', $index + 1, $key, self::MINUTES_PER_DAY );
+			}
+		}
+
+		return $errors;
+	}
+
+	/**
 	 * Evaluates whether an assignment or line-item row is eligible at $now.
 	 *
 	 * @param array<string, mixed> $row Candidate data.
