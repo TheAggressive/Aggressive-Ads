@@ -232,3 +232,20 @@ Named so their absence is deliberate:
 ## Retention and privacy
 
 The audit log stores hashed IPs, never raw. `context` never carries paths, nonces, tokens, or personal data. Private creative files for campaigns terminal more than 90 days are purged by `Workflow\Creative_Retention`: the private bytes and path/token meta go, while campaign records, checksums and Media Library attachments remain.
+
+## Viewability is attested, not verified
+
+The browser is the only thing that knows what was on screen, so a viewability
+number is not trustworthy against an adversary and this document does not
+pretend otherwise.
+
+What the server controls is narrower and worth stating exactly: a `viewable`
+must carry a signed fill token, that token must belong to a fill this site
+really made, and each event may be spent once against `(token_hash, event)`. A
+dishonest client can therefore inflate viewability only as far as it could
+already inflate impressions — by requesting fills — so the event adds no new
+leverage. Proven by `FillRoutesTest`, which asserts the allowlist, the implied
+delivery, the replay refusal and the expiry asymmetry.
+
+No new identifier is stored: one boolean per fill, no cookie, no fingerprint, no
+dwell histogram.

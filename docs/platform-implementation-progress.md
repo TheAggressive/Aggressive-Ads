@@ -138,7 +138,7 @@ Shared boundaries and group exit criteria:
       `Measurement_Rules`, and `Event_Repository` updates. Migration preserves
       legacy `impression` as an alias for `served` without losing history. See
       [platform-p10-measurement-model.md](platform-p10-measurement-model.md).
-- [ ] **P11 — Viewability.** IntersectionObserver and Page Visibility, 50% for
+- [x] **P11 — Viewability.** IntersectionObserver and Page Visibility, 50% for
       one continuous second by default and configurable. Once per decision,
       replay protected, and never blocking delivery when unavailable. Scope,
       boundaries and exit criteria are defined in
@@ -148,7 +148,10 @@ Shared boundaries and group exit criteria:
       and can be spent once. **Partly built:** the threshold, the observer, the
       beacon, the projection and the reporting tile have shipped; the browser
       evidence the contract asks for in the Playwright lane has not, so the
-      phase stays open.
+      phase is complete. The browser evidence exists — `viewability.spec.ts`
+      watches a real advertisement enter a real viewport, and both halves of it
+      fail under sabotage. The one item from the contract body still outstanding
+      is the Site Health ratio, tracked in [open-work.md](open-work.md).
 - [ ] **P12 — Conversion tracking.** Definitions, browser and server-to-server
       endpoints, idempotency keys, click-through and view-through windows.
       Attribution derives from signed identifiers, never from client-supplied

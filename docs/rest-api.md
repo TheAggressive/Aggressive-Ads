@@ -201,6 +201,32 @@ another organization and an assignment id belonging to a different campaign both
 return the same `404`, so neither can be used to enumerate. Both write routes are
 rate limited on the autosave bucket.
 
+## The impression beacon
+
+`POST /aggr/v1/i` takes a signed fill token and records one measurement event.
+`event` is optional and allowlisted to `served` and `viewable` — the only two a
+browser can observe. `request`, `fill` and `no_fill` are the server's own account
+of what it did, and `conversion` belongs to a later phase; a client able to write
+any of them could rewrite the funnel it is measured by. Absent means `served`, so
+a page cached with an older script keeps reporting.
+
+**A view implies a delivery.** One arriving before its own `served` records both
+rather than being refused: the two beacons are independent and nothing orders
+them, and `sendBeacon` reports nothing back, so a refusal was lost permanently.
+This grants no leverage — a client wanting to inflate impressions could always
+beacon the delivery directly, the token must still be ours, and each event is
+spent once against `(token_hash, event)`.
+
+**A view may arrive after the token has expired; a delivery may not.** An ad
+below the fold is delivered at page load and becomes viewable when somebody
+scrolls to it, routinely past the five-minute window. Refusing those dropped
+exactly the inventory viewability measures while the impression stayed in the
+denominator.
+
+Viewability is client-attested and cannot be otherwise — the browser is the only
+thing that knows what was on screen. See
+[threat-model.md](threat-model.md) for what the server does and does not control.
+
 ## The file-stream route
 
 The highest-value endpoint in the system, so its contract is explicit.
