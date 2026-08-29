@@ -99,6 +99,25 @@ final class Assignment_Rules {
 	}
 
 	/**
+	 * Whether a status is one nothing may move an assignment out of.
+	 *
+	 * `transitions()` already says so — both have no outgoing edges — but the
+	 * projection needs to ask the question directly rather than infer it from
+	 * an empty array, and a caller reading `array() === transitions()[$status]`
+	 * would be one refactor away from meaning something else.
+	 *
+	 * This is what protects a withdrawal. An assignment retired while its
+	 * campaign is live must not be resurrected the next time the campaign
+	 * transitions, and a completed one must not restart.
+	 *
+	 * @param string $status Current status.
+	 * @return bool
+	 */
+	public static function is_terminal( string $status ): bool {
+		return in_array( $status, array( self::COMPLETED, self::CANCELLED ), true );
+	}
+
+	/**
 	 * Whether one status may become another. A status may stay itself, so a
 	 * weight-only write is not refused for not being a transition.
 	 *

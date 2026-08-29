@@ -21,6 +21,7 @@ use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Domain\Assignment_Rules;
 use Aggressive\Ads\Install\Creative_Assignment_Migrator;
 use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Workflow\Campaign_State_Machine;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
@@ -63,10 +64,28 @@ if ( $aggr_existing instanceof WP_Post ) {
 	wp_delete_post( $aggr_existing->ID, true );
 }
 
+/*
+ * Scheduled, not live — and that difference is the point of this fixture.
+ *
+ * An earlier version of this seeder created the campaign already `aggr_live`
+ * and `$wpdb->insert`ed the assignment already `live` with its attachment
+ * already set. That is the *output* of the delivery pipeline, hand-written, so
+ * the browser test could only ever prove the renderer draws a creative it was
+ * handed. It proved nothing about how a row reaches that state — and for a long
+ * time nothing did: `Assignment_Rules::status_for_campaign()` had exactly one
+ * production caller, the one-time P2 backfill, so every campaign that went live
+ * afterwards kept assignments at `draft` and served nothing. The suite stayed
+ * green throughout, this fixture included.
+ *
+ * So the campaign now starts one legal edge short of live, with a window that
+ * has already opened, and the transition below is driven through the real state
+ * machine. If the projection stops running, this fixture stops serving and the
+ * viewability spec goes red — which is what it should always have done.
+ */
 $aggr_campaign_id = wp_insert_post(
 	array(
 		'post_type'   => Post_Types::CAMPAIGN,
-		'post_status' => Post_Statuses::LIVE,
+		'post_status' => Post_Statuses::SCHEDULED,
 		'post_title'  => 'E2E live advertisement',
 		'post_name'   => 'e2e-live-ad',
 	)
@@ -74,6 +93,10 @@ $aggr_campaign_id = wp_insert_post(
 
 update_post_meta( $aggr_campaign_id, Campaign_Repository::META_ORG_ID, $aggr_org_id );
 add_post_meta( $aggr_campaign_id, Campaign_Repository::META_PLACEMENT_ID, $aggr_placement_id );
+
+// `scheduled → live` carries GUARD_STARTED, so the window has to have opened.
+update_post_meta( $aggr_campaign_id, Campaign_Repository::META_START_TS, time() - DAY_IN_SECONDS );
+update_post_meta( $aggr_campaign_id, Campaign_Repository::META_END_TS, time() + ( 30 * DAY_IN_SECONDS ) );
 
 /*
  * An approved creative, which means the artwork is a Media Library attachment
@@ -140,10 +163,10 @@ $wpdb->insert(
 		'campaign_id'   => (int) $aggr_campaign_id,
 		'placement_id'  => $aggr_placement_id,
 		'revision_id'   => (int) $aggr_creative_id,
-		'status'        => Assignment_Rules::LIVE,
+		'status'        => Assignment_Rules::READY,
 		'weight'        => 100,
 		'click_url'     => 'https://example.com/e2e-live',
-		'attachment_id' => (int) $aggr_image,
+		'attachment_id' => 0,
 		'alt_text'      => 'E2E live advertisement',
 		'width'         => 728,
 		'height'        => 90,
@@ -153,6 +176,41 @@ $wpdb->insert(
 
 // Serving reads assignments only once the backfill reports finished.
 update_option( Creative_Assignment_Migrator::OPTION_DONE, 1 );
+
+/*
+ * The transition under test. `apply_system()` because `scheduled → live` is a
+ * system edge — the campaign clock's, not a person's.
+ */
+Plugin::instance()->container()->get( Campaign_State_Machine::class )
+	->apply_system( (int) $aggr_campaign_id, Post_Statuses::LIVE );
+
+/*
+ * Assert the fixture actually serves before the browser is asked to look at it.
+ *
+ * A seeder that silently produces a non-serving ad turns a broken pipeline into
+ * a confusing screenshot diff twenty seconds later. Failing here names the
+ * cause instead.
+ */
+$aggr_seeded = $wpdb->get_row(
+	$wpdb->prepare(
+		'SELECT status, attachment_id FROM %i WHERE campaign_id = %d LIMIT 1',
+		$aggr_assignments->table_name(),
+		(int) $aggr_campaign_id
+	),
+	ARRAY_A
+);
+
+if ( Assignment_Rules::LIVE !== ( $aggr_seeded['status'] ?? '' ) ) {
+	throw new RuntimeException(
+		'Seed failed: the campaign went live and its assignment did not. Assignment_Projection is not running.'
+	);
+}
+
+if ( (int) ( $aggr_seeded['attachment_id'] ?? 0 ) !== (int) $aggr_image ) {
+	throw new RuntimeException(
+		'Seed failed: the promoted attachment was not projected onto the assignment, so the slot cannot fill.'
+	);
+}
 
 /*
  * Two slots on one page: one that a scroll can reach and one that a scroll

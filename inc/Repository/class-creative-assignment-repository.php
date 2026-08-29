@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Repository;
 
+use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Domain\Assignment_Rules;
 use Aggressive\Ads\Install\Schema;
@@ -314,6 +315,179 @@ final class Creative_Assignment_Repository {
 		$updated = $wpdb->query( $wpdb->prepare( $sql, $this->table_name(), ...$values ) );
 
 		return 1 === $updated ? $next : false;
+	}
+
+	/**
+	 * Re-projects campaign- and creative-owned columns onto one assignment.
+	 *
+	 * **The write half that was missing.** The assignment row is a denormalized
+	 * snapshot — `candidates_for_placement()` reads `status` and `attachment_id`
+	 * off the row rather than joining back to the campaign and the creative,
+	 * which is what makes the fill query one indexed read. A snapshot nothing
+	 * refreshes is a snapshot of the moment it was taken: before this, the only
+	 * code that ever wrote `status` from a campaign was the one-time P2 backfill,
+	 * so every assignment froze at whatever the campaign happened to be during
+	 * the migration and no campaign that went live afterwards could ever serve.
+	 *
+	 * No `expected_revision`, unlike `update()`. This is a projection of state
+	 * the campaign already owns, not a person's edit competing with another
+	 * person's — there is nothing to lose a race against. It still bumps
+	 * `revision`, so an editor holding a stale row correctly loses its next
+	 * optimistic write rather than saving over a status it never saw.
+	 *
+	 * **Terminal rows are excluded here as well as by the caller.** A withdrawal
+	 * is the one thing a campaign transition must not undo. `Assignment_Projection`
+	 * skips terminal rows too, and sabotaging each in turn showed either alone
+	 * upholds the guarantee — so this is genuine defence in depth rather than
+	 * the load-bearing check. What is uniquely this one's job is the race: it
+	 * still holds if somebody retires an assignment between the caller reading
+	 * the row and writing it.
+	 *
+	 * @param int                                                                $assignment_id Assignment id.
+	 * @param array{status?: string, attachment_id?: int, organization_id?: int} $fields   Derived values.
+	 * @return bool True when the row moved.
+	 */
+	public function project( int $assignment_id, array $fields ): bool {
+		if ( $assignment_id <= 0 || array() === $fields || ! $this->table_exists() ) {
+			return false;
+		}
+
+		global $wpdb;
+
+		$columns = array( 'status', 'attachment_id', 'organization_id' );
+		$set     = array();
+		$values  = array();
+
+		foreach ( $columns as $column ) {
+			if ( ! array_key_exists( $column, $fields ) ) {
+				continue;
+			}
+
+			$set[]    = 'status' === $column ? "{$column} = %s" : "{$column} = %d";
+			$values[] = 'status' === $column ? (string) $fields[ $column ] : (int) $fields[ $column ];
+		}
+
+		if ( array() === $set ) {
+			return false;
+		}
+
+		$set[]    = 'revision = revision + 1';
+		$set[]    = 'updated_at_ts = %d';
+		$values[] = time();
+
+		$values[] = $assignment_id;
+		$values[] = Assignment_Rules::COMPLETED;
+		$values[] = Assignment_Rules::CANCELLED;
+
+		// Identifiers come only from the fixed allowlist above.
+		$sql = 'UPDATE %i SET ' . implode( ', ', $set ) . ' WHERE id = %d AND status NOT IN (%s, %s)';
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- Query values are prepared; identifiers come from the fixed allowlist above.
+		$updated = $wpdb->query( $wpdb->prepare( $sql, $this->table_name(), ...$values ) );
+
+		return 1 === $updated;
+	}
+
+	/**
+	 * Repairs every assignment whose denormalized snapshot went stale.
+	 *
+	 * The migration half of `Assignment_Projection`. That service keeps rows in
+	 * step from now on; this is what rescues the rows that froze before it
+	 * existed — every campaign that went live after the P2 backfill, plus the
+	 * rows carrying campaign statuses written straight into the column
+	 * (`aggr_draft`, `aggr_changes`), which `Assignment_Rules` already records
+	 * as a defect it fixed for new writes and never went back to clean up.
+	 *
+	 * **The status mapping is generated from `status_for_campaign()`**, not
+	 * rewritten as SQL. A hand-written `CASE` would be a second definition of
+	 * the same rule, and the two would drift the first time a campaign status
+	 * was added — the migration would then quietly assign the wrong delivery
+	 * state to every row it touched.
+	 *
+	 * Idempotent: running it twice reaches the same state, because it derives
+	 * from the campaign rather than stepping from the current value. Terminal
+	 * rows are excluded, so a withdrawal survives the repair.
+	 *
+	 * `organization_id` is deliberately left alone. It is not what blocks
+	 * delivery, it changes about as often as never, and the runtime projection
+	 * maintains it from here — a migration should repair what is broken, not
+	 * rewrite every column it could.
+	 *
+	 * @return int Rows whose status was repaired. The attachment pass runs
+	 *             beside it and is not counted; status is what blocks delivery.
+	 */
+	public function reproject_all(): int {
+		global $wpdb;
+
+		if ( ! $this->table_exists() ) {
+			return 0;
+		}
+
+		$assignments = $this->table_name();
+		$posts       = $wpdb->posts;
+		$postmeta    = $wpdb->postmeta;
+
+		/*
+		 * Two statements rather than one, and deliberately so.
+		 *
+		 * The first draft set both columns together with
+		 * `IF( CAST( m.meta_value AS UNSIGNED ) > 0, CAST( … ), a.attachment_id )`.
+		 * Against the real database that returned 0 for rows where the very
+		 * same `CAST(…) > 0` selected as its own column returned 1 — the
+		 * condition was true and the `IF` still took the else branch. I could
+		 * not explain it, and SQL that repairs delivery state is the last place
+		 * to ship something that only appears to work.
+		 *
+		 * An INNER JOIN says the same thing without a conditional: touch the
+		 * rows that have a promoted attachment, set it, leave every other row
+		 * alone. Nothing to misread.
+		 */
+		$values = array();
+		$case   = '';
+
+		foreach ( Post_Statuses::all() as $campaign_status ) {
+			$case    .= ' WHEN %s THEN %s';
+			$values[] = $campaign_status;
+			$values[] = Assignment_Rules::status_for_campaign( $campaign_status );
+		}
+
+		// The mapper's own default, for a post status this plugin does not own.
+		$values[] = Assignment_Rules::status_for_campaign( '' );
+		$values[] = time();
+		$values[] = Assignment_Rules::COMPLETED;
+		$values[] = Assignment_Rules::CANCELLED;
+
+		$status_sql = "UPDATE {$assignments} a
+			INNER JOIN {$posts} p ON p.ID = a.campaign_id
+			SET a.status = CASE p.post_status{$case} ELSE %s END,
+				a.revision = a.revision + 1,
+				a.updated_at_ts = %d
+			WHERE a.status NOT IN (%s, %s)";
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table names are core/prefix properties; every value is a placeholder and the CASE arms come from the domain mapper.
+		$repaired = $wpdb->query( $wpdb->prepare( $status_sql, ...$values ) );
+
+		$attachment_sql = "UPDATE {$assignments} a
+			INNER JOIN {$postmeta} m ON m.post_id = a.revision_id AND m.meta_key = %s
+			SET a.attachment_id = CAST( m.meta_value AS UNSIGNED ),
+				a.updated_at_ts = %d
+			WHERE a.status NOT IN (%s, %s)
+				AND CAST( m.meta_value AS UNSIGNED ) > 0
+				AND a.attachment_id <> CAST( m.meta_value AS UNSIGNED )";
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table names are core/prefix properties; every value is a placeholder.
+		$wpdb->query(
+			$wpdb->prepare(
+				$attachment_sql,
+				Creative_Repository::META_ATTACHMENT_ID,
+				time(),
+				Assignment_Rules::COMPLETED,
+				Assignment_Rules::CANCELLED
+			)
+		);
+		// phpcs:enable
+
+		return is_numeric( $repaired ) ? (int) $repaired : 0;
 	}
 
 	/**
