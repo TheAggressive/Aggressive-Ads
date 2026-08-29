@@ -47,7 +47,7 @@ if ( ! $sizing_page instanceof WP_Post ) {
 			'post_status'  => 'publish',
 			'post_name'    => 'e2e-ad-sizing',
 			'post_title'   => 'E2E ad sizing',
-			'post_content' => '<!-- wp:aggr/placement {"slot":"e2e-browser-placement","align":"wide","style":{"spacing":{"padding":{"top":"24px","right":"24px","bottom":"24px","left":"24px"}},"color":{"background":"#999999"}}} /-->',
+			'post_content' => '<!-- wp:aggr/ad-slot {"slot":"e2e-browser-placement","align":"wide","style":{"spacing":{"padding":{"top":"24px","right":"24px","bottom":"24px","left":"24px"}},"color":{"background":"#999999"}}} /-->',
 		),
 		true
 	);

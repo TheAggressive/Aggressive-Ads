@@ -218,7 +218,7 @@ if ( (int) ( $aggr_seeded['attachment_id'] ?? 0 ) !== (int) $aggr_image ) {
  * than a mocked one.
  */
 $aggr_spacer = str_repeat( '<!-- wp:paragraph --><p>Scrolling filler.</p><!-- /wp:paragraph -->', 60 );
-$aggr_slot   = '<!-- wp:aggr/placement {"slot":"e2e-browser-placement"} /-->';
+$aggr_slot   = '<!-- wp:aggr/ad-slot {"slot":"e2e-browser-placement"} /-->';
 
 $aggr_page = get_page_by_path( 'e2e-viewability', OBJECT, 'page' );
 

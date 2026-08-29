@@ -5,7 +5,7 @@ Guidance for AI assistants working in this plugin.
 Architectural patterns are adapted from the LAAO and Aggressive Apparel themes.
 **Nothing is inherited at runtime**, and where the three differ, this file is
 authoritative here. In particular: this is a plugin, not a theme; there is no
-WooCommerce, no Tailwind history, the only public block is `aggr/placement`,
+WooCommerce, no Tailwind history, the only public block is `aggr/ad-slot`,
 and the WordPress test suites run an older PHPUnit than LAAO's — the unit suite
 does not.
 
@@ -61,9 +61,19 @@ and deeper analytics remain open. What is built:
   `dist/styles/`), contrast-gated by `tests/php/Unit/Assets/PortalContrastTest.php`
 - TypeScript Interactivity modules under `src/interactivity/` (dialog, wizard,
   autosave, upload, scroll-lock, helpers, logic), compiled to `dist/interactivity/`
-- `src/blocks/placement/` — Block Editor slot (`aggr/placement`), compiled to
-  `dist/blocks/placement/`. Core `supports` (align, spacing, color, border)
-  style the reserved box; fill still happens after paint
+- `src/blocks-interactivity/ad-slot/` — the Block Editor slot (`aggr/ad-slot`),
+  compiled to `dist/blocks-interactivity/`. **Blocks are split the way the LAAO
+  and Aggressive Apparel themes split them:** `src/blocks/` for standard blocks
+  (`build:blocks`), `src/blocks-interactivity/` for Interactivity API blocks
+  (`build:interactivity`, `--experimental-modules`), `src/interactivity/` for
+  shared stores. Core `supports` (align, spacing, color, border) style the
+  reserved box; fill still happens after paint, now through an
+  `@wordpress/interactivity` store rather than a DOM script — rotation needs
+  per-slot state, and the old `data-aggr-filled="1"` latch made a second fill
+  impossible by construction. Renamed from `aggr/placement` in 1.6.0;
+  `Placement_Slot::LEGACY_BLOCK` keeps the old name registered and out of the
+  inserter so existing content renders untouched, and nothing rewrites
+  `post_content`
 - portal dialogs on the shared overlay: creative replace, live-ad preview,
   draft preview, and remove confirmation (no-JS `:target`, overlays in `wp_footer`)
 - the capability-gated staff review queue and campaign review detail, with

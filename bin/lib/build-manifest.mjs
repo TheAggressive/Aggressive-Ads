@@ -3,7 +3,8 @@
  *
  * Mirrors the Aggressive Apparel theme's build-manifest helpers, scoped to
  * what this plugin ships today: styles under src/styles/, top-level
- * script modules under src/interactivity/, and blocks under src/blocks/
+ * script modules under src/interactivity/, standard blocks under
+ * src/blocks/, and Interactivity API blocks under src/blocks-interactivity/
  * (compiled by a separate wp-scripts invocation, like the LAAO theme).
  */
 

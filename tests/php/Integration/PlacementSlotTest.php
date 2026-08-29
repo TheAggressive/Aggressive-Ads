@@ -42,12 +42,139 @@ final class PlacementSlotTest extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'aggr-slot__canvas', $shortcode );
 		$this->assertTrue( wp_style_is( $style_name, 'enqueued' ) );
 
-		$html = do_blocks( '<!-- wp:aggr/placement {"slot":"true-size-leaderboard"} /-->' );
+		$html = do_blocks( '<!-- wp:aggr/ad-slot {"slot":"true-size-leaderboard"} /-->' );
 
 		$this->assertStringContainsString( 'display:grid;width:fit-content;max-width:100%', $html );
 		$this->assertStringContainsString( 'class="aggr-slot__canvas"', $html );
 		$this->assertStringContainsString( 'width:728px;max-width:100%;aspect-ratio:728/90;', $html );
 		$this->assertStringNotContainsString( 'width:728px;min-height:90px;', $html );
+	}
+
+	/**
+	 * **Content saved under the old block name still renders.**
+	 *
+	 * The block name is serialized into `post_content`, so every post, template
+	 * and reusable block carrying `wp:aggr/placement` would show "This block
+	 * contains unexpected or invalid content" if the rename simply dropped the
+	 * old registration. Nothing rewrites anybody's content; the alias is what
+	 * makes that safe.
+	 *
+	 * @return void
+	 */
+	public function test_the_pre_rename_block_name_still_renders(): void {
+		$placement_id = self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::PLACEMENT,
+				'post_status' => 'publish',
+				'post_name'   => 'legacy-leaderboard',
+			)
+		);
+
+		update_post_meta( $placement_id, Placement_Repository::META_IS_ACTIVE, 1 );
+		update_post_meta( $placement_id, Placement_Repository::META_SIZE, '728x90' );
+
+		$legacy = do_blocks( '<!-- wp:aggr/placement {"slot":"legacy-leaderboard"} /-->' );
+		$fresh  = do_blocks( '<!-- wp:aggr/ad-slot {"slot":"legacy-leaderboard"} /-->' );
+
+		$this->assertStringContainsString( 'class="aggr-slot__canvas"', $legacy, 'Old content stopped rendering.' );
+		$this->assertStringContainsString( 'data-aggr-slot="legacy-leaderboard"', $legacy );
+
+		/*
+		 * Identical but for the class WordPress derives from the block name.
+		 *
+		 * `get_block_wrapper_attributes()` emits `wp-block-aggr-placement` for
+		 * the old name and `wp-block-aggr-ad-slot` for the new one, and that
+		 * difference is unavoidable without rewriting content. It is also
+		 * harmless: every style rule keys off `.aggr-slot`, which both carry.
+		 * Asserted by normalising exactly that one token rather than by
+		 * loosening the comparison, so any *other* divergence still fails.
+		 */
+		$normalised = str_replace( 'wp-block-aggr-placement', 'wp-block-aggr-ad-slot', $legacy );
+
+		$this->assertSame( $fresh, $normalised );
+		$this->assertStringContainsString( 'aggr-slot', $legacy, 'The styling hook must survive the rename.' );
+	}
+
+	/**
+	 * The rotation attributes reach the client as interactivity context.
+	 *
+	 * @return void
+	 */
+	public function test_rotation_reaches_the_client_as_context(): void {
+		$placement_id = self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::PLACEMENT,
+				'post_status' => 'publish',
+				'post_name'   => 'rotating-leaderboard',
+			)
+		);
+
+		update_post_meta( $placement_id, Placement_Repository::META_IS_ACTIVE, 1 );
+		update_post_meta( $placement_id, Placement_Repository::META_SIZE, '728x90' );
+
+		$html = do_blocks( '<!-- wp:aggr/ad-slot {"slot":"rotating-leaderboard","rotate":true,"rotateSeconds":45} /-->' );
+
+		$this->assertStringContainsString( 'data-wp-interactive="aggr/ad-slot"', $html );
+		$this->assertStringContainsString( 'data-wp-init="callbacks.fill"', $html );
+		$this->assertStringContainsString( '&quot;rotate&quot;:true', $html );
+		$this->assertStringContainsString( '&quot;rotateSeconds&quot;:45', $html );
+	}
+
+	/**
+	 * **An interval below the floor is raised, not honoured.**
+	 *
+	 * Every rotation is a new impression. A two-second interval would
+	 * manufacture them fifteen times faster than a reader could see them, and
+	 * a block comment can be hand-edited to say anything — so the server floors
+	 * it rather than trusting the editor control to have done so.
+	 *
+	 * @return void
+	 */
+	public function test_an_interval_below_the_floor_is_raised(): void {
+		$placement_id = self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::PLACEMENT,
+				'post_status' => 'publish',
+				'post_name'   => 'fast-leaderboard',
+			)
+		);
+
+		update_post_meta( $placement_id, Placement_Repository::META_IS_ACTIVE, 1 );
+		update_post_meta( $placement_id, Placement_Repository::META_SIZE, '728x90' );
+
+		$html = do_blocks( '<!-- wp:aggr/ad-slot {"slot":"fast-leaderboard","rotate":true,"rotateSeconds":2} /-->' );
+
+		$this->assertStringContainsString(
+			'&quot;rotateSeconds&quot;:' . Placement_Slot::MIN_ROTATE_SECONDS,
+			$html
+		);
+		$this->assertStringNotContainsString( '&quot;rotateSeconds&quot;:2', $html );
+	}
+
+	/**
+	 * A slot that did not ask to rotate says so, rather than omitting the key.
+	 *
+	 * The store reads `context.rotate`; an absent key and a false one behave the
+	 * same in JavaScript, which is exactly the kind of agreement that stops
+	 * being true when somebody refactors the store.
+	 *
+	 * @return void
+	 */
+	public function test_a_static_slot_declares_that_it_does_not_rotate(): void {
+		$placement_id = self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::PLACEMENT,
+				'post_status' => 'publish',
+				'post_name'   => 'static-leaderboard',
+			)
+		);
+
+		update_post_meta( $placement_id, Placement_Repository::META_IS_ACTIVE, 1 );
+		update_post_meta( $placement_id, Placement_Repository::META_SIZE, '728x90' );
+
+		$html = do_blocks( '<!-- wp:aggr/ad-slot {"slot":"static-leaderboard"} /-->' );
+
+		$this->assertStringContainsString( '&quot;rotate&quot;:false', $html );
 	}
 
 	/**

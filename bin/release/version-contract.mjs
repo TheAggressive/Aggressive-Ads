@@ -49,7 +49,7 @@ export const DEVELOPMENT_VERSION = '0.0.0-development';
 const VERSION_PATHS = Object.freeze([
 	'package.json',
 	'aggressive-ads.php',
-	'src/blocks/placement/block.json',
+	'src/blocks-interactivity/ad-slot/block.json',
 	'README.md',
 	'tests/php/bootstrap-unit.php',
 	'tests/php/phpstan-bootstrap.php',
@@ -126,7 +126,7 @@ export async function readSourceVersions(root = process.cwd()) {
 	}
 
 	const plugin = sources['aggressive-ads.php'];
-	const block = JSON.parse(sources['src/blocks/placement/block.json']);
+	const block = JSON.parse(sources['src/blocks-interactivity/ad-slot/block.json']);
 
 	return {
 		'package.json version': manifest.version,
@@ -219,8 +219,8 @@ export async function writeSourceVersions(version, root = process.cwd()) {
 		readFile(filePath(root, relativePath), 'utf8');
 
 	const updates = {
-		'src/blocks/placement/block.json': replaceOne(
-			await read('src/blocks/placement/block.json'),
+		'src/blocks-interactivity/ad-slot/block.json': replaceOne(
+			await read('src/blocks-interactivity/ad-slot/block.json'),
 			JSON_VERSION_PATTERN,
 			`$1${version}$2`,
 			'placement block version'

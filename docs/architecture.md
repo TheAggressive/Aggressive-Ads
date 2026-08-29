@@ -74,7 +74,7 @@ This is not an aspiration maintained by discipline. `tests/e2e/campaign-wizard.s
 
 ## Public pages without a theme embed
 
-Native fill only runs where the theme (or an editor) places `aggr/placement`,
+Native fill only runs where the theme (or an editor) places `aggr/ad-slot`,
 the PHP helper, or the shortcode. Until the LAAO theme swaps AdSanity group
 blocks for those embeds, public pages show empty reserved slots. That theme
 change is outside this plugin. Approval, Inventory, and the clock do not

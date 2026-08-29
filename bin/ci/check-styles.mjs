@@ -46,6 +46,7 @@ const STYLE_ROOT = path.join( ROOT, 'src' );
 const MARKUP_DIRS = [
 	'src/admin',
 	'src/blocks',
+	'src/blocks-interactivity',
 	'src/interactivity',
 	'templates',
 ];

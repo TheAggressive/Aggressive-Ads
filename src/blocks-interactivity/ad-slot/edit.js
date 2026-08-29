@@ -3,23 +3,36 @@ import {
 	Notice,
 	PanelBody,
 	Placeholder,
+	RangeControl,
 	SelectControl,
 	Spinner,
+	ToggleControl,
 } from '@wordpress/components';
 import { useEffect, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 import apiFetch from '@wordpress/api-fetch';
 
 /**
+ * The shortest rotation the editor offers.
+ *
+ * Matches the floor the view module and PHP both enforce. Three copies of one
+ * number is two too many, but the alternatives are worse: the editor bundle
+ * cannot import the view module without pulling the Interactivity runtime into
+ * the editor, and reading it from PHP would mean a REST round trip to render a
+ * slider. `AdSlotRotationTest` asserts the three agree.
+ */
+const MIN_ROTATE_SECONDS = 30;
+
+/**
  * Editor view: pick a slot. Core block supports style the wrapper.
  *
  * @param {Object}   props
- * @param {{ slot: string }} props.attributes
- * @param {(next: { slot: string }) => void} props.setAttributes
+ * @param {{ slot: string, rotate: boolean, rotateSeconds: number }} props.attributes
+ * @param {(next: Object) => void} props.setAttributes
  * @return {JSX.Element} The editor view.
  */
 export default function Edit( { attributes, setAttributes } ) {
-	const { slot } = attributes;
+	const { slot, rotate, rotateSeconds } = attributes;
 	const [ placements, setPlacements ] = useState( null );
 	const [ error, setError ] = useState( '' );
 
@@ -143,6 +156,54 @@ export default function Edit( { attributes, setAttributes } ) {
 					) : null }
 
 					{ ready && configured ? slotField : null }
+				</PanelBody>
+
+				<PanelBody title={ __( 'Rotation', 'aggressive-ads' ) }>
+					<ToggleControl
+						__nextHasNoMarginBottom
+						label={ __( 'Rotate ads', 'aggressive-ads' ) }
+						help={
+							rotate
+								? __(
+										'A new ad is requested on the interval below, while the slot is on screen.',
+										'aggressive-ads'
+								  )
+								: __(
+										'A new ad is chosen on every page load.',
+										'aggressive-ads'
+								  )
+						}
+						checked={ !! rotate }
+						onChange={ ( value ) =>
+							setAttributes( { rotate: value } )
+						}
+					/>
+
+					{ rotate ? (
+						<RangeControl
+							__nextHasNoMarginBottom
+							label={ __(
+								'Seconds between ads',
+								'aggressive-ads'
+							) }
+							help={ __(
+								'Rotation pauses while the slot is off screen or the tab is in the background, because each rotation counts as an impression.',
+								'aggressive-ads'
+							) }
+							value={ rotateSeconds }
+							onChange={ ( value ) =>
+								setAttributes( {
+									rotateSeconds: Math.max(
+										MIN_ROTATE_SECONDS,
+										Number( value ) || MIN_ROTATE_SECONDS
+									),
+								} )
+							}
+							min={ MIN_ROTATE_SECONDS }
+							max={ 600 }
+							step={ 5 }
+						/>
+					) : null }
 				</PanelBody>
 			</InspectorControls>
 

@@ -21,7 +21,7 @@ export default [
 		],
 	},
 	{
-		files: [ 'src/blocks/**/*.js' ],
+		files: [ 'src/blocks/**/*.js', 'src/blocks-interactivity/**/*.js' ],
 		languageOptions: {
 			parserOptions: {
 				ecmaVersion: 2022,
@@ -34,6 +34,7 @@ export default [
 				fetch: 'readonly',
 				URLSearchParams: 'readonly',
 				HTMLElement: 'readonly',
+				IntersectionObserver: 'readonly',
 			},
 		},
 		plugins: {

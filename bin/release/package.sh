@@ -102,13 +102,13 @@ PACKAGE_REQUIRED=(
 	dist/interactivity/wizard.js
 	dist/interactivity/autosave.js
 	dist/interactivity/upload.js
-	dist/blocks/placement/block.json
-	dist/blocks/placement/index.js
-	dist/blocks/placement/index.asset.php
-	dist/blocks/placement/index.css
-	dist/blocks/placement/style-index.css
-	dist/blocks/placement/view.js
-	dist/blocks/placement/view.asset.php
+	dist/blocks-interactivity/ad-slot/block.json
+	dist/blocks-interactivity/ad-slot/index.js
+	dist/blocks-interactivity/ad-slot/index.asset.php
+	dist/blocks-interactivity/ad-slot/index.css
+	dist/blocks-interactivity/ad-slot/style-index.css
+	dist/blocks-interactivity/ad-slot/view.js
+	dist/blocks-interactivity/ad-slot/view.asset.php
 	dist/styles/portal.css
 )
 
@@ -229,7 +229,7 @@ if [ "${failed}" -ne 0 ]; then
 fi
 
 # Stamped only after the required-file gate has run: sed on a missing
-# dist/blocks/placement/block.json dies with "can't read", burying the
+# dist/blocks-interactivity/ad-slot/block.json dies with "can't read", burying the
 # diagnostic that names the unbuilt file.
 #
 # semantic-release owns the published version. Stamp only the staged tree so
@@ -243,7 +243,7 @@ sed -i -E \
 	"${STAGING}/${PLUGIN_FILE}"
 sed -i -E \
 	"0,/\"version\": \"[^\"]+\"/s//\"version\": \"${VERSION}\"/" \
-	"${STAGING}/dist/blocks/placement/block.json"
+	"${STAGING}/dist/blocks-interactivity/ad-slot/block.json"
 # README ships, so it would otherwise reach users still reading
 # 0.0.0-development — the one stamped file that is documentation rather than
 # code, and the easiest to forget precisely because nothing executes it.
@@ -258,7 +258,7 @@ staged_constant_version=$(
 	grep -m1 -oE "define\( 'AGGR_VERSION', '[^']+'" "${STAGING}/${PLUGIN_FILE}" | awk -F"'" '{print $4}'
 )
 staged_block_version=$(
-	grep -m1 -oE '"version": "[^"]+"' "${STAGING}/dist/blocks/placement/block.json" | cut -d'"' -f4
+	grep -m1 -oE '"version": "[^"]+"' "${STAGING}/dist/blocks-interactivity/ad-slot/block.json" | cut -d'"' -f4
 )
 staged_readme_version=$(
 	# A literal grep pattern, not a template: the backticks are Markdown and
