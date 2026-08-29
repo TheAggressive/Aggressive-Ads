@@ -105,8 +105,7 @@ final class DecisionMetricsTest extends WP_UnitTestCase {
 			Decision_Pipeline::standard(),
 			$container->get( Fill_Cache::class ),
 			new Array_Frequency_Store(),
-			$container->get( \Aggressive\Ads\Repository\Line_Item_Repository::class ),
-			$container->get( \Aggressive\Ads\Repository\Rollup_Repository::class )
+			$container->get( \Aggressive\Ads\Repository\Line_Item_Repository::class )
 		);
 
 		$engine->decide(
@@ -146,8 +145,7 @@ final class DecisionMetricsTest extends WP_UnitTestCase {
 			Decision_Pipeline::standard(),
 			$container->get( Fill_Cache::class ),
 			new Array_Frequency_Store(),
-			$container->get( \Aggressive\Ads\Repository\Line_Item_Repository::class ),
-			$container->get( \Aggressive\Ads\Repository\Rollup_Repository::class )
+			$container->get( \Aggressive\Ads\Repository\Line_Item_Repository::class )
 		);
 
 		$engine->decide(

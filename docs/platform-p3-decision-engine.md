@@ -205,10 +205,23 @@ two caches with different TTLs is how a paused campaign keeps serving.
 
 - **Expected cardinality:** up to 500 candidate assignments per placement, the
   P2 clamp. Realistically single digits; the budget is written for the tail.
-- **Hot-path query budget:** one query cold, zero warm. The engine may not add a
-  query per candidate or per stage. This is the constraint that decides the
-  design, and it is why stage inputs must be on the candidate row — which is
+- **Hot-path query budget:** **two queries cold, zero warm.** The engine may not
+  add a query per candidate or per stage. This is the constraint that decides
+  the design, and it is why stage inputs must be on the candidate row — which is
   what P2's denormalization was for.
+
+  It was one, and the second is the delivery policy: priority, pacing, caps,
+  targeting and frequency live on the line item, and the counters they are
+  compared against live in rollups. Reading them was not optional — without it
+  four stages fell back to defaults — and folding them into
+  `candidates_for_placement()` would change the plan that query's contract
+  asserts. Policy and counters are read together in one statement rather than
+  two, because the budget is counted in queries: the second was enough on its
+  own to put a cold thousand-candidate fill over the measured ceiling.
+
+  `DeliveryScaleTest` is the enforcement, and it is worth running alone — its
+  budget passed inside a full-suite run while failing in isolation, because
+  earlier tests leave the object cache primed.
 - **Write budget:** unchanged. Zero writes on a fill.
 - **Latency budget:** the decision must not add more than a small constant to
   the current warm fill. State the number when the baseline is measured; a
