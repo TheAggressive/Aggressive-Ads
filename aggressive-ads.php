@@ -4,7 +4,7 @@
  * Plugin URI:        https://theaggressive.com
  * Update URI:        https://github.com/TheAggressive/Aggressive-Ads
  * Description:       Live means live. Advertisers build campaigns; staff review; approval publishes.
- * Version:           1.4.0
+ * Version:           1.5.0
  * Requires at least: 6.7
  * Requires PHP:      8.4
  * Author:            The Aggressive, LLC
@@ -29,7 +29,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-define( 'AGGR_VERSION', '1.4.0' );
+define( 'AGGR_VERSION', '1.5.0' );
 define( 'AGGR_PLUGIN_FILE', __FILE__ );
 define( 'AGGR_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 define( 'AGGR_PLUGIN_URL', plugin_dir_url( __FILE__ ) );

@@ -20,7 +20,7 @@ declare(strict_types=1);
  * thing: a template that requires a partial nobody has written fails analysis.
  */
 define( 'AGGR_PLUGIN_DIR', dirname( __DIR__, 2 ) . '/' );
-define( 'AGGR_VERSION', '1.4.0' );
+define( 'AGGR_VERSION', '1.5.0' );
 define( 'AGGR_PLUGIN_FILE', AGGR_PLUGIN_DIR . 'aggressive-ads.php' );
 define( 'AGGR_PLUGIN_URL', 'https://example.test/wp-content/plugins/aggressive-ads/' );
 define( 'AGGR_MIN_PHP', '8.4' );
