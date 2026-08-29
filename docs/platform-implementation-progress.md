@@ -150,8 +150,9 @@ Shared boundaries and group exit criteria:
       evidence the contract asks for in the Playwright lane has not, so the
       phase is complete. The browser evidence exists — `viewability.spec.ts`
       watches a real advertisement enter a real viewport, and both halves of it
-      fail under sabotage. The one item from the contract body still outstanding
-      is the Site Health ratio, tracked in [open-work.md](open-work.md).
+      fail under sabotage. The Site Health ratio from the contract's
+      observability section shipped with it, so nothing from that document
+      remains outstanding.
 - [ ] **P12 — Conversion tracking.** Definitions, browser and server-to-server
       endpoints, idempotency keys, click-through and view-through windows.
       Attribution derives from signed identifiers, never from client-supplied

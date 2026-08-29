@@ -11,19 +11,6 @@ Delete an entry when it ships. An entry that has been here through three
 releases is either not real or not wanted — say which, in the entry, and then
 delete it.
 
-## P11 — the viewability health signal
-
-P11's contract asks Site Health to report the viewable-to-served ratio for the
-last closed day, and to say *not measured* rather than `0%` for days before the
-column existed. Every exit criterion is met and this is not one of them, so the
-phase is closed and this is the remainder.
-
-It is worth having for one reason: a ratio of zero on a day with impressions
-almost always means the script is not running, not that nothing was seen — and
-that is invisible from the portal tile, which shows the same `0.0%` either way.
-The data is already there; this is a Site Health test reading `aggr_rollups` and
-a runbook paragraph on telling the two apart.
-
 ## Nothing else is open
 
 Every entry that was here has shipped or been closed. That is the intended

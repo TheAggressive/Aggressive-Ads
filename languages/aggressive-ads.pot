@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-29T11:34:27+00:00\n"
+"POT-Creation-Date: 2026-08-29T11:49:20+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -1599,6 +1599,7 @@ msgstr ""
 #: inc/Install/class-assignment-health.php:126
 #: inc/Install/class-decision-health.php:98
 #: inc/Install/class-rewrite-health.php:281
+#: inc/Install/class-viewability-health.php:125
 msgid "Advertising"
 msgstr ""
 
@@ -1675,6 +1676,44 @@ msgstr ""
 
 #: inc/Install/class-rewrite-health.php:262
 msgid "The advertising rewrite rules could not be written. Open Settings → Permalinks and save, then run this check again."
+msgstr ""
+
+#: inc/Install/class-viewability-health.php:54
+msgid "Advertising viewability is being measured"
+msgstr ""
+
+#: inc/Install/class-viewability-health.php:78
+msgid "No advertisements were delivered yesterday"
+msgstr ""
+
+#: inc/Install/class-viewability-health.php:79
+msgid "There is nothing to measure yet. This is normal on a new installation or a quiet site."
+msgstr ""
+
+#: inc/Install/class-viewability-health.php:86
+msgid "Yesterday was not measured for viewability"
+msgstr ""
+
+#: inc/Install/class-viewability-health.php:87
+msgid "These impressions predate viewability measurement. Days from here on will carry a rate."
+msgstr ""
+
+#: inc/Install/class-viewability-health.php:96
+msgid "Advertisements were delivered yesterday but none were measured as seen"
+msgstr ""
+
+#: inc/Install/class-viewability-health.php:97
+msgid "A zero rate across a whole day usually means the measuring script is not running rather than that nobody saw the advertisements. Check that the placement block is on the page and that JavaScript is not being stripped by a cache or optimizer."
+msgstr ""
+
+#. translators: %s: percentage of impressions measured as viewable.
+#: inc/Install/class-viewability-health.php:105
+#, php-format
+msgid "%s%% of yesterday's advertisements were seen"
+msgstr ""
+
+#: inc/Install/class-viewability-health.php:108
+msgid "Viewability is being measured and reported."
 msgstr ""
 
 #: inc/Notification/class-email-change-notification.php:41

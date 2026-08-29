@@ -329,6 +329,7 @@ final class Plugin {
 			Creative_Assignment_Migrator::class,
 			Assignment_Health::class,
 			Decision_Health::class,
+			\Aggressive\Ads\Install\Viewability_Health::class,
 
 			// After the state machine, whose transition action it listens to.
 			Campaign_Change_Manager::class,
