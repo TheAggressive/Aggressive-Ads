@@ -20,7 +20,6 @@ use Aggressive\Ads\Domain\Frequency_Store;
 use Aggressive\Ads\Install\Creative_Assignment_Migrator;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Line_Item_Repository;
-use Aggressive\Ads\Repository\Rollup_Repository;
 
 /**
  * Loads assignment candidates, runs the pipeline, and exposes traces for staff.
@@ -42,8 +41,7 @@ final class Decision_Engine {
 	 * @param Decision_Pipeline              $pipeline    Pure stages.
 	 * @param Fill_Cache                     $cache       Short-TTL candidate cache.
 	 * @param Frequency_Store                $frequency   Visitor frequency counts.
-	 * @param Line_Item_Repository           $line_items  Delivery policy reads.
-	 * @param Rollup_Repository              $rollups     Delivered counters.
+	 * @param Line_Item_Repository           $line_items  Delivery policy and counters.
 	 */
 	public function __construct(
 		private readonly Creative_Assignment_Repository $assignments,
@@ -52,8 +50,7 @@ final class Decision_Engine {
 		private readonly Decision_Pipeline $pipeline,
 		private readonly Fill_Cache $cache,
 		private readonly Frequency_Store $frequency,
-		private readonly Line_Item_Repository $line_items,
-		private readonly Rollup_Repository $rollups
+		private readonly Line_Item_Repository $line_items
 	) {
 	}
 
@@ -66,8 +63,11 @@ final class Decision_Engine {
 	 * back to its default, and a configured policy changed nothing at serve
 	 * time. Five phases were `[x]` in that state.
 	 *
-	 * Two bounded queries for the whole candidate set, never one per candidate,
-	 * and only on a cache miss: the enriched rows are what gets cached.
+	 * One bounded query for the whole candidate set, never one per candidate, and
+	 * only on a cache miss: the enriched rows are what gets cached. Policy and
+	 * counters are read together because the budget is counted in queries, and
+	 * a second statement was enough to put a cold thousand-candidate fill over
+	 * it.
 	 *
 	 * Counters are keyed by line item, which is what carries a cap. Keying them
 	 * by campaign was correct only while every campaign had exactly one line
@@ -93,30 +93,18 @@ final class Decision_Engine {
 			$line_item_ids[] = (int) ( $row['line_item_id'] ?? 0 );
 		}
 
-		$policies = $this->line_items->delivery_policies_for( $line_item_ids );
-		$totals   = $this->rollups->delivery_totals_for_line_items( $line_item_ids, gmdate( 'Y-m-d', $now ) );
+		$policies = $this->line_items->delivery_policies_for( $line_item_ids, gmdate( 'Y-m-d', $now ) );
 
 		foreach ( $rows as $index => $row ) {
 			$line_item_id = (int) ( $row['line_item_id'] ?? 0 );
 			$policy       = $policies[ $line_item_id ] ?? array();
-			$total        = $totals[ $line_item_id ] ?? array(
-				'lifetime' => 0,
-				'today'    => 0,
-			);
 
 			/*
 			 * The assignment wins on any key it already owns. Its window is
 			 * narrower than the line item's by construction, and overwriting it
 			 * here would silently widen what an advertiser was refused.
 			 */
-			$rows[ $index ] = array_merge(
-				$policy,
-				array(
-					'delivered_lifetime' => $total['lifetime'],
-					'delivered_today'    => $total['today'],
-				),
-				$row
-			);
+			$rows[ $index ] = array_merge( $policy, $row );
 		}
 
 		return $rows;

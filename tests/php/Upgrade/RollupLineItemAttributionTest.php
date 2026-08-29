@@ -239,4 +239,53 @@ final class RollupLineItemAttributionTest extends WP_UnitTestCase {
 			'A recorded delivery did not land on the line item that served it.'
 		);
 	}
+
+	/**
+	 * The pacing join reaches rollups by index rather than scanning them.
+	 *
+	 * This runs on every cold fill, joining the whole rollup table — which
+	 * grows one row per placement, campaign, line item and day and is never
+	 * purged with events. A scan here is invisible on a new site and gets
+	 * slower every day the plugin runs, which is the worst shape of
+	 * performance bug: it passes review and degrades in production.
+	 *
+	 * Asserted from `EXPLAIN` rather than from timing, for the reason the
+	 * candidate read contract records — a small table is fast to scan.
+	 *
+	 * **Two limits, both real.** This EXPLAINs the access pattern rather than
+	 * the repository's own statement, so it proves the index serves
+	 * `WHERE line_item_id IN (…) GROUP BY line_item_id` and not that the caller
+	 * still writes it that way. And a sabotage removing the index from the DDL
+	 * does not fail here: per-test tables are TEMPORARY, so dropping one can
+	 * reveal a base table that `dbDelta` then leaves alone. A fresh install on
+	 * a real site is the proof; this catches the access pattern drifting away
+	 * from the index it was given.
+	 */
+	public function test_the_pacing_join_uses_the_line_item_index(): void {
+		global $wpdb;
+
+		$rollups = $this->rollups->table_name();
+
+		for ( $i = 0; $i < 200; $i++ ) {
+			$this->rollups->increment( 'impressions', 1, 1, sprintf( '2026-03-%02d', ( $i % 28 ) + 1 ), 1000 + $i );
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Query-plan introspection over this plugin's own table.
+		$plan = $wpdb->get_results( "EXPLAIN SELECT line_item_id, SUM(impressions) FROM {$rollups} WHERE line_item_id IN (1000,1001,1002) GROUP BY line_item_id", ARRAY_A );
+
+		$this->assertNotEmpty( $plan, 'EXPLAIN returned nothing, so this asserts nothing.' );
+
+		$keys = array_filter( array_column( $plan, 'key' ) );
+
+		$this->assertContains(
+			'line_item_day',
+			$keys,
+			'The pacing read is not using the line-item index it was given.'
+		);
+
+		$this->assertNotEmpty(
+			$keys,
+			'The pacing read scans the rollup table, which grows every day and is never purged with events.'
+		);
+	}
 }

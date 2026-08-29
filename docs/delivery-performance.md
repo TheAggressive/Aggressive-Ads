@@ -104,3 +104,20 @@ time, replica lag, and restore time. Shorten raw retention or move the ledger
 to dedicated analytics infrastructure before the operational limits of the
 WordPress database are reached; rollups remain compact and authoritative for
 the advertiser UI.
+
+## Frequency capping needs the object cache more than the rest
+
+`Transient_Frequency_Store` uses `wp_cache_incr()` when a persistent object
+cache is installed, which is atomic and costs no database write. Without one it
+falls back to transients, and a transient with an expiry is a row in
+`wp_options` — so every capped impression becomes an options write, on top of
+the event insert and the rollup upsert the beacon already does.
+
+The rows are not autoloaded and expire on their own, so this is a write-volume
+cost rather than a memory one, and the counter stays best-effort either way: the
+read-then-write fallback loses races under exactly the concurrency that makes a
+cap worth having.
+
+Frequency capping is the one delivery feature whose correctness, not just its
+speed, improves with Redis or Memcached. A site running caps at volume should
+have one.

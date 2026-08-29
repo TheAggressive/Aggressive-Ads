@@ -190,9 +190,10 @@ final class Line_Item_Repository {
 	 * path free of per-candidate work either way.
 	 *
 	 * @param array<int, int> $line_item_ids Line-item ids.
+	 * @param string          $day_utc       UTC day for the daily counter; defaults to today.
 	 * @return array<int, array<string, mixed>> Keyed by line-item id.
 	 */
-	public function delivery_policies_for( array $line_item_ids ): array {
+	public function delivery_policies_for( array $line_item_ids, string $day_utc = '' ): array {
 		$ids = array();
 
 		foreach ( $line_item_ids as $line_item_id ) {
@@ -212,17 +213,32 @@ final class Line_Item_Repository {
 		global $wpdb;
 
 		$table        = $this->table_name();
+		$rollups      = $wpdb->prefix . Schema::ROLLUPS_TABLE;
 		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+		$day          = '' !== $day_utc ? $day_utc : gmdate( 'Y-m-d' );
+		$args         = array_merge( array( $day ), $ids );
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Table name is prefix+constant; placeholders are a fixed %d list matching $ids.
+		/*
+		 * Policy and counters in one statement rather than two. The decision
+		 * path is measured in queries, not in methods, and the second read was
+		 * enough on its own to put a cold thousand-candidate fill over budget.
+		 *
+		 * Grouped by the primary key, so every non-aggregated column is
+		 * functionally dependent and `ONLY_FULL_GROUP_BY` is satisfied.
+		 */
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Both table names are prefix+constant; placeholders are a fixed %d list matching $ids.
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT id, priority, pacing_mode, goal_type, goal_amount,
-					daily_cap, lifetime_cap, targeting_rules, frequency_policy,
-					delivery_settings
-				FROM {$table}
-				WHERE id IN ({$placeholders})",
-				...$ids
+				"SELECT l.id, l.priority, l.pacing_mode, l.goal_type, l.goal_amount,
+					l.daily_cap, l.lifetime_cap, l.targeting_rules, l.frequency_policy,
+					l.delivery_settings,
+					COALESCE(SUM(r.impressions), 0) AS delivered_lifetime,
+					COALESCE(SUM(CASE WHEN r.day_utc = %s THEN r.impressions ELSE 0 END), 0) AS delivered_today
+				FROM {$table} l
+				LEFT JOIN {$rollups} r ON r.line_item_id = l.id
+				WHERE l.id IN ({$placeholders})
+				GROUP BY l.id",
+				...$args
 			),
 			ARRAY_A
 		);
@@ -237,18 +253,20 @@ final class Line_Item_Repository {
 				}
 
 				$policies[ (int) ( $row['id'] ?? 0 ) ] = array(
-					'priority'          => (int) ( $row['priority'] ?? 0 ),
-					'pacing_mode'       => (string) ( $row['pacing_mode'] ?? '' ),
-					'goal_type'         => (string) ( $row['goal_type'] ?? '' ),
-					'goal_amount'       => (int) ( $row['goal_amount'] ?? 0 ),
-					'daily_cap'         => (int) ( $row['daily_cap'] ?? 0 ),
-					'lifetime_cap'      => (int) ( $row['lifetime_cap'] ?? 0 ),
-					'targeting_rules'   => $row['targeting_rules'] ?? null,
+					'priority'           => (int) ( $row['priority'] ?? 0 ),
+					'pacing_mode'        => (string) ( $row['pacing_mode'] ?? '' ),
+					'goal_type'          => (string) ( $row['goal_type'] ?? '' ),
+					'goal_amount'        => (int) ( $row['goal_amount'] ?? 0 ),
+					'daily_cap'          => (int) ( $row['daily_cap'] ?? 0 ),
+					'lifetime_cap'       => (int) ( $row['lifetime_cap'] ?? 0 ),
+					'targeting_rules'    => $row['targeting_rules'] ?? null,
 					// The column is `frequency_policy`; the stage reads
 					// `frequency_rules`. Renamed here so neither has to know
 					// about the other.
-					'frequency_rules'   => $row['frequency_policy'] ?? null,
-					'delivery_settings' => $row['delivery_settings'] ?? null,
+					'frequency_rules'    => $row['frequency_policy'] ?? null,
+					'delivery_settings'  => $row['delivery_settings'] ?? null,
+					'delivered_lifetime' => max( 0, (int) ( $row['delivered_lifetime'] ?? 0 ) ),
+					'delivered_today'    => max( 0, (int) ( $row['delivered_today'] ?? 0 ) ),
 				);
 			}
 		}
