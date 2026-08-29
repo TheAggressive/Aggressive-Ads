@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-29T10:33:45+00:00\n"
+"POT-Creation-Date: 2026-08-29T10:48:39+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -534,13 +534,13 @@ msgid "Campaign moved from %1$s to %2$s."
 msgstr ""
 
 #: inc/Admin/class-review-data.php:325
-#: inc/Portal/class-view-data.php:804
+#: inc/Portal/class-view-data.php:830
 msgid "Not scheduled"
 msgstr ""
 
 #. translators: 1: campaign start date. 2: campaign end date.
 #: inc/Admin/class-review-data.php:336
-#: inc/Portal/class-view-data.php:820
+#: inc/Portal/class-view-data.php:846
 #, php-format
 msgid "%1$s – %2$s"
 msgstr ""
@@ -571,7 +571,7 @@ msgid "Decided"
 msgstr ""
 
 #: inc/Admin/class-review-data.php:619
-#: inc/Portal/class-view-data.php:677
+#: inc/Portal/class-view-data.php:703
 msgid "Running"
 msgstr ""
 
@@ -2446,7 +2446,7 @@ msgid "Campaign ID"
 msgstr ""
 
 #: inc/Portal/class-report-actions.php:158
-#: inc/Portal/class-view-data.php:709
+#: inc/Portal/class-view-data.php:735
 #: templates/portal/partials/campaign-table.php:38
 #: templates/portal/partials/sparkline.php:30
 #: templates/portal/screens/campaign.php:888
@@ -2454,7 +2454,7 @@ msgid "Impressions"
 msgstr ""
 
 #: inc/Portal/class-report-actions.php:159
-#: inc/Portal/class-view-data.php:713
+#: inc/Portal/class-view-data.php:739
 #: templates/portal/partials/campaign-table.php:39
 #: templates/portal/screens/campaign.php:892
 msgid "Clicks"
@@ -2512,31 +2512,31 @@ msgstr ""
 msgid "%s%%"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:593
+#: inc/Portal/class-view-data.php:619
 #: templates/portal/partials/campaign-ad-updates.php:64
 msgid "Waiting for review"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:594
+#: inc/Portal/class-view-data.php:620
 msgid "Changes needed"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:681
+#: inc/Portal/class-view-data.php:707
 msgid "In review"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:685
+#: inc/Portal/class-view-data.php:711
 msgid "Needs your attention"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:717
+#: inc/Portal/class-view-data.php:743
 #: templates/portal/partials/campaign-table.php:40
 #: templates/portal/screens/campaign.php:896
 msgid "CTR"
 msgstr ""
 
 #. translators: %s: campaign start date.
-#: inc/Portal/class-view-data.php:813
+#: inc/Portal/class-view-data.php:839
 #, php-format
 msgid "From %s"
 msgstr ""

@@ -510,6 +510,36 @@ final class View_Data {
 	}
 
 	/**
+	 * Where to load a creative's image from.
+	 *
+	 * Approval promotes the artwork into the Media Library and deletes the
+	 * private original, so the authenticated file route answers 404 for
+	 * everything approved — correctly, because there is nothing left to stream.
+	 * Pointing at it regardless meant every approved creative on the campaign
+	 * screen rendered as a broken image.
+	 *
+	 * The attachment URL is public, which is not a leak: it is the same file
+	 * the ad is already serving to every visitor. Unapproved artwork has no
+	 * attachment and keeps the authenticated route.
+	 *
+	 * @param int $creative_id Creative post id.
+	 * @return string
+	 */
+	private function creative_preview( int $creative_id ): string {
+		$promoted = $this->creatives->attachment_url( $creative_id );
+
+		if ( '' !== $promoted ) {
+			return $promoted;
+		}
+
+		return add_query_arg(
+			'_wpnonce',
+			wp_create_nonce( 'wp_rest' ),
+			rest_url( Creative_File_Controller::NAMESPACE . '/creatives/' . $creative_id . '/file' )
+		);
+	}
+
+	/**
 	 * The campaign's creatives, shaped for display.
 	 *
 	 * No file path, no storage token and no checksum: those describe where the
@@ -553,11 +583,7 @@ final class View_Data {
 				'approved'     => $this->creatives->has_attachment( $creative['id'] ),
 				'name'         => null === $stored ? '' : $stored['name'],
 				'bytes'        => null === $stored ? 0 : $stored['bytes'],
-				'preview'      => add_query_arg(
-					'_wpnonce',
-					wp_create_nonce( 'wp_rest' ),
-					rest_url( Creative_File_Controller::NAMESPACE . '/creatives/' . $creative['id'] . '/file' )
-				),
+				'preview'      => $this->creative_preview( $creative['id'] ),
 			);
 		}
 
