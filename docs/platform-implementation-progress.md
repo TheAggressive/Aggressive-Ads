@@ -140,7 +140,12 @@ Shared boundaries and group exit criteria:
       [platform-p10-measurement-model.md](platform-p10-measurement-model.md).
 - [ ] **P11 — Viewability.** IntersectionObserver and Page Visibility, 50% for
       one continuous second by default and configurable. Once per decision,
-      replay protected, and never blocking delivery when unavailable.
+      replay protected, and never blocking delivery when unavailable. Scope,
+      boundaries and exit criteria are defined in
+      [platform-p11-viewability.md](platform-p11-viewability.md). The signal is
+      client-attested and the contract says so: the server's controls are that
+      a `viewable` must carry a signed token that already recorded a `served`,
+      and can be spent once.
 - [ ] **P12 — Conversion tracking.** Definitions, browser and server-to-server
       endpoints, idempotency keys, click-through and view-through windows.
       Attribution derives from signed identifiers, never from client-supplied
