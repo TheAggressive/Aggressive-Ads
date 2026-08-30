@@ -110,10 +110,28 @@ Two things still open from it:
    "paused with its campaign" from "paused on its own". Protecting it would strand
    assignments paused by a campaign pause, which is worse. It needs an ownership
    flag on the row, not a cleverer rule.
-2. **Nothing asserts that a fixture's status came from production code.** The
-   rule that would have caught this — a delivery test may not write
-   `Assignment_Rules::LIVE` itself — is a guard `bin/ci/` could enforce, in the
-   spirit of the other structural checks.
+2. ~~Nothing asserts that a fixture's status came from production code.~~
+   Shipped as `bin/ci/check-delivery-fixtures.mjs`, in `lint:files`.
+
+   **Narrower than the rule this entry used to propose**, and deliberately. "A
+   delivery test may not write `Assignment_Rules::LIVE` itself" sounds right and
+   is wrong: all seven tests that exercise delivery write it, and most of them
+   are entitled to. A test of the decision pipeline is supposed to hand it a
+   candidate row — that is what `DecisionPolicyInputsTest` exists to keep
+   honest. Enforcing the broad rule would have meant rewriting five test
+   fixtures to drive real campaign transitions, making them slower and coupling
+   them to a projection they are not about.
+
+   Only two files claim that *something else* set the status:
+   `AssignmentProjectionTest`, which drives a real transition and asserts the
+   row that comes out, and `tests/e2e/seed-live-ad.php`, which throws if the
+   fixture does not end up serving. Both already use the constant only to
+   assert. The guard keeps it that way, so the next person debugging a flake in
+   one of them cannot quiet it by supplying the answer.
+
+   Two things it had to get right, both found by running it: a docblock quoting
+   the forbidden line verbatim is prose and not a violation, and a renamed
+   protected file must fail rather than pass over nothing.
 
 ## The ad slot collapses when unsold, and there is no way to keep the space
 
