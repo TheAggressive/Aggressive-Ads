@@ -30,8 +30,10 @@ What is defined and not built:
    its own issue/revoke surface — and it is the one place a reporter may state
    value and currency, bounded by the definition. Until it exists, `allow_s2s`
    is a checkbox that does nothing, which is worth fixing or removing.
-2. **A staff screen.** The definition routes exist and nothing in wp-admin calls
-   them, so a definition can only be created over REST today.
+2. ~~A staff screen.~~ Shipped: Advertising → Conversions, behind
+   `aggr_manage_settings`, creating and archiving definitions through the same
+   REST routes. It shows the reporting key a page needs; it does not yet show a
+   snippet to paste, because no client snippet exists to paste.
 3. **Reporting surfaces.** The `conversions` column is populated and no screen
    reads it. That is P14's, not a gap here.
 4. **Operator counters.** `Conversion_Attribution` keeps refusal reasons apart —

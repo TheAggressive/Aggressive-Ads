@@ -13,6 +13,7 @@ use Aggressive\Ads\Admin\Campaign_Change_Actions;
 use Aggressive\Ads\Admin\Organization_Data;
 use Aggressive\Ads\Admin\Organization_Screen;
 use Aggressive\Ads\Admin\Package_Data;
+use Aggressive\Ads\Admin\Conversions_Screen;
 use Aggressive\Ads\Admin\Package_Screen;
 use Aggressive\Ads\Admin\Placement_Data;
 use Aggressive\Ads\Admin\Placement_Screen;
@@ -178,6 +179,11 @@ final class Runtime_Service_Registrar {
 				$c->get( Package_Repository::class ),
 				$c->get( Placement_Repository::class )
 			)
+		);
+
+		$container->register(
+			Conversions_Screen::class,
+			static fn (): Conversions_Screen => new Conversions_Screen()
 		);
 
 		$container->register(
