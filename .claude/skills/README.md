@@ -1,7 +1,12 @@
 # Skills
 
 Generic WordPress skills, copied from `laao/.claude/skills/` rather than
-symlinked: this plugin is its own git repository, and a symlink escaping it
+symlinked. `wp-block-themes` is deliberately not among them: block themes need
+`theme.json`, HTML templates and `parts/`, and this is a plugin — its
+`templates/` holds PHP portal templates. The rest earn their place
+(`aggr/ad-slot` for block development, `test:e2e:studio` for the Studio CLI).
+
+Copied rather than symlinked because: this plugin is its own git repository, and a symlink escaping it
 would be committed and arrive broken in every other clone. They carry no
 laao-specific content, so a copy is the honest representation.
 
