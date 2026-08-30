@@ -22,6 +22,7 @@ use Aggressive\Ads\Repository\Package_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Security\Ownership;
 use Aggressive\Ads\Security\Roles;
+use Aggressive\Ads\Workflow\Creative_Approval;
 use WP_UnitTestCase;
 
 /**
@@ -524,6 +525,123 @@ final class PortalViewDataTest extends WP_UnitTestCase {
 		$this->assertArrayNotHasKey( 'token', $creative );
 		$this->assertStringNotContainsString( 'private-artwork.png', wp_json_encode( $campaign ) );
 		$this->assertStringNotContainsString( 'server-secret-token', wp_json_encode( $campaign ) );
+	}
+
+	/**
+	 * **A turned-down creative says so, and says why, to the advertiser.**
+	 *
+	 * Staff cannot reject one without giving a reason. It was stored on the
+	 * creative and written to the audit trail, and shown in neither place an
+	 * advertiser can reach — so the card looked exactly like an approved one and
+	 * the ad simply never ran.
+	 *
+	 * The rejection is driven through `Creative_Approval::reject()` rather than
+	 * written as meta, because the claim under test is that what a reviewer
+	 * actually does reaches the person it was written for.
+	 *
+	 * @return void
+	 */
+	public function test_a_rejected_creative_carries_its_reason_to_the_advertiser(): void {
+		$fixture     = $this->waiting_creative();
+		$campaign_id = $fixture['campaign'];
+		$creative_id = $fixture['creative'];
+
+		$reviewer = self::factory()->user->create( array( 'role' => Roles::REVIEWER ) );
+		wp_set_current_user( $reviewer );
+
+		$this->assertSame(
+			$campaign_id,
+			Plugin::instance()->container()->get( Creative_Approval::class )
+				->reject( $creative_id, 'The logo is stretched.' ),
+			'The fixture never reached the rejected state this test is about.'
+		);
+
+		wp_set_current_user( $this->advertiser_a );
+		Plugin::instance()->container()->get( Ownership::class )->flush_cache();
+
+		$creative = $this->view->campaign( $campaign_id )['creatives'][0];
+
+		$this->assertTrue( $creative['rejected'] );
+		$this->assertFalse( $creative['approved'] );
+		$this->assertSame( 'Not approved', $creative['state_text'] );
+		$this->assertSame( 'The logo is stretched.', $creative['notes'] );
+	}
+
+	/**
+	 * **A creative nobody has decided about carries no reason.**
+	 *
+	 * `META_CHANGE_NOTES` is shared with the replacement flow, so exposing it
+	 * unconditionally would let a reason written about some other decision read
+	 * as the reason this ad is not running.
+	 *
+	 * @return void
+	 */
+	public function test_an_undecided_creative_states_no_reason(): void {
+		$fixture  = $this->waiting_creative();
+		$creative = $this->view->campaign( $fixture['campaign'] )['creatives'][0];
+
+		$this->assertFalse( $creative['rejected'] );
+		$this->assertFalse( $creative['approved'] );
+		$this->assertSame( 'Waiting for review', $creative['state_text'] );
+		$this->assertSame( '', $creative['notes'] );
+	}
+
+	/**
+	 * One running campaign carrying one unpublished creative.
+	 *
+	 * @return array{campaign: int, creative: int, placement: int}
+	 */
+	private function waiting_creative(): array {
+		$campaign_id  = $this->make_campaign( $this->org_a, Post_Statuses::LIVE, 'Autumn arts guide' );
+		$placement_id = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::PLACEMENT,
+				'post_status' => 'publish',
+				'post_title'  => 'Homepage Leaderboard',
+			)
+		);
+
+		update_post_meta( $placement_id, Placement_Repository::META_IS_ACTIVE, 1 );
+		update_post_meta( $placement_id, Placement_Repository::META_SIZE, '728x90' );
+		add_post_meta( $campaign_id, Campaign_Repository::META_PLACEMENT_ID, $placement_id );
+
+		$creatives   = Plugin::instance()->container()->get( Creative_Repository::class );
+		$creative_id = $creatives->create(
+			$campaign_id,
+			$this->org_a,
+			$placement_id,
+			array(
+				'kind'      => 'image',
+				'click_url' => 'https://example.com/exhibition',
+				'alt_text'  => 'Visitors in a gallery',
+				'size'      => '728x90',
+			)
+		);
+
+		$this->assertGreaterThan( 0, $creative_id );
+
+		$creatives->record_upload(
+			$creative_id,
+			array(
+				'path'   => 'private-artwork.png',
+				'token'  => 'server-secret-token',
+				'sha256' => str_repeat( 'a', 64 ),
+				'bytes'  => 2048,
+				'mime'   => 'image/png',
+				'width'  => 728,
+				'height' => 90,
+				'name'   => 'fall-gallery.png',
+			)
+		);
+
+		wp_set_current_user( $this->advertiser_a );
+		Plugin::instance()->container()->get( Ownership::class )->flush_cache();
+
+		return array(
+			'campaign'  => $campaign_id,
+			'creative'  => $creative_id,
+			'placement' => $placement_id,
+		);
 	}
 
 	/**

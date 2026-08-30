@@ -429,4 +429,45 @@ final class CreativeApprovalTest extends WP_UnitTestCase {
 
 		$this->assertSame( 0, $this->campaigns->pending_creative_count( $fixture['campaign'] ) );
 	}
+	/**
+	 * **A reason belongs to the decision that produced it.**
+	 *
+	 * `META_CHANGE_NOTES` carries two decisions: a refused *replacement*, written
+	 * by `reject_replacement()`, and a turned-down creative, written by
+	 * `reject_creative()`. Only the second is the advertiser's answer to "why is
+	 * this ad not running". Today the raw key happens to be safe to read on a
+	 * campaign screen, because replacement revisions are filtered out before it
+	 * is reached — which is a property of a different method and would go on
+	 * being relied on silently.
+	 *
+	 * So the pairing is asserted directly: notes present, creative not rejected,
+	 * nothing returned.
+	 *
+	 * @return void
+	 */
+	public function test_notes_are_not_a_rejection_reason_until_there_is_a_rejection(): void {
+		$fixture   = $this->fixture( Post_Statuses::LIVE );
+		$creatives = Plugin::instance()->container()->get( Creative_Repository::class );
+
+		update_post_meta( $fixture['creative'], Creative_Repository::META_CHANGE_NOTES, 'Notes from some other decision.' );
+
+		$this->assertSame(
+			'Notes from some other decision.',
+			$creatives->change_notes( $fixture['creative'] ),
+			'The fixture did not put notes on the creative, so the refusal below proves nothing.'
+		);
+		$this->assertFalse( $creatives->is_rejected( $fixture['creative'] ) );
+		$this->assertSame(
+			'',
+			$this->approvals->rejection_notes( $fixture['creative'] ),
+			'Notes written by another decision were offered as the reason this ad is not running.'
+		);
+
+		$this->assertTrue( $creatives->reject_creative( $fixture['creative'], 'The logo is stretched.' ) );
+		$this->assertSame(
+			'The logo is stretched.',
+			$this->approvals->rejection_notes( $fixture['creative'] ),
+			'A real rejection reason must reach the advertiser.'
+		);
+	}
 }

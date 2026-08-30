@@ -266,6 +266,30 @@ final class Creative_Approval {
 	}
 
 	/**
+	 * The reason a creative was turned down, for the advertiser who must read it.
+	 *
+	 * Deliberately not `Creative_Repository::change_notes()`, which is the raw
+	 * key. `META_CHANGE_NOTES` carries two different decisions: a refused
+	 * *replacement*, written on the replacement revision, and a turned-down
+	 * creative, written on the creative itself. A reader taking the raw value is
+	 * correct today only because `is_active()` happens to filter replacement
+	 * revisions out before it is reached — a property of a different method,
+	 * relied on silently, and true until somebody writes that key for a third
+	 * reason.
+	 *
+	 * Pairing the reason with the decision is this class's job, because the
+	 * decision is.
+	 *
+	 * @param int $creative_id Creative post id.
+	 * @return string Empty unless this creative was rejected.
+	 */
+	public function rejection_notes( int $creative_id ): string {
+		return $this->creatives->is_rejected( $creative_id )
+			? $this->creatives->change_notes( $creative_id )
+			: '';
+	}
+
+	/**
 	 * Recomputes the queue counter for one campaign.
 	 *
 	 * Called after an upload, so a creative added to a running campaign shows

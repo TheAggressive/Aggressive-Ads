@@ -26,6 +26,7 @@ use Aggressive\Ads\REST\Creative_File_Controller;
 use Aggressive\Ads\Workflow\Edit_Window;
 use Aggressive\Ads\Workflow\Campaign_Change_Manager;
 use Aggressive\Ads\Workflow\Campaign_Editor;
+use Aggressive\Ads\Workflow\Creative_Approval;
 use Aggressive\Ads\Workflow\Email_Change;
 use Aggressive\Ads\Workflow\Reporting_Read;
 use Aggressive\Ads\Workflow\Review_Readiness;
@@ -59,6 +60,7 @@ final class View_Data {
 	 * @param Edit_Window             $window     When editing is permitted.
 	 * @param Acting_As               $acting     Staff acting for an advertiser.
 	 * @param Line_Item_Repository    $line_items Campaign delivery strategies.
+	 * @param Creative_Approval       $approvals  Creative review decisions.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -76,7 +78,8 @@ final class View_Data {
 		private readonly Settings $settings,
 		private readonly Edit_Window $window,
 		private readonly Acting_As $acting,
-		private readonly Line_Item_Repository $line_items
+		private readonly Line_Item_Repository $line_items,
+		private readonly Creative_Approval $approvals
 	) {
 	}
 
@@ -579,7 +582,7 @@ final class View_Data {
 	 * ever needs to be told.
 	 *
 	 * @param int $campaign_id Campaign post id.
-	 * @return array<int, array{id: int, placement_id: int, placement: string, size: string, dimensions: string, click_url: string, alt_text: string, approved: bool, name: string, bytes: int, preview: string}>
+	 * @return array<int, array{id: int, placement_id: int, placement: string, size: string, dimensions: string, click_url: string, alt_text: string, approved: bool, rejected: bool, state_text: string, notes: string, name: string, bytes: int, preview: string}>
 	 */
 	private function creative_rows( int $campaign_id ): array {
 		$rows = array();
@@ -600,7 +603,9 @@ final class View_Data {
 				continue;
 			}
 
-			$stored = $this->creatives->storage_details( $creative['id'] );
+			$stored   = $this->creatives->storage_details( $creative['id'] );
+			$approved = $this->creatives->has_attachment( $creative['id'] );
+			$rejected = $this->creatives->is_rejected( $creative['id'] );
 
 			$rows[] = array(
 				'id'           => $creative['id'],
@@ -612,7 +617,13 @@ final class View_Data {
 					: '',
 				'click_url'    => $creative['click_url'],
 				'alt_text'     => $creative['alt_text'],
-				'approved'     => $this->creatives->has_attachment( $creative['id'] ),
+				'approved'     => $approved,
+				'rejected'     => $rejected,
+				'state_text'   => $this->creative_state_text( $approved, $rejected ),
+
+				// Empty unless this creative was turned down. The decision owns
+				// the reason; the shared meta key carries two of them.
+				'notes'        => $this->approvals->rejection_notes( $creative['id'] ),
 				'name'         => null === $stored ? '' : $stored['name'],
 				'bytes'        => null === $stored ? 0 : $stored['bytes'],
 				'preview'      => $this->creative_preview( $creative['id'] ),
@@ -620,6 +631,34 @@ final class View_Data {
 		}
 
 		return $rows;
+	}
+
+	/**
+	 * What the advertiser is told about one creative's review state.
+	 *
+	 * Three states, and before this there was one. A creative that had been
+	 * turned down looked exactly like one that had been approved: same card,
+	 * same preview, same Update action, and nothing anywhere saying it would
+	 * never be served. Staff are required to give a reason for exactly that
+	 * person, and it was stored and shown to nobody.
+	 *
+	 * `has_attachment()` is the approved question rather than
+	 * `META_REVIEW_STATE`, for the reason recorded in open-work.md: promotion
+	 * does not maintain that meta, so a creative serving for weeks still reads
+	 * `pending` there.
+	 *
+	 * @param bool $approved Whether promotion has produced a public attachment.
+	 * @param bool $rejected Whether a reviewer turned it down.
+	 * @return string
+	 */
+	private function creative_state_text( bool $approved, bool $rejected ): string {
+		if ( $rejected ) {
+			return __( 'Not approved', 'aggressive-ads' );
+		}
+
+		return $approved
+			? __( 'Running', 'aggressive-ads' )
+			: __( 'Waiting for review', 'aggressive-ads' );
 	}
 
 	/**
