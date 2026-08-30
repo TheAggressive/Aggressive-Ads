@@ -497,15 +497,47 @@ final class Review_Data {
 				 * whole basis for approving it at a glance.
 				 */
 				'text_only'    => $this->revisions->is_text_only_revision( (int) $creative['id'] ),
-				'preview'      => add_query_arg(
-					'_wpnonce',
-					wp_create_nonce( 'wp_rest' ),
-					rest_url( Creative_File_Controller::NAMESPACE . '/creatives/' . $creative['id'] . '/file' )
-				),
+				'preview'      => $this->creative_preview( (int) $creative['id'] ),
 			);
 		}
 
 		return $rows;
+	}
+
+	/**
+	 * Where to load a creative's image from.
+	 *
+	 * Approval promotes the artwork into the Media Library and deletes the
+	 * private original, so the authenticated file route answers 404 for
+	 * everything approved — correctly, because there is nothing left to stream.
+	 * Pointing at it regardless meant every promoted creative on the review
+	 * screen rendered as a broken image, and a reviewer opening an approved
+	 * campaign saw a wall of them.
+	 *
+	 * This is the same fault `Portal\View_Data::creative_preview()` was fixed
+	 * for, on the screen nobody checked afterwards. The two now answer the same
+	 * way; `ReviewPreviewTest` asserts it, so a third screen cannot quietly
+	 * reintroduce it.
+	 *
+	 * The attachment URL is public, which is not a leak: it is the same file
+	 * the ad already serves to every visitor. Unpromoted artwork has no
+	 * attachment and keeps the authenticated route.
+	 *
+	 * @param int $creative_id Creative post id.
+	 * @return string
+	 */
+	private function creative_preview( int $creative_id ): string {
+		$promoted = $this->creatives->attachment_url( $creative_id );
+
+		if ( '' !== $promoted ) {
+			return $promoted;
+		}
+
+		return add_query_arg(
+			'_wpnonce',
+			wp_create_nonce( 'wp_rest' ),
+			rest_url( Creative_File_Controller::NAMESPACE . '/creatives/' . $creative_id . '/file' )
+		);
 	}
 
 	/**
@@ -540,11 +572,7 @@ final class Review_Data {
 					: '',
 				'click_url'  => $creative['click_url'],
 				'alt_text'   => $creative['alt_text'],
-				'preview'    => add_query_arg(
-					'_wpnonce',
-					wp_create_nonce( 'wp_rest' ),
-					rest_url( Creative_File_Controller::NAMESPACE . '/creatives/' . $creative['id'] . '/file' )
-				),
+				'preview'    => $this->creative_preview( (int) $creative['id'] ),
 			);
 		}
 

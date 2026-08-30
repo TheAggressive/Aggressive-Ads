@@ -285,6 +285,78 @@ final class AdminReviewTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * **A promoted creative is previewed from the Media Library, not the
+	 * private route.**
+	 *
+	 * Approval moves the artwork into the Media Library and deletes the private
+	 * original, so the authenticated route answers 404 for everything approved —
+	 * correctly, because there is nothing left to stream. The review screen
+	 * pointed at it regardless, so a reviewer opening an approved campaign saw
+	 * every creative as a broken image and five 404s in the console.
+	 *
+	 * `Portal\View_Data` was fixed for exactly this and the staff screen was
+	 * not. Both answers are asserted here so a third screen cannot quietly
+	 * reintroduce it.
+	 *
+	 * @return void
+	 */
+	public function test_a_promoted_creative_is_previewed_from_the_media_library(): void {
+		$campaign = $this->campaign( Post_Statuses::SUBMITTED );
+		$creative = $this->creative( $campaign );
+
+		$attachment_id = (int) self::factory()->attachment->create_upload_object(
+			DIR_TESTDATA . '/images/canola.jpg'
+		);
+
+		$this->assertGreaterThan( 0, $attachment_id );
+
+		update_post_meta( $creative['creative_id'], Creative_Repository::META_ATTACHMENT_ID, $attachment_id );
+
+		wp_set_current_user( $this->reviewer );
+
+		$data = $this->data->campaign( $campaign );
+
+		$this->assertIsArray( $data );
+
+		$url = (string) $data['creatives'][0]['preview'];
+
+		$this->assertSame( wp_get_attachment_url( $attachment_id ), $url );
+		$this->assertStringNotContainsString( '/creatives/', $url, 'The private route would answer 404 for a promoted creative.' );
+		$this->assertStringNotContainsString( '_wpnonce', $url );
+	}
+
+	/**
+	 * An unpromoted creative keeps the authenticated route.
+	 *
+	 * The negative half. Without it, a change that always returned the
+	 * attachment URL would pass the test above and quietly stop reviewers from
+	 * seeing anything awaiting review — which is the only artwork they are
+	 * there to look at.
+	 *
+	 * @return void
+	 */
+	public function test_an_unpromoted_creative_keeps_the_private_route(): void {
+		$campaign = $this->campaign( Post_Statuses::SUBMITTED );
+		$creative = $this->creative( $campaign );
+
+		wp_set_current_user( $this->reviewer );
+
+		$data = $this->data->campaign( $campaign );
+
+		$this->assertIsArray( $data );
+
+		$url   = (string) $data['creatives'][0]['preview'];
+		$query = wp_parse_url( $url, PHP_URL_QUERY );
+		parse_str( is_string( $query ) ? $query : '', $parameters );
+
+		$this->assertSame(
+			'/aggr/v1/creatives/' . $creative['creative_id'] . '/file',
+			$parameters['rest_route'] ?? ''
+		);
+		$this->assertNotEmpty( $parameters['_wpnonce'] ?? '' );
+	}
+
+	/**
 	 * The rendered detail retains its controls without exposing storage data.
 	 *
 	 * @return void
