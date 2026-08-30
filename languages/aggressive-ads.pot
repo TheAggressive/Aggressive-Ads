@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-30T17:15:52+00:00\n"
+"POT-Creation-Date: 2026-08-30T17:20:16+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -3417,33 +3417,33 @@ msgstr ""
 msgid "That conversion definition is not valid."
 msgstr ""
 
-#: inc/Workflow/class-creative-approval.php:92
+#: inc/Workflow/class-creative-approval.php:93
 msgid "You do not have permission to publish creative."
 msgstr ""
 
-#: inc/Workflow/class-creative-approval.php:102
-#: inc/Workflow/class-creative-approval.php:206
+#: inc/Workflow/class-creative-approval.php:103
+#: inc/Workflow/class-creative-approval.php:207
 msgid "That creative no longer exists."
 msgstr ""
 
-#: inc/Workflow/class-creative-approval.php:115
-#: inc/Workflow/class-creative-approval.php:214
+#: inc/Workflow/class-creative-approval.php:116
+#: inc/Workflow/class-creative-approval.php:215
 msgid "That creative is not waiting to be published."
 msgstr ""
 
-#: inc/Workflow/class-creative-approval.php:178
+#: inc/Workflow/class-creative-approval.php:179
 msgid "You do not have permission to review creative."
 msgstr ""
 
-#: inc/Workflow/class-creative-approval.php:188
+#: inc/Workflow/class-creative-approval.php:189
 msgid "Explain why this advertisement is not being published."
 msgstr ""
 
-#: inc/Workflow/class-creative-approval.php:196
+#: inc/Workflow/class-creative-approval.php:197
 msgid "Use 2,000 characters or fewer for this explanation."
 msgstr ""
 
-#: inc/Workflow/class-creative-approval.php:224
+#: inc/Workflow/class-creative-approval.php:225
 msgid "That decision could not be saved. Please try again."
 msgstr ""
 
