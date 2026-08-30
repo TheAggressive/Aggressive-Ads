@@ -36,9 +36,20 @@ What is defined and not built:
    snippet to paste, because no client snippet exists to paste.
 3. **Reporting surfaces.** The `conversions` column is populated and no screen
    reads it. That is P14's, not a gap here.
-4. **Operator counters.** `Conversion_Attribution` keeps refusal reasons apart —
-   invalid lineage from out-of-window — exactly as the measurement contract
-   requires, and nothing yet counts them into Site Health.
+4. **Refusal counters.** Site Health now answers "can conversions be recorded,
+   and are they" from data the site already has — definitions that accept
+   reports, and yesterday's clicks against yesterday's conversions. What it
+   still cannot answer is *why* a report was refused.
+
+   `Conversion_Attribution` keeps those reasons apart, because an invalid
+   lineage is abuse or a bug and an out-of-window report is usually a window set
+   too short. Counting them is the part that is not built, and the obstacle is
+   real rather than effort: **a refusal writes nothing**, so a counter means a
+   write per refused request on a public unauthenticated endpoint — a cost an
+   attacker chooses rather than the site. A persistent object cache would make
+   it cheap and most installs do not have one, so the honest options are to
+   count only where a cache exists and say "not measured" everywhere else, or
+   to sample. Neither has been decided.
 
 **View-through attribution remains defined and deliberately unbuilt.** It needs
 the cross-visit identifier P11 declined to invent, and P27 is its gate.

@@ -347,6 +347,60 @@ final class Rollup_Repository {
 	}
 
 	/**
+	 * Clicks and conversions for one closed UTC day, across the whole site.
+	 *
+	 * The pair, because neither means anything alone: conversions without clicks
+	 * is a site that served nothing, and clicks without conversions is either a
+	 * quiet day or a reporting path that is not running. Only an operator
+	 * looking at both can tell those apart, so only both are returned.
+	 *
+	 * `conversions` stays nullable all the way out, exactly as `viewables` does.
+	 * Coalescing it to zero here would turn "no day was measured" into "nothing
+	 * converted", which is the distinction the column exists for.
+	 *
+	 * Deliberately not organization-scoped: this answers an operator's question
+	 * about the installation, not an advertiser's about their campaign.
+	 *
+	 * @param string $day_utc Closed UTC Y-m-d.
+	 * @return array{clicks: int, conversions: int|null}
+	 */
+	public function day_conversions( string $day_utc ): array {
+		$empty = array(
+			'clicks'      => 0,
+			'conversions' => null,
+		);
+
+		if ( 1 !== preg_match( '/^\d{4}-\d{2}-\d{2}$/', $day_utc ) || ! $this->table_exists() ) {
+			return $empty;
+		}
+
+		global $wpdb;
+
+		$table = $this->table_name();
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is prefix+constant; the day is prepared.
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				"SELECT COALESCE(SUM(clicks), 0) AS clicks, SUM(conversions) AS conversions
+				FROM {$table}
+				WHERE day_utc = %s",
+				$day_utc
+			),
+			ARRAY_A
+		);
+		// phpcs:enable
+
+		if ( ! is_array( $row ) ) {
+			return $empty;
+		}
+
+		return array(
+			'clicks'      => (int) $row['clicks'],
+			'conversions' => null === $row['conversions'] ? null : (int) $row['conversions'],
+		);
+	}
+
+	/**
 	 * Org-scoped totals across every day and placement.
 	 *
 	 * The join is the isolation boundary. Summing a PHP list of campaign ids
