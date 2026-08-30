@@ -46,7 +46,7 @@ change per tenant. Advertiser-facing default is “Advertising”, not
 
 **Front of site:** editors place a **slot**, never a campaign.
 
-- Block `aggr/placement` (header / break / sidebar / footer template parts)
+- Block `aggr/ad-slot` (header / break / sidebar / footer template parts)
 - PHP `aggr_placement( 'header-728x90' )`
 - Shortcode → the same renderer
 
@@ -135,7 +135,7 @@ the public slug.
 ### Phase D — Cutover (LAAO site)
 
 **Plugin half shipped.** Dual-write is gone. Template parts in the
-LAAO theme still need to swap AdSanity group blocks for `aggr/placement`.
+LAAO theme still need to swap AdSanity group blocks for `aggr/ad-slot`.
 Until they do, public pages show empty reserved slots. That theme change is
 outside this repository.
 

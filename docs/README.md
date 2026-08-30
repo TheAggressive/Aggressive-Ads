@@ -2,7 +2,7 @@
 
 The plugin owns the advertising campaign workflow and is the source of truth
 for which creative fills each slot. The host theme owns site presentation and
-must embed `aggr/placement` (or the PHP helper / shortcode). Those boundaries
+must embed `aggr/ad-slot` (or the PHP helper / shortcode). Those boundaries
 hold throughout this codebase, and most of what follows exists to keep them
 from eroding.
 

@@ -25,7 +25,7 @@ function blockJson(version) {
 async function fixture(version = '1.2.3', manifest = DEVELOPMENT_VERSION) {
 	const root = await mkdtemp(path.join(os.tmpdir(), 'aggr-version-'));
 	await mkdir(path.join(root, 'tests/php'), { recursive: true });
-	await mkdir(path.join(root, 'src/blocks/placement'), { recursive: true });
+	await mkdir(path.join(root, 'src/blocks-interactivity/ad-slot'), { recursive: true });
 	await Promise.all([
 		writeFile(path.join(root, 'package.json'), manifestJson(manifest)),
 		writeFile(
@@ -33,7 +33,7 @@ async function fixture(version = '1.2.3', manifest = DEVELOPMENT_VERSION) {
 			`/**\n * Version:           ${version}\n */\ndefine( 'AGGR_VERSION', '${version}' );\n`
 		),
 		writeFile(
-			path.join(root, 'src/blocks/placement/block.json'),
+			path.join(root, 'src/blocks-interactivity/ad-slot/block.json'),
 			blockJson(version)
 		),
 		writeFile(
@@ -127,7 +127,7 @@ test('writing rewrites JSON without reformatting anything else', async (context)
 	await writeSourceVersions('2.5.1', root);
 
 	assert.equal(
-		await readFile(path.join(root, 'src/blocks/placement/block.json'), 'utf8'),
+		await readFile(path.join(root, 'src/blocks-interactivity/ad-slot/block.json'), 'utf8'),
 		blockJson('2.5.1')
 	);
 });

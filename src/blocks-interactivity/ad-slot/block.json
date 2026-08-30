@@ -1,18 +1,26 @@
 {
 	"$schema": "https://schemas.wp.org/trunk/block.json",
 	"apiVersion": 3,
-	"name": "aggr/placement",
+	"name": "aggr/ad-slot",
 	"version": "1.5.0",
-	"title": "Ad placement",
+	"title": "Ad Slot",
 	"category": "widgets",
 	"icon": "megaphone",
-	"description": "A reserved slot filled at request time. Editors place a slot, never a campaign.",
-	"keywords": [ "ad", "advertising", "placement", "slot" ],
+	"description": "A reserved slot filled at request time, optionally rotating. Editors place a slot, never a campaign.",
+	"keywords": [ "ad", "advertising", "slot", "rotate", "banner" ],
 	"textdomain": "aggressive-ads",
 	"attributes": {
 		"slot": {
 			"type": "string",
 			"default": ""
+		},
+		"rotate": {
+			"type": "boolean",
+			"default": false
+		},
+		"rotateSeconds": {
+			"type": "number",
+			"default": 30
 		}
 	},
 	"supports": {
@@ -32,7 +40,8 @@
 			"radius": true,
 			"width": true,
 			"style": true
-		}
+		},
+		"interactivity": true
 	},
 	"editorScript": "file:./index.js",
 	"editorStyle": "file:./index.css",

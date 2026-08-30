@@ -197,7 +197,7 @@ as Aggressive Apparel's theme build, with this plugin's output directory kept as
 ```
 src/interactivity/*.ts     →  dist/interactivity/*.js (+ .asset.php)
 src/styles/*.css           →  dist/styles/*.css     (+ .asset.php)
-src/blocks/placement/      →  dist/blocks/placement/ (block.json, editor, view module)
+src/blocks-interactivity/ad-slot/      →  dist/blocks-interactivity/ad-slot/ (block.json, editor, view module)
 assets/icon.svg            →  shipped as-is (not compiled)
 ```
 
@@ -229,8 +229,8 @@ versions and merges listed dependencies with the known `@aggr/*` graph.
 Missing `dist/` files no-op rather than 404 — run `pnpm build` before loading
 the portal locally.
 
-The placement block is authored under `src/blocks/placement/` the same way the
-LAAO theme authors `src/blocks/`. PHP registers `dist/blocks/placement` and
+The placement block is authored under `src/blocks-interactivity/ad-slot/` the same way the
+LAAO theme authors `src/blocks/`. PHP registers `dist/blocks-interactivity/ad-slot` and
 supplies the dynamic `render_callback`. Alignment, spacing, background, and
 border come from core block `supports` / `theme.json`, not a parallel CSS
 island. The view script fills after paint; it does not count.

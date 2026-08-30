@@ -5,9 +5,9 @@ import './editor.css';
 import './style.css';
 
 /*
- * `aggr/placement` is a dynamic block rendered by PHP (`Placement_Slot`), which
- * registers it from dist/blocks/placement/block.json — so the client normally
- * receives supports and attributes from the server.
+ * `aggr/ad-slot` is a dynamic block rendered by PHP (`Placement_Slot`), which
+ * registers it from dist/blocks-interactivity/ad-slot/block.json — so the
+ * client normally receives supports and attributes from the server.
  *
  * Passing metadata as the first argument covers the fallback registration in
  * Placement_Slot::register_block(), which runs when dist/ has no block.json and

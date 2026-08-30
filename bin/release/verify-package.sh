@@ -127,11 +127,11 @@ PACKAGE_REQUIRED=(
 	dist/interactivity/wizard.js
 	dist/interactivity/autosave.js
 	dist/interactivity/upload.js
-	dist/blocks/placement/block.json
-	dist/blocks/placement/index.js
-	dist/blocks/placement/index.asset.php
-	dist/blocks/placement/view.js
-	dist/blocks/placement/view.asset.php
+	dist/blocks-interactivity/ad-slot/block.json
+	dist/blocks-interactivity/ad-slot/index.js
+	dist/blocks-interactivity/ad-slot/index.asset.php
+	dist/blocks-interactivity/ad-slot/view.js
+	dist/blocks-interactivity/ad-slot/view.asset.php
 	dist/admin/settings.js
 	dist/admin/settings.asset.php
 	dist/admin/packages.js
@@ -243,7 +243,7 @@ packaged_constant=$(
 	grep -m1 -oE "define\( 'AGGR_VERSION', '[^']+'" "${root}/${PLUGIN_FILE}" | awk -F"'" '{print $4}'
 )
 packaged_block_version=$(
-	grep -m1 -oE '"version": "[^"]+"' "${root}/dist/blocks/placement/block.json" | cut -d'"' -f4
+	grep -m1 -oE '"version": "[^"]+"' "${root}/dist/blocks-interactivity/ad-slot/block.json" | cut -d'"' -f4
 )
 
 if [ "${packaged_version}" != "${VERSION}" ]; then

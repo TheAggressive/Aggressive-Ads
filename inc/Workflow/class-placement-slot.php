@@ -20,7 +20,36 @@ use Aggressive\Ads\REST\Creative_File_Controller;
 final class Placement_Slot implements Service {
 
 	public const SHORTCODE = 'aggr_placement';
-	public const BLOCK     = 'aggr/placement';
+	public const BLOCK     = 'aggr/ad-slot';
+
+	/**
+	 * The name this block shipped under until 1.6.0.
+	 *
+	 * Kept registered, and out of the inserter, because the block name is
+	 * serialized into content as `<!-- wp:aggr/placement … -->`. Every post,
+	 * template and reusable block that already carries one would otherwise
+	 * render as "This block contains unexpected or invalid content".
+	 *
+	 * Nothing rewrites anybody's `post_content`. A migration across posts,
+	 * templates, revisions and widgets to save one registration is how a
+	 * homepage gets eaten; an alias costs a few lines and no risk.
+	 */
+	public const LEGACY_BLOCK = 'aggr/placement';
+
+	/**
+	 * The rotation interval a slot uses when it asks for none.
+	 */
+	public const DEFAULT_ROTATE_SECONDS = 30;
+
+	/**
+	 * The shortest rotation this plugin will emit.
+	 *
+	 * Every rotation is a new impression, so a two-second interval would
+	 * manufacture them fifteen times faster than a reader could see them. The
+	 * client enforces the same floor; this one stops a hand-edited block
+	 * comment from ever reaching the page with a lower number.
+	 */
+	public const MIN_ROTATE_SECONDS = 30;
 
 	/**
 	 * Constructor.
@@ -64,13 +93,14 @@ final class Placement_Slot implements Service {
 			return;
 		}
 
-		$block_dir = AGGR_PLUGIN_DIR . 'dist/blocks/placement';
+		$block_dir = AGGR_PLUGIN_DIR . 'dist/blocks-interactivity/ad-slot';
 		$args      = array(
 			'render_callback' => array( $this, 'render_block' ),
 		);
 
 		if ( is_file( $block_dir . '/block.json' ) ) {
 			register_block_type( $block_dir, $args );
+			$this->register_legacy_alias();
 
 			return;
 		}
@@ -81,8 +111,8 @@ final class Placement_Slot implements Service {
 				$args,
 				array(
 					'api_version' => '3',
-					'title'       => __( 'Ad placement', 'aggressive-ads' ),
-					'description' => __( 'A reserved slot filled at request time. Editors place a slot, never a campaign.', 'aggressive-ads' ),
+					'title'       => __( 'Ad Slot', 'aggressive-ads' ),
+					'description' => __( 'A reserved slot filled at request time, optionally rotating. Editors place a slot, never a campaign.', 'aggressive-ads' ),
 					'category'    => 'widgets',
 					'attributes'  => array(
 						'slot' => array(
@@ -93,6 +123,46 @@ final class Placement_Slot implements Service {
 				)
 			)
 		);
+
+		$this->register_legacy_alias();
+	}
+
+	/**
+	 * Registers the pre-1.6.0 block name so existing content keeps rendering.
+	 *
+	 * Same render callback, same attributes, hidden from the inserter. An
+	 * author editing an old post can convert it; one who never opens the post
+	 * never notices, which is the point.
+	 */
+	private function register_legacy_alias(): void {
+		if ( \WP_Block_Type_Registry::get_instance()->is_registered( self::LEGACY_BLOCK ) ) {
+			return;
+		}
+
+		register_block_type(
+			self::LEGACY_BLOCK,
+			array(
+				'render_callback' => array( $this, 'render_block' ),
+				'api_version'     => '3',
+				'title'           => __( 'Ad Slot (legacy)', 'aggressive-ads' ),
+				'category'        => 'widgets',
+				'supports'        => array( 'inserter' => false ),
+				'attributes'      => array(
+					'slot'          => array(
+						'type'    => 'string',
+						'default' => '',
+					),
+					'rotate'        => array(
+						'type'    => 'boolean',
+						'default' => false,
+					),
+					'rotateSeconds' => array(
+						'type'    => 'number',
+						'default' => 30,
+					),
+				),
+			)
+		);
 	}
 
 	/**
@@ -101,9 +171,13 @@ final class Placement_Slot implements Service {
 	 * @param array<string, mixed> $attributes Block attributes.
 	 */
 	public function render_block( array $attributes ): string {
-		$slot = isset( $attributes['slot'] ) && is_string( $attributes['slot'] ) ? $attributes['slot'] : '';
+		$slot           = isset( $attributes['slot'] ) && is_string( $attributes['slot'] ) ? $attributes['slot'] : '';
+		$rotate         = ! empty( $attributes['rotate'] );
+		$rotate_seconds = isset( $attributes['rotateSeconds'] ) && is_numeric( $attributes['rotateSeconds'] )
+			? (int) $attributes['rotateSeconds']
+			: self::DEFAULT_ROTATE_SECONDS;
 
-		return $this->markup( $slot, true );
+		return $this->markup( $slot, true, $rotate, $rotate_seconds );
 	}
 
 	/**
@@ -111,10 +185,12 @@ final class Placement_Slot implements Service {
 	 *
 	 * Does not mint a fill token. A token in cached HTML is a replay.
 	 *
-	 * @param string $slug     Placement post_name.
-	 * @param bool   $as_block Whether to apply core block wrapper supports.
+	 * @param string $slug           Placement post_name.
+	 * @param bool   $as_block       Whether to apply core block wrapper supports.
+	 * @param bool   $rotate         Whether the slot replaces its ad on an interval.
+	 * @param int    $rotate_seconds Requested interval, floored by the client.
 	 */
-	public function markup( string $slug, bool $as_block = false ): string {
+	public function markup( string $slug, bool $as_block = false, bool $rotate = false, int $rotate_seconds = self::DEFAULT_ROTATE_SECONDS ): string {
 		$slug = sanitize_title( $slug );
 
 		if ( '' === $slug || ! $this->fill->is_enabled() ) {
@@ -150,10 +226,41 @@ final class Placement_Slot implements Service {
 		}
 
 		$extra = array(
-			'class'          => 'aggr-slot',
-			'data-aggr-slot' => $slug,
-			'data-aggr-fill' => $fill,
+			'class'               => 'aggr-slot',
+			'data-aggr-slot'      => $slug,
+			'data-aggr-fill'      => $fill,
+
+			/*
+			 * The Interactivity API directives. `data-wp-init` rather than a
+			 * `DOMContentLoaded` listener, so a slot inside a block WordPress
+			 * hydrates late still fills — the previous DOM script queried the
+			 * document once and missed anything that arrived afterwards.
+			 */
+			'data-wp-interactive' => self::BLOCK,
+			'data-wp-init'        => 'callbacks.fill',
 		);
+
+		/*
+		 * Context, not attributes, because the store reads it per slot: two ad
+		 * slots on one page rotate on their own intervals.
+		 */
+		$context = array(
+			'rotate'        => $rotate,
+			'rotateSeconds' => max( self::MIN_ROTATE_SECONDS, $rotate_seconds ),
+		);
+
+		/*
+		 * Encoded directly rather than through `wp_interactivity_data_wp_context()`,
+		 * which returns a whole `data-wp-context='…'` attribute string. This
+		 * builds an attribute *array* that the wrapper helpers escape, so taking
+		 * the helper's output and stripping the name and quotes back off it
+		 * would be doing the same work twice and undoing half of it.
+		 */
+		$encoded = wp_json_encode( $context );
+
+		if ( is_string( $encoded ) ) {
+			$extra['data-wp-context'] = $encoded;
+		}
 
 		if ( '' !== $style ) {
 			$extra['style'] = $style;

@@ -248,7 +248,7 @@ Advertising → Settings.
 
 ## 7. Place the slots in the theme
 
-Editors place a **slot**, never a campaign: the `aggr/placement` block, the
+Editors place a **slot**, never a campaign: the `aggr/ad-slot` block, the
 `aggr_placement( 'header-728x90' )` helper, or the shortcode.
 
 Cached HTML holds a reserved box and a placement id. Fill happens after paint,
@@ -258,7 +258,7 @@ so a creative is never frozen into a page cache.
 right dimensions, then confirm `GET /aggr/v1/fill/{slot}` returns a payload.
 
 > An empty reserved box on every page usually means the theme has not been
-> updated to embed `aggr/placement` yet. That is a theme change, not a plugin
+> updated to embed `aggr/ad-slot` yet. That is a theme change, not a plugin
 > fault.
 
 ---
