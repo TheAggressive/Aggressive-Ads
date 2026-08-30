@@ -123,10 +123,11 @@ final class PlacementSlotTest extends WP_UnitTestCase {
 	/**
 	 * **An interval below the floor is raised, not honoured.**
 	 *
-	 * Every rotation is a new impression. A two-second interval would
-	 * manufacture them fifteen times faster than a reader could see them, and
-	 * a block comment can be hand-edited to say anything — so the server floors
-	 * it rather than trusting the editor control to have done so.
+	 * The floor is one second, so this is about zero and negatives rather than
+	 * about pacing: an interval of no length is a timer that fires as fast as
+	 * the browser will let it. A block comment can be hand-edited to say
+	 * anything, so the server floors it rather than trusting the editor control
+	 * to have done so.
 	 *
 	 * @return void
 	 */
@@ -142,13 +143,20 @@ final class PlacementSlotTest extends WP_UnitTestCase {
 		update_post_meta( $placement_id, Placement_Repository::META_IS_ACTIVE, 1 );
 		update_post_meta( $placement_id, Placement_Repository::META_SIZE, '728x90' );
 
-		$html = do_blocks( '<!-- wp:aggr/ad-slot {"slot":"fast-leaderboard","rotate":true,"rotateSeconds":2} /-->' );
+		$html = do_blocks( '<!-- wp:aggr/ad-slot {"slot":"fast-leaderboard","rotate":true,"rotateSeconds":0} /-->' );
 
 		$this->assertStringContainsString(
 			'&quot;rotateSeconds&quot;:' . Placement_Slot::MIN_ROTATE_SECONDS,
 			$html
 		);
-		$this->assertStringNotContainsString( '&quot;rotateSeconds&quot;:2', $html );
+		$this->assertStringNotContainsString( '&quot;rotateSeconds&quot;:0', $html );
+
+		// And a legal short interval is passed straight through, so the floor is
+		// a boundary rather than a blanket rewrite.
+		$this->assertStringContainsString(
+			'&quot;rotateSeconds&quot;:2',
+			do_blocks( '<!-- wp:aggr/ad-slot {"slot":"fast-leaderboard","rotate":true,"rotateSeconds":2} /-->' )
+		);
 	}
 
 	/**

@@ -245,7 +245,7 @@ wp_insert_post(
  * half of the rotation assertion is the viewability page's static slot: same
  * placement, same creative, no interval.
  */
-$aggr_rotating = '<!-- wp:aggr/ad-slot {"slot":"e2e-browser-placement","rotate":true,"rotateSeconds":30} /-->';
+$aggr_rotating = '<!-- wp:aggr/ad-slot {"slot":"e2e-browser-placement","rotate":true,"rotateSeconds":2} /-->';
 
 /*
  * A placement nothing can ever fill: active, correctly sized, and with no

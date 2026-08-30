@@ -11,14 +11,14 @@ import { expect, test } from '@playwright/test';
  * caught it.
  *
  * **Real time, not a faked clock.** `page.clock.install()` was the obvious way
- * to skip the thirty-second floor, and it does not work here: it freezes
- * timers, the view module is deferred so it hydrates *after* the freeze, and
- * the slot then never fills at all. That reads as "rotation is broken" when it
- * means "the test stopped the page". Waiting is slower and true.
+ * to skip the wait, and it does not work here: it freezes timers, the view
+ * module is deferred so it hydrates *after* the freeze, and the slot then never
+ * fills at all. That reads as "rotation is broken" when it means "the test
+ * stopped the page". Waiting is slower and true.
  *
- * The floor stays thirty seconds because every rotation is an impression, so
- * one wait has to earn its keep — the page carries a rotating slot, a static
- * slot on the same placement, and an unsold one, and this asserts all three.
+ * The fixture rotates every two seconds, so waiting costs little. One page
+ * still carries a rotating slot, a static slot on the same placement, and an
+ * unsold one, because the three assertions are cheaper together than apart.
  */
 
 const PLACEMENT = 'e2e-browser-placement';
@@ -27,10 +27,6 @@ const UNSOLD = '[data-aggr-slot="e2e-empty-placement"]';
 test( 'a rotating slot refetches while a static one beside it does not', async ( {
 	page,
 } ) => {
-	// One rotation interval plus room for the request and Playwright's own
-	// overhead. The default per-test timeout is shorter than the floor.
-	test.setTimeout( 120_000 );
-
 	const fills: number[] = [];
 
 	page.on( 'request', ( request ) => {
@@ -81,9 +77,13 @@ test( 'a rotating slot refetches while a static one beside it does not', async (
 		.locator( 'img' )
 		.evaluate( ( node ) => node.setAttribute( 'data-e2e-static', '1' ) );
 
-	// One interval, in real seconds.
+	/*
+	 * One interval, in real seconds. Polled for `3` rather than "more than 2",
+	 * so a slot rotating faster than it should fails here — the static slot
+	 * beside it shares the URL, and a runaway timer on either would overshoot.
+	 */
 	await expect
-		.poll( () => fills.length, { timeout: 60_000, intervals: [ 1000 ] } )
+		.poll( () => fills.length, { timeout: 15_000, intervals: [ 250 ] } )
 		.toBe( 3 );
 
 	// The rotating slot's image was replaced; the static slot's was not. Three

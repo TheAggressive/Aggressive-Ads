@@ -21,7 +21,10 @@ import apiFetch from '@wordpress/api-fetch';
  * the editor, and reading it from PHP would mean a REST round trip to render a
  * slider. `AdSlotRotationTest` asserts the three agree.
  */
-const MIN_ROTATE_SECONDS = 30;
+const MIN_ROTATE_SECONDS = 1;
+
+/** The slowest rotation the control offers. Longer is possible only by hand. */
+const MAX_ROTATE_SECONDS = 30;
 
 /**
  * Editor view: pick a slot. Core block supports style the wrapper.
@@ -200,8 +203,8 @@ export default function Edit( { attributes, setAttributes } ) {
 								} )
 							}
 							min={ MIN_ROTATE_SECONDS }
-							max={ 600 }
-							step={ 5 }
+							max={ MAX_ROTATE_SECONDS }
+							step={ 1 }
 						/>
 					) : null }
 				</PanelBody>

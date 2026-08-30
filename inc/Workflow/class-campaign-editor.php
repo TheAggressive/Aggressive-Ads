@@ -503,7 +503,7 @@ final class Campaign_Editor {
 			return $covered;
 		}
 
-		$window = Campaign_Rules::validate_window( $start_ts, $end_ts, time() );
+		$window = Campaign_Rules::validate_window( $start_ts, $end_ts, Campaign_Rules::day_start_ts( time(), wp_timezone()->getName() ) );
 		$window->absorb( Campaign_Rules::validate_day_boundaries( $start_ts, $end_ts, wp_timezone()->getName() ) );
 
 		// Staff edit campaigns that have already started — that is most of what

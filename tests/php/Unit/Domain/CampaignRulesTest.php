@@ -212,16 +212,123 @@ final class CampaignRulesTest extends TestCase {
 	}
 
 	/**
-	 * Starting exactly now counts as the past: by the time the request
-	 * finishes it is.
+	 * **Starting today is allowed**, which it was not before.
+	 *
+	 * A start has to be midnight in the site timezone, so comparing it against
+	 * the current moment refused every start earlier than tomorrow — today's
+	 * midnight is always in the past by the time somebody fills in the form.
+	 * The bound is the start of the day, so a campaign can begin today.
 	 *
 	 * @return void
 	 */
-	public function test_starting_exactly_now_is_refused(): void {
-		$now = 1_800_000_000;
+	public function test_starting_today_is_allowed(): void {
+		$midnight = Campaign_Rules::day_start_ts( 1_800_000_000, 'UTC' );
+
+		$this->assertFalse(
+			Campaign_Rules::validate_window( $midnight, 0, $midnight )
+				->has( Campaign_Rules::ERROR_START_IN_PAST )
+		);
+	}
+
+	/**
+	 * And still allowed once the day is underway.
+	 *
+	 * The case that matters in practice: somebody submitting at nine in the
+	 * morning for a campaign whose start is that day's midnight.
+	 *
+	 * @return void
+	 */
+	public function test_starting_today_is_allowed_later_in_the_day(): void {
+		$now      = 1_800_000_000;
+		$midnight = Campaign_Rules::day_start_ts( $now, 'UTC' );
+
+		$this->assertGreaterThan( $midnight, $now, 'The fixture must be mid-day, or this proves nothing.' );
+
+		$this->assertFalse(
+			Campaign_Rules::validate_window( $midnight, 0, $midnight )
+				->has( Campaign_Rules::ERROR_START_IN_PAST )
+		);
+	}
+
+	/**
+	 * Yesterday is still the past.
+	 *
+	 * The negative half. Without it, a rule that accepted every date would pass
+	 * the two assertions above.
+	 *
+	 * @return void
+	 */
+	public function test_starting_yesterday_is_refused(): void {
+		$midnight = Campaign_Rules::day_start_ts( 1_800_000_000, 'UTC' );
 
 		$this->assertTrue(
-			Campaign_Rules::validate_window( $now, 0, $now )->has( Campaign_Rules::ERROR_START_IN_PAST )
+			Campaign_Rules::validate_window( $midnight - 86400, 0, $midnight )
+				->has( Campaign_Rules::ERROR_START_IN_PAST )
+		);
+	}
+
+	/**
+	 * A second before today's midnight is refused, which is where the boundary
+	 * actually lives.
+	 *
+	 * @return void
+	 */
+	public function test_the_boundary_is_midnight_exactly(): void {
+		$midnight = Campaign_Rules::day_start_ts( 1_800_000_000, 'UTC' );
+
+		$this->assertTrue(
+			Campaign_Rules::validate_window( $midnight - 1, 0, $midnight )
+				->has( Campaign_Rules::ERROR_START_IN_PAST )
+		);
+		$this->assertFalse(
+			Campaign_Rules::validate_window( $midnight, 0, $midnight )
+				->has( Campaign_Rules::ERROR_START_IN_PAST )
+		);
+	}
+
+	/**
+	 * Midnight is the site's, not UTC's.
+	 *
+	 * A publisher in Los Angeles choosing today must get their own midnight;
+	 * comparing against UTC's would refuse the whole morning for anybody west
+	 * of Greenwich and accept a past day for anybody east of it.
+	 *
+	 * @return void
+	 */
+	public function test_the_day_starts_in_the_supplied_timezone(): void {
+		/*
+		 * Mid-morning in both zones on purpose. The first draft used a round
+		 * number that happened to be exactly midnight in Los Angeles, so the
+		 * assertion that a day boundary precedes the moment inside it failed on
+		 * an equality nothing was testing.
+		 */
+		$now = 1_800_030_000; // 2027-01-15 16:20 UTC, 08:20 in Los Angeles.
+
+		$utc = Campaign_Rules::day_start_ts( $now, 'UTC' );
+		$la  = Campaign_Rules::day_start_ts( $now, 'America/Los_Angeles' );
+
+		$this->assertNotSame( $utc, $la, 'Two timezones produced the same midnight.' );
+		$this->assertLessThan( $now, $utc );
+		$this->assertLessThan( $now, $la );
+
+		// Los Angeles is behind UTC, so its day started later in absolute time.
+		$this->assertGreaterThan( $utc, $la );
+	}
+
+	/**
+	 * An unusable timezone falls back to UTC rather than throwing.
+	 *
+	 * This runs during validation of a campaign somebody is trying to submit.
+	 * A fatal there would be a worse answer than a boundary an hour out.
+	 *
+	 * @return void
+	 */
+	public function test_an_unknown_timezone_falls_back_rather_than_throwing(): void {
+		$now = 1_800_000_000;
+
+		$this->assertSame(
+			Campaign_Rules::day_start_ts( $now, 'UTC' ),
+			Campaign_Rules::day_start_ts( $now, 'Not/AZone' )
 		);
 	}
 

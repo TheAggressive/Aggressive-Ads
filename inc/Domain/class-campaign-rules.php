@@ -140,14 +140,50 @@ final class Campaign_Rules {
 	}
 
 	/**
+	 * Midnight of the day a moment falls in, in a named timezone.
+	 *
+	 * `DateTimeImmutable` is PHP, not WordPress, so this stays inside the
+	 * Domain boundary — the caller supplies the timezone name because reading
+	 * the site's is a WordPress call this namespace may not make.
+	 *
+	 * @param int    $now      Moment to find the day of, UTC Unix seconds.
+	 * @param string $timezone Timezone name, e.g. `Europe/London`.
+	 * @return int Midnight of that day, UTC Unix seconds.
+	 */
+	public static function day_start_ts( int $now, string $timezone ): int {
+		try {
+			$zone = new \DateTimeZone( $timezone );
+		} catch ( \Exception $e ) {
+			$zone = new \DateTimeZone( 'UTC' );
+		}
+
+		return ( new \DateTimeImmutable( '@' . $now ) )
+			->setTimezone( $zone )
+			->setTime( 0, 0 )
+			->getTimestamp();
+	}
+
+	/**
 	 * Checks a campaign's date window.
 	 *
-	 * @param int $start_ts Start time, UTC Unix seconds.
-	 * @param int $end_ts   End time, UTC Unix seconds. Zero means open-ended.
-	 * @param int $now      Current time, UTC Unix seconds.
+	 * **The bound is the start of the current day, not the current moment.**
+	 * A campaign start is required to be midnight in the site timezone by
+	 * `validate_day_boundaries()`, so comparing it against `now` refused every
+	 * start earlier than tomorrow: today's midnight is always in the past by
+	 * the time somebody fills in the form. The two rules together made "start
+	 * today" unreachable, and the date input's `min` was set to tomorrow to
+	 * match a restriction nobody had chosen.
+	 *
+	 * Starting today is the ordinary case — a publisher sells a week and the
+	 * advertiser wants it running now — so the question is whether the chosen
+	 * *day* has passed, not whether its first second has.
+	 *
+	 * @param int $start_ts          Start time, UTC Unix seconds.
+	 * @param int $end_ts            End time, UTC Unix seconds. Zero means open-ended.
+	 * @param int $earliest_start_ts Earliest acceptable start, normally midnight today.
 	 * @return Validation_Result
 	 */
-	public static function validate_window( int $start_ts, int $end_ts, int $now ): Validation_Result {
+	public static function validate_window( int $start_ts, int $end_ts, int $earliest_start_ts ): Validation_Result {
 		$result = new Validation_Result();
 
 		if ( $start_ts <= 0 ) {
@@ -156,13 +192,13 @@ final class Campaign_Rules {
 			return $result;
 		}
 
-		if ( $start_ts <= $now ) {
+		if ( $start_ts < $earliest_start_ts ) {
 			$result->add(
 				self::ERROR_START_IN_PAST,
 				'start_ts',
 				array(
 					'start_ts' => $start_ts,
-					'now'      => $now,
+					'now'      => $earliest_start_ts,
 				)
 			);
 		}

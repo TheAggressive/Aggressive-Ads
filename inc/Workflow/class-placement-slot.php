@@ -39,17 +39,17 @@ final class Placement_Slot implements Service {
 	/**
 	 * The rotation interval a slot uses when it asks for none.
 	 */
-	public const DEFAULT_ROTATE_SECONDS = 30;
+	public const DEFAULT_ROTATE_SECONDS = 10;
 
 	/**
 	 * The shortest rotation this plugin will emit.
 	 *
-	 * Every rotation is a new impression, so a two-second interval would
-	 * manufacture them fifteen times faster than a reader could see them. The
-	 * client enforces the same floor; this one stops a hand-edited block
-	 * comment from ever reaching the page with a lower number.
+	 * One second, matching the client. There is deliberately no ceiling: a
+	 * longer interval records fewer impressions, so refusing one would refuse
+	 * the safer setting. This floor only stops a zero or a negative — from a
+	 * hand-edited block comment — becoming an interval of no length.
 	 */
-	public const MIN_ROTATE_SECONDS = 30;
+	public const MIN_ROTATE_SECONDS = 1;
 
 	/**
 	 * Constructor.
@@ -158,7 +158,7 @@ final class Placement_Slot implements Service {
 					),
 					'rotateSeconds' => array(
 						'type'    => 'number',
-						'default' => 30,
+						'default' => self::DEFAULT_ROTATE_SECONDS,
 					),
 				),
 			)
