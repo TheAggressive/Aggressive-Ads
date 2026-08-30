@@ -104,6 +104,36 @@ Two things still open from it:
    `Assignment_Rules::LIVE` itself — is a guard `bin/ci/` could enforce, in the
    spirit of the other structural checks.
 
+## The ad slot collapses when unsold, and there is no way to keep the space
+
+`Assignment_Projection` made delivery work; this is the behaviour a publisher
+notices next. A slot whose first fill returns no creative and no house removes
+itself, wrapper and all, rather than leaving a bordered rectangle of nothing on
+the page.
+
+Two decisions worth keeping:
+
+- **Only the first fill collapses.** A rotation that comes back empty leaves the
+  previous ad up. A slot vanishing out from under a reader mid-page is a far
+  worse shift than one that happens before they have started.
+- **The server still renders the slot.** It could not decide otherwise without
+  querying candidates per slot per page render, and a cached page would then
+  bake in "no ads" until the cache expired — the same class of problem as a
+  token in cached HTML. The decision stays at fill time, where it is per
+  request.
+
+What is not built:
+
+1. **No way to reserve the space deliberately.** Collapsing is unconditional.
+   A fixed-layout page that wants the box held open — or a publisher who would
+   rather show a house ad than a gap — has no option to say so. A
+   `collapseWhenEmpty` attribute defaulting to true is the obvious shape; nobody
+   has asked for it yet.
+2. **Without JavaScript the box stays.** The server cannot know whether an ad
+   exists at render time, so a no-JS visitor sees the reserved slot and, if a
+   house creative is configured, the noscript house inside it. Only a
+   render-time decision could fix that, and see above for why there is not one.
+
 ## Nothing else is open
 
 Every other entry that was here has shipped or been closed. That is the intended

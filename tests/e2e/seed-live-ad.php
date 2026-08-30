@@ -236,4 +236,71 @@ wp_insert_post(
 	)
 );
 
+/*
+ * A second page whose slot rotates, and whose slot is at the top.
+ *
+ * Rotation is gated on the slot being on screen, so the viewability page —
+ * which deliberately opens with its slot far below the fold — would never
+ * rotate at all. Two pages rather than two slots on one, because the negative
+ * half of the rotation assertion is the viewability page's static slot: same
+ * placement, same creative, no interval.
+ */
+$aggr_rotating = '<!-- wp:aggr/ad-slot {"slot":"e2e-browser-placement","rotate":true,"rotateSeconds":30} /-->';
+
+/*
+ * A placement nothing can ever fill: active, correctly sized, and with no
+ * campaign pointing at it. That is an unsold slot, which is the ordinary state
+ * of most inventory most of the time — not an error, and the case the slot has
+ * to collapse for.
+ */
+$aggr_empty = get_page_by_path( 'e2e-empty-placement', OBJECT, Post_Types::PLACEMENT );
+
+if ( $aggr_empty instanceof WP_Post ) {
+	wp_delete_post( $aggr_empty->ID, true );
+}
+
+$aggr_empty_id = wp_insert_post(
+	array(
+		'post_type'   => Post_Types::PLACEMENT,
+		'post_status' => 'publish',
+		'post_title'  => 'E2E empty placement',
+		'post_name'   => 'e2e-empty-placement',
+	)
+);
+
+update_post_meta( $aggr_empty_id, Placement_Repository::META_IS_ACTIVE, 1 );
+update_post_meta( $aggr_empty_id, Placement_Repository::META_SIZE, '728x90' );
+
+$aggr_unsold = '<!-- wp:aggr/ad-slot {"slot":"e2e-empty-placement"} /-->';
+
+/*
+ * The same placement as the rotating slot, deliberately. Both fill from one
+ * URL, so counting requests to it distinguishes "one slot rotated" from "both
+ * slots refetched" without either slot needing a marker the production markup
+ * would not carry.
+ */
+$aggr_static = '<!-- wp:aggr/ad-slot {"slot":"e2e-browser-placement"} /-->';
+
+$aggr_rotation_page = get_page_by_path( 'e2e-rotation', OBJECT, 'page' );
+
+if ( $aggr_rotation_page instanceof WP_Post ) {
+	wp_delete_post( $aggr_rotation_page->ID, true );
+}
+
+wp_insert_post(
+	array(
+		'post_type'    => 'page',
+		'post_status'  => 'publish',
+		'post_title'   => 'E2E rotation',
+		'post_name'    => 'e2e-rotation',
+		/*
+		 * A rotating slot, a static one on the same placement, and an unsold
+		 * one. Three slots so a single wait proves all three behaviours at
+		 * once: the rotating slot refetches, the static slot does not, and the
+		 * unsold slot removes itself.
+		 */
+		'post_content' => $aggr_rotating . $aggr_static . $aggr_unsold . $aggr_spacer,
+	)
+);
+
 echo (int) $aggr_campaign_id;
