@@ -183,16 +183,24 @@ What is not built:
    and in the audit trail, and the portal shows neither. That is the half of
    "with a reason" that is still missing, and it is a portal change rather than
    a review one.
-2. **No notification.** Nothing tells staff a creative is waiting; it appears on
-   the tab and that is all.
+2. ~~No notification.~~ Shipped: `Notification\Creative_Mailer` tells the rest
+   of the review team, once, with a link to the tab the campaign is actually
+   listed on.
 
-   `Notification\Request_Mailer` is the obvious home — it already has the retry,
-   receipt and per-recipient deduplication this needs, and is keyed on
-   `(campaign_id, kind)`. Adding a `creative` kind means changing
-   `still_pending()`, which today asks whether a *campaign request* is still
-   open, and the message builder, which branches on the same. That is a change
-   to a class with delivery semantics worth testing on its own rather than
-   riding along with the review screen.
+   **Not a `creative` kind on `Request_Mailer`, which is where this entry used
+   to say it belonged.** That class decides whether a retry may still deliver by
+   asking whether a *campaign request* is still open, and keys its receipt on a
+   request revision counter; a creative answers neither question, so sharing it
+   meant branching `still_pending()` and `message()` on a kind that takes the
+   other path through both.
+
+   The design changed once on contact with `Edit_Window`: a running campaign is
+   editable only by `REVIEW_CAMPAIGNS`, so the uploader is always *inside* the
+   recipient set. The actor is therefore excluded, and a lone reviewer who
+   uploads their own artwork is silence rather than a delivery failure.
+
+   Two of its six tests first passed for the wrong reason, which is recorded in
+   [testing-strategy.md](testing-strategy.md).
 
 ## Nothing else is open
 

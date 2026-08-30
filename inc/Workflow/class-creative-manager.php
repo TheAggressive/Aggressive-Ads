@@ -19,6 +19,7 @@ use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Security\Rate_Limiter;
 use Aggressive\Ads\Storage\Private_Storage;
+use Throwable;
 use WP_Error;
 
 /**
@@ -242,6 +243,7 @@ final class Creative_Manager {
 		 * approve it or serve it.
 		 */
 		$this->approvals->refresh_count( $campaign_id );
+		$this->notify_awaiting( $campaign_id, $creative_id );
 
 		return array(
 			'id'           => $creative_id,
@@ -252,6 +254,48 @@ final class Creative_Manager {
 			'bytes'        => $accepted['bytes'],
 			'name'         => $accepted['name'],
 		);
+	}
+
+	/**
+	 * Tells staff about a creative that has just joined the review queue.
+	 *
+	 * Only when it actually joined one. `refresh_count()` runs after every
+	 * upload, including uploads to a campaign that has never been published,
+	 * where the creative is published by the campaign's own approval and no
+	 * reviewer is waiting on anything. Asking the queue is what distinguishes
+	 * the two, and it is the same question the retry re-asks later.
+	 *
+	 * Failures are swallowed for the reason `Campaign_Change_Manager::notify_request()`
+	 * swallows them: the creative is already saved, and returning an error now
+	 * would tell the advertiser their upload failed when it did not.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @param int $creative_id Creative post id.
+	 * @return void
+	 */
+	private function notify_awaiting( int $campaign_id, int $creative_id ): void {
+		if ( ! in_array( $creative_id, $this->approvals->awaiting( $campaign_id ), true ) ) {
+			return;
+		}
+
+		try {
+			// Spelled out rather than referenced through Creative_Mailer, as
+			// Campaign_Change_Manager spells out its own notify hook: a hook
+			// name that only exists as a constant is a hook nobody can grep for.
+			do_action( 'aggr_notify_creative_awaiting', $campaign_id, $creative_id, get_current_user_id() );
+		} catch ( Throwable $exception ) {
+			$this->audit->insert(
+				new Audit_Event(
+					event: 'campaign.notification_failed',
+					outcome: Audit_Event::OUTCOME_FAILED,
+					object_type: 'campaign',
+					object_id: $campaign_id,
+					org_id: $this->campaigns->org_id( $campaign_id ),
+					message: $exception->getMessage(),
+					context: array( 'creative_id' => $creative_id )
+				)
+			);
+		}
 	}
 
 	/**

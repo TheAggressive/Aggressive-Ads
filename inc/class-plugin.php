@@ -31,6 +31,7 @@ use Aggressive\Ads\Install\Rewrite_Flusher;
 use Aggressive\Ads\Install\Rewrite_Health;
 use Aggressive\Ads\Install\Site_Lifecycle;
 use Aggressive\Ads\Install\Upgrader;
+use Aggressive\Ads\Notification\Creative_Mailer;
 use Aggressive\Ads\Notification\Ending_Soon_Mailer;
 use Aggressive\Ads\Notification\Notification_Service;
 use Aggressive\Ads\Notification\Request_Mailer;
@@ -352,6 +353,7 @@ final class Plugin {
 			Event_Retention::class,
 			Notification_Service::class,
 			Request_Mailer::class,
+			Creative_Mailer::class,
 			Menu::class,
 			Review_Screen::class,
 			Action_Notice::class,

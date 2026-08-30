@@ -20,6 +20,25 @@ Two have already been caught here this way, and both are worth knowing:
 
 The lesson both share: **assert your fixture is real before asserting on it.** That test now checks `/wp/v2/posts` is present before concluding anything from the absence of ours.
 
+Two more came from the creative-review notification, and both are about a
+*second* mechanism quietly satisfying the assertion:
+
+**A retry test was satisfied by the receipt, not by the guard it named.** It
+uploaded, decided the creative, retried, and asserted silence — but every
+recipient of that retry had already been sent to, so the per-recipient receipt
+suppressed it and deleting the "is this still waiting?" check changed nothing.
+The fix is a recipient created *after* the announcement, who holds no receipt,
+plus a control retry that must deliver. Without the control, the silence still
+proves nothing.
+
+**A `pre_wp_mail` capture returned `true` over an earlier filter's refusal.**
+`pre_wp_mail` runs the whole filter chain rather than stopping at the first
+non-null value, so a capture at priority 10 that ignores its `$short_circuit`
+argument overrides a refusal registered at priority 5. The failure-path test
+built that way was asserting that a *successfully delivered* message did not
+break the upload. Model transport failure as a value the capture returns, as
+`RequestNotificationTest` does, rather than as a second filter.
+
 ## Suites
 
 | Suite | Config | Bootstrap | Needs |

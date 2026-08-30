@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-30T17:20:16+00:00\n"
+"POT-Creation-Date: 2026-08-30T21:13:53+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -1895,6 +1895,40 @@ msgstr ""
 msgid "Viewability is being measured and reported."
 msgstr ""
 
+#: inc/Notification/class-creative-mailer.php:343
+msgid "An advertiser has added artwork to a campaign that is already running. It will not be served until somebody approves it."
+msgstr ""
+
+#. translators: %s: organization name.
+#: inc/Notification/class-creative-mailer.php:346
+#: inc/Notification/class-notification-service.php:601
+#: inc/Notification/class-request-mailer.php:328
+#, php-format
+msgid "Organization: %s"
+msgstr ""
+
+#. translators: %s: campaign title.
+#: inc/Notification/class-creative-mailer.php:348
+#: inc/Notification/class-ending-soon-mailer.php:275
+#: inc/Notification/class-notification-service.php:519
+#: inc/Notification/class-notification-service.php:603
+#: inc/Notification/class-request-mailer.php:330
+#, php-format
+msgid "Campaign: %s"
+msgstr ""
+
+#: inc/Notification/class-creative-mailer.php:350
+#: inc/Notification/class-notification-service.php:607
+#: inc/Notification/class-request-mailer.php:352
+msgid "Review campaign:"
+msgstr ""
+
+#. translators: 1: site name. 2: campaign title.
+#: inc/Notification/class-creative-mailer.php:363
+#, php-format
+msgid "[%1$s] Ad waiting for review: %2$s"
+msgstr ""
+
 #: inc/Notification/class-email-change-notification.php:41
 msgid "Confirm your new advertiser portal email"
 msgstr ""
@@ -1918,15 +1952,6 @@ msgstr ""
 
 #: inc/Notification/class-ending-soon-mailer.php:272
 msgid "This campaign is scheduled to stop running soon."
-msgstr ""
-
-#. translators: %s: campaign title.
-#: inc/Notification/class-ending-soon-mailer.php:275
-#: inc/Notification/class-notification-service.php:519
-#: inc/Notification/class-notification-service.php:603
-#: inc/Notification/class-request-mailer.php:330
-#, php-format
-msgid "Campaign: %s"
 msgstr ""
 
 #. translators: %s: localized end date.
@@ -2012,22 +2037,10 @@ msgstr ""
 msgid "A new advertising campaign is ready for review."
 msgstr ""
 
-#. translators: %s: organization name.
-#: inc/Notification/class-notification-service.php:601
-#: inc/Notification/class-request-mailer.php:328
-#, php-format
-msgid "Organization: %s"
-msgstr ""
-
 #. translators: %s: campaign revision number.
 #: inc/Notification/class-notification-service.php:605
 #, php-format
 msgid "Revision: %s"
-msgstr ""
-
-#: inc/Notification/class-notification-service.php:607
-#: inc/Notification/class-request-mailer.php:352
-msgid "Review campaign:"
 msgstr ""
 
 #. translators: %s: organization name.
@@ -2242,7 +2255,7 @@ msgstr ""
 #: inc/Portal/class-report-actions.php:74
 #: inc/Workflow/class-campaign-state-machine.php:245
 #: inc/Workflow/class-campaign-state-machine.php:263
-#: inc/Workflow/class-creative-manager.php:361
+#: inc/Workflow/class-creative-manager.php:405
 #: inc/Workflow/class-email-change.php:245
 #: inc/Workflow/class-review-actions.php:62
 msgid "You do not have permission to do that."
@@ -2433,14 +2446,14 @@ msgstr ""
 #: inc/Portal/class-creative-actions.php:254
 #: inc/Workflow/class-creative-change-manager.php:162
 #: inc/Workflow/class-creative-change-manager.php:497
-#: inc/Workflow/class-creative-manager.php:138
+#: inc/Workflow/class-creative-manager.php:139
 msgid "Enter the destination URL for this creative."
 msgstr ""
 
 #: inc/Portal/class-creative-actions.php:255
 #: inc/Workflow/class-creative-change-manager.php:166
 #: inc/Workflow/class-creative-change-manager.php:501
-#: inc/Workflow/class-creative-manager.php:142
+#: inc/Workflow/class-creative-manager.php:143
 msgid "Enter a valid http or https destination URL without embedded credentials."
 msgstr ""
 
@@ -2451,7 +2464,7 @@ msgstr ""
 #: inc/Portal/class-creative-actions.php:257
 #: inc/Workflow/class-creative-change-manager.php:173
 #: inc/Workflow/class-creative-change-manager.php:508
-#: inc/Workflow/class-creative-manager.php:149
+#: inc/Workflow/class-creative-manager.php:150
 msgid "Use 500 characters or fewer for the ad creative description."
 msgstr ""
 
@@ -2517,8 +2530,8 @@ msgstr ""
 #: inc/Portal/class-creative-actions.php:276
 #: inc/Workflow/class-assignment-editor.php:192
 #: inc/Workflow/class-campaign-editor.php:342
-#: inc/Workflow/class-creative-manager.php:304
-#: inc/Workflow/class-creative-manager.php:365
+#: inc/Workflow/class-creative-manager.php:348
+#: inc/Workflow/class-creative-manager.php:409
 #: inc/Workflow/class-line-item-editor.php:73
 msgid "This campaign cannot be changed right now."
 msgstr ""
@@ -2528,8 +2541,8 @@ msgid "There have been too many uploads. Wait a moment and try again."
 msgstr ""
 
 #: inc/Portal/class-creative-actions.php:278
-#: inc/Workflow/class-creative-manager.php:197
-#: inc/Workflow/class-creative-manager.php:215
+#: inc/Workflow/class-creative-manager.php:198
+#: inc/Workflow/class-creative-manager.php:216
 msgid "The creative could not be saved. Please try again."
 msgstr ""
 
@@ -3535,55 +3548,55 @@ msgstr ""
 msgid "The uploaded dimensions do not match this placement."
 msgstr ""
 
-#: inc/Workflow/class-creative-manager.php:89
+#: inc/Workflow/class-creative-manager.php:90
 msgid "You do not have permission to upload creative."
 msgstr ""
 
 #. translators: %d: maximum creatives allowed on one placement.
-#: inc/Workflow/class-creative-manager.php:127
+#: inc/Workflow/class-creative-manager.php:128
 #, php-format
 msgid "This placement already has the maximum of %d creatives. Remove one before uploading another."
 msgstr ""
 
 #. translators: 1: uploaded dimensions. 2: required dimensions.
-#: inc/Workflow/class-creative-manager.php:169
+#: inc/Workflow/class-creative-manager.php:170
 #, php-format
 msgid "Uploaded: %1$s. Required: %2$s. Resize the ad creative and try again."
 msgstr ""
 
-#: inc/Workflow/class-creative-manager.php:276
+#: inc/Workflow/class-creative-manager.php:320
 msgid "Advertisement"
 msgstr ""
 
 #. translators: %s: destination website hostname.
-#: inc/Workflow/class-creative-manager.php:279
+#: inc/Workflow/class-creative-manager.php:323
 #, php-format
 msgid "Advertisement linking to %s"
 msgstr ""
 
-#: inc/Workflow/class-creative-manager.php:292
-#: inc/Workflow/class-creative-manager.php:298
+#: inc/Workflow/class-creative-manager.php:336
+#: inc/Workflow/class-creative-manager.php:342
 msgid "You do not have permission to remove that creative."
 msgstr ""
 
-#: inc/Workflow/class-creative-manager.php:308
+#: inc/Workflow/class-creative-manager.php:352
 msgid "A published creative cannot be removed from this draft workflow."
 msgstr ""
 
-#: inc/Workflow/class-creative-manager.php:318
-#: inc/Workflow/class-creative-manager.php:327
+#: inc/Workflow/class-creative-manager.php:362
+#: inc/Workflow/class-creative-manager.php:371
 msgid "The creative could not be removed. Please try again."
 msgstr ""
 
-#: inc/Workflow/class-creative-manager.php:324
+#: inc/Workflow/class-creative-manager.php:368
 msgid "The creative record and file could not be reconciled. Please contact an administrator."
 msgstr ""
 
-#: inc/Workflow/class-creative-manager.php:369
+#: inc/Workflow/class-creative-manager.php:413
 msgid "That placement is not available."
 msgstr ""
 
-#: inc/Workflow/class-creative-manager.php:373
+#: inc/Workflow/class-creative-manager.php:417
 msgid "That placement is not part of this campaign."
 msgstr ""
 

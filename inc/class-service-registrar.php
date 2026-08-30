@@ -36,6 +36,7 @@ use Aggressive\Ads\Domain\Transition_Table;
 use Aggressive\Ads\Integration\Ad_Provider_Interface;
 use Aggressive\Ads\Integration\Native\Publisher;
 use Aggressive\Ads\Notification\Email_Change_Notification;
+use Aggressive\Ads\Notification\Creative_Mailer;
 use Aggressive\Ads\Notification\Ending_Soon_Mailer;
 use Aggressive\Ads\Notification\Organization_Notification;
 use Aggressive\Ads\Notification\Password_Notification;
@@ -612,6 +613,18 @@ final class Service_Registrar {
 				$c->get( Campaign_State_Machine::class ),
 				$c->get( Campaign_Lifecycle_Repository::class ),
 				$c->get( Campaign_Repository::class )
+			)
+		);
+
+		$container->register(
+			Creative_Mailer::class,
+			static fn ( Service_Container $c ): Creative_Mailer => new Creative_Mailer(
+				$c->get( \Aggressive\Ads\Workflow\Creative_Approval::class ),
+				$c->get( Campaign_Repository::class ),
+				$c->get( Org_Repository::class ),
+				$c->get( User_Repository::class ),
+				$c->get( Audit_Repository::class ),
+				$c->get( Notification_Delivery::class )
 			)
 		);
 
