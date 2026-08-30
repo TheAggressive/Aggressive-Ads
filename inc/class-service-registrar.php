@@ -799,7 +799,8 @@ final class Service_Registrar {
 				$c->get( Settings::class ),
 				$c->get( Edit_Window::class ),
 				$c->get( Acting_As::class ),
-				$c->get( Line_Item_Repository::class )
+				$c->get( Line_Item_Repository::class ),
+				$c->get( \Aggressive\Ads\Workflow\Creative_Approval::class )
 			)
 		);
 

@@ -572,6 +572,21 @@ endif;
 												<p><strong><?php echo esc_html( (string) $aggr_creative['name'] ); ?></strong></p>
 												<p><?php echo esc_html( (string) $aggr_creative['dimensions'] . ' · ' . size_format( (int) $aggr_creative['bytes'] ) ); ?></p>
 												<p class="aggr-table__url"><?php echo esc_html( (string) $aggr_creative['click_url'] ); ?></p>
+												<?php if ( true === $aggr_creative['rejected'] ) : ?>
+													<?php
+													/*
+													 * A creative turned down while the campaign was
+													 * running is still here when the advertiser comes
+													 * back to edit, and it still will not serve. Saying
+													 * why here as well as on the running view is what
+													 * makes the next upload the right one.
+													 */
+													?>
+													<p><span class="aggr-pill aggr-pill--danger"><?php echo esc_html( (string) $aggr_creative['state_text'] ); ?></span></p>
+													<?php if ( '' !== (string) $aggr_creative['notes'] ) : ?>
+														<p><?php echo esc_html( (string) $aggr_creative['notes'] ); ?></p>
+													<?php endif; ?>
+												<?php endif; ?>
 												<a
 													class="aggr-button aggr-button--danger"
 													href="#<?php echo esc_attr( $aggr_remove_id ); ?>"

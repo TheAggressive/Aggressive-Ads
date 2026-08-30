@@ -114,6 +114,11 @@ $aggr_overlays = array();
 					<div class="aggr-creative__meta">
 						<strong><?php echo esc_html( (string) $aggr_creative['placement'] ); ?></strong>
 						<span><?php echo esc_html( (string) $aggr_creative['dimensions'] ); ?></span>
+						<p>
+							<span class="aggr-pill aggr-pill--<?php echo esc_attr( $aggr_creative['rejected'] ? 'danger' : ( $aggr_creative['approved'] ? 'live' : 'pending' ) ); ?>">
+								<?php echo esc_html( (string) $aggr_creative['state_text'] ); ?>
+							</span>
+						</p>
 						<a
 							class="aggr-creative__action"
 							href="#<?php echo esc_attr( $aggr_dialog_id ); ?>"
@@ -123,6 +128,23 @@ $aggr_overlays = array();
 						><?php esc_html_e( 'Update', 'aggressive-ads' ); ?></a>
 					</div>
 				</div>
+				<?php if ( true === $aggr_creative['rejected'] ) : ?>
+					<?php
+					/*
+					 * The reason, to the person the reason was written for.
+					 * Staff cannot turn a creative down without giving one, and
+					 * until now it was stored on the creative and in the audit
+					 * trail and shown in neither place an advertiser can reach.
+					 */
+					?>
+					<div class="aggr-creative__body">
+						<p><strong><?php esc_html_e( 'This ad is not running.', 'aggressive-ads' ); ?></strong></p>
+						<?php if ( '' !== (string) $aggr_creative['notes'] ) : ?>
+							<p><?php echo esc_html( (string) $aggr_creative['notes'] ); ?></p>
+						<?php endif; ?>
+						<p class="aggr-hint"><?php esc_html_e( 'Select Update to supply a replacement.', 'aggressive-ads' ); ?></p>
+					</div>
+				<?php endif; ?>
 			</article>
 			<?php endif; ?>
 		<?php endforeach; ?>

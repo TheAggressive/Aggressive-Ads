@@ -179,10 +179,20 @@ What is not built:
    retired, so the decision engine stops considering a candidate it must always
    refuse — retirement is terminal, so `Assignment_Projection` cannot revive it.
 
-   **The advertiser still cannot read the reason.** It is stored on the creative
-   and in the audit trail, and the portal shows neither. That is the half of
-   "with a reason" that is still missing, and it is a portal change rather than
-   a review one.
+   ~~The advertiser still cannot read the reason.~~ Shipped: the portal card now
+   states which of three things is true — running, waiting for review, or not
+   approved — and a turned-down creative carries the reason it was given. Before
+   this, a rejected creative rendered identically to an approved one: same card,
+   same preview, same Update action, and nothing anywhere saying it would never
+   be served.
+
+   The reason is read through `Creative_Approval::rejection_notes()` rather than
+   `Creative_Repository::change_notes()`. That meta key carries two different
+   decisions — a refused *replacement*, written on the replacement revision, and
+   a turned-down creative, written on the creative — and a reader taking the raw
+   value is correct today only because `is_active()` happens to filter
+   replacement revisions out first. Pairing the reason with the decision belongs
+   to the class that owns the decision.
 2. ~~No notification.~~ Shipped: `Notification\Creative_Mailer` tells the rest
    of the review team, once, with a link to the tab the campaign is actually
    listed on.
@@ -201,6 +211,35 @@ What is not built:
 
    Two of its six tests first passed for the wrong reason, which is recorded in
    [testing-strategy.md](testing-strategy.md).
+
+## `Creative_Repository` is one method away from the file-length gate
+
+Not a defect, and not urgent — but it is the reason a small change had to be
+placed carefully rather than obviously, so it is worth someone knowing before
+they meet it the same way.
+
+The file is **981 lines** against a 1000-line hard fail. Adding a twenty-line
+accessor to it fails `lint:files`, which is the gate working: at that size the
+answer is to split by responsibility, not to shave the comment.
+
+Two coherent seams exist, and **both are coupled to `unpublished_for_campaign()`**,
+which asks `is_rejected()` and `has_attachment()` in the same loop. Whichever
+cluster moves, that method has to move with it or the old class ends up
+depending on the new one:
+
+1. **The attachment cluster** — `has_attachment`, `attachment_id`,
+   `attachment_url`, `attachment_file`, `set_attachment_id`,
+   `mark_attachment_as_creative`, `ids_promoted_with_private_file`,
+   `backfill_creative_attachment_marks`, `set_attachment_alt_text`. About 190
+   lines, and a genuinely different subject: the Media Library copy of the
+   artwork rather than the creative record. 11 files call into it.
+2. **The decision cluster** — `change_state`, `change_notes`, `requested_at`,
+   `reject_replacement`, `reject_creative`, `is_rejected`, the change locks.
+   Smaller, and closer to what recent work has been touching.
+
+Neither has been done, because a repository split is its own change and does not
+belong inside a feature. It is written down here so the next person to hit the
+gate finds the analysis instead of repeating it.
 
 ## Nothing else is open
 
