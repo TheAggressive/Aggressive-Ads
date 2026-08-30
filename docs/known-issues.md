@@ -70,3 +70,36 @@ reopen an entry in [open-work.md](open-work.md). Do not reach for
 `bin/ci/retry.sh`: it is deliberately scoped to network-bound setup steps,
 because a retry around a test turns a fast red into a slow red and hides the
 cold-start assumption that is the actual defect.
+
+## The packaging lane once built two different archives from one dist
+
+**What.** `pnpm ci:package` builds the ZIP twice and compares digests, so that a
+release is provably reproducible. On one CI run the second build produced an
+archive missing `dist/interactivity/wizard.js` — one 3 KB file, nothing else,
+from a `dist/` that had already yielded a complete 364-file archive seconds
+earlier in the same job. Re-running the job passed. Eight consecutive local
+builds were byte-identical, so it has never reproduced outside that one runner.
+
+**Cost.** A false red on a lane every pull request has to pass, and — much more
+important — **the operator is told the wrong thing**. Verification runs before
+the digest comparison, so a second archive that differs is reported as
+`required file missing from the archive`, which reads as an unbuilt file rather
+than as the reproducibility failure it is. Nothing prints the two listings, so
+there is no evidence left behind to diagnose from.
+
+**What is known.** The first `package.sh` and its verification passed with 364
+files. The second `package.sh` got past its own `PACKAGE_REQUIRED` check, which
+also names `wizard.js` and reads the staging directory — so the file was staged
+and then absent from the ZIP. Nothing between those two points removes files:
+the secrets scan has no `-delete`, and the version stamps, `chmod` and `touch`
+only rewrite what is there. `zip` exits non-zero when it cannot open a file it
+was given, and `set -euo pipefail` would have aborted on that. The cause is not
+identified.
+
+**Status.** Failed closed, which is the safe direction, so this is a diagnosis
+problem rather than a correctness one. Two changes would make the next
+occurrence self-explaining rather than a mystery: compare the two archive
+listings *before* the second verification, so a content difference is reported
+as one and names the paths; and print the archive's actual contents for a
+directory when a required file in it is missing, which distinguishes one lost
+file from a directory that was never built.
