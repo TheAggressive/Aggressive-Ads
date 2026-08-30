@@ -357,7 +357,7 @@ final class Campaign_Validator {
 			Campaign_Rules::validate_window(
 				$this->campaigns->start_ts( $campaign_id ),
 				$this->campaigns->end_ts( $campaign_id ),
-				time()
+				Campaign_Rules::day_start_ts( time(), wp_timezone()->getName() )
 			)
 		);
 

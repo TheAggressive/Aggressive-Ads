@@ -17,14 +17,14 @@ import { fillSlot } from './fill.js';
 /**
  * The shortest rotation this will honour, in seconds.
  *
- * **Every rotation is a new impression.** A two-second interval would
- * manufacture them at fifteen times the rate a reader could plausibly see, and
- * that is the behaviour that gets a publisher removed from an exchange rather
- * than merely producing odd numbers. The editor's own control refuses anything
- * lower; this is the floor that holds when the attribute arrives from somewhere
- * that did not, such as a hand-edited block comment.
+ * One second, by product decision — the publisher wants rotation to be visible
+ * rather than paced. **Every rotation is still a new impression**, so a slot at
+ * this floor records sixty an hour per minute of viewing, which is the kind of
+ * volume an exchange classifies as invalid traffic. Nothing here can prevent
+ * that; the floor exists only to stop a zero or a negative from becoming an
+ * interval of no length at all.
  */
-export const MIN_ROTATE_SECONDS = 30;
+export const MIN_ROTATE_SECONDS = 1;
 
 /**
  * The most times one slot will rotate for a single page view.

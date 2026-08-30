@@ -473,6 +473,87 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * **A campaign may start today**, through the real save path.
+	 *
+	 * The pure rule is asserted in `CampaignRulesTest`; this is the half that
+	 * proves an advertiser can actually submit it. Both rules have to agree:
+	 * the start must be midnight in the site timezone *and* not before today,
+	 * and it was the combination that made today unreachable — the date input's
+	 * `min` was set to tomorrow to match a restriction nobody had chosen.
+	 *
+	 * @return void
+	 */
+	public function test_a_campaign_can_start_today(): void {
+		wp_set_current_user( $this->advertiser );
+
+		$campaign_id = $this->editor->create( 'Starting today' );
+
+		$this->assertIsInt( $campaign_id );
+		$this->assertSame( 1, $this->actions->process_save_package( $campaign_id, $this->package_id, 0 ) );
+		$this->add_creative( $campaign_id );
+
+		$zone  = wp_timezone();
+		$start = ( new \DateTimeImmutable( 'today', $zone ) );
+		$end   = ( new \DateTimeImmutable( '+10 days', $zone ) )->setTime( 23, 59, 59 );
+
+		$this->assertLessThanOrEqual(
+			time(),
+			$start->getTimestamp(),
+			'Today midnight must already have passed, or this proves nothing about the old rule.'
+		);
+
+		$result = $this->editor->save(
+			$campaign_id,
+			array(
+				'start_ts'    => $start->getTimestamp(),
+				'end_ts'      => $end->getTimestamp(),
+				'wizard_step' => 'review',
+			),
+			1
+		);
+
+		// `save()` answers with the new autosave revision, not a boolean.
+		$this->assertIsInt( $result, 'An advertiser could not schedule a campaign to start today.' );
+		$this->assertGreaterThan( 1, $result, 'The save did not advance the revision, so nothing was written.' );
+		$this->assertSame(
+			$start->getTimestamp(),
+			(int) get_post_meta( $campaign_id, Campaign_Repository::META_START_TS, true )
+		);
+	}
+
+	/**
+	 * Yesterday is still refused, which is the half that keeps the rule a rule.
+	 *
+	 * @return void
+	 */
+	public function test_a_campaign_cannot_start_yesterday(): void {
+		wp_set_current_user( $this->advertiser );
+
+		$campaign_id = $this->editor->create( 'Starting yesterday' );
+
+		$this->assertIsInt( $campaign_id );
+		$this->assertSame( 1, $this->actions->process_save_package( $campaign_id, $this->package_id, 0 ) );
+		$this->add_creative( $campaign_id );
+
+		$zone  = wp_timezone();
+		$start = ( new \DateTimeImmutable( 'yesterday', $zone ) );
+		$end   = ( new \DateTimeImmutable( '+10 days', $zone ) )->setTime( 23, 59, 59 );
+
+		$result = $this->editor->save(
+			$campaign_id,
+			array(
+				'start_ts'    => $start->getTimestamp(),
+				'end_ts'      => $end->getTimestamp(),
+				'wizard_step' => 'review',
+			),
+			1
+		);
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'aggr_start_date_past', $result->get_error_code() );
+	}
+
+	/**
 	 * A stale tab cannot overwrite a newer save.
 	 *
 	 * @return void
