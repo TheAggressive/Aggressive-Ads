@@ -224,6 +224,7 @@ final class View_Data {
 		$row['wizard_step']       = $this->campaigns->wizard_step( $campaign_id );
 		$row['start_date']        = $this->date_input_value( $this->campaigns->start_ts( $campaign_id ) );
 		$row['end_date']          = $this->date_input_value( $this->campaigns->end_ts( $campaign_id ) );
+		$row['min_start_date']    = $this->min_start_date( $row['start_date'] );
 		$row['advertiser_notes']  = $this->campaigns->advertiser_notes( $campaign_id );
 		$row['autosave_rev']      = $this->campaigns->autosave_revision( $campaign_id );
 		$row['readiness']         = $this->readiness->for_campaign( $campaign_id );
@@ -507,6 +508,37 @@ final class View_Data {
 	 */
 	private function date_input_value( int $timestamp ): string {
 		return $timestamp > 0 ? (string) wp_date( 'Y-m-d', $timestamp, wp_timezone() ) : '';
+	}
+
+	/**
+	 * The earliest date the start picker may offer.
+	 *
+	 * Today, so a campaign can begin now — but **never later than the date
+	 * already stored**, because `min` is enforced by the browser before the
+	 * form reaches the server at all.
+	 *
+	 * A campaign edited a week after it was drafted carries a start that is now
+	 * in the past. A `min` above it makes the field reject its own value: the
+	 * person cannot save the step, cannot reach the server's explanation, and
+	 * is told only "Value must be … or later" by a tooltip with nothing behind
+	 * it. The form becomes unsubmittable for a reason it will not explain.
+	 *
+	 * Letting the stored value through does not make a past start legal.
+	 * `Campaign_Rules::validate_window()` still refuses one, with a message
+	 * that says what to do — which is the difference between a dead end and an
+	 * instruction.
+	 *
+	 * @param string $stored_start `Y-m-d` already on the campaign, or empty.
+	 * @return string
+	 */
+	private function min_start_date( string $stored_start ): string {
+		$today = (string) wp_date( 'Y-m-d', time(), wp_timezone() );
+
+		if ( '' !== $stored_start && $stored_start < $today ) {
+			return $stored_start;
+		}
+
+		return $today;
 	}
 
 	/**

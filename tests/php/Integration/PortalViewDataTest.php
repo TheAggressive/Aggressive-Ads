@@ -209,6 +209,87 @@ final class PortalViewDataTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * **The picker never rejects the campaign's own start date.**
+	 *
+	 * `min` is enforced by the browser before the form reaches the server, so a
+	 * minimum above the stored value makes the field invalid on load: the
+	 * person cannot save the step, cannot reach the server's explanation, and
+	 * sees only "Value must be … or later" with nothing behind it.
+	 *
+	 * A campaign drafted a week ago and edited today is exactly that case.
+	 *
+	 * @return void
+	 */
+	public function test_the_start_minimum_never_rejects_the_stored_date(): void {
+		$mine = $this->make_campaign( $this->org_a, Post_Statuses::DRAFT, 'Drafted a while ago' );
+
+		$stale = ( new \DateTimeImmutable( '-8 days', wp_timezone() ) )->setTime( 0, 0 );
+
+		update_post_meta( $mine, Campaign_Repository::META_START_TS, $stale->getTimestamp() );
+
+		wp_set_current_user( $this->advertiser_a );
+
+		$campaign = $this->view->campaign( $mine );
+
+		$this->assertIsArray( $campaign );
+		$this->assertSame( $stale->format( 'Y-m-d' ), $campaign['start_date'], 'The fixture must actually be stale.' );
+		$this->assertSame(
+			$campaign['start_date'],
+			$campaign['min_start_date'],
+			'The picker would have refused the value already in the field.'
+		);
+	}
+
+	/**
+	 * With no start yet, the minimum is today — so a campaign can begin now.
+	 *
+	 * @return void
+	 */
+	public function test_a_campaign_with_no_start_may_begin_today(): void {
+		$mine = $this->make_campaign( $this->org_a, Post_Statuses::DRAFT, 'Nothing chosen yet' );
+
+		wp_set_current_user( $this->advertiser_a );
+
+		$campaign = $this->view->campaign( $mine );
+
+		$this->assertIsArray( $campaign );
+		$this->assertSame( '', $campaign['start_date'] );
+		$this->assertSame(
+			(string) wp_date( 'Y-m-d', time(), wp_timezone() ),
+			$campaign['min_start_date']
+		);
+	}
+
+	/**
+	 * A future start does not drag the minimum forward with it.
+	 *
+	 * The third case, and the one that keeps the rule a `min()` rather than
+	 * "whatever is stored": somebody who picked next month must still be able
+	 * to move it earlier, to today.
+	 *
+	 * @return void
+	 */
+	public function test_a_future_start_leaves_the_minimum_at_today(): void {
+		$mine = $this->make_campaign( $this->org_a, Post_Statuses::DRAFT, 'Booked ahead' );
+
+		$ahead = ( new \DateTimeImmutable( '+30 days', wp_timezone() ) )->setTime( 0, 0 );
+
+		update_post_meta( $mine, Campaign_Repository::META_START_TS, $ahead->getTimestamp() );
+
+		wp_set_current_user( $this->advertiser_a );
+
+		$campaign = $this->view->campaign( $mine );
+
+		$this->assertIsArray( $campaign );
+		$this->assertSame( $ahead->format( 'Y-m-d' ), $campaign['start_date'] );
+		$this->assertSame(
+			(string) wp_date( 'Y-m-d', time(), wp_timezone() ),
+			$campaign['min_start_date'],
+			'A campaign booked ahead could no longer be moved earlier.'
+		);
+	}
+
+	/**
 	 * Review readiness reports every safe, actionable problem on an invalid draft.
 	 *
 	 * @return void

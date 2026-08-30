@@ -47,7 +47,8 @@ $aggr_creative_notice    = Creative_Actions::request_notice();
 $aggr_creative_error     = Creative_Actions::request_error_code();
 $aggr_error_placement    = Creative_Actions::request_error_placement();
 $aggr_creative_error_for = Creative_Actions::error_target( $aggr_creative_error, $aggr_error_placement );
-$aggr_min_start_date     = ( new \DateTimeImmutable( 'today', wp_timezone() ) )->format( 'Y-m-d' );
+// Decided by Portal\View_Data, which is where it can be tested.
+$aggr_min_start_date     = (string) ( $aggr_campaign['min_start_date'] ?? '' );
 $aggr_creative_ready     = array() !== $aggr_slots;
 $aggr_overlays           = array();
 $aggr_line_items         = is_array( $aggr_campaign['line_items'] ?? null ) ? $aggr_campaign['line_items'] : array();
