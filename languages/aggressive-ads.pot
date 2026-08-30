@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-29T23:47:26+00:00\n"
+"POT-Creation-Date: 2026-08-30T00:27:53+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -94,6 +94,15 @@ msgstr ""
 msgid "That campaign-change decision is not valid."
 msgstr ""
 
+#: inc/Admin/class-conversions-screen.php:86
+#: inc/Admin/class-conversions-screen.php:87
+#: inc/Admin/class-conversions-screen.php:111
+#: inc/Admin/class-conversions-screen.php:123
+#: inc/Admin/class-conversions-screen.php:150
+msgid "Conversions"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:102
 #: inc/Admin/class-menu.php:181
 #: inc/Admin/class-organization-screen.php:127
 #: inc/Admin/class-package-screen.php:116
@@ -102,6 +111,122 @@ msgstr ""
 #: inc/Admin/class-settings-screen.php:161
 msgid "You do not have permission to view this page."
 msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:112
+msgid "The conversions screen has not been built. Run “pnpm build” and reload."
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:122
+msgid "New conversion"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:124
+msgid "No conversions are defined yet. Nothing will be recorded until one is."
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:125
+#: inc/Admin/class-package-screen.php:150
+#: inc/Admin/class-placement-screen.php:150
+#: templates/portal/screens/campaign.php:755
+#: templates/portal/screens/organization.php:112
+msgid "Name"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:126
+msgid "Attribution window"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:127
+msgid "How long after a click an outcome still counts."
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:128
+msgid "Value"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:129
+msgid "What one conversion is worth. Leave empty for an outcome with no value, such as a signup."
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:130
+#: inc/Admin/class-package-screen.php:159
+msgid "Currency"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:131
+msgid "Three letters, such as USD. Required when a value is set."
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:132
+msgid "Limit to one advertiser"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:133
+msgid "Off means any campaign may be credited. On means only that advertiser’s campaigns can."
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:134
+msgid "Organization ID"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:135
+msgid "Reporting key"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:136
+#: inc/Admin/class-review-screen.php:269
+#: inc/Admin/class-review-screen.php:287
+#: templates/portal/partials/campaign-table.php:35
+#: templates/portal/screens/campaign.php:268
+#: templates/portal/screens/help.php:109
+msgid "Status"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:137
+#: templates/portal/screens/organization.php:116
+#: templates/portal/screens/organization.php:199
+msgid "Actions"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:138
+msgid "Accepting reports"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:139
+msgid "Archived"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:140
+msgid "Archive"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:141
+msgid "Create conversion"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:142
+msgid "days"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:143
+msgid "The conversions could not be loaded."
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:144
+msgid "That conversion could not be saved."
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:151
+msgid "The conversions screen needs JavaScript enabled."
+msgstr ""
+
+#. translators: %d: number of days.
+#: inc/Admin/class-conversions-screen.php:192
+#, php-format
+msgid "%d day"
+msgid_plural "%d days"
+msgstr[0] ""
+msgstr[1] ""
 
 #: inc/Admin/class-organization-screen.php:113
 #: inc/Admin/class-organization-screen.php:114
@@ -327,13 +452,6 @@ msgstr ""
 msgid "Package saved."
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:150
-#: inc/Admin/class-placement-screen.php:150
-#: templates/portal/screens/campaign.php:755
-#: templates/portal/screens/organization.php:112
-msgid "Name"
-msgstr ""
-
 #: inc/Admin/class-package-screen.php:151
 #: inc/Admin/class-review-screen.php:292
 #: inc/Core/class-post-types.php:199
@@ -372,10 +490,6 @@ msgstr ""
 
 #: inc/Admin/class-package-screen.php:158
 msgid "Stored as whole cents. Two decimal places."
-msgstr ""
-
-#: inc/Admin/class-package-screen.php:159
-msgid "Currency"
 msgstr ""
 
 #: inc/Admin/class-package-screen.php:161
@@ -705,14 +819,6 @@ msgstr ""
 #: templates/portal/screens/help.php:77
 #: src/blocks-interactivity/ad-slot/edit.js:138
 msgid "Placement"
-msgstr ""
-
-#: inc/Admin/class-review-screen.php:269
-#: inc/Admin/class-review-screen.php:287
-#: templates/portal/partials/campaign-table.php:35
-#: templates/portal/screens/campaign.php:268
-#: templates/portal/screens/help.php:109
-msgid "Status"
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:270
@@ -4777,11 +4883,6 @@ msgstr ""
 
 #: templates/portal/screens/organization.php:114
 msgid "Role"
-msgstr ""
-
-#: templates/portal/screens/organization.php:116
-#: templates/portal/screens/organization.php:199
-msgid "Actions"
 msgstr ""
 
 #: templates/portal/screens/organization.php:126
