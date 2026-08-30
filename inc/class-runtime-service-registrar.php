@@ -133,6 +133,7 @@ final class Runtime_Service_Registrar {
 			static fn ( Service_Container $c ): \Aggressive\Ads\Workflow\Creative_Approval => new \Aggressive\Ads\Workflow\Creative_Approval(
 				$c->get( \Aggressive\Ads\Repository\Campaign_Repository::class ),
 				$c->get( \Aggressive\Ads\Repository\Creative_Repository::class ),
+				$c->get( \Aggressive\Ads\Repository\Creative_Assignment_Repository::class ),
 				$c->get( \Aggressive\Ads\Workflow\Creative_Promoter::class ),
 				$c->get( \Aggressive\Ads\Workflow\Assignment_Projection::class ),
 				$c->get( \Aggressive\Ads\Workflow\Fill_Cache::class ),

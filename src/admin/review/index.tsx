@@ -409,6 +409,13 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 							t( 'creativePublished' )
 						)
 					}
+					onRejectCreative={ ( id, notes ) =>
+						void write(
+							`/aggr/v1/review/creatives/${ id }/reject`,
+							{ review_notes: notes },
+							t( 'creativeRejected' )
+						)
+					}
 				/>
 			) : (
 				<QueueView

@@ -24,13 +24,16 @@ function CreativeCard( {
 	creative,
 	children,
 	onPublish,
+	onReject,
 	busy,
 }: {
 	creative: Creative | CreativeUpdate;
 	children?: ReactElement | null;
 	onPublish?: ( id: number ) => void;
+	onReject?: ( id: number, notes: string ) => void;
 	busy?: boolean;
 } ): ReactElement {
+	const [ notes, setNotes ] = useState( '' );
 	const update = 'current_url' in creative ? creative : null;
 
 	/*
@@ -137,19 +140,50 @@ function CreativeCard( {
 					) }
 				</dl>
 				{ awaiting ? (
-					<p className="aggr-creative__decision">
+					<div className="aggr-form aggr-creative__decision">
+						<p className="aggr-hint">
+							{ t( 'publishCreativeHint' ) }
+						</p>
+
+						<div className="aggr-form__actions">
+							<button
+								type="button"
+								className="aggr-button"
+								disabled={ busy }
+								onClick={ () => onPublish?.( creative.id ) }
+							>
+								{ t( 'publishCreative' ) }
+							</button>
+						</div>
+
+						<label htmlFor={ `aggr-reject-${ creative.id }` }>
+							{ t( 'rejectCreativeReason' ) }
+						</label>
+						<textarea
+							id={ `aggr-reject-${ creative.id }` }
+							rows={ 3 }
+							maxLength={ 2000 }
+							value={ notes }
+							onChange={ ( event ) =>
+								setNotes( event.target.value )
+							}
+						/>
+
+						{ /*
+						 * Disabled until there is a reason, the same rule the
+						 * replacement rejection uses. An advertiser told only
+						 * "no" learns nothing, and silence is the behaviour
+						 * this whole decision exists to replace.
+						 */ }
 						<button
 							type="button"
-							className="aggr-button"
-							disabled={ busy }
-							onClick={ () => onPublish?.( creative.id ) }
+							className="aggr-button aggr-button--danger"
+							disabled={ busy || '' === notes.trim() }
+							onClick={ () => onReject?.( creative.id, notes ) }
 						>
-							{ t( 'publishCreative' ) }
+							{ t( 'rejectCreative' ) }
 						</button>
-						<span className="aggr-hint">
-							{ t( 'publishCreativeHint' ) }
-						</span>
-					</p>
+					</div>
 				) : null }
 
 				{ children ?? null }
@@ -340,6 +374,7 @@ export function CampaignView( {
 	onDeclineRequest,
 	onReplacement,
 	onPublishCreative,
+	onRejectCreative,
 	onDeliveryPolicy,
 }: {
 	campaign: Campaign;
@@ -352,6 +387,7 @@ export function CampaignView( {
 	onDeclineRequest: ( notes: string ) => void;
 	onReplacement: ( id: number, decision: string, notes: string ) => void;
 	onPublishCreative: ( id: number ) => void;
+	onRejectCreative: ( id: number, notes: string ) => void;
 	onDeliveryPolicy: (
 		id: number,
 		revision: number,
@@ -562,6 +598,7 @@ export function CampaignView( {
 									creative={ creative }
 									busy={ busy }
 									onPublish={ onPublishCreative }
+									onReject={ onRejectCreative }
 								/>
 							) ) }
 						</div>

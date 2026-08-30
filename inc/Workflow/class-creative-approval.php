@@ -13,6 +13,7 @@ use Aggressive\Ads\Audit\Audit_Event;
 use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Security\Capabilities;
 use WP_Error;
@@ -37,16 +38,18 @@ final class Creative_Approval {
 	/**
 	 * Constructor.
 	 *
-	 * @param Campaign_Repository   $campaigns  Campaign status and ownership.
-	 * @param Creative_Repository   $creatives  Creative persistence.
-	 * @param Creative_Promoter     $promoter   Private-to-public promotion.
-	 * @param Assignment_Projection $projection Assignment snapshot refresh.
-	 * @param Fill_Cache            $cache      Delivery cache.
-	 * @param Audit_Repository      $audit      Audit persistence.
+	 * @param Campaign_Repository            $campaigns   Campaign status and ownership.
+	 * @param Creative_Repository            $creatives   Creative persistence.
+	 * @param Creative_Assignment_Repository $assignments Assignment persistence.
+	 * @param Creative_Promoter              $promoter    Private-to-public promotion.
+	 * @param Assignment_Projection          $projection  Assignment snapshot refresh.
+	 * @param Fill_Cache                     $cache       Delivery cache.
+	 * @param Audit_Repository               $audit       Audit persistence.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
 		private readonly Creative_Repository $creatives,
+		private readonly Creative_Assignment_Repository $assignments,
 		private readonly Creative_Promoter $promoter,
 		private readonly Assignment_Projection $projection,
 		private readonly Fill_Cache $cache,
@@ -142,6 +145,124 @@ final class Creative_Approval {
 		$this->record( $campaign_id, $creative_id, Audit_Event::OUTCOME_OK, 'Creative published on a running campaign.' );
 
 		return $campaign_id;
+	}
+
+	/**
+	 * The longest explanation a reviewer may leave.
+	 *
+	 * The same bound the replacement rejection uses. An advertiser reads this,
+	 * so it has to be room for a reason rather than a field somebody pastes a
+	 * document into.
+	 */
+	public const MAX_NOTES_LENGTH = 2000;
+
+	/**
+	 * Turns down a creative on a running campaign, with a reason.
+	 *
+	 * **The reason is required**, exactly as it is for a rejected replacement.
+	 * A creative that simply stops being offered tells the advertiser nothing,
+	 * and the whole point of surfacing this decision was that silence was the
+	 * previous behaviour.
+	 *
+	 * Publishing needs two capabilities because it puts bytes on a public page.
+	 * Refusing needs only the reviewing one: turning something down cannot
+	 * publish anything.
+	 *
+	 * @param int    $creative_id Creative post id.
+	 * @param string $notes       Explanation the advertiser will read.
+	 * @return int|WP_Error Owning campaign id.
+	 */
+	public function reject( int $creative_id, string $notes ): int|WP_Error {
+		if ( ! current_user_can( Capabilities::REVIEW_CAMPAIGNS ) ) {
+			return new WP_Error(
+				'aggr_forbidden',
+				__( 'You do not have permission to review creative.', 'aggressive-ads' ),
+				array( 'status' => 403 )
+			);
+		}
+
+		$notes = trim( sanitize_textarea_field( $notes ) );
+
+		if ( '' === $notes ) {
+			return new WP_Error(
+				'aggr_creative_notes_required',
+				__( 'Explain why this advertisement is not being published.', 'aggressive-ads' ),
+				array( 'status' => 422 )
+			);
+		}
+
+		if ( mb_strlen( $notes ) > self::MAX_NOTES_LENGTH ) {
+			return new WP_Error(
+				'aggr_creative_notes_too_long',
+				__( 'Use 2,000 characters or fewer for this explanation.', 'aggressive-ads' ),
+				array( 'status' => 422 )
+			);
+		}
+
+		$campaign_id = $this->creatives->campaign_id( $creative_id );
+
+		if ( $campaign_id <= 0 ) {
+			return new WP_Error(
+				'aggr_creative_not_found',
+				__( 'That creative no longer exists.', 'aggressive-ads' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		if ( ! in_array( $creative_id, $this->awaiting( $campaign_id ), true ) ) {
+			return new WP_Error(
+				'aggr_creative_not_awaiting',
+				__( 'That creative is not waiting to be published.', 'aggressive-ads' ),
+				array( 'status' => 409 )
+			);
+		}
+
+		if ( ! $this->creatives->reject_creative( $creative_id, $notes ) ) {
+			$this->record( $campaign_id, $creative_id, Audit_Event::OUTCOME_FAILED, 'Creative decision could not be saved.' );
+
+			return new WP_Error(
+				'aggr_creative_decision_failed',
+				__( 'That decision could not be saved. Please try again.', 'aggressive-ads' ),
+				array( 'status' => 500 )
+			);
+		}
+
+		$this->retire_assignments( $campaign_id, $creative_id );
+
+		$this->campaigns->set_pending_creative_count(
+			$campaign_id,
+			$this->creatives->unpublished_count_for_campaign( $campaign_id )
+		);
+
+		$this->record( $campaign_id, $creative_id, Audit_Event::OUTCOME_OK, 'Creative turned down on a running campaign.' );
+
+		return $campaign_id;
+	}
+
+	/**
+	 * Takes a turned-down creative out of the candidate set.
+	 *
+	 * Rejecting only the creative would leave its assignment `live`, and the
+	 * decision engine would go on considering a candidate it must always refuse
+	 * for a missing attachment. Retiring is terminal, and
+	 * `Assignment_Projection` never revives a terminal row — so a later campaign
+	 * transition cannot quietly put it back.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @param int $creative_id Creative post id.
+	 */
+	private function retire_assignments( int $campaign_id, int $creative_id ): void {
+		foreach ( $this->assignments->for_campaign( $campaign_id ) as $row ) {
+			if ( (int) ( $row['revision_id'] ?? 0 ) !== $creative_id ) {
+				continue;
+			}
+
+			$this->assignments->retire(
+				(int) ( $row['id'] ?? 0 ),
+				$campaign_id,
+				(int) ( $row['revision'] ?? 0 )
+			);
+		}
 	}
 
 	/**

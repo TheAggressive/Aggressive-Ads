@@ -858,6 +858,46 @@ final class Creative_Repository {
 	}
 
 	/**
+	 * The review state a turned-down creative carries.
+	 *
+	 * Distinct from `CHANGE_REJECTED`, which is a *replacement's* change state.
+	 * A creative added to a running campaign is not replacing anything, so its
+	 * decision belongs on the review state rather than on a field that means
+	 * "what happened to the swap".
+	 */
+	public const REVIEW_REJECTED = 'rejected';
+
+	/**
+	 * Records a decision to turn down a creative, with the reason.
+	 *
+	 * Verified rather than assumed: `update_post_meta` returns false both when
+	 * a write fails and when the value was already there, so the caller cannot
+	 * tell those apart from its return. Reading the values back can.
+	 *
+	 * @param int    $creative_id Creative post id.
+	 * @param string $notes       Explanation the advertiser will read.
+	 * @return bool
+	 */
+	public function reject_creative( int $creative_id, string $notes ): bool {
+		update_post_meta( $creative_id, self::META_REVIEW_STATE, self::REVIEW_REJECTED );
+		update_post_meta( $creative_id, self::META_CHANGE_NOTES, $notes );
+		update_post_meta( $creative_id, self::META_DECIDED_AT, time() );
+
+		return $this->is_rejected( $creative_id )
+			&& (string) get_post_meta( $creative_id, self::META_CHANGE_NOTES, true ) === $notes;
+	}
+
+	/**
+	 * Whether a creative has been turned down.
+	 *
+	 * @param int $creative_id Creative post id.
+	 * @return bool
+	 */
+	public function is_rejected( int $creative_id ): bool {
+		return self::REVIEW_REJECTED === (string) get_post_meta( $creative_id, self::META_REVIEW_STATE, true );
+	}
+
+	/**
 	 * The campaign a creative belongs to, or 0.
 	 *
 	 * A single meta read. `details()` carries the same value, but it assembles
@@ -892,6 +932,15 @@ final class Creative_Repository {
 		$waiting = array();
 
 		foreach ( $this->ids_for_campaign( $campaign_id ) as $creative_id ) {
+			/*
+			 * A turned-down creative is not waiting for anything. Without this
+			 * it would sit on the queue for ever, because rejecting one cannot
+			 * give it the attachment whose absence put it there.
+			 */
+			if ( $this->is_rejected( $creative_id ) ) {
+				continue;
+			}
+
 			if ( $this->is_active( $creative_id ) && ! $this->has_attachment( $creative_id ) ) {
 				$waiting[] = (int) $creative_id;
 			}

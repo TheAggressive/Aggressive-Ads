@@ -150,6 +150,16 @@ final class Review_Controller implements Service {
 		);
 
 		Creative_File_Controller::register_route(
+			'/review/creatives/(?P<id>\d+)/reject',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'reject_creative' ),
+				'permission_callback' => array( $this, 'permission' ),
+				'args'                => self::id_arg(),
+			)
+		);
+
+		Creative_File_Controller::register_route(
 			'/review/campaigns/(?P<id>\d+)/request',
 			array(
 				'methods'             => 'POST',
@@ -175,6 +185,28 @@ final class Review_Controller implements Service {
 	 */
 	public function publish_creative( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		$campaign_id = $this->creatives->approve( (int) $request->get_param( 'id' ) );
+
+		if ( is_wp_error( $campaign_id ) ) {
+			return $campaign_id;
+		}
+
+		return new WP_REST_Response( array( 'campaign' => $this->data->campaign( $campaign_id ) ), 200 );
+	}
+
+	/**
+	 * Turns down one creative on a running campaign.
+	 *
+	 * @param WP_REST_Request $request The request.
+	 * @return WP_REST_Response|WP_Error
+	 *
+	 * @phpstan-param WP_REST_Request<array<string, mixed>> $request
+	 */
+	public function reject_creative( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		$notes       = $request->get_param( 'review_notes' );
+		$campaign_id = $this->creatives->reject(
+			(int) $request->get_param( 'id' ),
+			is_string( $notes ) ? $notes : ''
+		);
 
 		if ( is_wp_error( $campaign_id ) ) {
 			return $campaign_id;
