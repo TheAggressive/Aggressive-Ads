@@ -15,6 +15,8 @@ use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Domain\Assignment_Rules;
+use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Security\Ownership;
 use Aggressive\Ads\Security\Roles;
@@ -95,7 +97,7 @@ final class CreativeApprovalTest extends WP_UnitTestCase {
 	 * A campaign in one status with one creative that has never been published.
 	 *
 	 * @param string $status Campaign post status.
-	 * @return array{campaign: int, creative: int}
+	 * @return array{campaign: int, creative: int, placement: int, assignment: int}
 	 */
 	private function fixture( string $status ): array {
 		$campaign_id = (int) self::factory()->post->create(
@@ -127,11 +129,42 @@ final class CreativeApprovalTest extends WP_UnitTestCase {
 		update_post_meta( $creative_id, Creative_Repository::META_SIZE, '728x90' );
 		update_post_meta( $creative_id, Creative_Repository::META_KIND, 'image' );
 
+		/*
+		 * A live assignment, because that is what delivery actually reads. The
+		 * first version of this fixture created none, so `retire_assignments()`
+		 * was never exercised — removing it entirely changed no test, which is
+		 * the definition of untested code.
+		 */
+		global $wpdb;
+
+		$assignments = Plugin::instance()->container()->get( Creative_Assignment_Repository::class );
+		$assignments->install_table();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Fixture for this plugin's own table.
+		$wpdb->insert(
+			$assignments->table_name(),
+			array(
+				'line_item_id'  => 1,
+				'campaign_id'   => $campaign_id,
+				'placement_id'  => $placement_id,
+				'revision_id'   => $creative_id,
+				'status'        => Assignment_Rules::LIVE,
+				'weight'        => 100,
+				'click_url'     => 'https://example.com/landing',
+				'attachment_id' => 4242,
+				'width'         => 728,
+				'height'        => 90,
+				'revision'      => 1,
+			)
+		);
+
 		Plugin::instance()->container()->get( Ownership::class )->flush_cache();
 
 		return array(
-			'campaign' => $campaign_id,
-			'creative' => $creative_id,
+			'campaign'   => $campaign_id,
+			'creative'   => $creative_id,
+			'placement'  => $placement_id,
+			'assignment' => (int) $wpdb->insert_id,
 		);
 	}
 
@@ -228,6 +261,147 @@ final class CreativeApprovalTest extends WP_UnitTestCase {
 
 		$this->assertWPError( $result );
 		$this->assertSame( 'aggr_creative_not_found', $result->get_error_code() );
+	}
+
+	/**
+	 * **Turning one down requires a reason.**
+	 *
+	 * An advertiser told only "no" learns nothing, and silence is the behaviour
+	 * this whole decision exists to replace. The same rule the replacement
+	 * rejection already applies.
+	 */
+	public function test_rejecting_requires_a_reason(): void {
+		$fixture = $this->fixture( Post_Statuses::LIVE );
+
+		wp_set_current_user( $this->reviewer );
+
+		foreach ( array( '', '   ', "\n\t " ) as $empty ) {
+			$result = $this->approvals->reject( $fixture['creative'], $empty );
+
+			$this->assertWPError( $result );
+			$this->assertSame( 'aggr_creative_notes_required', $result->get_error_code() );
+		}
+
+		$this->assertSame(
+			array( $fixture['creative'] ),
+			$this->approvals->awaiting( $fixture['campaign'] ),
+			'A refused rejection must leave the creative waiting.'
+		);
+	}
+
+	/**
+	 * A reason longer than the field allows is refused rather than truncated.
+	 */
+	public function test_an_over_long_reason_is_refused(): void {
+		$fixture = $this->fixture( Post_Statuses::LIVE );
+
+		wp_set_current_user( $this->reviewer );
+
+		$result = $this->approvals->reject(
+			$fixture['creative'],
+			str_repeat( 'x', Creative_Approval::MAX_NOTES_LENGTH + 1 )
+		);
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'aggr_creative_notes_too_long', $result->get_error_code() );
+	}
+
+	/**
+	 * **A turned-down creative stops waiting and stops being a candidate.**
+	 *
+	 * Both halves matter. Rejecting only the creative would leave it on the
+	 * queue for ever — rejecting cannot give it the attachment whose absence
+	 * put it there — and leave its assignment `live`, so the decision engine
+	 * would go on considering a candidate it must always refuse.
+	 */
+	public function test_a_rejected_creative_leaves_the_queue_and_the_candidate_set(): void {
+		$fixture = $this->fixture( Post_Statuses::LIVE );
+
+		wp_set_current_user( $this->reviewer );
+
+		$this->assertSame(
+			$fixture['campaign'],
+			$this->approvals->reject( $fixture['creative'], 'The artwork is the wrong size.' )
+		);
+
+		$this->assertSame( array(), $this->approvals->awaiting( $fixture['campaign'] ) );
+		$this->assertSame( 0, $this->campaigns->pending_creative_count( $fixture['campaign'] ) );
+		$this->assertTrue( $this->creatives->is_rejected( $fixture['creative'] ) );
+
+		/*
+		 * The candidate set, which is the half the queue cannot show. Leaving
+		 * the assignment `live` would have the decision engine go on
+		 * considering a candidate it must always refuse — and the trace would
+		 * report a rejected creative as merely ineligible.
+		 */
+		$assignments = Plugin::instance()->container()->get( Creative_Assignment_Repository::class );
+
+		$this->assertSame(
+			array(),
+			$assignments->candidates_for_placement( $fixture['placement'], time() ),
+			'A turned-down creative was still a delivery candidate.'
+		);
+	}
+
+	/**
+	 * The reason is stored, because the advertiser is going to read it.
+	 */
+	public function test_the_reason_is_stored(): void {
+		$fixture = $this->fixture( Post_Statuses::LIVE );
+
+		wp_set_current_user( $this->reviewer );
+
+		$this->approvals->reject( $fixture['creative'], '  The logo is unreadable at this size.  ' );
+
+		$this->assertSame(
+			'The logo is unreadable at this size.',
+			(string) get_post_meta( $fixture['creative'], Creative_Repository::META_CHANGE_NOTES, true ),
+			'The reason must be stored trimmed and intact.'
+		);
+	}
+
+	/**
+	 * A rejected creative cannot then be published.
+	 *
+	 * The decision is one or the other, and `awaiting()` is what enforces it —
+	 * so this also proves the two paths agree about what is still open.
+	 */
+	public function test_a_rejected_creative_cannot_be_published_afterwards(): void {
+		$fixture = $this->fixture( Post_Statuses::LIVE );
+
+		wp_set_current_user( $this->reviewer );
+
+		$this->approvals->reject( $fixture['creative'], 'Wrong artwork.' );
+
+		$result = $this->approvals->approve( $fixture['creative'] );
+
+		$this->assertWPError( $result );
+		$this->assertSame( 'aggr_creative_not_awaiting', $result->get_error_code() );
+	}
+
+	/**
+	 * Rejecting needs only the reviewing capability.
+	 *
+	 * Publishing needs two because it puts bytes on a public page. Refusing
+	 * publishes nothing, so demanding the publishing capability would stop a
+	 * reviewer doing the half of their job that is purely a refusal.
+	 */
+	public function test_rejecting_needs_only_the_review_capability(): void {
+		$fixture = $this->fixture( Post_Statuses::LIVE );
+
+		wp_set_current_user( (int) self::factory()->user->create( array( 'role' => Roles::ADVERTISER ) ) );
+
+		$refused = $this->approvals->reject( $fixture['creative'], 'Not allowed.' );
+
+		$this->assertWPError( $refused );
+		$this->assertSame( 'aggr_forbidden', $refused->get_error_code() );
+
+		wp_set_current_user( (int) self::factory()->user->create( array( 'role' => Roles::REVIEWER ) ) );
+
+		$this->assertIsInt(
+			$this->approvals->reject( $fixture['creative'], 'The artwork is the wrong size.' ),
+			'A reviewer must be able to turn a creative down.'
+		);
 	}
 
 	/**

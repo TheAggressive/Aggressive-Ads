@@ -174,13 +174,25 @@ Two things worth keeping:
 
 What is not built:
 
-1. **No reject.** A reviewer can publish a waiting creative or leave it. There is
-   no way to turn one down with a reason, the way a campaign or a replacement
-   can be rejected — so an advertiser who uploads the wrong artwork to a running
-   campaign gets silence rather than an explanation.
+1. ~~No reject.~~ Shipped: a reviewer can turn one down with a reason, which is
+   required and stored. The creative leaves the queue *and* its assignment is
+   retired, so the decision engine stops considering a candidate it must always
+   refuse — retirement is terminal, so `Assignment_Projection` cannot revive it.
+
+   **The advertiser still cannot read the reason.** It is stored on the creative
+   and in the audit trail, and the portal shows neither. That is the half of
+   "with a reason" that is still missing, and it is a portal change rather than
+   a review one.
 2. **No notification.** Nothing tells staff a creative is waiting; it appears on
-   the tab and that is all. The submission and request mailers are the pattern
-   to follow.
+   the tab and that is all.
+
+   `Notification\Request_Mailer` is the obvious home — it already has the retry,
+   receipt and per-recipient deduplication this needs, and is keyed on
+   `(campaign_id, kind)`. Adding a `creative` kind means changing
+   `still_pending()`, which today asks whether a *campaign request* is still
+   open, and the message builder, which branches on the same. That is a change
+   to a class with delivery semantics worth testing on its own rather than
+   riding along with the review screen.
 
 ## Nothing else is open
 
