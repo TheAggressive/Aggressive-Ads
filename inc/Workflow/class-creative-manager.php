@@ -59,6 +59,7 @@ final class Creative_Manager {
 	 * @param Rate_Limiter         $limiter    Upload abuse bounding.
 	 * @param Audit_Repository     $audit      Audit persistence.
 	 * @param Edit_Window          $window     When editing is permitted.
+	 * @param Creative_Approval    $approvals  Queue counter for creatives awaiting publication.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -68,7 +69,8 @@ final class Creative_Manager {
 		private readonly Private_Storage $storage,
 		private readonly Rate_Limiter $limiter,
 		private readonly Audit_Repository $audit,
-		private readonly Edit_Window $window
+		private readonly Edit_Window $window,
+		private readonly Creative_Approval $approvals
 	) {
 	}
 
@@ -231,6 +233,15 @@ final class Creative_Manager {
 				actor_user_id: get_current_user_id()
 			)
 		);
+
+		/*
+		 * A creative uploaded to a campaign that is already running has missed
+		 * the transition that publishes artwork, so it needs a reviewer. This
+		 * is what puts it on the queue — before it existed such a creative was
+		 * invisible: no counter, no tab, no route, and therefore no way to ever
+		 * approve it or serve it.
+		 */
+		$this->approvals->refresh_count( $campaign_id );
 
 		return array(
 			'id'           => $creative_id,

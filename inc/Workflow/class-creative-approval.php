@@ -1,0 +1,201 @@
+<?php
+/**
+ * Publishing a creative added to a campaign that is already running.
+ *
+ * @package Aggressive\Ads
+ */
+
+declare(strict_types=1);
+
+namespace Aggressive\Ads\Workflow;
+
+use Aggressive\Ads\Audit\Audit_Event;
+use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Security\Capabilities;
+use WP_Error;
+
+/**
+ * The decision that had nowhere to be made.
+ *
+ * A creative is promoted into the Media Library by
+ * `Publisher::publish_campaign()`, which runs on the transition *into* a
+ * published state and promotes everything on the campaign at that moment. A
+ * creative added afterwards misses it: the campaign has no publish transition
+ * left, `EFFECT_RESUME` only busts the fill cache, and the only per-creative
+ * approval that existed was for *replacements*. So the creative stayed
+ * unpublished for ever, had no attachment, and `Decision_Engine` refused it
+ * with `eligibility_missing_attachment` — correctly, and invisibly.
+ *
+ * This is that missing decision. It does the same work the campaign transition
+ * would have: promote, re-point the assignment, drop the fill cache.
+ */
+final class Creative_Approval {
+
+	/**
+	 * Constructor.
+	 *
+	 * @param Campaign_Repository   $campaigns  Campaign status and ownership.
+	 * @param Creative_Repository   $creatives  Creative persistence.
+	 * @param Creative_Promoter     $promoter   Private-to-public promotion.
+	 * @param Assignment_Projection $projection Assignment snapshot refresh.
+	 * @param Fill_Cache            $cache      Delivery cache.
+	 * @param Audit_Repository      $audit      Audit persistence.
+	 */
+	public function __construct(
+		private readonly Campaign_Repository $campaigns,
+		private readonly Creative_Repository $creatives,
+		private readonly Creative_Promoter $promoter,
+		private readonly Assignment_Projection $projection,
+		private readonly Fill_Cache $cache,
+		private readonly Audit_Repository $audit
+	) {
+	}
+
+	/**
+	 * Creatives on a campaign that a reviewer still has to decide about.
+	 *
+	 * Only on a campaign that has already been published. Everything on a
+	 * campaign still awaiting its first approval is decided by approving the
+	 * campaign, and offering a second control for the same thing would let a
+	 * reviewer publish one creative of a campaign nobody has approved.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return array<int, int>
+	 */
+	public function awaiting( int $campaign_id ): array {
+		if ( ! $this->is_running( $campaign_id ) ) {
+			return array();
+		}
+
+		return $this->creatives->unpublished_for_campaign( $campaign_id );
+	}
+
+	/**
+	 * Publishes one creative on a running campaign.
+	 *
+	 * Returns the campaign it belongs to, so a caller can refresh the screen
+	 * without asking a repository which campaign that was — the workflow has
+	 * already had to decide, and answering twice is how the two disagree.
+	 *
+	 * @param int $creative_id Creative post id.
+	 * @return int|WP_Error Owning campaign id.
+	 */
+	public function approve( int $creative_id ): int|WP_Error {
+		if ( ! current_user_can( Capabilities::REVIEW_CAMPAIGNS ) || ! current_user_can( Capabilities::PUBLISH_TO_ADSANITY ) ) {
+			return new WP_Error(
+				'aggr_forbidden',
+				__( 'You do not have permission to publish creative.', 'aggressive-ads' ),
+				array( 'status' => 403 )
+			);
+		}
+
+		$campaign_id = $this->creatives->campaign_id( $creative_id );
+
+		if ( $campaign_id <= 0 ) {
+			return new WP_Error(
+				'aggr_creative_not_found',
+				__( 'That creative no longer exists.', 'aggressive-ads' ),
+				array( 'status' => 404 )
+			);
+		}
+
+		/*
+		 * Re-derived rather than taken from the caller. The route knows a
+		 * creative id and nothing else; which campaign it belongs to, and
+		 * whether that campaign is running, are the server's to decide.
+		 */
+		if ( ! in_array( $creative_id, $this->awaiting( $campaign_id ), true ) ) {
+			return new WP_Error(
+				'aggr_creative_not_awaiting',
+				__( 'That creative is not waiting to be published.', 'aggressive-ads' ),
+				array( 'status' => 409 )
+			);
+		}
+
+		$promoted = $this->promoter->promote( $creative_id );
+
+		if ( is_wp_error( $promoted ) ) {
+			$this->record( $campaign_id, $creative_id, Audit_Event::OUTCOME_FAILED, 'Creative could not be published.' );
+
+			return $promoted;
+		}
+
+		/*
+		 * The assignment row carries its own copy of the attachment, because a
+		 * fill reads that row and never joins back to the creative. Promotion
+		 * alone would leave the snapshot at zero and the ad would stay
+		 * ineligible — which is the same stale-snapshot fault that stopped
+		 * delivery working at all until `Assignment_Projection` existed.
+		 */
+		$this->projection->project( $campaign_id );
+
+		$this->campaigns->set_pending_creative_count(
+			$campaign_id,
+			$this->creatives->unpublished_count_for_campaign( $campaign_id )
+		);
+
+		$this->cache->bust_campaign( $campaign_id );
+
+		$this->record( $campaign_id, $creative_id, Audit_Event::OUTCOME_OK, 'Creative published on a running campaign.' );
+
+		return $campaign_id;
+	}
+
+	/**
+	 * Recomputes the queue counter for one campaign.
+	 *
+	 * Called after an upload, so a creative added to a running campaign shows
+	 * up for a reviewer rather than waiting to be noticed.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 */
+	public function refresh_count( int $campaign_id ): void {
+		if ( $campaign_id <= 0 ) {
+			return;
+		}
+
+		$this->campaigns->set_pending_creative_count(
+			$campaign_id,
+			$this->is_running( $campaign_id ) ? $this->creatives->unpublished_count_for_campaign( $campaign_id ) : 0
+		);
+	}
+
+	/**
+	 * Whether the campaign has already been published at least once.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 */
+	private function is_running( int $campaign_id ): bool {
+		return in_array(
+			$this->campaigns->status( $campaign_id ),
+			array( Post_Statuses::SCHEDULED, Post_Statuses::LIVE, Post_Statuses::PAUSED ),
+			true
+		);
+	}
+
+	/**
+	 * Records one decision.
+	 *
+	 * @param int    $campaign_id Campaign post id.
+	 * @param int    $creative_id Creative post id.
+	 * @param string $outcome     Audit outcome.
+	 * @param string $message     Audit message.
+	 */
+	private function record( int $campaign_id, int $creative_id, string $outcome, string $message ): void {
+		$this->audit->insert(
+			new Audit_Event(
+				event: 'creative.published_on_running_campaign',
+				outcome: $outcome,
+				object_type: 'campaign',
+				object_id: $campaign_id,
+				org_id: $this->campaigns->org_id( $campaign_id ),
+				message: $message,
+				context: array( 'creative_id' => $creative_id ),
+				actor_user_id: get_current_user_id()
+			)
+		);
+	}
+}

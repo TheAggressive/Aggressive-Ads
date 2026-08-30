@@ -40,6 +40,15 @@ export type Creative = {
 	alt_text: string;
 	click_url: string;
 	preview: string;
+	/**
+	 * Still waiting to be published.
+	 *
+	 * Server-derived from "has no Media Library attachment", which is what
+	 * published actually means — promotion creates one, and `_aggr_review_state`
+	 * is maintained only on the replacement path, so it reads `pending` for
+	 * creatives that have been serving for weeks.
+	 */
+	awaiting?: boolean;
 };
 
 export type CreativeUpdate = Creative & {

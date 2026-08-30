@@ -53,9 +53,27 @@ final class Campaign_Query_Repository {
 		);
 
 		if ( $pending_updates_only ) {
-			$args['meta_query'] = array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Bounded staff queue against a denormalized count.
+			/*
+			 * Two kinds of creative work waiting on one tab, ORed rather than
+			 * summed into a single counter.
+			 *
+			 * A replacement swaps artwork on a running campaign; a new creative
+			 * added to one has never been published at all. Both need the same
+			 * decision from the same person, and both were invisible before —
+			 * the second had no counter, no tab and no route, so a creative
+			 * added after a campaign went live could never be approved and
+			 * therefore could never serve.
+			 */
+			$args['meta_query'] = array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Bounded staff queue against two denormalized counts.
+				'relation' => 'OR',
 				array(
 					'key'     => Campaign_Repository::META_PENDING_UPDATES,
+					'value'   => 0,
+					'compare' => '>',
+					'type'    => 'NUMERIC',
+				),
+				array(
+					'key'     => Campaign_Repository::META_PENDING_CREATIVES,
 					'value'   => 0,
 					'compare' => '>',
 					'type'    => 'NUMERIC',

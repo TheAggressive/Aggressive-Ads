@@ -145,6 +145,43 @@ What is not built:
    house creative is configured, the noscript house inside it. Only a
    render-time decision could fix that, and see above for why there is not one.
 
+## A creative added to a running campaign is now reviewable
+
+`Publisher::publish_campaign()` promotes artwork on the transition *into* a
+published state and promotes everything on the campaign at that moment. A
+creative added afterwards missed it: the campaign had no publish transition
+left, `EFFECT_RESUME` only busts the fill cache, and the only per-creative
+approval was for *replacements*. The creative stayed unpublished for ever, had
+no attachment, and the decision engine refused it with
+`eligibility_missing_attachment` — correctly, and with nothing in wp-admin able
+to change it.
+
+`Workflow\Creative_Approval` is that missing decision, surfaced on the existing
+**Advertiser updates** tab through its own counter and offered on the campaign
+detail.
+
+Two things worth keeping:
+
+- **`_aggr_review_state` is not the approved signal and has not been for a long
+  time.** Promotion does not touch it; only the replacement path maintains it.
+  So a creative that has been serving for weeks still reads `pending`, and
+  `has_attachment()` is the honest question. Anything new that needs to ask
+  "is this approved" should ask that.
+- **Two counters, not one.** Replacements and never-published creatives are both
+  work waiting on the same tab, but they are recomputed from different sources.
+  Summing them into one meta key would mean approving a replacement wiped the
+  other kind's contribution and the queue lost campaigns it had been showing.
+
+What is not built:
+
+1. **No reject.** A reviewer can publish a waiting creative or leave it. There is
+   no way to turn one down with a reason, the way a campaign or a replacement
+   can be rejected — so an advertiser who uploads the wrong artwork to a running
+   campaign gets silence rather than an explanation.
+2. **No notification.** Nothing tells staff a creative is waiting; it appears on
+   the tab and that is all. The submission and request mailers are the pattern
+   to follow.
+
 ## Nothing else is open
 
 Every other entry that was here has shipped or been closed. That is the intended

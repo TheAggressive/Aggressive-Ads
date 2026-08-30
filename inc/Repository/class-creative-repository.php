@@ -858,6 +858,59 @@ final class Creative_Repository {
 	}
 
 	/**
+	 * The campaign a creative belongs to, or 0.
+	 *
+	 * A single meta read. `details()` carries the same value, but it assembles
+	 * the whole record — a caller that only needs to know which campaign owns a
+	 * creative should not pay for its dimensions and checksum.
+	 *
+	 * @param int $creative_id Creative post id.
+	 * @return int
+	 */
+	public function campaign_id( int $creative_id ): int {
+		return (int) get_post_meta( $creative_id, self::META_CAMPAIGN_ID, true );
+	}
+
+	/**
+	 * Creatives on a campaign that have not been published yet.
+	 *
+	 * **Having an attachment is what "approved" actually means here.** A
+	 * creative is promoted into the Media Library by `Publisher::publish_campaign()`
+	 * when the campaign transitions into a published state, and that promotion
+	 * does not touch `_aggr_review_state` — only the replacement path maintains
+	 * it. So a creative can read `pending` and be serving, which makes the meta
+	 * useless as a signal and `has_attachment()` the honest one.
+	 *
+	 * A creative added to an *already* published campaign misses that
+	 * transition entirely and stays unpublished with nothing surfacing it,
+	 * which is what this exists to find.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return array<int, int> Creative ids awaiting publication.
+	 */
+	public function unpublished_for_campaign( int $campaign_id ): array {
+		$waiting = array();
+
+		foreach ( $this->ids_for_campaign( $campaign_id ) as $creative_id ) {
+			if ( $this->is_active( $creative_id ) && ! $this->has_attachment( $creative_id ) ) {
+				$waiting[] = (int) $creative_id;
+			}
+		}
+
+		return $waiting;
+	}
+
+	/**
+	 * How many of a campaign's creatives are awaiting publication.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return int
+	 */
+	public function unpublished_count_for_campaign( int $campaign_id ): int {
+		return count( $this->unpublished_for_campaign( $campaign_id ) );
+	}
+
+	/**
 	 * Every creative on a campaign, with details.
 	 *
 	 * @param int $campaign_id Campaign post id.
