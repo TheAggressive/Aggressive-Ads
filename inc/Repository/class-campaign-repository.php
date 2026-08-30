@@ -41,7 +41,17 @@ final class Campaign_Repository {
 	public const META_BUDGET_CENTS         = '_aggr_budget_cents';
 	public const META_CURRENCY             = '_aggr_currency';
 	public const META_PENDING_UPDATES      = '_aggr_pending_creative_updates';
-	public const META_PENDING_EDITS        = '_aggr_pending_edits';
+
+	/**
+	 * Creatives added to an already-published campaign, awaiting publication.
+	 *
+	 * A separate counter from `META_PENDING_UPDATES`, which counts *replacements*
+	 * and is recomputed from them. Overloading one meta key would mean approving
+	 * a replacement wiped the other kind's contribution, and the queue would
+	 * lose campaigns it had been showing a moment earlier.
+	 */
+	public const META_PENDING_CREATIVES = '_aggr_pending_new_creatives';
+	public const META_PENDING_EDITS     = '_aggr_pending_edits';
 
 	/**
 	 * Set while the campaign is still carrying the name the plugin invented.
@@ -772,6 +782,32 @@ final class Campaign_Repository {
 	}
 
 	/**
+	 * Synchronizes the count of creatives awaiting publication.
+	 *
+	 * Recomputed from the creative repository rather than incremented, for the
+	 * reason the replacement counter beside it is: a counter that is stepped up
+	 * and down drifts the first time a path forgets one of the two, and a queue
+	 * showing work that is not there is worse than no queue.
+	 *
+	 * @param int $campaign_id Campaign id.
+	 * @param int $count       Canonical count from the creative repository.
+	 * @return void
+	 */
+	public function set_pending_creative_count( int $campaign_id, int $count ): void {
+		update_post_meta( $campaign_id, self::META_PENDING_CREATIVES, max( 0, $count ) );
+	}
+
+	/**
+	 * Creatives awaiting publication on one campaign.
+	 *
+	 * @param int $campaign_id Campaign id.
+	 * @return int
+	 */
+	public function pending_creative_count( int $campaign_id ): int {
+		return max( 0, (int) get_post_meta( $campaign_id, self::META_PENDING_CREATIVES, true ) );
+	}
+
+	/**
 	 * Pending replacement count for one campaign.
 	 *
 	 * @param int $campaign_id Campaign id.
@@ -794,9 +830,17 @@ final class Campaign_Repository {
 				'posts_per_page'         => 1,
 				'fields'                 => 'ids',
 				'update_post_term_cache' => false,
+				// Both kinds of waiting creative work; see Campaign_Query_Repository.
 				'meta_query'             => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- Count for the dedicated staff update queue.
+					'relation' => 'OR',
 					array(
 						'key'     => self::META_PENDING_UPDATES,
+						'value'   => 0,
+						'compare' => '>',
+						'type'    => 'NUMERIC',
+					),
+					array(
+						'key'     => self::META_PENDING_CREATIVES,
 						'value'   => 0,
 						'compare' => '>',
 						'type'    => 'NUMERIC',

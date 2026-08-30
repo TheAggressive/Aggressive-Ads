@@ -114,7 +114,8 @@ final class Runtime_Service_Registrar {
 				$c->get( Org_Repository::class ),
 				$c->get( Audit_Repository::class ),
 				$c->get( Campaign_Change_Manager::class ),
-				$c->get( Line_Item_Repository::class )
+				$c->get( Line_Item_Repository::class ),
+				$c->get( \Aggressive\Ads\Workflow\Creative_Approval::class )
 			)
 		);
 
@@ -128,11 +129,24 @@ final class Runtime_Service_Registrar {
 		);
 
 		$container->register(
+			\Aggressive\Ads\Workflow\Creative_Approval::class,
+			static fn ( Service_Container $c ): \Aggressive\Ads\Workflow\Creative_Approval => new \Aggressive\Ads\Workflow\Creative_Approval(
+				$c->get( \Aggressive\Ads\Repository\Campaign_Repository::class ),
+				$c->get( \Aggressive\Ads\Repository\Creative_Repository::class ),
+				$c->get( \Aggressive\Ads\Workflow\Creative_Promoter::class ),
+				$c->get( \Aggressive\Ads\Workflow\Assignment_Projection::class ),
+				$c->get( \Aggressive\Ads\Workflow\Fill_Cache::class ),
+				$c->get( \Aggressive\Ads\Repository\Audit_Repository::class )
+			)
+		);
+
+		$container->register(
 			Review_Controller::class,
 			static fn ( Service_Container $c ): Review_Controller => new Review_Controller(
 				$c->get( Review_Data::class ),
 				$c->get( Review_Actions::class ),
-				$c->get( Campaign_Change_Actions::class )
+				$c->get( Campaign_Change_Actions::class ),
+				$c->get( \Aggressive\Ads\Workflow\Creative_Approval::class )
 			)
 		);
 

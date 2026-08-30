@@ -54,14 +54,16 @@ final class Review_Controller implements Service {
 	/**
 	 * Constructor.
 	 *
-	 * @param Review_Data             $data      Queue and campaign read model.
-	 * @param Review_Actions          $actions   Internal-notes writes.
-	 * @param Campaign_Change_Actions $changes Staff decisions on campaign edits.
+	 * @param Review_Data                                $data      Queue and campaign read model.
+	 * @param Review_Actions                             $actions   Internal-notes writes.
+	 * @param Campaign_Change_Actions                    $changes   Advertiser change decisions.
+	 * @param \Aggressive\Ads\Workflow\Creative_Approval $creatives Creative publication.
 	 */
 	public function __construct(
 		private readonly Review_Data $data,
 		private readonly Review_Actions $actions,
-		private readonly Campaign_Change_Actions $changes
+		private readonly Campaign_Change_Actions $changes,
+		private readonly \Aggressive\Ads\Workflow\Creative_Approval $creatives
 	) {
 	}
 
@@ -131,6 +133,22 @@ final class Review_Controller implements Service {
 			)
 		);
 
+		/*
+		 * Keyed on the creative rather than the campaign, because a reviewer is
+		 * deciding about one piece of artwork. Which campaign it belongs to,
+		 * and whether that campaign is running, are re-derived server-side —
+		 * the client knows an id and is trusted with nothing else.
+		 */
+		Creative_File_Controller::register_route(
+			'/review/creatives/(?P<id>\d+)/publish',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'publish_creative' ),
+				'permission_callback' => array( $this, 'permission' ),
+				'args'                => self::id_arg(),
+			)
+		);
+
 		Creative_File_Controller::register_route(
 			'/review/campaigns/(?P<id>\d+)/request',
 			array(
@@ -140,6 +158,29 @@ final class Review_Controller implements Service {
 				'args'                => self::id_arg(),
 			)
 		);
+	}
+
+	/**
+	 * Publishes one creative added to a campaign that is already running.
+	 *
+	 * Thin over `Creative_Approval`, which owns the capability check it repeats
+	 * for its own audit trail, the running-campaign rule, and the promotion.
+	 * There is no second rule set here and there must not be: the workflow is
+	 * what the integration tests exercise.
+	 *
+	 * @param WP_REST_Request $request The request.
+	 * @return WP_REST_Response|WP_Error
+	 *
+	 * @phpstan-param WP_REST_Request<array<string, mixed>> $request
+	 */
+	public function publish_creative( WP_REST_Request $request ): WP_REST_Response|WP_Error {
+		$campaign_id = $this->creatives->approve( (int) $request->get_param( 'id' ) );
+
+		if ( is_wp_error( $campaign_id ) ) {
+			return $campaign_id;
+		}
+
+		return new WP_REST_Response( array( 'campaign' => $this->data->campaign( $campaign_id ) ), 200 );
 	}
 
 	/**

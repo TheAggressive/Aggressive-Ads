@@ -78,15 +78,16 @@ final class Review_Data {
 	/**
 	 * Constructor.
 	 *
-	 * @param Campaign_Repository          $campaigns  Campaign persistence.
-	 * @param Creative_Repository          $creatives  Creative persistence.
-	 * @param Creative_Revision_Repository $revisions Revision chain persistence.
-	 * @param Assigned_Creatives           $assigned   What is assigned where.
-	 * @param Placement_Repository         $placements Placement persistence.
-	 * @param Org_Repository               $orgs       Organization lookups.
-	 * @param Audit_Repository             $audit      Audit history.
-	 * @param Campaign_Change_Manager      $changes    Running-campaign change proposals.
-	 * @param Line_Item_Repository         $line_items Campaign delivery strategies.
+	 * @param Campaign_Repository                        $campaigns  Campaign persistence.
+	 * @param Creative_Repository                        $creatives  Creative persistence.
+	 * @param Creative_Revision_Repository               $revisions Revision chain persistence.
+	 * @param Assigned_Creatives                         $assigned   What is assigned where.
+	 * @param Placement_Repository                       $placements Placement persistence.
+	 * @param Org_Repository                             $orgs       Organization lookups.
+	 * @param Audit_Repository                           $audit      Audit history.
+	 * @param Campaign_Change_Manager                    $changes    Running-campaign change proposals.
+	 * @param Line_Item_Repository                       $line_items Campaign delivery strategies.
+	 * @param \Aggressive\Ads\Workflow\Creative_Approval $approvals  Creatives awaiting publication.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -97,7 +98,8 @@ final class Review_Data {
 		private readonly Org_Repository $orgs,
 		private readonly Audit_Repository $audit,
 		private readonly Campaign_Change_Manager $changes,
-		private readonly Line_Item_Repository $line_items
+		private readonly Line_Item_Repository $line_items,
+		private readonly \Aggressive\Ads\Workflow\Creative_Approval $approvals
 	) {
 	}
 
@@ -553,9 +555,19 @@ final class Review_Data {
 	private function creative_rows( int $campaign_id ): array {
 		$rows = array();
 
-		// Structure from the assignment table, values from the revision. See
-		// `Assigned_Creatives` for why the denormalized columns are not read
-		// on a screen where the underlying creative is still editable.
+		/*
+		 * Which creatives still need a decision.
+		 *
+		 * Read once for the campaign rather than per row: the answer depends on
+		 * the campaign's status, which does not change while this loop runs.
+		 */
+		$awaiting = $this->approvals->awaiting( $campaign_id );
+
+		/*
+		 * Structure from the assignment table, values from the revision. See
+		 * `Assigned_Creatives` for why the denormalized columns are not read on
+		 * a screen where the underlying creative is still editable.
+		 */
 		foreach ( $this->assigned->revision_ids( $campaign_id ) as $revision_id ) {
 			$creative = $this->creatives->details( $revision_id );
 
@@ -572,6 +584,15 @@ final class Review_Data {
 					: '',
 				'click_url'  => $creative['click_url'],
 				'alt_text'   => $creative['alt_text'],
+
+				/*
+				 * Whether this creative is still waiting to be published.
+				 * Having an attachment is what "published" means — promotion
+				 * creates one, and `_aggr_review_state` is maintained only on
+				 * the replacement path, so it reads `pending` for creatives
+				 * that have been serving for weeks.
+				 */
+				'awaiting'   => in_array( (int) $creative['id'], $awaiting, true ),
 				'preview'    => $this->creative_preview( (int) $creative['id'] ),
 			);
 		}

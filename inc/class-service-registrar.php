@@ -748,7 +748,8 @@ final class Service_Registrar {
 				$c->get( Private_Storage::class ),
 				$c->get( Rate_Limiter::class ),
 				$c->get( Audit_Repository::class ),
-				$c->get( Edit_Window::class )
+				$c->get( Edit_Window::class ),
+				$c->get( \Aggressive\Ads\Workflow\Creative_Approval::class )
 			)
 		);
 

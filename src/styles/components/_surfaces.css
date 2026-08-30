@@ -586,6 +586,20 @@
 	gap: var(--aggr-space-md);
 }
 
+/*
+ * The decision offered on a creative that is waiting to be published.
+ *
+ * Button and explanation on one line where there is room, stacked where there
+ * is not, because the sentence is the half that says why the button exists.
+ */
+.aggr-creative__decision {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--aggr-space-sm);
+	margin: var(--aggr-space-sm) 0 0;
+}
+
 .aggr-creative__preview {
 	display: flex;
 	flex: 0 0 auto;

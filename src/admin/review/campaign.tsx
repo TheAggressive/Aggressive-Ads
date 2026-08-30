@@ -23,9 +23,13 @@ import { requestOf } from './types';
 function CreativeCard( {
 	creative,
 	children,
+	onPublish,
+	busy,
 }: {
 	creative: Creative | CreativeUpdate;
 	children?: ReactElement | null;
+	onPublish?: ( id: number ) => void;
+	busy?: boolean;
 } ): ReactElement {
 	const update = 'current_url' in creative ? creative : null;
 
@@ -39,6 +43,14 @@ function CreativeCard( {
 	const textOnly = update?.text_only === true;
 	const urlChanged = update ? update.current_url !== update.click_url : false;
 	const altChanged = update ? update.current_alt !== update.alt_text : false;
+
+	/*
+	 * A creative added to a campaign that is already running never met the
+	 * transition that publishes artwork, so it needs a decision here. Until
+	 * this control existed there was nowhere to make it: no queue counter, no
+	 * route, and a creative that could never serve.
+	 */
+	const awaiting = onPublish && true === ( creative as Creative ).awaiting;
 
 	return (
 		<article className="aggr-creative">
@@ -124,6 +136,22 @@ function CreativeCard( {
 						</>
 					) }
 				</dl>
+				{ awaiting ? (
+					<p className="aggr-creative__decision">
+						<button
+							type="button"
+							className="aggr-button"
+							disabled={ busy }
+							onClick={ () => onPublish?.( creative.id ) }
+						>
+							{ t( 'publishCreative' ) }
+						</button>
+						<span className="aggr-hint">
+							{ t( 'publishCreativeHint' ) }
+						</span>
+					</p>
+				) : null }
+
 				{ children ?? null }
 			</div>
 		</article>
@@ -311,6 +339,7 @@ export function CampaignView( {
 	onChanges,
 	onDeclineRequest,
 	onReplacement,
+	onPublishCreative,
 	onDeliveryPolicy,
 }: {
 	campaign: Campaign;
@@ -322,6 +351,7 @@ export function CampaignView( {
 	onChanges: ( decision: string, notes: string ) => void;
 	onDeclineRequest: ( notes: string ) => void;
 	onReplacement: ( id: number, decision: string, notes: string ) => void;
+	onPublishCreative: ( id: number ) => void;
 	onDeliveryPolicy: (
 		id: number,
 		revision: number,
@@ -530,6 +560,8 @@ export function CampaignView( {
 								<CreativeCard
 									key={ creative.id }
 									creative={ creative }
+									busy={ busy }
+									onPublish={ onPublishCreative }
 								/>
 							) ) }
 						</div>
