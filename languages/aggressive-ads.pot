@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-30T02:58:02+00:00\n"
+"POT-Creation-Date: 2026-08-30T03:33:19+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -1703,10 +1703,59 @@ msgid "%d creatives were skipped by the delivery model upgrade, which reports it
 msgstr ""
 
 #: inc/Install/class-assignment-health.php:126
+#: inc/Install/class-conversion-health.php:164
 #: inc/Install/class-decision-health.php:98
 #: inc/Install/class-rewrite-health.php:281
 #: inc/Install/class-viewability-health.php:125
 msgid "Advertising"
+msgstr ""
+
+#: inc/Install/class-conversion-health.php:67
+msgid "Advertising conversions are being recorded"
+msgstr ""
+
+#: inc/Install/class-conversion-health.php:89
+msgid "No conversions are defined"
+msgstr ""
+
+#: inc/Install/class-conversion-health.php:90
+msgid "Nothing can be recorded until a conversion exists. Add one under Advertising → Conversions, then put its reporting key on the page an advertiser sends people to."
+msgstr ""
+
+#: inc/Install/class-conversion-health.php:100
+msgid "No advertisements were clicked yesterday"
+msgstr ""
+
+#: inc/Install/class-conversion-health.php:101
+msgid "There is nothing to attribute yet. A conversion is only recorded against a click or a view, so this is normal on a new installation or a quiet site."
+msgstr ""
+
+#: inc/Install/class-conversion-health.php:108
+msgid "Yesterday was not measured for conversions"
+msgstr ""
+
+#: inc/Install/class-conversion-health.php:109
+msgid "These clicks predate conversion tracking. Days from here on will carry a count."
+msgstr ""
+
+#: inc/Install/class-conversion-health.php:116
+msgid "Advertisements were clicked yesterday and no conversions were recorded"
+msgstr ""
+
+#: inc/Install/class-conversion-health.php:117
+msgid "This can simply mean nobody converted. It can also mean the reporting key is not on the advertiser’s page, or that the click token is being stripped from the destination URL before it arrives. Check that a click lands on a URL carrying an aggr_ct parameter."
+msgstr ""
+
+#. translators: %s: number of conversions recorded.
+#: inc/Install/class-conversion-health.php:125
+#, php-format
+msgid "%s conversion was recorded yesterday"
+msgid_plural "%s conversions were recorded yesterday"
+msgstr[0] ""
+msgstr[1] ""
+
+#: inc/Install/class-conversion-health.php:128
+msgid "Conversions are being reported and attributed."
 msgstr ""
 
 #: inc/Install/class-decision-health.php:49
