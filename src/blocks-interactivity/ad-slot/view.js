@@ -51,39 +51,60 @@ export const rotationInterval = ( seconds ) => {
 	return Math.max( MIN_ROTATE_SECONDS, Math.floor( requested ) );
 };
 
-const { state } = store( 'aggr/ad-slot', {
-	state: {
-		/** Slots that have already had their first fill, keyed by element. */
-		filled: new WeakSet(),
-	},
+/**
+ * Slots whose first fill has already been dispatched.
+ *
+ * Module scope rather than store state, matching `autosave.ts` and the rest of
+ * this plugin's stores. Interactivity state is a reactive proxy meant for values
+ * directives read; a `WeakSet` used purely to make an initializer idempotent is
+ * neither reactive nor readable, and putting it there would only make the
+ * store's shape misleading.
+ */
+const started = new WeakSet();
+
+/**
+ * Fills a slot and, if the block asked for it, keeps filling it.
+ *
+ * @param {HTMLElement} root    Slot wrapper.
+ * @param {Object}      context Block context.
+ */
+const run = async ( root, context ) => {
+	const rendered = await fillSlot( root );
+
+	/*
+	 * Nothing to rotate to. A slot that answered no-fill once will answer
+	 * no-fill again in thirty seconds, and asking anyway is one request per
+	 * slot per interval for as long as the tab stays open.
+	 */
+	if ( ! rendered || ! context.rotate ) {
+		return;
+	}
+
+	startRotation( root, context );
+};
+
+store( 'aggr/ad-slot', {
 	callbacks: {
 		/**
-		 * Fills the slot once, then rotates it if the block asked for that.
+		 * Fills the slot when the element enters the document.
 		 *
-		 * Bound with `data-wp-init`, so it runs once per slot when the element
-		 * enters the document — including a slot inside a block that WordPress
-		 * hydrates late, which a `DOMContentLoaded` listener would have missed.
+		 * A plain synchronous callback dispatching to an async helper, which is
+		 * how the rest of this plugin's stores handle async work. The
+		 * Interactivity runtime understands a sync callback and a `function*`
+		 * generator; an `async function*` is neither, and a directive bound to
+		 * one silently never completes — which is exactly how this shipped the
+		 * first time and why the browser tests caught it.
 		 */
-		async *fill() {
+		fill() {
 			const { ref } = getElement();
-			const context = getContext();
 
-			if ( ! ref || state.filled.has( ref ) ) {
+			if ( ! ref || started.has( ref ) ) {
 				return;
 			}
 
-			state.filled.add( ref );
+			started.add( ref );
 
-			const rendered = yield fillSlot( ref );
-
-			// Nothing to rotate to. A slot that answered no-fill once will
-			// answer no-fill again in thirty seconds, and asking anyway is a
-			// request per slot per interval for as long as the tab is open.
-			if ( ! rendered || ! context.rotate ) {
-				return;
-			}
-
-			startRotation( ref, context );
+			void run( ref, getContext() );
 		},
 	},
 } );
