@@ -37,6 +37,7 @@ restate it here.
 | How does a campaign change status? | `campaign-workflow.md` |
 | Who may do what? | `roles-and-capabilities.md` |
 | What are we defending against? | `threat-model.md` |
+| How is this tested, and with which PHPUnit? | `testing-strategy.md` |
 | What is half-finished right now, and why? | `open-work.md` |
 
 Also in `docs/`: `suite-roadmap.md`, `platform-implementation-progress.md`,
@@ -110,43 +111,22 @@ Three boundaries fail the build when crossed:
 
 ## Testing
 
-**Two PHPUnits, and the config file picks which.** The unit suite runs PHPUnit
-13 from `vendor/`; the suites that load real WordPress run PHPUnit 9.6 from
-`tests/wp/vendor/` (via `bin/ci/install-wp-runner.sh`), because
-`WP_UnitTestCase_Base` calls `PHPUnit\Util\Test::parseTestMethodAnnotations()`
-and PHPUnit removed that class in 10 — measured, not assumed.
-`bin/ci/run-wp-tests.sh` selects the binary. See `tests/wp/README.md`.
-
-They exist because org-scoped `map_meta_cap`, `dbDelta` idempotence, real REST
-authorization and real uploads are not expressible under Brain\Monkey. Separate
-config files because **PHPUnit allows exactly one bootstrap per file**.
-
-Unit tests extend `PHPUnit\Framework\TestCase` with `#[DataProvider]`
-attributes — PHPUnit 13 reads attributes, not doc comments, so the polyfills and
-`@dataProvider` docblocks are gone from `tests/php/Unit`; the WordPress suites
-still use them through `WP_UnitTestCase`.
-
-`failOnWarning`, `failOnRisky`, `failOnSkipped` and `failOnIncomplete` are all
-true. A skipped security test is a security test that is not running.
-
-### Two rules that came from real defects
+Suites, the two-PHPUnit split and the failure policy are in
+`docs/testing-strategy.md`. Two rules that live here because that doc does not
+cover them, and both came from real defects:
 
 - **Test the dangerous things first.** Anything that deletes, grants, denies or
   guards gets a test before it is called done; hand verification does not count.
   **A guard that stops matching reports success over code it is no longer
   reading** — most guards in `bin/ci/` had never worked when first audited, so
   check what one reads before trusting it, and make it print a count.
-  Assert a count rather than absence, and for destructive code assert the
-  negatives: what it must *not* touch is the more valuable half.
-- **Prove the test works.** Write it, watch it pass, break the implementation
-  deliberately, watch it fail, read the message, restore. Five tests here have
-  been caught passing for the wrong reason — an assertion satisfied for an
-  unrelated reason, a locally built `WP_REST_Server` that never receives routes,
-  core answering before our `map_meta_cap` filter, a `$_POST` fixture that
-  `check_admin_referer()` never reads because it reads `$_REQUEST`.
-  **Assert your fixture is real before asserting on it.**
+- **Assert a count, not just absence**, and for destructive code **assert the
+  negatives**: what it must *not* touch is usually the more valuable half.
 
-Both rules' incident-by-incident record is in `CLAUDE.archive.md`.
+`docs/testing-strategy.md` carries the "prove the test works" loop and the
+tests caught passing for the wrong reason; `CLAUDE.archive.md` has the
+incident-by-incident record of the guards.
+
 ## Gotchas that cost real time
 
 - **`wp_posts.post_type` and `post_status` are `varchar(20)`.** A longer slug
