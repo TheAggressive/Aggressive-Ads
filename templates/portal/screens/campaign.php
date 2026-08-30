@@ -48,10 +48,10 @@ $aggr_creative_error     = Creative_Actions::request_error_code();
 $aggr_error_placement    = Creative_Actions::request_error_placement();
 $aggr_creative_error_for = Creative_Actions::error_target( $aggr_creative_error, $aggr_error_placement );
 // Decided by Portal\View_Data, which is where it can be tested.
-$aggr_min_start_date     = (string) ( $aggr_campaign['min_start_date'] ?? '' );
-$aggr_creative_ready     = array() !== $aggr_slots;
-$aggr_overlays           = array();
-$aggr_line_items         = is_array( $aggr_campaign['line_items'] ?? null ) ? $aggr_campaign['line_items'] : array();
+$aggr_min_start_date = (string) ( $aggr_campaign['min_start_date'] ?? '' );
+$aggr_creative_ready = array() !== $aggr_slots;
+$aggr_overlays       = array();
+$aggr_line_items     = is_array( $aggr_campaign['line_items'] ?? null ) ? $aggr_campaign['line_items'] : array();
 
 foreach ( $aggr_slots as $aggr_slot ) {
 	if ( ! $aggr_slot['active'] || 1 !== count( $aggr_slot['creatives'] ) ) {
