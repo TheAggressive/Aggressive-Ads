@@ -22,66 +22,20 @@ import {
 	TextControl,
 	ToggleControl,
 } from '@wordpress/components';
+import { DataViews, filterSortAndPaginate } from '@wordpress/dataviews';
 import { createRoot } from '@wordpress/element';
-import { useEffect, useState } from '@wordpress/element';
-import { __ } from '@wordpress/i18n';
+import { useEffect, useMemo, useState } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 
-type Definition = {
-	id: number;
-	org_id: number;
-	public_key: string;
-	name: string;
-	window_seconds: number;
-	default_value_micros: number;
-	currency: string;
-	allow_s2s: boolean;
-	status: string;
-	accepts_reports: boolean;
-	revision: number;
-};
+import { Credentials } from './credentials';
 
-/**
- * The screen's strings, named rather than a `Record< string, string >`.
- *
- * With `noUncheckedIndexedAccess` a record lookup is `string | undefined`, and
- * the honest fixes are either a `?? ''` at every use — which renders an
- * unlabelled control that looks merely unfinished — or a `t()` helper, which
- * this codebase already has to guard with `ReviewStringsTest` for exactly that
- * reason. Naming the keys makes the compiler the guard instead, and a string
- * PHP forgets to send is a build failure rather than a blank label.
- */
-type Strings = {
-	newDefinition: string;
-	existing: string;
-	none: string;
-	name: string;
-	window: string;
-	windowHelp: string;
-	value: string;
-	valueHelp: string;
-	currency: string;
-	currencyHelp: string;
-	orgScoped: string;
-	orgScopedHelp: string;
-	orgId: string;
-	snippetKey: string;
-	status: string;
-	actions: string;
-	active: string;
-	archived: string;
-	archive: string;
-	create: string;
-	days: string;
-	loadFailed: string;
-	saveFailed: string;
-};
+import type {
+	Action,
+	Field as DataField,
+	View as DataView,
+} from '@wordpress/dataviews';
 
-type Payload = {
-	restPath: string;
-	windows: Array< { label: string; value: string } >;
-	i18n: Strings;
-};
+import type { Definition, Payload } from './types';
 
 /** A blank definition, in the shape the REST route accepts. */
 const emptyDraft = () => ( {
@@ -112,14 +66,35 @@ const amountToMicros = ( amount: string ): number => {
 		: 0;
 };
 
+/**
+ * Newest first: a definition is created and then immediately looked for.
+ *
+ * `accepts_reports` is the status column rather than `status`, because that is
+ * the field the rest of the plugin decides on — an archived definition and one
+ * whose window has closed are both "not accepting", and a table sorted on the
+ * stored slug would separate them.
+ */
+const DEFAULT_VIEW: DataView = {
+	type: 'table',
+	search: '',
+	page: 1,
+	perPage: 25,
+	sort: { field: 'name', direction: 'asc' },
+	filters: [],
+	titleField: 'name',
+	fields: [ 'public_key', 'window_seconds', 'allow_s2s', 'state' ],
+	layout: {},
+};
+
 function Screen( { payload }: { payload: Payload } ) {
-	const { restPath, windows, i18n } = payload;
+	const { restPath, credentialsPath, windows, advertisers, i18n } = payload;
 
 	const [ definitions, setDefinitions ] = useState< Definition[] >( [] );
 	const [ loading, setLoading ] = useState( true );
 	const [ error, setError ] = useState( '' );
 	const [ draft, setDraft ] = useState( emptyDraft );
 	const [ saving, setSaving ] = useState( false );
+	const [ view, setView ] = useState< DataView >( DEFAULT_VIEW );
 
 	useEffect( () => {
 		apiFetch< { definitions: Definition[] } >( { path: restPath } )
@@ -180,6 +155,92 @@ function Screen( { payload }: { payload: Payload } ) {
 			setError( message || i18n.saveFailed );
 		}
 	};
+
+	const fields: DataField< Definition >[] = useMemo(
+		() => [
+			{
+				id: 'name',
+				label: i18n.name,
+				type: 'text',
+				enableGlobalSearch: true,
+			},
+			{
+				id: 'public_key',
+				label: i18n.snippetKey,
+				type: 'text',
+				enableSorting: false,
+				enableGlobalSearch: true,
+				render: ( { item }: { item: Definition } ) => (
+					<code>{ item.public_key }</code>
+				),
+			},
+			{
+				// Sorted on the stored seconds and rendered in days, so seven
+				// days does not sort after thirty the way "7" sorts after "30".
+				id: 'window_seconds',
+				label: i18n.window,
+				type: 'integer',
+				getValue: ( { item }: { item: Definition } ) =>
+					item.window_seconds,
+				render: ( { item }: { item: Definition } ) =>
+					`${ Math.round( item.window_seconds / 86400 ) } ${
+						i18n.days
+					}`,
+			},
+			{
+				id: 'allow_s2s',
+				label: i18n.serverReports,
+				elements: [
+					{ value: 'yes', label: i18n.yes },
+					{ value: 'no', label: i18n.no },
+				],
+				filterBy: { operators: [ 'is' ] },
+				getValue: ( { item }: { item: Definition } ) =>
+					item.allow_s2s ? 'yes' : 'no',
+			},
+			{
+				id: 'state',
+				label: i18n.status,
+				elements: [
+					{ value: 'active', label: i18n.active },
+					{ value: 'archived', label: i18n.archived },
+				],
+				filterBy: { operators: [ 'is' ] },
+				getValue: ( { item }: { item: Definition } ) =>
+					item.accepts_reports ? 'active' : 'archived',
+			},
+		],
+		[ i18n ]
+	);
+
+	const actions: Action< Definition >[] = useMemo(
+		() => [
+			{
+				id: 'archive',
+				label: i18n.archive,
+				isDestructive: true,
+				supportsBulk: false,
+				isEligible: ( item: Definition ) => item.accepts_reports,
+				callback: ( items: Definition[] ) => {
+					const item = items[ 0 ];
+
+					if ( item ) {
+						void archive( item );
+					}
+				},
+			},
+		],
+		// `archive` is recreated every render and closes over `definitions`
+		// only to replace the row it changed; listing it here would rebuild the
+		// action menu on every keystroke in the form above.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[ i18n, restPath ]
+	);
+
+	const { data: rows, paginationInfo } = useMemo(
+		() => filterSortAndPaginate( definitions, view, fields ),
+		[ definitions, view, fields ]
+	);
 
 	if ( loading ) {
 		return <Spinner />;
@@ -276,6 +337,16 @@ function Screen( { payload }: { payload: Payload } ) {
 						/>
 					) : null }
 
+					<ToggleControl
+						__nextHasNoMarginBottom
+						label={ i18n.allowS2s }
+						help={ i18n.allowS2sHelp }
+						checked={ draft.allow_s2s }
+						onChange={ ( allowS2s ) =>
+							setDraft( { ...draft, allow_s2s: allowS2s } )
+						}
+					/>
+
 					<Button
 						variant="primary"
 						onClick={ create }
@@ -292,61 +363,26 @@ function Screen( { payload }: { payload: Payload } ) {
 					<h2>{ i18n.existing }</h2>
 				</CardHeader>
 				<CardBody>
-					{ 0 === definitions.length ? (
-						<p>{ i18n.none }</p>
-					) : (
-						<table className="widefat striped">
-							<thead>
-								<tr>
-									<th scope="col">{ i18n.name }</th>
-									<th scope="col">{ i18n.snippetKey }</th>
-									<th scope="col">{ i18n.window }</th>
-									<th scope="col">{ i18n.status }</th>
-									<th scope="col">
-										<span className="screen-reader-text">
-											{ i18n.actions }
-										</span>
-									</th>
-								</tr>
-							</thead>
-							<tbody>
-								{ definitions.map( ( row ) => (
-									<tr key={ row.id }>
-										<td>{ row.name }</td>
-										<td>
-											<code>{ row.public_key }</code>
-										</td>
-										<td>
-											{ Math.round(
-												row.window_seconds / 86400
-											) }{ ' ' }
-											{ i18n.days }
-										</td>
-										<td>
-											{ row.accepts_reports
-												? i18n.active
-												: i18n.archived }
-										</td>
-										<td>
-											{ row.accepts_reports ? (
-												<Button
-													variant="link"
-													isDestructive
-													onClick={ () =>
-														archive( row )
-													}
-												>
-													{ i18n.archive }
-												</Button>
-											) : null }
-										</td>
-									</tr>
-								) ) }
-							</tbody>
-						</table>
-					) }
+					<DataViews< Definition >
+						data={ rows }
+						fields={ fields }
+						view={ view }
+						onChangeView={ setView }
+						actions={ actions }
+						paginationInfo={ paginationInfo }
+						getItemId={ ( item ) => String( item.id ) }
+						defaultLayouts={ { table: {} } }
+						searchLabel={ i18n.searchDefinitions }
+						empty={ <p>{ i18n.none }</p> }
+					/>
 				</CardBody>
 			</Card>
+
+			<Credentials
+				path={ credentialsPath }
+				advertisers={ advertisers }
+				i18n={ i18n }
+			/>
 		</>
 	);
 }

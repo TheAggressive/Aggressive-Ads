@@ -198,7 +198,9 @@ final class Runtime_Service_Registrar {
 
 		$container->register(
 			Conversions_Screen::class,
-			static fn (): Conversions_Screen => new Conversions_Screen()
+			static fn ( Service_Container $c ): Conversions_Screen => new Conversions_Screen(
+				$c->get( Org_Repository::class )
+			)
 		);
 
 		$container->register(

@@ -12,6 +12,7 @@ namespace Aggressive\Ads\REST;
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Domain\Conversion_Credential;
 use Aggressive\Ads\Repository\Conversion_Credential_Repository;
+use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Workflow\Conversion_Credential_Manager;
 use WP_Error;
@@ -33,10 +34,12 @@ final class Conversion_Credentials_Controller implements Service {
 	 *
 	 * @param Conversion_Credential_Repository $credentials Credential persistence.
 	 * @param Conversion_Credential_Manager    $manager     Validation, capability and audit.
+	 * @param Org_Repository                   $orgs        Scope names, for the staff list.
 	 */
 	public function __construct(
 		private readonly Conversion_Credential_Repository $credentials,
-		private readonly Conversion_Credential_Manager $manager
+		private readonly Conversion_Credential_Manager $manager,
+		private readonly Org_Repository $orgs
 	) {
 	}
 
@@ -121,12 +124,52 @@ final class Conversion_Credentials_Controller implements Service {
 	}
 
 	/**
-	 * Every credential, without any secret.
+	 * Every credential, without any secret, ready to be read by a person.
+	 *
+	 * Three things are added to the stored row, and all three are added here
+	 * rather than in the repository or the browser.
+	 *
+	 * **The times are formatted on the server.** `wp_date()` is the only place
+	 * that knows the site's timezone and date format; a browser rendering its own
+	 * locale would disagree with the audit log sitting next to it, which is the
+	 * one comparison this list exists to support during an incident.
+	 *
+	 * **The scope carries its name.** A credential is revoked by a person who has
+	 * to recognise which advertiser it reports for, and an id is not a name. An
+	 * organization that has since been deleted answers with an empty string, and
+	 * the screen falls back to the id rather than showing a blank cell.
+	 *
+	 * **`live` is computed by the domain**, not by the reader. Whether a
+	 * revocation timestamp means "revoked" is `Conversion_Credential`'s answer,
+	 * and a screen deciding it independently is a second rule to keep in
+	 * agreement with the one that actually refuses the report.
 	 *
 	 * @return WP_REST_Response
 	 */
 	public function index(): WP_REST_Response {
-		return new WP_REST_Response( array( 'credentials' => $this->credentials->all() ), 200 );
+		$format = trim( (string) get_option( 'date_format' ) . ' ' . (string) get_option( 'time_format' ) );
+
+		$rows = array_map(
+			function ( array $row ) use ( $format ): array {
+				$live = Conversion_Credential::is_live( $row['revoked_at_ts'] );
+
+				return array_merge(
+					$row,
+					array(
+						'org_name'     => $this->orgs->name( $row['org_id'] ),
+						'live'         => $live,
+						'created_at'   => (string) wp_date( $format, $row['created_at_ts'] ),
+						'last_used_at' => $row['last_used_at_ts'] > 0
+							? (string) wp_date( $format, $row['last_used_at_ts'] )
+							: '',
+						'revoked_at'   => $live ? '' : (string) wp_date( $format, $row['revoked_at_ts'] ),
+					)
+				);
+			},
+			$this->credentials->all()
+		);
+
+		return new WP_REST_Response( array( 'credentials' => $rows ), 200 );
 	}
 
 	/**
