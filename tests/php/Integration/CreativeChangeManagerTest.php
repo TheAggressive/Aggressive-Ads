@@ -16,6 +16,7 @@ use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Repository\Creative_Revision_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Security\Ownership;
@@ -94,6 +95,13 @@ final class CreativeChangeManagerTest extends WP_UnitTestCase {
 	private Creative_Repository $creatives;
 
 	/**
+	 * Replacement lifecycle persistence.
+	 *
+	 * @var Creative_Revision_Repository
+	 */
+	private Creative_Revision_Repository $revisions;
+
+	/**
 	 * Campaign persistence.
 	 *
 	 * @var Campaign_Repository
@@ -168,6 +176,7 @@ final class CreativeChangeManagerTest extends WP_UnitTestCase {
 		$container       = Plugin::instance()->container();
 		$this->changes   = $container->get( Creative_Change_Manager::class );
 		$this->creatives = $container->get( Creative_Repository::class );
+		$this->revisions = $container->get( Creative_Revision_Repository::class );
 		$this->campaigns = $container->get( Campaign_Repository::class );
 		$this->storage   = $container->get( Private_Storage::class );
 
@@ -252,6 +261,77 @@ final class CreativeChangeManagerTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * **A swap that does not take is rolled back, and the live ad survives.**
+	 *
+	 * `activate_replacement()` verifies its own metadata writes and undoes them
+	 * when they did not land, because the alternative is a campaign whose current
+	 * creative has been archived and whose replacement is not serving — an
+	 * advertiser paying for a blank slot.
+	 *
+	 * That rollback had no test. It was found by moving the method to
+	 * `Creative_Revision_Repository` and sabotaging it: collapsing the whole
+	 * verification to `true` changed no outcome, because every existing test
+	 * takes the path where the writes succeed.
+	 *
+	 * The failure is injected through `update_post_metadata`, which
+	 * short-circuits a write while reporting success — the shape of the real
+	 * failure this guards against, where the row does not change but nothing
+	 * throws.
+	 *
+	 * @return void
+	 */
+	public function test_a_replacement_that_does_not_take_leaves_the_current_ad_serving(): void {
+		wp_set_current_user( $this->owner );
+
+		$request = $this->changes->request(
+			$this->creative_id,
+			$this->image_file(),
+			'https://example.com/replacement',
+			''
+		);
+
+		$this->assertIsArray( $request );
+		$replacement_id = (int) $request['id'];
+		$this->remember_storage( $replacement_id );
+
+		/*
+		 * `META_REPLACED_BY` on the *current* creative, not the provider id on the
+		 * replacement, and the difference is why the first version of this test
+		 * proved nothing. This fixture has no provider ad, so `activate_replacement()`
+		 * verifies `0 === 0` and swallowing that write changes no outcome. Archiving
+		 * the current creative is what `is_active()` reads, so this is a write the
+		 * verification genuinely depends on.
+		 */
+		$current_id = $this->creative_id;
+
+		$swallow = static function ( $check, int $object_id, string $meta_key ) use ( $current_id ) {
+			unset( $check );
+
+			return ( $current_id === $object_id && Creative_Repository::META_REPLACED_BY === $meta_key )
+				? true
+				: null;
+		};
+
+		add_filter( 'update_post_metadata', $swallow, 10, 3 );
+
+		wp_set_current_user( $this->reviewer );
+		$approved = $this->changes->approve( $replacement_id );
+
+		remove_filter( 'update_post_metadata', $swallow, 10 );
+
+		$this->assertNotTrue( $approved, 'A swap whose writes did not land reported success.' );
+		$this->assertSame(
+			array( $this->creative_id ),
+			array_column( $this->creatives->for_campaign( $this->campaign_id ), 'id' ),
+			'The current ad was archived even though its replacement never took.'
+		);
+		$this->assertTrue(
+			$this->creatives->is_active( $this->creative_id ),
+			'The live creative was left inactive with nothing serving in its place.'
+		);
+	}
+
+	/**
 	 * Rejection requires useful feedback and never alters the current ad.
 	 *
 	 * @return void
@@ -269,7 +349,7 @@ final class CreativeChangeManagerTest extends WP_UnitTestCase {
 		$this->assertSame( 'aggr_replacement_notes_required', $missing->get_error_code() );
 		$this->assertTrue( $this->changes->reject( $replacement_id, 'Use the approved exhibition branding.' ) );
 
-		$this->assertSame( Creative_Repository::CHANGE_REJECTED, $this->creatives->change_state( $replacement_id ) );
+		$this->assertSame( Creative_Repository::CHANGE_REJECTED, $this->revisions->change_state( $replacement_id ) );
 		$this->assertSame( 'Use the approved exhibition branding.', $this->creatives->change_notes( $replacement_id ) );
 		$current = $this->creatives->details( $this->creative_id );
 		$this->assertIsArray( $current );

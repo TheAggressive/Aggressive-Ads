@@ -347,7 +347,9 @@ final class Service_Registrar {
 
 		$container->register(
 			Creative_Revision_Repository::class,
-			static fn (): Creative_Revision_Repository => new Creative_Revision_Repository()
+			static fn ( Service_Container $c ): Creative_Revision_Repository => new Creative_Revision_Repository(
+				$c->get( Creative_Repository::class )
+			)
 		);
 
 		$container->register(
@@ -800,7 +802,8 @@ final class Service_Registrar {
 				$c->get( Edit_Window::class ),
 				$c->get( Acting_As::class ),
 				$c->get( Line_Item_Repository::class ),
-				$c->get( \Aggressive\Ads\Workflow\Creative_Approval::class )
+				$c->get( \Aggressive\Ads\Workflow\Creative_Approval::class ),
+				$c->get( Creative_Revision_Repository::class )
 			)
 		);
 
