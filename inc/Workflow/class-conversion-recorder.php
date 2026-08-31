@@ -85,6 +85,71 @@ final class Conversion_Recorder {
 		int $occurred_at_ts,
 		string $source
 	): array {
+		return $this->write( $parsed, $token_hash, $public_key, $idempotency_key, $occurred_at_ts, $source, 0, null );
+	}
+
+	/**
+	 * Records one conversion reported by an authenticated server.
+	 *
+	 * **A separate entry point rather than optional parameters on `record()`,
+	 * and that is the security property.** An anonymous browser may never state
+	 * what its own outcome was worth; making that structural — the browser path
+	 * has no parameter through which a value could arrive — is stronger than a
+	 * conditional somebody can later widen "just for this one integration".
+	 *
+	 * @param array{blog_id: int, placement_id: int, campaign_id: int, creative_id: int, exp: int, nonce: string} $parsed            Verified token payload.
+	 * @param string                                                                                              $token_hash        Replay digest of the same token.
+	 * @param string                                                                                              $public_key        Definition the reporter named.
+	 * @param string                                                                                              $idempotency_key   Reporter-supplied outcome key.
+	 * @param int                                                                                                 $occurred_at_ts    When the outcome happened.
+	 * @param int                                                                                                 $credential_org_id Organization the credential is scoped to.
+	 * @param array{value_micros: int, currency: string}|null                                                     $reported          Stated value, or null to use the definition's.
+	 * @return array{outcome: string, reason: string}
+	 */
+	public function record_from_server(
+		array $parsed,
+		string $token_hash,
+		string $public_key,
+		string $idempotency_key,
+		int $occurred_at_ts,
+		int $credential_org_id,
+		?array $reported
+	): array {
+		return $this->write(
+			$parsed,
+			$token_hash,
+			$public_key,
+			$idempotency_key,
+			$occurred_at_ts,
+			Conversion_Rules::SOURCE_SERVER,
+			$credential_org_id,
+			$reported
+		);
+	}
+
+	/**
+	 * The shared attribution and write path.
+	 *
+	 * @param array{blog_id: int, placement_id: int, campaign_id: int, creative_id: int, exp: int, nonce: string} $parsed            Verified token payload.
+	 * @param string                                                                                              $token_hash        Replay digest of the same token.
+	 * @param string                                                                                              $public_key        Definition the reporter named.
+	 * @param string                                                                                              $idempotency_key   Reporter-supplied outcome key.
+	 * @param int                                                                                                 $occurred_at_ts    When the outcome happened.
+	 * @param string                                                                                              $source            Conversion_Rules::SOURCE_*.
+	 * @param int                                                                                                 $credential_org_id Credential scope, or 0 for a browser report.
+	 * @param array{value_micros: int, currency: string}|null                                                     $reported          Stated value, or null.
+	 * @return array{outcome: string, reason: string}
+	 */
+	private function write(
+		array $parsed,
+		string $token_hash,
+		string $public_key,
+		string $idempotency_key,
+		int $occurred_at_ts,
+		string $source,
+		int $credential_org_id,
+		?array $reported
+	): array {
 		$definition = $this->definitions->find_by_public_key( $public_key );
 
 		/*
@@ -123,6 +188,29 @@ final class Conversion_Recorder {
 			);
 		}
 
+		/*
+		 * Whether *this reporter* may use *this definition*, asked before the
+		 * ledger seek for the reason the definition-level decision is: a
+		 * credential reporting against a definition that does not permit it must
+		 * cost one indexed read, not a read plus a seek into the highest-volume
+		 * table in the schema.
+		 *
+		 * Browser reports skip it entirely rather than passing a sentinel. There
+		 * is no such thing as a browser holding a credential, and a shared branch
+		 * would have to decide what org 0 means for one — which is exactly the
+		 * ambiguity `decide_server_report()` refuses.
+		 */
+		if ( Conversion_Rules::SOURCE_SERVER === $source ) {
+			$permitted = Conversion_Attribution::decide_server_report( $definition, $credential_org_id );
+
+			if ( Conversion_Attribution::ACCEPTED !== $permitted ) {
+				return array(
+					'outcome' => self::FAILED,
+					'reason'  => $permitted,
+				);
+			}
+		}
+
 		$interaction = $this->events->interaction_for_token( $token_hash );
 		$reason      = Conversion_Attribution::decide( $definition, $interaction, $campaign_org_id, $occurred_at_ts );
 
@@ -148,12 +236,23 @@ final class Conversion_Recorder {
 				'occurred_at_ts'   => $occurred_at_ts,
 
 				/*
-				 * From the definition, never the request. This is the whole
+				 * From the definition unless an authenticated server stated
+				 * otherwise, and `$reported` is null for every browser report by
+				 * construction — `record()` cannot pass one. This is the whole
 				 * reason a definition is a stored record: an anonymous browser
 				 * may not declare what its own outcome was worth.
+				 *
+				 * A stated currency has already been checked against the
+				 * definition's. Storing a different one would put two currencies
+				 * under one definition and make every total it produces a
+				 * meaningless sum, and this plugin has no rate to convert with.
 				 */
-				'value_micros'     => (int) $definition['default_value_micros'],
-				'currency'         => (string) $definition['currency'],
+				'value_micros'     => null === $reported
+					? (int) $definition['default_value_micros']
+					: $reported['value_micros'],
+				'currency'         => null === $reported
+					? (string) $definition['currency']
+					: $reported['currency'],
 				'source'           => $source,
 			)
 		);

@@ -12,7 +12,12 @@ started or that any item below is implemented.
 
 - Phase: **P12 — Conversion tracking**
 - Roadmap state: `[ ]`
-- Last audited: 2026-08-29 (definition only; no implementation)
+- Last audited: 2026-08-30. Click-through ingestion, definitions, the carrier,
+  the projection, its reconcile, the staff screen, Site Health and
+  **server-to-server ingestion under a scoped, revocable credential** have all
+  shipped. What remains is refusal counters (blocked on an undecided question,
+  see `open-work.md`), a staff screen for credentials, reporting surfaces
+  (P14's), and view-through attribution (gated on P27).
 - Authoritative environments: the Docker CI lanes, plus the Playwright lane for
   the browser endpoint and the click-through carrier.
 

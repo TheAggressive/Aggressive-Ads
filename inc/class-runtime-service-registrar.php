@@ -223,6 +223,18 @@ final class Runtime_Service_Registrar {
 			)
 		);
 		$container->register(
+			\Aggressive\Ads\Repository\Conversion_Credential_Repository::class,
+			static fn (): \Aggressive\Ads\Repository\Conversion_Credential_Repository => new \Aggressive\Ads\Repository\Conversion_Credential_Repository()
+		);
+		$container->register(
+			\Aggressive\Ads\Workflow\Conversion_Credential_Manager::class,
+			static fn ( Service_Container $c ): \Aggressive\Ads\Workflow\Conversion_Credential_Manager => new \Aggressive\Ads\Workflow\Conversion_Credential_Manager(
+				$c->get( \Aggressive\Ads\Repository\Conversion_Credential_Repository::class ),
+				$c->get( \Aggressive\Ads\Repository\Org_Repository::class ),
+				$c->get( \Aggressive\Ads\Repository\Audit_Repository::class )
+			)
+		);
+		$container->register(
 			\Aggressive\Ads\Workflow\Conversion_Definition_Manager::class,
 			static fn ( Service_Container $c ): \Aggressive\Ads\Workflow\Conversion_Definition_Manager => new \Aggressive\Ads\Workflow\Conversion_Definition_Manager(
 				$c->get( Conversion_Definition_Repository::class ),

@@ -197,6 +197,23 @@ final class Migration_Map {
 			20 => static function () use ( $c ): void {
 				$c->get( Creative_Assignment_Repository::class )->reproject_all();
 			},
+
+			/*
+			 * The credential table for server-to-server reporting.
+			 *
+			 * Empty on arrival, and unlike versions 14 and 18 that is the end
+			 * state rather than a staging one: a credential is a secret staff
+			 * issue deliberately, so an upgraded site has none until somebody
+			 * makes one, and with none the new route authenticates nobody. That
+			 * is the correct default for a site that has not asked for
+			 * server-side reporting.
+			 *
+			 * `install_conversions()` creates all three tables, so a repair
+			 * install heals a site whose upgrade stopped part way.
+			 */
+			21 => static function () use ( $c ): void {
+				$c->get( Installer::class )->install_conversions();
+			},
 		);
 	}
 }

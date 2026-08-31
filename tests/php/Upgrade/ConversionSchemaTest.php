@@ -12,6 +12,7 @@ namespace Aggressive\Ads\Tests\Upgrade;
 use Aggressive\Ads\Install\Migration_Map;
 use Aggressive\Ads\Install\Schema;
 use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Repository\Conversion_Credential_Repository;
 use Aggressive\Ads\Repository\Conversion_Definition_Repository;
 use Aggressive\Ads\Repository\Conversion_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
@@ -55,6 +56,9 @@ final class ConversionSchemaTest extends WP_UnitTestCase {
 
 	/** The database version that installs its definitions. */
 	private const DEFINITIONS_VERSION = 19;
+
+	/** The version that installs the server-to-server credential table. */
+	private const CREDENTIALS_VERSION = 21;
 
 	/**
 	 * Conversion ledger persistence.
@@ -100,6 +104,12 @@ final class ConversionSchemaTest extends WP_UnitTestCase {
 			self::DEFINITIONS_VERSION,
 			$steps,
 			'The definitions table is declared but no database version installs it.'
+		);
+
+		$this->assertArrayHasKey(
+			self::CREDENTIALS_VERSION,
+			$steps,
+			'The credential table is declared but no database version installs it.'
 		);
 
 		$this->assertGreaterThanOrEqual(
@@ -325,5 +335,89 @@ final class ConversionSchemaTest extends WP_UnitTestCase {
 			$names,
 			'A repeated dbDelta added an index. It adds and never drops, so this would stay.'
 		);
+	}
+	/**
+	 * Migration 21 installs the credential table on a site that has none.
+	 *
+	 * Invoked directly rather than through `maybe_upgrade()`, for the reason in
+	 * this class's docblock: that method's option-based lock survives the
+	 * transaction rollback in the object cache and silently disables a later
+	 * test's upgrade.
+	 *
+	 * @return void
+	 */
+	public function test_migration_21_installs_the_credential_table(): void {
+		global $wpdb;
+
+		$credentials = new Conversion_Credential_Repository();
+		$table       = $credentials->table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Deliberately un-rewritten drop; see the class docblock.
+		$wpdb->query( "/* real drop */ DROP TABLE IF EXISTS {$table}" );
+
+		$this->assertFalse(
+			( new Conversion_Credential_Repository() )->table_exists(),
+			'The fixture table survived the drop, so the migration below would prove nothing.'
+		);
+
+		$steps = Migration_Map::steps( Plugin::instance()->container() );
+
+		remove_filter( 'query', array( $this, '_create_temporary_tables' ) );
+
+		try {
+			$steps[ self::CREDENTIALS_VERSION ]();
+		} finally {
+			add_filter( 'query', array( $this, '_create_temporary_tables' ) );
+		}
+
+		$this->assertTrue(
+			( new Conversion_Credential_Repository() )->table_exists(),
+			'Migration 21 did not install the credential table.'
+		);
+	}
+
+	/**
+	 * The credential table's shape is the shape the schema declares.
+	 *
+	 * `token_hash` being UNIQUE is the assertion that matters. It is the lookup
+	 * for every presented bearer, so a non-unique index would mean one secret
+	 * could resolve to two credentials — and which organization a report was
+	 * scoped to would depend on row order.
+	 *
+	 * @return void
+	 */
+	public function test_the_credential_table_matches_the_declared_schema(): void {
+		global $wpdb;
+
+		$credentials = new Conversion_Credential_Repository();
+		$credentials->install_table();
+
+		$table = $credentials->table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Schema introspection in a test.
+		$columns = $wpdb->get_col( "SHOW COLUMNS FROM {$table}" );
+
+		$this->assertNotEmpty( $columns, 'The fixture table must exist before its shape is asserted.' );
+
+		sort( $columns );
+		$declared = Schema::conversion_credentials_columns();
+		sort( $declared );
+
+		$this->assertSame( $declared, $columns );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Schema introspection in a test.
+		$rows = $wpdb->get_results( "SHOW INDEX FROM {$table}", ARRAY_A );
+
+		$key = array_values( array_filter( $rows, static fn ( array $row ): bool => 'token_hash' === $row['Key_name'] ) );
+
+		$this->assertNotEmpty( $key, 'The verifier must be indexed, or every report is a table scan.' );
+
+		foreach ( $key as $part ) {
+			$this->assertSame(
+				'0',
+				(string) $part['Non_unique'],
+				'token_hash must be UNIQUE, or one secret could resolve to two credentials.'
+			);
+		}
 	}
 }

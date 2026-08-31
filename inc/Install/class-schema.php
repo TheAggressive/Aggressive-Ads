@@ -24,7 +24,7 @@ final class Schema {
 	 *
 	 * Drives the migration walker in Upgrader.
 	 */
-	public const DB_VERSION = 20;
+	public const DB_VERSION = 21;
 
 	/**
 	 * The audit table's name, without the site's table prefix.
@@ -45,6 +45,11 @@ final class Schema {
 
 	/** What a publisher declares a conversion to be. Trusted server configuration. */
 	public const CONVERSION_DEFINITIONS_TABLE = 'aggr_conversion_definitions';
+
+	/**
+	 * Bearer credentials for server-to-server conversion reporting.
+	 */
+	public const CONVERSION_CREDENTIALS_TABLE = 'aggr_conversion_credentials';
 
 	/** Delivery strategies owned by campaigns. */
 	public const LINE_ITEMS_TABLE = 'aggr_line_items';
@@ -728,5 +733,79 @@ final class Schema {
 	 */
 	public static function conversion_definitions_index_names(): array {
 		return array( 'PRIMARY', 'public_key', 'org_status' );
+	}
+	/**
+	 * Bearer credentials for server-to-server conversion reporting.
+	 *
+	 * **`token_hash` is a verifier, not an index over something already stored.**
+	 * The plaintext exists exactly once, in the response that issues it, and is
+	 * never written anywhere. So the digest is salted with `wp_salt( 'auth' )`
+	 * rather than the durable lookup salt `aggr_org_access.active_key` moved to
+	 * in version 10 — and the difference is deliberate. That column is an index
+	 * over `canonical_name`, which sits in the clear beside it, and a salt
+	 * rotation silently breaking every lookup was a defect. This one *should*
+	 * stop working when the salt rotates: rotating auth salts is how an operator
+	 * invalidates outstanding secrets, and a bearer credential that survived it
+	 * would be a credential nobody can revoke by rotation.
+	 *
+	 * `revoked_at_ts` rather than a status column, for two reasons. It answers
+	 * "is it revoked" and "when" with one value, and it avoids inventing another
+	 * short `varchar` status — `wp_posts.post_status` is `varchar(20)` and this
+	 * plugin has already been bitten by a slug that truncated on write and never
+	 * matched on read.
+	 *
+	 * A credential is never deleted. `aggr_conversions.source` records that a
+	 * row arrived server-side, and an operator asking which credential reported
+	 * it needs the row to still be there.
+	 *
+	 * `label` is what staff see in a list of otherwise identical secrets. It is
+	 * the only human-readable thing here, because the credential itself must not
+	 * be readable after issue.
+	 *
+	 * @param string $table_name      Fully prefixed table name.
+	 * @param string $charset_collate Database charset and collation.
+	 * @return string
+	 */
+	public static function conversion_credentials_table_ddl( string $table_name, string $charset_collate ): string {
+		return "CREATE TABLE {$table_name} (
+	id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	created_at_ts bigint(20) unsigned NOT NULL DEFAULT 0,
+	last_used_at_ts bigint(20) unsigned NOT NULL DEFAULT 0,
+	revoked_at_ts bigint(20) unsigned NOT NULL DEFAULT 0,
+	org_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	created_by bigint(20) unsigned NOT NULL DEFAULT 0,
+	token_hash char(64) NOT NULL DEFAULT '',
+	label varchar(191) NOT NULL DEFAULT '',
+	PRIMARY KEY  (id),
+	UNIQUE KEY token_hash (token_hash),
+	KEY org_revoked (org_id,revoked_at_ts)
+) {$charset_collate};";
+	}
+
+	/**
+	 * Conversion credential columns.
+	 *
+	 * @return array<int, string>
+	 */
+	public static function conversion_credentials_columns(): array {
+		return array(
+			'id',
+			'created_at_ts',
+			'last_used_at_ts',
+			'revoked_at_ts',
+			'org_id',
+			'created_by',
+			'token_hash',
+			'label',
+		);
+	}
+
+	/**
+	 * Conversion credential indexes.
+	 *
+	 * @return array<int, string>
+	 */
+	public static function conversion_credentials_index_names(): array {
+		return array( 'PRIMARY', 'token_hash', 'org_revoked' );
 	}
 }
