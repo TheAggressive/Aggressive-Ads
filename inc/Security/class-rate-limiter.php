@@ -41,6 +41,7 @@ final class Rate_Limiter {
 	public const ACTION_CLICK          = 'click';
 	public const ACTION_DECISIONS      = 'decisions';
 	public const ACTION_CONVERSION     = 'conversion';
+	public const ACTION_CONVERSION_S2S = 'conversion_s2s';
 
 	/**
 	 * Limits per action, as attempts per window.
@@ -138,6 +139,24 @@ final class Rate_Limiter {
 		 */
 		self::ACTION_CONVERSION     => array(
 			'limit'  => 60,
+			'window' => HOUR_IN_SECONDS,
+		),
+
+		/*
+		 * Per credential, not per client address.
+		 *
+		 * A server-to-server reporter is one machine sending every conversion an
+		 * advertiser makes, so counting it by address would put an entire shop's
+		 * checkout volume through a bucket sized for one shopper. The credential
+		 * is the honest subject: it is authenticated, it is scoped to one
+		 * organization, and if it misbehaves there is something to revoke.
+		 *
+		 * Higher than the browser's ceiling for the same reason, and still
+		 * bounded — a credential that has started reporting a conversion a
+		 * second is either broken or compromised, and both are worth stopping.
+		 */
+		self::ACTION_CONVERSION_S2S => array(
+			'limit'  => 3000,
 			'window' => HOUR_IN_SECONDS,
 		),
 	);

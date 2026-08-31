@@ -70,13 +70,6 @@ final class Creative_Repository {
 	public const MAX_PER_CAMPAIGN = 100;
 
 	/**
-	 * Advisory locks held by this request, keyed by database lock name.
-	 *
-	 * @var array<string, true>
-	 */
-	private static array $change_locks = array();
-
-	/**
 	 * The creative ids belonging to a campaign.
 	 *
 	 * @param int $campaign_id Campaign post id.
@@ -370,15 +363,6 @@ final class Creative_Repository {
 		return (int) get_post_meta( $creative_id, self::META_REPLACES_ID, true );
 	}
 
-	/**
-	 * Replacement-review state.
-	 *
-	 * @param int $creative_id Creative revision id.
-	 * @return string
-	 */
-	public function change_state( int $creative_id ): string {
-		return (string) get_post_meta( $creative_id, self::META_CHANGE_STATE, true );
-	}
 
 	/**
 	 * Advertiser-facing decision notes.
@@ -390,172 +374,6 @@ final class Creative_Repository {
 		return (string) get_post_meta( $creative_id, self::META_CHANGE_NOTES, true );
 	}
 
-	/**
-	 * When a replacement was requested.
-	 *
-	 * @param int $creative_id Creative revision id.
-	 * @return int
-	 */
-	public function requested_at( int $creative_id ): int {
-		return (int) get_post_meta( $creative_id, self::META_REQUESTED_AT, true );
-	}
-
-	/**
-	 * Pending replacement for one active creative, if any.
-	 *
-	 * @param int $creative_id Active creative id.
-	 * @return int
-	 */
-	public function pending_replacement_id( int $creative_id ): int {
-		foreach ( $this->ids_for_campaign( (int) ( $this->details( $creative_id )['campaign_id'] ?? 0 ) ) as $candidate_id ) {
-			if ( $creative_id === $this->replacement_target_id( $candidate_id ) && self::CHANGE_PENDING === $this->change_state( $candidate_id ) ) {
-				return $candidate_id;
-			}
-		}
-
-		return 0;
-	}
-
-	/**
-	 * Replacement revisions for a campaign, newest first.
-	 *
-	 * @param int                $campaign_id Campaign id.
-	 * @param array<int, string> $states      Optional state allowlist.
-	 * @return array<int, array{id: int, campaign_id: int, org_id: int, placement_id: int, size: string, kind: string, width: int, height: int, click_url: string, alt_text: string}>
-	 */
-	public function replacements_for_campaign( int $campaign_id, array $states = array() ): array {
-		$rows = array();
-
-		foreach ( array_reverse( $this->ids_for_campaign( $campaign_id ) ) as $creative_id ) {
-			$state = $this->change_state( $creative_id );
-
-			if ( $this->replacement_target_id( $creative_id ) <= 0 || ( array() !== $states && ! in_array( $state, $states, true ) ) ) {
-				continue;
-			}
-
-			$details = $this->details( $creative_id );
-
-			if ( null !== $details ) {
-				$rows[] = $details;
-			}
-		}
-
-		return $rows;
-	}
-
-	/**
-	 * Stores a rejected replacement and the advertiser-facing reason.
-	 *
-	 * @param int    $creative_id Replacement id.
-	 * @param string $notes       Review reason.
-	 * @return bool
-	 */
-	public function reject_replacement( int $creative_id, string $notes ): bool {
-		update_post_meta( $creative_id, self::META_CHANGE_STATE, self::CHANGE_REJECTED );
-		update_post_meta( $creative_id, self::META_CHANGE_NOTES, $notes );
-		update_post_meta( $creative_id, self::META_DECIDED_AT, time() );
-
-		return self::CHANGE_REJECTED === $this->change_state( $creative_id )
-			&& $notes === $this->change_notes( $creative_id );
-	}
-
-	/**
-	 * Makes an approved replacement current and archives its predecessor.
-	 *
-	 * The provider write happens first. If these verified metadata writes fail,
-	 * the caller restores the provider from the still-intact old creative.
-	 *
-	 * @param int $current_id     Current creative id.
-	 * @param int $replacement_id Approved replacement id.
-	 * @param int $provider_ad_id Existing provider ad id.
-	 * @return bool
-	 */
-	public function activate_replacement( int $current_id, int $replacement_id, int $provider_ad_id ): bool {
-		$old_review = (string) get_post_meta( $current_id, self::META_REVIEW_STATE, true );
-
-		update_post_meta( $current_id, self::META_REPLACED_BY, $replacement_id );
-		update_post_meta( $current_id, self::META_REVIEW_STATE, 'replaced' );
-		delete_post_meta( $current_id, self::META_PROVIDER_AD );
-
-		delete_post_meta( $replacement_id, self::META_REPLACES_ID );
-		update_post_meta( $replacement_id, self::META_CHANGE_STATE, self::CHANGE_APPLIED );
-		update_post_meta( $replacement_id, self::META_REVIEW_STATE, 'approved' );
-		update_post_meta( $replacement_id, self::META_DECIDED_AT, time() );
-		update_post_meta( $replacement_id, self::META_PROVIDER_AD, $provider_ad_id );
-
-		$activated = $this->is_active( $replacement_id )
-			&& ! $this->is_active( $current_id )
-			&& $provider_ad_id === $this->provider_ad_id( $replacement_id );
-
-		if ( $activated ) {
-			return true;
-		}
-
-		delete_post_meta( $current_id, self::META_REPLACED_BY );
-		update_post_meta( $current_id, self::META_REVIEW_STATE, $old_review );
-		update_post_meta( $current_id, self::META_PROVIDER_AD, $provider_ad_id );
-		update_post_meta( $replacement_id, self::META_REPLACES_ID, $current_id );
-		update_post_meta( $replacement_id, self::META_CHANGE_STATE, self::CHANGE_PENDING );
-		update_post_meta( $replacement_id, self::META_REVIEW_STATE, 'pending' );
-		delete_post_meta( $replacement_id, self::META_PROVIDER_AD );
-
-		return false;
-	}
-
-	/**
-	 * Atomically claims a replacement operation lock.
-	 *
-	 * @param int $creative_id Current creative id.
-	 * @return string Empty when another request owns the lock.
-	 */
-	public function claim_change_lock( int $creative_id ): string {
-		global $wpdb;
-
-		$lock_name = 'aggr_creative_change_' . get_current_blog_id() . '_' . $creative_id;
-
-		if ( isset( self::$change_locks[ $lock_name ] ) ) {
-			return '';
-		}
-
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- The advisory lock is the atomic cross-request serialization primitive.
-		$acquired = (int) $wpdb->get_var(
-			$wpdb->prepare( 'SELECT GET_LOCK(%s, %d)', $lock_name, 0 ) // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared -- The advisory lock name and timeout are prepared.
-		);
-
-		if ( 1 !== $acquired ) {
-			return '';
-		}
-
-		self::$change_locks[ $lock_name ] = true;
-
-		return $lock_name;
-	}
-
-	/**
-	 * Releases a replacement operation lock only for its owner.
-	 *
-	 * @param int    $creative_id Current creative id.
-	 * @param string $token       Claim token.
-	 * @return void
-	 */
-	public function release_change_lock( int $creative_id, string $token ): void {
-		global $wpdb;
-
-		$expected = 'aggr_creative_change_' . get_current_blog_id() . '_' . $creative_id;
-
-		if ( $expected !== $token || ! isset( self::$change_locks[ $token ] ) ) {
-			return;
-		}
-
-		try {
-			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Releases only the exact advisory lock this request acquired.
-			$wpdb->get_var(
-				$wpdb->prepare( 'SELECT RELEASE_LOCK(%s)', $token ) // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching,WordPress.DB.PreparedSQL.NotPrepared -- Releases only the exact advisory lock this request acquired.
-			);
-		} finally {
-			unset( self::$change_locks[ $token ] );
-		}
-	}
 
 	/**
 	 * Whether a creative already points at a real attachment.

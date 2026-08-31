@@ -96,10 +96,29 @@ only rewrite what is there. `zip` exits non-zero when it cannot open a file it
 was given, and `set -euo pipefail` would have aborted on that. The cause is not
 identified.
 
-**Status.** Failed closed, which is the safe direction, so this is a diagnosis
-problem rather than a correctness one. Two changes would make the next
-occurrence self-explaining rather than a mystery: compare the two archive
-listings *before* the second verification, so a content difference is reported
-as one and names the paths; and print the archive's actual contents for a
-directory when a required file in it is missing, which distinguishes one lost
-file from a directory that was never built.
+**Status.** Still unexplained, and still not reproduced. It failed closed, which
+is the safe direction, so this is a diagnosis problem rather than a correctness
+one — and the diagnosis is now built, so a recurrence explains itself instead of
+costing another investigation.
+
+`bin/release/compare-archives.sh` runs **before** the second verification and
+names the paths that differ, so the failure is reported as the reproducibility
+failure it is rather than as a missing required file. It compares digests as
+well as listings: an earlier draft compared listings only and answered
+"identical" for two archives with the same paths and different bytes, which is a
+lie about the one property the lane exists to assert. Its own test caught that.
+
+`verify-package.sh` now prints what the archive *does* hold in a directory whose
+required file is missing, with a count. One lost file out of thirteen and a
+directory that was never built were the same message before, and they are
+completely different problems.
+
+Both were checked against the original incident rather than only against
+fixtures: an archive rebuilt without `dist/interactivity/wizard.js` produces
+
+```
+Present in the first build and missing from the second:
+  aggressive-ads/dist/interactivity/wizard.js
+```
+
+and the verifier reports the twelve siblings that survived.

@@ -21,13 +21,29 @@ bash bin/release/verify-package.sh "${VERSION}"
 ZIP="release/aggressive-ads-${VERSION}.zip"
 first_digest="$(sha256sum "${ZIP}" | awk '{print $1}')"
 
+# The first archive is kept, because package.sh removes release/ before
+# rebuilding and the second run would otherwise leave nothing to compare
+# against. Without it a reproducibility failure can only be reported as two
+# hex strings.
+KEPT="$(mktemp -d)"
+trap 'rm -rf "${KEPT}"' EXIT
+cp "${ZIP}" "${KEPT}/first.zip"
+
 bash bin/release/package.sh "${VERSION}"
+
+# Before the second verification, deliberately.
+#
+# Verification reaches its missing-required-file check first, so a second
+# archive that lost a path is reported as `required file missing from the
+# archive` — which reads as an unbuilt file rather than as the reproducibility
+# failure it is. That happened, and cost a re-run and an investigation with no
+# evidence to work from. See docs/known-issues.md.
+bash bin/release/compare-archives.sh "${KEPT}/first.zip" "${ZIP}"
+
 bash bin/release/verify-package.sh "${VERSION}"
 
-second_digest="$(sha256sum "${ZIP}" | awk '{print $1}')"
-if [[ "${first_digest}" != "${second_digest}" ]]; then
-	echo "Package is not reproducible: ${first_digest} != ${second_digest}" >&2
-	exit 1
-fi
-
-echo "ci:package: reproducible ${ZIP} (${second_digest})"
+# The digest comparison lives in compare-archives.sh, which ran above and
+# answers both halves of the question: which paths differ, and — when none do —
+# whether the bytes still do. A second comparison here would be a check that can
+# never fire, which is the kind this repository deletes rather than keeps.
+echo "ci:package: reproducible ${ZIP} (${first_digest})"

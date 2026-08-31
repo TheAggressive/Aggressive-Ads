@@ -15,6 +15,7 @@ use Aggressive\Ads\Domain\Reporting_Rules;
 use Aggressive\Ads\Domain\Transition_Table;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Repository\Creative_Revision_Repository;
 use Aggressive\Ads\Workflow\Assigned_Creatives;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Org_Access_Repository;
@@ -44,23 +45,24 @@ final class View_Data {
 	/**
 	 * Constructor.
 	 *
-	 * @param Campaign_Repository     $campaigns  Campaign persistence.
-	 * @param Placement_Repository    $placements Placement persistence.
-	 * @param Creative_Repository     $creatives  Creative persistence.
-	 * @param Assigned_Creatives      $assigned   What is assigned where.
-	 * @param Org_Repository          $orgs       Organization lookups.
-	 * @param Org_Access_Repository   $org_access Organization access persistence.
-	 * @param Package_Repository      $packages   Package persistence.
-	 * @param Campaign_Editor         $editor     Shared package validation.
-	 * @param Review_Readiness        $readiness  Safe canonical review readiness.
-	 * @param Email_Change            $emails     Pending email-change lookup.
-	 * @param Reporting_Read          $reporting  Native rollup reads.
-	 * @param Campaign_Change_Manager $changes  Running-campaign change proposals.
-	 * @param Settings                $settings   Brand and support details.
-	 * @param Edit_Window             $window     When editing is permitted.
-	 * @param Acting_As               $acting     Staff acting for an advertiser.
-	 * @param Line_Item_Repository    $line_items Campaign delivery strategies.
-	 * @param Creative_Approval       $approvals  Creative review decisions.
+	 * @param Campaign_Repository          $campaigns  Campaign persistence.
+	 * @param Placement_Repository         $placements Placement persistence.
+	 * @param Creative_Repository          $creatives  Creative persistence.
+	 * @param Assigned_Creatives           $assigned   What is assigned where.
+	 * @param Org_Repository               $orgs       Organization lookups.
+	 * @param Org_Access_Repository        $org_access Organization access persistence.
+	 * @param Package_Repository           $packages   Package persistence.
+	 * @param Campaign_Editor              $editor     Shared package validation.
+	 * @param Review_Readiness             $readiness  Safe canonical review readiness.
+	 * @param Email_Change                 $emails     Pending email-change lookup.
+	 * @param Reporting_Read               $reporting  Native rollup reads.
+	 * @param Campaign_Change_Manager      $changes  Running-campaign change proposals.
+	 * @param Settings                     $settings   Brand and support details.
+	 * @param Edit_Window                  $window     When editing is permitted.
+	 * @param Acting_As                    $acting     Staff acting for an advertiser.
+	 * @param Line_Item_Repository         $line_items Campaign delivery strategies.
+	 * @param Creative_Approval            $approvals  Creative review decisions.
+	 * @param Creative_Revision_Repository $revisions Replacement lifecycle persistence.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -79,7 +81,8 @@ final class View_Data {
 		private readonly Edit_Window $window,
 		private readonly Acting_As $acting,
 		private readonly Line_Item_Repository $line_items,
-		private readonly Creative_Approval $approvals
+		private readonly Creative_Approval $approvals,
+		private readonly Creative_Revision_Repository $revisions
 	) {
 	}
 
@@ -670,8 +673,8 @@ final class View_Data {
 	private function creative_update_rows( int $campaign_id ): array {
 		$rows = array();
 
-		foreach ( $this->creatives->replacements_for_campaign( $campaign_id ) as $creative ) {
-			$state = $this->creatives->change_state( $creative['id'] );
+		foreach ( $this->revisions->replacements_for_campaign( $campaign_id ) as $creative ) {
+			$state = $this->revisions->change_state( $creative['id'] );
 
 			if ( ! in_array( $state, array( Creative_Repository::CHANGE_PENDING, Creative_Repository::CHANGE_REJECTED ), true ) ) {
 				continue;
@@ -690,7 +693,7 @@ final class View_Data {
 					? __( 'Waiting for review', 'aggressive-ads' )
 					: __( 'Changes needed', 'aggressive-ads' ),
 				'notes'        => $this->creatives->change_notes( $creative['id'] ),
-				'requested_at' => $this->creatives->requested_at( $creative['id'] ),
+				'requested_at' => $this->revisions->requested_at( $creative['id'] ),
 				'preview'      => add_query_arg(
 					'_wpnonce',
 					wp_create_nonce( 'wp_rest' ),
