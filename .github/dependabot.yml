@@ -1,86 +1,99 @@
-# Dependency updates are grouped, cooled down, and limited to non-major
-# releases so the guarded auto-merge workflow can handle routine maintenance
-# without turning dependency churn into product releases.
+# Keep routine dependency maintenance low-noise while preserving prompt security fixes.
+# Version updates run monthly, are grouped, and exclude majors. Security updates are
+# grouped separately and are not restricted by the version-update allow rules.
 version: 2
 
 updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: weekly
-      day: monday
-      time: '06:00'
-    open-pull-requests-limit: 3
+      interval: monthly
+    open-pull-requests-limit: 2
     cooldown:
-      default-days: 7
+      default-days: 14
     commit-message:
       prefix: chore
       include: scope
     labels:
       - dependencies
       - github_actions
-    ignore:
+    allow:
       - dependency-name: '*'
-        update-types: [version-update:semver-major]
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-patch
     groups:
-      actions:
+      routine-actions:
+        applies-to: version-updates
+        patterns: ['*']
+        update-types: [minor, patch]
+      security-actions:
+        applies-to: security-updates
         patterns: ['*']
 
   # Dev tooling only — the plugin has no runtime Composer dependencies and
-  # vendor/ never ships. Security updates remain exempt from the schedule.
+  # vendor/ never ships. Security updates remain independent of the schedule.
   - package-ecosystem: composer
     directory: /
     schedule:
-      interval: weekly
-      day: monday
-      time: '06:00'
-    open-pull-requests-limit: 3
+      interval: monthly
+    open-pull-requests-limit: 2
     cooldown:
-      default-days: 7
+      default-days: 14
       semver-major-days: 30
-      semver-minor-days: 7
-      semver-patch-days: 3
+      semver-minor-days: 14
+      semver-patch-days: 7
     commit-message:
       prefix: chore
       include: scope
     labels:
       - dependencies
       - php
-    ignore:
-      # Tooling majors are reviewed deliberately. Security updates still arrive.
+    allow:
       - dependency-name: '*'
-        update-types: [version-update:semver-major]
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-patch
     groups:
       php-tooling:
+        applies-to: version-updates
         patterns: ['*']
         update-types: [minor, patch]
+      security-updates:
+        applies-to: security-updates
+        patterns: ['*']
 
   - package-ecosystem: npm
     directory: /
     schedule:
-      interval: weekly
-      day: monday
-      time: '06:00'
-    open-pull-requests-limit: 3
+      interval: monthly
+    open-pull-requests-limit: 2
     cooldown:
-      default-days: 7
+      default-days: 14
       semver-major-days: 30
-      semver-minor-days: 7
-      semver-patch-days: 3
+      semver-minor-days: 14
+      semver-patch-days: 7
     commit-message:
       prefix: chore
       include: scope
     labels:
       - dependencies
       - javascript
-    ignore:
+    allow:
       - dependency-name: '*'
-        update-types: [version-update:semver-major]
+        update-types:
+          - version-update:semver-minor
+          - version-update:semver-patch
     groups:
       wordpress:
+        applies-to: version-updates
         patterns: ['@wordpress/*']
         update-types: [minor, patch]
       js-tooling:
+        applies-to: version-updates
         patterns: ['*']
         exclude-patterns: ['@wordpress/*']
         update-types: [minor, patch]
+      security-updates:
+        applies-to: security-updates
+        patterns: ['*']
