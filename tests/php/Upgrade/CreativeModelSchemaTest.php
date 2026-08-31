@@ -289,4 +289,47 @@ final class CreativeModelSchemaTest extends WP_UnitTestCase {
 			'Destructive uninstall does not drop the asset table.'
 		);
 	}
+	/**
+	 * **Migration 22 adds `operator_paused` to a table that predates it.**
+	 *
+	 * The column has to arrive on an *existing* table, which is the only case
+	 * that matters: a fresh install gets it from the DDL and would pass this
+	 * whatever the migration did. So the column is dropped first — the same
+	 * reason `dbDelta`'s index behaviour is asserted by recreating the old key
+	 * before checking it is gone.
+	 *
+	 * Without it, an upgraded site keeps a table with no way to tell a pause a
+	 * person made from a pause its campaign made, and `Assignment_Projection`
+	 * reads a column that is not there.
+	 *
+	 * @return void
+	 */
+	public function test_migration_22_adds_the_operator_pause_column(): void {
+		global $wpdb;
+
+		$this->assignments->install_table();
+
+		$table = $this->assignments->table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Removing the column the migration under test restores.
+		$wpdb->query( "ALTER TABLE {$table} DROP COLUMN operator_paused" );
+
+		$this->assertNotContains(
+			'operator_paused',
+			$this->actual_columns( $table ),
+			'The fixture still has the column, so the migration below would prove nothing.'
+		);
+
+		$steps = \Aggressive\Ads\Install\Migration_Map::steps( Plugin::instance()->container() );
+
+		$this->assertArrayHasKey( 22, $steps, 'No database version installs the operator-pause column.' );
+
+		$steps[22]();
+
+		$this->assertContains(
+			'operator_paused',
+			$this->actual_columns( $table ),
+			'Migration 22 did not add the column an upgraded site needs.'
+		);
+	}
 }

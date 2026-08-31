@@ -275,6 +275,18 @@ final class Assignment_Editor {
 					array( 'status' => 409 )
 				);
 			}
+
+			/*
+			 * Records that this pause was somebody's decision about this
+			 * advertisement, rather than a consequence of its campaign pausing.
+			 * Nothing else can tell the two apart afterwards — both leave the
+			 * identical row — and without the distinction a campaign resume
+			 * silently puts a deliberately stopped ad back on the page.
+			 *
+			 * Set on the way in and cleared on the way out, so resuming one
+			 * hands it back to its campaign rather than pinning it live.
+			 */
+			$clean['operator_paused'] = Assignment_Rules::is_operator_pause( $to ) ? 1 : 0;
 		}
 
 		$start = array_key_exists( 'start_at_ts', $clean ) ? (int) $clean['start_at_ts'] : (int) $current['start_at_ts'];

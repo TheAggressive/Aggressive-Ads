@@ -112,8 +112,15 @@ final class Assignment_Projection implements Service {
 				continue;
 			}
 
+			/*
+			 * An assignment a person paused stays paused. The campaign's own
+			 * pause and resume must not carry it along, and only the stored flag
+			 * can tell the two apart — both produce the identical row.
+			 */
+			$operator_paused = 1 === (int) ( $row['operator_paused'] ?? 0 );
+
 			$fields = array(
-				'status'          => $status,
+				'status'          => Assignment_Rules::project_status( $status, $operator_paused ),
 				'organization_id' => $org_id,
 			);
 

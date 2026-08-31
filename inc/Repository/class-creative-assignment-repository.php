@@ -282,8 +282,16 @@ final class Creative_Assignment_Repository {
 
 		global $wpdb;
 
-		$next    = $expected_revision + 1;
-		$columns = array( 'weight', 'start_at_ts', 'end_at_ts', 'status' );
+		$next = $expected_revision + 1;
+
+		/*
+		 * `operator_paused` travels with `status`, because it is the record of
+		 * *who* set that status. Written on the same statement so a pause and
+		 * its provenance cannot come apart: a row that said `paused` without the
+		 * flag would be resumed by the next campaign transition, which is the
+		 * defect the column exists to fix.
+		 */
+		$columns = array( 'weight', 'start_at_ts', 'end_at_ts', 'status', 'operator_paused' );
 		$set     = array();
 		$values  = array();
 
