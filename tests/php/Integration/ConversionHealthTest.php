@@ -13,7 +13,9 @@ use Aggressive\Ads\Domain\Conversion_Definition;
 use Aggressive\Ads\Install\Conversion_Health;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Conversion_Definition_Repository;
+use Aggressive\Ads\Domain\Conversion_Attribution;
 use Aggressive\Ads\Repository\Rollup_Repository;
+use Aggressive\Ads\Workflow\Conversion_Metrics;
 use WP_UnitTestCase;
 
 /**
@@ -47,6 +49,13 @@ final class ConversionHealthTest extends WP_UnitTestCase {
 	 */
 	private Rollup_Repository $rollups;
 
+	/**
+	 * Refusal counters.
+	 *
+	 * @var Conversion_Metrics
+	 */
+	private Conversion_Metrics $metrics;
+
 	public function set_up(): void {
 		parent::set_up();
 
@@ -55,7 +64,9 @@ final class ConversionHealthTest extends WP_UnitTestCase {
 		$this->health      = $container->get( Conversion_Health::class );
 		$this->definitions = $container->get( Conversion_Definition_Repository::class );
 		$this->rollups     = $container->get( Rollup_Repository::class );
+		$this->metrics     = $container->get( Conversion_Metrics::class );
 
+		$this->metrics->reset();
 		$this->definitions->install_table();
 		$this->rollups->install_table();
 	}
@@ -204,6 +215,66 @@ final class ConversionHealthTest extends WP_UnitTestCase {
 	/**
 	 * The test is registered, or none of the above is ever seen.
 	 */
+	/**
+	 * **The refusals are told to the operator, in words, where "why not" is the
+	 * question being asked.**
+	 *
+	 * This is the read half of the counter. It was written after the write half
+	 * because a counter nothing reads and a reader with nothing to count both
+	 * pass their own tests; the pair is what proves the feature.
+	 */
+	public function test_refusals_are_explained_when_nothing_was_recorded(): void {
+		$this->assertGreaterThan( 0, $this->definition() );
+		$this->day( 40, 0 );
+
+		foreach ( range( 1, 3 ) as $ignored ) {
+			$this->metrics->record_refusal( Conversion_Attribution::OUT_OF_WINDOW );
+		}
+
+		$this->metrics->flush();
+
+		$result = $this->health->run_test();
+
+		$this->assertSame( 'recommended', $result['status'], 'The counters must inform the description, never the status.' );
+		$this->assertStringContainsString( 'Reports refused since', (string) $result['description'] );
+		$this->assertStringContainsString( 'attribution window', (string) $result['description'] );
+		$this->assertStringContainsString( '3', (string) $result['description'] );
+	}
+
+	/**
+	 * A reason code never reaches the screen, only what it means.
+	 *
+	 * `out_of_window` is a decision this codebase makes, not a sentence anybody
+	 * outside it can act on.
+	 */
+	public function test_a_reason_code_is_never_shown_raw(): void {
+		$this->assertGreaterThan( 0, $this->definition() );
+		$this->day( 40, 0 );
+		$this->metrics->record_refusal( Conversion_Attribution::S2S_NOT_PERMITTED );
+		$this->metrics->flush();
+
+		$description = (string) $this->health->run_test()['description'];
+
+		$this->assertStringContainsString( 'does not accept server reports', $description );
+		$this->assertStringNotContainsString( Conversion_Attribution::S2S_NOT_PERMITTED, $description );
+	}
+
+	/**
+	 * **Nothing refused says nothing**, rather than "0 refusals".
+	 *
+	 * A count of zero invites the reader to wonder what it is a count of, on
+	 * the healthy site where there is nothing to wonder about.
+	 */
+	public function test_no_refusals_adds_no_sentence(): void {
+		$this->assertGreaterThan( 0, $this->definition() );
+		$this->day( 40, 7 );
+
+		$result = $this->health->run_test();
+
+		$this->assertSame( 'good', $result['status'] );
+		$this->assertStringNotContainsString( 'refused', (string) $result['description'] );
+	}
+
 	public function test_the_test_is_registered_with_site_health(): void {
 		$tests = apply_filters( 'site_status_tests', array( 'direct' => array() ) );
 

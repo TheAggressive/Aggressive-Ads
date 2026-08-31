@@ -55,6 +55,7 @@ final class Conversion_Recorder {
 	 * @param Rollup_Repository                $rollups     Reporting projection.
 	 * @param Campaign_Repository              $campaigns   Campaign ownership.
 	 * @param Creative_Assignment_Repository   $assignments Line-item attribution.
+	 * @param Conversion_Metrics               $metrics     Refusal counters.
 	 */
 	public function __construct(
 		private readonly Conversion_Repository $conversions,
@@ -62,7 +63,8 @@ final class Conversion_Recorder {
 		private readonly Event_Repository $events,
 		private readonly Rollup_Repository $rollups,
 		private readonly Campaign_Repository $campaigns,
-		private readonly Creative_Assignment_Repository $assignments
+		private readonly Creative_Assignment_Repository $assignments,
+		private readonly Conversion_Metrics $metrics
 	) {
 	}
 
@@ -85,7 +87,9 @@ final class Conversion_Recorder {
 		int $occurred_at_ts,
 		string $source
 	): array {
-		return $this->write( $parsed, $token_hash, $public_key, $idempotency_key, $occurred_at_ts, $source, 0, null );
+		return $this->counted(
+			$this->write( $parsed, $token_hash, $public_key, $idempotency_key, $occurred_at_ts, $source, 0, null )
+		);
 	}
 
 	/**
@@ -115,16 +119,44 @@ final class Conversion_Recorder {
 		int $credential_org_id,
 		?array $reported
 	): array {
-		return $this->write(
-			$parsed,
-			$token_hash,
-			$public_key,
-			$idempotency_key,
-			$occurred_at_ts,
-			Conversion_Rules::SOURCE_SERVER,
-			$credential_org_id,
-			$reported
+		return $this->counted(
+			$this->write(
+				$parsed,
+				$token_hash,
+				$public_key,
+				$idempotency_key,
+				$occurred_at_ts,
+				Conversion_Rules::SOURCE_SERVER,
+				$credential_org_id,
+				$reported
+			)
 		);
+	}
+
+	/**
+	 * Counts a refusal on the way out, whichever branch produced it.
+	 *
+	 * **One funnel rather than a counter at each refusal**, and that is the
+	 * whole reason this method exists. `write()` refuses in four places today;
+	 * a fifth added later is counted by construction instead of by whoever
+	 * remembers. The counter that is only *usually* called is the one that
+	 * reports a healthy site while the reason nobody can serve goes uncounted.
+	 *
+	 * A failed *write* is not counted, though its outcome is also `FAILED`: its
+	 * reason is `ACCEPTED`, because attribution accepted it and the database
+	 * did not. That belongs to durability rather than to attribution, and
+	 * `Conversion_Health` already surfaces it from the ledger — clicks
+	 * yesterday, no conversions.
+	 *
+	 * @param array{outcome: string, reason: string} $result What `write()` decided.
+	 * @return array{outcome: string, reason: string} The same result, unchanged.
+	 */
+	private function counted( array $result ): array {
+		if ( self::FAILED === $result['outcome'] ) {
+			$this->metrics->record_refusal( $result['reason'] );
+		}
+
+		return $result;
 	}
 
 	/**

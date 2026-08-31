@@ -221,8 +221,14 @@ final class Runtime_Service_Registrar {
 				$c->get( Event_Repository::class ),
 				$c->get( Rollup_Repository::class ),
 				$c->get( \Aggressive\Ads\Repository\Campaign_Repository::class ),
-				$c->get( Creative_Assignment_Repository::class )
+				$c->get( Creative_Assignment_Repository::class ),
+				$c->get( \Aggressive\Ads\Workflow\Conversion_Metrics::class )
 			)
+		);
+
+		$container->register(
+			\Aggressive\Ads\Workflow\Conversion_Metrics::class,
+			static fn (): \Aggressive\Ads\Workflow\Conversion_Metrics => new \Aggressive\Ads\Workflow\Conversion_Metrics()
 		);
 		$container->register(
 			\Aggressive\Ads\Repository\Conversion_Credential_Repository::class,

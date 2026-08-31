@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-31T09:19:47+00:00\n"
+"POT-Creation-Date: 2026-08-31T23:38:35+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -861,7 +861,9 @@ msgid "Review"
 msgstr ""
 
 #. translators: 1: menu label, 2: number of items awaiting a decision.
+#. translators: 1: number of refused reports. 2: why they were refused, such as "arrived after the attribution window".
 #: inc/Admin/class-review-screen.php:114
+#: inc/Install/class-conversion-health.php:172
 #, php-format
 msgid "%1$s %2$s"
 msgstr ""
@@ -1833,59 +1835,97 @@ msgid "%d creatives were skipped by the delivery model upgrade, which reports it
 msgstr ""
 
 #: inc/Install/class-assignment-health.php:126
-#: inc/Install/class-conversion-health.php:164
+#: inc/Install/class-conversion-health.php:247
 #: inc/Install/class-decision-health.php:98
 #: inc/Install/class-rewrite-health.php:281
 #: inc/Install/class-viewability-health.php:125
 msgid "Advertising"
 msgstr ""
 
-#: inc/Install/class-conversion-health.php:67
+#: inc/Install/class-conversion-health.php:77
 msgid "Advertising conversions are being recorded"
 msgstr ""
 
-#: inc/Install/class-conversion-health.php:89
+#: inc/Install/class-conversion-health.php:99
 msgid "No conversions are defined"
 msgstr ""
 
-#: inc/Install/class-conversion-health.php:90
+#: inc/Install/class-conversion-health.php:100
 msgid "Nothing can be recorded until a conversion exists. Add one under Advertising → Conversions, then put its reporting key on the page an advertiser sends people to."
 msgstr ""
 
-#: inc/Install/class-conversion-health.php:100
+#: inc/Install/class-conversion-health.php:110
 msgid "No advertisements were clicked yesterday"
 msgstr ""
 
-#: inc/Install/class-conversion-health.php:101
+#: inc/Install/class-conversion-health.php:111
 msgid "There is nothing to attribute yet. A conversion is only recorded against a click or a view, so this is normal on a new installation or a quiet site."
 msgstr ""
 
-#: inc/Install/class-conversion-health.php:108
+#: inc/Install/class-conversion-health.php:118
 msgid "Yesterday was not measured for conversions"
 msgstr ""
 
-#: inc/Install/class-conversion-health.php:109
+#: inc/Install/class-conversion-health.php:119
 msgid "These clicks predate conversion tracking. Days from here on will carry a count."
 msgstr ""
 
-#: inc/Install/class-conversion-health.php:116
+#: inc/Install/class-conversion-health.php:126
 msgid "Advertisements were clicked yesterday and no conversions were recorded"
 msgstr ""
 
-#: inc/Install/class-conversion-health.php:117
+#: inc/Install/class-conversion-health.php:127
 msgid "This can simply mean nobody converted. It can also mean the reporting key is not on the advertiser’s page, or that the click token is being stripped from the destination URL before it arrives. Check that a click lands on a URL carrying an aggr_ct parameter."
 msgstr ""
 
 #. translators: %s: number of conversions recorded.
-#: inc/Install/class-conversion-health.php:125
+#: inc/Install/class-conversion-health.php:136
 #, php-format
 msgid "%s conversion was recorded yesterday"
 msgid_plural "%s conversions were recorded yesterday"
 msgstr[0] ""
 msgstr[1] ""
 
-#: inc/Install/class-conversion-health.php:128
+#: inc/Install/class-conversion-health.php:139
 msgid "Conversions are being reported and attributed."
+msgstr ""
+
+#. translators: 1: date counting began. 2: a list of refusal counts, such as "12 arrived after the attribution window".
+#: inc/Install/class-conversion-health.php:186
+#, php-format
+msgid "Reports refused since %1$s, approximately: %2$s."
+msgstr ""
+
+#: inc/Install/class-conversion-health.php:188
+msgid "; "
+msgstr ""
+
+#: inc/Install/class-conversion-health.php:205
+msgid "named a reporting key this site does not have"
+msgstr ""
+
+#: inc/Install/class-conversion-health.php:206
+msgid "named a conversion that has been archived"
+msgstr ""
+
+#: inc/Install/class-conversion-health.php:207
+msgid "named a conversion belonging to another advertiser"
+msgstr ""
+
+#: inc/Install/class-conversion-health.php:208
+msgid "carried no click this site recorded"
+msgstr ""
+
+#: inc/Install/class-conversion-health.php:209
+msgid "arrived after the attribution window had closed"
+msgstr ""
+
+#: inc/Install/class-conversion-health.php:210
+msgid "came from a server, for a conversion that does not accept server reports"
+msgstr ""
+
+#: inc/Install/class-conversion-health.php:211
+msgid "used a credential scoped to another advertiser"
 msgstr ""
 
 #: inc/Install/class-decision-health.php:49
