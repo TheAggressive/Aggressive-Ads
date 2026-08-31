@@ -16,6 +16,7 @@ use Aggressive\Ads\Repository\Event_Repository;
 use Aggressive\Ads\Repository\Org_Access_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
+use Aggressive\Ads\Repository\Conversion_Credential_Repository;
 use Aggressive\Ads\Repository\Conversion_Definition_Repository;
 use Aggressive\Ads\Repository\Conversion_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
@@ -199,6 +200,7 @@ final class Installer {
 	public function install_conversions(): void {
 		( new Conversion_Repository() )->install_table();
 		( new Conversion_Definition_Repository() )->install_table();
+		( new Conversion_Credential_Repository() )->install_table();
 	}
 
 	/** Creates or repairs the campaign line-item table. */

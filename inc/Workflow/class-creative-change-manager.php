@@ -112,14 +112,14 @@ final class Creative_Change_Manager {
 			return $this->error( 'aggr_replacement_unchanged', __( 'Change the destination or description before requesting an update.', 'aggressive-ads' ), 422 );
 		}
 
-		$lock = $this->creatives->claim_change_lock( $creative_id );
+		$lock = $this->revisions->claim_change_lock( $creative_id );
 
 		if ( '' === $lock ) {
 			return $this->error( 'aggr_replacement_busy', __( 'Another update is already being saved for this ad. Try again.', 'aggressive-ads' ), 409 );
 		}
 
 		try {
-			if ( $this->creatives->pending_replacement_id( $creative_id ) > 0 ) {
+			if ( $this->revisions->pending_replacement_id( $creative_id ) > 0 ) {
 				return $this->error( 'aggr_replacement_pending', __( 'This ad already has an update waiting for review.', 'aggressive-ads' ), 409 );
 			}
 
@@ -141,7 +141,7 @@ final class Creative_Change_Manager {
 				'text_only' => true,
 			);
 		} finally {
-			$this->creatives->release_change_lock( $creative_id, $lock );
+			$this->revisions->release_change_lock( $creative_id, $lock );
 		}
 	}
 
@@ -205,14 +205,14 @@ final class Creative_Change_Manager {
 			return $current;
 		}
 
-		$lock = $this->creatives->claim_change_lock( $creative_id );
+		$lock = $this->revisions->claim_change_lock( $creative_id );
 
 		if ( '' === $lock ) {
 			return $this->error( 'aggr_replacement_busy', __( 'Another update is already being saved for this ad. Try again.', 'aggressive-ads' ), 409 );
 		}
 
 		try {
-			if ( $this->creatives->pending_replacement_id( $creative_id ) > 0 ) {
+			if ( $this->revisions->pending_replacement_id( $creative_id ) > 0 ) {
 				return $this->error( 'aggr_replacement_pending', __( 'This ad already has an update waiting for review.', 'aggressive-ads' ), 409 );
 			}
 
@@ -261,7 +261,7 @@ final class Creative_Change_Manager {
 				'bytes'        => $accepted['bytes'],
 			);
 		} finally {
-			$this->creatives->release_change_lock( $creative_id, $lock );
+			$this->revisions->release_change_lock( $creative_id, $lock );
 		}
 	}
 
@@ -286,7 +286,7 @@ final class Creative_Change_Manager {
 			return $this->error( 'aggr_replacement_campaign_inactive', __( 'Only a scheduled or live campaign can apply an ad update.', 'aggressive-ads' ), 409 );
 		}
 
-		$lock = $this->creatives->claim_change_lock( $context['current_id'] );
+		$lock = $this->revisions->claim_change_lock( $context['current_id'] );
 
 		if ( '' === $lock ) {
 			return $this->error( 'aggr_replacement_busy', __( 'Another review action is already updating this ad. Try again.', 'aggressive-ads' ), 409 );
@@ -303,7 +303,7 @@ final class Creative_Change_Manager {
 
 			$ad_id = $this->creatives->provider_ad_id( $context['current_id'] );
 
-			if ( ! $this->creatives->activate_replacement( $context['current_id'], $replacement_id, $ad_id ) ) {
+			if ( ! $this->revisions->activate_replacement( $context['current_id'], $replacement_id, $ad_id ) ) {
 				$restored = $this->provider->restore_creative( $context['campaign_id'], $context['current_id'] );
 
 				return $this->error(
@@ -321,7 +321,7 @@ final class Creative_Change_Manager {
 
 			return true;
 		} finally {
-			$this->creatives->release_change_lock( $context['current_id'], $lock );
+			$this->revisions->release_change_lock( $context['current_id'], $lock );
 		}
 	}
 
@@ -353,14 +353,14 @@ final class Creative_Change_Manager {
 			return $context;
 		}
 
-		$lock = $this->creatives->claim_change_lock( $context['current_id'] );
+		$lock = $this->revisions->claim_change_lock( $context['current_id'] );
 
 		if ( '' === $lock ) {
 			return $this->error( 'aggr_replacement_busy', __( 'Another review action is already updating this ad. Try again.', 'aggressive-ads' ), 409 );
 		}
 
 		try {
-			if ( ! $this->creatives->reject_replacement( $replacement_id, $notes ) ) {
+			if ( ! $this->revisions->reject_replacement( $replacement_id, $notes ) ) {
 				return $this->error( 'aggr_replacement_rejection_failed', __( 'The update decision could not be saved. Please try again.', 'aggressive-ads' ), 500 );
 			}
 
@@ -369,7 +369,7 @@ final class Creative_Change_Manager {
 
 			return true;
 		} finally {
-			$this->creatives->release_change_lock( $context['current_id'], $lock );
+			$this->revisions->release_change_lock( $context['current_id'], $lock );
 		}
 	}
 
@@ -390,7 +390,7 @@ final class Creative_Change_Manager {
 			return $this->error( 'aggr_forbidden', __( 'You do not have permission to withdraw that ad update.', 'aggressive-ads' ), 403 );
 		}
 
-		$lock = $this->creatives->claim_change_lock( $context['current_id'] );
+		$lock = $this->revisions->claim_change_lock( $context['current_id'] );
 
 		if ( '' === $lock ) {
 			return $this->error( 'aggr_replacement_busy', __( 'Another action is already updating this ad. Try again.', 'aggressive-ads' ), 409 );
@@ -425,7 +425,7 @@ final class Creative_Change_Manager {
 
 			return true;
 		} finally {
-			$this->creatives->release_change_lock( $context['current_id'], $lock );
+			$this->revisions->release_change_lock( $context['current_id'], $lock );
 		}
 	}
 
@@ -465,7 +465,7 @@ final class Creative_Change_Manager {
 		if (
 			null === $replacement
 			|| null === $current
-			|| Creative_Repository::CHANGE_PENDING !== $this->creatives->change_state( $replacement_id )
+			|| Creative_Repository::CHANGE_PENDING !== $this->revisions->change_state( $replacement_id )
 			|| $replacement['campaign_id'] !== $current['campaign_id']
 			|| $replacement['org_id'] !== $current['org_id']
 			|| $replacement['placement_id'] !== $current['placement_id']
@@ -545,7 +545,7 @@ final class Creative_Change_Manager {
 		return null !== $stored
 			&& $path === $stored['path']
 			&& $current_id === $this->creatives->replacement_target_id( $replacement_id )
-			&& Creative_Repository::CHANGE_PENDING === $this->creatives->change_state( $replacement_id );
+			&& Creative_Repository::CHANGE_PENDING === $this->revisions->change_state( $replacement_id );
 	}
 
 	/**
@@ -574,7 +574,7 @@ final class Creative_Change_Manager {
 	 * @return void
 	 */
 	private function sync_pending_count( int $campaign_id ): void {
-		$count = count( $this->creatives->replacements_for_campaign( $campaign_id, array( Creative_Repository::CHANGE_PENDING ) ) );
+		$count = count( $this->revisions->replacements_for_campaign( $campaign_id, array( Creative_Repository::CHANGE_PENDING ) ) );
 
 		$this->campaigns->set_pending_update_count( $campaign_id, $count );
 	}

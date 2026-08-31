@@ -42,6 +42,12 @@ final class Conversion_Attribution {
 	/** The interaction happened, but too long ago. */
 	public const OUT_OF_WINDOW = 'out_of_window';
 
+	/** The definition exists but does not accept server-side reports. */
+	public const S2S_NOT_PERMITTED = 's2s_not_permitted';
+
+	/** The credential is scoped to a different organization than the definition. */
+	public const FOREIGN_CREDENTIAL = 'foreign_credential';
+
 	/**
 	 * Every reason, for the observability counters.
 	 *
@@ -55,6 +61,8 @@ final class Conversion_Attribution {
 			self::FOREIGN_DEFINITION,
 			self::NO_INTERACTION,
 			self::OUT_OF_WINDOW,
+			self::S2S_NOT_PERMITTED,
+			self::FOREIGN_CREDENTIAL,
 		);
 	}
 
@@ -67,10 +75,62 @@ final class Conversion_Attribution {
 	 * into an oracle for which definitions exist on the site and who owns them,
 	 * which is the reason `public_key` is unguessable in the first place.
 	 *
+	 * The two server-side refusals join them for the same reason one step on.
+	 * A credential holder is authenticated, so telling it "that definition is
+	 * not yours" leaks less than telling an anonymous browser — but it still
+	 * distinguishes a definition that exists from one that does not, which is
+	 * exactly the enumeration `public_key` is unguessable to prevent. Holding a
+	 * credential for one organization must not become a way to discover another
+	 * organization's definitions.
+	 *
 	 * @return list<string>
 	 */
 	public static function indistinguishable_refusals(): array {
-		return array( self::NO_DEFINITION, self::DEFINITION_CLOSED, self::FOREIGN_DEFINITION );
+		return array(
+			self::NO_DEFINITION,
+			self::DEFINITION_CLOSED,
+			self::FOREIGN_DEFINITION,
+			self::S2S_NOT_PERMITTED,
+			self::FOREIGN_CREDENTIAL,
+		);
+	}
+
+	/**
+	 * Whether an authenticated server-side reporter may use this definition.
+	 *
+	 * Separate from `decide()` rather than another branch inside it, because it
+	 * answers a different question about a different actor. `decide()` asks
+	 * whether an outcome is creditable to an interaction, and its inputs are the
+	 * same whoever reported it; this asks whether *this reporter* may report
+	 * against *this definition* at all, and it has no meaning for a browser —
+	 * which is why the browser path has no parameter through which a credential
+	 * could arrive.
+	 *
+	 * Ordered so the cheaper, less revealing refusal comes first, matching
+	 * `decide()`.
+	 *
+	 * @param array{org_id: int, allow_s2s: bool} $definition        Stored definition.
+	 * @param int                                 $credential_org_id Organization the credential is scoped to.
+	 * @return string ACCEPTED, or the reason this reporter may not.
+	 */
+	public static function decide_server_report( array $definition, int $credential_org_id ): string {
+		if ( ! $definition['allow_s2s'] ) {
+			return self::S2S_NOT_PERMITTED;
+		}
+
+		/*
+		 * Exact match, and org 0 is not a wildcard in either direction. A
+		 * publisher's own definition (org 0) measures whoever clicked, and no
+		 * advertiser's credential may report into it; an advertiser's
+		 * definition may only be reported into by that advertiser's credential.
+		 * `decide()` lets org 0 accept any campaign because the *visitor* is
+		 * anonymous there — a credential never is.
+		 */
+		if ( $definition['org_id'] !== $credential_org_id ) {
+			return self::FOREIGN_CREDENTIAL;
+		}
+
+		return self::ACCEPTED;
 	}
 
 	/**

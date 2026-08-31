@@ -25,11 +25,34 @@ browser ingestion, the projection and its reconcile have all shipped.
 
 What is defined and not built:
 
-1. **Server-to-server ingestion.** The definition already carries `allow_s2s`,
-   and nothing reads it. It needs a scoped, revocable organization credential —
-   its own issue/revoke surface — and it is the one place a reporter may state
-   value and currency, bounded by the definition. Until it exists, `allow_s2s`
-   is a checkbox that does nothing, which is worth fixing or removing.
+1. ~~Server-to-server ingestion.~~ Shipped. `allow_s2s` now has a reader:
+   `POST /aggr/v1/conversions/server`, authenticated by a scoped, revocable
+   organization credential issued and revoked through
+   `/aggr/v1/conversion-credentials` behind `aggr_manage_settings`.
+
+   **A second route rather than a mode of the browser one**, and that separation
+   is the security property rather than tidiness. This route accepts a value and
+   a currency; `/conversions` has no such parameter at all, and
+   `Conversion_Recorder::record()` has no argument one could arrive through. "An
+   anonymous browser may never state what its outcome was worth" is therefore a
+   fact about the URL space instead of a conditional somebody widens later.
+
+   Two decisions worth keeping:
+
+   - **Value and currency are stated together or not at all**, and a currency
+     that disagrees with the definition is refused rather than converted. This
+     plugin holds no exchange rate, and two currencies under one definition make
+     every total it produces a meaningless sum.
+   - **Organization 0 is not a wildcard for a credential.** An org-0 definition
+     accepts a conversion from any campaign because the visitor reporting it is
+     anonymous; a credential never is, so one with that scope could report
+     against every advertiser on the site.
+
+   What is still not built: a staff screen. Credentials are issued and revoked
+   through REST, and the Conversions screen does not yet show them — so today it
+   takes a request rather than a button. Everything the screen would need is on
+   `GET /aggr/v1/conversion-credentials`, which returns every credential, live
+   and revoked, and no secret.
 2. ~~A staff screen.~~ Shipped: Advertising → Conversions, behind
    `aggr_manage_settings`, creating and archiving definitions through the same
    REST routes. It shows the reporting key a page needs; it does not yet show a
@@ -230,34 +253,54 @@ What is not built:
    Two of its six tests first passed for the wrong reason, which is recorded in
    [testing-strategy.md](testing-strategy.md).
 
-## `Creative_Repository` is one method away from the file-length gate
+## `Creative_Repository` split, and what is left of it
 
-Not a defect, and not urgent — but it is the reason a small change had to be
-placed carefully rather than obviously, so it is worth someone knowing before
-they meet it the same way.
+Done, and recorded because the *reasoning* is what the next person needs, not
+the fact.
 
-The file is **981 lines** against a 1000-line hard fail. Adding a twenty-line
-accessor to it fails `lint:files`, which is the gate working: at that size the
-answer is to split by responsibility, not to shave the comment.
+The file hit the 1000-line hard fail for the second time. The replacement
+lifecycle moved out — `change_state`, `requested_at`, `pending_replacement_id`,
+`replacements_for_campaign`, `reject_replacement`, `activate_replacement` and
+the two advisory locks — taking it from **981 to 799**, under the 800-line
+warning as well as the hard fail.
 
-Two coherent seams exist, and **both are coupled to `unpublished_for_campaign()`**,
-which asks `is_rejected()` and `has_attachment()` in the same loop. Whichever
-cluster moves, that method has to move with it or the old class ends up
-depending on the new one:
+**It moved into `Creative_Revision_Repository` rather than a new class**, which
+was not the plan this entry originally proposed. That class was itself split out
+of `Creative_Repository` the first time the limit was hit, it owns "how does this
+creative relate to the ones before it", and it already wrote half of the
+replacement lifecycle: `create_pending_text_revision()` sets the change state
+that `change_state()` reads. The two halves of one workflow were split across two
+files, which is worse than either arrangement, so a third class would have made
+it three.
 
-1. **The attachment cluster** — `has_attachment`, `attachment_id`,
-   `attachment_url`, `attachment_file`, `set_attachment_id`,
-   `mark_attachment_as_creative`, `ids_promoted_with_private_file`,
-   `backfill_creative_attachment_marks`, `set_attachment_alt_text`. About 190
-   lines, and a genuinely different subject: the Media Library copy of the
-   artwork rather than the creative record. 11 files call into it.
-2. **The decision cluster** — `change_state`, `change_notes`, `requested_at`,
-   `reject_replacement`, `reject_creative`, `is_rejected`, the change locks.
-   Smaller, and closer to what recent work has been touching.
+Three things worth knowing:
 
-Neither has been done, because a repository split is its own change and does not
-belong inside a feature. It is written down here so the next person to hit the
-gate finds the analysis instead of repeating it.
+- **`change_notes()` stayed behind.** `META_CHANGE_NOTES` carries two decisions —
+  a refused replacement and a turned-down creative — and only the first moved.
+  A shared reader belongs with the record, not with one of its readers.
+- **`replacement_target_id()` stayed** because `is_active()` reads it, so the
+  moved code calls back through the injected `Creative_Repository`. The
+  dependency runs one way: review state depends on the creative record, never the
+  reverse.
+- **`CreativeRepositoryLockTest` was renamed** to `CreativeRevisionLockTest`. A
+  test file named for the class it no longer exercises is how the next person
+  looks in the wrong place.
+
+The move also turned up an untested branch it was carrying: `activate_replacement()`
+verifies its own metadata writes and rolls them back when they did not land, and
+collapsing that verification to `true` changed no test. Every existing test took
+the path where the writes succeed. It now has one that injects a swallowed write
+through `update_post_metadata` and asserts the live ad is still serving — because
+the alternative is a campaign whose current creative is archived and whose
+replacement is not running, which is an advertiser paying for a blank slot.
+
+**The attachment cluster has not moved**, and does not need to yet:
+`has_attachment`, `attachment_id`, `attachment_url`, `attachment_file`,
+`set_attachment_id`, `mark_attachment_as_creative`,
+`ids_promoted_with_private_file`, `backfill_creative_attachment_marks` and
+`set_attachment_alt_text` — about 190 lines about the Media Library copy of the
+artwork rather than the creative record, called from 11 files. It is the obvious
+next seam if the file grows again.
 
 ## Nothing else is open
 

@@ -265,6 +265,8 @@ array(
     17 => install_delivery_tables,        // rollups gain viewables (additive)
     18 => install_conversions,            // aggr_conversions + rollups gain conversions
     19 => install_conversions,            // aggr_conversion_definitions
+    20 => reproject_all,                  // repairs stale assignment snapshots
+    21 => install_conversions,            // aggr_conversion_credentials
 )
 ```
 
@@ -488,6 +490,43 @@ one definition would both read revision 4 and both believe they were current.
 `MAX_DEFINITIONS` bounds the table at 200. Not a licence limit — it is what makes
 the unpaged staff listing and the per-request public lookup safe without either
 growing a pagination story.
+
+### `aggr_conversion_credentials`
+
+Schema 21, and the authenticated half of conversion tracking. One row is one
+bearer secret, scoped to one organization, that may report conversions
+server-side.
+
+**`token_hash` is a verifier, not an index over something already stored.** The
+plaintext exists exactly once, in the response that issues it, and is written
+nowhere — `Conversion_Credential_Repository` mints it, stores the digest, and
+returns it to one caller. Nothing can produce it again, which is what makes "we
+cannot show you the token again, issue a new one" a fact about the code rather
+than a policy in the interface. The repository also strips `token_hash` on the
+way out, so the verifier cannot be logged, serialized into a REST response, or
+compared by a caller that forgot to use a constant-time comparison.
+
+The digest is `hash_hmac( 'sha256', $token, wp_salt( 'auth' ) )`. That is the
+opposite of the decision schema v10 made for `aggr_org_access.active_key`, and
+the difference is the point: `active_key` is an index over `canonical_name`,
+which sits in the clear beside it, and a salt rotation silently breaking every
+lookup was a defect. This one *should* stop working when the salt rotates —
+rotating auth salts is how an operator invalidates outstanding secrets, and a
+bearer credential that survived it would be one nobody can revoke that way.
+
+`revoked_at_ts` rather than a status column. It answers "is it revoked" and
+"when" with one value, and it avoids inventing another short `varchar` status
+after the `wp_posts.post_status` truncation this plugin has already been bitten
+by. The revocation is written with `WHERE revoked_at_ts = 0`, so a second
+revocation cannot move the answer to "when did we cut this off" — the question
+that matters during an incident.
+
+A credential is never deleted. `aggr_conversions.source` records that a row
+arrived server-side, and an operator asking which credential reported it needs
+the row to still be there. `MAX_LIVE_CREDENTIALS` bounds the live set at 50, for
+the reason `MAX_DEFINITIONS` bounds definitions: revocation is the operator's
+tool against a leak, and a list nobody can read through is a list nobody revokes
+from.
 
 ## The P3 candidate read contract
 

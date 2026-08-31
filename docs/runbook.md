@@ -299,6 +299,43 @@ verifies a component; this verifies the product.
 
 ---
 
+## Revoking a server-to-server conversion credential
+
+A credential is a bearer secret: whoever holds it can report conversions for one
+organization. Revocation is the only tool against a leaked one, so it is written
+down here rather than left to be worked out during the incident.
+
+```bash
+# What exists, live and revoked. No secret is ever returned.
+wp eval 'echo wp_json_encode(
+  Aggressive\Ads\Plugin::instance()->container()
+    ->get( Aggressive\Ads\Repository\Conversion_Credential_Repository::class )
+    ->all()
+);'
+```
+
+`last_used_at_ts` is what identifies the one in use. Then revoke it by id through
+`DELETE /aggr/v1/conversion-credentials/{id}` as a user holding
+`aggr_manage_settings`.
+
+**Revoking twice is success, not an error.** The intent — "this secret must not
+work" — is already satisfied, and the original `revoked_at_ts` is preserved so
+the answer to "when did we cut this off" does not move.
+
+**To cut off every credential at once, rotate the auth salts.** The digests are
+derived from `wp_salt( 'auth' )`, so a rotation invalidates all of them — along
+with every session, which is the usual reason to do it. That is deliberate rather
+than incidental; see `docs/data-schema.md` on `aggr_conversion_credentials`.
+
+**After revoking, watch the audit log.** A revoked secret that is still being
+presented writes `Revoked conversion credential was presented.` on every attempt.
+Its absence means the integration has been updated; its continuation means it has
+not, or that the leak is still in use. An *unknown* secret is deliberately not
+audited — that is something anybody can cause on a public endpoint, and recording
+it would be an unbounded write an attacker chooses.
+
+---
+
 ## Rollback
 
 **Deactivate first, and only deactivate.**
