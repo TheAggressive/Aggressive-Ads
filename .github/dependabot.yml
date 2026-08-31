@@ -1,5 +1,5 @@
 # Keep routine dependency maintenance low-noise while preserving prompt security fixes.
-# Version updates run monthly, are grouped, and exclude majors. Security updates are
+# Version updates run weekly, are grouped, and exclude majors. Security updates are
 # grouped separately and are not restricted by the version-update allow rules.
 version: 2
 
@@ -7,10 +7,12 @@ updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: monthly
+      interval: weekly
+      day: monday
+      time: '06:00'
     open-pull-requests-limit: 2
     cooldown:
-      default-days: 14
+      default-days: 7
     commit-message:
       prefix: chore
       include: scope
@@ -36,13 +38,15 @@ updates:
   - package-ecosystem: composer
     directory: /
     schedule:
-      interval: monthly
+      interval: weekly
+      day: monday
+      time: '06:00'
     open-pull-requests-limit: 2
     cooldown:
-      default-days: 14
+      default-days: 7
       semver-major-days: 30
-      semver-minor-days: 14
-      semver-patch-days: 7
+      semver-minor-days: 7
+      semver-patch-days: 3
     commit-message:
       prefix: chore
       include: scope
@@ -66,13 +70,15 @@ updates:
   - package-ecosystem: npm
     directory: /
     schedule:
-      interval: monthly
+      interval: weekly
+      day: monday
+      time: '06:00'
     open-pull-requests-limit: 2
     cooldown:
-      default-days: 14
+      default-days: 7
       semver-major-days: 30
-      semver-minor-days: 14
-      semver-patch-days: 7
+      semver-minor-days: 7
+      semver-patch-days: 3
     commit-message:
       prefix: chore
       include: scope
