@@ -129,7 +129,8 @@ final class Rest_Service_Registrar {
 			Conversion_Credentials_Controller::class,
 			static fn ( Service_Container $c ): Conversion_Credentials_Controller => new Conversion_Credentials_Controller(
 				$c->get( \Aggressive\Ads\Repository\Conversion_Credential_Repository::class ),
-				$c->get( \Aggressive\Ads\Workflow\Conversion_Credential_Manager::class )
+				$c->get( \Aggressive\Ads\Workflow\Conversion_Credential_Manager::class ),
+				$c->get( \Aggressive\Ads\Repository\Org_Repository::class )
 			)
 		);
 

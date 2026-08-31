@@ -11,9 +11,12 @@ namespace Aggressive\Ads\Tests\Integration;
 
 use Aggressive\Ads\Admin\Conversions_Screen;
 use Aggressive\Ads\Admin\Menu;
+use Aggressive\Ads\Admin\Shared_Assets;
+use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Security\Roles;
 use WP_UnitTestCase;
@@ -173,15 +176,41 @@ final class ConversionsScreenTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * **The window options are ones the domain will actually accept.**
+	 * **The shared DataViews assets reach the page, script and style alike.**
 	 *
-	 * A select offering a window the validator clamps is a control that lies:
-	 * the publisher picks one day, the definition saves as one hour, and
-	 * nothing says so. Built from `Conversion_Rules`, asserted here.
+	 * Both tables on this screen are DataViews, and its stylesheet is the half
+	 * that fails silently: WordPress resolves script and style handles
+	 * separately, so a script dependency does not bring one. Losing it renders
+	 * unstyled markup that still technically works, which is why this asserts
+	 * the style as well as the script rather than trusting the dependency.
 	 */
-	public function test_every_offered_window_survives_validation(): void {
-		wp_set_current_user( (int) self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+	public function test_the_screen_enqueues_the_shared_dataviews_assets(): void {
+		$admin = (int) self::factory()->user->create( array( 'role' => 'administrator' ) );
 
+		// Registers the menu as WordPress would, which is what gives the screen
+		// the hook suffix it compares against below.
+		$this->submenu_for( $admin );
+
+		$this->screen->enqueue(
+			(string) get_plugin_page_hookname( Conversions_Screen::MENU_SLUG, Menu::PARENT_SLUG )
+		);
+
+		$this->assertTrue(
+			wp_script_is( 'aggr-conversions', 'enqueued' ),
+			'The screen did not load its own bundle, so the rest of this proves nothing.'
+		);
+		$this->assertTrue(
+			wp_style_is( Shared_Assets::DATAVIEWS, 'enqueued' ),
+			'DataViews would render as unstyled markup, and nothing would error.'
+		);
+	}
+
+	/**
+	 * The screen's payload, as the bundle parses it out of the attribute.
+	 *
+	 * @return array<string, mixed>
+	 */
+	private function payload(): array {
 		ob_start();
 		$this->screen->render();
 		$html = (string) ob_get_clean();
@@ -191,7 +220,73 @@ final class ConversionsScreenTest extends WP_UnitTestCase {
 
 		$payload = json_decode( html_entity_decode( $matches[1] ?? '', ENT_QUOTES ), true );
 
-		$this->assertIsArray( $payload );
+		$this->assertIsArray( $payload, 'The screen rendered no payload at all.' );
+
+		return $payload;
+	}
+
+	/**
+	 * **The screen offers the credential route and the scopes it accepts.**
+	 *
+	 * A credential is the only way an advertiser's own server may report a
+	 * conversion — and state what it was worth — so until this screen carried
+	 * the route, that half of P12 took a curl request to switch on.
+	 *
+	 * Only active organizations are offered, because
+	 * `Conversion_Credential_Manager::issue()` refuses an inactive one. An
+	 * offered choice that cannot succeed is the control-that-lies shape the
+	 * window options are asserted against below.
+	 */
+	public function test_the_payload_carries_the_credential_route_and_its_active_scopes(): void {
+		wp_set_current_user( (int) self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$orgs = Plugin::instance()->container()->get( Org_Repository::class );
+
+		$active = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::ORGANIZATION,
+				'post_status' => 'publish',
+				'post_title'  => 'Bright Angle Media',
+			)
+		);
+
+		$suspended = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::ORGANIZATION,
+				'post_status' => 'publish',
+				'post_title'  => 'Dormant Holdings',
+			)
+		);
+
+		$this->assertTrue( $orgs->set_state( $suspended, Org_Repository::STATE_SUSPENDED ) );
+
+		$payload = $this->payload();
+
+		$this->assertSame( '/aggr/v1/conversion-credentials', $payload['credentialsPath'] );
+
+		$offered = array_column( $payload['advertisers'], 'id' );
+
+		$this->assertContains( $active, $offered );
+		$this->assertNotContains(
+			$suspended,
+			$offered,
+			'The screen offers a scope the manager would refuse.'
+		);
+		$this->assertCount( 1, $offered, 'The scopes are not the active organizations.' );
+	}
+
+	/**
+	 * **The window options are ones the domain will actually accept.**
+	 *
+	 * A select offering a window the validator clamps is a control that lies:
+	 * the publisher picks one day, the definition saves as one hour, and
+	 * nothing says so. Built from `Conversion_Rules`, asserted here.
+	 */
+	public function test_every_offered_window_survives_validation(): void {
+		wp_set_current_user( (int) self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$payload = $this->payload();
+
 		$this->assertNotEmpty( $payload['windows'], 'The screen offers no attribution windows at all.' );
 
 		foreach ( $payload['windows'] as $option ) {

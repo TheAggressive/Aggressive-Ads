@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-31T08:35:22+00:00\n"
+"POT-Creation-Date: 2026-08-31T09:19:47+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -94,15 +94,15 @@ msgstr ""
 msgid "That campaign-change decision is not valid."
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:86
-#: inc/Admin/class-conversions-screen.php:87
-#: inc/Admin/class-conversions-screen.php:111
-#: inc/Admin/class-conversions-screen.php:123
-#: inc/Admin/class-conversions-screen.php:150
+#: inc/Admin/class-conversions-screen.php:112
+#: inc/Admin/class-conversions-screen.php:113
+#: inc/Admin/class-conversions-screen.php:137
+#: inc/Admin/class-conversions-screen.php:151
+#: inc/Admin/class-conversions-screen.php:208
 msgid "Conversions"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:102
+#: inc/Admin/class-conversions-screen.php:128
 #: inc/Admin/class-menu.php:181
 #: inc/Admin/class-organization-screen.php:127
 #: inc/Admin/class-package-screen.php:116
@@ -112,19 +112,20 @@ msgstr ""
 msgid "You do not have permission to view this page."
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:112
+#: inc/Admin/class-conversions-screen.php:138
 msgid "The conversions screen has not been built. Run “pnpm build” and reload."
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:122
+#: inc/Admin/class-conversions-screen.php:150
 msgid "New conversion"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:124
+#: inc/Admin/class-conversions-screen.php:152
 msgid "No conversions are defined yet. Nothing will be recorded until one is."
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:125
+#: inc/Admin/class-conversions-screen.php:153
+#: inc/Admin/class-conversions-screen.php:184
 #: inc/Admin/class-package-screen.php:150
 #: inc/Admin/class-placement-screen.php:150
 #: templates/portal/screens/campaign.php:771
@@ -132,48 +133,48 @@ msgstr ""
 msgid "Name"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:126
+#: inc/Admin/class-conversions-screen.php:154
 msgid "Attribution window"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:127
+#: inc/Admin/class-conversions-screen.php:155
 msgid "How long after a click an outcome still counts."
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:128
+#: inc/Admin/class-conversions-screen.php:156
 msgid "Value"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:129
+#: inc/Admin/class-conversions-screen.php:157
 msgid "What one conversion is worth. Leave empty for an outcome with no value, such as a signup."
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:130
+#: inc/Admin/class-conversions-screen.php:158
 #: inc/Admin/class-package-screen.php:159
 msgid "Currency"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:131
+#: inc/Admin/class-conversions-screen.php:159
 msgid "Three letters, such as USD. Required when a value is set."
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:132
+#: inc/Admin/class-conversions-screen.php:160
 msgid "Limit to one advertiser"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:133
+#: inc/Admin/class-conversions-screen.php:161
 msgid "Off means any campaign may be credited. On means only that advertiser’s campaigns can."
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:134
+#: inc/Admin/class-conversions-screen.php:162
 msgid "Organization ID"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:135
+#: inc/Admin/class-conversions-screen.php:163
 msgid "Reporting key"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:136
+#: inc/Admin/class-conversions-screen.php:164
 #: inc/Admin/class-review-screen.php:269
 #: inc/Admin/class-review-screen.php:287
 #: templates/portal/partials/campaign-table.php:35
@@ -182,46 +183,163 @@ msgstr ""
 msgid "Status"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:137
+#: inc/Admin/class-conversions-screen.php:165
 #: templates/portal/screens/organization.php:116
 #: templates/portal/screens/organization.php:199
 msgid "Actions"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:138
+#: inc/Admin/class-conversions-screen.php:166
 msgid "Accepting reports"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:139
+#: inc/Admin/class-conversions-screen.php:167
 msgid "Archived"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:140
+#: inc/Admin/class-conversions-screen.php:168
 msgid "Archive"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:141
+#: inc/Admin/class-conversions-screen.php:169
 msgid "Create conversion"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:142
+#: inc/Admin/class-conversions-screen.php:170
 msgid "days"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:143
+#: inc/Admin/class-conversions-screen.php:171
 msgid "The conversions could not be loaded."
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:144
+#: inc/Admin/class-conversions-screen.php:172
 msgid "That conversion could not be saved."
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:151
+#: inc/Admin/class-conversions-screen.php:173
+msgid "Accept reports from the advertiser’s server"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:174
+msgid "Off means only a browser may report this conversion, and never with a value. On also needs a credential, below."
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:175
+msgid "Server reports"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:176
+msgid "Yes"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:177
+msgid "No"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:179
+msgid "Server-to-server credentials"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:180
+msgid "A credential lets an advertiser’s own server report a conversion, and state what it was worth. Give one to a single integration, so revoking it stops that integration and nothing else."
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:181
+msgid "Issued credentials"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:182
+msgid "No credentials have been issued. A server cannot report a conversion without one."
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:183
+msgid "Issue a credential"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:185
+msgid "Where this credential is used, so it can be told apart when one has to be revoked."
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:186
+#: inc/Admin/class-review-screen.php:267
+#: inc/Admin/class-review-screen.php:277
+msgid "Advertiser"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:187
+msgid "The only organization this credential may report for."
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:188
+msgid "A credential reports for one advertiser, and there are no active advertisers yet."
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:189
+msgid "Issue credential"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:190
+msgid "Copy this secret now. It is shown once and cannot be read again — if it is lost, revoke it and issue another."
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:191
+msgid "Copy"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:192
+msgid "Copied"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:193
+msgid "Issued"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:194
+msgid "Last used"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:195
+#: inc/Admin/class-settings-screen.php:264
+msgid "Never"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:196
+#: inc/Core/class-post-statuses.php:211
+msgid "Live"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:197
+#: templates/portal/screens/organization.php:231
+msgid "Revoke"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:198
+msgid "Revoked"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:199
+msgid "Revoke this credential? Anything still using it stops reporting immediately."
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:200
+msgid "That credential could not be issued."
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:201
+msgid "Search conversions"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:202
+msgid "Search credentials"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:209
 msgid "The conversions screen needs JavaScript enabled."
 msgstr ""
 
 #. translators: %d: number of days.
-#: inc/Admin/class-conversions-screen.php:192
+#: inc/Admin/class-conversions-screen.php:281
 #, php-format
 msgid "%d day"
 msgid_plural "%d days"
@@ -808,11 +926,6 @@ msgstr ""
 msgid "Campaign"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:267
-#: inc/Admin/class-review-screen.php:277
-msgid "Advertiser"
-msgstr ""
-
 #: inc/Admin/class-review-screen.php:268
 #: inc/Core/class-post-types.php:199
 #: templates/portal/partials/campaign-table.php:34
@@ -1358,10 +1471,6 @@ msgstr ""
 msgid "When no paid creative is live"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:264
-msgid "Never"
-msgstr ""
-
 #: inc/Admin/class-settings-screen.php:303
 msgid "Give access"
 msgstr ""
@@ -1560,10 +1669,6 @@ msgstr ""
 
 #: inc/Core/class-post-statuses.php:210
 msgid "Scheduled"
-msgstr ""
-
-#: inc/Core/class-post-statuses.php:211
-msgid "Live"
 msgstr ""
 
 #: inc/Core/class-post-statuses.php:212
@@ -2880,7 +2985,7 @@ msgstr ""
 msgid "Not found."
 msgstr ""
 
-#: inc/REST/class-conversion-credentials-controller.php:115
+#: inc/REST/class-conversion-credentials-controller.php:118
 #: inc/Workflow/class-conversion-credential-manager.php:58
 #: inc/Workflow/class-conversion-credential-manager.php:132
 msgid "You do not have permission to manage conversion credentials."
@@ -5105,10 +5210,6 @@ msgstr ""
 
 #: templates/portal/screens/organization.php:231
 msgid "Deny"
-msgstr ""
-
-#: templates/portal/screens/organization.php:231
-msgid "Revoke"
 msgstr ""
 
 #: templates/portal/screens/organization.php:244

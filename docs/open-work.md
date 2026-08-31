@@ -48,11 +48,46 @@ What is defined and not built:
      anonymous; a credential never is, so one with that scope could report
      against every advertiser on the site.
 
-   What is still not built: a staff screen. Credentials are issued and revoked
-   through REST, and the Conversions screen does not yet show them — so today it
-   takes a request rather than a button. Everything the screen would need is on
-   `GET /aggr/v1/conversion-credentials`, which returns every credential, live
-   and revoked, and no secret.
+   ~~What is still not built: a staff screen.~~ Shipped, on the Conversions
+   screen the definitions already use: issue, list and revoke, behind
+   `aggr_manage_settings` and through the same three routes. Nothing was added
+   to the write path — `Conversion_Credential_Manager` remains the only place a
+   credential is decided.
+
+   Three decisions worth keeping:
+
+   - **The `allow_s2s` toggle shipped with it, and had to.** The flag was
+     stored, validated and exposed over REST from the first day and no control
+     ever set it, so every definition a person could create refused every server
+     report. A credentials screen without it issues secrets that authenticate
+     and are then refused — the shape `ConversionAttributionTest` already
+     records for the flag itself.
+   - **The list is composed on the server**, not in the browser: the scope's
+     name, the two timestamps in the site's timezone, and `live`. A browser
+     rendering its own locale would disagree with the audit log beside it, which
+     is the one comparison this list exists to support during an incident, and a
+     screen deciding for itself what a revocation timestamp means would be a
+     second rule to keep in agreement with the one that refuses the report.
+   - **The secret is rendered once and never refetched.** The create response
+     carries the id and the plaintext; the row a person then reads comes from
+     the index route, which has no secret to give. "We cannot show you the token
+     again" stays a fact about the code rather than a promise the interface
+     makes.
+
+   - **Both lists are DataViews**, through the shared `aggr-dataviews` bundle
+     the organization roster already ships — `Shared_Assets::register()`, and
+     the stylesheet enqueued by the screen itself because a script dependency
+     does not bring one. Sorting is the reason rather than consistency: a
+     credential list is read during an incident, and "what is live", "what has
+     never been used" and "what did we cut off" are sorts and filters over
+     columns. Both date columns sort on the stored timestamp and render the
+     server's formatted string, so July does not sort after August. The
+     definitions table converted with it — one screen must not have two list
+     idioms — and its archive button became a row action.
+
+   Only active organizations are offered, because the manager refuses an
+   inactive one, and organization 0 cannot be typed at all — the screen offers a
+   list rather than a number for that reason.
 2. ~~A staff screen.~~ Shipped: Advertising → Conversions, behind
    `aggr_manage_settings`, creating and archiving definitions through the same
    REST routes. It shows the reporting key a page needs; it does not yet show a

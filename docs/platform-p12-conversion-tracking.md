@@ -12,11 +12,11 @@ started or that any item below is implemented.
 
 - Phase: **P12 — Conversion tracking**
 - Roadmap state: `[ ]`
-- Last audited: 2026-08-30. Click-through ingestion, definitions, the carrier,
-  the projection, its reconcile, the staff screen, Site Health and
-  **server-to-server ingestion under a scoped, revocable credential** have all
-  shipped. What remains is refusal counters (blocked on an undecided question,
-  see `open-work.md`), a staff screen for credentials, reporting surfaces
+- Last audited: 2026-08-31. Click-through ingestion, definitions, the carrier,
+  the projection, its reconcile, the staff screens for both definitions and
+  credentials, Site Health and **server-to-server ingestion under a scoped,
+  revocable credential** have all shipped. What remains is refusal counters
+  (blocked on an undecided question, see `open-work.md`), reporting surfaces
   (P14's), and view-through attribution (gated on P27).
 - Authoritative environments: the Docker CI lanes, plus the Playwright lane for
   the browser endpoint and the click-through carrier.
@@ -296,12 +296,14 @@ Each dependency gets one stated behaviour, not an incidental exception:
 
 ## Accessibility and internationalization
 
-The staff definition screen is new UI and inherits the plugin's design system
-and its axe coverage: keyboard-navigable, labelled, focus-managed, colour
-independent, and reflowing. Its strings are translated, and — because `t()`
-answers a missing key with an empty string and an unlabelled input merely looks
-unfinished — its string catalog is guarded by test, as `ReviewStringsTest`
-guards the review screen's.
+The staff screen — definitions and credentials alike — is new UI and inherits
+the plugin's design system and its axe coverage: keyboard-navigable, labelled,
+focus-managed, colour independent, and reflowing. Its strings are translated,
+and its catalog is guarded by `ConversionStringsTest`, as `ReviewStringsTest`
+guards the review screen's. The failure it guards is the same in both: a string
+PHP never sends renders as a blank or `undefined` label, and the screen merely
+looks unfinished. It reads the bundle's `Strings` type rather than its `i18n.`
+uses, because the type is the list PHP is contracted to fill.
 
 The browser ingestion path renders nothing, announces nothing and moves no
 focus. A conversion measured on a page must not change that page.
