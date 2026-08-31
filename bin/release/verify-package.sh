@@ -223,10 +223,31 @@ for path in "${PACKAGE_FORBIDDEN[@]}"; do
 done
 
 # 4. Everything that must.
+#
+# A miss prints what the archive *does* hold in that directory. One lost file
+# and a directory that was never built are the same message otherwise, and they
+# are completely different problems: the first is a packaging or reproducibility
+# fault, the second means a build step did not run. Distinguishing them took a
+# re-run and an investigation once already — see docs/known-issues.md.
 for path in "${PACKAGE_REQUIRED[@]}"; do
-	if ! echo "${listing}" | grep -qxF "${SLUG}/${path}"; then
-		fail "required file missing from the archive: ${path}"
+	if echo "${listing}" | grep -qxF "${SLUG}/${path}"; then
+		continue
 	fi
+
+	fail "required file missing from the archive: ${path}"
+
+	directory="$(dirname "${path}")"
+	siblings="$(echo "${listing}" | grep -E "^${SLUG}/${directory}/[^/]+$" || true)"
+
+	if [ -z "${siblings}" ]; then
+		echo "        ${directory}/ is empty or absent, so a build step did not run." >&2
+		continue
+	fi
+
+	# Bounded. A directory with hundreds of entries would bury the finding it is
+	# supposed to explain, and the count is the part that identifies the case.
+	echo "        ${directory}/ holds $(printf '%s\n' "${siblings}" | wc -l | tr -d ' ') entries:" >&2
+	printf '%s\n' "${siblings}" | head -12 | sed "s|^${SLUG}/${directory}/|          |" >&2
 done
 
 extracted=$(mktemp -d)
