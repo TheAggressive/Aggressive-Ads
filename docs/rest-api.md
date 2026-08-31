@@ -51,6 +51,10 @@ Routes marked “planned” remain contracts for later phases. Every other row i
 | `POST` | `/creatives/{id}/replacement` | `aggr_upload_creative` + object ownership | Stages a private replacement for a scheduled/live ad; multipart `file`, `click_url`, and optional `alt_text` |
 | `GET` | `/fill/{slot}` | public (always registered) | Public, same-origin. Uncached. One live creative from weighted assignment selection, or house. Mints a token bound to that campaign **and the current `blog_id`**. Response omits internal ids and never lists candidates |
 | `POST` | `/conversions` | public (always registered) | **Not same-origin**, unlike `/i` — a conversion is reported by the advertiser's site. Carries the fill token, a definition `public_key` and an idempotency key. Duplicate is `200`, first is `201`, every refusal is one identical `400`. Own rate-limit bucket. `no-store` |
+| `POST` | `/conversions/server` | bearer credential (route always registered) | The credentialed twin of `/conversions`. `Authorization: Bearer <secret>`; unknown, malformed and revoked all answer one `401`. **The only route that may state `value_micros` and `currency`**, both or neither, and the currency must match the definition's. Rate limited per credential |
+| `GET` | `/conversion-credentials` | `aggr_manage_settings` | Every credential, live and revoked, without any secret |
+| `POST` | `/conversion-credentials` | `aggr_manage_settings` | Issues one, scoped to an organization. **The response is the only place the secret ever exists** — `no-store`, and there is no read path back to it |
+| `DELETE` | `/conversion-credentials/{id}` | `aggr_manage_settings` | Revokes one. Revoking an already-revoked credential is `200`, not a conflict |
 | `POST` | `/i` | public (always registered) | Public same-origin beacon. Prefetch 400, replay 409, cross-origin 403, success 204 |
 | `DELETE` | `/creative-replacements/{id}` | `aggr_upload_creative` + object ownership | Withdraws the caller's pending replacement |
 | `POST` | `/creative-replacements/{id}/decision` | `aggr_review_campaigns`; approval also requires `aggr_publish` | Staff `approve` or `reject`; rejection requires `review_notes` |
@@ -241,6 +245,49 @@ interaction is a row the server wrote, the window and the value come from the
 definition, and the organization comes from the campaign. The only client input
 that survives is *which* definition and *when* the outcome happened, and the
 second is bounded to a day either side of now.
+
+### Server-to-server reporting
+
+`POST /aggr/v1/conversions/server` is the same operation under a scoped,
+revocable organization credential. It is **a second route rather than a mode of
+the first**, and that separation is the security property rather than tidiness:
+this route accepts a value and a currency, and `/conversions` has no such
+parameter at all — so "an anonymous browser may never state what its outcome was
+worth" is a fact about the URL space instead of a conditional somebody can widen
+later. `Conversion_Recorder` mirrors it, with a `record()` that cannot carry a
+value and a `record_from_server()` that can.
+
+The credential is verified in the callback rather than in `permission_callback`.
+A permission callback answers before the workflow does, so refusing there would
+never reach `Conversion_Credential_Manager` and never write the audit row saying
+a revoked secret is still being presented — which is the one signal an operator
+wants after revoking one.
+
+**Value and currency are stated together or not at all.** Defaulting a missing
+currency is how a shop denominated in euros silently reports dollars, and nothing
+downstream could detect it because the row would look exactly like a correct one.
+A currency that disagrees with the definition is refused rather than converted:
+this plugin holds no exchange rate, and two currencies under one definition make
+every total it produces a meaningless sum.
+
+**Two more refusals join the indistinguishable set.** A definition that does not
+permit server reporting, and one belonging to another organization, answer the
+same `400` as an unknown definition. A credential holder is authenticated, so
+telling it "not yours" leaks less than telling an anonymous browser — but it
+still separates a definition that exists from one that does not, which is exactly
+the enumeration `public_key` is unguessable to prevent.
+
+**Organization 0 is not a wildcard for a credential.** An org-0 definition is the
+publisher's own and accepts a conversion from any campaign, because the visitor
+reporting it is anonymous. A credential never is, so one scoped to org 0 could
+report against every advertiser on the site — issuing one is refused, and so is
+reporting into an org-0 definition with an advertiser's credential.
+
+Credentials are stored as `hash_hmac( 'sha256', $token, wp_salt( 'auth' ) )` and
+never in the clear. Rotating auth salts therefore invalidates every outstanding
+credential, which is intended: that is how an operator cuts off everything at
+once, and it is the opposite of the `active_key` decision in schema v10 for the
+reason recorded there.
 
 **Expired tokens are accepted, and must be.** `Fill_Token::TTL_SECONDS` is five
 minutes and bounds when reporting may *start*; an attribution window is days.

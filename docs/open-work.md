@@ -25,11 +25,34 @@ browser ingestion, the projection and its reconcile have all shipped.
 
 What is defined and not built:
 
-1. **Server-to-server ingestion.** The definition already carries `allow_s2s`,
-   and nothing reads it. It needs a scoped, revocable organization credential —
-   its own issue/revoke surface — and it is the one place a reporter may state
-   value and currency, bounded by the definition. Until it exists, `allow_s2s`
-   is a checkbox that does nothing, which is worth fixing or removing.
+1. ~~Server-to-server ingestion.~~ Shipped. `allow_s2s` now has a reader:
+   `POST /aggr/v1/conversions/server`, authenticated by a scoped, revocable
+   organization credential issued and revoked through
+   `/aggr/v1/conversion-credentials` behind `aggr_manage_settings`.
+
+   **A second route rather than a mode of the browser one**, and that separation
+   is the security property rather than tidiness. This route accepts a value and
+   a currency; `/conversions` has no such parameter at all, and
+   `Conversion_Recorder::record()` has no argument one could arrive through. "An
+   anonymous browser may never state what its outcome was worth" is therefore a
+   fact about the URL space instead of a conditional somebody widens later.
+
+   Two decisions worth keeping:
+
+   - **Value and currency are stated together or not at all**, and a currency
+     that disagrees with the definition is refused rather than converted. This
+     plugin holds no exchange rate, and two currencies under one definition make
+     every total it produces a meaningless sum.
+   - **Organization 0 is not a wildcard for a credential.** An org-0 definition
+     accepts a conversion from any campaign because the visitor reporting it is
+     anonymous; a credential never is, so one with that scope could report
+     against every advertiser on the site.
+
+   What is still not built: a staff screen. Credentials are issued and revoked
+   through REST, and the Conversions screen does not yet show them — so today it
+   takes a request rather than a button. Everything the screen would need is on
+   `GET /aggr/v1/conversion-credentials`, which returns every credential, live
+   and revoked, and no secret.
 2. ~~A staff screen.~~ Shipped: Advertising → Conversions, behind
    `aggr_manage_settings`, creating and archiving definitions through the same
    REST routes. It shows the reporting key a page needs; it does not yet show a

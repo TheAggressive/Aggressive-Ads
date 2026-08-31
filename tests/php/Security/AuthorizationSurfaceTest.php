@@ -40,6 +40,8 @@ final class AuthorizationSurfaceTest extends WP_UnitTestCase {
 			'GET /aggr/v1/campaigns/(?P<campaign_id>\d+)/creative-assignments',
 			'GET /aggr/v1/campaigns/(?P<campaign_id>\d+)/line-items',
 			'GET /aggr/v1/campaigns/(?P<id>\d+)',
+			'DELETE /aggr/v1/conversion-credentials/(?P<id>\d+)',
+			'GET /aggr/v1/conversion-credentials',
 			'GET /aggr/v1/conversion-definitions',
 			'GET /aggr/v1/creatives/(?P<id>\d+)/file',
 			'GET /aggr/v1/fill/(?P<slot>[a-z0-9-]+)',
@@ -63,8 +65,10 @@ final class AuthorizationSurfaceTest extends WP_UnitTestCase {
 			'POST /aggr/v1/campaigns/(?P<id>\d+)/copy',
 			'POST /aggr/v1/campaigns/(?P<id>\d+)/creatives',
 			'POST /aggr/v1/campaigns/(?P<id>\d+)/transitions',
+			'POST /aggr/v1/conversion-credentials',
 			'POST /aggr/v1/conversion-definitions',
 			'POST /aggr/v1/conversions',
+			'POST /aggr/v1/conversions/server',
 			'POST /aggr/v1/creative-replacements/(?P<id>\d+)/decision',
 			'POST /aggr/v1/creatives/(?P<id>\d+)/replacement',
 			'POST /aggr/v1/decisions',
@@ -150,6 +154,20 @@ final class AuthorizationSurfaceTest extends WP_UnitTestCase {
 			 * definition the campaign's organization owns.
 			 */
 			'POST /aggr/v1/conversions',
+
+			/*
+			 * Public in the `permission_callback` sense, and authenticated in
+			 * the callback. The bearer credential is verified there rather than
+			 * here deliberately: a permission callback answers before the
+			 * workflow does, so refusing a revoked secret at this level would
+			 * never reach `Conversion_Credential_Manager` and never write the
+			 * audit row saying a revoked credential is still being presented —
+			 * which is the one signal an operator wants after revoking one.
+			 *
+			 * Nothing is recorded without a credential. The callback's first act
+			 * is to authenticate, and it answers 401 when that fails.
+			 */
+			'POST /aggr/v1/conversions/server',
 		);
 
 		foreach ( array( 0, self::factory()->user->create( array( 'role' => 'subscriber' ) ) ) as $user_id ) {

@@ -22,7 +22,9 @@ use Aggressive\Ads\REST\Decisions_Controller;
 use Aggressive\Ads\REST\Line_Items_Controller;
 use Aggressive\Ads\REST\Organizations_Controller;
 use Aggressive\Ads\REST\Conversion_Definitions_Controller;
+use Aggressive\Ads\REST\Conversion_Credentials_Controller;
 use Aggressive\Ads\REST\Conversions_Controller;
+use Aggressive\Ads\REST\Server_Conversions_Controller;
 use Aggressive\Ads\REST\Packages_Controller;
 use Aggressive\Ads\REST\Placements_Controller;
 use Aggressive\Ads\REST\Settings_Controller;
@@ -120,6 +122,26 @@ final class Rest_Service_Registrar {
 			static fn ( Service_Container $c ): Conversion_Definitions_Controller => new Conversion_Definitions_Controller(
 				$c->get( \Aggressive\Ads\Repository\Conversion_Definition_Repository::class ),
 				$c->get( \Aggressive\Ads\Workflow\Conversion_Definition_Manager::class )
+			)
+		);
+
+		$container->register(
+			Conversion_Credentials_Controller::class,
+			static fn ( Service_Container $c ): Conversion_Credentials_Controller => new Conversion_Credentials_Controller(
+				$c->get( \Aggressive\Ads\Repository\Conversion_Credential_Repository::class ),
+				$c->get( \Aggressive\Ads\Workflow\Conversion_Credential_Manager::class )
+			)
+		);
+
+		$container->register(
+			Server_Conversions_Controller::class,
+			static fn ( Service_Container $c ): Server_Conversions_Controller => new Server_Conversions_Controller(
+				$c->get( \Aggressive\Ads\Workflow\Fill_Service::class ),
+				$c->get( \Aggressive\Ads\Workflow\Fill_Token::class ),
+				$c->get( \Aggressive\Ads\Security\Rate_Limiter::class ),
+				$c->get( \Aggressive\Ads\Workflow\Conversion_Recorder::class ),
+				$c->get( \Aggressive\Ads\Workflow\Conversion_Credential_Manager::class ),
+				$c->get( \Aggressive\Ads\Repository\Conversion_Definition_Repository::class )
 			)
 		);
 

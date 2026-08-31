@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-31T01:24:59+00:00\n"
+"POT-Creation-Date: 2026-08-31T08:05:48+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -2840,6 +2840,7 @@ msgstr ""
 #: inc/REST/class-conversions-controller.php:143
 #: inc/REST/class-decisions-controller.php:90
 #: inc/REST/class-fill-controller.php:71
+#: inc/REST/class-server-conversions-controller.php:155
 msgid "Native delivery is off."
 msgstr ""
 
@@ -2879,7 +2880,14 @@ msgstr ""
 msgid "Not found."
 msgstr ""
 
+#: inc/REST/class-conversion-credentials-controller.php:115
+#: inc/Workflow/class-conversion-credential-manager.php:58
+#: inc/Workflow/class-conversion-credential-manager.php:132
+msgid "You do not have permission to manage conversion credentials."
+msgstr ""
+
 #: inc/REST/class-conversions-controller.php:248
+#: inc/REST/class-server-conversions-controller.php:339
 msgid "That conversion could not be recorded."
 msgstr ""
 
@@ -2931,6 +2939,14 @@ msgstr ""
 #: inc/REST/class-review-controller.php:274
 #: inc/REST/class-review-controller.php:356
 msgid "That campaign could not be found."
+msgstr ""
+
+#: inc/REST/class-server-conversions-controller.php:267
+msgid "State value_micros and currency together, or neither."
+msgstr ""
+
+#: inc/REST/class-server-conversions-controller.php:322
+msgid "That credential is not usable."
 msgstr ""
 
 #: inc/REST/class-settings-controller.php:136
@@ -3057,11 +3073,11 @@ msgstr ""
 msgid "Security"
 msgstr ""
 
-#: inc/Security/class-rate-limiter.php:200
+#: inc/Security/class-rate-limiter.php:219
 msgid "This request could not be safely accepted. Please try again."
 msgstr ""
 
-#: inc/Security/class-rate-limiter.php:223
+#: inc/Security/class-rate-limiter.php:242
 msgid "That is more requests than we can accept right now. Please wait a moment and try again."
 msgstr ""
 
@@ -3412,6 +3428,30 @@ msgstr ""
 
 #: inc/Workflow/class-campaign-validator.php:257
 msgid "This campaign is not ready to submit."
+msgstr ""
+
+#: inc/Workflow/class-conversion-credential-manager.php:68
+msgid "Give this credential a short name so it can be told apart later."
+msgstr ""
+
+#: inc/Workflow/class-conversion-credential-manager.php:84
+msgid "Choose the organization this credential reports for."
+msgstr ""
+
+#: inc/Workflow/class-conversion-credential-manager.php:92
+msgid "Revoke a credential before issuing another."
+msgstr ""
+
+#: inc/Workflow/class-conversion-credential-manager.php:104
+msgid "The credential could not be created."
+msgstr ""
+
+#: inc/Workflow/class-conversion-credential-manager.php:142
+msgid "That credential no longer exists."
+msgstr ""
+
+#: inc/Workflow/class-conversion-credential-manager.php:162
+msgid "The credential could not be revoked."
 msgstr ""
 
 #: inc/Workflow/class-conversion-definition-manager.php:55
