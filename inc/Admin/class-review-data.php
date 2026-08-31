@@ -472,7 +472,7 @@ final class Review_Data {
 	private function replacement_rows( int $campaign_id ): array {
 		$rows = array();
 
-		foreach ( $this->creatives->replacements_for_campaign( $campaign_id, array( Creative_Repository::CHANGE_PENDING ) ) as $creative ) {
+		foreach ( $this->revisions->replacements_for_campaign( $campaign_id, array( Creative_Repository::CHANGE_PENDING ) ) as $creative ) {
 			$current_id = $this->creatives->replacement_target_id( $creative['id'] );
 			$current    = $this->creatives->details( $current_id );
 
@@ -490,7 +490,7 @@ final class Review_Data {
 				'alt_text'     => $creative['alt_text'],
 				'current_url'  => $current['click_url'],
 				'current_alt'  => $current['alt_text'],
-				'requested_at' => $this->creatives->requested_at( $creative['id'] ),
+				'requested_at' => $this->revisions->requested_at( $creative['id'] ),
 
 				/*
 				 * Derived from the two checksums, never from the request that
