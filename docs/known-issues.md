@@ -71,6 +71,31 @@ reopen an entry in [open-work.md](open-work.md). Do not reach for
 because a retry around a test turns a fast red into a slow red and hides the
 cold-start assumption that is the actual defect.
 
+**Third occurrence, 2026-08-31, and the first with a trace.** On pull request
+150, `organizations.spec.ts:178` hit the 60 s *test* timeout inside
+`page.waitForURL( /\/wp-admin\// )` after the login click. A re-run of the same
+commit passed the whole lane in 3m12s, and four other tests in that same file
+drove the same `openScreen` login helper successfully in the failing run.
+
+The upload fixes worked, so this one left evidence, and it does not fit the
+theory above. From `trace.zip`: `goto /wp-login.php` 0.21 s, both fields filled,
+`click #wp-submit` returned in 0.04 s, then `Wait for navigation` consumed the
+entire 60 s. **The network log holds the login GET and its assets and no POST at
+all**, and the page snapshot at failure is still the login form with the
+password field focused.
+
+So nothing admin-side was ever reached: this occurrence cannot be first compile
+and parse of an admin bundle, which is what the other two were attributed to.
+Nor does it contradict the "not the login redirect" bullet — that eliminated a
+*slow* POST, by injecting a 4 s delay. This is a submit that produced no request
+whatsoever.
+
+What is still unknown is why. The candidate worth testing next is that the click
+lands before the login form is submittable, which would be visible in the DOM
+snapshot the trace keeps for the click step. Read that before changing the
+helper: making the test click twice, or wait for `networkidle`, would hide the
+question rather than answer it.
+
 ## The packaging lane once built two different archives from one dist
 
 **What.** `pnpm ci:package` builds the ZIP twice and compares digests, so that a
