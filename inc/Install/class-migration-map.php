@@ -214,6 +214,24 @@ final class Migration_Map {
 			21 => static function () use ( $c ): void {
 				$c->get( Installer::class )->install_conversions();
 			},
+
+			/*
+			 * `operator_paused` records who paused an assignment.
+			 *
+			 * Additive, and every existing row is correctly 0: before this
+			 * column there was no way for a person to pause one assignment and
+			 * have it stay paused, so no historical row can have been in that
+			 * state. Defaulting to zero is the true answer rather than a
+			 * convenient one — unlike `viewables`, where zero would have meant
+			 * "nothing was seen" instead of "nobody was counting".
+			 *
+			 * A campaign-paused assignment stays exactly as it is and is
+			 * resumed by the next campaign transition, which is the behaviour it
+			 * already had.
+			 */
+			22 => static function () use ( $c ): void {
+				$c->get( Creative_Assignment_Repository::class )->install_table();
+			},
 		);
 	}
 }

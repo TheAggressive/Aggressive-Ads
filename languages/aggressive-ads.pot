@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-08-31T08:05:48+00:00\n"
+"POT-Creation-Date: 2026-08-31T08:35:22+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -2874,7 +2874,7 @@ msgstr ""
 #: inc/REST/class-campaigns-controller.php:412
 #: inc/REST/class-creative-file-controller.php:190
 #: inc/REST/class-line-items-controller.php:358
-#: inc/Workflow/class-assignment-editor.php:325
+#: inc/Workflow/class-assignment-editor.php:337
 #: inc/Workflow/class-line-item-editor.php:69
 #: inc/Workflow/class-line-item-editor.php:78
 msgid "Not found."
@@ -3142,7 +3142,7 @@ msgstr ""
 msgid "This creative cannot move to that state from where it is now."
 msgstr ""
 
-#: inc/Workflow/class-assignment-editor.php:289
+#: inc/Workflow/class-assignment-editor.php:301
 msgid "Creative dates must fall inside the campaign’s own dates."
 msgstr ""
 

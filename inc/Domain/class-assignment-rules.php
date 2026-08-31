@@ -69,6 +69,53 @@ final class Assignment_Rules {
 	}
 
 	/**
+	 * The status a campaign transition may write onto one assignment.
+	 *
+	 * A campaign pause pauses every assignment under it, and a resume brings
+	 * them all back. That is right for the ones the campaign paused, and wrong
+	 * for one a person paused on its own: the publisher who stopped a single
+	 * advertisement finds it serving again after an unrelated pause and resume
+	 * of its campaign, with nothing in the interface saying it moved.
+	 *
+	 * The reason this needed a stored flag rather than a cleverer rule is that
+	 * `paused` alone cannot answer it. Both kinds of pause produce the identical
+	 * row, so protecting every paused assignment would strand the ones the
+	 * campaign paused — which is the worse failure, and is why this was left
+	 * open rather than guessed at.
+	 *
+	 * **A terminal projection still wins.** A campaign that completes or is
+	 * cancelled takes its assignments with it whoever paused them; an operator's
+	 * pause says "not now", not "never mind what happens to the campaign", and a
+	 * row left `paused` under a cancelled campaign would be a candidate the
+	 * engine keeps considering for a campaign that has ended.
+	 *
+	 * @param string $projected       Status derived from the campaign.
+	 * @param bool   $operator_paused Whether a person paused this assignment itself.
+	 * @return string The status to write.
+	 */
+	public static function project_status( string $projected, bool $operator_paused ): string {
+		if ( ! $operator_paused || self::is_terminal( $projected ) ) {
+			return $projected;
+		}
+
+		return self::PAUSED;
+	}
+
+	/**
+	 * Whether a status change is a person pausing this assignment on its own.
+	 *
+	 * Asked of the *edit* path only. A campaign transition reaches assignments
+	 * through `project_status()` and never through here, which is what keeps the
+	 * two kinds of pause distinguishable at all.
+	 *
+	 * @param string $to Status being written.
+	 * @return bool
+	 */
+	public static function is_operator_pause( string $to ): bool {
+		return self::PAUSED === $to;
+	}
+
+	/**
 	 * Whether a status string is one of ours.
 	 *
 	 * @param string $status Candidate status.
