@@ -14,10 +14,10 @@ started or that any item below is implemented.
 - Roadmap state: `[ ]`
 - Last audited: 2026-08-31. Click-through ingestion, definitions, the carrier,
   the projection, its reconcile, the staff screens for both definitions and
-  credentials, Site Health and **server-to-server ingestion under a scoped,
-  revocable credential** have all shipped. What remains is refusal counters
-  (blocked on an undecided question, see `open-work.md`), reporting surfaces
-  (P14's), and view-through attribution (gated on P27).
+  credentials, Site Health with **refusal counters**, and **server-to-server
+  ingestion under a scoped, revocable credential** have all shipped. What
+  remains belongs to other phases: reporting surfaces are P14's, and
+  view-through attribution is gated on P27.
 - Authoritative environments: the Docker CI lanes, plus the Playwright lane for
   the browser endpoint and the click-through carrier.
 
@@ -293,6 +293,13 @@ Each dependency gets one stated behaviour, not an incidental exception:
   window from a broken carrier, and how to read a conversion count of zero
   against a healthy click count — which almost always means the destination URL
   is dropping the parameter.
+- **Why a report was refused**, from `Workflow\Conversion_Metrics`: the counts
+  are buffered per request and written once on `shutdown`, so the public refusal
+  path costs no query while it is being served. They are approximate by
+  construction and therefore inform Site Health's description and never its
+  status, which stays derived from the exact ledger and rollup. `open-work.md`
+  records why the two compromises this was nearly built with — sampling, and
+  counting only where an object cache exists — were both rejected.
 
 ## Accessibility and internationalization
 

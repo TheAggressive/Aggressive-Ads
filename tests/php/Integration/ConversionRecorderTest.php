@@ -20,6 +20,7 @@ use Aggressive\Ads\Repository\Conversion_Definition_Repository;
 use Aggressive\Ads\Repository\Conversion_Repository;
 use Aggressive\Ads\Repository\Event_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
+use Aggressive\Ads\Workflow\Conversion_Metrics;
 use Aggressive\Ads\Workflow\Conversion_Recorder;
 use Aggressive\Ads\Workflow\Fill_Token;
 use WP_UnitTestCase;
@@ -77,6 +78,13 @@ final class ConversionRecorderTest extends WP_UnitTestCase {
 	private Fill_Token $tokens;
 
 	/**
+	 * Refusal counters.
+	 *
+	 * @var Conversion_Metrics
+	 */
+	private Conversion_Metrics $metrics;
+
+	/**
 	 * Placement the fill was for.
 	 *
 	 * @var int
@@ -115,6 +123,9 @@ final class ConversionRecorderTest extends WP_UnitTestCase {
 		$this->events      = $container->get( Event_Repository::class );
 		$this->rollups     = $container->get( Rollup_Repository::class );
 		$this->tokens      = $container->get( Fill_Token::class );
+		$this->metrics     = $container->get( Conversion_Metrics::class );
+
+		$this->metrics->reset();
 
 		$this->conversions->install_table();
 		$this->definitions->install_table();
@@ -400,6 +411,99 @@ final class ConversionRecorderTest extends WP_UnitTestCase {
 
 		$this->assertSame( Conversion_Attribution::NO_DEFINITION, $result['reason'] );
 		$this->assertSame( 0, $this->conversion_count() );
+	}
+
+	/**
+	 * Ends the request the way production does, minus core's output flushing.
+	 *
+	 * `wp_ob_end_flush_all` is hooked to `shutdown` by core and closes the
+	 * output buffers PHPUnit is holding, which makes every test that fires this
+	 * action risky. Dropping that one handler leaves the hook this service
+	 * actually listens to intact, which is the thing being proven.
+	 */
+	private function end_request(): void {
+		remove_action( 'shutdown', 'wp_ob_end_flush_all', 1 );
+
+		do_action( 'shutdown' );
+	}
+
+	/**
+	 * **A refusal counted through the production recorder, not beside it.**
+	 *
+	 * This is the assertion the counter exists for. Every stage of this plugin
+	 * that shipped a working counter nothing called — frequency capping is the
+	 * one that reached production — passed its own tests by arranging the count
+	 * it then read back. So the report here is refused by the real recorder and
+	 * the number is read from the real option.
+	 *
+	 * `shutdown` is fired rather than `flush()` called, because the hook is the
+	 * production writer and a test that called the method directly would pass
+	 * over a service nobody remembered to initialise.
+	 */
+	public function test_a_refusal_is_counted_by_the_recorder(): void {
+		$definition = $this->definition( array( 'window_seconds' => 3600 ) );
+		$click      = $this->clicked_token();
+
+		$this->assertSame( array(), $this->metrics->refusal_counts(), 'Nothing may be counted before the report.' );
+
+		$result = $this->recorder->record( $click['parsed'], $click['hash'], $definition['public_key'], 'order-1099-abcdef', self::CLICK_AT + 3601, Conversion_Rules::SOURCE_BROWSER );
+
+		$this->assertSame( Conversion_Attribution::OUT_OF_WINDOW, $result['reason'] );
+		$this->assertSame( array(), $this->metrics->refusal_counts(), 'The count must not be durable before the request ends.' );
+
+		// What production does at the end of the request, and the only thing
+		// that makes the count survive it.
+		$this->end_request();
+
+		$this->assertSame(
+			array( Conversion_Attribution::OUT_OF_WINDOW => 1 ),
+			$this->metrics->refusal_counts(),
+			'The recorder refused the report and counted nothing.'
+		);
+		$this->assertGreaterThan( 0, $this->metrics->counting_since() );
+	}
+
+	/**
+	 * **A refusal before the ledger read is counted too.**
+	 *
+	 * `write()` returns from four places and the cheap refusals return first,
+	 * from a branch that never reaches the event ledger at all. A counter
+	 * placed at the end of the successful path would miss exactly the refusals
+	 * an operator most needs to see, because those are the ones a
+	 * misconfiguration produces in bulk.
+	 */
+	public function test_a_refusal_that_never_reads_the_ledger_is_counted(): void {
+		$click = $this->clicked_token();
+
+		$this->recorder->record( $click['parsed'], $click['hash'], str_repeat( 'd', 32 ), 'order-1099-abcdef', self::CLICK_AT + 60, Conversion_Rules::SOURCE_BROWSER );
+
+		$this->end_request();
+
+		$this->assertSame(
+			array( Conversion_Attribution::NO_DEFINITION => 1 ),
+			$this->metrics->refusal_counts()
+		);
+	}
+
+	/**
+	 * **A recorded conversion counts no refusal**, which is the half worth more.
+	 *
+	 * A counter that also fired on success would report a broken integration on
+	 * a site where everything works, and the operator would learn to ignore it.
+	 */
+	public function test_a_recorded_conversion_counts_nothing(): void {
+		$definition = $this->definition();
+		$click      = $this->clicked_token();
+
+		$result = $this->recorder->record( $click['parsed'], $click['hash'], $definition['public_key'], 'order-1099-abcdef', self::CLICK_AT + 60, Conversion_Rules::SOURCE_BROWSER );
+
+		$this->assertSame( Conversion_Recorder::RECORDED, $result['outcome'] );
+		$this->assertSame( 1, $this->conversion_count(), 'The fixture must record, or the next assertion passes for the wrong reason.' );
+
+		$this->end_request();
+
+		$this->assertSame( array(), $this->metrics->refusal_counts() );
+		$this->assertSame( 0, $this->metrics->counting_since() );
 	}
 
 	/**

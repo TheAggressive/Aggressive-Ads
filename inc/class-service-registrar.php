@@ -326,7 +326,8 @@ final class Service_Registrar {
 			\Aggressive\Ads\Install\Conversion_Health::class,
 			static fn ( Service_Container $c ): \Aggressive\Ads\Install\Conversion_Health => new \Aggressive\Ads\Install\Conversion_Health(
 				$c->get( \Aggressive\Ads\Repository\Conversion_Definition_Repository::class ),
-				$c->get( \Aggressive\Ads\Repository\Rollup_Repository::class )
+				$c->get( \Aggressive\Ads\Repository\Rollup_Repository::class ),
+				$c->get( \Aggressive\Ads\Workflow\Conversion_Metrics::class )
 			)
 		);
 

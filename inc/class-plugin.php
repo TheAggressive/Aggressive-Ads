@@ -340,6 +340,14 @@ final class Plugin {
 			\Aggressive\Ads\Install\Conversion_Health::class,
 			\Aggressive\Ads\Install\Viewability_Health::class,
 
+			/*
+			 * Here for its `shutdown` hook, which is the only thing that makes a
+			 * refusal durable. Without this line the recorder counts into a
+			 * buffer nothing ever writes, and every screen reads zero on a site
+			 * refusing thousands.
+			 */
+			\Aggressive\Ads\Workflow\Conversion_Metrics::class,
+
 			// After the state machine, whose transition action it listens to.
 			Campaign_Change_Manager::class,
 
