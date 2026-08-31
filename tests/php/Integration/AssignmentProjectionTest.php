@@ -16,6 +16,10 @@ use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Install\Installer;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Security\Roles;
+use Aggressive\Ads\Workflow\Assignment_Editor;
 use Aggressive\Ads\Workflow\Assignment_Projection;
 use WP_UnitTestCase;
 
@@ -236,6 +240,182 @@ final class AssignmentProjectionTest extends WP_UnitTestCase {
 			1,
 			$this->assignments->candidates_for_placement( $this->placement_id, time() ),
 			'A resumed campaign did not start serving again.'
+		);
+	}
+
+	/**
+	 * **An assignment a person paused stays paused through its campaign's own
+	 * pause and resume.**
+	 *
+	 * A publisher who stops one advertisement finds it serving again after an
+	 * unrelated pause and resume of its campaign, with nothing in the interface
+	 * saying it moved. Both kinds of pause leave the identical row, which is why
+	 * this needed a stored flag rather than a cleverer rule — and why the entry
+	 * in open-work.md said so rather than guessing.
+	 *
+	 * The pause is made through `Assignment_Editor`, not written into the row.
+	 * The whole claim is that what a person actually does is distinguishable
+	 * afterwards, and a fixture that set the flag itself would be asserting its
+	 * own arrangement.
+	 *
+	 * @return void
+	 */
+	public function test_an_assignment_a_person_paused_is_not_resumed_with_its_campaign(): void {
+		$fixture = $this->fixture( Post_Statuses::LIVE );
+		$this->projection->project( $fixture['campaign'] );
+
+		$this->assertCount( 1, $this->assignments->candidates_for_placement( $this->placement_id, time() ) );
+
+		$this->pause_by_hand( $fixture['campaign'], $fixture['assignment'] );
+
+		$this->assertSame(
+			array(),
+			$this->assignments->candidates_for_placement( $this->placement_id, time() ),
+			'Pausing one assignment did not stop it serving.'
+		);
+
+		$this->move_campaign( $fixture['campaign'], Post_Statuses::PAUSED );
+		$this->move_campaign( $fixture['campaign'], Post_Statuses::LIVE );
+
+		$this->assertSame(
+			Assignment_Rules::PAUSED,
+			$this->row( $fixture['assignment'] )['status'],
+			'A campaign resume restarted an advertisement somebody had deliberately stopped.'
+		);
+		$this->assertSame(
+			array(),
+			$this->assignments->candidates_for_placement( $this->placement_id, time() ),
+			'The deliberately stopped advertisement is serving again.'
+		);
+	}
+
+	/**
+	 * **Resuming it by hand gives it back to its campaign.**
+	 *
+	 * The flag is cleared on the way out as well as set on the way in. Without
+	 * that it would pin the assignment: paused for ever by its own flag, or —
+	 * worse — live for ever, ignoring a campaign that has since been paused.
+	 *
+	 * @return void
+	 */
+	public function test_resuming_it_by_hand_hands_it_back_to_the_campaign(): void {
+		$fixture = $this->fixture( Post_Statuses::LIVE );
+		$this->projection->project( $fixture['campaign'] );
+
+		$this->pause_by_hand( $fixture['campaign'], $fixture['assignment'] );
+		$this->resume_by_hand( $fixture['campaign'], $fixture['assignment'] );
+
+		$this->assertCount(
+			1,
+			$this->assignments->candidates_for_placement( $this->placement_id, time() ),
+			'Resuming the assignment by hand did not put it back on the page.'
+		);
+
+		$this->move_campaign( $fixture['campaign'], Post_Statuses::PAUSED );
+
+		$this->assertSame(
+			Assignment_Rules::PAUSED,
+			$this->row( $fixture['assignment'] )['status'],
+			'A resumed assignment stopped following its campaign into a pause.'
+		);
+
+		$this->move_campaign( $fixture['campaign'], Post_Statuses::LIVE );
+
+		$this->assertCount(
+			1,
+			$this->assignments->candidates_for_placement( $this->placement_id, time() ),
+			'A resumed assignment stopped following its campaign back out of a pause.'
+		);
+	}
+
+	/**
+	 * **A campaign that ends takes a hand-paused assignment with it.**
+	 *
+	 * An operator's pause says "not now", not "never mind what happens to the
+	 * campaign". A row left `paused` under a cancelled campaign is a candidate
+	 * the engine keeps considering for a campaign that has ended.
+	 *
+	 * @return void
+	 */
+	public function test_a_terminal_campaign_status_still_reaches_a_hand_paused_assignment(): void {
+		$fixture = $this->fixture( Post_Statuses::LIVE );
+		$this->projection->project( $fixture['campaign'] );
+
+		$this->pause_by_hand( $fixture['campaign'], $fixture['assignment'] );
+		$this->move_campaign( $fixture['campaign'], Post_Statuses::CANCELLED );
+
+		$this->assertSame(
+			Assignment_Rules::CANCELLED,
+			$this->row( $fixture['assignment'] )['status'],
+			'A hand-paused assignment outlived the campaign it belongs to.'
+		);
+	}
+
+	/**
+	 * Moves the campaign and re-projects, as a real transition does.
+	 *
+	 * @param int    $campaign_id Campaign post id.
+	 * @param string $status      Target campaign status.
+	 * @return void
+	 */
+	private function move_campaign( int $campaign_id, string $status ): void {
+		wp_update_post(
+			array(
+				'ID'          => $campaign_id,
+				'post_status' => $status,
+			)
+		);
+
+		$this->projection->project( $campaign_id );
+	}
+
+	/**
+	 * Pauses one assignment the way a person does, through the editor.
+	 *
+	 * @param int $campaign_id   Campaign post id.
+	 * @param int $assignment_id Assignment id.
+	 * @return void
+	 */
+	private function pause_by_hand( int $campaign_id, int $assignment_id ): void {
+		$this->edit( $campaign_id, $assignment_id, Assignment_Rules::PAUSED );
+	}
+
+	/**
+	 * Resumes one assignment the way a person does.
+	 *
+	 * @param int $campaign_id   Campaign post id.
+	 * @param int $assignment_id Assignment id.
+	 * @return void
+	 */
+	private function resume_by_hand( int $campaign_id, int $assignment_id ): void {
+		$this->edit( $campaign_id, $assignment_id, Assignment_Rules::LIVE );
+	}
+
+	/**
+	 * One status edit through the production workflow.
+	 *
+	 * @param int    $campaign_id   Campaign post id.
+	 * @param int    $assignment_id Assignment id.
+	 * @param string $status        Target assignment status.
+	 * @return void
+	 */
+	private function edit( int $campaign_id, int $assignment_id, string $status ): void {
+		/*
+		 * Staff, because `Edit_Window` opens a live campaign only to
+		 * REVIEW_CAMPAIGNS — which is also who would be pausing one
+		 * advertisement of a running campaign in the first place.
+		 */
+		( new Installer( new Audit_Repository(), new Roles() ) )->install_roles();
+		wp_set_current_user( (int) self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$editor   = Plugin::instance()->container()->get( Assignment_Editor::class );
+		$revision = (int) $this->row( $assignment_id )['revision'];
+
+		$result = $editor->update( $campaign_id, $assignment_id, array( 'status' => $status ), $revision );
+
+		$this->assertIsInt(
+			$result,
+			'The editor refused the change, so nothing below is being tested.'
 		);
 	}
 

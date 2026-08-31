@@ -203,4 +203,74 @@ final class AssignmentRulesTest extends TestCase {
 	public function test_a_wider_window_is_refused_rather_than_narrowed(): void {
 		$this->assertFalse( Assignment_Rules::window_fits( 50, 250, 100, 200 ) );
 	}
+	/**
+	 * **A campaign transition may not resume an assignment a person paused.**
+	 *
+	 * The defect: a publisher stops one advertisement, the campaign is later
+	 * paused and resumed for unrelated reasons, and the stopped advertisement
+	 * comes back with nothing saying it moved.
+	 */
+	public function test_an_operator_pause_survives_a_campaign_resume(): void {
+		$this->assertSame(
+			Assignment_Rules::PAUSED,
+			Assignment_Rules::project_status( Assignment_Rules::LIVE, true )
+		);
+		$this->assertSame(
+			Assignment_Rules::PAUSED,
+			Assignment_Rules::project_status( Assignment_Rules::READY, true )
+		);
+	}
+
+	/**
+	 * **An assignment its campaign paused still follows its campaign.**
+	 *
+	 * The half that must not break. Protecting every paused assignment would
+	 * strand these, which is the worse failure and is why a stored flag was
+	 * needed rather than a rule over the status alone.
+	 */
+	public function test_a_campaign_pause_still_moves_with_its_campaign(): void {
+		$this->assertSame(
+			Assignment_Rules::LIVE,
+			Assignment_Rules::project_status( Assignment_Rules::LIVE, false )
+		);
+		$this->assertSame(
+			Assignment_Rules::PAUSED,
+			Assignment_Rules::project_status( Assignment_Rules::PAUSED, false )
+		);
+	}
+
+	/**
+	 * **A campaign that ends takes a hand-paused assignment with it.**
+	 *
+	 * An operator's pause says "not now", not "never mind what happens to the
+	 * campaign". A row left paused under a cancelled campaign is a candidate the
+	 * engine keeps considering for a campaign that has ended.
+	 */
+	public function test_a_terminal_projection_beats_an_operator_pause(): void {
+		$this->assertSame(
+			Assignment_Rules::CANCELLED,
+			Assignment_Rules::project_status( Assignment_Rules::CANCELLED, true )
+		);
+		$this->assertSame(
+			Assignment_Rules::COMPLETED,
+			Assignment_Rules::project_status( Assignment_Rules::COMPLETED, true )
+		);
+	}
+
+	/**
+	 * Only a pause is an operator pause; every other edit clears the flag.
+	 *
+	 * Clearing matters as much as setting. A flag that survived a resume would
+	 * pin the assignment — live for ever, ignoring a campaign since paused.
+	 */
+	public function test_only_a_pause_marks_an_assignment_operator_paused(): void {
+		$this->assertTrue( Assignment_Rules::is_operator_pause( Assignment_Rules::PAUSED ) );
+
+		foreach ( array( Assignment_Rules::LIVE, Assignment_Rules::READY, Assignment_Rules::DRAFT, Assignment_Rules::CANCELLED, Assignment_Rules::COMPLETED ) as $status ) {
+			$this->assertFalse(
+				Assignment_Rules::is_operator_pause( $status ),
+				$status . ' was treated as a deliberate pause.'
+			);
+		}
+	}
 }

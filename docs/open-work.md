@@ -128,11 +128,33 @@ throws if the fixture does not end up serving.
 
 Two things still open from it:
 
-1. **An individually paused assignment is resumed when its campaign resumes.**
-   Terminal states are protected; `paused` is not, because nothing distinguishes
-   "paused with its campaign" from "paused on its own". Protecting it would strand
-   assignments paused by a campaign pause, which is worse. It needs an ownership
-   flag on the row, not a cleverer rule.
+1. ~~An individually paused assignment is resumed when its campaign resumes.~~
+   Shipped. `aggr_creative_assignments.operator_paused` is the ownership flag
+   this entry said it needed, added at schema 22.
+
+   **The flag was necessary and a cleverer rule was not available**, which is
+   why this sat open rather than being guessed at. Both kinds of pause leave the
+   identical row, so protecting every `paused` assignment would have stranded the
+   ones the campaign paused — the worse failure of the two.
+
+   Three decisions worth keeping:
+
+   - **Set on the way in and cleared on the way out.** Resuming an assignment by
+     hand gives it back to its campaign. A flag that survived the resume would
+     pin the row — live for ever, ignoring a campaign since paused.
+   - **A terminal projection still wins.** An operator's pause says "not now",
+     not "never mind what happens to the campaign", and a row left `paused` under
+     a cancelled campaign is a candidate the engine keeps considering for a
+     campaign that has ended.
+   - **The flag is written on the same statement as the status**, because it is
+     the record of who set that status. A row that said `paused` without it would
+     be resumed by the next transition, which is the whole defect.
+
+   Migration 22 defaults every existing row to 0, and that is the true answer
+   rather than a convenient one: before the column there was no way to pause one
+   assignment and have it stay paused, so no historical row can have been in that
+   state. Unlike `viewables`, where zero would have meant "nothing was seen"
+   instead of "nobody was counting".
 2. ~~Nothing asserts that a fixture's status came from production code.~~
    Shipped as `bin/ci/check-delivery-fixtures.mjs`, in `lint:files`.
 

@@ -267,6 +267,7 @@ array(
     19 => install_conversions,            // aggr_conversion_definitions
     20 => reproject_all,                  // repairs stale assignment snapshots
     21 => install_conversions,            // aggr_conversion_credentials
+    22 => install_table,                  // assignments gain operator_paused
 )
 ```
 
@@ -354,8 +355,22 @@ like.
 | `start_at_ts` / `end_at_ts` | bigint unsigned | **0 means inherit the line item's window.** A non-zero value must fall *within* the parent and may only narrow it |
 | `click_url`, `alt_text`, `width`, `height`, `attachment_id` | — | **Denormalized from the approved revision at approval time** |
 | `revision` | bigint unsigned | Optimistic concurrency |
+| `operator_paused` | tinyint unsigned | **Who paused this row.** Schema 22 |
 | `compat_key` | tinyint unsigned **NULL** | Nullable-unique compatibility marker |
 | `created_at_ts` / `updated_at_ts` | bigint unsigned | UTC Unix seconds |
+
+`operator_paused` exists because `paused` alone cannot say who paused. A campaign
+pause pauses every assignment under it and a resume brings them all back, which
+is right for the ones the campaign paused and wrong for one a person stopped on
+its own — that advertisement comes back serving with nothing saying it moved.
+Both kinds leave the identical row, so protecting every paused assignment would
+have stranded the campaign-paused ones instead, which is the worse failure.
+
+It is written on the same statement as `status`, because it is the record of who
+set that status: a row saying `paused` without it is resumed by the next
+transition. `Assignment_Rules::project_status()` reads the pair, and a terminal
+projection still wins — a completed or cancelled campaign takes its assignments
+with it whoever paused them.
 
 Indexes: `line_item_placement_compat (line_item_id, placement_id, compat_key)`
 UNIQUE, `delivery (placement_id, status, start_at_ts, end_at_ts, id)`,
