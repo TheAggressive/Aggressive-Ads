@@ -42,6 +42,8 @@ import type {
 	View as DataView,
 } from '@wordpress/dataviews';
 
+import { amountToMicros, microsToAmount } from './money';
+
 import type { Advertiser, Definition, Payload, Strings } from './types';
 
 /** A blank definition, in the shape the REST route accepts. */
@@ -56,24 +58,6 @@ const emptyDraft = () => ( {
 } );
 
 type Draft = ReturnType< typeof emptyDraft >;
-
-/**
- * Micros in, a decimal string out.
- *
- * Value is stored in millionths of a currency unit because a per-click value is
- * routinely smaller than a cent. Editors think in currency, so the conversion
- * happens at the edge rather than anywhere a total could be computed from it.
- */
-const microsToAmount = ( micros: number ): string =>
-	micros > 0 ? ( micros / 1000000 ).toFixed( 2 ) : '';
-
-const amountToMicros = ( amount: string ): number => {
-	const parsed = Number.parseFloat( amount );
-
-	return Number.isFinite( parsed ) && parsed > 0
-		? Math.round( parsed * 1000000 )
-		: 0;
-};
 
 const DEFAULT_VIEW: DataView = {
 	type: 'table',
@@ -118,8 +102,20 @@ function DefinitionModal( {
 } ) {
 	const [ draft, setDraft ] = useState< Draft >( emptyDraft );
 
+	/*
+	 * The literal text, not a number formatted back out of the draft.
+	 *
+	 * Deriving the field's value from `default_value_micros` rewrote the box
+	 * under the caret on every keystroke: "4" became "4.00", the next key
+	 * landed after the decimals, and typing 4, 9, ., 9, 0 stored 4.02. The
+	 * packages screen already holds its price this way, and this form should
+	 * never have differed from it.
+	 */
+	const [ amount, setAmount ] = useState( '' );
+
 	const scoped = draft.org_id > 0;
-	const amount = microsToAmount( draft.default_value_micros );
+	const micros = amountToMicros( amount );
+	const priced = micros > 0;
 
 	return (
 		<Modal
@@ -171,28 +167,31 @@ function DefinitionModal( {
 							__next40pxDefaultSize
 							label={ i18n.value }
 							help={ i18n.valueHelp }
+							inputMode="decimal"
 							value={ amount }
 							onChange={ ( next ) => {
-								const micros = amountToMicros( next );
+								setAmount( next );
 
-								setDraft( {
-									...draft,
-									default_value_micros: micros,
-
-									/*
-									 * A value cleared takes its currency with
-									 * it, so a definition worth nothing cannot
-									 * keep a stale denomination — and stating
-									 * one reaches for the site's own, so the
-									 * common case is already answered by the
-									 * time the field becomes available.
-									 */
-									currency:
-										0 === micros
-											? ''
-											: draft.currency || defaultCurrency,
-								} );
+								// Stating a value reaches for the site's own
+								// currency, so the common case is answered by
+								// the time the control becomes available.
+								if (
+									'' === draft.currency &&
+									amountToMicros( next ) > 0
+								) {
+									setDraft( {
+										...draft,
+										currency: defaultCurrency,
+									} );
+								}
 							} }
+							// Tidied once the person has finished, never while
+							// they are still typing — that was the defect.
+							onBlur={ () =>
+								setAmount(
+									priced ? microsToAmount( micros ) : ''
+								)
+							}
 						/>
 					</FlexBlock>
 					<FlexBlock>
@@ -210,11 +209,11 @@ function DefinitionModal( {
 							__next40pxDefaultSize
 							label={ i18n.currency }
 							help={
-								'' === amount
-									? i18n.currencyDisabledHelp
-									: i18n.currencyHelp
+								priced
+									? i18n.currencyHelp
+									: i18n.currencyDisabledHelp
 							}
-							disabled={ '' === amount }
+							disabled={ ! priced }
 							value={ draft.currency }
 							options={ currencies }
 							onChange={ ( currency ) =>
@@ -281,7 +280,17 @@ function DefinitionModal( {
 					</Button>
 					<Button
 						variant="primary"
-						onClick={ () => onCreate( draft ) }
+						onClick={ () =>
+							onCreate( {
+								...draft,
+								default_value_micros: micros,
+
+								// A definition worth nothing carries no
+								// denomination, so a currency chosen and then
+								// abandoned cannot be saved beside a zero.
+								currency: priced ? draft.currency : '',
+							} )
+						}
 						isBusy={ saving }
 						disabled={ saving || '' === draft.name.trim() }
 					>
