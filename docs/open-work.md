@@ -389,32 +389,18 @@ replacement is not running, which is an advertiser paying for a blank slot.
 artwork rather than the creative record, called from 11 files. It is the obvious
 next seam if the file grows again.
 
-## The cold-container browser flake returned, and the trace says something new
-
-Third occurrence on 2026-08-31, and the first one that left a trace — the
-artifact-upload fixes made in August work. It is recorded in full in
-[known-issues.md](known-issues.md); what makes it open work rather than a note
-is that the evidence rules out the explanation the first two occurrences were
-given.
-
-The test never reached an admin page. It timed out waiting for the navigation
-after the `wp-login.php` submit, and the network log for that trace contains no
-POST at all — so "first compile and parse of an admin React bundle" cannot be
-what happened here, and the class is one step less understood than it looked.
-
-Not being worked, and it blocks a release whenever it fires, because `Package`
-and `Release` depend on the e2e lane. The next step is written down in
-known-issues: read the DOM snapshot the trace keeps for the click step and find
-out whether the form was submittable when the click landed. Do not make the
-helper click twice or wait for `networkidle` — either hides the question.
-
 ## Nothing else is open
 
 Every other entry that was here has shipped or been closed. That is the intended
 resting state, not a sign the file is unused — an entry is added the moment work
 is started and understood but not finished, and deleted the moment it ships.
-The browser flake above is the exception this file allows: not work somebody
-started, but a defect that blocks a release and whose next step is written down.
+
+The last one closed was the cold-container browser flake, which turned out not
+to be about cold containers: `wp-login.php` steals focus 200ms after load, a
+`fill()` in flight when that lands loses its value, and an empty `required`
+password makes the browser refuse to submit at all. Diagnosed from the trace's
+screencast frames and fixed in `tests/e2e/admin-login.ts`; the durable half is
+in [known-issues.md](known-issues.md).
 
 The last one closed was P2, the creative model. Its design, decisions and the
 defects found building it are in

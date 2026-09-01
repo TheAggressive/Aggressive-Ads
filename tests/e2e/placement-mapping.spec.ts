@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { expectAdminA11y } from './accessibility';
+import { signInToAdmin } from './admin-login';
 
 test( 'administrator creates a placement with a common size and a custom size', async ( {
 	page,
@@ -10,11 +11,7 @@ test( 'administrator creates a placement with a common size and a custom size', 
 	 * portal's own gate was redirected away from wp-login; this path is
 	 * unchanged and should stay that way.
 	 */
-	await page.goto( '/wp-login.php' );
-	await page.locator( '#user_login' ).fill( 'admin' );
-	await page.locator( '#user_pass' ).fill( 'admin' );
-	await expect( page.locator( '#user_login' ) ).toHaveValue( 'admin' );
-	await page.locator( '#wp-submit' ).click();
+	await signInToAdmin( page );
 
 	await page.goto( '/wp-admin/admin.php?page=aggr-placement-mapping' );
 

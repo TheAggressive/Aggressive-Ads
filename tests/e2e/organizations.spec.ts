@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { expectAdminA11y } from './accessibility';
+import { signInToAdmin } from './admin-login';
 import { wpPluginFile } from './wp-cli';
 
 /**
@@ -30,25 +31,7 @@ const SCREEN = '/wp-admin/admin.php?page=aggr-organizations';
 
 /** Signs in as the administrator and lands on the Organizations screen. */
 async function openScreen( page: Page ): Promise< void > {
-	await page.goto( '/wp-login.php' );
-	await page.locator( '#user_login' ).fill( 'admin' );
-	await page.locator( '#user_pass' ).fill( 'admin' );
-	await page.locator( '#wp-submit' ).click();
-
-	/*
-	 * Wait for the login to land before navigating away.
-	 *
-	 * Clicking submit and calling goto() straight after is a race, and it lost
-	 * in CI: the failure screenshot showed wp-login.php, not a slow-mounting
-	 * screen. Playwright serialises navigations on a page, which makes this
-	 * look safe, but serialising them does not guarantee the auth cookie is
-	 * set before the next request leaves.
-	 *
-	 * Waiting for wp-admin makes it deterministic, and it fails as "never
-	 * logged in" rather than as "the Organizations heading is missing", which
-	 * is the diagnosis that cost the time.
-	 */
-	await page.waitForURL( /\/wp-admin\// );
+	await signInToAdmin( page );
 
 	await page.goto( SCREEN );
 
