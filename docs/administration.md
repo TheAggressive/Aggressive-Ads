@@ -22,7 +22,7 @@ the portal.
 
 ## The Advertising menu
 
-Five submenus, each gated by its own capability. A person sees only what their
+Six submenus, each gated by its own capability. A person sees only what their
 capability grants — there is no "advertising manager" role that unlocks the
 whole menu.
 
@@ -32,6 +32,7 @@ whole menu.
 | Organizations | `aggr_manage_orgs` | Tenants, membership, suspension |
 | Inventory | `aggr_manage_placements` | The placement catalogue — the slots a campaign can be bought into |
 | Packages | `aggr_manage_packages` | What advertisers may buy, and at what price |
+| Conversions | `aggr_manage_settings` | What counts as a conversion, and the credentials advertisers report them with |
 | Settings | `aggr_manage_settings` | Modules, brand, delivery, tracking |
 
 `aggr_access_staff` is **derived**, never granted on a role. It is what the menu
@@ -120,7 +121,7 @@ site with `DISABLE_WP_CRON` and no real cron they never fire at all. See
 
 ## Site Health
 
-Five checks under **Tools → Site Health**. Each states a fact about this
+Seven checks under **Tools → Site Health**. Each states a fact about this
 installation rather than a recommendation.
 
 **Unapproved advertising creative is protected.** Creates a harmless random
@@ -171,6 +172,39 @@ from one that finished and left creatives behind. The first is progress and need
 nothing; the second is the only version worth investigating. A check that
 reported both as the same number would be noise for however many hours the walk
 takes, and noise is what teaches people to stop reading Site Health.
+
+**Advertising serving path.** Whether native fill is actually serving from
+creative assignments, which is the condition that failed silently once and took
+a release to notice — an assignment that never reached `live` matches no
+candidate, so the slot is empty and nothing anywhere reports an error.
+
+Three answers, and the middle one is the reason the check is worth having. If
+the assignment backfill is still running it says so and calls it ordinary: paid
+slots stay empty until every creative has an assignment, while house ads keep
+serving. If the backfill reports finished and the serving table is missing, that
+is critical and the repair is to deactivate and reactivate the plugin, which
+reinstalls the schema.
+
+**Advertising conversions are being recorded.** The check that answers "why is
+this integration recording nothing", which is otherwise a question nobody can
+answer from the outside. It separates the states that look identical from a
+report: no conversion defined at all, no clicks yesterday to attribute against, a
+day that predates conversion tracking, and — the one worth chasing — clicks
+yesterday with no conversions recorded.
+
+That last one is usually not "nobody converted". It is usually the reporting key
+missing from the advertiser's page, or the `aggr_ct` parameter being stripped
+from the destination URL before it arrives; a redirect service or a link
+shortener in front of the landing page will do that silently. Check that a click
+lands on a URL still carrying `aggr_ct`.
+
+The check also names, in words, why reports were **refused** — a key this site
+does not have, a conversion since archived, one belonging to another advertiser,
+a report carrying no click this site recorded, one that arrived after the window
+closed, a server report for a conversion that does not accept them, or a
+credential scoped to another advertiser. Those counts are approximate and
+deliberately so: they inform the description and never the status, because a
+status is what makes somebody act and the exact record is the ledger.
 
 ## When something looks wrong
 

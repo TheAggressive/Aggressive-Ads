@@ -11,9 +11,9 @@ started or that any item below is implemented.
 ## Status
 
 - Phase: **P12 — Conversion tracking**
-- Roadmap state: `[ ]`
-- Last audited: 2026-08-31. Click-through ingestion, definitions, the carrier,
-  the projection, its reconcile, the staff screens for both definitions and
+- Roadmap state: `[x]`
+- Closed out: 2026-09-01. Click-through ingestion, definitions, the carrier, the
+  projection, its reconcile, the staff screens for both definitions and
   credentials, Site Health with **refusal counters**, and **server-to-server
   ingestion under a scoped, revocable credential** have all shipped. What
   remains belongs to other phases: reporting surfaces are P14's, and
@@ -375,4 +375,51 @@ evidence for completion.
 
 ## Exit evidence and decision
 
-To be completed at closeout.
+Closed 2026-09-01. Every criterion above was walked against tests rather than
+against the code, and two failed on the first pass.
+
+**Criterion 4 was not met.** The requirement is deduplication "proven to survive
+concurrent arrival, not just sequential", and nothing proved it: every test
+inserted both rows through one repository in one process, which a
+check-then-insert implementation passes as happily as the unique index does. The
+implementation was already correct — insert first, and `exists()` documented as
+a post-failure diagnostic and never a pre-insert check — but nothing pinned it,
+so a refactor toward the race would have been silent. `ConversionLedgerTest`
+gained two tests: a duplicate whose competing row was written outside the
+repository entirely (which is what concurrent arrival *is* — the winner's row
+appearing between the loser's validation and its write), and a query count over
+the write path, so a read cannot creep in front of the index unnoticed.
+
+Both were sabotage-proven. A check-then-insert refactor fails the query count; a
+DDL edit dropping the word UNIQUE fails eight tests across four files. **The
+first sabotage run passed everything** — `dbDelta` adds an index and never drops
+one, so it ran against the UNIQUE key still on the persisted table. That is the
+documented gotcha, and it means a schema assertion is worthless until the table
+is dropped.
+
+**Criterion 9 was not met.** `threat-model.md` carried P11's attested caveat and
+nothing for conversions, though this document requires it there "in as many
+words" — and a conversion is the more consequential of the two, because a
+publisher billing on it is billing on a counterparty's word. It now has its own
+section. `administration.md` had drifted further: it said five submenus and five
+Site Health checks when six and seven ship, with the Conversions screen and both
+the serving-path and conversion checks undocumented. `testing-strategy.md` named
+no measurement suite at all — P11's omission as much as P12's — and now names
+both.
+
+**The required browser evidence was absent.** `FillRoutesTest` asserts the real
+hop's `Location` header in both the clean and already-carrying cases, which is
+stronger than the URL-builder unit test this document warns against and still
+not the browser. `click-carrier.spec.ts` closes it: a real click on a rendered
+advertisement, landing on a real page on this site, asserting what the address
+bar says. It fails both ways under sabotage — a carrier that appends instead of
+replacing is caught by the two-token assertion, and one that drops the parameter
+fails both tests.
+
+That last failure mode is the one worth remembering. Two values on one parameter
+raises no error anywhere: PHP hands the page the last one, so an appending
+carrier reads as a working integration right up until a conversion is attributed
+to the wrong fill.
+
+The remaining items are other phases' by this document's own boundary:
+reporting surfaces are P14's, and view-through is gated on P27.

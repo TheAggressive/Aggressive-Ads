@@ -38,6 +38,38 @@ update_post_meta( $placement_id, Placement_Repository::META_SIZE, '728x90' );
 update_post_meta( $placement_id, Placement_Repository::META_IS_ACTIVE, 1 );
 update_post_meta( $placement_id, Placement_Repository::META_SORT_ORDER, 999 );
 
+/*
+ * A second placement, for the click-carrier spec.
+ *
+ * Separate from `e2e-browser-placement` because the carrier assertion needs two
+ * destinations that differ — one clean, one already carrying the parameter —
+ * and a destination belongs to an assignment. Two assignments on one placement
+ * would compete in the decision, making which one the browser sees a coin toss.
+ */
+$carrier = get_page_by_path( 'e2e-carrier-placement', OBJECT, Post_Types::PLACEMENT );
+
+if ( $carrier instanceof WP_Post ) {
+	$carrier_id = $carrier->ID;
+} else {
+	$carrier_id = wp_insert_post(
+		array(
+			'post_type'   => Post_Types::PLACEMENT,
+			'post_status' => 'publish',
+			'post_name'   => 'e2e-carrier-placement',
+			'post_title'  => 'E2E carrier placement',
+		),
+		true
+	);
+
+	if ( is_wp_error( $carrier_id ) ) {
+		WP_CLI::error( $carrier_id->get_error_message() );
+	}
+}
+
+update_post_meta( $carrier_id, Placement_Repository::META_SIZE, '728x90' );
+update_post_meta( $carrier_id, Placement_Repository::META_IS_ACTIVE, 1 );
+update_post_meta( $carrier_id, Placement_Repository::META_SORT_ORDER, 998 );
+
 $sizing_page = get_page_by_path( 'e2e-ad-sizing', OBJECT, 'page' );
 
 if ( ! $sizing_page instanceof WP_Post ) {
@@ -57,4 +89,4 @@ if ( ! $sizing_page instanceof WP_Post ) {
 	}
 }
 
-WP_CLI::log( 'Seeded E2E inventory and sizing fixtures.' );
+WP_CLI::log( 'Seeded E2E inventory, carrier and sizing fixtures.' );

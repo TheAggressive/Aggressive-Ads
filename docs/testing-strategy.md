@@ -39,6 +39,33 @@ built that way was asserting that a *successfully delivered* message did not
 break the upload. Model transport failure as a value the capture returns, as
 `RequestNotificationTest` does, rather than as a second filter.
 
+Two more, from the WordPress suites' own machinery rather than from a mock:
+
+**A schema assertion is worthless until the table is dropped.** `dbDelta` adds
+an index and never drops one, so a DDL edit that changes or removes a key leaves
+the old one in place, still enforcing the old rule, and the suite passes over
+the change. This was watched happening during the P12 closeout: dropping the
+word UNIQUE from the conversion ledger's deduplication key produced a fully
+green run, and only the *second* run — against a table built from the edited
+DDL — failed the eight tests it should have. A test asserting something about an
+index must first establish that the table it is reading was built from the
+schema under test.
+
+**This suite cannot prove a table was created by dropping it first.**
+`WP_UnitTestCase` rewrites `CREATE TABLE` and `DROP TABLE` into their
+`TEMPORARY` forms, so a repository's `drop_table()` drops nothing and
+`SHOW TABLES` cannot see what the suite created. `ConversionSchemaTest` records
+what does work, including why it invokes the migration step directly rather than
+through `maybe_upgrade()` — whose option-based lock survives the transaction
+rollback in the object cache and silently disables a later test's upgrade.
+
+And one about where an assertion belongs: **a REST `permission_callback` answers
+before the workflow does**, so a denied request never reaches the manager and
+never writes the audit row the manager would write. That is intended — an
+unauthenticated probe that audited every attempt would be an unbounded write
+anybody could drive — but it means a denial-audit assertion belongs in a manager
+test, not a route test.
+
 ## Suites
 
 | Suite | Config | Bootstrap | Needs |
@@ -154,6 +181,28 @@ live campaigns/creatives, complete eligibility, and cold/warm/token query
 budgets. `TrackingDurabilityTest` proves closed-day rollup repair is exact and
 idempotent and retention deletes are bounded. Measured baselines and the
 reporting command live in [delivery-performance.md](delivery-performance.md).
+
+The measurement suites (P10–P12) are where most of the integration weight now
+sits, and they are grouped by what would break rather than by class.
+`ConversionLedgerTest` owns the deduplication guarantee: it asserts the unique
+key is actually `UNIQUE` rather than merely present, that a duplicate is refused
+when the competing row was written by a process this one knows nothing about,
+and that the write path issues one statement — a read before the insert would
+pass every sequential test and lose the race. `ConversionAttributionTest` and
+`ConversionRulesTest` are pure, and carry the window boundaries and the closed
+set of refusal reasons. `ConversionRecorderTest` is the one that goes through
+the production path end to end, including the projection and its exact
+reconcile, and the assertions that a refusal costs no ledger read.
+`ConversionRoutesTest` and `ServerConversionRoutesTest` prove the two ingestion
+routes attribute identically while differing in exactly one respect — the
+browser route has no value parameter to hand — and that their refusals are
+indistinguishable from one another. `ConversionMetricsTest` pins the refusal
+counters to a single buffered write on `shutdown`, because the cheapest refusal
+is the one an attacker repeats.
+
+`viewability.spec.ts` is the browser half of P11: a real advertisement entering
+a real viewport, asserting the beacon's *response* rather than the request,
+since a 204 is returned only once the row is written.
 
 **security** — the closed REST inventory and default-deny contract; the explicit public `admin-post` allowlist; every IDOR surface in [threat-model.md](threat-model.md) with a Phase-1 endpoint; advertiser A denied on B's campaign **and a co-member of A's org allowed** (the case that proves ownership is org-scoped rather than accidentally author-scoped); deleted objects mapping to `do_not_allow`; nonce-missing and nonce-forged raising `WPDieException`; revoked portal access closing every owner organization mutation without side effects; signup non-enumeration, anonymous rate limiting, unprivileged-before-ownership ordering and mail-failure rollback; private canonical organization matching, no duplicate tenant, pending users without portal capability, owner-only pending emails, cross-tenant approval denial, email-bound and single-use invitation consumption; owner-scoped member removal with the last-owner guard, cross-tenant removal denial, and advertiser-role cleanup that preserves unrelated WordPress roles; ownership transfer only to an existing member, with cross-tenant denial and former-owner demotion to member; organization rename with destination `active_key` reservation, cross-tenant denial, and exact identity collision refusal; staff organization suspend/reactivate requiring `aggr_manage_orgs`, with advertiser denial and audited read-back; portal-owned email change with HMAC token, single-use confirm, taken-address suppression, and details-save still unable to set email/role; portal-only setup and recovery URLs, core reset-key validation, minimum password policy and single-use consumption; the advertiser holding none of `upload_files` / `edit_posts` / `unfiltered_html`; no `wp_ajax_laao_ads*` action registered. The completed audit is [authorization-failure-review.md](authorization-failure-review.md).
 
