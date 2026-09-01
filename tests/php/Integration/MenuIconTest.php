@@ -56,10 +56,13 @@ final class MenuIconTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The mask source has to exist, or the menu shows an empty box.
+	 * The mark has to ship, even though the rule no longer loads it.
 	 *
-	 * The path is a constant in one file and a line in the release manifest, so
-	 * this fails when either moves without the other.
+	 * The CSS carries the mark inline, so a missing file breaks nothing at
+	 * runtime — which is exactly why this is worth asserting. `verify-package.sh`
+	 * requires the file in the ZIP, and the colour assertion below requires the
+	 * inlined bytes to equal it; between them the file cannot quietly become a
+	 * copy nobody updates.
 	 *
 	 * @return void
 	 */
@@ -81,8 +84,39 @@ final class MenuIconTest extends WP_UnitTestCase {
 		$css = $this->render();
 
 		$this->assertStringContainsString( 'background-color:currentColor', $css );
-		$this->assertStringContainsString( 'aggressive-ads-icon.svg', $css );
 		$this->assertStringContainsString( '-webkit-mask:', $css, 'Safari needs the prefixed property.' );
+
+		/*
+		 * The mask travels in the rule. Pointing it at the file's URL made the
+		 * mark a second request, and an element whose mask has not arrived
+		 * paints nothing — so the icon was absent on every admin page until
+		 * that response landed. Asserting the data URI is what stops a
+		 * well-meaning edit from putting the request back.
+		 */
+		$this->assertStringContainsString( 'data:image/svg+xml;base64,', $css );
+		$this->assertStringNotContainsString(
+			'aggressive-ads-icon.svg',
+			$css,
+			'A URL here is a second HTTP request, and the mark is invisible until it returns.'
+		);
+
+		/*
+		 * And that the inlined bytes are the shipped file's, rather than a copy
+		 * that can drift from it.
+		 *
+		 * The message matters more than usual here. Someone who edits the SVG
+		 * and does not regenerate the constant sees this fail, and a bare
+		 * "string not found" against 300 characters of base64 tells them
+		 * nothing about what to do — so it says what to run.
+		 */
+		$expected = base64_encode( (string) file_get_contents( AGGR_PLUGIN_DIR . 'assets/svg/aggressive-ads-icon.svg' ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_get_contents_file_get_contents, WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- Reading the bundled asset to prove the rule carries it.
+
+		$this->assertStringContainsString(
+			$expected,
+			$css,
+			"The inlined mark is not the file in assets/svg/. Regenerate Menu::ICON_DATA_URI:\n"
+				. "  printf 'data:image/svg+xml;base64,%s' \"$(base64 -w0 assets/svg/aggressive-ads-icon.svg)\""
+		);
 
 		// Centring is done by flex, not by a margin measured against one row
 		// height. A magic offset looked right on the expanded menu and sat

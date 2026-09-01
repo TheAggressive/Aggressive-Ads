@@ -121,6 +121,39 @@ every token to nothing — a transparent panel rather than a degraded one. That
 failure is a scope question rather than an existence one, and it is caught by
 looking at the screen.
 
+## Admin screens ship their rows with the page
+
+Every React screen under Advertising mounts on a `data-aggr-*` attribute
+carrying its own data — `data-aggr-review`, `data-aggr-packages`,
+`data-aggr-inventory`, `data-aggr-settings`, `data-aggr-organizations`,
+`data-aggr-conversions`. The bundle parses that and renders. It does **not**
+fetch its first screenful.
+
+The reason is ordering rather than bytes. A screen that fetches on mount cannot
+paint until the bundle has downloaded, parsed, mounted and then completed a
+round trip — and the server assembled those rows anyway, while rendering the
+markup the bundle is mounting into. The wait buys nothing and is paid on every
+navigation between submenus. Conversions was the exception until it was not: it
+rendered a `<Spinner />` over rows already in memory on the server, on the
+screen that also loads the DataViews bundle first and so had the least budget
+to spare.
+
+Two rules make this safe to repeat:
+
+- **Seed through the same code that answers the route.** `Conversions_Screen`
+  calls `Conversion_Definitions_Controller::index()` rather than shaping rows
+  itself, so the first paint and a post-write refetch cannot disagree. The
+  credential list is the one that proves why: its rows carry an organization
+  name and three timestamps formatted in the site's timezone, and a second copy
+  built for the first paint would be a second place the date format is decided.
+- **A write still refetches.** Seeding is the first paint, not a replacement for
+  the routes, and nothing here caches across a navigation.
+
+`ConversionsScreenTest` asserts the payload equals the controller's response;
+`conversions-first-paint.spec.ts` asserts the browser asks for nothing on the
+way in. Both are needed — a reinstated `useEffect` passes every PHP assertion in
+the suite.
+
 ## File size
 
 `bin/check-file-length.sh` warns above 800 lines and fails above 1000, with no allowlist. The remedy is always to split by responsibility. Raising the threshold is not an option, because the threshold is not the point — a 1200-line class is telling you it has more than one job, and the number is just how you found out.
