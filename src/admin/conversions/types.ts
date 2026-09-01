@@ -6,6 +6,11 @@
  * card cannot disagree about the shape of `i18n`.
  */
 
+export type Advertiser = {
+	id: number;
+	name: string;
+};
+
 export type Definition = {
 	id: number;
 	org_id: number;
@@ -61,15 +66,16 @@ export type Strings = {
 	existing: string;
 	none: string;
 	name: string;
+	nameHelp: string;
 	window: string;
 	windowHelp: string;
 	value: string;
 	valueHelp: string;
 	currency: string;
 	currencyHelp: string;
+	currencyDisabledHelp: string;
 	orgScoped: string;
 	orgScopedHelp: string;
-	orgId: string;
 	snippetKey: string;
 	status: string;
 	actions: string;
@@ -87,7 +93,6 @@ export type Strings = {
 	no: string;
 	credentials: string;
 	credentialsHelp: string;
-	credentialsList: string;
 	credentialsNone: string;
 	newCredential: string;
 	label: string;
@@ -107,6 +112,9 @@ export type Strings = {
 	revoked: string;
 	revokeConfirm: string;
 	credentialFailed: string;
+	credentialIssued: string;
+	cancel: string;
+	done: string;
 	searchDefinitions: string;
 	searchCredentials: string;
 };
@@ -115,6 +123,15 @@ export type Payload = {
 	restPath: string;
 	credentialsPath: string;
 	windows: Array< { label: string; value: string } >;
-	advertisers: Array< { id: number; name: string } >;
+	currencies: Array< { label: string; value: string } >;
+
+	/**
+	 * The currency to reach for when a value is first stated, or empty.
+	 *
+	 * Only set when the site prices everything in one currency; see the note on
+	 * `Conversions_Screen::default_currency()` for why two is not guessed at.
+	 */
+	defaultCurrency: string;
+	advertisers: Advertiser[];
 	i18n: Strings;
 };

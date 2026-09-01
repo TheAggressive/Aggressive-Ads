@@ -17,6 +17,7 @@ use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Repository\Package_Repository;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Security\Roles;
 use WP_UnitTestCase;
@@ -200,7 +201,23 @@ final class ConversionsScreenTest extends WP_UnitTestCase {
 			'The screen did not load its own bundle, so the rest of this proves nothing.'
 		);
 		$this->assertTrue(
-			wp_style_is( Shared_Assets::DATAVIEWS, 'enqueued' ),
+			wp_style_is( 'aggr-conversions', 'enqueued' ),
+			'The screen loaded without its own rules: full-width fields on the grey canvas.'
+		);
+
+		/*
+		 * Named as a dependency rather than enqueued beside it, so it loads
+		 * first — this screen's rules give DataViews its container and would
+		 * lose to it otherwise. Asserted through the registry rather than with
+		 * `wp_style_is( …, 'enqueued' )`, because a dependency is resolved at
+		 * print time and is not in the queue until then.
+		 */
+		$registered = wp_styles()->registered['aggr-conversions'] ?? null;
+
+		$this->assertNotNull( $registered );
+		$this->assertContains(
+			Shared_Assets::DATAVIEWS,
+			$registered->deps,
 			'DataViews would render as unstyled markup, and nothing would error.'
 		);
 	}
@@ -273,6 +290,72 @@ final class ConversionsScreenTest extends WP_UnitTestCase {
 			'The screen offers a scope the manager would refuse.'
 		);
 		$this->assertCount( 1, $offered, 'The scopes are not the active organizations.' );
+	}
+
+	/**
+	 * **The currency options are ones the domain will actually accept.**
+	 *
+	 * The same property the window options carry, and it matters more here
+	 * because this control replaced a free-text field: a select that offered a
+	 * code the validator refuses would turn a typo somebody could fix into a
+	 * refusal with no way out of it.
+	 *
+	 * The empty option is the exception and is deliberate — no currency is a
+	 * real state for a definition worth nothing, and it has to be choosable
+	 * again after somebody picks one by mistake.
+	 */
+	public function test_every_offered_currency_survives_validation(): void {
+		wp_set_current_user( (int) self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$payload = $this->payload();
+
+		$this->assertGreaterThan( 5, count( $payload['currencies'] ), 'The screen offers almost no currencies.' );
+
+		$empty = 0;
+
+		foreach ( $payload['currencies'] as $option ) {
+			$code = (string) $option['value'];
+
+			if ( '' === $code ) {
+				++$empty;
+				continue;
+			}
+
+			$this->assertTrue(
+				\Aggressive\Ads\Domain\Conversion_Rules::is_valid_currency( $code ),
+				"The screen offers {$code}, which the validator refuses."
+			);
+			$this->assertNotSame( '', (string) $option['label'], 'A currency with no label is an empty row.' );
+		}
+
+		$this->assertSame( 1, $empty, 'There must be exactly one way to say "no currency".' );
+	}
+
+	/**
+	 * **A default is only offered when the site prices in one currency.**
+	 *
+	 * Guessing between two would fill the field with a plausible wrong answer,
+	 * and a wrong currency is not a typo: it silently changes what every total
+	 * built from that definition means.
+	 */
+	public function test_a_default_currency_is_only_offered_when_it_is_unambiguous(): void {
+		wp_set_current_user( (int) self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$packages = Plugin::instance()->container()->get( Package_Repository::class );
+
+		$first = $packages->create( 'Sponsorship' );
+
+		$this->assertIsInt( $first );
+		$this->assertTrue( update_post_meta( $first, Package_Repository::META_CURRENCY, 'EUR' ) !== false );
+
+		$this->assertSame( 'EUR', $this->payload()['defaultCurrency'], 'One priced currency is the answer.' );
+
+		$second = $packages->create( 'Takeover' );
+
+		$this->assertIsInt( $second );
+		$this->assertTrue( update_post_meta( $second, Package_Repository::META_CURRENCY, 'GBP' ) !== false );
+
+		$this->assertSame( '', $this->payload()['defaultCurrency'], 'Two priced currencies must not be guessed between.' );
 	}
 
 	/**
