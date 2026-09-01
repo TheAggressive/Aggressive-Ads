@@ -37,7 +37,7 @@ import {
 	__experimentalVStack as VStack,
 } from '@wordpress/components';
 import { DataViews, filterSortAndPaginate } from '@wordpress/dataviews';
-import { useCallback, useEffect, useMemo, useState } from '@wordpress/element';
+import { useCallback, useMemo, useState } from '@wordpress/element';
 
 import apiFetch from '@wordpress/api-fetch';
 
@@ -52,6 +52,9 @@ import type { Advertiser, Credential, Strings } from './types';
 type Props = {
 	path: string;
 	advertisers: Advertiser[];
+
+	/** The list as the server already composed it. See `Payload.credentials`. */
+	seeded: Credential[];
 	i18n: Strings;
 };
 
@@ -192,13 +195,13 @@ function CredentialModal( {
 	);
 }
 
-export function Credentials( { path, advertisers, i18n }: Props ) {
-	const [ credentials, setCredentials ] = useState< Credential[] >( [] );
+export function Credentials( { path, advertisers, seeded, i18n }: Props ) {
+	// Seeded from the page, not fetched. See `Payload.credentials`.
+	const [ credentials, setCredentials ] = useState< Credential[] >( seeded );
 	const [ error, setError ] = useState( '' );
 	const [ formError, setFormError ] = useState( '' );
 	const [ token, setToken ] = useState( '' );
 	const [ issuing, setIssuing ] = useState( false );
-	const [ loading, setLoading ] = useState( true );
 	const [ open, setOpen ] = useState( false );
 	const [ view, setView ] = useState< DataView >( DEFAULT_VIEW );
 
@@ -209,12 +212,6 @@ export function Credentials( { path, advertisers, i18n }: Props ) {
 
 		setCredentials( result.credentials ?? [] );
 	}, [ path ] );
-
-	useEffect( () => {
-		load()
-			.catch( () => setError( i18n.loadFailed ) )
-			.finally( () => setLoading( false ) );
-	}, [ load, i18n.loadFailed ] );
 
 	const issue = async ( orgId: number, label: string ) => {
 		setIssuing( true );
@@ -380,7 +377,6 @@ export function Credentials( { path, advertisers, i18n }: Props ) {
 				actions={ actions }
 				paginationInfo={ paginationInfo }
 				getItemId={ ( item ) => String( item.id ) }
-				isLoading={ loading }
 				defaultLayouts={ { table: {} } }
 				searchLabel={ i18n.searchCredentials }
 				header={

@@ -23,14 +23,13 @@ import {
 	Modal,
 	Notice,
 	SelectControl,
-	Spinner,
 	TextControl,
 	ToggleControl,
 	__experimentalVStack as VStack,
 } from '@wordpress/components';
 import { DataViews, filterSortAndPaginate } from '@wordpress/dataviews';
 import { createRoot } from '@wordpress/element';
-import { useEffect, useMemo, useState } from '@wordpress/element';
+import { useMemo, useState } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 
 import { Credentials } from './credentials';
@@ -373,21 +372,16 @@ function Screen( { payload }: { payload: Payload } ) {
 		i18n,
 	} = payload;
 
-	const [ definitions, setDefinitions ] = useState< Definition[] >( [] );
-	const [ loading, setLoading ] = useState( true );
+	// Seeded from the page, not fetched. See `Payload.definitions`.
+	const [ definitions, setDefinitions ] = useState< Definition[] >(
+		payload.definitions
+	);
 	const [ error, setError ] = useState( '' );
 	const [ formError, setFormError ] = useState( '' );
 	const [ saving, setSaving ] = useState( false );
 	const [ creating, setCreating ] = useState( false );
 	const [ editing, setEditing ] = useState< Definition | null >( null );
 	const [ view, setView ] = useState< DataView >( DEFAULT_VIEW );
-
-	useEffect( () => {
-		apiFetch< { definitions: Definition[] } >( { path: restPath } )
-			.then( ( result ) => setDefinitions( result.definitions ?? [] ) )
-			.catch( () => setError( i18n.loadFailed ) )
-			.finally( () => setLoading( false ) );
-	}, [ restPath, i18n.loadFailed ] );
 
 	/**
 	 * One writer for both, because the difference is a route and a revision.
@@ -564,10 +558,6 @@ function Screen( { payload }: { payload: Payload } ) {
 		[ definitions, view, fields ]
 	);
 
-	if ( loading ) {
-		return <Spinner />;
-	}
-
 	return (
 		<>
 			{ '' !== error ? (
@@ -605,6 +595,7 @@ function Screen( { payload }: { payload: Payload } ) {
 			<Credentials
 				path={ credentialsPath }
 				advertisers={ advertisers }
+				seeded={ payload.credentials }
 				i18n={ i18n }
 			/>
 

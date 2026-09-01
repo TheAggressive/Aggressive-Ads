@@ -15,7 +15,14 @@ use Aggressive\Ads\Admin\Shared_Assets;
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Domain\Conversion_Definition;
+use Aggressive\Ads\REST\Conversion_Credentials_Controller;
+use Aggressive\Ads\REST\Conversion_Definitions_Controller;
 use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Conversion_Credential_Repository;
+use Aggressive\Ads\Repository\Conversion_Definition_Repository;
+use Aggressive\Ads\Workflow\Conversion_Credential_Manager;
+use Aggressive\Ads\Workflow\Conversion_Definition_Manager;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Package_Repository;
 use Aggressive\Ads\Security\Capabilities;
@@ -159,6 +166,71 @@ final class ConversionsScreenTest extends WP_UnitTestCase {
 		}
 
 		$this->assertTrue( $died, 'An advertiser reached the conversions screen by URL.' );
+	}
+
+	/**
+	 * And the refusal emits no public key, which is a stronger claim than dying.
+	 *
+	 * The payload now carries the definitions themselves, so this screen prints
+	 * every reporting key on the site. `wp_die()` after some output has already
+	 * been flushed still refuses the request and still leaks — the capability
+	 * check runs first for that reason, and this is what says so.
+	 */
+	public function test_an_unauthorized_render_emits_no_reporting_key(): void {
+		$container = Plugin::instance()->container();
+
+		$definitions = $container->get( Conversion_Definition_Repository::class );
+		$definitions->install_table();
+		$container->get( Audit_Repository::class )->install_table();
+
+		wp_set_current_user( (int) self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$id = $container->get( Conversion_Definition_Manager::class )->create(
+			array(
+				'name'                 => 'Purchase',
+				'org_id'               => 12,
+				'window_seconds'       => 2592000,
+				'default_value_micros' => 4990000,
+				'currency'             => 'USD',
+				'allow_s2s'            => true,
+				'status'               => Conversion_Definition::STATUS_ACTIVE,
+			)
+		);
+
+		$this->assertIsInt( $id );
+
+		$row = $definitions->find( $id );
+
+		$this->assertIsArray( $row );
+
+		$key = (string) $row['public_key'];
+
+		$this->assertNotSame( '', $key, 'Without a key to look for this test proves nothing.' );
+
+		wp_set_current_user( (int) self::factory()->user->create( array( 'role' => Roles::ADVERTISER ) ) );
+
+		add_filter(
+			'wp_die_handler',
+			static fn (): callable => static function (): void {
+				throw new \RuntimeException( 'wp_die' );
+			}
+		);
+
+		ob_start();
+
+		try {
+			$this->screen->render();
+		} catch ( \RuntimeException $e ) {
+			$this->assertSame( 'wp_die', $e->getMessage() );
+		}
+
+		$html = (string) ob_get_clean();
+
+		$this->assertStringNotContainsString(
+			$key,
+			$html,
+			'An advertiser was handed a reporting key belonging to somebody else.'
+		);
 	}
 
 	/**
@@ -381,5 +453,113 @@ final class ConversionsScreenTest extends WP_UnitTestCase {
 				'The screen offers a window the domain would clamp.'
 			);
 		}
+	}
+
+	/**
+	 * **The lists travel with the page, and are the lists REST would return.**
+	 *
+	 * The screen used to fetch both on mount, so it rendered a spinner over data
+	 * the server had already assembled while rendering the markup around it —
+	 * a whole round trip after React had booted, on the one screen that pays for
+	 * the 530K DataViews bundle first.
+	 *
+	 * Asserted against the controller's own response rather than against a
+	 * hand-written expectation, because the failure that matters is not an empty
+	 * array — it is the seeded rows and the refetched rows drifting apart. The
+	 * screen calls `index()` for exactly that reason; this is what stops someone
+	 * "simplifying" it into a second shaping.
+	 */
+	public function test_the_payload_carries_the_definitions_rest_would_return(): void {
+		wp_set_current_user( (int) self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$container = Plugin::instance()->container();
+
+		$definitions = $container->get( Conversion_Definition_Repository::class );
+		$definitions->install_table();
+		$container->get( Audit_Repository::class )->install_table();
+
+		$id = $container->get( Conversion_Definition_Manager::class )->create(
+			array(
+				'name'                 => 'Purchase',
+				'org_id'               => 12,
+				'window_seconds'       => 2592000,
+				'default_value_micros' => 4990000,
+				'currency'             => 'USD',
+				'allow_s2s'            => true,
+				'status'               => Conversion_Definition::STATUS_ACTIVE,
+			)
+		);
+
+		$this->assertIsInt( $id, 'The fixture must exist before the payload can carry it.' );
+
+		$payload = $this->payload();
+
+		$this->assertArrayHasKey( 'definitions', $payload );
+		$this->assertCount(
+			1,
+			$payload['definitions'],
+			'The screen shipped no rows, so it is still fetching them on mount.'
+		);
+
+		$rest = $container->get( Conversion_Definitions_Controller::class )->index()->get_data();
+
+		$this->assertSame(
+			$rest['definitions'],
+			$payload['definitions'],
+			'The seeded rows and the ones a refetch returns have diverged.'
+		);
+
+		// And that the row is the real one, not an empty shape of the right size.
+		$this->assertSame( 'Purchase', $payload['definitions'][0]['name'] );
+	}
+
+	/**
+	 * The same for credentials, whose composition is the more fragile of the two.
+	 *
+	 * Its rows carry an organization name and three timestamps formatted in the
+	 * site's timezone — the reason that list is composed on the server at all.
+	 * A second copy built for the first paint would be a second place for the
+	 * date format to be decided, and the two would disagree on exactly the
+	 * screen an incident is read from.
+	 */
+	public function test_the_payload_carries_the_credentials_rest_would_return(): void {
+		wp_set_current_user( (int) self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		$container = Plugin::instance()->container();
+
+		$container->get( Conversion_Credential_Repository::class )->install_table();
+		$container->get( Audit_Repository::class )->install_table();
+
+		$org = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::ORGANIZATION,
+				'post_status' => 'publish',
+				'post_title'  => 'Bright Angle Media',
+			)
+		);
+
+		$issued = $container->get( Conversion_Credential_Manager::class )->issue( $org, 'Storefront' );
+
+		$this->assertIsArray( $issued, 'The fixture must exist before the payload can carry it.' );
+
+		$payload = $this->payload();
+
+		$this->assertArrayHasKey( 'credentials', $payload );
+		$this->assertCount( 1, $payload['credentials'] );
+
+		$rest = $container->get( Conversion_Credentials_Controller::class )->index()->get_data();
+
+		$this->assertSame(
+			$rest['credentials'],
+			$payload['credentials'],
+			'The seeded rows and the ones a refetch returns have diverged.'
+		);
+
+		$this->assertSame( 'Bright Angle Media', $payload['credentials'][0]['org_name'] );
+
+		// The secret is issued once and never listed. The seeded copy is a
+		// second chance to leak it, so it gets the same assertion the route has.
+		$this->assertArrayNotHasKey( 'token', $payload['credentials'][0] );
+		$this->assertArrayNotHasKey( 'token_hash', $payload['credentials'][0] );
 	}
 }

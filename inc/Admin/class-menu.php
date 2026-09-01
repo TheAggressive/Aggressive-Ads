@@ -32,11 +32,6 @@ final class Menu implements Service {
 	public const ICON = 'none';
 
 	/**
-	 * The mark, as a mask source.
-	 */
-	private const ICON_FILE = 'assets/svg/aggressive-ads-icon.svg';
-
-	/**
 	 * Constructor.
 	 *
 	 * @param Settings $settings Product name for the sidebar label.
@@ -71,6 +66,26 @@ final class Menu implements Service {
 	 * is a different height. Zeroing that padding and letting flex do the
 	 * centring means there is no measurement to keep in sync.
 	 *
+	 * **The mask travels in the rule, not behind a URL.** Pointing `mask` at
+	 * the SVG's own URL made the mark a second HTTP request, and an element
+	 * whose mask has not arrived paints nothing — so the icon was missing on
+	 * every admin page until that request came back, which is a visible flash
+	 * on the one element that is on every screen. Inlining a 234-byte file
+	 * costs less than the request that fetched it, and the mark is now painted
+	 * in the same style recalculation as the rule that positions it.
+	 *
+	 * Inlining does **not** reintroduce the colour problem the constant above
+	 * describes: that one is about a data-URI *background-image*, whose pixels
+	 * are the image's own. A mask contributes shape only — the colour is still
+	 * `background-color: currentColor` — so how the mask is delivered has no
+	 * bearing on it.
+	 *
+	 * Escaped with `esc_attr` rather than `esc_url`, because `data:` is not in
+	 * WordPress's allowed protocol list and `esc_url` would strip the value to
+	 * an empty string — the mark would vanish, which is the failure this whole
+	 * change exists to fix. The payload is base64, which carries no character
+	 * `esc_attr` alters.
+	 *
 	 * @return void
 	 */
 	public function print_icon_style(): void {
@@ -81,9 +96,32 @@ final class Menu implements Service {
 		printf(
 			'<style id="aggr-menu-icon">#toplevel_page_%1$s .wp-menu-image{display:flex;align-items:center;justify-content:center;}#toplevel_page_%1$s .wp-menu-image::before{content:"";display:block;width:20px;height:20px;padding:0;margin:0;background-color:currentColor;-webkit-mask:url(%2$s) no-repeat center/20px 20px;mask:url(%2$s) no-repeat center/20px 20px;}</style>' . "\n",
 			esc_attr( self::PARENT_SLUG ),
-			esc_url( AGGR_PLUGIN_URL . self::ICON_FILE )
+			esc_attr( self::ICON_DATA_URI )
 		);
 	}
+
+	/**
+	 * The mark as a `data:` URI.
+	 *
+	 * A constant rather than a read of `ICON_FILE`, because this prints on
+	 * every admin page and a per-request `file_get_contents` buys nothing: the
+	 * mark is a fixed, version-controlled asset that cannot change between
+	 * requests. `MenuIconTest` asserts these bytes are the shipped file's, so
+	 * the two cannot drift — the copy is checked, not trusted.
+	 *
+	 * Base64 rather than percent-encoding: the payload lands inside a CSS
+	 * `url()` inside an HTML `<style>`, and base64's alphabet cannot carry a
+	 * quote, an angle bracket or a parenthesis out of that nesting. A
+	 * percent-encoded SVG has to be escaped correctly for all three contexts at
+	 * once, which is a thing to get right again on every edit of the file.
+	 *
+	 * Regenerate after editing `assets/svg/aggressive-ads-icon.svg`:
+	 *
+	 *     printf 'data:image/svg+xml;base64,%s' "$(base64 -w0 assets/svg/aggressive-ads-icon.svg)"
+	 *
+	 * `MenuIconTest` fails with that command in its message if the two drift.
+	 */
+	private const ICON_DATA_URI = 'data:image/svg+xml;base64,PHN2ZyBmaWxsPSJjdXJyZW50Q29sb3IiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiB2aWV3Qm94PSIwIDAgMjQgMjQiPjxwYXRoIGQ9Ik00LjMzIDIwLjYzSDBMMTAuNTggMy4zN2g0LjQxem0xOS42NyAwaC0zLjg4TDEyLjc4IDguMTZoMy42N3ptLTcuODItMy4xMiAxLjkyIDMuMTJINi4zMWw0LjctNy44MWgzLjIzbC0yLjY2IDQuNjl6Ii8+PC9zdmc+';
 
 	/**
 	 * Loads the rhythm-only stylesheet on the Advertising screens.

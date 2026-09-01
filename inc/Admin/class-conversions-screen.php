@@ -11,6 +11,8 @@ namespace Aggressive\Ads\Admin;
 
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Domain\Conversion_Rules;
+use Aggressive\Ads\REST\Conversion_Credentials_Controller;
+use Aggressive\Ads\REST\Conversion_Definitions_Controller;
 use Aggressive\Ads\REST\Creative_File_Controller;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Package_Repository;
@@ -40,12 +42,22 @@ final class Conversions_Screen implements Service {
 	/**
 	 * Constructor.
 	 *
-	 * @param Org_Repository     $orgs     Organization lookups, for the credential scope.
-	 * @param Package_Repository $packages Currencies this site already prices in.
+	 * The two controllers are here to be *read from*, not routed through. Both
+	 * lists are seeded into the mount payload by calling the same `index()` the
+	 * browser would have called, so the rows the screen starts with and the rows
+	 * it refetches after a write are composed once. Shaping them here instead
+	 * would be the second rule this class's docblock exists to avoid.
+	 *
+	 * @param Org_Repository                    $orgs        Organization lookups, for the credential scope.
+	 * @param Package_Repository                $packages    Currencies this site already prices in.
+	 * @param Conversion_Definitions_Controller $definitions The definitions list, as REST composes it.
+	 * @param Conversion_Credentials_Controller $credentials The credentials list, as REST composes it.
 	 */
 	public function __construct(
 		private readonly Org_Repository $orgs,
-		private readonly Package_Repository $packages
+		private readonly Package_Repository $packages,
+		private readonly Conversion_Definitions_Controller $definitions,
+		private readonly Conversion_Credentials_Controller $credentials
 	) {
 	}
 
@@ -160,6 +172,30 @@ final class Conversions_Screen implements Service {
 		$payload = array(
 			'restPath'        => '/' . Creative_File_Controller::NAMESPACE . '/conversion-definitions',
 			'credentialsPath' => '/' . Creative_File_Controller::NAMESPACE . '/conversion-credentials',
+
+			/*
+			 * Both lists travel with the page, the way every other Advertising
+			 * screen's rows do. Fetching them on mount cost a whole round trip
+			 * *after* React had booted — so the screen rendered a spinner over
+			 * data the server had already assembled while rendering the markup
+			 * around it, on the one screen that pays for the DataViews bundle
+			 * first.
+			 *
+			 * A refetch after a write still goes to REST. This seeds the first
+			 * paint, it does not replace the routes.
+			 *
+			 * **These rows carry the public keys pages report against**, which
+			 * is why `Conversion_Definitions_Controller::index()` answers
+			 * `Cache-Control: no-store`: a shared cache holding one staff
+			 * response and serving it to somebody else would hand over every
+			 * one of them. Embedding the same rows in the page inherits that
+			 * concern and `wp-admin/admin.php`'s own `nocache_headers()` is
+			 * what answers it — plus the capability check above, which is the
+			 * reason `ConversionsScreenTest` asserts an unauthorized render
+			 * emits no key rather than merely that it dies.
+			 */
+			'definitions'     => $this->seeded( $this->definitions->index()->get_data(), 'definitions' ),
+			'credentials'     => $this->seeded( $this->credentials->index()->get_data(), 'credentials' ),
 			'windows'         => self::windows(),
 			'currencies'      => Currency_Options::options(
 				$this->priced_currencies(),
@@ -193,7 +229,6 @@ final class Conversions_Screen implements Service {
 				'save'                 => __( 'Save changes', 'aggressive-ads' ),
 				'create'               => __( 'Create conversion', 'aggressive-ads' ),
 				'days'                 => __( 'days', 'aggressive-ads' ),
-				'loadFailed'           => __( 'The conversions could not be loaded.', 'aggressive-ads' ),
 				'saveFailed'           => __( 'That conversion could not be saved.', 'aggressive-ads' ),
 				'allowS2s'             => __( 'Accept reports from the advertiser’s server', 'aggressive-ads' ),
 				'allowS2sHelp'         => __( 'Off means only a browser may report this conversion, and never with a value. On also needs a credential, below.', 'aggressive-ads' ),
@@ -236,6 +271,32 @@ final class Conversions_Screen implements Service {
 			esc_html__( 'The conversions screen needs JavaScript enabled.', 'aggressive-ads' ),
 			esc_attr( (string) wp_json_encode( $payload ) )
 		);
+	}
+
+	/**
+	 * One list out of a controller response, or an empty list.
+	 *
+	 * `get_data()` is typed as mixed because a `WP_REST_Response` can carry
+	 * anything, so this narrows rather than trusts. What it buys at runtime is
+	 * only that a changed envelope becomes an empty list instead of a malformed
+	 * value in a `data-` attribute for the browser to choke on — the screen
+	 * would then show no rows, which is a real failure and not a graceful one.
+	 *
+	 * What actually protects against that is `ConversionsScreenTest`, which
+	 * asserts this payload equals the controller's own response. A controller
+	 * that changed its envelope fails there, loudly, rather than shipping a
+	 * screen that quietly renders nothing.
+	 *
+	 * @param mixed  $data Response data.
+	 * @param string $key  Envelope key holding the list.
+	 * @return array<int, mixed>
+	 */
+	private function seeded( mixed $data, string $key ): array {
+		if ( ! is_array( $data ) || ! isset( $data[ $key ] ) || ! is_array( $data[ $key ] ) ) {
+			return array();
+		}
+
+		return array_values( $data[ $key ] );
 	}
 
 	/**

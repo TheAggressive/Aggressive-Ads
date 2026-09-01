@@ -87,7 +87,6 @@ export type Strings = {
 	save: string;
 	create: string;
 	days: string;
-	loadFailed: string;
 	saveFailed: string;
 	allowS2s: string;
 	allowS2sHelp: string;
@@ -136,5 +135,20 @@ export type Payload = {
 	 */
 	defaultCurrency: string;
 	advertisers: Advertiser[];
+
+	/**
+	 * Both lists as the server already composed them, for the first paint.
+	 *
+	 * The same rows `GET /conversion-definitions` and
+	 * `GET /conversion-credentials` return — the screen calls those controllers
+	 * directly while rendering rather than shaping a second copy. Fetching them
+	 * on mount meant a round trip after React had booted, over data the server
+	 * assembled while rendering the page around it.
+	 *
+	 * A write still refetches. These seed the first render, they do not replace
+	 * the routes.
+	 */
+	definitions: Definition[];
+	credentials: Credential[];
 	i18n: Strings;
 };
