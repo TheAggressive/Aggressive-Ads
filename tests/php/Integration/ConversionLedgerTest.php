@@ -154,6 +154,103 @@ final class ConversionLedgerTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * **The concurrency half of deduplication, which sequential tests cannot
+	 * reach.** P12 requires the duplicate refusal to survive concurrent
+	 * arrival, and every other test here writes both rows through one
+	 * repository in one process — which a check-then-insert implementation
+	 * would also pass.
+	 *
+	 * A single-process suite cannot run two real requests, so this proves the
+	 * two properties that make the race unwinnable instead of hoping a
+	 * parallel test lands inside the window:
+	 *
+	 * 1. the row already present was written by something this repository
+	 *    knows nothing about, so no PHP-side memory of it can be what refuses
+	 *    the second write; and
+	 * 2. `exists()` still classifies the refusal as a duplicate rather than an
+	 *    infrastructure failure, which is what keeps the losing request
+	 *    returning success to its caller instead of a retryable error.
+	 *
+	 * Concurrent arrival is exactly case 1: the winner's row appears between
+	 * the loser's validation and its write.
+	 */
+	public function test_a_duplicate_written_by_another_process_is_still_refused(): void {
+		global $wpdb;
+
+		$table = $this->conversions->table_name();
+
+		/*
+		 * Deliberately not through the repository. This is the row the winning
+		 * request committed while the losing one was still validating, and it
+		 * differs in every column the key does not cover so that nothing but
+		 * `(definition_id, idempotency_key)` can be what matches.
+		 */
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Simulating a write this process did not make.
+		$wpdb->insert(
+			$table,
+			array(
+				'created_at_ts'    => 1699999999,
+				'occurred_at_ts'   => 1699999998,
+				'definition_id'    => 7,
+				'idempotency_key'  => 'order-1099-abcdef',
+				'placement_id'     => 99,
+				'campaign_id'      => 98,
+				'creative_id'      => 97,
+				'line_item_id'     => 96,
+				'token_hash'       => str_repeat( 'f', 64 ),
+				'attributed_event' => Measurement_Event_Type::TYPE_VIEWABLE,
+				'value_micros'     => 1,
+				'currency'         => 'EUR',
+				'source'           => Conversion_Rules::SOURCE_SERVER,
+			),
+			array( '%d', '%d', '%d', '%s', '%d', '%d', '%d', '%d', '%s', '%s', '%d', '%s', '%s' )
+		);
+
+		$this->assertSame( 1, $this->row_count(), 'The fixture must be present before the refusal means anything.' );
+
+		$this->assertFalse( $this->conversions->insert( $this->conversion() ), 'The database must refuse a key it has already seen.' );
+		$this->assertSame( 1, $this->row_count(), 'A losing concurrent write must not add a row.' );
+		$this->assertTrue(
+			$this->conversions->exists( 7, 'order-1099-abcdef' ),
+			'The loser must be able to tell a duplicate from a write failure, or it returns a retryable error for an outcome already recorded.'
+		);
+	}
+
+	/**
+	 * And that the refusal is the unique key rather than a read.
+	 *
+	 * A `exists()` check before the insert would pass every other test in this
+	 * file and lose the race: two requests both read nothing, both proceed,
+	 * and only the index stops the second — so if the index were ever dropped
+	 * in favour of the check, nothing here would notice. Counting the queries
+	 * pins the write path to one statement, which is the shape that cannot be
+	 * interleaved wrongly.
+	 *
+	 * Asserted as a number rather than by inspection, because the number is
+	 * the thing that regresses.
+	 */
+	public function test_the_write_path_reads_nothing_before_it_inserts(): void {
+		global $wpdb;
+
+		// Warm the memoised table_exists(): its SHOW TABLES is a
+		// once-per-request cost, and counting it here would measure the
+		// fixture rather than the write.
+		$this->assertTrue( $this->conversions->insert( $this->conversion( array( 'idempotency_key' => 'warm-up-key' ) ) ) );
+
+		$before = $wpdb->num_queries;
+
+		$this->assertTrue( $this->conversions->insert( $this->conversion() ) );
+
+		$this->assertSame( 1, $wpdb->num_queries - $before, 'One INSERT, and nothing that could decide a duplicate in PHP.' );
+
+		$after = $wpdb->num_queries;
+
+		$this->assertFalse( $this->conversions->insert( $this->conversion() ) );
+
+		$this->assertSame( 1, $wpdb->num_queries - $after, 'A refused duplicate must also cost one statement: the index refuses it, no read precedes it.' );
+	}
+
+	/**
 	 * **The assertion that fails if conversions are ever moved back into
 	 * `aggr_events`.**
 	 *

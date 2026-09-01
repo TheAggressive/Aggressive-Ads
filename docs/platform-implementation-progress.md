@@ -152,19 +152,33 @@ Shared boundaries and group exit criteria:
       and both halves of it fail under sabotage. The Site Health ratio from the
       contract's observability section shipped with it, so nothing from that
       document remains outstanding.
-- [ ] **P12 — Conversion tracking.** Definitions, browser and server-to-server
-      endpoints, idempotency keys, click-through and view-through windows.
-      Attribution derives from signed identifiers, never from client-supplied
-      campaign ids. WooCommerce adapter optional, never a dependency. Scope,
+- [x] **P12 — Conversion tracking.** Definitions, browser and server-to-server
+      endpoints, idempotency keys, click-through windows. Attribution derives
+      from signed identifiers, never from client-supplied campaign ids. Scope,
       boundaries and exit criteria are defined in
       [platform-p12-conversion-tracking.md](platform-p12-conversion-tracking.md).
-      Two decisions are settled there before any code: a conversion gets its own
-      append-only table rather than a row in `aggr_events`, whose
+      Two decisions were settled there before any code: a conversion gets its
+      own append-only table rather than a row in `aggr_events`, whose
       `(token_hash, event)` unique key would permit exactly one conversion per
       fill for all time; and **view-through attribution is defined but not
       shipped**, because it requires the cross-visit identifier P11 explicitly
       declined to invent and P27 exists to gate. Click-through needs none — the
       signed token travels in the destination URL.
+
+      Closeout found two of the contract's required proofs missing, and both are
+      worth naming because both had passing suites over them. **Deduplication
+      was never proven concurrently**: every test wrote both rows through one
+      repository in one process, which a check-then-insert implementation would
+      also pass — `ConversionLedgerTest` now refuses a duplicate whose competing
+      row was written outside the repository, and counts the write path's
+      queries so a read cannot creep in front of the index. **The carrier had no
+      browser evidence**, only the hop's `Location` header;
+      `click-carrier.spec.ts` now clicks a rendered advertisement and reads the
+      address it lands on, in both the clean and already-carrying cases. The
+      attested-signal caveat the contract asks for reached `threat-model.md`
+      with it, and `administration.md` and `testing-strategy.md` caught up with
+      what had shipped.
+
 - [ ] **P13 — Event and analytics schema.** Normalized dimensions and schema
       versioning on the existing append-first ledger. Indexes from real query
       patterns; write amplification reviewed rather than assumed.

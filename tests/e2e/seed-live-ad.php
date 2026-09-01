@@ -145,7 +145,7 @@ update_post_meta( $aggr_creative_id, Creative_Repository::META_SIZE, ( new Place
 update_post_meta( $aggr_creative_id, Creative_Repository::META_KIND, 'image' );
 update_post_meta( $aggr_creative_id, Creative_Repository::META_WIDTH, 728 );
 update_post_meta( $aggr_creative_id, Creative_Repository::META_HEIGHT, 90 );
-update_post_meta( $aggr_creative_id, Creative_Repository::META_CLICK_URL, 'https://example.com/e2e-live' );
+update_post_meta( $aggr_creative_id, Creative_Repository::META_CLICK_URL, home_url( '/e2e-click-landing/' ) );
 update_post_meta( $aggr_creative_id, Creative_Repository::META_ALT_TEXT, 'E2E live advertisement' );
 update_post_meta( $aggr_creative_id, Creative_Repository::META_ATTACHMENT_ID, (int) $aggr_image );
 update_post_meta( $aggr_creative_id, Creative_Repository::META_REVIEW_STATE, 'approved' );
@@ -165,7 +165,7 @@ $wpdb->insert(
 		'revision_id'   => (int) $aggr_creative_id,
 		'status'        => Assignment_Rules::READY,
 		'weight'        => 100,
-		'click_url'     => 'https://example.com/e2e-live',
+		'click_url'     => home_url( '/e2e-click-landing/' ),
 		'attachment_id' => 0,
 		'alt_text'      => 'E2E live advertisement',
 		'width'         => 728,
@@ -302,5 +302,158 @@ wp_insert_post(
 		'post_content' => $aggr_rotating . $aggr_static . $aggr_unsold . $aggr_spacer,
 	)
 );
+
+/*
+ * ── The click-carrier fixture ────────────────────────────────────────────────
+ *
+ * P12 requires browser evidence that the hop's destination carries `aggr_ct`,
+ * and that a destination already carrying one is not given two. Both halves are
+ * asserted through the real hop in `FillRoutesTest`; what no PHP test can do is
+ * prove that a person clicking a rendered advertisement in a real browser ends
+ * up on that URL. Between the assertion and the click sit the anchor the fill
+ * script builds, the browser's own navigation, and the redirect — none of which
+ * a Location-header assertion exercises.
+ *
+ * The landing page is on this site rather than `example.com` so a real click can
+ * actually arrive somewhere and the address bar can be read.
+ */
+$aggr_landing = get_page_by_path( 'e2e-click-landing', OBJECT, 'page' );
+
+if ( $aggr_landing instanceof WP_Post ) {
+	wp_delete_post( $aggr_landing->ID, true );
+}
+
+wp_insert_post(
+	array(
+		'post_type'    => 'page',
+		'post_status'  => 'publish',
+		'post_title'   => 'E2E click landing',
+		'post_name'    => 'e2e-click-landing',
+		'post_content' => '<!-- wp:paragraph --><p>The advertiser’s page.</p><!-- /wp:paragraph -->',
+	)
+);
+
+$aggr_carrier_placement = get_posts(
+	array(
+		'post_type'      => Post_Types::PLACEMENT,
+		'post_status'    => 'publish',
+		'name'           => 'e2e-carrier-placement',
+		'fields'         => 'ids',
+		'posts_per_page' => 1,
+	)
+);
+
+if ( array() !== $aggr_carrier_placement ) {
+	$aggr_carrier_placement_id = (int) $aggr_carrier_placement[0];
+
+	/*
+	 * A destination that already carries the parameter. `stale` is a value the
+	 * hop must overwrite: if the carrier ever appended instead of replacing,
+	 * the advertiser's page would see two `aggr_ct` values and PHP's own
+	 * parsing would hand it the last one — so the bug would look like a working
+	 * integration until the wrong token was reported against.
+	 */
+	$aggr_stale_url = add_query_arg( 'aggr_ct', 'stale', home_url( '/e2e-click-landing/' ) );
+
+	$aggr_existing_carrier = get_page_by_path( 'e2e-carrier-ad', OBJECT, Post_Types::CAMPAIGN );
+
+	if ( $aggr_existing_carrier instanceof WP_Post ) {
+		wp_delete_post( $aggr_existing_carrier->ID, true );
+	}
+
+	$aggr_carrier_campaign_id = wp_insert_post(
+		array(
+			'post_type'   => Post_Types::CAMPAIGN,
+			'post_status' => Post_Statuses::SCHEDULED,
+			'post_title'  => 'E2E carrier advertisement',
+			'post_name'   => 'e2e-carrier-ad',
+		)
+	);
+
+	update_post_meta( $aggr_carrier_campaign_id, Campaign_Repository::META_ORG_ID, $aggr_org_id );
+	add_post_meta( $aggr_carrier_campaign_id, Campaign_Repository::META_PLACEMENT_ID, $aggr_carrier_placement_id );
+	update_post_meta( $aggr_carrier_campaign_id, Campaign_Repository::META_START_TS, time() - DAY_IN_SECONDS );
+	update_post_meta( $aggr_carrier_campaign_id, Campaign_Repository::META_END_TS, time() + ( 30 * DAY_IN_SECONDS ) );
+
+	// The same artwork as the live fixture: this spec is about the URL a click
+	// produces, and a second image would only be a second thing to keep in size.
+	$aggr_carrier_creative_id = wp_insert_post(
+		array(
+			'post_type'   => Post_Types::CREATIVE,
+			'post_status' => 'publish',
+			'post_title'  => 'E2E carrier creative',
+		)
+	);
+
+	update_post_meta( $aggr_carrier_creative_id, Creative_Repository::META_CAMPAIGN_ID, (int) $aggr_carrier_campaign_id );
+	update_post_meta( $aggr_carrier_creative_id, Creative_Repository::META_ORG_ID, $aggr_org_id );
+	update_post_meta( $aggr_carrier_creative_id, Creative_Repository::META_PLACEMENT_ID, $aggr_carrier_placement_id );
+	update_post_meta( $aggr_carrier_creative_id, Creative_Repository::META_SIZE, '728x90' );
+	update_post_meta( $aggr_carrier_creative_id, Creative_Repository::META_KIND, 'image' );
+	update_post_meta( $aggr_carrier_creative_id, Creative_Repository::META_WIDTH, 728 );
+	update_post_meta( $aggr_carrier_creative_id, Creative_Repository::META_HEIGHT, 90 );
+	update_post_meta( $aggr_carrier_creative_id, Creative_Repository::META_CLICK_URL, $aggr_stale_url );
+	update_post_meta( $aggr_carrier_creative_id, Creative_Repository::META_ALT_TEXT, 'E2E carrier advertisement' );
+	update_post_meta( $aggr_carrier_creative_id, Creative_Repository::META_ATTACHMENT_ID, (int) $aggr_image );
+	update_post_meta( $aggr_carrier_creative_id, Creative_Repository::META_REVIEW_STATE, 'approved' );
+
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Seeding this plugin's own table for a browser fixture.
+	$wpdb->insert(
+		$aggr_assignments->table_name(),
+		array(
+			'line_item_id'  => (int) $aggr_carrier_campaign_id,
+			'campaign_id'   => (int) $aggr_carrier_campaign_id,
+			'placement_id'  => $aggr_carrier_placement_id,
+			'revision_id'   => (int) $aggr_carrier_creative_id,
+			'status'        => Assignment_Rules::READY,
+			'weight'        => 100,
+			'click_url'     => $aggr_stale_url,
+			'attachment_id' => 0,
+			'alt_text'      => 'E2E carrier advertisement',
+			'width'         => 728,
+			'height'        => 90,
+			'revision'      => 1,
+		)
+	);
+
+	Plugin::instance()->container()->get( Campaign_State_Machine::class )
+		->apply_system( (int) $aggr_carrier_campaign_id, Post_Statuses::LIVE );
+
+	// Same fail-fast as the live fixture: a seeder that produces a non-serving
+	// ad turns a broken pipeline into a confusing timeout in the browser.
+	$aggr_carrier_seeded = $wpdb->get_row(
+		$wpdb->prepare(
+			'SELECT status FROM %i WHERE campaign_id = %d LIMIT 1',
+			$aggr_assignments->table_name(),
+			(int) $aggr_carrier_campaign_id
+		),
+		ARRAY_A
+	);
+
+	if ( Assignment_Rules::LIVE !== ( $aggr_carrier_seeded['status'] ?? '' ) ) {
+		throw new RuntimeException(
+			'Seed failed: the carrier campaign went live and its assignment did not.'
+		);
+	}
+
+	$aggr_carrier_page = get_page_by_path( 'e2e-carrier', OBJECT, 'page' );
+
+	if ( $aggr_carrier_page instanceof WP_Post ) {
+		wp_delete_post( $aggr_carrier_page->ID, true );
+	}
+
+	// Both slots on one page, and both above the fold: the spec clicks them, it
+	// does not scroll to them, and one page is one fill wait instead of two.
+	wp_insert_post(
+		array(
+			'post_type'    => 'page',
+			'post_status'  => 'publish',
+			'post_title'   => 'E2E carrier',
+			'post_name'    => 'e2e-carrier',
+			'post_content' => '<!-- wp:aggr/ad-slot {"slot":"e2e-browser-placement"} /-->'
+				. '<!-- wp:aggr/ad-slot {"slot":"e2e-carrier-placement"} /-->',
+		)
+	);
+}
 
 echo (int) $aggr_campaign_id;

@@ -249,3 +249,46 @@ delivery, the replay refusal and the expiry asymmetry.
 
 No new identifier is stored: one boolean per fill, no cookie, no fingerprint, no
 dwell histogram.
+
+## Conversions are attested, not verified
+
+Same shape as viewability, one step further from the server: nothing here
+observes an outcome. A conversion is what the advertiser's page or the
+advertiser's server *says* happened, and the value is attested more strongly
+than the fact — the plugin never sees a cart, an order or a payment. A publisher
+billing on these numbers is billing on a counterparty's word, and that is a
+commercial arrangement rather than a measurement guarantee.
+
+What the server does control is worth stating exactly, because it is not
+nothing:
+
+- the interaction must be **real** — the token resolves to a fill this site made
+  and to a recorded `click` or `viewable`, never to a `served` alone;
+- it must be **in window**, against the definition's own attribution window,
+  measured from the server-recorded interaction rather than from anything the
+  reporter states;
+- it must be **attributed from server state**. Placement, campaign, creative,
+  line item and organization come from the signed token. No route accepts a
+  campaign id, and the browser route has no value parameter at all, so "an
+  anonymous browser may never state what its outcome was worth" is a fact about
+  the URL space rather than a conditional; and
+- it may be **spent once**, per `(definition_id, idempotency_key)`, refused by a
+  unique index rather than by a read — the property `ConversionLedgerTest` pins
+  both sequentially and against a row written by another process.
+
+**The ceiling on a dishonest client** is therefore the inventory it could
+already consume: it can report only against fills it was served and clicked. It
+gains no leverage it did not have by clicking. **A dishonest advertiser** with a
+credential can inflate its own conversions, which corrupts only its own
+reporting — which is why a credential is scoped to a single organization,
+revocable, and why organization 0 is not a wildcard for one.
+
+**The token in the destination URL is an exposure surface**, reaching the
+advertiser's server logs, their analytics and any third party on their landing
+page. It is built to be worth nothing but attribution: it names a placement, a
+campaign and a creative, carries no visitor identity, and can be spent only
+against a definition that organization owns.
+
+No cross-visit identifier exists. That is why view-through attribution is
+defined and deliberately unshipped — it needs the identifier P11 declined to
+invent, and P27 is its gate.
