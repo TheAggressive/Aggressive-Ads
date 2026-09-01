@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-01T00:18:55+00:00\n"
+"POT-Creation-Date: 2026-09-01T01:15:05+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -97,15 +97,15 @@ msgstr ""
 #: inc/Admin/class-conversions-screen.php:128
 #: inc/Admin/class-conversions-screen.php:129
 #: inc/Admin/class-conversions-screen.php:153
-#: inc/Admin/class-conversions-screen.php:169
-#: inc/Admin/class-conversions-screen.php:229
+#: inc/Admin/class-conversions-screen.php:172
+#: inc/Admin/class-conversions-screen.php:235
 msgid "Conversions"
 msgstr ""
 
 #: inc/Admin/class-conversions-screen.php:144
 #: inc/Admin/class-menu.php:181
 #: inc/Admin/class-organization-screen.php:127
-#: inc/Admin/class-package-screen.php:116
+#: inc/Admin/class-package-screen.php:117
 #: inc/Admin/class-placement-screen.php:116
 #: inc/Admin/class-review-screen.php:167
 #: inc/Admin/class-settings-screen.php:161
@@ -116,69 +116,74 @@ msgstr ""
 msgid "The conversions screen has not been built. Run “pnpm build” and reload."
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:168
-msgid "New conversion"
-msgstr ""
-
-#: inc/Admin/class-conversions-screen.php:170
-msgid "No conversions are defined yet. Nothing will be recorded until one is."
+#: inc/Admin/class-conversions-screen.php:166
+#: inc/Admin/class-package-screen.php:155
+msgid "Choose a currency"
 msgstr ""
 
 #: inc/Admin/class-conversions-screen.php:171
-#: inc/Admin/class-conversions-screen.php:202
-#: inc/Admin/class-package-screen.php:150
+msgid "New conversion"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:173
+msgid "No conversions are defined yet. Nothing will be recorded until one is."
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:174
+#: inc/Admin/class-conversions-screen.php:208
+#: inc/Admin/class-package-screen.php:164
 #: inc/Admin/class-placement-screen.php:150
 #: templates/portal/screens/campaign.php:771
 #: templates/portal/screens/organization.php:112
 msgid "Name"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:172
+#: inc/Admin/class-conversions-screen.php:175
 msgid "What the outcome is, in the words a report about it will use."
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:173
+#: inc/Admin/class-conversions-screen.php:176
 msgid "Attribution window"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:174
+#: inc/Admin/class-conversions-screen.php:177
 msgid "How long after a click an outcome still counts."
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:175
+#: inc/Admin/class-conversions-screen.php:178
 msgid "Value"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:176
+#: inc/Admin/class-conversions-screen.php:179
 msgid "What one conversion is worth. Leave empty for a signup or anything else with no price."
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:177
-#: inc/Admin/class-package-screen.php:159
+#: inc/Admin/class-conversions-screen.php:180
+#: inc/Admin/class-package-screen.php:173
 msgid "Currency"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:178
+#: inc/Admin/class-conversions-screen.php:181
 msgid "What the value above is denominated in."
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:179
+#: inc/Admin/class-conversions-screen.php:182
 msgid "Set a value first. An outcome worth nothing needs no currency."
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:180
+#: inc/Admin/class-conversions-screen.php:183
 msgid "Limit to one advertiser"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:181
+#: inc/Admin/class-conversions-screen.php:184
 msgid "Off means any campaign may be credited. On means only the advertiser you choose."
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:182
+#: inc/Admin/class-conversions-screen.php:185
 msgid "Reporting key"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:183
+#: inc/Admin/class-conversions-screen.php:186
 #: inc/Admin/class-review-screen.php:269
 #: inc/Admin/class-review-screen.php:287
 #: templates/portal/partials/campaign-table.php:35
@@ -187,150 +192,170 @@ msgstr ""
 msgid "Status"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:184
+#: inc/Admin/class-conversions-screen.php:187
 #: templates/portal/screens/organization.php:116
 #: templates/portal/screens/organization.php:199
 msgid "Actions"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:185
+#: inc/Admin/class-conversions-screen.php:188
 msgid "Accepting reports"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:186
+#: inc/Admin/class-conversions-screen.php:189
 msgid "Archived"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:187
+#: inc/Admin/class-conversions-screen.php:190
 msgid "Archive"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:188
-msgid "Create conversion"
-msgstr ""
-
-#: inc/Admin/class-conversions-screen.php:189
-msgid "days"
-msgstr ""
-
-#: inc/Admin/class-conversions-screen.php:190
-msgid "The conversions could not be loaded."
-msgstr ""
-
 #: inc/Admin/class-conversions-screen.php:191
-msgid "That conversion could not be saved."
+#: inc/Admin/class-review-screen.php:283
+#: templates/portal/screens/campaign.php:110
+#: templates/portal/screens/campaign.php:757
+#: templates/portal/screens/campaign.php:768
+#: templates/portal/screens/campaign.php:779
+#: templates/portal/screens/campaign.php:791
+#: templates/portal/screens/campaign.php:800
+#: templates/portal/screens/campaign.php:858
+msgid "Edit"
 msgstr ""
 
 #: inc/Admin/class-conversions-screen.php:192
-msgid "Accept reports from the advertiser’s server"
+msgid "Edit conversion"
 msgstr ""
 
 #: inc/Admin/class-conversions-screen.php:193
-msgid "Off means only a browser may report this conversion, and never with a value. On also needs a credential, below."
+msgid "Save changes"
 msgstr ""
 
 #: inc/Admin/class-conversions-screen.php:194
-msgid "Server reports"
+msgid "Create conversion"
 msgstr ""
 
 #: inc/Admin/class-conversions-screen.php:195
-msgid "Yes"
+msgid "days"
 msgstr ""
 
 #: inc/Admin/class-conversions-screen.php:196
-msgid "No"
+msgid "The conversions could not be loaded."
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:197
+msgid "That conversion could not be saved."
 msgstr ""
 
 #: inc/Admin/class-conversions-screen.php:198
-msgid "Server-to-server credentials"
+msgid "Accept reports from the advertiser’s server"
 msgstr ""
 
 #: inc/Admin/class-conversions-screen.php:199
-msgid "A credential lets an advertiser’s own server report a conversion, and state what it was worth. Give one to a single integration, so revoking it stops that integration and nothing else."
+msgid "Off means only a browser may report this conversion, and never with a value. On also needs a credential, below."
 msgstr ""
 
 #: inc/Admin/class-conversions-screen.php:200
-msgid "No credentials have been issued. A server cannot report a conversion without one."
+msgid "Server reports"
 msgstr ""
 
 #: inc/Admin/class-conversions-screen.php:201
-msgid "Issue a credential"
+msgid "Yes"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:203
-msgid "Where this credential is used, so it can be told apart when one has to be revoked."
+#: inc/Admin/class-conversions-screen.php:202
+msgid "No"
 msgstr ""
 
 #: inc/Admin/class-conversions-screen.php:204
+msgid "Server-to-server credentials"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:205
+msgid "A credential lets an advertiser’s own server report a conversion, and state what it was worth. Give one to a single integration, so revoking it stops that integration and nothing else."
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:206
+msgid "No credentials have been issued. A server cannot report a conversion without one."
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:207
+msgid "Issue a credential"
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:209
+msgid "Where this credential is used, so it can be told apart when one has to be revoked."
+msgstr ""
+
+#: inc/Admin/class-conversions-screen.php:210
 #: inc/Admin/class-review-screen.php:267
 #: inc/Admin/class-review-screen.php:277
 msgid "Advertiser"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:205
+#: inc/Admin/class-conversions-screen.php:211
 msgid "The only organization this credential may report for."
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:206
+#: inc/Admin/class-conversions-screen.php:212
 msgid "A credential reports for one advertiser, and there are no active advertisers yet."
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:207
+#: inc/Admin/class-conversions-screen.php:213
 msgid "Issue credential"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:208
+#: inc/Admin/class-conversions-screen.php:214
 msgid "Copy this secret now. It is shown once and cannot be read again — if it is lost, revoke it and issue another."
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:209
+#: inc/Admin/class-conversions-screen.php:215
 msgid "Copy"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:210
+#: inc/Admin/class-conversions-screen.php:216
 msgid "Copied"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:211
+#: inc/Admin/class-conversions-screen.php:217
 msgid "Issued"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:212
+#: inc/Admin/class-conversions-screen.php:218
 msgid "Last used"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:213
+#: inc/Admin/class-conversions-screen.php:219
 #: inc/Admin/class-settings-screen.php:264
 msgid "Never"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:214
+#: inc/Admin/class-conversions-screen.php:220
 #: inc/Core/class-post-statuses.php:211
 msgid "Live"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:215
+#: inc/Admin/class-conversions-screen.php:221
 #: templates/portal/screens/organization.php:231
 msgid "Revoke"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:216
+#: inc/Admin/class-conversions-screen.php:222
 msgid "Revoked"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:217
+#: inc/Admin/class-conversions-screen.php:223
 msgid "Revoke this credential? Anything still using it stops reporting immediately."
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:218
+#: inc/Admin/class-conversions-screen.php:224
 msgid "That credential could not be issued."
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:219
+#: inc/Admin/class-conversions-screen.php:225
 msgid "Credential issued"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:220
+#: inc/Admin/class-conversions-screen.php:226
 #: inc/Admin/class-organization-screen.php:208
 #: inc/Admin/class-review-screen.php:334
 #: templates/portal/partials/campaign-overlays.php:198
@@ -338,138 +363,134 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:221
+#: inc/Admin/class-conversions-screen.php:227
 msgid "Done"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:222
+#: inc/Admin/class-conversions-screen.php:228
 msgid "Search conversions"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:223
+#: inc/Admin/class-conversions-screen.php:229
 msgid "Search credentials"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:230
+#: inc/Admin/class-conversions-screen.php:236
 msgid "The conversions screen needs JavaScript enabled."
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:258
-msgid "Choose a currency"
-msgstr ""
+#. translators: %d: number of days.
+#: inc/Admin/class-conversions-screen.php:330
+#, php-format
+msgid "%d day"
+msgid_plural "%d days"
+msgstr[0] ""
+msgstr[1] ""
 
 #. translators: 1: ISO 4217 currency code, such as USD. 2: the currency's name.
 #. translators: 1: screen name. 2: site name.
-#: inc/Admin/class-conversions-screen.php:273
+#: inc/Admin/class-currency-options.php:77
 #: templates/portal/base-bare.php:33
 #: templates/portal/base.php:44
 #, php-format
 msgid "%1$s — %2$s"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:326
+#: inc/Admin/class-currency-options.php:112
 msgid "United States dollar"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:327
+#: inc/Admin/class-currency-options.php:113
 msgid "Euro"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:328
+#: inc/Admin/class-currency-options.php:114
 msgid "Pound sterling"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:329
+#: inc/Admin/class-currency-options.php:115
 msgid "Canadian dollar"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:330
+#: inc/Admin/class-currency-options.php:116
 msgid "Australian dollar"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:331
+#: inc/Admin/class-currency-options.php:117
 msgid "New Zealand dollar"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:332
+#: inc/Admin/class-currency-options.php:118
 msgid "Japanese yen"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:333
+#: inc/Admin/class-currency-options.php:119
 msgid "Chinese yuan"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:334
+#: inc/Admin/class-currency-options.php:120
 msgid "Indian rupee"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:335
+#: inc/Admin/class-currency-options.php:121
 msgid "Swiss franc"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:336
+#: inc/Admin/class-currency-options.php:122
 msgid "Swedish krona"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:337
+#: inc/Admin/class-currency-options.php:123
 msgid "Norwegian krone"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:338
+#: inc/Admin/class-currency-options.php:124
 msgid "Danish krone"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:339
+#: inc/Admin/class-currency-options.php:125
 msgid "Polish złoty"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:340
+#: inc/Admin/class-currency-options.php:126
 msgid "Czech koruna"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:341
+#: inc/Admin/class-currency-options.php:127
 msgid "Mexican peso"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:342
+#: inc/Admin/class-currency-options.php:128
 msgid "Brazilian real"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:343
+#: inc/Admin/class-currency-options.php:129
 msgid "South African rand"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:344
+#: inc/Admin/class-currency-options.php:130
 msgid "Singapore dollar"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:345
+#: inc/Admin/class-currency-options.php:131
 msgid "Hong Kong dollar"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:346
+#: inc/Admin/class-currency-options.php:132
 msgid "United Arab Emirates dirham"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:347
+#: inc/Admin/class-currency-options.php:133
 msgid "Israeli new shekel"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:348
+#: inc/Admin/class-currency-options.php:134
 msgid "South Korean won"
 msgstr ""
 
-#: inc/Admin/class-conversions-screen.php:349
+#: inc/Admin/class-currency-options.php:135
 msgid "Turkish lira"
 msgstr ""
-
-#. translators: %d: number of days.
-#: inc/Admin/class-conversions-screen.php:420
-#, php-format
-msgid "%d day"
-msgid_plural "%d days"
-msgstr[0] ""
-msgstr[1] ""
 
 #: inc/Admin/class-organization-screen.php:113
 #: inc/Admin/class-organization-screen.php:114
@@ -488,7 +509,7 @@ msgid "No organizations match this search."
 msgstr ""
 
 #: inc/Admin/class-organization-screen.php:163
-#: inc/Admin/class-package-screen.php:160
+#: inc/Admin/class-package-screen.php:174
 #: inc/Admin/class-placement-screen.php:160
 #: templates/portal/screens/organization.php:50
 msgid "Active"
@@ -612,7 +633,7 @@ msgid "That organization could not be updated."
 msgstr ""
 
 #: inc/Admin/class-organization-screen.php:194
-#: inc/Admin/class-package-screen.php:170
+#: inc/Admin/class-package-screen.php:184
 #: inc/Admin/class-placement-screen.php:173
 #: inc/Admin/class-review-screen.php:372
 #: inc/Admin/class-settings-screen.php:312
@@ -655,40 +676,40 @@ msgstr ""
 msgid "The organizations screen needs JavaScript enabled."
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:92
 #: inc/Admin/class-package-screen.php:93
-#: inc/Admin/class-package-screen.php:134
-#: inc/Admin/class-package-screen.php:176
+#: inc/Admin/class-package-screen.php:94
+#: inc/Admin/class-package-screen.php:135
+#: inc/Admin/class-package-screen.php:190
 #: inc/Core/class-post-types.php:200
 msgid "Packages"
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:135
+#: inc/Admin/class-package-screen.php:136
 msgid "The packages screen has not been built. Run “pnpm build” and reload."
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:145
+#: inc/Admin/class-package-screen.php:159
 msgid "New package"
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:146
+#: inc/Admin/class-package-screen.php:160
 msgid "Create package"
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:147
+#: inc/Admin/class-package-screen.php:161
 #: templates/portal/screens/campaign.php:504
 msgid "Save package"
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:148
+#: inc/Admin/class-package-screen.php:162
 msgid "Package created."
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:149
+#: inc/Admin/class-package-screen.php:163
 msgid "Package saved."
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:151
+#: inc/Admin/class-package-screen.php:165
 #: inc/Admin/class-review-screen.php:292
 #: inc/Core/class-post-types.php:199
 #: inc/Workflow/class-campaign-change-manager.php:768
@@ -698,82 +719,82 @@ msgstr ""
 msgid "Placements"
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:152
+#: inc/Admin/class-package-screen.php:166
 msgid "No placements exist yet. Create one under Inventory first."
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:153
+#: inc/Admin/class-package-screen.php:167
 #: inc/Admin/class-placement-screen.php:162
 msgid "inactive"
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:154
+#: inc/Admin/class-package-screen.php:168
 msgid "Advertiser chooses the dates"
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:155
+#: inc/Admin/class-package-screen.php:169
 msgid "Leave off to sell a fixed run length."
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:156
+#: inc/Admin/class-package-screen.php:170
 msgid "Duration (days)"
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:157
+#: inc/Admin/class-package-screen.php:171
 #: templates/portal/screens/campaign.php:783
 msgid "Price"
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:158
+#: inc/Admin/class-package-screen.php:172
 msgid "Stored as whole cents. Two decimal places."
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:161
+#: inc/Admin/class-package-screen.php:175
 msgid "Inactive packages are hidden from advertisers."
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:162
+#: inc/Admin/class-package-screen.php:176
 msgid "Catalogue default"
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:163
+#: inc/Admin/class-package-screen.php:177
 msgid "Pre-selected in the campaign wizard. Only one package can be the default."
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:164
+#: inc/Admin/class-package-screen.php:178
 msgid "default"
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:165
+#: inc/Admin/class-package-screen.php:179
 #: inc/Admin/class-placement-screen.php:168
 #: inc/Admin/class-settings-screen.php:307
 msgid "Not saved yet…"
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:166
+#: inc/Admin/class-package-screen.php:180
 #: inc/Admin/class-placement-screen.php:169
 #: inc/Admin/class-settings-screen.php:308
 #: inc/Assets/class-assets.php:356
 msgid "Saving…"
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:167
+#: inc/Admin/class-package-screen.php:181
 #: inc/Admin/class-placement-screen.php:170
 #: inc/Admin/class-settings-screen.php:309
 msgid "Saved."
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:168
+#: inc/Admin/class-package-screen.php:182
 #: inc/Admin/class-placement-screen.php:171
 #: inc/Admin/class-settings-screen.php:310
 msgid "Not saved."
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:169
+#: inc/Admin/class-package-screen.php:183
 msgid "That package could not be saved."
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:177
+#: inc/Admin/class-package-screen.php:191
 msgid "The packages screen needs JavaScript enabled."
 msgstr ""
 
@@ -1105,17 +1126,6 @@ msgstr ""
 
 #: inc/Admin/class-review-screen.php:282
 msgid "No active advertisers yet. Add one from Organizations first."
-msgstr ""
-
-#: inc/Admin/class-review-screen.php:283
-#: templates/portal/screens/campaign.php:110
-#: templates/portal/screens/campaign.php:757
-#: templates/portal/screens/campaign.php:768
-#: templates/portal/screens/campaign.php:779
-#: templates/portal/screens/campaign.php:791
-#: templates/portal/screens/campaign.php:800
-#: templates/portal/screens/campaign.php:858
-msgid "Edit"
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:284

@@ -21,6 +21,7 @@ import {
 	CardHeader,
 	CheckboxControl,
 	Notice,
+	SelectControl,
 	TextControl,
 	ToggleControl,
 	__experimentalHeading as Heading,
@@ -57,12 +58,16 @@ type View = {
 type Bootstrap = {
 	view: View;
 	restPath: string;
+	currencies: Array< { label: string; value: string } >;
+	defaultCurrency: string;
 	i18n: Record< string, string >;
 };
 
 const EMPTY: Bootstrap = {
 	view: { default_id: 0, placements: [], rows: [] },
 	restPath: '',
+	currencies: [],
+	defaultCurrency: '',
 	i18n: {},
 };
 
@@ -170,12 +175,14 @@ function PlacementPicker( {
 function PackageForm( {
 	value,
 	placements,
+	currencies,
 	submitLabel,
 	onSubmit,
 	busy,
 }: {
 	value: Package;
 	placements: Placement[];
+	currencies: Array< { label: string; value: string } >;
 	submitLabel: string;
 	onSubmit: ( draft: Package, amount: string ) => void;
 	busy: boolean;
@@ -236,13 +243,33 @@ function PackageForm( {
 					__nextHasNoMarginBottom
 					__next40pxDefaultSize
 				/>
-				<TextControl
+				{ /*
+				   A select, not three characters to type. A price is billed
+				   from, so "usd", "US$" and a typo all mattering more here than
+				   anywhere else — and only the last of the three was ever
+				   caught by anything. The stored code is added to the options
+				   when it is not one this screen would offer, because a select
+				   whose value is absent renders as something else and saves
+				   that instead.
+				*/ }
+				<SelectControl
 					label={ t( 'currency' ) }
 					value={ draft.currency }
-					maxLength={ 3 }
-					onChange={ ( currency: string ) =>
-						set( { currency: currency.toUpperCase() } )
+					options={
+						'' === draft.currency ||
+						currencies.some(
+							( option ) => option.value === draft.currency
+						)
+							? currencies
+							: [
+									...currencies,
+									{
+										label: draft.currency,
+										value: draft.currency,
+									},
+							  ]
 					}
+					onChange={ ( currency: string ) => set( { currency } ) }
 					__nextHasNoMarginBottom
 					__next40pxDefaultSize
 				/>
@@ -324,8 +351,9 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 						// successful create, so the next package starts blank
 						// instead of inheriting the last one's fields.
 						key={ `new-${ view.rows.length }` }
-						value={ BLANK }
+						value={ { ...BLANK, currency: data.defaultCurrency } }
 						placements={ view.placements }
+						currencies={ data.currencies }
 						submitLabel={ t( 'create' ) }
 						busy={ busy }
 						onSubmit={ ( draft, amount ) => {
@@ -358,6 +386,7 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 							key={ `${ row.id }-${ row.is_default }-${ row.is_active }` }
 							value={ row }
 							placements={ view.placements }
+							currencies={ data.currencies }
 							submitLabel={ t( 'save' ) }
 							busy={ busy }
 							onSubmit={ ( draft, amount ) => {

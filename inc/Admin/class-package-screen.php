@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Admin;
 
+use Aggressive\Ads\Admin\Currency_Options;
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\REST\Creative_File_Controller;
 use Aggressive\Ads\Security\Capabilities;
@@ -138,10 +139,23 @@ final class Package_Screen implements Service {
 			return;
 		}
 
+		/*
+		 * The currencies this site already prices in lead the list, and are the
+		 * default when there is only one — the same catalogue the conversions
+		 * screen offers, because a package priced in one currency and a
+		 * conversion valued in another is a total nobody can add up.
+		 */
+		$priced = $this->data->currencies_in_use();
+
 		$payload = array(
-			'view'     => $this->data->view(),
-			'restPath' => '/' . Creative_File_Controller::NAMESPACE . '/packages',
-			'i18n'     => array(
+			'view'            => $this->data->view(),
+			'restPath'        => '/' . Creative_File_Controller::NAMESPACE . '/packages',
+			'currencies'      => Currency_Options::options(
+				$priced,
+				__( 'Choose a currency', 'aggressive-ads' )
+			),
+			'defaultCurrency' => Currency_Options::default_for( $priced ),
+			'i18n'            => array(
 				'newPackage'         => __( 'New package', 'aggressive-ads' ),
 				'create'             => __( 'Create package', 'aggressive-ads' ),
 				'save'               => __( 'Save package', 'aggressive-ads' ),

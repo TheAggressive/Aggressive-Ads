@@ -82,6 +82,9 @@ export type Strings = {
 	active: string;
 	archived: string;
 	archive: string;
+	edit: string;
+	editDefinition: string;
+	save: string;
 	create: string;
 	days: string;
 	loadFailed: string;

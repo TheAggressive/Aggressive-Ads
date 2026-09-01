@@ -9,9 +9,11 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Tests\Integration;
 
+use Aggressive\Ads\Admin\Currency_Options;
 use Aggressive\Ads\Admin\Menu;
 use Aggressive\Ads\Admin\Package_Screen;
 use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Domain\Conversion_Rules;
 use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Audit_Repository;
@@ -163,6 +165,71 @@ final class PackageAdminTest extends WP_UnitTestCase {
 		// unreferenced write paths to the catalogue. See Rest\PackagesWriteTest.
 		$this->assertFalse( has_action( 'admin_post_aggr_create_package' ) );
 		$this->assertFalse( has_action( 'admin_post_aggr_update_package' ) );
+	}
+
+	/**
+	 * **The price currency is chosen, not typed, and from one catalogue.**
+	 *
+	 * A price is what a publisher bills from, and the column and the validator
+	 * both accept any three uppercase letters — so "usd", "US$" and a typo were
+	 * all possible on the free-text field this replaced, and only the last of
+	 * them was caught by anything.
+	 *
+	 * The catalogue is asserted to be the *same* one the conversions screen
+	 * offers. Two lists is how one screen comes to offer a currency the other
+	 * does not, and a package priced in one currency against a conversion
+	 * valued in another is a total nobody can add up.
+	 */
+	public function test_the_currency_catalogue_is_shared_with_conversions(): void {
+		wp_set_current_user( $this->administrator );
+
+		$offered = Currency_Options::options( array(), 'none' );
+
+		$this->assertGreaterThan( 5, count( $offered ), 'The catalogue offers almost nothing.' );
+
+		foreach ( $offered as $option ) {
+			$code = (string) $option['value'];
+
+			if ( '' === $code ) {
+				continue;
+			}
+
+			$this->assertTrue(
+				Conversion_Rules::is_valid_currency( $code ),
+				"The catalogue offers {$code}, which the validator refuses."
+			);
+		}
+
+		$screen = Plugin::instance()->container()->get( Package_Screen::class );
+
+		ob_start();
+		$screen->render();
+		$html = (string) ob_get_clean();
+
+		$matches = array();
+		preg_match( '/data-aggr-packages="([^"]+)"/', $html, $matches );
+
+		$payload = json_decode( html_entity_decode( $matches[1] ?? '', ENT_QUOTES ), true );
+
+		$this->assertIsArray( $payload );
+		$this->assertSame(
+			array_column( $offered, 'value' ),
+			array_column( $payload['currencies'], 'value' ),
+			'The packages screen offers a different catalogue from the shared one.'
+		);
+	}
+
+	/**
+	 * **A single priced currency becomes the default, and two do not.**
+	 *
+	 * Guessing between two would fill the field with a plausible wrong answer,
+	 * and a wrong currency is not a typo: it silently changes what every total
+	 * built from that price means.
+	 */
+	public function test_a_default_currency_is_only_offered_when_it_is_unambiguous(): void {
+		$this->assertSame( 'EUR', Currency_Options::default_for( array( 'EUR' ) ) );
+		$this->assertSame( '', Currency_Options::default_for( array( 'EUR', 'GBP' ) ) );
+		$this->assertSame( '', Currency_Options::default_for( array() ) );
 	}
 
 	/**

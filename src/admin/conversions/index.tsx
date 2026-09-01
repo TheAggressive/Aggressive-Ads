@@ -72,12 +72,44 @@ const DEFAULT_VIEW: DataView = {
 };
 
 /**
- * The create form.
+ * An option list that always contains the value it is asked to show.
+ *
+ * A select whose current value is absent from its options renders as something
+ * else and saves that instead — so editing a definition whose window or
+ * currency was set over REST, outside what this screen offers, would silently
+ * change it on the way past. The stored value is added rather than the offer
+ * widened: it is legal because it is already stored, not because the screen
+ * would propose it.
+ */
+function withCurrent(
+	options: Array< { label: string; value: string } >,
+	value: string,
+	label: string
+): Array< { label: string; value: string } > {
+	if (
+		'' === value ||
+		options.some( ( option ) => option.value === value )
+	) {
+		return options;
+	}
+
+	return [ ...options, { label, value } ];
+}
+
+/**
+ * The definition form, for a new one and for an existing one.
  *
  * A module-level component taking its state as props, like the roster's modals.
  * Nothing here is a DataViews action, so the frozen-action hazard that file
  * documents does not apply — but a form defined inside the screen's render
  * would still remount on every keystroke elsewhere, so the shape is the same.
+ *
+ * **Editing exists because archiving is not a correction.** A definition's
+ * `public_key` is what an advertiser has pasted onto their page, and it is
+ * minted once; without an edit, fixing a mistyped name or a wrong window meant
+ * archive-and-recreate, which hands back a different key and takes the
+ * advertiser's page down until somebody re-pastes it. The update route has
+ * never carried `public_key`, so editing cannot rotate it.
  */
 function DefinitionModal( {
 	i18n,
@@ -85,22 +117,36 @@ function DefinitionModal( {
 	currencies,
 	defaultCurrency,
 	advertisers,
+	editing,
 	saving,
 	error,
 	onCancel,
-	onCreate,
+	onSubmit,
 }: {
 	i18n: Strings;
 	windows: Array< { label: string; value: string } >;
 	currencies: Array< { label: string; value: string } >;
 	defaultCurrency: string;
 	advertisers: Advertiser[];
+	editing: Definition | null;
 	saving: boolean;
 	error: string;
 	onCancel: () => void;
-	onCreate: ( draft: Draft ) => void;
+	onSubmit: ( draft: Draft ) => void;
 } ) {
-	const [ draft, setDraft ] = useState< Draft >( emptyDraft );
+	const [ draft, setDraft ] = useState< Draft >( () =>
+		null === editing
+			? emptyDraft()
+			: {
+					name: editing.name,
+					org_id: editing.org_id,
+					window_seconds: editing.window_seconds,
+					default_value_micros: editing.default_value_micros,
+					currency: editing.currency,
+					allow_s2s: editing.allow_s2s,
+					status: editing.status,
+			  }
+	);
 
 	/*
 	 * The literal text, not a number formatted back out of the draft.
@@ -111,7 +157,9 @@ function DefinitionModal( {
 	 * packages screen already holds its price this way, and this form should
 	 * never have differed from it.
 	 */
-	const [ amount, setAmount ] = useState( '' );
+	const [ amount, setAmount ] = useState( () =>
+		null === editing ? '' : microsToAmount( editing.default_value_micros )
+	);
 
 	const scoped = draft.org_id > 0;
 	const micros = amountToMicros( amount );
@@ -119,7 +167,9 @@ function DefinitionModal( {
 
 	return (
 		<Modal
-			title={ i18n.newDefinition }
+			title={
+				null === editing ? i18n.newDefinition : i18n.editDefinition
+			}
 			className="aggr-conversion-modal"
 			onRequestClose={ onCancel }
 		>
@@ -145,7 +195,13 @@ function DefinitionModal( {
 					label={ i18n.window }
 					help={ i18n.windowHelp }
 					value={ String( draft.window_seconds ) }
-					options={ windows }
+					options={ withCurrent(
+						windows,
+						String( draft.window_seconds ),
+						`${ Math.round( draft.window_seconds / 86400 ) } ${
+							i18n.days
+						}`
+					) }
 					onChange={ ( value ) =>
 						setDraft( {
 							...draft,
@@ -215,7 +271,11 @@ function DefinitionModal( {
 							}
 							disabled={ ! priced }
 							value={ draft.currency }
-							options={ currencies }
+							options={ withCurrent(
+								currencies,
+								draft.currency,
+								draft.currency
+							) }
 							onChange={ ( currency ) =>
 								setDraft( { ...draft, currency } )
 							}
@@ -281,7 +341,7 @@ function DefinitionModal( {
 					<Button
 						variant="primary"
 						onClick={ () =>
-							onCreate( {
+							onSubmit( {
 								...draft,
 								default_value_micros: micros,
 
@@ -294,7 +354,7 @@ function DefinitionModal( {
 						isBusy={ saving }
 						disabled={ saving || '' === draft.name.trim() }
 					>
-						{ i18n.create }
+						{ null === editing ? i18n.create : i18n.save }
 					</Button>
 				</Flex>
 			</VStack>
@@ -319,6 +379,7 @@ function Screen( { payload }: { payload: Payload } ) {
 	const [ formError, setFormError ] = useState( '' );
 	const [ saving, setSaving ] = useState( false );
 	const [ creating, setCreating ] = useState( false );
+	const [ editing, setEditing ] = useState< Definition | null >( null );
 	const [ view, setView ] = useState< DataView >( DEFAULT_VIEW );
 
 	useEffect( () => {
@@ -328,19 +389,41 @@ function Screen( { payload }: { payload: Payload } ) {
 			.finally( () => setLoading( false ) );
 	}, [ restPath, i18n.loadFailed ] );
 
-	const create = async ( draft: Draft ) => {
+	/**
+	 * One writer for both, because the difference is a route and a revision.
+	 *
+	 * The revision is the definition's own, taken from the row that opened the
+	 * form. A concurrent change refuses the write and the manager answers with
+	 * "somebody else changed this, reload" — which travels to the notice
+	 * unchanged, because it is already the right sentence.
+	 */
+	const submit = async ( draft: Draft ) => {
 		setSaving( true );
 		setFormError( '' );
 
 		try {
-			const result = await apiFetch< { definition: Definition } >( {
-				path: restPath,
-				method: 'POST',
-				data: draft,
-			} );
+			const result = await apiFetch< { definition: Definition } >(
+				null === editing
+					? { path: restPath, method: 'POST', data: draft }
+					: {
+							path: `${ restPath }/${ editing.id }`,
+							method: 'PATCH',
+							data: { ...draft, revision: editing.revision },
+					  }
+			);
 
-			setDefinitions( [ result.definition, ...definitions ] );
+			setDefinitions(
+				null === editing
+					? [ result.definition, ...definitions ]
+					: definitions.map( ( row ) =>
+							row.id === result.definition.id
+								? result.definition
+								: row
+					  )
+			);
+
 			setCreating( false );
+			setEditing( null );
 		} catch ( failure ) {
 			// The manager's message is already translated and already written
 			// for the person reading it, so it travels unchanged — and it stays
@@ -442,6 +525,20 @@ function Screen( { payload }: { payload: Payload } ) {
 	const actions: Action< Definition >[] = useMemo(
 		() => [
 			{
+				id: 'edit',
+				label: i18n.edit,
+				isPrimary: true,
+				supportsBulk: false,
+				callback: ( items: Definition[] ) => {
+					const item = items[ 0 ];
+
+					if ( item ) {
+						setFormError( '' );
+						setEditing( item );
+					}
+				},
+			},
+			{
 				id: 'archive',
 				label: i18n.archive,
 				isDestructive: true,
@@ -511,17 +608,28 @@ function Screen( { payload }: { payload: Payload } ) {
 				i18n={ i18n }
 			/>
 
-			{ creating ? (
+			{ creating || null !== editing ? (
 				<DefinitionModal
+					/*
+					 * Keyed on what is being edited so the form is a fresh
+					 * mount per definition. Without it, opening a second row
+					 * while the first modal's state exists would show the first
+					 * one's values under the second one's title.
+					 */
+					key={ null === editing ? 'new' : editing.id }
 					i18n={ i18n }
 					windows={ windows }
 					currencies={ currencies }
 					defaultCurrency={ defaultCurrency }
 					advertisers={ advertisers }
+					editing={ editing }
 					saving={ saving }
 					error={ formError }
-					onCancel={ () => setCreating( false ) }
-					onCreate={ ( draft ) => void create( draft ) }
+					onCancel={ () => {
+						setCreating( false );
+						setEditing( null );
+					} }
+					onSubmit={ ( draft ) => void submit( draft ) }
 				/>
 			) : null }
 		</>
