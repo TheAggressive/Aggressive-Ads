@@ -199,7 +199,8 @@ final class Runtime_Service_Registrar {
 		$container->register(
 			Conversions_Screen::class,
 			static fn ( Service_Container $c ): Conversions_Screen => new Conversions_Screen(
-				$c->get( Org_Repository::class )
+				$c->get( Org_Repository::class ),
+				$c->get( \Aggressive\Ads\Repository\Package_Repository::class )
 			)
 		);
 

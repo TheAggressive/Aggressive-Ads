@@ -1,0 +1,156 @@
+/*
+ * The conversions screen, given the same surface as the rest of wp-admin.
+ *
+ * This screen shipped without a stylesheet at all, and that single omission is
+ * what made it look broken rather than plain: a name field stretched the full
+ * width of the monitor, help text sat flush against the *next* field's label so
+ * it read as that field's heading, and two DataViews tables floated on the grey
+ * canvas with no edge. None of that was a design decision; it was the absence
+ * of one.
+ *
+ * The rules here are the same restraint `admin-native.css` and the organization
+ * roster state: surface, rhythm and measure only. No colours beyond the tokens,
+ * no button or control states, no palette. DataViews arrives styled — it is
+ * core's own component — and what it does not arrive with is a container.
+ *
+ * Structural selectors against DataViews are honest here for the reason the
+ * roster records: it is bundled from a pinned `@wordpress/dataviews`, so its
+ * markup moves only when we move the dependency, unlike core's own list tables.
+ */
+
+/*
+ * Tokens must be imported, not assumed.
+ *
+ * This bundle is enqueued on its own, without admin.css, so nothing else on the
+ * page declares `--aggr-*`. An unresolved custom property in a colour
+ * declaration is not a degraded look — it is transparent text on a transparent
+ * background.
+ */
+@import '../../styles/base/_admin-tokens.css';
+
+/*
+ * Modals render through a portal at the end of the body, outside `.aggr-admin`
+ * and therefore outside the block that declares `--aggr-*`. Re-declare what the
+ * rules below actually use, and nothing more.
+ */
+.aggr-conversion-modal {
+	--aggr-measure: 60ch;
+	--aggr-color-surface-sunken: #f6f7f7;
+	--aggr-border-color: #dcdcde;
+	--aggr-color-text-muted: #646970;
+}
+
+/* Sections stack down the page; the heading owns the space above its table. */
+.wrap.aggr-admin .aggr-section + .aggr-section {
+	margin-top: 32px;
+}
+
+.wrap.aggr-admin .aggr-section > h2 {
+	margin-bottom: 4px;
+}
+
+/*
+ * Prose past roughly 75 characters is measurably harder to scan, and the
+ * credential explanation is prose rather than a label.
+ */
+.wrap.aggr-admin .aggr-section > p {
+	max-width: 75ch;
+	margin-top: 0;
+	color: var(--aggr-color-text-muted);
+}
+
+/*
+ * The card. Core's own list tables carry a white surface, a hairline and a
+ * one-pixel radius; matching those three is what makes a table read as part of
+ * wp-admin rather than as an embedded application.
+ */
+.wrap.aggr-admin .dataviews-wrapper {
+	background: var(--aggr-color-surface);
+	border: 1px solid var(--aggr-border-color);
+	border-radius: var(--aggr-radius-panel, 4px);
+	box-sizing: border-box;
+	margin-top: 12px;
+	overflow: hidden;
+}
+
+/* Search, filters and the primary action are a control strip, not content. */
+.wrap.aggr-admin .dataviews-filters__container {
+	padding: 12px 16px;
+}
+
+/* Long names must not touch the column beside them. */
+.wrap.aggr-admin .dataviews-view-table td,
+.wrap.aggr-admin .dataviews-view-table th {
+	padding-inline: 16px;
+}
+
+/* A name is the row's identity and reads heavier than the values beside it. */
+.wrap.aggr-admin .dataviews-view-table__primary-column-content {
+	font-weight: 600;
+}
+
+/*
+ * A reporting key is machine text an operator copies by eye, so it gets the
+ * inset surface core gives code, and a size that keeps 32 hex characters inside
+ * its column.
+ */
+.wrap.aggr-admin .dataviews-view-table code {
+	background: var(--aggr-color-surface-sunken);
+	border-radius: 2px;
+	font-size: 12px;
+	padding: 2px 6px;
+}
+
+/*
+ * The forms live in modals, and a modal sized to core's default leaves a
+ * 60-character field floating in a much wider frame. Sized to its content, with
+ * a floor that keeps the issue form from being a slot and a ceiling at the
+ * measure.
+ */
+/*
+ * `.components-modal__frame.aggr-conversion-modal`, not a descendant selector.
+ * `Modal` puts `className` on the frame itself, so
+ * `.aggr-conversion-modal .components-modal__frame` matches nothing and the
+ * frame keeps core's default width — which is how the first version of this
+ * rendered a 60-character form in a 996px dialog. The organization stylesheet
+ * records the same mistake against the action modal.
+ */
+.components-modal__frame.aggr-conversion-modal {
+	width: fit-content;
+
+	/*
+	 * Wide enough that the value and currency pair reads as one row rather than
+	 * two narrow columns: at 30rem the currency label truncated mid-word, which
+	 * is the point at which a select stops being scannable.
+	 */
+	min-width: min(90vw, 34rem);
+	max-width: min(90vw, var(--aggr-measure, 60ch));
+}
+
+/*
+ * Rhythm inside the form comes from the stack's gap, not from control margins:
+ * every control here is `__nextHasNoMarginBottom`, which is what left help text
+ * touching the next field's label. The one thing CSS still owns is the help
+ * text's *attachment* — it must read as belonging to the control above it.
+ */
+.aggr-conversion-modal .components-base-control__help {
+	margin-top: 4px;
+	margin-bottom: 0;
+}
+
+/*
+ * The secret, once. Monospaced so a person can check it character by character,
+ * and wrapped rather than clipped, because a token that runs past its box
+ * cannot be read back to somebody over a call.
+ */
+.aggr-conversion-secret {
+	background: var(--aggr-color-surface-sunken);
+	border: 1px solid var(--aggr-border-color);
+	border-radius: 2px;
+	display: block;
+	font-family: Menlo, Consolas, monaco, monospace;
+	font-size: 13px;
+	overflow-wrap: anywhere;
+	padding: 12px;
+	user-select: all;
+}
