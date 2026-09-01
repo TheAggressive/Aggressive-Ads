@@ -69,4 +69,27 @@ final class Package_Data {
 			'rows'       => $rows,
 		);
 	}
+
+	/**
+	 * Distinct currencies this site's packages are already priced in.
+	 *
+	 * Presentation data for the screen's currency select rather than part of
+	 * `view()`: the table does not render it, and a row shape the browser does
+	 * not read is a row shape somebody has to keep in agreement for nothing.
+	 *
+	 * @return list<string>
+	 */
+	public function currencies_in_use(): array {
+		$found = array();
+
+		foreach ( $this->packages->all_ids() as $package_id ) {
+			$code = strtoupper( $this->packages->currency( $package_id ) );
+
+			if ( 1 === preg_match( '/^[A-Z]{3}\z/', $code ) && ! in_array( $code, $found, true ) ) {
+				$found[] = $code;
+			}
+		}
+
+		return $found;
+	}
 }

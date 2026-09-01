@@ -161,8 +161,11 @@ final class Conversions_Screen implements Service {
 			'restPath'        => '/' . Creative_File_Controller::NAMESPACE . '/conversion-definitions',
 			'credentialsPath' => '/' . Creative_File_Controller::NAMESPACE . '/conversion-credentials',
 			'windows'         => self::windows(),
-			'currencies'      => $this->currencies(),
-			'defaultCurrency' => $this->default_currency(),
+			'currencies'      => Currency_Options::options(
+				$this->priced_currencies(),
+				__( 'Choose a currency', 'aggressive-ads' )
+			),
+			'defaultCurrency' => Currency_Options::default_for( $this->priced_currencies() ),
 			'advertisers'     => $this->advertisers(),
 			'i18n'            => array(
 				'newDefinition'        => __( 'New conversion', 'aggressive-ads' ),
@@ -185,6 +188,9 @@ final class Conversions_Screen implements Service {
 				'active'               => __( 'Accepting reports', 'aggressive-ads' ),
 				'archived'             => __( 'Archived', 'aggressive-ads' ),
 				'archive'              => __( 'Archive', 'aggressive-ads' ),
+				'edit'                 => __( 'Edit', 'aggressive-ads' ),
+				'editDefinition'       => __( 'Edit conversion', 'aggressive-ads' ),
+				'save'                 => __( 'Save changes', 'aggressive-ads' ),
 				'create'               => __( 'Create conversion', 'aggressive-ads' ),
 				'days'                 => __( 'days', 'aggressive-ads' ),
 				'loadFailed'           => __( 'The conversions could not be loaded.', 'aggressive-ads' ),
@@ -233,68 +239,10 @@ final class Conversions_Screen implements Service {
 	}
 
 	/**
-	 * Every currency the select offers, this site's own first.
-	 *
-	 * **Populated from the packages this site already prices in**, before any
-	 * general list. A publisher denominating their inventory in one currency is
-	 * overwhelmingly likely to denominate a conversion in the same one, and the
-	 * codes they will never use are noise in a list they have to search.
-	 *
-	 * A curated set follows, because a site with no packages yet still has to
-	 * be able to choose. Not the full ISO 4217 register: a select of 180 codes
-	 * is a worse control than a text field, and the ones left out are reachable
-	 * over REST, which validates the shape rather than a membership list.
-	 *
-	 * The empty option is first and is not a placeholder trick — "no currency"
-	 * is a real, valid state for a definition worth nothing, and it has to be
-	 * choosable again after somebody picks one by mistake.
-	 *
-	 * @return array<int, array{label: string, value: string}>
-	 */
-	private function currencies(): array {
-		$names   = self::currency_names();
-		$options = array(
-			array(
-				'label' => __( 'Choose a currency', 'aggressive-ads' ),
-				'value' => '',
-			),
-		);
-
-		foreach ( array_merge( $this->priced_currencies(), array_keys( $names ) ) as $code ) {
-			foreach ( $options as $existing ) {
-				if ( $existing['value'] === $code ) {
-					continue 2;
-				}
-			}
-
-			$options[] = array(
-				'label' => isset( $names[ $code ] )
-					/* translators: 1: ISO 4217 currency code, such as USD. 2: the currency's name. */
-					? sprintf( __( '%1$s — %2$s', 'aggressive-ads' ), $code, $names[ $code ] )
-					: $code,
-				'value' => $code,
-			);
-		}
-
-		return $options;
-	}
-
-	/**
-	 * The currency to reach for when somebody first states a value.
-	 *
-	 * Only when this site prices everything in one currency. Where there are
-	 * two, guessing between them would fill the field with a plausible wrong
-	 * answer, and a wrong currency is not a typo — it silently changes what
-	 * every total built from that definition means.
-	 */
-	private function default_currency(): string {
-		$priced = $this->priced_currencies();
-
-		return 1 === count( $priced ) ? (string) $priced[0] : '';
-	}
-
-	/**
 	 * Distinct currencies this site's packages are priced in.
+	 *
+	 * The order is the order `Currency_Options` puts first, so a publisher sees
+	 * their own currency before a general list they have to search.
 	 *
 	 * @return list<string>
 	 */
@@ -310,44 +258,6 @@ final class Conversions_Screen implements Service {
 		}
 
 		return $found;
-	}
-
-	/**
-	 * The currencies offered when this site has priced nothing yet.
-	 *
-	 * Names are translatable because a currency's name is, and its code is not:
-	 * ISO 4217 is the same three letters in every locale, which is why the code
-	 * leads the label rather than following it.
-	 *
-	 * @return array<string, string>
-	 */
-	private static function currency_names(): array {
-		return array(
-			'USD' => __( 'United States dollar', 'aggressive-ads' ),
-			'EUR' => __( 'Euro', 'aggressive-ads' ),
-			'GBP' => __( 'Pound sterling', 'aggressive-ads' ),
-			'CAD' => __( 'Canadian dollar', 'aggressive-ads' ),
-			'AUD' => __( 'Australian dollar', 'aggressive-ads' ),
-			'NZD' => __( 'New Zealand dollar', 'aggressive-ads' ),
-			'JPY' => __( 'Japanese yen', 'aggressive-ads' ),
-			'CNY' => __( 'Chinese yuan', 'aggressive-ads' ),
-			'INR' => __( 'Indian rupee', 'aggressive-ads' ),
-			'CHF' => __( 'Swiss franc', 'aggressive-ads' ),
-			'SEK' => __( 'Swedish krona', 'aggressive-ads' ),
-			'NOK' => __( 'Norwegian krone', 'aggressive-ads' ),
-			'DKK' => __( 'Danish krone', 'aggressive-ads' ),
-			'PLN' => __( 'Polish złoty', 'aggressive-ads' ),
-			'CZK' => __( 'Czech koruna', 'aggressive-ads' ),
-			'MXN' => __( 'Mexican peso', 'aggressive-ads' ),
-			'BRL' => __( 'Brazilian real', 'aggressive-ads' ),
-			'ZAR' => __( 'South African rand', 'aggressive-ads' ),
-			'SGD' => __( 'Singapore dollar', 'aggressive-ads' ),
-			'HKD' => __( 'Hong Kong dollar', 'aggressive-ads' ),
-			'AED' => __( 'United Arab Emirates dirham', 'aggressive-ads' ),
-			'ILS' => __( 'Israeli new shekel', 'aggressive-ads' ),
-			'KRW' => __( 'South Korean won', 'aggressive-ads' ),
-			'TRY' => __( 'Turkish lira', 'aggressive-ads' ),
-		);
 	}
 
 	/**
