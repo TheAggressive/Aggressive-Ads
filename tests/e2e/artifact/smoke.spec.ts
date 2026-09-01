@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+import { signInToAdmin } from '../admin-login';
+
 /**
  * The packaged plugin, installed into a WordPress that has never seen this
  * source tree.
@@ -13,10 +15,7 @@ import { expect, test } from '@playwright/test';
 test( 'the packaged plugin activates and registers its admin surface', async ( {
 	page,
 } ) => {
-	await page.goto( '/wp-login.php' );
-	await page.locator( '#user_login' ).fill( 'admin' );
-	await page.locator( '#user_pass' ).fill( 'password' );
-	await page.locator( '#wp-submit' ).click();
+	await signInToAdmin( page, 'password' );
 
 	const plugins = await page.goto( '/wp-admin/plugins.php' );
 	expect( plugins?.ok() ).toBe( true );

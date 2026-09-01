@@ -14,87 +14,60 @@ Things that are true, annoying, and worth writing down so nobody rediscovers the
 
 Raising the floor is the whole cost, and it is not a translation decision — it decides which sites can install the plugin at all. Until somebody wants to make that call, the hydration convention stays and is not a workaround for a gap so much as the price of supporting 6.7. See [interactivity-stores.md](interactivity-stores.md).
 
-## The reviewer-queue e2e test failed once on a cold container
+## wp-login.php steals focus 200ms after load, and an empty required field submits nothing
 
-**What.** On the v1.1.1 release run, `tests/e2e/review.spec.ts:15` took 10.8s
-against Playwright's 10s expect timeout and failed. A re-run of the same commit
-passed, and tests 7 and 8 in the same file — which drive the same screens —
-passed in both runs. It is the first test in that file to mount the admin React
-bundle after a `wp-login.php` round trip on a freshly started container.
+**What.** `wp-login.php` schedules `wp_attempt_focus()` 200ms after load: it
+focuses a field and calls `select()` on it. A Playwright `fill()` still in
+flight when that lands can lose its value. The password field carries
+`required`, so the browser then refuses to submit the form — **no request is
+made at all**. The page never navigates, the network log is empty, and the test
+waits out its timeout looking at a login form.
 
-**Cost.** `Package` and `Release` depend on `e2e`, so it blocks a release until
-somebody re-runs the job. It cost the first attempt at v1.1.1.
+Both halves are worth knowing on their own. The focus steal is reproducible on
+demand: fill immediately after the document commits and `document.activeElement`
+moves to `#user_login` about 140ms later. And clicking submit with an empty
+`required` field produces zero requests, `validity.valueMissing === true` and
+the message "Please fill out this field" — verified directly rather than
+inferred.
 
-**Status.** Reproduced once more, on the v1.4.0 release run of 2026-08-23, on a
-*different* spec: `placement-mapping.spec.ts` waiting for the Inventory heading.
-Same shape — the first mount of an admin React bundle on a freshly started
-container — and a re-run of the same commit went green, which is what let the
-release finish. So this is a class rather than one test, and the entry stays
-open. Three of
-the four candidate causes are eliminated, measured against a WordPress Studio
-site (native PHP, SQLite), which models the container only loosely:
+**Cost.** Three red release lanes. It presented as a cold-start flake because a
+warm machine fills in about 2ms and never overlaps the timer, while the CI
+container's password fill took 79ms.
 
-* **Not the REST round trip.** The failing assertion waits 16 ms warm. The
-  screen bootstraps from a server-rendered `data-aggr-review` attribute, so
-  React mounts synchronously and the `<h1>` never waits on a fetch.
-* **Not the server render.** Stopping and restarting the site for a genuinely
-  cold PHP process gave 0.74 s for the first review-screen response against
-  0.65 s warm — about 90 ms of cold start, not seconds.
-* **Not the login redirect,** though it looks exactly like a race: the test
-  clicks `#wp-submit` and calls `page.goto()` without awaiting navigation.
-  Playwright serialises navigations on a page, and injecting a 4 s delay into
-  the login POST still lands on the review screen with the heading visible.
-  **Do not "fix" this.**
+**Status — fixed**, in `tests/e2e/admin-login.ts`, which is now the only place
+the suite signs in to wp-admin. It waits for core's autofocus before filling,
+and then asserts the password field actually holds the password before
+submitting. The second half is the durable part: prevention that silently stops
+working is what cost the three lanes, and the assertion turns any future variant
+into a five-second failure that names the empty field.
 
-That leaves first compile and parse of the review admin bundle, and whatever
-Apache and MySQL do cold that a native-PHP SQLite site cannot reproduce.
+**The two earlier occurrences were attributed to the wrong thing.** On the
+v1.1.1 and v1.4.0 release runs this was read as first compile and parse of an
+admin React bundle on a cold container, and three of four candidate causes were
+eliminated against a WordPress Studio site. The elimination work was sound and
+the conclusion was not: the third occurrence left a trace showing the test never
+reached an admin page at all. What made the difference was evidence rather than
+reasoning, which is why the artifact-upload fixes below mattered more than they
+looked.
 
-**If it returns, do not guess.** The e2e job uploads `playwright-report/`,
-`.playwright-results/` and `test-results/` on failure with seven-day retention,
-and `trace: 'retain-on-failure'` is set, so the trace carries per-step timings
-for the run that actually failed.
+**The instrumentation that made the diagnosis possible.** Until 2026-08-23 the
+e2e job uploaded nothing on failure, and three causes compounded:
+`actions/upload-artifact` excludes hidden files unless told otherwise and
+`.playwright-results/` is hidden; `playwright-report/` never existed because no
+HTML reporter was configured; and `if-no-files-found` defaults to `warn`, so
+losing all of it produced a yellow annotation rather than a failure. All three
+are fixed — `include-hidden-files: true`, an `html` reporter, and
+`if-no-files-found: error`.
 
-That instruction was unfollowable until 2026-08-23, and the v1.4.0 recurrence is
-how it was discovered: the run uploaded nothing. Three causes compounded.
-`actions/upload-artifact` excludes hidden files unless told otherwise, and
-`.playwright-results/` is hidden, so every trace Playwright wrote was dropped.
-`playwright-report/` never existed at all, because no HTML reporter was
-configured. And `if-no-files-found` defaults to `warn`, so losing all of it
-produced a yellow annotation rather than a failure. All three are fixed —
-`include-hidden-files: true`, an `html` reporter, and `if-no-files-found: error`
-— so the next occurrence leaves evidence, and a run that somehow leaves none
-fails loudly instead of looking fine.
+The trace is what answered it, and specifically the screencast frames rather
+than the DOM snapshots: snapshots are written per action and stop at the click,
+while the frames kept rolling and showed the password box empty and the username
+selected 21ms after the click landed. Read those first next time.
 
-Pull that before changing anything, and
-reopen an entry in [open-work.md](open-work.md). Do not reach for
-`bin/ci/retry.sh`: it is deliberately scoped to network-bound setup steps,
-because a retry around a test turns a fast red into a slow red and hides the
-cold-start assumption that is the actual defect.
-
-**Third occurrence, 2026-08-31, and the first with a trace.** On pull request
-150, `organizations.spec.ts:178` hit the 60 s *test* timeout inside
-`page.waitForURL( /\/wp-admin\// )` after the login click. A re-run of the same
-commit passed the whole lane in 3m12s, and four other tests in that same file
-drove the same `openScreen` login helper successfully in the failing run.
-
-The upload fixes worked, so this one left evidence, and it does not fit the
-theory above. From `trace.zip`: `goto /wp-login.php` 0.21 s, both fields filled,
-`click #wp-submit` returned in 0.04 s, then `Wait for navigation` consumed the
-entire 60 s. **The network log holds the login GET and its assets and no POST at
-all**, and the page snapshot at failure is still the login form with the
-password field focused.
-
-So nothing admin-side was ever reached: this occurrence cannot be first compile
-and parse of an admin bundle, which is what the other two were attributed to.
-Nor does it contradict the "not the login redirect" bullet — that eliminated a
-*slow* POST, by injecting a 4 s delay. This is a submit that produced no request
-whatsoever.
-
-What is still unknown is why. The candidate worth testing next is that the click
-lands before the login form is submittable, which would be visible in the DOM
-snapshot the trace keeps for the click step. Read that before changing the
-helper: making the test click twice, or wait for `networkidle`, would hide the
-question rather than answer it.
+**Do not reach for `bin/ci/retry.sh`** if something like this returns: it is
+deliberately scoped to network-bound setup steps, because a retry around a test
+turns a fast red into a slow red and hides the assumption that is the actual
+defect.
 
 ## The packaging lane once built two different archives from one dist
 

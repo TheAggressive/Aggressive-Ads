@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { expectAdminA11y } from './accessibility';
+import { signInToAdmin } from './admin-login';
 import { solidPng } from './png';
 import { wpPluginFile } from './wp-cli';
 
@@ -15,10 +16,7 @@ import { wpPluginFile } from './wp-cli';
 test( 'a reviewer works the queue, claims a campaign and writes notes', async ( {
 	page,
 } ) => {
-	await page.goto( '/wp-login.php' );
-	await page.locator( '#user_login' ).fill( 'admin' );
-	await page.locator( '#user_pass' ).fill( 'admin' );
-	await page.locator( '#wp-submit' ).click();
+	await signInToAdmin( page );
 
 	await page.goto( '/wp-admin/admin.php?page=aggr-review' );
 
@@ -110,10 +108,7 @@ test( 'a tall creative stays inside its preview box', async ( { page } ) => {
 	 * lost the definite parent it resolves against — so this drives the real
 	 * screen and swaps the image, which is what actually exercises the rules.
 	 */
-	await page.goto( '/wp-login.php' );
-	await page.locator( '#user_login' ).fill( 'admin' );
-	await page.locator( '#user_pass' ).fill( 'admin' );
-	await page.locator( '#wp-submit' ).click();
+	await signInToAdmin( page );
 
 	// Seeded here rather than borrowed from whatever the queue happens to hold:
 	// no other fixture in the suite carries a creative, and depending on the
@@ -170,10 +165,7 @@ test( 'a tall creative stays inside its preview box', async ( { page } ) => {
 test( 'a decision that needs feedback is taken in an accessible dialog', async ( {
 	page,
 } ) => {
-	await page.goto( '/wp-login.php' );
-	await page.locator( '#user_login' ).fill( 'admin' );
-	await page.locator( '#user_pass' ).fill( 'admin' );
-	await page.locator( '#wp-submit' ).click();
+	await signInToAdmin( page );
 
 	const campaignId = wpPluginFile(
 		'tests/e2e/seed-review-creative.php'
@@ -273,10 +265,7 @@ test( 'a decision that needs feedback is taken in an accessible dialog', async (
  * wizard for a campaign that did not exist a moment ago.
  */
 test( 'a reviewer creates a campaign for an advertiser', async ( { page } ) => {
-	await page.goto( '/wp-login.php' );
-	await page.locator( '#user_login' ).fill( 'admin' );
-	await page.locator( '#user_pass' ).fill( 'admin' );
-	await page.locator( '#wp-submit' ).click();
+	await signInToAdmin( page );
 
 	await page.goto( '/wp-admin/admin.php?page=aggr-review' );
 
