@@ -18,8 +18,22 @@ use Aggressive\Ads\Install\Schema;
  */
 final class Event_Repository {
 
-	public const TYPE_SERVED     = Measurement_Event_Type::TYPE_SERVED;
-	public const TYPE_CLICK      = Measurement_Event_Type::TYPE_CLICK;
+	public const TYPE_SERVED = Measurement_Event_Type::TYPE_SERVED;
+	public const TYPE_CLICK  = Measurement_Event_Type::TYPE_CLICK;
+	/**
+	 * Which ledger shape wrote a row.
+	 *
+	 * Stamped on every insert rather than inferred. A row's meaning depends on
+	 * the vocabulary in force when it was written — P10 already redefined
+	 * `impression` as `served` once — and a ledger that cannot say which shape
+	 * it used forces every later reader to guess from the date. Rows written
+	 * before this column read 0, which is exactly the honest answer: unknown.
+	 *
+	 * Bump when the meaning of an existing column or event changes, not when
+	 * a column is added.
+	 */
+	public const SCHEMA_VERSION = 1;
+
 	public const TYPE_REQUEST    = Measurement_Event_Type::TYPE_REQUEST;
 	public const TYPE_FILL       = Measurement_Event_Type::TYPE_FILL;
 	public const TYPE_NO_FILL    = Measurement_Event_Type::TYPE_NO_FILL;
@@ -135,15 +149,16 @@ final class Event_Repository {
 			$written = $wpdb->insert(
 				$this->table_name(),
 				array(
-					'created_at_ts' => time(),
-					'event'         => $normalized,
-					'placement_id'  => $placement_id,
-					'campaign_id'   => $campaign_id,
-					'creative_id'   => $creative_id,
-					'token_hash'    => $token_hash,
-					'ip_hash'       => $ip_hash,
+					'created_at_ts'  => time(),
+					'event'          => $normalized,
+					'placement_id'   => $placement_id,
+					'campaign_id'    => $campaign_id,
+					'creative_id'    => $creative_id,
+					'token_hash'     => $token_hash,
+					'ip_hash'        => $ip_hash,
+					'schema_version' => self::SCHEMA_VERSION,
 				),
-				array( '%d', '%s', '%d', '%d', '%d', '%s', '%s' )
+				array( '%d', '%s', '%d', '%d', '%d', '%s', '%s', '%d' )
 			);
 		} finally {
 			$wpdb->suppress_errors( $was_suppressing );
