@@ -17,8 +17,9 @@ shipped it is marked; everything unmarked is still a definition, not a claim.
 
 **Landed so far:** `Report_Period`, `Rollup_Report_Repository`, the ranged and
 freshness-aware `Reporting_Read`, the dashboard tiles reading a stated window
-instead of all of history, and conversions made visible on every surface that
-already showed impressions. Everything else below is still ahead.
+instead of all of history, conversions made visible on every surface that
+already showed impressions, and each tile carrying its change against the
+window before it. Everything else below is still ahead.
 
 ## Outcome
 
@@ -183,6 +184,25 @@ the calendar. Where a comparison window falls partly outside retention, the
 report says the comparison is incomplete rather than comparing against a
 truncated sum.
 
+**A rate's change is in percentage points; a count's is in percent.** *(Built.)*
+CTR moving from 1.0% to 1.5% is a 50% increase and half a percentage point, and
+"CTR up 50%" is read by nearly everybody as the wrong one of those. Counts take
+`Reporting_Rules::change()`, rates take `point_change()`, and the two are
+separate functions rather than one with a flag so a call site cannot pick the
+wrong unit by omission.
+
+**Three things have no comparison at all**, and each renders as nothing rather
+than as a number:
+
+- the previous window is unmeasured — a range starting before the metric
+  shipped, where `-100%` would invent a collapse out of a release date;
+- the current window is unmeasured, for the same reason in the other direction;
+- the previous window was zero, because every change from nothing is infinite
+  and the count itself already says what is worth knowing.
+
+The rule lives in the pure function, not at the call sites, so a caller that
+coalesced a null into a zero on the way in cannot reintroduce it.
+
 ## Decision: freshness is part of every report, not a diagnostic
 
 Three states, derived from `aggr_rollups_reconciled_through` and the clock:
@@ -218,6 +238,10 @@ No new durable data. Every number a report shows is already stored.
   covers a different period than the one requested. `trailing()` clamps, and
   the difference is who supplied the number — a request parameter is refused, a
   constant chosen in this codebase cannot usefully be refused at runtime.
+  **`between()` is the only place a period is constructed.** `ending()`
+  delegates to it and `previous()` delegates to `ending()`, so the bound is
+  enforced once and two factories cannot end up disagreeing about whether a
+  range is inclusive.
 - **`Domain\Report_Request`** *(later slice)* — scope, metric set and comparison
   flag around a period, for the surfaces that take a range from a request. It is
   the seam scheduled delivery would render through; it is not needed until

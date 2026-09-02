@@ -124,6 +124,27 @@ final class Reporting_Read {
 	}
 
 	/**
+	 * Totals for a range and for the equal window immediately before it.
+	 *
+	 * Two bounded reads rather than one, deliberately: a comparison computed
+	 * from a single wider query would have to split the rows in PHP, which
+	 * means reading twice as many of them into memory to answer a question SQL
+	 * can already scope.
+	 *
+	 * @param int                $org_id Owning organization.
+	 * @param Report_Period|null $period Range, or the default window.
+	 * @return array{current: array{impressions: int, clicks: int, viewables: int|null, conversions: int|null}, previous: array{impressions: int, clicks: int, viewables: int|null, conversions: int|null}}
+	 */
+	public function totals_with_comparison( int $org_id, ?Report_Period $period = null ): array {
+		$period = $period ?? $this->default_period();
+
+		return array(
+			'current'  => $this->totals_for_org( $org_id, $period ),
+			'previous' => $this->totals_for_org( $org_id, $period->previous() ),
+		);
+	}
+
+	/**
 	 * Adds impressions, clicks, CTR and conversions to authorized campaign rows.
 	 *
 	 * Off leaves the keys absent so a client cannot treat 0 as "nobody saw this."

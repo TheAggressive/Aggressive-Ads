@@ -240,8 +240,15 @@ Shared boundaries and group exit criteria:
       export, with `NULL` rendered as "Not measured" rather than zero, because a
       campaign that ran before conversion tracking did not convert nobody.
 
+      **Tiles now compare against the window before them**, with a rate's
+      change in percentage points and a count's in percent — 1.0% to 1.5% CTR
+      is half a point and a 50% rise, and only one of those is what a reader
+      takes "up 50%" to mean. An unmeasured or empty previous window draws no
+      comparison at all rather than a `-100%` invented out of a feature's
+      release date.
+
       Still open: P13's decision counters have no reader outside their own
-      repository.
+      repository, and there is no way yet to choose a range.
 
 ### Inventory and commerce
 

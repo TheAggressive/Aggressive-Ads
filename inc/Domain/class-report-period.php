@@ -131,9 +131,11 @@ final class Report_Period {
 			return null;
 		}
 
-		$first = $last->modify( '-' . (string) ( $days - 1 ) . ' days' );
-
-		return new self( $first->format( 'Y-m-d' ), $last->format( 'Y-m-d' ), $days );
+		// Delegated rather than constructed here, so there is one place a
+		// period comes into existence and one place its bound is enforced. Two
+		// factories each doing their own arithmetic is how they end up
+		// disagreeing about whether a range is inclusive.
+		return self::between( $last->modify( '-' . (string) ( $days - 1 ) . ' days' )->format( 'Y-m-d' ), $end_day );
 	}
 
 	/**
@@ -197,10 +199,12 @@ final class Report_Period {
 			return $this;
 		}
 
-		$end   = $start->modify( '-1 day' );
-		$first = $end->modify( '-' . (string) ( $this->days - 1 ) . ' days' );
+		$end      = $start->modify( '-1 day' );
+		$previous = self::ending( $this->days, $end->format( 'Y-m-d' ) );
 
-		return new self( $first->format( 'Y-m-d' ), $end->format( 'Y-m-d' ), $this->days );
+		// A period's own length is already inside the bound, so the window
+		// before it is too; the fallback exists only because the type says so.
+		return $previous ?? $this;
 	}
 
 	/**
