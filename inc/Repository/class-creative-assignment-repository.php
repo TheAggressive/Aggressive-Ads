@@ -502,85 +502,42 @@ final class Creative_Assignment_Repository {
 	 * The line item that served one creative on one placement.
 	 *
 	 * Read on the beacon path, beside a write that was already happening, so a
-	 * delivery counts against the line item whose cap it spends. Retired rows
-	 * are included deliberately: an impression recorded moments after a
-	 * withdrawal still belongs to what served it, and dropping the attribution
-	 * would silently move it to line item 0.
+	 * delivery counts against the line item whose cap it spends.
+	 *
+	 * **Retired assignments are matched deliberately.** An impression recorded
+	 * moments after a withdrawal still belongs to what served it, and filtering
+	 * them out would silently move the delivery to line item 0.
+	 *
+	 * The owning organization is deliberately *not* resolved here, though an
+	 * earlier version did it in this query's join. Tenancy belongs to the
+	 * campaign, not to the assignment, and tying the two meant a conversion —
+	 * which can land days later on a placement whose assignment has since gone
+	 * — resolved no organization at all and wrote a row no report could see.
+	 * `Campaign_Repository::org_id()` answers that question from the fact that
+	 * actually determines it.
 	 *
 	 * @param int $revision_id  Creative revision id.
 	 * @param int $placement_id Placement post id.
 	 * @return int Line-item id, or 0 when nothing matches.
 	 */
 	public function line_item_for( int $revision_id, int $placement_id ): int {
-		return $this->attribution_for( $revision_id, $placement_id )['line_item_id'];
-	}
-
-	/**
-	 * Line item and owning organization for one served creative, in one read.
-	 *
-	 * **One query, because this runs on the event write path.** Both facts are
-	 * needed per event and both hang off the same assignment row, so resolving
-	 * them separately would double a read that a beacon already waits on. The
-	 * organization comes from the campaign's meta through a LEFT JOIN rather
-	 * than a second lookup.
-	 *
-	 * **The organization is keyed on the campaign the *event* names, not on the
-	 * assignment's.** Those differ exactly where it matters: a house fill
-	 * carries `campaign_id = 0` while still matching an assignment whose
-	 * campaign belongs to somebody, so joining on the assignment credited house
-	 * inventory to that advertiser. The ledger's campaign is the truth about
-	 * the event; the assignment is only how the line item is recovered.
-	 *
-	 * `LEFT` for the rest: an unattributable event must still record. The
-	 * ledger stays the truth, the projection takes 0, and the reconciler —
-	 * which keys on the ledger's own campaign — fills it in. Dropping the row
-	 * instead would lose an event to protect a dimension.
-	 *
-	 * @param int $revision_id  Creative revision id.
-	 * @param int $placement_id Placement post id.
-	 * @param int $campaign_id  Campaign the *event* names, or 0 for house.
-	 * @return array{line_item_id: int, org_id: int}
-	 */
-	public function attribution_for( int $revision_id, int $placement_id, int $campaign_id = 0 ): array {
 		global $wpdb;
 
-		$none = array(
-			'line_item_id' => 0,
-			'org_id'       => 0,
-		);
-
 		if ( $revision_id <= 0 || $placement_id <= 0 || ! $this->table_exists() ) {
-			return $none;
+			return 0;
 		}
 
-		$meta = $wpdb->postmeta;
-
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Bounded lookup on this plugin's own table joined to core postmeta; the only interpolation is the core table name and every value is prepared.
-		$row = $wpdb->get_row(
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Bounded lookup on this plugin's own table.
+		$found = $wpdb->get_var(
 			$wpdb->prepare(
-				"SELECT a.line_item_id, m.meta_value AS org_id
-				FROM %i a
-				LEFT JOIN {$meta} m ON m.post_id = %d AND m.meta_key = %s
-				WHERE a.revision_id = %d AND a.placement_id = %d
-				ORDER BY a.id ASC LIMIT 1",
+				'SELECT line_item_id FROM %i WHERE revision_id = %d AND placement_id = %d ORDER BY id ASC LIMIT 1',
 				$this->table_name(),
-				$campaign_id,
-				Campaign_Repository::META_ORG_ID,
 				$revision_id,
 				$placement_id
-			),
-			ARRAY_A
+			)
 		);
-		// phpcs:enable
 
-		if ( ! is_array( $row ) ) {
-			return $none;
-		}
-
-		return array(
-			'line_item_id' => (int) ( $row['line_item_id'] ?? 0 ),
-			'org_id'       => max( 0, (int) ( $row['org_id'] ?? 0 ) ),
-		);
+		return null === $found ? 0 : (int) $found;
 	}
 
 	/**

@@ -298,12 +298,29 @@ final class Conversion_Recorder {
 			);
 		}
 
+		/*
+		 * **Frozen tenancy matters most on this row.** A conversion counts on
+		 * the day the outcome happened, routinely days after the click, so it
+		 * can create a rollup row for a day this site served nothing — a row
+		 * with no delivery behind it to have frozen an organization onto it.
+		 * Left unattributed it counts a conversion no org-scoped report can
+		 * see, and the advertiser watches credited conversions disappear.
+		 *
+		 * `$campaign_org_id` rather than a second lookup: it already carries
+		 * the house-fill rule, so a house conversion stays at organization 0
+		 * instead of borrowing one.
+		 *
+		 * Named arguments because six positional values ending in two ids is a
+		 * call nobody can read, and the codebase already writes audit entries
+		 * this way.
+		 */
 		$projected = $this->rollups->increment(
-			'conversions',
-			$parsed['placement_id'],
-			$parsed['campaign_id'],
-			gmdate( 'Y-m-d', $occurred_at_ts ),
-			$line_item_id
+			column: 'conversions',
+			placement_id: $parsed['placement_id'],
+			campaign_id: $parsed['campaign_id'],
+			day_utc: gmdate( 'Y-m-d', $occurred_at_ts ),
+			line_item_id: $line_item_id,
+			org_id: $campaign_org_id,
 		);
 
 		return array(
