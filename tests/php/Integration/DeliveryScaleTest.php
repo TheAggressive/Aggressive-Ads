@@ -119,6 +119,25 @@ final class DeliveryScaleTest extends WP_UnitTestCase {
 				)
 			);
 		}
+
+		/*
+		 * **Decision counters cost nothing on the path the client waits on.**
+		 *
+		 * They are buffered and written once on `shutdown`, which is the whole
+		 * reason they could replace an option that read-modify-wrote itself on
+		 * every decision. Asserted here rather than only in the metrics suite
+		 * because this is the test that would notice if a future counter were
+		 * added inline: the budgets above are ceilings with headroom, so an
+		 * extra write per fill can hide under them.
+		 */
+		$rollups = Plugin::instance()->container()->get( \Aggressive\Ads\Repository\Decision_Rollup_Repository::class );
+		$rollups->install_table();
+
+		$this->assertSame(
+			array(),
+			$rollups->totals( gmdate( 'Y-m-d' ), gmdate( 'Y-m-d' ) ),
+			'A fill wrote decision counters before the response had gone.'
+		);
 	}
 
 	/** Creates the measured placement. */

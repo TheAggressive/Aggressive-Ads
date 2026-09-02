@@ -133,6 +133,42 @@ House rows
 (`campaign_id = 0`) are never attributed to an organization. Org totals are
 filtered in SQL against campaign `_aggr_org_id`.
 
+## Decision outcomes
+
+`{$wpdb->prefix}aggr_decision_rollups` answers "why is this slot empty". Unique
+`(placement_id, day_utc, outcome)`, where `outcome` is `request`, `fill`, or one
+of `No_Fill_Reason`'s codes — one column rather than three tables, because the
+reader's questions (how often was this asked for, how often did it fill, and
+when it did not, why) are one grouped read.
+
+**`requests` equals `fills` plus every no-fill reason**, and that invariant is
+what makes any rate computed from these meaningful. It holds because the engine
+records exactly one request and one outcome per opportunity. Per-candidate
+exclusions are deliberately not counted here — counting every losing candidate
+alongside the slot's own result meant a placement that filled every time still
+accumulated reasons, so the totals summed to nothing. Why an individual
+candidate lost is `REST\Decision_Trace_Controller`'s question.
+
+**This replaced an option, and the option was the defect.** `Decision_Metrics`
+used to `get_option()`, mutate a nested array and write all of it back on the
+public fill path: 228 KB at a thousand placements when measured, growing
+linearly and pruned by nothing, and — being a read-modify-write — losing
+concurrent increments, so counts were lowest exactly when traffic made them
+worth reading. The unique key fixes both halves: `ON DUPLICATE KEY UPDATE
+events = events + VALUES(events)` is atomic, and a per-day row is something
+retention can prune and a reconciler can rebuild.
+
+Counts are buffered per request and flushed once on `shutdown`, so a page with
+six slots writes once per placement rather than once per count, and the fill
+path the client waits on performs no counter query at all —
+`DeliveryScaleTest` asserts that, because the query budgets around it are
+ceilings with headroom that an inline write could hide under.
+
+`outcome` is `varchar(32)` against a longest code of 19. Cardinality is bounded
+by `Domain\Decision_Outcome`, so no caller can grow the table by inventing a
+code. Decision SQL lives in `Decision_Rollup_Repository`. See db version 23 and
+[platform-p13-event-analytics-schema.md](platform-p13-event-analytics-schema.md).
+
 Event SQL lives in `Event_Repository`; rollup SQL in `Rollup_Repository`.
 The event row is the durable ledger; the synchronous rollup upsert is a
 low-latency projection. An hourly restartable reconciler rebuilds closed UTC
@@ -268,6 +304,7 @@ array(
     20 => reproject_all,                  // repairs stale assignment snapshots
     21 => install_conversions,            // aggr_conversion_credentials
     22 => install_table,                  // assignments gain operator_paused
+    23 => install_decision_rollups,       // aggr_decision_rollups; drops the option it replaces
 )
 ```
 

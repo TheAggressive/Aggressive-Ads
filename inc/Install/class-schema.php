@@ -24,7 +24,7 @@ final class Schema {
 	 *
 	 * Drives the migration walker in Upgrader.
 	 */
-	public const DB_VERSION = 22;
+	public const DB_VERSION = 23;
 
 	/**
 	 * The audit table's name, without the site's table prefix.
@@ -39,6 +39,9 @@ final class Schema {
 
 	/** Campaign/placement/day counters. Reporting reads this, never the event log. */
 	public const ROLLUPS_TABLE = 'aggr_rollups';
+
+	/** Per-placement, per-day decision outcomes. See docs/platform-p13-event-analytics-schema.md. */
+	public const DECISION_ROLLUPS_TABLE = 'aggr_decision_rollups';
 
 	/** Append-only attributed conversions. Deliberately not a row in aggr_events. */
 	public const CONVERSIONS_TABLE = 'aggr_conversions';
@@ -624,6 +627,66 @@ final class Schema {
 	KEY campaign_day (campaign_id,occurred_at_ts,id),
 	KEY token_definition (token_hash,definition_id)
 ) {$charset_collate};";
+	}
+
+	/**
+	 * Per-placement, per-day decision outcomes.
+	 *
+	 * **Why a table rather than the option this replaces.** `Decision_Metrics`
+	 * kept one growing serialized array and read-modify-wrote all of it on the
+	 * fill path — 228 KB at a thousand placements, measured, growing linearly
+	 * and pruned by nothing. Worse than the size, a read-modify-write loses
+	 * concurrent increments, so the numbers were quietly lowest exactly when
+	 * traffic made them worth reading.
+	 *
+	 * The unique key is what fixes both. `ON DUPLICATE KEY UPDATE` makes an
+	 * increment atomic at the database, and a per-day row is something
+	 * retention can prune and a reconciler can rebuild — neither of which a
+	 * single running total can be.
+	 *
+	 * `outcome` holds a lifecycle name or a `No_Fill_Reason`, bounded by
+	 * `Domain\Decision_Outcome`, so cardinality is decided by the domain rather
+	 * than by whatever a caller passes.
+	 *
+	 * @param string $table_name      Fully prefixed table name.
+	 * @param string $charset_collate Database charset and collation.
+	 * @return string
+	 */
+	public static function decision_rollups_table_ddl( string $table_name, string $charset_collate ): string {
+		return "CREATE TABLE {$table_name} (
+	id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	day_utc date NOT NULL,
+	placement_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	outcome varchar(32) NOT NULL DEFAULT '',
+	events bigint(20) unsigned NOT NULL DEFAULT 0,
+	PRIMARY KEY  (id),
+	UNIQUE KEY slot_day_outcome (placement_id,day_utc,outcome),
+	KEY day_outcome (day_utc,outcome)
+) {$charset_collate};";
+	}
+
+	/**
+	 * Decision rollup columns.
+	 *
+	 * @return array<int, string>
+	 */
+	public static function decision_rollups_columns(): array {
+		return array(
+			'id',
+			'day_utc',
+			'placement_id',
+			'outcome',
+			'events',
+		);
+	}
+
+	/**
+	 * Decision rollup indexes.
+	 *
+	 * @return array<int, string>
+	 */
+	public static function decision_rollups_index_names(): array {
+		return array( 'PRIMARY', 'slot_day_outcome', 'day_outcome' );
 	}
 
 	/**

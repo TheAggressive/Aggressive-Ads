@@ -15,6 +15,7 @@ use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Event_Repository;
 use Aggressive\Ads\Repository\Org_Access_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Repository\Decision_Rollup_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Repository\Conversion_Credential_Repository;
 use Aggressive\Ads\Repository\Conversion_Definition_Repository;
@@ -190,10 +191,15 @@ final class Installer {
 
 	/**
 	 * Installs native fill event and rollup tables.
+	 *
+	 * Decision counters install here too, so a repair install heals a site the
+	 * upgrade missed — the same reason the dropped indexes live in
+	 * `install_table()` rather than only in their migration.
 	 */
 	public function install_delivery_tables(): void {
 		( new Event_Repository() )->install_table();
 		( new Rollup_Repository() )->install_table();
+		( new Decision_Rollup_Repository() )->install_table();
 	}
 
 	/** Creates or repairs the attributed-conversion ledger and its definitions. */
