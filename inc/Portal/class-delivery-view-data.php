@@ -17,10 +17,12 @@ use Aggressive\Ads\Workflow\Reporting_Read;
  * Keeps delivery reporting out of the multi-screen `View_Data` coordinator,
  * the way `Catalogue_View_Data` already keeps the catalogue out of it.
  *
- * These four methods share one job — turning org-scoped rollups into something
- * a tile can print — and one rule that the rest of the portal does not have to
- * care about: **an absent number and a zero are different answers**, and this
- * is the only place that decides which is which.
+ * One job — turning org-scoped rollups into something a tile can print — and
+ * one rule the rest of the portal does not have to carry: **an absent number, a
+ * zero and an unmeasured metric are three different answers**, and this is the
+ * only place that decides which is which. Every formatter below is private for
+ * that reason: the rule is enforced by there being no way to render one of
+ * these figures without coming through here.
  */
 final class Delivery_View_Data {
 
@@ -172,35 +174,31 @@ final class Delivery_View_Data {
 	 * 50% rise, and only one of those is what a reader takes "CTR up 50%" to
 	 * mean. See `Reporting_Rules::point_change()`.
 	 *
+	 * The sign is composed rather than translated. It is arithmetic notation,
+	 * not language, and building it into four separate strings would give
+	 * translators four chances to drop the one character a reader must not
+	 * misread at a glance.
+	 *
 	 * @param float|null $delta  Signed change.
 	 * @param bool       $points Whether $delta is percentage points.
 	 */
-	public function format_change( ?float $delta, bool $points = false ): string {
+	private function format_change( ?float $delta, bool $points = false ): string {
 		if ( null === $delta ) {
 			return '';
 		}
 
-		// Both a proportion and a point difference are stored as fractions, so
-		// both render by the same factor; only the unit differs.
-		$rounded = number_format_i18n( abs( $delta ) * 100, 1 );
+		// A proportion and a point difference are both stored as fractions, so
+		// both render by the same factor; only the unit differs. U+2212 is the
+		// minus sign, which a hyphen only resembles.
+		$signed = ( $delta < 0 ? "\u{2212}" : '+' ) . number_format_i18n( abs( $delta ) * 100, 1 );
 
 		if ( $points ) {
-			if ( $delta < 0 ) {
-				/* translators: %s: change in percentage points, e.g. 0.5. */
-				return sprintf( __( '−%s pp vs previous period', 'aggressive-ads' ), $rounded );
-			}
-
-			/* translators: %s: change in percentage points, e.g. 0.5. */
-			return sprintf( __( '+%s pp vs previous period', 'aggressive-ads' ), $rounded );
+			/* translators: %s: signed change in percentage points, e.g. +0.5. */
+			return sprintf( __( '%s pp vs previous period', 'aggressive-ads' ), $signed );
 		}
 
-		if ( $delta < 0 ) {
-			/* translators: %s: percentage change, e.g. 12.4. */
-			return sprintf( __( '−%s%% vs previous period', 'aggressive-ads' ), $rounded );
-		}
-
-		/* translators: %s: percentage change, e.g. 12.4. */
-		return sprintf( __( '+%s%% vs previous period', 'aggressive-ads' ), $rounded );
+		/* translators: %s: signed percentage change, e.g. +12.4. */
+		return sprintf( __( '%s%% vs previous period', 'aggressive-ads' ), $signed );
 	}
 
 	/**
@@ -262,7 +260,7 @@ final class Delivery_View_Data {
 	 *
 	 * @param float|null $ratio Clicks per impression.
 	 */
-	public function format_ctr( ?float $ratio ): string {
+	private function format_ctr( ?float $ratio ): string {
 		if ( null === $ratio ) {
 			return __( '—', 'aggressive-ads' );
 		}
@@ -285,7 +283,7 @@ final class Delivery_View_Data {
 	 *
 	 * @param int|null $value Counted outcomes, or null when unmeasured.
 	 */
-	public function format_count( ?int $value ): string {
+	private function format_count( ?int $value ): string {
 		if ( null === $value ) {
 			return __( 'Not measured', 'aggressive-ads' );
 		}
@@ -307,7 +305,7 @@ final class Delivery_View_Data {
 	 * @param int|null $viewables   Views recorded, or null when unmeasured.
 	 * @return string
 	 */
-	public function format_viewability( int $impressions, ?int $viewables ): string {
+	private function format_viewability( int $impressions, ?int $viewables ): string {
 		if ( null === $viewables ) {
 			return __( 'Not measured', 'aggressive-ads' );
 		}

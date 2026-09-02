@@ -329,8 +329,8 @@ final class ReportingTest extends WP_UnitTestCase {
 
 		// Forty days back is inside the comparison window and outside the
 		// reported one, which is the whole point of the arrangement.
-		$this->bump( $this->campaign_a, 100, 0, gmdate( 'Y-m-d', strtotime( '-40 days' ) ) );
-		$this->bump( $this->campaign_a, 150, 0 );
+		$this->bump( $this->campaign_a, 100, 4, gmdate( 'Y-m-d', strtotime( '-40 days' ) ) );
+		$this->bump( $this->campaign_a, 150, 1 );
 		wp_set_current_user( $this->advertiser_a );
 
 		$tiles = array();
@@ -349,6 +349,15 @@ final class ReportingTest extends WP_UnitTestCase {
 		 * so the direction class may never be the only carrier.
 		 */
 		$this->assertStringContainsString( '+', (string) $tiles['Impressions']['change'] );
+
+		/*
+		 * And the same in the other direction, because the colour is the half a
+		 * reader may not have. Clicks fell from four to one over the same two
+		 * windows, and the tile must say so in characters.
+		 */
+		$this->assertSame( 'down', $tiles['Clicks']['direction'] );
+		$this->assertStringContainsString( "\u{2212}", (string) $tiles['Clicks']['change'], 'A decline was carried only by the direction class.' );
+		$this->assertStringContainsString( '75.0%', (string) $tiles['Clicks']['change'] );
 	}
 
 	/**

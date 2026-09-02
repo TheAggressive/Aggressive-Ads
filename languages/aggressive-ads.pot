@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-02T23:34:06+00:00\n"
+"POT-Creation-Date: 2026-09-02T23:46:41+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -99,7 +99,7 @@ msgstr ""
 #: inc/Admin/class-conversions-screen.php:165
 #: inc/Admin/class-conversions-screen.php:208
 #: inc/Admin/class-conversions-screen.php:270
-#: inc/Portal/class-delivery-view-data.php:136
+#: inc/Portal/class-delivery-view-data.php:138
 #: inc/Portal/class-report-actions.php:172
 #: templates/portal/partials/campaign-summary-facts.php:81
 #: templates/portal/partials/campaign-table.php:41
@@ -2835,7 +2835,7 @@ msgid "Changes needed"
 msgstr ""
 
 #. translators: %d: number of days the delivery figures cover.
-#: inc/Portal/class-delivery-view-data.php:57
+#: inc/Portal/class-delivery-view-data.php:59
 #, php-format
 msgid "Last %d day (UTC)"
 msgid_plural "Last %d days (UTC)"
@@ -2843,12 +2843,12 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: a date, e.g. 30 August 2026.
-#: inc/Portal/class-delivery-view-data.php:84
+#: inc/Portal/class-delivery-view-data.php:86
 #, php-format
 msgid "Figures from %s onward are still being counted."
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:114
+#: inc/Portal/class-delivery-view-data.php:116
 #: inc/Portal/class-report-actions.php:169
 #: templates/portal/partials/campaign-summary-facts.php:56
 #: templates/portal/partials/campaign-table.php:38
@@ -2856,49 +2856,37 @@ msgstr ""
 msgid "Impressions"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:119
+#: inc/Portal/class-delivery-view-data.php:121
 #: inc/Portal/class-report-actions.php:170
 #: templates/portal/partials/campaign-summary-facts.php:60
 #: templates/portal/partials/campaign-table.php:39
 msgid "Clicks"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:124
+#: inc/Portal/class-delivery-view-data.php:126
 #: templates/portal/partials/campaign-summary-facts.php:64
 #: templates/portal/partials/campaign-table.php:40
 msgid "CTR"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:130
+#: inc/Portal/class-delivery-view-data.php:132
 msgid "Viewable"
 msgstr ""
 
-#. translators: %s: change in percentage points, e.g. 0.5.
-#: inc/Portal/class-delivery-view-data.php:190
+#. translators: %s: signed change in percentage points, e.g. +0.5.
+#: inc/Portal/class-delivery-view-data.php:197
 #, php-format
-msgid "−%s pp vs previous period"
+msgid "%s pp vs previous period"
 msgstr ""
 
-#. translators: %s: change in percentage points, e.g. 0.5.
-#: inc/Portal/class-delivery-view-data.php:194
+#. translators: %s: signed percentage change, e.g. +12.4.
+#: inc/Portal/class-delivery-view-data.php:201
 #, php-format
-msgid "+%s pp vs previous period"
+msgid "%s%% vs previous period"
 msgstr ""
 
-#. translators: %s: percentage change, e.g. 12.4.
-#: inc/Portal/class-delivery-view-data.php:199
-#, php-format
-msgid "−%s%% vs previous period"
-msgstr ""
-
-#. translators: %s: percentage change, e.g. 12.4.
-#: inc/Portal/class-delivery-view-data.php:203
-#, php-format
-msgid "+%s%% vs previous period"
-msgstr ""
-
-#: inc/Portal/class-delivery-view-data.php:267
-#: inc/Portal/class-delivery-view-data.php:318
+#: inc/Portal/class-delivery-view-data.php:265
+#: inc/Portal/class-delivery-view-data.php:316
 #: templates/portal/partials/campaign-summary-facts.php:75
 #: templates/portal/partials/campaign-table.php:81
 msgid "—"
@@ -2906,16 +2894,16 @@ msgstr ""
 
 #. translators: %s: click-through rate as a percentage, e.g. 1.2.
 #. translators: %s: share of impressions that were viewable, e.g. 62.5.
-#: inc/Portal/class-delivery-view-data.php:272
-#: inc/Portal/class-delivery-view-data.php:323
+#: inc/Portal/class-delivery-view-data.php:270
+#: inc/Portal/class-delivery-view-data.php:321
 #: templates/portal/partials/campaign-summary-facts.php:72
 #: templates/portal/partials/campaign-table.php:78
 #, php-format
 msgid "%s%%"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:290
-#: inc/Portal/class-delivery-view-data.php:312
+#: inc/Portal/class-delivery-view-data.php:288
+#: inc/Portal/class-delivery-view-data.php:310
 #: templates/portal/partials/campaign-summary-facts.php:90
 #: templates/portal/partials/campaign-table.php:97
 msgid "Not measured"

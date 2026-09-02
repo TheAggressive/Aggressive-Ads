@@ -133,13 +133,12 @@ final class Reporting_Read {
 	 *
 	 * @param int                $org_id Owning organization.
 	 * @param Report_Period|null $period Range, or the default window.
-	 * @return array{period: Report_Period, current: array{impressions: int, clicks: int, viewables: int|null, conversions: int|null}, previous: array{impressions: int, clicks: int, viewables: int|null, conversions: int|null}}
+	 * @return array{current: array{impressions: int, clicks: int, viewables: int|null, conversions: int|null}, previous: array{impressions: int, clicks: int, viewables: int|null, conversions: int|null}}
 	 */
 	public function totals_with_comparison( int $org_id, ?Report_Period $period = null ): array {
 		$period = $period ?? $this->default_period();
 
 		return array(
-			'period'   => $period,
 			'current'  => $this->totals_for_org( $org_id, $period ),
 			'previous' => $this->totals_for_org( $org_id, $period->previous() ),
 		);
