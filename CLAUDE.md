@@ -49,9 +49,10 @@ do not add an `adr/` log.
 
 Everything `docs/` describes is built; CSV reporting and deeper analytics are
 the open edge. **Do not assume from this file what exists** — check
-`docs/roadmap.md`, then `docs/open-work.md`, then the source. The per-feature
-inventory that used to live here is in `CLAUDE.archive.md`; it went stale faster
-than it was read. Screens exist only where real data backs them: impression,
+`docs/roadmap.md`, then `docs/open-work.md`, then the source. A per-feature
+inventory used to live here and was archived rather than maintained; it is gone
+now, because it went stale faster than it was read either way. Git history has
+it if it is ever wanted. Screens exist only where real data backs them: impression,
 click and CTR tiles, the sparkline and table CTR appear only when Reporting is
 on. Spend stays absent until billing has a source.
 ## Commands
@@ -124,8 +125,7 @@ cover them, and both came from real defects:
   negatives**: what it must *not* touch is usually the more valuable half.
 
 `docs/testing-strategy.md` carries the "prove the test works" loop and the
-tests caught passing for the wrong reason; `CLAUDE.archive.md` has the
-incident-by-incident record of the guards.
+tests caught passing for the wrong reason, incident by incident.
 
 ## Gotchas that cost real time
 
