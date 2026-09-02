@@ -564,6 +564,19 @@ final class ConversionRecorderTest extends WP_UnitTestCase {
 		 */
 		$this->assertNull( $row['viewables'], 'A conversion must not mark a day as viewability-measured.' );
 		$this->assertSame( 0, (int) $row['impressions'] );
+
+		/*
+		 * **And it is attributed.** This is the row with no delivery behind it,
+		 * so nothing else froze tenancy onto it: if the conversion path does
+		 * not resolve the organization itself, the row counts a conversion that
+		 * no org-scoped report can see, and the advertiser watches conversions
+		 * they were credited with disappear.
+		 */
+		$this->assertSame(
+			$this->org_id,
+			(int) $row['org_id'],
+			'A conversion-created row carries no organization, so no report can see it.'
+		);
 	}
 
 	/**

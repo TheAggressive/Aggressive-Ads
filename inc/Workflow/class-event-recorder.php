@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Workflow;
 
+use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Event_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
@@ -29,11 +30,13 @@ final class Event_Recorder {
 	 * @param Event_Repository               $events      Durable event ledger.
 	 * @param Rollup_Repository              $rollups     Repairable reporting projection.
 	 * @param Creative_Assignment_Repository $assignments Line-item attribution.
+	 * @param Campaign_Repository            $campaigns   Owning organization, frozen onto the projection.
 	 */
 	public function __construct(
 		private readonly Event_Repository $events,
 		private readonly Rollup_Repository $rollups,
-		private readonly Creative_Assignment_Repository $assignments
+		private readonly Creative_Assignment_Repository $assignments,
+		private readonly Campaign_Repository $campaigns
 	) {
 	}
 
@@ -72,17 +75,32 @@ final class Event_Recorder {
 		 * line item 0 rather than being dropped: the ledger stays the truth and
 		 * the daily reconcile repairs the projection.
 		 *
-		 * The owning organization is resolved by the same read, and frozen onto
-		 * the rollup row. Reporting used to recover it by joining the campaign's
-		 * meta at read time, which made tenancy a current fact rather than a
-		 * historical one: a campaign moved between organizations took its past
-		 * totals along. Resolving it here costs nothing extra because the query
-		 * was already happening.
+		 * The owning organization is frozen onto the rollup row from the
+		 * campaign the *event* names. Reporting used to recover it by joining
+		 * that meta at read time, which made tenancy a current fact rather than
+		 * a historical one: a campaign moved between organizations took its
+		 * past totals along.
+		 *
+		 * It is read from the campaign rather than folded into the assignment
+		 * lookup above, and the distinction is not stylistic. Tenancy belongs
+		 * to the campaign; the assignment is only how a line item is recovered.
+		 * A house fill carries `campaign_id = 0` while still matching an
+		 * assignment owned by somebody, so keying on the assignment credited
+		 * house inventory to that advertiser — and an event whose assignment
+		 * has been cleaned up resolved no organization at all. Post meta is
+		 * cached per request, so the ordinary cost is no query.
 		 */
-		$attribution = $this->assignments->attribution_for( $creative_id, $placement_id, $campaign_id );
+		$line_item_id = $this->assignments->line_item_for( $creative_id, $placement_id );
 
-		return $this->rollups->increment( $column, $placement_id, $campaign_id, '', $attribution['line_item_id'], $attribution['org_id'] )
-			? self::RECORDED
-			: self::RECORDED_PENDING;
+		$projected = $this->rollups->increment(
+			column: $column,
+			placement_id: $placement_id,
+			campaign_id: $campaign_id,
+			day_utc: '',
+			line_item_id: $line_item_id,
+			org_id: $this->campaigns->org_id( $campaign_id ),
+		);
+
+		return $projected ? self::RECORDED : self::RECORDED_PENDING;
 	}
 }
