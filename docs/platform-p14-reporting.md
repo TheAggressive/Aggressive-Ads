@@ -16,8 +16,9 @@ shipped it is marked; everything unmarked is still a definition, not a claim.
   read budgets are decided there; the browser lanes decide the screens.
 
 **Landed so far:** `Report_Period`, `Rollup_Report_Repository`, the ranged and
-freshness-aware `Reporting_Read`, and the dashboard tiles reading a stated
-window instead of all of history. Everything else below is still ahead.
+freshness-aware `Reporting_Read`, the dashboard tiles reading a stated window
+instead of all of history, and conversions made visible on every surface that
+already showed impressions. Everything else below is still ahead.
 
 ## Outcome
 
@@ -35,10 +36,12 @@ Three readers get an answer they cannot get today.
   either all-time (`Reporting_Read::totals_for_org()`) or a fixed seven days
   (`series_for_org()`). There is no date range, no comparison, and no way to ask
   what last month looked like.
-- **Anybody can see conversions.** P12 shipped ingestion, deduplication,
-  attribution and a definitions screen. `aggr_rollups.conversions` is written,
-  reconciled and retained — and it appears in no tile, no table, no CSV column
-  and no REST field. A feature was built, is running, and is invisible.
+- **Anybody can see conversions.** *(Done.)* P12 shipped ingestion,
+  deduplication, attribution and a definitions screen. `aggr_rollups.conversions`
+  was written, reconciled and retained — and appeared in no tile, no table, no
+  CSV column and no REST field. A feature was built, was running, and was
+  invisible. It now surfaces on the dashboard tiles, the campaign list, campaign
+  detail, `GET /campaigns` and the export.
 
 And one property applies to all three: **a report says how fresh it is.** The
 reconciliation watermark exists (`aggr_rollups_reconciled_through`) and no
@@ -155,6 +158,13 @@ every new surface, because the new surfaces are where it will be broken.
 - **Not measured** — nobody was counting. Every day before P11 for `viewables`,
   every day before P12 for `conversions`, both `NULL` in the projection.
 
+**A count has two of these, not three**, and conflating that with the rate case
+is the mistake available here. A rate needs a denominator, so "nothing to divide
+by" is a distinct state; a count does not, so a measured zero is simply zero and
+is a real, useful answer. Only "nobody was counting" has to be said in words.
+`Delivery_View_Data::format_count()` is where that lives, beside
+`format_viewability()`, which has all three.
+
 `Delivery_View_Data::format_viewability()` is the existing statement of this and
 the new reports must not re-derive it somewhere else. **A comparison period
 makes this worse and the rule stricter:** a range that starts before a metric
@@ -269,6 +279,11 @@ Two compatibility obligations instead:
   `Delivery_View_Data` and `Report_Actions`; a partially converted portal that
   shows an all-time tile beside a ranged table is a reporting defect, not an
   intermediate state.
+
+  **The CSV grew a column on the end.** `Conversions` follows `CTR %`; the six
+  existing columns keep their positions and their meanings, because somebody has
+  a workbook pointed at column D. An unmeasured day writes an empty cell rather
+  than a `0` — a distinction every spreadsheet that opens the file will act on.
 
   **The dashboard tiles changed meaning, and say so.** They were all-time and
   are now the last 30 UTC days, which is a different number for the same label.

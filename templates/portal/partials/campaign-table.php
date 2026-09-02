@@ -38,6 +38,7 @@ $aggr_show_metrics = ! empty( $aggr_show_metrics );
 					<th scope="col"><?php esc_html_e( 'Impressions', 'aggressive-ads' ); ?></th>
 					<th scope="col"><?php esc_html_e( 'Clicks', 'aggressive-ads' ); ?></th>
 					<th scope="col"><?php esc_html_e( 'CTR', 'aggressive-ads' ); ?></th>
+					<th scope="col"><?php esc_html_e( 'Conversions', 'aggressive-ads' ); ?></th>
 					<?php endif; ?>
 				</tr>
 			</thead>
@@ -78,6 +79,22 @@ $aggr_show_metrics = ! empty( $aggr_show_metrics );
 										number_format_i18n( $aggr_ctr * 100, 1 )
 									)
 									: __( '—', 'aggressive-ads' )
+							);
+							?>
+						</td>
+						<td>
+							<?php
+							/*
+							 * Null is "nobody was counting" — every day before
+							 * conversions shipped. Printing 0 there would read
+							 * as a campaign that delivered and converted
+							 * nobody, which is a different and worse claim.
+							 */
+							$aggr_conversions = $aggr_row['conversions'] ?? null;
+							echo esc_html(
+								is_int( $aggr_conversions )
+									? number_format_i18n( $aggr_conversions )
+									: __( 'Not measured', 'aggressive-ads' )
 							);
 							?>
 						</td>

@@ -233,9 +233,15 @@ Shared boundaries and group exit criteria:
       object that cannot exist unbounded, and the tiles now print the window
       and its timezone rather than silently changing meaning.
 
+      **P12's conversions are now visible.** They had been written, reconciled
+      and retained since P12 while appearing in no tile, table, CSV column or
+      REST field — a feature that ran and could not be seen. They now surface on
+      the dashboard, the campaign list, campaign detail, `GET /campaigns` and the
+      export, with `NULL` rendered as "Not measured" rather than zero, because a
+      campaign that ran before conversion tracking did not convert nobody.
+
       Still open: P13's decision counters have no reader outside their own
-      repository, and P12's attributed conversions are written, reconciled and
-      retained while appearing in no tile, table, CSV column or REST field.
+      repository.
 
 ### Inventory and commerce
 

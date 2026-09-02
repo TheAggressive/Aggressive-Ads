@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-02T07:01:09+00:00\n"
+"POT-Creation-Date: 2026-09-02T23:06:11+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -99,6 +99,10 @@ msgstr ""
 #: inc/Admin/class-conversions-screen.php:165
 #: inc/Admin/class-conversions-screen.php:208
 #: inc/Admin/class-conversions-screen.php:270
+#: inc/Portal/class-delivery-view-data.php:125
+#: inc/Portal/class-report-actions.php:172
+#: templates/portal/partials/campaign-summary-facts.php:81
+#: templates/portal/partials/campaign-table.php:41
 msgid "Conversions"
 msgstr ""
 
@@ -710,8 +714,8 @@ msgstr ""
 #: inc/Core/class-post-types.php:199
 #: inc/Workflow/class-campaign-change-manager.php:768
 #: templates/portal/partials/campaign-changes.php:149
+#: templates/portal/partials/campaign-summary-facts.php:32
 #: templates/portal/screens/campaign.php:785
-#: templates/portal/screens/campaign.php:881
 msgid "Placements"
 msgstr ""
 
@@ -842,7 +846,7 @@ msgid "Used by the placement block to choose this slot. Lowercase letters, numbe
 msgstr ""
 
 #: inc/Admin/class-placement-screen.php:153
-#: templates/portal/screens/campaign.php:960
+#: templates/portal/screens/campaign.php:909
 msgid "Size"
 msgstr ""
 
@@ -1057,7 +1061,7 @@ msgstr ""
 
 #: inc/Admin/class-review-screen.php:256
 #: inc/Core/class-post-types.php:201
-#: inc/Portal/class-report-actions.php:160
+#: inc/Portal/class-report-actions.php:167
 #: templates/portal/partials/campaign-table.php:33
 #: templates/portal/screens/campaign.php:836
 msgid "Campaign"
@@ -1066,7 +1070,7 @@ msgstr ""
 #: inc/Admin/class-review-screen.php:258
 #: inc/Core/class-post-types.php:199
 #: templates/portal/partials/campaign-table.php:34
-#: templates/portal/screens/campaign.php:959
+#: templates/portal/screens/campaign.php:908
 #: templates/portal/screens/help.php:77
 #: src/blocks-interactivity/ad-slot/edit.js:141
 msgid "Placement"
@@ -1180,7 +1184,7 @@ msgid "Not submitted"
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:287
-#: templates/portal/screens/campaign.php:899
+#: templates/portal/partials/campaign-summary-facts.php:50
 msgid "Revision"
 msgstr ""
 
@@ -1220,7 +1224,7 @@ msgstr ""
 #: inc/Admin/class-review-screen.php:296
 #: inc/Workflow/class-campaign-change-manager.php:766
 #: templates/portal/partials/campaign-changes.php:78
-#: templates/portal/screens/campaign.php:961
+#: templates/portal/screens/campaign.php:910
 msgid "Destination"
 msgstr ""
 
@@ -1912,8 +1916,8 @@ msgid "Creative"
 msgstr ""
 
 #: inc/Core/class-post-types.php:202
-#: templates/portal/screens/campaign.php:894
-#: templates/portal/screens/campaign.php:946
+#: templates/portal/partials/campaign-summary-facts.php:45
+#: templates/portal/screens/campaign.php:895
 msgid "Creatives"
 msgstr ""
 
@@ -2845,23 +2849,23 @@ msgid "Figures from %s onward are still being counted."
 msgstr ""
 
 #: inc/Portal/class-delivery-view-data.php:109
-#: inc/Portal/class-report-actions.php:162
+#: inc/Portal/class-report-actions.php:169
+#: templates/portal/partials/campaign-summary-facts.php:56
 #: templates/portal/partials/campaign-table.php:38
 #: templates/portal/partials/sparkline.php:30
-#: templates/portal/screens/campaign.php:905
 msgid "Impressions"
 msgstr ""
 
 #: inc/Portal/class-delivery-view-data.php:113
-#: inc/Portal/class-report-actions.php:163
+#: inc/Portal/class-report-actions.php:170
+#: templates/portal/partials/campaign-summary-facts.php:60
 #: templates/portal/partials/campaign-table.php:39
-#: templates/portal/screens/campaign.php:909
 msgid "Clicks"
 msgstr ""
 
 #: inc/Portal/class-delivery-view-data.php:117
+#: templates/portal/partials/campaign-summary-facts.php:64
 #: templates/portal/partials/campaign-table.php:40
-#: templates/portal/screens/campaign.php:913
 msgid "CTR"
 msgstr ""
 
@@ -2869,24 +2873,27 @@ msgstr ""
 msgid "Viewable"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:171
-#: inc/Portal/class-delivery-view-data.php:203
-#: templates/portal/partials/campaign-table.php:80
-#: templates/portal/screens/campaign.php:924
+#: inc/Portal/class-delivery-view-data.php:175
+#: inc/Portal/class-delivery-view-data.php:226
+#: templates/portal/partials/campaign-summary-facts.php:75
+#: templates/portal/partials/campaign-table.php:81
 msgid "—"
 msgstr ""
 
 #. translators: %s: click-through rate as a percentage, e.g. 1.2.
 #. translators: %s: share of impressions that were viewable, e.g. 62.5.
-#: inc/Portal/class-delivery-view-data.php:176
-#: inc/Portal/class-delivery-view-data.php:208
-#: templates/portal/partials/campaign-table.php:77
-#: templates/portal/screens/campaign.php:921
+#: inc/Portal/class-delivery-view-data.php:180
+#: inc/Portal/class-delivery-view-data.php:231
+#: templates/portal/partials/campaign-summary-facts.php:72
+#: templates/portal/partials/campaign-table.php:78
 #, php-format
 msgid "%s%%"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:197
+#: inc/Portal/class-delivery-view-data.php:198
+#: inc/Portal/class-delivery-view-data.php:220
+#: templates/portal/partials/campaign-summary-facts.php:90
+#: templates/portal/partials/campaign-table.php:97
 msgid "Not measured"
 msgstr ""
 
@@ -3012,15 +3019,15 @@ msgstr ""
 msgid "There is no organization to report on."
 msgstr ""
 
-#: inc/Portal/class-report-actions.php:159
+#: inc/Portal/class-report-actions.php:166
 msgid "Date (UTC)"
 msgstr ""
 
-#: inc/Portal/class-report-actions.php:161
+#: inc/Portal/class-report-actions.php:168
 msgid "Campaign ID"
 msgstr ""
 
-#: inc/Portal/class-report-actions.php:164
+#: inc/Portal/class-report-actions.php:171
 msgid "CTR %"
 msgstr ""
 
@@ -4594,6 +4601,12 @@ msgstr ""
 msgid "Send request"
 msgstr ""
 
+#: templates/portal/partials/campaign-summary-facts.php:37
+#: templates/portal/partials/campaign-table.php:57
+#: templates/portal/screens/campaign.php:785
+msgid "None selected"
+msgstr ""
+
 #: templates/portal/partials/campaign-table.php:25
 msgid "No campaigns yet"
 msgstr ""
@@ -4608,12 +4621,6 @@ msgstr ""
 
 #: templates/portal/partials/campaign-table.php:36
 msgid "Dates"
-msgstr ""
-
-#: templates/portal/partials/campaign-table.php:56
-#: templates/portal/screens/campaign.php:785
-#: templates/portal/screens/campaign.php:886
-msgid "None selected"
 msgstr ""
 
 #: templates/portal/partials/campaign-update-history.php:17
@@ -5113,15 +5120,15 @@ msgstr ""
 msgid "Summary"
 msgstr ""
 
-#: templates/portal/screens/campaign.php:951
+#: templates/portal/screens/campaign.php:900
 msgid "No creatives yet"
 msgstr ""
 
-#: templates/portal/screens/campaign.php:952
+#: templates/portal/screens/campaign.php:901
 msgid "A campaign needs at least one creative before it can be submitted."
 msgstr ""
 
-#: templates/portal/screens/campaign.php:955
+#: templates/portal/screens/campaign.php:904
 msgid "Creatives table"
 msgstr ""
 

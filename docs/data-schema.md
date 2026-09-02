@@ -117,7 +117,9 @@ is what marks a day as measured.
 
 **`conversions` is schema 18, and it is nullable for the same reason one phase
 later.** A day before conversions were measured did not convert nobody; nobody
-was counting. See [Attributed conversions — P12](#attributed-conversions--p12)
+was counting. P14 renders that `NULL` as "Not measured" on every surface — tile,
+table, campaign detail, REST field and an empty CSV cell — because zero is a
+real answer that a measured campaign can have and an unmeasured one cannot. See [Attributed conversions — P12](#attributed-conversions--p12)
 for why a conversion is not an `aggr_events` row.
 
 **`line_item_id` is schema 16, and it exists because a cap belongs to a line

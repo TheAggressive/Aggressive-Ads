@@ -876,58 +876,7 @@ endif;
 		<?php esc_html_e( 'Summary', 'aggressive-ads' ); ?>
 	</h2>
 
-	<dl class="aggr-facts">
-		<div class="aggr-fact">
-			<dt><?php esc_html_e( 'Placements', 'aggressive-ads' ); ?></dt>
-			<dd>
-				<?php
-				echo esc_html(
-					array() === $aggr_places
-						? __( 'None selected', 'aggressive-ads' )
-						: implode( ', ', $aggr_places )
-				);
-				?>
-			</dd>
-		</div>
-
-		<div class="aggr-fact">
-			<dt><?php esc_html_e( 'Creatives', 'aggressive-ads' ); ?></dt>
-			<dd><?php echo esc_html( number_format_i18n( count( $aggr_creatives ) ) ); ?></dd>
-		</div>
-
-		<div class="aggr-fact">
-			<dt><?php esc_html_e( 'Revision', 'aggressive-ads' ); ?></dt>
-			<dd><?php echo esc_html( number_format_i18n( (int) $aggr_campaign['revision'] ) ); ?></dd>
-		</div>
-
-		<?php if ( isset( $aggr_campaign['impressions'], $aggr_campaign['clicks'] ) ) : ?>
-		<div class="aggr-fact">
-			<dt><?php esc_html_e( 'Impressions', 'aggressive-ads' ); ?></dt>
-			<dd><?php echo esc_html( number_format_i18n( (int) $aggr_campaign['impressions'] ) ); ?></dd>
-		</div>
-		<div class="aggr-fact">
-			<dt><?php esc_html_e( 'Clicks', 'aggressive-ads' ); ?></dt>
-			<dd><?php echo esc_html( number_format_i18n( (int) $aggr_campaign['clicks'] ) ); ?></dd>
-		</div>
-		<div class="aggr-fact">
-			<dt><?php esc_html_e( 'CTR', 'aggressive-ads' ); ?></dt>
-			<dd>
-				<?php
-				$aggr_ctr = $aggr_campaign['ctr'] ?? null;
-				echo esc_html(
-					is_float( $aggr_ctr )
-						? sprintf(
-							/* translators: %s: click-through rate as a percentage, e.g. 1.2. */
-							__( '%s%%', 'aggressive-ads' ),
-							number_format_i18n( $aggr_ctr * 100, 1 )
-						)
-						: __( '—', 'aggressive-ads' )
-				);
-				?>
-			</dd>
-		</div>
-		<?php endif; ?>
-	</dl>
+	<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-summary-facts.php'; ?>
 </section>
 
 	<?php

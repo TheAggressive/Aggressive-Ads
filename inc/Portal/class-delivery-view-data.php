@@ -121,6 +121,10 @@ final class Delivery_View_Data {
 				'label' => __( 'Viewable', 'aggressive-ads' ),
 				'value' => $this->format_viewability( $totals['impressions'], $totals['viewables'] ),
 			),
+			array(
+				'label' => __( 'Conversions', 'aggressive-ads' ),
+				'value' => $this->format_count( $totals['conversions'] ),
+			),
 		);
 	}
 
@@ -176,6 +180,25 @@ final class Delivery_View_Data {
 			__( '%s%%', 'aggressive-ads' ),
 			number_format_i18n( $ratio * 100, 1 )
 		);
+	}
+
+	/**
+	 * A measured count, or the statement that nothing measured it.
+	 *
+	 * **Two answers here where viewability has three, and the missing one is
+	 * the em dash.** A rate needs a denominator, so "nothing to divide by" is a
+	 * distinct state; a count does not, so a measured zero is simply zero and
+	 * is a real answer — the campaign delivered and nobody converted, which is
+	 * worth knowing. Only "nobody was counting" has to be said in words.
+	 *
+	 * @param int|null $value Counted outcomes, or null when unmeasured.
+	 */
+	public function format_count( ?int $value ): string {
+		if ( null === $value ) {
+			return __( 'Not measured', 'aggressive-ads' );
+		}
+
+		return (string) number_format_i18n( $value );
 	}
 
 	/**

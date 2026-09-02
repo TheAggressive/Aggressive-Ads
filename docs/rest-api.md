@@ -24,7 +24,7 @@ Routes marked “planned” remain contracts for later phases. Every other row i
 
 | Method | Path | Capability | Notes |
 |---|---|---|---|
-| `GET` | `/campaigns` | `aggr_access_portal` | Own org only, always. Paged, server-side. `impressions` / `clicks` / `ctr` only while Reporting is on. `ctr` is a ratio, or null when impressions are 0 |
+| `GET` | `/campaigns` | `aggr_access_portal` | Own org only, always. Paged, server-side. `impressions` / `clicks` / `ctr` / `conversions` only while Reporting is on. `ctr` is a ratio, or null when impressions are 0. `conversions` is null when no day of the campaign was measured — every campaign that ran before conversion tracking — and that is not the same as 0 |
 | `POST` | `/campaigns` | `aggr_submit_campaign` | Creates a draft |
 | `GET` | `/campaigns/{id}` | `read_aggr_campaign` | 404 when not owned. Same metric fields as the list, same module gate |
 | `PATCH` | `/campaigns/{id}` | `edit_aggr_campaign` | Autosave; allowlisted fields; `_aggr_autosave_rev` for optimistic concurrency |

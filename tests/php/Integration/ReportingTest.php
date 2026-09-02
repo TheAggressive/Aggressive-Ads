@@ -316,6 +316,93 @@ final class ReportingTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * **P12 counted conversions and nothing showed them.**
+	 *
+	 * Ingestion, deduplication, attribution and a definitions screen all
+	 * shipped; `aggr_rollups.conversions` has been written, reconciled and
+	 * retained ever since, and appeared in no tile, no table, no CSV column and
+	 * no REST field. A feature that runs and cannot be seen is indistinguishable
+	 * from one that was never built.
+	 *
+	 * @return void
+	 */
+	public function test_a_counted_conversion_reaches_the_tiles_and_the_campaign_row(): void {
+		$this->enable_reporting( true );
+		$this->bump( $this->campaign_a, 10, 2 );
+		$this->bump_conversions( $this->campaign_a, 3 );
+		wp_set_current_user( $this->advertiser_a );
+
+		$totals = $this->reports->totals_for_org( $this->org_a, Report_Period::trailing( 30, gmdate( 'Y-m-d' ) ) );
+
+		$this->assertSame( 3, $totals['conversions'] );
+
+		$labels = array();
+
+		foreach ( $this->view->delivery_counts() as $tile ) {
+			$labels[ (string) $tile['label'] ] = (string) $tile['value'];
+		}
+
+		$this->assertArrayHasKey( 'Conversions', $labels, 'The dashboard has no conversions tile.' );
+		$this->assertSame( '3', $labels['Conversions'] );
+
+		$row = $this->reporting_read()->attach_one( array( 'id' => $this->campaign_a ) );
+
+		$this->assertSame( 3, $row['conversions'], 'A campaign row carried no conversion count.' );
+	}
+
+	/**
+	 * An unmeasured campaign reports null, and the tile says so in words.
+	 *
+	 * Zero would claim the campaign delivered and converted nobody. Every
+	 * campaign that ran before conversion tracking is in this state, so getting
+	 * it wrong misreports all of history rather than an edge case.
+	 *
+	 * @return void
+	 */
+	public function test_an_unmeasured_conversion_is_not_a_zero(): void {
+		$this->enable_reporting( true );
+		$this->bump( $this->campaign_a, 10, 2 );
+		wp_set_current_user( $this->advertiser_a );
+
+		$totals = $this->reports->totals_for_org( $this->org_a, Report_Period::trailing( 30, gmdate( 'Y-m-d' ) ) );
+
+		$this->assertNull( $totals['conversions'], 'An unmeasured period was reported as zero conversions.' );
+
+		$row = $this->reporting_read()->attach_one( array( 'id' => $this->campaign_a ) );
+
+		$this->assertNull( $row['conversions'], 'An unmeasured campaign was reported as zero conversions.' );
+
+		$labels = array();
+
+		foreach ( $this->view->delivery_counts() as $tile ) {
+			$labels[ (string) $tile['label'] ] = (string) $tile['value'];
+		}
+
+		$this->assertSame( 'Not measured', $labels['Conversions'] );
+	}
+
+	/**
+	 * Reporting off leaves the conversion field absent, not zero.
+	 *
+	 * The gate applies to every metric identically. A client that received
+	 * `conversions: 0` from a site with reporting switched off would have been
+	 * told something untrue about the campaign rather than nothing about it.
+	 *
+	 * @return void
+	 */
+	public function test_conversions_are_absent_while_reporting_is_off(): void {
+		$this->bump( $this->campaign_a, 10, 2 );
+		$this->bump_conversions( $this->campaign_a, 3 );
+		$this->enable_reporting( false );
+		wp_set_current_user( $this->advertiser_a );
+
+		$row = $this->reporting_read()->attach_one( array( 'id' => $this->campaign_a ) );
+
+		$this->assertArrayNotHasKey( 'conversions', $row );
+		$this->assertSame( array(), $this->view->delivery_counts() );
+	}
+
+	/**
 	 * The tiles sum the reporting window, not everything ever delivered.
 	 *
 	 * **This is the behaviour change P14 made, and the one worth a test.** The
@@ -532,6 +619,30 @@ final class ReportingTest extends WP_UnitTestCase {
 			'25.0%',
 			$this->view->delivery_counts()[3]['value']
 		);
+	}
+
+	/**
+	 * Records attributed conversions against a campaign.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @param int $conversions How many conversions to record.
+	 * @return void
+	 */
+	private function bump_conversions( int $campaign_id, int $conversions ): void {
+		$org_id = $campaign_id > 0
+			? (int) get_post_meta( $campaign_id, Campaign_Repository::META_ORG_ID, true )
+			: 0;
+
+		for ( $i = 0; $i < $conversions; $i++ ) {
+			$this->rollups->increment( 'conversions', $this->placement_id, $campaign_id, '', 0, $org_id );
+		}
+	}
+
+	/**
+	 * The reporting gate and reads, from the container.
+	 */
+	private function reporting_read(): \Aggressive\Ads\Workflow\Reporting_Read {
+		return Plugin::instance()->container()->get( \Aggressive\Ads\Workflow\Reporting_Read::class );
 	}
 
 	/**
