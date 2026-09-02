@@ -179,20 +179,35 @@ Shared boundaries and group exit criteria:
       with it, and `administration.md` and `testing-strategy.md` caught up with
       what had shipped.
 
-- [ ] **P13 — Event and analytics schema.** Normalized dimensions and schema
-      versioning on the existing append-first ledger. Indexes from real query
-      patterns; write amplification reviewed rather than assumed. Scope,
-      boundaries and exit criteria are defined in
+- [x] **P13 — Event and analytics schema.** Normalized dimensions and schema
+      versioning on the append-first ledger. Scope, boundaries and exit evidence
+      are in
       [platform-p13-event-analytics-schema.md](platform-p13-event-analytics-schema.md).
-      Two decisions are settled there before any code: **`org_id` becomes a
-      frozen fact** rather than a join to current campaign metadata, because
-      tenancy decides who may read a number and re-resolving it moves history
-      when a campaign changes hands; and **`request`/`fill`/`no_fill` are stored
-      as per-placement per-day counters, not ledger rows**, because they are per
-      opportunity rather than per fill. The phase also inherits a measured
-      defect: `Decision_Metrics` read-modify-writes a single unbounded option on
-      the fill path, 228 KB at a thousand placements, losing concurrent
-      increments as it goes.
+      Two decisions were settled before any code and both held: **`org_id` is a
+      frozen fact** rather than a join to current campaign metadata, so moving a
+      campaign no longer moves its history; and **`request`/`fill`/`no_fill` are
+      per-placement per-day counters, not ledger rows**, because they are per
+      opportunity rather than per fill.
+
+      The phase also replaced a measured defect. `Decision_Metrics` kept one
+      serialized option and read-modify-wrote all of it on the public fill path
+      — 228 KB at a thousand placements, growing linearly, pruned by nothing,
+      and losing concurrent increments as it went. Counters now live in
+      `aggr_decision_rollups` where the unique key makes an increment atomic,
+      retention can prune a day, and the reconciler can rebuild one.
+
+      **Three defects surfaced while building it, none by a failing test**: the
+      batch decision path recorded nothing at all, house fills were credited to
+      whichever advertiser owned the matching assignment, and conversion-only
+      rollup rows were unattributed and invisible to every org report.
+
+      Two exit criteria were **narrowed at closeout rather than ticked** — a
+      publisher *seeing* why a slot is empty is P14's, and the staged-backfill
+      machinery was reversed for one idempotent `UPDATE` because a backfill
+      cannot recover history and emptying the projection would have reset every
+      live delivery cap. Runtime behaviour on an unknown future version is
+      explicitly out of scope, owned by whichever phase first bumps one.
+
 - [ ] **P14 — Reporting.** Advertiser and publisher views from rollups rather
       than raw events, date ranges with comparison, CSV export, and the
       architecture for scheduled email.
@@ -279,7 +294,10 @@ Shared boundaries and group exit criteria:
 - P3 cannot start before P1 and P2: a decision engine that selects among
   campaigns rather than line items and creatives would be rewritten immediately.
 - P6 depends on P10 and P13. Pacing needs delivery counters, and counters need
-  event types that distinguish served from requested.
+  event types that distinguish served from requested. **Both are now `[x]`**, so
+  the dependency is satisfied rather than merely stated: P6 shipped its stages
+  against `aggr_rollups`, and P13 froze the tenancy those counters are read
+  through and proved the reads stay bounded as the table fills.
 - P11, P12 and P14 all read the P10 schema; building reporting first would mean
   reporting on the wrong events.
 - P16 depends on P15 and on enough P13 history to forecast from.
