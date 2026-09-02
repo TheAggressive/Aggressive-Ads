@@ -155,7 +155,16 @@ names any path that would 404. Offers administrators a button to reinstall them.
 It deliberately does not trust the recorded rewrite version, because a restored
 database leaves that version current and the rules gone.
 
-**Delivery dependencies.** The tables and services native fill needs.
+**Delivery dependencies.** The tables and services native fill needs, plus how
+far reporting has been reconciled — the last fully rebuilt UTC day, or that none
+has been. A projection stalled three days back otherwise looks identical to one
+that is caught up.
+
+It also names the projector versions present when there is more than one.
+That is normal while an upgrade reconciles older days and is reported rather
+than flagged, because a check that always has something to say is one nobody
+reads. If it persists, those days were written by code that is no longer
+running and can be reprojected.
 
 **Advertising viewability is being measured.** Reports the viewable-to-served
 ratio for the last closed UTC day, and is the only place that can tell a dead

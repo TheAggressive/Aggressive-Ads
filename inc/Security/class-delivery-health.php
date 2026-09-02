@@ -108,7 +108,50 @@ final class Delivery_Health implements Service {
 		return $this->result(
 			'good',
 			__( 'Advertising delivery dependencies are healthy', 'aggressive-ads' ),
-			__( 'Tracking tables exist, the 1,000-creative and atomic-counter cache probes succeeded, and projection and retention jobs are scheduled.', 'aggressive-ads' )
+			__( 'Tracking tables exist, the 1,000-creative and atomic-counter cache probes succeeded, and projection and retention jobs are scheduled.', 'aggressive-ads' ) . $this->projection_state()
+		);
+	}
+
+	/**
+	 * How far the projection is reconciled, and which code wrote it.
+	 *
+	 * Both questions were previously answerable only by opening the database,
+	 * which is what P13's observability contract says must not be necessary:
+	 * "is this day final" and "which projector produced these numbers" are the
+	 * two an operator asks when a report looks wrong.
+	 *
+	 * **Reported in the description, never in the status**, and that is a
+	 * decision rather than caution. More than one projector version present is
+	 * the *expected* state during a rollout — the reconciler rewrites older
+	 * days over the following nights — so raising it to `recommended` would
+	 * fire on every legitimate upgrade until it caught up. Noise is what
+	 * teaches people to stop reading Site Health.
+	 *
+	 * The versions are exact rather than approximate, unlike the conversion
+	 * refusal counts, because they come from a `DISTINCT` over the projection
+	 * rather than from a lossy counter.
+	 */
+	private function projection_state(): string {
+		$through = (string) get_option( Rollup_Reconciler::OPTION, '' );
+
+		$state = '' === $through
+			? ' ' . __( 'No day has been reconciled yet.', 'aggressive-ads' )
+			: ' ' . sprintf(
+				/* translators: %s: last fully reconciled UTC day, e.g. 2026-09-01. */
+				__( 'Reconciled through %s (UTC).', 'aggressive-ads' ),
+				esc_html( $through )
+			);
+
+		$versions = $this->rollups->projector_versions();
+
+		if ( count( $versions ) < 2 ) {
+			return $state;
+		}
+
+		return $state . ' ' . sprintf(
+			/* translators: %s: comma-separated projector version numbers, e.g. 1, 2. */
+			__( 'Counters were written by more than one projector (%s). This is normal while an upgrade is still reconciling older days; if it persists, those days were written by code that is no longer running and can be reprojected.', 'aggressive-ads' ),
+			esc_html( implode( ', ', array_map( 'strval', $versions ) ) )
 		);
 	}
 

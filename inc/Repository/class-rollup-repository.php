@@ -73,6 +73,37 @@ final class Rollup_Repository {
 	}
 
 	/**
+	 * Distinct projector versions present in the projection.
+	 *
+	 * **The reader that makes `projector_version` load-bearing rather than
+	 * decorative.** A column nothing looks at is a column that rots: this
+	 * codebase already shipped `allow_s2s` stored, validated and exposed over
+	 * REST while nothing set it, so every definition refused every server
+	 * report. Writing a version and never reading one is the same shape.
+	 *
+	 * What it answers is "which code wrote these numbers", which is otherwise
+	 * only answerable by opening the database. More than one version present
+	 * means a rollout is mid-flight or a rollback happened, and the days
+	 * written by the older projector are the ones to reproject.
+	 *
+	 * @return list<int> Versions found, ascending.
+	 */
+	public function projector_versions(): array {
+		global $wpdb;
+
+		if ( ! $this->table_exists() ) {
+			return array();
+		}
+
+		$table = $this->table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Diagnostic over this plugin's own projection; a cached answer is how a stale rollout looks finished.
+		$found = $wpdb->get_col( "SELECT DISTINCT projector_version FROM {$table} ORDER BY projector_version ASC" );
+
+		return array_values( array_map( 'intval', is_array( $found ) ? $found : array() ) );
+	}
+
+	/**
 	 * Fills `org_id` on rows written before the column existed.
 	 *
 	 * One statement, idempotent on `org_id = 0`: an interrupted run resumes by

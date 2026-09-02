@@ -186,10 +186,27 @@ The implementation must enforce:
   reconciliation watermark.
 - **A projection is reproducible.** Rebuilding a closed day from the ledger
   produces byte-identical counters, and doing it twice changes nothing.
-- **Version fields are written, never inferred.** A row without a
-  `schema_version` is a row from before the migration and is readable as such;
-  a row with an unknown future version fails explicitly rather than being
-  guessed at.
+- **Version fields are written, never inferred, and read by something.** A row
+  without a `schema_version` is a row from before the migration and reads as 0,
+  which is the honest answer rather than a guess. `projector_version` is
+  surfaced by the delivery Site Health check, which names every version present
+  in the projection — that reader is what keeps the column from becoming
+  decorative, the way `allow_s2s` was stored and validated for weeks while
+  nothing set it.
+
+  **What this phase deliberately does not do is branch on a version at
+  runtime.** The original invariant said an unknown future version must "fail
+  explicitly rather than being guessed at", and that was written before there
+  was anything to fail against. With one version in existence the correct
+  behaviour is undecidable: a reconciler that refuses rows from a newer
+  projector would, after a rollback, stop rebuilding closed days silently and
+  nightly — plausibly worse than the drift it prevents. This contract requires
+  a *stated* failure behaviour, and choosing one with no real second version to
+  test against would be a guess wearing a guard's clothes.
+
+  **It belongs to the phase that first bumps a version**, which will know what
+  changed and therefore what recovery means. Until then, mixed versions are
+  visible in Site Health and reprojection is the operator's answer.
 - **No new identifier.** Nothing here stores an IP, a cross-visit id, or any
   visitor-identifying value. `ip_hash` remains a salted daily HMAC.
 - **A decision never fails because measurement did.** Counter writes are
@@ -399,7 +416,10 @@ The phase may move to `[x]` only when:
    contention-safe, and the fill query budget has not increased.
 4. Historical tenancy is frozen, proven by a campaign that changes organization
    without changing history.
-5. Projections are versioned and reproducible; a closed day rebuilds exactly.
+5. Projections are versioned, readable and reproducible; a closed day rebuilds
+   exactly, and which projector wrote a day is answerable without opening the
+   database. Runtime behaviour on an unknown *future* version is explicitly out
+   of scope — see the invariant above.
 6. The staged migration is proven interruptible, resumable and reversible, with
    its state visible in Site Health.
 7. Growth is measured at the large fixture and bounded by retention.
