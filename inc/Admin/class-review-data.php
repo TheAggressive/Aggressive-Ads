@@ -88,6 +88,7 @@ final class Review_Data {
 	 * @param Campaign_Change_Manager                    $changes    Running-campaign change proposals.
 	 * @param Line_Item_Repository                       $line_items Campaign delivery strategies.
 	 * @param \Aggressive\Ads\Workflow\Creative_Approval $approvals  Creatives awaiting publication.
+	 * @param Pending_Work                               $pending    Waiting-work count, shared with the menu.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -99,7 +100,8 @@ final class Review_Data {
 		private readonly Audit_Repository $audit,
 		private readonly Campaign_Change_Manager $changes,
 		private readonly Line_Item_Repository $line_items,
-		private readonly \Aggressive\Ads\Workflow\Creative_Approval $approvals
+		private readonly \Aggressive\Ads\Workflow\Creative_Approval $approvals,
+		private readonly Pending_Work $pending
 	) {
 	}
 
@@ -181,22 +183,15 @@ final class Review_Data {
 	/**
 	 * How many items are waiting for a staff decision.
 	 *
-	 * Submitted campaigns plus advertiser requests — the two things a reviewer
-	 * is expected to clear. Creative replacements are deliberately excluded:
-	 * they already surface on their own tab, and a badge that counts everything
-	 * is a badge nobody can act on.
+	 * Delegated to `Pending_Work`, which the Advertising parent menu also uses.
+	 * Two definitions of "waiting" would disagree the moment one of them
+	 * learned about a new kind of work, and the disagreement would show as two
+	 * different numbers on the same screen.
 	 *
 	 * @return int
 	 */
 	public function pending_decision_count(): int {
-		$counts = $this->campaigns->count_by_status( array( Post_Statuses::SUBMITTED, Post_Statuses::REVIEW ) );
-		$total  = 0;
-
-		foreach ( $counts as $count ) {
-			$total += (int) $count;
-		}
-
-		return $total + $this->campaigns->campaigns_with_pending_requests();
+		return $this->pending->pending_decision_count();
 	}
 
 	/**

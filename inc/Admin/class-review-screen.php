@@ -46,9 +46,13 @@ final class Review_Screen implements Service {
 	/**
 	 * Constructor.
 	 *
-	 * @param Review_Data $data Screen data.
+	 * @param Review_Data  $data    Screen data.
+	 * @param Pending_Work $pending Waiting-work count, shared with the parent menu.
 	 */
-	public function __construct( private readonly Review_Data $data ) {
+	public function __construct(
+		private readonly Review_Data $data,
+		private readonly Pending_Work $pending
+	) {
 	}
 
 	/**
@@ -103,21 +107,7 @@ final class Review_Screen implements Service {
 			return $label;
 		}
 
-		$waiting = $this->data->pending_decision_count();
-
-		if ( $waiting < 1 ) {
-			return $label;
-		}
-
-		return sprintf(
-			/* translators: 1: menu label, 2: number of items awaiting a decision. */
-			__( '%1$s %2$s', 'aggressive-ads' ),
-			$label,
-			sprintf(
-				'<span class="awaiting-mod"><span class="pending-count">%s</span></span>',
-				esc_html( number_format_i18n( $waiting ) )
-			)
-		);
+		return $this->pending->label_with_badge( $label, $this->pending->submenu_badge() );
 	}
 
 	/**
