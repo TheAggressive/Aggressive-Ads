@@ -12,6 +12,7 @@ namespace Aggressive\Ads\Install;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Event_Repository;
 use Aggressive\Ads\Repository\Org_Access_Repository;
+use Aggressive\Ads\Repository\Decision_Rollup_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Repository\Conversion_Credential_Repository;
 use Aggressive\Ads\Repository\Conversion_Definition_Repository;
@@ -140,6 +141,7 @@ final class Uninstaller {
 		( new Org_Access_Repository() )->drop_table();
 		( new Event_Repository() )->drop_table();
 		( new Rollup_Repository() )->drop_table();
+		( new Decision_Rollup_Repository() )->drop_table();
 		( new Conversion_Repository() )->drop_table();
 		( new Conversion_Definition_Repository() )->drop_table();
 		( new Conversion_Credential_Repository() )->drop_table();

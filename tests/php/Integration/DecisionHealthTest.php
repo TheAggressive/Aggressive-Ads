@@ -85,7 +85,7 @@ final class DecisionHealthTest extends WP_UnitTestCase {
 			$engine = new Decision_Engine(
 				$assignments,
 				$container->get( Creative_Assignment_Migrator::class ),
-				new Decision_Metrics(),
+				new Decision_Metrics( new \Aggressive\Ads\Repository\Decision_Rollup_Repository() ),
 				Decision_Pipeline::standard(),
 				$container->get( Fill_Cache::class ),
 				new Array_Frequency_Store(),

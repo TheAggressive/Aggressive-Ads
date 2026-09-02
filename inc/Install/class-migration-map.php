@@ -12,6 +12,8 @@ namespace Aggressive\Ads\Install;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
+use Aggressive\Ads\Repository\Decision_Rollup_Repository;
+use Aggressive\Ads\Workflow\Decision_Metrics;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Org_Access_Repository;
 use Aggressive\Ads\Security\Ownership;
@@ -231,6 +233,24 @@ final class Migration_Map {
 			 */
 			22 => static function () use ( $c ): void {
 				$c->get( Creative_Assignment_Repository::class )->install_table();
+			},
+
+			/*
+			 * Decision outcome counters, and the end of the option they replace.
+			 *
+			 * The option is deleted rather than backfilled, and that loss is
+			 * deliberate: it held one unbounded running total with no time
+			 * dimension, so there is no day to attribute any of it to. Carrying
+			 * the number forward would put a total of unknown age beside
+			 * per-day rows and invite somebody to add them together.
+			 *
+			 * Additive otherwise — a new table, nothing existing changes shape,
+			 * so a site that rolls back loses counters and no history.
+			 */
+			23 => static function () use ( $c ): void {
+				$c->get( Decision_Rollup_Repository::class )->install_table();
+
+				delete_option( Decision_Metrics::LEGACY_OPTION_EXCLUSIONS );
 			},
 		);
 	}

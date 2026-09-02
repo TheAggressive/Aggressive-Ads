@@ -181,19 +181,7 @@ final class Decision_Engine {
 		$decision = $this->pipeline->decide( $rows, $request );
 
 		if ( $record_metrics ) {
-			$exclusions = array();
-
-			foreach ( $decision['candidates'] as $candidate ) {
-				if ( ! $candidate->is_eligible() && is_string( $candidate->exclusion_reason ) ) {
-					$exclusions[ $candidate->exclusion_reason ] = ( $exclusions[ $candidate->exclusion_reason ] ?? 0 ) + 1;
-				}
-			}
-
-			if ( ! $decision['result']->has_winner() && is_string( $decision['result']->reason ) ) {
-				$exclusions[ $decision['result']->reason ] = ( $exclusions[ $decision['result']->reason ] ?? 0 ) + 1;
-			}
-
-			$this->metrics->record_exclusions( $placement_id, $exclusions );
+			$this->count_outcome( $placement_id, $decision['result'] );
 		}
 
 		return array(
@@ -212,12 +200,64 @@ final class Decision_Engine {
 	 * @return array<string, array{result: Decision_Result, trace: Decision_Trace}>
 	 */
 	public function decide_page( array $slots_map, int $now, ?int $seed = null, array $facts = array() ): array {
-		return \Aggressive\Ads\Domain\Page_Decision_Coordinator::coordinate(
+		$decisions = \Aggressive\Ads\Domain\Page_Decision_Coordinator::coordinate(
 			$slots_map,
 			$this->pipeline,
 			$now,
 			$seed,
 			$facts
+		);
+
+		/*
+		 * Counted here rather than in the coordinator, which is `inc/Domain/`
+		 * and may not call a WordPress function at all.
+		 *
+		 * This path recorded nothing before P13. A page served through the
+		 * batch decision produced no counters while the same page served slot
+		 * by slot produced them, so "why is this slot empty" had an answer that
+		 * depended on which code path the request took — the shape that makes a
+		 * metric untrustworthy rather than merely incomplete.
+		 */
+		foreach ( $slots_map as $slot_slug => $slot_data ) {
+			if ( ! isset( $decisions[ $slot_slug ]['result'] ) ) {
+				continue;
+			}
+
+			$this->count_outcome( (int) $slot_data['placement_id'], $decisions[ $slot_slug ]['result'] );
+		}
+
+		return $decisions;
+	}
+
+	/**
+	 * Counts one decision opportunity: what was asked, and what came back.
+	 *
+	 * **One request and exactly one outcome**, so `requests` equals `fills`
+	 * plus every no-fill reason and a reader can reconcile the three.
+	 *
+	 * Per-candidate exclusions are deliberately not counted here, and that is a
+	 * change from what this used to store. Counting every losing candidate's
+	 * reason alongside the slot's own outcome meant a slot that filled still
+	 * incremented reasons, so the totals summed to nothing meaningful and a
+	 * busy placement looked like a broken one. Why an individual candidate lost
+	 * is what `REST\Decision_Trace_Controller` is for; this table answers why
+	 * the *slot* was empty.
+	 *
+	 * @param int             $placement_id Placement post id.
+	 * @param Decision_Result $result       Pipeline outcome for that placement.
+	 */
+	private function count_outcome( int $placement_id, Decision_Result $result ): void {
+		$this->metrics->record_request( $placement_id );
+
+		if ( $result->has_winner() ) {
+			$this->metrics->record_fill( $placement_id );
+
+			return;
+		}
+
+		$this->metrics->record_no_fill(
+			$placement_id,
+			is_string( $result->reason ) ? $result->reason : Exclusion_Reason::NO_FILL
 		);
 	}
 

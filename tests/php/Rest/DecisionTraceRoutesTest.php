@@ -11,11 +11,11 @@ namespace Aggressive\Ads\Tests\Rest;
 
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Install\Installer;
+use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Security\Roles;
-use Aggressive\Ads\Workflow\Decision_Metrics;
 use WP_REST_Request;
 use WP_UnitTestCase;
 
@@ -90,6 +90,17 @@ final class DecisionTraceRoutesTest extends WP_UnitTestCase {
 		$this->assertSame( $this->placement_id, (int) ( $data['placement_id'] ?? 0 ) );
 		$this->assertArrayHasKey( 'trace', $data );
 		$this->assertArrayHasKey( 'entries', $data['trace'] );
-		$this->assertFalse( get_option( Decision_Metrics::OPTION_EXCLUSIONS, false ) );
+
+		/*
+		 * The trace endpoint passes `$record_metrics = false`, so looking at a
+		 * decision must not count as one having happened. Asserted against the
+		 * durable table rather than the option this used to check: a staff
+		 * request that inflated the request count would make fill rate a
+		 * function of how often somebody debugged the placement.
+		 */
+		$rollups = Plugin::instance()->container()->get( \Aggressive\Ads\Repository\Decision_Rollup_Repository::class );
+		$rollups->install_table();
+
+		$this->assertSame( array(), $rollups->totals_for_placement( $this->placement_id, gmdate( 'Y-m-d' ), gmdate( 'Y-m-d' ) ) );
 	}
 }

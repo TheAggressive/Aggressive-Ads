@@ -181,7 +181,18 @@ Shared boundaries and group exit criteria:
 
 - [ ] **P13 — Event and analytics schema.** Normalized dimensions and schema
       versioning on the existing append-first ledger. Indexes from real query
-      patterns; write amplification reviewed rather than assumed.
+      patterns; write amplification reviewed rather than assumed. Scope,
+      boundaries and exit criteria are defined in
+      [platform-p13-event-analytics-schema.md](platform-p13-event-analytics-schema.md).
+      Two decisions are settled there before any code: **`org_id` becomes a
+      frozen fact** rather than a join to current campaign metadata, because
+      tenancy decides who may read a number and re-resolving it moves history
+      when a campaign changes hands; and **`request`/`fill`/`no_fill` are stored
+      as per-placement per-day counters, not ledger rows**, because they are per
+      opportunity rather than per fill. The phase also inherits a measured
+      defect: `Decision_Metrics` read-modify-writes a single unbounded option on
+      the fill path, 228 KB at a thousand placements, losing concurrent
+      increments as it goes.
 - [ ] **P14 — Reporting.** Advertiser and publisher views from rollups rather
       than raw events, date ranges with comparison, CSV export, and the
       architecture for scheduled email.

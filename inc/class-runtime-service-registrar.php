@@ -253,6 +253,7 @@ final class Runtime_Service_Registrar {
 			)
 		);
 		$container->register( Rollup_Repository::class, static fn (): Rollup_Repository => new Rollup_Repository() );
+		$container->register( \Aggressive\Ads\Repository\Decision_Rollup_Repository::class, static fn (): \Aggressive\Ads\Repository\Decision_Rollup_Repository => new \Aggressive\Ads\Repository\Decision_Rollup_Repository() );
 		$container->register( Fill_Token::class, static fn (): Fill_Token => new Fill_Token() );
 		$container->register(
 			Event_Recorder::class,
@@ -280,7 +281,9 @@ final class Runtime_Service_Registrar {
 
 		$container->register(
 			Decision_Metrics::class,
-			static fn (): Decision_Metrics => new Decision_Metrics()
+			static fn ( Service_Container $c ): Decision_Metrics => new Decision_Metrics(
+				$c->get( \Aggressive\Ads\Repository\Decision_Rollup_Repository::class )
+			)
 		);
 
 		$container->register(
