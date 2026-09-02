@@ -14,6 +14,7 @@ use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Portal\Campaign_Actions;
+use Aggressive\Ads\Portal\Campaign_Nonces;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
@@ -784,7 +785,7 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 
 		$_POST = array(
 			'campaign_id' => (string) $campaign_id,
-			'_wpnonce'    => wp_create_nonce( Campaign_Actions::save_nonce_action( $campaign_id + 1 ) ),
+			'_wpnonce'    => wp_create_nonce( Campaign_Nonces::save_nonce_action( $campaign_id + 1 ) ),
 		);
 
 		$this->expectException( 'WPDieException' );
@@ -804,7 +805,7 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 		$_POST = array(
 			'campaign_id' => (string) $campaign_id,
 			'package_id'  => (string) $this->package_id,
-			'_wpnonce'    => wp_create_nonce( Campaign_Actions::save_nonce_action( $campaign_id ) ),
+			'_wpnonce'    => wp_create_nonce( Campaign_Nonces::save_nonce_action( $campaign_id ) ),
 		);
 
 		$this->expectException( 'WPDieException' );
@@ -823,7 +824,7 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 
 		$_POST = array(
 			'campaign_id' => (string) $campaign_id,
-			'_wpnonce'    => wp_create_nonce( Campaign_Actions::package_nonce_action( $campaign_id ) ),
+			'_wpnonce'    => wp_create_nonce( Campaign_Nonces::package_nonce_action( $campaign_id ) ),
 		);
 
 		$this->expectException( 'WPDieException' );
@@ -842,7 +843,7 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 
 		$_POST = array(
 			'campaign_id' => (string) $campaign_id,
-			'_wpnonce'    => wp_create_nonce( Campaign_Actions::submit_nonce_action( $campaign_id + 1 ) ),
+			'_wpnonce'    => wp_create_nonce( Campaign_Nonces::submit_nonce_action( $campaign_id + 1 ) ),
 		);
 
 		$this->expectException( 'WPDieException' );

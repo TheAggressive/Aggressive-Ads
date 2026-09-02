@@ -109,7 +109,7 @@ final class Campaign_Actions implements Service {
 
 		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- copy_nonce_action() uses this id immediately below.
 
-		check_admin_referer( self::copy_nonce_action( $campaign_id ) );
+		check_admin_referer( Campaign_Nonces::copy_nonce_action( $campaign_id ) );
 
 		$result = $this->process_copy( $campaign_id );
 
@@ -130,7 +130,7 @@ final class Campaign_Actions implements Service {
 
 		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0;
 
-		check_admin_referer( self::save_nonce_action( $campaign_id ) );
+		check_admin_referer( Campaign_Nonces::save_nonce_action( $campaign_id ) );
 
 		$fields = array(
 			'title'            => isset( $_POST['title'] ) ? sanitize_text_field( wp_unslash( $_POST['title'] ) ) : '',
@@ -161,7 +161,7 @@ final class Campaign_Actions implements Service {
 
 		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0;
 
-		check_admin_referer( self::package_nonce_action( $campaign_id ) );
+		check_admin_referer( Campaign_Nonces::package_nonce_action( $campaign_id ) );
 
 		$package_id = isset( $_POST['package_id'] ) ? absint( $_POST['package_id'] ) : 0;
 		$revision   = isset( $_POST['autosave_rev'] ) ? absint( $_POST['autosave_rev'] ) : -1;
@@ -185,7 +185,7 @@ final class Campaign_Actions implements Service {
 
 		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0;
 
-		check_admin_referer( self::schedule_nonce_action( $campaign_id ) );
+		check_admin_referer( Campaign_Nonces::schedule_nonce_action( $campaign_id ) );
 
 		$start_date = isset( $_POST['start_date'] ) ? sanitize_text_field( wp_unslash( $_POST['start_date'] ) ) : '';
 		$end_date   = isset( $_POST['end_date'] ) ? sanitize_text_field( wp_unslash( $_POST['end_date'] ) ) : '';
@@ -210,7 +210,7 @@ final class Campaign_Actions implements Service {
 
 		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0;
 
-		check_admin_referer( self::submit_nonce_action( $campaign_id ) );
+		check_admin_referer( Campaign_Nonces::submit_nonce_action( $campaign_id ) );
 
 		$result = $this->process_submit( $campaign_id );
 		$url    = Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id );
@@ -238,7 +238,7 @@ final class Campaign_Actions implements Service {
 
 		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- withdraw_nonce_action() uses this id immediately below.
 
-		check_admin_referer( self::withdraw_nonce_action( $campaign_id ) );
+		check_admin_referer( Campaign_Nonces::withdraw_nonce_action( $campaign_id ) );
 
 		$result = $this->process_withdraw( $campaign_id );
 		$url    = Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id );
@@ -264,7 +264,7 @@ final class Campaign_Actions implements Service {
 
 		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- changes_nonce_action() uses this id immediately below.
 
-		check_admin_referer( self::changes_nonce_action( $campaign_id ) );
+		check_admin_referer( Campaign_Nonces::changes_nonce_action( $campaign_id ) );
 
 		$result = $this->changes->stage( $campaign_id, $this->posted_changes() );
 		$url    = add_query_arg( 'edit', '1', Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id ) );
@@ -288,7 +288,7 @@ final class Campaign_Actions implements Service {
 
 		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- submit_changes_nonce_action() uses this id immediately below.
 
-		check_admin_referer( self::submit_changes_nonce_action( $campaign_id ) );
+		check_admin_referer( Campaign_Nonces::submit_changes_nonce_action( $campaign_id ) );
 
 		$result = $this->changes->submit( $campaign_id );
 		$url    = Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id );
@@ -320,7 +320,7 @@ final class Campaign_Actions implements Service {
 
 		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- cancel_changes_nonce_action() uses this id immediately below.
 
-		check_admin_referer( self::cancel_changes_nonce_action( $campaign_id ) );
+		check_admin_referer( Campaign_Nonces::cancel_changes_nonce_action( $campaign_id ) );
 
 		$result = $this->changes->withdraw( $campaign_id );
 		$url    = Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id );
@@ -390,7 +390,7 @@ final class Campaign_Actions implements Service {
 
 		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- action_nonce_action() uses this id immediately below.
 
-		check_admin_referer( self::action_nonce_action( $campaign_id ) );
+		check_admin_referer( Campaign_Nonces::action_nonce_action( $campaign_id ) );
 
 		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Verified immediately above.
 		$action = isset( $_POST['requested_action'] ) ? sanitize_key( wp_unslash( $_POST['requested_action'] ) ) : '';
@@ -417,7 +417,7 @@ final class Campaign_Actions implements Service {
 
 		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- withdraw_action_nonce_action() uses this id immediately below.
 
-		check_admin_referer( self::withdraw_action_nonce_action( $campaign_id ) );
+		check_admin_referer( Campaign_Nonces::withdraw_action_nonce_action( $campaign_id ) );
 
 		$result = $this->changes->withdraw_action( $campaign_id );
 		$url    = Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id );
@@ -430,26 +430,6 @@ final class Campaign_Actions implements Service {
 	}
 
 	/**
-	 * Nonce action for one campaign's staff-action request.
-	 *
-	 * @param int $campaign_id Campaign post id.
-	 * @return string
-	 */
-	public static function action_nonce_action( int $campaign_id ): string {
-		return self::REQUEST_ACTION . '_' . max( 0, $campaign_id );
-	}
-
-	/**
-	 * Nonce action for withdrawing one campaign's staff-action request.
-	 *
-	 * @param int $campaign_id Campaign post id.
-	 * @return string
-	 */
-	public static function withdraw_action_nonce_action( int $campaign_id ): string {
-		return self::REQUEST_WITHDRAW . '_' . max( 0, $campaign_id );
-	}
-
-	/**
 	 * Ends a campaign at the advertiser's request.
 	 *
 	 * @return void
@@ -459,7 +439,7 @@ final class Campaign_Actions implements Service {
 
 		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- cancel_nonce_action() uses this id immediately below.
 
-		check_admin_referer( self::cancel_nonce_action( $campaign_id ) );
+		check_admin_referer( Campaign_Nonces::cancel_nonce_action( $campaign_id ) );
 
 		$result = $this->process_cancel( $campaign_id );
 
@@ -501,16 +481,6 @@ final class Campaign_Actions implements Service {
 		}
 
 		return $this->machine->apply( $campaign_id, Post_Statuses::CANCELLED );
-	}
-
-	/**
-	 * Nonce action for one campaign's cancellation.
-	 *
-	 * @param int $campaign_id Campaign post id.
-	 * @return string
-	 */
-	public static function cancel_nonce_action( int $campaign_id ): string {
-		return self::CANCEL_ACTION . '_' . max( 0, $campaign_id );
 	}
 
 	/**
@@ -674,96 +644,6 @@ final class Campaign_Actions implements Service {
 		}
 
 		return $this->machine->apply( $campaign_id, Post_Statuses::DRAFT );
-	}
-
-	/**
-	 * Nonce action bound to one campaign.
-	 *
-	 * @param int $campaign_id Campaign post id.
-	 * @return string
-	 */
-	public static function save_nonce_action( int $campaign_id ): string {
-		return self::SAVE_ACTION . '_' . max( 0, $campaign_id );
-	}
-
-	/**
-	 * Nonce action bound to the campaign being copied.
-	 *
-	 * @param int $campaign_id Source campaign post id.
-	 * @return string
-	 */
-	public static function copy_nonce_action( int $campaign_id ): string {
-		return self::COPY_ACTION . '_' . max( 0, $campaign_id );
-	}
-
-	/**
-	 * Nonce action for one campaign's package selection.
-	 *
-	 * @param int $campaign_id Campaign post id.
-	 * @return string
-	 */
-	public static function package_nonce_action( int $campaign_id ): string {
-		return self::SAVE_PACKAGE_ACTION . '_' . max( 0, $campaign_id );
-	}
-
-	/**
-	 * Nonce action for one campaign's destination-and-schedule step.
-	 *
-	 * @param int $campaign_id Campaign post id.
-	 * @return string
-	 */
-	public static function schedule_nonce_action( int $campaign_id ): string {
-		return self::SAVE_SCHEDULE_ACTION . '_' . max( 0, $campaign_id );
-	}
-
-	/**
-	 * Nonce action for one campaign's final submission.
-	 *
-	 * @param int $campaign_id Campaign post id.
-	 * @return string
-	 */
-	public static function submit_nonce_action( int $campaign_id ): string {
-		return self::SUBMIT_ACTION . '_' . max( 0, $campaign_id );
-	}
-
-	/**
-	 * Nonce action for one campaign's withdrawal.
-	 *
-	 * @param int $campaign_id Campaign post id.
-	 * @return string
-	 */
-	public static function withdraw_nonce_action( int $campaign_id ): string {
-		return self::WITHDRAW_ACTION . '_' . max( 0, $campaign_id );
-	}
-
-	/**
-	 * Nonce action for one campaign's change proposal.
-	 *
-	 * @param int $campaign_id Campaign post id.
-	 * @return string
-	 */
-	public static function changes_nonce_action( int $campaign_id ): string {
-		return self::CHANGES_ACTION . '_' . max( 0, $campaign_id );
-	}
-
-	/**
-	 * Nonce action for cancelling one campaign's change proposal.
-	 *
-	 * @param int $campaign_id Campaign post id.
-	 * @return string
-	 */
-	public static function cancel_changes_nonce_action( int $campaign_id ): string {
-		return self::CHANGES_CANCEL . '_' . max( 0, $campaign_id );
-	}
-
-	/**
-	 * Nonce action for submitting one campaign's change proposal.
-	 *
-	 * @param int $campaign_id Campaign post id.
-	 * @return string
-	 */
-	public static function submit_changes_nonce_action( int $campaign_id ): string {
-		return self::CHANGES_SUBMIT . '_' . max( 0, $campaign_id );
 	}
 
 	/**

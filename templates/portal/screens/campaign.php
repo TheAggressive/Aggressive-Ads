@@ -23,6 +23,7 @@ use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Portal\Request;
 use Aggressive\Ads\Portal\Routes;
 use Aggressive\Ads\Portal\Campaign_Actions;
+use Aggressive\Ads\Portal\Campaign_Nonces;
 use Aggressive\Ads\Portal\Creative_Actions;
 
 $aggr_creatives          = is_array( $aggr_campaign['creatives'] ) ? $aggr_campaign['creatives'] : array();
@@ -98,7 +99,7 @@ if ( 'creative' === $aggr_step && '' !== $aggr_creative_notice ) {
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 				<input type="hidden" name="action" value="<?php echo esc_attr( Campaign_Actions::WITHDRAW_ACTION ); ?>">
 				<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) (int) $aggr_campaign['id'] ); ?>">
-				<?php wp_nonce_field( Campaign_Actions::withdraw_nonce_action( (int) $aggr_campaign['id'] ) ); ?>
+				<?php wp_nonce_field( Campaign_Nonces::withdraw_nonce_action( (int) $aggr_campaign['id'] ) ); ?>
 				<button class="aggr-button" type="submit">
 					<?php esc_html_e( 'Withdraw and edit', 'aggressive-ads' ); ?>
 				</button>
@@ -115,7 +116,7 @@ if ( 'creative' === $aggr_step && '' !== $aggr_creative_notice ) {
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 				<input type="hidden" name="action" value="<?php echo esc_attr( Campaign_Actions::COPY_ACTION ); ?>">
 				<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) (int) $aggr_campaign['id'] ); ?>">
-				<?php wp_nonce_field( Campaign_Actions::copy_nonce_action( (int) $aggr_campaign['id'] ) ); ?>
+				<?php wp_nonce_field( Campaign_Nonces::copy_nonce_action( (int) $aggr_campaign['id'] ) ); ?>
 				<button class="aggr-button aggr-button--secondary" type="submit">
 					<?php echo esc_html( (string) $aggr_campaign['copy_label'] ); ?>
 				</button>
@@ -166,7 +167,7 @@ if ( 'creative' === $aggr_step && '' !== $aggr_creative_notice ) {
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 				<input type="hidden" name="action" value="<?php echo esc_attr( Campaign_Actions::CANCEL_ACTION ); ?>">
 				<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) (int) $aggr_campaign['id'] ); ?>">
-				<?php wp_nonce_field( Campaign_Actions::cancel_nonce_action( (int) $aggr_campaign['id'] ) ); ?>
+				<?php wp_nonce_field( Campaign_Nonces::cancel_nonce_action( (int) $aggr_campaign['id'] ) ); ?>
 				<button class="aggr-button aggr-button--outline-danger" type="submit">
 					<?php echo esc_html( (string) $aggr_campaign['cancel_label'] ); ?>
 				</button>
@@ -389,7 +390,7 @@ endif;
 			<input type="hidden" name="action" value="<?php echo esc_attr( Campaign_Actions::SAVE_ACTION ); ?>">
 			<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) $aggr_campaign['id'] ); ?>">
 			<input type="hidden" name="autosave_rev" value="<?php echo esc_attr( (string) $aggr_campaign['autosave_rev'] ); ?>">
-			<?php wp_nonce_field( Campaign_Actions::save_nonce_action( (int) $aggr_campaign['id'] ) ); ?>
+			<?php wp_nonce_field( Campaign_Nonces::save_nonce_action( (int) $aggr_campaign['id'] ) ); ?>
 
 			<div class="aggr-field">
 				<label for="aggr-title"><?php esc_html_e( 'Campaign name', 'aggressive-ads' ); ?></label>
@@ -461,7 +462,7 @@ endif;
 				<input type="hidden" name="action" value="<?php echo esc_attr( Campaign_Actions::SAVE_PACKAGE_ACTION ); ?>">
 				<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) $aggr_campaign['id'] ); ?>">
 				<input type="hidden" name="autosave_rev" value="<?php echo esc_attr( (string) $aggr_campaign['autosave_rev'] ); ?>">
-				<?php wp_nonce_field( Campaign_Actions::package_nonce_action( (int) $aggr_campaign['id'] ) ); ?>
+				<?php wp_nonce_field( Campaign_Nonces::package_nonce_action( (int) $aggr_campaign['id'] ) ); ?>
 
 				<fieldset id="aggr-packages" class="aggr-fieldset" <?php echo 'aggr-packages' === $aggr_error_for ? 'aria-invalid="true"' : ''; ?>>
 					<legend><?php esc_html_e( 'Available packages', 'aggressive-ads' ); ?></legend>
@@ -680,7 +681,7 @@ endif;
 				<input type="hidden" name="action" value="<?php echo esc_attr( Campaign_Actions::SAVE_SCHEDULE_ACTION ); ?>">
 				<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) $aggr_campaign['id'] ); ?>">
 				<input type="hidden" name="autosave_rev" value="<?php echo esc_attr( (string) $aggr_campaign['autosave_rev'] ); ?>">
-				<?php wp_nonce_field( Campaign_Actions::schedule_nonce_action( (int) $aggr_campaign['id'] ) ); ?>
+				<?php wp_nonce_field( Campaign_Nonces::schedule_nonce_action( (int) $aggr_campaign['id'] ) ); ?>
 
 				<section id="aggr-destinations" class="aggr-confirmation" aria-labelledby="aggr-destinations-heading">
 					<h3 id="aggr-destinations-heading"><?php esc_html_e( 'Creative destinations', 'aggressive-ads' ); ?></h3>
@@ -841,7 +842,7 @@ endif;
 					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 						<input type="hidden" name="action" value="<?php echo esc_attr( Campaign_Actions::SUBMIT_ACTION ); ?>">
 						<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) $aggr_campaign['id'] ); ?>">
-						<?php wp_nonce_field( Campaign_Actions::submit_nonce_action( (int) $aggr_campaign['id'] ) ); ?>
+						<?php wp_nonce_field( Campaign_Nonces::submit_nonce_action( (int) $aggr_campaign['id'] ) ); ?>
 						<div class="aggr-form__actions">
 							<a class="aggr-button aggr-button--secondary" href="<?php echo esc_url( add_query_arg( 'step', 'review', $aggr_campaign_url ) ); ?>"><?php esc_html_e( 'Back to review', 'aggressive-ads' ); ?></a>
 							<button class="aggr-button" type="submit"><?php esc_html_e( 'Submit campaign for review', 'aggressive-ads' ); ?></button>

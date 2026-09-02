@@ -265,6 +265,7 @@ final class Plugin {
 	private function register_services(): void {
 		( new Service_Registrar() )->register( $this->container );
 		( new Rest_Service_Registrar() )->register( $this->container );
+		( new Portal_Service_Registrar() )->register( $this->container );
 	}
 
 	/**

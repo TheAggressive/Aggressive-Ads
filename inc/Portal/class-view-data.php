@@ -45,30 +45,26 @@ final class View_Data {
 	/**
 	 * Constructor.
 	 *
-	 * @param Campaign_Repository          $campaigns  Campaign persistence.
-	 * @param Placement_Repository         $placements Placement persistence.
-	 * @param Creative_Repository          $creatives  Creative persistence.
-	 * @param Assigned_Creatives           $assigned   What is assigned where.
-	 * @param Org_Repository               $orgs       Organization lookups.
-	 * @param Org_Access_Repository        $org_access Organization access persistence.
-	 * @param Package_Repository           $packages   Package persistence.
-	 * @param Campaign_Editor              $editor     Shared package validation.
-	 * @param Review_Readiness             $readiness  Safe canonical review readiness.
-	 * @param Email_Change                 $emails     Pending email-change lookup.
-	 * @param Reporting_Read               $reporting  Native rollup reads.
-	 * @param Campaign_Change_Manager      $changes  Running-campaign change proposals.
-	 * @param Settings                     $settings   Brand and support details.
-	 * @param Edit_Window                  $window     When editing is permitted.
-	 * @param Acting_As                    $acting     Staff acting for an advertiser.
-	 * @param Line_Item_Repository         $line_items Campaign delivery strategies.
-	 * @param Creative_Approval            $approvals  Creative review decisions.
-	 * @param Creative_Revision_Repository $revisions Replacement lifecycle persistence.
+	 * @param Campaign_Repository     $campaigns  Campaign persistence.
+	 * @param Placement_Repository    $placements Placement persistence.
+	 * @param Org_Repository          $orgs       Organization lookups.
+	 * @param Org_Access_Repository   $org_access Organization access persistence.
+	 * @param Package_Repository      $packages   Package persistence.
+	 * @param Campaign_Editor         $editor     Shared package validation.
+	 * @param Review_Readiness        $readiness  Safe canonical review readiness.
+	 * @param Email_Change            $emails     Pending email-change lookup.
+	 * @param Reporting_Read          $reporting  Native rollup reads.
+	 * @param Campaign_Change_Manager $changes  Running-campaign change proposals.
+	 * @param Settings                $settings   Brand and support details.
+	 * @param Edit_Window             $window     When editing is permitted.
+	 * @param Acting_As               $acting     Staff acting for an advertiser.
+	 * @param Line_Item_Repository    $line_items Campaign delivery strategies.
+	 * @param Delivery_View_Data      $delivery   Dashboard delivery numbers.
+	 * @param Creative_View_Data      $creative_view Campaign creative rows.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
 		private readonly Placement_Repository $placements,
-		private readonly Creative_Repository $creatives,
-		private readonly Assigned_Creatives $assigned,
 		private readonly Org_Repository $orgs,
 		private readonly Org_Access_Repository $org_access,
 		private readonly Package_Repository $packages,
@@ -81,8 +77,8 @@ final class View_Data {
 		private readonly Edit_Window $window,
 		private readonly Acting_As $acting,
 		private readonly Line_Item_Repository $line_items,
-		private readonly Creative_Approval $approvals,
-		private readonly Creative_Revision_Repository $revisions
+		private readonly Delivery_View_Data $delivery,
+		private readonly Creative_View_Data $creative_view
 	) {
 	}
 
@@ -216,9 +212,9 @@ final class View_Data {
 		$row['review_notes']      = $this->campaigns->review_notes( $campaign_id );
 		$row['revision']          = $this->campaigns->revision( $campaign_id );
 		$row['submitted_at']      = $this->campaigns->submitted_at( $campaign_id );
-		$row['creatives']         = $this->creative_rows( $campaign_id );
-		$row['creative_updates']  = $this->creative_update_rows( $campaign_id );
-		$row['creative_slots']    = $this->creative_slots( $campaign_id, $row['creatives'] );
+		$row['creatives']         = $this->creative_view->creative_rows( $campaign_id );
+		$row['creative_updates']  = $this->creative_view->creative_update_rows( $campaign_id );
+		$row['creative_slots']    = $this->creative_view->creative_slots( $campaign_id, $row['creatives'] );
 		$row['placement_ids']     = $this->campaigns->placement_ids( $campaign_id );
 		$row['placement_options'] = $this->placement_options();
 		$row['package_id']        = $this->campaigns->package_id( $campaign_id );
@@ -490,23 +486,6 @@ final class View_Data {
 	}
 
 	/**
-	 * CTR as a percentage, or an em dash when there were no impressions.
-	 *
-	 * @param float|null $ratio Clicks per impression.
-	 */
-	private function format_ctr( ?float $ratio ): string {
-		if ( null === $ratio ) {
-			return __( '—', 'aggressive-ads' );
-		}
-
-		return sprintf(
-			/* translators: %s: click-through rate as a percentage, e.g. 1.2. */
-			__( '%s%%', 'aggressive-ads' ),
-			number_format_i18n( $ratio * 100, 1 )
-		);
-	}
-
-	/**
 	 * Formats a stored UTC timestamp for an HTML date input in site time.
 	 *
 	 * @param int $timestamp UTC Unix timestamp, or zero.
@@ -545,195 +524,6 @@ final class View_Data {
 		}
 
 		return $today;
-	}
-
-	/**
-	 * Where to load a creative's image from.
-	 *
-	 * Approval promotes the artwork into the Media Library and deletes the
-	 * private original, so the authenticated file route answers 404 for
-	 * everything approved — correctly, because there is nothing left to stream.
-	 * Pointing at it regardless meant every approved creative on the campaign
-	 * screen rendered as a broken image.
-	 *
-	 * The attachment URL is public, which is not a leak: it is the same file
-	 * the ad is already serving to every visitor. Unapproved artwork has no
-	 * attachment and keeps the authenticated route.
-	 *
-	 * @param int $creative_id Creative post id.
-	 * @return string
-	 */
-	private function creative_preview( int $creative_id ): string {
-		$promoted = $this->creatives->attachment_url( $creative_id );
-
-		if ( '' !== $promoted ) {
-			return $promoted;
-		}
-
-		return add_query_arg(
-			'_wpnonce',
-			wp_create_nonce( 'wp_rest' ),
-			rest_url( Creative_File_Controller::NAMESPACE . '/creatives/' . $creative_id . '/file' )
-		);
-	}
-
-	/**
-	 * The campaign's creatives, shaped for display.
-	 *
-	 * No file path, no storage token and no checksum: those describe where the
-	 * bytes live on disk, and a private-storage path is not something a browser
-	 * ever needs to be told.
-	 *
-	 * @param int $campaign_id Campaign post id.
-	 * @return array<int, array{id: int, placement_id: int, placement: string, size: string, dimensions: string, click_url: string, alt_text: string, approved: bool, rejected: bool, state_text: string, notes: string, name: string, bytes: int, preview: string}>
-	 */
-	private function creative_rows( int $campaign_id ): array {
-		$rows = array();
-
-		/*
-		 * Structure from the assignment table, values from the revision.
-		 *
-		 * The assignment answers which revisions are assigned to this campaign;
-		 * `details()` answers what each one contains. The assignment's own
-		 * `click_url` and `alt_text` are deliberately not read here — see
-		 * `Assigned_Creatives` for why a snapshot is right for serving and
-		 * wrong for an editing screen.
-		 */
-		foreach ( $this->assigned->revision_ids( $campaign_id ) as $revision_id ) {
-			$creative = $this->creatives->details( $revision_id );
-
-			if ( null === $creative || ! $this->creatives->is_active( $revision_id ) ) {
-				continue;
-			}
-
-			$stored   = $this->creatives->storage_details( $creative['id'] );
-			$approved = $this->creatives->has_attachment( $creative['id'] );
-			$rejected = $this->creatives->is_rejected( $creative['id'] );
-
-			$rows[] = array(
-				'id'           => $creative['id'],
-				'placement_id' => $creative['placement_id'],
-				'placement'    => $this->placements->name( $creative['placement_id'] ),
-				'size'         => $creative['size'],
-				'dimensions'   => $creative['width'] > 0 && $creative['height'] > 0
-					? $creative['width'] . '×' . $creative['height']
-					: '',
-				'click_url'    => $creative['click_url'],
-				'alt_text'     => $creative['alt_text'],
-				'approved'     => $approved,
-				'rejected'     => $rejected,
-				'state_text'   => $this->creative_state_text( $approved, $rejected ),
-
-				// Empty unless this creative was turned down. The decision owns
-				// the reason; the shared meta key carries two of them.
-				'notes'        => $this->approvals->rejection_notes( $creative['id'] ),
-				'name'         => null === $stored ? '' : $stored['name'],
-				'bytes'        => null === $stored ? 0 : $stored['bytes'],
-				'preview'      => $this->creative_preview( $creative['id'] ),
-			);
-		}
-
-		return $rows;
-	}
-
-	/**
-	 * What the advertiser is told about one creative's review state.
-	 *
-	 * Three states, and before this there was one. A creative that had been
-	 * turned down looked exactly like one that had been approved: same card,
-	 * same preview, same Update action, and nothing anywhere saying it would
-	 * never be served. Staff are required to give a reason for exactly that
-	 * person, and it was stored and shown to nobody.
-	 *
-	 * `has_attachment()` is the approved question rather than
-	 * `META_REVIEW_STATE`, for the reason recorded in open-work.md: promotion
-	 * does not maintain that meta, so a creative serving for weeks still reads
-	 * `pending` there.
-	 *
-	 * @param bool $approved Whether promotion has produced a public attachment.
-	 * @param bool $rejected Whether a reviewer turned it down.
-	 * @return string
-	 */
-	private function creative_state_text( bool $approved, bool $rejected ): string {
-		if ( $rejected ) {
-			return __( 'Not approved', 'aggressive-ads' );
-		}
-
-		return $approved
-			? __( 'Running', 'aggressive-ads' )
-			: __( 'Waiting for review', 'aggressive-ads' );
-	}
-
-	/**
-	 * Published-ad revisions visible to the owning advertiser.
-	 *
-	 * @param int $campaign_id Campaign id.
-	 * @return array<int, array<string, mixed>>
-	 */
-	private function creative_update_rows( int $campaign_id ): array {
-		$rows = array();
-
-		foreach ( $this->revisions->replacements_for_campaign( $campaign_id ) as $creative ) {
-			$state = $this->revisions->change_state( $creative['id'] );
-
-			if ( ! in_array( $state, array( Creative_Repository::CHANGE_PENDING, Creative_Repository::CHANGE_REJECTED ), true ) ) {
-				continue;
-			}
-
-			$rows[] = array(
-				'id'           => $creative['id'],
-				'creative_id'  => $this->creatives->replacement_target_id( $creative['id'] ),
-				'placement_id' => $creative['placement_id'],
-				'placement'    => $this->placements->name( $creative['placement_id'] ),
-				'dimensions'   => $creative['width'] . '×' . $creative['height'],
-				'click_url'    => $creative['click_url'],
-				'alt_text'     => $creative['alt_text'],
-				'state'        => $state,
-				'state_text'   => Creative_Repository::CHANGE_PENDING === $state
-					? __( 'Waiting for review', 'aggressive-ads' )
-					: __( 'Changes needed', 'aggressive-ads' ),
-				'notes'        => $this->creatives->change_notes( $creative['id'] ),
-				'requested_at' => $this->revisions->requested_at( $creative['id'] ),
-				'preview'      => add_query_arg(
-					'_wpnonce',
-					wp_create_nonce( 'wp_rest' ),
-					rest_url( Creative_File_Controller::NAMESPACE . '/creatives/' . $creative['id'] . '/file' )
-				),
-			);
-		}
-
-		return $rows;
-	}
-
-	/**
-	 * Selected placements paired with any creative already covering them.
-	 *
-	 * @param int                              $campaign_id Campaign post id.
-	 * @param array<int, array<string, mixed>> $creatives   Render-ready creative rows.
-	 * @return array<int, array{id: int, name: string, size: string, active: bool, creatives: array<int, array<string, mixed>>}>
-	 */
-	private function creative_slots( int $campaign_id, array $creatives ): array {
-		$slots = array();
-
-		foreach ( $this->campaigns->placement_ids( $campaign_id ) as $placement_id ) {
-			$matching = array();
-
-			foreach ( $creatives as $creative ) {
-				if ( (int) ( $creative['placement_id'] ?? 0 ) === $placement_id ) {
-					$matching[] = $creative;
-				}
-			}
-
-			$slots[] = array(
-				'id'        => $placement_id,
-				'name'      => $this->placements->name( $placement_id ),
-				'size'      => $this->placements->size( $placement_id ),
-				'active'    => $this->placements->is_active( $placement_id ),
-				'creatives' => $matching,
-			);
-		}
-
-		return $slots;
 	}
 
 	/**
@@ -791,105 +581,19 @@ final class View_Data {
 	/**
 	 * Native delivery totals for the caller's organization.
 	 *
-	 * Empty when the reporting surface is off, so the template does not render
-	 * a row of zeros that look like traffic.
-	 *
 	 * @return array<int, array{label: string, value: string}>
 	 */
 	public function delivery_counts(): array {
-		if ( ! $this->reporting->surfaces() ) {
-			return array();
-		}
-
-		$totals = $this->reporting->totals_for_org( $this->org_id() );
-		$ctr    = Reporting_Rules::ctr( $totals['impressions'], $totals['clicks'] );
-
-		return array(
-			array(
-				'label' => __( 'Impressions', 'aggressive-ads' ),
-				'value' => (string) number_format_i18n( $totals['impressions'] ),
-			),
-			array(
-				'label' => __( 'Clicks', 'aggressive-ads' ),
-				'value' => (string) number_format_i18n( $totals['clicks'] ),
-			),
-			array(
-				'label' => __( 'CTR', 'aggressive-ads' ),
-				'value' => $this->format_ctr( $ctr ),
-			),
-			array(
-				'label' => __( 'Viewable', 'aggressive-ads' ),
-				'value' => $this->format_viewability( $totals['impressions'], $totals['viewables'] ),
-			),
-		);
-	}
-
-	/**
-	 * Viewability as a percentage, or which kind of absence it is.
-	 *
-	 * Three answers, and collapsing any two of them would mislead. **Not
-	 * measured** is a day before viewability shipped, or one where the script
-	 * never ran — reporting it as `0%` claims nobody saw the ads, which is the
-	 * alarming reading and the false one. An em dash is the ordinary "nothing
-	 * delivered yet". `0.0%` is a real measurement of nothing being seen, and
-	 * is the one worth investigating.
-	 *
-	 * @param int      $impressions Delivered impressions.
-	 * @param int|null $viewables   Views recorded, or null when unmeasured.
-	 * @return string
-	 */
-	private function format_viewability( int $impressions, ?int $viewables ): string {
-		if ( null === $viewables ) {
-			return __( 'Not measured', 'aggressive-ads' );
-		}
-
-		$rate = Reporting_Rules::viewability( $impressions, $viewables );
-
-		if ( null === $rate ) {
-			return __( '—', 'aggressive-ads' );
-		}
-
-		return sprintf(
-			/* translators: %s: share of impressions that were viewable, e.g. 62.5. */
-			__( '%s%%', 'aggressive-ads' ),
-			number_format_i18n( $rate * 100, 1 )
-		);
+		return $this->delivery->counts( $this->org_id() );
 	}
 
 	/**
 	 * Seven-day impression series for the dashboard sparkline.
 	 *
-	 * Empty when Reporting is off, so the template omits the chart rather than
-	 * drawing a flat line that looks like traffic.
-	 *
 	 * @return list<array{day: string, label: string, impressions: int, height: int}>
 	 */
 	public function delivery_series(): array {
-		if ( ! $this->reporting->surfaces() ) {
-			return array();
-		}
-
-		$raw = $this->reporting->series_for_org( $this->org_id() );
-		$max = 0;
-
-		foreach ( $raw as $row ) {
-			$max = max( $max, $row['impressions'] );
-		}
-
-		$series = array();
-
-		foreach ( $raw as $row ) {
-			$timestamp = strtotime( $row['day'] . ' UTC' );
-
-			$series[] = array(
-				'day'         => $row['day'],
-				'label'       => false === $timestamp ? $row['day'] : (string) wp_date( 'D', $timestamp ),
-				'impressions' => $row['impressions'],
-				'height'      => Reporting_Rules::bar_height( $row['impressions'], $max ),
-			);
-		}
-
-		return $series;
+		return $this->delivery->series( $this->org_id() );
 	}
 
 	/**

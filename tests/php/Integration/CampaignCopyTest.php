@@ -14,6 +14,7 @@ use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Portal\Campaign_Actions;
+use Aggressive\Ads\Portal\Campaign_Nonces;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
@@ -342,7 +343,7 @@ final class CampaignCopyTest extends WP_UnitTestCase {
 		$source_id = $this->completed_campaign();
 		$_POST     = array(
 			'campaign_id' => (string) $source_id,
-			'_wpnonce'    => wp_create_nonce( Campaign_Actions::copy_nonce_action( $source_id + 1 ) ),
+			'_wpnonce'    => wp_create_nonce( Campaign_Nonces::copy_nonce_action( $source_id + 1 ) ),
 		);
 
 		$this->expectException( 'WPDieException' );

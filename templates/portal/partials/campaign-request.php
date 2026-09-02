@@ -21,6 +21,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use Aggressive\Ads\Portal\Campaign_Actions;
+use Aggressive\Ads\Portal\Campaign_Nonces;
 
 $aggr_request     = is_array( $aggr_campaign['action_request'] ?? null ) ? $aggr_campaign['action_request'] : array();
 $aggr_options     = is_array( $aggr_campaign['requestable_actions'] ?? null ) ? $aggr_campaign['requestable_actions'] : array();
@@ -55,7 +56,7 @@ if ( array() === $aggr_request && array() === $aggr_options ) {
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 			<input type="hidden" name="action" value="<?php echo esc_attr( Campaign_Actions::REQUEST_WITHDRAW ); ?>">
 			<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) $aggr_campaign_id ); ?>">
-			<?php wp_nonce_field( Campaign_Actions::withdraw_action_nonce_action( $aggr_campaign_id ) ); ?>
+			<?php wp_nonce_field( Campaign_Nonces::withdraw_action_nonce_action( $aggr_campaign_id ) ); ?>
 			<button class="aggr-button aggr-button--secondary" type="submit">
 				<?php esc_html_e( 'Withdraw this request', 'aggressive-ads' ); ?>
 			</button>
@@ -66,7 +67,7 @@ if ( array() === $aggr_request && array() === $aggr_options ) {
 		<form class="aggr-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 			<input type="hidden" name="action" value="<?php echo esc_attr( Campaign_Actions::REQUEST_ACTION ); ?>">
 			<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) $aggr_campaign_id ); ?>">
-			<?php wp_nonce_field( Campaign_Actions::action_nonce_action( $aggr_campaign_id ) ); ?>
+			<?php wp_nonce_field( Campaign_Nonces::action_nonce_action( $aggr_campaign_id ) ); ?>
 
 			<fieldset class="aggr-field">
 				<legend><?php esc_html_e( 'What do you need?', 'aggressive-ads' ); ?></legend>

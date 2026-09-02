@@ -24,6 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use Aggressive\Ads\Portal\Campaign_Actions;
+use Aggressive\Ads\Portal\Campaign_Nonces;
 use Aggressive\Ads\Portal\Request;
 use Aggressive\Ads\Portal\Routes;
 
@@ -112,7 +113,7 @@ $aggr_step_link = static function ( string $step, string $label, string $current
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 				<input type="hidden" name="action" value="<?php echo esc_attr( Campaign_Actions::CHANGES_SUBMIT ); ?>">
 				<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) $aggr_campaign_id ); ?>">
-				<?php wp_nonce_field( Campaign_Actions::submit_changes_nonce_action( $aggr_campaign_id ) ); ?>
+				<?php wp_nonce_field( Campaign_Nonces::submit_changes_nonce_action( $aggr_campaign_id ) ); ?>
 				<button class="aggr-button" type="submit">
 					<?php esc_html_e( 'Submit for review', 'aggressive-ads' ); ?>
 				</button>
@@ -121,7 +122,7 @@ $aggr_step_link = static function ( string $step, string $label, string $current
 			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 				<input type="hidden" name="action" value="<?php echo esc_attr( Campaign_Actions::CHANGES_CANCEL ); ?>">
 				<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) $aggr_campaign_id ); ?>">
-				<?php wp_nonce_field( Campaign_Actions::cancel_changes_nonce_action( $aggr_campaign_id ) ); ?>
+				<?php wp_nonce_field( Campaign_Nonces::cancel_changes_nonce_action( $aggr_campaign_id ) ); ?>
 				<button class="aggr-button aggr-button--secondary" type="submit">
 					<?php esc_html_e( 'Discard these edits', 'aggressive-ads' ); ?>
 				</button>
@@ -131,7 +132,7 @@ $aggr_step_link = static function ( string $step, string $label, string $current
 		<form class="aggr-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 			<input type="hidden" name="action" value="<?php echo esc_attr( Campaign_Actions::CHANGES_ACTION ); ?>">
 			<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) $aggr_campaign_id ); ?>">
-			<?php wp_nonce_field( Campaign_Actions::changes_nonce_action( $aggr_campaign_id ) ); ?>
+			<?php wp_nonce_field( Campaign_Nonces::changes_nonce_action( $aggr_campaign_id ) ); ?>
 
 			<?php if ( 'details' === $aggr_edit_step ) : ?>
 				<input type="hidden" name="next_step" value="<?php echo esc_attr( $aggr_has_schedule ? 'schedule' : ( $aggr_has_destination ? 'destination' : 'review' ) ); ?>">

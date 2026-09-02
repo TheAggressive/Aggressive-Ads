@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Tests\Unit\Assets;
 
 use PHPUnit\Framework\TestCase;
+use Aggressive\Ads\Portal\Campaign_Nonces;
 
 /**
  * Pins the semantic structure that automated CSS review cannot infer.
@@ -33,13 +34,13 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 		$this->assertStringContainsString( "remove_action( 'wp_body_open', 'wp_admin_bar_render', 0 )", $base );
 		$this->assertStringContainsString( 'Campaign_Actions::CREATE_ACTION', $list );
 		$this->assertStringContainsString( 'Campaign_Actions::COPY_ACTION', $detail );
-		$this->assertStringContainsString( 'Campaign_Actions::copy_nonce_action', $detail );
+		$this->assertStringContainsString( 'Campaign_Nonces::copy_nonce_action', $detail );
 		$this->assertStringContainsString( 'Campaign_Actions::SAVE_ACTION', $detail );
 		$this->assertStringContainsString( 'Campaign_Actions::SAVE_PACKAGE_ACTION', $detail );
 		$this->assertStringContainsString( 'Campaign_Actions::SAVE_SCHEDULE_ACTION', $detail );
-		$this->assertStringContainsString( 'Campaign_Actions::schedule_nonce_action', $detail );
+		$this->assertStringContainsString( 'Campaign_Nonces::schedule_nonce_action', $detail );
 		$this->assertStringContainsString( 'Campaign_Actions::SUBMIT_ACTION', $detail );
-		$this->assertStringContainsString( 'Campaign_Actions::submit_nonce_action', $detail );
+		$this->assertStringContainsString( 'Campaign_Nonces::submit_nonce_action', $detail );
 		$this->assertStringContainsString( 'Creative_Actions::UPLOAD_ACTION', $detail );
 		$this->assertStringContainsString( 'campaign-overlays.php', $detail );
 		$overlays = file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-overlays.php' );
