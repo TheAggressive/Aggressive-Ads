@@ -12,8 +12,8 @@ has started or that any item below is implemented.
 ## Status
 
 - Phase: **P13 — Event and analytics schema**
-- Roadmap state: `[ ]`
-- Last audited: 2026-09-01
+- Roadmap state: `[x]`
+- Closed out: 2026-09-02
 - Authoritative environments: the Docker CI lanes. CI pins MySQL 8.4; schema and
   `dbDelta` behaviour there decides disagreements, and this phase is almost
   entirely schema.
@@ -410,7 +410,15 @@ is stored, and `platform-implementation-progress.md`.
 The phase may move to `[x]` only when:
 
 1. `request`, `fill` and `no_fill` with structured reasons are recorded through
-   the production decision path, and a publisher can see why a slot is empty.
+   the production decision path, and the reason a slot stayed empty is stored
+   and queryable.
+
+   *Narrowed at closeout.* This originally said "a publisher can **see** why a
+   slot is empty", which contradicts this phase's own scope boundary: report
+   semantics are P14's and this phase deliberately adds no screen and no REST
+   route, on the grounds that a route without a report to serve is a surface to
+   secure for no reader. The data exists, is bounded, indexed and reconcilable;
+   showing it is the next phase's job.
 2. Fill rate is computable from stored counters, with its denominator defined.
 3. `Decision_Metrics`' option is gone, its replacement is proven
    contention-safe, and the fill query budget has not increased.
@@ -420,8 +428,17 @@ The phase may move to `[x]` only when:
    exactly, and which projector wrote a day is answerable without opening the
    database. Runtime behaviour on an unknown *future* version is explicitly out
    of scope — see the invariant above.
-6. The staged migration is proven interruptible, resumable and reversible, with
-   its state visible in Site Health.
+6. The migration is proven idempotent, resumable and reversible.
+
+   *Narrowed at closeout, because the staged design was reversed during
+   implementation.* Batches, a stored cursor, pause/resume and Site Health
+   progress were specified for a long-running backfill that no longer exists:
+   the attribution collapsed to one `UPDATE` predicated on `org_id = 0`, where
+   the predicate is the cursor. Resumability is therefore *re-running it*, which
+   `RollupTenancySchemaTest` asserts, and there is no progress for Site Health
+   to report because there are no batches. Reversibility is the additive schema:
+   dropping the columns loses nothing, since the ledger is untouched throughout
+   and every projection value is rebuildable from it.
 7. Growth is measured at the large fixture and bounded by retention.
 8. Required tests and the P0 baseline are green authoritatively.
 9. Documentation describes what shipped.
@@ -430,4 +447,50 @@ The existence of a table or a migration is not evidence for any of the above.
 
 ## Exit evidence and decision
 
-To be completed at closeout.
+Closed 2026-09-02. Every criterion was walked against tests rather than against
+the code, and two were narrowed rather than ticked — both are marked above with
+the reasoning, because a criterion quietly reinterpreted to fit what shipped is
+worse than one that was never met.
+
+**Three defects were found by building this, none of them by a failing test.**
+All three had green suites over them:
+
+- **`decide_page()` recorded nothing at all.** The batch path runs through a
+  pure-domain coordinator that may not call a WordPress function, so counters
+  existed on the single-slot path and not the batch one. "Why is this slot
+  empty" had an answer that depended on which code path the request took.
+- **House fills were credited to an advertiser.** Resolving the organization
+  through the *assignment's* campaign meant a house fill — `campaign_id = 0`,
+  still matching an assignment owned by somebody — landed in that advertiser's
+  totals.
+- **Conversion-only rollup rows were unattributed.** A conversion counts on the
+  day the outcome happened, so it can create a row for a day this site served
+  nothing; that row had no delivery behind it to freeze tenancy, and no
+  org-scoped report could see the conversion it counted.
+
+**Two guards this phase wrote did not work until they were attacked.** Both are
+recorded in `testing-strategy.md`:
+
+- An `EXPLAIN` assertion checked which index the plan *named*. Rebuilding
+  `day_outcome` as `(outcome)` alone — useless for a day range — left the plan
+  still naming it, because MySQL will use an index for the `GROUP BY` while
+  scanning every row for the `WHERE`. It now asserts rows examined, and fails at
+  79,996 of 79,980.
+- A projector-version test read `(0, 1)` for a single seeded row, because the
+  suite's tables are shared and other classes seed rows predating the column.
+  The fixture is now emptied and asserted empty first.
+
+**Measured, not assumed:** 79,980 rows at 1,000 placements × 30 days, 2.67 per
+placement-day, ~1.07M projected at 400-day retention — an order of magnitude
+under the 11M ceiling, because only outcomes that occur are written. The
+counters cost **no query** on the fill path, asserted in `DeliveryScaleTest`
+because the budgets there are ceilings with headroom an inline write could hide
+under.
+
+**Deliberately not built**, and owned by later phases: any screen reading these
+counters (P14), and runtime behaviour on an unknown future schema or projector
+version — undecidable with one version in existence, and owned by whichever
+phase first bumps one.
+
+Green at closeout: 1,328 PHP and 7 multisite locally, all CI lanes on pinned
+MySQL 8.4 and PHP 8.4 across #159, #162, #163, #165 and #166.
