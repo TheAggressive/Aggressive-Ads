@@ -518,21 +518,7 @@ final class Service_Registrar {
 			static fn (): Package_Repository => new Package_Repository()
 		);
 
-		$container->register(
-			Acting_Actions::class,
-			static fn ( Service_Container $c ): Acting_Actions => new Acting_Actions(
-				$c->get( Acting_As::class )
-			)
-		);
 
-		$container->register(
-			Acting_As::class,
-			static fn ( Service_Container $c ): Acting_As => new Acting_As(
-				$c->get( User_Repository::class ),
-				$c->get( Org_Repository::class ),
-				$c->get( Audit_Repository::class )
-			)
-		);
 
 		$container->register(
 			Edit_Window::class,
@@ -785,36 +771,9 @@ final class Service_Registrar {
 			)
 		);
 
-		$container->register(
-			Router::class,
-			static fn ( Service_Container $c ): Router => new Router(
-				$c->get( Advertiser_Registration::class )
-			)
-		);
 
-		$container->register(
-			View_Data::class,
-			static fn ( Service_Container $c ): View_Data => new View_Data(
-				$c->get( Campaign_Repository::class ),
-				$c->get( Placement_Repository::class ),
-				$c->get( Creative_Repository::class ),
-				$c->get( Assigned_Creatives::class ),
-				$c->get( Org_Repository::class ),
-				$c->get( Org_Access_Repository::class ),
-				$c->get( Package_Repository::class ),
-				$c->get( Campaign_Editor::class ),
-				$c->get( Review_Readiness::class ),
-				$c->get( Email_Change::class ),
-				$c->get( Reporting_Read::class ),
-				$c->get( Campaign_Change_Manager::class ),
-				$c->get( Settings::class ),
-				$c->get( Edit_Window::class ),
-				$c->get( Acting_As::class ),
-				$c->get( Line_Item_Repository::class ),
-				$c->get( \Aggressive\Ads\Workflow\Creative_Approval::class ),
-				$c->get( Creative_Revision_Repository::class )
-			)
-		);
+
+
 
 		$container->register(
 			Assets::class,
@@ -823,84 +782,14 @@ final class Service_Registrar {
 			)
 		);
 
-		$container->register(
-			Campaign_Actions::class,
-			static fn ( Service_Container $c ): Campaign_Actions => new Campaign_Actions(
-				$c->get( Campaign_Editor::class ),
-				$c->get( Campaign_Copier::class ),
-				$c->get( Campaign_State_Machine::class ),
-				$c->get( Rate_Limiter::class ),
-				$c->get( Campaign_Change_Manager::class )
-			)
-		);
 
-		$container->register(
-			Login_Actions::class,
-			static fn ( Service_Container $c ): Login_Actions => new Login_Actions(
-				$c->get( Rate_Limiter::class ),
-				$c->get( Audit_Repository::class ),
-				$c->get( Org_Access_Repository::class )
-			)
-		);
 
-		$container->register(
-			Organization_Actions::class,
-			static fn ( Service_Container $c ): Organization_Actions => new Organization_Actions(
-				$c->get( Organization_Membership::class ),
-				$c->get( Org_Repository::class ),
-				$c->get( Rate_Limiter::class )
-			)
-		);
 
-		$container->register(
-			Signup_Actions::class,
-			static fn ( Service_Container $c ): Signup_Actions => new Signup_Actions(
-				$c->get( Advertiser_Registration::class ),
-				$c->get( Rate_Limiter::class )
-			)
-		);
 
-		$container->register(
-			Password_Actions::class,
-			static fn ( Service_Container $c ): Password_Actions => new Password_Actions(
-				$c->get( User_Repository::class ),
-				$c->get( Password_Notification::class ),
-				$c->get( Password_Reset::class ),
-				$c->get( Rate_Limiter::class ),
-				$c->get( Audit_Repository::class )
-			)
-		);
 
-		$container->register(
-			Account_Actions::class,
-			static fn ( Service_Container $c ): Account_Actions => new Account_Actions(
-				$c->get( Password_Notification::class )
-			)
-		);
 
-		$container->register(
-			Email_Change_Actions::class,
-			static fn ( Service_Container $c ): Email_Change_Actions => new Email_Change_Actions(
-				$c->get( Email_Change::class ),
-				$c->get( Rate_Limiter::class )
-			)
-		);
 
-		$container->register(
-			Report_Actions::class,
-			static fn ( Service_Container $c ): Report_Actions => new Report_Actions(
-				$c->get( Reporting_Read::class ),
-				$c->get( Org_Repository::class )
-			)
-		);
 
-		$container->register(
-			Creative_Actions::class,
-			static fn ( Service_Container $c ): Creative_Actions => new Creative_Actions(
-				$c->get( Creative_Manager::class ),
-				$c->get( Creative_Change_Manager::class )
-			)
-		);
 
 		$container->register(
 			Rate_Limit_Repository::class,
