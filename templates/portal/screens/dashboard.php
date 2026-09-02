@@ -9,7 +9,9 @@
  *
  * The delivery tiles cover a bounded window and say which one, in UTC, along
  * with the first day whose figures may still move. They used to be all-time
- * totals with neither statement attached.
+ * totals with neither statement attached. Each also carries its change against
+ * the equal window immediately before it, as text with a sign — the colour is
+ * decoration over a figure that reads correctly without it.
  *
  * @package Aggressive\Ads
  */
@@ -87,6 +89,20 @@ if ( array() !== $aggr_delivery ) :
 		<div class="aggr-stat">
 			<div class="aggr-stat__label"><?php echo esc_html( (string) $aggr_stat['label'] ); ?></div>
 			<div class="aggr-stat__value"><?php echo esc_html( (string) $aggr_stat['value'] ); ?></div>
+			<?php
+			/*
+			 * The sign and the unit are in the text, so the direction class
+			 * only ever adds colour to something already legible without it.
+			 * An empty change is a real state — nothing to compare against —
+			 * and renders as nothing rather than as a zero.
+			 */
+			$aggr_change = (string) ( $aggr_stat['change'] ?? '' );
+			?>
+			<?php if ( '' !== $aggr_change ) : ?>
+				<div class="aggr-stat__change aggr-stat__change--<?php echo esc_attr( (string) ( $aggr_stat['direction'] ?? 'flat' ) ); ?>">
+					<?php echo esc_html( $aggr_change ); ?>
+				</div>
+			<?php endif; ?>
 		</div>
 	<?php endforeach; ?>
 </div>

@@ -101,31 +101,123 @@ final class Delivery_View_Data {
 			return array();
 		}
 
-		$totals = $this->reporting->totals_for_org( $org_id, $period ?? $this->period() );
-		$ctr    = Reporting_Rules::ctr( $totals['impressions'], $totals['clicks'] );
+		$read     = $this->reporting->totals_with_comparison( $org_id, $period ?? $this->period() );
+		$totals   = $read['current'];
+		$was      = $read['previous'];
+		$ctr      = Reporting_Rules::ctr( $totals['impressions'], $totals['clicks'] );
+		$ctr_was  = Reporting_Rules::ctr( $was['impressions'], $was['clicks'] );
+		$view     = Reporting_Rules::viewability( $totals['impressions'], $totals['viewables'] );
+		$view_was = Reporting_Rules::viewability( $was['impressions'], $was['viewables'] );
 
 		return array(
-			array(
-				'label' => __( 'Impressions', 'aggressive-ads' ),
-				'value' => (string) number_format_i18n( $totals['impressions'] ),
+			$this->tile(
+				__( 'Impressions', 'aggressive-ads' ),
+				(string) number_format_i18n( $totals['impressions'] ),
+				Reporting_Rules::change( $totals['impressions'], $was['impressions'] )
 			),
-			array(
-				'label' => __( 'Clicks', 'aggressive-ads' ),
-				'value' => (string) number_format_i18n( $totals['clicks'] ),
+			$this->tile(
+				__( 'Clicks', 'aggressive-ads' ),
+				(string) number_format_i18n( $totals['clicks'] ),
+				Reporting_Rules::change( $totals['clicks'], $was['clicks'] )
 			),
-			array(
-				'label' => __( 'CTR', 'aggressive-ads' ),
-				'value' => $this->format_ctr( $ctr ),
+			$this->tile(
+				__( 'CTR', 'aggressive-ads' ),
+				$this->format_ctr( $ctr ),
+				Reporting_Rules::point_change( $ctr, $ctr_was ),
+				true
 			),
-			array(
-				'label' => __( 'Viewable', 'aggressive-ads' ),
-				'value' => $this->format_viewability( $totals['impressions'], $totals['viewables'] ),
+			$this->tile(
+				__( 'Viewable', 'aggressive-ads' ),
+				$this->format_viewability( $totals['impressions'], $totals['viewables'] ),
+				Reporting_Rules::point_change( $view, $view_was ),
+				true
 			),
-			array(
-				'label' => __( 'Conversions', 'aggressive-ads' ),
-				'value' => $this->format_count( $totals['conversions'] ),
+			$this->tile(
+				__( 'Conversions', 'aggressive-ads' ),
+				$this->format_count( $totals['conversions'] ),
+				Reporting_Rules::change( $totals['conversions'], $was['conversions'] )
 			),
 		);
+	}
+
+	/**
+	 * One tile, with its comparison already rendered.
+	 *
+	 * `direction` exists to hang a colour on and carries no meaning of its own:
+	 * the sign is in `change` as text, so a reader in high contrast, in
+	 * monochrome, or with a colour vision deficiency loses nothing. Empty
+	 * `change` means there was no comparison to draw, which is a real state and
+	 * not a zero.
+	 *
+	 * @param string     $label  Tile label.
+	 * @param string     $value  Formatted figure.
+	 * @param float|null $delta  Signed change, or null when incomparable.
+	 * @param bool       $points Whether $delta is percentage points rather than a proportion.
+	 * @return array{label: string, value: string, change: string, direction: string}
+	 */
+	private function tile( string $label, string $value, ?float $delta, bool $points = false ): array {
+		return array(
+			'label'     => $label,
+			'value'     => $value,
+			'change'    => $this->format_change( $delta, $points ),
+			'direction' => $this->direction( $delta ),
+		);
+	}
+
+	/**
+	 * A signed change against the previous window, or '' when there is none.
+	 *
+	 * Rates read in percentage points and counts in percent, because they are
+	 * different quantities: CTR going from 1.0% to 1.5% is half a point and a
+	 * 50% rise, and only one of those is what a reader takes "CTR up 50%" to
+	 * mean. See `Reporting_Rules::point_change()`.
+	 *
+	 * @param float|null $delta  Signed change.
+	 * @param bool       $points Whether $delta is percentage points.
+	 */
+	public function format_change( ?float $delta, bool $points = false ): string {
+		if ( null === $delta ) {
+			return '';
+		}
+
+		// Both a proportion and a point difference are stored as fractions, so
+		// both render by the same factor; only the unit differs.
+		$rounded = number_format_i18n( abs( $delta ) * 100, 1 );
+
+		if ( $points ) {
+			if ( $delta < 0 ) {
+				/* translators: %s: change in percentage points, e.g. 0.5. */
+				return sprintf( __( '−%s pp vs previous period', 'aggressive-ads' ), $rounded );
+			}
+
+			/* translators: %s: change in percentage points, e.g. 0.5. */
+			return sprintf( __( '+%s pp vs previous period', 'aggressive-ads' ), $rounded );
+		}
+
+		if ( $delta < 0 ) {
+			/* translators: %s: percentage change, e.g. 12.4. */
+			return sprintf( __( '−%s%% vs previous period', 'aggressive-ads' ), $rounded );
+		}
+
+		/* translators: %s: percentage change, e.g. 12.4. */
+		return sprintf( __( '+%s%% vs previous period', 'aggressive-ads' ), $rounded );
+	}
+
+	/**
+	 * Styling hook for a change, never the change's meaning.
+	 *
+	 * @param float|null $delta Signed change.
+	 */
+	private function direction( ?float $delta ): string {
+		if ( null === $delta ) {
+			return '';
+		}
+
+		if ( $delta > 0 ) {
+			return 'up';
+		}
+
+		return $delta < 0 ? 'down' : 'flat';
 	}
 
 	/**

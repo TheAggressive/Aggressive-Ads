@@ -127,6 +127,11 @@ days — inside a 25,550-row table. The ranged read costs 50 rows per day in ran
 and stays flat as the site ages; the unbounded one grows with retention, which
 defaults to keeping every day.
 
+The dashboard makes **two** of these reads rather than one, because each tile
+carries its change against the preceding window. Two bounded reads beat one
+wider read split in PHP, which would pull twice the rows into memory to answer
+a question SQL can already scope.
+
 `ReportReadScaleTest` holds the line, and it EXPLAINs `$wpdb->last_query` after
 calling the repository rather than a copy of the SQL. A guard that explains its
 own string keeps passing after the code it watches has changed — the failure

@@ -316,6 +316,69 @@ final class ReportingTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Each tile carries its change against the equal window before it.
+	 *
+	 * Read through the production view data rather than the repository, because
+	 * what this asserts is that two bounded reads reach one tile — the earlier
+	 * mistake available here was comparing a window against itself.
+	 *
+	 * @return void
+	 */
+	public function test_the_tiles_compare_against_the_previous_window(): void {
+		$this->enable_reporting( true );
+
+		// Forty days back is inside the comparison window and outside the
+		// reported one, which is the whole point of the arrangement.
+		$this->bump( $this->campaign_a, 100, 0, gmdate( 'Y-m-d', strtotime( '-40 days' ) ) );
+		$this->bump( $this->campaign_a, 150, 0 );
+		wp_set_current_user( $this->advertiser_a );
+
+		$tiles = array();
+
+		foreach ( $this->view->delivery_counts() as $tile ) {
+			$tiles[ (string) $tile['label'] ] = $tile;
+		}
+
+		$this->assertSame( '150', $tiles['Impressions']['value'] );
+		$this->assertStringContainsString( '50.0%', (string) $tiles['Impressions']['change'], 'The tile did not compare against the previous window.' );
+		$this->assertSame( 'up', $tiles['Impressions']['direction'] );
+
+		/*
+		 * The sign is in the text, not only in the class. A reader in high
+		 * contrast or monochrome must still be able to tell a rise from a fall,
+		 * so the direction class may never be the only carrier.
+		 */
+		$this->assertStringContainsString( '+', (string) $tiles['Impressions']['change'] );
+	}
+
+	/**
+	 * Nothing before the window means no comparison, not a total collapse.
+	 *
+	 * A first-week advertiser has an empty previous window, and every change
+	 * from nothing is infinite. Rendering that as a percentage would put a
+	 * number on the dashboard that means nothing and reads as alarming.
+	 *
+	 * @return void
+	 */
+	public function test_an_empty_previous_window_produces_no_comparison(): void {
+		$this->enable_reporting( true );
+		$this->bump( $this->campaign_a, 25, 3 );
+		wp_set_current_user( $this->advertiser_a );
+
+		$tiles = array();
+
+		foreach ( $this->view->delivery_counts() as $tile ) {
+			$tiles[ (string) $tile['label'] ] = $tile;
+		}
+
+		$this->assertSame( '', $tiles['Impressions']['change'], 'A comparison was drawn against a window with nothing in it.' );
+		$this->assertSame( '', $tiles['Impressions']['direction'] );
+
+		// And the metric nobody was measuring is not reported as a decline.
+		$this->assertSame( '', $tiles['Conversions']['change'], 'An unmeasured metric was given a comparison.' );
+	}
+
+	/**
 	 * **P12 counted conversions and nothing showed them.**
 	 *
 	 * Ingestion, deduplication, attribution and a definitions screen all

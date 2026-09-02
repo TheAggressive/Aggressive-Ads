@@ -368,6 +368,30 @@
 	line-height: 1.1;
 }
 
+/*
+ * Change against the previous window.
+ *
+ * The sign and the unit are already in the text, so colour here is decoration
+ * over something legible without it — which is the rule for every status colour
+ * in this file. Reusing the live/danger pair rather than inventing a green and
+ * a red keeps one set of hues carrying meaning across the portal, and both are
+ * already contrast-checked against the surface.
+ */
+.aggr-stat__change {
+	margin-top: var(--aggr-space-2xs);
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--aggr-color-text-muted);
+}
+
+.aggr-stat__change--up {
+	color: var(--aggr-color-live);
+}
+
+.aggr-stat__change--down {
+	color: var(--aggr-color-danger);
+}
+
 .aggr-dashboard--split {
 	display: grid;
 	grid-template-columns: 2fr 1fr;

@@ -41,6 +41,54 @@ final class ReportingRulesTest extends TestCase {
 	}
 
 	/**
+	 * Proportional change, and the three cases that have no percentage.
+	 *
+	 * @return void
+	 */
+	public function test_change_is_signed_and_refuses_what_cannot_be_divided(): void {
+		$this->assertSame( 0.5, Reporting_Rules::change( 150, 100 ) );
+		$this->assertSame( -0.25, Reporting_Rules::change( 75, 100 ) );
+		$this->assertSame( 0.0, Reporting_Rules::change( 100, 100 ) );
+
+		// Every change from nothing is infinite; the count already says the
+		// thing worth knowing.
+		$this->assertNull( Reporting_Rules::change( 40, 0 ) );
+	}
+
+	/**
+	 * **An unmeasured window never becomes a decline.**
+	 *
+	 * A range starting before a metric shipped compares against `NULL`, and
+	 * reporting that as `-100%` would invent a collapse out of a feature's
+	 * release date. The rule lives in the function rather than at each call
+	 * site, so a caller that coalesced its way to a zero cannot reintroduce it.
+	 *
+	 * @return void
+	 */
+	public function test_an_unmeasured_side_has_no_comparison(): void {
+		$this->assertNull( Reporting_Rules::change( 40, null ), 'An unmeasured previous window was reported as growth.' );
+		$this->assertNull( Reporting_Rules::change( null, 40 ), 'An unmeasured current window was reported as a decline.' );
+		$this->assertNull( Reporting_Rules::change( null, null ) );
+	}
+
+	/**
+	 * A rate's change is in points, not in percent of a percent.
+	 *
+	 * 1.0% to 1.5% is half a percentage point and a 50% rise. "CTR up 50%" is
+	 * read by nearly everybody as the wrong one of those, which is why counts
+	 * and rates take different functions.
+	 *
+	 * @return void
+	 */
+	public function test_a_rate_changes_by_points(): void {
+		$this->assertEqualsWithDelta( 0.005, Reporting_Rules::point_change( 0.015, 0.010 ), 0.000001 );
+		$this->assertEqualsWithDelta( -0.005, Reporting_Rules::point_change( 0.010, 0.015 ), 0.000001 );
+		$this->assertSame( 0.0, Reporting_Rules::point_change( 0.02, 0.02 ) );
+		$this->assertNull( Reporting_Rules::point_change( 0.02, null ) );
+		$this->assertNull( Reporting_Rules::point_change( null, 0.02 ) );
+	}
+
+	/**
 	 * A zero max is a flat line. A lone impression still occupies one pixel.
 	 *
 	 * @return void

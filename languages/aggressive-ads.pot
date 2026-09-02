@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-02T23:06:11+00:00\n"
+"POT-Creation-Date: 2026-09-02T23:34:06+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -99,7 +99,7 @@ msgstr ""
 #: inc/Admin/class-conversions-screen.php:165
 #: inc/Admin/class-conversions-screen.php:208
 #: inc/Admin/class-conversions-screen.php:270
-#: inc/Portal/class-delivery-view-data.php:125
+#: inc/Portal/class-delivery-view-data.php:136
 #: inc/Portal/class-report-actions.php:172
 #: templates/portal/partials/campaign-summary-facts.php:81
 #: templates/portal/partials/campaign-table.php:41
@@ -1096,7 +1096,7 @@ msgstr ""
 
 #: inc/Admin/class-review-screen.php:265
 #: templates/portal/screens/campaigns.php:53
-#: templates/portal/screens/dashboard.php:59
+#: templates/portal/screens/dashboard.php:61
 msgid "Create campaign"
 msgstr ""
 
@@ -2848,7 +2848,7 @@ msgstr[1] ""
 msgid "Figures from %s onward are still being counted."
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:109
+#: inc/Portal/class-delivery-view-data.php:114
 #: inc/Portal/class-report-actions.php:169
 #: templates/portal/partials/campaign-summary-facts.php:56
 #: templates/portal/partials/campaign-table.php:38
@@ -2856,25 +2856,49 @@ msgstr ""
 msgid "Impressions"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:113
+#: inc/Portal/class-delivery-view-data.php:119
 #: inc/Portal/class-report-actions.php:170
 #: templates/portal/partials/campaign-summary-facts.php:60
 #: templates/portal/partials/campaign-table.php:39
 msgid "Clicks"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:117
+#: inc/Portal/class-delivery-view-data.php:124
 #: templates/portal/partials/campaign-summary-facts.php:64
 #: templates/portal/partials/campaign-table.php:40
 msgid "CTR"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:121
+#: inc/Portal/class-delivery-view-data.php:130
 msgid "Viewable"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:175
-#: inc/Portal/class-delivery-view-data.php:226
+#. translators: %s: change in percentage points, e.g. 0.5.
+#: inc/Portal/class-delivery-view-data.php:190
+#, php-format
+msgid "−%s pp vs previous period"
+msgstr ""
+
+#. translators: %s: change in percentage points, e.g. 0.5.
+#: inc/Portal/class-delivery-view-data.php:194
+#, php-format
+msgid "+%s pp vs previous period"
+msgstr ""
+
+#. translators: %s: percentage change, e.g. 12.4.
+#: inc/Portal/class-delivery-view-data.php:199
+#, php-format
+msgid "−%s%% vs previous period"
+msgstr ""
+
+#. translators: %s: percentage change, e.g. 12.4.
+#: inc/Portal/class-delivery-view-data.php:203
+#, php-format
+msgid "+%s%% vs previous period"
+msgstr ""
+
+#: inc/Portal/class-delivery-view-data.php:267
+#: inc/Portal/class-delivery-view-data.php:318
 #: templates/portal/partials/campaign-summary-facts.php:75
 #: templates/portal/partials/campaign-table.php:81
 msgid "—"
@@ -2882,16 +2906,16 @@ msgstr ""
 
 #. translators: %s: click-through rate as a percentage, e.g. 1.2.
 #. translators: %s: share of impressions that were viewable, e.g. 62.5.
-#: inc/Portal/class-delivery-view-data.php:180
-#: inc/Portal/class-delivery-view-data.php:231
+#: inc/Portal/class-delivery-view-data.php:272
+#: inc/Portal/class-delivery-view-data.php:323
 #: templates/portal/partials/campaign-summary-facts.php:72
 #: templates/portal/partials/campaign-table.php:78
 #, php-format
 msgid "%s%%"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:198
-#: inc/Portal/class-delivery-view-data.php:220
+#: inc/Portal/class-delivery-view-data.php:290
+#: inc/Portal/class-delivery-view-data.php:312
 #: templates/portal/partials/campaign-summary-facts.php:90
 #: templates/portal/partials/campaign-table.php:97
 msgid "Not measured"
@@ -5169,32 +5193,32 @@ msgid "Confirm email change"
 msgstr ""
 
 #. translators: %s: the advertiser's display name.
-#: templates/portal/screens/dashboard.php:41
+#: templates/portal/screens/dashboard.php:43
 #, php-format
 msgid "Welcome back, %s"
 msgstr ""
 
-#: templates/portal/screens/dashboard.php:49
+#: templates/portal/screens/dashboard.php:51
 msgid "Your campaigns and where each one has got to."
 msgstr ""
 
-#: templates/portal/screens/dashboard.php:50
+#: templates/portal/screens/dashboard.php:52
 msgid "Your campaigns, and how they are delivering."
 msgstr ""
 
 #. translators: %s: the window the figures cover, e.g. Last 30 days (UTC).
-#: templates/portal/screens/dashboard.php:81
+#: templates/portal/screens/dashboard.php:83
 #, php-format
 msgid "Native delivery, %s"
 msgstr ""
 
 #. translators: %s: the window the figures cover, e.g. Last 30 days (UTC).
-#: templates/portal/screens/dashboard.php:97
+#: templates/portal/screens/dashboard.php:113
 #, php-format
 msgid "Impressions and clicks from native delivery. %s."
 msgstr ""
 
-#: templates/portal/screens/dashboard.php:112
+#: templates/portal/screens/dashboard.php:128
 msgid "Your campaigns"
 msgstr ""
 
