@@ -41,6 +41,13 @@ break the upload. Model transport failure as a value the capture returns, as
 
 Two more, from the WordPress suites' own machinery rather than from a mock:
 
+**An index named in a query plan is not an index doing work.** `EXPLAIN`'s
+`key` column says which index MySQL touched, not whether it served the filter —
+it will happily use one for a `GROUP BY` while scanning every row for the
+`WHERE`. Rebuilding P13's `day_outcome` as `(outcome)` alone, useless for a day
+range, left the plan still naming `day_outcome` and the assertion still green.
+**Assert rows examined**, which caught the same sabotage at 79,996 of 79,980.
+
 **A schema assertion is worthless until the table is dropped.** `dbDelta` adds
 an index and never drops one, so a DDL edit that changes or removes a key leaves
 the old one in place, still enforcing the old rule, and the suite passes over

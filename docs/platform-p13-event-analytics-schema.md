@@ -293,20 +293,44 @@ route without a report to serve is a surface to secure for no reader.
 
 ## Performance and scale contract
 
-- **Expected cardinality:** decision rollups are placements × days × outcomes.
-  At 1,000 placements, 26 reason codes plus two lifecycle outcomes, and 400 days
-  of retention, the ceiling is ~11M rows — but only outcomes that actually occur
-  are written, so the realistic figure is far lower. This must be measured, not
-  assumed, before the phase exits.
+- **Measured cardinality.** `DecisionRollupScaleTest` builds 1,000 placements ×
+  30 days and counts what a realistic outcome spread produces:
+
+  | | |
+  |---|---|
+  | rows at 1,000 placements × 30 days | 79,980 |
+  | rows per placement-day | 2.67 |
+  | projected at 400-day retention | ~1.07M |
+
+  The pessimistic ceiling — a row for every storable outcome — would be about
+  11M. The realistic figure is an order of magnitude below it because **only
+  outcomes that actually occur are written**: a placement that always fills
+  costs two rows a day, not twenty-eight. The test asserts that ratio stays
+  under 4.0, so a change that began recording outcomes which did not happen
+  fails rather than quietly multiplying the table.
+
+  Bytes are deliberately not recorded. `SHOW TABLE STATUS` reports an InnoDB
+  estimate, and the suite runs inside a rolled-back transaction, so any figure
+  taken there would be wrong in a document somebody later plans capacity from.
+  Row counts are exact because they are counted.
 - **Write budget:** **one** upsert statement per request for the decision
   counters, independent of the number of slots on the page. Not "one per slot".
 - **Hot-path budget:** the existing cold and warm fill budgets in
   `DeliveryScaleTest` may not increase. The option read and write this phase
   removes should make them go *down*; the test must be updated to the new
   numbers deliberately, and never loosened to accommodate a regression.
-- **Report read budget:** bounded by date range and placement, using the unique
-  key as a covering index. No ordinary report may scan proportional to ledger
-  size.
+- **Report read budget:** bounded by date range and placement. Both shapes are
+  asserted against `EXPLAIN` at the measured size: the per-placement read (the
+  publisher asking why a slot is empty) uses `slot_day_outcome`, and the
+  site-wide day read uses `day_outcome`.
+
+  **Naming the index in the plan is not the assertion.** Rebuilding
+  `day_outcome` as `(outcome)` alone — useless for a day range — left the plan
+  still naming it, because MySQL will use an index for the `GROUP BY` while
+  scanning every row for the `WHERE`. The guard reported success over an index
+  it was no longer reading. Both assertions therefore check **rows examined**,
+  which fails at 79,996 of 79,980 when either key stops leading on the column
+  its query filters by.
 - **Large fixture:** 1,000 placements and 400 days of counters, which is the
   shape that made the option's cost visible in the first place.
 
