@@ -106,7 +106,7 @@ final class Reporting_Read {
 	 *
 	 * @param int                $org_id Owning organization.
 	 * @param Report_Period|null $period Range, or the default window.
-	 * @return array{impressions: int, clicks: int, viewables: int|null}
+	 * @return array{impressions: int, clicks: int, viewables: int|null, conversions: int|null}
 	 */
 	public function totals_for_org( int $org_id, ?Report_Period $period = null ): array {
 		if ( ! $this->surfaces() ) {
@@ -116,6 +116,7 @@ final class Reporting_Read {
 				'impressions' => 0,
 				'clicks'      => 0,
 				'viewables'   => null,
+				'conversions' => null,
 			);
 		}
 
@@ -123,10 +124,12 @@ final class Reporting_Read {
 	}
 
 	/**
-	 * Adds impressions, clicks, and CTR to authorized campaign rows.
+	 * Adds impressions, clicks, CTR and conversions to authorized campaign rows.
 	 *
 	 * Off leaves the keys absent so a client cannot treat 0 as "nobody saw this."
-	 * CTR is null when impressions are not positive (not a fake 0%).
+	 * CTR is null when impressions are not positive (not a fake 0%), and
+	 * `conversions` is null for a campaign no day of which was measured — a
+	 * campaign that ran before P12 did not fail to convert, it was not counted.
 	 *
 	 * These are lifetime figures for a named campaign, deliberately: the row is
 	 * about the campaign rather than about a period, and the read is bounded by
@@ -156,6 +159,7 @@ final class Reporting_Read {
 			$rows[ $index ]['impressions'] = $impressions;
 			$rows[ $index ]['clicks']      = $clicks;
 			$rows[ $index ]['ctr']         = Reporting_Rules::ctr( $impressions, $clicks );
+			$rows[ $index ]['conversions'] = $totals[ $id ]['conversions'] ?? null;
 		}
 
 		return $rows;
@@ -186,7 +190,7 @@ final class Reporting_Read {
 	 *
 	 * @param int           $org_id Owning organization.
 	 * @param Report_Period $period Bounded UTC range.
-	 * @return list<array{day: string, campaign_id: int, campaign: string, impressions: int, clicks: int}>
+	 * @return list<array{day: string, campaign_id: int, campaign: string, impressions: int, clicks: int, conversions: int|null}>
 	 */
 	public function daily_rows_for_org( int $org_id, Report_Period $period ): array {
 		if ( ! $this->surfaces() ) {

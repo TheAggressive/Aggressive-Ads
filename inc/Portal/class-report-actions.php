@@ -144,7 +144,14 @@ final class Report_Actions implements Service {
 	 * CTR is written as a rounded percentage because that is what a reader
 	 * expects in a spreadsheet, and left empty — not 0 — when there were no
 	 * impressions, for the same reason `Reporting_Rules::ctr()` returns null:
-	 * "0%" claims the ad was seen and ignored.
+	 * "0%" claims the ad was seen and ignored. Conversions are left empty on the
+	 * same principle when the day predates measurement, and an empty cell is
+	 * meaningfully different from a `0` to every spreadsheet that will open this.
+	 *
+	 * **Columns are appended, never reordered or reinterpreted.** Somebody has
+	 * a spreadsheet pointed at column D. Adding conversions on the end is safe;
+	 * inserting it after clicks would silently change what four existing
+	 * columns mean in every workbook already built on this export.
 	 *
 	 * Public because it is the seam the tests use. `handle_export()` ends in
 	 * `exit`, so asserting on the bytes an advertiser actually receives is only
@@ -152,7 +159,7 @@ final class Report_Actions implements Service {
 	 * its own process to reach a private method is a test nobody maintains.
 	 * This is a pure function of its argument; exposing it grants nothing.
 	 *
-	 * @param list<array{day: string, campaign_id: int, campaign: string, impressions: int, clicks: int}> $rows Export rows.
+	 * @param list<array{day: string, campaign_id: int, campaign: string, impressions: int, clicks: int, conversions?: int|null}> $rows Export rows.
 	 */
 	public function document( array $rows ): string {
 		$header = array(
@@ -162,12 +169,14 @@ final class Report_Actions implements Service {
 			__( 'Impressions', 'aggressive-ads' ),
 			__( 'Clicks', 'aggressive-ads' ),
 			__( 'CTR %', 'aggressive-ads' ),
+			__( 'Conversions', 'aggressive-ads' ),
 		);
 
 		$body = array();
 
 		foreach ( $rows as $row ) {
-			$ctr = Reporting_Rules::ctr( $row['impressions'], $row['clicks'] );
+			$ctr         = Reporting_Rules::ctr( $row['impressions'], $row['clicks'] );
+			$conversions = $row['conversions'] ?? null;
 
 			$body[] = array(
 				$row['day'],
@@ -176,6 +185,7 @@ final class Report_Actions implements Service {
 				$row['impressions'],
 				$row['clicks'],
 				null === $ctr ? '' : round( $ctr * 100, 2 ),
+				null === $conversions ? '' : $conversions,
 			);
 		}
 

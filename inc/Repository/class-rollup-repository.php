@@ -660,10 +660,14 @@ final class Rollup_Repository {
 	}
 
 	/**
-	 * Lifetime impressions and clicks per campaign.
+	 * Lifetime impressions, clicks and conversions per campaign.
+	 *
+	 * `conversions` is nullable for the reason the column is: a campaign that
+	 * ran before P12 did not convert nobody, it was not being counted. A
+	 * `COALESCE` here would turn an unmeasured campaign into a failed one.
 	 *
 	 * @param array<int, int> $campaign_ids Campaign post ids.
-	 * @return array<int, array{impressions: int, clicks: int}> Keyed by campaign id.
+	 * @return array<int, array{impressions: int, clicks: int, conversions: int|null}> Keyed by campaign id.
 	 */
 	public function totals_for_campaigns( array $campaign_ids ): array {
 		$ids = array();
@@ -690,7 +694,8 @@ final class Rollup_Repository {
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQLPlaceholders.UnfinishedPrepare -- Table name is prefix+constant; placeholders are a fixed %d list matching $ids.
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT campaign_id, SUM(impressions) AS impressions, SUM(clicks) AS clicks
+				"SELECT campaign_id, SUM(impressions) AS impressions, SUM(clicks) AS clicks,
+					SUM(conversions) AS conversions
 				FROM {$table}
 				WHERE campaign_id IN ({$placeholders})
 				GROUP BY campaign_id",
@@ -713,6 +718,10 @@ final class Rollup_Repository {
 				$totals[ $campaign_id ] = array(
 					'impressions' => (int) $row['impressions'],
 					'clicks'      => (int) $row['clicks'],
+
+					// SUM of all-NULL is NULL, which is the answer wanted: no
+					// measured day contributed, so there is nothing to report.
+					'conversions' => null === $row['conversions'] ? null : (int) $row['conversions'],
 				);
 			}
 		}

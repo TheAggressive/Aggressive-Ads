@@ -98,17 +98,33 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 		$table     = file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-table.php' );
 		$detail    = file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/screens/campaign.php' );
 
+		// The campaign summary's facts moved out of the screen when it reached
+		// the file-length gate. The guard follows them: reading the screen for
+		// a block that is no longer in it is how this stops watching anything.
+		$facts = file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-summary-facts.php' );
+
 		$this->assertIsString( $dashboard );
 		$this->assertIsString( $table );
 		$this->assertIsString( $detail );
+		$this->assertIsString( $facts );
 		$this->assertStringContainsString( 'delivery_counts()', $dashboard );
 		$this->assertStringContainsString( 'delivery_series()', $dashboard );
 		$this->assertStringContainsString( 'partials/sparkline.php', $dashboard );
 		$this->assertStringContainsString( 'Impressions and clicks from native delivery', $dashboard );
 		$this->assertStringContainsString( '$aggr_show_metrics', $table );
 		$this->assertStringContainsString( 'CTR', $table );
-		$this->assertStringContainsString( "isset( \$aggr_campaign['impressions'], \$aggr_campaign['clicks'] )", $detail );
+		$this->assertStringContainsString( 'partials/campaign-summary-facts.php', $detail );
+		$this->assertStringContainsString( "isset( \$aggr_campaign['impressions'], \$aggr_campaign['clicks'] )", $facts );
 		$this->assertStringContainsString( 'aggr-sizebox', $detail );
+
+		/*
+		 * Conversions are gated the same way and, unlike the others, have an
+		 * absence that must not render as a number: a campaign nothing measured
+		 * says so in words. A template that printed `0` there would claim the
+		 * campaign converted nobody.
+		 */
+		$this->assertStringContainsString( 'Not measured', $facts );
+		$this->assertStringContainsString( 'Not measured', $table );
 	}
 
 	/**

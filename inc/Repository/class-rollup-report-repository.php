@@ -56,22 +56,24 @@ final class Rollup_Report_Repository {
 	/**
 	 * Delivery totals for one organization over a bounded range.
 	 *
-	 * `viewables` is a `SUM` over a nullable column and stays null when no day
-	 * in range was measured: a range before P11 did not have nobody see the
-	 * ads, it had nobody counting. Coalescing it to zero here is the one edit
+	 * `viewables` and `conversions` are `SUM`s over nullable columns and stay
+	 * null when no day in range was measured: a range before P11 did not have
+	 * nobody see the ads, and one before P12 did not have nobody convert — in
+	 * both cases nobody was counting. Coalescing either to zero is the one edit
 	 * that would turn an unmeasured period into an alarming one.
 	 *
 	 * House rows (`campaign_id = 0`) are excluded and never attributed.
 	 *
 	 * @param int           $org_id Owning organization.
 	 * @param Report_Period $period Bounded UTC range.
-	 * @return array{impressions: int, clicks: int, viewables: int|null}
+	 * @return array{impressions: int, clicks: int, viewables: int|null, conversions: int|null}
 	 */
 	public function totals_for_org( int $org_id, Report_Period $period ): array {
 		$empty = array(
 			'impressions' => 0,
 			'clicks'      => 0,
 			'viewables'   => null,
+			'conversions' => null,
 		);
 
 		if ( $org_id <= 0 ) {
@@ -86,7 +88,7 @@ final class Rollup_Report_Repository {
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
 				"SELECT COALESCE(SUM(r.impressions), 0) AS impressions, COALESCE(SUM(r.clicks), 0) AS clicks,
-					SUM(r.viewables) AS viewables
+					SUM(r.viewables) AS viewables, SUM(r.conversions) AS conversions
 				FROM {$table} r
 				WHERE r.org_id = %d
 					AND r.campaign_id > 0
@@ -108,6 +110,7 @@ final class Rollup_Report_Repository {
 			'impressions' => (int) $row['impressions'],
 			'clicks'      => (int) $row['clicks'],
 			'viewables'   => null === $row['viewables'] ? null : (int) $row['viewables'],
+			'conversions' => null === $row['conversions'] ? null : (int) $row['conversions'],
 		);
 	}
 
@@ -189,7 +192,7 @@ final class Rollup_Report_Repository {
 	 *
 	 * @param int           $org_id Owning organization.
 	 * @param Report_Period $period Bounded UTC range.
-	 * @return list<array{day: string, campaign_id: int, campaign: string, impressions: int, clicks: int}>
+	 * @return list<array{day: string, campaign_id: int, campaign: string, impressions: int, clicks: int, conversions: int|null}>
 	 */
 	public function daily_rows_for_org( int $org_id, Report_Period $period ): array {
 		if ( $org_id <= 0 ) {
@@ -208,7 +211,8 @@ final class Rollup_Report_Repository {
 					r.campaign_id AS campaign_id,
 					p.post_title AS campaign,
 					COALESCE(SUM(r.impressions), 0) AS impressions,
-					COALESCE(SUM(r.clicks), 0) AS clicks
+					COALESCE(SUM(r.clicks), 0) AS clicks,
+					SUM(r.conversions) AS conversions
 				FROM {$table} r
 				INNER JOIN {$posts} p
 					ON p.ID = r.campaign_id
@@ -243,6 +247,7 @@ final class Rollup_Report_Repository {
 				'campaign'    => (string) $row['campaign'],
 				'impressions' => (int) $row['impressions'],
 				'clicks'      => (int) $row['clicks'],
+				'conversions' => null === $row['conversions'] ? null : (int) $row['conversions'],
 			);
 		}
 

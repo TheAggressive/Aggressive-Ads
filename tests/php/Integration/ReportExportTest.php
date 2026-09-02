@@ -216,7 +216,59 @@ final class ReportExportTest extends WP_UnitTestCase {
 
 		$csv = $this->exports->document( $this->reporting->daily_rows_for_org( $this->org_a, Report_Period::trailing( 7, gmdate( 'Y-m-d' ) ) ) );
 
-		$this->assertStringContainsString( ",0,3,\r\n", $csv );
+		// Two empty trailing cells now: no CTR to compute, and no conversion
+		// measurement on a day that predates it.
+		$this->assertStringContainsString( ",0,3,,\r\n", $csv );
+	}
+
+	/**
+	 * Conversions are appended to the header, and the existing columns do not move.
+	 *
+	 * **The whole header is asserted, not a substring.** Somebody has a
+	 * spreadsheet pointed at column D. Appending is safe and inserting is not,
+	 * and the only assertion that can tell the two apart is one that pins the
+	 * order.
+	 *
+	 * @return void
+	 */
+	public function test_conversions_are_appended_without_moving_the_existing_columns(): void {
+		$this->enable_reporting( true );
+
+		$csv = $this->exports->document( array() );
+
+		// The document opens with a UTF-8 BOM so Excel reads it as UTF-8; that
+		// is the writer's job, not this assertion's.
+		$header = ltrim( (string) strtok( $csv, "\r\n" ), "\xEF\xBB\xBF" );
+
+		$this->assertSame(
+			'Date (UTC),Campaign,Campaign ID,Impressions,Clicks,CTR %,Conversions',
+			$header
+		);
+	}
+
+	/**
+	 * A counted conversion reaches the last cell; an uncounted day leaves it empty.
+	 *
+	 * Empty and `0` are read very differently by every spreadsheet that will
+	 * open this, and the difference is the one the nullable column exists to
+	 * preserve: a day before conversion tracking did not convert nobody, it was
+	 * not being counted.
+	 *
+	 * @return void
+	 */
+	public function test_an_unmeasured_conversion_is_an_empty_cell_not_a_zero(): void {
+		$this->bump( $this->campaign_a, 4, 1 );
+		$this->enable_reporting( true );
+
+		$rows = $this->reporting->daily_rows_for_org( $this->org_a, Report_Period::trailing( 7, gmdate( 'Y-m-d' ) ) );
+
+		$this->assertStringContainsString( ",4,1,25,\r\n", $this->exports->document( $rows ), 'An unmeasured conversion was written as something other than an empty cell.' );
+
+		$this->rollups->increment( 'conversions', $this->placement_id, $this->campaign_a, '', 0, (int) get_post_meta( $this->campaign_a, Campaign_Repository::META_ORG_ID, true ) );
+
+		$measured = $this->reporting->daily_rows_for_org( $this->org_a, Report_Period::trailing( 7, gmdate( 'Y-m-d' ) ) );
+
+		$this->assertStringContainsString( ",4,1,25,1\r\n", $this->exports->document( $measured ), 'A counted conversion did not reach the document.' );
 	}
 
 	/**
