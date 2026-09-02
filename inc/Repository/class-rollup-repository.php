@@ -27,6 +27,17 @@ final class Rollup_Repository {
 	public const OPTION_VIEWABILITY_SINCE = 'aggr_viewability_since';
 
 	/**
+	 * Which projector wrote a row's counters.
+	 *
+	 * Stamped on every write so a day rebuilt by a later projector and a day
+	 * written live are distinguishable. Without it a projection bug and real
+	 * history look identical, and "is this number old code's answer?" has no
+	 * way to be asked. Bump this when the projection's arithmetic changes, not
+	 * when unrelated code moves.
+	 */
+	public const PROJECTOR_VERSION = 1;
+
+	/**
 	 * Fully prefixed table name.
 	 */
 	public function table_name(): string {
@@ -59,6 +70,52 @@ final class Rollup_Repository {
 		$found = $wpdb->get_var( $wpdb->prepare( 'SHOW TABLES LIKE %s', $table ) );
 
 		return $found === $table;
+	}
+
+	/**
+	 * Fills `org_id` on rows written before the column existed.
+	 *
+	 * One statement, idempotent on `org_id = 0`: an interrupted run resumes by
+	 * being run again, and a site with nothing unattributed does no work. That
+	 * is why this needs no cursor, no batch size and no resume state — the
+	 * predicate *is* the cursor.
+	 *
+	 * **Filled in place rather than rebuilt**, because this table is the pacing
+	 * and frequency counter as well as the reporting source. Emptying it to let
+	 * the reconciler regenerate history would reset every live cap, and a
+	 * campaign whose counter restarts overdelivers for the rest of the day.
+	 *
+	 * It writes *today's* organization onto older rows, which is not a
+	 * reconstruction of history: nothing ever recorded who owned a campaign
+	 * last month. It is the same answer the read-time join returned, written
+	 * down once so it stops changing.
+	 *
+	 * House rows (`campaign_id = 0`) are skipped and keep `org_id = 0`. They
+	 * are never attributed to an organization, and an `INNER JOIN` would drop
+	 * them anyway — stating it in the predicate makes that intent rather than
+	 * an accident of the join.
+	 *
+	 * @return int Rows attributed.
+	 */
+	public function backfill_org_ids(): int {
+		global $wpdb;
+
+		$table = $this->table_name();
+		$meta  = $wpdb->postmeta;
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- One-time attribution across this plugin's projection and core postmeta; the only interpolations are table names and the meta key is prepared.
+		$updated = $wpdb->query(
+			$wpdb->prepare(
+				"UPDATE {$table} r
+				INNER JOIN {$meta} m ON m.post_id = r.campaign_id AND m.meta_key = %s
+				SET r.org_id = CAST(m.meta_value AS UNSIGNED)
+				WHERE r.org_id = 0 AND r.campaign_id > 0",
+				Campaign_Repository::META_ORG_ID
+			)
+		);
+		// phpcs:enable
+
+		return is_int( $updated ) ? $updated : 0;
 	}
 
 	/**
@@ -148,9 +205,10 @@ final class Rollup_Repository {
 	 * @param int    $campaign_id  Campaign id, or 0 for house.
 	 * @param string $day_utc      Optional UTC Y-m-d. Invalid values use today.
 	 * @param int    $line_item_id Line item the delivery is spent against, or 0.
+	 * @param int    $org_id       Owning organization, frozen onto the row.
 	 * @return bool
 	 */
-	public function increment( string $column, int $placement_id, int $campaign_id, string $day_utc = '', int $line_item_id = 0 ): bool {
+	public function increment( string $column, int $placement_id, int $campaign_id, string $day_utc = '', int $line_item_id = 0, int $org_id = 0 ): bool {
 		global $wpdb;
 
 		if ( ! in_array( $column, array( 'impressions', 'clicks', 'viewables', 'conversions' ), true ) ) {
@@ -189,18 +247,30 @@ final class Rollup_Repository {
 		$viewables_value   = 'conversions' === $column ? 'NULL' : (string) ( 'viewables' === $column ? 1 : 0 );
 		$conversions_value = 'conversions' === $column ? '1' : 'NULL';
 
+		/*
+		 * `org_id` is set on insert and **filled but never changed** on update.
+		 * It is a durable fact about the delivery, so a later write must not
+		 * move it — but a row that predates the column, or one created by a
+		 * conversion before any delivery resolved an organization, holds 0 and
+		 * should take the first real answer that arrives.
+		 */
+
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is prefix+constant; column and the two literals are allowlisted to impressions|clicks|viewables|conversions.
 		$written = $wpdb->query(
 			$wpdb->prepare(
-				"INSERT INTO {$table} (day_utc, placement_id, campaign_id, line_item_id, impressions, clicks, viewables, conversions)
-				VALUES (%s, %d, %d, %d, %d, %d, {$viewables_value}, {$conversions_value})
-				ON DUPLICATE KEY UPDATE {$column} = COALESCE({$column}, 0) + 1",
+				"INSERT INTO {$table} (day_utc, placement_id, campaign_id, line_item_id, org_id, impressions, clicks, viewables, conversions, projector_version)
+				VALUES (%s, %d, %d, %d, %d, %d, %d, {$viewables_value}, {$conversions_value}, %d)
+				ON DUPLICATE KEY UPDATE {$column} = COALESCE({$column}, 0) + 1,
+					org_id = IF(org_id = 0, VALUES(org_id), org_id),
+					projector_version = VALUES(projector_version)",
 				$day,
 				$placement_id,
 				$campaign_id,
 				$line_item_id,
+				max( 0, $org_id ),
 				'impressions' === $column ? 1 : 0,
-				'clicks' === $column ? 1 : 0
+				'clicks' === $column ? 1 : 0,
+				self::PROJECTOR_VERSION
 			)
 		);
 		// phpcs:enable
@@ -254,20 +324,40 @@ final class Rollup_Repository {
 		$since = (string) get_option( self::OPTION_VIEWABILITY_SINCE, '' );
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Idempotent projection repair between this plugin's two custom tables.
+		$meta = $wpdb->postmeta;
+
+		/*
+		 * **The reconciler repairs counters and leaves dimensions alone.**
+		 *
+		 * `org_id` is filled when the row does not have one and never changed
+		 * when it does. That asymmetry is the whole point of freezing it: this
+		 * statement runs over closed days on a schedule, and re-deriving
+		 * tenancy here would silently undo the freeze every night for anything
+		 * that had since changed hands — the exact drift the column exists to
+		 * stop, reintroduced by the machinery meant to guarantee accuracy.
+		 *
+		 * The join is `LEFT` for the same reason as the assignment one: a house
+		 * fill has no organization and must still reconcile.
+		 */
 		$written = $wpdb->query(
 			$wpdb->prepare(
-				"INSERT INTO {$rollups} (day_utc, placement_id, campaign_id, line_item_id, impressions, clicks, viewables)
-				SELECT %s, e.placement_id, e.campaign_id, COALESCE(a.line_item_id, 0),
+				"INSERT INTO {$rollups} (day_utc, placement_id, campaign_id, line_item_id, org_id, impressions, clicks, viewables, projector_version)
+				SELECT %s, e.placement_id, e.campaign_id, COALESCE(a.line_item_id, 0), COALESCE(MAX(m.meta_value), 0),
 					SUM(CASE WHEN e.event IN (%s, %s) THEN 1 ELSE 0 END),
 					SUM(CASE WHEN e.event = %s THEN 1 ELSE 0 END),
-					IF(%s = '' OR %s < %s, NULL, SUM(CASE WHEN e.event = %s THEN 1 ELSE 0 END))
+					IF(%s = '' OR %s < %s, NULL, SUM(CASE WHEN e.event = %s THEN 1 ELSE 0 END)),
+					%d
 				FROM {$events} e
 				LEFT JOIN {$assignments} a
 					ON a.revision_id = e.creative_id AND a.placement_id = e.placement_id
+				LEFT JOIN {$meta} m
+					ON m.post_id = e.campaign_id AND m.meta_key = %s
 				WHERE e.created_at_ts >= %d AND e.created_at_ts < %d
 				GROUP BY e.placement_id, e.campaign_id, COALESCE(a.line_item_id, 0)
 				ON DUPLICATE KEY UPDATE impressions = VALUES(impressions), clicks = VALUES(clicks),
-					viewables = IF(VALUES(viewables) = 0 AND viewables IS NULL, NULL, VALUES(viewables))",
+					viewables = IF(VALUES(viewables) = 0 AND viewables IS NULL, NULL, VALUES(viewables)),
+					org_id = IF(org_id = 0, VALUES(org_id), org_id),
+					projector_version = VALUES(projector_version)",
 				$day_utc,
 				Event_Repository::TYPE_SERVED,
 				Event_Repository::TYPE_IMPRESSION,
@@ -276,6 +366,8 @@ final class Rollup_Repository {
 				$day_utc,
 				$since,
 				Event_Repository::TYPE_VIEWABLE,
+				self::PROJECTOR_VERSION,
+				Campaign_Repository::META_ORG_ID,
 				$start,
 				$end
 			)
@@ -427,21 +519,15 @@ final class Rollup_Repository {
 		global $wpdb;
 
 		$table = $this->table_name();
-		$meta  = $wpdb->postmeta;
 
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table names are prefix+constant / core postmeta; org id is prepared.
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is prefix+constant; org id is prepared.
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
 				"SELECT COALESCE(SUM(r.impressions), 0) AS impressions, COALESCE(SUM(r.clicks), 0) AS clicks,
 					SUM(r.viewables) AS viewables
 				FROM {$table} r
-				INNER JOIN {$meta} m
-					ON m.post_id = r.campaign_id
-					AND m.meta_key = %s
-					AND m.meta_value = %s
-				WHERE r.campaign_id > 0",
-				Campaign_Repository::META_ORG_ID,
-				(string) $org_id
+				WHERE r.org_id = %d AND r.campaign_id > 0",
+				$org_id
 			),
 			ARRAY_A
 		);
@@ -680,7 +766,6 @@ final class Rollup_Repository {
 		global $wpdb;
 
 		$table = $this->table_name();
-		$meta  = $wpdb->postmeta;
 		$posts = $wpdb->posts;
 		$first = $keys[0];
 		$last  = $keys[ array_key_last( $keys ) ];
@@ -694,19 +779,15 @@ final class Rollup_Repository {
 					COALESCE(SUM(r.impressions), 0) AS impressions,
 					COALESCE(SUM(r.clicks), 0) AS clicks
 				FROM {$table} r
-				INNER JOIN {$meta} m
-					ON m.post_id = r.campaign_id
-					AND m.meta_key = %s
-					AND m.meta_value = %s
 				INNER JOIN {$posts} p
 					ON p.ID = r.campaign_id
-				WHERE r.campaign_id > 0
+				WHERE r.org_id = %d
+					AND r.campaign_id > 0
 					AND r.day_utc >= %s
 					AND r.day_utc <= %s
 				GROUP BY r.day_utc, r.campaign_id, p.post_title
 				ORDER BY r.day_utc ASC, p.post_title ASC",
-				Campaign_Repository::META_ORG_ID,
-				(string) $org_id,
+				$org_id,
 				$first,
 				$last
 			),
@@ -767,7 +848,6 @@ final class Rollup_Repository {
 		global $wpdb;
 
 		$table = $this->table_name();
-		$meta  = $wpdb->postmeta;
 		$first = $keys[0];
 		$last  = $keys[ array_key_last( $keys ) ];
 
@@ -776,16 +856,12 @@ final class Rollup_Repository {
 			$wpdb->prepare(
 				"SELECT r.day_utc AS day, COALESCE(SUM(r.impressions), 0) AS impressions, COALESCE(SUM(r.clicks), 0) AS clicks
 				FROM {$table} r
-				INNER JOIN {$meta} m
-					ON m.post_id = r.campaign_id
-					AND m.meta_key = %s
-					AND m.meta_value = %s
-				WHERE r.campaign_id > 0
+				WHERE r.org_id = %d
+					AND r.campaign_id > 0
 					AND r.day_utc >= %s
 					AND r.day_utc <= %s
 				GROUP BY r.day_utc",
-				Campaign_Repository::META_ORG_ID,
-				(string) $org_id,
+				$org_id,
 				$first,
 				$last
 			),

@@ -263,12 +263,18 @@ final class ReportExportTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	private function bump( int $campaign_id, int $impressions, int $clicks ): void {
+		// Resolved as `Event_Recorder` resolves it: `org_id` is frozen onto the
+		// row at write time, and org-scoped reads filter on it.
+		$org_id = $campaign_id > 0
+			? (int) get_post_meta( $campaign_id, Campaign_Repository::META_ORG_ID, true )
+			: 0;
+
 		for ( $i = 0; $i < $impressions; $i++ ) {
-			$this->rollups->increment( 'impressions', $this->placement_id, $campaign_id );
+			$this->rollups->increment( 'impressions', $this->placement_id, $campaign_id, '', 0, $org_id );
 		}
 
 		for ( $i = 0; $i < $clicks; $i++ ) {
-			$this->rollups->increment( 'clicks', $this->placement_id, $campaign_id );
+			$this->rollups->increment( 'clicks', $this->placement_id, $campaign_id, '', 0, $org_id );
 		}
 	}
 

@@ -71,10 +71,17 @@ final class Event_Recorder {
 		 * that was already happening. An unattributable event counts against
 		 * line item 0 rather than being dropped: the ledger stays the truth and
 		 * the daily reconcile repairs the projection.
+		 *
+		 * The owning organization is resolved by the same read, and frozen onto
+		 * the rollup row. Reporting used to recover it by joining the campaign's
+		 * meta at read time, which made tenancy a current fact rather than a
+		 * historical one: a campaign moved between organizations took its past
+		 * totals along. Resolving it here costs nothing extra because the query
+		 * was already happening.
 		 */
-		$line_item_id = $this->assignments->line_item_for( $creative_id, $placement_id );
+		$attribution = $this->assignments->attribution_for( $creative_id, $placement_id, $campaign_id );
 
-		return $this->rollups->increment( $column, $placement_id, $campaign_id, '', $line_item_id )
+		return $this->rollups->increment( $column, $placement_id, $campaign_id, '', $attribution['line_item_id'], $attribution['org_id'] )
 			? self::RECORDED
 			: self::RECORDED_PENDING;
 	}

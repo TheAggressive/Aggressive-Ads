@@ -24,7 +24,7 @@ final class Schema {
 	 *
 	 * Drives the migration walker in Upgrader.
 	 */
-	public const DB_VERSION = 23;
+	public const DB_VERSION = 24;
 
 	/**
 	 * The audit table's name, without the site's table prefix.
@@ -479,6 +479,7 @@ final class Schema {
 	creative_id bigint(20) unsigned NOT NULL DEFAULT 0,
 	token_hash char(64) NOT NULL DEFAULT '',
 	ip_hash char(64) NOT NULL DEFAULT '',
+	schema_version smallint(5) unsigned NOT NULL DEFAULT 0,
 	PRIMARY KEY  (id),
 	UNIQUE KEY token_event (token_hash,event),
 	KEY created (created_at_ts,id),
@@ -501,6 +502,7 @@ final class Schema {
 			'creative_id',
 			'token_hash',
 			'ip_hash',
+			'schema_version',
 		);
 	}
 
@@ -526,6 +528,20 @@ final class Schema {
 	 * before P12 has no conversions to have counted, and a campaign reported as
 	 * converting nobody is a different statement from one nobody was measuring.
 	 *
+	 * **`org_id` is a frozen fact, not a lookup.** Org totals used to be
+	 * produced by joining `_aggr_org_id` off the campaign at read time, which
+	 * made tenancy a *current* fact about the campaign rather than a historical
+	 * fact about the delivery: moving a campaign between organizations moved
+	 * last quarter's totals with it, in both directions, with nothing recording
+	 * that it had. Tenancy decides who may read a number, so it is the one
+	 * label that cannot be re-resolved. Written once at delivery and never
+	 * re-derived — including by the reconciler, which repairs counters and
+	 * leaves dimensions alone.
+	 *
+	 * **`projector_version` says which code wrote the counters.** A day rebuilt
+	 * by a later projector and a day written live are otherwise
+	 * indistinguishable, so a projection bug cannot be told from real history.
+	 *
 	 * @param string $table_name      Fully prefixed table name.
 	 * @param string $charset_collate Database charset and collation.
 	 * @return string
@@ -537,14 +553,17 @@ final class Schema {
 	placement_id bigint(20) unsigned NOT NULL DEFAULT 0,
 	campaign_id bigint(20) unsigned NOT NULL DEFAULT 0,
 	line_item_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	org_id bigint(20) unsigned NOT NULL DEFAULT 0,
 	impressions bigint(20) unsigned NOT NULL DEFAULT 0,
 	clicks bigint(20) unsigned NOT NULL DEFAULT 0,
 	viewables bigint(20) unsigned NULL DEFAULT NULL,
 	conversions bigint(20) unsigned NULL DEFAULT NULL,
+	projector_version smallint(5) unsigned NOT NULL DEFAULT 0,
 	PRIMARY KEY  (id),
 	UNIQUE KEY slot_line_day (placement_id,campaign_id,line_item_id,day_utc),
 	KEY campaign_day (campaign_id,day_utc),
-	KEY line_item_day (line_item_id,day_utc)
+	KEY line_item_day (line_item_id,day_utc),
+	KEY org_day (org_id,day_utc)
 ) {$charset_collate};";
 	}
 
@@ -560,10 +579,12 @@ final class Schema {
 			'placement_id',
 			'campaign_id',
 			'line_item_id',
+			'org_id',
 			'impressions',
 			'clicks',
 			'viewables',
 			'conversions',
+			'projector_version',
 		);
 	}
 
@@ -573,7 +594,7 @@ final class Schema {
 	 * @return array<int, string>
 	 */
 	public static function rollups_index_names(): array {
-		return array( 'PRIMARY', 'slot_line_day', 'campaign_day', 'line_item_day' );
+		return array( 'PRIMARY', 'slot_line_day', 'campaign_day', 'line_item_day', 'org_day' );
 	}
 
 	/**

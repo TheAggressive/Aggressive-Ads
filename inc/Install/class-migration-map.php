@@ -252,6 +252,40 @@ final class Migration_Map {
 
 				delete_option( Decision_Metrics::LEGACY_OPTION_EXCLUSIONS );
 			},
+
+			/*
+			 * Schema versioning, and tenancy that stops moving.
+			 *
+			 * `aggr_rollups` gains `org_id` and `projector_version`;
+			 * `aggr_events` gains `schema_version`. All three are additive with
+			 * defaults, so `dbDelta` adds columns and no existing row changes
+			 * meaning.
+			 *
+			 * **The rows are filled in place rather than rebuilt**, and the
+			 * reason is that this table is not only the reporting source: it is
+			 * the pacing and frequency counter. Emptying it to let the
+			 * reconciler regenerate history would also reset every live cap,
+			 * and a campaign whose counter starts from nothing overdelivers for
+			 * the rest of the day — `ReleaseUpgradePathTest` names that
+			 * consequence for the same table one migration earlier.
+			 *
+			 * One `UPDATE` with a join, no cursor and no staging, because there
+			 * is nothing to stage: the statement is idempotent on `org_id = 0`,
+			 * so an interrupted run resumes by being run again, and a site with
+			 * no unattributed rows does no work.
+			 *
+			 * What it cannot do is recover *historical* tenancy. Nothing ever
+			 * recorded which organization owned a campaign last month, so this
+			 * writes today's answer onto older rows — which is exactly what the
+			 * read-time join it replaces already returned. The value of the
+			 * column is that tenancy stops moving from here, not that the past
+			 * becomes knowable.
+			 */
+			24 => static function () use ( $c ): void {
+				$c->get( Installer::class )->install_delivery_tables();
+
+				$c->get( \Aggressive\Ads\Repository\Rollup_Repository::class )->backfill_org_ids();
+			},
 		);
 	}
 }

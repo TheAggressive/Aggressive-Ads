@@ -169,6 +169,33 @@ by `Domain\Decision_Outcome`, so no caller can grow the table by inventing a
 code. Decision SQL lives in `Decision_Rollup_Repository`. See db version 23 and
 [platform-p13-event-analytics-schema.md](platform-p13-event-analytics-schema.md).
 
+**`org_id` is schema 24, and it is a frozen fact rather than a lookup.** Org
+totals used to be produced by joining `_aggr_org_id` off the campaign at read
+time, which made tenancy a *current* fact about the campaign instead of a
+historical fact about the delivery: moving a campaign between organizations
+moved its past totals with it, in both directions, with nothing recording that
+it had. Tenancy decides who may read a number, so it is the one label that
+cannot be re-resolved.
+
+It is written by `Event_Recorder` from the campaign **the event names**, not the
+one on the matching assignment. Those differ exactly where it matters: a house
+fill carries `campaign_id = 0` while still matching an assignment whose campaign
+belongs to somebody, so keying on the assignment credited house inventory to
+that advertiser. House rows stay at `org_id = 0` and are never attributed.
+
+The value is filled when absent and never changed once set — by the live write,
+by the reconciler, and by the migration alike. The reconciler is the one that
+matters: it rebuilds closed days on a schedule, so re-deriving tenancy there
+would silently undo the freeze every night, in the code whose purpose is to
+guarantee accuracy.
+
+**`projector_version` is schema 24 too**, stamped on every write so a day
+rebuilt by a later projector and a day written live are distinguishable.
+`aggr_events.schema_version` is its counterpart on the ledger: a row's meaning
+depends on the vocabulary in force when it was written — P10 already redefined
+`impression` as `served` once — and rows predating the column read 0, which is
+the honest answer rather than a guess.
+
 Event SQL lives in `Event_Repository`; rollup SQL in `Rollup_Repository`.
 The event row is the durable ledger; the synchronous rollup upsert is a
 low-latency projection. An hourly restartable reconciler rebuilds closed UTC
@@ -305,6 +332,8 @@ array(
     21 => install_conversions,            // aggr_conversion_credentials
     22 => install_table,                  // assignments gain operator_paused
     23 => install_decision_rollups,       // aggr_decision_rollups; drops the option it replaces
+    24 => install_delivery_tables,        // + org_id, projector_version, schema_version
+         backfill_org_ids,                // fills in place; never empties the pacing counter
 )
 ```
 
