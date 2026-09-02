@@ -105,6 +105,35 @@ to dedicated analytics infrastructure before the operational limits of the
 WordPress database are reached; rollups remain compact and authoritative for
 the advertiser UI.
 
+## Report reads are bounded by a range, not by retention
+
+Every org-scoped read of `aggr_rollups` goes through `Rollup_Report_Repository`
+and takes a `Domain\Report_Period` — a value object that cannot be constructed
+unbounded, capped at 92 days. That is a type, not a convention, because a bound
+each caller applies for itself is a bound one caller forgets.
+
+The advertiser dashboard's first tile used to have no date predicate at all. It
+summed everything the organization had ever delivered, on every page load, with
+nothing to bring it back down as history accumulated:
+
+| read | rows examined at one year |
+|---:|---:|
+| all-time org total (before) | 12,775 |
+| 30-day org total (after) | 1,500 |
+| 30-day org series (after) | 1,500 |
+
+Measured on 18,250 rows for one organization — 10 campaigns × 5 placements × 365
+days — inside a 25,550-row table. The ranged read costs 50 rows per day in range
+and stays flat as the site ages; the unbounded one grows with retention, which
+defaults to keeping every day.
+
+`ReportReadScaleTest` holds the line, and it EXPLAINs `$wpdb->last_query` after
+calling the repository rather than a copy of the SQL. A guard that explains its
+own string keeps passing after the code it watches has changed — the failure
+P13 hit twice. Restoring the missing predicate is what the test was proven
+against: with the date filter made non-sargable the values stay correct and the
+plan still names `org_day`, and the assertion fails at 12,775 of 18,250.
+
 ## Frequency capping needs the object cache more than the rest
 
 `Transient_Frequency_Store` uses `wp_cache_incr()` when a persistent object

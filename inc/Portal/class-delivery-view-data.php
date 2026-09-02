@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Portal;
 
+use Aggressive\Ads\Domain\Report_Period;
 use Aggressive\Ads\Domain\Reporting_Rules;
 use Aggressive\Ads\Workflow\Reporting_Read;
 
@@ -32,20 +33,75 @@ final class Delivery_View_Data {
 	}
 
 	/**
-	 * Native delivery totals for one organization.
+	 * The window every delivery tile on the dashboard covers.
+	 *
+	 * Read once and passed to both the numbers and the caption, so a tile
+	 * cannot end up describing a different period than the one it summed.
+	 */
+	public function period(): Report_Period {
+		return $this->reporting->default_period();
+	}
+
+	/**
+	 * The range in words, timezone included.
+	 *
+	 * **UTC is stated, not implied.** Both projections are keyed by a UTC day
+	 * and neither carries an hour, so a publisher or advertiser east or west of
+	 * UTC is reading days that do not line up with their own. A report that
+	 * left that unsaid would be quietly wrong for most of the world for the
+	 * hours that matter most.
+	 */
+	public function range_label(): string {
+		return sprintf(
+			/* translators: %d: number of days the delivery figures cover. */
+			_n( 'Last %d day (UTC)', 'Last %d days (UTC)', Reporting_Read::DEFAULT_DAYS, 'aggressive-ads' ),
+			Reporting_Read::DEFAULT_DAYS
+		);
+	}
+
+	/**
+	 * A sentence naming the first day whose numbers may still move, or ''.
+	 *
+	 * Empty means every day in range has been rebuilt from the event ledger and
+	 * will not change. Anything else names the boundary rather than disclaiming
+	 * the whole table, because "these numbers might be wrong" tells a reader
+	 * nothing they can act on and a date tells them which rows to re-check.
+	 *
+	 * @param Report_Period|null $period Range being described.
+	 */
+	public function freshness_note( ?Report_Period $period = null ): string {
+		$freshness = $this->reporting->freshness( $period ?? $this->period() );
+		$from      = $freshness['unreconciled_from'];
+
+		if ( Report_Period::RECONCILED === $freshness['state'] || null === $from ) {
+			return '';
+		}
+
+		$timestamp = strtotime( $from . ' UTC' );
+
+		return sprintf(
+			/* translators: %s: a date, e.g. 30 August 2026. */
+			__( 'Figures from %s onward are still being counted.', 'aggressive-ads' ),
+			false === $timestamp ? $from : (string) wp_date( (string) get_option( 'date_format', 'Y-m-d' ), $timestamp )
+		);
+	}
+
+	/**
+	 * Native delivery totals for one organization over the reporting window.
 	 *
 	 * Empty when the reporting surface is off, so the template does not render
 	 * a row of zeros that look like traffic.
 	 *
-	 * @param int $org_id Organization to report on.
+	 * @param int                $org_id Organization to report on.
+	 * @param Report_Period|null $period Range, or the dashboard's own window.
 	 * @return array<int, array{label: string, value: string}>
 	 */
-	public function counts( int $org_id ): array {
+	public function counts( int $org_id, ?Report_Period $period = null ): array {
 		if ( ! $this->reporting->surfaces() ) {
 			return array();
 		}
 
-		$totals = $this->reporting->totals_for_org( $org_id );
+		$totals = $this->reporting->totals_for_org( $org_id, $period ?? $this->period() );
 		$ctr    = Reporting_Rules::ctr( $totals['impressions'], $totals['clicks'] );
 
 		return array(

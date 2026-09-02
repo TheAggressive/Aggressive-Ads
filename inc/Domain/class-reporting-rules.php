@@ -53,36 +53,6 @@ final class Reporting_Rules {
 	}
 
 	/**
-	 * Inclusive UTC day keys ending on $end_day.
-	 *
-	 * Invalid ranges and dates yield an empty list so a caller cannot walk
-	 * an unbounded series.
-	 *
-	 * @param int    $days    Length, 1–31.
-	 * @param string $end_day UTC Y-m-d of the last day.
-	 * @return list<string>
-	 */
-	public static function utc_day_keys( int $days, string $end_day ): array {
-		if ( $days < 1 || $days > 31 || 1 !== preg_match( '/^\d{4}-\d{2}-\d{2}$/', $end_day ) ) {
-			return array();
-		}
-
-		try {
-			$end = new \DateTimeImmutable( $end_day . ' 00:00:00', new \DateTimeZone( 'UTC' ) );
-		} catch ( \Exception $e ) {
-			return array();
-		}
-
-		$keys = array();
-
-		for ( $offset = $days - 1; $offset >= 0; $offset-- ) {
-			$keys[] = $end->modify( '-' . (string) $offset . ' days' )->format( 'Y-m-d' );
-		}
-
-		return $keys;
-	}
-
-	/**
 	 * Height of one sparkline bar as an integer 0–$track.
 	 *
 	 * A positive value on a positive max is at least 1 so a single impression

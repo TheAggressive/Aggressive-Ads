@@ -9,11 +9,14 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Repository;
 
-use Aggressive\Ads\Domain\Reporting_Rules;
 use Aggressive\Ads\Install\Schema;
 
 /**
- * The only code that touches aggr_rollups.
+ * The table's schema, its writes, and the reads delivery itself makes.
+ *
+ * Org-scoped reporting reads live in `Rollup_Report_Repository`. Same table,
+ * two review standards: this half is judged on contention and query budget on
+ * the serving path, that half on tenant isolation and range bounds.
  */
 final class Rollup_Repository {
 
@@ -524,61 +527,6 @@ final class Rollup_Repository {
 	}
 
 	/**
-	 * Org-scoped totals across every day and placement.
-	 *
-	 * The join is the isolation boundary. Summing a PHP list of campaign ids
-	 * would under-count as soon as the dashboard is paged, and house rows
-	 * (campaign_id = 0) never have organization meta so they cannot leak in.
-	 *
-	 * `viewables` is deliberately nullable all the way out: summing it with
-	 * `COALESCE` would turn "no day was measured" into "nothing was seen".
-	 *
-	 * @param int $org_id Owning organization.
-	 * @return array{impressions: int, clicks: int, viewables: int|null}
-	 */
-	public function totals_for_org( int $org_id ): array {
-		$empty = array(
-			'impressions' => 0,
-			'clicks'      => 0,
-			'viewables'   => null,
-		);
-
-		if ( $org_id <= 0 ) {
-			return $empty;
-		}
-
-		global $wpdb;
-
-		$table = $this->table_name();
-
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is prefix+constant; org id is prepared.
-		$row = $wpdb->get_row(
-			$wpdb->prepare(
-				"SELECT COALESCE(SUM(r.impressions), 0) AS impressions, COALESCE(SUM(r.clicks), 0) AS clicks,
-					SUM(r.viewables) AS viewables
-				FROM {$table} r
-				WHERE r.org_id = %d AND r.campaign_id > 0",
-				$org_id
-			),
-			ARRAY_A
-		);
-		// phpcs:enable
-
-		if ( ! is_array( $row ) ) {
-			return $empty;
-		}
-
-		return array(
-			'impressions' => (int) $row['impressions'],
-			'clicks'      => (int) $row['clicks'],
-
-			// `SUM` of all-NULL is NULL, which is exactly the answer wanted:
-			// no measured day contributed, so there is no rate to report.
-			'viewables'   => null === $row['viewables'] ? null : (int) $row['viewables'],
-		);
-	}
-
-	/**
 	 * Per-campaign totals for a trusted id list.
 	 *
 	 * Callers must pass only ids already authorized for the current user.
@@ -770,153 +718,5 @@ final class Rollup_Repository {
 		}
 
 		return $totals;
-	}
-
-	/**
-	 * Org-scoped per-campaign, per-day rows for export, oldest day first.
-	 *
-	 * Unlike `series_for_org()` this does not pad missing days. A sparkline
-	 * needs a bar for every day so the shape is honest; a spreadsheet does not
-	 * need a row asserting that nothing happened, and 90 days times every
-	 * campaign of zeros would bury the days that did.
-	 *
-	 * The campaign title is joined here rather than looked up per row, because
-	 * the alternative is one `get_post()` per row inside an export loop.
-	 *
-	 * @param int $org_id Owning organization.
-	 * @param int $days   Window length, 1–31.
-	 * @return list<array{day: string, campaign_id: int, campaign: string, impressions: int, clicks: int}>
-	 */
-	public function daily_rows_for_org( int $org_id, int $days = 31 ): array {
-		$keys = Reporting_Rules::utc_day_keys( $days, gmdate( 'Y-m-d' ) );
-
-		if ( array() === $keys || $org_id <= 0 ) {
-			return array();
-		}
-
-		global $wpdb;
-
-		$table = $this->table_name();
-		$posts = $wpdb->posts;
-		$first = $keys[0];
-		$last  = $keys[ array_key_last( $keys ) ];
-
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table names are prefix+constant / core posts and postmeta; bounds and org id are prepared.
-		$rows = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT r.day_utc AS day,
-					r.campaign_id AS campaign_id,
-					p.post_title AS campaign,
-					COALESCE(SUM(r.impressions), 0) AS impressions,
-					COALESCE(SUM(r.clicks), 0) AS clicks
-				FROM {$table} r
-				INNER JOIN {$posts} p
-					ON p.ID = r.campaign_id
-				WHERE r.org_id = %d
-					AND r.campaign_id > 0
-					AND r.day_utc >= %s
-					AND r.day_utc <= %s
-				GROUP BY r.day_utc, r.campaign_id, p.post_title
-				ORDER BY r.day_utc ASC, p.post_title ASC",
-				$org_id,
-				$first,
-				$last
-			),
-			ARRAY_A
-		);
-		// phpcs:enable
-
-		if ( ! is_array( $rows ) ) {
-			return array();
-		}
-
-		$out = array();
-
-		foreach ( $rows as $row ) {
-			if ( ! is_array( $row ) ) {
-				continue;
-			}
-
-			$out[] = array(
-				'day'         => (string) $row['day'],
-				'campaign_id' => (int) $row['campaign_id'],
-				'campaign'    => (string) $row['campaign'],
-				'impressions' => (int) $row['impressions'],
-				'clicks'      => (int) $row['clicks'],
-			);
-		}
-
-		return $out;
-	}
-
-	/**
-	 * Org-scoped daily totals for a closed UTC window, oldest day first.
-	 *
-	 * Missing days are zeros. House rows cannot join organization meta, so they
-	 * cannot appear. Callers that need a sparkline must still gate on Reporting.
-	 *
-	 * @param int $org_id Owning organization.
-	 * @param int $days   Length, 1–31. Values outside that range are empty.
-	 * @return list<array{day: string, impressions: int, clicks: int}>
-	 */
-	public function series_for_org( int $org_id, int $days = 7 ): array {
-		$keys = Reporting_Rules::utc_day_keys( $days, gmdate( 'Y-m-d' ) );
-
-		if ( array() === $keys || $org_id <= 0 ) {
-			return array();
-		}
-
-		$padded = array();
-
-		foreach ( $keys as $day ) {
-			$padded[ $day ] = array(
-				'day'         => $day,
-				'impressions' => 0,
-				'clicks'      => 0,
-			);
-		}
-
-		global $wpdb;
-
-		$table = $this->table_name();
-		$first = $keys[0];
-		$last  = $keys[ array_key_last( $keys ) ];
-
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table names are prefix+constant / core postmeta; bounds and org id are prepared.
-		$rows = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT r.day_utc AS day, COALESCE(SUM(r.impressions), 0) AS impressions, COALESCE(SUM(r.clicks), 0) AS clicks
-				FROM {$table} r
-				WHERE r.org_id = %d
-					AND r.campaign_id > 0
-					AND r.day_utc >= %s
-					AND r.day_utc <= %s
-				GROUP BY r.day_utc",
-				$org_id,
-				$first,
-				$last
-			),
-			ARRAY_A
-		);
-		// phpcs:enable
-
-		if ( is_array( $rows ) ) {
-			foreach ( $rows as $row ) {
-				if ( ! is_array( $row ) ) {
-					continue;
-				}
-
-				$day = (string) $row['day'];
-
-				if ( ! isset( $padded[ $day ] ) ) {
-					continue;
-				}
-
-				$padded[ $day ]['impressions'] = (int) $row['impressions'];
-				$padded[ $day ]['clicks']      = (int) $row['clicks'];
-			}
-		}
-
-		return array_values( $padded );
 	}
 }

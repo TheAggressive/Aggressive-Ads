@@ -589,7 +589,9 @@ final class Service_Registrar {
 			Reporting_Read::class,
 			static fn ( Service_Container $c ): Reporting_Read => new Reporting_Read(
 				$c->get( Settings::class ),
-				$c->get( Rollup_Repository::class )
+				$c->get( Rollup_Repository::class ),
+				$c->get( \Aggressive\Ads\Repository\Rollup_Report_Repository::class ),
+				$c->get( \Aggressive\Ads\Workflow\Rollup_Reconciler::class )
 			)
 		);
 

@@ -15,6 +15,8 @@ use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Event_Repository;
+use Aggressive\Ads\Domain\Report_Period;
+use Aggressive\Ads\Repository\Rollup_Report_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Workflow\Event_Recorder;
 use WP_UnitTestCase;
@@ -43,6 +45,13 @@ final class FrozenTenancyTest extends WP_UnitTestCase {
 	private Rollup_Repository $rollups;
 
 	/**
+	 * Org-scoped, range-bounded reads.
+	 *
+	 * @var Rollup_Report_Repository
+	 */
+	private Rollup_Report_Repository $reports;
+
+	/**
 	 * Production write path.
 	 *
 	 * @var Event_Recorder
@@ -62,6 +71,7 @@ final class FrozenTenancyTest extends WP_UnitTestCase {
 		$container = Plugin::instance()->container();
 
 		$this->rollups = $container->get( Rollup_Repository::class );
+		$this->reports = $container->get( Rollup_Report_Repository::class );
 		$this->rollups->install_table();
 
 		$container->get( Event_Repository::class )->install_table();
@@ -170,7 +180,7 @@ final class FrozenTenancyTest extends WP_UnitTestCase {
 
 		$this->serve( $fixture, 'before' );
 
-		$before_old = $this->rollups->totals_for_org( 100 );
+		$before_old = $this->reports->totals_for_org( 100, $this->window() );
 		$this->assertSame( 1, $before_old['impressions'], 'Without a delivery on the books this test proves nothing.' );
 
 		// The campaign changes hands.
@@ -178,12 +188,12 @@ final class FrozenTenancyTest extends WP_UnitTestCase {
 
 		$this->assertSame(
 			1,
-			$this->rollups->totals_for_org( 100 )['impressions'],
+			$this->reports->totals_for_org( 100, $this->window() )['impressions'],
 			'The former organization lost a delivery it really made.'
 		);
 		$this->assertSame(
 			0,
-			$this->rollups->totals_for_org( 200 )['impressions'],
+			$this->reports->totals_for_org( 200, $this->window() )['impressions'],
 			'The new organization was credited with a delivery it never made.'
 		);
 	}
@@ -256,7 +266,7 @@ final class FrozenTenancyTest extends WP_UnitTestCase {
 			str_repeat( 'b', 64 )
 		);
 
-		$this->assertSame( 0, $this->rollups->totals_for_org( 100 )['impressions'] );
+		$this->assertSame( 0, $this->reports->totals_for_org( 100, $this->window() )['impressions'] );
 		$this->assertSame( 0, $this->stored_org_for( 0 ), 'A house row carried an organization.' );
 	}
 
@@ -310,5 +320,16 @@ final class FrozenTenancyTest extends WP_UnitTestCase {
 		$event_columns = $wpdb->get_col( "SHOW COLUMNS FROM {$events}" );
 
 		$this->assertContains( 'schema_version', $event_columns );
+	}
+
+	/**
+	 * The range every org read in this file uses.
+	 *
+	 * The fixtures deliver today, so any window ending today contains them.
+	 * Reads are bounded by type now, which is the point: there is no unbounded
+	 * org total left to call by accident.
+	 */
+	private function window(): Report_Period {
+		return Report_Period::trailing( 30, gmdate( 'Y-m-d' ) );
 	}
 }
