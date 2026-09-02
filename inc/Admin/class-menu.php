@@ -36,7 +36,16 @@ final class Menu implements Service {
 	 *
 	 * @param Settings $settings Product name for the sidebar label.
 	 */
-	public function __construct( private readonly Settings $settings ) {
+	/**
+	 * Constructor.
+	 *
+	 * @param Settings     $settings Product name for the sidebar label.
+	 * @param Pending_Work $pending  Waiting-work count for the parent badge.
+	 */
+	public function __construct(
+		private readonly Settings $settings,
+		private readonly Pending_Work $pending
+	) {
 	}
 
 	/**
@@ -188,13 +197,40 @@ final class Menu implements Service {
 	public function register_parent(): void {
 		add_menu_page(
 			$this->settings->product_name(),
-			$this->settings->product_name(),
+			$this->menu_title(),
 			Capabilities::ACCESS_STAFF,
 			self::PARENT_SLUG,
 			array( $this, 'redirect_to_first_screen' ),
 			self::ICON,
 			self::POSITION
 		);
+	}
+
+	/**
+	 * The sidebar label, with a count when work is waiting.
+	 *
+	 * **On the parent, not only on Review.** WordPress slides a submenu in from
+	 * off-canvas on hover, so the badge on `Review` is off-screen on every admin
+	 * page — including while you are inside Advertising. The parent's is the
+	 * only copy anybody sees without going looking for it.
+	 *
+	 * Gated on the capability that can act on it. A person who administers
+	 * organizations but cannot review campaigns is shown no number, because a
+	 * badge they cannot clear is one they learn to ignore, and it would leak
+	 * the size of a queue they have no access to.
+	 *
+	 * The page title stays the plain product name: the badge is markup, and
+	 * `add_menu_page` puts the page title in `<title>` where tags would show
+	 * through as text.
+	 */
+	private function menu_title(): string {
+		$label = $this->settings->product_name();
+
+		if ( ! current_user_can( Capabilities::REVIEW_CAMPAIGNS ) ) {
+			return $label;
+		}
+
+		return $this->pending->label_with_badge( $label, $this->pending->parent_badge() );
 	}
 
 	/**

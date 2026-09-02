@@ -115,7 +115,8 @@ final class Runtime_Service_Registrar {
 				$c->get( Audit_Repository::class ),
 				$c->get( Campaign_Change_Manager::class ),
 				$c->get( Line_Item_Repository::class ),
-				$c->get( \Aggressive\Ads\Workflow\Creative_Approval::class )
+				$c->get( \Aggressive\Ads\Workflow\Creative_Approval::class ),
+				$c->get( \Aggressive\Ads\Admin\Pending_Work::class )
 			)
 		);
 
@@ -161,7 +162,8 @@ final class Runtime_Service_Registrar {
 		$container->register(
 			Review_Screen::class,
 			static fn ( Service_Container $c ): Review_Screen => new Review_Screen(
-				$c->get( Review_Data::class )
+				$c->get( Review_Data::class ),
+				$c->get( \Aggressive\Ads\Admin\Pending_Work::class )
 			)
 		);
 

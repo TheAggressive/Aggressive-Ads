@@ -178,9 +178,17 @@ final class Service_Registrar {
 		);
 
 		$container->register(
+			\Aggressive\Ads\Admin\Pending_Work::class,
+			static fn ( Service_Container $c ): \Aggressive\Ads\Admin\Pending_Work => new \Aggressive\Ads\Admin\Pending_Work(
+				$c->get( Campaign_Repository::class )
+			)
+		);
+
+		$container->register(
 			Menu::class,
 			static fn ( Service_Container $c ): Menu => new Menu(
-				$c->get( Settings::class )
+				$c->get( Settings::class ),
+				$c->get( \Aggressive\Ads\Admin\Pending_Work::class )
 			)
 		);
 
