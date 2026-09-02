@@ -12,6 +12,7 @@ namespace Aggressive\Ads\Tests\Integration;
 use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Core\Settings;
+use Aggressive\Ads\Domain\Report_Period;
 use Aggressive\Ads\Domain\Settings_Schema;
 use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Plugin;
@@ -164,7 +165,7 @@ final class ReportExportTest extends WP_UnitTestCase {
 		$this->bump( 0, 50, 7 );
 		$this->enable_reporting( true );
 
-		$rows = $this->reporting->daily_rows_for_org( $this->org_a, 7 );
+		$rows = $this->reporting->daily_rows_for_org( $this->org_a, Report_Period::trailing( 7, gmdate( 'Y-m-d' ) ) );
 
 		$this->assertCount( 1, $rows );
 		$this->assertSame( $this->campaign_a, $rows[0]['campaign_id'] );
@@ -184,7 +185,7 @@ final class ReportExportTest extends WP_UnitTestCase {
 		$this->bump( $this->campaign_a, 5, 2 );
 		$this->enable_reporting( false );
 
-		$this->assertSame( array(), $this->reporting->daily_rows_for_org( $this->org_a, 7 ) );
+		$this->assertSame( array(), $this->reporting->daily_rows_for_org( $this->org_a, Report_Period::trailing( 7, gmdate( 'Y-m-d' ) ) ) );
 	}
 
 	/**
@@ -196,7 +197,7 @@ final class ReportExportTest extends WP_UnitTestCase {
 		$this->bump( $this->campaign_a, 4, 1 );
 		$this->enable_reporting( true );
 
-		$csv = $this->exports->document( $this->reporting->daily_rows_for_org( $this->org_a, 7 ) );
+		$csv = $this->exports->document( $this->reporting->daily_rows_for_org( $this->org_a, Report_Period::trailing( 7, gmdate( 'Y-m-d' ) ) ) );
 
 		$this->assertStringContainsString( 'Impressions,Clicks,CTR %', $csv );
 		$this->assertStringContainsString( gmdate( 'Y-m-d' ) . ',A flight,', $csv );
@@ -213,7 +214,7 @@ final class ReportExportTest extends WP_UnitTestCase {
 		$this->bump( $this->campaign_a, 0, 3 );
 		$this->enable_reporting( true );
 
-		$csv = $this->exports->document( $this->reporting->daily_rows_for_org( $this->org_a, 7 ) );
+		$csv = $this->exports->document( $this->reporting->daily_rows_for_org( $this->org_a, Report_Period::trailing( 7, gmdate( 'Y-m-d' ) ) ) );
 
 		$this->assertStringContainsString( ",0,3,\r\n", $csv );
 	}
@@ -234,7 +235,7 @@ final class ReportExportTest extends WP_UnitTestCase {
 		$this->bump( $campaign, 2, 1 );
 		$this->enable_reporting( true );
 
-		$csv = $this->exports->document( $this->reporting->daily_rows_for_org( $this->org_a, 7 ) );
+		$csv = $this->exports->document( $this->reporting->daily_rows_for_org( $this->org_a, Report_Period::trailing( 7, gmdate( 'Y-m-d' ) ) ) );
 
 		$this->assertStringNotContainsString( ',=HYPERLINK', $csv, 'A bare formula reached a cell boundary.' );
 		$this->assertStringNotContainsString( ',"=HYPERLINK', $csv, 'Quoting alone does not stop evaluation.' );

@@ -210,7 +210,32 @@ Shared boundaries and group exit criteria:
 
 - [ ] **P14 — Reporting.** Advertiser and publisher views from rollups rather
       than raw events, date ranges with comparison, CSV export, and the
-      architecture for scheduled email.
+      architecture for scheduled email. **In progress** —
+      [platform-p14-reporting.md](platform-p14-reporting.md).
+
+      Three decisions were settled before any code. **The reporting day is UTC
+      and every surface says so**, because neither projection has an hour
+      dimension and re-bucketing into a site timezone is a storage decision a
+      reporting phase should not smuggle in. **Comparison is the immediately
+      preceding window of equal length**, so a percentage cannot turn out to be
+      arithmetic about the calendar. **Freshness is part of the report** —
+      reconciled, provisional or partial, derived from
+      `aggr_rollups_reconciled_through`, which exists today and no surface
+      reads.
+
+      It inherited one defect and two invisible features.
+      `Rollup_Repository::totals_for_org()` — the first tile on the advertiser
+      dashboard — had no date predicate at all, so it aggregated every row the
+      organization had ever produced on every page load: 12,775 rows examined
+      at one year of history against a 30-day read's 1,500, and flat only for
+      the ranged one. **Fixed**: org-scoped reads moved to
+      `Rollup_Report_Repository` and take a `Domain\Report_Period`, a value
+      object that cannot exist unbounded, and the tiles now print the window
+      and its timezone rather than silently changing meaning.
+
+      Still open: P13's decision counters have no reader outside their own
+      repository, and P12's attributed conversions are written, reconciled and
+      retained while appearing in no tile, table, CSV column or REST field.
 
 ### Inventory and commerce
 

@@ -597,6 +597,20 @@ final class View_Data {
 	}
 
 	/**
+	 * The window the delivery tiles cover, in words.
+	 */
+	public function delivery_range_label(): string {
+		return $this->delivery->range_label();
+	}
+
+	/**
+	 * Which days in that window may still change, or '' when none.
+	 */
+	public function delivery_freshness_note(): string {
+		return $this->delivery->freshness_note();
+	}
+
+	/**
 	 * One campaign, shaped for a table row.
 	 *
 	 * @param int $campaign_id Campaign post id.

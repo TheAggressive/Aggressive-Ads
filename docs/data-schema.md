@@ -196,7 +196,9 @@ depends on the vocabulary in force when it was written — P10 already redefined
 `impression` as `served` once — and rows predating the column read 0, which is
 the honest answer rather than a guess.
 
-Event SQL lives in `Event_Repository`; rollup SQL in `Rollup_Repository`.
+Event SQL lives in `Event_Repository`; rollup SQL in `Rollup_Repository`, except
+the org-scoped reporting reads, which live in `Rollup_Report_Repository` and
+take a bounded `Domain\Report_Period` rather than aggregating all of history.
 The event row is the durable ledger; the synchronous rollup upsert is a
 low-latency projection. An hourly restartable reconciler rebuilds closed UTC
 days exactly after a ten-minute midnight grace period and stores its non-autoloaded watermark in

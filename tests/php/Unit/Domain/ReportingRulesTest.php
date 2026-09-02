@@ -41,22 +41,6 @@ final class ReportingRulesTest extends TestCase {
 	}
 
 	/**
-	 * Seven UTC days ending on the given date, oldest first.
-	 *
-	 * @return void
-	 */
-	public function test_utc_day_keys_are_inclusive_and_oldest_first(): void {
-		$this->assertSame(
-			array( '2026-08-07', '2026-08-08', '2026-08-09', '2026-08-10', '2026-08-11', '2026-08-12', '2026-08-13' ),
-			Reporting_Rules::utc_day_keys( 7, '2026-08-13' )
-		);
-		$this->assertSame( array( '2026-01-01' ), Reporting_Rules::utc_day_keys( 1, '2026-01-01' ) );
-		$this->assertSame( array(), Reporting_Rules::utc_day_keys( 0, '2026-08-13' ) );
-		$this->assertSame( array(), Reporting_Rules::utc_day_keys( 7, '13-08-2026' ) );
-		$this->assertSame( array(), Reporting_Rules::utc_day_keys( 32, '2026-08-13' ) );
-	}
-
-	/**
 	 * A zero max is a flat line. A lone impression still occupies one pixel.
 	 *
 	 * @return void

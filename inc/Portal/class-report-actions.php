@@ -11,6 +11,7 @@ namespace Aggressive\Ads\Portal;
 
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Domain\Csv_Writer;
+use Aggressive\Ads\Domain\Report_Period;
 use Aggressive\Ads\Domain\Reporting_Rules;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Security\Capabilities;
@@ -31,9 +32,11 @@ final class Report_Actions implements Service {
 	/**
 	 * Longest window the export will assemble.
 	 *
-	 * Bounded rather than open-ended because this builds the whole document in
-	 * memory before sending a byte, and because `Reporting_Rules::utc_day_keys()`
-	 * refuses anything longer anyway — the two agree deliberately.
+	 * **Tighter than `Report_Period::MAX_DAYS`, and for a different reason.** A
+	 * screen's range is bounded by what a read may examine; an export is bounded
+	 * by the document it assembles in memory before sending a byte. Collapsing
+	 * the two into one number would mean one of them had been chosen for the
+	 * wrong constraint, so they stay separate and the tighter one wins here.
 	 */
 	public const MAX_DAYS = 31;
 
@@ -100,8 +103,9 @@ final class Report_Actions implements Service {
 			);
 		}
 
-		$days = $this->requested_days();
-		$rows = $this->reporting->daily_rows_for_org( $org_id, $days );
+		$days   = $this->requested_days();
+		$period = Report_Period::trailing( $days, gmdate( 'Y-m-d' ) );
+		$rows   = $this->reporting->daily_rows_for_org( $org_id, $period );
 
 		$this->send( $this->document( $rows ), $this->filename( $org_id, $days ) );
 	}

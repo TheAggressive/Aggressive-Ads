@@ -48,6 +48,16 @@ it will happily use one for a `GROUP BY` while scanning every row for the
 range, left the plan still naming `day_outcome` and the assertion still green.
 **Assert rows examined**, which caught the same sabotage at 79,996 of 79,980.
 
+**A query-plan guard must EXPLAIN what production issued, not a copy of it.**
+The natural way to assert a read is bounded is to write the SQL into the test
+and `EXPLAIN` it. That test then measures the string it holds, and keeps passing
+after the repository it is supposed to be watching has diverged from it —
+exactly the shape of a guard that stops matching and reports success anyway.
+`ReportReadScaleTest` calls the repository and explains `$wpdb->last_query`, so
+there is no second copy to drift. Proven by making the date predicate
+non-sargable: the values stayed correct, the plan still named `org_day`, and
+rows examined went from 1,500 to 12,775.
+
 **A schema assertion is worthless until the table is dropped.** `dbDelta` adds
 an index and never drops one, so a DDL edit that changes or removes a key leaves
 the old one in place, still enforcing the old rule, and the suite passes over

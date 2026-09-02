@@ -255,6 +255,7 @@ final class Runtime_Service_Registrar {
 			)
 		);
 		$container->register( Rollup_Repository::class, static fn (): Rollup_Repository => new Rollup_Repository() );
+		$container->register( \Aggressive\Ads\Repository\Rollup_Report_Repository::class, static fn (): \Aggressive\Ads\Repository\Rollup_Report_Repository => new \Aggressive\Ads\Repository\Rollup_Report_Repository() );
 		$container->register( \Aggressive\Ads\Repository\Decision_Rollup_Repository::class, static fn (): \Aggressive\Ads\Repository\Decision_Rollup_Repository => new \Aggressive\Ads\Repository\Decision_Rollup_Repository() );
 		$container->register( Fill_Token::class, static fn (): Fill_Token => new Fill_Token() );
 		$container->register(

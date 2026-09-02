@@ -12,17 +12,21 @@ namespace Aggressive\Ads\Tests\Integration;
 use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Core\Settings;
+use Aggressive\Ads\Domain\Report_Period;
 use Aggressive\Ads\Domain\Reporting_Rules;
 use Aggressive\Ads\Domain\Settings_Schema;
 use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Portal\Delivery_View_Data;
 use Aggressive\Ads\Portal\View_Data;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Repository\Rollup_Report_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Security\Ownership;
 use Aggressive\Ads\Security\Roles;
+use Aggressive\Ads\Workflow\Rollup_Reconciler;
 use WP_REST_Request;
 use WP_UnitTestCase;
 
@@ -51,6 +55,13 @@ final class ReportingTest extends WP_UnitTestCase {
 	 * @var Rollup_Repository
 	 */
 	private Rollup_Repository $rollups;
+
+	/**
+	 * Org-scoped, range-bounded reads.
+	 *
+	 * @var Rollup_Report_Repository
+	 */
+	private Rollup_Report_Repository $reports;
 
 	/**
 	 * Organization A.
@@ -117,6 +128,7 @@ final class ReportingTest extends WP_UnitTestCase {
 		$this->view         = $container->get( View_Data::class );
 		$this->settings     = $container->get( Settings::class );
 		$this->rollups      = $container->get( Rollup_Repository::class );
+		$this->reports      = $container->get( Rollup_Report_Repository::class );
 		$this->advertiser_a = self::factory()->user->create( array( 'role' => Roles::ADVERTISER ) );
 		$this->advertiser_b = self::factory()->user->create( array( 'role' => Roles::ADVERTISER ) );
 		$this->org_a        = $this->make_org( $this->advertiser_a, 'Org A' );
@@ -297,10 +309,76 @@ final class ReportingTest extends WP_UnitTestCase {
 		$this->bump( $this->campaign_a, 2, 1 );
 		$this->bump( $this->campaign_b, 50, 10 );
 
-		$mine = $this->rollups->totals_for_org( $this->org_a );
+		$mine = $this->reports->totals_for_org( $this->org_a, Report_Period::trailing( 30, gmdate( 'Y-m-d' ) ) );
 
 		$this->assertSame( 2, $mine['impressions'] );
 		$this->assertSame( 1, $mine['clicks'] );
+	}
+
+	/**
+	 * The tiles sum the reporting window, not everything ever delivered.
+	 *
+	 * **This is the behaviour change P14 made, and the one worth a test.** The
+	 * tiles used to be all-time totals, which cost a scan of the whole
+	 * organization's history on every page load and, less visibly, meant a
+	 * campaign that ran last year kept inflating a figure a reader took for
+	 * current. A delivery outside the window must be absent from the number and
+	 * still present in the table it was written to.
+	 */
+	public function test_the_delivery_tiles_cover_only_the_reporting_window(): void {
+		$this->bump( $this->campaign_a, 3, 1 );
+		$this->bump( $this->campaign_a, 90, 40, gmdate( 'Y-m-d', strtotime( '-60 days' ) ) );
+
+		$window = $this->reports->totals_for_org( $this->org_a, Report_Period::trailing( 30, gmdate( 'Y-m-d' ) ) );
+
+		$this->assertSame( 3, $window['impressions'], 'A delivery from outside the window was counted in it.' );
+		$this->assertSame( 1, $window['clicks'] );
+
+		// And the older delivery is still on the books, so this is a bounded
+		// read rather than lost history. Sixty days back is inside the longest
+		// range a report may cover and outside the window the tiles use, which
+		// is the whole distinction being asserted.
+		$wider = $this->reports->totals_for_org( $this->org_a, Report_Period::trailing( 92, gmdate( 'Y-m-d' ) ) );
+
+		$this->assertSame( 93, $wider['impressions'], 'The older delivery was not merely out of range, it was gone.' );
+	}
+
+	/**
+	 * The dashboard says which window it covers, and that the days are UTC.
+	 */
+	public function test_the_dashboard_names_its_window_and_its_timezone(): void {
+		$this->enable_reporting( true );
+
+		$label = $this->view->delivery_range_label();
+
+		$this->assertStringContainsString( '30', $label, 'The tiles do not say how many days they cover.' );
+		$this->assertStringContainsString( 'UTC', $label, 'The tiles do not say the days are UTC, which they are.' );
+	}
+
+	/**
+	 * Freshness names the first day that may still move, and says nothing when
+	 * every day in range is settled.
+	 */
+	public function test_freshness_names_the_boundary_and_stays_quiet_when_settled(): void {
+		$this->enable_reporting( true );
+
+		$delivery = Plugin::instance()->container()->get( Delivery_View_Data::class );
+
+		update_option( Rollup_Reconciler::OPTION, gmdate( 'Y-m-d', strtotime( '-3 days' ) ), false );
+
+		$note = $delivery->freshness_note();
+
+		$this->assertNotSame( '', $note, 'A window running past the watermark claimed to be settled.' );
+
+		/*
+		 * A window that ends before the watermark is fully rebuilt from the
+		 * ledger, so there is nothing to warn about. An empty string here is
+		 * the assertion that the note is derived rather than always printed.
+		 */
+		$sealed = Report_Period::ending( 7, gmdate( 'Y-m-d', strtotime( '-10 days' ) ) );
+
+		$this->assertNotNull( $sealed );
+		$this->assertSame( '', $delivery->freshness_note( $sealed ), 'A fully reconciled window still carried a warning.' );
 	}
 
 	/**

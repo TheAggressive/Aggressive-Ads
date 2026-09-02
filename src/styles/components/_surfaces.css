@@ -112,6 +112,20 @@
 	font-size: 13px;
 }
 
+/*
+ * Which days in a reported range may still change.
+ *
+ * Its own block so the sentence sits under the hint rather than running on
+ * from it, and weighted rather than coloured: freshness is information a
+ * reader has to be able to act on, and colour alone would carry it for nobody
+ * using high contrast or a monochrome display.
+ */
+.aggr-hint__freshness {
+	display: block;
+	margin-top: var(--aggr-space-2xs);
+	font-weight: 600;
+}
+
 .aggr-field input[type="text"],
 .aggr-field input[type="email"],
 .aggr-field input[type="password"],

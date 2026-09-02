@@ -7,6 +7,10 @@
  * they read `aggr_rollups` — never invented zeros. Spend stays absent until
  * billing has a source.
  *
+ * The delivery tiles cover a bounded window and say which one, in UTC, along
+ * with the first day whose figures may still move. They used to be all-time
+ * totals with neither statement attached.
+ *
  * @package Aggressive\Ads
  */
 
@@ -24,6 +28,8 @@ $aggr_view      = Plugin::instance()->container()->get( View_Data::class );
 $aggr_campaigns = $aggr_view->campaigns();
 $aggr_delivery  = $aggr_view->delivery_counts();
 $aggr_series    = $aggr_view->delivery_series();
+$aggr_range     = $aggr_view->delivery_range_label();
+$aggr_freshness = $aggr_view->delivery_freshness_note();
 $aggr_user      = wp_get_current_user();
 ?>
 <div class="aggr-pagehead">
@@ -68,7 +74,15 @@ $aggr_user      = wp_get_current_user();
 if ( array() !== $aggr_delivery ) :
 	?>
 <div class="aggr-stats" aria-labelledby="aggr-delivery-heading">
-	<h2 id="aggr-delivery-heading" class="aggr-sr"><?php esc_html_e( 'Native delivery', 'aggressive-ads' ); ?></h2>
+	<h2 id="aggr-delivery-heading" class="aggr-sr">
+		<?php
+		printf(
+			/* translators: %s: the window the figures cover, e.g. Last 30 days (UTC). */
+			esc_html__( 'Native delivery, %s', 'aggressive-ads' ),
+			esc_html( $aggr_range )
+		);
+		?>
+	</h2>
 	<?php foreach ( $aggr_delivery as $aggr_stat ) : ?>
 		<div class="aggr-stat">
 			<div class="aggr-stat__label"><?php echo esc_html( (string) $aggr_stat['label'] ); ?></div>
@@ -76,7 +90,18 @@ if ( array() !== $aggr_delivery ) :
 		</div>
 	<?php endforeach; ?>
 </div>
-<p class="aggr-hint"><?php esc_html_e( 'Impressions and clicks from native delivery.', 'aggressive-ads' ); ?></p>
+<p class="aggr-hint">
+	<?php
+	printf(
+		/* translators: %s: the window the figures cover, e.g. Last 30 days (UTC). */
+		esc_html__( 'Impressions and clicks from native delivery. %s.', 'aggressive-ads' ),
+		esc_html( $aggr_range )
+	);
+	?>
+	<?php if ( '' !== $aggr_freshness ) : ?>
+		<span class="aggr-hint__freshness"><?php echo esc_html( $aggr_freshness ); ?></span>
+	<?php endif; ?>
+</p>
 	<?php
 endif;
 ?>
