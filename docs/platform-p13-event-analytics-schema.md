@@ -207,16 +207,38 @@ Two migrations, deliberately separate, because they carry different risk.
 `aggr_rollups`. New columns are nullable or defaulted; no existing row changes
 meaning. This is a schema change with no data rewrite and can ship on its own.
 
-**Migration B — the backfill.** Populates `aggr_rollups.org_id` from current
-campaign metadata for historical rows, and drops the `Decision_Metrics` option.
-This one rewrites durable data and must be staged:
+**Migration B — the backfill.** *Reversed during implementation, and the
+reasoning is worth keeping because the original plan was wrong twice over.*
 
-- bounded batches with a stored cursor, resumable after interruption;
-- idempotent per batch, so a replayed batch is a no-op;
-- progress and failure visible in Site Health, not only in a log;
-- a partial migration leaves reads correct — a row without `org_id` falls back
-  to the join, and the fallback is removed only once no such row remains; and
-- rollback drops the new columns without touching the ledger.
+This was specified as a staged migration: bounded batches, a stored cursor,
+resume after interruption, Site Health progress, a partial-migration read
+fallback and rollback. It shipped as **one idempotent `UPDATE`** with none of
+that. Two things changed the answer.
+
+**A backfill cannot recover history, so there is less to protect than it
+looks.** Nothing ever recorded which organization owned a campaign last month.
+The statement can only write *today's* answer onto older rows — which is
+exactly what the read-time join it replaces already returned. The value of the
+column is that tenancy stops moving from here, not that the past becomes
+knowable, and elaborate staging to protect a value that is not history is
+ceremony.
+
+**Emptying and reprojecting was considered and rejected.** It looked clean —
+`aggr_rollups` is a projection and `reconcile_day()` rebuilds any closed day
+exactly from the ledger — and it is wrong, because this table is also the
+**pacing and frequency counter**. Clearing it resets every live cap, and a
+campaign whose counter restarts from nothing overdelivers for the rest of the
+day. `ReleaseUpgradePathTest` already named that consequence for the same table
+one migration earlier; the plan here would have reintroduced it.
+
+What remains is `Rollup_Repository::backfill_org_ids()`: one `UPDATE ... JOIN`
+predicated on `org_id = 0`. The predicate *is* the cursor — an interrupted run
+resumes by being run again, a second run does nothing, and a site with no
+unattributed rows does no work. There is no partial state to read around,
+because a row is either attributed or waiting and reads of an unattributed row
+were already impossible.
+
+Rollback drops the added columns; the ledger is untouched throughout.
 
 **`dbDelta` adds an index and never drops one.** Any key whose definition
 changes must be dropped explicitly in `install_table()` as well as in the

@@ -334,12 +334,22 @@ final class ReportingTest extends WP_UnitTestCase {
 	 * @param string $day_utc     Optional UTC Y-m-d. Empty uses today.
 	 */
 	private function bump( int $campaign_id, int $impressions, int $clicks, string $day_utc = '' ): void {
+		/*
+		 * Resolved the way `Event_Recorder` resolves it, because `org_id` is
+		 * frozen onto the row at write time and org-scoped reads filter on it.
+		 * A fixture that left it at 0 would write rows no report can see, and
+		 * the tests below would fail for a reason unrelated to what they name.
+		 */
+		$org_id = $campaign_id > 0
+			? (int) get_post_meta( $campaign_id, Campaign_Repository::META_ORG_ID, true )
+			: 0;
+
 		for ( $i = 0; $i < $impressions; $i++ ) {
-			$this->rollups->increment( 'impressions', $this->placement_id, $campaign_id, $day_utc );
+			$this->rollups->increment( 'impressions', $this->placement_id, $campaign_id, $day_utc, 0, $org_id );
 		}
 
 		for ( $i = 0; $i < $clicks; $i++ ) {
-			$this->rollups->increment( 'clicks', $this->placement_id, $campaign_id, $day_utc );
+			$this->rollups->increment( 'clicks', $this->placement_id, $campaign_id, $day_utc, 0, $org_id );
 		}
 	}
 
@@ -454,8 +464,12 @@ final class ReportingTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	private function bump_viewables( int $campaign_id, int $viewables ): void {
+		$org_id = $campaign_id > 0
+			? (int) get_post_meta( $campaign_id, Campaign_Repository::META_ORG_ID, true )
+			: 0;
+
 		for ( $i = 0; $i < $viewables; $i++ ) {
-			$this->rollups->increment( 'viewables', $this->placement_id, $campaign_id );
+			$this->rollups->increment( 'viewables', $this->placement_id, $campaign_id, '', 0, $org_id );
 		}
 	}
 }

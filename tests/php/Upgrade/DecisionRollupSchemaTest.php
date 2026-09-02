@@ -68,10 +68,16 @@ final class DecisionRollupSchemaTest extends WP_UnitTestCase {
 	 * upgrades its recorded version past a migration that never ran.
 	 */
 	public function test_the_migration_is_registered_at_the_version_that_declares_it(): void {
-		$this->assertSame(
+		/*
+		 * Greater-than-or-equal, not equal. This asserts that *this* migration
+		 * is reachable, and a later phase adding version 25 must not fail a
+		 * suite about version 23 — the equality version did exactly that the
+		 * first time another migration landed.
+		 */
+		$this->assertGreaterThanOrEqual(
 			self::DECISION_ROLLUPS_VERSION,
 			Schema::DB_VERSION,
-			'DB_VERSION and the migration this suite asserts have diverged.'
+			'DB_VERSION is behind the migration this suite asserts, so it would never run.'
 		);
 
 		$this->assertArrayHasKey(
