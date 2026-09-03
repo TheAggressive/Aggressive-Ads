@@ -160,10 +160,10 @@ The domain model accommodates these without redesign. None is scheduled *here* �
 several are now sequenced in
 [platform-implementation-progress.md](platform-implementation-progress.md)
 instead, which is where they gained dependencies and migration notes:
-downloadable reports (P14), online payments and invoices (P19), richer creative
-formats (P17, P18), an organization-scoped role model beyond a single
-Advertising Manager (P21), and multiple providers behind `Ad_Provider_Interface`
-(P24).
+online payments and invoices (P19), richer creative formats (P17, P18), an
+organization-scoped role model beyond a single Advertising Manager (P21), and
+multiple providers behind `Ad_Provider_Interface` (P24). Downloadable reports
+were on this list and are built: P14 closed 2026-09-02.
 
 Still architected for and still unscheduled anywhere: campaign templates ·
 sponsored content · notification channels beyond email · CRM integration ·

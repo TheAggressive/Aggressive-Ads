@@ -240,6 +240,7 @@ final class ReportingTest extends WP_UnitTestCase {
 	 */
 	public function test_rest_metrics_follow_ownership_and_the_module_gate(): void {
 		$this->bump( $this->campaign_a, 6, 3 );
+		$this->bump_conversions( $this->campaign_a, 2 );
 		$this->bump( $this->campaign_b, 20, 4 );
 		$this->enable_reporting( true );
 
@@ -254,13 +255,22 @@ final class ReportingTest extends WP_UnitTestCase {
 		$this->assertSame( 6, $owned->get_data()['impressions'] );
 		$this->assertSame( 3, $owned->get_data()['clicks'] );
 		$this->assertSame( 0.5, $owned->get_data()['ctr'] );
+
+		/*
+		 * Conversions on the route, not only through the reader that feeds it.
+		 * The exit criterion names `GET /campaigns`, and a claim about a route
+		 * wants evidence at the route.
+		 */
+		$this->assertSame( 2, $owned->get_data()['conversions'] );
 		$this->assertSame( 404, $foreign->get_status() );
 		$this->assertArrayNotHasKey( 'impressions', $foreign->get_data() );
 		$this->assertArrayNotHasKey( 'ctr', $foreign->get_data() );
+		$this->assertArrayNotHasKey( 'conversions', $foreign->get_data() );
 		$this->assertSame( $this->campaign_a, $listed_a['id'] );
 		$this->assertSame( 6, $listed_a['impressions'] );
 		$this->assertSame( 3, $listed_a['clicks'] );
 		$this->assertSame( 0.5, $listed_a['ctr'] );
+		$this->assertSame( 2, $listed_a['conversions'] );
 
 		$this->enable_reporting( false );
 		wp_set_current_user( $this->advertiser_a );
@@ -270,6 +280,7 @@ final class ReportingTest extends WP_UnitTestCase {
 		$this->assertArrayNotHasKey( 'impressions', $off );
 		$this->assertArrayNotHasKey( 'clicks', $off );
 		$this->assertArrayNotHasKey( 'ctr', $off );
+		$this->assertArrayNotHasKey( 'conversions', $off );
 	}
 
 	/**

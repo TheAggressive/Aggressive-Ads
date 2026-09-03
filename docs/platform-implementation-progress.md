@@ -208,9 +208,9 @@ Shared boundaries and group exit criteria:
       live delivery cap. Runtime behaviour on an unknown future version is
       explicitly out of scope, owned by whichever phase first bumps one.
 
-- [ ] **P14 — Reporting.** Advertiser and publisher views from rollups rather
+- [x] **P14 — Reporting.** Advertiser and publisher views from rollups rather
       than raw events, date ranges with comparison, CSV export, and the
-      architecture for scheduled email. **In progress** —
+      architecture for scheduled email. **Closed out 2026-09-02** —
       [platform-p14-reporting.md](platform-p14-reporting.md).
 
       Three decisions were settled before any code. **The reporting day is UTC
@@ -273,7 +273,20 @@ Shared boundaries and group exit criteria:
       delivery problem and not a report-generation one. No email ships, for the
       reason `notifications.md` gives.
 
-      Still open: the closeout.
+      **One criterion was narrowed at closeout.** Both CSVs state their
+      timezone and neither states freshness: a prose row breaks every parser
+      pointed at a data file, and the statement stays beside the download
+      button instead. That is enough while a person downloads what they are
+      looking at and stops being enough the moment a report is mailed to
+      somebody who never saw the screen — which is the scheduling phase's to
+      say, and is recorded rather than left to be discovered.
+
+      **Five tests were written, watched to pass, and found worthless** — four
+      by attacking them, the fifth by CI, which is the weakest of the ways — and
+      one of them was covering a real defect: `aggr_view_reports` reached the
+      reviewer role and the menu map but not `Capabilities::primitives()`, so
+      an administrator could not have opened the screen while every
+      reviewer-based test stayed green.
 
 ### Inventory and commerce
 
