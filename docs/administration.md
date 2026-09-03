@@ -22,7 +22,7 @@ the portal.
 
 ## The Advertising menu
 
-Six submenus, each gated by its own capability. A person sees only what their
+Seven submenus, each gated by its own capability. A person sees only what their
 capability grants — there is no "advertising manager" role that unlocks the
 whole menu.
 
@@ -33,6 +33,7 @@ whole menu.
 | Inventory | `aggr_manage_placements` | The placement catalogue — the slots a campaign can be bought into |
 | Packages | `aggr_manage_packages` | What advertisers may buy, and at what price |
 | Conversions | `aggr_manage_settings` | What counts as a conversion, and the credentials advertisers report them with |
+| Reports | `aggr_view_reports` | Fill rate, and why a slot stayed empty |
 | Settings | `aggr_manage_settings` | Modules, brand, delivery, tracking |
 
 `aggr_access_staff` is **derived**, never granted on a role. It is what the menu
@@ -41,6 +42,44 @@ above. Granting it directly will not do what you expect.
 
 The parent slug is `aggr` and is stable; the menu's visible name follows the
 Brand product name you set in Settings.
+
+## Reports
+
+Advertising → Reports answers one question: **when this slot was asked for, how
+often did it fill, and when it did not, why.**
+
+Choose a window — 7, 30 or 90 days — and either a single placement or the whole
+site. The days are **UTC**, and the screen says so, because the counters behind
+it are stored per UTC day and have no hour dimension; a report cannot be
+re-cut into your local timezone without changing what it counts. If any day in
+the window has not yet been reconciled against the event ledger, the screen
+names the first one that may still move.
+
+Read the reason table as a diagnosis rather than a fault list. Some reasons are
+the system working:
+
+- **The visitor had already seen it enough times** — frequency capping doing
+  its job.
+- **Held back to spread delivery across the day** — pacing, on a campaign with
+  a daily goal.
+- **The visitor did not match the targeting rules** — targeting, working. If
+  this dominates a slot that should be busy, the targeting is probably narrower
+  than intended.
+
+Others are worth acting on:
+
+- **No advertisement was assigned to this slot** — the slot is unsold. Nothing
+  is wrong with delivery; there is nothing to deliver.
+- **Every assigned advertisement was ineligible** and **Outside every assigned
+  campaign's schedule** — there is demand, and none of it can run right now.
+- **The decision failed and no advertisement was served** — a defect. Check the
+  error log for that period.
+
+If the screen reports requests with **no recorded outcome**, that is a defect
+worth reporting: every request should end as either a fill or a reason.
+
+Figures appear only while the Reporting module is on, exactly as the advertiser
+tiles do.
 
 ## Settings
 

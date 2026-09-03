@@ -209,6 +209,22 @@ final class Runtime_Service_Registrar {
 		);
 
 		$container->register(
+			\Aggressive\Ads\Admin\Report_Data::class,
+			static fn ( Service_Container $c ): \Aggressive\Ads\Admin\Report_Data => new \Aggressive\Ads\Admin\Report_Data(
+				$c->get( \Aggressive\Ads\Repository\Decision_Rollup_Repository::class ),
+				$c->get( \Aggressive\Ads\Repository\Placement_Repository::class ),
+				$c->get( \Aggressive\Ads\Workflow\Reporting_Read::class )
+			)
+		);
+
+		$container->register(
+			\Aggressive\Ads\Admin\Reports_Screen::class,
+			static fn ( Service_Container $c ): \Aggressive\Ads\Admin\Reports_Screen => new \Aggressive\Ads\Admin\Reports_Screen(
+				$c->get( \Aggressive\Ads\Admin\Report_Data::class )
+			)
+		);
+
+		$container->register(
 			Package_Screen::class,
 			static fn ( Service_Container $c ): Package_Screen => new Package_Screen(
 				$c->get( Package_Data::class )

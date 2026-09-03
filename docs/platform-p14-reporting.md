@@ -18,14 +18,15 @@ shipped it is marked; everything unmarked is still a definition, not a claim.
 **Landed so far:** `Report_Period`, `Rollup_Report_Repository`, the ranged and
 freshness-aware `Reporting_Read`, the dashboard tiles reading a stated window
 instead of all of history, conversions made visible on every surface that
-already showed impressions, and each tile carrying its change against the
-window before it. Everything else below is still ahead.
+already showed impressions, each tile carrying its change against the window
+before it, and the publisher's fill report — the first reader P13's decision
+counters have ever had. Everything else below is still ahead.
 
 ## Outcome
 
 Three readers get an answer they cannot get today.
 
-- **A publisher can see why a slot is empty.** P13 stores it —
+- **A publisher can see why a slot is empty.** *(Done.)* P13 stores it —
   `aggr_decision_rollups` holds a request count, a fill count and a reason for
   every opportunity that did not fill — and **nothing reads it.** The read
   methods exist (`Decision_Metrics::totals()` and `totals_for_placement()`,
@@ -341,7 +342,7 @@ Business operations, not controllers:
    member can send a colleague a link to the same report and get the same
    numbers, subject to that colleague's own capability check on arrival.
 
-**The new capability is `aggr_view_reports`, and it is new rather than borrowed.**
+**The new capability is `aggr_view_reports`, and it is new rather than borrowed.** *(Built.)*
 Reusing `REVIEW_CAMPAIGNS` would mean the first person who should see numbers
 without approving creatives forces the split later, under pressure, in a
 capability map that is already granted. P21 introduces an analyst role and will

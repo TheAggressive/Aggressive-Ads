@@ -35,6 +35,17 @@ final class Capabilities {
 	public const MANAGE_SETTINGS     = 'aggr_manage_settings';
 
 	/**
+	 * Read delivery and fill reporting.
+	 *
+	 * **New rather than borrowed, and that is the decision.** Reusing
+	 * `REVIEW_CAMPAIGNS` would have worked on day one and made the first person
+	 * who should read numbers without approving creatives an argument about an
+	 * already-granted capability map. P21 introduces an organization-scoped
+	 * analyst and will need exactly one thing to scope; this is it.
+	 */
+	public const VIEW_REPORTS = 'aggr_view_reports';
+
+	/**
 	 * Derived shell cap for the unified admin parent. Not granted on a role.
 	 */
 	public const ACCESS_STAFF = 'aggr_access_staff';
@@ -89,6 +100,7 @@ final class Capabilities {
 			self::MANAGE_ORGS,
 			self::VIEW_AUDIT_LOG,
 			self::MANAGE_SETTINGS,
+			self::VIEW_REPORTS,
 		);
 	}
 
@@ -107,6 +119,7 @@ final class Capabilities {
 			self::MANAGE_PLACEMENTS,
 			self::MANAGE_PACKAGES,
 			self::MANAGE_SETTINGS,
+			self::VIEW_REPORTS,
 		);
 	}
 

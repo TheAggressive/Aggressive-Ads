@@ -29,7 +29,7 @@ final class Roles {
 	 * Bumped whenever the capability matrix below changes, so an update
 	 * re-applies roles on sites that were installed under the old matrix.
 	 */
-	public const VERSION = 3;
+	public const VERSION = 4;
 
 	/**
 	 * The role capability matrix.
@@ -137,6 +137,7 @@ final class Roles {
 		$caps[ Capabilities::REVIEW_CAMPAIGNS ]    = true;
 		$caps[ Capabilities::PUBLISH_TO_ADSANITY ] = true;
 		$caps[ Capabilities::VIEW_AUDIT_LOG ]      = true;
+		$caps[ Capabilities::VIEW_REPORTS ]        = true;
 
 		foreach ( Post_Types::all() as $post_type ) {
 			foreach ( Capabilities::generated_for( $post_type ) as $cap ) {

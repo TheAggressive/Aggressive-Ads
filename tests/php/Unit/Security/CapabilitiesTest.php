@@ -21,7 +21,7 @@ use PHPUnit\Framework\TestCase;
 final class CapabilitiesTest extends TestCase {
 
 	/**
-	 * The ten primitives, by literal name.
+	 * The eleven primitives, by literal name.
 	 *
 	 * Written out rather than derived, deliberately: this test exists to fail
 	 * when a capability is renamed, and deriving the expectation from the same
@@ -42,6 +42,7 @@ final class CapabilitiesTest extends TestCase {
 				'aggr_manage_orgs',
 				'aggr_view_audit_log',
 				'aggr_manage_settings',
+				'aggr_view_reports',
 			),
 			Capabilities::primitives()
 		);
@@ -158,7 +159,7 @@ final class CapabilitiesTest extends TestCase {
 		$all = Capabilities::all();
 
 		$this->assertSame( $all, array_unique( $all ) );
-		$this->assertCount( 10 + ( 5 * 11 ), $all );
+		$this->assertCount( 11 + ( 5 * 11 ), $all );
 	}
 
 	/**
@@ -179,6 +180,7 @@ final class CapabilitiesTest extends TestCase {
 				Capabilities::MANAGE_PLACEMENTS,
 				Capabilities::MANAGE_PACKAGES,
 				Capabilities::MANAGE_SETTINGS,
+				Capabilities::VIEW_REPORTS,
 			),
 			Capabilities::staff_menu_caps()
 		);

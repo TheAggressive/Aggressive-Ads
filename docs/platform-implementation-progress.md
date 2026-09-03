@@ -247,8 +247,16 @@ Shared boundaries and group exit criteria:
       comparison at all rather than a `-100%` invented out of a feature's
       release date.
 
-      Still open: P13's decision counters have no reader outside their own
-      repository, and there is no way yet to choose a range.
+      **P13's counters finally have a reader.** Advertising → Reports is
+      capability-gated on a new `aggr_view_reports` — new rather than borrowed,
+      because P21's analyst will need exactly one thing to scope — and answers
+      the question P13 stored the data for: how often a slot was asked for, how
+      often it filled, and when it did not, why, with every reason rendered as
+      a sentence rather than a code. A request that is neither a fill nor a
+      reason is shown rather than absorbed, because that invariant belongs to
+      the engine and not to the table.
+
+      Still open: an advertiser-facing range picker, and the publisher export.
 
 ### Inventory and commerce
 
