@@ -373,6 +373,7 @@ final class Plugin {
 			Conversions_Screen::class,
 			Package_Screen::class,
 			\Aggressive\Ads\Admin\Reports_Screen::class,
+			\Aggressive\Ads\Admin\Report_Export::class,
 			Settings_Screen::class,
 
 			// REST last: routes are registered on rest_api_init, which fires

@@ -93,8 +93,50 @@ final class Reports_Screen implements Service {
 		$this->render_filter( $period->days, $placement );
 		$this->render_summary( $period, $fill );
 		$this->render_reasons( $fill );
+		$this->render_export( $period, $placement );
 
 		echo '</div>';
+	}
+
+	/**
+	 * The download, beside the figures it contains.
+	 *
+	 * A POST rather than a link: it is a nonce-protected action, and a GET
+	 * download is a URL a browser or a prefetcher may follow on its own. The
+	 * button names the number of days it will actually produce, which is not
+	 * always the number on screen — the export assembles its whole document in
+	 * memory and caps tighter than a read does.
+	 *
+	 * @param Report_Period $period    Window on screen.
+	 * @param int           $placement Placement filter, or 0.
+	 * @return void
+	 */
+	private function render_export( Report_Period $period, int $placement ): void {
+		$days = min( $period->days, Report_Export::MAX_DAYS );
+
+		printf(
+			'<form method="post" action="%1$s"><input type="hidden" name="action" value="%2$s"><input type="hidden" name="days" value="%3$d"><input type="hidden" name="placement" value="%4$d">',
+			esc_url( admin_url( 'admin-post.php' ) ),
+			esc_attr( Report_Export::EXPORT_ACTION ),
+			(int) $period->days,
+			(int) $placement
+		);
+
+		// Printed by core rather than returned into the markup above: its output
+		// is already escaped, and passing it through a printf argument is
+		// indistinguishable to the escaping sniff from passing anything else.
+		wp_nonce_field( Report_Export::EXPORT_ACTION );
+
+		printf(
+			'<button type="submit" class="button">%s</button></form>',
+			esc_html(
+				sprintf(
+					/* translators: %d: number of days the download will cover. */
+					_n( 'Download %d day (CSV)', 'Download %d days (CSV)', $days, 'aggressive-ads' ),
+					$days
+				)
+			)
+		);
 	}
 
 	/**
