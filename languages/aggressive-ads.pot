@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-03T00:05:08+00:00\n"
+"POT-Creation-Date: 2026-09-03T00:47:58+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -99,8 +99,8 @@ msgstr ""
 #: inc/Admin/class-conversions-screen.php:165
 #: inc/Admin/class-conversions-screen.php:208
 #: inc/Admin/class-conversions-screen.php:270
-#: inc/Portal/class-delivery-view-data.php:138
-#: inc/Portal/class-report-actions.php:172
+#: inc/Portal/class-delivery-view-data.php:219
+#: inc/Portal/class-report-actions.php:192
 #: templates/portal/partials/campaign-summary-facts.php:81
 #: templates/portal/partials/campaign-table.php:41
 msgid "Conversions"
@@ -908,45 +908,45 @@ msgid "The inventory screen needs JavaScript enabled."
 msgstr ""
 
 #. translators: %s: a date, e.g. 30 August 2026.
-#: inc/Admin/class-report-data.php:172
-#: inc/Portal/class-delivery-view-data.php:86
+#: inc/Admin/class-report-data.php:181
+#: inc/Portal/class-delivery-view-data.php:167
 #, php-format
 msgid "Figures from %s onward are still being counted."
 msgstr ""
 
-#: inc/Admin/class-report-data.php:192
+#: inc/Admin/class-report-data.php:201
 msgid "No advertisement was assigned to this slot"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:193
+#: inc/Admin/class-report-data.php:202
 msgid "Every assigned advertisement was ineligible"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:194
+#: inc/Admin/class-report-data.php:203
 msgid "Outside every assigned campaign’s schedule"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:195
+#: inc/Admin/class-report-data.php:204
 msgid "The visitor did not match the targeting rules"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:196
+#: inc/Admin/class-report-data.php:205
 msgid "The visitor had already seen it enough times"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:197
+#: inc/Admin/class-report-data.php:206
 msgid "Held back to spread delivery across the day"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:198
+#: inc/Admin/class-report-data.php:207
 msgid "Excluded by a competing advertisement on the page"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:199
+#: inc/Admin/class-report-data.php:208
 msgid "The decision failed and no advertisement was served"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:200
+#: inc/Admin/class-report-data.php:209
 msgid "No reason was recorded"
 msgstr ""
 
@@ -968,9 +968,7 @@ msgid "Reporting window"
 msgstr ""
 
 #. translators: %d: number of days.
-#. translators: %d: number of days the delivery figures cover.
 #: inc/Admin/class-reports-screen.php:155
-#: inc/Portal/class-delivery-view-data.php:59
 #, php-format
 msgid "Last %d day (UTC)"
 msgid_plural "Last %d days (UTC)"
@@ -992,6 +990,7 @@ msgid "Every placement"
 msgstr ""
 
 #: inc/Admin/class-reports-screen.php:185
+#: templates/portal/screens/dashboard.php:96
 msgid "Show"
 msgstr ""
 
@@ -1019,8 +1018,8 @@ msgstr ""
 
 #: inc/Admin/class-reports-screen.php:231
 #: inc/Admin/class-reports-screen.php:283
-#: inc/Portal/class-delivery-view-data.php:265
-#: inc/Portal/class-delivery-view-data.php:316
+#: inc/Portal/class-delivery-view-data.php:356
+#: inc/Portal/class-delivery-view-data.php:407
 #: templates/portal/partials/campaign-summary-facts.php:75
 #: templates/portal/partials/campaign-table.php:81
 msgid "—"
@@ -1032,8 +1031,8 @@ msgstr ""
 #. translators: %s: share of impressions that were viewable, e.g. 62.5.
 #: inc/Admin/class-reports-screen.php:234
 #: inc/Admin/class-reports-screen.php:286
-#: inc/Portal/class-delivery-view-data.php:270
-#: inc/Portal/class-delivery-view-data.php:321
+#: inc/Portal/class-delivery-view-data.php:361
+#: inc/Portal/class-delivery-view-data.php:412
 #: templates/portal/partials/campaign-summary-facts.php:72
 #: templates/portal/partials/campaign-table.php:78
 #, php-format
@@ -1077,13 +1076,13 @@ msgid "Campaign moved from %1$s to %2$s."
 msgstr ""
 
 #: inc/Admin/class-review-data.php:322
-#: inc/Portal/class-view-data.php:658
+#: inc/Portal/class-view-data.php:681
 msgid "Not scheduled"
 msgstr ""
 
 #. translators: 1: campaign start date. 2: campaign end date.
 #: inc/Admin/class-review-data.php:333
-#: inc/Portal/class-view-data.php:674
+#: inc/Portal/class-view-data.php:697
 #, php-format
 msgid "%1$s – %2$s"
 msgstr ""
@@ -1225,7 +1224,7 @@ msgstr ""
 
 #: inc/Admin/class-review-screen.php:256
 #: inc/Core/class-post-types.php:201
-#: inc/Portal/class-report-actions.php:167
+#: inc/Portal/class-report-actions.php:187
 #: templates/portal/partials/campaign-table.php:33
 #: templates/portal/screens/campaign.php:836
 msgid "Campaign"
@@ -1251,7 +1250,7 @@ msgstr ""
 
 #: inc/Admin/class-review-screen.php:265
 #: templates/portal/screens/campaigns.php:53
-#: templates/portal/screens/dashboard.php:61
+#: templates/portal/screens/dashboard.php:66
 msgid "Create campaign"
 msgstr ""
 
@@ -2681,7 +2680,7 @@ msgstr ""
 #: inc/Portal/class-creative-actions.php:315
 #: inc/Portal/class-email-change-actions.php:178
 #: inc/Portal/class-organization-actions.php:222
-#: inc/Portal/class-report-actions.php:77
+#: inc/Portal/class-report-actions.php:78
 #: inc/Workflow/class-campaign-state-machine.php:245
 #: inc/Workflow/class-campaign-state-machine.php:263
 #: inc/Workflow/class-creative-manager.php:405
@@ -2989,45 +2988,51 @@ msgstr ""
 msgid "Changes needed"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:116
-#: inc/Portal/class-report-actions.php:169
+#. translators: 1: first day of the range. 2: last day of the range.
+#: inc/Portal/class-delivery-view-data.php:126
+#, php-format
+msgid "%1$s to %2$s (UTC)"
+msgstr ""
+
+#: inc/Portal/class-delivery-view-data.php:197
+#: inc/Portal/class-report-actions.php:189
 #: templates/portal/partials/campaign-summary-facts.php:56
 #: templates/portal/partials/campaign-table.php:38
-#: templates/portal/partials/sparkline.php:30
+#: templates/portal/partials/sparkline.php:34
 msgid "Impressions"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:121
-#: inc/Portal/class-report-actions.php:170
+#: inc/Portal/class-delivery-view-data.php:202
+#: inc/Portal/class-report-actions.php:190
 #: templates/portal/partials/campaign-summary-facts.php:60
 #: templates/portal/partials/campaign-table.php:39
 msgid "Clicks"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:126
+#: inc/Portal/class-delivery-view-data.php:207
 #: templates/portal/partials/campaign-summary-facts.php:64
 #: templates/portal/partials/campaign-table.php:40
 msgid "CTR"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:132
+#: inc/Portal/class-delivery-view-data.php:213
 msgid "Viewable"
 msgstr ""
 
 #. translators: %s: signed change in percentage points, e.g. +0.5.
-#: inc/Portal/class-delivery-view-data.php:197
+#: inc/Portal/class-delivery-view-data.php:278
 #, php-format
 msgid "%s pp vs previous period"
 msgstr ""
 
 #. translators: %s: signed percentage change, e.g. +12.4.
-#: inc/Portal/class-delivery-view-data.php:201
+#: inc/Portal/class-delivery-view-data.php:282
 #, php-format
 msgid "%s%% vs previous period"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:288
-#: inc/Portal/class-delivery-view-data.php:310
+#: inc/Portal/class-delivery-view-data.php:379
+#: inc/Portal/class-delivery-view-data.php:401
 #: templates/portal/partials/campaign-summary-facts.php:90
 #: templates/portal/partials/campaign-table.php:97
 msgid "Not measured"
@@ -3147,23 +3152,23 @@ msgstr ""
 msgid "If a portal account uses that address, a one-time password link has been sent."
 msgstr ""
 
-#: inc/Portal/class-report-actions.php:90
+#: inc/Portal/class-report-actions.php:91
 msgid "Reporting is not available on this site."
 msgstr ""
 
-#: inc/Portal/class-report-actions.php:100
+#: inc/Portal/class-report-actions.php:101
 msgid "There is no organization to report on."
 msgstr ""
 
-#: inc/Portal/class-report-actions.php:166
+#: inc/Portal/class-report-actions.php:186
 msgid "Date (UTC)"
 msgstr ""
 
-#: inc/Portal/class-report-actions.php:168
+#: inc/Portal/class-report-actions.php:188
 msgid "Campaign ID"
 msgstr ""
 
-#: inc/Portal/class-report-actions.php:171
+#: inc/Portal/class-report-actions.php:191
 msgid "CTR %"
 msgstr ""
 
@@ -3210,7 +3215,7 @@ msgid "Needs your attention"
 msgstr ""
 
 #. translators: %s: campaign start date.
-#: inc/Portal/class-view-data.php:667
+#: inc/Portal/class-view-data.php:690
 #, php-format
 msgid "From %s"
 msgstr ""
@@ -4775,18 +4780,14 @@ msgstr ""
 msgid "Portal"
 msgstr ""
 
-#. translators: 1: first weekday. 2: last weekday.
-#: templates/portal/partials/sparkline.php:24
+#. translators: 1: first day of the range. 2: last day of the range.
+#: templates/portal/partials/sparkline.php:28
 #, php-format
 msgid "Daily impressions, %1$s to %2$s"
 msgstr ""
 
-#: templates/portal/partials/sparkline.php:31
-msgid "Last 7 days"
-msgstr ""
-
 #. translators: 1: weekday. 2: impression count.
-#: templates/portal/partials/sparkline.php:42
+#: templates/portal/partials/sparkline.php:46
 #, php-format
 msgid "%1$s: %2$s impression"
 msgid_plural "%1$s: %2$s impressions"
@@ -4794,9 +4795,9 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d: number of days covered by the export.
-#: templates/portal/partials/sparkline.php:74
+#: templates/portal/partials/sparkline.php:102
 #, php-format
-msgid "Download last %d days (CSV)"
+msgid "Download %d days (CSV)"
 msgstr ""
 
 #: templates/portal/placeholder.php:19
@@ -5305,32 +5306,56 @@ msgid "Confirm email change"
 msgstr ""
 
 #. translators: %s: the advertiser's display name.
-#: templates/portal/screens/dashboard.php:43
+#: templates/portal/screens/dashboard.php:48
 #, php-format
 msgid "Welcome back, %s"
 msgstr ""
 
-#: templates/portal/screens/dashboard.php:51
+#: templates/portal/screens/dashboard.php:56
 msgid "Your campaigns and where each one has got to."
 msgstr ""
 
-#: templates/portal/screens/dashboard.php:52
+#: templates/portal/screens/dashboard.php:57
 msgid "Your campaigns, and how they are delivering."
 msgstr ""
 
+#: templates/portal/screens/dashboard.php:84
+msgid "Choose a reporting window"
+msgstr ""
+
+#: templates/portal/screens/dashboard.php:87
+msgid "From (UTC)"
+msgstr ""
+
+#: templates/portal/screens/dashboard.php:92
+msgid "To (UTC)"
+msgstr ""
+
+#. translators: %d: number of days.
+#: templates/portal/screens/dashboard.php:112
+#, php-format
+msgid "Last %d day"
+msgid_plural "Last %d days"
+msgstr[0] ""
+msgstr[1] ""
+
+#: templates/portal/screens/dashboard.php:131
+msgid "That date range could not be used, so the default window is shown. A range must be two valid dates, in order, and no longer than 92 days."
+msgstr ""
+
 #. translators: %s: the window the figures cover, e.g. Last 30 days (UTC).
-#: templates/portal/screens/dashboard.php:83
+#: templates/portal/screens/dashboard.php:140
 #, php-format
 msgid "Native delivery, %s"
 msgstr ""
 
-#. translators: %s: the window the figures cover, e.g. Last 30 days (UTC).
-#: templates/portal/screens/dashboard.php:113
+#. translators: %s: the window the figures cover, e.g. 1 August to 30 August 2026 (UTC).
+#: templates/portal/screens/dashboard.php:170
 #, php-format
 msgid "Impressions and clicks from native delivery. %s."
 msgstr ""
 
-#: templates/portal/screens/dashboard.php:128
+#: templates/portal/screens/dashboard.php:185
 msgid "Your campaigns"
 msgstr ""
 

@@ -256,7 +256,15 @@ Shared boundaries and group exit criteria:
       reason is shown rather than absorbed, because that invariant belongs to
       the engine and not to the table.
 
-      Still open: an advertiser-facing range picker, and the publisher export.
+      **The dashboard window is the reader's to choose**: two date inputs and
+      three presets, with the tiles, chart, caption and export all resolving
+      one request so the page cannot disagree with itself. A range that cannot
+      be used is refused and said to be, never clamped. The export follows the
+      window and truncates to what it can assemble in memory — a different cap
+      from what a read may examine, and the button names the number it will
+      actually produce.
+
+      Still open: the publisher export, and the scheduled-delivery seam.
 
 ### Inventory and commerce
 

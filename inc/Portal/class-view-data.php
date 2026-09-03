@@ -611,6 +611,29 @@ final class View_Data {
 	}
 
 	/**
+	 * The chosen window, and the slice of it the export will produce.
+	 *
+	 * One call rather than five, because a template that fetched these
+	 * separately could be edited into fetching them from different requests.
+	 *
+	 * @return array{from: string, to: string, days: int, rejected: bool, export_days: int, export_from: string, export_to: string}
+	 */
+	public function delivery_window(): array {
+		$period = $this->delivery->period();
+		$export = $this->delivery->export_period();
+
+		return array(
+			'from'        => $period->start,
+			'to'          => $period->end,
+			'days'        => $period->days,
+			'rejected'    => $this->delivery->range_rejected(),
+			'export_days' => $export->days,
+			'export_from' => $export->start,
+			'export_to'   => $export->end,
+		);
+	}
+
+	/**
 	 * One campaign, shaped for a table row.
 	 *
 	 * @param int $campaign_id Campaign post id.
