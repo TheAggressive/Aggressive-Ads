@@ -44,6 +44,22 @@ final class Reporting_Read {
 	public const SERIES_DAYS = 7;
 
 	/**
+	 * Windows a reader may pick from, in days.
+	 *
+	 * A short list rather than a free-text field, for the reason the audit
+	 * retention setting is also a list: a range has a small set of real
+	 * answers, and an open field lets somebody type 3000. Defined once here
+	 * because two screens offer them and a screen offering a window the other
+	 * refuses is a bug nobody would think to look for.
+	 *
+	 * Every value is inside `Report_Period::MAX_DAYS`, so no choice can produce
+	 * an unbounded read.
+	 *
+	 * @var list<int>
+	 */
+	public const WINDOWS = array( 7, 30, 90 );
+
+	/**
 	 * Constructor.
 	 *
 	 * @param Settings                 $settings   Settings document.

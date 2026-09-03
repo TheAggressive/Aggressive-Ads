@@ -32,7 +32,12 @@ $aggr_delivery  = $aggr_view->delivery_counts();
 $aggr_series    = $aggr_view->delivery_series();
 $aggr_range     = $aggr_view->delivery_range_label();
 $aggr_freshness = $aggr_view->delivery_freshness_note();
-$aggr_user      = wp_get_current_user();
+$aggr_window    = $aggr_view->delivery_window();
+
+$aggr_export_days = $aggr_window['export_days'];
+$aggr_export_from = $aggr_window['export_from'];
+$aggr_export_to   = $aggr_window['export_to'];
+$aggr_user        = wp_get_current_user();
 ?>
 <div class="aggr-pagehead">
 	<div>
@@ -75,6 +80,58 @@ $aggr_user      = wp_get_current_user();
 <?php
 if ( array() !== $aggr_delivery ) :
 	?>
+<form class="aggr-range" method="get" action="<?php echo esc_url( \Aggressive\Ads\Portal\Routes::url() ); ?>">
+	<h2 class="aggr-sr"><?php esc_html_e( 'Choose a reporting window', 'aggressive-ads' ); ?></h2>
+
+	<div class="aggr-range__field">
+		<label for="aggr-range-from"><?php esc_html_e( 'From (UTC)', 'aggressive-ads' ); ?></label>
+		<input type="date" id="aggr-range-from" name="from" value="<?php echo esc_attr( $aggr_window['from'] ); ?>">
+	</div>
+
+	<div class="aggr-range__field">
+		<label for="aggr-range-to"><?php esc_html_e( 'To (UTC)', 'aggressive-ads' ); ?></label>
+		<input type="date" id="aggr-range-to" name="to" value="<?php echo esc_attr( $aggr_window['to'] ); ?>">
+	</div>
+
+	<button class="aggr-button aggr-button--secondary" type="submit"><?php esc_html_e( 'Show', 'aggressive-ads' ); ?></button>
+
+	<?php
+	/*
+	 * The presets are links rather than a second control. A select beside two
+	 * date inputs asks the reader which one wins; a link that fills the same
+	 * range in answers that by not competing.
+	 */
+	?>
+	<ul class="aggr-range__presets">
+		<?php foreach ( \Aggressive\Ads\Workflow\Reporting_Read::WINDOWS as $aggr_preset ) : ?>
+			<li>
+				<a href="<?php echo esc_url( add_query_arg( 'days', (int) $aggr_preset, \Aggressive\Ads\Portal\Routes::url() ) ); ?>">
+					<?php
+					printf(
+						/* translators: %d: number of days. */
+						esc_html( _n( 'Last %d day', 'Last %d days', (int) $aggr_preset, 'aggressive-ads' ) ),
+						(int) $aggr_preset
+					);
+					?>
+				</a>
+			</li>
+		<?php endforeach; ?>
+	</ul>
+</form>
+
+	<?php if ( true === $aggr_window['rejected'] ) : ?>
+		<?php
+		/*
+		 * Refused, not clamped. A screen that quietly reported a different
+		 * period than the one asked for would look authoritative and answer a
+		 * question nobody put to it.
+		 */
+		?>
+	<p class="aggr-notice" role="status">
+		<?php esc_html_e( 'That date range could not be used, so the default window is shown. A range must be two valid dates, in order, and no longer than 92 days.', 'aggressive-ads' ); ?>
+	</p>
+	<?php endif; ?>
+
 <div class="aggr-stats" aria-labelledby="aggr-delivery-heading">
 	<h2 id="aggr-delivery-heading" class="aggr-sr">
 		<?php
@@ -109,7 +166,7 @@ if ( array() !== $aggr_delivery ) :
 <p class="aggr-hint">
 	<?php
 	printf(
-		/* translators: %s: the window the figures cover, e.g. Last 30 days (UTC). */
+		/* translators: %s: the window the figures cover, e.g. 1 August to 30 August 2026 (UTC). */
 		esc_html__( 'Impressions and clicks from native delivery. %s.', 'aggressive-ads' ),
 		esc_html( $aggr_range )
 	);

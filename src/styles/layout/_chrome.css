@@ -392,6 +392,50 @@
 	color: var(--aggr-color-danger);
 }
 
+/*
+ * The reporting window picker.
+ *
+ * Wraps rather than scrolls, and the presets sit on the same row until there
+ * is no room for them — a filter that pushes the figures it filters off the
+ * screen has cost more than it gave.
+ */
+.aggr-range {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: var(--aggr-space-sm);
+	margin-bottom: var(--aggr-space-md);
+}
+
+.aggr-range__field {
+	display: flex;
+	flex-direction: column;
+	gap: var(--aggr-space-2xs);
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.aggr-range__field input {
+	min-height: var(--aggr-control-min);
+	padding: var(--aggr-space-2xs) var(--aggr-space-xs);
+	background: var(--aggr-color-surface);
+	border: 1px solid var(--aggr-border-color);
+	border-radius: var(--aggr-radius-control);
+	color: var(--aggr-color-text);
+	font: inherit;
+	font-weight: 400;
+}
+
+.aggr-range__presets {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--aggr-space-sm);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	font-size: 13px;
+}
+
 .aggr-dashboard--split {
 	display: grid;
 	grid-template-columns: 2fr 1fr;

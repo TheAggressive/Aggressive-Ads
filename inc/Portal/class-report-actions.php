@@ -12,6 +12,7 @@ namespace Aggressive\Ads\Portal;
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Domain\Csv_Writer;
 use Aggressive\Ads\Domain\Report_Period;
+use Aggressive\Ads\Domain\Report_Request;
 use Aggressive\Ads\Domain\Reporting_Rules;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Security\Capabilities;
@@ -103,11 +104,10 @@ final class Report_Actions implements Service {
 			);
 		}
 
-		$days   = $this->requested_days();
-		$period = Report_Period::trailing( $days, gmdate( 'Y-m-d' ) );
+		$period = $this->requested_period();
 		$rows   = $this->reporting->daily_rows_for_org( $org_id, $period );
 
-		$this->send( $this->document( $rows ), $this->filename( $org_id, $days ) );
+		$this->send( $this->document( $rows ), $this->filename( $org_id, $period->days ) );
 	}
 
 	/**
@@ -123,19 +123,39 @@ final class Report_Actions implements Service {
 	}
 
 	/**
-	 * The requested window, clamped.
+	 * The window this export will cover.
 	 *
-	 * @return int
+	 * Read through `Report_Request` so the export and the screen agree about
+	 * what a range means, then truncated to this handler's own tighter cap.
+	 *
+	 * **Truncated rather than refused, and only here.** A range refused by
+	 * `Report_Request` is a malformed one and falls back to the default; a
+	 * valid range longer than this handler can assemble in memory is a real
+	 * request that this surface cannot fully answer, and the honest response is
+	 * the most recent slice of it rather than an error page. The button that
+	 * submits this names the number of days it will actually produce.
 	 */
-	private function requested_days(): int {
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- check_admin_referer() ran in the caller before this is reached.
-		$raw = isset( $_POST['days'] ) ? absint( wp_unslash( $_POST['days'] ) ) : 0;
+	private function requested_period(): Report_Period {
+		// phpcs:disable WordPress.Security.NonceVerification.Missing -- check_admin_referer() ran in the caller before this is reached.
+		$from = isset( $_POST['from'] ) ? sanitize_text_field( wp_unslash( $_POST['from'] ) ) : '';
+		$to   = isset( $_POST['to'] ) ? sanitize_text_field( wp_unslash( $_POST['to'] ) ) : '';
+		$days = isset( $_POST['days'] ) ? absint( wp_unslash( $_POST['days'] ) ) : 0;
+		// phpcs:enable
 
-		if ( $raw < 1 ) {
-			return self::DEFAULT_DAYS;
+		$period = Report_Request::resolve(
+			$from,
+			$to,
+			$days,
+			Reporting_Read::WINDOWS,
+			gmdate( 'Y-m-d' ),
+			self::DEFAULT_DAYS
+		)->period;
+
+		if ( $period->days <= self::MAX_DAYS ) {
+			return $period;
 		}
 
-		return min( $raw, self::MAX_DAYS );
+		return Report_Period::trailing( self::MAX_DAYS, $period->end );
 	}
 
 	/**

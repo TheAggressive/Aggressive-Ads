@@ -19,8 +19,9 @@ shipped it is marked; everything unmarked is still a definition, not a claim.
 freshness-aware `Reporting_Read`, the dashboard tiles reading a stated window
 instead of all of history, conversions made visible on every surface that
 already showed impressions, each tile carrying its change against the window
-before it, and the publisher's fill report — the first reader P13's decision
-counters have ever had. Everything else below is still ahead.
+before it, the publisher's fill report — the first reader P13's decision
+counters have ever had — and a range picker on the dashboard. What remains is
+the publisher export and the scheduled-delivery seam.
 
 ## Outcome
 
@@ -243,10 +244,16 @@ No new durable data. Every number a report shows is already stored.
   delegates to it and `previous()` delegates to `ending()`, so the bound is
   enforced once and two factories cannot end up disagreeing about whether a
   range is inclusive.
-- **`Domain\Report_Request`** *(later slice)* — scope, metric set and comparison
-  flag around a period, for the surfaces that take a range from a request. It is
-  the seam scheduled delivery would render through; it is not needed until
-  something offers a range picker.
+- **`Domain\Report_Request`** *(built, and smaller than planned)* — reads a
+  range off a request and records whether one was refused.
+
+  **It carries no scope and no metric set**, which the original sketch gave it.
+  Scope never comes from a request: the advertiser's organization comes from the
+  session and the publisher's screen is site-wide, so a scope field would have
+  been a tenancy boundary reimplemented in a place nobody thinks to test. A
+  metric set had no reader either — both screens show every metric they have.
+  What was actually needed was one answer to "what range did they ask for, and
+  was it usable", shared so two screens cannot disagree about it.
 - **`Repository\Rollup_Report_Repository`** *(built)* — the org-scoped reads,
   split from `Rollup_Repository`, which keeps the schema, the live counter
   increment, the reconciler's rebuild and the pacing reads. Same table, two
@@ -530,7 +537,10 @@ The phase may move to `[x]` only when:
    how often a slot was asked for, how often it filled, and the reasons it did
    not — read from `aggr_decision_rollups` through a production screen.
 2. An advertiser can choose a range and get delivery, viewability and conversion
-   numbers for it, with a comparison period, in the portal and in CSV.
+   numbers for it, with a comparison period, in the portal and in CSV. *(Done.)*
+   Two date inputs and three preset links; the tiles, the chart, the caption and
+   the export all resolve one request. A range that cannot be used is refused
+   and said to be refused, never clamped into a report nobody asked for.
 3. Conversions are visible wherever impressions and clicks are, including
    `GET /campaigns`.
 4. Every report states its timezone and its freshness, and a partial day is

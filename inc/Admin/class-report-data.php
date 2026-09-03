@@ -12,6 +12,7 @@ namespace Aggressive\Ads\Admin;
 use Aggressive\Ads\Domain\Decision_Outcome;
 use Aggressive\Ads\Domain\No_Fill_Reason;
 use Aggressive\Ads\Domain\Report_Period;
+use Aggressive\Ads\Domain\Report_Request;
 use Aggressive\Ads\Repository\Decision_Rollup_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Workflow\Reporting_Read;
@@ -33,12 +34,12 @@ final class Report_Data {
 	/**
 	 * Windows a reader may choose, in days.
 	 *
-	 * A short list rather than a free-text field, for the reason the audit
-	 * retention setting is also a list: a range has a small set of real
-	 * answers, and an open field lets somebody type 3000. Every value is inside
-	 * `Report_Period::MAX_DAYS`, so no choice here can produce an unbounded read.
+	 * The advertiser dashboard offers the same list, so it is defined once.
+	 * Two screens with their own copies agree until one is edited.
+	 *
+	 * @var list<int>
 	 */
-	public const WINDOWS = array( 7, 30, 90 );
+	public const WINDOWS = Reporting_Read::WINDOWS;
 
 	/**
 	 * Constructor.
@@ -66,19 +67,22 @@ final class Report_Data {
 	}
 
 	/**
-	 * A validated window from a day count, falling back to the default.
+	 * A validated window from request input, falling back to the default.
 	 *
-	 * The count is request input, so it is checked against the offered list
-	 * rather than clamped: a value that is not on the menu was not chosen from
-	 * the menu, and answering it with the nearest legal range would report a
-	 * period nobody asked for.
+	 * Delegated to `Report_Request` because the advertiser dashboard reads a
+	 * range from a query string too, and two screens that parse the same
+	 * parameters separately agree until the day one of them is edited.
 	 *
-	 * @param int $days Requested window.
+	 * **The refusal flag is deliberately dropped here.** The dashboard offers
+	 * two date inputs, where a range somebody typed can fail and saying so is
+	 * the difference between a report and a wrong answer. This screen offers a
+	 * closed list, so the only way to reach a refusal is to edit the URL by
+	 * hand — and the window it settled on is printed at the top either way.
+	 *
+	 * @param int $days Requested preset, or 0.
 	 */
 	public function period( int $days ): Report_Period {
-		$days = in_array( $days, self::WINDOWS, true ) ? $days : Reporting_Read::DEFAULT_DAYS;
-
-		return Report_Period::trailing( $days, gmdate( 'Y-m-d' ) );
+		return Report_Request::resolve( '', '', $days, self::WINDOWS, gmdate( 'Y-m-d' ), Reporting_Read::DEFAULT_DAYS )->period;
 	}
 
 	/**

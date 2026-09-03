@@ -18,6 +18,7 @@ use Aggressive\Ads\Domain\Settings_Schema;
 use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Portal\Delivery_View_Data;
+use Aggressive\Ads\Portal\Report_Actions;
 use Aggressive\Ads\Portal\View_Data;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
@@ -26,6 +27,7 @@ use Aggressive\Ads\Repository\Rollup_Report_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Security\Ownership;
 use Aggressive\Ads\Security\Roles;
+use Aggressive\Ads\Workflow\Reporting_Read;
 use Aggressive\Ads\Workflow\Rollup_Reconciler;
 use WP_REST_Request;
 use WP_UnitTestCase;
@@ -148,12 +150,17 @@ final class ReportingTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Settings option must not leak into later tests.
+	 * Settings and range parameters must not leak into later tests.
+	 *
+	 * The range is read from `$_GET` and memoized per instance, so a test that
+	 * left one behind would silently narrow every window a later test reports —
+	 * the sort of cross-test coupling that produces a failure in the wrong file.
 	 *
 	 * @return void
 	 */
 	public function tear_down(): void {
 		delete_option( Settings::OPTION );
+		unset( $_GET['from'], $_GET['to'], $_GET['days'] );
 		parent::tear_down();
 	}
 
@@ -266,11 +273,17 @@ final class ReportingTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The sparkline is seven UTC days, org-scoped, and pads days with no events.
+	 * The sparkline covers the chosen window, org-scoped, padding empty days.
+	 *
+	 * **It follows the tiles rather than keeping a length of its own.** A page
+	 * whose figures covered one window and whose chart covered another would
+	 * invite the reader to compare them, and every such comparison would be
+	 * wrong. The chart was a fixed seven days until the window became the
+	 * reader's to choose.
 	 *
 	 * @return void
 	 */
-	public function test_series_is_org_scoped_and_pads_missing_days(): void {
+	public function test_series_covers_the_window_and_pads_missing_days(): void {
 		$today     = gmdate( 'Y-m-d' );
 		$yesterday = gmdate( 'Y-m-d', time() - DAY_IN_SECONDS );
 
@@ -282,21 +295,22 @@ final class ReportingTest extends WP_UnitTestCase {
 		wp_set_current_user( $this->advertiser_a );
 
 		$series = $this->view->delivery_series();
+		$last   = array_key_last( $series );
 
-		$this->assertCount( 7, $series );
-		$this->assertSame( $yesterday, $series[5]['day'] );
-		$this->assertSame( 4, $series[5]['impressions'] );
-		$this->assertSame( 100, $series[5]['height'] );
-		$this->assertSame( $today, $series[6]['day'] );
-		$this->assertSame( 0, $series[6]['impressions'] );
-		$this->assertSame( 0, $series[6]['height'] );
+		$this->assertCount( Reporting_Read::DEFAULT_DAYS, $series, 'The chart did not cover the window the tiles report.' );
+		$this->assertSame( $yesterday, $series[ $last - 1 ]['day'] );
+		$this->assertSame( 4, $series[ $last - 1 ]['impressions'] );
+		$this->assertSame( 100, $series[ $last - 1 ]['height'] );
+		$this->assertSame( $today, $series[ $last ]['day'] );
+		$this->assertSame( 0, $series[ $last ]['impressions'], 'Another organization’s delivery reached this chart.' );
+		$this->assertSame( 0, $series[ $last ]['height'] );
 
 		wp_set_current_user( $this->advertiser_b );
 
 		$theirs = $this->view->delivery_series();
 
-		$this->assertSame( 90, $theirs[6]['impressions'] );
-		$this->assertSame( 0, $theirs[5]['impressions'] );
+		$this->assertSame( 90, $theirs[ $last ]['impressions'] );
+		$this->assertSame( 0, $theirs[ $last - 1 ]['impressions'] );
 	}
 
 	/**
@@ -313,6 +327,76 @@ final class ReportingTest extends WP_UnitTestCase {
 
 		$this->assertSame( 2, $mine['impressions'] );
 		$this->assertSame( 1, $mine['clicks'] );
+	}
+
+	/**
+	 * A range in the query string is what the whole page reports on.
+	 *
+	 * Tiles, chart, caption and export all resolve one request, so the page
+	 * cannot end up disagreeing with itself about which days it is describing.
+	 *
+	 * @return void
+	 */
+	public function test_a_requested_range_is_what_the_page_reports(): void {
+		$this->enable_reporting( true );
+		wp_set_current_user( $this->advertiser_a );
+
+		$_GET['from'] = '2026-08-01';
+		$_GET['to']   = '2026-08-07';
+
+		$window = $this->view->delivery_window();
+
+		$this->assertSame( '2026-08-01', $window['from'] );
+		$this->assertSame( '2026-08-07', $window['to'] );
+		$this->assertSame( 7, $window['days'] );
+		$this->assertFalse( $window['rejected'] );
+		$this->assertCount( 7, $this->view->delivery_series(), 'The chart covers a different window than the tiles.' );
+	}
+
+	/**
+	 * **A range that cannot be used is refused, and the page says so.**
+	 *
+	 * Falling back is not enough on its own. A screen that quietly showed the
+	 * last thirty days after being asked for something else looks authoritative
+	 * and has answered a question nobody put to it — which is exactly why
+	 * `Report_Period` refuses rather than clamps.
+	 *
+	 * @return void
+	 */
+	public function test_an_impossible_range_is_refused_and_reported(): void {
+		$this->enable_reporting( true );
+		wp_set_current_user( $this->advertiser_a );
+
+		$_GET['from'] = '2026-01-01';
+		$_GET['to']   = '2026-12-31';
+
+		$window = $this->view->delivery_window();
+
+		$this->assertTrue( $window['rejected'], 'A year-long range was accepted by a screen bounded to 92 days.' );
+		$this->assertSame( Reporting_Read::DEFAULT_DAYS, $window['days'] );
+	}
+
+	/**
+	 * The export follows the window, truncated to what it can assemble.
+	 *
+	 * The two caps differ because they answer different constraints — what a
+	 * read may examine, and what a document may hold in memory — so a 90-day
+	 * window offers a 31-day download, and the button names that number rather
+	 * than the window's.
+	 *
+	 * @return void
+	 */
+	public function test_the_export_follows_the_window_and_names_what_it_will_produce(): void {
+		$this->enable_reporting( true );
+		wp_set_current_user( $this->advertiser_a );
+
+		$_GET['days'] = 90;
+
+		$window = $this->view->delivery_window();
+
+		$this->assertSame( 90, $window['days'] );
+		$this->assertSame( Report_Actions::MAX_DAYS, $window['export_days'], 'The export offered more than it can assemble.' );
+		$this->assertSame( $window['to'], $window['export_to'], 'The export dropped the most recent days rather than the oldest.' );
 	}
 
 	/**
@@ -508,10 +592,20 @@ final class ReportingTest extends WP_UnitTestCase {
 	public function test_the_dashboard_names_its_window_and_its_timezone(): void {
 		$this->enable_reporting( true );
 
-		$label = $this->view->delivery_range_label();
+		$label  = $this->view->delivery_range_label();
+		$window = $this->view->delivery_window();
 
-		$this->assertStringContainsString( '30', $label, 'The tiles do not say how many days they cover.' );
 		$this->assertStringContainsString( 'UTC', $label, 'The tiles do not say the days are UTC, which they are.' );
+		$this->assertSame( gmdate( 'Y-m-d' ), $window['to'], 'The default window does not end today.' );
+		$this->assertSame( Reporting_Read::DEFAULT_DAYS, $window['days'] );
+		$this->assertFalse( $window['rejected'], 'A request with no range was treated as a refused one.' );
+
+		/*
+		 * The label names the dates rather than a length, now that the reader
+		 * chooses the window: "last 30 days" over a range somebody typed in
+		 * August would be worse than no label at all.
+		 */
+		$this->assertStringContainsString( (string) wp_date( (string) get_option( 'date_format' ), (int) strtotime( $window['from'] . ' UTC' ) ), $label );
 	}
 
 	/**

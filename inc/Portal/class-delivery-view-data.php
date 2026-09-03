@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Portal;
 
 use Aggressive\Ads\Domain\Report_Period;
+use Aggressive\Ads\Domain\Report_Request;
 use Aggressive\Ads\Domain\Reporting_Rules;
 use Aggressive\Ads\Workflow\Reporting_Read;
 
@@ -35,13 +36,72 @@ final class Delivery_View_Data {
 	}
 
 	/**
-	 * The window every delivery tile on the dashboard covers.
+	 * What the current request asked to see.
 	 *
-	 * Read once and passed to both the numbers and the caption, so a tile
-	 * cannot end up describing a different period than the one it summed.
+	 * Read here rather than in the template: a page whose tiles, chart, caption
+	 * and export each parsed the query string separately would eventually
+	 * disagree with itself, and the disagreement would look like a reporting
+	 * bug rather than a plumbing one.
+	 *
+	 * **Deliberately not memoized.** This service is a container singleton and
+	 * the container outlives a request in every context that reuses it, so an
+	 * instance property holding request state is a value from somebody else's
+	 * page waiting to be served as yours. Resolving is string parsing over four
+	 * parameters; caching it would trade a measurable nothing for that.
+	 *
+	 * Nothing is trusted. The dates go to `Report_Request`, which refuses
+	 * anything it cannot turn into a bounded period, and the organization is
+	 * never read from the request at all.
+	 */
+	private function request(): Report_Request {
+		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- A read-only range filter on the caller's own data; every value is validated by Report_Request and the organization comes from the session, never the request.
+		$from = isset( $_GET['from'] ) ? sanitize_text_field( wp_unslash( $_GET['from'] ) ) : '';
+		$to   = isset( $_GET['to'] ) ? sanitize_text_field( wp_unslash( $_GET['to'] ) ) : '';
+		$days = isset( $_GET['days'] ) ? absint( wp_unslash( $_GET['days'] ) ) : 0;
+		// phpcs:enable
+
+		return Report_Request::resolve(
+			$from,
+			$to,
+			$days,
+			Reporting_Read::WINDOWS,
+			gmdate( 'Y-m-d' ),
+			Reporting_Read::DEFAULT_DAYS
+		);
+	}
+
+	/**
+	 * The window every delivery tile on the dashboard covers.
 	 */
 	public function period(): Report_Period {
-		return $this->reporting->default_period();
+		return $this->request()->period;
+	}
+
+	/**
+	 * The slice of the window the export will actually produce.
+	 *
+	 * **Truncated rather than refused**, and the button says the number. The
+	 * export's cap is tighter than a report's because it assembles the whole
+	 * document in memory before sending a byte — a different constraint from
+	 * what a read may examine, which is why the two numbers are allowed to
+	 * differ. Truncation keeps the most recent days, which are the ones somebody
+	 * downloading today is asking about.
+	 */
+	public function export_period(): Report_Period {
+		$period = $this->period();
+
+		if ( $period->days <= Report_Actions::MAX_DAYS ) {
+			return $period;
+		}
+
+		return Report_Period::trailing( Report_Actions::MAX_DAYS, $period->end );
+	}
+
+	/**
+	 * Whether the requested range was refused and the default shown instead.
+	 */
+	public function range_rejected(): bool {
+		return $this->request()->rejected;
 	}
 
 	/**
@@ -52,13 +112,34 @@ final class Delivery_View_Data {
 	 * UTC is reading days that do not line up with their own. A report that
 	 * left that unsaid would be quietly wrong for most of the world for the
 	 * hours that matter most.
+	 *
+	 * The dates themselves rather than "last 30 days", now that the window is
+	 * the reader's to choose: a label naming a length cannot describe a range
+	 * somebody typed, and one that said "last 30 days" over an August report
+	 * would be worse than no label.
 	 */
 	public function range_label(): string {
+		$period = $this->period();
+
 		return sprintf(
-			/* translators: %d: number of days the delivery figures cover. */
-			_n( 'Last %d day (UTC)', 'Last %d days (UTC)', Reporting_Read::DEFAULT_DAYS, 'aggressive-ads' ),
-			Reporting_Read::DEFAULT_DAYS
+			/* translators: 1: first day of the range. 2: last day of the range. */
+			__( '%1$s to %2$s (UTC)', 'aggressive-ads' ),
+			$this->day_label( $period->start ),
+			$this->day_label( $period->end )
 		);
+	}
+
+	/**
+	 * One UTC day in the site's date format.
+	 *
+	 * @param string $day_utc `Y-m-d`.
+	 */
+	private function day_label( string $day_utc ): string {
+		$timestamp = strtotime( $day_utc . ' UTC' );
+
+		return false === $timestamp
+			? $day_utc
+			: (string) wp_date( (string) get_option( 'date_format', 'Y-m-d' ), $timestamp );
 	}
 
 	/**
@@ -219,10 +300,18 @@ final class Delivery_View_Data {
 	}
 
 	/**
-	 * Seven-day impression series for the dashboard sparkline.
+	 * Daily impressions across the chosen window, for the sparkline.
 	 *
 	 * Empty when Reporting is off, so the template omits the chart rather than
 	 * drawing a flat line that looks like traffic.
+	 *
+	 * **The chart follows the tiles.** A page whose figures covered one window
+	 * and whose chart covered another would invite the reader to compare them,
+	 * and every such comparison would be wrong.
+	 *
+	 * A weekday is a useful label over a week and a meaningless one over a
+	 * quarter, where the same seven names repeat thirteen times, so longer
+	 * windows label by date instead.
 	 *
 	 * @param int $org_id Organization to report on.
 	 * @return list<array{day: string, label: string, impressions: int, height: int}>
@@ -232,7 +321,7 @@ final class Delivery_View_Data {
 			return array();
 		}
 
-		$raw = $this->reporting->series_for_org( $org_id );
+		$raw = $this->reporting->series_for_org( $org_id, $this->period() );
 		$max = 0;
 
 		foreach ( $raw as $row ) {
@@ -241,12 +330,14 @@ final class Delivery_View_Data {
 
 		$series = array();
 
+		$format = count( $raw ) > 7 ? 'j M' : 'D';
+
 		foreach ( $raw as $row ) {
 			$timestamp = strtotime( $row['day'] . ' UTC' );
 
 			$series[] = array(
 				'day'         => $row['day'],
-				'label'       => false === $timestamp ? $row['day'] : (string) wp_date( 'D', $timestamp ),
+				'label'       => false === $timestamp ? $row['day'] : (string) wp_date( $format, $timestamp ),
 				'impressions' => $row['impressions'],
 				'height'      => Reporting_Rules::bar_height( $row['impressions'], $max ),
 			);
