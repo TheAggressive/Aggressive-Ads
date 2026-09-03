@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Admin;
 
+use Aggressive\Ads\Core\Csv_Download;
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Domain\Csv_Writer;
 use Aggressive\Ads\Domain\Report_Period;
@@ -96,15 +97,34 @@ final class Report_Export implements Service {
 		$placement = isset( $_POST['placement'] ) ? absint( wp_unslash( $_POST['placement'] ) ) : 0;
 		// phpcs:enable
 
+		$period = $this->export_period( $days );
+		$rows   = $this->decisions->daily_outcomes( $period->start, $period->end, $placement );
+
+		Csv_Download::send( $this->document( $rows ), $this->filename( $period, $placement ) );
+	}
+
+	/**
+	 * The window this export will actually cover.
+	 *
+	 * **Truncated rather than refused**, keeping the most recent days, which
+	 * are the ones somebody downloading today is asking about. A range refused
+	 * by `Report_Request` is malformed and falls back to the default; a valid
+	 * range longer than this handler can assemble in memory is a real request
+	 * this surface cannot fully answer, and the honest response is a slice of
+	 * it. The button that submits this names the number it will produce.
+	 *
+	 * Public for the same reason `document()` is: `handle_export()` ends in
+	 * `exit`, so anything only reachable through it is unassertable — and
+	 * mutation testing found this truncation surviving its own deletion.
+	 *
+	 * @param int $days Requested preset, or 0.
+	 */
+	public function export_period( int $days ): Report_Period {
 		$period = $this->data->period( $days );
 
-		if ( $period->days > self::MAX_DAYS ) {
-			$period = Report_Period::trailing( self::MAX_DAYS, $period->end );
-		}
-
-		$rows = $this->decisions->daily_outcomes( $period->start, $period->end, $placement );
-
-		$this->send( $this->document( $rows ), $this->filename( $period, $placement ) );
+		return $period->days > self::MAX_DAYS
+			? Report_Period::trailing( self::MAX_DAYS, $period->end )
+			: $period;
 	}
 
 	/**
@@ -180,35 +200,18 @@ final class Report_Export implements Service {
 	 * which lowers the risk and changes nothing: it goes through
 	 * `sanitize_file_name()` before it reaches a header either way.
 	 *
+	 * Public alongside the other two seams, and for the same reason: it is a
+	 * pure function of its arguments, and the only alternative is asserting it
+	 * through a method that ends in `exit`.
+	 *
 	 * @param Report_Period $period    Window exported.
 	 * @param int           $placement Placement id, or 0.
 	 */
-	private function filename( Report_Period $period, int $placement ): string {
+	public function filename( Report_Period $period, int $placement ): string {
 		$scope = 0 === $placement
 			? 'all-placements'
 			: sanitize_file_name( $this->placements->name( $placement ) );
 
 		return sprintf( 'fill-report-%s-%s-to-%s.csv', '' === $scope ? 'placement' : $scope, $period->start, $period->end );
-	}
-
-	/**
-	 * Sends the document as a download and stops.
-	 *
-	 * @param string $body     CSV bytes.
-	 * @param string $filename Sanitized download name.
-	 * @return void
-	 */
-	private function send( string $body, string $filename ): void {
-		nocache_headers();
-
-		header( 'Content-Type: text/csv; charset=utf-8' );
-		header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
-		header( 'Content-Length: ' . (string) strlen( $body ) );
-		header( 'X-Content-Type-Options: nosniff' );
-
-		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CSV bytes, not markup. Csv_Writer quotes every field and neutralizes spreadsheet formulas; HTML escaping here would corrupt the file.
-		echo $body;
-
-		exit;
 	}
 }

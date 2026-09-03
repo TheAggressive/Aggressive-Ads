@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Portal;
 
+use Aggressive\Ads\Core\Csv_Download;
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Domain\Csv_Writer;
 use Aggressive\Ads\Domain\Report_Period;
@@ -107,7 +108,7 @@ final class Report_Actions implements Service {
 		$period = $this->requested_period();
 		$rows   = $this->reporting->daily_rows_for_org( $org_id, $period );
 
-		$this->send( $this->document( $rows ), $this->filename( $org_id, $period->days ) );
+		Csv_Download::send( $this->document( $rows ), $this->filename( $org_id, $period->days ) );
 	}
 
 	/**
@@ -226,30 +227,5 @@ final class Report_Actions implements Service {
 		$name = '' === $name ? 'advertising' : $name;
 
 		return sprintf( '%s-performance-%dd-%s.csv', $name, $days, gmdate( 'Y-m-d' ) );
-	}
-
-	/**
-	 * Sends the document as a download and stops.
-	 *
-	 * @param string $body     CSV bytes.
-	 * @param string $filename Sanitized download name.
-	 * @return void
-	 */
-	private function send( string $body, string $filename ): void {
-		nocache_headers();
-
-		header( 'Content-Type: text/csv; charset=utf-8' );
-		header( 'Content-Disposition: attachment; filename="' . $filename . '"' );
-		header( 'Content-Length: ' . (string) strlen( $body ) );
-
-		// X-Content-Type-Options stops a browser sniffing this back into
-		// something it will render. A CSV whose first cell an advertiser
-		// controls is not a document any browser should be guessing about.
-		header( 'X-Content-Type-Options: nosniff' );
-
-		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CSV bytes, not markup. Csv_Writer quotes every field and neutralizes spreadsheet formulas; HTML escaping here would corrupt the file.
-		echo $body;
-
-		exit;
 	}
 }

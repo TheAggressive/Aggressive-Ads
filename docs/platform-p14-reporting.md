@@ -655,6 +655,34 @@ failed was the keyboard assertion above rather than anything about the screen.
 That is the acceptable version of this trade and not a repeatable one — the
 specs that matter most are the ones nobody can run locally.
 
+**Every unit this phase added was mutation-tested at closeout.** Forty-four
+deliberate defects, one at a time, each run against the suite. **Ten survived
+the first honest sweep** and every one of them is now killed:
+
+| survivor | what it meant |
+|---|---|
+| capability check deleted, both exports | nothing called `handle_export()`; the test that did was satisfied by whichever guard died first |
+| referer check deleted, both exports | as above |
+| module gate deleted, both exports | as above |
+| `nosniff` header deleted | everything behind `exit` was unassertable |
+| export window cap deleted | truncation had no reader |
+| filename sanitisation deleted | a staff-controlled name reaching a response header, unproven |
+| `campaign_id > 0` relaxed | the house guard was covered only in appearance — a house row also carries `org_id = 0`, so the tenancy filter alone passed the existing test either way |
+| publisher freshness note forced on | the portal had this assertion and the publisher screen did not |
+| download button cap ignored | the button could promise more than the export assembles |
+| placement id used unvalidated | a validation a docblock claimed and nothing proved |
+
+Two changes to the code came out of it rather than tests alone:
+`Csv_Download::headers()` was split from `send()` so a security header can be
+read by a test, and `Report_Export`'s window and filename became public seams
+for the same reason `document()` already was.
+
+**The harness lied before the code did**, which is worth as much as the
+findings. The first sweep reported nearly everything killed, because
+`phpunit --filter` exits non-zero when nothing matches — so every
+integration-only mutation looked caught while the unit suite had found no tests
+to run. A run that executes zero tests is inconclusive, never a kill.
+
 **Environment caveat.** Docker was unavailable on the authoring host throughout,
 so the WordPress suites ran natively against MySQL 8.0.46 and PHP 8.5.6 rather
 than CI's pinned 8.4/8.4, and the browser lanes never ran locally at all. CI is

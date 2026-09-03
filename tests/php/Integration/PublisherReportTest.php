@@ -24,6 +24,7 @@ use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Decision_Rollup_Repository;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Security\Roles;
+use Aggressive\Ads\Workflow\Rollup_Reconciler;
 use WP_UnitTestCase;
 
 /**
@@ -93,6 +94,19 @@ final class PublisherReportTest extends WP_UnitTestCase {
 
 		$this->rollups->install_table();
 		$this->enable_reporting( true );
+	}
+
+	/**
+	 * Filter parameters must not leak into later tests.
+	 *
+	 * They are read from `$_GET`, so one left behind would quietly filter a
+	 * later test's report and fail it somewhere unrelated.
+	 *
+	 * @return void
+	 */
+	public function tear_down(): void {
+		unset( $_GET['placement'], $_GET['days'] );
+		parent::tear_down();
 	}
 
 	/**
@@ -343,6 +357,86 @@ final class PublisherReportTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The export truncates a long window, keeps the recent end, and names it.
+	 *
+	 * Three assertions that all survived their own deletion until this existed:
+	 * the truncation, the direction it truncates in, and the sanitisation of a
+	 * filename that carries a staff-controlled placement name into a response
+	 * header.
+	 *
+	 * @return void
+	 */
+	public function test_the_export_window_is_capped_and_its_filename_is_safe(): void {
+		$ninety = $this->export->export_period( 90 );
+
+		$this->assertSame( Report_Export::MAX_DAYS, $ninety->days, 'A 90-day window was not capped to what the export can assemble.' );
+		$this->assertSame( gmdate( 'Y-m-d' ), $ninety->end, 'Truncation dropped the recent days rather than the old ones.' );
+
+		// A window already inside the cap is left alone.
+		$this->assertSame( 7, $this->export->export_period( 7 )->days );
+
+		$hostile = (int) self::factory()->post->create(
+			array(
+				'post_type'  => 'aggr_placements',
+				'post_title' => '../../etc/passwd "quoted"',
+			)
+		);
+
+		$filename = $this->export->filename( $ninety, $hostile );
+
+		$this->assertStringNotContainsString( '/', $filename, 'A path separator reached a Content-Disposition header.' );
+		$this->assertStringNotContainsString( '"', $filename, 'A quote reached a Content-Disposition header, where it ends the filename.' );
+		$this->assertStringEndsWith( '.csv', $filename );
+	}
+
+	/**
+	 * A placement id that is not in the catalogue reports the site, not itself.
+	 *
+	 * **The code claims to check this and nothing proved it.** Found by
+	 * mutation: replacing the catalogue lookup with `return $id` left every
+	 * test green. The counters are staff-wide so nothing crosses a tenant here,
+	 * but an unchecked id renders an empty report that looks like a placement
+	 * with no traffic rather than a placement that does not exist — and a
+	 * validation a docblock claims is a validation somebody will rely on.
+	 *
+	 * Falling back to the whole site rather than failing is the deliberate
+	 * choice: a stale bookmark should show something true.
+	 *
+	 * @return void
+	 */
+	public function test_an_unknown_placement_falls_back_to_the_whole_site(): void {
+		wp_set_current_user( (int) self::factory()->user->create( array( 'role' => Roles::REVIEWER ) ) );
+
+		$known = (int) self::factory()->post->create(
+			array(
+				'post_type'  => 'aggr_placements',
+				'post_title' => 'Known placement',
+			)
+		);
+
+		$this->rollups->add( gmdate( 'Y-m-d' ), $known, array( Decision_Outcome::REQUEST => 7 ) );
+
+		$_GET['placement'] = (string) ( $known + 9_999 );
+
+		ob_start();
+		$this->screen->render();
+		$unknown = (string) ob_get_clean();
+
+		// The site total, which includes the known placement's seven requests.
+		$this->assertStringContainsString( 'Requests: 7', $unknown, 'An unknown placement id was used as a filter instead of being refused.' );
+
+		$_GET['placement'] = (string) $known;
+
+		ob_start();
+		$this->screen->render();
+		$filtered = (string) ob_get_clean();
+
+		// And a real id still filters, so the fallback is not swallowing every id.
+		$this->assertStringContainsString( 'Requests: 7', $filtered );
+		$this->assertStringContainsString( 'selected', $filtered, 'A known placement was not marked selected in the control.' );
+	}
+
+	/**
 	 * The screen prints sentences and figures, never a reason code.
 	 *
 	 * @return void
@@ -466,28 +560,74 @@ final class PublisherReportTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * An unauthorized caller cannot download the figures.
+	 * **Each guard on the export is proven by the message it dies with.**
 	 *
-	 * The export is the bulk path: the one surface that hands over everything
-	 * at once, which is where an authorization gap is worth the most.
+	 * The first version of this asserted only that *something* called
+	 * `wp_die()`, and mutation testing showed what that was worth: deleting the
+	 * capability check left the test green, because `check_admin_referer()`
+	 * died a line later and the assertion could not tell them apart. It is the
+	 * same failure `testing-strategy.md` records for the retry receipt — a
+	 * second mechanism quietly satisfying the assertion.
+	 *
+	 * Reporting is off throughout so that a guard which stops guarding falls
+	 * through to the module notice rather than to a download, which would end
+	 * the test process in `exit`.
 	 *
 	 * @return void
 	 */
-	public function test_an_advertiser_cannot_download_the_fill_report(): void {
+	public function test_each_guard_on_the_export_refuses_for_its_own_reason(): void {
+		$this->enable_reporting( false );
+
+		// A valid nonce, so the capability is the only thing that can refuse.
+		$_REQUEST['_wpnonce'] = wp_create_nonce( Report_Export::EXPORT_ACTION );
+
 		wp_set_current_user( (int) self::factory()->user->create( array( 'role' => Roles::ADVERTISER ) ) );
 
-		$died = false;
-
-		add_filter(
-			'wp_die_handler',
-			static function () use ( &$died ): callable {
-				return static function () use ( &$died ): void {
-					$died = true;
-
-					throw new \RuntimeException( 'wp_die' );
-				};
-			}
+		$this->assertStringContainsString(
+			'permission',
+			$this->refusal_from_export(),
+			'An advertiser was refused for some other reason than lacking the capability — or was not refused at all.'
 		);
+
+		// The capability, and no nonce, so only the referer check can refuse.
+		wp_set_current_user( (int) self::factory()->user->create( array( 'role' => Roles::REVIEWER ) ) );
+		unset( $_REQUEST['_wpnonce'] );
+
+		$this->assertStringNotContainsString(
+			'Reporting is not available',
+			$this->refusal_from_export(),
+			'A request with no nonce reached past the referer check.'
+		);
+
+		// Both satisfied: the module gate is what is left to refuse.
+		$_REQUEST['_wpnonce'] = wp_create_nonce( Report_Export::EXPORT_ACTION );
+
+		$this->assertStringContainsString(
+			'Reporting is not available',
+			$this->refusal_from_export(),
+			'An authorized request with reporting off was refused for the wrong reason.'
+		);
+
+		unset( $_REQUEST['_wpnonce'] );
+	}
+
+	/**
+	 * Runs the export handler and returns the message it died with.
+	 *
+	 * @return string
+	 */
+	private function refusal_from_export(): string {
+		$message = '';
+
+		$handler = static function () use ( &$message ): callable {
+			return static function ( $died_with ) use ( &$message ): void {
+				$message = is_wp_error( $died_with ) ? $died_with->get_error_message() : (string) $died_with;
+
+				throw new \RuntimeException( 'wp_die' );
+			};
+		};
+
+		add_filter( 'wp_die_handler', $handler );
 
 		try {
 			ob_start();
@@ -495,10 +635,54 @@ final class PublisherReportTest extends WP_UnitTestCase {
 			ob_end_clean();
 		} catch ( \RuntimeException $e ) {
 			ob_end_clean();
-			$this->assertSame( 'wp_die', $e->getMessage() );
+		} finally {
+			remove_filter( 'wp_die_handler', $handler );
 		}
 
-		$this->assertTrue( $died, 'An advertiser downloaded the publisher fill report.' );
+		return $message;
+	}
+
+	/**
+	 * Freshness stays quiet when every day in the window is settled.
+	 *
+	 * The portal has this assertion and the publisher screen did not, so the
+	 * note could have been printed unconditionally and nothing would have said
+	 * so — a permanent "still being counted" on figures that are final is a
+	 * disclaimer that teaches people to ignore disclaimers.
+	 *
+	 * @return void
+	 */
+	public function test_the_publisher_freshness_note_is_quiet_when_settled(): void {
+		update_option( Rollup_Reconciler::OPTION, gmdate( 'Y-m-d', strtotime( '-3 days' ) ), false );
+
+		$this->assertNotSame( '', $this->data->freshness_note( $this->data->period( 30 ) ), 'A window past the watermark claimed to be settled.' );
+
+		$sealed = Report_Period::ending( 7, gmdate( 'Y-m-d', strtotime( '-10 days' ) ) );
+
+		$this->assertNotNull( $sealed );
+		$this->assertSame( '', $this->data->freshness_note( $sealed ), 'A fully reconciled window still carried a warning.' );
+	}
+
+	/**
+	 * The download button names the days it will produce, not the days on screen.
+	 *
+	 * The two caps differ, and the button is the only place a reader learns
+	 * that before clicking it.
+	 *
+	 * @return void
+	 */
+	public function test_the_download_button_names_the_capped_window(): void {
+		wp_set_current_user( (int) self::factory()->user->create( array( 'role' => Roles::REVIEWER ) ) );
+
+		$_GET['days'] = '90';
+
+		ob_start();
+		$this->screen->render();
+		$html = (string) ob_get_clean();
+
+		$this->assertStringContainsString( 'Last 90 days (UTC)', $html, 'The screen is not showing the 90-day window this asserts about.' );
+		$this->assertStringContainsString( sprintf( 'Download %d days (CSV)', Report_Export::MAX_DAYS ), $html );
+		$this->assertStringNotContainsString( 'Download 90 days (CSV)', $html, 'The button promised more than the export will assemble.' );
 	}
 
 	/**

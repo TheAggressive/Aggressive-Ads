@@ -89,6 +89,34 @@ would have passed, since almost any page has something focused. Assert the
 *order* — focus the first control, walk forward, name each stop — which fails on
 a reordered DOM or an introduced `tabindex`.
 
+**Breaking the code one line at a time finds what reading it cannot.** P14 was
+closed out by mutating every unit it added — forty-four deliberate defects, one
+at a time, each run against the suite. Ten survived, and they clustered in one
+place: the `document()` seams of both CSV exports were thoroughly tested and the
+`handle_export()` handlers around them were not tested at all, so the capability
+check, the referer check, the module gate, the window cap and the filename
+sanitisation could each be deleted with the suite still green.
+
+Two lessons came out of it that generalise past this phase:
+
+- **"Something called `wp_die()`" is not an authorization assertion.** A test
+  that only checks the request died is satisfied by whichever guard fires first,
+  so deleting the capability check changed nothing — `check_admin_referer()`
+  died a line later. Capture the message and assert *which* refusal it was, and
+  arrange the other guards to pass so only the one under test can speak.
+- **A guard behind `exit` cannot be asserted, so it will rot.** Everything
+  `Csv_Download::send()` did was unreachable, including
+  `X-Content-Type-Options: nosniff` on a document whose first cell somebody else
+  writes. The header map is now a separate pure method precisely so a test can
+  read it.
+
+**And the harness lied before the code did.** The first sweep reported almost
+everything killed. `phpunit --filter` exits non-zero when nothing matches, so
+every mutation filtered to integration-only classes looked caught while the unit
+suite had simply found no tests to run. A run that executes zero tests is
+inconclusive and must never count as a kill — which is the same mistake as a
+guard that stops matching and reports success, one level up.
+
 **A schema assertion is worthless until the table is dropped.** `dbDelta` adds
 an index and never drops one, so a DDL edit that changes or removes a key leaves
 the old one in place, still enforcing the old rule, and the suite passes over

@@ -69,6 +69,13 @@ final class ReportExportTest extends WP_UnitTestCase {
 	private int $org_a;
 
 	/**
+	 * A signed-in advertiser, for the handler tests.
+	 *
+	 * @var int
+	 */
+	private int $advertiser_a = 0;
+
+	/**
 	 * Organization B.
 	 *
 	 * @var int
@@ -114,8 +121,9 @@ final class ReportExportTest extends WP_UnitTestCase {
 		$this->rollups   = $container->get( Rollup_Repository::class );
 		$this->settings  = $container->get( Settings::class );
 
-		$advertiser_a = self::factory()->user->create( array( 'role' => Roles::ADVERTISER ) );
-		$advertiser_b = self::factory()->user->create( array( 'role' => Roles::ADVERTISER ) );
+		$advertiser_a       = (int) self::factory()->user->create( array( 'role' => Roles::ADVERTISER ) );
+		$this->advertiser_a = $advertiser_a;
+		$advertiser_b       = self::factory()->user->create( array( 'role' => Roles::ADVERTISER ) );
 
 		$this->org_a      = $this->make_org( $advertiser_a, 'Org A' );
 		$this->org_b      = $this->make_org( $advertiser_b, 'Org B' );
@@ -292,6 +300,88 @@ final class ReportExportTest extends WP_UnitTestCase {
 		$this->assertStringNotContainsString( ',=HYPERLINK', $csv, 'A bare formula reached a cell boundary.' );
 		$this->assertStringNotContainsString( ',"=HYPERLINK', $csv, 'Quoting alone does not stop evaluation.' );
 		$this->assertStringContainsString( "'=HYPERLINK", $csv );
+	}
+
+	/**
+	 * **Each guard on the export is proven by the message it dies with.**
+	 *
+	 * `document()` covers the bytes and covered nothing around them: mutation
+	 * testing removed the capability check, the referer check and the module
+	 * gate from `handle_export()` in turn and the suite stayed green, because
+	 * nothing called the handler at all. The bulk path is the one surface that
+	 * hands over everything at once, so it is the worst place to have taken
+	 * that on trust.
+	 *
+	 * Reporting is off throughout, so a guard that stops guarding falls through
+	 * to the module notice rather than to a download — which would end the test
+	 * process in `exit`.
+	 *
+	 * @return void
+	 */
+	public function test_each_guard_on_the_export_refuses_for_its_own_reason(): void {
+		$this->enable_reporting( false );
+
+		$_REQUEST['_wpnonce'] = wp_create_nonce( Report_Actions::EXPORT_ACTION );
+
+		// Signed out: no portal capability, and a valid nonce, so only the
+		// capability can be what refuses.
+		wp_set_current_user( 0 );
+
+		$this->assertStringContainsString(
+			'permission',
+			$this->refusal_from_export(),
+			'A signed-out caller was refused for some other reason, or not refused at all.'
+		);
+
+		wp_set_current_user( $this->advertiser_a );
+		unset( $_REQUEST['_wpnonce'] );
+
+		$this->assertStringNotContainsString(
+			'Reporting is not available',
+			$this->refusal_from_export(),
+			'A request with no nonce reached past the referer check.'
+		);
+
+		$_REQUEST['_wpnonce'] = wp_create_nonce( Report_Actions::EXPORT_ACTION );
+
+		$this->assertStringContainsString(
+			'Reporting is not available',
+			$this->refusal_from_export(),
+			'An authorized request with reporting off was refused for the wrong reason.'
+		);
+
+		unset( $_REQUEST['_wpnonce'] );
+	}
+
+	/**
+	 * Runs the export handler and returns the message it died with.
+	 *
+	 * @return string
+	 */
+	private function refusal_from_export(): string {
+		$message = '';
+
+		$handler = static function () use ( &$message ): callable {
+			return static function ( $died_with ) use ( &$message ): void {
+				$message = is_wp_error( $died_with ) ? $died_with->get_error_message() : (string) $died_with;
+
+				throw new \RuntimeException( 'wp_die' );
+			};
+		};
+
+		add_filter( 'wp_die_handler', $handler );
+
+		try {
+			ob_start();
+			$this->exports->handle_export();
+			ob_end_clean();
+		} catch ( \RuntimeException $e ) {
+			ob_end_clean();
+		} finally {
+			remove_filter( 'wp_die_handler', $handler );
+		}
+
+		return $message;
 	}
 
 	/**

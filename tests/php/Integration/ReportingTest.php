@@ -341,6 +341,50 @@ final class ReportingTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * **House inventory is excluded by two independent guards, not one.**
+	 *
+	 * `FrozenTenancyTest` asserts a house delivery never lands in an org total,
+	 * and it passes whether or not the `campaign_id > 0` predicate exists —
+	 * because a house row also carries `org_id = 0`, so the tenancy filter
+	 * alone already excludes it. Mutation testing found that: relaxing the
+	 * predicate to `>= 0` changed nothing anywhere.
+	 *
+	 * The predicate is defence in depth against a row whose tenancy was written
+	 * wrongly, which is the only way a house row could ever reach an org total.
+	 * This seeds exactly that row — `campaign_id = 0` carrying a real `org_id`,
+	 * which `Event_Recorder` will not produce and a bug might — and asserts the
+	 * second guard holds on its own.
+	 *
+	 * @return void
+	 */
+	public function test_a_house_row_with_a_tenant_is_still_excluded(): void {
+		global $wpdb;
+
+		$this->enable_reporting( true );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Seeding the corrupt row this guard exists for; no repository will write it.
+		$wpdb->insert(
+			$this->rollups->table_name(),
+			array(
+				'day_utc'      => gmdate( 'Y-m-d' ),
+				'placement_id' => $this->placement_id,
+				'campaign_id'  => 0,
+				'line_item_id' => 0,
+				'org_id'       => $this->org_a,
+				'impressions'  => 500,
+			)
+		);
+
+		$totals = $this->reports->totals_for_org( $this->org_a, Report_Period::trailing( 30, gmdate( 'Y-m-d' ) ) );
+
+		$this->assertSame(
+			0,
+			$totals['impressions'],
+			'House inventory carrying a tenant id was billed to that advertiser.'
+		);
+	}
+
+	/**
 	 * A range in the query string is what the whole page reports on.
 	 *
 	 * Tiles, chart, caption and export all resolve one request, so the page
