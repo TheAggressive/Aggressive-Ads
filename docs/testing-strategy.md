@@ -158,6 +158,33 @@ what does work, including why it invokes the migration step directly rather than
 through `maybe_upgrade()` — whose option-based lock survives the transaction
 rollback in the object cache and silently disables a later test's upgrade.
 
+**A default and a decision must not look alike to the code reading them.**
+`shortcode_atts()` fills every attribute nobody typed with `''`, so a boolean
+rule written as "every string except *false* is true" turned every setting on
+for every shortcode that configured none of them. The unit test that caught it
+was the one asserting the declared shortcode defaults read back as the shipped
+behaviour — the case that looks too obvious to write, because it asserts that
+nothing happens.
+
+**An equivalent mutant is a line no test can defend.** `Slot_Options` mirrored
+`rest_sanitize_boolean()`'s list of false-y strings, `'false'` and `'0'`.
+Deleting `'0'` killed no test, and correctly: `(bool) '0'` is already false in
+PHP, so the entry could never change an answer — in this plugin's copy or in
+core's. A surviving mutant is usually a missing test; sometimes, as here, it is
+a line to delete, and the two are only distinguishable by asking what input
+would tell them apart. Both readings were then held together by a parity test
+over the whole vocabulary, so the copy cannot drift from core in silence.
+
+**Ask the non-obvious surface the same question as the obvious one.** The block,
+the shortcode and the `aggr_placement()` helper render through one method, and
+only the block was ever asserted against. The shortcode and helper share a
+wrapper that named its attributes by hand, so the Interactivity directives —
+added to the array it is handed, much later — were dropped for those two, and
+neither surface had ever filled an ad. It renders identically to a slot with no
+inventory, a state the plugin has on purpose, so nothing about it read as
+broken. A defect that survives in the surface nobody tests is not found by
+testing the surface everybody tests more thoroughly.
+
 And one about where an assertion belongs: **a REST `permission_callback` answers
 before the workflow does**, so a denied request never reaches the manager and
 never writes the audit row the manager would write. That is intended — an

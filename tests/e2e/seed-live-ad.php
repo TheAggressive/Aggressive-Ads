@@ -304,6 +304,49 @@ wp_insert_post(
 );
 
 /*
+ * ── The slot-surfaces fixture ────────────────────────────────────────────────
+ *
+ * Two things no other page here asks about.
+ *
+ * **A shortcode slot.** Every browser fixture places its slots with the block,
+ * and the block wrapper is built by `get_block_wrapper_attributes()`. The
+ * shortcode and `aggr_placement()` share a different wrapper, which named its
+ * attributes by hand and so dropped the Interactivity directives from the day
+ * they were added — neither surface had ever filled an ad, and neither is
+ * watched by anything but this. They emit identical bytes, so the shortcode
+ * standing in for both is the whole helper's coverage too.
+ *
+ * **An unsold slot that was told to keep its space**, beside an unsold slot
+ * that was not. The same placement twice, so the pair is one assertion: after
+ * both have settled, exactly one may remain.
+ */
+$aggr_shortcode_slot = '<!-- wp:shortcode -->[aggr_placement slot="e2e-browser-placement"]<!-- /wp:shortcode -->';
+
+/*
+ * A border, because the reserved box is deliberately invisible without one —
+ * `empty.js` ships no placeholder appearance. It gives the spec something laid
+ * out to measure, and it is also the shape a publisher who wanted the space
+ * held would actually build.
+ */
+$aggr_reserved_slot = '<!-- wp:aggr/ad-slot {"slot":"e2e-empty-placement","collapseWhenEmpty":false,"style":{"border":{"width":"2px","color":"#333333","style":"solid"}}} /-->';
+
+$aggr_surfaces_page = get_page_by_path( 'e2e-slot-surfaces', OBJECT, 'page' );
+
+if ( $aggr_surfaces_page instanceof WP_Post ) {
+	wp_delete_post( $aggr_surfaces_page->ID, true );
+}
+
+wp_insert_post(
+	array(
+		'post_type'    => 'page',
+		'post_status'  => 'publish',
+		'post_title'   => 'E2E slot surfaces',
+		'post_name'    => 'e2e-slot-surfaces',
+		'post_content' => $aggr_shortcode_slot . $aggr_reserved_slot . $aggr_unsold . $aggr_spacer,
+	)
+);
+
+/*
  * ── The click-carrier fixture ────────────────────────────────────────────────
  *
  * P12 requires browser evidence that the hop's destination carries `aggr_ct`,
