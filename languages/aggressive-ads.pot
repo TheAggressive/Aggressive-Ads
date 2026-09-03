@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-03T00:47:58+00:00\n"
+"POT-Creation-Date: 2026-09-03T01:10:10+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -908,45 +908,45 @@ msgid "The inventory screen needs JavaScript enabled."
 msgstr ""
 
 #. translators: %s: a date, e.g. 30 August 2026.
-#: inc/Admin/class-report-data.php:181
+#: inc/Admin/class-report-data.php:176
 #: inc/Portal/class-delivery-view-data.php:167
 #, php-format
 msgid "Figures from %s onward are still being counted."
 msgstr ""
 
-#: inc/Admin/class-report-data.php:201
+#: inc/Admin/class-report-data.php:196
 msgid "No advertisement was assigned to this slot"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:202
+#: inc/Admin/class-report-data.php:197
 msgid "Every assigned advertisement was ineligible"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:203
+#: inc/Admin/class-report-data.php:198
 msgid "Outside every assigned campaign’s schedule"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:204
+#: inc/Admin/class-report-data.php:199
 msgid "The visitor did not match the targeting rules"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:205
+#: inc/Admin/class-report-data.php:200
 msgid "The visitor had already seen it enough times"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:206
+#: inc/Admin/class-report-data.php:201
 msgid "Held back to spread delivery across the day"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:207
+#: inc/Admin/class-report-data.php:202
 msgid "Excluded by a competing advertisement on the page"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:208
+#: inc/Admin/class-report-data.php:203
 msgid "The decision failed and no advertisement was served"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:209
+#: inc/Admin/class-report-data.php:204
 msgid "No reason was recorded"
 msgstr ""
 

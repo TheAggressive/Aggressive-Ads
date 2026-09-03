@@ -53,7 +53,7 @@ final class Delivery_View_Data {
 	 * anything it cannot turn into a bounded period, and the organization is
 	 * never read from the request at all.
 	 */
-	public function request(): Report_Request {
+	private function request(): Report_Request {
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended -- A read-only range filter on the caller's own data; every value is validated by Report_Request and the organization comes from the session, never the request.
 		$from = isset( $_GET['from'] ) ? sanitize_text_field( wp_unslash( $_GET['from'] ) ) : '';
 		$to   = isset( $_GET['to'] ) ? sanitize_text_field( wp_unslash( $_GET['to'] ) ) : '';

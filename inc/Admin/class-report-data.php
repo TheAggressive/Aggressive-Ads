@@ -73,21 +73,16 @@ final class Report_Data {
 	 * range from a query string too, and two screens that parse the same
 	 * parameters separately agree until the day one of them is edited.
 	 *
-	 * @param int    $days Requested preset, or 0.
-	 * @param string $from Requested first UTC day, or ''.
-	 * @param string $to   Requested last UTC day, or ''.
-	 */
-	public function request( int $days, string $from = '', string $to = '' ): Report_Request {
-		return Report_Request::resolve( $from, $to, $days, self::WINDOWS, gmdate( 'Y-m-d' ), Reporting_Read::DEFAULT_DAYS );
-	}
-
-	/**
-	 * The window alone, for callers with nothing to say about a refusal.
+	 * **The refusal flag is deliberately dropped here.** The dashboard offers
+	 * two date inputs, where a range somebody typed can fail and saying so is
+	 * the difference between a report and a wrong answer. This screen offers a
+	 * closed list, so the only way to reach a refusal is to edit the URL by
+	 * hand — and the window it settled on is printed at the top either way.
 	 *
-	 * @param int $days Requested window.
+	 * @param int $days Requested preset, or 0.
 	 */
 	public function period( int $days ): Report_Period {
-		return $this->request( $days )->period;
+		return Report_Request::resolve( '', '', $days, self::WINDOWS, gmdate( 'Y-m-d' ), Reporting_Read::DEFAULT_DAYS )->period;
 	}
 
 	/**
