@@ -73,7 +73,10 @@ final class Reports_Screen implements Service {
 			);
 		}
 
-		echo '<div class="wrap">';
+		// `wrap aggr-admin` is what every staff screen here carries: `wrap` for
+		// core's margins, `aggr-admin` to scope the plugin's design tokens and
+		// to give the browser suite one selector to axe.
+		echo '<div class="wrap aggr-admin">';
 		printf( '<h1>%s</h1>', esc_html__( 'Advertising reports', 'aggressive-ads' ) );
 
 		if ( ! $this->data->surfaces() ) {

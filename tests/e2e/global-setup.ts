@@ -16,6 +16,10 @@ export default function globalSetup(): void {
 	wpPluginFile( 'tests/e2e/seed-organizations.php' );
 	// After the organizations, which the live advertisement is owned by.
 	wpPluginFile( 'tests/e2e/seed-live-ad.php' );
+	// After seed-mappings, whose placement the counters are keyed to. Reporting
+	// ships off, so without this every reporting surface renders its absent
+	// state and a spec would pass over a screen it never saw.
+	wpPluginFile( 'tests/e2e/seed-reporting.php' );
 	wp( 'theme', 'activate', 'twentytwentyfive' );
 	// A fresh WordPress has an empty permalink_structure. Activation hard-flushes
 	// plugin rules but does not change that setting, so Apache still has no

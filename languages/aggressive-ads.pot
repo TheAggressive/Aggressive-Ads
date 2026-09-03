@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-03T02:18:56+00:00\n"
+"POT-Creation-Date: 2026-09-03T02:39:15+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -976,7 +976,7 @@ msgid "Date (UTC)"
 msgstr ""
 
 #: inc/Admin/class-report-export.php:129
-#: inc/Admin/class-reports-screen.php:208
+#: inc/Admin/class-reports-screen.php:211
 #: inc/Admin/class-review-screen.php:258
 #: inc/Core/class-post-types.php:199
 #: templates/portal/partials/campaign-table.php:34
@@ -1017,67 +1017,67 @@ msgstr ""
 msgid "Reports"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:77
+#: inc/Admin/class-reports-screen.php:80
 msgid "Advertising reports"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:82
+#: inc/Admin/class-reports-screen.php:85
 msgid "Reporting is switched off for this site. Turn it on under Advertising → Settings → Modules to see delivery figures here."
 msgstr ""
 
 #. translators: %d: number of days the download will cover.
-#: inc/Admin/class-reports-screen.php:135
+#: inc/Admin/class-reports-screen.php:138
 #, php-format
 msgid "Download %d day (CSV)"
 msgid_plural "Download %d days (CSV)"
 msgstr[0] ""
 msgstr[1] ""
 
-#: inc/Admin/class-reports-screen.php:185
+#: inc/Admin/class-reports-screen.php:188
 msgid "Reporting window"
 msgstr ""
 
 #. translators: %d: number of days.
-#: inc/Admin/class-reports-screen.php:197
+#: inc/Admin/class-reports-screen.php:200
 #, php-format
 msgid "Last %d day (UTC)"
 msgid_plural "Last %d days (UTC)"
 msgstr[0] ""
 msgstr[1] ""
 
-#: inc/Admin/class-reports-screen.php:214
+#: inc/Admin/class-reports-screen.php:217
 msgid "Every placement"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:227
+#: inc/Admin/class-reports-screen.php:230
 #: templates/portal/screens/dashboard.php:96
 msgid "Show"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:243
+#: inc/Admin/class-reports-screen.php:246
 msgid "(UTC)"
 msgstr ""
 
 #. translators: %s: a count of advertisement requests.
-#: inc/Admin/class-reports-screen.php:257
+#: inc/Admin/class-reports-screen.php:260
 #, php-format
 msgid "Requests: %s"
 msgstr ""
 
 #. translators: %s: a count of filled requests.
-#: inc/Admin/class-reports-screen.php:264
+#: inc/Admin/class-reports-screen.php:267
 #, php-format
 msgid "Filled: %s"
 msgstr ""
 
 #. translators: %s: fill rate as a percentage, or an em dash.
-#: inc/Admin/class-reports-screen.php:271
+#: inc/Admin/class-reports-screen.php:274
 #, php-format
 msgid "Fill rate: %s"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:273
-#: inc/Admin/class-reports-screen.php:325
+#: inc/Admin/class-reports-screen.php:276
+#: inc/Admin/class-reports-screen.php:328
 #: inc/Portal/class-delivery-view-data.php:356
 #: inc/Portal/class-delivery-view-data.php:407
 #: templates/portal/partials/campaign-summary-facts.php:75
@@ -1089,8 +1089,8 @@ msgstr ""
 #. translators: %s: a percentage, e.g. 12.4.
 #. translators: %s: click-through rate as a percentage, e.g. 1.2.
 #. translators: %s: share of impressions that were viewable, e.g. 62.5.
-#: inc/Admin/class-reports-screen.php:276
-#: inc/Admin/class-reports-screen.php:328
+#: inc/Admin/class-reports-screen.php:279
+#: inc/Admin/class-reports-screen.php:331
 #: inc/Portal/class-delivery-view-data.php:361
 #: inc/Portal/class-delivery-view-data.php:412
 #: templates/portal/partials/campaign-summary-facts.php:72
@@ -1099,32 +1099,32 @@ msgstr ""
 msgid "%s%%"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:294
+#: inc/Admin/class-reports-screen.php:297
 msgid "No advertisement was requested in this window, so there is nothing to explain yet."
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:301
+#: inc/Admin/class-reports-screen.php:304
 msgid "Every request was filled."
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:309
+#: inc/Admin/class-reports-screen.php:312
 msgid "Reasons a request was not filled"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:313
+#: inc/Admin/class-reports-screen.php:316
 msgid "Reason"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:314
+#: inc/Admin/class-reports-screen.php:317
 msgid "Requests"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:315
+#: inc/Admin/class-reports-screen.php:318
 msgid "Share"
 msgstr ""
 
 #. translators: %s: a count of requests with no recorded outcome.
-#: inc/Admin/class-reports-screen.php:349
+#: inc/Admin/class-reports-screen.php:352
 #, php-format
 msgid "%s requests have no recorded outcome. This is a defect worth reporting: every request should be either a fill or a reason."
 msgstr ""
