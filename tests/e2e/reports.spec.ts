@@ -46,9 +46,22 @@ test( 'the fill report is operable, labelled and reflows', async ( {
 	// The range is stated, in UTC, because the counters have no other timezone.
 	await expect( page.locator( '.wrap.aggr-admin' ) ).toContainText( 'UTC' );
 
-	// Keyboard alone reaches the controls: this screen has no pointer-only path.
+	/*
+	 * Tab order through the filter, which is the claim worth making. Pressing
+	 * Tab once from a fresh document proves nothing here: wp-admin puts a skip
+	 * link, the admin bar and the whole admin menu ahead of the content, so the
+	 * first stop is never this form. Starting at the first control and walking
+	 * forward asserts the order a keyboard user actually experiences, and fails
+	 * if the DOM is reordered or a tabindex is introduced between them.
+	 */
+	await window.focus();
+	await expect( window ).toBeFocused();
+
 	await page.keyboard.press( 'Tab' );
-	await expect( page.locator( '.wrap.aggr-admin :focus' ) ).toHaveCount( 1 );
+	await expect( placement ).toBeFocused();
+
+	await page.keyboard.press( 'Tab' );
+	await expect( page.getByRole( 'button', { name: 'Show' } ) ).toBeFocused();
 } );
 
 test( 'the fill report offers a download of what is on screen', async ( {
