@@ -686,11 +686,14 @@ to run. A run that executes zero tests is inconclusive, never a kill.
 **Environment caveat.** Docker was unavailable on the authoring host throughout,
 so the WordPress suites ran natively against MySQL 8.0.46 and PHP 8.5.6 rather
 than CI's pinned 8.4/8.4, and the browser lanes never ran locally at all. CI is
-the authority for every figure above that came from a query plan. One local-only
-flake was diagnosed and is worth knowing: this plugin's custom tables are not
-rolled back between tests, so rows accumulate across runs on a developer machine
-and an unrelated upgrade test began failing on leftovers. CI starts from a fresh
-database and is unaffected.
+the authority for every figure above that came from a query plan.
+
+One local-only flake was diagnosed here and **fixed rather than filed**, because
+it corrupted a verification run: a test that performs DDL commits the
+transaction `WP_UnitTestCase` wrapped it in, so rows written after
+`install_table()` survived the test and the run. One row leaked per full suite
+before `tests/php/Plugin_Table_Reset.php`, none after. CI never saw it, starting
+from a fresh database every time — which is why it lasted.
 
 Green at closeout across #169, #170, #171, #172, #173 and #174, every lane, on
 pinned MySQL 8.4 and PHP 8.4.

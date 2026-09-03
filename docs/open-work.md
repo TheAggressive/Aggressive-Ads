@@ -86,36 +86,6 @@ Two things still open from it:
    the forbidden line verbatim is prose and not a violation, and a renamed
    protected file must fail rather than pass over nothing.
 
-## Custom tables are not rolled back between tests, and rows accumulate
-
-`WP_UnitTestCase` wraps each test in a transaction, and that covers core's
-tables. This plugin's own tables are created outside it, so rows written by a
-test survive the rollback — and, on a developer machine, survive the *run*.
-
-Found while closing P14: `RollupLineItemAttributionTest` began failing on a
-local full-suite run and passed in isolation. The cause was six rows left in
-`aggr_rollups` by earlier runs of `RollupTenancySchemaTest`, whose line-item
-attribution the failing test then summed into its own total. Deleting them made
-the suite green, and the failure reproduced with that session's changes stashed,
-so it is nothing a particular change introduced.
-
-CI is unaffected: every lane starts from a fresh database. That is also why this
-has never been caught there, and why it will keep costing somebody an afternoon
-locally.
-
-Two things would fix it, and they are not the same size:
-
-1. **Truncate the plugin's tables in a shared `set_up()`.** Cheap, and it makes
-   every test's fixture its own. The risk is a test that quietly depended on a
-   neighbour's rows and starts failing honestly.
-2. **Make the tables temporary in the test bootstrap**, as core does with its
-   own. Closer to the real fix and more invasive: `Rollup_Repository::drop_table()`
-   and the schema assertions already behave differently under `TEMPORARY`, which
-   `ConversionSchemaTest` documents.
-
-Neither is P14's to do. Written down because the next person to hit it should
-spend a minute on it rather than an afternoon.
-
 ## The ad slot collapses when unsold, and there is no way to keep the space
 
 `Assignment_Projection` made delivery work; this is the behaviour a publisher

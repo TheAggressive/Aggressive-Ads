@@ -23,6 +23,18 @@
 	failOnIncomplete="true"
 	cacheResultFile=".phpunit.cache/multisite.result"
 	>
+	<extensions>
+		<!--
+			Empties this plugin's tables before every test.
+
+			`WP_UnitTestCase` rolls each test back, and that covers these tables
+			too — until a test performs DDL, which implicitly commits the
+			transaction and makes everything written after it permanent. See
+			tests/php/Plugin_Table_Reset.php for what that cost twice.
+		-->
+		<extension class="Aggressive\Ads\Tests\Plugin_Table_Reset"/>
+	</extensions>
+
 	<php>
 		<env name="WP_PHPUNIT__TESTS_CONFIG" value="/var/www/html/wp-content/plugins/aggressive-ads/tests/wp-tests-config.php"/>
 		<const name="WP_TESTS_MULTISITE" value="1"/>

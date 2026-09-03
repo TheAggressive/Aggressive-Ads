@@ -117,6 +117,29 @@ suite had simply found no tests to run. A run that executes zero tests is
 inconclusive and must never count as a kill — which is the same mistake as a
 guard that stops matching and reports success, one level up.
 
+**DDL inside a test commits the transaction the test is wrapped in.**
+`WP_UnitTestCase` opens a transaction in `set_up()` and rolls it back, and that
+covers this plugin's tables exactly as it covers core's — until something issues
+`CREATE TABLE`. MySQL commits implicitly on DDL, so a `set_up()` that calls
+`parent::set_up()` and then `install_table()` opens a transaction and ends it one
+line later; everything the test writes afterwards is permanent, and on a
+developer machine it is permanent across *runs*.
+
+It was diagnosed twice at cost. `RollupLineItemAttributionTest` began failing on
+a local full-suite run and passing in isolation, because rows left by earlier
+runs of `RollupTenancySchemaTest` were being summed into its total — and it later
+corrupted a mutation-testing run, where a red baseline makes every mutant look
+caught. CI never saw either: every lane starts from a fresh database, which is
+exactly what let it survive.
+
+`tests/php/Plugin_Table_Reset.php` empties the plugin's tables before every
+test, registered as a PHPUnit extension in both WordPress configs. A hook rather
+than a rule, because "do not perform DDL in a test" is unenforceable — schema
+and migration tests exist to do precisely that. It uses `DELETE` and never
+`TRUNCATE`, since truncation is itself DDL and would commit the transaction it
+is meant to protect. Measured: one row leaked per full run before it, none
+after.
+
 **A schema assertion is worthless until the table is dropped.** `dbDelta` adds
 an index and never drops one, so a DDL edit that changes or removes a key leaves
 the old one in place, still enforcing the old rule, and the suite passes over
