@@ -240,6 +240,7 @@ final class ReportingTest extends WP_UnitTestCase {
 	 */
 	public function test_rest_metrics_follow_ownership_and_the_module_gate(): void {
 		$this->bump( $this->campaign_a, 6, 3 );
+		$this->bump_conversions( $this->campaign_a, 2 );
 		$this->bump( $this->campaign_b, 20, 4 );
 		$this->enable_reporting( true );
 
@@ -254,13 +255,22 @@ final class ReportingTest extends WP_UnitTestCase {
 		$this->assertSame( 6, $owned->get_data()['impressions'] );
 		$this->assertSame( 3, $owned->get_data()['clicks'] );
 		$this->assertSame( 0.5, $owned->get_data()['ctr'] );
+
+		/*
+		 * Conversions on the route, not only through the reader that feeds it.
+		 * The exit criterion names `GET /campaigns`, and a claim about a route
+		 * wants evidence at the route.
+		 */
+		$this->assertSame( 2, $owned->get_data()['conversions'] );
 		$this->assertSame( 404, $foreign->get_status() );
 		$this->assertArrayNotHasKey( 'impressions', $foreign->get_data() );
 		$this->assertArrayNotHasKey( 'ctr', $foreign->get_data() );
+		$this->assertArrayNotHasKey( 'conversions', $foreign->get_data() );
 		$this->assertSame( $this->campaign_a, $listed_a['id'] );
 		$this->assertSame( 6, $listed_a['impressions'] );
 		$this->assertSame( 3, $listed_a['clicks'] );
 		$this->assertSame( 0.5, $listed_a['ctr'] );
+		$this->assertSame( 2, $listed_a['conversions'] );
 
 		$this->enable_reporting( false );
 		wp_set_current_user( $this->advertiser_a );
@@ -270,6 +280,7 @@ final class ReportingTest extends WP_UnitTestCase {
 		$this->assertArrayNotHasKey( 'impressions', $off );
 		$this->assertArrayNotHasKey( 'clicks', $off );
 		$this->assertArrayNotHasKey( 'ctr', $off );
+		$this->assertArrayNotHasKey( 'conversions', $off );
 	}
 
 	/**
@@ -327,6 +338,50 @@ final class ReportingTest extends WP_UnitTestCase {
 
 		$this->assertSame( 2, $mine['impressions'] );
 		$this->assertSame( 1, $mine['clicks'] );
+	}
+
+	/**
+	 * **House inventory is excluded by two independent guards, not one.**
+	 *
+	 * `FrozenTenancyTest` asserts a house delivery never lands in an org total,
+	 * and it passes whether or not the `campaign_id > 0` predicate exists —
+	 * because a house row also carries `org_id = 0`, so the tenancy filter
+	 * alone already excludes it. Mutation testing found that: relaxing the
+	 * predicate to `>= 0` changed nothing anywhere.
+	 *
+	 * The predicate is defence in depth against a row whose tenancy was written
+	 * wrongly, which is the only way a house row could ever reach an org total.
+	 * This seeds exactly that row — `campaign_id = 0` carrying a real `org_id`,
+	 * which `Event_Recorder` will not produce and a bug might — and asserts the
+	 * second guard holds on its own.
+	 *
+	 * @return void
+	 */
+	public function test_a_house_row_with_a_tenant_is_still_excluded(): void {
+		global $wpdb;
+
+		$this->enable_reporting( true );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Seeding the corrupt row this guard exists for; no repository will write it.
+		$wpdb->insert(
+			$this->rollups->table_name(),
+			array(
+				'day_utc'      => gmdate( 'Y-m-d' ),
+				'placement_id' => $this->placement_id,
+				'campaign_id'  => 0,
+				'line_item_id' => 0,
+				'org_id'       => $this->org_a,
+				'impressions'  => 500,
+			)
+		);
+
+		$totals = $this->reports->totals_for_org( $this->org_a, Report_Period::trailing( 30, gmdate( 'Y-m-d' ) ) );
+
+		$this->assertSame(
+			0,
+			$totals['impressions'],
+			'House inventory carrying a tenant id was billed to that advertiser.'
+		);
 	}
 
 	/**

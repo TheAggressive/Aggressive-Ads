@@ -11,18 +11,17 @@ shipped it is marked; everything unmarked is still a definition, not a claim.
 ## Status
 
 - Phase: **P14 — Reporting**
-- Roadmap state: `[ ]` — in progress
+- Roadmap state: `[x]`
+- Closed out: 2026-09-02
 - Authoritative environments: the Docker CI lanes, MySQL 8.4. Query plans and
   read budgets are decided there; the browser lanes decide the screens.
 
-**Landed so far:** `Report_Period`, `Rollup_Report_Repository`, the ranged and
-freshness-aware `Reporting_Read`, the dashboard tiles reading a stated window
-instead of all of history, conversions made visible on every surface that
-already showed impressions, each tile carrying its change against the window
-before it, the publisher's fill report — the first reader P13's decision
-counters have ever had — a range picker on the dashboard, and the publisher
-export with the scheduled-delivery seam it proves. What remains is the
-closeout.
+**What shipped:** `Report_Period` and `Report_Request`,
+`Rollup_Report_Repository`, a ranged and freshness-aware `Reporting_Read`, the
+dashboard reading a window the reader chooses and saying which one, conversions
+visible everywhere impressions already were, a comparison against the preceding
+window on every tile, and the publisher's fill report with its export — the
+first reader P13's decision counters have ever had.
 
 ## Outcome
 
@@ -554,6 +553,16 @@ The phase may move to `[x]` only when:
    `GET /campaigns`.
 4. Every report states its timezone and its freshness, and a partial day is
    never presented as a settled one.
+
+   *Narrowed at closeout, for the exports only.* Both CSVs state the timezone
+   in the column header and neither states freshness. A prose row in a data
+   file breaks every parser pointed at it, and a freshness column would repeat
+   one fact on every row — so the statement stays on the screen that offers the
+   download, immediately beside the button. That is sufficient while a person
+   downloads what they are looking at, and it stops being sufficient the moment
+   a report is mailed to somebody who never saw the screen. Whichever phase
+   builds scheduled delivery owns saying it in the message body; it is recorded
+   here rather than discovered there.
 5. Zero, em dash and not-measured stay distinct on every surface, including
    comparisons that span a metric's introduction.
 6. Tenant isolation is proven per surface, the export included, and the
@@ -571,6 +580,117 @@ The existence of a screen or a CSV column is not evidence for any of the above.
 
 ## Exit evidence and decision
 
-[Complete at closeout. Record commands, counts, environment caveats, accepted
-advisories and links to executable evidence. State the decision and why no
-required behaviour remains unproven.]
+Closed 2026-09-02. Every criterion was walked against tests rather than against
+the code. One was narrowed and is marked above with its reasoning, because a
+criterion quietly reinterpreted to fit what shipped is worse than one that was
+never met.
+
+**The inherited defect, measured before and after.** The advertiser dashboard's
+first tile aggregated `aggr_rollups` for an organization with no date predicate
+at all — every row it had ever produced, on every page load, bounded only by a
+retention setting that defaults to keeping everything. At one year of a modest
+advertiser's history the plan examined 12,775 rows where the ranged replacement
+examines 1,500, and the ranged one is flat as the site ages while the other is
+not. `ReportReadScaleTest` holds the line by explaining `$wpdb->last_query`
+after calling the repository, so the plan it judges is the one production
+issued.
+
+**Three features existed and could not be seen**, which is the shape of defect
+this phase was really about:
+
+- P13's decision counters had no reader outside their own repository. The read
+  methods existed and nothing called them.
+- P12's attributed conversions were written, reconciled and retained, and
+  appeared in no tile, table, CSV column or REST field.
+- The reconciliation watermark had existed since P11 and no surface read it, so
+  a partial day and a settled one looked identical.
+
+**Five tests were written, watched to pass, and found to be worthless.** Four
+were caught by attacking them; the fifth was caught by CI, which is the weakest
+of the five ways to find one. All are recorded in `testing-strategy.md` or in
+the code that carries them:
+
+- A roles-upgrade test wound the stored version back to `Roles::VERSION - 1`,
+  which always leaves the upgrader with work to do — so it proved the upgrader
+  runs and never that this release asks it to, and it passed with the version
+  bump reverted. It now pins the literal previous version.
+- An administrator-capability test asserted `user_can()` against whatever the
+  suite had already installed. Role definitions live in an option and a cached
+  `WP_Roles`, so it passed with the capability removed from `primitives()`
+  entirely. It now strips the capability, reinstalls and asserts it came back.
+- A query-plan guard claimed both new export reads were bounded by the day
+  range. Sabotage disagreed: filtered by placement, the unique key's leading
+  column does the bounding and the day predicate barely matters. Only the
+  site-wide read depends on the range, and that is where the assertion now has
+  teeth — it fails at 79,980 of 79,980.
+- A browser spec would have run against a screen showing "Reporting is switched
+  off", because the module ships off. `seed-reporting.php` turns it on and
+  seeds a spread that renders the reason table rather than the "every request
+  was filled" path.
+- A keyboard assertion pressed `Tab` once from a fresh document and checked that
+  focus had landed inside the screen. wp-admin puts a skip link, the admin bar
+  and the whole admin menu ahead of the content, so it never does — and the
+  assertion would have said little even where it passed, because "something is
+  focused" is true of almost any page. It now walks the tab order and names each
+  stop, which fails on a reordered DOM or an introduced `tabindex`.
+
+**And the second of those was covering a real defect.** `aggr_view_reports` was
+granted to the reviewer role and listed in the staff menu map but left out of
+`Capabilities::primitives()`, which is how an administrator is granted anything.
+The site owner could not have opened the screen. Every reviewer-based test
+stayed green; the pinned primitive list in `CapabilitiesTest` is what caught it.
+
+**Deliberately smaller than specified**, and marked above: `Report_Request`
+carries no scope and no metric set, because scope never comes from a request
+and no surface shows a subset of its metrics; the publisher report gets no REST
+route, because a route without a reader is a surface to secure for nobody; and
+no scheduled email ships, because the seam is what this phase owed and delivery
+— bounces, unsubscribes, attachment size, a schedule that must not double-send
+— is a whole problem rather than an appendix.
+
+**The browser specs were written without ever being run**, because the suite
+needs Docker or a Studio site it mutates irreversibly and neither was available.
+CI executed them first: twenty-seven of twenty-eight passed, and the one that
+failed was the keyboard assertion above rather than anything about the screen.
+That is the acceptable version of this trade and not a repeatable one — the
+specs that matter most are the ones nobody can run locally.
+
+**Every unit this phase added was mutation-tested at closeout.** Forty-four
+deliberate defects, one at a time, each run against the suite. **Ten survived
+the first honest sweep** and every one of them is now killed:
+
+| survivor | what it meant |
+|---|---|
+| capability check deleted, both exports | nothing called `handle_export()`; the test that did was satisfied by whichever guard died first |
+| referer check deleted, both exports | as above |
+| module gate deleted, both exports | as above |
+| `nosniff` header deleted | everything behind `exit` was unassertable |
+| export window cap deleted | truncation had no reader |
+| filename sanitisation deleted | a staff-controlled name reaching a response header, unproven |
+| `campaign_id > 0` relaxed | the house guard was covered only in appearance — a house row also carries `org_id = 0`, so the tenancy filter alone passed the existing test either way |
+| publisher freshness note forced on | the portal had this assertion and the publisher screen did not |
+| download button cap ignored | the button could promise more than the export assembles |
+| placement id used unvalidated | a validation a docblock claimed and nothing proved |
+
+Two changes to the code came out of it rather than tests alone:
+`Csv_Download::headers()` was split from `send()` so a security header can be
+read by a test, and `Report_Export`'s window and filename became public seams
+for the same reason `document()` already was.
+
+**The harness lied before the code did**, which is worth as much as the
+findings. The first sweep reported nearly everything killed, because
+`phpunit --filter` exits non-zero when nothing matches — so every
+integration-only mutation looked caught while the unit suite had found no tests
+to run. A run that executes zero tests is inconclusive, never a kill.
+
+**Environment caveat.** Docker was unavailable on the authoring host throughout,
+so the WordPress suites ran natively against MySQL 8.0.46 and PHP 8.5.6 rather
+than CI's pinned 8.4/8.4, and the browser lanes never ran locally at all. CI is
+the authority for every figure above that came from a query plan. One local-only
+flake was diagnosed and is worth knowing: this plugin's custom tables are not
+rolled back between tests, so rows accumulate across runs on a developer machine
+and an unrelated upgrade test began failing on leftovers. CI starts from a fresh
+database and is unaffected.
+
+Green at closeout across #169, #170, #171, #172, #173 and #174, every lane, on
+pinned MySQL 8.4 and PHP 8.4.

@@ -58,6 +58,65 @@ there is no second copy to drift. Proven by making the date predicate
 non-sargable: the values stayed correct, the plan still named `org_day`, and
 rows examined went from 1,500 to 12,775.
 
+**A fixture wound back relative to the constant it is testing always has work
+to do.** A roles-upgrade test set the stored version to `Roles::VERSION - 1` and
+asserted the new capability arrived. It passed with the version bump reverted,
+because whatever the constant currently is, one less than it is still behind —
+so the test proved the upgrader runs and never that this release asks it to. Pin
+the literal previous version; then forgetting the bump fails.
+
+**Role state survives a rolled-back transaction.** Role definitions live in an
+option and a cached `WP_Roles`, so `user_can()` in a test reports whatever the
+suite installed earlier rather than what the code under test grants. An
+administrator-capability assertion passed with the capability removed from
+`Capabilities::primitives()` entirely. Strip the capability, reinstall the roles
+and assert it came back — and note that it was covering a real defect while it
+was wrong.
+
+**A gate that ships off makes a browser test green over a screen it never saw.**
+Reporting defaults to off, so a spec that navigated to a reporting screen would
+have found the "switched off" notice and passed every assertion it could still
+make. Browser fixtures have to turn on what they intend to look at, and seed
+enough for the interesting branch to render — a placement that filled every
+time exercises the "every request was filled" path and proves nothing about the
+table beside it.
+
+**"Something is focused" is not a keyboard assertion.** A spec pressed `Tab`
+once from a fresh wp-admin document and checked that focus had landed inside the
+screen under test. It never does: core puts a skip link, the admin bar and the
+whole admin menu ahead of the content. The assertion was also weak where it
+would have passed, since almost any page has something focused. Assert the
+*order* — focus the first control, walk forward, name each stop — which fails on
+a reordered DOM or an introduced `tabindex`.
+
+**Breaking the code one line at a time finds what reading it cannot.** P14 was
+closed out by mutating every unit it added — forty-four deliberate defects, one
+at a time, each run against the suite. Ten survived, and they clustered in one
+place: the `document()` seams of both CSV exports were thoroughly tested and the
+`handle_export()` handlers around them were not tested at all, so the capability
+check, the referer check, the module gate, the window cap and the filename
+sanitisation could each be deleted with the suite still green.
+
+Two lessons came out of it that generalise past this phase:
+
+- **"Something called `wp_die()`" is not an authorization assertion.** A test
+  that only checks the request died is satisfied by whichever guard fires first,
+  so deleting the capability check changed nothing — `check_admin_referer()`
+  died a line later. Capture the message and assert *which* refusal it was, and
+  arrange the other guards to pass so only the one under test can speak.
+- **A guard behind `exit` cannot be asserted, so it will rot.** Everything
+  `Csv_Download::send()` did was unreachable, including
+  `X-Content-Type-Options: nosniff` on a document whose first cell somebody else
+  writes. The header map is now a separate pure method precisely so a test can
+  read it.
+
+**And the harness lied before the code did.** The first sweep reported almost
+everything killed. `phpunit --filter` exits non-zero when nothing matches, so
+every mutation filtered to integration-only classes looked caught while the unit
+suite had simply found no tests to run. A run that executes zero tests is
+inconclusive and must never count as a kill — which is the same mistake as a
+guard that stops matching and reports success, one level up.
+
 **A schema assertion is worthless until the table is dropped.** `dbDelta` adds
 an index and never drops one, so a DDL edit that changes or removes a key leaves
 the old one in place, still enforcing the old rule, and the suite passes over

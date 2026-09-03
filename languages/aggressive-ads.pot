@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-03T02:39:15+00:00\n"
+"POT-Creation-Date: 2026-09-03T03:26:34+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -100,7 +100,7 @@ msgstr ""
 #: inc/Admin/class-conversions-screen.php:208
 #: inc/Admin/class-conversions-screen.php:270
 #: inc/Portal/class-delivery-view-data.php:219
-#: inc/Portal/class-report-actions.php:192
+#: inc/Portal/class-report-actions.php:193
 #: templates/portal/partials/campaign-summary-facts.php:81
 #: templates/portal/partials/campaign-table.php:41
 msgid "Conversions"
@@ -950,13 +950,13 @@ msgstr ""
 msgid "No reason was recorded"
 msgstr ""
 
-#: inc/Admin/class-report-export.php:76
+#: inc/Admin/class-report-export.php:77
 #: inc/Portal/class-account-actions.php:220
 #: inc/Portal/class-campaign-actions.php:851
 #: inc/Portal/class-creative-actions.php:315
 #: inc/Portal/class-email-change-actions.php:178
 #: inc/Portal/class-organization-actions.php:222
-#: inc/Portal/class-report-actions.php:78
+#: inc/Portal/class-report-actions.php:79
 #: inc/Workflow/class-campaign-state-machine.php:245
 #: inc/Workflow/class-campaign-state-machine.php:263
 #: inc/Workflow/class-creative-manager.php:405
@@ -965,17 +965,17 @@ msgstr ""
 msgid "You do not have permission to do that."
 msgstr ""
 
-#: inc/Admin/class-report-export.php:88
-#: inc/Portal/class-report-actions.php:91
+#: inc/Admin/class-report-export.php:89
+#: inc/Portal/class-report-actions.php:92
 msgid "Reporting is not available on this site."
 msgstr ""
 
-#: inc/Admin/class-report-export.php:128
-#: inc/Portal/class-report-actions.php:186
+#: inc/Admin/class-report-export.php:148
+#: inc/Portal/class-report-actions.php:187
 msgid "Date (UTC)"
 msgstr ""
 
-#: inc/Admin/class-report-export.php:129
+#: inc/Admin/class-report-export.php:149
 #: inc/Admin/class-reports-screen.php:211
 #: inc/Admin/class-review-screen.php:258
 #: inc/Core/class-post-types.php:199
@@ -986,29 +986,29 @@ msgstr ""
 msgid "Placement"
 msgstr ""
 
-#: inc/Admin/class-report-export.php:130
+#: inc/Admin/class-report-export.php:150
 msgid "Placement ID"
 msgstr ""
 
-#: inc/Admin/class-report-export.php:131
+#: inc/Admin/class-report-export.php:151
 msgid "Outcome"
 msgstr ""
 
-#: inc/Admin/class-report-export.php:132
+#: inc/Admin/class-report-export.php:152
 msgid "Code"
 msgstr ""
 
-#: inc/Admin/class-report-export.php:133
+#: inc/Admin/class-report-export.php:153
 msgid "Events"
 msgstr ""
 
-#: inc/Admin/class-report-export.php:171
+#: inc/Admin/class-report-export.php:191
 #: inc/Admin/class-review-screen.php:311
 #: templates/portal/partials/campaign-changes-pending.php:44
 msgid "Requested"
 msgstr ""
 
-#: inc/Admin/class-report-export.php:172
+#: inc/Admin/class-report-export.php:192
 msgid "Filled"
 msgstr ""
 
@@ -1284,7 +1284,7 @@ msgstr ""
 
 #: inc/Admin/class-review-screen.php:256
 #: inc/Core/class-post-types.php:201
-#: inc/Portal/class-report-actions.php:187
+#: inc/Portal/class-report-actions.php:188
 #: templates/portal/partials/campaign-table.php:33
 #: templates/portal/screens/campaign.php:836
 msgid "Campaign"
@@ -3036,7 +3036,7 @@ msgid "%1$s to %2$s (UTC)"
 msgstr ""
 
 #: inc/Portal/class-delivery-view-data.php:197
-#: inc/Portal/class-report-actions.php:189
+#: inc/Portal/class-report-actions.php:190
 #: templates/portal/partials/campaign-summary-facts.php:56
 #: templates/portal/partials/campaign-table.php:38
 #: templates/portal/partials/sparkline.php:34
@@ -3044,7 +3044,7 @@ msgid "Impressions"
 msgstr ""
 
 #: inc/Portal/class-delivery-view-data.php:202
-#: inc/Portal/class-report-actions.php:190
+#: inc/Portal/class-report-actions.php:191
 #: templates/portal/partials/campaign-summary-facts.php:60
 #: templates/portal/partials/campaign-table.php:39
 msgid "Clicks"
@@ -3193,15 +3193,15 @@ msgstr ""
 msgid "If a portal account uses that address, a one-time password link has been sent."
 msgstr ""
 
-#: inc/Portal/class-report-actions.php:101
+#: inc/Portal/class-report-actions.php:102
 msgid "There is no organization to report on."
 msgstr ""
 
-#: inc/Portal/class-report-actions.php:188
+#: inc/Portal/class-report-actions.php:189
 msgid "Campaign ID"
 msgstr ""
 
-#: inc/Portal/class-report-actions.php:191
+#: inc/Portal/class-report-actions.php:192
 msgid "CTR %"
 msgstr ""
 
