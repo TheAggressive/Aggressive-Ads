@@ -269,6 +269,12 @@ inspector; the other two take them as attributes:
 aggr_placement( 'header-728x90', array( 'collapse_when_empty' => false ) );
 ```
 
+A visitor with **no JavaScript** sees the house advertisement where one is
+configured, and nothing at all where one is not — the slot removes itself rather
+than leaving an empty box. A slot with `collapse_when_empty="false"` keeps its
+space for them too, because reserving the box is a layout decision. Advertising
+→ Inventory says which placements have no house advertisement.
+
 **Turn collapsing off only where the layout needs the space held.** An unsold
 slot that keeps its space is an empty box the size of the ad, on every page it
 is on, for as long as the placement stays unsold — so give the block a border

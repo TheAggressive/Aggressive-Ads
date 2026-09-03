@@ -114,3 +114,52 @@ test( 'the server rendered both unsold slots before the page removed one', async
 	await page.goto( '/e2e-slot-surfaces/' );
 	await expect( page.locator( UNSOLD ) ).toHaveCount( 1 );
 } );
+
+/**
+ * The one audience whose experience nothing else here can check.
+ *
+ * `open-work.md` recorded for a long time that a visitor without JavaScript
+ * sees the reserved box whatever happens, on the reasoning that only a
+ * render-time decision could avoid it and there could not be one. That
+ * conflated two questions. Whether a *paid* ad will fill a slot does need a
+ * per-request candidate query, and a cached page would bake the answer in.
+ * Whether a *no-JS visitor* sees anything depends only on the house policy and
+ * whether a house creative exists — which the server already resolves, from
+ * placement configuration, to decide whether to emit the noscript house.
+ *
+ * Playwright can turn scripting off for a context, so this is assertable
+ * rather than arguable.
+ */
+test.describe( 'without JavaScript', () => {
+	test.use( { javaScriptEnabled: false } );
+
+	test( 'an unfillable slot leaves no empty box behind', async ( {
+		page,
+	} ) => {
+		await page.goto( '/e2e-slot-surfaces/' );
+
+		/*
+		 * Rendered by the server — the markup is in the document either way, which
+		 * is the whole reason the box used to be visible — and laid out at zero
+		 * height, because the rule inside <noscript> is live in this context.
+		 */
+		const slot = page.locator( SOLD );
+
+		await expect( slot ).toHaveCount( 1 );
+		await expect( slot ).toBeHidden();
+
+		/*
+		 * The unsold pair is where the rule has to discriminate. Both are on the
+		 * same placement and both are equally unfillable here; the only difference
+		 * is that one asked to keep its space. It keeps it — reserving the box is
+		 * a layout decision, and this visitor is still looking at the layout.
+		 */
+		await expect( page.locator( UNSOLD ) ).toHaveCount( 2 );
+		await expect(
+			page.locator( `${ UNSOLD }:not(.aggr-slot--needs-js)` )
+		).toBeVisible();
+		await expect(
+			page.locator( `${ UNSOLD }.aggr-slot--needs-js` )
+		).toBeHidden();
+	} );
+} );

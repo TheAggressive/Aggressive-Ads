@@ -86,7 +86,7 @@ Two things still open from it:
    the forbidden line verbatim is prose and not a violation, and a renamed
    protected file must fail rather than pass over nothing.
 
-## The ad slot collapses when unsold, and the space can now be kept
+## The ad slot collapses when unsold, and both halves are now answerable
 
 `Assignment_Projection` made delivery work; this is the behaviour a publisher
 notices next. A slot whose first fill returns no creative and no house removes
@@ -151,14 +151,45 @@ What is not built:
    non-block surfaces the same question the block gets asked could see it.
    The method emits what it is given now, because a second list of attribute
    names is a list that goes stale without a build failing.
-2. **Without JavaScript the box stays.** The server cannot know whether an ad
-   exists at render time, so a no-JS visitor sees the reserved slot and, if a
-   house creative is configured, the noscript house inside it. Only a
-   render-time decision could fix that, and see above for why there is not one.
+2. ~~Without JavaScript the box stays.~~ Shipped. A no-JS visitor now sees a
+   house advertisement where one is configured, and **nothing at all** where one
+   is not — never an empty reserved box.
 
-   `collapseWhenEmpty` does not help here and is not meant to: it is a
-   client-side decision, so a no-JS visitor gets the reserved box whichever way
-   it is set.
+   **The entry that used to sit here was reasoned from a false premise**, and
+   the premise is the part worth keeping. It said only a render-time decision
+   could fix this and there could not be one. That conflated two different
+   questions:
+
+   - *Will a paid ad fill this slot?* Needs a per-request candidate query, and a
+     cached page would bake the answer in. Genuinely unavailable, and the reason
+     the fill decision lives on the client.
+   - *Will a visitor with no JavaScript see anything?* Depends only on the house
+     policy and whether a house creative exists — which `noscript_house()`
+     already resolves from placement configuration, on the same inputs and with
+     the same cacheability as the house markup it emits beside it.
+
+   So the server marks a slot nothing can fill and emits
+   `<noscript><style>` to take it off the page. A slot that asked to keep its
+   space keeps it here too: reserving the box is a layout decision, and a
+   visitor without JavaScript is still looking at the layout.
+
+   Two things it had to get right, both found by running it:
+
+   - **`!important`, which is otherwise a smell and here is the requirement.** A
+     sized slot carries `display:grid` as an *inline* style, because the box's
+     dimensions come from the placement rather than a stylesheet, and an inline
+     declaration beats every ordinary rule however specific. Without it the
+     marker was applied, the rule was parsed into a real stylesheet, and the box
+     did not move. Four server-side tests passed throughout, because the markup
+     was never wrong — only the browser test could see it.
+   - **The rule is emitted per slot, not once per page.** Once-per-page needed a
+     flag on a service that outlives the request under any long-running SAPI,
+     where "once per request" quietly becomes "once per process" and every page
+     after the first carries a marker with no rule to act on it.
+
+   `Inventory` now says when a placement has no house advertisement, because the
+   consequence — the slot is simply absent — looks identical to a slot nobody
+   placed.
 
 ## A creative added to a running campaign is now reviewable
 
@@ -318,14 +349,27 @@ Every other entry that was here has shipped or been closed. That is the intended
 resting state, not a sign the file is unused — an entry is added the moment work
 is started and understood but not finished, and deleted the moment it ships.
 
-The last one closed was the cold-container browser flake, which turned out not
-to be about cold containers: `wp-login.php` steals focus 200ms after load, a
-`fill()` in flight when that lands loses its value, and an empty `required`
-password makes the browser refuse to submit at all. Diagnosed from the trace's
-screencast frames and fixed in `tests/e2e/admin-login.ts`; the durable half is
-in [known-issues.md](known-issues.md).
+**Two paragraphs here each used to claim to be the last one closed**, which is
+what this section looks like when entries are appended rather than rewritten.
+The list is now in order, newest first, and stays that way.
 
-The last one closed was P2, the creative model. Its design, decisions and the
+The most recent were the two halves of the ad-slot entry: a slot can keep its
+space when unsold, and a slot no visitor without JavaScript can fill now takes
+itself off the page. Closing the second one meant discarding the reasoning that
+had kept it open — see that entry.
+
+Before those, the `Creative_Repository` attachment split, which is recorded in
+its own entry because mutating the moved code proved five of its nine methods
+had never been defended by anything.
+
+Before that, the cold-container browser flake, which turned out not to be about
+cold containers: `wp-login.php` steals focus 200ms after load, a `fill()` in
+flight when that lands loses its value, and an empty `required` password makes
+the browser refuse to submit at all. Diagnosed from the trace's screencast
+frames and fixed in `tests/e2e/admin-login.ts`; the durable half is in
+[known-issues.md](known-issues.md).
+
+And before that, P2, the creative model. Its design, decisions and the
 defects found building it are in
 [platform-p2-creative-model.md](platform-p2-creative-model.md); which phase built
 what is in [platform-implementation-progress.md](platform-implementation-progress.md).
