@@ -13,6 +13,7 @@
 
 import { store, getContext, getElement } from '@wordpress/interactivity';
 import { fillSlot } from './fill.js';
+import { settleEmptySlot } from './empty.js';
 
 /**
  * The shortest rotation this will honour, in seconds.
@@ -63,24 +64,6 @@ export const rotationInterval = ( seconds ) => {
 const started = new WeakSet();
 
 /**
- * Removes a slot that has no ad to show.
- *
- * **The whole wrapper, not the canvas.** Block supports put the border, the
- * padding and the background on the outer element, so hiding only the inner
- * canvas leaves a bordered strip of nothing — which is precisely the empty box
- * this exists to get rid of.
- *
- * `remove()` rather than `display: none` for the same reason: a hidden element
- * still occupies the grid it was placed in, and a slot inside a flex or grid
- * layout would leave a gap where an ad never was.
- *
- * @param {HTMLElement} root Slot wrapper.
- */
-const collapse = ( root ) => {
-	root.remove();
-};
-
-/**
  * Fills a slot and, if the block asked for it, keeps filling it.
  *
  * @param {HTMLElement} root    Slot wrapper.
@@ -90,12 +73,13 @@ const run = async ( root, context ) => {
 	const rendered = await fillSlot( root );
 
 	/*
-	 * Nothing to show, so show nothing.
+	 * Nothing to show, so show nothing — unless the block asked otherwise.
 	 *
 	 * The reserved box exists to stop the page jumping when an ad arrives after
 	 * paint. That is worth nothing when no ad is coming, and an empty bordered
 	 * rectangle is worse than the reflow collapsing costs — a publisher with an
-	 * unsold placement should see their own page, not a grey hole in it.
+	 * unsold placement should see their own page, not a grey hole in it. A
+	 * fixed-layout page can say otherwise per slot; `empty.js` owns that choice.
 	 *
 	 * **Only ever here, on the first fill.** A rotation that comes back empty
 	 * leaves the previous ad up rather than collapsing, because a slot vanishing
@@ -103,7 +87,7 @@ const run = async ( root, context ) => {
 	 * happens before they have started.
 	 */
 	if ( ! rendered ) {
-		collapse( root );
+		settleEmptySlot( root, context );
 
 		return;
 	}
@@ -112,6 +96,13 @@ const run = async ( root, context ) => {
 	 * Nothing to rotate to. A slot that answered no-fill once will answer
 	 * no-fill again in thirty seconds, and asking anyway is one request per
 	 * slot per interval for as long as the tab stays open.
+	 *
+	 * That holds for a slot keeping its space too, and it is the weaker
+	 * argument there: the box is already reserved, so a later fill would cost
+	 * no layout shift at all. It stays for now because polling a placement
+	 * nobody has sold is a request per slot per interval for the life of the
+	 * tab, and a page load is not a long wait for inventory that arrives on a
+	 * campaign schedule.
 	 */
 	if ( ! context.rotate ) {
 		return;

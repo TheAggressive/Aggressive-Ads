@@ -19,7 +19,7 @@ import apiFetch from '@wordpress/api-fetch';
  * number is two too many, but the alternatives are worse: the editor bundle
  * cannot import the view module without pulling the Interactivity runtime into
  * the editor, and reading it from PHP would mean a REST round trip to render a
- * slider. `AdSlotRotationTest` asserts the three agree.
+ * slider. `PlacementSlotTest` asserts the three agree.
  */
 const MIN_ROTATE_SECONDS = 1;
 
@@ -30,12 +30,12 @@ const MAX_ROTATE_SECONDS = 30;
  * Editor view: pick a slot. Core block supports style the wrapper.
  *
  * @param {Object}   props
- * @param {{ slot: string, rotate: boolean, rotateSeconds: number }} props.attributes
+ * @param {{ slot: string, rotate: boolean, rotateSeconds: number, collapseWhenEmpty: boolean }} props.attributes
  * @param {(next: Object) => void} props.setAttributes
  * @return {JSX.Element} The editor view.
  */
 export default function Edit( { attributes, setAttributes } ) {
-	const { slot, rotate, rotateSeconds } = attributes;
+	const { slot, rotate, rotateSeconds, collapseWhenEmpty } = attributes;
 	const [ placements, setPlacements ] = useState( null );
 	const [ error, setError ] = useState( '' );
 
@@ -159,6 +159,36 @@ export default function Edit( { attributes, setAttributes } ) {
 					) : null }
 
 					{ ready && configured ? slotField : null }
+
+					{ /*
+					 * In the Placement panel rather than a panel of its own,
+					 * because it answers a question about this slot's presence
+					 * on the page — the same question the slot picker asks —
+					 * and a one-control panel is a heading a publisher has to
+					 * open to find out it was not what they wanted.
+					 */ }
+					<ToggleControl
+						__nextHasNoMarginBottom
+						label={ __(
+							'Remove the slot when no ad is available',
+							'aggressive-ads'
+						) }
+						help={
+							collapseWhenEmpty
+								? __(
+										'An unsold slot takes itself off the page and the layout closes the gap.',
+										'aggressive-ads'
+								  )
+								: __(
+										'An unsold slot keeps its space. Give the block a border or background so the reserved area is deliberate rather than a hole.',
+										'aggressive-ads'
+								  )
+						}
+						checked={ !! collapseWhenEmpty }
+						onChange={ ( value ) =>
+							setAttributes( { collapseWhenEmpty: value } )
+						}
+					/>
 				</PanelBody>
 
 				<PanelBody title={ __( 'Rotation', 'aggressive-ads' ) }>

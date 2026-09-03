@@ -11,6 +11,7 @@ namespace Aggressive\Ads\Workflow;
 
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Domain\Settings_Schema;
+use Aggressive\Ads\Domain\Slot_Options;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\REST\Creative_File_Controller;
 
@@ -35,21 +36,6 @@ final class Placement_Slot implements Service {
 	 * homepage gets eaten; an alias costs a few lines and no risk.
 	 */
 	public const LEGACY_BLOCK = 'aggr/placement';
-
-	/**
-	 * The rotation interval a slot uses when it asks for none.
-	 */
-	public const DEFAULT_ROTATE_SECONDS = 10;
-
-	/**
-	 * The shortest rotation this plugin will emit.
-	 *
-	 * One second, matching the client. There is deliberately no ceiling: a
-	 * longer interval records fewer impressions, so refusing one would refuse
-	 * the safer setting. This floor only stops a zero or a negative — from a
-	 * hand-edited block comment — becoming an interval of no length.
-	 */
-	public const MIN_ROTATE_SECONDS = 1;
 
 	/**
 	 * Constructor.
@@ -79,9 +65,9 @@ final class Placement_Slot implements Service {
 	 * @param array<string, string>|string $atts Shortcode attributes.
 	 */
 	public function shortcode( array|string $atts ): string {
-		$atts = shortcode_atts( array( 'slot' => '' ), is_array( $atts ) ? $atts : array() );
+		$atts = shortcode_atts( Slot_Options::shortcode_defaults(), is_array( $atts ) ? $atts : array() );
 
-		return $this->markup( (string) $atts['slot'] );
+		return $this->markup( (string) $atts['slot'], false, Slot_Options::from_atts( $atts ) );
 	}
 
 	/**
@@ -114,12 +100,7 @@ final class Placement_Slot implements Service {
 					'title'       => __( 'Ad Slot', 'aggressive-ads' ),
 					'description' => __( 'A reserved slot filled at request time, optionally rotating. Editors place a slot, never a campaign.', 'aggressive-ads' ),
 					'category'    => 'widgets',
-					'attributes'  => array(
-						'slot' => array(
-							'type'    => 'string',
-							'default' => '',
-						),
-					),
+					'attributes'  => self::block_attributes(),
 				)
 			)
 		);
@@ -147,20 +128,7 @@ final class Placement_Slot implements Service {
 				'title'           => __( 'Ad Slot (legacy)', 'aggressive-ads' ),
 				'category'        => 'widgets',
 				'supports'        => array( 'inserter' => false ),
-				'attributes'      => array(
-					'slot'          => array(
-						'type'    => 'string',
-						'default' => '',
-					),
-					'rotate'        => array(
-						'type'    => 'boolean',
-						'default' => false,
-					),
-					'rotateSeconds' => array(
-						'type'    => 'number',
-						'default' => self::DEFAULT_ROTATE_SECONDS,
-					),
-				),
+				'attributes'      => self::block_attributes(),
 			)
 		);
 	}
@@ -171,13 +139,45 @@ final class Placement_Slot implements Service {
 	 * @param array<string, mixed> $attributes Block attributes.
 	 */
 	public function render_block( array $attributes ): string {
-		$slot           = isset( $attributes['slot'] ) && is_string( $attributes['slot'] ) ? $attributes['slot'] : '';
-		$rotate         = ! empty( $attributes['rotate'] );
-		$rotate_seconds = isset( $attributes['rotateSeconds'] ) && is_numeric( $attributes['rotateSeconds'] )
-			? (int) $attributes['rotateSeconds']
-			: self::DEFAULT_ROTATE_SECONDS;
+		$slot = isset( $attributes['slot'] ) && is_string( $attributes['slot'] ) ? $attributes['slot'] : '';
 
-		return $this->markup( $slot, true, $rotate, $rotate_seconds );
+		return $this->markup( $slot, true, Slot_Options::from_block_attributes( $attributes ) );
+	}
+
+	/**
+	 * The attributes every registration of this block declares.
+	 *
+	 * One list for the fallback registration and the pre-1.6.0 alias. They used
+	 * to carry different ones, and the alias's were the complete set — so a
+	 * `dist/` build without a `block.json` rendered new content with rotation
+	 * silently dropped while the *legacy* name kept it.
+	 *
+	 * `src/blocks-interactivity/ad-slot/block.json` is still the source of
+	 * truth — it is what a build is made from — and
+	 * `PlacementSlotTest::test_every_registration_declares_the_same_attributes`
+	 * holds every registration to it.
+	 *
+	 * @return array<string, array<string, mixed>>
+	 */
+	private static function block_attributes(): array {
+		return array(
+			'slot'              => array(
+				'type'    => 'string',
+				'default' => '',
+			),
+			'rotate'            => array(
+				'type'    => 'boolean',
+				'default' => false,
+			),
+			'rotateSeconds'     => array(
+				'type'    => 'number',
+				'default' => Slot_Options::DEFAULT_ROTATE_SECONDS,
+			),
+			'collapseWhenEmpty' => array(
+				'type'    => 'boolean',
+				'default' => true,
+			),
+		);
 	}
 
 	/**
@@ -185,12 +185,11 @@ final class Placement_Slot implements Service {
 	 *
 	 * Does not mint a fill token. A token in cached HTML is a replay.
 	 *
-	 * @param string $slug           Placement post_name.
-	 * @param bool   $as_block       Whether to apply core block wrapper supports.
-	 * @param bool   $rotate         Whether the slot replaces its ad on an interval.
-	 * @param int    $rotate_seconds Requested interval, floored by the client.
+	 * @param string            $slug     Placement post_name.
+	 * @param bool              $as_block Whether to apply core block wrapper supports.
+	 * @param Slot_Options|null $options  Per-slot settings; the defaults when absent.
 	 */
-	public function markup( string $slug, bool $as_block = false, bool $rotate = false, int $rotate_seconds = self::DEFAULT_ROTATE_SECONDS ): string {
+	public function markup( string $slug, bool $as_block = false, ?Slot_Options $options = null ): string {
 		$slug = sanitize_title( $slug );
 
 		if ( '' === $slug || ! $this->fill->is_enabled() ) {
@@ -241,22 +240,13 @@ final class Placement_Slot implements Service {
 		);
 
 		/*
-		 * Context, not attributes, because the store reads it per slot: two ad
-		 * slots on one page rotate on their own intervals.
-		 */
-		$context = array(
-			'rotate'        => $rotate,
-			'rotateSeconds' => max( self::MIN_ROTATE_SECONDS, $rotate_seconds ),
-		);
-
-		/*
 		 * Encoded directly rather than through `wp_interactivity_data_wp_context()`,
 		 * which returns a whole `data-wp-context='…'` attribute string. This
 		 * builds an attribute *array* that the wrapper helpers escape, so taking
 		 * the helper's output and stripping the name and quotes back off it
 		 * would be doing the same work twice and undoing half of it.
 		 */
-		$encoded = wp_json_encode( $context );
+		$encoded = wp_json_encode( ( $options ?? Slot_Options::defaults() )->to_context() );
 
 		if ( is_string( $encoded ) ) {
 			$extra['data-wp-context'] = $encoded;
@@ -306,15 +296,32 @@ final class Placement_Slot implements Service {
 	/**
 	 * Shortcode and PHP helper wrapper. Block supports do not apply here.
 	 *
+	 * **Emits whatever it is given.** It used to name four attributes by hand,
+	 * which was correct when it was written and stopped being correct the day
+	 * the Interactivity directives joined the array: `data-wp-interactive`,
+	 * `data-wp-init` and `data-wp-context` were built for every slot and then
+	 * dropped on the way out of this method, so a slot placed with the
+	 * shortcode or with `aggr_placement()` rendered a reserved box that no
+	 * store ever hydrated and no fill ever reached. It looked like a slot with
+	 * no inventory, which is a state the plugin has on purpose, so nothing
+	 * about it read as broken.
+	 *
+	 * A list of attribute names in a second place is a list that goes stale
+	 * without a build failing, so there is not one any more.
+	 *
 	 * @param array<string, string> $extra Slot attributes.
 	 */
 	private function plain_wrapper( array $extra ): string {
-		$html  = '<div class="' . esc_attr( $extra['class'] ?? '' ) . '"';
-		$html .= ' data-aggr-slot="' . esc_attr( $extra['data-aggr-slot'] ?? '' ) . '"';
-		$html .= ' data-aggr-fill="' . esc_url( $extra['data-aggr-fill'] ?? '' ) . '"';
+		$html = '<div';
 
-		if ( isset( $extra['style'] ) && '' !== $extra['style'] ) {
-			$html .= ' style="' . esc_attr( $extra['style'] ) . '"';
+		foreach ( $extra as $name => $value ) {
+			if ( '' === $value ) {
+				continue;
+			}
+
+			$escaped = 'data-aggr-fill' === $name ? esc_url( $value ) : esc_attr( $value );
+
+			$html .= ' ' . esc_attr( $name ) . '="' . $escaped . '"';
 		}
 
 		return $html . '>';

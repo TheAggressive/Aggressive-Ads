@@ -254,6 +254,28 @@ Editors place a **slot**, never a campaign: the `aggr/ad-slot` block, the
 Cached HTML holds a reserved box and a placement id. Fill happens after paint,
 so a creative is never frozen into a page cache.
 
+All three surfaces take the same three settings. The block offers them in the
+inspector; the other two take them as attributes:
+
+| Block attribute | Shortcode / helper | Default | What it does |
+|---|---|---|---|
+| `rotate` | `rotate` | `false` | Requests a new ad on an interval, while the slot is on screen. |
+| `rotateSeconds` | `rotate_seconds` | `10` | The interval. Floored at 1; there is no ceiling. |
+| `collapseWhenEmpty` | `collapse_when_empty` | `true` | Whether an unsold slot removes itself. |
+
+```
+[aggr_placement slot="header-728x90" collapse_when_empty="false"]
+
+aggr_placement( 'header-728x90', array( 'collapse_when_empty' => false ) );
+```
+
+**Turn collapsing off only where the layout needs the space held.** An unsold
+slot that keeps its space is an empty box the size of the ad, on every page it
+is on, for as long as the placement stays unsold — so give the block a border
+or a background, or the reader sees an unexplained gap. It earns its keep in a
+fixed-layout template region, where a header slot that removes itself moves the
+whole page up.
+
 **Check.** Load a public page and confirm the reserved box appears with the
 right dimensions, then confirm `GET /aggr/v1/fill/{slot}` returns a payload.
 

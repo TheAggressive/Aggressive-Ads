@@ -86,37 +86,7 @@ Two things still open from it:
    the forbidden line verbatim is prose and not a violation, and a renamed
    protected file must fail rather than pass over nothing.
 
-## Custom tables are not rolled back between tests, and rows accumulate
-
-`WP_UnitTestCase` wraps each test in a transaction, and that covers core's
-tables. This plugin's own tables are created outside it, so rows written by a
-test survive the rollback — and, on a developer machine, survive the *run*.
-
-Found while closing P14: `RollupLineItemAttributionTest` began failing on a
-local full-suite run and passed in isolation. The cause was six rows left in
-`aggr_rollups` by earlier runs of `RollupTenancySchemaTest`, whose line-item
-attribution the failing test then summed into its own total. Deleting them made
-the suite green, and the failure reproduced with that session's changes stashed,
-so it is nothing a particular change introduced.
-
-CI is unaffected: every lane starts from a fresh database. That is also why this
-has never been caught there, and why it will keep costing somebody an afternoon
-locally.
-
-Two things would fix it, and they are not the same size:
-
-1. **Truncate the plugin's tables in a shared `set_up()`.** Cheap, and it makes
-   every test's fixture its own. The risk is a test that quietly depended on a
-   neighbour's rows and starts failing honestly.
-2. **Make the tables temporary in the test bootstrap**, as core does with its
-   own. Closer to the real fix and more invasive: `Rollup_Repository::drop_table()`
-   and the schema assertions already behave differently under `TEMPORARY`, which
-   `ConversionSchemaTest` documents.
-
-Neither is P14's to do. Written down because the next person to hit it should
-spend a minute on it rather than an afternoon.
-
-## The ad slot collapses when unsold, and there is no way to keep the space
+## The ad slot collapses when unsold, and the space can now be kept
 
 `Assignment_Projection` made delivery work; this is the behaviour a publisher
 notices next. A slot whose first fill returns no creative and no house removes
@@ -136,15 +106,59 @@ Two decisions worth keeping:
 
 What is not built:
 
-1. **No way to reserve the space deliberately.** Collapsing is unconditional.
-   A fixed-layout page that wants the box held open — or a publisher who would
-   rather show a house ad than a gap — has no option to say so. A
-   `collapseWhenEmpty` attribute defaulting to true is the obvious shape; nobody
-   has asked for it yet.
+1. ~~No way to reserve the space deliberately.~~ Shipped as
+   `collapseWhenEmpty`, defaulting to true, on the block, the shortcode
+   (`collapse_when_empty`) and `aggr_placement()`. The three settings and their
+   spellings are in [runbook.md](runbook.md).
+
+   **Only an explicit false keeps the space**, on both sides of the wire. That
+   is not defensiveness about types, it is which mistake is survivable:
+   a slot that collapses when it should not have costs one publisher a gap
+   they can see, while a slot that stops collapsing costs every reader an empty
+   box on every page and nothing errors, logs, or looks wrong. So an absent
+   attribute, an empty string, a null and a context that failed to encode all
+   collapse — which is also what makes every ad slot already in somebody's
+   `post_content` keep behaving exactly as it did.
+
+   Three things worth keeping:
+
+   - **`Slot_Options` is in `inc/Domain/`, not next to the renderer.** Reading
+     a hostile attribute has more cases than it has lines, and every one is a
+     value in and a value out. In the domain layer the whole matrix runs in
+     the unit suite in milliseconds; beside `Placement_Slot` it would have been
+     a handful of cases through a WordPress bootstrap, which is how the
+     interesting ones go unwritten.
+   - **The rotation decision did not change.** A slot that keeps its space
+     still stops asking after one no-fill. The cost argument is weaker there —
+     the box is reserved, so a later fill would shift nothing — but polling a
+     placement nobody has sold is a request per slot per interval for the life
+     of the tab, and inventory arrives on a campaign schedule rather than
+     within one page view.
+   - **No placeholder appearance ships.** The kept slot gets a class and
+     nothing else. A publisher who wants the box held open already had to give
+     the block a border or a background to want it; painting a grey rectangle
+     for them would put one on the pages that asked for a reserved gap.
+
+   **It also found that the shortcode and the helper had never filled at all.**
+   `plain_wrapper()` named four attributes by hand, which was right when it was
+   written and stopped being right the day the Interactivity directives joined
+   the array it is handed: `data-wp-interactive`, `data-wp-init` and
+   `data-wp-context` were built for every slot and dropped for these two, so a
+   slot placed by shortcode or by `aggr_placement()` rendered a reserved box
+   that no store hydrated and no fill ever reached. It renders identically to a
+   slot with no inventory, which is a state the plugin has on purpose — so
+   nothing about it read as broken, and only a test that asked the two
+   non-block surfaces the same question the block gets asked could see it.
+   The method emits what it is given now, because a second list of attribute
+   names is a list that goes stale without a build failing.
 2. **Without JavaScript the box stays.** The server cannot know whether an ad
    exists at render time, so a no-JS visitor sees the reserved slot and, if a
    house creative is configured, the noscript house inside it. Only a
    render-time decision could fix that, and see above for why there is not one.
+
+   `collapseWhenEmpty` does not help here and is not meant to: it is a
+   client-side decision, so a no-JS visitor gets the reserved box whichever way
+   it is set.
 
 ## A creative added to a running campaign is now reviewable
 

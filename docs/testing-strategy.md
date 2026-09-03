@@ -117,6 +117,29 @@ suite had simply found no tests to run. A run that executes zero tests is
 inconclusive and must never count as a kill — which is the same mistake as a
 guard that stops matching and reports success, one level up.
 
+**DDL inside a test commits the transaction the test is wrapped in.**
+`WP_UnitTestCase` opens a transaction in `set_up()` and rolls it back, and that
+covers this plugin's tables exactly as it covers core's — until something issues
+`CREATE TABLE`. MySQL commits implicitly on DDL, so a `set_up()` that calls
+`parent::set_up()` and then `install_table()` opens a transaction and ends it one
+line later; everything the test writes afterwards is permanent, and on a
+developer machine it is permanent across *runs*.
+
+It was diagnosed twice at cost. `RollupLineItemAttributionTest` began failing on
+a local full-suite run and passing in isolation, because rows left by earlier
+runs of `RollupTenancySchemaTest` were being summed into its total — and it later
+corrupted a mutation-testing run, where a red baseline makes every mutant look
+caught. CI never saw either: every lane starts from a fresh database, which is
+exactly what let it survive.
+
+`tests/php/Plugin_Table_Reset.php` empties the plugin's tables before every
+test, registered as a PHPUnit extension in both WordPress configs. A hook rather
+than a rule, because "do not perform DDL in a test" is unenforceable — schema
+and migration tests exist to do precisely that. It uses `DELETE` and never
+`TRUNCATE`, since truncation is itself DDL and would commit the transaction it
+is meant to protect. Measured: one row leaked per full run before it, none
+after.
+
 **A schema assertion is worthless until the table is dropped.** `dbDelta` adds
 an index and never drops one, so a DDL edit that changes or removes a key leaves
 the old one in place, still enforcing the old rule, and the suite passes over
@@ -134,6 +157,33 @@ schema under test.
 what does work, including why it invokes the migration step directly rather than
 through `maybe_upgrade()` — whose option-based lock survives the transaction
 rollback in the object cache and silently disables a later test's upgrade.
+
+**A default and a decision must not look alike to the code reading them.**
+`shortcode_atts()` fills every attribute nobody typed with `''`, so a boolean
+rule written as "every string except *false* is true" turned every setting on
+for every shortcode that configured none of them. The unit test that caught it
+was the one asserting the declared shortcode defaults read back as the shipped
+behaviour — the case that looks too obvious to write, because it asserts that
+nothing happens.
+
+**An equivalent mutant is a line no test can defend.** `Slot_Options` mirrored
+`rest_sanitize_boolean()`'s list of false-y strings, `'false'` and `'0'`.
+Deleting `'0'` killed no test, and correctly: `(bool) '0'` is already false in
+PHP, so the entry could never change an answer — in this plugin's copy or in
+core's. A surviving mutant is usually a missing test; sometimes, as here, it is
+a line to delete, and the two are only distinguishable by asking what input
+would tell them apart. Both readings were then held together by a parity test
+over the whole vocabulary, so the copy cannot drift from core in silence.
+
+**Ask the non-obvious surface the same question as the obvious one.** The block,
+the shortcode and the `aggr_placement()` helper render through one method, and
+only the block was ever asserted against. The shortcode and helper share a
+wrapper that named its attributes by hand, so the Interactivity directives —
+added to the array it is handed, much later — were dropped for those two, and
+neither surface had ever filled an ad. It renders identically to a slot with no
+inventory, a state the plugin has on purpose, so nothing about it read as
+broken. A defect that survives in the surface nobody tests is not found by
+testing the surface everybody tests more thoroughly.
 
 And one about where an assertion belongs: **a REST `permission_callback` answers
 before the workflow does**, so a denied request never reaches the manager and

@@ -21,6 +21,10 @@
 		"rotateSeconds": {
 			"type": "number",
 			"default": 10
+		},
+		"collapseWhenEmpty": {
+			"type": "boolean",
+			"default": true
 		}
 	},
 	"supports": {
