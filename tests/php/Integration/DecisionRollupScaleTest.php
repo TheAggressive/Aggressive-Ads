@@ -241,6 +241,76 @@ final class DecisionRollupScaleTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The export read is bounded, and by what.
+	 *
+	 * P14 added a per-day shape these counters had never been read in, and a
+	 * new shape is a new chance to fall off an index. Rows examined rather than
+	 * the index the plan names, for the reason this file already records: MySQL
+	 * will use an index for a `GROUP BY` while scanning every row for the
+	 * `WHERE`.
+	 *
+	 * **The two reads are bounded by different things, and saying so is the
+	 * point.** Filtered by placement, the unique key's leading column does the
+	 * work and the day range barely matters — proven by sabotage: making the
+	 * day predicate non-sargable left the filtered read at eighty rows and this
+	 * assertion green, because one placement's whole history is already a
+	 * bounded scope. Site-wide there is no such column, so the day range is the
+	 * only bound there is, and that is where the assertion has teeth.
+	 */
+	public function test_the_per_day_export_read_stays_bounded(): void {
+		global $wpdb;
+
+		$rows  = $this->seed();
+		$table = $this->rollups->table_name();
+		$today = gmdate( 'Y-m-d' );
+		$first = gmdate( 'Y-m-d', strtotime( '-6 days' ) );
+
+		$this->assertNotSame( array(), $this->rollups->daily_outcomes( $first, $today, 7 ), 'The filtered read returned nothing, so the plans below prove nothing.' );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Query plan introspection in a test.
+		$filtered = $wpdb->get_row(
+			$wpdb->prepare(
+				"EXPLAIN SELECT day_utc, placement_id, outcome, SUM(events) AS events FROM {$table} WHERE placement_id = %d AND day_utc BETWEEN %s AND %s GROUP BY day_utc, placement_id, outcome",
+				7,
+				$first,
+				$today
+			),
+			ARRAY_A
+		);
+
+		$this->assertIsArray( $filtered );
+
+		/*
+		 * One placement across the whole fixture is 30 days of outcomes, so a
+		 * threshold generous enough to survive a spread change is still two
+		 * orders of magnitude below the table. This catches the placement
+		 * predicate being lost, which is the failure available here.
+		 */
+		$this->assertLessThan(
+			500,
+			(int) ( $filtered['rows'] ?? PHP_INT_MAX ),
+			sprintf( 'A one-placement export examined %s of %d rows, so it is not reading one placement.', (string) ( $filtered['rows'] ?? '?' ), $rows )
+		);
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Query plan introspection in a test.
+		$site = $wpdb->get_row(
+			$wpdb->prepare(
+				"EXPLAIN SELECT day_utc, placement_id, outcome, SUM(events) AS events FROM {$table} WHERE day_utc BETWEEN %s AND %s GROUP BY day_utc, placement_id, outcome",
+				$today,
+				$today
+			),
+			ARRAY_A
+		);
+
+		$this->assertIsArray( $site );
+		$this->assertLessThan(
+			(int) ( $rows / 5 ),
+			(int) ( $site['rows'] ?? PHP_INT_MAX ),
+			sprintf( 'A one-day site-wide export examined %s of %d rows, so it is reading history.', (string) ( $site['rows'] ?? '?' ), $rows )
+		);
+	}
+
+	/**
 	 * Retention keeps the table bounded in time, in batches that do not lock it.
 	 *
 	 * Without this the counters are the option again: correct, useful, and

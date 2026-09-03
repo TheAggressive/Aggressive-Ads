@@ -157,6 +157,58 @@ final class Decision_Rollup_Repository {
 	}
 
 	/**
+	 * Per-day outcome rows for a range, site-wide or for one placement.
+	 *
+	 * The shape an export wants and a screen does not: long format, one row per
+	 * day and outcome, so a reader can pivot it without the column set changing
+	 * whenever a new reason first occurs.
+	 *
+	 * Both variants stay inside an index range. Filtered by placement the
+	 * unique key leads on `placement_id`; site-wide, `day_outcome` leads on the
+	 * day the range bounds. Neither grows with the table — only with the window
+	 * asked for, which is what makes an export safe to offer at all.
+	 *
+	 * @param string $from_utc  First UTC day, inclusive, `Y-m-d`.
+	 * @param string $to_utc    Last UTC day, inclusive, `Y-m-d`.
+	 * @param int    $placement Placement post id, or 0 for every placement.
+	 * @return list<array{day: string, placement_id: int, outcome: string, events: int}>
+	 */
+	public function daily_outcomes( string $from_utc, string $to_utc, int $placement = 0 ): array {
+		global $wpdb;
+
+		if ( ! self::is_day( $from_utc ) || ! self::is_day( $to_utc ) ) {
+			return array();
+		}
+
+		$table = $this->table_name();
+
+		if ( $placement > 0 ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Custom table, prefix-derived name; every value is a placeholder.
+			$rows = $wpdb->get_results( $wpdb->prepare( "SELECT day_utc, placement_id, outcome, SUM(events) AS events FROM {$table} WHERE placement_id = %d AND day_utc BETWEEN %s AND %s GROUP BY day_utc, placement_id, outcome ORDER BY day_utc ASC, outcome ASC", $placement, $from_utc, $to_utc ), ARRAY_A );
+		} else {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Custom table, prefix-derived name; every value is a placeholder.
+			$rows = $wpdb->get_results( $wpdb->prepare( "SELECT day_utc, placement_id, outcome, SUM(events) AS events FROM {$table} WHERE day_utc BETWEEN %s AND %s GROUP BY day_utc, placement_id, outcome ORDER BY day_utc ASC, placement_id ASC, outcome ASC", $from_utc, $to_utc ), ARRAY_A );
+		}
+
+		$out = array();
+
+		foreach ( is_array( $rows ) ? $rows : array() as $row ) {
+			if ( ! is_array( $row ) ) {
+				continue;
+			}
+
+			$out[] = array(
+				'day'          => (string) ( $row['day_utc'] ?? '' ),
+				'placement_id' => (int) ( $row['placement_id'] ?? 0 ),
+				'outcome'      => (string) ( $row['outcome'] ?? '' ),
+				'events'       => (int) ( $row['events'] ?? 0 ),
+			);
+		}
+
+		return $out;
+	}
+
+	/**
 	 * Outcome totals across every placement for a closed day range.
 	 *
 	 * @param string $from_utc First UTC day, inclusive, `Y-m-d`.

@@ -20,8 +20,9 @@ freshness-aware `Reporting_Read`, the dashboard tiles reading a stated window
 instead of all of history, conversions made visible on every surface that
 already showed impressions, each tile carrying its change against the window
 before it, the publisher's fill report — the first reader P13's decision
-counters have ever had — and a range picker on the dashboard. What remains is
-the publisher export and the scheduled-delivery seam.
+counters have ever had — a range picker on the dashboard, and the publisher
+export with the scheduled-delivery seam it proves. What remains is the
+closeout.
 
 ## Outcome
 
@@ -344,7 +345,11 @@ Business operations, not controllers:
 3. **A publisher reads fill and no-fill for a placement or the site**, over a
    range, with reasons rendered through a label map and never raw. New admin
    screen, new capability.
-4. **A publisher exports that.** Same rules as the advertiser export.
+4. **A publisher exports that.** *(Built.)* Same rules as the advertiser export,
+   and **long format** — one row per day and outcome — because a column per
+   reason would change the column set the first time a new reason occurred.
+   Each row carries the sentence for a reader and the code beside it for
+   anything joining the file to something else.
 5. **A report's parameters round-trip** — the range in the URL, so a staff
    member can send a colleague a link to the same report and get the same
    numbers, subject to that colleague's own capability check on arrival.
@@ -383,7 +388,11 @@ here as deliberately deferred so the next phase to want it knows it is picking
 up a whole problem and not a checkbox.
 
 What P14 must prove is only that nothing in the report path requires a request,
-a session or a screen to produce its bytes.
+a session or a screen to produce its bytes. *(Proven.)* Both exports build their
+document through a public, pure `document()` method taking rows and returning
+bytes; `PublisherReportTest` calls one with no signed-in user and asserts the
+same rows produce the same bytes twice. A later phase inherits a delivery
+problem, not a report-generation one.
 
 ## Security, privacy and abuse cases
 

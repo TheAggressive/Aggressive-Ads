@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Tests\Integration;
 
 use Aggressive\Ads\Admin\Report_Data;
+use Aggressive\Ads\Admin\Report_Export;
 use Aggressive\Ads\Admin\Reports_Screen;
 use Aggressive\Ads\Core\Settings;
 use Aggressive\Ads\Domain\Decision_Outcome;
@@ -70,6 +71,13 @@ final class PublisherReportTest extends WP_UnitTestCase {
 	 */
 	private Settings $settings;
 
+	/**
+	 * Export under test.
+	 *
+	 * @var Report_Export
+	 */
+	private Report_Export $export;
+
 	public function set_up(): void {
 		parent::set_up();
 
@@ -80,6 +88,7 @@ final class PublisherReportTest extends WP_UnitTestCase {
 		$this->screen   = $container->get( Reports_Screen::class );
 		$this->data     = $container->get( Report_Data::class );
 		$this->rollups  = $container->get( Decision_Rollup_Repository::class );
+		$this->export   = $container->get( Report_Export::class );
 		$this->settings = $container->get( Settings::class );
 
 		$this->rollups->install_table();
@@ -360,6 +369,136 @@ final class PublisherReportTest extends WP_UnitTestCase {
 		$this->assertStringContainsString( esc_html( $labels[ No_Fill_Reason::TARGETING_MISMATCH ] ), $html );
 		$this->assertStringNotContainsString( No_Fill_Reason::TARGETING_MISMATCH, $html, 'A raw reason code reached the screen.' );
 		$this->assertStringContainsString( 'UTC', $html, 'The report does not say its days are UTC.' );
+	}
+
+	/**
+	 * The export carries a row per day and outcome, with a stable header.
+	 *
+	 * Long format rather than a column per reason: a wide file's columns would
+	 * change the first time a new reason occurred, and somebody has a
+	 * spreadsheet pointed at a column.
+	 *
+	 * @return void
+	 */
+	public function test_the_export_is_long_format_with_a_pinned_header(): void {
+		$today = gmdate( 'Y-m-d' );
+
+		$this->rollups->add(
+			$today,
+			11,
+			array(
+				Decision_Outcome::REQUEST          => 10,
+				Decision_Outcome::FILL             => 6,
+				No_Fill_Reason::TARGETING_MISMATCH => 4,
+			)
+		);
+
+		$rows = $this->rollups->daily_outcomes( $today, $today, 11 );
+		$csv  = $this->export->document( $rows );
+
+		$header = ltrim( (string) strtok( $csv, "\r\n" ), "\xEF\xBB\xBF" );
+
+		$this->assertSame( 'Date (UTC),Placement,Placement ID,Outcome,Code,Events', $header );
+		$this->assertCount( 3, $rows, 'One row per outcome that occurred, and no others.' );
+
+		// The sentence for a reader and the code for a machine, both present.
+		$this->assertStringContainsString( Report_Data::reason_labels()[ No_Fill_Reason::TARGETING_MISMATCH ], $csv );
+		$this->assertStringContainsString( No_Fill_Reason::TARGETING_MISMATCH, $csv );
+	}
+
+	/**
+	 * A placement named as a formula reaches the file inert.
+	 *
+	 * Placement names are staff-controlled rather than advertiser-controlled,
+	 * which lowers the risk and changes nothing: the writer is not the place to
+	 * start making exceptions about who is trusted.
+	 *
+	 * @return void
+	 */
+	public function test_a_formula_named_placement_is_neutralized(): void {
+		$placement = (int) self::factory()->post->create(
+			array(
+				'post_type'  => 'aggr_placements',
+				'post_title' => '=HYPERLINK("https://attacker.example","Click")',
+			)
+		);
+
+		$this->rollups->add( gmdate( 'Y-m-d' ), $placement, array( Decision_Outcome::REQUEST => 1 ) );
+
+		$csv = $this->export->document( $this->rollups->daily_outcomes( gmdate( 'Y-m-d' ), gmdate( 'Y-m-d' ), $placement ) );
+
+		$this->assertStringNotContainsString( ',=HYPERLINK', $csv, 'A bare formula reached a cell boundary.' );
+		$this->assertStringNotContainsString( ',"=HYPERLINK', $csv, 'Quoting alone does not stop evaluation.' );
+		$this->assertStringContainsString( "'=HYPERLINK", $csv, 'The formula was not prefixed, so a spreadsheet would evaluate it.' );
+	}
+
+	/**
+	 * **The document needs no request, no session and no screen.**
+	 *
+	 * This is the whole of what P14 owes the scheduled-delivery contract: not a
+	 * scheduler, but proof that producing the bytes is a pure function of rows.
+	 * A later phase can call this from cron without unpicking anything, and
+	 * knows from here that the hard part left is delivery — bounces,
+	 * unsubscribes, attachment size, a schedule that must not double-send —
+	 * rather than report generation.
+	 *
+	 * @return void
+	 */
+	public function test_the_document_is_a_pure_function_of_its_rows(): void {
+		wp_set_current_user( 0 );
+
+		$rows = array(
+			array(
+				'day'          => '2026-08-01',
+				'placement_id' => 0,
+				'outcome'      => Decision_Outcome::REQUEST,
+				'events'       => 12,
+			),
+		);
+
+		$first  = $this->export->document( $rows );
+		$second = $this->export->document( $rows );
+
+		$this->assertSame( $first, $second, 'The same rows produced different bytes.' );
+		$this->assertStringContainsString( '2026-08-01', $first );
+		$this->assertStringContainsString( '12', $first );
+		$this->assertSame( 0, get_current_user_id(), 'The document read a session it should not need.' );
+	}
+
+	/**
+	 * An unauthorized caller cannot download the figures.
+	 *
+	 * The export is the bulk path: the one surface that hands over everything
+	 * at once, which is where an authorization gap is worth the most.
+	 *
+	 * @return void
+	 */
+	public function test_an_advertiser_cannot_download_the_fill_report(): void {
+		wp_set_current_user( (int) self::factory()->user->create( array( 'role' => Roles::ADVERTISER ) ) );
+
+		$died = false;
+
+		add_filter(
+			'wp_die_handler',
+			static function () use ( &$died ): callable {
+				return static function () use ( &$died ): void {
+					$died = true;
+
+					throw new \RuntimeException( 'wp_die' );
+				};
+			}
+		);
+
+		try {
+			ob_start();
+			$this->export->handle_export();
+			ob_end_clean();
+		} catch ( \RuntimeException $e ) {
+			ob_end_clean();
+			$this->assertSame( 'wp_die', $e->getMessage() );
+		}
+
+		$this->assertTrue( $died, 'An advertiser downloaded the publisher fill report.' );
 	}
 
 	/**

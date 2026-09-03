@@ -264,7 +264,16 @@ Shared boundaries and group exit criteria:
       from what a read may examine, and the button names the number it will
       actually produce.
 
-      Still open: the publisher export, and the scheduled-delivery seam.
+      **The publisher export ships in long format** — a row per day and
+      outcome, so the column set cannot change the first time a new reason
+      occurs — carrying the sentence for a reader and the code beside it.
+      **The scheduled-delivery seam is proven rather than built**: both exports
+      produce their bytes through a pure `document()` over rows, asserted with
+      no signed-in user, so whichever phase wants a mailed report inherits a
+      delivery problem and not a report-generation one. No email ships, for the
+      reason `notifications.md` gives.
+
+      Still open: the closeout.
 
 ### Inventory and commerce
 

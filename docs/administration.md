@@ -81,6 +81,12 @@ worth reporting: every request should end as either a fill or a reason.
 Figures appear only while the Reporting module is on, exactly as the advertiser
 tiles do.
 
+**Download (CSV)** gives one row per day, placement and outcome — long format,
+so it pivots without the columns moving as new reasons appear. Each row carries
+both the sentence and the underlying code. The download caps at 31 days even
+when the screen is showing 90, because the file is assembled in memory before
+it is sent; the button always names the number of days you will actually get.
+
 ## Settings
 
 One option, `aggr_settings`, behind one screen.
