@@ -16,8 +16,16 @@ Declared once in `inc/Security/class-capabilities.php`, which is the source of t
 | `aggr_manage_orgs` | Edit any organization |
 | `aggr_view_audit_log` | Read the audit log |
 | `aggr_manage_settings` | Change plugin settings (Settings screen under Advertising) |
+| `aggr_view_reports` | Read the Reports screen: fill rate, and why a slot stayed empty |
 
 `aggr_access_staff` is **not** a primitive. It is derived at `user_has_cap` when the user holds any Advertising submenu capability, so the parent menu appears without a second install-time grant. It is never stored on a role.
+
+`aggr_view_reports` is **new rather than borrowed**, and that is the decision.
+Reusing `aggr_review_campaigns` would have worked on the day the Reports screen
+shipped, and made the first person who should read numbers without approving
+creatives into an argument about an already-granted capability map. P21
+introduces an organization-scoped analyst and will need exactly one thing to
+scope; this is it.
 
 `aggr_review_campaigns` and `aggr_publish` are separate on purpose. Reviewing is a judgement; publishing writes to a third-party system and can bill a customer. Keeping them apart allows a future junior-reviewer role that can triage but not go live, without redesigning anything.
 
@@ -26,7 +34,7 @@ Declared once in `inc/Security/class-capabilities.php`, which is the source of t
 | Role | Display | Holds |
 |---|---|---|
 | `aggr_advertiser` | Advertiser | `read`, `aggr_access_portal`, `_upload_creative`, `_submit_campaign`; create/edit/edit_published/delete on `aggr_campaigns` and `aggr_creatives`; read-only on placements, packages, orgs |
-| `aggr_reviewer` | Ad Reviewer | Everything above, plus `_review_campaigns`, `_publish_to_adsanity`, `_view_audit_log`, and the `_others_` / `_private_` variants on all five post types |
+| `aggr_reviewer` | Ad Reviewer | Everything above, plus `_review_campaigns`, `_publish_to_adsanity`, `_view_audit_log`, `_view_reports`, and the `_others_` / `_private_` variants on all five post types |
 | `administrator` | — | Every `aggr_*` primitive and every generated capability, granted on install |
 
 `editor` receives nothing. The filter `aggr_roles_receiving_caps` (default `['administrator']`) is the supported way to grant the full set to another role.

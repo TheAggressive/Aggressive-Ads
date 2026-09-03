@@ -269,6 +269,7 @@ final class Menu implements Service {
 			Organization_Screen::MENU_SLUG => Capabilities::MANAGE_ORGS,
 			Placement_Screen::MENU_SLUG    => Capabilities::MANAGE_PLACEMENTS,
 			Package_Screen::MENU_SLUG      => Capabilities::MANAGE_PACKAGES,
+			Reports_Screen::MENU_SLUG      => Capabilities::VIEW_REPORTS,
 			Settings_Screen::MENU_SLUG     => Capabilities::MANAGE_SETTINGS,
 		);
 	}
