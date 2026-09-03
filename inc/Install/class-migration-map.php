@@ -14,6 +14,7 @@ use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Decision_Rollup_Repository;
 use Aggressive\Ads\Workflow\Decision_Metrics;
+use Aggressive\Ads\Repository\Creative_Attachment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Org_Access_Repository;
 use Aggressive\Ads\Security\Ownership;
@@ -56,7 +57,7 @@ final class Migration_Map {
 			// Creative promoted before the marker existed is still in
 			// the Media Library until it is marked.
 			7  => static function () use ( $c ): void {
-				$c->get( Creative_Repository::class )->backfill_creative_attachment_marks();
+				$c->get( Creative_Attachment_Repository::class )->backfill_creative_attachment_marks();
 			},
 			// The daily private-storage probe and its stored verdict
 			// outlived the notice they fed. Left alone they would stay

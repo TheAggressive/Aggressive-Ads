@@ -43,6 +43,7 @@ use Aggressive\Ads\Notification\Password_Notification;
 use Aggressive\Ads\Notification\Request_Mailer;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Line_Item_Repository;
+use Aggressive\Ads\Repository\Creative_Attachment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Creative_Revision_Repository;
 use Aggressive\Ads\Repository\Delivery_Repository;
@@ -314,6 +315,7 @@ final class Service_Registrar {
 			Creative_Assignment_Migrator::class,
 			static fn ( Service_Container $c ): Creative_Assignment_Migrator => new Creative_Assignment_Migrator(
 				$c->get( Creative_Repository::class ),
+				$c->get( Creative_Attachment_Repository::class ),
 				$c->get( Creative_Asset_Repository::class ),
 				$c->get( Creative_Assignment_Repository::class ),
 				$c->get( Line_Item_Repository::class ),
@@ -386,6 +388,7 @@ final class Service_Registrar {
 			Revision_Policy::class,
 			static fn ( Service_Container $c ): Revision_Policy => new Revision_Policy(
 				$c->get( Creative_Repository::class ),
+				$c->get( Creative_Attachment_Repository::class ),
 				$c->get( Creative_Revision_Repository::class ),
 				$c->get( Creative_Assignment_Repository::class ),
 				$c->get( Line_Item_Repository::class )
@@ -479,8 +482,15 @@ final class Service_Registrar {
 		);
 
 		$container->register(
+			Creative_Attachment_Repository::class,
+			static fn (): Creative_Attachment_Repository => new Creative_Attachment_Repository()
+		);
+
+		$container->register(
 			Creative_Repository::class,
-			static fn (): Creative_Repository => new Creative_Repository()
+			static fn ( $c ): Creative_Repository => new Creative_Repository(
+				$c->get( Creative_Attachment_Repository::class )
+			)
 		);
 
 		$container->register(
@@ -561,7 +571,7 @@ final class Service_Registrar {
 			static fn ( Service_Container $c ): Assignment_Projection => new Assignment_Projection(
 				$c->get( \Aggressive\Ads\Repository\Campaign_Repository::class ),
 				$c->get( \Aggressive\Ads\Repository\Creative_Assignment_Repository::class ),
-				$c->get( \Aggressive\Ads\Repository\Creative_Repository::class )
+				$c->get( Creative_Attachment_Repository::class )
 			)
 		);
 
@@ -579,6 +589,7 @@ final class Service_Registrar {
 				$c->get( Campaign_Editor::class ),
 				$c->get( Campaign_Repository::class ),
 				$c->get( Creative_Repository::class ),
+				$c->get( Creative_Attachment_Repository::class ),
 				$c->get( Private_Storage::class ),
 				$c->get( Audit_Repository::class ),
 				$c->get( Line_Item_Repository::class )
@@ -670,6 +681,7 @@ final class Service_Registrar {
 				$c->get( Campaign_Lifecycle_Repository::class ),
 				$c->get( Campaign_Repository::class ),
 				$c->get( Creative_Repository::class ),
+				$c->get( Creative_Attachment_Repository::class ),
 				$c->get( Private_Storage::class ),
 				$c->get( Audit_Repository::class ),
 				$c->get( Settings::class )
@@ -755,6 +767,7 @@ final class Service_Registrar {
 			static fn ( Service_Container $c ): Creative_Manager => new Creative_Manager(
 				$c->get( Campaign_Repository::class ),
 				$c->get( Creative_Repository::class ),
+				$c->get( Creative_Attachment_Repository::class ),
 				$c->get( Placement_Repository::class ),
 				$c->get( Creative_Uploader::class ),
 				$c->get( Private_Storage::class ),
@@ -769,6 +782,7 @@ final class Service_Registrar {
 			Creative_Promoter::class,
 			static fn ( Service_Container $c ): Creative_Promoter => new Creative_Promoter(
 				$c->get( Creative_Repository::class ),
+				$c->get( Creative_Attachment_Repository::class ),
 				$c->get( Private_Storage::class )
 			)
 		);

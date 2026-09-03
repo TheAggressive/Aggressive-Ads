@@ -11,6 +11,7 @@ namespace Aggressive\Ads\Portal;
 
 use Aggressive\Ads\REST\Creative_File_Controller;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Creative_Attachment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Creative_Revision_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
@@ -32,16 +33,18 @@ final class Creative_View_Data {
 	/**
 	 * Constructor.
 	 *
-	 * @param Campaign_Repository          $campaigns  Campaign persistence.
-	 * @param Creative_Repository          $creatives  Creative persistence.
-	 * @param Creative_Revision_Repository $revisions  Replacement lifecycle persistence.
-	 * @param Placement_Repository         $placements Placement persistence.
-	 * @param Assigned_Creatives           $assigned   What is assigned where.
-	 * @param Creative_Approval            $approvals  Creative review decisions.
+	 * @param Campaign_Repository            $campaigns  Campaign persistence.
+	 * @param Creative_Repository            $creatives  Creative persistence.
+	 * @param Creative_Attachment_Repository $attachments Media Library copy of the artwork.
+	 * @param Creative_Revision_Repository   $revisions  Replacement lifecycle persistence.
+	 * @param Placement_Repository           $placements Placement persistence.
+	 * @param Assigned_Creatives             $assigned   What is assigned where.
+	 * @param Creative_Approval              $approvals  Creative review decisions.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
 		private readonly Creative_Repository $creatives,
+		private readonly Creative_Attachment_Repository $attachments,
 		private readonly Creative_Revision_Repository $revisions,
 		private readonly Placement_Repository $placements,
 		private readonly Assigned_Creatives $assigned,
@@ -66,7 +69,7 @@ final class Creative_View_Data {
 	 * @return string
 	 */
 	private function creative_preview( int $creative_id ): string {
-		$promoted = $this->creatives->attachment_url( $creative_id );
+		$promoted = $this->attachments->attachment_url( $creative_id );
 
 		if ( '' !== $promoted ) {
 			return $promoted;
@@ -109,7 +112,7 @@ final class Creative_View_Data {
 			}
 
 			$stored   = $this->creatives->storage_details( $creative['id'] );
-			$approved = $this->creatives->has_attachment( $creative['id'] );
+			$approved = $this->attachments->has_attachment( $creative['id'] );
 			$rejected = $this->creatives->is_rejected( $creative['id'] );
 
 			$rows[] = array(

@@ -13,7 +13,7 @@ use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Domain\Assignment_Rules;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
-use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Repository\Creative_Attachment_Repository;
 
 /**
  * Re-derives the campaign-owned columns on every assignment a campaign owns.
@@ -45,12 +45,12 @@ final class Assignment_Projection implements Service {
 	 *
 	 * @param Campaign_Repository            $campaigns   Campaign status and ownership.
 	 * @param Creative_Assignment_Repository $assignments Assignment persistence.
-	 * @param Creative_Repository            $creatives   Promoted attachment lookup.
+	 * @param Creative_Attachment_Repository $attachments Promoted attachment lookup.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
 		private readonly Creative_Assignment_Repository $assignments,
-		private readonly Creative_Repository $creatives
+		private readonly Creative_Attachment_Repository $attachments
 	) {
 	}
 
@@ -130,7 +130,7 @@ final class Assignment_Projection implements Service {
 			 * projecting that zero would blank an assignment that was already
 			 * serving and take a live ad down.
 			 */
-			$attachment_id = $this->creatives->attachment_id( (int) ( $row['revision_id'] ?? 0 ) );
+			$attachment_id = $this->attachments->attachment_id( (int) ( $row['revision_id'] ?? 0 ) );
 
 			if ( $attachment_id > 0 ) {
 				$fields['attachment_id'] = $attachment_id;

@@ -268,13 +268,49 @@ through `update_post_metadata` and asserts the live ad is still serving — beca
 the alternative is a campaign whose current creative is archived and whose
 replacement is not running, which is an advertiser paying for a blank slot.
 
-**The attachment cluster has not moved**, and does not need to yet:
-`has_attachment`, `attachment_id`, `attachment_url`, `attachment_file`,
-`set_attachment_id`, `mark_attachment_as_creative`,
-`ids_promoted_with_private_file`, `backfill_creative_attachment_marks` and
-`set_attachment_alt_text` — about 190 lines about the Media Library copy of the
-artwork rather than the creative record, called from 11 files. It is the obvious
-next seam if the file grows again.
+**The attachment cluster has now moved too**, into
+`Creative_Attachment_Repository`: `has_attachment`, `attachment_id`,
+`attachment_url`, `attachment_file`, `set_attachment_id`,
+`mark_attachment_as_creative`, `ids_promoted_with_private_file`,
+`backfill_creative_attachment_marks` and `set_attachment_alt_text`. Two hundred
+lines about the Media Library copy of the artwork rather than about the creative
+record, taking the file from **799 to 618**.
+
+Three things worth keeping:
+
+- **The meta keys stayed behind**, for the third time and the same reason.
+  `META_ATTACHMENT_ID` is queried by the assignment repository and
+  `META_IS_CREATIVE` by the Media Library screen, so a key is read by more than
+  its writer and belongs with the record. Moving them would also have rewritten
+  thirty test files to say a different class name for an unchanged string.
+- **The dependency runs the other way from last time.** `Creative_Repository`
+  holds the new class, because `unpublished_for_campaign()` decides whether a
+  creative is waiting for review by asking `has_attachment()`. The new class
+  holds nothing and names two constants, which is a compile-time reference and
+  not an object graph, so there is no cycle. It is defaulted rather than
+  required so the five places that build a `Creative_Repository` did not have to
+  grow a container between them and a stateless collaborator.
+- **Two callers got narrower rather than wider.** `Assignment_Projection` and
+  the migration map only ever used moved methods, so they take the attachment
+  repository *instead of* `Creative_Repository` now.
+
+**The move is what proved the cluster was barely tested.** Mutating all nine
+methods, one at a time, killed four and left five standing: `has_attachment`
+could stop checking the post exists, `mark_attachment_as_creative` could write
+nothing, `ids_promoted_with_private_file` could drop the condition that makes it
+a contradiction, `backfill_creative_attachment_marks` could mark nothing, and
+`attachment_file` could always answer empty — all with a green suite.
+
+Every one was reachable only through a caller that asserted the *caller's*
+outcome, and the Media Library test wrote the marker by hand rather than through
+the writer, so nothing exercised the production path at all. Three of the five
+are in the category this repository treats as blocking: a migration that runs
+once against real data, a query that feeds a deletion sweep, and the guard that
+decides whether a creative may be published.
+
+`CreativeAttachmentRepositoryTest` covers all five, and asserts the negatives
+where it matters most — what the deletion sweep must *not* select is the more
+valuable half of that test.
 
 ## Nothing else is open
 

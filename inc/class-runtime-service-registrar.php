@@ -35,6 +35,7 @@ use Aggressive\Ads\Domain\Frequency_Store;
 use Aggressive\Ads\Workflow\Transient_Frequency_Store;
 use Aggressive\Ads\Install\Creative_Assignment_Migrator;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
+use Aggressive\Ads\Repository\Creative_Attachment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Creative_Revision_Repository;
 use Aggressive\Ads\Workflow\Assigned_Creatives;
@@ -108,6 +109,7 @@ final class Runtime_Service_Registrar {
 			static fn ( Service_Container $c ): Review_Data => new Review_Data(
 				$c->get( Campaign_Repository::class ),
 				$c->get( Creative_Repository::class ),
+				$c->get( Creative_Attachment_Repository::class ),
 				$c->get( Creative_Revision_Repository::class ),
 				$c->get( Assigned_Creatives::class ),
 				$c->get( Placement_Repository::class ),

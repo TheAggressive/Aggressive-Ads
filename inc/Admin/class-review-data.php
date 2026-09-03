@@ -15,6 +15,7 @@ use Aggressive\Ads\Portal\Routes;
 use Aggressive\Ads\Portal\View_Data;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Creative_Attachment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Creative_Revision_Repository;
 use Aggressive\Ads\Workflow\Assigned_Creatives;
@@ -80,6 +81,7 @@ final class Review_Data {
 	 *
 	 * @param Campaign_Repository                        $campaigns  Campaign persistence.
 	 * @param Creative_Repository                        $creatives  Creative persistence.
+	 * @param Creative_Attachment_Repository             $attachments Media Library copy of the artwork.
 	 * @param Creative_Revision_Repository               $revisions Revision chain persistence.
 	 * @param Assigned_Creatives                         $assigned   What is assigned where.
 	 * @param Placement_Repository                       $placements Placement persistence.
@@ -93,6 +95,7 @@ final class Review_Data {
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
 		private readonly Creative_Repository $creatives,
+		private readonly Creative_Attachment_Repository $attachments,
 		private readonly Creative_Revision_Repository $revisions,
 		private readonly Assigned_Creatives $assigned,
 		private readonly Placement_Repository $placements,
@@ -524,7 +527,7 @@ final class Review_Data {
 	 * @return string
 	 */
 	private function creative_preview( int $creative_id ): string {
-		$promoted = $this->creatives->attachment_url( $creative_id );
+		$promoted = $this->attachments->attachment_url( $creative_id );
 
 		if ( '' !== $promoted ) {
 			return $promoted;

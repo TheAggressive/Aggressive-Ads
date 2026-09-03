@@ -14,6 +14,7 @@ use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Domain\Campaign_Rules;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Creative_Attachment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Security\Capabilities;
@@ -52,19 +53,21 @@ final class Creative_Manager {
 	/**
 	 * Constructor.
 	 *
-	 * @param Campaign_Repository  $campaigns  Campaign persistence.
-	 * @param Creative_Repository  $creatives  Creative persistence.
-	 * @param Placement_Repository $placements Placement persistence.
-	 * @param Creative_Uploader    $uploader   Hostile-file validation.
-	 * @param Private_Storage      $storage    Private file storage.
-	 * @param Rate_Limiter         $limiter    Upload abuse bounding.
-	 * @param Audit_Repository     $audit      Audit persistence.
-	 * @param Edit_Window          $window     When editing is permitted.
-	 * @param Creative_Approval    $approvals  Queue counter for creatives awaiting publication.
+	 * @param Campaign_Repository            $campaigns  Campaign persistence.
+	 * @param Creative_Repository            $creatives  Creative persistence.
+	 * @param Creative_Attachment_Repository $attachments Media Library copy of the artwork.
+	 * @param Placement_Repository           $placements Placement persistence.
+	 * @param Creative_Uploader              $uploader   Hostile-file validation.
+	 * @param Private_Storage                $storage    Private file storage.
+	 * @param Rate_Limiter                   $limiter    Upload abuse bounding.
+	 * @param Audit_Repository               $audit      Audit persistence.
+	 * @param Edit_Window                    $window     When editing is permitted.
+	 * @param Creative_Approval              $approvals  Queue counter for creatives awaiting publication.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
 		private readonly Creative_Repository $creatives,
+		private readonly Creative_Attachment_Repository $attachments,
 		private readonly Placement_Repository $placements,
 		private readonly Creative_Uploader $uploader,
 		private readonly Private_Storage $storage,
@@ -348,7 +351,7 @@ final class Creative_Manager {
 			return $this->error( 'aggr_campaign_not_editable', __( 'This campaign cannot be changed right now.', 'aggressive-ads' ), 409 );
 		}
 
-		if ( $this->creatives->has_attachment( $creative_id ) || $this->creatives->provider_ad_id( $creative_id ) > 0 ) {
+		if ( $this->attachments->has_attachment( $creative_id ) || $this->creatives->provider_ad_id( $creative_id ) > 0 ) {
 			return $this->error( 'aggr_creative_published', __( 'A published creative cannot be removed from this draft workflow.', 'aggressive-ads' ), 409 );
 		}
 

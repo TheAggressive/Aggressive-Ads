@@ -185,6 +185,21 @@ inventory, a state the plugin has on purpose, so nothing about it read as
 broken. A defect that survives in the surface nobody tests is not found by
 testing the surface everybody tests more thoroughly.
 
+**Moving code is a cheap way to find out whether it was ever tested.** Splitting
+the attachment cluster out of `Creative_Repository` was a refactor with no
+behaviour change, so mutating the nine methods afterwards was meant to be a
+formality. Five survived. Each was reachable only through a caller whose test
+asserted the *caller's* outcome, so the method's body could be deleted and
+nothing anywhere failed — including a migration that could mark nothing and
+report success, and the query feeding a deletion sweep, which could drop the
+condition that makes it a contradiction at all.
+
+The Media Library case is the sharpest: its screen test wrote the marker meta by
+hand rather than calling the writer, so the production path that puts it there
+had no coverage whatsoever. **A test that arranges the state it is checking is
+testing the arrangement** — the same shape as the frequency counter that capped
+nobody, one file over.
+
 And one about where an assertion belongs: **a REST `permission_callback` answers
 before the workflow does**, so a denied request never reaches the manager and
 never writes the audit row the manager would write. That is intended — an

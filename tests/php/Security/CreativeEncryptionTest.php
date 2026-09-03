@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Tests\Security;
 
 use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Repository\Creative_Attachment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Storage\Creative_Cipher;
 use Aggressive\Ads\Storage\Private_Storage;
@@ -50,6 +51,13 @@ final class CreativeEncryptionTest extends WP_UnitTestCase {
 	private Creative_Repository $creatives;
 
 	/**
+	 * Media Library copy of the artwork.
+	 *
+	 * @var Creative_Attachment_Repository
+	 */
+	private Creative_Attachment_Repository $attachments;
+
+	/**
 	 * Temporary files to clean up.
 	 *
 	 * @var array<int, string>
@@ -71,9 +79,10 @@ final class CreativeEncryptionTest extends WP_UnitTestCase {
 	public function set_up(): void {
 		parent::set_up();
 
-		$this->cipher    = new Creative_Cipher();
-		$this->storage   = new Private_Storage( $this->cipher );
-		$this->creatives = new Creative_Repository();
+		$this->cipher      = new Creative_Cipher();
+		$this->storage     = new Private_Storage( $this->cipher );
+		$this->attachments = new Creative_Attachment_Repository();
+		$this->creatives   = new Creative_Repository( $this->attachments );
 	}
 
 	/**
@@ -368,7 +377,7 @@ final class CreativeEncryptionTest extends WP_UnitTestCase {
 
 		$this->creatives->record_upload( $creative_id, $accepted );
 
-		$promoter      = new Creative_Promoter( $this->creatives, $this->storage );
+		$promoter      = new Creative_Promoter( $this->creatives, $this->attachments, $this->storage );
 		$attachment_id = $promoter->promote( $creative_id );
 
 		$this->assertIsInt( $attachment_id );
@@ -407,7 +416,7 @@ final class CreativeEncryptionTest extends WP_UnitTestCase {
 
 		$this->creatives->record_upload( $creative_id, $accepted );
 
-		$promoter = new Creative_Promoter( $this->creatives, $this->storage );
+		$promoter = new Creative_Promoter( $this->creatives, $this->attachments, $this->storage );
 		$result   = $promoter->promote( $creative_id );
 
 		$this->assertInstanceOf( WP_Error::class, $result );

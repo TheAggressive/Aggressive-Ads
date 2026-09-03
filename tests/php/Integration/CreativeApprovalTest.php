@@ -17,6 +17,7 @@ use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Domain\Assignment_Rules;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
+use Aggressive\Ads\Repository\Creative_Attachment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Security\Ownership;
 use Aggressive\Ads\Security\Roles;
@@ -58,6 +59,13 @@ final class CreativeApprovalTest extends WP_UnitTestCase {
 	private Creative_Repository $creatives;
 
 	/**
+	 * Media Library copy of the artwork.
+	 *
+	 * @var Creative_Attachment_Repository
+	 */
+	private Creative_Attachment_Repository $attachments;
+
+	/**
 	 * Reviewer with publishing rights.
 	 *
 	 * @var int
@@ -78,9 +86,10 @@ final class CreativeApprovalTest extends WP_UnitTestCase {
 
 		$container = Plugin::instance()->container();
 
-		$this->approvals = $container->get( Creative_Approval::class );
-		$this->campaigns = $container->get( Campaign_Repository::class );
-		$this->creatives = $container->get( Creative_Repository::class );
+		$this->approvals   = $container->get( Creative_Approval::class );
+		$this->campaigns   = $container->get( Campaign_Repository::class );
+		$this->creatives   = $container->get( Creative_Repository::class );
+		$this->attachments = $container->get( Creative_Attachment_Repository::class );
 
 		$container->get( Audit_Repository::class )->install_table();
 
@@ -177,7 +186,7 @@ final class CreativeApprovalTest extends WP_UnitTestCase {
 		$fixture = $this->fixture( Post_Statuses::LIVE );
 
 		$this->assertFalse(
-			$this->creatives->has_attachment( $fixture['creative'] ),
+			$this->attachments->has_attachment( $fixture['creative'] ),
 			'The fixture must be unpublished, or this proves nothing.'
 		);
 
