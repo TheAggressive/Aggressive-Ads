@@ -306,15 +306,32 @@ final class Placement_Slot implements Service {
 	/**
 	 * Shortcode and PHP helper wrapper. Block supports do not apply here.
 	 *
+	 * **Emits whatever it is given.** It used to name four attributes by hand,
+	 * which was correct when it was written and stopped being correct the day
+	 * the Interactivity directives joined the array: `data-wp-interactive`,
+	 * `data-wp-init` and `data-wp-context` were built for every slot and then
+	 * dropped on the way out of this method, so a slot placed with the
+	 * shortcode or with `aggr_placement()` rendered a reserved box that no
+	 * store ever hydrated and no fill ever reached. It looked like a slot with
+	 * no inventory, which is a state the plugin has on purpose, so nothing
+	 * about it read as broken.
+	 *
+	 * A list of attribute names in a second place is a list that goes stale
+	 * without a build failing, so there is not one any more.
+	 *
 	 * @param array<string, string> $extra Slot attributes.
 	 */
 	private function plain_wrapper( array $extra ): string {
-		$html  = '<div class="' . esc_attr( $extra['class'] ?? '' ) . '"';
-		$html .= ' data-aggr-slot="' . esc_attr( $extra['data-aggr-slot'] ?? '' ) . '"';
-		$html .= ' data-aggr-fill="' . esc_url( $extra['data-aggr-fill'] ?? '' ) . '"';
+		$html = '<div';
 
-		if ( isset( $extra['style'] ) && '' !== $extra['style'] ) {
-			$html .= ' style="' . esc_attr( $extra['style'] ) . '"';
+		foreach ( $extra as $name => $value ) {
+			if ( '' === $value ) {
+				continue;
+			}
+
+			$escaped = 'data-aggr-fill' === $name ? esc_url( $value ) : esc_attr( $value );
+
+			$html .= ' ' . esc_attr( $name ) . '="' . $escaped . '"';
 		}
 
 		return $html . '>';

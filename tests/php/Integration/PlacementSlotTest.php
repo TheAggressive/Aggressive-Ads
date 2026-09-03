@@ -186,6 +186,71 @@ final class PlacementSlotTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * **A shortcode slot hydrates, or it is a box that never fills.**
+	 *
+	 * The block wrapper gets its attributes from
+	 * `get_block_wrapper_attributes()`, which emits everything it is handed.
+	 * The shortcode and `aggr_placement()` share a wrapper that used to name
+	 * four attributes by hand, so the Interactivity directives — added to the
+	 * array later — were built for every slot and dropped for these two. The
+	 * result renders exactly like a slot with no inventory, which is a state
+	 * the plugin has on purpose, so nothing about it looked wrong.
+	 *
+	 * Asserted per surface rather than once, because the two reach the same
+	 * wrapper through different callers and a fix to one is not a fix to both.
+	 *
+	 * @return void
+	 */
+	public function test_a_shortcode_slot_carries_the_directives_that_fill_it(): void {
+		$this->place( 'hydrating-leaderboard' );
+
+		ob_start();
+		aggr_placement( 'hydrating-leaderboard' );
+		$helper = (string) ob_get_clean();
+
+		$surfaces = array(
+			'shortcode' => do_shortcode( '[aggr_placement slot="hydrating-leaderboard"]' ),
+			'helper'    => $helper,
+		);
+
+		foreach ( $surfaces as $surface => $html ) {
+			$this->assertStringContainsString(
+				'data-wp-interactive="aggr/ad-slot"',
+				$html,
+				'A ' . $surface . ' slot is not hydrated by any store, so it can never fill.'
+			);
+			$this->assertStringContainsString( 'data-wp-init="callbacks.fill"', $html, $surface );
+			$this->assertStringContainsString( 'data-wp-context=', $html, $surface );
+
+			// And it still carries what it always did.
+			$this->assertStringContainsString( 'class="aggr-slot"', $html, $surface );
+			$this->assertStringContainsString( 'data-aggr-slot="hydrating-leaderboard"', $html, $surface );
+			$this->assertStringContainsString( '/aggr/v1/fill/hydrating-leaderboard', $html, $surface );
+		}
+	}
+
+	/**
+	 * Creates an active placement and returns nothing but the guarantee.
+	 *
+	 * @param string $slug Placement post_name.
+	 * @return int Placement post id.
+	 */
+	private function place( string $slug ): int {
+		$placement_id = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::PLACEMENT,
+				'post_status' => 'publish',
+				'post_name'   => $slug,
+			)
+		);
+
+		update_post_meta( $placement_id, Placement_Repository::META_IS_ACTIVE, 1 );
+		update_post_meta( $placement_id, Placement_Repository::META_SIZE, '728x90' );
+
+		return $placement_id;
+	}
+
+	/**
 	 * Saving the old kill-switch off cannot unregister aggr/placement.
 	 *
 	 * @return void
