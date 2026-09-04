@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Repository;
 
 use Aggressive\Ads\Domain\Decision_Outcome;
+use Aggressive\Ads\Domain\Opportunity;
 use Aggressive\Ads\Install\Schema;
 
 /**
@@ -141,14 +142,28 @@ final class Decision_Rollup_Repository {
 	 *
 	 * @param string             $day_utc    UTC day, `Y-m-d`.
 	 * @param int                $placement  Placement post id.
-	 * @param array<string, int> $increments Outcome code => count.
+	 * @param array<string, int> $increments  Outcome code => count.
+	 * @param string             $opportunity `Domain\Opportunity` kind these counts describe.
 	 * @return bool Whether a write was attempted and accepted.
 	 */
-	public function add( string $day_utc, int $placement, array $increments ): bool {
+	public function add( string $day_utc, int $placement, array $increments, string $opportunity = Opportunity::PAGE ): bool {
 		global $wpdb;
 
 		if ( $placement <= 0 || 1 !== preg_match( '/^\d{4}-\d{2}-\d{2}$/', $day_utc ) ) {
 			return false;
+		}
+
+		/*
+		 * An unknown kind is stored as a page opportunity rather than refused.
+		 *
+		 * The alternative is dropping the whole write, and a counter that
+		 * silently loses a request because a caller passed a typo is worse than
+		 * one that files it under supply. The vocabulary is closed by
+		 * `Domain\Opportunity`, so this is a guard against a programming
+		 * mistake rather than against input.
+		 */
+		if ( ! Opportunity::is_valid( $opportunity ) ) {
+			$opportunity = Opportunity::PAGE;
 		}
 
 		$values       = array();
@@ -165,9 +180,9 @@ final class Decision_Rollup_Repository {
 				continue;
 			}
 
-			$placeholders[] = '(%s, %d, %s, %d)';
+			$placeholders[] = '(%s, %d, %s, %s, %d)';
 
-			array_push( $values, $day_utc, $placement, $outcome, $amount );
+			array_push( $values, $day_utc, $placement, $outcome, $opportunity, $amount );
 		}
 
 		if ( array() === $placeholders ) {
@@ -176,7 +191,7 @@ final class Decision_Rollup_Repository {
 
 		$table = $this->table_name();
 
-		$sql = "INSERT INTO {$table} (day_utc, placement_id, outcome, events) VALUES "
+		$sql = "INSERT INTO {$table} (day_utc, placement_id, outcome, opportunity, events) VALUES "
 			. implode( ', ', $placeholders )
 			. ' ON DUPLICATE KEY UPDATE events = events + VALUES(events)';
 

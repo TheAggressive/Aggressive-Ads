@@ -53,6 +53,28 @@ final class Fill_Controller implements Service {
 						'sanitize_callback' => 'sanitize_title',
 						'validate_callback' => static fn ( mixed $value ): bool => is_string( $value ) && 1 === preg_match( '/^[a-z0-9-]+$/', $value ),
 					),
+
+					/*
+					 * Which fill this is within the page view, zero-based.
+					 *
+					 * **It partitions a supply metric and gates nothing.** The
+					 * endpoint is stateless and sits behind a page cache, so the
+					 * server cannot know whether a fill is a page's first — the
+					 * client does, and says. That makes it untrusted, and the
+					 * containment is what it is wired to: it does not decide
+					 * whether an impression counts, which stays on the beacon's
+					 * token path, and it credits no campaign and moves no money.
+					 *
+					 * Optional, because every fill served from a page cached
+					 * before this shipped arrives without it. Absent reads as a
+					 * page opportunity; see `Domain\Opportunity`.
+					 */
+					'n'    => array(
+						'type'              => 'integer',
+						'required'          => false,
+						'default'           => 0,
+						'sanitize_callback' => 'absint',
+					),
 				),
 			)
 		);
@@ -93,8 +115,9 @@ final class Fill_Controller implements Service {
 	 * @phpstan-param WP_REST_Request<array<string, mixed>> $request
 	 */
 	public function show( WP_REST_Request $request ): WP_REST_Response|WP_Error {
-		$slot    = (string) $request->get_param( 'slot' );
-		$payload = $this->fill->for_slug( $slot );
+		$slot     = (string) $request->get_param( 'slot' );
+		$sequence = (int) $request->get_param( 'n' );
+		$payload  = $this->fill->for_slug( $slot, $sequence );
 
 		if ( null === $payload ) {
 			return new WP_Error(

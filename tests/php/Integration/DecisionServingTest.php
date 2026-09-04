@@ -24,6 +24,10 @@ use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Security\Roles;
 use Aggressive\Ads\Workflow\Decision_Engine;
+use Aggressive\Ads\Domain\Decision_Outcome;
+use Aggressive\Ads\Domain\Opportunity;
+use Aggressive\Ads\Repository\Decision_Rollup_Repository;
+use Aggressive\Ads\Workflow\Decision_Metrics;
 use Aggressive\Ads\Workflow\Fill_Service;
 use WP_UnitTestCase;
 
@@ -139,6 +143,197 @@ final class DecisionServingTest extends WP_UnitTestCase {
 
 		$this->assertIsArray( $data );
 		$this->assertNull( $data['creative'] );
+	}
+
+	/**
+	 * **A first fill is counted as supply, through the production path.**
+	 *
+	 * The counter and the thing that increments it have to meet in a test. A
+	 * column that only fixtures populate is the frequency-capping defect this
+	 * repository already records: `get_count()` was correct, nothing called
+	 * `increment()`, and every test arranged its own count so all of them
+	 * passed.
+	 *
+	 * So this asks `Fill_Service` for a slot exactly as the route does, flushes
+	 * the request the way `shutdown` does, and reads the row back.
+	 *
+	 * @return void
+	 */
+	public function test_a_first_fill_is_recorded_as_a_page_opportunity(): void {
+		update_option( Creative_Assignment_Migrator::OPTION_DONE, 1 );
+
+		$fill = Plugin::instance()->container()->get( Fill_Service::class );
+
+		$payload = $fill->for_slug( 'decision-gate', 0 );
+
+		/*
+		 * The creative, not just a payload. `for_slug()` answers with a shape
+		 * whether or not anything filled, so `assertIsArray()` on the payload
+		 * passes over a slot that decided nothing — which is how the first
+		 * version of this test read zero counters and still looked reasonable.
+		 */
+		$this->assertIsArray( $payload );
+		$this->assertIsArray( $payload['creative'], 'Nothing was served, so there is no decision to have counted.' );
+
+		Plugin::instance()->container()->get( Decision_Metrics::class )->flush();
+
+		$this->assertSame( 1, $this->counted( Decision_Outcome::REQUEST, Opportunity::PAGE ) );
+		$this->assertSame( 1, $this->counted( Decision_Outcome::FILL, Opportunity::PAGE ) );
+
+		// And nothing was filed as supply that was not.
+		$this->assertSame( 0, $this->counted( Decision_Outcome::REQUEST, Opportunity::REFRESH ) );
+	}
+
+	/**
+	 * **A rotation is delivery, and is not supply.**
+	 *
+	 * This is the whole point of the grain: the impression is real, and the
+	 * opportunity is not independent inventory. Counting it as supply is what
+	 * would let P16 forecast a `setInterval`.
+	 *
+	 * @return void
+	 */
+	public function test_a_rotation_is_recorded_as_a_refresh_and_not_as_supply(): void {
+		update_option( Creative_Assignment_Migrator::OPTION_DONE, 1 );
+
+		$this->permit_refresh( true, 1, 10 );
+
+		$fill = Plugin::instance()->container()->get( Fill_Service::class );
+
+		$rotation = $fill->for_slug( 'decision-gate', 3 );
+
+		$this->assertIsArray( $rotation );
+		$this->assertIsArray( $rotation['creative'], 'The rotation served nothing, so there is no decision to have counted.' );
+
+		Plugin::instance()->container()->get( Decision_Metrics::class )->flush();
+
+		$this->assertSame( 1, $this->counted( Decision_Outcome::REQUEST, Opportunity::REFRESH ) );
+		$this->assertSame(
+			0,
+			$this->counted( Decision_Outcome::REQUEST, Opportunity::PAGE ),
+			'A refresh was counted as a page opportunity, which is supply invented from a timer.'
+		);
+	}
+
+	/**
+	 * **A request does not inherit the last request's kind.**
+	 *
+	 * The kind is one field on a service that outlives a single request under
+	 * any long-running SAPI — FrankenPHP, RoadRunner, a pooled worker — so a
+	 * value left set files the next request's counts under the previous one's.
+	 * The reset exists for that, and until this test existed nothing proved it:
+	 * deleting the reset changed no assertion anywhere.
+	 *
+	 * The failure it prevents is supply quietly disappearing. A rotation
+	 * followed by a real page view would record two refreshes and no page
+	 * opportunity, so a placement's inventory would shrink toward zero the
+	 * busier its rotation got.
+	 *
+	 * **The page batch is the path that was actually exposed.** A single-slot
+	 * fill declares its kind from the sequence it was given, so it is safe
+	 * whatever ran before it. `for_slots()` had no sequence and declared
+	 * nothing, which is why this exercises that one.
+	 *
+	 * @return void
+	 */
+	public function test_a_page_batch_is_not_filed_under_the_previous_kind(): void {
+		update_option( Creative_Assignment_Migrator::OPTION_DONE, 1 );
+
+		$this->permit_refresh( true, 1, 10 );
+
+		$fill    = Plugin::instance()->container()->get( Fill_Service::class );
+		$metrics = Plugin::instance()->container()->get( Decision_Metrics::class );
+
+		// A rotation, flushed the way `shutdown` flushes one.
+		$this->assertIsArray( $fill->for_slug( 'decision-gate', 2 )['creative'] );
+		$metrics->flush();
+
+		// Then a page load asking for every slot at once, in the same process.
+		$batch = $fill->for_slots( array( 'decision-gate' ) );
+
+		$this->assertIsArray( $batch['decision-gate'] ?? null, 'The page batch served nothing to count.' );
+		$metrics->flush();
+
+		$this->assertSame(
+			1,
+			$this->counted( Decision_Outcome::REQUEST, Opportunity::PAGE ),
+			'A page view was filed under the previous request\'s kind, so supply went missing.'
+		);
+		$this->assertSame( 1, $this->counted( Decision_Outcome::REQUEST, Opportunity::REFRESH ) );
+	}
+
+	/**
+	 * A placement that forbids refresh does not refresh, whatever was asked.
+	 *
+	 * The fixture placement carries no policy, so the strict default applies —
+	 * which is also the assertion that the default is doing something.
+	 *
+	 * @return void
+	 */
+	public function test_a_placement_that_forbids_refresh_refuses_the_fill(): void {
+		$fill = Plugin::instance()->container()->get( Fill_Service::class );
+
+		$this->assertNull( $fill->for_slug( 'decision-gate', 1 ), 'A forbidden refresh was served.' );
+
+		// The first fill on the same placement is untouched.
+		$this->assertIsArray( $fill->for_slug( 'decision-gate', 0 ) );
+	}
+
+	/**
+	 * A claimed sequence past the per-view cap is refused, not served.
+	 *
+	 * The sequence arrives from a browser. This is the bound that turns "we
+	 * trust the count" into "we trust it inside a number the publisher set".
+	 *
+	 * @return void
+	 */
+	public function test_a_sequence_past_the_cap_is_refused(): void {
+		$this->permit_refresh( true, 1, 2 );
+
+		$fill = Plugin::instance()->container()->get( Fill_Service::class );
+
+		$this->assertIsArray( $fill->for_slug( 'decision-gate', 2 ), 'The cap itself must be servable.' );
+		$this->assertNull( $fill->for_slug( 'decision-gate', 3 ) );
+		$this->assertNull( $fill->for_slug( 'decision-gate', 400 ) );
+	}
+
+	/**
+	 * Counts recorded for one outcome and inventory kind today.
+	 *
+	 * @param string $outcome     Stored outcome code.
+	 * @param string $opportunity `Domain\Opportunity` kind.
+	 * @return int
+	 */
+	private function counted( string $outcome, string $opportunity ): int {
+		global $wpdb;
+
+		$table = Plugin::instance()->container()->get( Decision_Rollup_Repository::class )->table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- Reading this plugin's own counter table in a test.
+		return (int) $wpdb->get_var(
+			$wpdb->prepare(
+				"SELECT COALESCE(SUM(events), 0) FROM {$table} WHERE placement_id = %d AND day_utc = %s AND outcome = %s AND opportunity = %s",
+				$this->placement_id,
+				gmdate( 'Y-m-d' ),
+				$outcome,
+				$opportunity
+			)
+		);
+	}
+
+	/**
+	 * Gives the fixture placement a refresh policy.
+	 *
+	 * @param bool $enabled      Whether refresh is permitted.
+	 * @param int  $seconds      Shortest interval permitted.
+	 * @param int  $max_per_view Refreshes permitted per page view.
+	 * @return void
+	 */
+	private function permit_refresh( bool $enabled, int $seconds, int $max_per_view ): void {
+		$this->assertTrue(
+			Plugin::instance()->container()->get( Placement_Repository::class )
+				->set_refresh_policy( $this->placement_id, $enabled, $seconds, $max_per_view )
+		);
 	}
 
 	private function enable_native(): void {

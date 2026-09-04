@@ -349,7 +349,8 @@ final class Runtime_Service_Registrar {
 				$c->get( Placement_Repository::class ),
 				$c->get( Delivery_Repository::class ),
 				$c->get( Fill_Token::class ),
-				$c->get( Decision_Engine::class )
+				$c->get( Decision_Engine::class ),
+				$c->get( Decision_Metrics::class )
 			)
 		);
 

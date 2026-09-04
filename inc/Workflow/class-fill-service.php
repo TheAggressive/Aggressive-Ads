@@ -11,6 +11,7 @@ namespace Aggressive\Ads\Workflow;
 
 use Aggressive\Ads\Core\Settings;
 use Aggressive\Ads\Domain\Campaign_Rules;
+use Aggressive\Ads\Domain\Opportunity;
 use Aggressive\Ads\Domain\Settings_Schema;
 use Aggressive\Ads\Domain\Viewability_Rules;
 use Aggressive\Ads\Domain\Upload_Rules;
@@ -31,13 +32,15 @@ final class Fill_Service {
 	 * @param Delivery_Repository  $delivery   Token validation reads.
 	 * @param Fill_Token           $tokens     Signed beacon/click tokens.
 	 * @param Decision_Engine      $decisions  Assignment decision engine.
+	 * @param Decision_Metrics     $metrics    Per-request decision counters.
 	 */
 	public function __construct(
 		private readonly Settings $settings,
 		private readonly Placement_Repository $placements,
 		private readonly Delivery_Repository $delivery,
 		private readonly Fill_Token $tokens,
-		private readonly Decision_Engine $decisions
+		private readonly Decision_Engine $decisions,
+		private readonly Decision_Metrics $metrics
 	) {
 	}
 
@@ -61,10 +64,11 @@ final class Fill_Service {
 	 *
 	 * The candidate set is cached; the winner is chosen per request.
 	 *
-	 * @param string $slug Placement post_name.
+	 * @param string $slug     Placement post_name.
+	 * @param int    $sequence Fill number within the page view, zero-based.
 	 * @return array<string, mixed>|null
 	 */
-	public function for_slug( string $slug ): ?array {
+	public function for_slug( string $slug, int $sequence = 0 ): ?array {
 		if ( ! $this->is_enabled() ) {
 			return null;
 		}
@@ -74,6 +78,35 @@ final class Fill_Service {
 		if ( $placement_id <= 0 || ! $this->placements->is_active( $placement_id ) ) {
 			return null;
 		}
+
+		/*
+		 * The publisher's refresh policy, enforced where a client cannot skip
+		 * it.
+		 *
+		 * The policy also reaches the browser as slot context, and the store
+		 * honours it — this is the backstop for a client that does not, which
+		 * includes a hand-written request. A placement that forbids refresh
+		 * does not refresh, whatever the block attribute says, and a claimed
+		 * sequence past the per-view cap is refused rather than served and
+		 * counted.
+		 *
+		 * **Refused the same way a missing placement is, deliberately.** A
+		 * distinct response would tell an unauthenticated caller which
+		 * placements exist and what each one's refresh policy is, which is a
+		 * small disclosure for no benefit: the legitimate client already has
+		 * the policy in its context and does not need to discover it by
+		 * probing.
+		 */
+		if ( ! $this->placements->refresh_policy( $placement_id )->permits_sequence( $sequence ) ) {
+			return null;
+		}
+
+		/*
+		 * Declared before decisioning, so every outcome this request records is
+		 * filed under the same kind of inventory and `requests` still equals
+		 * `fills` plus the no-fill reasons within it.
+		 */
+		$this->metrics->for_opportunity( Opportunity::from_sequence( $sequence ) );
 
 		$paid  = $this->paid_creative( $placement_id );
 		$house = null;
@@ -154,6 +187,18 @@ final class Fill_Service {
 		if ( array() === $slots_map ) {
 			return array();
 		}
+
+		/*
+		 * A page batch is a page opportunity by definition — it exists because
+		 * somebody loaded a page and asked for every slot on it at once.
+		 *
+		 * Declared here rather than inherited. The kind is one field on a
+		 * request-scoped service, and a path that does not set it takes
+		 * whatever the last request left, which for a rotation would file a
+		 * whole page of slots as refreshes and make the placement's supply
+		 * shrink the busier its rotation got.
+		 */
+		$this->metrics->for_opportunity( Opportunity::PAGE );
 
 		$facts     = $this->request_facts();
 		$decisions = $this->decisions->decide_page( $slots_map, $now, null, $facts );
