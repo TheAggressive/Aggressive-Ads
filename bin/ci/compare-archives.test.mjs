@@ -65,7 +65,67 @@ async function archive( dir, name, contents ) {
 
 	const zip = path.join( dir, name );
 
-	spawnSync( 'zip', [ '-qrX', zip, '.' ], { cwd: staging } );
+	/*
+	 * Built the way `package.sh` builds one, because the script under test
+	 * compares archives by `sha256sum` — byte for byte, embedded metadata
+	 * included.
+	 *
+	 * `zip -X` is not enough on its own, and production says so in the same
+	 * words: it strips extra fields but leaves each entry's DOS timestamp,
+	 * which zip stores at two-second granularity. Two archives written
+	 * back-to-back are usually inside one of those buckets and occasionally
+	 * straddle it, so this test passed on a quiet machine and failed on a
+	 * loaded CI runner — a flake in the fixture, reported as a reproducibility
+	 * failure in the build.
+	 *
+	 * So the fixture normalizes what production normalizes: fixed mtimes, fixed
+	 * modes, sorted traversal order and UTC. A guard whose fixture is less
+	 * deterministic than the thing it guards cannot tell a real regression from
+	 * its own noise.
+	 */
+	const epoch = '200001010000.00';
+
+	spawnSync( 'find', [
+		staging,
+		'-type',
+		'd',
+		'-exec',
+		'chmod',
+		'0755',
+		'{}',
+		'+',
+	] );
+	spawnSync( 'find', [
+		staging,
+		'-type',
+		'f',
+		'-exec',
+		'chmod',
+		'0644',
+		'{}',
+		'+',
+	] );
+	spawnSync( 'find', [
+		staging,
+		'-exec',
+		'touch',
+		'-h',
+		'-t',
+		epoch,
+		'{}',
+		'+',
+	] );
+
+	spawnSync(
+		'bash',
+		[
+			'-c',
+			'TZ=UTC find . -print | LC_ALL=C sort | TZ=UTC zip -qX "$1" -@',
+			'sh',
+			zip,
+		],
+		{ cwd: staging }
+	);
 
 	return zip;
 }
