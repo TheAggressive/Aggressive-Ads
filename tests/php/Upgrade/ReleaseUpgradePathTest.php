@@ -10,6 +10,11 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Tests\Upgrade;
 
 use Aggressive\Ads\Install\Creative_Assignment_Migrator;
+use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Domain\Refresh_Policy;
+use Aggressive\Ads\Repository\Decision_Rollup_Repository;
+use Aggressive\Ads\Repository\Placement_Repository;
+use Aggressive\Ads\Install\Migration_Map;
 use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Install\Schema;
 use Aggressive\Ads\Install\Upgrader;
@@ -209,6 +214,120 @@ final class ReleaseUpgradePathTest extends WP_UnitTestCase {
 		$this->assertNotFalse(
 			get_option( Rollup_Repository::OPTION_VIEWABILITY_SINCE, false ),
 			'Nothing recorded when measurement began, so the reconciler will zero history.'
+		);
+	}
+
+	/**
+	 * **A real upgrade leaves existing placements able to do what they did.**
+	 *
+	 * Migration 25 is the whole reason the strict refresh default is safe to
+	 * ship. Tested in isolation it calls the repository directly; tested here it
+	 * has to survive the walker, in sequence, from a version a real site is on.
+	 * The failure it guards is silent — an upgraded site whose ads simply stop
+	 * changing, with nothing erroring and nothing logged.
+	 *
+	 * @return void
+	 */
+	public function test_an_upgrade_leaves_existing_placements_permitted_to_refresh(): void {
+		$this->rewind_to_published();
+
+		$placement_id = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::PLACEMENT,
+				'post_status' => 'publish',
+				'post_name'   => 'upgraded-leaderboard',
+			)
+		);
+		update_post_meta( $placement_id, Placement_Repository::META_IS_ACTIVE, 1 );
+		update_post_meta( $placement_id, Placement_Repository::META_SIZE, '728x90' );
+
+		$container  = Plugin::instance()->container();
+		$placements = $container->get( Placement_Repository::class );
+
+		// Before: nothing recorded, so the strict default would forbid refresh.
+		$this->assertFalse( $placements->refresh_policy( $placement_id )->enabled );
+
+		$container->get( Upgrader::class )->maybe_upgrade();
+
+		$policy = $placements->refresh_policy( $placement_id );
+
+		$this->assertTrue(
+			$policy->enabled,
+			'An upgrade quietly forbade refresh on a placement that could already do it.'
+		);
+		$this->assertSame( Refresh_Policy::LEGACY_CLIENT_MAX_PER_VIEW, $policy->max_per_view );
+	}
+
+	/**
+	 * The grain reaches the counter table through the walker, not just alone.
+	 *
+	 * **Rewound to 25, not to 13, and the difference is the whole test.** From
+	 * 13 the walker passes through migration 24, whose `install_delivery_tables()`
+	 * already applies today's DDL — so the column and the key arrive whatever
+	 * migration 26 does, and deleting 26 entirely left this green. It was
+	 * passing for a reason unrelated to the thing it names.
+	 *
+	 * A site upgrading from 25 is the one migration 26 exists for, and its table
+	 * is in the pre-P15 shape, so this puts it there first. `dbDelta` adds an
+	 * index and never drops one, which is the failure being guarded.
+	 *
+	 * @return void
+	 */
+	public function test_an_upgrade_from_the_previous_version_carries_the_grain(): void {
+		global $wpdb;
+
+		$container = Plugin::instance()->container();
+		$table     = $container->get( Decision_Rollup_Repository::class )->table_name();
+
+		// The table as a site on 25 has it: no grain, and the old unique.
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Recreating the pre-P15 state this migration repairs.
+		$wpdb->query( "ALTER TABLE {$table} DROP INDEX slot_day_outcome_kind" );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Recreating the pre-P15 state this migration repairs.
+		$wpdb->query( "ALTER TABLE {$table} DROP COLUMN opportunity" );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Recreating the pre-P15 state this migration repairs.
+		$wpdb->query( "ALTER TABLE {$table} ADD UNIQUE KEY slot_day_outcome (placement_id,day_utc,outcome)" );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Schema introspection on this plugin's table.
+		$before = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$table}" );
+
+		$this->assertNotContains(
+			'opportunity',
+			$before,
+			'The fixture failed to recreate the pre-P15 table, so what follows would prove nothing.'
+		);
+
+		/*
+		 * The migration step directly, not `maybe_upgrade()`. The ALTER TABLE
+		 * above commits the transaction this test is wrapped in, so the
+		 * upgrader's option-based lock would survive the rollback and silently
+		 * disable a later test's upgrade — the trap `ConversionSchemaTest`
+		 * already records for the same reason.
+		 */
+		$steps = Migration_Map::steps( $container );
+
+		$this->assertArrayHasKey(
+			26,
+			$steps,
+			'The grain is declared but no database version installs it.'
+		);
+
+		$steps[26]();
+
+		$table = $container->get( Decision_Rollup_Repository::class )->table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Schema introspection on this plugin's table.
+		$columns = (array) $wpdb->get_col( "SHOW COLUMNS FROM {$table}" );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Schema introspection on this plugin's table.
+		$rows  = $wpdb->get_results( "SHOW INDEX FROM {$table}", ARRAY_A );
+		$names = is_array( $rows ) ? array_values( array_unique( array_column( $rows, 'Key_name' ) ) ) : array();
+
+		$this->assertContains( 'opportunity', $columns );
+		$this->assertContains( 'slot_day_outcome_kind', $names );
+		$this->assertNotContains(
+			'slot_day_outcome',
+			$names,
+			'The superseded unique survived a real upgrade, so a refresh cannot hold its own row.'
 		);
 	}
 

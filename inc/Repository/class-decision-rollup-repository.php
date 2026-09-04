@@ -60,15 +60,35 @@ final class Decision_Rollup_Repository {
 	private function drop_legacy_outcome_unique(): void {
 		global $wpdb;
 
-		if ( ! $this->table_exists() ) {
-			return;
-		}
-
 		$table = $this->table_name();
 
+		/*
+		 * **Not guarded on `table_exists()`, which is the obvious version and
+		 * silently does nothing.** That helper asks `SHOW TABLES LIKE`, and
+		 * `SHOW TABLES` cannot see a temporary table — which is what every table
+		 * in the WordPress test suite is, because `WP_UnitTestCase` rewrites
+		 * `CREATE TABLE` into its `TEMPORARY` form. The guard therefore returns
+		 * early exactly where the drop is being verified, so the migration looks
+		 * correct and the superseded unique survives.
+		 *
+		 * Asking the index list directly answers both questions at once: a table
+		 * that is not there has no indexes, so nothing is dropped and nothing
+		 * errors. Errors are suppressed around the read for that reason and
+		 * restored afterwards, because a missing table here is an expected
+		 * state rather than a fault worth surfacing.
+		 */
+		$suppressed = $wpdb->suppress_errors( true );
+
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Schema introspection on this plugin's table.
-		$rows  = $wpdb->get_results( "SHOW INDEX FROM {$table}", ARRAY_A );
+		$rows = $wpdb->get_results( "SHOW INDEX FROM {$table}", ARRAY_A );
+
+		$wpdb->suppress_errors( $suppressed );
+
 		$names = is_array( $rows ) ? array_values( array_unique( array_column( $rows, 'Key_name' ) ) ) : array();
+
+		if ( array() === $names ) {
+			return;
+		}
 
 		if ( in_array( 'slot_day_outcome', $names, true ) ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Dropping the pre-P15 unique so a refresh can hold its own row.
