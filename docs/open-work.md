@@ -11,6 +11,33 @@ Delete an entry when it ships. An entry that has been here through three
 releases is either not real or not wanted — say which, in the entry, and then
 delete it.
 
+**Say what would change the answer, not just the answer.** That staleness rule
+checks whether an entry is still *wanted*; nothing checks whether its reasoning
+still *holds*, and the second is what actually goes wrong. An entry that records
+a conclusion reads as settled, and nobody re-examines a settled thing — so a
+wrong conclusion is protected by having been written down carefully.
+
+It happened here. "Without JavaScript the box stays" said only a render-time
+decision could fix it and there could not be one. That was wrong: it conflated
+*will a paid ad fill this slot* (needs a per-request candidate query, genuinely
+unavailable) with *will a visitor without JavaScript see anything* (needs only
+placement configuration, and the server had already computed it). The entry was
+five days old, not five months — duration was never the problem. Nothing in it
+invited anyone to check the premise.
+
+So an entry that defers on a judgement has to name the condition that judgement
+rests on:
+
+- Not "only a render-time decision could fix that, and there is not one" but
+  "...while the decision needs a per-request candidate query. If any part of the
+  question turns out to be answerable from placement configuration, revisit."
+- "The obvious next seam **if the file grows again**" is already the right shape:
+  a trigger somebody can observe.
+- "Nobody has asked for it yet" is too — the trigger is somebody asking.
+
+Two of the three entries this rule was written from were already correct. The
+one that was not is the one that stated a verdict instead of a condition.
+
 ## Assignment status was never projected, and delivery never worked
 
 Fixed, but the shape is worth keeping. `candidates_for_placement()` selects on
