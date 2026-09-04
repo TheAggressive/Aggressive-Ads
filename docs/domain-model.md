@@ -147,6 +147,13 @@ write disappears with nothing reporting it.
 | `_aggr_adsanity_ad_id` | int | Unused. Former provider-object id. Native fill reads the creative record. |
 | `_aggr_review_state` | enum | `pending` \| `approved` \| `replaced`. **Never `rejected`** — rejection is a campaign status, not a creative one. `replaced` is an approved revision a later one superseded |
 
+**`_aggr_review_state` is not the approved signal, and has not been for a long
+time.** Promotion into the Media Library does not touch it — only the
+replacement path maintains it — so a creative that has been serving for weeks
+still reads `pending`. Anything asking "is this approved" must ask
+`Creative_Attachment_Repository::has_attachment()` instead, which is the honest
+question: having an attachment is what approval actually produces.
+
 ### Creative Asset and Creative Assignment — custom tables
 
 P2 splits what a Creative post used to hold into three owners, because a single

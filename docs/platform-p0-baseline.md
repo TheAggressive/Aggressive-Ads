@@ -62,7 +62,9 @@ There were no failing quality gates. Two accepted advisories remain visible:
   the repository's explicit admin-bundle contract still passes.
 
 The historical cold-container reviewer-queue timing issue remains documented in
-[open-work.md](open-work.md). Its test passed this baseline in 7.7 seconds with
+[known-issues.md](known-issues.md), which is where it moved when its
+`open-work.md` entry was closed: it turned out not to be about cold containers
+at all. Its test passed this baseline in 7.7 seconds with
 zero retries; one passing occurrence is not evidence that the historical flake
 has been eliminated.
 

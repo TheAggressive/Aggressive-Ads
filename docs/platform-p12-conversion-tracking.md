@@ -297,9 +297,10 @@ Each dependency gets one stated behaviour, not an incidental exception:
   are buffered per request and written once on `shutdown`, so the public refusal
   path costs no query while it is being served. They are approximate by
   construction and therefore inform Site Health's description and never its
-  status, which stays derived from the exact ledger and rollup. `open-work.md`
-  records why the two compromises this was nearly built with — sampling, and
-  counting only where an object cache exists — were both rejected.
+  status, which stays derived from the exact ledger and rollup. Two compromises
+  this was nearly built with — sampling, and counting only where an object cache
+  exists — were both rejected, for the reason above: an approximation that can
+  change a status is a status nobody can act on.
 
 ## Accessibility and internationalization
 

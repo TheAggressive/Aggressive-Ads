@@ -34,6 +34,15 @@ The root plugin file does four things: declare the header, define constants, gua
 
 Two rules carry most of the weight:
 
+**A meta key belongs with the record, not with one of its readers.**
+`Creative_Repository` has been split twice — the replacement lifecycle into
+`Creative_Revision_Repository`, the Media Library cluster into
+`Creative_Attachment_Repository` — and both times the meta-key constants stayed
+behind. A key is read by more than its writer: `META_ATTACHMENT_ID` is queried by
+the assignment repository and `META_IS_CREATIVE` by the Media Library screen. The
+dependency then runs one way and is stated in the class that holds it, so a split
+never produces a cycle.
+
 **`inc/Repository/` is the only place data access appears.** `WP_Query`, `get_posts()`, `get_post_meta()`, `update_post_meta()`, and `$wpdb` do not appear anywhere else in `inc/`. Enforced by `bin/ci/check-repository-boundary.sh`, which fails the build on a violation.
 
 Delivery presenters and controllers may depend on repositories to assemble
