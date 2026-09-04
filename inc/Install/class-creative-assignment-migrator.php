@@ -14,6 +14,7 @@ use Aggressive\Ads\Domain\Assignment_Rules;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Creative_Asset_Repository;
+use Aggressive\Ads\Repository\Creative_Attachment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Creative_Revision_Repository;
 use Aggressive\Ads\Repository\Line_Item_Repository;
@@ -44,6 +45,7 @@ final class Creative_Assignment_Migrator implements Service {
 	 * Builds the migrator.
 	 *
 	 * @param Creative_Repository            $creatives   Creative persistence.
+	 * @param Creative_Attachment_Repository $attachments Media Library copy of the artwork.
 	 * @param Creative_Asset_Repository      $assets      Asset persistence.
 	 * @param Creative_Assignment_Repository $assignments Assignment persistence.
 	 * @param Line_Item_Repository           $line_items  Line-item persistence.
@@ -52,6 +54,7 @@ final class Creative_Assignment_Migrator implements Service {
 	 */
 	public function __construct(
 		private readonly Creative_Repository $creatives,
+		private readonly Creative_Attachment_Repository $attachments,
 		private readonly Creative_Asset_Repository $assets,
 		private readonly Creative_Assignment_Repository $assignments,
 		private readonly Line_Item_Repository $line_items,
@@ -197,7 +200,7 @@ final class Creative_Assignment_Migrator implements Service {
 				'width'           => (int) ( $details['width'] ?? 0 ),
 				'height'          => (int) ( $details['height'] ?? 0 ),
 				// `details()` does not carry this; the repository has its own accessor.
-				'attachment_id'   => $this->creatives->attachment_id( $creative_id ),
+				'attachment_id'   => $this->attachments->attachment_id( $creative_id ),
 			)
 		);
 	}

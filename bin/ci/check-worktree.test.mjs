@@ -65,14 +65,23 @@ async function repo() {
 /**
  * Runs the guard against a repository.
  *
+ * **The escape hatch is stripped from the inherited environment**, and only the
+ * two tests that are about it put it back. `AGGR_QA_ALLOW_DIRTY=1 pnpm qa:local`
+ * is the workflow this guard's own failure message recommends for checking work
+ * in progress, and inheriting it turned every "a dirty tree fails" assertion
+ * into a pass — four tests reporting success over a guard they had switched
+ * off, in exactly the situation somebody runs them.
+ *
  * @param {string} dir Repository.
  * @param {object} env Extra environment.
  * @return {{status: number, stdout: string, stderr: string}}
  */
 function run( dir, env = {} ) {
+	const { AGGR_QA_ALLOW_DIRTY: ambient, ...inherited } = process.env;
+
 	const result = spawnSync( 'bash', [ CHECKER ], {
 		encoding: 'utf8',
-		env: { ...process.env, AGGR_WORKTREE_REPO: dir, ...env },
+		env: { ...inherited, AGGR_WORKTREE_REPO: dir, ...env },
 	} );
 
 	return {

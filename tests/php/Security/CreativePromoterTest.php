@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Tests\Security;
 
 use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Repository\Creative_Attachment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Storage\Private_Storage;
 use Aggressive\Ads\Workflow\Creative_Promoter;
@@ -47,6 +48,13 @@ final class CreativePromoterTest extends WP_UnitTestCase {
 	private Creative_Repository $creatives;
 
 	/**
+	 * Media Library copy of the artwork.
+	 *
+	 * @var Creative_Attachment_Repository
+	 */
+	private Creative_Attachment_Repository $attachments;
+
+	/**
 	 * Temporary files to clean up.
 	 *
 	 * @var array<int, string>
@@ -61,9 +69,10 @@ final class CreativePromoterTest extends WP_UnitTestCase {
 	public function set_up(): void {
 		parent::set_up();
 
-		$this->storage   = new Private_Storage();
-		$this->creatives = new Creative_Repository();
-		$this->promoter  = new Creative_Promoter( $this->creatives, $this->storage );
+		$this->storage     = new Private_Storage();
+		$this->attachments = new Creative_Attachment_Repository();
+		$this->creatives   = new Creative_Repository( $this->attachments );
+		$this->promoter    = new Creative_Promoter( $this->creatives, $this->attachments, $this->storage );
 	}
 
 	/**
@@ -137,7 +146,7 @@ final class CreativePromoterTest extends WP_UnitTestCase {
 
 		$this->assertIsInt( $attachment_id );
 		$this->assertSame( 'attachment', get_post_type( $attachment_id ) );
-		$this->assertSame( $attachment_id, $this->creatives->attachment_id( $creative_id ) );
+		$this->assertSame( $attachment_id, $this->attachments->attachment_id( $creative_id ) );
 	}
 
 	/**
@@ -187,7 +196,7 @@ final class CreativePromoterTest extends WP_UnitTestCase {
 
 		$this->assertInstanceOf( WP_Error::class, $result );
 		$this->assertSame( 'aggr_creative_changed', $result->get_error_code() );
-		$this->assertSame( 0, $this->creatives->attachment_id( $creative_id ) );
+		$this->assertSame( 0, $this->attachments->attachment_id( $creative_id ) );
 	}
 
 	/**

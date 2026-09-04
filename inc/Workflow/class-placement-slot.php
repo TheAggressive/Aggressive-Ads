@@ -190,7 +190,8 @@ final class Placement_Slot implements Service {
 	 * @param Slot_Options|null $options  Per-slot settings; the defaults when absent.
 	 */
 	public function markup( string $slug, bool $as_block = false, ?Slot_Options $options = null ): string {
-		$slug = sanitize_title( $slug );
+		$slug    = sanitize_title( $slug );
+		$options = $options ?? Slot_Options::defaults();
 
 		if ( '' === $slug || ! $this->fill->is_enabled() ) {
 			return '';
@@ -225,7 +226,7 @@ final class Placement_Slot implements Service {
 		}
 
 		$extra = array(
-			'class'               => 'aggr-slot',
+			'class'               => $this->wrapper_classes( $placement_id, $options ),
 			'data-aggr-slot'      => $slug,
 			'data-aggr-fill'      => $fill,
 
@@ -246,7 +247,7 @@ final class Placement_Slot implements Service {
 		 * the helper's output and stripping the name and quotes back off it
 		 * would be doing the same work twice and undoing half of it.
 		 */
-		$encoded = wp_json_encode( ( $options ?? Slot_Options::defaults() )->to_context() );
+		$encoded = wp_json_encode( $options->to_context() );
 
 		if ( is_string( $encoded ) ) {
 			$extra['data-wp-context'] = $encoded;
@@ -260,11 +261,81 @@ final class Placement_Slot implements Service {
 			? '<div ' . get_block_wrapper_attributes( $extra ) . '>'
 			: $this->plain_wrapper( $extra );
 
+		$house = $this->noscript_house( $placement_id );
+
 		$canvas  = '<div class="aggr-slot__canvas"';
 		$canvas .= '' !== $canvas_style ? ' style="' . esc_attr( $canvas_style ) . '"' : '';
-		$canvas .= '>' . $this->noscript_house( $placement_id ) . '</div>';
+		$canvas .= '>' . $house . '</div>';
 
-		return $open . $canvas . '</div>';
+		return $this->noscript_collapse_rule( $house, $options ) . $open . $canvas . '</div>';
+	}
+
+	/**
+	 * The class the emitted stylesheet rule hides.
+	 *
+	 * Only ever meaningful inside `<noscript>`. A rule on this class in the
+	 * ordinary stylesheet would hide the slot from everybody, because the class
+	 * is server-rendered and the server does not know whether the visitor has
+	 * JavaScript. Removing it on hydration instead would show a box and then
+	 * take it away, which is the layout shift the reserved box exists to avoid.
+	 */
+	public const NEEDS_JS_CLASS = 'aggr-slot--needs-js';
+
+	/**
+	 * The wrapper's classes, including the marker for a slot no-JS cannot fill.
+	 *
+	 * @param int          $placement_id Placement post id.
+	 * @param Slot_Options $options      Per-slot settings.
+	 */
+	private function wrapper_classes( int $placement_id, Slot_Options $options ): string {
+		if ( '' === $this->noscript_house( $placement_id ) && $options->collapse_when_empty ) {
+			return 'aggr-slot ' . self::NEEDS_JS_CLASS;
+		}
+
+		return 'aggr-slot';
+	}
+
+	/**
+	 * The rule that takes an unfillable slot off the page without JavaScript.
+	 *
+	 * **The server can answer this one, and cache-safely.** It cannot know
+	 * whether a paid ad will fill a slot — that needs a per-request candidate
+	 * query, and a cached page would bake the answer in — but whether a *no-JS*
+	 * visitor will see anything depends only on the house policy and whether a
+	 * house creative exists, which `noscript_house()` already resolved from
+	 * placement configuration. Same inputs as the house markup beside it, so
+	 * the same page cache holds both correctly.
+	 *
+	 * A slot that asked to keep its space keeps it here too. Reserving the box
+	 * is a layout decision, and a visitor without JavaScript is still looking at
+	 * the layout.
+	 *
+	 * **Emitted per slot rather than once per page**, which is the less elegant
+	 * of the two and the only correct one. Emitting once meant a flag on this
+	 * service, and the service outlives the request under any long-running SAPI
+	 * — FrankenPHP, RoadRunner, a pooled worker — where "once per request"
+	 * quietly becomes "once per process" and every page after the first renders
+	 * the marker with no rule to act on it. The cost of being right is seventy
+	 * bytes per unfillable slot, and identical rules cost a browser nothing.
+	 *
+	 * **`!important`, which is otherwise a smell and here is the requirement.**
+	 * A sized slot carries `display:grid` as an inline style — the wrapper has
+	 * to, because the reserved box's dimensions come from the placement rather
+	 * than from a stylesheet — and an inline declaration beats every ordinary
+	 * rule no matter how specific. Without this the marker was applied, the rule
+	 * was parsed, and the box stayed exactly where it was. Only the browser test
+	 * saw it; every server-side assertion was about markup that was already
+	 * correct.
+	 *
+	 * @param string       $house   The noscript house markup, empty when none.
+	 * @param Slot_Options $options Per-slot settings.
+	 */
+	private function noscript_collapse_rule( string $house, Slot_Options $options ): string {
+		if ( '' !== $house || ! $options->collapse_when_empty ) {
+			return '';
+		}
+
+		return '<noscript><style>.' . self::NEEDS_JS_CLASS . '{display:none!important}</style></noscript>';
 	}
 
 	/**

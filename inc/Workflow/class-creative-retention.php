@@ -15,6 +15,7 @@ use Aggressive\Ads\Core\Settings;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Lifecycle_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Creative_Attachment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Storage\Private_Storage;
 
@@ -60,17 +61,19 @@ final class Creative_Retention implements Service {
 	/**
 	 * Constructor.
 	 *
-	 * @param Campaign_Lifecycle_Repository $lifecycle Batch campaign lookups.
-	 * @param Campaign_Repository           $campaigns Campaign persistence.
-	 * @param Creative_Repository           $creatives Creative persistence.
-	 * @param Private_Storage               $storage   Private file storage.
-	 * @param Audit_Repository              $audit     Audit persistence.
-	 * @param Settings                      $settings  Stored configuration.
+	 * @param Campaign_Lifecycle_Repository  $lifecycle Batch campaign lookups.
+	 * @param Campaign_Repository            $campaigns Campaign persistence.
+	 * @param Creative_Repository            $creatives Creative persistence.
+	 * @param Creative_Attachment_Repository $attachments Media Library copy of the artwork.
+	 * @param Private_Storage                $storage   Private file storage.
+	 * @param Audit_Repository               $audit     Audit persistence.
+	 * @param Settings                       $settings  Stored configuration.
 	 */
 	public function __construct(
 		private readonly Campaign_Lifecycle_Repository $lifecycle,
 		private readonly Campaign_Repository $campaigns,
 		private readonly Creative_Repository $creatives,
+		private readonly Creative_Attachment_Repository $attachments,
 		private readonly Private_Storage $storage,
 		private readonly Audit_Repository $audit,
 		private readonly Settings $settings
@@ -171,7 +174,7 @@ final class Creative_Retention implements Service {
 	public function purge_promoted(): int {
 		$removed = 0;
 
-		foreach ( $this->creatives->ids_promoted_with_private_file( self::BATCH ) as $creative_id ) {
+		foreach ( $this->attachments->ids_promoted_with_private_file( self::BATCH ) as $creative_id ) {
 			$details = $this->creatives->storage_details( (int) $creative_id );
 
 			if ( null === $details || '' === $details['path'] ) {

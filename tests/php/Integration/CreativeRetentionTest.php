@@ -15,6 +15,7 @@ use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Creative_Attachment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Security\Ownership;
@@ -249,11 +250,12 @@ final class CreativeRetentionTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function test_a_promoted_original_is_swept_whatever_the_window(): void {
-		$campaign  = $this->campaign( Post_Statuses::COMPLETE, time() );
-		$creative  = $this->creative_with_private_file( $campaign );
-		$creatives = Plugin::instance()->container()->get( Creative_Repository::class );
+		$campaign    = $this->campaign( Post_Statuses::COMPLETE, time() );
+		$creative    = $this->creative_with_private_file( $campaign );
+		$creatives   = Plugin::instance()->container()->get( Creative_Repository::class );
+		$attachments = Plugin::instance()->container()->get( Creative_Attachment_Repository::class );
 
-		$creatives->set_attachment_id( $creative, 4321 );
+		$attachments->set_attachment_id( $creative, 4321 );
 
 		$details = $creatives->storage_details( $creative );
 		$this->assertIsArray( $details );

@@ -253,6 +253,19 @@ function PlacementForm( {
 						__nextHasNoMarginBottom
 						__next40pxDefaultSize
 					/>
+
+					{ /*
+					 * Not an error — a placement with no house advertisement is
+					 * a legitimate configuration, and the default one. It is
+					 * said out loud because the consequence is invisible from
+					 * this screen: the slot is simply absent on the page, which
+					 * looks the same as a slot nobody placed.
+					 */ }
+					{ 0 === draft.house_attachment_id ? (
+						<Notice status="info" isDismissible={ false }>
+							{ t( 'houseMissing' ) }
+						</Notice>
+					) : null }
 				</VStack>
 			</fieldset>
 

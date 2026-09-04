@@ -322,7 +322,7 @@ final class PlacementSlotTest extends WP_UnitTestCase {
 			$this->assertStringContainsString( 'data-wp-context=', $html, $surface );
 
 			// And it still carries what it always did.
-			$this->assertStringContainsString( 'class="aggr-slot"', $html, $surface );
+			$this->assertStringContainsString( 'class="aggr-slot', $html, $surface );
 			$this->assertStringContainsString( 'data-aggr-slot="hydrating-leaderboard"', $html, $surface );
 			$this->assertStringContainsString( '/aggr/v1/fill/hydrating-leaderboard', $html, $surface );
 		}
@@ -371,6 +371,139 @@ final class PlacementSlotTest extends WP_UnitTestCase {
 				);
 			}
 		}
+	}
+
+	/**
+	 * **A slot no visitor without JavaScript can ever fill takes itself away.**
+	 *
+	 * The server cannot know whether a *paid* ad will fill a slot — that needs a
+	 * per-request candidate query, and a cached page would bake the answer in.
+	 * It can know whether a **no-JS** visitor will see anything, because that
+	 * depends only on the house policy and whether a house creative exists,
+	 * which the noscript house markup already resolves from placement
+	 * configuration. Same inputs, same cacheability.
+	 *
+	 * @return void
+	 */
+	public function test_a_slot_that_no_script_can_fill_hides_itself_without_javascript(): void {
+		$this->place( 'scriptless-leaderboard' );
+
+		$html = do_blocks( '<!-- wp:aggr/ad-slot {"slot":"scriptless-leaderboard"} /-->' );
+
+		$this->assertStringContainsString( Placement_Slot::NEEDS_JS_CLASS, $html );
+		$this->assertStringContainsString(
+			'<noscript><style>.' . Placement_Slot::NEEDS_JS_CLASS . '{display:none!important}</style></noscript>',
+			$html,
+			'The marker is on the slot with no rule anywhere to act on it.'
+		);
+
+		/*
+		 * Inside noscript and nowhere else. A bare rule would hide the slot from
+		 * everybody, because the class is server-rendered and the server does
+		 * not know who has JavaScript.
+		 *
+		 * Asserted as "every hiding rule in this document is wrapped", rather
+		 * than by stripping the opening tag and looking for what is left — that
+		 * version passed over the closing tag it had not stripped, which is a
+		 * negative that could never fail.
+		 */
+		$this->assertSame(
+			substr_count( $html, '{display:none!important}' ),
+			substr_count(
+				$html,
+				'<noscript><style>.' . Placement_Slot::NEEDS_JS_CLASS . '{display:none!important}</style></noscript>'
+			),
+			'A rule that hides the slot escaped its noscript wrapper.'
+		);
+	}
+
+	/**
+	 * A slot with a house ad is not hidden: it has something to show.
+	 *
+	 * This is the half that makes the negative above mean anything. A rule that
+	 * fired for every slot would also satisfy "the unfillable one is hidden".
+	 *
+	 * @return void
+	 */
+	public function test_a_slot_with_a_house_advertisement_keeps_it_for_no_script_visitors(): void {
+		$placement_id = $this->place( 'housed-leaderboard' );
+		$this->give_it_a_house( $placement_id );
+
+		$html = do_blocks( '<!-- wp:aggr/ad-slot {"slot":"housed-leaderboard"} /-->' );
+
+		$this->assertStringContainsString( '<noscript><a href=', $html, 'The house advertisement stopped rendering.' );
+		$this->assertStringNotContainsString(
+			Placement_Slot::NEEDS_JS_CLASS,
+			$html,
+			'A slot showing a house advertisement was marked as showing nothing.'
+		);
+	}
+
+	/**
+	 * A slot told to keep its space keeps it without JavaScript too.
+	 *
+	 * Reserving the box is a layout decision, and a visitor with no JavaScript
+	 * is still looking at the layout. Hiding it here would mean the attribute
+	 * did the opposite of what it says for the one audience that cannot undo it.
+	 *
+	 * @return void
+	 */
+	public function test_a_slot_asked_to_keep_its_space_keeps_it_without_javascript(): void {
+		$this->place( 'reserved-scriptless' );
+
+		$html = do_blocks( '<!-- wp:aggr/ad-slot {"slot":"reserved-scriptless","collapseWhenEmpty":false} /-->' );
+
+		$this->assertStringNotContainsString( Placement_Slot::NEEDS_JS_CLASS, $html );
+		$this->assertStringNotContainsString( '<noscript><style>', $html );
+	}
+
+	/**
+	 * **Every marked slot carries its own rule.**
+	 *
+	 * Emitting the rule once per page would mean a flag on a service that
+	 * outlives the request under a long-running SAPI, where "once per request"
+	 * becomes "once per process" and every page after the first renders a marker
+	 * with nothing to act on it. Asserting one rule per marked slot is what
+	 * stops somebody optimising the duplication back into that bug.
+	 *
+	 * @return void
+	 */
+	public function test_every_marked_slot_carries_the_rule_that_hides_it(): void {
+		$this->place( 'repeated-leaderboard' );
+
+		$one   = do_blocks( '<!-- wp:aggr/ad-slot {"slot":"repeated-leaderboard"} /-->' );
+		$three = do_blocks(
+			'<!-- wp:aggr/ad-slot {"slot":"repeated-leaderboard"} /-->'
+			. '<!-- wp:aggr/ad-slot {"slot":"repeated-leaderboard"} /-->'
+			. '<!-- wp:aggr/ad-slot {"slot":"repeated-leaderboard"} /-->'
+		);
+
+		$this->assertSame( 1, substr_count( $one, '<noscript><style>' ) );
+		$this->assertSame( 3, substr_count( $three, Placement_Slot::NEEDS_JS_CLASS ) - 3 );
+		$this->assertSame(
+			3,
+			substr_count( $three, '<noscript><style>' ),
+			'A slot was marked with no rule of its own to hide it.'
+		);
+	}
+
+	/**
+	 * Gives a placement a servable house advertisement.
+	 *
+	 * @param int $placement_id Placement post id.
+	 * @return void
+	 */
+	private function give_it_a_house( int $placement_id ): void {
+		$attachment_id = (int) self::factory()->attachment->create_object(
+			array(
+				'file'           => 'house.png',
+				'post_mime_type' => 'image/png',
+			)
+		);
+
+		update_post_meta( $placement_id, Placement_Repository::META_HOUSE_ATTACHMENT, $attachment_id );
+		update_post_meta( $placement_id, Placement_Repository::META_HOUSE_CLICK_URL, 'https://example.test/house' );
+		update_post_meta( $placement_id, Placement_Repository::META_HOUSE_ALT, 'House advertisement' );
 	}
 
 	/**

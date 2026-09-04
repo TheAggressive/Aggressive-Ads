@@ -163,6 +163,7 @@ final class Placement_Screen implements Service {
 				'house'               => __( 'House advertisement', 'aggressive-ads' ),
 				'houseAttachment'     => __( 'House attachment ID', 'aggressive-ads' ),
 				'houseAttachmentHelp' => __( 'Shown when no paid creative is live, if the Delivery house-ad policy allows it. Leave at 0 for none.', 'aggressive-ads' ),
+				'houseMissing'        => __( 'With no house advertisement, this placement shows nothing when it is unsold — and nothing at all to visitors without JavaScript, whose slot is removed from the page rather than left as an empty box.', 'aggressive-ads' ),
 				'houseUrl'            => __( 'House click URL', 'aggressive-ads' ),
 				'houseAlt'            => __( 'House alt text', 'aggressive-ads' ),
 				'statusPending'       => __( 'Not saved yet…', 'aggressive-ads' ),

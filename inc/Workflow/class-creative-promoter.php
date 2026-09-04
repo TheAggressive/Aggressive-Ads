@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Workflow;
 
+use Aggressive\Ads\Repository\Creative_Attachment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Storage\Private_Storage;
 use WP_Error;
@@ -32,11 +33,13 @@ final class Creative_Promoter {
 	/**
 	 * Constructor.
 	 *
-	 * @param Creative_Repository $creatives Creative persistence.
-	 * @param Private_Storage     $storage   Private file storage.
+	 * @param Creative_Repository            $creatives Creative persistence.
+	 * @param Creative_Attachment_Repository $attachments Media Library copy of the artwork.
+	 * @param Private_Storage                $storage   Private file storage.
 	 */
 	public function __construct(
 		private readonly Creative_Repository $creatives,
+		private readonly Creative_Attachment_Repository $attachments,
 		private readonly Private_Storage $storage
 	) {
 	}
@@ -52,8 +55,8 @@ final class Creative_Promoter {
 	 * @return int|WP_Error Attachment id.
 	 */
 	public function promote( int $creative_id ) {
-		if ( $this->creatives->has_attachment( $creative_id ) ) {
-			return $this->creatives->attachment_id( $creative_id );
+		if ( $this->attachments->has_attachment( $creative_id ) ) {
+			return $this->attachments->attachment_id( $creative_id );
 		}
 
 		$details = $this->creatives->storage_details( $creative_id );
@@ -119,9 +122,9 @@ final class Creative_Promoter {
 
 		// Marked before the id is recorded: an attachment that exists but is not
 		// yet linked should still be out of the library, not briefly in it.
-		$this->creatives->mark_attachment_as_creative( $attachment_id, $creative_id );
+		$this->attachments->mark_attachment_as_creative( $attachment_id, $creative_id );
 
-		if ( ! $this->creatives->set_attachment_id( $creative_id, $attachment_id ) ) {
+		if ( ! $this->attachments->set_attachment_id( $creative_id, $attachment_id ) ) {
 			wp_delete_attachment( $attachment_id, true );
 
 			return new WP_Error(
@@ -134,7 +137,7 @@ final class Creative_Promoter {
 		// image itself, which is what stops the theme's render-time alt-text
 		// shim from having anything to fix. See docs/accessibility.md.
 		if ( '' !== $details['alt_text'] ) {
-			$this->creatives->set_attachment_alt_text( $attachment_id, $details['alt_text'] );
+			$this->attachments->set_attachment_alt_text( $attachment_id, $details['alt_text'] );
 		}
 
 		$this->drop_private_original( $creative_id, $details['path'] );

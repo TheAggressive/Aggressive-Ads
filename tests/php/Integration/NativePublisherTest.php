@@ -12,6 +12,7 @@ namespace Aggressive\Ads\Tests\Integration;
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Integration\Native\Publisher;
 use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Repository\Creative_Attachment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Storage\Private_Storage;
 use Aggressive\Ads\Workflow\Creative_Uploader;
@@ -57,6 +58,7 @@ final class NativePublisherTest extends WP_UnitTestCase {
 		);
 		$container   = Plugin::instance()->container();
 		$creatives   = $container->get( Creative_Repository::class );
+		$attachments = $container->get( Creative_Attachment_Repository::class );
 		$storage     = $container->get( Private_Storage::class );
 		$creative_id = $creatives->create(
 			$campaign_id,
@@ -91,7 +93,7 @@ final class NativePublisherTest extends WP_UnitTestCase {
 		$result = $container->get( Publisher::class )->publish_campaign( $campaign_id );
 
 		$this->assertNotInstanceOf( WP_Error::class, $result );
-		$this->assertTrue( $creatives->has_attachment( $creative_id ) );
+		$this->assertTrue( $attachments->has_attachment( $creative_id ) );
 
 		unlink( $temp );
 		$storage->delete( $accepted['path'] );

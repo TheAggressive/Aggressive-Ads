@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Workflow;
 
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
+use Aggressive\Ads\Repository\Creative_Attachment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Creative_Revision_Repository;
 use Aggressive\Ads\Repository\Line_Item_Repository;
@@ -30,12 +31,14 @@ final class Revision_Policy {
 	 * Builds the policy.
 	 *
 	 * @param Creative_Repository            $creatives   Creative persistence.
+	 * @param Creative_Attachment_Repository $attachments Media Library copy of the artwork.
 	 * @param Creative_Revision_Repository   $revisions   Revision chain persistence.
 	 * @param Creative_Assignment_Repository $assignments Assignment persistence.
 	 * @param Line_Item_Repository           $line_items  Line-item persistence.
 	 */
 	public function __construct(
 		private readonly Creative_Repository $creatives,
+		private readonly Creative_Attachment_Repository $attachments,
 		private readonly Creative_Revision_Repository $revisions,
 		private readonly Creative_Assignment_Repository $assignments,
 		private readonly Line_Item_Repository $line_items
@@ -50,7 +53,7 @@ final class Revision_Policy {
 	 * @return bool
 	 */
 	public function is_frozen( int $creative_id ): bool {
-		return $creative_id > 0 && $this->creatives->has_attachment( $creative_id );
+		return $creative_id > 0 && $this->attachments->has_attachment( $creative_id );
 	}
 
 	/**

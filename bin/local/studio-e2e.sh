@@ -199,11 +199,36 @@ if [[ "${served_plugin}" != "${repo_root}" ]]; then
 	exit 1
 fi
 
-original_theme="$(studio wp --path "${site_path}" option get stylesheet | tr -d '\r\n')"
+# What to put back, recorded where it survives this process.
+#
+# The obvious version of this reads the live theme at start and restores it at
+# the end, and it is wrong in one specific way: a run that dies without running
+# its trap — SIGKILL, a closed laptop, a killed terminal — leaves the site on the
+# test theme, and then *every later run* reads that as the original and restores
+# the site to it. The corruption is silent, permanent and self-perpetuating, and
+# the only symptom is somebody eventually asking why their theme keeps changing.
+#
+# So the record goes in a file. Its existence means a run is in progress or died
+# without cleaning up, and in both cases the file is the truth rather than
+# whatever the site currently says.
+restore_file="${site_path}/.aggr-e2e-restore"
 
-# global-setup.ts rewrites this with `--hard`, so it is as much this script's to
-# put back as the theme and the URLs are.
-original_permalinks="$(studio wp --path "${site_path}" option get permalink_structure | tr -d '\r\n')"
+if [[ -f "${restore_file}" ]]; then
+	original_theme="$(sed -n '1p' "${restore_file}" | tr -d '\r\n')"
+	original_permalinks="$(sed -n '2p' "${restore_file}" | tr -d '\r\n')"
+
+	echo "studio-e2e: a previous run did not clean up; recovering its record." >&2
+	echo "  theme:      ${original_theme}" >&2
+	echo "  permalinks: ${original_permalinks}" >&2
+else
+	original_theme="$(studio wp --path "${site_path}" option get stylesheet | tr -d '\r\n')"
+
+	# global-setup.ts rewrites this with `--hard`, so it is as much this script's
+	# to put back as the theme and the URLs are.
+	original_permalinks="$(studio wp --path "${site_path}" option get permalink_structure | tr -d '\r\n')"
+
+	printf '%s\n%s\n' "${original_theme}" "${original_permalinks}" > "${restore_file}"
+fi
 
 mail_fixture="${repo_root}/tests/fixtures/mu-plugins/dev-mail-sender.php"
 mail_link="${site_path}/wp-content/mu-plugins/aggr-e2e-mail-capture.php"
@@ -226,6 +251,15 @@ cleanup() {
 
 	if [[ "${remove_mail_link}" -eq 1 ]]; then
 		rm -f "${mail_link}" || cleanup_failed=1
+	fi
+
+	# Last, and only when everything above worked. A record removed after a
+	# failed restore would hand the next run the corrupted live state as its
+	# baseline, which is the whole failure this file exists to prevent.
+	if [[ "${cleanup_failed}" -eq 0 ]]; then
+		rm -f "${restore_file}" || cleanup_failed=1
+	else
+		echo "studio-e2e: keeping ${restore_file} so the next run can recover." >&2
 	fi
 
 	if [[ "${status}" -eq 0 && "${cleanup_failed}" -ne 0 ]]; then

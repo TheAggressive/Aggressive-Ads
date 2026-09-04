@@ -11,6 +11,33 @@ Delete an entry when it ships. An entry that has been here through three
 releases is either not real or not wanted — say which, in the entry, and then
 delete it.
 
+**Say what would change the answer, not just the answer.** That staleness rule
+checks whether an entry is still *wanted*; nothing checks whether its reasoning
+still *holds*, and the second is what actually goes wrong. An entry that records
+a conclusion reads as settled, and nobody re-examines a settled thing — so a
+wrong conclusion is protected by having been written down carefully.
+
+It happened here. "Without JavaScript the box stays" said only a render-time
+decision could fix it and there could not be one. That was wrong: it conflated
+*will a paid ad fill this slot* (needs a per-request candidate query, genuinely
+unavailable) with *will a visitor without JavaScript see anything* (needs only
+placement configuration, and the server had already computed it). The entry was
+five days old, not five months — duration was never the problem. Nothing in it
+invited anyone to check the premise.
+
+So an entry that defers on a judgement has to name the condition that judgement
+rests on:
+
+- Not "only a render-time decision could fix that, and there is not one" but
+  "...while the decision needs a per-request candidate query. If any part of the
+  question turns out to be answerable from placement configuration, revisit."
+- "The obvious next seam **if the file grows again**" is already the right shape:
+  a trigger somebody can observe.
+- "Nobody has asked for it yet" is too — the trigger is somebody asking.
+
+Two of the three entries this rule was written from were already correct. The
+one that was not is the one that stated a verdict instead of a condition.
+
 ## Assignment status was never projected, and delivery never worked
 
 Fixed, but the shape is worth keeping. `candidates_for_placement()` selects on
@@ -86,7 +113,7 @@ Two things still open from it:
    the forbidden line verbatim is prose and not a violation, and a renamed
    protected file must fail rather than pass over nothing.
 
-## The ad slot collapses when unsold, and the space can now be kept
+## The ad slot collapses when unsold, and both halves are now answerable
 
 `Assignment_Projection` made delivery work; this is the behaviour a publisher
 notices next. A slot whose first fill returns no creative and no house removes
@@ -151,14 +178,45 @@ What is not built:
    non-block surfaces the same question the block gets asked could see it.
    The method emits what it is given now, because a second list of attribute
    names is a list that goes stale without a build failing.
-2. **Without JavaScript the box stays.** The server cannot know whether an ad
-   exists at render time, so a no-JS visitor sees the reserved slot and, if a
-   house creative is configured, the noscript house inside it. Only a
-   render-time decision could fix that, and see above for why there is not one.
+2. ~~Without JavaScript the box stays.~~ Shipped. A no-JS visitor now sees a
+   house advertisement where one is configured, and **nothing at all** where one
+   is not — never an empty reserved box.
 
-   `collapseWhenEmpty` does not help here and is not meant to: it is a
-   client-side decision, so a no-JS visitor gets the reserved box whichever way
-   it is set.
+   **The entry that used to sit here was reasoned from a false premise**, and
+   the premise is the part worth keeping. It said only a render-time decision
+   could fix this and there could not be one. That conflated two different
+   questions:
+
+   - *Will a paid ad fill this slot?* Needs a per-request candidate query, and a
+     cached page would bake the answer in. Genuinely unavailable, and the reason
+     the fill decision lives on the client.
+   - *Will a visitor with no JavaScript see anything?* Depends only on the house
+     policy and whether a house creative exists — which `noscript_house()`
+     already resolves from placement configuration, on the same inputs and with
+     the same cacheability as the house markup it emits beside it.
+
+   So the server marks a slot nothing can fill and emits
+   `<noscript><style>` to take it off the page. A slot that asked to keep its
+   space keeps it here too: reserving the box is a layout decision, and a
+   visitor without JavaScript is still looking at the layout.
+
+   Two things it had to get right, both found by running it:
+
+   - **`!important`, which is otherwise a smell and here is the requirement.** A
+     sized slot carries `display:grid` as an *inline* style, because the box's
+     dimensions come from the placement rather than a stylesheet, and an inline
+     declaration beats every ordinary rule however specific. Without it the
+     marker was applied, the rule was parsed into a real stylesheet, and the box
+     did not move. Four server-side tests passed throughout, because the markup
+     was never wrong — only the browser test could see it.
+   - **The rule is emitted per slot, not once per page.** Once-per-page needed a
+     flag on a service that outlives the request under any long-running SAPI,
+     where "once per request" quietly becomes "once per process" and every page
+     after the first carries a marker with no rule to act on it.
+
+   `Inventory` now says when a placement has no house advertisement, because the
+   consequence — the slot is simply absent — looks identical to a slot nobody
+   placed.
 
 ## A creative added to a running campaign is now reviewable
 
@@ -268,13 +326,49 @@ through `update_post_metadata` and asserts the live ad is still serving — beca
 the alternative is a campaign whose current creative is archived and whose
 replacement is not running, which is an advertiser paying for a blank slot.
 
-**The attachment cluster has not moved**, and does not need to yet:
-`has_attachment`, `attachment_id`, `attachment_url`, `attachment_file`,
-`set_attachment_id`, `mark_attachment_as_creative`,
-`ids_promoted_with_private_file`, `backfill_creative_attachment_marks` and
-`set_attachment_alt_text` — about 190 lines about the Media Library copy of the
-artwork rather than the creative record, called from 11 files. It is the obvious
-next seam if the file grows again.
+**The attachment cluster has now moved too**, into
+`Creative_Attachment_Repository`: `has_attachment`, `attachment_id`,
+`attachment_url`, `attachment_file`, `set_attachment_id`,
+`mark_attachment_as_creative`, `ids_promoted_with_private_file`,
+`backfill_creative_attachment_marks` and `set_attachment_alt_text`. Two hundred
+lines about the Media Library copy of the artwork rather than about the creative
+record, taking the file from **799 to 618**.
+
+Three things worth keeping:
+
+- **The meta keys stayed behind**, for the third time and the same reason.
+  `META_ATTACHMENT_ID` is queried by the assignment repository and
+  `META_IS_CREATIVE` by the Media Library screen, so a key is read by more than
+  its writer and belongs with the record. Moving them would also have rewritten
+  thirty test files to say a different class name for an unchanged string.
+- **The dependency runs the other way from last time.** `Creative_Repository`
+  holds the new class, because `unpublished_for_campaign()` decides whether a
+  creative is waiting for review by asking `has_attachment()`. The new class
+  holds nothing and names two constants, which is a compile-time reference and
+  not an object graph, so there is no cycle. It is defaulted rather than
+  required so the five places that build a `Creative_Repository` did not have to
+  grow a container between them and a stateless collaborator.
+- **Two callers got narrower rather than wider.** `Assignment_Projection` and
+  the migration map only ever used moved methods, so they take the attachment
+  repository *instead of* `Creative_Repository` now.
+
+**The move is what proved the cluster was barely tested.** Mutating all nine
+methods, one at a time, killed four and left five standing: `has_attachment`
+could stop checking the post exists, `mark_attachment_as_creative` could write
+nothing, `ids_promoted_with_private_file` could drop the condition that makes it
+a contradiction, `backfill_creative_attachment_marks` could mark nothing, and
+`attachment_file` could always answer empty — all with a green suite.
+
+Every one was reachable only through a caller that asserted the *caller's*
+outcome, and the Media Library test wrote the marker by hand rather than through
+the writer, so nothing exercised the production path at all. Three of the five
+are in the category this repository treats as blocking: a migration that runs
+once against real data, a query that feeds a deletion sweep, and the guard that
+decides whether a creative may be published.
+
+`CreativeAttachmentRepositoryTest` covers all five, and asserts the negatives
+where it matters most — what the deletion sweep must *not* select is the more
+valuable half of that test.
 
 ## Nothing else is open
 
@@ -282,14 +376,27 @@ Every other entry that was here has shipped or been closed. That is the intended
 resting state, not a sign the file is unused — an entry is added the moment work
 is started and understood but not finished, and deleted the moment it ships.
 
-The last one closed was the cold-container browser flake, which turned out not
-to be about cold containers: `wp-login.php` steals focus 200ms after load, a
-`fill()` in flight when that lands loses its value, and an empty `required`
-password makes the browser refuse to submit at all. Diagnosed from the trace's
-screencast frames and fixed in `tests/e2e/admin-login.ts`; the durable half is
-in [known-issues.md](known-issues.md).
+**Two paragraphs here each used to claim to be the last one closed**, which is
+what this section looks like when entries are appended rather than rewritten.
+The list is now in order, newest first, and stays that way.
 
-The last one closed was P2, the creative model. Its design, decisions and the
+The most recent were the two halves of the ad-slot entry: a slot can keep its
+space when unsold, and a slot no visitor without JavaScript can fill now takes
+itself off the page. Closing the second one meant discarding the reasoning that
+had kept it open — see that entry.
+
+Before those, the `Creative_Repository` attachment split, which is recorded in
+its own entry because mutating the moved code proved five of its nine methods
+had never been defended by anything.
+
+Before that, the cold-container browser flake, which turned out not to be about
+cold containers: `wp-login.php` steals focus 200ms after load, a `fill()` in
+flight when that lands loses its value, and an empty `required` password makes
+the browser refuse to submit at all. Diagnosed from the trace's screencast
+frames and fixed in `tests/e2e/admin-login.ts`; the durable half is in
+[known-issues.md](known-issues.md).
+
+And before that, P2, the creative model. Its design, decisions and the
 defects found building it are in
 [platform-p2-creative-model.md](platform-p2-creative-model.md); which phase built
 what is in [platform-implementation-progress.md](platform-implementation-progress.md).
