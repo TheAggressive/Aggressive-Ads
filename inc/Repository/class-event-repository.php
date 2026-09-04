@@ -106,13 +106,34 @@ final class Event_Repository {
 
 		$table = $this->table_name();
 
-		if ( ! $this->table_exists() ) {
-			return;
-		}
+		/*
+		 * **Not guarded on `table_exists()`.** That helper asks
+		 * `SHOW TABLES LIKE`, which cannot see a temporary table — and every
+		 * table in the WordPress suite is temporary, because `WP_UnitTestCase`
+		 * rewrites `CREATE TABLE` into its `TEMPORARY` form. A guard written
+		 * that way returns early exactly where the drop is being verified, so
+		 * the migration looks correct while the superseded index survives.
+		 *
+		 * That is not hypothetical: it happened to the decision rollups table,
+		 * whose drop is reachable only after a mid-suite reinstall. This one
+		 * works today because nothing reinstalls its table first, which is an
+		 * ordering accident rather than a property.
+		 *
+		 * Asking the index list answers both questions at once: a table that is
+		 * not there has no indexes, so nothing is dropped and nothing errors.
+		 */
+		$suppressed = $wpdb->suppress_errors( true );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Schema introspection on this plugin's table.
-		$rows  = $wpdb->get_results( "SHOW INDEX FROM {$table}", ARRAY_A );
+		$rows = $wpdb->get_results( "SHOW INDEX FROM {$table}", ARRAY_A );
+
+		$wpdb->suppress_errors( $suppressed );
+
 		$names = is_array( $rows ) ? array_values( array_unique( array_column( $rows, 'Key_name' ) ) ) : array();
+
+		if ( array() === $names ) {
+			return;
+		}
 
 		if ( in_array( 'token_hash', $names, true ) ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Dropping the v4 unique so (token_hash, event) can be unique instead.
