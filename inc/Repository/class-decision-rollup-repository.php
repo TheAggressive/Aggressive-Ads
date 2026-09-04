@@ -38,6 +38,42 @@ final class Decision_Rollup_Repository {
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
 		dbDelta( Schema::decision_rollups_table_ddl( $this->table_name(), $wpdb->get_charset_collate() ) );
+
+		$this->drop_legacy_outcome_unique();
+	}
+
+	/**
+	 * Drops the pre-P15 unique that ignored the opportunity kind.
+	 *
+	 * `dbDelta` adds an index and never drops one, so `slot_day_outcome` would
+	 * survive the upgrade and keep enforcing one row per outcome per day. The
+	 * refresh split then fails on insert: a placement's first refresh of the day
+	 * collides with its page opportunity for the same outcome, and the counter
+	 * silently stops advancing for whichever arrives second.
+	 *
+	 * Here as well as in the migration, so a repair install heals a site the
+	 * upgrade missed — matching how the rollups and events tables drop their own
+	 * superseded uniques.
+	 *
+	 * @return void
+	 */
+	private function drop_legacy_outcome_unique(): void {
+		global $wpdb;
+
+		if ( ! $this->table_exists() ) {
+			return;
+		}
+
+		$table = $this->table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Schema introspection on this plugin's table.
+		$rows  = $wpdb->get_results( "SHOW INDEX FROM {$table}", ARRAY_A );
+		$names = is_array( $rows ) ? array_values( array_unique( array_column( $rows, 'Key_name' ) ) ) : array();
+
+		if ( in_array( 'slot_day_outcome', $names, true ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Dropping the pre-P15 unique so a refresh can hold its own row.
+			$wpdb->query( "ALTER TABLE {$table} DROP INDEX slot_day_outcome" );
+		}
 	}
 
 	/**

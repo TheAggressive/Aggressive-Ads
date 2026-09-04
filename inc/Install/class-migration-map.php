@@ -9,6 +9,9 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Install;
 
+use Aggressive\Ads\Domain\Refresh_Policy;
+use Aggressive\Ads\Domain\Slot_Options;
+use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
@@ -286,6 +289,58 @@ final class Migration_Map {
 				$c->get( Installer::class )->install_delivery_tables();
 
 				$c->get( \Aggressive\Ads\Repository\Rollup_Repository::class )->backfill_org_ids();
+			},
+
+			/*
+			 * The refresh policy, and the behaviour it must not change.
+			 *
+			 * P15 gives a publisher a rule about their own inventory, and the
+			 * rule bounds what a block may ask for. Refresh defaults to off,
+			 * because a placement nobody has decided about is not inventory
+			 * somebody chose to multiply.
+			 *
+			 * **That default cannot apply to placements that already exist.**
+			 * Rotation ships and works: a site whose editors set `rotate` on a
+			 * slot would upgrade into a policy that forbids it, the ads would
+			 * stop changing, and nothing would error or log. So every existing
+			 * placement is handed what the client already permitted it — the
+			 * one-second floor and the hundred-refresh stop from `view.js` —
+			 * and the strict default governs only what is created afterwards.
+			 *
+			 * The backfill skips a placement that already carries the flag, so
+			 * an interrupted run resumes by being run again and a publisher who
+			 * has since tightened their own policy is not overwritten.
+			 */
+			25 => static function () use ( $c ): void {
+				$c->get( Placement_Repository::class )->backfill_refresh_policies(
+					Slot_Options::MIN_ROTATE_SECONDS,
+					Refresh_Policy::LEGACY_CLIENT_MAX_PER_VIEW
+				);
+			},
+
+			/*
+			 * The grain, in the table that counts it.
+			 *
+			 * `aggr_decision_rollups` gains `opportunity` and its unique widens
+			 * to include it, because a page opportunity and a refresh of one are
+			 * different inventory and must not share a row.
+			 *
+			 * **The column is additive with a default and nothing is
+			 * backfilled.** Every existing row is `page`, which is the honest
+			 * reading rather than a convenient one: rotation existed, but
+			 * nothing recorded that a fill was a refresh, so no `UPDATE` can
+			 * recover which of them were. Writing a guess would invent supply
+			 * data that P16 is contractually required to forecast from.
+			 *
+			 * `install_table()` drops the superseded unique as well as this, so
+			 * a repair install heals a site the upgrade missed. Without the drop
+			 * `dbDelta` leaves `slot_day_outcome` enforcing one row per outcome
+			 * per day, and the first refresh of the day collides with the page
+			 * opportunity beside it — the counter stops advancing for whichever
+			 * arrives second, silently.
+			 */
+			26 => static function () use ( $c ): void {
+				$c->get( Decision_Rollup_Repository::class )->install_table();
 			},
 		);
 	}

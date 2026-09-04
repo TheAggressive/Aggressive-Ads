@@ -153,7 +153,7 @@ final class DecisionRollupScaleTest extends WP_UnitTestCase {
 
 		$this->assertIsArray( $plan );
 		$this->assertSame(
-			'slot_day_outcome',
+			'slot_day_outcome_kind',
 			$plan['key'] ?? null,
 			'The per-placement read fell off its index, so answering "why is this slot empty" scans the table.'
 		);

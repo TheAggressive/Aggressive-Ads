@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Repository;
 
 use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Domain\Refresh_Policy;
 use WP_Error;
 
 /**
@@ -24,6 +25,9 @@ final class Placement_Repository {
 	public const META_IS_ACTIVE        = '_aggr_is_active';
 	public const META_SORT_ORDER       = '_aggr_sort_order';
 	public const META_POSITION_LABEL   = '_aggr_position_label';
+	public const META_REFRESH_ENABLED  = '_aggr_refresh_enabled';
+	public const META_REFRESH_SECONDS  = '_aggr_refresh_seconds';
+	public const META_REFRESH_MAX      = '_aggr_refresh_max_per_view';
 	public const META_HOUSE_ATTACHMENT = '_aggr_house_attachment_id';
 	public const META_HOUSE_CLICK_URL  = '_aggr_house_click_url';
 	public const META_HOUSE_ALT        = '_aggr_house_alt';
@@ -121,6 +125,98 @@ final class Placement_Repository {
 		);
 
 		return array() === $ids ? 0 : (int) $ids[0];
+	}
+
+	/**
+	 * What this placement permits a timer to do.
+	 *
+	 * The publisher's rule about their own inventory. It bounds what a block
+	 * may ask for, never the reverse: every rotation is another impression, so
+	 * leaving the interval to whoever laid out the page makes the page's author
+	 * the person who decides how much inventory exists.
+	 *
+	 * @param int $placement_id Placement post id.
+	 */
+	public function refresh_policy( int $placement_id ): Refresh_Policy {
+		return Refresh_Policy::from_stored(
+			get_post_meta( $placement_id, self::META_REFRESH_ENABLED, true ),
+			get_post_meta( $placement_id, self::META_REFRESH_SECONDS, true ),
+			get_post_meta( $placement_id, self::META_REFRESH_MAX, true )
+		);
+	}
+
+	/**
+	 * Records a refresh policy, and reads it back to say whether it landed.
+	 *
+	 * Read-back rather than trusting `update_post_meta()`, which answers false
+	 * both for a failed write and for a value that was already what you asked
+	 * for. The caller needs to know the placement now permits what it says it
+	 * permits, and that is a question only a read answers.
+	 *
+	 * @param int  $placement_id Placement post id.
+	 * @param bool $enabled      Whether the placement may refresh at all.
+	 * @param int  $seconds      Shortest interval permitted.
+	 * @param int  $max_per_view Refreshes permitted per page view.
+	 */
+	public function set_refresh_policy( int $placement_id, bool $enabled, int $seconds, int $max_per_view ): bool {
+		if ( ! $this->exists( $placement_id ) ) {
+			return false;
+		}
+
+		$seconds      = max( Refresh_Policy::MIN_INTERVAL_SECONDS, $seconds );
+		$max_per_view = max( 0, $max_per_view );
+
+		update_post_meta( $placement_id, self::META_REFRESH_ENABLED, $enabled ? 1 : 0 );
+		update_post_meta( $placement_id, self::META_REFRESH_SECONDS, $seconds );
+		update_post_meta( $placement_id, self::META_REFRESH_MAX, $max_per_view );
+
+		$stored = $this->refresh_policy( $placement_id );
+
+		return $stored->enabled === $enabled
+			&& $stored->interval_seconds === $seconds
+			&& $stored->max_per_view === $max_per_view;
+	}
+
+	/**
+	 * Gives every existing placement the behaviour it already had.
+	 *
+	 * **Without this, shipping the policy silently stops rotation everywhere.**
+	 * Refresh defaults to off, and the policy bounds the block — so a site whose
+	 * editors set `rotate` on a slot last month would upgrade and find it had
+	 * quietly become static. Nothing would error and nothing would log; the ads
+	 * would simply stop changing, which is not a symptom anybody reads as a
+	 * failed migration.
+	 *
+	 * So the default is a decision about placements created *afterwards*, and
+	 * existing ones are handed what the client already permitted them: the
+	 * one-second floor and the hundred-refresh hard stop from `view.js`.
+	 * Enabling the policy does not make anything rotate — a block still has to
+	 * ask — it only preserves the state where everything was permitted.
+	 *
+	 * Idempotent: a placement that already carries the flag is skipped, so an
+	 * interrupted run resumes by being run again, and a publisher who has since
+	 * tightened their own policy is never overwritten.
+	 *
+	 * @param int $legacy_seconds Interval the client already floored at.
+	 * @param int $legacy_max     Refresh cap the client already enforced.
+	 * @return int Placements given an explicit policy.
+	 */
+	public function backfill_refresh_policies( int $legacy_seconds, int $legacy_max ): int {
+		$granted = 0;
+
+		foreach ( $this->all_ids() as $placement_id ) {
+			$existing = get_post_meta( $placement_id, self::META_REFRESH_ENABLED, true );
+
+			if ( '' !== $existing && null !== $existing ) {
+				continue;
+			}
+
+			if ( $this->set_refresh_policy( $placement_id, true, $legacy_seconds, $legacy_max ) ) {
+				++$granted;
+			}
+		}
+
+		return $granted;
 	}
 
 	/**

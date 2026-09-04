@@ -24,7 +24,7 @@ final class Schema {
 	 *
 	 * Drives the migration walker in Upgrader.
 	 */
-	public const DB_VERSION = 24;
+	public const DB_VERSION = 26;
 
 	/**
 	 * The audit table's name, without the site's table prefix.
@@ -669,6 +669,20 @@ final class Schema {
 	 * `Domain\Decision_Outcome`, so cardinality is decided by the domain rather
 	 * than by whatever a caller passes.
 	 *
+	 * **`opportunity` widens the unique key rather than joining it**, because a
+	 * page opportunity and a refresh of one are different inventory and must not
+	 * share a row. It defaults to `page`, which is what every row written before
+	 * P15 was: rotation existed, but nothing recorded that it had happened, so
+	 * the honest reading of history is that all of it was counted as supply.
+	 * That is stated rather than backfilled — no `UPDATE` can recover which
+	 * historical fills were refreshes, and pretending otherwise would invent
+	 * data.
+	 *
+	 * The old `slot_day_outcome` unique is dropped explicitly, in the migration
+	 * *and* in `install_table()`, because `dbDelta` adds an index and never
+	 * drops one. Left in place it would still enforce one row per outcome per
+	 * day and the refresh split would fail on insert.
+	 *
 	 * @param string $table_name      Fully prefixed table name.
 	 * @param string $charset_collate Database charset and collation.
 	 * @return string
@@ -679,9 +693,10 @@ final class Schema {
 	day_utc date NOT NULL,
 	placement_id bigint(20) unsigned NOT NULL DEFAULT 0,
 	outcome varchar(32) NOT NULL DEFAULT '',
+	opportunity varchar(8) NOT NULL DEFAULT 'page',
 	events bigint(20) unsigned NOT NULL DEFAULT 0,
 	PRIMARY KEY  (id),
-	UNIQUE KEY slot_day_outcome (placement_id,day_utc,outcome),
+	UNIQUE KEY slot_day_outcome_kind (placement_id,day_utc,outcome,opportunity),
 	KEY day_outcome (day_utc,outcome)
 ) {$charset_collate};";
 	}
@@ -697,6 +712,7 @@ final class Schema {
 			'day_utc',
 			'placement_id',
 			'outcome',
+			'opportunity',
 			'events',
 		);
 	}
@@ -707,7 +723,7 @@ final class Schema {
 	 * @return array<int, string>
 	 */
 	public static function decision_rollups_index_names(): array {
-		return array( 'PRIMARY', 'slot_day_outcome', 'day_outcome' );
+		return array( 'PRIMARY', 'slot_day_outcome_kind', 'day_outcome' );
 	}
 
 	/**

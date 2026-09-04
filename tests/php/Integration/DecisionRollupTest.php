@@ -80,16 +80,16 @@ final class DecisionRollupTest extends WP_UnitTestCase {
 		 * edit dropping the word UNIQUE would keep the name, keep the columns,
 		 * and quietly turn every increment into a duplicate row.
 		 */
-		$unique = array_values( array_filter( $rows, static fn ( array $r ): bool => 'slot_day_outcome' === $r['Key_name'] ) );
+		$unique = array_values( array_filter( $rows, static fn ( array $r ): bool => 'slot_day_outcome_kind' === $r['Key_name'] ) );
 
 		$this->assertNotEmpty( $unique );
 
 		foreach ( $unique as $part ) {
-			$this->assertSame( '0', (string) $part['Non_unique'], 'slot_day_outcome must be UNIQUE or increments duplicate instead of adding.' );
+			$this->assertSame( '0', (string) $part['Non_unique'], 'slot_day_outcome_kind must be UNIQUE or increments duplicate instead of adding.' );
 		}
 
 		$this->assertSame(
-			array( 'placement_id', 'day_utc', 'outcome' ),
+			array( 'placement_id', 'day_utc', 'outcome', 'opportunity' ),
 			array_column( $unique, 'Column_name' ),
 			'Deduplication is per placement, day and outcome; a key over anything else counts the wrong things together.'
 		);
