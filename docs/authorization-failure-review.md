@@ -48,7 +48,7 @@ was found in the reviewed scope.
 | Authenticated forms | 39 `admin_post_*` registrations | Authentication, feature capability, action/object-bound nonce, workflow authorization |
 | Public forms | 4 `admin_post_nopriv_*` registrations | Closed allowlist: login, signup, password request, password set; nonce, abuse bounds, non-enumerating responses |
 | Public delivery | fill, impression beacon, click hop | Same-origin/fetch-metadata checks where applicable, signed site-bound tokens, expiry/live-state validation, replay protection |
-| Staff admin | Review, Organizations, Inventory, Packages, Settings | Independent primitive per screen and REST write; publishing remains separate from reviewing |
+| Staff admin | Review, Organizations, Placements, Packages, Settings | Independent primitive per screen and REST write; publishing remains separate from reviewing |
 | Scheduled work | lifecycle, notifications, rollups, retention | No request-selected object scope; fixed hooks query eligible server-side state and use system-only transitions where required |
 
 `tests/php/Security/AuthorizationSurfaceTest.php` is the closed REST inventory.

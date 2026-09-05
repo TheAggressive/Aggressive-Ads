@@ -23,7 +23,7 @@ Nothing here is built merely because this document exists.
   Settings                     aggr_manage_settings
 ```
 
-Reviewers never see Settings. Inventory never implies Review. Caps stay
+Reviewers never see Settings. Placements never implies Review. Caps stay
 distinct; only the **shell** unifies. Parent slug `aggr` stays stable.
 
 **Settings (control plane)**
@@ -122,14 +122,14 @@ axe on each wizard step plus open overlays.
 **Shipped.** Settings + modules + brand tokens + unified Advertising menu.
 `aggr_manage_settings` gates the
 Settings screen. Public signup off is a 404 unless the URL carries an
-invitation token. Inventory is always registered.
+invitation token. Placements is always registered.
 
 ### Phase C — Native delivery
 
 **Shipped.** Live set is `aggr_live`, not an `ads` CPT. Cached HTML is a
 reserved slot; fill and beacons are uncached. Native is the
 `Ad_Provider_Interface`.
-Inventory creates placements (common sizes + custom WxH), house creative, and
+Placements creates placements (common sizes + custom WxH), house creative, and
 the public slug.
 
 ### Phase D — Cutover (LAAO site)

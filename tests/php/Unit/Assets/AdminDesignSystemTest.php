@@ -84,7 +84,7 @@ final class AdminDesignSystemTest extends TestCase {
 	 * A placement is deactivated, never deleted.
 	 *
 	 * The markup assertions that used to live here described a server-rendered
-	 * form that no longer exists — Inventory is a React screen writing through
+	 * form that no longer exists — Placements is a React screen writing through
 	 * REST. What they were really protecting survives the move and is asserted
 	 * where it now lives: there is no delete affordance and no route to reach
 	 * one. Deleting a placement would orphan every package that sells it and
@@ -104,7 +104,7 @@ final class AdminDesignSystemTest extends TestCase {
 	}
 
 	/**
-	 * Inventory keeps the size choices the deleted template offered.
+	 * Placements keeps the size choices the deleted template offered.
 	 *
 	 * The common-size list and the custom escape hatch are the whole point of
 	 * the screen: without the second, a site with a slot that is not an IAB

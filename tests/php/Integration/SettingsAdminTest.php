@@ -43,7 +43,7 @@ final class SettingsAdminTest extends WP_UnitTestCase {
 	private Settings_Screen $screen;
 
 	/**
-	 * Inventory screen. Always registered.
+	 * Placements screen. Always registered.
 	 *
 	 * @var Placement_Screen
 	 */
@@ -178,7 +178,7 @@ final class SettingsAdminTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Inventory is registered. Native delivery is not a kill-switch for it.
+	 * Placements is registered. Native delivery is not a kill-switch for it.
 	 *
 	 * @return void
 	 */

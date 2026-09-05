@@ -30,7 +30,7 @@ use WP_REST_Response;
  *
  * Reading and writing are separated by capability rather than by class: any
  * advertiser may see what is on offer, only `aggr_manage_placements` may decide
- * what is. The write half is what the Inventory screen posts to.
+ * what is. The write half is what the Placements screen posts to.
  */
 final class Placements_Controller implements Service {
 

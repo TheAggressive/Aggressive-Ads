@@ -64,7 +64,7 @@ a successful submission. See [notifications.md](notifications.md).
 
 ## Phase 6 — Publisher *(complete; adapter superseded)*
 
-`Ad_Provider_Interface` is implemented by `Integration\Native\Publisher`. Inventory is the placement catalogue (common IAB sizes plus custom WxH). There is no AdSanity adapter.
+`Ad_Provider_Interface` is implemented by `Integration\Native\Publisher`. Placements is the slot catalogue (common IAB sizes plus custom WxH). There is no AdSanity adapter.
 
 ## Phase 7 — Lifecycle automation *(complete)*
 

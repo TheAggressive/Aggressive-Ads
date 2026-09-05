@@ -267,7 +267,7 @@ in, so a REST write of 400 cannot become supply a modified browser
 would request and an honest one cannot.
 
 The policy itself had the same shape: `set_refresh_policy()` was tested and
-the inventory screen never called it. A new placement resolved `rotate:true`
+the Placements screen never called it. A new placement resolved `rotate:true`
 to off, and nothing on the form could change that. The write path is
 `Placement_Manager` through the catalogue route; a test that only calls the
 repository is not a test of the publisher's switch.
@@ -440,8 +440,8 @@ authenticated private preview, dialog keyboard (open, Tab trap, Escape,
 focus restore) for preview/remove/replace, non-clickable review
 destination, axe conformance on each wizard step plus open overlays, and that
 the active Twenty Twenty-Five block theme does not wrap the standalone portal.
-The inventory browser spec signs in as an administrator, opens the capability-
-gated wp-admin Inventory screen, creates a custom-size placement, and scans
+The placements browser spec signs in as an administrator, opens the capability-
+gated wp-admin Placements screen, creates a custom-size placement, and scans
 pre- and post-write states with axe.
 
 Global setup seeds and resets deterministic data; teardown deletes the campaign,

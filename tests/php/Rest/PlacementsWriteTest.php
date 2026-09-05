@@ -21,7 +21,7 @@ use WP_REST_Response;
 use WP_UnitTestCase;
 
 /**
- * What replaced Inventory's admin-post handlers.
+ * What replaced Placements' admin-post handlers.
  *
  * The screen moved to React and its forms went with it, so these routes are now
  * the only way to change what advertisers can buy — and a placement slug is

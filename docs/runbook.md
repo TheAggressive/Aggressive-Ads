@@ -239,7 +239,7 @@ Advertising → Settings.
    at save; that is the check, and there is no override.
 2. **Modules** — decide Reporting and Public signup deliberately. Off means the
    surface is absent, so switching Reporting on later is safe and reversible.
-3. **Inventory** — create the placements that match the slots in the theme.
+3. **Placements** — create the placements that match the slots in the theme.
 4. **Packages** — create what advertisers may buy.
 
 **Check.** `wp option get aggr_settings` returns what you set.
@@ -273,7 +273,7 @@ A visitor with **no JavaScript** sees the house advertisement where one is
 configured, and nothing at all where one is not — the slot removes itself rather
 than leaving an empty box. A slot with `collapse_when_empty="false"` keeps its
 space for them too, because reserving the box is a layout decision. Advertising
-→ Inventory says which placements have no house advertisement.
+→ Placements says which placements have no house advertisement.
 
 **Turn collapsing off only where the layout needs the space held.** An unsold
 slot that keeps its space is an empty box the size of the ad, on every page it
