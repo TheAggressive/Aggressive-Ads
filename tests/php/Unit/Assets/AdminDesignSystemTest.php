@@ -94,13 +94,52 @@ final class AdminDesignSystemTest extends TestCase {
 	 */
 	public function test_a_placement_can_never_be_deleted(): void {
 		$controller = file_get_contents( AGGR_PLUGIN_DIR . 'inc/REST/class-placements-controller.php' );
-		$screen     = file_get_contents( AGGR_PLUGIN_DIR . 'src/admin/inventory/index.tsx' );
 
 		$this->assertIsString( $controller );
-		$this->assertIsString( $screen );
 		$this->assertStringNotContainsString( "'DELETE'", $controller );
-		$this->assertStringNotContainsString( 'Delete placement', $screen );
 		$this->assertStringContainsString( 'is_active', $controller );
+
+		/*
+		 * Every module, because this is a negative assertion.
+		 *
+		 * Pinned to `index.tsx` it passed while a delete affordance sat in
+		 * `form.tsx` — verified, not supposed. A negative that only looks at
+		 * one of two files reports the absence of what it did not look for,
+		 * which for a safety guard is worse than having none: deleting a
+		 * placement orphans every package that sells it and every campaign
+		 * snapshot that bought one.
+		 */
+		$this->assertStringNotContainsString( 'Delete placement', $this->inventory_screen() );
+	}
+
+	/**
+	 * Every module of the placements screen, concatenated.
+	 *
+	 * **Read as a directory, never as a filename.** Both guards below were
+	 * pinned to `index.tsx`, and the DataViews refactor moved half the screen
+	 * into `form.tsx`. One of them failed loudly and was found; the other is a
+	 * negative assertion and passed over a file it was no longer looking at.
+	 * A guard tied to a filename is a guard the next split escapes.
+	 *
+	 * @return string
+	 */
+	private function inventory_screen(): string {
+		$modules = glob( AGGR_PLUGIN_DIR . 'src/admin/inventory/*.tsx' );
+
+		$this->assertIsArray( $modules );
+		$this->assertNotCount(
+			0,
+			$modules,
+			'The placements screen has no modules, so every assertion over it would pass over nothing.'
+		);
+
+		$source = '';
+
+		foreach ( $modules as $module ) {
+			$source .= (string) file_get_contents( $module );
+		}
+
+		return $source;
 	}
 
 	/**
@@ -113,10 +152,9 @@ final class AdminDesignSystemTest extends TestCase {
 	 * @return void
 	 */
 	public function test_inventory_offers_common_and_custom_sizes(): void {
-		$screen = file_get_contents( AGGR_PLUGIN_DIR . 'src/admin/inventory/index.tsx' );
+		$screen = $this->inventory_screen();
 		$php    = file_get_contents( AGGR_PLUGIN_DIR . 'inc/Admin/class-placement-screen.php' );
 
-		$this->assertIsString( $screen );
 		$this->assertIsString( $php );
 
 		// The strings live in PHP because make-pot does not parse .tsx.
