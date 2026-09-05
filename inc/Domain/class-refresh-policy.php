@@ -153,23 +153,6 @@ final class Refresh_Policy {
 	}
 
 	/**
-	 * The client's view of this policy.
-	 *
-	 * Every key is always present, including defaulted ones. The store treats an
-	 * absent key as the shipped behaviour, which makes an omission
-	 * indistinguishable from a choice.
-	 *
-	 * @return array<string, bool|int>
-	 */
-	public function to_context(): array {
-		return array(
-			'refreshEnabled'    => $this->enabled,
-			'refreshSeconds'    => $this->interval_seconds,
-			'refreshMaxPerView' => $this->max_per_view,
-		);
-	}
-
-	/**
 	 * A requested interval, floored at what any policy may permit.
 	 *
 	 * @param mixed $requested Stored value.

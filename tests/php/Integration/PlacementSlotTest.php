@@ -12,6 +12,7 @@ namespace Aggressive\Ads\Tests\Integration;
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Core\Settings;
 use Aggressive\Ads\Domain\Settings_Schema;
+use Aggressive\Ads\Domain\Refresh_Policy;
 use Aggressive\Ads\Domain\Slot_Options;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Placement_Repository;
@@ -63,16 +64,7 @@ final class PlacementSlotTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function test_the_pre_rename_block_name_still_renders(): void {
-		$placement_id = self::factory()->post->create(
-			array(
-				'post_type'   => Post_Types::PLACEMENT,
-				'post_status' => 'publish',
-				'post_name'   => 'legacy-leaderboard',
-			)
-		);
-
-		update_post_meta( $placement_id, Placement_Repository::META_IS_ACTIVE, 1 );
-		update_post_meta( $placement_id, Placement_Repository::META_SIZE, '728x90' );
+		$this->place( 'legacy-leaderboard' );
 
 		$legacy = do_blocks( '<!-- wp:aggr/placement {"slot":"legacy-leaderboard"} /-->' );
 		$fresh  = do_blocks( '<!-- wp:aggr/ad-slot {"slot":"legacy-leaderboard"} /-->' );
@@ -102,16 +94,7 @@ final class PlacementSlotTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function test_rotation_reaches_the_client_as_context(): void {
-		$placement_id = self::factory()->post->create(
-			array(
-				'post_type'   => Post_Types::PLACEMENT,
-				'post_status' => 'publish',
-				'post_name'   => 'rotating-leaderboard',
-			)
-		);
-
-		update_post_meta( $placement_id, Placement_Repository::META_IS_ACTIVE, 1 );
-		update_post_meta( $placement_id, Placement_Repository::META_SIZE, '728x90' );
+		$this->place( 'rotating-leaderboard' );
 
 		$html = do_blocks( '<!-- wp:aggr/ad-slot {"slot":"rotating-leaderboard","rotate":true,"rotateSeconds":45} /-->' );
 
@@ -119,6 +102,40 @@ final class PlacementSlotTest extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'data-wp-init="callbacks.fill"', $html );
 		$this->assertStringContainsString( '&quot;rotate&quot;:true', $html );
 		$this->assertStringContainsString( '&quot;rotateSeconds&quot;:45', $html );
+		$this->assertStringContainsString(
+			'&quot;maxRefreshes&quot;:' . Refresh_Policy::LEGACY_CLIENT_MAX_PER_VIEW,
+			$html
+		);
+	}
+
+	/**
+	 * **A placement nobody configured does not start a timer.**
+	 *
+	 * The block asked to rotate. The placement carries no policy, so the
+	 * strict default applies. Resolving that only in a unit test of
+	 * `Slot_Options` leaves `Placement_Slot::markup()` free to forget the
+	 * call — which is how `maxRefreshes` shipped as a key no client read.
+	 *
+	 * @return void
+	 */
+	public function test_an_unconfigured_placement_does_not_start_a_timer(): void {
+		$placement_id = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::PLACEMENT,
+				'post_status' => 'publish',
+				'post_name'   => 'unconfigured-leaderboard',
+			)
+		);
+
+		update_post_meta( $placement_id, Placement_Repository::META_IS_ACTIVE, 1 );
+		update_post_meta( $placement_id, Placement_Repository::META_SIZE, '728x90' );
+
+		$html = do_blocks(
+			'<!-- wp:aggr/ad-slot {"slot":"unconfigured-leaderboard","rotate":true,"rotateSeconds":1} /-->'
+		);
+
+		$this->assertStringContainsString( '&quot;rotate&quot;:false', $html );
+		$this->assertStringNotContainsString( '&quot;rotate&quot;:true', $html );
 	}
 
 	/**
@@ -133,16 +150,7 @@ final class PlacementSlotTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function test_an_interval_below_the_floor_is_raised(): void {
-		$placement_id = self::factory()->post->create(
-			array(
-				'post_type'   => Post_Types::PLACEMENT,
-				'post_status' => 'publish',
-				'post_name'   => 'fast-leaderboard',
-			)
-		);
-
-		update_post_meta( $placement_id, Placement_Repository::META_IS_ACTIVE, 1 );
-		update_post_meta( $placement_id, Placement_Repository::META_SIZE, '728x90' );
+		$this->place( 'fast-leaderboard' );
 
 		$html = do_blocks( '<!-- wp:aggr/ad-slot {"slot":"fast-leaderboard","rotate":true,"rotateSeconds":0} /-->' );
 
@@ -170,16 +178,7 @@ final class PlacementSlotTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function test_a_static_slot_declares_that_it_does_not_rotate(): void {
-		$placement_id = self::factory()->post->create(
-			array(
-				'post_type'   => Post_Types::PLACEMENT,
-				'post_status' => 'publish',
-				'post_name'   => 'static-leaderboard',
-			)
-		);
-
-		update_post_meta( $placement_id, Placement_Repository::META_IS_ACTIVE, 1 );
-		update_post_meta( $placement_id, Placement_Repository::META_SIZE, '728x90' );
+		$this->place( 'static-leaderboard' );
 
 		$html = do_blocks( '<!-- wp:aggr/ad-slot {"slot":"static-leaderboard"} /-->' );
 
@@ -523,6 +522,24 @@ final class PlacementSlotTest extends WP_UnitTestCase {
 
 		update_post_meta( $placement_id, Placement_Repository::META_IS_ACTIVE, 1 );
 		update_post_meta( $placement_id, Placement_Repository::META_SIZE, '728x90' );
+
+		/*
+		 * Permitted to refresh, the way migration 25 permits every placement
+		 * that existed before the policy did.
+		 *
+		 * A raw fixture placement carries no policy, so P15's strict default
+		 * applies and the block's rotation request resolves to off — which is
+		 * correct, and would make every assertion about rotation here a test of
+		 * the default rather than of what it is named for. Granting it in the
+		 * fixture keeps these about the block reaching the client, and the
+		 * default has its own tests in `InventoryGrainTest`.
+		 */
+		Plugin::instance()->container()->get( Placement_Repository::class )->set_refresh_policy(
+			$placement_id,
+			true,
+			Slot_Options::MIN_ROTATE_SECONDS,
+			Refresh_Policy::LEGACY_CLIENT_MAX_PER_VIEW
+		);
 
 		return $placement_id;
 	}

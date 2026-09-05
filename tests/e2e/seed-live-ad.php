@@ -19,6 +19,8 @@ declare(strict_types=1);
 use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Domain\Assignment_Rules;
+use Aggressive\Ads\Domain\Refresh_Policy;
+use Aggressive\Ads\Domain\Slot_Options;
 use Aggressive\Ads\Install\Creative_Assignment_Migrator;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Workflow\Campaign_State_Machine;
@@ -246,6 +248,20 @@ wp_insert_post(
  * placement, same creative, no interval.
  */
 $aggr_rotating = '<!-- wp:aggr/ad-slot {"slot":"e2e-browser-placement","rotate":true,"rotateSeconds":2} /-->';
+
+/*
+ * The same file that asks to rotate has to grant the policy. This placement
+ * is created after activation, so the upgrade backfill never sees it, and a
+ * grant sitting only in another seed is how a new rotating page would ship
+ * with `rotate:true` resolved to off.
+ */
+$aggr_placements = new Placement_Repository();
+$aggr_placements->set_refresh_policy(
+	$aggr_placement_id,
+	true,
+	Slot_Options::MIN_ROTATE_SECONDS,
+	Refresh_Policy::LEGACY_CLIENT_MAX_PER_VIEW
+);
 
 /*
  * A placement nothing can ever fill: active, correctly sized, and with no

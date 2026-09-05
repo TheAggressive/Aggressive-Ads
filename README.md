@@ -135,7 +135,7 @@ pnpm lint:js                 # ESLint on src/
 pnpm typecheck               # tsc --noEmit
 pnpm lint:css                # Stylelint on every authored CSS file under src/
 pnpm test:js                 # Jest on Interactivity helpers
-pnpm lint:files              # file length, repository boundary, permission callbacks
+pnpm lint:files              # file length, boundaries, permission callbacks, client contract
 pnpm ci:coverage             # combined unit + integration PCOV coverage
 pnpm test:e2e:browsers       # install Chromium and WebKit
 pnpm test:e2e:install        # the same, plus system libraries (needs sudo; what CI runs)

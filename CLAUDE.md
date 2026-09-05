@@ -75,8 +75,10 @@ pnpm test:php:integration   # WP integration/security/rest/upgrade (needs env:st
 pnpm test:php:multisite     # colliding-id tenancy (needs env:start)
 ```
 
-`lint:files` covers file length, architecture boundaries and permission
-callbacks. Every `ci:*` script maps 1:1 onto a CI job — adding a lane means
+`lint:files` covers file length, architecture boundaries, permission
+callbacks and the client contract (every value PHP puts on a slot, the
+browser must read; every value the fill route reads, the browser must
+write). Every `ci:*` script maps 1:1 onto a CI job — adding a lane means
 adding it to **both** the workflow and `bin/ci/verify.sh`; adding it to one is
 how the two drift.
 ## Architecture, in brief
@@ -163,6 +165,11 @@ tests caught passing for the wrong reason, incident by incident.
   shipped complete and capped nobody: `get_count()` was correct and nothing
   called `increment()`. Every test arranged its own count, so all passed. A
   counter test that never writes through the production path tests arithmetic.
+  P15 did it twice in one slice: `maxRefreshes` left the server and `view.js`
+  never read it; `n` landed on the fill route and `fillSlot` never sent it.
+  `bin/ci/check-client-contract.mjs` and `ClientContractParityTest` read both
+  sources and fail when one side is missing — do not add a context key or a
+  fill parameter without that lane seeing a reader.
 
 ## Working style
 

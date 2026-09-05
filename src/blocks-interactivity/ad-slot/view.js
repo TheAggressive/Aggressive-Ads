@@ -14,43 +14,14 @@
 import { store, getContext, getElement } from '@wordpress/interactivity';
 import { fillSlot } from './fill.js';
 import { settleEmptySlot } from './empty.js';
+import { rotationCap, rotationInterval } from './rotation.js';
 
-/**
- * The shortest rotation this will honour, in seconds.
- *
- * One second, by product decision — the publisher wants rotation to be visible
- * rather than paced. **Every rotation is still a new impression**, so a slot at
- * this floor records sixty an hour per minute of viewing, which is the kind of
- * volume an exchange classifies as invalid traffic. Nothing here can prevent
- * that; the floor exists only to stop a zero or a negative from becoming an
- * interval of no length at all.
- */
-export const MIN_ROTATE_SECONDS = 1;
-
-/**
- * The most times one slot will rotate for a single page view.
- *
- * A tab left open overnight must not spend a campaign's whole daily cap. At the
- * default interval this is a little under an hour of continuous viewing, which
- * is far longer than any real session on one page.
- */
-export const MAX_ROTATIONS = 100;
-
-/**
- * Seconds an attribute asks for, clamped to something honest.
- *
- * @param {unknown} seconds Requested interval.
- * @return {number} Interval to use.
- */
-export const rotationInterval = ( seconds ) => {
-	const requested = Number( seconds );
-
-	if ( ! Number.isFinite( requested ) ) {
-		return MIN_ROTATE_SECONDS;
-	}
-
-	return Math.max( MIN_ROTATE_SECONDS, Math.floor( requested ) );
-};
+export {
+	MAX_ROTATIONS,
+	MIN_ROTATE_SECONDS,
+	rotationCap,
+	rotationInterval,
+} from './rotation.js';
 
 /**
  * Slots whose first fill has already been dispatched.
@@ -70,7 +41,7 @@ const started = new WeakSet();
  * @param {Object}      context Block context.
  */
 const run = async ( root, context ) => {
-	const rendered = await fillSlot( root );
+	const rendered = await fillSlot( root, 0 );
 
 	/*
 	 * Nothing to show, so show nothing — unless the block asked otherwise.
@@ -175,7 +146,7 @@ const startRotation = ( root, context ) => {
 			return;
 		}
 
-		if ( rotations >= MAX_ROTATIONS ) {
+		if ( rotations >= rotationCap( context.maxRefreshes ) ) {
 			window.clearInterval( timer );
 
 			return;
@@ -187,7 +158,7 @@ const startRotation = ( root, context ) => {
 		// A failed rotation leaves the ad that is already there. Blanking a
 		// slot because one request lost the network is worse than showing the
 		// previous creative for another interval.
-		await fillSlot( root );
+		await fillSlot( root, rotations );
 
 		busy = false;
 	}, seconds * 1000 );

@@ -55,18 +55,33 @@ const buildAd = ( creative ) => {
  * rotation is worth continuing. A slot that answered `no_fill` is a slot with
  * nothing to rotate to.
  *
- * @param {HTMLElement} root Slot wrapper.
+ * The sequence is which fill this is within the page view, zero-based. The
+ * server cannot infer it — the endpoint is stateless and sits behind a page
+ * cache — so the client says. A request that omits it is a page opportunity,
+ * which is what every fill from a cached page predating this parameter is.
+ *
+ * @param {HTMLElement} root     Slot wrapper.
+ * @param {number}      sequence Fill number within the page view, zero-based.
  * @return {Promise<boolean>} Whether an ad is now on the page.
  */
-export const fillSlot = async ( root ) => {
+export const fillSlot = async ( root, sequence = 0 ) => {
 	const url = root.dataset.aggrFill;
 
 	if ( ! url ) {
 		return false;
 	}
 
+	const declared = Number( sequence );
+	const n =
+		Number.isFinite( declared ) && declared > 0
+			? Math.floor( declared )
+			: 0;
+
+	const endpoint = new URL( url, window.location.href );
+	endpoint.searchParams.set( 'n', String( n ) );
+
 	try {
-		const response = await fetch( url, {
+		const response = await fetch( endpoint.href, {
 			credentials: 'omit',
 			headers: { Accept: 'application/json' },
 		} );

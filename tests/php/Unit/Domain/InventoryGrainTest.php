@@ -11,6 +11,7 @@ namespace Aggressive\Ads\Tests\Unit\Domain;
 
 use Aggressive\Ads\Domain\Opportunity;
 use Aggressive\Ads\Domain\Refresh_Policy;
+use Aggressive\Ads\Domain\Slot_Options;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -221,19 +222,114 @@ final class InventoryGrainTest extends TestCase {
 	}
 
 	/**
-	 * The context states every setting rather than omitting defaults.
+	 * **A placement that forbids refresh does not start a timer.**
+	 *
+	 * The block asked to rotate every second; the placement says no. Leaving
+	 * `rotate` true would start an interval whose every request the server
+	 * refuses — a browser politely asking a hundred times for something it will
+	 * never be given.
 	 *
 	 * @return void
 	 */
-	public function test_the_context_states_every_setting(): void {
-		$this->assertSame(
+	public function test_a_forbidden_placement_resolves_rotation_off(): void {
+		$asked  = Slot_Options::from_block_attributes(
 			array(
-				'refreshEnabled'    => false,
-				'refreshSeconds'    => Refresh_Policy::DEFAULT_INTERVAL_SECONDS,
-				'refreshMaxPerView' => Refresh_Policy::DEFAULT_MAX_PER_VIEW,
-			),
-			Refresh_Policy::defaults()->to_context()
+				'rotate'        => true,
+				'rotateSeconds' => 1,
+			)
 		);
+		$policy = Refresh_Policy::from_stored( false, 30, 6 );
+
+		$context = $asked->resolved_context( $policy );
+
+		$this->assertFalse( $context['rotate'] );
+	}
+
+	/**
+	 * A cap of zero is a timer that must not start, even though refresh is on.
+	 *
+	 * Enabled-and-capped-at-zero is a documented valid state: the publisher
+	 * left the switch on while they decide. `permits_sequence()` already
+	 * refuses every refresh. Starting a timer anyway is the browser asking
+	 * for something it will never be given.
+	 *
+	 * @return void
+	 */
+	public function test_a_zero_cap_resolves_rotation_off(): void {
+		$asked = Slot_Options::from_block_attributes(
+			array(
+				'rotate'        => true,
+				'rotateSeconds' => 30,
+			)
+		);
+
+		$this->assertFalse(
+			$asked->resolved_context( Refresh_Policy::from_stored( true, 30, 0 ) )['rotate']
+		);
+	}
+
+	/**
+	 * The publisher's floor wins over a faster request, and only over that.
+	 *
+	 * @return void
+	 */
+	public function test_the_resolved_interval_is_the_slower_of_the_two(): void {
+		$policy = Refresh_Policy::from_stored( true, 30, 6 );
+
+		$fast = Slot_Options::from_block_attributes(
+			array(
+				'rotate'        => true,
+				'rotateSeconds' => 2,
+			)
+		)->resolved_context( $policy );
+
+		$slow = Slot_Options::from_block_attributes(
+			array(
+				'rotate'        => true,
+				'rotateSeconds' => 90,
+			)
+		)->resolved_context( $policy );
+
+		$this->assertTrue( $fast['rotate'] );
+		$this->assertSame( 30, $fast['rotateSeconds'], 'A block outran the placement that hosts it.' );
+		$this->assertSame( 90, $slow['rotateSeconds'], 'A slower request was overridden, which records more impressions, not fewer.' );
+	}
+
+	/**
+	 * The cap travels to the client so it stops itself at the publisher's number.
+	 *
+	 * @return void
+	 */
+	public function test_the_resolved_context_carries_the_publishers_cap(): void {
+		$context = Slot_Options::defaults()->resolved_context( Refresh_Policy::from_stored( true, 30, 4 ) );
+
+		$this->assertSame( 4, $context['maxRefreshes'] );
+
+		// And every key is present, so an omission cannot look like a choice.
+		$this->assertSame(
+			array( 'rotate', 'rotateSeconds', 'maxRefreshes', 'collapseWhenEmpty' ),
+			array_keys( $context )
+		);
+	}
+
+	/**
+	 * Collapsing is the block's decision and the policy does not touch it.
+	 *
+	 * Reserving space is a layout question; refreshing is an inventory one. A
+	 * policy that quietly changed the first would be answering a question
+	 * nobody asked it.
+	 *
+	 * @return void
+	 */
+	public function test_the_policy_does_not_touch_the_collapse_decision(): void {
+		$kept = Slot_Options::from_block_attributes( array( 'collapseWhenEmpty' => false ) );
+
+		foreach ( array( true, false ) as $enabled ) {
+			$this->assertFalse(
+				$kept->resolved_context( Refresh_Policy::from_stored( $enabled, 30, 6 ) )['collapseWhenEmpty'],
+				'The refresh policy changed whether the slot keeps its space.'
+			);
+		}
 	}
 
 	/**

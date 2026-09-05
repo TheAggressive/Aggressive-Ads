@@ -224,6 +224,34 @@ unauthenticated probe that audited every attempt would be an unbounded write
 anybody could drive — but it means a denial-audit assertion belongs in a manager
 test, not a route test.
 
+**A write half and a read half that never meet will keep happening until
+something reads both sources.** P15 resolved the publisher's refresh policy
+into slot context — `rotate`, `rotateSeconds`, `maxRefreshes` — and unit-tested
+the JSON. The store still stopped on its own `MAX_ROTATIONS`. The fill route
+grew an `n` parameter that partitions page from refresh; every serving test
+passed a sequence in by hand; `fillSlot` fetched the bare URL. Rotations
+filed as page opportunities and the publisher's cap never reached the timer.
+
+That is the frequency counter again, one layer out: the PHP was correct, the
+JS was complete, and nothing joined them. The fixture that would have caught
+the timer half — an unconfigured placement asked to rotate — was updated to
+*grant* the policy so the existing assertions stayed green, which is how a
+test of the default became a test of the grant.
+
+`bin/ci/check-client-contract.mjs` (in `lint:files`) and
+`ClientContractParityTest` close the naming half. They take the keys
+`resolved_context()` actually emits, require a `context.KEY` reader in the
+runtime client, require `fill.js` to send `n` from the sequence argument and
+`view.js` to pass the incrementing counter, and refuse an E2E file that asks
+`rotate:true` without calling `set_refresh_policy()` in that same file.
+
+The behaviour half is the fill route and the browser. `DecisionServingTest`
+dispatches `GET /aggr/v1/fill/{slot}?n=` and reads the rollup — a sequence
+passed into `for_slug()` by hand is how the grain tests stayed green while
+the client sent nothing. `rotation.spec.ts` asserts the first fills carry
+`n=0` and the refetch carries `n=1`, which is the only way to see that the
+store actually wrote what the route reads.
+
 ## Suites
 
 | Suite | Config | Bootstrap | Needs |

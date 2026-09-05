@@ -32,6 +32,7 @@ export default [
 				window: 'readonly',
 				document: 'readonly',
 				fetch: 'readonly',
+				URL: 'readonly',
 				URLSearchParams: 'readonly',
 				HTMLElement: 'readonly',
 				IntersectionObserver: 'readonly',

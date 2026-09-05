@@ -94,4 +94,28 @@ describe( 'ad slot fill', () => {
 		// nothing to rotate to.
 		expect( await fillSlot( root ) ).toBe( false );
 	} );
+
+	it( 'declares which fill this is so a rotation is not a page opportunity', async () => {
+		document.body.innerHTML = `
+			<div data-aggr-slot="leaderboard" data-aggr-fill="/fill">
+				<div class="aggr-slot__canvas"></div>
+			</div>
+		`;
+		const root = document.querySelector( '[data-aggr-slot]' );
+
+		window.fetch = jest.fn().mockResolvedValue( {
+			ok: true,
+			json: async () => ( { creative: null, house: null } ),
+		} );
+
+		await fillSlot( root );
+		await fillSlot( root, 1 );
+		await fillSlot( root, 6 );
+
+		const requested = window.fetch.mock.calls.map( ( [ url ] ) => url );
+
+		expect( requested[ 0 ] ).toContain( 'n=0' );
+		expect( requested[ 1 ] ).toContain( 'n=1' );
+		expect( requested[ 2 ] ).toContain( 'n=6' );
+	} );
 } );

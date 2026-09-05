@@ -173,6 +173,8 @@ gate rather than part of this metric.
 - **no `get_posts` / `WP_Query` / `get_post_meta` / `$wpdb` outside `inc/Repository/`**
 - **no AdSanity identifiers in `inc/` or `templates/`**
 - no `'permission_callback' => '__return_true'`
+- every slot-context key PHP emits has a client reader, and the fill
+  sequence the server reads is one the client writes
 - one top z-index token
 
 These enforce the architecture in [architecture.md](architecture.md). Conventions that are only written down erode; conventions that fail the build do not.

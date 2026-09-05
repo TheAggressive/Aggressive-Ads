@@ -24,14 +24,22 @@ import { expect, test } from '@playwright/test';
 const PLACEMENT = 'e2e-browser-placement';
 const UNSOLD = '[data-aggr-slot="e2e-empty-placement"]';
 
+/**
+ * The fill sequence the client put on the wire.
+ *
+ * @param url Absolute fill URL.
+ */
+const sequenceOf = ( url: string ): string | null =>
+	new URL( url ).searchParams.get( 'n' );
+
 test( 'a rotating slot refetches while a static one beside it does not', async ( {
 	page,
 } ) => {
-	const fills: number[] = [];
+	const fills: string[] = [];
 
 	page.on( 'request', ( request ) => {
 		if ( request.url().includes( `/aggr/v1/fill/${ PLACEMENT }` ) ) {
-			fills.push( Date.now() );
+			fills.push( request.url() );
 		}
 	} );
 
@@ -61,6 +69,14 @@ test( 'a rotating slot refetches while a static one beside it does not', async (
 	 * the later assertion without anything having rotated.
 	 */
 	await expect.poll( () => fills.length ).toBe( 2 );
+
+	/*
+	 * Both first fills declare sequence zero. A rotation that omitted `n`
+	 * would look identical on the wire to these, and the server would file
+	 * it as supply — which is what shipped while every PHP test passed a
+	 * sequence in by hand.
+	 */
+	expect( fills.map( sequenceOf ) ).toEqual( [ '0', '0' ] );
 
 	/*
 	 * Marks the rendered images, so the assertion after the interval is about
@@ -96,6 +112,11 @@ test( 'a rotating slot refetches while a static one beside it does not', async (
 	).toHaveCount( 1 );
 
 	await expect( slots.first().locator( 'img' ) ).toBeVisible();
+
+	const rotation = fills[ 2 ];
+
+	expect( rotation ).toBeDefined();
+	expect( sequenceOf( rotation ) ).toBe( '1' );
 
 	// The sentinel survived, so this document was never replaced: the creative
 	// changed in place, which is the whole claim.

@@ -246,8 +246,16 @@ final class Placement_Slot implements Service {
 		 * builds an attribute *array* that the wrapper helpers escape, so taking
 		 * the helper's output and stripping the name and quotes back off it
 		 * would be doing the same work twice and undoing half of it.
+		 *
+		 * The context is resolved against the placement's own refresh policy
+		 * before it leaves the server. The block states a request, the publisher
+		 * states a rule, and the browser receives the answer — handing the
+		 * client both halves would put the arithmetic in the one place a
+		 * publisher cannot govern and a reader can edit.
 		 */
-		$encoded = wp_json_encode( $options->to_context() );
+		$encoded = wp_json_encode(
+			$options->resolved_context( $this->placements->refresh_policy( $placement_id ) )
+		);
 
 		if ( is_string( $encoded ) ) {
 			$extra['data-wp-context'] = $encoded;

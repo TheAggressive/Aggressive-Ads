@@ -14,7 +14,7 @@ use Aggressive\Ads\Domain\Slot_Options;
 use WP_UnitTestCase;
 
 /**
- * Three copies of the rotation floor exist — PHP, the view store and the editor
+ * Three copies of the rotation floor exist — PHP, `rotation.js` and the editor
  * — and the editor's docblock has said "`PlacementSlotTest` asserts the three
  * agree" for as long as the third copy has existed. **It did not.** Nothing read
  * the JavaScript, so the sentence was a description of an intention.
@@ -61,7 +61,7 @@ final class ClientConstantParityTest extends WP_UnitTestCase {
 	public function test_the_shared_constants_agree_across_languages(): void {
 		$pairs = array(
 			'view store rotation floor' => array(
-				'src/blocks-interactivity/ad-slot/view.js',
+				'src/blocks-interactivity/ad-slot/rotation.js',
 				'MIN_ROTATE_SECONDS',
 				Slot_Options::MIN_ROTATE_SECONDS,
 			),
@@ -71,7 +71,7 @@ final class ClientConstantParityTest extends WP_UnitTestCase {
 				Slot_Options::MIN_ROTATE_SECONDS,
 			),
 			'client refresh hard stop'  => array(
-				'src/blocks-interactivity/ad-slot/view.js',
+				'src/blocks-interactivity/ad-slot/rotation.js',
 				'MAX_ROTATIONS',
 				Refresh_Policy::LEGACY_CLIENT_MAX_PER_VIEW,
 			),

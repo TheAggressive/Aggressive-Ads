@@ -29,6 +29,7 @@ use Aggressive\Ads\Domain\Opportunity;
 use Aggressive\Ads\Repository\Decision_Rollup_Repository;
 use Aggressive\Ads\Workflow\Decision_Metrics;
 use Aggressive\Ads\Workflow\Fill_Service;
+use WP_REST_Request;
 use WP_UnitTestCase;
 
 /**
@@ -71,6 +72,8 @@ final class DecisionServingTest extends WP_UnitTestCase {
 		Plugin::instance()->container()->get( Creative_Assignment_Repository::class )->install_table();
 		$this->seed_assignment();
 		$this->enable_native();
+
+		do_action( 'rest_api_init', rest_get_server() );
 
 		add_filter(
 			'wp_get_attachment_image_src',
@@ -154,23 +157,22 @@ final class DecisionServingTest extends WP_UnitTestCase {
 	 * `increment()`, and every test arranged its own count so all of them
 	 * passed.
 	 *
-	 * So this asks `Fill_Service` for a slot exactly as the route does, flushes
-	 * the request the way `shutdown` does, and reads the row back.
+	 * So this hits the fill route with `n=0` the way the client writes it,
+	 * flushes the request the way `shutdown` does, and reads the row back.
+	 * Passing the sequence into `for_slug()` by hand is how this test once
+	 * stayed green while `fillSlot` never sent `n` at all.
 	 *
 	 * @return void
 	 */
 	public function test_a_first_fill_is_recorded_as_a_page_opportunity(): void {
 		update_option( Creative_Assignment_Migrator::OPTION_DONE, 1 );
 
-		$fill = Plugin::instance()->container()->get( Fill_Service::class );
-
-		$payload = $fill->for_slug( 'decision-gate', 0 );
+		$payload = $this->fill_via_route( 0 );
 
 		/*
-		 * The creative, not just a payload. `for_slug()` answers with a shape
-		 * whether or not anything filled, so `assertIsArray()` on the payload
-		 * passes over a slot that decided nothing — which is how the first
-		 * version of this test read zero counters and still looked reasonable.
+		 * The creative, not just a payload. A 200 with no creative is a slot
+		 * that decided nothing — which is how the first version of this test
+		 * read zero counters and still looked reasonable.
 		 */
 		$this->assertIsArray( $payload );
 		$this->assertIsArray( $payload['creative'], 'Nothing was served, so there is no decision to have counted.' );
@@ -191,6 +193,10 @@ final class DecisionServingTest extends WP_UnitTestCase {
 	 * opportunity is not independent inventory. Counting it as supply is what
 	 * would let P16 forecast a `setInterval`.
 	 *
+	 * The sequence arrives on the query string, which is the only path a
+	 * browser has. A test that calls `for_slug( …, 3 )` is still arranging
+	 * the number the production client used to omit.
+	 *
 	 * @return void
 	 */
 	public function test_a_rotation_is_recorded_as_a_refresh_and_not_as_supply(): void {
@@ -198,9 +204,7 @@ final class DecisionServingTest extends WP_UnitTestCase {
 
 		$this->permit_refresh( true, 1, 10 );
 
-		$fill = Plugin::instance()->container()->get( Fill_Service::class );
-
-		$rotation = $fill->for_slug( 'decision-gate', 3 );
+		$rotation = $this->fill_via_route( 1 );
 
 		$this->assertIsArray( $rotation );
 		$this->assertIsArray( $rotation['creative'], 'The rotation served nothing, so there is no decision to have counted.' );
@@ -295,6 +299,27 @@ final class DecisionServingTest extends WP_UnitTestCase {
 		$this->assertIsArray( $fill->for_slug( 'decision-gate', 2 ), 'The cap itself must be servable.' );
 		$this->assertNull( $fill->for_slug( 'decision-gate', 3 ) );
 		$this->assertNull( $fill->for_slug( 'decision-gate', 400 ) );
+	}
+
+	/**
+	 * One fill the way a browser asks for it: the route, with `n` on the query.
+	 *
+	 * @param int $sequence Fill number within the page view, zero-based.
+	 * @return array<string, mixed>|null
+	 */
+	private function fill_via_route( int $sequence ): ?array {
+		$request = new WP_REST_Request( 'GET', '/aggr/v1/fill/decision-gate' );
+		$request->set_query_params( array( 'n' => $sequence ) );
+
+		$response = rest_get_server()->dispatch( $request );
+
+		if ( 200 !== $response->get_status() ) {
+			return null;
+		}
+
+		$data = $response->get_data();
+
+		return is_array( $data ) ? $data : null;
 	}
 
 	/**

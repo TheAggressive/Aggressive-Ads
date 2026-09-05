@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Tests\Unit\Domain;
 
+use Aggressive\Ads\Domain\Refresh_Policy;
 use Aggressive\Ads\Domain\Slot_Options;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
@@ -219,12 +220,20 @@ final class SlotOptionsTest extends TestCase {
 	 * key would look exactly like a slot that asked for the default.
 	 */
 	public function test_the_context_states_every_setting_rather_than_omitting_defaults(): void {
-		$context = Slot_Options::defaults()->to_context();
+		/*
+		 * Resolved against a placement that permits what the block asks, so this
+		 * stays about the context's shape rather than about the refresh policy.
+		 * What the policy does to these values is `InventoryGrainTest`'s.
+		 */
+		$context = Slot_Options::defaults()->resolved_context(
+			Refresh_Policy::from_stored( true, Slot_Options::MIN_ROTATE_SECONDS, 6 )
+		);
 
 		$this->assertSame(
 			array(
 				'rotate'            => false,
 				'rotateSeconds'     => Slot_Options::DEFAULT_ROTATE_SECONDS,
+				'maxRefreshes'      => 6,
 				'collapseWhenEmpty' => true,
 			),
 			$context
@@ -239,12 +248,13 @@ final class SlotOptionsTest extends TestCase {
 				'rotateSeconds'     => 0,
 				'collapseWhenEmpty' => false,
 			)
-		)->to_context();
+		)->resolved_context( Refresh_Policy::from_stored( true, Slot_Options::MIN_ROTATE_SECONDS, 6 ) );
 
 		$this->assertSame(
 			array(
 				'rotate'            => true,
 				'rotateSeconds'     => Slot_Options::MIN_ROTATE_SECONDS,
+				'maxRefreshes'      => 6,
 				'collapseWhenEmpty' => false,
 			),
 			$context

@@ -57,13 +57,14 @@ final class Fill_Controller implements Service {
 					/*
 					 * Which fill this is within the page view, zero-based.
 					 *
-					 * **It partitions a supply metric and gates nothing.** The
-					 * endpoint is stateless and sits behind a page cache, so the
-					 * server cannot know whether a fill is a page's first — the
-					 * client does, and says. That makes it untrusted, and the
-					 * containment is what it is wired to: it does not decide
-					 * whether an impression counts, which stays on the beacon's
-					 * token path, and it credits no campaign and moves no money.
+					 * **It partitions a supply metric and bounds a refresh.**
+					 * The endpoint is stateless and sits behind a page cache, so
+					 * the server cannot know whether a fill is a page's first —
+					 * the client does, and says. That makes it untrusted. It
+					 * does not decide whether an impression counts, which stays
+					 * on the beacon's token path, and it credits no campaign
+					 * and moves no money. It does decide whether a claimed
+					 * refresh is within the publisher's per-view cap.
 					 *
 					 * Optional, because every fill served from a page cached
 					 * before this shipped arrives without it. Absent reads as a
