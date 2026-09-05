@@ -163,6 +163,24 @@ final class InventoryGrainTest extends TestCase {
 	}
 
 	/**
+	 * A stored cap above the client's hard stop is the hard stop.
+	 *
+	 * `permits_sequence()` is the server half of an honest-client assumption.
+	 * Honouring 400 here would let a modified browser request sequences the
+	 * shipped client cannot, which is how a REST write becomes supply.
+	 *
+	 * @return void
+	 */
+	public function test_a_cap_cannot_exceed_the_client_hard_stop(): void {
+		$policy = Refresh_Policy::from_stored( true, 1, 400 );
+		$stop   = Refresh_Policy::LEGACY_CLIENT_MAX_PER_VIEW;
+
+		$this->assertSame( $stop, $policy->max_per_view );
+		$this->assertTrue( $policy->permits_sequence( $stop ) );
+		$this->assertFalse( $policy->permits_sequence( $stop + 1 ) );
+	}
+
+	/**
 	 * A publisher may be stricter than the floor and may not be looser.
 	 *
 	 * @param mixed $stored   What the placement recorded.

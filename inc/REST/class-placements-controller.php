@@ -12,6 +12,7 @@ namespace Aggressive\Ads\REST;
 use Aggressive\Ads\Admin\Placement_Data;
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Domain\Campaign_Rules;
+use Aggressive\Ads\Domain\Refresh_Policy;
 use Aggressive\Ads\Domain\Upload_Rules;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Security\Capabilities;
@@ -222,7 +223,7 @@ final class Placements_Controller implements Service {
 		$body = $request->get_json_params();
 		$body = is_array( $body ) ? $body : array();
 
-		return array(
+		$fields = array(
 			'name'                => isset( $body['name'] ) && is_string( $body['name'] ) ? $body['name'] : '',
 			'slug'                => isset( $body['slug'] ) && is_string( $body['slug'] ) ? $body['slug'] : '',
 			'size_preset'         => isset( $body['size_preset'] ) && is_string( $body['size_preset'] ) ? $body['size_preset'] : '',
@@ -234,6 +235,29 @@ final class Placements_Controller implements Service {
 			'house_click_url'     => isset( $body['house_click_url'] ) && is_string( $body['house_click_url'] ) ? $body['house_click_url'] : '',
 			'house_alt'           => isset( $body['house_alt'] ) && is_string( $body['house_alt'] ) ? $body['house_alt'] : '',
 		);
+
+		/*
+		 * Only when the client named them. Forcing the keys on every write
+		 * would make an omitted `refresh_seconds` a zero, which the policy
+		 * floors to one second — so a rename that did not mention refresh
+		 * would silently tighten every placement to the floor.
+		 */
+		if (
+			array_key_exists( 'refresh_enabled', $body )
+			|| array_key_exists( 'refresh_seconds', $body )
+			|| array_key_exists( 'refresh_max_per_view', $body )
+		) {
+			$defaults                       = Refresh_Policy::defaults();
+			$fields['refresh_enabled']      = ! empty( $body['refresh_enabled'] );
+			$fields['refresh_seconds']      = isset( $body['refresh_seconds'] )
+				? (int) $body['refresh_seconds']
+				: $defaults->interval_seconds;
+			$fields['refresh_max_per_view'] = isset( $body['refresh_max_per_view'] )
+				? (int) $body['refresh_max_per_view']
+				: $defaults->max_per_view;
+		}
+
+		return $fields;
 	}
 
 	/**

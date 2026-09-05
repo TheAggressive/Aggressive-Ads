@@ -231,9 +231,9 @@ organization or an automatic membership.
 
 ### Placement — `aggr_placement`
 
-`_aggr_size` string `{width}x{height}` · `_aggr_position_label` string · `_aggr_max_concurrent` int · `_aggr_is_active` int `0|1` · `_aggr_sort_order` int · `_aggr_house_attachment_id` int · `_aggr_house_click_url` string · `_aggr_house_alt` string
+`_aggr_size` string `{width}x{height}` · `_aggr_position_label` string · `_aggr_max_concurrent` int · `_aggr_is_active` int `0|1` · `_aggr_sort_order` int · `_aggr_refresh_enabled` int `0|1` · `_aggr_refresh_seconds` int · `_aggr_refresh_max_per_view` int · `_aggr_house_attachment_id` int · `_aggr_house_click_url` string · `_aggr_house_alt` string
 
-The public slot id is `post_name`. Size is a pixel pair from `Domain\Ad_Sizes` (common IAB list or custom WxH), not a slot identity. House creative is placement meta, not a sixth post type. Orphan `_aggr_adgroup_term_id` is not read.
+The public slot id is `post_name`. Size is a pixel pair from `Domain\Ad_Sizes` (common IAB list or custom WxH), not a slot identity. House creative is placement meta, not a sixth post type. Refresh policy is placement meta, owned by the publisher: it bounds what a block may ask for, never the reverse. A placement that has never been configured reads as refresh-off; create writes that default as a stored flag so a later backfill cannot mistake it for a pre-policy row. Orphan `_aggr_adgroup_term_id` is not read.
 
 ### Package — `aggr_package`
 

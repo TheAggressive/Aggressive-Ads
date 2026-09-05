@@ -11,6 +11,7 @@ namespace Aggressive\Ads\Admin;
 
 use Aggressive\Ads\Domain\Decision_Outcome;
 use Aggressive\Ads\Domain\No_Fill_Reason;
+use Aggressive\Ads\Domain\Opportunity;
 use Aggressive\Ads\Domain\Report_Period;
 use Aggressive\Ads\Domain\Report_Request;
 use Aggressive\Ads\Repository\Decision_Rollup_Repository;
@@ -118,12 +119,34 @@ final class Report_Data {
 	 *
 	 * @param Report_Period $period       Bounded UTC range.
 	 * @param int           $placement_id One placement, or 0 for the whole site.
-	 * @return array{requests: int, fills: int, fill_rate: float|null, unaccounted: int, reasons: list<array{code: string, label: string, events: int, share: float|null}>}
+	 * @return array{requests: int, fills: int, fill_rate: float|null, unaccounted: int, reasons: list<array{code: string, label: string, events: int, share: float|null}>, refresh: array{requests: int, fills: int, fill_rate: float|null, unaccounted: int, reasons: list<array{code: string, label: string, events: int, share: float|null}>}}
 	 */
 	public function fill( Report_Period $period, int $placement_id = 0 ): array {
+		$page    = $this->figures( $period, $placement_id, Opportunity::PAGE );
+		$refresh = $this->figures( $period, $placement_id, Opportunity::REFRESH );
+
+		$page['refresh'] = $refresh;
+
+		return $page;
+	}
+
+	/**
+	 * Figures for one inventory kind.
+	 *
+	 * **The kind is required.** Passing nothing and summing would put a
+	 * refresh back into the page numbers, which is the defect the column
+	 * exists to prevent and the one a screen that "just wants a total" will
+	 * reintroduce the first time somebody forgets.
+	 *
+	 * @param Report_Period $period       Bounded UTC range.
+	 * @param int           $placement_id One placement, or 0 for the whole site.
+	 * @param string        $opportunity  `Domain\Opportunity` kind.
+	 * @return array{requests: int, fills: int, fill_rate: float|null, unaccounted: int, reasons: list<array{code: string, label: string, events: int, share: float|null}>}
+	 */
+	private function figures( Report_Period $period, int $placement_id, string $opportunity ): array {
 		$totals = $placement_id > 0
-			? $this->decisions->totals_for_placement( $placement_id, $period->start, $period->end )
-			: $this->decisions->totals( $period->start, $period->end );
+			? $this->decisions->totals_for_placement( $placement_id, $period->start, $period->end, $opportunity )
+			: $this->decisions->totals( $period->start, $period->end, $opportunity );
 
 		$requests = (int) ( $totals[ Decision_Outcome::REQUEST ] ?? 0 );
 		$fills    = (int) ( $totals[ Decision_Outcome::FILL ] ?? 0 );
@@ -175,6 +198,22 @@ final class Report_Data {
 			/* translators: %s: a date, e.g. 30 August 2026. */
 			__( 'Figures from %s onward are still being counted.', 'aggressive-ads' ),
 			false === $timestamp ? $from : (string) wp_date( (string) get_option( 'date_format', 'Y-m-d' ), $timestamp )
+		);
+	}
+
+	/**
+	 * A sentence for every inventory kind the counters store.
+	 *
+	 * Derived from `Opportunity::all()` in the test, so a kind added there
+	 * without a sentence here is a missing key rather than a raw slug in a
+	 * spreadsheet.
+	 *
+	 * @return array<string, string>
+	 */
+	public static function opportunity_labels(): array {
+		return array(
+			Opportunity::PAGE    => __( 'Page', 'aggressive-ads' ),
+			Opportunity::REFRESH => __( 'Refresh', 'aggressive-ads' ),
 		);
 	}
 

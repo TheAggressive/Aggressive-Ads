@@ -206,6 +206,30 @@ final class RefreshPolicyMigrationTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A cap above the client's hard stop is stored as the hard stop.
+	 *
+	 * Clamping only on read would leave the inflated number in meta for a
+	 * later unclamped reader, and the write would report failure because
+	 * the stored value would not match what was asked.
+	 *
+	 * @return void
+	 */
+	public function test_a_policy_cannot_be_saved_above_the_client_hard_stop(): void {
+		$placement_id = $this->placement( 'capped-leaderboard' );
+
+		$this->assertTrue( $this->placements->set_refresh_policy( $placement_id, true, 30, 400 ) );
+
+		$policy = $this->placements->refresh_policy( $placement_id );
+
+		$this->assertSame( Refresh_Policy::LEGACY_CLIENT_MAX_PER_VIEW, $policy->max_per_view );
+		$this->assertSame(
+			(string) Refresh_Policy::LEGACY_CLIENT_MAX_PER_VIEW,
+			(string) get_post_meta( $placement_id, Placement_Repository::META_REFRESH_MAX, true ),
+			'The raw meta kept the inflated number, so a later unclamped reader would honour it.'
+		);
+	}
+
+	/**
 	 * Creates a placement.
 	 *
 	 * @param string $slug Placement post_name.

@@ -49,10 +49,21 @@ type Placement = {
 	house_attachment_id: number;
 	house_click_url: string;
 	house_alt: string;
+	refresh_enabled: boolean;
+	refresh_seconds: number;
+	refresh_max_per_view: number;
+};
+
+type RefreshDefaults = {
+	enabled: boolean;
+	seconds: number;
+	max_per_view: number;
 };
 
 type View = {
 	sizes: Record< string, string >;
+	refresh_defaults: RefreshDefaults;
+	refresh_ceiling: number;
 	rows: Placement[];
 };
 
@@ -63,12 +74,17 @@ type Bootstrap = {
 };
 
 const EMPTY: Bootstrap = {
-	view: { sizes: {}, rows: [] },
+	view: {
+		sizes: {},
+		refresh_defaults: { enabled: false, seconds: 30, max_per_view: 6 },
+		refresh_ceiling: 100,
+		rows: [],
+	},
 	restPath: '',
 	i18n: {},
 };
 
-const BLANK: Placement = {
+const blankPlacement = ( defaults: RefreshDefaults ): Placement => ( {
 	id: 0,
 	name: '',
 	slug: '',
@@ -81,7 +97,10 @@ const BLANK: Placement = {
 	house_attachment_id: 0,
 	house_click_url: '',
 	house_alt: '',
-};
+	refresh_enabled: defaults.enabled,
+	refresh_seconds: defaults.seconds,
+	refresh_max_per_view: defaults.max_per_view,
+} );
 
 /** The body the REST route allowlists. */
 function body( draft: Placement ): Record< string, unknown > {
@@ -96,6 +115,9 @@ function body( draft: Placement ): Record< string, unknown > {
 		house_attachment_id: draft.house_attachment_id,
 		house_click_url: draft.house_click_url,
 		house_alt: draft.house_alt,
+		refresh_enabled: draft.refresh_enabled,
+		refresh_seconds: draft.refresh_seconds,
+		refresh_max_per_view: draft.refresh_max_per_view,
 	};
 }
 
@@ -108,12 +130,14 @@ function body( draft: Placement ): Record< string, unknown > {
 function PlacementForm( {
 	value,
 	sizes,
+	ceiling,
 	submitLabel,
 	onSubmit,
 	busy,
 }: {
 	value: Placement;
 	sizes: Record< string, string >;
+	ceiling: number;
 	submitLabel: string;
 	onSubmit: ( draft: Placement ) => void;
 	busy: boolean;
@@ -216,6 +240,52 @@ function PlacementForm( {
 				__nextHasNoMarginBottom
 				onChange={ ( active: boolean ) => set( { active } ) }
 			/>
+
+			<fieldset>
+				<legend>{ t( 'refresh' ) }</legend>
+				<VStack spacing={ 4 }>
+					<ToggleControl
+						label={ t( 'refreshEnabled' ) }
+						help={ t( 'refreshEnabledHelp' ) }
+						checked={ draft.refresh_enabled }
+						__nextHasNoMarginBottom
+						onChange={ ( refresh_enabled: boolean ) =>
+							set( { refresh_enabled } )
+						}
+					/>
+					<TextControl
+						label={ t( 'refreshSeconds' ) }
+						help={ t( 'refreshSecondsHelp' ) }
+						type="number"
+						min={ 1 }
+						disabled={ ! draft.refresh_enabled }
+						value={ String( draft.refresh_seconds ) }
+						onChange={ ( seconds: string ) =>
+							set( {
+								refresh_seconds: Number( seconds ) || 0,
+							} )
+						}
+						__nextHasNoMarginBottom
+						__next40pxDefaultSize
+					/>
+					<TextControl
+						label={ t( 'refreshMax' ) }
+						help={ t( 'refreshMaxHelp' ) }
+						type="number"
+						min={ 0 }
+						max={ ceiling }
+						disabled={ ! draft.refresh_enabled }
+						value={ String( draft.refresh_max_per_view ) }
+						onChange={ ( max: string ) =>
+							set( {
+								refresh_max_per_view: Number( max ) || 0,
+							} )
+						}
+						__nextHasNoMarginBottom
+						__next40pxDefaultSize
+					/>
+				</VStack>
+			</fieldset>
 
 			<fieldset>
 				<legend>{ t( 'house' ) }</legend>
@@ -328,8 +398,13 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 						// successful create, so the next placement starts blank
 						// instead of inheriting the last one's fields.
 						key={ `new-${ view.rows.length }` }
-						value={ BLANK }
+						value={ blankPlacement(
+							view.refresh_defaults ?? EMPTY.view.refresh_defaults
+						) }
 						sizes={ view.sizes }
+						ceiling={
+							view.refresh_ceiling ?? EMPTY.view.refresh_ceiling
+						}
 						submitLabel={ t( 'create' ) }
 						busy={ busy }
 						onSubmit={ ( draft ) => {
@@ -368,6 +443,10 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 								key={ `${ row.id }-${ row.active }-${ row.size }` }
 								value={ row }
 								sizes={ view.sizes }
+								ceiling={
+									view.refresh_ceiling ??
+									EMPTY.view.refresh_ceiling
+								}
 								submitLabel={ t( 'save' ) }
 								busy={ busy }
 								onSubmit={ ( draft ) => {

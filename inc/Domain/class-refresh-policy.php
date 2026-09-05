@@ -166,12 +166,17 @@ final class Refresh_Policy {
 	}
 
 	/**
-	 * A per-view cap, floored at zero.
+	 * A per-view cap, floored at zero and capped at the client's hard stop.
 	 *
 	 * Zero is meaningful and is not the same as refresh being off: a publisher
 	 * may leave refresh enabled and set the cap to zero while they decide, and
 	 * `permits_sequence()` then refuses every refresh without discarding the
 	 * rest of the configuration.
+	 *
+	 * The ceiling is the same number `view.js` already stops at. A stored
+	 * value above it would let a modified client request sequences the
+	 * honest one cannot, which is how a REST write becomes an inventory
+	 * multiplier the policy was written to prevent.
 	 *
 	 * @param mixed $requested Stored value.
 	 */
@@ -180,7 +185,7 @@ final class Refresh_Policy {
 			return self::DEFAULT_MAX_PER_VIEW;
 		}
 
-		return max( 0, (int) $requested );
+		return min( self::LEGACY_CLIENT_MAX_PER_VIEW, max( 0, (int) $requested ) );
 	}
 
 	/**

@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Tests\Rest;
 
+use Aggressive\Ads\Domain\Refresh_Policy;
 use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Audit_Repository;
@@ -158,6 +159,100 @@ final class PlacementsWriteTest extends WP_UnitTestCase {
 		$this->assertSame( '728x90', $this->placements->size( $placement_id ) );
 		$this->assertSame( 'header', $this->placements->slug( $placement_id ) );
 		$this->assertTrue( $this->placements->is_active( $placement_id ) );
+
+		$policy = $this->placements->refresh_policy( $placement_id );
+
+		$this->assertFalse( $policy->enabled );
+		$this->assertSame( Refresh_Policy::DEFAULT_INTERVAL_SECONDS, $policy->interval_seconds );
+		$this->assertSame( Refresh_Policy::DEFAULT_MAX_PER_VIEW, $policy->max_per_view );
+	}
+
+	/**
+	 * The policy the form sends is the policy the catalogue returns.
+	 *
+	 * @return void
+	 */
+	public function test_refresh_policy_round_trips_through_the_catalogue(): void {
+		$placement_id = $this->create_placement(
+			array(
+				'slug'                 => 'rotating-header',
+				'refresh_enabled'      => true,
+				'refresh_seconds'      => 20,
+				'refresh_max_per_view' => 3,
+			)
+		);
+
+		$policy = $this->placements->refresh_policy( $placement_id );
+
+		$this->assertTrue( $policy->enabled );
+		$this->assertSame( 20, $policy->interval_seconds );
+		$this->assertSame( 3, $policy->max_per_view );
+
+		$response = $this->write(
+			'/aggr/v1/placements/' . $placement_id,
+			'PATCH',
+			$this->valid_placement(
+				array(
+					'slug'                 => 'rotating-header',
+					'name'                 => 'Homepage leaderboard',
+					'refresh_enabled'      => true,
+					'refresh_seconds'      => 45,
+					'refresh_max_per_view' => 2,
+				)
+			)
+		);
+
+		$this->assertSame( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertIsArray( $data );
+
+		$row = array();
+
+		foreach ( $data['view']['rows'] as $candidate ) {
+			if ( (int) $candidate['id'] === $placement_id ) {
+				$row = $candidate;
+				break;
+			}
+		}
+
+		$this->assertSame( 45, $row['refresh_seconds'] ?? null );
+		$this->assertSame( 2, $row['refresh_max_per_view'] ?? null );
+	}
+
+	/**
+	 * A rename that does not mention refresh must not reset the policy.
+	 *
+	 * @return void
+	 */
+	public function test_an_update_that_omits_refresh_leaves_the_policy(): void {
+		$placement_id = $this->create_placement(
+			array(
+				'slug'                 => 'kept-policy',
+				'refresh_enabled'      => true,
+				'refresh_seconds'      => 15,
+				'refresh_max_per_view' => 5,
+			)
+		);
+
+		$response = $this->write(
+			'/aggr/v1/placements/' . $placement_id,
+			'PATCH',
+			$this->valid_placement(
+				array(
+					'slug' => 'kept-policy',
+					'name' => 'Renamed, policy untouched',
+				)
+			)
+		);
+
+		$this->assertSame( 200, $response->get_status() );
+
+		$policy = $this->placements->refresh_policy( $placement_id );
+
+		$this->assertTrue( $policy->enabled, 'A rename turned refresh off.' );
+		$this->assertSame( 15, $policy->interval_seconds );
+		$this->assertSame( 5, $policy->max_per_view );
 	}
 
 	/**

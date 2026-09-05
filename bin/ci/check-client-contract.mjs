@@ -37,6 +37,7 @@ const CLIENT_FILES = [
 	'src/blocks-interactivity/ad-slot/view.js',
 	'src/blocks-interactivity/ad-slot/fill.js',
 	'src/blocks-interactivity/ad-slot/empty.js',
+	'src/blocks-interactivity/ad-slot/rotation.js',
 ];
 
 /**
@@ -245,6 +246,14 @@ async function main() {
 		problems.push(
 			'view.js never calls fillSlot( …, rotations ). Sending n=0 on every ' +
 				'tick is a write that does not meet the read.'
+		);
+	}
+
+	if ( ! /rotationCap\s*\(\s*context(?:\?)?\.maxRefreshes\b/.test( view ) ) {
+		problems.push(
+			'view.js does not call rotationCap( context.maxRefreshes ). A bare ' +
+				'context.maxRefreshes identifier next to MAX_ROTATIONS is how the ' +
+				'publisher cap shipped unread.'
 		);
 	}
 

@@ -234,8 +234,8 @@ final class Reports_Screen implements Service {
 	/**
 	 * Requests, fills and the rate between them.
 	 *
-	 * @param Report_Period                                                                                                  $period Window reported.
-	 * @param array{requests: int, fills: int, fill_rate: float|null, unaccounted: int, reasons: list<array<string, mixed>>} $fill   Figures.
+	 * @param Report_Period                                                                                                                                                                                                                           $period Window reported.
+	 * @param array{requests: int, fills: int, fill_rate: float|null, unaccounted: int, reasons: list<array<string, mixed>>, refresh: array{requests: int, fills: int, fill_rate: float|null, unaccounted: int, reasons: list<array<string, mixed>>}} $fill Figures.
 	 * @return void
 	 */
 	private function render_summary( Report_Period $period, array $fill ): void {
@@ -252,33 +252,50 @@ final class Reports_Screen implements Service {
 			printf( '<p class="description">%s</p>', esc_html( $note ) );
 		}
 
+		$refresh = $fill['refresh'];
+
 		printf(
-			'<ul><li>%1$s</li><li>%2$s</li><li>%3$s</li></ul>',
+			'<ul><li>%1$s</li><li>%2$s</li><li>%3$s</li><li>%4$s</li><li>%5$s</li><li>%6$s</li></ul>',
 			esc_html(
 				sprintf(
-					/* translators: %s: a count of advertisement requests. */
-					__( 'Requests: %s', 'aggressive-ads' ),
+					/* translators: %s: a count of page-view advertisement requests. */
+					__( 'Page requests: %s', 'aggressive-ads' ),
 					number_format_i18n( $fill['requests'] )
 				)
 			),
 			esc_html(
 				sprintf(
-					/* translators: %s: a count of filled requests. */
-					__( 'Filled: %s', 'aggressive-ads' ),
+					/* translators: %s: a count of filled page-view requests. */
+					__( 'Page filled: %s', 'aggressive-ads' ),
 					number_format_i18n( $fill['fills'] )
 				)
 			),
 			esc_html(
 				sprintf(
-					/* translators: %s: fill rate as a percentage, or an em dash. */
-					__( 'Fill rate: %s', 'aggressive-ads' ),
-					null === $fill['fill_rate']
-						? __( '—', 'aggressive-ads' )
-						: sprintf(
-							/* translators: %s: a percentage, e.g. 92.4. */
-							__( '%s%%', 'aggressive-ads' ),
-							number_format_i18n( $fill['fill_rate'] * 100, 1 )
-						)
+					/* translators: %s: page fill rate as a percentage, or an em dash. */
+					__( 'Page fill rate: %s', 'aggressive-ads' ),
+					$this->rate( $fill['fill_rate'] )
+				)
+			),
+			esc_html(
+				sprintf(
+					/* translators: %s: a count of refresh advertisement requests. */
+					__( 'Refresh requests: %s', 'aggressive-ads' ),
+					number_format_i18n( $refresh['requests'] )
+				)
+			),
+			esc_html(
+				sprintf(
+					/* translators: %s: a count of filled refresh requests. */
+					__( 'Refresh filled: %s', 'aggressive-ads' ),
+					number_format_i18n( $refresh['fills'] )
+				)
+			),
+			esc_html(
+				sprintf(
+					/* translators: %s: refresh fill rate as a percentage, or an em dash. */
+					__( 'Refresh fill rate: %s', 'aggressive-ads' ),
+					$this->rate( $refresh['fill_rate'] )
 				)
 			)
 		);
@@ -287,11 +304,18 @@ final class Reports_Screen implements Service {
 	/**
 	 * Why the unfilled requests were unfilled.
 	 *
-	 * @param array{requests: int, fills: int, fill_rate: float|null, unaccounted: int, reasons: list<array<string, mixed>>} $fill Figures.
+	 * Two tables, one kind each. A single table that opened on page
+	 * requests used to print "every request was filled" while refresh
+	 * no-fills sat only in the CSV — the same grain-summed-away defect
+	 * as the headline figures, one heading lower.
+	 *
+	 * @param array{requests: int, fills: int, fill_rate: float|null, unaccounted: int, reasons: list<array<string, mixed>>, refresh: array{requests: int, fills: int, fill_rate: float|null, unaccounted: int, reasons: list<array<string, mixed>>}} $fill Figures.
 	 * @return void
 	 */
 	private function render_reasons( array $fill ): void {
-		if ( 0 === $fill['requests'] ) {
+		$refresh = $fill['refresh'];
+
+		if ( 0 === $fill['requests'] && 0 === $refresh['requests'] ) {
 			printf(
 				'<p>%s</p>',
 				esc_html__( 'No advertisement was requested in this window, so there is nothing to explain yet.', 'aggressive-ads' )
@@ -300,17 +324,45 @@ final class Reports_Screen implements Service {
 			return;
 		}
 
-		if ( array() === $fill['reasons'] ) {
-			printf( '<p>%s</p>', esc_html__( 'Every request was filled.', 'aggressive-ads' ) );
+		$this->render_reason_group(
+			$fill,
+			__( 'Why page requests were not filled', 'aggressive-ads' ),
+			__( 'Reasons a page request was not filled', 'aggressive-ads' ),
+			__( 'Every page request was filled.', 'aggressive-ads' )
+		);
+		$this->render_reason_group(
+			$refresh,
+			__( 'Why refresh requests were not filled', 'aggressive-ads' ),
+			__( 'Reasons a refresh request was not filled', 'aggressive-ads' ),
+			__( 'Every refresh request was filled.', 'aggressive-ads' )
+		);
+	}
+
+	/**
+	 * One inventory kind's no-fill table, or silence when that kind had none.
+	 *
+	 * @param array<string, mixed> $figures Figures for one kind.
+	 * @param string               $heading Visible heading.
+	 * @param string               $caption Screen-reader caption.
+	 * @param string               $filled  Copy when every request of this kind filled.
+	 * @return void
+	 */
+	private function render_reason_group( array $figures, string $heading, string $caption, string $filled ): void {
+		if ( 0 === $figures['requests'] ) {
+			return;
+		}
+
+		printf( '<h2>%s</h2>', esc_html( $heading ) );
+
+		if ( array() === $figures['reasons'] ) {
+			printf( '<p>%s</p>', esc_html( $filled ) );
+			$this->render_unaccounted( $figures['unaccounted'] );
 
 			return;
 		}
 
 		echo '<table class="widefat striped">';
-		printf(
-			'<caption class="screen-reader-text">%s</caption>',
-			esc_html__( 'Reasons a request was not filled', 'aggressive-ads' )
-		);
+		printf( '<caption class="screen-reader-text">%s</caption>', esc_html( $caption ) );
 		printf(
 			'<thead><tr><th scope="col">%1$s</th><th scope="col">%2$s</th><th scope="col">%3$s</th></tr></thead><tbody>',
 			esc_html__( 'Reason', 'aggressive-ads' ),
@@ -318,42 +370,59 @@ final class Reports_Screen implements Service {
 			esc_html__( 'Share', 'aggressive-ads' )
 		);
 
-		foreach ( $fill['reasons'] as $reason ) {
+		foreach ( $figures['reasons'] as $reason ) {
 			printf(
 				'<tr><th scope="row">%1$s</th><td>%2$s</td><td>%3$s</td></tr>',
 				esc_html( (string) $reason['label'] ),
 				esc_html( number_format_i18n( (int) $reason['events'] ) ),
-				esc_html(
-					null === $reason['share']
-						? __( '—', 'aggressive-ads' )
-						: sprintf(
-							/* translators: %s: a percentage, e.g. 12.4. */
-							__( '%s%%', 'aggressive-ads' ),
-							number_format_i18n( (float) $reason['share'] * 100, 1 )
-						)
-				)
+				esc_html( $this->rate( isset( $reason['share'] ) ? $reason['share'] : null ) )
 			);
 		}
 
 		echo '</tbody></table>';
+		$this->render_unaccounted( $figures['unaccounted'] );
+	}
 
-		/*
-		 * P13's invariant is that requests equal fills plus every reason. It is
-		 * a property of the decision engine rather than of the table, so a
-		 * screen that normalised a discrepancy away would hide the defect worth
-		 * finding. On a healthy site this never prints.
-		 */
-		if ( $fill['unaccounted'] > 0 ) {
-			printf(
-				'<p class="description">%s</p>',
-				esc_html(
-					sprintf(
-						/* translators: %s: a count of requests with no recorded outcome. */
-						__( '%s requests have no recorded outcome. This is a defect worth reporting: every request should be either a fill or a reason.', 'aggressive-ads' ),
-						number_format_i18n( $fill['unaccounted'] )
-					)
-				)
-			);
+	/**
+	 * A rate as a percentage, or an em dash when there is no denominator.
+	 *
+	 * @param float|null $rate Share or fill rate, or null.
+	 */
+	private function rate( ?float $rate ): string {
+		if ( null === $rate ) {
+			return __( '—', 'aggressive-ads' );
 		}
+
+		return sprintf(
+			/* translators: %s: a percentage, e.g. 92.4. */
+			__( '%s%%', 'aggressive-ads' ),
+			number_format_i18n( $rate * 100, 1 )
+		);
+	}
+
+	/**
+	 * P13's invariant is that requests equal fills plus every reason. It is
+	 * a property of the decision engine rather than of the table, so a
+	 * screen that normalised a discrepancy away would hide the defect worth
+	 * finding. On a healthy site this never prints.
+	 *
+	 * @param int $unaccounted Requests with neither a fill nor a reason.
+	 * @return void
+	 */
+	private function render_unaccounted( int $unaccounted ): void {
+		if ( $unaccounted <= 0 ) {
+			return;
+		}
+
+		printf(
+			'<p class="description">%s</p>',
+			esc_html(
+				sprintf(
+					/* translators: %s: a count of requests with no recorded outcome. */
+					__( '%s requests have no recorded outcome. This is a defect worth reporting: every request should be either a fill or a reason.', 'aggressive-ads' ),
+					number_format_i18n( $unaccounted )
+				)
+			)
+		);
 	}
 }

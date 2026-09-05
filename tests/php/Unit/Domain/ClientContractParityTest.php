@@ -37,6 +37,7 @@ final class ClientContractParityTest extends TestCase {
 		'src/blocks-interactivity/ad-slot/view.js',
 		'src/blocks-interactivity/ad-slot/fill.js',
 		'src/blocks-interactivity/ad-slot/empty.js',
+		'src/blocks-interactivity/ad-slot/rotation.js',
 	);
 
 	/**
@@ -95,6 +96,10 @@ final class ClientContractParityTest extends TestCase {
 		$this->assertMatchesRegularExpression( '/searchParams\.set\(\s*[\'"]n[\'"]/', $fill );
 		$this->assertMatchesRegularExpression( '/\bsequence\b/', $fill );
 		$this->assertMatchesRegularExpression( '/fillSlot\s*\(\s*[^,)]+\s*,\s*rotations\s*\)/', $view );
+		$this->assertMatchesRegularExpression(
+			'/rotationCap\s*\(\s*context(?:\?)?\.maxRefreshes\b/',
+			$view
+		);
 	}
 
 	/**

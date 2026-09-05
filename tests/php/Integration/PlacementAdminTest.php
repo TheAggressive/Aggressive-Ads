@@ -13,6 +13,9 @@ use Aggressive\Ads\Admin\Menu;
 use Aggressive\Ads\Admin\Placement_Data;
 use Aggressive\Ads\Admin\Placement_Screen;
 use Aggressive\Ads\Domain\Ad_Sizes;
+use Aggressive\Ads\Domain\Decision_Outcome;
+use Aggressive\Ads\Domain\Opportunity;
+use Aggressive\Ads\Domain\Refresh_Policy;
 use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Audit_Repository;
@@ -152,6 +155,17 @@ final class PlacementAdminTest extends WP_UnitTestCase {
 		$this->assertSame( '728x90', $this->placements->size( $result ) );
 		$this->assertSame( 'header', $this->placements->slug( $result ) );
 		$this->assertTrue( $this->placements->is_active( $result ) );
+
+		$policy = $this->placements->refresh_policy( $result );
+
+		$this->assertFalse( $policy->enabled, 'A new placement inherited refresh without anyone asking.' );
+		$this->assertSame( Refresh_Policy::DEFAULT_INTERVAL_SECONDS, $policy->interval_seconds );
+		$this->assertSame( Refresh_Policy::DEFAULT_MAX_PER_VIEW, $policy->max_per_view );
+		$this->assertNotSame(
+			'',
+			get_post_meta( $result, Placement_Repository::META_REFRESH_ENABLED, true ),
+			'The default was left as absent meta, so a backfill would grant the legacy permit.'
+		);
 
 		$events = $this->audit->for_object( 'placement', $result, 0 );
 		$this->assertSame( 'placement.created', $events[0]['event'] );
@@ -504,6 +518,104 @@ final class PlacementAdminTest extends WP_UnitTestCase {
 	 * @param array<string, mixed> $overrides Field replacements.
 	 * @return array<string, mixed>
 	 */
+	/**
+	 * The publisher can turn refresh on, and can tighten it later.
+	 *
+	 * @return void
+	 */
+	public function test_the_publisher_owns_the_refresh_policy(): void {
+		wp_set_current_user( $this->administrator );
+
+		$placement_id = $this->manager->create(
+			$this->valid_fields(
+				array(
+					'refresh_enabled'      => true,
+					'refresh_seconds'      => 45,
+					'refresh_max_per_view' => 4,
+				)
+			)
+		);
+
+		$this->assertIsInt( $placement_id );
+
+		$row = array();
+
+		foreach ( $this->data->view()['rows'] as $candidate ) {
+			if ( (int) $candidate['id'] === $placement_id ) {
+				$row = $candidate;
+				break;
+			}
+		}
+
+		$this->assertTrue( $row['refresh_enabled'] ?? false );
+		$this->assertSame( 45, $row['refresh_seconds'] );
+		$this->assertSame( 4, $row['refresh_max_per_view'] );
+
+		$this->assertTrue(
+			$this->manager->update(
+				$placement_id,
+				$this->valid_fields(
+					array(
+						'refresh_enabled'      => true,
+						'refresh_seconds'      => 60,
+						'refresh_max_per_view' => 2,
+					)
+				)
+			)
+		);
+
+		$tightened = $this->placements->refresh_policy( $placement_id );
+
+		$this->assertTrue( $tightened->enabled );
+		$this->assertSame( 60, $tightened->interval_seconds );
+		$this->assertSame( 2, $tightened->max_per_view );
+	}
+
+	/**
+	 * Tightening the policy does not rewrite history.
+	 *
+	 * @return void
+	 */
+	public function test_a_policy_change_does_not_alter_recorded_counters(): void {
+		wp_set_current_user( $this->administrator );
+
+		$placement_id = $this->manager->create( $this->valid_fields() );
+		$this->assertIsInt( $placement_id );
+
+		$rollups = Plugin::instance()->container()->get( \Aggressive\Ads\Repository\Decision_Rollup_Repository::class );
+		$rollups->install_table();
+		$today = gmdate( 'Y-m-d' );
+
+		$this->assertTrue(
+			$rollups->add( $today, $placement_id, array( Decision_Outcome::REQUEST => 5 ), Opportunity::PAGE )
+		);
+		$this->assertTrue(
+			$rollups->add( $today, $placement_id, array( Decision_Outcome::REQUEST => 3 ), Opportunity::REFRESH )
+		);
+
+		$this->assertTrue(
+			$this->manager->update(
+				$placement_id,
+				$this->valid_fields(
+					array(
+						'refresh_enabled'      => false,
+						'refresh_seconds'      => 90,
+						'refresh_max_per_view' => 0,
+					)
+				)
+			)
+		);
+
+		$this->assertSame(
+			array( Decision_Outcome::REQUEST => 5 ),
+			$rollups->totals_for_placement( $placement_id, $today, $today, Opportunity::PAGE )
+		);
+		$this->assertSame(
+			array( Decision_Outcome::REQUEST => 3 ),
+			$rollups->totals_for_placement( $placement_id, $today, $today, Opportunity::REFRESH )
+		);
+	}
+
 	private function valid_fields( array $overrides = array() ): array {
 		return array_merge(
 			array(

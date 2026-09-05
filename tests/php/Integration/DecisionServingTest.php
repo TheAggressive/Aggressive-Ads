@@ -28,6 +28,7 @@ use Aggressive\Ads\Domain\Decision_Outcome;
 use Aggressive\Ads\Domain\Opportunity;
 use Aggressive\Ads\Repository\Decision_Rollup_Repository;
 use Aggressive\Ads\Workflow\Decision_Metrics;
+use Aggressive\Ads\Admin\Report_Data;
 use Aggressive\Ads\Workflow\Fill_Service;
 use WP_REST_Request;
 use WP_UnitTestCase;
@@ -184,6 +185,12 @@ final class DecisionServingTest extends WP_UnitTestCase {
 
 		// And nothing was filed as supply that was not.
 		$this->assertSame( 0, $this->counted( Decision_Outcome::REQUEST, Opportunity::REFRESH ) );
+
+		$report = Plugin::instance()->container()->get( Report_Data::class )
+			->fill( Plugin::instance()->container()->get( Report_Data::class )->period( 30 ), $this->placement_id );
+
+		$this->assertSame( 1, $report['requests'] );
+		$this->assertSame( 0, $report['refresh']['requests'] );
 	}
 
 	/**
@@ -217,6 +224,17 @@ final class DecisionServingTest extends WP_UnitTestCase {
 			$this->counted( Decision_Outcome::REQUEST, Opportunity::PAGE ),
 			'A refresh was counted as a page opportunity, which is supply invented from a timer.'
 		);
+
+		/*
+		 * And the surface a publisher reads agrees. Asking the table and then
+		 * the report used to be two different answers: the column was right
+		 * and every reader summed it away.
+		 */
+		$report = Plugin::instance()->container()->get( Report_Data::class )
+			->fill( Plugin::instance()->container()->get( Report_Data::class )->period( 30 ), $this->placement_id );
+
+		$this->assertSame( 0, $report['requests'], 'The fill report counted a refresh as page supply.' );
+		$this->assertSame( 1, $report['refresh']['requests'] );
 	}
 
 	/**

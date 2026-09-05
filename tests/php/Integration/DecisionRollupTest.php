@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Tests\Integration;
 
 use Aggressive\Ads\Domain\Decision_Outcome;
+use Aggressive\Ads\Domain\Opportunity;
 use Aggressive\Ads\Install\Schema;
 use Aggressive\Ads\Repository\Decision_Rollup_Repository;
 use WP_UnitTestCase;
@@ -203,6 +204,38 @@ final class DecisionRollupTest extends WP_UnitTestCase {
 	/**
 	 * Counts are per placement, so one slot's silence is not another's.
 	 */
+	/**
+	 * A filter that names a kind returns only that kind.
+	 *
+	 * Unfiltered totals still answer "how many decisions happened". A screen
+	 * talking about supply has to pass `page` itself.
+	 *
+	 * @return void
+	 */
+	public function test_totals_can_read_one_kind_without_the_other(): void {
+		$this->rollups->add( '2026-09-01', 7, array( Decision_Outcome::FILL => 2 ), Opportunity::PAGE );
+		$this->rollups->add( '2026-09-01', 7, array( Decision_Outcome::FILL => 5 ), Opportunity::REFRESH );
+
+		$this->assertSame(
+			array( Decision_Outcome::FILL => 2 ),
+			$this->rollups->totals( '2026-09-01', '2026-09-01', Opportunity::PAGE )
+		);
+		$this->assertSame(
+			array( Decision_Outcome::FILL => 5 ),
+			$this->rollups->totals_for_placement( 7, '2026-09-01', '2026-09-01', Opportunity::REFRESH )
+		);
+		$this->assertSame(
+			array( Decision_Outcome::FILL => 7 ),
+			$this->rollups->totals( '2026-09-01', '2026-09-01' ),
+			'Unfiltered totals must still see both kinds.'
+		);
+		$this->assertSame(
+			array(),
+			$this->rollups->totals( '2026-09-01', '2026-09-01', 'pageview' ),
+			'An invented kind must return nothing, not fall through to page.'
+		);
+	}
+
 	public function test_placements_are_counted_separately(): void {
 		$this->rollups->add( '2026-09-01', 7, array( Decision_Outcome::FILL => 2 ) );
 		$this->rollups->add( '2026-09-01', 8, array( Decision_Outcome::FILL => 5 ) );

@@ -163,18 +163,17 @@ final class Placement_Repository {
 			return false;
 		}
 
-		$seconds      = max( Refresh_Policy::MIN_INTERVAL_SECONDS, $seconds );
-		$max_per_view = max( 0, $max_per_view );
+		$policy = Refresh_Policy::from_stored( $enabled, $seconds, $max_per_view );
 
-		update_post_meta( $placement_id, self::META_REFRESH_ENABLED, $enabled ? 1 : 0 );
-		update_post_meta( $placement_id, self::META_REFRESH_SECONDS, $seconds );
-		update_post_meta( $placement_id, self::META_REFRESH_MAX, $max_per_view );
+		update_post_meta( $placement_id, self::META_REFRESH_ENABLED, $policy->enabled ? 1 : 0 );
+		update_post_meta( $placement_id, self::META_REFRESH_SECONDS, $policy->interval_seconds );
+		update_post_meta( $placement_id, self::META_REFRESH_MAX, $policy->max_per_view );
 
 		$stored = $this->refresh_policy( $placement_id );
 
-		return $stored->enabled === $enabled
-			&& $stored->interval_seconds === $seconds
-			&& $stored->max_per_view === $max_per_view;
+		return $stored->enabled === $policy->enabled
+			&& $stored->interval_seconds === $policy->interval_seconds
+			&& $stored->max_per_view === $policy->max_per_view;
 	}
 
 	/**

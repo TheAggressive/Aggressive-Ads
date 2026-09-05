@@ -25,6 +25,7 @@ const FILES = {
 	view: 'src/blocks-interactivity/ad-slot/view.js',
 	fill: 'src/blocks-interactivity/ad-slot/fill.js',
 	empty: 'src/blocks-interactivity/ad-slot/empty.js',
+	rotation: 'src/blocks-interactivity/ad-slot/rotation.js',
 };
 
 const roots = [];
@@ -64,6 +65,8 @@ async function root( overrides = {} ) {
 			"export const fillSlot = async ( root, sequence = 0 ) => {\n\tconst n = sequence;\n\tendpoint.searchParams.set( 'n', String( n ) );\n};\n",
 		[ FILES.empty ]:
 			'export const collapses = ( context ) => false !== context?.collapseWhenEmpty;\n',
+		[ FILES.rotation ]:
+			'export const rotationCap = ( requested ) => Math.min( 100, requested );\n',
 		...overrides,
 	};
 
@@ -129,6 +132,18 @@ test( 'a client that never sends n is refused', async () => {
 
 	assert.equal( status, 1 );
 	assert.match( output, /searchParams\.set/ );
+} );
+
+test( 'a dead maxRefreshes identifier without rotationCap is refused', async () => {
+	const dir = await root( {
+		[ FILES.view ]:
+			'const on = context.rotate;\nconst s = context.rotateSeconds;\nconst unused = context.maxRefreshes;\nif ( rotations >= MAX_ROTATIONS ) {}\nawait fillSlot( root, rotations );\n',
+	} );
+
+	const { status, output } = run( dir );
+
+	assert.equal( status, 1, output );
+	assert.match( output, /rotationCap/ );
 } );
 
 test( 'fillSlot called without the incrementing counter is refused', async () => {

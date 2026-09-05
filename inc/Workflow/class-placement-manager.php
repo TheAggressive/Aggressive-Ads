@@ -12,6 +12,7 @@ namespace Aggressive\Ads\Workflow;
 use Aggressive\Ads\Audit\Audit_Event;
 use Aggressive\Ads\Domain\Ad_Sizes;
 use Aggressive\Ads\Domain\Campaign_Rules;
+use Aggressive\Ads\Domain\Refresh_Policy;
 use Aggressive\Ads\Domain\Upload_Rules;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
@@ -97,6 +98,16 @@ final class Placement_Manager {
 			return $house;
 		}
 
+		$refresh = $this->apply_refresh( $placement_id, $input, true );
+
+		if ( is_wp_error( $refresh ) ) {
+			$this->placements->delete( $placement_id );
+
+			return $refresh;
+		}
+
+		$policy = $this->placements->refresh_policy( $placement_id );
+
 		$this->audit->insert(
 			new Audit_Event(
 				event: 'placement.created',
@@ -104,9 +115,10 @@ final class Placement_Manager {
 				object_id: $placement_id,
 				message: 'Placement created.',
 				context: array(
-					'slug'      => $fields['slug'],
-					'size'      => $fields['size'],
-					'is_active' => $fields['is_active'],
+					'slug'            => $fields['slug'],
+					'size'            => $fields['size'],
+					'is_active'       => $fields['is_active'],
+					'refresh_enabled' => $policy->enabled,
 				),
 				actor_user_id: get_current_user_id()
 			)
@@ -160,7 +172,15 @@ final class Placement_Manager {
 			return $house;
 		}
 
+		$refresh = $this->apply_refresh( $placement_id, $input, false );
+
+		if ( is_wp_error( $refresh ) ) {
+			return $refresh;
+		}
+
 		$this->cache->delete( $placement_id );
+
+		$policy = $this->placements->refresh_policy( $placement_id );
 
 		$this->audit->insert(
 			new Audit_Event(
@@ -169,9 +189,10 @@ final class Placement_Manager {
 				object_id: $placement_id,
 				message: 'Placement updated.',
 				context: array(
-					'slug'      => $fields['slug'],
-					'size'      => $fields['size'],
-					'is_active' => $fields['is_active'],
+					'slug'            => $fields['slug'],
+					'size'            => $fields['size'],
+					'is_active'       => $fields['is_active'],
+					'refresh_enabled' => $policy->enabled,
 				),
 				actor_user_id: get_current_user_id()
 			)
@@ -265,6 +286,55 @@ final class Placement_Manager {
 		$size = isset( $input['size'] ) && is_string( $input['size'] ) ? $input['size'] : '';
 
 		return Ad_Sizes::is_valid( $size ) ? $size : null;
+	}
+
+	/**
+	 * Records the publisher's refresh policy.
+	 *
+	 * **Create always writes one.** A placement nobody has decided about is
+	 * refresh-off, and that decision has to be a stored value rather than
+	 * absent meta: the upgrade backfill treats an empty flag as "existed
+	 * before the policy" and would grant the legacy 100-refresh permit to
+	 * a placement created afterwards if it ever ran again.
+	 *
+	 * Update writes only when the form sent a field, matching house: an
+	 * older client that does not know the keys must not reset the policy.
+	 *
+	 * @param int                  $placement_id Placement post id.
+	 * @param array<string, mixed> $input        Raw fields.
+	 * @param bool                 $creating     Whether this is a new placement.
+	 * @return true|WP_Error
+	 */
+	private function apply_refresh( int $placement_id, array $input, bool $creating ) {
+		$present = array_key_exists( 'refresh_enabled', $input )
+			|| array_key_exists( 'refresh_seconds', $input )
+			|| array_key_exists( 'refresh_max_per_view', $input );
+
+		if ( ! $present && ! $creating ) {
+			return true;
+		}
+
+		$defaults = Refresh_Policy::defaults();
+		$enabled  = $present ? ! empty( $input['refresh_enabled'] ) : $defaults->enabled;
+		$seconds  = $present && isset( $input['refresh_seconds'] )
+			? (int) $input['refresh_seconds']
+			: $defaults->interval_seconds;
+		$max      = $present && isset( $input['refresh_max_per_view'] )
+			? (int) $input['refresh_max_per_view']
+			: $defaults->max_per_view;
+
+		if ( ! $this->placements->set_refresh_policy( $placement_id, $enabled, $seconds, $max ) ) {
+			$this->record( $placement_id, Audit_Event::OUTCOME_FAILED, 'Placement refresh policy write failed.' );
+
+			return new WP_Error(
+				'aggr_refresh_not_saved',
+				__( 'The refresh policy could not be saved.', 'aggressive-ads' )
+			);
+		}
+
+		$this->cache->delete( $placement_id );
+
+		return true;
 	}
 
 	/**

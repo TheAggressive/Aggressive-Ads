@@ -252,6 +252,26 @@ the client sent nothing. `rotation.spec.ts` asserts the first fills carry
 `n=0` and the refetch carries `n=1`, which is the only way to see that the
 store actually wrote what the route reads.
 
+The same join applies one layer up. The column was stored correctly and
+every production reader — `totals()`, `daily_outcomes()`, the fill report,
+the CSV — grouped only by outcome, so a refresh became page supply on the
+only surface a publisher can see. `PublisherReportTest` and
+`DecisionServingTest` now read `Report_Data::fill()` after a production
+write, and `rotation.js` is in the contract scan so a dead
+`context.maxRefreshes` next to `MAX_ROTATIONS` fails the lane. The
+publisher screen now prints page and refresh as separate figures *and*
+separate reason tables: a page that filled every request used to print
+"every request was filled" while the refresh no-fills sat only in the
+CSV. The per-view cap is clamped at the client's hard stop on the way
+in, so a REST write of 400 cannot become supply a modified browser
+would request and an honest one cannot.
+
+The policy itself had the same shape: `set_refresh_policy()` was tested and
+the inventory screen never called it. A new placement resolved `rotate:true`
+to off, and nothing on the form could change that. The write path is
+`Placement_Manager` through the catalogue route; a test that only calls the
+repository is not a test of the publisher's switch.
+
 ## Suites
 
 | Suite | Config | Bootstrap | Needs |

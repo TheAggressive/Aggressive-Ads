@@ -104,16 +104,18 @@ final class Decision_Metrics implements Service {
 	/**
 	 * Declares what kind of opportunity this request is counting.
 	 *
-	 * Called once, before decisioning. An unknown kind is ignored rather than
-	 * stored, so a caller's mistake leaves the safe default rather than
-	 * inventing a third kind of inventory.
+	 * Called once, before decisioning. An unknown kind resets to page rather
+	 * than being ignored: ignoring would leave whatever the previous request
+	 * set, and on a long-running worker that is a refresh filed as a page
+	 * — or the other way around — which is the leftover-kind defect the
+	 * `for_slots` test exists to prevent.
 	 *
 	 * @param string $opportunity `Domain\Opportunity` kind.
 	 */
 	public function for_opportunity( string $opportunity ): void {
-		if ( Opportunity::is_valid( $opportunity ) ) {
-			$this->opportunity = $opportunity;
-		}
+		$this->opportunity = Opportunity::is_valid( $opportunity )
+			? $opportunity
+			: Opportunity::PAGE;
 	}
 
 	/**
