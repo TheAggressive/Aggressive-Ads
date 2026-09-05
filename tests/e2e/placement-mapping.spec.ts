@@ -4,13 +4,13 @@ import { signInToAdmin } from './admin-login';
 
 const SCREEN = '/wp-admin/admin.php?page=aggr-placement-mapping';
 
-/** Signs in as the administrator and lands on Inventory. */
+/** Signs in as the administrator and lands on Placements. */
 async function openScreen( page: Page ): Promise< void > {
 	await signInToAdmin( page );
 	await page.goto( SCREEN );
 
 	await expect(
-		page.getByRole( 'heading', { level: 1, name: 'Inventory' } )
+		page.getByRole( 'heading', { level: 1, name: 'Placements' } )
 	).toBeVisible();
 	await expect( page.locator( '.dataviews-view-table' ) ).toBeVisible();
 }

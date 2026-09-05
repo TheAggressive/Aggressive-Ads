@@ -115,8 +115,8 @@ final class Placement_Screen implements Service {
 	public function register_menu(): void {
 		$hook = add_submenu_page(
 			Menu::PARENT_SLUG,
-			__( 'Inventory', 'aggressive-ads' ),
-			__( 'Inventory', 'aggressive-ads' ),
+			__( 'Placements', 'aggressive-ads' ),
+			__( 'Placements', 'aggressive-ads' ),
 			Capabilities::MANAGE_PLACEMENTS,
 			self::MENU_SLUG,
 			array( $this, 'render' )
@@ -149,8 +149,8 @@ final class Placement_Screen implements Service {
 		if ( ! is_file( AGGR_PLUGIN_DIR . 'dist/admin/inventory.asset.php' ) ) {
 			printf(
 				'<div class="wrap"><h1>%1$s</h1><div class="notice notice-error"><p>%2$s</p></div></div>',
-				esc_html__( 'Inventory', 'aggressive-ads' ),
-				esc_html__( 'The inventory screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' )
+				esc_html__( 'Placements', 'aggressive-ads' ),
+				esc_html__( 'The placements screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' )
 			);
 
 			return;
@@ -210,8 +210,8 @@ final class Placement_Screen implements Service {
 
 		printf(
 			'<div class="wrap aggr-admin"><h1>%1$s</h1><noscript><div class="notice notice-error"><p>%2$s</p></div></noscript><div id="aggr-inventory-root" data-aggr-inventory="%3$s"></div></div>',
-			esc_html__( 'Inventory', 'aggressive-ads' ),
-			esc_html__( 'The inventory screen needs JavaScript enabled.', 'aggressive-ads' ),
+			esc_html__( 'Placements', 'aggressive-ads' ),
+			esc_html__( 'The placements screen needs JavaScript enabled.', 'aggressive-ads' ),
 			esc_attr( (string) wp_json_encode( $payload ) )
 		);
 	}

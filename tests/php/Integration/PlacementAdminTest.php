@@ -335,7 +335,7 @@ final class PlacementAdminTest extends WP_UnitTestCase {
 		$this->screen->render();
 		$html = (string) ob_get_clean();
 
-		$this->assertStringContainsString( 'Inventory', $html );
+		$this->assertStringContainsString( 'Placements', $html );
 		$this->assertStringContainsString( 'id="aggr-inventory-root"', $html );
 		$this->assertStringContainsString( '<noscript>', $html );
 

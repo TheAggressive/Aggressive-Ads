@@ -18,7 +18,7 @@ Nothing here is built merely because this document exists.
 {Product name}                 ← Settings → Brand (default UI: “Advertising”)
   Review                       aggr_review_campaigns
   Organizations                aggr_manage_orgs
-  Inventory                    aggr_manage_placements
+  Placements                   aggr_manage_placements
   Packages                     aggr_manage_packages
   Settings                     aggr_manage_settings
 ```

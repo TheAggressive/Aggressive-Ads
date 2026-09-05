@@ -280,7 +280,7 @@ export default function Edit( { attributes, setAttributes } ) {
 									isDismissible={ false }
 								>
 									{ __(
-										'No active placements yet. Create one under Advertising → Inventory.',
+										'No active placements yet. Create one under Advertising → Placements.',
 										'aggressive-ads'
 									) }
 								</Notice>

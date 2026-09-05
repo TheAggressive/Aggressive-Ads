@@ -86,10 +86,10 @@ This is not an aspiration maintained by discipline. `tests/e2e/campaign-wizard.s
 Native fill only runs where the theme (or an editor) places `aggr/ad-slot`,
 the PHP helper, or the shortcode. Until the LAAO theme swaps AdSanity group
 blocks for those embeds, public pages show empty reserved slots. That theme
-change is outside this plugin. Approval, Inventory, and the clock do not
+change is outside this plugin. Approval, Placements, and the clock do not
 depend on it.
 
-Staff create placements in Advertising → Inventory: a common IAB size or
+Staff create placements in Advertising → Placements: a common IAB size or
 custom width × height, stored as `{width}x{height}` with ASCII `x`. Size is
 not identity — two slots may share 728×90. There is no delete: deactivate,
 same as packages. The Block Editor block is authored under `src/blocks/`
