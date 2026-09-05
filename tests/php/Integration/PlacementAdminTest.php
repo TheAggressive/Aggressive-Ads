@@ -12,6 +12,7 @@ namespace Aggressive\Ads\Tests\Integration;
 use Aggressive\Ads\Admin\Menu;
 use Aggressive\Ads\Admin\Placement_Data;
 use Aggressive\Ads\Admin\Placement_Screen;
+use Aggressive\Ads\Admin\Shared_Assets;
 use Aggressive\Ads\Domain\Ad_Sizes;
 use Aggressive\Ads\Domain\Decision_Outcome;
 use Aggressive\Ads\Domain\Opportunity;
@@ -139,6 +140,45 @@ final class PlacementAdminTest extends WP_UnitTestCase {
 		// unreferenced write paths to the catalogue. See Rest\PlacementsWriteTest.
 		$this->assertFalse( has_action( 'admin_post_aggr_create_placement' ) );
 		$this->assertFalse( has_action( 'admin_post_aggr_update_placement' ) );
+	}
+
+	/**
+	 * **The shared DataViews assets reach the page, script and style alike.**
+	 *
+	 * The table is DataViews, and its stylesheet is the half that fails
+	 * silently: WordPress resolves script and style handles separately, so a
+	 * script dependency does not bring one. Losing it renders unstyled markup
+	 * that still technically works, which is why this asserts the style as
+	 * well as the script rather than trusting the dependency.
+	 *
+	 * @return void
+	 */
+	public function test_the_screen_enqueues_the_shared_dataviews_assets(): void {
+		wp_set_current_user( $this->administrator );
+
+		Plugin::instance()->container()->get( Menu::class )->register_parent();
+		$this->screen->register_menu();
+		$this->screen->enqueue(
+			(string) get_plugin_page_hookname( Placement_Screen::MENU_SLUG, Menu::PARENT_SLUG )
+		);
+
+		$this->assertTrue(
+			wp_script_is( 'aggr-inventory', 'enqueued' ),
+			'The screen did not load its own bundle, so the rest of this proves nothing.'
+		);
+		$this->assertTrue(
+			wp_style_is( 'aggr-inventory', 'enqueued' ),
+			'The screen loaded without its own rules: a table flat on the grey canvas.'
+		);
+
+		$registered = wp_styles()->registered['aggr-inventory'] ?? null;
+
+		$this->assertNotNull( $registered );
+		$this->assertContains(
+			Shared_Assets::DATAVIEWS,
+			$registered->deps,
+			'DataViews would render as unstyled markup, and nothing would error.'
+		);
 	}
 
 	/**
@@ -306,6 +346,8 @@ final class PlacementAdminTest extends WP_UnitTestCase {
 		$this->assertSame( 'Homepage leaderboard', $payload['view']['rows'][0]['name'] );
 		$this->assertSame( 'Create placement', $payload['i18n']['create'] );
 		$this->assertSame( 'Custom size', $payload['i18n']['customSize'] );
+		$this->assertSame( 'Search placements', $payload['i18n']['search'] );
+		$this->assertSame( 'Edit', $payload['i18n']['edit'] );
 
 		// No form, so no nonce: the write path is REST, which authenticates
 		// with its own nonce header rather than a posted field.

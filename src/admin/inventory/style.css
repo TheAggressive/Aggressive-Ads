@@ -1,0 +1,86 @@
+/*
+ * The inventory screen, given the same surface as the rest of wp-admin.
+ *
+ * DataViews arrives styled — it is core's own component — and what it does
+ * not arrive with is a *container*: dropped into a `.wrap`, the table sits
+ * flat on the admin's grey canvas with no edge. Matching core's list-table
+ * surface, hairline and radius is what makes this read as part of wp-admin
+ * rather than as an embedded application.
+ *
+ * Structural selectors against DataViews are honest here for the reason the
+ * organization roster records: it is bundled from a pinned
+ * `@wordpress/dataviews`, so its markup moves only when we move the
+ * dependency, unlike core's own list tables.
+ */
+
+/*
+ * Tokens must be imported, not assumed.
+ *
+ * This bundle is enqueued on its own, without admin.css, so nothing else on
+ * the page declares `--aggr-*`. An unresolved custom property in a colour
+ * declaration is not a degraded look — it is transparent text on a
+ * transparent background.
+ */
+@import '../../styles/base/_admin-tokens.css';
+
+/*
+ * Modals render through a portal at the end of the body, outside `.aggr-admin`
+ * and therefore outside the block that declares `--aggr-*`. Re-declare what
+ * the rules below actually use, and nothing more.
+ */
+.aggr-inventory-modal {
+	--aggr-measure: 60ch;
+	--aggr-color-surface-sunken: #f6f7f7;
+	--aggr-border-color: #dcdcde;
+	--aggr-color-text-muted: #646970;
+}
+
+.wrap.aggr-admin .dataviews-wrapper {
+	background: var(--aggr-color-surface);
+	border: 1px solid var(--aggr-border-color);
+	border-radius: var(--aggr-radius-panel, 4px);
+	box-sizing: border-box;
+	margin-top: 16px;
+	overflow: hidden;
+}
+
+.wrap.aggr-admin .dataviews-filters__container {
+	padding: 12px 16px;
+}
+
+.wrap.aggr-admin .dataviews-view-table td,
+.wrap.aggr-admin .dataviews-view-table th {
+	padding-inline: 16px;
+}
+
+.wrap.aggr-admin .dataviews-view-table__primary-column-content {
+	font-weight: 600;
+}
+
+/*
+ * `.components-modal__frame.aggr-inventory-modal`, not a descendant selector.
+ * `Modal` puts `className` on the frame itself, so a descendant match is
+ * empty and the frame keeps core's default width — which is how Conversions
+ * first rendered a 60-character form in a 996px dialog.
+ */
+.components-modal__frame.aggr-inventory-modal {
+	width: fit-content;
+	min-width: min(90vw, 34rem);
+	max-width: min(90vw, var(--aggr-measure, 60ch));
+}
+
+.aggr-inventory-modal .components-base-control__help {
+	margin-top: 4px;
+	margin-bottom: 0;
+}
+
+.aggr-inventory-modal fieldset {
+	border: 1px solid var(--aggr-border-color);
+	border-radius: 2px;
+	margin: 0;
+	padding: 12px 16px 16px;
+}
+
+.aggr-inventory-modal legend {
+	padding-inline: 4px;
+}

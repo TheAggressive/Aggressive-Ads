@@ -70,17 +70,43 @@ final class Placement_Screen implements Service {
 			return;
 		}
 
-		$meta = require $asset;
+		$meta    = require $asset;
+		$version = is_string( $meta['version'] ?? null ) ? $meta['version'] : AGGR_VERSION;
+
+		// The bundle's .asset.php names aggr-dataviews as a dependency, because
+		// the build rewrote its @wordpress/dataviews import onto the shared
+		// copy. Registering it here is what lets WordPress resolve that.
+		Shared_Assets::register();
 
 		wp_enqueue_script(
 			'aggr-inventory',
 			AGGR_PLUGIN_URL . 'dist/admin/inventory.js',
 			is_array( $meta['dependencies'] ?? null ) ? $meta['dependencies'] : array(),
-			is_string( $meta['version'] ?? null ) ? $meta['version'] : AGGR_VERSION,
+			$version,
 			true
 		);
 
 		wp_enqueue_style( 'wp-components' );
+
+		/*
+		 * The shared DataViews stylesheet, named as a dependency rather than
+		 * enqueued beside this one, so it always loads first: this screen's
+		 * rules restyle DataViews components and would lose to them otherwise.
+		 *
+		 * A script dependency does not bring a stylesheet — WordPress resolves
+		 * script and style handles separately — so this is the only thing that
+		 * puts it on the page.
+		 */
+		wp_enqueue_style(
+			'aggr-inventory',
+			AGGR_PLUGIN_URL . 'dist/admin/inventory.css',
+			array( 'wp-components', Shared_Assets::DATAVIEWS ),
+			$version
+		);
+
+		// The build emits inventory-rtl.css beside it; core swaps the file
+		// wholesale rather than appending overrides.
+		wp_style_add_data( 'aggr-inventory', 'rtl', 'replace' );
 	}
 
 	/**
@@ -98,14 +124,6 @@ final class Placement_Screen implements Service {
 
 		$this->hook_suffix = is_string( $hook ) ? $hook : '';
 	}
-
-	/*
-	 * No stylesheet is enqueued here.
-	 *
-	 * This screen is native WordPress admin markup — wrap, notice, and core's
-	 * own component set — so core already styles every part of it. Loading the
-	 * plugin's design system would only give it something to fight.
-	 */
 
 	/**
 	 * Renders the authorized catalogue.
@@ -143,10 +161,18 @@ final class Placement_Screen implements Service {
 			'restPath' => '/' . Creative_File_Controller::NAMESPACE . '/placements',
 			'i18n'     => array(
 				'newPlacement'        => __( 'New placement', 'aggressive-ads' ),
+				'editPlacement'       => __( 'Edit placement', 'aggressive-ads' ),
 				'create'              => __( 'Create placement', 'aggressive-ads' ),
 				'save'                => __( 'Save placement', 'aggressive-ads' ),
 				'created'             => __( 'Placement created.', 'aggressive-ads' ),
 				'saved'               => __( 'Placement saved.', 'aggressive-ads' ),
+				'edit'                => __( 'Edit', 'aggressive-ads' ),
+				'cancel'              => __( 'Cancel', 'aggressive-ads' ),
+				'search'              => __( 'Search placements', 'aggressive-ads' ),
+				'none'                => __( 'No placements yet.', 'aggressive-ads' ),
+				'status'              => __( 'Status', 'aggressive-ads' ),
+				'refreshOn'           => __( 'Allowed', 'aggressive-ads' ),
+				'refreshOff'          => __( 'Off', 'aggressive-ads' ),
 				'name'                => __( 'Name', 'aggressive-ads' ),
 				'slug'                => __( 'Slot slug', 'aggressive-ads' ),
 				'slugHelp'            => __( 'Used by the placement block to choose this slot. Lowercase letters, numbers and hyphens.', 'aggressive-ads' ),
