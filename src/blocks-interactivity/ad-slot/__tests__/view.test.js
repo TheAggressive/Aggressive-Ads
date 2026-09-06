@@ -1,9 +1,30 @@
-/* global afterEach, describe, expect, it, jest */
+/* global afterEach, beforeEach, describe, expect, it, jest */
 
 import { fillSlot } from '../fill.js';
 
+/**
+ * Makes every image report itself paintable, or not.
+ *
+ * jsdom loads nothing and implements no `decode()`, so without this every fill
+ * waits out its preload timeout and swaps nothing. A real browser answers this
+ * question for us; here the test has to say which answer it is assuming, which
+ * is also what lets the failure case be tested at all.
+ *
+ * @param {boolean} paintable Whether images should resolve as ready.
+ */
+const imagesPaint = ( paintable ) => {
+	window.HTMLImageElement.prototype.decode = paintable
+		? () => Promise.resolve()
+		: () => Promise.reject( new Error( 'decode failed' ) );
+};
+
 describe( 'ad slot fill', () => {
+	beforeEach( () => {
+		imagesPaint( true );
+	} );
+
 	afterEach( () => {
+		delete window.HTMLImageElement.prototype.decode;
 		document.body.replaceChildren();
 		delete window.fetch;
 		jest.restoreAllMocks();
@@ -40,6 +61,98 @@ describe( 'ad slot fill', () => {
 		expect( image.style.width ).toBe( '100%' );
 		expect( image.style.height ).toBe( 'auto' );
 		expect( root.querySelector( ':scope > a' ) ).toBeNull();
+	} );
+
+	it( 'keeps the current ad on screen until the next one can be painted', async () => {
+		document.body.innerHTML = `
+			<div data-aggr-slot="leaderboard" data-aggr-fill="/fill">
+				<div class="aggr-slot__canvas"></div>
+			</div>
+		`;
+		const root = document.querySelector( '[data-aggr-slot]' );
+		const canvas = root.querySelector( '.aggr-slot__canvas' );
+
+		let nth = 0;
+
+		window.fetch = jest.fn().mockImplementation( async () => ( {
+			ok: true,
+			json: async () => {
+				nth += 1;
+
+				return {
+					creative: {
+						image: `https://example.test/${ nth }.png`,
+						click: 'https://example.test/destination',
+					},
+				};
+			},
+		} ) );
+
+		await fillSlot( root );
+		expect( canvas.querySelector( 'img' ).src ).toContain( '1.png' );
+
+		/*
+		 * The second creative is held mid-decode. This is the moment the bug
+		 * lived in: the old ad used to be removed here and the box sat empty
+		 * until the new bytes arrived.
+		 */
+		let release;
+		window.HTMLImageElement.prototype.decode = () =>
+			new Promise( ( resolve ) => {
+				release = resolve;
+			} );
+
+		const rotation = fillSlot( root, 1 );
+
+		// Let the fetch and its JSON settle so the fill reaches the decode it
+		// is now waiting on. Polling rather than counting microtasks, so this
+		// does not depend on how many awaits sit before it.
+		while ( undefined === release ) {
+			await new Promise( ( resolve ) => window.setTimeout( resolve, 0 ) );
+		}
+
+		expect( canvas.querySelector( 'img' ).src ).toContain( '1.png' );
+		expect( canvas.querySelector( 'img' ) ).not.toBeNull();
+
+		release();
+		await rotation;
+
+		expect( canvas.querySelector( 'img' ).src ).toContain( '2.png' );
+	} );
+
+	it( 'does not swap in, or count, a creative that cannot be painted', async () => {
+		document.body.innerHTML = `
+			<div data-aggr-slot="leaderboard" data-aggr-fill="/fill">
+				<div class="aggr-slot__canvas"></div>
+			</div>
+		`;
+		const root = document.querySelector( '[data-aggr-slot]' );
+		const canvas = root.querySelector( '.aggr-slot__canvas' );
+
+		window.fetch = jest.fn().mockResolvedValue( {
+			ok: true,
+			json: async () => ( {
+				creative: {
+					image: 'https://example.test/broken.png',
+					click: 'https://example.test/destination',
+					token: 'tok',
+				},
+				beacon: 'https://example.test/beacon',
+			} ),
+		} );
+		window.navigator.sendBeacon = jest.fn();
+
+		imagesPaint( false );
+
+		expect( await fillSlot( root ) ).toBe( false );
+		expect( canvas.querySelector( 'img' ) ).toBeNull();
+
+		/*
+		 * The impression is the half that used to be wrong in the other
+		 * direction: the beacon fired the instant the element was inserted, so
+		 * bytes that never arrived were still counted as seen.
+		 */
+		expect( window.navigator.sendBeacon ).not.toHaveBeenCalled();
 	} );
 
 	it( 'replaces the previous ad instead of stacking a second one', async () => {
