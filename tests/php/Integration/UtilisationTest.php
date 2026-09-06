@@ -394,7 +394,20 @@ final class UtilisationTest extends WP_UnitTestCase {
 		return (string) ob_get_clean();
 	}
 
-	public function test_the_screen_lists_each_placement_and_its_rate(): void {
+	/**
+	 * The payload the screen hands the browser carries the figures.
+	 *
+	 * Asserted on the decoded payload rather than on rendered text, because the
+	 * table is now built by DataViews in the browser.
+	 *
+	 * **The previous version of this test searched the HTML for "Leader" and
+	 * "Utilisation by group" and kept passing after the tables moved** — both
+	 * strings are inside the JSON attribute, so it matched the bootstrap rather
+	 * than anything rendered, and would have passed with every number wrong.
+	 *
+	 * @return void
+	 */
+	public function test_the_screen_hands_the_browser_each_placement_and_its_rate(): void {
 		$id = $this->placement( 'leader', array( 'sidebar' ) );
 
 		$this->rollups->add(
@@ -407,12 +420,34 @@ final class UtilisationTest extends WP_UnitTestCase {
 			Opportunity::PAGE
 		);
 
+		$payload = $this->payload();
+		$row     = $payload['view']['placements'][0];
+
+		$this->assertSame( 'Leader', $row['name'] );
+		$this->assertSame( array( 'sidebar' ), $row['groups'] );
+		$this->assertSame( 200, $row['requests'] );
+		$this->assertSame( 0.25, $row['fill_rate'] );
+		$this->assertSame( 'sidebar', $payload['view']['groups'][0]['slug'] );
+	}
+
+	/**
+	 * The utilisation section still says what it is without JavaScript.
+	 *
+	 * Only the tables moved to the browser. The heading, the page-only caveat
+	 * and a noscript notice stay in the markup, so a reader without JavaScript
+	 * is told what is missing rather than shown a gap where a number should be.
+	 *
+	 * @return void
+	 */
+	public function test_the_utilisation_section_survives_without_javascript(): void {
+		$this->placement( 'leader' );
+
 		$html = $this->rendered();
 
 		$this->assertStringContainsString( 'Utilisation by placement', $html );
-		$this->assertStringContainsString( 'Leader', $html );
-		$this->assertStringContainsString( 'sidebar', $html );
-		$this->assertStringContainsString( 'Utilisation by group', $html );
+		$this->assertStringContainsString( 'aggr-reports-root', $html );
+		$this->assertStringContainsString( '<noscript>', $html );
+		$this->assertStringContainsString( 'need JavaScript enabled', $html );
 	}
 
 	/**
@@ -431,14 +466,42 @@ final class UtilisationTest extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'Page opportunities only', $this->rendered() );
 	}
 
-	/** A placement in no group renders an em dash, not an empty cell. */
-	public function test_an_ungrouped_placement_renders_a_dash(): void {
+	/**
+	 * An ungrouped placement is handed over with no groups and no group table.
+	 *
+	 * How that renders — an em dash rather than an empty cell — is now the
+	 * browser's business. What the server owes is an empty list rather than a
+	 * missing key, so the client has something unambiguous to render from.
+	 *
+	 * @return void
+	 */
+	public function test_an_ungrouped_placement_is_handed_over_with_no_groups(): void {
 		$this->placement( 'loner' );
 
+		$payload = $this->payload();
+
+		$this->assertSame( array(), $payload['view']['placements'][0]['groups'] );
+		$this->assertSame( array(), $payload['view']['groups'] );
+	}
+
+	/**
+	 * The bootstrapped payload, decoded.
+	 *
+	 * @return array<string, mixed>
+	 */
+	private function payload(): array {
 		$html = $this->rendered();
 
-		$this->assertStringContainsString( 'Utilisation by placement', $html );
-		$this->assertStringNotContainsString( 'Utilisation by group', $html );
-		$this->assertStringContainsString( '—', $html );
+		$this->assertSame(
+			1,
+			preg_match( '/data-aggr-reports="([^"]*)"/', $html, $found ),
+			'The reports screen rendered no utilisation payload.'
+		);
+
+		$decoded = json_decode( html_entity_decode( $found[1], ENT_QUOTES ), true );
+
+		$this->assertIsArray( $decoded );
+
+		return $decoded;
 	}
 }

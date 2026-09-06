@@ -235,7 +235,7 @@ final class ScreenStylesheetTest extends WP_UnitTestCase {
 		$screens  = $this->screens();
 		$problems = array();
 		$checked  = 0;
-		$seen     = array();
+		$rendered = array();
 
 		$this->assertNotEmpty( $screens, 'No Advertising screens registered; this test would prove nothing.' );
 
@@ -254,11 +254,12 @@ final class ScreenStylesheetTest extends WP_UnitTestCase {
 				continue;
 			}
 
+			$rendered[ $slug ] = $html;
+
 			$defined = $this->defined_in( $this->enqueued_stylesheets() );
 
 			foreach ( $this->used_in( $html ) as $used ) {
 				++$checked;
-				$seen[] = $used;
 
 				if ( ! $this->satisfied( $used, $defined ) ) {
 					$problems[] = sprintf(
@@ -285,17 +286,22 @@ final class ScreenStylesheetTest extends WP_UnitTestCase {
 		/*
 		 * **The assertion that makes the rest of this test mean something.**
 		 *
-		 * `aggr-table-scroll` is printed only once the reports screen has
-		 * reporting enabled *and* a placement to list. The first version of
-		 * this test had neither, so it inspected an empty-state page, saw
-		 * nothing, and passed cleanly with the stylesheet defect deliberately
-		 * reintroduced. Naming one class that must be present is what stops it
-		 * quietly returning to that.
+		 * An unseeded reports screen renders "Reporting is switched off", and
+		 * with the module on but no placements it returns before the
+		 * utilisation section. The first version of this test had neither, so
+		 * it inspected an empty-state page, saw nothing, and passed cleanly
+		 * with a stylesheet defect deliberately reintroduced.
+		 *
+		 * The anchor is the utilisation mount rather than a class name: the
+		 * classes on this screen are now DataViews' own, printed by the browser
+		 * and invisible here, so a class-based anchor would drift with the
+		 * bundle. The mount point is what the server promises.
 		 */
-		$this->assertContains(
-			'aggr-table-scroll',
-			$seen,
-			'The reports screen did not render its utilisation tables, so the case this test exists for was never examined.'
+		$this->assertArrayHasKey( 'aggr-reports', $rendered );
+		$this->assertStringContainsString(
+			'aggr-reports-root',
+			$rendered['aggr-reports'],
+			'The reports screen did not render its utilisation section, so this test examined an empty-state page.'
 		);
 	}
 

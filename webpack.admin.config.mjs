@@ -78,6 +78,10 @@ export default ( env = {}, argv = {} ) => {
 				process.cwd(),
 				'src/admin/conversions/index.tsx'
 			),
+			'admin/reports': path.resolve(
+				process.cwd(),
+				'src/admin/reports/index.tsx'
+			),
 		},
 		output: {
 			path: path.resolve( process.cwd(), 'dist' ),

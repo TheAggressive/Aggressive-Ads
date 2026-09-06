@@ -1,0 +1,13 @@
+/*
+ * Rhythm for the utilisation tables, and nothing else.
+ *
+ * The two DataViews sit under server-rendered headings on a page that is
+ * otherwise native WordPress markup, so they need separating from what precedes
+ * them and from each other. Everything else about how they look is DataViews'
+ * own, deliberately: restyling a component means re-checking it against every
+ * release for states that are easy to half-implement.
+ */
+.aggr-reports-utilisation {
+	margin-top: 12px;
+	margin-bottom: 32px;
+}

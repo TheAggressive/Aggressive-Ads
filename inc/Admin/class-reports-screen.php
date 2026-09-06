@@ -33,6 +33,13 @@ final class Reports_Screen implements Service {
 	public const MENU_SLUG = 'aggr-reports';
 
 	/**
+	 * This screen's hook suffix, assigned by add_submenu_page().
+	 *
+	 * @var string
+	 */
+	private string $hook_suffix = '';
+
+	/**
 	 * Constructor.
 	 *
 	 * @param Report_Data $data Fill figures and their labels.
@@ -45,13 +52,14 @@ final class Reports_Screen implements Service {
 	 */
 	public function init(): void {
 		add_action( 'admin_menu', array( $this, 'register_menu' ) );
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue' ) );
 	}
 
 	/**
 	 * Registers a capability-owned submenu under Advertising.
 	 */
 	public function register_menu(): void {
-		add_submenu_page(
+		$hook = add_submenu_page(
 			Menu::PARENT_SLUG,
 			__( 'Reports', 'aggressive-ads' ),
 			__( 'Reports', 'aggressive-ads' ),
@@ -59,6 +67,65 @@ final class Reports_Screen implements Service {
 			self::MENU_SLUG,
 			array( $this, 'render' )
 		);
+
+		$this->hook_suffix = is_string( $hook ) ? $hook : '';
+	}
+
+	/**
+	 * Loads the utilisation tables' bundle, and only on this screen.
+	 *
+	 * The rest of the page needs no JavaScript and does not get any. Reports is
+	 * what somebody opens when something is already wrong, so the headline
+	 * figures, the no-fill reasons and the export stay server-rendered and
+	 * readable without a bundle. Only the two tables whose question is a sort
+	 * are mounted.
+	 *
+	 * @param string $hook_suffix Current admin screen.
+	 * @return void
+	 */
+	public function enqueue( string $hook_suffix ): void {
+		if ( '' === $this->hook_suffix || $hook_suffix !== $this->hook_suffix ) {
+			return;
+		}
+
+		if ( ! $this->data->surfaces() ) {
+			return;
+		}
+
+		$asset = AGGR_PLUGIN_DIR . 'dist/admin/reports.asset.php';
+
+		if ( ! is_file( $asset ) ) {
+			return;
+		}
+
+		$meta    = require $asset;
+		$version = is_string( $meta['version'] ?? null ) ? $meta['version'] : AGGR_VERSION;
+
+		// The bundle's .asset.php names aggr-dataviews as a dependency, because
+		// the build rewrote its @wordpress/dataviews import onto the shared
+		// copy. Registering it here is what lets WordPress resolve that.
+		Shared_Assets::register();
+
+		wp_enqueue_script(
+			'aggr-reports',
+			AGGR_PLUGIN_URL . 'dist/admin/reports.js',
+			is_array( $meta['dependencies'] ?? null ) ? $meta['dependencies'] : array(),
+			$version,
+			true
+		);
+
+		wp_enqueue_style( 'wp-components' );
+
+		$style = AGGR_PLUGIN_DIR . 'dist/admin/reports.css';
+
+		if ( is_file( $style ) ) {
+			wp_enqueue_style(
+				'aggr-reports',
+				AGGR_PLUGIN_URL . 'dist/admin/reports.css',
+				array( 'wp-components' ),
+				$version
+			);
+		}
 	}
 
 	/**
@@ -385,17 +452,19 @@ final class Reports_Screen implements Service {
 	}
 
 	/**
-	 * How much of each placement's page inventory was actually sold.
+	 * Mounts the utilisation tables.
 	 *
-	 * **Page opportunities only, and the heading says so.** A refresh is the
-	 * same slot filled again by a timer, not new supply, so counting it here
-	 * would let a publisher raise their apparent utilisation by rotating
-	 * faster. The wording is not decoration: a reader who assumes this includes
-	 * every impression will draw the opposite conclusion from the number.
+	 * **Only these two tables are a bundle.** Sorting is the question they
+	 * exist to answer — "which placements are underselling" is a sort by fill
+	 * rate, and a static table cannot answer it. Everything above them on this
+	 * page stays server-rendered, so the headline figures and the no-fill
+	 * reasons are still readable with JavaScript off.
 	 *
-	 * Not filtered by the placement selector. The point of this table is
-	 * comparing placements against each other, and a one-row comparison is the
-	 * summary above.
+	 * **Page opportunities only, and the heading says so.** A refresh fills the
+	 * same slot again on a timer, so counting it here would let a publisher
+	 * raise their apparent utilisation by rotating faster. A reader who assumes
+	 * this includes every impression draws the opposite conclusion from the
+	 * number, which is why the caveat is rendered rather than implied.
 	 *
 	 * @param array{placements: list<array<string, mixed>>, groups: list<array<string, mixed>>} $view Utilisation view.
 	 * @return void
@@ -414,144 +483,33 @@ final class Reports_Screen implements Service {
 			return;
 		}
 
-		/*
-		 * Named so it collides with nothing. An accessible name is matched by
-		 * substring, so "Utilisation by placement" also answered to the
-		 * "Placement" filter's label and made that control ambiguous to any
-		 * caller asking for it by name — a browser test, and a screen reader
-		 * user navigating by form control.
-		 */
-		$this->open_scroll_region( __( 'Utilisation detail', 'aggressive-ads' ) );
-
-		echo '<table class="widefat striped">';
-		printf(
-			'<caption class="screen-reader-text">%s</caption>',
-			esc_html__( 'Page requests, fills and utilisation for each placement.', 'aggressive-ads' )
-		);
-		printf(
-			'<thead><tr><th scope="col">%1$s</th><th scope="col">%2$s</th><th scope="col">%3$s</th><th scope="col">%4$s</th><th scope="col">%5$s</th></tr></thead><tbody>',
-			esc_html__( 'Placement', 'aggressive-ads' ),
-			esc_html__( 'Groups', 'aggressive-ads' ),
-			esc_html__( 'Page requests', 'aggressive-ads' ),
-			esc_html__( 'Filled', 'aggressive-ads' ),
-			esc_html__( 'Utilisation', 'aggressive-ads' )
-		);
-
 		$unaccounted = 0;
 
 		foreach ( $view['placements'] as $row ) {
 			$unaccounted += (int) $row['unaccounted'];
-
-			printf(
-				'<tr><th scope="row">%1$s</th><td>%2$s</td><td>%3$s</td><td>%4$s</td><td>%5$s</td></tr>',
-				esc_html( (string) $row['name'] ),
-				esc_html( $this->group_list( $row['groups'] ) ),
-				esc_html( number_format_i18n( (int) $row['requests'] ) ),
-				esc_html( number_format_i18n( (int) $row['fills'] ) ),
-				esc_html( $this->rate( $row['fill_rate'] ) )
-			);
 		}
 
-		echo '</tbody></table></div>';
+		$payload = array(
+			'view' => $view,
+			'i18n' => array(
+				'placement'      => __( 'Placement', 'aggressive-ads' ),
+				'groups'         => __( 'Groups', 'aggressive-ads' ),
+				'requests'       => __( 'Page requests', 'aggressive-ads' ),
+				'fills'          => __( 'Filled', 'aggressive-ads' ),
+				'utilisation'    => __( 'Utilisation', 'aggressive-ads' ),
+				'group'          => __( 'Group', 'aggressive-ads' ),
+				'placementCount' => __( 'Placements', 'aggressive-ads' ),
+				'byGroup'        => __( 'Utilisation by group', 'aggressive-ads' ),
+			),
+		);
+
+		printf(
+			'<noscript><div class="notice notice-warning"><p>%1$s</p></div></noscript><div id="aggr-reports-root" data-aggr-reports="%2$s"></div>',
+			esc_html__( 'The utilisation tables need JavaScript enabled. Every other figure on this page is above.', 'aggressive-ads' ),
+			esc_attr( (string) wp_json_encode( $payload ) )
+		);
 
 		$this->render_unaccounted( $unaccounted );
-		$this->render_group_utilisation( $view['groups'] );
-	}
-
-	/**
-	 * The same figure totalled over each group.
-	 *
-	 * Summed from the placement counters rather than averaged from their rates
-	 * — a mean of rates weights a placement with nine requests the same as one
-	 * with nine thousand, and would report a nearly empty group as
-	 * three-quarters sold. The arithmetic is in `Admin\Report_Data`; this only
-	 * prints it.
-	 *
-	 * @param list<array<string, mixed>> $groups Group rows.
-	 * @return void
-	 */
-	private function render_group_utilisation( array $groups ): void {
-		if ( array() === $groups ) {
-			return;
-		}
-
-		printf( '<h2>%s</h2>', esc_html__( 'Utilisation by group', 'aggressive-ads' ) );
-
-		// Not a superstring of the table region's name above, for the same
-		// substring-matching reason.
-		$this->open_scroll_region( __( 'Group totals', 'aggressive-ads' ) );
-
-		echo '<table class="widefat striped">';
-		printf(
-			'<caption class="screen-reader-text">%s</caption>',
-			esc_html__( 'Page requests, fills and utilisation totalled for each placement group.', 'aggressive-ads' )
-		);
-		printf(
-			'<thead><tr><th scope="col">%1$s</th><th scope="col">%2$s</th><th scope="col">%3$s</th><th scope="col">%4$s</th><th scope="col">%5$s</th></tr></thead><tbody>',
-			esc_html__( 'Group', 'aggressive-ads' ),
-			esc_html__( 'Placements', 'aggressive-ads' ),
-			esc_html__( 'Page requests', 'aggressive-ads' ),
-			esc_html__( 'Filled', 'aggressive-ads' ),
-			esc_html__( 'Utilisation', 'aggressive-ads' )
-		);
-
-		foreach ( $groups as $group ) {
-			printf(
-				'<tr><th scope="row">%1$s</th><td>%2$s</td><td>%3$s</td><td>%4$s</td><td>%5$s</td></tr>',
-				esc_html( (string) $group['slug'] ),
-				esc_html( number_format_i18n( (int) $group['placements'] ) ),
-				esc_html( number_format_i18n( (int) $group['requests'] ) ),
-				esc_html( number_format_i18n( (int) $group['fills'] ) ),
-				esc_html( $this->rate( $group['fill_rate'] ) )
-			);
-		}
-
-		echo '</tbody></table></div>';
-	}
-
-	/**
-	 * Opens a horizontally scrollable region around a wide table.
-	 *
-	 * WCAG 1.4.10 requires the *page* to reflow at 320 CSS pixels without
-	 * two-dimensional scrolling. These two tables carry five columns of figures
-	 * that a publisher compares against each other, so narrowing them to fit
-	 * would mean dropping a column and hiding data rather than presenting it.
-	 * Scrolling the table inside its own region satisfies the criterion without
-	 * that trade.
-	 *
-	 * **`tabindex` is what makes it legitimate.** A scrollable region that only
-	 * a mouse can scroll is unreachable by keyboard, which axe reports as
-	 * `scrollable-region-focusable` and which is a worse failure than the one
-	 * being fixed. Focusable regions need an accessible name, hence the label.
-	 *
-	 * @param string $label Accessible name for the region.
-	 * @return void
-	 */
-	private function open_scroll_region( string $label ): void {
-		printf(
-			'<div class="aggr-table-scroll" role="region" tabindex="0" aria-label="%s">',
-			esc_attr( $label )
-		);
-	}
-
-	/**
-	 * A placement's groups as one readable cell.
-	 *
-	 * An em dash rather than an empty cell for a placement in no group: an
-	 * empty table cell reads as missing data rather than as a deliberate
-	 * nothing.
-	 *
-	 * @param array<int, string> $groups Group slugs.
-	 * @return string
-	 */
-	private function group_list( array $groups ): string {
-		if ( array() === $groups ) {
-			return __( '—', 'aggressive-ads' );
-		}
-
-		// A plain separator rather than a translatable one: a bare ", " gives a
-		// translator no context to work from and nothing to get right.
-		return implode( ', ', $groups );
 	}
 
 	/**
