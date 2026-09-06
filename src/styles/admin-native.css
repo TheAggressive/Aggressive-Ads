@@ -155,6 +155,54 @@
 }
 
 /*
+ * Figures sit near their headings, not stranded across the page.
+ *
+ * A `widefat` table gives every column an equal share, so five columns on a
+ * wide screen put "0" some five hundred pixels from the word "Filled" and left
+ * the first column six times wider than the longest placement name in it. The
+ * numeric columns are sized to their content and the name column takes what is
+ * left, which is the only column whose length is unpredictable.
+ *
+ * Layout only — no colours, no borders, no cell chrome. Core still draws the
+ * table.
+ */
+.wrap.aggr-admin .aggr-report-table {
+	/*
+	 * One measure for the screen.
+	 *
+	 * A `widefat` table fills whatever it is given, so on a wide monitor
+	 * right-aligned figures ended up a canyon away from the words they belong
+	 * to. This is the width the two summary cards already span, so the tables
+	 * line up under them instead of running past to the window edge.
+	 *
+	 * A max-width, not a width: below it the table still fills the space, which
+	 * is what keeps the narrow-viewport behaviour unchanged.
+	 */
+	max-width: 900px;
+}
+
+.wrap.aggr-admin .aggr-report-table td,
+.wrap.aggr-admin .aggr-report-table th {
+	width: 1%;
+	white-space: nowrap;
+}
+
+.wrap.aggr-admin .aggr-report-table td:first-child,
+.wrap.aggr-admin .aggr-report-table th:first-child {
+	width: auto;
+	white-space: normal;
+}
+
+/*
+ * A number reads against the one above it, so the digits line up rather than
+ * the words. The heading follows its column.
+ */
+.wrap.aggr-admin .aggr-report-table td:not(:first-child),
+.wrap.aggr-admin .aggr-report-table th:not(:first-child) {
+	text-align: right;
+}
+
+/*
  * A wide data table scrolls inside itself, never the page.
  *
  * WCAG 1.4.10 asks that content reflow at 320 CSS pixels without

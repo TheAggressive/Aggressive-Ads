@@ -409,7 +409,7 @@ final class Reports_Screen implements Service {
 			return;
 		}
 
-		echo '<table class="widefat striped">';
+		echo '<table class="widefat striped aggr-report-table">';
 		printf( '<caption class="screen-reader-text">%s</caption>', esc_html( $caption ) );
 		printf(
 			'<thead><tr><th scope="col">%1$s</th><th scope="col">%2$s</th><th scope="col">%3$s</th></tr></thead><tbody>',
@@ -455,16 +455,10 @@ final class Reports_Screen implements Service {
 			esc_html__( 'Page opportunities only. A refresh fills the same slot again on a timer, so it is delivery rather than new inventory and is deliberately not counted here.', 'aggressive-ads' )
 		);
 
+		$this->render_unattributed( $view['unattributed'] ?? array() );
+
 		if ( array() === $view['placements'] ) {
 			printf( '<p>%s</p>', esc_html__( 'No placements are configured yet.', 'aggressive-ads' ) );
-
-			/*
-			 * Still said, because this is the case that needs it most: no
-			 * placements and a headline in the thousands is the widest the two
-			 * figures can disagree, and an early return here is what made the
-			 * disagreement unexplainable in the first place.
-			 */
-			$this->render_unattributed( $view['unattributed'] ?? array() );
 
 			return;
 		}
@@ -478,7 +472,7 @@ final class Reports_Screen implements Service {
 		 */
 		$this->open_scroll_region( __( 'Utilisation detail', 'aggressive-ads' ) );
 
-		echo '<table class="widefat striped">';
+		echo '<table class="widefat striped aggr-report-table">';
 		printf(
 			'<caption class="screen-reader-text">%s</caption>',
 			esc_html__( 'Page requests, fills and utilisation for each placement.', 'aggressive-ads' )
@@ -506,12 +500,11 @@ final class Reports_Screen implements Service {
 		echo '</tbody></table></div>';
 
 		/*
-		 * The unexplained-outcome warning is printed once, above, against the
-		 * whole site. Summing it again per placement said the same thing with a
+		 * The unexplained-outcome warning is printed once, against the whole
+		 * site. Summing it again per placement said the same thing with a
 		 * different number and identical wording, which reads as two separate
 		 * defects rather than one seen from two angles.
 		 */
-		$this->render_unattributed( $view['unattributed'] ?? array() );
 		$this->render_group_utilisation( $view['groups'] );
 	}
 
@@ -538,7 +531,7 @@ final class Reports_Screen implements Service {
 		// substring-matching reason.
 		$this->open_scroll_region( __( 'Group totals', 'aggressive-ads' ) );
 
-		echo '<table class="widefat striped">';
+		echo '<table class="widefat striped aggr-report-table">';
 		printf(
 			'<caption class="screen-reader-text">%s</caption>',
 			esc_html__( 'Page requests, fills and utilisation totalled for each placement group.', 'aggressive-ads' )
@@ -618,6 +611,10 @@ final class Reports_Screen implements Service {
 	 * can. Without this the two disagree by a number nobody can explain — the
 	 * summary says three thousand page requests, every placement says nought,
 	 * and both are telling the truth about different sets of rows.
+	 *
+	 * **Printed before the table, not after it.** It explains why the rows read
+	 * nought, and a reader who meets ten rows of zeros first has already decided
+	 * something is broken by the time they reach the sentence saying otherwise.
 	 *
 	 * Ordinary on a development site that has been reseeded, and worth a second
 	 * look on a live one: it means history exists for inventory that was
