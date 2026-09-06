@@ -125,7 +125,7 @@ final class Report_Data {
 	 * "how much of this group sold".
 	 *
 	 * @param Report_Period $period Bounded UTC range.
-	 * @return array{placements: list<array{id: int, name: string, slug: string, groups: list<string>, requests: int, fills: int, fill_rate: float|null, unaccounted: int}>, groups: list<array{slug: string, placements: int, requests: int, fills: int, fill_rate: float|null}>}
+	 * @return array{placements: list<array{id: int, name: string, slug: string, groups: list<string>, requests: int, fills: int, fill_rate: float|null, unaccounted: int}>, groups: list<array{slug: string, placements: int, requests: int, fills: int, fill_rate: float|null}>, unattributed: array{requests: int, fills: int}}
 	 */
 	public function utilisation( Report_Period $period ): array {
 		$totals = $this->decisions->totals_by_placement(
@@ -160,6 +160,27 @@ final class Report_Data {
 			}
 		}
 
+		/*
+		 * **Counters whose placement no longer exists are reported, not
+		 * dropped.**
+		 *
+		 * The headline figures sum every row in the window; this breakdown can
+		 * only name placements that still exist. Delete a placement — or reseed
+		 * a development site — and its history stays in the table while
+		 * vanishing from every row here, so the totals above disagree with the
+		 * rows below and nothing says why. A screen that quietly loses events
+		 * is the same defect `unaccounted` exists to surface, one level up.
+		 *
+		 * Reported as one figure rather than attributed: the placement is gone,
+		 * so there is nothing honest to attribute it to. P15's invariant is
+		 * that a placement identity used by history is retired rather than
+		 * reused, which is exactly what makes these counters unattributable and
+		 * not merely misfiled.
+		 */
+		$known       = array_map( 'intval', $this->placements->all_ids() );
+		$orphan_rows = array_diff_key( $totals, array_flip( $known ) );
+		$orphan      = Fill_Figures::from_totals( self::merge_totals( $orphan_rows ) );
+
 		ksort( $groups );
 
 		$group_rows = array();
@@ -180,9 +201,31 @@ final class Report_Data {
 		}
 
 		return array(
-			'placements' => $rows,
-			'groups'     => $group_rows,
+			'placements'   => $rows,
+			'groups'       => $group_rows,
+			'unattributed' => array(
+				'requests' => $orphan['requests'],
+				'fills'    => $orphan['fills'],
+			),
 		);
+	}
+
+	/**
+	 * Sums several placements' outcome totals into one.
+	 *
+	 * @param array<int, array<string, int>> $rows Placement id to outcome totals.
+	 * @return array<string, int>
+	 */
+	private static function merge_totals( array $rows ): array {
+		$merged = array();
+
+		foreach ( $rows as $totals ) {
+			foreach ( $totals as $outcome => $events ) {
+				$merged[ $outcome ] = ( $merged[ $outcome ] ?? 0 ) + (int) $events;
+			}
+		}
+
+		return $merged;
 	}
 
 	/**

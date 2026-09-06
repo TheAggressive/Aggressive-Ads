@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Tests\Integration;
 
 use Aggressive\Ads\Admin\Menu;
+use Aggressive\Ads\Admin\Shared_Assets;
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Core\Settings;
 use Aggressive\Ads\Domain\Decision_Outcome;
@@ -235,7 +236,7 @@ final class ScreenStylesheetTest extends WP_UnitTestCase {
 		$screens  = $this->screens();
 		$problems = array();
 		$checked  = 0;
-		$seen     = array();
+		$rendered = array();
 
 		$this->assertNotEmpty( $screens, 'No Advertising screens registered; this test would prove nothing.' );
 
@@ -254,11 +255,12 @@ final class ScreenStylesheetTest extends WP_UnitTestCase {
 				continue;
 			}
 
+			$rendered[ $slug ] = $html;
+
 			$defined = $this->defined_in( $this->enqueued_stylesheets() );
 
 			foreach ( $this->used_in( $html ) as $used ) {
 				++$checked;
-				$seen[] = $used;
 
 				if ( ! $this->satisfied( $used, $defined ) ) {
 					$problems[] = sprintf(
@@ -285,17 +287,99 @@ final class ScreenStylesheetTest extends WP_UnitTestCase {
 		/*
 		 * **The assertion that makes the rest of this test mean something.**
 		 *
-		 * `aggr-table-scroll` is printed only once the reports screen has
-		 * reporting enabled *and* a placement to list. The first version of
-		 * this test had neither, so it inspected an empty-state page, saw
-		 * nothing, and passed cleanly with the stylesheet defect deliberately
-		 * reintroduced. Naming one class that must be present is what stops it
-		 * quietly returning to that.
+		 * An unseeded reports screen renders "Reporting is switched off", and
+		 * with the module on but no placements it returns before the
+		 * utilisation section. The first version of this test had neither, so
+		 * it inspected an empty-state page and passed cleanly with a stylesheet
+		 * defect deliberately reintroduced.
+		 *
+		 * The anchor is the mount rather than a class: the classes in that
+		 * section are DataViews' own now, printed by the browser and invisible
+		 * to a server-side render.
 		 */
-		$this->assertContains(
-			'aggr-table-scroll',
-			$seen,
-			'The reports screen did not render its utilisation tables, so the case this test exists for was never examined.'
+		$this->assertArrayHasKey( 'aggr-reports', $rendered );
+		$this->assertStringContainsString(
+			'aggr-reports-root',
+			$rendered['aggr-reports'],
+			'The reports screen did not render its utilisation section, so this test examined an empty-state page.'
+		);
+	}
+
+	/**
+	 * **A screen whose bundle needs DataViews enqueues the DataViews stylesheet.**
+	 *
+	 * `wp_enqueue_script()` resolves script handles; `wp_enqueue_style()`
+	 * resolves style handles. They are separate registries, so a bundle naming
+	 * `aggr-dataviews` in its `.asset.php` gets the *script* and no CSS
+	 * whatsoever unless the screen also names it as a style dependency.
+	 *
+	 * Omitting it does not error, does not warn, and does not fail any other
+	 * check here — the page simply renders DataViews unstyled: a table sized to
+	 * its content, hugging the left edge, with none of its responsive
+	 * behaviour. The reports screen shipped exactly that, and the conversion
+	 * was judged and reverted on the strength of how it looked.
+	 *
+	 * Derived rather than listed: any screen that grows a DataViews bundle is
+	 * covered without anyone remembering this rule exists.
+	 *
+	 * @return void
+	 */
+	public function test_a_dataviews_screen_enqueues_the_dataviews_stylesheet(): void {
+		$checked = 0;
+
+		foreach ( $this->screens() as $slug => $hook ) {
+			$GLOBALS['wp_styles']  = null;
+			$GLOBALS['wp_scripts'] = null;
+
+			$_GET['page'] = $slug;
+
+			do_action( 'admin_enqueue_scripts', $hook );
+
+			$scripts = wp_scripts();
+			$needs   = false;
+
+			foreach ( $scripts->queue as $handle ) {
+				$registered = $scripts->registered[ $handle ] ?? null;
+				$deps       = is_object( $registered ) ? (array) $registered->deps : array();
+
+				if ( in_array( Shared_Assets::DATAVIEWS, $deps, true ) ) {
+					$needs = true;
+					break;
+				}
+			}
+
+			if ( ! $needs ) {
+				continue;
+			}
+
+			++$checked;
+
+			/*
+			 * `->queue` holds only what was enqueued directly; a dependency is
+			 * resolved at print time. Both screens name the stylesheet as a
+			 * dependency of their own, which is the documented way to order it
+			 * first — so the tree is what has to be searched.
+			 *
+			 * Asserting on the queue alone reported the working Placements
+			 * screen as broken, which is how this test nearly shipped a false
+			 * verdict about the code it was written to defend.
+			 */
+			$styles = wp_styles();
+			$styles->all_deps( $styles->queue );
+
+			$this->assertContains(
+				Shared_Assets::DATAVIEWS,
+				$styles->to_do,
+				$slug . ' loads a DataViews bundle without the DataViews stylesheet, so it renders unstyled.'
+			);
+		}
+
+		unset( $_GET['page'] );
+
+		$this->assertGreaterThan(
+			0,
+			$checked,
+			'No screen was found loading a DataViews bundle; this test examined nothing.'
 		);
 	}
 

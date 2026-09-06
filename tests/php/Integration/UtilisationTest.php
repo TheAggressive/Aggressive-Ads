@@ -368,6 +368,183 @@ final class UtilisationTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * **Counters for a deleted placement are reported, not silently dropped.**
+	 *
+	 * The headline figures sum every row in the window; the breakdown can only
+	 * name placements that still exist. Delete one and its history stays in the
+	 * table while vanishing from every row, so the totals disagree with the
+	 * rows by a number nobody can account for. Observed on a real screen:
+	 * "Page requests: 3,120" above a table where every placement read nought.
+	 *
+	 * @return void
+	 */
+	public function test_counters_for_a_deleted_placement_are_reported(): void {
+		$id = $this->placement( 'doomed' );
+
+		$this->rollups->add(
+			$this->day,
+			$id,
+			array(
+				Decision_Outcome::REQUEST => 3120,
+				Decision_Outcome::FILL    => 2340,
+			),
+			Opportunity::PAGE
+		);
+
+		wp_delete_post( $id, true );
+
+		$view = $this->data->utilisation( $this->window() );
+
+		$this->assertSame( array(), $view['placements'], 'A deleted placement must not be listed.' );
+		$this->assertSame( 3120, $view['unattributed']['requests'] );
+		$this->assertSame( 2340, $view['unattributed']['fills'] );
+
+		$this->assertStringContainsString(
+			'no longer exist',
+			$this->rendered(),
+			'The screen counted events it could not attribute and said nothing.'
+		);
+	}
+
+	/** A site with no deleted placements reports nothing extra. */
+	public function test_nothing_unattributed_prints_no_notice(): void {
+		$id = $this->placement( 'present' );
+
+		$this->rollups->add(
+			$this->day,
+			$id,
+			array(
+				Decision_Outcome::REQUEST => 10,
+				Decision_Outcome::FILL    => 4,
+			),
+			Opportunity::PAGE
+		);
+
+		$view = $this->data->utilisation( $this->window() );
+
+		$this->assertSame( 0, $view['unattributed']['requests'] );
+		$this->assertStringNotContainsString( 'no longer exist', $this->rendered() );
+	}
+
+	/**
+	 * **Every page request on the screen is accounted for exactly once.**
+	 *
+	 * The headline sums every row in the window. The breakdown names the
+	 * placements that still exist. The notice names what belongs to placements
+	 * that do not. Those three are only trustworthy together if they add up —
+	 * and nothing checked that they did, which is how a screen showing 3,120
+	 * requests above a table of zeros passed every test in this suite.
+	 *
+	 * @return void
+	 */
+	public function test_the_breakdown_and_the_headline_reconcile(): void {
+		$live = array(
+			'alpha' => array( 800, 600 ),
+			'beta'  => array( 650, 420 ),
+			'gamma' => array( 220, 0 ),
+		);
+
+		foreach ( $live as $slug => $counts ) {
+			$id = $this->placement( $slug );
+
+			$this->rollups->add(
+				$this->day,
+				$id,
+				array(
+					Decision_Outcome::REQUEST => $counts[0],
+					Decision_Outcome::FILL    => $counts[1],
+				),
+				Opportunity::PAGE
+			);
+		}
+
+		// One placement's history outliving the placement itself.
+		$gone = $this->placement( 'deleted' );
+		$this->rollups->add(
+			$this->day,
+			$gone,
+			array(
+				Decision_Outcome::REQUEST => 450,
+				Decision_Outcome::FILL    => 300,
+			),
+			Opportunity::PAGE
+		);
+		wp_delete_post( $gone, true );
+
+		// Refresh counters, which must not touch any of the above.
+		$noise = $this->placement( 'rotator' );
+		$this->rollups->add(
+			$this->day,
+			$noise,
+			array(
+				Decision_Outcome::REQUEST => 9000,
+				Decision_Outcome::FILL    => 9000,
+			),
+			Opportunity::REFRESH
+		);
+
+		$period   = $this->window();
+		$headline = $this->data->fill( $period );
+		$view     = $this->data->utilisation( $period );
+
+		$listed_requests = array_sum( array_column( $view['placements'], 'requests' ) );
+		$listed_fills    = array_sum( array_column( $view['placements'], 'fills' ) );
+
+		$this->assertSame(
+			$headline['requests'],
+			$listed_requests + $view['unattributed']['requests'],
+			'Page requests on the screen do not add up to the headline.'
+		);
+
+		$this->assertSame(
+			$headline['fills'],
+			$listed_fills + $view['unattributed']['fills'],
+			'Page fills on the screen do not add up to the headline.'
+		);
+
+		// And the figures themselves, so a reconciling pair of wrong numbers
+		// cannot pass: 800+650+220 live, 450 orphaned, 9000 refresh excluded.
+		$this->assertSame( 2120, $headline['requests'] );
+		$this->assertSame( 1670, $listed_requests );
+		$this->assertSame( 450, $view['unattributed']['requests'] );
+		$this->assertSame( 9000, $headline['refresh']['requests'] );
+	}
+
+	/**
+	 * P13's invariant holds on the screen: requests equal fills plus reasons.
+	 *
+	 * `unaccounted` is what surfaces a violation, so it must be zero on data
+	 * that balances — otherwise the screen cries defect over healthy counters
+	 * and nobody believes it when it matters.
+	 *
+	 * @return void
+	 */
+	public function test_requests_equal_fills_plus_every_reason(): void {
+		$id = $this->placement( 'balanced' );
+
+		$this->rollups->add(
+			$this->day,
+			$id,
+			array(
+				Decision_Outcome::REQUEST          => 3120,
+				Decision_Outcome::FILL             => 2340,
+				No_Fill_Reason::TARGETING_MISMATCH => 520,
+				No_Fill_Reason::FREQUENCY_CAPPED   => 260,
+			),
+			Opportunity::PAGE
+		);
+
+		$figures = $this->data->fill( $this->window() );
+		$reasons = array_sum( array_column( $figures['reasons'], 'events' ) );
+
+		$this->assertSame( 3120, $figures['requests'] );
+		$this->assertSame( 2340, $figures['fills'] );
+		$this->assertSame( 780, $reasons );
+		$this->assertSame( 0, $figures['unaccounted'], 'Balanced counters must not report a defect.' );
+		$this->assertSame( 0.75, $figures['fill_rate'] );
+	}
+
+	/**
 	 * Turns reporting on, since the screen renders nothing without it.
 	 *
 	 * @return void
@@ -394,7 +571,20 @@ final class UtilisationTest extends WP_UnitTestCase {
 		return (string) ob_get_clean();
 	}
 
-	public function test_the_screen_lists_each_placement_and_its_rate(): void {
+	/**
+	 * The payload the screen hands the browser carries the figures.
+	 *
+	 * Asserted on the decoded payload rather than on rendered text, because the
+	 * table is now built by DataViews in the browser.
+	 *
+	 * **The previous version of this test searched the HTML for "Leader" and
+	 * "Utilisation by group" and kept passing after the tables moved** — both
+	 * strings are inside the JSON attribute, so it matched the bootstrap rather
+	 * than anything rendered, and would have passed with every number wrong.
+	 *
+	 * @return void
+	 */
+	public function test_the_screen_hands_the_browser_each_placement_and_its_rate(): void {
 		$id = $this->placement( 'leader', array( 'sidebar' ) );
 
 		$this->rollups->add(
@@ -407,12 +597,34 @@ final class UtilisationTest extends WP_UnitTestCase {
 			Opportunity::PAGE
 		);
 
+		$payload = $this->payload();
+		$row     = $payload['view']['placements'][0];
+
+		$this->assertSame( 'Leader', $row['name'] );
+		$this->assertSame( array( 'sidebar' ), $row['groups'] );
+		$this->assertSame( 200, $row['requests'] );
+		$this->assertSame( 0.25, $row['fill_rate'] );
+		$this->assertSame( 'sidebar', $payload['view']['groups'][0]['slug'] );
+	}
+
+	/**
+	 * The utilisation section still says what it is without JavaScript.
+	 *
+	 * Only the tables moved to the browser. The heading, the page-only caveat
+	 * and a noscript notice stay in the markup, so a reader without JavaScript
+	 * is told what is missing rather than shown a gap where a number should be.
+	 *
+	 * @return void
+	 */
+	public function test_the_utilisation_section_survives_without_javascript(): void {
+		$this->placement( 'leader' );
+
 		$html = $this->rendered();
 
 		$this->assertStringContainsString( 'Utilisation by placement', $html );
-		$this->assertStringContainsString( 'Leader', $html );
-		$this->assertStringContainsString( 'sidebar', $html );
-		$this->assertStringContainsString( 'Utilisation by group', $html );
+		$this->assertStringContainsString( 'aggr-reports-root', $html );
+		$this->assertStringContainsString( '<noscript>', $html );
+		$this->assertStringContainsString( 'need JavaScript enabled', $html );
 	}
 
 	/**
@@ -431,14 +643,42 @@ final class UtilisationTest extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'Page opportunities only', $this->rendered() );
 	}
 
-	/** A placement in no group renders an em dash, not an empty cell. */
-	public function test_an_ungrouped_placement_renders_a_dash(): void {
+	/**
+	 * An ungrouped placement is handed over with no groups and no group table.
+	 *
+	 * How that renders — an em dash rather than an empty cell — is now the
+	 * browser's business. What the server owes is an empty list rather than a
+	 * missing key, so the client has something unambiguous to render from.
+	 *
+	 * @return void
+	 */
+	public function test_an_ungrouped_placement_is_handed_over_with_no_groups(): void {
 		$this->placement( 'loner' );
 
+		$payload = $this->payload();
+
+		$this->assertSame( array(), $payload['view']['placements'][0]['groups'] );
+		$this->assertSame( array(), $payload['view']['groups'] );
+	}
+
+	/**
+	 * The bootstrapped payload, decoded.
+	 *
+	 * @return array<string, mixed>
+	 */
+	private function payload(): array {
 		$html = $this->rendered();
 
-		$this->assertStringContainsString( 'Utilisation by placement', $html );
-		$this->assertStringNotContainsString( 'Utilisation by group', $html );
-		$this->assertStringContainsString( '—', $html );
+		$this->assertSame(
+			1,
+			preg_match( '/data-aggr-reports="([^"]*)"/', $html, $found ),
+			'The reports screen rendered no utilisation payload.'
+		);
+
+		$decoded = json_decode( html_entity_decode( $found[1], ENT_QUOTES ), true );
+
+		$this->assertIsArray( $decoded );
+
+		return $decoded;
 	}
 }

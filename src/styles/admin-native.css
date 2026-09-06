@@ -105,36 +105,99 @@
 }
 
 /*
- * A wide data table scrolls inside itself, never the page.
+ * The headline figure on a report card.
  *
- * WCAG 1.4.10 asks that content reflow at 320 CSS pixels without
- * two-dimensional scrolling. The utilisation tables carry five columns a
- * publisher reads against each other, so narrowing them to fit would mean
- * dropping a column and hiding the comparison rather than presenting it.
+ * This is heading weight and measure, which is what this file owns — no
+ * colours, no borders, no component of its own. The card around it is core's
+ * `postbox` and the grid is `.aggr-card-grid`, both already here.
  *
- * This is layout rather than a restyled component, which is why it belongs in
- * a file that otherwise touches no tables: it changes where overflow goes, not
- * how core draws a cell.
+ * The size is the entire design change. Six figures previously sat in one flat
+ * list where the fill rate — the number this screen exists to deliver — read as
+ * the fourth sentence of a paragraph, indistinguishable from the caption under
+ * it. Scale is what separates a figure from prose.
  *
- * **It lives here because this is the sheet these screens actually load.** The
- * first version of this rule went into `admin.css`, which the review screens
- * load and the reports screen does not — so the markup carried a class with no
- * rule behind it and the overflow stayed. A rule in the wrong stylesheet looks
- * exactly like a rule that does not work.
+ * Deliberately not accented. WordPress uses blue for things you can click, and
+ * a blue static number invites a click that does nothing.
  */
-.wrap.aggr-admin .aggr-table-scroll {
-	overflow-x: auto;
-	max-width: 100%;
+.wrap.aggr-admin .aggr-figure {
+	font-size: 32px;
+	font-weight: 600;
+	line-height: 1.1;
+	margin: 0;
 }
 
 /*
- * The region is keyboard focusable — a scroll container only a mouse can reach
- * is a worse failure than the overflow it fixes — and a focusable thing needs a
- * visible focus state or it trades 1.4.10 for 2.4.7. `currentcolor` rather than
- * a palette token: this file carries no colours, and a focus ring that inherits
- * the text colour needs none.
+ * No data is a sentence, not a big dash.
+ *
+ * An em dash in the figure slot renders at 32px as a thick horizontal bar that
+ * reads as a redaction mark. Muting it did not help — the shape is the problem.
+ * The card says what is missing in words instead, at body size, because an
+ * absence is prose rather than a measurement.
  */
-.wrap.aggr-admin .aggr-table-scroll:focus-visible {
-	outline: 2px solid currentcolor;
-	outline-offset: 2px;
+.wrap.aggr-admin .aggr-figure--none {
+	color: var(--aggr-color-text-muted);
+	margin: 0;
+}
+
+.wrap.aggr-admin .aggr-figure__caption {
+	margin: 4px 0 0;
+}
+
+/*
+ * The counts the rate came from.
+ *
+ * Present because a rate with no denominator on screen is a number nobody can
+ * check, and quiet because they are the working, not the answer.
+ */
+.wrap.aggr-admin .aggr-figure__detail {
+	color: var(--aggr-color-text-muted);
+	margin: 12px 0 0;
+}
+
+/*
+ * Figures sit near their headings, not stranded across the page.
+ *
+ * A `widefat` table gives every column an equal share, so five columns on a
+ * wide screen put "0" some five hundred pixels from the word "Filled" and left
+ * the first column six times wider than the longest placement name in it. The
+ * numeric columns are sized to their content and the name column takes what is
+ * left, which is the only column whose length is unpredictable.
+ *
+ * Layout only — no colours, no borders, no cell chrome. Core still draws the
+ * table.
+ */
+.wrap.aggr-admin .aggr-report-table {
+	/*
+	 * One measure for the screen.
+	 *
+	 * A `widefat` table fills whatever it is given, so on a wide monitor
+	 * right-aligned figures ended up a canyon away from the words they belong
+	 * to. This is the width the two summary cards already span, so the tables
+	 * line up under them instead of running past to the window edge.
+	 *
+	 * A max-width, not a width: below it the table still fills the space, which
+	 * is what keeps the narrow-viewport behaviour unchanged.
+	 */
+	max-width: 900px;
+}
+
+.wrap.aggr-admin .aggr-report-table td,
+.wrap.aggr-admin .aggr-report-table th {
+	width: 1%;
+	white-space: nowrap;
+}
+
+.wrap.aggr-admin .aggr-report-table td:first-child,
+.wrap.aggr-admin .aggr-report-table th:first-child {
+	width: auto;
+	white-space: normal;
+}
+
+/*
+ * A number reads against the one above it, so the digits line up rather than
+ * the words. The heading follows its column.
+ */
+.wrap.aggr-admin .aggr-report-table td:not(:first-child),
+.wrap.aggr-admin .aggr-report-table th:not(:first-child) {
+	text-align: right;
 }

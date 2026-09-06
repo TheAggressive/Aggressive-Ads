@@ -33,6 +33,13 @@ final class Reports_Screen implements Service {
 	public const MENU_SLUG = 'aggr-reports';
 
 	/**
+	 * This screen's hook suffix, assigned by add_submenu_page().
+	 *
+	 * @var string
+	 */
+	private string $hook_suffix = '';
+
+	/**
 	 * Constructor.
 	 *
 	 * @param Report_Data $data Fill figures and their labels.
@@ -45,13 +52,14 @@ final class Reports_Screen implements Service {
 	 */
 	public function init(): void {
 		add_action( 'admin_menu', array( $this, 'register_menu' ) );
+		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue' ) );
 	}
 
 	/**
 	 * Registers a capability-owned submenu under Advertising.
 	 */
 	public function register_menu(): void {
-		add_submenu_page(
+		$hook = add_submenu_page(
 			Menu::PARENT_SLUG,
 			__( 'Reports', 'aggressive-ads' ),
 			__( 'Reports', 'aggressive-ads' ),
@@ -59,6 +67,71 @@ final class Reports_Screen implements Service {
 			self::MENU_SLUG,
 			array( $this, 'render' )
 		);
+
+		$this->hook_suffix = is_string( $hook ) ? $hook : '';
+	}
+
+	/**
+	 * Loads the utilisation tables' bundle, and only on this screen.
+	 *
+	 * The rest of the page needs no JavaScript and does not get any: the
+	 * headline cards, the no-fill reasons and the export stay server-rendered,
+	 * so the figures somebody opens this screen for survive without a bundle.
+	 *
+	 * @param string $hook_suffix Current admin screen.
+	 * @return void
+	 */
+	public function enqueue( string $hook_suffix ): void {
+		if ( '' === $this->hook_suffix || $hook_suffix !== $this->hook_suffix ) {
+			return;
+		}
+
+		if ( ! $this->data->surfaces() ) {
+			return;
+		}
+
+		$asset = AGGR_PLUGIN_DIR . 'dist/admin/reports.asset.php';
+
+		if ( ! is_file( $asset ) ) {
+			return;
+		}
+
+		$meta    = require $asset;
+		$version = is_string( $meta['version'] ?? null ) ? $meta['version'] : AGGR_VERSION;
+
+		Shared_Assets::register();
+
+		wp_enqueue_script(
+			'aggr-reports',
+			AGGR_PLUGIN_URL . 'dist/admin/reports.js',
+			is_array( $meta['dependencies'] ?? null ) ? $meta['dependencies'] : array(),
+			$version,
+			true
+		);
+
+		/*
+		 * **`Shared_Assets::DATAVIEWS` is a style dependency, and it has to be.**
+		 *
+		 * A script dependency does not bring a stylesheet — WordPress resolves
+		 * script and style handles separately — so naming the DataViews script
+		 * in the bundle's `.asset.php` puts no CSS on the page. `Placement_Screen`
+		 * records the same thing beside the same line.
+		 *
+		 * Omitting it renders DataViews entirely unstyled: a table sized to its
+		 * content, hugging the left edge, with none of its responsive
+		 * behaviour. That is what it did here the first time, and the screen
+		 * was judged and reverted on the strength of it.
+		 */
+		wp_enqueue_style(
+			'aggr-reports',
+			AGGR_PLUGIN_URL . 'dist/admin/reports.css',
+			array( 'wp-components', Shared_Assets::DATAVIEWS ),
+			$version
+		);
+
+		// The build emits reports-rtl.css beside it; core swaps the file
+		// wholesale rather than appending overrides.
+		wp_style_add_data( 'aggr-reports', 'rtl', 'replace' );
 	}
 
 	/**
@@ -253,53 +326,100 @@ final class Reports_Screen implements Service {
 			printf( '<p class="description">%s</p>', esc_html( $note ) );
 		}
 
-		$refresh = $fill['refresh'];
+		/*
+		 * Two cards, not six lines.
+		 *
+		 * Page and refresh are different kinds of inventory, and keeping them
+		 * apart is the whole point of the grain this phase defined — so the
+		 * layout says so, rather than interleaving them in one list where the
+		 * fill rate reads as the fourth sentence of a paragraph. It is the
+		 * number this screen exists to deliver.
+		 *
+		 * `postbox` is WordPress's own card and `aggr-card-grid` was already in
+		 * the stylesheet waiting for a screen. Nothing is invented here, which
+		 * is what keeps this inside what `admin-native.css` is willing to own.
+		 */
+		echo '<div id="poststuff"><div class="aggr-card-grid">';
+
+		$this->render_kind_card(
+			__( 'Page', 'aggressive-ads' ),
+			$fill,
+			__( 'of page requests filled', 'aggressive-ads' ),
+			__( 'No page requests in this window.', 'aggressive-ads' )
+		);
+
+		$this->render_kind_card(
+			__( 'Refresh', 'aggressive-ads' ),
+			$fill['refresh'],
+			__( 'of refresh requests filled', 'aggressive-ads' ),
+			__( 'No refreshes in this window.', 'aggressive-ads' )
+		);
+
+		echo '</div></div>';
+	}
+
+	/**
+	 * One inventory kind, as a card.
+	 *
+	 * The rate leads because it is the question — "is my inventory selling" —
+	 * and the counts it came from sit under it, because a rate with no
+	 * denominator on screen is a number nobody can check.
+	 *
+	 * When nothing was requested there is no figure at all, only the sentence
+	 * saying so. Nothing was requested and a placement nobody asked for did not
+	 * fail to fill — but an em dash at figure size renders as a bar, so the
+	 * absence is written out instead of symbolised.
+	 *
+	 * @param string                                                  $heading Kind name.
+	 * @param array{requests: int, fills: int, fill_rate: float|null} $figures Figures for that kind.
+	 * @param string                                                  $caption Caption under the rate.
+	 * @param string                                                  $none    Sentence shown when nothing was requested.
+	 * @return void
+	 */
+	private function render_kind_card( string $heading, array $figures, string $caption, string $none ): void {
+		$requests = (int) $figures['requests'];
+		$rate     = $figures['fill_rate'];
 
 		printf(
-			'<ul><li>%1$s</li><li>%2$s</li><li>%3$s</li><li>%4$s</li><li>%5$s</li><li>%6$s</li></ul>',
+			'<div class="postbox"><div class="postbox-header"><h2 class="hndle">%s</h2></div><div class="inside">',
+			esc_html( $heading )
+		);
+
+		if ( null === $rate ) {
+			/*
+			 * No figure at all when there is nothing to report.
+			 *
+			 * An em dash in the figure slot renders as a thick horizontal bar
+			 * that reads as a redaction mark — seen in a rendering, and not
+			 * fixed by making it lighter. An absence does not need a
+			 * placeholder glyph; it needs a sentence, and the sentence is the
+			 * one this card would have captioned the figure with anyway.
+			 */
+			printf( '<p class="aggr-figure--none">%s</p>', esc_html( $none ) );
+		} else {
+			printf( '<p class="aggr-figure">%s</p>', esc_html( $this->rate( $rate ) ) );
+			printf( '<p class="aggr-figure__caption">%s</p>', esc_html( $caption ) );
+		}
+
+		printf(
+			'<p class="aggr-figure__detail">%1$s<br>%2$s</p>',
 			esc_html(
 				sprintf(
-					/* translators: %s: a count of page-view advertisement requests. */
-					__( 'Page requests: %s', 'aggressive-ads' ),
-					number_format_i18n( $fill['requests'] )
+					/* translators: %s: a count of advertisement requests. */
+					__( '%s requests', 'aggressive-ads' ),
+					number_format_i18n( $requests )
 				)
 			),
 			esc_html(
 				sprintf(
-					/* translators: %s: a count of filled page-view requests. */
-					__( 'Page filled: %s', 'aggressive-ads' ),
-					number_format_i18n( $fill['fills'] )
-				)
-			),
-			esc_html(
-				sprintf(
-					/* translators: %s: page fill rate as a percentage, or an em dash. */
-					__( 'Page fill rate: %s', 'aggressive-ads' ),
-					$this->rate( $fill['fill_rate'] )
-				)
-			),
-			esc_html(
-				sprintf(
-					/* translators: %s: a count of refresh advertisement requests. */
-					__( 'Refresh requests: %s', 'aggressive-ads' ),
-					number_format_i18n( $refresh['requests'] )
-				)
-			),
-			esc_html(
-				sprintf(
-					/* translators: %s: a count of filled refresh requests. */
-					__( 'Refresh filled: %s', 'aggressive-ads' ),
-					number_format_i18n( $refresh['fills'] )
-				)
-			),
-			esc_html(
-				sprintf(
-					/* translators: %s: refresh fill rate as a percentage, or an em dash. */
-					__( 'Refresh fill rate: %s', 'aggressive-ads' ),
-					$this->rate( $refresh['fill_rate'] )
+					/* translators: %s: a count of filled requests. */
+					__( '%s filled', 'aggressive-ads' ),
+					number_format_i18n( (int) $figures['fills'] )
 				)
 			)
 		);
+
+		echo '</div></div>';
 	}
 
 	/**
@@ -362,7 +482,7 @@ final class Reports_Screen implements Service {
 			return;
 		}
 
-		echo '<table class="widefat striped">';
+		echo '<table class="widefat striped aggr-report-table">';
 		printf( '<caption class="screen-reader-text">%s</caption>', esc_html( $caption ) );
 		printf(
 			'<thead><tr><th scope="col">%1$s</th><th scope="col">%2$s</th><th scope="col">%3$s</th></tr></thead><tbody>',
@@ -385,19 +505,23 @@ final class Reports_Screen implements Service {
 	}
 
 	/**
-	 * How much of each placement's page inventory was actually sold.
+	 * Mounts the utilisation tables.
 	 *
-	 * **Page opportunities only, and the heading says so.** A refresh is the
-	 * same slot filled again by a timer, not new supply, so counting it here
-	 * would let a publisher raise their apparent utilisation by rotating
-	 * faster. The wording is not decoration: a reader who assumes this includes
-	 * every impression will draw the opposite conclusion from the number.
+	 * **Only these two tables are a bundle.** Sorting is the question they
+	 * exist to answer — "which placements are underselling" is a sort by fill
+	 * rate, and a static table cannot answer it. Everything above them stays
+	 * server-rendered, so the headline figures and the no-fill reasons are
+	 * still readable with JavaScript off.
 	 *
-	 * Not filtered by the placement selector. The point of this table is
-	 * comparing placements against each other, and a one-row comparison is the
-	 * summary above.
+	 * **Page opportunities only, and the caption says so.** A refresh fills the
+	 * same slot again on a timer, so counting it here would let a publisher
+	 * raise their apparent utilisation by rotating faster.
 	 *
-	 * @param array{placements: list<array<string, mixed>>, groups: list<array<string, mixed>>} $view Utilisation view.
+	 * The unattributed notice is printed before the mount, not after it: it
+	 * explains why the rows can read nought, and a reader who meets the zeros
+	 * first has already decided something is broken.
+	 *
+	 * @param array{placements: list<array<string, mixed>>, groups: list<array<string, mixed>>, unattributed?: array{requests?: int, fills?: int}} $view Utilisation view.
 	 * @return void
 	 */
 	private function render_utilisation( array $view ): void {
@@ -408,150 +532,73 @@ final class Reports_Screen implements Service {
 			esc_html__( 'Page opportunities only. A refresh fills the same slot again on a timer, so it is delivery rather than new inventory and is deliberately not counted here.', 'aggressive-ads' )
 		);
 
+		$this->render_unattributed( $view['unattributed'] ?? array() );
+
 		if ( array() === $view['placements'] ) {
 			printf( '<p>%s</p>', esc_html__( 'No placements are configured yet.', 'aggressive-ads' ) );
 
 			return;
 		}
 
-		/*
-		 * Named so it collides with nothing. An accessible name is matched by
-		 * substring, so "Utilisation by placement" also answered to the
-		 * "Placement" filter's label and made that control ambiguous to any
-		 * caller asking for it by name — a browser test, and a screen reader
-		 * user navigating by form control.
-		 */
-		$this->open_scroll_region( __( 'Utilisation detail', 'aggressive-ads' ) );
-
-		echo '<table class="widefat striped">';
-		printf(
-			'<caption class="screen-reader-text">%s</caption>',
-			esc_html__( 'Page requests, fills and utilisation for each placement.', 'aggressive-ads' )
-		);
-		printf(
-			'<thead><tr><th scope="col">%1$s</th><th scope="col">%2$s</th><th scope="col">%3$s</th><th scope="col">%4$s</th><th scope="col">%5$s</th></tr></thead><tbody>',
-			esc_html__( 'Placement', 'aggressive-ads' ),
-			esc_html__( 'Groups', 'aggressive-ads' ),
-			esc_html__( 'Page requests', 'aggressive-ads' ),
-			esc_html__( 'Filled', 'aggressive-ads' ),
-			esc_html__( 'Utilisation', 'aggressive-ads' )
+		$payload = array(
+			'view' => $view,
+			'i18n' => array(
+				'placement'      => __( 'Placement', 'aggressive-ads' ),
+				'groups'         => __( 'Groups', 'aggressive-ads' ),
+				'requests'       => __( 'Page requests', 'aggressive-ads' ),
+				'fills'          => __( 'Filled', 'aggressive-ads' ),
+				'utilisation'    => __( 'Utilisation', 'aggressive-ads' ),
+				'group'          => __( 'Group', 'aggressive-ads' ),
+				'placementCount' => __( 'Placements', 'aggressive-ads' ),
+				'byGroup'        => __( 'Utilisation by group', 'aggressive-ads' ),
+				'detailRegion'   => __( 'Utilisation detail', 'aggressive-ads' ),
+				'groupRegion'    => __( 'Group totals', 'aggressive-ads' ),
+			),
 		);
 
-		$unaccounted = 0;
-
-		foreach ( $view['placements'] as $row ) {
-			$unaccounted += (int) $row['unaccounted'];
-
-			printf(
-				'<tr><th scope="row">%1$s</th><td>%2$s</td><td>%3$s</td><td>%4$s</td><td>%5$s</td></tr>',
-				esc_html( (string) $row['name'] ),
-				esc_html( $this->group_list( $row['groups'] ) ),
-				esc_html( number_format_i18n( (int) $row['requests'] ) ),
-				esc_html( number_format_i18n( (int) $row['fills'] ) ),
-				esc_html( $this->rate( $row['fill_rate'] ) )
-			);
-		}
-
-		echo '</tbody></table></div>';
-
-		$this->render_unaccounted( $unaccounted );
-		$this->render_group_utilisation( $view['groups'] );
+		printf(
+			'<noscript><div class="notice notice-warning"><p>%1$s</p></div></noscript><div id="aggr-reports-root" data-aggr-reports="%2$s"></div>',
+			esc_html__( 'The utilisation tables need JavaScript enabled. Every other figure on this page is above.', 'aggressive-ads' ),
+			esc_attr( (string) wp_json_encode( $payload ) )
+		);
 	}
 
 	/**
-	 * The same figure totalled over each group.
+	 * Counters belonging to placements that no longer exist.
 	 *
-	 * Summed from the placement counters rather than averaged from their rates
-	 * — a mean of rates weights a placement with nine requests the same as one
-	 * with nine thousand, and would report a nearly empty group as
-	 * three-quarters sold. The arithmetic is in `Admin\Report_Data`; this only
-	 * prints it.
+	 * Printed because the headline figures above count them and no row below
+	 * can. Without this the two disagree by a number nobody can explain — the
+	 * summary says three thousand page requests, every placement says nought,
+	 * and both are telling the truth about different sets of rows.
 	 *
-	 * @param list<array<string, mixed>> $groups Group rows.
+	 * **Printed before the table, not after it.** It explains why the rows read
+	 * nought, and a reader who meets ten rows of zeros first has already decided
+	 * something is broken by the time they reach the sentence saying otherwise.
+	 *
+	 * Ordinary on a development site that has been reseeded, and worth a second
+	 * look on a live one: it means history exists for inventory that was
+	 * deleted rather than deactivated.
+	 *
+	 * @param array{requests?: int, fills?: int} $figures Unattributed totals.
 	 * @return void
 	 */
-	private function render_group_utilisation( array $groups ): void {
-		if ( array() === $groups ) {
+	private function render_unattributed( array $figures ): void {
+		$requests = (int) ( $figures['requests'] ?? 0 );
+
+		if ( $requests <= 0 ) {
 			return;
 		}
 
-		printf( '<h2>%s</h2>', esc_html__( 'Utilisation by group', 'aggressive-ads' ) );
-
-		// Not a superstring of the table region's name above, for the same
-		// substring-matching reason.
-		$this->open_scroll_region( __( 'Group totals', 'aggressive-ads' ) );
-
-		echo '<table class="widefat striped">';
 		printf(
-			'<caption class="screen-reader-text">%s</caption>',
-			esc_html__( 'Page requests, fills and utilisation totalled for each placement group.', 'aggressive-ads' )
+			'<p class="description">%s</p>',
+			esc_html(
+				sprintf(
+					/* translators: %s: a count of page requests recorded against deleted placements. */
+					__( '%s page requests belong to placements that no longer exist, so they are counted in the totals above but cannot appear in any row. This is normal after a placement is deleted.', 'aggressive-ads' ),
+					number_format_i18n( $requests )
+				)
+			)
 		);
-		printf(
-			'<thead><tr><th scope="col">%1$s</th><th scope="col">%2$s</th><th scope="col">%3$s</th><th scope="col">%4$s</th><th scope="col">%5$s</th></tr></thead><tbody>',
-			esc_html__( 'Group', 'aggressive-ads' ),
-			esc_html__( 'Placements', 'aggressive-ads' ),
-			esc_html__( 'Page requests', 'aggressive-ads' ),
-			esc_html__( 'Filled', 'aggressive-ads' ),
-			esc_html__( 'Utilisation', 'aggressive-ads' )
-		);
-
-		foreach ( $groups as $group ) {
-			printf(
-				'<tr><th scope="row">%1$s</th><td>%2$s</td><td>%3$s</td><td>%4$s</td><td>%5$s</td></tr>',
-				esc_html( (string) $group['slug'] ),
-				esc_html( number_format_i18n( (int) $group['placements'] ) ),
-				esc_html( number_format_i18n( (int) $group['requests'] ) ),
-				esc_html( number_format_i18n( (int) $group['fills'] ) ),
-				esc_html( $this->rate( $group['fill_rate'] ) )
-			);
-		}
-
-		echo '</tbody></table></div>';
-	}
-
-	/**
-	 * Opens a horizontally scrollable region around a wide table.
-	 *
-	 * WCAG 1.4.10 requires the *page* to reflow at 320 CSS pixels without
-	 * two-dimensional scrolling. These two tables carry five columns of figures
-	 * that a publisher compares against each other, so narrowing them to fit
-	 * would mean dropping a column and hiding data rather than presenting it.
-	 * Scrolling the table inside its own region satisfies the criterion without
-	 * that trade.
-	 *
-	 * **`tabindex` is what makes it legitimate.** A scrollable region that only
-	 * a mouse can scroll is unreachable by keyboard, which axe reports as
-	 * `scrollable-region-focusable` and which is a worse failure than the one
-	 * being fixed. Focusable regions need an accessible name, hence the label.
-	 *
-	 * @param string $label Accessible name for the region.
-	 * @return void
-	 */
-	private function open_scroll_region( string $label ): void {
-		printf(
-			'<div class="aggr-table-scroll" role="region" tabindex="0" aria-label="%s">',
-			esc_attr( $label )
-		);
-	}
-
-	/**
-	 * A placement's groups as one readable cell.
-	 *
-	 * An em dash rather than an empty cell for a placement in no group: an
-	 * empty table cell reads as missing data rather than as a deliberate
-	 * nothing.
-	 *
-	 * @param array<int, string> $groups Group slugs.
-	 * @return string
-	 */
-	private function group_list( array $groups ): string {
-		if ( array() === $groups ) {
-			return __( '—', 'aggressive-ads' );
-		}
-
-		// A plain separator rather than a translatable one: a bare ", " gives a
-		// translator no context to work from and nothing to get right.
-		return implode( ', ', $groups );
 	}
 
 	/**
