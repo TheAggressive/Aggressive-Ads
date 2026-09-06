@@ -187,7 +187,7 @@ final class Placement_Repository {
 	 * regardless of the order somebody assigned them in.
 	 *
 	 * @param int $placement_id Placement post id.
-	 * @return array<int, string>
+	 * @return list<string>
 	 */
 	public function groups( int $placement_id ): array {
 		if ( ! $this->exists( $placement_id ) ) {

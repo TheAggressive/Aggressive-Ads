@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-06T03:08:31+00:00\n"
+"POT-Creation-Date: 2026-09-06T05:23:32+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -719,6 +719,7 @@ msgstr ""
 #: inc/Admin/class-placement-screen.php:119
 #: inc/Admin/class-placement-screen.php:152
 #: inc/Admin/class-placement-screen.php:223
+#: inc/Admin/class-reports-screen.php:492
 #: inc/Admin/class-review-screen.php:282
 #: inc/Core/class-post-types.php:199
 #: inc/Workflow/class-campaign-change-manager.php:768
@@ -901,7 +902,7 @@ msgid "Inactive placements are hidden from advertisers and stop being filled."
 msgstr ""
 
 #: inc/Admin/class-placement-screen.php:189
-#: inc/Admin/class-report-data.php:216
+#: inc/Admin/class-report-data.php:296
 msgid "Refresh"
 msgstr ""
 
@@ -930,6 +931,7 @@ msgid "A responsive placement needs a row starting at 0, or it serves its single
 msgstr ""
 
 #: inc/Admin/class-placement-screen.php:197
+#: inc/Admin/class-reports-screen.php:434
 msgid "Groups"
 msgstr ""
 
@@ -998,53 +1000,53 @@ msgid "The placements screen needs JavaScript enabled."
 msgstr ""
 
 #. translators: %s: a date, e.g. 30 August 2026.
-#: inc/Admin/class-report-data.php:199
+#: inc/Admin/class-report-data.php:279
 #: inc/Portal/class-delivery-view-data.php:167
 #, php-format
 msgid "Figures from %s onward are still being counted."
 msgstr ""
 
-#: inc/Admin/class-report-data.php:215
+#: inc/Admin/class-report-data.php:295
 msgid "Page"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:235
+#: inc/Admin/class-report-data.php:315
 msgid "No advertisement was assigned to this slot"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:236
+#: inc/Admin/class-report-data.php:316
 msgid "Every assigned advertisement was ineligible"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:237
+#: inc/Admin/class-report-data.php:317
 msgid "No advertisement was the size this screen asked for"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:238
+#: inc/Admin/class-report-data.php:318
 msgid "Outside every assigned campaign’s schedule"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:239
+#: inc/Admin/class-report-data.php:319
 msgid "The visitor did not match the targeting rules"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:240
+#: inc/Admin/class-report-data.php:320
 msgid "The visitor had already seen it enough times"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:241
+#: inc/Admin/class-report-data.php:321
 msgid "Held back to spread delivery across the day"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:242
+#: inc/Admin/class-report-data.php:322
 msgid "Excluded by a competing advertisement on the page"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:243
+#: inc/Admin/class-report-data.php:323
 msgid "The decision failed and no advertisement was served"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:244
+#: inc/Admin/class-report-data.php:324
 msgid "No reason was recorded"
 msgstr ""
 
@@ -1074,7 +1076,8 @@ msgid "Date (UTC)"
 msgstr ""
 
 #: inc/Admin/class-report-export.php:150
-#: inc/Admin/class-reports-screen.php:211
+#: inc/Admin/class-reports-screen.php:212
+#: inc/Admin/class-reports-screen.php:433
 #: inc/Admin/class-review-screen.php:258
 #: inc/Core/class-post-types.php:199
 #: templates/portal/partials/campaign-table.php:34
@@ -1115,6 +1118,8 @@ msgid "Requested"
 msgstr ""
 
 #: inc/Admin/class-report-export.php:199
+#: inc/Admin/class-reports-screen.php:436
+#: inc/Admin/class-reports-screen.php:494
 msgid "Filled"
 msgstr ""
 
@@ -1132,115 +1137,162 @@ msgid "Reporting is switched off for this site. Turn it on under Advertising →
 msgstr ""
 
 #. translators: %d: number of days the download will cover.
-#: inc/Admin/class-reports-screen.php:138
+#: inc/Admin/class-reports-screen.php:139
 #, php-format
 msgid "Download %d day (CSV)"
 msgid_plural "Download %d days (CSV)"
 msgstr[0] ""
 msgstr[1] ""
 
-#: inc/Admin/class-reports-screen.php:188
+#: inc/Admin/class-reports-screen.php:189
 msgid "Reporting window"
 msgstr ""
 
 #. translators: %d: number of days.
-#: inc/Admin/class-reports-screen.php:200
+#: inc/Admin/class-reports-screen.php:201
 #, php-format
 msgid "Last %d day (UTC)"
 msgid_plural "Last %d days (UTC)"
 msgstr[0] ""
 msgstr[1] ""
 
-#: inc/Admin/class-reports-screen.php:217
+#: inc/Admin/class-reports-screen.php:218
 msgid "Every placement"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:230
+#: inc/Admin/class-reports-screen.php:231
 #: templates/portal/screens/dashboard.php:96
 msgid "Show"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:246
+#: inc/Admin/class-reports-screen.php:247
 msgid "(UTC)"
 msgstr ""
 
 #. translators: %s: a count of page-view advertisement requests.
-#: inc/Admin/class-reports-screen.php:262
+#: inc/Admin/class-reports-screen.php:263
 #, php-format
 msgid "Page requests: %s"
 msgstr ""
 
 #. translators: %s: a count of filled page-view requests.
-#: inc/Admin/class-reports-screen.php:269
+#: inc/Admin/class-reports-screen.php:270
 #, php-format
 msgid "Page filled: %s"
 msgstr ""
 
 #. translators: %s: page fill rate as a percentage, or an em dash.
-#: inc/Admin/class-reports-screen.php:276
+#: inc/Admin/class-reports-screen.php:277
 #, php-format
 msgid "Page fill rate: %s"
 msgstr ""
 
 #. translators: %s: a count of refresh advertisement requests.
-#: inc/Admin/class-reports-screen.php:283
+#: inc/Admin/class-reports-screen.php:284
 #, php-format
 msgid "Refresh requests: %s"
 msgstr ""
 
 #. translators: %s: a count of filled refresh requests.
-#: inc/Admin/class-reports-screen.php:290
+#: inc/Admin/class-reports-screen.php:291
 #, php-format
 msgid "Refresh filled: %s"
 msgstr ""
 
 #. translators: %s: refresh fill rate as a percentage, or an em dash.
-#: inc/Admin/class-reports-screen.php:297
+#: inc/Admin/class-reports-screen.php:298
 #, php-format
 msgid "Refresh fill rate: %s"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:321
+#: inc/Admin/class-reports-screen.php:322
 msgid "No advertisement was requested in this window, so there is nothing to explain yet."
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:329
+#: inc/Admin/class-reports-screen.php:330
 msgid "Why page requests were not filled"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:330
+#: inc/Admin/class-reports-screen.php:331
 msgid "Reasons a page request was not filled"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:331
+#: inc/Admin/class-reports-screen.php:332
 msgid "Every page request was filled."
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:335
+#: inc/Admin/class-reports-screen.php:336
 msgid "Why refresh requests were not filled"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:336
+#: inc/Admin/class-reports-screen.php:337
 msgid "Reasons a refresh request was not filled"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:337
+#: inc/Admin/class-reports-screen.php:338
 msgid "Every refresh request was filled."
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:368
+#: inc/Admin/class-reports-screen.php:369
 msgid "Reason"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:369
+#: inc/Admin/class-reports-screen.php:370
 msgid "Requests"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:370
+#: inc/Admin/class-reports-screen.php:371
 msgid "Share"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:393
+#: inc/Admin/class-reports-screen.php:404
+msgid "Utilisation by placement"
+msgstr ""
+
+#: inc/Admin/class-reports-screen.php:408
+msgid "Page opportunities only. A refresh fills the same slot again on a timer, so it is delivery rather than new inventory and is deliberately not counted here."
+msgstr ""
+
+#: inc/Admin/class-reports-screen.php:412
+msgid "No placements are configured yet."
+msgstr ""
+
+#: inc/Admin/class-reports-screen.php:424
+msgid "Utilisation detail"
+msgstr ""
+
+#: inc/Admin/class-reports-screen.php:429
+msgid "Page requests, fills and utilisation for each placement."
+msgstr ""
+
+#: inc/Admin/class-reports-screen.php:435
+#: inc/Admin/class-reports-screen.php:493
+msgid "Page requests"
+msgstr ""
+
+#: inc/Admin/class-reports-screen.php:437
+#: inc/Admin/class-reports-screen.php:495
+msgid "Utilisation"
+msgstr ""
+
+#: inc/Admin/class-reports-screen.php:478
+msgid "Utilisation by group"
+msgstr ""
+
+#: inc/Admin/class-reports-screen.php:482
+msgid "Group totals"
+msgstr ""
+
+#: inc/Admin/class-reports-screen.php:487
+msgid "Page requests, fills and utilisation totalled for each placement group."
+msgstr ""
+
+#: inc/Admin/class-reports-screen.php:491
+msgid "Group"
+msgstr ""
+
+#: inc/Admin/class-reports-screen.php:549
+#: inc/Admin/class-reports-screen.php:564
 #: inc/Portal/class-delivery-view-data.php:356
 #: inc/Portal/class-delivery-view-data.php:407
 #: templates/portal/partials/campaign-summary-facts.php:75
@@ -1251,7 +1303,7 @@ msgstr ""
 #. translators: %s: a percentage, e.g. 92.4.
 #. translators: %s: click-through rate as a percentage, e.g. 1.2.
 #. translators: %s: share of impressions that were viewable, e.g. 62.5.
-#: inc/Admin/class-reports-screen.php:398
+#: inc/Admin/class-reports-screen.php:569
 #: inc/Portal/class-delivery-view-data.php:361
 #: inc/Portal/class-delivery-view-data.php:412
 #: templates/portal/partials/campaign-summary-facts.php:72
@@ -1261,7 +1313,7 @@ msgid "%s%%"
 msgstr ""
 
 #. translators: %s: a count of requests with no recorded outcome.
-#: inc/Admin/class-reports-screen.php:422
+#: inc/Admin/class-reports-screen.php:593
 #, php-format
 msgid "%s requests have no recorded outcome. This is a defect worth reporting: every request should be either a fill or a reason."
 msgstr ""

@@ -293,8 +293,13 @@ Shared boundaries and group exit criteria:
 Shared boundaries and group exit criteria:
 [platform-inventory-commerce-contract.md](platform-inventory-commerce-contract.md).
 
-- [ ] **P15 — Inventory management.** Placement groups, responsive multi-size
+- [x] **P15 — Inventory management.** Placement groups, responsive multi-size
       mapping, categories, house and refresh policy, utilisation dashboard.
+      Closed with two limits recorded rather than assumed away: archives supply
+      no page facts, so contextual selling there is unfinished, and a group is
+      organisational only — it is not a sellable unit, because `aggr_package`
+      already is one. See
+      [platform-p15-inventory-management.md](platform-p15-inventory-management.md).
 - [ ] **P16 — Forecasting and reservations.** Conservative forecasts from
       rolling history, tracked against actuals with error recorded. Oversell
       warns and logs the override rather than silently blocking staff.

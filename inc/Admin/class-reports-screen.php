@@ -96,6 +96,7 @@ final class Reports_Screen implements Service {
 		$this->render_filter( $period->days, $placement );
 		$this->render_summary( $period, $fill );
 		$this->render_reasons( $fill );
+		$this->render_utilisation( $this->data->utilisation( $period ) );
 		$this->render_export( $period, $placement );
 
 		echo '</div>';
@@ -381,6 +382,176 @@ final class Reports_Screen implements Service {
 
 		echo '</tbody></table>';
 		$this->render_unaccounted( $figures['unaccounted'] );
+	}
+
+	/**
+	 * How much of each placement's page inventory was actually sold.
+	 *
+	 * **Page opportunities only, and the heading says so.** A refresh is the
+	 * same slot filled again by a timer, not new supply, so counting it here
+	 * would let a publisher raise their apparent utilisation by rotating
+	 * faster. The wording is not decoration: a reader who assumes this includes
+	 * every impression will draw the opposite conclusion from the number.
+	 *
+	 * Not filtered by the placement selector. The point of this table is
+	 * comparing placements against each other, and a one-row comparison is the
+	 * summary above.
+	 *
+	 * @param array{placements: list<array<string, mixed>>, groups: list<array<string, mixed>>} $view Utilisation view.
+	 * @return void
+	 */
+	private function render_utilisation( array $view ): void {
+		printf( '<h2>%s</h2>', esc_html__( 'Utilisation by placement', 'aggressive-ads' ) );
+
+		printf(
+			'<p class="description">%s</p>',
+			esc_html__( 'Page opportunities only. A refresh fills the same slot again on a timer, so it is delivery rather than new inventory and is deliberately not counted here.', 'aggressive-ads' )
+		);
+
+		if ( array() === $view['placements'] ) {
+			printf( '<p>%s</p>', esc_html__( 'No placements are configured yet.', 'aggressive-ads' ) );
+
+			return;
+		}
+
+		/*
+		 * Named so it collides with nothing. An accessible name is matched by
+		 * substring, so "Utilisation by placement" also answered to the
+		 * "Placement" filter's label and made that control ambiguous to any
+		 * caller asking for it by name — a browser test, and a screen reader
+		 * user navigating by form control.
+		 */
+		$this->open_scroll_region( __( 'Utilisation detail', 'aggressive-ads' ) );
+
+		echo '<table class="widefat striped">';
+		printf(
+			'<caption class="screen-reader-text">%s</caption>',
+			esc_html__( 'Page requests, fills and utilisation for each placement.', 'aggressive-ads' )
+		);
+		printf(
+			'<thead><tr><th scope="col">%1$s</th><th scope="col">%2$s</th><th scope="col">%3$s</th><th scope="col">%4$s</th><th scope="col">%5$s</th></tr></thead><tbody>',
+			esc_html__( 'Placement', 'aggressive-ads' ),
+			esc_html__( 'Groups', 'aggressive-ads' ),
+			esc_html__( 'Page requests', 'aggressive-ads' ),
+			esc_html__( 'Filled', 'aggressive-ads' ),
+			esc_html__( 'Utilisation', 'aggressive-ads' )
+		);
+
+		$unaccounted = 0;
+
+		foreach ( $view['placements'] as $row ) {
+			$unaccounted += (int) $row['unaccounted'];
+
+			printf(
+				'<tr><th scope="row">%1$s</th><td>%2$s</td><td>%3$s</td><td>%4$s</td><td>%5$s</td></tr>',
+				esc_html( (string) $row['name'] ),
+				esc_html( $this->group_list( $row['groups'] ) ),
+				esc_html( number_format_i18n( (int) $row['requests'] ) ),
+				esc_html( number_format_i18n( (int) $row['fills'] ) ),
+				esc_html( $this->rate( $row['fill_rate'] ) )
+			);
+		}
+
+		echo '</tbody></table></div>';
+
+		$this->render_unaccounted( $unaccounted );
+		$this->render_group_utilisation( $view['groups'] );
+	}
+
+	/**
+	 * The same figure totalled over each group.
+	 *
+	 * Summed from the placement counters rather than averaged from their rates
+	 * — a mean of rates weights a placement with nine requests the same as one
+	 * with nine thousand, and would report a nearly empty group as
+	 * three-quarters sold. The arithmetic is in `Admin\Report_Data`; this only
+	 * prints it.
+	 *
+	 * @param list<array<string, mixed>> $groups Group rows.
+	 * @return void
+	 */
+	private function render_group_utilisation( array $groups ): void {
+		if ( array() === $groups ) {
+			return;
+		}
+
+		printf( '<h2>%s</h2>', esc_html__( 'Utilisation by group', 'aggressive-ads' ) );
+
+		// Not a superstring of the table region's name above, for the same
+		// substring-matching reason.
+		$this->open_scroll_region( __( 'Group totals', 'aggressive-ads' ) );
+
+		echo '<table class="widefat striped">';
+		printf(
+			'<caption class="screen-reader-text">%s</caption>',
+			esc_html__( 'Page requests, fills and utilisation totalled for each placement group.', 'aggressive-ads' )
+		);
+		printf(
+			'<thead><tr><th scope="col">%1$s</th><th scope="col">%2$s</th><th scope="col">%3$s</th><th scope="col">%4$s</th><th scope="col">%5$s</th></tr></thead><tbody>',
+			esc_html__( 'Group', 'aggressive-ads' ),
+			esc_html__( 'Placements', 'aggressive-ads' ),
+			esc_html__( 'Page requests', 'aggressive-ads' ),
+			esc_html__( 'Filled', 'aggressive-ads' ),
+			esc_html__( 'Utilisation', 'aggressive-ads' )
+		);
+
+		foreach ( $groups as $group ) {
+			printf(
+				'<tr><th scope="row">%1$s</th><td>%2$s</td><td>%3$s</td><td>%4$s</td><td>%5$s</td></tr>',
+				esc_html( (string) $group['slug'] ),
+				esc_html( number_format_i18n( (int) $group['placements'] ) ),
+				esc_html( number_format_i18n( (int) $group['requests'] ) ),
+				esc_html( number_format_i18n( (int) $group['fills'] ) ),
+				esc_html( $this->rate( $group['fill_rate'] ) )
+			);
+		}
+
+		echo '</tbody></table></div>';
+	}
+
+	/**
+	 * Opens a horizontally scrollable region around a wide table.
+	 *
+	 * WCAG 1.4.10 requires the *page* to reflow at 320 CSS pixels without
+	 * two-dimensional scrolling. These two tables carry five columns of figures
+	 * that a publisher compares against each other, so narrowing them to fit
+	 * would mean dropping a column and hiding data rather than presenting it.
+	 * Scrolling the table inside its own region satisfies the criterion without
+	 * that trade.
+	 *
+	 * **`tabindex` is what makes it legitimate.** A scrollable region that only
+	 * a mouse can scroll is unreachable by keyboard, which axe reports as
+	 * `scrollable-region-focusable` and which is a worse failure than the one
+	 * being fixed. Focusable regions need an accessible name, hence the label.
+	 *
+	 * @param string $label Accessible name for the region.
+	 * @return void
+	 */
+	private function open_scroll_region( string $label ): void {
+		printf(
+			'<div class="aggr-table-scroll" role="region" tabindex="0" aria-label="%s">',
+			esc_attr( $label )
+		);
+	}
+
+	/**
+	 * A placement's groups as one readable cell.
+	 *
+	 * An em dash rather than an empty cell for a placement in no group: an
+	 * empty table cell reads as missing data rather than as a deliberate
+	 * nothing.
+	 *
+	 * @param array<int, string> $groups Group slugs.
+	 * @return string
+	 */
+	private function group_list( array $groups ): string {
+		if ( array() === $groups ) {
+			return __( '—', 'aggressive-ads' );
+		}
+
+		// A plain separator rather than a translatable one: a bare ", " gives a
+		// translator no context to work from and nothing to get right.
+		return implode( ', ', $groups );
 	}
 
 	/**

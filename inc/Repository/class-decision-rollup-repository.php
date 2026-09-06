@@ -240,6 +240,67 @@ final class Decision_Rollup_Repository {
 	}
 
 	/**
+	 * Outcome totals for every placement in a range, in one query.
+	 *
+	 * The utilisation view needs the same figures `totals_for_placement()`
+	 * returns, but for every placement at once. Calling that method in a loop
+	 * would issue one query per placement — two hundred of them on a site at
+	 * the catalogue ceiling — for a screen that is meant to be a glance.
+	 *
+	 * **The kind is required**, for the reason `Admin\Report_Data::figures()`
+	 * spells out: summing page and refresh together puts a timer back into the
+	 * supply figure, and a utilisation number built that way says a placement
+	 * is busier than its inventory actually is.
+	 *
+	 * Stays inside an index range — the unique key leads on `placement_id` and
+	 * the range bounds the days — so the cost grows with the window asked for
+	 * rather than with the table.
+	 *
+	 * @param string $from_utc    First UTC day, inclusive, `Y-m-d`.
+	 * @param string $to_utc      Last UTC day, inclusive, `Y-m-d`.
+	 * @param string $opportunity `Domain\Opportunity` kind.
+	 * @return array<int, array<string, int>> Placement id to outcome totals.
+	 */
+	public function totals_by_placement( string $from_utc, string $to_utc, string $opportunity ): array {
+		global $wpdb;
+
+		if ( ! self::is_day( $from_utc ) || ! self::is_day( $to_utc ) ) {
+			return array();
+		}
+
+		// Unlike the other readers, an empty kind is refused rather than
+		// treated as "every kind". A caller that forgot to say gets nothing,
+		// instead of a number that silently merges the two.
+		if ( ! Opportunity::is_valid( $opportunity ) ) {
+			return array();
+		}
+
+		$table = $this->table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Custom table, prefix-derived name; every value is a placeholder. A cached count is how a stale diagnostic looks healthy.
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT placement_id, outcome, SUM(events) AS total FROM {$table} WHERE day_utc BETWEEN %s AND %s AND opportunity = %s GROUP BY placement_id, outcome", $from_utc, $to_utc, $opportunity ), ARRAY_A );
+
+		if ( ! is_array( $rows ) ) {
+			return array();
+		}
+
+		$by_placement = array();
+
+		foreach ( $rows as $row ) {
+			$placement = (int) ( $row['placement_id'] ?? 0 );
+			$outcome   = (string) ( $row['outcome'] ?? '' );
+
+			if ( $placement <= 0 || '' === $outcome ) {
+				continue;
+			}
+
+			$by_placement[ $placement ][ $outcome ] = (int) ( $row['total'] ?? 0 );
+		}
+
+		return $by_placement;
+	}
+
+	/**
 	 * Per-day outcome rows for a range, site-wide or for one placement.
 	 *
 	 * The shape an export wants and a screen does not: long format, one row per

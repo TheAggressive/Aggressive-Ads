@@ -103,3 +103,38 @@
 		grid-template-columns: repeat(3, minmax(0, 1fr));
 	}
 }
+
+/*
+ * A wide data table scrolls inside itself, never the page.
+ *
+ * WCAG 1.4.10 asks that content reflow at 320 CSS pixels without
+ * two-dimensional scrolling. The utilisation tables carry five columns a
+ * publisher reads against each other, so narrowing them to fit would mean
+ * dropping a column and hiding the comparison rather than presenting it.
+ *
+ * This is layout rather than a restyled component, which is why it belongs in
+ * a file that otherwise touches no tables: it changes where overflow goes, not
+ * how core draws a cell.
+ *
+ * **It lives here because this is the sheet these screens actually load.** The
+ * first version of this rule went into `admin.css`, which the review screens
+ * load and the reports screen does not — so the markup carried a class with no
+ * rule behind it and the overflow stayed. A rule in the wrong stylesheet looks
+ * exactly like a rule that does not work.
+ */
+.wrap.aggr-admin .aggr-table-scroll {
+	overflow-x: auto;
+	max-width: 100%;
+}
+
+/*
+ * The region is keyboard focusable — a scroll container only a mouse can reach
+ * is a worse failure than the overflow it fixes — and a focusable thing needs a
+ * visible focus state or it trades 1.4.10 for 2.4.7. `currentcolor` rather than
+ * a palette token: this file carries no colours, and a focus ring that inherits
+ * the text colour needs none.
+ */
+.wrap.aggr-admin .aggr-table-scroll:focus-visible {
+	outline: 2px solid currentcolor;
+	outline-offset: 2px;
+}

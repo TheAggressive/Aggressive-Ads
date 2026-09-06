@@ -117,8 +117,10 @@ Ordered by dependency, not by size.
    context supplied into the targeting facts so content categories can be sold
    against. Neither is a package — see `domain-model.md` for why that
    distinction is load-bearing.
-4. **Utilisation dashboard.** Last deliberately — it cannot be honest before
-   slice 1 exists.
+4. **Utilisation dashboard.** *Shipped.* Per-placement and per-group page
+   utilisation on the reports screen. Last deliberately — it cannot be honest
+   before slice 1 exists, and it needed slice 3's groups to have anything to
+   total by.
 
 A slice is marked shipped when its evidence below is executable and the screen
 that configures it exists. Both halves are the bar deliberately: slice 2 had
@@ -155,7 +157,38 @@ one, and that is not a shipped slice.
   reports `size_unavailable` rather than a generic no-fill — a mixed field still
   reports no-fill, because "some were the wrong size" does not explain why the
   rest lost and a reason that is only sometimes true is worse than none.
+- **A rotation does not raise utilisation.** Adding nine hundred refresh fills
+  to a placement leaves its utilisation figure byte-for-byte identical. This is
+  the assertion the whole grain split exists to make possible: without it a
+  publisher could raise their apparent sold-through by rotating faster.
+- A placement nobody requested reads as no data, not as nought per cent, and a
+  placement that was requested and never filled reads as a measured zero. Every
+  active placement appears either way — an empty placement is the one a
+  publisher most needs to see.
+- **A group totals its placements rather than averaging their rates.** Proven
+  with a deliberately skewed pair where the mean of the rates is 0.75 and the
+  true share sold is 0.11.
 
 ## Exit criteria
 
-To be completed at closeout.
+All four slices shipped and merged. The phase is closed.
+
+- The grain is defined, recorded and countable, and the projector agrees with
+  the ledger.
+- Refresh policy belongs to the publisher and bounds the block, enforced where
+  a client cannot skip it.
+- Responsive mappings are deterministic across the full width sweep, and a
+  publisher can configure them.
+- Placements can be grouped, and content categories can be sold against.
+- Utilisation is presented per placement and per group, and excludes refreshes.
+
+Two things this phase deliberately did **not** do, recorded so a later phase
+does not assume otherwise:
+
+- **Archives supply no page facts.** A targeted campaign therefore does not
+  serve on a category archive — the safe direction, but contextual selling
+  there is unfinished.
+- **A group is not a sellable unit.** It has no price, no duration and no
+  snapshot, and nothing in the decision path reads one. Selling a bundle is
+  what `aggr_package` already does; if a group ever needs to be bought, that is
+  a pricing decision for P19 rather than a field to add here.

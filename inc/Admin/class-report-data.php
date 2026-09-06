@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Admin;
 
 use Aggressive\Ads\Domain\Decision_Outcome;
+use Aggressive\Ads\Domain\Fill_Figures;
 use Aggressive\Ads\Domain\No_Fill_Reason;
 use Aggressive\Ads\Domain\Opportunity;
 use Aggressive\Ads\Domain\Report_Period;
@@ -105,6 +106,86 @@ final class Report_Data {
 	}
 
 	/**
+	 * Per-placement utilisation for a window, and the group totals over it.
+	 *
+	 * **Page opportunities only.** Utilisation answers "how much of what I have
+	 * to sell was actually sold", and a refresh is not independent supply — it
+	 * is the same slot filled again by a timer. Including it would let a
+	 * publisher raise their apparent utilisation by rotating faster, which is
+	 * the exact mistake the page/refresh split exists to prevent.
+	 *
+	 * Every active placement appears, including ones nothing asked for. A
+	 * placement missing from the list because it had no traffic is the one a
+	 * publisher most needs to see, and omitting it would make an empty
+	 * placement indistinguishable from one that does not exist.
+	 *
+	 * Group rows are summed from the placement counters rather than rated and
+	 * averaged. A mean of rates weights a placement with nine requests the same
+	 * as one with nine thousand; summing first is the only figure that answers
+	 * "how much of this group sold".
+	 *
+	 * @param Report_Period $period Bounded UTC range.
+	 * @return array{placements: list<array{id: int, name: string, slug: string, groups: list<string>, requests: int, fills: int, fill_rate: float|null, unaccounted: int}>, groups: list<array{slug: string, placements: int, requests: int, fills: int, fill_rate: float|null}>}
+	 */
+	public function utilisation( Report_Period $period ): array {
+		$totals = $this->decisions->totals_by_placement(
+			$period->start,
+			$period->end,
+			Opportunity::PAGE
+		);
+
+		$rows   = array();
+		$groups = array();
+
+		foreach ( $this->placements->all_ids() as $id ) {
+			$id      = (int) $id;
+			$figures = Fill_Figures::from_totals( $totals[ $id ] ?? array() );
+			$slugs   = $this->placements->groups( $id );
+
+			$rows[] = array(
+				'id'          => $id,
+				'name'        => $this->placements->name( $id ),
+				'slug'        => $this->placements->slug( $id ),
+				'groups'      => $slugs,
+				'requests'    => $figures['requests'],
+				'fills'       => $figures['fills'],
+				'fill_rate'   => $figures['fill_rate'],
+				'unaccounted' => $figures['unaccounted'],
+			);
+
+			foreach ( $slugs as $slug ) {
+				$groups[ $slug ]['placements'] = ( $groups[ $slug ]['placements'] ?? 0 ) + 1;
+				$groups[ $slug ]['requests']   = ( $groups[ $slug ]['requests'] ?? 0 ) + $figures['requests'];
+				$groups[ $slug ]['fills']      = ( $groups[ $slug ]['fills'] ?? 0 ) + $figures['fills'];
+			}
+		}
+
+		ksort( $groups );
+
+		$group_rows = array();
+
+		foreach ( $groups as $slug => $sums ) {
+			$group_rows[] = array(
+				'slug'       => (string) $slug,
+				'placements' => $sums['placements'],
+				'requests'   => $sums['requests'],
+				'fills'      => $sums['fills'],
+
+				// Same null-not-zero rule as everywhere else: a group nobody
+				// requested did not fail to fill.
+				'fill_rate'  => $sums['requests'] > 0
+					? (float) $sums['fills'] / $sums['requests']
+					: null,
+			);
+		}
+
+		return array(
+			'placements' => $rows,
+			'groups'     => $group_rows,
+		);
+	}
+
+	/**
 	 * Fill figures for a window, site-wide or for one placement.
 	 *
 	 * `fill_rate` is null when nothing was asked for, not zero: a placement
@@ -148,35 +229,34 @@ final class Report_Data {
 			? $this->decisions->totals_for_placement( $placement_id, $period->start, $period->end, $opportunity )
 			: $this->decisions->totals( $period->start, $period->end, $opportunity );
 
-		$requests = (int) ( $totals[ Decision_Outcome::REQUEST ] ?? 0 );
-		$fills    = (int) ( $totals[ Decision_Outcome::FILL ] ?? 0 );
-		$labels   = self::reason_labels();
-		$reasons  = array();
-		$counted  = 0;
+		return self::labelled( Fill_Figures::from_totals( $totals ) );
+	}
 
-		foreach ( $totals as $code => $events ) {
-			if ( Decision_Outcome::REQUEST === $code || Decision_Outcome::FILL === $code ) {
-				continue;
-			}
+	/**
+	 * Attaches translated reason labels to bare domain figures.
+	 *
+	 * The arithmetic lives in `Domain\Fill_Figures` so the site-wide report and
+	 * the per-placement utilisation view cannot disagree about what a
+	 * denominator is. Labels stay here because they are translated, and the
+	 * domain layer calls no WordPress function.
+	 *
+	 * @param array{requests: int, fills: int, fill_rate: float|null, unaccounted: int, reasons: list<array{code: string, events: int, share: float|null}>} $figures Bare figures.
+	 * @return array{requests: int, fills: int, fill_rate: float|null, unaccounted: int, reasons: list<array{code: string, label: string, events: int, share: float|null}>}
+	 */
+	private static function labelled( array $figures ): array {
+		$labels = self::reason_labels();
 
-			$events   = (int) $events;
-			$counted += $events;
-
-			$reasons[] = array(
-				'code'   => (string) $code,
-				'label'  => $labels[ $code ] ?? $labels[ No_Fill_Reason::UNKNOWN ],
-				'events' => $events,
-				'share'  => $requests > 0 ? $events / $requests : null,
-			);
-		}
-
-		return array(
-			'requests'    => $requests,
-			'fills'       => $fills,
-			'fill_rate'   => $requests > 0 ? $fills / $requests : null,
-			'unaccounted' => max( 0, $requests - $fills - $counted ),
-			'reasons'     => $reasons,
+		$figures['reasons'] = array_map(
+			static fn ( array $reason ): array => array(
+				'code'   => $reason['code'],
+				'label'  => $labels[ $reason['code'] ] ?? $labels[ No_Fill_Reason::UNKNOWN ],
+				'events' => $reason['events'],
+				'share'  => $reason['share'],
+			),
+			$figures['reasons']
 		);
+
+		return $figures;
 	}
 
 	/**

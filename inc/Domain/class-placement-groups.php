@@ -55,7 +55,7 @@ final class Placement_Groups {
 	 * write instead of merely re-running the same transformation.
 	 *
 	 * @param mixed $slugs Anything a caller offered.
-	 * @return array<int, string>
+	 * @return list<string>
 	 */
 	public static function normalise( mixed $slugs ): array {
 		if ( ! is_array( $slugs ) ) {
