@@ -4,6 +4,15 @@
 
 export const CUSTOM = 'custom';
 
+/**
+ * Most breakpoints one placement may declare.
+ *
+ * Mirrors `Domain\Size_Map::MAX_BREAKPOINTS`. The server trims past it, so a
+ * form that let somebody add a seventh would show them a row that vanishes on
+ * save.
+ */
+export const MAX_BREAKPOINTS = 6;
+
 export type Placement = {
 	id: number;
 	name: string;
@@ -20,6 +29,16 @@ export type Placement = {
 	refresh_enabled: boolean;
 	refresh_seconds: number;
 	refresh_max_per_view: number;
+
+	/**
+	 * Minimum viewport width to the size served at or above it.
+	 *
+	 * Keyed by floor rather than expressed as ranges, matching `Domain\Size_Map`:
+	 * two floors cannot both be the largest at or below a width, so the mapping
+	 * cannot answer twice. A placement that serves one size everywhere has a
+	 * single entry at 0.
+	 */
+	breakpoints: Record< string, string >;
 };
 
 export type RefreshDefaults = {
@@ -65,6 +84,7 @@ export const blankPlacement = ( defaults: RefreshDefaults ): Placement => ( {
 	house_attachment_id: 0,
 	house_click_url: '',
 	house_alt: '',
+	breakpoints: {},
 	refresh_enabled: defaults.enabled,
 	refresh_seconds: defaults.seconds,
 	refresh_max_per_view: defaults.max_per_view,
@@ -86,5 +106,13 @@ export function body( draft: Placement ): Record< string, unknown > {
 		refresh_enabled: draft.refresh_enabled,
 		refresh_seconds: draft.refresh_seconds,
 		refresh_max_per_view: draft.refresh_max_per_view,
+
+		/*
+		 * Always sent, because the form always knows the answer. The server
+		 * treats an *absent* key as "leave them alone" — a rule that protects a
+		 * client which does not know about breakpoints, not this one, which
+		 * does and would be sending its own emptiness as a decision.
+		 */
+		breakpoints: draft.breakpoints,
 	};
 }

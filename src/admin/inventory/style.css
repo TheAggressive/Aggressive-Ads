@@ -74,6 +74,20 @@
 	margin-bottom: 0;
 }
 
+/*
+ * Standalone help text, for a fieldset that explains itself before its first
+ * control rather than beside one.
+ *
+ * Matched to the control help above rather than invented, so the responsive
+ * fieldset's introduction does not read as a different kind of text from every
+ * other hint on the screen.
+ */
+.aggr-inventory-modal .aggr-field-help {
+	color: var(--aggr-color-text-muted);
+	font-size: 12px;
+	margin: 0;
+}
+
 .aggr-inventory-modal fieldset {
 	border: 1px solid var(--aggr-border-color);
 	border-radius: 2px;

@@ -24,7 +24,7 @@ import {
 	__experimentalVStack as VStack,
 } from '@wordpress/components';
 import { t } from '../shared/save';
-import { CUSTOM, type Placement } from './types';
+import { CUSTOM, MAX_BREAKPOINTS, type Placement } from './types';
 
 export function PlacementModal( {
 	value,
@@ -49,6 +49,44 @@ export function PlacementModal( {
 
 	const set = ( patch: Partial< Placement > ): void =>
 		setDraft( { ...draft, ...patch } );
+
+	/*
+	 * Breakpoints are edited as an ordered list and stored as a map.
+	 *
+	 * A map cannot hold two rows that both say "0" while somebody is halfway
+	 * through typing the second one, so the list is the editing shape and the
+	 * map is built from it on submit. Ordering is by floor ascending, which is
+	 * how a person reads a set of screen widths — narrowest first — and the
+	 * opposite of how `Size_Map` resolves them.
+	 */
+	const rows: Array< [ string, string ] > = Object.entries(
+		draft.breakpoints
+	).sort( ( a, b ) => Number( a[ 0 ] ) - Number( b[ 0 ] ) );
+
+	const commit = ( next: Array< [ string, string ] > ): void => {
+		const map: Record< string, string > = {};
+
+		for ( const [ floor, size ] of next ) {
+			const width = Math.max( 0, Math.floor( Number( floor ) || 0 ) );
+
+			map[ String( width ) ] = size;
+		}
+
+		set( { breakpoints: map } );
+	};
+
+	const setRow = ( index: number, floor: string, size: string ): void => {
+		const next = rows.slice();
+
+		next[ index ] = [ floor, size ];
+		commit( next );
+	};
+
+	const removeRow = ( index: number ): void =>
+		commit( rows.filter( ( _row, at ) => at !== index ) );
+
+	const addRow = (): void =>
+		commit( [ ...rows, [ 0 === rows.length ? '0' : '', '' ] ] );
 
 	const sizeOptions = [
 		{ label: t( 'chooseSize' ), value: '' },
@@ -156,6 +194,81 @@ export function PlacementModal( {
 					__nextHasNoMarginBottom
 					onChange={ ( active: boolean ) => set( { active } ) }
 				/>
+
+				<fieldset>
+					<legend>{ t( 'responsive' ) }</legend>
+					<VStack spacing={ 3 }>
+						<p className="aggr-field-help">
+							{ t( 'responsiveHelp' ) }
+						</p>
+
+						{ rows.map( ( [ floor, size ], index ) => (
+							<HStack
+								key={ `bp-${ index }` }
+								alignment="flex-end"
+								spacing={ 2 }
+							>
+								<TextControl
+									label={ t( 'breakpointWidth' ) }
+									type="number"
+									min={ 0 }
+									value={ floor }
+									onChange={ ( next: string ) =>
+										setRow( index, next, size )
+									}
+									__nextHasNoMarginBottom
+									__next40pxDefaultSize
+								/>
+								<SelectControl
+									label={ t( 'breakpointSize' ) }
+									value={ size }
+									options={ sizeOptions }
+									onChange={ ( next: string ) =>
+										setRow( index, floor, next )
+									}
+									__nextHasNoMarginBottom
+									__next40pxDefaultSize
+								/>
+								<Button
+									variant="tertiary"
+									isDestructive
+									__next40pxDefaultSize
+									onClick={ () => removeRow( index ) }
+								>
+									{ t( 'removeBreakpoint' ) }
+								</Button>
+							</HStack>
+						) ) }
+
+						{ /*
+						 * Said rather than silently repaired. `Size_Map` reads a
+						 * map with no floor at zero as "not a map" and falls
+						 * back to the single size, so a publisher who only
+						 * described wide screens would see their configuration
+						 * saved and ignored. Inventing a zero row for them
+						 * would be guessing what a phone should show.
+						 */ }
+						{ rows.length > 0 &&
+						! rows.some(
+							( [ floor ] ) => 0 === Number( floor )
+						) ? (
+							<Notice status="warning" isDismissible={ false }>
+								{ t( 'breakpointBaseNote' ) }
+							</Notice>
+						) : null }
+
+						<div>
+							<Button
+								variant="secondary"
+								__next40pxDefaultSize
+								disabled={ rows.length >= MAX_BREAKPOINTS }
+								onClick={ addRow }
+							>
+								{ t( 'addBreakpoint' ) }
+							</Button>
+						</div>
+					</VStack>
+				</fieldset>
 
 				<fieldset>
 					<legend>{ t( 'refresh' ) }</legend>
