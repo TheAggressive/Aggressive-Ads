@@ -31,19 +31,38 @@ rebuilding a mechanism it already has.
 
 ### The measurement gap, precisely
 
-`aggr_events` records `creative_id` on every impression and click. `aggr_rollups`
-does not — its grain is day, placement, outcome and opportunity. So per-creative
-performance exists as raw events and nowhere else.
+**There are two rollup tables, and only one of them is the right one.** Getting
+this wrong sends the migration to the wrong place, so it is written out here
+rather than left to be rediscovered:
 
-That gap is the whole ordering constraint of this phase. Comparing two variants
-by querying the event ledger directly is a scan whose cost grows with history,
-which is exactly what the rollup exists to avoid. **A creative dimension has to
-reach the projection before any comparison surface is honest**, and P13's
-projector is where that belongs.
+| Table | Grain | Holds |
+|---|---|---|
+| `aggr_decision_rollups` | day, placement, outcome, opportunity | request, fill, and every no-fill reason |
+| `aggr_rollups` | day, placement, campaign, line item, org | impressions, clicks, viewables, conversions |
 
-Adding a dimension to a counter table is not free: it multiplies rows by the
-number of creatives serving a placement. The slice that does it must state the
-row-count consequence and measure it, rather than discover it on a busy site.
+Variant *performance* is impressions, clicks and conversions, so **`aggr_rollups`
+is the table this phase changes**. `aggr_decision_rollups` stays as it is: a
+request has no creative — nothing has been chosen yet — so a creative dimension
+there could only ever describe fills, and a per-creative fill *rate* has no
+denominator to be a rate against.
+
+`aggr_events` already records `creative_id` on every impression and click, so
+the facts exist; they are simply not projected. Comparing two variants by
+querying that ledger directly is a scan whose cost grows with history, which is
+exactly what the rollup exists to avoid. **The creative dimension has to reach
+`aggr_rollups` before any comparison surface is honest.**
+
+Two consequences the slice must carry rather than discover:
+
+- **Row growth.** `UNIQUE KEY slot_line_day (placement_id, campaign_id,
+  line_item_id, day_utc)` gains a creative, multiplying rows by the number of
+  creatives serving a placement. Measured on a seeded fixture, not assumed.
+- **The old unique key must be dropped explicitly.** `dbDelta` adds an index and
+  never drops one, so `slot_line_day` survives the upgrade and goes on enforcing
+  one row per line item per day — silently collapsing every variant back into
+  one. The drop belongs in the migration *and* in `install_table()`, and the
+  test asserting it is gone has to recreate it first, because a fresh table
+  never had it and the assertion would pass over a migration that does nothing.
 
 ## Scope boundary
 
@@ -74,8 +93,9 @@ No new entity. This phase changes one projection and adds no post type.
 | Review decision and reason | `Creative_Change_Manager` | Append-only |
 
 **The projection is the only denormalization this phase adds.** `aggr_rollups`
-gains a creative dimension; `aggr_events` already carries `creative_id` and
-remains the record the projection is derived from. What synchronizes them is the
+— the delivery-metric table, not `aggr_decision_rollups` — gains a creative
+dimension; `aggr_events` already carries `creative_id` and remains the record
+the projection is derived from. What synchronizes them is the
 existing projector, and the reconciliation evidence below is what proves it
 stayed synchronized.
 
@@ -103,8 +123,8 @@ second revision — which is why nothing here may edit a revision to create one.
 
 ## Migration and compatibility contract
 
-Durable data changes: `aggr_rollups` gains a creative column, so this needs a
-migration and the rules that go with one.
+Durable data changes: `aggr_rollups` gains a creative column and a changed
+unique key, so this needs a migration and the rules that go with one.
 
 - **Source and destination.** Existing rows are per-placement totals with no
   creative attribution. They must survive as they are; history recorded before
@@ -117,10 +137,10 @@ migration and the rules that go with one.
 - **Partial or failed migration.** Reads fall back to the placement grain, which
   is what every current screen already uses, so a half-applied migration
   degrades to today's behaviour rather than to a broken screen.
-- **`dbDelta` adds an index and never drops one.** A key whose definition
-  changes leaves the old one enforcing the old rule, so any changed unique key
-  is dropped explicitly in both the migration and `install_table()`, and the
-  test asserting it recreates the old key first.
+- **`slot_line_day` must be dropped explicitly.** `dbDelta` adds an index and
+  never drops one, so the old unique goes on enforcing one row per line item per
+  day and collapses every variant into one. Dropped in the migration *and* in
+  `install_table()`, so a repair install heals a site the upgrade missed.
 - **Retirement condition.** The compatibility read goes when no row predating
   the dimension remains inside the longest reporting window offered.
 
@@ -169,9 +189,9 @@ distinction leaks whether the id exists.
 
 ## Performance and scale contract
 
-- **Expected cardinality.** Rows per placement per day multiply by the number of
-  creatives serving it. A placement with six live variants produces six times
-  the rollup rows it does today. **This figure is the slice's headline risk and
+- **Expected cardinality.** `aggr_rollups` rows multiply by the number of
+  creatives serving a placement. A placement with six live variants produces six
+  times the rows it does today. **This figure is the slice's headline risk and
   must be measured on a seeded multi-creative fixture, not assumed.**
 - **Hot-path budget.** Unchanged. Delivery reads assignments, not counters, so
   the fill path takes no new query.
