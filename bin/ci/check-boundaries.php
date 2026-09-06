@@ -67,6 +67,7 @@ const DATA_ACCESS_FUNCTIONS = array(
 	// placement groups: without these the group taxonomy was the one part of
 	// the schema any layer could reach past the repository to touch.
 	'wp_get_object_terms',
+	'get_the_terms',
 	'wp_set_object_terms',
 	'get_terms',
 	'get_term_by',

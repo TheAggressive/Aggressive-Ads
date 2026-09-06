@@ -16,6 +16,7 @@ use Aggressive\Ads\Domain\Settings_Schema;
 use Aggressive\Ads\Domain\Viewability_Rules;
 use Aggressive\Ads\Domain\Upload_Rules;
 use Aggressive\Ads\Repository\Delivery_Repository;
+use Aggressive\Ads\Repository\Page_Context_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\REST\Creative_File_Controller;
 
@@ -27,16 +28,18 @@ final class Fill_Service {
 	/**
 	 * Constructor.
 	 *
-	 * @param Settings             $settings   Module and delivery flags.
-	 * @param Placement_Repository $placements Slot catalogue.
-	 * @param Delivery_Repository  $delivery   Token validation reads.
-	 * @param Fill_Token           $tokens     Signed beacon/click tokens.
-	 * @param Decision_Engine      $decisions  Assignment decision engine.
-	 * @param Decision_Metrics     $metrics    Per-request decision counters.
+	 * @param Settings                $settings   Module and delivery flags.
+	 * @param Placement_Repository    $placements Slot catalogue.
+	 * @param Page_Context_Repository $context    Page facts for contextual targeting.
+	 * @param Delivery_Repository     $delivery   Token validation reads.
+	 * @param Fill_Token              $tokens     Signed beacon/click tokens.
+	 * @param Decision_Engine         $decisions  Assignment decision engine.
+	 * @param Decision_Metrics        $metrics    Per-request decision counters.
 	 */
 	public function __construct(
 		private readonly Settings $settings,
 		private readonly Placement_Repository $placements,
+		private readonly Page_Context_Repository $context,
 		private readonly Delivery_Repository $delivery,
 		private readonly Fill_Token $tokens,
 		private readonly Decision_Engine $decisions,
@@ -67,9 +70,10 @@ final class Fill_Service {
 	 * @param string $slug     Placement post_name.
 	 * @param int    $sequence Fill number within the page view, zero-based.
 	 * @param int    $viewport_width Reported viewport width in CSS pixels, or 0 for the base size.
+	 * @param int    $post_id        Post the slot is on, or 0 when none was reported.
 	 * @return array<string, mixed>|null
 	 */
-	public function for_slug( string $slug, int $sequence = 0, int $viewport_width = 0 ): ?array {
+	public function for_slug( string $slug, int $sequence = 0, int $viewport_width = 0, int $post_id = 0 ): ?array {
 		if ( ! $this->is_enabled() ) {
 			return null;
 		}
@@ -109,7 +113,7 @@ final class Fill_Service {
 		 */
 		$this->metrics->for_opportunity( Opportunity::from_sequence( $sequence ) );
 
-		$paid  = $this->paid_creative( $placement_id, $viewport_width );
+		$paid  = $this->paid_creative( $placement_id, $viewport_width, $post_id );
 		$house = null;
 
 		if ( null === $paid && Settings_Schema::HOUSE_WHEN_EMPTY === $this->settings->house_policy() ) {
@@ -151,9 +155,10 @@ final class Fill_Service {
 	 *
 	 * @param array<int, string> $slugs          Requested slot slugs.
 	 * @param int                $viewport_width Reported viewport width in CSS pixels, or 0 for the base size.
+	 * @param int                $post_id        Post the slots are on, or 0 when none was reported.
 	 * @return array<string, array<string, mixed>> Keyed by slot slug.
 	 */
-	public function for_slots( array $slugs, int $viewport_width = 0 ): array {
+	public function for_slots( array $slugs, int $viewport_width = 0, int $post_id = 0 ): array {
 		if ( ! $this->is_enabled() || array() === $slugs ) {
 			return array();
 		}
@@ -210,7 +215,7 @@ final class Fill_Service {
 		 */
 		$this->metrics->for_opportunity( Opportunity::PAGE );
 
-		$facts     = $this->request_facts();
+		$facts     = array_merge( $this->request_facts(), $this->context->facts_for( $post_id ) );
 		$decisions = $this->decisions->decide_page( $slots_map, $now, null, $facts );
 		$payloads  = array();
 
@@ -305,15 +310,16 @@ final class Fill_Service {
 	 *
 	 * @param int $placement_id   Placement post id.
 	 * @param int $viewport_width Reported viewport width in CSS pixels, or 0 for the base size.
+	 * @param int $post_id        Post the slot is on, or 0 when none was reported.
 	 * @return array<string, mixed>|null
 	 */
-	private function paid_creative( int $placement_id, int $viewport_width = 0 ): ?array {
+	private function paid_creative( int $placement_id, int $viewport_width = 0, int $post_id = 0 ): ?array {
 		if ( ! $this->decisions->serving_ready() ) {
 			return null;
 		}
 
 		$now      = time();
-		$facts    = $this->facts_for( $placement_id, $viewport_width );
+		$facts    = $this->facts_for( $placement_id, $viewport_width, $post_id );
 		$rows     = $this->decisions->cached_rows( $placement_id, $now );
 		$decision = $this->decisions->decide( $placement_id, $now, null, $rows, true, $facts );
 
@@ -368,10 +374,11 @@ final class Fill_Service {
 	 *
 	 * @param int $placement_id  Placement post id.
 	 * @param int $viewport_width Reported viewport width in CSS pixels.
+	 * @param int $post_id        Post the slot is on, or 0 when none was reported.
 	 * @return array<string, mixed>
 	 */
-	private function facts_for( int $placement_id, int $viewport_width ): array {
-		$facts = $this->request_facts();
+	private function facts_for( int $placement_id, int $viewport_width, int $post_id = 0 ): array {
+		$facts = array_merge( $this->request_facts(), $this->context->facts_for( $post_id ) );
 
 		$facts['size'] = $this->placements->size_map( $placement_id )->for_viewport( $viewport_width );
 

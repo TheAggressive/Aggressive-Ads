@@ -33,6 +33,23 @@ const SCAN_ROOT = process.env.AGGR_CLIENT_CONTRACT_SCAN_DIR ?? ROOT;
 
 const PHP_CONTEXT = 'inc/Domain/class-slot-options.php';
 const FILL_CONTROLLER = 'inc/REST/class-fill-controller.php';
+const SLOT_RENDERER = 'inc/Workflow/class-placement-slot.php';
+
+/**
+ * Fill parameters the server puts in the URL, and where it must do it.
+ *
+ * Every other declared parameter has to be written by `fill.js`. These are the
+ * exception, and they get the *opposite* assertion rather than an exemption: a
+ * server-supplied parameter that nothing supplies is the same defect as a
+ * client-supplied one nothing sends, and letting it merely skip the check is
+ * how an exception list turns into a blind spot.
+ *
+ * `slot` is the path segment, so its writer is the route itself.
+ */
+const SERVER_SUPPLIED = {
+	slot: null,
+	p: SLOT_RENDERER,
+};
 const CLIENT_FILES = [
 	'src/blocks-interactivity/ad-slot/view.js',
 	'src/blocks-interactivity/ad-slot/fill.js',
@@ -237,7 +254,10 @@ async function main() {
 		...controller.matchAll( /'([a-z_]+)'\s*=> array\(\s*\n\s*'type'/g ),
 	]
 		.map( ( match ) => match[ 1 ] )
-		.filter( ( name ) => 'slot' !== name );
+		.filter(
+			( name ) =>
+				! Object.prototype.hasOwnProperty.call( SERVER_SUPPLIED, name )
+		);
 
 	if ( 0 === declared.length ) {
 		problems.push(
@@ -267,6 +287,45 @@ async function main() {
 			problems.push(
 				`Fill_Controller declares '${ name }' and never calls ` +
 					`get_param( '${ name }' ), so the client sends it into nothing.`
+			);
+		}
+	}
+
+	/*
+	 * The other half of the split: a parameter the server is supposed to supply
+	 * must actually be supplied somewhere, and must still be read.
+	 */
+	for ( const [ name, source ] of Object.entries( SERVER_SUPPLIED ) ) {
+		if ( ! new RegExp( `'${ name }'\\s*=> array\\(` ).test( controller ) ) {
+			continue;
+		}
+
+		if (
+			! new RegExp( `get_param\\(\\s*'${ name }'\\s*\\)` ).test(
+				controller
+			)
+		) {
+			problems.push(
+				`Fill_Controller declares '${ name }' and never calls ` +
+					`get_param( '${ name }' ), so nothing reads what the server sends.`
+			);
+		}
+
+		if ( null === source ) {
+			continue;
+		}
+
+		const renderer = codeOnly(
+			await readFile( resolve( source ), 'utf8' )
+		);
+
+		if (
+			! new RegExp( `add_query_arg\\(\\s*'${ name }'` ).test( renderer )
+		) {
+			problems.push(
+				`${ source } does not add_query_arg( '${ name }', … ), but the ` +
+					`fill route declares it as server-supplied. A parameter no ` +
+					`renderer writes is a server reader with no writer.`
 			);
 		}
 	}

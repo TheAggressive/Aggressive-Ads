@@ -209,6 +209,29 @@ final class Placement_Slot implements Service {
 		$height = isset( $dims[1] ) ? (int) $dims[1] : 0;
 		$fill   = rest_url( Creative_File_Controller::NAMESPACE . '/fill/' . rawurlencode( $slug ) );
 
+		/*
+		 * The page this slot is rendering on, for contextual targeting.
+		 *
+		 * Baked into the URL here rather than sent by the browser. The server
+		 * knows the page at render time, and the browser would only be
+		 * repeating back something we already had — a client-declared fact
+		 * where none is needed.
+		 *
+		 * Correct under a page cache for the same reason: the id is cached with
+		 * the page whose id it is. A page cached before this existed simply
+		 * omits it, and the fill route reads a missing page as "no context",
+		 * which is the behaviour every fill had until now.
+		 *
+		 * `get_queried_object_id()` rather than `get_the_ID()`: inside a
+		 * sidebar or a template part the loop may be pointing at something
+		 * other than the page the reader is on, and the ad is on the page.
+		 */
+		$page_id = (int) get_queried_object_id();
+
+		if ( $page_id > 0 && is_singular() ) {
+			$fill = add_query_arg( 'p', $page_id, $fill );
+		}
+
 		$this->enqueue_view();
 
 		$style        = '';

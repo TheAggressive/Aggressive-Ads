@@ -21,6 +21,7 @@ use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Repository\Line_Item_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Security\Roles;
 use Aggressive\Ads\Workflow\Decision_Engine;
@@ -52,6 +53,13 @@ final class DecisionServingTest extends WP_UnitTestCase {
 	 * @var int
 	 */
 	private int $placement_id;
+
+	/**
+	 * Fixture campaign, which is also the assignment's line item id.
+	 *
+	 * @var int
+	 */
+	private int $campaign_id = 0;
 
 	public function set_up(): void {
 		parent::set_up();
@@ -354,7 +362,7 @@ final class DecisionServingTest extends WP_UnitTestCase {
 			array(
 				0   => '320x50',
 				768 => '728x90',
-			) 
+			)
 		);
 
 		$fill = Plugin::instance()->container()->get( Fill_Service::class );
@@ -497,6 +505,188 @@ final class DecisionServingTest extends WP_UnitTestCase {
 		$this->assertTrue( $this->settings->save( $document ) );
 	}
 
+	/**
+	 * **A campaign sold against a category serves on that category, and only
+	 * there.**
+	 *
+	 * This is the half of contextual selling that had never existed.
+	 * `Targeting_Rules` could always evaluate a fact set — the comparator for
+	 * an array-valued fact was already there — but nothing ever put the page
+	 * into the facts, so a publisher's category rule matched nobody. A test of
+	 * the comparator alone passes over exactly that defect, which is why this
+	 * one goes through `Fill_Service` and the real fill path.
+	 *
+	 * Both directions are asserted. "Serves on the sports post" alone would
+	 * pass over targeting that was never applied at all.
+	 *
+	 * @return void
+	 */
+	public function test_a_category_targeted_campaign_serves_only_on_that_category(): void {
+		update_option( Creative_Assignment_Migrator::OPTION_DONE, 1 );
+
+		$this->target_on(
+			array(
+				'dimension' => 'categories',
+				'cmp'       => 'contains',
+				'value'     => 'sports',
+			)
+		);
+
+		$sports  = $this->post_in( 'sports' );
+		$recipes = $this->post_in( 'recipes' );
+
+		$fill = Plugin::instance()->container()->get( Fill_Service::class );
+
+		$on_topic = $fill->for_slug( 'decision-gate', 0, 1024, $sports );
+
+		$this->assertIsArray( $on_topic );
+		$this->assertIsArray(
+			$on_topic['creative'],
+			'A campaign targeting "sports" did not serve on a sports post.'
+		);
+
+		$off_topic = $fill->for_slug( 'decision-gate', 0, 1024, $recipes );
+
+		$this->assertIsArray( $off_topic );
+		$this->assertNull(
+			$off_topic['creative'],
+			'A campaign targeting "sports" served on a recipes post.'
+		);
+	}
+
+	/**
+	 * A fill that reports no page is not silently on-topic.
+	 *
+	 * Every fill from a page cached before this shipped arrives without a page
+	 * id. A targeted campaign must not serve into that gap — "we do not know
+	 * where this is" is not "this is sports".
+	 *
+	 * @return void
+	 */
+	public function test_a_targeted_campaign_does_not_serve_without_a_page(): void {
+		update_option( Creative_Assignment_Migrator::OPTION_DONE, 1 );
+
+		$this->target_on(
+			array(
+				'dimension' => 'categories',
+				'cmp'       => 'contains',
+				'value'     => 'sports',
+			)
+		);
+
+		$fill    = Plugin::instance()->container()->get( Fill_Service::class );
+		$payload = $fill->for_slug( 'decision-gate', 0, 1024, 0 );
+
+		$this->assertIsArray( $payload );
+		$this->assertNull(
+			$payload['creative'],
+			'A targeted campaign served into a fill that reported no page.'
+		);
+	}
+
+	/**
+	 * An untargeted campaign is unaffected by page context.
+	 *
+	 * The overwhelming majority of inventory has no targeting, and a change
+	 * that made those campaigns depend on a page id would break every fill
+	 * from an archive or a cached page.
+	 *
+	 * @return void
+	 */
+	public function test_an_untargeted_campaign_serves_whatever_the_page(): void {
+		update_option( Creative_Assignment_Migrator::OPTION_DONE, 1 );
+
+		$fill = Plugin::instance()->container()->get( Fill_Service::class );
+
+		foreach ( array( 0, $this->post_in( 'recipes' ) ) as $page ) {
+			$payload = $fill->for_slug( 'decision-gate', 0, 1024, $page );
+
+			$this->assertIsArray( $payload );
+			$this->assertIsArray(
+				$payload['creative'],
+				'An untargeted campaign was refused for page ' . $page . '.'
+			);
+		}
+	}
+
+	/**
+	 * A published post in one category.
+	 *
+	 * @param string $category Category slug.
+	 * @return int
+	 */
+	private function post_in( string $category ): int {
+		$post_id = (int) self::factory()->post->create( array( 'post_status' => 'publish' ) );
+
+		wp_set_object_terms( $post_id, array( $category ), 'category', false );
+
+		return $post_id;
+	}
+
+	/**
+	 * Puts a targeting rule on the seeded line item.
+	 *
+	 * Written straight to the row the decision path actually reads, rather than
+	 * to a hand-built candidate array — `candidates_for_placement()` returns
+	 * the assignment's columns and targeting lives on `aggr_line_items`, so a
+	 * fixture that supplied it any other way would prove nothing.
+	 *
+	 * @param array<string, mixed> $leaf One targeting leaf.
+	 * @return void
+	 */
+	private function target_on( array $leaf ): void {
+		global $wpdb;
+
+		$line_items = Plugin::instance()->container()->get( Line_Item_Repository::class );
+		$default    = $line_items->ensure_default( $this->campaign_id );
+
+		$this->assertIsArray( $default, 'No line item exists to carry a targeting rule.' );
+
+		$line_item_id = (int) $default['id'];
+		$assignments  = Plugin::instance()->container()->get( Creative_Assignment_Repository::class );
+
+		/*
+		 * Point the seeded assignment at the real line item.
+		 *
+		 * `seed_assignment()` uses the campaign id as the line item id, which
+		 * is fine for every test that reads nothing off the line item. This one
+		 * does, and `enrich()` joins on `line_item_id` — so without this the
+		 * targeting rule would sit on a row the decision path never loads and
+		 * the campaign would serve everywhere, passing the first assertion and
+		 * failing the second for the wrong reason.
+		 */
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Test fixture for this plugin's own table.
+		$wpdb->update(
+			$assignments->table_name(),
+			array( 'line_item_id' => $line_item_id ),
+			array( 'campaign_id' => $this->campaign_id ),
+			array( '%d' ),
+			array( '%d' )
+		);
+
+		$encoded = wp_json_encode(
+			array(
+				'op'    => 'AND',
+				'rules' => array( $leaf ),
+			)
+		);
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Test fixture for this plugin's own table.
+		$updated = $wpdb->update(
+			$line_items->table_name(),
+			array( 'targeting_rules' => $encoded ),
+			array( 'id' => $line_item_id ),
+			array( '%s' ),
+			array( '%d' )
+		);
+
+		$this->assertSame(
+			1,
+			$updated,
+			'The targeting rule was not written to a line item, so this test would prove nothing.'
+		);
+	}
+
 	private function seed_assignment(): void {
 		global $wpdb;
 
@@ -507,6 +697,8 @@ final class DecisionServingTest extends WP_UnitTestCase {
 			)
 		);
 		add_post_meta( $campaign_id, Campaign_Repository::META_PLACEMENT_ID, $this->placement_id );
+
+		$this->campaign_id = $campaign_id;
 
 		$attachment_id = (int) self::factory()->attachment->create_object(
 			array(

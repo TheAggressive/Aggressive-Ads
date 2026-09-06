@@ -26,6 +26,7 @@ const FILES = {
 	fill: 'src/blocks-interactivity/ad-slot/fill.js',
 	empty: 'src/blocks-interactivity/ad-slot/empty.js',
 	rotation: 'src/blocks-interactivity/ad-slot/rotation.js',
+	renderer: 'inc/Workflow/class-placement-slot.php',
 };
 
 const roots = [];
@@ -66,7 +67,7 @@ async function root( overrides = {} ) {
 		 * first time this ran.
 		 */
 		[ FILES.controller ]:
-			"<?php\n'args' => array(\n\t'slot' => array(\n\t\t'type' => 'string',\n\t),\n\t'n' => array(\n\t\t'type' => 'integer',\n\t),\n\t'w' => array(\n\t\t'type' => 'integer',\n\t),\n),\n$sequence = (int) $request->get_param( 'n' );\n$viewport = (int) $request->get_param( 'w' );\n",
+			"<?php\n'args' => array(\n\t'slot' => array(\n\t\t'type' => 'string',\n\t),\n\t'n' => array(\n\t\t'type' => 'integer',\n\t),\n\t'w' => array(\n\t\t'type' => 'integer',\n\t),\n\t'p' => array(\n\t\t'type' => 'integer',\n\t),\n),\n$slot = (string) $request->get_param( 'slot' );\n$sequence = (int) $request->get_param( 'n' );\n$viewport = (int) $request->get_param( 'w' );\n$post_id = (int) $request->get_param( 'p' );\n",
 		[ FILES.view ]:
 			'const on = context.rotate;\nconst s = context.rotateSeconds;\nconst cap = rotationCap( context.maxRefreshes );\nawait fillSlot( root, rotations );\n',
 		[ FILES.fill ]:
@@ -75,6 +76,8 @@ async function root( overrides = {} ) {
 			'export const collapses = ( context ) => false !== context?.collapseWhenEmpty;\n',
 		[ FILES.rotation ]:
 			'export const rotationCap = ( requested ) => Math.min( 100, requested );\n',
+		[ FILES.renderer ]:
+			"<?php\n$fill = add_query_arg( 'p', $page_id, $fill );\n",
 		...overrides,
 	};
 
@@ -217,6 +220,35 @@ test( 'the honest tree passes and says how much it read', async () => {
 
 	assert.equal( status, 0, output );
 	assert.match( output, /check-client-contract: ok \(4 context keys/ );
+} );
+
+test( 'a server-supplied parameter no renderer writes is refused', async () => {
+	/*
+	 * `p` is not sent by the browser — the server bakes it into the fill URL —
+	 * so the client-side check does not apply to it and it would otherwise be
+	 * exempt from every check. This is the assertion that replaces the
+	 * exemption: something still has to supply it.
+	 */
+	const dir = await root( {
+		[ FILES.renderer ]: '<?php\n$fill = rest_url( $path );\n',
+	} );
+
+	const { status, output } = run( dir );
+
+	assert.equal( status, 1, output );
+	assert.match( output, /does not add_query_arg\( 'p'/ );
+} );
+
+test( 'a server-supplied parameter the controller never reads is refused', async () => {
+	const dir = await root( {
+		[ FILES.controller ]:
+			"<?php\n'args' => array(\n\t'slot' => array(\n\t\t'type' => 'string',\n\t),\n\t'n' => array(\n\t\t'type' => 'integer',\n\t),\n\t'w' => array(\n\t\t'type' => 'integer',\n\t),\n\t'p' => array(\n\t\t'type' => 'integer',\n\t),\n),\n$slot = (string) $request->get_param( 'slot' );\n$sequence = (int) $request->get_param( 'n' );\n$viewport = (int) $request->get_param( 'w' );\n",
+	} );
+
+	const { status, output } = run( dir );
+
+	assert.equal( status, 1, output );
+	assert.match( output, /never calls get_param\( 'p' \)/ );
 } );
 
 test( 'a renamed protected file fails rather than passing over nothing', async () => {

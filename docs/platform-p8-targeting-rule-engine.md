@@ -74,6 +74,36 @@ Targeting criteria are stored under `delivery_settings['targeting']` or `targeti
 }
 ```
 
+### The dimensions delivery actually supplies
+
+**The names above are this document's original sketch, not the fact keys.**
+Until P15 slice 3 the engine received only `visitor_id` and `size`, so a rule
+naming `wp.category` matched nobody — silently, because an unsupplied dimension
+fails cleanly by design (guarantee 3 above). That guarantee is what made the gap
+invisible: nothing errors, nothing logs, the campaign simply never serves.
+
+What `Page_Context_Repository` supplies today, for a fill that reports a page:
+
+| Fact | Shape | Notes |
+|---|---|---|
+| `post_type` | string | The queried post's type. |
+| `categories` | array of slugs | The `category` taxonomy only. |
+| `terms` | array of `taxonomy:slug` | Every **public** taxonomy. Qualified because a slug is unique only within its taxonomy — a category and a tag both called `sports` are different inventory. |
+| `size` | string | `{width}x{height}` resolved for the reported viewport. |
+| `visitor_id` | string | Hashed client IP. |
+
+Match an array-valued fact with `contains`; the comparator already handled
+arrays and needed no change for this.
+
+Private taxonomies are never supplied — `aggr_placement_group` among them, so an
+advertiser's rule cannot read a publisher's own filing. An unpublished post
+supplies nothing at all: the page id travels in a URL, and a draft's categories
+are not something a guessed id should reveal.
+
+A fill that reports no page — an archive, or a page cached before this shipped —
+supplies no page facts, and a targeted campaign therefore does not serve into
+it. "We do not know where this is" is not "this is sports".
+
 ### Invariants
 
 1. **No Executable Code**: Stored targeting rules are pure data parsed via strict schemas; `eval()`, regex compilation from untrusted user input, and dynamic function invocation are strictly forbidden.

@@ -75,6 +75,7 @@ use Aggressive\Ads\REST\Packages_Controller;
 use Aggressive\Ads\REST\Organizations_Controller;
 use Aggressive\Ads\REST\Settings_Controller;
 use Aggressive\Ads\REST\Transitions_Controller;
+use Aggressive\Ads\Repository\Page_Context_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Repository\User_Repository;
@@ -527,6 +528,11 @@ final class Service_Registrar {
 		$container->register(
 			Placement_Repository::class,
 			static fn (): Placement_Repository => new Placement_Repository()
+		);
+
+		$container->register(
+			Page_Context_Repository::class,
+			static fn (): Page_Context_Repository => new Page_Context_Repository()
 		);
 
 		$container->register(

@@ -99,6 +99,30 @@ final class Fill_Controller implements Service {
 						'default'           => 0,
 						'sanitize_callback' => 'absint',
 					),
+
+					/*
+					 * The page the slot is on, for contextual targeting.
+					 *
+					 * **Put in the URL by the server, not by the browser.**
+					 * `Placement_Slot` knows the page at render time and bakes
+					 * it into `data-aggr-fill`, so this is not a client-declared
+					 * fact the way `n` and `w` are. It travels through the page
+					 * cache correctly because it is cached with the page whose
+					 * id it is.
+					 *
+					 * Even forged it buys little: the id only selects *which*
+					 * published post's terms are read, and the terms themselves
+					 * come from the database. A caller cannot invent a category
+					 * that does not exist, only claim to be on a different page
+					 * of the same site — which is a thing their browser could
+					 * do by loading that page anyway.
+					 */
+					'p'    => array(
+						'type'              => 'integer',
+						'required'          => false,
+						'default'           => 0,
+						'sanitize_callback' => 'absint',
+					),
 				),
 			)
 		);
@@ -142,7 +166,8 @@ final class Fill_Controller implements Service {
 		$slot     = (string) $request->get_param( 'slot' );
 		$sequence = (int) $request->get_param( 'n' );
 		$viewport = (int) $request->get_param( 'w' );
-		$payload  = $this->fill->for_slug( $slot, $sequence, $viewport );
+		$post_id  = (int) $request->get_param( 'p' );
+		$payload  = $this->fill->for_slug( $slot, $sequence, $viewport, $post_id );
 
 		if ( null === $payload ) {
 			return new WP_Error(

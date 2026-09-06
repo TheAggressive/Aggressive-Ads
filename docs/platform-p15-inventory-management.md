@@ -112,7 +112,11 @@ Ordered by dependency, not by size.
    Contract-mandated and fixes a live integrity problem.
 2. **Responsive multi-size mapping.** *Shipped.* Carries the determinism
    invariant.
-3. **Groups and categories.** Organisational; depends on the settled model.
+3. **Groups and categories.** *Shipped.* Two independent halves: a private,
+   flat `aggr_placement_group` taxonomy for the publisher's own filing, and page
+   context supplied into the targeting facts so content categories can be sold
+   against. Neither is a package — see `domain-model.md` for why that
+   distinction is load-bearing.
 4. **Utilisation dashboard.** Last deliberately — it cannot be honest before
    slice 1 exists.
 
@@ -138,6 +142,14 @@ one, and that is not a shipped slice.
   boundary nobody thought to pick.
 - A map missing its zero floor is not silently treated as a map — it falls back
   to the placement's single size, and the form says so before saving.
+- **A campaign sold against a category serves on that category and nowhere
+  else**, proven through `Fill_Service` rather than against the comparator. The
+  comparator always worked; nothing ever supplied the page, so a category rule
+  matched nobody. A test of the rule engine alone passes over exactly that.
+- A fill that reports no page does not satisfy a targeted campaign, and an
+  untargeted campaign is unaffected by page context either way.
+- A private taxonomy is never a targeting dimension, and an unpublished post
+  supplies no facts at all.
 - A creative whose size does not match what the viewport resolved to is
   excluded. When *every* candidate lost for that one reason, the placement
   reports `size_unavailable` rather than a generic no-fill — a mixed field still
