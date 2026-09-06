@@ -253,53 +253,100 @@ final class Reports_Screen implements Service {
 			printf( '<p class="description">%s</p>', esc_html( $note ) );
 		}
 
-		$refresh = $fill['refresh'];
+		/*
+		 * Two cards, not six lines.
+		 *
+		 * Page and refresh are different kinds of inventory, and keeping them
+		 * apart is the whole point of the grain this phase defined — so the
+		 * layout says so, rather than interleaving them in one list where the
+		 * fill rate reads as the fourth sentence of a paragraph. It is the
+		 * number this screen exists to deliver.
+		 *
+		 * `postbox` is WordPress's own card and `aggr-card-grid` was already in
+		 * the stylesheet waiting for a screen. Nothing is invented here, which
+		 * is what keeps this inside what `admin-native.css` is willing to own.
+		 */
+		echo '<div id="poststuff"><div class="aggr-card-grid">';
+
+		$this->render_kind_card(
+			__( 'Page', 'aggressive-ads' ),
+			$fill,
+			__( 'of page requests filled', 'aggressive-ads' ),
+			__( 'No page requests in this window.', 'aggressive-ads' )
+		);
+
+		$this->render_kind_card(
+			__( 'Refresh', 'aggressive-ads' ),
+			$fill['refresh'],
+			__( 'of refresh requests filled', 'aggressive-ads' ),
+			__( 'No refreshes in this window.', 'aggressive-ads' )
+		);
+
+		echo '</div></div>';
+	}
+
+	/**
+	 * One inventory kind, as a card.
+	 *
+	 * The rate leads because it is the question — "is my inventory selling" —
+	 * and the counts it came from sit under it, because a rate with no
+	 * denominator on screen is a number nobody can check.
+	 *
+	 * When nothing was requested there is no figure at all, only the sentence
+	 * saying so. Nothing was requested and a placement nobody asked for did not
+	 * fail to fill — but an em dash at figure size renders as a bar, so the
+	 * absence is written out instead of symbolised.
+	 *
+	 * @param string                                                  $heading Kind name.
+	 * @param array{requests: int, fills: int, fill_rate: float|null} $figures Figures for that kind.
+	 * @param string                                                  $caption Caption under the rate.
+	 * @param string                                                  $none    Sentence shown when nothing was requested.
+	 * @return void
+	 */
+	private function render_kind_card( string $heading, array $figures, string $caption, string $none ): void {
+		$requests = (int) $figures['requests'];
+		$rate     = $figures['fill_rate'];
 
 		printf(
-			'<ul><li>%1$s</li><li>%2$s</li><li>%3$s</li><li>%4$s</li><li>%5$s</li><li>%6$s</li></ul>',
+			'<div class="postbox"><div class="postbox-header"><h2 class="hndle">%s</h2></div><div class="inside">',
+			esc_html( $heading )
+		);
+
+		if ( null === $rate ) {
+			/*
+			 * No figure at all when there is nothing to report.
+			 *
+			 * An em dash in the figure slot renders as a thick horizontal bar
+			 * that reads as a redaction mark — seen in a rendering, and not
+			 * fixed by making it lighter. An absence does not need a
+			 * placeholder glyph; it needs a sentence, and the sentence is the
+			 * one this card would have captioned the figure with anyway.
+			 */
+			printf( '<p class="aggr-figure--none">%s</p>', esc_html( $none ) );
+		} else {
+			printf( '<p class="aggr-figure">%s</p>', esc_html( $this->rate( $rate ) ) );
+			printf( '<p class="aggr-figure__caption">%s</p>', esc_html( $caption ) );
+		}
+
+		printf(
+			'<p class="aggr-figure__detail">%1$s<br>%2$s</p>',
 			esc_html(
 				sprintf(
-					/* translators: %s: a count of page-view advertisement requests. */
-					__( 'Page requests: %s', 'aggressive-ads' ),
-					number_format_i18n( $fill['requests'] )
+					/* translators: %s: a count of advertisement requests. */
+					__( '%s requests', 'aggressive-ads' ),
+					number_format_i18n( $requests )
 				)
 			),
 			esc_html(
 				sprintf(
-					/* translators: %s: a count of filled page-view requests. */
-					__( 'Page filled: %s', 'aggressive-ads' ),
-					number_format_i18n( $fill['fills'] )
-				)
-			),
-			esc_html(
-				sprintf(
-					/* translators: %s: page fill rate as a percentage, or an em dash. */
-					__( 'Page fill rate: %s', 'aggressive-ads' ),
-					$this->rate( $fill['fill_rate'] )
-				)
-			),
-			esc_html(
-				sprintf(
-					/* translators: %s: a count of refresh advertisement requests. */
-					__( 'Refresh requests: %s', 'aggressive-ads' ),
-					number_format_i18n( $refresh['requests'] )
-				)
-			),
-			esc_html(
-				sprintf(
-					/* translators: %s: a count of filled refresh requests. */
-					__( 'Refresh filled: %s', 'aggressive-ads' ),
-					number_format_i18n( $refresh['fills'] )
-				)
-			),
-			esc_html(
-				sprintf(
-					/* translators: %s: refresh fill rate as a percentage, or an em dash. */
-					__( 'Refresh fill rate: %s', 'aggressive-ads' ),
-					$this->rate( $refresh['fill_rate'] )
+					/* translators: %s: a count of filled requests. */
+					__( '%s filled', 'aggressive-ads' ),
+					number_format_i18n( (int) $figures['fills'] )
 				)
 			)
 		);
+
+		echo '</div></div>';
 	}
 
 	/**
@@ -445,11 +492,7 @@ final class Reports_Screen implements Service {
 			esc_html__( 'Utilisation', 'aggressive-ads' )
 		);
 
-		$unaccounted = 0;
-
 		foreach ( $view['placements'] as $row ) {
-			$unaccounted += (int) $row['unaccounted'];
-
 			printf(
 				'<tr><th scope="row">%1$s</th><td>%2$s</td><td>%3$s</td><td>%4$s</td><td>%5$s</td></tr>',
 				esc_html( (string) $row['name'] ),
@@ -462,7 +505,12 @@ final class Reports_Screen implements Service {
 
 		echo '</tbody></table></div>';
 
-		$this->render_unaccounted( $unaccounted );
+		/*
+		 * The unexplained-outcome warning is printed once, above, against the
+		 * whole site. Summing it again per placement said the same thing with a
+		 * different number and identical wording, which reads as two separate
+		 * defects rather than one seen from two angles.
+		 */
 		$this->render_unattributed( $view['unattributed'] ?? array() );
 		$this->render_group_utilisation( $view['groups'] );
 	}

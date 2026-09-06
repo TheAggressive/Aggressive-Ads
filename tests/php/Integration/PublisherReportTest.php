@@ -255,7 +255,7 @@ final class PublisherReportTest extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'Every page request was filled.', $html );
 		$this->assertStringContainsString( 'Why refresh requests were not filled', $html );
 		$this->assertStringContainsString( esc_html( $labels[ No_Fill_Reason::TARGETING_MISMATCH ] ), $html );
-		$this->assertStringContainsString( 'Refresh fill rate:', $html );
+		$this->assertStringContainsString( 'of refresh requests filled', $html );
 		$this->assertStringNotContainsString( 'Every request was filled.', $html );
 	}
 
@@ -287,7 +287,7 @@ final class PublisherReportTest extends WP_UnitTestCase {
 		$this->assertStringNotContainsString( 'No advertisement was requested in this window', $html );
 		$this->assertStringContainsString( 'Why refresh requests were not filled', $html );
 		$this->assertStringContainsString( esc_html( $labels[ No_Fill_Reason::FREQUENCY_CAPPED ] ), $html );
-		$this->assertStringContainsString( 'Page requests: 0', $html );
+		$this->assertStringContainsString( 'No page requests in this window.', $html );
 	}
 
 	/**
@@ -548,7 +548,7 @@ final class PublisherReportTest extends WP_UnitTestCase {
 		$unknown = (string) ob_get_clean();
 
 		// The site total, which includes the known placement's seven requests.
-		$this->assertStringContainsString( 'Page requests: 7', $unknown, 'An unknown placement id was used as a filter instead of being refused.' );
+		$this->assertStringContainsString( '7 requests', $unknown, 'An unknown placement id was used as a filter instead of being refused.' );
 
 		$_GET['placement'] = (string) $known;
 
@@ -557,7 +557,7 @@ final class PublisherReportTest extends WP_UnitTestCase {
 		$filtered = (string) ob_get_clean();
 
 		// And a real id still filters, so the fallback is not swallowing every id.
-		$this->assertStringContainsString( 'Page requests: 7', $filtered );
+		$this->assertStringContainsString( '7 requests', $filtered );
 		$this->assertStringContainsString( 'selected', $filtered, 'A known placement was not marked selected in the control.' );
 	}
 

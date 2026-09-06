@@ -105,6 +105,56 @@
 }
 
 /*
+ * The headline figure on a report card.
+ *
+ * This is heading weight and measure, which is what this file owns — no
+ * colours, no borders, no component of its own. The card around it is core's
+ * `postbox` and the grid is `.aggr-card-grid`, both already here.
+ *
+ * The size is the entire design change. Six figures previously sat in one flat
+ * list where the fill rate — the number this screen exists to deliver — read as
+ * the fourth sentence of a paragraph, indistinguishable from the caption under
+ * it. Scale is what separates a figure from prose.
+ *
+ * Deliberately not accented. WordPress uses blue for things you can click, and
+ * a blue static number invites a click that does nothing.
+ */
+.wrap.aggr-admin .aggr-figure {
+	font-size: 32px;
+	font-weight: 600;
+	line-height: 1.1;
+	margin: 0;
+}
+
+/*
+ * No data is a sentence, not a big dash.
+ *
+ * An em dash in the figure slot renders at 32px as a thick horizontal bar that
+ * reads as a redaction mark. Muting it did not help — the shape is the problem.
+ * The card says what is missing in words instead, at body size, because an
+ * absence is prose rather than a measurement.
+ */
+.wrap.aggr-admin .aggr-figure--none {
+	color: var(--aggr-color-text-muted);
+	margin: 0;
+}
+
+.wrap.aggr-admin .aggr-figure__caption {
+	margin: 4px 0 0;
+}
+
+/*
+ * The counts the rate came from.
+ *
+ * Present because a rate with no denominator on screen is a number nobody can
+ * check, and quiet because they are the working, not the answer.
+ */
+.wrap.aggr-admin .aggr-figure__detail {
+	color: var(--aggr-color-text-muted);
+	margin: 12px 0 0;
+}
+
+/*
  * A wide data table scrolls inside itself, never the page.
  *
  * WCAG 1.4.10 asks that content reflow at 320 CSS pixels without
