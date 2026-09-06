@@ -27,6 +27,22 @@
  * Dynamic names are handled as prefixes: `aggr-pill--${status}` requires only
  * that something matching `aggr-pill--` exists, because which modifier a status
  * maps to is the server's business and not knowable here.
+ *
+ * **`inc/` is scanned, and was not always.** The guard read 77 markup files
+ * while the admin screens — which echo most of this plugin's markup from PHP —
+ * were none of them. A class invented in `inc/Admin/` passed silently, which is
+ * how a WCAG 1.4.10 fix shipped twice with its rule in a stylesheet the screen
+ * does not load: the markup carried the class, nothing defined it where it
+ * mattered, and this said ok. Adding the directory took the count to 325 and
+ * found no existing violations, so the cost of having looked away was one
+ * defect rather than a backlog.
+ *
+ * What this still does not check is *which* stylesheet a given screen enqueues.
+ * A class defined in `admin.css` and used on a screen that only loads
+ * `admin-native.css` satisfies rule 1 and renders unstyled. Catching that means
+ * teaching this script the enqueue map, which is a bigger claim about the
+ * plugin than a stylesheet gate should make on its own — recorded here so the
+ * next person meets the limit rather than rediscovers it.
  */
 
 import { readdir, readFile } from 'node:fs/promises';
@@ -49,6 +65,7 @@ const MARKUP_DIRS = [
 	'src/blocks-interactivity',
 	'src/interactivity',
 	'templates',
+	'inc',
 ];
 const MARKUP_EXTENSIONS = [ '.tsx', '.ts', '.js', '.php' ];
 

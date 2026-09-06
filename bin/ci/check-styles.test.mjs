@@ -81,6 +81,38 @@ function tree( css, markup ) {
 	};
 }
 
+test( 'a class used only in an admin PHP screen is checked', async () => {
+	/*
+	 * `inc/` was outside the scanned directories, so every class in the admin
+	 * screens — which is where most of this plugin's markup is echoed from —
+	 * was unguarded. A WCAG fix shipped twice partly because of it.
+	 */
+	const root = await fixture( {
+		'src/styles/admin-native.css': '.aggr-defined { color: red; }',
+		'inc/Admin/class-reports-screen.php':
+			'<?php echo \'<div class="aggr-invented">\';',
+	} );
+
+	const { status, stderr } = run( root );
+
+	assert.equal( status, 1, stderr );
+	assert.match( stderr, /aggr-invented/ );
+	assert.match( stderr, /inc\/Admin\/class-reports-screen\.php/ );
+} );
+
+test( 'a defined class in an admin PHP screen passes', async () => {
+	const root = await fixture( {
+		'src/styles/admin-native.css':
+			'.aggr-table-scroll { overflow-x: auto; }',
+		'inc/Admin/class-reports-screen.php':
+			'<?php echo \'<div class="aggr-table-scroll">\';',
+	} );
+
+	const { status, stdout } = run( root );
+
+	assert.equal( status, 0, stdout );
+} );
+
 test( 'a class that is defined passes, and the counts are reported', async () => {
 	const root = await fixture(
 		tree(
