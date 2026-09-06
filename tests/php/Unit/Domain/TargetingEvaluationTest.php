@@ -325,7 +325,14 @@ final class TargetingEvaluationTest extends TestCase {
 		$decision = $pipeline->decide( $rows, $request );
 
 		$this->assertFalse( $decision['result']->has_winner() );
-		$this->assertSame( Exclusion_Reason::NO_FILL, $decision['result']->reason );
+
+		/*
+		 * The slot's reason is the candidate's, because every candidate lost
+		 * for it. A generic no-fill here would tell a publisher nothing was
+		 * assigned when something was, and send them looking at a campaign that
+		 * is working exactly as configured.
+		 */
+		$this->assertSame( Exclusion_Reason::TARGETING_EXCLUDED, $decision['result']->reason );
 
 		$this->assertNotEmpty( $decision['trace']->entries );
 		$this->assertSame( 'targeting', $decision['trace']->entries[0]['stage'] );

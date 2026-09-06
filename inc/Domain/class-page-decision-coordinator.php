@@ -94,8 +94,27 @@ final class Page_Decision_Coordinator {
 				$eligible_candidates[] = $candidate_row;
 			}
 
-			// 2. Decide using the standard pipeline.
-			$request  = new Decision_Request( $placement_id, $now, $current_seed++, $facts );
+			/*
+			 * 2. Decide using the standard pipeline.
+			 *
+			 * Facts are shared across the page except for the ones that are
+			 * per-slot. Size is one: a responsive placement serves several, and
+			 * two placements on one page can be serving different sizes at the
+			 * same viewport. Passing one page-wide size would tell the
+			 * eligibility gate that every slot wanted whatever the first one
+			 * did.
+			 *
+			 * Resolved by the caller and carried on the slot rather than looked
+			 * up here, because this class is `inc/Domain/` and may not call a
+			 * WordPress function to ask a placement anything.
+			 */
+			$slot_facts = $facts;
+
+			if ( isset( $slot_data['size'] ) && is_string( $slot_data['size'] ) ) {
+				$slot_facts['size'] = $slot_data['size'];
+			}
+
+			$request  = new Decision_Request( $placement_id, $now, $current_seed++, $slot_facts );
 			$decision = $pipeline->decide( $eligible_candidates, $request );
 
 			$winner = $decision['result']->winner;

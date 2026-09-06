@@ -11,6 +11,7 @@ namespace Aggressive\Ads\Repository;
 
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Domain\Refresh_Policy;
+use Aggressive\Ads\Domain\Size_Map;
 use WP_Error;
 
 /**
@@ -21,6 +22,7 @@ use WP_Error;
 final class Placement_Repository {
 
 	public const META_SIZE             = '_aggr_size';
+	public const META_SIZE_MAP         = '_aggr_size_map';
 	public const META_ADGROUP_TERM     = '_aggr_adgroup_term_id';
 	public const META_IS_ACTIVE        = '_aggr_is_active';
 	public const META_SORT_ORDER       = '_aggr_sort_order';
@@ -125,6 +127,49 @@ final class Placement_Repository {
 		);
 
 		return array() === $ids ? 0 : (int) $ids[0];
+	}
+
+	/**
+	 * Which size this placement serves at each viewport.
+	 *
+	 * A placement that has never been made responsive resolves to a fixed map
+	 * over its single stored size, so every existing placement keeps serving
+	 * exactly what it served before and the resolution is one code path rather
+	 * than a branch on "is this responsive".
+	 *
+	 * @param int $placement_id Placement post id.
+	 */
+	public function size_map( int $placement_id ): Size_Map {
+		return Size_Map::from_stored(
+			get_post_meta( $placement_id, self::META_SIZE_MAP, true ),
+			$this->size( $placement_id )
+		);
+	}
+
+	/**
+	 * Records a responsive size map, and reads it back to say whether it landed.
+	 *
+	 * Read-back rather than trusting `update_post_meta()`, which answers false
+	 * both for a failed write and for a value that was already what you asked
+	 * for. A publisher told their breakpoints saved while the placement keeps
+	 * serving one size is the failure this prevents.
+	 *
+	 * The stored value is normalised on the way in by the same reader that
+	 * resolves it, so a map that would not survive reading is never written.
+	 *
+	 * @param int                $placement_id Placement post id.
+	 * @param array<int, string> $breakpoints  Minimum viewport width => size.
+	 */
+	public function set_size_map( int $placement_id, array $breakpoints ): bool {
+		if ( ! $this->exists( $placement_id ) ) {
+			return false;
+		}
+
+		$normalised = Size_Map::from_stored( $breakpoints, $this->size( $placement_id ) )->breakpoints();
+
+		update_post_meta( $placement_id, self::META_SIZE_MAP, $normalised );
+
+		return $this->size_map( $placement_id )->breakpoints() === $normalised;
 	}
 
 	/**

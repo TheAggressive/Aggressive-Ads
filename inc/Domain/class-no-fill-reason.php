@@ -15,8 +15,19 @@ namespace Aggressive\Ads\Domain;
  */
 final class No_Fill_Reason {
 
-	public const NO_CANDIDATES       = 'no_candidates';
-	public const ALL_INELIGIBLE      = 'all_ineligible';
+	public const NO_CANDIDATES  = 'no_candidates';
+	public const ALL_INELIGIBLE = 'all_ineligible';
+
+	/**
+	 * Advertisements existed; none was the size this viewport asked for.
+	 *
+	 * Kept apart from `ALL_INELIGIBLE` because it is the one no-fill a
+	 * publisher can act on directly: a responsive placement serving a
+	 * breakpoint nobody has supplied artwork for. Folded into "every
+	 * advertisement was ineligible" it would read as a campaign problem rather
+	 * than a missing size.
+	 */
+	public const SIZE_UNAVAILABLE    = 'size_unavailable';
 	public const SCHEDULE_EXCLUDED   = 'schedule_excluded';
 	public const TARGETING_MISMATCH  = 'targeting_mismatch';
 	public const FREQUENCY_CAPPED    = 'frequency_capped';
@@ -34,6 +45,7 @@ final class No_Fill_Reason {
 		return array(
 			self::NO_CANDIDATES,
 			self::ALL_INELIGIBLE,
+			self::SIZE_UNAVAILABLE,
 			self::SCHEDULE_EXCLUDED,
 			self::TARGETING_MISMATCH,
 			self::FREQUENCY_CAPPED,
@@ -58,6 +70,8 @@ final class No_Fill_Reason {
 			Exclusion_Reason::ELIGIBILITY_INVALID_CLICK_URL,
 			Exclusion_Reason::ELIGIBILITY_MISSING_ATTACHMENT,
 			Exclusion_Reason::ELIGIBILITY_INVALID_WEIGHT => self::ALL_INELIGIBLE,
+
+			Exclusion_Reason::ELIGIBILITY_SIZE_MISMATCH => self::SIZE_UNAVAILABLE,
 
 			Exclusion_Reason::SCHEDULE_NOT_STARTED,
 			Exclusion_Reason::SCHEDULE_EXPIRED,

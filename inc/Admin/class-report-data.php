@@ -234,6 +234,7 @@ final class Report_Data {
 		return array(
 			No_Fill_Reason::NO_CANDIDATES       => __( 'No advertisement was assigned to this slot', 'aggressive-ads' ),
 			No_Fill_Reason::ALL_INELIGIBLE      => __( 'Every assigned advertisement was ineligible', 'aggressive-ads' ),
+			No_Fill_Reason::SIZE_UNAVAILABLE    => __( 'No advertisement was the size this screen asked for', 'aggressive-ads' ),
 			No_Fill_Reason::SCHEDULE_EXCLUDED   => __( 'Outside every assigned campaign’s schedule', 'aggressive-ads' ),
 			No_Fill_Reason::TARGETING_MISMATCH  => __( 'The visitor did not match the targeting rules', 'aggressive-ads' ),
 			No_Fill_Reason::FREQUENCY_CAPPED    => __( 'The visitor had already seen it enough times', 'aggressive-ads' ),

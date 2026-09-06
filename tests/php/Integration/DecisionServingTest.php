@@ -29,6 +29,7 @@ use Aggressive\Ads\Domain\Opportunity;
 use Aggressive\Ads\Repository\Decision_Rollup_Repository;
 use Aggressive\Ads\Workflow\Decision_Metrics;
 use Aggressive\Ads\Admin\Report_Data;
+use Aggressive\Ads\Domain\No_Fill_Reason;
 use Aggressive\Ads\Workflow\Fill_Service;
 use WP_REST_Request;
 use WP_UnitTestCase;
@@ -282,6 +283,116 @@ final class DecisionServingTest extends WP_UnitTestCase {
 			'A page view was filed under the previous request\'s kind, so supply went missing.'
 		);
 		$this->assertSame( 1, $this->counted( Decision_Outcome::REQUEST, Opportunity::REFRESH ) );
+	}
+
+	/**
+	 * **A creative of the wrong size is refused, not stretched into the slot.**
+	 *
+	 * Nothing checked this before P15 and nothing needed to: a placement had
+	 * one size and creative upload enforced it, so every candidate matched by
+	 * construction. A responsive placement breaks that — it serves several
+	 * sizes and may hold artwork for only one — and without the gate the engine
+	 * puts a 728x90 into a 320x50 slot: a broken page, and an advertiser billed
+	 * for an impression their creative did not fit.
+	 *
+	 * Driven through `Fill_Service` rather than the stage, because a gate that
+	 * reads a fact nothing puts there is the defect this repository keeps
+	 * finding. The fixture creative is 728x90; asking the placement to serve a
+	 * viewport that resolves to 320x50 is what makes the two disagree.
+	 *
+	 * @return void
+	 */
+	public function test_a_creative_of_the_wrong_size_is_not_served(): void {
+		update_option( Creative_Assignment_Migrator::OPTION_DONE, 1 );
+
+		$placements = Plugin::instance()->container()->get( Placement_Repository::class );
+
+		$this->assertTrue(
+			$placements->set_size_map(
+				$this->placement_id,
+				array(
+					0   => '320x50',
+					768 => '728x90',
+				)
+			)
+		);
+
+		$fill = Plugin::instance()->container()->get( Fill_Service::class );
+
+		// Wide: the placement serves 728x90 and the creative is 728x90.
+		$wide = $fill->for_slug( 'decision-gate', 0, 1024 );
+
+		$this->assertIsArray( $wide );
+		$this->assertIsArray( $wide['creative'], 'A matching creative was refused.' );
+
+		// Narrow: the placement serves 320x50 and nothing that size exists.
+		$narrow = $fill->for_slug( 'decision-gate', 0, 375 );
+
+		$this->assertIsArray( $narrow );
+		$this->assertNull(
+			$narrow['creative'],
+			'A 728x90 creative was served into a slot reserving 320x50.'
+		);
+	}
+
+	/**
+	 * The refusal is reported as a missing size, not as a broken campaign.
+	 *
+	 * It is the one no-fill a publisher can act on directly — supply artwork
+	 * for that breakpoint — so folding it into "every advertisement was
+	 * ineligible" would send them looking at campaigns instead.
+	 *
+	 * @return void
+	 */
+	public function test_a_size_refusal_is_recorded_as_its_own_reason(): void {
+		update_option( Creative_Assignment_Migrator::OPTION_DONE, 1 );
+
+		$placements = Plugin::instance()->container()->get( Placement_Repository::class );
+
+		$placements->set_size_map(
+			$this->placement_id,
+			array(
+				0   => '320x50',
+				768 => '728x90',
+			) 
+		);
+
+		$fill = Plugin::instance()->container()->get( Fill_Service::class );
+
+		$fill->for_slug( 'decision-gate', 0, 375 );
+
+		Plugin::instance()->container()->get( Decision_Metrics::class )->flush();
+
+		$this->assertSame(
+			1,
+			$this->counted( No_Fill_Reason::SIZE_UNAVAILABLE, Opportunity::PAGE ),
+			'The size refusal was filed under some other reason.'
+		);
+	}
+
+	/**
+	 * A placement that has never been made responsive is unaffected.
+	 *
+	 * Every existing placement is a fixed map over its single size, so the gate
+	 * compares that size against itself and refuses nothing. Without this the
+	 * assertions above would pass on a gate that simply refused everything.
+	 *
+	 * @return void
+	 */
+	public function test_a_fixed_placement_still_serves_at_every_width(): void {
+		update_option( Creative_Assignment_Migrator::OPTION_DONE, 1 );
+
+		$fill = Plugin::instance()->container()->get( Fill_Service::class );
+
+		foreach ( array( 0, 375, 1024, 4000 ) as $width ) {
+			$payload = $fill->for_slug( 'decision-gate', 0, $width );
+
+			$this->assertIsArray( $payload );
+			$this->assertIsArray(
+				$payload['creative'],
+				'A fixed placement stopped serving at ' . $width . 'px.'
+			);
+		}
 	}
 
 	/**

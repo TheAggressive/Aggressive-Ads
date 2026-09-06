@@ -66,9 +66,10 @@ final class Fill_Service {
 	 *
 	 * @param string $slug     Placement post_name.
 	 * @param int    $sequence Fill number within the page view, zero-based.
+	 * @param int    $viewport_width Reported viewport width in CSS pixels, or 0 for the base size.
 	 * @return array<string, mixed>|null
 	 */
-	public function for_slug( string $slug, int $sequence = 0 ): ?array {
+	public function for_slug( string $slug, int $sequence = 0, int $viewport_width = 0 ): ?array {
 		if ( ! $this->is_enabled() ) {
 			return null;
 		}
@@ -108,7 +109,7 @@ final class Fill_Service {
 		 */
 		$this->metrics->for_opportunity( Opportunity::from_sequence( $sequence ) );
 
-		$paid  = $this->paid_creative( $placement_id );
+		$paid  = $this->paid_creative( $placement_id, $viewport_width );
 		$house = null;
 
 		if ( null === $paid && Settings_Schema::HOUSE_WHEN_EMPTY === $this->settings->house_policy() ) {
@@ -148,10 +149,11 @@ final class Fill_Service {
 	/**
 	 * Batch fill payloads for multiple placement slugs on a single page view.
 	 *
-	 * @param array<int, string> $slugs Requested slot slugs.
+	 * @param array<int, string> $slugs          Requested slot slugs.
+	 * @param int                $viewport_width Reported viewport width in CSS pixels, or 0 for the base size.
 	 * @return array<string, array<string, mixed>> Keyed by slot slug.
 	 */
-	public function for_slots( array $slugs ): array {
+	public function for_slots( array $slugs, int $viewport_width = 0 ): array {
 		if ( ! $this->is_enabled() || array() === $slugs ) {
 			return array();
 		}
@@ -174,13 +176,21 @@ final class Fill_Service {
 			}
 
 			$rows                = $this->decisions->cached_rows( $placement_id, $now );
+			$serving             = $this->placements->size_map( $placement_id )->for_viewport( $viewport_width );
 			$slots_map[ $slug ]  = array(
 				'placement_id' => $placement_id,
 				'candidates'   => $rows,
+
+				/*
+				 * Per slot, because two placements on one page can be serving
+				 * different sizes at the same viewport. The coordinator merges
+				 * this into that slot's facts and the eligibility gate reads it.
+				 */
+				'size'         => $serving,
 			);
 			$valid_info[ $slug ] = array(
 				'placement_id' => $placement_id,
-				'size'         => $this->placements->size( $placement_id ),
+				'size'         => $serving,
 			);
 		}
 
@@ -293,16 +303,17 @@ final class Fill_Service {
 	/**
 	 * Chooses one creative through the assignment decision engine.
 	 *
-	 * @param int $placement_id Placement post id.
+	 * @param int $placement_id   Placement post id.
+	 * @param int $viewport_width Reported viewport width in CSS pixels, or 0 for the base size.
 	 * @return array<string, mixed>|null
 	 */
-	private function paid_creative( int $placement_id ): ?array {
+	private function paid_creative( int $placement_id, int $viewport_width = 0 ): ?array {
 		if ( ! $this->decisions->serving_ready() ) {
 			return null;
 		}
 
 		$now      = time();
-		$facts    = $this->request_facts();
+		$facts    = $this->facts_for( $placement_id, $viewport_width );
 		$rows     = $this->decisions->cached_rows( $placement_id, $now );
 		$decision = $this->decisions->decide( $placement_id, $now, null, $rows, true, $facts );
 
@@ -339,6 +350,32 @@ final class Fill_Service {
 		}
 
 		return array( 'visitor_id' => $this->tokens->ip_hash( $ip ) );
+	}
+
+	/**
+	 * The request's facts, plus the size this placement is serving right now.
+	 *
+	 * **A fact of the request rather than of the placement.** A responsive
+	 * placement serves several sizes and which one applies depends on the
+	 * viewport that asked, so the size cannot be resolved once and cached with
+	 * the slot. `Eligibility_Stage` reads it to refuse a candidate whose
+	 * artwork is a different size — without which a placement holding only
+	 * 728x90 creatives would serve one into a 320x50 slot.
+	 *
+	 * A viewport of zero is a caller that reported none, and resolves to the
+	 * map's base. Every existing placement is a fixed map, so this is that
+	 * placement's only size and the gate is a no-op for it.
+	 *
+	 * @param int $placement_id  Placement post id.
+	 * @param int $viewport_width Reported viewport width in CSS pixels.
+	 * @return array<string, mixed>
+	 */
+	private function facts_for( int $placement_id, int $viewport_width ): array {
+		$facts = $this->request_facts();
+
+		$facts['size'] = $this->placements->size_map( $placement_id )->for_viewport( $viewport_width );
+
+		return $facts;
 	}
 
 	/**

@@ -17,6 +17,7 @@ final class Exclusion_Reason {
 	public const ELIGIBILITY_INVALID_CLICK_URL  = 'eligibility_invalid_click_url';
 	public const ELIGIBILITY_MISSING_ATTACHMENT = 'eligibility_missing_attachment';
 	public const ELIGIBILITY_INVALID_WEIGHT     = 'eligibility_invalid_weight';
+	public const ELIGIBILITY_SIZE_MISMATCH      = 'eligibility_size_mismatch';
 	public const ELIGIBILITY_STAGE_ERROR        = 'eligibility_stage_error';
 
 	public const SCHEDULE_NOT_STARTED      = 'schedule_not_started';

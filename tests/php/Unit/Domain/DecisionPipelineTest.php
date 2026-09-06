@@ -49,7 +49,14 @@ final class DecisionPipelineTest extends TestCase {
 		);
 
 		$this->assertFalse( $result['result']->has_winner() );
-		$this->assertSame( Exclusion_Reason::NO_FILL, $result['result']->reason );
+
+		/*
+		 * The slot's reason is the candidate's, because every candidate lost
+		 * for it. A generic no-fill here would tell a publisher nothing was
+		 * assigned when something was, and send them looking at a campaign that
+		 * is working exactly as configured.
+		 */
+		$this->assertSame( Exclusion_Reason::ELIGIBILITY_INVALID_CLICK_URL, $result['result']->reason );
 		$this->assertSame(
 			Exclusion_Reason::ELIGIBILITY_INVALID_CLICK_URL,
 			$result['trace']->entries[0]['reason']
@@ -125,7 +132,14 @@ final class DecisionPipelineTest extends TestCase {
 		);
 
 		$this->assertFalse( $result['result']->has_winner() );
-		$this->assertSame( Exclusion_Reason::NO_FILL, $result['result']->reason );
+
+		/*
+		 * The slot's reason is the candidate's, because every candidate lost
+		 * for it. A generic no-fill here would tell a publisher nothing was
+		 * assigned when something was, and send them looking at a campaign that
+		 * is working exactly as configured.
+		 */
+		$this->assertSame( Exclusion_Reason::SCHEDULE_EXPIRED, $result['result']->reason );
 		$this->assertSame(
 			Exclusion_Reason::SCHEDULE_EXPIRED,
 			$result['trace']->entries[0]['reason']
@@ -187,7 +201,14 @@ final class DecisionPipelineTest extends TestCase {
 		);
 
 		$this->assertFalse( $result['result']->has_winner() );
-		$this->assertSame( Exclusion_Reason::NO_FILL, $result['result']->reason );
+
+		/*
+		 * The slot's reason is the candidate's, because every candidate lost
+		 * for it. A generic no-fill here would tell a publisher nothing was
+		 * assigned when something was, and send them looking at a campaign that
+		 * is working exactly as configured.
+		 */
+		$this->assertSame( Exclusion_Reason::PACING_LIFETIME_CAP_REACHED, $result['result']->reason );
 		$this->assertSame(
 			Exclusion_Reason::PACING_LIFETIME_CAP_REACHED,
 			$result['trace']->entries[0]['reason']

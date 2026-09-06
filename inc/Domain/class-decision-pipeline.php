@@ -75,7 +75,7 @@ final class Decision_Pipeline {
 		);
 
 		if ( array() === $survivors ) {
-			$result = Decision_Result::empty( Exclusion_Reason::NO_FILL );
+			$result = Decision_Result::empty( self::unanimous_reason( $candidates ) );
 			return array(
 				'result'     => $result,
 				'trace'      => Decision_Trace::from( $candidates, $result ),
@@ -110,5 +110,48 @@ final class Decision_Pipeline {
 			'trace'      => Decision_Trace::from( $candidates, $result ),
 			'candidates' => $candidates,
 		);
+	}
+
+	/**
+	 * The reason to report when nothing survived.
+	 *
+	 * **Only when every candidate lost for the same one.** Per-candidate
+	 * exclusions are deliberately not counted alongside the slot's outcome —
+	 * that is what made the old totals meaningless, since a slot that filled
+	 * still incremented every loser's reason. But when the whole field was
+	 * refused for one reason, that reason *is* why the slot is empty, and
+	 * reporting a generic no-fill throws away the only actionable thing about
+	 * it.
+	 *
+	 * The case this was written for is a responsive placement serving a
+	 * breakpoint nobody has supplied artwork for. "No advertisement was the
+	 * size this screen asked for" tells a publisher what to do; "no
+	 * advertisement was assigned to this slot" sends them to look at campaigns
+	 * that are working perfectly.
+	 *
+	 * A mixed field stays generic, because no single reason explains it and
+	 * picking one would be inventing an answer.
+	 *
+	 * @param array<int, Decision_Candidate> $candidates Every candidate considered.
+	 */
+	private static function unanimous_reason( array $candidates ): string {
+		if ( array() === $candidates ) {
+			return Exclusion_Reason::NO_FILL;
+		}
+
+		$reasons = array_unique(
+			array_map(
+				static fn ( Decision_Candidate $candidate ): string => (string) $candidate->exclusion_reason,
+				$candidates
+			)
+		);
+
+		if ( 1 !== count( $reasons ) ) {
+			return Exclusion_Reason::NO_FILL;
+		}
+
+		$only = (string) reset( $reasons );
+
+		return '' === $only ? Exclusion_Reason::NO_FILL : $only;
 	}
 }
