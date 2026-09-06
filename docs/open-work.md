@@ -67,8 +67,11 @@ What the slot does when unsold, with and without JavaScript, and the three
 per-slot settings are in [runbook.md](runbook.md), because that is a question an
 operator asks rather than a decision a maintainer revisits.
 
-Work in flight for P15 is tracked in
+**A phase in progress belongs in its own phase document, not here.** This file
+is for work that is started and *not covered by one*, and duplicating a slice
+list into it is how the two disagree. P15 was tracked that way through four
+slices and closed in
 [platform-p15-inventory-management.md](platform-p15-inventory-management.md),
-which carries its own slice list. A phase in progress belongs there rather than
-here: this file is for work that is started and *not covered by a phase
-document*, and duplicating a slice list into it is how the two disagree.
+including the two things it deliberately did not do — the paragraph that used to
+sit here saying P15 was in flight outlived the phase by exactly one merge, which
+is the failure mode this file has to watch for in itself.
