@@ -305,7 +305,12 @@ Shared boundaries and group exit criteria:
       warns and logs the override rather than silently blocking staff.
 - [ ] **P17 — Creative experience.** Variants, A/B tests, schedules, device
       preview, approval and rejection history, performance comparison. Upload
-      security is not relaxed to add formats.
+      security is not relaxed to add formats. **Weighted variant delivery
+      already exists** — assignments carry weight, window and status, and
+      `Domain\Weighted_Selection` picks among them deterministically. The phase
+      builds measurement and management around that mechanism rather than the
+      mechanism. Scoped in
+      [platform-p17-creative-experience.md](platform-p17-creative-experience.md).
 - [ ] **P18 — Rich creative types.** Handlers behind an interface: responsive
       image, HTML5 (sandboxed, CSP, no server execution), third-party
       (staff-only), video via VAST-compatible providers.
