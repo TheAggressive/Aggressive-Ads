@@ -57,12 +57,20 @@ async function root( overrides = {} ) {
 		);
 	}
 `,
+		/*
+		 * Shaped like the real controller in the way the guard reads it.
+		 *
+		 * The parameter list used to be irrelevant here because the check
+		 * hardcoded `n`. It derives them from the `args` declaration now, so a
+		 * fixture without one exercises nothing — and said so, loudly, the
+		 * first time this ran.
+		 */
 		[ FILES.controller ]:
-			"<?php\n$sequence = (int) $request->get_param( 'n' );\n",
+			"<?php\n'args' => array(\n\t'slot' => array(\n\t\t'type' => 'string',\n\t),\n\t'n' => array(\n\t\t'type' => 'integer',\n\t),\n\t'w' => array(\n\t\t'type' => 'integer',\n\t),\n),\n$sequence = (int) $request->get_param( 'n' );\n$viewport = (int) $request->get_param( 'w' );\n",
 		[ FILES.view ]:
 			'const on = context.rotate;\nconst s = context.rotateSeconds;\nconst cap = rotationCap( context.maxRefreshes );\nawait fillSlot( root, rotations );\n',
 		[ FILES.fill ]:
-			"export const fillSlot = async ( root, sequence = 0 ) => {\n\tconst n = sequence;\n\tendpoint.searchParams.set( 'n', String( n ) );\n};\n",
+			"export const fillSlot = async ( root, sequence = 0 ) => {\n\tconst n = sequence;\n\tendpoint.searchParams.set( 'n', String( n ) );\n\tendpoint.searchParams.set( 'w', String( viewportWidth() ) );\n};\n",
 		[ FILES.empty ]:
 			'export const collapses = ( context ) => false !== context?.collapseWhenEmpty;\n',
 		[ FILES.rotation ]:

@@ -76,6 +76,29 @@ final class Fill_Controller implements Service {
 						'default'           => 0,
 						'sanitize_callback' => 'absint',
 					),
+
+					/*
+					 * The viewport the slot is rendered into, in CSS pixels.
+					 *
+					 * A responsive placement serves several sizes and only the
+					 * browser knows which applies — the page is cached, so the
+					 * server cannot infer it. Optional, because a request
+					 * without it is either an older cached client or a caller
+					 * that has none, and both resolve to the placement's base
+					 * size. Every placement that has never been made responsive
+					 * is a fixed map, so for them this changes nothing at all.
+					 *
+					 * `absint` rather than a range: a hostile width picks which
+					 * of the publisher's own sizes it is shown, which is not a
+					 * lever worth validating against. It cannot reach a size
+					 * the publisher did not configure.
+					 */
+					'w'    => array(
+						'type'              => 'integer',
+						'required'          => false,
+						'default'           => 0,
+						'sanitize_callback' => 'absint',
+					),
 				),
 			)
 		);
@@ -118,7 +141,8 @@ final class Fill_Controller implements Service {
 	public function show( WP_REST_Request $request ): WP_REST_Response|WP_Error {
 		$slot     = (string) $request->get_param( 'slot' );
 		$sequence = (int) $request->get_param( 'n' );
-		$payload  = $this->fill->for_slug( $slot, $sequence );
+		$viewport = (int) $request->get_param( 'w' );
+		$payload  = $this->fill->for_slug( $slot, $sequence, $viewport );
 
 		if ( null === $payload ) {
 			return new WP_Error(

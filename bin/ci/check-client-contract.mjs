@@ -220,6 +220,57 @@ async function main() {
 			CLIENT_FILES.indexOf( 'src/blocks-interactivity/ad-slot/view.js' )
 		];
 
+	/*
+	 * Every optional parameter the fill route declares needs a client that
+	 * sends it.
+	 *
+	 * Derived from the controller rather than listed here, because the listed
+	 * version only knew about `n` — and `w` was added, shipped, and would have
+	 * gone unsent with this lane green. That is the same defect twice: a route
+	 * that reads something the live client never writes, which looks like a
+	 * feature nobody uses rather than a wire that was never connected.
+	 *
+	 * `slot` is excluded because it is a path segment rather than a query
+	 * parameter, so it cannot be sent with `searchParams`.
+	 */
+	const declared = [
+		...controller.matchAll( /'([a-z_]+)'\s*=> array\(\s*\n\s*'type'/g ),
+	]
+		.map( ( match ) => match[ 1 ] )
+		.filter( ( name ) => 'slot' !== name );
+
+	if ( 0 === declared.length ) {
+		problems.push(
+			'No fill-route parameters were found to check. The controller shape ' +
+				'changed and this guard is now reading nothing.'
+		);
+	}
+
+	for ( const name of declared ) {
+		const sends = new RegExp(
+			`searchParams\\.set\\(\\s*['"]${ name }['"]`
+		);
+
+		if ( ! sends.test( fill ) ) {
+			problems.push(
+				`fill.js does not searchParams.set( '${ name }', … ), but the ` +
+					'fill route declares it. A parameter the live client never ' +
+					'writes is a server reader with no writer.'
+			);
+		}
+
+		if (
+			! new RegExp( `get_param\\(\\s*'${ name }'\\s*\\)` ).test(
+				controller
+			)
+		) {
+			problems.push(
+				`Fill_Controller declares '${ name }' and never calls ` +
+					`get_param( '${ name }' ), so the client sends it into nothing.`
+			);
+		}
+	}
+
 	if ( ! /get_param\(\s*'n'\s*\)/.test( controller ) ) {
 		problems.push(
 			"Fill_Controller no longer reads get_param( 'n' ), so the sequence " +

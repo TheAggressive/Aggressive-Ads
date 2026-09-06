@@ -94,6 +94,78 @@ final class FillRoutesTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * **The viewport reaches the size decision, or responsive inventory is a lie.**
+	 *
+	 * Driven through the route rather than the service, because that is the
+	 * seam where the two halves have twice failed to meet in this phase:
+	 * `maxRefreshes` left the server and no client read it, and `n` was
+	 * accepted and never sent. A parameter declared and unread looks exactly
+	 * like a feature nobody uses.
+	 *
+	 * **What this proves and what it does not.** It proves the route accepts a
+	 * viewport, answers both widths, and that the map underneath resolves them
+	 * differently. It does *not* prove the route passes `w` through — this
+	 * fixture has no live creative, so both widths return the same empty
+	 * payload and hardcoding the viewport to zero would leave it green. That
+	 * contract is enforced by `bin/ci/check-client-contract.mjs`, which fails
+	 * with "Fill_Controller declares 'w' and never calls get_param( 'w' )", and
+	 * the served-size difference is asserted in `DecisionServingTest` where a
+	 * creative exists to be refused.
+	 *
+	 * Said plainly because the first version of this docblock claimed the
+	 * difference was asserted here, and it was not.
+	 *
+	 * @return void
+	 */
+	public function test_the_reported_viewport_selects_the_size_served(): void {
+		$this->enable_native();
+
+		$placements = Plugin::instance()->container()->get( Placement_Repository::class );
+		$placement  = $placements->id_by_slug( 'leaderboard' );
+
+		$this->assertGreaterThan( 0, $placement );
+		$this->assertTrue(
+			$placements->set_size_map(
+				$placement,
+				array(
+					0   => '320x50',
+					768 => '728x90',
+				)
+			)
+		);
+
+		$this->assertSame( '320x50', $placements->size_map( $placement )->for_viewport( 375 ) );
+		$this->assertSame( '728x90', $placements->size_map( $placement )->for_viewport( 1024 ) );
+
+		$narrow = new WP_REST_Request( 'GET', '/aggr/v1/fill/leaderboard' );
+		$narrow->set_param( 'w', 375 );
+
+		$wide = new WP_REST_Request( 'GET', '/aggr/v1/fill/leaderboard' );
+		$wide->set_param( 'w', 1024 );
+
+		$this->assertSame( 200, rest_get_server()->dispatch( $narrow )->get_status() );
+		$this->assertSame( 200, rest_get_server()->dispatch( $wide )->get_status() );
+	}
+
+	/**
+	 * A request with no viewport is answered, not refused.
+	 *
+	 * Every fill served from a page cached before this shipped arrives without
+	 * `w`, and every placement that has never been made responsive is a fixed
+	 * map for which the parameter changes nothing.
+	 *
+	 * @return void
+	 */
+	public function test_a_fill_without_a_viewport_is_still_answered(): void {
+		$this->enable_native();
+
+		$response = rest_get_server()->dispatch( new WP_REST_Request( 'GET', '/aggr/v1/fill/leaderboard' ) );
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertIsArray( $response->get_data() );
+	}
+
+	/**
 	 * Fill is public by default. Native delivery is not a staff kill-switch.
 	 *
 	 * @return void
