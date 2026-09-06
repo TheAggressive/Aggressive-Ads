@@ -10,6 +10,65 @@
 import { observeViewability } from './viewability.js';
 
 /**
+ * How long to wait for a creative's pixels before giving up on the swap.
+ *
+ * Bounded because the rotation timer holds a `busy` flag across this await; an
+ * image that never resolves would stall every later rotation, not just this
+ * one. Four seconds is long enough for a slow connection to finish a banner and
+ * short enough that a stuck one costs a single interval.
+ */
+const PRELOAD_TIMEOUT_MS = 4000;
+
+/**
+ * Resolves once an image can be painted, or false if it cannot.
+ *
+ * **This is what stops a rotation flashing an empty box.** Setting `src` starts
+ * a download; putting the element straight into the document shows the space it
+ * will occupy and nothing in it until the bytes arrive. Decoding first means
+ * the swap happens when there is something to swap *to*.
+ *
+ * `decode()` is the direct question — "is this ready to paint" — and resolves
+ * after download and decode both. The load/error fallback is for browsers
+ * without it, where "downloaded" is the closest available answer.
+ *
+ * @param {HTMLImageElement} image     The image to prepare.
+ * @param {number}           timeoutMs Milliseconds before giving up.
+ * @return {Promise<boolean>} Whether the image is ready to paint.
+ */
+const readyToPaint = ( image, timeoutMs ) =>
+	new Promise( ( resolve ) => {
+		let settled = false;
+
+		const settle = ( ok ) => {
+			if ( ! settled ) {
+				settled = true;
+				resolve( ok );
+			}
+		};
+
+		const timer = window.setTimeout( () => settle( false ), timeoutMs );
+
+		const finish = ( ok ) => {
+			window.clearTimeout( timer );
+			settle( ok );
+		};
+
+		if ( 'function' === typeof image.decode ) {
+			image.decode().then(
+				() => finish( true ),
+				() => finish( false )
+			);
+
+			return;
+		}
+
+		image.addEventListener( 'load', () => finish( true ), { once: true } );
+		image.addEventListener( 'error', () => finish( false ), {
+			once: true,
+		} );
+	} );
+
+/**
  * Builds the anchor and image for one creative.
  *
  * @param {Object} creative Creative payload from the fill endpoint.
@@ -140,7 +199,29 @@ export const fillSlot = async ( root, sequence = 0 ) => {
 		 * an observer whose target has left the document reports nothing — so a
 		 * rotation cannot let one creative's dwell time count toward the next.
 		 */
-		canvas.replaceChildren( buildAd( creative ) );
+		const ad = buildAd( creative );
+		const image = ad.querySelector( 'img' );
+
+		/*
+		 * **Nothing is removed until the replacement can be painted.**
+		 *
+		 * A rotation that swaps first shows an empty box for as long as the new
+		 * creative takes to arrive — the gap this fixes. Waiting here means the
+		 * old ad stays up for those same milliseconds instead, which is the
+		 * behaviour the rotation timer already chose for a failed request:
+		 * blanking a slot is worse than showing the previous creative a moment
+		 * longer.
+		 *
+		 * A creative that cannot be painted is not rendered and not counted.
+		 * Before this, the beacon fired the instant the element was inserted —
+		 * so an impression was recorded for bytes that had not arrived and, on
+		 * a broken image, never would.
+		 */
+		if ( image && ! ( await readyToPaint( image, PRELOAD_TIMEOUT_MS ) ) ) {
+			return false;
+		}
+
+		canvas.replaceChildren( ad );
 
 		if ( payload.beacon && creative.token ) {
 			window.navigator.sendBeacon?.(
