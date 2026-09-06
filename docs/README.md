@@ -41,6 +41,20 @@ Then, as needed:
 | [platform-p0-baseline.md](platform-p0-baseline.md) | Platform regression matrix, executed quality baseline and P0 exit evidence |
 | [platform-p1-line-item-closeout.md](platform-p1-line-item-closeout.md) | Remaining P1 correctness, migration and evidence required for completion |
 | [platform-p2-creative-model.md](platform-p2-creative-model.md) | P2 creative asset, revision, assignment, migration and enterprise exit contract |
+| [platform-p3-decision-engine.md](platform-p3-decision-engine.md) | Decision pipeline, eligibility, creative selection, competition and serving |
+| [platform-p4-exact-scheduling.md](platform-p4-exact-scheduling.md) | Serve-time scheduling, dayparting evaluation and timezone-aware precision |
+| [platform-p5-priority-weight-sov.md](platform-p5-priority-weight-sov.md) | Configurable priority tiers, weight-driven rotation and share of voice |
+| [platform-p6-delivery-goals-pacing.md](platform-p6-delivery-goals-pacing.md) | Goal-driven delivery, daily and lifetime caps and pacing distribution |
+| [platform-p7-page-level-batch-decisions.md](platform-p7-page-level-batch-decisions.md) | Batch decisions endpoint, roadblocks, competitive separation and deduplication |
+| [platform-p8-targeting-rule-engine.md](platform-p8-targeting-rule-engine.md) | Declarative targeting rules, dimension support and pure evaluation |
+| [platform-p9-frequency-capping.md](platform-p9-frequency-capping.md) | Privacy-respecting frequency capping across session, hourly and daily windows |
+| [platform-p10-measurement-model.md](platform-p10-measurement-model.md) | Canonical lifecycle, fill and no_fill reasons, legacy impression normalization |
+| [platform-p11-viewability.md](platform-p11-viewability.md) | Viewability measurement, IntersectionObserver, fifty-percent one-second threshold |
+| [platform-p12-conversion-tracking.md](platform-p12-conversion-tracking.md) | Conversion definitions, browser and server ingestion, click-through attribution |
+| [platform-p13-event-analytics-schema.md](platform-p13-event-analytics-schema.md) | Event storage versioning, request and fill recording, bounded projections |
+| [platform-p14-reporting.md](platform-p14-reporting.md) | Report periods, ranged queries, fill reasons and freshness awareness |
+| [platform-p15-inventory-management.md](platform-p15-inventory-management.md) | Inventory grain, page and refresh tracking, placement groups and categories |
+| [platform-p17-creative-experience.md](platform-p17-creative-experience.md) | Variant management, review history, per-creative measurement and preview |
 | [platform-serving-contract.md](platform-serving-contract.md) | Shared decisioning, privacy, performance and exit contract for P3–P9 |
 | [platform-measurement-contract.md](platform-measurement-contract.md) | Shared event, attribution, analytics and reporting contract for P10–P14 |
 | [platform-inventory-commerce-contract.md](platform-inventory-commerce-contract.md) | Shared inventory, forecasting, creative-format, billing and workflow contract for P15–P20 |
