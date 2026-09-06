@@ -110,11 +110,33 @@ final class Transition_Table {
 		$delete = Capabilities::meta_cap( Post_Types::CAMPAIGN, 'delete' );
 
 		$transitions = array(
-			// The advertiser's own campaign, before anyone has looked at it.
+
+			/*
+			 * A campaign before anyone has looked at it.
+			 *
+			 * **Staff may submit as well as advertisers**, because a publisher
+			 * who enters a campaign on an advertiser's behalf is the workflow
+			 * on a site where staff do the data entry. Refusing them left the
+			 * campaign stuck in draft with no route forward: every holder of
+			 * `aggr_review_campaigns` is classed as staff, so an administrator
+			 * could never submit anything, including a campaign they had just
+			 * created themselves.
+			 *
+			 * **This widens who may act, not what they may do.** Both
+			 * capabilities are still required and both are checked against the
+			 * campaign, so `map_meta_cap` answers the ownership question in the
+			 * same call: an advertiser from another organization is refused
+			 * exactly as before, and so is anyone without
+			 * `aggr_submit_campaign`.
+			 *
+			 * Withdrawal deliberately stays advertiser-only below. Submitting
+			 * on someone's behalf is help; pulling a campaign back out from
+			 * under the reviewer working on it is not.
+			 */
 			new Campaign_Transition(
 				Post_Statuses::DRAFT,
 				Post_Statuses::SUBMITTED,
-				array( self::ACTOR_ADVERTISER ),
+				array( self::ACTOR_ADVERTISER, self::ACTOR_STAFF ),
 				array( Capabilities::SUBMIT_CAMPAIGN, $edit ),
 				array( self::GUARD_VALIDATOR ),
 				array( self::EFFECT_STAMP_SUBMITTED )

@@ -275,6 +275,24 @@ final class Creative_Actions implements Service {
 			'aggr_placement_not_selected'   => __( 'That placement is not available for this campaign.', 'aggressive-ads' ),
 			'aggr_campaign_not_editable'    => __( 'This campaign cannot be changed right now.', 'aggressive-ads' ),
 			'aggr_rate_limited'             => __( 'There have been too many uploads. Wait a moment and try again.', 'aggressive-ads' ),
+
+			/*
+			 * **A refusal is not a retry.** Every code below fell through to
+			 * the default, so being denied permission, removing a published
+			 * creative, or hitting a storage mismatch all read as "could not be
+			 * saved, please try again" — which invites the reader to repeat an
+			 * action that cannot succeed, and hides a 403 behind what looks
+			 * like a transient glitch.
+			 *
+			 * The wording matches what the manager already returns, so the
+			 * portal and the REST route say the same thing about the same
+			 * failure rather than two things.
+			 */
+			'aggr_forbidden'                => __( 'You do not have permission to change that creative.', 'aggressive-ads' ),
+			'aggr_creative_published'       => __( 'A published creative cannot be removed from this draft workflow.', 'aggressive-ads' ),
+			'aggr_creative_not_deleted'     => __( 'The creative could not be removed. Please try again.', 'aggressive-ads' ),
+			'aggr_creative_restore_failed'  => __( 'The creative record and file could not be reconciled. Please contact an administrator.', 'aggressive-ads' ),
+			'aggr_creative_not_created'     => __( 'The creative could not be saved. Please try again.', 'aggressive-ads' ),
 			default                             => __( 'The creative could not be saved. Please try again.', 'aggressive-ads' ),
 		};
 	}

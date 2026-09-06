@@ -182,6 +182,112 @@ final class CampaignStateMachineTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * **Staff may submit a campaign on an advertiser's behalf.**
+	 *
+	 * Every holder of `aggr_review_campaigns` is classed as staff, so while
+	 * submission was advertiser-only an administrator could not submit
+	 * anything — including a campaign they had just created for an advertiser
+	 * themselves. The campaign sat in draft with no route forward and the
+	 * screen said only "You do not have permission to submit that campaign".
+	 *
+	 * @return void
+	 */
+	public function test_staff_may_submit_on_an_advertisers_behalf(): void {
+		wp_set_current_user( $this->reviewer );
+
+		$campaign = $this->campaign( Post_Statuses::DRAFT );
+		$machine  = $this->machine( array( Transition_Table::GUARD_VALIDATOR => $this->passing_guard() ) );
+
+		$this->assertTrue( $machine->apply( $campaign, Post_Statuses::SUBMITTED ) );
+		$this->assertSame( Post_Statuses::SUBMITTED, $this->campaigns->status( $campaign ) );
+
+		// Who did it is recorded, which is what makes acting on someone's
+		// behalf accountable rather than invisible.
+		$this->assertSame( 1, $this->audit_rows( $campaign, 'campaign.transitioned' ) );
+	}
+
+	/**
+	 * **Widening the actor did not widen permission.**
+	 *
+	 * The transition still requires `aggr_submit_campaign` and the edit meta
+	 * capability, and both are checked against the campaign — so `map_meta_cap`
+	 * answers the ownership question in the same call. An advertiser from
+	 * another organization is refused exactly as before.
+	 *
+	 * This is the assertion that makes the change safe rather than convenient.
+	 *
+	 * @return void
+	 */
+	public function test_an_advertiser_from_another_organization_still_cannot_submit(): void {
+		$outsider = self::factory()->user->create( array( 'role' => Roles::ADVERTISER ) );
+
+		$other_org = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::ORGANIZATION,
+				'post_status' => 'publish',
+			)
+		);
+		update_post_meta( $other_org, Org_Repository::META_OWNER_USER, $outsider );
+
+		$campaign = $this->campaign( Post_Statuses::DRAFT );
+
+		wp_set_current_user( $outsider );
+
+		$machine = $this->machine( array( Transition_Table::GUARD_VALIDATOR => $this->passing_guard() ) );
+		$result  = $machine->apply( $campaign, Post_Statuses::SUBMITTED );
+
+		$this->assertInstanceOf( \WP_Error::class, $result );
+		$this->assertSame( 'aggr_forbidden', $result->get_error_code() );
+		$this->assertSame( Post_Statuses::DRAFT, $this->campaigns->status( $campaign ) );
+	}
+
+	/**
+	 * A user holding neither capability cannot submit, staff or not.
+	 *
+	 * A subscriber is the floor: no portal access, no submit capability, no
+	 * ownership. If the actor widening had replaced the capability check
+	 * rather than sat beside it, this is what would have started passing.
+	 *
+	 * @return void
+	 */
+	public function test_a_user_without_the_capability_cannot_submit(): void {
+		$nobody = self::factory()->user->create( array( 'role' => 'subscriber' ) );
+
+		$campaign = $this->campaign( Post_Statuses::DRAFT );
+
+		wp_set_current_user( $nobody );
+
+		$machine = $this->machine( array( Transition_Table::GUARD_VALIDATOR => $this->passing_guard() ) );
+		$result  = $machine->apply( $campaign, Post_Statuses::SUBMITTED );
+
+		$this->assertInstanceOf( \WP_Error::class, $result );
+		$this->assertSame( 'aggr_forbidden', $result->get_error_code() );
+		$this->assertSame( Post_Statuses::DRAFT, $this->campaigns->status( $campaign ) );
+	}
+
+	/**
+	 * **Withdrawal stays advertiser-only.**
+	 *
+	 * Submitting on someone's behalf is help. Pulling a campaign back out from
+	 * under the reviewer working on it is not, so staff gained the first and
+	 * not the second — and this is what proves the widening was scoped to one
+	 * edge rather than applied to the table.
+	 *
+	 * @return void
+	 */
+	public function test_staff_still_cannot_withdraw_a_submitted_campaign(): void {
+		wp_set_current_user( $this->reviewer );
+
+		$campaign = $this->campaign( Post_Statuses::SUBMITTED );
+		$machine  = $this->machine( array( Transition_Table::GUARD_VALIDATOR => $this->passing_guard() ) );
+
+		$result = $machine->apply( $campaign, Post_Statuses::DRAFT );
+
+		$this->assertInstanceOf( \WP_Error::class, $result );
+		$this->assertSame( Post_Statuses::SUBMITTED, $this->campaigns->status( $campaign ) );
+	}
+
+	/**
 	 * A second request cannot evaluate from a status already being changed.
 	 *
 	 * @return void
@@ -246,6 +352,15 @@ final class CampaignStateMachineTest extends WP_UnitTestCase {
 	 * Reviewers inherit advertiser primitives, so this proves the transition's
 	 * actor declaration is enforced rather than treated as UI-only metadata.
 	 *
+	 * **Moved from submission to cancellation.** Submission now names both
+	 * actors — a publisher entering a campaign on an advertiser's behalf is the
+	 * workflow, and refusing staff left an administrator unable to submit
+	 * anything at all. Cancelling somebody else's draft is not help, so that
+	 * edge still names one actor and is where this property is now proven.
+	 *
+	 * The mechanism under test is unchanged; only the edge that still exercises
+	 * it has moved.
+	 *
 	 * @return void
 	 */
 	public function test_a_reviewer_cannot_make_an_advertiser_transition(): void {
@@ -253,7 +368,7 @@ final class CampaignStateMachineTest extends WP_UnitTestCase {
 
 		$campaign = $this->campaign( Post_Statuses::DRAFT );
 		$machine  = $this->machine( array( Transition_Table::GUARD_VALIDATOR => $this->passing_guard() ) );
-		$result   = $machine->apply( $campaign, Post_Statuses::SUBMITTED );
+		$result   = $machine->apply( $campaign, Post_Statuses::CANCELLED );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
 		$this->assertSame( 'aggr_forbidden', $result->get_error_code() );

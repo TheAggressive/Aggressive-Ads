@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-06T10:01:39+00:00\n"
+"POT-Creation-Date: 2026-09-06T21:32:58+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -1055,7 +1055,7 @@ msgstr ""
 #: inc/Admin/class-report-export.php:78
 #: inc/Portal/class-account-actions.php:220
 #: inc/Portal/class-campaign-actions.php:851
-#: inc/Portal/class-creative-actions.php:315
+#: inc/Portal/class-creative-actions.php:333
 #: inc/Portal/class-email-change-actions.php:178
 #: inc/Portal/class-organization-actions.php:222
 #: inc/Portal/class-report-actions.php:79
@@ -3198,7 +3198,28 @@ msgstr ""
 msgid "There have been too many uploads. Wait a moment and try again."
 msgstr ""
 
-#: inc/Portal/class-creative-actions.php:278
+#: inc/Portal/class-creative-actions.php:291
+msgid "You do not have permission to change that creative."
+msgstr ""
+
+#: inc/Portal/class-creative-actions.php:292
+#: inc/Workflow/class-creative-manager.php:355
+msgid "A published creative cannot be removed from this draft workflow."
+msgstr ""
+
+#: inc/Portal/class-creative-actions.php:293
+#: inc/Workflow/class-creative-manager.php:365
+#: inc/Workflow/class-creative-manager.php:374
+msgid "The creative could not be removed. Please try again."
+msgstr ""
+
+#: inc/Portal/class-creative-actions.php:294
+#: inc/Workflow/class-creative-manager.php:371
+msgid "The creative record and file could not be reconciled. Please contact an administrator."
+msgstr ""
+
+#: inc/Portal/class-creative-actions.php:295
+#: inc/Portal/class-creative-actions.php:296
 #: inc/Workflow/class-creative-manager.php:201
 #: inc/Workflow/class-creative-manager.php:219
 msgid "The creative could not be saved. Please try again."
@@ -4292,19 +4313,6 @@ msgstr ""
 #: inc/Workflow/class-creative-manager.php:339
 #: inc/Workflow/class-creative-manager.php:345
 msgid "You do not have permission to remove that creative."
-msgstr ""
-
-#: inc/Workflow/class-creative-manager.php:355
-msgid "A published creative cannot be removed from this draft workflow."
-msgstr ""
-
-#: inc/Workflow/class-creative-manager.php:365
-#: inc/Workflow/class-creative-manager.php:374
-msgid "The creative could not be removed. Please try again."
-msgstr ""
-
-#: inc/Workflow/class-creative-manager.php:371
-msgid "The creative record and file could not be reconciled. Please contact an administrator."
 msgstr ""
 
 #: inc/Workflow/class-creative-manager.php:416
