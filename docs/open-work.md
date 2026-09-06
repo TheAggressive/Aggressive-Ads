@@ -38,10 +38,42 @@ rests on:
 Two of the three entries this rule was written from were already correct. The
 one that was not is the one that stated a verdict instead of a condition.
 
-## Nothing is open
+## Contextual targeting stops at the archive
 
-Every entry that was here has shipped and been deleted, which is this file's
-intended resting state rather than a sign it is unused. An entry is added the
+**What.** `Placement_Slot` bakes the page into the fill URL only for a singular
+view — `$page_id > 0 && is_singular()`. A category or tag archive therefore sends
+no `p`, `Page_Context_Repository::facts_for()` receives 0 and returns an empty
+set, and a campaign targeted at a category does not serve on that category's own
+archive. The safe direction, and the wrong one.
+
+**Why it stopped there.** `facts_for()` takes a *post* id and resolves it through
+`get_post()`, so the parameter can only name something with a post row. An
+archive's identity is a term, and nothing in the fill request can currently say
+so.
+
+**What would change the answer.** This defers on one premise: *that page context
+has to be keyed to a post id*. If an archive's identity can be carried in the
+same fill parameter — or a second one beside it — then the repository already has
+the shape to answer, because a term archive's facts are that term's own slug in
+the `categories` and `terms` dimensions the targeting engine already reads.
+Nothing about the engine, the facts vocabulary or the privacy filter needs to
+change. **Revisit the moment somebody establishes that a term can be named in
+the fill request safely** — the page cache carries the URL, so whatever names it
+must be correct for the cached page rather than for the visitor.
+
+**Cost of leaving it.** A publisher who sells against a category gets no
+delivery on the archive pages for that category, silently — the campaign simply
+does not serve, with no error and no reason recorded that distinguishes it from
+ordinary no-fill.
+
+Recorded here rather than left in P15's closeout: that phase is closed, and a
+closed phase document is a historical record rather than something anyone reads
+to find out what is half-finished.
+
+## Nothing else is open
+
+Every other entry that was here has shipped and been deleted, which is this
+file's intended resting state rather than a sign it is unused. An entry is added the
 moment work is started and understood but not finished, and removed the moment
 it ships — including the reasoning, once that reasoning has a permanent home.
 
