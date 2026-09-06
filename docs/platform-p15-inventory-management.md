@@ -107,13 +107,19 @@ This phase does not own:
 
 Ordered by dependency, not by size.
 
-1. **Grain and refresh policy.** The page/refresh split, per-placement policy,
-   server-side clamping of the block's request. Contract-mandated and fixes a
-   live integrity problem.
-2. **Responsive multi-size mapping.** Carries the determinism invariant.
+1. **Grain and refresh policy.** *Shipped.* The page/refresh split,
+   per-placement policy, server-side clamping of the block's request.
+   Contract-mandated and fixes a live integrity problem.
+2. **Responsive multi-size mapping.** *Shipped.* Carries the determinism
+   invariant.
 3. **Groups and categories.** Organisational; depends on the settled model.
 4. **Utilisation dashboard.** Last deliberately — it cannot be honest before
    slice 1 exists.
+
+A slice is marked shipped when its evidence below is executable and the screen
+that configures it exists. Both halves are the bar deliberately: slice 2 had
+storage, a resolver, a gate and a REST field days before a publisher could set
+one, and that is not a shipped slice.
 
 ## Required executable evidence
 
@@ -126,6 +132,17 @@ Ordered by dependency, not by size.
 - A policy change does not alter already-recorded counters.
 - The split survives the projector: what the ledger records and what reports
   read agree.
+- **A size map resolves identically for the same viewport, every time.**
+  `SizeMapTest` sweeps every width from 0 to 1400 rather than sampling the
+  interesting ones, because the defect this invariant guards against is a
+  boundary nobody thought to pick.
+- A map missing its zero floor is not silently treated as a map — it falls back
+  to the placement's single size, and the form says so before saving.
+- A creative whose size does not match what the viewport resolved to is
+  excluded. When *every* candidate lost for that one reason, the placement
+  reports `size_unavailable` rather than a generic no-fill — a mixed field still
+  reports no-fill, because "some were the wrong size" does not explain why the
+  rest lost and a reason that is only sometimes true is worse than none.
 
 ## Exit criteria
 
