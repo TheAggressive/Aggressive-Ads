@@ -147,6 +147,13 @@ write disappears with nothing reporting it.
 | `_aggr_adsanity_ad_id` | int | Unused. Former provider-object id. Native fill reads the creative record. |
 | `_aggr_review_state` | enum | `pending` \| `approved` \| `replaced`. **Never `rejected`** — rejection is a campaign status, not a creative one. `replaced` is an approved revision a later one superseded |
 
+**`_aggr_review_state` is not the approved signal, and has not been for a long
+time.** Promotion into the Media Library does not touch it — only the
+replacement path maintains it — so a creative that has been serving for weeks
+still reads `pending`. Anything asking "is this approved" must ask
+`Creative_Attachment_Repository::has_attachment()` instead, which is the honest
+question: having an attachment is what approval actually produces.
+
 ### Creative Asset and Creative Assignment — custom tables
 
 P2 splits what a Creative post used to hold into three owners, because a single
@@ -224,9 +231,19 @@ organization or an automatic membership.
 
 ### Placement — `aggr_placement`
 
-`_aggr_size` string `{width}x{height}` · `_aggr_position_label` string · `_aggr_max_concurrent` int · `_aggr_is_active` int `0|1` · `_aggr_sort_order` int · `_aggr_house_attachment_id` int · `_aggr_house_click_url` string · `_aggr_house_alt` string
+`_aggr_size` string `{width}x{height}` · `_aggr_position_label` string · `_aggr_max_concurrent` int · `_aggr_is_active` int `0|1` · `_aggr_sort_order` int · `_aggr_refresh_enabled` int `0|1` · `_aggr_refresh_seconds` int · `_aggr_refresh_max_per_view` int · `_aggr_house_attachment_id` int · `_aggr_house_click_url` string · `_aggr_house_alt` string
 
-The public slot id is `post_name`. Size is a pixel pair from `Domain\Ad_Sizes` (common IAB list or custom WxH), not a slot identity. House creative is placement meta, not a sixth post type. Orphan `_aggr_adgroup_term_id` is not read.
+The public slot id is `post_name`. Size is a pixel pair from `Domain\Ad_Sizes` (common IAB list or custom WxH), not a slot identity. House creative is placement meta, not a sixth post type. Refresh policy is placement meta, owned by the publisher: it bounds what a block may ask for, never the reverse. A placement that has never been configured reads as refresh-off; create writes that default as a stored flag so a later backfill cannot mistake it for a pre-policy row. Orphan `_aggr_adgroup_term_id` is not read — it is AdSanity's term id, kept only so a migration can recognise a row it has already seen, and superseded by the group taxonomy below rather than revived by it.
+
+`_aggr_size_map` holds responsive breakpoints: minimum viewport width to size served at or above it. Empty means "not a map" and the single `_aggr_size` applies everywhere. See `Domain\Size_Map`.
+
+#### Placement groups — `aggr_placement_group`
+
+A flat, private taxonomy on `aggr_placement`. Slugs are normalised by `Domain\Placement_Groups`, which deliberately does not use `sanitize_title()`: the same label has to produce the same slug in the browser, in REST and in a roll-up, and core's filter chain is something a site can change.
+
+**A group is not a package.** `aggr_package` is the sellable bundle — price, duration, placement list, snapshotted onto a campaign. A group carries none of that and **nothing in the decision path reads one**. It exists so a publisher can find and total their own inventory. A group that grows a price has become a package badly; a group that delivery reads has become targeting badly.
+
+Flat rather than hierarchical on purpose: a nested group makes every roll-up ask whether a parent's number includes its children, and no single answer is right for both "how much of my sidebar sold" and "how much of my site sold".
 
 ### Package — `aggr_package`
 

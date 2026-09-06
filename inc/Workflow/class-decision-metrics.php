@@ -12,6 +12,7 @@ namespace Aggressive\Ads\Workflow;
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Domain\Decision_Outcome;
 use Aggressive\Ads\Domain\No_Fill_Reason;
+use Aggressive\Ads\Domain\Opportunity;
 use Aggressive\Ads\Repository\Decision_Rollup_Repository;
 
 /**
@@ -59,6 +60,28 @@ final class Decision_Metrics implements Service {
 	private array $buffered = array();
 
 	/**
+	 * Which kind of inventory this request's counts describe.
+	 *
+	 * One field rather than a dimension on every buffered entry, because a fill
+	 * request is either a page's first or a refresh of it and cannot be both.
+	 * A page batch decides many slots at once and they are all the same page
+	 * view; a rotation refetches one slot and is a refresh. There is no request
+	 * that produces both.
+	 *
+	 * **Every entry point declares it, rather than one of them resetting it.**
+	 * This service outlives a request under a long-running SAPI, so a kind left
+	 * set would file the next request's counts under the last one's. A reset in
+	 * `flush()` would also prevent that, and was written first — but it made
+	 * correctness depend on a line running somewhere else, and no test could
+	 * fail over its removal while both callers happened to set the kind anyway.
+	 * Declaring at each entry is correct by construction and every line of it
+	 * is defended by a test.
+	 *
+	 * @var string
+	 */
+	private string $opportunity = Opportunity::PAGE;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param Decision_Rollup_Repository $rollups Durable per-day counters.
@@ -76,6 +99,23 @@ final class Decision_Metrics implements Service {
 	 */
 	public function init(): void {
 		add_action( 'shutdown', array( $this, 'flush' ) );
+	}
+
+	/**
+	 * Declares what kind of opportunity this request is counting.
+	 *
+	 * Called once, before decisioning. An unknown kind resets to page rather
+	 * than being ignored: ignoring would leave whatever the previous request
+	 * set, and on a long-running worker that is a refresh filed as a page
+	 * — or the other way around — which is the leftover-kind defect the
+	 * `for_slots` test exists to prevent.
+	 *
+	 * @param string $opportunity `Domain\Opportunity` kind.
+	 */
+	public function for_opportunity( string $opportunity ): void {
+		$this->opportunity = Opportunity::is_valid( $opportunity )
+			? $opportunity
+			: Opportunity::PAGE;
 	}
 
 	/**
@@ -156,7 +196,7 @@ final class Decision_Metrics implements Service {
 		$day = gmdate( 'Y-m-d' );
 
 		foreach ( $this->buffered as $placement_id => $increments ) {
-			$this->rollups->add( $day, (int) $placement_id, $increments );
+			$this->rollups->add( $day, (int) $placement_id, $increments, $this->opportunity );
 		}
 
 		$this->buffered = array();

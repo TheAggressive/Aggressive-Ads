@@ -10,6 +10,10 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Repository;
 
 use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Core\Taxonomies;
+use Aggressive\Ads\Domain\Placement_Groups;
+use Aggressive\Ads\Domain\Refresh_Policy;
+use Aggressive\Ads\Domain\Size_Map;
 use WP_Error;
 
 /**
@@ -20,10 +24,14 @@ use WP_Error;
 final class Placement_Repository {
 
 	public const META_SIZE             = '_aggr_size';
+	public const META_SIZE_MAP         = '_aggr_size_map';
 	public const META_ADGROUP_TERM     = '_aggr_adgroup_term_id';
 	public const META_IS_ACTIVE        = '_aggr_is_active';
 	public const META_SORT_ORDER       = '_aggr_sort_order';
 	public const META_POSITION_LABEL   = '_aggr_position_label';
+	public const META_REFRESH_ENABLED  = '_aggr_refresh_enabled';
+	public const META_REFRESH_SECONDS  = '_aggr_refresh_seconds';
+	public const META_REFRESH_MAX      = '_aggr_refresh_max_per_view';
 	public const META_HOUSE_ATTACHMENT = '_aggr_house_attachment_id';
 	public const META_HOUSE_CLICK_URL  = '_aggr_house_click_url';
 	public const META_HOUSE_ALT        = '_aggr_house_alt';
@@ -121,6 +129,217 @@ final class Placement_Repository {
 		);
 
 		return array() === $ids ? 0 : (int) $ids[0];
+	}
+
+	/**
+	 * Which size this placement serves at each viewport.
+	 *
+	 * A placement that has never been made responsive resolves to a fixed map
+	 * over its single stored size, so every existing placement keeps serving
+	 * exactly what it served before and the resolution is one code path rather
+	 * than a branch on "is this responsive".
+	 *
+	 * @param int $placement_id Placement post id.
+	 */
+	public function size_map( int $placement_id ): Size_Map {
+		return Size_Map::from_stored(
+			get_post_meta( $placement_id, self::META_SIZE_MAP, true ),
+			$this->size( $placement_id )
+		);
+	}
+
+	/**
+	 * Records a responsive size map, and reads it back to say whether it landed.
+	 *
+	 * Read-back rather than trusting `update_post_meta()`, which answers false
+	 * both for a failed write and for a value that was already what you asked
+	 * for. A publisher told their breakpoints saved while the placement keeps
+	 * serving one size is the failure this prevents.
+	 *
+	 * The stored value is normalised on the way in by the same reader that
+	 * resolves it, so a map that would not survive reading is never written.
+	 *
+	 * @param int                $placement_id Placement post id.
+	 * @param array<int, string> $breakpoints  Minimum viewport width => size.
+	 */
+	public function set_size_map( int $placement_id, array $breakpoints ): bool {
+		if ( ! $this->exists( $placement_id ) ) {
+			return false;
+		}
+
+		$normalised = Size_Map::from_stored( $breakpoints, $this->size( $placement_id ) )->breakpoints();
+
+		update_post_meta( $placement_id, self::META_SIZE_MAP, $normalised );
+
+		return $this->size_map( $placement_id )->breakpoints() === $normalised;
+	}
+
+	/**
+	 * The group slugs a placement is filed under.
+	 *
+	 * Slugs rather than term ids, because every reader of this — the admin
+	 * filter, the REST shape, a utilisation roll-up — wants something stable
+	 * and legible, and a term id is neither across an export or a multisite
+	 * copy. The orphan `_aggr_adgroup_term_id` is what storing the id instead
+	 * looks like after the taxonomy it pointed into is gone.
+	 *
+	 * Always sorted, so two placements carrying the same groups compare equal
+	 * regardless of the order somebody assigned them in.
+	 *
+	 * @param int $placement_id Placement post id.
+	 * @return array<int, string>
+	 */
+	public function groups( int $placement_id ): array {
+		if ( ! $this->exists( $placement_id ) ) {
+			return array();
+		}
+
+		$terms = wp_get_object_terms(
+			$placement_id,
+			Taxonomies::PLACEMENT_GROUP,
+			array( 'fields' => 'slugs' )
+		);
+
+		if ( is_wp_error( $terms ) || ! is_array( $terms ) ) {
+			return array();
+		}
+
+		$slugs = array_values( array_unique( array_map( 'strval', $terms ) ) );
+		sort( $slugs );
+
+		return $slugs;
+	}
+
+	/**
+	 * Files a placement under a set of groups, replacing whatever it had.
+	 *
+	 * Replace rather than append: the caller sends the whole set, so an
+	 * append would make removing a group impossible through the only write
+	 * path there is.
+	 *
+	 * Terms are created on demand. A publisher naming a new group in the
+	 * placement form should not have to go and create it somewhere else
+	 * first, and there is no separate somewhere else.
+	 *
+	 * Reads back before reporting success, for the same reason `set_size_map`
+	 * does: `wp_set_object_terms` can partially fail, and a write that
+	 * returned true over a placement that is not actually in the group is the
+	 * failure this whole layer exists to make impossible.
+	 *
+	 * @param int                $placement_id Placement post id.
+	 * @param array<int, string> $slugs       Group slugs to file it under.
+	 * @return bool
+	 */
+	public function set_groups( int $placement_id, array $slugs ): bool {
+		if ( ! $this->exists( $placement_id ) ) {
+			return false;
+		}
+
+		$wanted = Placement_Groups::normalise( $slugs );
+
+		$result = wp_set_object_terms(
+			$placement_id,
+			array() === $wanted ? array() : $wanted,
+			Taxonomies::PLACEMENT_GROUP,
+			false
+		);
+
+		if ( is_wp_error( $result ) ) {
+			return false;
+		}
+
+		return $this->groups( $placement_id ) === $wanted;
+	}
+
+	/**
+	 * What this placement permits a timer to do.
+	 *
+	 * The publisher's rule about their own inventory. It bounds what a block
+	 * may ask for, never the reverse: every rotation is another impression, so
+	 * leaving the interval to whoever laid out the page makes the page's author
+	 * the person who decides how much inventory exists.
+	 *
+	 * @param int $placement_id Placement post id.
+	 */
+	public function refresh_policy( int $placement_id ): Refresh_Policy {
+		return Refresh_Policy::from_stored(
+			get_post_meta( $placement_id, self::META_REFRESH_ENABLED, true ),
+			get_post_meta( $placement_id, self::META_REFRESH_SECONDS, true ),
+			get_post_meta( $placement_id, self::META_REFRESH_MAX, true )
+		);
+	}
+
+	/**
+	 * Records a refresh policy, and reads it back to say whether it landed.
+	 *
+	 * Read-back rather than trusting `update_post_meta()`, which answers false
+	 * both for a failed write and for a value that was already what you asked
+	 * for. The caller needs to know the placement now permits what it says it
+	 * permits, and that is a question only a read answers.
+	 *
+	 * @param int  $placement_id Placement post id.
+	 * @param bool $enabled      Whether the placement may refresh at all.
+	 * @param int  $seconds      Shortest interval permitted.
+	 * @param int  $max_per_view Refreshes permitted per page view.
+	 */
+	public function set_refresh_policy( int $placement_id, bool $enabled, int $seconds, int $max_per_view ): bool {
+		if ( ! $this->exists( $placement_id ) ) {
+			return false;
+		}
+
+		$policy = Refresh_Policy::from_stored( $enabled, $seconds, $max_per_view );
+
+		update_post_meta( $placement_id, self::META_REFRESH_ENABLED, $policy->enabled ? 1 : 0 );
+		update_post_meta( $placement_id, self::META_REFRESH_SECONDS, $policy->interval_seconds );
+		update_post_meta( $placement_id, self::META_REFRESH_MAX, $policy->max_per_view );
+
+		$stored = $this->refresh_policy( $placement_id );
+
+		return $stored->enabled === $policy->enabled
+			&& $stored->interval_seconds === $policy->interval_seconds
+			&& $stored->max_per_view === $policy->max_per_view;
+	}
+
+	/**
+	 * Gives every existing placement the behaviour it already had.
+	 *
+	 * **Without this, shipping the policy silently stops rotation everywhere.**
+	 * Refresh defaults to off, and the policy bounds the block — so a site whose
+	 * editors set `rotate` on a slot last month would upgrade and find it had
+	 * quietly become static. Nothing would error and nothing would log; the ads
+	 * would simply stop changing, which is not a symptom anybody reads as a
+	 * failed migration.
+	 *
+	 * So the default is a decision about placements created *afterwards*, and
+	 * existing ones are handed what the client already permitted them: the
+	 * one-second floor and the hundred-refresh hard stop from `view.js`.
+	 * Enabling the policy does not make anything rotate — a block still has to
+	 * ask — it only preserves the state where everything was permitted.
+	 *
+	 * Idempotent: a placement that already carries the flag is skipped, so an
+	 * interrupted run resumes by being run again, and a publisher who has since
+	 * tightened their own policy is never overwritten.
+	 *
+	 * @param int $legacy_seconds Interval the client already floored at.
+	 * @param int $legacy_max     Refresh cap the client already enforced.
+	 * @return int Placements given an explicit policy.
+	 */
+	public function backfill_refresh_policies( int $legacy_seconds, int $legacy_max ): int {
+		$granted = 0;
+
+		foreach ( $this->all_ids() as $placement_id ) {
+			$existing = get_post_meta( $placement_id, self::META_REFRESH_ENABLED, true );
+
+			if ( '' !== $existing && null !== $existing ) {
+				continue;
+			}
+
+			if ( $this->set_refresh_policy( $placement_id, true, $legacy_seconds, $legacy_max ) ) {
+				++$granted;
+			}
+		}
+
+		return $granted;
 	}
 
 	/**

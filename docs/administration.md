@@ -30,7 +30,7 @@ whole menu.
 |---|---|---|
 | Review | `aggr_review_campaigns` | The queue. Approve, reject, pause, resume, cancel; internal notes; audit history |
 | Organizations | `aggr_manage_orgs` | Tenants, membership, suspension |
-| Inventory | `aggr_manage_placements` | The placement catalogue — the slots a campaign can be bought into |
+| Placements | `aggr_manage_placements` | The catalogue of slots a campaign can be bought into |
 | Packages | `aggr_manage_packages` | What advertisers may buy, and at what price |
 | Conversions | `aggr_manage_settings` | What counts as a conversion, and the credentials advertisers report them with |
 | Reports | `aggr_view_reports` | Fill rate, and why a slot stayed empty |

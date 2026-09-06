@@ -45,6 +45,7 @@ use Aggressive\Ads\Repository\Conversion_Repository;
 use Aggressive\Ads\Repository\Event_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Package_Repository;
+use Aggressive\Ads\Repository\Page_Context_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Repository\Line_Item_Repository;
@@ -347,9 +348,11 @@ final class Runtime_Service_Registrar {
 			static fn ( Service_Container $c ): Fill_Service => new Fill_Service(
 				$c->get( Settings::class ),
 				$c->get( Placement_Repository::class ),
+				$c->get( Page_Context_Repository::class ),
 				$c->get( Delivery_Repository::class ),
 				$c->get( Fill_Token::class ),
-				$c->get( Decision_Engine::class )
+				$c->get( Decision_Engine::class ),
+				$c->get( Decision_Metrics::class )
 			)
 		);
 

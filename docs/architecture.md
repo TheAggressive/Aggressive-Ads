@@ -34,6 +34,15 @@ The root plugin file does four things: declare the header, define constants, gua
 
 Two rules carry most of the weight:
 
+**A meta key belongs with the record, not with one of its readers.**
+`Creative_Repository` has been split twice — the replacement lifecycle into
+`Creative_Revision_Repository`, the Media Library cluster into
+`Creative_Attachment_Repository` — and both times the meta-key constants stayed
+behind. A key is read by more than its writer: `META_ATTACHMENT_ID` is queried by
+the assignment repository and `META_IS_CREATIVE` by the Media Library screen. The
+dependency then runs one way and is stated in the class that holds it, so a split
+never produces a cycle.
+
 **`inc/Repository/` is the only place data access appears.** `WP_Query`, `get_posts()`, `get_post_meta()`, `update_post_meta()`, and `$wpdb` do not appear anywhere else in `inc/`. Enforced by `bin/ci/check-repository-boundary.sh`, which fails the build on a violation.
 
 Delivery presenters and controllers may depend on repositories to assemble
@@ -77,10 +86,10 @@ This is not an aspiration maintained by discipline. `tests/e2e/campaign-wizard.s
 Native fill only runs where the theme (or an editor) places `aggr/ad-slot`,
 the PHP helper, or the shortcode. Until the LAAO theme swaps AdSanity group
 blocks for those embeds, public pages show empty reserved slots. That theme
-change is outside this plugin. Approval, Inventory, and the clock do not
+change is outside this plugin. Approval, Placements, and the clock do not
 depend on it.
 
-Staff create placements in Advertising → Inventory: a common IAB size or
+Staff create placements in Advertising → Placements: a common IAB size or
 custom width × height, stored as `{width}x{height}` with ASCII `x`. Size is
 not identity — two slots may share 728×90. There is no delete: deactivate,
 same as packages. The Block Editor block is authored under `src/blocks/`

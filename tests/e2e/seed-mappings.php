@@ -8,6 +8,8 @@
 declare(strict_types=1);
 
 use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Domain\Refresh_Policy;
+use Aggressive\Ads\Domain\Slot_Options;
 use Aggressive\Ads\Repository\Placement_Repository;
 
 if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
@@ -37,6 +39,23 @@ if ( $existing instanceof WP_Post ) {
 update_post_meta( $placement_id, Placement_Repository::META_SIZE, '728x90' );
 update_post_meta( $placement_id, Placement_Repository::META_IS_ACTIVE, 1 );
 update_post_meta( $placement_id, Placement_Repository::META_SORT_ORDER, 999 );
+
+/*
+ * Permitted to refresh, the way migration 25 permits every placement that
+ * existed before the policy did.
+ *
+ * This placement is created *after* activation, so the backfill never sees
+ * it. Without an explicit policy the strict default applies and the
+ * rotation page's `rotate:true` resolves to off — a slot that never
+ * refetches, which is exactly what `rotation.spec.ts` is watching for.
+ */
+$aggr_placements = new Placement_Repository();
+$aggr_placements->set_refresh_policy(
+	(int) $placement_id,
+	true,
+	Slot_Options::MIN_ROTATE_SECONDS,
+	Refresh_Policy::LEGACY_CLIENT_MAX_PER_VIEW
+);
 
 /*
  * A second placement, for the click-carrier spec.

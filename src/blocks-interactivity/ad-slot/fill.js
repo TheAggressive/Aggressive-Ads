@@ -44,6 +44,21 @@ const buildAd = ( creative ) => {
 };
 
 /**
+ * The viewport width a slot is being rendered into, in CSS pixels.
+ *
+ * Zero when the document is not measurable, which the server reads as "no
+ * viewport reported" and answers with the placement's base size — the same
+ * answer every non-responsive placement has always had.
+ *
+ * @return {number} Viewport width, or 0.
+ */
+const viewportWidth = () => {
+	const width = document.documentElement?.clientWidth;
+
+	return Number.isFinite( width ) && width > 0 ? Math.floor( width ) : 0;
+};
+
+/**
  * Fills one slot once, replacing whatever is in its canvas.
  *
  * **Replaces rather than appends**, which is what makes rotation possible at
@@ -55,18 +70,52 @@ const buildAd = ( creative ) => {
  * rotation is worth continuing. A slot that answered `no_fill` is a slot with
  * nothing to rotate to.
  *
- * @param {HTMLElement} root Slot wrapper.
+ * The sequence is which fill this is within the page view, zero-based. The
+ * server cannot infer it — the endpoint is stateless and sits behind a page
+ * cache — so the client says. A request that omits it is a page opportunity,
+ * which is what every fill from a cached page predating this parameter is.
+ *
+ * @param {HTMLElement} root     Slot wrapper.
+ * @param {number}      sequence Fill number within the page view, zero-based.
  * @return {Promise<boolean>} Whether an ad is now on the page.
  */
-export const fillSlot = async ( root ) => {
+export const fillSlot = async ( root, sequence = 0 ) => {
 	const url = root.dataset.aggrFill;
 
 	if ( ! url ) {
 		return false;
 	}
 
+	const declared = Number( sequence );
+	const n =
+		Number.isFinite( declared ) && declared > 0
+			? Math.floor( declared )
+			: 0;
+
+	const endpoint = new URL( url, window.location.href );
+	endpoint.searchParams.set( 'n', String( n ) );
+
+	/*
+	 * The viewport the slot is actually being rendered into.
+	 *
+	 * A responsive placement serves several sizes and the server cannot know
+	 * which applies: the page is cached, and the viewport is a fact only the
+	 * browser has. Without this every responsive placement resolves to its base
+	 * — the narrowest size — on every screen, which is a desktop reader served
+	 * a mobile banner and a publisher's widest inventory never sold.
+	 *
+	 * `documentElement.clientWidth` rather than `innerWidth`, because the
+	 * former excludes the scrollbar and so matches what CSS media queries and
+	 * the slot's own layout actually see. A pixel of disagreement here puts the
+	 * decision on the other side of a breakpoint from the box it fills.
+	 *
+	 * Sent on every fill rather than once, because a rotation can happen after
+	 * the reader has resized or turned their phone.
+	 */
+	endpoint.searchParams.set( 'w', String( viewportWidth() ) );
+
 	try {
-		const response = await fetch( url, {
+		const response = await fetch( endpoint.href, {
 			credentials: 'omit',
 			headers: { Accept: 'application/json' },
 		} );

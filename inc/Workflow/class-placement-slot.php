@@ -209,6 +209,29 @@ final class Placement_Slot implements Service {
 		$height = isset( $dims[1] ) ? (int) $dims[1] : 0;
 		$fill   = rest_url( Creative_File_Controller::NAMESPACE . '/fill/' . rawurlencode( $slug ) );
 
+		/*
+		 * The page this slot is rendering on, for contextual targeting.
+		 *
+		 * Baked into the URL here rather than sent by the browser. The server
+		 * knows the page at render time, and the browser would only be
+		 * repeating back something we already had — a client-declared fact
+		 * where none is needed.
+		 *
+		 * Correct under a page cache for the same reason: the id is cached with
+		 * the page whose id it is. A page cached before this existed simply
+		 * omits it, and the fill route reads a missing page as "no context",
+		 * which is the behaviour every fill had until now.
+		 *
+		 * `get_queried_object_id()` rather than `get_the_ID()`: inside a
+		 * sidebar or a template part the loop may be pointing at something
+		 * other than the page the reader is on, and the ad is on the page.
+		 */
+		$page_id = (int) get_queried_object_id();
+
+		if ( $page_id > 0 && is_singular() ) {
+			$fill = add_query_arg( 'p', $page_id, $fill );
+		}
+
 		$this->enqueue_view();
 
 		$style        = '';
@@ -246,8 +269,16 @@ final class Placement_Slot implements Service {
 		 * builds an attribute *array* that the wrapper helpers escape, so taking
 		 * the helper's output and stripping the name and quotes back off it
 		 * would be doing the same work twice and undoing half of it.
+		 *
+		 * The context is resolved against the placement's own refresh policy
+		 * before it leaves the server. The block states a request, the publisher
+		 * states a rule, and the browser receives the answer — handing the
+		 * client both halves would put the arithmetic in the one place a
+		 * publisher cannot govern and a reader can edit.
 		 */
-		$encoded = wp_json_encode( $options->to_context() );
+		$encoded = wp_json_encode(
+			$options->resolved_context( $this->placements->refresh_policy( $placement_id ) )
+		);
 
 		if ( is_string( $encoded ) ) {
 			$extra['data-wp-context'] = $encoded;

@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Tests\Rest;
 
+use Aggressive\Ads\Domain\Refresh_Policy;
 use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Audit_Repository;
@@ -20,7 +21,7 @@ use WP_REST_Response;
 use WP_UnitTestCase;
 
 /**
- * What replaced Inventory's admin-post handlers.
+ * What replaced Placements' admin-post handlers.
  *
  * The screen moved to React and its forms went with it, so these routes are now
  * the only way to change what advertisers can buy — and a placement slug is
@@ -158,6 +159,284 @@ final class PlacementsWriteTest extends WP_UnitTestCase {
 		$this->assertSame( '728x90', $this->placements->size( $placement_id ) );
 		$this->assertSame( 'header', $this->placements->slug( $placement_id ) );
 		$this->assertTrue( $this->placements->is_active( $placement_id ) );
+
+		$policy = $this->placements->refresh_policy( $placement_id );
+
+		$this->assertFalse( $policy->enabled );
+		$this->assertSame( Refresh_Policy::DEFAULT_INTERVAL_SECONDS, $policy->interval_seconds );
+		$this->assertSame( Refresh_Policy::DEFAULT_MAX_PER_VIEW, $policy->max_per_view );
+	}
+
+	/**
+	 * Breakpoints the form sends are the breakpoints the placement serves.
+	 *
+	 * @return void
+	 */
+	public function test_breakpoints_round_trip_through_the_catalogue(): void {
+		$placement_id = $this->create_placement(
+			array(
+				'slug'        => 'responsive-header',
+				'breakpoints' => array(
+					0   => '320x50',
+					768 => '728x90',
+				),
+			)
+		);
+
+		$map = $this->placements->size_map( $placement_id );
+
+		$this->assertTrue( $map->is_responsive() );
+		$this->assertSame( '320x50', $map->for_viewport( 375 ) );
+		$this->assertSame( '728x90', $map->for_viewport( 1024 ) );
+	}
+
+	/**
+	 * **An unrelated save does not quietly make a placement fixed again.**
+	 *
+	 * An omitted key means "unchanged", never "cleared" — the same rule the
+	 * refresh policy and the house creative already follow. Without it a rename
+	 * would write an empty map, `Size_Map` would read that as "not a map" and
+	 * fall back to the single stored size, and the placement would serve its
+	 * base everywhere while the screen still listed the breakpoints somebody
+	 * configured. A disagreement between what the screen shows and what the
+	 * server serves is the kind nobody thinks to check.
+	 *
+	 * @return void
+	 */
+	public function test_a_save_that_omits_breakpoints_leaves_them_alone(): void {
+		$placement_id = $this->create_placement(
+			array(
+				'slug'        => 'responsive-header',
+				'breakpoints' => array(
+					0   => '320x50',
+					768 => '728x90',
+				),
+			)
+		);
+
+		$response = $this->write(
+			'/aggr/v1/placements/' . $placement_id,
+			'PATCH',
+			$this->valid_placement(
+				array(
+					'slug' => 'responsive-header',
+					'name' => 'Renamed and nothing else',
+				)
+			)
+		);
+
+		$this->assertSame( 200, $response->get_status() );
+
+		$map = $this->placements->size_map( $placement_id );
+
+		$this->assertTrue( $map->is_responsive(), 'A rename turned a responsive placement into a fixed one.' );
+		$this->assertSame( '728x90', $map->for_viewport( 1024 ) );
+	}
+
+	/**
+	 * An explicit empty list does clear them, because that is a decision.
+	 *
+	 * The distinction is the whole point of the rule above: silence is not a
+	 * choice, and an empty array is.
+	 *
+	 * @return void
+	 */
+	public function test_an_explicit_empty_list_makes_a_placement_fixed(): void {
+		$placement_id = $this->create_placement(
+			array(
+				'slug'        => 'responsive-header',
+				'breakpoints' => array(
+					0   => '320x50',
+					768 => '728x90',
+				),
+			)
+		);
+
+		$response = $this->write(
+			'/aggr/v1/placements/' . $placement_id,
+			'PATCH',
+			$this->valid_placement(
+				array(
+					'slug'        => 'responsive-header',
+					'breakpoints' => array(),
+				)
+			)
+		);
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertFalse( $this->placements->size_map( $placement_id )->is_responsive() );
+	}
+
+	/**
+	 * Groups the form sends are the groups the placement is filed under.
+	 *
+	 * Labels go in and slugs come out, which is the round trip that matters:
+	 * the browser deliberately does not normalise, so the server is the only
+	 * implementation of the rules and this is where that is proven.
+	 *
+	 * @return void
+	 */
+	public function test_groups_round_trip_through_the_catalogue(): void {
+		$placement_id = $this->create_placement(
+			array(
+				'slug'   => 'grouped-header',
+				'groups' => array( 'Above The Fold', 'sidebar' ),
+			)
+		);
+
+		$this->assertSame(
+			array( 'above-the-fold', 'sidebar' ),
+			$this->placements->groups( $placement_id )
+		);
+	}
+
+	/**
+	 * **An unrelated save does not quietly unfile a placement.**
+	 *
+	 * The same omitted-means-unchanged rule, and the failure here is quieter
+	 * than the breakpoint one and therefore worse: nothing about delivery
+	 * changes, so the only symptom is a roll-up that stops counting a
+	 * placement nobody noticed had left its group.
+	 *
+	 * @return void
+	 */
+	public function test_a_save_that_omits_groups_leaves_them_alone(): void {
+		$placement_id = $this->create_placement(
+			array(
+				'slug'   => 'grouped-header',
+				'groups' => array( 'sidebar' ),
+			)
+		);
+
+		$response = $this->write(
+			'/aggr/v1/placements/' . $placement_id,
+			'PATCH',
+			$this->valid_placement(
+				array(
+					'slug' => 'grouped-header',
+					'name' => 'Renamed and nothing else',
+				)
+			)
+		);
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame(
+			array( 'sidebar' ),
+			$this->placements->groups( $placement_id ),
+			'A rename unfiled a placement from its group.'
+		);
+	}
+
+	/** An explicit empty list does unfile it, because that is a decision. */
+	public function test_an_explicit_empty_group_list_unfiles_a_placement(): void {
+		$placement_id = $this->create_placement(
+			array(
+				'slug'   => 'grouped-header',
+				'groups' => array( 'sidebar' ),
+			)
+		);
+
+		$response = $this->write(
+			'/aggr/v1/placements/' . $placement_id,
+			'PATCH',
+			$this->valid_placement(
+				array(
+					'slug'   => 'grouped-header',
+					'groups' => array(),
+				)
+			)
+		);
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( array(), $this->placements->groups( $placement_id ) );
+	}
+
+	/**
+	 * The policy the form sends is the policy the catalogue returns.
+	 *
+	 * @return void
+	 */
+	public function test_refresh_policy_round_trips_through_the_catalogue(): void {
+		$placement_id = $this->create_placement(
+			array(
+				'slug'                 => 'rotating-header',
+				'refresh_enabled'      => true,
+				'refresh_seconds'      => 20,
+				'refresh_max_per_view' => 3,
+			)
+		);
+
+		$policy = $this->placements->refresh_policy( $placement_id );
+
+		$this->assertTrue( $policy->enabled );
+		$this->assertSame( 20, $policy->interval_seconds );
+		$this->assertSame( 3, $policy->max_per_view );
+
+		$response = $this->write(
+			'/aggr/v1/placements/' . $placement_id,
+			'PATCH',
+			$this->valid_placement(
+				array(
+					'slug'                 => 'rotating-header',
+					'name'                 => 'Homepage leaderboard',
+					'refresh_enabled'      => true,
+					'refresh_seconds'      => 45,
+					'refresh_max_per_view' => 2,
+				)
+			)
+		);
+
+		$this->assertSame( 200, $response->get_status() );
+
+		$data = $response->get_data();
+		$this->assertIsArray( $data );
+
+		$row = array();
+
+		foreach ( $data['view']['rows'] as $candidate ) {
+			if ( (int) $candidate['id'] === $placement_id ) {
+				$row = $candidate;
+				break;
+			}
+		}
+
+		$this->assertSame( 45, $row['refresh_seconds'] ?? null );
+		$this->assertSame( 2, $row['refresh_max_per_view'] ?? null );
+	}
+
+	/**
+	 * A rename that does not mention refresh must not reset the policy.
+	 *
+	 * @return void
+	 */
+	public function test_an_update_that_omits_refresh_leaves_the_policy(): void {
+		$placement_id = $this->create_placement(
+			array(
+				'slug'                 => 'kept-policy',
+				'refresh_enabled'      => true,
+				'refresh_seconds'      => 15,
+				'refresh_max_per_view' => 5,
+			)
+		);
+
+		$response = $this->write(
+			'/aggr/v1/placements/' . $placement_id,
+			'PATCH',
+			$this->valid_placement(
+				array(
+					'slug' => 'kept-policy',
+					'name' => 'Renamed, policy untouched',
+				)
+			)
+		);
+
+		$this->assertSame( 200, $response->get_status() );
+
+		$policy = $this->placements->refresh_policy( $placement_id );
+
+		$this->assertTrue( $policy->enabled, 'A rename turned refresh off.' );
+		$this->assertSame( 15, $policy->interval_seconds );
+		$this->assertSame( 5, $policy->max_per_view );
 	}
 
 	/**

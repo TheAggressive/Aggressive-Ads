@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Repository;
 
 use Aggressive\Ads\Domain\Decision_Outcome;
+use Aggressive\Ads\Domain\Opportunity;
 use Aggressive\Ads\Install\Schema;
 
 /**
@@ -38,6 +39,62 @@ final class Decision_Rollup_Repository {
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
 		dbDelta( Schema::decision_rollups_table_ddl( $this->table_name(), $wpdb->get_charset_collate() ) );
+
+		$this->drop_legacy_outcome_unique();
+	}
+
+	/**
+	 * Drops the pre-P15 unique that ignored the opportunity kind.
+	 *
+	 * `dbDelta` adds an index and never drops one, so `slot_day_outcome` would
+	 * survive the upgrade and keep enforcing one row per outcome per day. The
+	 * refresh split then fails on insert: a placement's first refresh of the day
+	 * collides with its page opportunity for the same outcome, and the counter
+	 * silently stops advancing for whichever arrives second.
+	 *
+	 * Here as well as in the migration, so a repair install heals a site the
+	 * upgrade missed — matching how the rollups and events tables drop their own
+	 * superseded uniques.
+	 *
+	 * @return void
+	 */
+	private function drop_legacy_outcome_unique(): void {
+		global $wpdb;
+
+		$table = $this->table_name();
+
+		/*
+		 * **Not guarded on `table_exists()`, which is the obvious version and
+		 * silently does nothing.** That helper asks `SHOW TABLES LIKE`, and
+		 * `SHOW TABLES` cannot see a temporary table — which is what every table
+		 * in the WordPress test suite is, because `WP_UnitTestCase` rewrites
+		 * `CREATE TABLE` into its `TEMPORARY` form. The guard therefore returns
+		 * early exactly where the drop is being verified, so the migration looks
+		 * correct and the superseded unique survives.
+		 *
+		 * Asking the index list directly answers both questions at once: a table
+		 * that is not there has no indexes, so nothing is dropped and nothing
+		 * errors. Errors are suppressed around the read for that reason and
+		 * restored afterwards, because a missing table here is an expected
+		 * state rather than a fault worth surfacing.
+		 */
+		$suppressed = $wpdb->suppress_errors( true );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Schema introspection on this plugin's table.
+		$rows = $wpdb->get_results( "SHOW INDEX FROM {$table}", ARRAY_A );
+
+		$wpdb->suppress_errors( $suppressed );
+
+		$names = is_array( $rows ) ? array_values( array_unique( array_column( $rows, 'Key_name' ) ) ) : array();
+
+		if ( array() === $names ) {
+			return;
+		}
+
+		if ( in_array( 'slot_day_outcome', $names, true ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Dropping the pre-P15 unique so a refresh can hold its own row.
+			$wpdb->query( "ALTER TABLE {$table} DROP INDEX slot_day_outcome" );
+		}
 	}
 
 	/**
@@ -85,14 +142,28 @@ final class Decision_Rollup_Repository {
 	 *
 	 * @param string             $day_utc    UTC day, `Y-m-d`.
 	 * @param int                $placement  Placement post id.
-	 * @param array<string, int> $increments Outcome code => count.
+	 * @param array<string, int> $increments  Outcome code => count.
+	 * @param string             $opportunity `Domain\Opportunity` kind these counts describe.
 	 * @return bool Whether a write was attempted and accepted.
 	 */
-	public function add( string $day_utc, int $placement, array $increments ): bool {
+	public function add( string $day_utc, int $placement, array $increments, string $opportunity = Opportunity::PAGE ): bool {
 		global $wpdb;
 
 		if ( $placement <= 0 || 1 !== preg_match( '/^\d{4}-\d{2}-\d{2}$/', $day_utc ) ) {
 			return false;
+		}
+
+		/*
+		 * An unknown kind is stored as a page opportunity rather than refused.
+		 *
+		 * The alternative is dropping the whole write, and a counter that
+		 * silently loses a request because a caller passed a typo is worse than
+		 * one that files it under supply. The vocabulary is closed by
+		 * `Domain\Opportunity`, so this is a guard against a programming
+		 * mistake rather than against input.
+		 */
+		if ( ! Opportunity::is_valid( $opportunity ) ) {
+			$opportunity = Opportunity::PAGE;
 		}
 
 		$values       = array();
@@ -109,9 +180,9 @@ final class Decision_Rollup_Repository {
 				continue;
 			}
 
-			$placeholders[] = '(%s, %d, %s, %d)';
+			$placeholders[] = '(%s, %d, %s, %s, %d)';
 
-			array_push( $values, $day_utc, $placement, $outcome, $amount );
+			array_push( $values, $day_utc, $placement, $outcome, $opportunity, $amount );
 		}
 
 		if ( array() === $placeholders ) {
@@ -120,7 +191,7 @@ final class Decision_Rollup_Repository {
 
 		$table = $this->table_name();
 
-		$sql = "INSERT INTO {$table} (day_utc, placement_id, outcome, events) VALUES "
+		$sql = "INSERT INTO {$table} (day_utc, placement_id, outcome, opportunity, events) VALUES "
 			. implode( ', ', $placeholders )
 			. ' ON DUPLICATE KEY UPDATE events = events + VALUES(events)';
 
@@ -136,22 +207,34 @@ final class Decision_Rollup_Repository {
 	 * Bounded by the unique key's leading column and the day, so the read is an
 	 * index range rather than work proportional to the table.
 	 *
-	 * @param int    $placement Placement post id.
-	 * @param string $from_utc  First UTC day, inclusive, `Y-m-d`.
-	 * @param string $to_utc    Last UTC day, inclusive, `Y-m-d`.
+	 * @param int    $placement   Placement post id.
+	 * @param string $from_utc    First UTC day, inclusive, `Y-m-d`.
+	 * @param string $to_utc      Last UTC day, inclusive, `Y-m-d`.
+	 * @param string $opportunity `Domain\Opportunity` kind, or '' for every kind.
 	 * @return array<string, int> Outcome code => total, highest first.
 	 */
-	public function totals_for_placement( int $placement, string $from_utc, string $to_utc ): array {
+	public function totals_for_placement( int $placement, string $from_utc, string $to_utc, string $opportunity = '' ): array {
 		global $wpdb;
 
 		if ( $placement <= 0 || ! self::is_day( $from_utc ) || ! self::is_day( $to_utc ) ) {
 			return array();
 		}
 
+		$filter = self::opportunity_filter( $opportunity );
+
+		if ( null === $filter ) {
+			return array();
+		}
+
 		$table = $this->table_name();
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Custom table, prefix-derived name; every value is a placeholder. A cached count is how a stale diagnostic looks healthy.
-		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT outcome, SUM(events) AS total FROM {$table} WHERE placement_id = %d AND day_utc BETWEEN %s AND %s GROUP BY outcome", $placement, $from_utc, $to_utc ), ARRAY_A );
+		if ( '' === $filter ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Custom table, prefix-derived name; every value is a placeholder. A cached count is how a stale diagnostic looks healthy.
+			$rows = $wpdb->get_results( $wpdb->prepare( "SELECT outcome, SUM(events) AS total FROM {$table} WHERE placement_id = %d AND day_utc BETWEEN %s AND %s GROUP BY outcome", $placement, $from_utc, $to_utc ), ARRAY_A );
+		} else {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Custom table, prefix-derived name; every value is a placeholder. A cached count is how a stale diagnostic looks healthy.
+			$rows = $wpdb->get_results( $wpdb->prepare( "SELECT outcome, SUM(events) AS total FROM {$table} WHERE placement_id = %d AND day_utc BETWEEN %s AND %s AND opportunity = %s GROUP BY outcome", $placement, $from_utc, $to_utc, $filter ), ARRAY_A );
+		}
 
 		return self::as_totals( is_array( $rows ) ? $rows : array() );
 	}
@@ -160,8 +243,10 @@ final class Decision_Rollup_Repository {
 	 * Per-day outcome rows for a range, site-wide or for one placement.
 	 *
 	 * The shape an export wants and a screen does not: long format, one row per
-	 * day and outcome, so a reader can pivot it without the column set changing
-	 * whenever a new reason first occurs.
+	 * day, outcome and inventory kind, so a reader can pivot it without the
+	 * column set changing whenever a new reason first occurs. Grouping without
+	 * the kind is how a refresh became a page opportunity on the only surface
+	 * that read these counters.
 	 *
 	 * Both variants stay inside an index range. Filtered by placement the
 	 * unique key leads on `placement_id`; site-wide, `day_outcome` leads on the
@@ -171,7 +256,7 @@ final class Decision_Rollup_Repository {
 	 * @param string $from_utc  First UTC day, inclusive, `Y-m-d`.
 	 * @param string $to_utc    Last UTC day, inclusive, `Y-m-d`.
 	 * @param int    $placement Placement post id, or 0 for every placement.
-	 * @return list<array{day: string, placement_id: int, outcome: string, events: int}>
+	 * @return list<array{day: string, placement_id: int, outcome: string, opportunity: string, events: int}>
 	 */
 	public function daily_outcomes( string $from_utc, string $to_utc, int $placement = 0 ): array {
 		global $wpdb;
@@ -184,10 +269,10 @@ final class Decision_Rollup_Repository {
 
 		if ( $placement > 0 ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Custom table, prefix-derived name; every value is a placeholder.
-			$rows = $wpdb->get_results( $wpdb->prepare( "SELECT day_utc, placement_id, outcome, SUM(events) AS events FROM {$table} WHERE placement_id = %d AND day_utc BETWEEN %s AND %s GROUP BY day_utc, placement_id, outcome ORDER BY day_utc ASC, outcome ASC", $placement, $from_utc, $to_utc ), ARRAY_A );
+			$rows = $wpdb->get_results( $wpdb->prepare( "SELECT day_utc, placement_id, outcome, opportunity, SUM(events) AS events FROM {$table} WHERE placement_id = %d AND day_utc BETWEEN %s AND %s GROUP BY day_utc, placement_id, outcome, opportunity ORDER BY day_utc ASC, outcome ASC, opportunity ASC", $placement, $from_utc, $to_utc ), ARRAY_A );
 		} else {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Custom table, prefix-derived name; every value is a placeholder.
-			$rows = $wpdb->get_results( $wpdb->prepare( "SELECT day_utc, placement_id, outcome, SUM(events) AS events FROM {$table} WHERE day_utc BETWEEN %s AND %s GROUP BY day_utc, placement_id, outcome ORDER BY day_utc ASC, placement_id ASC, outcome ASC", $from_utc, $to_utc ), ARRAY_A );
+			$rows = $wpdb->get_results( $wpdb->prepare( "SELECT day_utc, placement_id, outcome, opportunity, SUM(events) AS events FROM {$table} WHERE day_utc BETWEEN %s AND %s GROUP BY day_utc, placement_id, outcome, opportunity ORDER BY day_utc ASC, placement_id ASC, outcome ASC, opportunity ASC", $from_utc, $to_utc ), ARRAY_A );
 		}
 
 		$out = array();
@@ -201,6 +286,7 @@ final class Decision_Rollup_Repository {
 				'day'          => (string) ( $row['day_utc'] ?? '' ),
 				'placement_id' => (int) ( $row['placement_id'] ?? 0 ),
 				'outcome'      => (string) ( $row['outcome'] ?? '' ),
+				'opportunity'  => (string) ( $row['opportunity'] ?? Opportunity::PAGE ),
 				'events'       => (int) ( $row['events'] ?? 0 ),
 			);
 		}
@@ -211,21 +297,33 @@ final class Decision_Rollup_Repository {
 	/**
 	 * Outcome totals across every placement for a closed day range.
 	 *
-	 * @param string $from_utc First UTC day, inclusive, `Y-m-d`.
-	 * @param string $to_utc   Last UTC day, inclusive, `Y-m-d`.
+	 * @param string $from_utc    First UTC day, inclusive, `Y-m-d`.
+	 * @param string $to_utc      Last UTC day, inclusive, `Y-m-d`.
+	 * @param string $opportunity `Domain\Opportunity` kind, or '' for every kind.
 	 * @return array<string, int> Outcome code => total, highest first.
 	 */
-	public function totals( string $from_utc, string $to_utc ): array {
+	public function totals( string $from_utc, string $to_utc, string $opportunity = '' ): array {
 		global $wpdb;
 
 		if ( ! self::is_day( $from_utc ) || ! self::is_day( $to_utc ) ) {
 			return array();
 		}
 
+		$filter = self::opportunity_filter( $opportunity );
+
+		if ( null === $filter ) {
+			return array();
+		}
+
 		$table = $this->table_name();
 
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Custom table, prefix-derived name; every value is a placeholder. A cached count is how a stale diagnostic looks healthy.
-		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT outcome, SUM(events) AS total FROM {$table} WHERE day_utc BETWEEN %s AND %s GROUP BY outcome", $from_utc, $to_utc ), ARRAY_A );
+		if ( '' === $filter ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Custom table, prefix-derived name; every value is a placeholder. A cached count is how a stale diagnostic looks healthy.
+			$rows = $wpdb->get_results( $wpdb->prepare( "SELECT outcome, SUM(events) AS total FROM {$table} WHERE day_utc BETWEEN %s AND %s GROUP BY outcome", $from_utc, $to_utc ), ARRAY_A );
+		} else {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Custom table, prefix-derived name; every value is a placeholder. A cached count is how a stale diagnostic looks healthy.
+			$rows = $wpdb->get_results( $wpdb->prepare( "SELECT outcome, SUM(events) AS total FROM {$table} WHERE day_utc BETWEEN %s AND %s AND opportunity = %s GROUP BY outcome", $from_utc, $to_utc, $filter ), ARRAY_A );
+		}
 
 		return self::as_totals( is_array( $rows ) ? $rows : array() );
 	}
@@ -302,5 +400,26 @@ final class Decision_Rollup_Repository {
 	 */
 	private static function is_day( string $day ): bool {
 		return 1 === preg_match( '/^\d{4}-\d{2}-\d{2}$/', $day );
+	}
+
+	/**
+	 * A kind the read may filter on, or null when the caller named one that
+	 * does not exist.
+	 *
+	 * **Empty means every kind, and that is the diagnostic default.** A forgotten
+	 * filter still answers "how many decisions happened". A screen that is
+	 * talking about *supply* has to pass `Opportunity::PAGE` itself — mixing
+	 * the two on that surface is the defect this column exists to prevent.
+	 * An invented kind returns nothing rather than falling through to page,
+	 * so a typo cannot silently report the wrong inventory.
+	 *
+	 * @param string $opportunity Requested kind, or ''.
+	 */
+	private static function opportunity_filter( string $opportunity ): ?string {
+		if ( '' === $opportunity ) {
+			return '';
+		}
+
+		return Opportunity::is_valid( $opportunity ) ? $opportunity : null;
 	}
 }

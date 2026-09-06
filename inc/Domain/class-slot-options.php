@@ -124,23 +124,35 @@ final class Slot_Options {
 	}
 
 	/**
-	 * The client's view of these settings.
+	 * The client's view once the publisher's policy has bounded the request.
 	 *
-	 * Interactivity context rather than attributes on the wrapper, because the
-	 * store reads it per slot: two ad slots on one page rotate on their own
-	 * intervals and settle their own emptiness.
+	 * **The client receives settled values, not both halves.** Sending the
+	 * block's request and the placement's policy separately would make the
+	 * browser responsible for combining them, which puts the rule in the one
+	 * place a publisher cannot govern and a reader can edit. The resolution is
+	 * here, in the layer that can run the whole matrix in milliseconds, and the
+	 * store honours what it is handed.
 	 *
-	 * Every key is always present, including the ones holding a default. The
-	 * store treats an absent key as the shipped behaviour, which makes an
-	 * omission indistinguishable from a choice — and a slot whose context
-	 * failed to encode would then look like a slot that asked for it.
+	 * Three things come out of it:
 	 *
+	 * - `rotate` is true only when the block asked, the placement permits, and
+	 *   the cap is at least one. A slot whose placement forbids refresh — or
+	 *   permits it with a cap of zero — does not start a timer at all, rather
+	 *   than starting one whose every request the server will refuse.
+	 * - `rotateSeconds` is the slower of the two. A block asking to go faster
+	 *   than the publisher allows gets the publisher's number; one asking to go
+	 *   slower is honoured, because fewer impressions is the safer setting.
+	 * - `maxRefreshes` is the publisher's cap. The client stops itself there;
+	 *   `MAX_ROTATIONS` remains only as a last-resort ceiling.
+	 *
+	 * @param Refresh_Policy $policy The placement's refresh policy.
 	 * @return array<string, bool|int>
 	 */
-	public function to_context(): array {
+	public function resolved_context( Refresh_Policy $policy ): array {
 		return array(
-			'rotate'            => $this->rotate,
-			'rotateSeconds'     => $this->rotate_seconds,
+			'rotate'            => $this->rotate && $policy->enabled && $policy->max_per_view > 0,
+			'rotateSeconds'     => $policy->interval_for( $this->rotate_seconds ),
+			'maxRefreshes'      => $policy->max_per_view,
 			'collapseWhenEmpty' => $this->collapse_when_empty,
 		);
 	}

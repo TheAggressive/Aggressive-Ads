@@ -53,6 +53,76 @@ final class Fill_Controller implements Service {
 						'sanitize_callback' => 'sanitize_title',
 						'validate_callback' => static fn ( mixed $value ): bool => is_string( $value ) && 1 === preg_match( '/^[a-z0-9-]+$/', $value ),
 					),
+
+					/*
+					 * Which fill this is within the page view, zero-based.
+					 *
+					 * **It partitions a supply metric and bounds a refresh.**
+					 * The endpoint is stateless and sits behind a page cache, so
+					 * the server cannot know whether a fill is a page's first —
+					 * the client does, and says. That makes it untrusted. It
+					 * does not decide whether an impression counts, which stays
+					 * on the beacon's token path, and it credits no campaign
+					 * and moves no money. It does decide whether a claimed
+					 * refresh is within the publisher's per-view cap.
+					 *
+					 * Optional, because every fill served from a page cached
+					 * before this shipped arrives without it. Absent reads as a
+					 * page opportunity; see `Domain\Opportunity`.
+					 */
+					'n'    => array(
+						'type'              => 'integer',
+						'required'          => false,
+						'default'           => 0,
+						'sanitize_callback' => 'absint',
+					),
+
+					/*
+					 * The viewport the slot is rendered into, in CSS pixels.
+					 *
+					 * A responsive placement serves several sizes and only the
+					 * browser knows which applies — the page is cached, so the
+					 * server cannot infer it. Optional, because a request
+					 * without it is either an older cached client or a caller
+					 * that has none, and both resolve to the placement's base
+					 * size. Every placement that has never been made responsive
+					 * is a fixed map, so for them this changes nothing at all.
+					 *
+					 * `absint` rather than a range: a hostile width picks which
+					 * of the publisher's own sizes it is shown, which is not a
+					 * lever worth validating against. It cannot reach a size
+					 * the publisher did not configure.
+					 */
+					'w'    => array(
+						'type'              => 'integer',
+						'required'          => false,
+						'default'           => 0,
+						'sanitize_callback' => 'absint',
+					),
+
+					/*
+					 * The page the slot is on, for contextual targeting.
+					 *
+					 * **Put in the URL by the server, not by the browser.**
+					 * `Placement_Slot` knows the page at render time and bakes
+					 * it into `data-aggr-fill`, so this is not a client-declared
+					 * fact the way `n` and `w` are. It travels through the page
+					 * cache correctly because it is cached with the page whose
+					 * id it is.
+					 *
+					 * Even forged it buys little: the id only selects *which*
+					 * published post's terms are read, and the terms themselves
+					 * come from the database. A caller cannot invent a category
+					 * that does not exist, only claim to be on a different page
+					 * of the same site — which is a thing their browser could
+					 * do by loading that page anyway.
+					 */
+					'p'    => array(
+						'type'              => 'integer',
+						'required'          => false,
+						'default'           => 0,
+						'sanitize_callback' => 'absint',
+					),
 				),
 			)
 		);
@@ -93,8 +163,11 @@ final class Fill_Controller implements Service {
 	 * @phpstan-param WP_REST_Request<array<string, mixed>> $request
 	 */
 	public function show( WP_REST_Request $request ): WP_REST_Response|WP_Error {
-		$slot    = (string) $request->get_param( 'slot' );
-		$payload = $this->fill->for_slug( $slot );
+		$slot     = (string) $request->get_param( 'slot' );
+		$sequence = (int) $request->get_param( 'n' );
+		$viewport = (int) $request->get_param( 'w' );
+		$post_id  = (int) $request->get_param( 'p' );
+		$payload  = $this->fill->for_slug( $slot, $sequence, $viewport, $post_id );
 
 		if ( null === $payload ) {
 			return new WP_Error(

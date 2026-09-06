@@ -1,0 +1,144 @@
+/**
+ * Placement catalogue types, and the body the REST route allowlists.
+ */
+
+export const CUSTOM = 'custom';
+
+/**
+ * Most breakpoints one placement may declare.
+ *
+ * Mirrors `Domain\Size_Map::MAX_BREAKPOINTS`. The server trims past it, so a
+ * form that let somebody add a seventh would show them a row that vanishes on
+ * save.
+ */
+export const MAX_BREAKPOINTS = 6;
+
+/**
+ * Most groups one placement may be filed under.
+ *
+ * Mirrors `Domain\Placement_Groups::MAX_GROUPS`. The server trims past it, so
+ * a form that let somebody add one more would show them a group that vanishes
+ * on save.
+ */
+export const MAX_GROUPS = 20;
+
+export type Placement = {
+	id: number;
+	name: string;
+	slug: string;
+	size: string;
+	size_preset: string;
+	size_width: number;
+	size_height: number;
+	active: boolean;
+	sort_order: number;
+	house_attachment_id: number;
+	house_click_url: string;
+	house_alt: string;
+	refresh_enabled: boolean;
+	refresh_seconds: number;
+	refresh_max_per_view: number;
+
+	/**
+	 * Minimum viewport width to the size served at or above it.
+	 *
+	 * Keyed by floor rather than expressed as ranges, matching `Domain\Size_Map`:
+	 * two floors cannot both be the largest at or below a width, so the mapping
+	 * cannot answer twice. A placement that serves one size everywhere has a
+	 * single entry at 0.
+	 */
+	breakpoints: Record< string, string >;
+
+	/**
+	 * The groups this placement is filed under, as slugs.
+	 *
+	 * Organisational only — nothing in delivery reads one. Sorted by the
+	 * server, so two placements filed the same way render identically without
+	 * the screen sorting again.
+	 */
+	groups: string[];
+};
+
+export type RefreshDefaults = {
+	enabled: boolean;
+	seconds: number;
+	max_per_view: number;
+};
+
+export type Catalogue = {
+	sizes: Record< string, string >;
+	refresh_defaults: RefreshDefaults;
+	refresh_ceiling: number;
+
+	/** Every group already in use, offered so labels are reused not retyped. */
+	all_groups: string[];
+	rows: Placement[];
+};
+
+export type Bootstrap = {
+	view: Catalogue;
+	restPath: string;
+	i18n: Record< string, string >;
+};
+
+export const EMPTY: Bootstrap = {
+	view: {
+		sizes: {},
+		refresh_defaults: { enabled: false, seconds: 30, max_per_view: 6 },
+		refresh_ceiling: 100,
+		all_groups: [],
+		rows: [],
+	},
+	restPath: '',
+	i18n: {},
+};
+
+export const blankPlacement = ( defaults: RefreshDefaults ): Placement => ( {
+	id: 0,
+	name: '',
+	slug: '',
+	size: '',
+	size_preset: '',
+	size_width: 0,
+	size_height: 0,
+	active: true,
+	sort_order: 0,
+	house_attachment_id: 0,
+	house_click_url: '',
+	house_alt: '',
+	breakpoints: {},
+	groups: [],
+	refresh_enabled: defaults.enabled,
+	refresh_seconds: defaults.seconds,
+	refresh_max_per_view: defaults.max_per_view,
+} );
+
+/** The body the REST route allowlists. */
+export function body( draft: Placement ): Record< string, unknown > {
+	return {
+		name: draft.name,
+		slug: draft.slug,
+		size_preset: draft.size_preset,
+		size_width: draft.size_width,
+		size_height: draft.size_height,
+		sort_order: draft.sort_order,
+		is_active: draft.active,
+		house_attachment_id: draft.house_attachment_id,
+		house_click_url: draft.house_click_url,
+		house_alt: draft.house_alt,
+		refresh_enabled: draft.refresh_enabled,
+		refresh_seconds: draft.refresh_seconds,
+		refresh_max_per_view: draft.refresh_max_per_view,
+
+		/*
+		 * Always sent, because the form always knows the answer. The server
+		 * treats an *absent* key as "leave them alone" — a rule that protects a
+		 * client which does not know about breakpoints, not this one, which
+		 * does and would be sending its own emptiness as a decision.
+		 */
+		breakpoints: draft.breakpoints,
+
+		/* Always sent, for the same reason breakpoints always are. */
+		groups: draft.groups,
+	};
+}

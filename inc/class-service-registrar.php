@@ -19,6 +19,7 @@ use Aggressive\Ads\Assets\Assets;
 use Aggressive\Ads\Assets\Brand_Styles;
 use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Core\Taxonomies;
 use Aggressive\Ads\Core\Settings;
 use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Install\Migration_Map;
@@ -74,6 +75,7 @@ use Aggressive\Ads\REST\Packages_Controller;
 use Aggressive\Ads\REST\Organizations_Controller;
 use Aggressive\Ads\REST\Settings_Controller;
 use Aggressive\Ads\REST\Transitions_Controller;
+use Aggressive\Ads\Repository\Page_Context_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Repository\User_Repository;
@@ -216,6 +218,11 @@ final class Service_Registrar {
 		$container->register(
 			Post_Types::class,
 			static fn (): Post_Types => new Post_Types()
+		);
+
+		$container->register(
+			Taxonomies::class,
+			static fn (): Taxonomies => new Taxonomies()
 		);
 
 		$container->register(
@@ -521,6 +528,11 @@ final class Service_Registrar {
 		$container->register(
 			Placement_Repository::class,
 			static fn (): Placement_Repository => new Placement_Repository()
+		);
+
+		$container->register(
+			Page_Context_Repository::class,
+			static fn (): Page_Context_Repository => new Page_Context_Repository()
 		);
 
 		$container->register(

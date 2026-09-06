@@ -12,6 +12,7 @@ namespace Aggressive\Ads\Workflow;
 use Aggressive\Ads\Audit\Audit_Event;
 use Aggressive\Ads\Domain\Ad_Sizes;
 use Aggressive\Ads\Domain\Campaign_Rules;
+use Aggressive\Ads\Domain\Refresh_Policy;
 use Aggressive\Ads\Domain\Upload_Rules;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
@@ -97,6 +98,32 @@ final class Placement_Manager {
 			return $house;
 		}
 
+		$refresh = $this->apply_refresh( $placement_id, $input, true );
+
+		if ( is_wp_error( $refresh ) ) {
+			$this->placements->delete( $placement_id );
+
+			return $refresh;
+		}
+
+		$sizes = $this->apply_breakpoints( $placement_id, $input );
+
+		if ( is_wp_error( $sizes ) ) {
+			$this->placements->delete( $placement_id );
+
+			return $sizes;
+		}
+
+		$groups = $this->apply_groups( $placement_id, $input );
+
+		if ( is_wp_error( $groups ) ) {
+			$this->placements->delete( $placement_id );
+
+			return $groups;
+		}
+
+		$policy = $this->placements->refresh_policy( $placement_id );
+
 		$this->audit->insert(
 			new Audit_Event(
 				event: 'placement.created',
@@ -104,9 +131,10 @@ final class Placement_Manager {
 				object_id: $placement_id,
 				message: 'Placement created.',
 				context: array(
-					'slug'      => $fields['slug'],
-					'size'      => $fields['size'],
-					'is_active' => $fields['is_active'],
+					'slug'            => $fields['slug'],
+					'size'            => $fields['size'],
+					'is_active'       => $fields['is_active'],
+					'refresh_enabled' => $policy->enabled,
 				),
 				actor_user_id: get_current_user_id()
 			)
@@ -160,7 +188,27 @@ final class Placement_Manager {
 			return $house;
 		}
 
+		$refresh = $this->apply_refresh( $placement_id, $input, false );
+
+		if ( is_wp_error( $refresh ) ) {
+			return $refresh;
+		}
+
+		$sizes = $this->apply_breakpoints( $placement_id, $input );
+
+		if ( is_wp_error( $sizes ) ) {
+			return $sizes;
+		}
+
+		$groups = $this->apply_groups( $placement_id, $input );
+
+		if ( is_wp_error( $groups ) ) {
+			return $groups;
+		}
+
 		$this->cache->delete( $placement_id );
+
+		$policy = $this->placements->refresh_policy( $placement_id );
 
 		$this->audit->insert(
 			new Audit_Event(
@@ -169,9 +217,10 @@ final class Placement_Manager {
 				object_id: $placement_id,
 				message: 'Placement updated.',
 				context: array(
-					'slug'      => $fields['slug'],
-					'size'      => $fields['size'],
-					'is_active' => $fields['is_active'],
+					'slug'            => $fields['slug'],
+					'size'            => $fields['size'],
+					'is_active'       => $fields['is_active'],
+					'refresh_enabled' => $policy->enabled,
 				),
 				actor_user_id: get_current_user_id()
 			)
@@ -265,6 +314,128 @@ final class Placement_Manager {
 		$size = isset( $input['size'] ) && is_string( $input['size'] ) ? $input['size'] : '';
 
 		return Ad_Sizes::is_valid( $size ) ? $size : null;
+	}
+
+	/**
+	 * Records the publisher's refresh policy.
+	 *
+	 * **Create always writes one.** A placement nobody has decided about is
+	 * refresh-off, and that decision has to be a stored value rather than
+	 * absent meta: the upgrade backfill treats an empty flag as "existed
+	 * before the policy" and would grant the legacy 100-refresh permit to
+	 * a placement created afterwards if it ever ran again.
+	 *
+	 * Update writes only when the form sent a field, matching house: an
+	 * older client that does not know the keys must not reset the policy.
+	 *
+	 * @param int                  $placement_id Placement post id.
+	 * @param array<string, mixed> $input        Raw fields.
+	 * @param bool                 $creating     Whether this is a new placement.
+	 * @return true|WP_Error
+	 */
+	private function apply_refresh( int $placement_id, array $input, bool $creating ) {
+		$present = array_key_exists( 'refresh_enabled', $input )
+			|| array_key_exists( 'refresh_seconds', $input )
+			|| array_key_exists( 'refresh_max_per_view', $input );
+
+		if ( ! $present && ! $creating ) {
+			return true;
+		}
+
+		$defaults = Refresh_Policy::defaults();
+		$enabled  = $present ? ! empty( $input['refresh_enabled'] ) : $defaults->enabled;
+		$seconds  = $present && isset( $input['refresh_seconds'] )
+			? (int) $input['refresh_seconds']
+			: $defaults->interval_seconds;
+		$max      = $present && isset( $input['refresh_max_per_view'] )
+			? (int) $input['refresh_max_per_view']
+			: $defaults->max_per_view;
+
+		if ( ! $this->placements->set_refresh_policy( $placement_id, $enabled, $seconds, $max ) ) {
+			$this->record( $placement_id, Audit_Event::OUTCOME_FAILED, 'Placement refresh policy write failed.' );
+
+			return new WP_Error(
+				'aggr_refresh_not_saved',
+				__( 'The refresh policy could not be saved.', 'aggressive-ads' )
+			);
+		}
+
+		$this->cache->delete( $placement_id );
+
+		return true;
+	}
+
+	/**
+	 * Stores responsive breakpoints when the form sent them.
+	 *
+	 * Same rule as refresh and house: an absent key means "unchanged", never
+	 * "cleared". Clearing on omission would turn a publisher's responsive
+	 * placement into a fixed one on any unrelated save — it would serve its
+	 * base size everywhere while the screen still listed the breakpoints they
+	 * had configured, which is the kind of disagreement nobody thinks to check.
+	 *
+	 * The map is normalised by the domain on the way in, so a breakpoint list
+	 * that could not survive being read is never stored.
+	 *
+	 * @param int                  $placement_id Placement post id.
+	 * @param array<string, mixed> $input        Raw fields.
+	 * @return true|WP_Error
+	 */
+	private function apply_breakpoints( int $placement_id, array $input ) {
+		if ( ! array_key_exists( 'breakpoints', $input ) ) {
+			return true;
+		}
+
+		$breakpoints = is_array( $input['breakpoints'] ) ? $input['breakpoints'] : array();
+
+		if ( ! $this->placements->set_size_map( $placement_id, $breakpoints ) ) {
+			$this->record( $placement_id, Audit_Event::OUTCOME_FAILED, 'Placement size map write failed.' );
+
+			return new WP_Error(
+				'aggr_size_map_not_saved',
+				__( 'The responsive sizes could not be saved.', 'aggressive-ads' )
+			);
+		}
+
+		$this->cache->delete( $placement_id );
+
+		return true;
+	}
+
+	/**
+	 * Files a placement into groups when the form sent them.
+	 *
+	 * Same omitted-means-unchanged rule as breakpoints, refresh and house.
+	 *
+	 * A group is organisational only — nothing in the decision path reads one —
+	 * so a failure here does not make delivery wrong. It is still reported
+	 * rather than swallowed, because a publisher who files a placement and is
+	 * told it worked will not look again, and the roll-up that quietly omits it
+	 * is the thing they will eventually not trust.
+	 *
+	 * @param int                  $placement_id Placement post id.
+	 * @param array<string, mixed> $input        Raw fields.
+	 * @return true|WP_Error
+	 */
+	private function apply_groups( int $placement_id, array $input ) {
+		if ( ! array_key_exists( 'groups', $input ) ) {
+			return true;
+		}
+
+		$groups = is_array( $input['groups'] ) ? $input['groups'] : array();
+
+		if ( ! $this->placements->set_groups( $placement_id, $groups ) ) {
+			$this->record( $placement_id, Audit_Event::OUTCOME_FAILED, 'Placement group write failed.' );
+
+			return new WP_Error(
+				'aggr_groups_not_saved',
+				__( 'The placement groups could not be saved.', 'aggressive-ads' )
+			);
+		}
+
+		$this->cache->delete( $placement_id );
+
+		return true;
 	}
 
 	/**

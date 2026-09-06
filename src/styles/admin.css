@@ -526,7 +526,7 @@
 }
 
 /*
- * A form beside its list, rather than under it. Used by Inventory and
+ * A form beside its list, rather than under it. Used by Placements and
  * Packages; Settings groups its roster and add control into one panel instead,
  * because there they are one subject rather than two.
  *
@@ -541,7 +541,7 @@
 }
 
 /*
- * Inventory and Packages put their create form before their list, because
+ * Placements and Packages put their create form before their list, because
  * that is the right reading and tab order. The list still deserves the wider
  * column, so the proportions are reversed here rather than the markup.
  */

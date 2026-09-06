@@ -224,6 +224,54 @@ unauthenticated probe that audited every attempt would be an unbounded write
 anybody could drive — but it means a denial-audit assertion belongs in a manager
 test, not a route test.
 
+**A write half and a read half that never meet will keep happening until
+something reads both sources.** P15 resolved the publisher's refresh policy
+into slot context — `rotate`, `rotateSeconds`, `maxRefreshes` — and unit-tested
+the JSON. The store still stopped on its own `MAX_ROTATIONS`. The fill route
+grew an `n` parameter that partitions page from refresh; every serving test
+passed a sequence in by hand; `fillSlot` fetched the bare URL. Rotations
+filed as page opportunities and the publisher's cap never reached the timer.
+
+That is the frequency counter again, one layer out: the PHP was correct, the
+JS was complete, and nothing joined them. The fixture that would have caught
+the timer half — an unconfigured placement asked to rotate — was updated to
+*grant* the policy so the existing assertions stayed green, which is how a
+test of the default became a test of the grant.
+
+`bin/ci/check-client-contract.mjs` (in `lint:files`) and
+`ClientContractParityTest` close the naming half. They take the keys
+`resolved_context()` actually emits, require a `context.KEY` reader in the
+runtime client, require `fill.js` to send `n` from the sequence argument and
+`view.js` to pass the incrementing counter, and refuse an E2E file that asks
+`rotate:true` without calling `set_refresh_policy()` in that same file.
+
+The behaviour half is the fill route and the browser. `DecisionServingTest`
+dispatches `GET /aggr/v1/fill/{slot}?n=` and reads the rollup — a sequence
+passed into `for_slug()` by hand is how the grain tests stayed green while
+the client sent nothing. `rotation.spec.ts` asserts the first fills carry
+`n=0` and the refetch carries `n=1`, which is the only way to see that the
+store actually wrote what the route reads.
+
+The same join applies one layer up. The column was stored correctly and
+every production reader — `totals()`, `daily_outcomes()`, the fill report,
+the CSV — grouped only by outcome, so a refresh became page supply on the
+only surface a publisher can see. `PublisherReportTest` and
+`DecisionServingTest` now read `Report_Data::fill()` after a production
+write, and `rotation.js` is in the contract scan so a dead
+`context.maxRefreshes` next to `MAX_ROTATIONS` fails the lane. The
+publisher screen now prints page and refresh as separate figures *and*
+separate reason tables: a page that filled every request used to print
+"every request was filled" while the refresh no-fills sat only in the
+CSV. The per-view cap is clamped at the client's hard stop on the way
+in, so a REST write of 400 cannot become supply a modified browser
+would request and an honest one cannot.
+
+The policy itself had the same shape: `set_refresh_policy()` was tested and
+the Placements screen never called it. A new placement resolved `rotate:true`
+to off, and nothing on the form could change that. The write path is
+`Placement_Manager` through the catalogue route; a test that only calls the
+repository is not a test of the publisher's switch.
+
 ## Suites
 
 | Suite | Config | Bootstrap | Needs |
@@ -392,8 +440,8 @@ authenticated private preview, dialog keyboard (open, Tab trap, Escape,
 focus restore) for preview/remove/replace, non-clickable review
 destination, axe conformance on each wizard step plus open overlays, and that
 the active Twenty Twenty-Five block theme does not wrap the standalone portal.
-The inventory browser spec signs in as an administrator, opens the capability-
-gated wp-admin Inventory screen, creates a custom-size placement, and scans
+The placements browser spec signs in as an administrator, opens the capability-
+gated wp-admin Placements screen, creates a custom-size placement, and scans
 pre- and post-write states with axe.
 
 Global setup seeds and resets deterministic data; teardown deletes the campaign,

@@ -24,14 +24,22 @@ import { expect, test } from '@playwright/test';
 const PLACEMENT = 'e2e-browser-placement';
 const UNSOLD = '[data-aggr-slot="e2e-empty-placement"]';
 
+/**
+ * The fill sequence the client put on the wire.
+ *
+ * @param url Absolute fill URL.
+ */
+const sequenceOf = ( url: string ): string | null =>
+	new URL( url ).searchParams.get( 'n' );
+
 test( 'a rotating slot refetches while a static one beside it does not', async ( {
 	page,
 } ) => {
-	const fills: number[] = [];
+	const fills: string[] = [];
 
 	page.on( 'request', ( request ) => {
 		if ( request.url().includes( `/aggr/v1/fill/${ PLACEMENT }` ) ) {
-			fills.push( Date.now() );
+			fills.push( request.url() );
 		}
 	} );
 
@@ -61,6 +69,14 @@ test( 'a rotating slot refetches while a static one beside it does not', async (
 	 * the later assertion without anything having rotated.
 	 */
 	await expect.poll( () => fills.length ).toBe( 2 );
+
+	/*
+	 * Both first fills declare sequence zero. A rotation that omitted `n`
+	 * would look identical on the wire to these, and the server would file
+	 * it as supply — which is what shipped while every PHP test passed a
+	 * sequence in by hand.
+	 */
+	expect( fills.map( sequenceOf ) ).toEqual( [ '0', '0' ] );
 
 	/*
 	 * Marks the rendered images, so the assertion after the interval is about
@@ -96,6 +112,11 @@ test( 'a rotating slot refetches while a static one beside it does not', async (
 	).toHaveCount( 1 );
 
 	await expect( slots.first().locator( 'img' ) ).toBeVisible();
+
+	const rotation = fills[ 2 ];
+
+	expect( rotation ).toBeDefined();
+	expect( sequenceOf( rotation ) ).toBe( '1' );
 
 	// The sentinel survived, so this document was never replaced: the creative
 	// changed in place, which is the whole claim.
@@ -148,4 +169,73 @@ test( 'the unsold slot was rendered by the server before the page removed it', a
 
 	await page.goto( '/e2e-rotation/' );
 	await expect( page.locator( UNSOLD ) ).toHaveCount( 0 );
+} );
+
+/**
+ * The publisher's rule, watched where it is actually applied.
+ *
+ * Everything else proving this runs server-side: the policy resolves the
+ * block's request before the context leaves PHP, and unit tests cover the whole
+ * matrix. What no PHP test can see is a timer — whether one starts, and whether
+ * it stops at the publisher's number rather than the client's own.
+ *
+ * That gap has already cost this plugin twice in one slice. `maxRefreshes` left
+ * the server and `view.js` never read it; `n` landed on the fill route and
+ * `fillSlot` never sent it. Both halves existed, neither met, and the suite was
+ * green throughout.
+ */
+test( 'a placement that forbids refresh never starts a timer', async ( {
+	page,
+} ) => {
+	const fills: string[] = [];
+
+	page.on( 'request', ( request ) => {
+		if (
+			request.url().includes( '/aggr/v1/fill/e2e-forbidden-placement' )
+		) {
+			fills.push( request.url() );
+		}
+	} );
+
+	await page.goto( '/e2e-refresh-policy/' );
+
+	const slot = page.locator( '[data-aggr-slot="e2e-forbidden-placement"]' );
+
+	await expect( slot ).toHaveCount( 1 );
+
+	/*
+	 * The slot filled, which is what makes the silence below mean anything.
+	 *
+	 * An unsold placement never rotates whatever its policy says — the first
+	 * fill returns nothing and no timer is scheduled — so a version of this test
+	 * on an empty placement passed with the policy gate deleted. It was
+	 * measuring the absence of inventory. This asserts there is an advertisement
+	 * on the page first, so the timer that does not fire had something to fire
+	 * for.
+	 */
+	await expect(
+		slot.locator( 'img' ),
+		'The slot served nothing, so a timer would not have started regardless of policy.'
+	).toBeVisible();
+
+	/*
+	 * The block asked to rotate every two seconds. The placement says no, so the
+	 * server resolved `rotate` to false and the store has nothing to schedule.
+	 */
+	await expect(
+		slot,
+		'The slot was told not to rotate and the context still says it should.'
+	).toHaveAttribute( 'data-wp-context', /"rotate":false/ );
+
+	// One fill, and it stays one across several intervals of the rate the block
+	// asked for. Polled rather than slept once, so a timer that starts late still
+	// fails this.
+	await expect.poll( () => fills.length ).toBe( 1 );
+
+	await page.waitForTimeout( 5000 );
+
+	expect(
+		fills.length,
+		`A forbidden placement refetched ${ fills.length } times; the publisher's policy did not reach the timer.`
+	).toBe( 1 );
 } );

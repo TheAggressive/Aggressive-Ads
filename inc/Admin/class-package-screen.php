@@ -163,7 +163,7 @@ final class Package_Screen implements Service {
 				'saved'              => __( 'Package saved.', 'aggressive-ads' ),
 				'name'               => __( 'Name', 'aggressive-ads' ),
 				'placements'         => __( 'Placements', 'aggressive-ads' ),
-				'noPlacements'       => __( 'No placements exist yet. Create one under Inventory first.', 'aggressive-ads' ),
+				'noPlacements'       => __( 'No placements exist yet. Create one under Placements first.', 'aggressive-ads' ),
 				'inactive'           => __( 'inactive', 'aggressive-ads' ),
 				'customDuration'     => __( 'Advertiser chooses the dates', 'aggressive-ads' ),
 				'customDurationHelp' => __( 'Leave off to sell a fixed run length.', 'aggressive-ads' ),

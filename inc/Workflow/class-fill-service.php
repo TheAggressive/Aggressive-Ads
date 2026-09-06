@@ -11,10 +11,12 @@ namespace Aggressive\Ads\Workflow;
 
 use Aggressive\Ads\Core\Settings;
 use Aggressive\Ads\Domain\Campaign_Rules;
+use Aggressive\Ads\Domain\Opportunity;
 use Aggressive\Ads\Domain\Settings_Schema;
 use Aggressive\Ads\Domain\Viewability_Rules;
 use Aggressive\Ads\Domain\Upload_Rules;
 use Aggressive\Ads\Repository\Delivery_Repository;
+use Aggressive\Ads\Repository\Page_Context_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\REST\Creative_File_Controller;
 
@@ -26,18 +28,22 @@ final class Fill_Service {
 	/**
 	 * Constructor.
 	 *
-	 * @param Settings             $settings   Module and delivery flags.
-	 * @param Placement_Repository $placements Slot catalogue.
-	 * @param Delivery_Repository  $delivery   Token validation reads.
-	 * @param Fill_Token           $tokens     Signed beacon/click tokens.
-	 * @param Decision_Engine      $decisions  Assignment decision engine.
+	 * @param Settings                $settings   Module and delivery flags.
+	 * @param Placement_Repository    $placements Slot catalogue.
+	 * @param Page_Context_Repository $context    Page facts for contextual targeting.
+	 * @param Delivery_Repository     $delivery   Token validation reads.
+	 * @param Fill_Token              $tokens     Signed beacon/click tokens.
+	 * @param Decision_Engine         $decisions  Assignment decision engine.
+	 * @param Decision_Metrics        $metrics    Per-request decision counters.
 	 */
 	public function __construct(
 		private readonly Settings $settings,
 		private readonly Placement_Repository $placements,
+		private readonly Page_Context_Repository $context,
 		private readonly Delivery_Repository $delivery,
 		private readonly Fill_Token $tokens,
-		private readonly Decision_Engine $decisions
+		private readonly Decision_Engine $decisions,
+		private readonly Decision_Metrics $metrics
 	) {
 	}
 
@@ -61,10 +67,13 @@ final class Fill_Service {
 	 *
 	 * The candidate set is cached; the winner is chosen per request.
 	 *
-	 * @param string $slug Placement post_name.
+	 * @param string $slug     Placement post_name.
+	 * @param int    $sequence Fill number within the page view, zero-based.
+	 * @param int    $viewport_width Reported viewport width in CSS pixels, or 0 for the base size.
+	 * @param int    $post_id        Post the slot is on, or 0 when none was reported.
 	 * @return array<string, mixed>|null
 	 */
-	public function for_slug( string $slug ): ?array {
+	public function for_slug( string $slug, int $sequence = 0, int $viewport_width = 0, int $post_id = 0 ): ?array {
 		if ( ! $this->is_enabled() ) {
 			return null;
 		}
@@ -75,7 +84,36 @@ final class Fill_Service {
 			return null;
 		}
 
-		$paid  = $this->paid_creative( $placement_id );
+		/*
+		 * The publisher's refresh policy, enforced where a client cannot skip
+		 * it.
+		 *
+		 * The policy also reaches the browser as slot context, and the store
+		 * honours it — this is the backstop for a client that does not, which
+		 * includes a hand-written request. A placement that forbids refresh
+		 * does not refresh, whatever the block attribute says, and a claimed
+		 * sequence past the per-view cap is refused rather than served and
+		 * counted.
+		 *
+		 * **Refused the same way a missing placement is, deliberately.** A
+		 * distinct response would tell an unauthenticated caller which
+		 * placements exist and what each one's refresh policy is, which is a
+		 * small disclosure for no benefit: the legitimate client already has
+		 * the policy in its context and does not need to discover it by
+		 * probing.
+		 */
+		if ( ! $this->placements->refresh_policy( $placement_id )->permits_sequence( $sequence ) ) {
+			return null;
+		}
+
+		/*
+		 * Declared before decisioning, so every outcome this request records is
+		 * filed under the same kind of inventory and `requests` still equals
+		 * `fills` plus the no-fill reasons within it.
+		 */
+		$this->metrics->for_opportunity( Opportunity::from_sequence( $sequence ) );
+
+		$paid  = $this->paid_creative( $placement_id, $viewport_width, $post_id );
 		$house = null;
 
 		if ( null === $paid && Settings_Schema::HOUSE_WHEN_EMPTY === $this->settings->house_policy() ) {
@@ -115,10 +153,12 @@ final class Fill_Service {
 	/**
 	 * Batch fill payloads for multiple placement slugs on a single page view.
 	 *
-	 * @param array<int, string> $slugs Requested slot slugs.
+	 * @param array<int, string> $slugs          Requested slot slugs.
+	 * @param int                $viewport_width Reported viewport width in CSS pixels, or 0 for the base size.
+	 * @param int                $post_id        Post the slots are on, or 0 when none was reported.
 	 * @return array<string, array<string, mixed>> Keyed by slot slug.
 	 */
-	public function for_slots( array $slugs ): array {
+	public function for_slots( array $slugs, int $viewport_width = 0, int $post_id = 0 ): array {
 		if ( ! $this->is_enabled() || array() === $slugs ) {
 			return array();
 		}
@@ -141,13 +181,21 @@ final class Fill_Service {
 			}
 
 			$rows                = $this->decisions->cached_rows( $placement_id, $now );
+			$serving             = $this->placements->size_map( $placement_id )->for_viewport( $viewport_width );
 			$slots_map[ $slug ]  = array(
 				'placement_id' => $placement_id,
 				'candidates'   => $rows,
+
+				/*
+				 * Per slot, because two placements on one page can be serving
+				 * different sizes at the same viewport. The coordinator merges
+				 * this into that slot's facts and the eligibility gate reads it.
+				 */
+				'size'         => $serving,
 			);
 			$valid_info[ $slug ] = array(
 				'placement_id' => $placement_id,
-				'size'         => $this->placements->size( $placement_id ),
+				'size'         => $serving,
 			);
 		}
 
@@ -155,7 +203,19 @@ final class Fill_Service {
 			return array();
 		}
 
-		$facts     = $this->request_facts();
+		/*
+		 * A page batch is a page opportunity by definition — it exists because
+		 * somebody loaded a page and asked for every slot on it at once.
+		 *
+		 * Declared here rather than inherited. The kind is one field on a
+		 * request-scoped service, and a path that does not set it takes
+		 * whatever the last request left, which for a rotation would file a
+		 * whole page of slots as refreshes and make the placement's supply
+		 * shrink the busier its rotation got.
+		 */
+		$this->metrics->for_opportunity( Opportunity::PAGE );
+
+		$facts     = array_merge( $this->request_facts(), $this->context->facts_for( $post_id ) );
 		$decisions = $this->decisions->decide_page( $slots_map, $now, null, $facts );
 		$payloads  = array();
 
@@ -248,16 +308,18 @@ final class Fill_Service {
 	/**
 	 * Chooses one creative through the assignment decision engine.
 	 *
-	 * @param int $placement_id Placement post id.
+	 * @param int $placement_id   Placement post id.
+	 * @param int $viewport_width Reported viewport width in CSS pixels, or 0 for the base size.
+	 * @param int $post_id        Post the slot is on, or 0 when none was reported.
 	 * @return array<string, mixed>|null
 	 */
-	private function paid_creative( int $placement_id ): ?array {
+	private function paid_creative( int $placement_id, int $viewport_width = 0, int $post_id = 0 ): ?array {
 		if ( ! $this->decisions->serving_ready() ) {
 			return null;
 		}
 
 		$now      = time();
-		$facts    = $this->request_facts();
+		$facts    = $this->facts_for( $placement_id, $viewport_width, $post_id );
 		$rows     = $this->decisions->cached_rows( $placement_id, $now );
 		$decision = $this->decisions->decide( $placement_id, $now, null, $rows, true, $facts );
 
@@ -294,6 +356,33 @@ final class Fill_Service {
 		}
 
 		return array( 'visitor_id' => $this->tokens->ip_hash( $ip ) );
+	}
+
+	/**
+	 * The request's facts, plus the size this placement is serving right now.
+	 *
+	 * **A fact of the request rather than of the placement.** A responsive
+	 * placement serves several sizes and which one applies depends on the
+	 * viewport that asked, so the size cannot be resolved once and cached with
+	 * the slot. `Eligibility_Stage` reads it to refuse a candidate whose
+	 * artwork is a different size — without which a placement holding only
+	 * 728x90 creatives would serve one into a 320x50 slot.
+	 *
+	 * A viewport of zero is a caller that reported none, and resolves to the
+	 * map's base. Every existing placement is a fixed map, so this is that
+	 * placement's only size and the gate is a no-op for it.
+	 *
+	 * @param int $placement_id  Placement post id.
+	 * @param int $viewport_width Reported viewport width in CSS pixels.
+	 * @param int $post_id        Post the slot is on, or 0 when none was reported.
+	 * @return array<string, mixed>
+	 */
+	private function facts_for( int $placement_id, int $viewport_width, int $post_id = 0 ): array {
+		$facts = array_merge( $this->request_facts(), $this->context->facts_for( $post_id ) );
+
+		$facts['size'] = $this->placements->size_map( $placement_id )->for_viewport( $viewport_width );
+
+		return $facts;
 	}
 
 	/**

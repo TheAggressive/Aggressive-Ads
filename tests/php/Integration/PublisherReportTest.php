@@ -15,6 +15,7 @@ use Aggressive\Ads\Admin\Reports_Screen;
 use Aggressive\Ads\Core\Settings;
 use Aggressive\Ads\Domain\Decision_Outcome;
 use Aggressive\Ads\Domain\No_Fill_Reason;
+use Aggressive\Ads\Domain\Opportunity;
 use Aggressive\Ads\Domain\Report_Period;
 use Aggressive\Ads\Domain\Settings_Schema;
 use Aggressive\Ads\Install\Installer;
@@ -119,6 +120,16 @@ final class PublisherReportTest extends WP_UnitTestCase {
 	 *
 	 * @return void
 	 */
+	public function test_every_opportunity_kind_has_a_label(): void {
+		$labels = Report_Data::opportunity_labels();
+
+		foreach ( Opportunity::all() as $kind ) {
+			$this->assertArrayHasKey( $kind, $labels, sprintf( 'No sentence for the inventory kind "%s".', $kind ) );
+			$this->assertNotSame( $kind, $labels[ $kind ], 'A kind is being rendered as its own code.' );
+			$this->assertNotSame( '', trim( $labels[ $kind ] ) );
+		}
+	}
+
 	public function test_every_reason_code_has_a_label(): void {
 		$labels = Report_Data::reason_labels();
 
@@ -163,6 +174,120 @@ final class PublisherReportTest extends WP_UnitTestCase {
 		}
 
 		$this->assertEqualsWithDelta( 0.20, $shares[ No_Fill_Reason::TARGETING_MISMATCH ], 0.0001 );
+	}
+
+	/**
+	 * **A refresh is not a page request, on the surface a publisher reads.**
+	 *
+	 * The column is stored correctly and then every production reader used to
+	 * `SUM` it away. A test that only asked the table would stay green while
+	 * the fill report invented supply from a timer.
+	 *
+	 * @return void
+	 */
+	public function test_a_refresh_is_not_counted_as_a_page_request(): void {
+		$today = gmdate( 'Y-m-d' );
+
+		$this->rollups->add(
+			$today,
+			7,
+			array(
+				Decision_Outcome::REQUEST => 10,
+				Decision_Outcome::FILL    => 8,
+			),
+			Opportunity::PAGE
+		);
+		$this->rollups->add(
+			$today,
+			7,
+			array(
+				Decision_Outcome::REQUEST => 40,
+				Decision_Outcome::FILL    => 40,
+			),
+			Opportunity::REFRESH
+		);
+
+		$fill = $this->data->fill( $this->data->period( 30 ), 7 );
+
+		$this->assertSame( 10, $fill['requests'], 'Refresh requests were added to page supply.' );
+		$this->assertSame( 8, $fill['fills'] );
+		$this->assertSame( 40, $fill['refresh']['requests'] );
+		$this->assertSame( 40, $fill['refresh']['fills'] );
+	}
+
+	/**
+	 * A refresh no-fill is explained as a refresh, not absorbed into "every
+	 * request was filled" because the page ones were.
+	 *
+	 * @return void
+	 */
+	public function test_a_refresh_no_fill_is_explained_as_a_refresh(): void {
+		wp_set_current_user( (int) self::factory()->user->create( array( 'role' => Roles::REVIEWER ) ) );
+
+		$today = gmdate( 'Y-m-d' );
+
+		$this->rollups->add(
+			$today,
+			7,
+			array(
+				Decision_Outcome::REQUEST => 10,
+				Decision_Outcome::FILL    => 10,
+			),
+			Opportunity::PAGE
+		);
+		$this->rollups->add(
+			$today,
+			7,
+			array(
+				Decision_Outcome::REQUEST          => 8,
+				Decision_Outcome::FILL             => 5,
+				No_Fill_Reason::TARGETING_MISMATCH => 3,
+			),
+			Opportunity::REFRESH
+		);
+
+		ob_start();
+		$this->screen->render();
+		$html = (string) ob_get_clean();
+
+		$labels = Report_Data::reason_labels();
+
+		$this->assertStringContainsString( 'Every page request was filled.', $html );
+		$this->assertStringContainsString( 'Why refresh requests were not filled', $html );
+		$this->assertStringContainsString( esc_html( $labels[ No_Fill_Reason::TARGETING_MISMATCH ] ), $html );
+		$this->assertStringContainsString( 'Refresh fill rate:', $html );
+		$this->assertStringNotContainsString( 'Every request was filled.', $html );
+	}
+
+	/**
+	 * Refresh-only traffic is a report, not the empty-state sentence.
+	 *
+	 * @return void
+	 */
+	public function test_refresh_only_traffic_is_not_an_empty_report(): void {
+		wp_set_current_user( (int) self::factory()->user->create( array( 'role' => Roles::REVIEWER ) ) );
+
+		$this->rollups->add(
+			gmdate( 'Y-m-d' ),
+			7,
+			array(
+				Decision_Outcome::REQUEST        => 4,
+				Decision_Outcome::FILL           => 1,
+				No_Fill_Reason::FREQUENCY_CAPPED => 3,
+			),
+			Opportunity::REFRESH
+		);
+
+		ob_start();
+		$this->screen->render();
+		$html = (string) ob_get_clean();
+
+		$labels = Report_Data::reason_labels();
+
+		$this->assertStringNotContainsString( 'No advertisement was requested in this window', $html );
+		$this->assertStringContainsString( 'Why refresh requests were not filled', $html );
+		$this->assertStringContainsString( esc_html( $labels[ No_Fill_Reason::FREQUENCY_CAPPED ] ), $html );
+		$this->assertStringContainsString( 'Page requests: 0', $html );
 	}
 
 	/**
@@ -423,7 +548,7 @@ final class PublisherReportTest extends WP_UnitTestCase {
 		$unknown = (string) ob_get_clean();
 
 		// The site total, which includes the known placement's seven requests.
-		$this->assertStringContainsString( 'Requests: 7', $unknown, 'An unknown placement id was used as a filter instead of being refused.' );
+		$this->assertStringContainsString( 'Page requests: 7', $unknown, 'An unknown placement id was used as a filter instead of being refused.' );
 
 		$_GET['placement'] = (string) $known;
 
@@ -432,7 +557,7 @@ final class PublisherReportTest extends WP_UnitTestCase {
 		$filtered = (string) ob_get_clean();
 
 		// And a real id still filters, so the fallback is not swallowing every id.
-		$this->assertStringContainsString( 'Requests: 7', $filtered );
+		$this->assertStringContainsString( 'Page requests: 7', $filtered );
 		$this->assertStringContainsString( 'selected', $filtered, 'A known placement was not marked selected in the control.' );
 	}
 
@@ -492,12 +617,32 @@ final class PublisherReportTest extends WP_UnitTestCase {
 
 		$header = ltrim( (string) strtok( $csv, "\r\n" ), "\xEF\xBB\xBF" );
 
-		$this->assertSame( 'Date (UTC),Placement,Placement ID,Outcome,Code,Events', $header );
+		$this->assertSame( 'Date (UTC),Placement,Placement ID,Outcome,Code,Opportunity,Kind,Events', $header );
 		$this->assertCount( 3, $rows, 'One row per outcome that occurred, and no others.' );
 
 		// The sentence for a reader and the code for a machine, both present.
 		$this->assertStringContainsString( Report_Data::reason_labels()[ No_Fill_Reason::TARGETING_MISMATCH ], $csv );
 		$this->assertStringContainsString( No_Fill_Reason::TARGETING_MISMATCH, $csv );
+	}
+
+	/**
+	 * The export keeps a page row and a refresh row apart.
+	 *
+	 * @return void
+	 */
+	public function test_the_export_does_not_merge_a_refresh_into_a_page_row(): void {
+		$today = gmdate( 'Y-m-d' );
+
+		$this->rollups->add( $today, 11, array( Decision_Outcome::REQUEST => 10 ), Opportunity::PAGE );
+		$this->rollups->add( $today, 11, array( Decision_Outcome::REQUEST => 4 ), Opportunity::REFRESH );
+
+		$rows = $this->rollups->daily_outcomes( $today, $today, 11 );
+		$csv  = $this->export->document( $rows );
+
+		$this->assertCount( 2, $rows, 'A refresh was merged into the page row beside it.' );
+		$this->assertSame( array( Opportunity::PAGE, Opportunity::REFRESH ), array_column( $rows, 'opportunity' ) );
+		$this->assertStringContainsString( ',' . Report_Data::opportunity_labels()[ Opportunity::PAGE ] . ',' . Opportunity::PAGE . ',10', $csv );
+		$this->assertStringContainsString( ',' . Report_Data::opportunity_labels()[ Opportunity::REFRESH ] . ',' . Opportunity::REFRESH . ',4', $csv );
 	}
 
 	/**

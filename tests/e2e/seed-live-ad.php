@@ -19,6 +19,8 @@ declare(strict_types=1);
 use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Domain\Assignment_Rules;
+use Aggressive\Ads\Domain\Refresh_Policy;
+use Aggressive\Ads\Domain\Slot_Options;
 use Aggressive\Ads\Install\Creative_Assignment_Migrator;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Workflow\Campaign_State_Machine;
@@ -174,6 +176,63 @@ $wpdb->insert(
 	)
 );
 
+/*
+ * A placement that asks to rotate and is not permitted to.
+ *
+ * **Created before the transition below, and sold, and both matter.**
+ *
+ * Sold, because an unsold placement never rotates whatever its policy says:
+ * the first fill returns nothing, the slot collapses, and no timer is ever
+ * scheduled. A browser test built on an empty placement passes with the policy
+ * gate deleted, because it measures the absence of inventory rather than the
+ * presence of a rule. That is what the first version of this fixture did.
+ *
+ * Before the transition, because `Assignment_Projection` promotes artwork onto
+ * the assignments that exist when the campaign goes live. An assignment
+ * inserted afterwards keeps `attachment_id` at zero, the engine refuses it with
+ * `eligibility_missing_attachment`, and the slot silently never fills — which
+ * is the same defect the projection entry in `open-work.md` was written about.
+ * Nothing here writes the projected columns by hand; the real transition does.
+ */
+$aggr_forbidden = get_page_by_path( 'e2e-forbidden-placement', OBJECT, Post_Types::PLACEMENT );
+
+if ( $aggr_forbidden instanceof WP_Post ) {
+	wp_delete_post( $aggr_forbidden->ID, true );
+}
+
+$aggr_forbidden_id = (int) wp_insert_post(
+	array(
+		'post_type'   => Post_Types::PLACEMENT,
+		'post_status' => 'publish',
+		'post_title'  => 'E2E forbidden refresh',
+		'post_name'   => 'e2e-forbidden-placement',
+	)
+);
+
+update_post_meta( $aggr_forbidden_id, Placement_Repository::META_IS_ACTIVE, 1 );
+update_post_meta( $aggr_forbidden_id, Placement_Repository::META_SIZE, '728x90' );
+
+( new Placement_Repository() )->set_refresh_policy( $aggr_forbidden_id, false, 2, 6 );
+
+// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Seeding this plugin's own table for a browser fixture.
+$wpdb->insert(
+	$aggr_assignments->table_name(),
+	array(
+		'line_item_id'  => (int) $aggr_campaign_id,
+		'campaign_id'   => (int) $aggr_campaign_id,
+		'placement_id'  => $aggr_forbidden_id,
+		'revision_id'   => (int) $aggr_creative_id,
+		'status'        => Assignment_Rules::READY,
+		'weight'        => 100,
+		'click_url'     => home_url( '/e2e-click-landing/' ),
+		'attachment_id' => 0,
+		'alt_text'      => 'E2E forbidden refresh advertisement',
+		'width'         => 728,
+		'height'        => 90,
+		'revision'      => 1,
+	)
+);
+
 // Serving reads assignments only once the backfill reports finished.
 update_option( Creative_Assignment_Migrator::OPTION_DONE, 1 );
 
@@ -248,6 +307,20 @@ wp_insert_post(
 $aggr_rotating = '<!-- wp:aggr/ad-slot {"slot":"e2e-browser-placement","rotate":true,"rotateSeconds":2} /-->';
 
 /*
+ * The same file that asks to rotate has to grant the policy. This placement
+ * is created after activation, so the upgrade backfill never sees it, and a
+ * grant sitting only in another seed is how a new rotating page would ship
+ * with `rotate:true` resolved to off.
+ */
+$aggr_placements = new Placement_Repository();
+$aggr_placements->set_refresh_policy(
+	$aggr_placement_id,
+	true,
+	Slot_Options::MIN_ROTATE_SECONDS,
+	Refresh_Policy::LEGACY_CLIENT_MAX_PER_VIEW
+);
+
+/*
  * A placement nothing can ever fill: active, correctly sized, and with no
  * campaign pointing at it. That is an unsold slot, which is the ordinary state
  * of most inventory most of the time — not an error, and the case the slot has
@@ -280,6 +353,24 @@ $aggr_unsold = '<!-- wp:aggr/ad-slot {"slot":"e2e-empty-placement"} /-->';
  * would not carry.
  */
 $aggr_static = '<!-- wp:aggr/ad-slot {"slot":"e2e-browser-placement"} /-->';
+
+$aggr_forbidden_slot = '<!-- wp:aggr/ad-slot {"slot":"e2e-forbidden-placement","rotate":true,"rotateSeconds":2} /-->';
+
+$aggr_forbidden_page = get_page_by_path( 'e2e-refresh-policy', OBJECT, 'page' );
+
+if ( $aggr_forbidden_page instanceof WP_Post ) {
+	wp_delete_post( $aggr_forbidden_page->ID, true );
+}
+
+wp_insert_post(
+	array(
+		'post_type'    => 'page',
+		'post_status'  => 'publish',
+		'post_title'   => 'E2E refresh policy',
+		'post_name'    => 'e2e-refresh-policy',
+		'post_content' => $aggr_forbidden_slot . $aggr_spacer,
+	)
+);
 
 $aggr_rotation_page = get_page_by_path( 'e2e-rotation', OBJECT, 'page' );
 

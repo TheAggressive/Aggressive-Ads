@@ -11,6 +11,7 @@ namespace Aggressive\Ads\Tests\Integration;
 
 use Aggressive\Ads\Domain\Array_Frequency_Store;
 use Aggressive\Ads\Domain\Decision_Outcome;
+use Aggressive\Ads\Domain\Opportunity;
 use Aggressive\Ads\Domain\Decision_Pipeline;
 use Aggressive\Ads\Domain\No_Fill_Reason;
 use Aggressive\Ads\Install\Creative_Assignment_Migrator;
@@ -288,6 +289,37 @@ final class DecisionMetricsTest extends WP_UnitTestCase {
 	 * Without it the buffer is discarded at the end of every request and every
 	 * assertion above passes on a counter that never persists.
 	 */
+	/**
+	 * An unknown kind resets to page, it does not keep the last request's kind.
+	 *
+	 * @return void
+	 */
+	public function test_an_unknown_kind_does_not_inherit_the_previous_request(): void {
+		$this->metrics->for_opportunity( Opportunity::REFRESH );
+		$this->engine()->decide( 99, time(), 1, array( self::unservable() ) );
+		$this->metrics->flush();
+
+		$this->metrics->for_opportunity( 'pageview' );
+		$this->engine()->decide( 100, time(), 1, array( self::unservable() ) );
+		$this->metrics->flush();
+
+		$today = gmdate( 'Y-m-d' );
+
+		$this->assertSame(
+			1,
+			$this->rollups->totals_for_placement( 99, $today, $today, Opportunity::REFRESH )[ Decision_Outcome::REQUEST ] ?? 0
+		);
+		$this->assertSame(
+			1,
+			$this->rollups->totals_for_placement( 100, $today, $today, Opportunity::PAGE )[ Decision_Outcome::REQUEST ] ?? 0,
+			'A typo after a refresh filed the next request as a refresh.'
+		);
+		$this->assertSame(
+			0,
+			$this->rollups->totals_for_placement( 100, $today, $today, Opportunity::REFRESH )[ Decision_Outcome::REQUEST ] ?? 0
+		);
+	}
+
 	public function test_the_shutdown_hook_is_what_writes_the_counts(): void {
 		$metrics = new Decision_Metrics( $this->rollups );
 		$metrics->init();

@@ -1,16 +1,24 @@
 /**
- * The placement catalogue, in core's component set.
+ * The placement catalogue, in DataViews.
+ *
+ * The previous version rendered one expanded Card per placement: every field
+ * open at once, plus a second always-open create form. That reads at five
+ * placements and stops reading at fifty. DataViews inverts it. The list is a
+ * table you can search, sort and filter, and the writes move behind a modal.
  *
  * Nothing autosaves, for the reason Packages does not: a slot slug is what a
  * published page renders an ad into, and "active" decides whether advertisers
  * can buy the slot at all. A half-typed slug is not a state the catalogue
- * should ever briefly hold. Every change is staged locally and written when the
- * person says so.
+ * should ever briefly hold.
  *
  * There is no delete, and there must not be one. A placement is referenced by
- * every package that sells it and every campaign that bought one, so removing a
- * row would orphan the snapshot those point at. Deactivating hides it from
+ * every package that sells it and every campaign that bought one, so removing
+ * a row would orphan the snapshot those point at. Deactivating hides it from
  * advertisers and leaves the history intact.
+ *
+ * `@wordpress/dataviews` is bundled, not externalised. WordPress 7.1 registers
+ * no `wp-dataviews` handle. See the BUNDLE_NOT_EXTERNAL note in
+ * webpack.admin.config.mjs.
  *
  * Strings arrive from PHP. `wp i18n make-pot` does not parse .tsx, so an __()
  * call here would compile, run, and produce no catalog entry at all.
@@ -18,296 +26,193 @@
 
 import type { ReactElement } from 'react';
 import apiFetch from '@wordpress/api-fetch';
-import { createRoot, useState } from '@wordpress/element';
+import { createRoot, useMemo, useState } from '@wordpress/element';
+import { Button, Notice } from '@wordpress/components';
+import { DataViews, filterSortAndPaginate } from '@wordpress/dataviews';
+import type {
+	Action,
+	Field as DataField,
+	View as DataView,
+} from '@wordpress/dataviews';
+import { errorMessage, setStrings, t } from '../shared/save';
+import { PlacementModal } from './form';
 import {
-	Button,
-	Card,
-	CardBody,
-	CardHeader,
-	Notice,
-	SelectControl,
-	TextControl,
-	ToggleControl,
-	__experimentalHeading as Heading,
-	__experimentalHStack as HStack,
-	__experimentalVStack as VStack,
-} from '@wordpress/components';
-import { SaveError, setStrings, t, useAction } from '../shared/save';
+	EMPTY,
+	blankPlacement,
+	body,
+	type Bootstrap,
+	type Catalogue,
+	type Placement,
+} from './types';
+import './style.css';
 
-const CUSTOM = 'custom';
-
-type Placement = {
-	id: number;
-	name: string;
-	slug: string;
-	size: string;
-	size_preset: string;
-	size_width: number;
-	size_height: number;
-	active: boolean;
-	sort_order: number;
-	house_attachment_id: number;
-	house_click_url: string;
-	house_alt: string;
+const DEFAULT_VIEW: DataView = {
+	type: 'table',
+	search: '',
+	page: 1,
+	perPage: 25,
+	sort: { field: 'name', direction: 'asc' },
+	filters: [],
+	titleField: 'name',
+	fields: [ 'slug', 'size', 'status', 'refresh', 'groups' ],
+	layout: {},
 };
-
-type View = {
-	sizes: Record< string, string >;
-	rows: Placement[];
-};
-
-type Bootstrap = {
-	view: View;
-	restPath: string;
-	i18n: Record< string, string >;
-};
-
-const EMPTY: Bootstrap = {
-	view: { sizes: {}, rows: [] },
-	restPath: '',
-	i18n: {},
-};
-
-const BLANK: Placement = {
-	id: 0,
-	name: '',
-	slug: '',
-	size: '',
-	size_preset: '',
-	size_width: 0,
-	size_height: 0,
-	active: true,
-	sort_order: 0,
-	house_attachment_id: 0,
-	house_click_url: '',
-	house_alt: '',
-};
-
-/** The body the REST route allowlists. */
-function body( draft: Placement ): Record< string, unknown > {
-	return {
-		name: draft.name,
-		slug: draft.slug,
-		size_preset: draft.size_preset,
-		size_width: draft.size_width,
-		size_height: draft.size_height,
-		sort_order: draft.sort_order,
-		is_active: draft.active,
-		house_attachment_id: draft.house_attachment_id,
-		house_click_url: draft.house_click_url,
-		house_alt: draft.house_alt,
-	};
-}
-
-/**
- * One placement's editable form.
- *
- * Held as a draft rather than written through, so an abandoned edit changes
- * nothing. The Save button is the only thing that writes.
- */
-function PlacementForm( {
-	value,
-	sizes,
-	submitLabel,
-	onSubmit,
-	busy,
-}: {
-	value: Placement;
-	sizes: Record< string, string >;
-	submitLabel: string;
-	onSubmit: ( draft: Placement ) => void;
-	busy: boolean;
-} ): ReactElement {
-	const [ draft, setDraft ] = useState( value );
-
-	const set = ( patch: Partial< Placement > ): void =>
-		setDraft( { ...draft, ...patch } );
-
-	const sizeOptions = [
-		{ label: t( 'chooseSize' ), value: '' },
-		...Object.entries( sizes ).map( ( [ stored, label ] ) => ( {
-			label,
-			value: stored,
-		} ) ),
-		{ label: t( 'customSize' ), value: CUSTOM },
-	];
-
-	return (
-		<VStack spacing={ 4 }>
-			<TextControl
-				label={ t( 'name' ) }
-				value={ draft.name }
-				onChange={ ( name: string ) => set( { name } ) }
-				__nextHasNoMarginBottom
-				__next40pxDefaultSize
-			/>
-
-			<TextControl
-				label={ t( 'slug' ) }
-				help={ t( 'slugHelp' ) }
-				value={ draft.slug }
-				onChange={ ( slug: string ) => set( { slug } ) }
-				__nextHasNoMarginBottom
-				__next40pxDefaultSize
-			/>
-
-			<SelectControl
-				label={ t( 'size' ) }
-				value={ draft.size_preset }
-				options={ sizeOptions }
-				onChange={ ( size_preset: string ) => set( { size_preset } ) }
-				__nextHasNoMarginBottom
-				__next40pxDefaultSize
-			/>
-
-			{ CUSTOM === draft.size_preset ? (
-				<HStack
-					justify="flex-start"
-					alignment="flex-start"
-					spacing={ 3 }
-				>
-					<TextControl
-						label={ t( 'customWidth' ) }
-						type="number"
-						min={ 1 }
-						max={ 10000 }
-						value={ String( draft.size_width ) }
-						onChange={ ( width: string ) =>
-							set( { size_width: Number( width ) || 0 } )
-						}
-						__nextHasNoMarginBottom
-						__next40pxDefaultSize
-					/>
-					<TextControl
-						label={ t( 'customHeight' ) }
-						type="number"
-						min={ 1 }
-						max={ 10000 }
-						value={ String( draft.size_height ) }
-						onChange={ ( height: string ) =>
-							set( { size_height: Number( height ) || 0 } )
-						}
-						__nextHasNoMarginBottom
-						__next40pxDefaultSize
-					/>
-				</HStack>
-			) : (
-				<></>
-			) }
-
-			<TextControl
-				label={ t( 'sortOrder' ) }
-				help={ t( 'sortOrderHelp' ) }
-				type="number"
-				min={ 0 }
-				max={ 9999 }
-				value={ String( draft.sort_order ) }
-				onChange={ ( order: string ) =>
-					set( { sort_order: Number( order ) || 0 } )
-				}
-				__nextHasNoMarginBottom
-				__next40pxDefaultSize
-			/>
-
-			<ToggleControl
-				label={ t( 'active' ) }
-				help={ t( 'activeHelp' ) }
-				checked={ draft.active }
-				__nextHasNoMarginBottom
-				onChange={ ( active: boolean ) => set( { active } ) }
-			/>
-
-			<fieldset>
-				<legend>{ t( 'house' ) }</legend>
-				<VStack spacing={ 4 }>
-					<TextControl
-						label={ t( 'houseAttachment' ) }
-						help={ t( 'houseAttachmentHelp' ) }
-						type="number"
-						min={ 0 }
-						value={ String( draft.house_attachment_id ) }
-						onChange={ ( id: string ) =>
-							set( {
-								house_attachment_id: Number( id ) || 0,
-							} )
-						}
-						__nextHasNoMarginBottom
-						__next40pxDefaultSize
-					/>
-					<TextControl
-						label={ t( 'houseUrl' ) }
-						type="url"
-						value={ draft.house_click_url }
-						onChange={ ( house_click_url: string ) =>
-							set( { house_click_url } )
-						}
-						__nextHasNoMarginBottom
-						__next40pxDefaultSize
-					/>
-					<TextControl
-						label={ t( 'houseAlt' ) }
-						value={ draft.house_alt }
-						onChange={ ( house_alt: string ) =>
-							set( { house_alt } )
-						}
-						__nextHasNoMarginBottom
-						__next40pxDefaultSize
-					/>
-
-					{ /*
-					 * Not an error — a placement with no house advertisement is
-					 * a legitimate configuration, and the default one. It is
-					 * said out loud because the consequence is invisible from
-					 * this screen: the slot is simply absent on the page, which
-					 * looks the same as a slot nobody placed.
-					 */ }
-					{ 0 === draft.house_attachment_id ? (
-						<Notice status="info" isDismissible={ false }>
-							{ t( 'houseMissing' ) }
-						</Notice>
-					) : null }
-				</VStack>
-			</fieldset>
-
-			<HStack justify="flex-start">
-				<Button
-					variant="primary"
-					__next40pxDefaultSize
-					disabled={ busy }
-					onClick={ () => onSubmit( draft ) }
-				>
-					{ submitLabel }
-				</Button>
-			</HStack>
-		</VStack>
-	);
-}
 
 function App( { data }: { data: Bootstrap } ): ReactElement {
-	const [ view, setView ] = useState( data.view );
+	const [ catalogue, setCatalogue ] = useState< Catalogue >( data.view );
+	const [ table, setTable ] = useState< DataView >( DEFAULT_VIEW );
+	const [ creating, setCreating ] = useState( false );
+	const [ editing, setEditing ] = useState< Placement | null >( null );
+	const [ formError, setFormError ] = useState( '' );
 	const [ saved, setSaved ] = useState( '' );
-	const { error, busy, run, clearError } = useAction< { view: View } >();
+	const [ busy, setBusy ] = useState( false );
 
-	const write = async (
-		options: Record< string, unknown >,
-		message: string
-	): Promise< void > => {
+	const persist = async ( draft: Placement ): Promise< void > => {
+		setBusy( true );
+		setFormError( '' );
 		setSaved( '' );
 
-		const result = await run( () => apiFetch< { view: View } >( options ) );
+		try {
+			const result = await apiFetch< { view: Catalogue } >(
+				0 === draft.id
+					? {
+							path: `${ data.restPath }/catalogue`,
+							method: 'POST',
+							data: body( draft ),
+					  }
+					: {
+							path: `${ data.restPath }/${ draft.id }`,
+							method: 'PATCH',
+							data: body( draft ),
+					  }
+			);
 
-		if ( result ) {
-			// The server's view, not a local guess. Sort order re-sequences the
-			// whole list, and only the server knows what else moved.
-			setView( result.view );
-			setSaved( message );
+			// The server's catalogue, not a local guess. Sort order
+			// re-sequences the whole list, and only the server knows what
+			// else moved.
+			setCatalogue( result.view );
+			setCreating( false );
+			setEditing( null );
+			setSaved( 0 === draft.id ? t( 'created' ) : t( 'saved' ) );
+		} catch ( failure ) {
+			setFormError( errorMessage( failure ) );
+		} finally {
+			setBusy( false );
 		}
 	};
 
-	return (
-		<VStack spacing={ 5 }>
-			<SaveError message={ error } onRetry={ undefined } />
+	const fields: DataField< Placement >[] = useMemo(
+		() => [
+			{
+				id: 'name',
+				label: t( 'name' ),
+				type: 'text',
+				enableGlobalSearch: true,
+			},
+			{
+				id: 'slug',
+				label: t( 'slug' ),
+				type: 'text',
+				enableGlobalSearch: true,
+			},
+			{
+				id: 'size',
+				label: t( 'size' ),
+				type: 'text',
+			},
+			{
+				id: 'status',
+				label: t( 'status' ),
+				elements: [
+					{ value: 'active', label: t( 'active' ) },
+					{ value: 'inactive', label: t( 'inactive' ) },
+				],
+				filterBy: { operators: [ 'is' ] },
+				getValue: ( { item }: { item: Placement } ) =>
+					item.active ? 'active' : 'inactive',
+			},
+			{
+				id: 'refresh',
+				label: t( 'refresh' ),
+				elements: [
+					{ value: 'on', label: t( 'refreshOn' ) },
+					{ value: 'off', label: t( 'refreshOff' ) },
+				],
+				filterBy: { operators: [ 'is' ] },
+				getValue: ( { item }: { item: Placement } ) =>
+					item.refresh_enabled ? 'on' : 'off',
+			},
+			{
+				/*
+				 * The point of a group is finding things, so it is a filter
+				 * before it is a column. `elements` is built from the groups
+				 * actually in use rather than a fixed list, because the
+				 * vocabulary is the publisher's own.
+				 *
+				 * `getValue` returns the joined slugs so search matches them;
+				 * the `is`/`is any` filter compares against that same string,
+				 * so a placement in several groups is found by any one of them
+				 * only because `contains` is offered alongside.
+				 */
+				id: 'groups',
+				label: t( 'groups' ),
+				enableGlobalSearch: true,
+				elements: ( catalogue.all_groups ?? [] ).map(
+					( group: string ) => ( { value: group, label: group } )
+				),
+				filterBy: { operators: [ 'contains' ] },
+				getValue: ( { item }: { item: Placement } ) =>
+					( item.groups ?? [] ).join( ' ' ),
+			},
+			{
+				id: 'sort_order',
+				label: t( 'sortOrder' ),
+				type: 'integer',
+			},
+		],
+		// The group filter's options come from the data, so this list is not
+		// constant the way the others are — an empty dependency array here
+		// would freeze the options at whatever was loaded first and never
+		// offer a group created since.
+		[ catalogue.all_groups ]
+	);
 
+	const actions: Action< Placement >[] = useMemo(
+		() => [
+			{
+				id: 'edit',
+				label: t( 'edit' ),
+				isPrimary: true,
+				supportsBulk: false,
+				callback: ( items: Placement[] ) => {
+					const item = items[ 0 ];
+
+					if ( item ) {
+						setFormError( '' );
+						setSaved( '' );
+						setEditing( item );
+					}
+				},
+			},
+		],
+		[]
+	);
+
+	const { data: rows, paginationInfo } = useMemo(
+		() => filterSortAndPaginate( catalogue.rows, table, fields ),
+		[ catalogue.rows, table, fields ]
+	);
+
+	const open =
+		creating || null !== editing
+			? editing ??
+			  blankPlacement(
+					catalogue.refresh_defaults ?? EMPTY.view.refresh_defaults
+			  )
+			: null;
+
+	return (
+		<>
 			{ saved ? (
 				<Notice
 					status="success"
@@ -318,75 +223,55 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 				</Notice>
 			) : null }
 
-			<Card>
-				<CardHeader>
-					<Heading level={ 2 }>{ t( 'newPlacement' ) }</Heading>
-				</CardHeader>
-				<CardBody>
-					<PlacementForm
-						// Remounting on catalogue length clears the form after a
-						// successful create, so the next placement starts blank
-						// instead of inheriting the last one's fields.
-						key={ `new-${ view.rows.length }` }
-						value={ BLANK }
-						sizes={ view.sizes }
-						submitLabel={ t( 'create' ) }
-						busy={ busy }
-						onSubmit={ ( draft ) => {
-							clearError();
-							void write(
-								{
-									path: `${ data.restPath }/catalogue`,
-									method: 'POST',
-									data: body( draft ),
-								},
-								t( 'created' )
-							);
-						} }
-					/>
-				</CardBody>
-			</Card>
+			<section className="aggr-section">
+				<DataViews< Placement >
+					data={ rows }
+					fields={ fields }
+					view={ table }
+					onChangeView={ setTable }
+					actions={ actions }
+					paginationInfo={ paginationInfo }
+					getItemId={ ( item ) => String( item.id ) }
+					defaultLayouts={ { table: {} } }
+					searchLabel={ t( 'search' ) }
+					header={
+						<Button
+							variant="primary"
+							onClick={ () => {
+								setFormError( '' );
+								setSaved( '' );
+								setEditing( null );
+								setCreating( true );
+							} }
+						>
+							{ t( 'newPlacement' ) }
+						</Button>
+					}
+					empty={ <p>{ t( 'none' ) }</p> }
+				/>
+			</section>
 
-			{ /*
-			 * A plain div rather than a components layout primitive: the grid
-			 * and its breakpoints live in src/styles/admin-native.css, which is
-			 * already enqueued on every Advertising screen. Inline styles could
-			 * not express the breakpoints, and a second stylesheet for one rule
-			 * would be a second thing to remember to load.
-			 */ }
-			<div className="aggr-card-grid">
-				{ view.rows.map( ( row ) => (
-					<Card key={ row.id }>
-						<CardHeader>
-							<Heading level={ 2 }>
-								{ `${ row.name } (${ row.size })` }
-								{ row.active ? '' : ` — ${ t( 'inactive' ) }` }
-							</Heading>
-						</CardHeader>
-						<CardBody>
-							<PlacementForm
-								key={ `${ row.id }-${ row.active }-${ row.size }` }
-								value={ row }
-								sizes={ view.sizes }
-								submitLabel={ t( 'save' ) }
-								busy={ busy }
-								onSubmit={ ( draft ) => {
-									clearError();
-									void write(
-										{
-											path: `${ data.restPath }/${ row.id }`,
-											method: 'PATCH',
-											data: body( draft ),
-										},
-										t( 'saved' )
-									);
-								} }
-							/>
-						</CardBody>
-					</Card>
-				) ) }
-			</div>
-		</VStack>
+			{ null !== open ? (
+				<PlacementModal
+					key={ 0 === open.id ? 'new' : open.id }
+					value={ open }
+					sizes={ catalogue.sizes }
+					allGroups={ catalogue.all_groups ?? EMPTY.view.all_groups }
+					ceiling={
+						catalogue.refresh_ceiling ?? EMPTY.view.refresh_ceiling
+					}
+					submitLabel={ 0 === open.id ? t( 'create' ) : t( 'save' ) }
+					busy={ busy }
+					error={ formError }
+					onCancel={ () => {
+						setCreating( false );
+						setEditing( null );
+						setFormError( '' );
+					} }
+					onSubmit={ ( draft ) => void persist( draft ) }
+				/>
+			) : null }
+		</>
 	);
 }
 

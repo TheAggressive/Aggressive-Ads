@@ -19,7 +19,7 @@ import apiFetch from '@wordpress/api-fetch';
  * number is two too many, but the alternatives are worse: the editor bundle
  * cannot import the view module without pulling the Interactivity runtime into
  * the editor, and reading it from PHP would mean a REST round trip to render a
- * slider. `PlacementSlotTest` asserts the three agree.
+ * slider. `ClientConstantParityTest` reads this file and fails if they drift.
  */
 const MIN_ROTATE_SECONDS = 1;
 
@@ -280,7 +280,7 @@ export default function Edit( { attributes, setAttributes } ) {
 									isDismissible={ false }
 								>
 									{ __(
-										'No active placements yet. Create one under Advertising → Inventory.',
+										'No active placements yet. Create one under Advertising → Placements.',
 										'aggressive-ads'
 									) }
 								</Notice>

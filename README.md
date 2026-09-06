@@ -25,9 +25,9 @@ block. Sign-in, signup, password setup and recovery are portal-owned;
 enter wp-admin (`Admin_Guard`). Screens: dashboard, campaigns, six-step wizard,
 organization, account, help.
 
-**Staff admin** under one Advertising menu: Review, Organizations, Inventory,
+**Staff admin** under one Advertising menu: Review, Organizations, Placements,
 Packages, Settings. Distinct capabilities; `aggr_access_staff` is derived, never
-granted on a role. Inventory is the placement catalogue (common IAB sizes or
+granted on a role. Placements is the slot catalogue (common IAB sizes or
 custom W×H). Packages are staff-written; campaigns keep snapshots.
 
 **Native delivery** is always on, not a Modules checkbox. Editors place
@@ -135,7 +135,7 @@ pnpm lint:js                 # ESLint on src/
 pnpm typecheck               # tsc --noEmit
 pnpm lint:css                # Stylelint on every authored CSS file under src/
 pnpm test:js                 # Jest on Interactivity helpers
-pnpm lint:files              # file length, repository boundary, permission callbacks
+pnpm lint:files              # file length, boundaries, permission callbacks, client contract
 pnpm ci:coverage             # combined unit + integration PCOV coverage
 pnpm test:e2e:browsers       # install Chromium and WebKit
 pnpm test:e2e:install        # the same, plus system libraries (needs sudo; what CI runs)
@@ -183,7 +183,7 @@ Start with [docs/README.md](docs/README.md). Short version:
 
 | Doc | Covers |
 |---|---|
-| [architecture.md](docs/architecture.md) | Layers, native fill, Inventory, no downstream ads CPT |
+| [architecture.md](docs/architecture.md) | Layers, native fill, Placements, no downstream ads CPT |
 | [domain-model.md](docs/domain-model.md) | Five entities, storage, invariants |
 | [campaign-workflow.md](docs/campaign-workflow.md) | The state machine every status write goes through |
 | [roles-and-capabilities.md](docs/roles-and-capabilities.md) | Who may do what |

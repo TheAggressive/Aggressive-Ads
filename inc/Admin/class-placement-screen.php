@@ -70,17 +70,43 @@ final class Placement_Screen implements Service {
 			return;
 		}
 
-		$meta = require $asset;
+		$meta    = require $asset;
+		$version = is_string( $meta['version'] ?? null ) ? $meta['version'] : AGGR_VERSION;
+
+		// The bundle's .asset.php names aggr-dataviews as a dependency, because
+		// the build rewrote its @wordpress/dataviews import onto the shared
+		// copy. Registering it here is what lets WordPress resolve that.
+		Shared_Assets::register();
 
 		wp_enqueue_script(
 			'aggr-inventory',
 			AGGR_PLUGIN_URL . 'dist/admin/inventory.js',
 			is_array( $meta['dependencies'] ?? null ) ? $meta['dependencies'] : array(),
-			is_string( $meta['version'] ?? null ) ? $meta['version'] : AGGR_VERSION,
+			$version,
 			true
 		);
 
 		wp_enqueue_style( 'wp-components' );
+
+		/*
+		 * The shared DataViews stylesheet, named as a dependency rather than
+		 * enqueued beside this one, so it always loads first: this screen's
+		 * rules restyle DataViews components and would lose to them otherwise.
+		 *
+		 * A script dependency does not bring a stylesheet — WordPress resolves
+		 * script and style handles separately — so this is the only thing that
+		 * puts it on the page.
+		 */
+		wp_enqueue_style(
+			'aggr-inventory',
+			AGGR_PLUGIN_URL . 'dist/admin/inventory.css',
+			array( 'wp-components', Shared_Assets::DATAVIEWS ),
+			$version
+		);
+
+		// The build emits inventory-rtl.css beside it; core swaps the file
+		// wholesale rather than appending overrides.
+		wp_style_add_data( 'aggr-inventory', 'rtl', 'replace' );
 	}
 
 	/**
@@ -89,8 +115,8 @@ final class Placement_Screen implements Service {
 	public function register_menu(): void {
 		$hook = add_submenu_page(
 			Menu::PARENT_SLUG,
-			__( 'Inventory', 'aggressive-ads' ),
-			__( 'Inventory', 'aggressive-ads' ),
+			__( 'Placements', 'aggressive-ads' ),
+			__( 'Placements', 'aggressive-ads' ),
 			Capabilities::MANAGE_PLACEMENTS,
 			self::MENU_SLUG,
 			array( $this, 'render' )
@@ -98,14 +124,6 @@ final class Placement_Screen implements Service {
 
 		$this->hook_suffix = is_string( $hook ) ? $hook : '';
 	}
-
-	/*
-	 * No stylesheet is enqueued here.
-	 *
-	 * This screen is native WordPress admin markup — wrap, notice, and core's
-	 * own component set — so core already styles every part of it. Loading the
-	 * plugin's design system would only give it something to fight.
-	 */
 
 	/**
 	 * Renders the authorized catalogue.
@@ -131,8 +149,8 @@ final class Placement_Screen implements Service {
 		if ( ! is_file( AGGR_PLUGIN_DIR . 'dist/admin/inventory.asset.php' ) ) {
 			printf(
 				'<div class="wrap"><h1>%1$s</h1><div class="notice notice-error"><p>%2$s</p></div></div>',
-				esc_html__( 'Inventory', 'aggressive-ads' ),
-				esc_html__( 'The inventory screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' )
+				esc_html__( 'Placements', 'aggressive-ads' ),
+				esc_html__( 'The placements screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' )
 			);
 
 			return;
@@ -143,10 +161,18 @@ final class Placement_Screen implements Service {
 			'restPath' => '/' . Creative_File_Controller::NAMESPACE . '/placements',
 			'i18n'     => array(
 				'newPlacement'        => __( 'New placement', 'aggressive-ads' ),
+				'editPlacement'       => __( 'Edit placement', 'aggressive-ads' ),
 				'create'              => __( 'Create placement', 'aggressive-ads' ),
 				'save'                => __( 'Save placement', 'aggressive-ads' ),
 				'created'             => __( 'Placement created.', 'aggressive-ads' ),
 				'saved'               => __( 'Placement saved.', 'aggressive-ads' ),
+				'edit'                => __( 'Edit', 'aggressive-ads' ),
+				'cancel'              => __( 'Cancel', 'aggressive-ads' ),
+				'search'              => __( 'Search placements', 'aggressive-ads' ),
+				'none'                => __( 'No placements yet.', 'aggressive-ads' ),
+				'status'              => __( 'Status', 'aggressive-ads' ),
+				'refreshOn'           => __( 'Allowed', 'aggressive-ads' ),
+				'refreshOff'          => __( 'Off', 'aggressive-ads' ),
 				'name'                => __( 'Name', 'aggressive-ads' ),
 				'slug'                => __( 'Slot slug', 'aggressive-ads' ),
 				'slugHelp'            => __( 'Used by the placement block to choose this slot. Lowercase letters, numbers and hyphens.', 'aggressive-ads' ),
@@ -160,6 +186,23 @@ final class Placement_Screen implements Service {
 				'active'              => __( 'Active', 'aggressive-ads' ),
 				'activeHelp'          => __( 'Inactive placements are hidden from advertisers and stop being filled.', 'aggressive-ads' ),
 				'inactive'            => __( 'inactive', 'aggressive-ads' ),
+				'refresh'             => __( 'Refresh', 'aggressive-ads' ),
+				'responsive'          => __( 'Responsive sizes', 'aggressive-ads' ),
+				'responsiveHelp'      => __( 'Serve a different size at different screen widths. Leave empty to serve one size everywhere. Each row is the narrowest screen that gets that size, so the first row must start at 0.', 'aggressive-ads' ),
+				'breakpointWidth'     => __( 'From screen width (px)', 'aggressive-ads' ),
+				'breakpointSize'      => __( 'Serves size', 'aggressive-ads' ),
+				'addBreakpoint'       => __( 'Add a size', 'aggressive-ads' ),
+				'removeBreakpoint'    => __( 'Remove', 'aggressive-ads' ),
+				'breakpointBaseNote'  => __( 'A responsive placement needs a row starting at 0, or it serves its single size everywhere.', 'aggressive-ads' ),
+				'groups'              => __( 'Groups', 'aggressive-ads' ),
+				'groupsLabel'         => __( 'Filed under', 'aggressive-ads' ),
+				'groupsHelp'          => __( 'Your own filing, for finding placements and totalling them together. Groups do not change which advertisement is served, and an advertiser never sees them. Labels are simplified when saved.', 'aggressive-ads' ),
+				'refreshEnabled'      => __( 'Allow refresh', 'aggressive-ads' ),
+				'refreshEnabledHelp'  => __( 'When on, a slot on this placement may replace its advertisement on a timer. The block still has to ask. Off is the default: a new placement is not inventory somebody chose to multiply.', 'aggressive-ads' ),
+				'refreshSeconds'      => __( 'Shortest interval (seconds)', 'aggressive-ads' ),
+				'refreshSecondsHelp'  => __( 'A block asking to rotate faster than this gets this number. A slower request is honoured.', 'aggressive-ads' ),
+				'refreshMax'          => __( 'Refreshes per page view', 'aggressive-ads' ),
+				'refreshMaxHelp'      => __( 'How many times one slot may refresh after the first fill. Zero keeps refresh on but starts no timer.', 'aggressive-ads' ),
 				'house'               => __( 'House advertisement', 'aggressive-ads' ),
 				'houseAttachment'     => __( 'House attachment ID', 'aggressive-ads' ),
 				'houseAttachmentHelp' => __( 'Shown when no paid creative is live, if the Delivery house-ad policy allows it. Leave at 0 for none.', 'aggressive-ads' ),
@@ -177,8 +220,8 @@ final class Placement_Screen implements Service {
 
 		printf(
 			'<div class="wrap aggr-admin"><h1>%1$s</h1><noscript><div class="notice notice-error"><p>%2$s</p></div></noscript><div id="aggr-inventory-root" data-aggr-inventory="%3$s"></div></div>',
-			esc_html__( 'Inventory', 'aggressive-ads' ),
-			esc_html__( 'The inventory screen needs JavaScript enabled.', 'aggressive-ads' ),
+			esc_html__( 'Placements', 'aggressive-ads' ),
+			esc_html__( 'The placements screen needs JavaScript enabled.', 'aggressive-ads' ),
 			esc_attr( (string) wp_json_encode( $payload ) )
 		);
 	}

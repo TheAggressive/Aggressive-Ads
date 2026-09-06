@@ -24,7 +24,7 @@ final class Ad_Sizes {
 	public const CUSTOM = 'custom';
 
 	/**
-	 * Common sizes offered in Inventory, keyed by stored value.
+	 * Common sizes offered in Placements, keyed by stored value.
 	 *
 	 * @return array<string, string>
 	 */

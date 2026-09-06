@@ -12,6 +12,7 @@ namespace Aggressive\Ads\Admin;
 use Aggressive\Ads\Core\Csv_Download;
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Domain\Csv_Writer;
+use Aggressive\Ads\Domain\Opportunity;
 use Aggressive\Ads\Domain\Report_Period;
 use Aggressive\Ads\Repository\Decision_Rollup_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
@@ -141,7 +142,7 @@ final class Report_Export implements Service {
 	 * Rendering only the code would put a slug in front of a reader; rendering
 	 * only the sentence would make the file untranslatable to a machine.
 	 *
-	 * @param list<array{day: string, placement_id: int, outcome: string, events: int}> $rows Counter rows.
+	 * @param list<array{day: string, placement_id: int, outcome: string, opportunity?: string, events: int}> $rows Counter rows.
 	 */
 	public function document( array $rows ): string {
 		$header = array(
@@ -150,15 +151,19 @@ final class Report_Export implements Service {
 			__( 'Placement ID', 'aggressive-ads' ),
 			__( 'Outcome', 'aggressive-ads' ),
 			__( 'Code', 'aggressive-ads' ),
+			__( 'Opportunity', 'aggressive-ads' ),
+			__( 'Kind', 'aggressive-ads' ),
 			__( 'Events', 'aggressive-ads' ),
 		);
 
 		$labels = $this->outcome_labels();
+		$kinds  = Report_Data::opportunity_labels();
 		$names  = array();
 		$body   = array();
 
 		foreach ( $rows as $row ) {
 			$placement_id = $row['placement_id'];
+			$kind         = $row['opportunity'] ?? Opportunity::PAGE;
 
 			if ( ! isset( $names[ $placement_id ] ) ) {
 				$names[ $placement_id ] = $this->placements->name( $placement_id );
@@ -170,6 +175,8 @@ final class Report_Export implements Service {
 				$placement_id,
 				$labels[ $row['outcome'] ] ?? $row['outcome'],
 				$row['outcome'],
+				$kinds[ $kind ] ?? $kind,
+				$kind,
 				$row['events'],
 			);
 		}
