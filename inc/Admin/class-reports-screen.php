@@ -414,7 +414,14 @@ final class Reports_Screen implements Service {
 			return;
 		}
 
-		$this->open_scroll_region( __( 'Utilisation by placement', 'aggressive-ads' ) );
+		/*
+		 * Named so it collides with nothing. An accessible name is matched by
+		 * substring, so "Utilisation by placement" also answered to the
+		 * "Placement" filter's label and made that control ambiguous to any
+		 * caller asking for it by name — a browser test, and a screen reader
+		 * user navigating by form control.
+		 */
+		$this->open_scroll_region( __( 'Utilisation detail', 'aggressive-ads' ) );
 
 		echo '<table class="widefat striped">';
 		printf(
@@ -470,7 +477,9 @@ final class Reports_Screen implements Service {
 
 		printf( '<h2>%s</h2>', esc_html__( 'Utilisation by group', 'aggressive-ads' ) );
 
-		$this->open_scroll_region( __( 'Utilisation by group', 'aggressive-ads' ) );
+		// Not a superstring of the table region's name above, for the same
+		// substring-matching reason.
+		$this->open_scroll_region( __( 'Group totals', 'aggressive-ads' ) );
 
 		echo '<table class="widefat striped">';
 		printf(
