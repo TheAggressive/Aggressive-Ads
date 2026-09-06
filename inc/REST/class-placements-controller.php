@@ -271,6 +271,17 @@ final class Placements_Controller implements Service {
 			$fields['breakpoints'] = is_array( $body['breakpoints'] ) ? $body['breakpoints'] : array();
 		}
 
+		/*
+		 * Groups follow the same omitted-means-unchanged rule. Here the
+		 * consequence of getting it wrong is quieter than with breakpoints and
+		 * therefore worse: a placement silently leaves every group it was
+		 * filed under, nothing about delivery changes, and the only symptom is
+		 * a roll-up that stops counting it.
+		 */
+		if ( array_key_exists( 'groups', $body ) ) {
+			$fields['groups'] = is_array( $body['groups'] ) ? $body['groups'] : array();
+		}
+
 		return $fields;
 	}
 

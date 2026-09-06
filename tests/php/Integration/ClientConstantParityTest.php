@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Tests\Integration;
 
+use Aggressive\Ads\Domain\Placement_Groups;
 use Aggressive\Ads\Domain\Refresh_Policy;
 use Aggressive\Ads\Domain\Size_Map;
 use Aggressive\Ads\Domain\Slot_Options;
@@ -81,6 +82,11 @@ final class ClientConstantParityTest extends WP_UnitTestCase {
 				'MAX_BREAKPOINTS',
 				Size_Map::MAX_BREAKPOINTS,
 			),
+			'group ceiling'             => array(
+				'src/admin/inventory/types.ts',
+				'MAX_GROUPS',
+				Placement_Groups::MAX_GROUPS,
+			),
 		);
 
 		$checked = 0;
@@ -105,6 +111,6 @@ final class ClientConstantParityTest extends WP_UnitTestCase {
 
 		// A guard that stops matching reports success over code it is no longer
 		// reading, so it says how much it read.
-		$this->assertSame( 4, $checked, 'The parity list shrank; fewer constants are guarded than this claims.' );
+		$this->assertSame( 5, $checked, 'The parity list shrank; fewer constants are guarded than this claims.' );
 	}
 }

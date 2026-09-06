@@ -13,6 +13,15 @@ export const CUSTOM = 'custom';
  */
 export const MAX_BREAKPOINTS = 6;
 
+/**
+ * Most groups one placement may be filed under.
+ *
+ * Mirrors `Domain\Placement_Groups::MAX_GROUPS`. The server trims past it, so
+ * a form that let somebody add one more would show them a group that vanishes
+ * on save.
+ */
+export const MAX_GROUPS = 20;
+
 export type Placement = {
 	id: number;
 	name: string;
@@ -39,6 +48,15 @@ export type Placement = {
 	 * single entry at 0.
 	 */
 	breakpoints: Record< string, string >;
+
+	/**
+	 * The groups this placement is filed under, as slugs.
+	 *
+	 * Organisational only — nothing in delivery reads one. Sorted by the
+	 * server, so two placements filed the same way render identically without
+	 * the screen sorting again.
+	 */
+	groups: string[];
 };
 
 export type RefreshDefaults = {
@@ -51,6 +69,9 @@ export type Catalogue = {
 	sizes: Record< string, string >;
 	refresh_defaults: RefreshDefaults;
 	refresh_ceiling: number;
+
+	/** Every group already in use, offered so labels are reused not retyped. */
+	all_groups: string[];
 	rows: Placement[];
 };
 
@@ -65,6 +86,7 @@ export const EMPTY: Bootstrap = {
 		sizes: {},
 		refresh_defaults: { enabled: false, seconds: 30, max_per_view: 6 },
 		refresh_ceiling: 100,
+		all_groups: [],
 		rows: [],
 	},
 	restPath: '',
@@ -85,6 +107,7 @@ export const blankPlacement = ( defaults: RefreshDefaults ): Placement => ( {
 	house_click_url: '',
 	house_alt: '',
 	breakpoints: {},
+	groups: [],
 	refresh_enabled: defaults.enabled,
 	refresh_seconds: defaults.seconds,
 	refresh_max_per_view: defaults.max_per_view,
@@ -114,5 +137,8 @@ export function body( draft: Placement ): Record< string, unknown > {
 		 * does and would be sending its own emptiness as a decision.
 		 */
 		breakpoints: draft.breakpoints,
+
+		/* Always sent, for the same reason breakpoints always are. */
+		groups: draft.groups,
 	};
 }

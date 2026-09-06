@@ -54,7 +54,7 @@ const DEFAULT_VIEW: DataView = {
 	sort: { field: 'name', direction: 'asc' },
 	filters: [],
 	titleField: 'name',
-	fields: [ 'slug', 'size', 'status', 'refresh' ],
+	fields: [ 'slug', 'size', 'status', 'refresh', 'groups' ],
 	layout: {},
 };
 
@@ -143,12 +143,38 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 					item.refresh_enabled ? 'on' : 'off',
 			},
 			{
+				/*
+				 * The point of a group is finding things, so it is a filter
+				 * before it is a column. `elements` is built from the groups
+				 * actually in use rather than a fixed list, because the
+				 * vocabulary is the publisher's own.
+				 *
+				 * `getValue` returns the joined slugs so search matches them;
+				 * the `is`/`is any` filter compares against that same string,
+				 * so a placement in several groups is found by any one of them
+				 * only because `contains` is offered alongside.
+				 */
+				id: 'groups',
+				label: t( 'groups' ),
+				enableGlobalSearch: true,
+				elements: ( catalogue.all_groups ?? [] ).map(
+					( group: string ) => ( { value: group, label: group } )
+				),
+				filterBy: { operators: [ 'contains' ] },
+				getValue: ( { item }: { item: Placement } ) =>
+					( item.groups ?? [] ).join( ' ' ),
+			},
+			{
 				id: 'sort_order',
 				label: t( 'sortOrder' ),
 				type: 'integer',
 			},
 		],
-		[]
+		// The group filter's options come from the data, so this list is not
+		// constant the way the others are — an empty dependency array here
+		// would freeze the options at whatever was loaded first and never
+		// offer a group created since.
+		[ catalogue.all_groups ]
 	);
 
 	const actions: Action< Placement >[] = useMemo(
@@ -230,6 +256,7 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 					key={ 0 === open.id ? 'new' : open.id }
 					value={ open }
 					sizes={ catalogue.sizes }
+					allGroups={ catalogue.all_groups ?? EMPTY.view.all_groups }
 					ceiling={
 						catalogue.refresh_ceiling ?? EMPTY.view.refresh_ceiling
 					}

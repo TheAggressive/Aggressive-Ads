@@ -114,6 +114,14 @@ final class Placement_Manager {
 			return $sizes;
 		}
 
+		$groups = $this->apply_groups( $placement_id, $input );
+
+		if ( is_wp_error( $groups ) ) {
+			$this->placements->delete( $placement_id );
+
+			return $groups;
+		}
+
 		$policy = $this->placements->refresh_policy( $placement_id );
 
 		$this->audit->insert(
@@ -190,6 +198,12 @@ final class Placement_Manager {
 
 		if ( is_wp_error( $sizes ) ) {
 			return $sizes;
+		}
+
+		$groups = $this->apply_groups( $placement_id, $input );
+
+		if ( is_wp_error( $groups ) ) {
+			return $groups;
 		}
 
 		$this->cache->delete( $placement_id );
@@ -380,6 +394,42 @@ final class Placement_Manager {
 			return new WP_Error(
 				'aggr_size_map_not_saved',
 				__( 'The responsive sizes could not be saved.', 'aggressive-ads' )
+			);
+		}
+
+		$this->cache->delete( $placement_id );
+
+		return true;
+	}
+
+	/**
+	 * Files a placement into groups when the form sent them.
+	 *
+	 * Same omitted-means-unchanged rule as breakpoints, refresh and house.
+	 *
+	 * A group is organisational only — nothing in the decision path reads one —
+	 * so a failure here does not make delivery wrong. It is still reported
+	 * rather than swallowed, because a publisher who files a placement and is
+	 * told it worked will not look again, and the roll-up that quietly omits it
+	 * is the thing they will eventually not trust.
+	 *
+	 * @param int                  $placement_id Placement post id.
+	 * @param array<string, mixed> $input        Raw fields.
+	 * @return true|WP_Error
+	 */
+	private function apply_groups( int $placement_id, array $input ) {
+		if ( ! array_key_exists( 'groups', $input ) ) {
+			return true;
+		}
+
+		$groups = is_array( $input['groups'] ) ? $input['groups'] : array();
+
+		if ( ! $this->placements->set_groups( $placement_id, $groups ) ) {
+			$this->record( $placement_id, Audit_Event::OUTCOME_FAILED, 'Placement group write failed.' );
+
+			return new WP_Error(
+				'aggr_groups_not_saved',
+				__( 'The placement groups could not be saved.', 'aggressive-ads' )
 			);
 		}
 

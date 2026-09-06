@@ -35,7 +35,7 @@ Routes marked “planned” remain contracts for later phases. Every other row i
 | `POST` | `/campaigns/{id}/creatives` | `aggr_upload_creative` | Multipart. Rate-limited |
 | `GET` | `/creatives/{id}/file` | `read_aggr_creative` | **Streams bytes. Never redirects** |
 | `DELETE` | `/creatives/{id}` | `delete_aggr_creative` | Removes private bytes and the record only while advertiser-editable and unpublished |
-| `GET` | `/placements` | `aggr_access_portal` **or** `edit_posts` **or** `edit_theme_options` | Active placements only; includes public `slug` for the slot block; no ad-group IDs |
+| `GET` | `/placements` | `aggr_access_portal` **or** `edit_posts` **or** `edit_theme_options` | Active placements only; includes public `slug` for the slot block; no AdSanity ad-group IDs, and no `aggr_placement_group` terms either — a group is the publisher's own filing and an advertiser has no business reading it |
 | `GET` | `/placements/{id}/decision` | `aggr_review_campaigns` | Staff-only replay of one fill decision and trace for a placement. Optional `at` (UTC seconds) and `seed`. Missing and forbidden are both 404. Never cached |
 | `GET` | `/packages` | `aggr_access_portal` | Active, completely configured packages only; includes advertiser-facing placement labels, duration and integer-cent price |
 | `GET` | `/conversion-definitions` | `aggr_manage_settings` | Every definition, unpaged and bounded at 200. **`no-store`** — the response carries the public keys pages report against |

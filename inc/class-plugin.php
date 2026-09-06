@@ -21,6 +21,7 @@ use Aggressive\Ads\Assets\Assets;
 use Aggressive\Ads\Assets\Brand_Styles;
 use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Core\Taxonomies;
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Install\Assignment_Health;
@@ -315,6 +316,7 @@ final class Plugin {
 			// exist yet, and a status must be registered before any query
 			// filters on it.
 			Post_Types::class,
+			Taxonomies::class,
 			Post_Statuses::class,
 
 			// Ownership before anything that could ask a capability question,

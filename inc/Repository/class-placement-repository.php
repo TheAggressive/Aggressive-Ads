@@ -10,6 +10,8 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Repository;
 
 use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Core\Taxonomies;
+use Aggressive\Ads\Domain\Placement_Groups;
 use Aggressive\Ads\Domain\Refresh_Policy;
 use Aggressive\Ads\Domain\Size_Map;
 use WP_Error;
@@ -170,6 +172,83 @@ final class Placement_Repository {
 		update_post_meta( $placement_id, self::META_SIZE_MAP, $normalised );
 
 		return $this->size_map( $placement_id )->breakpoints() === $normalised;
+	}
+
+	/**
+	 * The group slugs a placement is filed under.
+	 *
+	 * Slugs rather than term ids, because every reader of this — the admin
+	 * filter, the REST shape, a utilisation roll-up — wants something stable
+	 * and legible, and a term id is neither across an export or a multisite
+	 * copy. The orphan `_aggr_adgroup_term_id` is what storing the id instead
+	 * looks like after the taxonomy it pointed into is gone.
+	 *
+	 * Always sorted, so two placements carrying the same groups compare equal
+	 * regardless of the order somebody assigned them in.
+	 *
+	 * @param int $placement_id Placement post id.
+	 * @return array<int, string>
+	 */
+	public function groups( int $placement_id ): array {
+		if ( ! $this->exists( $placement_id ) ) {
+			return array();
+		}
+
+		$terms = wp_get_object_terms(
+			$placement_id,
+			Taxonomies::PLACEMENT_GROUP,
+			array( 'fields' => 'slugs' )
+		);
+
+		if ( is_wp_error( $terms ) || ! is_array( $terms ) ) {
+			return array();
+		}
+
+		$slugs = array_values( array_unique( array_map( 'strval', $terms ) ) );
+		sort( $slugs );
+
+		return $slugs;
+	}
+
+	/**
+	 * Files a placement under a set of groups, replacing whatever it had.
+	 *
+	 * Replace rather than append: the caller sends the whole set, so an
+	 * append would make removing a group impossible through the only write
+	 * path there is.
+	 *
+	 * Terms are created on demand. A publisher naming a new group in the
+	 * placement form should not have to go and create it somewhere else
+	 * first, and there is no separate somewhere else.
+	 *
+	 * Reads back before reporting success, for the same reason `set_size_map`
+	 * does: `wp_set_object_terms` can partially fail, and a write that
+	 * returned true over a placement that is not actually in the group is the
+	 * failure this whole layer exists to make impossible.
+	 *
+	 * @param int                $placement_id Placement post id.
+	 * @param array<int, string> $slugs       Group slugs to file it under.
+	 * @return bool
+	 */
+	public function set_groups( int $placement_id, array $slugs ): bool {
+		if ( ! $this->exists( $placement_id ) ) {
+			return false;
+		}
+
+		$wanted = Placement_Groups::normalise( $slugs );
+
+		$result = wp_set_object_terms(
+			$placement_id,
+			array() === $wanted ? array() : $wanted,
+			Taxonomies::PLACEMENT_GROUP,
+			false
+		);
+
+		if ( is_wp_error( $result ) ) {
+			return false;
+		}
+
+		return $this->groups( $placement_id ) === $wanted;
 	}
 
 	/**

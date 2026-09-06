@@ -15,6 +15,7 @@ import { useState } from '@wordpress/element';
 import {
 	Button,
 	Flex,
+	FormTokenField,
 	Modal,
 	Notice,
 	SelectControl,
@@ -24,11 +25,12 @@ import {
 	__experimentalVStack as VStack,
 } from '@wordpress/components';
 import { t } from '../shared/save';
-import { CUSTOM, MAX_BREAKPOINTS, type Placement } from './types';
+import { CUSTOM, MAX_BREAKPOINTS, MAX_GROUPS, type Placement } from './types';
 
 export function PlacementModal( {
 	value,
 	sizes,
+	allGroups,
 	ceiling,
 	submitLabel,
 	busy,
@@ -38,6 +40,7 @@ export function PlacementModal( {
 }: {
 	value: Placement;
 	sizes: Record< string, string >;
+	allGroups: string[];
 	ceiling: number;
 	submitLabel: string;
 	busy: boolean;
@@ -267,6 +270,44 @@ export function PlacementModal( {
 								{ t( 'addBreakpoint' ) }
 							</Button>
 						</div>
+					</VStack>
+				</fieldset>
+
+				<fieldset>
+					<legend>{ t( 'groups' ) }</legend>
+					<VStack spacing={ 3 }>
+						<p className="aggr-field-help">{ t( 'groupsHelp' ) }</p>
+
+						{ /*
+						 * Suggestions come from the groups already in use, so a
+						 * publisher reuses a label instead of retyping it and
+						 * quietly creating a near-duplicate.
+						 *
+						 * The server owns the slug rules, so what is typed here
+						 * is a label and what comes back after saving may be a
+						 * tidied version of it. Normalising in the browser too
+						 * would mean two implementations of the same rules that
+						 * have to agree forever.
+						 */ }
+						<FormTokenField
+							label={ t( 'groupsLabel' ) }
+							value={ draft.groups }
+							suggestions={ allGroups }
+							maxLength={ MAX_GROUPS }
+							onChange={ (
+								next: ( string | { value: string } )[]
+							) =>
+								set( {
+									groups: next.map( ( item ) =>
+										'string' === typeof item
+											? item
+											: item.value
+									),
+								} )
+							}
+							__nextHasNoMarginBottom
+							__next40pxDefaultSize
+						/>
 					</VStack>
 				</fieldset>
 

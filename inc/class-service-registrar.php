@@ -19,6 +19,7 @@ use Aggressive\Ads\Assets\Assets;
 use Aggressive\Ads\Assets\Brand_Styles;
 use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Core\Taxonomies;
 use Aggressive\Ads\Core\Settings;
 use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Install\Migration_Map;
@@ -216,6 +217,11 @@ final class Service_Registrar {
 		$container->register(
 			Post_Types::class,
 			static fn (): Post_Types => new Post_Types()
+		);
+
+		$container->register(
+			Taxonomies::class,
+			static fn (): Taxonomies => new Taxonomies()
 		);
 
 		$container->register(

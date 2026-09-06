@@ -268,6 +268,90 @@ final class PlacementsWriteTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Groups the form sends are the groups the placement is filed under.
+	 *
+	 * Labels go in and slugs come out, which is the round trip that matters:
+	 * the browser deliberately does not normalise, so the server is the only
+	 * implementation of the rules and this is where that is proven.
+	 *
+	 * @return void
+	 */
+	public function test_groups_round_trip_through_the_catalogue(): void {
+		$placement_id = $this->create_placement(
+			array(
+				'slug'   => 'grouped-header',
+				'groups' => array( 'Above The Fold', 'sidebar' ),
+			)
+		);
+
+		$this->assertSame(
+			array( 'above-the-fold', 'sidebar' ),
+			$this->placements->groups( $placement_id )
+		);
+	}
+
+	/**
+	 * **An unrelated save does not quietly unfile a placement.**
+	 *
+	 * The same omitted-means-unchanged rule, and the failure here is quieter
+	 * than the breakpoint one and therefore worse: nothing about delivery
+	 * changes, so the only symptom is a roll-up that stops counting a
+	 * placement nobody noticed had left its group.
+	 *
+	 * @return void
+	 */
+	public function test_a_save_that_omits_groups_leaves_them_alone(): void {
+		$placement_id = $this->create_placement(
+			array(
+				'slug'   => 'grouped-header',
+				'groups' => array( 'sidebar' ),
+			)
+		);
+
+		$response = $this->write(
+			'/aggr/v1/placements/' . $placement_id,
+			'PATCH',
+			$this->valid_placement(
+				array(
+					'slug' => 'grouped-header',
+					'name' => 'Renamed and nothing else',
+				)
+			)
+		);
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame(
+			array( 'sidebar' ),
+			$this->placements->groups( $placement_id ),
+			'A rename unfiled a placement from its group.'
+		);
+	}
+
+	/** An explicit empty list does unfile it, because that is a decision. */
+	public function test_an_explicit_empty_group_list_unfiles_a_placement(): void {
+		$placement_id = $this->create_placement(
+			array(
+				'slug'   => 'grouped-header',
+				'groups' => array( 'sidebar' ),
+			)
+		);
+
+		$response = $this->write(
+			'/aggr/v1/placements/' . $placement_id,
+			'PATCH',
+			$this->valid_placement(
+				array(
+					'slug'   => 'grouped-header',
+					'groups' => array(),
+				)
+			)
+		);
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( array(), $this->placements->groups( $placement_id ) );
+	}
+
+	/**
 	 * The policy the form sends is the policy the catalogue returns.
 	 *
 	 * @return void

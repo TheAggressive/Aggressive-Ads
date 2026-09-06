@@ -63,6 +63,15 @@ const DATA_ACCESS_FUNCTIONS = array(
 	'wp_delete_post',
 	'get_the_title',
 	'get_post_field',
+	// Taxonomy reads and writes are data access like any other. Added with
+	// placement groups: without these the group taxonomy was the one part of
+	// the schema any layer could reach past the repository to touch.
+	'wp_get_object_terms',
+	'wp_set_object_terms',
+	'get_terms',
+	'get_term_by',
+	'wp_insert_term',
+	'wp_delete_term',
 );
 
 /**
