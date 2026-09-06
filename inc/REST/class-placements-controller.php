@@ -257,6 +257,20 @@ final class Placements_Controller implements Service {
 				: $defaults->max_per_view;
 		}
 
+		/*
+		 * Breakpoints follow the same rule as the refresh policy, for the same
+		 * reason: an omitted key must mean "unchanged", never "cleared".
+		 *
+		 * A rename that did not mention sizes would otherwise write an empty
+		 * map, and `Size_Map` reads an empty map as "not a map" and falls back
+		 * to the single stored size. A publisher's responsive placement would
+		 * quietly become fixed, serving its base everywhere, with the screen
+		 * still showing the breakpoints they had configured.
+		 */
+		if ( array_key_exists( 'breakpoints', $body ) ) {
+			$fields['breakpoints'] = is_array( $body['breakpoints'] ) ? $body['breakpoints'] : array();
+		}
+
 		return $fields;
 	}
 

@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-06T01:24:43+00:00\n"
+"POT-Creation-Date: 2026-09-06T01:59:51+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -4484,7 +4484,7 @@ msgid "That password does not meet this site's security requirements."
 msgstr ""
 
 #: inc/Workflow/class-placement-manager.php:62
-#: inc/Workflow/class-placement-manager.php:143
+#: inc/Workflow/class-placement-manager.php:151
 msgid "You do not have permission to manage placements."
 msgstr ""
 
@@ -4493,50 +4493,54 @@ msgstr ""
 msgid "The placement could not be created."
 msgstr ""
 
-#: inc/Workflow/class-placement-manager.php:150
+#: inc/Workflow/class-placement-manager.php:158
 msgid "That placement could not be found."
 msgstr ""
 
-#: inc/Workflow/class-placement-manager.php:165
+#: inc/Workflow/class-placement-manager.php:173
 msgid "The placement could not be saved."
 msgstr ""
 
-#: inc/Workflow/class-placement-manager.php:217
+#: inc/Workflow/class-placement-manager.php:231
 msgid "Enter a placement name."
 msgstr ""
 
-#: inc/Workflow/class-placement-manager.php:226
+#: inc/Workflow/class-placement-manager.php:240
 msgid "Enter a slot slug."
 msgstr ""
 
-#: inc/Workflow/class-placement-manager.php:235
+#: inc/Workflow/class-placement-manager.php:249
 msgid "That slot slug is already in use."
 msgstr ""
 
-#: inc/Workflow/class-placement-manager.php:244
+#: inc/Workflow/class-placement-manager.php:258
 msgid "Choose a common size or enter a custom width and height in pixels."
 msgstr ""
 
-#: inc/Workflow/class-placement-manager.php:253
+#: inc/Workflow/class-placement-manager.php:267
 msgid "Sort order must be between 0 and 9999."
 msgstr ""
 
-#: inc/Workflow/class-placement-manager.php:331
+#: inc/Workflow/class-placement-manager.php:345
 msgid "The refresh policy could not be saved."
 msgstr ""
 
-#: inc/Workflow/class-placement-manager.php:370
-#: inc/Workflow/class-placement-manager.php:379
-#: inc/Workflow/class-placement-manager.php:388
-#: inc/Workflow/class-placement-manager.php:400
+#: inc/Workflow/class-placement-manager.php:382
+msgid "The responsive sizes could not be saved."
+msgstr ""
+
+#: inc/Workflow/class-placement-manager.php:421
+#: inc/Workflow/class-placement-manager.php:430
+#: inc/Workflow/class-placement-manager.php:439
+#: inc/Workflow/class-placement-manager.php:451
 msgid "House creative must be a JPEG, PNG, GIF, or WebP image."
 msgstr ""
 
-#: inc/Workflow/class-placement-manager.php:420
+#: inc/Workflow/class-placement-manager.php:471
 msgid "House destination must be an http or https URL without credentials."
 msgstr ""
 
-#: inc/Workflow/class-placement-manager.php:437
+#: inc/Workflow/class-placement-manager.php:488
 msgid "The house creative could not be saved."
 msgstr ""
 

@@ -106,6 +106,14 @@ final class Placement_Manager {
 			return $refresh;
 		}
 
+		$sizes = $this->apply_breakpoints( $placement_id, $input );
+
+		if ( is_wp_error( $sizes ) ) {
+			$this->placements->delete( $placement_id );
+
+			return $sizes;
+		}
+
 		$policy = $this->placements->refresh_policy( $placement_id );
 
 		$this->audit->insert(
@@ -176,6 +184,12 @@ final class Placement_Manager {
 
 		if ( is_wp_error( $refresh ) ) {
 			return $refresh;
+		}
+
+		$sizes = $this->apply_breakpoints( $placement_id, $input );
+
+		if ( is_wp_error( $sizes ) ) {
+			return $sizes;
 		}
 
 		$this->cache->delete( $placement_id );
@@ -329,6 +343,43 @@ final class Placement_Manager {
 			return new WP_Error(
 				'aggr_refresh_not_saved',
 				__( 'The refresh policy could not be saved.', 'aggressive-ads' )
+			);
+		}
+
+		$this->cache->delete( $placement_id );
+
+		return true;
+	}
+
+	/**
+	 * Stores responsive breakpoints when the form sent them.
+	 *
+	 * Same rule as refresh and house: an absent key means "unchanged", never
+	 * "cleared". Clearing on omission would turn a publisher's responsive
+	 * placement into a fixed one on any unrelated save — it would serve its
+	 * base size everywhere while the screen still listed the breakpoints they
+	 * had configured, which is the kind of disagreement nobody thinks to check.
+	 *
+	 * The map is normalised by the domain on the way in, so a breakpoint list
+	 * that could not survive being read is never stored.
+	 *
+	 * @param int                  $placement_id Placement post id.
+	 * @param array<string, mixed> $input        Raw fields.
+	 * @return true|WP_Error
+	 */
+	private function apply_breakpoints( int $placement_id, array $input ) {
+		if ( ! array_key_exists( 'breakpoints', $input ) ) {
+			return true;
+		}
+
+		$breakpoints = is_array( $input['breakpoints'] ) ? $input['breakpoints'] : array();
+
+		if ( ! $this->placements->set_size_map( $placement_id, $breakpoints ) ) {
+			$this->record( $placement_id, Audit_Event::OUTCOME_FAILED, 'Placement size map write failed.' );
+
+			return new WP_Error(
+				'aggr_size_map_not_saved',
+				__( 'The responsive sizes could not be saved.', 'aggressive-ads' )
 			);
 		}
 

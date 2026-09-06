@@ -168,6 +168,106 @@ final class PlacementsWriteTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Breakpoints the form sends are the breakpoints the placement serves.
+	 *
+	 * @return void
+	 */
+	public function test_breakpoints_round_trip_through_the_catalogue(): void {
+		$placement_id = $this->create_placement(
+			array(
+				'slug'        => 'responsive-header',
+				'breakpoints' => array(
+					0   => '320x50',
+					768 => '728x90',
+				),
+			)
+		);
+
+		$map = $this->placements->size_map( $placement_id );
+
+		$this->assertTrue( $map->is_responsive() );
+		$this->assertSame( '320x50', $map->for_viewport( 375 ) );
+		$this->assertSame( '728x90', $map->for_viewport( 1024 ) );
+	}
+
+	/**
+	 * **An unrelated save does not quietly make a placement fixed again.**
+	 *
+	 * An omitted key means "unchanged", never "cleared" — the same rule the
+	 * refresh policy and the house creative already follow. Without it a rename
+	 * would write an empty map, `Size_Map` would read that as "not a map" and
+	 * fall back to the single stored size, and the placement would serve its
+	 * base everywhere while the screen still listed the breakpoints somebody
+	 * configured. A disagreement between what the screen shows and what the
+	 * server serves is the kind nobody thinks to check.
+	 *
+	 * @return void
+	 */
+	public function test_a_save_that_omits_breakpoints_leaves_them_alone(): void {
+		$placement_id = $this->create_placement(
+			array(
+				'slug'        => 'responsive-header',
+				'breakpoints' => array(
+					0   => '320x50',
+					768 => '728x90',
+				),
+			)
+		);
+
+		$response = $this->write(
+			'/aggr/v1/placements/' . $placement_id,
+			'PATCH',
+			$this->valid_placement(
+				array(
+					'slug' => 'responsive-header',
+					'name' => 'Renamed and nothing else',
+				)
+			)
+		);
+
+		$this->assertSame( 200, $response->get_status() );
+
+		$map = $this->placements->size_map( $placement_id );
+
+		$this->assertTrue( $map->is_responsive(), 'A rename turned a responsive placement into a fixed one.' );
+		$this->assertSame( '728x90', $map->for_viewport( 1024 ) );
+	}
+
+	/**
+	 * An explicit empty list does clear them, because that is a decision.
+	 *
+	 * The distinction is the whole point of the rule above: silence is not a
+	 * choice, and an empty array is.
+	 *
+	 * @return void
+	 */
+	public function test_an_explicit_empty_list_makes_a_placement_fixed(): void {
+		$placement_id = $this->create_placement(
+			array(
+				'slug'        => 'responsive-header',
+				'breakpoints' => array(
+					0   => '320x50',
+					768 => '728x90',
+				),
+			)
+		);
+
+		$response = $this->write(
+			'/aggr/v1/placements/' . $placement_id,
+			'PATCH',
+			$this->valid_placement(
+				array(
+					'slug'        => 'responsive-header',
+					'breakpoints' => array(),
+				)
+			)
+		);
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertFalse( $this->placements->size_map( $placement_id )->is_responsive() );
+	}
+
+	/**
 	 * The policy the form sends is the policy the catalogue returns.
 	 *
 	 * @return void
