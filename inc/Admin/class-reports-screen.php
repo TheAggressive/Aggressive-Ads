@@ -500,6 +500,15 @@ final class Reports_Screen implements Service {
 				'group'          => __( 'Group', 'aggressive-ads' ),
 				'placementCount' => __( 'Placements', 'aggressive-ads' ),
 				'byGroup'        => __( 'Utilisation by group', 'aggressive-ads' ),
+
+				/*
+				 * Region names, kept clear of every other label on this screen.
+				 * An accessible name matches by substring, so "Utilisation by
+				 * placement" here would also answer to the "Placement" filter
+				 * and make that select ambiguous to anyone asking by name.
+				 */
+				'detailRegion'   => __( 'Utilisation detail', 'aggressive-ads' ),
+				'groupRegion'    => __( 'Group totals', 'aggressive-ads' ),
 			),
 		);
 

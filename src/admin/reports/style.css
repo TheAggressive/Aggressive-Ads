@@ -1,13 +1,35 @@
 /*
- * Rhythm for the utilisation tables, and nothing else.
+ * Rhythm for the utilisation tables, and the one thing DataViews does not do.
  *
- * The two DataViews sit under server-rendered headings on a page that is
- * otherwise native WordPress markup, so they need separating from what precedes
- * them and from each other. Everything else about how they look is DataViews'
- * own, deliberately: restyling a component means re-checking it against every
+ * The two views sit under server-rendered headings on a page that is otherwise
+ * native WordPress markup, so they need separating from what precedes them and
+ * from each other. Everything else about how they look is DataViews' own,
+ * deliberately: restyling a component means re-checking it against every
  * release for states that are easy to half-implement.
  */
 .aggr-reports-utilisation {
 	margin-top: 12px;
 	margin-bottom: 32px;
+
+	/*
+	 * **DataViews does not reflow at 320 CSS pixels on its own.** Measured, not
+	 * assumed: the reports screen came to 465 against a 320 viewport with these
+	 * tables mounted and nothing containing them, failing WCAG 1.4.10. Five
+	 * columns of figures a publisher reads against each other cannot be
+	 * narrowed without dropping one, so the table scrolls inside this and the
+	 * page does not.
+	 */
+	overflow-x: auto;
+	max-width: 100%;
+}
+
+/*
+ * The region is keyboard focusable — a scroll container only a mouse can reach
+ * is `scrollable-region-focusable`, a worse failure than the overflow it fixes
+ * — and a focusable thing needs a visible focus state or it trades 1.4.10 for
+ * 2.4.7. `currentcolor` needs no palette token to be legible in either theme.
+ */
+.aggr-reports-utilisation:focus-visible {
+	outline: 2px solid currentcolor;
+	outline-offset: 2px;
 }

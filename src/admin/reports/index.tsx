@@ -130,7 +130,18 @@ function Placements( { rows }: { rows: PlacementRow[] } ): ReactElement {
 	);
 
 	return (
-		<div className="aggr-reports-utilisation">
+		/*
+		 * Focusable, and named so nothing else answers to it. An accessible
+		 * name is matched by substring, so calling this "Utilisation by
+		 * placement" would also answer to the screen's "Placement" filter and
+		 * make that control ambiguous to anyone asking for it by name.
+		 */
+		<div
+			className="aggr-reports-utilisation"
+			role="region"
+			tabIndex={ 0 }
+			aria-label={ t( 'detailRegion' ) }
+		>
 			<DataViews< PlacementRow >
 				data={ data }
 				fields={ fields }
@@ -204,7 +215,13 @@ function Groups( { rows }: { rows: GroupRow[] } ): ReactElement | null {
 	}
 
 	return (
-		<div className="aggr-reports-utilisation">
+		// Not a superstring of the region above, for the same reason.
+		<div
+			className="aggr-reports-utilisation"
+			role="region"
+			tabIndex={ 0 }
+			aria-label={ t( 'groupRegion' ) }
+		>
 			<h2>{ t( 'byGroup' ) }</h2>
 			<DataViews< GroupRow >
 				data={ data }
