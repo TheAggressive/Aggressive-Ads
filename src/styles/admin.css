@@ -28,6 +28,29 @@
 }
 
 /*
+ * A wide data table scrolls inside itself, never the page.
+ *
+ * WCAG 1.4.10 asks that content reflow at 320 CSS pixels without
+ * two-dimensional scrolling. The utilisation tables carry five columns a
+ * publisher reads against each other, so narrowing them to fit would mean
+ * dropping a column and hiding the comparison rather than presenting it.
+ *
+ * The focus outline is deliberate rather than inherited: this region is
+ * keyboard focusable — a scroll container a mouse alone can reach is a worse
+ * failure than the overflow it fixes — and a focusable thing with no visible
+ * focus state fails 2.4.7 instead.
+ */
+.aggr-table-scroll {
+	overflow-x: auto;
+	max-width: 100%;
+}
+
+.aggr-table-scroll:focus-visible {
+	outline: 2px solid var(--aggr-color-accent);
+	outline-offset: 2px;
+}
+
+/*
  * Review actions in the page header.
  *
  * Sized to their content, unlike the same buttons inside .aggr-action, which

@@ -414,6 +414,8 @@ final class Reports_Screen implements Service {
 			return;
 		}
 
+		$this->open_scroll_region( __( 'Utilisation by placement', 'aggressive-ads' ) );
+
 		echo '<table class="widefat striped">';
 		printf(
 			'<caption class="screen-reader-text">%s</caption>',
@@ -443,7 +445,7 @@ final class Reports_Screen implements Service {
 			);
 		}
 
-		echo '</tbody></table>';
+		echo '</tbody></table></div>';
 
 		$this->render_unaccounted( $unaccounted );
 		$this->render_group_utilisation( $view['groups'] );
@@ -467,6 +469,8 @@ final class Reports_Screen implements Service {
 		}
 
 		printf( '<h2>%s</h2>', esc_html__( 'Utilisation by group', 'aggressive-ads' ) );
+
+		$this->open_scroll_region( __( 'Utilisation by group', 'aggressive-ads' ) );
 
 		echo '<table class="widefat striped">';
 		printf(
@@ -493,7 +497,32 @@ final class Reports_Screen implements Service {
 			);
 		}
 
-		echo '</tbody></table>';
+		echo '</tbody></table></div>';
+	}
+
+	/**
+	 * Opens a horizontally scrollable region around a wide table.
+	 *
+	 * WCAG 1.4.10 requires the *page* to reflow at 320 CSS pixels without
+	 * two-dimensional scrolling. These two tables carry five columns of figures
+	 * that a publisher compares against each other, so narrowing them to fit
+	 * would mean dropping a column and hiding data rather than presenting it.
+	 * Scrolling the table inside its own region satisfies the criterion without
+	 * that trade.
+	 *
+	 * **`tabindex` is what makes it legitimate.** A scrollable region that only
+	 * a mouse can scroll is unreachable by keyboard, which axe reports as
+	 * `scrollable-region-focusable` and which is a worse failure than the one
+	 * being fixed. Focusable regions need an accessible name, hence the label.
+	 *
+	 * @param string $label Accessible name for the region.
+	 * @return void
+	 */
+	private function open_scroll_region( string $label ): void {
+		printf(
+			'<div class="aggr-table-scroll" role="region" tabindex="0" aria-label="%s">',
+			esc_attr( $label )
+		);
 	}
 
 	/**
