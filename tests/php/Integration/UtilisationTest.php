@@ -368,6 +368,65 @@ final class UtilisationTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * **Counters for a deleted placement are reported, not silently dropped.**
+	 *
+	 * The headline figures sum every row in the window; the breakdown can only
+	 * name placements that still exist. Delete one and its history stays in the
+	 * table while vanishing from every row, so the totals disagree with the
+	 * rows by a number nobody can account for. Observed on a real screen:
+	 * "Page requests: 3,120" above a table where every placement read nought.
+	 *
+	 * @return void
+	 */
+	public function test_counters_for_a_deleted_placement_are_reported(): void {
+		$id = $this->placement( 'doomed' );
+
+		$this->rollups->add(
+			$this->day,
+			$id,
+			array(
+				Decision_Outcome::REQUEST => 3120,
+				Decision_Outcome::FILL    => 2340,
+			),
+			Opportunity::PAGE
+		);
+
+		wp_delete_post( $id, true );
+
+		$view = $this->data->utilisation( $this->window() );
+
+		$this->assertSame( array(), $view['placements'], 'A deleted placement must not be listed.' );
+		$this->assertSame( 3120, $view['unattributed']['requests'] );
+		$this->assertSame( 2340, $view['unattributed']['fills'] );
+
+		$this->assertStringContainsString(
+			'no longer exist',
+			$this->rendered(),
+			'The screen counted events it could not attribute and said nothing.'
+		);
+	}
+
+	/** A site with no deleted placements reports nothing extra. */
+	public function test_nothing_unattributed_prints_no_notice(): void {
+		$id = $this->placement( 'present' );
+
+		$this->rollups->add(
+			$this->day,
+			$id,
+			array(
+				Decision_Outcome::REQUEST => 10,
+				Decision_Outcome::FILL    => 4,
+			),
+			Opportunity::PAGE
+		);
+
+		$view = $this->data->utilisation( $this->window() );
+
+		$this->assertSame( 0, $view['unattributed']['requests'] );
+		$this->assertStringNotContainsString( 'no longer exist', $this->rendered() );
+	}
+
+	/**
 	 * Turns reporting on, since the screen renders nothing without it.
 	 *
 	 * @return void

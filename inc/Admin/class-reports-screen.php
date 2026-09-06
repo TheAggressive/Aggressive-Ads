@@ -411,6 +411,14 @@ final class Reports_Screen implements Service {
 		if ( array() === $view['placements'] ) {
 			printf( '<p>%s</p>', esc_html__( 'No placements are configured yet.', 'aggressive-ads' ) );
 
+			/*
+			 * Still said, because this is the case that needs it most: no
+			 * placements and a headline in the thousands is the widest the two
+			 * figures can disagree, and an early return here is what made the
+			 * disagreement unexplainable in the first place.
+			 */
+			$this->render_unattributed( $view['unattributed'] ?? array() );
+
 			return;
 		}
 
@@ -455,6 +463,7 @@ final class Reports_Screen implements Service {
 		echo '</tbody></table></div>';
 
 		$this->render_unaccounted( $unaccounted );
+		$this->render_unattributed( $view['unattributed'] ?? array() );
 		$this->render_group_utilisation( $view['groups'] );
 	}
 
@@ -552,6 +561,40 @@ final class Reports_Screen implements Service {
 		// A plain separator rather than a translatable one: a bare ", " gives a
 		// translator no context to work from and nothing to get right.
 		return implode( ', ', $groups );
+	}
+
+	/**
+	 * Counters belonging to placements that no longer exist.
+	 *
+	 * Printed because the headline figures above count them and no row below
+	 * can. Without this the two disagree by a number nobody can explain — the
+	 * summary says three thousand page requests, every placement says nought,
+	 * and both are telling the truth about different sets of rows.
+	 *
+	 * Ordinary on a development site that has been reseeded, and worth a second
+	 * look on a live one: it means history exists for inventory that was
+	 * deleted rather than deactivated.
+	 *
+	 * @param array{requests?: int, fills?: int} $figures Unattributed totals.
+	 * @return void
+	 */
+	private function render_unattributed( array $figures ): void {
+		$requests = (int) ( $figures['requests'] ?? 0 );
+
+		if ( $requests <= 0 ) {
+			return;
+		}
+
+		printf(
+			'<p class="description">%s</p>',
+			esc_html(
+				sprintf(
+					/* translators: %s: a count of page requests recorded against deleted placements. */
+					__( '%s page requests belong to placements that no longer exist, so they are counted in the totals above but cannot appear in any row. This is normal after a placement is deleted.', 'aggressive-ads' ),
+					number_format_i18n( $requests )
+				)
+			)
+		);
 	}
 
 	/**
