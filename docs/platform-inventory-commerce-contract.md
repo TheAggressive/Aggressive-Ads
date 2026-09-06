@@ -71,6 +71,29 @@ Owns conservative forecasts, reservation lifecycle, oversell warnings,
 auditable overrides and recorded forecast error. Forecasts advise; they do not
 silently block authorized staff or pretend uncertainty is exact capacity.
 
+**A forecast is staff-only. An advertiser sees availability, never capacity.**
+The advertiser-facing question is "can I book this?", answered yes, no or
+limited from forecast capacity without exposing the number behind it. The
+forecast itself — its value, confidence, version and recorded error — is a
+staff surface behind its own capability.
+
+Three reasons, recorded so this is not re-litigated as a UI preference:
+
+- **A forecast is the publisher's negotiating position.** It reveals unsold
+  inventory, and an advertiser who can see which placements are empty knows what
+  to offer for them. This is the same call `aggr_placement_group` already makes:
+  how a publisher organises and fills their own inventory is not a buyer's
+  business, which is why that taxonomy is private and absent from the
+  advertiser-facing placement route.
+- **A number shown to a buyer stops being advisory.** This phase requires
+  conservative fallback for sparse inventory and treats forecasts as advice.
+  Staff can hold a figure as uncertain; an advertiser reads a projected volume
+  as a commitment, and a shortfall then has the publisher's own screen as
+  evidence against them.
+- **Override, actor, reason and oversell are operator concepts.** They have no
+  advertiser-facing meaning, and a surface that shows the forecast but hides
+  them would misrepresent how firm the number is.
+
 ### P17 — Creative experience
 
 Owns variants, experiments, schedules, device preview, approval/rejection
@@ -120,6 +143,10 @@ remain separate in storage, authorization and notifications.
   delivery or audit history.
 - Staff notes never enter advertiser responses, email or exports unless an
   explicit workflow copies approved text into an advertiser message.
+- Forecast values, confidence intervals, forecast versions and recorded error
+  never enter advertiser responses, email or exports. An advertiser-facing
+  surface may carry only a derived availability answer for a requested slice and
+  window.
 
 ## Inventory and forecasting contract
 
@@ -129,7 +156,8 @@ opportunity, apply viewability and policy gates, and avoid forecasting infinite
 supply from a timer.
 
 P16 declares source history, exclusions, seasonality assumptions, minimum data,
-confidence representation and conservative fallback for sparse inventory.
+confidence representation, conservative fallback for sparse inventory, and which
+audience each figure is exposed to.
 Forecast error is recorded when actuals mature. Reservation checks are atomic
 for the chosen consistency model, and the tolerated race/oversell bound is
 measured rather than assumed.
