@@ -81,6 +81,21 @@ enough for the interesting branch to render — a placement that filled every
 time exercises the "every request was filled" path and proves nothing about the
 table beside it.
 
+**A guard written to catch unread keys shipped unable to see the newest one.**
+`check-client-contract.mjs` grew a lane asserting that every value the server
+puts on a creative is read by the browser — written because two keys had
+already shipped with no reader, one of which meant no advertisement could open
+in a new tab. The first version read the `return array( … )` of each payload
+builder, reported "7 creative payload keys" and passed. Eight are sent:
+`servable` is assigned *after* the return array, so the lane skipped precisely
+the key whose class of defect it was built for, and said a confident number
+while doing it.
+
+The count is what exposed it, which is the argument for printing one. Assert
+what a guard reads, not only what it concludes — and sabotage it in both
+directions before trusting it: a server key with no reader must fail, and a
+client reading a key the server strips must fail too.
+
 **The instrument that measures the tests needs a control of its own.** P16's
 supply forecast was mutation-tested with a shell loop that broke a line, ran
 PHPUnit, and read the result with `grep -E "^OK"`. PHPUnit colours that summary

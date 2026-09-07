@@ -27,7 +27,12 @@ const FILES = {
 	empty: 'src/blocks-interactivity/ad-slot/empty.js',
 	rotation: 'src/blocks-interactivity/ad-slot/rotation.js',
 	renderer: 'inc/Workflow/class-placement-slot.php',
+	engine: 'inc/Workflow/class-decision-engine.php',
+	service: 'inc/Workflow/class-fill-service.php',
 };
+
+const BASE_FILL =
+	"export const fillSlot = async ( root, sequence = 0 ) => {\n\tconst n = sequence;\n\tendpoint.searchParams.set( 'n', String( n ) );\n\tendpoint.searchParams.set( 'w', String( viewportWidth() ) );\n\timg.src = creative.image;\n\tif ( ! creative.sameTab ) { link.target = '_blank'; }\n\tlink.href = creative.click;\n\tsend( creative.token );\n\treturn creative.servable;\n};\n";
 
 const roots = [];
 
@@ -70,14 +75,45 @@ async function root( overrides = {} ) {
 			"<?php\n'args' => array(\n\t'slot' => array(\n\t\t'type' => 'string',\n\t),\n\t'n' => array(\n\t\t'type' => 'integer',\n\t),\n\t'w' => array(\n\t\t'type' => 'integer',\n\t),\n\t'p' => array(\n\t\t'type' => 'integer',\n\t),\n),\n$slot = (string) $request->get_param( 'slot' );\n$sequence = (int) $request->get_param( 'n' );\n$viewport = (int) $request->get_param( 'w' );\n$post_id = (int) $request->get_param( 'p' );\n",
 		[ FILES.view ]:
 			'const on = context.rotate;\nconst s = context.rotateSeconds;\nconst cap = rotationCap( context.maxRefreshes );\nawait fillSlot( root, rotations );\n',
-		[ FILES.fill ]:
-			"export const fillSlot = async ( root, sequence = 0 ) => {\n\tconst n = sequence;\n\tendpoint.searchParams.set( 'n', String( n ) );\n\tendpoint.searchParams.set( 'w', String( viewportWidth() ) );\n};\n",
+		[ FILES.fill ]: BASE_FILL,
 		[ FILES.empty ]:
 			'export const collapses = ( context ) => false !== context?.collapseWhenEmpty;\n',
 		[ FILES.rotation ]:
 			'export const rotationCap = ( requested ) => Math.min( 100, requested );\n',
 		[ FILES.renderer ]:
 			"<?php\n$fill = add_query_arg( 'p', $page_id, $fill );\n",
+		[ FILES.engine ]: `<?php
+	public function payload_from_row( array $row, int $placement_id ): ?array {
+		return array(
+			'image'     => $image,
+			'placement' => $placement_id,
+			'sameTab'   => false,
+		);
+	}
+`,
+		[ FILES.service ]: `<?php
+	private function house_creative( int $placement_id ): ?array {
+		return array(
+			'image'     => $image,
+			'placement' => $placement_id,
+		);
+	}
+
+	private function paid_creative( int $placement_id ): ?array {
+		$payload['servable'] = (int) $decision['servable'];
+
+		return $payload;
+	}
+
+	private function with_tokens( array $payload ): array {
+		$row['token'] = $minted['token'];
+		$row['click'] = Click_Hop::url( $minted['token'] );
+
+		unset( $row['placement'] );
+
+		return $payload;
+	}
+`,
 		...overrides,
 	};
 
@@ -108,6 +144,96 @@ function run( dir ) {
 		output: `${ result.stdout ?? '' }${ result.stderr ?? '' }`,
 	};
 }
+
+test( 'a creative key no client reads is refused', async () => {
+	const dir = await root( {
+		[ FILES.engine ]: `<?php
+	public function payload_from_row( array $row, int $placement_id ): ?array {
+		return array(
+			'image'     => $image,
+			'placement' => $placement_id,
+			'sameTab'   => false,
+			'brandNew'  => 1,
+		);
+	}
+`,
+	} );
+
+	const { status, output } = run( dir );
+
+	assert.equal( status, 1 );
+	assert.match( output, /"brandNew" on a creative/ );
+} );
+
+/*
+ * The regression this lane was built for. `servable` is set after the return
+ * array rather than inside it, and the first version of the parse read only
+ * return arrays — so it reported a count and silently skipped the newest key.
+ */
+test( 'a key assigned after the return array is still checked', async () => {
+	const dir = await root( {
+		[ FILES.fill ]: BASE_FILL.replace(
+			'\treturn creative.servable;\n',
+			''
+		),
+	} );
+
+	const { status, output } = run( dir );
+
+	assert.equal( status, 1 );
+	assert.match( output, /"servable" on a creative/ );
+} );
+
+test( 'a key with_tokens adds must still be read', async () => {
+	const dir = await root( {
+		[ FILES.fill ]: BASE_FILL.replace( '\tsend( creative.token );\n', '' ),
+	} );
+
+	const { status, output } = run( dir );
+
+	assert.equal( status, 1 );
+	assert.match( output, /"token" on a creative/ );
+} );
+
+test( 'reading a key with_tokens strips is refused', async () => {
+	const dir = await root( {
+		[ FILES.fill ]: BASE_FILL.replace(
+			'\timg.src = creative.image;\n',
+			'\timg.src = creative.image;\n\tconst p = creative.placement;\n'
+		),
+	} );
+
+	const { status, output } = run( dir );
+
+	assert.equal( status, 1 );
+	assert.match( output, /with_tokens\(\) removes it/ );
+} );
+
+test( 'a docblock mentioning a creative key is not a reader', async () => {
+	const dir = await root( {
+		[ FILES.fill ]: BASE_FILL.replace(
+			'\treturn creative.servable;\n',
+			'\t/* creative.servable says how many could serve. */\n'
+		),
+	} );
+
+	const { status, output } = run( dir );
+
+	assert.equal( status, 1 );
+	assert.match( output, /"servable" on a creative/ );
+} );
+
+test( 'a payload the guard cannot parse fails rather than passing over nothing', async () => {
+	const dir = await root( {
+		[ FILES.engine ]:
+			'<?php\n// The method moved and this lane never noticed.\n',
+	} );
+
+	const { status, output } = run( dir );
+
+	assert.equal( status, 1 );
+	assert.match( output, /protecting nothing until the parse is fixed/ );
+} );
 
 test( 'a context key with no client reader is refused', async () => {
 	const dir = await root( {

@@ -34,6 +34,8 @@ const SCAN_ROOT = process.env.AGGR_CLIENT_CONTRACT_SCAN_DIR ?? ROOT;
 const PHP_CONTEXT = 'inc/Domain/class-slot-options.php';
 const FILL_CONTROLLER = 'inc/REST/class-fill-controller.php';
 const SLOT_RENDERER = 'inc/Workflow/class-placement-slot.php';
+const DECISION_ENGINE = 'inc/Workflow/class-decision-engine.php';
+const FILL_SERVICE = 'inc/Workflow/class-fill-service.php';
 
 /**
  * Fill parameters the server puts in the URL, and where it must do it.
@@ -159,6 +161,110 @@ function contextKeys( php ) {
  * @param {string} key    Context key.
  * @return {boolean} Whether a reader exists.
  */
+/**
+ * Keys of the `return array( … )` inside one PHP method.
+ *
+ * @param {string} php    Source with comments already blanked.
+ * @param {string} method Method name to read.
+ * @return {string[]|null} Keys, or null when the method or its array is gone.
+ */
+function returnedKeys( php, method ) {
+	const start = php.indexOf( `function ${ method }` );
+
+	if ( start < 0 ) {
+		return null;
+	}
+
+	const body = php.slice( start );
+	const match = body.match( /return array\s*\(([\s\S]*?)\n\t\t\);/ );
+
+	if ( ! match ) {
+		return null;
+	}
+
+	return [ ...match[ 1 ].matchAll( /'([A-Za-z][A-Za-z0-9_]*)'\s*=>/g ) ].map(
+		( found ) => found[ 1 ]
+	);
+}
+
+/**
+ * Keys assigned onto a variable inside one PHP method.
+ *
+ * A payload is not always finished by its `return array( … )`. `servable` is
+ * set on the way out of `paid_creative()`, and the first version of this lane
+ * read only the return arrays — so it reported seven keys checked and silently
+ * skipped the newest one, which is the failure it exists to catch happening to
+ * itself.
+ *
+ * @param {string} php      Source with comments already blanked.
+ * @param {string} method   Method name to read.
+ * @param {string} variable Variable the keys are set on, without the sigil.
+ * @return {string[]|null} Keys, or null when the method is gone.
+ */
+function assignedKeys( php, method, variable ) {
+	const start = php.indexOf( `function ${ method }` );
+
+	if ( start < 0 ) {
+		return null;
+	}
+
+	const body = php.slice( start, php.indexOf( '\n\t}', start ) );
+
+	return [
+		...body.matchAll(
+			new RegExp(
+				`\\$${ variable }\\['([A-Za-z][A-Za-z0-9_]*)'\\]\\s*=[^=]`,
+				'g'
+			)
+		),
+	].map( ( found ) => found[ 1 ] );
+}
+
+/**
+ * What `with_tokens()` puts on a creative, and what it takes off again.
+ *
+ * Read out of the method rather than restated, for the reason the context
+ * keys are: a list kept beside it is a second copy, and a second copy is how
+ * this lane passes after only one side changed.
+ *
+ * @param {string} php Fill_Service source with comments blanked.
+ * @return {{added: string[], stripped: string[]}|null}
+ */
+function tokenEffects( php ) {
+	const start = php.indexOf( 'function with_tokens' );
+
+	if ( start < 0 ) {
+		return null;
+	}
+
+	const body = php.slice( start, start + 2000 );
+	const added = [
+		...body.matchAll( /\$row\['([A-Za-z][A-Za-z0-9_]*)'\]\s*=/g ),
+	].map( ( found ) => found[ 1 ] );
+	const unset = body.match( /unset\(([^)]*)\)/ );
+
+	if ( 0 === added.length || ! unset ) {
+		return null;
+	}
+
+	return {
+		added,
+		stripped: [
+			...unset[ 1 ].matchAll( /\$row\['([A-Za-z][A-Za-z0-9_]*)'\]/g ),
+		].map( ( found ) => found[ 1 ] ),
+	};
+}
+
+/**
+ * Whether the client reads one key off the creative it is rendering.
+ *
+ * @param {string} client Concatenated client sources.
+ * @param {string} key    Payload key.
+ */
+function clientReadsCreative( client, key ) {
+	return new RegExp( `creative(?:\\?)?\\.${ key }\\b` ).test( client );
+}
+
 function clientReads( client, key ) {
 	return new RegExp( `context(?:\\?)?\\.${ key }\\b` ).test( client );
 }
@@ -170,7 +276,13 @@ function clientReads( client, key ) {
  */
 async function main() {
 	const problems = [];
-	const required = [ PHP_CONTEXT, FILL_CONTROLLER, ...CLIENT_FILES ];
+	const required = [
+		PHP_CONTEXT,
+		FILL_CONTROLLER,
+		DECISION_ENGINE,
+		FILL_SERVICE,
+		...CLIENT_FILES,
+	];
 	let scanned = 0;
 
 	for ( const relative of required ) {
@@ -203,6 +315,12 @@ async function main() {
 	}
 
 	const client = clientParts.join( '\n' );
+	const engine = codeOnly(
+		await readFile( resolve( DECISION_ENGINE ), 'utf8' )
+	);
+	const fillService = codeOnly(
+		await readFile( resolve( FILL_SERVICE ), 'utf8' )
+	);
 	const keys = contextKeys( php );
 
 	if ( null === keys || 0 === keys.length ) {
@@ -405,14 +523,107 @@ async function main() {
 		);
 	}
 
+	/*
+	 * **Every value the server puts on a creative, the browser must read.**
+	 *
+	 * This is the half the lane was missing, and it is the half that broke
+	 * twice. `_aggr_target_blank` was stored, carried across every creative
+	 * revision, and read by nothing — an advertisement could not be made to
+	 * open a new tab because the wire was never connected. `servable` is the
+	 * same shape of key added since. Neither surface was watched, because the
+	 * checks above read slot context and fill *parameters*, and a creative
+	 * payload is neither.
+	 *
+	 * Scoped to the creative object rather than the whole response. That is
+	 * where a key means "render this", so an unread one is a feature that does
+	 * nothing. The response's own top-level `slot` and `size` are the reply
+	 * describing itself and are read by no browser, which is a weaker claim
+	 * this lane deliberately does not make — an exemption list is how a guard
+	 * turns into a blind spot, so the boundary is stated instead of carved
+	 * out.
+	 */
+	const paidKeys = returnedKeys( engine, 'payload_from_row' );
+	const houseKeys = returnedKeys( fillService, 'house_creative' );
+	const lateKeys = assignedKeys( fillService, 'paid_creative', 'payload' );
+	const effects = tokenEffects( fillService );
+
+	if (
+		null === paidKeys ||
+		null === houseKeys ||
+		null === lateKeys ||
+		null === effects
+	) {
+		problems.push(
+			'check-client-contract: could not read the creative payload out of ' +
+				`${ DECISION_ENGINE } and ${ FILL_SERVICE }. This lane is ` +
+				'protecting nothing until the parse is fixed — do not delete it ' +
+				'to get green.'
+		);
+	}
+
+	let payloadRead = 0;
+
+	if (
+		null !== paidKeys &&
+		null !== houseKeys &&
+		null !== lateKeys &&
+		null !== effects
+	) {
+		const sent = [
+			...new Set( [
+				...paidKeys,
+				...houseKeys,
+				...lateKeys,
+				...effects.added,
+			] ),
+		].filter( ( key ) => ! effects.stripped.includes( key ) );
+
+		if ( 0 === sent.length ) {
+			problems.push(
+				'check-client-contract: the creative payload parsed as empty, ' +
+					'so every assertion below it is vacuous.'
+			);
+		}
+
+		for ( const key of sent ) {
+			payloadRead += 1;
+
+			if ( ! clientReadsCreative( client, key ) ) {
+				problems.push(
+					`check-client-contract: the fill response puts "${ key }" on ` +
+						'a creative and no client file reads it. Either the ' +
+						'browser half was never written, or the key is dead ' +
+						'weight — both were real defects here.'
+				);
+			}
+		}
+
+		/*
+		 * The opposite assertion for the keys `with_tokens()` removes, rather
+		 * than letting them skip the check. A client reading one of these is
+		 * reading `undefined` on every fill, which is silent: `placement`,
+		 * `campaign` and `creative` exist only long enough to mint a token.
+		 */
+		for ( const key of effects.stripped ) {
+			if ( clientReadsCreative( client, key ) ) {
+				problems.push(
+					`check-client-contract: a client file reads "${ key }" off a ` +
+						'creative, but with_tokens() removes it before the ' +
+						'response is sent. That read is undefined on every fill.'
+				);
+			}
+		}
+	}
+
 	if ( problems.length > 0 ) {
 		console.error( problems.join( '\n' ) );
 		process.exit( 1 );
 	}
 
 	console.log(
-		`check-client-contract: ok (${ read } context keys, ${ scanned } client ` +
-			`files, ${ e2eScanned } e2e files)`
+		`check-client-contract: ok (${ read } context keys, ${ payloadRead } ` +
+			`creative payload keys, ${ scanned } client files, ${ e2eScanned } ` +
+			'e2e files)'
 	);
 }
 
