@@ -344,11 +344,4 @@ final class Decision_Engine {
 			'sameTab'   => false,
 		);
 	}
-
-	/**
-	 * No-fill reason when no assignment survives the pipeline.
-	 */
-	public static function no_fill_reason(): string {
-		return Exclusion_Reason::NO_FILL;
-	}
 }

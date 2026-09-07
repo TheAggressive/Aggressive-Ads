@@ -110,6 +110,36 @@ what a guard reads, not only what it concludes — and sabotage it in both
 directions before trusting it: a server key with no reader must fail, and a
 client reading a key the server strips must fail too.
 
+**Two guards now exist for defects this project kept re-shipping**, both
+written after an audit found five more instances in one afternoon.
+
+`bin/ci/check-dead-code.mjs` refuses a public method in `inc/` that nothing
+calls. Every historical instance looked like a working feature from outside: a
+setting stored, versioned across revisions and read by nobody; a getter whose
+docblock described a publishing loop the superseded adapter used to run; two
+meta keys faithfully written and cleared on live paths and read by nobody; a
+product rule named in one place and hardcoded in another. A method with no
+caller is a claim that a behaviour exists, and the next person to need that
+behaviour finds it, believes it, and ships on top of it. A self-reference
+counts, because hook callbacks are registered by name and requiring a reference
+from elsewhere would fire on most of `inc/Portal/`.
+
+`ClosedVocabularyTest` refuses a declared code missing from its own `all()`.
+That shipped twice: `No_Fill_Reason::SIZE_UNAVAILABLE`, where
+`Decision_Metrics::buffer()` silently dropped every counter carrying it, and
+`Exclusion_Reason::ELIGIBILITY_SIZE_MISMATCH`, latent only because nothing read
+that list yet. **The scope selects itself** — any `inc/Domain/` class whose
+`all()` returns strings is checked, so a vocabulary added tomorrow is covered
+without anybody registering it, and `Transition_Table` is skipped because its
+`all()` returns objects rather than because a list excuses it. A deliberate
+non-member is named `LEGACY_*` at the declaration, and a second assertion
+requires it to normalise into a canonical member so the prefix cannot hide a
+real omission.
+
+Both were validated by reproducing the actual defects rather than by reasoning:
+the vocabulary guard was run against `all()` with `SIZE_UNAVAILABLE` and
+`ELIGIBILITY_SIZE_MISMATCH` removed, and failed on each.
+
 **The instrument that measures the tests needs a control of its own.** P16's
 supply forecast was mutation-tested with a shell loop that broke a line, ran
 PHPUnit, and read the result with `grep -E "^OK"`. PHPUnit colours that summary
