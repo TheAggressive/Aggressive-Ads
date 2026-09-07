@@ -35,6 +35,7 @@
 		"@wordpress/element": "^8.6.0",
 		"@wordpress/i18n": "^6.27.0",
 		"@wordpress/interactivity": "^6.54.0",
+		"@wordpress/media-utils": "^5.54.0",
 		"@wordpress/prettier-config": "^4.54.0",
 		"@wordpress/scripts": "^34.1.0",
 		"@wordpress/stylelint-config": "^24.3.0",

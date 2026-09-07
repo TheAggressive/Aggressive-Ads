@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-07T06:19:41+00:00\n"
+"POT-Creation-Date: 2026-09-07T07:14:44+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -110,7 +110,7 @@ msgstr ""
 #: inc/Admin/class-menu.php:255
 #: inc/Admin/class-organization-screen.php:127
 #: inc/Admin/class-package-screen.php:117
-#: inc/Admin/class-placement-screen.php:134
+#: inc/Admin/class-placement-screen.php:142
 #: inc/Admin/class-reports-screen.php:143
 #: inc/Admin/class-review-screen.php:180
 #: inc/Admin/class-settings-screen.php:161
@@ -137,7 +137,7 @@ msgstr ""
 #: inc/Admin/class-conversions-screen.php:210
 #: inc/Admin/class-conversions-screen.php:243
 #: inc/Admin/class-package-screen.php:164
-#: inc/Admin/class-placement-screen.php:176
+#: inc/Admin/class-placement-screen.php:184
 #: templates/portal/screens/campaign.php:772
 #: templates/portal/screens/organization.php:112
 msgid "Name"
@@ -189,7 +189,7 @@ msgid "Reporting key"
 msgstr ""
 
 #: inc/Admin/class-conversions-screen.php:222
-#: inc/Admin/class-placement-screen.php:173
+#: inc/Admin/class-placement-screen.php:181
 #: inc/Admin/class-review-screen.php:282
 #: inc/Admin/class-review-screen.php:300
 #: templates/portal/partials/campaign-table.php:35
@@ -217,7 +217,7 @@ msgid "Archive"
 msgstr ""
 
 #: inc/Admin/class-conversions-screen.php:227
-#: inc/Admin/class-placement-screen.php:169
+#: inc/Admin/class-placement-screen.php:177
 #: inc/Admin/class-review-screen.php:296
 #: templates/portal/screens/campaign.php:111
 #: templates/portal/screens/campaign.php:758
@@ -360,7 +360,7 @@ msgstr ""
 
 #: inc/Admin/class-conversions-screen.php:261
 #: inc/Admin/class-organization-screen.php:208
-#: inc/Admin/class-placement-screen.php:170
+#: inc/Admin/class-placement-screen.php:178
 #: inc/Admin/class-review-screen.php:347
 #: templates/portal/partials/campaign-overlays.php:198
 #: templates/portal/partials/campaign-overlays.php:239
@@ -514,7 +514,7 @@ msgstr ""
 
 #: inc/Admin/class-organization-screen.php:163
 #: inc/Admin/class-package-screen.php:174
-#: inc/Admin/class-placement-screen.php:186
+#: inc/Admin/class-placement-screen.php:194
 #: templates/portal/screens/organization.php:50
 msgid "Active"
 msgstr ""
@@ -563,7 +563,7 @@ msgid "Ownership transferred."
 msgstr ""
 
 #: inc/Admin/class-organization-screen.php:174
-#: inc/Admin/class-placement-screen.php:195
+#: inc/Admin/class-placement-screen.php:203
 #: inc/Admin/class-settings-screen.php:306
 #: templates/portal/screens/organization.php:154
 msgid "Remove"
@@ -639,7 +639,7 @@ msgstr ""
 
 #: inc/Admin/class-organization-screen.php:194
 #: inc/Admin/class-package-screen.php:184
-#: inc/Admin/class-placement-screen.php:219
+#: inc/Admin/class-placement-screen.php:232
 #: inc/Admin/class-review-screen.php:385
 #: inc/Admin/class-settings-screen.php:312
 msgid "Try again"
@@ -715,10 +715,10 @@ msgid "Package saved."
 msgstr ""
 
 #: inc/Admin/class-package-screen.php:165
-#: inc/Admin/class-placement-screen.php:118
-#: inc/Admin/class-placement-screen.php:119
-#: inc/Admin/class-placement-screen.php:152
-#: inc/Admin/class-placement-screen.php:225
+#: inc/Admin/class-placement-screen.php:126
+#: inc/Admin/class-placement-screen.php:127
+#: inc/Admin/class-placement-screen.php:160
+#: inc/Admin/class-placement-screen.php:238
 #: inc/Admin/class-reports-screen.php:552
 #: inc/Admin/class-review-screen.php:305
 #: inc/Core/class-post-types.php:199
@@ -734,7 +734,7 @@ msgid "No placements exist yet. Create one under Placements first."
 msgstr ""
 
 #: inc/Admin/class-package-screen.php:167
-#: inc/Admin/class-placement-screen.php:188
+#: inc/Admin/class-placement-screen.php:196
 msgid "inactive"
 msgstr ""
 
@@ -776,26 +776,26 @@ msgid "default"
 msgstr ""
 
 #: inc/Admin/class-package-screen.php:179
-#: inc/Admin/class-placement-screen.php:214
+#: inc/Admin/class-placement-screen.php:227
 #: inc/Admin/class-settings-screen.php:307
 msgid "Not saved yet…"
 msgstr ""
 
 #: inc/Admin/class-package-screen.php:180
-#: inc/Admin/class-placement-screen.php:215
+#: inc/Admin/class-placement-screen.php:228
 #: inc/Admin/class-settings-screen.php:308
 #: inc/Assets/class-assets.php:356
 msgid "Saving…"
 msgstr ""
 
 #: inc/Admin/class-package-screen.php:181
-#: inc/Admin/class-placement-screen.php:216
+#: inc/Admin/class-placement-screen.php:229
 #: inc/Admin/class-settings-screen.php:309
 msgid "Saved."
 msgstr ""
 
 #: inc/Admin/class-package-screen.php:182
-#: inc/Admin/class-placement-screen.php:217
+#: inc/Admin/class-placement-screen.php:230
 #: inc/Admin/class-settings-screen.php:310
 msgid "Not saved."
 msgstr ""
@@ -816,195 +816,215 @@ msgstr ""
 msgid "%1$s %2$s"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:153
+#: inc/Admin/class-placement-screen.php:161
 msgid "The placements screen has not been built. Run “pnpm build” and reload."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:163
+#: inc/Admin/class-placement-screen.php:171
 msgid "New placement"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:164
+#: inc/Admin/class-placement-screen.php:172
 msgid "Edit placement"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:165
+#: inc/Admin/class-placement-screen.php:173
 msgid "Create placement"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:166
+#: inc/Admin/class-placement-screen.php:174
 msgid "Save placement"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:167
+#: inc/Admin/class-placement-screen.php:175
 msgid "Placement created."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:168
+#: inc/Admin/class-placement-screen.php:176
 msgid "Placement saved."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:171
+#: inc/Admin/class-placement-screen.php:179
 msgid "Search placements"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:172
+#: inc/Admin/class-placement-screen.php:180
 msgid "No placements yet."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:174
+#: inc/Admin/class-placement-screen.php:182
 msgid "Allowed"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:175
+#: inc/Admin/class-placement-screen.php:183
 msgid "Off"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:177
+#: inc/Admin/class-placement-screen.php:185
 msgid "Slot slug"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:178
+#: inc/Admin/class-placement-screen.php:186
 msgid "Used by the placement block to choose this slot. Lowercase letters, numbers and hyphens."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:179
+#: inc/Admin/class-placement-screen.php:187
 #: templates/portal/screens/campaign.php:909
 msgid "Size"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:180
+#: inc/Admin/class-placement-screen.php:188
 msgid "Choose a size"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:181
+#: inc/Admin/class-placement-screen.php:189
 msgid "Custom size"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:182
+#: inc/Admin/class-placement-screen.php:190
 msgid "Custom width (px)"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:183
+#: inc/Admin/class-placement-screen.php:191
 msgid "Custom height (px)"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:184
+#: inc/Admin/class-placement-screen.php:192
 msgid "Sort order"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:185
+#: inc/Admin/class-placement-screen.php:193
 msgid "Lower numbers appear first in the advertiser wizard."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:187
+#: inc/Admin/class-placement-screen.php:195
 msgid "Inactive placements are hidden from advertisers and stop being filled."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:189
+#: inc/Admin/class-placement-screen.php:197
 #: inc/Admin/class-report-data.php:339
 #: inc/Admin/class-reports-screen.php:352
 msgid "Refresh"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:190
+#: inc/Admin/class-placement-screen.php:198
 msgid "Responsive sizes"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:191
+#: inc/Admin/class-placement-screen.php:199
 msgid "Serve a different size at different screen widths. Leave empty to serve one size everywhere. Each row is the narrowest screen that gets that size, so the first row must start at 0."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:192
+#: inc/Admin/class-placement-screen.php:200
 msgid "From screen width (px)"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:193
+#: inc/Admin/class-placement-screen.php:201
 msgid "Serves size"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:194
+#: inc/Admin/class-placement-screen.php:202
 msgid "Add a size"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:196
+#: inc/Admin/class-placement-screen.php:204
 msgid "A responsive placement needs a row starting at 0, or it serves its single size everywhere."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:197
+#: inc/Admin/class-placement-screen.php:205
 #: inc/Admin/class-reports-screen.php:547
 msgid "Groups"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:198
+#: inc/Admin/class-placement-screen.php:206
 msgid "Filed under"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:199
+#: inc/Admin/class-placement-screen.php:207
 msgid "Your own filing, for finding placements and totalling them together. Groups do not change which advertisement is served, and an advertiser never sees them. Labels are simplified when saved."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:200
+#: inc/Admin/class-placement-screen.php:208
 msgid "Allow refresh"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:201
+#: inc/Admin/class-placement-screen.php:209
 msgid "When on, a slot on this placement may replace its advertisement on a timer. The block still has to ask. Off is the default: a new placement is not inventory somebody chose to multiply."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:202
+#: inc/Admin/class-placement-screen.php:210
 msgid "Shortest interval (seconds)"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:203
+#: inc/Admin/class-placement-screen.php:211
 msgid "A block asking to rotate faster than this gets this number. A slower request is honoured."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:204
+#: inc/Admin/class-placement-screen.php:212
 msgid "Refreshes per page view"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:205
+#: inc/Admin/class-placement-screen.php:213
 msgid "How many times one slot may refresh after the first fill. Zero keeps refresh on but starts no timer."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:206
+#: inc/Admin/class-placement-screen.php:214
 msgid "House advertisement"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:207
+#: inc/Admin/class-placement-screen.php:215
 msgid "House attachment ID"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:208
-msgid "Shown when no paid creative is live, if the Delivery house-ad policy allows it. Leave at 0 for none."
+#: inc/Admin/class-placement-screen.php:216
+msgid "Shown when no paid creative is live, if the Delivery house-ad policy allows it. Leave empty for none."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:209
+#: inc/Admin/class-placement-screen.php:217
 msgid "With no house advertisement, this placement shows nothing when it is unsold — and nothing at all to visitors without JavaScript, whose slot is removed from the page rather than left as an empty box."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:210
+#: inc/Admin/class-placement-screen.php:218
 msgid "House click URL"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:211
+#: inc/Admin/class-placement-screen.php:219
 msgid "House alt text"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:212
+#: inc/Admin/class-placement-screen.php:220
+msgid "Choose image"
+msgstr ""
+
+#: inc/Admin/class-placement-screen.php:221
+msgid "Replace image"
+msgstr ""
+
+#: inc/Admin/class-placement-screen.php:222
+msgid "Remove image"
+msgstr ""
+
+#: inc/Admin/class-placement-screen.php:223
+msgid "The house advertisement as it will be served"
+msgstr ""
+
+#: inc/Admin/class-placement-screen.php:224
+msgid "Alt text is needed. A house advertisement is a linked image, and without it the link has no name a screen reader can announce."
+msgstr ""
+
+#: inc/Admin/class-placement-screen.php:225
 msgid "Open in the same tab"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:213
+#: inc/Admin/class-placement-screen.php:226
 msgid "Advertisements open in a new tab so a click does not take the reader off your page. Turn this on when the house advertisement points somewhere on this site, where a new tab is the wrong behaviour."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:218
+#: inc/Admin/class-placement-screen.php:231
 msgid "That placement could not be saved."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:226
+#: inc/Admin/class-placement-screen.php:239
 msgid "The placements screen needs JavaScript enabled."
 msgstr ""
 
