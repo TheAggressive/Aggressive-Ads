@@ -17,6 +17,7 @@ use Aggressive\Ads\Repository\Org_Access_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Decision_Rollup_Repository;
 use Aggressive\Ads\Repository\Forecast_Repository;
+use Aggressive\Ads\Repository\Reservation_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Repository\Conversion_Credential_Repository;
 use Aggressive\Ads\Repository\Conversion_Definition_Repository;
@@ -202,6 +203,7 @@ final class Installer {
 		( new Rollup_Repository() )->install_table();
 		( new Decision_Rollup_Repository() )->install_table();
 		( new Forecast_Repository() )->install_table();
+		( new Reservation_Repository() )->install_table();
 	}
 
 	/** Creates or repairs the attributed-conversion ledger and its definitions. */

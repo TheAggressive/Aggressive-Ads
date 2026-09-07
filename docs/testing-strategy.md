@@ -81,6 +81,20 @@ enough for the interesting branch to render — a placement that filled every
 time exercises the "every request was filled" path and proves nothing about the
 table beside it.
 
+**A mutation run that reported a survivor was running the wrong suite.** P16's
+reservation rules live in `inc/Domain/` and are unit-tested; the ledger that
+uses them is an integration test. The harness filtered both names through the
+*integration* config, which silently printed "No tests executed!" for the unit
+one — so every domain mutant was being judged only by whatever the integration
+tests happened to exercise, and the one mutation no integration test could
+reach was reported as surviving.
+
+The two-PHPUnit split is the trap here: a filter that matches nothing is not an
+error in either runner, and a harness that concatenates a pass from one suite
+with an empty run from the other looks identical to a real pass. Run every
+suite a mutated file has tests in, and treat "no tests executed" as a failure
+rather than a silence.
+
 **A guard written to catch unread keys shipped unable to see the newest one.**
 `check-client-contract.mjs` grew a lane asserting that every value the server
 puts on a creative is read by the browser — written because two keys had

@@ -15,7 +15,7 @@ use Aggressive\Ads\Domain\Opportunity;
 use Aggressive\Ads\Domain\Forecast_Error;
 use Aggressive\Ads\Domain\Supply_Forecast;
 use Aggressive\Ads\Install\Installer;
-use Aggressive\Ads\Install\Schema;
+use Aggressive\Ads\Install\Migration_Map;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Decision_Rollup_Repository;
@@ -134,9 +134,21 @@ final class ForecastSnapshotTest extends WP_UnitTestCase {
 		}
 	}
 
-	public function test_the_table_is_installed_at_the_current_schema_version(): void {
+	public function test_a_migration_exists_to_create_the_table(): void {
 		$this->assertTrue( $this->forecasts->table_exists() );
-		$this->assertSame( 27, Schema::DB_VERSION, 'A new table without a version bump never reaches an existing site.' );
+
+		/*
+		 * The registered migration, not the current `DB_VERSION`. Pinning the
+		 * number that happened to be current when this shipped makes the test
+		 * fail every time an unrelated table is added — noise that trains
+		 * somebody to edit the assertion rather than read it. What has to hold
+		 * is that a site already installed reaches this table at all.
+		 */
+		$this->assertArrayHasKey(
+			27,
+			Migration_Map::steps( Plugin::instance()->container() ),
+			'Without a registered step a site upgrades its recorded version past a migration that never ran, and the table never appears.'
+		);
 	}
 
 	public function test_a_forecast_is_stored_as_version_one(): void {
