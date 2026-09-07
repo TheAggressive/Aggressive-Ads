@@ -37,6 +37,15 @@ export type Placement = {
 	house_alt: string;
 
 	/**
+	 * Preview URL for the chosen image, supplied by the server.
+	 *
+	 * Not sent back on save. The attachment id is the record; this is what the
+	 * form shows so a publisher can see what they picked, and deriving it in
+	 * the browser would mean a second opinion about which size to render.
+	 */
+	house_image_url: string;
+
+	/**
 	 * Keep a click on this placement's house advertisement in the same tab.
 	 *
 	 * Only a house advertisement offers this. A paid creative always opens a
@@ -114,6 +123,7 @@ export const blankPlacement = ( defaults: RefreshDefaults ): Placement => ( {
 	house_attachment_id: 0,
 	house_click_url: '',
 	house_alt: '',
+	house_image_url: '',
 	house_same_tab: false,
 	breakpoints: {},
 	groups: [],

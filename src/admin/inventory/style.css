@@ -98,3 +98,42 @@
 .aggr-inventory-modal legend {
 	padding-inline: 4px;
 }
+
+/*
+ * The house image picker.
+ *
+ * The buttons wrap under the preview rather than beside it on a narrow modal,
+ * because the alternative is a thumbnail squeezed to nothing next to two
+ * buttons that still do not fit.
+ */
+.aggr-inventory-modal .aggr-house-picker {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+}
+
+/*
+ * Bounded in both directions. A house creative is a full-width leaderboard as
+ * often as it is a square, and an unconstrained preview either pushes the form
+ * controls off the modal or renders a 728-pixel image at a height nobody can
+ * see. The checkerboard is what makes a transparent PNG legible against the
+ * modal's own white.
+ */
+.aggr-inventory-modal .aggr-house-picker__preview {
+	background-color: #f0f0f1;
+	background-image:
+		linear-gradient(45deg, #dcdcde 25%, transparent 25%),
+		linear-gradient(-45deg, #dcdcde 25%, transparent 25%),
+		linear-gradient(45deg, transparent 75%, #dcdcde 75%),
+		linear-gradient(-45deg, transparent 75%, #dcdcde 75%);
+	background-position: 0 0, 0 4px, 4px -4px, -4px 0;
+	background-size: 8px 8px;
+	border: 1px solid var(--aggr-border-color);
+	border-radius: 2px;
+	height: auto;
+	max-height: 80px;
+	max-width: 100%;
+	object-fit: contain;
+	width: auto;
+}
