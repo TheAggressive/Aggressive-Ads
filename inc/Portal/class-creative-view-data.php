@@ -9,7 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Portal;
 
-use Aggressive\Ads\REST\Creative_File_Controller;
+use Aggressive\Ads\REST\Api;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Attachment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
@@ -78,7 +78,7 @@ final class Creative_View_Data {
 		return add_query_arg(
 			'_wpnonce',
 			wp_create_nonce( 'wp_rest' ),
-			rest_url( Creative_File_Controller::NAMESPACE . '/creatives/' . $creative_id . '/file' )
+			rest_url( Api::NAMESPACE . '/creatives/' . $creative_id . '/file' )
 		);
 	}
 
@@ -202,7 +202,7 @@ final class Creative_View_Data {
 				'preview'      => add_query_arg(
 					'_wpnonce',
 					wp_create_nonce( 'wp_rest' ),
-					rest_url( Creative_File_Controller::NAMESPACE . '/creatives/' . $creative['id'] . '/file' )
+					rest_url( Api::NAMESPACE . '/creatives/' . $creative['id'] . '/file' )
 				),
 			);
 		}

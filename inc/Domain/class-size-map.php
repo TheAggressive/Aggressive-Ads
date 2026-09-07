@@ -29,8 +29,6 @@ namespace Aggressive\Ads\Domain;
  * The same shape gives totality for free: the map is invalid without a floor of
  * zero, so every width from zero upward has an answer and there is no gap to
  * fall through.
- *
- * Pure domain: no WordPress, no storage.
  */
 final class Size_Map {
 

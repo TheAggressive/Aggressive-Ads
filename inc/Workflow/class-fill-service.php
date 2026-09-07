@@ -18,7 +18,7 @@ use Aggressive\Ads\Domain\Upload_Rules;
 use Aggressive\Ads\Repository\Delivery_Repository;
 use Aggressive\Ads\Repository\Page_Context_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
-use Aggressive\Ads\REST\Creative_File_Controller;
+use Aggressive\Ads\REST\Api;
 
 /**
  * Native fill. Paid creatives are chosen by the assignment decision engine.
@@ -126,7 +126,7 @@ final class Fill_Service {
 				'size'        => $this->placements->size( $placement_id ),
 				'creative'    => $paid,
 				'house'       => $house,
-				'beacon'      => rest_url( Creative_File_Controller::NAMESPACE . '/i' ),
+				'beacon'      => rest_url( Api::NAMESPACE . '/i' ),
 				'viewability' => $this->viewability(),
 			)
 		);
@@ -243,7 +243,7 @@ final class Fill_Service {
 					'size'        => $info['size'],
 					'creative'    => $paid,
 					'house'       => $house,
-					'beacon'      => rest_url( Creative_File_Controller::NAMESPACE . '/i' ),
+					'beacon'      => rest_url( Api::NAMESPACE . '/i' ),
 					'viewability' => $this->viewability(),
 				)
 			);

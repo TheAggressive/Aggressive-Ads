@@ -514,7 +514,7 @@ final class Campaigns_Controller implements Service {
 
 				// The authorized stream, never a path into private storage.
 				'file_url'       => rest_url(
-					sprintf( '%s/creatives/%d/file', Creative_File_Controller::NAMESPACE, $creative['id'] )
+					sprintf( '%s/creatives/%d/file', Api::NAMESPACE, $creative['id'] )
 				),
 			);
 		}

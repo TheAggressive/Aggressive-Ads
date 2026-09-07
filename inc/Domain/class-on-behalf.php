@@ -12,23 +12,18 @@ namespace Aggressive\Ads\Domain;
 /**
  * The on-behalf rule.
  *
- * Extracted for the same reason as `Acting_Session`: it is a rule rather than
- * a mechanism, and rules belong in the layer that loads without WordPress so
- * they can be tested exhaustively instead of representatively.
- *
- * The rule decides how an edit is *recorded*, which is why getting it wrong is
- * quiet. Audit timelines are read to answer "who changed this", and an edit
- * mislabelled either way makes that answer misleading rather than absent.
+ * Decides how an edit is *recorded*, which is why getting it wrong is quiet:
+ * audit timelines answer "who changed this", and a mislabelled edit makes that
+ * answer misleading rather than absent.
  */
 final class On_Behalf {
 
 	/**
 	 * Whether this actor is acting for an organization they do not belong to.
 	 *
-	 * Membership decides, not capability. A staff member who genuinely belongs
-	 * to the owning organization is editing their own work, and recording that
-	 * as on-behalf would make the timeline read as though an outsider had
-	 * reached in.
+	 * Membership decides, not capability: a staff member who belongs to the
+	 * owning organization is editing their own work, and recording that as
+	 * on-behalf reads as though an outsider reached in.
 	 *
 	 * @param bool            $is_staff       Whether the actor holds the review capability.
 	 * @param int             $org_id         The organization owning the object.

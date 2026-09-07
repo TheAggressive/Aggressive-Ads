@@ -15,26 +15,15 @@ use DateTimeZone;
 /**
  * Parses and validates the UTC days this plugin's counters are keyed by.
  *
- * **Extracted because there were four readings of the same question.** Three
- * repositories each carried a private `is_day()` matching
- * `/^\d{4}-\d{2}-\d{2}$/`, and `Supply_Forecast` carried a stricter one that
- * actually parsed the date. Those disagree: the regex accepts `2026-13-45`, so
- * a caller passing an impossible day got a query that matched nothing and no
- * indication of why — the same shape as a placement that simply had no data.
- * The domain refused it; storage did not.
+ * One reading, and the strict one. Three repositories each carried a private
+ * `is_day()` matching `/^\d{4}-\d{2}-\d{2}$/`, which accepts `2026-13-45` — so
+ * an impossible day produced a query that matched nothing, indistinguishable
+ * from a placement with no data.
  *
- * Four copies of a rule are four chances to fix a bug in one of them. This is
- * the one reading, and it is the strict one: a day that cannot exist is
- * refused everywhere rather than quietly returning an empty result somewhere.
- *
- * **The timezone is explicit and load-bearing.** `DateTimeImmutable` without
- * one reads the ambient default, which WordPress sets from a site setting — so
- * a publisher changing their display timezone would re-bucket historical days
- * that no new data had touched. Samoa crossed the date line at the end of 2011
- * and `2011-12-30` does not exist in `Pacific/Apia`, which is the case that
- * makes this concrete rather than theoretical.
- *
- * Pure domain: no WordPress, no storage, testable without a bootstrap.
+ * **The timezone is load-bearing.** `DateTimeImmutable` without one reads the
+ * ambient default, which WordPress sets from a site setting. Samoa crossed the
+ * date line at the end of 2011, so `2011-12-30` does not exist in
+ * `Pacific/Apia` — a publisher there would silently lose a day of history.
  */
 final class Utc_Day {
 

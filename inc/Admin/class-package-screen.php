@@ -11,7 +11,7 @@ namespace Aggressive\Ads\Admin;
 
 use Aggressive\Ads\Admin\Currency_Options;
 use Aggressive\Ads\Core\Service;
-use Aggressive\Ads\REST\Creative_File_Controller;
+use Aggressive\Ads\REST\Api;
 use Aggressive\Ads\Security\Capabilities;
 
 /**
@@ -149,7 +149,7 @@ final class Package_Screen implements Service {
 
 		$payload = array(
 			'view'            => $this->data->view(),
-			'restPath'        => '/' . Creative_File_Controller::NAMESPACE . '/packages',
+			'restPath'        => '/' . Api::NAMESPACE . '/packages',
 			'currencies'      => Currency_Options::options(
 				$priced,
 				__( 'Choose a currency', 'aggressive-ads' )
