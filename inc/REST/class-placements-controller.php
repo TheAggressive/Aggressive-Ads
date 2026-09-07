@@ -234,6 +234,7 @@ final class Placements_Controller implements Service {
 			'house_attachment_id' => isset( $body['house_attachment_id'] ) ? absint( $body['house_attachment_id'] ) : 0,
 			'house_click_url'     => isset( $body['house_click_url'] ) && is_string( $body['house_click_url'] ) ? $body['house_click_url'] : '',
 			'house_alt'           => isset( $body['house_alt'] ) && is_string( $body['house_alt'] ) ? $body['house_alt'] : '',
+			'house_same_tab'      => ! empty( $body['house_same_tab'] ),
 		);
 
 		/*

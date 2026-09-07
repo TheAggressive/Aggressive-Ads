@@ -32,7 +32,7 @@ final class Placement_Data {
 	/**
 	 * Complete inventory-screen state.
 	 *
-	 * @return array{sizes: array<string, string>, refresh_defaults: array{enabled: bool, seconds: int, max_per_view: int}, refresh_ceiling: int, rows: array<int, array{id: int, name: string, slug: string, size: string, size_preset: string, size_width: int, size_height: int, active: bool, sort_order: int, refresh_enabled: bool, refresh_seconds: int, refresh_max_per_view: int, house_attachment_id: int, house_click_url: string, house_alt: string, breakpoints: array<int, string>, groups: array<int, string>}>, all_groups: array<int, string>}
+	 * @return array{sizes: array<string, string>, refresh_defaults: array{enabled: bool, seconds: int, max_per_view: int}, refresh_ceiling: int, rows: array<int, array{id: int, name: string, slug: string, size: string, size_preset: string, size_width: int, size_height: int, active: bool, sort_order: int, refresh_enabled: bool, refresh_seconds: int, refresh_max_per_view: int, house_attachment_id: int, house_click_url: string, house_alt: string, house_same_tab: bool, breakpoints: array<int, string>, groups: array<int, string>}>, all_groups: array<int, string>}
 	 */
 	public function view(): array {
 		$rows     = array();
@@ -60,6 +60,7 @@ final class Placement_Data {
 				'house_attachment_id'  => $this->placements->house_attachment_id( $placement_id ),
 				'house_click_url'      => $this->placements->house_click_url( $placement_id ),
 				'house_alt'            => $this->placements->house_alt( $placement_id ),
+				'house_same_tab'       => $this->placements->house_same_tab( $placement_id ),
 
 				/*
 				 * Keyed by floor and stringified, because JSON object keys are

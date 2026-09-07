@@ -248,7 +248,6 @@ final class Creative_Revision_Repository {
 			Creative_Repository::META_KIND,
 			Creative_Repository::META_WIDTH,
 			Creative_Repository::META_HEIGHT,
-			Creative_Repository::META_TARGET_BLANK,
 			Creative_Repository::META_ATTACHMENT_ID,
 			Creative_Repository::META_SHA256,
 			Creative_Repository::META_MIME,

@@ -331,6 +331,16 @@ final class Decision_Engine {
 			'placement' => $placement_id,
 			'campaign'  => (int) ( $row['campaign_id'] ?? 0 ),
 			'creative'  => (int) ( $row['revision_id'] ?? 0 ),
+
+			/*
+			 * **A paid creative never keeps the reader on the page.** The
+			 * reader it would carry away is the publisher's, and an advertiser
+			 * has no standing to spend that. The key is sent as a constant
+			 * rather than omitted so the browser reads one field for both
+			 * kinds of advertisement — an absent key and a false one look the
+			 * same to `fill.js`, and only one of them is a decision.
+			 */
+			'sameTab'   => false,
 		);
 	}
 

@@ -31,7 +31,6 @@ final class Creative_Repository {
 	public const META_CLICK_URL     = '_aggr_click_url';
 	public const META_ALT_TEXT      = '_aggr_alt_text';
 	public const META_REVIEW_STATE  = '_aggr_review_state';
-	public const META_TARGET_BLANK  = '_aggr_target_blank';
 	public const META_ATTACHMENT_ID = '_aggr_attachment_id';
 
 	/**
@@ -394,16 +393,6 @@ final class Creative_Repository {
 	}
 
 
-
-	/**
-	 * Whether the creative's destination should open in a new window.
-	 *
-	 * @param int $creative_id Creative post id.
-	 * @return bool
-	 */
-	public function opens_in_new_window( int $creative_id ): bool {
-		return 1 === (int) get_post_meta( $creative_id, self::META_TARGET_BLANK, true );
-	}
 
 	/**
 	 * The provider ad id published for this creative, or 0.

@@ -392,7 +392,19 @@ final class Placement_Slot implements Service {
 			return '';
 		}
 
-		return '<noscript><a href="' . esc_url( $click ) . '"><img src="' . esc_url( $image ) . '" alt="' . esc_attr( $alt ) . '"></a></noscript>';
+		/*
+		 * **The same tab rule as the scripted path, written twice on purpose.**
+		 * This markup is built here because a visitor without JavaScript never
+		 * reaches the fill route, so there is no shared branch to put it in.
+		 * `NoScriptHouseTest` asserts both paths agree; the risk of two
+		 * renderers is that one of them quietly stops opening a new tab, and
+		 * the one nobody looks at is this one.
+		 */
+		$target = $this->placements->house_same_tab( $placement_id )
+			? ''
+			: ' target="_blank" rel="noopener noreferrer"';
+
+		return '<noscript><a href="' . esc_url( $click ) . '"' . $target . '><img src="' . esc_url( $image ) . '" alt="' . esc_attr( $alt ) . '"></a></noscript>';
 	}
 
 	/**
