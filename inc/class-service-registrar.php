@@ -118,6 +118,7 @@ use Aggressive\Ads\Repository\Decision_Rollup_Repository;
 use Aggressive\Ads\Repository\Forecast_Repository;
 use Aggressive\Ads\Repository\Reservation_Repository;
 use Aggressive\Ads\Workflow\Reviewer_Access;
+use Aggressive\Ads\Workflow\Booking_Service;
 use Aggressive\Ads\Workflow\Forecast_Recorder;
 use Aggressive\Ads\Workflow\Supply_History;
 use Aggressive\Ads\Workflow\Review_Readiness;
@@ -394,6 +395,15 @@ final class Service_Registrar {
 		$container->register(
 			Reservation_Repository::class,
 			static fn (): Reservation_Repository => new Reservation_Repository()
+		);
+
+		$container->register(
+			Booking_Service::class,
+			static fn ( Service_Container $c ): Booking_Service => new Booking_Service(
+				$c->get( Forecast_Repository::class ),
+				$c->get( Reservation_Repository::class ),
+				$c->get( Audit_Repository::class )
+			)
 		);
 
 		$container->register(
