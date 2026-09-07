@@ -35,6 +35,7 @@ final class Placement_Repository {
 	public const META_HOUSE_ATTACHMENT = '_aggr_house_attachment_id';
 	public const META_HOUSE_CLICK_URL  = '_aggr_house_click_url';
 	public const META_HOUSE_ALT        = '_aggr_house_alt';
+	public const META_HOUSE_SAME_TAB   = '_aggr_house_same_tab';
 
 	/**
 	 * Upper bound on placements returned in one query.
@@ -91,6 +92,25 @@ final class Placement_Repository {
 		$title = get_post_field( 'post_title', $placement_id, 'raw' );
 
 		return is_string( $title ) ? $title : '';
+	}
+
+	/**
+	 * Whether this placement's house advertisement stays in the same tab.
+	 *
+	 * **Only a house advertisement gets this choice.** A paid creative always
+	 * opens a new tab, because the reader it would otherwise carry away is the
+	 * publisher's, and an advertiser has no standing to spend that. A house
+	 * advertisement is the publisher's own and usually points somewhere on the
+	 * publisher's own site, where a new tab is the wrong default rather than
+	 * the safe one.
+	 *
+	 * Absent means false, so a new tab is what everything gets until a
+	 * publisher says otherwise about their own advertisement.
+	 *
+	 * @param int $placement_id Placement post id.
+	 */
+	public function house_same_tab( int $placement_id ): bool {
+		return 1 === (int) get_post_meta( $placement_id, self::META_HOUSE_SAME_TAB, true );
 	}
 
 	/**
@@ -421,8 +441,9 @@ final class Placement_Repository {
 	 * @param int    $attachment_id Media attachment id, or zero.
 	 * @param string $click_url     Destination URL.
 	 * @param string $alt           Image alt text.
+	 * @param bool   $same_tab      Keep the reader on the page instead of opening a tab.
 	 */
-	public function set_house( int $placement_id, int $attachment_id, string $click_url, string $alt ): bool {
+	public function set_house( int $placement_id, int $attachment_id, string $click_url, string $alt, bool $same_tab = false ): bool {
 		if ( ! $this->exists( $placement_id ) || $attachment_id < 0 ) {
 			return false;
 		}
@@ -430,10 +451,12 @@ final class Placement_Repository {
 		update_post_meta( $placement_id, self::META_HOUSE_ATTACHMENT, $attachment_id );
 		update_post_meta( $placement_id, self::META_HOUSE_CLICK_URL, $click_url );
 		update_post_meta( $placement_id, self::META_HOUSE_ALT, $alt );
+		update_post_meta( $placement_id, self::META_HOUSE_SAME_TAB, $same_tab ? 1 : 0 );
 
 		return $this->house_attachment_id( $placement_id ) === $attachment_id
 			&& $this->house_click_url( $placement_id ) === $click_url
-			&& $this->house_alt( $placement_id ) === $alt;
+			&& $this->house_alt( $placement_id ) === $alt
+			&& $this->house_same_tab( $placement_id ) === $same_tab;
 	}
 
 	/**

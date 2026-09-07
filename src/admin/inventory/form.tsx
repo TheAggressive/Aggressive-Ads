@@ -394,6 +394,16 @@ export function PlacementModal( {
 							__next40pxDefaultSize
 						/>
 
+						<ToggleControl
+							label={ t( 'houseSameTab' ) }
+							help={ t( 'houseSameTabHelp' ) }
+							checked={ draft.house_same_tab }
+							onChange={ ( house_same_tab: boolean ) =>
+								set( { house_same_tab } )
+							}
+							__nextHasNoMarginBottom
+						/>
+
 						{ /*
 						 * Not an error — a placement with no house
 						 * advertisement is a legitimate configuration, and the

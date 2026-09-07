@@ -209,6 +209,8 @@ final class Placement_Screen implements Service {
 				'houseMissing'        => __( 'With no house advertisement, this placement shows nothing when it is unsold — and nothing at all to visitors without JavaScript, whose slot is removed from the page rather than left as an empty box.', 'aggressive-ads' ),
 				'houseUrl'            => __( 'House click URL', 'aggressive-ads' ),
 				'houseAlt'            => __( 'House alt text', 'aggressive-ads' ),
+				'houseSameTab'        => __( 'Open in the same tab', 'aggressive-ads' ),
+				'houseSameTabHelp'    => __( 'Advertisements open in a new tab so a click does not take the reader off your page. Turn this on when the house advertisement points somewhere on this site, where a new tab is the wrong behaviour.', 'aggressive-ads' ),
 				'statusPending'       => __( 'Not saved yet…', 'aggressive-ads' ),
 				'statusSaving'        => __( 'Saving…', 'aggressive-ads' ),
 				'statusSaved'         => __( 'Saved.', 'aggressive-ads' ),

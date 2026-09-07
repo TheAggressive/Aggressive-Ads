@@ -77,7 +77,23 @@ const readyToPaint = ( image, timeoutMs ) =>
 const buildAd = ( creative ) => {
 	const link = document.createElement( 'a' );
 	link.href = creative.click;
-	link.rel = 'noopener noreferrer';
+
+	/*
+	 * An advertisement opens a new tab unless the publisher said otherwise
+	 * about their own house advertisement, which `sameTab` carries.
+	 *
+	 * `rel` used to be set here unconditionally beside no `target` at all,
+	 * which is the tell: `noopener` exists to sever `window.opener` on a new
+	 * browsing context, so on a same-tab navigation it protects nothing. The
+	 * pairing was written for behaviour that had never been connected — a
+	 * per-creative "open in new window" setting that was stored, versioned
+	 * across revisions, and read by nothing.
+	 */
+	if ( ! creative.sameTab ) {
+		link.target = '_blank';
+		link.rel = 'noopener noreferrer';
+	}
+
 	link.style.display = 'block';
 	link.style.width = '100%';
 
