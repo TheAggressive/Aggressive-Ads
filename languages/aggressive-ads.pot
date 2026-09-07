@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-07T21:28:54+00:00\n"
+"POT-Creation-Date: 2026-09-07T22:08:38+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -99,7 +99,7 @@ msgstr ""
 #: inc/Admin/class-conversions-screen.php:165
 #: inc/Admin/class-conversions-screen.php:208
 #: inc/Admin/class-conversions-screen.php:270
-#: inc/Portal/class-delivery-view-data.php:219
+#: inc/Portal/class-delivery-view-data.php:232
 #: inc/Portal/class-report-actions.php:193
 #: templates/portal/partials/campaign-summary-facts.php:81
 #: templates/portal/partials/campaign-table.php:41
@@ -902,7 +902,7 @@ msgid "Inactive placements are hidden from advertisers and stop being filled."
 msgstr ""
 
 #: inc/Admin/class-placement-screen.php:197
-#: inc/Admin/class-report-data.php:339
+#: inc/Admin/class-report-data.php:351
 #: inc/Admin/class-reports-screen.php:352
 msgid "Refresh"
 msgstr ""
@@ -1029,54 +1029,54 @@ msgid "The placements screen needs JavaScript enabled."
 msgstr ""
 
 #. translators: %s: a date, e.g. 30 August 2026.
-#: inc/Admin/class-report-data.php:322
-#: inc/Portal/class-delivery-view-data.php:167
+#: inc/Admin/class-report-data.php:334
+#: inc/Portal/class-delivery-view-data.php:180
 #, php-format
 msgid "Figures from %s onward are still being counted."
 msgstr ""
 
-#: inc/Admin/class-report-data.php:338
+#: inc/Admin/class-report-data.php:350
 #: inc/Admin/class-reports-screen.php:345
 msgid "Page"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:358
+#: inc/Admin/class-report-data.php:370
 msgid "No advertisement was assigned to this slot"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:359
+#: inc/Admin/class-report-data.php:371
 msgid "Every assigned advertisement was ineligible"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:360
+#: inc/Admin/class-report-data.php:372
 msgid "No advertisement was the size this screen asked for"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:361
+#: inc/Admin/class-report-data.php:373
 msgid "Outside every assigned campaign’s schedule"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:362
+#: inc/Admin/class-report-data.php:374
 msgid "The visitor did not match the targeting rules"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:363
+#: inc/Admin/class-report-data.php:375
 msgid "The visitor had already seen it enough times"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:364
+#: inc/Admin/class-report-data.php:376
 msgid "Held back to spread delivery across the day"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:365
+#: inc/Admin/class-report-data.php:377
 msgid "Excluded by a competing advertisement on the page"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:366
+#: inc/Admin/class-report-data.php:378
 msgid "The decision failed and no advertisement was served"
 msgstr ""
 
-#: inc/Admin/class-report-data.php:367
+#: inc/Admin/class-report-data.php:379
 msgid "No reason was recorded"
 msgstr ""
 
@@ -1313,8 +1313,8 @@ msgid "%s page requests belong to placements that no longer exist, so they are c
 msgstr ""
 
 #: inc/Admin/class-reports-screen.php:611
-#: inc/Portal/class-delivery-view-data.php:356
-#: inc/Portal/class-delivery-view-data.php:407
+#: inc/Portal/class-delivery-view-data.php:369
+#: inc/Portal/class-delivery-view-data.php:420
 #: templates/portal/partials/campaign-summary-facts.php:75
 #: templates/portal/partials/campaign-table.php:81
 msgid "—"
@@ -1324,8 +1324,8 @@ msgstr ""
 #. translators: %s: click-through rate as a percentage, e.g. 1.2.
 #. translators: %s: share of impressions that were viewable, e.g. 62.5.
 #: inc/Admin/class-reports-screen.php:616
-#: inc/Portal/class-delivery-view-data.php:361
-#: inc/Portal/class-delivery-view-data.php:412
+#: inc/Portal/class-delivery-view-data.php:374
+#: inc/Portal/class-delivery-view-data.php:425
 #: templates/portal/partials/campaign-summary-facts.php:72
 #: templates/portal/partials/campaign-table.php:78
 #, php-format
@@ -3278,12 +3278,12 @@ msgid "Changes needed"
 msgstr ""
 
 #. translators: 1: first day of the range. 2: last day of the range.
-#: inc/Portal/class-delivery-view-data.php:126
+#: inc/Portal/class-delivery-view-data.php:127
 #, php-format
 msgid "%1$s to %2$s (UTC)"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:197
+#: inc/Portal/class-delivery-view-data.php:210
 #: inc/Portal/class-report-actions.php:190
 #: templates/portal/partials/campaign-summary-facts.php:56
 #: templates/portal/partials/campaign-table.php:38
@@ -3291,37 +3291,37 @@ msgstr ""
 msgid "Impressions"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:202
+#: inc/Portal/class-delivery-view-data.php:215
 #: inc/Portal/class-report-actions.php:191
 #: templates/portal/partials/campaign-summary-facts.php:60
 #: templates/portal/partials/campaign-table.php:39
 msgid "Clicks"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:207
+#: inc/Portal/class-delivery-view-data.php:220
 #: templates/portal/partials/campaign-summary-facts.php:64
 #: templates/portal/partials/campaign-table.php:40
 msgid "CTR"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:213
+#: inc/Portal/class-delivery-view-data.php:226
 msgid "Viewable"
 msgstr ""
 
 #. translators: %s: signed change in percentage points, e.g. +0.5.
-#: inc/Portal/class-delivery-view-data.php:278
+#: inc/Portal/class-delivery-view-data.php:291
 #, php-format
 msgid "%s pp vs previous period"
 msgstr ""
 
 #. translators: %s: signed percentage change, e.g. +12.4.
-#: inc/Portal/class-delivery-view-data.php:282
+#: inc/Portal/class-delivery-view-data.php:295
 #, php-format
 msgid "%s%% vs previous period"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:379
-#: inc/Portal/class-delivery-view-data.php:401
+#: inc/Portal/class-delivery-view-data.php:392
+#: inc/Portal/class-delivery-view-data.php:414
 #: templates/portal/partials/campaign-summary-facts.php:90
 #: templates/portal/partials/campaign-table.php:97
 msgid "Not measured"

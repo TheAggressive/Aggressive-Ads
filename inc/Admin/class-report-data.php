@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Admin;
 
+use DateTimeZone;
 use Aggressive\Ads\Domain\Decision_Outcome;
 use Aggressive\Ads\Domain\Fill_Figures;
 use Aggressive\Ads\Domain\No_Fill_Reason;
@@ -317,10 +318,21 @@ final class Report_Data {
 
 		$timestamp = strtotime( $from . ' UTC' );
 
+		/*
+		 * UTC, for the reason `Portal\Delivery_View_Data::day_label()` gives:
+		 * this is a stored day rather than an instant, and site-time formatting
+		 * moved it a day earlier on every site west of Greenwich — naming a day
+		 * as still being counted when the day actually still being counted was
+		 * the one after it.
+		 */
+		$label = false === $timestamp
+			? $from
+			: (string) wp_date( (string) get_option( 'date_format', 'Y-m-d' ), $timestamp, new DateTimeZone( 'UTC' ) );
+
 		return sprintf(
 			/* translators: %s: a date, e.g. 30 August 2026. */
 			__( 'Figures from %s onward are still being counted.', 'aggressive-ads' ),
-			false === $timestamp ? $from : (string) wp_date( (string) get_option( 'date_format', 'Y-m-d' ), $timestamp )
+			$label
 		);
 	}
 
