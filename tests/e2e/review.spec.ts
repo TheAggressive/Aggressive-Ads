@@ -26,16 +26,36 @@ test( 'a reviewer works the queue, claims a campaign and writes notes', async ( 
 	await expect(
 		page.getByRole( 'heading', { level: 1, name: 'Campaign review' } )
 	).toBeVisible();
+	/*
+	 * Rows by DataViews' own class, because the queue's table is DataViews now
+	 * and the hand-rolled `.aggr-review-table` is gone. Asserting on the
+	 * component's markup rather than on a role keeps this failing loudly if the
+	 * table stops rendering at all — which is the thing worth catching, since
+	 * an unstyled or unmounted DataViews still produces rows for a role query.
+	 */
 	await expect(
-		page.locator( '.aggr-review-table tbody tr' )
+		page.locator( '.dataviews-view-table__row' )
 	).not.toHaveCount( 0 );
 	await expectAdminA11y( page );
 
-	// Into one campaign, and the URL says which.
-	const first = page.locator( '.aggr-review-table tbody tr' ).first();
-	const title = ( await first.locator( 'td' ).first().innerText() ).trim();
+	/*
+	 * Into one campaign, and the URL says which.
+	 *
+	 * The campaign is reached through the link button this screen renders into
+	 * the title field, not through a positional cell. DataViews decides its own
+	 * column order and may put a checkbox or a primary-column wrapper first, so
+	 * "the first `td`" is a guess about somebody else's markup — it timed out
+	 * on exactly that. The button is ours and is guaranteed to be there.
+	 */
+	const firstTitle = page
+		.locator( '.dataviews-view-table__row .aggr-linkbutton' )
+		.first();
 
-	await first.getByRole( 'button', { name: title } ).click();
+	await expect( firstTitle ).toBeVisible();
+
+	const title = ( await firstTitle.innerText() ).trim();
+
+	await firstTitle.click();
 
 	await expect(
 		page.getByRole( 'heading', { level: 1, name: title } )

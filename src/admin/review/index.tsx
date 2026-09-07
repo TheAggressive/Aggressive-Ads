@@ -19,10 +19,12 @@ import {
 	createRoot,
 	useCallback,
 	useEffect,
+	useRef,
 	useState,
 } from '@wordpress/element';
 import { errorMessage, setStrings, t } from '../shared/save';
 import { QueueView } from './queue';
+import { createQueueCache } from './queue-cache';
 import { CampaignView } from './campaign';
 import { navigateSameOrigin } from '../shared/navigate';
 import type { Bootstrap, Campaign, Queue, Tab } from './types';
@@ -67,6 +69,12 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 		data.campaign
 	);
 	const [ busy, setBusy ] = useState( false );
+
+	/*
+	 * A ref, not state: remembering a page must never itself cause a render,
+	 * and the request ordering inside it has to survive one.
+	 */
+	const cache = useRef( createQueueCache() );
 	const [ flash, setFlash ] = useState< Flash >( null );
 
 	/**
@@ -89,12 +97,35 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 		window.history.pushState( next, '', url.toString() );
 	}, [] );
 
+	/*
+	 * **Show what was last known, then correct it.**
+	 *
+	 * A tab click costs a full WordPress bootstrap — 300ms warm and 1.3s cold
+	 * on a local site, measured, against a handler that takes five. Nothing
+	 * here makes that faster; it stops the wait happening in front of the
+	 * reader. Cached rows render immediately and the request runs behind them.
+	 *
+	 * It caches *while* fetching rather than instead of it, because this is a
+	 * shared queue: one reviewer claims a campaign and the other must stop
+	 * seeing it unassigned. Every switch still asks the server.
+	 */
 	const loadQueue = useCallback(
 		async (
 			nextFilter: string,
 			page: number,
 			navigate = true
 		): Promise< void > => {
+			const known = cache.current.get( nextFilter, page );
+
+			if ( known ) {
+				setFilter( nextFilter );
+				setTabs( known.tabs );
+				setQueue( known.queue );
+				setCampaign( null );
+			}
+
+			const ticket = cache.current.issue();
+
 			setBusy( true );
 
 			try {
@@ -110,6 +141,21 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 					) }&paged=${ page }`,
 				} );
 
+				cache.current.put( nextFilter, page, {
+					queue: result.queue,
+					tabs: result.tabs,
+				} );
+
+				/*
+				 * A superseded answer is remembered but never shown. Clicking
+				 * two tabs quickly puts both requests in flight, and the first
+				 * one landing second would drop the reader back onto a tab they
+				 * had already left — with the other one still highlighted.
+				 */
+				if ( ! cache.current.isCurrent( ticket ) ) {
+					return;
+				}
+
 				setFilter( result.filter );
 				setTabs( result.tabs );
 				setQueue( result.queue );
@@ -124,7 +170,9 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 			} catch ( reason ) {
 				setFlash( { type: 'error', message: errorMessage( reason ) } );
 			} finally {
-				setBusy( false );
+				if ( cache.current.isCurrent( ticket ) ) {
+					setBusy( false );
+				}
 			}
 		},
 		[ data.restPath, push ]
@@ -205,6 +253,13 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 			} );
 
 			if ( created.id ) {
+				/*
+				 * The queue is stale from here whether or not the navigation
+				 * below succeeds — and when it fails this screen stays on
+				 * exactly the list that is now missing a campaign.
+				 */
+				cache.current.clear();
+
 				await actFor( orgId );
 
 				if (
@@ -288,6 +343,16 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 				method: 'POST',
 				data: body,
 			} );
+
+			/*
+			 * **A decision invalidates every tab, not the one being looked at.**
+			 *
+			 * Approving moves a campaign out of Pending and into Decided and
+			 * changes both counts, so a remembered Pending page would still
+			 * list it and a remembered Decided page would still be missing it.
+			 * Whichever tab is opened next has to ask.
+			 */
+			cache.current.clear();
 
 			if ( result.campaign ) {
 				setCampaign( result.campaign );

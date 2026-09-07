@@ -126,8 +126,31 @@ final class Review_Screen implements Service {
 			return;
 		}
 
+		/*
+		 * **`Shared_Assets::DATAVIEWS` is named as a *style* dependency.**
+		 *
+		 * The queue is a DataViews table now, and the bundle names that handle
+		 * in its `.asset.php` — but WordPress resolves script and style handles
+		 * separately, so that brings the script and no CSS at all. Omitting it
+		 * renders DataViews entirely unstyled: a table sized to its content,
+		 * hugging the left edge, with none of its responsive behaviour.
+		 *
+		 * The reports screen shipped exactly that twice before the cause was
+		 * found. `ScreenStylesheetTest` now fails when a screen loads a
+		 * DataViews bundle without resolving this handle.
+		 *
+		 * It sits at the end of the chain so this screen's own rules, which
+		 * restyle nothing of DataViews but do own the pill beside it, load
+		 * after the component they sit next to.
+		 */
+		Shared_Assets::register();
+
 		$this->enqueue_style( Assets::HANDLE, Assets::STYLE_PORTAL );
-		$this->enqueue_style( 'aggr-review', Assets::STYLE_ADMIN, array( Assets::HANDLE ) );
+		$this->enqueue_style(
+			'aggr-review',
+			Assets::STYLE_ADMIN,
+			array( Assets::HANDLE, 'wp-components', Shared_Assets::DATAVIEWS )
+		);
 
 		$asset = AGGR_PLUGIN_DIR . 'dist/admin/review.asset.php';
 

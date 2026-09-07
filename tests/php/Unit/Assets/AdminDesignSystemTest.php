@@ -47,10 +47,22 @@ final class AdminDesignSystemTest extends TestCase {
 	 *
 	 * The two templates these assertions read no longer exist — the screens are
 	 * React writing through REST. What they were protecting is the structure
-	 * itself, so it is asserted against the components that now render it:
-	 * scoped table headers, a labelled control for every textarea, and the
-	 * design system this screen deliberately kept rather than moving to core's
-	 * component set.
+	 * itself, so it is asserted against the components that now render it.
+	 *
+	 * **The scoped-header assertion moved, because the queue table did.** The
+	 * queue is a DataViews table now, so `queue.tsx` no longer writes a `<th>`
+	 * at all — DataViews emits `scope="col"` itself, and `review.spec.ts` runs
+	 * axe against the rendered screen three times, which checks header
+	 * semantics on real output rather than by matching a string in a file. That
+	 * is the stronger guarantee; this one was checking the wrong place once the
+	 * markup moved.
+	 *
+	 * **The design-system rule narrowed rather than went away.** The detail
+	 * screen still refuses wp-components, which is what `src/styles/admin.css`
+	 * exists for. The queue deliberately does not: it is a list of records,
+	 * which is the one thing DataViews is for, and it keeps the portal's own
+	 * pill through the field's `render` rather than adopting a core status
+	 * component.
 	 *
 	 * @return void
 	 */
@@ -62,8 +74,14 @@ final class AdminDesignSystemTest extends TestCase {
 		$this->assertIsString( $campaign );
 
 		$this->assertStringContainsString( 'aria-current', $queue );
-		$this->assertStringContainsString( 'scope="col"', $queue );
 		$this->assertStringContainsString( 'aria-labelledby', $campaign );
+
+		// The queue's table is DataViews; the pill beside it is not. Mixing on
+		// purpose, and only this far.
+		$table = file_get_contents( AGGR_PLUGIN_DIR . 'src/admin/review/queue-table.tsx' );
+		$this->assertIsString( $table );
+		$this->assertStringContainsString( '@wordpress/dataviews', $table );
+		$this->assertStringContainsString( 'aggr-pill', $table );
 
 		// Every textarea on the detail screen is reachable by its label.
 		$this->assertSame(
@@ -72,12 +90,11 @@ final class AdminDesignSystemTest extends TestCase {
 			'A textarea on the review screen has no label bound to it.'
 		);
 
-		// The plugin's own design system, not wp-components. Mixing the two on
-		// one screen is the half-done state src/styles/admin.css exists to
+		// The detail screen stays on the plugin's own design system. Mixing the
+		// two there is the half-done state src/styles/admin.css exists to
 		// avoid; see the note in Review_Screen.
 		$this->assertStringContainsString( 'aggr-panel', $campaign );
 		$this->assertStringNotContainsString( '@wordpress/components', $campaign );
-		$this->assertStringNotContainsString( '@wordpress/components', $queue );
 	}
 
 	/**
