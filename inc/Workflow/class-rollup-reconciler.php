@@ -26,7 +26,7 @@ final class Rollup_Reconciler implements Service {
 	private const MAX_DAYS_PER_RUN = 7;
 
 	/** Lets requests crossing UTC midnight finish before that day is sealed. */
-	private const CLOSURE_GRACE_SECONDS = 10 * MINUTE_IN_SECONDS;
+	public const CLOSURE_GRACE_SECONDS = 10 * MINUTE_IN_SECONDS;
 
 	/**
 	 * Constructor.
@@ -72,6 +72,35 @@ final class Rollup_Reconciler implements Service {
 	}
 
 	/**
+	 * Midnight UTC of the day still accepting events, as a timestamp.
+	 *
+	 * @return int|null Null when the clock could not be read.
+	 */
+	private static function open_day_start(): ?int {
+		$start = strtotime( gmdate( 'Y-m-d', time() - self::CLOSURE_GRACE_SECONDS ) . ' 00:00:00 UTC' );
+
+		return false === $start ? null : $start;
+	}
+
+	/**
+	 * The most recent UTC day whose counters can no longer change.
+	 *
+	 * **One definition of a sealed day, shared.** This class already had to
+	 * decide it, so that anything reading a closed day is reading the same one
+	 * it reconciles. A second implementation elsewhere would be a second
+	 * chance to disagree about where today ends, and the disagreement would
+	 * surface as a forecast built partly from a day this job was still
+	 * rewriting underneath it.
+	 *
+	 * @return string `Y-m-d`, or '' when the clock could not be read.
+	 */
+	public static function latest_closed_day(): string {
+		$open = self::open_day_start();
+
+		return null === $open ? '' : gmdate( 'Y-m-d', $open - DAY_IN_SECONDS );
+	}
+
+	/**
 	 * Reconciles a bounded number of closed days and advances the watermark.
 	 *
 	 * Current UTC day is never rebuilt while events can still arrive. That
@@ -80,9 +109,9 @@ final class Rollup_Reconciler implements Service {
 	 * @return int Days reconciled.
 	 */
 	public function run(): int {
-		$open_day_start = strtotime( gmdate( 'Y-m-d', time() - self::CLOSURE_GRACE_SECONDS ) . ' 00:00:00 UTC' );
+		$open_day_start = self::open_day_start();
 
-		if ( false === $open_day_start ) {
+		if ( null === $open_day_start ) {
 			return 0;
 		}
 
