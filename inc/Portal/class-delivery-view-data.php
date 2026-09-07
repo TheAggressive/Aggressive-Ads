@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Portal;
 
+use DateTimeZone;
 use Aggressive\Ads\Domain\Report_Period;
 use Aggressive\Ads\Domain\Report_Request;
 use Aggressive\Ads\Domain\Reporting_Rules;
@@ -137,9 +138,21 @@ final class Delivery_View_Data {
 	private function day_label( string $day_utc ): string {
 		$timestamp = strtotime( $day_utc . ' UTC' );
 
+		/*
+		 * **Formatted in UTC, because a stored day is a day and not an
+		 * instant.** `wp_date()` without a timezone renders in the site's,
+		 * which is a real conversion: midnight UTC on the ninth is the eighth
+		 * in Los Angeles, so every date in this label came out one day early
+		 * for any site west of Greenwich — under a sentence that ends "(UTC)".
+		 *
+		 * The counters are keyed by UTC day and the date input beside this
+		 * label shows the UTC day, so the two disagreed on screen. Nothing was
+		 * wrong with the figures; the caption was describing a different
+		 * window from the one it had.
+		 */
 		return false === $timestamp
 			? $day_utc
-			: (string) wp_date( (string) get_option( 'date_format', 'Y-m-d' ), $timestamp );
+			: (string) wp_date( (string) get_option( 'date_format', 'Y-m-d' ), $timestamp, new DateTimeZone( 'UTC' ) );
 	}
 
 	/**
