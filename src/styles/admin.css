@@ -173,17 +173,6 @@
 		font-size: 12px;
 	}
 
-	.aggr-review-table th,
-	.aggr-review-table td {
-		white-space: nowrap;
-	}
-
-	.aggr-review-table th:first-child,
-	.aggr-review-table td:first-child {
-		min-width: 15rem;
-		white-space: normal;
-	}
-
 	.aggr-flash {
 		margin-bottom: var(--aggr-space-lg);
 		padding: var(--aggr-space-md) var(--aggr-space-lg);

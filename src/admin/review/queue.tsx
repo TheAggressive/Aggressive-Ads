@@ -1,11 +1,17 @@
 /**
  * The review queue: tabs, one page of campaigns, and paging.
  *
- * Rendered in the plugin's own design system rather than core's component set,
- * unlike the other converted admin screens. That is deliberate:
- * `src/styles/admin.css` exists for these two screens and is contrast-gated,
- * and swapping it for wp-components would be a decision about the product's
- * visual direction rather than part of moving the writes to REST.
+ * **The shell is the plugin's own design system; the table is DataViews.** That
+ * split is the decision this file used to say had not been made — swapping the
+ * design system was called out here as a visual-direction choice rather than
+ * part of moving writes to REST, and it has now been made deliberately.
+ *
+ * The queue is a list of records, which is the one thing DataViews is for, and
+ * it arrives with the search, column and pagination chrome every other staff
+ * screen already has. Everything around it — tabs, panel, page head, dialogs —
+ * stays in `src/styles/admin.css`, which is contrast-gated and is what keeps
+ * this screen looking like the portal rather than like stock wp-admin. The
+ * status pill survives inside the table through the field's `render`.
  *
  * Strings arrive from PHP. `wp i18n make-pot` does not parse .tsx, so an __()
  * call here would compile, run, and produce no catalog entry at all.
@@ -14,6 +20,7 @@
 import type { ReactElement } from 'react';
 import { useState } from '@wordpress/element';
 import { Dialog } from './dialog';
+import { QueueTable } from './queue-table';
 import { t } from '../shared/save';
 import type { Advertiser, Queue, Tab } from './types';
 
@@ -154,53 +161,6 @@ function Tabs( {
 		</nav>
 	);
 }
-
-/**
- * Previous/next paging.
- *
- * Deliberately not a numbered list. `paginate_links()` produced one server-side,
- * and reproducing its ellipsis logic in TSX would be a second implementation of
- * something nobody asked to change; two controls and a position read the same
- * to a screen reader and cannot drift.
- */
-function Pages( {
-	queue,
-	onPage,
-}: {
-	queue: Queue;
-	onPage: ( page: number ) => void;
-} ): ReactElement | null {
-	if ( queue.pages <= 1 ) {
-		return null;
-	}
-
-	return (
-		<nav className="aggr-pagination" aria-label={ t( 'pagesLabel' ) }>
-			<button
-				type="button"
-				className="aggr-button aggr-button--secondary"
-				disabled={ queue.page <= 1 }
-				onClick={ () => onPage( queue.page - 1 ) }
-			>
-				{ t( 'previous' ) }
-			</button>
-			<span aria-live="polite">
-				{ t( 'pageOf' )
-					.replace( '%1$s', String( queue.page ) )
-					.replace( '%2$s', String( queue.pages ) ) }
-			</span>
-			<button
-				type="button"
-				className="aggr-button aggr-button--secondary"
-				disabled={ queue.page >= queue.pages }
-				onClick={ () => onPage( queue.page + 1 ) }
-			>
-				{ t( 'next' ) }
-			</button>
-		</nav>
-	);
-}
-
 export function QueueView( {
 	tabs,
 	queue,
@@ -272,69 +232,14 @@ export function QueueView( {
 						<p>{ t( 'queueEmptyBody' ) }</p>
 					</div>
 				) : (
-					<div
-						className="aggr-tablewrap"
-						role="region"
-						aria-label={ t( 'queueTableLabel' ) }
-						tabIndex={ 0 }
-					>
-						<table className="aggr-table aggr-review-table">
-							<thead>
-								<tr>
-									<th scope="col">{ t( 'colCampaign' ) }</th>
-									<th scope="col">
-										{ t( 'colAdvertiser' ) }
-									</th>
-									<th scope="col">{ t( 'colPlacement' ) }</th>
-									<th scope="col">{ t( 'colStatus' ) }</th>
-									<th scope="col">{ t( 'colSubmitted' ) }</th>
-									<th scope="col">{ t( 'colReviewer' ) }</th>
-									<th scope="col">{ t( 'colUpdates' ) }</th>
-								</tr>
-							</thead>
-							<tbody>
-								{ queue.rows.map( ( row ) => (
-									<tr key={ row.id }>
-										<td className="aggr-table__primary">
-											<button
-												type="button"
-												className="aggr-linkbutton"
-												onClick={ () =>
-													onOpen( row.id )
-												}
-											>
-												{ row.title }
-											</button>
-										</td>
-										<td>{ row.org_name }</td>
-										<td>{ row.placements.join( ', ' ) }</td>
-										<td>
-											<span
-												className={ `aggr-pill aggr-pill--${ row.pill }` }
-											>
-												{ row.status_text }
-											</span>
-										</td>
-										<td>
-											{ '' === row.submitted_text
-												? '—'
-												: row.submitted_text }
-										</td>
-										<td>
-											{ '' === row.reviewer
-												? t( 'unassigned' )
-												: row.reviewer }
-										</td>
-										<td>{ row.pending_updates }</td>
-									</tr>
-								) ) }
-							</tbody>
-						</table>
-					</div>
+					<QueueTable
+						queue={ queue }
+						busy={ busy }
+						onPage={ onPage }
+						onOpen={ onOpen }
+					/>
 				) }
 			</section>
-
-			<Pages queue={ queue } onPage={ onPage } />
 		</>
 	);
 }
