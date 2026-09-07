@@ -144,7 +144,7 @@ describe( 'ad slot fill', () => {
 
 		imagesPaint( false );
 
-		expect( await fillSlot( root ) ).toBe( false );
+		expect( ( await fillSlot( root ) ).rendered ).toBe( false );
 		expect( canvas.querySelector( 'img' ) ).toBeNull();
 
 		/*
@@ -153,6 +153,86 @@ describe( 'ad slot fill', () => {
 		 * bytes that never arrived were still counted as seen.
 		 */
 		expect( window.navigator.sendBeacon ).not.toHaveBeenCalled();
+	} );
+
+	it( 'reports how many creatives could have taken the slot', async () => {
+		document.body.innerHTML = `
+			<div data-aggr-slot="leaderboard" data-aggr-fill="/fill">
+				<div class="aggr-slot__canvas"></div>
+			</div>
+		`;
+		const root = document.querySelector( '[data-aggr-slot]' );
+
+		window.fetch = jest.fn().mockResolvedValue( {
+			ok: true,
+			json: async () => ( {
+				creative: {
+					image: 'https://example.test/ad.png',
+					click: 'https://example.test/destination',
+					servable: 4,
+				},
+			} ),
+		} );
+
+		expect( await fillSlot( root ) ).toEqual( {
+			rendered: true,
+			servable: 4,
+		} );
+	} );
+
+	it( 'reports nothing to rotate to when the server did not say', async () => {
+		document.body.innerHTML = `
+			<div data-aggr-slot="leaderboard" data-aggr-fill="/fill">
+				<div class="aggr-slot__canvas"></div>
+			</div>
+		`;
+		const root = document.querySelector( '[data-aggr-slot]' );
+
+		// A house advertisement carries no count, because there is never a
+		// second one. Rotating it would redraw the same image and fire another
+		// beacon for it.
+		window.fetch = jest.fn().mockResolvedValue( {
+			ok: true,
+			json: async () => ( {
+				house: {
+					image: 'https://example.test/house.png',
+					click: 'https://example.test/destination',
+				},
+			} ),
+		} );
+
+		expect( await fillSlot( root ) ).toEqual( {
+			rendered: true,
+			servable: 0,
+		} );
+	} );
+
+	it( 'refuses a servable count that is not a whole number', async () => {
+		document.body.innerHTML = `
+			<div data-aggr-slot="leaderboard" data-aggr-fill="/fill">
+				<div class="aggr-slot__canvas"></div>
+			</div>
+		`;
+		const root = document.querySelector( '[data-aggr-slot]' );
+
+		window.fetch = jest.fn().mockResolvedValue( {
+			ok: true,
+			json: async () => ( {
+				creative: {
+					image: 'https://example.test/ad.png',
+					click: 'https://example.test/destination',
+					servable: '9',
+				},
+			} ),
+		} );
+
+		/*
+		 * A string nine is truthy and greater than one after coercion, so a
+		 * loose check would keep a timer running on a value the server never
+		 * meant as a count. Rotation is the thing that mints impressions, so
+		 * the safe reading is the one that stops.
+		 */
+		expect( ( await fillSlot( root ) ).servable ).toBe( 0 );
 	} );
 
 	it( 'replaces the previous ad instead of stacking a second one', async () => {
@@ -181,8 +261,8 @@ describe( 'ad slot fill', () => {
 			},
 		} ) );
 
-		expect( await fillSlot( root ) ).toBe( true );
-		expect( await fillSlot( root ) ).toBe( true );
+		expect( ( await fillSlot( root ) ).rendered ).toBe( true );
+		expect( ( await fillSlot( root ) ).rendered ).toBe( true );
 
 		// Rotation swaps the ad; it must never stack them, or the slot grows
 		// taller on every interval and the page reflows under the reader.
@@ -205,7 +285,7 @@ describe( 'ad slot fill', () => {
 
 		// The store uses this to decide not to start rotating a slot that has
 		// nothing to rotate to.
-		expect( await fillSlot( root ) ).toBe( false );
+		expect( ( await fillSlot( root ) ).rendered ).toBe( false );
 	} );
 
 	it( 'declares which fill this is so a rotation is not a page opportunity', async () => {

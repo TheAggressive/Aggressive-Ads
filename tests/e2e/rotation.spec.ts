@@ -129,6 +129,51 @@ test( 'a rotating slot refetches while a static one beside it does not', async (
 	).toBe( 1 );
 } );
 
+test( 'a slot with one creative stops instead of redrawing it', async ( {
+	page,
+} ) => {
+	const LONELY = 'e2e-lonely-placement';
+	const fills: string[] = [];
+
+	page.on( 'request', ( request ) => {
+		if ( request.url().includes( `/aggr/v1/fill/${ LONELY }` ) ) {
+			fills.push( request.url() );
+		}
+	} );
+
+	await page.goto( '/e2e-rotation/' );
+
+	const slot = page.locator( `[data-aggr-slot="${ LONELY }"]` );
+
+	await expect( slot ).toHaveCount( 1 );
+	await expect( slot.locator( 'img' ) ).toBeVisible();
+
+	/*
+	 * One fill, and it has to be asserted before the wait or the wait proves
+	 * nothing: a page that had already fetched twice would satisfy the
+	 * assertion after it without the timer having been stopped.
+	 */
+	await expect.poll( () => fills.length ).toBe( 1 );
+
+	/*
+	 * This placement asks to rotate at two seconds and is permitted to, so a
+	 * slot that ignored its own inventory would fetch several more times in
+	 * this window. The wait is deliberately longer than the rotating slot's
+	 * proof needs — the claim here is that nothing happens, and a short wait
+	 * is a weak way to make it.
+	 */
+	await page.waitForTimeout( 8_000 );
+
+	expect(
+		fills.length,
+		`The slot fetched ${ fills.length } times with one creative to show. Every one of those redraws the same image and fires another impression beacon for it, which at the one-second floor is the volume an exchange calls invalid traffic.`
+	).toBe( 1 );
+
+	// Still showing the advertisement it was given. Stopping the timer must not
+	// be confused with taking the ad down.
+	await expect( slot.locator( 'img' ) ).toBeVisible();
+} );
+
 test( 'a slot with no advertisement to show renders nothing at all', async ( {
 	page,
 } ) => {

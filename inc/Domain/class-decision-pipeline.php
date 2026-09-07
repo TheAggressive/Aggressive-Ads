@@ -54,7 +54,16 @@ final class Decision_Pipeline {
 	 *
 	 * @param list<array<string, mixed>> $rows    Assignment rows from the repository.
 	 * @param Decision_Request           $request Evaluation inputs.
-	 * @return array{result: Decision_Result, trace: Decision_Trace, candidates: array<int, Decision_Candidate>}
+	 * `servable` is how many distinct candidates *could* have been chosen for
+	 * this request — the survivors, counted before selection runs. It cannot be
+	 * recovered afterwards: selection marks every loser excluded, so counting
+	 * eligibility on the way out always answers one.
+	 *
+	 * It is zero whenever nothing was served, the no-weight case included. The
+	 * question it exists to answer is "is there anything else to show", and a
+	 * candidate that cannot win is not something else to show.
+	 *
+	 * @return array{result: Decision_Result, trace: Decision_Trace, candidates: array<int, Decision_Candidate>, servable: int}
 	 */
 	public function decide( array $rows, Decision_Request $request ): array {
 		$context    = new Decision_Context( $request->placement_id, $request->now, $request->facts );
@@ -80,6 +89,7 @@ final class Decision_Pipeline {
 				'result'     => $result,
 				'trace'      => Decision_Trace::from( $candidates, $result ),
 				'candidates' => $candidates,
+				'servable'   => 0,
 			);
 		}
 
@@ -92,6 +102,7 @@ final class Decision_Pipeline {
 				'result'     => $result,
 				'trace'      => Decision_Trace::from( $candidates, $result ),
 				'candidates' => $candidates,
+				'servable'   => 0,
 			);
 		}
 
@@ -109,6 +120,7 @@ final class Decision_Pipeline {
 			'result'     => $result,
 			'trace'      => Decision_Trace::from( $candidates, $result ),
 			'candidates' => $candidates,
+			'servable'   => count( $survivors ),
 		);
 	}
 
