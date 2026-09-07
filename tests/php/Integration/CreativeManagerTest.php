@@ -205,6 +205,49 @@ final class CreativeManagerTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * **An upload that fails late leaves a record saying why.**
+	 *
+	 * This path returned a 500 and wrote nothing anywhere, so "The creative
+	 * could not be saved. Please try again." was the entire diagnosis available
+	 * to anyone — including whoever had to fix it. `rest-api.md` already
+	 * requires diagnostics to go to the audit log rather than the response
+	 * body; this path did neither.
+	 *
+	 * The insert is forced to fail rather than waited for, because the failure
+	 * is a database condition nobody can arrange honestly. What is under test
+	 * is the recording, not the cause.
+	 *
+	 * @return void
+	 */
+	public function test_a_failed_insert_is_recorded_with_its_reason(): void {
+		wp_set_current_user( $this->owner );
+
+		add_filter( 'wp_insert_post_empty_content', '__return_true' );
+
+		$result = $this->manager->upload(
+			$this->campaign_id,
+			$this->placement_id,
+			$this->image_file( 728, 90 ),
+			'https://example.com/exhibitions',
+			'Visitors viewing a gallery exhibition'
+		);
+
+		remove_filter( 'wp_insert_post_empty_content', '__return_true' );
+
+		$this->assertInstanceOf( \WP_Error::class, $result );
+		$this->assertSame( 'aggr_creative_not_created', $result->get_error_code() );
+
+		$events = ( new Audit_Repository() )->for_object( 'campaign', $this->campaign_id, $this->org_id );
+		$codes  = array_column( $events, 'event' );
+
+		$this->assertContains(
+			'creative.upload_failed',
+			$codes,
+			'A 500 was returned and nothing was recorded, so the next occurrence is undiagnosable.'
+		);
+	}
+
+	/**
 	 * Wrong dimensions are explained and the staged private file is removed.
 	 *
 	 * @return void
