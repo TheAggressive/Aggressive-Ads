@@ -213,6 +213,21 @@ final class Review_Data {
 		);
 		$rows   = array();
 
+		/*
+		 * **One trip for the posts and their meta, rather than one per row.**
+		 *
+		 * The query asks for ids, which means WordPress primes no caches at
+		 * all: every title, status, organization and placement below was then
+		 * its own round trip. Measured at 2.2 queries per row — forty-five for
+		 * a single page of twenty.
+		 *
+		 * Priming here rather than widening the query keeps the page size
+		 * decision separate from the cost of rendering a row.
+		 */
+		if ( array() !== $result['ids'] ) {
+			_prime_post_caches( $result['ids'], false, true );
+		}
+
 		foreach ( $result['ids'] as $campaign_id ) {
 			$rows[] = $this->row( $campaign_id );
 		}
