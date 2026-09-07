@@ -256,6 +256,61 @@ The first active package carrying `_aggr_is_default = 1` is preselected for
 a campaign that has no package snapshot yet. The package-management screen
 clears every other default flag in the same save so duplicates cannot accumulate.
 
+### Forecast — `aggr_forecasts` custom table
+
+`placement_id` · `opportunity` · `window_start` · `window_end` · `version` ·
+`estimate` · `optimistic` · `confidence` · `days_observed` · `days_forecast` ·
+`made_at` · `actual` · `actual_at`
+
+**A forecast is a claim made at a moment, and the moment is the point.**
+Re-forecasting the same window writes a new `version` rather than editing the
+old one, so a figure quoted in March survives being told something else in
+April — which is the only thing that makes the error recorded against the March
+number mean anything. The unique key over
+`(placement_id, opportunity, window_start, window_end, version)` is what makes a
+version a version: two staff re-forecasting at once cannot both claim the same
+one, so the loser fails its insert instead of silently overwriting a snapshot
+somebody has already been given.
+
+`actual` is the only column written after insert, and it is write-once. The
+forecast half never changes; the outcome is appended when the window has
+matured, guarded by an `actual IS NULL` predicate rather than a read-then-write
+— a matured figure that can be rewritten is one an inconvenient error can be
+edited out of. It is applied to *every* version of a window, because each
+forecast the same days and each is right or wrong about the same outcome.
+
+Null `actual` means the window has not been measured, never that it supplied
+nothing. `Domain\Forecast_Error` reads the pair; `Domain\Supply_Forecast`
+produces the estimate. **Every figure here is staff-only** — the
+inventory-commerce contract puts forecast value, confidence, version and error
+in one sentence, and none of them may reach an advertiser response, export or
+email.
+
+### Reservation — `aggr_reservations` custom table
+
+`placement_id` · `opportunity` · `window_start` · `window_end` · `campaign_id` ·
+`org_id` · `quantity` · `status` · `forecast_version` · `created_at` ·
+`updated_at`
+
+A time-bounded claim on a placement's forecast supply. `status` is one of
+`held`, `confirmed`, `released`, `expired`, and **which of them consume capacity
+is the decision everything rests on**: held and confirmed do, released and
+expired do not. `Domain\Reservation_Rules` owns that answer and the repository
+asks rather than restating it — a hold that consumed nothing would let the same
+inventory be promised to everyone who asked, and capacity that never returned
+would ratchet a placement down to refusing everything.
+
+The capacity check and the insert happen inside one MySQL advisory lock scoped
+to the placement and window. That is the declared consistency model: it makes
+the oversell bound zero by construction, where `INSERT … SELECT` with the sum in
+a `WHERE` only reads as atomic — under `REPEATABLE READ` two concurrent bookings
+see the same snapshot, both find room, and both insert.
+
+`forecast_version` records which snapshot the claim was checked against, because
+an oversell override has to be able to name the figure it overrode. `org_id` is
+stored rather than resolved through the campaign, so a tenancy check is a
+predicate on this table instead of a join a later query might forget.
+
 ## Repeated meta, not serialized arrays
 
 `_aggr_placement_id` and `_aggr_member_user_id` are stored as multiple rows with `single => false`, never as one serialized array.

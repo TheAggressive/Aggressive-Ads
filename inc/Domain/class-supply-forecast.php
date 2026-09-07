@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Domain;
 
 use DateTimeImmutable;
-use DateTimeZone;
 use InvalidArgumentException;
 
 /**
@@ -205,8 +204,8 @@ final class Supply_Forecast {
 	 * @throws InvalidArgumentException When either date is unparseable, reversed, or the span is too long.
 	 */
 	public static function days_in_window( string $from, string $to ): array {
-		$start = self::utc_day( $from );
-		$end   = self::utc_day( $to );
+		$start = Utc_Day::parse( $from );
+		$end   = Utc_Day::parse( $to );
 
 		if ( null === $start || null === $end ) {
 			throw new InvalidArgumentException( 'A forecast window needs two Y-m-d dates.' );
@@ -239,7 +238,7 @@ final class Supply_Forecast {
 		$samples = array();
 
 		foreach ( $observed as $day => $count ) {
-			if ( null === self::utc_day( (string) $day ) ) {
+			if ( null === Utc_Day::parse( (string) $day ) ) {
 				continue;
 			}
 
@@ -267,7 +266,7 @@ final class Supply_Forecast {
 		$buckets = array();
 
 		foreach ( $samples as $day => $count ) {
-			$date = self::utc_day( $day );
+			$date = Utc_Day::parse( $day );
 
 			if ( null === $date ) {
 				continue;
@@ -292,7 +291,7 @@ final class Supply_Forecast {
 	 */
 	private static function weekly_cycle_supported( array $by_weekday, array $window ): bool {
 		foreach ( $window as $day ) {
-			$date = self::utc_day( $day );
+			$date = Utc_Day::parse( $day );
 
 			if ( null === $date ) {
 				return false;
@@ -320,7 +319,7 @@ final class Supply_Forecast {
 		$optimistic = 0;
 
 		foreach ( $window as $day ) {
-			$date = self::utc_day( $day );
+			$date = Utc_Day::parse( $day );
 
 			if ( null === $date ) {
 				continue;
@@ -375,26 +374,5 @@ final class Supply_Forecast {
 		$rank = (int) ceil( $quantile * count( $samples ) );
 
 		return $samples[ max( 0, min( count( $samples ) - 1, $rank - 1 ) ) ];
-	}
-
-	/**
-	 * A Y-m-d string as a UTC midnight, or null when it is not one.
-	 *
-	 * **The timezone is explicit on purpose.** `DateTimeImmutable` without one
-	 * reads the ambient default, which WordPress sets from a site setting — so
-	 * a publisher changing their display timezone would silently re-bucket
-	 * every historical day and move a forecast that no new data had touched.
-	 * The counters are stored in UTC and are read back in it.
-	 *
-	 * @param string $day Candidate Y-m-d.
-	 */
-	private static function utc_day( string $day ): ?DateTimeImmutable {
-		$date = DateTimeImmutable::createFromFormat( '!Y-m-d', $day, new DateTimeZone( 'UTC' ) );
-
-		if ( false === $date || $date->format( 'Y-m-d' ) !== $day ) {
-			return null;
-		}
-
-		return $date;
 	}
 }

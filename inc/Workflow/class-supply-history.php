@@ -12,6 +12,7 @@ namespace Aggressive\Ads\Workflow;
 use Aggressive\Ads\Domain\Decision_Outcome;
 use Aggressive\Ads\Domain\Opportunity;
 use Aggressive\Ads\Domain\Supply_Forecast;
+use Aggressive\Ads\Domain\Utc_Day;
 use Aggressive\Ads\Repository\Decision_Rollup_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use InvalidArgumentException;
@@ -163,7 +164,7 @@ final class Supply_History {
 			return null;
 		}
 
-		if ( $to_utc > $last || $to_utc < $from_utc ) {
+		if ( $to_utc > $last || ! Utc_Day::is_window( $from_utc, $to_utc ) ) {
 			return null;
 		}
 

@@ -11,6 +11,7 @@ namespace Aggressive\Ads\Repository;
 
 use Aggressive\Ads\Domain\Opportunity;
 use Aggressive\Ads\Domain\Reservation_Rules;
+use Aggressive\Ads\Domain\Utc_Day;
 use Aggressive\Ads\Install\Planning_Schema;
 use Aggressive\Ads\Install\Schema;
 
@@ -101,7 +102,7 @@ final class Reservation_Repository {
 			return 0;
 		}
 
-		if ( ! self::is_day( $from_utc ) || ! self::is_day( $to_utc ) ) {
+		if ( ! Utc_Day::is_window( $from_utc, $to_utc ) ) {
 			return 0;
 		}
 
@@ -235,7 +236,7 @@ final class Reservation_Repository {
 	public function expire_through( string $through_utc, int $limit ): int {
 		global $wpdb;
 
-		if ( ! self::is_day( $through_utc ) || $limit <= 0 ) {
+		if ( ! Utc_Day::is_day( $through_utc ) || $limit <= 0 ) {
 			return 0;
 		}
 
@@ -311,11 +312,7 @@ final class Reservation_Repository {
 			return 'unknown_placement';
 		}
 
-		if ( ! self::is_day( (string) ( $claim['from'] ?? '' ) ) || ! self::is_day( (string) ( $claim['to'] ?? '' ) ) ) {
-			return 'window';
-		}
-
-		if ( (string) $claim['to'] < (string) $claim['from'] ) {
+		if ( ! Utc_Day::is_window( (string) ( $claim['from'] ?? '' ), (string) ( $claim['to'] ?? '' ) ) ) {
 			return 'window';
 		}
 
@@ -393,14 +390,5 @@ final class Reservation_Repository {
 			'created_at'       => (string) ( $row['created_at'] ?? '' ),
 			'updated_at'       => (string) ( $row['updated_at'] ?? '' ),
 		);
-	}
-
-	/**
-	 * Whether a string is a `Y-m-d` date.
-	 *
-	 * @param string $day Candidate day.
-	 */
-	private static function is_day( string $day ): bool {
-		return 1 === preg_match( '/^\d{4}-\d{2}-\d{2}$/', $day );
 	}
 }

@@ -11,6 +11,7 @@ namespace Aggressive\Ads\Repository;
 
 use Aggressive\Ads\Domain\Opportunity;
 use Aggressive\Ads\Domain\Supply_Forecast;
+use Aggressive\Ads\Domain\Utc_Day;
 use Aggressive\Ads\Install\Planning_Schema;
 use Aggressive\Ads\Install\Schema;
 
@@ -100,7 +101,7 @@ final class Forecast_Repository {
 			return 0;
 		}
 
-		if ( ! self::is_day( $from_utc ) || ! self::is_day( $to_utc ) || $to_utc < $from_utc ) {
+		if ( ! Utc_Day::is_window( $from_utc, $to_utc ) ) {
 			return 0;
 		}
 
@@ -161,7 +162,7 @@ final class Forecast_Repository {
 			return 0;
 		}
 
-		if ( ! self::is_day( $from_utc ) || ! self::is_day( $to_utc ) ) {
+		if ( ! Utc_Day::is_window( $from_utc, $to_utc ) ) {
 			return 0;
 		}
 
@@ -185,7 +186,7 @@ final class Forecast_Repository {
 	public function latest( int $placement, string $opportunity, string $from_utc, string $to_utc ): ?array {
 		global $wpdb;
 
-		if ( $placement <= 0 || ! self::is_day( $from_utc ) || ! self::is_day( $to_utc ) ) {
+		if ( $placement <= 0 || ! Utc_Day::is_window( $from_utc, $to_utc ) ) {
 			return null;
 		}
 
@@ -209,7 +210,7 @@ final class Forecast_Repository {
 	public function versions( int $placement, string $opportunity, string $from_utc, string $to_utc ): array {
 		global $wpdb;
 
-		if ( $placement <= 0 || ! self::is_day( $from_utc ) || ! self::is_day( $to_utc ) ) {
+		if ( $placement <= 0 || ! Utc_Day::is_window( $from_utc, $to_utc ) ) {
 			return array();
 		}
 
@@ -285,7 +286,7 @@ final class Forecast_Repository {
 	public function awaiting_actuals( string $through_utc, int $limit ): array {
 		global $wpdb;
 
-		if ( ! self::is_day( $through_utc ) || $limit <= 0 ) {
+		if ( ! Utc_Day::is_day( $through_utc ) || $limit <= 0 ) {
 			return array();
 		}
 
@@ -322,7 +323,7 @@ final class Forecast_Repository {
 	public function purge_through( string $through_utc, int $limit ): int {
 		global $wpdb;
 
-		if ( ! self::is_day( $through_utc ) || $limit <= 0 ) {
+		if ( ! Utc_Day::is_day( $through_utc ) || $limit <= 0 ) {
 			return 0;
 		}
 
@@ -382,14 +383,5 @@ final class Forecast_Repository {
 			 */
 			'actual'        => null === $actual ? null : (int) $actual,
 		);
-	}
-
-	/**
-	 * Whether a string is a `Y-m-d` date.
-	 *
-	 * @param string $day Candidate day.
-	 */
-	private static function is_day( string $day ): bool {
-		return 1 === preg_match( '/^\d{4}-\d{2}-\d{2}$/', $day );
 	}
 }

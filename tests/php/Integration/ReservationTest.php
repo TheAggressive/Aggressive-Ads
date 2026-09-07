@@ -293,6 +293,30 @@ final class ReservationTest extends WP_UnitTestCase {
 		$this->assertSame( 'window', $result['refused'] );
 	}
 
+	public function test_a_day_that_never_happened_is_refused(): void {
+		/*
+		 * The repositories used to check the *shape* of a date with a regex,
+		 * which accepts the thirtieth of February. A claim carrying one ran a
+		 * query that matched nothing and reported no problem, so the booking
+		 * silently did not exist — indistinguishable from a placement with no
+		 * inventory. `Domain\Utc_Day` is now the single reading and it parses.
+		 */
+		$result = $this->reservations->claim(
+			$this->claim(
+				$this->placement(),
+				100,
+				10000,
+				array(
+					'from' => '2026-02-30',
+					'to'   => '2026-03-15',
+				)
+			)
+		);
+
+		$this->assertSame( 0, $result['id'] );
+		$this->assertSame( 'window', $result['refused'] );
+	}
+
 	public function test_an_unknown_opportunity_is_refused(): void {
 		$result = $this->reservations->claim( $this->claim( $this->placement(), 100, 10000, array( 'opportunity' => 'invented' ) ) );
 
