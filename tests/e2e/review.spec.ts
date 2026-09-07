@@ -38,11 +38,24 @@ test( 'a reviewer works the queue, claims a campaign and writes notes', async ( 
 	).not.toHaveCount( 0 );
 	await expectAdminA11y( page );
 
-	// Into one campaign, and the URL says which.
-	const first = page.locator( '.dataviews-view-table__row' ).first();
-	const title = ( await first.locator( 'td' ).first().innerText() ).trim();
+	/*
+	 * Into one campaign, and the URL says which.
+	 *
+	 * The campaign is reached through the link button this screen renders into
+	 * the title field, not through a positional cell. DataViews decides its own
+	 * column order and may put a checkbox or a primary-column wrapper first, so
+	 * "the first `td`" is a guess about somebody else's markup — it timed out
+	 * on exactly that. The button is ours and is guaranteed to be there.
+	 */
+	const firstTitle = page
+		.locator( '.dataviews-view-table__row .aggr-linkbutton' )
+		.first();
 
-	await first.getByRole( 'button', { name: title } ).click();
+	await expect( firstTitle ).toBeVisible();
+
+	const title = ( await firstTitle.innerText() ).trim();
+
+	await firstTitle.click();
 
 	await expect(
 		page.getByRole( 'heading', { level: 1, name: title } )
