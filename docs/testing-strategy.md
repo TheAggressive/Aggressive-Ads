@@ -81,6 +81,21 @@ enough for the interesting branch to render — a placement that filled every
 time exercises the "every request was filled" path and proves nothing about the
 table beside it.
 
+**The instrument that measures the tests needs a control of its own.** P16's
+supply forecast was mutation-tested with a shell loop that broke a line, ran
+PHPUnit, and read the result with `grep -E "^OK"`. PHPUnit colours that summary
+line, so `OK` is never at its start: nothing ever matched, every mutant was
+reported killed, and the two that genuinely survived were invisible. The run
+looked like the strongest evidence in the change and was the weakest thing in
+it.
+
+Re-run against PHPUnit's exit code, with a **no-op control mutant that must be
+reported as surviving**, it found both — one of which was a timezone test that
+passed over the very behaviour it was written to pin. A mutation harness earns
+the same suspicion as anything in `bin/ci/`: it is a guard, and a guard that
+reports success over output it is no longer reading is worse than none, because
+it is trusted. Print a count, or prove a control fails.
+
 **"Something is focused" is not a keyboard assertion.** A spec pressed `Tab`
 once from a fresh wp-admin document and checked that focus had landed inside the
 screen under test. It never does: core puts a skip link, the admin bar and the
