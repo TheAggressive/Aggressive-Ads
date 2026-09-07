@@ -81,6 +81,45 @@ The portal never calls a theme class, never requires a theme file, and never ass
 
 This is not an aspiration maintained by discipline. `tests/e2e/campaign-wizard.spec.ts` switches the active theme to Twenty Twenty-Five, logs in, loads the portal, and runs axe. A theme dependency introduced by accident fails that test.
 
+## Serialising a critical section
+
+Four repositories take a MySQL advisory lock — `Campaign_Repository` around a
+lifecycle transition, `Creative_Revision_Repository` around a revision write,
+`Rate_Limit_Repository` when no persistent object cache offers an atomic
+increment, and `Reservation_Repository` around a capacity check and the booking
+that follows it. It is the plugin's cross-request serialisation primitive, and
+the rule for reaching for it is narrower than "I need this to be atomic".
+
+**Use it when a check and the write it authorises must not be separated, and
+the operation is driven by a person.** A booking, a transition, a revision:
+these happen at human rates, so serialising per entity costs nothing
+measurable, and the alternative is a race whose only symptom is a wrong number
+appearing later with no trace of how.
+
+**Never on the fill path.** Delivery runs at hundreds of requests per second
+against the same handful of placements, and a lock there would convert
+concurrency into a queue. The rate limiter is the deliberate exception and
+proves the rule: it uses the lock only when the object cache cannot offer an
+atomic increment, and `docs/delivery-performance.md` lists a persistent cache
+as a production requirement partly for that reason.
+
+**Prefer a database constraint where one can express the rule.** A unique key
+needs no lock, cannot be forgotten, and holds against clients that never read
+this document — which is why forecast versions are guarded by a unique key
+rather than by the lock that guards reservation capacity. A lock is for rules a
+constraint cannot state, such as a sum across rows compared against a figure
+computed elsewhere.
+
+**What not to reach for instead.** `INSERT … SELECT` with the condition in a
+`WHERE` reads as atomic and is not: under `REPEATABLE READ` two concurrent
+statements see the same snapshot, both find the condition satisfied, and both
+insert. That failure is silent, appears only under load, and is exactly the
+shape of bug this section exists to prevent.
+
+Lock names are scoped to `get_current_blog_id()`. A multisite network's tenants
+share one MySQL server, so an unscoped name lets one site's booking block
+another's.
+
 ## Public pages without a theme embed
 
 Native fill only runs where the theme (or an editor) places `aggr/ad-slot`,

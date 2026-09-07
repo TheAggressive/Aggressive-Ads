@@ -11,6 +11,7 @@ namespace Aggressive\Ads\Repository;
 
 use Aggressive\Ads\Domain\Decision_Outcome;
 use Aggressive\Ads\Domain\Opportunity;
+use Aggressive\Ads\Domain\Utc_Day;
 use Aggressive\Ads\Install\Schema;
 
 /**
@@ -216,7 +217,7 @@ final class Decision_Rollup_Repository {
 	public function totals_for_placement( int $placement, string $from_utc, string $to_utc, string $opportunity = '' ): array {
 		global $wpdb;
 
-		if ( $placement <= 0 || ! self::is_day( $from_utc ) || ! self::is_day( $to_utc ) ) {
+		if ( $placement <= 0 || ! Utc_Day::is_day( $from_utc ) || ! Utc_Day::is_day( $to_utc ) ) {
 			return array();
 		}
 
@@ -273,7 +274,7 @@ final class Decision_Rollup_Repository {
 	public function daily_events_for_placement( int $placement, string $outcome, string $opportunity, string $from_utc, string $to_utc ): array {
 		global $wpdb;
 
-		if ( $placement <= 0 || ! self::is_day( $from_utc ) || ! self::is_day( $to_utc ) ) {
+		if ( $placement <= 0 || ! Utc_Day::is_day( $from_utc ) || ! Utc_Day::is_day( $to_utc ) ) {
 			return array();
 		}
 
@@ -330,7 +331,7 @@ final class Decision_Rollup_Repository {
 	public function totals_by_placement( string $from_utc, string $to_utc, string $opportunity ): array {
 		global $wpdb;
 
-		if ( ! self::is_day( $from_utc ) || ! self::is_day( $to_utc ) ) {
+		if ( ! Utc_Day::is_day( $from_utc ) || ! Utc_Day::is_day( $to_utc ) ) {
 			return array();
 		}
 
@@ -388,7 +389,7 @@ final class Decision_Rollup_Repository {
 	public function daily_outcomes( string $from_utc, string $to_utc, int $placement = 0 ): array {
 		global $wpdb;
 
-		if ( ! self::is_day( $from_utc ) || ! self::is_day( $to_utc ) ) {
+		if ( ! Utc_Day::is_day( $from_utc ) || ! Utc_Day::is_day( $to_utc ) ) {
 			return array();
 		}
 
@@ -432,7 +433,7 @@ final class Decision_Rollup_Repository {
 	public function totals( string $from_utc, string $to_utc, string $opportunity = '' ): array {
 		global $wpdb;
 
-		if ( ! self::is_day( $from_utc ) || ! self::is_day( $to_utc ) ) {
+		if ( ! Utc_Day::is_day( $from_utc ) || ! Utc_Day::is_day( $to_utc ) ) {
 			return array();
 		}
 
@@ -468,7 +469,7 @@ final class Decision_Rollup_Repository {
 	public function purge_through( string $through_utc, int $limit ): int {
 		global $wpdb;
 
-		if ( ! self::is_day( $through_utc ) || $limit <= 0 ) {
+		if ( ! Utc_Day::is_day( $through_utc ) || $limit <= 0 ) {
 			return 0;
 		}
 
@@ -520,14 +521,6 @@ final class Decision_Rollup_Repository {
 		return $totals;
 	}
 
-	/**
-	 * Whether a string is a `Y-m-d` UTC day.
-	 *
-	 * @param string $day Candidate day.
-	 */
-	private static function is_day( string $day ): bool {
-		return 1 === preg_match( '/^\d{4}-\d{2}-\d{2}$/', $day );
-	}
 
 	/**
 	 * A kind the read may filter on, or null when the caller named one that
