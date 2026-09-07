@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-06T21:32:58+00:00\n"
+"POT-Creation-Date: 2026-09-07T00:18:17+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -1311,91 +1311,91 @@ msgid "%s requests have no recorded outcome. This is a defect worth reporting: e
 msgstr ""
 
 #. translators: 1: previous campaign status, already translated. 2: new campaign status, already translated.
-#: inc/Admin/class-review-data.php:310
+#: inc/Admin/class-review-data.php:325
 #, php-format
 msgid "Campaign moved from %1$s to %2$s."
 msgstr ""
 
-#: inc/Admin/class-review-data.php:325
+#: inc/Admin/class-review-data.php:340
 #: inc/Portal/class-view-data.php:681
 msgid "Not scheduled"
 msgstr ""
 
 #. translators: 1: campaign start date. 2: campaign end date.
-#: inc/Admin/class-review-data.php:336
+#: inc/Admin/class-review-data.php:351
 #: inc/Portal/class-view-data.php:697
 #, php-format
 msgid "%1$s – %2$s"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:615
+#: inc/Admin/class-review-data.php:630
 msgid "System"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:661
+#: inc/Admin/class-review-data.php:676
 msgid "Needs review"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:662
+#: inc/Admin/class-review-data.php:677
 #: inc/Admin/class-review-screen.php:262
 msgid "Ad updates"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:663
+#: inc/Admin/class-review-data.php:678
 msgid "Advertiser requests"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:664
+#: inc/Admin/class-review-data.php:679
 msgid "With the advertiser"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:665
+#: inc/Admin/class-review-data.php:680
 msgid "Decided"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:666
+#: inc/Admin/class-review-data.php:681
 #: inc/Portal/class-creative-view-data.php:168
 #: inc/Portal/class-view-data.php:567
 msgid "Running"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:667
+#: inc/Admin/class-review-data.php:682
 msgid "Finished"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:683
+#: inc/Admin/class-review-data.php:698
 msgid "Start review"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:684
+#: inc/Admin/class-review-data.php:699
 msgid "Release back to the queue"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:685
+#: inc/Admin/class-review-data.php:700
 msgid "Request changes"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:686
+#: inc/Admin/class-review-data.php:701
 msgid "Reject"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:687
+#: inc/Admin/class-review-data.php:702
 msgid "Approve and publish"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:688
+#: inc/Admin/class-review-data.php:703
 msgid "Reopen as a draft"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:689
+#: inc/Admin/class-review-data.php:704
 msgid "Pause campaign"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:690
+#: inc/Admin/class-review-data.php:705
 msgid "Resume campaign"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:691
+#: inc/Admin/class-review-data.php:706
 #: inc/Portal/class-view-data.php:297
 msgid "Cancel campaign"
 msgstr ""
