@@ -204,6 +204,54 @@ than removing a guard — so this is written down instead of chased with a test
 that would only assert the grouping's shape. Every other mutant across the two
 slices is killed.
 
+## Slice 5 — the reservation ledger *(built)*
+
+`aggr_reservations` (db version 28) holds time-bounded claims against a
+placement's forecast supply. `Domain\Reservation_Rules` owns the vocabulary and
+the lifecycle; `Repository\Reservation_Repository` owns the table.
+
+**Which statuses consume capacity is the decision everything rests on.** Held
+and confirmed do; released and expired do not. A hold that consumed nothing
+would let the same inventory be promised to every advertiser who asked — every
+check would pass and the shortfall would appear only when the window ran. And
+capacity that never came back would ratchet downward with every cancellation
+until the placement refused everything.
+
+**The declared consistency model is an advisory lock.** The contract requires
+reservation checks to be atomic and the tolerated oversell bound to be measured
+rather than assumed; a lock makes that bound zero by construction, which is a
+stronger claim than reasoning about isolation levels and is checkable by
+reading one method. The obvious alternative — `INSERT … SELECT` with the
+capacity sum in a `WHERE` — reads as atomic and is not: under `REPEATABLE READ`
+two concurrent bookings see the same snapshot, both find room, and both insert.
+The cost is serialising bookings per placement and window, which is nothing at
+the rate people negotiate campaigns, and would be the wrong trade on the fill
+path. `Rate_Limit_Repository` and `Campaign_Repository` already use the same
+primitive.
+
+Status changes carry the current status in the `WHERE`, so a transition is
+checked and applied in one statement. Reading, deciding, then writing would let
+two requests both see `held` and both act — releasing a reservation somebody
+else had just confirmed.
+
+Expiry takes abandoned holds and leaves commitments alone: a confirmed
+reservation whose window ended is a delivered booking, and expiring it would
+rewrite history into a claim nobody honoured.
+
+`forecast_version` is stored on every claim because the contract requires an
+oversell override to name one. A reservation that could not say which figure it
+was checked against would leave a publisher knowing somebody overrode a warning
+and not what the warning said.
+
+### The mutation harness ran the wrong suite
+
+The rules are unit-tested and the ledger is an integration test, and the first
+run filtered both through the integration config — which printed "No tests
+executed!" for the unit filter and carried on. Every domain mutant was
+therefore judged only by what the integration tests happened to reach, and the
+one mutation none of them could reach was reported as surviving. Run across
+both suites: nineteen mutants, all killed, control survives.
+
 ## Not built yet
 - **Reservations.** Table, lifecycle, concurrency-safe quantity and status
   changes, audit.

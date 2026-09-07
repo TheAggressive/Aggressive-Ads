@@ -116,6 +116,7 @@ use Aggressive\Ads\Workflow\Reporting_Read;
 use Aggressive\Ads\Workflow\Revision_Policy;
 use Aggressive\Ads\Repository\Decision_Rollup_Repository;
 use Aggressive\Ads\Repository\Forecast_Repository;
+use Aggressive\Ads\Repository\Reservation_Repository;
 use Aggressive\Ads\Workflow\Reviewer_Access;
 use Aggressive\Ads\Workflow\Forecast_Recorder;
 use Aggressive\Ads\Workflow\Supply_History;
@@ -388,6 +389,11 @@ final class Service_Registrar {
 		$container->register(
 			Forecast_Repository::class,
 			static fn (): Forecast_Repository => new Forecast_Repository()
+		);
+
+		$container->register(
+			Reservation_Repository::class,
+			static fn (): Reservation_Repository => new Reservation_Repository()
 		);
 
 		$container->register(

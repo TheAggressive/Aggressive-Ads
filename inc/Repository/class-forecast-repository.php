@@ -11,6 +11,7 @@ namespace Aggressive\Ads\Repository;
 
 use Aggressive\Ads\Domain\Opportunity;
 use Aggressive\Ads\Domain\Supply_Forecast;
+use Aggressive\Ads\Install\Planning_Schema;
 use Aggressive\Ads\Install\Schema;
 
 /**
@@ -51,7 +52,7 @@ final class Forecast_Repository {
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
-		dbDelta( Schema::forecasts_table_ddl( $this->table_name(), $wpdb->get_charset_collate() ) );
+		dbDelta( Planning_Schema::forecasts_table_ddl( $this->table_name(), $wpdb->get_charset_collate() ) );
 	}
 
 	/** Whether the table exists. */

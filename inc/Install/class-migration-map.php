@@ -17,6 +17,7 @@ use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Decision_Rollup_Repository;
 use Aggressive\Ads\Repository\Forecast_Repository;
+use Aggressive\Ads\Repository\Reservation_Repository;
 use Aggressive\Ads\Workflow\Decision_Metrics;
 use Aggressive\Ads\Repository\Creative_Attachment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
@@ -352,6 +353,16 @@ final class Migration_Map {
 			 */
 			27 => static function () use ( $c ): void {
 				$c->get( Forecast_Repository::class )->install_table();
+			},
+
+			/*
+			 * P16's reservation ledger. A create, and deliberately no backfill:
+			 * inventory nobody booked is not a reservation, and inventing rows
+			 * for live campaigns would consume capacity against forecasts those
+			 * campaigns were never checked against.
+			 */
+			28 => static function () use ( $c ): void {
+				$c->get( Reservation_Repository::class )->install_table();
 			},
 		);
 	}
