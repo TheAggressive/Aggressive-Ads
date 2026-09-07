@@ -207,6 +207,72 @@ final class CampaignStateMachineTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * **Staff may resubmit a campaign after changes were requested.**
+	 *
+	 * The more common half of the workflow, and the half still refused after
+	 * the draft edge was fixed: a reviewer asks for a correction, the publisher
+	 * makes it on the advertiser's behalf, and "You do not have permission to
+	 * submit that campaign" is all they get. Submitting and resubmitting are
+	 * one action to the person doing them.
+	 *
+	 * @return void
+	 */
+	public function test_staff_may_resubmit_after_changes_were_requested(): void {
+		wp_set_current_user( $this->reviewer );
+
+		$campaign = $this->campaign( Post_Statuses::CHANGES );
+		$machine  = $this->machine( array( Transition_Table::GUARD_VALIDATOR => $this->passing_guard() ) );
+
+		$this->assertTrue( $machine->apply( $campaign, Post_Statuses::SUBMITTED ) );
+		$this->assertSame( Post_Statuses::SUBMITTED, $this->campaigns->status( $campaign ) );
+	}
+
+	/**
+	 * Resubmission is still refused to someone outside the organization.
+	 *
+	 * The same proof as the draft edge, on the edge that actually blocked the
+	 * reported workflow: the capabilities are checked against the campaign, so
+	 * widening the actor did not widen ownership here either.
+	 *
+	 * @return void
+	 */
+	public function test_an_outsider_cannot_resubmit_after_changes(): void {
+		$outsider = self::factory()->user->create( array( 'role' => Roles::ADVERTISER ) );
+
+		$campaign = $this->campaign( Post_Statuses::CHANGES );
+
+		wp_set_current_user( $outsider );
+
+		$machine = $this->machine( array( Transition_Table::GUARD_VALIDATOR => $this->passing_guard() ) );
+		$result  = $machine->apply( $campaign, Post_Statuses::SUBMITTED );
+
+		$this->assertInstanceOf( \WP_Error::class, $result );
+		$this->assertSame( 'aggr_forbidden', $result->get_error_code() );
+		$this->assertSame( Post_Statuses::CHANGES, $this->campaigns->status( $campaign ) );
+	}
+
+	/**
+	 * **Cancelling somebody else's campaign is still not staff's to do.**
+	 *
+	 * The line this draws is between moving work forward and taking it away.
+	 * Submitting and resubmitting are help; cancelling is not, and widening the
+	 * two submit edges must not have widened this one by association.
+	 *
+	 * @return void
+	 */
+	public function test_staff_still_cannot_cancel_from_changes(): void {
+		wp_set_current_user( $this->reviewer );
+
+		$campaign = $this->campaign( Post_Statuses::CHANGES );
+		$machine  = $this->machine( array( Transition_Table::GUARD_VALIDATOR => $this->passing_guard() ) );
+
+		$result = $machine->apply( $campaign, Post_Statuses::CANCELLED );
+
+		$this->assertInstanceOf( \WP_Error::class, $result );
+		$this->assertSame( Post_Statuses::CHANGES, $this->campaigns->status( $campaign ) );
+	}
+
+	/**
 	 * **Widening the actor did not widen permission.**
 	 *
 	 * The transition still requires `aggr_submit_campaign` and the edit meta

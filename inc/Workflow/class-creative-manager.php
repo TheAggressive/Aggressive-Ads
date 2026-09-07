@@ -90,7 +90,7 @@ final class Creative_Manager {
 	 */
 	public function upload( int $campaign_id, int $placement_id, array $file, string $click_url, string $alt_text ): array|WP_Error {
 		if ( ! current_user_can( Capabilities::UPLOAD_CREATIVE ) ) {
-			return $this->error( 'aggr_forbidden', __( 'You do not have permission to upload creative.', 'aggressive-ads' ), 403 );
+			return $this->error( 'aggr_upload_forbidden', __( 'You do not have permission to upload creative.', 'aggressive-ads' ), 403 );
 		}
 
 		$allowed = $this->limiter->attempt( Rate_Limiter::ACTION_UPLOAD, get_current_user_id() );
@@ -336,13 +336,13 @@ final class Creative_Manager {
 	 */
 	public function remove( int $creative_id ): bool|WP_Error {
 		if ( ! current_user_can( Capabilities::UPLOAD_CREATIVE ) || ! current_user_can( 'delete_aggr_creative', $creative_id ) ) {
-			return $this->error( 'aggr_forbidden', __( 'You do not have permission to remove that creative.', 'aggressive-ads' ), 403 );
+			return $this->error( 'aggr_remove_forbidden', __( 'You do not have permission to remove that creative.', 'aggressive-ads' ), 403 );
 		}
 
 		$creative = $this->creatives->details( $creative_id );
 
 		if ( null === $creative ) {
-			return $this->error( 'aggr_forbidden', __( 'You do not have permission to remove that creative.', 'aggressive-ads' ), 403 );
+			return $this->error( 'aggr_remove_forbidden', __( 'You do not have permission to remove that creative.', 'aggressive-ads' ), 403 );
 		}
 
 		$campaign_id = $creative['campaign_id'];
@@ -405,6 +405,14 @@ final class Creative_Manager {
 	 */
 	private function authorize_campaign_placement( int $campaign_id, int $placement_id ): bool|WP_Error {
 		if ( ! current_user_can( 'edit_aggr_campaign', $campaign_id ) ) {
+			/*
+			 * **Keeps `aggr_forbidden`.** The two checks above got their own
+			 * codes because nothing asserted theirs; this one is the ownership
+			 * refusal that forty-four tests and `campaign-workflow.md` already
+			 * name, and renaming an established code to improve one sentence is
+			 * a trade in the wrong direction. Which refusal this was belongs in
+			 * the audit log, not in a code a tenant-isolation test depends on.
+			 */
 			return $this->error( 'aggr_forbidden', __( 'You do not have permission to do that.', 'aggressive-ads' ), 403 );
 		}
 

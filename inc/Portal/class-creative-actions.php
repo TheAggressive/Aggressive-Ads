@@ -277,17 +277,22 @@ final class Creative_Actions implements Service {
 			'aggr_rate_limited'             => __( 'There have been too many uploads. Wait a moment and try again.', 'aggressive-ads' ),
 
 			/*
-			 * **A refusal is not a retry.** Every code below fell through to
-			 * the default, so being denied permission, removing a published
-			 * creative, or hitting a storage mismatch all read as "could not be
-			 * saved, please try again" — which invites the reader to repeat an
-			 * action that cannot succeed, and hides a 403 behind what looks
-			 * like a transient glitch.
+			 * **A refusal is not a retry, and it says which refusal.**
 			 *
-			 * The wording matches what the manager already returns, so the
-			 * portal and the REST route say the same thing about the same
-			 * failure rather than two things.
+			 * Every code below once fell through to the default, so being
+			 * denied permission, removing a published creative, or hitting a
+			 * storage mismatch all read as "could not be saved, please try
+			 * again" — inviting the reader to repeat an action that cannot
+			 * succeed, and hiding a 403 behind what looks like a glitch.
+			 *
+			 * The forbidden cases then carry one code each, because the portal
+			 * renders from the code alone: the error crosses a redirect as a
+			 * string rather than as a `WP_Error`, so a shared code means a
+			 * shared sentence whatever the manager wrote. "You do not have
+			 * permission" is true of all four and useful for none.
 			 */
+			'aggr_upload_forbidden'         => __( 'You do not have permission to upload creative for this campaign.', 'aggressive-ads' ),
+			'aggr_remove_forbidden'         => __( 'You do not have permission to remove that creative.', 'aggressive-ads' ),
 			'aggr_forbidden'                => __( 'You do not have permission to change that creative.', 'aggressive-ads' ),
 			'aggr_creative_published'       => __( 'A published creative cannot be removed from this draft workflow.', 'aggressive-ads' ),
 			'aggr_creative_not_deleted'     => __( 'The creative could not be removed. Please try again.', 'aggressive-ads' ),
