@@ -33,10 +33,12 @@ import type { Queue, QueueRow } from './types';
 
 export function QueueTable( {
 	queue,
+	busy,
 	onPage,
 	onOpen,
 }: {
 	queue: Queue;
+	busy: boolean;
 	onPage: ( page: number ) => void;
 	onOpen: ( id: number ) => void;
 } ): ReactElement {
@@ -158,7 +160,14 @@ export function QueueTable( {
 			defaultLayouts={ { table: {} } }
 			actions={ [] }
 			getItemId={ ( item ) => String( item.id ) }
-			isLoading={ false }
+			/*
+			 * **Every tab and page change is a REST round trip**, because the
+			 * queue is paged and filtered by the server. Hardcoding this false
+			 * told DataViews a fetch was never in flight, so the table sat
+			 * showing the previous tab's rows with no indication anything was
+			 * happening — which reads as lag rather than as loading.
+			 */
+			isLoading={ busy }
 			search={ false }
 		/>
 	);

@@ -234,6 +234,7 @@ export function QueueView( {
 				) : (
 					<QueueTable
 						queue={ queue }
+						busy={ busy }
 						onPage={ onPage }
 						onOpen={ onOpen }
 					/>
