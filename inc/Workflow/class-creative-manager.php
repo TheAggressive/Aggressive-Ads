@@ -198,6 +198,33 @@ final class Creative_Manager {
 		if ( 0 === $creative_id ) {
 			$this->storage->delete( $accepted['path'] );
 
+			/*
+			 * **A five hundred that recorded nothing could not be diagnosed.**
+			 *
+			 * `rest-api.md` already says diagnostics belong in the audit log
+			 * rather than the response body, and this path did neither: the
+			 * reader got "please try again" and nobody could find out what
+			 * happened. The two ways this upload can fail late are
+			 * indistinguishable from each other in a bug report, so each now
+			 * says which one it was.
+			 */
+			$this->audit->insert(
+				new Audit_Event(
+					event: 'creative.upload_failed',
+					object_type: 'campaign',
+					object_id: $campaign_id,
+					org_id: $this->campaigns->org_id( $campaign_id ),
+					message: 'Creative record could not be inserted.',
+					context: array(
+						'reason'       => 'insert_returned_zero',
+						'placement_id' => $placement_id,
+						'width'        => $accepted['width'],
+						'height'       => $accepted['height'],
+					),
+					outcome: Audit_Event::OUTCOME_FAILED
+				)
+			);
+
 			return $this->error( 'aggr_creative_not_created', __( 'The creative could not be saved. Please try again.', 'aggressive-ads' ), 500 );
 		}
 
@@ -213,6 +240,32 @@ final class Creative_Manager {
 			|| $campaign_id !== $details['campaign_id']
 			|| $placement_id !== $details['placement_id']
 		) {
+			/*
+			 * Which of the four checks disagreed, recorded before the evidence
+			 * is deleted. "The record did not read back" is not a diagnosis; a
+			 * path that differs by a prefix and a campaign id that differs by
+			 * one are entirely different bugs.
+			 */
+			$this->audit->insert(
+				new Audit_Event(
+					event: 'creative.upload_failed',
+					object_type: 'campaign',
+					object_id: $campaign_id,
+					org_id: $this->campaigns->org_id( $campaign_id ),
+					message: 'Creative record did not read back as written.',
+					context: array(
+						'reason'            => 'read_back_mismatch',
+						'creative_id'       => $creative_id,
+						'storage_recorded'  => null !== $recorded,
+						'details_recorded'  => null !== $details,
+						'path_matches'      => null !== $recorded && $accepted['path'] === $recorded['path'],
+						'campaign_matches'  => null !== $details && $campaign_id === $details['campaign_id'],
+						'placement_matches' => null !== $details && $placement_id === $details['placement_id'],
+					),
+					outcome: Audit_Event::OUTCOME_FAILED
+				)
+			);
+
 			$this->creatives->delete( $creative_id );
 			$this->storage->delete( $accepted['path'] );
 

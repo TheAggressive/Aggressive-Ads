@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-07T00:56:40+00:00\n"
+"POT-Creation-Date: 2026-09-07T01:08:37+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -1061,7 +1061,7 @@ msgstr ""
 #: inc/Portal/class-report-actions.php:79
 #: inc/Workflow/class-campaign-state-machine.php:245
 #: inc/Workflow/class-campaign-state-machine.php:263
-#: inc/Workflow/class-creative-manager.php:416
+#: inc/Workflow/class-creative-manager.php:469
 #: inc/Workflow/class-email-change.php:245
 #: inc/Workflow/class-review-actions.php:62
 msgid "You do not have permission to do that."
@@ -3188,8 +3188,8 @@ msgstr ""
 #: inc/Portal/class-creative-actions.php:276
 #: inc/Workflow/class-assignment-editor.php:192
 #: inc/Workflow/class-campaign-editor.php:342
-#: inc/Workflow/class-creative-manager.php:351
-#: inc/Workflow/class-creative-manager.php:420
+#: inc/Workflow/class-creative-manager.php:404
+#: inc/Workflow/class-creative-manager.php:473
 #: inc/Workflow/class-line-item-editor.php:73
 msgid "This campaign cannot be changed right now."
 msgstr ""
@@ -3203,8 +3203,8 @@ msgid "You do not have permission to upload creative for this campaign."
 msgstr ""
 
 #: inc/Portal/class-creative-actions.php:295
-#: inc/Workflow/class-creative-manager.php:339
-#: inc/Workflow/class-creative-manager.php:345
+#: inc/Workflow/class-creative-manager.php:392
+#: inc/Workflow/class-creative-manager.php:398
 msgid "You do not have permission to remove that creative."
 msgstr ""
 
@@ -3213,25 +3213,25 @@ msgid "You do not have permission to change that creative."
 msgstr ""
 
 #: inc/Portal/class-creative-actions.php:297
-#: inc/Workflow/class-creative-manager.php:355
+#: inc/Workflow/class-creative-manager.php:408
 msgid "A published creative cannot be removed from this draft workflow."
 msgstr ""
 
 #: inc/Portal/class-creative-actions.php:298
-#: inc/Workflow/class-creative-manager.php:365
-#: inc/Workflow/class-creative-manager.php:374
+#: inc/Workflow/class-creative-manager.php:418
+#: inc/Workflow/class-creative-manager.php:427
 msgid "The creative could not be removed. Please try again."
 msgstr ""
 
 #: inc/Portal/class-creative-actions.php:299
-#: inc/Workflow/class-creative-manager.php:371
+#: inc/Workflow/class-creative-manager.php:424
 msgid "The creative record and file could not be reconciled. Please contact an administrator."
 msgstr ""
 
 #: inc/Portal/class-creative-actions.php:300
 #: inc/Portal/class-creative-actions.php:301
-#: inc/Workflow/class-creative-manager.php:201
-#: inc/Workflow/class-creative-manager.php:219
+#: inc/Workflow/class-creative-manager.php:228
+#: inc/Workflow/class-creative-manager.php:272
 msgid "The creative could not be saved. Please try again."
 msgstr ""
 
@@ -4310,21 +4310,21 @@ msgstr ""
 msgid "Uploaded: %1$s. Required: %2$s. Resize the ad creative and try again."
 msgstr ""
 
-#: inc/Workflow/class-creative-manager.php:323
+#: inc/Workflow/class-creative-manager.php:376
 msgid "Advertisement"
 msgstr ""
 
 #. translators: %s: destination website hostname.
-#: inc/Workflow/class-creative-manager.php:326
+#: inc/Workflow/class-creative-manager.php:379
 #, php-format
 msgid "Advertisement linking to %s"
 msgstr ""
 
-#: inc/Workflow/class-creative-manager.php:424
+#: inc/Workflow/class-creative-manager.php:477
 msgid "That placement is not available."
 msgstr ""
 
-#: inc/Workflow/class-creative-manager.php:428
+#: inc/Workflow/class-creative-manager.php:481
 msgid "That placement is not part of this campaign."
 msgstr ""
 
