@@ -224,6 +224,54 @@ final class Forecast_Repository {
 	}
 
 	/**
+	 * Matured snapshots for one placement, newest window first.
+	 *
+	 * Only rows that have an outcome, because a summary is over what has been
+	 * judged. An open window is not an accurate one, and including it so the
+	 * caller can skip it again would make the row count and the judged count
+	 * disagree for no benefit.
+	 *
+	 * **The join is what excludes an open window**, not a second predicate
+	 * beside it. Its subquery only considers versions carrying an outcome, so a
+	 * window with none joins nothing and never appears — and repeating
+	 * `actual IS NOT NULL` in the outer clause would be a condition no row can
+	 * fail, which reads as a case somebody thought about rather than one that
+	 * cannot arise.
+	 *
+	 * **The newest version of each window, not every version.** A window
+	 * forecast four times would otherwise contribute four measurements of one
+	 * outcome, weighting a much-revised window four times as heavily as a
+	 * window nobody looked at twice — and revision usually means somebody was
+	 * uncertain, which is the opposite of the weighting anybody would choose.
+	 *
+	 * @param int    $placement   Placement post id.
+	 * @param string $opportunity `Domain\Opportunity` kind.
+	 * @param int    $limit       Windows to return.
+	 * @return array<int, array<string, mixed>>
+	 */
+	public function matured( int $placement, string $opportunity, int $limit = self::MAX_HISTORY ): array {
+		global $wpdb;
+
+		if ( $placement <= 0 || ! Opportunity::is_valid( $opportunity ) || $limit <= 0 ) {
+			return array();
+		}
+
+		$table = $this->table_name();
+		$rows  = array();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Prefix-derived table; every value is a placeholder. The join keeps one row per window rather than one per version.
+		$found = $wpdb->get_results( $wpdb->prepare( "SELECT f.* FROM {$table} f JOIN (SELECT window_start, window_end, MAX(version) AS version FROM {$table} WHERE placement_id = %d AND opportunity = %s AND actual IS NOT NULL GROUP BY window_start, window_end) newest ON newest.window_start = f.window_start AND newest.window_end = f.window_end AND newest.version = f.version WHERE f.placement_id = %d AND f.opportunity = %s ORDER BY f.window_end DESC LIMIT %d", $placement, $opportunity, $placement, $opportunity, min( self::MAX_HISTORY, $limit ) ), ARRAY_A );
+
+		foreach ( is_array( $found ) ? $found : array() as $row ) {
+			if ( is_array( $row ) ) {
+				$rows[] = self::shape( $row );
+			}
+		}
+
+		return $rows;
+	}
+
+	/**
 	 * Windows that have ended and have no outcome recorded yet.
 	 *
 	 * Bounded, and ordered by the oldest window rather than the oldest row, so

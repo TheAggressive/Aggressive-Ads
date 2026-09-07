@@ -12,6 +12,7 @@ namespace Aggressive\Ads\Tests\Integration;
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Domain\Decision_Outcome;
 use Aggressive\Ads\Domain\Opportunity;
+use Aggressive\Ads\Domain\Forecast_Error;
 use Aggressive\Ads\Domain\Supply_Forecast;
 use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Install\Schema;
@@ -411,6 +412,173 @@ final class ForecastSnapshotTest extends WP_UnitTestCase {
 			'Retention that reached a live window would delete the forecast a publisher is currently selling against.'
 		);
 		$this->assertCount( 1, $this->recorder->history_for( $placement, Opportunity::PAGE, $this->day( -1 ), $this->day( -7 ) ) );
+	}
+
+	/**
+	 * Forecasts a window that has already closed, then matures it.
+	 *
+	 * @param int $placement Placement post id.
+	 * @param int $from_ago  First day of the window, back from the sealed day.
+	 * @param int $to_ago    Last day of the window, back from the sealed day.
+	 * @param int $supplied  What the window really produced, per day.
+	 */
+	private function closed_window( int $placement, int $from_ago, int $to_ago, int $supplied ): void {
+		$this->recorder->snapshot( $placement, Opportunity::PAGE, $this->day( $from_ago ), $this->day( $to_ago ), 90 );
+		$this->record_days( $placement, $from_ago, $to_ago, $supplied );
+		$this->recorder->mature( $this->last );
+	}
+
+	public function test_accuracy_reads_what_maturing_wrote(): void {
+		$placement = $this->placement();
+
+		// A quiet stretch to forecast from, so the estimate is modest.
+		$this->record_days( $placement, 90, 31, 100 );
+
+		$this->closed_window( $placement, 30, 24, 400 );
+
+		$accuracy = $this->recorder->accuracy( $placement, Opportunity::PAGE );
+
+		$this->assertSame(
+			1,
+			$accuracy['judged'],
+			'The read half and the write half have to meet somewhere, and a summary computed from rows nothing produced is arithmetic rather than a measurement.'
+		);
+		$this->assertSame( 0, $accuracy['oversold'] );
+		$this->assertNotNull( $accuracy['mean_absolute'] );
+	}
+
+	public function test_a_window_the_placement_could_not_fill_is_counted_as_oversold(): void {
+		$placement = $this->placement();
+
+		/*
+		 * The window sits outside the history the forecast draws from, which is
+		 * what lets the two disagree at all. A window inside its own history is
+		 * zero-filled while it is still empty, so the forecast for it comes out
+		 * low and the placement beats it — true, and not the case under test.
+		 */
+		$this->record_days( $placement, 19, 0, 5000 );
+		$this->record_days( $placement, 60, 54, 1 );
+
+		$this->recorder->snapshot( $placement, Opportunity::PAGE, $this->day( 60 ), $this->day( 54 ), 20 );
+		$this->recorder->mature( $this->last );
+
+		$accuracy = $this->recorder->accuracy( $placement, Opportunity::PAGE );
+
+		$this->assertSame( 1, $accuracy['judged'] );
+		$this->assertSame(
+			1,
+			$accuracy['oversold'],
+			'This is the case the phase exists to prevent: a publisher sold against inventory that did not arrive.'
+		);
+	}
+
+	public function test_a_much_revised_window_is_still_one_measurement(): void {
+		$placement = $this->placement();
+
+		$this->record_days( $placement, 90, 31, 100 );
+
+		foreach ( array( 90, 60, 45 ) as $history ) {
+			$this->recorder->snapshot( $placement, Opportunity::PAGE, $this->day( 30 ), $this->day( 24 ), $history );
+		}
+
+		$this->record_days( $placement, 30, 24, 400 );
+		$this->recorder->mature( $this->last );
+
+		$this->assertCount(
+			3,
+			$this->recorder->history_for( $placement, Opportunity::PAGE, $this->day( 30 ), $this->day( 24 ) )
+		);
+		$this->assertSame(
+			1,
+			$this->recorder->accuracy( $placement, Opportunity::PAGE )['judged'],
+			'Four forecasts of one window are four opinions about one outcome. Counting them all weights a much-revised window four times as heavily, and revision usually means somebody was uncertain.'
+		);
+	}
+
+	public function test_the_newest_judged_version_is_the_one_measured(): void {
+		$placement = $this->placement();
+
+		// Two histories that disagree, so the two snapshots do too.
+		$this->record_days( $placement, 40, 20, 100 );
+		$this->record_days( $placement, 19, 0, 5000 );
+		$this->record_days( $placement, 60, 54, 1 );
+
+		$this->recorder->snapshot( $placement, Opportunity::PAGE, $this->day( 60 ), $this->day( 54 ), 20 );
+		$this->recorder->snapshot( $placement, Opportunity::PAGE, $this->day( 60 ), $this->day( 54 ), 41 );
+		$this->recorder->mature( $this->last );
+
+		$versions = $this->recorder->history_for( $placement, Opportunity::PAGE, $this->day( 60 ), $this->day( 54 ) );
+
+		$this->assertCount( 2, $versions );
+		$this->assertNotSame( $versions[0]['estimate'], $versions[1]['estimate'] );
+
+		$accuracy = $this->recorder->accuracy( $placement, Opportunity::PAGE );
+
+		$this->assertSame( 1, $accuracy['judged'] );
+		$this->assertSame(
+			(float) abs( 7 - $versions[1]['estimate'] ),
+			$accuracy['mean_absolute'],
+			'The latest opinion about a window is the one it is judged on. Measuring the first would score the model on a figure it had already replaced.'
+		);
+	}
+
+	public function test_re_forecasting_a_matured_window_does_not_unjudge_it(): void {
+		$placement = $this->placement();
+
+		$this->record_days( $placement, 19, 0, 5000 );
+		$this->record_days( $placement, 60, 54, 1 );
+
+		$this->recorder->snapshot( $placement, Opportunity::PAGE, $this->day( 60 ), $this->day( 54 ), 20 );
+		$this->recorder->mature( $this->last );
+
+		$judged = $this->recorder->accuracy( $placement, Opportunity::PAGE );
+
+		$this->assertSame( 1, $judged['judged'] );
+
+		/*
+		 * A window that has already matured, forecast again — comparing a
+		 * model against a known outcome is a reasonable thing for staff to do.
+		 * The new version carries no actual, because `record_actual()` is
+		 * write-once and has already run for this window.
+		 */
+		$this->recorder->snapshot( $placement, Opportunity::PAGE, $this->day( 60 ), $this->day( 54 ), 20 );
+
+		$after = $this->recorder->accuracy( $placement, Opportunity::PAGE );
+
+		$this->assertSame(
+			$judged,
+			$after,
+			'The unmatured newcomer must not become the version measured, or re-forecasting a closed window would quietly erase what the model was judged on.'
+		);
+	}
+
+	public function test_an_open_window_contributes_nothing_to_accuracy(): void {
+		$placement = $this->placement();
+
+		$this->record_days( $placement, 90, 0, 100 );
+		$this->recorder->snapshot( $placement, Opportunity::PAGE, $this->day( -1 ), $this->day( -7 ), 90 );
+
+		$accuracy = $this->recorder->accuracy( $placement, Opportunity::PAGE );
+
+		$this->assertSame( 0, $accuracy['judged'] );
+		$this->assertNull(
+			$accuracy['mean_absolute'],
+			'A placement nobody has measured must not read as the most accurate one on the screen.'
+		);
+	}
+
+	public function test_accuracy_does_not_cross_the_opportunity_grain(): void {
+		$placement = $this->placement();
+
+		$this->record_days( $placement, 90, 31, 100 );
+		$this->closed_window( $placement, 30, 24, 400 );
+
+		$this->assertSame( 1, $this->recorder->accuracy( $placement, Opportunity::PAGE )['judged'] );
+		$this->assertSame(
+			0,
+			$this->recorder->accuracy( $placement, Opportunity::REFRESH )['judged'],
+			'Page and refresh are separate inventory, so one kind\'s accuracy says nothing about the other.'
+		);
 	}
 
 	public function test_the_container_supplies_both_halves(): void {

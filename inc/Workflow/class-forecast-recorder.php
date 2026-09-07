@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Workflow;
 
+use Aggressive\Ads\Domain\Forecast_Error;
 use Aggressive\Ads\Domain\Opportunity;
 use Aggressive\Ads\Repository\Forecast_Repository;
 
@@ -116,6 +117,29 @@ final class Forecast_Recorder {
 		}
 
 		return $closed;
+	}
+
+	/**
+	 * How wrong this placement's forecasts have turned out to be.
+	 *
+	 * The figure operations look at, and the reason the snapshots exist. Read
+	 * one window per matured forecast rather than one per version, so a window
+	 * somebody revised four times does not outweigh three windows nobody
+	 * touched.
+	 *
+	 * **`oversold` is the number that matters, not the mean.** The estimate is
+	 * a low quantile, so being beaten is the design working and a large average
+	 * miss says little. A window the publisher sold against and could not fill
+	 * is the failure this phase exists to prevent, and it has to survive being
+	 * summarised.
+	 *
+	 * @param int    $placement   Placement post id.
+	 * @param string $opportunity `Domain\Opportunity` kind.
+	 * @param int    $limit       Windows to consider.
+	 * @return array{judged: int, oversold: int, mean_absolute: float|null, mean_relative: float|null}
+	 */
+	public function accuracy( int $placement, string $opportunity, int $limit = Forecast_Repository::MAX_HISTORY ): array {
+		return Forecast_Error::summarise( $this->forecasts->matured( $placement, $opportunity, $limit ) );
 	}
 
 	/**

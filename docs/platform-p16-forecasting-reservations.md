@@ -160,11 +160,51 @@ day the clock has not got to, which is a wrong argument or a skewed clock, and
 is precisely when a partial window would be written down as an outcome. Asserted
 through that path now; ten mutants, all killed.
 
-## Not built yet
+## Slice 4 — how wrong it turned out to be *(built)*
 
-- **Recorded forecast error as a figure.** The inputs are stored — estimate and
-  actual on the same row — and nothing yet subtracts them or presents the
-  result.
+`Domain\Forecast_Error` compares an estimate with the outcome, and
+`Forecast_Recorder::accuracy()` summarises a placement's run of them.
+
+**Direction matters more than magnitude, and not symmetrically.** The estimate
+is the twentieth percentile of observed days, so on roughly four windows in
+five the placement is *expected* to supply more than forecast. Under-forecasting
+is the design working, and a summary reporting it as error would have staff
+correcting a model behaving exactly as commissioned.
+
+So `oversold` is the headline rather than the mean. A large average miss says
+little; a single window a publisher sold against and could not fill is the
+failure this phase exists to prevent, and averaging the two together produces a
+comfortable number with the failures hidden inside it. The sign follows the
+same logic: `actual - estimate`, so positive means the placement beat its
+forecast — the safe miss. The other order would put the alarming case in
+positive numbers and invite a screen to show the reassuring one in red.
+
+**Null, not zero, for anything unjudged.** A window nobody has measured has not
+been forecast accurately; it has not been judged at all, and a perfect score
+would make an unmeasured placement the best performing one on the screen. A
+window that supplied nothing has no percentage either, because every miss
+against a zero denominator is infinite — but it still counts as judged and as
+oversold, since it is the worst possible outcome and must not drop out of the
+number that names it.
+
+**One measurement per window, not per version.** A window forecast four times
+would otherwise contribute four opinions about one outcome, weighting a
+much-revised window four times as heavily — and revision usually means somebody
+was uncertain, which is the opposite of the weighting anybody would choose. The
+newest *judged* version is the one measured, so re-forecasting a closed window
+does not quietly erase what the model was scored on.
+
+### One equivalent mutant, recorded rather than tested around
+
+Adding `actual` to the `GROUP BY` in `matured()` survives. It is genuinely
+equivalent: the subquery already filters `actual IS NOT NULL`, so the column
+cannot vary within it, and `record_actual()` writes one figure to every version
+of a window. There is no line to delete — the mutation adds redundancy rather
+than removing a guard — so this is written down instead of chased with a test
+that would only assert the grouping's shape. Every other mutant across the two
+slices is killed.
+
+## Not built yet
 - **Reservations.** Table, lifecycle, concurrency-safe quantity and status
   changes, audit.
 - **Oversell warning and audited override** naming actor, reason, forecast
