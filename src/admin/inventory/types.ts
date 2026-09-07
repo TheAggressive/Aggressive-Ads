@@ -35,6 +35,14 @@ export type Placement = {
 	house_attachment_id: number;
 	house_click_url: string;
 	house_alt: string;
+
+	/**
+	 * Keep a click on this placement's house advertisement in the same tab.
+	 *
+	 * Only a house advertisement offers this. A paid creative always opens a
+	 * new tab, because the reader it would carry away is the publisher's.
+	 */
+	house_same_tab: boolean;
 	refresh_enabled: boolean;
 	refresh_seconds: number;
 	refresh_max_per_view: number;
@@ -106,6 +114,7 @@ export const blankPlacement = ( defaults: RefreshDefaults ): Placement => ( {
 	house_attachment_id: 0,
 	house_click_url: '',
 	house_alt: '',
+	house_same_tab: false,
 	breakpoints: {},
 	groups: [],
 	refresh_enabled: defaults.enabled,
@@ -126,6 +135,7 @@ export function body( draft: Placement ): Record< string, unknown > {
 		house_attachment_id: draft.house_attachment_id,
 		house_click_url: draft.house_click_url,
 		house_alt: draft.house_alt,
+		house_same_tab: draft.house_same_tab,
 		refresh_enabled: draft.refresh_enabled,
 		refresh_seconds: draft.refresh_seconds,
 		refresh_max_per_view: draft.refresh_max_per_view,

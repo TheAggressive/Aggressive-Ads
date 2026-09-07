@@ -439,6 +439,7 @@ final class Fill_Service {
 			'placement' => $placement_id,
 			'campaign'  => 0,
 			'creative'  => 0,
+			'sameTab'   => $this->placements->house_same_tab( $placement_id ),
 		);
 	}
 

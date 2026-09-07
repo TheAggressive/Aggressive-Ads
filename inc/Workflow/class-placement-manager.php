@@ -453,6 +453,7 @@ final class Placement_Manager {
 		$attachment_id = isset( $input['house_attachment_id'] ) ? (int) $input['house_attachment_id'] : 0;
 		$click_url     = isset( $input['house_click_url'] ) && is_string( $input['house_click_url'] ) ? trim( $input['house_click_url'] ) : '';
 		$alt           = isset( $input['house_alt'] ) && is_string( $input['house_alt'] ) ? sanitize_text_field( $input['house_alt'] ) : '';
+		$same_tab      = ! empty( $input['house_same_tab'] );
 
 		if ( $attachment_id < 0 ) {
 			$attachment_id = 0;
@@ -526,11 +527,12 @@ final class Placement_Manager {
 			$this->placements->house_attachment_id( $placement_id ) === $attachment_id
 			&& $this->placements->house_click_url( $placement_id ) === $click_url
 			&& $this->placements->house_alt( $placement_id ) === $alt
+			&& $this->placements->house_same_tab( $placement_id ) === $same_tab
 		) {
 			return true;
 		}
 
-		if ( ! $this->placements->set_house( $placement_id, $attachment_id, $click_url, $alt ) ) {
+		if ( ! $this->placements->set_house( $placement_id, $attachment_id, $click_url, $alt, $same_tab ) ) {
 			$this->record( $placement_id, Audit_Event::OUTCOME_FAILED, 'Placement house write failed.' );
 
 			return new WP_Error(
