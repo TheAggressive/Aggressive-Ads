@@ -110,14 +110,61 @@ reports success over code it is not reading is worse than no instrument.
 
 21 real mutants, all killed.
 
+## Slice 3 — the snapshot, and the outcome it is judged against *(built)*
+
+`aggr_forecasts` (db version 27) stores what a placement was forecast to
+supply and, later, what it actually did. `Repository\Forecast_Repository`
+owns the table; `Workflow\Forecast_Recorder` composes it with
+`Supply_History`.
+
+**A forecast is a claim made at a moment.** Re-forecasting the same window
+writes a new version rather than editing the old one, so a figure quoted in
+March survives being told something else in April — which is the only thing
+that makes the error recorded against the March number mean anything. The
+unique key is what makes a version a version: two staff re-forecasting at once
+cannot both claim the same one, so the loser fails its insert instead of
+silently overwriting a snapshot somebody has already been given.
+
+**`actual` is the single mutable column, and it is write-once.** The `IS NULL`
+predicate in the `UPDATE` is what enforces it, not a read-then-write, because
+a matured figure that can be rewritten is a figure an inconvenient forecast
+error can be edited out of. It is applied to *every* version of a window, since
+each one forecast the same days and each is wrong or right about the same
+outcome.
+
+**A window that has not closed is never matured.** `Supply_History::supplied()`
+answers null while a window is open, and the recorder skips rather than
+recording it. A partial window summed as though complete produces an actual
+below the truth, and the resulting error would report every placement as
+over-forecast — an error that says the model is pessimistic when what happened
+is that nobody waited.
+
+**A forecast with no estimate is not stored at all.** There is nothing to be
+wrong about later, so the row would only add a version whose error can never be
+computed, and a history of them would make an unmeasurable placement look
+re-forecast.
+
+Recording is deliberately not automatic. Nothing forecasts on a schedule: a
+snapshot is a claim somebody made, so it is written when staff ask for a
+figure. Maturing needs no judgement, only a closed window, so that half is a
+bounded batch a job can drive — and a missed run costs nothing, because the
+window stays in `awaiting_actuals()` and nothing tracks a watermark that could
+be wrong.
+
+### Two mutants survived a filter that hid them
+
+`awaiting_actuals()` already excludes windows that have not ended, so the
+guards beneath it — the open-window check and the null-supply skip — were never
+reached by a test, and both survived. They are reached by a caller passing a
+day the clock has not got to, which is a wrong argument or a skewed clock, and
+is precisely when a partial window would be written down as an outcome. Asserted
+through that path now; ten mutants, all killed.
+
 ## Not built yet
 
-- **Persisted forecast snapshots.** The contract requires forecasts to be
-  immutable and versioned, with reforecasting creating a new version and
-  preserving the old one's observed error. Nothing is stored yet;
-  `Supply_Forecast` computes and returns.
-- **Recorded forecast error.** Needs snapshots first, and needs actuals to
-  mature before there is anything to compare.
+- **Recorded forecast error as a figure.** The inputs are stored — estimate and
+  actual on the same row — and nothing yet subtracts them or presents the
+  result.
 - **Reservations.** Table, lifecycle, concurrency-safe quantity and status
   changes, audit.
 - **Oversell warning and audited override** naming actor, reason, forecast
