@@ -364,6 +364,27 @@ final class Migration_Map {
 			28 => static function () use ( $c ): void {
 				$c->get( Reservation_Repository::class )->install_table();
 			},
+
+			/*
+			 * Two meta keys nothing ever read.
+			 *
+			 * `_aggr_pending_edits_at` and `_aggr_pending_edits_by` recorded
+			 * when a change was proposed and by whom — the same two facts the
+			 * audit row written on the very next line already carried, in
+			 * `actor_user_id` and `created_at_ts`. Storage that nothing reads
+			 * is not free: it is a second answer to a question, and the next
+			 * person to need it has to work out which copy is trustworthy.
+			 *
+			 * Deleted rather than left orphaned, because a row that outlives
+			 * the code which wrote it is exactly the thing that makes a future
+			 * reader believe a feature exists.
+			 */
+			29 => static function () use ( $c ): void {
+				unset( $c );
+
+				delete_post_meta_by_key( '_aggr_pending_edits_at' );
+				delete_post_meta_by_key( '_aggr_pending_edits_by' );
+			},
 		);
 	}
 }

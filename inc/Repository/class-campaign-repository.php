@@ -62,8 +62,6 @@ final class Campaign_Repository {
 	 * so the fact is recorded rather than inferred.
 	 */
 	public const META_TITLE_IS_PLACEHOLDER = '_aggr_title_is_placeholder';
-	public const META_PENDING_EDITS_AT     = '_aggr_pending_edits_at';
-	public const META_PENDING_EDITS_BY     = '_aggr_pending_edits_by';
 	public const META_PENDING_EDITS_SENT   = '_aggr_pending_edits_submitted';
 	public const META_ACTION_REQUEST       = '_aggr_action_request';
 	public const META_REQUEST_REVISION     = '_aggr_request_revision';
@@ -183,9 +181,18 @@ final class Campaign_Repository {
 			return $this->clear_pending_edits( $campaign_id );
 		}
 
+		/*
+		 * **Who proposed this and when are not stored here.** They were, in
+		 * `_aggr_pending_edits_at` and `_aggr_pending_edits_by`, and nothing
+		 * ever read either — while the audit row written on the same line of
+		 * `Campaign_Change_Manager` records `actor_user_id` and
+		 * `created_at_ts` for the identical event. Two copies of one fact, one
+		 * of them durable, queryable and covered by retention, and the other a
+		 * pair of post meta rows with no reader. The audit log is the answer to
+		 * "who asked for this change"; `$user_id` stays a parameter because the
+		 * caller that logs it takes it from here.
+		 */
 		update_post_meta( $campaign_id, self::META_PENDING_EDITS, $edits );
-		update_post_meta( $campaign_id, self::META_PENDING_EDITS_AT, time() );
-		update_post_meta( $campaign_id, self::META_PENDING_EDITS_BY, $user_id );
 		update_post_meta( $campaign_id, self::META_PENDING_EDITS_SENT, $submitted ? 1 : 0 );
 
 		// Read back rather than trusting update_post_meta()'s return, which is
@@ -200,8 +207,6 @@ final class Campaign_Repository {
 	 */
 	public function clear_pending_edits( int $campaign_id ): bool {
 		delete_post_meta( $campaign_id, self::META_PENDING_EDITS );
-		delete_post_meta( $campaign_id, self::META_PENDING_EDITS_AT );
-		delete_post_meta( $campaign_id, self::META_PENDING_EDITS_BY );
 		delete_post_meta( $campaign_id, self::META_PENDING_EDITS_SENT );
 
 		return array() === $this->pending_edits( $campaign_id );
@@ -219,24 +224,6 @@ final class Campaign_Repository {
 	 */
 	public function pending_edits_submitted( int $campaign_id ): bool {
 		return 1 === (int) get_post_meta( $campaign_id, self::META_PENDING_EDITS_SENT, true );
-	}
-
-	/**
-	 * When the pending change was proposed, as a UTC Unix timestamp.
-	 *
-	 * @param int $campaign_id Campaign post id.
-	 */
-	public function pending_edits_at( int $campaign_id ): int {
-		return (int) get_post_meta( $campaign_id, self::META_PENDING_EDITS_AT, true );
-	}
-
-	/**
-	 * Who proposed the pending change.
-	 *
-	 * @param int $campaign_id Campaign post id.
-	 */
-	public function pending_edits_by( int $campaign_id ): int {
-		return (int) get_post_meta( $campaign_id, self::META_PENDING_EDITS_BY, true );
 	}
 
 	/**

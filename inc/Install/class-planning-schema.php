@@ -26,6 +26,79 @@ namespace Aggressive\Ads\Install;
 final class Planning_Schema {
 
 	/**
+	 * Columns `aggr_forecasts` must have.
+	 *
+	 * Declared beside the DDL so a schema test can compare what the site really
+	 * built against what this file says it should be. `dbDelta` is forgiving —
+	 * it adds and never drops — so a table that drifted from its definition
+	 * stays working and wrong until something asserts the difference.
+	 *
+	 * @return list<string>
+	 */
+	public static function forecasts_columns(): array {
+		return array(
+			'id',
+			'placement_id',
+			'opportunity',
+			'window_start',
+			'window_end',
+			'version',
+			'estimate',
+			'optimistic',
+			'confidence',
+			'days_observed',
+			'days_forecast',
+			'made_at',
+			'actual',
+			'actual_at',
+		);
+	}
+
+	/**
+	 * Index names `aggr_forecasts` must have, in the order MySQL reports them.
+	 *
+	 * @return list<string>
+	 */
+	public static function forecasts_index_names(): array {
+		return array( 'PRIMARY', 'slot_window_version', 'slot_made', 'maturing' );
+	}
+
+	/**
+	 * Columns `aggr_reservations` must have.
+	 *
+	 * @return list<string>
+	 */
+	public static function reservations_columns(): array {
+		return array(
+			'id',
+			'placement_id',
+			'opportunity',
+			'window_start',
+			'window_end',
+			'campaign_id',
+			'org_id',
+			'quantity',
+			'status',
+			'forecast_version',
+			'created_at',
+			'updated_at',
+		);
+	}
+
+	/**
+	 * Index names `aggr_reservations` must have, in the order MySQL reports them.
+	 *
+	 * `slot_window_status` is the one capacity is summed over, so a test that
+	 * catches its loss catches a booking check degrading into a table scan
+	 * rather than failing outright.
+	 *
+	 * @return list<string>
+	 */
+	public static function reservations_index_names(): array {
+		return array( 'PRIMARY', 'slot_window_status', 'campaign', 'org_window' );
+	}
+
+	/**
 	 * Versioned forecast snapshots.
 	 *
 	 * **A forecast is a claim made at a moment, and the moment is the point.**

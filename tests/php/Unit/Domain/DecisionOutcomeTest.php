@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Tests\Unit\Domain;
 
 use Aggressive\Ads\Domain\Decision_Outcome;
+use Aggressive\Ads\Domain\Exclusion_Reason;
 use Aggressive\Ads\Domain\No_Fill_Reason;
 use PHPUnit\Framework\TestCase;
 
@@ -18,6 +19,46 @@ use PHPUnit\Framework\TestCase;
  * accepts is decidable without a database.
  */
 final class DecisionOutcomeTest extends TestCase {
+
+	/**
+	 * **Every declared exclusion reason is in the list of them.**
+	 *
+	 * `ELIGIBILITY_SIZE_MISMATCH` was not. `Eligibility_Stage` emits it and
+	 * `No_Fill_Reason` maps it to `SIZE_UNAVAILABLE`, so the pipeline produced
+	 * a reason its own vocabulary denied — `is_reason()` answered false for a
+	 * code the engine had just written.
+	 *
+	 * Nothing in production read `all()` at the time, which is the only reason
+	 * this was latent rather than a defect: the same omission in
+	 * `No_Fill_Reason::all()` silently dropped counters, and that one had a
+	 * reader. Declared by reflection rather than by a second hand-kept list,
+	 * because a hand-kept list is what went wrong.
+	 *
+	 * @return void
+	 */
+	public function test_every_declared_exclusion_reason_is_listed(): void {
+		$declared = ( new \ReflectionClass( Exclusion_Reason::class ) )->getConstants();
+		$listed   = Exclusion_Reason::all();
+
+		unset( $declared['MAX_LENGTH'] );
+
+		$this->assertNotEmpty( $declared, 'No constants found, so this test would prove nothing.' );
+
+		foreach ( $declared as $name => $code ) {
+			$this->assertContains(
+				$code,
+				$listed,
+				"Exclusion_Reason::{$name} is declared, can be emitted, and is absent from all()."
+			);
+		}
+
+		$this->assertSame(
+			count( $declared ),
+			count( $listed ),
+			'all() lists something that is not a declared reason.'
+		);
+	}
+
 
 	public function test_the_lifecycle_outcomes_are_storable(): void {
 		$this->assertTrue( Decision_Outcome::is_storable( Decision_Outcome::REQUEST ) );
