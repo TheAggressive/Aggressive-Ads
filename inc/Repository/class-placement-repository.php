@@ -95,6 +95,27 @@ final class Placement_Repository {
 	}
 
 	/**
+	 * A preview URL for the house image, or '' when there is not one.
+	 *
+	 * The editing screen shows the publisher what they picked, which is the
+	 * whole reason the attachment id stopped being typed in by hand. A medium
+	 * size rather than the full one: this is a thumbnail beside a form, and a
+	 * leaderboard at full width is a megabyte to render eighty pixels.
+	 *
+	 * @param int $placement_id Placement post id.
+	 */
+	public function house_image_url( int $placement_id ): string {
+		/*
+		 * No zero guard. `wp_get_attachment_image_url( 0 )` answers false on
+		 * its own, so a guard here would be a branch no input can reach — and
+		 * an unreachable branch reads as a case somebody has thought about.
+		 */
+		$url = wp_get_attachment_image_url( $this->house_attachment_id( $placement_id ), 'medium' );
+
+		return is_string( $url ) ? $url : '';
+	}
+
+	/**
 	 * Whether this placement's house advertisement stays in the same tab.
 	 *
 	 * **Only a house advertisement gets this choice.** A paid creative always

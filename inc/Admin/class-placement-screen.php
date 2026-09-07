@@ -86,6 +86,14 @@ final class Placement_Screen implements Service {
 			true
 		);
 
+		/*
+		 * The media modal's own framework, which `MediaUpload` opens and does
+		 * not load. Without this the house picker is a button that does
+		 * nothing — and it fails silently, because the component renders fine
+		 * and only the click has no `wp.media` to call.
+		 */
+		wp_enqueue_media();
+
 		wp_enqueue_style( 'wp-components' );
 
 		/*
@@ -205,10 +213,15 @@ final class Placement_Screen implements Service {
 				'refreshMaxHelp'      => __( 'How many times one slot may refresh after the first fill. Zero keeps refresh on but starts no timer.', 'aggressive-ads' ),
 				'house'               => __( 'House advertisement', 'aggressive-ads' ),
 				'houseAttachment'     => __( 'House attachment ID', 'aggressive-ads' ),
-				'houseAttachmentHelp' => __( 'Shown when no paid creative is live, if the Delivery house-ad policy allows it. Leave at 0 for none.', 'aggressive-ads' ),
+				'houseAttachmentHelp' => __( 'Shown when no paid creative is live, if the Delivery house-ad policy allows it. Leave empty for none.', 'aggressive-ads' ),
 				'houseMissing'        => __( 'With no house advertisement, this placement shows nothing when it is unsold — and nothing at all to visitors without JavaScript, whose slot is removed from the page rather than left as an empty box.', 'aggressive-ads' ),
 				'houseUrl'            => __( 'House click URL', 'aggressive-ads' ),
 				'houseAlt'            => __( 'House alt text', 'aggressive-ads' ),
+				'houseChoose'         => __( 'Choose image', 'aggressive-ads' ),
+				'houseReplace'        => __( 'Replace image', 'aggressive-ads' ),
+				'houseRemove'         => __( 'Remove image', 'aggressive-ads' ),
+				'housePreviewAlt'     => __( 'The house advertisement as it will be served', 'aggressive-ads' ),
+				'houseAltRequired'    => __( 'Alt text is needed. A house advertisement is a linked image, and without it the link has no name a screen reader can announce.', 'aggressive-ads' ),
 				'houseSameTab'        => __( 'Open in the same tab', 'aggressive-ads' ),
 				'houseSameTabHelp'    => __( 'Advertisements open in a new tab so a click does not take the reader off your page. Turn this on when the house advertisement points somewhere on this site, where a new tab is the wrong behaviour.', 'aggressive-ads' ),
 				'statusPending'       => __( 'Not saved yet…', 'aggressive-ads' ),

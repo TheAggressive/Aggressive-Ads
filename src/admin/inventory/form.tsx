@@ -24,8 +24,31 @@ import {
 	__experimentalHStack as HStack,
 	__experimentalVStack as VStack,
 } from '@wordpress/components';
+import { MediaUpload } from '@wordpress/media-utils';
 import { t } from '../shared/save';
 import { CUSTOM, MAX_BREAKPOINTS, MAX_GROUPS, type Placement } from './types';
+
+/** The attachment fields this form reads off a media selection. */
+type MediaItem = {
+	id?: number;
+	url?: string;
+	alt?: string;
+};
+
+/**
+ * `MediaUpload` with the props it actually takes.
+ *
+ * The package declares the component's props as `Readonly<{}>`, so every prop
+ * below is a type error against types that describe nothing. Stating the
+ * contract here is narrower than casting the calls away one at a time, and it
+ * fails honestly if a future version changes the shape — an `any` would not.
+ */
+const MediaPicker = MediaUpload as unknown as ( props: {
+	allowedTypes?: string[];
+	value?: number;
+	onSelect: ( media: MediaItem ) => void;
+	render: ( args: { open: () => void } ) => ReactElement;
+} ) => ReactElement;
 
 export function PlacementModal( {
 	value,
@@ -52,6 +75,16 @@ export function PlacementModal( {
 
 	const set = ( patch: Partial< Placement > ): void =>
 		setDraft( { ...draft, ...patch } );
+
+	/*
+	 * A house advertisement is an image inside a link, so with no alt text the
+	 * link has no accessible name at all — a screen reader announces the raw
+	 * URL or nothing. Flagged rather than blocked: the image on its own is a
+	 * legitimate half-finished state, and a form that refuses to save until
+	 * every field is right is a form people fight.
+	 */
+	const houseNeedsAlt =
+		draft.house_attachment_id > 0 && '' === draft.house_alt.trim();
 
 	/*
 	 * Breakpoints are edited as an ordered list and stored as a map.
@@ -360,20 +393,77 @@ export function PlacementModal( {
 				<fieldset>
 					<legend>{ t( 'house' ) }</legend>
 					<VStack spacing={ 4 }>
-						<TextControl
-							label={ t( 'houseAttachment' ) }
-							help={ t( 'houseAttachmentHelp' ) }
-							type="number"
-							min={ 0 }
-							value={ String( draft.house_attachment_id ) }
-							onChange={ ( id: string ) =>
-								set( {
-									house_attachment_id: Number( id ) || 0,
-								} )
-							}
-							__nextHasNoMarginBottom
-							__next40pxDefaultSize
-						/>
+						{ /*
+						 * The attachment id used to be typed in by hand, which
+						 * meant uploading the image somewhere else, finding its
+						 * id, and copying the number across. Nothing validated
+						 * it either: a wrong number saved cleanly and the
+						 * placement served nothing.
+						 */ }
+						<div className="aggr-house-picker">
+							{ draft.house_image_url ? (
+								<img
+									className="aggr-house-picker__preview"
+									src={ draft.house_image_url }
+									alt={ t( 'housePreviewAlt' ) }
+								/>
+							) : null }
+
+							<MediaPicker
+								allowedTypes={ [ 'image' ] }
+								value={ draft.house_attachment_id }
+								onSelect={ ( media: MediaItem ) =>
+									set( {
+										house_attachment_id:
+											Number( media?.id ) || 0,
+										house_image_url: media?.url ?? '',
+
+										/*
+										 * The library already holds alt text
+										 * for this image, so asking for it
+										 * again is asking twice. An alt the
+										 * publisher has already written is
+										 * never overwritten: it describes
+										 * where the advertisement goes, which
+										 * the image's own alt does not.
+										 */
+										house_alt:
+											draft.house_alt || media?.alt || '',
+									} )
+								}
+								render={ ( { open } ) => (
+									<Button
+										variant="secondary"
+										__next40pxDefaultSize
+										onClick={ open }
+									>
+										{ draft.house_attachment_id
+											? t( 'houseReplace' )
+											: t( 'houseChoose' ) }
+									</Button>
+								) }
+							/>
+
+							{ draft.house_attachment_id ? (
+								<Button
+									variant="tertiary"
+									isDestructive
+									__next40pxDefaultSize
+									onClick={ () =>
+										set( {
+											house_attachment_id: 0,
+											house_image_url: '',
+										} )
+									}
+								>
+									{ t( 'houseRemove' ) }
+								</Button>
+							) : null }
+						</div>
+
+						<p className="aggr-field-help">
+							{ t( 'houseAttachmentHelp' ) }
+						</p>
 						<TextControl
 							label={ t( 'houseUrl' ) }
 							type="url"
@@ -389,6 +479,11 @@ export function PlacementModal( {
 							value={ draft.house_alt }
 							onChange={ ( house_alt: string ) =>
 								set( { house_alt } )
+							}
+							help={
+								houseNeedsAlt
+									? t( 'houseAltRequired' )
+									: undefined
 							}
 							__nextHasNoMarginBottom
 							__next40pxDefaultSize
