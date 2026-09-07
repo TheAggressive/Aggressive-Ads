@@ -233,6 +233,130 @@ $wpdb->insert(
 	)
 );
 
+/*
+ * A placement that is allowed to rotate and has nothing to rotate to.
+ *
+ * The counterpart to the fixture below. One eligible creative means every
+ * rotation redraws the same image and fires another beacon for it, so the
+ * timer must never start — and proving that needs a placement whose refresh
+ * policy permits it, or the assertion would pass on the policy gate instead.
+ * `e2e-forbidden-placement` cannot serve here for exactly that reason.
+ */
+$aggr_lonely = get_page_by_path( 'e2e-lonely-placement', OBJECT, Post_Types::PLACEMENT );
+
+if ( $aggr_lonely instanceof WP_Post ) {
+	wp_delete_post( $aggr_lonely->ID, true );
+}
+
+$aggr_lonely_id = (int) wp_insert_post(
+	array(
+		'post_type'   => Post_Types::PLACEMENT,
+		'post_status' => 'publish',
+		'post_title'  => 'E2E lonely placement',
+		'post_name'   => 'e2e-lonely-placement',
+	)
+);
+
+update_post_meta( $aggr_lonely_id, Placement_Repository::META_IS_ACTIVE, 1 );
+update_post_meta( $aggr_lonely_id, Placement_Repository::META_SIZE, '728x90' );
+
+( new Placement_Repository() )->set_refresh_policy( $aggr_lonely_id, true, 2, 6 );
+
+// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Seeding this plugin's own table for a browser fixture.
+$wpdb->insert(
+	$aggr_assignments->table_name(),
+	array(
+		'line_item_id'  => (int) $aggr_campaign_id,
+		'campaign_id'   => (int) $aggr_campaign_id,
+		'placement_id'  => $aggr_lonely_id,
+		'revision_id'   => (int) $aggr_creative_id,
+		'status'        => Assignment_Rules::READY,
+		'weight'        => 100,
+		'click_url'     => home_url( '/e2e-click-landing/' ),
+		'attachment_id' => 0,
+		'alt_text'      => 'E2E lonely advertisement',
+		'width'         => 728,
+		'height'        => 90,
+		'revision'      => 1,
+	)
+);
+
+/*
+ * A second creative for the rotating placement, so there is something to
+ * rotate *to*.
+ *
+ * **The fixture used to have one, and that made the rotation test dishonest.**
+ * A placement with a single eligible creative redraws the same image on every
+ * interval and fires a beacon for each one, so the test was demonstrating the
+ * defect rather than the feature. Rotation now stops when nothing else could
+ * be served, which means proving rotation needs inventory a publisher would
+ * actually rotate through.
+ *
+ * A second colour as well as a second row: the assertion downstream is about a
+ * replaced element rather than a changed `src`, but a visibly different image
+ * is what makes a failing screenshot legible.
+ */
+$aggr_second_file = trailingslashit( $aggr_uploads['path'] ) . 'e2e-live-ad-2.png';
+
+if ( ! file_exists( $aggr_second_file ) ) {
+	$aggr_second_canvas = imagecreatetruecolor( 728, 90 );
+	imagefill( $aggr_second_canvas, 0, 0, imagecolorallocate( $aggr_second_canvas, 160, 64, 32 ) );
+	imagepng( $aggr_second_canvas, $aggr_second_file );
+}
+
+$aggr_second_image = wp_insert_attachment(
+	array(
+		'post_mime_type' => 'image/png',
+		'post_title'     => 'E2E live creative two',
+		'post_status'    => 'inherit',
+	),
+	$aggr_second_file
+);
+
+wp_update_attachment_metadata( $aggr_second_image, wp_generate_attachment_metadata( $aggr_second_image, $aggr_second_file ) );
+
+$aggr_second_creative_id = wp_insert_post(
+	array(
+		'post_type'   => Post_Types::CREATIVE,
+		'post_status' => 'publish',
+		'post_title'  => 'E2E live creative two',
+	)
+);
+
+update_post_meta( $aggr_second_creative_id, Creative_Repository::META_CAMPAIGN_ID, (int) $aggr_campaign_id );
+update_post_meta( $aggr_second_creative_id, Creative_Repository::META_ORG_ID, $aggr_org_id );
+update_post_meta( $aggr_second_creative_id, Creative_Repository::META_PLACEMENT_ID, $aggr_placement_id );
+update_post_meta( $aggr_second_creative_id, Creative_Repository::META_SIZE, ( new Placement_Repository() )->size( $aggr_placement_id ) );
+update_post_meta( $aggr_second_creative_id, Creative_Repository::META_KIND, 'image' );
+update_post_meta( $aggr_second_creative_id, Creative_Repository::META_WIDTH, 728 );
+update_post_meta( $aggr_second_creative_id, Creative_Repository::META_HEIGHT, 90 );
+update_post_meta( $aggr_second_creative_id, Creative_Repository::META_CLICK_URL, home_url( '/e2e-click-landing/' ) );
+update_post_meta( $aggr_second_creative_id, Creative_Repository::META_ALT_TEXT, 'E2E live advertisement two' );
+update_post_meta( $aggr_second_creative_id, Creative_Repository::META_ATTACHMENT_ID, (int) $aggr_second_image );
+update_post_meta( $aggr_second_creative_id, Creative_Repository::META_REVIEW_STATE, 'approved' );
+
+// Inserted before the transition for the reason spelled out above: the
+// projection promotes artwork onto the assignments that exist when the
+// campaign goes live, and a row added afterwards never gets an attachment.
+// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Seeding this plugin's own table for a browser fixture.
+$wpdb->insert(
+	$aggr_assignments->table_name(),
+	array(
+		'line_item_id'  => (int) $aggr_campaign_id,
+		'campaign_id'   => (int) $aggr_campaign_id,
+		'placement_id'  => $aggr_placement_id,
+		'revision_id'   => (int) $aggr_second_creative_id,
+		'status'        => Assignment_Rules::READY,
+		'weight'        => 100,
+		'click_url'     => home_url( '/e2e-click-landing/' ),
+		'attachment_id' => 0,
+		'alt_text'      => 'E2E live advertisement two',
+		'width'         => 728,
+		'height'        => 90,
+		'revision'      => 1,
+	)
+);
+
 // Serving reads assignments only once the backfill reports finished.
 update_option( Creative_Assignment_Migrator::OPTION_DONE, 1 );
 
@@ -354,6 +478,9 @@ $aggr_unsold = '<!-- wp:aggr/ad-slot {"slot":"e2e-empty-placement"} /-->';
  */
 $aggr_static = '<!-- wp:aggr/ad-slot {"slot":"e2e-browser-placement"} /-->';
 
+// Asks to rotate, is permitted to, and has one creative to show.
+$aggr_lonely_slot = '<!-- wp:aggr/ad-slot {"slot":"e2e-lonely-placement","rotate":true,"rotateSeconds":2} /-->';
+
 $aggr_forbidden_slot = '<!-- wp:aggr/ad-slot {"slot":"e2e-forbidden-placement","rotate":true,"rotateSeconds":2} /-->';
 
 $aggr_forbidden_page = get_page_by_path( 'e2e-refresh-policy', OBJECT, 'page' );
@@ -385,12 +512,13 @@ wp_insert_post(
 		'post_title'   => 'E2E rotation',
 		'post_name'    => 'e2e-rotation',
 		/*
-		 * A rotating slot, a static one on the same placement, and an unsold
-		 * one. Three slots so a single wait proves all three behaviours at
-		 * once: the rotating slot refetches, the static slot does not, and the
-		 * unsold slot removes itself.
+		 * A rotating slot, a static one on the same placement, an unsold one,
+		 * and one that may rotate but has nothing to rotate to. Four slots so
+		 * a single wait proves all four behaviours at once: the rotating slot
+		 * refetches, the static slot does not, the unsold slot removes itself,
+		 * and the lonely slot stops rather than redrawing the same image.
 		 */
-		'post_content' => $aggr_rotating . $aggr_static . $aggr_unsold . $aggr_spacer,
+		'post_content' => $aggr_rotating . $aggr_static . $aggr_unsold . $aggr_lonely_slot . $aggr_spacer,
 	)
 );
 

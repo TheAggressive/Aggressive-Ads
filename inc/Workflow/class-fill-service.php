@@ -331,7 +331,22 @@ final class Fill_Service {
 
 		$this->decisions->record_delivery( $winner, $now, $facts );
 
-		return $this->decisions->payload_from_row( $winner, $placement_id );
+		$payload = $this->decisions->payload_from_row( $winner, $placement_id );
+
+		if ( null === $payload ) {
+			return null;
+		}
+
+		/*
+		 * **Carried on the payload rather than kept on the service.** A
+		 * property would be the obvious place and is wrong here: `for_slots()`
+		 * decides several placements in one pass, so a shared field would hold
+		 * whichever slot happened to run last and every other slot on the page
+		 * would be told about somebody else's inventory.
+		 */
+		$payload['servable'] = (int) $decision['servable'];
+
+		return $payload;
 	}
 
 	/**

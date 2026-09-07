@@ -20,6 +20,17 @@ import { observeViewability } from './viewability.js';
 const PRELOAD_TIMEOUT_MS = 4000;
 
 /**
+ * The answer when no advertisement went up.
+ *
+ * Frozen and shared because every early exit returns the same thing, and a
+ * fresh object per exit invites one of them to drift into reporting an
+ * alternative that is not there.
+ *
+ * @type {{rendered: boolean, servable: number}}
+ */
+const NOTHING = Object.freeze( { rendered: false, servable: 0 } );
+
+/**
  * Resolves once an image can be painted, or false if it cannot.
  *
  * **This is what stops a rotation flashing an empty box.** Setting `src` starts
@@ -152,13 +163,17 @@ const viewportWidth = () => {
  *
  * @param {HTMLElement} root     Slot wrapper.
  * @param {number}      sequence Fill number within the page view, zero-based.
- * @return {Promise<boolean>} Whether an ad is now on the page.
+ * @return {Promise<{rendered: boolean, servable: number}>} Whether an ad is now
+ *   on the page, and how many distinct creatives could have taken the slot.
+ *   `servable` is what decides whether rotating would show anything different:
+ *   it is zero for a house advertisement and for a slot nobody sold, because
+ *   neither has an alternative to rotate to.
  */
 export const fillSlot = async ( root, sequence = 0 ) => {
 	const url = root.dataset.aggrFill;
 
 	if ( ! url ) {
-		return false;
+		return NOTHING;
 	}
 
 	const declared = Number( sequence );
@@ -196,14 +211,14 @@ export const fillSlot = async ( root, sequence = 0 ) => {
 		} );
 
 		if ( ! response.ok ) {
-			return false;
+			return NOTHING;
 		}
 
 		const payload = await response.json();
 		const creative = payload.creative ?? payload.house;
 
 		if ( ! creative?.image || ! creative.click ) {
-			return false;
+			return NOTHING;
 		}
 
 		const canvas =
@@ -234,7 +249,7 @@ export const fillSlot = async ( root, sequence = 0 ) => {
 		 * a broken image, never would.
 		 */
 		if ( image && ! ( await readyToPaint( image, PRELOAD_TIMEOUT_MS ) ) ) {
-			return false;
+			return NOTHING;
 		}
 
 		canvas.replaceChildren( ad );
@@ -257,8 +272,13 @@ export const fillSlot = async ( root, sequence = 0 ) => {
 			}
 		}
 
-		return true;
+		return {
+			rendered: true,
+			servable: Number.isInteger( creative.servable )
+				? creative.servable
+				: 0,
+		};
 	} catch {
-		return false;
+		return NOTHING;
 	}
 };

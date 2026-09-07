@@ -159,7 +159,7 @@ final class Decision_Engine {
 	 * @param list<array<string, mixed>>|null $rows           Preloaded candidates; queried when null.
 	 * @param bool                            $record_metrics Whether to record exclusion metrics.
 	 * @param array<string, mixed>            $facts          Request and targeting facts.
-	 * @return array{result: Decision_Result, trace: Decision_Trace}
+	 * @return array{result: Decision_Result, trace: Decision_Trace, servable: int}
 	 */
 	public function decide( int $placement_id, int $now, ?int $seed = null, ?array $rows = null, bool $record_metrics = true, array $facts = array() ): array {
 		if ( null === $rows ) {
@@ -185,8 +185,9 @@ final class Decision_Engine {
 		}
 
 		return array(
-			'result' => $decision['result'],
-			'trace'  => $decision['trace'],
+			'result'   => $decision['result'],
+			'trace'    => $decision['trace'],
+			'servable' => (int) ( $decision['servable'] ?? 0 ),
 		);
 	}
 

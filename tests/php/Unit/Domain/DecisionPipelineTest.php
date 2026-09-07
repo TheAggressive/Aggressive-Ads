@@ -90,6 +90,113 @@ final class DecisionPipelineTest extends TestCase {
 		);
 	}
 
+	public function test_the_servable_count_is_taken_before_selection(): void {
+		$pipeline = Decision_Pipeline::standard();
+		$rows     = array(
+			$this->row(
+				array(
+					'id'     => 1,
+					'weight' => 100,
+				)
+			),
+			$this->row(
+				array(
+					'id'     => 2,
+					'weight' => 900,
+				)
+			),
+			$this->row(
+				array(
+					'id'     => 3,
+					'weight' => 50,
+				)
+			),
+		);
+
+		$result = $pipeline->decide( $rows, new Decision_Request( 1, 1_700_000_000, 850 ) );
+
+		$this->assertTrue( $result['result']->has_winner() );
+		$this->assertSame(
+			3,
+			$result['servable'],
+			'Selection marks every loser excluded, so counting eligibility on the way out always answers one. Taken afterwards this figure would tell a rotating slot there was nothing else to show while two other campaigns were waiting.'
+		);
+	}
+
+	public function test_one_candidate_is_one_servable(): void {
+		$pipeline = Decision_Pipeline::standard();
+
+		$result = $pipeline->decide(
+			array( $this->row( array( 'id' => 1 ) ) ),
+			new Decision_Request( 1, 1_700_000_000, 1 )
+		);
+
+		$this->assertTrue( $result['result']->has_winner() );
+		$this->assertSame(
+			1,
+			$result['servable'],
+			'The slot rotates to the same advertisement for as long as the tab is open, firing a beacon each time, and this is the only number that says so.'
+		);
+	}
+
+	public function test_an_excluded_candidate_is_not_something_else_to_show(): void {
+		$pipeline = Decision_Pipeline::standard();
+		$rows     = array(
+			$this->row( array( 'id' => 1 ) ),
+			$this->row(
+				array(
+					'id'        => 2,
+					'click_url' => 'javascript:alert(1)',
+				)
+			),
+		);
+
+		$result = $pipeline->decide( $rows, new Decision_Request( 1, 1_700_000_000, 1 ) );
+
+		$this->assertTrue( $result['result']->has_winner() );
+		$this->assertSame(
+			1,
+			$result['servable'],
+			'A candidate the stages threw out cannot take the slot, so counting it would keep a timer running that has nothing left to show.'
+		);
+	}
+
+	public function test_nothing_served_is_nothing_to_rotate_to(): void {
+		$pipeline = Decision_Pipeline::standard();
+
+		$result = $pipeline->decide( array(), new Decision_Request( 1, 1_700_000_000, 1 ) );
+
+		$this->assertFalse( $result['result']->has_winner() );
+		$this->assertSame( 0, $result['servable'] );
+	}
+
+	public function test_candidates_that_cannot_win_are_not_servable(): void {
+		$pipeline = Decision_Pipeline::standard();
+		$rows     = array(
+			$this->row(
+				array(
+					'id'     => 1,
+					'weight' => 0,
+				)
+			),
+			$this->row(
+				array(
+					'id'     => 2,
+					'weight' => 0,
+				)
+			),
+		);
+
+		$result = $pipeline->decide( $rows, new Decision_Request( 1, 1_700_000_000, 1 ) );
+
+		$this->assertFalse( $result['result']->has_winner() );
+		$this->assertSame(
+			0,
+			$result['servable'],
+			'Two candidates survived the stages and neither can be chosen. The question this answers is whether there is anything else to show, and a candidate that cannot win is not something else to show.'
+		);
+	}
+
 	public function test_every_candidate_leaves_with_a_reason_when_none_survive(): void {
 		$pipeline = Decision_Pipeline::standard();
 		$result   = $pipeline->decide(

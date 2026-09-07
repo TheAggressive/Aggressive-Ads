@@ -41,7 +41,7 @@ const started = new WeakSet();
  * @param {Object}      context Block context.
  */
 const run = async ( root, context ) => {
-	const rendered = await fillSlot( root, 0 );
+	const { rendered, servable } = await fillSlot( root, 0 );
 
 	/*
 	 * Nothing to show, so show nothing — unless the block asked otherwise.
@@ -76,6 +76,31 @@ const run = async ( root, context ) => {
 	 * campaign schedule.
 	 */
 	if ( ! context.rotate ) {
+		return;
+	}
+
+	/*
+	 * **Nothing else to show, so stop showing the same thing again.**
+	 *
+	 * Rotation re-decides and can legitimately land on the same creative — an
+	 * advertiser who bought ninety per cent of a slot's share should appear
+	 * nine times in ten, and excluding whatever showed last would quietly
+	 * hand that share to somebody who did not buy it. Repeats are the
+	 * weighting working.
+	 *
+	 * One candidate is a different thing. There the repeat is certain, the
+	 * image never changes, and the rotation exists only to fire another
+	 * beacon: at the one-second floor that is sixty impressions an hour from
+	 * one reader looking at one unchanged advertisement, which is the volume
+	 * an exchange calls invalid traffic. A house advertisement and an unsold
+	 * slot report zero for the same reason.
+	 *
+	 * The set can grow while the page is open — a campaign going live, a
+	 * budget freeing up — and this will not notice. A page view is bounded
+	 * and the next one asks again, which is a better trade than minting
+	 * impressions nobody saw a second version of.
+	 */
+	if ( servable < 2 ) {
 		return;
 	}
 
@@ -158,7 +183,18 @@ const startRotation = ( root, context ) => {
 		// A failed rotation leaves the ad that is already there. Blanking a
 		// slot because one request lost the network is worse than showing the
 		// previous creative for another interval.
-		await fillSlot( root, rotations );
+		const { rendered, servable } = await fillSlot( root, rotations );
+
+		/*
+		 * The inventory can shrink underneath a rotating slot — a campaign
+		 * ending, a budget running out, a frequency cap closing — and from
+		 * that point every further rotation redraws the same advertisement.
+		 * A failed request is not evidence of that and must not stop the
+		 * timer, which is why this asks whether the fill succeeded first.
+		 */
+		if ( rendered && servable < 2 ) {
+			window.clearInterval( timer );
+		}
 
 		busy = false;
 	}, seconds * 1000 );
