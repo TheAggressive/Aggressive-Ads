@@ -210,11 +210,25 @@ final class Transition_Table {
 				array( self::EFFECT_PUBLISH )
 			),
 
-			// Correction and resubmission.
+			/*
+			 * Correction and resubmission.
+			 *
+			 * **Staff may resubmit, for the same reason they may submit.** The
+			 * two are one action from the person doing them — "send this for
+			 * review" — and fixing only the draft edge left a publisher able to
+			 * submit a new campaign and unable to resubmit the one a reviewer
+			 * had just asked them to correct. That is the more common half of
+			 * the workflow, and it was the half still refused.
+			 *
+			 * The line this phase draws is between moving work *forward* and
+			 * taking it *away*: submitting and resubmitting are help, while
+			 * withdrawal and cancellation below stay with the advertiser whose
+			 * campaign it is.
+			 */
 			new Campaign_Transition(
 				Post_Statuses::CHANGES,
 				Post_Statuses::SUBMITTED,
-				array( self::ACTOR_ADVERTISER ),
+				array( self::ACTOR_ADVERTISER, self::ACTOR_STAFF ),
 				array( Capabilities::SUBMIT_CAMPAIGN, $edit ),
 				array( self::GUARD_VALIDATOR ),
 				array( self::EFFECT_STAMP_SUBMITTED, self::EFFECT_INCREMENT_REVISION )
