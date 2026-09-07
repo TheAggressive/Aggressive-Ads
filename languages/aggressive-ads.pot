@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-07T23:13:56+00:00\n"
+"POT-Creation-Date: 2026-09-07T23:39:46+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -99,7 +99,7 @@ msgstr ""
 #: inc/Admin/class-conversions-screen.php:155
 #: inc/Admin/class-conversions-screen.php:198
 #: inc/Admin/class-conversions-screen.php:260
-#: inc/Portal/class-delivery-view-data.php:232
+#: inc/Portal/class-delivery-view-data.php:244
 #: inc/Portal/class-report-actions.php:193
 #: templates/portal/partials/campaign-summary-facts.php:81
 #: templates/portal/partials/campaign-table.php:41
@@ -1030,7 +1030,7 @@ msgstr ""
 
 #. translators: %s: a date, e.g. 30 August 2026.
 #: inc/Admin/class-report-data.php:334
-#: inc/Portal/class-delivery-view-data.php:180
+#: inc/Portal/class-delivery-view-data.php:192
 #, php-format
 msgid "Figures from %s onward are still being counted."
 msgstr ""
@@ -1313,8 +1313,8 @@ msgid "%s page requests belong to placements that no longer exist, so they are c
 msgstr ""
 
 #: inc/Admin/class-reports-screen.php:611
-#: inc/Portal/class-delivery-view-data.php:369
-#: inc/Portal/class-delivery-view-data.php:420
+#: inc/Portal/class-delivery-view-data.php:379
+#: inc/Portal/class-delivery-view-data.php:430
 #: templates/portal/partials/campaign-summary-facts.php:75
 #: templates/portal/partials/campaign-table.php:81
 msgid "—"
@@ -1324,8 +1324,8 @@ msgstr ""
 #. translators: %s: click-through rate as a percentage, e.g. 1.2.
 #. translators: %s: share of impressions that were viewable, e.g. 62.5.
 #: inc/Admin/class-reports-screen.php:616
-#: inc/Portal/class-delivery-view-data.php:374
-#: inc/Portal/class-delivery-view-data.php:425
+#: inc/Portal/class-delivery-view-data.php:384
+#: inc/Portal/class-delivery-view-data.php:435
 #: templates/portal/partials/campaign-summary-facts.php:72
 #: templates/portal/partials/campaign-table.php:78
 #, php-format
@@ -3283,7 +3283,7 @@ msgstr ""
 msgid "%1$s to %2$s (UTC)"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:210
+#: inc/Portal/class-delivery-view-data.php:222
 #: inc/Portal/class-report-actions.php:190
 #: templates/portal/partials/campaign-summary-facts.php:56
 #: templates/portal/partials/campaign-table.php:38
@@ -3291,37 +3291,37 @@ msgstr ""
 msgid "Impressions"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:215
+#: inc/Portal/class-delivery-view-data.php:227
 #: inc/Portal/class-report-actions.php:191
 #: templates/portal/partials/campaign-summary-facts.php:60
 #: templates/portal/partials/campaign-table.php:39
 msgid "Clicks"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:220
+#: inc/Portal/class-delivery-view-data.php:232
 #: templates/portal/partials/campaign-summary-facts.php:64
 #: templates/portal/partials/campaign-table.php:40
 msgid "CTR"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:226
+#: inc/Portal/class-delivery-view-data.php:238
 msgid "Viewable"
 msgstr ""
 
 #. translators: %s: signed change in percentage points, e.g. +0.5.
-#: inc/Portal/class-delivery-view-data.php:291
+#: inc/Portal/class-delivery-view-data.php:303
 #, php-format
 msgid "%s pp vs previous period"
 msgstr ""
 
 #. translators: %s: signed percentage change, e.g. +12.4.
-#: inc/Portal/class-delivery-view-data.php:295
+#: inc/Portal/class-delivery-view-data.php:307
 #, php-format
 msgid "%s%% vs previous period"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:392
-#: inc/Portal/class-delivery-view-data.php:414
+#: inc/Portal/class-delivery-view-data.php:402
+#: inc/Portal/class-delivery-view-data.php:424
 #: templates/portal/partials/campaign-summary-facts.php:90
 #: templates/portal/partials/campaign-table.php:97
 msgid "Not measured"

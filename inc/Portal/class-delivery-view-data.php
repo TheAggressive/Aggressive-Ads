@@ -134,8 +134,9 @@ final class Delivery_View_Data {
 	 * One UTC day in the site's date format.
 	 *
 	 * @param string $day_utc `Y-m-d`.
+	 * @param string $format  Date format, or '' for the site's.
 	 */
-	private function day_label( string $day_utc ): string {
+	private function day_label( string $day_utc, string $format = '' ): string {
 		$timestamp = strtotime( $day_utc . ' UTC' );
 
 		/*
@@ -149,10 +150,23 @@ final class Delivery_View_Data {
 		 * label shows the UTC day, so the two disagreed on screen. Nothing was
 		 * wrong with the figures; the caption was describing a different
 		 * window from the one it had.
+		 *
+		 * **Every stored day in this class comes through here**, which is the
+		 * other half of the fix. The freshness note and the sparkline's axis
+		 * labels each carried their own copy of `strtotime( … ' UTC' )` and
+		 * `wp_date()`, so fixing the range caption left both of them a day
+		 * early — one of them under the same "(UTC)" sentence. Three copies of
+		 * a rule are three chances to fix it in two places.
 		 */
-		return false === $timestamp
-			? $day_utc
-			: (string) wp_date( (string) get_option( 'date_format', 'Y-m-d' ), $timestamp, new DateTimeZone( 'UTC' ) );
+		if ( false === $timestamp ) {
+			return $day_utc;
+		}
+
+		return (string) wp_date(
+			'' === $format ? (string) get_option( 'date_format', 'Y-m-d' ) : $format,
+			$timestamp,
+			new DateTimeZone( 'UTC' )
+		);
 	}
 
 	/**
@@ -173,12 +187,10 @@ final class Delivery_View_Data {
 			return '';
 		}
 
-		$timestamp = strtotime( $from . ' UTC' );
-
 		return sprintf(
 			/* translators: %s: a date, e.g. 30 August 2026. */
 			__( 'Figures from %s onward are still being counted.', 'aggressive-ads' ),
-			false === $timestamp ? $from : (string) wp_date( (string) get_option( 'date_format', 'Y-m-d' ), $timestamp )
+			$this->day_label( $from )
 		);
 	}
 
@@ -346,11 +358,9 @@ final class Delivery_View_Data {
 		$format = count( $raw ) > 7 ? 'j M' : 'D';
 
 		foreach ( $raw as $row ) {
-			$timestamp = strtotime( $row['day'] . ' UTC' );
-
 			$series[] = array(
 				'day'         => $row['day'],
-				'label'       => false === $timestamp ? $row['day'] : (string) wp_date( $format, $timestamp ),
+				'label'       => $this->day_label( $row['day'], $format ),
 				'impressions' => $row['impressions'],
 				'height'      => Reporting_Rules::bar_height( $row['impressions'], $max ),
 			);

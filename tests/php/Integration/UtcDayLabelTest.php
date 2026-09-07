@@ -13,7 +13,10 @@ use Aggressive\Ads\Admin\Report_Data;
 use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Portal\Delivery_View_Data;
+use Aggressive\Ads\Core\Settings;
+use Aggressive\Ads\Domain\Settings_Schema;
 use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Security\Roles;
 use WP_UnitTestCase;
 
@@ -43,7 +46,43 @@ final class UtcDayLabelTest extends WP_UnitTestCase {
 
 		update_option( 'timezone_string', 'America/Los_Angeles' );
 		update_option( 'date_format', 'F j, Y' );
+
+		$container = Plugin::instance()->container();
+		$settings  = $container->get( Settings::class );
+		$document  = $settings->get();
+
+		$document['modules'][ Settings_Schema::MODULE_REPORTING ] = true;
+
+		$settings->save( $document );
+
+		/*
+		 * Real counters, because the sparkline assertion below skips without
+		 * them — and a test that always skips is a test that proves nothing.
+		 */
+		$rollups = $container->get( Rollup_Repository::class );
+
+		$rollups->install_table();
+
+		$this->org_id = (int) self::factory()->post->create();
+
+		foreach ( array( 2, 1 ) as $days_ago ) {
+			$rollups->increment(
+				'impressions',
+				(int) self::factory()->post->create(),
+				(int) self::factory()->post->create(),
+				gmdate( 'Y-m-d', time() - $days_ago * DAY_IN_SECONDS ),
+				0,
+				$this->org_id
+			);
+		}
 	}
+
+	/**
+	 * The organization the seeded counters belong to.
+	 *
+	 * @var int
+	 */
+	private int $org_id = 0;
 
 	public function tear_down(): void {
 		update_option( 'timezone_string', '' );
@@ -94,6 +133,61 @@ final class UtcDayLabelTest extends WP_UnitTestCase {
 			$view->range_label(),
 			'The date input shows the UTC day and the caption showed the day before it.'
 		);
+	}
+
+	/**
+	 * **Every stored day in the class, not the one that was reported.**
+	 *
+	 * The first fix corrected the range caption and left two copies of the same
+	 * logic untouched — the portal's own freshness note and the sparkline's
+	 * axis labels, each with its own `strtotime( … ' UTC' )` and `wp_date()`.
+	 * One of them sat under the same "(UTC)" sentence. Asserted by reflection
+	 * so a fourth copy added later fails here rather than shipping a day early.
+	 *
+	 * @return void
+	 */
+	public function test_no_stored_day_is_formatted_outside_utc(): void {
+		$source = (string) file_get_contents(
+			dirname( __DIR__, 3 ) . '/inc/Portal/class-delivery-view-data.php'
+		);
+
+		$this->assertNotSame( '', $source, 'The file could not be read, so this assertion would be vacuous.' );
+
+		/*
+		 * Comments blanked first. The docblocks here discuss `wp_date()` at
+		 * length, and counting prose made this fail on correct code — the
+		 * same mistake `check-client-contract.mjs` records, where a key
+		 * quoted in a docblock read as a reader of it.
+		 */
+		$code = (string) preg_replace( '#^\\s*(?:/\\*|\\*|//).*$#m', '', $source );
+
+		$formatting = preg_match_all( '/wp_date\\(/', $code );
+		$in_utc     = preg_match_all( '/new DateTimeZone\\( \\x27UTC\\x27 \\)/', $code );
+
+		$this->assertGreaterThan( 0, $formatting, 'No date formatting found, so the comparison below proves nothing.' );
+		$this->assertSame(
+			$formatting,
+			$in_utc,
+			'A stored day is formatted somewhere without naming UTC, and site-time formatting moves it a day for every reader west of Greenwich.'
+		);
+	}
+
+	public function test_the_sparkline_labels_the_day_the_bar_belongs_to(): void {
+		$view   = Plugin::instance()->container()->get( Delivery_View_Data::class );
+		$series = $view->series( $this->org_id );
+
+		$this->assertNotEmpty(
+			$series,
+			'No bars were produced, so every assertion below would be vacuous — which is what this test used to skip over.'
+		);
+
+		foreach ( $series as $point ) {
+			$this->assertSame(
+				(string) wp_date( 'j M', (int) strtotime( $point['day'] . ' UTC' ), new \DateTimeZone( 'UTC' ) ),
+				$point['label'],
+				'An axis label naming the day before its own bar makes a chart disagree with the table beside it.'
+			);
+		}
 	}
 
 	public function test_the_freshness_note_names_the_day_that_is_still_moving(): void {
