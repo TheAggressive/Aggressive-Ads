@@ -88,4 +88,47 @@ final class Shared_Assets {
 		// wholesale rather than appending overrides.
 		wp_style_add_data( self::DATAVIEWS, 'rtl', 'replace' );
 	}
+
+	/**
+	 * Enqueues one admin bundle from its build metadata.
+	 *
+	 * Four screens carried the same twelve lines: build the `.asset.php` path,
+	 * check it exists, `require` it, pull `dependencies` and `version` with the
+	 * same two defensive casts, enqueue. Only the handle and the bundle name
+	 * differed. A fifth screen copied from a fourth is how one of them ends up
+	 * with a subtly different default nobody notices.
+	 *
+	 * **Returns the version, or '' when the build is missing.** Screens need
+	 * that version for their own stylesheet, and they need the empty answer to
+	 * stop — which is why this reports rather than enqueues everything: what a
+	 * screen loads besides its script is its own decision, and folding those in
+	 * would trade four honest copies for one that has to know about all of them.
+	 *
+	 * It deliberately does not call `register()`. Not every screen needs
+	 * DataViews, and registering on their behalf would change what loads.
+	 *
+	 * @param string $handle Script handle, e.g. `aggr-packages`.
+	 * @param string $bundle Bundle name under `dist/admin/`, e.g. `packages`.
+	 * @return string Asset version, or '' when the build is absent.
+	 */
+	public static function enqueue_bundle( string $handle, string $bundle ): string {
+		$asset = AGGR_PLUGIN_DIR . 'dist/admin/' . $bundle . '.asset.php';
+
+		if ( ! is_file( $asset ) ) {
+			return '';
+		}
+
+		$meta    = require $asset;
+		$version = is_string( $meta['version'] ?? null ) ? $meta['version'] : AGGR_VERSION;
+
+		wp_enqueue_script(
+			$handle,
+			AGGR_PLUGIN_URL . 'dist/admin/' . $bundle . '.js',
+			is_array( $meta['dependencies'] ?? null ) ? $meta['dependencies'] : array(),
+			$version,
+			true
+		);
+
+		return $version;
+	}
 }
