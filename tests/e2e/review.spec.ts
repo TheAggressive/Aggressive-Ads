@@ -26,13 +26,20 @@ test( 'a reviewer works the queue, claims a campaign and writes notes', async ( 
 	await expect(
 		page.getByRole( 'heading', { level: 1, name: 'Campaign review' } )
 	).toBeVisible();
+	/*
+	 * Rows by DataViews' own class, because the queue's table is DataViews now
+	 * and the hand-rolled `.aggr-review-table` is gone. Asserting on the
+	 * component's markup rather than on a role keeps this failing loudly if the
+	 * table stops rendering at all — which is the thing worth catching, since
+	 * an unstyled or unmounted DataViews still produces rows for a role query.
+	 */
 	await expect(
-		page.locator( '.aggr-review-table tbody tr' )
+		page.locator( '.dataviews-view-table__row' )
 	).not.toHaveCount( 0 );
 	await expectAdminA11y( page );
 
 	// Into one campaign, and the URL says which.
-	const first = page.locator( '.aggr-review-table tbody tr' ).first();
+	const first = page.locator( '.dataviews-view-table__row' ).first();
 	const title = ( await first.locator( 'td' ).first().innerText() ).trim();
 
 	await first.getByRole( 'button', { name: title } ).click();
