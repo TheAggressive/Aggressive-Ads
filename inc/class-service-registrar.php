@@ -115,7 +115,9 @@ use Aggressive\Ads\Workflow\Fill_Cache;
 use Aggressive\Ads\Workflow\Reporting_Read;
 use Aggressive\Ads\Workflow\Revision_Policy;
 use Aggressive\Ads\Repository\Decision_Rollup_Repository;
+use Aggressive\Ads\Repository\Forecast_Repository;
 use Aggressive\Ads\Workflow\Reviewer_Access;
+use Aggressive\Ads\Workflow\Forecast_Recorder;
 use Aggressive\Ads\Workflow\Supply_History;
 use Aggressive\Ads\Workflow\Review_Readiness;
 use Aggressive\Ads\Workflow\Placement_Manager;
@@ -380,6 +382,19 @@ final class Service_Registrar {
 				$c->get( Campaign_Repository::class ),
 				$c->get( Audit_Repository::class ),
 				$c->get( Edit_Window::class )
+			)
+		);
+
+		$container->register(
+			Forecast_Repository::class,
+			static fn (): Forecast_Repository => new Forecast_Repository()
+		);
+
+		$container->register(
+			Forecast_Recorder::class,
+			static fn ( Service_Container $c ): Forecast_Recorder => new Forecast_Recorder(
+				$c->get( Supply_History::class ),
+				$c->get( Forecast_Repository::class )
 			)
 		);
 

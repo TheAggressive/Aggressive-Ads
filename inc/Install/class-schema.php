@@ -24,7 +24,7 @@ final class Schema {
 	 *
 	 * Drives the migration walker in Upgrader.
 	 */
-	public const DB_VERSION = 26;
+	public const DB_VERSION = 27;
 
 	/**
 	 * The audit table's name, without the site's table prefix.
@@ -42,6 +42,9 @@ final class Schema {
 
 	/** Per-placement, per-day decision outcomes. See docs/platform-p13-event-analytics-schema.md. */
 	public const DECISION_ROLLUPS_TABLE = 'aggr_decision_rollups';
+
+	/** Immutable, versioned supply forecasts. Staff-only; never an advertiser response. */
+	public const FORECASTS_TABLE = 'aggr_forecasts';
 
 	/** Append-only attributed conversions. Deliberately not a row in aggr_events. */
 	public const CONVERSIONS_TABLE = 'aggr_conversions';
@@ -647,6 +650,56 @@ final class Schema {
 	KEY created (created_at_ts,id),
 	KEY campaign_day (campaign_id,occurred_at_ts,id),
 	KEY token_definition (token_hash,definition_id)
+) {$charset_collate};";
+	}
+
+	/**
+	 * Versioned forecast snapshots.
+	 *
+	 * **A forecast is a claim made at a moment, and the moment is the point.**
+	 * Re-forecasting the same window writes a new row rather than editing the
+	 * old one, so what a publisher was told in March survives being told
+	 * something else in April — which is the only way the error recorded
+	 * against the March figure means anything.
+	 *
+	 * `actual` is the one column written after insert, once and only once. The
+	 * forecast half never changes; the outcome is appended when the window has
+	 * matured. That is the whole of the mutability this table allows, and
+	 * `Forecast_Repository::record_actual()` is what holds the line.
+	 *
+	 * The unique key is what makes a version a version: two rows cannot claim
+	 * the same version of the same window, so a concurrent re-forecast loses
+	 * the insert rather than silently overwriting a snapshot somebody has
+	 * already quoted.
+	 *
+	 * `opportunity` and the window are `varchar(8)`/`date` to match
+	 * `aggr_decision_rollups`, which is the table this is forecast from — a
+	 * grain that disagreed with its own source would be forecasting one thing
+	 * and measuring another.
+	 *
+	 * @param string $table_name      Prefixed table name.
+	 * @param string $charset_collate Site charset and collation.
+	 */
+	public static function forecasts_table_ddl( string $table_name, string $charset_collate ): string {
+		return "CREATE TABLE {$table_name} (
+	id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	placement_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	opportunity varchar(8) NOT NULL DEFAULT 'page',
+	window_start date NOT NULL,
+	window_end date NOT NULL,
+	version smallint(5) unsigned NOT NULL DEFAULT 1,
+	estimate bigint(20) unsigned NOT NULL DEFAULT 0,
+	optimistic bigint(20) unsigned NOT NULL DEFAULT 0,
+	confidence varchar(8) NOT NULL DEFAULT 'none',
+	days_observed smallint(5) unsigned NOT NULL DEFAULT 0,
+	days_forecast smallint(5) unsigned NOT NULL DEFAULT 0,
+	made_at datetime NOT NULL,
+	actual bigint(20) unsigned NULL DEFAULT NULL,
+	actual_at datetime NULL DEFAULT NULL,
+	PRIMARY KEY  (id),
+	UNIQUE KEY slot_window_version (placement_id,opportunity,window_start,window_end,version),
+	KEY slot_made (placement_id,made_at),
+	KEY maturing (actual,window_end)
 ) {$charset_collate};";
 	}
 

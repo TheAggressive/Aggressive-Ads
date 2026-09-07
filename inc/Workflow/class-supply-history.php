@@ -137,6 +137,42 @@ final class Supply_History {
 	}
 
 	/**
+	 * What a placement actually supplied between two days.
+	 *
+	 * The counterpart to a forecast, and what its error is measured against.
+	 * No zero-filling and no creation date: this is a sum over a closed window
+	 * rather than a distribution to draw from, and a day with no row
+	 * contributes nothing to a sum either way.
+	 *
+	 * **Returns null for a window that has not closed.** A partial window
+	 * summed as though it were complete produces an actual lower than the
+	 * truth, and a forecast error computed from it would report every
+	 * placement as over-forecast — an error that says the model is pessimistic
+	 * when what happened is that nobody waited.
+	 *
+	 * @param int    $placement   Placement post id.
+	 * @param string $opportunity `Domain\Opportunity` kind.
+	 * @param string $from_utc    First day of the window, `Y-m-d`.
+	 * @param string $to_utc      Last day of the window, `Y-m-d`.
+	 * @return int|null Opportunities recorded, or null while the window is open.
+	 */
+	public function supplied( int $placement, string $opportunity, string $from_utc, string $to_utc ): ?int {
+		$last = Rollup_Reconciler::latest_closed_day();
+
+		if ( '' === $last || $placement <= 0 || ! Opportunity::is_valid( $opportunity ) ) {
+			return null;
+		}
+
+		if ( $to_utc > $last || $to_utc < $from_utc ) {
+			return null;
+		}
+
+		$recorded = $this->decisions->daily_events_for_placement( $placement, Decision_Outcome::REQUEST, $opportunity, $from_utc, $to_utc );
+
+		return array_sum( $recorded );
+	}
+
+	/**
 	 * What a placement is likely to supply between two days.
 	 *
 	 * @param int    $placement    Placement post id.

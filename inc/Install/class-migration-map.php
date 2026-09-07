@@ -16,6 +16,7 @@ use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Decision_Rollup_Repository;
+use Aggressive\Ads\Repository\Forecast_Repository;
 use Aggressive\Ads\Workflow\Decision_Metrics;
 use Aggressive\Ads\Repository\Creative_Attachment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
@@ -341,6 +342,16 @@ final class Migration_Map {
 			 */
 			26 => static function () use ( $c ): void {
 				$c->get( Decision_Rollup_Repository::class )->install_table();
+			},
+
+			/*
+			 * P16's forecast snapshots. A create, so there is nothing to
+			 * backfill: a forecast describes a window from history available
+			 * when it was made, and inventing rows for windows nobody forecast
+			 * would put figures in the table that no publisher was ever told.
+			 */
+			27 => static function () use ( $c ): void {
+				$c->get( Forecast_Repository::class )->install_table();
 			},
 		);
 	}
