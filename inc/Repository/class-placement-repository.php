@@ -114,6 +114,35 @@ final class Placement_Repository {
 	}
 
 	/**
+	 * The UTC day a placement first existed, or '' when it cannot be told.
+	 *
+	 * **This is what separates a quiet day from a day before the placement.**
+	 * The decision counters write no row for a day nothing happened, so history
+	 * read from them alone cannot distinguish a placement that produced nothing
+	 * on Sunday from a placement that did not exist on Sunday. A forecast has
+	 * to tell them apart: the first is a real zero that belongs in the
+	 * distribution, and the second is silence that must not drag an estimate
+	 * down.
+	 *
+	 * `post_date_gmt` is the honest source. It is zero-filled on drafts saved
+	 * before publication, which is why the sentinel is checked rather than
+	 * trusted — a placement carrying `0000-00-00` would otherwise claim to have
+	 * existed since the year zero and turn every unobserved day since into a
+	 * counted zero.
+	 *
+	 * @param int $placement_id Placement post id.
+	 */
+	public function first_day_utc( int $placement_id ): string {
+		$created = get_post_field( 'post_date_gmt', $placement_id, 'raw' );
+
+		if ( ! is_string( $created ) || '' === $created || str_starts_with( $created, '0000-00-00' ) ) {
+			return '';
+		}
+
+		return substr( $created, 0, 10 );
+	}
+
+	/**
 	 * Public slot id. Editors place this, never a campaign.
 	 *
 	 * @param int $placement_id Placement post id.

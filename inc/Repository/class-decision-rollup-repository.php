@@ -240,6 +240,72 @@ final class Decision_Rollup_Repository {
 	}
 
 	/**
+	 * One outcome's daily counts for one placement, as a day-indexed series.
+	 *
+	 * The forecast's source read. `daily_outcomes()` would answer the same
+	 * question, but it returns every outcome and both opportunity kinds — for a
+	 * ninety-day history that is roughly two thousand rows to extract ninety
+	 * numbers from, and the extraction would happen in the forecast's caller
+	 * rather than in the index.
+	 *
+	 * **The kind is required**, for the reason `totals_by_placement()` gives:
+	 * summing page and refresh opportunities puts a timer back into the supply
+	 * figure, and a forecast built that way promises inventory a rotation
+	 * invented.
+	 *
+	 * Stays inside an index range — the unique key leads on `placement_id` and
+	 * the range bounds the days — so the cost grows with the window asked for
+	 * rather than with the table.
+	 *
+	 * **A day with no row is absent, not zero.** The counters record what
+	 * happened, so a day nothing happened on has nothing here to distinguish it
+	 * from a day before this placement existed. Only a caller that knows when
+	 * the placement was created can tell those apart, and
+	 * `Workflow\Supply_History` is where that happens.
+	 *
+	 * @param int    $placement   Placement post id.
+	 * @param string $outcome     `Domain\Decision_Outcome` code.
+	 * @param string $opportunity `Domain\Opportunity` kind.
+	 * @param string $from_utc    First UTC day, inclusive, `Y-m-d`.
+	 * @param string $to_utc      Last UTC day, inclusive, `Y-m-d`.
+	 * @return array<string, int> UTC day to events, ascending.
+	 */
+	public function daily_events_for_placement( int $placement, string $outcome, string $opportunity, string $from_utc, string $to_utc ): array {
+		global $wpdb;
+
+		if ( $placement <= 0 || ! self::is_day( $from_utc ) || ! self::is_day( $to_utc ) ) {
+			return array();
+		}
+
+		if ( ! Decision_Outcome::is_storable( $outcome ) || ! Opportunity::is_valid( $opportunity ) ) {
+			return array();
+		}
+
+		$table = $this->table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Custom table, prefix-derived name; every value is a placeholder. A cached series is how a stale forecast looks fresh.
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT day_utc, SUM(events) AS events FROM {$table} WHERE placement_id = %d AND day_utc BETWEEN %s AND %s AND outcome = %s AND opportunity = %s GROUP BY day_utc ORDER BY day_utc ASC", $placement, $from_utc, $to_utc, $outcome, $opportunity ), ARRAY_A );
+
+		$series = array();
+
+		foreach ( is_array( $rows ) ? $rows : array() as $row ) {
+			if ( ! is_array( $row ) ) {
+				continue;
+			}
+
+			$day = (string) ( $row['day_utc'] ?? '' );
+
+			if ( '' === $day ) {
+				continue;
+			}
+
+			$series[ $day ] = (int) ( $row['events'] ?? 0 );
+		}
+
+		return $series;
+	}
+
+	/**
 	 * Outcome totals for every placement in a range, in one query.
 	 *
 	 * The utilisation view needs the same figures `totals_for_placement()`

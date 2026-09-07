@@ -114,7 +114,9 @@ use Aggressive\Ads\Workflow\Ending_Soon_Notifier;
 use Aggressive\Ads\Workflow\Fill_Cache;
 use Aggressive\Ads\Workflow\Reporting_Read;
 use Aggressive\Ads\Workflow\Revision_Policy;
+use Aggressive\Ads\Repository\Decision_Rollup_Repository;
 use Aggressive\Ads\Workflow\Reviewer_Access;
+use Aggressive\Ads\Workflow\Supply_History;
 use Aggressive\Ads\Workflow\Review_Readiness;
 use Aggressive\Ads\Workflow\Placement_Manager;
 use Aggressive\Ads\Workflow\Organization_State_Manager;
@@ -378,6 +380,14 @@ final class Service_Registrar {
 				$c->get( Campaign_Repository::class ),
 				$c->get( Audit_Repository::class ),
 				$c->get( Edit_Window::class )
+			)
+		);
+
+		$container->register(
+			Supply_History::class,
+			static fn ( Service_Container $c ): Supply_History => new Supply_History(
+				$c->get( Decision_Rollup_Repository::class ),
+				$c->get( Placement_Repository::class )
 			)
 		);
 
