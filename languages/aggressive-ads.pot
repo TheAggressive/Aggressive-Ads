@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-07T20:18:38+00:00\n"
+"POT-Creation-Date: 2026-09-07T21:28:54+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -3956,6 +3956,22 @@ msgstr ""
 
 #: inc/Workflow/class-assignment-editor.php:301
 msgid "Creative dates must fall inside the campaign’s own dates."
+msgstr ""
+
+#: inc/Workflow/class-booking-service.php:114
+msgid "You do not have permission to book inventory."
+msgstr ""
+
+#: inc/Workflow/class-booking-service.php:122
+msgid "That is not a kind of inventory."
+msgstr ""
+
+#: inc/Workflow/class-booking-service.php:140
+msgid "This booking is larger than the forecast supports. Give a reason to book it anyway."
+msgstr ""
+
+#: inc/Workflow/class-booking-service.php:167
+msgid "The booking could not be recorded."
 msgstr ""
 
 #: inc/Workflow/class-campaign-change-manager.php:174

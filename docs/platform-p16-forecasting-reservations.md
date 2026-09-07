@@ -252,6 +252,45 @@ therefore judged only by what the integration tests happened to reach, and the
 one mutation none of them could reach was reported as surviving. Run across
 both suites: nineteen mutants, all killed, control survives.
 
+## Slice 6 — the oversell warning and its audited override *(built)*
+
+`Domain\Availability` compares a forecast against what is claimed;
+`Workflow\Booking_Service` is the one place a booking decision is made.
+
+**Three verdicts, not two.** A window has room, is short of it, or was never
+forecast — and the third is a different fact from the second. Treating
+"unmeasured" as unlimited is how an oversell starts; treating it as zero
+refuses every booking on a placement nobody has measured, which is every new
+placement. So `unknown` is bookable and says so, and no number reaches an
+advertiser either way.
+
+**Overselling warns, it does not block.** The contract is explicit, and the
+reason is that the estimate is a twentieth percentile: a publisher who knows
+their inventory better than the model is often right to sell past it. What must
+not happen is selling past it unrecorded — so an oversell without a reason is
+refused, and with one it proceeds and writes an audit row naming the actor, the
+reason, the forecast version overridden and the shortfall accepted. The
+forecast *value* goes in too, because a version number stops meaning anything
+once retention purges the snapshot.
+
+**Gated on `MANAGE_PLACEMENTS`, not on a capability of its own.** A separate
+oversell primitive was the obvious design and would today have exactly the same
+holders — only administrators hold `MANAGE_PLACEMENTS` — so it would be a
+distinction with no difference, and a permission nobody can hold separately
+reads as protection it does not provide. P21 is the change that makes a second
+capability mean something.
+
+### The ceiling moved into the domain because a mutant survived
+
+`Booking_Service` hands the ledger a capacity for each claim, since the ledger
+re-checks inside its lock where the reading above does not run. Making that
+figure `PHP_INT_MAX` survived every test: its value is observable only under
+concurrency, and the PHP suites are single-connection.
+
+That is a rule, not plumbing, so it became `Availability::ceiling()` —
+`committed + requested`, asserted directly rather than inferred from a race
+nobody can stage. Fourteen mutants across the slice, all killed.
+
 ## Not built yet
 - **Reservations.** Table, lifecycle, concurrency-safe quantity and status
   changes, audit.
