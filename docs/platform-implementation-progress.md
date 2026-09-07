@@ -302,7 +302,11 @@ Shared boundaries and group exit criteria:
       [platform-p15-inventory-management.md](platform-p15-inventory-management.md).
 - [ ] **P16 — Forecasting and reservations.** Conservative forecasts from
       rolling history, tracked against actuals with error recorded. Oversell
-      warns and logs the override rather than silently blocking staff.
+      warns and logs the override rather than silently blocking staff. In
+      flight: the supply estimate is built — a low quantile of observed days
+      rather than a mean, because a mean is missed on half of them. Snapshots,
+      recorded error, reservations and the staff surface are not. Tracked in
+      [platform-p16-forecasting-reservations.md](platform-p16-forecasting-reservations.md).
 - [ ] **P17 — Creative experience.** Variants, A/B tests, schedules, device
       preview, approval and rejection history, performance comparison. Upload
       security is not relaxed to add formats. **Weighted variant delivery
