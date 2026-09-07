@@ -12,16 +12,10 @@ namespace Aggressive\Ads\Domain;
 /**
  * The reservation vocabulary and its lifecycle.
  *
- * A reservation is a time-bounded claim on a placement's forecast supply. The
- * one question everything else depends on is **which states consume capacity**,
- * because that is what a booking is checked against — get it wrong in the
- * generous direction and a publisher oversells without ever being warned; get
- * it wrong in the strict direction and released inventory is never sellable
- * again.
- *
- * Pure domain: no WordPress and no storage, so the rules can be exercised
- * exhaustively in milliseconds. Storage decides nothing here — the repository
- * asks this class which states to sum.
+ * Everything depends on **which states consume capacity**: too generous and a
+ * publisher oversells unwarned, too strict and released inventory is never
+ * sellable again. The repository asks this class which states to sum rather
+ * than restating them.
  */
 final class Reservation_Rules {
 
@@ -40,11 +34,9 @@ final class Reservation_Rules {
 	/**
 	 * Longest status this column must hold.
 	 *
-	 * Nine characters. Stated because `wp_posts.post_status` is `varchar(20)`
-	 * and a longer slug there truncates on write and never matches on read —
-	 * this is our own table and not subject to that, but the habit of checking
-	 * is what stops the next status from being invented at eleven characters
-	 * and stored somewhere that cares.
+	 * `wp_posts.post_status` is `varchar(20)`, where a longer slug truncates on
+	 * write and never matches on read. This is our own table, but the next
+	 * status may not be.
 	 */
 	public const MAX_LENGTH = 20;
 
@@ -60,14 +52,10 @@ final class Reservation_Rules {
 	/**
 	 * The statuses that count against forecast capacity.
 	 *
-	 * **Held counts.** A hold that did not consume capacity would let the same
-	 * inventory be promised to every advertiser who asked for it, which is the
-	 * entire failure a reservation exists to prevent — the check would pass for
-	 * all of them and the shortfall would only appear when the window ran.
-	 *
-	 * **Released and expired do not.** Inventory given back has to become
-	 * sellable again, or a publisher's capacity ratchets downward with every
-	 * cancelled booking and the placement eventually refuses everything.
+	 * **Held counts**, or the same inventory is promised to everybody who asks
+	 * and the shortfall appears only when the window runs. **Released and
+	 * expired do not**, or capacity ratchets downward with every cancellation
+	 * until the placement refuses everything.
 	 *
 	 * @return list<string>
 	 */
@@ -96,16 +84,13 @@ final class Reservation_Rules {
 	/**
 	 * Statuses a reservation may move to from where it is.
 	 *
-	 * **Released and expired are terminal.** Re-holding a released reservation
-	 * would recreate the original claim's position in the queue without
-	 * re-checking capacity, so giving inventory back and wanting it again is a
-	 * new reservation — which is checked, dated and audited as one.
+	 * **Released and expired are terminal**: re-holding would restore a claim
+	 * without re-checking capacity, so wanting it back is a new reservation.
 	 *
-	 * A confirmed reservation may still be released, because a campaign can be
-	 * cancelled after it is booked and the inventory has to return to the pool.
-	 * It may not go back to held: a hold is the weaker claim, and letting a
-	 * commitment decay into one silently would let a publisher believe
-	 * inventory was still spoken for when nobody had committed to it.
+	 * A confirmed reservation may still be released — a campaign can be
+	 * cancelled — but never returned to held. A hold is the weaker claim, and a
+	 * commitment decaying into one silently leaves a publisher believing
+	 * inventory is spoken for when nobody has committed.
 	 *
 	 * @param string $from Current status.
 	 * @return list<string>

@@ -13,7 +13,7 @@ use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Domain\Conversion_Rules;
 use Aggressive\Ads\REST\Conversion_Credentials_Controller;
 use Aggressive\Ads\REST\Conversion_Definitions_Controller;
-use Aggressive\Ads\REST\Creative_File_Controller;
+use Aggressive\Ads\REST\Api;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Package_Repository;
 use Aggressive\Ads\Security\Capabilities;
@@ -170,8 +170,8 @@ final class Conversions_Screen implements Service {
 		}
 
 		$payload = array(
-			'restPath'        => '/' . Creative_File_Controller::NAMESPACE . '/conversion-definitions',
-			'credentialsPath' => '/' . Creative_File_Controller::NAMESPACE . '/conversion-credentials',
+			'restPath'        => '/' . Api::NAMESPACE . '/conversion-definitions',
+			'credentialsPath' => '/' . Api::NAMESPACE . '/conversion-credentials',
 
 			/*
 			 * Both lists travel with the page, the way every other Advertising

@@ -11,7 +11,6 @@ namespace Aggressive\Ads\Domain;
 
 /**
  * Closed vocabulary of lifecycle events for ad delivery and interaction.
- * Pure domain model without WordPress dependencies.
  */
 final class Measurement_Event_Type {
 

@@ -24,8 +24,6 @@ namespace Aggressive\Ads\Domain;
  * and the direction is the invariant — **it bounds the block's request, never
  * the reverse.** A block asking for a one-second rotation on a placement that
  * forbids refresh does not refresh.
- *
- * Pure domain: no WordPress, no storage.
  */
 final class Refresh_Policy {
 

@@ -11,7 +11,6 @@ namespace Aggressive\Ads\Domain;
 
 /**
  * Validates measurement event lineage, transition validity, and cryptographic digests.
- * Pure domain model without WordPress dependencies.
  */
 final class Measurement_Rules {
 

@@ -12,7 +12,7 @@ namespace Aggressive\Ads\Admin;
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Core\Settings;
 use Aggressive\Ads\Domain\Settings_Schema;
-use Aggressive\Ads\REST\Creative_File_Controller;
+use Aggressive\Ads\REST\Api;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Workflow\Reviewer_Access;
 
@@ -298,7 +298,7 @@ final class Settings_Screen implements Service {
 			 * apiFetch signs the request with core's REST nonce; there is no
 			 * plugin nonce here because there is no plugin-owned handshake.
 			 */
-			'restPath'  => '/' . Creative_File_Controller::NAMESPACE . '/settings',
+			'restPath'  => '/' . Api::NAMESPACE . '/settings',
 			'i18n'      => array(
 				'add'               => __( 'Give access', 'aggressive-ads' ),
 				'addReviewer'       => __( 'Give someone review access', 'aggressive-ads' ),

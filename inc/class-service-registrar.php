@@ -10,133 +10,115 @@ declare(strict_types=1);
 namespace Aggressive\Ads;
 
 use Aggressive\Ads\Admin\Campaign_Change_Actions;
+use Aggressive\Ads\Admin\Media_Library;
 use Aggressive\Ads\Admin\Menu;
 use Aggressive\Ads\Admin\Organization_Data;
-use Aggressive\Ads\Admin\Package_Data;
+use Aggressive\Ads\Admin\Pending_Work;
 use Aggressive\Ads\Admin\Placement_Data;
 use Aggressive\Ads\Admin\Settings_Screen;
 use Aggressive\Ads\Assets\Assets;
 use Aggressive\Ads\Assets\Brand_Styles;
 use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Core\Post_Types;
-use Aggressive\Ads\Core\Taxonomies;
 use Aggressive\Ads\Core\Settings;
-use Aggressive\Ads\Install\Installer;
-use Aggressive\Ads\Install\Migration_Map;
-use Aggressive\Ads\Repository\Creative_Assignment_Repository;
-use Aggressive\Ads\Repository\Creative_Asset_Repository;
+use Aggressive\Ads\Core\Taxonomies;
+use Aggressive\Ads\Domain\Transition_Table;
 use Aggressive\Ads\Install\Assignment_Health;
-use Aggressive\Ads\Install\Decision_Health;
+use Aggressive\Ads\Install\Conversion_Health;
 use Aggressive\Ads\Install\Creative_Assignment_Migrator;
+use Aggressive\Ads\Install\Decision_Health;
+use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Install\Line_Item_Migrator;
+use Aggressive\Ads\Install\Migration_Map;
 use Aggressive\Ads\Install\Rewrite_Flusher;
 use Aggressive\Ads\Install\Site_Lifecycle;
 use Aggressive\Ads\Install\Upgrader;
-use Aggressive\Ads\Repository\Audit_Repository;
-use Aggressive\Ads\Domain\Transition_Table;
+use Aggressive\Ads\Install\Viewability_Health;
 use Aggressive\Ads\Integration\Ad_Provider_Interface;
 use Aggressive\Ads\Integration\Native\Publisher;
-use Aggressive\Ads\Notification\Email_Change_Notification;
 use Aggressive\Ads\Notification\Creative_Mailer;
+use Aggressive\Ads\Notification\Email_Change_Notification;
 use Aggressive\Ads\Notification\Ending_Soon_Mailer;
+use Aggressive\Ads\Notification\Notification_Delivery;
 use Aggressive\Ads\Notification\Organization_Notification;
 use Aggressive\Ads\Notification\Password_Notification;
 use Aggressive\Ads\Notification\Request_Mailer;
+use Aggressive\Ads\Portal\Router;
+use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Campaign_Lifecycle_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
-use Aggressive\Ads\Repository\Line_Item_Repository;
+use Aggressive\Ads\Repository\Conversion_Definition_Repository;
+use Aggressive\Ads\Repository\Creative_Asset_Repository;
+use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Creative_Attachment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Creative_Revision_Repository;
-use Aggressive\Ads\Repository\Delivery_Repository;
+use Aggressive\Ads\Repository\Decision_Rollup_Repository;
 use Aggressive\Ads\Repository\Event_Repository;
-use Aggressive\Ads\Repository\Org_Repository;
+use Aggressive\Ads\Repository\Forecast_Repository;
+use Aggressive\Ads\Repository\Line_Item_Repository;
 use Aggressive\Ads\Repository\Org_Access_Repository;
+use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Package_Repository;
-use Aggressive\Ads\Repository\Rate_Limit_Repository;
-use Aggressive\Ads\Portal\Acting_Actions;
-use Aggressive\Ads\Portal\Acting_As;
-use Aggressive\Ads\Portal\Email_Change_Actions;
-use Aggressive\Ads\Portal\Router;
-use Aggressive\Ads\Portal\View_Data;
-use Aggressive\Ads\Portal\Account_Actions;
-use Aggressive\Ads\Portal\Campaign_Actions;
-use Aggressive\Ads\Portal\Login_Actions;
-use Aggressive\Ads\Portal\Organization_Actions;
-use Aggressive\Ads\Portal\Password_Actions;
-use Aggressive\Ads\Portal\Report_Actions;
-use Aggressive\Ads\Portal\Signup_Actions;
-use Aggressive\Ads\Portal\Creative_Actions;
-use Aggressive\Ads\REST\Campaigns_Controller;
-use Aggressive\Ads\REST\Line_Items_Controller;
-use Aggressive\Ads\REST\Creative_Controller;
-use Aggressive\Ads\REST\Creative_File_Controller;
-use Aggressive\Ads\REST\Placements_Controller;
-use Aggressive\Ads\REST\Packages_Controller;
-use Aggressive\Ads\REST\Organizations_Controller;
-use Aggressive\Ads\REST\Settings_Controller;
-use Aggressive\Ads\REST\Transitions_Controller;
-use Aggressive\Ads\Repository\Page_Context_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
+use Aggressive\Ads\Repository\Rate_Limit_Repository;
+use Aggressive\Ads\Repository\Reservation_Repository;
+use Aggressive\Ads\Repository\Rollup_Report_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Repository\User_Repository;
+use Aggressive\Ads\Security\Admin_Guard;
+use Aggressive\Ads\Security\Delivery_Health;
+use Aggressive\Ads\Security\Ownership;
+use Aggressive\Ads\Security\Private_Storage_Health;
+use Aggressive\Ads\Security\Rate_Limiter;
+use Aggressive\Ads\Security\Roles;
+use Aggressive\Ads\Service_Container;
 use Aggressive\Ads\Storage\Creative_Cipher;
 use Aggressive\Ads\Storage\Private_Storage;
 use Aggressive\Ads\Update\Package_Verifier;
 use Aggressive\Ads\Update\Plugin_Updates;
 use Aggressive\Ads\Update\Release_Repository;
 use Aggressive\Ads\Update\Update_Http_Client;
-use Aggressive\Ads\Workflow\Campaign_State_Machine;
 use Aggressive\Ads\Workflow\Advertiser_Registration;
-use Aggressive\Ads\Workflow\Password_Reset;
-use Aggressive\Ads\Workflow\Organization_Membership;
+use Aggressive\Ads\Workflow\Assigned_Creatives;
+use Aggressive\Ads\Workflow\Assignment_Editor;
+use Aggressive\Ads\Workflow\Assignment_Projection;
+use Aggressive\Ads\Workflow\Audit_Retention;
+use Aggressive\Ads\Workflow\Booking_Service;
 use Aggressive\Ads\Workflow\Campaign_Change_Manager;
 use Aggressive\Ads\Workflow\Campaign_Clock;
 use Aggressive\Ads\Workflow\Campaign_Copier;
 use Aggressive\Ads\Workflow\Campaign_Editor;
-use Aggressive\Ads\Workflow\Line_Item_Editor;
-use Aggressive\Ads\Workflow\Assignment_Projection;
-use Aggressive\Ads\Workflow\Line_Item_Lifecycle;
-use Aggressive\Ads\Workflow\Line_Item_Validator;
-use Aggressive\Ads\Workflow\Assigned_Creatives;
-use Aggressive\Ads\Workflow\Assignment_Editor;
-use Aggressive\Ads\Workflow\Edit_Window;
+use Aggressive\Ads\Workflow\Campaign_State_Machine;
 use Aggressive\Ads\Workflow\Campaign_Validator;
+use Aggressive\Ads\Workflow\Conversion_Metrics;
 use Aggressive\Ads\Workflow\Coverage_Service;
-use Aggressive\Ads\Workflow\Decision_Engine;
-use Aggressive\Ads\Workflow\Decision_Metrics;
-use Aggressive\Ads\Workflow\Creative_Promoter;
+use Aggressive\Ads\Workflow\Creative_Approval;
 use Aggressive\Ads\Workflow\Creative_Change_Manager;
 use Aggressive\Ads\Workflow\Creative_Manager;
-use Aggressive\Ads\Workflow\Audit_Retention;
+use Aggressive\Ads\Workflow\Creative_Promoter;
 use Aggressive\Ads\Workflow\Creative_Retention;
 use Aggressive\Ads\Workflow\Creative_Uploader;
+use Aggressive\Ads\Workflow\Decision_Engine;
+use Aggressive\Ads\Workflow\Edit_Window;
+use Aggressive\Ads\Workflow\Email_Change;
 use Aggressive\Ads\Workflow\Ending_Soon_Notifier;
 use Aggressive\Ads\Workflow\Fill_Cache;
-use Aggressive\Ads\Workflow\Reporting_Read;
-use Aggressive\Ads\Workflow\Revision_Policy;
-use Aggressive\Ads\Repository\Decision_Rollup_Repository;
-use Aggressive\Ads\Repository\Forecast_Repository;
-use Aggressive\Ads\Repository\Reservation_Repository;
-use Aggressive\Ads\Workflow\Reviewer_Access;
-use Aggressive\Ads\Workflow\Booking_Service;
 use Aggressive\Ads\Workflow\Forecast_Recorder;
-use Aggressive\Ads\Workflow\Supply_History;
-use Aggressive\Ads\Workflow\Review_Readiness;
-use Aggressive\Ads\Workflow\Placement_Manager;
+use Aggressive\Ads\Workflow\Line_Item_Editor;
+use Aggressive\Ads\Workflow\Line_Item_Lifecycle;
+use Aggressive\Ads\Workflow\Line_Item_Validator;
+use Aggressive\Ads\Workflow\Organization_Membership;
 use Aggressive\Ads\Workflow\Organization_State_Manager;
-use Aggressive\Ads\Workflow\Package_Manager;
-use Aggressive\Ads\Workflow\Email_Change;
+use Aggressive\Ads\Workflow\Password_Reset;
+use Aggressive\Ads\Workflow\Placement_Manager;
+use Aggressive\Ads\Workflow\Reporting_Read;
+use Aggressive\Ads\Workflow\Review_Readiness;
+use Aggressive\Ads\Workflow\Reviewer_Access;
+use Aggressive\Ads\Workflow\Revision_Policy;
+use Aggressive\Ads\Workflow\Rollup_Reconciler;
+use Aggressive\Ads\Workflow\Supply_History;
 use Aggressive\Ads\Workflow\Transition_Guards;
-use Aggressive\Ads\Security\Admin_Guard;
-use Aggressive\Ads\Security\Delivery_Health;
-use Aggressive\Ads\Security\Ownership;
-use Aggressive\Ads\Security\Private_Storage_Health;
-use Aggressive\Ads\Admin\Media_Library;
-use Aggressive\Ads\Security\Rate_Limiter;
-use Aggressive\Ads\Security\Roles;
-use Aggressive\Ads\Service_Container;
-use Aggressive\Ads\Repository\Campaign_Lifecycle_Repository;
-use Aggressive\Ads\Notification\Notification_Delivery;
 
 /**
  * Composition-root registration, kept out of Plugin so boot/init stay readable.
@@ -156,13 +138,6 @@ final class Service_Registrar {
 		$container->register(
 			Update_Http_Client::class,
 			static fn (): Update_Http_Client => new Update_Http_Client()
-		);
-
-		$container->register(
-			Release_Repository::class,
-			static fn ( Service_Container $c ): Release_Repository => new Release_Repository(
-				$c->get( Update_Http_Client::class )
-			)
 		);
 
 		$container->register(
@@ -187,8 +162,8 @@ final class Service_Registrar {
 		);
 
 		$container->register(
-			\Aggressive\Ads\Admin\Pending_Work::class,
-			static fn ( Service_Container $c ): \Aggressive\Ads\Admin\Pending_Work => new \Aggressive\Ads\Admin\Pending_Work(
+			Pending_Work::class,
+			static fn ( Service_Container $c ): Pending_Work => new Pending_Work(
 				$c->get( Campaign_Repository::class )
 			)
 		);
@@ -197,7 +172,7 @@ final class Service_Registrar {
 			Menu::class,
 			static fn ( Service_Container $c ): Menu => new Menu(
 				$c->get( Settings::class ),
-				$c->get( \Aggressive\Ads\Admin\Pending_Work::class )
+				$c->get( Pending_Work::class )
 			)
 		);
 
@@ -217,11 +192,6 @@ final class Service_Registrar {
 		);
 
 		$container->register(
-			Org_Access_Repository::class,
-			static fn (): Org_Access_Repository => new Org_Access_Repository()
-		);
-
-		$container->register(
 			Post_Types::class,
 			static fn (): Post_Types => new Post_Types()
 		);
@@ -234,11 +204,6 @@ final class Service_Registrar {
 		$container->register(
 			Post_Statuses::class,
 			static fn (): Post_Statuses => new Post_Statuses()
-		);
-
-		$container->register(
-			Audit_Repository::class,
-			static fn (): Audit_Repository => new Audit_Repository()
 		);
 
 		$container->register(
@@ -276,13 +241,6 @@ final class Service_Registrar {
 		);
 
 		$container->register(
-			Org_Repository::class,
-			static fn ( Service_Container $c ): Org_Repository => new Org_Repository(
-				$c->get( Org_Access_Repository::class )
-			)
-		);
-
-		$container->register(
 			Ownership::class,
 			static fn ( Service_Container $c ): Ownership => new Ownership(
 				$c->get( Org_Repository::class )
@@ -295,33 +253,11 @@ final class Service_Registrar {
 		);
 
 		$container->register(
-			Campaign_Repository::class,
-			static fn (): Campaign_Repository => new Campaign_Repository()
-		);
-
-		$container->register(
-			Line_Item_Repository::class,
-			static fn ( Service_Container $c ): Line_Item_Repository => new Line_Item_Repository(
-				$c->get( Campaign_Repository::class )
-			)
-		);
-
-		$container->register(
 			Line_Item_Migrator::class,
 			static fn ( Service_Container $c ): Line_Item_Migrator => new Line_Item_Migrator(
 				$c->get( Line_Item_Repository::class ),
 				$c->get( Campaign_Repository::class )
 			)
-		);
-
-		$container->register(
-			Creative_Asset_Repository::class,
-			static fn (): Creative_Asset_Repository => new Creative_Asset_Repository()
-		);
-
-		$container->register(
-			Creative_Assignment_Repository::class,
-			static fn (): Creative_Assignment_Repository => new Creative_Assignment_Repository()
 		);
 
 		$container->register(
@@ -346,18 +282,18 @@ final class Service_Registrar {
 		);
 
 		$container->register(
-			\Aggressive\Ads\Install\Conversion_Health::class,
-			static fn ( Service_Container $c ): \Aggressive\Ads\Install\Conversion_Health => new \Aggressive\Ads\Install\Conversion_Health(
-				$c->get( \Aggressive\Ads\Repository\Conversion_Definition_Repository::class ),
-				$c->get( \Aggressive\Ads\Repository\Rollup_Repository::class ),
-				$c->get( \Aggressive\Ads\Workflow\Conversion_Metrics::class )
+			Conversion_Health::class,
+			static fn ( Service_Container $c ): Conversion_Health => new Conversion_Health(
+				$c->get( Conversion_Definition_Repository::class ),
+				$c->get( Rollup_Repository::class ),
+				$c->get( Conversion_Metrics::class )
 			)
 		);
 
 		$container->register(
-			\Aggressive\Ads\Install\Viewability_Health::class,
-			static fn ( Service_Container $c ): \Aggressive\Ads\Install\Viewability_Health => new \Aggressive\Ads\Install\Viewability_Health(
-				$c->get( \Aggressive\Ads\Repository\Rollup_Repository::class )
+			Viewability_Health::class,
+			static fn ( Service_Container $c ): Viewability_Health => new Viewability_Health(
+				$c->get( Rollup_Repository::class )
 			)
 		);
 
@@ -370,13 +306,6 @@ final class Service_Registrar {
 		);
 
 		$container->register(
-			Creative_Revision_Repository::class,
-			static fn ( Service_Container $c ): Creative_Revision_Repository => new Creative_Revision_Repository(
-				$c->get( Creative_Repository::class )
-			)
-		);
-
-		$container->register(
 			Assignment_Editor::class,
 			static fn ( Service_Container $c ): Assignment_Editor => new Assignment_Editor(
 				$c->get( Creative_Assignment_Repository::class ),
@@ -385,16 +314,6 @@ final class Service_Registrar {
 				$c->get( Audit_Repository::class ),
 				$c->get( Edit_Window::class )
 			)
-		);
-
-		$container->register(
-			Forecast_Repository::class,
-			static fn (): Forecast_Repository => new Forecast_Repository()
-		);
-
-		$container->register(
-			Reservation_Repository::class,
-			static fn (): Reservation_Repository => new Reservation_Repository()
 		);
 
 		$container->register(
@@ -453,21 +372,11 @@ final class Service_Registrar {
 		);
 
 		$container->register(
-			Campaign_Lifecycle_Repository::class,
-			static fn (): Campaign_Lifecycle_Repository => new Campaign_Lifecycle_Repository()
-		);
-
-		$container->register(
 			Notification_Delivery::class,
 			static fn ( Service_Container $c ): Notification_Delivery => new Notification_Delivery(
 				$c->get( Campaign_Repository::class ),
 				$c->get( Audit_Repository::class )
 			)
-		);
-
-		$container->register(
-			User_Repository::class,
-			static fn (): User_Repository => new User_Repository()
 		);
 
 		$container->register(
@@ -530,23 +439,6 @@ final class Service_Registrar {
 		);
 
 		$container->register(
-			Creative_Attachment_Repository::class,
-			static fn (): Creative_Attachment_Repository => new Creative_Attachment_Repository()
-		);
-
-		$container->register(
-			Creative_Repository::class,
-			static fn ( $c ): Creative_Repository => new Creative_Repository(
-				$c->get( Creative_Attachment_Repository::class )
-			)
-		);
-
-		$container->register(
-			Delivery_Repository::class,
-			static fn (): Delivery_Repository => new Delivery_Repository()
-		);
-
-		$container->register(
 			Private_Storage_Health::class,
 			static fn ( Service_Container $c ): Private_Storage_Health => new Private_Storage_Health(
 				$c->get( Private_Storage::class )
@@ -564,21 +456,6 @@ final class Service_Registrar {
 				$c->get( Event_Repository::class ),
 				$c->get( Rollup_Repository::class )
 			)
-		);
-
-		$container->register(
-			Placement_Repository::class,
-			static fn (): Placement_Repository => new Placement_Repository()
-		);
-
-		$container->register(
-			Page_Context_Repository::class,
-			static fn (): Page_Context_Repository => new Page_Context_Repository()
-		);
-
-		$container->register(
-			Package_Repository::class,
-			static fn (): Package_Repository => new Package_Repository()
 		);
 
 
@@ -622,8 +499,8 @@ final class Service_Registrar {
 		$container->register(
 			Assignment_Projection::class,
 			static fn ( Service_Container $c ): Assignment_Projection => new Assignment_Projection(
-				$c->get( \Aggressive\Ads\Repository\Campaign_Repository::class ),
-				$c->get( \Aggressive\Ads\Repository\Creative_Assignment_Repository::class ),
+				$c->get( Campaign_Repository::class ),
+				$c->get( Creative_Assignment_Repository::class ),
 				$c->get( Creative_Attachment_Repository::class )
 			)
 		);
@@ -654,8 +531,8 @@ final class Service_Registrar {
 			static fn ( Service_Container $c ): Reporting_Read => new Reporting_Read(
 				$c->get( Settings::class ),
 				$c->get( Rollup_Repository::class ),
-				$c->get( \Aggressive\Ads\Repository\Rollup_Report_Repository::class ),
-				$c->get( \Aggressive\Ads\Workflow\Rollup_Reconciler::class )
+				$c->get( Rollup_Report_Repository::class ),
+				$c->get( Rollup_Reconciler::class )
 			)
 		);
 
@@ -682,7 +559,7 @@ final class Service_Registrar {
 		$container->register(
 			Creative_Mailer::class,
 			static fn ( Service_Container $c ): Creative_Mailer => new Creative_Mailer(
-				$c->get( \Aggressive\Ads\Workflow\Creative_Approval::class ),
+				$c->get( Creative_Approval::class ),
 				$c->get( Campaign_Repository::class ),
 				$c->get( Org_Repository::class ),
 				$c->get( User_Repository::class ),
@@ -827,7 +704,7 @@ final class Service_Registrar {
 				$c->get( Rate_Limiter::class ),
 				$c->get( Audit_Repository::class ),
 				$c->get( Edit_Window::class ),
-				$c->get( \Aggressive\Ads\Workflow\Creative_Approval::class )
+				$c->get( Creative_Approval::class )
 			)
 		);
 
@@ -859,11 +736,6 @@ final class Service_Registrar {
 
 
 
-
-		$container->register(
-			Rate_Limit_Repository::class,
-			static fn (): Rate_Limit_Repository => new Rate_Limit_Repository()
-		);
 
 		$container->register(
 			Rate_Limiter::class,

@@ -13,7 +13,7 @@ use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Domain\Settings_Schema;
 use Aggressive\Ads\Domain\Slot_Options;
 use Aggressive\Ads\Repository\Placement_Repository;
-use Aggressive\Ads\REST\Creative_File_Controller;
+use Aggressive\Ads\REST\Api;
 
 /**
  * Reserved box + noscript house. Paid creatives arrive via fill.
@@ -207,7 +207,7 @@ final class Placement_Slot implements Service {
 		$dims   = explode( 'x', $size );
 		$width  = isset( $dims[0] ) ? (int) $dims[0] : 0;
 		$height = isset( $dims[1] ) ? (int) $dims[1] : 0;
-		$fill   = rest_url( Creative_File_Controller::NAMESPACE . '/fill/' . rawurlencode( $slug ) );
+		$fill   = rest_url( Api::NAMESPACE . '/fill/' . rawurlencode( $slug ) );
 
 		/*
 		 * The page this slot is rendering on, for contextual targeting.

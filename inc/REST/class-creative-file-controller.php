@@ -43,10 +43,6 @@ use WP_REST_Response;
  */
 final class Creative_File_Controller implements Service {
 
-	/**
-	 * The REST namespace.
-	 */
-	public const NAMESPACE = 'aggr/v1';
 
 	/**
 	 * Registers a route on the plugin namespace.
@@ -56,7 +52,7 @@ final class Creative_File_Controller implements Service {
 	 * @return void
 	 */
 	public static function register_route( string $route, array $args ): void {
-		register_rest_route( self::NAMESPACE, $route, $args );
+		register_rest_route( Api::NAMESPACE, $route, $args );
 	}
 
 	/**

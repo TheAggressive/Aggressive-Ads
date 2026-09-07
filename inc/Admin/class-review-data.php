@@ -22,7 +22,7 @@ use Aggressive\Ads\Workflow\Assigned_Creatives;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Repository\Line_Item_Repository;
-use Aggressive\Ads\REST\Creative_File_Controller;
+use Aggressive\Ads\REST\Api;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Workflow\Campaign_Change_Manager;
 
@@ -551,7 +551,7 @@ final class Review_Data {
 		return add_query_arg(
 			'_wpnonce',
 			wp_create_nonce( 'wp_rest' ),
-			rest_url( Creative_File_Controller::NAMESPACE . '/creatives/' . $creative_id . '/file' )
+			rest_url( Api::NAMESPACE . '/creatives/' . $creative_id . '/file' )
 		);
 	}
 

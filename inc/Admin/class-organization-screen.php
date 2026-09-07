@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Admin;
 
 use Aggressive\Ads\Core\Service;
-use Aggressive\Ads\REST\Creative_File_Controller;
+use Aggressive\Ads\REST\Api;
 use Aggressive\Ads\Security\Capabilities;
 
 /**
@@ -157,7 +157,7 @@ final class Organization_Screen implements Service {
 			 * browser holds the whole directory.
 			 */
 			'view'     => $this->data->view(),
-			'restPath' => '/' . Creative_File_Controller::NAMESPACE . '/organizations',
+			'restPath' => '/' . Api::NAMESPACE . '/organizations',
 			'i18n'     => array(
 				'empty'           => __( 'No organizations match this search.', 'aggressive-ads' ),
 				'stateActive'     => __( 'Active', 'aggressive-ads' ),

@@ -12,21 +12,14 @@ namespace Aggressive\Ads\Domain;
 /**
  * The inventory grain: a page opportunity, or a refresh of one.
  *
- * P15 owes the phases after it a defined unit of inventory, and this is it.
- * Both kinds are real delivery and both record an impression — what separates
- * them is whether they represent *independent supply*.
+ * Both kinds are real delivery and both record an impression. What separates
+ * them is whether they are *independent supply*.
  *
- * - **Page** — a slot's first fill on a page view. It exists because somebody
- *   loaded a page, so it is supply, and it is what a forecast may be built on.
- * - **Refresh** — a later fill of the same slot inside the same page view,
- *   produced by a timer. Counting it as supply means forecasting a
- *   `setInterval`: rotation runs to a hundred fills per view, so a page would
- *   appear to be a hundred pages.
- *
- * **Pure domain: no WordPress, no storage.** The whole matrix of things a
- * client can send is a value in and a value out, which is worth running
- * exhaustively in milliseconds rather than a handful of cases through a
- * bootstrap.
+ * - **Page** — a slot's first fill on a page view, so it is supply and a
+ *   forecast may be built on it.
+ * - **Refresh** — a later fill inside the same page view, produced by a timer.
+ *   Counting it as supply forecasts a `setInterval`: rotation runs to a hundred
+ *   fills per view, so one page would look like a hundred.
  */
 final class Opportunity {
 
@@ -37,10 +30,7 @@ final class Opportunity {
 	public const REFRESH = 'refresh';
 
 	/**
-	 * Longest value the column must hold.
-	 *
-	 * Seven characters for `refresh`. Stated so the DDL and this agree by
-	 * derivation rather than by somebody remembering.
+	 * Longest value the column must hold, so the DDL and this agree.
 	 */
 	public const MAX_LENGTH = 8;
 

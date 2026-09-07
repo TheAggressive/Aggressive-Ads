@@ -10,7 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Admin;
 
 use Aggressive\Ads\Core\Service;
-use Aggressive\Ads\REST\Creative_File_Controller;
+use Aggressive\Ads\REST\Api;
 use Aggressive\Ads\Security\Capabilities;
 
 /**
@@ -166,7 +166,7 @@ final class Placement_Screen implements Service {
 
 		$payload = array(
 			'view'     => $this->data->view(),
-			'restPath' => '/' . Creative_File_Controller::NAMESPACE . '/placements',
+			'restPath' => '/' . Api::NAMESPACE . '/placements',
 			'i18n'     => array(
 				'newPlacement'        => __( 'New placement', 'aggressive-ads' ),
 				'editPlacement'       => __( 'Edit placement', 'aggressive-ads' ),

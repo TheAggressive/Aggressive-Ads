@@ -210,7 +210,7 @@ final class Creative_Controller implements Service {
 		}
 
 		$result['file_url'] = rest_url(
-			sprintf( '%s/creatives/%d/file', Creative_File_Controller::NAMESPACE, (int) $result['id'] )
+			sprintf( '%s/creatives/%d/file', Api::NAMESPACE, (int) $result['id'] )
 		);
 
 		return new WP_REST_Response( $result, 201 );

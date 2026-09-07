@@ -11,7 +11,6 @@ namespace Aggressive\Ads\Domain;
 
 /**
  * Structured reason taxonomy for no_fill measurement events.
- * Pure domain model without WordPress dependencies.
  */
 final class No_Fill_Reason {
 

@@ -13,7 +13,7 @@ use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Domain\Upload_Rules;
 use Aggressive\Ads\Portal\Request;
 use Aggressive\Ads\Portal\Router;
-use Aggressive\Ads\REST\Creative_File_Controller;
+use Aggressive\Ads\REST\Api;
 
 /**
  * Loads portal styles and Interactivity script modules, on the portal only.
@@ -345,7 +345,7 @@ final class Assets implements Service {
 			array(
 				'autosaves' => array(
 					$autosave_id => array(
-						'restUrl'  => rest_url( Creative_File_Controller::NAMESPACE . '/campaigns/' . $campaign['id'] ),
+						'restUrl'  => rest_url( Api::NAMESPACE . '/campaigns/' . $campaign['id'] ),
 						'nonce'    => wp_create_nonce( 'wp_rest' ),
 						'revision' => $campaign['autosave_rev'],
 						'status'   => 'idle',

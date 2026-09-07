@@ -12,22 +12,12 @@ namespace Aggressive\Ads\Domain;
 /**
  * Compares a forecast against what has already been claimed.
  *
- * **Three answers, not two.** A window can have room, be short of it, or be
- * unmeasured — and the third is a different fact from the second. Treating
- * "we have never forecast this placement" as unlimited is how an oversell
- * starts; treating it as zero refuses every booking on a placement nobody has
- * measured yet, which is every new placement. Both readings are wrong, so the
- * verdict says which situation it is and lets the caller decide.
+ * Three verdicts rather than two: unmeasured is not the same as full. Reading
+ * it as unlimited oversells; reading it as zero refuses every new placement.
  *
- * **Being short is a warning, not a refusal.** The inventory-commerce contract
- * is explicit: oversell warns and logs the override rather than silently
- * blocking staff. A forecast is a conservative estimate — the twentieth
- * percentile of observed days — so a publisher who knows their inventory
- * better than a model does is often right to sell past it. What must not
- * happen is selling past it *without noticing*.
- *
- * Pure domain: no WordPress, no storage. The capability check and the audit
- * row belong to the workflow that acts on this answer.
+ * Being short warns rather than refuses, per the inventory-commerce contract —
+ * the estimate is a low quantile, so selling past it is often correct. Doing so
+ * unnoticed is not.
  */
 final class Availability {
 
@@ -52,15 +42,9 @@ final class Availability {
 	/**
 	 * Whether a booking of this size fits.
 	 *
-	 * `remaining` is null when nothing has been forecast, for the same reason
-	 * {@see Fill_Figures} reports a null rate with no denominator: a placement
-	 * nobody has measured has not been measured as full, and a screen showing
-	 * `0` would say it is sold out.
-	 *
-	 * `shortfall` is how much of the request the forecast cannot cover — the
-	 * figure an override has to record as its expected impact, because "we
-	 * oversold" is not actionable and "we sold 4,000 more than we expect to
-	 * have" is.
+	 * `remaining` is null when nothing has been forecast: a screen showing `0`
+	 * would say the placement is sold out. `shortfall` is what the forecast
+	 * cannot cover, which is the expected impact an override records.
 	 *
 	 * @param int|null $capacity  What the forecast says the window will supply, or null.
 	 * @param int      $committed What reservations already claim.
@@ -69,26 +53,17 @@ final class Availability {
 	 */
 	public static function decide( ?int $capacity, int $committed, int $requested ): array {
 		if ( null === $capacity ) {
+			// Not a shortfall: nothing is known to be short, and a number on a
+			// screen is read as knowledge.
 			return array(
 				'verdict'   => self::UNKNOWN,
 				'remaining' => null,
-
-				/*
-				 * Not a shortfall. Nothing is known to be short — reporting the
-				 * whole request as an overrun would put a number on a screen
-				 * that means "we have no idea", and a number is read as
-				 * knowledge.
-				 */
 				'shortfall' => 0,
 			);
 		}
 
-		/*
-		 * Clamped at zero. A window already oversold has negative headroom,
-		 * and reporting that as remaining invites a caller to add it to the
-		 * next request and quietly reduce the shortfall it is about to warn
-		 * about.
-		 */
+		// Clamped: negative headroom added to the next request would quietly
+		// reduce the shortfall it is about to warn about.
 		$remaining = max( 0, $capacity - max( 0, $committed ) );
 		$shortfall = max( 0, $requested - $remaining );
 
@@ -102,24 +77,18 @@ final class Availability {
 	/**
 	 * The capacity figure a ledger should be given for one claim.
 	 *
-	 * **Exactly enough for this claim, given what is already held.** The
-	 * ledger re-checks capacity inside its lock, where the reading above does
-	 * not run, so an acknowledged oversell and an unforecast window both have
-	 * to get past it — and the ceiling is what lets them without switching the
-	 * guard off.
+	 * Exactly enough for this claim, given what is already held. The ledger
+	 * re-checks inside its lock, so an acknowledged oversell and an unforecast
+	 * window both have to get past it without the guard being switched off.
 	 *
-	 * `committed + requested` is the whole rule, and it holds for all three
-	 * verdicts. What it buys is the race: if another booking lands between the
-	 * reading and the claim, the ledger's own total is higher than the one this
-	 * was computed from, so `taken + requested` exceeds this ceiling and the
-	 * second claim is refused rather than quietly doubling the window. An
-	 * unbounded ceiling would pass every such claim, and the oversell would
-	 * appear only when the window ran.
+	 * The race is what this buys: a booking landing between the reading and the
+	 * claim pushes the ledger's total past this ceiling, and the second claim is
+	 * refused. An unbounded ceiling passes every such claim and the oversell
+	 * appears only when the window runs.
 	 *
-	 * That is also why this is here rather than in the workflow that calls it.
-	 * Its value is observable only under concurrency, which the PHP suites run
-	 * single-connection and cannot reach — as a rule in the domain it can be
-	 * asserted directly instead of inferred from a race nobody can stage.
+	 * In the domain rather than the workflow because that value is observable
+	 * only under concurrency, which the single-connection PHP suites cannot
+	 * stage — here it can be asserted directly.
 	 *
 	 * @param int $committed What reservations already claim.
 	 * @param int $requested What is being asked for now.
@@ -131,16 +100,10 @@ final class Availability {
 	/**
 	 * The answer an advertiser may be given.
 	 *
-	 * **A number never crosses this line.** The contract puts forecast value,
-	 * confidence, version and error in one sentence and keeps all of them
-	 * staff-only, because a forecast is the publisher's negotiating position:
-	 * an advertiser who can see which placements are empty knows what to offer
-	 * for them. So the advertiser-facing question is "can I book this?", and
-	 * the answer is yes or no with nothing behind it.
-	 *
-	 * `unknown` reads as bookable. A placement nobody has forecast is not
-	 * evidence of a full one, and refusing on the strength of no evidence would
-	 * make every new placement unsellable until a quarter of history existed.
+	 * **No number crosses this line.** A forecast is the publisher's negotiating
+	 * position, so the advertiser-facing answer is yes or no with nothing behind
+	 * it. `unknown` reads as bookable: refusing on no evidence would make every
+	 * new placement unsellable until a quarter of history existed.
 	 *
 	 * @param string $verdict One of the verdicts above.
 	 */

@@ -12,7 +12,7 @@ namespace Aggressive\Ads\Admin;
 use Aggressive\Ads\Portal\Routes;
 use Aggressive\Ads\Assets\Assets;
 use Aggressive\Ads\Core\Service;
-use Aggressive\Ads\REST\Creative_File_Controller;
+use Aggressive\Ads\REST\Api;
 use Aggressive\Ads\Security\Capabilities;
 
 /**
@@ -215,7 +215,7 @@ final class Review_Screen implements Service {
 			'paged'       => $page,
 			'campaignId'  => $campaign_id,
 			'queueUrl'    => self::queue_url(),
-			'restPath'    => '/' . Creative_File_Controller::NAMESPACE . '/review',
+			'restPath'    => '/' . Api::NAMESPACE . '/review',
 			'tabs'        => $this->data->tabs(),
 			'queue'       => $campaign_id > 0 ? self::empty_queue( $page ) : $this->data->queue( $filter, $page ),
 			'campaign'    => $campaign_id > 0 ? $this->data->campaign( $campaign_id ) : null,
