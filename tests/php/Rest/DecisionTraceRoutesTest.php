@@ -15,6 +15,7 @@ use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Security\Capabilities;
+use Aggressive\Ads\Domain\Exclusion_Reason;
 use Aggressive\Ads\Security\Roles;
 use WP_REST_Request;
 use WP_UnitTestCase;
@@ -102,5 +103,53 @@ final class DecisionTraceRoutesTest extends WP_UnitTestCase {
 		$rollups->install_table();
 
 		$this->assertSame( array(), $rollups->totals_for_placement( $this->placement_id, gmdate( 'Y-m-d' ), gmdate( 'Y-m-d' ) ) );
+	}
+
+	/**
+	 * **Every exclusion reason has a label, and every label is a reason.**
+	 *
+	 * The map shipped with six of twenty-seven. Everything the schedule,
+	 * targeting, frequency, pacing, priority and page-coordination stages can
+	 * say reached this screen as a raw code — on the one screen whose entire
+	 * job is explaining why an advertisement did not serve, so a staff member
+	 * debugging a campaign was shown `pacing_daily_cap_reached` and left to
+	 * guess.
+	 *
+	 * Both directions, because each catches a different mistake. A reason with
+	 * no label is a code shown to a person. A label for something that is not a
+	 * reason is a translated string nothing can ever produce — dead weight that
+	 * reads as coverage, and the reason `Exclusion_Reason::is_reason()` exists.
+	 *
+	 * @return void
+	 */
+	public function test_every_exclusion_reason_has_a_human_label(): void {
+		wp_set_current_user( (int) self::factory()->user->create( array( 'role' => Roles::REVIEWER ) ) );
+
+		$response = rest_do_request(
+			new WP_REST_Request(
+				'GET',
+				'/aggr/v1/placements/' . $this->placement_id . '/decision'
+			)
+		);
+
+		$labels = $response->get_data()['reason_labels'] ?? array();
+
+		$this->assertNotEmpty( $labels, 'No labels were returned, so the assertions below would be vacuous.' );
+
+		foreach ( Exclusion_Reason::all() as $reason ) {
+			$this->assertArrayHasKey(
+				$reason,
+				$labels,
+				"Exclusion reason {$reason} reaches the trace screen as a raw code."
+			);
+			$this->assertNotSame( '', trim( (string) $labels[ $reason ] ) );
+		}
+
+		foreach ( array_keys( $labels ) as $code ) {
+			$this->assertTrue(
+				Exclusion_Reason::is_reason( (string) $code ),
+				"A label exists for {$code}, which no stage can produce."
+			);
+		}
 	}
 }

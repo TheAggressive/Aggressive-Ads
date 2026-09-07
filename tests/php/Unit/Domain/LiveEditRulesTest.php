@@ -257,4 +257,64 @@ final class LiveEditRulesTest extends TestCase {
 			)
 		);
 	}
+
+	/**
+	 * **Every structural settings key really is treated as structural.**
+	 *
+	 * The assertion above passes over a hardcoded
+	 * `array_key_exists( 'placement_ids', $diff )`, because
+	 * `structural_edit_keys()` currently holds exactly one key and the two
+	 * agree by coincidence. This walks the list instead, so a second key added
+	 * there — shown to staff as structural, described as structural in the
+	 * settings help — cannot be quietly treated as cosmetic here while the
+	 * campaign keeps serving a creative the approval invalidated.
+	 *
+	 * @return void
+	 */
+	public function test_every_declared_structural_key_invalidates_the_creative(): void {
+		$fields = Live_Edit_Rules::fields_for();
+		$keys   = Settings_Schema::structural_edit_keys();
+
+		$this->assertNotEmpty( $keys, 'No structural keys declared, so this test would prove nothing.' );
+
+		foreach ( $keys as $key ) {
+			$this->assertArrayHasKey( $key, $fields, "Structural key {$key} unlocks no field, so nothing can carry it into a diff." );
+
+			foreach ( $fields[ $key ] as $name ) {
+				$this->assertTrue(
+					Live_Edit_Rules::is_structural( array( $name => 'changed' ) ),
+					"Field {$name} belongs to structural key {$key} and was not treated as structural."
+				);
+			}
+		}
+	}
+
+	/**
+	 * And nothing outside that list is.
+	 *
+	 * The other half, because a rule that answered true for everything would
+	 * satisfy the test above and stop every campaign on any approved edit.
+	 *
+	 * @return void
+	 */
+	public function test_no_other_field_invalidates_the_creative(): void {
+		$structural = array();
+
+		foreach ( Settings_Schema::structural_edit_keys() as $key ) {
+			$structural = array_merge( $structural, Live_Edit_Rules::fields_for()[ $key ] ?? array() );
+		}
+
+		foreach ( Live_Edit_Rules::fields_for() as $key => $names ) {
+			foreach ( $names as $name ) {
+				if ( in_array( $name, $structural, true ) ) {
+					continue;
+				}
+
+				$this->assertFalse(
+					Live_Edit_Rules::is_structural( array( $name => 'changed' ) ),
+					"Field {$name} is not structural and was treated as though it were."
+				);
+			}
+		}
+	}
 }

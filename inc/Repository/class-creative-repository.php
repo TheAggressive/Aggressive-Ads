@@ -397,26 +397,19 @@ final class Creative_Repository {
 	/**
 	 * The provider ad id published for this creative, or 0.
 	 *
+	 * **Written by `Creative_Revision_Repository`, not from here.** A setter
+	 * lived beside this and nothing called it: its docblock described writing
+	 * one id per ad as a publishing loop succeeded, which is the superseded
+	 * adapter's shape. The value now moves during a revision swap, where it has
+	 * to be handed from the outgoing creative to the incoming one in the same
+	 * operation — a separate setter could only have been a second way to get
+	 * that half right.
+	 *
 	 * @param int $creative_id Creative post id.
 	 * @return int
 	 */
 	public function provider_ad_id( int $creative_id ): int {
 		return (int) get_post_meta( $creative_id, self::META_PROVIDER_AD, true );
-	}
-
-	/**
-	 * Records the provider ad id for a creative.
-	 *
-	 * Written the moment each ad succeeds rather than once at the end, so a
-	 * failure partway through leaves the successes recorded and a retry
-	 * reconciles them instead of creating duplicates.
-	 *
-	 * @param int $creative_id Creative post id.
-	 * @param int $ad_id       Provider ad id.
-	 * @return void
-	 */
-	public function set_provider_ad_id( int $creative_id, int $ad_id ): void {
-		update_post_meta( $creative_id, self::META_PROVIDER_AD, $ad_id );
 	}
 
 	/**

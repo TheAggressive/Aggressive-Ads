@@ -81,10 +81,31 @@ final class Live_Edit_Rules {
 	/**
 	 * Whether an approved change would leave the existing creative unusable.
 	 *
+	 * **Derived from `Settings_Schema::structural_edit_keys()`, not restated.**
+	 * This used to test `array_key_exists( 'placement_ids', $diff )` directly,
+	 * which agreed with that list only because the list has one entry. A second
+	 * structural key added there would have been shown to staff as structural,
+	 * described as structural in the settings help text, and quietly treated as
+	 * cosmetic here — the campaign would keep serving a creative the approval
+	 * had just invalidated.
+	 *
+	 * `fields_for()` is the same map `allowed_fields()` uses, so the settings
+	 * key and the field names it unlocks stay one statement rather than three.
+	 *
 	 * @param array<string, mixed> $diff Reduced change set.
 	 */
 	public static function is_structural( array $diff ): bool {
-		return array_key_exists( 'placement_ids', $diff );
+		$fields = self::fields_for();
+
+		foreach ( Settings_Schema::structural_edit_keys() as $key ) {
+			foreach ( $fields[ $key ] ?? array() as $name ) {
+				if ( array_key_exists( $name, $diff ) ) {
+					return true;
+				}
+			}
+		}
+
+		return false;
 	}
 
 	/**

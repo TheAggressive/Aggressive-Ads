@@ -257,6 +257,19 @@ final class ConversionSchemaTest extends WP_UnitTestCase {
 		foreach ( $key as $part ) {
 			$this->assertSame( '0', (string) $part['Non_unique'], 'public_key must be UNIQUE, or two definitions could share a reporting credential.' );
 		}
+
+		/*
+		 * And the whole index set, not only the key this test was written
+		 * about. `Schema::conversion_definitions_index_names()` was declared
+		 * beside the DDL and had no consumer at all — seven of the nine
+		 * `*_index_names()` methods were asserted somewhere and these two were
+		 * not — so any index but `public_key` could disappear silently, taking
+		 * a query plan with it and failing nothing.
+		 */
+		$this->assertSame(
+			Schema::conversion_definitions_index_names(),
+			array_values( array_unique( array_column( $rows, 'Key_name' ) ) )
+		);
 	}
 
 	/**
@@ -419,5 +432,11 @@ final class ConversionSchemaTest extends WP_UnitTestCase {
 				'token_hash must be UNIQUE, or one secret could resolve to two credentials.'
 			);
 		}
+
+		// The whole index set, for the reason given on the definitions table.
+		$this->assertSame(
+			Schema::conversion_credentials_index_names(),
+			array_values( array_unique( array_column( $rows, 'Key_name' ) ) )
+		);
 	}
 }
