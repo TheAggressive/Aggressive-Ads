@@ -65,21 +65,9 @@ final class Package_Screen implements Service {
 			return;
 		}
 
-		$asset = AGGR_PLUGIN_DIR . 'dist/admin/packages.asset.php';
-
-		if ( ! is_file( $asset ) ) {
+		if ( '' === Shared_Assets::enqueue_bundle( 'aggr-packages', 'packages' ) ) {
 			return;
 		}
-
-		$meta = require $asset;
-
-		wp_enqueue_script(
-			'aggr-packages',
-			AGGR_PLUGIN_URL . 'dist/admin/packages.js',
-			is_array( $meta['dependencies'] ?? null ) ? $meta['dependencies'] : array(),
-			is_string( $meta['version'] ?? null ) ? $meta['version'] : AGGR_VERSION,
-			true
-		);
 
 		wp_enqueue_style( 'wp-components' );
 	}

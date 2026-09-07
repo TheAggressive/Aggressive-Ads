@@ -58,28 +58,16 @@ final class Organization_Screen implements Service {
 			return;
 		}
 
-		$asset = AGGR_PLUGIN_DIR . 'dist/admin/organizations.asset.php';
-
-		if ( ! is_file( $asset ) ) {
-			return;
-		}
-
-		$meta = require $asset;
-
-		$version = is_string( $meta['version'] ?? null ) ? $meta['version'] : AGGR_VERSION;
-
 		// The bundle's .asset.php names aggr-dataviews as a dependency, because
 		// the build rewrote its @wordpress/dataviews import onto the shared
 		// copy. Registering it here is what lets WordPress resolve that.
 		Shared_Assets::register();
 
-		wp_enqueue_script(
-			'aggr-organizations',
-			AGGR_PLUGIN_URL . 'dist/admin/organizations.js',
-			is_array( $meta['dependencies'] ?? null ) ? $meta['dependencies'] : array(),
-			$version,
-			true
-		);
+		$version = Shared_Assets::enqueue_bundle( 'aggr-organizations', 'organizations' );
+
+		if ( '' === $version ) {
+			return;
+		}
 
 		wp_enqueue_style( 'wp-components' );
 

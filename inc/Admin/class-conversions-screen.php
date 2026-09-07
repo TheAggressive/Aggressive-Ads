@@ -79,26 +79,16 @@ final class Conversions_Screen implements Service {
 			return;
 		}
 
-		$asset = AGGR_PLUGIN_DIR . 'dist/admin/conversions.asset.php';
-
-		if ( ! is_file( $asset ) ) {
-			return;
-		}
-
-		$meta = require $asset;
-
 		// The bundle's .asset.php names aggr-dataviews as a dependency, because
 		// the build rewrote its @wordpress/dataviews import onto the shared
 		// copy. Registering it here is what lets WordPress resolve that.
 		Shared_Assets::register();
 
-		wp_enqueue_script(
-			'aggr-conversions',
-			AGGR_PLUGIN_URL . 'dist/admin/conversions.js',
-			is_array( $meta['dependencies'] ?? null ) ? $meta['dependencies'] : array(),
-			is_string( $meta['version'] ?? null ) ? $meta['version'] : AGGR_VERSION,
-			true
-		);
+		$version = Shared_Assets::enqueue_bundle( 'aggr-conversions', 'conversions' );
+
+		if ( '' === $version ) {
+			return;
+		}
 
 		wp_enqueue_style( 'wp-components' );
 
@@ -118,7 +108,7 @@ final class Conversions_Screen implements Service {
 			'aggr-conversions',
 			AGGR_PLUGIN_URL . 'dist/admin/conversions.css',
 			array( 'wp-components', Shared_Assets::DATAVIEWS ),
-			is_string( $meta['version'] ?? null ) ? $meta['version'] : AGGR_VERSION
+			$version
 		);
 
 		// The build emits conversions-rtl.css beside it; core swaps the file
