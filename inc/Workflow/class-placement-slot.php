@@ -271,6 +271,23 @@ final class Placement_Slot implements Service {
 			'data-aggr-fill'      => $fill,
 
 			/*
+			 * The batch route, so a page with several slots can be decided as a
+			 * page rather than as unrelated slots.
+			 *
+			 * Page rules — competitive separation, roadblocks, category
+			 * exclusivity — can only be applied by something that sees every
+			 * slot at once, and the per-slot route by construction never does.
+			 * Baked here for the same reason the fill URL is: `rest_url()` knows
+			 * whether this site serves pretty permalinks or `rest_route`, and
+			 * the browser reconstructing that from a fill URL would be guessing
+			 * at a shape the server already knows.
+			 *
+			 * Identical on every slot and cached with the page, which is what
+			 * makes it safe: it carries no per-request fact.
+			 */
+			'data-aggr-decisions' => rest_url( Api::NAMESPACE . '/decisions' ),
+
+			/*
 			 * The Interactivity API directives. `data-wp-init` rather than a
 			 * `DOMContentLoaded` listener, so a slot inside a block WordPress
 			 * hydrates late still fills — the previous DOM script queried the
@@ -450,7 +467,9 @@ final class Placement_Slot implements Service {
 				continue;
 			}
 
-			$escaped = 'data-aggr-fill' === $name ? esc_url( $value ) : esc_attr( $value );
+			$escaped = in_array( $name, array( 'data-aggr-fill', 'data-aggr-decisions' ), true )
+				? esc_url( $value )
+				: esc_attr( $value );
 
 			$html .= ' ' . esc_attr( $name ) . '="' . $escaped . '"';
 		}

@@ -36,6 +36,8 @@ const FILL_CONTROLLER = 'inc/REST/class-fill-controller.php';
 const SLOT_RENDERER = 'inc/Workflow/class-placement-slot.php';
 const DECISION_ENGINE = 'inc/Workflow/class-decision-engine.php';
 const FILL_SERVICE = 'inc/Workflow/class-fill-service.php';
+const DECISIONS_CONTROLLER = 'inc/REST/class-decisions-controller.php';
+const BATCH_CLIENT = 'src/blocks-interactivity/ad-slot/batch.js';
 
 /**
  * Fill parameters the server puts in the URL, and where it must do it.
@@ -56,6 +58,7 @@ const SERVER_SUPPLIED = {
 const CLIENT_FILES = [
 	'src/blocks-interactivity/ad-slot/view.js',
 	'src/blocks-interactivity/ad-slot/fill.js',
+	BATCH_CLIENT,
 	'src/blocks-interactivity/ad-slot/empty.js',
 	'src/blocks-interactivity/ad-slot/rotation.js',
 ];
@@ -280,6 +283,8 @@ async function main() {
 	const required = [
 		PHP_CONTEXT,
 		FILL_CONTROLLER,
+		DECISIONS_CONTROLLER,
+		SLOT_RENDERER,
 		DECISION_ENGINE,
 		FILL_SERVICE,
 		...CLIENT_FILES,
@@ -316,6 +321,9 @@ async function main() {
 	}
 
 	const client = clientParts.join( '\n' );
+	const slotRenderer = codeOnly(
+		await readFile( resolve( SLOT_RENDERER ), 'utf8' )
+	);
 	const engine = codeOnly(
 		await readFile( resolve( DECISION_ENGINE ), 'utf8' )
 	);
@@ -447,6 +455,102 @@ async function main() {
 					`renderer writes is a server reader with no writer.`
 			);
 		}
+	}
+
+	/*
+	 * The batch route, held to the same contract as the per-slot one.
+	 *
+	 * It went two years accepting a viewport and a post id that no caller ever
+	 * sent, because nothing checked this side. Worse, the route had no browser
+	 * caller at all — page coordination was implemented, tested and never once
+	 * run for a visitor. A lane that only ever read the per-slot controller
+	 * could not have noticed either.
+	 */
+	const decisions = codeOnly(
+		await readFile( resolve( DECISIONS_CONTROLLER ), 'utf8' )
+	);
+	const batch = codeOnly( await readFile( resolve( BATCH_CLIENT ), 'utf8' ) );
+
+	/*
+	 * Anchored on the argument list's own indentation. An unanchored match also
+	 * picks up `items`, the nested shape declaration inside `slots`, and then
+	 * demands a reader and a writer for a parameter that does not exist.
+	 */
+	const batchDeclared = [
+		...decisions.matchAll( /^\t{5}'([a-z_]+)'\s*=> array\(/gm ),
+	].map( ( match ) => match[ 1 ] );
+
+	if ( 0 === batchDeclared.length ) {
+		problems.push(
+			'No batch-route parameters were found to check. The decisions ' +
+				'controller shape changed and this guard is now reading nothing.'
+		);
+	}
+
+	for ( const name of batchDeclared ) {
+		if (
+			! new RegExp( `get_param\\(\\s*'${ name }'\\s*\\)` ).test(
+				decisions
+			)
+		) {
+			problems.push(
+				`Decisions_Controller declares '${ name }' and never calls ` +
+					`get_param( '${ name }' ), so the client sends it into nothing.`
+			);
+		}
+
+		if ( ! new RegExp( `\\b${ name }\\s*:` ).test( batch ) ) {
+			problems.push(
+				`batch.js does not put '${ name }' in the request body, but the ` +
+					'batch route declares it. A parameter the live client never ' +
+					'writes is a server reader with no writer.'
+			);
+		}
+	}
+
+	/*
+	 * And the route must be reachable from a rendered page at all. The slot
+	 * renderer bakes its URL; nothing else can tell the browser where it is.
+	 */
+	/*
+	 * Matched with its value, not by name alone. The attribute name also
+	 * appears in the wrapper's escaping switch, so a bare name match stayed
+	 * green when the attribute itself was removed from the array — this guard
+	 * passed over exactly the change it exists to catch.
+	 */
+	if ( ! /'data-aggr-decisions'\s*=>\s*rest_url\(/.test( slotRenderer ) ) {
+		problems.push(
+			'The slot renderer no longer emits data-aggr-decisions, so no page ' +
+				'can reach the batch route and page coordination stops running ' +
+				'for every visitor, silently.'
+		);
+	}
+
+	if ( ! /aggrDecisions/.test( batch ) ) {
+		problems.push(
+			'batch.js no longer reads dataset.aggrDecisions, so the URL the ' +
+				'server bakes onto every slot has no reader.'
+		);
+	}
+
+	/*
+	 * A caller, not the definition. `batch.js` is one of the client files, and
+	 * it exports `pageDecisions` — so searching every client file for the name
+	 * found the export and reported a caller that did not exist, which is the
+	 * production-dead route this whole lane was extended to prevent.
+	 */
+	const viewer = codeOnly(
+		await readFile(
+			resolve( 'src/blocks-interactivity/ad-slot/view.js' ),
+			'utf8'
+		)
+	);
+
+	if ( ! /pageDecisions\(/.test( viewer ) ) {
+		problems.push(
+			'view.js never calls pageDecisions(), so the batch route has no ' +
+				'browser caller and page rules run for nobody.'
+		);
 	}
 
 	if ( ! /get_param\(\s*'n'\s*\)/.test( controller ) ) {

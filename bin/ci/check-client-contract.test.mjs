@@ -29,7 +29,33 @@ const FILES = {
 	renderer: 'inc/Workflow/class-placement-slot.php',
 	engine: 'inc/Workflow/class-decision-engine.php',
 	service: 'inc/Workflow/class-fill-service.php',
+	decisions: 'inc/REST/class-decisions-controller.php',
+	batch: 'src/blocks-interactivity/ad-slot/batch.js',
 };
+
+/*
+ * A batch route and a client that satisfies it.
+ *
+ * The five tabs before each argument are load-bearing: the guard anchors on the
+ * argument list's own indentation so the nested `items` shape inside `slots`
+ * is not mistaken for a parameter of its own.
+ */
+const BASE_DECISIONS = `<?php
+					'slots' => array(
+						'type' => 'array',
+						'items'             => array(
+							'type' => 'string',
+						),
+					),
+					'w'     => array(
+						'type' => 'integer',
+					),
+	$slots = $request->get_param( 'slots' );
+	$w = (int) $request->get_param( 'w' );
+`;
+
+const BASE_BATCH =
+	'export const pageDecisions = async () => {\n\tconst endpoint = slots[ 0 ].dataset.aggrDecisions;\n\tconst body = { slots: slugs, w: viewportWidth() };\n};\n';
 
 const BASE_FILL =
 	"export const fillSlot = async ( root, sequence = 0 ) => {\n\tconst n = sequence;\n\tendpoint.searchParams.set( 'n', String( n ) );\n\tendpoint.searchParams.set( 'w', String( viewportWidth() ) );\n\timg.src = creative.image;\n\tif ( ! creative.sameTab ) { link.target = '_blank'; }\n\tlink.href = creative.click;\n\tsend( creative.token );\n\treturn creative.servable;\n};\n";
@@ -74,14 +100,16 @@ async function root( overrides = {} ) {
 		[ FILES.controller ]:
 			"<?php\n'args' => array(\n\t'slot' => array(\n\t\t'type' => 'string',\n\t),\n\t'n' => array(\n\t\t'type' => 'integer',\n\t),\n\t'w' => array(\n\t\t'type' => 'integer',\n\t),\n\t'p' => array(\n\t\t'type' => 'integer',\n\t),\n),\n$slot = (string) $request->get_param( 'slot' );\n$sequence = (int) $request->get_param( 'n' );\n$viewport = (int) $request->get_param( 'w' );\n$post_id = (int) $request->get_param( 'p' );\n",
 		[ FILES.view ]:
-			'const on = context.rotate;\nconst s = context.rotateSeconds;\nconst cap = rotationCap( context.maxRefreshes );\nawait fillSlot( root, rotations );\n',
+			'const on = context.rotate;\nconst s = context.rotateSeconds;\nconst cap = rotationCap( context.maxRefreshes );\nawait pageDecisions();\nawait fillSlot( root, rotations );\n',
 		[ FILES.fill ]: BASE_FILL,
 		[ FILES.empty ]:
 			'export const collapses = ( context ) => false !== context?.collapseWhenEmpty;\n',
 		[ FILES.rotation ]:
 			'export const rotationCap = ( requested ) => Math.min( 100, requested );\n',
 		[ FILES.renderer ]:
-			"<?php\n$fill = add_query_arg( 'p', $page_id, $fill );\n",
+			"<?php\n$fill = add_query_arg( 'p', $page_id, $fill );\n'data-aggr-decisions' => rest_url( $path ),\n",
+		[ FILES.decisions ]: BASE_DECISIONS,
+		[ FILES.batch ]: BASE_BATCH,
 		[ FILES.engine ]: `<?php
 	public function payload_from_row( array $row, int $placement_id ): ?array {
 		return array(
@@ -238,7 +266,7 @@ test( 'a payload the guard cannot parse fails rather than passing over nothing',
 test( 'a context key with no client reader is refused', async () => {
 	const dir = await root( {
 		[ FILES.view ]:
-			'const on = context.rotate;\nconst s = context.rotateSeconds;\nawait fillSlot( root, rotations );\n',
+			'const on = context.rotate;\nconst s = context.rotateSeconds;\nawait pageDecisions();\nawait fillSlot( root, rotations );\n',
 	} );
 
 	const { status, output } = run( dir );
@@ -250,7 +278,7 @@ test( 'a context key with no client reader is refused', async () => {
 test( 'a docblock quoting the key is not a reader', async () => {
 	const dir = await root( {
 		[ FILES.view ]:
-			'/** context.maxRefreshes is the publisher cap. */\nconst on = context.rotate;\nconst s = context.rotateSeconds;\nawait fillSlot( root, rotations );\n',
+			'/** context.maxRefreshes is the publisher cap. */\nconst on = context.rotate;\nconst s = context.rotateSeconds;\nawait pageDecisions();\nawait fillSlot( root, rotations );\n',
 	} );
 
 	const { status, output } = run( dir );
@@ -274,7 +302,7 @@ test( 'a client that never sends n is refused', async () => {
 test( 'a dead maxRefreshes identifier without rotationCap is refused', async () => {
 	const dir = await root( {
 		[ FILES.view ]:
-			'const on = context.rotate;\nconst s = context.rotateSeconds;\nconst unused = context.maxRefreshes;\nif ( rotations >= MAX_ROTATIONS ) {}\nawait fillSlot( root, rotations );\n',
+			'const on = context.rotate;\nconst s = context.rotateSeconds;\nconst unused = context.maxRefreshes;\nif ( rotations >= MAX_ROTATIONS ) {}\nawait pageDecisions();\nawait fillSlot( root, rotations );\n',
 	} );
 
 	const { status, output } = run( dir );
@@ -356,7 +384,8 @@ test( 'a server-supplied parameter no renderer writes is refused', async () => {
 	 * exemption: something still has to supply it.
 	 */
 	const dir = await root( {
-		[ FILES.renderer ]: '<?php\n$fill = rest_url( $path );\n',
+		[ FILES.renderer ]:
+			"<?php\n$fill = rest_url( $path );\n'data-aggr-decisions' => rest_url( $path ),\n",
 	} );
 
 	const { status, output } = run( dir );
