@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-08T04:15:10+00:00\n"
+"POT-Creation-Date: 2026-09-08T23:32:49+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -190,6 +190,7 @@ msgid "Reporting key"
 msgstr ""
 
 #: inc/Admin/class-conversions-screen.php:212
+#: inc/Admin/class-forecast-screen.php:156
 #: inc/Admin/class-placement-screen.php:170
 #: inc/Admin/class-review-screen.php:282
 #: inc/Admin/class-review-screen.php:300
@@ -540,15 +541,15 @@ msgstr ""
 msgid "Remaining"
 msgstr ""
 
-#: inc/Admin/class-forecast-screen.php:156
+#: inc/Admin/class-forecast-screen.php:157
 msgid "Confidence"
 msgstr ""
 
-#: inc/Admin/class-forecast-screen.php:157
+#: inc/Admin/class-forecast-screen.php:158
 msgid "Window"
 msgstr ""
 
-#: inc/Admin/class-forecast-screen.php:158
+#: inc/Admin/class-forecast-screen.php:159
 #: inc/Admin/class-package-screen.php:153
 #: inc/Admin/class-placement-screen.php:115
 #: inc/Admin/class-placement-screen.php:116
@@ -564,46 +565,46 @@ msgstr ""
 msgid "Placements"
 msgstr ""
 
-#: inc/Admin/class-forecast-screen.php:159
-#: inc/Admin/class-forecast-screen.php:166
+#: inc/Admin/class-forecast-screen.php:160
+#: inc/Admin/class-forecast-screen.php:167
 msgid "Oversold"
 msgstr ""
 
-#: inc/Admin/class-forecast-screen.php:160
+#: inc/Admin/class-forecast-screen.php:161
 msgid "Not yet forecast"
 msgstr ""
 
-#: inc/Admin/class-forecast-screen.php:161
+#: inc/Admin/class-forecast-screen.php:162
 msgid "No active placements to forecast."
 msgstr ""
 
 #. translators: shown instead of a number when a placement has never been forecast.
-#: inc/Admin/class-forecast-screen.php:164
+#: inc/Admin/class-forecast-screen.php:165
 msgid "Not forecast"
 msgstr ""
 
-#: inc/Admin/class-forecast-screen.php:165
+#: inc/Admin/class-forecast-screen.php:166
 msgid "Available"
 msgstr ""
 
-#: inc/Admin/class-forecast-screen.php:167
+#: inc/Admin/class-forecast-screen.php:168
 msgid "Unmeasured"
 msgstr ""
 
-#: inc/Admin/class-forecast-screen.php:168
+#: inc/Admin/class-forecast-screen.php:169
 #: templates/portal/screens/campaign.php:773
 msgid "None"
 msgstr ""
 
-#: inc/Admin/class-forecast-screen.php:169
+#: inc/Admin/class-forecast-screen.php:170
 msgid "Low"
 msgstr ""
 
-#: inc/Admin/class-forecast-screen.php:170
+#: inc/Admin/class-forecast-screen.php:171
 msgid "Medium"
 msgstr ""
 
-#: inc/Admin/class-forecast-screen.php:171
+#: inc/Admin/class-forecast-screen.php:172
 msgid "High"
 msgstr ""
 
