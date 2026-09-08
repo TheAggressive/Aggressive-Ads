@@ -14,6 +14,7 @@ use Aggressive\Ads\Admin\Menu;
 use Aggressive\Ads\Admin\Organization_Screen;
 use Aggressive\Ads\Admin\Conversions_Screen;
 use Aggressive\Ads\Admin\Package_Screen;
+use Aggressive\Ads\Admin\Forecast_Screen;
 use Aggressive\Ads\Admin\Placement_Screen;
 use Aggressive\Ads\Admin\Review_Screen;
 use Aggressive\Ads\Admin\Settings_Screen;
@@ -372,6 +373,7 @@ final class Plugin {
 			Review_Screen::class,
 			Action_Notice::class,
 			Placement_Screen::class,
+			Forecast_Screen::class,
 			Organization_Screen::class,
 			Conversions_Screen::class,
 			Package_Screen::class,

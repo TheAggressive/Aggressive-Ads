@@ -1,0 +1,57 @@
+.aggr-forecast__cards {
+	display: grid;
+	gap: 12px;
+	grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+	margin: 16px 0 24px;
+}
+
+.aggr-forecast__card {
+	background: #fff;
+	border: 1px solid var(--aggr-border-color);
+	border-radius: 2px;
+	padding: 14px 16px;
+}
+
+.aggr-forecast__label {
+	color: var(--aggr-color-text-muted);
+	font-size: 11px;
+	letter-spacing: 0.04em;
+	margin: 0 0 6px;
+	text-transform: uppercase;
+}
+
+.aggr-forecast__figure {
+	font-size: 28px;
+	font-weight: 600;
+	line-height: 1.1;
+	margin: 0;
+}
+
+/*
+ * A figure that is a count of problems reads differently from one that is a
+ * volume, so the only colour on this screen marks the number somebody has to
+ * act on. Nought oversold stays neutral — colouring it green would make an
+ * ordinary state look like an achievement.
+ */
+.aggr-forecast__figure--alarm {
+	color: #b32d2e;
+}
+
+.aggr-forecast__window {
+	color: var(--aggr-color-text-muted);
+	margin: 0 0 4px;
+}
+
+/*
+ * Wide tables scroll inside their own region rather than the page, and the
+ * region is focusable so a keyboard can reach the overflow. WCAG 1.4.10 at
+ * 320 CSS pixels; `scrollable-region-focusable` is the rule that makes the
+ * tabindex mandatory rather than optional.
+ */
+.aggr-forecast__table {
+	overflow-x: auto;
+}
+
+.aggr-forecast__none {
+	color: var(--aggr-color-text-muted);
+}

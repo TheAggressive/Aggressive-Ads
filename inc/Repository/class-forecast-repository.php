@@ -199,6 +199,51 @@ final class Forecast_Repository {
 	}
 
 	/**
+	 * The newest forecast of one window for many placements, in one query.
+	 *
+	 * A screen listing the catalogue needs this figure per placement, and
+	 * calling {@see self::latest()} in a loop would issue one query each — two
+	 * hundred at the catalogue ceiling, for a page meant to be a glance. The
+	 * same reason `Decision_Rollup_Repository::totals_by_placement()` exists.
+	 *
+	 * @param array<int, int> $placements  Placement post ids.
+	 * @param string          $opportunity `Domain\Opportunity` kind.
+	 * @param string          $from_utc    First day of the window, `Y-m-d`.
+	 * @param string          $to_utc      Last day of the window, `Y-m-d`.
+	 * @return array<int, array<string, mixed>> Placement id to its newest snapshot.
+	 */
+	public function latest_by_placement( array $placements, string $opportunity, string $from_utc, string $to_utc ): array {
+		global $wpdb;
+
+		$ids = array_values( array_unique( array_filter( array_map( 'intval', $placements ), static fn ( int $id ): bool => $id > 0 ) ) );
+
+		if ( array() === $ids || ! Opportunity::is_valid( $opportunity ) || ! Utc_Day::is_window( $from_utc, $to_utc ) ) {
+			return array();
+		}
+
+		$table  = $this->table_name();
+		$slots  = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+		$values = array_merge( $ids, array( $opportunity, $from_utc, $to_utc ), $ids, array( $opportunity, $from_utc, $to_utc ) );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Prefix-derived table. The id placeholders are generated from a bounded, integer-cast list and every value is bound; the sniff cannot count a generated set.
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT f.* FROM {$table} f JOIN (SELECT placement_id, MAX(version) AS version FROM {$table} WHERE placement_id IN ({$slots}) AND opportunity = %s AND window_start = %s AND window_end = %s GROUP BY placement_id) newest ON newest.placement_id = f.placement_id AND newest.version = f.version WHERE f.placement_id IN ({$slots}) AND f.opportunity = %s AND f.window_start = %s AND f.window_end = %s", $values ), ARRAY_A );
+
+		$out = array();
+
+		foreach ( is_array( $rows ) ? $rows : array() as $row ) {
+			if ( ! is_array( $row ) ) {
+				continue;
+			}
+
+			$shaped = self::shape( $row );
+
+			$out[ $shaped['placement_id'] ] = $shaped;
+		}
+
+		return $out;
+	}
+
+	/**
 	 * Every version of one window, oldest first.
 	 *
 	 * @param int    $placement   Placement post id.
