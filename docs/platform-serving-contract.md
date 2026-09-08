@@ -109,9 +109,39 @@ concurrency.
 
 ### P7 — Page-level batch decisions
 
-Owns one authenticated page request for several slots, deterministic response
-mapping, roadblocks, competitive separation and page-scoped coordination.
-Single-slot fill remains a documented compatibility surface.
+Owns one page request for several slots, deterministic response mapping,
+roadblocks, competitive separation and page-scoped coordination.
+
+**How a page reaches it.** `Placement_Slot` bakes the batch URL onto every slot
+as `data-aggr-decisions`, alongside the per-slot `data-aggr-fill` it already
+emitted. On first paint `batch.js` collects the slots present, posts their slugs
+once with the viewport and the page context, and hands each slot its own payload
+by slug. The viewport is the browser's to report and the page context is lifted
+back off the fill URL the server baked, so nothing new is asserted by the client
+and nothing per-request enters the cached markup.
+
+**Single-slot fill is not a compatibility surface; it is the other half.** It
+serves rotations — a rotation refreshes one slot thirty seconds later, and every
+page rule is about which ads appear *together on a page view* — and it serves
+single-slot pages, a slug appearing twice on one page, and any page the batch
+could not answer. Both routes end in the same PHP pipeline and both payloads are
+painted by the same `renderPayload`, so there is one decision implementation and
+one rendering implementation, not two of either.
+
+A repeated slug is deliberately left to the per-slot route. The batch answers
+one payload per slug and a payload carries the measurement token minted for it;
+handing one token to two slots would make the second impression a replay the
+server's uniqueness guard correctly refuses to count — two boxes, one recorded
+view.
+
+**This was production-dead until 2026-09-08.** The coordinator, the engine
+method, the service and the route all existed and were tested, and no browser
+ever called any of them: `fill.js` fetched one slot at a time, so competitive
+separation, roadblocks and category exclusivity ran only in the suite. The tests
+passed because they called `for_slots()` in PHP — the one caller production did
+not have. `check-client-contract.mjs` now fails if the slot renderer stops
+emitting the batch URL, if `view.js` stops calling `pageDecisions()`, or if the
+route declares a parameter `batch.js` does not send.
 
 ### P8 — Targeting rule engine
 

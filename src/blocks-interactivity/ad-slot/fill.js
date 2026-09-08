@@ -214,71 +214,85 @@ export const fillSlot = async ( root, sequence = 0 ) => {
 			return NOTHING;
 		}
 
-		const payload = await response.json();
-		const creative = payload.creative ?? payload.house;
-
-		if ( ! creative?.image || ! creative.click ) {
-			return NOTHING;
-		}
-
-		const canvas =
-			root.querySelector( ':scope > .aggr-slot__canvas' ) ?? root;
-
-		/*
-		 * The previous ad's observer is dropped with the element it watched.
-		 * `observeViewability` disconnects on its own once it has reported, and
-		 * an observer whose target has left the document reports nothing — so a
-		 * rotation cannot let one creative's dwell time count toward the next.
-		 */
-		const ad = buildAd( creative );
-		const image = ad.querySelector( 'img' );
-
-		/*
-		 * **Nothing is removed until the replacement can be painted.**
-		 *
-		 * A rotation that swaps first shows an empty box for as long as the new
-		 * creative takes to arrive — the gap this fixes. Waiting here means the
-		 * old ad stays up for those same milliseconds instead, which is the
-		 * behaviour the rotation timer already chose for a failed request:
-		 * blanking a slot is worse than showing the previous creative a moment
-		 * longer.
-		 *
-		 * A creative that cannot be painted is not rendered and not counted.
-		 * Before this, the beacon fired the instant the element was inserted —
-		 * so an impression was recorded for bytes that had not arrived and, on
-		 * a broken image, never would.
-		 */
-		if ( image && ! ( await readyToPaint( image, PRELOAD_TIMEOUT_MS ) ) ) {
-			return NOTHING;
-		}
-
-		canvas.replaceChildren( ad );
-
-		if ( payload.beacon && creative.token ) {
-			window.navigator.sendBeacon?.(
-				payload.beacon,
-				new URLSearchParams( { token: creative.token } )
-			);
-
-			// Observation starts after the ad is in the document, so the first
-			// measurement describes something a person could actually see.
-			if ( payload.viewability ) {
-				observeViewability( canvas, {
-					ratio: payload.viewability.ratio,
-					dwellMs: payload.viewability.dwell_ms,
-					beacon: payload.beacon,
-					token: creative.token,
-				} );
-			}
-		}
-
-		return {
-			rendered: true,
-			servable: Number.isInteger( creative.servable )
-				? creative.servable
-				: 0,
-		};
+		return await renderPayload( root, await response.json() );
 	} catch {
 		return NOTHING;
 	}
+};
+
+/**
+ * Paints one decided payload into one slot, and measures it.
+ *
+ * Shared by both request shapes on purpose. The per-slot route and the page
+ * batch differ only in *how many slots the server was asked about*; what comes
+ * back is the same payload and must be rendered, beaconed and observed the same
+ * way. A second copy of this would be where the two paths silently diverged —
+ * an impression counted differently, or viewability observed on one path and
+ * not the other.
+ *
+ * @param {HTMLElement} root    Slot wrapper.
+ * @param {object}      payload One slot's decision from either route.
+ * @return {Promise<{rendered: boolean, servable: number}>} What was rendered.
+ */
+export const renderPayload = async ( root, payload ) => {
+	const creative = payload?.creative ?? payload?.house;
+
+	if ( ! creative?.image || ! creative.click ) {
+		return NOTHING;
+	}
+
+	const canvas = root.querySelector( ':scope > .aggr-slot__canvas' ) ?? root;
+
+	/*
+	 * The previous ad's observer is dropped with the element it watched.
+	 * `observeViewability` disconnects on its own once it has reported, and
+	 * an observer whose target has left the document reports nothing — so a
+	 * rotation cannot let one creative's dwell time count toward the next.
+	 */
+	const ad = buildAd( creative );
+	const image = ad.querySelector( 'img' );
+
+	/*
+	 * **Nothing is removed until the replacement can be painted.**
+	 *
+	 * A rotation that swaps first shows an empty box for as long as the new
+	 * creative takes to arrive — the gap this fixes. Waiting here means the
+	 * old ad stays up for those same milliseconds instead, which is the
+	 * behaviour the rotation timer already chose for a failed request:
+	 * blanking a slot is worse than showing the previous creative a moment
+	 * longer.
+	 *
+	 * A creative that cannot be painted is not rendered and not counted.
+	 * Before this, the beacon fired the instant the element was inserted —
+	 * so an impression was recorded for bytes that had not arrived and, on
+	 * a broken image, never would.
+	 */
+	if ( image && ! ( await readyToPaint( image, PRELOAD_TIMEOUT_MS ) ) ) {
+		return NOTHING;
+	}
+
+	canvas.replaceChildren( ad );
+
+	if ( payload.beacon && creative.token ) {
+		window.navigator.sendBeacon?.(
+			payload.beacon,
+			new URLSearchParams( { token: creative.token } )
+		);
+
+		// Observation starts after the ad is in the document, so the first
+		// measurement describes something a person could actually see.
+		if ( payload.viewability ) {
+			observeViewability( canvas, {
+				ratio: payload.viewability.ratio,
+				dwellMs: payload.viewability.dwell_ms,
+				beacon: payload.beacon,
+				token: creative.token,
+			} );
+		}
+	}
+
+	return {
+		rendered: true,
+		servable: Number.isInteger( creative.servable ) ? creative.servable : 0,
+	};
 };

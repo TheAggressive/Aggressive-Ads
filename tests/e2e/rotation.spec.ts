@@ -149,11 +149,23 @@ test( 'a slot with one creative stops instead of redrawing it', async ( {
 	await expect( slot.locator( 'img' ) ).toBeVisible();
 
 	/*
-	 * One fill, and it has to be asserted before the wait or the wait proves
-	 * nothing: a page that had already fetched twice would satisfy the
-	 * assertion after it without the timer having been stopped.
+	 * **Zero per-slot fills, and the advertisement is on the page anyway.**
+	 *
+	 * The first fill for this slot now comes from the page decision, which asks
+	 * about every slot at once, so it is not one of these requests. A rotation
+	 * still goes down the per-slot route — page rules are about which ads share
+	 * a page view, not about a refresh thirty seconds later — so this counter
+	 * has become a pure count of rotations, which is what the test was always
+	 * really asking about.
+	 *
+	 * The visible image above is what stops this being weaker than the `1` it
+	 * replaced: without it, zero would also be the answer for a slot that never
+	 * filled at all.
+	 *
+	 * Asserted before the wait or the wait proves nothing: a page that had
+	 * already rotated would satisfy an assertion made after it.
 	 */
-	await expect.poll( () => fills.length ).toBe( 1 );
+	await expect.poll( () => fills.length ).toBe( 0 );
 
 	/*
 	 * This placement asks to rotate at two seconds and is permitted to, so a
@@ -166,8 +178,8 @@ test( 'a slot with one creative stops instead of redrawing it', async ( {
 
 	expect(
 		fills.length,
-		`The slot fetched ${ fills.length } times with one creative to show. Every one of those redraws the same image and fires another impression beacon for it, which at the one-second floor is the volume an exchange calls invalid traffic.`
-	).toBe( 1 );
+		`The slot rotated ${ fills.length } times with one creative to show. Every one of those redraws the same image and fires another impression beacon for it, which at the one-second floor is the volume an exchange calls invalid traffic.`
+	).toBe( 0 );
 
 	// Still showing the advertisement it was given. Stopping the timer must not
 	// be confused with taking the ad down.

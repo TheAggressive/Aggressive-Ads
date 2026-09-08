@@ -12,7 +12,8 @@
  */
 
 import { store, getContext, getElement } from '@wordpress/interactivity';
-import { fillSlot } from './fill.js';
+import { fillSlot, renderPayload } from './fill.js';
+import { pageDecisions } from './batch.js';
 import { settleEmptySlot } from './empty.js';
 import { rotationCap, rotationInterval } from './rotation.js';
 
@@ -35,13 +36,42 @@ export {
 const started = new WeakSet();
 
 /**
+ * The first fill, taken from the page's decision when there is one.
+ *
+ * **The page is asked once, and only about the first fill.** Page rules —
+ * competitive separation, roadblocks, category exclusivity — are about which
+ * ads appear together on a page view, which is a question that exists at page
+ * load and not on a rotation thirty seconds later. A rotation refreshes one
+ * slot and goes back down the per-slot route.
+ *
+ * The per-slot route is therefore kept deliberately rather than left behind:
+ * it serves rotations, single-slot pages, a slug that appears twice, and any
+ * page where the batch could not answer. There is no second decision
+ * implementation in either case — both routes end in the same PHP pipeline, and
+ * the payload they return is painted by the same `renderPayload`.
+ *
+ * @param {HTMLElement} root Slot wrapper.
+ * @return {Promise<{rendered: boolean, servable: number}>} What was rendered.
+ */
+const firstFill = async ( root ) => {
+	const slug = root.dataset.aggrSlot;
+	const decided = slug ? ( await pageDecisions() ).get( slug ) : undefined;
+
+	if ( decided ) {
+		return renderPayload( root, decided );
+	}
+
+	return fillSlot( root, 0 );
+};
+
+/**
  * Fills a slot and, if the block asked for it, keeps filling it.
  *
  * @param {HTMLElement} root    Slot wrapper.
  * @param {Object}      context Block context.
  */
 const run = async ( root, context ) => {
-	const { rendered, servable } = await fillSlot( root, 0 );
+	const { rendered, servable } = await firstFill( root );
 
 	/*
 	 * Nothing to show, so show nothing — unless the block asked otherwise.

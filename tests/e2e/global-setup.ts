@@ -16,6 +16,8 @@ export default function globalSetup(): void {
 	wpPluginFile( 'tests/e2e/seed-organizations.php' );
 	// After the organizations, which the live advertisement is owned by.
 	wpPluginFile( 'tests/e2e/seed-live-ad.php' );
+	// After seed-live-ad, whose approved attachment the coordination fixture reuses.
+	wpPluginFile( 'tests/e2e/seed-page-coordination.php' );
 	// After seed-mappings, whose placement the counters are keyed to. Reporting
 	// ships off, so without this every reporting surface renders its absent
 	// state and a spec would pass over a screen it never saw.
