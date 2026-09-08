@@ -34,6 +34,15 @@ services:
         define( 'WP_DEBUG_DISPLAY', false );
         define( 'SCRIPT_DEBUG', true );
         define( 'WP_AUTO_UPDATE_CORE', false );
+        # This stack is torn down with its volumes on every stop, so invented
+        # data is acceptable here and nowhere else. `wp_get_environment_type()`
+        # answers `production` whenever nothing says otherwise, which is the
+        # right default and the reason a disposable site has to say so out loud:
+        # the dev seeder writes delivery counters that cannot afterwards be told
+        # apart from real traffic, and refuses to run against a site that has
+        # not declared itself. A constant beats the environment variable, so it
+        # is defined rather than exported.
+        define( 'WP_ENVIRONMENT_TYPE', 'local' );
       WORDPRESS_DB_HOST: database
       WORDPRESS_DB_NAME: wordpress
       WORDPRESS_DB_PASSWORD: wordpress

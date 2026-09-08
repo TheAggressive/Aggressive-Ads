@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-07T23:57:23+00:00\n"
+"POT-Creation-Date: 2026-09-08T00:37:15+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -1274,7 +1274,7 @@ msgid "Every placement"
 msgstr ""
 
 #: inc/Admin/class-reports-screen.php:304
-#: templates/portal/screens/dashboard.php:96
+#: templates/portal/screens/dashboard.php:122
 msgid "Show"
 msgstr ""
 
@@ -5774,43 +5774,39 @@ msgstr ""
 msgid "Your campaigns, and how they are delivering."
 msgstr ""
 
-#: templates/portal/screens/dashboard.php:84
+#: templates/portal/screens/dashboard.php:104
+msgid "Native delivery"
+msgstr ""
+
+#: templates/portal/screens/dashboard.php:110
 msgid "Choose a reporting window"
 msgstr ""
 
-#: templates/portal/screens/dashboard.php:87
+#: templates/portal/screens/dashboard.php:113
 msgid "From (UTC)"
 msgstr ""
 
-#: templates/portal/screens/dashboard.php:92
+#: templates/portal/screens/dashboard.php:118
 msgid "To (UTC)"
 msgstr ""
 
 #. translators: %d: number of days.
-#: templates/portal/screens/dashboard.php:112
+#: templates/portal/screens/dashboard.php:138
 #, php-format
 msgid "Last %d day"
 msgid_plural "Last %d days"
 msgstr[0] ""
 msgstr[1] ""
 
-#: templates/portal/screens/dashboard.php:131
+#: templates/portal/screens/dashboard.php:158
 msgid "That date range could not be used, so the default window is shown. A range must be two valid dates, in order, and no longer than 92 days."
 msgstr ""
 
-#. translators: %s: the window the figures cover, e.g. Last 30 days (UTC).
-#: templates/portal/screens/dashboard.php:140
-#, php-format
-msgid "Native delivery, %s"
-msgstr ""
-
-#. translators: %s: the window the figures cover, e.g. 1 August to 30 August 2026 (UTC).
-#: templates/portal/screens/dashboard.php:170
-#, php-format
-msgid "Impressions and clicks from native delivery. %s."
-msgstr ""
-
 #: templates/portal/screens/dashboard.php:185
+msgid "Impressions and clicks from native delivery."
+msgstr ""
+
+#: templates/portal/screens/dashboard.php:198
 msgid "Your campaigns"
 msgstr ""
 

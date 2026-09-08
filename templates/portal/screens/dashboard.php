@@ -68,18 +68,44 @@ $aggr_user        = wp_get_current_user();
 	</form>
 </div>
 
-<div class="aggr-stats">
+<?php
+/*
+ * Where each campaign has got to — deliberately not `aggr-stat`.
+ *
+ * These are all-time pipeline counts and the tiles below them are delivery for
+ * a chosen window. Rendering both as the same card put the window picker
+ * between two rows that looked identical, so narrowing to seven days read as
+ * "3 campaigns ran this week": a correct number answering a question nobody
+ * asked, which is the same failure as a wrong one.
+ */
+?>
+<ul class="aggr-pipeline">
 	<?php foreach ( $aggr_view->counts() as $aggr_stat ) : ?>
-		<div class="aggr-stat">
-			<div class="aggr-stat__label"><?php echo esc_html( (string) $aggr_stat['label'] ); ?></div>
-			<div class="aggr-stat__value"><?php echo esc_html( number_format_i18n( (int) $aggr_stat['value'] ) ); ?></div>
-		</div>
+		<li class="aggr-pipeline__item">
+			<span class="aggr-pipeline__value"><?php echo esc_html( number_format_i18n( (int) $aggr_stat['value'] ) ); ?></span>
+			<span class="aggr-pipeline__label"><?php echo esc_html( (string) $aggr_stat['label'] ); ?></span>
+		</li>
 	<?php endforeach; ?>
-</div>
+</ul>
 
 <?php
+/*
+ * The window picker sits in this section's header, not above it.
+ *
+ * Its scope is whatever it is next to. Floating between the pipeline counts
+ * and these tiles, it claimed both, and the pipeline counts have no window.
+ */
 if ( array() !== $aggr_delivery ) :
 	?>
+<section class="aggr-delivery" aria-labelledby="aggr-delivery-heading aggr-delivery-window">
+<div class="aggr-delivery__head">
+	<div>
+		<h2 id="aggr-delivery-heading" class="aggr-delivery__title">
+			<?php esc_html_e( 'Native delivery', 'aggressive-ads' ); ?>
+		</h2>
+		<p id="aggr-delivery-window" class="aggr-delivery__window"><?php echo esc_html( $aggr_range ); ?></p>
+	</div>
+
 <form class="aggr-range" method="get" action="<?php echo esc_url( \Aggressive\Ads\Portal\Routes::url() ); ?>">
 	<h2 class="aggr-sr"><?php esc_html_e( 'Choose a reporting window', 'aggressive-ads' ); ?></h2>
 
@@ -118,6 +144,7 @@ if ( array() !== $aggr_delivery ) :
 		<?php endforeach; ?>
 	</ul>
 </form>
+</div>
 
 	<?php if ( true === $aggr_window['rejected'] ) : ?>
 		<?php
@@ -132,16 +159,7 @@ if ( array() !== $aggr_delivery ) :
 	</p>
 	<?php endif; ?>
 
-<div class="aggr-stats" aria-labelledby="aggr-delivery-heading">
-	<h2 id="aggr-delivery-heading" class="aggr-sr">
-		<?php
-		printf(
-			/* translators: %s: the window the figures cover, e.g. Last 30 days (UTC). */
-			esc_html__( 'Native delivery, %s', 'aggressive-ads' ),
-			esc_html( $aggr_range )
-		);
-		?>
-	</h2>
+<div class="aggr-stats">
 	<?php foreach ( $aggr_delivery as $aggr_stat ) : ?>
 		<div class="aggr-stat">
 			<div class="aggr-stat__label"><?php echo esc_html( (string) $aggr_stat['label'] ); ?></div>
@@ -164,17 +182,12 @@ if ( array() !== $aggr_delivery ) :
 	<?php endforeach; ?>
 </div>
 <p class="aggr-hint">
-	<?php
-	printf(
-		/* translators: %s: the window the figures cover, e.g. 1 August to 30 August 2026 (UTC). */
-		esc_html__( 'Impressions and clicks from native delivery. %s.', 'aggressive-ads' ),
-		esc_html( $aggr_range )
-	);
-	?>
+	<?php esc_html_e( 'Impressions and clicks from native delivery.', 'aggressive-ads' ); ?>
 	<?php if ( '' !== $aggr_freshness ) : ?>
 		<span class="aggr-hint__freshness"><?php echo esc_html( $aggr_freshness ); ?></span>
 	<?php endif; ?>
 </p>
+</section>
 	<?php
 endif;
 ?>

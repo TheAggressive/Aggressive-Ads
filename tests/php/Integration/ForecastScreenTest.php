@@ -78,12 +78,22 @@ final class ForecastScreenTest extends WP_UnitTestCase {
 	 * @return int
 	 */
 	private function placement( string $name = 'Leaderboard' ): int {
+		/*
+		 * Backdated, because `Supply_History` will not forecast a placement
+		 * from days before it existed — a placement created today has no
+		 * history and no forecast, which is correct and makes it useless as a
+		 * fixture for a job that produces one.
+		 */
+		$created = gmdate( 'Y-m-d H:i:s', time() - 400 * DAY_IN_SECONDS );
+
 		$id = (int) self::factory()->post->create(
 			array(
-				'post_type'   => Post_Types::PLACEMENT,
-				'post_status' => 'publish',
-				'post_title'  => $name,
-				'post_name'   => 'slot-' . wp_generate_password( 8, false ),
+				'post_type'     => Post_Types::PLACEMENT,
+				'post_status'   => 'publish',
+				'post_title'    => $name,
+				'post_name'     => 'slot-' . wp_generate_password( 8, false ),
+				'post_date_gmt' => $created,
+				'post_date'     => $created,
 			)
 		);
 
@@ -304,6 +314,132 @@ final class ForecastScreenTest extends WP_UnitTestCase {
 			html_entity_decode( $html ),
 			'The payload reached the page, which is the half a screen test exists to prove.'
 		);
+	}
+
+	/**
+	 * **The screen reads a table, and something has to write it.**
+	 *
+	 * Shipped without this, the outlook reported every placement as never
+	 * forecast — `aggr_forecasts` was read by a screen and written by nothing.
+	 * That is the failure this project keeps re-shipping, so the job that fills
+	 * it is asserted through the same path cron takes.
+	 *
+	 * @return void
+	 */
+	public function test_the_scheduled_job_gives_the_screen_something_to_read(): void {
+		$placement = $this->placement();
+		$rollups   = Plugin::instance()->container()->get( \Aggressive\Ads\Repository\Decision_Rollup_Repository::class );
+
+		$rollups->install_table();
+
+		// Ninety days of history, so a forecast has something to draw from.
+		for ( $ago = 90; $ago >= 1; $ago-- ) {
+			$rollups->add(
+				gmdate( 'Y-m-d', time() - $ago * DAY_IN_SECONDS ),
+				$placement,
+				array( \Aggressive\Ads\Domain\Decision_Outcome::REQUEST => 500 ),
+				Opportunity::PAGE
+			);
+		}
+
+		$this->assertNull(
+			$this->view()['rows'][0]['forecast'],
+			'Nothing has forecast it yet, which is the state the screen shipped in.'
+		);
+
+		$written = Plugin::instance()->container()
+			->get( \Aggressive\Ads\Workflow\Forecast_Scheduler::class )
+			->run();
+
+		$this->assertGreaterThan( 0, $written );
+		$this->assertNotNull(
+			$this->view()['rows'][0]['forecast'],
+			'The job ran and the screen still has nothing to show, so the two halves do not meet.'
+		);
+	}
+
+	/**
+	 * The job also closes windows that have finished.
+	 *
+	 * Maturing is what makes forecast error measurable, and it runs on every
+	 * pass rather than only when a snapshot was written — a window that closed
+	 * yesterday is waiting whether or not today produced anything.
+	 *
+	 * @return void
+	 */
+	public function test_the_job_records_what_a_finished_window_supplied(): void {
+		$placement = $this->placement();
+		$rollups   = Plugin::instance()->container()->get( \Aggressive\Ads\Repository\Decision_Rollup_Repository::class );
+
+		$rollups->install_table();
+
+		// A week that has already ended, with real supply recorded against it.
+		for ( $ago = 14; $ago >= 8; $ago-- ) {
+			$rollups->add(
+				gmdate( 'Y-m-d', time() - $ago * DAY_IN_SECONDS ),
+				$placement,
+				array( \Aggressive\Ads\Domain\Decision_Outcome::REQUEST => 200 ),
+				Opportunity::PAGE
+			);
+		}
+
+		$from = gmdate( 'Y-m-d', time() - 14 * DAY_IN_SECONDS );
+		$to   = gmdate( 'Y-m-d', time() - 8 * DAY_IN_SECONDS );
+
+		$this->forecasts->record(
+			$placement,
+			Opportunity::PAGE,
+			$from,
+			$to,
+			array(
+				'estimate'      => 1000,
+				'optimistic'    => 2000,
+				'confidence'    => Supply_Forecast::CONFIDENCE_HIGH,
+				'days_observed' => 30,
+				'days_forecast' => 7,
+			)
+		);
+
+		$this->assertNull( $this->forecasts->latest( $placement, Opportunity::PAGE, $from, $to )['actual'] );
+
+		Plugin::instance()->container()->get( \Aggressive\Ads\Workflow\Forecast_Scheduler::class )->run();
+
+		$this->assertSame(
+			1400,
+			$this->forecasts->latest( $placement, Opportunity::PAGE, $from, $to )['actual'],
+			'Seven days at two hundred. Without maturing the snapshot never gains an outcome and its error can never be computed.'
+		);
+	}
+
+	public function test_both_kinds_of_inventory_are_forecast(): void {
+		$placement = $this->placement();
+		$rollups   = Plugin::instance()->container()->get( \Aggressive\Ads\Repository\Decision_Rollup_Repository::class );
+
+		$rollups->install_table();
+
+		foreach ( Opportunity::all() as $kind ) {
+			for ( $ago = 90; $ago >= 1; $ago-- ) {
+				$rollups->add(
+					gmdate( 'Y-m-d', time() - $ago * DAY_IN_SECONDS ),
+					$placement,
+					array( \Aggressive\Ads\Domain\Decision_Outcome::REQUEST => 300 ),
+					$kind
+				);
+			}
+		}
+
+		Plugin::instance()->container()->get( \Aggressive\Ads\Workflow\Forecast_Scheduler::class )->run();
+
+		$window = $this->data->default_window();
+
+		foreach ( Opportunity::all() as $kind ) {
+			$view = $this->data->view( $kind, $window['from'], $window['to'] );
+
+			$this->assertNotNull(
+				$view['rows'][0]['forecast'],
+				"The {$kind} view reads as never forecast, so switching to it shows an empty screen."
+			);
+		}
 	}
 
 	public function test_the_container_supplies_the_screen(): void {

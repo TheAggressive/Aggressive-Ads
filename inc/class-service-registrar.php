@@ -107,6 +107,7 @@ use Aggressive\Ads\Workflow\Email_Change;
 use Aggressive\Ads\Workflow\Ending_Soon_Notifier;
 use Aggressive\Ads\Workflow\Fill_Cache;
 use Aggressive\Ads\Workflow\Forecast_Recorder;
+use Aggressive\Ads\Workflow\Forecast_Scheduler;
 use Aggressive\Ads\Workflow\Line_Item_Editor;
 use Aggressive\Ads\Workflow\Line_Item_Lifecycle;
 use Aggressive\Ads\Workflow\Line_Item_Validator;
@@ -324,6 +325,15 @@ final class Service_Registrar {
 				$c->get( Placement_Repository::class ),
 				$c->get( Forecast_Repository::class ),
 				$c->get( Reservation_Repository::class )
+			)
+		);
+
+		$container->register(
+			Forecast_Scheduler::class,
+			static fn ( Service_Container $c ): Forecast_Scheduler => new Forecast_Scheduler(
+				$c->get( Placement_Repository::class ),
+				$c->get( Forecast_Recorder::class ),
+				$c->get( Forecast_Data::class )
 			)
 		);
 

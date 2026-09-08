@@ -16,7 +16,12 @@ declare(strict_types=1);
 
 use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Domain\Decision_Outcome;
+use Aggressive\Ads\Domain\No_Fill_Reason;
+use Aggressive\Ads\Domain\Opportunity;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Decision_Rollup_Repository;
+use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Package_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
@@ -24,6 +29,33 @@ use Aggressive\Ads\Security\Roles;
 
 if ( ! defined( 'WP_CLI' ) || ! WP_CLI ) {
 	exit( 1 );
+}
+
+/*
+ * **Refused outside a development site, because this writes reporting data.**
+ *
+ * `bin/` never enters a release archive, so the shipped plugin cannot run
+ * this. That was enough while the seed only made campaigns and organisations:
+ * obviously fake rows a person would notice. It stopped being enough when the
+ * seed began writing `aggr_decision_rollups` and `aggr_rollups`, because
+ * fabricated counters are indistinguishable from real delivery once they are
+ * in the table — there is no flag on a row saying it was invented, and a
+ * publisher reading a fill rate has no way to tell.
+ *
+ * The risk is a checkout pointed at a production database: a staging box
+ * sharing credentials, or a developer restoring a dump. Wrong numbers are
+ * worse than no numbers, so this refuses rather than warns, and there is no
+ * override flag — changing the environment type is the deliberate act.
+ */
+$aggr_seed_environment = function_exists( 'wp_get_environment_type' ) ? wp_get_environment_type() : 'production';
+
+if ( ! in_array( $aggr_seed_environment, array( 'local', 'development' ), true ) ) {
+	WP_CLI::error(
+		sprintf(
+			'Refusing to seed: this writes delivery counters that cannot be told from real traffic, and WP_ENVIRONMENT_TYPE is "%s". Set it to "local" or "development" on a site where invented numbers are acceptable.',
+			$aggr_seed_environment
+		)
+	);
 }
 
 // The development site should expose the signup surface this repository ships.
@@ -212,6 +244,113 @@ foreach ( $campaigns as $campaign ) {
 		);
 	}
 }
+
+/*
+ * Ninety days of delivery, so the reporting and outlook screens have something
+ * to show.
+ *
+ * Without this every figure on those screens is nought on a fresh site, which
+ * reads as a broken report rather than an empty one — and the forecast screen
+ * has no history to draw from at all, because a forecast is a quantile over
+ * observed days.
+ *
+ * Written through `Decision_Rollup_Repository::add()` and
+ * `Rollup_Repository::increment()`, the same calls delivery makes. A seed that
+ * inserted rows directly would be a second way to write these tables, and the
+ * one that is never exercised is the one that drifts.
+ */
+$aggr_seed_rollups  = new Decision_Rollup_Repository();
+$aggr_seed_delivery = new Rollup_Repository();
+
+$aggr_seed_rollups->install_table();
+$aggr_seed_delivery->install_table();
+
+/*
+ * Cleared first, because the counters increment.
+ *
+ * `add()` and `increment()` are the production write paths and they add to
+ * what is there — which is right for delivery and wrong for a seed. Running
+ * `dev:seed` twice would otherwise double every figure on the reporting
+ * screens, and a number that changes because somebody re-ran a script is a
+ * number nobody can trust. The rest of the seeder is find-or-make for the same
+ * reason.
+ */
+global $wpdb;
+
+foreach ( $placement_ids as $aggr_seed_clear ) {
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Dev seeder resetting its own rows.
+	$wpdb->delete( $wpdb->prefix . 'aggr_decision_rollups', array( 'placement_id' => $aggr_seed_clear ), array( '%d' ) );
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Dev seeder resetting its own rows.
+	$wpdb->delete( $wpdb->prefix . 'aggr_rollups', array( 'placement_id' => $aggr_seed_clear ), array( '%d' ) );
+}
+
+$aggr_seed_days = 90;
+$aggr_seed_end  = strtotime( gmdate( 'Y-m-d' ) . ' 00:00:00 UTC' ) - DAY_IN_SECONDS;
+
+/*
+ * A weekday rhythm rather than a flat line, because a forecast that models
+ * seasonality is only demonstrable against data that has some. Weekends run at
+ * about a third, which is roughly what a publisher's own traffic does.
+ */
+$aggr_seed_shape = array( 1.0, 1.05, 1.1, 1.05, 0.95, 0.35, 0.3 );
+
+foreach ( $placement_ids as $aggr_seed_slug => $aggr_seed_placement ) {
+	// A stable per-placement scale, so the catalogue is not uniform.
+	$aggr_seed_scale = 40 + ( crc32( (string) $aggr_seed_slug ) % 60 );
+
+	for ( $aggr_seed_ago = $aggr_seed_days; $aggr_seed_ago >= 1; $aggr_seed_ago-- ) {
+		$aggr_seed_ts  = $aggr_seed_end - ( $aggr_seed_ago - 1 ) * DAY_IN_SECONDS;
+		$aggr_seed_day = gmdate( 'Y-m-d', $aggr_seed_ts );
+		$aggr_seed_dow = (int) gmdate( 'N', $aggr_seed_ts ) - 1;
+
+		$aggr_seed_requests = (int) round( $aggr_seed_scale * $aggr_seed_shape[ $aggr_seed_dow ] * ( 0.85 + ( ( $aggr_seed_ago % 7 ) / 20 ) ) );
+
+		if ( $aggr_seed_requests < 1 ) {
+			continue;
+		}
+
+		$aggr_seed_targeting = (int) floor( $aggr_seed_requests * 0.12 );
+		$aggr_seed_capped    = (int) floor( $aggr_seed_requests * 0.05 );
+		$aggr_seed_fills     = $aggr_seed_requests - $aggr_seed_targeting - $aggr_seed_capped;
+
+		$aggr_seed_rollups->add(
+			$aggr_seed_day,
+			$aggr_seed_placement,
+			array(
+				Decision_Outcome::REQUEST          => $aggr_seed_requests,
+				Decision_Outcome::FILL             => $aggr_seed_fills,
+				No_Fill_Reason::TARGETING_MISMATCH => $aggr_seed_targeting,
+				No_Fill_Reason::FREQUENCY_CAPPED   => $aggr_seed_capped,
+			),
+			Opportunity::PAGE
+		);
+
+		// A rotating slot refreshes, and refresh is separate inventory.
+		$aggr_seed_rollups->add(
+			$aggr_seed_day,
+			$aggr_seed_placement,
+			array(
+				Decision_Outcome::REQUEST => (int) floor( $aggr_seed_requests * 0.4 ),
+				Decision_Outcome::FILL    => (int) floor( $aggr_seed_requests * 0.36 ),
+			),
+			Opportunity::REFRESH
+		);
+
+		$aggr_seed_delivery->increment( 'impressions', $aggr_seed_placement, (int) $campaign_id, $aggr_seed_day, 0, $org_id );
+
+		if ( 0 === $aggr_seed_ago % 3 ) {
+			$aggr_seed_delivery->increment( 'clicks', $aggr_seed_placement, (int) $campaign_id, $aggr_seed_day, 0, $org_id );
+		}
+	}
+}
+
+WP_CLI::success(
+	sprintf(
+		'Seeded %d days of delivery across %d placements.',
+		$aggr_seed_days,
+		count( $placement_ids )
+	)
+);
 
 WP_CLI::success(
 	sprintf(

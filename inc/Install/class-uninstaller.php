@@ -30,6 +30,7 @@ use Aggressive\Ads\Workflow\Audit_Retention;
 use Aggressive\Ads\Workflow\Creative_Retention;
 use Aggressive\Ads\Workflow\Ending_Soon_Notifier;
 use Aggressive\Ads\Workflow\Event_Retention;
+use Aggressive\Ads\Workflow\Forecast_Scheduler;
 use Aggressive\Ads\Workflow\Rollup_Reconciler;
 
 /**
@@ -159,6 +160,7 @@ final class Uninstaller {
 		Audit_Retention::unschedule();
 		Event_Retention::unschedule();
 		Rollup_Reconciler::unschedule();
+		Forecast_Scheduler::unschedule();
 		Line_Item_Migrator::unschedule();
 		Creative_Assignment_Migrator::unschedule();
 

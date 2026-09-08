@@ -186,6 +186,49 @@ final class InstallerTest extends WP_UnitTestCase {
 
 		$this->assertContains( 'token_event', $indexes );
 		$this->assertNotContains( 'token_hash', $indexes );
+		$this->assert_replay_guard_is_unique();
+	}
+
+	/**
+	 * The replay guard on the installed table is genuinely unique.
+	 *
+	 * `SHOW INDEX` reporting a key named `token_event` says nothing about what
+	 * the key enforces, and `dbDelta` adds an index but never drops one: a site
+	 * carrying a non-unique key of that name keeps it through every upgrade,
+	 * looking guarded while counting the same beacon twice. This is the one key
+	 * standing between an advertiser and being billed for one view repeatedly,
+	 * so it is asserted on the live table and not only in the DDL string.
+	 *
+	 * @return void
+	 */
+	public function test_the_replay_guard_is_unique_on_the_installed_table(): void {
+		$this->assert_replay_guard_is_unique();
+	}
+
+	/**
+	 * Asserts the live events table refuses a repeated token for one event.
+	 *
+	 * @return void
+	 */
+	private function assert_replay_guard_is_unique(): void {
+		global $wpdb;
+
+		$table = ( new Event_Repository() )->table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Integration schema assertion against a prefix-derived name.
+		$rows = $wpdb->get_results( "SHOW INDEX FROM {$table} WHERE Key_name = 'token_event'", ARRAY_A );
+
+		$this->assertNotEmpty( $rows, 'The replay guard is missing, so one beacon can be counted twice.' );
+		$this->assertSame(
+			0,
+			(int) $rows[0]['Non_unique'],
+			'The key exists and is not unique, which is worse than missing: it looks like the guard is there.'
+		);
+		$this->assertSame(
+			array( 'token_hash', 'event' ),
+			array_column( $rows, 'Column_name' ),
+			'Dropping `event` would refuse a legitimate click after an impression; dropping `token_hash` would stop guarding replay.'
+		);
 	}
 
 	/**
