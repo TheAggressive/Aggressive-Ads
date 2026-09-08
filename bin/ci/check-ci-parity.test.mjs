@@ -170,6 +170,38 @@ test( 'a lane no job runs fails, and names it', async () => {
 	assert.match( stderr, /ci:orphaned: no job runs it/ );
 } );
 
+test( 'a parser that fails says so, instead of failing silently', async () => {
+	/*
+	 * `set -o pipefail` already stopped the script when `lanes.mjs` exited
+	 * non-zero, but it stopped it before anything was echoed: the gate exited 1
+	 * having printed nothing at all. It sits in a chain of a dozen checks that
+	 * run as one command, so a silent non-zero there is indistinguishable from
+	 * any of the others failing, and the reader has to bisect the chain by hand.
+	 *
+	 * A workflow whose jobs run no lane makes the real parser exit 1 with its
+	 * own explanation, which is why this needs no stub: both messages reach the
+	 * reader, the parser's saying what it could not find and this one saying
+	 * which of the twelve checks was speaking.
+	 */
+	const root = await fixture( { scripts: [ 'ci:lint' ], inWorkflow: [] } );
+
+	const { status, stderr } = run( root );
+
+	assert.equal( status, 1 );
+	assert.match( stderr, /lanes\.mjs failed, so no lane list could be read/ );
+	assert.match(
+		stderr,
+		/parser failure, not a workflow that runs nothing/,
+		'The message must not read as workflow drift, which is the other cause.'
+	);
+
+	/*
+	 * The parser's own stderr has to survive too. It names the actual cause;
+	 * this guard only says who was asking.
+	 */
+	assert.match( stderr, /no commands found/ );
+} );
+
 test( 'a lane is not satisfied by a longer lane that shares its prefix', async () => {
 	/*
 	 * `pnpm ci:php` must not count as covered by a workflow that only runs
