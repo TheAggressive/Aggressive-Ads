@@ -128,6 +128,48 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 	}
 
 	/**
+	 * The reporting window governs the figures it sits beside, and only those.
+	 *
+	 * The dashboard shows two kinds of number: all-time counts of where each
+	 * campaign has got to, and delivery for a chosen window. Both were rendered
+	 * as the same `aggr-stat` card with the window picker floating between
+	 * them, so narrowing to seven days read as "3 campaigns ran this week" —
+	 * a correct figure answering a question nobody asked, which misinforms just
+	 * as effectively as a wrong one.
+	 *
+	 * Order is the assertion because order is the fix: the pipeline counts come
+	 * first in their own markup, then the delivery section, then the picker
+	 * inside it, then the tiles the picker changes.
+	 *
+	 * @return void
+	 */
+	public function test_the_reporting_window_is_scoped_to_the_delivery_figures(): void {
+		$dashboard = file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/screens/dashboard.php' );
+
+		$this->assertIsString( $dashboard );
+
+		$counts  = strpos( $dashboard, 'class="aggr-pipeline"' );
+		$section = strpos( $dashboard, 'class="aggr-delivery"' );
+		$picker  = strpos( $dashboard, 'class="aggr-range"' );
+		$tiles   = strpos( $dashboard, 'class="aggr-stats"' );
+
+		$this->assertIsInt( $counts, 'The pipeline counts render as their own list, not as metric tiles.' );
+		$this->assertIsInt( $section, 'Delivery is a section so the picker has something to belong to.' );
+		$this->assertIsInt( $picker );
+		$this->assertIsInt( $tiles );
+
+		$this->assertLessThan( $section, $counts );
+		$this->assertLessThan( $picker, $section, 'The picker must sit inside the section it governs.' );
+		$this->assertLessThan( $tiles, $picker );
+
+		$this->assertSame(
+			1,
+			substr_count( $dashboard, 'class="aggr-stats"' ),
+			'A second tile row is how the two kinds of number became indistinguishable.'
+		);
+	}
+
+	/**
 	 * New controls use the shared touch-target and color token vocabulary.
 	 *
 	 * @return void
@@ -140,6 +182,8 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 		$this->assertStringContainsString( '.aggr-choice--package', $css );
 		$this->assertStringContainsString( '.aggr-sizebox', $css );
 		$this->assertStringContainsString( '.aggr-dashboard--split', $css );
+		$this->assertStringContainsString( '.aggr-pipeline__value', $css );
+		$this->assertStringContainsString( '.aggr-delivery__head', $css );
 		$this->assertStringContainsString( '.aggr-spark__track', $css );
 		$this->assertStringContainsString( '.aggr-button--secondary', $css );
 		$this->assertStringContainsString( '.aggr-upload-card', $css );

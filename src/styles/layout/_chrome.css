@@ -393,6 +393,77 @@
 }
 
 /*
+ * Campaign pipeline counts — where each campaign has got to.
+ *
+ * Not `.aggr-stat`, and the difference is the point. These are all-time counts;
+ * the tiles are delivery for a chosen window. Giving both the same card put the
+ * window picker between two identical-looking rows, so narrowing to seven days
+ * read as "3 campaigns ran this week". Text on the page ground rather than a
+ * card also spends the reader's attention where the money is, one row down.
+ */
+.aggr-pipeline {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--aggr-space-lg);
+	margin: 0 0 var(--aggr-space-lg);
+	padding: 0;
+	list-style: none;
+}
+
+.aggr-pipeline__item {
+	display: flex;
+	align-items: baseline;
+	gap: var(--aggr-space-2xs);
+}
+
+.aggr-pipeline__value {
+	font-size: 20px;
+	font-weight: 800;
+	line-height: 1;
+}
+
+.aggr-pipeline__label {
+	font-size: 13px;
+	color: var(--aggr-color-text-muted);
+}
+
+/*
+ * Delivery, and the window that governs it.
+ *
+ * A filter's scope is whatever it sits beside, so the picker belongs in this
+ * header and the figures it changes belong under it.
+ */
+.aggr-delivery {
+	margin-bottom: var(--aggr-space-lg);
+}
+
+.aggr-delivery__head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: var(--aggr-space-md);
+	margin-bottom: var(--aggr-space-md);
+}
+
+.aggr-delivery__title {
+	margin: 0;
+	font-size: 1.125rem;
+	font-weight: 700;
+}
+
+.aggr-delivery__window {
+	margin: var(--aggr-space-2xs) 0 0;
+	font-size: 13px;
+	color: var(--aggr-color-text-muted);
+}
+
+/* The header already carries the gap below it. */
+.aggr-delivery__head .aggr-range {
+	margin-bottom: 0;
+}
+
+/*
  * The reporting window picker.
  *
  * Wraps rather than scrolls, and the presets sit on the same row until there
