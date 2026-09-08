@@ -55,7 +55,26 @@ fi
 # lanes.mjs lives beside this script, not in the tree being checked, so a
 # fixture run still uses the real parser against the fixture's workflow.
 LANES_PARSER="$(cd "$(dirname "$0")" && pwd)/lanes.mjs"
-local_lanes=$( AGGR_LANES_ROOT="$(pwd)" node "$LANES_PARSER" | cut -f2 )
+
+# The parser's own failure is reported as its own failure.
+#
+# `set -o pipefail` already stops the script when `lanes.mjs` exits non-zero,
+# but it stops it *silently*: the assignment dies before anything is echoed, so
+# the gate exits 1 having printed nothing at all and the reader is left to guess
+# which of a dozen checks in the same command chain went wrong.
+#
+# There is no separate branch for "parsed fine, found nothing": `lanes.mjs`
+# already exits 1 on an empty result, and its own stderr says why. A branch for
+# a state the parser cannot produce would be code that never runs and therefore
+# never gets checked, in a guard whose whole job is noticing that.
+if ! lanes_output=$( AGGR_LANES_ROOT="$(pwd)" node "$LANES_PARSER" ); then
+	echo "check-ci-parity: bin/ci/lanes.mjs failed, so no lane list could be read" >&2
+	echo "  This is a parser failure, not a workflow that runs nothing." >&2
+	echo "  Run it directly to see why: AGGR_LANES_ROOT=\"\$(pwd)\" node bin/ci/lanes.mjs" >&2
+	exit 1
+fi
+
+local_lanes=$( printf '%s\n' "$lanes_output" | cut -f2 )
 
 lanes=$(
 	node -e "
