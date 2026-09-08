@@ -37,8 +37,16 @@ use WP_UnitTestCase;
  * Asset deduplication is the exception: it reads `asset_id`, which the
  * candidate query has always returned, so it was the one page rule that worked.
  *
- * These go through `Fill_Service::for_slots()`, the batch path a page actually
- * uses, rather than through the coordinator directly.
+ * These go through `Fill_Service::for_slots()` rather than through the
+ * coordinator directly, because a rule proven only against the coordinator is
+ * proven against a hand-built call.
+ *
+ * It is *not* "the batch path a page actually uses", which is what this said
+ * before and was not true: `fill.js` fetches the per-slot URL, one request per
+ * slot, and nothing in `src/` posts to `/aggr/v1/decisions` at all. Every rule
+ * below therefore passes here and never runs for a visitor. See
+ * `docs/open-work.md` — the comment is corrected rather than deleted because a
+ * test file claiming production uses this path is how the gap stayed invisible.
  */
 final class PageCoordinationInputsTest extends WP_UnitTestCase {
 

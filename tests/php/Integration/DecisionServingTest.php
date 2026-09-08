@@ -642,6 +642,116 @@ final class DecisionServingTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * **The batch route reports the page too, and did not until now.**
+	 *
+	 * `Fill_Service::for_slots()` has always taken a viewport and a post id,
+	 * and `Decisions_Controller` passed neither — so every batch decision
+	 * resolved to a placement's base size and carried no page facts at all.
+	 * A parameter a service reads and nothing supplies is the shape this
+	 * codebase keeps finding after the fact.
+	 *
+	 * It matters more than an unused argument because the two paths then
+	 * disagree: the same page, asked slot by slot, served the campaign, and
+	 * asked as a batch, did not. A no-fill whose answer depends on which route
+	 * the browser happened to take is worse than either answer on its own.
+	 *
+	 * Goes through the REST route rather than the service, because the service
+	 * half already worked — the controller was the half that supplied nothing.
+	 *
+	 * @return void
+	 */
+	public function test_the_batch_route_carries_the_page_into_the_decision(): void {
+		update_option( Creative_Assignment_Migrator::OPTION_DONE, 1 );
+
+		$this->target_on(
+			array(
+				'dimension' => 'categories',
+				'cmp'       => 'contains',
+				'value'     => 'sports',
+			)
+		);
+
+		$sports  = $this->post_in( 'sports' );
+		$recipes = $this->post_in( 'recipes' );
+
+		$this->assertIsArray(
+			$this->batch_creative( array( 'p' => $sports ) ),
+			'A campaign targeting "sports" did not serve on a sports post through the batch route.'
+		);
+		$this->assertNull(
+			$this->batch_creative( array( 'p' => $recipes ) ),
+			'A campaign targeting "sports" served on a recipes post through the batch route.'
+		);
+		$this->assertNull(
+			$this->batch_creative( array() ),
+			'A batch that reported no page served a targeted campaign anyway.'
+		);
+	}
+
+	/**
+	 * The batch route tells a term archive from a post, in both directions.
+	 *
+	 * `p` and `t` arrive as adjacent integers of the same type on a route that
+	 * forwards them positionally, so a swapped pair is the defect this invites
+	 * and nothing downstream could see it: each would find no row and report no
+	 * context, which reads as a campaign that simply stopped serving.
+	 *
+	 * @return void
+	 */
+	public function test_the_batch_route_does_not_confuse_a_post_with_a_term(): void {
+		update_option( Creative_Assignment_Migrator::OPTION_DONE, 1 );
+
+		$this->target_on(
+			array(
+				'dimension' => 'categories',
+				'cmp'       => 'contains',
+				'value'     => 'sports',
+			)
+		);
+
+		$term = (int) self::factory()->category->create( array( 'slug' => 'sports' ) );
+
+		$this->assertIsArray(
+			$this->batch_creative( array( 't' => $term ) ),
+			'The sports category archive did not serve through the batch route.'
+		);
+		$this->assertNull(
+			$this->batch_creative( array( 'p' => $term ) ),
+			'A term id read as a post id served, so a swapped pair would look correct.'
+		);
+	}
+
+	/**
+	 * The creative the batch route returns for the seeded slot, or null.
+	 *
+	 * @param array<string, int> $context Extra request parameters, e.g. `p` or `t`.
+	 * @return array<string, mixed>|null
+	 */
+	private function batch_creative( array $context ): ?array {
+		$request = new WP_REST_Request( 'POST', '/aggr/v1/decisions' );
+		$request->set_param( 'slots', array( 'decision-gate' ) );
+
+		foreach ( $context as $key => $value ) {
+			$request->set_param( $key, $value );
+		}
+
+		$response = rest_get_server()->dispatch( $request );
+
+		$this->assertSame( 200, $response->get_status(), 'The batch route refused the request.' );
+
+		$data = $response->get_data();
+
+		$this->assertArrayHasKey( 'decisions', $data );
+		$this->assertArrayHasKey(
+			'decision-gate',
+			$data['decisions'],
+			'The batch route dropped the slot, so nothing below is about targeting.'
+		);
+
+		return $data['decisions']['decision-gate']['creative'];
+	}
+
+	/**
 	 * A fill that reports no page is not silently on-topic.
 	 *
 	 * Every fill from a page cached before this shipped arrives without a page
