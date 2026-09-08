@@ -82,8 +82,30 @@ $aggr_user        = wp_get_current_user();
 <ul class="aggr-pipeline">
 	<?php foreach ( $aggr_view->counts() as $aggr_stat ) : ?>
 		<li class="aggr-pipeline__item">
-			<span class="aggr-pipeline__value"><?php echo esc_html( number_format_i18n( (int) $aggr_stat['value'] ) ); ?></span>
-			<span class="aggr-pipeline__label"><?php echo esc_html( (string) $aggr_stat['label'] ); ?></span>
+			<?php
+			/*
+			 * Each count links to the campaigns it counted.
+			 *
+			 * "Needs your attention: 3" was a statement with nowhere to go, so
+			 * the reader's next move was the campaign list and a manual scan
+			 * for the three. The link answers the question the tile raises,
+			 * and both ends read the same definition of the slice, so the
+			 * number and the rows cannot disagree.
+			 *
+			 * A zero is still a link. It says the same true thing, and a
+			 * control that appears only sometimes costs more attention than
+			 * one that is always there.
+			 */
+			$aggr_filter_url = add_query_arg(
+				'status',
+				(string) $aggr_stat['filter'],
+				\Aggressive\Ads\Portal\Routes::url( \Aggressive\Ads\Portal\Request::ROUTE_CAMPAIGNS )
+			);
+			?>
+			<a class="aggr-pipeline__link" href="<?php echo esc_url( $aggr_filter_url ); ?>">
+				<span class="aggr-pipeline__value"><?php echo esc_html( number_format_i18n( (int) $aggr_stat['value'] ) ); ?></span>
+				<span class="aggr-pipeline__label"><?php echo esc_html( (string) $aggr_stat['label'] ); ?></span>
+			</a>
 		</li>
 	<?php endforeach; ?>
 </ul>

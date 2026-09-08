@@ -140,11 +140,12 @@ final class Campaign_Query_Repository {
 	/**
 	 * One organization's newest campaigns.
 	 *
-	 * @param int $org_id Organization id.
-	 * @param int $page Page number.
+	 * @param int                $org_id Organization id.
+	 * @param int                $page Page number.
+	 * @param array<int, string> $statuses Statuses to include, or empty for every status.
 	 * @return array{ids: array<int, int>, total: int, pages: int}
 	 */
-	public function for_org( int $org_id, int $page ): array {
+	public function for_org( int $org_id, int $page, array $statuses = array() ): array {
 		if ( $org_id <= 0 ) {
 			return array(
 				'ids'   => array(),
@@ -156,7 +157,15 @@ final class Campaign_Query_Repository {
 		$query = new \WP_Query(
 			array(
 				'post_type'              => Post_Types::CAMPAIGN,
-				'post_status'            => Post_Statuses::all(),
+
+				/*
+				 * Narrowed to our own statuses whatever the caller asked for.
+				 * An unrecognised status reaching `WP_Query` would be dropped
+				 * by WordPress and the query would widen to its default, which
+				 * is `publish` — a status no campaign ever has, so the list
+				 * would come back empty and read as "you have no campaigns".
+				 */
+				'post_status'            => self::requested_statuses( $statuses ),
 				'posts_per_page'         => Campaign_Repository::PAGE_SIZE,
 				'paged'                  => max( 1, $page ),
 				'fields'                 => 'ids',
@@ -173,6 +182,18 @@ final class Campaign_Query_Repository {
 		);
 
 		return $this->page_result( $query );
+	}
+
+	/**
+	 * The statuses a query may ask for, always a subset of ours.
+	 *
+	 * @param array<int, string> $statuses Requested statuses, or empty for all.
+	 * @return array<int, string>
+	 */
+	private static function requested_statuses( array $statuses ): array {
+		$allowed = array_values( array_intersect( $statuses, Post_Statuses::all() ) );
+
+		return array() === $allowed ? Post_Statuses::all() : $allowed;
 	}
 
 	/**

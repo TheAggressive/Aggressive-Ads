@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Portal;
 
 use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Domain\Campaign_Filter;
 use Aggressive\Ads\Core\Settings;
 use Aggressive\Ads\Domain\Reporting_Rules;
 use Aggressive\Ads\Domain\Transition_Table;
@@ -147,10 +148,11 @@ final class View_Data {
 	/**
 	 * The caller's campaigns, ready to render.
 	 *
-	 * @param int $page 1-based page.
+	 * @param int    $page 1-based page.
+	 * @param string $filter Slice to show, or '' for every campaign.
 	 * @return array{rows: array<int, array<string, mixed>>, total: int, pages: int, page: int, show_metrics: bool}
 	 */
-	public function campaigns( int $page = 1 ): array {
+	public function campaigns( int $page = 1, string $filter = '' ): array {
 		$org_id = $this->org_id();
 
 		/*
@@ -170,7 +172,7 @@ final class View_Data {
 			);
 		}
 
-		$result = $this->campaigns->for_org( $org_id, $page );
+		$result = $this->campaigns->for_org( $org_id, $page, Campaign_Filter::statuses( $filter ) );
 		$rows   = array();
 
 		foreach ( $result['ids'] as $campaign_id ) {
@@ -533,7 +535,7 @@ final class View_Data {
 	 * are `delivery_counts()` and stay absent unless both reporting modules
 	 * are on — a dashboard of invented zeros is worse than fewer real numbers.
 	 *
-	 * @return array<int, array{label: string, value: int}>
+	 * @return array<int, array{label: string, value: int, filter: string}>
 	 */
 	public function counts(): array {
 		$campaigns = $this->campaigns( 1 );
@@ -545,37 +547,70 @@ final class View_Data {
 		foreach ( $campaigns['rows'] as $row ) {
 			$status = (string) $row['status'];
 
-			if ( in_array( $status, Post_Statuses::published(), true ) ) {
+			/*
+			 * Grouped by the same definition the list filters on, rather than
+			 * by a copy of it. These are one question asked twice — the tile
+			 * says how many need attention and the list shows which ones — and
+			 * two definitions of "needs attention" is one edit away from a
+			 * count that does not match the rows beneath it. A reader cannot
+			 * resolve that disagreement, and stops trusting both halves.
+			 */
+			if ( in_array( $status, Campaign_Filter::statuses( Campaign_Filter::RUNNING ), true ) ) {
 				++$running;
 
 				continue;
 			}
 
-			if ( in_array( $status, array( Post_Statuses::SUBMITTED, Post_Statuses::REVIEW ), true ) ) {
+			if ( in_array( $status, Campaign_Filter::statuses( Campaign_Filter::IN_REVIEW ), true ) ) {
 				++$reviewing;
 
 				continue;
 			}
 
-			if ( in_array( $status, Post_Statuses::advertiser_editable(), true ) ) {
+			if ( in_array( $status, Campaign_Filter::statuses( Campaign_Filter::ATTENTION ), true ) ) {
 				++$drafts;
 			}
 		}
 
 		return array(
 			array(
-				'label' => __( 'Running', 'aggressive-ads' ),
-				'value' => $running,
+				'label'  => $this->filter_label( Campaign_Filter::RUNNING ),
+				'value'  => $running,
+				'filter' => Campaign_Filter::RUNNING,
 			),
 			array(
-				'label' => __( 'In review', 'aggressive-ads' ),
-				'value' => $reviewing,
+				'label'  => $this->filter_label( Campaign_Filter::IN_REVIEW ),
+				'value'  => $reviewing,
+				'filter' => Campaign_Filter::IN_REVIEW,
 			),
 			array(
-				'label' => __( 'Needs your attention', 'aggressive-ads' ),
-				'value' => $drafts,
+				'label'  => $this->filter_label( Campaign_Filter::ATTENTION ),
+				'value'  => $drafts,
+				'filter' => Campaign_Filter::ATTENTION,
 			),
 		);
+	}
+
+	/**
+	 * What one slice is called, wherever it is named.
+	 *
+	 * The dashboard tile and the campaign list's filter notice name the same
+	 * slice, and a reader who clicked "Needs your attention" and arrived at a
+	 * page saying "Showing only: Drafts" would reasonably wonder whether they
+	 * had landed somewhere else. Labels live here rather than in
+	 * `Campaign_Filter` because they are translated, and `inc/Domain/` calls no
+	 * WordPress function.
+	 *
+	 * @param string $filter Filter slug, or '' for no filter.
+	 * @return string
+	 */
+	public function filter_label( string $filter ): string {
+		return match ( $filter ) {
+			Campaign_Filter::RUNNING   => __( 'Running', 'aggressive-ads' ),
+			Campaign_Filter::IN_REVIEW => __( 'In review', 'aggressive-ads' ),
+			Campaign_Filter::ATTENTION => __( 'Needs your attention', 'aggressive-ads' ),
+			default                    => __( 'All campaigns', 'aggressive-ads' ),
+		};
 	}
 
 	/**
