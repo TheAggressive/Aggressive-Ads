@@ -300,12 +300,17 @@ Shared boundaries and group exit criteria:
       organisational only — it is not a sellable unit, because `aggr_package`
       already is one. See
       [platform-p15-inventory-management.md](platform-p15-inventory-management.md).
-- [ ] **P16 — Forecasting and reservations.** Conservative forecasts from
-      rolling history, tracked against actuals with error recorded. Oversell
-      warns and logs the override rather than silently blocking staff. In
-      flight: the supply estimate is built — a low quantile of observed days
-      rather than a mean, because a mean is missed on half of them. Snapshots,
-      recorded error, reservations and the staff surface are not. Tracked in
+- [x] **P16 — Forecasting and reservations.** Conservative forecasts from
+      rolling history — a low quantile of observed days rather than a mean,
+      because a mean is missed on half of them — snapshotted daily, tracked
+      against actuals with error recorded, and held against campaigns through a
+      reservation ledger serialised by an advisory lock. Oversell warns and logs
+      an override naming the actor, reason, forecast version, forecast value and
+      accepted shortfall, rather than silently blocking staff. Closed with two
+      limits recorded rather than assumed away: no advertiser-facing booking
+      flow exists, so `Availability::bookable()` has no production caller yet,
+      and reservations hold opportunities rather than money, because billing
+      still has no source. See
       [platform-p16-forecasting-reservations.md](platform-p16-forecasting-reservations.md).
 - [ ] **P17 — Creative experience.** Variants, A/B tests, schedules, device
       preview, approval and rejection history, performance comparison. Upload

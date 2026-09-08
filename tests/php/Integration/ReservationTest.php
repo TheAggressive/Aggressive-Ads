@@ -96,6 +96,86 @@ final class ReservationTest extends WP_UnitTestCase {
 		);
 	}
 
+	/**
+	 * **A claim another request is already holding the lock for is refused.**
+	 *
+	 * The advisory lock is the whole concurrency guarantee: two staff booking
+	 * the last of an inventory at the same moment both read the same committed
+	 * total, and without serialisation both writes land and the placement is
+	 * sold twice. Everything else in this file runs one claim at a time and
+	 * therefore proves the arithmetic while proving nothing about the lock —
+	 * delete `acquire()` and every other test here still passes.
+	 *
+	 * A second connection is what makes this real. MySQL's `GET_LOCK` is
+	 * re-entrant within one session, so taking the lock on `$wpdb` and then
+	 * claiming would succeed and assert the opposite of the truth.
+	 *
+	 * @return void
+	 */
+	public function test_a_window_another_request_is_booking_is_refused_rather_than_double_sold(): void {
+		global $wpdb;
+
+		$placement = $this->placement();
+		$claim     = $this->claim( $placement, 10, 1000 );
+		$lock      = 'aggr_reserve_' . get_current_blog_id() . '_' . $placement . '_' . Opportunity::PAGE . '_' . $claim['from'] . '_' . $claim['to'];
+
+		$other = new \wpdb( DB_USER, DB_PASSWORD, DB_NAME, DB_HOST );
+		$other->set_prefix( $wpdb->prefix );
+
+		$this->assertSame(
+			1,
+			(int) $other->get_var( $other->prepare( 'SELECT GET_LOCK(%s, %d)', $lock, 5 ) ),
+			'The fixture could not take the lock, so nothing below is about contention.'
+		);
+
+		try {
+			$refused = $this->reservations->claim( $claim );
+
+			$this->assertSame( 0, (int) $refused['id'], 'A claim landed while another request held the lock.' );
+			$this->assertSame( 'busy', $refused['refused'] );
+
+			$this->assertSame(
+				0,
+				$this->reservations->committed( $placement, Opportunity::PAGE, $claim['from'], $claim['to'] ),
+				'The refused claim still consumed inventory, which is the double sale this prevents.'
+			);
+		} finally {
+			$other->query( $other->prepare( 'SELECT RELEASE_LOCK(%s)', $lock ) );
+			$other->close();
+		}
+
+		/*
+		 * And the same claim succeeds once the lock is free, so the refusal
+		 * above was contention rather than the claim being invalid.
+		 */
+		$this->assertGreaterThan( 0, (int) $this->reservations->claim( $claim )['id'] );
+	}
+
+	/**
+	 * The lock is given back, so the next request is not made to wait it out.
+	 *
+	 * A leaked lock does not fail anything immediately — the session that holds
+	 * it keeps working, because `GET_LOCK` is re-entrant — so the symptom lands
+	 * on whichever *other* request wants that window next, three seconds later,
+	 * as a refusal nobody can reproduce.
+	 *
+	 * @return void
+	 */
+	public function test_the_lock_is_released_when_the_claim_is_done(): void {
+		global $wpdb;
+
+		$placement = $this->placement();
+		$claim     = $this->claim( $placement, 10, 1000 );
+		$lock      = 'aggr_reserve_' . get_current_blog_id() . '_' . $placement . '_' . Opportunity::PAGE . '_' . $claim['from'] . '_' . $claim['to'];
+
+		$this->assertGreaterThan( 0, (int) $this->reservations->claim( $claim )['id'] );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Asserting the advisory lock is not still held.
+		$holder = $wpdb->get_var( $wpdb->prepare( 'SELECT IS_USED_LOCK(%s)', $lock ) );
+
+		$this->assertNull( $holder, 'The claim finished still holding its lock.' );
+	}
+
 	public function test_a_migration_exists_to_create_the_table(): void {
 		$this->assertTrue( $this->reservations->table_exists() );
 

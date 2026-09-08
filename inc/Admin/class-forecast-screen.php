@@ -153,6 +153,7 @@ final class Forecast_Screen implements Service {
 				'forecast'   => __( 'Forecast', 'aggressive-ads' ),
 				'committed'  => __( 'Booked', 'aggressive-ads' ),
 				'remaining'  => __( 'Remaining', 'aggressive-ads' ),
+				'status'     => __( 'Status', 'aggressive-ads' ),
 				'confidence' => __( 'Confidence', 'aggressive-ads' ),
 				'window'     => __( 'Window', 'aggressive-ads' ),
 				'placements' => __( 'Placements', 'aggressive-ads' ),

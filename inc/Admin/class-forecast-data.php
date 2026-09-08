@@ -120,7 +120,15 @@ final class Forecast_Data {
 	 */
 	private function row( int $placement, ?array $forecast, int $committed ): array {
 		$capacity = is_array( $forecast ) ? (int) $forecast['estimate'] : null;
-		$decision = Availability::decide( $capacity, $committed, 0 );
+
+		/*
+		 * `holdings()`, not `decide( …, 0 )`. Asking whether a request of
+		 * nothing fits is not the same question as whether the window is
+		 * oversold, and it always answers yes — so every row read `available`,
+		 * including the ones the summary above the table was counting as
+		 * oversold in the same render.
+		 */
+		$decision = Availability::holdings( $capacity, $committed );
 
 		return array(
 			'id'         => $placement,
@@ -166,7 +174,14 @@ final class Forecast_Data {
 			$forecast  += (int) $row['forecast'];
 			$remaining += (int) $row['remaining'];
 
-			if ( (int) $row['committed'] > (int) $row['forecast'] ) {
+			/*
+			 * The row's own verdict rather than a second rule. This counted
+			 * with an inline `committed > forecast` while the rows carried a
+			 * verdict from the domain, which is two definitions of oversold on
+			 * one screen — the arrangement where a tile and the rows beneath it
+			 * can disagree and neither can be checked against the other.
+			 */
+			if ( Availability::OVERSELL === $row['verdict'] ) {
 				++$oversold;
 			}
 		}

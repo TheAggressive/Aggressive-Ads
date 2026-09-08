@@ -71,7 +71,13 @@ const Outlook = ( {
 		type: 'table',
 		page: 1,
 		perPage: 25,
-		fields: [ 'forecast', 'committed', 'remaining', 'confidence' ],
+		fields: [
+			'forecast',
+			'committed',
+			'remaining',
+			'status',
+			'confidence',
+		],
 		titleField: 'name',
 	} );
 
@@ -116,6 +122,29 @@ const Outlook = ( {
 				enableSorting: true,
 				getValue: ( { item } ) => item.remaining ?? -1,
 				render: ( { item } ) => <>{ figure( item.remaining ) }</>,
+			},
+			{
+				/*
+				 * The server has always sent a verdict per row and nothing
+				 * rendered it, so the three labels for it shipped to every
+				 * staff member unread while the summary above the table
+				 * counted oversold placements the rows could not show.
+				 */
+				id: 'status',
+				label: t( 'status' ),
+				enableSorting: true,
+				getValue: ( { item } ) => item.verdict,
+				render: ( { item } ) => (
+					<span
+						className={
+							'oversell' === item.verdict
+								? 'aggr-forecast__oversold'
+								: undefined
+						}
+					>
+						{ t( item.verdict ) }
+					</span>
+				),
 			},
 			{
 				id: 'confidence',
