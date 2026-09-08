@@ -291,6 +291,37 @@ That is a rule, not plumbing, so it became `Availability::ceiling()` —
 `committed + requested`, asserted directly rather than inferred from a race
 nobody can stage. Fourteen mutants across the slice, all killed.
 
+## Slice 7 — the staff surface *(built)*
+
+`Admin\Forecast_Data` assembles one window's outlook; `Admin\Forecast_Screen`
+prints it under **Advertising → Outlook**, gated on `MANAGE_PLACEMENTS` — the
+same capability `Booking_Service` requires, so anyone who can see the outlook
+could act on it.
+
+Until this existed, `Forecast_Recorder` and `Booking_Service` were reachable
+only from tests. That is the gap it closes.
+
+**Two queries for the catalogue.** The forecast and the committed total are
+each read in batch, because the screen lists every active placement and the
+ceiling is two hundred.
+
+**The window starts tomorrow.** Today is half elapsed and cannot be sold
+whole, so including it would offer inventory that has partly gone — and mix a
+part-measured day into a forecast of unmeasured ones. The first version
+anchored on the reconciler's sealed day, which put today in the window; the
+reconciler dependency went with the fix, because a forward-looking window has
+no need to know where the counters stop.
+
+**Unmeasured is not sold out**, on the screen as in the domain: a placement
+nobody has forecast shows a sentence rather than a nought, and `unforecast` is
+counted in the totals so partial coverage is not presented as complete. The
+only colour on the screen marks `oversold`, and only when it is above zero —
+colouring a zero green would make an ordinary state look like an achievement.
+
+Twelve tests; eight mutants, all killed. One survived first: every test asked
+for the page view, so forcing the kind changed nothing — a refresh-view case
+fixed that.
+
 ## Not built yet
 - **Reservations.** Table, lifecycle, concurrency-safe quantity and status
   changes, audit.

@@ -117,6 +117,52 @@ final class Reservation_Repository {
 	}
 
 	/**
+	 * What is spoken for in one window, for many placements, in one query.
+	 *
+	 * The batched form of {@see self::committed()}, for the same reason the
+	 * forecast has one: a screen listing the catalogue would otherwise issue a
+	 * query per placement.
+	 *
+	 * Placements with nothing booked are absent rather than zero. A caller
+	 * building rows supplies its own default, and inventing a row here would
+	 * make "no reservations" and "no such placement" the same answer.
+	 *
+	 * @param array<int, int> $placements  Placement post ids.
+	 * @param string          $opportunity `Domain\Opportunity` kind.
+	 * @param string          $from_utc    First day of the window, `Y-m-d`.
+	 * @param string          $to_utc      Last day of the window, `Y-m-d`.
+	 * @return array<int, int> Placement id to opportunities committed.
+	 */
+	public function committed_by_placement( array $placements, string $opportunity, string $from_utc, string $to_utc ): array {
+		global $wpdb;
+
+		$ids = array_values( array_unique( array_filter( array_map( 'intval', $placements ), static fn ( int $id ): bool => $id > 0 ) ) );
+
+		if ( array() === $ids || ! Opportunity::is_valid( $opportunity ) || ! Utc_Day::is_window( $from_utc, $to_utc ) ) {
+			return array();
+		}
+
+		$table     = $this->table_name();
+		$consuming = Reservation_Rules::consuming();
+		$slots     = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+		$statuses  = implode( ',', array_fill( 0, count( $consuming ), '%s' ) );
+		$values    = array_merge( $ids, array( $opportunity, $from_utc, $to_utc ), $consuming );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQLPlaceholders.ReplacementsWrongNumber -- Prefix-derived table. Both placeholder sets are generated — the ids from a bounded integer-cast list, the statuses from a closed domain vocabulary — and every value is bound; the sniff cannot count a generated set.
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT placement_id, COALESCE(SUM(quantity), 0) AS committed FROM {$table} WHERE placement_id IN ({$slots}) AND opportunity = %s AND window_start = %s AND window_end = %s AND status IN ({$statuses}) GROUP BY placement_id", $values ), ARRAY_A );
+
+		$out = array();
+
+		foreach ( is_array( $rows ) ? $rows : array() as $row ) {
+			if ( is_array( $row ) ) {
+				$out[ (int) ( $row['placement_id'] ?? 0 ) ] = (int) ( $row['committed'] ?? 0 );
+			}
+		}
+
+		return $out;
+	}
+
+	/**
 	 * Claims inventory if the window has room, atomically.
 	 *
 	 * **The capacity check and the insert are one critical section.** Two staff

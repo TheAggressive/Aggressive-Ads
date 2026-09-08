@@ -10,6 +10,8 @@ declare(strict_types=1);
 namespace Aggressive\Ads;
 
 use Aggressive\Ads\Admin\Campaign_Change_Actions;
+use Aggressive\Ads\Admin\Forecast_Data;
+use Aggressive\Ads\Admin\Forecast_Screen;
 use Aggressive\Ads\Admin\Media_Library;
 use Aggressive\Ads\Admin\Menu;
 use Aggressive\Ads\Admin\Organization_Data;
@@ -313,6 +315,22 @@ final class Service_Registrar {
 				$c->get( Campaign_Repository::class ),
 				$c->get( Audit_Repository::class ),
 				$c->get( Edit_Window::class )
+			)
+		);
+
+		$container->register(
+			Forecast_Data::class,
+			static fn ( Service_Container $c ): Forecast_Data => new Forecast_Data(
+				$c->get( Placement_Repository::class ),
+				$c->get( Forecast_Repository::class ),
+				$c->get( Reservation_Repository::class )
+			)
+		);
+
+		$container->register(
+			Forecast_Screen::class,
+			static fn ( Service_Container $c ): Forecast_Screen => new Forecast_Screen(
+				$c->get( Forecast_Data::class )
 			)
 		);
 
