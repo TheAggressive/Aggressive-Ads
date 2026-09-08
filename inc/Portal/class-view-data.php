@@ -588,7 +588,12 @@ final class View_Data {
 	}
 
 	/**
-	 * Seven-day impression series for the dashboard sparkline.
+	 * Impression series for the dashboard sparkline, over the chosen window.
+	 *
+	 * Not seven days, whatever this said before: the chart follows the tiles,
+	 * because a page whose figures covered one window and whose chart covered
+	 * another would invite a comparison that was always wrong. A docblock
+	 * naming a fixed window is how someone later "fixes" the code to match it.
 	 *
 	 * @return list<array{day: string, label: string, impressions: int, height: int}>
 	 */

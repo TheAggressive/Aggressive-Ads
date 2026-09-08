@@ -38,38 +38,6 @@ rests on:
 Two of the three entries this rule was written from were already correct. The
 one that was not is the one that stated a verdict instead of a condition.
 
-## Contextual targeting stops at the archive
-
-**What.** `Placement_Slot` bakes the page into the fill URL only for a singular
-view — `$page_id > 0 && is_singular()`. A category or tag archive therefore sends
-no `p`, `Page_Context_Repository::facts_for()` receives 0 and returns an empty
-set, and a campaign targeted at a category does not serve on that category's own
-archive. The safe direction, and the wrong one.
-
-**Why it stopped there.** `facts_for()` takes a *post* id and resolves it through
-`get_post()`, so the parameter can only name something with a post row. An
-archive's identity is a term, and nothing in the fill request can currently say
-so.
-
-**What would change the answer.** This defers on one premise: *that page context
-has to be keyed to a post id*. If an archive's identity can be carried in the
-same fill parameter — or a second one beside it — then the repository already has
-the shape to answer, because a term archive's facts are that term's own slug in
-the `categories` and `terms` dimensions the targeting engine already reads.
-Nothing about the engine, the facts vocabulary or the privacy filter needs to
-change. **Revisit the moment somebody establishes that a term can be named in
-the fill request safely** — the page cache carries the URL, so whatever names it
-must be correct for the cached page rather than for the visitor.
-
-**Cost of leaving it.** A publisher who sells against a category gets no
-delivery on the archive pages for that category, silently — the campaign simply
-does not serve, with no error and no reason recorded that distinguishes it from
-ordinary no-fill.
-
-Recorded here rather than left in P15's closeout: that phase is closed, and a
-closed phase document is a historical record rather than something anyone reads
-to find out what is half-finished.
-
 ## Nothing else is open
 
 Every other entry that was here has shipped and been deleted, which is this
@@ -77,8 +45,20 @@ file's intended resting state rather than a sign it is unused. An entry is added
 moment work is started and understood but not finished, and removed the moment
 it ships — including the reasoning, once that reasoning has a permanent home.
 
-**Deleting an entry is not deleting what it knew.** Four entries were removed
-together after P15's first slice, and each left its durable half behind first:
+**Deleting an entry is not deleting what it knew.**
+
+The contextual-targeting entry was removed when the archive case shipped, and it
+is worth recording that it came out the way the rule at the top of this file
+intends. It deferred on a named premise — *that page context has to be keyed to
+a post id* — rather than on a verdict, so revisiting it cost reading two
+functions instead of a re-investigation. The premise turned out to be the only
+blocker: `get_queried_object_id()` already returned the term, and only the
+`is_singular()` guard beside it kept archives out. What it knew is now in
+[platform-p8-targeting-rule-engine.md](platform-p8-targeting-rule-engine.md),
+beside the fact table a maintainer actually reads.
+
+Four earlier entries were removed together after P15's first slice, and each
+left its durable half behind first:
 
 - The delivery denormalization — `candidates_for_placement()` returns the
   *assignment's* columns, so a stage reading a key nothing puts there is the

@@ -123,6 +123,27 @@ final class Fill_Controller implements Service {
 						'default'           => 0,
 						'sanitize_callback' => 'absint',
 					),
+
+					/*
+					 * The term archive the slot is on, for the same targeting.
+					 *
+					 * Separate from `p` because a post id and a term id are
+					 * different namespaces: post 12 and category 12 are
+					 * unrelated, so one parameter could not say which was
+					 * meant. Server-supplied and cache-correct on the same
+					 * grounds — the queried term is a property of the archive
+					 * URL, not of the visitor.
+					 *
+					 * Forging it buys the same nothing `p` does: it selects
+					 * which existing public term's slug is read, and a caller
+					 * cannot invent a term that is not there.
+					 */
+					't'    => array(
+						'type'              => 'integer',
+						'required'          => false,
+						'default'           => 0,
+						'sanitize_callback' => 'absint',
+					),
 				),
 			)
 		);
@@ -167,7 +188,8 @@ final class Fill_Controller implements Service {
 		$sequence = (int) $request->get_param( 'n' );
 		$viewport = (int) $request->get_param( 'w' );
 		$post_id  = (int) $request->get_param( 'p' );
-		$payload  = $this->fill->for_slug( $slot, $sequence, $viewport, $post_id );
+		$term_id  = (int) $request->get_param( 't' );
+		$payload  = $this->fill->for_slug( $slot, $sequence, $viewport, $post_id, $term_id );
 
 		if ( null === $payload ) {
 			return new WP_Error(

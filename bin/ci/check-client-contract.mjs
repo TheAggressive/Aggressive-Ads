@@ -51,6 +51,7 @@ const FILL_SERVICE = 'inc/Workflow/class-fill-service.php';
 const SERVER_SUPPLIED = {
 	slot: null,
 	p: SLOT_RENDERER,
+	t: SLOT_RENDERER,
 };
 const CLIENT_FILES = [
 	'src/blocks-interactivity/ad-slot/view.js',

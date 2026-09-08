@@ -86,7 +86,7 @@ What `Page_Context_Repository` supplies today, for a fill that reports a page:
 
 | Fact | Shape | Notes |
 |---|---|---|
-| `post_type` | string | The queried post's type. |
+| `post_type` | string | The queried post's type. **Absent on a term archive**, which is not a post — so `post_type contains post` correctly fails there rather than matching a page that has no post type. |
 | `categories` | array of slugs | The `category` taxonomy only. |
 | `terms` | array of `taxonomy:slug` | Every **public** taxonomy. Qualified because a slug is unique only within its taxonomy — a category and a tag both called `sports` are different inventory. |
 | `size` | string | `{width}x{height}` resolved for the reported viewport. |
@@ -100,9 +100,25 @@ advertiser's rule cannot read a publisher's own filing. An unpublished post
 supplies nothing at all: the page id travels in a URL, and a draft's categories
 are not something a guessed id should reveal.
 
-A fill that reports no page — an archive, or a page cached before this shipped —
-supplies no page facts, and a targeted campaign therefore does not serve into
-it. "We do not know where this is" is not "this is sports".
+A fill that reports no page — a page cached before this shipped, or a forged id
+naming nothing — supplies no page facts, and a targeted campaign therefore does
+not serve into it. "We do not know where this is" is not "this is sports".
+
+**A term archive does report its page**, and did not until this shipped. The
+archive is inventory a publisher sells, but it has no post row, so the fill
+named nothing and a campaign bought against a category did not serve on that
+category's own page — silently, in exactly the shape guarantee 3 makes
+invisible. The identity of an archive is its term, so the slot sends `t` beside
+the `p` it already sent, and `facts_for_term()` answers with the term's own
+`categories` and `terms` entries.
+
+The two parameters are separate because a post id and a term id are different
+namespaces: post 12 and category 12 are unrelated rows, and one parameter could
+not have said which was meant. Both are server-supplied and both survive a page
+cache, because the queried object is a property of the URL rather than of the
+visitor. When both arrive the post wins — a slot renders on one page, so both
+being set means a caller invented one, and a real post is the more specific
+claim.
 
 ### Invariants
 

@@ -115,6 +115,122 @@ final class PageContextFactsTest extends WP_UnitTestCase {
 		unregister_taxonomy( 'aggr_secret' );
 	}
 
+	/**
+	 * A category archive reports the category it is an archive of.
+	 *
+	 * This is the case that silently did not work. The archive is inventory a
+	 * publisher sells, the fill reported no page because an archive has no post
+	 * row, and a campaign bought against the category did not serve on that
+	 * category's own page — with no error and no exclusion reason, so it looked
+	 * exactly like ordinary no-fill.
+	 *
+	 * @return void
+	 */
+	public function test_a_category_archive_reports_its_own_category(): void {
+		$term_id = (int) self::factory()->category->create( array( 'slug' => 'sports' ) );
+
+		$facts = $this->context->facts_for_term( $term_id );
+
+		$this->assertSame( array( 'sports' ), $facts['categories'] );
+		$this->assertSame( array( 'category:sports' ), $facts['terms'] );
+	}
+
+	/**
+	 * A tag archive is a term but not a category.
+	 *
+	 * `categories` is the narrower dimension and only categories belong in it.
+	 * A tag leaking into it would make a rule bought against the category
+	 * "playoffs" serve on the tag archive of the same name — different
+	 * inventory, sold as if it were the same.
+	 *
+	 * @return void
+	 */
+	public function test_a_tag_archive_is_a_term_but_not_a_category(): void {
+		$term_id = (int) self::factory()->tag->create( array( 'slug' => 'playoffs' ) );
+
+		$facts = $this->context->facts_for_term( $term_id );
+
+		$this->assertSame( array( 'post_tag:playoffs' ), $facts['terms'] );
+		$this->assertSame( array(), $facts['categories'] );
+	}
+
+	/**
+	 * An archive is not a post, and does not claim a post type.
+	 *
+	 * Inventing one would make `post_type contains post` match a page that has
+	 * no post type. Absent resolves to null, which fails a `contains` and
+	 * passes a `not contains` — the honest answers for a dimension that does
+	 * not apply.
+	 *
+	 * @return void
+	 */
+	public function test_an_archive_claims_no_post_type(): void {
+		$term_id = (int) self::factory()->category->create( array( 'slug' => 'sports' ) );
+
+		$this->assertArrayNotHasKey( 'post_type', $this->context->facts_for_term( $term_id ) );
+	}
+
+	/**
+	 * A term in a private taxonomy is answered as no context.
+	 *
+	 * Same rule as the post path, and answered the same way rather than as an
+	 * error: a forged id and an unlisted taxonomy should be indistinguishable
+	 * from outside.
+	 *
+	 * @return void
+	 */
+	public function test_a_private_taxonomy_archive_is_not_exposed(): void {
+		register_taxonomy( 'aggr_secret', 'post', array( 'public' => false ) );
+
+		$hidden  = (int) self::factory()->term->create(
+			array(
+				'taxonomy' => 'aggr_secret',
+				'slug'     => 'internal',
+			)
+		);
+		$visible = (int) self::factory()->category->create( array( 'slug' => 'sports' ) );
+
+		$this->assertSame( array(), $this->context->facts_for_term( $hidden ) );
+
+		/*
+		 * The public archive must answer in the same test. Asserting only the
+		 * absence would pass just as well over a method that returned nothing
+		 * for everything.
+		 */
+		$this->assertSame( array( 'category:sports' ), $this->context->facts_for_term( $visible )['terms'] );
+
+		unregister_taxonomy( 'aggr_secret' );
+	}
+
+	/**
+	 * A term id that names nothing reports nothing.
+	 *
+	 * @return void
+	 */
+	public function test_an_unknown_term_reports_no_facts(): void {
+		$this->assertSame( array(), $this->context->facts_for_term( 0 ) );
+		$this->assertSame( array(), $this->context->facts_for_term( 99999999 ) );
+	}
+
+	/**
+	 * A post id and a term id are different namespaces, and are not interchangeable.
+	 *
+	 * They are both positive integers arriving as adjacent arguments, so a
+	 * swapped pair is the defect this pairing invites and nothing downstream
+	 * could detect. Reading a post id as a term must not answer with that
+	 * post's terms — it must answer with nothing, or the swap would look like
+	 * it worked.
+	 *
+	 * @return void
+	 */
+	public function test_a_post_id_is_not_read_as_a_term_id(): void {
+		$post_id = $this->post_in_category();
+
+		$facts = $this->context->facts_for_term( $post_id );
+
+		$this->assertNotContains( 'category:sports', $facts['terms'] ?? array() );
+	}
+
 	/** The placement group taxonomy specifically is private, and stays out. */
 	public function test_placement_groups_are_not_a_targeting_dimension(): void {
 		$this->assertFalse( get_taxonomy( Taxonomies::PLACEMENT_GROUP )->public );

@@ -71,9 +71,10 @@ final class Fill_Service {
 	 * @param int    $sequence Fill number within the page view, zero-based.
 	 * @param int    $viewport_width Reported viewport width in CSS pixels, or 0 for the base size.
 	 * @param int    $post_id        Post the slot is on, or 0 when none was reported.
+	 * @param int    $term_id        Term whose archive the slot is on, or 0 when none was reported.
 	 * @return array<string, mixed>|null
 	 */
-	public function for_slug( string $slug, int $sequence = 0, int $viewport_width = 0, int $post_id = 0 ): ?array {
+	public function for_slug( string $slug, int $sequence = 0, int $viewport_width = 0, int $post_id = 0, int $term_id = 0 ): ?array {
 		if ( ! $this->is_enabled() ) {
 			return null;
 		}
@@ -113,7 +114,7 @@ final class Fill_Service {
 		 */
 		$this->metrics->for_opportunity( Opportunity::from_sequence( $sequence ) );
 
-		$paid  = $this->paid_creative( $placement_id, $viewport_width, $post_id );
+		$paid  = $this->paid_creative( $placement_id, $viewport_width, $post_id, $term_id );
 		$house = null;
 
 		if ( null === $paid && Settings_Schema::HOUSE_WHEN_EMPTY === $this->settings->house_policy() ) {
@@ -215,7 +216,7 @@ final class Fill_Service {
 		 */
 		$this->metrics->for_opportunity( Opportunity::PAGE );
 
-		$facts     = array_merge( $this->request_facts(), $this->context->facts_for( $post_id ) );
+		$facts     = array_merge( $this->request_facts(), $this->page_facts( $post_id, 0 ) );
 		$decisions = $this->decisions->decide_page( $slots_map, $now, null, $facts );
 		$payloads  = array();
 
@@ -311,15 +312,16 @@ final class Fill_Service {
 	 * @param int $placement_id   Placement post id.
 	 * @param int $viewport_width Reported viewport width in CSS pixels, or 0 for the base size.
 	 * @param int $post_id        Post the slot is on, or 0 when none was reported.
+	 * @param int $term_id        Term whose archive the slot is on, or 0 when none was reported.
 	 * @return array<string, mixed>|null
 	 */
-	private function paid_creative( int $placement_id, int $viewport_width = 0, int $post_id = 0 ): ?array {
+	private function paid_creative( int $placement_id, int $viewport_width = 0, int $post_id = 0, int $term_id = 0 ): ?array {
 		if ( ! $this->decisions->serving_ready() ) {
 			return null;
 		}
 
 		$now      = time();
-		$facts    = $this->facts_for( $placement_id, $viewport_width, $post_id );
+		$facts    = $this->facts_for( $placement_id, $viewport_width, $post_id, $term_id );
 		$rows     = $this->decisions->cached_rows( $placement_id, $now );
 		$decision = $this->decisions->decide( $placement_id, $now, null, $rows, true, $facts );
 
@@ -374,6 +376,31 @@ final class Fill_Service {
 	}
 
 	/**
+	 * What the page is about, whichever kind of page it is.
+	 *
+	 * A post id and a term id are both positive integers from different
+	 * namespaces, so only one of them can be meaningful for a given fill and
+	 * nothing downstream could tell a swapped pair apart. Choosing between them
+	 * in one place keeps that decision out of the three callers that would each
+	 * have had to make it identically.
+	 *
+	 * The post wins when both arrive. A slot renders on one page, so both being
+	 * set means a caller has invented one of them, and a real post is the more
+	 * specific claim.
+	 *
+	 * @param int $post_id Post the slot is on, or 0 when none was reported.
+	 * @param int $term_id Term whose archive the slot is on, or 0 when none was reported.
+	 * @return array<string, mixed>
+	 */
+	private function page_facts( int $post_id, int $term_id ): array {
+		if ( $post_id > 0 ) {
+			return $this->context->facts_for( $post_id );
+		}
+
+		return $this->context->facts_for_term( $term_id );
+	}
+
+	/**
 	 * The request's facts, plus the size this placement is serving right now.
 	 *
 	 * **A fact of the request rather than of the placement.** A responsive
@@ -390,10 +417,11 @@ final class Fill_Service {
 	 * @param int $placement_id  Placement post id.
 	 * @param int $viewport_width Reported viewport width in CSS pixels.
 	 * @param int $post_id        Post the slot is on, or 0 when none was reported.
+	 * @param int $term_id        Term whose archive the slot is on, or 0 when none was reported.
 	 * @return array<string, mixed>
 	 */
-	private function facts_for( int $placement_id, int $viewport_width, int $post_id = 0 ): array {
-		$facts = array_merge( $this->request_facts(), $this->context->facts_for( $post_id ) );
+	private function facts_for( int $placement_id, int $viewport_width, int $post_id = 0, int $term_id = 0 ): array {
+		$facts = array_merge( $this->request_facts(), $this->page_facts( $post_id, $term_id ) );
 
 		$facts['size'] = $this->placements->size_map( $placement_id )->for_viewport( $viewport_width );
 
