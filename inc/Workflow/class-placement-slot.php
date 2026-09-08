@@ -232,6 +232,23 @@ final class Placement_Slot implements Service {
 			$fill = add_query_arg( 'p', $page_id, $fill );
 		}
 
+		/*
+		 * The same question for an archive, whose identity is a term.
+		 *
+		 * `get_queried_object_id()` already returned it — only the
+		 * `is_singular()` guard above kept it out — so a category archive sent
+		 * no context at all and a campaign bought against that category did
+		 * not serve on the category's own page. Silently: no error and no
+		 * exclusion reason, indistinguishable from ordinary no-fill.
+		 *
+		 * Sent as `t` rather than reusing `p` because the two are different
+		 * namespaces. Post 12 and category 12 are unrelated rows, and a single
+		 * parameter would have made the fill route guess which was meant.
+		 */
+		if ( $page_id > 0 && ( is_category() || is_tag() || is_tax() ) ) {
+			$fill = add_query_arg( 't', $page_id, $fill );
+		}
+
 		$this->enqueue_view();
 
 		$style        = '';

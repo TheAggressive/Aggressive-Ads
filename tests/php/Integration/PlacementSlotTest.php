@@ -53,6 +53,76 @@ final class PlacementSlotTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The slot names the page it is on, and names it as the right kind of page.
+	 *
+	 * Both identifiers come from the same `get_queried_object_id()` call and
+	 * are told apart only by the conditional beside it, so a wrong condition
+	 * sends a term id as `p` or a post id as `t`. Nothing downstream could
+	 * detect that: both are positive integers, and the reader would simply
+	 * find no row and report no context — a campaign that silently stops
+	 * serving, which is the failure this whole path exists to remove.
+	 *
+	 * The client-contract lane proves the renderer *contains* both calls. Only
+	 * a rendered page proves the conditions around them fire on the right one.
+	 *
+	 * @return void
+	 */
+	public function test_a_slot_reports_the_page_it_is_on_by_its_own_kind(): void {
+		$placement_id = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::PLACEMENT,
+				'post_status' => 'publish',
+				'post_name'   => 'context-leaderboard',
+			)
+		);
+		update_post_meta( $placement_id, Placement_Repository::META_IS_ACTIVE, 1 );
+		update_post_meta( $placement_id, Placement_Repository::META_SIZE, '728x90' );
+
+		$category = (int) self::factory()->category->create( array( 'slug' => 'sports' ) );
+		$post_id  = (int) self::factory()->post->create( array( 'post_status' => 'publish' ) );
+		wp_set_object_terms( $post_id, array( 'sports' ), 'category', false );
+
+		$slot = Plugin::instance()->container()->get( Placement_Slot::class );
+
+		$this->go_to( get_permalink( $post_id ) );
+		$singular = $this->fill_query( $slot->shortcode( array( 'slot' => 'context-leaderboard' ) ) );
+
+		$this->assertSame( (string) $post_id, $singular['p'] ?? '', 'A singular view stopped naming its post.' );
+		$this->assertArrayNotHasKey( 't', $singular, 'A post was also announced as a term archive.' );
+
+		$this->go_to( get_term_link( $category, 'category' ) );
+		$archive = $this->fill_query( $slot->shortcode( array( 'slot' => 'context-leaderboard' ) ) );
+
+		$this->assertSame( (string) $category, $archive['t'] ?? '', 'A category archive did not name its term.' );
+		$this->assertArrayNotHasKey( 'p', $archive, 'An archive was announced as a post.' );
+	}
+
+	/**
+	 * The fill URL's query parameters, read out of rendered slot markup.
+	 *
+	 * Parsed rather than matched as a substring: `data-aggr-slot="…"` ends in
+	 * `t="`, so `assertStringNotContainsString( 't=' )` fails on correct markup
+	 * and would have been "fixed" by weakening it.
+	 *
+	 * @param string $html Rendered slot markup.
+	 * @return array<string, string>
+	 */
+	private function fill_query( string $html ): array {
+		$matched = preg_match( '/data-aggr-fill="([^"]+)"/', $html, $matches );
+
+		$this->assertSame( 1, $matched, 'The slot rendered without a fill URL.' );
+
+		$query = wp_parse_url( html_entity_decode( $matches[1] ), PHP_URL_QUERY );
+
+		$this->assertIsString( $query, 'The fill URL carried no query string.' );
+
+		$parsed = array();
+		wp_parse_str( $query, $parsed );
+
+		return array_map( 'strval', $parsed );
+	}
+
+	/**
 	 * **Content saved under the old block name still renders.**
 	 *
 	 * The block name is serialized into `post_content`, so every post, template

@@ -555,6 +555,93 @@ final class DecisionServingTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * **The same campaign serves on that category's own archive.**
+	 *
+	 * The archive was the one place contextual targeting did not reach. An
+	 * archive has no post row, so the fill reported no page, `facts_for()`
+	 * returned nothing, and a campaign bought against the category did not
+	 * serve on the category's own page — the safe direction, and the wrong
+	 * one. It failed silently: no error, no exclusion reason, indistinguishable
+	 * from ordinary no-fill, which is why a publisher would have seen only that
+	 * their inventory did not sell.
+	 *
+	 * Goes through `Fill_Service` for the same reason the post case does: the
+	 * repository answering correctly proves nothing if nothing passes the term
+	 * to it.
+	 *
+	 * Both directions again — serving on the sports archive alone would pass
+	 * over targeting that was never applied.
+	 *
+	 * @return void
+	 */
+	public function test_a_category_targeted_campaign_serves_on_that_category_archive(): void {
+		update_option( Creative_Assignment_Migrator::OPTION_DONE, 1 );
+
+		$this->target_on(
+			array(
+				'dimension' => 'categories',
+				'cmp'       => 'contains',
+				'value'     => 'sports',
+			)
+		);
+
+		$sports  = (int) self::factory()->category->create( array( 'slug' => 'sports' ) );
+		$recipes = (int) self::factory()->category->create( array( 'slug' => 'recipes' ) );
+
+		$fill = Plugin::instance()->container()->get( Fill_Service::class );
+
+		$on_topic = $fill->for_slug( 'decision-gate', 0, 1024, 0, $sports );
+
+		$this->assertIsArray( $on_topic );
+		$this->assertIsArray(
+			$on_topic['creative'],
+			'A campaign targeting "sports" did not serve on the sports category archive.'
+		);
+
+		$off_topic = $fill->for_slug( 'decision-gate', 0, 1024, 0, $recipes );
+
+		$this->assertIsArray( $off_topic );
+		$this->assertNull(
+			$off_topic['creative'],
+			'A campaign targeting "sports" served on the recipes archive.'
+		);
+	}
+
+	/**
+	 * A term id in the post slot does not serve as if it were the archive.
+	 *
+	 * The two identifiers are adjacent integer arguments from different
+	 * namespaces, so a swapped pair is the defect this signature invites, and
+	 * every stage downstream would accept it without complaint. Passing the
+	 * category as the post id must not serve the category-targeted campaign —
+	 * if it did, a swap would look like it worked and the mistake would ship.
+	 *
+	 * @return void
+	 */
+	public function test_a_term_id_passed_as_a_post_id_does_not_serve(): void {
+		update_option( Creative_Assignment_Migrator::OPTION_DONE, 1 );
+
+		$this->target_on(
+			array(
+				'dimension' => 'categories',
+				'cmp'       => 'contains',
+				'value'     => 'sports',
+			)
+		);
+
+		$sports = (int) self::factory()->category->create( array( 'slug' => 'sports' ) );
+
+		$fill    = Plugin::instance()->container()->get( Fill_Service::class );
+		$swapped = $fill->for_slug( 'decision-gate', 0, 1024, $sports, 0 );
+
+		$this->assertIsArray( $swapped );
+		$this->assertNull(
+			$swapped['creative'],
+			'A term id read as a post id served the campaign, so a swapped pair would look correct.'
+		);
+	}
+
+	/**
 	 * A fill that reports no page is not silently on-topic.
 	 *
 	 * Every fill from a page cached before this shipped arrives without a page
