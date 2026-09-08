@@ -157,9 +157,10 @@ final class Fill_Service {
 	 * @param array<int, string> $slugs          Requested slot slugs.
 	 * @param int                $viewport_width Reported viewport width in CSS pixels, or 0 for the base size.
 	 * @param int                $post_id        Post the slots are on, or 0 when none was reported.
+	 * @param int                $term_id        Term whose archive the slots are on, or 0 when none was reported.
 	 * @return array<string, array<string, mixed>> Keyed by slot slug.
 	 */
-	public function for_slots( array $slugs, int $viewport_width = 0, int $post_id = 0 ): array {
+	public function for_slots( array $slugs, int $viewport_width = 0, int $post_id = 0, int $term_id = 0 ): array {
 		if ( ! $this->is_enabled() || array() === $slugs ) {
 			return array();
 		}
@@ -216,7 +217,7 @@ final class Fill_Service {
 		 */
 		$this->metrics->for_opportunity( Opportunity::PAGE );
 
-		$facts     = array_merge( $this->request_facts(), $this->page_facts( $post_id, 0 ) );
+		$facts     = array_merge( $this->request_facts(), $this->page_facts( $post_id, $term_id ) );
 		$decisions = $this->decisions->decide_page( $slots_map, $now, null, $facts );
 		$payloads  = array();
 

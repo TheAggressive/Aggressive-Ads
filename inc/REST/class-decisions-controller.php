@@ -72,6 +72,46 @@ final class Decisions_Controller implements Service {
 							return true;
 						},
 					),
+
+					/*
+					 * The viewport and the page, which this route accepted from
+					 * nobody until now.
+					 *
+					 * `Fill_Service::for_slots()` has always taken a viewport
+					 * and a post id, and this controller passed neither, so
+					 * every batch decision resolved to a placement's base size
+					 * and carried no page facts at all. A responsive placement
+					 * was offered the wrong size and a category-targeted
+					 * campaign could not match, silently and only on this path
+					 * — the same figures asked for slot by slot answered
+					 * differently, which is worse than either answer alone.
+					 *
+					 * Client-declared here, unlike the fill route, where the
+					 * server bakes the page into the slot's URL because it
+					 * knows it at render time. A batch POST has no such moment.
+					 * The exposure is the one the fill route already documents:
+					 * these select which existing published post's or public
+					 * term's own facts are read, and a caller cannot invent a
+					 * category that is not there.
+					 */
+					'w'     => array(
+						'type'              => 'integer',
+						'required'          => false,
+						'default'           => 0,
+						'sanitize_callback' => 'absint',
+					),
+					'p'     => array(
+						'type'              => 'integer',
+						'required'          => false,
+						'default'           => 0,
+						'sanitize_callback' => 'absint',
+					),
+					't'     => array(
+						'type'              => 'integer',
+						'required'          => false,
+						'default'           => 0,
+						'sanitize_callback' => 'absint',
+					),
 				),
 			)
 		);
@@ -135,7 +175,12 @@ final class Decisions_Controller implements Service {
 		}
 
 		$slot_strings = array_values( array_filter( $slots, 'is_string' ) );
-		$payloads     = $this->fill->for_slots( $slot_strings );
+		$payloads     = $this->fill->for_slots(
+			$slot_strings,
+			(int) $request->get_param( 'w' ),
+			(int) $request->get_param( 'p' ),
+			(int) $request->get_param( 't' )
+		);
 
 		return new WP_REST_Response(
 			array(

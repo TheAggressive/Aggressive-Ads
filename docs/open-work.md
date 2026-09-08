@@ -38,6 +38,46 @@ rests on:
 Two of the three entries this rule was written from were already correct. The
 one that was not is the one that stated a verdict instead of a condition.
 
+## Page coordination has no caller, so it never fires
+
+**What.** Roadblocks, competitive separation and category exclusivity are
+evaluated only in `Page_Decision_Coordinator`, which is reached only through
+`Decision_Engine::decide_page()`, which is reached only through
+`Fill_Service::for_slots()`, which is reached only through
+`POST /aggr/v1/decisions`. Nothing in `src/` calls that route: `fill.js` fetches
+the per-slot `data-aggr-fill` URL, one request per slot. So for a real visitor
+none of the three page rules run, and two campaigns from competing advertisers
+can share a page that was configured to keep them apart.
+
+**Why it looks fine.** Every one of those rules is tested, and the tests pass —
+`PageCoordinationInputsTest` goes through `for_slots()` directly, which is the
+right call for what it is testing and also the reason the missing caller is
+invisible from the suite. The route exists, is registered, is rate-limited and
+answers correctly. Only nobody asks it anything.
+
+**What stops it mattering today.** `roadblock` and `exclusive_category` are read
+from `delivery_settings` and there is no writer: no admin control, no portal
+field, and nothing in the REST schema names either key. The line-items route
+accepts `delivery_settings` as free-form, so staff *could* set them through the
+API and get silent non-enforcement, but nothing invites them to.
+
+**What would change the answer.** This defers on one premise: *that no
+configured page rule can reach delivery*. **Revisit the moment either key gets a
+writer** — an admin control, a portal field, or a named REST schema entry —
+because at that point a publisher can configure a rule that silently does
+nothing, which is the failure this codebase treats as worse than an error. The
+fix at that point is a decision about the client, not the server: the server
+half works, and the question is whether a page with several slots should make
+one batch request instead of one request per slot. That is a delivery change
+with page-cache and rotation consequences, not a small one, which is the honest
+reason it is not being done pre-emptively.
+
+**Cost of leaving it.** Three implemented features that do not run, and a route
+whose docblock says it is what "a page actually uses" when no page does.
+
+Found while wiring the viewport and page context through that route, which had
+been accepting neither.
+
 ## Nothing else is open
 
 Every other entry that was here has shipped and been deleted, which is this
