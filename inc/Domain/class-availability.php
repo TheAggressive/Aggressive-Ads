@@ -98,6 +98,37 @@ final class Availability {
 	}
 
 	/**
+	 * The state of a window given only what is already held.
+	 *
+	 * A different question from {@see self::decide()}, which asks whether one
+	 * more claim fits. Asking that with a request of nothing is not the same
+	 * question and does not answer this one: nothing always fits, so the
+	 * verdict comes back `available` for a window whose commitments already
+	 * exceed the forecast. The outlook screen asked it that way and every row
+	 * therefore read as available, including the oversold ones the summary
+	 * above the table was counting at the same moment.
+	 *
+	 * Built on `decide()` rather than beside it so the oversell rule has one
+	 * definition. The screen's summary had grown a second one — an inline
+	 * `committed > forecast` — and two definitions of oversold on one screen is
+	 * how the tile and the rows come to disagree.
+	 *
+	 * @param int|null $capacity  Forecast supply, or null when unmeasured.
+	 * @param int      $committed What reservations already hold.
+	 * @return array{verdict: string, remaining: int|null, shortfall: int}
+	 */
+	public static function holdings( ?int $capacity, int $committed ): array {
+		$held     = max( 0, $committed );
+		$decision = self::decide( $capacity, 0, $held );
+
+		return array(
+			'verdict'   => $decision['verdict'],
+			'remaining' => null === $capacity ? null : max( 0, $capacity - $held ),
+			'shortfall' => $decision['shortfall'],
+		);
+	}
+
+	/**
 	 * The answer an advertiser may be given.
 	 *
 	 * **No number crosses this line.** A forecast is the publisher's negotiating

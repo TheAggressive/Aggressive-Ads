@@ -280,6 +280,93 @@ final class ForecastScreenTest extends WP_UnitTestCase {
 
 		$this->assertSame( 1, $this->view()['totals']['oversold'] );
 		$this->assertSame( 0, $this->view()['rows'][0]['remaining'] );
+
+		/*
+		 * And the row says so too.
+		 *
+		 * The summary counted this placement while its row reported
+		 * `available`, because the row asked whether a request of *nothing*
+		 * fitted and nothing always does. Two definitions of oversold on one
+		 * screen, disagreeing about the same placement in the same render, and
+		 * the assertion above passed over it because it only ever read the
+		 * summary.
+		 */
+		$this->assertSame(
+			Availability::OVERSELL,
+			$this->view()['rows'][0]['verdict'],
+			'The summary counts this placement as oversold and its own row does not say so.'
+		);
+	}
+
+	/**
+	 * **The summary and the rows agree, placement by placement.**
+	 *
+	 * Asserted as an equality over a mixed catalogue rather than as two
+	 * separate expectations, so a future second definition of oversold fails
+	 * here rather than showing staff a tile that contradicts the table under
+	 * it.
+	 *
+	 * @return void
+	 */
+	public function test_the_oversold_tile_equals_the_rows_that_say_oversold(): void {
+		$window = $this->data->default_window();
+
+		$sold_out = $this->placement( 'Sold past its forecast' );
+		$healthy  = $this->placement( 'Comfortably within' );
+		$unknown  = $this->placement( 'Never measured' );
+
+		$this->forecast( $sold_out, 100 );
+		$this->forecast( $healthy, 1000 );
+
+		foreach ( array(
+			$sold_out => 400,
+			$healthy  => 10,
+		) as $placement => $quantity ) {
+			$this->reservations->claim(
+				array(
+					'placement'        => $placement,
+					'opportunity'      => Opportunity::PAGE,
+					'from'             => $window['from'],
+					'to'               => $window['to'],
+					'campaign'         => 5,
+					'org'              => 6,
+					'quantity'         => $quantity,
+					'capacity'         => $quantity,
+					'forecast_version' => 1,
+				)
+			);
+		}
+
+		$view = $this->view();
+
+		$verdicts = array();
+
+		foreach ( $view['rows'] as $row ) {
+			$verdicts[] = (string) $row['verdict'];
+		}
+
+		$this->assertSame(
+			count( array_filter( $verdicts, static fn ( string $v ): bool => Availability::OVERSELL === $v ) ),
+			(int) $view['totals']['oversold'],
+			'The oversold tile and the rows claiming to be oversold are different sets.'
+		);
+
+		// Pinned as well as compared: equality alone holds when both are zero.
+		$this->assertSame( 1, (int) $view['totals']['oversold'] );
+		$this->assertContains( Availability::UNKNOWN, $verdicts, 'A placement nobody measured is not a verdict about capacity.' );
+		$this->assertContains( Availability::AVAILABLE, $verdicts );
+		$this->assertSame( 3, count( $verdicts ) );
+
+		// By id rather than by position: nothing promises the row order.
+		$by_id = array();
+
+		foreach ( $view['rows'] as $row ) {
+			$by_id[ (int) $row['id'] ] = (string) $row['verdict'];
+		}
+
+		$this->assertSame( Availability::OVERSELL, $by_id[ $sold_out ] );
+		$this->assertSame( Availability::AVAILABLE, $by_id[ $healthy ] );
+		$this->assertSame( Availability::UNKNOWN, $by_id[ $unknown ] );
 	}
 
 	public function test_a_reader_without_the_capability_is_refused(): void {
@@ -367,6 +454,101 @@ final class ForecastScreenTest extends WP_UnitTestCase {
 	 *
 	 * @return void
 	 */
+	/**
+	 * **The job is armed and reachable the way production reaches it.**
+	 *
+	 * Every other test here calls `run()` directly, which proves the work is
+	 * correct and nothing about whether anything ever asks for it. Remove
+	 * `Forecast_Scheduler` from `Plugin::service_init_order()`, or the
+	 * `add_action` from `init()`, and all of them still pass while no site ever
+	 * takes a snapshot again — the read half and the write half not meeting,
+	 * which is the failure this codebase keeps finding after the fact.
+	 *
+	 * So this one arms it the way `init` does and fires the hook the way WP
+	 * Cron does, touching `run()` at no point.
+	 *
+	 * @return void
+	 */
+	public function test_the_cron_hook_is_armed_and_produces_a_snapshot(): void {
+		$placement = $this->placement();
+
+		$rollups = Plugin::instance()->container()->get( \Aggressive\Ads\Repository\Decision_Rollup_Repository::class );
+		$rollups->install_table();
+
+		// Thirty days of history, so the job has something to forecast from.
+		for ( $ago = 30; $ago >= 1; $ago-- ) {
+			$rollups->add(
+				gmdate( 'Y-m-d', time() - $ago * DAY_IN_SECONDS ),
+				$placement,
+				array( \Aggressive\Ads\Domain\Decision_Outcome::REQUEST => 500 ),
+				Opportunity::PAGE
+			);
+		}
+
+		$scheduler = Plugin::instance()->container()->get( \Aggressive\Ads\Workflow\Forecast_Scheduler::class );
+
+		$this->assertNull( $this->view()['rows'][0]['forecast'] );
+
+		/*
+		 * `init()` is what `Plugin` calls, so this is the production wiring
+		 * rather than a hand-attached listener.
+		 */
+		$scheduler->init();
+
+		$this->assertTrue(
+			has_action( \Aggressive\Ads\Workflow\Forecast_Scheduler::HOOK ) !== false,
+			'Nothing listens on the cron hook, so WP Cron would fire it into empty air.'
+		);
+
+		/*
+		 * The `init` listener is asserted rather than fired. Running the whole
+		 * of `init` inside a test re-registers the block and trips core's own
+		 * doing-it-wrong guard, so this checks that WordPress would call the
+		 * arming callback and then calls exactly that callback.
+		 */
+		$this->assertNotFalse(
+			has_action( 'init', array( $scheduler, 'ensure_scheduled' ) ),
+			'Nothing arms the schedule on init, so a fresh site would never book the job.'
+		);
+
+		$scheduler->ensure_scheduled();
+
+		$this->assertIsInt(
+			wp_next_scheduled( \Aggressive\Ads\Workflow\Forecast_Scheduler::HOOK ),
+			'The recurring event was never booked, so the hook would never fire.'
+		);
+		$this->assertSame(
+			\Aggressive\Ads\Workflow\Forecast_Scheduler::RECURRENCE,
+			wp_get_schedule( \Aggressive\Ads\Workflow\Forecast_Scheduler::HOOK )
+		);
+
+		// What WP Cron does, and the only thing this test does to run the job.
+		do_action( \Aggressive\Ads\Workflow\Forecast_Scheduler::HOOK );
+
+		$this->assertNotNull(
+			$this->view()['rows'][0]['forecast'],
+			'The hook fired and the screen still has nothing, so the job is not on the end of it.'
+		);
+	}
+
+	/**
+	 * Uninstalling takes the schedule with it.
+	 *
+	 * A cron entry surviving uninstall fires forever into a hook nothing
+	 * listens on, which WordPress retries and logs on every run.
+	 *
+	 * @return void
+	 */
+	public function test_the_schedule_is_removed_on_uninstall(): void {
+		Plugin::instance()->container()->get( \Aggressive\Ads\Workflow\Forecast_Scheduler::class )->ensure_scheduled();
+
+		$this->assertIsInt( wp_next_scheduled( \Aggressive\Ads\Workflow\Forecast_Scheduler::HOOK ) );
+
+		\Aggressive\Ads\Workflow\Forecast_Scheduler::unschedule();
+
+		$this->assertFalse( wp_next_scheduled( \Aggressive\Ads\Workflow\Forecast_Scheduler::HOOK ) );
+	}
+
 	public function test_the_job_records_what_a_finished_window_supplied(): void {
 		$placement = $this->placement();
 		$rollups   = Plugin::instance()->container()->get( \Aggressive\Ads\Repository\Decision_Rollup_Repository::class );

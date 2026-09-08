@@ -3,11 +3,20 @@
 ## Status
 
 - Phase: **P16 — Forecasting and reservations**
-- Roadmap state: `[ ]`
-- Last audited: 2026-09-06
+- Roadmap state: `[x]`
+- Last audited: 2026-09-08
 - Authoritative environments: CI's pinned MySQL 8.4 / PHP 8.4 lanes
 
-This document records in-progress work. It does not claim completion.
+**Closed.** Every slice below is built, and the exit criteria at the end of this
+document record where each one is proven rather than asserted.
+
+This block said `[ ]` and "does not claim completion" while slices 5, 6 and 7
+were already marked *(built)* above, and a "Not built yet" list at the end named
+exactly those three. The status was stale in three places at once, in a document
+whose job is to say what is true. That is recorded rather than quietly corrected
+because it is the failure mode this file exists to prevent: a phase document
+that disagrees with itself is worse than none, since a reader has no way to tell
+which half is current and will usually believe the pessimistic one.
 
 ## Outcome
 
@@ -322,10 +331,96 @@ Twelve tests; eight mutants, all killed. One survived first: every test asked
 for the page view, so forcing the kind changed nothing — a refresh-view case
 fixed that.
 
-## Not built yet
-- **Reservations.** Table, lifecycle, concurrency-safe quantity and status
-  changes, audit.
-- **Oversell warning and audited override** naming actor, reason, forecast
-  version and expected impact.
-- **The staff surface**, behind its own capability, and the derived
-  advertiser-facing availability answer that exposes no number.
+## Closeout — what was finished last
+
+Three things were genuinely incomplete when this phase was audited on
+2026-09-08. Two were defects; one was the documentation.
+
+### The screen's own rows could not report an oversell
+
+`Forecast_Data::row()` asked `Availability::decide( $capacity, $committed, 0 )`.
+That is a different question — *does one more claim of nothing fit* — and
+nothing always fits, so the verdict came back `available` for every forecast
+placement including the ones already sold past their estimate.
+
+The summary above the table counted those same placements as oversold, using an
+inline `committed > forecast` of its own. **Two definitions of oversold on one
+screen, disagreeing about the same placement in the same render**, and neither
+checkable against the other.
+
+`Availability::holdings()` now answers the question the screen actually asks,
+built on `decide()` so the rule has one definition, and the summary counts the
+rows' own verdicts. A test asserts the tile equals the set of rows claiming to
+be oversold, over a catalogue holding an oversold, a healthy and an unmeasured
+placement, so the two cannot drift apart again.
+
+The verdict had also never been rendered: it was in the payload and in
+`types.ts`, with `available` / `oversell` / `unknown` labels shipped to every
+staff member, and no component read any of it. The table now has a status
+column, which is what gives those labels a reader.
+
+**One equivalent mutant, recorded rather than tested around.** Restoring the
+summary's inline `committed > forecast` still passes, because with `holdings()`
+correct the two agree on every reachable input — they diverge only for a
+negative commitment, which the ledger cannot produce. The consolidation is for
+the next edit, not for this one.
+
+### Nothing proved the daily job was reachable
+
+Every test called `Forecast_Scheduler::run()` directly. Remove the scheduler
+from `Plugin::service_init_order()`, or the `add_action` from `init()`, and all
+of them still passed while no site ever took another snapshot — the read half
+and the write half not meeting.
+
+A test now arms it the way `init` does, asserts the recurring event is booked
+with the right recurrence, and fires `Forecast_Scheduler::HOOK` the way WP Cron
+does, touching `run()` at no point. Three mutants confirm it: never registering
+the hook, never arming on `init`, and never booking the event all die.
+
+The `init` listener is asserted rather than fired, because running the whole of
+`init` inside a test re-registers the block and trips core's own doing-it-wrong
+guard.
+
+### The concurrency guarantee was implied
+
+The advisory lock around `claim()` had no test. Every case ran one claim at a
+time, which proves the arithmetic and nothing about serialisation: deleting
+`acquire()` left the suite green.
+
+A second `wpdb` connection now holds the lock while a claim is attempted —
+`GET_LOCK` is re-entrant within one session, so taking it on `$wpdb` would have
+asserted the opposite of the truth. The claim is refused as `busy`, consumes
+nothing, and succeeds once the lock is free. A second test asserts
+`IS_USED_LOCK` is null afterwards, because a leaked lock does not fail the
+session holding it — it fails whichever *other* request wants that window next,
+three seconds later, as a refusal nobody can reproduce.
+
+## Exit criteria
+
+| Criterion | Where it is proven |
+|---|---|
+| Forecasts come from recorded supply, and missing history is never zero capacity | `SupplyForecastTest::test_no_history_is_not_no_inventory`, `test_an_omitted_day_is_unknown_rather_than_zero`, `ForecastScreenTest::test_an_unforecast_placement_is_not_sold_out` |
+| Reservations consume and release capacity | `ReservationTest::test_a_hold_consumes_capacity_against_the_next_booking`, `test_releasing_returns_the_inventory_to_the_pool` |
+| Concurrency is serialised, not assumed | `ReservationTest::test_a_window_another_request_is_booking_is_refused_rather_than_double_sold`, `test_the_lock_is_released_when_the_claim_is_done` |
+| Oversell warns rather than blocks | `OversellOverrideTest::test_an_oversell_with_a_reason_proceeds`, `test_an_oversell_without_a_reason_is_refused` |
+| An override names actor, reason, forecast version, value and shortfall | `OversellOverrideTest::test_the_override_names_everything_an_investigation_needs` |
+| The ledger guard survives an acknowledged oversell | `OversellOverrideTest::test_an_acknowledged_oversell_does_not_disable_the_ledger_guard` |
+| Snapshots and maturation run through the production path | `ForecastScreenTest::test_the_cron_hook_is_armed_and_produces_a_snapshot`, `test_the_job_records_what_a_finished_window_supplied` |
+| The schedule is removed on uninstall | `ForecastScreenTest::test_the_schedule_is_removed_on_uninstall` |
+| The screen uses the domain rules rather than its own | `ForecastScreenTest::test_the_oversold_tile_equals_the_rows_that_say_oversold`, `AvailabilityTest::test_a_window_sold_past_its_forecast_is_oversold` |
+| Capability gating | `ForecastScreenTest::test_a_reader_without_the_capability_is_refused`, `OversellOverrideTest::test_a_user_who_may_not_manage_inventory_is_refused_and_recorded`, `test_a_reviewer_may_not_book_either` |
+| Tenant isolation | `ReservationTest::test_reservations_are_listed_by_organization`, `test_another_placement_is_not_this_ones_inventory` |
+| Migration | `ReservationTest::test_a_migration_exists_to_create_the_table`, `PlanningSchemaTest` (indexes asserted on the live table, including that the version key is genuinely unique) |
+| Performance | `Forecast_Data::view()` reads the forecast and the committed total in two batched queries for the whole catalogue, not per placement |
+| No number reaches an advertiser | `AvailabilityTest::test_an_advertiser_is_told_yes_or_no_and_nothing_else` |
+
+### What this phase deliberately did not do
+
+- **No advertiser-facing booking flow.** `Booking_Service` is staff-only behind
+  `MANAGE_PLACEMENTS`. The advertiser-facing answer exists in the domain
+  (`Availability::bookable()`) and exposes no number, but nothing in the portal
+  calls it yet — there is no screen where an advertiser asks for inventory.
+  Recorded here rather than left as an assumption: the domain half is finished
+  and untested against a caller because it has none.
+- **No spend or price.** Reservations hold opportunities, not money. Billing
+  has no source, so a reservation cannot be costed.

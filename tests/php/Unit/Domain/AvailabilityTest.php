@@ -116,6 +116,87 @@ final class AvailabilityTest extends TestCase {
 	 *
 	 * @return void
 	 */
+	/**
+	 * **A window already sold past its forecast reports oversold.**
+	 *
+	 * The outlook screen asked this with `decide( capacity, committed, 0 )`,
+	 * which is a different question — does one more claim of nothing fit — and
+	 * nothing always fits, so every row came back `available` including the
+	 * ones the summary above the table was counting as oversold in the same
+	 * render. The row said available, the tile said one oversold, and neither
+	 * could be checked against the other.
+	 *
+	 * @return void
+	 */
+	public function test_a_window_sold_past_its_forecast_is_oversold(): void {
+		$state = Availability::holdings( 100, 140 );
+
+		$this->assertSame( Availability::OVERSELL, $state['verdict'] );
+		$this->assertSame( 40, $state['shortfall'] );
+		$this->assertSame( 0, $state['remaining'], 'An oversold window has no headroom left to offer.' );
+	}
+
+	/**
+	 * The question the old call actually answered, kept as the contrast.
+	 *
+	 * Asserted here so the difference between the two is a fact of the suite
+	 * rather than a claim in a comment: the same numbers, asked the other way,
+	 * still say available.
+	 *
+	 * @return void
+	 */
+	public function test_asking_whether_nothing_fits_is_not_this_question(): void {
+		$this->assertSame(
+			Availability::AVAILABLE,
+			Availability::decide( 100, 140, 0 )['verdict'],
+			'A request of nothing always fits, which is why it cannot describe a window.'
+		);
+	}
+
+	/**
+	 * Holdings within the forecast leave the headroom that is actually left.
+	 *
+	 * @return void
+	 */
+	public function test_holdings_within_the_forecast_report_the_headroom(): void {
+		$state = Availability::holdings( 100, 40 );
+
+		$this->assertSame( Availability::AVAILABLE, $state['verdict'] );
+		$this->assertSame( 60, $state['remaining'] );
+		$this->assertSame( 0, $state['shortfall'] );
+	}
+
+	/**
+	 * Taking exactly the forecast is a sale, not an oversell.
+	 *
+	 * The boundary is the whole point of a `>` rather than a `>=`, and it is
+	 * the one an off-by-one would move.
+	 *
+	 * @return void
+	 */
+	public function test_holding_exactly_the_forecast_is_not_oversold(): void {
+		$state = Availability::holdings( 100, 100 );
+
+		$this->assertSame( Availability::AVAILABLE, $state['verdict'] );
+		$this->assertSame( 0, $state['remaining'] );
+	}
+
+	/**
+	 * An unmeasured placement stays unknown however much is held against it.
+	 *
+	 * A screen that called this oversold would invent a shortfall against a
+	 * number nobody has produced.
+	 *
+	 * @return void
+	 */
+	public function test_holdings_against_no_forecast_stay_unknown(): void {
+		$state = Availability::holdings( null, 500 );
+
+		$this->assertSame( Availability::UNKNOWN, $state['verdict'] );
+		$this->assertNull( $state['remaining'], 'A number here would be read as knowledge.' );
+		$this->assertSame( 0, $state['shortfall'] );
+	}
+
 	public function test_the_ledger_ceiling_admits_this_claim_and_no_more(): void {
 		$this->assertSame(
 			9000,

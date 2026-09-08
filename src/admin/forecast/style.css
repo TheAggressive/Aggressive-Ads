@@ -55,3 +55,14 @@
 .aggr-forecast__none {
 	color: var(--aggr-color-text-muted);
 }
+
+/*
+ * An oversold row, marked rather than merely worded.
+ *
+ * The summary above the table has always counted these; until the verdict was
+ * rendered there was no way to tell which rows it meant.
+ */
+.aggr-forecast__oversold {
+	font-weight: 700;
+	color: #b32d2e;
+}
