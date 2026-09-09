@@ -54,8 +54,24 @@ $aggr_creative_ready = array() !== $aggr_slots;
 $aggr_overlays       = array();
 $aggr_line_items     = is_array( $aggr_campaign['line_items'] ?? null ) ? $aggr_campaign['line_items'] : array();
 
+/*
+ * **At least one creative per active placement, not exactly one.**
+ *
+ * `exactly one` contradicted the two rules that actually decide anything.
+ * `Creative_Manager` permits ten creatives on a placement, and
+ * `Campaign_Validator` accepts a placement covered by any number of them —
+ * `Coverage_Service` counts a placement as covered once, however many cover it,
+ * and a creative still awaiting review covers for submission.
+ *
+ * So an advertiser could upload a second creative, was permitted to by the
+ * manager, would have been accepted by the validator, and was then stopped here
+ * by a wizard step telling them a placement needs exactly one. A dead end made
+ * by the only rule in the system that held that opinion — and the reason
+ * weighted variants, which delivery has supported all along, were unreachable
+ * without calling the REST route by hand.
+ */
 foreach ( $aggr_slots as $aggr_slot ) {
-	if ( ! $aggr_slot['active'] || 1 !== count( $aggr_slot['creatives'] ) ) {
+	if ( ! $aggr_slot['active'] || array() === $aggr_slot['creatives'] ) {
 		$aggr_creative_ready = false;
 	}
 }
@@ -671,7 +687,7 @@ endif;
 					<?php if ( $aggr_creative_ready ) : ?>
 						<a class="aggr-button" href="<?php echo esc_url( add_query_arg( 'step', 'destination', $aggr_campaign_url ) ); ?>"><?php esc_html_e( 'Continue to schedule', 'aggressive-ads' ); ?></a>
 					<?php else : ?>
-						<p class="aggr-hint"><?php esc_html_e( 'Upload one creative for every active package placement to continue.', 'aggressive-ads' ); ?></p>
+						<p class="aggr-hint"><?php esc_html_e( 'Upload at least one creative for every active package placement to continue.', 'aggressive-ads' ); ?></p>
 					<?php endif; ?>
 				</div>
 			</div>
@@ -689,7 +705,7 @@ endif;
 
 					<?php if ( ! $aggr_creative_ready ) : ?>
 						<div class="aggr-alert aggr-alert--error" role="alert">
-							<p><?php esc_html_e( 'Every active package placement needs exactly one creative before this schedule can be completed.', 'aggressive-ads' ); ?></p>
+							<p><?php esc_html_e( 'Every active package placement needs at least one creative before this schedule can be completed.', 'aggressive-ads' ); ?></p>
 						</div>
 					<?php endif; ?>
 
