@@ -288,13 +288,54 @@ that order. The reason lives in the PHP docblock and not inside the DDL string:
 column list as a definition, so a comment there produced 382 errors across the
 suite rather than a warning.
 
+## Slice 2 note — the mechanism is real, the surface is blocked
+
+Before building a screen that sets weights, the weighting was checked through
+the path a visitor takes rather than through the selector. **It works.** Two
+assignments at 3 and 1 converge on roughly three to one over 600 fills through
+`Fill_Service::for_slug()` — the real candidate query, the real pipeline, the
+real payload — both variants serve, and a placement with a single assignment is
+unaffected. `WeightedVariantDeliveryTest` holds it, and a mutant that ignores
+weight and always returns the first candidate dies there.
+
+That check was worth doing first for a specific reason: the page coordinator was
+also complete, tested and reachable, and had no caller for a visitor. A weights
+screen over a mechanism in that state would be a control over nothing. This one
+is not.
+
+**What actually blocks slice 2 is the portal, not the delivery layer.**
+`templates/portal/screens/campaign.php` marks a campaign ready only when every
+active slot holds *exactly* one creative:
+
+```php
+if ( ! $aggr_slot['active'] || 1 !== count( $aggr_slot['creatives'] ) ) {
+    $aggr_creative_ready = false;
+}
+```
+
+So an advertiser cannot create a second variant, and a campaign that somehow had
+one would be reported as not ready to submit. Variants are reachable only
+through `PATCH /campaigns/{id}/creative-assignments/{id}` by hand.
+
+Relaxing that rule to "at least one" is a change to what submission means for
+every advertiser, not a screen. It belongs in slice 2 as its first decision
+rather than as an incidental edit, and it wants a deliberate answer to: may a
+campaign be submitted with two variants awaiting review, and does approving one
+variant of a slot make the campaign servable?
+
 ## Required executable evidence
 
-- **A weighted pair converges on its weights.** Two assignments at 3 and 1 over
-  a large seeded run land near three to one, through the production decision
-  path rather than by calling the selector directly.
+- **A weighted pair converges on its weights.** *(done — slice 2 note above.)*
+  Two assignments at 3 and 1 over a large seeded run land near three to one,
+  through the production decision path rather than by calling the selector
+  directly.
 - **The same seed replays the same winner**, so an experiment's outcome can be
-  audited after the fact.
+  audited after the fact. *(Held at unit level by
+  `WeightedSelectionTest::test_the_same_seed_replays_the_same_winner`. Not yet
+  asserted through the fill path, which passes no seed — every request draws its
+  own. Auditing a past decision needs the seed recorded with the decision, and
+  nothing records one; that is a slice 3 problem, named here rather than assumed
+  covered by the unit test.)*
 - **Per-creative counters sum to the placement's counters.** The same
   reconciliation the utilisation view now asserts, one dimension lower — a
   breakdown that does not add up to its total is the defect P15 shipped and
