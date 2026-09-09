@@ -24,7 +24,7 @@ final class Schema {
 	 *
 	 * Drives the migration walker in Upgrader.
 	 */
-	public const DB_VERSION = 29;
+	public const DB_VERSION = 30;
 
 	/**
 	 * The audit table's name, without the site's table prefix.
@@ -553,12 +553,27 @@ final class Schema {
 	 * @return string
 	 */
 	public static function rollups_table_ddl( string $table_name, string $charset_collate ): string {
+		/*
+		 * `creative_day` is declared last so a fresh install and an upgrade
+		 * agree on index order. `dbDelta` appends a new index to an existing
+		 * table rather than placing it where the DDL says, so listing it before
+		 * `org_day` makes `SHOW INDEX` return one order on a site installed
+		 * today and another on a site upgraded to it — and the schema assertion
+		 * compares that order.
+		 *
+		 * The note lives here rather than inside the statement because `dbDelta`
+		 * parses the DDL a line at a time and treats anything in the column list
+		 * as a definition. A comment in there produced 382 errors across the
+		 * suite, not a parse warning.
+		 */
+
 		return "CREATE TABLE {$table_name} (
 	id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
 	day_utc date NOT NULL,
 	placement_id bigint(20) unsigned NOT NULL DEFAULT 0,
 	campaign_id bigint(20) unsigned NOT NULL DEFAULT 0,
 	line_item_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	creative_id bigint(20) unsigned NOT NULL DEFAULT 0,
 	org_id bigint(20) unsigned NOT NULL DEFAULT 0,
 	impressions bigint(20) unsigned NOT NULL DEFAULT 0,
 	clicks bigint(20) unsigned NOT NULL DEFAULT 0,
@@ -566,10 +581,11 @@ final class Schema {
 	conversions bigint(20) unsigned NULL DEFAULT NULL,
 	projector_version smallint(5) unsigned NOT NULL DEFAULT 0,
 	PRIMARY KEY  (id),
-	UNIQUE KEY slot_line_day (placement_id,campaign_id,line_item_id,day_utc),
+	UNIQUE KEY slot_creative_day (placement_id,campaign_id,line_item_id,creative_id,day_utc),
 	KEY campaign_day (campaign_id,day_utc),
 	KEY line_item_day (line_item_id,day_utc),
-	KEY org_day (org_id,day_utc)
+	KEY org_day (org_id,day_utc),
+	KEY creative_day (creative_id,day_utc)
 ) {$charset_collate};";
 	}
 
@@ -585,6 +601,7 @@ final class Schema {
 			'placement_id',
 			'campaign_id',
 			'line_item_id',
+			'creative_id',
 			'org_id',
 			'impressions',
 			'clicks',
@@ -600,7 +617,7 @@ final class Schema {
 	 * @return array<int, string>
 	 */
 	public static function rollups_index_names(): array {
-		return array( 'PRIMARY', 'slot_line_day', 'campaign_day', 'line_item_day', 'org_day' );
+		return array( 'PRIMARY', 'slot_creative_day', 'campaign_day', 'line_item_day', 'org_day', 'creative_day' );
 	}
 
 	/**

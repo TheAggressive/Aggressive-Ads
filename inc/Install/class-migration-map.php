@@ -385,6 +385,27 @@ final class Migration_Map {
 				delete_post_meta_by_key( '_aggr_pending_edits_at' );
 				delete_post_meta_by_key( '_aggr_pending_edits_by' );
 			},
+
+			/*
+			 * The creative dimension on the delivery rollups.
+			 *
+			 * `install_table()` adds the column and the new unique, and drops
+			 * the superseded `slot_line_day` — which `dbDelta` would leave in
+			 * place, still enforcing one row per line item per day and silently
+			 * collapsing every variant of a line item back into one row.
+			 *
+			 * Existing rows keep `creative_id = 0`, which is the honest reading
+			 * of history: those counters were never attributed to a creative
+			 * and cannot be, because the rollup is the only surviving record at
+			 * that grain. They are not backfilled from `aggr_events` — the
+			 * ledger is retained for a window, so a backfill would attribute
+			 * the days still in it and leave the rest at zero, producing a
+			 * comparison that silently changes meaning partway along its own
+			 * x-axis. `runbook.md` records the reading rule.
+			 */
+			30 => static function () use ( $c ): void {
+				$c->get( Rollup_Repository::class )->install_table();
+			},
 		);
 	}
 }

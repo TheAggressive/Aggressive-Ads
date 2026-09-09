@@ -3,7 +3,7 @@
 ## Status
 
 - Phase: **P17 — Creative experience**
-- Roadmap state: `[ ]`
+- Roadmap state: `[ ]` — slice 1 of 4 built
 - Last audited: 2026-09-06
 - Authoritative environments: CI's pinned MySQL 8.4 / PHP 8.4 lanes
 
@@ -226,10 +226,10 @@ plugin's floor is 6.7 — see `known-issues.md`.
 
 Ordered by dependency, not by size.
 
-1. **Per-creative measurement.** The projector gains a creative dimension, with
-   the row-count cost measured rather than assumed. Nothing else in this phase
-   can be judged before this exists, which is the same reason P15's grain came
-   first.
+1. **Per-creative measurement.** *(built)* The projector gains a creative
+   dimension, with the row-count cost measured rather than assumed. Nothing else
+   in this phase can be judged before this exists, which is the same reason
+   P15's grain came first. See the closeout note below.
 2. **Variant management.** A screen for the assignments that already deliver:
    weight, window, status, and the revision each points at. Today this is a REST
    route and no UI.
@@ -238,6 +238,55 @@ Ordered by dependency, not by size.
    mechanism.
 4. **Review history and preview.** What was approved or rejected, when and why,
    and a device preview of the exact revision reviewed.
+
+## Slice 1 closeout — per-creative measurement
+
+**The measured row growth.** A seeded placement serving four creatives over
+seven days produces **28 rollup rows where the old grain produced 7** — one row
+per creative per day. The multiplier is exactly the number of creatives serving
+a placement and nothing else, asserted in
+`RollupCreativeGrainTest::test_the_creative_grain_multiplies_rows_by_the_creatives_serving`
+rather than described here. A placement serving one creative is unchanged.
+
+**`slot_line_day` is dropped explicitly**, in `install_table()` as well as in
+migration 30, exactly as this document warned. Left in place it does not error:
+it goes on enforcing one row per line item per day, silently merging every
+variant back into one row so two creatives report identical counters and no
+query looks wrong. The test recreates the key before asserting it is gone,
+because a fresh table never had it.
+
+### Two things the slice found that were not in the plan
+
+**A pre-dimension row doubles the day it belongs to.** Reconciliation repairs a
+row through `ON DUPLICATE KEY UPDATE`, and once the unique key carries a
+creative, a counter written at `creative_id = 0` is no longer the row the
+projection lands on. It survives untouched beside the newly attributed rows and
+the day is counted twice — once unattributed, once per creative. The reconciler
+now removes the rows a day's ledger supersedes before rebuilding it.
+
+That delete is scoped twice over, and both bounds are load-bearing. It matches
+only `(placement, campaign)` pairs the day's ledger actually has an opinion
+about, so a day purged by retention produces no pairs and its counters stand
+rather than being rebuilt as zero. And it skips any row whose creative the
+ledger still has, so `ON DUPLICATE KEY UPDATE` reaches it — which is what
+preserves the frozen `org_id`. A delete one notch wider re-derived tenancy every
+night, undoing the freeze by way of the machinery meant to guarantee accuracy;
+`FrozenTenancyTest` caught it immediately.
+
+**Existing counters are not backfilled.** Rows written before this keep
+`creative_id = 0`, which is the honest reading: they were never attributed and
+cannot be, because for days outside the ledger's retention the rollup is the
+only surviving record. Backfilling would attribute the days still in the ledger
+and leave the rest unattributed, producing a comparison that silently changes
+meaning partway along its own x-axis.
+
+**Index order is part of the schema contract.** `dbDelta` appends a new index
+rather than placing it where the DDL says, so `creative_day` is declared last to
+keep a fresh install and an upgrade agreeing — the schema assertion compares
+that order. The reason lives in the PHP docblock and not inside the DDL string:
+`dbDelta` parses that statement a line at a time and treats anything in the
+column list as a definition, so a comment there produced 382 errors across the
+suite rather than a warning.
 
 ## Required executable evidence
 

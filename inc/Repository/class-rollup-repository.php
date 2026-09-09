@@ -250,6 +250,24 @@ final class Rollup_Repository {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Dropping the pre-v16 unique so a second line item can hold its own row.
 			$wpdb->query( "ALTER TABLE {$table} DROP INDEX slot_day" );
 		}
+
+		/*
+		 * And its successor, for the same reason one version later.
+		 *
+		 * `slot_line_day` enforces one row per line item per day, which is
+		 * exactly what a creative dimension must stop doing. Left in place it
+		 * does not error — it silently collapses every variant of a line item
+		 * back into a single row, so a comparison screen would show two
+		 * creatives sharing one set of counters and no query would look wrong.
+		 *
+		 * A test asserting this key is gone has to recreate it first: a fresh
+		 * table never had it, and the assertion would otherwise pass over a
+		 * migration that does nothing.
+		 */
+		if ( in_array( 'slot_line_day', $names, true ) ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Dropping the pre-v30 unique so one line item's variants hold their own rows.
+			$wpdb->query( "ALTER TABLE {$table} DROP INDEX slot_line_day" );
+		}
 	}
 
 	/**
@@ -261,9 +279,10 @@ final class Rollup_Repository {
 	 * @param string $day_utc      Optional UTC Y-m-d. Invalid values use today.
 	 * @param int    $line_item_id Line item the delivery is spent against, or 0.
 	 * @param int    $org_id       Owning organization, frozen onto the row.
+	 * @param int    $creative_id  Revision that served, or 0 when none is known.
 	 * @return bool
 	 */
-	public function increment( string $column, int $placement_id, int $campaign_id, string $day_utc = '', int $line_item_id = 0, int $org_id = 0 ): bool {
+	public function increment( string $column, int $placement_id, int $campaign_id, string $day_utc = '', int $line_item_id = 0, int $org_id = 0, int $creative_id = 0 ): bool {
 		global $wpdb;
 
 		if ( ! in_array( $column, array( 'impressions', 'clicks', 'viewables', 'conversions' ), true ) ) {
@@ -313,8 +332,8 @@ final class Rollup_Repository {
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is prefix+constant; column and the two literals are allowlisted to impressions|clicks|viewables|conversions.
 		$written = $wpdb->query(
 			$wpdb->prepare(
-				"INSERT INTO {$table} (day_utc, placement_id, campaign_id, line_item_id, org_id, impressions, clicks, viewables, conversions, projector_version)
-				VALUES (%s, %d, %d, %d, %d, %d, %d, {$viewables_value}, {$conversions_value}, %d)
+				"INSERT INTO {$table} (day_utc, placement_id, campaign_id, line_item_id, creative_id, org_id, impressions, clicks, viewables, conversions, projector_version)
+				VALUES (%s, %d, %d, %d, %d, %d, %d, %d, {$viewables_value}, {$conversions_value}, %d)
 				ON DUPLICATE KEY UPDATE {$column} = COALESCE({$column}, 0) + 1,
 					org_id = IF(org_id = 0, VALUES(org_id), org_id),
 					projector_version = VALUES(projector_version)",
@@ -322,6 +341,7 @@ final class Rollup_Repository {
 				$placement_id,
 				$campaign_id,
 				$line_item_id,
+				max( 0, $creative_id ),
 				max( 0, $org_id ),
 				'impressions' === $column ? 1 : 0,
 				'clicks' === $column ? 1 : 0,
@@ -378,6 +398,66 @@ final class Rollup_Repository {
 		 */
 		$since = (string) get_option( self::OPTION_VIEWABILITY_SINCE, '' );
 
+		/*
+		 * **Rows this day's ledger supersedes are removed before it is rebuilt.**
+		 *
+		 * `ON DUPLICATE KEY UPDATE` repairs a row the projection would land on
+		 * again, and once the unique key carries a creative that is no longer
+		 * the same row. A counter written at `creative_id = 0` — by a
+		 * pre-dimension install, or by any increment that could not name the
+		 * creative — is a different key from the one the ledger produces, so it
+		 * survives the repair untouched and the day is counted twice: once
+		 * unattributed and once per creative. Reconciliation would be adding
+		 * impressions rather than correcting them.
+		 *
+		 * Scoped to the `(placement, campaign)` pairs this day's ledger actually
+		 * has an opinion about, which is the difference between superseding and
+		 * deleting. A day the ledger no longer covers — purged by retention —
+		 * produces no pairs, so nothing is removed and the existing counters
+		 * stand. That is the case where deleting first would be destroying
+		 * history to replace it with zero.
+		 *
+		 * **Only rows the rebuild will not land on again.** A row whose creative
+		 * this day's ledger still has is left for `ON DUPLICATE KEY UPDATE`,
+		 * which is what preserves the frozen `org_id`: deleting it and
+		 * reinserting would re-derive tenancy every night from current post
+		 * meta, undoing the freeze by way of the machinery meant to guarantee
+		 * accuracy. So the delete removes exactly the stale attributions — the
+		 * `creative_id = 0` aggregate, or a creative that no longer served that
+		 * day — and touches nothing the projection is about to correct.
+		 *
+		 * Conversions are rebuilt immediately afterwards from their own ledger,
+		 * so removing their counter here costs nothing; a row holding only
+		 * conversions belongs to a `(placement, campaign)` with no delivery
+		 * events that day and is therefore not matched at all.
+		 */
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Both table names are prefix+constant; every value is a placeholder.
+		$wpdb->query(
+			$wpdb->prepare(
+				"DELETE r FROM {$rollups} r
+				JOIN (
+					SELECT DISTINCT placement_id, campaign_id
+					FROM {$events}
+					WHERE created_at_ts >= %d AND created_at_ts < %d
+				) covered
+					ON covered.placement_id = r.placement_id AND covered.campaign_id = r.campaign_id
+				WHERE r.day_utc = %s
+					AND NOT EXISTS (
+						SELECT 1 FROM {$events} k
+						WHERE k.created_at_ts >= %d AND k.created_at_ts < %d
+							AND k.placement_id = r.placement_id
+							AND k.campaign_id = r.campaign_id
+							AND k.creative_id = r.creative_id
+					)",
+				$start,
+				$end,
+				$day_utc,
+				$start,
+				$end
+			)
+		);
+		// phpcs:enable
+
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Idempotent projection repair between this plugin's two custom tables.
 		$meta = $wpdb->postmeta;
 
@@ -396,8 +476,8 @@ final class Rollup_Repository {
 		 */
 		$written = $wpdb->query(
 			$wpdb->prepare(
-				"INSERT INTO {$rollups} (day_utc, placement_id, campaign_id, line_item_id, org_id, impressions, clicks, viewables, projector_version)
-				SELECT %s, e.placement_id, e.campaign_id, COALESCE(a.line_item_id, 0), COALESCE(MAX(m.meta_value), 0),
+				"INSERT INTO {$rollups} (day_utc, placement_id, campaign_id, line_item_id, creative_id, org_id, impressions, clicks, viewables, projector_version)
+				SELECT %s, e.placement_id, e.campaign_id, COALESCE(a.line_item_id, 0), e.creative_id, COALESCE(MAX(m.meta_value), 0),
 					SUM(CASE WHEN e.event IN (%s, %s) THEN 1 ELSE 0 END),
 					SUM(CASE WHEN e.event = %s THEN 1 ELSE 0 END),
 					IF(%s = '' OR %s < %s, NULL, SUM(CASE WHEN e.event = %s THEN 1 ELSE 0 END)),
@@ -408,7 +488,7 @@ final class Rollup_Repository {
 				LEFT JOIN {$meta} m
 					ON m.post_id = e.campaign_id AND m.meta_key = %s
 				WHERE e.created_at_ts >= %d AND e.created_at_ts < %d
-				GROUP BY e.placement_id, e.campaign_id, COALESCE(a.line_item_id, 0)
+				GROUP BY e.placement_id, e.campaign_id, COALESCE(a.line_item_id, 0), e.creative_id
 				ON DUPLICATE KEY UPDATE impressions = VALUES(impressions), clicks = VALUES(clicks),
 					viewables = IF(VALUES(viewables) = 0 AND viewables IS NULL, NULL, VALUES(viewables)),
 					org_id = IF(org_id = 0, VALUES(org_id), org_id),
@@ -477,11 +557,11 @@ final class Rollup_Repository {
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Idempotent projection repair between this plugin's two custom tables.
 		$written = $wpdb->query(
 			$wpdb->prepare(
-				"INSERT INTO {$rollups} (day_utc, placement_id, campaign_id, line_item_id, impressions, clicks, viewables, conversions)
-				SELECT %s, c.placement_id, c.campaign_id, c.line_item_id, 0, 0, NULL, COUNT(*)
+				"INSERT INTO {$rollups} (day_utc, placement_id, campaign_id, line_item_id, creative_id, impressions, clicks, viewables, conversions)
+				SELECT %s, c.placement_id, c.campaign_id, c.line_item_id, c.creative_id, 0, 0, NULL, COUNT(*)
 				FROM {$conversions} c
 				WHERE c.occurred_at_ts >= %d AND c.occurred_at_ts < %d
-				GROUP BY c.placement_id, c.campaign_id, c.line_item_id
+				GROUP BY c.placement_id, c.campaign_id, c.line_item_id, c.creative_id
 				ON DUPLICATE KEY UPDATE conversions = VALUES(conversions)",
 				$day_utc,
 				$start,

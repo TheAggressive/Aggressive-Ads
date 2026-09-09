@@ -85,6 +85,22 @@ upsert, while an hourly restartable reconciler rebuilds closed UTC days exactly
 from raw events after a ten-minute midnight grace period. Its watermark
 advances only after success.
 
+**The grain is placement, campaign, line item, creative and UTC day.** The
+creative joined it in v30 so two variants of one line item can be compared;
+before that a line item held one row per day and its variants shared it. Rows
+written before v30 keep `creative_id = 0`, and are not backfilled — for days
+outside the ledger's retention the rollup is the only surviving record, so a
+backfill would attribute the recent half of a window and leave the rest
+unattributed, which changes what a chart means partway along its own x-axis.
+
+Because the creative is part of the unique key, **the reconciler removes the
+rows a day supersedes before rebuilding it**. A counter at `creative_id = 0` is
+not the row the projection now lands on, so `ON DUPLICATE KEY UPDATE` cannot
+correct it and the day would be counted twice. That delete matches only
+`(placement, campaign)` pairs the day's ledger still covers — a day purged by
+retention keeps its counters rather than being rebuilt as zero — and skips any
+row whose creative the ledger still has, so the frozen `org_id` on it survives.
+
 Retention runs hourly in batches of 10,000 rows, up to 100,000 rows per run,
 and never deletes beyond the last reconciled day. At sustained rates above
 2.4 million retained events per day, increase worker frequency through a real

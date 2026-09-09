@@ -99,6 +99,7 @@ final class Event_Recorder {
 			day_utc: '',
 			line_item_id: $line_item_id,
 			org_id: $this->campaigns->org_id( $campaign_id ),
+			creative_id: $creative_id,
 		);
 
 		return $projected ? self::RECORDED : self::RECORDED_PENDING;

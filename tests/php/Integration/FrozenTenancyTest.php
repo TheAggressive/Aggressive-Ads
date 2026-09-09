@@ -234,11 +234,21 @@ final class FrozenTenancyTest extends WP_UnitTestCase {
 
 		/*
 		 * A counter as an older release wrote it: no organization named, and on
-		 * the same key the recorder will write to. The line item matters — the
-		 * unique key includes it, so a different value here would create a
-		 * second row and the fill below would never be exercised.
+		 * the same key the recorder will write to. The line item and the
+		 * creative both matter — the unique key includes both, so a different
+		 * value in either would create a second row and the fill below would
+		 * never be exercised. That is not hypothetical: adding the creative to
+		 * the key broke this fixture exactly that way.
 		 */
-		$this->rollups->increment( 'impressions', $fixture['placement'], $fixture['campaign'], '', $fixture['campaign'] );
+		$this->rollups->increment(
+			'impressions',
+			$fixture['placement'],
+			$fixture['campaign'],
+			'',
+			$fixture['campaign'],
+			0,
+			$fixture['creative']
+		);
 
 		$this->assertSame( 0, $this->stored_org_for( $fixture['campaign'] ) );
 

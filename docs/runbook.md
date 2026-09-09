@@ -231,6 +231,25 @@ back to step 5.
 
 ---
 
+## 5c. Reading per-creative counters after an upgrade (upgrades only)
+
+Delivery counters carry the creative that served them from v30 onward. Rows
+written before the upgrade keep `creative_id = 0` and are **not** backfilled.
+
+So on an upgraded site a per-creative breakdown begins at the upgrade, and
+anything earlier appears as one unattributed row per line item per day. Totals
+are unaffected — the parts still sum to the same whole, which is what every
+existing report reads.
+
+This is deliberate. The event ledger is retained for a window, so a backfill
+could attribute only the days still inside it and would leave everything older
+unattributed, producing a chart whose meaning changes partway along its own
+x-axis. An unattributed row says "not measured at this grain", which is true; a
+partially backfilled one would say something false about the shape of the data.
+
+Nothing to run. If a publisher asks why an old campaign shows no variant
+breakdown, this is the answer.
+
 ## 6. Configure, then verify the configuration took
 
 Advertising → Settings.
