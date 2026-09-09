@@ -59,6 +59,7 @@ const CLIENT_FILES = [
 	'src/blocks-interactivity/ad-slot/view.js',
 	'src/blocks-interactivity/ad-slot/fill.js',
 	BATCH_CLIENT,
+	'src/blocks-interactivity/ad-slot/viewport.js',
 	'src/blocks-interactivity/ad-slot/empty.js',
 	'src/blocks-interactivity/ad-slot/rotation.js',
 ];

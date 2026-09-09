@@ -23,12 +23,13 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 	 * @return void
 	 */
 	public function test_campaign_creation_has_a_progressive_form_path(): void {
-		$list   = file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/screens/campaigns.php' );
-		$detail = file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/screens/campaign.php' );
-		$base   = file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/base.php' );
+		$list = file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/screens/campaigns.php' );
+		$base = file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/base.php' );
+
+		// The whole wizard, so an assertion survives a step moving to a partial.
+		$detail = $this->wizard();
 
 		$this->assertIsString( $list );
-		$this->assertIsString( $detail );
 		$this->assertIsString( $base );
 		$this->assertStringContainsString( 'show_admin_bar( false )', $base );
 		$this->assertStringContainsString( "remove_action( 'wp_body_open', 'wp_admin_bar_render', 0 )", $base );
@@ -64,10 +65,9 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 	 * @return void
 	 */
 	public function test_wizard_structure_is_accessible(): void {
-		$template = file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/screens/campaign.php' );
+		$template = $this->wizard();
 		$progress = array();
 
-		$this->assertIsString( $template );
 		$this->assertStringContainsString( 'aria-current="step"', $template );
 		$this->assertStringContainsString( 'Campaign creation progress', $template );
 		$this->assertSame( 1, preg_match( '/<ol class="aggr-steps".*?<\/ol>/s', $template, $progress ) );
@@ -86,6 +86,37 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 		$this->assertStringContainsString( 'Assets::UPLOAD_STORE', $template );
 		$this->assertStringContainsString( 'tabindex="-1"', $template );
 		$this->assertStringContainsString( 'id="aggr-details-heading"', $template );
+	}
+
+	/**
+	 * The wizard as a reader meets it: the screen plus the steps it requires.
+	 *
+	 * Assertions here are about the rendered wizard, not about which file a
+	 * given line currently sits in. Reading only `campaign.php` made them fail
+	 * the moment the creative step moved to a partial — the content was
+	 * unchanged and the guard had simply stopped looking at it, which is the
+	 * same failure as a guard that silently stops matching.
+	 *
+	 * @return string
+	 */
+	private function wizard(): string {
+		$parts = array(
+			AGGR_PLUGIN_DIR . 'templates/portal/screens/campaign.php',
+			AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-creative-step.php',
+			AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-variant-share.php',
+		);
+
+		$read = array();
+
+		foreach ( $parts as $path ) {
+			$contents = file_get_contents( $path );
+
+			$this->assertIsString( $contents, $path . ' could not be read, so these assertions cover nothing.' );
+
+			$read[] = $contents;
+		}
+
+		return implode( "\n", $read );
 	}
 
 	/**

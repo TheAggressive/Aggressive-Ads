@@ -7,6 +7,7 @@
  * lifecycle. `view.js` owns *when* this runs; this owns *what* it does.
  */
 
+import { viewportWidth } from './viewport.js';
 import { observeViewability } from './viewability.js';
 
 /**
@@ -127,21 +128,6 @@ const buildAd = ( creative ) => {
 	link.appendChild( image );
 
 	return link;
-};
-
-/**
- * The viewport width a slot is being rendered into, in CSS pixels.
- *
- * Zero when the document is not measurable, which the server reads as "no
- * viewport reported" and answers with the placement's base size — the same
- * answer every non-responsive placement has always had.
- *
- * @return {number} Viewport width, or 0.
- */
-const viewportWidth = () => {
-	const width = document.documentElement?.clientWidth;
-
-	return Number.isFinite( width ) && width > 0 ? Math.floor( width ) : 0;
 };
 
 /**
