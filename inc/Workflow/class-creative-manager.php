@@ -11,10 +11,12 @@ namespace Aggressive\Ads\Workflow;
 
 use Aggressive\Ads\Audit\Audit_Event;
 use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Domain\Assignment_Rules;
 use Aggressive\Ads\Domain\Campaign_Rules;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Attachment_Repository;
+use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Security\Capabilities;
@@ -63,6 +65,7 @@ final class Creative_Manager {
 	 * @param Audit_Repository               $audit      Audit persistence.
 	 * @param Edit_Window                    $window     When editing is permitted.
 	 * @param Creative_Approval              $approvals  Queue counter for creatives awaiting publication.
+	 * @param Creative_Assignment_Repository $assignments Delivery assignments, which carry each variant's weight.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -74,7 +77,8 @@ final class Creative_Manager {
 		private readonly Rate_Limiter $limiter,
 		private readonly Audit_Repository $audit,
 		private readonly Edit_Window $window,
-		private readonly Creative_Approval $approvals
+		private readonly Creative_Approval $approvals,
+		private readonly Creative_Assignment_Repository $assignments
 	) {
 	}
 
@@ -379,6 +383,108 @@ final class Creative_Manager {
 				__( 'Advertisement linking to %s', 'aggressive-ads' ),
 				$host
 			);
+	}
+
+	/**
+	 * Sets how often one creative is chosen against the others on its placement.
+	 *
+	 * The weight already decides delivery — `Weighted_Selection` reads it, and
+	 * two creatives at 3 and 1 have always rotated three to one — but nothing
+	 * outside the REST route could set it, so the behaviour existed and was
+	 * unreachable.
+	 *
+	 * Gated exactly as removal is, because it is the same kind of act: it
+	 * changes what this campaign delivers. Capability, then ownership of the
+	 * creative, then ownership of the campaign, then the edit window. Ownership
+	 * before the window, so a caller who may not touch the campaign at all is
+	 * refused for that reason rather than told it is the wrong moment.
+	 *
+	 * The floor is `Assignment_Rules::MIN_WEIGHT`, which is 1, not 0. There is
+	 * deliberately no "weight it to nothing": a variant that should stop serving
+	 * is retired, which removes it from the candidate set and says so, rather
+	 * than left in the set at a weight that can never win. The two look the same
+	 * on a chart and mean different things to whoever reads it next.
+	 *
+	 * @param int $creative_id Creative post id.
+	 * @param int $weight      Relative share, clamped to the assignment rules.
+	 * @return true|WP_Error
+	 */
+	public function set_weight( int $creative_id, int $weight ): bool|WP_Error {
+		if ( ! current_user_can( Capabilities::UPLOAD_CREATIVE ) || ! current_user_can( 'edit_aggr_creative', $creative_id ) ) {
+			return $this->error( 'aggr_weight_forbidden', __( 'You do not have permission to change that creative.', 'aggressive-ads' ), 403 );
+		}
+
+		$creative = $this->creatives->details( $creative_id );
+
+		if ( null === $creative ) {
+			return $this->error( 'aggr_weight_forbidden', __( 'You do not have permission to change that creative.', 'aggressive-ads' ), 403 );
+		}
+
+		$campaign_id = (int) $creative['campaign_id'];
+
+		if ( ! current_user_can( 'edit_aggr_campaign', $campaign_id ) || ! $this->window->allows( $campaign_id ) ) {
+			return $this->error( 'aggr_campaign_not_editable', __( 'This campaign cannot be changed right now.', 'aggressive-ads' ), 409 );
+		}
+
+		if ( $weight < Assignment_Rules::MIN_WEIGHT || $weight > Assignment_Rules::MAX_WEIGHT ) {
+			return $this->error(
+				'aggr_weight_out_of_range',
+				sprintf(
+					/* translators: 1: lowest permitted weight, 2: highest permitted weight. */
+					__( 'A share must be between %1$d and %2$d.', 'aggressive-ads' ),
+					Assignment_Rules::MIN_WEIGHT,
+					Assignment_Rules::MAX_WEIGHT
+				),
+				422
+			);
+		}
+
+		$assignment = null;
+
+		foreach ( $this->assignments->for_campaign( $campaign_id ) as $row ) {
+			if ( (int) $row['revision_id'] === $creative_id ) {
+				$assignment = $row;
+
+				break;
+			}
+		}
+
+		if ( null === $assignment ) {
+			return $this->error( 'aggr_weight_no_assignment', __( 'That creative is not delivering yet, so it has no share to set.', 'aggressive-ads' ), 409 );
+		}
+
+		/*
+		 * `update()` carries the revision it expects, so two people editing one
+		 * campaign's shares cannot silently overwrite each other: the second
+		 * write matches no row and reports it rather than winning.
+		 */
+		$written = $this->assignments->update(
+			(int) $assignment['id'],
+			$campaign_id,
+			array( 'weight' => $weight ),
+			(int) $assignment['revision']
+		);
+
+		if ( false === $written || $written < 1 ) {
+			return $this->error( 'aggr_weight_not_saved', __( 'That share could not be saved. Reload the page and try again.', 'aggressive-ads' ), 409 );
+		}
+
+		$this->audit->insert(
+			new Audit_Event(
+				event: 'creative.weight_changed',
+				object_type: 'campaign',
+				object_id: $campaign_id,
+				org_id: $this->campaigns->org_id( $campaign_id ),
+				message: 'Creative delivery share changed.',
+				context: array(
+					'creative_id' => $creative_id,
+					'weight'      => $weight,
+					'was'         => (int) $assignment['weight'],
+				)
+			)
+		);
+
+		return true;
 	}
 
 	/**

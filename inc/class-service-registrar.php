@@ -732,7 +732,8 @@ final class Service_Registrar {
 				$c->get( Rate_Limiter::class ),
 				$c->get( Audit_Repository::class ),
 				$c->get( Edit_Window::class ),
-				$c->get( Creative_Approval::class )
+				$c->get( Creative_Approval::class ),
+				$c->get( Creative_Assignment_Repository::class )
 			)
 		);
 

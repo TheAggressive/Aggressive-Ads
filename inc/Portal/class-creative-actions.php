@@ -25,6 +25,7 @@ final class Creative_Actions implements Service {
 	public const REMOVE_ACTION   = 'aggr_remove_creative';
 	public const REPLACE_ACTION  = 'aggr_request_creative_replacement';
 	public const WITHDRAW_ACTION = 'aggr_withdraw_creative_replacement';
+	public const WEIGHT_ACTION   = 'aggr_set_creative_weight';
 
 	/**
 	 * Constructor.
@@ -48,6 +49,7 @@ final class Creative_Actions implements Service {
 		add_action( 'admin_post_' . self::REMOVE_ACTION, array( $this, 'handle_remove' ) );
 		add_action( 'admin_post_' . self::REPLACE_ACTION, array( $this, 'handle_replace' ) );
 		add_action( 'admin_post_' . self::WITHDRAW_ACTION, array( $this, 'handle_withdraw' ) );
+		add_action( 'admin_post_' . self::WEIGHT_ACTION, array( $this, 'handle_weight' ) );
 	}
 
 	/**
@@ -197,6 +199,50 @@ final class Creative_Actions implements Service {
 	 * @param int $creative_id Current creative id.
 	 * @return string
 	 */
+	public static function weight_nonce_action( int $creative_id ): string {
+		return self::WEIGHT_ACTION . '_' . max( 0, $creative_id );
+	}
+
+	/**
+	 * Sets one creative's share of its placement.
+	 *
+	 * @return void
+	 */
+	public function handle_weight(): void {
+		$this->assert_portal_access();
+
+		$creative_id = isset( $_POST['creative_id'] ) ? absint( $_POST['creative_id'] ) : 0;
+		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0;
+		$weight      = isset( $_POST['weight'] ) ? absint( $_POST['weight'] ) : 0;
+
+		check_admin_referer( self::weight_nonce_action( $creative_id ) );
+
+		$result = $this->process_weight( $creative_id, $weight );
+
+		if ( is_wp_error( $result ) ) {
+			$this->redirect( $campaign_id, 'error', $result );
+		}
+
+		$this->redirect( $campaign_id, 'creative_weight_saved' );
+	}
+
+	/**
+	 * Testable weight entry point.
+	 *
+	 * @param int $creative_id Creative post id.
+	 * @param int $weight      Relative share.
+	 * @return true|WP_Error
+	 */
+	public function process_weight( int $creative_id, int $weight ): bool|WP_Error {
+		return $this->manager->set_weight( $creative_id, $weight );
+	}
+
+	/**
+	 * Nonce scoped to one creative's share.
+	 *
+	 * @param int $creative_id Creative post id.
+	 * @return string
+	 */
 	public static function replace_nonce_action( int $creative_id ): string {
 		return self::REPLACE_ACTION . '_' . max( 0, $creative_id );
 	}
@@ -220,7 +266,7 @@ final class Creative_Actions implements Service {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only post/redirect/get display state.
 		$value = isset( $_GET['aggr_notice'] ) ? sanitize_key( wp_unslash( $_GET['aggr_notice'] ) ) : '';
 
-		return in_array( $value, array( 'creative_uploaded', 'creative_removed', 'creative_update_requested', 'creative_update_withdrawn', 'error' ), true ) ? $value : '';
+		return in_array( $value, array( 'creative_uploaded', 'creative_removed', 'creative_update_requested', 'creative_update_withdrawn', 'creative_weight_saved', 'error' ), true ) ? $value : '';
 	}
 
 	/**

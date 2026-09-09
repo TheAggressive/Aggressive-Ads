@@ -238,7 +238,7 @@ endif;
 	</div>
 <?php endif; ?>
 
-<?php if ( in_array( $aggr_creative_notice, array( 'creative_uploaded', 'creative_removed', 'creative_update_requested', 'creative_update_withdrawn' ), true ) ) : ?>
+<?php if ( in_array( $aggr_creative_notice, array( 'creative_uploaded', 'creative_removed', 'creative_update_requested', 'creative_update_withdrawn', 'creative_weight_saved' ), true ) ) : ?>
 	<div class="aggr-alert aggr-alert--success" role="status">
 		<p>
 			<?php
@@ -247,6 +247,7 @@ endif;
 					'creative_uploaded'         => __( 'Creative uploaded and stored privately.', 'aggressive-ads' ),
 					'creative_removed'          => __( 'Creative removed.', 'aggressive-ads' ),
 					'creative_update_requested' => __( 'Your ad update is waiting for review. The current ad will keep running.', 'aggressive-ads' ),
+					'creative_weight_saved'     => __( 'Share saved. The new split applies to the next advertisement served.', 'aggressive-ads' ),
 					default                     => __( 'The pending ad update was withdrawn.', 'aggressive-ads' ),
 				}
 			);
@@ -604,6 +605,8 @@ endif;
 														<p><?php echo esc_html( (string) $aggr_creative['notes'] ); ?></p>
 													<?php endif; ?>
 												<?php endif; ?>
+												<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-variant-share.php'; ?>
+
 												<a
 													class="aggr-button aggr-button--danger"
 													href="#<?php echo esc_attr( $aggr_remove_id ); ?>"

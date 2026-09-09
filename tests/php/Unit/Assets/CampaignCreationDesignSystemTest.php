@@ -128,6 +128,44 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 	}
 
 	/**
+	 * The share control appears only where there is something to share with.
+	 *
+	 * A weight beside a single creative claims a choice the selector never
+	 * makes: with nothing to compete against, every weight delivers the same
+	 * hundred per cent. Rendering it anyway would be the interface asserting
+	 * behaviour the domain does not have — the failure this codebase keeps
+	 * finding from the other direction, where a control exists over a mechanism
+	 * that does nothing.
+	 *
+	 * @return void
+	 */
+	public function test_the_share_control_needs_a_second_creative_to_appear(): void {
+		$partial = file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-variant-share.php' );
+
+		$this->assertIsString( $partial );
+
+		$this->assertStringContainsString(
+			"count( \$aggr_slot['creatives'] ) < 2",
+			$partial,
+			'The share control no longer checks that the placement holds a second creative.'
+		);
+
+		/*
+		 * A creative with no assignment carries a null weight rather than zero,
+		 * and the control must not offer to set a share for something that is
+		 * not delivering yet.
+		 */
+		$this->assertStringContainsString( 'null === $aggr_share_weight', $partial );
+
+		// The bounds come from the domain rather than being retyped here.
+		$this->assertStringContainsString( 'Assignment_Rules::MIN_WEIGHT', $partial );
+		$this->assertStringContainsString( 'Assignment_Rules::MAX_WEIGHT', $partial );
+
+		// And the write is nonce-protected, like every other portal write.
+		$this->assertStringContainsString( 'weight_nonce_action', $partial );
+	}
+
+	/**
 	 * **The wizard lets a placement carry more than one creative.**
 	 *
 	 * It used to require exactly one, which contradicted the only two rules
