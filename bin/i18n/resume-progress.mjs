@@ -220,7 +220,9 @@ function main() {
 	}
 
 	console.log(
-		`i18n:resume: ${ path.basename( baseFile ) }: restored=${ result.restored }`
+		`i18n:resume: ${ path.basename( baseFile ) }: restored=${
+			result.restored
+		}`
 	);
 }
 
