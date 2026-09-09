@@ -28,7 +28,122 @@
  * @property {number}  skipped   Entries already translated.
  * @property {number}  remaining Entries still needing translation afterwards.
  * @property {boolean} truncated Whether the provider cut the locale short.
+ * @property {string[]|number} [refused] Entries the run declined to write —
+ *                               the source strings, or just how many — because
+ *                               the
+ *                               machine translation came back with the wrong
+ *                               placeholders. They stay untranslated on
+ *                               purpose, so they are not evidence of an
+ *                               unfinished run.
  */
+
+/**
+ * The code carried by an error raised because one string's translation was
+ * unusable, rather than because the provider stopped answering.
+ */
+export const MT_REFUSED = 'aggr-mt-refused';
+
+/**
+ * What a single string's failure means for the rest of the locale.
+ *
+ * - `refused`      — the translation came back wrong (placeholders invented or
+ *                    dropped, HTML entities injected). One bad string, nothing
+ *                    to conclude about the next one: skip it and carry on.
+ * - `provider-stop`— quota, rate limit or a 4xx. The provider is done talking,
+ *                    so keep what is written and stop asking.
+ * - `retryable`    — anything else; treated like `provider-stop` today, but
+ *                    named separately so the two can diverge without a
+ *                    re-reading of the regex.
+ *
+ * **The tag is checked before the message, and that ordering is the fix.** The
+ * message of a refusal embeds the source string so a human can see which one
+ * broke — and `"Limit to one advertiser"` is a real string in this plugin, so
+ * sniffing `/LIMIT/i` across the whole message read a refused string as an
+ * exhausted quota and abandoned the rest of the locale. The run then reported
+ * "the provider stopped the run", which was not true and pointed the next
+ * person at the wrong system. Provider errors carry no source text (see the
+ * throws in translate.mjs), so the regex is safe once refusals are taken out
+ * ahead of it.
+ *
+ * @param {unknown} err Error raised while translating one string.
+ * @return {'refused'|'provider-stop'|'retryable'} What it means for the run.
+ */
+export function classifyMtFailure( err ) {
+	if ( err && typeof err === 'object' && MT_REFUSED === err.code ) {
+		return 'refused';
+	}
+
+	const message = String(
+		err && typeof err === 'object' && err.message ? err.message : err
+	);
+
+	if ( /HTTP 4\d\d|LIMIT|quota|MYMEMORY WARNING/i.test( message ) ) {
+		return 'provider-stop';
+	}
+
+	return 'retryable';
+}
+
+/**
+ * Escapes text for a GitHub Actions workflow command.
+ *
+ * `%` first, or the escapes introduced by the later replacements are escaped
+ * again. This matters more here than it looks: a refused string is refused
+ * *because of its placeholders*, so nearly every message this encodes contains
+ * a literal `%s` or `%d` for the runner to misread.
+ *
+ * @param {string} text
+ * @return {string}
+ */
+function encodeAnnotation( text ) {
+	return text
+		.replaceAll( '%', '%25' )
+		.replaceAll( '\r', '%0D' )
+		.replaceAll( '\n', '%0A' );
+}
+
+/**
+ * Workflow annotations naming the strings a run declined to translate.
+ *
+ * Refusals do not fail the run, which leaves a gap this closes: a string the
+ * provider mangles every time stays untranslated behind a green lane, visible
+ * only in the log of whichever run last tried it. The draft pull request's body
+ * is written once and never mentions them.
+ *
+ * A warning is the right volume. The catalogs are correct and the page falls
+ * back to English, so this is not a failure — but "the run reported success
+ * afterwards" is exactly the defect judgeRun() exists for, and silence about a
+ * string no machine will ever get right is the same mistake in a smaller place.
+ *
+ * @param {LocaleResult[]} results Per-locale outcomes.
+ * @return {string[]} `::warning::` lines, one per locale that refused anything.
+ */
+export function refusalAnnotations( results ) {
+	const lines = [];
+
+	for ( const result of results ) {
+		const refused = Array.isArray( result.refused ) ? result.refused : [];
+
+		if ( 0 === refused.length ) {
+			continue;
+		}
+
+		const title = `${ refused.length } string(s) in ${ result.locale } need a human translator`;
+		const body =
+			'The machine translation came back with the wrong ' +
+			`placeholders, so it was not written:\n${ refused
+				.map( ( msgid ) => `  "${ msgid }"` )
+				.join( '\n' ) }`;
+
+		lines.push(
+			`::warning title=${ encodeAnnotation(
+				title
+			) }::${ encodeAnnotation( body ) }`
+		);
+	}
+
+	return lines;
+}
 
 /**
  * Judges a completed run.
@@ -61,6 +176,9 @@ export function judgeRun( results, opts = {} ) {
 
 	for ( const result of results ) {
 		const remaining = Number( result.remaining ?? 0 );
+		const refused = Array.isArray( result.refused )
+			? result.refused.length
+			: Number( result.refused ?? 0 );
 
 		if ( result.truncated ) {
 			problems.push(
@@ -72,10 +190,21 @@ export function judgeRun( results, opts = {} ) {
 			continue;
 		}
 
-		if ( remaining > 0 ) {
+		/*
+		 * A refused string is untranslated on purpose: the machine gave an
+		 * answer that would have broken the page, and declining it is the
+		 * correct outcome rather than an unfinished pass. Counting it as
+		 * incomplete is what made this lane permanently red — the next run
+		 * asks the same provider the same question and is refused again, so
+		 * the failure never clears and no draft is ever published. They are
+		 * named on stdout by translate.mjs, which has the strings.
+		 */
+		const unexplained = Math.max( 0, remaining - refused );
+
+		if ( unexplained > 0 ) {
 			problems.push(
-				`${ result.locale }: ${ remaining } entr` +
-					`${ 1 === remaining ? 'y' : 'ies' } still untranslated ` +
+				`${ result.locale }: ${ unexplained } entr` +
+					`${ 1 === unexplained ? 'y' : 'ies' } still untranslated ` +
 					`after a complete pass`
 			);
 		}
