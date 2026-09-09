@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-08T23:48:00+00:00\n"
+"POT-Creation-Date: 2026-09-08T23:58:05+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -767,7 +767,7 @@ msgstr ""
 #: templates/portal/campaigns.php:15
 #: templates/portal/partials/rail.php:31
 #: templates/portal/screens/campaign.php:80
-#: templates/portal/screens/campaigns.php:36
+#: templates/portal/screens/campaigns.php:52
 #: templates/portal/screens/organization.php:73
 msgid "Campaigns"
 msgstr ""
@@ -1275,7 +1275,7 @@ msgid "Every placement"
 msgstr ""
 
 #: inc/Admin/class-reports-screen.php:304
-#: templates/portal/screens/dashboard.php:122
+#: templates/portal/screens/dashboard.php:144
 msgid "Show"
 msgstr ""
 
@@ -1430,13 +1430,13 @@ msgid "Campaign moved from %1$s to %2$s."
 msgstr ""
 
 #: inc/Admin/class-review-data.php:340
-#: inc/Portal/class-view-data.php:686
+#: inc/Portal/class-view-data.php:721
 msgid "Not scheduled"
 msgstr ""
 
 #. translators: 1: campaign start date. 2: campaign end date.
 #: inc/Admin/class-review-data.php:351
-#: inc/Portal/class-view-data.php:702
+#: inc/Portal/class-view-data.php:737
 #, php-format
 msgid "%1$s – %2$s"
 msgstr ""
@@ -1468,7 +1468,7 @@ msgstr ""
 
 #: inc/Admin/class-review-data.php:681
 #: inc/Portal/class-creative-view-data.php:168
-#: inc/Portal/class-view-data.php:567
+#: inc/Portal/class-view-data.php:609
 msgid "Running"
 msgstr ""
 
@@ -1509,7 +1509,7 @@ msgid "Resume campaign"
 msgstr ""
 
 #: inc/Admin/class-review-data.php:706
-#: inc/Portal/class-view-data.php:297
+#: inc/Portal/class-view-data.php:299
 msgid "Cancel campaign"
 msgstr ""
 
@@ -1603,7 +1603,7 @@ msgid "Back to campaign review"
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:288
-#: templates/portal/screens/campaigns.php:53
+#: templates/portal/screens/campaigns.php:93
 #: templates/portal/screens/dashboard.php:66
 msgid "Create campaign"
 msgstr ""
@@ -3560,28 +3560,32 @@ msgstr ""
 msgid "We could not create the account. Please try again later."
 msgstr ""
 
-#: inc/Portal/class-view-data.php:244
+#: inc/Portal/class-view-data.php:246
 msgid "Renew campaign"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:245
+#: inc/Portal/class-view-data.php:247
 msgid "Duplicate campaign"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:296
+#: inc/Portal/class-view-data.php:298
 msgid "Delete campaign"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:571
+#: inc/Portal/class-view-data.php:610
 msgid "In review"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:575
+#: inc/Portal/class-view-data.php:611
 msgid "Needs your attention"
 msgstr ""
 
+#: inc/Portal/class-view-data.php:612
+msgid "All campaigns"
+msgstr ""
+
 #. translators: %s: campaign start date.
-#: inc/Portal/class-view-data.php:695
+#: inc/Portal/class-view-data.php:730
 #, php-format
 msgid "From %s"
 msgstr ""
@@ -5725,17 +5729,27 @@ msgstr ""
 msgid "Creatives table"
 msgstr ""
 
-#: templates/portal/screens/campaigns.php:30
+#: templates/portal/screens/campaigns.php:46
 msgid "Campaign ended. It stays in your list as cancelled, along with anything it delivered."
 msgstr ""
 
 #. translators: %s: number of campaigns.
-#: templates/portal/screens/campaigns.php:41
+#: templates/portal/screens/campaigns.php:57
 #, php-format
 msgid "%s campaign"
 msgid_plural "%s campaigns"
 msgstr[0] ""
 msgstr[1] ""
+
+#. translators: %s: the slice being shown, e.g. Needs your attention.
+#: templates/portal/screens/campaigns.php:77
+#, php-format
+msgid "Showing only: %s."
+msgstr ""
+
+#: templates/portal/screens/campaigns.php:82
+msgid "Show all campaigns"
+msgstr ""
 
 #: templates/portal/screens/confirm-email.php:59
 msgid "Sign in with your current account to finish changing your email address."
@@ -5775,39 +5789,39 @@ msgstr ""
 msgid "Your campaigns, and how they are delivering."
 msgstr ""
 
-#: templates/portal/screens/dashboard.php:104
+#: templates/portal/screens/dashboard.php:126
 msgid "Native delivery"
 msgstr ""
 
-#: templates/portal/screens/dashboard.php:110
+#: templates/portal/screens/dashboard.php:132
 msgid "Choose a reporting window"
 msgstr ""
 
-#: templates/portal/screens/dashboard.php:113
+#: templates/portal/screens/dashboard.php:135
 msgid "From (UTC)"
 msgstr ""
 
-#: templates/portal/screens/dashboard.php:118
+#: templates/portal/screens/dashboard.php:140
 msgid "To (UTC)"
 msgstr ""
 
 #. translators: %d: number of days.
-#: templates/portal/screens/dashboard.php:138
+#: templates/portal/screens/dashboard.php:160
 #, php-format
 msgid "Last %d day"
 msgid_plural "Last %d days"
 msgstr[0] ""
 msgstr[1] ""
 
-#: templates/portal/screens/dashboard.php:158
+#: templates/portal/screens/dashboard.php:180
 msgid "That date range could not be used, so the default window is shown. A range must be two valid dates, in order, and no longer than 92 days."
 msgstr ""
 
-#: templates/portal/screens/dashboard.php:185
+#: templates/portal/screens/dashboard.php:207
 msgid "Impressions and clicks from native delivery."
 msgstr ""
 
-#: templates/portal/screens/dashboard.php:198
+#: templates/portal/screens/dashboard.php:220
 msgid "Your campaigns"
 msgstr ""
 

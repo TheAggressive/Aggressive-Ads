@@ -879,12 +879,13 @@ final class Campaign_Repository {
 	 * point page two is short for reasons nobody can explain, and the fix that
 	 * suggests itself is to remove the filter.
 	 *
-	 * @param int $org_id Owning organization.
-	 * @param int $page   1-based page number.
+	 * @param int                $org_id Owning organization.
+	 * @param int                $page   1-based page number.
+	 * @param array<int, string> $statuses Statuses to include, or empty for every status.
 	 * @return array{ids: array<int, int>, total: int, pages: int}
 	 */
-	public function for_org( int $org_id, int $page = 1 ): array {
-		return ( new Campaign_Query_Repository() )->for_org( $org_id, $page );
+	public function for_org( int $org_id, int $page = 1, array $statuses = array() ): array {
+		return ( new Campaign_Query_Repository() )->for_org( $org_id, $page, $statuses );
 	}
 
 	/**

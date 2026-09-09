@@ -685,6 +685,115 @@ final class PortalViewDataTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * **Every count equals the list it links to.**
+	 *
+	 * The tile and the filtered list answer the same question, so the number
+	 * and the rows have to be the same set. They are built by different code —
+	 * the count classifies rows in PHP, the filter narrows a `WP_Query` — and
+	 * before `Campaign_Filter` they were built from two separate definitions of
+	 * each slice. A count that disagrees with the rows beneath it is the kind
+	 * of wrong a reader cannot resolve and does not forgive: neither half can
+	 * be trusted afterwards.
+	 *
+	 * Asserted for all three slices over a fixture holding several statuses in
+	 * each, including two the slices must not claim, so a filter that quietly
+	 * matched everything would fail rather than agree by coincidence.
+	 *
+	 * @return void
+	 */
+	public function test_each_count_equals_the_list_its_link_shows(): void {
+		$this->make_campaign( $this->org_a, Post_Statuses::LIVE, 'Running now' );
+		$this->make_campaign( $this->org_a, Post_Statuses::SCHEDULED, 'Running later' );
+		$this->make_campaign( $this->org_a, Post_Statuses::PAUSED, 'Running, paused' );
+		$this->make_campaign( $this->org_a, Post_Statuses::SUBMITTED, 'Waiting' );
+		$this->make_campaign( $this->org_a, Post_Statuses::REVIEW, 'Being read' );
+		$this->make_campaign( $this->org_a, Post_Statuses::DRAFT, 'Unfinished' );
+		$this->make_campaign( $this->org_a, Post_Statuses::CHANGES, 'Sent back' );
+
+		// Neither slice may claim these, and both are the caller's own.
+		$this->make_campaign( $this->org_a, Post_Statuses::COMPLETE, 'Done' );
+		$this->make_campaign( $this->org_a, Post_Statuses::REJECTED, 'Refused' );
+
+		$this->make_campaign( $this->org_b, Post_Statuses::LIVE, 'Not theirs to count' );
+
+		wp_set_current_user( $this->advertiser_a );
+
+		$counts = $this->view->counts();
+
+		$this->assertCount( 3, $counts );
+
+		foreach ( $counts as $stat ) {
+			$filter = (string) $stat['filter'];
+			$listed = $this->view->campaigns( 1, $filter );
+
+			$this->assertSame(
+				(int) $stat['value'],
+				(int) $listed['total'],
+				sprintf( 'The "%s" tile and the list it links to disagree.', $filter )
+			);
+		}
+
+		$values = array_map( static fn ( array $stat ): int => (int) $stat['value'], $counts );
+
+		/*
+		 * The totals are pinned as well as compared. Equality alone would hold
+		 * if both halves returned zero, which is exactly what a filter matching
+		 * nothing would produce.
+		 */
+		$this->assertSame( array( 3, 2, 2 ), $values );
+
+		/*
+		 * And the three slices do not add up to the whole list: two of the
+		 * caller's campaigns are in neither. A test over a fixture where every
+		 * campaign belonged to some slice would pass over a filter that ignored
+		 * its argument entirely.
+		 */
+		$this->assertSame( 9, (int) $this->view->campaigns()['total'] );
+		$this->assertSame( 7, array_sum( $values ) );
+	}
+
+	/**
+	 * An unknown slice shows everything rather than nothing.
+	 *
+	 * A stale bookmark or a hand-edited URL must not produce an empty page: the
+	 * advertiser would read "no campaigns" as fact. Widening is the answer they
+	 * can act on.
+	 *
+	 * @return void
+	 */
+	public function test_an_unknown_filter_shows_every_campaign(): void {
+		$this->make_campaign( $this->org_a, Post_Statuses::LIVE, 'Running' );
+		$this->make_campaign( $this->org_a, Post_Statuses::DRAFT, 'Unfinished' );
+
+		wp_set_current_user( $this->advertiser_a );
+
+		$this->assertSame( 2, (int) $this->view->campaigns( 1, 'not-a-slice' )['total'] );
+		$this->assertSame( 2, (int) $this->view->campaigns( 1, '' )['total'] );
+	}
+
+	/**
+	 * A filtered list is still scoped to the caller's organization.
+	 *
+	 * The filter narrows a query that already carries the tenant predicate, and
+	 * a narrowing that replaced it rather than adding to it would be a tenancy
+	 * leak wearing a feature's clothes.
+	 *
+	 * @return void
+	 */
+	public function test_a_filtered_list_never_reaches_another_organization(): void {
+		$this->make_campaign( $this->org_a, Post_Statuses::LIVE, 'Mine' );
+		$this->make_campaign( $this->org_b, Post_Statuses::LIVE, 'Theirs' );
+		$this->make_campaign( $this->org_b, Post_Statuses::DRAFT, 'Also theirs' );
+
+		wp_set_current_user( $this->advertiser_a );
+
+		$listed = $this->view->campaigns( 1, \Aggressive\Ads\Domain\Campaign_Filter::RUNNING );
+
+		$this->assertSame( 1, (int) $listed['total'] );
+		$this->assertSame( 'Mine', (string) $listed['rows'][0]['title'] );
+	}
+
+	/**
 	 * Metric fields stay absent until both reporting modules are on.
 	 *
 	 * A row of zeros would look like "nobody saw this ad" while native

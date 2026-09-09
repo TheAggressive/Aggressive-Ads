@@ -22,5 +22,6 @@
 @import './base/_fonts.css';
 @import './base/_tokens.css';
 @import './layout/_chrome.css';
+@import './layout/_dashboard.css';
 @import './components/_surfaces.css';
 @import './components/_overlay.css';

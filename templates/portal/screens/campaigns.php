@@ -11,13 +11,29 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use Aggressive\Ads\Domain\Campaign_Filter;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Portal\Campaign_Actions;
+use Aggressive\Ads\Portal\Request;
+use Aggressive\Ads\Portal\Routes;
 use Aggressive\Ads\Portal\View_Data;
 use Aggressive\Ads\Security\Capabilities;
 
+/*
+ * The slice the dashboard sent the reader here to see.
+ *
+ * Read-only navigation state, so no nonce: this selects which of the caller's
+ * own campaigns are listed and can do nothing else. `Campaign_Filter` widens an
+ * unknown slug to the whole list rather than narrowing it to nothing, so a
+ * stale or hand-typed URL shows the advertiser their campaigns instead of an
+ * empty page that reads as "you have none".
+ */
+// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only list filter, validated against a closed vocabulary below.
+$aggr_requested = isset( $_GET['status'] ) ? sanitize_key( wp_unslash( $_GET['status'] ) ) : '';
+$aggr_filter    = Campaign_Filter::is_valid( $aggr_requested ) ? $aggr_requested : '';
+
 $aggr_view      = Plugin::instance()->container()->get( View_Data::class );
-$aggr_campaigns = $aggr_view->campaigns();
+$aggr_campaigns = $aggr_view->campaigns( 1, $aggr_filter );
 $aggr_notice    = Campaign_Actions::request_notice();
 $aggr_error     = Campaign_Actions::request_error_code();
 ?>
@@ -43,6 +59,30 @@ $aggr_error     = Campaign_Actions::request_error_code();
 			);
 			?>
 		</p>
+
+		<?php if ( '' !== $aggr_filter ) : ?>
+			<?php
+			/*
+			 * The filter says what it is doing and how to stop.
+			 *
+			 * A list quietly showing a subset is the same defect as a wrong
+			 * number: the reader counts what is in front of them and believes
+			 * it is everything.
+			 */
+			?>
+			<p class="aggr-filter" role="status">
+				<?php
+				printf(
+					/* translators: %s: the slice being shown, e.g. Needs your attention. */
+					esc_html__( 'Showing only: %s.', 'aggressive-ads' ),
+					esc_html( $aggr_view->filter_label( $aggr_filter ) )
+				);
+				?>
+				<a href="<?php echo esc_url( Routes::url( Request::ROUTE_CAMPAIGNS ) ); ?>">
+					<?php esc_html_e( 'Show all campaigns', 'aggressive-ads' ); ?>
+				</a>
+			</p>
+		<?php endif; ?>
 	</div>
 
 	<?php if ( current_user_can( Capabilities::SUBMIT_CAMPAIGN ) ) : ?>
