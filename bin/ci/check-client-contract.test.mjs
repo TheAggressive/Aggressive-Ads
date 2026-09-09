@@ -31,6 +31,7 @@ const FILES = {
 	service: 'inc/Workflow/class-fill-service.php',
 	decisions: 'inc/REST/class-decisions-controller.php',
 	batch: 'src/blocks-interactivity/ad-slot/batch.js',
+	viewport: 'src/blocks-interactivity/ad-slot/viewport.js',
 };
 
 /*
@@ -110,6 +111,8 @@ async function root( overrides = {} ) {
 			"<?php\n$fill = add_query_arg( 'p', $page_id, $fill );\n'data-aggr-decisions' => rest_url( $path ),\n",
 		[ FILES.decisions ]: BASE_DECISIONS,
 		[ FILES.batch ]: BASE_BATCH,
+		[ FILES.viewport ]:
+			'export const viewportWidth = () => document.documentElement?.clientWidth ?? 0;\n',
 		[ FILES.engine ]: `<?php
 	public function payload_from_row( array $row, int $placement_id ): ?array {
 		return array(

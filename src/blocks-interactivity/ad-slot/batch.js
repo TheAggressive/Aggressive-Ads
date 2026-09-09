@@ -13,6 +13,8 @@
  * exclusivity never ran outside the test suite.
  */
 
+import { viewportWidth } from './viewport.js';
+
 /** Slots that have not yet been decided, in document order. */
 const slotsOnPage = () =>
 	Array.from(
@@ -170,22 +172,6 @@ export const requestPageDecisions = async ( {
 	} catch {
 		return empty;
 	}
-};
-
-/**
- * The viewport the slots are being rendered into.
- *
- * Same measure and same reason as the per-slot path: `clientWidth` excludes the
- * scrollbar, so it matches what CSS media queries and the slot's own box see. A
- * pixel of disagreement puts the decision on the other side of a breakpoint
- * from the box it fills.
- *
- * @return {number} Width in CSS pixels.
- */
-export const viewportWidth = () => {
-	const width = document.documentElement?.clientWidth ?? window.innerWidth;
-
-	return Number.isFinite( width ) && width > 0 ? Math.floor( width ) : 0;
 };
 
 /**

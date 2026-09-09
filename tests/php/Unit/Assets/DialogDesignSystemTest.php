@@ -25,11 +25,24 @@ final class DialogDesignSystemTest extends TestCase {
 	public function test_campaign_dialogs_use_the_shared_overlay(): void {
 		$cards    = file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-ad-updates.php' );
 		$overlays = file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-overlays.php' );
-		$campaign = file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/screens/campaign.php' );
+
+		/*
+		 * The screen and the wizard step it requires, read together.
+		 *
+		 * These assertions are about the campaign wizard's dialogs, not about
+		 * which file a line sits in. Reading only the screen made them fail the
+		 * moment the creative step moved to a partial — the markup was
+		 * unchanged and the guard had simply stopped looking at it.
+		 */
+		$screen = file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/screens/campaign.php' );
+		$step   = file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-creative-step.php' );
 
 		$this->assertIsString( $cards );
 		$this->assertIsString( $overlays );
-		$this->assertIsString( $campaign );
+		$this->assertIsString( $screen );
+		$this->assertIsString( $step );
+
+		$campaign = $screen . "\n" . $step;
 
 		$this->assertStringContainsString( 'campaign-ad-updates.php', $campaign );
 		$this->assertStringContainsString( 'campaign-overlays.php', $campaign );
