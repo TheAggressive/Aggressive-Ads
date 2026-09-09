@@ -85,6 +85,67 @@ export function classifyMtFailure( err ) {
 }
 
 /**
+ * Escapes text for a GitHub Actions workflow command.
+ *
+ * `%` first, or the escapes introduced by the later replacements are escaped
+ * again. This matters more here than it looks: a refused string is refused
+ * *because of its placeholders*, so nearly every message this encodes contains
+ * a literal `%s` or `%d` for the runner to misread.
+ *
+ * @param {string} text
+ * @return {string}
+ */
+function encodeAnnotation( text ) {
+	return text
+		.replaceAll( '%', '%25' )
+		.replaceAll( '\r', '%0D' )
+		.replaceAll( '\n', '%0A' );
+}
+
+/**
+ * Workflow annotations naming the strings a run declined to translate.
+ *
+ * Refusals do not fail the run, which leaves a gap this closes: a string the
+ * provider mangles every time stays untranslated behind a green lane, visible
+ * only in the log of whichever run last tried it. The draft pull request's body
+ * is written once and never mentions them.
+ *
+ * A warning is the right volume. The catalogs are correct and the page falls
+ * back to English, so this is not a failure — but "the run reported success
+ * afterwards" is exactly the defect judgeRun() exists for, and silence about a
+ * string no machine will ever get right is the same mistake in a smaller place.
+ *
+ * @param {LocaleResult[]} results Per-locale outcomes.
+ * @return {string[]} `::warning::` lines, one per locale that refused anything.
+ */
+export function refusalAnnotations( results ) {
+	const lines = [];
+
+	for ( const result of results ) {
+		const refused = Array.isArray( result.refused ) ? result.refused : [];
+
+		if ( 0 === refused.length ) {
+			continue;
+		}
+
+		const title = `${ refused.length } string(s) in ${ result.locale } need a human translator`;
+		const body =
+			'The machine translation came back with the wrong ' +
+			`placeholders, so it was not written:\n${ refused
+				.map( ( msgid ) => `  "${ msgid }"` )
+				.join( '\n' ) }`;
+
+		lines.push(
+			`::warning title=${ encodeAnnotation(
+				title
+			) }::${ encodeAnnotation( body ) }`
+		);
+	}
+
+	return lines;
+}
+
+/**
  * Judges a completed run.
  *
  * A locale is a problem when the provider gave up partway, or when entries are

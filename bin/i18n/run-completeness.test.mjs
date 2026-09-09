@@ -16,6 +16,7 @@ import {
 	MT_REFUSED,
 	classifyMtFailure,
 	judgeRun,
+	refusalAnnotations,
 } from './run-completeness.mjs';
 import { resumeCatalog } from './resume-progress.mjs';
 
@@ -330,5 +331,58 @@ test( 'a truncated locale still fails even if some strings were refused', () => 
 	assert.match(
 		verdict.problems[ 0 ],
 		/fr_FR: the provider stopped the run/
+	);
+} );
+
+test( 'refused strings are annotated on the run, not just logged', () => {
+	const lines = refusalAnnotations( [
+		{
+			locale: 'de_DE',
+			updated: 1,
+			skipped: 0,
+			remaining: 2,
+			truncated: false,
+			refused: [ 'All campaigns', 'Used: %s' ],
+		},
+		{
+			locale: 'fr_FR',
+			updated: 3,
+			skipped: 0,
+			remaining: 0,
+			truncated: false,
+			refused: [],
+		},
+	] );
+
+	assert.equal( lines.length, 1, 'only the locale that refused anything' );
+	assert.match( lines[ 0 ], /^::warning title=/ );
+	assert.match(
+		lines[ 0 ],
+		/2 string\(s\) in de_DE need a human translator/
+	);
+
+	/*
+	 * A refused string is refused *because of its placeholders*, so almost
+	 * every message this encodes contains a literal % for the runner to
+	 * misread. Escaping % after the newline escapes would corrupt the %0A the
+	 * previous replacement had just written.
+	 */
+	assert.match( lines[ 0 ], /Used: %25s/ );
+	assert.doesNotMatch( lines[ 0 ], /Used: %s/ );
+	assert.match( lines[ 0 ], /%0A/ );
+	assert.doesNotMatch(
+		lines[ 0 ],
+		/%250A/,
+		'the newline escape must not itself be escaped'
+	);
+
+	// One annotation per locale: the message is multiline, the line is not.
+	assert.equal( lines[ 0 ].split( '\n' ).length, 1 );
+} );
+
+test( 'a run that refused nothing annotates nothing', () => {
+	assert.deepEqual(
+		refusalAnnotations( [ complete( 'de_DE' ), complete( 'fr_FR' ) ] ),
+		[]
 	);
 } );

@@ -32,6 +32,7 @@ import {
 	MT_REFUSED,
 	classifyMtFailure,
 	judgeRun,
+	refusalAnnotations,
 } from './run-completeness.mjs';
 import { fileURLToPath } from 'node:url';
 
@@ -822,6 +823,16 @@ async function main() {
 		for ( const result of refusals ) {
 			for ( const msgid of result.refused ) {
 				console.log( `  ${ result.locale }: "${ msgid }"` );
+			}
+		}
+
+		/*
+		 * And on the run itself, not only in a log nobody opens. A refusal is
+		 * not a failure, so without this the string would go missing quietly.
+		 */
+		if ( process.env.GITHUB_ACTIONS ) {
+			for ( const line of refusalAnnotations( results ) ) {
+				console.log( line );
 			}
 		}
 	}
