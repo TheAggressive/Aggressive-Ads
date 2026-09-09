@@ -577,6 +577,7 @@ export async function translatePoFile( file, opts ) {
 			skipped: 0,
 			remaining: 0,
 			truncated: false,
+			refused: [],
 		};
 	}
 

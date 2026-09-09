@@ -406,3 +406,19 @@ msgstr ""
 		fs.rmSync( dir, { recursive: true, force: true } );
 	}
 } );
+
+test( 'an unsupported locale keeps the result contract', async () => {
+	const result = await translatePoFile(
+		path.join( os.tmpdir(), 'aggressive-ads-xx_YY.po' ),
+		{ dryRun: false, limit: Infinity }
+	);
+
+	assert.deepEqual( result, {
+		locale: 'xx_YY',
+		updated: 0,
+		skipped: 0,
+		remaining: 0,
+		truncated: false,
+		refused: [],
+	} );
+} );
