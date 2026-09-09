@@ -321,6 +321,7 @@ final class Conversion_Recorder {
 			day_utc: gmdate( 'Y-m-d', $occurred_at_ts ),
 			line_item_id: $line_item_id,
 			org_id: $campaign_org_id,
+			creative_id: (int) $parsed['creative_id'],
 		);
 
 		return array(

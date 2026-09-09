@@ -180,12 +180,97 @@ final class RollupLineItemAttributionTest extends WP_UnitTestCase {
 
 		$names = $this->index_names();
 
-		$this->assertContains( 'slot_line_day', $names, 'The new unique key was never created.' );
+		$this->assertContains( 'slot_creative_day', $names, 'The new unique key was never created.' );
 		$this->assertNotContains(
 			'slot_day',
 			$names,
 			'The pre-v16 unique survived, so a second line item still cannot hold its own row.'
 		);
+	}
+
+	/**
+	 * **The pre-v30 unique is dropped too, or every variant collapses into one.**
+	 *
+	 * `slot_line_day` enforces one row per line item per day. Left in place
+	 * beside the creative column it does not error — it silently merges every
+	 * creative of a line item back into a single row, so two variants share one
+	 * set of counters and a comparison screen reports them as identical while
+	 * no query looks wrong.
+	 *
+	 * Recreated first for the same reason the case above recreates `slot_day`:
+	 * a fresh table is built from the current DDL and never had it, so
+	 * asserting its absence without this would pass over a migration that does
+	 * nothing.
+	 *
+	 * @return void
+	 */
+	public function test_the_pre_v30_line_item_unique_is_dropped(): void {
+		global $wpdb;
+
+		$table = $this->rollups->table_name();
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Recreating the pre-v30 shape in a test.
+		$wpdb->query( "ALTER TABLE {$table} DROP INDEX slot_creative_day" );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.DirectDatabaseQuery.SchemaChange, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Recreating the pre-v30 shape in a test.
+		$wpdb->query( "ALTER TABLE {$table} ADD UNIQUE KEY slot_line_day (placement_id,campaign_id,line_item_id,day_utc)" );
+
+		$this->assertContains( 'slot_line_day', $this->index_names(), 'The fixture did not recreate the pre-v30 unique.' );
+
+		$this->rollups->install_table();
+
+		$names = $this->index_names();
+
+		$this->assertNotContains(
+			'slot_line_day',
+			$names,
+			'The pre-v30 unique survived, so two creatives of one line item still share a row.'
+		);
+		$this->assertContains( 'slot_creative_day', $names );
+	}
+
+	/**
+	 * Two creatives on one line item keep their own counters.
+	 *
+	 * The point of the whole dimension, asserted through the write path rather
+	 * than the schema: a key that merges them produces one row here, and the
+	 * sum still matches, so only the per-creative reading catches it.
+	 *
+	 * @return void
+	 */
+	public function test_two_creatives_on_one_line_item_are_counted_apart(): void {
+		global $wpdb;
+
+		$table = $this->rollups->table_name();
+		$day   = gmdate( 'Y-m-d' );
+
+		$this->assertTrue( $this->rollups->increment( 'impressions', 11, 22, $day, 33, 44, 101 ) );
+		$this->assertTrue( $this->rollups->increment( 'impressions', 11, 22, $day, 33, 44, 101 ) );
+		$this->assertTrue( $this->rollups->increment( 'impressions', 11, 22, $day, 33, 44, 202 ) );
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Reading this plugin's own table in a test.
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT creative_id, impressions FROM {$table} WHERE day_utc = %s AND line_item_id = 33 ORDER BY creative_id ASC",
+				$day
+			),
+			ARRAY_A
+		);
+
+		$this->assertCount( 2, $rows, 'The two creatives were merged into one row.' );
+		$this->assertSame( '101', (string) $rows[0]['creative_id'] );
+		$this->assertSame( '2', (string) $rows[0]['impressions'] );
+		$this->assertSame( '202', (string) $rows[1]['creative_id'] );
+		$this->assertSame( '1', (string) $rows[1]['impressions'] );
+
+		/*
+		 * And the breakdown adds up to the total the line item already reported.
+		 * A dimension whose parts do not sum to their whole is the defect P15
+		 * shipped and caught, one grain higher.
+		 */
+		$totals = $this->rollups->delivery_totals_for_line_items( array( 33 ), $day );
+
+		$this->assertSame( 3, (int) $totals[33]['lifetime'], 'The per-creative rows do not sum to the line item total.' );
+		$this->assertSame( 3, (int) $totals[33]['today'] );
 	}
 
 	/**
