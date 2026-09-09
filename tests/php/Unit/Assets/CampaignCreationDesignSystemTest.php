@@ -128,6 +128,52 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 	}
 
 	/**
+	 * **The wizard lets a placement carry more than one creative.**
+	 *
+	 * It used to require exactly one, which contradicted the only two rules
+	 * that decide anything: `Creative_Manager` permits ten on a placement, and
+	 * `Campaign_Validator` accepts a placement covered by any number of them,
+	 * because `Coverage_Service` counts a placement as covered once however
+	 * many cover it. An advertiser could upload a second creative, was
+	 * permitted to, would have been accepted — and was stopped by a wizard step
+	 * telling them a placement needs exactly one.
+	 *
+	 * That is why weighted variants were unreachable without calling the REST
+	 * route by hand, despite delivery having supported them all along.
+	 *
+	 * Asserted on the template because that is where the contradicting rule
+	 * lived. A count comparison here is the shape of the defect: `1 !==` is a
+	 * cap, `array() ===` is a requirement, and only one of them agrees with the
+	 * validator.
+	 *
+	 * @return void
+	 */
+	public function test_the_creative_step_requires_at_least_one_not_exactly_one(): void {
+		$screen = file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/screens/campaign.php' );
+
+		$this->assertIsString( $screen );
+
+		$this->assertStringContainsString(
+			"array() === \$aggr_slot['creatives']",
+			$screen,
+			'The creative step no longer asks whether a placement has any creative at all.'
+		);
+		$this->assertStringNotContainsString(
+			"1 !== count( \$aggr_slot['creatives'] )",
+			$screen,
+			'The wizard requires exactly one creative again, so a second variant is a dead end.'
+		);
+
+		/*
+		 * And the copy agrees with the rule. A gate that accepts two while its
+		 * own sentence says "exactly one" teaches the advertiser the wrong
+		 * thing about their own campaign.
+		 */
+		$this->assertStringNotContainsString( 'needs exactly one creative', $screen );
+		$this->assertStringContainsString( 'at least one creative', $screen );
+	}
+
+	/**
 	 * The reporting window governs the figures it sits beside, and only those.
 	 *
 	 * The dashboard shows two kinds of number: all-time counts of where each

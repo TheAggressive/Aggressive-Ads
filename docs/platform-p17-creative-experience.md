@@ -303,25 +303,37 @@ also complete, tested and reachable, and had no caller for a visitor. A weights
 screen over a mechanism in that state would be a control over nothing. This one
 is not.
 
-**What actually blocks slice 2 is the portal, not the delivery layer.**
-`templates/portal/screens/campaign.php` marks a campaign ready only when every
-active slot holds *exactly* one creative:
+**What blocked slice 2 was one wizard rule, and it was wrong — corrected.**
 
-```php
-if ( ! $aggr_slot['active'] || 1 !== count( $aggr_slot['creatives'] ) ) {
-    $aggr_creative_ready = false;
-}
-```
+The first version of this note said an advertiser could not create a variant and
+that relaxing the rule would change what submission means for everybody. Both
+halves were wrong, and the correction is recorded rather than quietly applied
+because the mistake was a claim made without reading the two rules that decide
+the question.
 
-So an advertiser cannot create a second variant, and a campaign that somehow had
-one would be reported as not ready to submit. Variants are reachable only
-through `PATCH /campaigns/{id}/creative-assignments/{id}` by hand.
+- `Creative_Manager::MAX_CREATIVES_PER_PLACEMENT` is **10**. Uploading a second
+  creative to a placement was always permitted.
+- `Campaign_Validator` gates submission through `Coverage_Service`, which counts
+  a placement as covered **once, however many creatives cover it** — and
+  `covers_for_submission()` accepts a creative still awaiting review.
 
-Relaxing that rule to "at least one" is a change to what submission means for
-every advertiser, not a screen. It belongs in slice 2 as its first decision
-rather than as an incidental edit, and it wants a deliberate answer to: may a
-campaign be submitted with two variants awaiting review, and does approving one
-variant of a slot make the campaign servable?
+So a campaign with two variants was already uploadable and already submittable.
+The only rule anywhere that wanted exactly one lived in the campaign wizard's
+creative step, which told an advertiser their placement needed exactly one
+creative and refused to continue. Upload permitted, submission accepted,
+progress blocked — by the one opinion nothing else shared.
+
+That is why weighted variants were unreachable outside the REST route, and it is
+a template condition rather than a semantic change: `1 !== count(...)` became
+`array() === ...`, with the copy corrected to match. `Coverage_Service` remains
+the single definition of usable coverage; the wizard now agrees with it instead
+of contradicting it.
+
+**The two questions this note previously raised as open were already answered in
+code.** May a campaign be submitted with two variants awaiting review — yes,
+`covers_for_submission()` says so. Does one approved variant make the placement
+servable — yes, delivery serves whatever assignments are ready. Neither needed a
+decision; both needed reading.
 
 ## Required executable evidence
 
