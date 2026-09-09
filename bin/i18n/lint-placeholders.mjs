@@ -18,7 +18,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { extractPlaceholders, parsePo } from './po.mjs';
+import {
+	extractPlaceholders,
+	parsePo,
+	placeholderSourceFor,
+	placeholdersIntact,
+} from './po.mjs';
 
 const __dirname = path.dirname( fileURLToPath( import.meta.url ) );
 const LANGUAGES = path.resolve( __dirname, '../..', 'languages' );
@@ -47,22 +52,19 @@ export function findPlaceholderMismatches( content ) {
 				continue;
 			}
 
-			// Plural forms translate msgid_plural, whose placeholders can
-			// legitimately differ from the singular's.
-			const source =
-				key !== 'msgstr[0]' && entry.msgidPlural
-					? entry.msgidPlural
-					: entry.msgid;
+			const source = placeholderSourceFor( entry, key );
+
+			// The verdict comes from po.mjs so that the translator, the
+			// resume step and this lint cannot drift apart on what a
+			// placeholder mismatch is; the lists below are only for the
+			// message. They did drift once, and the weaker definition
+			// upstream let the stronger one here fail every run.
+			if ( placeholdersIntact( source, msgstr ) ) {
+				continue;
+			}
 
 			const expected = extractPlaceholders( source );
 			const actual = extractPlaceholders( msgstr );
-
-			if (
-				expected.length === actual.length &&
-				expected.every( ( p, i ) => p === actual[ i ] )
-			) {
-				continue;
-			}
 
 			problems.push(
 				`  msgid "${ entry.msgid }"\n` +

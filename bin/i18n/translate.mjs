@@ -28,10 +28,20 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { judgeRun } from './run-completeness.mjs';
+import {
+	MT_REFUSED,
+	classifyMtFailure,
+	judgeRun,
+} from './run-completeness.mjs';
 import { fileURLToPath } from 'node:url';
 
-import { PLACEHOLDER_PATTERN, parsePo, placeholdersIntact } from './po.mjs';
+import {
+	PLACEHOLDER_PATTERN,
+	entryPlaceholdersIntact,
+	extractPlaceholders,
+	parsePo,
+	placeholdersIntact,
+} from './po.mjs';
 
 const __dirname = path.dirname( fileURLToPath( import.meta.url ) );
 const PLUGIN_ROOT = path.resolve( __dirname, '../..' );
@@ -185,13 +195,32 @@ function serializeEntry( entry ) {
 	}
 
 	const lines = [ ...translator, ...extracted, ...references, ...other ];
-	const flags = new Set( entry.flags );
-	flags.delete( 'fuzzy' );
-	if ( ! flags.has( 'aggr-mt' ) ) {
-		flags.add( 'aggr-mt' );
-	}
-	if ( flags.size ) {
-		lines.push( `#, ${ [ ...flags ].join( ', ' ) }` );
+
+	/*
+	 * Flags are written exactly as they stand. This used to clear `fuzzy` and
+	 * stamp `aggr-mt` on every entry it serialized, which is the whole
+	 * catalog — not the handful this run translated — and both halves of that
+	 * were destructive.
+	 *
+	 * Clearing `fuzzy` promoted every uncertain match msgmerge had just made
+	 * to a finished translation. That is how the third failing string on
+	 * master got there: msgmerge fuzzy-matched a new "…cannot be used: %s"
+	 * onto the older translation of the same sentence without the `%s`, marked
+	 * it fuzzy exactly as it should, and the next write silently un-marked it.
+	 * The lint skips fuzzy entries because gettext falls back to English for
+	 * them, so removing the flag is what turned a correct draft into a
+	 * published string missing its placeholder.
+	 *
+	 * Stamping `aggr-mt` relabelled reviewed human translations as machine
+	 * output, and resume-progress.mjs keys on that flag to decide what is a
+	 * restorable draft — so a person's work became something a later run felt
+	 * free to treat as its own.
+	 *
+	 * Neither line was needed: the translation loop already sets both flags on
+	 * the entries it actually fills.
+	 */
+	if ( entry.flags.size ) {
+		lines.push( `#, ${ [ ...entry.flags ].join( ', ' ) }` );
 	}
 	// Previous-string comments must sit immediately before msgid.
 	lines.push( ...previous );
@@ -233,6 +262,21 @@ function needsTranslation( entry ) {
 	}
 	const msgstr = entry.msgstrs.msgstr ?? '';
 	return msgstr === '' || isFuzzy;
+}
+
+/**
+ * One string's translation is unusable. Marked so the run can tell it apart
+ * from the provider going quiet: the message names the offending source, and
+ * matching a quota regex against that text read `"Limit to one advertiser"` as
+ * an exhausted quota. See classifyMtFailure() in run-completeness.mjs.
+ *
+ * @param {string} message
+ */
+function refusal( message ) {
+	const err = new Error( message );
+	err.code = MT_REFUSED;
+
+	return err;
 }
 
 /**
@@ -421,7 +465,7 @@ function resolveProviderMode() {
  * @param {string} locale
  * @returns {Promise<{ text: string, via: string }>}
  */
-async function mt( text, localeCodes, mode, locale, context = null ) {
+export async function mt( text, localeCodes, mode, locale, context = null ) {
 	const { protectedText, tokens: ph } = protectPlaceholders( text );
 	const brand = protectBrandTerms( protectedText );
 	let out;
@@ -473,14 +517,19 @@ async function mt( text, localeCodes, mode, locale, context = null ) {
 	out = applyLocaleGlossary( out, locale );
 
 	if ( ! placeholdersIntact( text, out ) ) {
-		throw new Error(
-			`MT dropped placeholders (source=${ text.slice( 0, 40 ) }…)`
+		throw refusal(
+			`MT returned the wrong placeholders (source=${ text.slice(
+				0,
+				40
+			) }…, expected ${
+				extractPlaceholders( text ).join( ' ' ) || 'none'
+			}` + `, got ${ extractPlaceholders( out ).join( ' ' ) || 'none' })`
 		);
 	}
 
 	// Reject leftover HTML entities MyMemory invents (e.g. Progress → Progrès&#10;).
 	if ( /&#\w+;|&[a-z]+;/i.test( out ) && ! /&#\w+;|&[a-z]+;/i.test( text ) ) {
-		throw new Error(
+		throw refusal(
 			`MT injected HTML entities (source=${ text.slice( 0, 40 ) }…)`
 		);
 	}
@@ -514,7 +563,7 @@ function localeFromPo( file ) {
 	return path.basename( file, '.po' ).slice( `${ TEXT_DOMAIN }-`.length );
 }
 
-async function translatePoFile( file, opts ) {
+export async function translatePoFile( file, opts ) {
 	const locale = localeFromPo( file );
 	const codes = LOCALE_MAP[ locale ];
 	if ( ! codes ) {
@@ -539,6 +588,8 @@ async function translatePoFile( file, opts ) {
 	let skipped = 0;
 	let lastVia = mode;
 	let truncated = false;
+	/** @type {string[]} Sources whose translation came back unusable. */
+	const refused = [];
 
 	for ( const entry of entries ) {
 		if ( ! needsTranslation( entry ) ) {
@@ -605,6 +656,21 @@ async function translatePoFile( file, opts ) {
 					60
 				) }…" → ${ err.message }`
 			);
+
+			/*
+			 * A refused string is this string's problem and says nothing about
+			 * the next one. Leave it untranslated — empty or still fuzzy, both
+			 * of which the lint skips and gettext falls back to English for —
+			 * and keep going. Stopping the locale here is what deadlocked the
+			 * drafting workflow: validation runs before the draft branch is
+			 * written, so one string the provider kept mangling threw away the
+			 * other thousand every run, and the next run regenerated it.
+			 */
+			if ( 'refused' === classifyMtFailure( err ) ) {
+				refused.push( entry.msgid );
+				await sleep( delay );
+				continue;
+			}
 			/*
 			 * Stop this locale on a quota or hard error, so whatever was
 			 * translated is still written rather than lost.
@@ -614,9 +680,7 @@ async function translatePoFile( file, opts ) {
 			 * file has been written, so the work survives and the claim does
 			 * not. See bin/i18n/run-completeness.mjs.
 			 */
-			if (
-				/HTTP 4\d\d|LIMIT|quota|MYMEMORY WARNING/i.test( String( err ) )
-			) {
+			if ( 'provider-stop' === classifyMtFailure( err ) ) {
 				truncated = true;
 				break;
 			}
@@ -627,8 +691,54 @@ async function translatePoFile( file, opts ) {
 
 	process.stdout.write( '\n' );
 
-	if ( updated > 0 && ! opts.dryRun ) {
+	/*
+	 * Last line before the file is written: no entry this run is responsible
+	 * for may leave here claiming to be a finished translation while carrying
+	 * the wrong placeholders. Anything that does is demoted to fuzzy, which is
+	 * what it actually is — a draft — and which the lint and gettext both
+	 * already treat as one.
+	 *
+	 * This is a backstop, not the fix. Two causes are fixed upstream: mt()
+	 * refuses a translation whose placeholders do not match, and
+	 * serializeEntry() no longer strips `fuzzy` from entries this run never
+	 * touched. Both are covered by tests. The backstop stays because those two
+	 * were found by reading a failing job rather than by anything asserting
+	 * the invariant, and a pipeline that rewrites catalogs unattended should
+	 * not depend on every future writer remembering it: whatever puts an entry
+	 * in this file, the catalog the run produces passes the validation that
+	 * runs next.
+	 *
+	 * Only the machine's own output is swept. A human translation that fails
+	 * parity is left exactly as it is, to fail the lint loudly, because
+	 * quietly flagging somebody's work fuzzy hides a problem they need to see.
+	 */
+	const demoted = [];
+
+	for ( const entry of entries ) {
+		if ( entry.flags.has( 'fuzzy' ) || ! entry.flags.has( 'aggr-mt' ) ) {
+			continue;
+		}
+
+		if ( entryPlaceholdersIntact( entry ) ) {
+			continue;
+		}
+
+		entry.flags.add( 'fuzzy' );
+		demoted.push( entry.msgid );
+		refused.push( entry.msgid );
+	}
+
+	if ( ( updated > 0 || demoted.length > 0 ) && ! opts.dryRun ) {
 		fs.writeFileSync( file, serializePo( header, entries ), 'utf8' );
+	}
+
+	if ( demoted.length > 0 ) {
+		console.warn(
+			`i18n:translate: ${ locale }: ${ demoted.length } machine ` +
+				'translation(s) held back as fuzzy — wrong placeholders, and ' +
+				'not refused at request time. This should not happen; see ' +
+				'docs/i18n.md.'
+		);
 	}
 
 	// Counted from the entries as they now stand, not inferred from arithmetic:
@@ -637,7 +747,15 @@ async function translatePoFile( file, opts ) {
 		needsTranslation( entry )
 	).length;
 
-	return { locale, updated, skipped, remaining, truncated, provider: mode };
+	return {
+		locale,
+		updated,
+		skipped,
+		remaining,
+		truncated,
+		refused,
+		provider: mode,
+	};
 }
 
 async function main() {
@@ -681,13 +799,32 @@ async function main() {
 	for ( const file of files ) {
 		const result = await translatePoFile( file, opts );
 		console.log(
-			`i18n:translate: ${ result.locale }: updated=${ result.updated } already-ok=${ result.skipped } remaining=${ result.remaining }`
+			`i18n:translate: ${ result.locale }: updated=${ result.updated } already-ok=${ result.skipped } remaining=${ result.remaining } refused=${ result.refused.length }`
 		);
 		total += result.updated;
 		results.push( result );
 	}
 
 	console.log( `i18n:translate: Done. ${ total } string(s) filled.` );
+
+	/*
+	 * Named, not just counted. A refusal means a human has to translate that
+	 * string, and a number alone tells nobody which one.
+	 */
+	const refusals = results.filter( ( r ) => r.refused.length > 0 );
+
+	if ( refusals.length > 0 ) {
+		console.log(
+			'\ni18n:translate: left for a human — the machine translation ' +
+				'came back with the wrong placeholders:'
+		);
+
+		for ( const result of refusals ) {
+			for ( const msgid of result.refused ) {
+				console.log( `  ${ result.locale }: "${ msgid }"` );
+			}
+		}
+	}
 	if ( opts.dryRun && total > 0 ) {
 		console.log( 'i18n:translate: dry-run — no files written.' );
 	}
@@ -717,7 +854,18 @@ async function main() {
 	}
 }
 
-main().catch( ( err ) => {
-	console.error( err );
-	process.exit( 1 );
-} );
+/*
+ * Guarded so the module can be imported by a test, the way resume-progress.mjs
+ * is. Without this, `mt()` could only be exercised by running the whole script
+ * against a paid API — which is why the refusal path had never been tested
+ * through the code that raises it, only through an error a test built itself.
+ */
+if (
+	process.argv[ 1 ] &&
+	path.resolve( process.argv[ 1 ] ) === fileURLToPath( import.meta.url )
+) {
+	main().catch( ( err ) => {
+		console.error( err );
+		process.exit( 1 );
+	} );
+}
