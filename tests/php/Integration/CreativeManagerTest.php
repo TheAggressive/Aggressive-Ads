@@ -16,6 +16,7 @@ use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Portal\Creative_Actions;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
@@ -611,6 +612,96 @@ final class CreativeManagerTest extends WP_UnitTestCase {
 	 * @param int $height Image height.
 	 * @return array<string, mixed>
 	 */
+	/**
+	 * **A share can be set, and only by somebody entitled to.**
+	 *
+	 * The weight has always decided delivery — `Weighted_Selection` reads it,
+	 * and #227 proved two assignments at 3 and 1 rotate three to one through
+	 * the real fill path. Nothing outside the REST route could set it, so the
+	 * behaviour existed and was unreachable.
+	 *
+	 * Gated exactly as removal is: capability, then the creative, then the
+	 * campaign, then the edit window. The refusal case is asserted alongside
+	 * the success one, because a permission test that only checks the happy
+	 * path passes over a gate that lets everybody through.
+	 *
+	 * @return void
+	 */
+	public function test_a_share_is_saved_for_the_owner_and_refused_for_a_stranger(): void {
+		wp_set_current_user( $this->owner );
+
+		$creative = $this->manager->upload(
+			$this->campaign_id,
+			$this->placement_id,
+			$this->image_file( 728, 90 ),
+			'https://example.com/',
+			'Weighted creative'
+		);
+
+		$this->assertIsArray( $creative );
+
+		$stored = Plugin::instance()->container()->get( Creative_Repository::class )->storage_details( (int) $creative['id'] );
+		$this->assertIsArray( $stored );
+		$this->stored[] = $stored['path'];
+
+		$assignments = Plugin::instance()->container()->get( Creative_Assignment_Repository::class );
+		$assignments->install_table();
+		$assignments->ensure(
+			array(
+				'line_item_id' => $this->campaign_id,
+				'campaign_id'  => $this->campaign_id,
+				'placement_id' => $this->placement_id,
+				'revision_id'  => (int) $creative['id'],
+			)
+		);
+
+		$this->assertTrue( $this->manager->set_weight( (int) $creative['id'], 7 ) );
+
+		$saved = null;
+
+		foreach ( $assignments->for_campaign( $this->campaign_id ) as $row ) {
+			if ( (int) $row['revision_id'] === (int) $creative['id'] ) {
+				$saved = $row;
+			}
+		}
+
+		$this->assertIsArray( $saved, 'The assignment disappeared.' );
+		$this->assertSame( 7, (int) $saved['weight'] );
+
+		// A weight outside the rules is refused rather than clamped: a silently
+		// adjusted number is one the advertiser did not choose.
+		$refused = $this->manager->set_weight( (int) $creative['id'], 0 );
+
+		$this->assertInstanceOf( \WP_Error::class, $refused );
+		$this->assertSame( 'aggr_weight_out_of_range', $refused->get_error_code() );
+
+		wp_set_current_user( 0 );
+
+		$stranger = $this->manager->set_weight( (int) $creative['id'], 4 );
+
+		$this->assertInstanceOf( \WP_Error::class, $stranger, 'A signed-out caller changed a delivery share.' );
+
+		/*
+		 * The *code* matters, not just the refusal. Removing the capability
+		 * check entirely still produces an error here — the campaign gate below
+		 * it catches a signed-out caller too — so an assertion that only says
+		 * "some error" passes over a missing permission check. Naming the gate
+		 * is what makes this test about permissions.
+		 */
+		$this->assertSame(
+			'aggr_weight_forbidden',
+			$stranger->get_error_code(),
+			'A different gate refused, so the capability check is not the thing being tested.'
+		);
+
+		// And nothing moved.
+		foreach ( $assignments->for_campaign( $this->campaign_id ) as $row ) {
+			if ( (int) $row['revision_id'] === (int) $creative['id'] ) {
+				$this->assertSame( 7, (int) $row['weight'] );
+			}
+		}
+	}
+
 	private function image_file( int $width, int $height ): array {
 		$image = imagecreatetruecolor( $width, $height );
 		ob_start();

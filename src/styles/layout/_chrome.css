@@ -769,3 +769,41 @@
 .aggr-acting__leave:focus-visible {
 	background: var(--aggr-color-rail-active);
 }
+
+/*
+ * The share control beside a variant.
+ *
+ * Inline and small on purpose: it sits inside an uploaded creative's details,
+ * where the primary act is still "remove", and a full-width form would make
+ * adjusting a split look like the main thing to do here.
+ */
+.aggr-share {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--aggr-space-xs);
+	margin: var(--aggr-space-xs) 0;
+}
+
+.aggr-share__label {
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.aggr-share__input {
+	width: 6rem;
+	min-height: var(--aggr-control-min);
+	padding: var(--aggr-space-2xs) var(--aggr-space-xs);
+	background: var(--aggr-color-surface);
+	border: 1px solid var(--aggr-border-color);
+	border-radius: var(--aggr-radius-control);
+	color: var(--aggr-color-text);
+	font: inherit;
+}
+
+.aggr-share__result {
+	flex-basis: 100%;
+	margin: 0;
+	font-size: 12px;
+	color: var(--aggr-color-text-muted);
+}

@@ -230,9 +230,13 @@ Ordered by dependency, not by size.
    dimension, with the row-count cost measured rather than assumed. Nothing else
    in this phase can be judged before this exists, which is the same reason
    P15's grain came first. See the closeout note below.
-2. **Variant management.** A screen for the assignments that already deliver:
-   weight, window, status, and the revision each points at. Today this is a REST
-   route and no UI.
+2. **Variant management.** *(share built; window and status still REST-only.)*
+   A screen for the assignments that already deliver. An advertiser can now see
+   and set each variant's share of its placement from the creative step; the
+   control appears only where a placement holds a second creative, because a
+   share beside a lone advertisement claims a choice the selector never makes.
+   Window and status remain reachable only through
+   `PATCH /campaigns/{id}/creative-assignments/{id}`.
 3. **Comparison.** Two variants side by side over a window, using the counters
    from slice 1. An experiment is this plus a hypothesis; it is not a separate
    mechanism.

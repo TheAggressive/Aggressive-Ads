@@ -12,6 +12,7 @@ namespace Aggressive\Ads\Portal;
 use Aggressive\Ads\REST\Api;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Attachment_Repository;
+use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Creative_Revision_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
@@ -40,6 +41,7 @@ final class Creative_View_Data {
 	 * @param Placement_Repository           $placements Placement persistence.
 	 * @param Assigned_Creatives             $assigned   What is assigned where.
 	 * @param Creative_Approval              $approvals  Creative review decisions.
+	 * @param Creative_Assignment_Repository $assignments Delivery assignments, which carry each variant's weight.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -48,7 +50,8 @@ final class Creative_View_Data {
 		private readonly Creative_Revision_Repository $revisions,
 		private readonly Placement_Repository $placements,
 		private readonly Assigned_Creatives $assigned,
-		private readonly Creative_Approval $approvals
+		private readonly Creative_Approval $approvals,
+		private readonly Creative_Assignment_Repository $assignments
 	) {
 	}
 
@@ -90,10 +93,21 @@ final class Creative_View_Data {
 	 * ever needs to be told.
 	 *
 	 * @param int $campaign_id Campaign post id.
-	 * @return array<int, array{id: int, placement_id: int, placement: string, size: string, dimensions: string, click_url: string, alt_text: string, approved: bool, rejected: bool, state_text: string, notes: string, name: string, bytes: int, preview: string}>
+	 * @return array<int, array{id: int, placement_id: int, placement: string, size: string, dimensions: string, click_url: string, alt_text: string, approved: bool, rejected: bool, state_text: string, notes: string, name: string, bytes: int, preview: string, weight: int|null, share: float|null, assignment_id: int, revision: int}>
 	 */
 	public function creative_rows( int $campaign_id ): array {
 		$rows = array();
+
+		/*
+		 * Weights are gathered before the loop so each row can be built whole.
+		 *
+		 * Attaching them afterwards, by writing keys onto rows already
+		 * returned, also works and cost this method its declared shape:
+		 * a mutated array is `array<string, mixed>` to a static analyser
+		 * however precise the writes are, so the type stopped documenting
+		 * anything. Building the row once is both simpler and checkable.
+		 */
+		[ $weights, $totals ] = $this->weights_for( $campaign_id );
 
 		/*
 		 * Structure from the assignment table, values from the revision.
@@ -116,29 +130,80 @@ final class Creative_View_Data {
 			$rejected = $this->creatives->is_rejected( $creative['id'] );
 
 			$rows[] = array(
-				'id'           => $creative['id'],
-				'placement_id' => $creative['placement_id'],
-				'placement'    => $this->placements->name( $creative['placement_id'] ),
-				'size'         => $creative['size'],
-				'dimensions'   => $creative['width'] > 0 && $creative['height'] > 0
+				'id'            => $creative['id'],
+				'placement_id'  => $creative['placement_id'],
+				'placement'     => $this->placements->name( $creative['placement_id'] ),
+				'size'          => $creative['size'],
+				'dimensions'    => $creative['width'] > 0 && $creative['height'] > 0
 					? $creative['width'] . '×' . $creative['height']
 					: '',
-				'click_url'    => $creative['click_url'],
-				'alt_text'     => $creative['alt_text'],
-				'approved'     => $approved,
-				'rejected'     => $rejected,
-				'state_text'   => $this->creative_state_text( $approved, $rejected ),
+				'click_url'     => $creative['click_url'],
+				'alt_text'      => $creative['alt_text'],
+				'approved'      => $approved,
+				'rejected'      => $rejected,
+				'state_text'    => $this->creative_state_text( $approved, $rejected ),
 
 				// Empty unless this creative was turned down. The decision owns
 				// the reason; the shared meta key carries two of them.
-				'notes'        => $this->approvals->rejection_notes( $creative['id'] ),
-				'name'         => null === $stored ? '' : $stored['name'],
-				'bytes'        => null === $stored ? 0 : $stored['bytes'],
-				'preview'      => $this->creative_preview( $creative['id'] ),
+				'notes'         => $this->approvals->rejection_notes( $creative['id'] ),
+				'name'          => null === $stored ? '' : $stored['name'],
+				'bytes'         => null === $stored ? 0 : $stored['bytes'],
+				'preview'       => $this->creative_preview( $creative['id'] ),
+
+				/*
+				 * Null rather than zero for a creative with no assignment yet.
+				 * Zero is a real weight the rules do not even permit, and a
+				 * share of 0% would tell the advertiser this creative had been
+				 * switched off rather than that it has not started delivering.
+				 */
+				'weight'        => isset( $weights[ $revision_id ] ) ? (int) $weights[ $revision_id ]['weight'] : null,
+				'share'         => $this->share_of( $weights[ $revision_id ] ?? null, $totals[ (int) $creative['placement_id'] ] ?? 0 ),
+				'assignment_id' => isset( $weights[ $revision_id ] ) ? (int) $weights[ $revision_id ]['id'] : 0,
+				'revision'      => isset( $weights[ $revision_id ] ) ? (int) $weights[ $revision_id ]['revision'] : 0,
 			);
 		}
 
 		return $rows;
+	}
+
+	/**
+	 * The campaign's assignments by revision, and the weight on each placement.
+	 *
+	 * Share is totalled per placement because that is the set the selection
+	 * chooses between. Totalling across the campaign would show a creative
+	 * "40%" of a contest it never enters.
+	 *
+	 * @param int $campaign_id Campaign to read.
+	 * @return array{0: array<int, array<string, mixed>>, 1: array<int, int>}
+	 */
+	private function weights_for( int $campaign_id ): array {
+		$by_revision = array();
+		$totals      = array();
+
+		foreach ( $this->assignments->for_campaign( $campaign_id ) as $assignment ) {
+			$revision_id = (int) $assignment['revision_id'];
+			$placement   = (int) $assignment['placement_id'];
+
+			$by_revision[ $revision_id ] = $assignment;
+			$totals[ $placement ]        = ( $totals[ $placement ] ?? 0 ) + max( 0, (int) $assignment['weight'] );
+		}
+
+		return array( $by_revision, $totals );
+	}
+
+	/**
+	 * One assignment's share of its placement, or null when it has none.
+	 *
+	 * @param array<string, mixed>|null $assignment The assignment, if there is one.
+	 * @param int                       $total      Every weight on that placement.
+	 * @return float|null
+	 */
+	private function share_of( ?array $assignment, int $total ): ?float {
+		if ( null === $assignment || $total <= 0 ) {
+			return null;
+		}
+
+		return max( 0, (int) $assignment['weight'] ) / $total;
 	}
 
 	/**
