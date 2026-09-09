@@ -33,6 +33,7 @@ concurrency:
 
 env:
   NODE_VERSION: '24'
+  I18N_DRAFT_BRANCH: 'i18n/mt-drafts'
 
 jobs:
   draft:
@@ -83,8 +84,61 @@ jobs:
             echo "No locale .po files. Scaffold one with: pnpm i18n:locale -- fr_FR"
           fi
 
-      - name: Machine-translate empty and fuzzy entries
+      # A provider-limited run can have hundreds of valid translations in its
+      # worktree when it exits non-zero. Those used to disappear with the
+      # runner, so every retry began from master and paid for the same strings
+      # again. Resume from the draft branch, but never copy a whole stale PO
+      # over master: the helper only fills entries that master still considers
+      # empty/fuzzy, and only from entries explicitly tagged `aggr-mt`.
+      - name: Restore saved draft progress
         if: steps.catalogs.outputs.present == 'true'
+        env:
+          DRAFT_BRANCH: ${{ env.I18N_DRAFT_BRANCH }}
+        run: |
+          set -euo pipefail
+
+          set +e
+          git ls-remote --exit-code --heads origin "${DRAFT_BRANCH}" > /dev/null 2>/tmp/i18n-ls-remote.err
+          status=$?
+          set -e
+
+          if [ "${status}" -eq 2 ]; then
+            echo "No saved draft branch yet; starting from master catalogs."
+            exit 0
+          fi
+
+          if [ "${status}" -ne 0 ]; then
+            cat /tmp/i18n-ls-remote.err >&2
+            exit "${status}"
+          fi
+
+          git fetch --quiet --depth=1 origin "${DRAFT_BRANCH}:refs/remotes/origin/${DRAFT_BRANCH}"
+          draft_ref="refs/remotes/origin/${DRAFT_BRANCH}"
+          restored=0
+
+          for file in languages/*.po; do
+            if ! git cat-file -e "${draft_ref}:${file}" 2>/dev/null; then
+              continue
+            fi
+
+            saved="${RUNNER_TEMP}/$(basename "${file}").saved"
+            git show "${draft_ref}:${file}" > "${saved}"
+            output="$(node bin/i18n/resume-progress.mjs "${file}" "${saved}")"
+            echo "${output}"
+            count="${output##*=}"
+            restored=$(( restored + count ))
+          done
+
+          echo "Restored ${restored} saved machine translation(s)."
+
+      # The translator intentionally exits non-zero when quota/rate limits stop
+      # it before every locale is complete. Let the job continue long enough to
+      # validate and persist what it already wrote; a final step turns the job
+      # red again afterwards so an incomplete run is never presented as done.
+      - id: translate
+        name: Machine-translate empty and fuzzy entries
+        if: steps.catalogs.outputs.present == 'true'
+        continue-on-error: true
         env:
           DEEPL_AUTH_KEY: ${{ secrets.DEEPL_AUTH_KEY }}
           I18N_MT_EMAIL: ${{ secrets.I18N_MT_EMAIL }}
@@ -100,7 +154,9 @@ jobs:
           fi
 
       # The same gate CI runs. Machine output that drops a placeholder must fail
-      # here rather than arrive in a pull request looking reviewed.
+      # here rather than arrive in a pull request looking reviewed. Because the
+      # translation step is continue-on-error, provider-limited partial output
+      # still reaches this safety gate before anything is persisted.
       - name: Validate the catalogs
         if: steps.catalogs.outputs.present == 'true'
         run: node bin/i18n/lint-placeholders.mjs
@@ -112,13 +168,14 @@ jobs:
       # differ from the pinned CI versions. That is a correct thing to tell a
       # developer and a nonsense thing to tell a job that is already inside CI.
       #
-      # It cost a full 41-minute translation run: everything succeeded, the
-      # commit was made, and the push was refused by a hook meant for laptops.
-      - name: Open a pull request
+      # Partial, validated progress is pushed too. The next run restores it and
+      # continues from the first still-empty/fuzzy entry instead of starting over.
+      - name: Open or update the draft pull request
         if: steps.catalogs.outputs.present == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HUSKY: '0'
+          DRAFT_BRANCH: ${{ env.I18N_DRAFT_BRANCH }}
         run: |
           set -euo pipefail
 
@@ -127,45 +184,36 @@ jobs:
             exit 0
           fi
 
-          branch="i18n/mt-drafts"
-          git config user.name  "github-actions[bot]"
+          branch="${DRAFT_BRANCH}"
+          git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git checkout -B "${branch}"
-          git add languages
-          # chore(i18n) on purpose: semantic-release must not cut a version for
-          # a translation draft. Merged catalogs ride the next feat/fix release.
-          git commit -m "chore(i18n): machine-translated draft catalogs"
 
-          # The lease needs something to lease against.
-          #
-          # `actions/checkout` fetches only the ref that triggered the run, so
-          # `origin/${branch}` does not exist here and a bare
-          # `--force-with-lease` is refused outright: "stale info". It is not a
-          # conflict — git simply has no recorded remote state to compare, and
-          # declines rather than guess.
-          #
-          # That made this step work exactly once. The first run created the
-          # branch, and pushing a branch that does not exist remotely has
-          # nothing to lease against, so it succeeded; every run afterwards was
-          # rejected by a check that could never pass.
-          #
-          # So the branch is fetched and its head passed explicitly. An empty
-          # value is the correct expectation when the branch does not exist,
-          # and the guarantee is unchanged: if anyone else moved the branch
-          # between the fetch and the push, the lease still refuses.
+          # Refetch immediately before the lease. Restore may have fetched this
+          # branch many minutes ago, and a lease that protects stale information
+          # is not a lease at all.
           git remote set-branches --add origin "${branch}"
           git fetch --quiet origin "${branch}" || true
-          # --verify --quiet, because a bare `git rev-parse` on a ref that does
-          # not exist prints the ref *name* to stdout and exits non-zero. With
-          # stderr silenced the `|| echo ''` never fires, and the lease is
-          # handed the literal string "refs/remotes/origin/i18n/mt-drafts",
-          # which git rejects: "cannot parse expected object name".
-          #
-          # That is the branch-does-not-exist path, and it is the one the first
-          # version of this fix was not tested against.
           remote_head="$(git rev-parse --verify --quiet "refs/remotes/origin/${branch}" || echo '')"
 
-          git push --force-with-lease="${branch}:${remote_head}" origin "${branch}"
+          # A retry that hit the provider limit before adding anything new can
+          # still contain the already-saved draft after restore. Do not rewrite
+          # the branch with an identical catalog tree just to produce a new
+          # timestamped commit; simply ensure its PR exists below.
+          needs_push=true
+          if [ -n "${remote_head}" ] && git diff --quiet "${remote_head}" -- languages; then
+            needs_push=false
+            echo "No new catalog progress since the saved draft."
+          fi
+
+          if [ "${needs_push}" = true ]; then
+            git checkout -B "${branch}"
+            git add languages
+            # chore(i18n) on purpose: semantic-release must not cut a version for
+            # a translation draft. Merged catalogs ride the next feat/fix release.
+            git commit -m "chore(i18n): machine-translated draft catalogs"
+
+            git push --force-with-lease="${branch}:${remote_head}" origin "${branch}"
+          fi
 
           if [ -z "$(gh pr list --head "${branch}" --state open --json number --jq '.[].number')" ]; then
             cat > /tmp/pr-body.md <<'BODY'
@@ -173,9 +221,9 @@ jobs:
           flagged `aggr-mt` and carries a review comment naming the provider.
 
           **Skim before merging.** Machine output is a draft: check placeholders,
-          product names, and the register of short UI labels. Without a
-          `DEEPL_AUTH_KEY` secret this ran on MyMemory, which is noticeably rougher
-          on the short labels this plugin is mostly made of.
+          product names, and the register of short UI labels. Provider quota or
+          rate limits can leave this PR partially filled; later runs restore this
+          branch and continue from the entries that are still empty/fuzzy.
 
           Compiled catalogs are not committed. The release job builds them from
           whatever `.po` is on `master`, so merged translations ride the next
@@ -189,5 +237,14 @@ jobs:
               --title "chore(i18n): machine-translated draft catalogs" \
               --body-file /tmp/pr-body.md
           else
-            echo "Pull request already open for ${branch}; pushed an update to it."
+            echo "Pull request already open for ${branch}."
           fi
+
+      # Keep the original completeness signal. The difference is that by the
+      # time this fails, validated partial work has already been saved and the
+      # next run can actually resume it.
+      - name: Report incomplete translation run
+        if: steps.catalogs.outputs.present == 'true' && steps.translate.outcome == 'failure'
+        run: |
+          echo "::error::Machine translation did not finish. Validated partial progress was saved to ${I18N_DRAFT_BRANCH}; re-run when provider quota allows and it will resume from that draft."
+          exit 1

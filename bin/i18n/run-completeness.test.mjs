@@ -13,6 +13,7 @@ import { strict as assert } from 'node:assert';
 import test from 'node:test';
 
 import { judgeRun } from './run-completeness.mjs';
+import { resumeCatalog } from './resume-progress.mjs';
 
 /** A locale that finished cleanly. */
 function complete( locale, updated = 1014 ) {
@@ -163,4 +164,62 @@ test( 'singular and plural read correctly, because the message is the product', 
 	] );
 
 	assert.match( many.problems[ 0 ], /2 entries still untranslated/ );
+} );
+
+const poHeader = `msgid ""
+msgstr ""
+"Language: de\\n"
+
+`;
+
+test( 'resume restores tagged MT into an empty master entry', () => {
+	const base = `${ poHeader }#: current.php:10
+#, php-format
+msgid "Hello %s"
+msgstr ""
+`;
+	const draft = `${ poHeader }#. Auto-translated (aggr-mt) via deepl — review before release.
+#: old.php:2
+#, php-format, aggr-mt
+msgid "Hello %s"
+msgstr "Hallo %s"
+`;
+	const result = resumeCatalog( base, draft );
+
+	assert.equal( result.restored, 1 );
+	assert.match( result.content, /current\.php:10/ );
+	assert.doesNotMatch( result.content, /old\.php:2/ );
+	assert.match( result.content, /aggr-mt/ );
+	assert.match( result.content, /msgstr "Hallo %s"/ );
+} );
+
+test( 'resume never overwrites a clean translation already on master', () => {
+	const base = `${ poHeader }#: current.php:10
+msgid "Hello"
+msgstr "Mensch"
+`;
+	const draft = `${ poHeader }#. Auto-translated (aggr-mt) via deepl — review before release.
+#, aggr-mt
+msgid "Hello"
+msgstr "Maschine"
+`;
+	const result = resumeCatalog( base, draft );
+
+	assert.equal( result.restored, 0 );
+	assert.match( result.content, /msgstr "Mensch"/ );
+	assert.doesNotMatch( result.content, /Maschine/ );
+} );
+
+test( 'resume ignores untagged translations from a stale draft', () => {
+	const base = `${ poHeader }msgid "Hello"
+msgstr ""
+`;
+	const draft = `${ poHeader }msgid "Hello"
+msgstr "Hallo"
+`;
+	const result = resumeCatalog( base, draft );
+
+	assert.equal( result.restored, 0 );
+	assert.match( result.content, /msgstr ""/ );
+	assert.doesNotMatch( result.content, /Hallo/ );
 } );
