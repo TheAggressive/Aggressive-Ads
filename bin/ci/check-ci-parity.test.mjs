@@ -303,3 +303,38 @@ test( 'every drifted lane is reported, not just the first', async () => {
 	assert.match( stderr, /ci:one/ );
 	assert.match( stderr, /ci:two/ );
 } );
+
+test( 'a package.json with no ci:* lane fails rather than passing over nothing', async () => {
+	/*
+	 * The loop over `$lanes` is the entire check, so over an empty lane list it
+	 * does nothing and reports ok — a green guard reading nothing at all. It
+	 * did exactly that when handed a package.json whose only ci:* scripts were
+	 * the two exempt ones, which describes a repository whose CI runs no lane.
+	 *
+	 * The same shape covers the other way in: whatever leaves `$lanes` empty —
+	 * scripts removed, the prefix renamed, that `node -e` returning nothing —
+	 * now stops the build instead of congratulating it.
+	 */
+	// The workflow still runs a lane, so the parser has something to read and
+	// its own guard is not what fires here. Only package.json has gone empty.
+	const root = await fixture( { scripts: [], inWorkflow: [ 'ci:lint' ] } );
+
+	const { status, stdout, stderr } = run( root );
+
+	assert.equal( status, 1 );
+	assert.match( stderr, /declares no ci:\* lane/ );
+	assert.doesNotMatch( stdout, /ok/ );
+} );
+
+test( 'a passing run says how many lanes it actually compared', async () => {
+	// A count, not a bare "ok": the failure above was invisible precisely
+	// because success looked identical whether it checked eleven lanes or none.
+	const root = await fixture( {
+		scripts: [ 'ci:lint', 'ci:php', 'ci:e2e' ],
+	} );
+
+	const { status, stdout } = run( root );
+
+	assert.equal( status, 0 );
+	assert.match( stdout, /ok \(3 lanes, \d+ reached by the parser\)/ );
+} );
