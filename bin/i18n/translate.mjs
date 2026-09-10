@@ -130,7 +130,34 @@ const DO_NOT_TRANSLATE = [
  *
  * @type {Record<string, Array<[string, string]>>}
  */
-const LOCALE_GLOSSARY = {};
+const LOCALE_GLOSSARY = {
+	/*
+	 * Earned on 2026-09-10, reviewing the first German draft that reached a
+	 * pull request. Longest keys first, because the replacement is a plain
+	 * substring pass: "Konvertierungen" has to go before "Konvertierung" or it
+	 * becomes "Conversionen".
+	 *
+	 * Only substitutions that cannot change the grammar around them are here.
+	 * "Ausweis" (an identity card) is wrong for an API credential, but it is
+	 * masculine where "Anmeldedaten" is plural, so swapping the noun alone
+	 * turns "Dieser Ausweis" into "Dieser Anmeldedaten" — worse German than the
+	 * wrong word. That one needs a translator, not a rule.
+	 */
+	de_DE: [
+		// The ad industry keeps the English loanword; "Konvertierung" is what
+		// you call converting a file. MyMemory used both, in adjacent strings.
+		[ 'Konvertierungen', 'Conversions' ],
+		[ 'Konvertierung', 'Conversion' ],
+
+		// "Namensnennung" is attribution in the give-credit sense — it is the
+		// word in the German Creative Commons licences — not the advertising
+		// sense of crediting a click with an outcome.
+		[ 'Fenster Namensnennung', 'Attributionsfenster' ],
+
+		// "Befundung" is a radiologist writing up a scan.
+		[ 'Befundungsschlüssel', 'Berichtsschlüssel' ],
+	],
+};
 
 function parseArgs( argv ) {
 	const out = { locale: null, dryRun: false, limit: Infinity };
@@ -380,10 +407,31 @@ async function translateMyMemory( text, lang ) {
 			}`
 		);
 	}
-	// MyMemory sometimes echoes the query when it cannot translate.
+	/*
+	 * MyMemory echoes the query when it cannot translate, and this used to
+	 * return that echo as the translation. The run then wrote English into the
+	 * German catalog, flagged it `aggr-mt`, cleared its fuzzy mark and counted
+	 * it among the strings it had filled — the catalog claiming a translation
+	 * it had never been given. The 2026-09-10 draft carried eleven of them,
+	 * including "None" and "Singapore dollar" presented as finished German.
+	 *
+	 * An echo is not evidence of a translation, so it is refused: the entry
+	 * stays empty, gettext falls back to the source string exactly as the echo
+	 * would have displayed, and the string is named for a human instead of
+	 * hidden among the finished ones. Some strings really are identical in both
+	 * languages — "Euro", "Code", "CTR" — and nothing here can tell those from
+	 * a provider giving up, which is the point: a person can, and now gets
+	 * asked.
+	 */
 	if ( translated === text ) {
-		return text;
+		throw refusal(
+			`MT echoed the source instead of translating it (source=${ text.slice(
+				0,
+				40
+			) }…)`
+		);
 	}
+
 	return translated;
 }
 
