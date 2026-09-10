@@ -460,6 +460,52 @@ function resolveProviderMode() {
 }
 
 /**
+ * Providers that have stopped answering for the rest of this run.
+ *
+ * A quota is exhausted for the day, not for the request. Without this, `auto`
+ * mode asked DeepL about every single string after it had already answered
+ * `HTTP 456: Quota exceeded` — 341 filled strings cost 341 doomed DeepL calls
+ * plus 341 MyMemory ones, and the run took six minutes to do half of one
+ * locale. Remembering the refusal halves the requests and the wall time.
+ *
+ * Only a `provider-stop` failure counts. A timeout or a dropped connection is
+ * this request's problem and says nothing about the next one, so retiring a
+ * working provider over one blip would be worse than the waste it saves.
+ *
+ * Deliberately not applied to `mode === 'deepl'`: somebody who names a provider
+ * gets that provider or an error, never a quiet substitution.
+ */
+const exhausted = { deepl: false };
+
+/**
+ * Forgets which providers gave up, so one run's exhaustion is not another's.
+ *
+ * @return {void}
+ */
+export function resetProviderHealth() {
+	exhausted.deepl = false;
+}
+
+/**
+ * Records a provider's refusal when it is the kind that will repeat.
+ *
+ * @param {string}  name Provider key.
+ * @param {unknown} err  What it threw.
+ * @return {void}
+ */
+function noteProviderFailure( name, err ) {
+	if ( 'provider-stop' !== classifyMtFailure( err ) || exhausted[ name ] ) {
+		return;
+	}
+
+	exhausted[ name ] = true;
+
+	console.warn(
+		`\ni18n:translate: ${ name } is out of quota; using the fallback for the rest of this run`
+	);
+}
+
+/**
  * @param {string} text
  * @param {{ mymemory: string, deepl: string }} localeCodes
  * @param {'mymemory' | 'deepl'} mode
@@ -473,11 +519,12 @@ export async function mt( text, localeCodes, mode, locale, context = null ) {
 	let via;
 
 	const hasDeeplKey = Boolean( process.env.DEEPL_AUTH_KEY );
+	const deeplUsable = hasDeeplKey && ! exhausted.deepl;
 
 	if ( mode === 'deepl' ) {
 		out = await translateDeepL( brand.text, localeCodes.deepl, context );
 		via = 'deepl';
-	} else if ( mode === 'auto' && hasDeeplKey ) {
+	} else if ( mode === 'auto' && deeplUsable ) {
 		try {
 			out = await translateDeepL(
 				brand.text,
@@ -486,6 +533,7 @@ export async function mt( text, localeCodes, mode, locale, context = null ) {
 			);
 			via = 'deepl';
 		} catch ( err ) {
+			noteProviderFailure( 'deepl', err );
 			console.warn(
 				`\ni18n:translate: DeepL failed (${ err.message }); falling back to MyMemory`
 			);
@@ -497,7 +545,8 @@ export async function mt( text, localeCodes, mode, locale, context = null ) {
 			out = await translateMyMemory( brand.text, localeCodes.mymemory );
 			via = 'mymemory';
 		} catch ( err ) {
-			if ( ! hasDeeplKey ) {
+			// Nothing left to fall back to: no key, or DeepL already gave up.
+			if ( ! deeplUsable ) {
 				throw err;
 			}
 			console.warn(
@@ -762,6 +811,7 @@ export async function translatePoFile( file, opts ) {
 
 async function main() {
 	loadLocalEnv();
+	resetProviderHealth();
 
 	const opts = parseArgs(
 		process.argv.slice( 2 ).filter( ( a ) => a !== '--' )
