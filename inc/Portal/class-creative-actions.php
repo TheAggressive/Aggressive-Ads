@@ -10,8 +10,10 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Portal;
 
 use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Domain\Assignment_Rules;
 use Aggressive\Ads\Domain\Upload_Rules;
 use Aggressive\Ads\Security\Capabilities;
+use Aggressive\Ads\Workflow\Assignment_Editor;
 use Aggressive\Ads\Workflow\Creative_Change_Manager;
 use Aggressive\Ads\Workflow\Creative_Manager;
 use WP_Error;
@@ -26,16 +28,20 @@ final class Creative_Actions implements Service {
 	public const REPLACE_ACTION  = 'aggr_request_creative_replacement';
 	public const WITHDRAW_ACTION = 'aggr_withdraw_creative_replacement';
 	public const WEIGHT_ACTION   = 'aggr_set_creative_weight';
+	public const STATUS_ACTION   = 'aggr_set_creative_status';
+	public const WINDOW_ACTION   = 'aggr_set_creative_window';
 
 	/**
 	 * Constructor.
 	 *
-	 * @param Creative_Manager        $manager Shared draft creative workflow.
-	 * @param Creative_Change_Manager $changes Reviewed published-ad changes.
+	 * @param Creative_Manager        $manager     Shared draft creative workflow.
+	 * @param Creative_Change_Manager $changes     Reviewed published-ad changes.
+	 * @param Assignment_Editor       $assignments Delivery settings on one assignment.
 	 */
 	public function __construct(
 		private readonly Creative_Manager $manager,
-		private readonly Creative_Change_Manager $changes
+		private readonly Creative_Change_Manager $changes,
+		private readonly Assignment_Editor $assignments
 	) {
 	}
 
@@ -50,6 +56,8 @@ final class Creative_Actions implements Service {
 		add_action( 'admin_post_' . self::REPLACE_ACTION, array( $this, 'handle_replace' ) );
 		add_action( 'admin_post_' . self::WITHDRAW_ACTION, array( $this, 'handle_withdraw' ) );
 		add_action( 'admin_post_' . self::WEIGHT_ACTION, array( $this, 'handle_weight' ) );
+		add_action( 'admin_post_' . self::STATUS_ACTION, array( $this, 'handle_status' ) );
+		add_action( 'admin_post_' . self::WINDOW_ACTION, array( $this, 'handle_window' ) );
 	}
 
 	/**
@@ -238,6 +246,155 @@ final class Creative_Actions implements Service {
 	}
 
 	/**
+	 * Pauses or resumes one variant's delivery.
+	 *
+	 * @return void
+	 */
+	public function handle_status(): void {
+		$this->assert_portal_access();
+
+		$assignment_id = isset( $_POST['assignment_id'] ) ? absint( $_POST['assignment_id'] ) : 0;
+		$campaign_id   = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0;
+		$revision      = isset( $_POST['revision'] ) ? absint( $_POST['revision'] ) : 0;
+		$intent        = isset( $_POST['intent'] ) ? sanitize_key( wp_unslash( $_POST['intent'] ) ) : '';
+
+		check_admin_referer( self::status_nonce_action( $assignment_id ) );
+
+		$result = $this->process_status( $campaign_id, $assignment_id, $intent, $revision );
+
+		if ( is_wp_error( $result ) ) {
+			$this->redirect( $campaign_id, 'error', $result );
+		}
+
+		$this->redirect(
+			$campaign_id,
+			'pause' === $intent ? 'creative_paused' : 'creative_resumed'
+		);
+	}
+
+	/**
+	 * Testable pause/resume entry point.
+	 *
+	 * **An intent, not a status.** The form says what the button does, and this
+	 * maps it to the one status that button is allowed to write. Accepting a
+	 * status string instead would let a hand-made post to the pause action
+	 * cancel an assignment — `Assignment_Editor` would permit it, because
+	 * `live → cancelled` is a legal edge for the routes that are meant to offer
+	 * it. Terminal states are not this control's to hand out.
+	 *
+	 * @param int    $campaign_id   Campaign id.
+	 * @param int    $assignment_id Assignment id.
+	 * @param string $intent        `pause` or `resume`.
+	 * @param int    $revision      Revision the form was rendered from.
+	 * @return int|WP_Error New revision, or why not.
+	 */
+	public function process_status( int $campaign_id, int $assignment_id, string $intent, int $revision ): int|WP_Error {
+		$status = match ( $intent ) {
+			'pause'  => Assignment_Rules::PAUSED,
+			'resume' => Assignment_Rules::LIVE,
+			default  => '',
+		};
+
+		if ( '' === $status ) {
+			return new WP_Error(
+				'aggr_creative_status_intent_invalid',
+				__( 'That is not something you can do to a creative.', 'aggressive-ads' ),
+				array( 'status' => 400 )
+			);
+		}
+
+		return $this->assignments->update(
+			$campaign_id,
+			$assignment_id,
+			array( 'status' => $status ),
+			$revision
+		);
+	}
+
+	/**
+	 * Sets one variant's own delivery window.
+	 *
+	 * @return void
+	 */
+	public function handle_window(): void {
+		$this->assert_portal_access();
+
+		$assignment_id = isset( $_POST['assignment_id'] ) ? absint( $_POST['assignment_id'] ) : 0;
+		$campaign_id   = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0;
+		$revision      = isset( $_POST['revision'] ) ? absint( $_POST['revision'] ) : 0;
+		$start         = isset( $_POST['starts_on'] ) ? sanitize_text_field( wp_unslash( $_POST['starts_on'] ) ) : '';
+		$end           = isset( $_POST['ends_on'] ) ? sanitize_text_field( wp_unslash( $_POST['ends_on'] ) ) : '';
+
+		check_admin_referer( self::window_nonce_action( $assignment_id ) );
+
+		$result = $this->process_window( $campaign_id, $assignment_id, $start, $end, $revision );
+
+		if ( is_wp_error( $result ) ) {
+			$this->redirect( $campaign_id, 'error', $result );
+		}
+
+		$this->redirect( $campaign_id, 'creative_window_saved' );
+	}
+
+	/**
+	 * Testable window entry point.
+	 *
+	 * Both ends are sent every time, because `Assignment_Editor` compares the
+	 * pair against the campaign's window and an empty field is a real value
+	 * here — it means "inherit this end from the campaign", not "leave it".
+	 *
+	 * @param int    $campaign_id   Campaign id.
+	 * @param int    $assignment_id Assignment id.
+	 * @param string $start         YYYY-MM-DD, or empty to inherit.
+	 * @param string $end           YYYY-MM-DD, or empty to inherit.
+	 * @param int    $revision      Revision the form was rendered from.
+	 * @return int|WP_Error New revision, or why not.
+	 */
+	public function process_window( int $campaign_id, int $assignment_id, string $start, string $end, int $revision ): int|WP_Error {
+		$start_ts = Date_Input::parse( $start, false );
+
+		if ( is_wp_error( $start_ts ) ) {
+			return $start_ts;
+		}
+
+		$end_ts = Date_Input::parse( $end, true );
+
+		if ( is_wp_error( $end_ts ) ) {
+			return $end_ts;
+		}
+
+		return $this->assignments->update(
+			$campaign_id,
+			$assignment_id,
+			array(
+				'start_at_ts' => $start_ts,
+				'end_at_ts'   => $end_ts,
+			),
+			$revision
+		);
+	}
+
+	/**
+	 * Nonce scoped to one assignment's pause control.
+	 *
+	 * @param int $assignment_id Assignment id.
+	 * @return string
+	 */
+	public static function status_nonce_action( int $assignment_id ): string {
+		return self::STATUS_ACTION . '_' . max( 0, $assignment_id );
+	}
+
+	/**
+	 * Nonce scoped to one assignment's window.
+	 *
+	 * @param int $assignment_id Assignment id.
+	 * @return string
+	 */
+	public static function window_nonce_action( int $assignment_id ): string {
+		return self::WINDOW_ACTION . '_' . max( 0, $assignment_id );
+	}
+
+	/**
 	 * Nonce scoped to one creative's share.
 	 *
 	 * @param int $creative_id Creative post id.
@@ -266,7 +423,7 @@ final class Creative_Actions implements Service {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only post/redirect/get display state.
 		$value = isset( $_GET['aggr_notice'] ) ? sanitize_key( wp_unslash( $_GET['aggr_notice'] ) ) : '';
 
-		return in_array( $value, array( 'creative_uploaded', 'creative_removed', 'creative_update_requested', 'creative_update_withdrawn', 'creative_weight_saved', 'error' ), true ) ? $value : '';
+		return in_array( $value, array( 'creative_uploaded', 'creative_removed', 'creative_update_requested', 'creative_update_withdrawn', 'creative_weight_saved', 'creative_paused', 'creative_resumed', 'creative_window_saved', 'error' ), true ) ? $value : '';
 	}
 
 	/**
