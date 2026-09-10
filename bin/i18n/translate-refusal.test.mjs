@@ -19,7 +19,7 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import test, { afterEach } from 'node:test';
 
-import { mt, translatePoFile } from './translate.mjs';
+import { mt, resetProviderHealth, translatePoFile } from './translate.mjs';
 import { classifyMtFailure } from './run-completeness.mjs';
 import { findPlaceholderMismatches } from './lint-placeholders.mjs';
 import { parsePo } from './po.mjs';
@@ -421,4 +421,115 @@ test( 'an unsupported locale keeps the result contract', async () => {
 		truncated: false,
 		refused: [],
 	} );
+} );
+
+test( 'a provider that is out of quota is not asked again this run', async () => {
+	/*
+	 * On 2026-09-10 DeepL answered `HTTP 456: Quota exceeded` to every request
+	 * and `auto` mode asked it about every string anyway: 341 filled strings
+	 * cost 341 doomed DeepL calls on top of 341 MyMemory ones, and the run
+	 * spent six minutes to half-finish one locale.
+	 */
+	const calls = { deepl: 0, mymemory: 0 };
+
+	globalThis.fetch = async ( url ) => {
+		const target = String( url?.url ?? url );
+
+		if ( target.includes( 'deepl' ) ) {
+			calls.deepl += 1;
+
+			return {
+				ok: false,
+				status: 456,
+				text: async () => '{"message":"Quota exceeded"}',
+			};
+		}
+
+		calls.mymemory += 1;
+
+		return {
+			ok: true,
+			status: 200,
+			json: async () => ( {
+				responseStatus: 200,
+				responseData: { translatedText: 'Alle Kampagnen' },
+			} ),
+		};
+	};
+
+	const previousKey = process.env.DEEPL_AUTH_KEY;
+	process.env.DEEPL_AUTH_KEY = 'test-key';
+	resetProviderHealth();
+
+	try {
+		for ( let i = 0; i < 5; i++ ) {
+			await mt( 'All campaigns', CODES, 'auto', 'de_DE' );
+		}
+
+		assert.equal(
+			calls.deepl,
+			1,
+			'DeepL was asked again after saying its quota was gone'
+		);
+		assert.equal( calls.mymemory, 5, 'every string still got translated' );
+	} finally {
+		process.env.DEEPL_AUTH_KEY = previousKey;
+		resetProviderHealth();
+	}
+} );
+
+test( 'a one-off provider error does not retire it for the run', async () => {
+	// A dropped connection is this request's problem and says nothing about the
+	// next one. Retiring a working provider over one blip is worse than the
+	// waste it saves.
+	const calls = { deepl: 0 };
+	let first = true;
+
+	globalThis.fetch = async ( url ) => {
+		const target = String( url?.url ?? url );
+
+		if ( target.includes( 'deepl' ) ) {
+			calls.deepl += 1;
+
+			if ( first ) {
+				first = false;
+				throw new Error( 'socket hang up' );
+			}
+
+			return {
+				ok: true,
+				status: 200,
+				json: async () => ( {
+					translations: [ { text: 'Alle Kampagnen' } ],
+				} ),
+			};
+		}
+
+		return {
+			ok: true,
+			status: 200,
+			json: async () => ( {
+				responseStatus: 200,
+				responseData: { translatedText: 'Alle Kampagnen' },
+			} ),
+		};
+	};
+
+	const previousKey = process.env.DEEPL_AUTH_KEY;
+	process.env.DEEPL_AUTH_KEY = 'test-key';
+	resetProviderHealth();
+
+	try {
+		await mt( 'All campaigns', CODES, 'auto', 'de_DE' );
+		await mt( 'All campaigns', CODES, 'auto', 'de_DE' );
+
+		assert.equal(
+			calls.deepl,
+			2,
+			'DeepL was retired over a transient error'
+		);
+	} finally {
+		process.env.DEEPL_AUTH_KEY = previousKey;
+		resetProviderHealth();
+	}
 } );
