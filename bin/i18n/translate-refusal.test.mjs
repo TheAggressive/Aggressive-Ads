@@ -25,6 +25,28 @@ import { findPlaceholderMismatches } from './lint-placeholders.mjs';
 import { parsePo } from './po.mjs';
 
 const CODES = { mymemory: 'de', deepl: 'DE' };
+
+/**
+ * Puts an environment variable back, including putting it back to absent.
+ *
+ * `process.env.X = undefined` stores the *string* "undefined", which is truthy
+ * — so a test that had set a key left every later test believing one was
+ * configured. That is what made the echo test fall through to a DeepL fallback
+ * that should not have existed.
+ *
+ * @param {string} name
+ * @param {string|undefined} previous
+ */
+function restoreEnv( name, previous ) {
+	if ( undefined === previous ) {
+		delete process.env[ name ];
+
+		return;
+	}
+
+	process.env[ name ] = previous;
+}
+
 const realFetch = globalThis.fetch;
 
 afterEach( () => {
@@ -473,7 +495,7 @@ test( 'a provider that is out of quota is not asked again this run', async () =>
 		);
 		assert.equal( calls.mymemory, 5, 'every string still got translated' );
 	} finally {
-		process.env.DEEPL_AUTH_KEY = previousKey;
+		restoreEnv( 'DEEPL_AUTH_KEY', previousKey );
 		resetProviderHealth();
 	}
 } );
@@ -529,7 +551,80 @@ test( 'a one-off provider error does not retire it for the run', async () => {
 			'DeepL was retired over a transient error'
 		);
 	} finally {
-		process.env.DEEPL_AUTH_KEY = previousKey;
+		restoreEnv( 'DEEPL_AUTH_KEY', previousKey );
 		resetProviderHealth();
 	}
+} );
+
+test( 'a provider echoing the source is refused, not recorded as a translation', async () => {
+	/*
+	 * MyMemory returns the query unchanged when it cannot translate. That echo
+	 * used to be written as the translation, flagged `aggr-mt`, cleared of its
+	 * fuzzy mark and counted among the filled strings — so the catalog claimed
+	 * German it had never been given. The 2026-09-10 draft carried eleven,
+	 * including "None" and "Singapore dollar" presented as finished German.
+	 */
+	stubProvider( 'None' );
+
+	// No fallback provider, so the refusal is what the caller sees.
+	const previousKey = process.env.DEEPL_AUTH_KEY;
+	delete process.env.DEEPL_AUTH_KEY;
+
+	const err = await mt( 'None', CODES, 'mymemory', 'de_DE' ).then(
+		() => null,
+		( e ) => e
+	);
+
+	assert.ok( err, 'an untranslated echo was accepted as a translation' );
+	assert.match( err.message, /echoed the source/ );
+	assert.equal(
+		classifyMtFailure( err ),
+		'refused',
+		'it is this string’s problem, not the provider going quiet'
+	);
+
+	restoreEnv( 'DEEPL_AUTH_KEY', previousKey );
+} );
+
+test( 'the German glossary corrects the terms the review pass caught', async () => {
+	// Applied to MT output, so the assertions go through mt() rather than
+	// calling the glossary directly — a rule nothing applies is not a rule.
+	stubProvider( 'Neue Konvertierung' );
+	assert.equal(
+		( await mt( 'New conversion', CODES, 'mymemory', 'de_DE' ) ).text,
+		'Neue Conversion'
+	);
+
+	// Plural first, or the singular rule turns it into "Conversionen".
+	stubProvider( 'Es sind noch keine Konvertierungen definiert.' );
+	assert.equal(
+		(
+			await mt(
+				'No conversions are defined yet.',
+				CODES,
+				'mymemory',
+				'de_DE'
+			)
+		).text,
+		'Es sind noch keine Conversions definiert.'
+	);
+
+	stubProvider( 'Fenster Namensnennung' );
+	assert.equal(
+		( await mt( 'Attribution window', CODES, 'mymemory', 'de_DE' ) ).text,
+		'Attributionsfenster'
+	);
+
+	stubProvider( 'Befundungsschlüssel' );
+	assert.equal(
+		( await mt( 'Reporting key', CODES, 'mymemory', 'de_DE' ) ).text,
+		'Berichtsschlüssel'
+	);
+
+	// A locale with no glossary is untouched.
+	stubProvider( 'Nueva Konvertierung' );
+	assert.equal(
+		( await mt( 'New conversion', CODES, 'mymemory', 'es_ES' ) ).text,
+		'Nueva Konvertierung'
+	);
 } );
