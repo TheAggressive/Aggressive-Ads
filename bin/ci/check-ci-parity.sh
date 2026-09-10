@@ -76,7 +76,10 @@ fi
 
 local_lanes=$( printf '%s\n' "$lanes_output" | cut -f2 )
 
-lanes=$(
+# Reported as its own failure, like the parser above. Under `set -e` a bare
+# assignment would abort the script with node's exit code and nothing saying
+# which of the two node calls stopped it.
+if ! lanes=$(
 	node -e "
 		const s = require('./package.json').scripts;
 		console.log(
@@ -86,7 +89,26 @@ lanes=$(
 				.join('\n')
 		);
 	"
-)
+); then
+	echo "check-ci-parity: could not read the ci:* scripts from package.json" >&2
+	exit 1
+fi
+
+# An empty lane list is the one input this guard cannot survive: the loop below
+# is the whole check, and over no lanes it does nothing and reports ok. That is
+# not hypothetical — it passed green over a package.json carrying no ci:* script
+# at all, which is a repository whose CI runs nothing. A guard that stops
+# matching has to fail rather than go quiet, so the count is asserted here and
+# printed on success.
+lane_count=$( printf '%s\n' "$lanes" | grep -c . || true )
+local_count=$( printf '%s\n' "$local_lanes" | grep -c . || true )
+
+if [ "$lane_count" -eq 0 ]; then
+	echo "check-ci-parity: package.json declares no ci:* lane, so this guard" >&2
+	echo "  would compare nothing and pass. Either the scripts were removed or" >&2
+	echo "  the name they start with changed; both need a person." >&2
+	exit 1
+fi
 
 status=0
 
@@ -128,4 +150,4 @@ if [ "$status" -ne 0 ]; then
 	exit 1
 fi
 
-echo "check-ci-parity: ok"
+echo "check-ci-parity: ok (${lane_count} lanes, ${local_count} reached by the parser)"
