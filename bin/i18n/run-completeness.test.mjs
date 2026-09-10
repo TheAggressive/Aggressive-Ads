@@ -16,6 +16,7 @@ import {
 	MT_REFUSED,
 	classifyMtFailure,
 	judgeRun,
+	providerMix,
 	refusalAnnotations,
 } from './run-completeness.mjs';
 import { resumeCatalog } from './resume-progress.mjs';
@@ -385,4 +386,111 @@ test( 'a run that refused nothing annotates nothing', () => {
 		refusalAnnotations( [ complete( 'de_DE' ), complete( 'fr_FR' ) ] ),
 		[]
 	);
+} );
+
+test( 'a draft from the fallback engine says so, loudly', () => {
+	/*
+	 * Two runs — 718 strings — went out entirely from MyMemory because DeepL
+	 * answered `456 Quota exceeded`, and the only trace was a `via` tag inside
+	 * a PO comment. The pull request named no engine and the job was red for an
+	 * unrelated reason. The draft was reviewed on its German, found about a
+	 * third defective, and closed.
+	 */
+	const mix = providerMix( [
+		{
+			locale: 'de_DE',
+			updated: 328,
+			skipped: 0,
+			remaining: 0,
+			truncated: false,
+			refused: [],
+			providers: { 'mymemory-fallback': 328 },
+		},
+	] );
+
+	assert.equal( mix.degraded, true );
+	assert.equal( mix.total, 328 );
+	assert.match( mix.summary, /\[!WARNING\]/ );
+	assert.match( mix.summary, /fallback engine/ );
+	assert.match( mix.summary, /mymemory-fallback` — 328 strings/ );
+} );
+
+test( 'a run on the preferred engine carries no warning', () => {
+	const mix = providerMix( [
+		{
+			locale: 'de_DE',
+			updated: 300,
+			skipped: 0,
+			remaining: 0,
+			truncated: false,
+			refused: [],
+			providers: { deepl: 300 },
+		},
+		{
+			locale: 'fr_FR',
+			updated: 100,
+			skipped: 0,
+			remaining: 0,
+			truncated: false,
+			refused: [],
+			providers: { deepl: 100 },
+		},
+	] );
+
+	assert.equal( mix.degraded, false );
+	assert.equal( mix.total, 400 );
+	assert.doesNotMatch( mix.summary, /WARNING/ );
+	assert.match( mix.summary, /`deepl` — 400 strings/ );
+} );
+
+test( 'a mixed run is counted across locales and still warns', () => {
+	// One locale finishing on the preferred engine does not make the draft
+	// safe: the reviewer needs to know part of it did not.
+	const mix = providerMix( [
+		{
+			locale: 'de_DE',
+			updated: 10,
+			skipped: 0,
+			remaining: 0,
+			truncated: false,
+			refused: [],
+			providers: { deepl: 6, 'mymemory-fallback': 4 },
+		},
+		{
+			locale: 'fr_FR',
+			updated: 5,
+			skipped: 0,
+			remaining: 0,
+			truncated: false,
+			refused: [],
+			providers: { 'mymemory-fallback': 5 },
+		},
+	] );
+
+	assert.equal( mix.degraded, true );
+	assert.equal( mix.total, 15 );
+	assert.equal( mix.counts[ 'mymemory-fallback' ], 9 );
+	assert.equal( mix.counts.deepl, 6 );
+	// Largest first, so the engine that wrote most of it leads.
+	assert.match(
+		mix.summary,
+		/mymemory-fallback` — 9 strings\n- `deepl` — 6 strings/
+	);
+} );
+
+test( 'a run that translated nothing does not claim an engine', () => {
+	const mix = providerMix( [
+		{
+			locale: 'de_DE',
+			updated: 0,
+			skipped: 0,
+			remaining: 5,
+			truncated: true,
+			refused: [],
+		},
+	] );
+
+	assert.equal( mix.degraded, false );
+	assert.equal( mix.total, 0 );
+	assert.match( mix.summary, /No strings were translated/ );
 } );

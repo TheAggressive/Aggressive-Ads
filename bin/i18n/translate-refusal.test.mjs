@@ -19,7 +19,8 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import test, { afterEach } from 'node:test';
 
-import { mt, resetProviderHealth, translatePoFile } from './translate.mjs';
+import { mt, resetProviderHealth } from './providers.mjs';
+import { translatePoFile } from './translate.mjs';
 import { classifyMtFailure } from './run-completeness.mjs';
 import { findPlaceholderMismatches } from './lint-placeholders.mjs';
 import { parsePo } from './po.mjs';

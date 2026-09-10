@@ -10,11 +10,19 @@ name: 🌐 i18n MT drafts
 # adding a marketplace action here would mean one more pinned SHA to keep
 # current for a job that runs `gh pr create` once.
 
+# Started by hand, never by a push.
+#
+# It ran on every POT change until 2026-09-10. What that produced, twice, was a
+# draft nobody could merge: DeepL answered `456 Quota exceeded`, every string
+# fell through to MyMemory, and the German came back about a third defective —
+# an ad creative rendered as a shopping cart, screen widths as sieve widths. The
+# second of those drafts was reviewed and closed, and the first had sat on the
+# draft branch being restored into later runs as though it were finished work.
+#
+# A workflow that manufactures review work which always ends in "close" is worse
+# than one nobody starts. Run it deliberately, when the preferred provider is
+# known to be answering, and read what it produces.
 on:
-  push:
-    branches: [master]
-    paths:
-      - 'languages/*.pot'
   workflow_dispatch:
     inputs:
       locale:
@@ -142,6 +150,8 @@ jobs:
         env:
           DEEPL_AUTH_KEY: ${{ secrets.DEEPL_AUTH_KEY }}
           I18N_MT_EMAIL: ${{ secrets.I18N_MT_EMAIL }}
+          # Which engine actually answered, for the pull request body.
+          AGGR_I18N_SUMMARY_FILE: ${{ runner.temp }}/provider-mix.md
           # Through the environment, never interpolated into the script body: a
           # workflow_dispatch input expanded inline is a shell injection anyone
           # who can start the workflow controls.
@@ -176,6 +186,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HUSKY: '0'
           DRAFT_BRANCH: ${{ env.I18N_DRAFT_BRANCH }}
+          AGGR_I18N_SUMMARY_FILE: ${{ runner.temp }}/provider-mix.md
         run: |
           set -euo pipefail
 
@@ -215,8 +226,7 @@ jobs:
             git push --force-with-lease="${branch}:${remote_head}" origin "${branch}"
           fi
 
-          if [ -z "$(gh pr list --head "${branch}" --state open --json number --jq '.[].number')" ]; then
-            cat > /tmp/pr-body.md <<'BODY'
+          cat > /tmp/pr-body.md <<'BODY'
           Machine translation filled empty and fuzzy entries. Every filled entry is
           flagged `aggr-mt` and carries a review comment naming the provider.
 
@@ -229,15 +239,30 @@ jobs:
           whatever `.po` is on `master`, so merged translations ride the next
           feat/fix release without a version bump of their own.
           BODY
-            sed -i 's/^          //' /tmp/pr-body.md
+          sed -i 's/^          //' /tmp/pr-body.md
 
+          # Which engine wrote this, above everything else. A reviewer must not
+          # have to grep a PO comment to find out that the preferred provider
+          # refused and a weaker one answered instead.
+          if [ -s "${AGGR_I18N_SUMMARY_FILE}" ]; then
+            cat "${AGGR_I18N_SUMMARY_FILE}" /tmp/pr-body.md > /tmp/pr-body-final.md
+            mv /tmp/pr-body-final.md /tmp/pr-body.md
+          fi
+
+          existing="$(gh pr list --head "${branch}" --state open --json number --jq '.[].number')"
+
+          if [ -z "${existing}" ]; then
             gh pr create \
               --head "${branch}" \
               --base master \
               --title "chore(i18n): machine-translated draft catalogs" \
               --body-file /tmp/pr-body.md
           else
-            echo "Pull request already open for ${branch}."
+            # Rewritten every run. The body used to be written once, at
+            # creation, so a later run that degraded to the fallback engine left
+            # the first run's claims standing over its own output.
+            gh pr edit "${existing}" --body-file /tmp/pr-body.md
+            echo "Updated the open pull request for ${branch}."
           fi
 
       # Keep the original completeness signal. The difference is that by the

@@ -146,6 +146,71 @@ export function refusalAnnotations( results ) {
 }
 
 /**
+ * What a reviewer needs to know before reading a word of the translation.
+ *
+ * `auto` mode prefers DeepL and silently substitutes MyMemory whenever DeepL
+ * refuses. Two runs went out that way — 718 strings, every one from the
+ * fallback — and the only trace was a `via` tag inside a PO comment. The pull
+ * request said "Machine translation filled empty and fuzzy entries" and named
+ * no engine; the job was red for an unrelated reason. The draft was reviewed on
+ * its German, found roughly a third defective, and closed.
+ *
+ * So the mix goes at the top of the pull request, not into a log. `fallback` in
+ * a `via` name is the signal: it means the engine that answered was not the one
+ * the run was configured to prefer.
+ *
+ * @param {LocaleResult[]} results Per-locale outcomes.
+ * @return {{degraded: boolean, total: number, counts: Record<string, number>, summary: string}}
+ */
+export function providerMix( results ) {
+	const counts = {};
+
+	for ( const result of results ) {
+		for ( const [ via, n ] of Object.entries( result.providers ?? {} ) ) {
+			counts[ via ] = ( counts[ via ] ?? 0 ) + n;
+		}
+	}
+
+	const total = Object.values( counts ).reduce( ( a, b ) => a + b, 0 );
+	const degraded = Object.keys( counts ).some( ( via ) =>
+		via.includes( 'fallback' )
+	);
+
+	const ordered = Object.entries( counts ).sort(
+		( a, b ) => b[ 1 ] - a[ 1 ]
+	);
+	const lines = ordered.map(
+		( [ via, n ] ) =>
+			`- \`${ via }\` — ${ n } string${ 1 === n ? '' : 's' }`
+	);
+
+	if ( 0 === total ) {
+		return {
+			degraded: false,
+			total: 0,
+			counts,
+			summary: 'No strings were translated in this run.',
+		};
+	}
+
+	const heading = degraded
+		? '> [!WARNING]\n' +
+		  '> **This draft was produced by a fallback engine.** The preferred\n' +
+		  '> provider refused, so these strings came from the substitute. A\n' +
+		  '> previous draft in that state was about a third defective and was\n' +
+		  '> closed rather than merged — read the translations before trusting\n' +
+		  '> this one.\n'
+		: '';
+
+	return {
+		degraded,
+		total,
+		counts,
+		summary: `${ heading }\n**Translated by**\n\n${ lines.join( '\n' ) }\n`,
+	};
+}
+
+/**
  * Judges a completed run.
  *
  * A locale is a problem when the provider gave up partway, or when entries are
