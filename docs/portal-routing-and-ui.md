@@ -140,7 +140,14 @@ the catalogue remains mutable without retroactively changing the draft. Each
 campaign form has its own campaign-bound nonce, and campaign-field writes carry
 the optimistic revision token through `Campaign_Editor`. Creative writes have
 campaign/placement- or creative-bound nonces and share `Creative_Manager` with
-REST. Creative files remain private, previews use the authorized stream with a
+REST. The three per-variant controls on the creative step — share, dates, and
+pause — are **assignment**-bound instead: their nonces are scoped to the
+assignment id, and they carry the revision the page was rendered from, so a form
+opened before somebody else's change is refused rather than winning. Share goes
+through `Creative_Manager`; dates and pause go through
+`Workflow\Assignment_Editor`, the same path the REST route drives, so the rules
+for a delivery window and a status transition have one definition rather than a
+portal copy. Creative files remain private, previews use the authorized stream with a
 short-lived REST nonce, and invalid dimensions report the uploaded and required
 sizes. Scheduled and live campaign detail screens expose **Your ads** as
 selectable previews. The thumbnail opens a larger preview overlay; **Update**

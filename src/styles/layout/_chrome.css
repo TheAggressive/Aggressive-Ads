@@ -807,3 +807,72 @@
 	font-size: 12px;
 	color: var(--aggr-color-text-muted);
 }
+
+/*
+ * The window and pause controls, beside the share.
+ *
+ * Same restraint as `.aggr-share`, and the same reason: these sit inside an
+ * uploaded creative's details, where the primary act is still "remove". Three
+ * full-width forms stacked under one thumbnail would turn a card into a
+ * settings page.
+ */
+.aggr-variant-window {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: var(--aggr-space-xs);
+	margin: var(--aggr-space-xs) 0;
+}
+
+.aggr-variant-window__fields {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--aggr-space-xs);
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
+.aggr-variant-window__legend {
+	padding: 0;
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.aggr-variant-window__label {
+	font-size: 13px;
+	color: var(--aggr-color-text-muted);
+}
+
+.aggr-variant-window__input {
+	min-height: var(--aggr-control-min);
+	padding: var(--aggr-space-2xs) var(--aggr-space-xs);
+	background: var(--aggr-color-surface);
+	border: 1px solid var(--aggr-border-color);
+	border-radius: var(--aggr-radius-control);
+	color: var(--aggr-color-text);
+	font: inherit;
+}
+
+.aggr-variant-window__hint {
+	flex-basis: 100%;
+	margin: 0;
+	font-size: 12px;
+	color: var(--aggr-color-text-muted);
+}
+
+.aggr-variant-status {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--aggr-space-xs);
+	margin: var(--aggr-space-xs) 0;
+}
+
+.aggr-variant-status__note {
+	flex-basis: 100%;
+	margin: 0;
+	font-size: 12px;
+	color: var(--aggr-color-text-muted);
+}

@@ -44,6 +44,12 @@ decides a whole page at once with competitive separation.
 `GET /aggr/v1/placements/{id}/decision` returns the decision and its full trace
 to staff only, replayable from a supplied clock and seed.
 
+**Variants.** A placement may carry up to ten creatives, and an advertiser sets
+each one's share of the rotation, its own dates inside the campaign's, and
+whether it is paused — from the campaign's creative step, without staff. The
+weighting has always been real; what was missing until recently was any way to
+reach it outside the REST route.
+
 **Reporting** (when the Reporting module is on) reads `aggr_rollups`: dashboard
 tiles, a seven-day sparkline, campaign list/detail columns, REST
 `impressions` / `clicks` / `ctr`. House and other orgs are excluded in SQL.
@@ -172,10 +178,14 @@ aggressive-ads.php                 header, constants, floor guard, hand-off
  └ inc/class-service-registrar.php factories — instantiates nothing
 ```
 
-Two boundaries fail the build when crossed:
+Three boundaries fail the build when crossed, all enforced by
+`bin/ci/check-repository-boundary.sh`:
 
 - **`inc/Repository/` is the only place data access appears.** No `WP_Query`,
   `get_posts()`, `get_post_meta()`, `$wpdb` anywhere else in `inc/`.
+- **AdSanity identifiers appear nowhere** in `inc/` or `templates/`. Native fill
+  is the only publisher, and the guard refuses a bare `adsanity_get_ads()` as
+  readily as a class name.
 - **`inc/Domain/` calls no WordPress function.** Campaign rules stay unit-testable
   without a bootstrap.
 

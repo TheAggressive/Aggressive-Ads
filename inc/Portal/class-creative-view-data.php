@@ -160,6 +160,17 @@ final class Creative_View_Data {
 				'share'         => $this->share_of( $weights[ $revision_id ] ?? null, $totals[ (int) $creative['placement_id'] ] ?? 0 ),
 				'assignment_id' => isset( $weights[ $revision_id ] ) ? (int) $weights[ $revision_id ]['id'] : 0,
 				'revision'      => isset( $weights[ $revision_id ] ) ? (int) $weights[ $revision_id ]['revision'] : 0,
+
+				/*
+				 * Delivery status and window, for the controls beside the
+				 * share. Empty string rather than a default status for a
+				 * creative with no assignment: `draft` is a real status, and
+				 * showing it for a creative that was never assigned would
+				 * offer a Pause button over nothing to pause.
+				 */
+				'status'        => isset( $weights[ $revision_id ] ) ? (string) $weights[ $revision_id ]['status'] : '',
+				'starts_on'     => isset( $weights[ $revision_id ] ) ? Date_Input::format( (int) $weights[ $revision_id ]['start_at_ts'] ) : '',
+				'ends_on'       => isset( $weights[ $revision_id ] ) ? Date_Input::format( (int) $weights[ $revision_id ]['end_at_ts'] ) : '',
 			);
 		}
 

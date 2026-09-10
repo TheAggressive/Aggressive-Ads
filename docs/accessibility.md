@@ -138,7 +138,7 @@ the campaign into a false submitted state.
 
 Every creative carries `_aggr_alt_text` and writes it to `_wp_attachment_image_alt` when promoted. The portal generates concise text from the validated destination host, so advertisers are not asked for a separate description; API clients may still supply more specific text.
 
-This closes a real gap. The LAAO theme currently patches missing ad alt text at render time in `inc/Accessibility/class-ad-link-labels.php`, injecting `alt="Advertisement: {title}"` — written because three ads on the front page had no alt text and were failing an axe link-name check. That shim is a workaround for ads created by hand in AdSanity's admin, where alt text is not a field.
+This closes a real gap. The LAAO theme currently patches missing ad alt text at render time, in that theme's own `inc/Accessibility/class-ad-link-labels.php` — no such file exists here, and looking for one is the wrong search — injecting `alt="Advertisement: {title}"` — written because three ads on the front page had no alt text and were failing an axe link-name check. That shim is a workaround for ads created by hand in AdSanity's admin, where alt text is not a field.
 
 Ads this portal publishes will not need it: accessible text is generated during upload and travels with the file. The theme's shim can stay as a safety net for legacy ads, but it will have nothing to do for ours.
 

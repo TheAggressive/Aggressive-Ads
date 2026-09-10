@@ -56,7 +56,7 @@ so two tenants cannot claim the same name.
 
 ### What the advertiser deliberately does not have
 
-Asserted explicitly in `tests/php/Security/RolesTest.php`:
+Asserted explicitly, and in two places on purpose — `tests/php/Unit/Security/RolesMatrixTest.php` asserts what the role *declares*, and `InstallerTest::test_a_real_advertiser_cannot_upload_or_edit_content` asserts what a real user granted that role can actually do. A declaration is not a grant: a capability added by a filter, or one core hands out on its own, shows up only in the second:
 
 - **`upload_files`** — advertisers never touch the Media Library. Creative goes to private storage and only becomes an attachment at approval.
 - **`edit_posts`** — no access to site content of any kind.

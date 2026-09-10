@@ -238,7 +238,7 @@ endif;
 	</div>
 <?php endif; ?>
 
-<?php if ( in_array( $aggr_creative_notice, array( 'creative_uploaded', 'creative_removed', 'creative_update_requested', 'creative_update_withdrawn', 'creative_weight_saved' ), true ) ) : ?>
+<?php if ( in_array( $aggr_creative_notice, array( 'creative_uploaded', 'creative_removed', 'creative_update_requested', 'creative_update_withdrawn', 'creative_weight_saved', 'creative_paused', 'creative_resumed', 'creative_window_saved' ), true ) ) : ?>
 	<div class="aggr-alert aggr-alert--success" role="status">
 		<p>
 			<?php
@@ -248,6 +248,9 @@ endif;
 					'creative_removed'          => __( 'Creative removed.', 'aggressive-ads' ),
 					'creative_update_requested' => __( 'Your ad update is waiting for review. The current ad will keep running.', 'aggressive-ads' ),
 					'creative_weight_saved'     => __( 'Share saved. The new split applies to the next advertisement served.', 'aggressive-ads' ),
+					'creative_paused'           => __( 'Paused. The other creatives on that placement take its share.', 'aggressive-ads' ),
+					'creative_resumed'          => __( 'Resumed. It starts serving again on the next request.', 'aggressive-ads' ),
+					'creative_window_saved'     => __( 'Dates saved.', 'aggressive-ads' ),
 					default                     => __( 'The pending ad update was withdrawn.', 'aggressive-ads' ),
 				}
 			);

@@ -9,7 +9,6 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Portal;
 
-use DateTimeImmutable;
 use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Security\Capabilities;
@@ -816,25 +815,7 @@ final class Campaign_Actions implements Service {
 	 * @return int|WP_Error
 	 */
 	private function parse_date( string $value, bool $end_of_day ): int|WP_Error {
-		if ( '' === $value ) {
-			return 0;
-		}
-
-		$date = DateTimeImmutable::createFromFormat( '!Y-m-d', $value, wp_timezone() );
-
-		if ( false === $date || $date->format( 'Y-m-d' ) !== $value ) {
-			return new WP_Error(
-				$end_of_day ? 'aggr_end_date_invalid' : 'aggr_start_date_invalid',
-				__( 'Enter a valid date in the required format.', 'aggressive-ads' ),
-				array( 'status' => 422 )
-			);
-		}
-
-		if ( $end_of_day ) {
-			$date = $date->setTime( 23, 59, 59 );
-		}
-
-		return $date->getTimestamp();
+		return Date_Input::parse( $value, $end_of_day );
 	}
 
 	/**

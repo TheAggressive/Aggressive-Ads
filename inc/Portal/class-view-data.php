@@ -494,7 +494,7 @@ final class View_Data {
 	 * @return string
 	 */
 	private function date_input_value( int $timestamp ): string {
-		return $timestamp > 0 ? (string) wp_date( 'Y-m-d', $timestamp, wp_timezone() ) : '';
+		return Date_Input::format( $timestamp );
 	}
 
 	/**

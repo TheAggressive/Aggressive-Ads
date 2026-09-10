@@ -98,7 +98,12 @@ headers are not trusted by the plugin. See
   security; CodeQL analyzes JavaScript and TypeScript.
 - Composer and pnpm lockfiles are installed frozen and audited. Audit exceptions
   require a local source-level regression check and a documented removal
-  condition.
+  condition. **An advisory database we cannot reach is a failure, never a
+  pass.** The audits are retried through `bin/ci/retry.sh` so a transient
+  outage does not turn a sound change red, and they still fail once the retries
+  are exhausted; `composer audit --ignore-unreachable` is deliberately not used,
+  because it would convert the one condition the lane exists to detect into a
+  green tick.
 - One WordPress package ships **inside** the plugin rather than being loaded from
   core. WordPress 7.1 uses DataViews internally but registers no `wp-dataviews`
   script or style handle, so `@wordpress/dataviews` is compiled once into

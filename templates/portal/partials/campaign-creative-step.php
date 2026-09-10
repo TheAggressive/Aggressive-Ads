@@ -112,6 +112,8 @@ use Aggressive\Ads\Workflow\Creative_Manager;
 													<?php endif; ?>
 												<?php endif; ?>
 												<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-variant-share.php'; ?>
+												<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-variant-window.php'; ?>
+												<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-variant-status.php'; ?>
 
 												<a
 													class="aggr-button aggr-button--danger"

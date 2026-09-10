@@ -3,7 +3,7 @@
 ## Status
 
 - Phase: **P17 — Creative experience**
-- Roadmap state: `[ ]` — slice 1 of 4 built
+- Roadmap state: `[ ]` — slices 1 and 2 of 4 built
 - Last audited: 2026-09-06
 - Authoritative environments: CI's pinned MySQL 8.4 / PHP 8.4 lanes
 
@@ -230,13 +230,14 @@ Ordered by dependency, not by size.
    dimension, with the row-count cost measured rather than assumed. Nothing else
    in this phase can be judged before this exists, which is the same reason
    P15's grain came first. See the closeout note below.
-2. **Variant management.** *(share built; window and status still REST-only.)*
-   A screen for the assignments that already deliver. An advertiser can now see
-   and set each variant's share of its placement from the creative step; the
-   control appears only where a placement holds a second creative, because a
-   share beside a lone advertisement claims a choice the selector never makes.
-   Window and status remain reachable only through
-   `PATCH /campaigns/{id}/creative-assignments/{id}`.
+2. **Variant management.** *(built)* A screen for the assignments that already
+   deliver. An advertiser sets each variant's share of its placement, its own
+   dates inside the campaign's, and whether it is paused — all from the creative
+   step. The share control appears only where a placement holds a second
+   creative, because a share beside a lone advertisement claims a choice the
+   selector never makes; the window and pause controls appear wherever there is
+   an assignment, because both are meaningful for one creative alone. See the
+   slice 2 closeout below.
 3. **Comparison.** Two variants side by side over a window, using the counters
    from slice 1. An experiment is this plus a hypothesis; it is not a separate
    mechanism.
@@ -339,6 +340,50 @@ code.** May a campaign be submitted with two variants awaiting review — yes,
 servable — yes, delivery serves whatever assignments are ready. Neither needed a
 decision; both needed reading.
 
+## Slice 2 closeout — variant management
+
+The share control shipped first and is described in the note above. Window and
+pause followed, and the shape of that work is worth recording because most of it
+was deciding what *not* to write.
+
+**Nothing new decides anything.** `Workflow\Assignment_Editor` already owned
+every rule these controls need — capability, edit window, status transitions,
+`window_fits()`, optimistic concurrency and the audit row — because the REST
+route had been driving it since P2. The portal handlers validate nothing of
+their own; they map a form to that call. A second validation path would have
+been a second definition of when a creative may run, and the two would have
+disagreed the first time either changed.
+
+**One thing the portal does decide, and it is a boundary.** The pause form posts
+`intent=pause|resume`, never a status. `live → cancelled` is a legal transition
+that `Assignment_Editor` permits for the routes meant to offer withdrawal, so a
+pause button posting a status field would have been a cancel button for anyone
+willing to edit a form — terminally, since the same control could not resume it.
+Recorded in [threat-model.md](threat-model.md) with the test that proves it.
+
+**An empty date is a value.** Both ends are submitted every time, because zero
+means *inherit this end from the campaign* rather than *leave it alone*.
+`Assignment_Rules::window_fits()` treats each end independently, and refuses a
+window that widens rather than clamping it — a campaign sold for June must not
+carry a creative running into July, and silently moving somebody's date is worse
+than refusing it.
+
+**Two duplicate rules were removed rather than added to.** Reading a typed date
+into the model's UTC integer lived only in `Portal\Campaign_Actions`, and
+rendering one back out lived only in `Portal\View_Data`. The variant window
+needed both. They are now `Portal\Date_Input::parse()` and `::format()`, one
+class holding both halves of the round trip — a formatter reading one timezone
+and a parser reading another loses a day, and the loss is invisible in either
+file alone.
+
+**What the pause control is not.** It does not withdraw a creative from its
+placement; `Assignment_Editor::unassign()` does that and keeps the artwork. It
+does not reject a creative; that is review's. It is the operator pause, which
+sets `operator_paused` so that `Assignment_Rules::project_status()` keeps a
+person's pause distinct from a campaign transition — a pause that set the status
+and not the flag would be undone the next time the campaign moved, which
+`CreativeVariantControlsTest` asserts directly rather than trusting.
+
 ## Required executable evidence
 
 - **A weighted pair converges on its weights.** *(done — slice 2 note above.)*
@@ -356,6 +401,17 @@ decision; both needed reading.
   reconciliation the utilisation view now asserts, one dimension lower — a
   breakdown that does not add up to its total is the defect P15 shipped and
   caught.
+- **A variant pauses, resumes, and re-dates from the portal**, through the form
+  handlers rather than the REST route, with the row read back each time.
+  `CreativeVariantControlsTest`. *(done — slice 2.)* The pause control is also
+  posted `cancelled`, `completed` and a raw status string, and the row asserted
+  not to move; the guard was verified by mutating its map to forward whatever it
+  was given and watching that test fail.
+- **A stale form loses to the write it did not see.** The same revision
+  submitted twice is refused with `aggr_assignment_conflict` rather than
+  overwriting, and a stranger reaches neither control — refused as `aggr_not_found`,
+  because a refusal that distinguishes "forbidden" from "missing" enumerates.
+  *(done — slice 2.)*
 - Approving a variant does not alter any other variant's revision, asserted by
   checksum rather than by absence of an error.
 - A rejected revision keeps its reason after the campaign moves on.
