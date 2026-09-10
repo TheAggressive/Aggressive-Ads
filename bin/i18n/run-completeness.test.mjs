@@ -12,7 +12,12 @@
 import { strict as assert } from 'node:assert';
 import test from 'node:test';
 
-import { judgeRun } from './run-completeness.mjs';
+import {
+	MT_REFUSED,
+	classifyMtFailure,
+	judgeRun,
+	refusalAnnotations,
+} from './run-completeness.mjs';
 import { resumeCatalog } from './resume-progress.mjs';
 
 /** A locale that finished cleanly. */
@@ -222,4 +227,162 @@ msgstr "Hallo"
 	assert.equal( result.restored, 0 );
 	assert.match( result.content, /msgstr ""/ );
 	assert.doesNotMatch( result.content, /Hallo/ );
+} );
+
+test( 'a refused string is told apart from an exhausted quota', () => {
+	const refusal = new Error(
+		'MT returned the wrong placeholders (source=Limit to one advertiser…)'
+	);
+	refusal.code = MT_REFUSED;
+
+	/*
+	 * "Limit to one advertiser" is a real string in this plugin, and the
+	 * refusal message quotes the source so a human can see which one broke.
+	 * Sniffing /LIMIT/i across the whole message therefore read a bad
+	 * translation as an exhausted quota and abandoned the rest of the locale,
+	 * reporting "the provider stopped the run" about a provider that was fine.
+	 */
+	assert.equal( classifyMtFailure( refusal ), 'refused' );
+
+	const untagged = new Error(
+		'MT returned the wrong placeholders (source=Limit to one advertiser…)'
+	);
+
+	assert.equal(
+		classifyMtFailure( untagged ),
+		'provider-stop',
+		'the tag, not the message, is what separates the two'
+	);
+
+	assert.equal(
+		classifyMtFailure( new Error( 'MyMemory HTTP 429' ) ),
+		'provider-stop'
+	);
+	assert.equal(
+		classifyMtFailure( new Error( 'DeepL HTTP 456: quota' ) ),
+		'provider-stop'
+	);
+	assert.equal(
+		classifyMtFailure( new Error( 'socket hang up' ) ),
+		'retryable'
+	);
+} );
+
+test( 'refused strings do not make a finished pass look unfinished', () => {
+	const verdict = judgeRun( [
+		{
+			locale: 'de_DE',
+			updated: 1011,
+			skipped: 0,
+			remaining: 3,
+			truncated: false,
+			refused: [
+				'All campaigns',
+				'Show all campaigns',
+				'That delivery policy cannot be used: %s',
+			],
+		},
+	] );
+
+	/*
+	 * The deadlock this clears: the three strings are left untranslated on
+	 * purpose, the next run asks the same provider and is refused again, so a
+	 * run judged incomplete here can never become complete — and because
+	 * validation runs before the draft branch is written, every run threw away
+	 * the other 1011 translations too.
+	 */
+	assert.equal( verdict.ok, true );
+	assert.deepEqual( verdict.problems, [] );
+} );
+
+test( 'a refusal does not excuse the strings nothing tried to translate', () => {
+	const verdict = judgeRun( [
+		{
+			locale: 'de_DE',
+			updated: 900,
+			skipped: 0,
+			remaining: 114,
+			truncated: false,
+			refused: [ 'All campaigns' ],
+		},
+	] );
+
+	assert.equal( verdict.ok, false );
+	assert.equal( verdict.problems.length, 1 );
+	assert.match(
+		verdict.problems[ 0 ],
+		/de_DE: 113 entries still untranslated/
+	);
+} );
+
+test( 'a truncated locale still fails even if some strings were refused', () => {
+	const verdict = judgeRun( [
+		{
+			locale: 'fr_FR',
+			updated: 10,
+			skipped: 0,
+			remaining: 1004,
+			truncated: true,
+			refused: [ 'All campaigns' ],
+		},
+	] );
+
+	assert.equal( verdict.ok, false );
+	assert.match(
+		verdict.problems[ 0 ],
+		/fr_FR: the provider stopped the run/
+	);
+} );
+
+test( 'refused strings are annotated on the run, not just logged', () => {
+	const lines = refusalAnnotations( [
+		{
+			locale: 'de_DE',
+			updated: 1,
+			skipped: 0,
+			remaining: 2,
+			truncated: false,
+			refused: [ 'All campaigns', 'Used: %s' ],
+		},
+		{
+			locale: 'fr_FR',
+			updated: 3,
+			skipped: 0,
+			remaining: 0,
+			truncated: false,
+			refused: [],
+		},
+	] );
+
+	assert.equal( lines.length, 1, 'only the locale that refused anything' );
+	assert.match( lines[ 0 ], /^::warning title=/ );
+	assert.match(
+		lines[ 0 ],
+		/2 string\(s\) in de_DE need a human translator/
+	);
+
+	/*
+	 * A refused string is refused *because of its placeholders*, so almost
+	 * every message this encodes contains a literal % for the runner to
+	 * misread. Escaping % after the newline escapes would corrupt the %0A the
+	 * previous replacement had just written.
+	 */
+	assert.match( lines[ 0 ], /Used: %25s/ );
+	assert.doesNotMatch( lines[ 0 ], /Used: %s/ );
+	assert.match( lines[ 0 ], /%0A/ );
+	assert.doesNotMatch(
+		lines[ 0 ],
+		/%250A/,
+		'the newline escape must not itself be escaped'
+	);
+
+	// One annotation per locale: the message is multiline, the line is not.
+	assert.equal( lines[ 0 ].split( '\n' ).length, 1 );
+} );
+
+test( 'a run that refused nothing annotates nothing', () => {
+	assert.deepEqual(
+		refusalAnnotations( [ complete( 'de_DE' ), complete( 'fr_FR' ) ] ),
+		[]
+	);
 } );

@@ -32,10 +32,25 @@ export function extractPlaceholders( text ) {
 }
 
 /**
- * Whether a translation preserves every placeholder its source carries.
+ * Whether a translation carries exactly the placeholders its source carries.
  *
  * Order is ignored (languages reorder clauses); multiplicity is not, because a
  * dropped or duplicated token is a broken string either way.
+ *
+ * **Both directions, and the second one is not hypothetical.** This used to
+ * return `true` early whenever the source had no placeholders, on the reading
+ * that a string with nothing to preserve cannot lose anything. True, and beside
+ * the point: a machine translator does not only drop tokens, it invents them,
+ * because it answers out of a translation memory full of other people's
+ * strings. "All campaigns" came back as German carrying a `%d` borrowed from a
+ * neighbouring "%d campaigns", and `%d` in a string PHP never passes an
+ * argument to is a broken page, not a cosmetic problem.
+ *
+ * Every gate built on this function waved that through, while
+ * lint-placeholders.mjs — which had always compared both directions — refused
+ * it. One rule with two definitions and the upstream one weaker, so the
+ * drafting workflow reliably wrote a catalog its own validator would reject and
+ * failed every run on master. The lint now calls this instead of restating it.
  *
  * @param {string} source
  * @param {string} translated
@@ -43,14 +58,52 @@ export function extractPlaceholders( text ) {
  */
 export function placeholdersIntact( source, translated ) {
 	const a = extractPlaceholders( source );
-
-	if ( a.length === 0 ) {
-		return true;
-	}
-
 	const b = extractPlaceholders( translated );
 
 	return a.length === b.length && a.every( ( p, i ) => p === b[ i ] );
+}
+
+/**
+ * Which source string a given msgstr is a translation of.
+ *
+ * Plural forms translate `msgid_plural`, whose placeholders can legitimately
+ * differ from the singular's — comparing every form against `msgid` reports a
+ * correct catalog as broken. Defined once because both the lint and the
+ * translator's write-time sweep have to make the same choice.
+ *
+ * @param {Record<string, unknown>} entry Parsed entry.
+ * @param {string}                  key   msgstr key, e.g. `msgstr[1]`.
+ * @returns {string} The source to compare against.
+ */
+export function placeholderSourceFor( entry, key ) {
+	return 'msgstr[0]' !== key && entry.msgidPlural
+		? String( entry.msgidPlural )
+		: String( entry.msgid );
+}
+
+/**
+ * Whether every translated form of an entry carries the right placeholders.
+ *
+ * Empty forms are drafts and are not judged — gettext falls back to the source
+ * string for them, so a placeholder they have not got yet cannot reach a page.
+ *
+ * @param {Record<string, any>} entry Parsed entry.
+ * @returns {boolean}
+ */
+export function entryPlaceholdersIntact( entry ) {
+	for ( const [ key, msgstr ] of Object.entries( entry.msgstrs ?? {} ) ) {
+		if ( '' === msgstr ) {
+			continue;
+		}
+
+		if (
+			! placeholdersIntact( placeholderSourceFor( entry, key ), msgstr )
+		) {
+			return false;
+		}
+	}
+
+	return true;
 }
 
 /**
