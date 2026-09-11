@@ -352,6 +352,16 @@ const LOCAL_REGISTER = {
  *
  * `LOCALE_GLOSSARY` still runs afterwards as a substring backstop; this is the
  * instruction, that is the correction.
+ *
+ * **Revised after product review the same day.** *Werbebuchung*, *Platzierung*,
+ * *Zugangsdaten* and *Auslieferung* for delivery were confirmed — the first two
+ * are the terms Google Ad Manager's German interface uses. Two changes:
+ * *delivery* and *fill* were one blanket rule and are now separate concepts,
+ * because what is delivered is the ad and an ad request is served or
+ * processed, never itself delivered; and "worth reporting" gained a rule,
+ * because the first gate rendered it *meldepflichtig*, the legal term for a
+ * mandatory report. Neither was tuned to a sample the model will be graded on:
+ * the next gate is drawn fresh.
  */
 const LOCAL_TERMS = {
 	de_DE: [
@@ -370,8 +380,18 @@ const LOCAL_TERMS = {
 		[ 'campaign', 'Kampagne' ],
 		[ 'line item', 'Werbebuchung' ],
 		[ 'viewable, viewability', 'sichtbar, Sichtbarkeit' ],
-		[ 'delivery, to serve an ad', 'Auslieferung, ausliefern' ],
-		[ 'fill (a request answered with an ad)', 'Auslieferung' ],
+		[
+			'delivery; to deliver or serve an ad, creative, impression or line item',
+			'Auslieferung; ausliefern',
+		],
+		[
+			'an ad request, and a request being filled',
+			'Anfrage. A request is bedient (served) or verarbeitet (processed); never say the request itself was ausgeliefert. What is ausgeliefert is the ad.',
+		],
+		[
+			'worth reporting (advisable, not an obligation)',
+			'sollte gemeldet werden. Never meldepflichtig, which means legally required to report.',
+		],
 		[ 'publisher (the site owner)', 'Publisher' ],
 		[ 'credential (API access)', 'Zugangsdaten' ],
 		[ 'attribution window', 'Attributionsfenster' ],
