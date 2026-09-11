@@ -3,7 +3,7 @@
 ## Status
 
 - Phase: **P17 — Creative experience**
-- Roadmap state: `[ ]` — slices 1 and 2 of 4 built
+- Roadmap state: `[ ]` — slices 1 to 3 of 4 built
 - Last audited: 2026-09-06
 - Authoritative environments: CI's pinned MySQL 8.4 / PHP 8.4 lanes
 
@@ -238,9 +238,9 @@ Ordered by dependency, not by size.
    selector never makes; the window and pause controls appear wherever there is
    an assignment, because both are meaningful for one creative alone. See the
    slice 2 closeout below.
-3. **Comparison.** Two variants side by side over a window, using the counters
-   from slice 1. An experiment is this plus a hypothesis; it is not a separate
-   mechanism.
+3. **Comparison.** *(built)* Two variants side by side over a window, using
+   the counters from slice 1. An experiment is this plus a hypothesis; it is
+   not a separate mechanism. See the slice 3 closeout below.
 4. **Review history and preview.** What was approved or rejected, when and why,
    and a device preview of the exact revision reviewed.
 
@@ -384,6 +384,64 @@ person's pause distinct from a campaign transition — a pause that set the stat
 and not the flag would be undone the next time the campaign moved, which
 `CreativeVariantControlsTest` asserts directly rather than trusting.
 
+## Slice 3 closeout — comparison
+
+**The creative dimension had a writer for two slices and no reader.** Every
+counter since slice 1 was written per creative and read per campaign, so the
+split existed only in the table. `Rollup_Report_Repository::creative_totals_for_campaign()`
+is the first read of it, and the campaign screen's **Compare your ads** panel
+renders it: one table per placement holding two or more creatives, over the
+page's reporting window.
+
+**Where it lives, and why not the obvious file.** The read is in
+`Rollup_Report_Repository` rather than `Rollup_Repository`, for the reason that
+class's docblock gives — one owns the table's writes and hot-path reads, the
+other owns org-scoped, range-bounded reads, and they are reviewed for different
+things. The gate is `Reporting_Read::variant_totals()`, the formatting is
+`Delivery_View_Data`'s existing CTR, viewability and count rules — a second copy
+of "a rate with no denominator is an em dash" is how the two would disagree.
+
+**Every row delivered on the placement is shown.** Delivery counted before the
+dimension existed lands at creative id 0 and appears as *Before per-ad
+counting*; a creative removed after delivering appears as *An ad no longer on
+this placement*. Showing only the current variants would make a placement's rows
+sum to less than it delivered, which is the reconciliation this phase's
+evidence list asks for.
+
+**Tenancy is the frozen `org_id`, and the test found out what that means.** The
+first version of the tenant test wrote a second organization's delivery for the
+same campaign, placement, creative and day, and read 53 of the owner's
+impressions where there were 3. The rollup's unique key does not include
+`org_id`, and `increment()` fills `org_id` once and never changes it — so a
+second organization's same-day writes land in the first organization's row.
+That is the designed behaviour (a delivery's organization is a durable fact),
+and it means a campaign that changes hands keeps its old history on *earlier*
+days. The test now arranges exactly that.
+
+**Bounded by construction.** `Report_Period` caps the window at 92 days, and the
+read carries `LIMIT MAX_VARIANT_ROWS` (500) — a campaign's placements times the
+ten creatives a placement may hold, with room to spare. The P17 contract asked
+the comparison to bound its own creative count rather than inherit an unbounded
+scan; the limit is there so the bound does not depend on the data being small.
+
+**Nothing renders without data behind it.** No table appears until a placement
+holds two creatives *and* something was seen in the window, and none appears
+with Reporting off — the same rule as every other figure on the portal.
+
+**Deliberately not built: a comparison cache.** The contract proposed caching
+per window and placement, invalidated on projection. The read goes through
+`campaign_day (campaign_id, day_utc)` for one campaign over at most 92 days, and
+no existing reporting read on this table is cached either. A cache here would
+need an invalidation hook on the projector's hot path to save a read nothing has
+shown to be slow. **Revisit if** the comparison appears in a query profile, or a
+campaign's placement count grows past what the row cap was sized for.
+
+**Also not built, and named rather than assumed covered:** replaying one past
+decision. The comparison reads *outcomes*, which need no seed. Auditing why one
+particular impression went to variant A still needs the selection seed recorded
+with the decision, and nothing records it. **Revisit when** somebody needs to
+audit an individual decision rather than compare totals.
+
 ## Required executable evidence
 
 - **A weighted pair converges on its weights.** *(done — slice 2 note above.)*
@@ -400,7 +458,16 @@ and not the flag would be undone the next time the campaign moved, which
 - **Per-creative counters sum to the placement's counters.** The same
   reconciliation the utilisation view now asserts, one dimension lower — a
   breakdown that does not add up to its total is the defect P15 shipped and
-  caught.
+  caught. *(done — slice 3.)*
+  `VariantComparisonTest::test_the_rows_add_up_to_what_the_placement_delivered`
+  seeds current variants, pre-dimension delivery and a removed creative
+  through `Rollup_Repository::increment()` and asserts the rows sum to all ten
+  impressions. It fails when the builder drops rows that are not a current
+  variant.
+- **A comparison never reads another organization's delivery**, asserted on a
+  second organization's rows for the same campaign that verifiably exist, and
+  **never reads outside its window**. *(done — slice 3.)* Both fail when their
+  predicate is mutated to always-true.
 - **A variant pauses, resumes, and re-dates from the portal**, through the form
   handlers rather than the REST route, with the row read back each time.
   `CreativeVariantControlsTest`. *(done — slice 2.)* The pause control is also

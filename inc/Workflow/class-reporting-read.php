@@ -161,6 +161,26 @@ final class Reporting_Read {
 	}
 
 	/**
+	 * One campaign's delivery per placement and creative, or nothing when the
+	 * surface is off.
+	 *
+	 * Empty rather than zeros for the reason `totals_for_org()` gives: Reporting
+	 * being off is not a claim that no variant was seen.
+	 *
+	 * @param int                $org_id      Organization the delivery is attributed to.
+	 * @param int                $campaign_id Campaign post id.
+	 * @param Report_Period|null $period      Range, or the default window.
+	 * @return array<int, array<int, array{impressions: int, clicks: int, viewables: int|null, conversions: int|null}>> Placement id, then creative id; creative 0 predates per-creative counting.
+	 */
+	public function variant_totals( int $org_id, int $campaign_id, ?Report_Period $period = null ): array {
+		if ( ! $this->surfaces() ) {
+			return array();
+		}
+
+		return $this->reports->creative_totals_for_campaign( $org_id, $campaign_id, $period ?? $this->default_period() );
+	}
+
+	/**
 	 * Adds impressions, clicks, CTR and conversions to authorized campaign rows.
 	 *
 	 * Off leaves the keys absent so a client cannot treat 0 as "nobody saw this."

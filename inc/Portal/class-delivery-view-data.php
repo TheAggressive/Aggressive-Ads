@@ -370,6 +370,157 @@ final class Delivery_View_Data {
 	}
 
 	/**
+	 * Each placement's variants side by side, over this page's window.
+	 *
+	 * P17 slice 3. An experiment is this plus a hypothesis, so there is no
+	 * separate experiment mechanism — the comparison is the product.
+	 *
+	 * Only placements holding two or more creatives get a table, because a
+	 * lone advertisement has nothing to be compared with. And nothing renders
+	 * at all until something has been seen in the window: a table of dashes
+	 * over a campaign that has not started is a screen with no data behind it.
+	 *
+	 * **Every row the read returns is shown**, including delivery by a creative
+	 * that has since been removed from the placement and delivery counted
+	 * before per-creative measurement existed. Showing only the creatives
+	 * currently assigned would make a placement's rows sum to less than it
+	 * delivered, which is the defect this phase's reconciliation evidence
+	 * exists to catch.
+	 *
+	 * @param int                              $org_id      Organization the delivery is attributed to.
+	 * @param int                              $campaign_id Campaign being read.
+	 * @param array<int, array<string, mixed>> $creatives   The campaign's creative rows.
+	 * @return array{range?: string, note?: string, groups?: list<array{placement: string, rows: list<array{label: string, share: string, impressions: string, clicks: string, ctr: string, viewable: string, conversions: string}>}>}
+	 */
+	public function variant_comparison( int $org_id, int $campaign_id, array $creatives ): array {
+		if ( ! $this->reporting->surfaces() ) {
+			return array();
+		}
+
+		$by_placement = array();
+
+		foreach ( $creatives as $creative ) {
+			$by_placement[ (int) $creative['placement_id'] ][] = $creative;
+		}
+
+		$by_placement = array_filter(
+			$by_placement,
+			static fn ( array $variants ): bool => count( $variants ) > 1
+		);
+
+		if ( array() === $by_placement ) {
+			return array();
+		}
+
+		$period  = $this->period();
+		$figures = $this->reporting->variant_totals( $org_id, $campaign_id, $period );
+		$groups  = array();
+		$seen    = 0;
+
+		foreach ( $by_placement as $placement_id => $variants ) {
+			$delivered = $figures[ $placement_id ] ?? array();
+			$rows      = array();
+
+			foreach ( $variants as $creative ) {
+				$id     = (int) $creative['id'];
+				$name   = (string) ( $creative['name'] ?? '' );
+				$counts = $delivered[ $id ] ?? null;
+
+				unset( $delivered[ $id ] );
+
+				$rows[] = $this->variant_row(
+					'' !== $name
+						? $name
+						: sprintf(
+							/* translators: %d: creative id. */
+							__( 'Ad %d', 'aggressive-ads' ),
+							$id
+						),
+					$this->format_share( $creative['share'] ?? null ),
+					$counts
+				);
+			}
+
+			// What is left delivered here and is not currently assigned.
+			foreach ( $delivered as $creative_id => $counts ) {
+				$rows[] = $this->variant_row(
+					0 === $creative_id
+						? __( 'Before per-ad counting', 'aggressive-ads' )
+						: __( 'An ad no longer on this placement', 'aggressive-ads' ),
+					__( '—', 'aggressive-ads' ),
+					$counts
+				);
+			}
+
+			foreach ( $figures[ $placement_id ] ?? array() as $counts ) {
+				$seen += $counts['impressions'];
+			}
+
+			$groups[] = array(
+				'placement' => (string) $variants[0]['placement'],
+				'rows'      => $rows,
+			);
+		}
+
+		if ( 0 === $seen ) {
+			return array();
+		}
+
+		return array(
+			'range'  => $this->range_label(),
+			'note'   => $this->freshness_note( $period ),
+			'groups' => $groups,
+		);
+	}
+
+	/**
+	 * One variant's formatted figures.
+	 *
+	 * @param string                                                                                $label  What the row is.
+	 * @param string                                                                                $share  Its formatted share of rotation.
+	 * @param array{impressions: int, clicks: int, viewables: int|null, conversions: int|null}|null $counts Delivery, or null for none in range.
+	 * @return array{label: string, share: string, impressions: string, clicks: string, ctr: string, viewable: string, conversions: string}
+	 */
+	private function variant_row( string $label, string $share, ?array $counts ): array {
+		$impressions = null === $counts ? 0 : $counts['impressions'];
+		$clicks      = null === $counts ? 0 : $counts['clicks'];
+
+		return array(
+			'label'       => $label,
+			'share'       => $share,
+			'impressions' => (string) number_format_i18n( $impressions ),
+			'clicks'      => (string) number_format_i18n( $clicks ),
+			'ctr'         => $this->format_ctr( Reporting_Rules::ctr( $impressions, $clicks ) ),
+
+			/*
+			 * No row means nothing delivered, not nobody measuring: the other
+			 * variants on this placement were counted over the same days.
+			 * Passing null here rendered "Not measured", which the formatter
+			 * reserves for the alarming reading and warns is the false one.
+			 */
+			'viewable'    => $this->format_viewability( $impressions, null === $counts ? 0 : $counts['viewables'] ),
+			'conversions' => $this->format_count( null === $counts ? null : $counts['conversions'] ),
+		);
+	}
+
+	/**
+	 * A share of rotation as a percentage, or an em dash when there is none.
+	 *
+	 * @param float|null $share Fraction of the placement's weight.
+	 */
+	private function format_share( ?float $share ): string {
+		if ( null === $share ) {
+			return __( '—', 'aggressive-ads' );
+		}
+
+		return sprintf(
+			/* translators: %s: a percentage, e.g. 92.4. */
+			__( '%s%%', 'aggressive-ads' ),
+			number_format_i18n( $share * 100, 0 )
+		);
+	}
+
+	/**
 	 * CTR as a percentage, or an em dash when there were no impressions.
 	 *
 	 * @param float|null $ratio Clicks per impression.

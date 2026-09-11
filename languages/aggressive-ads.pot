@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-10T05:24:45+00:00\n"
+"POT-Creation-Date: 2026-09-11T17:28:20+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -103,6 +103,7 @@ msgstr ""
 #: inc/Portal/class-report-actions.php:193
 #: templates/portal/partials/campaign-summary-facts.php:81
 #: templates/portal/partials/campaign-table.php:41
+#: templates/portal/partials/campaign-variant-comparison.php:50
 msgid "Conversions"
 msgstr ""
 
@@ -1399,8 +1400,10 @@ msgid "%s page requests belong to placements that no longer exist, so they are c
 msgstr ""
 
 #: inc/Admin/class-reports-screen.php:611
-#: inc/Portal/class-delivery-view-data.php:379
-#: inc/Portal/class-delivery-view-data.php:430
+#: inc/Portal/class-delivery-view-data.php:450
+#: inc/Portal/class-delivery-view-data.php:513
+#: inc/Portal/class-delivery-view-data.php:530
+#: inc/Portal/class-delivery-view-data.php:581
 #: templates/portal/partials/campaign-summary-facts.php:75
 #: templates/portal/partials/campaign-table.php:81
 msgid "—"
@@ -1410,8 +1413,9 @@ msgstr ""
 #. translators: %s: click-through rate as a percentage, e.g. 1.2.
 #. translators: %s: share of impressions that were viewable, e.g. 62.5.
 #: inc/Admin/class-reports-screen.php:616
-#: inc/Portal/class-delivery-view-data.php:384
-#: inc/Portal/class-delivery-view-data.php:435
+#: inc/Portal/class-delivery-view-data.php:518
+#: inc/Portal/class-delivery-view-data.php:535
+#: inc/Portal/class-delivery-view-data.php:586
 #: templates/portal/partials/campaign-summary-facts.php:72
 #: templates/portal/partials/campaign-table.php:78
 #, php-format
@@ -1431,13 +1435,13 @@ msgid "Campaign moved from %1$s to %2$s."
 msgstr ""
 
 #: inc/Admin/class-review-data.php:340
-#: inc/Portal/class-view-data.php:721
+#: inc/Portal/class-view-data.php:722
 msgid "Not scheduled"
 msgstr ""
 
 #. translators: 1: campaign start date. 2: campaign end date.
 #: inc/Admin/class-review-data.php:351
-#: inc/Portal/class-view-data.php:737
+#: inc/Portal/class-view-data.php:738
 #, php-format
 msgid "%1$s – %2$s"
 msgstr ""
@@ -1469,7 +1473,7 @@ msgstr ""
 
 #: inc/Admin/class-review-data.php:681
 #: inc/Portal/class-creative-view-data.php:244
-#: inc/Portal/class-view-data.php:609
+#: inc/Portal/class-view-data.php:610
 msgid "Running"
 msgstr ""
 
@@ -1510,7 +1514,7 @@ msgid "Resume campaign"
 msgstr ""
 
 #: inc/Admin/class-review-data.php:706
-#: inc/Portal/class-view-data.php:299
+#: inc/Portal/class-view-data.php:300
 msgid "Cancel campaign"
 msgstr ""
 
@@ -3380,6 +3384,7 @@ msgstr ""
 #: inc/Portal/class-report-actions.php:190
 #: templates/portal/partials/campaign-summary-facts.php:56
 #: templates/portal/partials/campaign-table.php:38
+#: templates/portal/partials/campaign-variant-comparison.php:46
 #: templates/portal/partials/sparkline.php:34
 msgid "Impressions"
 msgstr ""
@@ -3388,16 +3393,19 @@ msgstr ""
 #: inc/Portal/class-report-actions.php:191
 #: templates/portal/partials/campaign-summary-facts.php:60
 #: templates/portal/partials/campaign-table.php:39
+#: templates/portal/partials/campaign-variant-comparison.php:47
 msgid "Clicks"
 msgstr ""
 
 #: inc/Portal/class-delivery-view-data.php:232
 #: templates/portal/partials/campaign-summary-facts.php:64
 #: templates/portal/partials/campaign-table.php:40
+#: templates/portal/partials/campaign-variant-comparison.php:48
 msgid "CTR"
 msgstr ""
 
 #: inc/Portal/class-delivery-view-data.php:238
+#: templates/portal/partials/campaign-variant-comparison.php:49
 msgid "Viewable"
 msgstr ""
 
@@ -3413,8 +3421,22 @@ msgstr ""
 msgid "%s%% vs previous period"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:402
-#: inc/Portal/class-delivery-view-data.php:424
+#. translators: %d: creative id.
+#: inc/Portal/class-delivery-view-data.php:436
+#, php-format
+msgid "Ad %d"
+msgstr ""
+
+#: inc/Portal/class-delivery-view-data.php:448
+msgid "Before per-ad counting"
+msgstr ""
+
+#: inc/Portal/class-delivery-view-data.php:449
+msgid "An ad no longer on this placement"
+msgstr ""
+
+#: inc/Portal/class-delivery-view-data.php:553
+#: inc/Portal/class-delivery-view-data.php:575
 #: templates/portal/partials/campaign-summary-facts.php:90
 #: templates/portal/partials/campaign-table.php:97
 msgid "Not measured"
@@ -3568,32 +3590,32 @@ msgstr ""
 msgid "We could not create the account. Please try again later."
 msgstr ""
 
-#: inc/Portal/class-view-data.php:246
+#: inc/Portal/class-view-data.php:247
 msgid "Renew campaign"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:247
+#: inc/Portal/class-view-data.php:248
 msgid "Duplicate campaign"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:298
+#: inc/Portal/class-view-data.php:299
 msgid "Delete campaign"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:610
+#: inc/Portal/class-view-data.php:611
 msgid "In review"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:611
+#: inc/Portal/class-view-data.php:612
 msgid "Needs your attention"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:612
+#: inc/Portal/class-view-data.php:613
 msgid "All campaigns"
 msgstr ""
 
 #. translators: %s: campaign start date.
-#: inc/Portal/class-view-data.php:730
+#: inc/Portal/class-view-data.php:731
 #, php-format
 msgid "From %s"
 msgstr ""
@@ -5314,6 +5336,18 @@ msgstr ""
 
 #: templates/portal/partials/campaign-update-history.php:17
 msgid "Ad update history"
+msgstr ""
+
+#: templates/portal/partials/campaign-variant-comparison.php:35
+msgid "Compare your ads"
+msgstr ""
+
+#: templates/portal/partials/campaign-variant-comparison.php:44
+msgid "Ad"
+msgstr ""
+
+#: templates/portal/partials/campaign-variant-comparison.php:45
+msgid "Share of rotation"
 msgstr ""
 
 #: templates/portal/partials/campaign-variant-share.php:62
