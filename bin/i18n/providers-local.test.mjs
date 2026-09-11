@@ -281,13 +281,28 @@ test( 'the German prompt carries the register and the reviewed terms', () => {
 	assert.match( prompt, /German \(Germany\)/ );
 	assert.match( prompt, /formally with "Sie"/ );
 
-	// The three defects the MyMemory drafts shipped, each now an instruction.
+	// The defects the MyMemory drafts shipped, each now an instruction.
 	assert.match( prompt, /creative \(the ad artwork, a noun\) → Werbemittel/ );
+	assert.match( prompt, /screen width → Bildschirmbreite/ );
+
+	// Product review: delivery and fill are separate concepts. What is
+	// delivered is the ad; a request is served or processed.
 	assert.match(
 		prompt,
-		/fill \(a request answered with an ad\) → Auslieferung/
+		/delivery; to deliver or serve an ad.* → Auslieferung; ausliefern/
 	);
-	assert.match( prompt, /screen width → Bildschirmbreite/ );
+	assert.match( prompt, /never say the request itself was ausgeliefert/ );
+	assert.doesNotMatch(
+		prompt,
+		/fill \(a request answered with an ad\) → Auslieferung/,
+		'the blanket fill-and-delivery rule the review rejected is back'
+	);
+
+	// The first gate rendered "worth reporting" as the legal term.
+	assert.match(
+		prompt,
+		/worth reporting .* → sollte gemeldet werden\. Never meldepflichtig/
+	);
 
 	// A locale with no terms still gets a usable prompt.
 	assert.match( localSystemPrompt( 'nl_NL' ), /Dutch/ );
