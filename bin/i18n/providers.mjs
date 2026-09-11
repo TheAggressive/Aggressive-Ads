@@ -390,7 +390,24 @@ export async function mt( text, localeCodes, mode, locale, context = null ) {
 	} else {
 		try {
 			out = await translateMyMemory( brand.text, localeCodes.mymemory );
-			via = 'mymemory';
+
+			/*
+			 * A *remembered* refusal is still a fallback. Retiring DeepL for
+			 * the run sends every later string down this branch, which is also
+			 * the branch a site with no DeepL key at all takes — so tagging
+			 * both `mymemory` erased the one signal saying the preferred engine
+			 * had not done the work.
+			 *
+			 * That is not hypothetical: the first run after the retirement
+			 * landed 458 strings tagged plain `mymemory`, and the pull request
+			 * that opened said "Translated by mymemory" with no warning, over a
+			 * draft that had degraded on its very first request. Two changes,
+			 * each tested alone and never together.
+			 */
+			via =
+				'auto' === mode && hasDeeplKey && exhausted.deepl
+					? 'mymemory-fallback'
+					: 'mymemory';
 		} catch ( err ) {
 			// Nothing left to fall back to: no key, or DeepL already gave up.
 			if ( ! deeplUsable ) {
