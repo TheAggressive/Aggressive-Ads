@@ -299,11 +299,302 @@ async function translateDeepL( text, lang, context = null ) {
 export function resolveProviderMode() {
 	const raw = ( process.env.I18N_MT_PROVIDER || 'auto' ).toLowerCase();
 
-	if ( raw === 'deepl' || raw === 'mymemory' ) {
+	if ( raw === 'deepl' || raw === 'mymemory' || raw === 'local' ) {
 		return raw;
 	}
 
 	return 'auto';
+}
+
+/**
+ * Language names for the local model's prompt. A model reads "German" more
+ * reliably than "de_DE", and a locale missing here falls back to its code.
+ */
+const LOCAL_LANGUAGE = {
+	de_DE: 'German (Germany)',
+	fr_FR: 'French (France)',
+	fr_CA: 'French (Canada)',
+	es_ES: 'Spanish (Spain)',
+	es_MX: 'Spanish (Mexico)',
+	it_IT: 'Italian',
+	pt_BR: 'Portuguese (Brazil)',
+	pt_PT: 'Portuguese (Portugal)',
+	nl_NL: 'Dutch',
+	pl_PL: 'Polish',
+	sv_SE: 'Swedish',
+	ja: 'Japanese',
+	ko_KR: 'Korean',
+	zh_CN: 'Chinese (Simplified)',
+};
+
+/**
+ * How a locale addresses the reader. One of the defects the MyMemory drafts
+ * shipped was a German string switching from "Sie" to "du" mid-catalog.
+ */
+const LOCAL_REGISTER = {
+	de_DE: 'Address the reader formally with "Sie" and its forms. Never use "du".',
+	fr_FR: 'Address the reader formally with "vous". Never use "tu".',
+	fr_CA: 'Address the reader formally with "vous". Never use "tu".',
+	es_ES: 'Address the reader formally with "usted". Never use "tú".',
+	es_MX: 'Address the reader formally with "usted". Never use "tú".',
+	it_IT: 'Address the reader formally with "Lei". Never use "tu".',
+};
+
+/**
+ * Terms the model must render one way, by locale.
+ *
+ * **Proposed on 2026-09-11, for product review rather than as settled
+ * German.** These are what an MT engine cannot be told and a model can: the
+ * domain meaning of words English overloads. The MyMemory drafts rendered
+ * "creative" as creative *people* (Kreative), "fill" as a dental filling
+ * (Füllung) and screen widths as sieve widths (Siebbreiten). Each entry names
+ * the sense in brackets, because the sense is the whole point.
+ *
+ * `LOCALE_GLOSSARY` still runs afterwards as a substring backstop; this is the
+ * instruction, that is the correction.
+ */
+const LOCAL_TERMS = {
+	de_DE: [
+		[ 'creative (the ad artwork, a noun)', 'Werbemittel' ],
+		[
+			'conversion (a tracked outcome)',
+			'Conversion (plural: Conversions)',
+		],
+		[ 'impression (one ad shown)', 'Impression (plural: Impressionen)' ],
+		[
+			'click-through rate',
+			'Klickrate (keep the abbreviation CTR as CTR)',
+		],
+		[ 'placement (an ad slot on the site)', 'Platzierung' ],
+		[ 'advertiser', 'Werbetreibender (plural: Werbetreibende)' ],
+		[ 'campaign', 'Kampagne' ],
+		[ 'line item', 'Werbebuchung' ],
+		[ 'viewable, viewability', 'sichtbar, Sichtbarkeit' ],
+		[ 'delivery, to serve an ad', 'Auslieferung, ausliefern' ],
+		[ 'fill (a request answered with an ad)', 'Auslieferung' ],
+		[ 'publisher (the site owner)', 'Publisher' ],
+		[ 'credential (API access)', 'Zugangsdaten' ],
+		[ 'attribution window', 'Attributionsfenster' ],
+		[ 'screen width', 'Bildschirmbreite' ],
+		[ 'forecast', 'Prognose' ],
+	],
+};
+
+/**
+ * The system prompt for one string.
+ *
+ * Context and the translator's note go here rather than in the user message,
+ * so the user message is exactly the text to translate and nothing else the
+ * model might translate or echo back.
+ *
+ * @param {string}      locale  WordPress locale.
+ * @param {string|null} context The entry's msgctxt.
+ * @param {string}      notes   The entry's translator comments.
+ * @return {string}
+ */
+export function localSystemPrompt( locale, context = null, notes = '' ) {
+	const language = LOCAL_LANGUAGE[ locale ] ?? locale;
+	const lines = [
+		"You translate the interface of Aggressive Ads, a WordPress plugin for selling and serving display advertising on a publisher's own website. Advertisers use a portal to build campaigns and upload ad creatives; the publisher's staff review them in wp-admin.",
+		'',
+		`Translate the user's text from English into ${ language }.`,
+		'',
+		'Rules:',
+		'1. Reply with the translation only: no quotation marks around it, no notes, no alternatives.',
+		`2. ${
+			LOCAL_REGISTER[ locale ] ??
+			'Use the register a software interface uses for this language.'
+		}`,
+		'3. Tokens such as __AGGR_PH_0__ and __AGGR_BR_0__ stand for values and names inserted at runtime. Copy each exactly once, where the sentence needs it. Never translate, drop, repeat or renumber them.',
+		'4. Keep acronyms and names unchanged: CTR, CSV, JSON, WordPress, wp-admin, pnpm.',
+		'5. Match the form of the source: a short label stays a short label, and a label without a full stop gets none.',
+	];
+
+	const terms = LOCAL_TERMS[ locale ] ?? [];
+
+	if ( terms.length > 0 ) {
+		lines.push( '6. Use these terms consistently:' );
+
+		for ( const [ english, local ] of terms ) {
+			lines.push( `   - ${ english } → ${ local }` );
+		}
+	}
+
+	if ( context || notes ) {
+		lines.push( '', 'About this string:' );
+
+		if ( context ) {
+			lines.push( `- It appears in this context: ${ context }` );
+		}
+
+		if ( notes ) {
+			lines.push( `- Note from the developer: ${ notes }` );
+		}
+	}
+
+	return lines.join( '\n' );
+}
+
+/**
+ * Translates one string through an OpenAI-compatible chat completions API.
+ *
+ * Written against `/v1/chat/completions` rather than any one server, so LM
+ * Studio, Ollama's compatible endpoint or llama.cpp's server all work. The
+ * model decides how good the German is; this only decides what it is told and
+ * what of its answer is kept.
+ *
+ * **Only `message.content` is read.** Reasoning models return their thinking
+ * separately (`reasoning_content`, 120 tokens of it for "Save changes" on the
+ * first probe) or inline as `<think>…</think>`, depending on the server.
+ * Either reaching a catalog would be a paragraph of English deliberation
+ * filed as a German button label.
+ *
+ * @param {string}      text    Source, placeholders and brands protected.
+ * @param {string}      locale  WordPress locale.
+ * @param {string|null} context The entry's msgctxt.
+ * @param {string}      notes   The entry's translator comments.
+ * @return {Promise<string>}
+ */
+async function translateLocal( text, locale, context = null, notes = '' ) {
+	const base = ( process.env.I18N_LOCAL_URL || '' ).replace( /\/+$/, '' );
+	const model = process.env.I18N_LOCAL_MODEL || '';
+
+	if ( ! base || ! model ) {
+		throw new Error(
+			'The local provider needs I18N_LOCAL_URL and I18N_LOCAL_MODEL'
+		);
+	}
+
+	const headers = { 'Content-Type': 'application/json' };
+
+	if ( process.env.I18N_LOCAL_API_KEY ) {
+		headers.Authorization = `Bearer ${ process.env.I18N_LOCAL_API_KEY }`;
+	}
+
+	const timeout = Number.parseInt(
+		process.env.I18N_LOCAL_TIMEOUT_MS || '180000',
+		10
+	);
+
+	const res = await fetch( `${ base }/chat/completions`, {
+		method: 'POST',
+		headers,
+		body: JSON.stringify( {
+			model,
+			temperature: 0,
+			messages: [
+				{
+					role: 'system',
+					content: localSystemPrompt( locale, context, notes ),
+				},
+				{ role: 'user', content: text },
+			],
+		} ),
+		signal: AbortSignal.timeout( timeout ),
+	} );
+
+	if ( ! res.ok ) {
+		// "HTTP 4xx" is what classifyMtFailure() reads as the provider
+		// refusing for good: a model name the server does not have is that.
+		throw new Error( `Local model HTTP ${ res.status }` );
+	}
+
+	const data = await res.json();
+	const content = data?.choices?.[ 0 ]?.message?.content;
+
+	if ( 'string' !== typeof content ) {
+		throw new Error( 'Local model returned no message content' );
+	}
+
+	let translated = content.replace( /<think>[\s\S]*?<\/think>/gi, '' ).trim();
+
+	// Told not to, a model still sometimes quotes its whole answer. Removed
+	// only when the source was not itself quoted.
+	const quoted = /^(["“„«])([\s\S]*)(["”“»])$/;
+
+	if ( quoted.test( translated ) && ! quoted.test( text ) ) {
+		translated = translated.replace( quoted, '$2' ).trim();
+	}
+
+	if ( '' === translated ) {
+		throw refusal(
+			`Local model returned an empty translation (source=${ text.slice(
+				0,
+				40
+			) }…)`
+		);
+	}
+
+	// The same rule MyMemory's echoes get, for the same reason: an identical
+	// answer is a claim a person should confirm, not one to file silently.
+	if ( translated === text ) {
+		throw refusal(
+			`MT echoed the source instead of translating it (source=${ text.slice(
+				0,
+				40
+			) }…)`
+		);
+	}
+
+	return translated;
+}
+
+/**
+ * Whether the configured local model is there to be asked, checked once
+ * before a run touches any catalog.
+ *
+ * Without it, an unreachable server fails every string individually: each is
+ * skipped as a one-off error, the run grinds through the whole catalog, and it
+ * ends reporting a thousand strings untranslated for a reason it never states.
+ *
+ * @return {Promise<{ok: boolean, reason: string}>}
+ */
+export async function checkLocalProvider() {
+	const base = ( process.env.I18N_LOCAL_URL || '' ).replace( /\/+$/, '' );
+	const model = process.env.I18N_LOCAL_MODEL || '';
+
+	if ( ! base || ! model ) {
+		return {
+			ok: false,
+			reason: 'set I18N_LOCAL_URL and I18N_LOCAL_MODEL (see .env.example)',
+		};
+	}
+
+	let res;
+
+	try {
+		res = await fetch( `${ base }/models`, {
+			signal: AbortSignal.timeout( 10000 ),
+		} );
+	} catch ( err ) {
+		return {
+			ok: false,
+			reason: `cannot reach ${ base } (${ err.message })`,
+		};
+	}
+
+	if ( ! res.ok ) {
+		return {
+			ok: false,
+			reason: `HTTP ${ res.status } from ${ base }/models`,
+		};
+	}
+
+	const data = await res.json().catch( () => null );
+	const ids = Array.isArray( data?.data )
+		? data.data.map( ( m ) => String( m?.id ?? '' ) )
+		: [];
+
+	if ( ! ids.includes( model ) ) {
+		return {
+			ok: false,
+			reason: `${ base } does not serve "${ model }" (it serves: ${
+				ids.join( ', ' ) || 'nothing'
+			})`,
+		};
+	}
+
+	return { ok: true, reason: '' };
 }
 
 /**
@@ -355,11 +646,20 @@ function noteProviderFailure( name, err ) {
 /**
  * @param {string} text
  * @param {{ mymemory: string, deepl: string }} localeCodes
- * @param {'mymemory' | 'deepl'} mode
+ * @param {'auto' | 'mymemory' | 'deepl' | 'local'} mode
  * @param {string} locale
+ * @param {string|null} context The entry's msgctxt.
+ * @param {string} notes The entry's translator comments; only the local model reads them.
  * @returns {Promise<{ text: string, via: string }>}
  */
-export async function mt( text, localeCodes, mode, locale, context = null ) {
+export async function mt(
+	text,
+	localeCodes,
+	mode,
+	locale,
+	context = null,
+	notes = ''
+) {
 	const { protectedText, tokens: ph } = protectPlaceholders( text );
 	const brand = protectBrandTerms( protectedText );
 	let out;
@@ -368,7 +668,15 @@ export async function mt( text, localeCodes, mode, locale, context = null ) {
 	const hasDeeplKey = Boolean( process.env.DEEPL_AUTH_KEY );
 	const deeplUsable = hasDeeplKey && ! exhausted.deepl;
 
-	if ( mode === 'deepl' ) {
+	/*
+	 * No fallback, deliberately. Somebody who names a provider gets that
+	 * provider or an error — and the local model is being measured against the
+	 * others, so a quiet substitution would contaminate the measurement.
+	 */
+	if ( mode === 'local' ) {
+		out = await translateLocal( brand.text, locale, context, notes );
+		via = 'local';
+	} else if ( mode === 'deepl' ) {
 		out = await translateDeepL( brand.text, localeCodes.deepl, context );
 		via = 'deepl';
 	} else if ( mode === 'auto' && deeplUsable ) {

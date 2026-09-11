@@ -39,6 +39,7 @@ import { fileURLToPath } from 'node:url';
 import { entryPlaceholdersIntact, parsePo } from './po.mjs';
 import {
 	LOCALE_MAP,
+	checkLocalProvider,
 	mt,
 	resetProviderHealth,
 	resolveProviderMode,
@@ -246,6 +247,30 @@ function localeFromPo( file ) {
 	return path.basename( file, '.po' ).slice( `${ TEXT_DOMAIN }-`.length );
 }
 
+/**
+ * The developer's notes on an entry, for a translator that can read them.
+ *
+ * `#.` lines are extracted comments: the `translators:` notes naming what each
+ * placeholder is. This run's own "Auto-translated (aggr-mt)" marker is also an
+ * extracted comment and is not advice, so it is left out.
+ *
+ * @param {Record<string, any>} entry Parsed entry.
+ * @return {string}
+ */
+export function translatorNotes( entry ) {
+	return ( entry.comments ?? [] )
+		.filter(
+			( c ) =>
+				c.startsWith( '#.' ) &&
+				! c.includes( 'Auto-translated (aggr-mt)' )
+		)
+		.map( ( c ) =>
+			c.replace( /^#\.\s*/, '' ).replace( /^translators:\s*/i, '' )
+		)
+		.join( ' ' )
+		.trim();
+}
+
 export async function translatePoFile( file, opts ) {
 	const locale = localeFromPo( file );
 	const codes = LOCALE_MAP[ locale ];
@@ -299,7 +324,8 @@ export async function translatePoFile( file, opts ) {
 					codes,
 					mode,
 					locale,
-					entry.msgctxt
+					entry.msgctxt,
+					translatorNotes( entry )
 				);
 				await sleep( delay );
 				const plural = await mt(
@@ -307,7 +333,8 @@ export async function translatePoFile( file, opts ) {
 					codes,
 					mode,
 					locale,
-					entry.msgctxt
+					entry.msgctxt,
+					translatorNotes( entry )
 				);
 				entry.msgstrs[ 'msgstr[0]' ] = singular.text;
 				entry.msgstrs[ 'msgstr[1]' ] = plural.text;
@@ -319,7 +346,8 @@ export async function translatePoFile( file, opts ) {
 					codes,
 					mode,
 					locale,
-					entry.msgctxt
+					entry.msgctxt,
+					translatorNotes( entry )
 				);
 				entry.msgstrs.msgstr = result.text;
 				lastVia = result.via;
@@ -474,7 +502,25 @@ async function main() {
 	let primary;
 	let backup;
 
-	if ( mode === 'deepl' ) {
+	if ( mode === 'local' ) {
+		primary = `local (${ process.env.I18N_LOCAL_MODEL || 'unset' })`;
+		backup = 'none';
+
+		/*
+		 * Checked before any catalog is touched. An unreachable server
+		 * otherwise fails every string one at a time, each skipped as a one-off
+		 * error, and the run ends a thousand strings short without ever saying
+		 * the server was not there.
+		 */
+		const health = await checkLocalProvider();
+
+		if ( ! health.ok ) {
+			console.error(
+				`i18n:translate: local provider: ${ health.reason }`
+			);
+			process.exit( 1 );
+		}
+	} else if ( mode === 'deepl' ) {
 		primary = 'deepl';
 		backup = 'none';
 	} else if ( mode === 'auto' && hasDeeplKey ) {

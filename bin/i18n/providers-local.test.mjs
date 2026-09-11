@@ -1,0 +1,354 @@
+/**
+ * The local provider: an OpenAI-compatible `/v1/chat/completions` server the
+ * publisher runs themselves.
+ *
+ * Driven through `mt()` with a stubbed server, so what is asserted is what the
+ * catalog walk would actually receive — the request that went out, and what of
+ * the answer was kept.
+ */
+
+import assert from 'node:assert/strict';
+import test, { afterEach, beforeEach } from 'node:test';
+
+import {
+	checkLocalProvider,
+	localSystemPrompt,
+	mt,
+	resolveProviderMode,
+} from './providers.mjs';
+import { classifyMtFailure } from './run-completeness.mjs';
+import { translatorNotes } from './translate.mjs';
+
+const CODES = { mymemory: 'de', deepl: 'DE' };
+const URL_BASE = 'http://model.test:1234/v1';
+const MODEL = 'qwen/qwen3.8-27b';
+const realFetch = globalThis.fetch;
+const saved = {};
+
+/**
+ * Restores an environment variable, including restoring it to absent.
+ *
+ * @param {string}           name
+ * @param {string|undefined} previous
+ */
+function restoreEnv( name, previous ) {
+	if ( undefined === previous ) {
+		delete process.env[ name ];
+
+		return;
+	}
+
+	process.env[ name ] = previous;
+}
+
+beforeEach( () => {
+	for ( const name of [
+		'I18N_LOCAL_URL',
+		'I18N_LOCAL_MODEL',
+		'I18N_LOCAL_API_KEY',
+		'I18N_MT_PROVIDER',
+		'DEEPL_AUTH_KEY',
+	] ) {
+		saved[ name ] = process.env[ name ];
+	}
+
+	process.env.I18N_LOCAL_URL = URL_BASE;
+	process.env.I18N_LOCAL_MODEL = MODEL;
+	delete process.env.I18N_LOCAL_API_KEY;
+} );
+
+afterEach( () => {
+	globalThis.fetch = realFetch;
+
+	for ( const [ name, value ] of Object.entries( saved ) ) {
+		restoreEnv( name, value );
+	}
+} );
+
+/**
+ * A server answering every chat completion with one message, recording what
+ * it was sent.
+ *
+ * @param {object} message The `message` object to return.
+ * @return {Array<{url: string, init: object}>}
+ */
+function server( message ) {
+	const calls = [];
+
+	globalThis.fetch = async ( url, init ) => {
+		calls.push( { url: String( url ), init } );
+
+		return {
+			ok: true,
+			status: 200,
+			json: async () => ( {
+				choices: [ { index: 0, message, finish_reason: 'stop' } ],
+			} ),
+		};
+	};
+
+	return calls;
+}
+
+test( 'it sends an OpenAI-compatible chat completion at temperature 0', async () => {
+	const calls = server( {
+		role: 'assistant',
+		content: 'Änderungen speichern',
+	} );
+
+	const result = await mt( 'Save changes', CODES, 'local', 'de_DE' );
+
+	assert.equal( result.text, 'Änderungen speichern' );
+	assert.equal( result.via, 'local' );
+	assert.equal( calls.length, 1 );
+	assert.equal( calls[ 0 ].url, `${ URL_BASE }/chat/completions` );
+	assert.equal( calls[ 0 ].init.method, 'POST' );
+
+	const body = JSON.parse( calls[ 0 ].init.body );
+
+	assert.equal( body.model, MODEL );
+	assert.equal( body.temperature, 0 );
+	assert.equal( body.messages[ 0 ].role, 'system' );
+	assert.equal( body.messages[ 1 ].role, 'user' );
+
+	// The user message is exactly the text to translate, nothing wrapped round
+	// it that the model might translate or echo back.
+	assert.equal( body.messages[ 1 ].content, 'Save changes' );
+} );
+
+test( 'only the answer is kept, never the reasoning', async () => {
+	// The shape the real server returned on the first probe.
+	server( {
+		role: 'assistant',
+		content: 'Änderungen speichern',
+		reasoning_content:
+			'The user wants me to translate "Save changes" from English to German…',
+	} );
+
+	assert.equal(
+		( await mt( 'Save changes', CODES, 'local', 'de_DE' ) ).text,
+		'Änderungen speichern'
+	);
+
+	// And the inline form other servers use.
+	server( {
+		role: 'assistant',
+		content: '<think>Formal register, so…</think>\nÄnderungen speichern',
+	} );
+
+	assert.equal(
+		( await mt( 'Save changes', CODES, 'local', 'de_DE' ) ).text,
+		'Änderungen speichern'
+	);
+} );
+
+test( 'a quoted answer is unwrapped only when the source was not quoted', async () => {
+	server( { role: 'assistant', content: '„Änderungen speichern“' } );
+
+	assert.equal(
+		( await mt( 'Save changes', CODES, 'local', 'de_DE' ) ).text,
+		'Änderungen speichern'
+	);
+} );
+
+test( 'a source that is itself quoted keeps its quotes', async () => {
+	// The unwrap exists for a model quoting its whole answer. A label that was
+	// quoted in English is quoted on purpose, and must stay so.
+	server( { role: 'assistant', content: '„Standard“' } );
+
+	assert.equal(
+		( await mt( '“Default”', CODES, 'local', 'de_DE' ) ).text,
+		'„Standard“'
+	);
+} );
+
+test( 'placeholders survive, and the existing gates still apply', async () => {
+	server( {
+		role: 'assistant',
+		content: '__AGGR_PH_0__ Werbemittel wurden übersprungen',
+	} );
+
+	assert.equal(
+		( await mt( '%d creatives were skipped', CODES, 'local', 'de_DE' ) )
+			.text,
+		'%d Werbemittel wurden übersprungen'
+	);
+
+	// A dropped token is refused exactly as it is for the other providers.
+	server( { role: 'assistant', content: 'Werbemittel wurden übersprungen' } );
+
+	const dropped = await mt(
+		'%d creatives were skipped',
+		CODES,
+		'local',
+		'de_DE'
+	).then(
+		() => null,
+		( e ) => e
+	);
+
+	assert.ok( dropped );
+	assert.equal( classifyMtFailure( dropped ), 'refused' );
+} );
+
+test( 'an echo and an empty answer are refused rather than filed', async () => {
+	server( { role: 'assistant', content: 'Save changes' } );
+
+	const echo = await mt( 'Save changes', CODES, 'local', 'de_DE' ).then(
+		() => null,
+		( e ) => e
+	);
+
+	assert.ok( echo );
+	assert.equal( classifyMtFailure( echo ), 'refused' );
+
+	server( { role: 'assistant', content: '<think>Hmm.</think>   ' } );
+
+	const empty = await mt( 'Save changes', CODES, 'local', 'de_DE' ).then(
+		() => null,
+		( e ) => e
+	);
+
+	assert.ok( empty );
+	assert.equal( classifyMtFailure( empty ), 'refused' );
+} );
+
+test( 'a named local provider never falls back to another one', async () => {
+	// A DeepL key is configured, which is exactly when a quiet substitution
+	// would be tempting — and would contaminate the measurement.
+	process.env.DEEPL_AUTH_KEY = 'configured';
+
+	const hosts = [];
+
+	globalThis.fetch = async ( url ) => {
+		hosts.push( new URL( String( url ) ).host );
+
+		return { ok: false, status: 503, json: async () => ( {} ) };
+	};
+
+	const err = await mt( 'Save changes', CODES, 'local', 'de_DE' ).then(
+		() => null,
+		( e ) => e
+	);
+
+	assert.ok( err, 'a failing local model must surface as an error' );
+	assert.deepEqual(
+		hosts,
+		[ 'model.test:1234' ],
+		'something other than the local model was asked'
+	);
+} );
+
+test( 'a model the server does not have stops the run', async () => {
+	globalThis.fetch = async () => ( {
+		ok: false,
+		status: 404,
+		json: async () => ( {} ),
+	} );
+
+	const err = await mt( 'Save changes', CODES, 'local', 'de_DE' ).then(
+		() => null,
+		( e ) => e
+	);
+
+	assert.equal( classifyMtFailure( err ), 'provider-stop' );
+} );
+
+test( 'context and the translator note reach the prompt', async () => {
+	const calls = server( { role: 'assistant', content: '%d Tag' } );
+
+	await mt(
+		'%d day',
+		CODES,
+		'local',
+		'de_DE',
+		'duration',
+		'placeholder is a number of days.'
+	);
+
+	const system = JSON.parse( calls[ 0 ].init.body ).messages[ 0 ].content;
+
+	assert.match( system, /It appears in this context: duration/ );
+	assert.match(
+		system,
+		/Note from the developer: placeholder is a number of days\./
+	);
+} );
+
+test( 'the German prompt carries the register and the reviewed terms', () => {
+	const prompt = localSystemPrompt( 'de_DE' );
+
+	assert.match( prompt, /German \(Germany\)/ );
+	assert.match( prompt, /formally with "Sie"/ );
+
+	// The three defects the MyMemory drafts shipped, each now an instruction.
+	assert.match( prompt, /creative \(the ad artwork, a noun\) → Werbemittel/ );
+	assert.match(
+		prompt,
+		/fill \(a request answered with an ad\) → Auslieferung/
+	);
+	assert.match( prompt, /screen width → Bildschirmbreite/ );
+
+	// A locale with no terms still gets a usable prompt.
+	assert.match( localSystemPrompt( 'nl_NL' ), /Dutch/ );
+	assert.doesNotMatch( localSystemPrompt( 'nl_NL' ), /Use these terms/ );
+} );
+
+test( 'translator notes are extracted, and the run’s own marker is not one', () => {
+	assert.equal(
+		translatorNotes( {
+			comments: [
+				'#. translators: %d: number of days.',
+				'#. Auto-translated (aggr-mt) via mymemory — review before release.',
+				'#: inc/Portal/class-view-data.php:12',
+			],
+		} ),
+		'%d: number of days.'
+	);
+} );
+
+test( 'the preflight names what is wrong before any catalog is touched', async () => {
+	globalThis.fetch = async () => ( {
+		ok: true,
+		status: 200,
+		json: async () => ( { data: [ { id: MODEL }, { id: 'embed' } ] } ),
+	} );
+
+	assert.deepEqual( await checkLocalProvider(), { ok: true, reason: '' } );
+
+	globalThis.fetch = async () => ( {
+		ok: true,
+		status: 200,
+		json: async () => ( { data: [ { id: 'some-other-model' } ] } ),
+	} );
+
+	const missing = await checkLocalProvider();
+
+	assert.equal( missing.ok, false );
+	assert.match( missing.reason, /does not serve "qwen\/qwen3\.8-27b"/ );
+	assert.match( missing.reason, /some-other-model/ );
+
+	globalThis.fetch = async () => {
+		throw new Error( 'connect ECONNREFUSED' );
+	};
+
+	const down = await checkLocalProvider();
+
+	assert.equal( down.ok, false );
+	assert.match( down.reason, /cannot reach/ );
+
+	delete process.env.I18N_LOCAL_URL;
+
+	const unset = await checkLocalProvider();
+
+	assert.equal( unset.ok, false );
+	assert.match( unset.reason, /I18N_LOCAL_URL/ );
+} );
+
+test( 'local is a provider the run can be told to use', () => {
+	process.env.I18N_MT_PROVIDER = 'local';
+	assert.equal( resolveProviderMode(), 'local' );
+
+	process.env.I18N_MT_PROVIDER = 'LOCAL';
+	assert.equal( resolveProviderMode(), 'local' );
+} );
