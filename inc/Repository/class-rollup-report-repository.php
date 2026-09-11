@@ -41,6 +41,18 @@ use Aggressive\Ads\Install\Schema;
 final class Rollup_Report_Repository {
 
 	/**
+	 * The most rows one variant comparison may return.
+	 *
+	 * A campaign's placements times `Creative_Manager::MAX_CREATIVES_PER_PLACEMENT`
+	 * (ten), plus one row per placement for delivery counted before the
+	 * creative dimension existed. Far above any real campaign, and there so the
+	 * read is bounded by construction rather than by the data being small —
+	 * the P17 contract asks the comparison to bound its own creative count
+	 * instead of inheriting an unbounded scan.
+	 */
+	public const MAX_VARIANT_ROWS = 500;
+
+	/**
 	 * Fully prefixed table name.
 	 *
 	 * Derived the same way `Rollup_Repository` derives it. Both read one
@@ -247,6 +259,79 @@ final class Rollup_Report_Repository {
 				'campaign'    => (string) $row['campaign'],
 				'impressions' => (int) $row['impressions'],
 				'clicks'      => (int) $row['clicks'],
+				'conversions' => null === $row['conversions'] ? null : (int) $row['conversions'],
+			);
+		}
+
+		return $out;
+	}
+
+	/**
+	 * One campaign's delivery per placement and creative, over a bounded range.
+	 *
+	 * The first reader of the creative dimension P17 slice 1 added. Until this,
+	 * every counter was written per creative and read per campaign, so the
+	 * split existed only in the table.
+	 *
+	 * **Creative id 0 is returned, not filtered.** It is delivery counted before
+	 * per-creative measurement existed, and dropping it would make a
+	 * placement's variants sum to less than the placement — the defect P15
+	 * shipped and caught one dimension higher. The caller decides how to label
+	 * it; this read only refuses to lose it.
+	 *
+	 * Tenancy is the frozen `org_id`, as every read in this class: a campaign id
+	 * alone authorizes nothing, and a campaign that changed hands keeps its
+	 * history with the organization that ran it.
+	 *
+	 * @param int           $org_id      Organization the delivery is attributed to.
+	 * @param int           $campaign_id Campaign post id.
+	 * @param Report_Period $period      Bounded UTC range.
+	 * @return array<int, array<int, array{impressions: int, clicks: int, viewables: int|null, conversions: int|null}>> Placement id, then creative id.
+	 */
+	public function creative_totals_for_campaign( int $org_id, int $campaign_id, Report_Period $period ): array {
+		if ( $org_id <= 0 || $campaign_id <= 0 ) {
+			return array();
+		}
+
+		global $wpdb;
+
+		$table = $this->table_name();
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is prefix+constant; ids, bounds and the row cap are prepared.
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT r.placement_id, r.creative_id,
+					COALESCE(SUM(r.impressions), 0) AS impressions, COALESCE(SUM(r.clicks), 0) AS clicks,
+					SUM(r.viewables) AS viewables, SUM(r.conversions) AS conversions
+				FROM {$table} r
+				WHERE r.org_id = %d
+					AND r.campaign_id = %d
+					AND r.day_utc >= %s
+					AND r.day_utc <= %s
+				GROUP BY r.placement_id, r.creative_id
+				ORDER BY r.placement_id, r.creative_id
+				LIMIT %d",
+				$org_id,
+				$campaign_id,
+				$period->start,
+				$period->end,
+				self::MAX_VARIANT_ROWS
+			),
+			ARRAY_A
+		);
+		// phpcs:enable
+
+		$out = array();
+
+		foreach ( is_array( $rows ) ? $rows : array() as $row ) {
+			if ( ! is_array( $row ) ) {
+				continue;
+			}
+
+			$out[ (int) $row['placement_id'] ][ (int) $row['creative_id'] ] = array(
+				'impressions' => (int) $row['impressions'],
+				'clicks'      => (int) $row['clicks'],
+				'viewables'   => null === $row['viewables'] ? null : (int) $row['viewables'],
 				'conversions' => null === $row['conversions'] ? null : (int) $row['conversions'],
 			);
 		}

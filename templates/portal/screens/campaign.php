@@ -789,5 +789,7 @@ endif;
 
 	<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-ad-updates.php'; ?>
 
+	<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-variant-comparison.php'; ?>
+
 		<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-update-history.php'; ?>
 	<?php endif; ?>

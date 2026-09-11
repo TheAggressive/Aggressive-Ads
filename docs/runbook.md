@@ -250,6 +250,15 @@ partially backfilled one would say something false about the shape of the data.
 Nothing to run. If a publisher asks why an old campaign shows no variant
 breakdown, this is the answer.
 
+**How it reads on the campaign screen.** The **Compare your ads** panel shows
+those rows as *Before per-ad counting*, beside the variants rather than hidden —
+hiding them would make a placement's rows sum to less than it delivered. A
+window that falls entirely before the upgrade therefore shows the variants at
+zero, with dashes for their rates, and all the delivery on that one row. That is
+correct, not a fault: the delivery happened, and nothing recorded which variant
+it was. A creative removed after it delivered appears the same way, as *An ad no
+longer on this placement*.
+
 ## 6. Configure, then verify the configuration took
 
 Advertising → Settings.
