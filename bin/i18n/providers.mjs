@@ -24,30 +24,12 @@ import {
 	placeholdersIntact,
 } from './po.mjs';
 
-/** WordPress locale → MyMemory / DeepL language code. */
-export const LOCALE_MAP = {
-	fr_FR: { mymemory: 'fr', deepl: 'FR' },
-	fr_CA: { mymemory: 'fr', deepl: 'FR' },
-	es_ES: { mymemory: 'es', deepl: 'ES' },
-	es_MX: { mymemory: 'es', deepl: 'ES' },
-	de_DE: { mymemory: 'de', deepl: 'DE' },
-	it_IT: { mymemory: 'it', deepl: 'IT' },
-	pt_BR: { mymemory: 'pt-BR', deepl: 'PT-BR' },
-	pt_PT: { mymemory: 'pt', deepl: 'PT-PT' },
-	nl_NL: { mymemory: 'nl', deepl: 'NL' },
-	pl_PL: { mymemory: 'pl', deepl: 'PL' },
-	sv_SE: { mymemory: 'sv', deepl: 'SV' },
-	ja: { mymemory: 'ja', deepl: 'JA' },
-	ko_KR: { mymemory: 'ko', deepl: 'KO' },
-	zh_CN: { mymemory: 'zh-CN', deepl: 'ZH' },
-};
-
 const DO_NOT_TRANSLATE = [
 	// Chosen from what the catalog actually contains, not from a guess at what
 	// an advertising plugin might say. Each of these is a proper noun or an
 	// industry acronym that has one spelling everywhere, and MT will happily
-	// localise all of them: MyMemory returns "Bibliothèque de médias" for the
-	// screen WordPress itself already translates, and turns CTR into a word.
+	// localise all of them: a translator will localise all of them, including the
+	// screen WordPress itself already translates.
 	'Aggressive Ads',
 	'WordPress',
 	'CTR',
@@ -82,7 +64,7 @@ const LOCALE_GLOSSARY = {
 	 */
 	de_DE: [
 		// The ad industry keeps the English loanword; "Konvertierung" is what
-		// you call converting a file. MyMemory used both, in adjacent strings.
+		// you call converting a file. the first drafts used both, in adjacent strings.
 		[ 'Konvertierungen', 'Conversions' ],
 		[ 'Konvertierung', 'Conversion' ],
 
@@ -112,7 +94,7 @@ function refusal( message ) {
 }
 
 /**
- * ASCII-only tokens — Unicode brackets get mangled by MyMemory.
+ * ASCII-only tokens, so nothing in the round trip mangles them.
  *
  * @param {string} text
  */
@@ -158,7 +140,7 @@ function restoreBrandTerms( text, tokens ) {
 }
 
 /**
- * MyMemory sometimes emits HTML entities (e.g. &#10; for newline).
+ * Some engines emit HTML entities (e.g. &#10; for newline).
  *
  * @param {string} text
  */
@@ -174,141 +156,30 @@ function sanitizeMtOutput( text ) {
 }
 
 /**
- * @param {string} text
- * @param {string} locale
+ * Post-translation corrections for one locale.
+ *
+ * The backstop behind the prompt's terminology: a plain substring pass over the
+ * answer, longest keys first, recording mistakes the model actually made on
+ * this catalog rather than ones it might make.
+ *
+ * @param {string} text   The model's answer.
+ * @param {string} locale WordPress locale.
+ * @return {string}
  */
 function applyLocaleGlossary( text, locale ) {
 	const rules = LOCALE_GLOSSARY[ locale ];
+
 	if ( ! rules ) {
 		return text;
 	}
+
 	let out = text;
+
 	for ( const [ from, to ] of rules ) {
 		out = out.split( from ).join( to );
 	}
+
 	return out;
-}
-
-async function translateMyMemory( text, lang ) {
-	const email = process.env.I18N_MT_EMAIL || '';
-	const url = new URL( 'https://api.mymemory.translated.net/get' );
-	url.searchParams.set( 'q', text.slice( 0, 500 ) );
-	url.searchParams.set( 'langpair', `en|${ lang }` );
-	if ( email ) {
-		url.searchParams.set( 'de', email );
-	}
-
-	const res = await fetch( url );
-	if ( ! res.ok ) {
-		throw new Error( `MyMemory HTTP ${ res.status }` );
-	}
-	const data = await res.json();
-	const translated = data?.responseData?.translatedText;
-	if ( ! translated || data?.responseStatus !== 200 ) {
-		throw new Error(
-			`MyMemory failed: ${
-				data?.responseDetails || data?.responseStatus
-			}`
-		);
-	}
-	/*
-	 * MyMemory echoes the query when it cannot translate, and this used to
-	 * return that echo as the translation. The run then wrote English into the
-	 * German catalog, flagged it `aggr-mt`, cleared its fuzzy mark and counted
-	 * it among the strings it had filled — the catalog claiming a translation
-	 * it had never been given. The 2026-09-10 draft carried eleven of them,
-	 * including "None" and "Singapore dollar" presented as finished German.
-	 *
-	 * An echo is not evidence of a translation, so it is refused: the entry
-	 * stays empty, gettext falls back to the source string exactly as the echo
-	 * would have displayed, and the string is named for a human instead of
-	 * hidden among the finished ones. Some strings really are identical in both
-	 * languages — "Euro", "Code", "CTR" — and nothing here can tell those from
-	 * a provider giving up, which is the point: a person can, and now gets
-	 * asked.
-	 */
-	if ( translated === text ) {
-		throw refusal(
-			`MT echoed the source instead of translating it (source=${ text.slice(
-				0,
-				40
-			) }…)`
-		);
-	}
-
-	return translated;
-}
-
-/**
- * Translate one string through DeepL.
- *
- * `context` is the entry's msgctxt when it has one. DeepL uses it to
- * disambiguate and neither translates nor bills it, which is exactly what a
- * gettext context is for.
- *
- * Without it, `_x()` disambiguation is invisible to machine translation: the
- * context reaches the .po file and the human reading it, and never reaches the
- * translator. "State" on the organizations screen is why this exists — with a
- * context of "organization status column heading" already in the catalogue,
- * DeepL still returned "Bundesland", a federal state, because nothing sent it.
- *
- * @param {string}      text    Source string, placeholders already protected.
- * @param {string}      lang    DeepL target language code.
- * @param {string|null} context Gettext msgctxt, or null.
- * @return {Promise<string>} Translated text.
- */
-async function translateDeepL( text, lang, context = null ) {
-	const key = process.env.DEEPL_AUTH_KEY;
-	if ( ! key ) {
-		throw new Error( 'DEEPL_AUTH_KEY is not set' );
-	}
-	const endpoint = key.endsWith( ':fx' )
-		? 'https://api-free.deepl.com/v2/translate'
-		: 'https://api.deepl.com/v2/translate';
-	const body = new URLSearchParams();
-	body.set( 'text', text );
-	body.set( 'source_lang', 'EN' );
-	body.set( 'target_lang', lang );
-	body.set( 'preserve_formatting', '1' );
-
-	if ( context ) {
-		body.set( 'context', context );
-	}
-
-	const res = await fetch( endpoint, {
-		method: 'POST',
-		headers: {
-			Authorization: `DeepL-Auth-Key ${ key }`,
-			'Content-Type': 'application/x-www-form-urlencoded',
-		},
-		body,
-	} );
-	if ( ! res.ok ) {
-		throw new Error( `DeepL HTTP ${ res.status }: ${ await res.text() }` );
-	}
-	const data = await res.json();
-	return data?.translations?.[ 0 ]?.text ?? text;
-}
-
-/**
- * Resolve provider mode.
- *
- * - auto (default): DeepL first when a key is set, MyMemory on DeepL failure.
- *   With no key it degrades to plain MyMemory, so a fresh clone and CI without
- *   the secret still work with no configuration.
- * - mymemory: MyMemory first; DeepL only if MyMemory fails and key exists.
- * - deepl: DeepL only, no fallback (requires DEEPL_AUTH_KEY).
- *
- * @returns {'auto' | 'mymemory' | 'deepl'}
- */
-export function resolveProviderMode() {
-	const raw = ( process.env.I18N_MT_PROVIDER || 'auto' ).toLowerCase();
-
-	if ( raw === 'deepl' || raw === 'mymemory' || raw === 'local' ) {
-		return raw;
-	}
-
-	return 'auto';
 }
 
 /**
@@ -333,9 +204,22 @@ const LOCAL_LANGUAGE = {
 };
 
 /**
- * How a locale addresses the reader. One of the defects the MyMemory drafts
+ * How a locale addresses the reader. One of the defects the first machine drafts
  * shipped was a German string switching from "Sie" to "du" mid-catalog.
  */
+/**
+ * Whether this pipeline will translate a locale at all.
+ *
+ * A locale with no language name is skipped rather than guessed at: "de_DE" is
+ * not a target language to hand a model.
+ *
+ * @param {string} locale WordPress locale.
+ * @return {boolean}
+ */
+export function isSupportedLocale( locale ) {
+	return Object.prototype.hasOwnProperty.call( LOCAL_LANGUAGE, locale );
+}
+
 const LOCAL_REGISTER = {
 	de_DE: 'Address the reader formally with "Sie" and its forms. Never use "du".',
 	fr_FR: 'Address the reader formally with "vous". Never use "tu".',
@@ -350,7 +234,7 @@ const LOCAL_REGISTER = {
  *
  * **Proposed on 2026-09-11, for product review rather than as settled
  * German.** These are what an MT engine cannot be told and a model can: the
- * domain meaning of words English overloads. The MyMemory drafts rendered
+ * domain meaning of words English overloads. The first machine drafts rendered
  * "creative" as creative *people* (Kreative), "fill" as a dental filling
  * (Füllung) and screen widths as sieve widths (Siebbreiten). Each entry names
  * the sense in brackets, because the sense is the whole point.
@@ -671,7 +555,7 @@ async function translateLocal( text, locale, context = null, notes = '' ) {
 		);
 	}
 
-	// The same rule MyMemory's echoes get, for the same reason: an identical
+	// An identical
 	// answer is a claim a person should confirm, not one to file silently.
 	if ( translated === text ) {
 		throw refusal(
@@ -800,140 +684,19 @@ export async function checkLocalProvider() {
 }
 
 /**
- * Providers that have stopped answering for the rest of this run.
+ * Translates one string, protecting what must survive the round trip.
  *
- * A quota is exhausted for the day, not for the request. Without this, `auto`
- * mode asked DeepL about every single string after it had already answered
- * `HTTP 456: Quota exceeded` — 341 filled strings cost 341 doomed DeepL calls
- * plus 341 MyMemory ones, and the run took six minutes to do half of one
- * locale. Remembering the refusal halves the requests and the wall time.
- *
- * Only a `provider-stop` failure counts. A timeout or a dropped connection is
- * this request's problem and says nothing about the next one, so retiring a
- * working provider over one blip would be worse than the waste it saves.
- *
- * Deliberately not applied to `mode === 'deepl'`: somebody who names a provider
- * gets that provider or an error, never a quiet substitution.
- */
-const exhausted = { deepl: false };
-
-/**
- * Forgets which providers gave up, so one run's exhaustion is not another's.
- *
- * @return {void}
- */
-export function resetProviderHealth() {
-	exhausted.deepl = false;
-}
-
-/**
- * Records a provider's refusal when it is the kind that will repeat.
- *
- * @param {string}  name Provider key.
- * @param {unknown} err  What it threw.
- * @return {void}
- */
-function noteProviderFailure( name, err ) {
-	if ( 'provider-stop' !== classifyMtFailure( err ) || exhausted[ name ] ) {
-		return;
-	}
-
-	exhausted[ name ] = true;
-
-	console.warn(
-		`\ni18n:translate: ${ name } is out of quota; using the fallback for the rest of this run`
-	);
-}
-
-/**
- * @param {string} text
- * @param {{ mymemory: string, deepl: string }} localeCodes
- * @param {'auto' | 'mymemory' | 'deepl' | 'local'} mode
- * @param {string} locale
+ * @param {string}      text    Source string.
+ * @param {string}      locale  WordPress locale.
  * @param {string|null} context The entry's msgctxt.
- * @param {string} notes The entry's translator comments; only the local model reads them.
+ * @param {string}      notes   The entry's translator comments.
  * @returns {Promise<{ text: string, via: string }>}
  */
-export async function mt(
-	text,
-	localeCodes,
-	mode,
-	locale,
-	context = null,
-	notes = ''
-) {
+export async function mt( text, locale, context = null, notes = '' ) {
 	const { protectedText, tokens: ph } = protectPlaceholders( text );
 	const brand = protectBrandTerms( protectedText );
-	let out;
-	let via;
 
-	const hasDeeplKey = Boolean( process.env.DEEPL_AUTH_KEY );
-	const deeplUsable = hasDeeplKey && ! exhausted.deepl;
-
-	/*
-	 * No fallback, deliberately. Somebody who names a provider gets that
-	 * provider or an error — and the local model is being measured against the
-	 * others, so a quiet substitution would contaminate the measurement.
-	 */
-	if ( mode === 'local' ) {
-		out = await translateLocal( brand.text, locale, context, notes );
-		via = 'local';
-	} else if ( mode === 'deepl' ) {
-		out = await translateDeepL( brand.text, localeCodes.deepl, context );
-		via = 'deepl';
-	} else if ( mode === 'auto' && deeplUsable ) {
-		try {
-			out = await translateDeepL(
-				brand.text,
-				localeCodes.deepl,
-				context
-			);
-			via = 'deepl';
-		} catch ( err ) {
-			noteProviderFailure( 'deepl', err );
-			console.warn(
-				`\ni18n:translate: DeepL failed (${ err.message }); falling back to MyMemory`
-			);
-			out = await translateMyMemory( brand.text, localeCodes.mymemory );
-			via = 'mymemory-fallback';
-		}
-	} else {
-		try {
-			out = await translateMyMemory( brand.text, localeCodes.mymemory );
-
-			/*
-			 * A *remembered* refusal is still a fallback. Retiring DeepL for
-			 * the run sends every later string down this branch, which is also
-			 * the branch a site with no DeepL key at all takes — so tagging
-			 * both `mymemory` erased the one signal saying the preferred engine
-			 * had not done the work.
-			 *
-			 * That is not hypothetical: the first run after the retirement
-			 * landed 458 strings tagged plain `mymemory`, and the pull request
-			 * that opened said "Translated by mymemory" with no warning, over a
-			 * draft that had degraded on its very first request. Two changes,
-			 * each tested alone and never together.
-			 */
-			via =
-				'auto' === mode && hasDeeplKey && exhausted.deepl
-					? 'mymemory-fallback'
-					: 'mymemory';
-		} catch ( err ) {
-			// Nothing left to fall back to: no key, or DeepL already gave up.
-			if ( ! deeplUsable ) {
-				throw err;
-			}
-			console.warn(
-				`\ni18n:translate: MyMemory failed (${ err.message }); falling back to DeepL`
-			);
-			out = await translateDeepL(
-				brand.text,
-				localeCodes.deepl,
-				context
-			);
-			via = 'deepl-fallback';
-		}
-	}
+	let out = await translateLocal( brand.text, locale, context, notes );
 
 	out = restoreBrandTerms( out, brand.tokens );
 	out = restorePlaceholders( out, ph );
@@ -951,12 +714,12 @@ export async function mt(
 		);
 	}
 
-	// Reject leftover HTML entities MyMemory invents (e.g. Progress → Progrès&#10;).
+	// A model answering with markup instead of text (Progress → Progrès&#10;).
 	if ( /&#\w+;|&[a-z]+;/i.test( out ) && ! /&#\w+;|&[a-z]+;/i.test( text ) ) {
 		throw refusal(
 			`MT injected HTML entities (source=${ text.slice( 0, 40 ) }…)`
 		);
 	}
 
-	return { text: out, via };
+	return { text: out, via: 'local' };
 }

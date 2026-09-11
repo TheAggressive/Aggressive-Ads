@@ -1,27 +1,28 @@
 #!/usr/bin/env node
 /**
- * Machine-translate empty / fuzzy PO entries.
+ * Machine-translate empty / fuzzy PO entries through a local model.
  *
- * Default (`auto`): DeepL when DEEPL_AUTH_KEY is set, falling back to MyMemory
- * if DeepL fails (bad key, quota exhausted, outage); MyMemory alone when no key
- * is present. DeepL leads because MyMemory is a translation-memory aggregator —
- * it returns whole-segment matches from unrelated corpora, which arrive with
- * punctuation and register the source never had (a bare "Measurements in
- * inches" came back as "Le misure sono rappresentate in pollici.").
- * Only fills empty msgstr or fuzzy entries — never overwrites clean translations.
+ * One provider: an OpenAI-compatible server you run yourself (LM Studio,
+ * Ollama, llama.cpp). Nothing leaves the machine, and CI cannot reach it, so
+ * translating is a local, deliberate act rather than something a runner does
+ * on a push.
+ *
+ * Only fills empty or fuzzy entries. A clean translation is never overwritten
+ * and never re-sent, so a second run costs nothing; a string removed from the
+ * source keeps its translation, commented out, in case it comes back.
  *
  * Usage:
- *   node bin/i18n/translate.mjs [--locale=fr_FR] [--dry-run] [--limit=N]
+ *   node bin/i18n/translate.mjs [--locale=de_DE] [--dry-run] [--limit=N]
  *
  * Env:
- *   I18N_MT_PROVIDER=auto|mymemory|deepl
- *                                     (default: auto; mymemory = MyMemory first;
- *                                      deepl = DeepL-only, no fallback)
- *   DEEPL_AUTH_KEY=…                  (enables DeepL; without it auto = MyMemory)
- *   I18N_MT_EMAIL=…                   (optional; raises MyMemory daily quota)
- *   I18N_MT_DELAY_MS=350              (pause between requests)
+ *   I18N_LOCAL_URL=…                  (base URL ending in /v1)
+ *   I18N_LOCAL_MODEL=…                (model id the server serves)
+ *   I18N_LOCAL_API_KEY=…              (optional bearer token)
+ *   I18N_LOCAL_TIMEOUT_MS=180000      (per-request timeout)
+ *   I18N_LOCAL_RETRY_DELAYS_MS=…      (optional backoff override, comma list)
+ *   I18N_MT_DELAY_MS=0                (pause between requests)
  *
- * Local secrets: copy `.env.example` → `.env.local` (gitignored). Existing
+ * Local settings: copy `.env.example` → `.env.local` (gitignored). Existing
  * process env wins over file values.
  */
 
@@ -38,13 +39,11 @@ import { fileURLToPath } from 'node:url';
 
 import { entryPlaceholdersIntact, parsePo } from './po.mjs';
 import {
-	LOCALE_MAP,
 	checkLocalProvider,
+	isSupportedLocale,
 	localProviderDownMessage,
 	localRunIncompleteMessage,
 	mt,
-	resetProviderHealth,
-	resolveProviderMode,
 } from './providers.mjs';
 
 const __dirname = path.dirname( fileURLToPath( import.meta.url ) );
@@ -178,7 +177,7 @@ function serializeEntry( entry ) {
 	 * published string missing its placeholder.
 	 *
 	 * Stamping `aggr-mt` relabelled reviewed human translations as machine
-	 * output, and resume-progress.mjs keys on that flag to decide what is a
+	 * output, and that flag is what marks a machine draft as a
 	 * restorable draft — so a person's work became something a later run felt
 	 * free to treat as its own.
 	 *
@@ -282,10 +281,9 @@ export function translatorNotes( entry ) {
 
 export async function translatePoFile( file, opts ) {
 	const locale = localeFromPo( file );
-	const codes = LOCALE_MAP[ locale ];
-	if ( ! codes ) {
+	if ( ! isSupportedLocale( locale ) ) {
 		console.warn(
-			`i18n:translate: skip ${ locale } (add mapping in providers.mjs LOCALE_MAP)`
+			`i18n:translate: skip ${ locale } (add it to LOCAL_LANGUAGE in providers.mjs)`
 		);
 		return {
 			locale,
@@ -297,20 +295,17 @@ export async function translatePoFile( file, opts ) {
 		};
 	}
 
-	const mode = resolveProviderMode();
 	const delay = Number.parseInt( process.env.I18N_MT_DELAY_MS || '350', 10 );
 
 	const content = fs.readFileSync( file, 'utf8' );
 	const { header, entries } = parsePo( content );
 	let updated = 0;
 	let skipped = 0;
-	let lastVia = mode;
+	let lastVia = 'local';
 	/*
-	 * Which engine actually answered, counted rather than remembered. `auto`
-	 * silently substitutes MyMemory whenever DeepL refuses, and two runs — 718
-	 * strings — went out entirely from the fallback with no signal anywhere but
-	 * a `via` tag inside a PO comment. The lane was red for an unrelated
-	 * reason, so even the failure pointed at the wrong thing.
+	 * Which engine answered, counted rather than assumed. There is one
+	 * provider now, and the tally is still what tells a reviewer what wrote
+	 * the catalog in front of them.
 	 */
 	const providers = {};
 	let truncated = false;
@@ -335,8 +330,6 @@ export async function translatePoFile( file, opts ) {
 			if ( entry.msgidPlural !== null ) {
 				const singular = await mt(
 					entry.msgid,
-					codes,
-					mode,
 					locale,
 					entry.msgctxt,
 					translatorNotes( entry )
@@ -344,8 +337,6 @@ export async function translatePoFile( file, opts ) {
 				await sleep( delay );
 				const plural = await mt(
 					entry.msgidPlural,
-					codes,
-					mode,
 					locale,
 					entry.msgctxt,
 					translatorNotes( entry )
@@ -357,8 +348,6 @@ export async function translatePoFile( file, opts ) {
 			} else {
 				const result = await mt(
 					entry.msgid,
-					codes,
-					mode,
 					locale,
 					entry.msgctxt,
 					translatorNotes( entry )
@@ -495,13 +484,12 @@ export async function translatePoFile( file, opts ) {
 		truncated,
 		refused,
 		providers,
-		provider: mode,
+		provider: 'local',
 	};
 }
 
 async function main() {
 	loadLocalEnv();
-	resetProviderHealth();
 
 	const opts = parseArgs(
 		process.argv.slice( 2 ).filter( ( a ) => a !== '--' )
@@ -515,40 +503,21 @@ async function main() {
 		process.exit( 0 );
 	}
 
-	const mode = resolveProviderMode();
-	const hasDeeplKey = Boolean( process.env.DEEPL_AUTH_KEY );
-	let primary;
-	let backup;
+	/*
+	 * Checked before any catalog is touched. An unreachable server otherwise
+	 * fails every string one at a time, each skipped as a one-off error, and
+	 * the run ends a thousand strings short without ever saying the server was
+	 * not there.
+	 */
+	const health = await checkLocalProvider();
 
-	if ( mode === 'local' ) {
-		primary = `local (${ process.env.I18N_LOCAL_MODEL || 'unset' })`;
-		backup = 'none';
-
-		/*
-		 * Checked before any catalog is touched. An unreachable server
-		 * otherwise fails every string one at a time, each skipped as a one-off
-		 * error, and the run ends a thousand strings short without ever saying
-		 * the server was not there.
-		 */
-		const health = await checkLocalProvider();
-
-		if ( ! health.ok ) {
-			console.error( localProviderDownMessage( health.reason ) );
-			process.exit( 1 );
-		}
-	} else if ( mode === 'deepl' ) {
-		primary = 'deepl';
-		backup = 'none';
-	} else if ( mode === 'auto' && hasDeeplKey ) {
-		primary = 'deepl';
-		backup = 'mymemory-on-deepl-failure';
-	} else {
-		primary = 'mymemory';
-		backup = hasDeeplKey ? 'deepl-on-mymemory-failure' : 'none';
+	if ( ! health.ok ) {
+		console.error( localProviderDownMessage( health.reason ) );
+		process.exit( 1 );
 	}
 
 	console.log(
-		`i18n:translate: mode=${ mode } primary=${ primary } backup=${ backup } dryRun=${ opts.dryRun }`
+		`i18n:translate: model=${ process.env.I18N_LOCAL_MODEL } at ${ process.env.I18N_LOCAL_URL } dryRun=${ opts.dryRun }`
 	);
 
 	let total = 0;
@@ -575,18 +544,6 @@ async function main() {
 	console.log(
 		`i18n:translate: engines — ${ JSON.stringify( mix.counts ) }`
 	);
-
-	if ( mix.degraded ) {
-		console.warn(
-			'i18n:translate: this draft came from a fallback engine, not the preferred one.'
-		);
-
-		if ( process.env.GITHUB_ACTIONS ) {
-			console.log(
-				'::warning title=Draft produced by a fallback engine::The preferred provider refused, so these strings came from the substitute. Read them before merging.'
-			);
-		}
-	}
 
 	if ( process.env.AGGR_I18N_SUMMARY_FILE ) {
 		fs.writeFileSync(
@@ -643,11 +600,7 @@ async function main() {
 		 * a quota or a network blip, and the fix here is to start the model
 		 * again — or correct its address in .env.local.
 		 */
-		console.error(
-			'local' === mode
-				? localRunIncompleteMessage()
-				: '\ni18n:translate: the run did not finish.'
-		);
+		console.error( localRunIncompleteMessage() );
 
 		for ( const problem of verdict.problems ) {
 			console.error( `  ${ problem }` );
@@ -663,8 +616,7 @@ async function main() {
 }
 
 /*
- * Guarded so the module can be imported by a test, the way resume-progress.mjs
- * is. Without this, `mt()` could only be exercised by running the whole script
+ * Guarded so the module can be imported by a test. Without this, `mt()` could only be exercised by running the whole script
  * against a paid API — which is why the refusal path had never been tested
  * through the code that raises it, only through an error a test built itself.
  */

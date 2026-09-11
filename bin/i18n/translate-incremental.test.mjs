@@ -27,7 +27,6 @@ beforeEach( () => {
 		'I18N_LOCAL_MODEL',
 		'I18N_MT_PROVIDER',
 		'I18N_MT_DELAY_MS',
-		'DEEPL_AUTH_KEY',
 	] ) {
 		saved[ name ] = process.env[ name ];
 	}
@@ -36,7 +35,6 @@ beforeEach( () => {
 	process.env.I18N_LOCAL_MODEL = MODEL;
 	process.env.I18N_MT_PROVIDER = 'local';
 	process.env.I18N_MT_DELAY_MS = '0';
-	delete process.env.DEEPL_AUTH_KEY;
 } );
 
 afterEach( () => {

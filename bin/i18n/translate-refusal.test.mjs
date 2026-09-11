@@ -1,15 +1,13 @@
 /**
- * The refusal path, driven through the code that raises it.
+ * What a run does to a catalog when the model answers badly.
  *
- * The tests in run-completeness.test.mjs build a tagged error by hand, which
- * proves the classifier reads a tag and nothing about whether `mt()` ever sets
- * one. That is the failure this project keeps meeting — a read half and a write
- * half that each pass their own tests and never meet — so these drive the real
- * `mt()` with a stubbed provider and assert on what it actually throws.
+ * The per-string verdicts live in providers-local.test.mjs; these drive the
+ * whole catalog walk and assert what lands on disk — that a refusal costs one
+ * string and not the locale, that a bad translation already in the file is held
+ * back, and that entries the run never touched come back unchanged.
  *
- * The two responses below are the ones that failed three runs on master: a
- * translation memory answering "All campaigns" out of a neighbouring
- * "%d campaigns", and one dropping the "%s" it was given.
+ * The answers below are the ones that failed three runs on master: an engine
+ * inventing a "%d" for "All campaigns", and one dropping the "%s" it was given.
  */
 
 import fs from 'node:fs';
@@ -17,23 +15,20 @@ import os from 'node:os';
 import path from 'node:path';
 
 import assert from 'node:assert/strict';
-import test, { afterEach } from 'node:test';
+import test, { afterEach, beforeEach } from 'node:test';
 
-import { mt, resetProviderHealth } from './providers.mjs';
+import { mt } from './providers.mjs';
 import { translatePoFile } from './translate.mjs';
-import { classifyMtFailure, providerMix } from './run-completeness.mjs';
+import { classifyMtFailure } from './run-completeness.mjs';
 import { findPlaceholderMismatches } from './lint-placeholders.mjs';
 import { parsePo } from './po.mjs';
-
-const CODES = { mymemory: 'de', deepl: 'DE' };
 
 /**
  * Puts an environment variable back, including putting it back to absent.
  *
  * `process.env.X = undefined` stores the *string* "undefined", which is truthy
  * — so a test that had set a key left every later test believing one was
- * configured. That is what made the echo test fall through to a DeepL fallback
- * that should not have existed.
+ * configured, and a test then ran against a provider it never meant to use.
  *
  * @param {string} name
  * @param {string|undefined} previous
@@ -49,27 +44,73 @@ function restoreEnv( name, previous ) {
 }
 
 const realFetch = globalThis.fetch;
+const savedEnv = {};
+
+beforeEach( () => {
+	for ( const name of [
+		'I18N_LOCAL_URL',
+		'I18N_LOCAL_MODEL',
+		'I18N_MT_PROVIDER',
+		'I18N_MT_DELAY_MS',
+		'I18N_LOCAL_RETRY_DELAYS_MS',
+	] ) {
+		savedEnv[ name ] = process.env[ name ];
+	}
+
+	process.env.I18N_LOCAL_URL = 'http://model.test:1234/v1';
+	process.env.I18N_LOCAL_MODEL = 'test-model';
+	process.env.I18N_LOCAL_RETRY_DELAYS_MS = '0,0';
+} );
 
 afterEach( () => {
 	globalThis.fetch = realFetch;
+
+	for ( const [ name, value ] of Object.entries( savedEnv ) ) {
+		restoreEnv( name, value );
+	}
 } );
 
-/** Answers every request with one MyMemory translation. */
+/** Answers every chat completion with one translation. */
 function stubProvider( translatedText ) {
 	globalThis.fetch = async () => ( {
 		ok: true,
 		status: 200,
 		json: async () => ( {
-			responseStatus: 200,
-			responseData: { translatedText },
+			choices: [ { message: { content: translatedText } } ],
 		} ),
 	} );
+}
+
+/**
+ * Sets the local provider up for a catalog-walk test.
+ *
+ * @return {() => void} Restores what it changed.
+ */
+function useLocalProvider() {
+	const previous = {
+		provider: process.env.I18N_MT_PROVIDER,
+		delay: process.env.I18N_MT_DELAY_MS,
+		url: process.env.I18N_LOCAL_URL,
+		model: process.env.I18N_LOCAL_MODEL,
+	};
+
+	process.env.I18N_MT_PROVIDER = 'local';
+	process.env.I18N_MT_DELAY_MS = '0';
+	process.env.I18N_LOCAL_URL = 'http://model.test:1234/v1';
+	process.env.I18N_LOCAL_MODEL = 'test-model';
+
+	return () => {
+		restoreEnv( 'I18N_MT_PROVIDER', previous.provider );
+		restoreEnv( 'I18N_MT_DELAY_MS', previous.delay );
+		restoreEnv( 'I18N_LOCAL_URL', previous.url );
+		restoreEnv( 'I18N_LOCAL_MODEL', previous.model );
+	};
 }
 
 test( 'an invented placeholder is refused, and tagged as a refusal', async () => {
 	stubProvider( 'Alle %d Kampagnen' );
 
-	const err = await mt( 'All campaigns', CODES, 'mymemory', 'de_DE' ).then(
+	const err = await mt( 'All campaigns', 'de_DE' ).then(
 		() => null,
 		( e ) => e
 	);
@@ -82,77 +123,6 @@ test( 'an invented placeholder is refused, and tagged as a refusal', async () =>
 		classifyMtFailure( err ),
 		'refused',
 		'mt() must tag it so the run skips the string instead of the locale'
-	);
-} );
-
-test( 'a dropped placeholder is refused too', async () => {
-	stubProvider( 'Diese Auslieferungsrichtlinie kann nicht verwendet werden' );
-
-	const err = await mt(
-		'That delivery policy cannot be used: %s',
-		CODES,
-		'mymemory',
-		'de_DE'
-	).then(
-		() => null,
-		( e ) => e
-	);
-
-	assert.ok( err );
-	assert.equal( classifyMtFailure( err ), 'refused' );
-} );
-
-test( 'a refusal naming a source that says "Limit" is still a refusal', async () => {
-	// The message quotes the source, and "Limit to one advertiser" is a real
-	// string here. Classifying on the message read that as an exhausted quota
-	// and abandoned the rest of the locale.
-	stubProvider( 'Auf einen Werbetreibenden %d beschränken' );
-
-	const err = await mt(
-		'Limit to one advertiser',
-		CODES,
-		'mymemory',
-		'de_DE'
-	).then(
-		() => null,
-		( e ) => e
-	);
-
-	assert.ok( err );
-	assert.match( err.message, /Limit to one advertiser/ );
-	assert.equal( classifyMtFailure( err ), 'refused' );
-} );
-
-test( 'a good translation still comes back', async () => {
-	stubProvider( 'Alle Kampagnen' );
-
-	const result = await mt( 'All campaigns', CODES, 'mymemory', 'de_DE' );
-
-	assert.equal( result.text, 'Alle Kampagnen' );
-	assert.equal( result.via, 'mymemory' );
-} );
-
-test( 'a placeholder that survives translation is preserved', async () => {
-	stubProvider( 'Verwendet: __AGGR_PH_0__' );
-
-	const result = await mt( 'Used: %s', CODES, 'mymemory', 'de_DE' );
-
-	assert.equal( result.text, 'Verwendet: %s' );
-} );
-
-test( 'a provider quota error is not mistaken for a refusal', async () => {
-	globalThis.fetch = async () => ( { ok: false, status: 429 } );
-
-	const err = await mt( 'All campaigns', CODES, 'mymemory', 'de_DE' ).then(
-		() => null,
-		( e ) => e
-	);
-
-	assert.ok( err );
-	assert.equal(
-		classifyMtFailure( err ),
-		'provider-stop',
-		'the locale must still stop when the provider stops answering'
 	);
 } );
 
@@ -202,23 +172,27 @@ msgstr ""
 		[ 'Organization', 'Organisation' ],
 	] );
 
-	globalThis.fetch = async ( url ) => {
-		const query = new URL( url ).searchParams.get( 'q' );
+	globalThis.fetch = async ( url, init ) => {
+		if ( String( url ).endsWith( '/models' ) ) {
+			return {
+				ok: true,
+				status: 200,
+				json: async () => ( { data: [ { id: 'test-model' } ] } ),
+			};
+		}
+
+		const asked = JSON.parse( init.body ).messages[ 1 ].content;
 
 		return {
 			ok: true,
 			status: 200,
 			json: async () => ( {
-				responseStatus: 200,
-				responseData: { translatedText: answers.get( query ) },
+				choices: [ { message: { content: answers.get( asked ) } } ],
 			} ),
 		};
 	};
 
-	const previousProvider = process.env.I18N_MT_PROVIDER;
-	const previousDelay = process.env.I18N_MT_DELAY_MS;
-	process.env.I18N_MT_PROVIDER = 'mymemory';
-	process.env.I18N_MT_DELAY_MS = '0';
+	const restore = useLocalProvider();
 
 	try {
 		const result = await translatePoFile( file, {
@@ -255,8 +229,7 @@ msgstr ""
 			'the catalog this run wrote must pass the validation that follows it'
 		);
 	} finally {
-		process.env.I18N_MT_PROVIDER = previousProvider;
-		process.env.I18N_MT_DELAY_MS = previousDelay;
+		restore();
 		fs.rmSync( dir, { recursive: true, force: true } );
 	}
 } );
@@ -301,8 +274,7 @@ msgstr "Von einer Person geprüft"
 		throw new Error( 'the provider must not be called for this catalog' );
 	};
 
-	const previousProvider = process.env.I18N_MT_PROVIDER;
-	process.env.I18N_MT_PROVIDER = 'mymemory';
+	const restore = useLocalProvider();
 
 	try {
 		const result = await translatePoFile( file, {
@@ -345,7 +317,7 @@ msgstr "Von einer Person geprüft"
 		assert.equal( problems.length, 1 );
 		assert.match( problems[ 0 ], /Reviewed by a person: %s/ );
 	} finally {
-		process.env.I18N_MT_PROVIDER = previousProvider;
+		restore();
 		fs.rmSync( dir, { recursive: true, force: true } );
 	}
 } );
@@ -362,7 +334,7 @@ test( 'translating one string does not rewrite the flags of every other', async 
 	 * the job failed on a placeholder the machine had never touched.
 	 *
 	 * The same code stamped `aggr-mt` on every entry, including reviewed human
-	 * translations, and resume-progress.mjs keys on that flag to decide what
+	 * translations, and that flag is what marks an entry as machine-written
 	 * counts as a machine draft it may restore over.
 	 */
 	const dir = fs.mkdtempSync( path.join( os.tmpdir(), 'aggr-i18n-' ) );
@@ -389,10 +361,7 @@ msgstr ""
 
 	stubProvider( 'Nicht übersetzt' );
 
-	const previousProvider = process.env.I18N_MT_PROVIDER;
-	const previousDelay = process.env.I18N_MT_DELAY_MS;
-	process.env.I18N_MT_PROVIDER = 'mymemory';
-	process.env.I18N_MT_DELAY_MS = '0';
+	const restore = useLocalProvider();
 
 	try {
 		await translatePoFile( file, { dryRun: false, limit: Infinity } );
@@ -424,8 +393,7 @@ msgstr ""
 		// skips drafts, so a fuzzy mismatch is not a failure.
 		assert.deepEqual( findPlaceholderMismatches( written ), [] );
 	} finally {
-		process.env.I18N_MT_PROVIDER = previousProvider;
-		process.env.I18N_MT_DELAY_MS = previousDelay;
+		restore();
 		fs.rmSync( dir, { recursive: true, force: true } );
 	}
 } );
@@ -446,294 +414,38 @@ test( 'an unsupported locale keeps the result contract', async () => {
 	} );
 } );
 
-test( 'a provider that is out of quota is not asked again this run', async () => {
-	/*
-	 * On 2026-09-10 DeepL answered `HTTP 456: Quota exceeded` to every request
-	 * and `auto` mode asked it about every string anyway: 341 filled strings
-	 * cost 341 doomed DeepL calls on top of 341 MyMemory ones, and the run
-	 * spent six minutes to half-finish one locale.
-	 */
-	const calls = { deepl: 0, mymemory: 0 };
-
-	globalThis.fetch = async ( url ) => {
-		const target = String( url?.url ?? url );
-
-		if ( target.includes( 'deepl' ) ) {
-			calls.deepl += 1;
-
-			return {
-				ok: false,
-				status: 456,
-				text: async () => '{"message":"Quota exceeded"}',
-			};
-		}
-
-		calls.mymemory += 1;
-
-		return {
-			ok: true,
-			status: 200,
-			json: async () => ( {
-				responseStatus: 200,
-				responseData: { translatedText: 'Alle Kampagnen' },
-			} ),
-		};
-	};
-
-	const previousKey = process.env.DEEPL_AUTH_KEY;
-	process.env.DEEPL_AUTH_KEY = 'test-key';
-	resetProviderHealth();
-
-	try {
-		for ( let i = 0; i < 5; i++ ) {
-			await mt( 'All campaigns', CODES, 'auto', 'de_DE' );
-		}
-
-		assert.equal(
-			calls.deepl,
-			1,
-			'DeepL was asked again after saying its quota was gone'
-		);
-		assert.equal( calls.mymemory, 5, 'every string still got translated' );
-	} finally {
-		restoreEnv( 'DEEPL_AUTH_KEY', previousKey );
-		resetProviderHealth();
-	}
-} );
-
-test( 'a one-off provider error does not retire it for the run', async () => {
-	// A dropped connection is this request's problem and says nothing about the
-	// next one. Retiring a working provider over one blip is worse than the
-	// waste it saves.
-	const calls = { deepl: 0 };
-	let first = true;
-
-	globalThis.fetch = async ( url ) => {
-		const target = String( url?.url ?? url );
-
-		if ( target.includes( 'deepl' ) ) {
-			calls.deepl += 1;
-
-			if ( first ) {
-				first = false;
-				throw new Error( 'socket hang up' );
-			}
-
-			return {
-				ok: true,
-				status: 200,
-				json: async () => ( {
-					translations: [ { text: 'Alle Kampagnen' } ],
-				} ),
-			};
-		}
-
-		return {
-			ok: true,
-			status: 200,
-			json: async () => ( {
-				responseStatus: 200,
-				responseData: { translatedText: 'Alle Kampagnen' },
-			} ),
-		};
-	};
-
-	const previousKey = process.env.DEEPL_AUTH_KEY;
-	process.env.DEEPL_AUTH_KEY = 'test-key';
-	resetProviderHealth();
-
-	try {
-		await mt( 'All campaigns', CODES, 'auto', 'de_DE' );
-		await mt( 'All campaigns', CODES, 'auto', 'de_DE' );
-
-		assert.equal(
-			calls.deepl,
-			2,
-			'DeepL was retired over a transient error'
-		);
-	} finally {
-		restoreEnv( 'DEEPL_AUTH_KEY', previousKey );
-		resetProviderHealth();
-	}
-} );
-
-test( 'a provider echoing the source is refused, not recorded as a translation', async () => {
-	/*
-	 * MyMemory returns the query unchanged when it cannot translate. That echo
-	 * used to be written as the translation, flagged `aggr-mt`, cleared of its
-	 * fuzzy mark and counted among the filled strings — so the catalog claimed
-	 * German it had never been given. The 2026-09-10 draft carried eleven,
-	 * including "None" and "Singapore dollar" presented as finished German.
-	 */
-	stubProvider( 'None' );
-
-	// No fallback provider, so the refusal is what the caller sees.
-	const previousKey = process.env.DEEPL_AUTH_KEY;
-	delete process.env.DEEPL_AUTH_KEY;
-
-	const err = await mt( 'None', CODES, 'mymemory', 'de_DE' ).then(
-		() => null,
-		( e ) => e
-	);
-
-	assert.ok( err, 'an untranslated echo was accepted as a translation' );
-	assert.match( err.message, /echoed the source/ );
-	assert.equal(
-		classifyMtFailure( err ),
-		'refused',
-		'it is this string’s problem, not the provider going quiet'
-	);
-
-	restoreEnv( 'DEEPL_AUTH_KEY', previousKey );
-} );
-
 test( 'the German glossary corrects the terms the review pass caught', async () => {
 	// Applied to MT output, so the assertions go through mt() rather than
 	// calling the glossary directly — a rule nothing applies is not a rule.
 	stubProvider( 'Neue Konvertierung' );
 	assert.equal(
-		( await mt( 'New conversion', CODES, 'mymemory', 'de_DE' ) ).text,
+		( await mt( 'New conversion', 'de_DE' ) ).text,
 		'Neue Conversion'
 	);
 
 	// Plural first, or the singular rule turns it into "Conversionen".
 	stubProvider( 'Es sind noch keine Konvertierungen definiert.' );
 	assert.equal(
-		(
-			await mt(
-				'No conversions are defined yet.',
-				CODES,
-				'mymemory',
-				'de_DE'
-			)
-		).text,
+		( await mt( 'No conversions are defined yet.', 'de_DE' ) ).text,
 		'Es sind noch keine Conversions definiert.'
 	);
 
 	stubProvider( 'Fenster Namensnennung' );
 	assert.equal(
-		( await mt( 'Attribution window', CODES, 'mymemory', 'de_DE' ) ).text,
+		( await mt( 'Attribution window', 'de_DE' ) ).text,
 		'Attributionsfenster'
 	);
 
 	stubProvider( 'Befundungsschlüssel' );
 	assert.equal(
-		( await mt( 'Reporting key', CODES, 'mymemory', 'de_DE' ) ).text,
+		( await mt( 'Reporting key', 'de_DE' ) ).text,
 		'Berichtsschlüssel'
 	);
 
 	// A locale with no glossary is untouched.
 	stubProvider( 'Nueva Konvertierung' );
 	assert.equal(
-		( await mt( 'New conversion', CODES, 'mymemory', 'es_ES' ) ).text,
+		( await mt( 'New conversion', 'es_ES' ) ).text,
 		'Nueva Konvertierung'
 	);
-} );
-
-test( 'a remembered refusal is still reported as a fallback', async () => {
-	/*
-	 * The interaction two separate changes created, and neither test caught
-	 * because each covered its own change alone.
-	 *
-	 * Retiring DeepL for the run sends every later string down the same branch
-	 * a site with no DeepL key at all takes, and that branch tagged its output
-	 * plain `mymemory` — erasing the one signal saying the preferred engine had
-	 * not done the work. The first real run after the retirement translated 458
-	 * strings and opened a pull request headed "Translated by mymemory", with no
-	 * warning, over a draft that had degraded on its very first request.
-	 */
-	globalThis.fetch = async ( url ) => {
-		const target = String( url?.url ?? url );
-
-		if ( target.includes( 'deepl' ) ) {
-			return {
-				ok: false,
-				status: 456,
-				text: async () => '{"message":"Quota exceeded"}',
-			};
-		}
-
-		return {
-			ok: true,
-			status: 200,
-			json: async () => ( {
-				responseStatus: 200,
-				responseData: { translatedText: 'Alle Kampagnen' },
-			} ),
-		};
-	};
-
-	const previousKey = process.env.DEEPL_AUTH_KEY;
-	process.env.DEEPL_AUTH_KEY = 'test-key';
-	resetProviderHealth();
-
-	try {
-		const first = await mt( 'All campaigns', CODES, 'auto', 'de_DE' );
-		const second = await mt( 'All campaigns', CODES, 'auto', 'de_DE' );
-
-		assert.equal(
-			first.via,
-			'mymemory-fallback',
-			'the first fall-through'
-		);
-		assert.equal(
-			second.via,
-			'mymemory-fallback',
-			'the remembered one must report the same way, or the warning vanishes'
-		);
-
-		// The whole point: providerMix must still call this degraded.
-		const mix = providerMix( [
-			{
-				locale: 'de_DE',
-				updated: 2,
-				skipped: 0,
-				remaining: 0,
-				truncated: false,
-				refused: [],
-				providers: { [ first.via ]: 1, [ second.via ]: 1 },
-			},
-		] );
-
-		assert.equal(
-			mix.degraded,
-			true,
-			'a degraded run reported itself clean'
-		);
-	} finally {
-		restoreEnv( 'DEEPL_AUTH_KEY', previousKey );
-		resetProviderHealth();
-	}
-} );
-
-test( 'a site with no DeepL key is not called degraded', async () => {
-	// The same branch, and it must stay honest in the other direction: nothing
-	// was preferred over MyMemory here, so nothing fell back.
-	stubProvider( 'Alle Kampagnen' );
-
-	const previousKey = process.env.DEEPL_AUTH_KEY;
-	delete process.env.DEEPL_AUTH_KEY;
-	resetProviderHealth();
-
-	try {
-		const result = await mt( 'All campaigns', CODES, 'auto', 'de_DE' );
-
-		assert.equal( result.via, 'mymemory' );
-		assert.equal(
-			providerMix( [
-				{
-					locale: 'de_DE',
-					updated: 1,
-					skipped: 0,
-					remaining: 0,
-					truncated: false,
-					refused: [],
-					providers: { mymemory: 1 },
-				},
-			] ).degraded,
-			false
-		);
-	} finally {
-		restoreEnv( 'DEEPL_AUTH_KEY', previousKey );
-	}
 } );

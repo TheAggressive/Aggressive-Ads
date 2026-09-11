@@ -10,7 +10,7 @@ while [[ "${1:-}" == "--" ]]; do
 	shift
 done
 
-# Local DeepL / MyMemory secrets from gitignored `.env.local` (see `.env.example`).
+# Local model settings from gitignored `.env.local` (see `.env.example`).
 aggr_i18n_load_dotenv
 
 aggr_i18n_info "Syncing locales from pot…"
