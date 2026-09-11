@@ -7,6 +7,10 @@
  * the answer was kept.
  */
 
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
 import assert from 'node:assert/strict';
 import test, { afterEach, beforeEach } from 'node:test';
 
@@ -17,7 +21,7 @@ import {
 	resolveProviderMode,
 } from './providers.mjs';
 import { classifyMtFailure } from './run-completeness.mjs';
-import { translatorNotes } from './translate.mjs';
+import { translatePoFile, translatorNotes } from './translate.mjs';
 
 const CODES = { mymemory: 'de', deepl: 'DE' };
 const URL_BASE = 'http://model.test:1234/v1';
@@ -47,6 +51,8 @@ beforeEach( () => {
 		'I18N_LOCAL_MODEL',
 		'I18N_LOCAL_API_KEY',
 		'I18N_MT_PROVIDER',
+		'I18N_LOCAL_RETRY_DELAYS_MS',
+		'I18N_MT_DELAY_MS',
 		'DEEPL_AUTH_KEY',
 	] ) {
 		saved[ name ] = process.env[ name ];
@@ -55,6 +61,9 @@ beforeEach( () => {
 	process.env.I18N_LOCAL_URL = URL_BASE;
 	process.env.I18N_LOCAL_MODEL = MODEL;
 	delete process.env.I18N_LOCAL_API_KEY;
+
+	// Two quick retries rather than two minutes of real backoff.
+	process.env.I18N_LOCAL_RETRY_DELAYS_MS = '0,0';
 } );
 
 afterEach( () => {
@@ -233,18 +242,25 @@ test( 'a named local provider never falls back to another one', async () => {
 
 	assert.ok( err, 'a failing local model must surface as an error' );
 	assert.deepEqual(
-		hosts,
+		[ ...new Set( hosts ) ],
 		[ 'model.test:1234' ],
 		'something other than the local model was asked'
 	);
 } );
 
-test( 'a model the server does not have stops the run', async () => {
-	globalThis.fetch = async () => ( {
-		ok: false,
-		status: 404,
-		json: async () => ( {} ),
-	} );
+test( 'a model the server does not have stops the run, without retrying', async () => {
+	let calls = 0;
+
+	globalThis.fetch = async () => {
+		calls += 1;
+
+		return {
+			ok: false,
+			status: 404,
+			text: async () => 'model not found',
+			json: async () => ( {} ),
+		};
+	};
 
 	const err = await mt( 'Save changes', CODES, 'local', 'de_DE' ).then(
 		() => null,
@@ -252,6 +268,11 @@ test( 'a model the server does not have stops the run', async () => {
 	);
 
 	assert.equal( classifyMtFailure( err ), 'provider-stop' );
+	assert.equal(
+		calls,
+		1,
+		'a missing model cannot be waited back into existence'
+	);
 } );
 
 test( 'context and the translator note reach the prompt', async () => {
@@ -366,4 +387,200 @@ test( 'local is a provider the run can be told to use', () => {
 
 	process.env.I18N_MT_PROVIDER = 'LOCAL';
 	assert.equal( resolveProviderMode(), 'local' );
+} );
+
+test( 'a model being reloaded is waited for, not fatal', async () => {
+	/*
+	 * The first full German run stopped after 567 of 1,386 strings: the model
+	 * was reloaded mid-run, LM Studio answered 400 until it was back, and one
+	 * 400 was read as the server refusing for good.
+	 */
+	let calls = 0;
+
+	globalThis.fetch = async () => {
+		calls += 1;
+
+		if ( 1 === calls ) {
+			return {
+				ok: false,
+				status: 400,
+				text: async () => 'Model is not loaded',
+				json: async () => ( {} ),
+			};
+		}
+
+		return {
+			ok: true,
+			status: 200,
+			json: async () => ( {
+				choices: [ { message: { content: 'Änderungen angefordert' } } ],
+			} ),
+		};
+	};
+
+	assert.equal(
+		( await mt( 'Changes requested', CODES, 'local', 'de_DE' ) ).text,
+		'Änderungen angefordert'
+	);
+	assert.equal( calls, 2, 'the rejected request was not retried' );
+} );
+
+test( 'a dropped connection is retried', async () => {
+	let calls = 0;
+
+	globalThis.fetch = async () => {
+		calls += 1;
+
+		if ( 1 === calls ) {
+			throw new TypeError( 'fetch failed' );
+		}
+
+		return {
+			ok: true,
+			status: 200,
+			json: async () => ( {
+				choices: [ { message: { content: 'Änderungen speichern' } } ],
+			} ),
+		};
+	};
+
+	assert.equal(
+		( await mt( 'Save changes', CODES, 'local', 'de_DE' ) ).text,
+		'Änderungen speichern'
+	);
+	assert.equal( calls, 2 );
+} );
+
+test( 'a string a healthy server keeps rejecting is skipped, not fatal', async () => {
+	globalThis.fetch = async ( url ) => {
+		if ( String( url ).endsWith( '/models' ) ) {
+			return {
+				ok: true,
+				status: 200,
+				json: async () => ( { data: [ { id: MODEL } ] } ),
+			};
+		}
+
+		return {
+			ok: false,
+			status: 400,
+			text: async () => '{"error":"Context length exceeded"}',
+			json: async () => ( {} ),
+		};
+	};
+
+	const err = await mt( 'Save changes', CODES, 'local', 'de_DE' ).then(
+		() => null,
+		( e ) => e
+	);
+
+	assert.ok( err );
+	assert.equal(
+		classifyMtFailure( err ),
+		'retryable',
+		'one rejected request stopped the whole locale'
+	);
+	assert.match(
+		err.message,
+		/Context length exceeded/,
+		'the server’s reason was thrown away'
+	);
+} );
+
+test( 'a server that stays down stops the run so a re-run can resume', async () => {
+	globalThis.fetch = async ( url ) => {
+		if ( String( url ).endsWith( '/models' ) ) {
+			throw new Error( 'connect ECONNREFUSED' );
+		}
+
+		return {
+			ok: false,
+			status: 503,
+			text: async () => 'unavailable',
+			json: async () => ( {} ),
+		};
+	};
+
+	const err = await mt( 'Save changes', CODES, 'local', 'de_DE' ).then(
+		() => null,
+		( e ) => e
+	);
+
+	assert.equal( classifyMtFailure( err ), 'provider-stop' );
+	assert.match( err.message, /unavailable after retries/ );
+} );
+
+test( 'one rejected string does not cost the rest of a local run', async () => {
+	// The incident, through the catalog walk: the rejected string sits in the
+	// middle, so carrying on past it is what is being proved.
+	const dir = fs.mkdtempSync( path.join( os.tmpdir(), 'aggr-local-' ) );
+	const file = path.join( dir, 'aggressive-ads-de_DE.po' );
+
+	fs.writeFileSync(
+		file,
+		'msgid ""\nmsgstr ""\n"Content-Type: text/plain; charset=UTF-8\\n"\n\n' +
+			'msgid "Save changes"\nmsgstr ""\n\n' +
+			'msgid "Changes requested"\nmsgstr ""\n\n' +
+			'msgid "End date"\nmsgstr ""\n',
+		'utf8'
+	);
+
+	const answers = {
+		'Save changes': 'Änderungen speichern',
+		'End date': 'Enddatum',
+	};
+
+	globalThis.fetch = async ( url, init ) => {
+		if ( String( url ).endsWith( '/models' ) ) {
+			return {
+				ok: true,
+				status: 200,
+				json: async () => ( { data: [ { id: MODEL } ] } ),
+			};
+		}
+
+		const text = JSON.parse( init.body ).messages[ 1 ].content;
+
+		if ( ! ( text in answers ) ) {
+			return {
+				ok: false,
+				status: 400,
+				text: async () => 'rejected',
+				json: async () => ( {} ),
+			};
+		}
+
+		return {
+			ok: true,
+			status: 200,
+			json: async () => ( {
+				choices: [ { message: { content: answers[ text ] } } ],
+			} ),
+		};
+	};
+
+	process.env.I18N_MT_PROVIDER = 'local';
+	process.env.I18N_MT_DELAY_MS = '0';
+
+	try {
+		const result = await translatePoFile( file, {
+			dryRun: false,
+			limit: Infinity,
+		} );
+
+		assert.equal(
+			result.truncated,
+			false,
+			'one rejected string stopped the locale'
+		);
+		assert.equal( result.updated, 2 );
+
+		const written = fs.readFileSync( file, 'utf8' );
+
+		assert.match( written, /msgstr "Änderungen speichern"/ );
+		assert.match( written, /msgstr "Enddatum"/ );
+		assert.match( written, /msgid "Changes requested"\nmsgstr ""/ );
+	} finally {
+		fs.rmSync( dir, { recursive: true, force: true } );
+	}
 } );

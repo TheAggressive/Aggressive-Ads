@@ -13,7 +13,9 @@ import { strict as assert } from 'node:assert';
 import test from 'node:test';
 
 import {
+	MT_PROVIDER_STOP,
 	MT_REFUSED,
+	MT_RETRYABLE,
 	classifyMtFailure,
 	judgeRun,
 	providerMix,
@@ -493,4 +495,35 @@ test( 'a run that translated nothing does not claim an engine', () => {
 	assert.equal( mix.degraded, false );
 	assert.equal( mix.total, 0 );
 	assert.match( mix.summary, /No strings were translated/ );
+} );
+
+test( 'an explicit code decides before the message is read', () => {
+	/*
+	 * The local provider's messages carry a status, and the message regex
+	 * reads any "HTTP 4xx" as the provider refusing for good. A model answering
+	 * 400 while it was reloaded stopped the first full German run that way.
+	 */
+	const retry = new Error(
+		'Local model rejected this string after retries (HTTP 400: rejected)'
+	);
+	retry.code = MT_RETRYABLE;
+
+	assert.equal(
+		classifyMtFailure( retry ),
+		'retryable',
+		'an HTTP 400 in the message outranked the code'
+	);
+
+	const stop = new Error(
+		'Local model unavailable after retries (unreachable)'
+	);
+	stop.code = MT_PROVIDER_STOP;
+
+	assert.equal( classifyMtFailure( stop ), 'provider-stop' );
+
+	// Uncoded, the regex still applies: DeepL's quota is read as before.
+	assert.equal(
+		classifyMtFailure( new Error( 'DeepL HTTP 456: quota' ) ),
+		'provider-stop'
+	);
 } );

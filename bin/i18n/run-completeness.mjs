@@ -31,8 +31,8 @@
  * @property {string[]|number} [refused] Entries the run declined to write —
  *                               the source strings, or just how many — because
  *                               the
- *                               machine translation came back with the wrong
- *                               placeholders. They stay untranslated on
+ *                               machine translation was refused — an echo,
+ *                               an empty answer or the wrongplaceholders. They stay untranslated on
  *                               purpose, so they are not evidence of an
  *                               unfinished run.
  */
@@ -42,6 +42,25 @@
  * unusable, rather than because the provider stopped answering.
  */
 export const MT_REFUSED = 'aggr-mt-refused';
+
+/**
+ * The code on a failure that belongs to one string and not to the provider:
+ * the server is up and answering, and rejected this request. Skip the string,
+ * carry on with the next.
+ */
+export const MT_RETRYABLE = 'aggr-mt-retryable';
+
+/**
+ * The code on a failure that means the provider has stopped answering: stop
+ * the locale, keep what is written, let a re-run resume.
+ *
+ * Codes rather than message sniffing, because the local provider's messages
+ * carry a status — and the message regex below reads any "HTTP 4xx" as the
+ * provider refusing for good. That is right for DeepL's 456 and wrong for a
+ * local model that answered 400 while it was being reloaded, which is exactly
+ * how the first full German run stopped after 567 of 1,386 strings.
+ */
+export const MT_PROVIDER_STOP = 'aggr-mt-provider-stop';
 
 /**
  * What a single string's failure means for the rest of the locale.
@@ -69,8 +88,18 @@ export const MT_REFUSED = 'aggr-mt-refused';
  * @return {'refused'|'provider-stop'|'retryable'} What it means for the run.
  */
 export function classifyMtFailure( err ) {
-	if ( err && typeof err === 'object' && MT_REFUSED === err.code ) {
-		return 'refused';
+	if ( err && typeof err === 'object' ) {
+		if ( MT_REFUSED === err.code ) {
+			return 'refused';
+		}
+
+		if ( MT_PROVIDER_STOP === err.code ) {
+			return 'provider-stop';
+		}
+
+		if ( MT_RETRYABLE === err.code ) {
+			return 'retryable';
+		}
 	}
 
 	const message = String(
@@ -130,8 +159,8 @@ export function refusalAnnotations( results ) {
 
 		const title = `${ refused.length } string(s) in ${ result.locale } need a human translator`;
 		const body =
-			'The machine translation came back with the wrong ' +
-			`placeholders, so it was not written:\n${ refused
+			'The machine translation was refused — an echoed source, an empty ' +
+			`answer or the wrong placeholders — so it was not written:\n${ refused
 				.map( ( msgid ) => `  "${ msgid }"` )
 				.join( '\n' ) }`;
 

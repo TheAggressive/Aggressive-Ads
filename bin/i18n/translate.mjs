@@ -588,8 +588,8 @@ async function main() {
 
 	if ( refusals.length > 0 ) {
 		console.log(
-			'\ni18n:translate: left for a human — the machine translation ' +
-				'came back with the wrong placeholders:'
+			'\ni18n:translate: left for a human — the translation was refused ' +
+				'(an echoed source, an empty answer, or the wrong placeholders):'
 		);
 
 		for ( const result of refusals ) {
@@ -629,7 +629,7 @@ async function main() {
 		}
 
 		console.error(
-			'\nRe-run once the provider quota allows it. Translation is ' +
+			'\nRe-run once the provider is answering again. Translation is ' +
 				'incremental, so a re-run only fills what is still missing.'
 		);
 
