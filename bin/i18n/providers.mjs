@@ -686,6 +686,62 @@ async function translateLocal( text, locale, context = null, notes = '' ) {
 }
 
 /**
+ * Whether to colour a stream, honouring NO_COLOR and FORCE_COLOR.
+ *
+ * @param {{isTTY?: boolean}} stream
+ * @return {boolean}
+ */
+function useColour( stream ) {
+	if ( process.env.NO_COLOR ) {
+		return false;
+	}
+
+	if ( process.env.FORCE_COLOR ) {
+		return true;
+	}
+
+	return Boolean( stream && stream.isTTY );
+}
+
+/**
+ * What a person sees when the local model is not answering.
+ *
+ * Red and unmissable, and it names the two things worth doing: start the
+ * model, or correct its address. A run that translates nothing must not look
+ * like a run that had nothing to do.
+ *
+ * @param {string} reason Why the preflight refused, from checkLocalProvider().
+ * @return {string}
+ */
+export function localProviderDownMessage( reason ) {
+	const text =
+		'\ni18n:translate: TRANSLATIONS DID NOT RUN — the local model is not answering.\n' +
+		`  ${ reason }\n` +
+		'  Start it (LM Studio → Developer → Start Server), or set I18N_LOCAL_URL\n' +
+		'  in .env.local if its address changed. Nothing was written.';
+
+	return useColour( process.stderr ) ? `\u001b[31m${ text }\u001b[39m` : text;
+}
+
+/**
+ * What a person sees when the model stopped answering partway through.
+ *
+ * The catalogs keep what was translated; only the claim that the run finished
+ * is withdrawn. Distinct from the message above because the fix is the same
+ * but the state is not: there is work on disk to keep.
+ *
+ * @return {string}
+ */
+export function localRunIncompleteMessage() {
+	const text =
+		'\ni18n:translate: TRANSLATIONS DID NOT FINISH — the local model stopped\n' +
+		'  answering partway through. What was translated is written; re-run once\n' +
+		'  it is back and only the missing strings are asked for.';
+
+	return useColour( process.stderr ) ? `\u001b[31m${ text }\u001b[39m` : text;
+}
+
+/**
  * Whether the configured local model is there to be asked, checked once
  * before a run touches any catalog.
  *

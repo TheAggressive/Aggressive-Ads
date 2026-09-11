@@ -16,6 +16,8 @@ import test, { afterEach, beforeEach } from 'node:test';
 
 import {
 	checkLocalProvider,
+	localProviderDownMessage,
+	localRunIncompleteMessage,
 	localSystemPrompt,
 	mt,
 	resolveProviderMode,
@@ -54,6 +56,8 @@ beforeEach( () => {
 		'I18N_LOCAL_RETRY_DELAYS_MS',
 		'I18N_MT_DELAY_MS',
 		'DEEPL_AUTH_KEY',
+		'NO_COLOR',
+		'FORCE_COLOR',
 	] ) {
 		saved[ name ] = process.env[ name ];
 	}
@@ -583,4 +587,34 @@ test( 'one rejected string does not cost the rest of a local run', async () => {
 	} finally {
 		fs.rmSync( dir, { recursive: true, force: true } );
 	}
+} );
+
+test( 'a model that is not answering says so, unmissably', () => {
+	delete process.env.NO_COLOR;
+	process.env.FORCE_COLOR = '1';
+
+	const down = localProviderDownMessage(
+		'cannot reach http://model.test:1234/v1 (fetch failed)'
+	);
+
+	assert.ok( down.startsWith( '\u001b[31m' ), 'the failure was not red' );
+	assert.match( down, /TRANSLATIONS DID NOT RUN/ );
+	assert.match( down, /cannot reach http:\/\/model\.test:1234\/v1/ );
+	assert.match( down, /\.env\.local/, 'it must say where the address lives' );
+	assert.match( down, /Nothing was written/ );
+
+	// Stopping partway is a different state: there is work on disk to keep.
+	const midway = localRunIncompleteMessage();
+
+	assert.ok( midway.startsWith( '\u001b[31m' ) );
+	assert.match( midway, /DID NOT FINISH/ );
+	assert.match( midway, /What was translated is written/ );
+} );
+
+test( 'NO_COLOR is honoured, so a log file gets plain text', () => {
+	process.env.NO_COLOR = '1';
+	delete process.env.FORCE_COLOR;
+
+	assert.doesNotMatch( localProviderDownMessage( 'down' ), /\u001b\[/ );
+	assert.doesNotMatch( localRunIncompleteMessage(), /\u001b\[/ );
 } );

@@ -40,6 +40,8 @@ import { entryPlaceholdersIntact, parsePo } from './po.mjs';
 import {
 	LOCALE_MAP,
 	checkLocalProvider,
+	localProviderDownMessage,
+	localRunIncompleteMessage,
 	mt,
 	resetProviderHealth,
 	resolveProviderMode,
@@ -130,6 +132,13 @@ function formatPoString( keyword, value ) {
 }
 
 function serializeEntry( entry ) {
+	// An obsolete entry goes back exactly as it arrived: it is a record of a
+	// translation for a string the source no longer has, not something this
+	// run has any business rewriting.
+	if ( entry.obsolete ) {
+		return String( entry.raw ).trimEnd();
+	}
+
 	// gettext comment order: # / #. / #: / #, / #| / msgid…
 	const translator = [];
 	const extracted = [];
@@ -309,6 +318,11 @@ export async function translatePoFile( file, opts ) {
 	const refused = [];
 
 	for ( const entry of entries ) {
+		// Not a string anybody can translate: it is already commented out.
+		if ( entry.obsolete ) {
+			continue;
+		}
+
 		if ( ! needsTranslation( entry ) ) {
 			skipped += 1;
 			continue;
@@ -437,7 +451,11 @@ export async function translatePoFile( file, opts ) {
 	const demoted = [];
 
 	for ( const entry of entries ) {
-		if ( entry.flags.has( 'fuzzy' ) || ! entry.flags.has( 'aggr-mt' ) ) {
+		if (
+			entry.obsolete ||
+			entry.flags.has( 'fuzzy' ) ||
+			! entry.flags.has( 'aggr-mt' )
+		) {
 			continue;
 		}
 
@@ -465,8 +483,8 @@ export async function translatePoFile( file, opts ) {
 
 	// Counted from the entries as they now stand, not inferred from arithmetic:
 	// a `break` leaves the two out of step, and the count is the whole point.
-	const remaining = entries.filter( ( entry ) =>
-		needsTranslation( entry )
+	const remaining = entries.filter(
+		( entry ) => ! entry.obsolete && needsTranslation( entry )
 	).length;
 
 	return {
@@ -515,9 +533,7 @@ async function main() {
 		const health = await checkLocalProvider();
 
 		if ( ! health.ok ) {
-			console.error(
-				`i18n:translate: local provider: ${ health.reason }`
-			);
+			console.error( localProviderDownMessage( health.reason ) );
 			process.exit( 1 );
 		}
 	} else if ( mode === 'deepl' ) {
@@ -622,7 +638,16 @@ async function main() {
 	} );
 
 	if ( ! verdict.ok ) {
-		console.error( '\ni18n:translate: the run did not finish.' );
+		/*
+		 * A local model gets its own words: "the run did not finish" reads as
+		 * a quota or a network blip, and the fix here is to start the model
+		 * again — or correct its address in .env.local.
+		 */
+		console.error(
+			'local' === mode
+				? localRunIncompleteMessage()
+				: '\ni18n:translate: the run did not finish.'
+		);
 
 		for ( const problem of verdict.problems ) {
 			console.error( `  ${ problem }` );

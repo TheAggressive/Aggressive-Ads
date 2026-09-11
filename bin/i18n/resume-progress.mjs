@@ -85,6 +85,12 @@ function formatPoString( keyword, value ) {
 }
 
 function serializeEntry( entry ) {
+	// Kept verbatim, for the reason po.mjs records: a commented-out string is
+	// a translation waiting for its source to come back.
+	if ( entry.obsolete ) {
+		return String( entry.raw ).trimEnd();
+	}
+
 	const translator = [];
 	const extracted = [];
 	const references = [];
@@ -144,6 +150,10 @@ function serializePo( header, entries ) {
 	}
 
 	for ( const entry of entries ) {
+		if ( entry.obsolete ) {
+			continue;
+		}
+
 		chunks.push( serializeEntry( entry ) );
 	}
 
@@ -161,7 +171,9 @@ export function resumeCatalog( baseContent, draftContent ) {
 	const base = parsePo( baseContent );
 	const draft = parsePo( draftContent );
 	const draftByKey = new Map(
-		draft.entries.map( ( entry ) => [ entryKey( entry ), entry ] )
+		draft.entries
+			.filter( ( entry ) => ! entry.obsolete )
+			.map( ( entry ) => [ entryKey( entry ), entry ] )
 	);
 	let restored = 0;
 

@@ -176,6 +176,30 @@ export function parsePo( content ) {
 		}
 
 		if ( msgid === null ) {
+			/*
+			 * An obsolete block, kept verbatim.
+			 *
+			 * `msgmerge` comments out a string the source no longer has, so
+			 * every line begins `#~` and none of them parses as a msgid — and
+			 * this loop used to drop the block entirely, so the next write
+			 * deleted the translation. That is the opposite of why msgmerge
+			 * keeps it: restoring a reverted string must not cost its German.
+			 * Never re-parsed and never offered to a translator; written back
+			 * exactly as it came in.
+			 */
+			if ( lines.some( ( line ) => line.startsWith( '#~' ) ) ) {
+				entries.push( {
+					obsolete: true,
+					raw: block,
+					comments,
+					flags: new Set(),
+					msgctxt: null,
+					msgid: null,
+					msgidPlural: null,
+					msgstrs: {},
+				} );
+			}
+
 			continue;
 		}
 
