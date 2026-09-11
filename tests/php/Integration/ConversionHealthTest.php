@@ -242,6 +242,64 @@ final class ConversionHealthTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * One refusal is one report; three are three reports.
+	 *
+	 * The reasons were fragments inserted after the number by a `'%1$s %2$s'`
+	 * template — "3 arrived after the attribution window". That reads in
+	 * English and cannot be translated into German, where the verb agrees with
+	 * the number and a fragment carrying the verb cannot be reordered round it.
+	 * Each reason is now a whole `_n()` sentence, and the noun agreeing with
+	 * the count is how this test tells the two apart.
+	 */
+	public function test_a_refusal_count_is_a_whole_sentence_in_both_forms(): void {
+		$this->assertGreaterThan( 0, $this->definition() );
+		$this->day( 40, 0 );
+		$this->metrics->record_refusal( Conversion_Attribution::FOREIGN_DEFINITION );
+
+		foreach ( range( 1, 3 ) as $ignored ) {
+			$this->metrics->record_refusal( Conversion_Attribution::OUT_OF_WINDOW );
+		}
+
+		$this->metrics->flush();
+
+		$description = (string) $this->health->run_test()['description'];
+
+		$this->assertStringContainsString( '1 report named a conversion belonging to another advertiser', $description );
+		$this->assertStringContainsString( '3 reports arrived after the attribution window had closed', $description );
+		$this->assertStringNotContainsString( '1 reports', $description );
+	}
+
+	/**
+	 * Every refusal reason the attribution can give has a sentence.
+	 *
+	 * An unknown reason is skipped rather than shown raw, which is right for a
+	 * code this screen has never heard of and silently wrong for one added to
+	 * `Conversion_Attribution` without a sentence here. Read by reflection so a
+	 * new reason fails this test rather than vanishing from the screen, and
+	 * counted so the test notices when the list it reads changes.
+	 */
+	public function test_every_refusal_reason_has_a_sentence(): void {
+		$reasons = array_values(
+			array_diff(
+				( new \ReflectionClass( Conversion_Attribution::class ) )->getConstants(),
+				array( Conversion_Attribution::ACCEPTED )
+			)
+		);
+
+		$this->assertCount( 7, $reasons, 'The refusal reasons changed; give each new one a sentence.' );
+
+		$phrase = new \ReflectionMethod( \Aggressive\Ads\Install\Conversion_Health::class, 'reason_phrase' );
+
+		foreach ( $reasons as $reason ) {
+			$sentence = $phrase->invoke( null, (string) $reason, 2 );
+
+			$this->assertIsString( $sentence, "No sentence for {$reason}." );
+			$this->assertStringContainsString( '2 reports', $sentence );
+			$this->assertStringNotContainsString( (string) $reason, $sentence );
+		}
+	}
+
+	/**
 	 * A reason code never reaches the screen, only what it means.
 	 *
 	 * `out_of_window` is a decision this codebase makes, not a sentence anybody

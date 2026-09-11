@@ -159,20 +159,14 @@ final class Conversion_Health implements Service {
 			return '';
 		}
 
-		$labels  = self::reason_labels();
 		$phrases = array();
 
 		foreach ( array_slice( $counts, 0, 3, true ) as $reason => $count ) {
-			if ( ! isset( $labels[ $reason ] ) ) {
-				continue;
-			}
+			$phrase = self::reason_phrase( (string) $reason, (int) $count );
 
-			$phrases[] = sprintf(
-				/* translators: 1: number of refused reports. 2: why they were refused, such as "arrived after the attribution window". */
-				__( '%1$s %2$s', 'aggressive-ads' ),
-				number_format_i18n( $count ),
-				$labels[ $reason ]
-			);
+			if ( null !== $phrase ) {
+				$phrases[] = $phrase;
+			}
 		}
 
 		if ( array() === $phrases ) {
@@ -182,7 +176,7 @@ final class Conversion_Health implements Service {
 		$since = $this->metrics->counting_since();
 
 		return ' ' . sprintf(
-			/* translators: 1: date counting began. 2: a list of refusal counts, such as "12 arrived after the attribution window". */
+			/* translators: 1: date counting began. 2: a list of refusal counts, such as "12 reports arrived after the attribution window had closed". */
 			__( 'Reports refused since %1$s, approximately: %2$s.', 'aggressive-ads' ),
 			wp_date( (string) get_option( 'date_format' ), $since ),
 			implode( __( '; ', 'aggressive-ads' ), $phrases )
@@ -190,7 +184,7 @@ final class Conversion_Health implements Service {
 	}
 
 	/**
-	 * What each refusal reason means to the person reading it.
+	 * One refusal reason and its count, as a sentence a translator owns whole.
 	 *
 	 * Named plainly rather than by code, and each one says what to go and look
 	 * at. `Conversion_Attribution` deliberately gives a *client* one answer for
@@ -198,18 +192,62 @@ final class Conversion_Health implements Service {
 	 * the endpoint an oracle — but this is a staff screen, where the distinction
 	 * is the entire value.
 	 *
-	 * @return array<string, string>
+	 * **Whole sentences, with the count inside, through `_n()`.** These were
+	 * predicate fragments — "named a conversion belonging to another
+	 * advertiser" — inserted after the number by a `'%1$s %2$s'` template, which
+	 * reads in English and cannot be translated into German: the verb has to
+	 * agree with the number, and a fragment carrying the verb inside a template
+	 * that cannot reorder it leaves a translator nothing to agree it with. The
+	 * first machine-translation quality gate found it, and it was
+	 * untranslatable by a person just as much as by a model. `_n()` hands the
+	 * translator the number, the subject and the verb in one string, in both
+	 * forms, so word order and agreement are theirs to get right.
+	 *
+	 * @param string $reason A `Conversion_Attribution` reason code.
+	 * @param int    $count  How many reports were refused for it.
+	 * @return string|null Null for a reason this screen has no sentence for.
 	 */
-	private static function reason_labels(): array {
-		return array(
-			Conversion_Attribution::NO_DEFINITION      => __( 'named a reporting key this site does not have', 'aggressive-ads' ),
-			Conversion_Attribution::DEFINITION_CLOSED  => __( 'named a conversion that has been archived', 'aggressive-ads' ),
-			Conversion_Attribution::FOREIGN_DEFINITION => __( 'named a conversion belonging to another advertiser', 'aggressive-ads' ),
-			Conversion_Attribution::NO_INTERACTION     => __( 'carried no click this site recorded', 'aggressive-ads' ),
-			Conversion_Attribution::OUT_OF_WINDOW      => __( 'arrived after the attribution window had closed', 'aggressive-ads' ),
-			Conversion_Attribution::S2S_NOT_PERMITTED  => __( 'came from a server, for a conversion that does not accept server reports', 'aggressive-ads' ),
-			Conversion_Attribution::FOREIGN_CREDENTIAL => __( 'used a credential scoped to another advertiser', 'aggressive-ads' ),
-		);
+	private static function reason_phrase( string $reason, int $count ): ?string {
+		$number = number_format_i18n( $count );
+
+		return match ( $reason ) {
+			Conversion_Attribution::NO_DEFINITION      => sprintf(
+				/* translators: %s: number of refused reports. */
+				_n( '%s report named a reporting key this site does not have', '%s reports named a reporting key this site does not have', $count, 'aggressive-ads' ),
+				$number
+			),
+			Conversion_Attribution::DEFINITION_CLOSED  => sprintf(
+				/* translators: %s: number of refused reports. */
+				_n( '%s report named a conversion that has been archived', '%s reports named a conversion that has been archived', $count, 'aggressive-ads' ),
+				$number
+			),
+			Conversion_Attribution::FOREIGN_DEFINITION => sprintf(
+				/* translators: %s: number of refused reports. */
+				_n( '%s report named a conversion belonging to another advertiser', '%s reports named a conversion belonging to another advertiser', $count, 'aggressive-ads' ),
+				$number
+			),
+			Conversion_Attribution::NO_INTERACTION     => sprintf(
+				/* translators: %s: number of refused reports. */
+				_n( '%s report carried no click this site recorded', '%s reports carried no click this site recorded', $count, 'aggressive-ads' ),
+				$number
+			),
+			Conversion_Attribution::OUT_OF_WINDOW      => sprintf(
+				/* translators: %s: number of refused reports. */
+				_n( '%s report arrived after the attribution window had closed', '%s reports arrived after the attribution window had closed', $count, 'aggressive-ads' ),
+				$number
+			),
+			Conversion_Attribution::S2S_NOT_PERMITTED  => sprintf(
+				/* translators: %s: number of refused reports. */
+				_n( '%s report came from a server, for a conversion that does not accept server reports', '%s reports came from a server, for a conversion that does not accept server reports', $count, 'aggressive-ads' ),
+				$number
+			),
+			Conversion_Attribution::FOREIGN_CREDENTIAL => sprintf(
+				/* translators: %s: number of refused reports. */
+				_n( '%s report used a credential scoped to another advertiser', '%s reports used a credential scoped to another advertiser', $count, 'aggressive-ads' ),
+				$number
+			),
+			default                                    => null,
+		};
 	}
 
 	/**

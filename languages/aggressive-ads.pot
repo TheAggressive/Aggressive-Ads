@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-11T17:28:20+00:00\n"
+"POT-Creation-Date: 2026-09-11T21:07:37+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -907,9 +907,7 @@ msgid "The packages screen needs JavaScript enabled."
 msgstr ""
 
 #. translators: 1: menu label, 2: number of items awaiting a decision.
-#. translators: 1: number of refused reports. 2: why they were refused, such as "arrived after the attribution window".
 #: inc/Admin/class-pending-work.php:147
-#: inc/Install/class-conversion-health.php:172
 #, php-format
 msgid "%1$s %2$s"
 msgstr ""
@@ -2479,7 +2477,7 @@ msgid "%d creatives were skipped by the delivery model upgrade, which reports it
 msgstr ""
 
 #: inc/Install/class-assignment-health.php:126
-#: inc/Install/class-conversion-health.php:247
+#: inc/Install/class-conversion-health.php:285
 #: inc/Install/class-decision-health.php:98
 #: inc/Install/class-rewrite-health.php:281
 #: inc/Install/class-viewability-health.php:125
@@ -2534,43 +2532,71 @@ msgstr[1] ""
 msgid "Conversions are being reported and attributed."
 msgstr ""
 
-#. translators: 1: date counting began. 2: a list of refusal counts, such as "12 arrived after the attribution window".
-#: inc/Install/class-conversion-health.php:186
+#. translators: 1: date counting began. 2: a list of refusal counts, such as "12 reports arrived after the attribution window had closed".
+#: inc/Install/class-conversion-health.php:180
 #, php-format
 msgid "Reports refused since %1$s, approximately: %2$s."
 msgstr ""
 
-#: inc/Install/class-conversion-health.php:188
+#: inc/Install/class-conversion-health.php:182
 msgid "; "
 msgstr ""
 
-#: inc/Install/class-conversion-health.php:205
-msgid "named a reporting key this site does not have"
-msgstr ""
+#. translators: %s: number of refused reports.
+#: inc/Install/class-conversion-health.php:216
+#, php-format
+msgid "%s report named a reporting key this site does not have"
+msgid_plural "%s reports named a reporting key this site does not have"
+msgstr[0] ""
+msgstr[1] ""
 
-#: inc/Install/class-conversion-health.php:206
-msgid "named a conversion that has been archived"
-msgstr ""
+#. translators: %s: number of refused reports.
+#: inc/Install/class-conversion-health.php:221
+#, php-format
+msgid "%s report named a conversion that has been archived"
+msgid_plural "%s reports named a conversion that has been archived"
+msgstr[0] ""
+msgstr[1] ""
 
-#: inc/Install/class-conversion-health.php:207
-msgid "named a conversion belonging to another advertiser"
-msgstr ""
+#. translators: %s: number of refused reports.
+#: inc/Install/class-conversion-health.php:226
+#, php-format
+msgid "%s report named a conversion belonging to another advertiser"
+msgid_plural "%s reports named a conversion belonging to another advertiser"
+msgstr[0] ""
+msgstr[1] ""
 
-#: inc/Install/class-conversion-health.php:208
-msgid "carried no click this site recorded"
-msgstr ""
+#. translators: %s: number of refused reports.
+#: inc/Install/class-conversion-health.php:231
+#, php-format
+msgid "%s report carried no click this site recorded"
+msgid_plural "%s reports carried no click this site recorded"
+msgstr[0] ""
+msgstr[1] ""
 
-#: inc/Install/class-conversion-health.php:209
-msgid "arrived after the attribution window had closed"
-msgstr ""
+#. translators: %s: number of refused reports.
+#: inc/Install/class-conversion-health.php:236
+#, php-format
+msgid "%s report arrived after the attribution window had closed"
+msgid_plural "%s reports arrived after the attribution window had closed"
+msgstr[0] ""
+msgstr[1] ""
 
-#: inc/Install/class-conversion-health.php:210
-msgid "came from a server, for a conversion that does not accept server reports"
-msgstr ""
+#. translators: %s: number of refused reports.
+#: inc/Install/class-conversion-health.php:241
+#, php-format
+msgid "%s report came from a server, for a conversion that does not accept server reports"
+msgid_plural "%s reports came from a server, for a conversion that does not accept server reports"
+msgstr[0] ""
+msgstr[1] ""
 
-#: inc/Install/class-conversion-health.php:211
-msgid "used a credential scoped to another advertiser"
-msgstr ""
+#. translators: %s: number of refused reports.
+#: inc/Install/class-conversion-health.php:246
+#, php-format
+msgid "%s report used a credential scoped to another advertiser"
+msgid_plural "%s reports used a credential scoped to another advertiser"
+msgstr[0] ""
+msgstr[1] ""
 
 #: inc/Install/class-decision-health.php:49
 msgid "Advertising serving path"
