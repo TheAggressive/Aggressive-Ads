@@ -12,7 +12,12 @@
  * @package Aggressive\Ads
  */
 
-import { MT_REFUSED, classifyMtFailure } from './run-completeness.mjs';
+import {
+	MT_PROVIDER_STOP,
+	MT_REFUSED,
+	MT_RETRYABLE,
+	classifyMtFailure,
+} from './run-completeness.mjs';
 import {
 	PLACEHOLDER_PATTERN,
 	extractPlaceholders,
@@ -456,6 +461,71 @@ export function localSystemPrompt( locale, context = null, notes = '' ) {
 }
 
 /**
+ * Statuses that waiting cannot change: authentication, authorization, and a
+ * model or route the server does not have.
+ */
+const PERMANENT_STATUSES = new Set( [ 401, 403, 404 ] );
+
+/**
+ * Backoff between attempts at one string, in milliseconds.
+ *
+ * About two minutes in all, which outlasts a model being reloaded. Overridable
+ * as a comma list in I18N_LOCAL_RETRY_DELAYS_MS, so tests do not wait.
+ *
+ * @return {number[]}
+ */
+function localRetryDelays() {
+	const raw = process.env.I18N_LOCAL_RETRY_DELAYS_MS;
+
+	if ( undefined === raw || '' === raw.trim() ) {
+		return [ 2000, 5000, 10000, 20000, 30000, 60000 ];
+	}
+
+	return raw
+		.split( ',' )
+		.map( ( value ) => Number.parseInt( value.trim(), 10 ) )
+		.filter( ( value ) => Number.isFinite( value ) && value >= 0 );
+}
+
+/**
+ * @param {number} ms Milliseconds.
+ * @return {Promise<void>}
+ */
+function pause( ms ) {
+	return new Promise( ( resolve ) => setTimeout( resolve, ms ) );
+}
+
+/**
+ * An error carrying the code the run decides on.
+ *
+ * @param {string} code    MT_RETRYABLE or MT_PROVIDER_STOP.
+ * @param {string} message What happened, including the server's own reason.
+ * @return {Error}
+ */
+function failure( code, message ) {
+	const err = new Error( message );
+	err.code = code;
+
+	return err;
+}
+
+/**
+ * The server's reason for refusing, bounded, or nothing.
+ *
+ * @param {Response} res A response that was not ok.
+ * @return {Promise<string>}
+ */
+async function reasonFrom( res ) {
+	try {
+		const body = 'function' === typeof res.text ? await res.text() : '';
+
+		return String( body ).replace( /\s+/g, ' ' ).trim().slice( 0, 300 );
+	} catch {
+		return '';
+	}
+}
+
+/**
  * Translates one string through an OpenAI-compatible chat completions API.
  *
  * Written against `/v1/chat/completions` rather than any one server, so LM
@@ -496,30 +566,86 @@ async function translateLocal( text, locale, context = null, notes = '' ) {
 		10
 	);
 
-	const res = await fetch( `${ base }/chat/completions`, {
-		method: 'POST',
-		headers,
-		body: JSON.stringify( {
-			model,
-			temperature: 0,
-			messages: [
-				{
-					role: 'system',
-					content: localSystemPrompt( locale, context, notes ),
-				},
-				{ role: 'user', content: text },
-			],
-		} ),
-		signal: AbortSignal.timeout( timeout ),
+	const body = JSON.stringify( {
+		model,
+		temperature: 0,
+		messages: [
+			{
+				role: 'system',
+				content: localSystemPrompt( locale, context, notes ),
+			},
+			{ role: 'user', content: text },
+		],
 	} );
 
-	if ( ! res.ok ) {
-		// "HTTP 4xx" is what classifyMtFailure() reads as the provider
-		// refusing for good: a model name the server does not have is that.
-		throw new Error( `Local model HTTP ${ res.status }` );
+	/*
+	 * A local server is somebody's machine, and it gets restarted. The first
+	 * full German run stopped after 567 of 1,386 strings because the model was
+	 * reloaded mid-run: LM Studio answered 400 until it was back, and one 400
+	 * was read as the server refusing for good. A failed request is now retried
+	 * with backoff for about two minutes, which outlasts a reload; only a
+	 * status that waiting cannot change stops at once.
+	 */
+	const delays = localRetryDelays();
+	let data = null;
+	let last = '';
+
+	for ( let attempt = 0; attempt <= delays.length; attempt++ ) {
+		if ( attempt > 0 ) {
+			await pause( delays[ attempt - 1 ] );
+		}
+
+		let res;
+
+		try {
+			res = await fetch( `${ base }/chat/completions`, {
+				method: 'POST',
+				headers,
+				body,
+				signal: AbortSignal.timeout( timeout ),
+			} );
+		} catch ( err ) {
+			last = `unreachable (${ err.message })`;
+			continue;
+		}
+
+		if ( res.ok ) {
+			data = await res.json();
+			break;
+		}
+
+		// Kept rather than discarded: the first 400 could not be diagnosed
+		// because its body was never read.
+		const reason = await reasonFrom( res );
+
+		last = `HTTP ${ res.status }${ reason ? `: ${ reason }` : '' }`;
+
+		if ( PERMANENT_STATUSES.has( res.status ) ) {
+			throw failure( MT_PROVIDER_STOP, `Local model ${ last }` );
+		}
 	}
 
-	const data = await res.json();
+	if ( null === data ) {
+		/*
+		 * Out of retries. Whose fault that is, the server can say: if it still
+		 * serves the model, the request was the problem and only this string
+		 * is skipped; if not, the run stops so a re-run can resume, instead of
+		 * spending two minutes on every string left.
+		 */
+		const health = await checkLocalProvider();
+
+		if ( ! health.ok ) {
+			throw failure(
+				MT_PROVIDER_STOP,
+				`Local model unavailable after retries (${ last }); ${ health.reason }`
+			);
+		}
+
+		throw failure(
+			MT_RETRYABLE,
+			`Local model rejected this string after retries (${ last })`
+		);
+	}
 	const content = data?.choices?.[ 0 ]?.message?.content;
 
 	if ( 'string' !== typeof content ) {
