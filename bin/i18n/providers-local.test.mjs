@@ -16,14 +16,14 @@ import test, { afterEach, beforeEach } from 'node:test';
 
 import {
 	checkLocalProvider,
+	localProviderDownMessage,
+	localRunIncompleteMessage,
 	localSystemPrompt,
 	mt,
-	resolveProviderMode,
 } from './providers.mjs';
 import { classifyMtFailure } from './run-completeness.mjs';
 import { translatePoFile, translatorNotes } from './translate.mjs';
 
-const CODES = { mymemory: 'de', deepl: 'DE' };
 const URL_BASE = 'http://model.test:1234/v1';
 const MODEL = 'qwen/qwen3.8-27b';
 const realFetch = globalThis.fetch;
@@ -53,7 +53,8 @@ beforeEach( () => {
 		'I18N_MT_PROVIDER',
 		'I18N_LOCAL_RETRY_DELAYS_MS',
 		'I18N_MT_DELAY_MS',
-		'DEEPL_AUTH_KEY',
+		'NO_COLOR',
+		'FORCE_COLOR',
 	] ) {
 		saved[ name ] = process.env[ name ];
 	}
@@ -105,7 +106,7 @@ test( 'it sends an OpenAI-compatible chat completion at temperature 0', async ()
 		content: 'Änderungen speichern',
 	} );
 
-	const result = await mt( 'Save changes', CODES, 'local', 'de_DE' );
+	const result = await mt( 'Save changes', 'de_DE' );
 
 	assert.equal( result.text, 'Änderungen speichern' );
 	assert.equal( result.via, 'local' );
@@ -135,7 +136,7 @@ test( 'only the answer is kept, never the reasoning', async () => {
 	} );
 
 	assert.equal(
-		( await mt( 'Save changes', CODES, 'local', 'de_DE' ) ).text,
+		( await mt( 'Save changes', 'de_DE' ) ).text,
 		'Änderungen speichern'
 	);
 
@@ -146,7 +147,7 @@ test( 'only the answer is kept, never the reasoning', async () => {
 	} );
 
 	assert.equal(
-		( await mt( 'Save changes', CODES, 'local', 'de_DE' ) ).text,
+		( await mt( 'Save changes', 'de_DE' ) ).text,
 		'Änderungen speichern'
 	);
 } );
@@ -155,7 +156,7 @@ test( 'a quoted answer is unwrapped only when the source was not quoted', async 
 	server( { role: 'assistant', content: '„Änderungen speichern“' } );
 
 	assert.equal(
-		( await mt( 'Save changes', CODES, 'local', 'de_DE' ) ).text,
+		( await mt( 'Save changes', 'de_DE' ) ).text,
 		'Änderungen speichern'
 	);
 } );
@@ -165,10 +166,7 @@ test( 'a source that is itself quoted keeps its quotes', async () => {
 	// quoted in English is quoted on purpose, and must stay so.
 	server( { role: 'assistant', content: '„Standard“' } );
 
-	assert.equal(
-		( await mt( '“Default”', CODES, 'local', 'de_DE' ) ).text,
-		'„Standard“'
-	);
+	assert.equal( ( await mt( '“Default”', 'de_DE' ) ).text, '„Standard“' );
 } );
 
 test( 'placeholders survive, and the existing gates still apply', async () => {
@@ -178,20 +176,14 @@ test( 'placeholders survive, and the existing gates still apply', async () => {
 	} );
 
 	assert.equal(
-		( await mt( '%d creatives were skipped', CODES, 'local', 'de_DE' ) )
-			.text,
+		( await mt( '%d creatives were skipped', 'de_DE' ) ).text,
 		'%d Werbemittel wurden übersprungen'
 	);
 
 	// A dropped token is refused exactly as it is for the other providers.
 	server( { role: 'assistant', content: 'Werbemittel wurden übersprungen' } );
 
-	const dropped = await mt(
-		'%d creatives were skipped',
-		CODES,
-		'local',
-		'de_DE'
-	).then(
+	const dropped = await mt( '%d creatives were skipped', 'de_DE' ).then(
 		() => null,
 		( e ) => e
 	);
@@ -203,7 +195,7 @@ test( 'placeholders survive, and the existing gates still apply', async () => {
 test( 'an echo and an empty answer are refused rather than filed', async () => {
 	server( { role: 'assistant', content: 'Save changes' } );
 
-	const echo = await mt( 'Save changes', CODES, 'local', 'de_DE' ).then(
+	const echo = await mt( 'Save changes', 'de_DE' ).then(
 		() => null,
 		( e ) => e
 	);
@@ -213,7 +205,7 @@ test( 'an echo and an empty answer are refused rather than filed', async () => {
 
 	server( { role: 'assistant', content: '<think>Hmm.</think>   ' } );
 
-	const empty = await mt( 'Save changes', CODES, 'local', 'de_DE' ).then(
+	const empty = await mt( 'Save changes', 'de_DE' ).then(
 		() => null,
 		( e ) => e
 	);
@@ -223,10 +215,7 @@ test( 'an echo and an empty answer are refused rather than filed', async () => {
 } );
 
 test( 'a named local provider never falls back to another one', async () => {
-	// A DeepL key is configured, which is exactly when a quiet substitution
-	// would be tempting — and would contaminate the measurement.
-	process.env.DEEPL_AUTH_KEY = 'configured';
-
+	// Only the local model is ever contacted, including when it is failing.
 	const hosts = [];
 
 	globalThis.fetch = async ( url ) => {
@@ -235,7 +224,7 @@ test( 'a named local provider never falls back to another one', async () => {
 		return { ok: false, status: 503, json: async () => ( {} ) };
 	};
 
-	const err = await mt( 'Save changes', CODES, 'local', 'de_DE' ).then(
+	const err = await mt( 'Save changes', 'de_DE' ).then(
 		() => null,
 		( e ) => e
 	);
@@ -262,7 +251,7 @@ test( 'a model the server does not have stops the run, without retrying', async 
 		};
 	};
 
-	const err = await mt( 'Save changes', CODES, 'local', 'de_DE' ).then(
+	const err = await mt( 'Save changes', 'de_DE' ).then(
 		() => null,
 		( e ) => e
 	);
@@ -280,8 +269,6 @@ test( 'context and the translator note reach the prompt', async () => {
 
 	await mt(
 		'%d day',
-		CODES,
-		'local',
 		'de_DE',
 		'duration',
 		'placeholder is a number of days.'
@@ -335,7 +322,7 @@ test( 'translator notes are extracted, and the run’s own marker is not one', (
 		translatorNotes( {
 			comments: [
 				'#. translators: %d: number of days.',
-				'#. Auto-translated (aggr-mt) via mymemory — review before release.',
+				'#. Auto-translated (aggr-mt) via local — review before release.',
 				'#: inc/Portal/class-view-data.php:12',
 			],
 		} ),
@@ -381,14 +368,6 @@ test( 'the preflight names what is wrong before any catalog is touched', async (
 	assert.match( unset.reason, /I18N_LOCAL_URL/ );
 } );
 
-test( 'local is a provider the run can be told to use', () => {
-	process.env.I18N_MT_PROVIDER = 'local';
-	assert.equal( resolveProviderMode(), 'local' );
-
-	process.env.I18N_MT_PROVIDER = 'LOCAL';
-	assert.equal( resolveProviderMode(), 'local' );
-} );
-
 test( 'a model being reloaded is waited for, not fatal', async () => {
 	/*
 	 * The first full German run stopped after 567 of 1,386 strings: the model
@@ -419,7 +398,7 @@ test( 'a model being reloaded is waited for, not fatal', async () => {
 	};
 
 	assert.equal(
-		( await mt( 'Changes requested', CODES, 'local', 'de_DE' ) ).text,
+		( await mt( 'Changes requested', 'de_DE' ) ).text,
 		'Änderungen angefordert'
 	);
 	assert.equal( calls, 2, 'the rejected request was not retried' );
@@ -445,7 +424,7 @@ test( 'a dropped connection is retried', async () => {
 	};
 
 	assert.equal(
-		( await mt( 'Save changes', CODES, 'local', 'de_DE' ) ).text,
+		( await mt( 'Save changes', 'de_DE' ) ).text,
 		'Änderungen speichern'
 	);
 	assert.equal( calls, 2 );
@@ -469,7 +448,7 @@ test( 'a string a healthy server keeps rejecting is skipped, not fatal', async (
 		};
 	};
 
-	const err = await mt( 'Save changes', CODES, 'local', 'de_DE' ).then(
+	const err = await mt( 'Save changes', 'de_DE' ).then(
 		() => null,
 		( e ) => e
 	);
@@ -501,7 +480,7 @@ test( 'a server that stays down stops the run so a re-run can resume', async () 
 		};
 	};
 
-	const err = await mt( 'Save changes', CODES, 'local', 'de_DE' ).then(
+	const err = await mt( 'Save changes', 'de_DE' ).then(
 		() => null,
 		( e ) => e
 	);
@@ -583,4 +562,34 @@ test( 'one rejected string does not cost the rest of a local run', async () => {
 	} finally {
 		fs.rmSync( dir, { recursive: true, force: true } );
 	}
+} );
+
+test( 'a model that is not answering says so, unmissably', () => {
+	delete process.env.NO_COLOR;
+	process.env.FORCE_COLOR = '1';
+
+	const down = localProviderDownMessage(
+		'cannot reach http://model.test:1234/v1 (fetch failed)'
+	);
+
+	assert.ok( down.startsWith( '\u001b[31m' ), 'the failure was not red' );
+	assert.match( down, /TRANSLATIONS DID NOT RUN/ );
+	assert.match( down, /cannot reach http:\/\/model\.test:1234\/v1/ );
+	assert.match( down, /\.env\.local/, 'it must say where the address lives' );
+	assert.match( down, /Nothing was written/ );
+
+	// Stopping partway is a different state: there is work on disk to keep.
+	const midway = localRunIncompleteMessage();
+
+	assert.ok( midway.startsWith( '\u001b[31m' ) );
+	assert.match( midway, /DID NOT FINISH/ );
+	assert.match( midway, /What was translated is written/ );
+} );
+
+test( 'NO_COLOR is honoured, so a log file gets plain text', () => {
+	process.env.NO_COLOR = '1';
+	delete process.env.FORCE_COLOR;
+
+	assert.doesNotMatch( localProviderDownMessage( 'down' ), /\u001b\[/ );
+	assert.doesNotMatch( localRunIncompleteMessage(), /\u001b\[/ );
 } );

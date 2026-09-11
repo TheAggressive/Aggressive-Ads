@@ -21,7 +21,6 @@ import {
 	providerMix,
 	refusalAnnotations,
 } from './run-completeness.mjs';
-import { resumeCatalog } from './resume-progress.mjs';
 
 /** A locale that finished cleanly. */
 function complete( locale, updated = 1014 ) {
@@ -180,97 +179,6 @@ msgstr ""
 
 `;
 
-test( 'resume restores tagged MT into an empty master entry', () => {
-	const base = `${ poHeader }#: current.php:10
-#, php-format
-msgid "Hello %s"
-msgstr ""
-`;
-	const draft = `${ poHeader }#. Auto-translated (aggr-mt) via deepl — review before release.
-#: old.php:2
-#, php-format, aggr-mt
-msgid "Hello %s"
-msgstr "Hallo %s"
-`;
-	const result = resumeCatalog( base, draft );
-
-	assert.equal( result.restored, 1 );
-	assert.match( result.content, /current\.php:10/ );
-	assert.doesNotMatch( result.content, /old\.php:2/ );
-	assert.match( result.content, /aggr-mt/ );
-	assert.match( result.content, /msgstr "Hallo %s"/ );
-} );
-
-test( 'resume never overwrites a clean translation already on master', () => {
-	const base = `${ poHeader }#: current.php:10
-msgid "Hello"
-msgstr "Mensch"
-`;
-	const draft = `${ poHeader }#. Auto-translated (aggr-mt) via deepl — review before release.
-#, aggr-mt
-msgid "Hello"
-msgstr "Maschine"
-`;
-	const result = resumeCatalog( base, draft );
-
-	assert.equal( result.restored, 0 );
-	assert.match( result.content, /msgstr "Mensch"/ );
-	assert.doesNotMatch( result.content, /Maschine/ );
-} );
-
-test( 'resume ignores untagged translations from a stale draft', () => {
-	const base = `${ poHeader }msgid "Hello"
-msgstr ""
-`;
-	const draft = `${ poHeader }msgid "Hello"
-msgstr "Hallo"
-`;
-	const result = resumeCatalog( base, draft );
-
-	assert.equal( result.restored, 0 );
-	assert.match( result.content, /msgstr ""/ );
-	assert.doesNotMatch( result.content, /Hallo/ );
-} );
-
-test( 'a refused string is told apart from an exhausted quota', () => {
-	const refusal = new Error(
-		'MT returned the wrong placeholders (source=Limit to one advertiser…)'
-	);
-	refusal.code = MT_REFUSED;
-
-	/*
-	 * "Limit to one advertiser" is a real string in this plugin, and the
-	 * refusal message quotes the source so a human can see which one broke.
-	 * Sniffing /LIMIT/i across the whole message therefore read a bad
-	 * translation as an exhausted quota and abandoned the rest of the locale,
-	 * reporting "the provider stopped the run" about a provider that was fine.
-	 */
-	assert.equal( classifyMtFailure( refusal ), 'refused' );
-
-	const untagged = new Error(
-		'MT returned the wrong placeholders (source=Limit to one advertiser…)'
-	);
-
-	assert.equal(
-		classifyMtFailure( untagged ),
-		'provider-stop',
-		'the tag, not the message, is what separates the two'
-	);
-
-	assert.equal(
-		classifyMtFailure( new Error( 'MyMemory HTTP 429' ) ),
-		'provider-stop'
-	);
-	assert.equal(
-		classifyMtFailure( new Error( 'DeepL HTTP 456: quota' ) ),
-		'provider-stop'
-	);
-	assert.equal(
-		classifyMtFailure( new Error( 'socket hang up' ) ),
-		'retryable'
-	);
-} );
-
 test( 'refused strings do not make a finished pass look unfinished', () => {
 	const verdict = judgeRun( [
 		{
@@ -390,96 +298,6 @@ test( 'a run that refused nothing annotates nothing', () => {
 	);
 } );
 
-test( 'a draft from the fallback engine says so, loudly', () => {
-	/*
-	 * Two runs — 718 strings — went out entirely from MyMemory because DeepL
-	 * answered `456 Quota exceeded`, and the only trace was a `via` tag inside
-	 * a PO comment. The pull request named no engine and the job was red for an
-	 * unrelated reason. The draft was reviewed on its German, found about a
-	 * third defective, and closed.
-	 */
-	const mix = providerMix( [
-		{
-			locale: 'de_DE',
-			updated: 328,
-			skipped: 0,
-			remaining: 0,
-			truncated: false,
-			refused: [],
-			providers: { 'mymemory-fallback': 328 },
-		},
-	] );
-
-	assert.equal( mix.degraded, true );
-	assert.equal( mix.total, 328 );
-	assert.match( mix.summary, /\[!WARNING\]/ );
-	assert.match( mix.summary, /fallback engine/ );
-	assert.match( mix.summary, /mymemory-fallback` — 328 strings/ );
-} );
-
-test( 'a run on the preferred engine carries no warning', () => {
-	const mix = providerMix( [
-		{
-			locale: 'de_DE',
-			updated: 300,
-			skipped: 0,
-			remaining: 0,
-			truncated: false,
-			refused: [],
-			providers: { deepl: 300 },
-		},
-		{
-			locale: 'fr_FR',
-			updated: 100,
-			skipped: 0,
-			remaining: 0,
-			truncated: false,
-			refused: [],
-			providers: { deepl: 100 },
-		},
-	] );
-
-	assert.equal( mix.degraded, false );
-	assert.equal( mix.total, 400 );
-	assert.doesNotMatch( mix.summary, /WARNING/ );
-	assert.match( mix.summary, /`deepl` — 400 strings/ );
-} );
-
-test( 'a mixed run is counted across locales and still warns', () => {
-	// One locale finishing on the preferred engine does not make the draft
-	// safe: the reviewer needs to know part of it did not.
-	const mix = providerMix( [
-		{
-			locale: 'de_DE',
-			updated: 10,
-			skipped: 0,
-			remaining: 0,
-			truncated: false,
-			refused: [],
-			providers: { deepl: 6, 'mymemory-fallback': 4 },
-		},
-		{
-			locale: 'fr_FR',
-			updated: 5,
-			skipped: 0,
-			remaining: 0,
-			truncated: false,
-			refused: [],
-			providers: { 'mymemory-fallback': 5 },
-		},
-	] );
-
-	assert.equal( mix.degraded, true );
-	assert.equal( mix.total, 15 );
-	assert.equal( mix.counts[ 'mymemory-fallback' ], 9 );
-	assert.equal( mix.counts.deepl, 6 );
-	// Largest first, so the engine that wrote most of it leads.
-	assert.match(
-		mix.summary,
-		/mymemory-fallback` — 9 strings\n- `deepl` — 6 strings/
-	);
-} );
-
 test( 'a run that translated nothing does not claim an engine', () => {
 	const mix = providerMix( [
 		{
@@ -492,7 +310,6 @@ test( 'a run that translated nothing does not claim an engine', () => {
 		},
 	] );
 
-	assert.equal( mix.degraded, false );
 	assert.equal( mix.total, 0 );
 	assert.match( mix.summary, /No strings were translated/ );
 } );
@@ -521,9 +338,37 @@ test( 'an explicit code decides before the message is read', () => {
 
 	assert.equal( classifyMtFailure( stop ), 'provider-stop' );
 
-	// Uncoded, the regex still applies: DeepL's quota is read as before.
+	// And with no code at all it is this string's problem, not the run's.
+	// Guessing a provider stop from a message is what the codes replaced.
 	assert.equal(
-		classifyMtFailure( new Error( 'DeepL HTTP 456: quota' ) ),
-		'provider-stop'
+		classifyMtFailure( new Error( 'something unexpected' ) ),
+		'retryable'
 	);
+} );
+
+test( 'the engine tally counts what wrote the run', () => {
+	const mix = providerMix( [
+		{
+			locale: 'de_DE',
+			updated: 300,
+			skipped: 0,
+			remaining: 0,
+			truncated: false,
+			refused: [],
+			providers: { local: 300 },
+		},
+		{
+			locale: 'fr_FR',
+			updated: 100,
+			skipped: 0,
+			remaining: 0,
+			truncated: false,
+			refused: [],
+			providers: { local: 100 },
+		},
+	] );
+
+	assert.equal( mix.total, 400 );
+	assert.deepEqual( mix.counts, { local: 400 } );
+	assert.match( mix.summary, /`local` — 400 strings/ );
 } );

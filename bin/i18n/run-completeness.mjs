@@ -9,9 +9,7 @@
  * **The failure this exists for.** `translatePoFile()` deliberately stops a
  * locale on a quota or rate-limit error rather than throwing, so whatever was
  * translated is still written and not lost. That part is right. What was wrong
- * is that the run then reported success: on 2026-08-24 a run exhausted the DeepL
- * quota partway through the first locale, translated 390 of 1014 entries in
- * German and none at all in Spanish, French or Italian, exited zero, and opened
+ * is that the run then reported success: a run once stopped partway through the first locale, having translated 390 of 1014 entries in German and none at all in Spanish, French or Italian, exited zero, and opened
  * a pull request that looked exactly like a complete one.
  *
  * Three empty locales presented as reviewable is worse than no catalogues,
@@ -56,8 +54,7 @@ export const MT_RETRYABLE = 'aggr-mt-retryable';
  *
  * Codes rather than message sniffing, because the local provider's messages
  * carry a status — and the message regex below reads any "HTTP 4xx" as the
- * provider refusing for good. That is right for DeepL's 456 and wrong for a
- * local model that answered 400 while it was being reloaded, which is exactly
+ * provider refusing for good. A status inside a message cannot decide a locale, as a model answering 400 while it reloaded showed, which is exactly
  * how the first full German run stopped after 567 of 1,386 strings.
  */
 export const MT_PROVIDER_STOP = 'aggr-mt-provider-stop';
@@ -68,7 +65,7 @@ export const MT_PROVIDER_STOP = 'aggr-mt-provider-stop';
  * - `refused`      — the translation came back wrong (placeholders invented or
  *                    dropped, HTML entities injected). One bad string, nothing
  *                    to conclude about the next one: skip it and carry on.
- * - `provider-stop`— quota, rate limit or a 4xx. The provider is done talking,
+ * - `provider-stop`— the provider is done talking,
  *                    so keep what is written and stop asking.
  * - `retryable`    — anything else; treated like `provider-stop` today, but
  *                    named separately so the two can diverge without a
@@ -102,14 +99,11 @@ export function classifyMtFailure( err ) {
 		}
 	}
 
-	const message = String(
-		err && typeof err === 'object' && err.message ? err.message : err
-	);
-
-	if ( /HTTP 4\d\d|LIMIT|quota|MYMEMORY WARNING/i.test( message ) ) {
-		return 'provider-stop';
-	}
-
+	/*
+	 * Uncoded failures are this string's problem. Guessing from the message
+	 * is what stopped a whole locale over one 400 while a model reloaded, and
+	 * there is no second engine left whose quota needs sniffing for.
+	 */
 	return 'retryable';
 }
 
@@ -175,21 +169,14 @@ export function refusalAnnotations( results ) {
 }
 
 /**
- * What a reviewer needs to know before reading a word of the translation.
+ * What wrote this run's translations, counted.
  *
- * `auto` mode prefers DeepL and silently substitutes MyMemory whenever DeepL
- * refuses. Two runs went out that way — 718 strings, every one from the
- * fallback — and the only trace was a `via` tag inside a PO comment. The pull
- * request said "Machine translation filled empty and fuzzy entries" and named
- * no engine; the job was red for an unrelated reason. The draft was reviewed on
- * its German, found roughly a third defective, and closed.
- *
- * So the mix goes at the top of the pull request, not into a log. `fallback` in
- * a `via` name is the signal: it means the engine that answered was not the one
- * the run was configured to prefer.
+ * One provider today. The tally stays because a catalog should be able to say
+ * what produced it — the question "which engine wrote this German?" once took
+ * a review pass to answer, and the answer mattered.
  *
  * @param {LocaleResult[]} results Per-locale outcomes.
- * @return {{degraded: boolean, total: number, counts: Record<string, number>, summary: string}}
+ * @return {{total: number, counts: Record<string, number>, summary: string}}
  */
 export function providerMix( results ) {
 	const counts = {};
@@ -201,41 +188,26 @@ export function providerMix( results ) {
 	}
 
 	const total = Object.values( counts ).reduce( ( a, b ) => a + b, 0 );
-	const degraded = Object.keys( counts ).some( ( via ) =>
-		via.includes( 'fallback' )
-	);
-
-	const ordered = Object.entries( counts ).sort(
-		( a, b ) => b[ 1 ] - a[ 1 ]
-	);
-	const lines = ordered.map(
-		( [ via, n ] ) =>
-			`- \`${ via }\` — ${ n } string${ 1 === n ? '' : 's' }`
-	);
 
 	if ( 0 === total ) {
 		return {
-			degraded: false,
 			total: 0,
 			counts,
 			summary: 'No strings were translated in this run.',
 		};
 	}
 
-	const heading = degraded
-		? '> [!WARNING]\n' +
-		  '> **This draft was produced by a fallback engine.** The preferred\n' +
-		  '> provider refused, so these strings came from the substitute. A\n' +
-		  '> previous draft in that state was about a third defective and was\n' +
-		  '> closed rather than merged — read the translations before trusting\n' +
-		  '> this one.\n'
-		: '';
+	const lines = Object.entries( counts )
+		.sort( ( a, b ) => b[ 1 ] - a[ 1 ] )
+		.map(
+			( [ via, n ] ) =>
+				`- \`${ via }\` — ${ n } string${ 1 === n ? '' : 's' }`
+		);
 
 	return {
-		degraded,
 		total,
 		counts,
-		summary: `${ heading }\n**Translated by**\n\n${ lines.join( '\n' ) }\n`,
+		summary: `**Translated by**\n\n${ lines.join( '\n' ) }\n`,
 	};
 }
 

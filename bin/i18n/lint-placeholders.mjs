@@ -43,7 +43,9 @@ export function findPlaceholderMismatches( content ) {
 	const problems = [];
 
 	for ( const entry of entries ) {
-		if ( entry.flags?.has( 'fuzzy' ) ) {
+		// Obsolete entries are commented out: gettext never reads them, so
+		// they cannot put a broken placeholder on a page.
+		if ( entry.obsolete || entry.flags?.has( 'fuzzy' ) ) {
 			continue;
 		}
 
