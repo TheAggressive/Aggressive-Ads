@@ -296,6 +296,10 @@ export async function translatePoFile( file, opts ) {
 	}
 
 	const delay = Number.parseInt( process.env.I18N_MT_DELAY_MS || '350', 10 );
+	const flushEvery = Number.parseInt(
+		process.env.I18N_FLUSH_EVERY || '25',
+		10
+	);
 
 	const content = fs.readFileSync( file, 'utf8' );
 	const { header, entries } = parsePo( content );
@@ -311,6 +315,59 @@ export async function translatePoFile( file, opts ) {
 	let truncated = false;
 	/** @type {string[]} Sources whose translation came back unusable. */
 	const refused = [];
+
+	/** @type {string[]} Machine entries held back for a person. */
+	const demoted = [];
+	let dirty = false;
+
+	/**
+	 * Sweeps the catalog and writes it as it stands.
+	 *
+	 * **Called as the run goes, not only at the end.** A full catalog takes
+	 * well over an hour on a local model, and writing once at the end meant an
+	 * interruption — a reboot, a closed session, a stopped process — threw away
+	 * everything the run had done. It did: one German run translated 567
+	 * strings and left nothing on disk.
+	 *
+	 * The sweep is the backstop, not the fix: no entry this run is responsible
+	 * for may leave here claiming to be a finished translation while carrying
+	 * the wrong placeholders. Anything that does is demoted to fuzzy, which is
+	 * what it actually is — a draft — and which the lint and gettext both treat
+	 * as one. mt() already refuses such a translation and serializeEntry() no
+	 * longer strips `fuzzy` from entries this run never touched; this is here
+	 * because both of those were found by reading a failing job rather than by
+	 * anything asserting the invariant.
+	 *
+	 * Only the machine's own output is swept. A human translation that fails
+	 * parity is left exactly as it is, to fail the lint loudly, because quietly
+	 * flagging somebody's work hides a problem only they can fix.
+	 */
+	const flush = () => {
+		for ( const entry of entries ) {
+			if (
+				entry.obsolete ||
+				entry.flags.has( 'fuzzy' ) ||
+				! entry.flags.has( 'aggr-mt' )
+			) {
+				continue;
+			}
+
+			if ( entryPlaceholdersIntact( entry ) ) {
+				continue;
+			}
+
+			entry.flags.add( 'fuzzy' );
+			demoted.push( entry.msgid );
+			refused.push( entry.msgid );
+			dirty = true;
+		}
+
+		if ( ! dirty || opts.dryRun ) {
+			return;
+		}
+
+		fs.writeFileSync( file, serializePo( header, entries ), 'utf8' );
+	};
 
 	for ( const entry of entries ) {
 		// Not a string anybody can translate: it is already commented out.
@@ -373,7 +430,12 @@ export async function translatePoFile( file, opts ) {
 				);
 			}
 			updated += 1;
+			dirty = true;
 			process.stdout.write( '.' );
+
+			if ( flushEvery > 0 && 0 === updated % flushEvery ) {
+				flush();
+			}
 		} catch ( err ) {
 			console.warn(
 				`\ni18n:translate: ${ locale }: "${ entry.msgid.slice(
@@ -416,50 +478,7 @@ export async function translatePoFile( file, opts ) {
 
 	process.stdout.write( '\n' );
 
-	/*
-	 * Last line before the file is written: no entry this run is responsible
-	 * for may leave here claiming to be a finished translation while carrying
-	 * the wrong placeholders. Anything that does is demoted to fuzzy, which is
-	 * what it actually is — a draft — and which the lint and gettext both
-	 * already treat as one.
-	 *
-	 * This is a backstop, not the fix. Two causes are fixed upstream: mt()
-	 * refuses a translation whose placeholders do not match, and
-	 * serializeEntry() no longer strips `fuzzy` from entries this run never
-	 * touched. Both are covered by tests. The backstop stays because those two
-	 * were found by reading a failing job rather than by anything asserting
-	 * the invariant, and a pipeline that rewrites catalogs unattended should
-	 * not depend on every future writer remembering it: whatever puts an entry
-	 * in this file, the catalog the run produces passes the validation that
-	 * runs next.
-	 *
-	 * Only the machine's own output is swept. A human translation that fails
-	 * parity is left exactly as it is, to fail the lint loudly, because
-	 * quietly flagging somebody's work fuzzy hides a problem they need to see.
-	 */
-	const demoted = [];
-
-	for ( const entry of entries ) {
-		if (
-			entry.obsolete ||
-			entry.flags.has( 'fuzzy' ) ||
-			! entry.flags.has( 'aggr-mt' )
-		) {
-			continue;
-		}
-
-		if ( entryPlaceholdersIntact( entry ) ) {
-			continue;
-		}
-
-		entry.flags.add( 'fuzzy' );
-		demoted.push( entry.msgid );
-		refused.push( entry.msgid );
-	}
-
-	if ( ( updated > 0 || demoted.length > 0 ) && ! opts.dryRun ) {
-		fs.writeFileSync( file, serializePo( header, entries ), 'utf8' );
-	}
+	flush();
 
 	if ( demoted.length > 0 ) {
 		console.warn(

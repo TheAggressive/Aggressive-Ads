@@ -27,6 +27,7 @@ beforeEach( () => {
 		'I18N_LOCAL_MODEL',
 		'I18N_MT_PROVIDER',
 		'I18N_MT_DELAY_MS',
+		'I18N_FLUSH_EVERY',
 	] ) {
 		saved[ name ] = process.env[ name ];
 	}
@@ -179,6 +180,76 @@ test( 'only new, changed, empty or uncertain strings reach the model', async () 
 		);
 
 		assert.notEqual( before, after );
+	} finally {
+		fs.rmSync( dir, { recursive: true, force: true } );
+	}
+} );
+
+test( 'work is written as the run goes, not only at the end', async () => {
+	/*
+	 * A full catalog takes well over an hour on a local model. Writing once at
+	 * the end meant any interruption threw the whole run away, and it did: a
+	 * German run translated 567 strings and left nothing on disk when the
+	 * process was stopped.
+	 */
+	const dir = fs.mkdtempSync( path.join( os.tmpdir(), 'aggr-flush-' ) );
+	const file = path.join( dir, 'aggressive-ads-de_DE.po' );
+
+	fs.writeFileSync(
+		file,
+		'msgid ""\nmsgstr ""\n"Content-Type: text/plain; charset=UTF-8\\n"\n\n' +
+			[ 'First', 'Second', 'Third', 'Fourth', 'Fifth' ]
+				.map( ( id ) => `msgid "${ id }"\nmsgstr ""\n` )
+				.join( '\n' ),
+		'utf8'
+	);
+
+	process.env.I18N_FLUSH_EVERY = '2';
+
+	let onDiskWhenFifthWasAsked = null;
+
+	globalThis.fetch = async ( url, init ) => {
+		if ( String( url ).endsWith( '/models' ) ) {
+			return {
+				ok: true,
+				status: 200,
+				json: async () => ( { data: [ { id: MODEL } ] } ),
+			};
+		}
+
+		const text = JSON.parse( init.body ).messages[ 1 ].content;
+
+		if ( 'Fifth' === text ) {
+			onDiskWhenFifthWasAsked = fs.readFileSync( file, 'utf8' );
+		}
+
+		return {
+			ok: true,
+			status: 200,
+			json: async () => ( {
+				choices: [ { message: { content: `DE:${ text }` } } ],
+			} ),
+		};
+	};
+
+	try {
+		await translatePoFile( file, { dryRun: false, limit: Infinity } );
+
+		assert.ok(
+			onDiskWhenFifthWasAsked,
+			'the fifth string was never asked for'
+		);
+
+		// Flushing every two: four were done, so four are on disk already.
+		assert.match(
+			onDiskWhenFifthWasAsked,
+			/msgstr "DE:First"/,
+			'nothing had been written by the time four strings were translated'
+		);
+		assert.match( onDiskWhenFifthWasAsked, /msgstr "DE:Fourth"/ );
+
+		// And the last one lands in the final write.
+		assert.match( fs.readFileSync( file, 'utf8' ), /msgstr "DE:Fifth"/ );
 	} finally {
 		fs.rmSync( dir, { recursive: true, force: true } );
 	}
