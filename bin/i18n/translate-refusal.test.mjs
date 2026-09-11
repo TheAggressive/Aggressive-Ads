@@ -21,7 +21,7 @@ import test, { afterEach } from 'node:test';
 
 import { mt, resetProviderHealth } from './providers.mjs';
 import { translatePoFile } from './translate.mjs';
-import { classifyMtFailure } from './run-completeness.mjs';
+import { classifyMtFailure, providerMix } from './run-completeness.mjs';
 import { findPlaceholderMismatches } from './lint-placeholders.mjs';
 import { parsePo } from './po.mjs';
 
@@ -628,4 +628,112 @@ test( 'the German glossary corrects the terms the review pass caught', async () 
 		( await mt( 'New conversion', CODES, 'mymemory', 'es_ES' ) ).text,
 		'Nueva Konvertierung'
 	);
+} );
+
+test( 'a remembered refusal is still reported as a fallback', async () => {
+	/*
+	 * The interaction two separate changes created, and neither test caught
+	 * because each covered its own change alone.
+	 *
+	 * Retiring DeepL for the run sends every later string down the same branch
+	 * a site with no DeepL key at all takes, and that branch tagged its output
+	 * plain `mymemory` — erasing the one signal saying the preferred engine had
+	 * not done the work. The first real run after the retirement translated 458
+	 * strings and opened a pull request headed "Translated by mymemory", with no
+	 * warning, over a draft that had degraded on its very first request.
+	 */
+	globalThis.fetch = async ( url ) => {
+		const target = String( url?.url ?? url );
+
+		if ( target.includes( 'deepl' ) ) {
+			return {
+				ok: false,
+				status: 456,
+				text: async () => '{"message":"Quota exceeded"}',
+			};
+		}
+
+		return {
+			ok: true,
+			status: 200,
+			json: async () => ( {
+				responseStatus: 200,
+				responseData: { translatedText: 'Alle Kampagnen' },
+			} ),
+		};
+	};
+
+	const previousKey = process.env.DEEPL_AUTH_KEY;
+	process.env.DEEPL_AUTH_KEY = 'test-key';
+	resetProviderHealth();
+
+	try {
+		const first = await mt( 'All campaigns', CODES, 'auto', 'de_DE' );
+		const second = await mt( 'All campaigns', CODES, 'auto', 'de_DE' );
+
+		assert.equal(
+			first.via,
+			'mymemory-fallback',
+			'the first fall-through'
+		);
+		assert.equal(
+			second.via,
+			'mymemory-fallback',
+			'the remembered one must report the same way, or the warning vanishes'
+		);
+
+		// The whole point: providerMix must still call this degraded.
+		const mix = providerMix( [
+			{
+				locale: 'de_DE',
+				updated: 2,
+				skipped: 0,
+				remaining: 0,
+				truncated: false,
+				refused: [],
+				providers: { [ first.via ]: 1, [ second.via ]: 1 },
+			},
+		] );
+
+		assert.equal(
+			mix.degraded,
+			true,
+			'a degraded run reported itself clean'
+		);
+	} finally {
+		restoreEnv( 'DEEPL_AUTH_KEY', previousKey );
+		resetProviderHealth();
+	}
+} );
+
+test( 'a site with no DeepL key is not called degraded', async () => {
+	// The same branch, and it must stay honest in the other direction: nothing
+	// was preferred over MyMemory here, so nothing fell back.
+	stubProvider( 'Alle Kampagnen' );
+
+	const previousKey = process.env.DEEPL_AUTH_KEY;
+	delete process.env.DEEPL_AUTH_KEY;
+	resetProviderHealth();
+
+	try {
+		const result = await mt( 'All campaigns', CODES, 'auto', 'de_DE' );
+
+		assert.equal( result.via, 'mymemory' );
+		assert.equal(
+			providerMix( [
+				{
+					locale: 'de_DE',
+					updated: 1,
+					skipped: 0,
+					remaining: 0,
+					truncated: false,
+					refused: [],
+					providers: { mymemory: 1 },
+				},
+			] ).degraded,
+			false
+		);
+	} finally {
+		restoreEnv( 'DEEPL_AUTH_KEY', previousKey );
+	}
 } );
