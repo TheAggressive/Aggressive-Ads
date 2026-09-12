@@ -20,7 +20,9 @@ ExecStart=/usr/bin/env bash @PLUGIN_ROOT@/bin/i18n/scheduled-run.sh
 Nice=10
 IOSchedulingClass=idle
 
-# The run can take well over an hour on a full catalog; systemd's default
-# would kill it partway. The periodic flush means a kill costs at most the
-# strings since the last write, but there is no reason to spend them.
-TimeoutStartSec=4h
+# A full catalog is roughly an hour and a half per locale, and the first run
+# after adding a language does every locale at once — four of them is most of a
+# night. systemd's default would kill it partway. The periodic flush means a
+# kill costs at most the strings since the last write, but there is no reason
+# to spend them.
+TimeoutStartSec=12h
