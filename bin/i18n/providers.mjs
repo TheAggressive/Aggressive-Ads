@@ -287,7 +287,152 @@ const LOCAL_TERMS = {
 		[ 'screen width', 'Bildschirmbreite' ],
 		[ 'forecast', 'Prognose' ],
 	],
+
+	/*
+	 * Proposed 2026-09-11, in the same spirit as the German list and with the
+	 * same status: a starting instruction for review by someone who reads the
+	 * language, not settled terminology. Each term is the one the major ad
+	 * servers use in their own Spanish interface, because that is the
+	 * vocabulary an advertiser arrives already knowing.
+	 *
+	 * The two rules the German review earned are carried across, because they
+	 * are about the domain rather than about German: delivery and fill stay
+	 * separate concepts, and "worth reporting" must not become the legal term
+	 * for a mandatory filing.
+	 */
+	es_ES: [
+		[
+			'creative (the ad artwork, a noun)',
+			'creatividad (never "creativo", which is the person)',
+		],
+		[
+			'conversion (a tracked outcome)',
+			'conversión (plural: conversiones)',
+		],
+		[ 'impression (one ad shown)', 'impresión (plural: impresiones)' ],
+		[
+			'click-through rate',
+			'porcentaje de clics (keep the abbreviation CTR as CTR)',
+		],
+		[ 'placement (an ad slot on the site)', 'emplazamiento' ],
+		[ 'advertiser', 'anunciante' ],
+		[ 'campaign', 'campaña' ],
+		[ 'line item (the booked unit of a campaign)', 'elemento de línea' ],
+		[ 'delivery; to deliver or serve an ad', 'publicación; publicar' ],
+		[
+			'an ad request, and a request being filled',
+			'solicitud. A request is atendida (served) or procesada (processed); never say the request itself was publicada. What is publicado is the ad.',
+		],
+		[
+			'worth reporting (advisable, not an obligation)',
+			'conviene informar. Never de declaración obligatoria, which means legally required to report.',
+		],
+		[ 'publisher (the site owner)', 'editor' ],
+		[ 'credential (API access)', 'credenciales' ],
+		[ 'attribution window', 'ventana de atribución' ],
+		[ 'screen width', 'ancho de pantalla' ],
+		[ 'forecast', 'previsión' ],
+	],
+
+	fr_FR: [
+		[
+			'creative (the ad artwork, a noun)',
+			'création publicitaire (never "créatif", which is the person)',
+		],
+		[
+			'conversion (a tracked outcome)',
+			'conversion (plural: conversions)',
+		],
+		[ 'impression (one ad shown)', 'impression (plural: impressions)' ],
+		[
+			'click-through rate',
+			'taux de clics (keep the abbreviation CTR as CTR)',
+		],
+		[ 'placement (an ad slot on the site)', 'emplacement' ],
+		[ 'advertiser', 'annonceur' ],
+		[ 'campaign', 'campagne' ],
+		[ 'line item (the booked unit of a campaign)', 'élément de campagne' ],
+		[ 'delivery; to deliver or serve an ad', 'diffusion; diffuser' ],
+		[
+			'an ad request, and a request being filled',
+			'demande. A request is traitée (processed) or servie (served); never say the request itself was diffusée. What is diffusé is the ad.',
+		],
+		[
+			'worth reporting (advisable, not an obligation)',
+			'il est conseillé de signaler. Never à déclaration obligatoire, which means legally required to report.',
+		],
+		[ 'publisher (the site owner)', 'éditeur' ],
+		[ 'credential (API access)', 'identifiants' ],
+		[ 'attribution window', "fenêtre d'attribution" ],
+		[ 'screen width', "largeur d'écran" ],
+		[ 'forecast', 'prévision' ],
+	],
+
+	it_IT: [
+		[
+			'creative (the ad artwork, a noun)',
+			'creatività (never "creativo", which is the person)',
+		],
+		[
+			'conversion (a tracked outcome)',
+			'conversione (plural: conversioni)',
+		],
+		[ 'impression (one ad shown)', 'impressione (plural: impressioni)' ],
+		[
+			'click-through rate',
+			'percentuale di clic (keep the abbreviation CTR as CTR)',
+		],
+		[ 'placement (an ad slot on the site)', 'posizionamento' ],
+		[ 'advertiser', 'inserzionista' ],
+		[ 'campaign', 'campagna' ],
+		[
+			'line item (the booked unit of a campaign)',
+			'elemento pubblicitario',
+		],
+		[ 'delivery; to deliver or serve an ad', 'erogazione; erogare' ],
+		[
+			'an ad request, and a request being filled',
+			'richiesta. A request is gestita (handled) or elaborata (processed); never say the request itself was erogata. What is erogato is the ad.',
+		],
+		[
+			'worth reporting (advisable, not an obligation)',
+			'è opportuno segnalare. Never soggetto a obbligo di segnalazione, which means legally required to report.',
+		],
+		[ 'publisher (the site owner)', 'editore' ],
+		[ 'credential (API access)', 'credenziali' ],
+		[ 'attribution window', 'finestra di attribuzione' ],
+		[ 'screen width', 'larghezza dello schermo' ],
+		[ 'forecast', 'previsione' ],
+	],
 };
+
+/**
+ * The term list for a locale, falling back to the language.
+ *
+ * es_MX and fr_CA carry a register rule but no list of their own. Advertising
+ * vocabulary is shared across a language far more than it is split by country
+ * — an anunciante is an anunciante in Mexico — so a regional variant borrows
+ * the language's terms rather than being drafted with no terms at all, which
+ * is what produced "creative" as a creative *person* in the first place.
+ *
+ * @param {string} locale WordPress locale.
+ * @return {Array<[string, string]>}
+ */
+function termsFor( locale ) {
+	if ( LOCAL_TERMS[ locale ] ) {
+		return LOCAL_TERMS[ locale ];
+	}
+
+	const language = locale.split( '_' )[ 0 ];
+
+	for ( const [ key, terms ] of Object.entries( LOCAL_TERMS ) ) {
+		if ( key.split( '_' )[ 0 ] === language ) {
+			return terms;
+		}
+	}
+
+	return [];
+}
 
 /**
  * The system prompt for one string.
@@ -319,7 +464,7 @@ export function localSystemPrompt( locale, context = null, notes = '' ) {
 		'5. Match the form of the source: a short label stays a short label, and a label without a full stop gets none.',
 	];
 
-	const terms = LOCAL_TERMS[ locale ] ?? [];
+	const terms = termsFor( locale );
 
 	if ( terms.length > 0 ) {
 		lines.push( '6. Use these terms consistently:' );

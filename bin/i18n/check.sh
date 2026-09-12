@@ -60,4 +60,10 @@ esac
 # then prints it literally on the page.
 node "${AGGR_I18N_DIR}/lint-placeholders.mjs"
 
+# Catalog coverage. The drift check above compares the POT to the source;
+# nothing compared the catalogs to the POT, so three of them sat 353 strings
+# behind while this gate stayed green. A string missing from a catalog and a
+# string untranslated in one both render English, which is why it went unseen.
+node "${AGGR_I18N_DIR}/check-catalog-drift.mjs"
+
 aggr_i18n_info "i18n check passed."

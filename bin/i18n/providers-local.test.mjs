@@ -639,3 +639,40 @@ test( 'one letter is enough to make a string worth translating', async () => {
 		'local'
 	);
 } );
+
+test( 'every locale that is addressed formally is also given its terms', () => {
+	// A register rule without a term list is the state the first drafts shipped
+	// in: fluent, polite, and calling the ad artwork a creative person. These
+	// are the locales this plugin has catalogs or register rules for.
+	for ( const locale of [ 'de_DE', 'es_ES', 'fr_FR', 'it_IT' ] ) {
+		const prompt = localSystemPrompt( locale );
+
+		assert.match( prompt, /Address the reader formally/, locale );
+		assert.match( prompt, /Use these terms consistently/, locale );
+		assert.match(
+			prompt,
+			/creative \(the ad artwork, a noun\) → /,
+			`${ locale } has no rule for "creative"`
+		);
+		assert.match(
+			prompt,
+			/never say the request itself was /,
+			`${ locale } lost the delivery-is-not-fill rule`
+		);
+		assert.match(
+			prompt,
+			/Never .*, which means legally required to report\./,
+			`${ locale } lost the "worth reporting" rule`
+		);
+	}
+} );
+
+test( 'a regional variant borrows its language’s terms', () => {
+	// es_MX and fr_CA have a register rule and no list of their own.
+	assert.match( localSystemPrompt( 'es_MX' ), /→ anunciante/ );
+	assert.match( localSystemPrompt( 'fr_CA' ), /→ annonceur/ );
+
+	// The fallback is by language, not "any list will do".
+	assert.doesNotMatch( localSystemPrompt( 'es_MX' ), /Werbetreibender/ );
+	assert.doesNotMatch( localSystemPrompt( 'nl_NL' ), /Use these terms/ );
+} );
