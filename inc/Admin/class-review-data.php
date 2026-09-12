@@ -436,22 +436,30 @@ final class Review_Data {
 		}
 
 		return array(
-			'id'              => $campaign_id,
-			'title'           => $this->campaigns->title( $campaign_id ),
-			'status'          => $status,
-			'status_text'     => self::status_label( $status ),
-			'pill'            => View_Data::pill_for( $status ),
-			'org_id'          => $this->campaigns->org_id( $campaign_id ),
-			'org_name'        => $this->orgs->name( $this->campaigns->org_id( $campaign_id ) ),
+			'id'               => $campaign_id,
+			'title'            => $this->campaigns->title( $campaign_id ),
+			'status'           => $status,
+			'status_text'      => self::status_label( $status ),
+			'pill'             => View_Data::pill_for( $status ),
+			'org_id'           => $this->campaigns->org_id( $campaign_id ),
+			'org_name'         => $this->orgs->name( $this->campaigns->org_id( $campaign_id ) ),
 
 			/*
 			 * The portal, not a wp-admin screen. Editing on a client's behalf
 			 * uses the advertiser's own wizard, so staff see the campaign the
 			 * way the client does and there is only one editor to keep correct.
 			 */
-			'edit_url'        => Routes::url( 'campaigns', $campaign_id ),
-			'placements'      => $names,
-			'submitted_at'    => $this->campaigns->submitted_at( $campaign_id ),
+			'edit_url'         => Routes::url( 'campaigns', $campaign_id ),
+			'placements'       => $names,
+
+			/*
+			 * The advertiser writes these under the label "Notes for the
+			 * review team", and until this line they reached no reviewer:
+			 * not in this payload, not on the review screen. The only way to
+			 * read one was to open the campaign in the portal editor.
+			 */
+			'advertiser_notes' => $this->campaigns->advertiser_notes( $campaign_id ),
+			'submitted_at'     => $this->campaigns->submitted_at( $campaign_id ),
 
 			/*
 			 * Formatted here rather than in the client. wp_date() resolves the
@@ -460,19 +468,19 @@ final class Review_Data {
 			 * the visitor's timezone, silently, and off by hours for anyone
 			 * whose is not the site's.
 			 */
-			'submitted_text'  => self::format_timestamp( $this->campaigns->submitted_at( $campaign_id ), true ),
-			'schedule_text'   => self::schedule_text(
+			'submitted_text'   => self::format_timestamp( $this->campaigns->submitted_at( $campaign_id ), true ),
+			'schedule_text'    => self::schedule_text(
 				$this->campaigns->start_ts( $campaign_id ),
 				$this->campaigns->end_ts( $campaign_id )
 			),
-			'modified_at'     => $this->campaigns->modified_ts( $campaign_id ),
-			'reviewer_id'     => $reviewer_id,
-			'reviewer'        => self::user_name( $reviewer_id ),
-			'revision'        => $this->campaigns->revision( $campaign_id ),
-			'review_notes'    => $this->campaigns->review_notes( $campaign_id ),
-			'start_ts'        => $this->campaigns->start_ts( $campaign_id ),
-			'end_ts'          => $this->campaigns->end_ts( $campaign_id ),
-			'pending_updates' => $this->campaigns->pending_update_count( $campaign_id ),
+			'modified_at'      => $this->campaigns->modified_ts( $campaign_id ),
+			'reviewer_id'      => $reviewer_id,
+			'reviewer'         => self::user_name( $reviewer_id ),
+			'revision'         => $this->campaigns->revision( $campaign_id ),
+			'review_notes'     => $this->campaigns->review_notes( $campaign_id ),
+			'start_ts'         => $this->campaigns->start_ts( $campaign_id ),
+			'end_ts'           => $this->campaigns->end_ts( $campaign_id ),
+			'pending_updates'  => $this->campaigns->pending_update_count( $campaign_id ),
 		);
 	}
 

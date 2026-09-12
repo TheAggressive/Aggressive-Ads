@@ -8,7 +8,7 @@ import { signIn } from './sign-in-helper';
 import { solidPng } from './png';
 import { wp } from './wp-cli';
 
-test( 'advertiser completes and submits the accessible six-step wizard', async ( {
+test( 'advertiser completes and submits the accessible five-step wizard', async ( {
 	page,
 } ) => {
 	await page.goto( '/advertiser/' );
@@ -47,11 +47,60 @@ test( 'advertiser completes and submits the accessible six-step wizard', async (
 
 	await page.getByRole( 'button', { name: 'Create campaign' } ).click();
 	await expect(
-		page.getByRole( 'heading', { level: 2, name: 'Campaign details' } )
+		page.getByRole( 'heading', {
+			level: 2,
+			name: 'Name your campaign and choose a package',
+		} )
 	).toBeFocused();
 
+	/*
+	 * The panel is asserted present after submission further down. Here it
+	 * must be absent: the line item exists by now — the repository writes a
+	 * default one at creation — so an advertiser on step 1 would otherwise
+	 * read five rows of delivery defaults nobody chose before reaching the
+	 * first field. Absence is the half worth pinning; presence already is.
+	 */
+	await expect(
+		page.getByRole( 'region', { name: 'Delivery strategy' } )
+	).toHaveCount( 0 );
+
+	/*
+	 * Step 1 collects what the campaign *is*. Everything that describes a
+	 * campaign that already exists belongs to a later step or to the
+	 * post-submission screen, so none of it may appear here.
+	 */
+	await expect( page.getByLabel( 'Notes for the review team' ) ).toHaveCount(
+		0
+	);
+	await expect( page.getByRole( 'region', { name: 'Summary' } ) ).toHaveCount(
+		0
+	);
+	await expect(
+		page.getByRole( 'heading', { name: 'Creatives', exact: true } )
+	).toHaveCount( 0 );
+
+	// Five steps, and no link to the one that was folded away.
+	const progress = page.getByRole( 'list', {
+		name: 'Campaign creation progress',
+	} );
+	await expect( progress.getByRole( 'listitem' ) ).toHaveCount( 5 );
+	await expect(
+		progress.getByRole( 'link', { name: 'Package' } )
+	).toHaveCount( 0 );
+
 	const title = `E2E browser campaign ${ Date.now() }`;
-	await page.getByLabel( 'Campaign name' ).fill( title );
+	const name = page.getByLabel( 'Campaign name' );
+
+	/*
+	 * Emptied first. A new draft is created titled "Untitled campaign", so
+	 * typing into the field appends to that rather than replacing it — which
+	 * is why the caret assertion below is worth making at all. Typed rather
+	 * than filled because `fill()` sets the value in one shot and never
+	 * produces the keystrokes autosave debounces on.
+	 */
+	await name.fill( '' );
+	await name.click();
+	await page.keyboard.type( title );
 
 	/*
 	 * Autosave must not move the caret out from under someone who is still
@@ -60,10 +109,6 @@ test( 'advertiser completes and submits the accessible six-step wizard', async (
 	 * that the field the user was in is still focused, with the caret still
 	 * where they left it, after a save has actually completed.
 	 */
-	const notes = page.getByLabel( 'Notes for the review team' );
-	await notes.click();
-	await page.keyboard.type( 'Browser-tested submission.' );
-
 	/*
 	 * The announcement text is asserted, not merely its presence. These strings
 	 * are hydrated by the server and were being overwritten with empty defaults
@@ -73,38 +118,84 @@ test( 'advertiser completes and submits the accessible six-step wizard', async (
 	const status = page.locator( '[id^="aggr-autosave-status-"]' );
 	await expect( status ).toHaveText( 'Draft saved.', { timeout: 15_000 } );
 
-	await expect( notes ).toBeFocused();
+	await expect( name ).toBeFocused();
 	expect(
-		await notes.evaluate(
-			( el ) => ( el as HTMLTextAreaElement ).selectionStart
+		await name.evaluate(
+			( el ) => ( el as HTMLInputElement ).selectionStart
 		)
-	).toBe( 'Browser-tested submission.'.length );
+	).toBe( title.length );
 
-	await page.getByRole( 'button', { name: 'Save and continue' } ).click();
-
+	/*
+	 * The package is chosen on this screen now, not the next one. The default
+	 * arrives pre-selected from the server, and picking another has to be a
+	 * plain radio in a named group — the whole point of merging the two steps
+	 * was to lose a page load, not to lose the grouping a screen reader needs.
+	 */
+	const packages = page.getByRole( 'group', { name: 'Choose a package' } );
+	await expect( packages ).toBeVisible();
 	await expect(
-		page.getByRole( 'heading', { level: 2, name: 'Choose a package' } )
-	).toBeFocused();
-	await expect(
-		page.getByRole( 'radio', { name: /Launch bundle/ } )
+		packages.getByRole( 'radio', { name: /Launch bundle/ } )
 	).toBeChecked();
+
+	/*
+	 * The button says what it does, and says it from the first paint. Both
+	 * labels are rendered by the server and CSS picks one on `scripting`, so
+	 * the reader never sees the text change under them — which is exactly what
+	 * rewriting it from the module used to cause on every reload.
+	 */
+	await expect(
+		page.getByRole( 'button', { name: 'Continue', exact: true } )
+	).toBeVisible();
+	await expect(
+		page.getByRole( 'button', { name: 'Save and continue' } )
+	).toHaveCount( 0 );
+
+	// Attached, which the label no longer tells us.
+	await expect(
+		page.locator( 'form[data-aggr-autosave][data-aggr-autosave-ready]' )
+	).toBeAttached();
+
 	await expectPortalA11y( page );
-	await page.getByRole( 'radio', { name: /Focused sidebar/ } ).check();
-	await page.getByRole( 'button', { name: 'Save package' } ).click();
+
+	// No click on Continue: choosing a package finishes this step. The campaign
+	// has a name by now, which is the condition for advancing at all.
+	await packages.getByRole( 'radio', { name: /Focused sidebar/ } ).check();
 
 	await expect(
 		page.getByRole( 'heading', { level: 2, name: 'Upload creative' } )
 	).toBeFocused();
 	const upload = page.getByRole( 'region', { name: 'Article sidebar' } );
+
+	/*
+	 * The button is hidden only after the module attaches, so its absence is
+	 * the evidence that the automatic path is the one being exercised below —
+	 * and that a browser without the module would still have the form.
+	 */
+	await expect(
+		upload.getByRole( 'button', { name: 'Upload creative' } )
+	).toBeHidden();
+
 	await upload.getByLabel( 'Ad creative file' ).setInputFiles( {
 		name: 'e2e-sidebar.png',
 		mimeType: 'image/png',
 		buffer: solidPng( 300, 250 ),
 	} );
-	await upload
-		.getByLabel( 'Destination URL' )
-		.fill( 'https://www.example.com/exhibition' );
-	await upload.getByRole( 'button', { name: 'Upload creative' } ).click();
+
+	// A file on its own is not enough to send: the creative needs somewhere to
+	// point, so nothing may be uploaded until the destination is filled in.
+	await expect(
+		page.getByRole( 'status' ).filter( { hasText: 'Creative uploaded' } )
+	).toHaveCount( 0 );
+
+	/*
+	 * No click. Leaving the field is the commit — `fill()` alone raises only
+	 * `input`, and this deliberately does not send on `input`: a half-typed
+	 * address like `https://exa` is a syntactically valid URL and would upload
+	 * to it. Blurring is what a person does by tabbing on or clicking away.
+	 */
+	const destination = upload.getByLabel( 'Destination URL' );
+	await destination.fill( 'https://www.example.com/exhibition' );
+	await destination.blur();
 
 	await expect(
 		page.getByRole( 'status' ).filter( { hasText: 'Creative uploaded' } )
@@ -157,9 +248,7 @@ test( 'advertiser completes and submits the accessible six-step wizard', async (
 		.toISOString()
 		.slice( 0, 10 );
 	await page.getByLabel( 'Start date' ).fill( start );
-	await page
-		.getByRole( 'button', { name: 'Save and continue to review' } )
-		.click();
+	await page.getByRole( 'button', { name: 'Continue to review' } ).click();
 
 	await expect(
 		page.getByRole( 'heading', { level: 2, name: 'Review your campaign' } )
@@ -182,6 +271,14 @@ test( 'advertiser completes and submits the accessible six-step wizard', async (
 			name: 'Send this campaign to the review team?',
 		} )
 	).toBeVisible();
+	/*
+	 * The note is written here, not on step 1, and it is posted by the submit
+	 * button rather than autosaved — so typing it and clicking straight through
+	 * is exactly the sequence that has to keep it. No wait, no debounce.
+	 */
+	const note = 'Please run this in the evening slot if you can.';
+	await page.getByLabel( 'Notes for the review team' ).fill( note );
+
 	await expectPortalA11y( page );
 	await page
 		.getByRole( 'button', { name: 'Submit campaign for review' } )
@@ -197,6 +294,11 @@ test( 'advertiser completes and submits the accessible six-step wizard', async (
 		page.getByRole( 'button', { name: 'Submit campaign for review' } )
 	).toHaveCount( 0 );
 	await expect( page.getByLabel( 'Campaign name' ) ).toHaveCount( 0 );
+	await expect(
+		page
+			.getByRole( 'region', { name: 'Your notes for the review team' } )
+			.getByText( note )
+	).toBeVisible();
 	const deliveryStrategy = page.getByRole( 'region', {
 		name: 'Delivery strategy',
 	} );

@@ -112,6 +112,53 @@ final class PortalViewDataTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A draft parked on the retired step resumes on the one that replaced it.
+	 *
+	 * The package chooser moved into the details step, so `package` is no
+	 * longer a step the wizard can render. Rows written before that change —
+	 * and rows written during an upgrade by a request already in flight — still
+	 * hold it, and the screen coerces an unrecognised step to `review`. Left
+	 * alone this would throw a half-finished draft past every question it had
+	 * not answered, so the read path maps it.
+	 *
+	 * @return void
+	 */
+	public function test_a_draft_stored_on_the_retired_step_resumes_on_details(): void {
+		$mine = $this->make_campaign( $this->org_a, Post_Statuses::DRAFT, 'Parked mid-wizard' );
+		update_post_meta( $mine, Campaign_Repository::META_WIZARD_STEP, 'package' );
+
+		wp_set_current_user( $this->advertiser_a );
+
+		$campaign = $this->view->campaign( $mine );
+
+		$this->assertIsArray( $campaign );
+		$this->assertSame( 'details', $campaign['wizard_step'] );
+	}
+
+	/**
+	 * Every other stored step is handed back untouched.
+	 *
+	 * The negative half: a mapping that rewrote more than the one retired value
+	 * would strand advertisers on step 1 no matter how far they had got, and
+	 * the assertion above would not notice.
+	 *
+	 * @return void
+	 */
+	public function test_other_stored_steps_are_left_alone(): void {
+		wp_set_current_user( $this->advertiser_a );
+
+		foreach ( array( 'details', 'creative', 'destination', 'review' ) as $step ) {
+			$campaign = $this->make_campaign( $this->org_a, Post_Statuses::DRAFT, 'Parked on ' . $step );
+			update_post_meta( $campaign, Campaign_Repository::META_WIZARD_STEP, $step );
+
+			$row = $this->view->campaign( $campaign );
+
+			$this->assertIsArray( $row );
+			$this->assertSame( $step, $row['wizard_step'], $step . ' must survive the read unchanged.' );
+		}
+	}
+
+	/**
 	 * A campaign belonging to an organization.
 	 *
 	 * @param int    $org_id Owning organization.
@@ -318,9 +365,9 @@ final class PortalViewDataTest extends WP_UnitTestCase {
 
 		$this->assertSame(
 			array(
-				'package_missing'    => array( 'package', 'aggr-packages' ),
+				'package_missing'    => array( 'details', 'aggr-packages' ),
 				'start_date_missing' => array( 'destination', 'aggr-start-date' ),
-				'no_placements'      => array( 'package', 'aggr-packages' ),
+				'no_placements'      => array( 'details', 'aggr-packages' ),
 				'no_creatives'       => array( 'creative', 'aggr-details-heading' ),
 			),
 			$locations

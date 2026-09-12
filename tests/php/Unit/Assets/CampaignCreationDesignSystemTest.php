@@ -37,7 +37,7 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 		$this->assertStringContainsString( 'Campaign_Actions::COPY_ACTION', $detail );
 		$this->assertStringContainsString( 'Campaign_Nonces::copy_nonce_action', $detail );
 		$this->assertStringContainsString( 'Campaign_Actions::SAVE_ACTION', $detail );
-		$this->assertStringContainsString( 'Campaign_Actions::SAVE_PACKAGE_ACTION', $detail );
+		$this->assertStringContainsString( 'name="package_id"', $detail );
 		$this->assertStringContainsString( 'Campaign_Actions::SAVE_SCHEDULE_ACTION', $detail );
 		$this->assertStringContainsString( 'Campaign_Nonces::schedule_nonce_action', $detail );
 		$this->assertStringContainsString( 'Campaign_Actions::SUBMIT_ACTION', $detail );
@@ -51,7 +51,6 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 		$this->assertStringContainsString( 'wp_nonce_field', $detail );
 		$this->assertStringContainsString( 'type="date"', $detail );
 		$this->assertStringContainsString( 'min="<?php echo esc_attr( $aggr_min_start_date ); ?>"', $detail );
-		$this->assertStringContainsString( 'type="checkbox"', $detail );
 		$this->assertStringContainsString( 'type="radio"', $detail );
 		$this->assertStringContainsString( 'type="file"', $detail );
 		$this->assertStringContainsString( 'enctype="multipart/form-data"', $detail );
@@ -71,7 +70,7 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 		$this->assertStringContainsString( 'aria-current="step"', $template );
 		$this->assertStringContainsString( 'Campaign creation progress', $template );
 		$this->assertSame( 1, preg_match( '/<ol class="aggr-steps".*?<\/ol>/s', $template, $progress ) );
-		$this->assertSame( 6, substr_count( $progress[0], '<li' ), 'The documented wizard has six named steps.' );
+		$this->assertSame( 5, substr_count( $progress[0], '<li' ), 'The documented wizard has five named steps.' );
 		$this->assertStringContainsString( 'role="alert"', $template );
 		$this->assertStringContainsString( 'aria-describedby=', $template );
 		$this->assertStringContainsString( 'aggr-readiness-heading', $template );
@@ -86,6 +85,21 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 		$this->assertStringContainsString( 'Assets::UPLOAD_STORE', $template );
 		$this->assertStringContainsString( 'tabindex="-1"', $template );
 		$this->assertStringContainsString( 'id="aggr-details-heading"', $template );
+
+		/*
+		 * Both questions the merged first step asks. The name is a labelled
+		 * input and the package a radio group in its own fieldset: merging two
+		 * steps into one screen is only an improvement if each still announces
+		 * as its own named group.
+		 */
+		$this->assertStringContainsString( 'for="aggr-title"', $template );
+		$this->assertStringContainsString( 'id="aggr-packages"', $template );
+		$this->assertStringContainsString( 'aria-describedby="aggr-packages-hint"', $template );
+		$this->assertSame(
+			0,
+			substr_count( $template, "add_query_arg( 'step', 'package'" ),
+			'Nothing may still link to the step that no longer exists.'
+		);
 	}
 
 	/**
@@ -146,7 +160,6 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 		$this->assertStringContainsString( 'CTR', $table );
 		$this->assertStringContainsString( 'partials/campaign-summary-facts.php', $detail );
 		$this->assertStringContainsString( "isset( \$aggr_campaign['impressions'], \$aggr_campaign['clicks'] )", $facts );
-		$this->assertStringContainsString( 'aggr-sizebox', $detail );
 
 		/*
 		 * Conversions are gated the same way and, unlike the others, have an
@@ -295,7 +308,6 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 		$this->assertStringContainsString( '.aggr-form', $css );
 		$this->assertStringContainsString( '.aggr-steps', $css );
 		$this->assertStringContainsString( '.aggr-choice--package', $css );
-		$this->assertStringContainsString( '.aggr-sizebox', $css );
 		$this->assertStringContainsString( '.aggr-dashboard--split', $css );
 		$this->assertStringContainsString( '.aggr-pipeline__value', $css );
 		$this->assertStringContainsString( '.aggr-delivery__head', $css );

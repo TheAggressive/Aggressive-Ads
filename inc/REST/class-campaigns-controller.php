@@ -20,6 +20,7 @@ use Aggressive\Ads\Repository\Line_Item_Repository;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Security\Rate_Limiter;
 use Aggressive\Ads\Portal\Acting_As;
+use Aggressive\Ads\Portal\Date_Input;
 use Aggressive\Ads\Workflow\Edit_Window;
 use Aggressive\Ads\Workflow\Campaign_Copier;
 use Aggressive\Ads\Workflow\Campaign_Editor;
@@ -187,6 +188,18 @@ final class Campaigns_Controller implements Service {
 						),
 						'start_ts'         => $this->nonnegative_int_arg( false ),
 						'end_ts'           => $this->nonnegative_int_arg( false ),
+
+						/*
+						 * Local YYYY-MM-DD, converted here rather than in the
+						 * browser. A date input holds a calendar day with no
+						 * timezone, and a timestamp built from it in JavaScript
+						 * is the *visitor's* zone — silently hours out from the
+						 * site's, which is the zone the campaign actually runs
+						 * in. Date_Input::parse() is the same conversion the
+						 * no-JS form already goes through, so both paths agree.
+						 */
+						'start_date'       => $this->string_arg( false ),
+						'end_date'         => $this->string_arg( false ),
 						'advertiser_notes' => $this->textarea_arg( false ),
 						'wizard_step'      => $this->string_arg( false ),
 						'autosave_rev'     => $this->nonnegative_int_arg( true ),
@@ -329,6 +342,26 @@ final class Campaigns_Controller implements Service {
 			if ( $request->has_param( $field ) ) {
 				$fields[ $field ] = $request->get_param( $field );
 			}
+		}
+
+		// Local dates win over raw stamps: a client sending both is a client
+		// that has not been updated, and the local pair is the one a person
+		// actually typed.
+		foreach ( array(
+			'start_date' => 'start_ts',
+			'end_date'   => 'end_ts',
+		) as $local => $stamp ) {
+			if ( ! $request->has_param( $local ) ) {
+				continue;
+			}
+
+			$parsed = Date_Input::parse( (string) $request->get_param( $local ), 'end_date' === $local );
+
+			if ( is_wp_error( $parsed ) ) {
+				return $parsed;
+			}
+
+			$fields[ $stamp ] = $parsed;
 		}
 
 		$campaign_id = (int) $request->get_param( 'id' );

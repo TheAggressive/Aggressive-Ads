@@ -458,6 +458,59 @@ final class AdminReviewTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The advertiser's note reaches the reviewer's payload.
+	 *
+	 * It is labelled "Notes for the review team" on the portal, and for the
+	 * life of the field it reached no review team at all: absent from this
+	 * payload, absent from the screen, readable only by opening the campaign
+	 * in the portal editor. The label made a promise the product did not keep,
+	 * so the assertion is that the reviewer is handed the text.
+	 *
+	 * @return void
+	 */
+	public function test_the_advertiser_note_reaches_the_reviewer(): void {
+		$campaign = $this->campaign( Post_Statuses::SUBMITTED, 'Campaign with a note' );
+		update_post_meta(
+			$campaign,
+			Campaign_Repository::META_ADVERTISER_NOTES,
+			"Evening slot preferred.\nRun the second creative first."
+		);
+
+		wp_set_current_user( $this->reviewer );
+
+		$row = $this->data->campaign( $campaign );
+
+		$this->assertIsArray( $row );
+		$this->assertArrayHasKey( 'advertiser_notes', $row );
+		$this->assertSame(
+			"Evening slot preferred.\nRun the second creative first.",
+			$row['advertiser_notes'],
+			'The reviewer must receive the note exactly as written, newlines included.'
+		);
+	}
+
+	/**
+	 * A campaign with no note hands the reviewer an empty string, not a missing key.
+	 *
+	 * The screen branches on the value to choose between the note and its
+	 * empty state, so an absent key would be an undefined read rather than a
+	 * rendered "no notes" message.
+	 *
+	 * @return void
+	 */
+	public function test_a_campaign_without_a_note_still_carries_the_key(): void {
+		$campaign = $this->campaign( Post_Statuses::SUBMITTED, 'Campaign with no note' );
+
+		wp_set_current_user( $this->reviewer );
+
+		$row = $this->data->campaign( $campaign );
+
+		$this->assertIsArray( $row );
+		$this->assertArrayHasKey( 'advertiser_notes', $row );
+		$this->assertSame( '', $row['advertiser_notes'] );
+	}
+
+	/**
 	 * **The review capability alone is not a licence over every organization.**
 	 *
 	 * `save_internal_notes()` checks the capability *and* `edit_aggr_campaign`

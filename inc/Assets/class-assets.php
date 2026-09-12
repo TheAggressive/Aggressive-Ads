@@ -378,7 +378,9 @@ final class Assets implements Service {
 				array(
 					'uploads' => $uploads,
 					'i18n'    => array(
-						'ready'      => __( 'File selected. Upload when you are ready.', 'aggressive-ads' ),
+						'ready'      => __( 'File selected. Add a destination URL to upload it.', 'aggressive-ads' ),
+						'uploading'  => __( 'Uploading the creative.', 'aggressive-ads' ),
+						'needsUrl'   => __( 'Enter a complete destination URL to finish the upload.', 'aggressive-ads' ),
 						'empty'      => __( 'Choose an ad creative file to upload.', 'aggressive-ads' ),
 						'type'       => __( 'Use a JPEG, PNG, GIF, or WebP image.', 'aggressive-ads' ),
 						'size'       => __( 'The file is larger than 2 MB. Choose a smaller ad creative.', 'aggressive-ads' ),

@@ -184,6 +184,24 @@ final class Router implements Service {
 
 		$this->is_portal_url = true;
 
+		/*
+		 * Suppressed here rather than in the template, because by the time a
+		 * template runs the decision has already been made and acted on.
+		 *
+		 * `_wp_admin_bar_init()` runs on template_redirect priority 0; the
+		 * portal template is chosen at template_include, which is later. By
+		 * then WP_Admin_Bar::initialize() has already enqueued admin-bar.css
+		 * and hooked `_admin_bar_bump_cb` to wp_head, which prints
+		 * `html { margin-top: 32px !important }`. The template's own
+		 * `show_admin_bar( false )` still removes the toolbar — nothing
+		 * re-reads that filter afterwards — so the bar vanished and its 32px
+		 * of reserved space did not, leaving an empty band above the portal
+		 * header. parse_query is before template_redirect, which is what makes
+		 * this the first moment the answer can still change anything.
+		 */
+		// phpcs:ignore WordPressVIPMinimum.UserExperience.AdminBarRemoval.RemovalDetected -- See templates/portal/base.php: this owned document replaces WordPress chrome entirely.
+		add_filter( 'show_admin_bar', '__return_false' );
+
 		$this->request = Request::from(
 			(string) $query->get( self::QUERY_ROUTE ),
 			(string) $query->get( self::QUERY_OBJECT )

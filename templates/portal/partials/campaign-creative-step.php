@@ -166,6 +166,20 @@ use Aggressive\Ads\Workflow\Creative_Manager;
 										<input type="hidden" name="placement_id" value="<?php echo esc_attr( (string) $aggr_slot['id'] ); ?>">
 										<?php wp_nonce_field( Creative_Actions::upload_nonce_action( (int) $aggr_campaign['id'], (int) $aggr_slot['id'] ) ); ?>
 
+										<?php
+										/*
+										 * WCAG 3.2.2: the upload submits on its
+										 * own once both fields are filled, and
+										 * that is a change of context. It is
+										 * only conformant because this sentence
+										 * precedes both controls and is read
+										 * out with each of them.
+										 */
+										?>
+										<p id="aggr-upload-auto-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?>" class="aggr-hint">
+											<?php esc_html_e( 'There is no upload button: choose a file, enter the destination URL, then move on from that field and the upload starts by itself.', 'aggressive-ads' ); ?>
+										</p>
+
 										<div class="aggr-field">
 											<label for="aggr-file-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?>"><?php esc_html_e( 'Ad creative file', 'aggressive-ads' ); ?></label>
 											<p id="aggr-file-hint-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?>" class="aggr-hint">
@@ -174,14 +188,14 @@ use Aggressive\Ads\Workflow\Creative_Manager;
 												printf( esc_html__( 'Required: %s pixels. Maximum file size: 2 MB.', 'aggressive-ads' ), esc_html( (string) $aggr_slot['size'] ) );
 												?>
 											</p>
-											<input id="aggr-file-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?>" name="file" type="file" accept="image/jpeg,image/png,image/gif,image/webp" required aria-describedby="aggr-file-hint-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?> aggr-upload-status-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?><?php echo ( 'aggr-file-' . $aggr_slot['id'] ) === $aggr_creative_error_for ? ' aggr-creative-error' : ''; ?>" <?php echo ( 'aggr-file-' . $aggr_slot['id'] ) === $aggr_creative_error_for ? 'aria-invalid="true"' : ''; ?>>
+											<input id="aggr-file-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?>" name="file" type="file" accept="image/jpeg,image/png,image/gif,image/webp" required aria-describedby="aggr-upload-auto-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?> aggr-file-hint-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?> aggr-upload-status-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?><?php echo ( 'aggr-file-' . $aggr_slot['id'] ) === $aggr_creative_error_for ? ' aggr-creative-error' : ''; ?>" <?php echo ( 'aggr-file-' . $aggr_slot['id'] ) === $aggr_creative_error_for ? 'aria-invalid="true"' : ''; ?>>
 											<p id="aggr-upload-status-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?>" class="aggr-sr" role="status" aria-live="polite"></p>
 										</div>
 
 										<div class="aggr-field">
 											<label for="aggr-click-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?>"><?php esc_html_e( 'Destination URL', 'aggressive-ads' ); ?></label>
 											<p id="aggr-click-hint-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?>" class="aggr-hint"><?php esc_html_e( 'Where someone should go after selecting the advertisement. Use a complete http or https URL.', 'aggressive-ads' ); ?></p>
-											<input id="aggr-click-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?>" name="click_url" type="url" inputmode="url" required aria-describedby="aggr-click-hint-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?><?php echo ( 'aggr-click-' . $aggr_slot['id'] ) === $aggr_creative_error_for ? ' aggr-creative-error' : ''; ?>" <?php echo ( 'aggr-click-' . $aggr_slot['id'] ) === $aggr_creative_error_for ? 'aria-invalid="true"' : ''; ?>>
+											<input id="aggr-click-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?>" name="click_url" type="url" inputmode="url" required aria-describedby="aggr-upload-auto-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?> aggr-click-hint-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?><?php echo ( 'aggr-click-' . $aggr_slot['id'] ) === $aggr_creative_error_for ? ' aggr-creative-error' : ''; ?>" <?php echo ( 'aggr-click-' . $aggr_slot['id'] ) === $aggr_creative_error_for ? 'aria-invalid="true"' : ''; ?>>
 										</div>
 
 										<button class="aggr-button" type="submit"><?php esc_html_e( 'Upload creative', 'aggressive-ads' ); ?></button>
@@ -194,11 +208,13 @@ use Aggressive\Ads\Workflow\Creative_Manager;
 				<?php endif; ?>
 
 				<div class="aggr-form__actions">
-					<a class="aggr-button aggr-button--secondary" href="<?php echo esc_url( add_query_arg( 'step', 'package', $aggr_campaign_url ) ); ?>"><?php esc_html_e( 'Back to package', 'aggressive-ads' ); ?></a>
+					<?php if ( ! $aggr_creative_ready ) : ?>
+						<?php /* Before the controls, so it is read as the reason there is no way on rather than as a footnote after it. */ ?>
+						<p class="aggr-hint"><?php esc_html_e( 'Upload at least one creative for every active package placement to continue.', 'aggressive-ads' ); ?></p>
+					<?php endif; ?>
+					<a class="aggr-button aggr-button--secondary" href="<?php echo esc_url( add_query_arg( 'step', 'details', $aggr_campaign_url ) ); ?>"><?php esc_html_e( 'Back to details', 'aggressive-ads' ); ?></a>
 					<?php if ( $aggr_creative_ready ) : ?>
 						<a class="aggr-button" href="<?php echo esc_url( add_query_arg( 'step', 'destination', $aggr_campaign_url ) ); ?>"><?php esc_html_e( 'Continue to schedule', 'aggressive-ads' ); ?></a>
-					<?php else : ?>
-						<p class="aggr-hint"><?php esc_html_e( 'Upload at least one creative for every active package placement to continue.', 'aggressive-ads' ); ?></p>
 					<?php endif; ?>
 				</div>
 			</div>

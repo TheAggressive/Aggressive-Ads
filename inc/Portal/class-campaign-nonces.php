@@ -75,15 +75,6 @@ final class Campaign_Nonces {
 		return Campaign_Actions::COPY_ACTION . '_' . max( 0, $campaign_id );
 	}
 
-	/**
-	 * Nonce action for one campaign's package selection.
-	 *
-	 * @param int $campaign_id Campaign post id.
-	 * @return string
-	 */
-	public static function package_nonce_action( int $campaign_id ): string {
-		return Campaign_Actions::SAVE_PACKAGE_ACTION . '_' . max( 0, $campaign_id );
-	}
 
 	/**
 	 * Nonce action for one campaign's destination-and-schedule step.

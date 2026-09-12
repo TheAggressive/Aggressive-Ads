@@ -412,11 +412,25 @@ final class Campaign_Repository {
 	/**
 	 * The saved wizard resume point.
 	 *
+	 * Read-time normalisation rather than a migration, because the rows are
+	 * not the only source of the stale value: a draft saved by an older copy
+	 * of the plugin, or a request already in flight during an upgrade, writes
+	 * `package` after any migration has run. Mapping on read heals both, costs
+	 * nothing, and cannot half-apply.
+	 *
+	 * `details` and not `creative`: the package chooser moved into the details
+	 * step, so somebody parked on `package` was choosing a package and that is
+	 * where they left off. Returning an unknown step would be worse than either
+	 * — the screen falls back to `review`, which would skip a draft past every
+	 * question it has not answered yet.
+	 *
 	 * @param int $campaign_id Campaign post id.
 	 * @return string
 	 */
 	public function wizard_step( int $campaign_id ): string {
-		return (string) get_post_meta( $campaign_id, self::META_WIZARD_STEP, true );
+		$step = (string) get_post_meta( $campaign_id, self::META_WIZARD_STEP, true );
+
+		return 'package' === $step ? 'details' : $step;
 	}
 
 	/**

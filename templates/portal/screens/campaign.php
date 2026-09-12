@@ -18,6 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use Aggressive\Ads\Assets\Assets;
+use Aggressive\Ads\Workflow\Campaign_Editor;
 use Aggressive\Ads\Workflow\Creative_Manager;
 use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Portal\Request;
@@ -42,7 +43,7 @@ $aggr_notice             = Campaign_Actions::request_notice();
 $aggr_error              = Campaign_Actions::request_error_code();
 $aggr_error_for          = Campaign_Actions::error_field( $aggr_error );
 $aggr_step               = Campaign_Actions::request_step( (string) $aggr_campaign['wizard_step'] );
-$aggr_step               = in_array( $aggr_step, array( 'details', 'package', 'creative', 'destination', 'review', 'submit' ), true ) ? $aggr_step : 'review';
+$aggr_step               = in_array( $aggr_step, Campaign_Editor::DISPLAY_STEPS, true ) ? $aggr_step : 'review';
 $aggr_campaign_url       = Routes::url( Request::ROUTE_CAMPAIGNS, (int) $aggr_campaign['id'] );
 $aggr_creative_notice    = Creative_Actions::request_notice();
 $aggr_creative_error     = Creative_Actions::request_error_code();
@@ -53,6 +54,16 @@ $aggr_min_start_date = (string) ( $aggr_campaign['min_start_date'] ?? '' );
 $aggr_creative_ready = array() !== $aggr_slots;
 $aggr_overlays       = array();
 $aggr_line_items     = is_array( $aggr_campaign['line_items'] ?? null ) ? $aggr_campaign['line_items'] : array();
+
+/*
+ * The wizard is on screen, and the panels below it are describing steps the
+ * advertiser has not reached yet.
+ *
+ * `editable` alone is the wrong test: Edit_Window::allows() is true for staff
+ * in every status, so keying on it would blank these panels for a reviewer
+ * opening a submitted campaign. Staff working a client's campaign keep them.
+ */
+$aggr_wizard_on_screen = true === $aggr_campaign['editable'] && empty( $aggr_campaign['on_behalf'] );
 
 /*
  * **At least one creative per active placement, not exactly one.**
@@ -279,7 +290,34 @@ endif;
 	</section>
 <?php endif; ?>
 
-<?php if ( array() !== $aggr_line_items ) : ?>
+<?php
+/*
+ * The other half of that conversation, read back.
+ *
+ * The note is written on the submit step, and submitting is what takes that
+ * step away — so without this the advertiser can no longer see what they told
+ * the review team, on the screen where the team's reply to it appears.
+ */
+?>
+<?php if ( ! $aggr_wizard_on_screen && '' !== trim( (string) $aggr_campaign['advertiser_notes'] ) ) : ?>
+	<section class="aggr-panel" aria-labelledby="aggr-sent-notes-heading">
+		<h2 id="aggr-sent-notes-heading" class="aggr-panel__head">
+			<?php esc_html_e( 'Your notes for the review team', 'aggressive-ads' ); ?>
+		</h2>
+		<p class="aggr-notes-body"><?php echo esc_html( (string) $aggr_campaign['advertiser_notes'] ); ?></p>
+	</section>
+<?php endif; ?>
+
+<?php
+/*
+ * Every value here is a default the repository wrote at creation, not a choice
+ * the advertiser made, and the first row only repeats the campaign name from
+ * the form below it — five rows of jargon between somebody and step 1. Once the
+ * campaign is submitted the wizard is gone and this panel is the only
+ * description of how it will be delivered, which is when it earns the space.
+ */
+?>
+<?php if ( array() !== $aggr_line_items && ! $aggr_wizard_on_screen ) : ?>
 	<section class="aggr-panel" aria-labelledby="aggr-delivery-strategy-heading">
 		<h2 id="aggr-delivery-strategy-heading" class="aggr-panel__head">
 			<?php esc_html_e( 'Delivery strategy', 'aggressive-ads' ); ?>
@@ -344,12 +382,11 @@ endif;
 				<?php
 				echo esc_html(
 					match ( $aggr_step ) {
-						'details'  => __( 'Step 1 of 6', 'aggressive-ads' ),
-						'package'  => __( 'Step 2 of 6', 'aggressive-ads' ),
-						'creative' => __( 'Step 3 of 6', 'aggressive-ads' ),
-						'destination' => __( 'Step 4 of 6', 'aggressive-ads' ),
-						'review'      => __( 'Step 5 of 6', 'aggressive-ads' ),
-						default       => __( 'Step 6 of 6', 'aggressive-ads' ),
+						'details'     => __( 'Step 1 of 5', 'aggressive-ads' ),
+						'creative'    => __( 'Step 2 of 5', 'aggressive-ads' ),
+						'destination' => __( 'Step 3 of 5', 'aggressive-ads' ),
+						'review'      => __( 'Step 4 of 5', 'aggressive-ads' ),
+						default       => __( 'Step 5 of 5', 'aggressive-ads' ),
 					}
 				);
 				?>
@@ -358,9 +395,8 @@ endif;
 				<?php
 				echo esc_html(
 					match ( $aggr_step ) {
-						'details'  => __( 'Campaign details', 'aggressive-ads' ),
-						'package'  => __( 'Choose a package', 'aggressive-ads' ),
-						'creative' => __( 'Upload creative', 'aggressive-ads' ),
+						'details'     => __( 'Name your campaign and choose a package', 'aggressive-ads' ),
+						'creative'    => __( 'Upload creative', 'aggressive-ads' ),
 						'destination' => __( 'Confirm destinations and schedule', 'aggressive-ads' ),
 						'review'      => __( 'Review your campaign', 'aggressive-ads' ),
 						default       => __( 'Submit your campaign', 'aggressive-ads' ),
@@ -373,9 +409,6 @@ endif;
 		<ol class="aggr-steps" aria-label="<?php esc_attr_e( 'Campaign creation progress', 'aggressive-ads' ); ?>">
 			<li <?php echo 'details' === $aggr_step ? 'aria-current="step"' : ''; ?>>
 				<a data-aggr-step="details" data-wp-on--click="actions.guardVisit" href="<?php echo esc_url( add_query_arg( 'step', 'details', $aggr_campaign_url ) ); ?>"><?php esc_html_e( 'Details', 'aggressive-ads' ); ?></a>
-			</li>
-			<li <?php echo 'package' === $aggr_step ? 'aria-current="step"' : ''; ?>>
-				<a data-aggr-step="package" data-wp-on--click="actions.guardVisit" href="<?php echo esc_url( add_query_arg( 'step', 'package', $aggr_campaign_url ) ); ?>"><?php esc_html_e( 'Package', 'aggressive-ads' ); ?></a>
 			</li>
 			<li <?php echo 'creative' === $aggr_step ? 'aria-current="step"' : ''; ?>>
 				<a data-aggr-step="creative" data-wp-on--click="actions.guardVisit" href="<?php echo esc_url( add_query_arg( 'step', 'creative', $aggr_campaign_url ) ); ?>"><?php esc_html_e( 'Creative', 'aggressive-ads' ); ?></a>
@@ -405,6 +438,7 @@ endif;
 			data-wp-interactive="<?php echo esc_attr( Assets::AUTOSAVE_STORE ); ?>"
 			<?php echo $aggr_autosave_context; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_interactivity_data_wp_context(). ?>
 			data-aggr-autosave="<?php echo esc_attr( $aggr_wizard_id ); ?>"
+			data-aggr-title-placeholder="<?php echo true === ( $aggr_campaign['title_is_placeholder'] ?? false ) ? '1' : '0'; ?>"
 			data-wp-init="actions.init"
 		>
 			<input type="hidden" name="action" value="<?php echo esc_attr( Campaign_Actions::SAVE_ACTION ); ?>">
@@ -427,31 +461,49 @@ endif;
 				>
 			</div>
 
-			<fieldset id="aggr-placements" class="aggr-fieldset" <?php echo 'aggr-placements' === $aggr_error_for ? 'aria-invalid="true"' : ''; ?>>
-				<legend><?php esc_html_e( 'Placement interests', 'aggressive-ads' ); ?></legend>
-				<p class="aggr-hint"><?php esc_html_e( 'Optional. Note where you would like the campaign to appear. The package selected in the next step sets the final placement list.', 'aggressive-ads' ); ?></p>
+			<?php
+			/*
+			 * The package chooser lives here, on step 1, because the step it
+			 * used to share this screen with collected nothing that survived
+			 * it: "Placement interests" was a grid of checkboxes that
+			 * `package_snapshot()` overwrote with the package's own placements
+			 * the moment one was picked. Asking the question and discarding the
+			 * answer cost an advertiser a page load and a decision.
+			 *
+			 * Not `required`, deliberately. A draft has to be savable with a
+			 * name and nothing else so somebody can come back to it; the
+			 * package is enforced at review, where Review_Readiness points the
+			 * error straight back at this fieldset.
+			 */
+			?>
+			<fieldset id="aggr-packages" class="aggr-fieldset" <?php echo 'aggr-packages' === $aggr_error_for ? 'aria-invalid="true"' : ''; ?>>
+				<legend><?php esc_html_e( 'Choose a package', 'aggressive-ads' ); ?></legend>
+				<p id="aggr-packages-hint" class="aggr-hint"><?php esc_html_e( 'Selecting a package copies its current price and placements into this campaign so later catalogue changes cannot alter your draft. Once the campaign has a name, choosing one saves this step and moves on to the creative.', 'aggressive-ads' ); ?></p>
 
-				<?php if ( array() === $aggr_options ) : ?>
-					<p><?php esc_html_e( 'No placements are available right now. You can save the draft and return later.', 'aggressive-ads' ); ?></p>
+				<?php if ( array() === $aggr_packages ) : ?>
+					<div class="aggr-empty">
+						<p class="aggr-empty__title"><?php esc_html_e( 'No packages are available', 'aggressive-ads' ); ?></p>
+						<p><?php esc_html_e( 'The catalogue is not configured yet. Your draft is safe; please return later or get in touch.', 'aggressive-ads' ); ?></p>
+					</div>
 				<?php else : ?>
 					<div class="aggr-choicegrid">
-						<?php foreach ( $aggr_options as $aggr_option ) : ?>
-							<?php
-							$aggr_box   = explode( 'x', strtolower( (string) $aggr_option['size'] ) );
-							$aggr_box_w = isset( $aggr_box[0] ) ? max( 1, (int) $aggr_box[0] ) : 1;
-							$aggr_box_h = isset( $aggr_box[1] ) ? max( 1, (int) $aggr_box[1] ) : 1;
-							?>
-							<label class="aggr-choice">
+						<?php foreach ( $aggr_packages as $aggr_package ) : ?>
+							<?php $aggr_selected_package_id = $aggr_package_id > 0 ? $aggr_package_id : ( (bool) $aggr_package['is_default'] ? (int) $aggr_package['id'] : 0 ); ?>
+							<label class="aggr-choice aggr-choice--package">
 								<input
-									type="checkbox"
-									name="placement_ids[]"
-									value="<?php echo esc_attr( (string) $aggr_option['id'] ); ?>"
-									<?php checked( in_array( (int) $aggr_option['id'], $aggr_place_ids, true ) ); ?>
+									type="radio"
+									name="package_id"
+									value="<?php echo esc_attr( (string) $aggr_package['id'] ); ?>"
+									aria-describedby="aggr-packages-hint"
+									<?php checked( (int) $aggr_package['id'], $aggr_selected_package_id ); ?>
 								>
-								<span class="aggr-sizebox" style="--aggr-box-w: <?php echo esc_attr( (string) $aggr_box_w ); ?>; --aggr-box-h: <?php echo esc_attr( (string) $aggr_box_h ); ?>" aria-hidden="true"></span>
-								<span>
-									<strong><?php echo esc_html( (string) $aggr_option['name'] ); ?></strong>
-									<small><?php echo esc_html( (string) $aggr_option['size'] ); ?> px</small>
+								<span class="aggr-choice__text">
+									<strong><?php echo esc_html( (string) $aggr_package['name'] ); ?></strong>
+									<?php if ( (bool) $aggr_package['is_default'] ) : ?>
+										<small><?php esc_html_e( 'Recommended', 'aggressive-ads' ); ?></small>
+									<?php endif; ?>
+									<small><?php echo esc_html( (string) $aggr_package['price'] . ' · ' . (string) $aggr_package['duration'] ); ?></small>
+									<small><?php echo esc_html( implode( ', ', $aggr_package['placements'] ) ); ?></small>
 								</span>
 							</label>
 						<?php endforeach; ?>
@@ -459,17 +511,31 @@ endif;
 				<?php endif; ?>
 			</fieldset>
 
-			<div class="aggr-field">
-				<label for="aggr-advertiser-notes"><?php esc_html_e( 'Notes for the review team', 'aggressive-ads' ); ?></label>
-				<p id="aggr-notes-hint" class="aggr-hint"><?php esc_html_e( 'Optional. Include context that will help the team review this campaign.', 'aggressive-ads' ); ?></p>
-				<textarea id="aggr-advertiser-notes" name="advertiser_notes" rows="4" aria-describedby="aggr-notes-hint"><?php echo esc_textarea( (string) $aggr_campaign['advertiser_notes'] ); ?></textarea>
-			</div>
-
+			<?php
+			/*
+			 * Two labels, both true, and the right one is chosen before paint.
+			 *
+			 * Without JavaScript this button is the save, and "Save and
+			 * continue" describes it exactly. With autosave running the step is
+			 * already stored by the time anyone reaches it, so all that is left
+			 * is to move on.
+			 *
+			 * Both are rendered and CSS picks one on `scripting`. Rewriting the
+			 * text from the module instead — which is what this did first —
+			 * cannot run until after first paint, so every reload showed the
+			 * long label and then visibly swapped it.
+			 */
+			?>
 			<div class="aggr-form__actions">
-				<button class="aggr-button" type="submit"><?php esc_html_e( 'Save and continue', 'aggressive-ads' ); ?></button>
+				<button class="aggr-button" type="submit">
+					<span class="aggr-noscript-label"><?php esc_html_e( 'Save and continue', 'aggressive-ads' ); ?></span>
+					<span class="aggr-script-label"><?php esc_html_e( 'Continue', 'aggressive-ads' ); ?></span>
+				</button>
 			</div>
 		</form>
-		<?php elseif ( 'package' === $aggr_step ) : ?>
+		<?php elseif ( 'creative' === $aggr_step ) : ?>
+			<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-creative-step.php'; ?>
+		<?php elseif ( 'destination' === $aggr_step ) : ?>
 			<form
 				class="aggr-form"
 				method="post"
@@ -479,57 +545,6 @@ endif;
 				data-aggr-autosave="<?php echo esc_attr( $aggr_wizard_id ); ?>"
 				data-wp-init="actions.init"
 			>
-				<input type="hidden" name="action" value="<?php echo esc_attr( Campaign_Actions::SAVE_PACKAGE_ACTION ); ?>">
-				<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) $aggr_campaign['id'] ); ?>">
-				<input type="hidden" name="autosave_rev" value="<?php echo esc_attr( (string) $aggr_campaign['autosave_rev'] ); ?>">
-				<?php wp_nonce_field( Campaign_Nonces::package_nonce_action( (int) $aggr_campaign['id'] ) ); ?>
-
-				<fieldset id="aggr-packages" class="aggr-fieldset" <?php echo 'aggr-packages' === $aggr_error_for ? 'aria-invalid="true"' : ''; ?>>
-					<legend><?php esc_html_e( 'Available packages', 'aggressive-ads' ); ?></legend>
-					<p class="aggr-hint"><?php esc_html_e( 'Selecting a package copies its current price and placements into this campaign so later catalogue changes cannot alter your draft.', 'aggressive-ads' ); ?></p>
-
-					<?php if ( array() === $aggr_packages ) : ?>
-						<div class="aggr-empty">
-							<p class="aggr-empty__title"><?php esc_html_e( 'No packages are available', 'aggressive-ads' ); ?></p>
-							<p><?php esc_html_e( 'The catalogue is not configured yet. Your draft is safe; please return later or get in touch.', 'aggressive-ads' ); ?></p>
-						</div>
-					<?php else : ?>
-						<div class="aggr-choicegrid">
-							<?php foreach ( $aggr_packages as $aggr_package ) : ?>
-								<?php $aggr_selected_package_id = $aggr_package_id > 0 ? $aggr_package_id : ( (bool) $aggr_package['is_default'] ? (int) $aggr_package['id'] : 0 ); ?>
-								<label class="aggr-choice aggr-choice--package">
-									<input
-										type="radio"
-										name="package_id"
-										value="<?php echo esc_attr( (string) $aggr_package['id'] ); ?>"
-										required
-										<?php checked( (int) $aggr_package['id'], $aggr_selected_package_id ); ?>
-									>
-									<span>
-										<strong><?php echo esc_html( (string) $aggr_package['name'] ); ?></strong>
-										<?php if ( (bool) $aggr_package['is_default'] ) : ?>
-											<small><?php esc_html_e( 'Recommended', 'aggressive-ads' ); ?></small>
-										<?php endif; ?>
-										<small><?php echo esc_html( (string) $aggr_package['price'] . ' · ' . (string) $aggr_package['duration'] ); ?></small>
-										<small><?php echo esc_html( implode( ', ', $aggr_package['placements'] ) ); ?></small>
-									</span>
-								</label>
-							<?php endforeach; ?>
-						</div>
-					<?php endif; ?>
-				</fieldset>
-
-				<div class="aggr-form__actions">
-					<a class="aggr-button aggr-button--secondary" href="<?php echo esc_url( add_query_arg( 'step', 'details', $aggr_campaign_url ) ); ?>"><?php esc_html_e( 'Back to details', 'aggressive-ads' ); ?></a>
-					<?php if ( array() !== $aggr_packages ) : ?>
-						<button class="aggr-button" type="submit"><?php esc_html_e( 'Save package', 'aggressive-ads' ); ?></button>
-					<?php endif; ?>
-				</div>
-			</form>
-		<?php elseif ( 'creative' === $aggr_step ) : ?>
-			<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-creative-step.php'; ?>
-		<?php elseif ( 'destination' === $aggr_step ) : ?>
-			<form class="aggr-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 				<input type="hidden" name="action" value="<?php echo esc_attr( Campaign_Actions::SAVE_SCHEDULE_ACTION ); ?>">
 				<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) $aggr_campaign['id'] ); ?>">
 				<input type="hidden" name="autosave_rev" value="<?php echo esc_attr( (string) $aggr_campaign['autosave_rev'] ); ?>">
@@ -588,7 +603,10 @@ endif;
 				<div class="aggr-form__actions">
 					<a class="aggr-button aggr-button--secondary" href="<?php echo esc_url( add_query_arg( 'step', 'creative', $aggr_campaign_url ) ); ?>"><?php esc_html_e( 'Back to creative', 'aggressive-ads' ); ?></a>
 					<?php if ( $aggr_creative_ready ) : ?>
-						<button class="aggr-button" type="submit"><?php esc_html_e( 'Save and continue to review', 'aggressive-ads' ); ?></button>
+						<button class="aggr-button" type="submit">
+							<span class="aggr-noscript-label"><?php esc_html_e( 'Save and continue to review', 'aggressive-ads' ); ?></span>
+							<span class="aggr-script-label"><?php esc_html_e( 'Continue to review', 'aggressive-ads' ); ?></span>
+						</button>
 					<?php endif; ?>
 				</div>
 			</form>
@@ -622,14 +640,13 @@ endif;
 						</div>
 						<dl class="aggr-review-list">
 							<div><dt><?php esc_html_e( 'Name', 'aggressive-ads' ); ?></dt><dd><?php echo esc_html( (string) $aggr_campaign['title'] ); ?></dd></div>
-							<div><dt><?php esc_html_e( 'Notes', 'aggressive-ads' ); ?></dt><dd><?php echo esc_html( '' === (string) $aggr_campaign['advertiser_notes'] ? __( 'None', 'aggressive-ads' ) : (string) $aggr_campaign['advertiser_notes'] ); ?></dd></div>
 						</dl>
 					</section>
 
 					<section class="aggr-review-card" aria-labelledby="aggr-review-package-heading">
 						<div class="aggr-review-card__head">
 							<h3 id="aggr-review-package-heading"><?php esc_html_e( 'Package', 'aggressive-ads' ); ?></h3>
-							<a href="<?php echo esc_url( add_query_arg( 'step', 'package', $aggr_campaign_url ) ); ?>"><?php esc_html_e( 'Edit', 'aggressive-ads' ); ?></a>
+							<a href="<?php echo esc_url( add_query_arg( 'step', 'details', $aggr_campaign_url ) . '#aggr-packages' ); ?>"><?php esc_html_e( 'Edit', 'aggressive-ads' ); ?></a>
 						</div>
 						<dl class="aggr-review-list">
 							<div><dt><?php esc_html_e( 'Package', 'aggressive-ads' ); ?></dt><dd><?php echo esc_html( '' === (string) $aggr_campaign['package_name'] ? __( 'Not selected', 'aggressive-ads' ) : (string) $aggr_campaign['package_name'] ); ?></dd></div>
@@ -691,10 +708,27 @@ endif;
 						</dl>
 					</section>
 
-					<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+					<form class="aggr-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 						<input type="hidden" name="action" value="<?php echo esc_attr( Campaign_Actions::SUBMIT_ACTION ); ?>">
 						<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) $aggr_campaign['id'] ); ?>">
+						<input type="hidden" name="autosave_rev" value="<?php echo esc_attr( (string) $aggr_campaign['autosave_rev'] ); ?>">
 						<?php wp_nonce_field( Campaign_Nonces::submit_nonce_action( (int) $aggr_campaign['id'] ) ); ?>
+
+						<?php
+						/*
+						 * This field is posted by the submit button rather than
+						 * autosaved as you type. Autosave runs on a 600ms
+						 * debounce, and the gap between the last keystroke and
+						 * the click is exactly where a note typed quickly would
+						 * be lost. Submitting it with the transition closes it.
+						 */
+						?>
+						<div class="aggr-field">
+							<label for="aggr-advertiser-notes"><?php esc_html_e( 'Notes for the review team', 'aggressive-ads' ); ?></label>
+							<p id="aggr-notes-hint" class="aggr-hint"><?php esc_html_e( 'Optional. Include anything that will help the team review this campaign.', 'aggressive-ads' ); ?></p>
+							<textarea id="aggr-advertiser-notes" name="advertiser_notes" rows="4" maxlength="2000" aria-describedby="aggr-notes-hint"><?php echo esc_textarea( (string) $aggr_campaign['advertiser_notes'] ); ?></textarea>
+						</div>
+
 						<div class="aggr-form__actions">
 							<a class="aggr-button aggr-button--secondary" href="<?php echo esc_url( add_query_arg( 'step', 'review', $aggr_campaign_url ) ); ?>"><?php esc_html_e( 'Back to review', 'aggressive-ads' ); ?></a>
 							<button class="aggr-button" type="submit"><?php esc_html_e( 'Submit campaign for review', 'aggressive-ads' ); ?></button>
@@ -722,7 +756,23 @@ endif;
 	</section>
 <?php endif; ?>
 
-<?php if ( true !== $aggr_campaign['editable'] || ! in_array( $aggr_step, array( 'review', 'submit' ), true ) ) : ?>
+<?php
+/*
+ * Everything below the wizard stands down while the wizard is running.
+ *
+ * Summary, Creatives, ad updates, variant comparison and update history all
+ * describe a campaign that exists; on step 1 they describe one that does not.
+ * Creatives is the clearest case — it renders "No creatives yet" as a warning
+ * about step 3 while step 1 is asking for a name — but Summary is the same
+ * thing said twice, echoing back the fields the form above is still
+ * collecting.
+ *
+ * The step test stays for staff working on a client's behalf: they keep these
+ * panels, and review and submit are the two steps that already summarise the
+ * campaign themselves.
+ */
+?>
+<?php if ( ! $aggr_wizard_on_screen && ( true !== $aggr_campaign['editable'] || ! in_array( $aggr_step, array( 'review', 'submit' ), true ) ) ) : ?>
 <section class="aggr-panel" aria-labelledby="aggr-summary-heading">
 	<h2 id="aggr-summary-heading" class="aggr-panel__head">
 		<?php esc_html_e( 'Summary', 'aggressive-ads' ); ?>

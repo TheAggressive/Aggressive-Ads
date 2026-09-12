@@ -470,6 +470,49 @@
 	color: var(--aggr-color-danger);
 }
 
+/*
+ * Which of a control's two labels a reader sees, decided at first paint.
+ *
+ * The pair exists because one button does two jobs: without scripting it saves
+ * and continues, with autosave running the step is already saved and it only
+ * continues. Choosing between them in the module meant rewriting the text after
+ * first paint, so every reload showed one label and then swapped it in front of
+ * the reader. `scripting` is a media feature, so CSS answers before anything is
+ * painted and nothing ever changes under them.
+ *
+ * The honest half of the pair is the default: a browser that does not know the
+ * feature, or has scripting off, gets "Save and continue", which is true in
+ * every case — pressing it always saves. The shorter label is the refinement.
+ */
+.aggr-script-label {
+	display: none;
+}
+
+@media (scripting: enabled) {
+	.aggr-noscript-label {
+		display: none;
+	}
+
+	.aggr-script-label {
+		display: inline;
+	}
+}
+
+/*
+ * `hidden` has to win over every component's own display rule.
+ *
+ * The UA stylesheet's `[hidden] { display: none }` is a plain attribute
+ * selector, so any class that sets `display` outranks it — `.aggr-button` is
+ * `inline-flex`, which meant setting `el.hidden = true` on a button changed the
+ * DOM and nothing else. The creative step's upload button was the first place
+ * that mattered: script hid it, the browser kept showing it, and only a real
+ * browser run caught it. Scoped to the portal shell so it cannot reach the
+ * host theme.
+ */
+.aggr-portal [hidden] {
+	display: none !important;
+}
+
 .aggr-button {
 	display: inline-flex;
 	align-items: center;

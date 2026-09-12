@@ -120,6 +120,7 @@ export type Campaign = {
 	revision: number;
 	reviewer: string;
 	review_notes: string;
+	advertiser_notes: string;
 	internal_notes: string;
 	creatives: Creative[];
 	creative_updates: CreativeUpdate[];

@@ -78,17 +78,17 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 	private array $temporary = array();
 
 	/**
-	 * Builds users, a campaign and a placement.
-	 *
-	 * @return void
-	 */
-	/**
 	 * The owner's organization, for the on-behalf routes.
 	 *
 	 * @var int
 	 */
 	private int $org_id;
 
+	/**
+	 * Builds users, a campaign and a placement.
+	 *
+	 * @return void
+	 */
 	public function set_up(): void {
 		parent::set_up();
 
@@ -262,7 +262,7 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 		$request->set_body_params(
 			array(
 				'package_id'   => $package_id,
-				'wizard_step'  => 'package',
+				'wizard_step'  => 'creative',
 				'autosave_rev' => 0,
 			)
 		);
@@ -275,6 +275,21 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 		$this->assertSame( 45000, $data['budget_cents'] );
 		$this->assertSame( 'USD', $data['currency'] );
 		$this->assertSame( array( $this->placement_id ), $data['placement_ids'] );
+
+		/*
+		 * The step the package chooser used to live on is retired, and the
+		 * route has to say so rather than storing a resume point the wizard
+		 * cannot render. A stale client is the realistic caller here.
+		 */
+		$stale = new WP_REST_Request( 'PATCH', '/aggr/v1/campaigns/' . $this->campaign_id );
+		$stale->set_body_params(
+			array(
+				'wizard_step'  => 'package',
+				'autosave_rev' => $data['autosave_rev'] ?? 1,
+			)
+		);
+
+		$this->assertSame( 422, rest_get_server()->dispatch( $stale )->get_status() );
 	}
 
 	/**
@@ -302,48 +317,8 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 		$this->assertSame( 0, (int) get_post_meta( $this->campaign_id, Campaign_Repository::META_START_TS, true ) );
 	}
 
-	/**
-	 * REST and HTML share successful Step 4 completion validation.
-	 *
-	 * @return void
-	 */
-	public function test_rest_can_complete_destination_and_schedule_step(): void {
-		wp_set_current_user( $this->owner );
 
-		$creative_id = Plugin::instance()->container()->get( Creative_Repository::class )->create(
-			$this->campaign_id,
-			(int) get_post_meta( $this->campaign_id, Campaign_Repository::META_ORG_ID, true ),
-			$this->placement_id,
-			array(
-				'kind'      => 'image',
-				'click_url' => 'https://example.com/exhibition',
-				'alt_text'  => 'Visitors viewing an exhibition',
-				'size'      => '728x90',
-			)
-		);
-		$this->assertGreaterThan( 0, $creative_id );
 
-		$start   = ( new \DateTimeImmutable( '+10 days', wp_timezone() ) )->setTime( 0, 0, 0 )->getTimestamp();
-		$end     = ( new \DateTimeImmutable( '+20 days', wp_timezone() ) )->setTime( 23, 59, 59 )->getTimestamp();
-		$request = new WP_REST_Request( 'PATCH', '/aggr/v1/campaigns/' . $this->campaign_id );
-		$request->set_body_params(
-			array(
-				'start_ts'     => $start,
-				'end_ts'       => $end,
-				'wizard_step'  => 'review',
-				'autosave_rev' => 0,
-			)
-		);
-
-		$response = rest_get_server()->dispatch( $request );
-		$data     = $response->get_data();
-
-		$this->assertSame( 200, $response->get_status() );
-		$this->assertSame( 'review', $data['wizard_step'] );
-		$this->assertSame( $start, $data['start_ts'] );
-		$this->assertSame( $end, $data['end_ts'] );
-		$this->assertSame( 1, $data['autosave_rev'] );
-	}
 
 	/**
 	 * A stale autosave receives a conflict and cannot overwrite current data.

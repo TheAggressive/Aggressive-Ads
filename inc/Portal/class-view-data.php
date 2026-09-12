@@ -219,22 +219,33 @@ final class View_Data {
 		$row['creative_slots']     = $this->creative_view->creative_slots( $campaign_id, $row['creatives'] );
 		$row['variant_comparison'] = $this->delivery->variant_comparison( $this->campaigns->org_id( $campaign_id ), $campaign_id, $row['creatives'] );
 		$row['placement_ids']      = $this->campaigns->placement_ids( $campaign_id );
-		$row['placement_options']  = $this->placement_options();
-		$row['package_id']         = $this->campaigns->package_id( $campaign_id );
-		$row['package_name']       = $row['package_id'] > 0 ? $this->packages->name( $row['package_id'] ) : '';
-		$row['package_options']    = $this->package_options();
-		$row['budget_cents']       = $this->campaigns->budget_cents( $campaign_id );
-		$row['currency']           = $this->campaigns->currency( $campaign_id );
-		$row['package_price']      = '' === $row['currency'] ? '' : $this->format_money( $row['budget_cents'], $row['currency'] );
-		$row['wizard_step']        = $this->campaigns->wizard_step( $campaign_id );
-		$row['start_date']         = $this->date_input_value( $this->campaigns->start_ts( $campaign_id ) );
-		$row['end_date']           = $this->date_input_value( $this->campaigns->end_ts( $campaign_id ) );
-		$row['min_start_date']     = $this->min_start_date( $row['start_date'] );
-		$row['advertiser_notes']   = $this->campaigns->advertiser_notes( $campaign_id );
-		$row['autosave_rev']       = $this->campaigns->autosave_revision( $campaign_id );
-		$row['readiness']          = $this->readiness->for_campaign( $campaign_id );
-		$row['editable']           = $this->window->allows( $campaign_id );
-		$row['on_behalf']          = $this->window->is_on_behalf( $campaign_id );
+
+		/*
+		 * Whether the name is still the one the wizard invented.
+		 *
+		 * Recorded rather than inferred — comparing the stored title to the
+		 * placeholder string breaks the moment the site language changes.
+		 * The first step reads it to decide whether choosing a package may
+		 * carry somebody straight on: advancing an unnamed campaign only
+		 * sends them back here from review with a title error.
+		 */
+		$row['title_is_placeholder'] = $this->campaigns->title_is_placeholder( $campaign_id );
+		$row['placement_options']    = $this->placement_options();
+		$row['package_id']           = $this->campaigns->package_id( $campaign_id );
+		$row['package_name']         = $row['package_id'] > 0 ? $this->packages->name( $row['package_id'] ) : '';
+		$row['package_options']      = $this->package_options();
+		$row['budget_cents']         = $this->campaigns->budget_cents( $campaign_id );
+		$row['currency']             = $this->campaigns->currency( $campaign_id );
+		$row['package_price']        = '' === $row['currency'] ? '' : $this->format_money( $row['budget_cents'], $row['currency'] );
+		$row['wizard_step']          = $this->campaigns->wizard_step( $campaign_id );
+		$row['start_date']           = $this->date_input_value( $this->campaigns->start_ts( $campaign_id ) );
+		$row['end_date']             = $this->date_input_value( $this->campaigns->end_ts( $campaign_id ) );
+		$row['min_start_date']       = $this->min_start_date( $row['start_date'] );
+		$row['advertiser_notes']     = $this->campaigns->advertiser_notes( $campaign_id );
+		$row['autosave_rev']         = $this->campaigns->autosave_revision( $campaign_id );
+		$row['readiness']            = $this->readiness->for_campaign( $campaign_id );
+		$row['editable']             = $this->window->allows( $campaign_id );
+		$row['on_behalf']            = $this->window->is_on_behalf( $campaign_id );
 		$this->line_items->ensure_default( $campaign_id );
 		$row['line_items'] = $this->line_items->for_campaign( $campaign_id );
 
