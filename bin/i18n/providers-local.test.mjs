@@ -593,3 +593,49 @@ test( 'NO_COLOR is honoured, so a log file gets plain text', () => {
 	assert.doesNotMatch( localProviderDownMessage( 'down' ), /\u001b\[/ );
 	assert.doesNotMatch( localRunIncompleteMessage(), /\u001b\[/ );
 } );
+
+test( 'a string with nothing translatable in it is copied, not asked about', async () => {
+	const calls = server( {
+		role: 'assistant',
+		content: 'should not be used',
+	} );
+
+	// Every one of these refused on every run before this, as an "echo" — the
+	// model returning the only correct answer looked like the model giving up.
+	for ( const source of [
+		'%1$s — %2$s',
+		'%s',
+		'%1$s / %2$s',
+		'—',
+		'Aggressive Ads',
+		'https://theaggressive.com',
+	] ) {
+		const result = await mt( source, 'de_DE' );
+
+		assert.equal( result.text, source, `${ source } was altered` );
+		assert.equal( result.via, 'copy' );
+	}
+
+	assert.equal(
+		calls.length,
+		0,
+		'the model was asked about a bare separator'
+	);
+} );
+
+test( 'one letter is enough to make a string worth translating', async () => {
+	const calls = server( { role: 'assistant', content: 'Seite %s von %s' } );
+
+	const result = await mt( 'Page %s of %s', 'de_DE' );
+
+	assert.equal( result.text, 'Seite %s von %s' );
+	assert.equal( result.via, 'local' );
+	assert.equal( calls.length, 1 );
+
+	// A brand term plus real words still goes out: only the brand is protected.
+	server( { role: 'assistant', content: 'Aggressive Ads-Einstellungen' } );
+	assert.equal(
+		( await mt( 'Aggressive Ads settings', 'de_DE' ) ).via,
+		'local'
+	);
+} );

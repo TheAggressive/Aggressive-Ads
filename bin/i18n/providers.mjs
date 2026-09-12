@@ -684,6 +684,37 @@ export async function checkLocalProvider() {
 }
 
 /**
+ * Whether a string contains nothing a translator would change.
+ *
+ * Strip the placeholders, the URLs and the terms that stay in English, and if
+ * no letter is left then the German is the English, character for character.
+ * `"%1$s — %2$s"` used to come back as a refusal on every run — the model
+ * "echoed the source", which is the one right answer — so it stayed empty in
+ * the catalog forever and a person was asked to confirm an em dash.
+ *
+ * Only letters count. A string of digits and punctuation is the same in every
+ * locale this plugin ships; a string with even one letter is not, and goes to
+ * the model as before.
+ *
+ * @param {string} text
+ * @returns {boolean}
+ */
+export function nothingToTranslate( text ) {
+	let rest = text.replace(
+		new RegExp( PLACEHOLDER_PATTERN.source, 'g' ),
+		' '
+	);
+
+	rest = rest.replace( /https?:\/\/\S+/gi, ' ' );
+
+	for ( const term of DO_NOT_TRANSLATE ) {
+		rest = rest.split( term ).join( ' ' );
+	}
+
+	return '' !== text.trim() && ! /\p{L}/u.test( rest );
+}
+
+/**
  * Translates one string, protecting what must survive the round trip.
  *
  * @param {string}      text    Source string.
@@ -693,6 +724,10 @@ export async function checkLocalProvider() {
  * @returns {Promise<{ text: string, via: string }>}
  */
 export async function mt( text, locale, context = null, notes = '' ) {
+	if ( nothingToTranslate( text ) ) {
+		return { text, via: 'copy' };
+	}
+
 	const { protectedText, tokens: ph } = protectPlaceholders( text );
 	const brand = protectBrandTerms( protectedText );
 
