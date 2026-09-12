@@ -1,0 +1,19 @@
+[Unit]
+Description=Aggressive Ads: nightly translation draft
+
+[Timer]
+# Nightly rather than hourly. A run with nothing to do is genuinely cheap now
+# — it sends the model no requests at all — but each one still wakes a GPU,
+# and new strings arrive at the pace people write code, not the pace of a
+# clock.
+OnCalendar=*-*-* 03:00:00
+
+# Spread the start, so a machine that wakes several timers at 03:00 does not
+# run them all at once.
+RandomizedDelaySec=30m
+
+# A laptop that was asleep at 03:00 still gets its run.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

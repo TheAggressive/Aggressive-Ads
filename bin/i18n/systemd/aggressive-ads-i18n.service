@@ -1,0 +1,26 @@
+[Unit]
+Description=Aggressive Ads: draft translations with the local model
+Documentation=file://%h/Studio/laao/wp-content/plugins/aggressive-ads/docs/i18n.md
+
+# The model runs on the local network, so there is no point starting before
+# there is one. This does not prove the model is up; translate.mjs checks that
+# and says so in red.
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+
+# Set by install-timer.sh to the plugin checkout it was run from.
+WorkingDirectory=@PLUGIN_ROOT@
+ExecStart=/usr/bin/env bash @PLUGIN_ROOT@/bin/i18n/scheduled-run.sh
+
+# A drafting job must never be the reason a machine is busy when someone is
+# using it.
+Nice=10
+IOSchedulingClass=idle
+
+# The run can take well over an hour on a full catalog; systemd's default
+# would kill it partway. The periodic flush means a kill costs at most the
+# strings since the last write, but there is no reason to spend them.
+TimeoutStartSec=4h
