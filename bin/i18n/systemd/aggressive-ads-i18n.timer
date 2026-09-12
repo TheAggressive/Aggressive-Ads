@@ -1,19 +1,22 @@
 [Unit]
-Description=Aggressive Ads: nightly translation draft
+Description=Aggressive Ads: translation draft, while the machine is on
 
 [Timer]
-# Nightly rather than hourly. A run with nothing to do is genuinely cheap now
-# — it sends the model no requests at all — but each one still wakes a GPU,
-# and new strings arrive at the pace people write code, not the pace of a
-# clock.
-OnCalendar=*-*-* 03:00:00
+# Deliberately not a wall-clock schedule. This machine is off overnight, so an
+# OnCalendar=03:00 timer with Persistent=true does the opposite of what it
+# looks like: it skips every night and then fires the moment you boot, taking
+# the GPU while you are sitting down to work.
+#
+# So the trigger is "the machine is on and has been for a while" instead.
+OnBootSec=20min
+OnUnitActiveSec=3h
 
-# Spread the start, so a machine that wakes several timers at 03:00 does not
-# run them all at once.
-RandomizedDelaySec=30m
+# Enough to miss the login rush and whatever else starts with the session.
+RandomizedDelaySec=10m
 
-# A laptop that was asleep at 03:00 still gets its run.
-Persistent=true
+# Nothing to catch up on: there is no missed occurrence when the schedule is
+# relative to boot rather than to a clock.
+Persistent=false
 
 [Install]
 WantedBy=timers.target
