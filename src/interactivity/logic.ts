@@ -7,7 +7,6 @@
 
 export const DISPLAY_STEPS = [
 	'details',
-	'package',
 	'creative',
 	'destination',
 	'review',

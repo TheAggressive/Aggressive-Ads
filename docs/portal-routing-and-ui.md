@@ -105,24 +105,61 @@ It creates an organization-scoped `aggr_draft` and redirects to the ordinary
 `/advertiser/campaigns/{id}/` detail URL, keeping the documented URL grammar
 numeric rather than inventing a special `new` object segment.
 
-The detail screen is also the resumable wizard surface. All six steps currently
-ship. Details collects campaign name, optional placement interests, and notes
-for reviewers. Package presents only active,
+The detail screen is also the resumable wizard surface. All five steps
+currently ship.
+
+**Details** collects the campaign name and the package together. The package
+was its own step until the two were merged: the step before it offered a
+"placement interests" checkbox grid, and selecting a package overwrote those
+placements with the package's own through `package_snapshot()`, so the grid
+asked a question whose answer never survived. It is gone, and with it a page
+load and a decision that changed nothing. The step presents only active,
 completely configured catalogue entries as native radio controls, with price,
 duration, and included placement sizes. A package explicitly marked for a
 custom schedule displays that label instead of inventing a duration, and the
 active package marked as default is preselected only while the campaign has no
-saved package. Creative presents one upload card per
-package placement, including exact dimensions, a native file input, destination
-URL, authenticated preview, and nonce-protected removal. Accessible image text
-is generated from the validated destination host unless an API client supplies
-its own. Destination and schedule confirms every per-creative destination, then
-collects a required future local start date and optional
-end date. Review presents the stored campaign, commercial package snapshot,
-schedule, and authenticated creative previews. It aggregates every current
-submission problem and links each one back to the exact editing step and field.
-Submit explains the editing lock, withdrawal boundary, and changes-requested
-path before presenting the final action. All six steps work without JavaScript.
+saved package. The package is **not** `required` on the control: a draft must
+be savable with a name alone, and `Review_Readiness` points the missing-package
+error back at this fieldset.
+
+**Creative** presents one upload card per package placement, including exact
+dimensions, a native file input, destination URL, authenticated preview, and
+nonce-protected removal. Accessible image text is generated from the validated
+destination host unless an API client supplies its own. The upload sends itself
+once a file and a valid destination are both present, so the submit button is
+hidden — by script, after the module attaches, so a browser without it keeps
+the ordinary form. It commits on `change`/`blur` rather than `input`, because a
+half-typed address such as `https://exa` is already a valid URL and would
+upload to it; the button is restored if an attempt is refused. Uploading is a
+change of context, so a sentence describing it precedes both controls and is in
+`aria-describedby` on each (WCAG 3.2.2).
+
+**Destination and schedule** confirms every per-creative destination, then
+collects a required future local start date and optional end date. Both dates
+autosave. They travel as the local `YYYY-MM-DD` string the input holds and are
+resolved by `Date_Input::parse()` on the server, never in the browser: a date
+input carries no timezone, and a stamp built client-side is the visitor's zone
+rather than the site's — hours out for anyone who is not local.
+
+**Review** presents the stored campaign, commercial package snapshot, schedule,
+and authenticated creative previews. It aggregates every current submission
+problem and links each one back to the exact editing step and field.
+
+**Submit** explains the editing lock, withdrawal boundary, and changes-requested
+path before presenting the final action, and collects the advertiser's notes for
+the review team. The notes sit here rather than on the first step because they
+describe a campaign the advertiser has by then finished assembling, and they are
+posted by the submit button rather than autosaved — the gap between a last
+keystroke and the click is where a debounced save loses them.
+
+All five steps work without JavaScript.
+
+Panels that describe a campaign which already exists — Summary, Creatives,
+delivery strategy, ad updates, variant comparison, update history — are hidden
+for as long as an advertiser has the wizard on screen. Staff editing on a
+client's behalf keep them. `editable` alone is the wrong test for this:
+`Edit_Window::allows()` is true for staff in every status, so keying on it
+would blank those panels for a reviewer.
 
 A completed or otherwise uneditable campaign can be copied from the detail
 screen. Complete campaigns label the action **Renew campaign**; others say

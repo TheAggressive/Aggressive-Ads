@@ -28,7 +28,7 @@ whole menu.
 
 | Screen | Capability | What it is for |
 |---|---|---|
-| Review | `aggr_review_campaigns` | The queue. Approve, reject, pause, resume, cancel; internal notes; audit history |
+| Review | `aggr_review_campaigns` | The queue. Approve, reject, pause, resume, cancel; the advertiser's submission notes; internal notes; audit history |
 | Organizations | `aggr_manage_orgs` | Tenants, membership, suspension |
 | Placements | `aggr_manage_placements` | The catalogue of slots a campaign can be bought into |
 | Packages | `aggr_manage_packages` | What advertisers may buy, and at what price |

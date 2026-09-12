@@ -241,7 +241,7 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 		$this->assertSame( 'Museum season launch', get_the_title( $campaign_id ) );
 		$this->assertSame( array( $this->placement_id ), Plugin::instance()->container()->get( Campaign_Repository::class )->placement_ids( $campaign_id ) );
 		$this->assertStringContainsString( 'fall artwork', (string) get_post_meta( $campaign_id, Campaign_Repository::META_ADVERTISER_NOTES, true ) );
-		$this->assertSame( 'package', get_post_meta( $campaign_id, Campaign_Repository::META_WIZARD_STEP, true ) );
+		$this->assertSame( 'creative', get_post_meta( $campaign_id, Campaign_Repository::META_WIZARD_STEP, true ) );
 	}
 
 	/**
@@ -255,7 +255,7 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 		$campaign_id = $this->editor->create( 'Package snapshot' );
 		$this->assertIsInt( $campaign_id );
 
-		$result = $this->actions->process_save_package( $campaign_id, $this->package_id, 0 );
+		$result = $this->actions->process_save( $campaign_id, array( 'package_id' => $this->package_id ), 0 );
 
 		$this->assertSame( 1, $result );
 		$this->assertSame( $this->package_id, (int) get_post_meta( $campaign_id, Campaign_Repository::META_PACKAGE_ID, true ) );
@@ -351,20 +351,33 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The form requires an explicit package selection.
+	 * Saving without a package is allowed, and clears any stored selection.
+	 *
+	 * The package used to be its own step with its own required control, so
+	 * saving without one was an error. It shares the first step with the
+	 * campaign name now, and a draft has to be savable with a name alone —
+	 * somebody naming a campaign they will finish tomorrow is not making a
+	 * mistake. `Review_Readiness` is what refuses a submission with no package,
+	 * and it points the error back at this fieldset.
 	 *
 	 * @return void
 	 */
-	public function test_package_form_requires_a_selection(): void {
+	public function test_saving_without_a_package_is_allowed_and_clears_it(): void {
 		wp_set_current_user( $this->advertiser );
 
-		$campaign_id = $this->editor->create( 'Required package' );
+		$campaign_id = $this->editor->create( 'Package optional while drafting' );
 		$this->assertIsInt( $campaign_id );
 
-		$result = $this->actions->process_save_package( $campaign_id, 0, 0 );
+		$this->assertSame( 1, $this->actions->process_save( $campaign_id, array( 'package_id' => $this->package_id ), 0 ) );
+		$this->assertSame( $this->package_id, (int) get_post_meta( $campaign_id, Campaign_Repository::META_PACKAGE_ID, true ) );
 
-		$this->assertWPError( $result );
-		$this->assertSame( 'aggr_package_required', $result->get_error_code() );
+		$this->assertSame( 2, $this->actions->process_save( $campaign_id, array( 'package_id' => 0 ), 1 ) );
+		$this->assertSame( 0, (int) get_post_meta( $campaign_id, Campaign_Repository::META_PACKAGE_ID, true ) );
+		$this->assertSame(
+			array(),
+			Plugin::instance()->container()->get( Campaign_Repository::class )->placement_ids( $campaign_id ),
+			'Clearing the package clears the placements it wrote.'
+		);
 	}
 
 	/**
@@ -377,7 +390,7 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 
 		$campaign_id = $this->editor->create( 'Scheduled campaign' );
 		$this->assertIsInt( $campaign_id );
-		$this->assertSame( 1, $this->actions->process_save_package( $campaign_id, $this->package_id, 0 ) );
+		$this->assertSame( 1, $this->actions->process_save( $campaign_id, array( 'package_id' => $this->package_id ), 0 ) );
 		$this->add_creative( $campaign_id );
 
 		$start_date = ( new \DateTimeImmutable( '+10 days', wp_timezone() ) )->format( 'Y-m-d' );
@@ -400,7 +413,7 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 
 		$campaign_id = $this->editor->create( 'Incomplete campaign' );
 		$this->assertIsInt( $campaign_id );
-		$this->assertSame( 1, $this->actions->process_save_package( $campaign_id, $this->package_id, 0 ) );
+		$this->assertSame( 1, $this->actions->process_save( $campaign_id, array( 'package_id' => $this->package_id ), 0 ) );
 
 		$start_date = ( new \DateTimeImmutable( '+10 days', wp_timezone() ) )->format( 'Y-m-d' );
 		$result     = $this->actions->process_save_schedule( $campaign_id, $start_date, '', 1 );
@@ -421,7 +434,7 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 
 		$campaign_id = $this->editor->create( 'Invalid schedule' );
 		$this->assertIsInt( $campaign_id );
-		$this->assertSame( 1, $this->actions->process_save_package( $campaign_id, $this->package_id, 0 ) );
+		$this->assertSame( 1, $this->actions->process_save( $campaign_id, array( 'package_id' => $this->package_id ), 0 ) );
 		$this->add_creative( $campaign_id );
 
 		$missing = $this->actions->process_save_schedule( $campaign_id, '', '', 1 );
@@ -451,7 +464,7 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 
 		$campaign_id = $this->editor->create( 'API schedule boundaries' );
 		$this->assertIsInt( $campaign_id );
-		$this->assertSame( 1, $this->actions->process_save_package( $campaign_id, $this->package_id, 0 ) );
+		$this->assertSame( 1, $this->actions->process_save( $campaign_id, array( 'package_id' => $this->package_id ), 0 ) );
 		$this->add_creative( $campaign_id );
 
 		$zone   = wp_timezone();
@@ -490,7 +503,7 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 		$campaign_id = $this->editor->create( 'Starting today' );
 
 		$this->assertIsInt( $campaign_id );
-		$this->assertSame( 1, $this->actions->process_save_package( $campaign_id, $this->package_id, 0 ) );
+		$this->assertSame( 1, $this->actions->process_save( $campaign_id, array( 'package_id' => $this->package_id ), 0 ) );
 		$this->add_creative( $campaign_id );
 
 		$zone  = wp_timezone();
@@ -533,7 +546,7 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 		$campaign_id = $this->editor->create( 'Starting yesterday' );
 
 		$this->assertIsInt( $campaign_id );
-		$this->assertSame( 1, $this->actions->process_save_package( $campaign_id, $this->package_id, 0 ) );
+		$this->assertSame( 1, $this->actions->process_save( $campaign_id, array( 'package_id' => $this->package_id ), 0 ) );
 		$this->add_creative( $campaign_id );
 
 		$zone  = wp_timezone();
@@ -682,6 +695,88 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The note written on the submit step is stored by the submission itself.
+	 *
+	 * The write half and the read half have to meet: submission is a state
+	 * transition, and the transition is what closes the edit window, so a note
+	 * saved a moment too late would be refused with nothing to show the
+	 * advertiser. Asserting the stored value — not that a method was called —
+	 * is what makes that ordering provable.
+	 *
+	 * @return void
+	 */
+	public function test_submission_stores_the_note_written_on_the_submit_step(): void {
+		wp_set_current_user( $this->advertiser );
+		$campaign_id = $this->complete_campaign( 'Submitting with a note' );
+		$revision    = (int) get_post_meta( $campaign_id, Campaign_Repository::META_AUTOSAVE_REV, true );
+
+		$result = $this->actions->process_submit( $campaign_id, 'Evening slot preferred.', $revision );
+
+		$this->assertTrue( $result );
+		$this->assertSame( Post_Statuses::SUBMITTED, get_post_status( $campaign_id ) );
+		$this->assertSame(
+			'Evening slot preferred.',
+			get_post_meta( $campaign_id, Campaign_Repository::META_ADVERTISER_NOTES, true )
+		);
+	}
+
+	/**
+	 * Submitting without a note leaves an existing one alone.
+	 *
+	 * Null and empty string are different answers here. A campaign returned for
+	 * changes and resubmitted carries the note its advertiser already wrote,
+	 * and treating "no field posted" as "clear it" would silently drop it.
+	 *
+	 * @return void
+	 */
+	public function test_submission_without_a_note_keeps_the_stored_one(): void {
+		wp_set_current_user( $this->advertiser );
+		$campaign_id = $this->complete_campaign( 'Submitting with no note field' );
+		update_post_meta( $campaign_id, Campaign_Repository::META_ADVERTISER_NOTES, 'Written earlier.' );
+
+		$this->assertTrue( $this->actions->process_submit( $campaign_id ) );
+		$this->assertSame(
+			'Written earlier.',
+			get_post_meta( $campaign_id, Campaign_Repository::META_ADVERTISER_NOTES, true )
+		);
+	}
+
+	/**
+	 * Saving step 1 does not erase a note written on the submit step.
+	 *
+	 * The details form stopped carrying this field, and the save path used to
+	 * force it to '' whether or not the caller supplied it — so every step-1
+	 * save would have wiped the note. The negative is the assertion worth
+	 * having: what the save must *not* touch.
+	 *
+	 * @return void
+	 */
+	public function test_saving_details_leaves_the_advertiser_note_untouched(): void {
+		wp_set_current_user( $this->advertiser );
+
+		$campaign_id = $this->editor->create( 'Note survives a details save' );
+		$this->assertIsInt( $campaign_id );
+		update_post_meta( $campaign_id, Campaign_Repository::META_ADVERTISER_NOTES, 'Do not lose me.' );
+
+		$revision = (int) get_post_meta( $campaign_id, Campaign_Repository::META_AUTOSAVE_REV, true );
+		$saved    = $this->actions->process_save(
+			$campaign_id,
+			array(
+				'title'         => 'Renamed on step 1',
+				'placement_ids' => array(),
+			),
+			$revision
+		);
+
+		$this->assertIsInt( $saved );
+		$this->assertSame( 'Renamed on step 1', get_the_title( $campaign_id ) );
+		$this->assertSame(
+			'Do not lose me.',
+			get_post_meta( $campaign_id, Campaign_Repository::META_ADVERTISER_NOTES, true )
+		);
+	}
+
+	/**
 	 * Browser readiness cannot bypass transition-time validation.
 	 *
 	 * @return void
@@ -792,25 +887,6 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 		$this->actions->handle_save();
 	}
 
-	/**
-	 * A details nonce cannot authorize the distinct package write action.
-	 *
-	 * @return void
-	 */
-	public function test_package_handler_rejects_a_nonce_for_another_action(): void {
-		wp_set_current_user( $this->advertiser );
-		$campaign_id = $this->editor->create();
-		$this->assertIsInt( $campaign_id );
-
-		$_POST = array(
-			'campaign_id' => (string) $campaign_id,
-			'package_id'  => (string) $this->package_id,
-			'_wpnonce'    => wp_create_nonce( Campaign_Nonces::save_nonce_action( $campaign_id ) ),
-		);
-
-		$this->expectException( 'WPDieException' );
-		$this->actions->handle_save_package();
-	}
 
 	/**
 	 * A package nonce cannot authorize the schedule write action.
@@ -824,7 +900,7 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 
 		$_POST = array(
 			'campaign_id' => (string) $campaign_id,
-			'_wpnonce'    => wp_create_nonce( Campaign_Nonces::package_nonce_action( $campaign_id ) ),
+			'_wpnonce'    => wp_create_nonce( Campaign_Nonces::submit_nonce_action( $campaign_id ) ),
 		);
 
 		$this->expectException( 'WPDieException' );

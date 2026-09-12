@@ -14,21 +14,25 @@ import {
 } from '../logic';
 
 describe( 'wizard steps', () => {
-	it( 'accepts only the six display steps', () => {
+	it( 'accepts only the five display steps', () => {
 		expect( isWizardStep( 'details' ) ).toBe( true );
 		expect( isWizardStep( 'submit' ) ).toBe( true );
 		expect( isWizardStep( 'lap_draft' ) ).toBe( false );
 		expect( isWizardStep( '' ) ).toBe( false );
+		// The package step was folded into details. Still accepting it would
+		// let a stale link or a stored resume point address a step the wizard
+		// no longer renders.
+		expect( isWizardStep( 'package' ) ).toBe( false );
 	} );
 
 	it( 'walks forward and back without wrapping', () => {
-		expect( nextStep( 'details' ) ).toBe( 'package' );
+		expect( nextStep( 'details' ) ).toBe( 'creative' );
 		expect( nextStep( 'review' ) ).toBe( 'submit' );
 		expect( nextStep( 'submit' ) ).toBeNull();
 		expect( nextStep( 'nope' ) ).toBeNull();
-		expect( previousStep( 'package' ) ).toBe( 'details' );
+		expect( previousStep( 'creative' ) ).toBe( 'details' );
 		expect( previousStep( 'details' ) ).toBeNull();
-		expect( stepIndex( 'creative' ) ).toBe( 2 );
+		expect( stepIndex( 'creative' ) ).toBe( 1 );
 	} );
 
 	it( 'gates only the submit step', () => {

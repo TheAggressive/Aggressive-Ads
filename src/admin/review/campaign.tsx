@@ -323,6 +323,28 @@ function FeedbackDialog( {
 	);
 }
 
+/*
+ * What the advertiser wrote for this reviewer, read-only.
+ *
+ * `pre-line` because it is prose typed into a textarea: the newlines are the
+ * advertiser's paragraphing, and collapsing them runs a list of points into
+ * one block.
+ */
+function AdvertiserNotes( { value }: { value: string } ): ReactElement {
+	return (
+		<section className="aggr-panel" aria-labelledby="aggr-advertiser-notes">
+			<h2 id="aggr-advertiser-notes" className="aggr-panel__head">
+				{ t( 'advertiserNotes' ) }
+			</h2>
+			{ '' === value.trim() ? (
+				<p className="aggr-empty">{ t( 'noAdvertiserNotes' ) }</p>
+			) : (
+				<p className="aggr-notes-body">{ value }</p>
+			) }
+		</section>
+	);
+}
+
 /** The staff-only notes, saved on a button rather than as you type. */
 function InternalNotes( {
 	value,
@@ -748,6 +770,8 @@ export function CampaignView( {
 						<p className="aggr-empty">{ t( 'noActions' ) }</p>
 					</section>
 				) : null }
+
+				<AdvertiserNotes value={ campaign.advertiser_notes } />
 
 				<InternalNotes
 					// Remounted when the server's copy changes, so the box shows

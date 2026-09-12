@@ -18,6 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 use Aggressive\Ads\Assets\Assets;
 use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Workflow\Campaign_Editor;
 
 $aggr_campaign     = isset( $aggr_campaign ) && is_array( $aggr_campaign ) ? $aggr_campaign : array();
 $aggr_step         = isset( $aggr_step ) && is_string( $aggr_step ) ? $aggr_step : 'details';
@@ -25,14 +26,21 @@ $aggr_review_ready = true === ( $aggr_review_ready ?? false );
 $aggr_slots        = isset( $aggr_slots ) && is_array( $aggr_slots ) ? $aggr_slots : array();
 $aggr_wizard_id    = 'campaign-' . (int) ( $aggr_campaign['id'] ?? 0 );
 
+/*
+ * Read from the canonical list rather than a copy of it. This is what a screen
+ * reader announces on every step change, so a list that drifts from the one the
+ * wizard actually renders announces the wrong position and nothing on screen
+ * looks wrong.
+ */
+$aggr_step_position = array_search( $aggr_step, Campaign_Editor::DISPLAY_STEPS, true );
+
 $aggr_step_label = sprintf(
 	/* translators: 1: current step number, 2: total steps, 3: step title. */
 	__( 'Step %1$s of %2$s: %3$s', 'aggressive-ads' ),
-	(string) ( array_search( $aggr_step, array( 'details', 'package', 'creative', 'destination', 'review', 'submit' ), true ) + 1 ),
-	'6',
+	(string) ( false === $aggr_step_position ? 1 : $aggr_step_position + 1 ),
+	(string) count( Campaign_Editor::DISPLAY_STEPS ),
 	match ( $aggr_step ) {
-		'details'     => __( 'Campaign details', 'aggressive-ads' ),
-		'package'     => __( 'Choose a package', 'aggressive-ads' ),
+		'details'     => __( 'Name your campaign and choose a package', 'aggressive-ads' ),
 		'creative'    => __( 'Upload creative', 'aggressive-ads' ),
 		'destination' => __( 'Confirm destinations and schedule', 'aggressive-ads' ),
 		'review'      => __( 'Review your campaign', 'aggressive-ads' ),

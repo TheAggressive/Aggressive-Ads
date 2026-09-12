@@ -30,7 +30,6 @@ final class Campaign_Actions implements Service {
 	public const CREATE_ACTION        = 'aggr_create_campaign';
 	public const COPY_ACTION          = 'aggr_copy_campaign';
 	public const SAVE_ACTION          = 'aggr_save_campaign';
-	public const SAVE_PACKAGE_ACTION  = 'aggr_save_campaign_package';
 	public const SAVE_SCHEDULE_ACTION = 'aggr_save_campaign_schedule';
 	public const SUBMIT_ACTION        = 'aggr_submit_campaign';
 	public const WITHDRAW_ACTION      = 'aggr_withdraw_campaign';
@@ -68,7 +67,6 @@ final class Campaign_Actions implements Service {
 		add_action( 'admin_post_' . self::CREATE_ACTION, array( $this, 'handle_create' ) );
 		add_action( 'admin_post_' . self::COPY_ACTION, array( $this, 'handle_copy' ) );
 		add_action( 'admin_post_' . self::SAVE_ACTION, array( $this, 'handle_save' ) );
-		add_action( 'admin_post_' . self::SAVE_PACKAGE_ACTION, array( $this, 'handle_save_package' ) );
 		add_action( 'admin_post_' . self::SAVE_SCHEDULE_ACTION, array( $this, 'handle_save_schedule' ) );
 		add_action( 'admin_post_' . self::SUBMIT_ACTION, array( $this, 'handle_submit' ) );
 		add_action( 'admin_post_' . self::WITHDRAW_ACTION, array( $this, 'handle_withdraw' ) );
@@ -132,12 +130,21 @@ final class Campaign_Actions implements Service {
 		check_admin_referer( Campaign_Nonces::save_nonce_action( $campaign_id ) );
 
 		$fields = array(
-			'title'            => isset( $_POST['title'] ) ? sanitize_text_field( wp_unslash( $_POST['title'] ) ) : '',
-			'placement_ids'    => isset( $_POST['placement_ids'] ) && is_array( $_POST['placement_ids'] )
-				? array_map( 'absint', wp_unslash( $_POST['placement_ids'] ) )
-				: array(),
-			'advertiser_notes' => isset( $_POST['advertiser_notes'] ) ? sanitize_textarea_field( wp_unslash( $_POST['advertiser_notes'] ) ) : '',
+			'title' => isset( $_POST['title'] ) ? sanitize_text_field( wp_unslash( $_POST['title'] ) ) : '',
 		);
+
+		/*
+		 * Absent, not empty, when the form offered no choice.
+		 *
+		 * This step used to post a placement checkbox grid, so sending
+		 * `placement_ids => array()` for an empty submission was right. The
+		 * grid is gone — the package sets the placements — and an unconditional
+		 * empty array here would clear, on every save of the campaign's name,
+		 * exactly the placements the package had just written.
+		 */
+		if ( isset( $_POST['package_id'] ) ) {
+			$fields['package_id'] = absint( wp_unslash( $_POST['package_id'] ) );
+		}
 
 		$revision = isset( $_POST['autosave_rev'] ) ? absint( $_POST['autosave_rev'] ) : -1;
 		$result   = $this->process_save( $campaign_id, $fields, $revision );
@@ -147,32 +154,9 @@ final class Campaign_Actions implements Service {
 			$this->redirect( add_query_arg( 'step', 'details', $url ), 'error', $result );
 		}
 
-		$this->redirect( add_query_arg( 'step', 'package', $url ), 'saved' );
+		$this->redirect( add_query_arg( 'step', 'creative', $url ), 'saved' );
 	}
 
-	/**
-	 * Saves the selected catalogue package and returns to that wizard step.
-	 *
-	 * @return void
-	 */
-	public function handle_save_package(): void {
-		$this->assert_portal_access();
-
-		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0;
-
-		check_admin_referer( Campaign_Nonces::package_nonce_action( $campaign_id ) );
-
-		$package_id = isset( $_POST['package_id'] ) ? absint( $_POST['package_id'] ) : 0;
-		$revision   = isset( $_POST['autosave_rev'] ) ? absint( $_POST['autosave_rev'] ) : -1;
-		$result     = $this->process_save_package( $campaign_id, $package_id, $revision );
-		$url        = add_query_arg( 'step', 'creative', Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id ) );
-
-		if ( is_wp_error( $result ) ) {
-			$this->redirect( $url, 'error', $result );
-		}
-
-		$this->redirect( $url, 'package_saved' );
-	}
 
 	/**
 	 * Saves the destination confirmation and campaign schedule.
@@ -211,8 +195,10 @@ final class Campaign_Actions implements Service {
 
 		check_admin_referer( Campaign_Nonces::submit_nonce_action( $campaign_id ) );
 
-		$result = $this->process_submit( $campaign_id );
-		$url    = Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id );
+		$notes    = isset( $_POST['advertiser_notes'] ) ? sanitize_textarea_field( wp_unslash( $_POST['advertiser_notes'] ) ) : null;
+		$revision = isset( $_POST['autosave_rev'] ) ? absint( $_POST['autosave_rev'] ) : -1;
+		$result   = $this->process_submit( $campaign_id, $notes, $revision );
+		$url      = Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id );
 
 		if ( is_wp_error( $result ) ) {
 			$step = 'aggr_campaign_invalid' === $result->get_error_code() ? 'review' : 'submit';
@@ -528,44 +514,24 @@ final class Campaign_Actions implements Service {
 			return new WP_Error( 'aggr_forbidden', __( 'You do not have permission to edit that campaign.', 'aggressive-ads' ), array( 'status' => 403 ) );
 		}
 
-		return $this->editor->save(
-			$campaign_id,
-			array(
-				'title'            => (string) ( $fields['title'] ?? '' ),
-				'placement_ids'    => is_array( $fields['placement_ids'] ?? null ) ? $fields['placement_ids'] : array(),
-				'advertiser_notes' => (string) ( $fields['advertiser_notes'] ?? '' ),
-				'wizard_step'      => 'package',
-			),
-			$revision
-		);
-	}
+		/*
+		 * Only the keys the caller actually supplied. Campaign_Editor::save()
+		 * tests each with array_key_exists, so an omitted key leaves the stored
+		 * value alone and a present-but-empty one overwrites it. Passing a
+		 * field the form did not render is how a save silently erases work done
+		 * on another step.
+		 */
+		$clean = array( 'wizard_step' => 'creative' );
 
-	/**
-	 * Delivery-level package selection entry point for forms and tests.
-	 *
-	 * @param int $campaign_id Campaign post id.
-	 * @param int $package_id  Selected package post id.
-	 * @param int $revision    Last-seen revision.
-	 * @return int|WP_Error
-	 */
-	public function process_save_package( int $campaign_id, int $package_id, int $revision ): int|WP_Error {
-		if ( ! current_user_can( Capabilities::ACCESS_PORTAL ) ) {
-			return new WP_Error( 'aggr_forbidden', __( 'You do not have permission to edit that campaign.', 'aggressive-ads' ), array( 'status' => 403 ) );
+		foreach ( array( 'title', 'placement_ids', 'package_id', 'advertiser_notes' ) as $key ) {
+			if ( array_key_exists( $key, $fields ) ) {
+				$clean[ $key ] = $fields[ $key ];
+			}
 		}
 
-		if ( $package_id <= 0 ) {
-			return new WP_Error( 'aggr_package_required', __( 'Choose a package.', 'aggressive-ads' ), array( 'status' => 422 ) );
-		}
-
-		return $this->editor->save(
-			$campaign_id,
-			array(
-				'package_id'  => $package_id,
-				'wizard_step' => 'creative',
-			),
-			$revision
-		);
+		return $this->editor->save( $campaign_id, $clean, $revision );
 	}
+
 
 	/**
 	 * Parses local dates and completes the shared schedule workflow.
@@ -602,10 +568,12 @@ final class Campaign_Actions implements Service {
 	 * The state machine reauthorizes the object and revalidates current stored
 	 * data. Readiness rendered in the browser is advisory and is never trusted.
 	 *
-	 * @param int $campaign_id Campaign post id.
+	 * @param int         $campaign_id Campaign post id.
+	 * @param string|null $notes       Advertiser note written on the submit step, or null to leave it alone.
+	 * @param int         $revision    Client's last-seen revision, used only when a note is supplied.
 	 * @return true|WP_Error
 	 */
-	public function process_submit( int $campaign_id ): bool|WP_Error {
+	public function process_submit( int $campaign_id, ?string $notes = null, int $revision = -1 ): bool|WP_Error {
 		if ( ! current_user_can( Capabilities::ACCESS_PORTAL ) ) {
 			return new WP_Error( 'aggr_forbidden', __( 'You do not have permission to submit that campaign.', 'aggressive-ads' ), array( 'status' => 403 ) );
 		}
@@ -614,6 +582,21 @@ final class Campaign_Actions implements Service {
 
 		if ( is_wp_error( $allowed ) ) {
 			return $allowed;
+		}
+
+		/*
+		 * Written before the transition, because the transition is what makes
+		 * the campaign uneditable — saving afterwards would be refused by the
+		 * edit window, and the note would be gone with no error the advertiser
+		 * could see. A save that fails stops the submission rather than
+		 * submitting without the note the advertiser just wrote.
+		 */
+		if ( null !== $notes ) {
+			$saved = $this->editor->save( $campaign_id, array( 'advertiser_notes' => $notes ), $revision );
+
+			if ( is_wp_error( $saved ) ) {
+				return $saved;
+			}
 		}
 
 		return $this->machine->apply( $campaign_id, Post_Statuses::SUBMITTED );

@@ -111,6 +111,16 @@
 		--aggr-measure: 92ch;
 
 		/*
+		 * How wide a form control is allowed to get.
+		 *
+		 * Separate from --aggr-measure, which is a reading measure for prose. A
+		 * control is not read across, it is aimed at: a destination URL or a
+		 * campaign name stretched the full width of a panel is harder to scan and
+		 * harder to hit, and a file input that wide is mostly empty dashed border.
+		 */
+		--aggr-field-measure: 34rem;
+
+		/*
 		 * Archivo is self-hosted (SIL OFL). A Google Fonts link would send
 		 * every advertiser's IP to Google on every screen.
 		 */

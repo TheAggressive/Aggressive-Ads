@@ -106,7 +106,6 @@
 }
 
 .aggr-hint {
-	max-width: var(--aggr-measure);
 	margin: var(--aggr-space-2xs) 0 var(--aggr-space-xs);
 	color: var(--aggr-color-text-muted);
 	font-size: 13px;
@@ -135,6 +134,7 @@
 .aggr-field textarea {
 	display: block;
 	width: 100%;
+	max-width: var(--aggr-field-measure);
 	min-height: var(--aggr-control-min);
 	padding: var(--aggr-space-xs) var(--aggr-space-sm);
 	background: var(--aggr-color-surface);
@@ -147,6 +147,7 @@
 .aggr-field input[type="file"] {
 	display: block;
 	width: 100%;
+	max-width: var(--aggr-field-measure);
 	min-height: var(--aggr-control-min);
 	padding: var(--aggr-space-xs);
 	background: var(--aggr-color-surface);
@@ -200,6 +201,20 @@
 	border: 1px solid var(--aggr-border-color);
 	border-radius: var(--aggr-radius-control);
 	cursor: pointer;
+
+	/* Catalogue names, not copy we control. Only breaks a word that cannot fit
+	   a line of its own: `anywhere` also lowers the min-content width, and
+	   against the real catalogue that chopped "Homepage Leaderboard" into
+	   "Homepag/e Leaderboar/d". */
+	overflow-wrap: break-word;
+}
+
+/* Flex items floor at min-content, so without this the longest word in a name
+   sets the card's width and the text spills past the border instead of
+   wrapping inside it. `break-word` only helps once the box is allowed to be
+   narrower than that word. */
+.aggr-choice__text {
+	min-width: 0;
 }
 
 .aggr-choice:has(input:checked) {
@@ -207,14 +222,6 @@
 	border-color: var(--aggr-color-live);
 }
 
-.aggr-sizebox {
-	flex: 0 0 auto;
-	width: min(5.5rem, calc(5.5rem * var(--aggr-box-w, 1) / var(--aggr-box-h, 1)));
-	height: min(5.5rem, calc(5.5rem * var(--aggr-box-h, 1) / var(--aggr-box-w, 1)));
-	background: var(--aggr-color-surface-sunken);
-	border: 1px dashed var(--aggr-border-color-strong);
-	border-radius: 4px;
-}
 
 .aggr-choice--package {
 	align-items: flex-start;
@@ -245,8 +252,19 @@
 .aggr-form__actions {
 	display: flex;
 	gap: var(--aggr-space-sm);
+	align-items: center;
 	justify-content: flex-end;
 	flex-wrap: wrap;
+}
+
+/*
+ * The note explaining why there is nothing to continue to, kept on the left of
+ * the controls and on their centre line. `auto` on the end margin does the
+ * separating, so the buttons stay where they always are and the row still
+ * stacks sensibly when it wraps.
+ */
+.aggr-form__actions .aggr-hint {
+	margin: 0 auto 0 0;
 }
 
 .aggr-upload-list {

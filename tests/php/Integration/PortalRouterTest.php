@@ -186,6 +186,88 @@ final class PortalRouterTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A portal request reserves no room for a toolbar it does not render.
+	 *
+	 * The template already called `show_admin_bar( false )`, and the toolbar
+	 * was indeed absent — but 32px of blank space sat above the portal header
+	 * anyway. `_wp_admin_bar_init()` runs on template_redirect priority 0 and
+	 * the portal template is chosen at template_include, so by the time the
+	 * template spoke, `WP_Admin_Bar::initialize()` had already enqueued
+	 * admin-bar.css and hooked `_admin_bar_bump_cb` to wp_head, which prints
+	 * `html { margin-top: 32px !important }`. Removing the render actions took
+	 * the bar away and left the gap it was reserved for.
+	 *
+	 * So the assertion is on the bump and the stylesheet, not on the bar: the
+	 * bar being gone was never the part that was broken.
+	 *
+	 * @return void
+	 */
+	public function test_a_portal_request_reserves_no_toolbar_space(): void {
+		wp_set_current_user( $this->advertiser );
+
+		/*
+		 * `is_admin_bar_showing()` memoises into the $show_admin_bar global
+		 * behind an `isset()`, and that global outlives a test. Whichever of
+		 * these two tests runs first would otherwise decide the answer for the
+		 * second, which is how a suite reports green over a rule it never
+		 * evaluated. Production never sees it — one request, one process — and
+		 * the `show_admin_bar` filter is applied on every call regardless, so
+		 * the fix under test works either way.
+		 */
+		$GLOBALS['show_admin_bar'] = null;
+
+		$this->go_to( home_url( '/advertiser/' ) );
+
+		// What the real request does next, and the only point at which core
+		// decides whether to reserve the space.
+		do_action( 'template_redirect' );
+
+		$this->assertFalse( is_admin_bar_showing() );
+		$this->assertFalse(
+			(bool) has_action( 'wp_head', '_admin_bar_bump_cb' ),
+			'The 32px bump must never be hooked on a portal request.'
+		);
+		$this->assertFalse(
+			wp_style_is( 'admin-bar', 'enqueued' ),
+			'A portal page should not pay for the toolbar stylesheet either.'
+		);
+	}
+
+	/**
+	 * The toolbar is untouched everywhere that is not the portal.
+	 *
+	 * The negative half, and the one worth having: suppressing the bar too
+	 * broadly would take it off the whole front end for every signed-in user,
+	 * and nothing about the portal rendering correctly would reveal that.
+	 *
+	 * @return void
+	 */
+	public function test_a_non_portal_request_keeps_the_toolbar(): void {
+		wp_set_current_user( $this->advertiser );
+
+		/*
+		 * `is_admin_bar_showing()` memoises into the $show_admin_bar global
+		 * behind an `isset()`, and that global outlives a test. Whichever of
+		 * these two tests runs first would otherwise decide the answer for the
+		 * second, which is how a suite reports green over a rule it never
+		 * evaluated. Production never sees it — one request, one process — and
+		 * the `show_admin_bar` filter is applied on every call regardless, so
+		 * the fix under test works either way.
+		 */
+		$GLOBALS['show_admin_bar'] = null;
+
+		$this->go_to( home_url( '/' ) );
+		do_action( 'template_redirect' );
+
+		$this->assertNull( $this->router->request() );
+		$this->assertTrue( is_admin_bar_showing() );
+		$this->assertTrue(
+			(bool) has_action( 'wp_head', '_admin_bar_bump_cb' ),
+			'Outside the portal the toolbar and its spacing belong to WordPress.'
+		);
+	}
+
+	/**
 	 * A route with an object parses into both.
 	 *
 	 * @return void

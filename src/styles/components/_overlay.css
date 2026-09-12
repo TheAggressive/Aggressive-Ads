@@ -160,6 +160,15 @@
 	text-align: center;
 }
 
+/* Advertiser prose typed into a textarea: the line breaks are theirs, and
+   collapsing them runs a list of separate points into one paragraph. */
+.aggr-notes-body {
+	margin: 0;
+	padding: var(--aggr-space-md) var(--aggr-space-lg);
+	white-space: pre-line;
+	overflow-wrap: anywhere;
+}
+
 .aggr-empty__title {
 	margin: 0 0 var(--aggr-space-xs);
 	font-size: 16px;

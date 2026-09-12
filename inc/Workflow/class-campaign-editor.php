@@ -39,14 +39,14 @@ final class Campaign_Editor {
 	 *
 	 * @var array<int, string>
 	 */
-	public const WIZARD_STEPS = array( 'details', 'package', 'creative', 'destination', 'review' );
+	public const WIZARD_STEPS = array( 'details', 'creative', 'destination', 'review' );
 
 	/**
 	 * Displayable wizard steps, including query-only final confirmation.
 	 *
 	 * @var array<int, string>
 	 */
-	public const DISPLAY_STEPS = array( 'details', 'package', 'creative', 'destination', 'review', 'submit' );
+	public const DISPLAY_STEPS = array( 'details', 'creative', 'destination', 'review', 'submit' );
 
 	/**
 	 * Constructor.

@@ -26,7 +26,7 @@ trait CampaignEditorFixtures {
 	private function complete_campaign( string $title ): int {
 		$campaign_id = $this->editor->create( $title );
 		$this->assertIsInt( $campaign_id );
-		$this->assertSame( 1, $this->actions->process_save_package( $campaign_id, $this->package_id, 0 ) );
+		$this->assertSame( 1, $this->actions->process_save( $campaign_id, array( 'package_id' => $this->package_id ), 0 ) );
 		$this->add_creative( $campaign_id );
 
 		$start = ( new \DateTimeImmutable( '+10 days', wp_timezone() ) )->format( 'Y-m-d' );

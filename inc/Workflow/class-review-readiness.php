@@ -78,7 +78,7 @@ final class Review_Readiness {
 			Campaign_Rules::ERROR_PACKAGE_MISSING,
 			Campaign_Rules::ERROR_PACKAGE_UNAVAILABLE,
 			Campaign_Rules::ERROR_PRICE_MISSING      => array(
-				'step'   => 'package',
+				'step'   => 'details',
 				'target' => 'aggr-packages',
 			),
 			Campaign_Rules::ERROR_NO_CREATIVES,
