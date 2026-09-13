@@ -49,6 +49,7 @@ use Aggressive\Ads\Portal\Router;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Lifecycle_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Campaign_Request_Repository;
 use Aggressive\Ads\Repository\Conversion_Definition_Repository;
 use Aggressive\Ads\Repository\Creative_Asset_Repository;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
@@ -613,7 +614,8 @@ final class Service_Registrar {
 				$c->get( Org_Repository::class ),
 				$c->get( User_Repository::class ),
 				$c->get( Audit_Repository::class ),
-				$c->get( Notification_Delivery::class )
+				$c->get( Notification_Delivery::class ),
+				$c->get( Campaign_Request_Repository::class )
 			)
 		);
 
@@ -829,7 +831,8 @@ final class Service_Registrar {
 				$c->get( Settings::class ),
 				$c->get( Fill_Cache::class ),
 				$c->get( Rate_Limiter::class ),
-				$c->get( Audit_Repository::class )
+				$c->get( Audit_Repository::class ),
+				$c->get( Campaign_Request_Repository::class )
 			)
 		);
 

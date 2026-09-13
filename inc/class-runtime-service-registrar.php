@@ -30,6 +30,7 @@ use Aggressive\Ads\Notification\Notification_Service;
 use Aggressive\Ads\Portal\Router;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Campaign_Request_Repository;
 use Aggressive\Ads\Domain\Decision_Pipeline;
 use Aggressive\Ads\Domain\Frequency_Store;
 use Aggressive\Ads\Workflow\Transient_Frequency_Store;
@@ -119,7 +120,8 @@ final class Runtime_Service_Registrar {
 				$c->get( Campaign_Change_Manager::class ),
 				$c->get( Line_Item_Repository::class ),
 				$c->get( \Aggressive\Ads\Workflow\Creative_Approval::class ),
-				$c->get( \Aggressive\Ads\Admin\Pending_Work::class )
+				$c->get( \Aggressive\Ads\Admin\Pending_Work::class ),
+				$c->get( Campaign_Request_Repository::class )
 			)
 		);
 

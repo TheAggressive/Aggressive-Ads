@@ -12,6 +12,7 @@ namespace Aggressive\Ads;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Lifecycle_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Campaign_Request_Repository;
 use Aggressive\Ads\Repository\Creative_Asset_Repository;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Creative_Attachment_Repository;
@@ -74,6 +75,10 @@ final class Repository_Service_Registrar {
 		$container->register(
 			Campaign_Repository::class,
 			static fn (): Campaign_Repository => new Campaign_Repository()
+		);
+		$container->register(
+			Campaign_Request_Repository::class,
+			static fn (): Campaign_Request_Repository => new Campaign_Request_Repository()
 		);
 		$container->register(
 			Line_Item_Repository::class,

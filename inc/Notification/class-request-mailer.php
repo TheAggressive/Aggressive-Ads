@@ -14,6 +14,7 @@ use Aggressive\Ads\Audit\Audit_Event;
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Campaign_Request_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\User_Repository;
 use Aggressive\Ads\Security\Capabilities;
@@ -54,18 +55,20 @@ final class Request_Mailer implements Service {
 	/**
 	 * Constructor.
 	 *
-	 * @param Campaign_Repository   $campaigns Campaign persistence.
-	 * @param Org_Repository        $orgs      Organization persistence.
-	 * @param User_Repository       $users     Recipient resolution.
-	 * @param Audit_Repository      $audit     Audit persistence.
-	 * @param Notification_Delivery $delivery  Shared receipt and retry helpers.
+	 * @param Campaign_Repository         $campaigns Campaign persistence.
+	 * @param Org_Repository              $orgs      Organization persistence.
+	 * @param User_Repository             $users     Recipient resolution.
+	 * @param Audit_Repository            $audit     Audit persistence.
+	 * @param Notification_Delivery       $delivery  Shared receipt and retry helpers.
+	 * @param Campaign_Request_Repository $requests  Advertiser requests and proposed changes.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
 		private readonly Org_Repository $orgs,
 		private readonly User_Repository $users,
 		private readonly Audit_Repository $audit,
-		private readonly Notification_Delivery $delivery
+		private readonly Notification_Delivery $delivery,
+		private readonly Campaign_Request_Repository $requests
 	) {
 	}
 
@@ -89,7 +92,7 @@ final class Request_Mailer implements Service {
 	 * @throws RuntimeException When one or more messages cannot be queued.
 	 */
 	public function advertiser_requested( int $campaign_id, string $kind ): void {
-		$revision = $this->campaigns->request_revision( $campaign_id );
+		$revision = $this->requests->request_revision( $campaign_id );
 
 		try {
 			$this->queue( $campaign_id, $kind, $revision );
@@ -124,7 +127,7 @@ final class Request_Mailer implements Service {
 		}
 
 		try {
-			$this->queue( $campaign_id, $kind, $this->campaigns->request_revision( $campaign_id ) );
+			$this->queue( $campaign_id, $kind, $this->requests->request_revision( $campaign_id ) );
 		} catch ( RuntimeException ) {
 			$exhausted = Notification_Delivery::MAX_RETRIES === $attempt;
 
@@ -158,10 +161,10 @@ final class Request_Mailer implements Service {
 	 */
 	private function still_pending( int $campaign_id, string $kind ): bool {
 		if ( self::KIND_EDITS === $kind ) {
-			return $this->campaigns->pending_edits_submitted( $campaign_id );
+			return $this->requests->pending_edits_submitted( $campaign_id );
 		}
 
-		$request = $this->campaigns->action_request( $campaign_id );
+		$request = $this->requests->action_request( $campaign_id );
 
 		return array() !== $request && $request['action'] === $kind;
 	}
@@ -331,7 +334,7 @@ final class Request_Mailer implements Service {
 		);
 
 		if ( ! $is_edits ) {
-			$request = $this->campaigns->action_request( $campaign_id );
+			$request = $this->requests->action_request( $campaign_id );
 
 			$body[] = sprintf(
 				/* translators: %s: the requested action, already translated. */

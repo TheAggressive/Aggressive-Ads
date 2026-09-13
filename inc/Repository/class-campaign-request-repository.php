@@ -19,9 +19,9 @@ namespace Aggressive\Ads\Repository;
  * (`Campaign_Change_Manager`) and readers (the review screen and the request
  * mailer), so it moved as one unit rather than a few methods at a time.
  *
- * `Campaign_Repository` keeps the public methods as delegations, so no caller
- * changed, and keeps the meta key constants, which callers outside this class
- * reference directly.
+ * Callers take this class directly — it is registered as a service and
+ * injected where it is used. `Campaign_Repository` keeps the meta key
+ * constants, which callers outside this class reference directly.
  */
 final class Campaign_Request_Repository {
 
