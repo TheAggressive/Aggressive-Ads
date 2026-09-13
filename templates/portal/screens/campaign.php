@@ -415,22 +415,22 @@ if ( in_array( $aggr_creative_notice, array( 'creative_uploaded', 'creative_remo
 
 		<ol class="aggr-steps" aria-label="<?php esc_attr_e( 'Campaign creation progress', 'aggressive-ads' ); ?>">
 			<li <?php echo 'details' === $aggr_step ? 'aria-current="step"' : ''; ?>>
-				<a data-aggr-step="details" data-wp-on--click="actions.guardVisit" href="<?php echo esc_url( add_query_arg( 'step', 'details', $aggr_campaign_url ) ); ?>"><?php esc_html_e( 'Details', 'aggressive-ads' ); ?></a>
+				<a data-aggr-step="details" data-wp-on--click="actions.guardVisit" href="<?php echo esc_url( add_query_arg( 'step', 'details', $aggr_campaign_url ) ); ?>"><span class="aggr-steps__label"><?php esc_html_e( 'Details', 'aggressive-ads' ); ?></span></a>
 			</li>
 			<li <?php echo 'creative' === $aggr_step ? 'aria-current="step"' : ''; ?>>
-				<a data-aggr-step="creative" data-wp-on--click="actions.guardVisit" href="<?php echo esc_url( add_query_arg( 'step', 'creative', $aggr_campaign_url ) ); ?>"><?php esc_html_e( 'Creative', 'aggressive-ads' ); ?></a>
+				<a data-aggr-step="creative" data-wp-on--click="actions.guardVisit" href="<?php echo esc_url( add_query_arg( 'step', 'creative', $aggr_campaign_url ) ); ?>"><span class="aggr-steps__label"><?php esc_html_e( 'Creative', 'aggressive-ads' ); ?></span></a>
 			</li>
 			<li <?php echo 'destination' === $aggr_step ? 'aria-current="step"' : ''; ?>>
-				<a data-aggr-step="destination" data-wp-on--click="actions.guardVisit" href="<?php echo esc_url( add_query_arg( 'step', 'destination', $aggr_campaign_url ) ); ?>"><?php esc_html_e( 'Destination and schedule', 'aggressive-ads' ); ?></a>
+				<a data-aggr-step="destination" data-wp-on--click="actions.guardVisit" href="<?php echo esc_url( add_query_arg( 'step', 'destination', $aggr_campaign_url ) ); ?>"><span class="aggr-steps__label"><?php esc_html_e( 'Destination and schedule', 'aggressive-ads' ); ?></span></a>
 			</li>
 			<li <?php echo 'review' === $aggr_step ? 'aria-current="step"' : ''; ?>>
-				<a data-aggr-step="review" data-wp-on--click="actions.guardVisit" href="<?php echo esc_url( add_query_arg( 'step', 'review', $aggr_campaign_url ) ); ?>"><?php esc_html_e( 'Review', 'aggressive-ads' ); ?></a>
+				<a data-aggr-step="review" data-wp-on--click="actions.guardVisit" href="<?php echo esc_url( add_query_arg( 'step', 'review', $aggr_campaign_url ) ); ?>"><span class="aggr-steps__label"><?php esc_html_e( 'Review', 'aggressive-ads' ); ?></span></a>
 			</li>
 			<li <?php echo 'submit' === $aggr_step ? 'aria-current="step"' : ''; ?>>
 				<?php if ( $aggr_review_ready && 'submit' !== $aggr_step ) : ?>
-					<a data-aggr-step="submit" data-wp-on--click="actions.guardVisit" href="<?php echo esc_url( add_query_arg( 'step', 'submit', $aggr_campaign_url ) ); ?>"><?php esc_html_e( 'Submit', 'aggressive-ads' ); ?></a>
+					<a data-aggr-step="submit" data-wp-on--click="actions.guardVisit" href="<?php echo esc_url( add_query_arg( 'step', 'submit', $aggr_campaign_url ) ); ?>"><span class="aggr-steps__label"><?php esc_html_e( 'Submit', 'aggressive-ads' ); ?></span></a>
 				<?php else : ?>
-					<?php esc_html_e( 'Submit', 'aggressive-ads' ); ?>
+					<span class="aggr-steps__label"><?php esc_html_e( 'Submit', 'aggressive-ads' ); ?></span>
 				<?php endif; ?>
 			</li>
 		</ol>

@@ -24,34 +24,61 @@
 }
 
 /*
- * The column count follows the markup rather than being written down here.
- * It was `repeat(6, ...)` from when creation had six steps, so cutting it to
- * five left a sixth empty column and a bar that stopped short of the panel
- * edge; the edit flow, whose step list is built from whichever sections the
- * campaign actually has, was short by two or three.
+ * The first step starts the bar and the last one ends it.
+ *
+ * Laid out as equal grid columns, each step began at the left of its own
+ * column, so "Submit" stopped a whole column short of the edge "Details" began
+ * at. `space-between` pins both ends and spaces the rest evenly, for however
+ * many steps a flow has: creation has five, and the edit flow builds its list
+ * from whichever sections a campaign actually has.
+ *
+ * The bar is its own container, so it adapts to the width it is given rather
+ * than to the viewport — the same panel is narrower beside the rail than on a
+ * phone held upright.
  */
 .aggr-steps {
-	display: grid;
-	grid-auto-flow: column;
-	grid-auto-columns: minmax(7rem, 1fr);
+	container-type: inline-size;
+	position: relative;
+	display: flex;
 	gap: var(--aggr-space-xs);
+	align-items: flex-start;
+	justify-content: space-between;
 	margin: 0;
 	padding: var(--aggr-space-md) var(--aggr-space-lg);
 	background: var(--aggr-color-surface-raised);
 	border-bottom: 1px solid var(--aggr-border-color);
 	counter-reset: aggr-step;
 	list-style: none;
-	overflow-x: auto;
 }
 
+/*
+ * Five 44-pixel targets need 220 pixels, and a 320-pixel screen leaves this bar
+ * about 238. With the desktop padding the numbers sat 40 pixels apart and a tap
+ * beside "2" opened step 3. The bar is the container its steps measure, so its
+ * own padding has to follow the viewport instead.
+ */
+@media (max-width: 40rem) {
+	.aggr-steps {
+		padding-inline: var(--aggr-space-sm);
+	}
+}
+
+/*
+ * A step never shrinks below its own number. With `min-width: 0` the flex
+ * items gave way before the bar did, to 17 pixels at 320, and the circles
+ * drew over each other and over the current label.
+ */
 .aggr-steps li {
+	position: relative;
 	display: flex;
+	flex: none;
 	gap: var(--aggr-space-xs);
 	align-items: center;
-	min-width: 7rem;
+	min-height: 28px;
 	color: var(--aggr-color-text-subtle);
 	font-size: 12px;
 	font-weight: 700;
+	white-space: nowrap;
 	counter-increment: aggr-step;
 }
 
@@ -81,6 +108,104 @@
 	color: inherit;
 	text-decoration-thickness: 1px;
 	text-underline-offset: 3px;
+}
+
+/*
+ * A narrow bar keeps every step and every number, and names only the current
+ * step.
+ *
+ * Five labels need about 31rem. Below 36rem this bar used to scroll sideways,
+ * which on a phone could leave the step you were on out of sight behind the
+ * ones you were not, and fails reflow at 320 CSS pixels.
+ *
+ * The other labels are clipped, not removed: every step is still announced by
+ * name and still reachable from the keyboard. The link is stretched across its
+ * number so the circle itself is the touch target, 44 pixels in each
+ * direction, and focus is drawn on the circle because the link has no visible
+ * box of its own to outline.
+ */
+@container (max-width: 36rem) {
+	.aggr-steps li {
+		justify-content: center;
+		min-height: 44px;
+	}
+
+	/*
+	 * No gap where the label is not beside the number. The link is still a
+	 * flex item after the circle, zero pixels wide, and the gap before it
+	 * pushed "5" past the end of the bar at 320.
+	 */
+	.aggr-steps li:not([aria-current="step"]) {
+		gap: 0;
+	}
+
+	.aggr-steps li:not([aria-current="step"]) .aggr-steps__label {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		margin: -1px;
+		padding: 0;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+		border: 0;
+	}
+
+	/* The current step is the one item allowed to give way, by wrapping. */
+	.aggr-steps li[aria-current="step"] {
+		flex-shrink: 1;
+		min-width: 28px;
+		white-space: normal;
+	}
+
+	.aggr-steps a::after {
+		position: absolute;
+		inset: 0 -8px;
+		content: "";
+	}
+
+	.aggr-steps a:focus-visible {
+		outline: none;
+	}
+
+	.aggr-steps li:has(a:focus-visible)::before {
+		outline: 2px solid var(--aggr-color-accent-strong);
+		outline-offset: 2px;
+	}
+}
+
+/*
+ * On a phone even one label beside the numbers leaves it a few words per line,
+ * so it moves under them as a caption. The current step makes room for it with
+ * its own padding, because a container query cannot restyle the bar it is
+ * measuring.
+ */
+@container (max-width: 24rem) {
+	.aggr-steps li[aria-current="step"] {
+		position: static;
+		box-sizing: border-box;
+		flex-shrink: 0;
+		gap: 0;
+		min-height: calc(44px + 1.5rem);
+		padding-bottom: 1.5rem;
+		align-items: center;
+	}
+
+	.aggr-steps li[aria-current="step"] .aggr-steps__label {
+		position: absolute;
+		right: var(--aggr-space-sm);
+		bottom: var(--aggr-space-md);
+		left: var(--aggr-space-sm);
+		line-height: 1.25;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+
+	/* Positioned against the bar now, so stretching it would cover every step. */
+	.aggr-steps li[aria-current="step"] a::after {
+		content: none;
+	}
 }
 
 .aggr-form {
