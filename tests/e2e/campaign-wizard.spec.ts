@@ -8,6 +8,93 @@ import { signIn } from './sign-in-helper';
 import { solidPng } from './png';
 import { wp } from './wp-cli';
 
+test( 'choosing a package waits for the save already on the wire', async ( {
+	page,
+} ) => {
+	/*
+	 * **The wizard's own autosave was making step one impossible to leave.**
+	 *
+	 * Typing the name arms a six-hundred-millisecond debounce. Pause about
+	 * that long to read the package list — which is what the list is for —
+	 * and the PATCH is on the wire when the click lands. The form still holds
+	 * the old `autosave_rev`, the PATCH bumps the stored one first, and the
+	 * POST arrives one revision behind. The server refuses it, correctly, and
+	 * the advertiser is thrown back to step one with the package unset and a
+	 * message about another window they never opened.
+	 *
+	 * Reproduced by hand on every attempt between 620ms and 750ms and never
+	 * at two seconds, which is why this does not sleep: a fixed pause tuned to
+	 * one machine is a test that passes on the next one for no reason. Holding
+	 * the response open makes the overlap a fact of the test rather than a
+	 * race it hopes to win.
+	 */
+	await page.goto( '/advertiser/' );
+	await signIn( page, 'advertiser@example.test', 'advertiser' );
+
+	let patched = false;
+
+	await page.route( '**/wp-json/aggr/v1/campaigns/*', async ( route ) => {
+		if ( 'PATCH' !== route.request().method() ) {
+			await route.continue();
+			return;
+		}
+
+		/*
+		 * **Let the server apply it, then hold the answer back.** Delaying the
+		 * request instead — the obvious way to widen a race — inverts this one:
+		 * the POST reaches a server that has not moved yet, succeeds, and the
+		 * test passes over the unfixed client. It did, until this was written
+		 * the other way round.
+		 *
+		 * Fetching first means the revision is already bumped when the click
+		 * happens, and only the browser is still behind. That is the actual
+		 * condition, and it is what the pause before choosing a package
+		 * produces on a real machine.
+		 */
+		const response = await route.fetch();
+
+		patched = true;
+
+		await new Promise( ( resolve ) => setTimeout( resolve, 2000 ) );
+		await route.fulfill( { response } );
+	} );
+
+	await page.getByRole( 'button', { name: 'Create campaign' } ).click();
+	await expect(
+		page.locator( 'form[data-aggr-autosave][data-aggr-autosave-ready]' )
+	).toBeAttached();
+
+	await page
+		.getByLabel( 'Campaign name' )
+		.fill( `E2E browser campaign race ${ Date.now() }` );
+
+	// The server has applied it; only the browser is behind. The precondition.
+	await expect.poll( () => patched, { timeout: 5000 } ).toBe( true );
+
+	await page.getByRole( 'radio', { name: /Focused sidebar/ } ).check();
+
+	/*
+	 * Landing on the creative step is the assertion. A refused save returns to
+	 * `step=details`, so checking the URL distinguishes "advanced" from
+	 * "bounced" without depending on which message was rendered.
+	 */
+	await expect( page ).toHaveURL( /step=creative/, { timeout: 15_000 } );
+
+	/*
+	 * And exactly one notice, because the second half of this defect was two.
+	 * The campaign screen reads its own notice and the creative one off the
+	 * same `aggr_notice` parameter, and both answered to the bare string
+	 * `error` — so one refused campaign save also rendered a campaign error
+	 * code through the creative vocabulary, as "The creative could not be
+	 * saved. Please try again." A count catches that where matching on text
+	 * would not.
+	 */
+	const toasts = page.locator( '.aggr-toast' );
+
+	await expect( toasts ).toHaveCount( 1 );
+	await expect( toasts ).not.toContainText( 'creative could not be saved' );
+} );
+
 test( 'advertiser completes and submits the accessible five-step wizard', async ( {
 	page,
 } ) => {

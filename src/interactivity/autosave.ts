@@ -103,8 +103,14 @@ function fieldsFrom( form: HTMLFormElement ): Record< string, unknown > {
  *
  * One control, one unambiguous choice — the only step where "done" is a single
  * event rather than a guess. It submits the form rather than navigating, so the
- * ordinary POST persists the name and the package together and there is no race
- * with the debounce.
+ * ordinary POST persists the name and the package together.
+ *
+ * **There is no race with the debounce, and that is not free.** This comment
+ * claimed it while the race was live: a save already on the wire left the form
+ * holding a stale `autosave_rev`, and the POST was refused. What makes the
+ * claim true is the submit listener in `init()`, which holds every submit —
+ * this one, the Continue button, and Enter in a text field — until any save in
+ * flight has come back.
  *
  * Not while the campaign is still called what the wizard named it. Carrying an
  * unnamed draft forward only earns a title error at review and a trip back to
@@ -252,8 +258,22 @@ const { state } = store( 'aggr/autosave', {
 				return;
 			}
 
+			/*
+			 * The save currently on the wire, so anything that has to know the
+			 * campaign's real revision can wait for it. A cancelled debounce
+			 * says nothing about a request that has already left.
+			 */
+			let submitting = false;
+			let inFlight: Promise< void > | null = null;
+
 			const run = debounce( () => {
-				void patch( autosaveId, root );
+				const started = patch( autosaveId, root ).finally( () => {
+					if ( inFlight === started ) {
+						inFlight = null;
+					}
+				} );
+
+				inFlight = started;
 			}, 600 );
 			pending.set( autosaveId, run );
 
@@ -281,8 +301,6 @@ const { state } = store( 'aggr/autosave', {
 			 * the problem: anything that re-arms after the cancel has to be
 			 * refused, not undone.
 			 */
-			let submitting = false;
-
 			const onChange = () => {
 				if ( submitting ) {
 					return;
@@ -293,9 +311,53 @@ const { state } = store( 'aggr/autosave', {
 
 			root.addEventListener( 'input', onChange );
 			root.addEventListener( 'change', onChange );
-			root.addEventListener( 'submit', () => {
+
+			/*
+			 * **Every submit waits for a save already on the wire.**
+			 *
+			 * Cancelling covers a save that has not left; it does nothing
+			 * about one that has. Type the name, pause the six hundred
+			 * milliseconds it takes to read the package list, and the PATCH
+			 * is in flight when the click lands — the browser serialises the
+			 * old `autosave_rev`, the PATCH bumps the stored one first, and
+			 * the POST arrives a revision behind. `Campaign_Editor::save()`
+			 * refuses it, and the advertiser is returned to step one with
+			 * their package unset, told the campaign changed in another
+			 * window they never opened.
+			 *
+			 * Here rather than on the package radio, which is where this was
+			 * first fixed and was not enough: the radio auto-advances by
+			 * calling `requestSubmit()`, but the step also has an ordinary
+			 * Continue button, and Enter in a text field submits too. All
+			 * three arrive here, and only here is early enough to stop the
+			 * browser reading the inputs.
+			 *
+			 * The re-submit cannot loop: `inFlight` is cleared by the
+			 * handler registered when the save started, which runs before
+			 * this one, so the second pass finds nothing to wait for.
+			 */
+			root.addEventListener( 'submit', ( event ) => {
 				submitting = true;
 				run.cancel();
+
+				const waiting = inFlight;
+
+				if ( null === waiting ) {
+					return;
+				}
+
+				event.preventDefault();
+
+				// The button that was pressed carries its own name and value
+				// on some steps, so re-submitting without it changes the post.
+				const submitter =
+					event instanceof SubmitEvent ? event.submitter : null;
+
+				void waiting.finally( () => {
+					root.requestSubmit(
+						submitter instanceof HTMLElement ? submitter : undefined
+					);
+				} );
 			} );
 
 			/*

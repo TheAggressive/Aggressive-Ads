@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
-"POT-Creation-Date: 2026-09-13T08:03:17+00:00\n"
+"POT-Creation-Date: 2026-09-13T08:41:46+00:00\n"
 "PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -3494,17 +3494,17 @@ msgstr ""
 msgid "About %s of this placement."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:77
+#: inc/Portal/class-creative-feedback.php:90
 #: templates/portal/partials/campaign-creative-step.php:286
 msgid "Custom run dates set"
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:78
+#: inc/Portal/class-creative-feedback.php:91
 #: templates/portal/partials/campaign-creative-step.php:287
 msgid "Add custom run dates"
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:233
+#: inc/Portal/class-creative-feedback.php:246
 #: inc/Workflow/class-creative-change-manager.php:162
 #: inc/Workflow/class-creative-change-manager.php:497
 #: inc/Workflow/class-creative-manager.php:148
@@ -3512,7 +3512,7 @@ msgstr ""
 msgid "Enter the destination URL for this creative."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:234
+#: inc/Portal/class-creative-feedback.php:247
 #: inc/Workflow/class-creative-change-manager.php:166
 #: inc/Workflow/class-creative-change-manager.php:501
 #: inc/Workflow/class-creative-manager.php:152
@@ -3521,27 +3521,27 @@ msgid ""
 "Enter a valid http or https destination URL without embedded credentials."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:235
+#: inc/Portal/class-creative-feedback.php:248
 msgid "Describe the ad creative for people who cannot see it."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:236
+#: inc/Portal/class-creative-feedback.php:249
 #: inc/Workflow/class-creative-change-manager.php:173
 #: inc/Workflow/class-creative-change-manager.php:508
 #: inc/Workflow/class-creative-manager.php:159
 msgid "Use 500 characters or fewer for the ad creative description."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:237
+#: inc/Portal/class-creative-feedback.php:250
 msgid ""
 "The uploaded dimensions do not match this placement. Resize the ad creative "
 "to the required dimensions and try again."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:238
-#: inc/Portal/class-creative-feedback.php:239
-#: inc/Portal/class-creative-feedback.php:280
-#: inc/Portal/class-creative-feedback.php:309
+#: inc/Portal/class-creative-feedback.php:251
+#: inc/Portal/class-creative-feedback.php:252
+#: inc/Portal/class-creative-feedback.php:293
+#: inc/Portal/class-creative-feedback.php:322
 #: inc/Workflow/class-creative-manager.php:415
 #: inc/Workflow/class-creative-manager.php:421
 #: inc/Workflow/class-creative-manager.php:565
@@ -3551,86 +3551,86 @@ msgstr ""
 msgid "You do not have permission to change that creative."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:240
+#: inc/Portal/class-creative-feedback.php:253
 #: inc/Workflow/class-creative-manager.php:434
 msgid ""
 "This ad has already been approved, so new artwork is submitted as an update "
 "for review rather than swapped in here."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:241
+#: inc/Portal/class-creative-feedback.php:254
 #: inc/Workflow/class-creative-manager.php:502
 msgid "The new artwork could not be saved. Please try again."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:242
+#: inc/Portal/class-creative-feedback.php:255
 #: inc/Workflow/class-creative-manager.php:583
 msgid ""
 "This ad has already been approved, so its destination is changed by "
 "requesting an update rather than edited here."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:243
+#: inc/Portal/class-creative-feedback.php:256
 msgid ""
 "This placement already has the maximum number of creatives. Remove one "
 "before uploading another."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:244
+#: inc/Portal/class-creative-feedback.php:257
 #: inc/Workflow/class-creative-change-manager.php:123
 #: inc/Workflow/class-creative-change-manager.php:216
 msgid "This ad already has an update waiting for review."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:245
+#: inc/Portal/class-creative-feedback.php:258
 #: inc/Workflow/class-creative-change-manager.php:448
 msgid "Only an ad in a scheduled or live campaign can be updated."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:246
+#: inc/Portal/class-creative-feedback.php:259
 #: inc/Workflow/class-creative-change-manager.php:118
 #: inc/Workflow/class-creative-change-manager.php:211
 msgid "Another update is already being saved for this ad. Try again."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:247
+#: inc/Portal/class-creative-feedback.php:260
 msgid "No file was received. Choose an ad creative and try again."
 msgstr ""
 
 #. translators: %s: this placement's maximum file size, e.g. 150 KB.
-#: inc/Portal/class-creative-feedback.php:250
+#: inc/Portal/class-creative-feedback.php:263
 #, php-format
 msgid "That file is larger than %s. Save it at a smaller size and try again."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:253
+#: inc/Portal/class-creative-feedback.php:266
 msgid ""
 "That ad creative has too many pixels to process. Resize it to the placement "
 "dimensions and try again."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:254
+#: inc/Portal/class-creative-feedback.php:267
 msgid ""
 "That file is not a readable image. JPEG, PNG, GIF, and WebP are supported."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:255
+#: inc/Portal/class-creative-feedback.php:268
 msgid "The file contents do not match its filename, so it was not accepted."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:256
+#: inc/Portal/class-creative-feedback.php:269
 msgid "That file type is not supported. Use JPEG, PNG, GIF, or WebP."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:257
+#: inc/Portal/class-creative-feedback.php:270
 msgid "The upload did not complete. Try again."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:259
+#: inc/Portal/class-creative-feedback.php:272
 msgid "That placement is not available for this campaign."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:260
+#: inc/Portal/class-creative-feedback.php:273
 #: inc/Workflow/class-assignment-editor.php:192
 #: inc/Workflow/class-campaign-editor.php:342
 #: inc/Workflow/class-creative-manager.php:428
@@ -3642,40 +3642,40 @@ msgstr ""
 msgid "This campaign cannot be changed right now."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:261
+#: inc/Portal/class-creative-feedback.php:274
 msgid "There have been too many uploads. Wait a moment and try again."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:278
+#: inc/Portal/class-creative-feedback.php:291
 msgid "You do not have permission to upload creative for this campaign."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:279
+#: inc/Portal/class-creative-feedback.php:292
 #: inc/Workflow/class-creative-manager.php:743
 #: inc/Workflow/class-creative-manager.php:749
 msgid "You do not have permission to remove that creative."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:281
+#: inc/Portal/class-creative-feedback.php:294
 #: inc/Workflow/class-creative-manager.php:759
 msgid "A published creative cannot be removed from this draft workflow."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:282
+#: inc/Portal/class-creative-feedback.php:295
 #: inc/Workflow/class-creative-manager.php:769
 #: inc/Workflow/class-creative-manager.php:778
 msgid "The creative could not be removed. Please try again."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:283
+#: inc/Portal/class-creative-feedback.php:296
 #: inc/Workflow/class-creative-manager.php:775
 msgid ""
 "The creative record and file could not be reconciled. Please contact an "
 "administrator."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:284
-#: inc/Portal/class-creative-feedback.php:321
+#: inc/Portal/class-creative-feedback.php:297
+#: inc/Portal/class-creative-feedback.php:334
 #: inc/Workflow/class-creative-manager.php:234
 #: inc/Workflow/class-creative-manager.php:278
 msgid "The creative could not be saved. Please try again."
@@ -3683,66 +3683,66 @@ msgstr ""
 
 #. translators: 1: lowest permitted share, 2: highest permitted share.
 #. translators: 1: lowest permitted weight, 2: highest permitted weight.
-#: inc/Portal/class-creative-feedback.php:305
+#: inc/Portal/class-creative-feedback.php:318
 #: inc/Workflow/class-creative-manager.php:679
 #, php-format
 msgid "A share must be between %1$d and %2$d."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:310
+#: inc/Portal/class-creative-feedback.php:323
 #: inc/Workflow/class-creative-manager.php:698
 msgid "That creative is not delivering yet, so it has no share to set."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:311
+#: inc/Portal/class-creative-feedback.php:324
 #: inc/Workflow/class-creative-manager.php:714
 msgid "That share could not be saved. Reload the page and try again."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:312
+#: inc/Portal/class-creative-feedback.php:325
 #: inc/Workflow/class-creative-change-manager.php:286
 msgid "Only a scheduled or live campaign can apply an ad update."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:313
+#: inc/Portal/class-creative-feedback.php:326
 #: inc/Workflow/class-creative-change-manager.php:475
 msgid "That ad update is no longer available."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:314
+#: inc/Portal/class-creative-feedback.php:327
 #: inc/Workflow/class-creative-change-manager.php:133
 #: inc/Workflow/class-creative-change-manager.php:238
 msgid "The ad update could not be saved. Please try again."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:315
+#: inc/Portal/class-creative-feedback.php:328
 #: inc/Workflow/class-creative-change-manager.php:407
 msgid "The update file could not be removed. Please try again."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:316
+#: inc/Portal/class-creative-feedback.php:329
 #: inc/Workflow/class-creative-change-manager.php:343
 msgid "Explain why this ad update needs changes."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:317
+#: inc/Portal/class-creative-feedback.php:330
 #: inc/Workflow/class-creative-change-manager.php:347
 msgid "Use 2,000 characters or fewer for update feedback."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:318
+#: inc/Portal/class-creative-feedback.php:331
 #: inc/Workflow/class-creative-change-manager.php:364
 msgid "The update decision could not be saved. Please try again."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:319
+#: inc/Portal/class-creative-feedback.php:332
 #: inc/Workflow/class-creative-change-manager.php:413
 msgid ""
 "The update record and file could not be reconciled. Please contact an "
 "administrator."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:320
+#: inc/Portal/class-creative-feedback.php:333
 #: inc/Workflow/class-creative-change-manager.php:112
 msgid "Change the destination or description before requesting an update."
 msgstr ""
