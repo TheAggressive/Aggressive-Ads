@@ -238,6 +238,84 @@ final class OrganizationsWriteTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * **A rename containing markup characters is kept as typed.**
+	 *
+	 * `rename()` read the stored title back through `get_the_title()`, which
+	 * encodes `&` and curls quotes, so every rename containing either failed
+	 * verification and was rolled back as "could not be renamed". The write
+	 * was also unslashed, so a backslash was stripped before it got that far.
+	 *
+	 * The expected value is the repository's own uppercase display form, so
+	 * this asserts the punctuation survives rather than restating the casing
+	 * rule.
+	 *
+	 * @dataProvider provide_names_with_markup_characters
+	 *
+	 * @param string $typed Name as submitted.
+	 * @return void
+	 */
+	public function test_a_rename_with_markup_characters_is_kept( string $typed ): void {
+		wp_set_current_user( $this->administrator );
+
+		$response = $this->call( 'PATCH', '/aggr/v1/organizations/' . $this->org_id, array( 'name' => $typed ) );
+
+		$this->assertSame( 200, $response->get_status(), (string) wp_json_encode( $response->get_data() ) );
+		$this->assertSame( Org_Repository::display_name( $typed ), $this->organizations->name( $this->org_id ) );
+	}
+
+	/**
+	 * Names that each broke the rename a different way.
+	 *
+	 * @return array<string, array{0: string}>
+	 */
+	public static function provide_names_with_markup_characters(): array {
+		return array(
+			'ampersand, encoded by display'     => array( 'Arts & Culture' ),
+			'apostrophe, curled by display'     => array( "Shawn's Studio" ),
+			'double quotes, curled by display'  => array( 'The "Big" Room' ),
+			'backslash, stripped by unslashing' => array( 'Back \\ Slash' ),
+		);
+	}
+
+	/**
+	 * An owner renaming from the portal takes the path kses runs on.
+	 *
+	 * Staff hold `unfiltered_html`; an organization owner does not, and for
+	 * them WordPress stores `&` as `&amp;`. The read-back has to compare
+	 * against that stored form, so this case is only meaningful for an account
+	 * without the capability — which is asserted rather than assumed.
+	 *
+	 * @return void
+	 */
+	public function test_an_owner_without_unfiltered_html_can_rename_with_an_ampersand(): void {
+		wp_set_current_user( $this->advertiser );
+		$this->assertFalse(
+			current_user_can( 'unfiltered_html' ),
+			'This test needs an account WordPress filters titles for.'
+		);
+
+		$this->assertTrue( $this->organizations->rename( $this->org_id, 'Arts & Culture' ) );
+		$this->assertSame( 'ARTS & CULTURE', $this->organizations->name( $this->org_id ) );
+	}
+
+	/**
+	 * A new organization keeps a backslash in its name.
+	 *
+	 * The create path verified only its meta, so an unslashed insert stripped
+	 * the backslash silently and reported success. Compared case-insensitively
+	 * so the assertion is about the character, not the casing rule.
+	 *
+	 * @return void
+	 */
+	public function test_a_new_organization_keeps_a_backslash_in_its_name(): void {
+		$owner  = self::factory()->user->create( array( 'role' => Roles::ADVERTISER ) );
+		$org_id = $this->organizations->create_for_owner( 'Back \\ Slash Media', $owner );
+
+		$this->assertIsInt( $org_id );
+		$this->assertSame( 'BACK \\ SLASH MEDIA', mb_strtoupper( $this->organizations->name( $org_id ), 'UTF-8' ) );
+	}
+
+	/**
 	 * Staff can move ownership to another member.
 	 *
 	 * @return void

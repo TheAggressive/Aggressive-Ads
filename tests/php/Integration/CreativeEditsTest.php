@@ -14,6 +14,7 @@ use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Portal\Creative_Actions;
+use Aggressive\Ads\Portal\Campaign_Actions;
 use Aggressive\Ads\Portal\Creative_Feedback;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
@@ -702,6 +703,81 @@ final class CreativeEditsTest extends WP_UnitTestCase {
 				array( 'replacement_id' => '1' ),
 			),
 		);
+	}
+
+	/**
+	 * **A refused creative write redirects with a notice of its own.**
+	 *
+	 * The campaign screen reads two notices off one `aggr_notice` parameter.
+	 * Both used to answer to the bare string `error`, so a refused campaign
+	 * save also went through the creative vocabulary, found no arm for a
+	 * campaign code, and raised a second toast: "The creative could not be
+	 * saved. Please try again." — on a page where nobody had touched a
+	 * creative. This is the half that proves creative refusals no longer send
+	 * the shared value.
+	 *
+	 * @return void
+	 */
+	public function test_a_refused_creative_write_redirects_with_its_own_notice(): void {
+		wp_set_current_user( $this->owner );
+
+		$creative = $this->manager->upload(
+			$this->campaign_id,
+			$this->placement_id,
+			$this->image_file( 728, 90 ),
+			'https://example.com/start',
+			'Notice creative'
+		);
+
+		$this->assertIsArray( $creative );
+
+		$creative_id = (int) $creative['id'];
+		$stored      = Plugin::instance()->container()->get( Creative_Repository::class )->storage_details( $creative_id );
+
+		$this->assertIsArray( $stored );
+		$this->stored[] = $stored['path'];
+
+		$_POST = array(
+			'creative_id' => (string) $creative_id,
+			'campaign_id' => (string) $this->campaign_id,
+			'click_url'   => 'javascript:alert(1)',
+			'_wpnonce'    => wp_create_nonce( Creative_Actions::destination_nonce_action( $creative_id ) ),
+		);
+
+		$url = $this->redirect_from( fn () => $this->actions->handle_destination() );
+
+		$this->assertStringContainsString( 'aggr_notice=' . Creative_Feedback::ERROR_NOTICE, $url );
+		$this->assertDoesNotMatchRegularExpression(
+			'/[?&]aggr_notice=error(&|#|$)/',
+			$url,
+			'A creative refusal sent the value the campaign reader also answers to.'
+		);
+	}
+
+	/**
+	 * **Each notice reader answers only to its own value.**
+	 *
+	 * The other half. Given the value a campaign refusal redirects with, only
+	 * the campaign reader answers; given the creative one, only the creative
+	 * reader does. If either allowlist ever grows the other's value, the
+	 * screen draws two toasts for one failure again.
+	 *
+	 * @return void
+	 */
+	public function test_each_notice_reader_answers_only_to_its_own_value(): void {
+		try {
+			$_GET['aggr_notice'] = 'error';
+
+			$this->assertSame( 'error', Campaign_Actions::request_notice() );
+			$this->assertSame( '', Creative_Feedback::request_notice() );
+
+			$_GET['aggr_notice'] = Creative_Feedback::ERROR_NOTICE;
+
+			$this->assertSame( '', Campaign_Actions::request_notice() );
+			$this->assertSame( Creative_Feedback::ERROR_NOTICE, Creative_Feedback::request_notice() );
+		} finally {
+			unset( $_GET['aggr_notice'] );
+		}
 	}
 
 	/**

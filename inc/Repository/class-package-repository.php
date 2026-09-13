@@ -201,11 +201,14 @@ final class Package_Repository {
 			return new WP_Error( 'aggr_package_limit', 'The package catalogue is full.' );
 		}
 
+		// Slashed: `wp_insert_post()` unslashes. See Post_Title.
 		$package_id = wp_insert_post(
-			array(
-				'post_type'   => Post_Types::PACKAGE,
-				'post_status' => 'publish',
-				'post_title'  => $name,
+			wp_slash(
+				array(
+					'post_type'   => Post_Types::PACKAGE,
+					'post_status' => 'publish',
+					'post_title'  => $name,
+				)
 			),
 			true
 		);
@@ -242,9 +245,11 @@ final class Package_Repository {
 		}
 
 		$updated = wp_update_post(
-			array(
-				'ID'         => $package_id,
-				'post_title' => $fields['name'],
+			wp_slash(
+				array(
+					'ID'         => $package_id,
+					'post_title' => $fields['name'],
+				)
 			),
 			true
 		);
@@ -276,7 +281,8 @@ final class Package_Repository {
 
 		$expected_duration = $fields['custom_duration'] ? 0 : $fields['duration_days'];
 
-		return $this->name( $package_id ) === $fields['name']
+		// Against the stored form: see the same check in Placement_Repository::save().
+		return $this->name( $package_id ) === Post_Title::as_stored( $fields['name'] )
 			&& $this->placement_ids( $package_id ) === $fields['placement_ids']
 			&& $this->duration_days( $package_id ) === $expected_duration
 			&& $this->has_custom_duration( $package_id ) === $fields['custom_duration']

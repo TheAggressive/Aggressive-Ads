@@ -157,37 +157,12 @@ final class Campaign_Draft_Persistence {
 			} elseif ( in_array( $key, array( 'start_ts', 'end_ts', 'package_id', 'budget_cents' ), true ) ) {
 				$normalized[ $key ] = (int) $fields[ $key ];
 			} elseif ( 'title' === $key ) {
-				$normalized[ $key ] = self::as_stored_title( (string) $fields[ $key ] );
+				$normalized[ $key ] = Post_Title::as_stored( (string) $fields[ $key ] );
 			} elseif ( in_array( $key, array( 'advertiser_notes', 'wizard_step', 'currency' ), true ) ) {
 				$normalized[ $key ] = (string) $fields[ $key ];
 			}
 		}
 
 		return $normalized;
-	}
-
-	/**
-	 * The title WordPress will actually store for this input.
-	 *
-	 * **The read-back has to compare against this, not against what was
-	 * typed.** A title is not stored verbatim: for an account without
-	 * `unfiltered_html` — every advertiser — `title_save_pre` runs
-	 * `wp_filter_kses`, which writes `&` as `&amp;`. Comparing the stored value
-	 * with the raw input therefore failed for any title containing an
-	 * ampersand, the persistence rolled the save back, and the revision it had
-	 * already claimed left the advertiser's page one behind: "This campaign
-	 * changed in another window", on a campaign nobody else had touched.
-	 *
-	 * Built from the same filters `wp_insert_post()` applies rather than a
-	 * list of characters, so it stays exact for any account and any filter a
-	 * site adds.
-	 *
-	 * @param string $title Title as submitted.
-	 * @return string Title as it will be stored.
-	 */
-	private static function as_stored_title( string $title ): string {
-		$stored = wp_unslash( sanitize_post_field( 'post_title', wp_slash( $title ), 0, 'db' ) );
-
-		return is_string( $stored ) ? $stored : '';
 	}
 }

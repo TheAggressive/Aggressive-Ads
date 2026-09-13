@@ -14,6 +14,7 @@ use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
+use Aggressive\Ads\Repository\Post_Title;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Security\Roles;
 use WP_REST_Request;
@@ -165,6 +166,36 @@ final class PlacementsWriteTest extends WP_UnitTestCase {
 		$this->assertFalse( $policy->enabled );
 		$this->assertSame( Refresh_Policy::DEFAULT_INTERVAL_SECONDS, $policy->interval_seconds );
 		$this->assertSame( Refresh_Policy::DEFAULT_MAX_PER_VIEW, $policy->max_per_view );
+	}
+
+	/**
+	 * **A name with markup characters is kept, on create and on update.**
+	 *
+	 * Both writes passed the name to WordPress unslashed, so a backslash was
+	 * stripped. On create that was silent; on update the read-back then saw a
+	 * different name and the save reported failure for a placement that had,
+	 * otherwise, saved.
+	 *
+	 * Expected against `Post_Title::as_stored()` so the assertion holds whether
+	 * or not this site lets administrators post unfiltered HTML — a backslash
+	 * survives that function and did not survive the old write.
+	 *
+	 * @return void
+	 */
+	public function test_a_name_with_markup_characters_is_kept(): void {
+		$typed        = 'Arts & Culture\'s "Big" Slot \\ one';
+		$placement_id = $this->create_placement( array( 'name' => $typed ) );
+
+		$this->assertSame( Post_Title::as_stored( $typed ), $this->placements->name( $placement_id ) );
+		$this->assertStringContainsString( '\\', $this->placements->name( $placement_id ) );
+
+		wp_set_current_user( $this->administrator );
+
+		$renamed  = 'Back \\ Slash leaderboard';
+		$response = $this->write( '/aggr/v1/placements/' . $placement_id, 'PATCH', $this->valid_placement( array( 'name' => $renamed ) ) );
+
+		$this->assertSame( 200, $response->get_status(), (string) wp_json_encode( $response->get_data() ) );
+		$this->assertSame( Post_Title::as_stored( $renamed ), $this->placements->name( $placement_id ) );
 	}
 
 	/**

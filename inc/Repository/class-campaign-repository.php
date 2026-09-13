@@ -870,7 +870,7 @@ final class Campaign_Repository {
 	 * @return string
 	 */
 	public function title( int $campaign_id ): string {
-		return wp_specialchars_decode( $this->raw_title( $campaign_id ), ENT_QUOTES );
+		return Post_Title::plain( $this->raw_title( $campaign_id ) );
 	}
 
 	/**

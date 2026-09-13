@@ -95,6 +95,117 @@ test( 'choosing a package waits for the save already on the wire', async ( {
 	await expect( toasts ).not.toContainText( 'creative could not be saved' );
 } );
 
+test( 'pressing Continue waits for the save already on the wire', async ( {
+	page,
+} ) => {
+	/*
+	 * **The path the reporter actually took.** The step opens with a package
+	 * already chosen, so choosing it again raises no `change` and cannot
+	 * auto-advance — people press Continue. The first fix for this race waited
+	 * only on the package radio, and the test above drives the radio, so both
+	 * were green while pressing Continue still sent a stale revision.
+	 *
+	 * Same overlap as above: the server applies the autosave, and only the
+	 * browser is told late.
+	 */
+	await page.goto( '/advertiser/' );
+	await signIn( page, 'advertiser@example.test', 'advertiser' );
+
+	let patched = false;
+
+	await page.route( '**/wp-json/aggr/v1/campaigns/*', async ( route ) => {
+		if ( 'PATCH' !== route.request().method() ) {
+			await route.continue();
+			return;
+		}
+
+		const response = await route.fetch();
+
+		patched = true;
+
+		await new Promise( ( resolve ) => setTimeout( resolve, 2000 ) );
+		await route.fulfill( { response } );
+	} );
+
+	await page.getByRole( 'button', { name: 'Create campaign' } ).click();
+	await expect(
+		page.locator( 'form[data-aggr-autosave][data-aggr-autosave-ready]' )
+	).toBeAttached();
+
+	// The precondition that rules out auto-advance: a package is already chosen.
+	await expect(
+		page.locator( 'input[name="package_id"]:checked' )
+	).toHaveCount( 1 );
+
+	await page
+		.getByLabel( 'Campaign name' )
+		.fill( `E2E browser campaign continue ${ Date.now() }` );
+
+	await expect.poll( () => patched, { timeout: 5000 } ).toBe( true );
+
+	await page
+		.locator( 'form[data-aggr-autosave] button[type="submit"]' )
+		.first()
+		.click();
+
+	await expect( page ).toHaveURL( /step=creative/, { timeout: 15_000 } );
+
+	const toasts = page.locator( '.aggr-toast' );
+
+	await expect( toasts ).toHaveCount( 1 );
+	await expect( toasts ).not.toContainText( 'changed in another window' );
+} );
+
+test( 'a name with markup characters survives the round trip', async ( {
+	page,
+} ) => {
+	/*
+	 * **What the advertiser typed is what they get back.** A name containing
+	 * `&`, `'`, `"` or a backslash could not be saved at all: the stored title
+	 * never matched the typed one, the save rolled back, and the page reported
+	 * a conflict. The PHP tests prove the workflow; this proves the whole trip
+	 * — the field, the autosave, the form post, and the page drawing the name
+	 * again — because each layer had its own way of changing the text.
+	 *
+	 * The heading is checked for encoded entities as well as for the text,
+	 * since the display half of this bug showed "&#038;" to the advertiser
+	 * after a save that had succeeded.
+	 */
+	await page.goto( '/advertiser/' );
+	await signIn( page, 'advertiser@example.test', 'advertiser' );
+
+	await page.getByRole( 'button', { name: 'Create campaign' } ).click();
+	await expect(
+		page.locator( 'form[data-aggr-autosave][data-aggr-autosave-ready]' )
+	).toBeAttached();
+
+	const name = `E2E browser campaign Arts & Culture's "Big" Show \\ ${ Date.now() }`;
+
+	await page.getByLabel( 'Campaign name' ).fill( name );
+	await page
+		.locator( 'form[data-aggr-autosave] button[type="submit"]' )
+		.first()
+		.click();
+
+	await expect( page ).toHaveURL( /step=creative/, { timeout: 15_000 } );
+	await expect( page.locator( '.aggr-toast' ) ).toHaveCount( 1 );
+	await expect( page.locator( '.aggr-toast' ) ).not.toContainText(
+		'changed in another window'
+	);
+
+	const details = new URL( page.url() );
+	details.search = '?step=details';
+	await page.goto( details.toString() );
+
+	await expect( page.getByLabel( 'Campaign name' ) ).toHaveValue( name );
+
+	const heading = page.locator( 'h1.aggr-title' );
+
+	await expect( heading ).toHaveText( name );
+	await expect( heading ).not.toContainText( '&#038;' );
+	await expect( heading ).not.toContainText( '&amp;' );
+} );
+
 test( 'advertiser completes and submits the accessible five-step wizard', async ( {
 	page,
 } ) => {

@@ -155,12 +155,16 @@ final class Org_Repository {
 			return new WP_Error( 'aggr_invalid_org_identity', __( 'The organization name is not valid.', 'aggressive-ads' ) );
 		}
 
+		// Slashed: `wp_insert_post()` unslashes, and a name with a backslash
+		// in it lost that backslash here. See Post_Title.
 		$org_id = wp_insert_post(
-			array(
-				'post_type'   => Post_Types::ORGANIZATION,
-				'post_status' => 'publish',
-				'post_title'  => $name,
-				'post_author' => $owner_user_id,
+			wp_slash(
+				array(
+					'post_type'   => Post_Types::ORGANIZATION,
+					'post_status' => 'publish',
+					'post_title'  => $name,
+					'post_author' => $owner_user_id,
+				)
 			),
 			true
 		);
@@ -246,9 +250,11 @@ final class Org_Repository {
 		}
 
 		$updated = wp_update_post(
-			array(
-				'ID'         => $org_id,
-				'post_title' => $display,
+			wp_slash(
+				array(
+					'ID'         => $org_id,
+					'post_title' => $display,
+				)
 			),
 			true
 		);
@@ -264,15 +270,23 @@ final class Org_Repository {
 		update_post_meta( $org_id, self::META_CANONICAL_NAME, $canonical );
 		$this->flush_cache();
 
-		$verified = $this->name( $org_id ) === $display
+		/*
+		 * Compared raw against the stored form, not through `name()`. It read
+		 * `get_the_title()`, which encodes `&` and curls quotes, so a rename
+		 * containing either could never verify: every one was rolled back and
+		 * reported as "could not be renamed".
+		 */
+		$verified = $this->raw_name( $org_id ) === Post_Title::as_stored( $display )
 			&& (string) get_post_meta( $org_id, self::META_CANONICAL_NAME, true ) === $canonical
 			&& ( ! $identity_moved || $org_id === $this->access->org_id_for_canonical( $canonical ) );
 
 		if ( ! $verified ) {
 			wp_update_post(
-				array(
-					'ID'         => $org_id,
-					'post_title' => $old_display,
+				wp_slash(
+					array(
+						'ID'         => $org_id,
+						'post_title' => $old_display,
+					)
 				),
 				true
 			);
@@ -329,8 +343,10 @@ final class Org_Repository {
 			);
 
 			foreach ( $ids as $org_id ) {
-				$title        = get_the_title( (int) $org_id );
-				$title        = is_string( $title ) ? $title : '';
+				// The stored title, decoded — never `get_the_title()`. Comparing
+				// against display text found a difference in every name with an
+				// ampersand or a quote, and wrote the encoded form back for good.
+				$title        = Post_Title::plain( $this->raw_name( (int) $org_id ) );
 				$display_name = self::display_name( $title );
 				$canonical    = self::canonical_name( $display_name );
 
@@ -340,9 +356,11 @@ final class Org_Repository {
 
 				if ( $display_name !== $title ) {
 					wp_update_post(
-						array(
-							'ID'         => (int) $org_id,
-							'post_title' => $display_name,
+						wp_slash(
+							array(
+								'ID'         => (int) $org_id,
+								'post_title' => $display_name,
+							)
 						)
 					);
 				}
@@ -787,7 +805,19 @@ final class Org_Repository {
 			return '';
 		}
 
-		$title = get_the_title( $org_id );
+		// Plain text, not `get_the_title()`, which is already encoded for display
+		// and was escaped again by every template and mailer that used it.
+		return Post_Title::plain( $this->raw_name( $org_id ) );
+	}
+
+	/**
+	 * The organization's title exactly as stored, for verifying a write.
+	 *
+	 * @param int $org_id Organization post id.
+	 * @return string
+	 */
+	private function raw_name( int $org_id ): string {
+		$title = get_post_field( 'post_title', $org_id, 'raw' );
 
 		return is_string( $title ) ? $title : '';
 	}

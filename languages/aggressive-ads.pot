@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-13T09:47:52+00:00\n"
+"POT-Creation-Date: 2026-09-13T16:43:54+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -3766,7 +3766,7 @@ msgid "Organization name updated."
 msgstr ""
 
 #: inc/Portal/class-organization-actions.php:174
-#: inc/Repository/class-org-repository.php:239
+#: inc/Repository/class-org-repository.php:243
 msgid "That organization name is already in use."
 msgstr ""
 
@@ -3856,7 +3856,7 @@ msgstr ""
 
 #: inc/Repository/class-org-access-repository.php:104
 #: inc/Repository/class-org-access-repository.php:181
-#: inc/Repository/class-org-repository.php:218
+#: inc/Repository/class-org-repository.php:222
 msgid "Enter a valid organization name."
 msgstr ""
 
@@ -3876,16 +3876,16 @@ msgstr ""
 msgid "The organization name is not valid."
 msgstr ""
 
-#: inc/Repository/class-org-repository.php:183
+#: inc/Repository/class-org-repository.php:187
 msgid "The organization could not be created."
 msgstr ""
 
-#: inc/Repository/class-org-repository.php:211
+#: inc/Repository/class-org-repository.php:215
 msgid "The organization could not be found."
 msgstr ""
 
-#: inc/Repository/class-org-repository.php:261
-#: inc/Repository/class-org-repository.php:285
+#: inc/Repository/class-org-repository.php:267
+#: inc/Repository/class-org-repository.php:299
 msgid "The organization could not be renamed."
 msgstr ""
 
