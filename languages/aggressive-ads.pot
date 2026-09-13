@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-13T08:41:46+00:00\n"
+"POT-Creation-Date: 2026-09-13T09:47:52+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -3179,7 +3179,7 @@ msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:514
 #: inc/Portal/class-campaign-actions.php:547
-#: inc/Workflow/class-campaign-editor.php:338
+#: inc/Workflow/class-campaign-editor.php:350
 msgid "You do not have permission to edit that campaign."
 msgstr ""
 
@@ -3193,18 +3193,18 @@ msgid "You do not have permission to withdraw that campaign."
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:721
-#: inc/Workflow/class-campaign-editor.php:362
+#: inc/Workflow/class-campaign-editor.php:374
 msgid "Enter a campaign name."
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:722
 #: inc/Workflow/class-campaign-editor.php:143
-#: inc/Workflow/class-campaign-editor.php:366
+#: inc/Workflow/class-campaign-editor.php:378
 msgid "Use 160 characters or fewer for the campaign name."
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:723
-#: inc/Workflow/class-campaign-editor.php:406
+#: inc/Workflow/class-campaign-editor.php:418
 #: inc/Workflow/class-campaign-validator.php:236
 msgid "The end date must be after the start date."
 msgstr ""
@@ -3241,8 +3241,8 @@ msgid "That package is not configured completely. Choose another package or get 
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:732
-#: inc/Workflow/class-campaign-editor.php:475
-#: inc/Workflow/class-campaign-editor.php:480
+#: inc/Workflow/class-campaign-editor.php:487
+#: inc/Workflow/class-campaign-editor.php:492
 msgid "Upload one creative for every package placement before scheduling."
 msgstr ""
 
@@ -3282,7 +3282,7 @@ msgid "The campaign could not be submitted. Please try again."
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:742
-#: inc/Workflow/class-campaign-editor.php:239
+#: inc/Workflow/class-campaign-editor.php:251
 msgid "The campaign could not be saved. Please try again."
 msgstr ""
 
@@ -3479,7 +3479,7 @@ msgstr ""
 
 #: inc/Portal/class-creative-feedback.php:273
 #: inc/Workflow/class-assignment-editor.php:192
-#: inc/Workflow/class-campaign-editor.php:342
+#: inc/Workflow/class-campaign-editor.php:354
 #: inc/Workflow/class-creative-manager.php:428
 #: inc/Workflow/class-creative-manager.php:577
 #: inc/Workflow/class-creative-manager.php:671
@@ -4489,23 +4489,23 @@ msgstr ""
 msgid "This campaign changed in another window. Reload it before saving again."
 msgstr ""
 
-#: inc/Workflow/class-campaign-editor.php:377
+#: inc/Workflow/class-campaign-editor.php:389
 msgid "One of the selected placements is not available."
 msgstr ""
 
-#: inc/Workflow/class-campaign-editor.php:417
+#: inc/Workflow/class-campaign-editor.php:429
 msgid "That campaign step is not valid."
 msgstr ""
 
-#: inc/Workflow/class-campaign-editor.php:560
+#: inc/Workflow/class-campaign-editor.php:572
 msgid "That package is not available."
 msgstr ""
 
-#: inc/Workflow/class-campaign-editor.php:571
+#: inc/Workflow/class-campaign-editor.php:583
 msgid "That package is not configured completely. Please choose another package or get in touch."
 msgstr ""
 
-#: inc/Workflow/class-campaign-editor.php:576
+#: inc/Workflow/class-campaign-editor.php:588
 msgid "That package includes a placement that is not available. Please choose another package or get in touch."
 msgstr ""
 

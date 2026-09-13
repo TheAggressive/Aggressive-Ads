@@ -236,6 +236,18 @@ final class Campaign_Editor {
 		$saved = $this->campaigns->update_draft( $campaign_id, $clean );
 
 		if ( is_wp_error( $saved ) ) {
+			/*
+			 * **Give the revision back.** It was claimed above, before the
+			 * write, so the compare-and-swap protects against a concurrent
+			 * editor — but a write that then fails has saved nothing, and
+			 * keeping the claim leaves every open page a revision behind a
+			 * campaign that did not change. The browser only updates its copy
+			 * on success, so its very next save was refused as a conflict:
+			 * one failed save became "This campaign changed in another
+			 * window", repeated for as long as the page stayed open.
+			 */
+			$this->campaigns->release_autosave_revision( $campaign_id, $revision, $expected_rev );
+
 			return $this->error( 'aggr_campaign_not_saved', __( 'The campaign could not be saved. Please try again.', 'aggressive-ads' ), 500 );
 		}
 

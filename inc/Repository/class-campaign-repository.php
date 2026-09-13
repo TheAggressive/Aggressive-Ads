@@ -89,12 +89,16 @@ final class Campaign_Repository {
 	 * @return int|\WP_Error
 	 */
 	public function create_draft( int $org_id, int $user_id, string $title ) {
+		// Slashed because `wp_insert_post()` unslashes: a title created with a
+		// backslash in it — by staff for a client, or by the copier — lost it.
 		$campaign_id = wp_insert_post(
-			array(
-				'post_type'   => Post_Types::CAMPAIGN,
-				'post_status' => Post_Statuses::DRAFT,
-				'post_author' => $user_id,
-				'post_title'  => $title,
+			wp_slash(
+				array(
+					'post_type'   => Post_Types::CAMPAIGN,
+					'post_status' => Post_Statuses::DRAFT,
+					'post_author' => $user_id,
+					'post_title'  => $title,
+				)
 			),
 			true
 		);
@@ -139,23 +143,20 @@ final class Campaign_Repository {
 		return ( new Campaign_Draft_Persistence( $this ) )->update( $campaign_id, $fields );
 	}
 
+	/*
+	 * Advertiser requests — proposed edits, requested actions and the counter
+	 * that keys their notices — live in `Campaign_Request_Repository`. These
+	 * stay as delegations so no caller had to change when that state moved out.
+	 */
+
 	/**
 	 * The change set an advertiser has proposed for a running campaign.
-	 *
-	 * Stored as meta on the campaign rather than as a shadow post, unlike a
-	 * creative replacement. That asymmetry is deliberate: a replacement has
-	 * *bytes* to hold, validate and stream before anyone approves it, and a
-	 * post is what owns bytes here. A field change is a handful of scalars, and
-	 * giving it a post would buy a second thing to keep in step with the
-	 * campaign for no capability in return.
 	 *
 	 * @param int $campaign_id Campaign post id.
 	 * @return array<string, mixed> Empty when nothing is pending.
 	 */
 	public function pending_edits( int $campaign_id ): array {
-		$stored = get_post_meta( $campaign_id, self::META_PENDING_EDITS, true );
-
-		return is_array( $stored ) ? $stored : array();
+		return $this->requests()->pending_edits( $campaign_id );
 	}
 
 	/**
@@ -164,7 +165,7 @@ final class Campaign_Repository {
 	 * @param int $campaign_id Campaign post id.
 	 */
 	public function has_pending_edits( int $campaign_id ): bool {
-		return array() !== $this->pending_edits( $campaign_id );
+		return $this->requests()->has_pending_edits( $campaign_id );
 	}
 
 	/**
@@ -174,30 +175,9 @@ final class Campaign_Repository {
 	 * @param array<string, mixed> $edits       Validated change set.
 	 * @param int                  $user_id     Proposing user.
 	 * @param bool                 $submitted   Whether it has been sent for review.
-	 * @return bool
 	 */
 	public function set_pending_edits( int $campaign_id, array $edits, int $user_id, bool $submitted = false ): bool {
-		if ( array() === $edits ) {
-			return $this->clear_pending_edits( $campaign_id );
-		}
-
-		/*
-		 * **Who proposed this and when are not stored here.** They were, in
-		 * `_aggr_pending_edits_at` and `_aggr_pending_edits_by`, and nothing
-		 * ever read either — while the audit row written on the same line of
-		 * `Campaign_Change_Manager` records `actor_user_id` and
-		 * `created_at_ts` for the identical event. Two copies of one fact, one
-		 * of them durable, queryable and covered by retention, and the other a
-		 * pair of post meta rows with no reader. The audit log is the answer to
-		 * "who asked for this change"; `$user_id` stays a parameter because the
-		 * caller that logs it takes it from here.
-		 */
-		update_post_meta( $campaign_id, self::META_PENDING_EDITS, $edits );
-		update_post_meta( $campaign_id, self::META_PENDING_EDITS_SENT, $submitted ? 1 : 0 );
-
-		// Read back rather than trusting update_post_meta()'s return, which is
-		// false both when the write failed and when the value was unchanged.
-		return $this->pending_edits( $campaign_id ) === $edits;
+		return $this->requests()->set_pending_edits( $campaign_id, $edits, $user_id, $submitted );
 	}
 
 	/**
@@ -206,51 +186,26 @@ final class Campaign_Repository {
 	 * @param int $campaign_id Campaign post id.
 	 */
 	public function clear_pending_edits( int $campaign_id ): bool {
-		delete_post_meta( $campaign_id, self::META_PENDING_EDITS );
-		delete_post_meta( $campaign_id, self::META_PENDING_EDITS_SENT );
-
-		return array() === $this->pending_edits( $campaign_id );
+		return $this->requests()->clear_pending_edits( $campaign_id );
 	}
 
 	/**
 	 * Whether the pending change has been sent for review.
 	 *
-	 * A proposal being assembled across wizard steps is not one a reviewer
-	 * should see. Without this flag the review queue would show half-finished
-	 * edits and staff would approve a change the advertiser had not finished
-	 * making.
-	 *
 	 * @param int $campaign_id Campaign post id.
 	 */
 	public function pending_edits_submitted( int $campaign_id ): bool {
-		return 1 === (int) get_post_meta( $campaign_id, self::META_PENDING_EDITS_SENT, true );
+		return $this->requests()->pending_edits_submitted( $campaign_id );
 	}
 
 	/**
 	 * An advertiser's request for a staff-only action on a running campaign.
 	 *
-	 * Kept apart from pending edits even though both are "the advertiser wants
-	 * something": an edit proposes new *values* and is applied on approval,
-	 * while this proposes a *transition* that staff perform themselves through
-	 * the review screen. Sharing storage would mean one approval path deciding
-	 * two different kinds of thing.
-	 *
 	 * @param int $campaign_id Campaign post id.
 	 * @return array{action: string, reason: string, at: int, by: int}|array{}
 	 */
 	public function action_request( int $campaign_id ): array {
-		$stored = get_post_meta( $campaign_id, self::META_ACTION_REQUEST, true );
-
-		if ( ! is_array( $stored ) || ! isset( $stored['action'] ) ) {
-			return array();
-		}
-
-		return array(
-			'action' => (string) $stored['action'],
-			'reason' => (string) ( $stored['reason'] ?? '' ),
-			'at'     => (int) ( $stored['at'] ?? 0 ),
-			'by'     => (int) ( $stored['by'] ?? 0 ),
-		);
+		return $this->requests()->action_request( $campaign_id );
 	}
 
 	/**
@@ -260,21 +215,9 @@ final class Campaign_Repository {
 	 * @param string $action      Target status.
 	 * @param string $reason      Advertiser's explanation.
 	 * @param int    $user_id     Requesting user.
-	 * @return bool
 	 */
 	public function set_action_request( int $campaign_id, string $action, string $reason, int $user_id ): bool {
-		update_post_meta(
-			$campaign_id,
-			self::META_ACTION_REQUEST,
-			array(
-				'action' => $action,
-				'reason' => $reason,
-				'at'     => time(),
-				'by'     => $user_id,
-			)
-		);
-
-		return array() !== $this->action_request( $campaign_id );
+		return $this->requests()->set_action_request( $campaign_id, $action, $reason, $user_id );
 	}
 
 	/**
@@ -283,9 +226,32 @@ final class Campaign_Repository {
 	 * @param int $campaign_id Campaign post id.
 	 */
 	public function clear_action_request( int $campaign_id ): bool {
-		delete_post_meta( $campaign_id, self::META_ACTION_REQUEST );
+		return $this->requests()->clear_action_request( $campaign_id );
+	}
 
-		return array() === $this->action_request( $campaign_id );
+	/**
+	 * How many times an advertiser has asked staff for something on this campaign.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 */
+	public function request_revision( int $campaign_id ): int {
+		return $this->requests()->request_revision( $campaign_id );
+	}
+
+	/**
+	 * Bumps the request counter and returns the new value.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 */
+	public function increment_request_revision( int $campaign_id ): int {
+		return $this->requests()->increment_request_revision( $campaign_id );
+	}
+
+	/**
+	 * The collaborator that owns advertiser request state.
+	 */
+	private function requests(): Campaign_Request_Repository {
+		return new Campaign_Request_Repository();
 	}
 
 	/**
@@ -315,6 +281,22 @@ final class Campaign_Repository {
 		$updated = update_post_meta( $campaign_id, self::META_AUTOSAVE_REV, $next, $expected );
 
 		return false === $updated ? false : $next;
+	}
+
+	/**
+	 * Returns a claimed revision whose write then failed.
+	 *
+	 * Compare-and-swap in the other direction, so it can only undo its own
+	 * claim: if another save has already moved past `$claimed`, that save's
+	 * revision stands and this does nothing.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @param int $claimed     Revision this request claimed.
+	 * @param int $previous    Revision to restore.
+	 * @return bool Whether the revision was restored.
+	 */
+	public function release_autosave_revision( int $campaign_id, int $claimed, int $previous ): bool {
+		return false !== update_post_meta( $campaign_id, self::META_AUTOSAVE_REV, $previous, $claimed );
 	}
 
 	/**
@@ -652,37 +634,6 @@ final class Campaign_Repository {
 	}
 
 	/**
-	 * How many times an advertiser has asked staff for something on this campaign.
-	 *
-	 * Deliberately not `revision()`. That counter tracks *submissions of the
-	 * campaign itself* and only moves on a transition, whereas a request is a
-	 * meta write against a campaign that stays live throughout. Keying request
-	 * notification receipts on `revision()` would leave the number unchanged
-	 * across a withdraw and a resubmit, so the second ask would be suppressed as
-	 * a duplicate and nobody would be told about it.
-	 *
-	 * @param int $campaign_id Campaign post id.
-	 * @return int
-	 */
-	public function request_revision( int $campaign_id ): int {
-		return (int) get_post_meta( $campaign_id, self::META_REQUEST_REVISION, true );
-	}
-
-	/**
-	 * Bumps the request counter and returns the new value.
-	 *
-	 * @param int $campaign_id Campaign post id.
-	 * @return int
-	 */
-	public function increment_request_revision( int $campaign_id ): int {
-		$next = $this->request_revision( $campaign_id ) + 1;
-
-		update_post_meta( $campaign_id, self::META_REQUEST_REVISION, $next );
-
-		return $next;
-	}
-
-	/**
 	 * Stamps the submission time.
 	 *
 	 * @param int $campaign_id Campaign post id.
@@ -903,13 +854,33 @@ final class Campaign_Repository {
 	}
 
 	/**
-	 * The campaign's title.
+	 * The campaign's title, as plain text.
+	 *
+	 * **Not `get_the_title()`.** That is a display filter: it curls quotes and
+	 * writes `&` as `&#038;`. Every consumer here escapes or sanitizes on its
+	 * own way out, so feeding them pre-encoded text showed advertisers
+	 * "Arts &amp;#038; Culture" and filled the edit field with the encoded
+	 * form, which the next save then stored. Worse, the draft read-back
+	 * compared typed text against it, so any title containing `&`, `'` or `"`
+	 * was rolled back on every save.
+	 *
+	 * Decoded from the stored value, which kses has already made safe.
 	 *
 	 * @param int $campaign_id Campaign post id.
 	 * @return string
 	 */
 	public function title( int $campaign_id ): string {
-		$title = get_the_title( $campaign_id );
+		return wp_specialchars_decode( $this->raw_title( $campaign_id ), ENT_QUOTES );
+	}
+
+	/**
+	 * The title exactly as stored, for checking a write against what landed.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return string
+	 */
+	public function raw_title( int $campaign_id ): string {
+		$title = get_post_field( 'post_title', $campaign_id, 'raw' );
 
 		return is_string( $title ) ? $title : '';
 	}
