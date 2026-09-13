@@ -69,7 +69,14 @@ final class Catalogue_View_Data {
 		return array(
 			'statuses'   => $statuses,
 			'placements' => $this->placement_options(),
-			'max_size'   => size_format( Upload_Rules::MAX_BYTES ),
+
+			/*
+			 * The largest any placement could be set to, which is the only
+			 * honest single number now that each one carries its own limit.
+			 * What a given placement actually accepts is in the table below
+			 * the sentence this feeds, per row.
+			 */
+			'max_size'   => size_format( Upload_Rules::CEILING_MAX_BYTES ),
 			'file_types' => array_values( array_unique( $types ) ),
 
 			/*
@@ -86,16 +93,21 @@ final class Catalogue_View_Data {
 	/**
 	 * Active placements with preparation details.
 	 *
-	 * @return array<int, array{id: int, name: string, size: string}>
+	 * @return array<int, array{id: int, name: string, size: string, max_size: string}>
 	 */
 	public function placement_options(): array {
 		$options = array();
 
 		foreach ( $this->placements->active_ids() as $placement_id ) {
 			$options[] = array(
-				'id'   => $placement_id,
-				'name' => $this->placements->name( $placement_id ),
-				'size' => $this->placements->size( $placement_id ),
+				'id'       => $placement_id,
+				'name'     => $this->placements->name( $placement_id ),
+				'size'     => $this->placements->size( $placement_id ),
+
+				// Formatted here rather than in the template: it is the same
+				// sentence as the one on the upload form, and two callers
+				// formatting the same number is how they come to disagree.
+				'max_size' => (string) size_format( $this->placements->max_bytes( $placement_id ) ),
 			);
 		}
 

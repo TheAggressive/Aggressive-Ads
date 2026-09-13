@@ -129,6 +129,71 @@ test( 'a rotating slot refetches while a static one beside it does not', async (
 	).toBe( 1 );
 } );
 
+test( 'a slot decided by the page batch still rotates', async ( { page } ) => {
+	/*
+	 * **The route a real page actually takes.**
+	 *
+	 * `firstFill()` asks the page batch first and only falls back per slot,
+	 * and `batchableSlugs()` excludes a slug that appears twice — which the
+	 * rotation page above does on purpose. So every other assertion in this
+	 * file is about the fallback, and the batch shipped without `servable` on
+	 * its payload: `view.js` read `undefined`, took it for zero, and returned
+	 * before starting the timer. Two live creatives and a rotation setting
+	 * that was on, on every page a visitor loads.
+	 */
+	const batched: string[] = [];
+	const fills: string[] = [];
+
+	page.on( 'request', ( request ) => {
+		const url = request.url();
+
+		if ( url.includes( '/aggr/v1/decisions' ) ) {
+			batched.push( url );
+		}
+
+		if ( url.includes( `/aggr/v1/fill/${ PLACEMENT }` ) ) {
+			fills.push( url );
+		}
+	} );
+
+	await page.goto( '/e2e-rotation-batch/' );
+
+	const slot = page.locator( `[data-aggr-slot="${ PLACEMENT }"]` );
+
+	await expect( slot ).toHaveCount( 1 );
+	await expect( slot.locator( 'img' ) ).toBeVisible();
+
+	// The neighbour is only there to make the page batchable; it must have
+	// filled too, or the batch answered half a page and this proves less.
+	await expect(
+		page.locator( '[data-aggr-slot="e2e-lonely-placement"] img' )
+	).toBeVisible();
+
+	/*
+	 * The batch answered and the per-slot route was not used for the first
+	 * fill. Without this the test would pass over a page that quietly fell
+	 * back, which is the same as not testing the batch at all.
+	 */
+	await expect.poll( () => batched.length ).toBe( 1 );
+	expect( fills ).toEqual( [] );
+
+	// Marked rather than compared by src: selection is weighted-random and can
+	// legitimately return the same creative twice.
+	await slot
+		.locator( 'img' )
+		.evaluate( ( node ) => node.setAttribute( 'data-e2e-batched', '1' ) );
+
+	await expect
+		.poll( () => fills.length, { timeout: 15_000, intervals: [ 250 ] } )
+		.toBe( 1 );
+
+	// A rotation, not a second first fill.
+	expect( sequenceOf( fills[ 0 ] ) ).toBe( '1' );
+
+	await expect( slot.locator( 'img[data-e2e-batched]' ) ).toHaveCount( 0 );
+	await expect( slot.locator( 'img' ) ).toBeVisible();
+} );
+
 test( 'a slot with one creative stops instead of redrawing it', async ( {
 	page,
 } ) => {

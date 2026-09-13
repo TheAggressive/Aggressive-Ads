@@ -104,7 +104,8 @@ final class Rest_Service_Registrar {
 			static fn ( Service_Container $c ): Placements_Controller => new Placements_Controller(
 				$c->get( Placement_Repository::class ),
 				$c->get( Placement_Manager::class ),
-				$c->get( Placement_Data::class )
+				$c->get( Placement_Data::class ),
+				$c->get( Creative_Assignment_Repository::class )
 			)
 		);
 		$container->register(

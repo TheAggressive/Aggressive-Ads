@@ -12,6 +12,7 @@ namespace Aggressive\Ads\Tests\Integration;
 use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Portal\Creative_Actions;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Creative_Revision_Repository;
@@ -328,6 +329,53 @@ final class TextOnlyChangeTest extends WP_UnitTestCase {
 			'aggr_replacement_unchanged',
 			$result->get_error_code(),
 			'The refusal must not depend on what was submitted.'
+		);
+	}
+	/**
+	 * **The portal reaches the text-only path when no file is chosen.**
+	 *
+	 * `request_text_change()` was complete, tested and reachable only over
+	 * REST: `handle_replace()` called `request()` unconditionally, so the one
+	 * screen an advertiser uses forced them to re-upload artwork they had not
+	 * changed in order to fix a destination. The dialog even offered to change
+	 * "the ad creative or destination" while requiring the file.
+	 *
+	 * An untouched file input is the case that matters. PHP still sends an
+	 * entry for it — `UPLOAD_ERR_NO_FILE` with an empty name — so the array is
+	 * not empty and REST's own emptiness test would have sent this down the
+	 * artwork path.
+	 *
+	 * @return void
+	 */
+	public function test_the_portal_stages_a_text_change_when_no_file_is_chosen(): void {
+		$made = $this->serving_creative();
+
+		$actions = Plugin::instance()->container()->get( Creative_Actions::class );
+
+		$untouched = array(
+			'name'     => '',
+			'type'     => '',
+			'tmp_name' => '',
+			'error'    => UPLOAD_ERR_NO_FILE,
+			'size'     => 0,
+		);
+
+		$result = $actions->process_replace( $made['creative'], $untouched, 'https://example.com/fixed', 'Fixed copy' );
+
+		$this->assertIsArray( $result, 'A destination-only correction was refused.' );
+
+		$pending = $this->revisions->pending_replacement_id( $made['creative'] );
+
+		$this->assertGreaterThan( 0, $pending, 'Nothing was staged for review.' );
+
+		/*
+		 * And it is a text-only revision, not artwork smuggled through the
+		 * cheap door: the classification is derived from the checksums
+		 * matching, never asserted by the caller.
+		 */
+		$this->assertTrue(
+			$this->revisions->is_text_only_revision( $pending ),
+			'The staged revision carries new bytes, so this is not the text-only path.'
 		);
 	}
 }

@@ -291,7 +291,7 @@ final class Creative_View_Data {
 	 *
 	 * @param int                              $campaign_id Campaign post id.
 	 * @param array<int, array<string, mixed>> $creatives   Render-ready creative rows.
-	 * @return array<int, array{id: int, name: string, size: string, active: bool, creatives: array<int, array<string, mixed>>}>
+	 * @return array<int, array{id: int, name: string, size: string, max_bytes: int, max_size: string, active: bool, creatives: array<int, array<string, mixed>>}>
 	 */
 	public function creative_slots( int $campaign_id, array $creatives ): array {
 		$slots = array();
@@ -305,10 +305,21 @@ final class Creative_View_Data {
 				}
 			}
 
+			$max_bytes = $this->placements->max_bytes( $placement_id );
+
 			$slots[] = array(
 				'id'        => $placement_id,
 				'name'      => $this->placements->name( $placement_id ),
 				'size'      => $this->placements->size( $placement_id ),
+
+				/*
+				 * Both forms of the same limit. The number is what the browser
+				 * compares a chosen file against; the string is what the form
+				 * tells someone to prepare. Formatting it once here is what
+				 * keeps the sentence and the check describing one rule.
+				 */
+				'max_bytes' => $max_bytes,
+				'max_size'  => (string) size_format( $max_bytes ),
 				'active'    => $this->placements->is_active( $placement_id ),
 				'creatives' => $matching,
 			);

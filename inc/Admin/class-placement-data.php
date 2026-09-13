@@ -12,6 +12,7 @@ namespace Aggressive\Ads\Admin;
 use Aggressive\Ads\Domain\Ad_Sizes;
 use Aggressive\Ads\Domain\Campaign_Rules;
 use Aggressive\Ads\Domain\Refresh_Policy;
+use Aggressive\Ads\Domain\Upload_Rules;
 use Aggressive\Ads\Repository\Placement_Repository;
 
 /**
@@ -32,7 +33,7 @@ final class Placement_Data {
 	/**
 	 * Complete inventory-screen state.
 	 *
-	 * @return array{sizes: array<string, string>, refresh_defaults: array{enabled: bool, seconds: int, max_per_view: int}, refresh_ceiling: int, rows: array<int, array{id: int, name: string, slug: string, size: string, size_preset: string, size_width: int, size_height: int, active: bool, sort_order: int, refresh_enabled: bool, refresh_seconds: int, refresh_max_per_view: int, house_attachment_id: int, house_click_url: string, house_alt: string, house_image_url: string, house_same_tab: bool, breakpoints: array<int, string>, groups: array<int, string>}>, all_groups: array<int, string>}
+	 * @return array{sizes: array<string, string>, refresh_defaults: array{enabled: bool, seconds: int, max_per_view: int}, refresh_ceiling: int, upload_limits: array{default: int, floor: int, ceiling: int}, rows: array<int, array{id: int, name: string, slug: string, size: string, size_preset: string, size_width: int, size_height: int, active: bool, sort_order: int, refresh_enabled: bool, refresh_seconds: int, refresh_max_per_view: int, max_bytes: int, house_attachment_id: int, house_click_url: string, house_alt: string, house_image_url: string, house_same_tab: bool, breakpoints: array<int, string>, groups: array<int, string>}>, all_groups: array<int, string>}
 	 */
 	public function view(): array {
 		$rows     = array();
@@ -80,6 +81,7 @@ final class Placement_Data {
 				 * — and two placements filed the same way look the same.
 				 */
 				'groups'               => $this->placements->groups( $placement_id ),
+				'max_bytes'            => $this->placements->max_bytes( $placement_id ),
 			);
 		}
 
@@ -91,6 +93,17 @@ final class Placement_Data {
 				'max_per_view' => $defaults->max_per_view,
 			),
 			'refresh_ceiling'  => Refresh_Policy::LEGACY_CLIENT_MAX_PER_VIEW,
+
+			/*
+			 * The bounds the server will clamp to, so the field can refuse a
+			 * number before it is sent rather than accepting it and quietly
+			 * storing a different one.
+			 */
+			'upload_limits'    => array(
+				'default' => Upload_Rules::DEFAULT_MAX_BYTES,
+				'floor'   => Upload_Rules::FLOOR_MAX_BYTES,
+				'ceiling' => Upload_Rules::CEILING_MAX_BYTES,
+			),
 
 			/*
 			 * Every group in use anywhere, so the form can offer what already

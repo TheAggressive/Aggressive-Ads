@@ -11,6 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use Aggressive\Ads\Portal\Portal_Notice;
 use Aggressive\Ads\Portal\Password_Actions;
 use Aggressive\Ads\Portal\Request;
 use Aggressive\Ads\Portal\Routes;
@@ -28,10 +29,22 @@ $aggr_redirect = '' === $aggr_redirect ? '' : wp_validate_redirect( $aggr_redire
 	<div class="aggr-panel">
 		<h1 class="aggr-panel__head"><?php esc_html_e( 'Reset your password', 'aggressive-ads' ); ?></h1>
 
-		<?php if ( '' !== $aggr_notice ) : ?>
-			<div class="aggr-alert <?php echo esc_attr( 'sent' === $aggr_notice ? 'aggr-alert--success' : 'aggr-alert--error' ); ?>" role="<?php echo esc_attr( 'sent' === $aggr_notice ? 'status' : 'alert' ); ?>">
-				<p><?php echo esc_html( Password_Actions::request_message( $aggr_notice ) ); ?></p>
-			</div>
+		<?php
+		/*
+		 * A refusal leaves the form on screen, so it goes to the notice
+		 * region. A sent request replaces the form, so its message is the
+		 * page's outcome rather than a notice about it — and an outcome that
+		 * fades away leaves a panel saying nothing.
+		 */
+		if ( '' !== $aggr_notice && 'sent' !== $aggr_notice ) {
+			Portal_Notice::add( Password_Actions::request_message( $aggr_notice ), 'error' );
+		}
+		?>
+
+		<?php if ( 'sent' === $aggr_notice ) : ?>
+			<p class="aggr-outcome aggr-outcome--success">
+				<?php echo esc_html( Password_Actions::request_message( $aggr_notice ) ); ?>
+			</p>
 		<?php endif; ?>
 
 		<?php if ( 'sent' !== $aggr_notice ) : ?>

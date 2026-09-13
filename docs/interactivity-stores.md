@@ -11,6 +11,7 @@ Interactivity API stores: no SPA, no router, and no client-side state tree.
 | `aggr/wizard` | **Shipped** | Step announcement, submit-step gating on the existing no-JS forms |
 | `aggr/upload` | **Shipped** | Drag/drop onto the native file input, client size/type/dimension checks |
 | `aggr/autosave` | **Shipped** | Debounced PATCH of the public allowlist, dirty/save status |
+| `aggr/save` | **Shipped** | Posts a portal write without a page load and confirms it in a toast. Binds by `data-aggr-save`, not `data-wp-interactive`, because an element carries one namespace and the upload form already carries `aggr/upload`. Adds no endpoint: the same `admin-post.php` action, nonce and handler answer it, and `Portal\Creative_Actions::redirect()` returns JSON when the post carries `aggr_async`. **The server sends a `patch` map of selector → text and the client applies nothing else** — reading the new value off the submitted form is right only while a write changes nothing but its own field, and a share is a percentage of the other creatives on the placement. Text, never markup: the dialogs are printed separately in the footer, so swapping a card's HTML would orphan every trigger in it. An empty map means the page cannot be brought up to date and the client falls back to the redirect, which is why upload, remove and replace stay ordinary posts. Failures always follow the redirect back to the page that renders them beside their field |
 
 Four namespaces, deliberately. A single `portal` store would become the client-side god object this architecture exists to avoid.
 
@@ -24,6 +25,7 @@ Author under `src/`; ship compiled `dist/` (see [build-and-release.md](build-and
 | `@aggr/helpers` | `src/interactivity/helpers.ts` | `dist/interactivity/helpers.js` |
 | `@aggr/logic` | `src/interactivity/logic.ts` | `dist/interactivity/logic.js` |
 | `@aggr/dialog` | `src/interactivity/dialog.ts` | `dist/interactivity/dialog.js` |
+| `@aggr/save` | `src/interactivity/save.ts` | `dist/interactivity/save.js` |
 | `@aggr/wizard` | `src/interactivity/wizard.ts` | `dist/interactivity/wizard.js` |
 | `@aggr/autosave` | `src/interactivity/autosave.ts` | `dist/interactivity/autosave.js` |
 | `@aggr/upload` | `src/interactivity/upload.ts` | `dist/interactivity/upload.js` |

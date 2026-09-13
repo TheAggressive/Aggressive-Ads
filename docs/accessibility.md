@@ -52,8 +52,17 @@ must use this stack — building a second one is how half of them end up without
 a focus trap.
 
 **Shipped today:** creative replace, live-ad preview, draft creative
-preview, and remove confirmation — all on the shared overlay
-(`templates/portal/partials/campaign-overlays.php`). Triggers are hash links with
+preview, remove confirmation, and the creative card's own four — custom run
+dates, edit destination, replace artwork and add a rotating creative — all on
+the shared overlay (`templates/portal/partials/campaign-overlays.php`).
+
+**Reopening a dialog after a refused save is done with a URL fragment**, never
+by seeding the store's `isOpen`. `bootDialog()` only calls `openDialog()` while
+the state is still closed, so a dialog pre-marked open receives no focus trap,
+no `inert` on the shell and not even the class that makes it visible. The
+fragment drives both halves: `:target` shows it without JavaScript, and the
+module's boot sees the matching hash and opens it properly.
+`Portal\Creative_Actions::error_fragment()` decides which one. Triggers are hash links with
 `aria-haspopup="dialog"` and `aria-controls`. Do not add a second dialog
 stack.
 

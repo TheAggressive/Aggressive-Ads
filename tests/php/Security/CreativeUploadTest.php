@@ -119,7 +119,7 @@ final class CreativeUploadTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function test_a_real_image_is_accepted(): void {
-		$result = $this->uploader->accept( $this->upload( $this->png( 40, 20 ), 'banner.png' ) );
+		$result = $this->uploader->accept( $this->upload( $this->png( 40, 20 ), 'banner.png' ), Upload_Rules::CEILING_MAX_BYTES );
 
 		$this->assertNotInstanceOf( WP_Error::class, $result );
 		$this->assertSame( 'image/png', $result['mime'] );
@@ -153,7 +153,7 @@ final class CreativeUploadTest extends WP_UnitTestCase {
 
 		$this->assertInstanceOf(
 			WP_Error::class,
-			$this->uploader->accept( $this->upload( $svg, $name ) ),
+			$this->uploader->accept( $this->upload( $svg, $name ), Upload_Rules::CEILING_MAX_BYTES ),
 			"An SVG named {$name} was accepted."
 		);
 	}
@@ -194,9 +194,9 @@ final class CreativeUploadTest extends WP_UnitTestCase {
 	public function test_a_script_named_as_an_image_is_refused(): void {
 		$php = "<?php echo shell_exec( \$_GET['c'] ); ?>";
 
-		$this->assertInstanceOf( WP_Error::class, $this->uploader->accept( $this->upload( $php, 'shell.php' ) ) );
-		$this->assertInstanceOf( WP_Error::class, $this->uploader->accept( $this->upload( $php, 'shell.png' ) ) );
-		$this->assertInstanceOf( WP_Error::class, $this->uploader->accept( $this->upload( $php, 'shell.php.png' ) ) );
+		$this->assertInstanceOf( WP_Error::class, $this->uploader->accept( $this->upload( $php, 'shell.php' ), Upload_Rules::CEILING_MAX_BYTES ) );
+		$this->assertInstanceOf( WP_Error::class, $this->uploader->accept( $this->upload( $php, 'shell.png' ), Upload_Rules::CEILING_MAX_BYTES ) );
+		$this->assertInstanceOf( WP_Error::class, $this->uploader->accept( $this->upload( $php, 'shell.php.png' ), Upload_Rules::CEILING_MAX_BYTES ) );
 	}
 
 	/**
@@ -209,24 +209,57 @@ final class CreativeUploadTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function test_a_mislabelled_image_is_refused_rather_than_corrected(): void {
-		$result = $this->uploader->accept( $this->upload( $this->png(), 'banner.gif' ) );
+		$result = $this->uploader->accept( $this->upload( $this->png(), 'banner.gif' ), Upload_Rules::CEILING_MAX_BYTES );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
 		$this->assertSame( 'aggr_' . Upload_Rules::ERROR_TYPE_MISMATCH, $result->get_error_code() );
 	}
 
 	/**
-	 * A file over the size cap is refused.
+	 * A file over the ceiling is refused.
 	 *
 	 * @return void
 	 */
 	public function test_an_oversized_file_is_refused(): void {
-		$oversized = str_repeat( 'a', Upload_Rules::MAX_BYTES + 1 );
+		$oversized = str_repeat( 'a', Upload_Rules::CEILING_MAX_BYTES + 1 );
 
-		$result = $this->uploader->accept( $this->upload( $oversized, 'big.png' ) );
+		$result = $this->uploader->accept( $this->upload( $oversized, 'big.png' ), Upload_Rules::CEILING_MAX_BYTES );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
 		$this->assertSame( 'aggr_' . Upload_Rules::ERROR_TOO_LARGE, $result->get_error_code() );
+	}
+
+	/**
+	 * **The placement's limit is what is enforced, not the ceiling.**
+	 *
+	 * The assertion that matters is the middle one: a file comfortably
+	 * under two megabytes, refused because the placement it is going to
+	 * asks for a hundred and fifty kilobytes. Enforcing the ceiling would
+	 * pass every other test in this file and accept it, and nothing an
+	 * advertiser saw would say the configured limit was decorative.
+	 *
+	 * @return void
+	 */
+	public function test_the_placement_limit_is_enforced_below_the_ceiling(): void {
+		$limit = 150 * 1024;
+		$half  = str_repeat( 'a', 500 * 1024 );
+
+		$refused = $this->uploader->accept( $this->upload( $half, 'big.png' ), $limit );
+
+		$this->assertInstanceOf( WP_Error::class, $refused );
+		$this->assertSame( 'aggr_' . Upload_Rules::ERROR_TOO_LARGE, $refused->get_error_code() );
+
+		// The sentence has to name the placement's number. Quoting the
+		// ceiling would tell an advertiser their 500 KB file is under the
+		// limit while the server refuses it.
+		$this->assertStringContainsString( size_format( $limit ), $refused->get_error_message() );
+		$this->assertStringNotContainsString( size_format( Upload_Rules::CEILING_MAX_BYTES ), $refused->get_error_message() );
+
+		// The negative half: the same placement still takes a real image
+		// that fits, so the limit refuses size and nothing else.
+		$accepted = $this->uploader->accept( $this->upload( $this->png( 40, 20 ), 'banner.png' ), $limit );
+
+		$this->assertNotInstanceOf( WP_Error::class, $accepted );
 	}
 
 	/**
@@ -249,7 +282,7 @@ final class CreativeUploadTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function test_a_missing_file_is_refused(): void {
-		$this->assertInstanceOf( WP_Error::class, $this->uploader->accept( array() ) );
+		$this->assertInstanceOf( WP_Error::class, $this->uploader->accept( array(), Upload_Rules::CEILING_MAX_BYTES ) );
 
 		$this->assertInstanceOf(
 			WP_Error::class,
@@ -258,7 +291,8 @@ final class CreativeUploadTest extends WP_UnitTestCase {
 					'name'     => 'x.png',
 					'tmp_name' => '/tmp/does-not-exist-' . wp_generate_uuid4(),
 					'error'    => UPLOAD_ERR_OK,
-				)
+				),
+				Upload_Rules::CEILING_MAX_BYTES
 			)
 		);
 	}
@@ -272,7 +306,7 @@ final class CreativeUploadTest extends WP_UnitTestCase {
 		$file          = $this->upload( $this->png(), 'banner.png' );
 		$file['error'] = UPLOAD_ERR_PARTIAL;
 
-		$this->assertInstanceOf( WP_Error::class, $this->uploader->accept( $file ) );
+		$this->assertInstanceOf( WP_Error::class, $this->uploader->accept( $file, Upload_Rules::CEILING_MAX_BYTES ) );
 	}
 
 	/**
@@ -356,7 +390,7 @@ final class CreativeUploadTest extends WP_UnitTestCase {
 		$this->assertIsArray( $probe, 'Test precondition: the crafted header must be readable.' );
 		$this->assertSame( 30000, $probe[0] );
 
-		$result = $this->uploader->accept( $this->upload( $header, 'bomb.png' ) );
+		$result = $this->uploader->accept( $this->upload( $header, 'bomb.png' ), Upload_Rules::CEILING_MAX_BYTES );
 
 		$this->assertInstanceOf( WP_Error::class, $result );
 		$this->assertSame( 'aggr_' . Upload_Rules::ERROR_TOO_MANY_PIXELS, $result->get_error_code() );
@@ -384,7 +418,7 @@ final class CreativeUploadTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function test_a_swapped_file_fails_its_checksum(): void {
-		$result = $this->uploader->accept( $this->upload( $this->png( 12, 12 ), 'banner.png' ) );
+		$result = $this->uploader->accept( $this->upload( $this->png( 12, 12 ), 'banner.png' ), Upload_Rules::CEILING_MAX_BYTES );
 
 		$this->assertNotInstanceOf( WP_Error::class, $result );
 		$this->assertTrue( $this->storage->matches_checksum( $result['path'], $result['sha256'] ) );

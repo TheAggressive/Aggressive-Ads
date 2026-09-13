@@ -13,6 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Portal\Organization_Actions;
+use Aggressive\Ads\Portal\Portal_Notice;
 use Aggressive\Ads\Portal\View_Data;
 use Aggressive\Ads\Repository\Org_Access_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
@@ -32,11 +33,14 @@ if ( null === $aggr_org ) :
 	return;
 endif;
 ?>
-<?php if ( '' !== $aggr_org_notice ) : ?>
-	<div class="aggr-alert <?php echo esc_attr( in_array( $aggr_org_notice, array( 'error', 'rate_limited', 'name_taken' ), true ) ? 'aggr-alert--error' : 'aggr-alert--success' ); ?>" role="status">
-		<p><?php echo esc_html( Organization_Actions::notice_message( $aggr_org_notice ) ); ?></p>
-	</div>
-<?php endif; ?>
+<?php
+if ( '' !== $aggr_org_notice ) {
+	Portal_Notice::add(
+		Organization_Actions::notice_message( $aggr_org_notice ),
+		in_array( $aggr_org_notice, array( 'error', 'rate_limited', 'name_taken' ), true ) ? 'error' : 'success'
+	);
+}
+?>
 
 <div class="aggr-pagehead">
 	<div>

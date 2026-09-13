@@ -110,6 +110,24 @@ what a guard reads, not only what it concludes — and sabotage it in both
 directions before trusting it: a server key with no reader must fail, and a
 client reading a key the server strips must fail too.
 
+**Then the same key shipped missing again, from the other writer.** With the
+lane fixed, `servable` was written by `paid_creative()`, read by `fill.js`, and
+absent from `for_slots()` — the page batch, which is the route a real page
+takes: `firstFill()` asks it first and falls back per slot only when it cannot
+answer. So `view.js` read `undefined`, took it for zero and returned before
+starting a timer, and every placement with two live creatives and rotation
+switched on showed one unchanging advertisement. Every test passed. The browser
+suite passed too, because its rotation fixture puts the same slug on the page
+twice and `batchableSlugs()` drops a duplicate — so all of it was testing the
+fallback.
+
+The lesson is narrower than "test both routes". A contract lane that asks
+*whether a key is written* answers yes as long as one writer writes it. It has
+to ask *whether every writer writes it*, and the lane now does: the keys
+`paid_creative()` adds late must also be assigned in `for_slots()`. A fixture
+that cannot reach a code path is not coverage of it, and "the E2E suite covers
+rotation" was true and useless.
+
 **Two guards now exist for defects this project kept re-shipping**, both
 written after an audit found five more instances in one afternoon.
 

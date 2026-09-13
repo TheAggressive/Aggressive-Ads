@@ -192,6 +192,51 @@ export default function Edit( { attributes, setAttributes } ) {
 				</PanelBody>
 
 				<PanelBody title={ __( 'Rotation', 'aggressive-ads' ) }>
+					{ /*
+					 * The publisher's placement has the final say: the server
+					 * resolves this toggle as `rotate && policy.enabled &&
+					 * policy.maxPerView > 0`, and refresh is off on a new
+					 * placement. Without this the switch looks live and does
+					 * nothing, which is indistinguishable from rotation being
+					 * broken — and it is what sends people to read delivery
+					 * code that is working correctly.
+					 */ }
+					{ /*
+					 * Two things stop a rotation, and neither is visible from
+					 * here: the publisher's placement policy, and how many
+					 * creatives are actually eligible. A slot with one is left
+					 * alone deliberately — redrawing the only advertisement
+					 * there is would mint an impression of an unchanged image
+					 * every interval — but nothing said so, so the toggle
+					 * looked broken.
+					 */ }
+					{ rotate &&
+					selected &&
+					false !== selected.rotates &&
+					'number' === typeof selected.candidates &&
+					selected.candidates < 2 ? (
+						<Notice status="warning" isDismissible={ false }>
+							{ selected.candidates < 1
+								? __(
+										'This placement has no live creative, so the slot has nothing to show yet.',
+										'aggressive-ads'
+								  )
+								: __(
+										'This placement has one live creative. Rotation needs at least two, so the slot will not change until another campaign is running on it.',
+										'aggressive-ads'
+								  ) }
+						</Notice>
+					) : null }
+
+					{ rotate && selected && false === selected.rotates ? (
+						<Notice status="warning" isDismissible={ false }>
+							{ __(
+								'This placement does not allow rotation, so the slot will show one ad per page load. A publisher can turn on “Allow refresh” for it under Inventory.',
+								'aggressive-ads'
+							) }
+						</Notice>
+					) : null }
+
 					<ToggleControl
 						__nextHasNoMarginBottom
 						label={ __( 'Rotate ads', 'aggressive-ads' ) }

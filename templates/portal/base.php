@@ -25,6 +25,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Portal\Portal_Notice;
 use Aggressive\Ads\Portal\View_Data;
 
 $aggr_screen = isset( $aggr_screen ) && is_string( $aggr_screen ) ? $aggr_screen : '';
@@ -141,6 +142,19 @@ $aggr_head_has_viewport = has_action( 'wp_head', '_block_template_viewport_meta_
 		</footer>
 	</div>
 </div>
+
+<?php
+/*
+ * The region every notice is written into, present on every portal page and
+ * empty most of the time.
+ *
+ * One permanent live region rather than one created per message: a region
+ * inserted at the same moment as its text is routinely missed by screen
+ * readers. Outside `.aggr-shell` so an open dialog's `inert` cannot reach it,
+ * for the same reason the dialogs themselves print out here.
+ */
+?>
+<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/toast-host.php'; ?>
 
 <?php wp_footer(); ?>
 </body>

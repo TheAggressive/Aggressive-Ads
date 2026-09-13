@@ -27,12 +27,34 @@ final class Upload_Rules {
 	public const ERROR_FAILED           = 'upload_failed';
 
 	/**
-	 * Two megabytes.
+	 * The most any placement may be configured to allow: two megabytes.
 	 *
-	 * Generous for a banner and small enough that a decompression bomb has
-	 * little room to work with.
+	 * A ceiling, not the limit. Each placement carries its own maximum and
+	 * this is the highest one an administrator can set — small enough that a
+	 * decompression bomb has little room to work with, whatever a placement
+	 * asks for.
 	 */
-	public const MAX_BYTES = 2097152;
+	public const CEILING_MAX_BYTES = 2097152;
+
+	/**
+	 * What a placement allows when nobody has said: 150 kilobytes.
+	 *
+	 * The figure display advertising already runs on — comfortable for a
+	 * well-compressed banner at the usual sizes, and small enough to refuse an
+	 * unoptimised export, which is what most oversized creative actually is.
+	 * A placement created before this setting existed reads as unset and gets
+	 * this, so the safe number is the one that applies without anyone acting.
+	 */
+	public const DEFAULT_MAX_BYTES = 153600;
+
+	/**
+	 * The smallest maximum a placement may be given: ten kilobytes.
+	 *
+	 * A floor exists so a typo cannot close a placement to every creative
+	 * there is. Ten kilobytes still admits a flat-colour banner, so a number
+	 * below it is a mistake rather than a strict policy.
+	 */
+	public const FLOOR_MAX_BYTES = 10240;
 
 	/**
 	 * Twenty-five million pixels.
@@ -130,13 +152,39 @@ final class Upload_Rules {
 	}
 
 	/**
-	 * Whether a file is too big.
+	 * The maximum a placement actually enforces.
 	 *
-	 * @param int $bytes File size.
+	 * Takes the stored number and answers with one that is safe to enforce:
+	 * unset or nonsense becomes the default, and anything outside the floor
+	 * and the ceiling is clamped rather than refused. Refusing would leave the
+	 * caller to decide what to do with a bad stored value, and every caller
+	 * deciding separately is how one of them ends up enforcing nothing.
+	 *
+	 * @param int $configured What the placement has stored, 0 when unset.
+	 * @return int
+	 */
+	public static function resolve_max_bytes( int $configured ): int {
+		if ( $configured < 1 ) {
+			return self::DEFAULT_MAX_BYTES;
+		}
+
+		return max( self::FLOOR_MAX_BYTES, min( self::CEILING_MAX_BYTES, $configured ) );
+	}
+
+	/**
+	 * Whether a file is too big for the placement it is going to.
+	 *
+	 * The limit is a parameter because it belongs to the placement, not to
+	 * this class. Passing it in is also what stops a caller reaching for the
+	 * ceiling by habit and enforcing two megabytes on a placement that asked
+	 * for a hundred and fifty kilobytes.
+	 *
+	 * @param int $bytes     File size.
+	 * @param int $max_bytes The placement's resolved maximum.
 	 * @return bool
 	 */
-	public static function exceeds_size( int $bytes ): bool {
-		return $bytes > self::MAX_BYTES;
+	public static function exceeds_size( int $bytes, int $max_bytes ): bool {
+		return $bytes > self::resolve_max_bytes( $max_bytes );
 	}
 
 	/**

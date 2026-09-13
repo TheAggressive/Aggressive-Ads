@@ -218,14 +218,47 @@ final class UploadRulesTest extends TestCase {
 	}
 
 	/**
-	 * The size ceiling is inclusive of the limit itself.
+	 * The limit is the placement's, and it is inclusive.
 	 *
 	 * @return void
 	 */
-	public function test_size_is_bounded_at_the_limit(): void {
-		$this->assertFalse( Upload_Rules::exceeds_size( 0 ) );
-		$this->assertFalse( Upload_Rules::exceeds_size( Upload_Rules::MAX_BYTES ) );
-		$this->assertTrue( Upload_Rules::exceeds_size( Upload_Rules::MAX_BYTES + 1 ) );
+	public function test_size_is_bounded_at_the_placement_limit(): void {
+		$limit = 100000;
+
+		$this->assertFalse( Upload_Rules::exceeds_size( 0, $limit ) );
+		$this->assertFalse( Upload_Rules::exceeds_size( $limit, $limit ) );
+		$this->assertTrue( Upload_Rules::exceeds_size( $limit + 1, $limit ) );
+
+		/*
+		 * The ceiling is not the limit. A placement asking for 100 KB must
+		 * refuse a 500 KB file, which the old single-constant check would
+		 * have accepted — that is the whole point of the change and the one
+		 * assertion that fails if the parameter is ever ignored.
+		 */
+		$this->assertTrue( Upload_Rules::exceeds_size( 500000, $limit ) );
+		$this->assertFalse( Upload_Rules::exceeds_size( 500000, Upload_Rules::CEILING_MAX_BYTES ) );
+	}
+
+	/**
+	 * An unset, absurd or out-of-range limit still resolves to a safe one.
+	 *
+	 * Every caller gets its limit from stored meta, which nothing stops a
+	 * database edit or an older row from being wrong. Resolving rather than
+	 * refusing means there is no path on which the size check is skipped.
+	 *
+	 * @return void
+	 */
+	public function test_a_stored_limit_resolves_to_something_enforceable(): void {
+		$this->assertSame( Upload_Rules::DEFAULT_MAX_BYTES, Upload_Rules::resolve_max_bytes( 0 ) );
+		$this->assertSame( Upload_Rules::DEFAULT_MAX_BYTES, Upload_Rules::resolve_max_bytes( -1 ) );
+		$this->assertSame( Upload_Rules::FLOOR_MAX_BYTES, Upload_Rules::resolve_max_bytes( 1 ) );
+		$this->assertSame( Upload_Rules::CEILING_MAX_BYTES, Upload_Rules::resolve_max_bytes( PHP_INT_MAX ) );
+		$this->assertSame( 200000, Upload_Rules::resolve_max_bytes( 200000 ) );
+
+		// The default has to sit inside its own bounds, or every unset
+		// placement enforces a number the form will not let anyone type.
+		$this->assertGreaterThanOrEqual( Upload_Rules::FLOOR_MAX_BYTES, Upload_Rules::DEFAULT_MAX_BYTES );
+		$this->assertLessThanOrEqual( Upload_Rules::CEILING_MAX_BYTES, Upload_Rules::DEFAULT_MAX_BYTES );
 	}
 
 	/**

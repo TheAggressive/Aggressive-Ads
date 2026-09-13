@@ -198,7 +198,7 @@ final class Decision_Engine {
 	 * @param int                                                                             $now       Evaluation time.
 	 * @param int|null                                                                        $seed      Random seed.
 	 * @param array<string, mixed>                                                            $facts     Request facts.
-	 * @return array<string, array{result: Decision_Result, trace: Decision_Trace}>
+	 * @return array<string, array{result: Decision_Result, trace: Decision_Trace, servable: int}>
 	 */
 	public function decide_page( array $slots_map, int $now, ?int $seed = null, array $facts = array() ): array {
 		$decisions = \Aggressive\Ads\Domain\Page_Decision_Coordinator::coordinate(

@@ -10,6 +10,7 @@ declare module '@aggr/helpers' {
 	export function canRestoreFocus(
 		element: Element | null
 	): element is HTMLElement;
+	export function endpointOf( form: HTMLFormElement ): string;
 }
 
 declare module '@aggr/scroll-lock' {

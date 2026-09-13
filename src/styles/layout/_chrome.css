@@ -612,8 +612,26 @@
 	font-weight: 700;
 }
 
-.aggr-alert--success {
+/*
+ * What a page is left saying once its form has gone.
+ *
+ * Not an alert and not a notice: a completed sign-up or password request
+ * replaces the form it came from, so this is the panel's content rather than
+ * a remark about it. It has no ARIA role for that reason — it is read in
+ * place, not announced — and it does not fade, because there would be
+ * nothing behind it.
+ */
+.aggr-outcome {
+	margin: 0;
+	padding: var(--aggr-space-md) var(--aggr-space-lg);
+	border: 1px solid var(--aggr-border-color-strong);
+	border-radius: var(--aggr-radius-control);
+	font-weight: 600;
+}
+
+.aggr-outcome--success {
 	background: var(--aggr-color-live-tint);
+	border-color: var(--aggr-color-live);
 	color: var(--aggr-color-live);
 }
 

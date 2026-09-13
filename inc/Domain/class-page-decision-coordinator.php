@@ -22,7 +22,22 @@ final class Page_Decision_Coordinator {
 	 * @param int                                                                             $now       Current timestamp.
 	 * @param int|null                                                                        $seed      Random seed.
 	 * @param array<string, mixed>                                                            $facts     Request facts.
-	 * @return array<string, array{result: Decision_Result, trace: Decision_Trace}>
+	 * `servable` is carried per slot for the same reason the per-slot route
+	 * carries it: it is how the browser decides whether rotating this slot
+	 * would show anything different, and it cannot be recovered from the
+	 * result — selection marks every loser excluded on the way out.
+	 *
+	 * Counted after page coordination, so a candidate held back by competitive
+	 * separation or a roadblock is not counted. That under-reports on purpose.
+	 * A rotation goes back down the per-slot route, where page rules do not
+	 * apply, so that held-back candidate could in fact appear — but the two
+	 * ways of being wrong are not symmetric. Under-reporting costs a rotation
+	 * that never starts on a page with a separation rule; over-reporting mints
+	 * a timer that redraws the same advertisement every interval, which is the
+	 * volume an exchange calls invalid traffic. The first rotation re-reads
+	 * this from the per-slot route and stops the timer if it was wrong.
+	 *
+	 * @return array<string, array{result: Decision_Result, trace: Decision_Trace, servable: int}>
 	 */
 	public static function coordinate(
 		array $slots_map,
@@ -127,8 +142,9 @@ final class Page_Decision_Coordinator {
 			);
 
 			$results[ $slot_slug ] = array(
-				'result' => $decision['result'],
-				'trace'  => $trace,
+				'result'   => $decision['result'],
+				'trace'    => $trace,
+				'servable' => (int) ( $decision['servable'] ?? 0 ),
 			);
 
 			// 3. If a winner emerged, record page-level facts for subsequent slots.

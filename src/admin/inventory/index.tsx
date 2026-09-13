@@ -121,6 +121,19 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 				type: 'text',
 			},
 			{
+				/*
+				 * A column, not just a form field. The limit is the reason an
+				 * advertiser's upload gets refused, and a publisher answering
+				 * "why was mine rejected?" should not have to open each
+				 * placement in turn to find out what it allows.
+				 */
+				id: 'max_bytes',
+				label: t( 'maxFileSizeColumn' ),
+				type: 'text',
+				getValue: ( { item }: { item: Placement } ) =>
+					`${ Math.round( item.max_bytes / 1024 ) } KB`,
+			},
+			{
 				id: 'status',
 				label: t( 'status' ),
 				elements: [
@@ -207,7 +220,8 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 		creating || null !== editing
 			? editing ??
 			  blankPlacement(
-					catalogue.refresh_defaults ?? EMPTY.view.refresh_defaults
+					catalogue.refresh_defaults ?? EMPTY.view.refresh_defaults,
+					catalogue.upload_limits ?? EMPTY.view.upload_limits
 			  )
 			: null;
 
@@ -259,6 +273,9 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 					allGroups={ catalogue.all_groups ?? EMPTY.view.all_groups }
 					ceiling={
 						catalogue.refresh_ceiling ?? EMPTY.view.refresh_ceiling
+					}
+					uploadLimits={
+						catalogue.upload_limits ?? EMPTY.view.upload_limits
 					}
 					submitLabel={ 0 === open.id ? t( 'create' ) : t( 'save' ) }
 					busy={ busy }

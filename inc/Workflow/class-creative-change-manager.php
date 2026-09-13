@@ -508,7 +508,7 @@ final class Creative_Change_Manager {
 			return $this->error( 'aggr_alt_text_too_long', __( 'Use 500 characters or fewer for the ad creative description.', 'aggressive-ads' ), 422, 'alt_text' );
 		}
 
-		$accepted = $this->uploader->accept( $file );
+		$accepted = $this->uploader->accept( $file, $this->placements->max_bytes( $placement_id ) );
 
 		if ( is_wp_error( $accepted ) ) {
 			$accepted->add_data( array( 'status' => 422 ), $accepted->get_error_code() );

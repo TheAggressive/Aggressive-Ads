@@ -11,6 +11,37 @@ import { wp } from './wp-cli';
 test( 'advertiser completes and submits the accessible five-step wizard', async ( {
 	page,
 } ) => {
+	/*
+	 * Anything the page throws, kept for the assertions below. A module that
+	 * fails inside an event handler leaves no mark in the DOM and no request
+	 * on the wire — which is indistinguishable from a listener that never
+	 * ran, and cost several runs to tell apart.
+	 */
+	const pageErrors: string[] = [];
+
+	page.on( 'pageerror', ( error ) => pageErrors.push( error.message ) );
+
+	/*
+	 * `void somethingAsync()` discards the rejection, so a module that throws
+	 * inside a handler produces no page error and no request — silence that
+	 * looks exactly like a listener which never ran.
+	 */
+	await page.addInitScript( () => {
+		(
+			window as unknown as { __aggrRejections: string[] }
+		 ).__aggrRejections = [];
+		window.addEventListener( 'unhandledrejection', ( event ) => {
+			(
+				window as unknown as { __aggrRejections: string[] }
+			 ).__aggrRejections.push( String( event.reason ) );
+		} );
+	} );
+	page.on( 'console', ( message ) => {
+		if ( 'error' === message.type() ) {
+			pageErrors.push( message.text() );
+		}
+	} );
+
 	await page.goto( '/advertiser/' );
 	await signIn( page, 'advertiser@example.test', 'advertiser' );
 
@@ -167,9 +198,11 @@ test( 'advertiser completes and submits the accessible five-step wizard', async 
 	const upload = page.getByRole( 'region', { name: 'Article sidebar' } );
 
 	/*
-	 * The button is hidden only after the module attaches, so its absence is
-	 * the evidence that the automatic path is the one being exercised below —
-	 * and that a browser without the module would still have the form.
+	 * Hidden from the markup, not by the module, so it never paints: it used
+	 * to ship visible and be withdrawn on init, which flashed a button on
+	 * every load. That makes this a check that the server rendered it right,
+	 * not evidence the module attached — the automatic upload below is what
+	 * proves that.
 	 */
 	await expect(
 		upload.getByRole( 'button', { name: 'Upload creative' } )
@@ -200,6 +233,18 @@ test( 'advertiser completes and submits the accessible five-step wizard', async 
 	await expect(
 		page.getByRole( 'status' ).filter( { hasText: 'Creative uploaded' } )
 	).toBeVisible();
+
+	/*
+	 * And the notice is no longer part of the address.
+	 *
+	 * The upload is a full page post, so its message has to travel in the
+	 * query string — but once the page has rendered it, leaving it there
+	 * means a reload claims the upload happened again, and so does a link
+	 * sent to somebody else.
+	 */
+	await expect
+		.poll( () => new URL( page.url() ).searchParams.has( 'aggr_notice' ) )
+		.toBe( false );
 	const preview = page.getByRole( 'img', {
 		name: 'Advertisement linking to example.com',
 	} );
@@ -213,17 +258,141 @@ test( 'advertiser completes and submits the accessible five-step wizard', async 
 		.toBe( 300 );
 	await expectPortalA11y( page );
 
-	const previewTrigger = page.getByRole( 'link', {
-		name: 'Advertisement linking to example.com',
-	} );
+	/*
+	 * The actions are a row beneath the artwork now, not an overlay on it.
+	 * White text over a gradient is a bet on what the advertiser uploaded,
+	 * and a light banner loses it.
+	 */
+	const previewTrigger = page.getByRole( 'link', { name: 'Preview' } );
 	await expectDialogKeyboard(
 		page,
 		previewTrigger,
 		'Preview Article sidebar'
 	);
 
-	const removeTrigger = page.getByRole( 'link', { name: 'Remove creative' } );
+	const removeTrigger = page.getByRole( 'link', { name: 'Remove' } );
 	await expectDialogKeyboard( page, removeTrigger, 'Remove this creative?' );
+
+	/*
+	 * **Saving the destination must not take the page away.**
+	 *
+	 * This is the one thing no other test in this repository can see. The PHP
+	 * proves the handler answers JSON, the module source proves it binds the
+	 * form, the markup proves the attributes are rendered — and every one of
+	 * those is equally true of a build that posts the whole page anyway,
+	 * which is exactly what shipped once.
+	 */
+	/*
+	 * Every form that asked to save asynchronously has to have been bound,
+	 * not just one of them. `.first()` matched a card form and said nothing
+	 * about the one inside the dialog, which is the form that then posted the
+	 * whole page.
+	 */
+	const wired = page.locator( 'form[data-aggr-save]' );
+	const ready = page.locator( 'form[data-aggr-save][data-aggr-save-ready]' );
+
+	expect( await ready.count() ).toBe( await wired.count() );
+
+	await page.getByRole( 'link', { name: 'Edit destination' } ).click();
+
+	const destinationDialog = page.getByRole( 'dialog', {
+		name: 'Edit destination',
+	} );
+	await expect( destinationDialog ).toBeVisible();
+	await expectOpenDialogA11y( page );
+
+	// And this one in particular, since it is the one that posted the page.
+	await expect(
+		destinationDialog.locator( 'form[data-aggr-save-ready]' )
+	).toBeAttached();
+
+	// A navigation would replace this, so its survival is the assertion.
+	await page.evaluate( () => {
+		( window as unknown as { __aggrStayed: boolean } ).__aggrStayed = true;
+	} );
+
+	await destinationDialog
+		.getByLabel( 'Destination URL' )
+		.fill( 'https://www.example.com/rewritten' );
+	/*
+	 * **The write must leave as a fetch, not as a navigation.**
+	 *
+	 * This is the whole claim, asked of the request rather than the response:
+	 * a navigation request means the browser is posting the form itself, and
+	 * everything after that — the reload, the banner, the missing toast — is
+	 * a consequence rather than a separate fault. Reading the response body
+	 * cannot answer it, because a redirect has no body to read.
+	 */
+	/*
+	 * Nothing leaves an invalid form: the browser cancels the submit before
+	 * any listener sees it, so no request, no error and no navigation — the
+	 * same silence as a module that never ran.
+	 */
+	expect(
+		await destinationDialog
+			.locator( 'form[data-aggr-save]' )
+			.evaluate( ( form: HTMLFormElement ) =>
+				Array.from( form.elements )
+					.filter(
+						( field ): field is HTMLInputElement =>
+							field instanceof HTMLInputElement &&
+							! field.checkValidity()
+					)
+					.map( ( field ) => `${ field.name }=${ field.value }` )
+			),
+		'The browser will refuse to submit this form.'
+	).toEqual( [] );
+
+	const posted = page.waitForRequest( ( request ) =>
+		request.url().includes( 'admin-post.php' )
+	);
+
+	await destinationDialog
+		.getByRole( 'button', { name: 'Save destination' } )
+		.click();
+
+	await expect.poll( () => pageErrors, { timeout: 5000 } ).toEqual( [] );
+
+	expect(
+		await page.evaluate(
+			() =>
+				( window as unknown as { __aggrRejections?: string[] } )
+					.__aggrRejections ?? []
+		)
+	).toEqual( [] );
+
+	expect(
+		( await posted ).isNavigationRequest(),
+		'The form posted the whole page instead of saving in the background.'
+	).toBe( false );
+
+	/*
+	 * The toast, not the banner. Both say "Destination saved." — the banner
+	 * is what the server renders after a full page post, so a text match
+	 * passes on exactly the failure this is here to catch.
+	 */
+	await expect(
+		page.locator( '.aggr-toast', { hasText: 'Destination saved.' } )
+	).toBeVisible();
+	await expect( destinationDialog ).toBeHidden();
+
+	// The card shows the new address without anybody reloading anything.
+	await expect(
+		page.getByText( 'https://www.example.com/rewritten', { exact: true } )
+	).toBeVisible();
+
+	expect(
+		await page.evaluate(
+			() =>
+				( window as unknown as { __aggrStayed?: boolean } )
+					.__aggrStayed === true
+		)
+	).toBe( true );
+
+	// And it clears itself rather than sitting there for the session.
+	await expect(
+		page.locator( '.aggr-toast', { hasText: 'Destination saved.' } )
+	).toHaveCount( 0, { timeout: 10000 } );
 
 	await page.getByRole( 'link', { name: 'Continue to schedule' } ).click();
 
@@ -235,12 +404,12 @@ test( 'advertiser completes and submits the accessible five-step wizard', async 
 	).toBeFocused();
 	const destinations = page.locator( '#aggr-destinations' );
 	await expect(
-		destinations.getByText( 'https://www.example.com/exhibition', {
+		destinations.getByText( 'https://www.example.com/rewritten', {
 			exact: true,
 		} )
 	).toBeVisible();
 	await expect(
-		page.locator( 'a[href="https://www.example.com/exhibition"]' )
+		page.locator( 'a[href="https://www.example.com/rewritten"]' )
 	).toHaveCount( 0 );
 	await expectPortalA11y( page );
 
@@ -346,7 +515,7 @@ test( 'advertiser completes and submits the accessible five-step wizard', async 
 	).toBeVisible();
 	await expect( page.getByLabel( 'Replacement ad creative' ) ).toBeVisible();
 	await expect( page.getByLabel( 'Destination URL' ) ).toHaveValue(
-		'https://www.example.com/exhibition'
+		'https://www.example.com/rewritten'
 	);
 	await expect( page.getByLabel( 'Image description' ) ).toHaveCount( 0 );
 	await expectOpenDialogA11y( page );

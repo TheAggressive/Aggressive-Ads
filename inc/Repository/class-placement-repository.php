@@ -14,6 +14,7 @@ use Aggressive\Ads\Core\Taxonomies;
 use Aggressive\Ads\Domain\Placement_Groups;
 use Aggressive\Ads\Domain\Refresh_Policy;
 use Aggressive\Ads\Domain\Size_Map;
+use Aggressive\Ads\Domain\Upload_Rules;
 use WP_Error;
 
 /**
@@ -25,6 +26,7 @@ final class Placement_Repository {
 
 	public const META_SIZE             = '_aggr_size';
 	public const META_SIZE_MAP         = '_aggr_size_map';
+	public const META_MAX_BYTES        = '_aggr_max_bytes';
 	public const META_ADGROUP_TERM     = '_aggr_adgroup_term_id';
 	public const META_IS_ACTIVE        = '_aggr_is_active';
 	public const META_SORT_ORDER       = '_aggr_sort_order';
@@ -80,6 +82,43 @@ final class Placement_Repository {
 	 */
 	public function size( int $placement_id ): string {
 		return (string) get_post_meta( $placement_id, self::META_SIZE, true );
+	}
+
+	/**
+	 * The largest creative this placement accepts, in bytes.
+	 *
+	 * Always a number that is safe to enforce: `Upload_Rules` turns an unset
+	 * or out-of-range meta value into the default. Every placement that
+	 * existed before this setting has no meta and therefore gets the default,
+	 * which is the whole reason the resolving happens on read rather than
+	 * being backfilled by a migration.
+	 *
+	 * @param int $placement_id Placement post id.
+	 * @return int
+	 */
+	public function max_bytes( int $placement_id ): int {
+		return Upload_Rules::resolve_max_bytes(
+			(int) get_post_meta( $placement_id, self::META_MAX_BYTES, true )
+		);
+	}
+
+	/**
+	 * Stores the largest creative this placement accepts.
+	 *
+	 * The value is clamped before it is written as well as after it is read.
+	 * Storing what was asked for and correcting it on the way out would show
+	 * an administrator a number the site is not enforcing.
+	 *
+	 * @param int $placement_id Placement post id.
+	 * @param int $max_bytes    Requested maximum, in bytes.
+	 * @return int The value actually stored.
+	 */
+	public function set_max_bytes( int $placement_id, int $max_bytes ): int {
+		$resolved = Upload_Rules::resolve_max_bytes( $max_bytes );
+
+		update_post_meta( $placement_id, self::META_MAX_BYTES, $resolved );
+
+		return $resolved;
 	}
 
 	/**

@@ -16,6 +16,10 @@ interface UploadState {
 	maxBytes: number;
 	maxPixels: number;
 	allowedMime: string[];
+
+	// Per placement, because the number inside it is. Every other refusal
+	// says the same thing on every slot and lives in the shared i18n map.
+	sizeMessage: string;
 }
 
 interface UploadContext {
@@ -23,16 +27,41 @@ interface UploadContext {
 }
 
 const initializedIds = new Set< string >();
+
+/**
+ * Marks a form as wired in the DOM rather than only in this module.
+ *
+ * The file is evaluated more than once on some pages — two instances, two
+ * `initializedIds` sets — so a module-local guard alone would let the same
+ * input be bound twice and upload twice.
+ */
+const READY_ATTRIBUTE = 'data-aggr-upload-ready';
 const submitted = new Set< string >();
 
 function announcerFor( id: string ): HTMLElement | null {
 	return document.getElementById( `aggr-upload-status-${ id }` );
 }
 
-function announce( id: string, message: string ): void {
+/**
+ * Says what happened, to everybody.
+ *
+ * This paragraph used to be `aggr-sr`, so every refusal below was spoken and
+ * never shown: the file input emptied itself, the upload button appeared, and
+ * a sighted advertiser had no way to know a check had refused the image.
+ *
+ * The tone styles the message and nothing else. Which control is at fault is
+ * decided at the call site, because this is also how the destination URL
+ * reports itself and the file is not what is wrong there.
+ */
+function announce(
+	id: string,
+	message: string,
+	tone: 'note' | 'error' = 'note'
+): void {
 	const announcer = announcerFor( id );
 	if ( announcer ) {
 		announcer.textContent = message;
+		announcer.classList.toggle( 'is-error', 'error' === tone );
 	}
 }
 
@@ -88,8 +117,7 @@ function maybeSubmit( id: string ): void {
 	// The browser's own URL parsing, not a pattern of ours to keep in step
 	// with it. An address it rejects would fail the same check server-side.
 	if ( ! url.checkValidity() ) {
-		announce( id, state.i18n.needsUrl ?? '' );
-		revealButton( id );
+		announce( id, state.i18n.needsUrl ?? '', 'error' );
 		url.setAttribute( 'aria-invalid', 'true' );
 		return;
 	}
@@ -105,6 +133,10 @@ function maybeSubmit( id: string ): void {
  *
  * Hiding it outright would leave someone whose address was rejected with no
  * way to try again, which is worse than the click the hiding removed.
+ *
+ * The hiding itself is the template's: the button is rendered `hidden` so it
+ * never paints. Doing it here meant doing it after first paint, which showed
+ * the button on every load and took it away a frame later.
  */
 function revealButton( id: string ): void {
 	const button = submitButtonFor( id );
@@ -113,9 +145,24 @@ function revealButton( id: string ): void {
 	}
 }
 
+/**
+ * The sentence for a refusal code.
+ *
+ * `size` is the one that cannot come from the shared map: the limit belongs
+ * to the placement, and the shared message named the two-megabyte ceiling on
+ * every slot, including the ones that refuse at a tenth of it.
+ */
 function messageFor(
+	id: string,
 	code: 'type' | 'size' | 'pixels' | 'dimensions' | 'empty'
 ): string {
+	if ( 'size' === code ) {
+		const perSlot = state.uploads[ id ]?.sizeMessage;
+		if ( perSlot ) {
+			return perSlot;
+		}
+	}
+
 	const copy = state.i18n[ code ];
 	return typeof copy === 'string' ? copy : '';
 }
@@ -148,9 +195,13 @@ async function applyFile( id: string, file: File ): Promise< void > {
 		return;
 	}
 
+	// A new file is a new attempt: whatever the last one was marked for no
+	// longer describes what is in the field.
+	input.removeAttribute( 'aria-invalid' );
+
 	const expected = parsePixelSize( current.expectedSize );
 	if ( expected === null ) {
-		announce( id, messageFor( 'dimensions' ) );
+		announce( id, messageFor( id, 'dimensions' ), 'error' );
 		revealButton( id );
 		return;
 	}
@@ -162,7 +213,8 @@ async function applyFile( id: string, file: File ): Promise< void > {
 		width = size.width;
 		height = size.height;
 	} catch {
-		announce( id, messageFor( 'type' ) );
+		announce( id, messageFor( id, 'type' ), 'error' );
+		input.setAttribute( 'aria-invalid', 'true' );
 		revealButton( id );
 		return;
 	}
@@ -181,23 +233,151 @@ async function applyFile( id: string, file: File ): Promise< void > {
 
 	if ( ! result.ok ) {
 		input.value = '';
-		announce( id, messageFor( result.code ) );
+		announce( id, messageFor( id, result.code ), 'error' );
+		input.setAttribute( 'aria-invalid', 'true' );
 
 		/*
-		 * The file is gone and the automatic path cannot run without one, so
-		 * the control has to come back. Leaving it hidden strands somebody
-		 * whose image was refused: no button, and nothing they can do to the
-		 * destination field will send a creative that no longer exists.
+		 * No button here. Choosing another file runs this whole function
+		 * again, so the recovery is the one the person is already making,
+		 * and a button that submits an empty file input is not a way out of
+		 * anything. Revealing it was how a refused image came to look like a
+		 * broken uploader: the button was the only visible thing that
+		 * changed, and the reason was in a paragraph nobody could see.
 		 */
-		revealButton( id );
 		return;
 	}
 
-	const transfer = new DataTransfer();
-	transfer.items.add( file );
-	input.files = transfer.files;
+	/*
+	 * Only a drop needs the file putting into the input; one chosen through
+	 * the input is already there.
+	 *
+	 * **`new DataTransfer()` is not constructible in WebKit.** Running it
+	 * unconditionally threw before the announcement below, so choosing a file
+	 * in Safari left the status silent and the upload never started — and
+	 * because the throw happens inside a promise nobody awaits, it left no
+	 * error anywhere either.
+	 */
+	if ( input.files?.[ 0 ] !== file ) {
+		try {
+			const transfer = new DataTransfer();
+
+			transfer.items.add( file );
+			input.files = transfer.files;
+		} catch {
+			// A browser that cannot build one cannot accept a drop. The
+			// input still works, which is what the hint tells people to use.
+			announce( id, messageFor( id, 'empty' ), 'error' );
+
+			return;
+		}
+	}
+
 	announce( id, state.i18n.ready ?? '' );
 	maybeSubmit( id );
+}
+
+/**
+ * Attaches drag and drop, the file check and the automatic send to one form.
+ *
+ * @param uploadId The placement id this form uploads to.
+ * @param zone     The form element.
+ */
+function wireUpload( uploadId: string, zone: HTMLElement ): void {
+	const input = inputFor( uploadId );
+
+	if ( ! input ) {
+		return;
+	}
+
+	zone.addEventListener( 'dragover', ( event ) => {
+		event.preventDefault();
+		zone.classList.add( 'is-drop-target' );
+	} );
+	zone.addEventListener( 'dragleave', () => {
+		zone.classList.remove( 'is-drop-target' );
+	} );
+	zone.addEventListener( 'drop', ( event ) => {
+		event.preventDefault();
+		zone.classList.remove( 'is-drop-target' );
+		const file = event.dataTransfer?.files[ 0 ];
+		if ( file ) {
+			void applyFile( uploadId, file );
+		}
+	} );
+
+	input.addEventListener( 'change', () => {
+		const file = input.files?.[ 0 ];
+		if ( file ) {
+			void applyFile( uploadId, file );
+		}
+	} );
+
+	const url = urlInputFor( uploadId );
+	const button = submitButtonFor( uploadId );
+
+	/*
+	 * The automatic path is only switched on where the manual one
+	 * exists to fall back to. Every failure below answers with
+	 * `revealButton`, and there is nothing to reveal on a form that
+	 * has no button in it.
+	 */
+	if ( url && button ) {
+		/*
+		 * Commit events, not `input`. A half-typed address is often a
+		 * syntactically valid URL — `https://exa` parses — so sending
+		 * on every keystroke would upload to whatever someone had got
+		 * to so far. `blur` is here as well as `change` because the
+		 * two differ: `change` is silent when the value has not been
+		 * edited since it was last committed, which is exactly the
+		 * case after a failed attempt has been corrected and restored.
+		 */
+		url.addEventListener( 'change', () => maybeSubmit( uploadId ) );
+		url.addEventListener( 'blur', () => maybeSubmit( uploadId ) );
+	}
+}
+
+/**
+ * Wires one upload form, once, whoever asks first.
+ *
+ * @param uploadId The placement id this form uploads to.
+ */
+function initUpload( uploadId: string ): void {
+	if ( '' === uploadId || initializedIds.has( uploadId ) ) {
+		return;
+	}
+
+	const zone = document.querySelector(
+		`[data-aggr-upload="${ CSS.escape( uploadId ) }"]`
+	);
+
+	if (
+		! ( zone instanceof HTMLElement ) ||
+		zone.hasAttribute( READY_ATTRIBUTE )
+	) {
+		return;
+	}
+
+	initializedIds.add( uploadId );
+	zone.setAttribute( READY_ATTRIBUTE, '1' );
+
+	wireUpload( uploadId, zone );
+}
+
+/**
+ * Wires every upload form on the page without waiting to be asked.
+ *
+ * **`data-wp-init` is not enough on its own.** The dialog store already says
+ * so — it boots its shells the same way — and this module found out the hard
+ * way: in WebKit the file is evaluated and `actions.init` is never called, so
+ * choosing a creative did nothing at all and nothing said why. Booting here
+ * does not depend on the runtime reaching the directive.
+ */
+function bootAllUploads(): void {
+	document
+		.querySelectorAll< HTMLElement >( '[data-aggr-upload]' )
+		.forEach( ( zone ) => {
+			initUpload( zone.getAttribute( 'data-aggr-upload' ) ?? '' );
+		} );
 }
 
 const { state } = store( 'aggr/upload', {
@@ -208,68 +388,17 @@ const { state } = store( 'aggr/upload', {
 		i18n: {} as Partial< Record< string, string > >,
 	},
 	actions: {
+		/**
+		 * The runtime's entry point, kept for the browsers that call it.
+		 */
 		init() {
 			const { uploadId } = getContext< UploadContext >();
-			if ( ! uploadId || initializedIds.has( uploadId ) ) {
-				return;
-			}
-			initializedIds.add( uploadId );
 
-			const zone = document.querySelector(
-				`[data-aggr-upload="${ CSS.escape( uploadId ) }"]`
-			);
-			const input = inputFor( uploadId );
-			if ( ! ( zone instanceof HTMLElement ) || ! input ) {
-				return;
-			}
-
-			zone.addEventListener( 'dragover', ( event ) => {
-				event.preventDefault();
-				zone.classList.add( 'is-drop-target' );
-			} );
-			zone.addEventListener( 'dragleave', () => {
-				zone.classList.remove( 'is-drop-target' );
-			} );
-			zone.addEventListener( 'drop', ( event ) => {
-				event.preventDefault();
-				zone.classList.remove( 'is-drop-target' );
-				const file = event.dataTransfer?.files[ 0 ];
-				if ( file ) {
-					void applyFile( uploadId, file );
-				}
-			} );
-
-			input.addEventListener( 'change', () => {
-				const file = input.files?.[ 0 ];
-				if ( file ) {
-					void applyFile( uploadId, file );
-				}
-			} );
-
-			/*
-			 * The button is hidden only once this listener is attached, so a
-			 * browser without this module still gets the ordinary form it has
-			 * always had. It comes back if an automatic attempt cannot finish.
-			 */
-			const url = urlInputFor( uploadId );
-			const button = submitButtonFor( uploadId );
-
-			if ( url && button ) {
-				/*
-				 * Commit events, not `input`. A half-typed address is often a
-				 * syntactically valid URL — `https://exa` parses — so sending
-				 * on every keystroke would upload to whatever someone had got
-				 * to so far. `blur` is here as well as `change` because the
-				 * two differ: `change` is silent when the value has not been
-				 * edited since it was last committed, which is exactly the
-				 * case after a failed attempt has been corrected and restored.
-				 */
-				url.addEventListener( 'change', () => maybeSubmit( uploadId ) );
-				url.addEventListener( 'blur', () => maybeSubmit( uploadId ) );
-				button.hidden = true;
-			}
+			initUpload( String( uploadId ?? '' ) );
 		},
 	},
 } );
+
+bootAllUploads();
 
 export { state };

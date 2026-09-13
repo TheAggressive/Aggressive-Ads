@@ -57,6 +57,15 @@ export type Placement = {
 	refresh_max_per_view: number;
 
 	/**
+	 * The largest creative this placement accepts, in bytes.
+	 *
+	 * Bytes on the wire because that is what the server enforces in; the form
+	 * presents kilobytes, because nobody sizes a banner in bytes. Converting
+	 * at the edge keeps one unit in the data and the other in the label.
+	 */
+	max_bytes: number;
+
+	/**
 	 * Minimum viewport width to the size served at or above it.
 	 *
 	 * Keyed by floor rather than expressed as ranges, matching `Domain\Size_Map`:
@@ -76,6 +85,12 @@ export type Placement = {
 	groups: string[];
 };
 
+export type UploadLimits = {
+	default: number;
+	floor: number;
+	ceiling: number;
+};
+
 export type RefreshDefaults = {
 	enabled: boolean;
 	seconds: number;
@@ -86,6 +101,7 @@ export type Catalogue = {
 	sizes: Record< string, string >;
 	refresh_defaults: RefreshDefaults;
 	refresh_ceiling: number;
+	upload_limits: UploadLimits;
 
 	/** Every group already in use, offered so labels are reused not retyped. */
 	all_groups: string[];
@@ -103,6 +119,7 @@ export const EMPTY: Bootstrap = {
 		sizes: {},
 		refresh_defaults: { enabled: false, seconds: 30, max_per_view: 6 },
 		refresh_ceiling: 100,
+		upload_limits: { default: 153600, floor: 10240, ceiling: 2097152 },
 		all_groups: [],
 		rows: [],
 	},
@@ -110,7 +127,10 @@ export const EMPTY: Bootstrap = {
 	i18n: {},
 };
 
-export const blankPlacement = ( defaults: RefreshDefaults ): Placement => ( {
+export const blankPlacement = (
+	defaults: RefreshDefaults,
+	uploads: UploadLimits
+): Placement => ( {
 	id: 0,
 	name: '',
 	slug: '',
@@ -130,6 +150,7 @@ export const blankPlacement = ( defaults: RefreshDefaults ): Placement => ( {
 	refresh_enabled: defaults.enabled,
 	refresh_seconds: defaults.seconds,
 	refresh_max_per_view: defaults.max_per_view,
+	max_bytes: uploads.default,
 } );
 
 /** The body the REST route allowlists. */
@@ -149,6 +170,13 @@ export function body( draft: Placement ): Record< string, unknown > {
 		refresh_enabled: draft.refresh_enabled,
 		refresh_seconds: draft.refresh_seconds,
 		refresh_max_per_view: draft.refresh_max_per_view,
+
+		/*
+		 * Always sent, like breakpoints and for the same reason: this form
+		 * knows the answer. The server's omitted-means-unchanged rule is there
+		 * for a client that does not know the key exists.
+		 */
+		max_bytes: draft.max_bytes,
 
 		/*
 		 * Always sent, because the form always knows the answer. The server

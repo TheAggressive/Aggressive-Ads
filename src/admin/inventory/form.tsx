@@ -26,7 +26,13 @@ import {
 } from '@wordpress/components';
 import { MediaUpload } from '@wordpress/media-utils';
 import { t } from '../shared/save';
-import { CUSTOM, MAX_BREAKPOINTS, MAX_GROUPS, type Placement } from './types';
+import {
+	CUSTOM,
+	MAX_BREAKPOINTS,
+	MAX_GROUPS,
+	type Placement,
+	type UploadLimits,
+} from './types';
 
 /** The attachment fields this form reads off a media selection. */
 type MediaItem = {
@@ -55,6 +61,7 @@ export function PlacementModal( {
 	sizes,
 	allGroups,
 	ceiling,
+	uploadLimits,
 	submitLabel,
 	busy,
 	error,
@@ -65,6 +72,7 @@ export function PlacementModal( {
 	sizes: Record< string, string >;
 	allGroups: string[];
 	ceiling: number;
+	uploadLimits: UploadLimits;
 	submitLabel: string;
 	busy: boolean;
 	error: string;
@@ -218,6 +226,34 @@ export function PlacementModal( {
 					value={ String( draft.sort_order ) }
 					onChange={ ( order: string ) =>
 						set( { sort_order: Number( order ) || 0 } )
+					}
+					__nextHasNoMarginBottom
+					__next40pxDefaultSize
+				/>
+
+				{ /*
+				 * Kilobytes in the field, bytes in the data. A publisher sizes
+				 * a banner in kilobytes, and the server enforces in bytes; the
+				 * conversion happens here so neither side has to know about
+				 * the other's unit. `min` and `max` are the server's own
+				 * clamp, sent down with the catalogue, so the field cannot
+				 * offer a number that would be stored as a different one.
+				 */ }
+				<TextControl
+					label={ t( 'maxFileSize' ) }
+					help={ t( 'maxFileSizeHelp' ) }
+					type="number"
+					min={ Math.round( uploadLimits.floor / 1024 ) }
+					max={ Math.round( uploadLimits.ceiling / 1024 ) }
+					step={ 1 }
+					value={ String( Math.round( draft.max_bytes / 1024 ) ) }
+					onChange={ ( kilobytes: string ) =>
+						set( {
+							max_bytes:
+								( Number( kilobytes ) || 0 ) > 0
+									? Number( kilobytes ) * 1024
+									: uploadLimits.default,
+						} )
 					}
 					__nextHasNoMarginBottom
 					__next40pxDefaultSize

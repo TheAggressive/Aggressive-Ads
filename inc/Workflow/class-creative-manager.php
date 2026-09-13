@@ -66,6 +66,7 @@ final class Creative_Manager {
 	 * @param Edit_Window                    $window     When editing is permitted.
 	 * @param Creative_Approval              $approvals  Queue counter for creatives awaiting publication.
 	 * @param Creative_Assignment_Repository $assignments Delivery assignments, which carry each variant's weight.
+	 * @param Revision_Policy                $revisions   Whether a creative may still be edited in place.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -78,7 +79,8 @@ final class Creative_Manager {
 		private readonly Audit_Repository $audit,
 		private readonly Edit_Window $window,
 		private readonly Creative_Approval $approvals,
-		private readonly Creative_Assignment_Repository $assignments
+		private readonly Creative_Assignment_Repository $assignments,
+		private readonly Revision_Policy $revisions
 	) {
 	}
 
@@ -157,7 +159,7 @@ final class Creative_Manager {
 			return $this->error( 'aggr_alt_text_too_long', __( 'Use 500 characters or fewer for the ad creative description.', 'aggressive-ads' ), 422, 'alt_text' );
 		}
 
-		$accepted = $this->uploader->accept( $file );
+		$accepted = $this->uploader->accept( $file, $this->placements->max_bytes( $placement_id ) );
 
 		if ( is_wp_error( $accepted ) ) {
 			$accepted->add_data( array( 'status' => 422 ), $accepted->get_error_code() );
@@ -383,6 +385,249 @@ final class Creative_Manager {
 				__( 'Advertisement linking to %s', 'aggressive-ads' ),
 				$host
 			);
+	}
+
+	/**
+	 * Swaps the artwork on a creative that no reviewer has accepted yet.
+	 *
+	 * Changing a banner used to mean removing the creative and uploading
+	 * again. On a placement that is already covered that drops the coverage in
+	 * between, throws away the destination and the share, and — once other
+	 * creatives are on the placement — silently reorders the rotation. The
+	 * record stays; only its bytes change.
+	 *
+	 * **Only while the creative is still editable**, on the same authority
+	 * `set_destination()` uses. Replacing approved artwork in place is exactly
+	 * what P2's immutability rule forbids, and the route from there is
+	 * `Creative_Change_Manager::request()`, which stages the new file for
+	 * review and leaves the live ad serving until staff accept it.
+	 *
+	 * The new bytes are recorded before the old ones are deleted. The other
+	 * order leaves a record pointing at a file that is already gone if the
+	 * write fails, which is unreadable rather than merely stale.
+	 *
+	 * @param int                  $creative_id Creative post id.
+	 * @param array<string, mixed> $file        One $_FILES entry.
+	 * @return array<string, mixed>|WP_Error
+	 */
+	public function replace_artwork( int $creative_id, array $file ): array|WP_Error {
+		if ( ! current_user_can( Capabilities::UPLOAD_CREATIVE ) || ! current_user_can( 'edit_aggr_creative', $creative_id ) ) {
+			return $this->error( 'aggr_artwork_forbidden', __( 'You do not have permission to change that creative.', 'aggressive-ads' ), 403 );
+		}
+
+		$creative = $this->creatives->details( $creative_id );
+
+		if ( null === $creative ) {
+			return $this->error( 'aggr_artwork_forbidden', __( 'You do not have permission to change that creative.', 'aggressive-ads' ), 403 );
+		}
+
+		$campaign_id  = (int) $creative['campaign_id'];
+		$placement_id = (int) $creative['placement_id'];
+
+		if ( ! current_user_can( 'edit_aggr_campaign', $campaign_id ) || ! $this->window->allows( $campaign_id ) ) {
+			return $this->error( 'aggr_campaign_not_editable', __( 'This campaign cannot be changed right now.', 'aggressive-ads' ), 409 );
+		}
+
+		if ( $this->revisions->is_frozen( $creative_id ) ) {
+			return $this->error(
+				'aggr_artwork_frozen',
+				__( 'This ad has already been approved, so new artwork is submitted as an update for review rather than swapped in here.', 'aggressive-ads' ),
+				409,
+				'file'
+			);
+		}
+
+		// Rate limited as an upload, because it is one. Leaving this off would
+		// make replacement the cheap way around the limit on `upload()`.
+		$allowed = $this->limiter->attempt( Rate_Limiter::ACTION_UPLOAD, get_current_user_id() );
+
+		if ( is_wp_error( $allowed ) ) {
+			return $allowed;
+		}
+
+		$accepted = $this->uploader->accept( $file, $this->placements->max_bytes( $placement_id ) );
+
+		if ( is_wp_error( $accepted ) ) {
+			$accepted->add_data( array( 'status' => 422 ), $accepted->get_error_code() );
+
+			return $accepted;
+		}
+
+		$required_size = $this->placements->size( $placement_id );
+
+		if ( ! Campaign_Rules::size_matches( $accepted['width'], $accepted['height'], $required_size ) ) {
+			$this->storage->delete( $accepted['path'] );
+
+			return new WP_Error(
+				'aggr_creative_size_mismatch',
+				sprintf(
+					/* translators: 1: uploaded dimensions. 2: required dimensions. */
+					__( 'Uploaded: %1$s. Required: %2$s. Resize the ad creative and try again.', 'aggressive-ads' ),
+					$accepted['width'] . ' × ' . $accepted['height'],
+					$required_size
+				),
+				array(
+					'status'   => 422,
+					'field'    => 'file',
+					'uploaded' => array( $accepted['width'], $accepted['height'] ),
+					'required' => $required_size,
+				)
+			);
+		}
+
+		$previous = $this->creatives->storage_details( $creative_id );
+
+		$this->creatives->record_upload( $creative_id, $accepted );
+
+		$recorded = $this->creatives->storage_details( $creative_id );
+
+		if ( null === $recorded || $accepted['path'] !== $recorded['path'] ) {
+			$this->storage->delete( $accepted['path'] );
+
+			$this->audit->insert(
+				new Audit_Event(
+					event: 'creative.artwork_replace_failed',
+					object_type: 'campaign',
+					object_id: $campaign_id,
+					org_id: $this->campaigns->org_id( $campaign_id ),
+					message: 'Replacement artwork did not read back.',
+					context: array(
+						'creative_id' => $creative_id,
+						'reason'      => 'read_back_mismatch',
+					),
+					outcome: Audit_Event::OUTCOME_FAILED
+				)
+			);
+
+			return $this->error( 'aggr_artwork_not_saved', __( 'The new artwork could not be saved. Please try again.', 'aggressive-ads' ), 500 );
+		}
+
+		if ( null !== $previous && $previous['path'] !== $accepted['path'] ) {
+			$this->storage->delete( $previous['path'] );
+		}
+
+		$this->audit->insert(
+			new Audit_Event(
+				event: 'creative.artwork_replaced',
+				object_type: 'campaign',
+				object_id: $campaign_id,
+				org_id: $this->campaigns->org_id( $campaign_id ),
+				message: 'Creative artwork replaced before review.',
+				context: array(
+					'creative_id' => $creative_id,
+					'width'       => $accepted['width'],
+					'height'      => $accepted['height'],
+					'bytes'       => $accepted['bytes'],
+					'mime'        => $accepted['mime'],
+				),
+				actor_user_id: get_current_user_id()
+			)
+		);
+
+		$this->approvals->refresh_count( $campaign_id );
+
+		return array(
+			'id'           => $creative_id,
+			'placement_id' => $placement_id,
+			'width'        => $accepted['width'],
+			'height'       => $accepted['height'],
+			'mime'         => $accepted['mime'],
+			'bytes'        => $accepted['bytes'],
+			'name'         => $accepted['name'],
+		);
+	}
+
+	/**
+	 * Repoints a creative that no reviewer has accepted yet.
+	 *
+	 * A destination typed with a typo used to be unfixable: the only route was
+	 * remove and re-upload, which on a placement that is already covered means
+	 * losing the coverage in between and re-doing the file.
+	 *
+	 * **Only while the creative is still editable.** `Revision_Policy` is the
+	 * single authority on that and nothing here re-derives it. Once artwork has
+	 * been approved, repointing it in place is the exact mutation P2's
+	 * immutability rule exists to stop — a publisher accepted a destination as
+	 * well as an image, and the advertiser's route from there is
+	 * `Creative_Change_Manager::request_text_change()`, which stages the same
+	 * edit for review and leaves the live ad serving meanwhile.
+	 *
+	 * Gated exactly as `set_weight()` is, and validated exactly as `upload()`
+	 * is: the same URL reaching the site by a different door must not be
+	 * judged by a different rule.
+	 *
+	 * @param int    $creative_id Creative post id.
+	 * @param string $click_url   New destination.
+	 * @return true|WP_Error
+	 */
+	public function set_destination( int $creative_id, string $click_url ): bool|WP_Error {
+		if ( ! current_user_can( Capabilities::UPLOAD_CREATIVE ) || ! current_user_can( 'edit_aggr_creative', $creative_id ) ) {
+			return $this->error( 'aggr_destination_forbidden', __( 'You do not have permission to change that creative.', 'aggressive-ads' ), 403 );
+		}
+
+		$creative = $this->creatives->details( $creative_id );
+
+		if ( null === $creative ) {
+			return $this->error( 'aggr_destination_forbidden', __( 'You do not have permission to change that creative.', 'aggressive-ads' ), 403 );
+		}
+
+		$campaign_id = (int) $creative['campaign_id'];
+
+		if ( ! current_user_can( 'edit_aggr_campaign', $campaign_id ) || ! $this->window->allows( $campaign_id ) ) {
+			return $this->error( 'aggr_campaign_not_editable', __( 'This campaign cannot be changed right now.', 'aggressive-ads' ), 409 );
+		}
+
+		if ( $this->revisions->is_frozen( $creative_id ) ) {
+			return $this->error(
+				'aggr_destination_frozen',
+				__( 'This ad has already been approved, so its destination is changed by requesting an update rather than edited here.', 'aggressive-ads' ),
+				409,
+				'click_url'
+			);
+		}
+
+		$click_url = trim( $click_url );
+
+		if ( '' === $click_url ) {
+			return $this->error( 'aggr_click_url_required', __( 'Enter the destination URL for this creative.', 'aggressive-ads' ), 422, 'click_url' );
+		}
+
+		if ( ! Campaign_Rules::is_valid_click_url( $click_url ) || false === wp_http_validate_url( $click_url ) ) {
+			return $this->error( 'aggr_click_url_invalid', __( 'Enter a valid http or https destination URL without embedded credentials.', 'aggressive-ads' ), 422, 'click_url' );
+		}
+
+		/*
+		 * A save that changes nothing is a success, not an error. Somebody who
+		 * opened the field, thought better of it and saved anyway has done
+		 * nothing wrong, and there is no audit event worth writing for it.
+		 */
+		if ( $click_url === (string) $creative['click_url'] ) {
+			return true;
+		}
+
+		$this->creatives->set_click_url( $creative_id, $click_url );
+
+		/*
+		 * The destination is recorded, the old one is not. What it used to be
+		 * is the question an abuse report actually asks, and the revision
+		 * chain does not hold it for a creative that was never frozen.
+		 */
+		$this->audit->insert(
+			new Audit_Event(
+				event: 'creative.destination_changed',
+				object_type: 'campaign',
+				object_id: $campaign_id,
+				org_id: $this->campaigns->org_id( $campaign_id ),
+				message: 'Creative destination changed before review.',
+				context: array(
+					'creative_id' => $creative_id,
+					'from'        => (string) $creative['click_url'],
+					'to'          => $click_url,
+				)
+			)
+		);
+
+		return true;
 	}
 
 	/**

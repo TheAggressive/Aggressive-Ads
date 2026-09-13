@@ -705,6 +705,43 @@ async function main() {
 		}
 
 		/*
+		 * **Both routes, not just one of them.**
+		 *
+		 * `paid_creative()` serves the per-slot route and `for_slots()` serves
+		 * the page batch, and a page takes the batch — `firstFill()` asks it
+		 * first and only falls back per slot. A key added late by one and not
+		 * the other reaches the browser as `undefined` on the route that
+		 * actually answers, and every check above still passes, because the
+		 * key *is* written: somewhere.
+		 *
+		 * That is how `servable` shipped missing from the batch. Rotation
+		 * stops at `servable < 2`, so a placement with two live creatives and
+		 * refresh enabled never changed its advertisement, on every page.
+		 * Asking "is this key written anywhere" cannot catch that; asking
+		 * "does every writer write it" can.
+		 */
+		const batchKeys = assignedKeys( fillService, 'for_slots', 'paid' );
+
+		if ( null === batchKeys ) {
+			problems.push(
+				'check-client-contract: could not read the batch payload out ' +
+					`of ${ FILL_SERVICE }::for_slots(). This lane is blind ` +
+					'rather than passing.'
+			);
+		} else {
+			for ( const key of lateKeys ) {
+				if ( ! batchKeys.includes( key ) ) {
+					problems.push(
+						`check-client-contract: paid_creative() puts "${ key }" ` +
+							'on a creative and for_slots() does not, so the ' +
+							'page batch sends it undefined. Both fill routes ' +
+							'have to write every key the browser reads.'
+					);
+				}
+			}
+		}
+
+		/*
 		 * The opposite assertion for the keys `with_tokens()` removes, rather
 		 * than letting them skip the check. A client reading one of these is
 		 * reading `undefined` on every fill, which is silent: `placement`,

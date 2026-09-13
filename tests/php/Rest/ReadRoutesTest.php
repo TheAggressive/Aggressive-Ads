@@ -14,7 +14,9 @@ use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Domain\Assignment_Rules;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Package_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
@@ -318,6 +320,99 @@ final class ReadRoutesTest extends WP_UnitTestCase {
 		$this->assertSame( 728, $first['width'] );
 		$this->assertSame( 90, $first['height'] );
 		$this->assertNotSame( '', $first['slug'] );
+	}
+
+	/**
+	 * The candidate count the editor's rotation warning is built on.
+	 *
+	 * Rotation stops at `servable < 2` in `view.js`, and nothing said so: a
+	 * publisher with one live creative saw a rotation setting that was on and
+	 * a slot that never changed. The block now warns, and it can only warn
+	 * about a number the route actually sends — so this asserts the count at
+	 * each of the three values the warning branches on, not merely that the
+	 * key is present.
+	 *
+	 * @return void
+	 */
+	public function test_placements_report_how_many_creatives_could_rotate(): void {
+		$empty = $this->publish_placement( 'Nothing live' );
+		$one   = $this->publish_placement( 'One creative' );
+		$two   = $this->publish_placement( 'Two creatives' );
+
+		$this->seed_live_assignment( $one, 1 );
+		$this->seed_live_assignment( $two, 2 );
+		$this->seed_live_assignment( $two, 3 );
+
+		// A cancelled row is not something else to show, and counting it would
+		// promise a rotation that the decision pipeline then refuses.
+		$this->seed_live_assignment( $one, 4, Assignment_Rules::CANCELLED );
+
+		wp_set_current_user( $this->owner );
+
+		$response = $this->get( '/placements' );
+		$this->assertSame( 200, $response->get_status() );
+
+		$counts = array();
+
+		foreach ( $response->get_data()['placements'] as $placement ) {
+			$counts[ (int) $placement['id'] ] = $placement['candidates'];
+		}
+
+		$this->assertSame( 0, $counts[ $empty ] ?? null );
+		$this->assertSame( 1, $counts[ $one ] ?? null );
+		$this->assertSame( 2, $counts[ $two ] ?? null );
+	}
+
+	/**
+	 * A live, listable placement.
+	 *
+	 * @param string $title Placement title.
+	 * @return int Placement post id.
+	 */
+	private function publish_placement( string $title ): int {
+		$placement = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::PLACEMENT,
+				'post_status' => 'publish',
+				'post_title'  => $title,
+			)
+		);
+		update_post_meta( $placement, Placement_Repository::META_IS_ACTIVE, 1 );
+		update_post_meta( $placement, Placement_Repository::META_SIZE, '728x90' );
+
+		return $placement;
+	}
+
+	/**
+	 * One assignment row on a placement.
+	 *
+	 * @param int    $placement_id Placement post id.
+	 * @param int    $asset_id     A distinct asset, so nothing deduplicates.
+	 * @param string $status       Assignment status.
+	 * @return void
+	 */
+	private function seed_live_assignment( int $placement_id, int $asset_id, string $status = Assignment_Rules::LIVE ): void {
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Test fixture for this plugin's own table.
+		$wpdb->insert(
+			Plugin::instance()->container()->get( Creative_Assignment_Repository::class )->table_name(),
+			array(
+				'line_item_id'  => 1,
+				'campaign_id'   => $this->campaign_id,
+				'placement_id'  => $placement_id,
+				'asset_id'      => $asset_id,
+				'revision_id'   => $asset_id,
+				'status'        => $status,
+				'weight'        => 100,
+				'click_url'     => 'https://example.com/paid',
+				'attachment_id' => $asset_id,
+				'alt_text'      => 'Paid',
+				'width'         => 728,
+				'height'        => 90,
+				'revision'      => 1,
+			)
+		);
 	}
 
 	/**

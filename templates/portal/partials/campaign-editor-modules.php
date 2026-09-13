@@ -17,6 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use Aggressive\Ads\Assets\Assets;
+use Aggressive\Ads\Domain\Upload_Rules;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Workflow\Campaign_Editor;
 
@@ -55,9 +56,19 @@ foreach ( $aggr_slots as $aggr_slot ) {
 		continue;
 	}
 
+	/*
+	 * A missing limit resolves to the default rather than to zero. Zero
+	 * reaches the browser as `maxBytes` and every file is larger than
+	 * zero, so the fallback for an absent number would have been a
+	 * placement that silently refuses everything.
+	 */
+	$aggr_slot_max = Upload_Rules::resolve_max_bytes( (int) ( $aggr_slot['max_bytes'] ?? 0 ) );
+
 	$aggr_editor_slots[] = array(
-		'id'   => (int) ( $aggr_slot['id'] ?? 0 ),
-		'size' => (string) ( $aggr_slot['size'] ?? '' ),
+		'id'        => (int) ( $aggr_slot['id'] ?? 0 ),
+		'size'      => (string) ( $aggr_slot['size'] ?? '' ),
+		'max_bytes' => $aggr_slot_max,
+		'max_size'  => (string) size_format( $aggr_slot_max ),
 	);
 }
 

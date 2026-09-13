@@ -232,6 +232,27 @@ final class Fill_Service {
 				$this->decisions->record_delivery( $winner, $now, $facts );
 
 				$paid = $this->decisions->payload_from_row( $winner, $placement_id );
+
+				/*
+				 * **The same field the per-slot route sends, on the route that
+				 * actually answers.**
+				 *
+				 * `view.js` stops rotating at `servable < 2`, and this path
+				 * left the field off the payload entirely — so it read as
+				 * zero and every slot the page batch answered for refused to
+				 * rotate, whatever the block and the placement policy said.
+				 * The per-slot route sets it in `paid_creative()`, which is
+				 * why the browser tests never saw this: they exercise the
+				 * route a page only falls back to.
+				 *
+				 * `check-client-contract.mjs` did not see it either, because
+				 * the key exists — on the other route. A contract lane that
+				 * asks whether a key is written *somewhere* cannot answer
+				 * whether both writers write it.
+				 */
+				if ( is_array( $paid ) ) {
+					$paid['servable'] = (int) ( $decision['servable'] ?? 0 );
+				}
 			}
 
 			$house = null;

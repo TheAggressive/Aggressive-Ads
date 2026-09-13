@@ -17,6 +17,7 @@ use Aggressive\Ads\Domain\Ad_Sizes;
 use Aggressive\Ads\Domain\Decision_Outcome;
 use Aggressive\Ads\Domain\Opportunity;
 use Aggressive\Ads\Domain\Refresh_Policy;
+use Aggressive\Ads\Domain\Upload_Rules;
 use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Audit_Repository;
@@ -210,6 +211,113 @@ final class PlacementAdminTest extends WP_UnitTestCase {
 		$events = $this->audit->for_object( 'placement', $result, 0 );
 		$this->assertSame( 'placement.created', $events[0]['event'] );
 		$this->assertSame( 'ok', $events[0]['outcome'] );
+	}
+
+	/**
+	 * A new placement is created with the safe upload limit already stored.
+	 *
+	 * Stored, not merely resolved on read. The read resolves an absent value
+	 * to the same number, so a test that only called `max_bytes()` would
+	 * pass over a create that wrote nothing — and the screen would then show
+	 * a limit no row contained, with the first unrelated save appearing to
+	 * introduce it.
+	 *
+	 * @return void
+	 */
+	public function test_a_new_placement_stores_the_default_upload_limit(): void {
+		wp_set_current_user( $this->administrator );
+
+		$result = $this->manager->create( $this->valid_fields() );
+
+		$this->assertIsInt( $result );
+		$this->assertSame( Upload_Rules::DEFAULT_MAX_BYTES, $this->placements->max_bytes( $result ) );
+		$this->assertSame(
+			(string) Upload_Rules::DEFAULT_MAX_BYTES,
+			(string) get_post_meta( $result, Placement_Repository::META_MAX_BYTES, true ),
+			'The default was left as absent meta rather than written.'
+		);
+	}
+
+	/**
+	 * The stored limit is clamped, and an omitted key changes nothing.
+	 *
+	 * Both halves matter and for opposite reasons. Clamping is the security
+	 * half: nothing a request body says can raise a placement above the
+	 * ceiling, whoever sends it. Omission is the safety half: a save that
+	 * never mentions the limit — an older client, a rename — must not reset
+	 * a publisher's deliberate choice back to the default.
+	 *
+	 * @return void
+	 */
+	public function test_the_upload_limit_is_clamped_and_survives_an_unrelated_save(): void {
+		wp_set_current_user( $this->administrator );
+
+		$placement = $this->manager->create( $this->valid_fields() );
+
+		$this->assertIsInt( $placement );
+
+		// Far above the ceiling: stored as the ceiling, not as asked.
+		$fields              = $this->valid_fields();
+		$fields['max_bytes'] = 999999999;
+
+		$this->assertTrue( true === $this->manager->update( $placement, $fields ) );
+		$this->assertSame( Upload_Rules::CEILING_MAX_BYTES, $this->placements->max_bytes( $placement ) );
+
+		// Below the floor: stored as the floor, so a typo cannot close a
+		// placement to every creative there is.
+		$fields['max_bytes'] = 1;
+
+		$this->assertTrue( true === $this->manager->update( $placement, $fields ) );
+		$this->assertSame( Upload_Rules::FLOOR_MAX_BYTES, $this->placements->max_bytes( $placement ) );
+
+		// A deliberate in-range choice is kept exactly.
+		$fields['max_bytes'] = 250 * 1024;
+
+		$this->assertTrue( true === $this->manager->update( $placement, $fields ) );
+		$this->assertSame( 250 * 1024, $this->placements->max_bytes( $placement ) );
+
+		/*
+		 * The negative, which is the more valuable half: a save that does
+		 * not mention the limit leaves it alone. Forcing the key on every
+		 * write would silently reset this to 150 KB on the next rename.
+		 */
+		$without = $this->valid_fields();
+		unset( $without['max_bytes'] );
+		$without['name'] = 'Renamed header';
+
+		$this->assertTrue( true === $this->manager->update( $placement, $without ) );
+		$this->assertSame( 250 * 1024, $this->placements->max_bytes( $placement ) );
+
+		/*
+		 * And the trail records what is being enforced, not what was asked
+		 * for. Raising the limit is a decision about what the site accepts
+		 * from advertisers, so it has to be answerable later; a row that
+		 * recorded the unclamped request would name a number nothing
+		 * enforces.
+		 *
+		 * Read straight off the table because `for_object()` does not select
+		 * `context` — nothing in the plugin reads it back, so the row itself
+		 * is the only place this can be checked, and an assertion through a
+		 * reader that never returns the column would pass over an empty one.
+		 */
+		global $wpdb;
+
+		$context = $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT context FROM %i WHERE object_type = %s AND object_id = %d AND event = %s ORDER BY id DESC LIMIT 1',
+				$this->audit->table_name(),
+				'placement',
+				$placement,
+				'placement.updated'
+			)
+		);
+
+		$this->assertIsString( $context, 'No placement.updated row was recorded, so this assertion covers nothing.' );
+
+		$decoded = json_decode( $context, true );
+
+		$this->assertIsArray( $decoded );
+		$this->assertSame( 250 * 1024, (int) ( $decoded['max_bytes'] ?? 0 ) );
 	}
 
 	/**

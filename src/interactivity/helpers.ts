@@ -64,3 +64,21 @@ export function canRestoreFocus(
 		typeof element.focus === 'function'
 	);
 }
+
+/**
+ * Where this form posts.
+ *
+ * **Never `form.action`.** Named controls shadow properties on the form
+ * element, and every one of these forms carries WordPress's required
+ * `<input name="action">` — so `form.action` returns that input, `fetch()`
+ * stringifies it to `[object HTMLInputElement]`, and the write goes to a
+ * nonsense relative URL. The 404 that comes back is not JSON, the catch
+ * treats it as a network failure, and what the reader sees is the page
+ * reloading exactly as if none of this existed. It took a browser to find.
+ *
+ * @param form The form being saved.
+ * @return The endpoint from the attribute, which nothing can shadow.
+ */
+export function endpointOf( form: HTMLFormElement ): string {
+	return form.getAttribute( 'action' ) ?? window.location.href;
+}

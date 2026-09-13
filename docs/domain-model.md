@@ -231,9 +231,18 @@ organization or an automatic membership.
 
 ### Placement — `aggr_placement`
 
-`_aggr_size` string `{width}x{height}` · `_aggr_position_label` string · `_aggr_max_concurrent` int · `_aggr_is_active` int `0|1` · `_aggr_sort_order` int · `_aggr_refresh_enabled` int `0|1` · `_aggr_refresh_seconds` int · `_aggr_refresh_max_per_view` int · `_aggr_house_attachment_id` int · `_aggr_house_click_url` string · `_aggr_house_alt` string
+`_aggr_size` string `{width}x{height}` · `_aggr_position_label` string · `_aggr_max_concurrent` int · `_aggr_is_active` int `0|1` · `_aggr_sort_order` int · `_aggr_refresh_enabled` int `0|1` · `_aggr_refresh_seconds` int · `_aggr_refresh_max_per_view` int · `_aggr_house_attachment_id` int · `_aggr_house_click_url` string · `_aggr_house_alt` string · `_aggr_max_bytes` int
 
 The public slot id is `post_name`. Size is a pixel pair from `Domain\Ad_Sizes` (common IAB list or custom WxH), not a slot identity. House creative is placement meta, not a sixth post type. Refresh policy is placement meta, owned by the publisher: it bounds what a block may ask for, never the reverse. A placement that has never been configured reads as refresh-off; create writes that default as a stored flag so a later backfill cannot mistake it for a pre-policy row. Orphan `_aggr_adgroup_term_id` is not read — it is AdSanity's term id, kept only so a migration can recognise a row it has already seen, and superseded by the group taxonomy below rather than revived by it.
+
+`_aggr_max_bytes` is the largest creative this placement accepts, owned by the
+publisher for the same reason refresh is: it is the publisher's page that pays
+for the bytes. `Domain\Upload_Rules` resolves it on every read and clamps it on
+every write — unset or out of range becomes `DEFAULT_MAX_BYTES` (150 KB),
+bounded by `FLOOR_MAX_BYTES` (10 KB) and `CEILING_MAX_BYTES` (2 MB). Resolving
+on read is what lets a placement that predates the setting enforce something
+safe without a backfill; create still writes the default as a stored value, so
+the screen never shows a limit no row contains.
 
 `_aggr_size_map` holds responsive breakpoints: minimum viewport width to size served at or above it. Empty means "not a map" and the single `_aggr_size` applies everywhere. See `Domain\Size_Map`.
 

@@ -22,6 +22,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 use Aggressive\Ads\Assets\Assets;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Portal\Creative_Actions;
+use Aggressive\Ads\Portal\Creative_Feedback;
 
 $aggr_campaign = isset( $aggr_campaign ) && is_array( $aggr_campaign ) ? $aggr_campaign : array();
 $aggr_overlays = isset( $aggr_overlays ) && is_array( $aggr_overlays ) ? $aggr_overlays : array();
@@ -44,6 +45,14 @@ if ( true !== ( $aggr_overlay_print ?? false ) ) {
 			continue;
 		}
 
+		/*
+		 * Always closed here. Reopening after a refused save is done with a
+		 * URL fragment instead — see `Creative_Feedback::error_fragment()`.
+		 * Seeding this `true` looked equivalent and was not: `bootDialog()`
+		 * only calls `openDialog()` when the state is still closed, so a
+		 * dialog marked open here got no focus trap, no `inert` on the
+		 * shell and no `.is-open` class — it did not open at all.
+		 */
 		$aggr_dialog_state[ $aggr_dialog_id ] = array(
 			'isOpen'            => false,
 			'animationDuration' => 200,
@@ -88,7 +97,22 @@ if ( true !== ( $aggr_overlay_print ?? false ) ) {
 		$aggr_creative  = is_array( $aggr_overlay['creative'] ?? null ) ? $aggr_overlay['creative'] : array();
 		$aggr_placement = (string) ( $aggr_overlay['placement'] ?? ( $aggr_creative['placement'] ?? '' ) );
 
-		if ( '' === $aggr_dialog_id || array() === $aggr_creative || ! in_array( $aggr_kind, array( 'preview', 'remove', 'replace' ), true ) ) {
+		/*
+		 * `add` is the one kind with no creative behind it — it is the form
+		 * for the creative that does not exist yet — so the creative check
+		 * has to skip it rather than silently dropping the dialog.
+		 */
+		$aggr_slot = is_array( $aggr_overlay['slot'] ?? null ) ? $aggr_overlay['slot'] : array();
+
+		// The footer closure carries only the campaign and the specs, so a body
+		// that marks its own invalid field has to be told which one that is.
+		$aggr_creative_error_for = (string) ( $aggr_overlay['error_for'] ?? '' );
+
+		if ( '' === $aggr_dialog_id || ! in_array( $aggr_kind, array( 'preview', 'remove', 'replace', 'window', 'destination', 'artwork', 'add' ), true ) ) {
+			continue;
+		}
+
+		if ( 'add' === $aggr_kind ? array() === $aggr_slot : array() === $aggr_creative ) {
 			continue;
 		}
 
@@ -109,6 +133,26 @@ if ( true !== ( $aggr_overlay_print ?? false ) ) {
 			'remove'  => sprintf(
 				/* translators: %s: placement name. */
 				__( 'Remove creative dialog opened for %s', 'aggressive-ads' ),
+				$aggr_placement
+			),
+			'window'  => sprintf(
+				/* translators: %s: placement name. */
+				__( 'Run dates dialog opened for %s', 'aggressive-ads' ),
+				$aggr_placement
+			),
+			'destination' => sprintf(
+				/* translators: %s: placement name. */
+				__( 'Destination dialog opened for %s', 'aggressive-ads' ),
+				$aggr_placement
+			),
+			'artwork' => sprintf(
+				/* translators: %s: placement name. */
+				__( 'Replace artwork dialog opened for %s', 'aggressive-ads' ),
+				$aggr_placement
+			),
+			'add'     => sprintf(
+				/* translators: %s: placement name. */
+				__( 'Add creative dialog opened for %s', 'aggressive-ads' ),
 				$aggr_placement
 			),
 			default   => sprintf(
@@ -149,6 +193,18 @@ if ( true !== ( $aggr_overlay_print ?? false ) ) {
 							);
 						} elseif ( 'remove' === $aggr_kind ) {
 							esc_html_e( 'Remove this creative?', 'aggressive-ads' );
+						} elseif ( 'window' === $aggr_kind ) {
+							esc_html_e( 'Custom run dates', 'aggressive-ads' );
+						} elseif ( 'destination' === $aggr_kind ) {
+							esc_html_e( 'Edit destination', 'aggressive-ads' );
+						} elseif ( 'artwork' === $aggr_kind ) {
+							esc_html_e( 'Replace artwork', 'aggressive-ads' );
+						} elseif ( 'add' === $aggr_kind ) {
+							printf(
+								/* translators: %s: placement name. */
+								esc_html__( 'Add a creative to %s', 'aggressive-ads' ),
+								esc_html( $aggr_placement )
+							);
 						} else {
 							printf(
 								/* translators: %s: placement name. */
@@ -178,6 +234,14 @@ if ( true !== ( $aggr_overlay_print ?? false ) ) {
 							src="<?php echo esc_url( (string) $aggr_creative['preview'] ); ?>"
 							alt="<?php echo esc_attr( (string) $aggr_creative['alt_text'] ); ?>"
 						>
+					<?php elseif ( 'window' === $aggr_kind ) : ?>
+						<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-variant-window.php'; ?>
+					<?php elseif ( 'destination' === $aggr_kind ) : ?>
+						<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-variant-destination.php'; ?>
+					<?php elseif ( 'artwork' === $aggr_kind ) : ?>
+						<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-variant-artwork.php'; ?>
+					<?php elseif ( 'add' === $aggr_kind ) : ?>
+						<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-upload-form.php'; ?>
 					<?php elseif ( 'remove' === $aggr_kind ) : ?>
 						<p class="aggr-hint">
 							<?php esc_html_e( 'This removes the file from the campaign. You can upload a replacement afterwards.', 'aggressive-ads' ); ?>
@@ -212,13 +276,23 @@ if ( true !== ( $aggr_overlay_print ?? false ) ) {
 							<?php wp_nonce_field( Creative_Actions::replace_nonce_action( (int) $aggr_creative['id'] ) ); ?>
 
 							<div class="aggr-field">
-								<label for="aggr-replacement-file-<?php echo esc_attr( (string) $aggr_creative['id'] ); ?>"><?php esc_html_e( 'Replacement ad creative', 'aggressive-ads' ); ?></label>
-								<input id="aggr-replacement-file-<?php echo esc_attr( (string) $aggr_creative['id'] ); ?>" name="file" type="file" accept="image/jpeg,image/png,image/gif,image/webp" required>
+								<label for="aggr-replacement-file-<?php echo esc_attr( (string) $aggr_creative['id'] ); ?>"><?php esc_html_e( 'Replacement ad creative (optional)', 'aggressive-ads' ); ?></label>
+								<?php
+								/*
+								 * Optional, and that is the point of this dialog's own
+								 * heading: it offers to change the creative *or* the
+								 * destination, and requiring a file made the second half
+								 * of that sentence untrue. Leaving it empty stages a
+								 * text-only revision, which is reviewed the same way and
+								 * keeps the current ad serving meanwhile.
+								 */
+								?>
+								<input id="aggr-replacement-file-<?php echo esc_attr( (string) $aggr_creative['id'] ); ?>" name="file" type="file" accept="image/jpeg,image/png,image/gif,image/webp">
 								<p class="aggr-hint">
 									<?php
 									printf(
 										/* translators: %s: required creative dimensions, for example 728x90. */
-										esc_html__( 'Exactly %s. JPEG, PNG, GIF, or WebP.', 'aggressive-ads' ),
+										esc_html__( 'Exactly %s. JPEG, PNG, GIF, or WebP. Leave this empty to change only the destination.', 'aggressive-ads' ),
 										esc_html( (string) $aggr_creative['size'] )
 									);
 									?>
