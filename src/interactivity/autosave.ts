@@ -257,13 +257,55 @@ const { state } = store( 'aggr/autosave', {
 			}, 600 );
 			pending.set( autosaveId, run );
 
+			/*
+			 * **Cancelling on submit is not enough on its own.**
+			 *
+			 * Choosing a package advances the step by calling
+			 * `requestSubmit()` from a listener on the radio, so `submit`
+			 * fires — and `run.cancel()` with it — during the *target* phase
+			 * of that same `change` event. The event then carries on
+			 * bubbling to the form, where the handler below re-arms the very
+			 * debounce that was just cancelled. Six hundred milliseconds
+			 * later the page is navigating and the save goes out into a
+			 * document being torn down.
+			 *
+			 * Chromium drops that request silently. WebKit reports it as
+			 * `Fetch API cannot load … due to access control checks`, which
+			 * reads as a CORS fault and is not one: the origins match and the
+			 * same request from the same page succeeds. Nothing reaches the
+			 * wire either way, so the last edit before choosing a package was
+			 * never saved by this path — it survived only because the form
+			 * post that navigates carries the same fields.
+			 *
+			 * A latch rather than a second cancel, because the ordering is
+			 * the problem: anything that re-arms after the cancel has to be
+			 * refused, not undone.
+			 */
+			let submitting = false;
+
 			const onChange = () => {
+				if ( submitting ) {
+					return;
+				}
+
 				run();
 			};
 
 			root.addEventListener( 'input', onChange );
 			root.addEventListener( 'change', onChange );
 			root.addEventListener( 'submit', () => {
+				submitting = true;
+				run.cancel();
+			} );
+
+			/*
+			 * A navigation this form did not start — a rail link, the back
+			 * button — has the same effect on an in-flight debounce, and
+			 * `pagehide` is the event that fires for all of them in WebKit,
+			 * where `unload` is unreliable and a page may be held in the
+			 * back/forward cache instead of destroyed.
+			 */
+			window.addEventListener( 'pagehide', () => {
 				run.cancel();
 			} );
 
