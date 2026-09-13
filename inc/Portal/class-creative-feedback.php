@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Portal;
 
+use Aggressive\Ads\Domain\Assignment_Rules;
 use Aggressive\Ads\Domain\Upload_Rules;
 use WP_Error;
 
@@ -281,6 +282,42 @@ final class Creative_Feedback {
 			'aggr_creative_not_deleted'     => __( 'The creative could not be removed. Please try again.', 'aggressive-ads' ),
 			'aggr_creative_restore_failed'  => __( 'The creative record and file could not be reconciled. Please contact an administrator.', 'aggressive-ads' ),
 			'aggr_creative_not_created'     => __( 'The creative could not be saved. Please try again.', 'aggressive-ads' ),
+
+			/*
+			 * **Twelve codes that reached a reader as "could not be saved".**
+			 *
+			 * Each already carried a usable sentence where it was raised, and
+			 * every one of them was thrown away: the error crosses the
+			 * redirect as a bare string, so the sentence a `WP_Error` was
+			 * given never travels and only an arm in this match can put one
+			 * back. Missing arms fall to the default, which is why setting a
+			 * share on a creative that is not delivering yet, or asking for an
+			 * ad update that changes nothing, both said "The creative could
+			 * not be saved. Please try again." — inviting a retry that cannot
+			 * work and naming the wrong object while doing it.
+			 *
+			 * The wording is copied from the raise site deliberately, so the
+			 * two read the same; `bin/ci/check-error-messages.mjs` fails when
+			 * a code the creative workflows can return has no arm here.
+			 */
+			'aggr_weight_out_of_range'      => sprintf(
+				/* translators: 1: lowest permitted share, 2: highest permitted share. */
+				__( 'A share must be between %1$d and %2$d.', 'aggressive-ads' ),
+				Assignment_Rules::MIN_WEIGHT,
+				Assignment_Rules::MAX_WEIGHT
+			),
+			'aggr_weight_forbidden'         => __( 'You do not have permission to change that creative.', 'aggressive-ads' ),
+			'aggr_weight_no_assignment'     => __( 'That creative is not delivering yet, so it has no share to set.', 'aggressive-ads' ),
+			'aggr_weight_not_saved'         => __( 'That share could not be saved. Reload the page and try again.', 'aggressive-ads' ),
+			'aggr_replacement_campaign_inactive' => __( 'Only a scheduled or live campaign can apply an ad update.', 'aggressive-ads' ),
+			'aggr_replacement_invalid'      => __( 'That ad update is no longer available.', 'aggressive-ads' ),
+			'aggr_replacement_not_created'  => __( 'The ad update could not be saved. Please try again.', 'aggressive-ads' ),
+			'aggr_replacement_not_deleted'  => __( 'The update file could not be removed. Please try again.', 'aggressive-ads' ),
+			'aggr_replacement_notes_required' => __( 'Explain why this ad update needs changes.', 'aggressive-ads' ),
+			'aggr_replacement_notes_too_long' => __( 'Use 2,000 characters or fewer for update feedback.', 'aggressive-ads' ),
+			'aggr_replacement_rejection_failed' => __( 'The update decision could not be saved. Please try again.', 'aggressive-ads' ),
+			'aggr_replacement_restore_failed' => __( 'The update record and file could not be reconciled. Please contact an administrator.', 'aggressive-ads' ),
+			'aggr_replacement_unchanged'    => __( 'Change the destination or description before requesting an update.', 'aggressive-ads' ),
 			default                             => __( 'The creative could not be saved. Please try again.', 'aggressive-ads' ),
 		};
 	}
