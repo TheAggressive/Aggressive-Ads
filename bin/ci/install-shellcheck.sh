@@ -65,7 +65,9 @@ TARGET="${TOOL_DIR}/shellcheck"
 # The binary is what gets run, so the binary is what gets checked on the fast
 # path. The tarball checksum above governs what may ever become that binary; a
 # version match afterwards catches a stale cache from an earlier pin.
-if [ -x "${TARGET}" ] && "${TARGET}" --version 2>/dev/null | grep -qx "version: ${SHELLCHECK_VERSION}"; then
+# Not piped into `grep -q`: under `pipefail` that can miss a match and
+# reinstall for nothing. See check-pipefail-grep.mjs.
+if [ -x "${TARGET}" ] && grep -qx "version: ${SHELLCHECK_VERSION}" <<< "$("${TARGET}" --version 2>/dev/null)"; then
 	[ -n "${SHELLCHECK_SKIP_INFO:-}" ] || echo "install-shellcheck: ${TARGET} already at ${SHELLCHECK_VERSION}"
 	exit 0
 fi

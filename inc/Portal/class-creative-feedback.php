@@ -39,6 +39,19 @@ final class Creative_Feedback {
 	public const ASYNC_FIELD = 'aggr_async';
 
 	/**
+	 * The notice value a refused creative write redirects with.
+	 *
+	 * **Not `error`.** The campaign screen reads two notices off the same
+	 * `aggr_notice` parameter — its own and this one — and both used to
+	 * answer to the bare string, so one refused campaign save raised two
+	 * toasts: the true one, and this side rendering a campaign error code it
+	 * has no arm for as "The creative could not be saved. Please try again."
+	 * Two readers of one value cannot tell whose failure it is; a value of
+	 * its own can.
+	 */
+	public const ERROR_NOTICE = 'creative_error';
+
+	/**
 	 * Reads an allowlisted creative notice.
 	 *
 	 * @return string
@@ -47,7 +60,7 @@ final class Creative_Feedback {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only post/redirect/get display state.
 		$value = isset( $_GET['aggr_notice'] ) ? sanitize_key( wp_unslash( $_GET['aggr_notice'] ) ) : '';
 
-		return in_array( $value, array( 'creative_uploaded', 'creative_removed', 'creative_update_requested', 'creative_update_withdrawn', 'creative_weight_saved', 'creative_paused', 'creative_resumed', 'creative_window_saved', 'creative_destination_saved', 'creative_artwork_replaced', 'error' ), true ) ? $value : '';
+		return in_array( $value, array( 'creative_uploaded', 'creative_removed', 'creative_update_requested', 'creative_update_withdrawn', 'creative_weight_saved', 'creative_paused', 'creative_resumed', 'creative_window_saved', 'creative_destination_saved', 'creative_artwork_replaced', self::ERROR_NOTICE ), true ) ? $value : '';
 	}
 
 	/**
@@ -365,7 +378,7 @@ final class Creative_Feedback {
 	public static function after( int $campaign_id, string $notice, ?WP_Error $error = null, int $placement_id = 0, int $creative_id = 0, array $patch = array() ): never {
 		$args = array(
 			'step'        => 'creative',
-			'aggr_notice' => $notice,
+			'aggr_notice' => null === $error ? $notice : self::ERROR_NOTICE,
 		);
 
 		if ( null !== $error ) {

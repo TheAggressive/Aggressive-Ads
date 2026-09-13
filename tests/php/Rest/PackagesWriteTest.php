@@ -16,6 +16,7 @@ use Aggressive\Ads\REST\Packages_Controller;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Package_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
+use Aggressive\Ads\Repository\Post_Title;
 use Aggressive\Ads\Security\Roles;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -270,6 +271,41 @@ final class PackagesWriteTest extends WP_UnitTestCase {
 
 		$this->assertSame( 400, $response->get_status() );
 		$this->assertSame( 'aggr_invalid_package_currency', $response->get_data()['code'] );
+	}
+
+	/**
+	 * **A name with markup characters is kept, on create and on update.**
+	 *
+	 * Same defect as placements: the unslashed write stripped a backslash, and
+	 * the update's read-back then reported failure for a package that had
+	 * saved. Expected against `Post_Title::as_stored()` for the same reason.
+	 *
+	 * @return void
+	 */
+	public function test_a_name_with_markup_characters_is_kept(): void {
+		wp_set_current_user( $this->administrator );
+
+		$packages = Plugin::instance()->container()->get( Package_Repository::class );
+		$typed    = 'Arts & Culture\'s "Big" Month \\ one';
+
+		$input         = $this->valid_package();
+		$input['name'] = $typed;
+
+		$created = $this->write( self::CREATE, 'POST', $input );
+
+		$this->assertSame( 201, $created->get_status(), (string) wp_json_encode( $created->get_data() ) );
+
+		$id = (int) $created->get_data()['id'];
+
+		$this->assertSame( Post_Title::as_stored( $typed ), $packages->name( $id ) );
+		$this->assertStringContainsString( '\\', $packages->name( $id ) );
+
+		$renamed       = 'Back \\ Slash month';
+		$input['name'] = $renamed;
+		$updated       = $this->write( '/aggr/v1/packages/' . $id, 'PATCH', $input );
+
+		$this->assertSame( 200, $updated->get_status(), (string) wp_json_encode( $updated->get_data() ) );
+		$this->assertSame( Post_Title::as_stored( $renamed ), $packages->name( $id ) );
 	}
 
 	/**

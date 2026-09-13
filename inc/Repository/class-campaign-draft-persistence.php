@@ -60,10 +60,20 @@ final class Campaign_Draft_Persistence {
 	 */
 	private function write( int $campaign_id, array $fields ) {
 		if ( isset( $fields['title'] ) ) {
+			/*
+			 * **Slashed, because `wp_update_post()` unslashes.** It passes its
+			 * argument through `wp_unslash()` on the way in, so handing it
+			 * plain text silently strips every backslash an advertiser typed.
+			 * The read-back below then saw a different title from the one
+			 * sent, rolled the save back, and the portal said the campaign
+			 * had changed in another window.
+			 */
 			$updated = wp_update_post(
-				array(
-					'ID'         => $campaign_id,
-					'post_title' => (string) $fields['title'],
+				wp_slash(
+					array(
+						'ID'         => $campaign_id,
+						'post_title' => (string) $fields['title'],
+					)
 				),
 				true
 			);
@@ -85,7 +95,9 @@ final class Campaign_Draft_Persistence {
 
 		foreach ( $meta as $field => $meta_key ) {
 			if ( array_key_exists( $field, $fields ) ) {
-				update_post_meta( $campaign_id, $meta_key, $fields[ $field ] );
+				// Slashed for the same reason: `update_post_meta()` unslashes too,
+				// so a note containing a backslash lost it and failed the read-back.
+				update_post_meta( $campaign_id, $meta_key, wp_slash( $fields[ $field ] ) );
 			}
 		}
 
@@ -109,7 +121,7 @@ final class Campaign_Draft_Persistence {
 	 */
 	private function values( int $campaign_id, array $keys ): array {
 		$getters = array(
-			'title'            => 'title',
+			'title'            => 'raw_title',
 			'start_ts'         => 'start_ts',
 			'end_ts'           => 'end_ts',
 			'advertiser_notes' => 'advertiser_notes',
@@ -144,7 +156,9 @@ final class Campaign_Draft_Persistence {
 				$normalized[ $key ] = array_values( array_unique( array_filter( array_map( 'intval', $fields[ $key ] ) ) ) );
 			} elseif ( in_array( $key, array( 'start_ts', 'end_ts', 'package_id', 'budget_cents' ), true ) ) {
 				$normalized[ $key ] = (int) $fields[ $key ];
-			} elseif ( in_array( $key, array( 'title', 'advertiser_notes', 'wizard_step', 'currency' ), true ) ) {
+			} elseif ( 'title' === $key ) {
+				$normalized[ $key ] = Post_Title::as_stored( (string) $fields[ $key ] );
+			} elseif ( in_array( $key, array( 'advertiser_notes', 'wizard_step', 'currency' ), true ) ) {
 				$normalized[ $key ] = (string) $fields[ $key ];
 			}
 		}

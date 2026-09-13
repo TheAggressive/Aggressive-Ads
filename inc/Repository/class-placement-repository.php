@@ -580,12 +580,15 @@ final class Placement_Repository {
 			return new WP_Error( 'aggr_placement_slug_taken', 'That slot slug is already in use.' );
 		}
 
+		// Slashed: `wp_insert_post()` unslashes. See Post_Title.
 		$placement_id = wp_insert_post(
-			array(
-				'post_type'   => Post_Types::PLACEMENT,
-				'post_status' => 'publish',
-				'post_title'  => $name,
-				'post_name'   => $slug,
+			wp_slash(
+				array(
+					'post_type'   => Post_Types::PLACEMENT,
+					'post_status' => 'publish',
+					'post_title'  => $name,
+					'post_name'   => $slug,
+				)
 			),
 			true
 		);
@@ -626,10 +629,12 @@ final class Placement_Repository {
 		}
 
 		$updated = wp_update_post(
-			array(
-				'ID'         => $placement_id,
-				'post_title' => $fields['name'],
-				'post_name'  => $fields['slug'],
+			wp_slash(
+				array(
+					'ID'         => $placement_id,
+					'post_title' => $fields['name'],
+					'post_name'  => $fields['slug'],
+				)
 			),
 			true
 		);
@@ -642,7 +647,10 @@ final class Placement_Repository {
 		update_post_meta( $placement_id, self::META_IS_ACTIVE, $fields['is_active'] ? 1 : 0 );
 		update_post_meta( $placement_id, self::META_SORT_ORDER, $fields['sort_order'] );
 
-		return $this->name( $placement_id ) === $fields['name']
+		// Against the stored form: a name with a backslash was stripped on write
+		// and then failed this check, so the save reported failure for a
+		// placement that had otherwise saved.
+		return $this->name( $placement_id ) === Post_Title::as_stored( $fields['name'] )
 			&& $this->slug( $placement_id ) === $fields['slug']
 			&& $this->size( $placement_id ) === $fields['size']
 			&& $this->is_active( $placement_id ) === $fields['is_active']

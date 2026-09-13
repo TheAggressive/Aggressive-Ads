@@ -8,6 +8,204 @@ import { signIn } from './sign-in-helper';
 import { solidPng } from './png';
 import { wp } from './wp-cli';
 
+test( 'choosing a package waits for the save already on the wire', async ( {
+	page,
+} ) => {
+	/*
+	 * **The wizard's own autosave was making step one impossible to leave.**
+	 *
+	 * Typing the name arms a six-hundred-millisecond debounce. Pause about
+	 * that long to read the package list — which is what the list is for —
+	 * and the PATCH is on the wire when the click lands. The form still holds
+	 * the old `autosave_rev`, the PATCH bumps the stored one first, and the
+	 * POST arrives one revision behind. The server refuses it, correctly, and
+	 * the advertiser is thrown back to step one with the package unset and a
+	 * message about another window they never opened.
+	 *
+	 * Reproduced by hand on every attempt between 620ms and 750ms and never
+	 * at two seconds, which is why this does not sleep: a fixed pause tuned to
+	 * one machine is a test that passes on the next one for no reason. Holding
+	 * the response open makes the overlap a fact of the test rather than a
+	 * race it hopes to win.
+	 */
+	await page.goto( '/advertiser/' );
+	await signIn( page, 'advertiser@example.test', 'advertiser' );
+
+	let patched = false;
+
+	await page.route( '**/wp-json/aggr/v1/campaigns/*', async ( route ) => {
+		if ( 'PATCH' !== route.request().method() ) {
+			await route.continue();
+			return;
+		}
+
+		/*
+		 * **Let the server apply it, then hold the answer back.** Delaying the
+		 * request instead — the obvious way to widen a race — inverts this one:
+		 * the POST reaches a server that has not moved yet, succeeds, and the
+		 * test passes over the unfixed client. It did, until this was written
+		 * the other way round.
+		 *
+		 * Fetching first means the revision is already bumped when the click
+		 * happens, and only the browser is still behind. That is the actual
+		 * condition, and it is what the pause before choosing a package
+		 * produces on a real machine.
+		 */
+		const response = await route.fetch();
+
+		patched = true;
+
+		await new Promise( ( resolve ) => setTimeout( resolve, 2000 ) );
+		await route.fulfill( { response } );
+	} );
+
+	await page.getByRole( 'button', { name: 'Create campaign' } ).click();
+	await expect(
+		page.locator( 'form[data-aggr-autosave][data-aggr-autosave-ready]' )
+	).toBeAttached();
+
+	await page
+		.getByLabel( 'Campaign name' )
+		.fill( `E2E browser campaign race ${ Date.now() }` );
+
+	// The server has applied it; only the browser is behind. The precondition.
+	await expect.poll( () => patched, { timeout: 5000 } ).toBe( true );
+
+	await page.getByRole( 'radio', { name: /Focused sidebar/ } ).check();
+
+	/*
+	 * Landing on the creative step is the assertion. A refused save returns to
+	 * `step=details`, so checking the URL distinguishes "advanced" from
+	 * "bounced" without depending on which message was rendered.
+	 */
+	await expect( page ).toHaveURL( /step=creative/, { timeout: 15_000 } );
+
+	/*
+	 * And exactly one notice, because the second half of this defect was two.
+	 * The campaign screen reads its own notice and the creative one off the
+	 * same `aggr_notice` parameter, and both answered to the bare string
+	 * `error` — so one refused campaign save also rendered a campaign error
+	 * code through the creative vocabulary, as "The creative could not be
+	 * saved. Please try again." A count catches that where matching on text
+	 * would not.
+	 */
+	const toasts = page.locator( '.aggr-toast' );
+
+	await expect( toasts ).toHaveCount( 1 );
+	await expect( toasts ).not.toContainText( 'creative could not be saved' );
+} );
+
+test( 'pressing Continue waits for the save already on the wire', async ( {
+	page,
+} ) => {
+	/*
+	 * **The path the reporter actually took.** The step opens with a package
+	 * already chosen, so choosing it again raises no `change` and cannot
+	 * auto-advance — people press Continue. The first fix for this race waited
+	 * only on the package radio, and the test above drives the radio, so both
+	 * were green while pressing Continue still sent a stale revision.
+	 *
+	 * Same overlap as above: the server applies the autosave, and only the
+	 * browser is told late.
+	 */
+	await page.goto( '/advertiser/' );
+	await signIn( page, 'advertiser@example.test', 'advertiser' );
+
+	let patched = false;
+
+	await page.route( '**/wp-json/aggr/v1/campaigns/*', async ( route ) => {
+		if ( 'PATCH' !== route.request().method() ) {
+			await route.continue();
+			return;
+		}
+
+		const response = await route.fetch();
+
+		patched = true;
+
+		await new Promise( ( resolve ) => setTimeout( resolve, 2000 ) );
+		await route.fulfill( { response } );
+	} );
+
+	await page.getByRole( 'button', { name: 'Create campaign' } ).click();
+	await expect(
+		page.locator( 'form[data-aggr-autosave][data-aggr-autosave-ready]' )
+	).toBeAttached();
+
+	// The precondition that rules out auto-advance: a package is already chosen.
+	await expect(
+		page.locator( 'input[name="package_id"]:checked' )
+	).toHaveCount( 1 );
+
+	await page
+		.getByLabel( 'Campaign name' )
+		.fill( `E2E browser campaign continue ${ Date.now() }` );
+
+	await expect.poll( () => patched, { timeout: 5000 } ).toBe( true );
+
+	await page
+		.locator( 'form[data-aggr-autosave] button[type="submit"]' )
+		.first()
+		.click();
+
+	await expect( page ).toHaveURL( /step=creative/, { timeout: 15_000 } );
+
+	const toasts = page.locator( '.aggr-toast' );
+
+	await expect( toasts ).toHaveCount( 1 );
+	await expect( toasts ).not.toContainText( 'changed in another window' );
+} );
+
+test( 'a name with markup characters survives the round trip', async ( {
+	page,
+} ) => {
+	/*
+	 * **What the advertiser typed is what they get back.** A name containing
+	 * `&`, `'`, `"` or a backslash could not be saved at all: the stored title
+	 * never matched the typed one, the save rolled back, and the page reported
+	 * a conflict. The PHP tests prove the workflow; this proves the whole trip
+	 * — the field, the autosave, the form post, and the page drawing the name
+	 * again — because each layer had its own way of changing the text.
+	 *
+	 * The heading is checked for encoded entities as well as for the text,
+	 * since the display half of this bug showed "&#038;" to the advertiser
+	 * after a save that had succeeded.
+	 */
+	await page.goto( '/advertiser/' );
+	await signIn( page, 'advertiser@example.test', 'advertiser' );
+
+	await page.getByRole( 'button', { name: 'Create campaign' } ).click();
+	await expect(
+		page.locator( 'form[data-aggr-autosave][data-aggr-autosave-ready]' )
+	).toBeAttached();
+
+	const name = `E2E browser campaign Arts & Culture's "Big" Show \\ ${ Date.now() }`;
+
+	await page.getByLabel( 'Campaign name' ).fill( name );
+	await page
+		.locator( 'form[data-aggr-autosave] button[type="submit"]' )
+		.first()
+		.click();
+
+	await expect( page ).toHaveURL( /step=creative/, { timeout: 15_000 } );
+	await expect( page.locator( '.aggr-toast' ) ).toHaveCount( 1 );
+	await expect( page.locator( '.aggr-toast' ) ).not.toContainText(
+		'changed in another window'
+	);
+
+	const details = new URL( page.url() );
+	details.search = '?step=details';
+	await page.goto( details.toString() );
+
+	await expect( page.getByLabel( 'Campaign name' ) ).toHaveValue( name );
+
+	const heading = page.locator( 'h1.aggr-title' );
+
+	await expect( heading ).toHaveText( name );
+	await expect( heading ).not.toContainText( '&#038;' );
+	await expect( heading ).not.toContainText( '&amp;' );
+} );
+
 test( 'advertiser completes and submits the accessible five-step wizard', async ( {
 	page,
 } ) => {
