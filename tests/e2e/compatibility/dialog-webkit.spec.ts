@@ -4,6 +4,24 @@ import { signIn } from '../sign-in-helper';
 import { solidPng } from '../png';
 
 test( 'the shared creative dialog works in WebKit', async ( { page } ) => {
+	/*
+	 * **WebKit's console, asserted rather than glanced at.**
+	 *
+	 * This spec ran green for weeks over `Fetch API cannot load … due to
+	 * access control checks`, thrown on every run by an autosave the wizard
+	 * re-armed after cancelling it, fired into a page that was already
+	 * navigating. It read as CORS and was not: the origins match and the same
+	 * request from the same page returns a real status. Nothing but a browser
+	 * showed it, and nothing here was looking.
+	 */
+	const pageErrors: string[] = [];
+
+	page.on( 'pageerror', ( error ) => pageErrors.push( error.message ) );
+	page.on( 'console', ( message ) => {
+		if ( 'error' === message.type() ) {
+			pageErrors.push( message.text() );
+		}
+	} );
 	await page.goto( '/advertiser/' );
 	await signIn( page, 'advertiser@example.test', 'advertiser' );
 	await expectPortalA11y( page );
@@ -85,4 +103,8 @@ test( 'the shared creative dialog works in WebKit', async ( { page } ) => {
 		page.getByRole( 'link', { name: 'Preview' } ),
 		'Preview Article sidebar'
 	);
+
+	// Polled, because the save that used to throw was on a timer: asserting
+	// once at the end of a fast run would have passed over it.
+	await expect.poll( () => pageErrors, { timeout: 5000 } ).toEqual( [] );
 } );

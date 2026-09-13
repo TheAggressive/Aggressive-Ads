@@ -128,6 +128,26 @@ to ask *whether every writer writes it*, and the lane now does: the keys
 that cannot reach a code path is not coverage of it, and "the E2E suite covers
 rotation" was true and useless.
 
+**A browser test that does not read the console is not watching the browser.**
+The WebKit dialog spec passed for weeks while every single run threw
+`Fetch API cannot load … due to access control checks`. It reads as a CORS
+fault and was not one: the origins matched, and the same request issued by
+hand from the same page came back with a real status. What actually happened
+is that choosing a package advances the step by calling `requestSubmit()` from
+a listener on the radio, so `submit` — and the autosave's `cancel()` with it —
+fires during the *target* phase of that `change` event, and the event then
+bubbles on to the form and re-arms the debounce that was just cancelled. Six
+hundred milliseconds later the page is navigating and the save goes into a
+document being torn down.
+
+Two things kept it invisible. Chromium discards such a request silently, so the
+only browser that says anything is the one project with no console assertion.
+And the request never reaches the wire, so nothing on the network side shows
+it either. The spec now collects `pageerror` and console errors and polls for
+an empty list — polls, because the throw is on a timer and a single assertion
+at the end of a fast run steps over it. Removing the fix reproduces three of
+them.
+
 **Two guards now exist for defects this project kept re-shipping**, both
 written after an audit found five more instances in one afternoon.
 
