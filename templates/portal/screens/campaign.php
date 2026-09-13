@@ -283,7 +283,7 @@ if ( in_array( $aggr_creative_notice, array( 'creative_uploaded', 'creative_remo
 		},
 		'success'
 	);
-} elseif ( 'error' === $aggr_creative_notice ) {
+} elseif ( Creative_Feedback::ERROR_NOTICE === $aggr_creative_notice ) {
 	Portal_Notice::add(
 		Creative_Feedback::error_message( $aggr_creative_error, $aggr_error_max_bytes ),
 		'error',
