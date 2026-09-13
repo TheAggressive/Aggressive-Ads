@@ -15,6 +15,7 @@ use Aggressive\Ads\Core\Settings;
 use Aggressive\Ads\Domain\Reporting_Rules;
 use Aggressive\Ads\Domain\Transition_Table;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Campaign_Request_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Creative_Revision_Repository;
 use Aggressive\Ads\Workflow\Assigned_Creatives;
@@ -46,22 +47,23 @@ final class View_Data {
 	/**
 	 * Constructor.
 	 *
-	 * @param Campaign_Repository     $campaigns  Campaign persistence.
-	 * @param Placement_Repository    $placements Placement persistence.
-	 * @param Org_Repository          $orgs       Organization lookups.
-	 * @param Org_Access_Repository   $org_access Organization access persistence.
-	 * @param Package_Repository      $packages   Package persistence.
-	 * @param Campaign_Editor         $editor     Shared package validation.
-	 * @param Review_Readiness        $readiness  Safe canonical review readiness.
-	 * @param Email_Change            $emails     Pending email-change lookup.
-	 * @param Reporting_Read          $reporting  Native rollup reads.
-	 * @param Campaign_Change_Manager $changes  Running-campaign change proposals.
-	 * @param Settings                $settings   Brand and support details.
-	 * @param Edit_Window             $window     When editing is permitted.
-	 * @param Acting_As               $acting     Staff acting for an advertiser.
-	 * @param Line_Item_Repository    $line_items Campaign delivery strategies.
-	 * @param Delivery_View_Data      $delivery   Dashboard delivery numbers.
-	 * @param Creative_View_Data      $creative_view Campaign creative rows.
+	 * @param Campaign_Repository         $campaigns  Campaign persistence.
+	 * @param Placement_Repository        $placements Placement persistence.
+	 * @param Org_Repository              $orgs       Organization lookups.
+	 * @param Org_Access_Repository       $org_access Organization access persistence.
+	 * @param Package_Repository          $packages   Package persistence.
+	 * @param Campaign_Editor             $editor     Shared package validation.
+	 * @param Review_Readiness            $readiness  Safe canonical review readiness.
+	 * @param Email_Change                $emails     Pending email-change lookup.
+	 * @param Reporting_Read              $reporting  Native rollup reads.
+	 * @param Campaign_Change_Manager     $changes  Running-campaign change proposals.
+	 * @param Settings                    $settings   Brand and support details.
+	 * @param Edit_Window                 $window     When editing is permitted.
+	 * @param Acting_As                   $acting     Staff acting for an advertiser.
+	 * @param Line_Item_Repository        $line_items Campaign delivery strategies.
+	 * @param Delivery_View_Data          $delivery   Dashboard delivery numbers.
+	 * @param Creative_View_Data          $creative_view Campaign creative rows.
+	 * @param Campaign_Request_Repository $requests      Advertiser requests and proposed changes.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -79,7 +81,8 @@ final class View_Data {
 		private readonly Acting_As $acting,
 		private readonly Line_Item_Repository $line_items,
 		private readonly Delivery_View_Data $delivery,
-		private readonly Creative_View_Data $creative_view
+		private readonly Creative_View_Data $creative_view,
+		private readonly Campaign_Request_Repository $requests
 	) {
 	}
 
@@ -281,7 +284,7 @@ final class View_Data {
 		 */
 		$row['pending_edits']       = $this->changes->pending_summary( $campaign_id );
 		$row['draft_edits']         = $this->changes->draft_summary( $campaign_id );
-		$row['edits_submitted']     = $this->campaigns->pending_edits_submitted( $campaign_id );
+		$row['edits_submitted']     = $this->requests->pending_edits_submitted( $campaign_id );
 		$row['can_request_changes'] = $this->changes->accepts_changes( $campaign_id )
 			&& current_user_can( Capabilities::SUBMIT_CAMPAIGN )
 			&& ! $row['edits_submitted'];
@@ -295,9 +298,9 @@ final class View_Data {
 		 * instead would silently discard a half-finished proposal every time
 		 * they moved between steps.
 		 */
-		$row['edit_values'] = array_merge( $this->changes->current( $campaign_id ), $this->campaigns->pending_edits( $campaign_id ) );
+		$row['edit_values'] = array_merge( $this->changes->current( $campaign_id ), $this->requests->pending_edits( $campaign_id ) );
 
-		$row['action_request']       = $this->campaigns->action_request( $campaign_id );
+		$row['action_request']       = $this->requests->action_request( $campaign_id );
 		$row['requestable_actions']  = array() === $row['action_request']
 			? $this->changes->requestable_actions( $campaign_id )
 			: array();

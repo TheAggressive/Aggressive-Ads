@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import {
 	expectDialogKeyboard,
 	expectOpenDialogA11y,
@@ -7,6 +7,41 @@ import {
 import { signIn } from './sign-in-helper';
 import { solidPng } from './png';
 import { wp } from './wp-cli';
+
+/**
+ * Holds the autosave's response back after the server has applied it.
+ *
+ * **Let the server apply it, then hold the answer back.** Delaying the
+ * request instead — the obvious way to widen a race — inverts this one: the
+ * POST reaches a server that has not moved yet, succeeds, and the test passes
+ * over the unfixed client. It did, until this was written the other way round.
+ *
+ * Fetching first means the revision is already bumped when the click happens,
+ * and only the browser is still behind. That is the actual condition, and it is
+ * what the pause before choosing a package produces on a real machine.
+ *
+ * @param page The page whose autosave to hold.
+ * @return Whether the server has applied the save yet, for `expect.poll`.
+ */
+async function holdAutosaveResponse( page: Page ): Promise< () => boolean > {
+	let applied = false;
+
+	await page.route( '**/wp-json/aggr/v1/campaigns/*', async ( route ) => {
+		if ( 'PATCH' !== route.request().method() ) {
+			await route.continue();
+			return;
+		}
+
+		const response = await route.fetch();
+
+		applied = true;
+
+		await new Promise( ( resolve ) => setTimeout( resolve, 2000 ) );
+		await route.fulfill( { response } );
+	} );
+
+	return () => applied;
+}
 
 test( 'choosing a package waits for the save already on the wire', async ( {
 	page,
@@ -31,33 +66,7 @@ test( 'choosing a package waits for the save already on the wire', async ( {
 	await page.goto( '/advertiser/' );
 	await signIn( page, 'advertiser@example.test', 'advertiser' );
 
-	let patched = false;
-
-	await page.route( '**/wp-json/aggr/v1/campaigns/*', async ( route ) => {
-		if ( 'PATCH' !== route.request().method() ) {
-			await route.continue();
-			return;
-		}
-
-		/*
-		 * **Let the server apply it, then hold the answer back.** Delaying the
-		 * request instead — the obvious way to widen a race — inverts this one:
-		 * the POST reaches a server that has not moved yet, succeeds, and the
-		 * test passes over the unfixed client. It did, until this was written
-		 * the other way round.
-		 *
-		 * Fetching first means the revision is already bumped when the click
-		 * happens, and only the browser is still behind. That is the actual
-		 * condition, and it is what the pause before choosing a package
-		 * produces on a real machine.
-		 */
-		const response = await route.fetch();
-
-		patched = true;
-
-		await new Promise( ( resolve ) => setTimeout( resolve, 2000 ) );
-		await route.fulfill( { response } );
-	} );
+	const saveApplied = await holdAutosaveResponse( page );
 
 	await page.getByRole( 'button', { name: 'Create campaign' } ).click();
 	await expect(
@@ -69,7 +78,7 @@ test( 'choosing a package waits for the save already on the wire', async ( {
 		.fill( `E2E browser campaign race ${ Date.now() }` );
 
 	// The server has applied it; only the browser is behind. The precondition.
-	await expect.poll( () => patched, { timeout: 5000 } ).toBe( true );
+	await expect.poll( saveApplied, { timeout: 5000 } ).toBe( true );
 
 	await page.getByRole( 'radio', { name: /Focused sidebar/ } ).check();
 
@@ -111,21 +120,7 @@ test( 'pressing Continue waits for the save already on the wire', async ( {
 	await page.goto( '/advertiser/' );
 	await signIn( page, 'advertiser@example.test', 'advertiser' );
 
-	let patched = false;
-
-	await page.route( '**/wp-json/aggr/v1/campaigns/*', async ( route ) => {
-		if ( 'PATCH' !== route.request().method() ) {
-			await route.continue();
-			return;
-		}
-
-		const response = await route.fetch();
-
-		patched = true;
-
-		await new Promise( ( resolve ) => setTimeout( resolve, 2000 ) );
-		await route.fulfill( { response } );
-	} );
+	const saveApplied = await holdAutosaveResponse( page );
 
 	await page.getByRole( 'button', { name: 'Create campaign' } ).click();
 	await expect(
@@ -141,7 +136,7 @@ test( 'pressing Continue waits for the save already on the wire', async ( {
 		.getByLabel( 'Campaign name' )
 		.fill( `E2E browser campaign continue ${ Date.now() }` );
 
-	await expect.poll( () => patched, { timeout: 5000 } ).toBe( true );
+	await expect.poll( saveApplied, { timeout: 5000 } ).toBe( true );
 
 	await page
 		.locator( 'form[data-aggr-autosave] button[type="submit"]' )

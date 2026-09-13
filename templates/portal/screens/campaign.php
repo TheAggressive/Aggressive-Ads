@@ -125,10 +125,6 @@ $aggr_confirming_cancel = true === ( $aggr_campaign['can_cancel'] ?? false )
 
 $aggr_editing_changes = Campaign_Actions::wants_change_editor()
 	&& true === ( $aggr_campaign['can_request_changes'] ?? false );
-
-if ( 'creative' === $aggr_step && '' !== $aggr_creative_notice ) {
-	$aggr_notice = '';
-}
 ?>
 <nav class="aggr-breadcrumb" aria-label="<?php esc_attr_e( 'Breadcrumb', 'aggressive-ads' ); ?>">
 	<a href="<?php echo esc_url( Routes::url( Request::ROUTE_CAMPAIGNS ) ); ?>">

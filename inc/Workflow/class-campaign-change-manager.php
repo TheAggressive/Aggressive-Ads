@@ -18,6 +18,7 @@ use Aggressive\Ads\Domain\Transition_Table;
 use Aggressive\Ads\Notification\Request_Mailer;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Campaign_Request_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Security\Capabilities;
@@ -46,14 +47,15 @@ final class Campaign_Change_Manager implements Service {
 	/**
 	 * Constructor.
 	 *
-	 * @param Campaign_Repository  $campaigns  Campaign persistence.
-	 * @param Creative_Repository  $creatives  Creative persistence.
-	 * @param Revision_Policy      $revisions  Immutability policy for approved creatives.
-	 * @param Placement_Repository $placements Placement names for the change summary.
-	 * @param Settings             $settings   Site policy.
-	 * @param Fill_Cache           $fill       Delivery cache.
-	 * @param Rate_Limiter         $limiter    Abuse bounding.
-	 * @param Audit_Repository     $audit      Audit persistence.
+	 * @param Campaign_Repository         $campaigns  Campaign persistence.
+	 * @param Creative_Repository         $creatives  Creative persistence.
+	 * @param Revision_Policy             $revisions  Immutability policy for approved creatives.
+	 * @param Placement_Repository        $placements Placement names for the change summary.
+	 * @param Settings                    $settings   Site policy.
+	 * @param Fill_Cache                  $fill       Delivery cache.
+	 * @param Rate_Limiter                $limiter    Abuse bounding.
+	 * @param Audit_Repository            $audit      Audit persistence.
+	 * @param Campaign_Request_Repository $requests   Advertiser requests and proposed changes.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -63,7 +65,8 @@ final class Campaign_Change_Manager implements Service {
 		private readonly Settings $settings,
 		private readonly Fill_Cache $fill,
 		private readonly Rate_Limiter $limiter,
-		private readonly Audit_Repository $audit
+		private readonly Audit_Repository $audit,
+		private readonly Campaign_Request_Repository $requests
 	) {
 	}
 
@@ -88,8 +91,8 @@ final class Campaign_Change_Manager implements Service {
 	 * @return void
 	 */
 	public function clear_request_on_transition( int $campaign_id ): void {
-		if ( array() !== $this->campaigns->action_request( $campaign_id ) ) {
-			$this->campaigns->clear_action_request( $campaign_id );
+		if ( array() !== $this->requests->action_request( $campaign_id ) ) {
+			$this->requests->clear_action_request( $campaign_id );
 		}
 
 		/*
@@ -110,7 +113,7 @@ final class Campaign_Change_Manager implements Service {
 			return;
 		}
 
-		$this->campaigns->clear_pending_edits( $campaign_id );
+		$this->requests->clear_pending_edits( $campaign_id );
 		$this->log(
 			'campaign.changes_dropped',
 			$campaign_id,
@@ -184,7 +187,7 @@ final class Campaign_Change_Manager implements Service {
 			return $limited;
 		}
 
-		if ( $this->campaigns->pending_edits_submitted( $campaign_id ) ) {
+		if ( $this->requests->pending_edits_submitted( $campaign_id ) ) {
 			return $this->error( 'aggr_edits_pending', __( 'This campaign already has changes waiting for review. Withdraw them first.', 'aggressive-ads' ), 409 );
 		}
 
@@ -203,7 +206,7 @@ final class Campaign_Change_Manager implements Service {
 			);
 		}
 
-		if ( ! $this->campaigns->set_pending_edits( $campaign_id, $diff, get_current_user_id() ) ) {
+		if ( ! $this->requests->set_pending_edits( $campaign_id, $diff, get_current_user_id() ) ) {
 			return $this->error( 'aggr_edits_not_saved', __( 'The requested changes could not be saved. Please try again.', 'aggressive-ads' ), 500 );
 		}
 
@@ -288,7 +291,7 @@ final class Campaign_Change_Manager implements Service {
 			return $limited;
 		}
 
-		if ( array() !== $this->campaigns->action_request( $campaign_id ) ) {
+		if ( array() !== $this->requests->action_request( $campaign_id ) ) {
 			return $this->error( 'aggr_action_already_requested', __( 'You have already asked the review team about this campaign.', 'aggressive-ads' ), 409 );
 		}
 
@@ -302,7 +305,7 @@ final class Campaign_Change_Manager implements Service {
 			return $this->error( 'aggr_action_reason_long', __( 'That explanation is too long.', 'aggressive-ads' ), 422 );
 		}
 
-		if ( ! $this->campaigns->set_action_request( $campaign_id, $action, $reason, get_current_user_id() ) ) {
+		if ( ! $this->requests->set_action_request( $campaign_id, $action, $reason, get_current_user_id() ) ) {
 			return $this->error( 'aggr_action_not_saved', __( 'The request could not be saved. Please try again.', 'aggressive-ads' ), 500 );
 		}
 
@@ -325,11 +328,11 @@ final class Campaign_Change_Manager implements Service {
 			return $authorized;
 		}
 
-		if ( array() === $this->campaigns->action_request( $campaign_id ) ) {
+		if ( array() === $this->requests->action_request( $campaign_id ) ) {
 			return $this->error( 'aggr_no_action_request', __( 'There is no request to withdraw.', 'aggressive-ads' ), 404 );
 		}
 
-		$this->campaigns->clear_action_request( $campaign_id );
+		$this->requests->clear_action_request( $campaign_id );
 		$this->log( 'campaign.action_request_withdrawn', $campaign_id, array(), 'Advertiser withdrew a campaign action request.' );
 
 		return true;
@@ -350,7 +353,7 @@ final class Campaign_Change_Manager implements Service {
 			return $this->error( 'aggr_forbidden', __( 'You do not have permission to decide campaign requests.', 'aggressive-ads' ), 403 );
 		}
 
-		if ( array() === $this->campaigns->action_request( $campaign_id ) ) {
+		if ( array() === $this->requests->action_request( $campaign_id ) ) {
 			return $this->error( 'aggr_no_action_request', __( 'This campaign has no request waiting.', 'aggressive-ads' ), 404 );
 		}
 
@@ -360,7 +363,7 @@ final class Campaign_Change_Manager implements Service {
 			$this->campaigns->set_review_notes( $campaign_id, $notes );
 		}
 
-		$this->campaigns->clear_action_request( $campaign_id );
+		$this->requests->clear_action_request( $campaign_id );
 		$this->log( 'campaign.action_request_resolved', $campaign_id, array(), 'Campaign action request resolved by staff.' );
 
 		return true;
@@ -415,13 +418,13 @@ final class Campaign_Change_Manager implements Service {
 			return $this->error( 'aggr_campaign_not_running', __( 'This campaign is not running, so there is nothing to change.', 'aggressive-ads' ), 409 );
 		}
 
-		if ( $this->campaigns->pending_edits_submitted( $campaign_id ) ) {
+		if ( $this->requests->pending_edits_submitted( $campaign_id ) ) {
 			return $this->error( 'aggr_edits_pending', __( 'These changes are already with the review team. Withdraw them to keep editing.', 'aggressive-ads' ), 409 );
 		}
 
 		$current = $this->current( $campaign_id );
 		$step    = Live_Edit_Rules::diff( $allowed, $current, $proposed );
-		$merged  = $this->campaigns->pending_edits( $campaign_id );
+		$merged  = $this->requests->pending_edits( $campaign_id );
 
 		// A field the advertiser has put back to its original value is no
 		// longer a change, so it leaves the proposal rather than lingering as
@@ -460,7 +463,7 @@ final class Campaign_Change_Manager implements Service {
 			);
 		}
 
-		if ( ! $this->campaigns->set_pending_edits( $campaign_id, $merged, get_current_user_id() ) ) {
+		if ( ! $this->requests->set_pending_edits( $campaign_id, $merged, get_current_user_id() ) ) {
 			return $this->error( 'aggr_edits_not_saved', __( 'The changes could not be saved. Please try again.', 'aggressive-ads' ), 500 );
 		}
 
@@ -486,11 +489,11 @@ final class Campaign_Change_Manager implements Service {
 			return $limited;
 		}
 
-		if ( $this->campaigns->pending_edits_submitted( $campaign_id ) ) {
+		if ( $this->requests->pending_edits_submitted( $campaign_id ) ) {
 			return $this->error( 'aggr_edits_pending', __( 'These changes are already with the review team.', 'aggressive-ads' ), 409 );
 		}
 
-		$edits      = $this->campaigns->pending_edits( $campaign_id );
+		$edits      = $this->requests->pending_edits( $campaign_id );
 		$validation = Live_Edit_Rules::validate( $edits, $this->current( $campaign_id ), time() );
 
 		if ( ! $validation->is_valid() ) {
@@ -504,7 +507,7 @@ final class Campaign_Change_Manager implements Service {
 			);
 		}
 
-		if ( ! $this->campaigns->set_pending_edits( $campaign_id, $edits, get_current_user_id(), true ) ) {
+		if ( ! $this->requests->set_pending_edits( $campaign_id, $edits, get_current_user_id(), true ) ) {
 			return $this->error( 'aggr_edits_not_saved', __( 'The changes could not be submitted. Please try again.', 'aggressive-ads' ), 500 );
 		}
 
@@ -532,7 +535,7 @@ final class Campaign_Change_Manager implements Service {
 	 * @return void
 	 */
 	private function notify_request( int $campaign_id, string $kind ): void {
-		$this->campaigns->increment_request_revision( $campaign_id );
+		$this->requests->increment_request_revision( $campaign_id );
 
 		try {
 			// Spelled out rather than referenced through Request_Mailer, as
@@ -609,7 +612,7 @@ final class Campaign_Change_Manager implements Service {
 			return $applied;
 		}
 
-		$this->campaigns->clear_pending_edits( $campaign_id );
+		$this->requests->clear_pending_edits( $campaign_id );
 
 		// The campaign is in the live set, so anything the fill payload quotes
 		// — the destination above all — is stale the instant this returns.
@@ -651,7 +654,7 @@ final class Campaign_Change_Manager implements Service {
 		}
 
 		$this->campaigns->set_review_notes( $campaign_id, $notes );
-		$this->campaigns->clear_pending_edits( $campaign_id );
+		$this->requests->clear_pending_edits( $campaign_id );
 
 		$this->log( 'campaign.changes_rejected', $campaign_id, $edits, 'Campaign changes rejected.' );
 
@@ -671,13 +674,13 @@ final class Campaign_Change_Manager implements Service {
 			return $authorized;
 		}
 
-		$edits = $this->campaigns->pending_edits( $campaign_id );
+		$edits = $this->requests->pending_edits( $campaign_id );
 
 		if ( array() === $edits ) {
 			return $this->error( 'aggr_no_pending_edits', __( 'There are no requested changes to withdraw.', 'aggressive-ads' ), 404 );
 		}
 
-		$this->campaigns->clear_pending_edits( $campaign_id );
+		$this->requests->clear_pending_edits( $campaign_id );
 		$this->log( 'campaign.changes_withdrawn', $campaign_id, $edits, 'Campaign changes withdrawn by the advertiser.' );
 
 		return true;
@@ -705,7 +708,7 @@ final class Campaign_Change_Manager implements Service {
 	 * @return array<int, array{field: string, label: string, from: string, to: string}>
 	 */
 	public function draft_summary( int $campaign_id ): array {
-		return $this->summarize( $this->campaigns->pending_edits( $campaign_id ), $campaign_id );
+		return $this->summarize( $this->requests->pending_edits( $campaign_id ), $campaign_id );
 	}
 
 	/**
@@ -715,8 +718,8 @@ final class Campaign_Change_Manager implements Service {
 	 * @return array<string, mixed>
 	 */
 	private function submitted_edits( int $campaign_id ): array {
-		return $this->campaigns->pending_edits_submitted( $campaign_id )
-			? $this->campaigns->pending_edits( $campaign_id )
+		return $this->requests->pending_edits_submitted( $campaign_id )
+			? $this->requests->pending_edits( $campaign_id )
 			: array();
 	}
 

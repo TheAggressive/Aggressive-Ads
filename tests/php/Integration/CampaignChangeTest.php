@@ -18,6 +18,7 @@ use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Campaign_Request_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Package_Repository;
@@ -113,6 +114,13 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 	private Campaign_Repository $campaigns;
 
 	/**
+	 * Advertiser request state.
+	 *
+	 * @var Campaign_Request_Repository
+	 */
+	private Campaign_Request_Repository $requests;
+
+	/**
 	 * Two tenants, one placement, one package.
 	 *
 	 * @return void
@@ -165,6 +173,7 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 		$this->changes   = $container->get( Campaign_Change_Manager::class );
 		$this->settings  = $container->get( Settings::class );
 		$this->campaigns = $container->get( Campaign_Repository::class );
+		$this->requests  = Plugin::instance()->container()->get( Campaign_Request_Repository::class );
 
 		$container->get( Org_Repository::class )->flush_cache();
 		$container->get( Ownership::class )->flush_cache();
@@ -250,7 +259,7 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 		$this->allow( array( Settings_Schema::EDIT_TITLE ) );
 		$this->propose( $campaign_id, array( 'title' => 'Renamed mid-flight' ) );
 
-		$this->assertTrue( $this->campaigns->has_pending_edits( $campaign_id ) );
+		$this->assertTrue( $this->requests->has_pending_edits( $campaign_id ) );
 
 		// The campaign ends underneath the queued proposal.
 		wp_update_post(
@@ -281,7 +290,7 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 		$this->allow( array( Settings_Schema::EDIT_TITLE ) );
 		$this->propose( $campaign_id, array( 'title' => 'Renamed mid-flight' ) );
 
-		$this->assertTrue( $this->campaigns->has_pending_edits( $campaign_id ) );
+		$this->assertTrue( $this->requests->has_pending_edits( $campaign_id ) );
 
 		wp_update_post(
 			array(
@@ -292,7 +301,7 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 
 		do_action( 'aggr_campaign_transitioned', $campaign_id );
 
-		$this->assertFalse( $this->campaigns->has_pending_edits( $campaign_id ) );
+		$this->assertFalse( $this->requests->has_pending_edits( $campaign_id ) );
 	}
 
 	/**
@@ -423,7 +432,7 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 
 		$this->assertIsArray( $result );
 		$this->assertSame( array( 'title' => 'Renamed' ), $result );
-		$this->assertSame( array( 'title' => 'Renamed' ), $this->campaigns->pending_edits( $campaign_id ) );
+		$this->assertSame( array( 'title' => 'Renamed' ), $this->requests->pending_edits( $campaign_id ) );
 	}
 
 	/**
@@ -475,7 +484,7 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 		$this->assertTrue( $this->changes->approve( $campaign_id ) );
 		$this->assertSame( 'Approved name', get_post_field( 'post_title', $campaign_id ) );
 		$this->assertSame( $new_end, $this->campaigns->end_ts( $campaign_id ) );
-		$this->assertFalse( $this->campaigns->has_pending_edits( $campaign_id ) );
+		$this->assertFalse( $this->requests->has_pending_edits( $campaign_id ) );
 		$this->assertSame( Post_Statuses::LIVE, get_post_status( $campaign_id ) );
 	}
 
@@ -522,7 +531,7 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 
 		$this->assertWPError( $result );
 		$this->assertSame( 'aggr_live_edit_invalid', $result->get_error_code() );
-		$this->assertFalse( $this->campaigns->has_pending_edits( $campaign_id ) );
+		$this->assertFalse( $this->requests->has_pending_edits( $campaign_id ) );
 	}
 
 	/**
@@ -541,7 +550,7 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 
 		$this->assertTrue( $this->changes->reject( $campaign_id, 'Please keep the original name.' ) );
 		$this->assertSame( 'Original name', get_post_field( 'post_title', $campaign_id ) );
-		$this->assertFalse( $this->campaigns->has_pending_edits( $campaign_id ) );
+		$this->assertFalse( $this->requests->has_pending_edits( $campaign_id ) );
 		$this->assertStringContainsString( 'original name', $this->campaigns->review_notes( $campaign_id ) );
 	}
 
@@ -562,7 +571,7 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 		$result = $this->changes->reject( $campaign_id, '   ' );
 
 		$this->assertWPError( $result );
-		$this->assertTrue( $this->campaigns->has_pending_edits( $campaign_id ) );
+		$this->assertTrue( $this->requests->has_pending_edits( $campaign_id ) );
 	}
 
 	/**
@@ -578,7 +587,7 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 		$this->propose( $campaign_id, array( 'title' => 'Renamed' ) );
 
 		$this->assertTrue( $this->changes->withdraw( $campaign_id ) );
-		$this->assertFalse( $this->campaigns->has_pending_edits( $campaign_id ) );
+		$this->assertFalse( $this->requests->has_pending_edits( $campaign_id ) );
 	}
 
 	/**
@@ -597,7 +606,7 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 
 		$this->assertWPError( $second );
 		$this->assertSame( 'aggr_edits_pending', $second->get_error_code() );
-		$this->assertSame( array( 'title' => 'First' ), $this->campaigns->pending_edits( $campaign_id ) );
+		$this->assertSame( array( 'title' => 'First' ), $this->requests->pending_edits( $campaign_id ) );
 	}
 
 	/**
@@ -616,7 +625,7 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 
 		$this->assertWPError( $result );
 		$this->assertSame( 'aggr_forbidden', $result->get_error_code() );
-		$this->assertFalse( $this->campaigns->has_pending_edits( $campaign_id ) );
+		$this->assertFalse( $this->requests->has_pending_edits( $campaign_id ) );
 	}
 
 	/**
@@ -674,7 +683,7 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 		$this->propose( $campaign_id, array( 'end_ts' => time() + ( 7 * self::DAY ) ) );
 
 		// The proposal sat in the queue until its own end date passed.
-		$this->campaigns->set_pending_edits( $campaign_id, array( 'end_ts' => time() - self::DAY ), $this->advertiser, true );
+		$this->requests->set_pending_edits( $campaign_id, array( 'end_ts' => time() - self::DAY ), $this->advertiser, true );
 
 		wp_set_current_user( self::factory()->user->create( array( 'role' => Roles::REVIEWER ) ) );
 		$result = $this->changes->approve( $campaign_id );
@@ -702,7 +711,7 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 		$result  = $actions->process( $campaign_id, 'approve_quietly' );
 
 		$this->assertWPError( $result );
-		$this->assertTrue( $this->campaigns->has_pending_edits( $campaign_id ) );
+		$this->assertTrue( $this->requests->has_pending_edits( $campaign_id ) );
 	}
 
 	/**
@@ -750,7 +759,7 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 				'title'  => 'Renamed',
 				'end_ts' => $new_end,
 			),
-			$this->campaigns->pending_edits( $campaign_id )
+			$this->requests->pending_edits( $campaign_id )
 		);
 	}
 
@@ -767,10 +776,10 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 		$this->allow( array( Settings_Schema::EDIT_TITLE ) );
 
 		$this->assertIsArray( $this->changes->stage( $campaign_id, array( 'title' => 'Renamed' ) ) );
-		$this->assertSame( array( 'title' => 'Renamed' ), $this->campaigns->pending_edits( $campaign_id ) );
+		$this->assertSame( array( 'title' => 'Renamed' ), $this->requests->pending_edits( $campaign_id ) );
 
 		$this->assertIsArray( $this->changes->stage( $campaign_id, array( 'title' => 'Original name' ) ) );
-		$this->assertSame( array(), $this->campaigns->pending_edits( $campaign_id ) );
+		$this->assertSame( array(), $this->requests->pending_edits( $campaign_id ) );
 	}
 
 	/**
@@ -788,7 +797,7 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 		$result = $this->changes->stage( $campaign_id, array( 'click_urls' => array( $creative_id => 'javascript:alert(1)' ) ) );
 
 		$this->assertWPError( $result );
-		$this->assertSame( array(), $this->campaigns->pending_edits( $campaign_id ) );
+		$this->assertSame( array(), $this->requests->pending_edits( $campaign_id ) );
 	}
 
 	/**
@@ -822,8 +831,8 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 		$this->assertTrue( $this->changes->request_action( $campaign_id, Post_Statuses::PAUSED, 'Product sold out.' ) );
 
 		$this->assertSame( Post_Statuses::LIVE, get_post_status( $campaign_id ) );
-		$this->assertSame( Post_Statuses::PAUSED, $this->campaigns->action_request( $campaign_id )['action'] );
-		$this->assertSame( 'Product sold out.', $this->campaigns->action_request( $campaign_id )['reason'] );
+		$this->assertSame( Post_Statuses::PAUSED, $this->requests->action_request( $campaign_id )['action'] );
+		$this->assertSame( 'Product sold out.', $this->requests->action_request( $campaign_id )['reason'] );
 	}
 
 	/**
@@ -839,7 +848,7 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 		$result = $this->changes->request_action( $campaign_id, Post_Statuses::PAUSED, '   ' );
 
 		$this->assertWPError( $result );
-		$this->assertSame( array(), $this->campaigns->action_request( $campaign_id ) );
+		$this->assertSame( array(), $this->requests->action_request( $campaign_id ) );
 	}
 
 	/**
@@ -892,7 +901,7 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 		wp_set_current_user( self::factory()->user->create( array( 'role' => Roles::REVIEWER ) ) );
 
 		$this->assertTrue( $this->changes->resolve_action( $campaign_id, 'Your flight ends in two days anyway.' ) );
-		$this->assertSame( array(), $this->campaigns->action_request( $campaign_id ) );
+		$this->assertSame( array(), $this->requests->action_request( $campaign_id ) );
 		$this->assertStringContainsString( 'two days', $this->campaigns->review_notes( $campaign_id ) );
 		$this->assertSame( Post_Statuses::LIVE, get_post_status( $campaign_id ) );
 	}
@@ -914,7 +923,7 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 		);
 
 		$this->assertSame( Post_Statuses::PAUSED, get_post_status( $campaign_id ) );
-		$this->assertSame( array(), $this->campaigns->action_request( $campaign_id ), 'A request must not survive the transition it asked for.' );
+		$this->assertSame( array(), $this->requests->action_request( $campaign_id ), 'A request must not survive the transition it asked for.' );
 	}
 
 	/**
@@ -928,7 +937,7 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 
 		$this->assertTrue( $this->changes->request_action( $campaign_id, Post_Statuses::CANCELLED, 'Changed our minds.' ) );
 		$this->assertTrue( $this->changes->withdraw_action( $campaign_id ) );
-		$this->assertSame( array(), $this->campaigns->action_request( $campaign_id ) );
+		$this->assertSame( array(), $this->requests->action_request( $campaign_id ) );
 	}
 
 	/**
@@ -944,7 +953,7 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 		$result = $this->changes->request_action( $campaign_id, Post_Statuses::PAUSED, 'Not mine.' );
 
 		$this->assertWPError( $result );
-		$this->assertSame( array(), $this->campaigns->action_request( $campaign_id ) );
+		$this->assertSame( array(), $this->requests->action_request( $campaign_id ) );
 	}
 
 	/**

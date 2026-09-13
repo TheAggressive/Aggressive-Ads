@@ -243,8 +243,9 @@ final class Creative_Repository {
 		update_post_meta( $creative_id, self::META_ORG_ID, $org_id );
 		update_post_meta( $creative_id, self::META_PLACEMENT_ID, $placement_id );
 		update_post_meta( $creative_id, self::META_KIND, $fields['kind'] ?? '' );
-		update_post_meta( $creative_id, self::META_CLICK_URL, $fields['click_url'] ?? '' );
-		update_post_meta( $creative_id, self::META_ALT_TEXT, $fields['alt_text'] ?? '' );
+		// Slashed: `update_post_meta()` unslashes, so a backslash in either was lost.
+		update_post_meta( $creative_id, self::META_CLICK_URL, wp_slash( $fields['click_url'] ?? '' ) );
+		update_post_meta( $creative_id, self::META_ALT_TEXT, wp_slash( $fields['alt_text'] ?? '' ) );
 		update_post_meta( $creative_id, self::META_SIZE, $fields['size'] ?? '' );
 		update_post_meta( $creative_id, self::META_REVIEW_STATE, 'pending' );
 
@@ -304,7 +305,14 @@ final class Creative_Repository {
 	 * @return string
 	 */
 	public function title( int $creative_id ): string {
-		return $creative_id > 0 ? (string) get_the_title( $creative_id ) : '';
+		if ( $creative_id <= 0 ) {
+			return '';
+		}
+
+		// The stored title, decoded: `get_the_title()` is a display filter. See Post_Title.
+		$title = get_post_field( 'post_title', $creative_id, 'raw' );
+
+		return is_string( $title ) ? Post_Title::plain( $title ) : '';
 	}
 
 	/**
@@ -426,7 +434,7 @@ final class Creative_Repository {
 	 * @return void
 	 */
 	public function set_click_url( int $creative_id, string $click_url ): void {
-		update_post_meta( $creative_id, self::META_CLICK_URL, $click_url );
+		update_post_meta( $creative_id, self::META_CLICK_URL, wp_slash( $click_url ) );
 	}
 
 	/**
@@ -443,8 +451,8 @@ final class Creative_Repository {
 	 * @return void
 	 */
 	public function set_text( int $creative_id, string $click_url, string $alt_text ): void {
-		update_post_meta( $creative_id, self::META_CLICK_URL, $click_url );
-		update_post_meta( $creative_id, self::META_ALT_TEXT, $alt_text );
+		update_post_meta( $creative_id, self::META_CLICK_URL, wp_slash( $click_url ) );
+		update_post_meta( $creative_id, self::META_ALT_TEXT, wp_slash( $alt_text ) );
 	}
 
 
@@ -499,7 +507,9 @@ final class Creative_Repository {
 	 */
 	public function reject_creative( int $creative_id, string $notes ): bool {
 		update_post_meta( $creative_id, self::META_REVIEW_STATE, self::REVIEW_REJECTED );
-		update_post_meta( $creative_id, self::META_CHANGE_NOTES, $notes );
+		// Slashed: unslashed, a note with a backslash failed the read-back below
+		// and the rejection was reported as not saved.
+		update_post_meta( $creative_id, self::META_CHANGE_NOTES, wp_slash( $notes ) );
 		update_post_meta( $creative_id, self::META_DECIDED_AT, time() );
 
 		return $this->is_rejected( $creative_id )

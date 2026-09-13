@@ -143,117 +143,6 @@ final class Campaign_Repository {
 		return ( new Campaign_Draft_Persistence( $this ) )->update( $campaign_id, $fields );
 	}
 
-	/*
-	 * Advertiser requests — proposed edits, requested actions and the counter
-	 * that keys their notices — live in `Campaign_Request_Repository`. These
-	 * stay as delegations so no caller had to change when that state moved out.
-	 */
-
-	/**
-	 * The change set an advertiser has proposed for a running campaign.
-	 *
-	 * @param int $campaign_id Campaign post id.
-	 * @return array<string, mixed> Empty when nothing is pending.
-	 */
-	public function pending_edits( int $campaign_id ): array {
-		return $this->requests()->pending_edits( $campaign_id );
-	}
-
-	/**
-	 * Whether a change is waiting for a decision.
-	 *
-	 * @param int $campaign_id Campaign post id.
-	 */
-	public function has_pending_edits( int $campaign_id ): bool {
-		return $this->requests()->has_pending_edits( $campaign_id );
-	}
-
-	/**
-	 * Records a proposed change, replacing any previous one.
-	 *
-	 * @param int                  $campaign_id Campaign post id.
-	 * @param array<string, mixed> $edits       Validated change set.
-	 * @param int                  $user_id     Proposing user.
-	 * @param bool                 $submitted   Whether it has been sent for review.
-	 */
-	public function set_pending_edits( int $campaign_id, array $edits, int $user_id, bool $submitted = false ): bool {
-		return $this->requests()->set_pending_edits( $campaign_id, $edits, $user_id, $submitted );
-	}
-
-	/**
-	 * Drops a proposed change.
-	 *
-	 * @param int $campaign_id Campaign post id.
-	 */
-	public function clear_pending_edits( int $campaign_id ): bool {
-		return $this->requests()->clear_pending_edits( $campaign_id );
-	}
-
-	/**
-	 * Whether the pending change has been sent for review.
-	 *
-	 * @param int $campaign_id Campaign post id.
-	 */
-	public function pending_edits_submitted( int $campaign_id ): bool {
-		return $this->requests()->pending_edits_submitted( $campaign_id );
-	}
-
-	/**
-	 * An advertiser's request for a staff-only action on a running campaign.
-	 *
-	 * @param int $campaign_id Campaign post id.
-	 * @return array{action: string, reason: string, at: int, by: int}|array{}
-	 */
-	public function action_request( int $campaign_id ): array {
-		return $this->requests()->action_request( $campaign_id );
-	}
-
-	/**
-	 * Records a requested action, replacing any previous one.
-	 *
-	 * @param int    $campaign_id Campaign post id.
-	 * @param string $action      Target status.
-	 * @param string $reason      Advertiser's explanation.
-	 * @param int    $user_id     Requesting user.
-	 */
-	public function set_action_request( int $campaign_id, string $action, string $reason, int $user_id ): bool {
-		return $this->requests()->set_action_request( $campaign_id, $action, $reason, $user_id );
-	}
-
-	/**
-	 * Drops a requested action.
-	 *
-	 * @param int $campaign_id Campaign post id.
-	 */
-	public function clear_action_request( int $campaign_id ): bool {
-		return $this->requests()->clear_action_request( $campaign_id );
-	}
-
-	/**
-	 * How many times an advertiser has asked staff for something on this campaign.
-	 *
-	 * @param int $campaign_id Campaign post id.
-	 */
-	public function request_revision( int $campaign_id ): int {
-		return $this->requests()->request_revision( $campaign_id );
-	}
-
-	/**
-	 * Bumps the request counter and returns the new value.
-	 *
-	 * @param int $campaign_id Campaign post id.
-	 */
-	public function increment_request_revision( int $campaign_id ): int {
-		return $this->requests()->increment_request_revision( $campaign_id );
-	}
-
-	/**
-	 * The collaborator that owns advertiser request state.
-	 */
-	private function requests(): Campaign_Request_Repository {
-		return new Campaign_Request_Repository();
-	}
-
 	/**
 	 * Current optimistic-concurrency token.
 	 *
@@ -548,7 +437,8 @@ final class Campaign_Repository {
 	 * @return void
 	 */
 	public function set_review_notes( int $campaign_id, string $notes ): void {
-		update_post_meta( $campaign_id, self::META_REVIEW_NOTES, $notes );
+		// Slashed: `update_post_meta()` unslashes, so a backslash in a note was lost.
+		update_post_meta( $campaign_id, self::META_REVIEW_NOTES, wp_slash( $notes ) );
 	}
 
 	/**
@@ -569,7 +459,7 @@ final class Campaign_Repository {
 	 * @return void
 	 */
 	public function set_internal_notes( int $campaign_id, string $notes ): void {
-		update_post_meta( $campaign_id, self::META_INTERNAL_NOTES, $notes );
+		update_post_meta( $campaign_id, self::META_INTERNAL_NOTES, wp_slash( $notes ) );
 	}
 
 	/**

@@ -18,6 +18,7 @@ use Aggressive\Ads\Notification\Request_Mailer;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Campaign_Request_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\User_Repository;
 use Aggressive\Ads\Security\Capabilities;
@@ -43,6 +44,13 @@ final class RequestNotificationTest extends WP_UnitTestCase {
 	 * @var Campaign_Repository
 	 */
 	private Campaign_Repository $campaigns;
+
+	/**
+	 * Advertiser request state.
+	 *
+	 * @var Campaign_Request_Repository
+	 */
+	private Campaign_Request_Repository $requests;
 
 	/**
 	 * Audit persistence.
@@ -110,6 +118,7 @@ final class RequestNotificationTest extends WP_UnitTestCase {
 
 		$this->audit     = new Audit_Repository();
 		$this->campaigns = new Campaign_Repository();
+		$this->requests  = Plugin::instance()->container()->get( Campaign_Request_Repository::class );
 
 		( new Installer( $this->audit, new Roles() ) )->install_roles();
 
@@ -518,7 +527,7 @@ final class RequestNotificationTest extends WP_UnitTestCase {
 		$result = $this->changes->request_action( $campaign, Post_Statuses::PAUSED, 'The sponsor has paused the budget.' );
 
 		$this->assertTrue( $result, 'A mail failure must not become the advertiser\'s error.' );
-		$this->assertSame( Post_Statuses::PAUSED, $this->campaigns->action_request( $campaign )['action'] );
+		$this->assertSame( Post_Statuses::PAUSED, $this->requests->action_request( $campaign )['action'] );
 
 		$events = array_column( $this->audit->for_object( 'campaign', $campaign, $this->org_id ), 'event' );
 

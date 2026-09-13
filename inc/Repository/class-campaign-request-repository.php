@@ -19,9 +19,9 @@ namespace Aggressive\Ads\Repository;
  * (`Campaign_Change_Manager`) and readers (the review screen and the request
  * mailer), so it moved as one unit rather than a few methods at a time.
  *
- * `Campaign_Repository` keeps the public methods as delegations, so no caller
- * changed, and keeps the meta key constants, which callers outside this class
- * reference directly.
+ * Callers take this class directly — it is registered as a service and
+ * injected where it is used. `Campaign_Repository` keeps the meta key
+ * constants, which callers outside this class reference directly.
  */
 final class Campaign_Request_Repository {
 
@@ -78,7 +78,10 @@ final class Campaign_Request_Repository {
 		 * "who asked for this change"; `$user_id` stays a parameter because the
 		 * caller that logs it takes it from here.
 		 */
-		update_post_meta( $campaign_id, Campaign_Repository::META_PENDING_EDITS, $edits );
+		// Slashed: `update_post_meta()` unslashes, recursively. A proposed title
+		// containing a backslash lost it, failed the read-back below, and the
+		// change request was refused.
+		update_post_meta( $campaign_id, Campaign_Repository::META_PENDING_EDITS, wp_slash( $edits ) );
 		update_post_meta( $campaign_id, Campaign_Repository::META_PENDING_EDITS_SENT, $submitted ? 1 : 0 );
 
 		// Read back rather than trusting update_post_meta()'s return, which is
@@ -149,14 +152,17 @@ final class Campaign_Request_Repository {
 	 * @return bool
 	 */
 	public function set_action_request( int $campaign_id, string $action, string $reason, int $user_id ): bool {
+		// Slashed, so a backslash in the advertiser's reason is kept.
 		update_post_meta(
 			$campaign_id,
 			Campaign_Repository::META_ACTION_REQUEST,
-			array(
-				'action' => $action,
-				'reason' => $reason,
-				'at'     => time(),
-				'by'     => $user_id,
+			wp_slash(
+				array(
+					'action' => $action,
+					'reason' => $reason,
+					'at'     => time(),
+					'by'     => $user_id,
+				)
 			)
 		);
 

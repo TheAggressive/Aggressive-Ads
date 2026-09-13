@@ -15,6 +15,7 @@ use Aggressive\Ads\Portal\Routes;
 use Aggressive\Ads\Portal\View_Data;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Campaign_Request_Repository;
 use Aggressive\Ads\Repository\Creative_Attachment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Creative_Revision_Repository;
@@ -91,6 +92,7 @@ final class Review_Data {
 	 * @param Line_Item_Repository                       $line_items Campaign delivery strategies.
 	 * @param \Aggressive\Ads\Workflow\Creative_Approval $approvals  Creatives awaiting publication.
 	 * @param Pending_Work                               $pending    Waiting-work count, shared with the menu.
+	 * @param Campaign_Request_Repository                $requests   Advertiser requests and proposed changes.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -104,7 +106,8 @@ final class Review_Data {
 		private readonly Campaign_Change_Manager $changes,
 		private readonly Line_Item_Repository $line_items,
 		private readonly \Aggressive\Ads\Workflow\Creative_Approval $approvals,
-		private readonly Pending_Work $pending
+		private readonly Pending_Work $pending,
+		private readonly Campaign_Request_Repository $requests
 	) {
 	}
 
@@ -281,7 +284,7 @@ final class Review_Data {
 		$row['creatives']        = $this->creative_rows( $campaign_id );
 		$row['creative_updates'] = $this->replacement_rows( $campaign_id );
 		$row['pending_edits']    = $this->changes->pending_summary( $campaign_id );
-		$row['action_request']   = self::labelled_request( $this->campaigns->action_request( $campaign_id ) );
+		$row['action_request']   = self::labelled_request( $this->requests->action_request( $campaign_id ) );
 		$row['actions']          = $this->actions_for( $campaign_id, $row['status'] );
 		$row['internal_notes']   = $this->campaigns->internal_notes( $campaign_id );
 		$row['can_view_audit']   = current_user_can( Capabilities::VIEW_AUDIT_LOG );

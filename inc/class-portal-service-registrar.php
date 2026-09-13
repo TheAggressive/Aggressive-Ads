@@ -28,6 +28,7 @@ use Aggressive\Ads\Portal\Router;
 use Aggressive\Ads\Portal\Signup_Actions;
 use Aggressive\Ads\Portal\View_Data;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Campaign_Request_Repository;
 use Aggressive\Ads\Repository\Creative_Attachment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Creative_Revision_Repository;
@@ -115,7 +116,8 @@ final class Portal_Service_Registrar {
 				$c->get( Acting_As::class ),
 				$c->get( Line_Item_Repository::class ),
 				$c->get( \Aggressive\Ads\Portal\Delivery_View_Data::class ),
-				$c->get( \Aggressive\Ads\Portal\Creative_View_Data::class )
+				$c->get( \Aggressive\Ads\Portal\Creative_View_Data::class ),
+				$c->get( Campaign_Request_Repository::class )
 			)
 		);
 		$container->register(
