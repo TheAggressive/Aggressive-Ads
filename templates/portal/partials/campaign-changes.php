@@ -50,7 +50,7 @@ $aggr_has_destination = in_array( 'click_urls', $aggr_edit_fields, true );
  */
 $aggr_step_link = static function ( string $step, string $label, string $current, string $base ): void {
 	printf(
-		'<li%1$s><a href="%2$s">%3$s</a></li>',
+		'<li%1$s><a href="%2$s"><span class="aggr-steps__label">%3$s</span></a></li>',
 		$step === $current ? ' aria-current="step"' : '',
 		esc_url( add_query_arg( 'step', $step, $base ) ),
 		esc_html( $label )
