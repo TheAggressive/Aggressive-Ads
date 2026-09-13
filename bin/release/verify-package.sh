@@ -215,9 +215,18 @@ if [ "${top_level}" != "${SLUG}" ]; then
 	fail "expected one top-level directory named ${SLUG}, found: $(echo "${top_level}" | tr '\n' ' ')"
 fi
 
+# **Here-strings, never `echo "${listing}" | grep -q`.** Under `pipefail`,
+# `grep -q` exits on its first match; if `echo` is still writing, it takes
+# SIGPIPE and the pipeline fails — so the `if` reads a present file as absent.
+# Measured at 6 to 20 false misses per 300 runs against a real archive. Below
+# it failed a pull request for `scroll-lock.js`, then `wizard.js` on a local
+# re-run, while both sat in the archive exactly once. In the forbidden check
+# the same miss runs the other way: a path that must not ship is reported
+# absent and the gate passes. `check-pipefail-grep.mjs` refuses the pattern.
+
 # 3. Nothing that should not ship.
 for path in "${PACKAGE_FORBIDDEN[@]}"; do
-	if echo "${listing}" | grep -qE "^${SLUG}/${path}(/|$)"; then
+	if grep -qE "^${SLUG}/${path}(/|$)" <<< "${listing}"; then
 		fail "forbidden path in the archive: ${path}"
 	fi
 done
@@ -230,7 +239,7 @@ done
 # fault, the second means a build step did not run. Distinguishing them took a
 # re-run and an investigation once already — see docs/known-issues.md.
 for path in "${PACKAGE_REQUIRED[@]}"; do
-	if echo "${listing}" | grep -qxF "${SLUG}/${path}"; then
+	if grep -qxF "${SLUG}/${path}" <<< "${listing}"; then
 		continue
 	fi
 

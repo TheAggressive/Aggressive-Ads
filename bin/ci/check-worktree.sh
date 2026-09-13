@@ -57,7 +57,10 @@ echo >&2
 echo "$changes" >&2
 echo >&2
 
-if git status --porcelain | grep -q '^??'; then
+# Captured first: piping into `grep -q` under `pipefail` can report no
+# untracked files when there are some. See check-pipefail-grep.mjs.
+porcelain="$(git status --porcelain)"
+if grep -q '^??' <<< "${porcelain}"; then
 	echo "  Files marked ?? are untracked. CI will not have them at all: every" >&2
 	echo "  lane here can read them and pass while the same lane fails there." >&2
 	echo >&2

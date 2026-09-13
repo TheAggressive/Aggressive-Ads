@@ -69,7 +69,7 @@ deliberately scoped to network-bound setup steps, because a retry around a test
 turns a fast red into a slow red and hides the assumption that is the actual
 defect.
 
-## The packaging lane once built two different archives from one dist
+## The packaging lane reported files missing that were in the archive (resolved)
 
 **What.** `pnpm ci:package` builds the ZIP twice and compares digests, so that a
 release is provably reproducible. On one CI run the second build produced an
@@ -85,19 +85,36 @@ the digest comparison, so a second archive that differs is reported as
 than as the reproducibility failure it is. Nothing prints the two listings, so
 there is no evidence left behind to diagnose from.
 
-**What is known.** The first `package.sh` and its verification passed with 364
-files. The second `package.sh` got past its own `PACKAGE_REQUIRED` check, which
-also names `wizard.js` and reads the staging directory — so the file was staged
-and then absent from the ZIP. Nothing between those two points removes files:
-the secrets scan has no `-delete`, and the version stamps, `chmod` and `touch`
-only rewrite what is there. `zip` exits non-zero when it cannot open a file it
-was given, and `set -euo pipefail` would have aborted on that. The cause is not
-identified.
+**Cause.** The archive was never missing anything. `verify-package.sh` checked
+each required path with `echo "${listing}" | grep -qxF "${path}"` under
+`set -euo pipefail`. `grep -q` exits on its first match; if `echo` is still
+writing, it takes SIGPIPE, and `pipefail` makes the pipeline fail — so the `if`
+read a present file as absent. Which path lost the race depended on scheduling,
+which is why one re-run passed and eight local rebuilds looked clean.
 
-**Status.** Still unexplained, and still not reproduced. It failed closed, which
-is the safe direction, so this is a diagnosis problem rather than a correctness
-one — and the diagnosis is now built, so a recurrence explains itself instead of
-costing another investigation.
+Everything recorded above fits. The staging check passed because it tests files
+directly and pipes nothing; only the archive check used the pipe. The digests
+matched because the two archives were identical.
+
+It came back on a pull request that added files to the package: CI reported
+`dist/interactivity/scroll-lock.js` missing, a local re-run reported `wizard.js`,
+and `unzip -Z1` showed both present exactly once. Against that archive, the piped
+check falsely missed 6 to 20 times in 300 runs, and a here-string never did.
+
+**Why it mattered beyond one red lane.** The same pattern guarded the forbidden
+paths, where a false miss runs the dangerous way: a file that must not ship is
+reported absent and the gate passes. `check-worktree.sh` had it too, and could
+report a clean tree with untracked files in it.
+
+**Status.** Resolved. All five occurrences under `bin/` read a here-string now,
+and five consecutive `pnpm ci:package` runs passed with one digest.
+`bin/ci/check-pipefail-grep.mjs` fails any script that sets `pipefail` and pipes
+into `grep -q`, because a race cannot be tested reliably but the pattern can be
+refused. Run against the scripts as they were, it names exactly those five lines.
+
+The diagnostics below were built while the cause was unknown. They did not fire
+on this bug, because nothing differed, but they still answer the question they
+were written for.
 
 `bin/release/compare-archives.sh` runs **before** the second verification and
 names the paths that differ, so the failure is reported as the reproducibility

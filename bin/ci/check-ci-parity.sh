@@ -136,7 +136,9 @@ for lane in $lanes; do
 		status=1
 	fi
 
-	if ! printf '%s\n' "$local_lanes" | grep -qxF "$lane"; then
+	# A here-string: piping into `grep -q` under `pipefail` can report a
+	# lane missing that is present. See check-pipefail-grep.mjs.
+	if ! grep -qxF "$lane" <<< "$local_lanes"; then
 		echo "  ${lane}: the workflow runs it, but bin/ci/lanes.mjs does not reach it" >&2
 		echo "    (a publishing job, or a step shape the parser does not read)" >&2
 		status=1
