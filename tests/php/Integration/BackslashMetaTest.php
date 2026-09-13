@@ -12,6 +12,7 @@ namespace Aggressive\Ads\Tests\Integration;
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Campaign_Request_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Creative_Revision_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
@@ -184,5 +185,37 @@ final class BackslashMetaTest extends WP_UnitTestCase {
 
 		$this->assertSame( self::TEXT, $campaigns->review_notes( $this->campaign_id ) );
 		$this->assertSame( self::TEXT . ' (internal)', $campaigns->internal_notes( $this->campaign_id ) );
+	}
+
+	/**
+	 * **A proposed change with a backslash in its title is recorded.**
+	 *
+	 * The proposal is stored as one array and read back whole. Unslashed, the
+	 * title inside it lost its backslash, the read-back no longer matched, and
+	 * the advertiser's change request was refused.
+	 *
+	 * @return void
+	 */
+	public function test_a_proposed_change_keeps_backslashes(): void {
+		$requests = Plugin::instance()->container()->get( Campaign_Request_Repository::class );
+		$edits    = array(
+			'title'            => 'Path \\ renamed',
+			'advertiser_notes' => self::TEXT,
+		);
+
+		$this->assertTrue( $requests->set_pending_edits( $this->campaign_id, $edits, 1 ) );
+		$this->assertSame( $edits, $requests->pending_edits( $this->campaign_id ) );
+	}
+
+	/**
+	 * An advertiser's reason for a requested action keeps its backslashes.
+	 *
+	 * @return void
+	 */
+	public function test_an_action_request_keeps_its_reason(): void {
+		$requests = Plugin::instance()->container()->get( Campaign_Request_Repository::class );
+
+		$this->assertTrue( $requests->set_action_request( $this->campaign_id, 'aggr_paused', self::TEXT, 1 ) );
+		$this->assertSame( self::TEXT, $requests->action_request( $this->campaign_id )['reason'] );
 	}
 }
