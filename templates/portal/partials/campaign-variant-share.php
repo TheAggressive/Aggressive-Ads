@@ -37,7 +37,12 @@ if ( count( $aggr_slot['creatives'] ) < 2 || null === $aggr_share_weight ) {
 $aggr_share_id    = 'aggr-share-' . (int) $aggr_creative['id'];
 $aggr_share_ratio = $aggr_creative['share'] ?? null;
 ?>
-<form class="aggr-share" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+<form
+	class="aggr-share"
+	method="post"
+	action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"
+	data-aggr-save="<?php echo esc_attr( 'aggr-save-share-' . (int) $aggr_creative['id'] ); ?>"
+>
 	<input type="hidden" name="action" value="<?php echo esc_attr( Creative_Actions::WEIGHT_ACTION ); ?>">
 	<input type="hidden" name="creative_id" value="<?php echo esc_attr( (string) (int) $aggr_creative['id'] ); ?>">
 	<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) (int) $aggr_campaign['id'] ); ?>">
@@ -70,7 +75,7 @@ $aggr_share_ratio = $aggr_creative['share'] ?? null;
 		 * rather than left to be worked out.
 		 */
 		?>
-		<p class="aggr-share__result">
+		<p class="aggr-share__result" id="<?php echo esc_attr( 'aggr-share-ratio-' . (int) $aggr_creative['id'] ); ?>">
 			<?php
 			printf(
 				/* translators: %s: this creative's share of the placement, e.g. 75%. */

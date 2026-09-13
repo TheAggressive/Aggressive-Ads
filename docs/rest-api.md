@@ -367,8 +367,16 @@ GET /wp-json/aggr/v1/creatives/{id}/file
 `Creative_Manager`. A write requires a selected active placement, valid HTTP(S)
 destination without credentials, non-empty alternative text, and
 server-detected dimensions exactly matching the placement. JPEG, PNG, GIF, and
-WebP are allowed up to 2 MB; SVG remains denied regardless of site-wide MIME
-plugins. One creative may cover each placement.
+WebP are allowed up to the placement's own `max_bytes` — 150 KB by default,
+never above the 2 MB ceiling — and SVG remains denied regardless of site-wide
+MIME plugins. One creative may cover each placement.
+
+`GET /placements` reports each placement's `max_bytes` so a client can say what
+to prepare rather than what went wrong. `PATCH /placements/{id}` accepts it
+under `MANAGE_PLACEMENTS`, and follows the same omitted-means-unchanged rule as
+the refresh policy: a write that does not name the key leaves the limit alone.
+The value is clamped where it is stored and again where it is read, so the
+number a client sends is never the number that gets enforced.
 
 Validation after private staging compensates by deleting staged bytes on
 failure. Persistence failure removes both the partial record and its file.

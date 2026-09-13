@@ -21,6 +21,7 @@ const PLUGIN_MODULE_IDS = {
 	'@aggr/wizard': '@aggr/wizard',
 	'@aggr/autosave': '@aggr/autosave',
 	'@aggr/upload': '@aggr/upload',
+	'@aggr/save': '@aggr/save',
 };
 
 export default ( env = {}, argv = {} ) => {

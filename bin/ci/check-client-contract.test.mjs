@@ -136,6 +136,12 @@ async function root( overrides = {} ) {
 		return $payload;
 	}
 
+	public function for_slots( array $slugs ): array {
+		$paid['servable'] = (int) $decision['servable'];
+
+		return $payloads;
+	}
+
 	private function with_tokens( array $payload ): array {
 		$row['token'] = $minted['token'];
 		$row['click'] = Click_Hop::url( $minted['token'] );
@@ -213,6 +219,43 @@ test( 'a key assigned after the return array is still checked', async () => {
 
 	assert.equal( status, 1 );
 	assert.match( output, /"servable" on a creative/ );
+} );
+
+test( 'a key only one fill route adds is refused', async () => {
+	const dir = await root( {
+		[ FILES.service ]: `<?php
+	private function house_creative( int $placement_id ): ?array {
+		return array(
+			'image'     => $image,
+			'placement' => $placement_id,
+		);
+	}
+
+	private function paid_creative( int $placement_id ): ?array {
+		$payload['servable'] = (int) $decision['servable'];
+
+		return $payload;
+	}
+
+	public function for_slots( array $slugs ): array {
+		return $payloads;
+	}
+
+	private function with_tokens( array $payload ): array {
+		$row['token'] = $minted['token'];
+		$row['click'] = Click_Hop::url( $minted['token'] );
+
+		unset( $row['placement'] );
+
+		return $payload;
+	}
+`,
+	} );
+
+	const { status, output } = run( dir );
+
+	assert.equal( status, 1 );
+	assert.match( output, /for_slots\(\) does not/ );
 } );
 
 test( 'a key with_tokens adds must still be read', async () => {

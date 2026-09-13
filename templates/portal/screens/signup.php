@@ -12,6 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Portal\Portal_Notice;
 use Aggressive\Ads\Portal\Request;
 use Aggressive\Ads\Portal\Routes;
 use Aggressive\Ads\Portal\Signup_Actions;
@@ -37,10 +38,21 @@ $aggr_complete     = 'sent' === $aggr_notice;
 			</div>
 		<?php endif; ?>
 
-		<?php if ( '' !== $aggr_notice ) : ?>
-			<div class="aggr-alert <?php echo esc_attr( 'sent' === $aggr_notice ? 'aggr-alert--success' : 'aggr-alert--error' ); ?>" role="<?php echo esc_attr( 'sent' === $aggr_notice ? 'status' : 'alert' ); ?>">
-				<p><?php echo esc_html( Signup_Actions::notice_message( $aggr_notice ) ); ?></p>
-			</div>
+		<?php
+		/*
+		 * Queued, except when it is the page. A completed request hides the
+		 * form, so 'sent' has to stay on screen — a panel with nothing in it
+		 * but a notice that fades is a page that says nothing at all.
+		 */
+		if ( '' !== $aggr_notice && 'sent' !== $aggr_notice ) {
+			Portal_Notice::add( Signup_Actions::notice_message( $aggr_notice ), 'error' );
+		}
+		?>
+
+		<?php if ( 'sent' === $aggr_notice ) : ?>
+			<p class="aggr-outcome aggr-outcome--success">
+				<?php echo esc_html( Signup_Actions::notice_message( $aggr_notice ) ); ?>
+			</p>
 		<?php endif; ?>
 
 		<?php if ( $aggr_enabled && ! $aggr_complete ) : ?>

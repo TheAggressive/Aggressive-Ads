@@ -2,7 +2,7 @@
  * @jest-environment jsdom
  */
 
-import { canRestoreFocus, setupFocusTrap } from '../helpers';
+import { canRestoreFocus, endpointOf, setupFocusTrap } from '../helpers';
 
 describe( 'canRestoreFocus', () => {
 	it( 'rejects null and detached nodes', () => {
@@ -177,5 +177,57 @@ describe( 'setupFocusTrap', () => {
 		// Focus is left exactly where the browser would take over.
 		expect( event.defaultPrevented ).toBe( false );
 		expect( document.activeElement?.id ).toBe( 'b' );
+	} );
+} );
+
+describe( 'endpointOf', () => {
+	/**
+	 * **The bug this exists for cost a browser to find.**
+	 *
+	 * Every WordPress `admin-post.php` form carries a hidden control named
+	 * `action`, and named controls shadow properties on the form element — so
+	 * `form.action` returns that input rather than the URL. `fetch()` then
+	 * stringifies it to `[object HTMLInputElement]`, posts to a nonsense
+	 * relative address, and the 404 that comes back is not JSON. What the
+	 * reader saw was the page reloading as though none of it existed.
+	 */
+	it( 'reads the attribute even when a control named action shadows it', () => {
+		const form = document.createElement( 'form' );
+		form.setAttribute(
+			'action',
+			'https://example.test/wp-admin/admin-post.php'
+		);
+
+		const shadow = document.createElement( 'input' );
+		shadow.type = 'hidden';
+		shadow.name = 'action';
+		shadow.value = 'aggr_set_creative_destination';
+		form.appendChild( shadow );
+		document.body.appendChild( form );
+
+		/*
+		 * **This test cannot catch the regression, and says so rather than
+		 * implying otherwise.** jsdom returns the URL from `form.action` even
+		 * with the control present, because it does not implement the
+		 * `[LegacyOverrideBuiltIns]` behaviour that makes a real browser hand
+		 * back the input. Reverting the helper to `form.action` would leave
+		 * this passing. What it does pin is the contract — the attribute is
+		 * what gets read — and `check-form-endpoints` fails the build if any
+		 * module goes back to the property.
+		 */
+		expect( endpointOf( form ) ).toBe(
+			'https://example.test/wp-admin/admin-post.php'
+		);
+
+		form.remove();
+	} );
+
+	it( 'falls back to the current address when no action is set', () => {
+		const form = document.createElement( 'form' );
+		document.body.appendChild( form );
+
+		expect( endpointOf( form ) ).toBe( window.location.href );
+
+		form.remove();
 	} );
 } );

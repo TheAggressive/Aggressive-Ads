@@ -242,18 +242,154 @@
 }
 
 @media (max-width: 782px) {
-	.aggr-upload-form,
-	.aggr-uploaded,
+	/*
+	 * The upload card's own stacking moved to a container query beside it in
+	 * `_surfaces.css`: it stacks on the card's width now, which a three-across
+	 * grid reaches long before the window does.
+	 */
 	.aggr-review-creative {
 		grid-template-columns: 1fr;
 	}
+}
 
-	.aggr-upload-form .aggr-field,
-	.aggr-upload-form button {
-		grid-column: 1;
+/*
+ * Notices, bottom-right, over everything.
+ *
+ * Colour carries severity, and never alone: each variant also has its own
+ * left edge and its own word in the label, because a reader who cannot
+ * separate green from red still has to be able to tell a save from a refusal.
+ *
+ * The host is a permanent live region rather than one created per message —
+ * a region inserted at the same moment as its text is frequently missed by
+ * screen readers, which is how a polite announcement becomes no announcement.
+ */
+.aggr-toasts {
+	position: fixed;
+	inset-block-end: var(--aggr-space-lg);
+	inset-inline-end: var(--aggr-space-lg);
+	z-index: 100;
+	display: grid;
+	gap: var(--aggr-space-xs);
+	justify-items: end;
+	pointer-events: none;
+}
+
+/*
+ * The two live regions stack like the notices do. Empty most of the time, and
+ * `display: contents` keeps them from adding a row when they are.
+ */
+.aggr-toasts__region {
+	display: contents;
+}
+
+.aggr-toast {
+	display: flex;
+	gap: var(--aggr-space-sm);
+	align-items: flex-start;
+	margin: 0;
+	max-width: min(26rem, calc(100vw - 2 * var(--aggr-space-lg)));
+	padding: var(--aggr-space-sm) var(--aggr-space-md);
+	background: var(--aggr-color-surface);
+	border: 1px solid var(--aggr-border-color-strong);
+	border-inline-start: 4px solid var(--aggr-color-neutral);
+	border-radius: var(--aggr-radius-control);
+	box-shadow: 0 6px 20px rgb(0 0 0 / 18%);
+	color: var(--aggr-color-text);
+	font-size: 14px;
+
+	/*
+	 * The host ignores pointer events so it never covers the page; each
+	 * message takes them back, because it carries a dismiss control.
+	 */
+	pointer-events: auto;
+	animation: aggr-toast-in 160ms ease-out;
+}
+
+.aggr-toast__text {
+	margin: 0;
+	flex: 1 1 auto;
+	font-weight: 600;
+}
+
+.aggr-toast__text a {
+	color: inherit;
+	font-weight: 700;
+}
+
+/*
+ * Dismissable by hand, always. Only a success clears itself, so an error or
+ * a warning that nobody has read stays until somebody deals with it — a
+ * message you have to act on does not belong on a timer.
+ */
+.aggr-toast__close {
+	flex: 0 0 auto;
+	padding: 0 var(--aggr-space-2xs);
+	background: none;
+	border: 0;
+	color: var(--aggr-color-text-muted);
+	font-size: 16px;
+	line-height: 1.2;
+	cursor: pointer;
+}
+
+.aggr-toast__close:hover,
+.aggr-toast__close:focus-visible {
+	color: var(--aggr-color-text);
+}
+
+.aggr-toast--success {
+	background: var(--aggr-color-live-tint);
+	border-color: var(--aggr-color-live);
+	color: var(--aggr-color-live);
+}
+
+.aggr-toast--error {
+	background: var(--aggr-color-danger-tint);
+	border-color: var(--aggr-color-danger);
+	color: var(--aggr-color-danger);
+}
+
+.aggr-toast--warning {
+	background: var(--aggr-color-pending-tint);
+	border-color: var(--aggr-color-pending);
+	color: var(--aggr-color-pending);
+}
+
+.aggr-toast--info {
+	background: var(--aggr-color-neutral-tint);
+	border-color: var(--aggr-color-neutral);
+	color: var(--aggr-color-neutral);
+}
+
+.aggr-toast.is-leaving {
+	opacity: 0;
+	transition: opacity 200ms ease;
+}
+
+@keyframes aggr-toast-in {
+
+	from {
+		opacity: 0;
+		transform: translateY(6px);
 	}
 
-	.aggr-upload-card__head {
-		flex-direction: column;
+	to {
+		opacity: 1;
+		transform: none;
+	}
+}
+
+/*
+ * The entrance is decoration; the message is not. Reduced motion keeps the
+ * text and drops the movement.
+ */
+@media (prefers-reduced-motion: reduce) {
+
+	.aggr-toast {
+		animation: none;
+	}
+
+	.aggr-toast.is-leaving {
+		transition: none;
 	}
 }

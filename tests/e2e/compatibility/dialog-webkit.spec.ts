@@ -75,11 +75,14 @@ test( 'the shared creative dialog works in WebKit', async ( { page } ) => {
 	await expect(
 		page.getByRole( 'status' ).filter( { hasText: 'Creative uploaded' } )
 	).toBeVisible();
+	/*
+	 * The preview trigger is a named control in the row beneath the artwork
+	 * now, not the image itself wrapped in a link. Text over a creative is a
+	 * bet on what the advertiser uploaded, and a light banner loses it.
+	 */
 	await expectDialogKeyboard(
 		page,
-		page.getByRole( 'link', {
-			name: 'Advertisement linking to example.com',
-		} ),
+		page.getByRole( 'link', { name: 'Preview' } ),
 		'Preview Article sidebar'
 	);
 } );

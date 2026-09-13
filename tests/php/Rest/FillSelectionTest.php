@@ -154,6 +154,79 @@ final class FillSelectionTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * **Both fill routes tell the browser how much there was to choose from.**
+	 *
+	 * `view.js` refuses to start a rotation at `servable < 2`, so this one
+	 * integer decides whether a slot rotates at all. The per-slot route set it
+	 * in `paid_creative()` and the page batch never set it — and the page batch
+	 * is the route a real page takes, because `firstFill()` asks the batch
+	 * first and only falls back per slot. The result was a placement with two
+	 * live creatives, refresh enabled and the block's toggle on, that never
+	 * changed its advertisement.
+	 *
+	 * Asserted on both routes in one test on purpose. Each route tested alone
+	 * passes while the other is silently missing the field, which is exactly
+	 * how this shipped.
+	 *
+	 * @return void
+	 */
+	public function test_both_fill_routes_report_how_many_creatives_could_have_won(): void {
+		$this->enable_native();
+		$this->stub_images();
+
+		$this->live_campaign( 'https://example.com/one' );
+		$this->live_campaign( 'https://example.com/two' );
+
+		Plugin::instance()->container()->get( Fill_Cache::class )->delete( $this->placement_id );
+
+		$single = rest_get_server()->dispatch(
+			new WP_REST_Request( 'GET', '/aggr/v1/fill/leaderboard' )
+		)->get_data();
+
+		$batch = new WP_REST_Request( 'POST', '/aggr/v1/decisions' );
+		$batch->set_body_params( array( 'slots' => array( 'leaderboard' ) ) );
+		$batched = rest_get_server()->dispatch( $batch )->get_data();
+
+		$this->assertIsArray( $single['creative'] );
+		$this->assertSame( 2, $single['creative']['servable'] );
+
+		$slot = $batched['decisions']['leaderboard'] ?? null;
+		$this->assertIsArray( $slot, 'The batch route answered nothing for the slot.' );
+		$this->assertIsArray( $slot['creative'] );
+		$this->assertArrayHasKey(
+			'servable',
+			$slot['creative'],
+			'The page batch omitted servable, so every slot it answers refuses to rotate.'
+		);
+		$this->assertSame( 2, $slot['creative']['servable'] );
+	}
+
+	/**
+	 * A house advertisement has nothing to rotate to, on either route.
+	 *
+	 * The negative half: `servable` must not become "some number the browser
+	 * will accept". A house fill is one unsold slot's fallback and rotating it
+	 * would re-draw the same image on a timer, so both routes must leave the
+	 * browser with zero.
+	 *
+	 * @return void
+	 */
+	public function test_a_house_fill_offers_nothing_to_rotate_to(): void {
+		$this->enable_native();
+		$this->stub_images();
+
+		Plugin::instance()->container()->get( Fill_Cache::class )->delete( $this->placement_id );
+
+		$batch = new WP_REST_Request( 'POST', '/aggr/v1/decisions' );
+		$batch->set_body_params( array( 'slots' => array( 'leaderboard' ) ) );
+		$slot = rest_get_server()->dispatch( $batch )->get_data()['decisions']['leaderboard'] ?? null;
+
+		$this->assertIsArray( $slot );
+		$this->assertNull( $slot['creative'] );
+		$this->assertArrayNotHasKey( 'servable', (array) ( $slot['house'] ?? array() ) );
+	}
+
+	/**
 	 * Turns native delivery on for this request.
 	 */
 	private function enable_native(): void {

@@ -54,7 +54,7 @@ test( 'administrator creates a placement with a common size and a custom size', 
 	 * behind on every run.
 	 */
 	await modal.getByLabel( 'Slot slug' ).fill( 'e2e-custom-slot' );
-	await modal.getByLabel( 'Size' ).selectOption( 'custom' );
+	await modal.getByLabel( 'Size', { exact: true } ).selectOption( 'custom' );
 	await modal.getByLabel( 'Custom width (px)' ).fill( '123' );
 	await modal.getByLabel( 'Custom height (px)' ).fill( '45' );
 	await modal.getByRole( 'button', { name: 'Create placement' } ).click();
@@ -110,7 +110,7 @@ test( 'administrator creates a placement with a common size and a custom size', 
 	await row.getByRole( 'button', { name: 'Edit' } ).click();
 
 	await expect( modal ).toBeVisible();
-	await modal.getByLabel( 'Size' ).selectOption( '728x90' );
+	await modal.getByLabel( 'Size', { exact: true } ).selectOption( '728x90' );
 	await modal.getByRole( 'button', { name: 'Save placement' } ).click();
 
 	await expect( modal ).toBeHidden();

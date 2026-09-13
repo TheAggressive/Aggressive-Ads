@@ -1,0 +1,320 @@
+/*
+ * The creative card, and the dialogs it opens onto.
+ *
+ * Split out of `_surfaces.css` when that file crossed the thousand-line gate.
+ * The seam is a screen: everything here belongs to the campaign wizard's
+ * creative step — the placement grid, the uploaded creative, the artwork's
+ * own action strip and the upload form — and nothing outside that step reads
+ * any of it.
+ */
+
+/*
+ * Placements sit beside each other rather than one per row.
+ *
+ * A card is a placement, and a placement's widest control is a form input,
+ * which --aggr-field-measure already caps at 34rem. One card per row meant a
+ * 34rem field alone on a 90rem row and the second placement below the fold,
+ * so the tracks are sized just above that cap: three across on a wide screen,
+ * two on a laptop, one on a tablet, and no card ever narrower than its own
+ * fields want to be.
+ */
+.aggr-upload-list {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(26rem, 1fr));
+	gap: var(--aggr-space-lg);
+	margin: var(--aggr-space-lg) 0;
+}
+
+.aggr-upload-card {
+	/*
+	 * What has to stack inside a card is decided by the card's width, not the
+	 * window's. Three cards on a 1440px screen are each narrower than the
+	 * 782px viewport breakpoint would ever fire at.
+	 */
+	container-type: inline-size;
+	padding: var(--aggr-space-lg);
+	background: var(--aggr-color-surface-raised);
+	border: 1px solid var(--aggr-border-color);
+	border-radius: var(--aggr-radius-panel);
+}
+
+/*
+ * Wraps rather than stacking. The container query below used to force this to
+ * a column at 34rem, which put the badge on its own line on a card that had
+ * room for it beside the title; letting it wrap means it only moves when it
+ * genuinely does not fit.
+ */
+.aggr-upload-card__head {
+	display: flex;
+	gap: var(--aggr-space-md);
+	align-items: flex-start;
+	justify-content: space-between;
+	flex-wrap: wrap;
+	margin-bottom: var(--aggr-space-lg);
+}
+
+.aggr-upload-card__head h3,
+.aggr-upload-card__head p,
+.aggr-uploaded p {
+	margin: 0;
+}
+
+.aggr-upload-card__head h3 {
+	font-size: 17px;
+}
+
+.aggr-upload-card__head p {
+	color: var(--aggr-color-text-muted);
+	font-size: 13px;
+}
+
+/*
+ * One column. The two-column rule this replaces was left over from a form
+ * with more fields in it: the file input and the button both spanned
+ * `1 / -1`, so the only thing the second track ever held was the empty half
+ * of the destination URL's row.
+ */
+.aggr-upload-form {
+	display: grid;
+	gap: 0;
+}
+
+.aggr-upload-form button {
+	justify-self: end;
+}
+
+/*
+ * What the client-side checks decided, where the person who chose the file can
+ * read it. It was a screen-reader-only paragraph, so a refused creative looked
+ * like the upload silently breaking.
+ *
+ * `:empty` rather than a hidden class, so nothing has to remember to clear a
+ * modifier: the paragraph is out of the layout exactly when it has no text.
+ */
+.aggr-upload-status {
+	margin: var(--aggr-space-2xs) 0 var(--aggr-space-md);
+	color: var(--aggr-color-text-muted);
+	font-size: 13px;
+}
+
+/*
+ * Collapsed when empty, never `display: none`.
+ *
+ * This is a live region. Taking it out of the layout also takes it out of the
+ * accessibility tree, and a region that appears at the same moment as its
+ * text is the pattern screen readers routinely miss — the same reason the
+ * toast host is created once and left in place. It also made the element
+ * unfindable by role until it happened to have something to say.
+ */
+.aggr-upload-status:empty {
+	margin: 0;
+}
+
+/*
+ * A refusal is bordered as well as coloured. It replaces a message that was
+ * only ever spoken, and colour alone would put a sighted reader using high
+ * contrast back where they started.
+ */
+.aggr-upload-status.is-error {
+	padding: var(--aggr-space-xs) var(--aggr-space-sm);
+	background: var(--aggr-color-danger-tint);
+	color: var(--aggr-color-danger);
+	border-left: 3px solid var(--aggr-color-danger);
+	border-radius: var(--aggr-radius-control);
+	font-weight: 600;
+}
+
+.aggr-upload-form.is-drop-target {
+	outline: 2px dashed var(--aggr-color-accent);
+	outline-offset: 4px;
+	background: var(--aggr-color-surface-inset);
+}
+
+.aggr-uploaded {
+	display: grid;
+	grid-template-columns: minmax(10rem, 16rem) 1fr;
+	gap: var(--aggr-space-lg);
+	align-items: start;
+}
+
+/* A card narrow enough that the preview and its details would fight. */
+@container (max-width: 34rem) {
+
+	.aggr-uploaded {
+		grid-template-columns: 1fr;
+	}
+}
+
+/*
+ * The artwork and its actions, kept together as one grid cell.
+ */
+.aggr-uploaded__figure {
+	display: grid;
+	gap: var(--aggr-space-xs);
+	align-content: start;
+}
+
+.aggr-uploaded__thumb {
+	display: grid;
+	place-items: center;
+	padding: var(--aggr-space-sm);
+	background: var(--aggr-color-surface-inset);
+	border-radius: var(--aggr-radius-control);
+}
+
+.aggr-uploaded__image {
+	display: block;
+	max-width: 100%;
+	max-height: 16rem;
+	object-fit: contain;
+}
+
+/*
+ * Beneath the image rather than on it.
+ *
+ * These were white text over a gradient, which is a bet on what the
+ * advertiser uploaded — a scrim tuned for a dark banner is unreadable over a
+ * light one, and there is no scrim that works for every creative because a
+ * creative is whatever somebody sends. Down here the contrast is the page's
+ * own, and everything the overlay needed — the reveal on hover, the
+ * `:focus-within` fallback, the `hover: none` exception, the opacity dance
+ * that kept the links focusable while invisible — stops existing rather than
+ * being made to work.
+ */
+.aggr-creative-actions {
+	display: flex;
+	gap: var(--aggr-space-md);
+	align-items: baseline;
+	flex-wrap: wrap;
+}
+
+.aggr-uploaded__details {
+	display: grid;
+	gap: var(--aggr-space-xs);
+}
+
+.aggr-uploaded__details .aggr-button {
+	margin-top: var(--aggr-space-sm);
+	justify-self: start;
+}
+
+/*
+ * The destination is the creative's subject line: it is where every click
+ * goes, and it is what somebody proof-reading their own campaign is looking
+ * for. It reads before the filename now, which is metadata and is styled as
+ * metadata.
+ */
+.aggr-uploaded__destination {
+	display: flex;
+	gap: var(--aggr-space-xs);
+	align-items: baseline;
+	flex-wrap: wrap;
+}
+
+.aggr-uploaded__destination-label {
+	color: var(--aggr-color-text-subtle);
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+}
+
+.aggr-uploaded__destination-value {
+	color: var(--aggr-color-text);
+	font-weight: 600;
+
+	/* A destination is one unbroken token and will not wrap on its own. */
+	overflow-wrap: anywhere;
+}
+
+.aggr-uploaded__meta {
+	color: var(--aggr-color-text-muted);
+	font-size: 13px;
+	overflow-wrap: anywhere;
+}
+
+/*
+ * The scheduling disclosure and removal on one line, with removal pushed to
+ * the end. `flex-start` rather than a baseline, so opening the disclosure
+ * grows it downwards and leaves the link where it was.
+ */
+.aggr-uploaded__actions {
+	display: flex;
+	gap: var(--aggr-space-md);
+	align-items: baseline;
+	flex-wrap: wrap;
+	margin-top: var(--aggr-space-xs);
+}
+
+/*
+ * The add-another trigger belongs to the card rather than to the creative
+ * above it, so it is separated from it.
+ */
+.aggr-add-creative {
+	margin: var(--aggr-space-lg) 0 0;
+	padding-top: var(--aggr-space-md);
+	border-top: 1px solid var(--aggr-border-color);
+}
+
+/*
+ * A card's own edits. Underlined only on hover and focus, because three
+ * permanently underlined links under a picture is a card that looks like a
+ * table of contents.
+ */
+.aggr-card-action {
+	color: var(--aggr-color-text-muted);
+	font-size: 13px;
+	font-weight: 600;
+	text-decoration: none;
+}
+
+/*
+ * An edit that has something behind it reads as settled rather than offered.
+ * Weight and colour, not colour alone.
+ */
+.aggr-card-action--set {
+	color: var(--aggr-color-text);
+	font-weight: 700;
+}
+
+/*
+ * Destructive, and last in its row. Colour is not the only cue: it is the
+ * only action here that opens a confirmation, and it sits apart from the two
+ * that do not.
+ */
+.aggr-card-action--danger {
+	margin-inline-start: auto;
+	color: var(--aggr-color-danger);
+}
+
+.aggr-card-action--danger:hover,
+.aggr-card-action--danger:focus-visible {
+	color: var(--aggr-color-danger);
+}
+
+.aggr-card-action:hover,
+.aggr-card-action:focus-visible {
+	color: var(--aggr-color-text);
+	text-decoration: underline;
+	text-decoration-thickness: 1px;
+	text-underline-offset: 3px;
+}
+
+/*
+ * The destination edit, inside its fold.
+ *
+ * Its own rule rather than borrowing the upload form's: this form has one
+ * field and lives in a column roughly a third of the page, where the shared
+ * 34rem control measure is wider than the space it has.
+ */
+.aggr-variant-destination {
+	margin-top: var(--aggr-space-xs);
+}
+
+.aggr-variant-destination .aggr-field {
+	margin-bottom: var(--aggr-space-sm);
+}
+
+.aggr-variant-destination input[type="url"] {
+	max-width: 100%;
+}

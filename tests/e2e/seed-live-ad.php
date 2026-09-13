@@ -523,6 +523,52 @@ wp_insert_post(
 );
 
 /*
+ * ── The page-batch rotation fixture ─────────────────────────────────────────
+ *
+ * **One slot, alone on its page, so the page batch is what answers it.**
+ *
+ * `batchableSlugs()` drops any slug appearing twice, and the rotation page
+ * above carries `e2e-browser-placement` twice on purpose — so every assertion
+ * on that page is about the per-slot fallback route, and the batch route had
+ * no rotation coverage at all. It shipped without `servable` on its payload:
+ * `view.js` read `undefined`, treated it as zero, and refused to start a timer
+ * on every page a real visitor loads. Two live creatives, refresh enabled, the
+ * block's toggle on, and an advertisement that never changed.
+ *
+ * A separate page rather than a fifth slot on the rotation page, because a
+ * unique slug is the whole precondition — adding it there would make it a
+ * duplicate and send it straight back down the route that already worked.
+ *
+ * Two slots, because one is not a page: `requestPageDecisions()` returns an
+ * empty map below two batchable slugs, on the grounds that every page rule
+ * compares one slot's candidate against what another slot already took. The
+ * rotating slot is placed *first* so it is decided before anything has been
+ * served — page coordination can exclude a candidate that duplicates an asset
+ * or an advertiser already on the page, and a shrunken candidate set would
+ * fail this test for a reason that has nothing to do with what it is asking.
+ */
+$aggr_batch_slot = '<!-- wp:aggr/ad-slot {"slot":"e2e-browser-placement","rotate":true,"rotateSeconds":2} /-->';
+
+// A second slug so the batch is reached at all; static, so it rotates nothing.
+$aggr_batch_neighbour = '<!-- wp:aggr/ad-slot {"slot":"e2e-lonely-placement"} /-->';
+
+$aggr_batch_page = get_page_by_path( 'e2e-rotation-batch', OBJECT, 'page' );
+
+if ( $aggr_batch_page instanceof WP_Post ) {
+	wp_delete_post( $aggr_batch_page->ID, true );
+}
+
+wp_insert_post(
+	array(
+		'post_type'    => 'page',
+		'post_status'  => 'publish',
+		'post_title'   => 'E2E rotation batch',
+		'post_name'    => 'e2e-rotation-batch',
+		'post_content' => $aggr_batch_slot . $aggr_batch_neighbour . $aggr_spacer,
+	)
+);
+
+/*
  * ── The slot-surfaces fixture ────────────────────────────────────────────────
  *
  * Two things no other page here asks about.

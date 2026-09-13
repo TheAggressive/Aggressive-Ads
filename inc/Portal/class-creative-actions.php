@@ -11,7 +11,6 @@ namespace Aggressive\Ads\Portal;
 
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Domain\Assignment_Rules;
-use Aggressive\Ads\Domain\Upload_Rules;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Workflow\Assignment_Editor;
 use Aggressive\Ads\Workflow\Creative_Change_Manager;
@@ -23,13 +22,15 @@ use WP_Error;
  */
 final class Creative_Actions implements Service {
 
-	public const UPLOAD_ACTION   = 'aggr_upload_creative';
-	public const REMOVE_ACTION   = 'aggr_remove_creative';
-	public const REPLACE_ACTION  = 'aggr_request_creative_replacement';
-	public const WITHDRAW_ACTION = 'aggr_withdraw_creative_replacement';
-	public const WEIGHT_ACTION   = 'aggr_set_creative_weight';
-	public const STATUS_ACTION   = 'aggr_set_creative_status';
-	public const WINDOW_ACTION   = 'aggr_set_creative_window';
+	public const UPLOAD_ACTION      = 'aggr_upload_creative';
+	public const REMOVE_ACTION      = 'aggr_remove_creative';
+	public const REPLACE_ACTION     = 'aggr_request_creative_replacement';
+	public const WITHDRAW_ACTION    = 'aggr_withdraw_creative_replacement';
+	public const WEIGHT_ACTION      = 'aggr_set_creative_weight';
+	public const STATUS_ACTION      = 'aggr_set_creative_status';
+	public const WINDOW_ACTION      = 'aggr_set_creative_window';
+	public const DESTINATION_ACTION = 'aggr_set_creative_destination';
+	public const ARTWORK_ACTION     = 'aggr_replace_creative_artwork';
 
 	/**
 	 * Constructor.
@@ -37,11 +38,13 @@ final class Creative_Actions implements Service {
 	 * @param Creative_Manager        $manager     Shared draft creative workflow.
 	 * @param Creative_Change_Manager $changes     Reviewed published-ad changes.
 	 * @param Assignment_Editor       $assignments Delivery settings on one assignment.
+	 * @param Creative_View_Data      $creatives   Render-ready creative rows, for restating shares.
 	 */
 	public function __construct(
 		private readonly Creative_Manager $manager,
 		private readonly Creative_Change_Manager $changes,
-		private readonly Assignment_Editor $assignments
+		private readonly Assignment_Editor $assignments,
+		private readonly Creative_View_Data $creatives
 	) {
 	}
 
@@ -58,6 +61,8 @@ final class Creative_Actions implements Service {
 		add_action( 'admin_post_' . self::WEIGHT_ACTION, array( $this, 'handle_weight' ) );
 		add_action( 'admin_post_' . self::STATUS_ACTION, array( $this, 'handle_status' ) );
 		add_action( 'admin_post_' . self::WINDOW_ACTION, array( $this, 'handle_window' ) );
+		add_action( 'admin_post_' . self::DESTINATION_ACTION, array( $this, 'handle_destination' ) );
+		add_action( 'admin_post_' . self::ARTWORK_ACTION, array( $this, 'handle_artwork' ) );
 	}
 
 	/**
@@ -77,13 +82,58 @@ final class Creative_Actions implements Service {
 		$file      = isset( $_FILES['file'] ) && is_array( $_FILES['file'] ) ? $_FILES['file'] : array();
 		$click_url = isset( $_POST['click_url'] ) ? sanitize_text_field( wp_unslash( $_POST['click_url'] ) ) : '';
 		$alt_text  = isset( $_POST['alt_text'] ) ? sanitize_text_field( wp_unslash( $_POST['alt_text'] ) ) : '';
-		$result    = $this->changes->request( $creative_id, $file, $click_url, $alt_text );
+		$result    = $this->process_replace( $creative_id, $file, $click_url, $alt_text );
 
 		if ( is_wp_error( $result ) ) {
-			$this->redirect( $campaign_id, 'error', $result );
+			Creative_Feedback::after( $campaign_id, 'error', $result );
 		}
 
-		$this->redirect( $campaign_id, 'creative_update_requested' );
+		Creative_Feedback::after( $campaign_id, 'creative_update_requested' );
+	}
+
+	/**
+	 * Testable replacement entry point, artwork optional.
+	 *
+	 * **A destination-only correction must not require re-uploading artwork
+	 * that has not changed.** `request_text_change()` exists for exactly that
+	 * and the REST route has always branched to it; the portal did not, so the
+	 * one screen an advertiser actually uses made a live campaign's typo
+	 * unfixable without a file they had no reason to touch. Both paths stage a
+	 * reviewed revision and both leave the current ad serving.
+	 *
+	 * @param int                  $creative_id Creative post id.
+	 * @param array<string, mixed> $file        One $_FILES entry, empty when none.
+	 * @param string               $click_url   Destination.
+	 * @param string               $alt_text    Alternative text.
+	 * @return array<string, mixed>|WP_Error
+	 */
+	public function process_replace( int $creative_id, array $file, string $click_url, string $alt_text ): array|WP_Error {
+		return self::has_upload( $file )
+			? $this->changes->request( $creative_id, $file, $click_url, $alt_text )
+			: $this->changes->request_text_change( $creative_id, $click_url, $alt_text );
+	}
+
+	/**
+	 * Whether a `$_FILES` entry actually carries a file.
+	 *
+	 * A form that submits an untouched file input still produces an entry —
+	 * PHP fills it with `UPLOAD_ERR_NO_FILE` and an empty name — so an
+	 * emptiness test on the array itself is always false here. REST sees no
+	 * entry at all, which is why its own check is simpler and why copying it
+	 * would have sent every text-only edit down the artwork path.
+	 *
+	 * @param array<string, mixed> $file One $_FILES entry.
+	 * @return bool
+	 */
+	private static function has_upload( array $file ): bool {
+		if ( array() === $file ) {
+			return false;
+		}
+
+		$error = isset( $file['error'] ) ? (int) $file['error'] : UPLOAD_ERR_NO_FILE;
+		$tmp   = isset( $file['tmp_name'] ) && is_string( $file['tmp_name'] ) ? $file['tmp_name'] : '';
+
+		return UPLOAD_ERR_NO_FILE !== $error && '' !== $tmp;
 	}
 
 	/**
@@ -102,10 +152,10 @@ final class Creative_Actions implements Service {
 		$result = $this->changes->withdraw( $replacement_id );
 
 		if ( is_wp_error( $result ) ) {
-			$this->redirect( $campaign_id, 'error', $result );
+			Creative_Feedback::after( $campaign_id, 'error', $result );
 		}
 
-		$this->redirect( $campaign_id, 'creative_update_withdrawn' );
+		Creative_Feedback::after( $campaign_id, 'creative_update_withdrawn' );
 	}
 
 	/**
@@ -128,10 +178,10 @@ final class Creative_Actions implements Service {
 		$result    = $this->process_upload( $campaign_id, $placement_id, $file, $click_url, $alt_text );
 
 		if ( is_wp_error( $result ) ) {
-			$this->redirect( $campaign_id, 'error', $result, $placement_id );
+			Creative_Feedback::after( $campaign_id, 'error', $result, $placement_id );
 		}
 
-		$this->redirect( $campaign_id, 'creative_uploaded' );
+		Creative_Feedback::after( $campaign_id, 'creative_uploaded' );
 	}
 
 	/**
@@ -150,10 +200,10 @@ final class Creative_Actions implements Service {
 		$result = $this->process_remove( $creative_id );
 
 		if ( is_wp_error( $result ) ) {
-			$this->redirect( $campaign_id, 'error', $result );
+			Creative_Feedback::after( $campaign_id, 'error', $result );
 		}
 
-		$this->redirect( $campaign_id, 'creative_removed' );
+		Creative_Feedback::after( $campaign_id, 'creative_removed' );
 	}
 
 	/**
@@ -202,6 +252,26 @@ final class Creative_Actions implements Service {
 	}
 
 	/**
+	 * Nonce scoped to one creative's artwork.
+	 *
+	 * @param int $creative_id Creative post id.
+	 * @return string
+	 */
+	public static function artwork_nonce_action( int $creative_id ): string {
+		return 'aggr_creative_artwork_' . $creative_id;
+	}
+
+	/**
+	 * Nonce scoped to one creative's destination.
+	 *
+	 * @param int $creative_id Creative post id.
+	 * @return string
+	 */
+	public static function destination_nonce_action( int $creative_id ): string {
+		return 'aggr_creative_destination_' . $creative_id;
+	}
+
+	/**
 	 * Nonce scoped to a current creative replacement request.
 	 *
 	 * @param int $creative_id Current creative id.
@@ -228,10 +298,10 @@ final class Creative_Actions implements Service {
 		$result = $this->process_weight( $creative_id, $weight );
 
 		if ( is_wp_error( $result ) ) {
-			$this->redirect( $campaign_id, 'error', $result );
+			Creative_Feedback::after( $campaign_id, 'error', $result );
 		}
 
-		$this->redirect( $campaign_id, 'creative_weight_saved' );
+		Creative_Feedback::after( $campaign_id, 'creative_weight_saved', null, 0, 0, $this->share_patch( $campaign_id ) );
 	}
 
 	/**
@@ -243,6 +313,83 @@ final class Creative_Actions implements Service {
 	 */
 	public function process_weight( int $creative_id, int $weight ): bool|WP_Error {
 		return $this->manager->set_weight( $creative_id, $weight );
+	}
+
+	/**
+	 * Swaps the artwork on one creative that review has not yet accepted.
+	 *
+	 * @return void
+	 */
+	public function handle_artwork(): void {
+		$this->assert_portal_access();
+
+		$creative_id = isset( $_POST['creative_id'] ) ? absint( $_POST['creative_id'] ) : 0;
+		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0;
+
+		check_admin_referer( self::artwork_nonce_action( $creative_id ) );
+
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized, WordPress.Security.ValidatedSanitizedInput.MissingUnslash -- Raw $_FILES entry; Creative_Uploader validates the bytes, and sanitising the array here would corrupt tmp_name.
+		$file = isset( $_FILES['file'] ) && is_array( $_FILES['file'] ) ? $_FILES['file'] : array();
+
+		$result = $this->process_artwork( $creative_id, $file );
+
+		if ( is_wp_error( $result ) ) {
+			Creative_Feedback::after( $campaign_id, 'error', $result, 0, $creative_id );
+		}
+
+		Creative_Feedback::after( $campaign_id, 'creative_artwork_replaced' );
+	}
+
+	/**
+	 * Testable artwork entry point.
+	 *
+	 * @param int                  $creative_id Creative post id.
+	 * @param array<string, mixed> $file        One $_FILES entry.
+	 * @return array<string, mixed>|WP_Error
+	 */
+	public function process_artwork( int $creative_id, array $file ): array|WP_Error {
+		return $this->manager->replace_artwork( $creative_id, $file );
+	}
+
+	/**
+	 * Repoints one creative that review has not yet accepted.
+	 *
+	 * @return void
+	 */
+	public function handle_destination(): void {
+		$this->assert_portal_access();
+
+		$creative_id = isset( $_POST['creative_id'] ) ? absint( $_POST['creative_id'] ) : 0;
+		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0;
+		$click_url   = isset( $_POST['click_url'] ) ? sanitize_text_field( wp_unslash( $_POST['click_url'] ) ) : '';
+
+		check_admin_referer( self::destination_nonce_action( $creative_id ) );
+
+		$result = $this->process_destination( $creative_id, $click_url );
+
+		if ( is_wp_error( $result ) ) {
+			Creative_Feedback::after( $campaign_id, 'error', $result, 0, $creative_id );
+		}
+
+		Creative_Feedback::after(
+			$campaign_id,
+			'creative_destination_saved',
+			null,
+			0,
+			0,
+			Creative_Feedback::destination_patch( $creative_id, $click_url )
+		);
+	}
+
+	/**
+	 * Testable destination entry point.
+	 *
+	 * @param int    $creative_id Creative post id.
+	 * @param string $click_url   New destination.
+	 * @return true|WP_Error
+	 */
+	public function process_destination( int $creative_id, string $click_url ): bool|WP_Error {
+		return $this->manager->set_destination( $creative_id, $click_url );
 	}
 
 	/**
@@ -263,10 +410,10 @@ final class Creative_Actions implements Service {
 		$result = $this->process_status( $campaign_id, $assignment_id, $intent, $revision );
 
 		if ( is_wp_error( $result ) ) {
-			$this->redirect( $campaign_id, 'error', $result );
+			Creative_Feedback::after( $campaign_id, 'error', $result );
 		}
 
-		$this->redirect(
+		Creative_Feedback::after(
 			$campaign_id,
 			'pause' === $intent ? 'creative_paused' : 'creative_resumed'
 		);
@@ -330,10 +477,17 @@ final class Creative_Actions implements Service {
 		$result = $this->process_window( $campaign_id, $assignment_id, $start, $end, $revision );
 
 		if ( is_wp_error( $result ) ) {
-			$this->redirect( $campaign_id, 'error', $result );
+			Creative_Feedback::after( $campaign_id, 'error', $result );
 		}
 
-		$this->redirect( $campaign_id, 'creative_window_saved' );
+		Creative_Feedback::after(
+			$campaign_id,
+			'creative_window_saved',
+			null,
+			0,
+			0,
+			array( '#aggr-window-label-' . $assignment_id => Creative_Feedback::window_label( $start, $end ) )
+		);
 	}
 
 	/**
@@ -414,119 +568,51 @@ final class Creative_Actions implements Service {
 		return self::WITHDRAW_ACTION . '_' . max( 0, $replacement_id );
 	}
 
-	/**
-	 * Reads an allowlisted creative notice.
-	 *
-	 * @return string
-	 */
-	public static function request_notice(): string {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only post/redirect/get display state.
-		$value = isset( $_GET['aggr_notice'] ) ? sanitize_key( wp_unslash( $_GET['aggr_notice'] ) ) : '';
 
-		return in_array( $value, array( 'creative_uploaded', 'creative_removed', 'creative_update_requested', 'creative_update_withdrawn', 'creative_weight_saved', 'creative_paused', 'creative_resumed', 'creative_window_saved', 'error' ), true ) ? $value : '';
-	}
+
+
 
 	/**
-	 * Reads the safe error code passed through the redirect.
+	 * Every share sentence on a campaign, restated.
 	 *
-	 * @return string
-	 */
-	public static function request_error_code(): string {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only allowlisted display state.
-		return isset( $_GET['aggr_error'] ) ? sanitize_key( wp_unslash( $_GET['aggr_error'] ) ) : '';
-	}
-
-	/**
-	 * Placement related to the upload error, or zero.
+	 * A weight is relative, so saving one creative's share changes what every
+	 * other creative on that placement is delivering. Patching only the card
+	 * that was edited would leave its neighbours showing percentages that no
+	 * longer add up — which is worse than not updating at all, because it
+	 * looks settled.
 	 *
-	 * @return int
-	 */
-	public static function request_error_placement(): int {
-		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only in-page link target.
-		return isset( $_GET['aggr_placement'] ) ? absint( $_GET['aggr_placement'] ) : 0;
-	}
-
-	/**
-	 * Stable message for a redirect error code.
+	 * Built from the same view data the page rendered with, so the sentence
+	 * that replaces one is the sentence a reload would have produced.
 	 *
-	 * @param string $code Error code.
-	 * @return string
+	 * @param int $campaign_id Campaign post id.
+	 * @return array<string, string>
 	 */
-	public static function error_message( string $code ): string {
-		return match ( $code ) {
-			'aggr_click_url_required'       => __( 'Enter the destination URL for this creative.', 'aggressive-ads' ),
-			'aggr_click_url_invalid'        => __( 'Enter a valid http or https destination URL without embedded credentials.', 'aggressive-ads' ),
-			'aggr_alt_text_required'        => __( 'Describe the ad creative for people who cannot see it.', 'aggressive-ads' ),
-			'aggr_alt_text_too_long'        => __( 'Use 500 characters or fewer for the ad creative description.', 'aggressive-ads' ),
-			'aggr_creative_size_mismatch'   => __( 'The uploaded dimensions do not match this placement. Resize the ad creative to the required dimensions and try again.', 'aggressive-ads' ),
-			'aggr_creative_limit_reached'   => __( 'This placement already has the maximum number of creatives. Remove one before uploading another.', 'aggressive-ads' ),
-			'aggr_replacement_pending'       => __( 'This ad already has an update waiting for review.', 'aggressive-ads' ),
-			'aggr_replacement_unavailable'   => __( 'Only an ad in a scheduled or live campaign can be updated.', 'aggressive-ads' ),
-			'aggr_replacement_busy'          => __( 'Another update is already being saved for this ad. Try again.', 'aggressive-ads' ),
-			'aggr_upload_no_file'           => __( 'No file was received. Choose an ad creative and try again.', 'aggressive-ads' ),
-			'aggr_upload_too_large'         => sprintf(
-				/* translators: %s: maximum file size. */
-				__( 'That file is larger than %s. Save it at a smaller size and try again.', 'aggressive-ads' ),
-				size_format( Upload_Rules::MAX_BYTES )
-			),
-			'aggr_upload_too_many_pixels'   => __( 'That ad creative has too many pixels to process. Resize it to the placement dimensions and try again.', 'aggressive-ads' ),
-			'aggr_upload_not_an_image'      => __( 'That file is not a readable image. JPEG, PNG, GIF, and WebP are supported.', 'aggressive-ads' ),
-			'aggr_upload_type_mismatch'     => __( 'The file contents do not match its filename, so it was not accepted.', 'aggressive-ads' ),
-			'aggr_upload_type_not_allowed'  => __( 'That file type is not supported. Use JPEG, PNG, GIF, or WebP.', 'aggressive-ads' ),
-			'aggr_upload_failed'            => __( 'The upload did not complete. Try again.', 'aggressive-ads' ),
-			'aggr_placement_unavailable',
-			'aggr_placement_not_selected'   => __( 'That placement is not available for this campaign.', 'aggressive-ads' ),
-			'aggr_campaign_not_editable'    => __( 'This campaign cannot be changed right now.', 'aggressive-ads' ),
-			'aggr_rate_limited'             => __( 'There have been too many uploads. Wait a moment and try again.', 'aggressive-ads' ),
+	private function share_patch( int $campaign_id ): array {
+		$patch = array();
 
-			/*
-			 * **A refusal is not a retry, and it says which refusal.**
-			 *
-			 * Every code below once fell through to the default, so being
-			 * denied permission, removing a published creative, or hitting a
-			 * storage mismatch all read as "could not be saved, please try
-			 * again" — inviting the reader to repeat an action that cannot
-			 * succeed, and hiding a 403 behind what looks like a glitch.
-			 *
-			 * The forbidden cases then carry one code each, because the portal
-			 * renders from the code alone: the error crosses a redirect as a
-			 * string rather than as a `WP_Error`, so a shared code means a
-			 * shared sentence whatever the manager wrote. "You do not have
-			 * permission" is true of all four and useful for none.
-			 */
-			'aggr_upload_forbidden'         => __( 'You do not have permission to upload creative for this campaign.', 'aggressive-ads' ),
-			'aggr_remove_forbidden'         => __( 'You do not have permission to remove that creative.', 'aggressive-ads' ),
-			'aggr_forbidden'                => __( 'You do not have permission to change that creative.', 'aggressive-ads' ),
-			'aggr_creative_published'       => __( 'A published creative cannot be removed from this draft workflow.', 'aggressive-ads' ),
-			'aggr_creative_not_deleted'     => __( 'The creative could not be removed. Please try again.', 'aggressive-ads' ),
-			'aggr_creative_restore_failed'  => __( 'The creative record and file could not be reconciled. Please contact an administrator.', 'aggressive-ads' ),
-			'aggr_creative_not_created'     => __( 'The creative could not be saved. Please try again.', 'aggressive-ads' ),
-			default                             => __( 'The creative could not be saved. Please try again.', 'aggressive-ads' ),
-		};
-	}
+		foreach ( $this->creatives->creative_rows( $campaign_id ) as $creative ) {
+			$share = $creative['share'] ?? null;
 
-	/**
-	 * In-page field target for a creative error.
-	 *
-	 * @param string $code         Error code.
-	 * @param int    $placement_id Related placement.
-	 * @return string
-	 */
-	public static function error_target( string $code, int $placement_id ): string {
-		if ( $placement_id <= 0 ) {
-			return '';
+			if ( null === $share ) {
+				continue;
+			}
+
+			$patch[ '#aggr-share-ratio-' . (int) $creative['id'] ] = sprintf(
+				/* translators: %s: this creative's share of the placement, e.g. 75%. */
+				__( 'About %s of this placement.', 'aggressive-ads' ),
+				number_format_i18n( (float) $share * 100, 0 ) . '%'
+			);
 		}
 
-		$prefix = match ( $code ) {
-			'aggr_click_url_required',
-			'aggr_click_url_invalid' => 'aggr-click-',
-			'aggr_alt_text_required',
-			'aggr_alt_text_too_long' => 'aggr-alt-',
-			default                      => 'aggr-file-',
-		};
-
-		return $prefix . $placement_id;
+		return $patch;
 	}
+
+
+
+
+
+
+
 
 	/**
 	 * Refuses direct handler calls without portal access.
@@ -539,32 +625,5 @@ final class Creative_Actions implements Service {
 		}
 
 		wp_die( esc_html__( 'You do not have permission to do that.', 'aggressive-ads' ), '', array( 'response' => 403 ) );
-	}
-
-	/**
-	 * Redirects after one write without carrying user-provided messages.
-	 *
-	 * @param int           $campaign_id  Campaign post id.
-	 * @param string        $notice       Notice key.
-	 * @param WP_Error|null $error        Optional workflow error.
-	 * @param int           $placement_id Optional placement for field focus.
-	 * @return never
-	 */
-	private function redirect( int $campaign_id, string $notice, ?WP_Error $error = null, int $placement_id = 0 ): never {
-		$args = array(
-			'step'        => 'creative',
-			'aggr_notice' => $notice,
-		);
-
-		if ( null !== $error ) {
-			$args['aggr_error'] = sanitize_key( (string) $error->get_error_code() );
-		}
-
-		if ( $placement_id > 0 ) {
-			$args['aggr_placement'] = $placement_id;
-		}
-
-		wp_safe_redirect( add_query_arg( $args, Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id ) ) );
-		exit;
 	}
 }

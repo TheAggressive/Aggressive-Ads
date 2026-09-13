@@ -58,6 +58,13 @@ remains fully supported for backward compatibility.
   }
   ```
 
+Each `creative` carries `servable` — how many candidates could have taken that
+slot — exactly as `GET /aggr/v1/fill/{slot}` does. It is what `view.js` checks
+before starting a rotation (`servable < 2` stops), and this route shipped
+without it: the browser read `undefined`, took it for zero, and no slot the
+batch answered ever rotated. Both routes write it or neither should, and
+`bin/ci/check-client-contract.mjs` now fails when only one does.
+
 ### Invariants
 
 1. **Deterministic Resolution**: Given the same slot order, candidates, and random seed, batch decisions are strictly reproducible.

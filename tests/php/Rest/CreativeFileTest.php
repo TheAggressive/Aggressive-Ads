@@ -19,6 +19,7 @@ use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Security\Ownership;
 use Aggressive\Ads\Security\Roles;
 use Aggressive\Ads\Storage\Private_Storage;
+use Aggressive\Ads\Domain\Upload_Rules;
 use Aggressive\Ads\Workflow\Creative_Uploader;
 use WP_REST_Request;
 use WP_UnitTestCase;
@@ -167,7 +168,8 @@ final class CreativeFileTest extends WP_UnitTestCase {
 				'tmp_name' => $temp,
 				'error'    => UPLOAD_ERR_OK,
 				'size'     => strlen( $bytes ),
-			)
+			),
+			Upload_Rules::CEILING_MAX_BYTES
 		);
 
 		$this->assertIsArray( $accepted );

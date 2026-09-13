@@ -14,6 +14,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 use Aggressive\Ads\Domain\Campaign_Filter;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Portal\Campaign_Actions;
+use Aggressive\Ads\Portal\Portal_Notice;
 use Aggressive\Ads\Portal\Request;
 use Aggressive\Ads\Portal\Routes;
 use Aggressive\Ads\Portal\View_Data;
@@ -37,15 +38,16 @@ $aggr_campaigns = $aggr_view->campaigns( 1, $aggr_filter );
 $aggr_notice    = Campaign_Actions::request_notice();
 $aggr_error     = Campaign_Actions::request_error_code();
 ?>
-<?php if ( 'error' === $aggr_notice ) : ?>
-	<div class="aggr-alert aggr-alert--error" role="alert">
-		<p><?php echo esc_html( Campaign_Actions::error_message( $aggr_error ) ); ?></p>
-	</div>
-<?php elseif ( 'cancelled' === $aggr_notice ) : ?>
-	<div class="aggr-alert aggr-alert--success" role="status">
-		<p><?php esc_html_e( 'Campaign ended. It stays in your list as cancelled, along with anything it delivered.', 'aggressive-ads' ); ?></p>
-	</div>
-<?php endif; ?>
+<?php
+if ( 'error' === $aggr_notice ) {
+	Portal_Notice::add( Campaign_Actions::error_message( $aggr_error ), 'error' );
+} elseif ( 'cancelled' === $aggr_notice ) {
+	Portal_Notice::add(
+		__( 'Campaign ended. It stays in your list as cancelled, along with anything it delivered.', 'aggressive-ads' ),
+		'success'
+	);
+}
+?>
 
 <div class="aggr-pagehead">
 	<div>

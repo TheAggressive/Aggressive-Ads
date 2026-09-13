@@ -59,8 +59,8 @@ $aggr_help = Plugin::instance()->container()->get( View_Data::class )->help();
 		<p>
 			<?php
 			printf(
-				/* translators: 1: comma-separated file types, e.g. JPG, PNG. 2: maximum file size, e.g. 2 MB. */
-				esc_html__( 'Images only: %1$s, up to %2$s each.', 'aggressive-ads' ),
+				/* translators: 1: comma-separated file types, e.g. JPG, PNG. 2: the largest file any placement accepts, e.g. 2 MB. */
+				esc_html__( 'Images only: %1$s, and never larger than %2$s. Most placements ask for a good deal less — the table below gives the limit for each one.', 'aggressive-ads' ),
 				esc_html( implode( ', ', $aggr_help['file_types'] ) ),
 				esc_html( (string) $aggr_help['max_size'] )
 			);
@@ -76,6 +76,7 @@ $aggr_help = Plugin::instance()->container()->get( View_Data::class )->help();
 					<tr>
 						<th scope="col"><?php esc_html_e( 'Placement', 'aggressive-ads' ); ?></th>
 						<th scope="col"><?php esc_html_e( 'Required size', 'aggressive-ads' ); ?></th>
+						<th scope="col"><?php esc_html_e( 'Largest file', 'aggressive-ads' ); ?></th>
 					</tr>
 				</thead>
 				<tbody>
@@ -91,6 +92,7 @@ $aggr_help = Plugin::instance()->container()->get( View_Data::class )->help();
 								);
 								?>
 							</td>
+							<td><?php echo esc_html( (string) $aggr_placement['max_size'] ); ?></td>
 						</tr>
 					<?php endforeach; ?>
 				</tbody>

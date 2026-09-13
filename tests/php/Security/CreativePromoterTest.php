@@ -14,6 +14,7 @@ use Aggressive\Ads\Repository\Creative_Attachment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Storage\Private_Storage;
 use Aggressive\Ads\Workflow\Creative_Promoter;
+use Aggressive\Ads\Domain\Upload_Rules;
 use Aggressive\Ads\Workflow\Creative_Uploader;
 use WP_Error;
 use WP_UnitTestCase;
@@ -116,7 +117,8 @@ final class CreativePromoterTest extends WP_UnitTestCase {
 				'tmp_name' => $temp,
 				'error'    => UPLOAD_ERR_OK,
 				'size'     => strlen( $bytes ),
-			)
+			),
+			Upload_Rules::CEILING_MAX_BYTES
 		);
 
 		$this->assertNotInstanceOf( WP_Error::class, $accepted );

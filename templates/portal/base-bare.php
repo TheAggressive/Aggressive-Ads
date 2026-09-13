@@ -75,6 +75,8 @@ $aggr_head_has_viewport = has_action( 'wp_head', '_block_template_viewport_meta_
 	?>
 </main>
 
+<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/toast-host.php'; ?>
+
 <?php wp_footer(); ?>
 </body>
 </html>

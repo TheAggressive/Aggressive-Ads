@@ -38,7 +38,12 @@ $aggr_window_end   = 'aggr-ends-' . $aggr_assignment_id;
 $aggr_parent_start = (string) ( $aggr_campaign['start_date'] ?? '' );
 $aggr_parent_end   = (string) ( $aggr_campaign['end_date'] ?? '' );
 ?>
-<form class="aggr-variant-window" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+<form
+	class="aggr-variant-window"
+	method="post"
+	action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"
+	data-aggr-save="<?php echo esc_attr( 'aggr-save-window-' . $aggr_assignment_id ); ?>"
+>
 	<input type="hidden" name="action" value="<?php echo esc_attr( Creative_Actions::WINDOW_ACTION ); ?>">
 	<input type="hidden" name="assignment_id" value="<?php echo esc_attr( (string) $aggr_assignment_id ); ?>">
 	<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) (int) $aggr_campaign['id'] ); ?>">

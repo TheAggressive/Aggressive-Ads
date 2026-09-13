@@ -205,7 +205,8 @@ final class Portal_Service_Registrar {
 			static fn ( Service_Container $c ): Creative_Actions => new Creative_Actions(
 				$c->get( Creative_Manager::class ),
 				$c->get( Creative_Change_Manager::class ),
-				$c->get( Assignment_Editor::class )
+				$c->get( Assignment_Editor::class ),
+				$c->get( Creative_View_Data::class )
 			)
 		);
 	}

@@ -15,6 +15,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Portal\Portal_Notice;
 use Aggressive\Ads\Portal\Account_Actions;
 use Aggressive\Ads\Portal\Email_Change_Actions;
 use Aggressive\Ads\Portal\View_Data;
@@ -34,27 +35,25 @@ $aggr_email_error = isset( $_GET['aggr_error'] ) ? sanitize_key( wp_unslash( $_G
 	</div>
 </div>
 
-<?php if ( 'error' === $aggr_notice ) : ?>
-	<div class="aggr-alert aggr-alert--error" role="alert">
-		<p><?php echo esc_html( Account_Actions::error_message( $aggr_error ) ); ?></p>
-	</div>
-<?php elseif ( 'saved' === $aggr_notice ) : ?>
-	<div class="aggr-alert aggr-alert--success" role="status">
-		<p><?php esc_html_e( 'Your details were saved.', 'aggressive-ads' ); ?></p>
-	</div>
-<?php elseif ( 'password_sent' === $aggr_notice ) : ?>
-	<div class="aggr-alert aggr-alert--success" role="status">
-		<p><?php esc_html_e( 'Check your email for a link to set a new password.', 'aggressive-ads' ); ?></p>
-	</div>
-<?php elseif ( 'email_error' === $aggr_email_notice ) : ?>
-	<div class="aggr-alert aggr-alert--error" role="alert">
-		<p><?php echo esc_html( Email_Change_Actions::error_message( $aggr_email_error ) ); ?></p>
-	</div>
-<?php elseif ( '' !== $aggr_email_notice ) : ?>
-	<div class="aggr-alert <?php echo esc_attr( 'rate_limited' === $aggr_email_notice ? 'aggr-alert--error' : 'aggr-alert--success' ); ?>" role="status">
-		<p><?php echo esc_html( Email_Change_Actions::account_notice_message( $aggr_email_notice ) ); ?></p>
-	</div>
-<?php endif; ?>
+<?php
+if ( 'error' === $aggr_notice ) {
+	Portal_Notice::add( Account_Actions::error_message( $aggr_error ), 'error' );
+} elseif ( 'saved' === $aggr_notice ) {
+	Portal_Notice::add( __( 'Your details were saved.', 'aggressive-ads' ), 'success' );
+} elseif ( 'password_sent' === $aggr_notice ) {
+	Portal_Notice::add(
+		__( 'Check your email for a link to set a new password.', 'aggressive-ads' ),
+		'success'
+	);
+} elseif ( 'email_error' === $aggr_email_notice ) {
+	Portal_Notice::add( Email_Change_Actions::error_message( $aggr_email_error ), 'error' );
+} elseif ( '' !== $aggr_email_notice ) {
+	Portal_Notice::add(
+		Email_Change_Actions::account_notice_message( $aggr_email_notice ),
+		'rate_limited' === $aggr_email_notice ? 'error' : 'success'
+	);
+}
+?>
 
 <section class="aggr-panel" aria-labelledby="aggr-account-details">
 	<h2 id="aggr-account-details" class="aggr-panel__head"><?php esc_html_e( 'Your details', 'aggressive-ads' ); ?></h2>

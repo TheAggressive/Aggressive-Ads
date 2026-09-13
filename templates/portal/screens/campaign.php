@@ -26,6 +26,8 @@ use Aggressive\Ads\Portal\Routes;
 use Aggressive\Ads\Portal\Campaign_Actions;
 use Aggressive\Ads\Portal\Campaign_Nonces;
 use Aggressive\Ads\Portal\Creative_Actions;
+use Aggressive\Ads\Portal\Creative_Feedback;
+use Aggressive\Ads\Portal\Portal_Notice;
 
 $aggr_creatives          = is_array( $aggr_campaign['creatives'] ) ? $aggr_campaign['creatives'] : array();
 $aggr_creative_updates   = is_array( $aggr_campaign['creative_updates'] ) ? $aggr_campaign['creative_updates'] : array();
@@ -45,10 +47,36 @@ $aggr_error_for          = Campaign_Actions::error_field( $aggr_error );
 $aggr_step               = Campaign_Actions::request_step( (string) $aggr_campaign['wizard_step'] );
 $aggr_step               = in_array( $aggr_step, Campaign_Editor::DISPLAY_STEPS, true ) ? $aggr_step : 'review';
 $aggr_campaign_url       = Routes::url( Request::ROUTE_CAMPAIGNS, (int) $aggr_campaign['id'] );
-$aggr_creative_notice    = Creative_Actions::request_notice();
-$aggr_creative_error     = Creative_Actions::request_error_code();
-$aggr_error_placement    = Creative_Actions::request_error_placement();
-$aggr_creative_error_for = Creative_Actions::error_target( $aggr_creative_error, $aggr_error_placement );
+$aggr_creative_notice    = Creative_Feedback::request_notice();
+$aggr_creative_error     = Creative_Feedback::request_error_code();
+$aggr_error_placement    = Creative_Feedback::request_error_placement();
+$aggr_creative_error_for = Creative_Feedback::error_target( $aggr_creative_error, $aggr_error_placement );
+
+/*
+ * A refused destination edit names its own creative's field. The upload
+ * form's targets are keyed by placement, and a placement can hold ten
+ * creatives, so reusing that key would open the wrong fold.
+ */
+$aggr_error_creative = Creative_Feedback::request_error_creative();
+
+if ( $aggr_error_creative > 0 && in_array( $aggr_creative_error, array( 'aggr_click_url_required', 'aggr_click_url_invalid', 'aggr_destination_frozen', 'aggr_destination_forbidden' ), true ) ) {
+	$aggr_creative_error_for = 'aggr-destination-' . $aggr_error_creative;
+}
+
+/*
+ * The size limit belongs to the placement the upload was for, and a
+ * redirect carries only an error code and a placement id. Reading it off
+ * the slots already on this screen keeps the banner quoting the same
+ * number the form beside it does.
+ */
+$aggr_error_max_bytes = 0;
+
+foreach ( $aggr_slots as $aggr_error_slot ) {
+	if ( is_array( $aggr_error_slot ) && (int) ( $aggr_error_slot['id'] ?? 0 ) === $aggr_error_placement ) {
+		$aggr_error_max_bytes = (int) ( $aggr_error_slot['max_bytes'] ?? 0 );
+		break;
+	}
+}
 // Decided by Portal\View_Data, which is where it can be tested.
 $aggr_min_start_date = (string) ( $aggr_campaign['min_start_date'] ?? '' );
 $aggr_creative_ready = array() !== $aggr_slots;
@@ -213,73 +241,56 @@ if ( 'creative' === $aggr_step && '' !== $aggr_creative_notice ) {
 endif;
 ?>
 
-<?php if ( in_array( $aggr_notice, array( 'created', 'copied', 'saved', 'package_saved', 'schedule_saved', 'submitted', 'withdrawn', 'changes_requested', 'changes_cancelled', 'changes_saved' ), true ) ) : ?>
-	<div class="aggr-alert aggr-alert--success" role="status">
-		<p>
-			<?php
-				echo esc_html(
-					match ( $aggr_notice ) {
-						'created'        => __( 'Campaign created. Add the details below to continue.', 'aggressive-ads' ),
-						'copied'         => __( 'Campaign copied. Choose new dates before submitting.', 'aggressive-ads' ),
-						'package_saved'  => __( 'Package saved. Add one correctly sized creative for each placement.', 'aggressive-ads' ),
-						'schedule_saved' => __( 'Destinations and schedule saved. Continue to review when you are ready.', 'aggressive-ads' ),
-						'submitted'      => __( 'Campaign submitted. It is now in the review queue.', 'aggressive-ads' ),
-						'withdrawn'      => __( 'Campaign withdrawn from review and reopened for editing. Submit it again when you are ready.', 'aggressive-ads' ),
-						'changes_requested' => __( 'Edits submitted for review. Your campaign keeps running as approved until the review team decides.', 'aggressive-ads' ),
-						'changes_cancelled' => __( 'Edits discarded. Nothing about your running campaign changed.', 'aggressive-ads' ),
-						'changes_saved'     => __( 'Saved. Nothing is sent to the review team until you submit these edits.', 'aggressive-ads' ),
-						default          => __( 'Details saved. Choose a package to continue.', 'aggressive-ads' ),
-					}
-				);
-			?>
-		</p>
-	</div>
-<?php elseif ( 'error' === $aggr_notice ) : ?>
-	<div class="aggr-alert aggr-alert--error" role="alert" tabindex="-1">
-		<h2><?php esc_html_e( 'There is a problem', 'aggressive-ads' ); ?></h2>
-		<p id="aggr-campaign-error">
-			<?php if ( '' !== $aggr_error_for ) : ?>
-				<a href="#<?php echo esc_attr( $aggr_error_for ); ?>">
-					<?php echo esc_html( Campaign_Actions::error_message( $aggr_error ) ); ?>
-				</a>
-			<?php else : ?>
-				<?php echo esc_html( Campaign_Actions::error_message( $aggr_error ) ); ?>
-			<?php endif; ?>
-		</p>
-	</div>
-<?php endif; ?>
+<?php
+/*
+ * Notices are queued, not drawn. The layout owns the region they appear in,
+ * so every screen reports the same way and severity means one thing across
+ * the portal — before this each screen built its own banner and chose its own
+ * colours.
+ */
+if ( in_array( $aggr_notice, array( 'created', 'copied', 'saved', 'package_saved', 'schedule_saved', 'submitted', 'withdrawn', 'changes_requested', 'changes_cancelled', 'changes_saved' ), true ) ) {
+	Portal_Notice::add(
+		match ( $aggr_notice ) {
+			'created'           => __( 'Campaign created. Add the details below to continue.', 'aggressive-ads' ),
+			'copied'            => __( 'Campaign copied. Choose new dates before submitting.', 'aggressive-ads' ),
+			'package_saved'     => __( 'Package saved. Add one correctly sized creative for each placement.', 'aggressive-ads' ),
+			'schedule_saved'    => __( 'Destinations and schedule saved. Continue to review when you are ready.', 'aggressive-ads' ),
+			'submitted'         => __( 'Campaign submitted. It is now in the review queue.', 'aggressive-ads' ),
+			'withdrawn'         => __( 'Campaign withdrawn from review and reopened for editing. Submit it again when you are ready.', 'aggressive-ads' ),
+			'changes_requested' => __( 'Edits submitted for review. Your campaign keeps running as approved until the review team decides.', 'aggressive-ads' ),
+			'changes_cancelled' => __( 'Edits discarded. Nothing about your running campaign changed.', 'aggressive-ads' ),
+			'changes_saved'     => __( 'Saved. Nothing is sent to the review team until you submit these edits.', 'aggressive-ads' ),
+			default             => __( 'Details saved. Choose a package to continue.', 'aggressive-ads' ),
+		},
+		'success'
+	);
+} elseif ( 'error' === $aggr_notice ) {
+	Portal_Notice::add( Campaign_Actions::error_message( $aggr_error ), 'error', $aggr_error_for );
+}
 
-<?php if ( in_array( $aggr_creative_notice, array( 'creative_uploaded', 'creative_removed', 'creative_update_requested', 'creative_update_withdrawn', 'creative_weight_saved', 'creative_paused', 'creative_resumed', 'creative_window_saved' ), true ) ) : ?>
-	<div class="aggr-alert aggr-alert--success" role="status">
-		<p>
-			<?php
-			echo esc_html(
-				match ( $aggr_creative_notice ) {
-					'creative_uploaded'         => __( 'Creative uploaded and stored privately.', 'aggressive-ads' ),
-					'creative_removed'          => __( 'Creative removed.', 'aggressive-ads' ),
-					'creative_update_requested' => __( 'Your ad update is waiting for review. The current ad will keep running.', 'aggressive-ads' ),
-					'creative_weight_saved'     => __( 'Share saved. The new split applies to the next advertisement served.', 'aggressive-ads' ),
-					'creative_paused'           => __( 'Paused. The other creatives on that placement take its share.', 'aggressive-ads' ),
-					'creative_resumed'          => __( 'Resumed. It starts serving again on the next request.', 'aggressive-ads' ),
-					'creative_window_saved'     => __( 'Dates saved.', 'aggressive-ads' ),
-					default                     => __( 'The pending ad update was withdrawn.', 'aggressive-ads' ),
-				}
-			);
-			?>
-		</p>
-	</div>
-<?php elseif ( 'error' === $aggr_creative_notice ) : ?>
-	<div class="aggr-alert aggr-alert--error" role="alert" tabindex="-1">
-		<h2><?php esc_html_e( 'There is a problem with the creative', 'aggressive-ads' ); ?></h2>
-		<p id="aggr-creative-error">
-			<?php if ( '' !== $aggr_creative_error_for ) : ?>
-				<a href="#<?php echo esc_attr( $aggr_creative_error_for ); ?>"><?php echo esc_html( Creative_Actions::error_message( $aggr_creative_error ) ); ?></a>
-			<?php else : ?>
-				<?php echo esc_html( Creative_Actions::error_message( $aggr_creative_error ) ); ?>
-			<?php endif; ?>
-		</p>
-	</div>
-<?php endif; ?>
+if ( in_array( $aggr_creative_notice, array( 'creative_uploaded', 'creative_removed', 'creative_update_requested', 'creative_update_withdrawn', 'creative_weight_saved', 'creative_paused', 'creative_resumed', 'creative_window_saved', 'creative_destination_saved' ), true ) ) {
+	Portal_Notice::add(
+		match ( $aggr_creative_notice ) {
+			'creative_uploaded'          => __( 'Creative uploaded and stored privately.', 'aggressive-ads' ),
+			'creative_removed'           => __( 'Creative removed.', 'aggressive-ads' ),
+			'creative_update_requested'  => __( 'Your ad update is waiting for review. The current ad will keep running.', 'aggressive-ads' ),
+			'creative_weight_saved'      => __( 'Share saved. The new split applies to the next advertisement served.', 'aggressive-ads' ),
+			'creative_paused'            => __( 'Paused. The other creatives on that placement take its share.', 'aggressive-ads' ),
+			'creative_resumed'           => __( 'Resumed. It starts serving again on the next request.', 'aggressive-ads' ),
+			'creative_window_saved'      => __( 'Dates saved.', 'aggressive-ads' ),
+			'creative_destination_saved' => __( 'Destination saved.', 'aggressive-ads' ),
+			default                      => __( 'The pending ad update was withdrawn.', 'aggressive-ads' ),
+		},
+		'success'
+	);
+} elseif ( 'error' === $aggr_creative_notice ) {
+	Portal_Notice::add(
+		Creative_Feedback::error_message( $aggr_creative_error, $aggr_error_max_bytes ),
+		'error',
+		$aggr_creative_error_for
+	);
+}
+?>
 
 <?php if ( '' !== $aggr_notes ) : ?>
 	<section class="aggr-notice" aria-labelledby="aggr-notes-heading">

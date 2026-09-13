@@ -14,6 +14,7 @@ use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Domain\Campaign_Rules;
 use Aggressive\Ads\Domain\Refresh_Policy;
 use Aggressive\Ads\Domain\Upload_Rules;
+use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Workflow\Placement_Manager;
@@ -37,14 +38,16 @@ final class Placements_Controller implements Service {
 	/**
 	 * Constructor.
 	 *
-	 * @param Placement_Repository $placements Placement persistence.
-	 * @param Placement_Manager    $manager    Staff catalogue writes.
-	 * @param Placement_Data       $data       Catalogue view for the staff screen.
+	 * @param Placement_Repository           $placements Placement persistence.
+	 * @param Placement_Manager              $manager    Staff catalogue writes.
+	 * @param Placement_Data                 $data       Catalogue view for the staff screen.
+	 * @param Creative_Assignment_Repository $assignments Live candidates, for the rotation hint.
 	 */
 	public function __construct(
 		private readonly Placement_Repository $placements,
 		private readonly Placement_Manager $manager,
-		private readonly Placement_Data $data
+		private readonly Placement_Data $data,
+		private readonly Creative_Assignment_Repository $assignments
 	) {
 	}
 
@@ -259,6 +262,21 @@ final class Placements_Controller implements Service {
 		}
 
 		/*
+		 * The creative size limit follows the same rule, and here an omitted
+		 * key forced to zero would be worse than tightening: zero resolves to
+		 * the default, so a rename that did not mention the limit would reset
+		 * a placement a publisher had deliberately loosened, and nothing on
+		 * the screen would say so.
+		 *
+		 * Cast only. The number is a limit the server enforces, so it is
+		 * clamped where it is stored and again where it is read, rather than
+		 * being trusted from a request body.
+		 */
+		if ( array_key_exists( 'max_bytes', $body ) ) {
+			$fields['max_bytes'] = (int) $body['max_bytes'];
+		}
+
+		/*
 		 * Breakpoints follow the same rule as the refresh policy, for the same
 		 * reason: an omitted key must mean "unchanged", never "cleared".
 		 *
@@ -287,6 +305,22 @@ final class Placements_Controller implements Service {
 	}
 
 	/**
+	 * Whether this placement permits a slot to rotate at all.
+	 *
+	 * Both halves of the policy, not just the flag: a placement with refresh
+	 * enabled and a zero per-view cap rotates nothing, and reporting it as
+	 * rotating would send the editor's reassurance in the wrong direction.
+	 *
+	 * @param int $placement_id Placement post id.
+	 * @return bool
+	 */
+	private function rotation_allowed( int $placement_id ): bool {
+		$policy = $this->placements->refresh_policy( $placement_id );
+
+		return $policy->enabled && $policy->max_per_view > 0;
+	}
+
+	/**
 	 * Every placement currently on offer.
 	 *
 	 * @param WP_REST_Request $request The request.
@@ -302,17 +336,42 @@ final class Placements_Controller implements Service {
 			$parsed = Campaign_Rules::parse_size( $size );
 
 			$placements[] = array(
-				'id'        => $placement_id,
-				'name'      => $this->placements->name( $placement_id ),
-				'slug'      => $this->placements->slug( $placement_id ),
-				'size'      => $size,
-				'width'     => null === $parsed ? 0 : $parsed[0],
-				'height'    => null === $parsed ? 0 : $parsed[1],
+				'id'         => $placement_id,
+				'name'       => $this->placements->name( $placement_id ),
+				'slug'       => $this->placements->slug( $placement_id ),
+				'size'       => $size,
+				'width'      => null === $parsed ? 0 : $parsed[0],
+				'height'     => null === $parsed ? 0 : $parsed[1],
 
 				// Everything an upload form needs to tell somebody what to
 				// prepare *before* they try, rather than after a rejection.
-				'accepts'   => Upload_Rules::ALLOWED_MIME,
-				'max_bytes' => Upload_Rules::MAX_BYTES,
+				'accepts'    => Upload_Rules::ALLOWED_MIME,
+				'max_bytes'  => $this->placements->max_bytes( $placement_id ),
+
+				/*
+				 * The publisher's refresh policy, because the block's own rotate
+				 * toggle is ANDed with it — `Domain\Slot_Options` resolves
+				 * `rotate && $policy->enabled && $policy->max_per_view > 0`. An
+				 * editor that cannot read this shows a switch that silently does
+				 * nothing on every placement that has not opted in, which is the
+				 * default.
+				 */
+				'rotates'    => $this->rotation_allowed( $placement_id ),
+
+				/*
+				 * How many creatives could be chosen for this placement right now.
+				 *
+				 * Rotation needs two. `view.js` stops at `servable < 2`, because
+				 * re-drawing the only creative there is would mint an impression
+				 * of an unchanged advertisement every interval — and nothing said
+				 * so anywhere, so a publisher with one creative saw a rotation
+				 * setting that was on and a slot that never changed.
+				 *
+				 * A count for right now, not a promise: eligibility is decided per
+				 * request, and a campaign can start or a cap can bite between this
+				 * and the next fill.
+				 */
+				'candidates' => count( $this->assignments->candidates_for_placement( $placement_id, time() ) ),
 			);
 		}
 

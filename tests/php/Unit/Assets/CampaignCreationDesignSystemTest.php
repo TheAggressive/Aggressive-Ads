@@ -117,6 +117,9 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 		$parts = array(
 			AGGR_PLUGIN_DIR . 'templates/portal/screens/campaign.php',
 			AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-creative-step.php',
+			AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-upload-form.php',
+			AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-variant-destination.php',
+			AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-variant-artwork.php',
 			AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-variant-share.php',
 		);
 
@@ -131,6 +134,104 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 		}
 
 		return implode( "\n", $read );
+	}
+
+	/**
+	 * Field labels state their own case rather than inheriting the theme's.
+	 *
+	 * The portal renders inside whatever theme the site runs. LAAO's own
+	 * stylesheet opens with a bare `label { text-transform: uppercase }`,
+	 * which reached every field in the portal and made the forms shout —
+	 * costing width in a card that is already a third of the page. Asserted
+	 * here because the defence is one declaration and its absence looks
+	 * exactly like nothing being wrong.
+	 *
+	 * @return void
+	 */
+	public function test_field_labels_resist_a_theme_shouting_at_them(): void {
+		$css = Portal_Styles::contents();
+
+		$this->assertSame(
+			1,
+			preg_match(
+				'/\.aggr-field label,\s*\.aggr-fieldset legend \{[^}]*text-transform: none;/s',
+				$css
+			),
+			'A theme with a bare label rule will uppercase every field in the portal again.'
+		);
+	}
+
+	/**
+	 * Every stated size limit comes from the placement, never from a constant.
+	 *
+	 * The form said "Maximum file size: 2 MB" on every placement while the
+	 * server enforced whatever that placement was set to. A hardcoded figure
+	 * in this template is the failure, so the absence of one is asserted
+	 * alongside the slot value being read.
+	 *
+	 * @return void
+	 */
+	public function test_the_upload_form_states_the_placement_limit(): void {
+		$template = file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-upload-form.php' );
+
+		$this->assertIsString( $template, 'The upload form could not be read, so these assertions cover nothing.' );
+
+		$this->assertSame(
+			1,
+			substr_count( $template, "\$aggr_slot['max_size']" ),
+			'The size hint has to read the placement own limit from the slot.'
+		);
+		$this->assertSame(
+			0,
+			substr_count( $template, '2 MB' ),
+			'A fixed size is back in the creative step. Every limit here belongs to a placement.'
+		);
+	}
+
+	/**
+	 * The upload button never paints, and a scriptless browser still gets one.
+	 *
+	 * It shipped visible and `init` hid it, so every load flashed a button and
+	 * then withdrew it, directly under a sentence saying there is no upload
+	 * button. All three halves are asserted because any one of them alone
+	 * passes over a broken state: the attribute without the `<noscript>` rule
+	 * strands a browser that will never run the module, the rule without the
+	 * attribute still flashes, and leaving the assignment in the module means
+	 * the next reader cannot tell which half is load-bearing.
+	 *
+	 * @return void
+	 */
+	public function test_upload_button_ships_hidden_with_a_noscript_restore(): void {
+		$form   = file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-upload-form.php' );
+		$step   = file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-creative-step.php' );
+		$module = file_get_contents( AGGR_PLUGIN_DIR . 'src/interactivity/upload.ts' );
+
+		$this->assertIsString( $form, 'The upload form could not be read, so these assertions cover nothing.' );
+		$this->assertIsString( $step, 'The creative step could not be read, so these assertions cover nothing.' );
+		$this->assertIsString( $module, 'The upload module could not be read, so these assertions cover nothing.' );
+
+		$this->assertSame(
+			1,
+			substr_count( $form, 'type="submit" hidden>' ),
+			'The upload button has to be hidden in the markup. Hiding it from script paints it first.'
+		);
+
+		/*
+		 * The rule stays on the step rather than moving with the form: the
+		 * form renders twice — inline on an empty placement and inside the
+		 * add-a-creative dialog — and one document-wide rule covers both,
+		 * where one per form would emit it twice.
+		 */
+		$this->assertStringContainsString(
+			'<noscript><style>.aggr-portal .aggr-upload-form button[type="submit"][hidden]{display:inline-flex!important}</style></noscript>',
+			$step,
+			'A browser that never runs the module needs the button back.'
+		);
+		$this->assertStringNotContainsString(
+			'button.hidden = true',
+			$module,
+			'Hiding from script is what caused the flash. The template owns it now.'
+		);
 	}
 
 	/**

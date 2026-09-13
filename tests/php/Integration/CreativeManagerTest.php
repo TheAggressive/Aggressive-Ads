@@ -17,6 +17,7 @@ use Aggressive\Ads\Portal\Creative_Actions;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
+use Aggressive\Ads\Repository\Creative_Attachment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
@@ -605,13 +606,6 @@ final class CreativeManagerTest extends WP_UnitTestCase {
 		$this->actions->handle_upload();
 	}
 
-	/**
-	 * Makes a temporary PNG upload entry.
-	 *
-	 * @param int $width  Image width.
-	 * @param int $height Image height.
-	 * @return array<string, mixed>
-	 */
 	/**
 	 * **A share can be set, and only by somebody entitled to.**
 	 *

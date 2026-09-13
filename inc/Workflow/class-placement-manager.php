@@ -106,6 +106,8 @@ final class Placement_Manager {
 			return $refresh;
 		}
 
+		$this->apply_max_bytes( $placement_id, $input, true );
+
 		$sizes = $this->apply_breakpoints( $placement_id, $input );
 
 		if ( is_wp_error( $sizes ) ) {
@@ -135,6 +137,14 @@ final class Placement_Manager {
 					'size'            => $fields['size'],
 					'is_active'       => $fields['is_active'],
 					'refresh_enabled' => $policy->enabled,
+
+					/*
+					 * The limit decides what bytes the site will accept from an
+					 * advertiser, so who raised it and when is a question the trail
+					 * has to answer. Recorded as stored, after clamping, because
+					 * what was asked for is not what is being enforced.
+					 */
+					'max_bytes'       => $this->placements->max_bytes( $placement_id ),
 				),
 				actor_user_id: get_current_user_id()
 			)
@@ -188,6 +198,8 @@ final class Placement_Manager {
 			return $house;
 		}
 
+		$this->apply_max_bytes( $placement_id, $input, false );
+
 		$refresh = $this->apply_refresh( $placement_id, $input, false );
 
 		if ( is_wp_error( $refresh ) ) {
@@ -221,6 +233,14 @@ final class Placement_Manager {
 					'size'            => $fields['size'],
 					'is_active'       => $fields['is_active'],
 					'refresh_enabled' => $policy->enabled,
+
+					/*
+					 * The limit decides what bytes the site will accept from an
+					 * advertiser, so who raised it and when is a question the trail
+					 * has to answer. Recorded as stored, after clamping, because
+					 * what was asked for is not what is being enforced.
+					 */
+					'max_bytes'       => $this->placements->max_bytes( $placement_id ),
 				),
 				actor_user_id: get_current_user_id()
 			)
@@ -363,6 +383,36 @@ final class Placement_Manager {
 		$this->cache->delete( $placement_id );
 
 		return true;
+	}
+
+	/**
+	 * Records the largest creative this placement accepts.
+	 *
+	 * Same omitted-means-unchanged rule as refresh, and create always writes
+	 * one so the stored number and the enforced number are the same thing.
+	 * Leaving it absent on create would work — the read resolves an unset
+	 * value to the default — but then the screen would show a limit that
+	 * exists nowhere, and the first save of an unrelated field would look like
+	 * it had introduced one.
+	 *
+	 * There is no failure branch: the repository clamps rather than refuses,
+	 * so there is no value a form can send that has no safe answer.
+	 *
+	 * @param int                  $placement_id Placement post id.
+	 * @param array<string, mixed> $input        Raw fields.
+	 * @param bool                 $creating     Whether this is a new placement.
+	 */
+	private function apply_max_bytes( int $placement_id, array $input, bool $creating ): void {
+		if ( ! array_key_exists( 'max_bytes', $input ) && ! $creating ) {
+			return;
+		}
+
+		$this->placements->set_max_bytes(
+			$placement_id,
+			isset( $input['max_bytes'] ) ? (int) $input['max_bytes'] : Upload_Rules::DEFAULT_MAX_BYTES
+		);
+
+		$this->cache->delete( $placement_id );
 	}
 
 	/**

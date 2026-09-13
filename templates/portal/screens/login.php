@@ -11,6 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use Aggressive\Ads\Portal\Portal_Notice;
 use Aggressive\Ads\Portal\Login_Actions;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Portal\Request;
@@ -32,11 +33,14 @@ $aggr_signup_enabled = Plugin::instance()->container()->get( Advertiser_Registra
 	<div class="aggr-panel">
 		<h1 class="aggr-panel__head"><?php esc_html_e( 'Sign in', 'aggressive-ads' ); ?></h1>
 
-		<?php if ( '' !== $aggr_notice ) : ?>
-			<div class="aggr-alert <?php echo esc_attr( in_array( $aggr_notice, array( 'password_set', 'pending' ), true ) ? 'aggr-alert--success' : 'aggr-alert--error' ); ?>" role="<?php echo esc_attr( in_array( $aggr_notice, array( 'password_set', 'pending' ), true ) ? 'status' : 'alert' ); ?>">
-				<p><?php echo esc_html( Login_Actions::notice_message( $aggr_notice ) ); ?></p>
-			</div>
-		<?php endif; ?>
+		<?php
+		if ( '' !== $aggr_notice ) {
+			Portal_Notice::add(
+				Login_Actions::notice_message( $aggr_notice ),
+				in_array( $aggr_notice, array( 'password_set', 'pending' ), true ) ? 'success' : 'error'
+			);
+		}
+		?>
 
 		<form class="aggr-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 			<input type="hidden" name="action" value="<?php echo esc_attr( Login_Actions::LOGIN_ACTION ); ?>">

@@ -57,6 +57,7 @@ final class Assets implements Service {
 	public const MODULE_WIZARD      = '@aggr/wizard';
 	public const MODULE_AUTOSAVE    = '@aggr/autosave';
 	public const MODULE_UPLOAD      = '@aggr/upload';
+	public const MODULE_SAVE        = '@aggr/save';
 
 	/**
 	 * Interactivity store namespaces.
@@ -65,6 +66,7 @@ final class Assets implements Service {
 	public const WIZARD_STORE   = 'aggr/wizard';
 	public const AUTOSAVE_STORE = 'aggr/autosave';
 	public const UPLOAD_STORE   = 'aggr/upload';
+	public const SAVE_STORE     = 'aggr/save';
 
 	/**
 	 * Whether shared modules have been registered this request.
@@ -221,6 +223,16 @@ final class Assets implements Service {
 			if ( $has_logic && is_file( AGGR_PLUGIN_DIR . 'dist/interactivity/upload.js' ) ) {
 				wp_enqueue_script_module( self::MODULE_UPLOAD );
 			}
+
+			/*
+			 * No `$has_logic` gate: saving asynchronously shares nothing with
+			 * the creative-checking logic module, and requiring it would make
+			 * every portal write fall back to a page reload whenever that one
+			 * file failed to build.
+			 */
+			if ( is_file( AGGR_PLUGIN_DIR . 'dist/interactivity/save.js' ) ) {
+				wp_enqueue_script_module( self::MODULE_SAVE );
+			}
 		}
 	}
 
@@ -310,7 +322,7 @@ final class Assets implements Service {
 	 * Modules are enqueued from enqueue() so the import map prints in wp_head.
 	 * This only writes Interactivity state. Safe to call when the APIs are absent.
 	 *
-	 * @param array{id: int, wizard_step: string, autosave_rev: int, submit_ready: bool, step_label: string, slots: array<int, array{id: int, size: string}>} $campaign Campaign view data.
+	 * @param array{id: int, wizard_step: string, autosave_rev: int, submit_ready: bool, step_label: string, slots: array<int, array{id: int, size: string, max_bytes: int, max_size: string}>} $campaign Campaign view data.
 	 * @return void
 	 */
 	public function hydrate_campaign_editor( array $campaign ): void {
@@ -361,14 +373,56 @@ final class Assets implements Service {
 			)
 		);
 
+		/*
+		 * One sentence per notice key, because the client is told which key
+		 * it got rather than being handed a sentence to display. A message
+		 * built on the client is a message that cannot be translated by the
+		 * site's own catalogue.
+		 */
+		wp_interactivity_state(
+			self::SAVE_STORE,
+			array(
+				'i18n' => array(
+					'saved'                      => __( 'Saved.', 'aggressive-ads' ),
+					'dismiss'                    => __( 'Dismiss this notice', 'aggressive-ads' ),
+					'level_success'              => __( 'Success', 'aggressive-ads' ),
+					'level_error'                => __( 'Error', 'aggressive-ads' ),
+					'level_warning'              => __( 'Warning', 'aggressive-ads' ),
+					'level_info'                 => __( 'Notice', 'aggressive-ads' ),
+					'creative_uploaded'          => __( 'Creative uploaded.', 'aggressive-ads' ),
+					'creative_removed'           => __( 'Creative removed.', 'aggressive-ads' ),
+					'creative_destination_saved' => __( 'Destination saved.', 'aggressive-ads' ),
+					'creative_artwork_replaced'  => __( 'Artwork replaced.', 'aggressive-ads' ),
+					'creative_window_saved'      => __( 'Dates saved.', 'aggressive-ads' ),
+					'creative_weight_saved'      => __( 'Share saved.', 'aggressive-ads' ),
+					'creative_paused'            => __( 'Paused.', 'aggressive-ads' ),
+					'creative_resumed'           => __( 'Resumed.', 'aggressive-ads' ),
+					'creative_update_requested'  => __( 'Update sent for review.', 'aggressive-ads' ),
+					'creative_update_withdrawn'  => __( 'Update withdrawn.', 'aggressive-ads' ),
+				),
+			)
+		);
+
 		$uploads = array();
 
 		foreach ( $campaign['slots'] as $slot ) {
 			$uploads[ (string) $slot['id'] ] = array(
 				'expectedSize' => $slot['size'],
-				'maxBytes'     => Upload_Rules::MAX_BYTES,
+				'maxBytes'     => $slot['max_bytes'],
 				'maxPixels'    => Upload_Rules::MAX_PIXELS,
 				'allowedMime'  => Upload_Rules::ALLOWED_MIME,
+
+				/*
+				 * The refusal sentence, per placement, because the number in it
+				 * is per placement. The shared `i18n` map cannot hold this one:
+				 * it said "larger than 2 MB" on every slot, which was the
+				 * ceiling rather than anything a placement enforced.
+				 */
+				'sizeMessage'  => sprintf(
+					/* translators: %s: this placement's maximum file size, e.g. 150 KB. */
+					__( 'That file is larger than %s. Choose a smaller ad creative.', 'aggressive-ads' ),
+					$slot['max_size']
+				),
 			);
 		}
 
@@ -383,7 +437,6 @@ final class Assets implements Service {
 						'needsUrl'   => __( 'Enter a complete destination URL to finish the upload.', 'aggressive-ads' ),
 						'empty'      => __( 'Choose an ad creative file to upload.', 'aggressive-ads' ),
 						'type'       => __( 'Use a JPEG, PNG, GIF, or WebP image.', 'aggressive-ads' ),
-						'size'       => __( 'The file is larger than 2 MB. Choose a smaller ad creative.', 'aggressive-ads' ),
 						'pixels'     => __( 'That ad creative is too large in pixels to process safely. Choose a smaller one.', 'aggressive-ads' ),
 						'dimensions' => __( 'The ad creative must match the required pixel size for this placement.', 'aggressive-ads' ),
 					),
@@ -448,6 +501,11 @@ final class Assets implements Service {
 				'@wordpress/interactivity',
 				self::MODULE_LOGIC,
 			)
+		);
+		$this->register_module(
+			self::MODULE_SAVE,
+			'save',
+			array( '@wordpress/interactivity' )
 		);
 
 		return $ok;

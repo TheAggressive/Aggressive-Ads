@@ -12,6 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Portal\Portal_Notice;
 use Aggressive\Ads\Portal\Password_Actions;
 use Aggressive\Ads\Portal\Request;
 use Aggressive\Ads\Portal\Routes;
@@ -36,11 +37,21 @@ $aggr_valid     = ! is_wp_error( $aggr_user );
 			<div class="aggr-alert aggr-alert--error" role="alert">
 				<p><?php esc_html_e( 'This password link is invalid or has expired. Request a new one.', 'aggressive-ads' ); ?></p>
 			</div>
-		<?php elseif ( 'invalid_password' === $aggr_notice ) : ?>
-			<div class="aggr-alert aggr-alert--error" role="alert">
-				<p><?php esc_html_e( 'Use matching passwords of at least 12 characters.', 'aggressive-ads' ); ?></p>
-			</div>
 		<?php endif; ?>
+
+		<?php
+		/*
+		 * A refused password leaves the form on screen, so the message can go
+		 * to the notice region. The invalid-link case above cannot: it hides
+		 * the form and is the only thing left to read.
+		 */
+		if ( $aggr_valid && 'invalid_password' === $aggr_notice ) {
+			Portal_Notice::add(
+				__( 'Use matching passwords of at least 12 characters.', 'aggressive-ads' ),
+				'error'
+			);
+		}
+		?>
 
 		<?php if ( $aggr_valid ) : ?>
 			<form class="aggr-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
