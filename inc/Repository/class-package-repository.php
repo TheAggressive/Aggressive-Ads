@@ -87,6 +87,16 @@ final class Package_Repository {
 	 * @return string
 	 */
 	public function name( int $package_id ): string {
+		return Post_Title::plain( $this->raw_name( $package_id ) );
+	}
+
+	/**
+	 * The package's title exactly as stored, for verifying a write.
+	 *
+	 * @param int $package_id Package post id.
+	 * @return string
+	 */
+	private function raw_name( int $package_id ): string {
 		$title = get_post_field( 'post_title', $package_id, 'raw' );
 
 		return is_string( $title ) ? $title : '';
@@ -282,7 +292,7 @@ final class Package_Repository {
 		$expected_duration = $fields['custom_duration'] ? 0 : $fields['duration_days'];
 
 		// Against the stored form: see the same check in Placement_Repository::save().
-		return $this->name( $package_id ) === Post_Title::as_stored( $fields['name'] )
+		return $this->raw_name( $package_id ) === Post_Title::as_stored( $fields['name'] )
 			&& $this->placement_ids( $package_id ) === $fields['placement_ids']
 			&& $this->duration_days( $package_id ) === $expected_duration
 			&& $this->has_custom_duration( $package_id ) === $fields['custom_duration']

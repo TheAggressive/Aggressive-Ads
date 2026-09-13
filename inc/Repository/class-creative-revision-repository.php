@@ -261,8 +261,9 @@ final class Creative_Revision_Repository {
 			}
 		}
 
-		update_post_meta( $revision_id, Creative_Repository::META_CLICK_URL, $click_url );
-		update_post_meta( $revision_id, Creative_Repository::META_ALT_TEXT, $alt_text );
+		// Slashed: `update_post_meta()` unslashes, so a backslash in either was lost.
+		update_post_meta( $revision_id, Creative_Repository::META_CLICK_URL, wp_slash( $click_url ) );
+		update_post_meta( $revision_id, Creative_Repository::META_ALT_TEXT, wp_slash( $alt_text ) );
 
 		return $revision_id;
 	}
@@ -366,7 +367,9 @@ final class Creative_Revision_Repository {
 	 */
 	public function reject_replacement( int $creative_id, string $notes ): bool {
 		update_post_meta( $creative_id, Creative_Repository::META_CHANGE_STATE, Creative_Repository::CHANGE_REJECTED );
-		update_post_meta( $creative_id, Creative_Repository::META_CHANGE_NOTES, $notes );
+		// Slashed: unslashed, a note with a backslash failed the read-back below
+		// and the rejection was reported as not saved.
+		update_post_meta( $creative_id, Creative_Repository::META_CHANGE_NOTES, wp_slash( $notes ) );
 		update_post_meta( $creative_id, Creative_Repository::META_DECIDED_AT, time() );
 
 		return Creative_Repository::CHANGE_REJECTED === $this->change_state( $creative_id )

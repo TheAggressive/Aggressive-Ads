@@ -548,7 +548,8 @@ final class Campaign_Repository {
 	 * @return void
 	 */
 	public function set_review_notes( int $campaign_id, string $notes ): void {
-		update_post_meta( $campaign_id, self::META_REVIEW_NOTES, $notes );
+		// Slashed: `update_post_meta()` unslashes, so a backslash in a note was lost.
+		update_post_meta( $campaign_id, self::META_REVIEW_NOTES, wp_slash( $notes ) );
 	}
 
 	/**
@@ -569,7 +570,7 @@ final class Campaign_Repository {
 	 * @return void
 	 */
 	public function set_internal_notes( int $campaign_id, string $notes ): void {
-		update_post_meta( $campaign_id, self::META_INTERNAL_NOTES, $notes );
+		update_post_meta( $campaign_id, self::META_INTERNAL_NOTES, wp_slash( $notes ) );
 	}
 
 	/**

@@ -128,6 +128,16 @@ final class Placement_Repository {
 	 * @return string
 	 */
 	public function name( int $placement_id ): string {
+		return Post_Title::plain( $this->raw_name( $placement_id ) );
+	}
+
+	/**
+	 * The placement's title exactly as stored, for verifying a write.
+	 *
+	 * @param int $placement_id Placement post id.
+	 * @return string
+	 */
+	private function raw_name( int $placement_id ): string {
 		$title = get_post_field( 'post_title', $placement_id, 'raw' );
 
 		return is_string( $title ) ? $title : '';
@@ -538,8 +548,10 @@ final class Placement_Repository {
 		}
 
 		update_post_meta( $placement_id, self::META_HOUSE_ATTACHMENT, $attachment_id );
-		update_post_meta( $placement_id, self::META_HOUSE_CLICK_URL, $click_url );
-		update_post_meta( $placement_id, self::META_HOUSE_ALT, $alt );
+		// Slashed: unslashed, a backslash in either failed the read-back below and
+		// the house ad was reported as not saved.
+		update_post_meta( $placement_id, self::META_HOUSE_CLICK_URL, wp_slash( $click_url ) );
+		update_post_meta( $placement_id, self::META_HOUSE_ALT, wp_slash( $alt ) );
 		update_post_meta( $placement_id, self::META_HOUSE_SAME_TAB, $same_tab ? 1 : 0 );
 
 		return $this->house_attachment_id( $placement_id ) === $attachment_id
@@ -650,7 +662,7 @@ final class Placement_Repository {
 		// Against the stored form: a name with a backslash was stripped on write
 		// and then failed this check, so the save reported failure for a
 		// placement that had otherwise saved.
-		return $this->name( $placement_id ) === Post_Title::as_stored( $fields['name'] )
+		return $this->raw_name( $placement_id ) === Post_Title::as_stored( $fields['name'] )
 			&& $this->slug( $placement_id ) === $fields['slug']
 			&& $this->size( $placement_id ) === $fields['size']
 			&& $this->is_active( $placement_id ) === $fields['is_active']

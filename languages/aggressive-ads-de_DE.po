@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
-"POT-Creation-Date: 2026-09-13T16:43:54+00:00\n"
+"POT-Creation-Date: 2026-09-13T17:11:52+00:00\n"
 "PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -154,7 +154,7 @@ msgstr ""
 #: inc/Admin/class-conversions-screen.php:233
 #: inc/Admin/class-package-screen.php:152
 #: inc/Admin/class-placement-screen.php:173
-#: templates/portal/screens/campaign.php:653
+#: templates/portal/screens/campaign.php:649
 #: templates/portal/screens/organization.php:116
 msgid "Name"
 msgstr "Name"
@@ -220,7 +220,7 @@ msgstr "Reporting-Schlüssel"
 #: inc/Admin/class-placement-screen.php:170
 #: inc/Admin/class-review-screen.php:282 inc/Admin/class-review-screen.php:300
 #: templates/portal/partials/campaign-table.php:35
-#: templates/portal/screens/campaign.php:339
+#: templates/portal/screens/campaign.php:335
 #: templates/portal/screens/help.php:111
 msgid "Status"
 msgstr "Status"
@@ -246,13 +246,13 @@ msgstr "Archiv"
 #: inc/Admin/class-conversions-screen.php:217
 #: inc/Admin/class-placement-screen.php:166
 #: inc/Admin/class-review-screen.php:296
-#: templates/portal/screens/campaign.php:166
-#: templates/portal/screens/campaign.php:639
-#: templates/portal/screens/campaign.php:650
-#: templates/portal/screens/campaign.php:660
-#: templates/portal/screens/campaign.php:672
-#: templates/portal/screens/campaign.php:681
-#: templates/portal/screens/campaign.php:756
+#: templates/portal/screens/campaign.php:162
+#: templates/portal/screens/campaign.php:635
+#: templates/portal/screens/campaign.php:646
+#: templates/portal/screens/campaign.php:656
+#: templates/portal/screens/campaign.php:668
+#: templates/portal/screens/campaign.php:677
+#: templates/portal/screens/campaign.php:752
 msgid "Edit"
 msgstr "Bearbeiten"
 
@@ -578,7 +578,7 @@ msgstr "Dieser Bildschirm benötigt JavaScript."
 #: inc/Admin/class-reports-screen.php:546 inc/Admin/class-review-screen.php:281
 #: inc/Core/class-post-types.php:199
 #: templates/portal/partials/campaign-table.php:34
-#: templates/portal/screens/campaign.php:821
+#: templates/portal/screens/campaign.php:817
 #: templates/portal/screens/help.php:77
 #: src/blocks-interactivity/ad-slot/edit.js:141
 msgid "Placement"
@@ -615,7 +615,7 @@ msgstr "Fenster"
 #: inc/Workflow/class-campaign-change-manager.php:768
 #: templates/portal/partials/campaign-changes.php:149
 #: templates/portal/partials/campaign-summary-facts.php:32
-#: templates/portal/screens/campaign.php:665
+#: templates/portal/screens/campaign.php:661
 msgid "Placements"
 msgstr "Platzierungen"
 
@@ -833,7 +833,7 @@ msgstr "Inhaber"
 #: inc/Admin/class-organization-screen.php:184
 #: inc/Core/class-post-types.php:201 templates/portal/campaigns.php:15
 #: templates/portal/partials/rail.php:31
-#: templates/portal/screens/campaign.php:135
+#: templates/portal/screens/campaign.php:131
 #: templates/portal/screens/campaigns.php:54
 #: templates/portal/screens/organization.php:77
 msgid "Campaigns"
@@ -916,7 +916,7 @@ msgid "Duration (days)"
 msgstr "Dauer (Tage)"
 
 #: inc/Admin/class-package-screen.php:159
-#: templates/portal/screens/campaign.php:664
+#: templates/portal/screens/campaign.php:660
 msgid "Price"
 msgstr "Preis"
 
@@ -1040,7 +1040,7 @@ msgstr ""
 "Kleinbuchstaben, Zahlen und Bindestriche."
 
 #: inc/Admin/class-placement-screen.php:176
-#: templates/portal/screens/campaign.php:822
+#: templates/portal/screens/campaign.php:818
 msgid "Size"
 msgstr "Größe"
 
@@ -1697,7 +1697,7 @@ msgid "Campaign review"
 msgstr "Kampagnenprüfung"
 
 #: inc/Admin/class-review-screen.php:104
-#: templates/portal/screens/campaign.php:431
+#: templates/portal/screens/campaign.php:427
 msgid "Review"
 msgstr "Prüfung"
 
@@ -1763,7 +1763,7 @@ msgstr "Tabelle der Kampagnen-Prüfungswarteschlange"
 #: inc/Admin/class-review-screen.php:279 inc/Core/class-post-types.php:201
 #: inc/Portal/class-report-actions.php:188
 #: templates/portal/partials/campaign-table.php:33
-#: templates/portal/screens/campaign.php:716
+#: templates/portal/screens/campaign.php:712
 msgid "Campaign"
 msgstr "Kampagne"
 
@@ -1801,7 +1801,7 @@ msgstr "Wählen Sie einen Werbetreibenden"
 #: inc/Admin/class-settings-screen.php:215
 #: inc/Workflow/class-campaign-change-manager.php:758
 #: templates/portal/partials/campaign-changes.php:142
-#: templates/portal/screens/campaign.php:461
+#: templates/portal/screens/campaign.php:457
 msgid "Campaign name"
 msgstr "Kampagnenname"
 
@@ -1824,27 +1824,27 @@ msgid "Campaign summary"
 msgstr "Kampagnenübersicht"
 
 #: inc/Admin/class-review-screen.php:298
-#: templates/portal/screens/campaign.php:334
+#: templates/portal/screens/campaign.php:330
 msgid "Delivery strategy"
 msgstr "Auslieferungsstrategie"
 
 #: inc/Admin/class-review-screen.php:299
-#: templates/portal/screens/campaign.php:338
+#: templates/portal/screens/campaign.php:334
 msgid "Line item"
 msgstr "Werbebuchung"
 
 #: inc/Admin/class-review-screen.php:301
-#: templates/portal/screens/campaign.php:340
+#: templates/portal/screens/campaign.php:336
 msgid "Pricing"
 msgstr "Preise"
 
 #: inc/Admin/class-review-screen.php:302
-#: templates/portal/screens/campaign.php:341
+#: templates/portal/screens/campaign.php:337
 msgid "Goal"
 msgstr "Ziel"
 
 #: inc/Admin/class-review-screen.php:303 inc/Admin/class-review-screen.php:351
-#: templates/portal/screens/campaign.php:342
+#: templates/portal/screens/campaign.php:338
 msgid "Pacing"
 msgstr "Auslieferungstempo"
 
@@ -1858,8 +1858,8 @@ msgstr "Organisation"
 
 #: inc/Admin/class-review-screen.php:306
 #: templates/portal/partials/campaign-changes.php:74
-#: templates/portal/screens/campaign.php:671
-#: templates/portal/screens/campaign.php:718
+#: templates/portal/screens/campaign.php:667
+#: templates/portal/screens/campaign.php:714
 msgid "Schedule"
 msgstr "Zeitplan"
 
@@ -1913,7 +1913,7 @@ msgstr "Alternativtext"
 #: inc/Admin/class-review-screen.php:319
 #: inc/Workflow/class-campaign-change-manager.php:766
 #: templates/portal/partials/campaign-changes.php:78
-#: templates/portal/screens/campaign.php:823
+#: templates/portal/screens/campaign.php:819
 msgid "Destination"
 msgstr "Zielseite"
 
@@ -2558,11 +2558,11 @@ msgstr "Hinweis"
 msgid "Creative uploaded."
 msgstr "Werbemittel hochgeladen."
 
-#: inc/Assets/class-assets.php:393 templates/portal/screens/campaign.php:275
+#: inc/Assets/class-assets.php:393 templates/portal/screens/campaign.php:271
 msgid "Creative removed."
 msgstr "Werbemittel entfernt."
 
-#: inc/Assets/class-assets.php:394 templates/portal/screens/campaign.php:281
+#: inc/Assets/class-assets.php:394 templates/portal/screens/campaign.php:277
 msgid "Destination saved."
 msgstr "Ziel gespeichert."
 
@@ -2570,7 +2570,7 @@ msgstr "Ziel gespeichert."
 msgid "Artwork replaced."
 msgstr "Werbemittel ersetzt."
 
-#: inc/Assets/class-assets.php:396 templates/portal/screens/campaign.php:280
+#: inc/Assets/class-assets.php:396 templates/portal/screens/campaign.php:276
 msgid "Dates saved."
 msgstr "Datumsangaben gespeichert."
 
@@ -2758,20 +2758,20 @@ msgid_plural "Cancelled <span class=\"count\">(%s)</span>"
 msgstr[0] "Storniert <span class=\"count\">(%s)</span>"
 msgstr[1] "Storniert <span class=\"count\">(%s)</span>"
 
-#: inc/Core/class-post-types.php:200 templates/portal/screens/campaign.php:659
-#: templates/portal/screens/campaign.php:663
-#: templates/portal/screens/campaign.php:717
+#: inc/Core/class-post-types.php:200 templates/portal/screens/campaign.php:655
+#: templates/portal/screens/campaign.php:659
+#: templates/portal/screens/campaign.php:713
 msgid "Package"
 msgstr "Paket"
 
-#: inc/Core/class-post-types.php:202 templates/portal/screens/campaign.php:425
-#: templates/portal/screens/campaign.php:680
+#: inc/Core/class-post-types.php:202 templates/portal/screens/campaign.php:421
+#: templates/portal/screens/campaign.php:676
 msgid "Creative"
 msgstr "Werbemittel"
 
 #: inc/Core/class-post-types.php:202
 #: templates/portal/partials/campaign-summary-facts.php:45
-#: templates/portal/screens/campaign.php:808
+#: templates/portal/screens/campaign.php:804
 msgid "Creatives"
 msgstr "Werbemittel"
 
@@ -5207,13 +5207,13 @@ msgstr "Es gibt keine beantragten Änderungen zum Zurückziehen."
 
 #: inc/Workflow/class-campaign-change-manager.php:762
 #: templates/portal/partials/campaign-changes.php:186
-#: templates/portal/screens/campaign.php:586
+#: templates/portal/screens/campaign.php:582
 msgid "Start date"
 msgstr "Startdatum"
 
 #: inc/Workflow/class-campaign-change-manager.php:764
 #: templates/portal/partials/campaign-changes.php:191
-#: templates/portal/screens/campaign.php:601
+#: templates/portal/screens/campaign.php:597
 msgid "End date"
 msgstr "Enddatum"
 
@@ -6133,7 +6133,7 @@ msgid "Campaign edit progress"
 msgstr "Kampagne bearbeiten – Fortschritt"
 
 #: templates/portal/partials/campaign-changes.php:70
-#: templates/portal/screens/campaign.php:422
+#: templates/portal/screens/campaign.php:418
 msgid "Details"
 msgstr "Details"
 
@@ -6181,7 +6181,7 @@ msgstr ""
 "dieses geprüft wurde."
 
 #: templates/portal/partials/campaign-changes.php:167
-#: templates/portal/screens/campaign.php:738
+#: templates/portal/screens/campaign.php:734
 msgid "Notes for the review team"
 msgstr "Hinweise für das Prüfungsteam"
 
@@ -6192,7 +6192,7 @@ msgid "Destination for %s"
 msgstr "Ziel für %s"
 
 #: templates/portal/partials/campaign-changes.php:219
-#: templates/portal/screens/campaign.php:542
+#: templates/portal/screens/campaign.php:538
 msgid "Save and continue"
 msgstr "Speichern und fortfahren"
 
@@ -6295,28 +6295,28 @@ msgid "Step %1$s of %2$s: %3$s"
 msgstr "Schritt %1$s von %2$s: %3$s"
 
 #: templates/portal/partials/campaign-editor-modules.php:44
-#: templates/portal/screens/campaign.php:409
+#: templates/portal/screens/campaign.php:405
 msgid "Name your campaign and choose a package"
 msgstr "Benennen Sie Ihre Kampagne und wählen Sie ein Paket"
 
 #: templates/portal/partials/campaign-editor-modules.php:45
 #: templates/portal/partials/campaign-upload-form.php:95
-#: templates/portal/screens/campaign.php:410
+#: templates/portal/screens/campaign.php:406
 msgid "Upload creative"
 msgstr "Werbemittel hochladen"
 
 #: templates/portal/partials/campaign-editor-modules.php:46
-#: templates/portal/screens/campaign.php:411
+#: templates/portal/screens/campaign.php:407
 msgid "Confirm destinations and schedule"
 msgstr "Zielplatzierungen und Zeitplan bestätigen"
 
 #: templates/portal/partials/campaign-editor-modules.php:47
-#: templates/portal/screens/campaign.php:412
+#: templates/portal/screens/campaign.php:408
 msgid "Review your campaign"
 msgstr "Prüfen Sie Ihre Kampagne"
 
 #: templates/portal/partials/campaign-editor-modules.php:48
-#: templates/portal/screens/campaign.php:413
+#: templates/portal/screens/campaign.php:409
 msgid "Submit your campaign"
 msgstr "Kampagne einreichen"
 
@@ -6469,7 +6469,7 @@ msgstr "Anfrage senden"
 
 #: templates/portal/partials/campaign-summary-facts.php:37
 #: templates/portal/partials/campaign-table.php:57
-#: templates/portal/screens/campaign.php:665
+#: templates/portal/screens/campaign.php:661
 msgid "None selected"
 msgstr "Keine ausgewählt"
 
@@ -6745,15 +6745,15 @@ msgstr "Diese Kampagne existiert nicht oder gehört nicht zu Ihnen."
 msgid "Back to campaigns"
 msgstr "Zurück zu den Kampagnen"
 
-#: templates/portal/screens/campaign.php:133
+#: templates/portal/screens/campaign.php:129
 msgid "Breadcrumb"
 msgstr "Brotkrumen"
 
-#: templates/portal/screens/campaign.php:159
+#: templates/portal/screens/campaign.php:155
 msgid "Withdraw and edit"
 msgstr "Zurückziehen und bearbeiten"
 
-#: templates/portal/screens/campaign.php:214
+#: templates/portal/screens/campaign.php:210
 msgid ""
 "This campaign will be closed and can never be reopened or submitted. Its "
 "record stays in your list so you can see what happened."
@@ -6762,7 +6762,7 @@ msgstr ""
 "eingereicht werden. Ihr Eintrag bleibt in Ihrer Liste, damit Sie sehen "
 "können, was passiert ist."
 
-#: templates/portal/screens/campaign.php:215
+#: templates/portal/screens/campaign.php:211
 msgid ""
 "This campaign will stop and can never be restarted. Its record and any "
 "delivery figures stay in your list."
@@ -6770,42 +6770,42 @@ msgstr ""
 "Diese Kampagne wird gestoppt und kann nie wieder gestartet werden. Ihr "
 "Eintrag und alle Auslieferungszahlen bleiben in Ihrer Liste."
 
-#: templates/portal/screens/campaign.php:219
+#: templates/portal/screens/campaign.php:215
 msgid "If you only want to change something, go back and use Edit instead."
 msgstr ""
 "Wenn Sie nur etwas ändern möchten, gehen Sie zurück und verwenden Sie "
 "stattdessen Bearbeiten."
 
-#: templates/portal/screens/campaign.php:232
+#: templates/portal/screens/campaign.php:228
 msgid "Keep this campaign"
 msgstr "Diese Kampagne beibehalten"
 
-#: templates/portal/screens/campaign.php:254
+#: templates/portal/screens/campaign.php:250
 msgid "Campaign created. Add the details below to continue."
 msgstr "Kampagne erstellt. Fügen Sie die Angaben unten hinzu, um fortzufahren."
 
-#: templates/portal/screens/campaign.php:255
+#: templates/portal/screens/campaign.php:251
 msgid "Campaign copied. Choose new dates before submitting."
 msgstr "Kampagne kopiert. Wählen Sie neue Daten aus, bevor Sie einreichen."
 
-#: templates/portal/screens/campaign.php:256
+#: templates/portal/screens/campaign.php:252
 msgid "Package saved. Add one correctly sized creative for each placement."
 msgstr ""
 "Paket gespeichert. Fügen Sie für jede Platzierung ein Werbemittel in der "
 "richtigen Größe hinzu."
 
-#: templates/portal/screens/campaign.php:257
+#: templates/portal/screens/campaign.php:253
 msgid "Destinations and schedule saved. Continue to review when you are ready."
 msgstr ""
 "Ziele und Zeitplan gespeichert. Fahren Sie mit der Überprüfung fort, wenn "
 "Sie bereit sind."
 
-#: templates/portal/screens/campaign.php:258
+#: templates/portal/screens/campaign.php:254
 msgid "Campaign submitted. It is now in the review queue."
 msgstr ""
 "Kampagne eingereicht. Sie befindet sich nun in der Prüfungswarteschlange."
 
-#: templates/portal/screens/campaign.php:259
+#: templates/portal/screens/campaign.php:255
 msgid ""
 "Campaign withdrawn from review and reopened for editing. Submit it again "
 "when you are ready."
@@ -6813,7 +6813,7 @@ msgstr ""
 "Kampagne aus der Prüfung zurückgezogen und zum Bearbeiten wieder geöffnet. "
 "Reichen Sie sie erneut ein, wenn Sie bereit sind."
 
-#: templates/portal/screens/campaign.php:260
+#: templates/portal/screens/campaign.php:256
 msgid ""
 "Edits submitted for review. Your campaign keeps running as approved until "
 "the review team decides."
@@ -6821,65 +6821,65 @@ msgstr ""
 "Änderungen zur Prüfung eingereicht. Ihre Kampagne läuft weiterhin wie "
 "genehmigt, bis das Prüfungsteam eine Entscheidung trifft."
 
-#: templates/portal/screens/campaign.php:261
+#: templates/portal/screens/campaign.php:257
 msgid "Edits discarded. Nothing about your running campaign changed."
 msgstr ""
 "Änderungen verworfen. An Ihrer laufenden Kampagne hat sich nichts geändert."
 
-#: templates/portal/screens/campaign.php:262
+#: templates/portal/screens/campaign.php:258
 msgid "Saved. Nothing is sent to the review team until you submit these edits."
 msgstr ""
 "Gespeichert. Es wird nichts an das Prüfungsteam gesendet, bis Sie diese "
 "Änderungen einreichen."
 
-#: templates/portal/screens/campaign.php:263
+#: templates/portal/screens/campaign.php:259
 msgid "Details saved. Choose a package to continue."
 msgstr "Details gespeichert. Wählen Sie ein Paket, um fortzufahren."
 
-#: templates/portal/screens/campaign.php:274
+#: templates/portal/screens/campaign.php:270
 msgid "Creative uploaded and stored privately."
 msgstr "Werbemittel hochgeladen und privat gespeichert."
 
-#: templates/portal/screens/campaign.php:276
+#: templates/portal/screens/campaign.php:272
 msgid "Your ad update is waiting for review. The current ad will keep running."
 msgstr ""
 "Ihre Werbeanpassung wartet auf Prüfung. Die aktuelle Werbeanzeige läuft "
 "weiter."
 
-#: templates/portal/screens/campaign.php:277
+#: templates/portal/screens/campaign.php:273
 msgid "Share saved. The new split applies to the next advertisement served."
 msgstr ""
 "Anteil gespeichert. Die neue Aufteilung gilt für die nächste ausgelieferte "
 "Anzeige."
 
-#: templates/portal/screens/campaign.php:278
+#: templates/portal/screens/campaign.php:274
 msgid "Paused. The other creatives on that placement take its share."
 msgstr ""
 "Pausiert. Die anderen Werbemittel auf dieser Platzierung übernehmen dessen "
 "Anteil."
 
-#: templates/portal/screens/campaign.php:279
+#: templates/portal/screens/campaign.php:275
 msgid "Resumed. It starts serving again on the next request."
 msgstr "Fortgesetzt. Bei der nächsten Anfrage wird wieder ausgeliefert."
 
-#: templates/portal/screens/campaign.php:282
+#: templates/portal/screens/campaign.php:278
 msgid "The pending ad update was withdrawn."
 msgstr "Die ausstehende Werbeanpassung wurde zurückgezogen."
 
-#: templates/portal/screens/campaign.php:298
+#: templates/portal/screens/campaign.php:294
 msgid "Notes from the review team"
 msgstr "Notizen vom Prüfungsteam"
 
-#: templates/portal/screens/campaign.php:316
+#: templates/portal/screens/campaign.php:312
 msgid "Your notes for the review team"
 msgstr "Ihre Notizen für das Prüfungsteam"
 
-#: templates/portal/screens/campaign.php:359
+#: templates/portal/screens/campaign.php:355
 msgid "You are editing on behalf of this advertiser"
 msgstr "Sie bearbeiten im Namen dieses Werbetreibenden"
 
 #. translators: %s: organization name.
-#: templates/portal/screens/campaign.php:365
+#: templates/portal/screens/campaign.php:361
 #, php-format
 msgid ""
 "Changes you save here are recorded against %s and appear in their audit "
@@ -6888,50 +6888,50 @@ msgstr ""
 "Änderungen, die Sie hier speichern, werden für %s erfasst und erscheinen in "
 "deren Audit-Verlauf als Bearbeitung durch das Personal."
 
-#: templates/portal/screens/campaign.php:396
+#: templates/portal/screens/campaign.php:392
 msgid "Step 1 of 5"
 msgstr "Schritt 1 von 5"
 
-#: templates/portal/screens/campaign.php:397
+#: templates/portal/screens/campaign.php:393
 msgid "Step 2 of 5"
 msgstr "Schritt 2 von 5"
 
-#: templates/portal/screens/campaign.php:398
+#: templates/portal/screens/campaign.php:394
 msgid "Step 3 of 5"
 msgstr "Schritt 3 von 5"
 
-#: templates/portal/screens/campaign.php:399
+#: templates/portal/screens/campaign.php:395
 msgid "Step 4 of 5"
 msgstr "Schritt 4 von 5"
 
-#: templates/portal/screens/campaign.php:400
+#: templates/portal/screens/campaign.php:396
 msgid "Step 5 of 5"
 msgstr "Schritt 5 von 5"
 
-#: templates/portal/screens/campaign.php:420
+#: templates/portal/screens/campaign.php:416
 msgid "Campaign creation progress"
 msgstr "Fortschritt der Kampagnenerstellung"
 
-#: templates/portal/screens/campaign.php:428
+#: templates/portal/screens/campaign.php:424
 msgid "Destination and schedule"
 msgstr "Ziel und Zeitraum"
 
-#: templates/portal/screens/campaign.php:435
-#: templates/portal/screens/campaign.php:437
+#: templates/portal/screens/campaign.php:431
+#: templates/portal/screens/campaign.php:433
 msgid "Submit"
 msgstr "Absenden"
 
-#: templates/portal/screens/campaign.php:462
+#: templates/portal/screens/campaign.php:458
 msgid "Use a name your team will recognize. This is not shown with the ad."
 msgstr ""
 "Verwenden Sie einen Namen, den Ihr Team wiedererkennt. Dieser wird nicht mit "
 "der Anzeige angezeigt."
 
-#: templates/portal/screens/campaign.php:491
+#: templates/portal/screens/campaign.php:487
 msgid "Choose a package"
 msgstr "Wählen Sie ein Paket"
 
-#: templates/portal/screens/campaign.php:492
+#: templates/portal/screens/campaign.php:488
 msgid ""
 "Selecting a package copies its current price and placements into this "
 "campaign so later catalogue changes cannot alter your draft. Once the "
@@ -6944,11 +6944,11 @@ msgstr ""
 "überspringt die Auswahl eines Pakets diesen Schritt und geht direkt zum "
 "Werbemittel weiter."
 
-#: templates/portal/screens/campaign.php:496
+#: templates/portal/screens/campaign.php:492
 msgid "No packages are available"
 msgstr "Keine Pakete verfügbar"
 
-#: templates/portal/screens/campaign.php:497
+#: templates/portal/screens/campaign.php:493
 msgid ""
 "The catalogue is not configured yet. Your draft is safe; please return later "
 "or get in touch."
@@ -6956,19 +6956,19 @@ msgstr ""
 "Der Katalog ist noch nicht konfiguriert. Ihr Entwurf ist sicher; kommen Sie "
 "später wieder oder kontaktieren Sie uns."
 
-#: templates/portal/screens/campaign.php:514
+#: templates/portal/screens/campaign.php:510
 msgid "Recommended"
 msgstr "Empfohlen"
 
-#: templates/portal/screens/campaign.php:543
+#: templates/portal/screens/campaign.php:539
 msgid "Continue"
 msgstr "Weiter"
 
-#: templates/portal/screens/campaign.php:565
+#: templates/portal/screens/campaign.php:561
 msgid "Creative destinations"
 msgstr "Zielseiten der Werbemittel"
 
-#: templates/portal/screens/campaign.php:566
+#: templates/portal/screens/campaign.php:562
 msgid ""
 "Confirm where each advertisement sends visitors. Return to the creative step "
 "if an address needs to change."
@@ -6976,7 +6976,7 @@ msgstr ""
 "Bestätigen Sie, wohin jede Anzeige Besucher weiterleitet. Kehren Sie zum "
 "Schritt „Werbemittel\" zurück, wenn eine Adresse geändert werden muss."
 
-#: templates/portal/screens/campaign.php:570
+#: templates/portal/screens/campaign.php:566
 msgid ""
 "Every active package placement needs at least one creative before this "
 "schedule can be completed."
@@ -6984,34 +6984,34 @@ msgstr ""
 "Jede aktive Paketplatzierung benötigt mindestens ein Werbemittel, bevor "
 "dieser Zeitplan abgeschlossen werden kann."
 
-#: templates/portal/screens/campaign.php:587
+#: templates/portal/screens/campaign.php:583
 msgid ""
 "Required. The campaign begins at the start of this day in the site timezone."
 msgstr ""
 "Pflichtfeld. Die Kampagne beginnt zu Beginn dieses Tages in der Zeitzone der "
 "Website."
 
-#: templates/portal/screens/campaign.php:602
+#: templates/portal/screens/campaign.php:598
 msgid "Optional. The campaign runs through the end of this day."
 msgstr "Optional. Die Kampagne läuft bis zum Ende dieses Tages."
 
-#: templates/portal/screens/campaign.php:615
+#: templates/portal/screens/campaign.php:611
 msgid "Back to creative"
 msgstr "Zurück zum Werbemittel"
 
-#: templates/portal/screens/campaign.php:618
+#: templates/portal/screens/campaign.php:614
 msgid "Save and continue to review"
 msgstr "Speichern und zur Prüfung fortfahren"
 
-#: templates/portal/screens/campaign.php:619
+#: templates/portal/screens/campaign.php:615
 msgid "Continue to review"
 msgstr "Weiter zur Prüfung"
 
-#: templates/portal/screens/campaign.php:628
+#: templates/portal/screens/campaign.php:624
 msgid "Ready for submission"
 msgstr "Bereit zur Einreichung"
 
-#: templates/portal/screens/campaign.php:629
+#: templates/portal/screens/campaign.php:625
 msgid ""
 "The campaign currently passes every submission check. Review the information "
 "below before continuing."
@@ -7019,35 +7019,35 @@ msgstr ""
 "Die Kampagne besteht derzeit alle Einreichungsprüfungen. Prüfen Sie die "
 "folgenden Informationen, bevor Sie fortfahren."
 
-#: templates/portal/screens/campaign.php:633
+#: templates/portal/screens/campaign.php:629
 msgid "Changes are still needed"
 msgstr "Änderungen sind noch erforderlich"
 
-#: templates/portal/screens/campaign.php:634
+#: templates/portal/screens/campaign.php:630
 msgid "Resolve every item below before submitting this campaign."
 msgstr "Beheben Sie alle Punkte unten, bevor Sie diese Kampagne einreichen."
 
-#: templates/portal/screens/campaign.php:649
+#: templates/portal/screens/campaign.php:645
 msgid "Campaign details"
 msgstr "Kampagnendetails"
 
-#: templates/portal/screens/campaign.php:663
+#: templates/portal/screens/campaign.php:659
 msgid "Not selected"
 msgstr "Nicht ausgewählt"
 
-#: templates/portal/screens/campaign.php:698
+#: templates/portal/screens/campaign.php:694
 msgid "Back to schedule"
 msgstr "Zurück zum Zeitplan"
 
-#: templates/portal/screens/campaign.php:700
+#: templates/portal/screens/campaign.php:696
 msgid "Continue to submit"
 msgstr "Absenden fortsetzen"
 
-#: templates/portal/screens/campaign.php:708
+#: templates/portal/screens/campaign.php:704
 msgid "Send this campaign to the review team?"
 msgstr "Diese Kampagne an das Prüfungsteam senden?"
 
-#: templates/portal/screens/campaign.php:709
+#: templates/portal/screens/campaign.php:705
 msgid ""
 "Submission locks campaign editing while the review team checks the creative, "
 "destinations, schedule, and placement availability."
@@ -7056,63 +7056,63 @@ msgstr ""
 "Prüfungsteam das Werbemittel, die Ziele, den Zeitplan und die Verfügbarkeit "
 "der Platzierung prüft."
 
-#: templates/portal/screens/campaign.php:711
+#: templates/portal/screens/campaign.php:707
 msgid "You can withdraw the campaign only until a reviewer claims it."
 msgstr ""
 "Sie können die Kampagne nur zurückziehen, bis ein Prüfer sie übernimmt."
 
-#: templates/portal/screens/campaign.php:712
+#: templates/portal/screens/campaign.php:708
 msgid "If changes are requested, the campaign becomes editable again."
 msgstr ""
 "Wenn Änderungen angefordert werden, wird die Kampagne wieder bearbeitbar."
 
-#: templates/portal/screens/campaign.php:713
+#: templates/portal/screens/campaign.php:709
 msgid "The submission checks run again when you press the button below."
 msgstr ""
 "Die Einreichungsprüfungen werden erneut ausgeführt, wenn Sie auf die "
 "Schaltfläche unten klicken."
 
-#: templates/portal/screens/campaign.php:739
+#: templates/portal/screens/campaign.php:735
 msgid ""
 "Optional. Include anything that will help the team review this campaign."
 msgstr ""
 "Optional. Geben Sie alles an, was dem Team bei der Prüfung dieser Kampagne "
 "hilft."
 
-#: templates/portal/screens/campaign.php:744
-#: templates/portal/screens/campaign.php:762
+#: templates/portal/screens/campaign.php:740
+#: templates/portal/screens/campaign.php:758
 msgid "Back to review"
 msgstr "Zurück zur Prüfung"
 
-#: templates/portal/screens/campaign.php:745
+#: templates/portal/screens/campaign.php:741
 msgid "Submit campaign for review"
 msgstr "Kampagne zur Prüfung einreichen"
 
-#: templates/portal/screens/campaign.php:750
+#: templates/portal/screens/campaign.php:746
 msgid "Campaign is no longer ready"
 msgstr "Kampagne ist nicht mehr einsatzbereit"
 
-#: templates/portal/screens/campaign.php:751
+#: templates/portal/screens/campaign.php:747
 msgid "Resolve every item below before returning to submission."
 msgstr ""
 "Beheben Sie alle folgenden Punkte, bevor Sie zur Einreichung zurückkehren."
 
-#: templates/portal/screens/campaign.php:789
+#: templates/portal/screens/campaign.php:785
 #: templates/portal/screens/organization.php:68
 msgid "Summary"
 msgstr "Zusammenfassung"
 
-#: templates/portal/screens/campaign.php:813
+#: templates/portal/screens/campaign.php:809
 msgid "No creatives yet"
 msgstr "Noch keine Werbemittel"
 
-#: templates/portal/screens/campaign.php:814
+#: templates/portal/screens/campaign.php:810
 msgid "A campaign needs at least one creative before it can be submitted."
 msgstr ""
 "Eine Kampagne benötigt mindestens ein Werbemittel, bevor sie eingereicht "
 "werden kann."
 
-#: templates/portal/screens/campaign.php:817
+#: templates/portal/screens/campaign.php:813
 msgid "Creatives table"
 msgstr "Werbemittel-Tabelle"
 
