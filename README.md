@@ -22,7 +22,7 @@ theme dependency. Display name and logo are settings; the code prefix is
 **Advertiser portal** at `/advertiser/` — its own document, not a page with a
 block. Sign-in, signup, password setup and recovery are portal-owned;
 `wp-login.php` is untouched and is how staff reach wp-admin. Advertisers never
-enter wp-admin (`Admin_Guard`). Screens: dashboard, campaigns, six-step wizard,
+enter wp-admin (`Admin_Guard`). Screens: dashboard, campaigns, five-step wizard,
 organization, account, help.
 
 **Staff admin** under one Advertising menu: Review, Organizations, Placements,
@@ -200,7 +200,8 @@ Start with [docs/README.md](docs/README.md). Short version:
 | [threat-model.md](docs/threat-model.md) | Attack surfaces and the test proving each |
 | [platform-p3-decision-engine.md](docs/platform-p3-decision-engine.md) | The serving pipeline, its stages and trace contract |
 | [roadmap.md](docs/roadmap.md) | What shipped vs remaining product |
-| [suite-roadmap.md](docs/suite-roadmap.md) | Suite build order |
+| [suite-roadmap.md](docs/suite-roadmap.md) | Durable suite/product direction |
+| [work-tracking.md](docs/work-tracking.md) | Issue hierarchy, dependencies and execution order |
 
 ## License
 
