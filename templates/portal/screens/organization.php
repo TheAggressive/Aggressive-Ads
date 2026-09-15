@@ -64,48 +64,15 @@ if ( '' !== $aggr_org_notice ) {
 	</section>
 <?php endif; ?>
 
-<section class="aggr-panel" aria-labelledby="aggr-org-summary">
-	<h2 id="aggr-org-summary" class="aggr-panel__head"><?php esc_html_e( 'Summary', 'aggressive-ads' ); ?></h2>
-
-	<dl class="aggr-facts">
-		<div class="aggr-fact">
-			<dt><?php esc_html_e( 'People', 'aggressive-ads' ); ?></dt>
-			<dd><?php echo esc_html( number_format_i18n( count( $aggr_org['members'] ) ) ); ?></dd>
-		</div>
-
-		<div class="aggr-fact">
-			<dt><?php esc_html_e( 'Campaigns', 'aggressive-ads' ); ?></dt>
-			<dd><?php echo esc_html( number_format_i18n( (int) $aggr_org['campaigns'] ) ); ?></dd>
-		</div>
-	</dl>
-</section>
-
-<?php if ( true === $aggr_org['can_manage_members'] ) : ?>
-	<section class="aggr-panel" aria-labelledby="aggr-org-name">
-		<h2 id="aggr-org-name" class="aggr-panel__head"><?php esc_html_e( 'Organization name', 'aggressive-ads' ); ?></h2>
-		<p class="aggr-hint"><?php esc_html_e( 'Names are stored in uppercase. Exact matches of another organization’s name are refused so two tenants cannot claim the same identity.', 'aggressive-ads' ); ?></p>
-
-		<form class="aggr-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-			<input type="hidden" name="action" value="<?php echo esc_attr( Organization_Actions::RENAME_ACTION ); ?>">
-			<?php wp_nonce_field( Organization_Actions::RENAME_ACTION ); ?>
-
-			<div class="aggr-field">
-				<label for="aggr-organization-name"><?php esc_html_e( 'Display name', 'aggressive-ads' ); ?></label>
-				<input
-					id="aggr-organization-name"
-					name="organization_name"
-					type="text"
-					value="<?php echo esc_attr( (string) $aggr_org['name'] ); ?>"
-					maxlength="<?php echo esc_attr( (string) Org_Repository::MAX_NAME_LENGTH ); ?>"
-					required
-				>
-			</div>
-
-			<button class="aggr-button" type="submit"><?php esc_html_e( 'Save name', 'aggressive-ads' ); ?></button>
-		</form>
-	</section>
-<?php endif; ?>
-
+<?php
+/*
+ * The people this organization is made of on the left, and what the owner can
+ * do about them on the right: the list is what somebody came to read, and the
+ * forms are what they occasionally act on.
+ */
+?>
+<div class="aggr-columns">
+	<div class="aggr-columns__main">
 <section class="aggr-panel" aria-labelledby="aggr-org-people">
 	<h2 id="aggr-org-people" class="aggr-panel__head"><?php esc_html_e( 'People', 'aggressive-ads' ); ?></h2>
 
@@ -132,11 +99,11 @@ if ( '' !== $aggr_org_notice ) {
 						</td>
 						<td class="aggr-table__url"><?php echo esc_html( (string) $aggr_member['email'] ); ?></td>
 						<td>
-							<?php
-							echo true === $aggr_member['is_owner']
-								? esc_html__( 'Owner', 'aggressive-ads' )
-								: esc_html__( 'Member', 'aggressive-ads' );
-							?>
+							<?php if ( true === $aggr_member['is_owner'] ) : ?>
+								<span class="aggr-pill aggr-pill--owner"><?php esc_html_e( 'Owner', 'aggressive-ads' ); ?></span>
+							<?php else : ?>
+								<span class="aggr-pill aggr-pill--neutral"><?php esc_html_e( 'Member', 'aggressive-ads' ); ?></span>
+							<?php endif; ?>
 						</td>
 						<?php if ( true === $aggr_org['can_manage_members'] ) : ?>
 							<td>
@@ -171,23 +138,6 @@ if ( '' !== $aggr_org_notice ) {
 </section>
 
 <?php if ( true === $aggr_org['can_manage_members'] ) : ?>
-	<section class="aggr-panel" aria-labelledby="aggr-org-invite">
-		<h2 id="aggr-org-invite" class="aggr-panel__head"><?php esc_html_e( 'Invite a person', 'aggressive-ads' ); ?></h2>
-		<p class="aggr-hint"><?php esc_html_e( 'We will email a single-use invitation that expires after three days. Membership is granted only after the recipient completes it.', 'aggressive-ads' ); ?></p>
-
-		<form class="aggr-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-			<input type="hidden" name="action" value="<?php echo esc_attr( Organization_Actions::INVITE_ACTION ); ?>">
-			<?php wp_nonce_field( Organization_Actions::INVITE_ACTION ); ?>
-
-			<div class="aggr-field">
-				<label for="aggr-invite-email"><?php esc_html_e( 'Work email', 'aggressive-ads' ); ?></label>
-				<input id="aggr-invite-email" name="email" type="email" autocomplete="email" maxlength="100" required>
-			</div>
-
-			<button class="aggr-button" type="submit"><?php esc_html_e( 'Send invitation', 'aggressive-ads' ); ?></button>
-		</form>
-	</section>
-
 	<?php if ( array() !== $aggr_org['pending_access'] ) : ?>
 		<section class="aggr-panel" aria-labelledby="aggr-org-pending">
 			<h2 id="aggr-org-pending" class="aggr-panel__head"><?php esc_html_e( 'Pending access', 'aggressive-ads' ); ?></h2>
@@ -247,3 +197,66 @@ if ( '' !== $aggr_org_notice ) {
 <?php else : ?>
 	<p class="aggr-panel__foot"><?php esc_html_e( 'Only the organization owner can rename the organization, invite people, approve requests, remove members, or transfer ownership.', 'aggressive-ads' ); ?></p>
 <?php endif; ?>
+	</div>
+
+	<aside class="aggr-columns__side">
+<section class="aggr-panel" aria-labelledby="aggr-org-summary">
+	<h2 id="aggr-org-summary" class="aggr-panel__head"><?php esc_html_e( 'Summary', 'aggressive-ads' ); ?></h2>
+
+	<dl class="aggr-facts">
+		<div class="aggr-fact">
+			<dt><?php esc_html_e( 'People', 'aggressive-ads' ); ?></dt>
+			<dd><?php echo esc_html( number_format_i18n( count( $aggr_org['members'] ) ) ); ?></dd>
+		</div>
+
+		<div class="aggr-fact">
+			<dt><?php esc_html_e( 'Campaigns', 'aggressive-ads' ); ?></dt>
+			<dd><?php echo esc_html( number_format_i18n( (int) $aggr_org['campaigns'] ) ); ?></dd>
+		</div>
+	</dl>
+</section>
+
+<?php if ( true === $aggr_org['can_manage_members'] ) : ?>
+	<section class="aggr-panel" aria-labelledby="aggr-org-invite">
+		<h2 id="aggr-org-invite" class="aggr-panel__head"><?php esc_html_e( 'Invite a person', 'aggressive-ads' ); ?></h2>
+		<p class="aggr-hint"><?php esc_html_e( 'We will email a single-use invitation that expires after three days. Membership is granted only after the recipient completes it.', 'aggressive-ads' ); ?></p>
+
+		<form class="aggr-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<input type="hidden" name="action" value="<?php echo esc_attr( Organization_Actions::INVITE_ACTION ); ?>">
+			<?php wp_nonce_field( Organization_Actions::INVITE_ACTION ); ?>
+
+			<div class="aggr-field">
+				<label for="aggr-invite-email"><?php esc_html_e( 'Work email', 'aggressive-ads' ); ?></label>
+				<input id="aggr-invite-email" name="email" type="email" autocomplete="email" maxlength="100" required>
+			</div>
+
+			<button class="aggr-button" type="submit"><?php esc_html_e( 'Send invitation', 'aggressive-ads' ); ?></button>
+		</form>
+	</section>
+
+	<section class="aggr-panel" aria-labelledby="aggr-org-name">
+		<h2 id="aggr-org-name" class="aggr-panel__head"><?php esc_html_e( 'Organization name', 'aggressive-ads' ); ?></h2>
+		<p class="aggr-hint"><?php esc_html_e( 'Names are stored in uppercase. Exact matches of another organization’s name are refused so two tenants cannot claim the same identity.', 'aggressive-ads' ); ?></p>
+
+		<form class="aggr-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<input type="hidden" name="action" value="<?php echo esc_attr( Organization_Actions::RENAME_ACTION ); ?>">
+			<?php wp_nonce_field( Organization_Actions::RENAME_ACTION ); ?>
+
+			<div class="aggr-field">
+				<label for="aggr-organization-name"><?php esc_html_e( 'Display name', 'aggressive-ads' ); ?></label>
+				<input
+					id="aggr-organization-name"
+					name="organization_name"
+					type="text"
+					value="<?php echo esc_attr( (string) $aggr_org['name'] ); ?>"
+					maxlength="<?php echo esc_attr( (string) Org_Repository::MAX_NAME_LENGTH ); ?>"
+					required
+				>
+			</div>
+
+			<button class="aggr-button" type="submit"><?php esc_html_e( 'Save name', 'aggressive-ads' ); ?></button>
+		</form>
+	</section>
+<?php endif; ?>
+	</aside>
+</div>

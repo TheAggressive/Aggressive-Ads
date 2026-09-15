@@ -27,18 +27,26 @@ use WP_Error;
  */
 final class Campaign_Actions implements Service {
 
-	public const CREATE_ACTION        = 'aggr_create_campaign';
-	public const COPY_ACTION          = 'aggr_copy_campaign';
-	public const SAVE_ACTION          = 'aggr_save_campaign';
-	public const SAVE_SCHEDULE_ACTION = 'aggr_save_campaign_schedule';
-	public const SUBMIT_ACTION        = 'aggr_submit_campaign';
-	public const WITHDRAW_ACTION      = 'aggr_withdraw_campaign';
-	public const CHANGES_ACTION       = 'aggr_request_campaign_changes';
-	public const CHANGES_CANCEL       = 'aggr_cancel_campaign_changes';
-	public const CHANGES_SUBMIT       = 'aggr_submit_campaign_changes';
-	public const CANCEL_ACTION        = 'aggr_cancel_campaign';
-	public const REQUEST_ACTION       = 'aggr_request_campaign_action';
-	public const REQUEST_WITHDRAW     = 'aggr_withdraw_campaign_action';
+	public const CREATE_ACTION            = 'aggr_create_campaign';
+	public const COPY_ACTION              = 'aggr_copy_campaign';
+	public const SAVE_ACTION              = 'aggr_save_campaign';
+	public const COMPLETE_CREATIVE_ACTION = 'aggr_complete_campaign_creative';
+	public const RENAME_ACTION            = 'aggr_rename_campaign';
+	public const SUBMIT_ACTION            = 'aggr_submit_campaign';
+	public const WITHDRAW_ACTION          = 'aggr_withdraw_campaign';
+	public const CHANGES_ACTION           = 'aggr_request_campaign_changes';
+	public const CHANGES_CANCEL           = 'aggr_cancel_campaign_changes';
+	public const CHANGES_SUBMIT           = 'aggr_submit_campaign_changes';
+	public const CANCEL_ACTION            = 'aggr_cancel_campaign';
+	public const REQUEST_ACTION           = 'aggr_request_campaign_action';
+	public const REQUEST_WITHDRAW         = 'aggr_withdraw_campaign_action';
+
+	/**
+	 * Error codes that belong to the schedule on details.
+	 *
+	 * @var array<int, string>
+	 */
+	private const DATE_ERRORS = array( 'aggr_start_date_required', 'aggr_start_date_past', 'aggr_start_date_not_midnight', 'aggr_start_date_invalid', 'aggr_end_before_start', 'aggr_end_date_not_day_end', 'aggr_end_date_invalid' );
 
 	/**
 	 * Constructor.
@@ -67,7 +75,8 @@ final class Campaign_Actions implements Service {
 		add_action( 'admin_post_' . self::CREATE_ACTION, array( $this, 'handle_create' ) );
 		add_action( 'admin_post_' . self::COPY_ACTION, array( $this, 'handle_copy' ) );
 		add_action( 'admin_post_' . self::SAVE_ACTION, array( $this, 'handle_save' ) );
-		add_action( 'admin_post_' . self::SAVE_SCHEDULE_ACTION, array( $this, 'handle_save_schedule' ) );
+		add_action( 'admin_post_' . self::COMPLETE_CREATIVE_ACTION, array( $this, 'handle_complete_creative' ) );
+		add_action( 'admin_post_' . self::RENAME_ACTION, array( $this, 'handle_rename' ) );
 		add_action( 'admin_post_' . self::SUBMIT_ACTION, array( $this, 'handle_submit' ) );
 		add_action( 'admin_post_' . self::WITHDRAW_ACTION, array( $this, 'handle_withdraw' ) );
 		add_action( 'admin_post_' . self::CHANGES_ACTION, array( $this, 'handle_request_changes' ) );
@@ -81,19 +90,35 @@ final class Campaign_Actions implements Service {
 	/**
 	 * Creates a draft and opens its details screen.
 	 *
+	 * The dashboard's package cards post here with a `package_id`, so choosing
+	 * what to buy and starting the campaign are one click rather than two.
+	 * A package that cannot be applied still leaves the draft behind and says
+	 * why on it, rather than discarding a campaign the advertiser just created.
+	 *
 	 * @return void
 	 */
 	public function handle_create(): void {
 		$this->assert_portal_access();
 		check_admin_referer( self::CREATE_ACTION );
 
-		$result = $this->process_create();
+		$package_id = isset( $_POST['package_id'] ) ? absint( wp_unslash( $_POST['package_id'] ) ) : 0;
+		$result     = $this->process_create();
 
 		if ( is_wp_error( $result ) ) {
 			$this->redirect( Routes::url( Request::ROUTE_CAMPAIGNS ), 'error', $result );
 		}
 
-		$this->redirect( Routes::url( Request::ROUTE_CAMPAIGNS, $result ), 'created' );
+		$url = add_query_arg( 'step', 'details', Routes::url( Request::ROUTE_CAMPAIGNS, $result ) );
+
+		if ( $package_id > 0 ) {
+			$chosen = $this->process_choose_package( $result, $package_id );
+
+			if ( is_wp_error( $chosen ) ) {
+				$this->redirect( $url, 'error', $chosen );
+			}
+		}
+
+		$this->redirect( $url, 'created' );
 	}
 
 	/**
@@ -118,7 +143,7 @@ final class Campaign_Actions implements Service {
 	}
 
 	/**
-	 * Saves the first wizard step and returns to the campaign.
+	 * Saves the first wizard step — package and schedule — and moves on.
 	 *
 	 * @return void
 	 */
@@ -129,21 +154,34 @@ final class Campaign_Actions implements Service {
 
 		check_admin_referer( Campaign_Nonces::save_nonce_action( $campaign_id ) );
 
-		$fields = array(
-			'title' => isset( $_POST['title'] ) ? sanitize_text_field( wp_unslash( $_POST['title'] ) ) : '',
-		);
-
 		/*
-		 * Absent, not empty, when the form offered no choice.
+		 * **Absent, not empty, when the form did not render the field.**
 		 *
-		 * This step used to post a placement checkbox grid, so sending
-		 * `placement_ids => array()` for an empty submission was right. The
-		 * grid is gone — the package sets the placements — and an unconditional
-		 * empty array here would clear, on every save of the campaign's name,
-		 * exactly the placements the package had just written.
+		 * The name used to be on this step, so an unconditional `title => ''`
+		 * was harmless. It is edited from the page heading now; posting an
+		 * empty one here would refuse every save of this step as unnamed. The
+		 * same holds for the package — an empty `placement_ids` once cleared
+		 * the placements the package had just written — and for the end date,
+		 * which a fixed package renders disabled so the server derives it.
 		 */
+		$fields = array();
+
+		if ( isset( $_POST['title'] ) ) {
+			$fields['title'] = sanitize_text_field( wp_unslash( $_POST['title'] ) );
+		}
+
 		if ( isset( $_POST['package_id'] ) ) {
 			$fields['package_id'] = absint( wp_unslash( $_POST['package_id'] ) );
+		}
+
+		foreach ( array( 'start_date', 'end_date' ) as $key ) {
+			if ( isset( $_POST[ $key ] ) ) {
+				$fields[ $key ] = sanitize_text_field( wp_unslash( $_POST[ $key ] ) );
+			}
+		}
+
+		if ( isset( $_POST['default_click_url'] ) ) {
+			$fields['default_click_url'] = sanitize_text_field( wp_unslash( $_POST['default_click_url'] ) );
 		}
 
 		$revision = isset( $_POST['autosave_rev'] ) ? absint( $_POST['autosave_rev'] ) : -1;
@@ -151,36 +189,72 @@ final class Campaign_Actions implements Service {
 		$url      = Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id );
 
 		if ( is_wp_error( $result ) ) {
-			$this->redirect( add_query_arg( 'step', 'details', $url ), 'error', $result );
+			// Back to the step the refused field is on, not always the first one.
+			$step = 'aggr_default_click_url_invalid' === $result->get_error_code() ? 'creative' : 'details';
+
+			$this->redirect( add_query_arg( 'step', $step, $url ), 'error', $result );
 		}
 
 		$this->redirect( add_query_arg( 'step', 'creative', $url ), 'saved' );
 	}
 
-
 	/**
-	 * Saves the destination confirmation and campaign schedule.
+	 * Leaves the creative step for review.
+	 *
+	 * A refused date sends the advertiser to details, where the date is, and
+	 * anything else back to the uploads — returning them to the step they
+	 * pressed the button on would show the error beside nothing it is about.
 	 *
 	 * @return void
 	 */
-	public function handle_save_schedule(): void {
+	public function handle_complete_creative(): void {
 		$this->assert_portal_access();
 
-		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0;
+		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- creative_nonce_action() uses this id immediately below.
 
-		check_admin_referer( Campaign_Nonces::schedule_nonce_action( $campaign_id ) );
+		check_admin_referer( Campaign_Nonces::creative_nonce_action( $campaign_id ) );
 
-		$start_date = isset( $_POST['start_date'] ) ? sanitize_text_field( wp_unslash( $_POST['start_date'] ) ) : '';
-		$end_date   = isset( $_POST['end_date'] ) ? sanitize_text_field( wp_unslash( $_POST['end_date'] ) ) : '';
-		$revision   = isset( $_POST['autosave_rev'] ) ? absint( $_POST['autosave_rev'] ) : -1;
-		$result     = $this->process_save_schedule( $campaign_id, $start_date, $end_date, $revision );
-		$url        = Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id );
+		$revision = isset( $_POST['autosave_rev'] ) ? absint( $_POST['autosave_rev'] ) : -1;
+		$result   = $this->process_complete_creative( $campaign_id, $revision );
+		$url      = Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id );
 
 		if ( is_wp_error( $result ) ) {
-			$this->redirect( add_query_arg( 'step', 'destination', $url ), 'error', $result );
+			$step = in_array( $result->get_error_code(), self::DATE_ERRORS, true ) ? 'details' : 'creative';
+
+			$this->redirect( add_query_arg( 'step', $step, $url ), 'error', $result );
 		}
 
-		$this->redirect( add_query_arg( 'step', 'review', $url ), 'schedule_saved' );
+		$this->redirect( add_query_arg( 'step', 'review', $url ), 'reviewing' );
+	}
+
+	/**
+	 * Renames a campaign from the review step, for a browser without script.
+	 *
+	 * With script the page heading is the control and saves through REST
+	 * autosave; this is the same write for everyone else, and it returns to
+	 * the step the form was on.
+	 *
+	 * @return void
+	 */
+	public function handle_rename(): void {
+		$this->assert_portal_access();
+
+		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- rename_nonce_action() uses this id immediately below.
+
+		check_admin_referer( Campaign_Nonces::rename_nonce_action( $campaign_id ) );
+
+		$title    = isset( $_POST['title'] ) ? sanitize_text_field( wp_unslash( $_POST['title'] ) ) : '';
+		$revision = isset( $_POST['autosave_rev'] ) ? absint( $_POST['autosave_rev'] ) : -1;
+		$step     = isset( $_POST['return_step'] ) ? sanitize_key( wp_unslash( $_POST['return_step'] ) ) : 'review';
+		$step     = in_array( $step, Campaign_Editor::DISPLAY_STEPS, true ) ? $step : 'review';
+		$result   = $this->process_rename( $campaign_id, $title, $revision );
+		$url      = add_query_arg( 'step', $step, Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id ) );
+
+		if ( is_wp_error( $result ) ) {
+			$this->redirect( $url, 'error', $result );
+		}
+
+		$this->redirect( $url, 'renamed' );
 	}
 
 	/**
@@ -201,8 +275,7 @@ final class Campaign_Actions implements Service {
 		$url      = Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id );
 
 		if ( is_wp_error( $result ) ) {
-			$step = 'aggr_campaign_invalid' === $result->get_error_code() ? 'review' : 'submit';
-			$this->redirect( add_query_arg( 'step', $step, $url ), 'error', $result );
+			$this->redirect( add_query_arg( 'step', 'review', $url ), 'error', $result );
 		}
 
 		$this->redirect( $url, 'submitted' );
@@ -212,9 +285,9 @@ final class Campaign_Actions implements Service {
 	 * Pulls a submitted campaign back to draft and reopens the wizard.
 	 *
 	 * Lands on the first step rather than the persisted one. The persisted step
-	 * after a submission is `submit`, and returning somebody there — to the one
-	 * screen with no fields on it — after they asked to edit would be answering
-	 * a different question than the one the button asks.
+	 * after a submission is `review`, and returning somebody to a summary with
+	 * a submit button after they asked to edit would be answering a different
+	 * question than the one the button asks.
 	 *
 	 * @return void
 	 */
@@ -482,6 +555,25 @@ final class Campaign_Actions implements Service {
 	}
 
 	/**
+	 * Applies the package a draft was started from.
+	 *
+	 * Revision zero, because this runs straight after creation and nothing
+	 * else can have saved the draft yet; a draft that has moved on is refused
+	 * as a conflict rather than overwritten.
+	 *
+	 * @param int $campaign_id Newly created draft.
+	 * @param int $package_id  Package chosen on the dashboard.
+	 * @return int|WP_Error
+	 */
+	public function process_choose_package( int $campaign_id, int $package_id ): int|WP_Error {
+		if ( ! current_user_can( Capabilities::ACCESS_PORTAL ) ) {
+			return new WP_Error( 'aggr_forbidden', __( 'You do not have permission to edit that campaign.', 'aggressive-ads' ), array( 'status' => 403 ) );
+		}
+
+		return $this->editor->save( $campaign_id, array( 'package_id' => $package_id ), 0 );
+	}
+
+	/**
 	 * Delivery-level copy entry point for forms and integration tests.
 	 *
 	 * @param int $campaign_id Source campaign post id.
@@ -523,43 +615,66 @@ final class Campaign_Actions implements Service {
 		 */
 		$clean = array( 'wizard_step' => 'creative' );
 
-		foreach ( array( 'title', 'placement_ids', 'package_id', 'advertiser_notes' ) as $key ) {
+		foreach ( array( 'title', 'placement_ids', 'package_id', 'advertiser_notes', 'default_click_url' ) as $key ) {
 			if ( array_key_exists( $key, $fields ) ) {
 				$clean[ $key ] = $fields[ $key ];
 			}
 		}
 
+		/*
+		 * Local date strings, resolved in the site timezone here rather than
+		 * trusted as timestamps: a date input carries no zone, and the
+		 * campaign runs in the site's.
+		 */
+		foreach ( array(
+			'start_date' => 'start_ts',
+			'end_date'   => 'end_ts',
+		) as $key => $field ) {
+			if ( ! array_key_exists( $key, $fields ) ) {
+				continue;
+			}
+
+			$parsed = $this->parse_date( (string) $fields[ $key ], 'end_ts' === $field );
+
+			if ( is_wp_error( $parsed ) ) {
+				return $parsed;
+			}
+
+			$clean[ $field ] = $parsed;
+		}
+
 		return $this->editor->save( $campaign_id, $clean, $revision );
 	}
 
-
 	/**
-	 * Parses local dates and completes the shared schedule workflow.
+	 * Delivery-level entry point for leaving the creative step.
 	 *
-	 * @param int    $campaign_id Campaign post id.
-	 * @param string $start_date  Local YYYY-MM-DD start date.
-	 * @param string $end_date    Local YYYY-MM-DD end date, or empty.
-	 * @param int    $revision    Last-seen revision.
+	 * @param int $campaign_id Campaign post id.
+	 * @param int $revision    Last-seen revision.
 	 * @return int|WP_Error
 	 */
-	public function process_save_schedule( int $campaign_id, string $start_date, string $end_date, int $revision ): int|WP_Error {
+	public function process_complete_creative( int $campaign_id, int $revision ): int|WP_Error {
 		if ( ! current_user_can( Capabilities::ACCESS_PORTAL ) ) {
 			return new WP_Error( 'aggr_forbidden', __( 'You do not have permission to edit that campaign.', 'aggressive-ads' ), array( 'status' => 403 ) );
 		}
 
-		$start = $this->parse_date( $start_date, false );
+		return $this->editor->complete_creative( $campaign_id, $revision );
+	}
 
-		if ( is_wp_error( $start ) ) {
-			return $start;
+	/**
+	 * Delivery-level rename entry point for forms and integration tests.
+	 *
+	 * @param int    $campaign_id Campaign post id.
+	 * @param string $title       New name.
+	 * @param int    $revision    Last-seen revision.
+	 * @return int|WP_Error
+	 */
+	public function process_rename( int $campaign_id, string $title, int $revision ): int|WP_Error {
+		if ( ! current_user_can( Capabilities::ACCESS_PORTAL ) ) {
+			return new WP_Error( 'aggr_forbidden', __( 'You do not have permission to edit that campaign.', 'aggressive-ads' ), array( 'status' => 403 ) );
 		}
 
-		$end = $this->parse_date( $end_date, true );
-
-		if ( is_wp_error( $end ) ) {
-			return $end;
-		}
-
-		return $this->editor->save_schedule( $campaign_id, $start, $end, $revision );
+		return $this->editor->save( $campaign_id, array( 'title' => $title ), $revision );
 	}
 
 	/**
@@ -682,7 +797,7 @@ final class Campaign_Actions implements Service {
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only post/redirect/get display state; never authorizes or mutates anything.
 		$value = isset( $_GET['aggr_notice'] ) ? sanitize_key( wp_unslash( $_GET['aggr_notice'] ) ) : '';
 
-		return in_array( $value, array( 'created', 'copied', 'saved', 'package_saved', 'schedule_saved', 'submitted', 'withdrawn', 'changes_requested', 'changes_cancelled', 'changes_saved', 'cancelled', 'action_requested', 'action_withdrawn', 'error' ), true ) ? $value : '';
+		return in_array( $value, array( 'created', 'copied', 'saved', 'reviewing', 'renamed', 'submitted', 'withdrawn', 'changes_requested', 'changes_cancelled', 'changes_saved', 'cancelled', 'action_requested', 'action_withdrawn', 'error' ), true ) ? $value : '';
 	}
 
 	/**
@@ -723,13 +838,15 @@ final class Campaign_Actions implements Service {
 			'aggr_end_before_start'        => __( 'The end date must be after the start date.', 'aggressive-ads' ),
 			'aggr_start_date_required'     => __( 'Choose a start date.', 'aggressive-ads' ),
 			'aggr_start_date_past'         => __( 'The start date has already passed. Choose a later one.', 'aggressive-ads' ),
+			'aggr_start_date_not_midnight' => __( 'The start date must begin at midnight in the site timezone.', 'aggressive-ads' ),
+			'aggr_end_date_not_day_end'    => __( 'The end date must include the full selected day in the site timezone.', 'aggressive-ads' ),
 			'aggr_start_date_invalid',
 			'aggr_end_date_invalid'        => __( 'Enter a valid date in the required format.', 'aggressive-ads' ),
 			'aggr_placement_unavailable'   => __( 'One of the selected placements is no longer available.', 'aggressive-ads' ),
 			'aggr_package_required'        => __( 'Choose a package.', 'aggressive-ads' ),
 			'aggr_package_unavailable'     => __( 'That package is no longer available. Choose another package.', 'aggressive-ads' ),
 			'aggr_package_misconfigured'   => __( 'That package is not configured completely. Choose another package or get in touch.', 'aggressive-ads' ),
-			'aggr_creatives_incomplete'    => __( 'Upload one creative for every package placement before scheduling.', 'aggressive-ads' ),
+			'aggr_creatives_incomplete'    => __( 'Add an ad for every size in the package before continuing.', 'aggressive-ads' ),
 			'aggr_edit_conflict'           => __( 'This campaign changed in another window. Review the current values and save again.', 'aggressive-ads' ),
 			'aggr_organization_missing'    => __( 'Your account is not connected to an organization.', 'aggressive-ads' ),
 			'aggr_organization_inactive'   => __( 'This organization cannot create campaigns. Please get in touch.', 'aggressive-ads' ),
@@ -754,15 +871,18 @@ final class Campaign_Actions implements Service {
 			'aggr_title_required',
 			'aggr_title_too_long'          => 'aggr-title',
 			'aggr_end_before_start',
+			'aggr_end_date_not_day_end',
 			'aggr_end_date_invalid'        => 'aggr-end-date',
 			'aggr_start_date_invalid',
 			'aggr_start_date_required',
+			'aggr_start_date_not_midnight',
 			'aggr_start_date_past'         => 'aggr-start-date',
 			'aggr_placement_unavailable'   => 'aggr-placements',
 			'aggr_package_required',
 			'aggr_package_unavailable',
 			'aggr_package_misconfigured'   => 'aggr-packages',
-			'aggr_creatives_incomplete'    => 'aggr-destinations',
+			'aggr_creatives_incomplete'    => 'aggr-uploads',
+			'aggr_default_click_url_invalid' => 'aggr-campaign-link',
 			'aggr_campaign_invalid'        => 'aggr-readiness-heading',
 			default                            => '',
 		};

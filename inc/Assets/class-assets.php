@@ -322,7 +322,7 @@ final class Assets implements Service {
 	 * Modules are enqueued from enqueue() so the import map prints in wp_head.
 	 * This only writes Interactivity state. Safe to call when the APIs are absent.
 	 *
-	 * @param array{id: int, wizard_step: string, autosave_rev: int, submit_ready: bool, step_label: string, slots: array<int, array{id: int, size: string, max_bytes: int, max_size: string}>} $campaign Campaign view data.
+	 * @param array{id: int, wizard_step: string, autosave_rev: int, step_label: string, slots: array<int, array{id: int, size: string, max_bytes: int, max_size: string}>} $campaign Campaign view data.
 	 * @return void
 	 */
 	public function hydrate_campaign_editor( array $campaign ): void {
@@ -342,8 +342,7 @@ final class Assets implements Service {
 			array(
 				'wizards' => array(
 					$wizard_id => array(
-						'current'     => $campaign['wizard_step'],
-						'submitReady' => $campaign['submit_ready'],
+						'current' => $campaign['wizard_step'],
 					),
 				),
 				'i18n'    => array(
@@ -364,11 +363,20 @@ final class Assets implements Service {
 					),
 				),
 				'i18n'      => array(
-					'idle'     => '',
-					'saving'   => __( 'Saving…', 'aggressive-ads' ),
-					'saved'    => __( 'Draft saved.', 'aggressive-ads' ),
-					'error'    => __( 'Could not save the draft. Your last change may not be stored.', 'aggressive-ads' ),
-					'conflict' => __( 'This campaign was saved elsewhere. Refresh to continue from the latest draft.', 'aggressive-ads' ),
+					'idle'        => '',
+					'saving'      => __( 'Saving…', 'aggressive-ads' ),
+					'saved'       => __( 'Draft saved.', 'aggressive-ads' ),
+					'error'       => __( 'Could not save the draft. Your last change may not be stored.', 'aggressive-ads' ),
+					'conflict'    => __( 'This campaign was saved elsewhere. Refresh to continue from the latest draft.', 'aggressive-ads' ),
+					/* translators: %s: the campaign's last day, e.g. October 30, 2026. */
+					'runsThrough' => __( 'Runs through %s.', 'aggressive-ads' ),
+					'rename'      => __( 'Rename campaign', 'aggressive-ads' ),
+					'nameLabel'   => __( 'Campaign name', 'aggressive-ads' ),
+					'nameSaved'   => __( 'Campaign renamed.', 'aggressive-ads' ),
+					'nameEmpty'   => __( 'A campaign needs a name. The previous name was kept.', 'aggressive-ads' ),
+					'nameError'   => __( 'The name could not be saved. The previous name was kept.', 'aggressive-ads' ),
+					'linkSaved'   => __( 'Link saved.', 'aggressive-ads' ),
+					'linkInvalid' => __( 'That is not a link we can use. Enter a web address, such as https://example.com.', 'aggressive-ads' ),
 				),
 			)
 		);

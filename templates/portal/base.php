@@ -110,7 +110,8 @@ $aggr_head_has_viewport = has_action( 'wp_head', '_block_template_viewport_meta_
 	<div class="aggr-body">
 		<header class="aggr-topbar">
 			<div class="aggr-org">
-				<?php echo esc_html( '' !== $aggr_view->org_name() ? $aggr_view->org_name() : get_bloginfo( 'name' ) ); ?>
+				<span><?php echo esc_html( '' !== $aggr_view->org_name() ? $aggr_view->org_name() : get_bloginfo( 'name' ) ); ?></span>
+				<span class="aggr-org__role"><?php esc_html_e( 'Advertiser', 'aggressive-ads' ); ?></span>
 			</div>
 
 			<div class="aggr-topbar__actions">

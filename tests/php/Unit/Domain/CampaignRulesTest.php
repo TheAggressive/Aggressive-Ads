@@ -424,4 +424,62 @@ final class CampaignRulesTest extends TestCase {
 	public function test_the_scheme_allowlist_is_minimal(): void {
 		$this->assertSame( array( 'http', 'https' ), Campaign_Rules::ALLOWED_URL_SCHEMES );
 	}
+
+	/**
+	 * A fixed package counts its start day as the first of its days.
+	 *
+	 * @return void
+	 */
+	public function test_a_fixed_run_ends_on_its_last_counted_day(): void {
+		$zone  = new \DateTimeZone( 'UTC' );
+		$start = new \DateTimeImmutable( '2027-10-01 00:00:00', $zone );
+
+		$this->assertSame(
+			'2027-10-30 23:59:59',
+			gmdate( 'Y-m-d H:i:s', Campaign_Rules::fixed_end_ts( $start->getTimestamp(), 30, 'UTC' ) )
+		);
+		$this->assertSame(
+			'2027-10-01 23:59:59',
+			gmdate( 'Y-m-d H:i:s', Campaign_Rules::fixed_end_ts( $start->getTimestamp(), 1, 'UTC' ) ),
+			'A one-day package must end on the day it starts.'
+		);
+	}
+
+	/**
+	 * Across a daylight-saving change the run still ends at 23:59:59 local.
+	 *
+	 * Seconds arithmetic lands at 22:59:59 or 00:59:59 here, which the
+	 * boundary rule then refuses — so the derived end is checked against the
+	 * same rule submission applies, not just against a string.
+	 *
+	 * @return void
+	 */
+	public function test_a_fixed_run_crossing_daylight_saving_ends_at_local_day_end(): void {
+		$zone = new \DateTimeZone( 'America/New_York' );
+
+		foreach ( array( '2027-03-01', '2027-11-01' ) as $day ) {
+			$start = new \DateTimeImmutable( $day . ' 00:00:00', $zone );
+			$end   = Campaign_Rules::fixed_end_ts( $start->getTimestamp(), 30, $zone->getName() );
+
+			$this->assertSame( '23:59:59', ( new \DateTimeImmutable( '@' . $end ) )->setTimezone( $zone )->format( 'H:i:s' ), $day );
+			$this->assertTrue(
+				Campaign_Rules::validate_day_boundaries( $start->getTimestamp(), $end, $zone->getName() )->is_valid(),
+				$day . ' produced an end the submission rule refuses.'
+			);
+		}
+	}
+
+	/**
+	 * An unset start or a custom package derives nothing.
+	 *
+	 * Zero is the model's open or unset value, so returning a timestamp here
+	 * would invent a schedule nobody chose.
+	 *
+	 * @return void
+	 */
+	public function test_a_fixed_run_needs_both_a_start_and_a_length(): void {
+		$this->assertSame( 0, Campaign_Rules::fixed_end_ts( 0, 30, 'UTC' ) );
+		$this->assertSame( 0, Campaign_Rules::fixed_end_ts( 1_827_532_800, 0, 'UTC' ) );
+		$this->assertSame( 0, Campaign_Rules::fixed_end_ts( -5, 30, 'UTC' ) );
+	}
 }

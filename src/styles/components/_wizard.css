@@ -1,0 +1,924 @@
+/*
+ * The campaign wizard: the step beside its order summary.
+ *
+ * Its own partial rather than more of `_surfaces.css`, which was near the
+ * thousand-line gate. The wizard is a container, so the two columns follow
+ * the panel's width rather than the viewport's: the same panel is narrower
+ * beside the rail than on a wide screen without it.
+ */
+
+.aggr-wizard {
+	container: aggr-wizard / inline-size;
+}
+
+.aggr-wizard__layout {
+	display: grid;
+	gap: var(--aggr-space-xl);
+}
+
+.aggr-wizard__main {
+	min-width: 0;
+}
+
+/* Narrow: the step's own button carries the action, so this one stands down. */
+.aggr-summary__cta {
+	display: none;
+	width: 100%;
+	min-height: 3rem;
+}
+
+@container aggr-wizard (min-width: 60rem) {
+	.aggr-wizard__layout {
+		grid-template-columns: minmax(0, 1fr) 20rem;
+		align-items: start;
+	}
+
+	.aggr-summary {
+		position: sticky;
+		top: var(--aggr-space-lg);
+	}
+
+	.aggr-summary__cta {
+		display: inline-flex;
+	}
+
+	/* Two classes, so it outranks .aggr-button wherever the partial lands. */
+	.aggr-wizard .aggr-wizard__primary {
+		display: none;
+	}
+}
+
+.aggr-summary {
+	display: flex;
+	flex-direction: column;
+	gap: var(--aggr-space-md);
+	padding: var(--aggr-space-lg);
+	background: var(--aggr-color-surface);
+	border: 1px solid var(--aggr-border-color);
+	border-radius: var(--aggr-radius-panel);
+}
+
+.aggr-summary__head {
+	display: flex;
+	gap: var(--aggr-space-sm);
+	align-items: center;
+	justify-content: space-between;
+}
+
+.aggr-summary__head .aggr-eyebrow {
+	margin: 0;
+}
+
+.aggr-summary__rows {
+	display: grid;
+	gap: var(--aggr-space-md);
+	margin: 0;
+}
+
+.aggr-summary__rows > div {
+	display: grid;
+	grid-template-columns: 5.5rem minmax(0, 1fr);
+	gap: var(--aggr-space-sm);
+	align-items: baseline;
+}
+
+.aggr-summary__rows dt {
+	color: var(--aggr-color-text-subtle);
+	font-family: var(--aggr-font-mono);
+	font-size: 10.5px;
+	font-weight: 600;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+}
+
+.aggr-summary__rows dd {
+	margin: 0;
+	font-size: 14px;
+	font-weight: 600;
+	overflow-wrap: anywhere;
+}
+
+.aggr-summary__muted {
+	color: var(--aggr-color-text-muted);
+	font-weight: 500;
+}
+
+.aggr-summary__link {
+	font-family: var(--aggr-font-mono);
+	font-size: 12.5px;
+	font-weight: 500;
+}
+
+.aggr-summary__bar {
+	display: block;
+	height: 4px;
+	margin-top: var(--aggr-space-xs);
+	border-radius: var(--aggr-radius-pill);
+	background: var(--aggr-color-surface-inset);
+	overflow: hidden;
+}
+
+.aggr-summary__bar > span {
+	display: block;
+	height: 100%;
+	background: var(--aggr-color-live);
+}
+
+.aggr-summary__total {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	padding-top: var(--aggr-space-md);
+	border-top: 1px solid var(--aggr-border-color);
+	font-weight: 600;
+}
+
+.aggr-summary__price {
+	font-size: 1.625rem;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+	letter-spacing: -0.02em;
+}
+
+.aggr-summary__cta:disabled {
+	background: var(--aggr-color-surface-inset);
+	color: var(--aggr-color-text-muted);
+	cursor: not-allowed;
+	filter: none;
+}
+
+.aggr-summary__note {
+	margin: 0;
+	color: var(--aggr-color-text-muted);
+	font-size: 12px;
+	text-align: center;
+}
+
+/*
+ * A package card leads with what it costs, then how long and how many sizes,
+ * then the sizes drawn to proportion — "728×90" read as a shape rather than
+ * as a code somebody has to picture.
+ */
+.aggr-choice--package .aggr-choice__text {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.aggr-package__name {
+	color: var(--aggr-color-text);
+	font-size: 15px;
+	font-weight: 650;
+}
+
+.aggr-package__badge {
+	align-self: flex-start;
+	margin-top: var(--aggr-space-2xs);
+	padding: 1px 8px;
+	border-radius: var(--aggr-radius-pill);
+	background: var(--aggr-color-surface-inset);
+	color: var(--aggr-color-accent-strong);
+	font-size: 11px;
+	font-weight: 600;
+}
+
+.aggr-package__price {
+	margin-top: var(--aggr-space-xs);
+	color: var(--aggr-color-text);
+	font-size: 1.5rem;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+	letter-spacing: -0.02em;
+}
+
+.aggr-package__meta {
+	color: var(--aggr-color-text-body);
+	font-family: var(--aggr-font-mono);
+	font-size: 12px;
+}
+
+.aggr-package__sizes {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--aggr-space-sm);
+	align-items: flex-end;
+	margin-top: var(--aggr-space-sm);
+	padding-top: var(--aggr-space-sm);
+	border-top: 1px solid var(--aggr-border-color);
+}
+
+.aggr-package__size {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	align-items: center;
+	color: var(--aggr-color-text-muted);
+	font-family: var(--aggr-font-mono);
+	font-size: 10.5px;
+}
+
+.aggr-package__shape {
+	display: block;
+	border: 1px solid var(--aggr-color-text-muted);
+	border-radius: 2px;
+	background: var(--aggr-color-surface);
+}
+
+.aggr-choice:has(input:checked) .aggr-package__shape {
+	border-color: var(--aggr-color-accent);
+	background: var(--aggr-color-accent);
+}
+
+.aggr-package__places {
+	margin-top: var(--aggr-space-2xs);
+	color: var(--aggr-color-text-muted);
+	font-size: 12px;
+}
+
+/*
+ * The ads step: one link, one place to drop files, and a card per size.
+ *
+ * The drop zone ships as a preview of the upload that is coming, marked as
+ * such, while each size's own form below does the uploading. A control that
+ * looks live and silently does nothing is the one thing it must not be.
+ */
+.aggr-ads-section,
+.aggr-step-card {
+	display: flex;
+	flex-direction: column;
+	gap: var(--aggr-space-md);
+	margin-bottom: var(--aggr-space-lg);
+	padding: var(--aggr-space-lg);
+	background: var(--aggr-color-surface);
+	border: 1px solid var(--aggr-border-color);
+	border-radius: var(--aggr-radius-panel);
+}
+
+.aggr-ads-section__head {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--aggr-space-md);
+	align-items: flex-end;
+	justify-content: space-between;
+}
+
+.aggr-ads-section__head h3 {
+	margin: var(--aggr-space-2xs) 0 0;
+	font-size: 1.1875rem;
+	font-weight: 650;
+	letter-spacing: -0.012em;
+}
+
+.aggr-ads-section__head .aggr-eyebrow,
+.aggr-ads-section__head .aggr-hint {
+	margin: 0;
+}
+
+.aggr-ads-link {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--aggr-space-sm);
+	align-items: center;
+	min-height: 3.25rem;
+	padding: var(--aggr-space-sm) var(--aggr-space-md);
+	background: var(--aggr-color-surface-raised);
+	border: 1px solid var(--aggr-border-color-strong);
+	border-radius: var(--aggr-radius-control);
+	overflow-wrap: anywhere;
+}
+
+.aggr-ads-link:focus-within {
+	border-color: var(--aggr-color-accent);
+	box-shadow: 0 0 0 1px var(--aggr-color-accent);
+}
+
+.aggr-ads-link > svg {
+	flex: none;
+	color: var(--aggr-color-text-muted);
+}
+
+.aggr-portal .aggr-ads-link .aggr-ads-link__input {
+	flex: 1 1 12rem;
+	min-width: 0;
+	min-height: var(--aggr-control-min);
+	padding: 0;
+	background: transparent;
+	border: 0;
+	box-shadow: none;
+	font-family: var(--aggr-font-mono);
+	font-size: 14px;
+}
+
+.aggr-portal .aggr-ads-link .aggr-ads-link__input:focus {
+	outline: none;
+}
+
+.aggr-ads-link__status {
+	margin-left: auto;
+}
+
+.aggr-ads-link__status-text {
+	margin: var(--aggr-space-xs) 0 0;
+	color: var(--aggr-color-live);
+	font-size: 13px;
+}
+
+.aggr-ads-link__status-text:empty {
+	display: none;
+}
+
+.aggr-ads-link__status-text.is-error {
+	color: var(--aggr-color-danger);
+}
+
+.aggr-ads-link__meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--aggr-space-sm);
+	align-items: center;
+	justify-content: space-between;
+	margin-top: var(--aggr-space-sm);
+	font-size: 13px;
+}
+
+.aggr-ads-link__used {
+	color: var(--aggr-color-text-body);
+	font-family: var(--aggr-font-mono);
+	font-size: 12px;
+}
+
+.aggr-portal .aggr-ads-link__tags {
+	min-height: auto;
+	padding: 0;
+	background: none;
+	border: 0;
+	color: var(--aggr-color-accent-strong);
+	font: inherit;
+	font-weight: 600;
+	cursor: not-allowed;
+	opacity: 0.7;
+}
+
+.aggr-ads-progress {
+	display: flex;
+	flex-direction: column;
+	gap: var(--aggr-space-xs);
+	align-items: flex-end;
+	min-width: 11rem;
+	font-family: var(--aggr-font-mono);
+	font-size: 12px;
+}
+
+.aggr-ads-progress .aggr-summary__bar {
+	width: 100%;
+	margin: 0;
+}
+
+.aggr-dropzone {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--aggr-space-md);
+	align-items: center;
+	padding: var(--aggr-space-lg);
+	background-color: var(--aggr-color-surface-raised);
+	background-image: radial-gradient(var(--aggr-border-color) 1px, transparent 1px);
+	background-size: 16px 16px;
+	border: 1.5px dashed var(--aggr-border-color-strong);
+	border-radius: var(--aggr-radius-panel);
+}
+
+.aggr-dropzone__icon {
+	display: flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: 3.5rem;
+	height: 3.5rem;
+	background: var(--aggr-color-surface);
+	border: 1px solid var(--aggr-border-color);
+	border-radius: 14px;
+}
+
+.aggr-dropzone__text {
+	display: flex;
+	flex: 1 1 16rem;
+	flex-direction: column;
+	gap: var(--aggr-space-2xs);
+}
+
+.aggr-dropzone__title {
+	font-size: 17px;
+	font-weight: 650;
+}
+
+.aggr-dropzone .aggr-button:disabled {
+	cursor: not-allowed;
+	opacity: 0.6;
+}
+
+/* Two columns of sizes; a large wide size takes the row so its shape stays wide. */
+.aggr-wizard .aggr-upload-list {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: var(--aggr-space-md);
+}
+
+@container aggr-wizard (max-width: 40rem) {
+	.aggr-wizard .aggr-upload-list {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+.aggr-upload-card__dims {
+	color: var(--aggr-color-text-muted);
+	font-family: var(--aggr-font-mono);
+	font-size: 12px;
+}
+
+.aggr-upload-card--wide {
+	grid-column: 1 / -1;
+}
+
+.aggr-upload-card__stage {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 9rem;
+	margin-bottom: var(--aggr-space-md);
+	padding: var(--aggr-space-md);
+	background: var(--aggr-color-surface-sunken);
+	border-radius: var(--aggr-radius-control);
+}
+
+.aggr-upload-card__frame {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	max-width: var(--aggr-frame-width, 20rem);
+	max-height: 12rem;
+	background: var(--aggr-color-surface);
+	border: 1.5px dashed var(--aggr-border-color-strong);
+	border-radius: 3px;
+	color: var(--aggr-color-text-muted);
+	font-family: var(--aggr-font-mono);
+	font-size: 11px;
+}
+
+/* The wizard sits on the canvas as cards; the panel frame it had is gone. */
+.aggr-wizard-shell {
+	margin-bottom: var(--aggr-space-lg);
+}
+
+.aggr-step-card .aggr-fieldset {
+	margin: 0;
+}
+
+.aggr-step-card legend {
+	display: flex;
+	flex-direction: column;
+	gap: var(--aggr-space-2xs);
+	margin-bottom: var(--aggr-space-2xs);
+}
+
+.aggr-step-card legend .aggr-eyebrow {
+	margin: 0;
+}
+
+.aggr-step-card__title {
+	font-size: 1.1875rem;
+	font-weight: 650;
+	letter-spacing: -0.012em;
+}
+
+/* The selection mark sits top-right, where the card's eye lands last. */
+.aggr-choice--package {
+	position: relative;
+	padding-right: 3rem;
+}
+
+.aggr-choice--package input {
+	position: absolute;
+	top: var(--aggr-space-md);
+	right: var(--aggr-space-md);
+	margin: 0;
+}
+
+.aggr-date-input {
+	position: relative;
+	max-width: var(--aggr-field-measure);
+}
+
+.aggr-field .aggr-date-input input[type="date"] {
+	padding-right: 9rem;
+}
+
+.aggr-date-input__note {
+	position: absolute;
+	top: 50%;
+	right: 2.75rem;
+	color: var(--aggr-color-text-muted);
+	font-family: var(--aggr-font-mono);
+	font-size: 11px;
+	pointer-events: none;
+	transform: translateY(-50%);
+}
+
+.aggr-presets {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--aggr-space-xs);
+	margin-top: var(--aggr-space-md);
+}
+
+.aggr-presets button {
+	min-height: 2rem;
+	padding: 0 var(--aggr-space-sm);
+	background: var(--aggr-color-surface);
+	border: 1px solid var(--aggr-border-color-strong);
+	border-radius: var(--aggr-radius-pill);
+	color: var(--aggr-color-text-body);
+	font: inherit;
+	font-size: 13px;
+	font-weight: 600;
+	cursor: not-allowed;
+	opacity: 0.7;
+}
+
+.aggr-calendar {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+	gap: var(--aggr-space-xl);
+	margin-top: var(--aggr-space-sm);
+	padding: var(--aggr-space-lg);
+	border: 1px solid var(--aggr-border-color);
+	border-radius: var(--aggr-radius-control);
+}
+
+.aggr-calendar__month {
+	display: flex;
+	flex-direction: column;
+	gap: var(--aggr-space-xs);
+}
+
+.aggr-calendar__name {
+	font-weight: 600;
+}
+
+.aggr-calendar__grid {
+	display: grid;
+	grid-template-columns: repeat(7, minmax(0, 1fr));
+	row-gap: 4px;
+}
+
+.aggr-calendar__weekday {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 1.5rem;
+	color: var(--aggr-color-text-subtle);
+	font-family: var(--aggr-font-mono);
+	font-size: 10px;
+}
+
+.aggr-calendar__day {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 2.5rem;
+	font-size: 13px;
+	font-variant-numeric: tabular-nums;
+}
+
+.aggr-calendar__day--in {
+	background: var(--aggr-color-surface-sunken);
+}
+
+.aggr-calendar__day--edge {
+	border-radius: var(--aggr-radius-control);
+	background: var(--aggr-color-accent);
+	color: var(--aggr-color-on-accent);
+	font-weight: 700;
+}
+
+/*
+ * The campaign head: where you are, what it is, and how far along. The steps
+ * moved here from inside the panel so progress reads with the title it
+ * belongs to.
+ */
+.aggr-pagehead--campaign {
+	align-items: flex-end;
+}
+
+.aggr-pagehead__main {
+	display: flex;
+	flex-direction: column;
+	gap: var(--aggr-space-xs);
+	min-width: 0;
+}
+
+.aggr-pagehead__main .aggr-breadcrumb {
+	margin: 0;
+}
+
+.aggr-pagehead__rename {
+	flex: none;
+	width: 18px;
+	height: 18px;
+	color: var(--aggr-color-text-subtle);
+}
+
+.aggr-pagehead__meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--aggr-space-sm);
+	align-items: center;
+	margin: 0;
+	font-size: 13px;
+}
+
+.aggr-saved {
+	display: inline-flex;
+	gap: 6px;
+	align-items: center;
+}
+
+.aggr-saved::before {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--aggr-color-live);
+	content: "";
+}
+
+.aggr-pagehead--campaign .aggr-pagehead__actions {
+	flex: 1 1 36rem;
+	align-items: flex-end;
+	justify-content: flex-end;
+}
+
+.aggr-pagehead .aggr-steps {
+	flex: 1 1 38rem;
+	max-width: 42rem;
+	gap: var(--aggr-space-sm);
+	padding: 0;
+	background: none;
+	border-bottom: 0;
+}
+
+.aggr-pagehead .aggr-steps li {
+	flex: 1 1 0;
+	gap: var(--aggr-space-xs);
+	padding-bottom: var(--aggr-space-sm);
+	border-bottom: 3px solid var(--aggr-border-color);
+	font-size: 13px;
+}
+
+.aggr-pagehead .aggr-steps li::before {
+	flex: none;
+	width: auto;
+	min-width: 1.5rem;
+	height: auto;
+	background: none;
+	border: 0;
+	border-radius: 0;
+	color: var(--aggr-color-text-subtle);
+	font-family: var(--aggr-font-mono);
+	font-size: 11px;
+	content: counter(aggr-step, decimal-leading-zero);
+}
+
+.aggr-pagehead .aggr-steps li[aria-current="step"] {
+	border-bottom-color: var(--aggr-color-accent);
+}
+
+.aggr-pagehead .aggr-steps li[aria-current="step"]::before {
+	background: none;
+	color: var(--aggr-color-text);
+}
+
+.aggr-pagehead .aggr-steps li:has(~ li[aria-current="step"]) {
+	border-bottom-color: var(--aggr-color-text);
+	color: var(--aggr-color-text);
+}
+
+.aggr-pagehead .aggr-steps a {
+	text-decoration: none;
+}
+
+.aggr-menu {
+	position: relative;
+}
+
+.aggr-menu > summary {
+	width: var(--aggr-control-min);
+	padding: 0;
+	list-style: none;
+}
+
+/*
+ * A square, whatever the theme guard gives buttons: its side padding would
+ * otherwise leave a 44px toggle no room for the dots it holds.
+ */
+.aggr-portal .aggr-menu > .aggr-menu__toggle {
+	width: var(--aggr-control-min);
+	padding: 0;
+	cursor: pointer;
+}
+
+.aggr-menu__panel {
+	position: absolute;
+	top: calc(100% + 6px);
+	right: 0;
+	z-index: 10;
+	display: flex;
+	flex-direction: column;
+	min-width: 13rem;
+	padding: var(--aggr-space-2xs);
+	background: var(--aggr-color-surface);
+	border: 1px solid var(--aggr-border-color);
+	border-radius: var(--aggr-radius-control);
+	box-shadow: var(--aggr-shadow-panel);
+}
+
+.aggr-menu__item {
+	display: block;
+	width: 100%;
+	min-height: var(--aggr-control-min);
+	border: 0;
+	border-radius: var(--aggr-radius-small);
+	font: inherit;
+	font-size: 14px;
+	font-weight: 500;
+	text-align: start;
+	cursor: pointer;
+}
+
+.aggr-menu__item:hover,
+.aggr-menu__item:focus-visible {
+	background: var(--aggr-color-surface-sunken);
+}
+
+/* Review: one row per thing the campaign needs. */
+.aggr-check {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.aggr-check__row {
+	display: flex;
+	gap: var(--aggr-space-md);
+	align-items: center;
+	padding: var(--aggr-space-md) 0;
+	border-top: 1px solid var(--aggr-border-color);
+}
+
+.aggr-check__mark {
+	display: flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: 1.625rem;
+	height: 1.625rem;
+	border-radius: 50%;
+}
+
+.aggr-check__mark--done {
+	background: var(--aggr-color-live-tint);
+	color: var(--aggr-color-live);
+}
+
+.aggr-check__mark--todo {
+	border: 2px solid var(--aggr-color-pending);
+}
+
+.aggr-check__mark--todo::after {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--aggr-color-pending);
+	content: "";
+}
+
+.aggr-check__text {
+	display: flex;
+	flex: 1 1 auto;
+	flex-direction: column;
+	gap: 2px;
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.aggr-check__title {
+	font-weight: 600;
+}
+
+.aggr-check__detail {
+	color: var(--aggr-color-text-muted);
+	font-size: 13px;
+}
+
+.aggr-check__action {
+	display: inline-flex;
+	align-items: center;
+	min-height: var(--aggr-control-min);
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.aggr-pagepreview {
+	overflow: hidden;
+	margin-bottom: var(--aggr-space-md);
+	background: var(--aggr-color-surface);
+	border: 1px solid var(--aggr-border-color);
+	border-radius: var(--aggr-radius-control);
+}
+
+.aggr-pagepreview__bar {
+	display: flex;
+	align-items: center;
+	height: 2.25rem;
+	padding: 0 var(--aggr-space-md);
+	background: var(--aggr-color-surface-raised);
+	border-bottom: 1px solid var(--aggr-border-color);
+}
+
+
+.aggr-pagepreview__body {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 30%;
+	gap: var(--aggr-space-lg);
+	padding: var(--aggr-space-lg);
+}
+
+.aggr-pagepreview__column,
+.aggr-pagepreview__rail {
+	display: flex;
+	flex-direction: column;
+	gap: var(--aggr-space-sm);
+	min-width: 0;
+}
+
+.aggr-pagepreview__line {
+	height: 0.5rem;
+	border-radius: 4px;
+	background: var(--aggr-color-surface-inset);
+}
+
+.aggr-pagepreview__line--title {
+	width: 70%;
+	height: 0.875rem;
+}
+
+.aggr-pagepreview__line--short {
+	width: 60%;
+}
+
+.aggr-pagepreview__slot {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: auto;
+	border-radius: 2px;
+	object-fit: cover;
+}
+
+.aggr-pagepreview__slot--empty {
+	background: var(--aggr-color-pending-tint);
+	border: 1.5px dashed var(--aggr-color-pending);
+	color: var(--aggr-color-pending);
+	font-family: var(--aggr-font-mono);
+	font-size: 11px;
+}
+
+.aggr-step-card.aggr-submit-card {
+	max-width: none;
+	border-color: var(--aggr-border-color);
+}
+
+.aggr-nextsteps {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+	gap: var(--aggr-space-lg);
+	margin: var(--aggr-space-sm) 0 0;
+	padding: 0;
+	list-style: none;
+}
+
+.aggr-nextsteps li {
+	display: flex;
+	gap: var(--aggr-space-sm);
+	align-items: center;
+	color: var(--aggr-color-text-body);
+	font-size: 13px;
+}
+
+.aggr-nextsteps svg {
+	flex: none;
+	box-sizing: content-box;
+	padding: 8px;
+	border-radius: 9px;
+	background: var(--aggr-color-surface-sunken);
+}

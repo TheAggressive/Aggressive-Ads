@@ -11,6 +11,7 @@ namespace Aggressive\Ads\Assets;
 
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Core\Settings;
+use Aggressive\Ads\Domain\Settings_Schema;
 
 /**
  * Prints after the compiled stylesheet so Brand wins on the keys it owns.
@@ -43,12 +44,14 @@ final class Brand_Styles implements Service {
 
 		$brand = $this->settings->get()['brand'];
 		$css   = sprintf(
-			'.aggr-portal{--aggr-color-accent:%1$s;--aggr-color-accent-strong:%2$s;--aggr-color-canvas:%3$s;--aggr-color-surface:%4$s;--aggr-color-text:%5$s;}',
+			'.aggr-portal{--aggr-color-accent:%1$s;--aggr-color-accent-strong:%2$s;--aggr-color-canvas:%3$s;--aggr-color-surface:%4$s;--aggr-color-text:%5$s;--aggr-color-on-accent:%6$s;}',
 			$brand['accent'],
 			$brand['accent_strong'],
 			$brand['canvas'],
 			$brand['surface'],
-			$brand['text']
+			$brand['text'],
+			// Derived, not stored: the label ink follows whatever accent the site chose.
+			Settings_Schema::on_accent( $brand['accent'], $brand['text'] )
 		);
 
 		wp_add_inline_style( Assets::HANDLE, $css );

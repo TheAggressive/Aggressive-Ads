@@ -56,6 +56,29 @@ final class Contrast {
 	}
 
 	/**
+	 * The candidate ink that reads best on a background.
+	 *
+	 * @param string             $background Hex with leading #.
+	 * @param array<int, string> $inks       Candidates in preference order; a tie keeps the earlier one.
+	 * @return string
+	 */
+	public static function best_ink( string $background, array $inks ): string {
+		$best  = $inks[0] ?? '#000000';
+		$ratio = -1.0;
+
+		foreach ( $inks as $ink ) {
+			$candidate = self::ratio( $ink, $background );
+
+			if ( $candidate > $ratio ) {
+				$best  = $ink;
+				$ratio = $candidate;
+			}
+		}
+
+		return $best;
+	}
+
+	/**
 	 * Relative luminance of a six-digit hex colour, per WCAG.
 	 *
 	 * @param string $hex Hex with leading #.

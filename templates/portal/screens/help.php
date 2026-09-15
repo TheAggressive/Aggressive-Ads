@@ -38,18 +38,42 @@ $aggr_help = Plugin::instance()->container()->get( View_Data::class )->help();
 <section class="aggr-panel" aria-labelledby="aggr-help-flow">
 	<h2 id="aggr-help-flow" class="aggr-panel__head"><?php esc_html_e( 'How a campaign runs', 'aggressive-ads' ); ?></h2>
 
-	<div class="aggr-prose">
-		<ol>
-			<li><?php esc_html_e( 'Create a campaign and give it a name.', 'aggressive-ads' ); ?></li>
-			<li><?php esc_html_e( 'Choose a package. This sets the price and where your advertisement appears.', 'aggressive-ads' ); ?></li>
-			<li><?php esc_html_e( 'Upload one ad creative for each placement, with the address it should link to.', 'aggressive-ads' ); ?></li>
-			<li><?php esc_html_e( 'Confirm the destinations and choose your dates.', 'aggressive-ads' ); ?></li>
-			<li><?php esc_html_e( 'Submit it. The review team checks the artwork, the links and the dates.', 'aggressive-ads' ); ?></li>
-			<li><?php esc_html_e( 'Once approved, it starts automatically on your start date and stops on your end date.', 'aggressive-ads' ); ?></li>
-		</ol>
+	<?php
+	/*
+	 * The wizard's three steps, then the review team's. Written to match the
+	 * wizard as it is: this list described five steps, a name asked for first
+	 * and a destination confirmed twice, long after the wizard stopped doing
+	 * any of that.
+	 */
+	?>
+	<ol class="aggr-flow">
+		<li class="aggr-flow__step">
+			<strong><?php esc_html_e( 'Choose a package and dates', 'aggressive-ads' ); ?></strong>
+			<span><?php esc_html_e( 'The package sets the price and where your ads appear.', 'aggressive-ads' ); ?></span>
+		</li>
+		<li class="aggr-flow__step">
+			<strong><?php esc_html_e( 'Add your ads', 'aggressive-ads' ); ?></strong>
+			<span><?php esc_html_e( 'One image for each size, all linking to the address you give the first one unless you change it.', 'aggressive-ads' ); ?></span>
+		</li>
+		<li class="aggr-flow__step">
+			<strong><?php esc_html_e( 'Review and submit', 'aggressive-ads' ); ?></strong>
+			<span><?php esc_html_e( 'Check everything on one page, then send it to the review team.', 'aggressive-ads' ); ?></span>
+		</li>
+		<li class="aggr-flow__step">
+			<strong><?php esc_html_e( 'Review', 'aggressive-ads' ); ?></strong>
+			<span><?php esc_html_e( 'The review team checks the artwork, the links and the dates.', 'aggressive-ads' ); ?></span>
+		</li>
+		<li class="aggr-flow__step">
+			<strong><?php esc_html_e( 'Scheduled', 'aggressive-ads' ); ?></strong>
+			<span><?php esc_html_e( 'Once approved, it starts by itself on your start date.', 'aggressive-ads' ); ?></span>
+		</li>
+		<li class="aggr-flow__step">
+			<strong><?php esc_html_e( 'Live, then complete', 'aggressive-ads' ); ?></strong>
+			<span><?php esc_html_e( 'It stops on its end date. Run it again from your campaign list.', 'aggressive-ads' ); ?></span>
+		</li>
+	</ol>
 
-		<p><?php esc_html_e( 'We email you when the review team asks for changes, and when your campaign is approved, starts and finishes.', 'aggressive-ads' ); ?></p>
-	</div>
+	<p class="aggr-hint"><?php esc_html_e( 'We email you when the review team asks for changes, and when your campaign is approved, starts and finishes.', 'aggressive-ads' ); ?></p>
 </section>
 
 <section class="aggr-panel" aria-labelledby="aggr-help-artwork">
@@ -66,7 +90,7 @@ $aggr_help = Plugin::instance()->container()->get( View_Data::class )->help();
 			);
 			?>
 		</p>
-		<p><?php esc_html_e( 'Each ad creative must be exactly the size of the placement it is for. Every ad creative also needs a short description for people who cannot see it — this is a legal requirement as well as a courtesy.', 'aggressive-ads' ); ?></p>
+		<p><?php esc_html_e( 'Each ad must be exactly the size of the placement it is for. A short description for people who cannot see the image is added for you, from the address the ad links to.', 'aggressive-ads' ); ?></p>
 	</div>
 
 	<?php if ( array() !== $aggr_help['placements'] ) : ?>

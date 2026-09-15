@@ -1,0 +1,93 @@
+/*
+ * The portal's buttons, restated against a theme's bare button rule.
+ *
+ * LAAO's forms stylesheet has `button[type="submit"] { background: red;
+ * color: white; padding: .75rem 1rem; text-transform: uppercase }`. An element
+ * plus an attribute is (0,1,1), which outranks every single-class component
+ * rule here, so each portal submit button took the theme's red, its padding
+ * and its capitals — "DUPLICATE CAMPAIGN" in the theme's colours, not ours.
+ *
+ * Scoping each rule under `.aggr-portal` makes it (0,2,0) and wins without
+ * `!important`. Imported last, so the modifiers keep beating the base rule
+ * by order exactly as they do in the component files. Every property the
+ * theme sets is named here; one it sets and this does not is one that leaks.
+ */
+
+.aggr-portal button[type="submit"] {
+	letter-spacing: normal;
+	text-transform: none;
+}
+
+.aggr-portal .aggr-button {
+	padding: 0 var(--aggr-space-lg);
+	background: var(--aggr-color-accent);
+	color: var(--aggr-color-on-accent);
+}
+
+.aggr-portal .aggr-button--small {
+	padding-inline: var(--aggr-space-sm);
+}
+
+.aggr-portal .aggr-button--secondary {
+	background: var(--aggr-color-surface);
+	color: var(--aggr-color-text);
+}
+
+.aggr-portal .aggr-button--danger {
+	background: var(--aggr-color-danger);
+	color: var(--aggr-color-accent-contrast);
+}
+
+.aggr-portal .aggr-button.aggr-button--outline-danger {
+	background: transparent;
+	color: var(--aggr-color-danger);
+}
+
+.aggr-portal .aggr-button.aggr-button--outline-danger:hover,
+.aggr-portal .aggr-button.aggr-button--outline-danger:focus-visible {
+	background: var(--aggr-color-danger);
+	color: var(--aggr-color-accent-contrast);
+}
+
+.aggr-portal .aggr-summary__cta:disabled {
+	background: var(--aggr-color-surface-inset);
+	color: var(--aggr-color-text-muted);
+}
+
+.aggr-portal .aggr-start__choice {
+	padding: var(--aggr-space-sm);
+	background: var(--aggr-color-surface-raised);
+	color: inherit;
+}
+
+.aggr-portal .aggr-table__action button {
+	padding: 0;
+	background: none;
+	color: var(--aggr-color-text-muted);
+}
+
+.aggr-portal .aggr-table__action button:hover,
+.aggr-portal .aggr-table__action button:focus-visible {
+	color: var(--aggr-color-text);
+}
+
+.aggr-portal .aggr-menu__item {
+	padding: var(--aggr-space-xs) var(--aggr-space-sm);
+	background: none;
+	color: var(--aggr-color-text);
+}
+
+.aggr-portal .aggr-menu__item--danger {
+	color: var(--aggr-color-danger);
+}
+
+.aggr-portal .aggr-acting__leave {
+	padding: var(--aggr-space-xs) var(--aggr-space-sm);
+	background: transparent;
+	color: var(--aggr-color-rail-text-strong);
+}
+
+.aggr-portal .aggr-acting__leave:hover,
+.aggr-portal .aggr-acting__leave:focus-visible {
+	background: var(--aggr-color-rail-active);
+}

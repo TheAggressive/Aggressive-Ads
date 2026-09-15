@@ -77,13 +77,23 @@ final class Campaign_Nonces {
 
 
 	/**
-	 * Nonce action for one campaign's destination-and-schedule step.
+	 * Nonce action for leaving one campaign's creative step for review.
 	 *
 	 * @param int $campaign_id Campaign post id.
 	 * @return string
 	 */
-	public static function schedule_nonce_action( int $campaign_id ): string {
-		return Campaign_Actions::SAVE_SCHEDULE_ACTION . '_' . max( 0, $campaign_id );
+	public static function creative_nonce_action( int $campaign_id ): string {
+		return Campaign_Actions::COMPLETE_CREATIVE_ACTION . '_' . max( 0, $campaign_id );
+	}
+
+	/**
+	 * Nonce action for renaming one campaign.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return string
+	 */
+	public static function rename_nonce_action( int $campaign_id ): string {
+		return Campaign_Actions::RENAME_ACTION . '_' . max( 0, $campaign_id );
 	}
 
 	/**

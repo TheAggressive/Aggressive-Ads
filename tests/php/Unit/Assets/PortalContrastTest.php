@@ -80,16 +80,17 @@ final class PortalContrastTest extends TestCase {
 	public function test_default_tokens_match_the_approved_product_palette(): void {
 		$approved = array(
 			'--aggr-color-rail'          => '#111214',
-			'--aggr-color-canvas'        => '#f7f4ee',
+			'--aggr-color-canvas'        => '#f7f7f5',
 			'--aggr-color-surface'       => '#ffffff',
-			'--aggr-color-accent'        => '#ff3b2f',
-			'--aggr-color-accent-strong' => '#8e1f1f',
-			'--aggr-color-accent-rail'   => '#e90d00',
-			'--aggr-color-text-body'     => '#4a4844',
-			'--aggr-color-text-subtle'   => '#6d6a5d',
-			'--aggr-border-color'        => '#e3dfd4',
+			'--aggr-color-accent'        => '#f05a28',
+			'--aggr-color-accent-strong' => '#b5401a',
+			'--aggr-color-on-accent'     => '#111214',
+			'--aggr-color-accent-rail'   => '#f05a28',
+			'--aggr-color-text-body'     => '#3d3f45',
+			'--aggr-color-text-subtle'   => '#5c5e65',
+			'--aggr-border-color'        => '#e3e3df',
 			'--aggr-color-live'          => '#1a7a4d',
-			'--aggr-color-pending'       => '#91630d',
+			'--aggr-color-pending'       => '#735400',
 			'--aggr-color-danger'        => '#c03826',
 		);
 
@@ -196,7 +197,37 @@ final class PortalContrastTest extends TestCase {
 	 * @return void
 	 */
 	public function test_button_text_reads_on_the_accent(): void {
-		$this->assertContrast( 'accent-contrast', 'accent-strong', self::AA_NORMAL );
+		$this->assertContrast( 'on-accent', 'accent', self::AA_NORMAL );
+	}
+
+	/**
+	 * White on the brand orange is the pairing the palette exists to avoid.
+	 *
+	 * The negative half of the test above: if the label ink drifted back to
+	 * white, this is the assertion that says why that is not a stylistic call.
+	 *
+	 * @return void
+	 */
+	public function test_white_would_not_read_on_the_accent(): void {
+		$this->assertLessThan( self::AA_NORMAL, $this->ratio( 'accent-contrast', 'accent' ) );
+	}
+
+	/**
+	 * Danger buttons and other dark fills keep white labels.
+	 *
+	 * @return void
+	 */
+	public function test_white_labels_read_on_danger(): void {
+		$this->assertContrast( 'accent-contrast', 'danger', self::AA_NORMAL );
+	}
+
+	/**
+	 * The accented last word of the product name is text on the rail.
+	 *
+	 * @return void
+	 */
+	public function test_the_accented_brand_word_reads_on_the_rail(): void {
+		$this->assertContrast( 'accent', 'rail', self::AA_NORMAL );
 	}
 
 	/**
@@ -233,6 +264,6 @@ final class PortalContrastTest extends TestCase {
 	public function test_the_active_nav_chip_reads_on_the_rail(): void {
 		$this->assertContrast( 'accent-rail', 'rail-active', self::AA_NON_TEXT );
 		$this->assertContrast( 'accent-rail', 'rail', self::AA_NON_TEXT );
-		$this->assertContrast( 'accent-contrast', 'accent-rail', self::AA_NON_TEXT );
+		$this->assertContrast( 'on-accent-rail', 'accent-rail', self::AA_NON_TEXT );
 	}
 }

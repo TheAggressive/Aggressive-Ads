@@ -25,6 +25,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Portal\Campaign_Actions;
 use Aggressive\Ads\Portal\View_Data;
+use Aggressive\Ads\Security\Capabilities;
 
 $aggr_view      = Plugin::instance()->container()->get( View_Data::class );
 $aggr_campaigns = $aggr_view->campaigns();
@@ -109,6 +110,45 @@ $aggr_user        = wp_get_current_user();
 		</li>
 	<?php endforeach; ?>
 </ul>
+
+<?php
+/*
+ * **Choosing what to buy starts the campaign.** "Create campaign" opened an
+ * empty draft whose first question was which package — so the catalogue was
+ * one click and one page load away from the screen an advertiser lands on.
+ * Each card posts the same create action with its package, and the draft
+ * opens on the dates.
+ *
+ * One form with a submit button per package, not a form per card: the button
+ * that was pressed posts its own `package_id`, and one nonce serves them all.
+ */
+$aggr_start_packages = current_user_can( Capabilities::SUBMIT_CAMPAIGN ) ? $aggr_view->package_options() : array();
+?>
+<?php if ( array() !== $aggr_start_packages ) : ?>
+	<section class="aggr-panel" aria-labelledby="aggr-start-heading">
+		<h2 id="aggr-start-heading" class="aggr-panel__head">
+			<?php esc_html_e( 'Start a campaign', 'aggressive-ads' ); ?>
+		</h2>
+
+		<form class="aggr-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<input type="hidden" name="action" value="<?php echo esc_attr( Campaign_Actions::CREATE_ACTION ); ?>">
+			<?php wp_nonce_field( Campaign_Actions::CREATE_ACTION ); ?>
+			<p class="aggr-hint"><?php esc_html_e( 'Pick a package to begin. You choose the dates and add your ads next.', 'aggressive-ads' ); ?></p>
+
+			<div class="aggr-choicegrid">
+				<?php foreach ( $aggr_start_packages as $aggr_start_package ) : ?>
+					<button class="aggr-choice aggr-choice--package aggr-start__choice" type="submit" name="package_id" value="<?php echo esc_attr( (string) $aggr_start_package['id'] ); ?>">
+						<span class="aggr-choice__text">
+							<strong><?php echo esc_html( (string) $aggr_start_package['name'] ); ?></strong>
+							<small><?php echo esc_html( (string) $aggr_start_package['price'] . ' · ' . (string) $aggr_start_package['duration'] ); ?></small>
+							<small><?php echo esc_html( implode( ', ', $aggr_start_package['placements'] ) ); ?></small>
+						</span>
+					</button>
+				<?php endforeach; ?>
+			</div>
+		</form>
+	</section>
+<?php endif; ?>
 
 <?php
 /*

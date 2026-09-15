@@ -224,6 +224,22 @@ final class View_Data {
 		$row['placement_ids']      = $this->campaigns->placement_ids( $campaign_id );
 
 		/*
+		 * The link the next upload starts from: the one set for the campaign,
+		 * or else the first one its ads already have. A package of three sizes
+		 * nearly always sends all three to one page, so asking for the address
+		 * on every card was typing the same thing three times — and a chance to
+		 * mistype it twice.
+		 */
+		$row['default_click_url'] = $this->campaigns->default_click_url( $campaign_id );
+
+		foreach ( '' === $row['default_click_url'] ? $row['creatives'] : array() as $creative ) {
+			if ( '' !== (string) ( $creative['click_url'] ?? '' ) ) {
+				$row['default_click_url'] = (string) $creative['click_url'];
+				break;
+			}
+		}
+
+		/*
 		 * Whether the name is still the one the wizard invented.
 		 *
 		 * Recorded rather than inferred — comparing the stored title to the
@@ -476,7 +492,7 @@ final class View_Data {
 	/**
 	 * Active, complete packages with their advertiser-facing catalogue details.
 	 *
-	 * @return array<int, array{id: int, name: string, duration: string, price: string, placements: array<int, string>, is_default: bool}>
+	 * @return array<int, array{id: int, name: string, duration: string, price: string, placements: array<int, string>, is_default: bool, duration_days: int, sizes: array<int, array{label: string, width: int, height: int}>}>
 	 */
 	public function package_options(): array {
 		return $this->catalogue()->package_options();

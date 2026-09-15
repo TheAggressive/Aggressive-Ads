@@ -111,6 +111,20 @@ served, not a feature.
 Product name, logo, tagline, and the accent and surface colours written as
 `--aggr-*` custom properties onto `.aggr-portal` and the staff screens.
 
+The two accents do different jobs. **Accent** fills buttons, marks what is
+selected and draws the focus ring; the label on a button is set in whichever of
+the text colour and white reads better on it, so a dark accent keeps white
+labels without a separate setting. **Accent for links** is the accent as text
+and must read on the surface. The shipped palette is Graphite `#111214`, Signal
+orange `#F05A28` (links `#B5401A`) and Soft white `#F7F7F5`.
+
+A site that saved brand colours before a palette change keeps what it saved:
+stored settings always win over the plugin's defaults. Re-save the Brand
+section to pick up new defaults.
+
+Without a logo the product name is the mark, and a two-word name sets its last
+word in the accent.
+
 **Save rejects colour combinations that fail WCAG AA.** This is not advisory and
 there is no override. A contrast failure saved once is a contrast failure on
 every advertiser's dashboard until somebody notices, and nobody notices their
