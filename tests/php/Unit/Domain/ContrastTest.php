@@ -24,6 +24,17 @@ final class ContrastTest extends TestCase {
 	 *
 	 * @return void
 	 */
+	public function test_the_best_ink_is_chosen_for_its_background(): void {
+		$this->assertSame( '#111214', Contrast::best_ink( '#f05a28', array( '#111214', '#ffffff' ) ) );
+		$this->assertSame( '#ffffff', Contrast::best_ink( '#8e1f1f', array( '#111214', '#ffffff' ) ) );
+		$this->assertSame( '#111214', Contrast::best_ink( '#808080', array( '#111214', '#111214' ) ), 'A tie keeps the first candidate.' );
+	}
+
+	/**
+	 * Black on white is the maximum ratio.
+	 *
+	 * @return void
+	 */
 	public function test_black_on_white_is_twenty_one(): void {
 		$this->assertEqualsWithDelta( 21.0, Contrast::ratio( '#000000', '#ffffff' ), 0.001 );
 	}
@@ -59,7 +70,7 @@ final class ContrastTest extends TestCase {
 
 		$this->assertTrue( Contrast::passes( $brand['text'], $brand['canvas'] ) );
 		$this->assertTrue( Contrast::passes( $brand['text'], $brand['surface'] ) );
-		$this->assertTrue( Contrast::passes( Settings_Schema::ACCENT_CONTRAST, $brand['accent_strong'] ) );
+		$this->assertTrue( Contrast::passes( Settings_Schema::on_accent( $brand['accent'], $brand['text'] ), $brand['accent'] ) );
 		$this->assertTrue( Contrast::passes( $brand['accent_strong'], $brand['surface'] ) );
 	}
 

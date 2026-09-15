@@ -34,9 +34,9 @@ final class SettingsSchemaTest extends TestCase {
 		$this->assertSame( 'Advertising', $defaults['brand']['product_name'] );
 		$this->assertSame( '', $defaults['brand']['tagline'] );
 		$this->assertSame( '', $defaults['brand']['logo_url'] );
-		$this->assertSame( '#ff3b2f', $defaults['brand']['accent'] );
-		$this->assertSame( '#8e1f1f', $defaults['brand']['accent_strong'] );
-		$this->assertSame( '#f7f4ee', $defaults['brand']['canvas'] );
+		$this->assertSame( '#f05a28', $defaults['brand']['accent'] );
+		$this->assertSame( '#b5401a', $defaults['brand']['accent_strong'] );
+		$this->assertSame( '#f7f7f5', $defaults['brand']['canvas'] );
 		$this->assertSame( '#ffffff', $defaults['brand']['surface'] );
 		$this->assertSame( '#111214', $defaults['brand']['text'] );
 		$this->assertSame( 30, $defaults['delivery']['fill_ttl'] );
@@ -113,7 +113,7 @@ final class SettingsSchemaTest extends TestCase {
 		$this->assertArrayNotHasKey( 'nope', $merged['modules'] );
 		$this->assertSame( 'Museum Ads', $merged['brand']['product_name'] );
 		$this->assertArrayNotHasKey( 'extra', $merged['brand'] );
-		$this->assertSame( '#ff3b2f', $merged['brand']['accent'] );
+		$this->assertSame( '#f05a28', $merged['brand']['accent'] );
 	}
 
 	/**
@@ -157,7 +157,41 @@ final class SettingsSchemaTest extends TestCase {
 	}
 
 	/**
-	 * White on white buttons fail AA. Save must refuse, not warn.
+	 * An accent no label ink can read on is refused. Save must refuse, not warn.
+	 *
+	 * Mid grey is the hard case: neither the text colour nor white reaches
+	 * 4.5:1 on it, so there is no ink to choose.
+	 *
+	 * @return void
+	 */
+	public function test_an_accent_no_ink_can_read_on_is_rejected(): void {
+		$input                    = Settings_Schema::defaults();
+		$input['brand']['accent'] = '#7a7a7a';
+
+		$result = Settings_Schema::validate( $input );
+
+		$this->assertFalse( $result['ok'] );
+		$this->assertContains( 'contrast_button', $result['errors'] );
+	}
+
+	/**
+	 * A dark accent is accepted, because its labels switch to white.
+	 *
+	 * The negative half: a rule that only checked graphite would refuse every
+	 * dark brand colour a site already uses.
+	 *
+	 * @return void
+	 */
+	public function test_a_dark_accent_passes_with_white_labels(): void {
+		$input                    = Settings_Schema::defaults();
+		$input['brand']['accent'] = '#8e1f1f';
+
+		$this->assertTrue( Settings_Schema::validate( $input )['ok'] );
+		$this->assertSame( '#ffffff', Settings_Schema::on_accent( '#8e1f1f', '#111214' ) );
+	}
+
+	/**
+	 * White link text on a white surface fails AA.
 	 *
 	 * @return void
 	 */
@@ -168,7 +202,7 @@ final class SettingsSchemaTest extends TestCase {
 		$result = Settings_Schema::validate( $input );
 
 		$this->assertFalse( $result['ok'] );
-		$this->assertContains( 'contrast_button', $result['errors'] );
+		$this->assertContains( 'contrast_link', $result['errors'] );
 	}
 
 	/**

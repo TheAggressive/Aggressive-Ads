@@ -34,10 +34,16 @@ final class CreativeCardFoldsTest extends WP_UnitTestCase {
 	 */
 	private function render( array $creatives, string $error_for = '' ): string {
 		$aggr_campaign = array(
-			'id'         => 7,
-			'start_date' => '2026-06-01',
-			'end_date'   => '2026-06-30',
+			'id'           => 7,
+			'start_date'   => '2026-06-01',
+			'end_date'     => '2026-06-30',
+			'autosave_rev' => 0,
 		);
+
+		// The Destination card is its own autosave form, so the step reads these.
+		$aggr_error_for        = '';
+		$aggr_wizard_id        = 'campaign-7';
+		$aggr_autosave_context = '';
 
 		$aggr_slots = array(
 			array(
@@ -122,8 +128,8 @@ final class CreativeCardFoldsTest extends WP_UnitTestCase {
 	public function test_an_empty_placement_shows_the_form_unfolded(): void {
 		$html = $this->render( array() );
 
-		$this->assertStringContainsString( 'Creative needed', $html );
-		$this->assertStringContainsString( 'Required ad creative size: 728x90 pixels', $html );
+		$this->assertStringContainsString( 'Needs a file', $html );
+		$this->assertStringContainsString( '728 × 90 px', $html );
 
 		// Not behind a dialog: uploading is the whole point of an empty card.
 		$this->assertStringNotContainsString( 'Add a rotating creative', $html );
@@ -138,13 +144,10 @@ final class CreativeCardFoldsTest extends WP_UnitTestCase {
 	public function test_a_filled_placement_drops_what_it_no_longer_asks(): void {
 		$html = $this->render( $this->one_creative() );
 
+		// The size stays as the card's label; only the request for a file goes.
+		$this->assertStringContainsString( '728 × 90 px', $html );
 		$this->assertStringNotContainsString(
-			'Required ad creative size',
-			$html,
-			'Instructions for a task that is already done.'
-		);
-		$this->assertStringNotContainsString(
-			'Creative needed',
+			'Needs a file',
 			$html,
 			'The card is not asking for a creative it has.'
 		);

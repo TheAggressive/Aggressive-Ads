@@ -139,7 +139,7 @@ another organization is refused in every status.
 
 Editing a campaign that is already serving re-checks creative coverage on
 **every** save, not only when a wizard step advances. Coverage used to be
-verified only on the way out of Step 4, which was safe while the only editable
+verified only on the way out of a wizard step, which was safe while the only editable
 statuses were draft and changes — an incomplete draft is expected, and
 submission catches it later. Once staff could edit a `live` campaign that
 stopped holding: the save busts fill cache, so a placement left without a
@@ -259,23 +259,24 @@ delivery. Approval requires review capability, promotes the checksum-verified
 revision, and busts fill cache. The repository then makes the revision current
 and archives its predecessor. Every outcome is campaign-audited.
 
-Leaving destination-and-schedule Step 4 is another `Campaign_Editor` operation,
-not a display-only step change. After authorization and optimistic concurrency,
-the editor verifies one creative covers every selected placement and applies
-`Campaign_Rules::validate_window()` to the candidate dates. A successful write
-stores the UTC timestamps and advances `_aggr_wizard_step` to `review` in
-the same draft update. REST and the progressive form therefore cannot disagree
-about whether Step 4 is complete.
+Leaving the creative step is another `Campaign_Editor` operation, not a
+display-only step change. After authorization and optimistic concurrency, the
+editor verifies a creative covers every selected placement and applies
+`Campaign_Rules::validate_window()` to the stored dates; a successful write
+advances `_aggr_wizard_step` to `review`. Leaving details with a start date
+applies the same window rule to the candidate dates first, so a past start is
+refused beside the field rather than after the uploads. REST and the
+progressive form therefore cannot disagree about whether a step is complete.
 
-The Step 5 review screen does not invent a second definition of complete.
+The review step does not invent a second definition of complete.
 `Review_Readiness` runs `Campaign_Validator`, converts every problem into a
 localized advertiser-facing message and exact wizard edit destination, and
 removes the validator's raw context before returning data to the portal or REST
 detail response. The screen is a read-only snapshot; it never advances status
 and it never substitutes for transition-time validation.
 
-Step 6 is also delivery-only: it does not persist a `submit` resume point.
-After an explicit confirmation, its campaign-bound form nonce and the REST
+Submission is also delivery-only: it does not persist a `submit` resume point.
+From the confirmation at the end of review, its campaign-bound form nonce and the REST
 transition route both call `Campaign_State_Machine::apply( ..., aggr_submitted )`
 under the same per-user transition rate limit. The machine decides the edge,
 reauthorizes the campaign, runs the validator against current stored data, and

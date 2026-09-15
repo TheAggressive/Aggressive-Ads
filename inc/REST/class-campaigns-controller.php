@@ -176,18 +176,18 @@ final class Campaigns_Controller implements Service {
 					'callback'            => array( $this, 'update' ),
 					'permission_callback' => array( $this, 'write_permission' ),
 					'args'                => array(
-						'id'               => $this->positive_int_arg( true ),
-						'title'            => $this->string_arg( false ),
-						'package_id'       => $this->nonnegative_int_arg( false ),
-						'placement_ids'    => array(
+						'id'                => $this->positive_int_arg( true ),
+						'title'             => $this->string_arg( false ),
+						'package_id'        => $this->nonnegative_int_arg( false ),
+						'placement_ids'     => array(
 							'type'              => 'array',
 							'required'          => false,
 							'items'             => array( 'type' => 'integer' ),
 							'sanitize_callback' => array( self::class, 'sanitize_ids' ),
 							'validate_callback' => array( self::class, 'validate_ids' ),
 						),
-						'start_ts'         => $this->nonnegative_int_arg( false ),
-						'end_ts'           => $this->nonnegative_int_arg( false ),
+						'start_ts'          => $this->nonnegative_int_arg( false ),
+						'end_ts'            => $this->nonnegative_int_arg( false ),
 
 						/*
 						 * Local YYYY-MM-DD, converted here rather than in the
@@ -198,11 +198,12 @@ final class Campaigns_Controller implements Service {
 						 * in. Date_Input::parse() is the same conversion the
 						 * no-JS form already goes through, so both paths agree.
 						 */
-						'start_date'       => $this->string_arg( false ),
-						'end_date'         => $this->string_arg( false ),
-						'advertiser_notes' => $this->textarea_arg( false ),
-						'wizard_step'      => $this->string_arg( false ),
-						'autosave_rev'     => $this->nonnegative_int_arg( true ),
+						'start_date'        => $this->string_arg( false ),
+						'end_date'          => $this->string_arg( false ),
+						'advertiser_notes'  => $this->textarea_arg( false ),
+						'default_click_url' => $this->string_arg( false ),
+						'wizard_step'       => $this->string_arg( false ),
+						'autosave_rev'      => $this->nonnegative_int_arg( true ),
 					),
 				),
 			)
@@ -338,7 +339,7 @@ final class Campaigns_Controller implements Service {
 
 		$fields = array();
 
-		foreach ( array( 'title', 'package_id', 'placement_ids', 'start_ts', 'end_ts', 'advertiser_notes', 'wizard_step' ) as $field ) {
+		foreach ( array( 'title', 'package_id', 'placement_ids', 'start_ts', 'end_ts', 'advertiser_notes', 'default_click_url', 'wizard_step' ) as $field ) {
 			if ( $request->has_param( $field ) ) {
 				$fields[ $field ] = $request->get_param( $field );
 			}
@@ -479,33 +480,34 @@ final class Campaigns_Controller implements Service {
 		$status = $this->campaigns->status( $campaign_id );
 
 		return array(
-			'id'               => $campaign_id,
-			'title'            => $this->campaigns->title( $campaign_id ),
-			'status'           => $status,
-			'status_label'     => $this->status_label( $status ),
-			'start_ts'         => $this->campaigns->start_ts( $campaign_id ),
-			'end_ts'           => $this->campaigns->end_ts( $campaign_id ),
-			'submitted_at'     => $this->campaigns->submitted_at( $campaign_id ),
-			'revision'         => $this->campaigns->revision( $campaign_id ),
-			'autosave_rev'     => $this->campaigns->autosave_revision( $campaign_id ),
-			'wizard_step'      => $this->campaigns->wizard_step( $campaign_id ),
-			'package_id'       => $this->campaigns->package_id( $campaign_id ),
-			'budget_cents'     => $this->campaigns->budget_cents( $campaign_id ),
-			'currency'         => $this->campaigns->currency( $campaign_id ),
+			'id'                => $campaign_id,
+			'title'             => $this->campaigns->title( $campaign_id ),
+			'status'            => $status,
+			'status_label'      => $this->status_label( $status ),
+			'start_ts'          => $this->campaigns->start_ts( $campaign_id ),
+			'end_ts'            => $this->campaigns->end_ts( $campaign_id ),
+			'submitted_at'      => $this->campaigns->submitted_at( $campaign_id ),
+			'revision'          => $this->campaigns->revision( $campaign_id ),
+			'autosave_rev'      => $this->campaigns->autosave_revision( $campaign_id ),
+			'wizard_step'       => $this->campaigns->wizard_step( $campaign_id ),
+			'package_id'        => $this->campaigns->package_id( $campaign_id ),
+			'budget_cents'      => $this->campaigns->budget_cents( $campaign_id ),
+			'currency'          => $this->campaigns->currency( $campaign_id ),
 
 			// Advertiser-visible feedback, which is the whole point of the
 			// field. Internal notes are a different key and never appear here.
-			'review_notes'     => $this->campaigns->review_notes( $campaign_id ),
-			'advertiser_notes' => $this->campaigns->advertiser_notes( $campaign_id ),
+			'review_notes'      => $this->campaigns->review_notes( $campaign_id ),
+			'advertiser_notes'  => $this->campaigns->advertiser_notes( $campaign_id ),
+			'default_click_url' => $this->campaigns->default_click_url( $campaign_id ),
 
-			'editable'         => $this->window->allows( $campaign_id ),
-			'can_copy'         => current_user_can( Capabilities::SUBMIT_CAMPAIGN ),
-			'placement_ids'    => $this->campaigns->placement_ids( $campaign_id ),
+			'editable'          => $this->window->allows( $campaign_id ),
+			'can_copy'          => current_user_can( Capabilities::SUBMIT_CAMPAIGN ),
+			'placement_ids'     => $this->campaigns->placement_ids( $campaign_id ),
 
 			// What this advertiser could do next, so a UI does not have to
 			// reimplement the transition table to decide which buttons to draw.
-			'actions'          => $this->actions( $campaign_id, $status ),
-			'line_items'       => $this->line_item_rows( $campaign_id ),
+			'actions'           => $this->actions( $campaign_id, $status ),
+			'line_items'        => $this->line_item_rows( $campaign_id ),
 		);
 	}
 

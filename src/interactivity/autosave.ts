@@ -5,14 +5,28 @@
  * State is keyed per instance at state.autosaves[ autosaveId ].
  *
  * Ordinary POST still saves and advances. This store PATCHes the public
- * allowlist as the advertiser types so a refresh does not lose the draft.
- * File uploads and submit are not autosaved.
+ * allowlist as the advertiser types so a refresh does not lose the draft, and
+ * makes the page heading the campaign's rename control. File uploads and
+ * submit are not autosaved.
  */
 
 import { store, getContext } from '@wordpress/interactivity';
-import { debounce } from '@aggr/logic';
+import { debounce, normaliseLink, runEndDate } from '@aggr/logic';
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error' | 'conflict';
+
+type Outcome = 'saved' | 'error' | 'conflict';
+
+type Copy =
+	| SaveStatus
+	| 'runsThrough'
+	| 'rename'
+	| 'nameLabel'
+	| 'nameSaved'
+	| 'nameEmpty'
+	| 'nameError'
+	| 'linkSaved'
+	| 'linkInvalid';
 
 interface AutosaveState {
 	restUrl: string;
@@ -26,6 +40,13 @@ interface AutosaveContext {
 }
 
 const initializedIds = new Set< string >();
+
+/*
+ * The refusal code of each instance's last failed save. The link field says
+ * why it was refused, and a bare 'error' outcome cannot tell a bad link from a
+ * dropped connection.
+ */
+const lastErrorCode = new Map< string, string >();
 const pending = new Map<
 	string,
 	ReturnType< typeof debounce< () => void > >
@@ -33,6 +54,13 @@ const pending = new Map<
 
 function announcerFor( id: string ): HTMLElement | null {
 	return document.getElementById( `aggr-autosave-status-${ id }` );
+}
+
+function announce( id: string, message: string ): void {
+	const announcer = announcerFor( id );
+	if ( announcer ) {
+		announcer.textContent = message;
+	}
 }
 
 function setStatus( id: string, status: SaveStatus ): void {
@@ -63,6 +91,19 @@ function fieldsFrom( form: HTMLFormElement ): Record< string, unknown > {
 	const notes = data.get( 'advertiser_notes' );
 	if ( typeof notes === 'string' ) {
 		fields.advertiser_notes = notes;
+	}
+
+	/*
+	 * Only once the browser accepts it as a URL. This saves as it is typed,
+	 * and `htt` on its way to `https://` would otherwise come back refused
+	 * mid-word; an address still being typed is left unsaved, not rejected.
+	 */
+	const link = form.querySelector< HTMLInputElement >(
+		'input[name="default_click_url"]'
+	);
+	const normalised = link ? normaliseLink( link.value ) : null;
+	if ( null !== normalised ) {
+		fields.default_click_url = normalised;
 	}
 
 	/*
@@ -99,66 +140,98 @@ function fieldsFrom( form: HTMLFormElement ): Record< string, unknown > {
 }
 
 /**
- * Choosing a package finishes the first step.
+ * A `YYYY-MM-DD` date in words, in the page's language.
  *
- * One control, one unambiguous choice — the only step where "done" is a single
- * event rather than a guess. It submits the form rather than navigating, so the
- * ordinary POST persists the name and the package together.
+ * Formatted in UTC from the date's own parts, so no timezone can move it.
  *
- * **There is no race with the debounce, and that is not free.** This comment
- * claimed it while the race was live: a save already on the wire left the form
- * holding a stale `autosave_rev`, and the POST was refused. What makes the
- * claim true is the submit listener in `init()`, which holds every submit —
- * this one, the Continue button, and Enter in a text field — until any save in
- * flight has come back.
- *
- * Not while the campaign is still called what the wizard named it. Carrying an
- * unnamed draft forward only earns a title error at review and a trip back to
- * this field, which is a worse journey than the click it saved. The flag is the
- * server's, because comparing the title against the placeholder string breaks
- * as soon as the site language changes.
+ * @param date `YYYY-MM-DD`.
+ * @return The date for reading, or the input if the browser cannot format it.
  */
-function advanceOnPackage( form: HTMLFormElement ): void {
-	const radios = form.querySelectorAll< HTMLInputElement >(
-		'input[type="radio"][name="package_id"]'
+function formatDay( date: string ): string {
+	const [ year = 0, month = 1, day = 1 ] = date.split( '-' ).map( Number );
+
+	try {
+		return new Intl.DateTimeFormat(
+			document.documentElement.lang || undefined,
+			{
+				year: 'numeric',
+				month: 'long',
+				day: 'numeric',
+				timeZone: 'UTC',
+			}
+		).format( new Date( Date.UTC( year, month - 1, day ) ) );
+	} catch {
+		return date;
+	}
+}
+
+/**
+ * Keeps the schedule fieldset describing the package that is chosen.
+ *
+ * A fixed package decides its own end date, so its end field is disabled —
+ * which also keeps it out of `FormData`, and so out of the autosave, and so
+ * lets the server derive the end — and the last day is stated instead. A
+ * custom package gets the field back.
+ *
+ * Nothing runs on attach. The server rendered this fieldset for the package it
+ * had selected, and rewriting it before anyone has changed anything would only
+ * swap one date format for another in front of them.
+ *
+ * Synchronous on `change`, which matters: the debounce reads the form 600ms
+ * later, and must find the end field already enabled or disabled to match.
+ *
+ * @param form The first step's form.
+ */
+function followPlan( form: HTMLFormElement ): void {
+	const radios = Array.from(
+		form.querySelectorAll< HTMLInputElement >(
+			'input[type="radio"][name="package_id"]'
+		)
+	);
+	const start = form.querySelector< HTMLInputElement >(
+		'input[name="start_date"]'
+	);
+	const endField = form.querySelector< HTMLElement >(
+		'[data-aggr-end-field]'
+	);
+	const end = form.querySelector< HTMLInputElement >(
+		'input[name="end_date"]'
+	);
+	const through = form.querySelector< HTMLElement >(
+		'[data-aggr-run-through]'
 	);
 
-	if ( 0 === radios.length ) {
+	if ( 0 === radios.length || null === start ) {
 		return;
 	}
 
-	const title = form.querySelector< HTMLInputElement >(
-		'input[name="title"]'
-	);
-	const placeholder =
-		'1' === form.getAttribute( 'data-aggr-title-placeholder' );
-	let advancing = false;
+	const sync = (): void => {
+		const chosen = radios.find( ( radio ) => radio.checked );
+		const days = Number( chosen?.dataset.aggrDurationDays ?? '0' );
+		const fixed = undefined !== chosen && days > 0;
 
-	/*
-	 * Asked at the moment of choosing, not tracked as it is typed.
-	 *
-	 * Listening for `input` on the name looked equivalent and was not: this
-	 * module attaches on hydration, and a name filled before that — a paste, a
-	 * password manager, a fast typist, a browser test — raises its event with
-	 * nobody listening, leaving the step convinced the campaign is unnamed.
-	 * `defaultValue` is the value the server rendered, so comparing against it
-	 * reads the same answer no matter when the edit happened.
-	 */
-	const named = (): boolean =>
-		null !== title &&
-		'' !== title.value.trim() &&
-		( ! placeholder || title.value !== title.defaultValue );
+		if ( endField && end ) {
+			endField.hidden = fixed;
+			end.disabled = fixed;
+		}
 
-	radios.forEach( ( radio ) => {
-		radio.addEventListener( 'change', () => {
-			if ( advancing || ! named() || ! form.checkValidity() ) {
-				return;
-			}
+		if ( through ) {
+			const last = fixed ? runEndDate( start.value, days ) : null;
 
-			advancing = true;
-			form.requestSubmit();
-		} );
-	} );
+			through.hidden = null === last;
+			through.textContent =
+				null === last
+					? ''
+					: ( state.i18n.runsThrough ?? '' ).replace(
+							'%s',
+							formatDay( last )
+					  );
+		}
+	};
+
+	radios.forEach( ( radio ) => radio.addEventListener( 'change', sync ) );
+	start.addEventListener( 'input', sync );
+	start.addEventListener( 'change', sync );
 }
 
 function syncRevision( revision: number ): void {
@@ -167,6 +240,106 @@ function syncRevision( revision: number ): void {
 		.forEach( ( input ) => {
 			input.value = String( revision );
 		} );
+}
+
+/**
+ * One campaign's autosave writes, one after another.
+ *
+ * The heading's rename and the form's debounce share one revision. Two PATCHes
+ * sent together carry the same revision, the server accepts the first and
+ * refuses the second as a conflict — so each waits for the one before it and
+ * sends the revision that one left behind.
+ */
+const queues = new Map< string, Promise< unknown > >();
+
+function serialise< T >( id: string, task: () => Promise< T > ): Promise< T > {
+	const next = ( queues.get( id ) ?? Promise.resolve() ).then( task, task );
+
+	queues.set(
+		id,
+		next.catch( () => undefined )
+	);
+
+	return next;
+}
+
+/**
+ * PATCHes fields and adopts the revision the server answers with.
+ *
+ * @param id     Autosave instance.
+ * @param fields Allowlisted campaign fields.
+ * @return What happened, for the caller to report.
+ */
+async function send(
+	id: string,
+	fields: Record< string, unknown >
+): Promise< Outcome > {
+	const current = state.autosaves[ id ];
+	if ( ! current || current.restUrl === '' || current.nonce === '' ) {
+		return 'error';
+	}
+
+	try {
+		const response = await fetch( current.restUrl, {
+			method: 'PATCH',
+			credentials: 'same-origin',
+
+			/*
+			 * Finishes even if the page navigates. Leaving a field and pressing
+			 * Continue is one gesture, and without this the save it started
+			 * was dropped by the navigation it was racing.
+			 */
+			keepalive: true,
+			headers: {
+				'Content-Type': 'application/json',
+				'X-WP-Nonce': current.nonce,
+			},
+			body: JSON.stringify( {
+				...fields,
+				autosave_rev: current.revision,
+			} ),
+		} );
+
+		if ( response.status === 409 ) {
+			return 'conflict';
+		}
+
+		if ( ! response.ok ) {
+			const refusal: unknown = await response.json().catch( () => null );
+			lastErrorCode.set(
+				id,
+				refusal &&
+					typeof refusal === 'object' &&
+					'code' in refusal &&
+					typeof refusal.code === 'string'
+					? refusal.code
+					: ''
+			);
+
+			return 'error';
+		}
+
+		lastErrorCode.delete( id );
+		const payload: unknown = await response.json();
+		const revision =
+			payload &&
+			typeof payload === 'object' &&
+			'autosave_rev' in payload &&
+			typeof payload.autosave_rev === 'number'
+				? payload.autosave_rev
+				: null;
+
+		if ( revision === null ) {
+			return 'error';
+		}
+
+		current.revision = revision;
+		syncRevision( revision );
+
+		return 'saved';
+	} catch {
+		return 'error';
+	}
 }
 
 async function patch( id: string, form: HTMLFormElement ): Promise< void > {
@@ -181,51 +354,191 @@ async function patch( id: string, form: HTMLFormElement ): Promise< void > {
 	}
 
 	setStatus( id, 'saving' );
+	const outcome = await send( id, fields );
+	setStatus( id, outcome );
 
-	try {
-		const response = await fetch( current.restUrl, {
-			method: 'PATCH',
-			credentials: 'same-origin',
-			headers: {
-				'Content-Type': 'application/json',
-				'X-WP-Nonce': current.nonce,
-			},
-			body: JSON.stringify( {
-				...fields,
-				autosave_rev: current.revision,
-			} ),
+	if ( 'default_click_url' in fields ) {
+		showLinkStatus(
+			form,
+			'saved' === outcome ? 'saved' : outcome,
+			lastErrorCode.get( id ) ?? ''
+		);
+	}
+}
+
+/**
+ * Says, beside the Destination field, whether its link was kept.
+ *
+ * Visible rather than announced only: the field used to go quiet when a save
+ * failed, and a link that looks saved and is not sends every click nowhere.
+ *
+ * @param form    The Destination form.
+ * @param outcome What the save did, or 'invalid' before anything was sent.
+ * @param code    The server's refusal code, when there was one.
+ */
+function showLinkStatus(
+	form: HTMLFormElement,
+	outcome: Outcome | 'invalid',
+	code = ''
+): void {
+	const link = form.querySelector< HTMLInputElement >(
+		'input[name="default_click_url"]'
+	);
+	const status = form.querySelector< HTMLElement >(
+		'[data-aggr-link-status]'
+	);
+
+	if ( ! link || ! status ) {
+		return;
+	}
+
+	const invalid =
+		'invalid' === outcome || 'aggr_default_click_url_invalid' === code;
+	const copy = invalid
+		? state.i18n.linkInvalid
+		: 'saved' === outcome
+		? state.i18n.linkSaved
+		: state.i18n[ outcome ];
+
+	status.textContent = typeof copy === 'string' ? copy : '';
+	status.classList.toggle( 'is-error', 'saved' !== outcome );
+
+	if ( invalid ) {
+		link.setAttribute( 'aria-invalid', 'true' );
+	} else {
+		link.removeAttribute( 'aria-invalid' );
+	}
+}
+
+/**
+ * Makes the page heading the campaign's rename control.
+ *
+ * The heading's text becomes a button styled to be indistinguishable from it,
+ * so nothing moves when this attaches. Pressing it swaps in a text field in the
+ * same type; Enter or leaving the field saves, Escape keeps the old name.
+ *
+ * The heading's accessible name stays the campaign's name, because that is
+ * what the page is about. What the button does is a description, held in a
+ * visually hidden node beside the heading rather than inside it.
+ *
+ * @param id      Autosave instance.
+ * @param heading The page's `<h1>`.
+ */
+function enableRename( id: string, heading: HTMLElement ): void {
+	let name = ( heading.textContent ?? '' ).trim();
+
+	const button = document.createElement( 'button' );
+	button.type = 'button';
+	button.className = 'aggr-title__button';
+	button.textContent = name;
+
+	const hint = document.createElement( 'span' );
+	hint.id = `${ heading.id }-hint`;
+	hint.className = 'aggr-sr';
+	hint.textContent = state.i18n.rename ?? '';
+	heading.after( hint );
+	button.setAttribute( 'aria-describedby', hint.id );
+
+	heading.replaceChildren( button );
+
+	const show = ( text: string, refocus: boolean ): void => {
+		button.textContent = text;
+		heading.replaceChildren( button );
+
+		// Only after Enter or Escape. Leaving the field by clicking elsewhere
+		// put focus somewhere on purpose, and taking it back would fight that.
+		if ( refocus ) {
+			button.focus();
+		}
+	};
+
+	button.addEventListener( 'click', () => {
+		const input = document.createElement( 'input' );
+		input.type = 'text';
+		input.className = 'aggr-title__input';
+		input.value = name;
+		input.maxLength = 160;
+		input.setAttribute( 'aria-label', state.i18n.nameLabel ?? '' );
+
+		const fit = (): void => {
+			input.style.width = `${ Math.max( input.value.length, 4 ) + 1 }ch`;
+		};
+
+		fit();
+		input.addEventListener( 'input', fit );
+		heading.replaceChildren( input );
+		input.focus();
+		input.select();
+
+		/*
+		 * Once per edit. Enter saves and then removes the field, and removing a
+		 * focused field raises `blur` — which would save a second time, a
+		 * revision behind the first.
+		 */
+		let settled = false;
+
+		const settle = async (
+			commit: boolean,
+			refocus: boolean
+		): Promise< void > => {
+			if ( settled ) {
+				return;
+			}
+			settled = true;
+
+			const next = input.value.trim();
+
+			if ( ! commit || next === name ) {
+				show( name, refocus );
+				return;
+			}
+
+			if ( '' === next ) {
+				show( name, refocus );
+				announce( id, state.i18n.nameEmpty ?? '' );
+				return;
+			}
+
+			input.readOnly = true;
+
+			const outcome = await serialise( id, () =>
+				send( id, { title: next } )
+			);
+
+			if ( 'saved' !== outcome ) {
+				show( name, refocus );
+				announce(
+					id,
+					( 'conflict' === outcome
+						? state.i18n.conflict
+						: state.i18n.nameError ) ?? ''
+				);
+				return;
+			}
+
+			if ( document.title.includes( name ) ) {
+				document.title = document.title.replace( name, next );
+			}
+
+			name = next;
+			show( name, refocus );
+			announce( id, state.i18n.nameSaved ?? '' );
+		};
+
+		input.addEventListener( 'keydown', ( event ) => {
+			if ( 'Enter' === event.key ) {
+				event.preventDefault();
+				void settle( true, true );
+			} else if ( 'Escape' === event.key ) {
+				event.preventDefault();
+				void settle( false, true );
+			}
 		} );
 
-		if ( response.status === 409 ) {
-			setStatus( id, 'conflict' );
-			return;
-		}
-
-		if ( ! response.ok ) {
-			setStatus( id, 'error' );
-			return;
-		}
-
-		const payload: unknown = await response.json();
-		const revision =
-			payload &&
-			typeof payload === 'object' &&
-			'autosave_rev' in payload &&
-			typeof payload.autosave_rev === 'number'
-				? payload.autosave_rev
-				: null;
-
-		if ( revision === null ) {
-			setStatus( id, 'error' );
-			return;
-		}
-
-		current.revision = revision;
-		syncRevision( revision );
-		setStatus( id, 'saved' );
-	} catch {
-		setStatus( id, 'error' );
-	}
+		input.addEventListener( 'blur', () => {
+			void settle( true, false );
+		} );
+	} );
 }
 
 const { state } = store( 'aggr/autosave', {
@@ -241,7 +554,7 @@ const { state } = store( 'aggr/autosave', {
 		 * nothing at all. Errors and conflicts are the messages that matters
 		 * most, and they were the ones being silently dropped.
 		 */
-		i18n: {} as Partial< Record< SaveStatus, string > >,
+		i18n: {} as Partial< Record< Copy, string > >,
 	},
 	actions: {
 		init() {
@@ -266,24 +579,28 @@ const { state } = store( 'aggr/autosave', {
 			let submitting = false;
 			let inFlight: Promise< void > | null = null;
 
-			const run = debounce( () => {
-				const started = patch( autosaveId, root ).finally( () => {
+			const saveNow = () => {
+				const started = serialise( autosaveId, () =>
+					patch( autosaveId, root )
+				).finally( () => {
 					if ( inFlight === started ) {
 						inFlight = null;
 					}
 				} );
 
 				inFlight = started;
-			}, 600 );
+			};
+			const run = debounce( saveNow, 600 );
 			pending.set( autosaveId, run );
 
 			/*
 			 * **Cancelling on submit is not enough on its own.**
 			 *
-			 * Choosing a package advances the step by calling
+			 * Choosing a package used to advance the step by calling
 			 * `requestSubmit()` from a listener on the radio, so `submit`
-			 * fires — and `run.cancel()` with it — during the *target* phase
-			 * of that same `change` event. The event then carries on
+			 * fired — and `run.cancel()` with it — during the *target* phase
+			 * of that same `change` event. The radio no longer submits, but
+			 * any `change` that lands during a submit meets the same order. The event then carries on
 			 * bubbling to the form, where the handler below re-arms the very
 			 * debounce that was just cancelled. Six hundred milliseconds
 			 * later the page is navigating and the save goes out into a
@@ -301,8 +618,16 @@ const { state } = store( 'aggr/autosave', {
 			 * the problem: anything that re-arms after the cancel has to be
 			 * refused, not undone.
 			 */
-			const onChange = () => {
-				if ( submitting ) {
+			const link = root.querySelector< HTMLInputElement >(
+				'input[name="default_click_url"]'
+			);
+
+			const onChange = ( event: Event ) => {
+				// The link commits on its own below, straight away.
+				if (
+					submitting ||
+					( 'change' === event.type && event.target === link )
+				) {
 					return;
 				}
 
@@ -311,6 +636,58 @@ const { state } = store( 'aggr/autosave', {
 
 			root.addEventListener( 'input', onChange );
 			root.addEventListener( 'change', onChange );
+
+			/*
+			 * On commit, the link field shows the address it will save, says
+			 * so when there is none, and saves at once rather than after the
+			 * debounce: leaving the field is usually the move to the next
+			 * thing, and six hundred milliseconds is long enough to lose it.
+			 * Typing is left alone — rewriting `exa` to `https://exa` under
+			 * someone's cursor would be worse.
+			 */
+			link?.addEventListener( 'change', () => {
+				const normalised = normaliseLink( link.value );
+
+				if ( null === normalised ) {
+					run.cancel();
+					showLinkStatus( root, 'invalid' );
+					return;
+				}
+
+				link.value = normalised;
+				run.cancel();
+				saveNow();
+			} );
+
+			/*
+			 * **Any other form carrying the revision waits too.** The ads
+			 * step's Continue is its own form, so the wait below never saw it:
+			 * a link saved on the way to that button bumped the revision the
+			 * button had already read, and the step came back as a conflict.
+			 */
+			document.addEventListener( 'submit', ( event ) => {
+				const other = event.target;
+
+				if (
+					! ( other instanceof HTMLFormElement ) ||
+					other === root ||
+					! other.querySelector( 'input[name="autosave_rev"]' ) ||
+					null === inFlight
+				) {
+					return;
+				}
+
+				event.preventDefault();
+
+				const submitter =
+					event instanceof SubmitEvent ? event.submitter : null;
+
+				void inFlight.finally( () => {
+					other.requestSubmit(
+						submitter instanceof HTMLElement ? submitter : undefined
+					);
+				} );
+			} );
 
 			/*
 			 * **Every submit waits for a save already on the wire.**
@@ -326,10 +703,10 @@ const { state } = store( 'aggr/autosave', {
 			 * window they never opened.
 			 *
 			 * Here rather than on the package radio, which is where this was
-			 * first fixed and was not enough: the radio auto-advances by
-			 * calling `requestSubmit()`, but the step also has an ordinary
-			 * Continue button, and Enter in a text field submits too. All
-			 * three arrive here, and only here is early enough to stop the
+			 * first fixed and was not enough: the radio used to auto-advance
+			 * by calling `requestSubmit()`, but the step also has an ordinary
+			 * Continue button, and Enter in a field submits too. Every one
+			 * arrives here, and only here is early enough to stop the
 			 * browser reading the inputs.
 			 *
 			 * The re-submit cannot loop: `inFlight` is cleared by the
@@ -371,7 +748,7 @@ const { state } = store( 'aggr/autosave', {
 				run.cancel();
 			} );
 
-			advanceOnPackage( root );
+			followPlan( root );
 
 			/*
 			 * Says the module is attached, for anything that has to wait for
@@ -381,6 +758,24 @@ const { state } = store( 'aggr/autosave', {
 			 * behaviour hook here — see docs/architecture.md.
 			 */
 			root.dataset.aggrAutosaveReady = '1';
+		},
+
+		initTitle() {
+			const { autosaveId } = getContext< AutosaveContext >();
+			const heading = document.getElementById( 'aggr-campaign-title' );
+
+			if (
+				! autosaveId ||
+				! ( heading instanceof HTMLElement ) ||
+				'1' === heading.dataset.aggrTitleReady
+			) {
+				return;
+			}
+
+			// In the DOM, for the same reason the upload store marks its forms:
+			// a module evaluated twice would otherwise wrap the heading twice.
+			heading.dataset.aggrTitleReady = '1';
+			enableRename( autosaveId, heading );
 		},
 	},
 } );

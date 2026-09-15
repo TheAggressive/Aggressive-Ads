@@ -17,8 +17,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Portal\Campaign_Actions;
+use Aggressive\Ads\Portal\Campaign_Nonces;
+use Aggressive\Ads\Security\Capabilities;
+
 $aggr_rows         = isset( $aggr_rows ) && is_array( $aggr_rows ) ? $aggr_rows : array();
 $aggr_show_metrics = ! empty( $aggr_show_metrics );
+$aggr_can_renew    = current_user_can( Capabilities::SUBMIT_CAMPAIGN );
 ?>
 <?php if ( array() === $aggr_rows ) : ?>
 	<div class="aggr-empty">
@@ -49,6 +55,24 @@ $aggr_show_metrics = ! empty( $aggr_show_metrics );
 							<a href="<?php echo esc_url( (string) $aggr_row['url'] ); ?>">
 								<?php echo esc_html( (string) $aggr_row['title'] ); ?>
 							</a>
+							<?php
+							/*
+							 * A finished campaign is most often run again as it
+							 * was, and that used to mean opening it to find the
+							 * renew button. The copy keeps the package, artwork
+							 * and links and asks only for new dates.
+							 */
+							?>
+							<?php if ( $aggr_can_renew && Post_Statuses::COMPLETE === (string) $aggr_row['status'] ) : ?>
+								<form class="aggr-table__action" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+									<input type="hidden" name="action" value="<?php echo esc_attr( Campaign_Actions::COPY_ACTION ); ?>">
+									<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) (int) $aggr_row['id'] ); ?>">
+									<?php wp_nonce_field( Campaign_Nonces::copy_nonce_action( (int) $aggr_row['id'] ) ); ?>
+									<button type="submit">
+										<?php esc_html_e( 'Run again', 'aggressive-ads' ); ?><span class="aggr-sr">: <?php echo esc_html( (string) $aggr_row['title'] ); ?></span>
+									</button>
+								</form>
+							<?php endif; ?>
 						</td>
 						<td>
 							<?php

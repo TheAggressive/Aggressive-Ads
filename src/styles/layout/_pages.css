@@ -1,0 +1,70 @@
+/*
+ * Organization, account and help.
+ *
+ * Their own partial because they share a shape the wizard and the dashboard do
+ * not: a column somebody reads and a narrower column of things they act on.
+ */
+
+.aggr-columns {
+	display: grid;
+	gap: var(--aggr-space-lg);
+	align-items: start;
+}
+
+.aggr-columns__main,
+.aggr-columns__side {
+	min-width: 0;
+}
+
+@media (min-width: 64rem) {
+	.aggr-columns {
+		grid-template-columns: minmax(0, 1fr) 22rem;
+	}
+}
+
+/* Ownership is a role, not a status, so it does not borrow a status colour. */
+.aggr-pill--owner {
+	background: var(--aggr-color-rail);
+	color: var(--aggr-color-rail-text-strong);
+}
+
+/*
+ * How a campaign runs, as numbered cards. The list keeps its semantics; the
+ * counter is drawn rather than typed, so a step added or removed renumbers.
+ */
+.aggr-flow {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+	gap: var(--aggr-space-md);
+	margin: 0 0 var(--aggr-space-md);
+	padding: 0;
+	list-style: none;
+	counter-reset: aggr-flow;
+}
+
+.aggr-flow__step {
+	display: flex;
+	flex-direction: column;
+	gap: var(--aggr-space-2xs);
+	padding: var(--aggr-space-md) var(--aggr-space-lg);
+	background: var(--aggr-color-surface-raised);
+	border: 1px solid var(--aggr-border-color);
+	border-radius: var(--aggr-radius-control);
+	color: var(--aggr-color-text-muted);
+	font-size: 13px;
+	counter-increment: aggr-flow;
+}
+
+.aggr-flow__step::before {
+	color: var(--aggr-color-accent-strong);
+	font-family: var(--aggr-font-mono);
+	font-size: 12px;
+	font-weight: 600;
+	content: counter(aggr-flow, decimal-leading-zero);
+}
+
+.aggr-flow__step strong {
+	color: var(--aggr-color-text);
+	font-size: 15px;
+	font-weight: 650;
+}

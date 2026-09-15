@@ -9,6 +9,18 @@ import { solidPng } from './png';
 import { wp } from './wp-cli';
 
 /**
+ * A date some days ahead, as a date input holds it.
+ *
+ * @param days Days from now.
+ * @return `YYYY-MM-DD`.
+ */
+function futureDate( days: number ): string {
+	return new Date( Date.now() + days * 24 * 60 * 60 * 1000 )
+		.toISOString()
+		.slice( 0, 10 );
+}
+
+/**
  * Holds the autosave's response back after the server has applied it.
  *
  * **Let the server apply it, then hold the answer back.** Delaying the
@@ -43,79 +55,26 @@ async function holdAutosaveResponse( page: Page ): Promise< () => boolean > {
 	return () => applied;
 }
 
-test( 'choosing a package waits for the save already on the wire', async ( {
+test( 'pressing Continue waits for the save already on the wire', async ( {
 	page,
 } ) => {
 	/*
 	 * **The wizard's own autosave was making step one impossible to leave.**
 	 *
-	 * Typing the name arms a six-hundred-millisecond debounce. Pause about
-	 * that long to read the package list — which is what the list is for —
-	 * and the PATCH is on the wire when the click lands. The form still holds
-	 * the old `autosave_rev`, the PATCH bumps the stored one first, and the
-	 * POST arrives one revision behind. The server refuses it, correctly, and
-	 * the advertiser is thrown back to step one with the package unset and a
-	 * message about another window they never opened.
+	 * Changing a field arms a six-hundred-millisecond debounce. Pause about
+	 * that long and the PATCH is on the wire when Continue is pressed. The
+	 * form still holds the old `autosave_rev`, the PATCH bumps the stored one
+	 * first, and the POST arrives one revision behind — refused, correctly,
+	 * with a message about another window the advertiser never opened.
 	 *
-	 * Reproduced by hand on every attempt between 620ms and 750ms and never
-	 * at two seconds, which is why this does not sleep: a fixed pause tuned to
-	 * one machine is a test that passes on the next one for no reason. Holding
-	 * the response open makes the overlap a fact of the test rather than a
-	 * race it hopes to win.
-	 */
-	await page.goto( '/advertiser/' );
-	await signIn( page, 'advertiser@example.test', 'advertiser' );
-
-	const saveApplied = await holdAutosaveResponse( page );
-
-	await page.getByRole( 'button', { name: 'Create campaign' } ).click();
-	await expect(
-		page.locator( 'form[data-aggr-autosave][data-aggr-autosave-ready]' )
-	).toBeAttached();
-
-	await page
-		.getByLabel( 'Campaign name' )
-		.fill( `E2E browser campaign race ${ Date.now() }` );
-
-	// The server has applied it; only the browser is behind. The precondition.
-	await expect.poll( saveApplied, { timeout: 5000 } ).toBe( true );
-
-	await page.getByRole( 'radio', { name: /Focused sidebar/ } ).check();
-
-	/*
-	 * Landing on the creative step is the assertion. A refused save returns to
-	 * `step=details`, so checking the URL distinguishes "advanced" from
-	 * "bounced" without depending on which message was rendered.
-	 */
-	await expect( page ).toHaveURL( /step=creative/, { timeout: 15_000 } );
-
-	/*
-	 * And exactly one notice, because the second half of this defect was two.
-	 * The campaign screen reads its own notice and the creative one off the
-	 * same `aggr_notice` parameter, and both answered to the bare string
-	 * `error` — so one refused campaign save also rendered a campaign error
-	 * code through the creative vocabulary, as "The creative could not be
-	 * saved. Please try again." A count catches that where matching on text
-	 * would not.
-	 */
-	const toasts = page.locator( '.aggr-toast' );
-
-	await expect( toasts ).toHaveCount( 1 );
-	await expect( toasts ).not.toContainText( 'creative could not be saved' );
-} );
-
-test( 'pressing Continue waits for the save already on the wire', async ( {
-	page,
-} ) => {
-	/*
-	 * **The path the reporter actually took.** The step opens with a package
-	 * already chosen, so choosing it again raises no `change` and cannot
-	 * auto-advance — people press Continue. The first fix for this race waited
-	 * only on the package radio, and the test above drives the radio, so both
-	 * were green while pressing Continue still sent a stale revision.
+	 * The first fix waited only on the package radio, which used to
+	 * auto-advance, and its test drove the radio: both were green while
+	 * pressing Continue still sent a stale revision. Continue is now the only
+	 * way on, so this is the path.
 	 *
-	 * Same overlap as above: the server applies the autosave, and only the
-	 * browser is told late.
+	 * Holding the response open makes the overlap a fact of the test rather
+	 * than a race it hopes to win: the server applies the autosave, and only
+	 * the browser is told late.
 	 */
 	await page.goto( '/advertiser/' );
 	await signIn( page, 'advertiser@example.test', 'advertiser' );
@@ -132,76 +91,215 @@ test( 'pressing Continue waits for the save already on the wire', async ( {
 		page.locator( 'input[name="package_id"]:checked' )
 	).toHaveCount( 1 );
 
-	await page
-		.getByLabel( 'Campaign name' )
-		.fill( `E2E browser campaign continue ${ Date.now() }` );
+	await page.getByLabel( 'Start date' ).fill( futureDate( 10 ) );
 
 	await expect.poll( saveApplied, { timeout: 5000 } ).toBe( true );
 
+	// By name: on a wide panel the step's own button is hidden and the order
+	// summary's submits the step's form, which is the path this has to cover.
 	await page
-		.locator( 'form[data-aggr-autosave] button[type="submit"]' )
-		.first()
+		.getByRole( 'button', { name: 'Continue to ads', exact: true } )
 		.click();
 
+	/*
+	 * Landing on the ads step is the assertion. A refused save returns to
+	 * `step=details`, so the URL tells "advanced" from "bounced" without
+	 * depending on which message was rendered.
+	 */
 	await expect( page ).toHaveURL( /step=creative/, { timeout: 15_000 } );
 
+	/*
+	 * And exactly one notice, because the second half of this defect was two:
+	 * the campaign and creative notices read the same `aggr_notice` parameter,
+	 * so one refused save also rendered as a creative error. A count catches
+	 * that where matching on text would not.
+	 */
 	const toasts = page.locator( '.aggr-toast' );
 
 	await expect( toasts ).toHaveCount( 1 );
 	await expect( toasts ).not.toContainText( 'changed in another window' );
+	await expect( toasts ).not.toContainText( 'creative could not be saved' );
 } );
 
-test( 'a name with markup characters survives the round trip', async ( {
+test( 'the page heading renames the campaign, markup characters and all', async ( {
 	page,
 } ) => {
 	/*
 	 * **What the advertiser typed is what they get back.** A name containing
-	 * `&`, `'`, `"` or a backslash could not be saved at all: the stored title
-	 * never matched the typed one, the save rolled back, and the page reported
-	 * a conflict. The PHP tests prove the workflow; this proves the whole trip
-	 * — the field, the autosave, the form post, and the page drawing the name
-	 * again — because each layer had its own way of changing the text.
+	 * `&`, `'`, `"` or a backslash once could not be saved at all: the stored
+	 * title never matched the typed one, the save rolled back, and the page
+	 * reported a conflict. The heading is the only place a name is typed now,
+	 * so it carries the whole trip — the field, the PATCH, and the page
+	 * drawing the name again after a reload.
 	 *
-	 * The heading is checked for encoded entities as well as for the text,
-	 * since the display half of this bug showed "&#038;" to the advertiser
-	 * after a save that had succeeded.
+	 * Encoded entities are checked as well as the text, since the display half
+	 * of that bug showed "&#038;" after a save that had succeeded.
 	 */
 	await page.goto( '/advertiser/' );
 	await signIn( page, 'advertiser@example.test', 'advertiser' );
 
 	await page.getByRole( 'button', { name: 'Create campaign' } ).click();
-	await expect(
-		page.locator( 'form[data-aggr-autosave][data-aggr-autosave-ready]' )
-	).toBeAttached();
-
-	const name = `E2E browser campaign Arts & Culture's "Big" Show \\ ${ Date.now() }`;
-
-	await page.getByLabel( 'Campaign name' ).fill( name );
-	await page
-		.locator( 'form[data-aggr-autosave] button[type="submit"]' )
-		.first()
-		.click();
-
-	await expect( page ).toHaveURL( /step=creative/, { timeout: 15_000 } );
-	await expect( page.locator( '.aggr-toast' ) ).toHaveCount( 1 );
-	await expect( page.locator( '.aggr-toast' ) ).not.toContainText(
-		'changed in another window'
-	);
-
-	const details = new URL( page.url() );
-	details.search = '?step=details';
-	await page.goto( details.toString() );
-
-	await expect( page.getByLabel( 'Campaign name' ) ).toHaveValue( name );
 
 	const heading = page.locator( 'h1.aggr-title' );
+	const rename = heading.getByRole( 'button' );
+
+	// The button exists only once the module has attached.
+	await expect( rename ).toBeVisible();
+	await expect(
+		page.getByRole( 'heading', { level: 1 } )
+	).toHaveAccessibleName( 'Untitled campaign' );
+
+	await rename.click();
+
+	const field = page.getByRole( 'textbox', { name: 'Campaign name' } );
+	const name = `E2E browser campaign Arts & Culture's "Big" Show \\ ${ Date.now() }`;
+
+	await expect( field ).toBeFocused();
+	await field.fill( name );
+
+	const saved = page.waitForResponse(
+		( response ) =>
+			'PATCH' === response.request().method() &&
+			response.url().includes( '/aggr/v1/campaigns/' )
+	);
+
+	await field.press( 'Enter' );
+
+	expect( ( await saved ).ok() ).toBe( true );
+	await expect( heading ).toHaveText( name );
+
+	// Enter hands focus back to the heading's control, not to the document.
+	await expect( rename ).toBeFocused();
+	await expect( page.locator( '[id^="aggr-autosave-status-"]' ) ).toHaveText(
+		'Campaign renamed.'
+	);
+
+	// Escape keeps the name that was there.
+	await rename.click();
+	await field.fill( 'Not this one' );
+	await field.press( 'Escape' );
+	await expect( heading ).toHaveText( name );
+
+	await page.reload();
 
 	await expect( heading ).toHaveText( name );
 	await expect( heading ).not.toContainText( '&#038;' );
 	await expect( heading ).not.toContainText( '&amp;' );
 } );
 
-test( 'advertiser completes and submits the accessible five-step wizard', async ( {
+test( 'the first link given is the link every other size starts from', async ( {
+	page,
+} ) => {
+	/*
+	 * **One address, typed once.** A package of two sizes used to ask for the
+	 * destination on each card, and nearly every campaign sends both to the
+	 * same page. After the first upload the second card arrives with that link
+	 * filled in and folded behind it, so choosing a file is the whole upload.
+	 *
+	 * The negative half is the fold: it is a real posted field, so a different
+	 * link is still one click away and is what gets sent when it is changed.
+	 */
+	await page.goto( '/advertiser/' );
+	await signIn( page, 'advertiser@example.test', 'advertiser' );
+
+	/*
+	 * Started from the dashboard's package card, which is the other half of
+	 * this change: the draft opens on the dates with the package applied.
+	 */
+	await page
+		.getByRole( 'region', { name: 'Start a campaign' } )
+		.getByRole( 'button', { name: /Launch bundle/ } )
+		.click();
+
+	await expect(
+		page.getByRole( 'heading', {
+			level: 2,
+			name: 'Choose a package and dates',
+		} )
+	).toBeFocused();
+	await expect(
+		page.getByRole( 'radio', { name: /Launch bundle/ } )
+	).toBeChecked();
+	await expect(
+		page.locator( 'form[data-aggr-autosave][data-aggr-autosave-ready]' )
+	).toBeAttached();
+
+	await page.getByLabel( 'Start date' ).fill( futureDate( 12 ) );
+	await page
+		.getByRole( 'button', { name: 'Continue to ads', exact: true } )
+		.click();
+	await expect(
+		page.getByRole( 'heading', { level: 2, name: 'Add your ads' } )
+	).toBeFocused();
+
+	const leaderboard = page.getByRole( 'region', {
+		name: 'Homepage leaderboard',
+	} );
+	const sidebar = page.getByRole( 'region', { name: 'Article sidebar' } );
+
+	// Nothing to start from yet: the first card asks for the address.
+	await expect( leaderboard.getByText( 'Goes to' ) ).toHaveCount( 0 );
+	await expect(
+		leaderboard.getByRole( 'button', { name: 'Upload creative' } )
+	).toBeHidden();
+
+	await leaderboard.getByLabel( 'Ad creative file' ).setInputFiles( {
+		name: 'e2e-leaderboard.png',
+		mimeType: 'image/png',
+		buffer: solidPng( 728, 90 ),
+	} );
+	await expect(
+		leaderboard.getByRole( 'status' ).filter( { hasText: 'File selected' } )
+	).toBeAttached();
+
+	const first = leaderboard.getByLabel( 'Destination URL' );
+	await first.fill( 'https://www.example.com/season' );
+	await first.blur();
+
+	await expect(
+		page.getByRole( 'status' ).filter( { hasText: 'Creative uploaded' } )
+	).toBeVisible();
+
+	// The second card starts from that address, folded.
+	const fold = sidebar.locator( 'details.aggr-upload-destination' );
+
+	await expect( fold ).toBeVisible();
+	await expect( fold ).not.toHaveAttribute( 'open', '' );
+	await expect( fold.locator( 'summary' ) ).toContainText(
+		'https://www.example.com/season'
+	);
+	await expect( sidebar.getByLabel( 'Destination URL' ) ).toHaveValue(
+		'https://www.example.com/season'
+	);
+	await expectPortalA11y( page );
+
+	// A file alone is the upload now. No field is touched.
+	await sidebar.getByLabel( 'Ad creative file' ).setInputFiles( {
+		name: 'e2e-sidebar.png',
+		mimeType: 'image/png',
+		buffer: solidPng( 300, 250 ),
+	} );
+
+	await expect(
+		page.getByRole( 'status' ).filter( { hasText: 'Creative uploaded' } )
+	).toBeVisible();
+	await expect( page.locator( '.aggr-summary' ) ).toContainText(
+		'2 of 2 ready'
+	);
+	await expect(
+		page
+			.getByRole( 'region', { name: 'Article sidebar' } )
+			.getByText( 'https://www.example.com/season', { exact: true } )
+	).toBeVisible();
+
+	// Every size has an ad, so the step can be left.
+	await page.getByRole( 'button', { name: 'Continue to review' } ).click();
+	await expect(
+		page.getByRole( 'heading', { level: 3, name: 'Ready check' } )
+	).toBeVisible();
+} );
+
+test( 'advertiser completes and submits the accessible three-step wizard', async ( {
 	page,
 } ) => {
 	/*
@@ -273,7 +371,7 @@ test( 'advertiser completes and submits the accessible five-step wizard', async 
 	await expect(
 		page.getByRole( 'heading', {
 			level: 2,
-			name: 'Name your campaign and choose a package',
+			name: 'Choose a package and dates',
 		} )
 	).toBeFocused();
 
@@ -303,51 +401,40 @@ test( 'advertiser completes and submits the accessible five-step wizard', async 
 		page.getByRole( 'heading', { name: 'Creatives', exact: true } )
 	).toHaveCount( 0 );
 
-	// Five steps, and no link to the one that was folded away.
+	// Three steps, and no link to the ones that were folded away.
 	const progress = page.getByRole( 'list', {
 		name: 'Campaign creation progress',
 	} );
-	await expect( progress.getByRole( 'listitem' ) ).toHaveCount( 5 );
-	await expect(
-		progress.getByRole( 'link', { name: 'Package' } )
-	).toHaveCount( 0 );
+	await expect( progress.getByRole( 'listitem' ) ).toHaveCount( 3 );
 
-	const title = `E2E browser campaign ${ Date.now() }`;
-	const name = page.getByLabel( 'Campaign name' );
+	for ( const retired of [
+		'Package',
+		'Creative',
+		'Destination and schedule',
+		'Submit',
+	] ) {
+		await expect(
+			progress.getByRole( 'link', { name: retired, exact: true } )
+		).toHaveCount( 0 );
+	}
 
-	/*
-	 * Emptied first. A new draft is created titled "Untitled campaign", so
-	 * typing into the field appends to that rather than replacing it — which
-	 * is why the caret assertion below is worth making at all. Typed rather
-	 * than filled because `fill()` sets the value in one shot and never
-	 * produces the keystrokes autosave debounces on.
-	 */
-	await name.fill( '' );
-	await name.click();
-	await page.keyboard.type( title );
+	// Nobody is asked for a name before choosing what they are buying.
+	await expect( page.getByLabel( 'Campaign name' ) ).toHaveCount( 0 );
 
 	/*
-	 * Autosave must not move the caret out from under someone who is still
-	 * typing. It fires on a 600ms debounce, announces through a polite live
-	 * region, and deliberately touches focus not at all — so the assertion is
-	 * that the field the user was in is still focused, with the caret still
-	 * where they left it, after a save has actually completed.
+	 * The schedule autosaves like any field on this step, and the save must
+	 * not take focus from the field somebody is still in. The announcement
+	 * text is asserted, not merely its presence: these strings are hydrated
+	 * by the server and were once overwritten with empty defaults by the
+	 * client store, so the region rendered, passed axe, and said nothing.
 	 */
-	/*
-	 * The announcement text is asserted, not merely its presence. These strings
-	 * are hydrated by the server and were being overwritten with empty defaults
-	 * by the client store, so the region rendered, passed axe, and said nothing
-	 * — for saves, and for the save *errors* that matter more.
-	 */
+	const startField = page.getByLabel( 'Start date' );
+
+	await startField.fill( futureDate( 10 ) );
+
 	const status = page.locator( '[id^="aggr-autosave-status-"]' );
 	await expect( status ).toHaveText( 'Draft saved.', { timeout: 15_000 } );
-
-	await expect( name ).toBeFocused();
-	expect(
-		await name.evaluate(
-			( el ) => ( el as HTMLInputElement ).selectionStart
-		)
-	).toBe( title.length );
+	await expect( startField ).toBeFocused();
 
 	/*
 	 * The package is chosen on this screen now, not the next one. The default
@@ -362,13 +449,24 @@ test( 'advertiser completes and submits the accessible five-step wizard', async 
 	).toBeChecked();
 
 	/*
+	 * A fixed package states its last day instead of asking for one. The end
+	 * field is still in the form — disabled and hidden, so it is not posted
+	 * and the server derives the end — and comes back for a custom package.
+	 */
+	await expect( page.locator( '#aggr-run-through' ) ).toContainText(
+		'Runs through'
+	);
+	await expect( page.getByLabel( 'End date' ) ).toBeHidden();
+	await expect( page.getByLabel( 'End date' ) ).toBeDisabled();
+
+	/*
 	 * The button says what it does, and says it from the first paint. Both
 	 * labels are rendered by the server and CSS picks one on `scripting`, so
 	 * the reader never sees the text change under them — which is exactly what
 	 * rewriting it from the module used to cause on every reload.
 	 */
 	await expect(
-		page.getByRole( 'button', { name: 'Continue', exact: true } )
+		page.getByRole( 'button', { name: 'Continue to ads', exact: true } )
 	).toBeVisible();
 	await expect(
 		page.getByRole( 'button', { name: 'Save and continue' } )
@@ -381,13 +479,31 @@ test( 'advertiser completes and submits the accessible five-step wizard', async 
 
 	await expectPortalA11y( page );
 
-	// No click on Continue: choosing a package finishes this step. The campaign
-	// has a name by now, which is the condition for advancing at all.
+	/*
+	 * Choosing a package no longer leaves the step: there is a date beside it
+	 * now, and a radio that navigated would skip it. The stated last day
+	 * follows the package that was chosen.
+	 */
 	await packages.getByRole( 'radio', { name: /Focused sidebar/ } ).check();
+	await expect( page ).toHaveURL(
+		/step=details|advertiser\/campaigns\/\d+\/?$/
+	);
+	await expect( page.locator( '#aggr-run-through' ) ).toContainText(
+		'Runs through'
+	);
+
+	await page
+		.getByRole( 'button', { name: 'Continue to ads', exact: true } )
+		.click();
 
 	await expect(
-		page.getByRole( 'heading', { level: 2, name: 'Upload creative' } )
+		page.getByRole( 'heading', { level: 2, name: 'Add your ads' } )
 	).toBeFocused();
+
+	// The plan is restated above the uploads, with how much is left to do.
+	await expect( page.locator( '.aggr-summary' ) ).toContainText(
+		'0 of 1 ready'
+	);
 	const upload = page.getByRole( 'region', { name: 'Article sidebar' } );
 
 	/*
@@ -587,54 +703,45 @@ test( 'advertiser completes and submits the accessible five-step wizard', async 
 		page.locator( '.aggr-toast', { hasText: 'Destination saved.' } )
 	).toHaveCount( 0, { timeout: 10000 } );
 
-	await page.getByRole( 'link', { name: 'Continue to schedule' } ).click();
+	await page.getByRole( 'button', { name: 'Continue to review' } ).click();
 
 	await expect(
-		page.getByRole( 'heading', {
-			level: 2,
-			name: 'Confirm destinations and schedule',
-		} )
+		page.getByRole( 'heading', { level: 2, name: 'Review and submit' } )
 	).toBeFocused();
-	const destinations = page.locator( '#aggr-destinations' );
 	await expect(
-		destinations.getByText( 'https://www.example.com/rewritten', {
-			exact: true,
-		} )
+		page.getByRole( 'heading', { level: 3, name: 'Ready check' } )
+	).toBeVisible();
+
+	/*
+	 * Nobody typed a name, so the wizard named the campaign after its package.
+	 * Read back here and asserted against the delivery strategy after
+	 * submission, which is where the line item carries it.
+	 */
+	const title = ( await page.locator( 'h1.aggr-title' ).innerText() ).trim();
+
+	expect( title.startsWith( 'Focused sidebar' ) ).toBe( true );
+
+	// Destinations are text on review, never a link out of an unfinished campaign.
+	await expect(
+		page
+			.locator( '.aggr-review-creatives' )
+			.getByText( 'https://www.example.com/rewritten', { exact: true } )
 	).toBeVisible();
 	await expect(
 		page.locator( 'a[href="https://www.example.com/rewritten"]' )
 	).toHaveCount( 0 );
-	await expectPortalA11y( page );
 
-	const start = new Date( Date.now() + 10 * 24 * 60 * 60 * 1000 )
-		.toISOString()
-		.slice( 0, 10 );
-	await page.getByLabel( 'Start date' ).fill( start );
-	await page.getByRole( 'button', { name: 'Continue to review' } ).click();
-
-	await expect(
-		page.getByRole( 'heading', { level: 2, name: 'Review your campaign' } )
-	).toBeFocused();
-	await expect(
-		page.getByRole( 'heading', { level: 3, name: 'Ready for submission' } )
-	).toBeVisible();
-	await expect(
-		page.getByRole( 'heading', { level: 1, name: title, exact: true } )
-	).toBeVisible();
-	await expectPortalA11y( page );
-	await page.getByRole( 'link', { name: 'Continue to submit' } ).click();
-
-	await expect(
-		page.getByRole( 'heading', { level: 2, name: 'Submit your campaign' } )
-	).toBeFocused();
+	// Submitting is the end of review, not a page of its own.
 	await expect(
 		page.getByRole( 'heading', {
 			level: 3,
-			name: 'Send this campaign to the review team?',
+			name: 'Notes for the review team',
 		} )
 	).toBeVisible();
+	await expectPortalA11y( page );
+
 	/*
-	 * The note is written here, not on step 1, and it is posted by the submit
+	 * The note is written on review, not on step 1, and it is posted by the submit
 	 * button rather than autosaved — so typing it and clicking straight through
 	 * is exactly the sequence that has to keep it. No wait, no debounce.
 	 */
@@ -642,9 +749,7 @@ test( 'advertiser completes and submits the accessible five-step wizard', async 
 	await page.getByLabel( 'Notes for the review team' ).fill( note );
 
 	await expectPortalA11y( page );
-	await page
-		.getByRole( 'button', { name: 'Submit campaign for review' } )
-		.click();
+	await page.getByRole( 'button', { name: 'Submit for review' } ).click();
 
 	await expect(
 		page.getByRole( 'status' ).filter( { hasText: 'Campaign submitted' } )
@@ -653,7 +758,7 @@ test( 'advertiser completes and submits the accessible five-step wizard', async 
 		page.getByText( 'Submitted', { exact: true } )
 	).toBeVisible();
 	await expect(
-		page.getByRole( 'button', { name: 'Submit campaign for review' } )
+		page.getByRole( 'button', { name: 'Submit for review' } )
 	).toHaveCount( 0 );
 	await expect( page.getByLabel( 'Campaign name' ) ).toHaveCount( 0 );
 	await expect(
@@ -680,7 +785,7 @@ test( 'advertiser completes and submits the accessible five-step wizard', async 
 		page.getByText( 'Submitted', { exact: true } )
 	).toBeVisible();
 	await expect(
-		page.getByRole( 'button', { name: 'Submit campaign for review' } )
+		page.getByRole( 'button', { name: 'Submit for review' } )
 	).toHaveCount( 0 );
 
 	// Put this isolated browser fixture into the post-approval state so the

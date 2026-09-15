@@ -119,6 +119,23 @@ final class Settings_Schema {
 	}
 
 	/**
+	 * The ink a label on the accent is set in.
+	 *
+	 * Buttons are the accent itself, and a bright brand colour usually wants
+	 * dark text: white on the default orange is 3.4:1, the body text is 5.5:1.
+	 * Choosing between the site's text colour and white, rather than fixing
+	 * one, is what lets a site with a dark accent keep white labels without a
+	 * second setting to get wrong.
+	 *
+	 * @param string $accent Accent hex.
+	 * @param string $text   Body text hex.
+	 * @return string
+	 */
+	public static function on_accent( string $accent, string $text ): string {
+		return Contrast::best_ink( $accent, array( $text, self::ACCENT_CONTRAST ) );
+	}
+
+	/**
 	 * First-read document. Public signup stays on so existing WP registration
 	 * policy is unchanged until staff turn the module off.
 	 *
@@ -142,9 +159,9 @@ final class Settings_Schema {
 				'tagline'       => '',
 				'support_email' => '',
 				'logo_url'      => '',
-				'accent'        => '#ff3b2f',
-				'accent_strong' => '#8e1f1f',
-				'canvas'        => '#f7f4ee',
+				'accent'        => '#f05a28',
+				'accent_strong' => '#b5401a',
+				'canvas'        => '#f7f7f5',
 				'surface'       => '#ffffff',
 				'text'          => '#111214',
 			),
@@ -348,7 +365,8 @@ final class Settings_Schema {
 			$errors[] = 'contrast_text_surface';
 		}
 
-		if ( ! Contrast::passes( self::ACCENT_CONTRAST, $colours['accent_strong'] ) ) {
+		// Buttons are the accent, labelled in whichever ink reads better on it.
+		if ( ! Contrast::passes( self::on_accent( $colours['accent'], $colours['text'] ), $colours['accent'] ) ) {
 			$errors[] = 'contrast_button';
 		}
 

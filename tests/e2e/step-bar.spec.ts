@@ -19,7 +19,7 @@ async function openWizard( page: Page ): Promise< Locator > {
 	const bar = page.locator( 'ol.aggr-steps' );
 
 	await expect( bar ).toBeVisible();
-	await expect( bar.locator( ':scope > li' ) ).toHaveCount( 5 );
+	await expect( bar.locator( ':scope > li' ) ).toHaveCount( 3 );
 
 	return bar;
 }
@@ -47,20 +47,11 @@ function measure( bar: Locator ): Promise< Geometry > {
 			contentRight: box.right - parseFloat( style.paddingRight ),
 			firstLeft: items[ 0 ].left,
 			/*
-			 * Where the last step visibly ends, not where its box does. In the
-			 * old grid the box filled its column to the bar's edge while
-			 * "Submit" stopped a column short, and a box measurement passed.
+			 * Where the last step's bar ends. Each step now spans its own bar
+			 * under the label, so the bar's end — not the label's — is what has
+			 * to meet the end of the list.
 			 */
-			lastRight: ( () => {
-				const last = list.children[ list.children.length - 1 ];
-				const label = last
-					.querySelector( '.aggr-steps__label' )
-					?.getBoundingClientRect();
-
-				return label && label.width > 1
-					? label.right
-					: items[ items.length - 1 ].left + 28;
-			} )(),
+			lastRight: items[ items.length - 1 ].right,
 			gaps: items
 				.slice( 1 )
 				.map( ( item, index ) => item.left - items[ index ].right ),
@@ -93,16 +84,15 @@ test( 'the first step starts the bar and the last one ends it', async ( {
 	).toBeLessThanOrEqual( 1 );
 
 	// Every label is on screen at this width.
-	for ( const name of [
-		'Details',
-		'Creative',
-		'Destination and schedule',
-		'Review',
-	] ) {
-		await expect( bar.getByRole( 'link', { name } ) ).toBeVisible();
+	for ( const name of [ 'Package & dates', 'Ads', 'Review & submit' ] ) {
+		await expect(
+			bar.getByRole( 'link', { name, exact: true } )
+		).toBeVisible();
 	}
 
-	await expect( bar.locator( ':scope > li' ).last() ).toHaveText( 'Submit' );
+	await expect( bar.locator( ':scope > li' ).last() ).toHaveText(
+		'Review & submit'
+	);
 } );
 
 test( 'the bar never scrolls sideways, from desktop to a phone', async ( {
@@ -159,7 +149,7 @@ test( 'on a phone every step is still named and its number can be tapped', async
 	 * still a link with its own name. Playwright calls a one-pixel box
 	 * visible, so the width is what shows the label is off screen.
 	 */
-	const creative = bar.getByRole( 'link', { name: 'Creative' } );
+	const creative = bar.getByRole( 'link', { name: 'Ads', exact: true } );
 
 	await expect( creative ).toHaveCount( 1 );
 
@@ -200,7 +190,7 @@ test( 'on a phone every step is still named and its number can be tapped', async
 
 	expect(
 		hits.every( ( step ) => 'creative' === step ),
-		`A tap near the Creative step's number missed its link: ${ JSON.stringify(
+		`A tap near the Ads step's number missed its link: ${ JSON.stringify(
 			hits
 		) }`
 	).toBe( true );
@@ -214,7 +204,7 @@ test( 'on a phone the current step is named under the numbers, not over them', a
 	const bar = await openWizard( page );
 	const label = bar.locator( 'li[aria-current="step"] .aggr-steps__label' );
 
-	await expect( label ).toHaveText( 'Details' );
+	await expect( label ).toHaveText( 'Package & dates' );
 
 	const layout = await bar.evaluate( ( list ) => {
 		const caption = list
@@ -252,9 +242,9 @@ test( 'a tablet-width bar still shows every label', async ( { page } ) => {
 
 	const bar = await openWizard( page );
 
-	for ( const name of [ 'Creative', 'Destination and schedule', 'Review' ] ) {
+	for ( const name of [ 'Ads', 'Review & submit' ] ) {
 		const box = await bar
-			.getByRole( 'link', { name } )
+			.getByRole( 'link', { name, exact: true } )
 			.locator( '.aggr-steps__label' )
 			.boundingBox();
 

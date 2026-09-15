@@ -17,9 +17,10 @@
 .aggr-eyebrow {
 	margin: 0 0 var(--aggr-space-2xs);
 	color: var(--aggr-color-text-subtle);
-	font-size: 11px;
-	font-weight: 700;
-	letter-spacing: 0.08em;
+	font-family: var(--aggr-font-mono);
+	font-size: 10.5px;
+	font-weight: 600;
+	letter-spacing: 0.12em;
 	text-transform: uppercase;
 }
 
@@ -99,9 +100,9 @@
 }
 
 .aggr-steps li[aria-current="step"]::before {
-	background: var(--aggr-color-accent-strong);
-	border-color: var(--aggr-color-accent-strong);
-	color: var(--aggr-color-accent-contrast);
+	background: var(--aggr-color-accent);
+	border-color: var(--aggr-color-accent);
+	color: var(--aggr-color-on-accent);
 }
 
 .aggr-steps a {
@@ -169,7 +170,7 @@
 	}
 
 	.aggr-steps li:has(a:focus-visible)::before {
-		outline: 2px solid var(--aggr-color-accent-strong);
+		outline: 2px solid var(--aggr-color-accent);
 		outline-offset: 2px;
 	}
 }
@@ -362,9 +363,11 @@
 	min-width: 0;
 }
 
+/* Selected is the accent, not "live" green: choosing a package is not a status. */
 .aggr-choice:has(input:checked) {
-	background: var(--aggr-color-live-tint);
-	border-color: var(--aggr-color-live);
+	background: var(--aggr-color-surface);
+	border-color: var(--aggr-color-accent);
+	box-shadow: 0 0 0 1px var(--aggr-color-accent);
 }
 
 
@@ -382,7 +385,7 @@
 	width: 20px;
 	height: 20px;
 	margin: 0;
-	accent-color: var(--aggr-color-accent-strong);
+	accent-color: var(--aggr-color-accent);
 }
 
 .aggr-choice strong,
@@ -475,9 +478,13 @@
 	border-color: var(--aggr-color-live);
 }
 
+/*
+ * Unfinished, not failed. A draft with things left to do is the ordinary state
+ * of a draft, and a red panel told advertisers something had gone wrong.
+ */
 .aggr-readiness--issues {
-	background: var(--aggr-color-danger-tint);
-	border-color: var(--aggr-color-danger);
+	background: var(--aggr-color-pending-tint);
+	border-color: var(--aggr-border-color-strong);
 }
 
 .aggr-readiness h3,
@@ -623,7 +630,7 @@
 	max-width: var(--aggr-measure);
 	padding: var(--aggr-space-xl);
 	background: var(--aggr-color-surface-raised);
-	border: 1px solid var(--aggr-color-accent-strong);
+	border: 1px solid var(--aggr-color-accent);
 	border-radius: var(--aggr-radius-panel);
 }
 
@@ -741,10 +748,10 @@
 	margin-top: var(--aggr-space-xs);
 	min-height: var(--aggr-control-min);
 	padding: 0.45rem 0.85rem;
-	border: 1px solid var(--aggr-color-accent-strong);
+	border: 1px solid var(--aggr-color-accent);
 	border-radius: var(--aggr-radius-control);
-	background: var(--aggr-color-accent-strong);
-	color: var(--aggr-color-accent-contrast);
+	background: var(--aggr-color-accent);
+	color: var(--aggr-color-on-accent);
 	font-size: 13px;
 	font-weight: 700;
 	line-height: 1.2;
@@ -765,3 +772,134 @@
 	margin-top: 0;
 }
 
+
+/*
+ * The page title doubles as the rename control on an editable campaign.
+ *
+ * At rest it has to be the heading it replaced, to the pixel: the module swaps
+ * the heading's text for this button after first paint, so any difference in
+ * font, box or colour is a visible jump on every load. Hover and focus are the
+ * only states allowed to look like anything.
+ */
+.aggr-title__button,
+.aggr-title__input {
+	margin: 0;
+	padding: 0;
+	color: inherit;
+	font: inherit;
+	letter-spacing: inherit;
+	line-height: inherit;
+	text-align: inherit;
+	background: none;
+	border: 0;
+}
+
+.aggr-title__button {
+	cursor: text;
+}
+
+.aggr-title__button:hover {
+	text-decoration: underline dotted;
+	text-decoration-thickness: 2px;
+	text-underline-offset: 0.18em;
+}
+
+/* Sized to its text by the module, and never wider than the row it sits in. */
+.aggr-title__input {
+	max-width: 100%;
+	box-shadow: inset 0 -2px 0 var(--aggr-color-accent);
+}
+
+/*
+ * The plan, restated above the uploads. A row that wraps rather than a grid of
+ * cards: it is context for the step, not a step of its own.
+ */
+.aggr-plan-summary {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--aggr-space-sm) var(--aggr-space-xl);
+	margin: 0;
+	padding: var(--aggr-space-md) var(--aggr-space-lg);
+	background: var(--aggr-color-surface-inset);
+	border: 1px solid var(--aggr-border-color);
+	border-radius: var(--aggr-radius-control);
+}
+
+.aggr-plan-summary dt {
+	color: var(--aggr-color-text-subtle);
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+}
+
+.aggr-plan-summary dd {
+	margin: var(--aggr-space-2xs) 0 0;
+	color: var(--aggr-color-text);
+	font-weight: 600;
+}
+
+/*
+ * Folded edits: a summary that reads as an action, opening a form beneath it.
+ * Native <details>, so it opens from the keyboard and without script, and a
+ * refused save can render it already open.
+ */
+.aggr-rename,
+.aggr-upload-destination {
+	margin-top: var(--aggr-space-md);
+}
+
+.aggr-rename > summary,
+.aggr-upload-destination > summary {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--aggr-space-xs);
+	align-items: center;
+	min-height: var(--aggr-control-min);
+	cursor: pointer;
+}
+
+.aggr-rename > summary,
+.aggr-upload-destination__change {
+	color: var(--aggr-color-text-muted);
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.aggr-upload-destination__change {
+	text-decoration: underline;
+	text-decoration-thickness: 1px;
+	text-underline-offset: 3px;
+}
+
+.aggr-rename[open] > summary,
+.aggr-upload-destination[open] > summary {
+	margin-bottom: var(--aggr-space-sm);
+}
+
+/*
+ * "Run again" beneath a finished campaign's name. Quiet, because it sits in
+ * every such row, and still a real button with a 24px target.
+ */
+.aggr-table__action {
+	margin: var(--aggr-space-2xs) 0 0;
+}
+
+.aggr-table__action button {
+	min-height: 24px;
+	padding: 0;
+	color: var(--aggr-color-text-muted);
+	font: inherit;
+	font-size: 13px;
+	font-weight: 600;
+	background: none;
+	border: 0;
+	cursor: pointer;
+}
+
+.aggr-table__action button:hover,
+.aggr-table__action button:focus-visible {
+	color: var(--aggr-color-text);
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}

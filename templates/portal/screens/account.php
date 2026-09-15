@@ -55,6 +55,8 @@ if ( 'error' === $aggr_notice ) {
 }
 ?>
 
+<div class="aggr-columns">
+<div class="aggr-columns__main">
 <section class="aggr-panel" aria-labelledby="aggr-account-details">
 	<h2 id="aggr-account-details" class="aggr-panel__head"><?php esc_html_e( 'Your details', 'aggressive-ads' ); ?></h2>
 
@@ -75,6 +77,7 @@ if ( 'error' === $aggr_notice ) {
 			>
 		</div>
 
+		<div class="aggr-formgrid">
 		<div class="aggr-field">
 			<label for="aggr-first-name"><?php esc_html_e( 'First name', 'aggressive-ads' ); ?></label>
 			<input
@@ -98,11 +101,15 @@ if ( 'error' === $aggr_notice ) {
 				autocomplete="family-name"
 			>
 		</div>
+		</div>
 
 		<button class="aggr-button" type="submit"><?php esc_html_e( 'Save details', 'aggressive-ads' ); ?></button>
 	</form>
 </section>
 
+</div>
+
+<aside class="aggr-columns__side">
 <section class="aggr-panel" aria-labelledby="aggr-account-signin">
 	<h2 id="aggr-account-signin" class="aggr-panel__head"><?php esc_html_e( 'Signing in', 'aggressive-ads' ); ?></h2>
 
@@ -183,3 +190,5 @@ if ( 'error' === $aggr_notice ) {
 		</form>
 	</div>
 </section>
+</aside>
+</div>

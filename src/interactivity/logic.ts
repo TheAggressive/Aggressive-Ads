@@ -5,13 +5,7 @@
  * Limits and copy are hydrated from PHP. This file only decides.
  */
 
-export const DISPLAY_STEPS = [
-	'details',
-	'creative',
-	'destination',
-	'review',
-	'submit',
-] as const;
+export const DISPLAY_STEPS = [ 'details', 'creative', 'review' ] as const;
 
 export type WizardStep = ( typeof DISPLAY_STEPS )[ number ];
 
@@ -44,17 +38,58 @@ export function previousStep( current: string ): WizardStep | null {
 }
 
 /**
- * Submit is gated. Every earlier step is reachable so an advertiser can
- * go back; the server still refuses to persist an illegal resume point.
+ * A `YYYY-MM-DD` date moved by whole days, as the same kind of string.
+ *
+ * Arithmetic on the date's own parts in UTC, so the visitor's timezone and its
+ * daylight-saving changes cannot move the answer by a day. The server derives
+ * the real end date; this only previews it beside the field.
+ *
+ * @param date `YYYY-MM-DD`.
+ * @param days Whole days to add; negative moves back.
+ * @return The moved date, or null when `date` is not a real calendar date.
  */
-export function canVisitStep( target: string, submitReady: boolean ): boolean {
-	if ( ! isWizardStep( target ) ) {
-		return false;
+export function addDays( date: string, days: number ): string | null {
+	const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec( date );
+	if ( ! match || ! Number.isInteger( days ) ) {
+		return null;
 	}
-	if ( target === 'submit' ) {
-		return submitReady;
+
+	const year = Number( match[ 1 ] );
+	const month = Number( match[ 2 ] ) - 1;
+	const day = Number( match[ 3 ] );
+	const moment = new Date( Date.UTC( year, month, day ) );
+
+	// `Date` rolls 2027-02-31 over to March rather than refusing it.
+	if (
+		moment.getUTCFullYear() !== year ||
+		moment.getUTCMonth() !== month ||
+		moment.getUTCDate() !== day
+	) {
+		return null;
 	}
-	return true;
+
+	moment.setUTCDate( moment.getUTCDate() + days );
+
+	return moment.toISOString().slice( 0, 10 );
+}
+
+/**
+ * The last day of a fixed run. The start day is the first of its days, the
+ * same count `Campaign_Rules::fixed_end_ts()` makes on the server.
+ *
+ * @param start        `YYYY-MM-DD` start date.
+ * @param durationDays Days the package runs.
+ * @return The last day, or null when either input is unusable.
+ */
+export function runEndDate(
+	start: string,
+	durationDays: number
+): string | null {
+	if ( ! Number.isInteger( durationDays ) || durationDays < 1 ) {
+		return null;
+	}
+
+	return addDays( start, durationDays - 1 );
 }
 
 export function parsePixelSize(
@@ -115,6 +150,45 @@ export function checkCreativeFile( input: {
 	}
 
 	return { ok: true };
+}
+
+/**
+ * A destination link as it will be saved, or null when it cannot be one.
+ *
+ * People type `example.com/page`, which a URL input calls invalid and which
+ * never left the browser: the field looked saved and was not. A missing scheme
+ * becomes https. Empty stays empty, because empty clears the link.
+ *
+ * @param value What was typed.
+ * @return The link to send, '' to clear it, or null when it is not a link.
+ */
+export function normaliseLink( value: string ): string | null {
+	const trimmed = value.trim();
+
+	if ( '' === trimmed ) {
+		return '';
+	}
+
+	const candidate = /^[a-z][a-z0-9+.-]*:/i.test( trimmed )
+		? trimmed
+		: `https://${ trimmed }`;
+
+	try {
+		const url = new URL( candidate );
+
+		if (
+			( 'http:' !== url.protocol && 'https:' !== url.protocol ) ||
+			'' === url.hostname ||
+			'' !== url.username ||
+			'' !== url.password
+		) {
+			return null;
+		}
+	} catch {
+		return null;
+	}
+
+	return candidate;
 }
 
 export function debounce< T extends ( ...args: never[] ) => void >(

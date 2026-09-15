@@ -26,6 +26,31 @@ if ( ! defined( 'ABSPATH' ) ) {
 use Aggressive\Ads\Assets\Assets;
 use Aggressive\Ads\Portal\Creative_Actions;
 
+$aggr_slot_key          = (string) $aggr_slot['id'];
+$aggr_default_click_url = (string) ( $aggr_campaign['default_click_url'] ?? '' );
+$aggr_click_error       = ( 'aggr-click-' . $aggr_slot_key ) === $aggr_creative_error_for;
+
+/*
+ * A blank artboard at the placement's exact size, so whoever makes the ad
+ * starts from the dimensions the upload will be checked against rather than
+ * from a number copied out of this sentence. Built here, from a size already
+ * validated by the placement, as a data URI: nothing to host, nothing to fetch.
+ */
+$aggr_template   = '';
+$aggr_size_parts = array();
+
+if ( 1 === preg_match( '/^(\d+)x(\d+)$/', (string) $aggr_slot['size'], $aggr_size_parts ) ) {
+	$aggr_template_w = (int) $aggr_size_parts[1];
+	$aggr_template_h = (int) $aggr_size_parts[2];
+	$aggr_template   = sprintf(
+		'<svg xmlns="http://www.w3.org/2000/svg" width="%1$d" height="%2$d" viewBox="0 0 %1$d %2$d"><rect width="%1$d" height="%2$d" fill="#f2f2f2"/><rect x="1" y="1" width="%3$d" height="%4$d" fill="none" stroke="#8a8a8a" stroke-width="2" stroke-dasharray="8 6"/><text x="50%%" y="50%%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="%5$d" fill="#555555">%1$d x %2$d</text></svg>',
+		$aggr_template_w,
+		$aggr_template_h,
+		max( 0, $aggr_template_w - 2 ),
+		max( 0, $aggr_template_h - 2 ),
+		max( 10, min( 32, intdiv( $aggr_template_h, 4 ) ) )
+	);
+}
 ?>
 <form
 	class="aggr-upload-form"
@@ -53,7 +78,13 @@ use Aggressive\Ads\Portal\Creative_Actions;
 	 */
 	?>
 	<p id="aggr-upload-auto-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?>" class="aggr-hint">
-		<?php esc_html_e( 'There is no upload button: choose a file, enter the destination URL, then move on from that field and the upload starts by itself.', 'aggressive-ads' ); ?>
+		<?php
+		echo esc_html(
+			'' === $aggr_default_click_url
+				? __( 'Uploads by itself: choose a file, enter its link, and the upload starts when you leave the link field.', 'aggressive-ads' )
+				: __( 'Uploads as soon as you choose a file, linking to the address below unless you change it first.', 'aggressive-ads' )
+		);
+		?>
 	</p>
 
 	<div class="aggr-field">
@@ -61,9 +92,8 @@ use Aggressive\Ads\Portal\Creative_Actions;
 		<p id="aggr-file-hint-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?>" class="aggr-hint">
 			<?php
 			printf(
-				/* translators: 1: required image dimensions, e.g. 728x90. 2: this placement's maximum file size, e.g. 150 KB. */
-				esc_html__( 'Required: %1$s pixels. Maximum file size: %2$s.', 'aggressive-ads' ),
-				esc_html( (string) $aggr_slot['size'] ),
+				/* translators: %s: this placement's maximum file size, e.g. 150 KB. */
+				esc_html__( 'Maximum file size: %s.', 'aggressive-ads' ),
 				esc_html( (string) $aggr_slot['max_size'] )
 			);
 			?>
@@ -84,13 +114,50 @@ use Aggressive\Ads\Portal\Creative_Actions;
 		 */
 		?>
 		<p id="aggr-upload-status-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?>" class="aggr-upload-status" role="status" aria-live="polite"></p>
+
+		<?php if ( '' !== $aggr_template ) : ?>
+			<p class="aggr-hint">
+				<a class="aggr-card-action" download="<?php echo esc_attr( 'ad-template-' . (string) $aggr_slot['size'] . '.svg' ); ?>" href="<?php echo esc_url( 'data:image/svg+xml;charset=utf-8,' . rawurlencode( $aggr_template ), array( 'data' ) ); ?>">
+					<?php
+					esc_html_e( 'Download template', 'aggressive-ads' );
+					echo '<span class="aggr-sr"> ';
+					printf(
+						/* translators: %s: required image dimensions, e.g. 728x90. */
+						esc_html__( 'for %s', 'aggressive-ads' ),
+						esc_html( (string) $aggr_slot['size'] )
+					);
+					echo '</span>';
+					?>
+				</a>
+			</p>
+		<?php endif; ?>
 	</div>
 
+	<?php
+	/*
+	 * **Asked once per campaign, not once per card.** When the campaign already
+	 * has a link, the field arrives filled with it and folded behind the address
+	 * it holds; choosing a file is then the whole upload. It is still a real,
+	 * posted field inside a native <details>, so a browser without script sends
+	 * the same address, and a refused one reopens the fold.
+	 */
+	?>
+	<?php if ( '' !== $aggr_default_click_url ) : ?>
+		<details class="aggr-upload-destination" <?php echo $aggr_click_error ? 'open' : ''; ?>>
+			<summary>
+				<span class="aggr-uploaded__destination-label"><?php esc_html_e( 'Goes to', 'aggressive-ads' ); ?></span>
+				<span class="aggr-uploaded__destination-value"><?php echo esc_html( $aggr_default_click_url ); ?></span>
+				<span class="aggr-upload-destination__change"><?php esc_html_e( 'Use a different link', 'aggressive-ads' ); ?></span>
+			</summary>
+	<?php endif; ?>
 	<div class="aggr-field">
 		<label for="aggr-click-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?>"><?php esc_html_e( 'Destination URL', 'aggressive-ads' ); ?></label>
 		<p id="aggr-click-hint-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?>" class="aggr-hint"><?php esc_html_e( 'Where someone should go after selecting the advertisement. Use a complete http or https URL.', 'aggressive-ads' ); ?></p>
-		<input id="aggr-click-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?>" name="click_url" type="url" inputmode="url" required aria-describedby="aggr-upload-auto-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?> aggr-click-hint-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?><?php echo ( 'aggr-click-' . $aggr_slot['id'] ) === $aggr_creative_error_for ? ' aggr-creative-error' : ''; ?>" <?php echo ( 'aggr-click-' . $aggr_slot['id'] ) === $aggr_creative_error_for ? 'aria-invalid="true"' : ''; ?>>
+		<input id="aggr-click-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?>" name="click_url" type="url" inputmode="url" value="<?php echo esc_attr( $aggr_default_click_url ); ?>" required aria-describedby="aggr-upload-auto-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?> aggr-click-hint-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?><?php echo ( 'aggr-click-' . $aggr_slot['id'] ) === $aggr_creative_error_for ? ' aggr-creative-error' : ''; ?>" <?php echo ( 'aggr-click-' . $aggr_slot['id'] ) === $aggr_creative_error_for ? 'aria-invalid="true"' : ''; ?>>
 	</div>
+	<?php if ( '' !== $aggr_default_click_url ) : ?>
+		</details>
+	<?php endif; ?>
 
 	<button class="aggr-button" type="submit" hidden><?php esc_html_e( 'Upload creative', 'aggressive-ads' ); ?></button>
 </form>

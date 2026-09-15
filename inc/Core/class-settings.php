@@ -160,13 +160,59 @@ final class Settings {
 			return true;
 		}
 
+		$errors = isset( $validated['errors'] ) && is_array( $validated['errors'] ) ? $validated['errors'] : array();
+
 		return new WP_Error(
 			'aggr_settings_invalid',
-			__( 'Those settings cannot be saved.', 'aggressive-ads' ),
+			self::refusal( $errors ),
 			array(
 				'status' => 400,
-				'errors' => isset( $validated['errors'] ) && is_array( $validated['errors'] ) ? $validated['errors'] : array(),
+				'errors' => $errors,
 			)
 		);
+	}
+
+	/**
+	 * The sentence a refused save shows, naming what to change.
+	 *
+	 * The settings screen shows the message a refused save returns, and it used
+	 * to be "Those settings cannot be saved." for every cause — so a contrast
+	 * refusal read as the save being broken, which is the one thing it was not.
+	 *
+	 * @param array<int, mixed> $codes Settings_Schema problem codes.
+	 * @return string
+	 */
+	private static function refusal( array $codes ): string {
+		$sentences = array();
+
+		foreach ( $codes as $code ) {
+			$sentence = match ( (string) $code ) {
+				'contrast_button'       => __( 'The accent is not readable behind button text in either dark or white. Choose a darker or lighter accent.', 'aggressive-ads' ),
+				'contrast_link'         => __( 'The accent for links is too light to read on the surface colour. Choose a darker one.', 'aggressive-ads' ),
+				'contrast_text_canvas'  => __( 'The text colour is too close to the canvas colour to read.', 'aggressive-ads' ),
+				'contrast_text_surface' => __( 'The text colour is too close to the surface colour to read.', 'aggressive-ads' ),
+				'product_name'          => __( 'Enter a product name.', 'aggressive-ads' ),
+				'product_name_length'   => sprintf(
+					/* translators: %d: maximum characters. */
+					__( 'Use %d characters or fewer for the product name.', 'aggressive-ads' ),
+					Settings_Schema::MAX_PRODUCT_NAME
+				),
+				'tagline_length'        => sprintf(
+					/* translators: %d: maximum characters. */
+					__( 'Use %d characters or fewer for the tagline.', 'aggressive-ads' ),
+					Settings_Schema::MAX_TAGLINE
+				),
+				'logo_url'              => __( 'The logo URL must be a complete http or https address.', 'aggressive-ads' ),
+				'support_email'         => __( 'The support email is not a valid address.', 'aggressive-ads' ),
+				'accent', 'accent_strong', 'canvas', 'surface', 'text' => __( 'Colours must be six-digit hex values, like #F05A28.', 'aggressive-ads' ),
+				default                 => '',
+			};
+
+			if ( '' !== $sentence && ! in_array( $sentence, $sentences, true ) ) {
+				$sentences[] = $sentence;
+			}
+		}
+
+		return array() === $sentences ? __( 'Those settings cannot be saved.', 'aggressive-ads' ) : implode( ' ', $sentences );
 	}
 }

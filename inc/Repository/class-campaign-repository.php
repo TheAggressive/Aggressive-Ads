@@ -37,6 +37,7 @@ final class Campaign_Repository {
 	public const META_AUTOSAVE_REV         = '_aggr_autosave_rev';
 	public const META_WIZARD_STEP          = '_aggr_wizard_step';
 	public const META_ADVERTISER_NOTES     = '_aggr_advertiser_notes';
+	public const META_DEFAULT_CLICK_URL    = '_aggr_default_click_url';
 	public const META_PACKAGE_ID           = '_aggr_package_id';
 	public const META_BUDGET_CENTS         = '_aggr_budget_cents';
 	public const META_CURRENCY             = '_aggr_currency';
@@ -62,9 +63,18 @@ final class Campaign_Repository {
 	 * so the fact is recorded rather than inferred.
 	 */
 	public const META_TITLE_IS_PLACEHOLDER = '_aggr_title_is_placeholder';
-	public const META_PENDING_EDITS_SENT   = '_aggr_pending_edits_submitted';
-	public const META_ACTION_REQUEST       = '_aggr_action_request';
-	public const META_REQUEST_REVISION     = '_aggr_request_revision';
+
+	/**
+	 * Set while the name is one the wizard built from the package and dates.
+	 *
+	 * Distinct from the placeholder: an automatic name describes the campaign
+	 * well enough to submit, where "Untitled campaign" does not. It is still
+	 * the wizard's, so it follows the plan until the advertiser renames it.
+	 */
+	public const META_TITLE_IS_AUTOMATIC = '_aggr_title_is_automatic';
+	public const META_PENDING_EDITS_SENT = '_aggr_pending_edits_submitted';
+	public const META_ACTION_REQUEST     = '_aggr_action_request';
+	public const META_REQUEST_REVISION   = '_aggr_request_revision';
 
 	/**
 	 * Transition locks held by this PHP request.
@@ -254,6 +264,16 @@ final class Campaign_Repository {
 	}
 
 	/**
+	 * The link every new ad on this campaign starts from, or an empty string.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return string
+	 */
+	public function default_click_url( int $campaign_id ): string {
+		return (string) get_post_meta( $campaign_id, self::META_DEFAULT_CLICK_URL, true );
+	}
+
+	/**
 	 * Whether the campaign is still carrying the name the plugin invented.
 	 *
 	 * @param int $campaign_id Campaign post id.
@@ -281,6 +301,33 @@ final class Campaign_Repository {
 	}
 
 	/**
+	 * Whether the current name was built by the wizard from the plan.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return bool
+	 */
+	public function title_is_automatic( int $campaign_id ): bool {
+		return '' !== (string) get_post_meta( $campaign_id, self::META_TITLE_IS_AUTOMATIC, true );
+	}
+
+	/**
+	 * Records or clears the automatic-name marker.
+	 *
+	 * @param int  $campaign_id Campaign post id.
+	 * @param bool $automatic   Whether the current title was built from the plan.
+	 * @return void
+	 */
+	public function set_title_is_automatic( int $campaign_id, bool $automatic ): void {
+		if ( $automatic ) {
+			update_post_meta( $campaign_id, self::META_TITLE_IS_AUTOMATIC, '1' );
+
+			return;
+		}
+
+		delete_post_meta( $campaign_id, self::META_TITLE_IS_AUTOMATIC );
+	}
+
+	/**
 	 * The saved wizard resume point.
 	 *
 	 * Read-time normalisation rather than a migration, because the rows are
@@ -295,13 +342,17 @@ final class Campaign_Repository {
 	 * — the screen falls back to `review`, which would skip a draft past every
 	 * question it has not answered yet.
 	 *
+	 * `destination` goes the same way, for the same reason: the schedule it
+	 * collected moved onto details, so a draft parked there still needs its
+	 * dates, and details is where they are asked for now.
+	 *
 	 * @param int $campaign_id Campaign post id.
 	 * @return string
 	 */
 	public function wizard_step( int $campaign_id ): string {
 		$step = (string) get_post_meta( $campaign_id, self::META_WIZARD_STEP, true );
 
-		return 'package' === $step ? 'details' : $step;
+		return in_array( $step, array( 'package', 'destination' ), true ) ? 'details' : $step;
 	}
 
 	/**

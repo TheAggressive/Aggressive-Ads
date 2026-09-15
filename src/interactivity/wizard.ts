@@ -5,16 +5,15 @@
  * State is keyed per instance at state.wizards[ wizardId ].
  *
  * The forms stay server-rendered. This store announces the current step and
- * keeps the progress list in sync when Interactivity hydrates. Navigation
- * remains ordinary links so no-JS is unchanged.
+ * moves focus to the step heading when Interactivity hydrates. Navigation
+ * remains ordinary links, so no-JS is unchanged.
  */
 
 import { store, getContext } from '@wordpress/interactivity';
-import { canVisitStep, isWizardStep } from '@aggr/logic';
+import { isWizardStep } from '@aggr/logic';
 
 interface WizardState {
 	current: string;
-	submitReady: boolean;
 }
 
 interface WizardContext {
@@ -64,29 +63,6 @@ const { state, actions } = store( 'aggr/wizard', {
 					heading.focus( { preventScroll: true } );
 				}
 			}
-		},
-
-		guardVisit( event: Event ) {
-			const { wizardId } = getContext< WizardContext >();
-			if ( ! wizardId ) {
-				return;
-			}
-			const current = state.wizards[ wizardId ];
-			if ( ! current ) {
-				return;
-			}
-
-			const target = event.currentTarget;
-			if ( ! ( target instanceof HTMLAnchorElement ) ) {
-				return;
-			}
-
-			const step = target.getAttribute( 'data-aggr-step' ) ?? '';
-			if ( canVisitStep( step, current.submitReady ) ) {
-				return;
-			}
-
-			event.preventDefault();
 		},
 	},
 } );

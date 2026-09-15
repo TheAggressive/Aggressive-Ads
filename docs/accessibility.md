@@ -120,28 +120,39 @@ Not "invalid image". The advertiser has to fix this themselves without calling a
 
 Progress is conveyed by text and structure, not only by a coloured bar. Each step is a landmark with a heading. Moving between steps moves focus to the new step's heading, so a screen-reader user knows the context changed. Validation errors summarize at the top with in-page links to the offending fields — the standard pattern, because it works.
 
-Destination-and-schedule Step 4 renders creative destinations as text rather
-than activating external links during campaign creation. Its native date inputs
-have visible labels and pre-field instructions; start is programmatically
-required and carries the earliest allowed local date. Server errors link back
-to the affected date or destination summary and are included in that field's
+The first step's schedule is a fieldset of native date inputs with visible
+labels and pre-field instructions; start is programmatically required and
+carries the earliest allowed local date. For a fixed package the end field is
+disabled and hidden, and the derived last day is stated in a polite live
+region the start field references, so it is announced as the start changes.
+Server errors link back to the affected field and are included in that field's
 `aria-describedby` only while the error is present.
 
-Review Step 5 exposes all current submission problems in one ordered summary,
-not only the first failure. The problem state is an alert, the ready state is a
+The page heading renames the campaign. Its text becomes a button styled to
+match the heading and *described*, not labelled, as "Rename campaign", so the
+heading's accessible name stays the campaign's. The edit field is labelled
+"Campaign name"; Enter saves, Escape keeps the old name, and either returns
+focus to the heading's button. The outcome is announced through the autosave
+live region. Without script, review carries an ordinary labelled rename form.
+
+On the ads step a destination already given folds into a native `<details>`
+whose summary states the address, and the automatic-upload sentence WCAG 3.2.2
+requires before both controls says the upload will use it. Creative
+destinations render as text, never active links, during creation.
+
+Review exposes all current submission problems in one ordered summary, not
+only the first failure. The problem state is an alert, the ready state is a
 status, and every issue has a keyboard-operable 44px edit target that returns
 to the exact step and field. Review sections use labelled landmarks and native
-description lists. Creative previews use their generated alternative text;
-destination URLs render as text so keyboard users are not sent away from an
-unfinished campaign accidentally.
+description lists. Creative previews use their generated alternative text.
 
-Submit Step 6 has a visible heading, plain-language consequences before the
-action, a native POST form, and separate Back and Submit controls with shared
-touch-target and focus tokens. It does not use a surprise dialog or depend on
-JavaScript. If readiness changes, the submit button disappears and the full
-ordered, linked problem summary replaces it. Successful submission is
-announced with `role="status"`; server refusal returns an alert without placing
-the campaign into a false submitted state.
+Submission ends review: a visible heading, plain-language consequences before
+the action, a native POST form, and separate Back and Submit controls with
+shared touch-target and focus tokens. It does not use a surprise dialog or
+depend on JavaScript. The submit form renders only while the campaign is ready;
+otherwise the ordered, linked problem summary is all there is. Successful
+submission is announced with `role="status"`; server refusal returns an alert
+without placing the campaign into a false submitted state.
 
 ## Creative alt text
 

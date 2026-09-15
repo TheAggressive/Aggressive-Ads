@@ -18,6 +18,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Portal\Acting_As;
 use Aggressive\Ads\Portal\Acting_Actions;
+use Aggressive\Ads\Portal\Campaign_Actions;
+use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Portal\Request;
 use Aggressive\Ads\Portal\Router;
 use Aggressive\Ads\Portal\Routes;
@@ -25,6 +27,7 @@ use Aggressive\Ads\Portal\Routes;
 $aggr_acting  = Plugin::instance()->container()->get( Acting_As::class );
 $aggr_request = Plugin::instance()->container()->get( Router::class )->request();
 $aggr_current = null !== $aggr_request ? $aggr_request->route : '';
+$aggr_host    = (string) wp_parse_url( home_url(), PHP_URL_HOST );
 
 $aggr_items = array(
 	Request::ROUTE_DASHBOARD    => __( 'Dashboard', 'aggressive-ads' ),
@@ -89,4 +92,26 @@ $aggr_items = array(
 			<?php endforeach; ?>
 		</ul>
 	</nav>
+
+	<?php
+	/*
+	 * Starting a campaign from wherever you are, and whose site this is. The
+	 * rail is on every screen, so both are one place rather than one per page.
+	 */
+	?>
+	<div class="aggr-rail__foot">
+		<?php if ( current_user_can( Capabilities::SUBMIT_CAMPAIGN ) ) : ?>
+			<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+				<input type="hidden" name="action" value="<?php echo esc_attr( Campaign_Actions::CREATE_ACTION ); ?>">
+				<?php wp_nonce_field( Campaign_Actions::CREATE_ACTION ); ?>
+				<button class="aggr-rail__new" type="submit">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg>
+					<?php esc_html_e( 'New campaign', 'aggressive-ads' ); ?>
+				</button>
+			</form>
+		<?php endif; ?>
+		<?php if ( '' !== $aggr_host ) : ?>
+			<p class="aggr-rail__site"><?php echo esc_html( $aggr_host ); ?></p>
+		<?php endif; ?>
+	</div>
 </div>
