@@ -1,167 +1,135 @@
-# Aggressive Ads — suite build outline
+# Aggressive Ads — suite direction
 
 Working identity: **Aggressive Ads** / `aggr_`. Tagline: **Live means live.**
-This is the sequence for a white-label advertising management suite that
-**serves** ads, not only reviews them. Phases 1–8 of [roadmap.md](roadmap.md)
-already shipped the campaign domain. This file is what to build **next**, in
-order. Do not start a later phase because it looks more fun.
 
-Nothing here is built merely because this document exists.
+This document records the durable product direction for the white-label
+advertising suite. It is **not** the live backlog. Actionable work is tracked in
+GitHub Issues; see [work-tracking.md](work-tracking.md).
 
----
+The original suite closeout work is largely shipped. The platform expansion
+beyond it is tracked in
+[platform-implementation-progress.md](platform-implementation-progress.md).
 
-## How the product looks
+## Product shape
 
-**One wp-admin product**, not three top-level megaphones.
+Aggressive Ads is one WordPress advertising product with two deliberately
+separate experiences:
 
-```
-{Product name}                 ← Settings → Brand (default UI: “Advertising”)
-  Review                       aggr_review_campaigns
-  Organizations                aggr_manage_orgs
-  Placements                   aggr_manage_placements
-  Packages                     aggr_manage_packages
-  Settings                     aggr_manage_settings
-```
+- a dedicated advertiser portal outside wp-admin; and
+- capability-gated publisher/staff administration inside wp-admin.
 
-Reviewers never see Settings. Placements never implies Review. Caps stay
-distinct; only the **shell** unifies. Parent slug `aggr` stays stable.
+The plugin owns the campaign, inventory, serving, measurement and direct-sales
+workflow. External systems may extend delivery, payment or sales operations but
+must not become mandatory for native direct sales.
 
-**Settings (control plane)**
+### Staff control plane
 
-| Panel | Behaviour |
-|---|---|
-| **Modules** | Kill-switches: Billing UI, Public signup, Reporting. Native delivery is always on and is not a checkbox. Off = routes/menus/fields **absent**, not `display:none`. |
-| **Brand** | Product name, logo, tagline, accent/surface tokens. Writes `--aggr-*` on `.aggr-portal` / staff admin. Save **rejects** WCAG AA failures. |
-| **Delivery** | Native fill. Fill cache TTL. House-ad policy. |
-| **Tracking** | Beacon-only impressions, click hop, retention. Never trust a client-supplied count. |
+One Advertising menu, with distinct capabilities for review, organizations,
+placements, packages, reports and settings. Shell unification never implies
+permission unification.
 
-Billing **off** until payments exist: campaign snapshots may still store
-currency; the UI must not pretend checkout exists.
+Brand settings own the advertiser-facing display name, logo, tagline and design
+tokens. Prefixes, post-type identifiers and internal API namespaces remain
+stable and are not tenant-configurable.
 
-**White-label** is owned by the plugin: token *values*, logo, and
-display name. Theme CSS may still override. Settings should win on
-`.aggr-portal` so a tenant is not fighting the host theme. Prefixes never
-change per tenant. Advertiser-facing default is “Advertising”, not
-“Aggressive Ads”.
+### Advertiser portal
 
-**Front of site:** editors place a **slot**, never a campaign.
+Advertisers never need wp-admin. Authentication, campaign creation, creative
+management, organization/account management, review feedback and reporting are
+presented through the portal while WordPress core remains authoritative for
+users, password hashing and sessions.
 
-- Block `aggr/ad-slot` (header / break / sidebar / footer template parts)
-- PHP `aggr_placement( 'header-728x90' )`
-- Shortcode → the same renderer
+Critical advertiser workflows remain functional without JavaScript where
+practical; JavaScript enhances rather than invents the only path through a
+business transition.
 
-Cached HTML is a **reserved box** + placement id. It does not freeze a
-creative into the page cache.
+## Native delivery
 
----
+Editors place a **slot**, never a campaign:
 
-## Cache vs the right ad
+- the Aggressive Ads placement block;
+- `aggr_placement( 'slot-slug' )`; or
+- the equivalent shortcode/render path.
 
-Full-page cache and accurate ads cannot share AdSanity’s model (query + count
-on HTML render).
+Cached page HTML reserves the slot. Selection and counting happen outside the
+page-cache artifact so a cached page does not freeze one creative or one metric
+increment into every view.
 
-```
-Cached page              Fill (short TTL)                 Count (never cached)
-────────────             ────────────────                 ────────────────────
-Reserved slot            GET aggr/v1/fill/{slot}          POST impression token
-+ noscript house ad      compact eligible-id cache        HMAC, single-use,
-                         per-creative payload, pick one   durable event ledger
-                         bust on approve/pause/complete   click: 302 /ads/c/{token}
-```
+Native delivery is the baseline provider and remains usable with every optional
+external provider disabled.
 
-- State-machine transitions **delete** that placement’s fill key in the same
-  request. A paused campaign must not ride out a CDN TTL.
-- No-JS: `noscript` house (or SSR fill on uncached pages). No-JS impressions
-  are **clicks only** — do not invent SSR counts on cached HTML.
-- Logged-in / uncached pages may SSR fill for first paint; still beacon so
-  SSR and JS do not double-count.
+## Decisioning and measurement
 
----
+The current platform has moved beyond simple rotation. The serving pipeline now
+owns eligibility, exact schedule/daypart evaluation, targeting, frequency,
+pacing, priority, weighted creative selection and page-level coordination.
 
-## Hardened tracking
+Measurement distinguishes request, fill/no-fill, served, viewable, click and
+conversion facts with rollup-backed reporting. Completed phase evidence belongs
+in the detailed platform docs; this suite document does not duplicate it.
 
-Own tables, not `_views-{day}` postmeta:
+## Direct-sales direction
 
-- `aggr_events` — append-only (type, ids, time, token hash)
-- `aggr_rollups` — campaign/placement/day for dashboards
+The product is deliberately optimized for publishers that sell their own
+inventory and need a coherent lifecycle:
 
-Rules:
+> inventory → availability → commercial terms → campaign → creative review →
+> delivery → measurement → reporting → renewal/make-good
 
-- Server increments only. Fill mints a signed, single-use token bound to the
-  campaign and creative that were actually chosen.
-- Reject expired, reused, prefetch (`Sec-Purpose`), obvious bots.
-- Store `HMAC(IP + daily salt)`, not raw IP.
-- Click is a first-party hop, then the destination. Destination works without JS.
-- Advertiser metric tiles and a seven-day sparkline read **rollups only**, and
-  only while Reporting is on.
-  House (`campaign_id = 0`) never joins an org. Rotation does not move a view
-  onto a different campaign after the fact.
-- Closed UTC days are reconciled exactly from the event ledger before bounded
-  retention may delete their raw rows.
+The competitive expansion is tracked under #258. The main product issues are:
 
----
+- #279 scheduled white-label advertiser reports;
+- #280 advertiser inventory storefront and booking;
+- #281 reusable campaign templates / sales-product presets;
+- #282 proposal, quote and insertion-order workflow;
+- #283 publisher sales and revenue dashboard;
+- #284 deterministic renewal and sales intelligence;
+- #285 CRM integration boundary;
+- #286 cross-channel campaign and line-item model;
+- #287 newsletter advertising; and
+- #288 sponsored-content/native-sponsorship workflow.
 
-## Build order
+These are sequenced by dependency in
+[work-tracking.md](work-tracking.md), not by their issue numbers.
 
-### Phase 0 — Identity *(shipped)*
+## External-system boundaries
 
-Aggressive Ads / `aggr_`.
-There is no LAAO rewrite or one-release alias. New installs write the current
-names.
+Aggressive Ads may integrate with payment providers, CRMs, email platforms,
+GAM, Prebid/OpenRTB, VAST-compatible video providers and other services, but the
+core product stays whole when they are unavailable or disabled.
 
-### Phase A — Portal UI close
+Durable rules:
 
-Wizard / upload / autosave Interactivity stores on the existing no-JS forms.
-Self-hosted Archivo. Preview, remove-confirmation, and live-ad
-preview dialogs on the shared overlay primitive. Keyboard + screen-reader
-e2e covers skip link, step-heading focus, dialog trap/Escape/restore, and
-axe on each wizard step plus open overlays.
+- delivery never waits on a payment provider or CRM;
+- external providers advertise capabilities rather than leaking product-name
+  conditionals into the core domain;
+- provider/channel metrics retain source and freshness provenance;
+- external markup remains untrusted;
+- native guarantees are not silently outranked by external demand;
+- privacy/consent gates identifier use before collection/disclosure;
+- remote systems never gain authority merely because they can send a webhook or
+  API request; and
+- Campaign remains the commercial umbrella as additional channels arrive.
 
-### Phase B — Control plane
+## Modern WordPress direction
 
-**Shipped.** Settings + modules + brand tokens + unified Advertising menu.
-`aggr_manage_settings` gates the
-Settings screen. Public signup off is a 404 unless the URL carries an
-invitation token. Placements is always registered.
+Prefer WordPress-native primitives where they strengthen the product:
+repositories around private data models, Script Modules/Interactivity for
+progressive UI, REST with explicit permission callbacks, block-based placement,
+object-cache APIs and WordPress user/authentication infrastructure.
 
-### Phase C — Native delivery
+Avoid architecture that exists only to imitate a generic SaaS stack: a mandatory
+React wp-admin SPA, a second presentation theme, counting inside cached page
+HTML, provider-specific core entities, or tenant-configurable internal prefixes.
 
-**Shipped.** Live set is `aggr_live`, not an `ads` CPT. Cached HTML is a
-reserved slot; fill and beacons are uncached. Native is the
-`Ad_Provider_Interface`.
-Placements creates placements (common sizes + custom WxH), house creative, and
-the public slug.
+## Where actionable work lives
 
-### Phase D — Cutover (LAAO site)
+Do not add implementation checklists to this file.
 
-**Plugin half shipped.** Dual-write is gone. Template parts in the
-LAAO theme still need to swap AdSanity group blocks for `aggr/ad-slot`.
-Until they do, public pages show empty reserved slots. That theme change is
-outside this repository.
+- Platform phase status: [platform-implementation-progress.md](platform-implementation-progress.md)
+- Work-tracking rules/order: [work-tracking.md](work-tracking.md)
+- Competitive product umbrella: #258
+- Tracking migration: #259
 
-### Phase E — Suite depth
-
-Staff package admin is **shipped** (Advertising → Packages). Assignment-based
-weighted fill is **shipped**. Fill dashboard and richer tiering remain. Geo /
-frequency cap only when a buyer needs them. Payments only behind the Billing
-module and a real PCI story.
-
----
-
-## Modern WordPress (use / do not use)
-
-**Use:** private CPTs + repositories, custom event table, Script Modules,
-Interactivity, block `viewScriptModule`, object cache with transition bust,
-REST with real permission callbacks, settings behind a repository.
-
-**Do not use:** a React wp-admin SPA, `wp/v2` for campaigns, counting inside
-cached HTML, a second CSS theme for white-label, a tenant-configurable
-post-type prefix.
-
----
-
-## Out of scope until named
-
-Header bidding / GAM, CRM, multi-provider auctions, online checkout, video /
-HTML5 tags, a second dialog stack. The domain can take them; this outline
-does not schedule them.
+When a durable suite principle changes, update this document. When a task needs
+to become done, create or update an Issue instead.
