@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
-"POT-Creation-Date: 2026-09-15T01:16:52+00:00\n"
+"POT-Creation-Date: 2026-09-16T23:27:39+00:00\n"
 "PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -114,7 +114,7 @@ msgstr "Diese Entscheidung zur Kampagnenänderung ist nicht gültig."
 #: inc/Portal/class-delivery-view-data.php:244
 #: inc/Portal/class-report-actions.php:193
 #: templates/portal/partials/campaign-summary-facts.php:81
-#: templates/portal/partials/campaign-table.php:47
+#: templates/portal/partials/campaign-table.php:54
 #: templates/portal/partials/campaign-variant-comparison.php:50
 msgid "Conversions"
 msgstr "Conversions"
@@ -155,7 +155,7 @@ msgstr ""
 #: inc/Admin/class-package-screen.php:152
 #: inc/Admin/class-placement-screen.php:173
 #: templates/portal/partials/campaign-review-step.php:140
-#: templates/portal/screens/organization.php:83
+#: templates/portal/screens/organization.php:99
 msgid "Name"
 msgstr "Name"
 
@@ -219,15 +219,14 @@ msgstr "Reporting-Schlüssel"
 #: inc/Admin/class-forecast-screen.php:156
 #: inc/Admin/class-placement-screen.php:170
 #: inc/Admin/class-review-screen.php:282 inc/Admin/class-review-screen.php:300
-#: templates/portal/partials/campaign-table.php:41
+#: templates/portal/partials/campaign-table.php:44
 #: templates/portal/screens/campaign.php:471
-#: templates/portal/screens/help.php:135
 msgid "Status"
 msgstr "Status"
 
 #: inc/Admin/class-conversions-screen.php:213
-#: templates/portal/screens/organization.php:87
-#: templates/portal/screens/organization.php:153
+#: templates/portal/screens/organization.php:103
+#: templates/portal/screens/organization.php:193
 msgid "Actions"
 msgstr "Aktionen"
 
@@ -383,11 +382,12 @@ msgstr "Nie"
 
 #: inc/Admin/class-conversions-screen.php:245
 #: inc/Core/class-post-statuses.php:211
+#: templates/portal/partials/campaign-status.php:47
 msgid "Live"
 msgstr "Live"
 
 #: inc/Admin/class-conversions-screen.php:246
-#: templates/portal/screens/organization.php:185
+#: templates/portal/screens/organization.php:233
 msgid "Revoke"
 msgstr "Widerrufen"
 
@@ -437,9 +437,9 @@ msgid "The conversions screen needs JavaScript enabled."
 msgstr "Die Conversions-Ansicht erfordert JavaScript."
 
 #. translators: %d: number of days.
-#. translators: %d: number of days the campaign runs.
 #: inc/Admin/class-conversions-screen.php:381
 #: templates/portal/partials/campaign-review-step.php:117
+#: templates/portal/screens/dashboard.php:167
 #, php-format
 msgid "%d day"
 msgid_plural "%d days"
@@ -573,10 +573,8 @@ msgstr "Dieser Bildschirm benötigt JavaScript."
 #: inc/Admin/class-forecast-screen.php:152
 #: inc/Admin/class-report-export.php:150 inc/Admin/class-reports-screen.php:285
 #: inc/Admin/class-reports-screen.php:546 inc/Admin/class-review-screen.php:281
-#: inc/Core/class-post-types.php:199
-#: templates/portal/partials/campaign-table.php:40
-#: templates/portal/screens/campaign.php:612
-#: templates/portal/screens/help.php:101
+#: inc/Core/class-post-types.php:199 templates/portal/screens/campaign.php:618
+#: templates/portal/screens/help.php:113
 #: src/blocks-interactivity/ad-slot/edit.js:141
 msgid "Placement"
 msgstr "Platzierung"
@@ -679,12 +677,14 @@ msgstr "Keine Organisationen entsprechen dieser Suche."
 #: inc/Admin/class-organization-screen.php:151
 #: inc/Admin/class-package-screen.php:162
 #: inc/Admin/class-placement-screen.php:186
-#: templates/portal/screens/organization.php:54
+#: templates/portal/screens/organization.php:53
+#: templates/portal/screens/organization.php:257
 msgid "Active"
 msgstr "Aktiv"
 
 #: inc/Admin/class-organization-screen.php:152
-#: templates/portal/screens/organization.php:55
+#: templates/portal/screens/organization.php:54
+#: templates/portal/screens/organization.php:257
 msgid "Suspended"
 msgstr "Gesperrt"
 
@@ -705,7 +705,7 @@ msgstr ""
 "anderes Mitglied übertragen werden, laden Sie daher zuerst jemanden ein."
 
 #: inc/Admin/class-organization-screen.php:156
-#: templates/portal/screens/organization.php:238
+#: templates/portal/screens/organization.php:294
 msgid "Organization name"
 msgstr "Organisationsname"
 
@@ -724,7 +724,7 @@ msgid "owner"
 msgstr "Inhaber"
 
 #: inc/Admin/class-organization-screen.php:160
-#: templates/portal/screens/organization.php:117
+#: templates/portal/screens/organization.php:144
 msgid "Make owner"
 msgstr "Als Besitzer festlegen"
 
@@ -736,7 +736,7 @@ msgstr "Eigentum übertragen."
 #: inc/Admin/class-placement-screen.php:195
 #: inc/Admin/class-settings-screen.php:306
 #: templates/portal/partials/campaign-creative-step.php:353
-#: templates/portal/screens/organization.php:125
+#: templates/portal/screens/organization.php:152
 msgid "Remove"
 msgstr "Entfernen"
 
@@ -758,7 +758,7 @@ msgstr ""
 "besteht kein Zugriff."
 
 #: inc/Admin/class-organization-screen.php:166
-#: templates/portal/screens/organization.php:233
+#: templates/portal/screens/organization.php:289
 msgid "Send invitation"
 msgstr "Einladung senden"
 
@@ -824,7 +824,8 @@ msgid "Try again"
 msgstr "Erneut versuchen"
 
 #: inc/Admin/class-organization-screen.php:183
-#: templates/portal/screens/organization.php:103
+#: templates/portal/screens/account.php:231
+#: templates/portal/screens/organization.php:130
 msgid "Owner"
 msgstr "Inhaber"
 
@@ -833,7 +834,8 @@ msgstr "Inhaber"
 #: templates/portal/partials/rail.php:34
 #: templates/portal/screens/campaign.php:184
 #: templates/portal/screens/campaigns.php:54
-#: templates/portal/screens/organization.php:213
+#: templates/portal/screens/campaigns.php:55
+#: templates/portal/screens/organization.php:267
 msgid "Campaigns"
 msgstr "Kampagnen"
 
@@ -1037,7 +1039,7 @@ msgstr ""
 "Kleinbuchstaben, Zahlen und Bindestriche."
 
 #: inc/Admin/class-placement-screen.php:176
-#: templates/portal/screens/campaign.php:613
+#: templates/portal/screens/campaign.php:619
 msgid "Size"
 msgstr "Größe"
 
@@ -1425,7 +1427,7 @@ msgid "Every placement"
 msgstr "Jede Platzierung"
 
 #: inc/Admin/class-reports-screen.php:304
-#: templates/portal/screens/dashboard.php:184
+#: templates/portal/screens/dashboard.php:189
 msgid "Show"
 msgstr "Anzeigen"
 
@@ -1574,7 +1576,7 @@ msgstr ""
 #: inc/Portal/class-delivery-view-data.php:530
 #: inc/Portal/class-delivery-view-data.php:581
 #: templates/portal/partials/campaign-summary-facts.php:75
-#: templates/portal/partials/campaign-table.php:105
+#: templates/portal/partials/campaign-table.php:97
 msgid "—"
 msgstr "—"
 
@@ -1586,7 +1588,7 @@ msgstr "—"
 #: inc/Portal/class-delivery-view-data.php:535
 #: inc/Portal/class-delivery-view-data.php:586
 #: templates/portal/partials/campaign-summary-facts.php:72
-#: templates/portal/partials/campaign-table.php:102
+#: templates/portal/partials/campaign-table.php:94
 #, php-format
 msgid "%s%%"
 msgstr "%s%%"
@@ -1608,13 +1610,14 @@ msgstr ""
 msgid "Campaign moved from %1$s to %2$s."
 msgstr "Kampagne von %1$s auf %2$s verschoben."
 
-#: inc/Admin/class-review-data.php:343 inc/Portal/class-view-data.php:752
+#: inc/Admin/class-review-data.php:343 inc/Portal/class-view-data.php:757
+#: inc/Portal/class-view-data.php:789
 msgid "Not scheduled"
 msgstr "Nicht geplant"
 
 #. translators: 1: campaign start date. 2: campaign end date.
 #. translators: 1: package name. 2: month and year the campaign starts, e.g. October 2026.
-#: inc/Admin/class-review-data.php:354 inc/Portal/class-view-data.php:768
+#: inc/Admin/class-review-data.php:354 inc/Portal/class-view-data.php:805
 #: inc/Workflow/class-campaign-editor.php:697
 #, php-format
 msgid "%1$s – %2$s"
@@ -1695,7 +1698,7 @@ msgstr "Kampagne stornieren"
 msgid "Campaign review"
 msgstr "Kampagnenprüfung"
 
-#: inc/Admin/class-review-screen.php:104 templates/portal/screens/help.php:63
+#: inc/Admin/class-review-screen.php:104 templates/portal/screens/help.php:31
 msgid "Review"
 msgstr "Prüfung"
 
@@ -1760,11 +1763,13 @@ msgstr "Tabelle der Kampagnen-Prüfungswarteschlange"
 
 #: inc/Admin/class-review-screen.php:279 inc/Core/class-post-types.php:201
 #: inc/Portal/class-report-actions.php:188
-#: templates/portal/partials/campaign-table.php:39
+#: templates/portal/partials/campaign-status.php:152
+#: templates/portal/partials/campaign-table.php:43
 msgid "Campaign"
 msgstr "Kampagne"
 
 #: inc/Admin/class-review-screen.php:283 inc/Core/class-post-statuses.php:205
+#: templates/portal/partials/campaign-status.php:43
 msgid "Submitted"
 msgstr "Eingereicht"
 
@@ -1781,8 +1786,6 @@ msgid "Back to campaign review"
 msgstr "Zurück zur Kampagnenprüfung"
 
 #: inc/Admin/class-review-screen.php:288
-#: templates/portal/screens/campaigns.php:95
-#: templates/portal/screens/dashboard.php:67
 msgid "Create campaign"
 msgstr "Kampagne erstellen"
 
@@ -1847,7 +1850,8 @@ msgstr "Auslieferungstempo"
 
 #: inc/Admin/class-review-screen.php:304 inc/Core/class-post-types.php:198
 #: templates/portal/organization.php:15 templates/portal/partials/rail.php:35
-#: templates/portal/screens/account.php:123
+#: templates/portal/screens/account.php:143
+#: templates/portal/screens/account.php:225
 #: templates/portal/screens/organization.php:28
 #: templates/portal/screens/signup.php:78
 msgid "Organization"
@@ -1857,6 +1861,8 @@ msgstr "Organisation"
 #: templates/portal/partials/campaign-changes.php:74
 #: templates/portal/partials/campaign-order-summary.php:81
 #: templates/portal/partials/campaign-review-step.php:113
+#: templates/portal/partials/campaign-status.php:166
+#: templates/portal/partials/campaign-table.php:45
 msgid "Schedule"
 msgstr "Zeitplan"
 
@@ -1891,7 +1897,7 @@ msgstr ""
 "Diese Kampagne kann nicht genehmigt werden, bis alle Platzierungen ein "
 "Werbemittel haben."
 
-#: inc/Admin/class-review-screen.php:315 templates/portal/screens/help.php:102
+#: inc/Admin/class-review-screen.php:315 templates/portal/screens/help.php:114
 msgid "Required size"
 msgstr "Erforderliche Größe"
 
@@ -1911,7 +1917,7 @@ msgstr "Alternativtext"
 #: inc/Workflow/class-campaign-change-manager.php:769
 #: templates/portal/partials/campaign-changes.php:78
 #: templates/portal/partials/campaign-review-step.php:126
-#: templates/portal/screens/campaign.php:614
+#: templates/portal/screens/campaign.php:620
 msgid "Destination"
 msgstr "Zielseite"
 
@@ -2234,6 +2240,8 @@ msgstr "%d Tage"
 
 #: inc/Admin/class-settings-screen.php:95
 #: inc/Admin/class-settings-screen.php:96
+#: templates/portal/screens/account.php:34
+#: templates/portal/screens/organization.php:47
 msgid "Settings"
 msgstr "Einstellungen"
 
@@ -2288,7 +2296,7 @@ msgstr ""
 
 #: inc/Admin/class-settings-screen.php:218
 #: templates/portal/partials/campaign-overlays.php:303
-#: templates/portal/partials/campaign-upload-form.php:154
+#: templates/portal/partials/campaign-upload-form.php:141
 #: templates/portal/partials/campaign-variant-destination.php:54
 msgid "Destination URL"
 msgstr "Ziel-URL"
@@ -2672,6 +2680,7 @@ msgstr ""
 "entsprechen."
 
 #: inc/Core/class-post-statuses.php:204
+#: templates/portal/partials/campaign-status.php:42
 msgid "Draft"
 msgstr "Entwurf"
 
@@ -2688,10 +2697,13 @@ msgid "Rejected"
 msgstr "Abgelehnt"
 
 #: inc/Core/class-post-statuses.php:209
+#: templates/portal/partials/campaign-status.php:45
 msgid "Approved"
 msgstr "Genehmigt"
 
-#: inc/Core/class-post-statuses.php:210 templates/portal/screens/help.php:67
+#: inc/Core/class-post-statuses.php:210
+#: templates/portal/partials/campaign-status.php:46
+#: templates/portal/screens/help.php:32
 msgid "Scheduled"
 msgstr "Geplant"
 
@@ -2798,6 +2810,7 @@ msgstr[1] "Storniert <span class=\"count\">(%s)</span>"
 #: inc/Core/class-post-types.php:200
 #: templates/portal/partials/campaign-order-summary.php:68
 #: templates/portal/partials/campaign-review-step.php:106
+#: templates/portal/partials/campaign-status.php:157
 msgid "Package"
 msgstr "Paket"
 
@@ -2807,7 +2820,7 @@ msgstr "Werbemittel"
 
 #: inc/Core/class-post-types.php:202
 #: templates/portal/partials/campaign-summary-facts.php:45
-#: templates/portal/screens/campaign.php:599
+#: templates/portal/screens/campaign.php:605
 msgid "Creatives"
 msgstr "Werbemittel"
 
@@ -3347,6 +3360,7 @@ msgstr "Öffnen Sie Ihre Kampagne:"
 
 #: inc/Notification/class-notification-service.php:500
 #: inc/Notification/class-request-mailer.php:322
+#: templates/portal/screens/dashboard.php:51
 msgid "Changes requested"
 msgstr "Änderungen angefordert"
 
@@ -3896,8 +3910,9 @@ msgid "Yours to edit. Nobody else can see it yet."
 msgstr "Sie können es bearbeiten. Niemand anderes kann es noch sehen."
 
 #: inc/Portal/class-catalogue-view-data.php:207
+#, fuzzy
 msgid ""
-"Waiting for the review team. You can still withdraw it until someone starts "
+"Waiting for the review team. You can withdraw it until someone starts "
 "reviewing."
 msgstr ""
 "Warten auf das Prüfungsteam. Sie können es noch zurückziehen, bis jemand mit "
@@ -3908,7 +3923,9 @@ msgid "Someone is reviewing it now."
 msgstr "Jemand prüft es gerade."
 
 #: inc/Portal/class-catalogue-view-data.php:209
-msgid "The review team has asked for changes. Edit it and submit again."
+#: templates/portal/partials/campaign-status.php:65
+#, fuzzy
+msgid "The review team asked for changes. Edit it and submit again."
 msgstr ""
 "Das Prüfungsteam hat Änderungen angefordert. Bearbeiten Sie es und reichen "
 "Sie es erneut ein."
@@ -3926,21 +3943,26 @@ msgid "Ready and waiting for its start date."
 msgstr "Bereit und wartet auf den Starttermin."
 
 #: inc/Portal/class-catalogue-view-data.php:213
+#: templates/portal/partials/campaign-status.php:68
 msgid "Being shown on the site right now."
 msgstr "Aktuell auf der Website ausgeliefert."
 
 #: inc/Portal/class-catalogue-view-data.php:214
+#: templates/portal/partials/campaign-status.php:69
 msgid "Temporarily not being shown. Get in touch if this is unexpected."
 msgstr ""
 "Wird vorübergehend nicht angezeigt. Kontaktieren Sie uns, wenn dies "
 "unerwartet ist."
 
 #: inc/Portal/class-catalogue-view-data.php:215
-msgid "Finished. Duplicate it to run the campaign again."
+#: templates/portal/partials/campaign-status.php:70
+#, fuzzy
+msgid "Finished. Run it again from your campaign list."
 msgstr ""
 "Abgeschlossen. Duplizieren Sie die Kampagne, um sie erneut auszuführen."
 
 #: inc/Portal/class-catalogue-view-data.php:216
+#: templates/portal/partials/campaign-status.php:71
 msgid "Cancelled and no longer running."
 msgstr "Storniert und läuft nicht mehr."
 
@@ -4288,23 +4310,22 @@ msgstr "%1$s bis %2$s (UTC)"
 #: inc/Portal/class-delivery-view-data.php:222
 #: inc/Portal/class-report-actions.php:190
 #: templates/portal/partials/campaign-summary-facts.php:56
-#: templates/portal/partials/campaign-table.php:44
+#: templates/portal/partials/campaign-table.php:50
 #: templates/portal/partials/campaign-variant-comparison.php:46
-#: templates/portal/partials/sparkline.php:34
 msgid "Impressions"
 msgstr "Impressionen"
 
 #: inc/Portal/class-delivery-view-data.php:227
 #: inc/Portal/class-report-actions.php:191
 #: templates/portal/partials/campaign-summary-facts.php:60
-#: templates/portal/partials/campaign-table.php:45
+#: templates/portal/partials/campaign-table.php:52
 #: templates/portal/partials/campaign-variant-comparison.php:47
 msgid "Clicks"
 msgstr "Klicks"
 
 #: inc/Portal/class-delivery-view-data.php:232
 #: templates/portal/partials/campaign-summary-facts.php:64
-#: templates/portal/partials/campaign-table.php:46
+#: templates/portal/partials/campaign-table.php:53
 #: templates/portal/partials/campaign-variant-comparison.php:48
 msgid "CTR"
 msgstr "CTR"
@@ -4343,7 +4364,7 @@ msgstr "Eine Anzeige, die nicht mehr auf dieser Platzierung ist"
 #: inc/Portal/class-delivery-view-data.php:553
 #: inc/Portal/class-delivery-view-data.php:575
 #: templates/portal/partials/campaign-summary-facts.php:90
-#: templates/portal/partials/campaign-table.php:121
+#: templates/portal/partials/campaign-table.php:113
 msgid "Not measured"
 msgstr "Nicht gemessen"
 
@@ -4537,22 +4558,31 @@ msgid "Delete campaign"
 msgstr "Kampagne löschen"
 
 #: inc/Portal/class-view-data.php:641
+#: templates/portal/partials/campaign-status.php:44
 msgid "In review"
 msgstr "In Prüfung"
 
 #: inc/Portal/class-view-data.php:642
+#: templates/portal/screens/dashboard.php:275
 msgid "Needs your attention"
 msgstr "Benötigt Ihre Aufmerksamkeit"
 
 #: inc/Portal/class-view-data.php:643
+#: templates/portal/screens/dashboard.php:121
 msgid "All campaigns"
 msgstr "Alle Kampagnen"
 
 #. translators: %s: campaign start date.
-#: inc/Portal/class-view-data.php:761
+#: inc/Portal/class-view-data.php:765 inc/Portal/class-view-data.php:798
 #, php-format
 msgid "From %s"
 msgstr "Ab %s"
+
+#. translators: 1: campaign start date, e.g. Sep 6. 2: campaign end date, e.g. Oct 4.
+#: inc/Portal/class-view-data.php:772
+#, fuzzy, php-format
+msgid "%1$s → %2$s"
+msgstr "%1$s — %2$s"
 
 #: inc/Repository/class-campaign-draft-persistence.php:50
 msgid "The campaign changes could not be saved completely."
@@ -6112,7 +6142,7 @@ msgstr "Seite nicht gefunden"
 #: templates/portal/account.php:15
 #: templates/portal/partials/campaign-review-step.php:150
 #: templates/portal/partials/rail.php:36
-#: templates/portal/screens/account.php:33
+#: templates/portal/screens/account.php:35
 msgid "Account"
 msgstr "Konto"
 
@@ -6150,7 +6180,7 @@ msgid "Reset your password"
 msgstr "Passwort zurücksetzen"
 
 #: templates/portal/help.php:15 templates/portal/partials/rail.php:37
-#: templates/portal/screens/help.php:29
+#: templates/portal/screens/help.php:40
 msgid "Help"
 msgstr "Hilfe"
 
@@ -6161,6 +6191,7 @@ msgid "Sign in"
 msgstr "Anmelden"
 
 #: templates/portal/partials/campaign-ad-updates.php:40
+#: templates/portal/partials/campaign-status.php:198
 msgid "Your ads"
 msgstr "Ihre Anzeigen"
 
@@ -6257,7 +6288,7 @@ msgstr "Details"
 #: templates/portal/partials/campaign-changes.php:81
 #: templates/portal/partials/campaign-editor-modules.php:44
 #: templates/portal/screens/campaign.php:534
-#: templates/portal/screens/help.php:59
+#: templates/portal/screens/help.php:30
 msgid "Review and submit"
 msgstr "Prüfen und einreichen"
 
@@ -6372,7 +6403,7 @@ msgstr ""
 #: templates/portal/partials/campaign-creative-step.php:145
 #: templates/portal/partials/campaign-editor-modules.php:43
 #: templates/portal/screens/campaign.php:533
-#: templates/portal/screens/help.php:55
+#: templates/portal/screens/help.php:29
 #, fuzzy
 msgid "Add your ads"
 msgstr "Ihre Anzeigen"
@@ -6454,7 +6485,7 @@ msgid "Replace"
 msgstr "Ersetzen"
 
 #: templates/portal/partials/campaign-creative-step.php:371
-#: templates/portal/partials/campaign-upload-form.php:148
+#: templates/portal/partials/campaign-upload-form.php:135
 msgid "Goes to"
 msgstr "Geht zu"
 
@@ -6518,7 +6549,7 @@ msgstr "Schritt %1$s von %2$s: %3$s"
 
 #: templates/portal/partials/campaign-editor-modules.php:42
 #: templates/portal/screens/campaign.php:532
-#: templates/portal/screens/help.php:51
+#: templates/portal/screens/help.php:28
 #, fuzzy
 msgid "Choose a package and dates"
 msgstr "Wählen Sie ein Paket"
@@ -6536,6 +6567,7 @@ msgstr "Noch nicht gespeichert…"
 
 #. translators: %d: number of days the campaign runs.
 #: templates/portal/partials/campaign-order-summary.php:89
+#: templates/portal/partials/campaign-status.php:174
 #, php-format
 msgid "%d day · site time"
 msgid_plural "%d days · site time"
@@ -6543,6 +6575,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: templates/portal/partials/campaign-order-summary.php:98
+#: templates/portal/partials/campaign-table.php:47
 #, fuzzy
 msgid "Sizes"
 msgstr "Größe"
@@ -6560,6 +6593,7 @@ msgstr[0] "Werbemittelplatzierung"
 msgstr[1] "Werbemittelplatzierung"
 
 #: templates/portal/partials/campaign-order-summary.php:115
+#: templates/portal/partials/campaign-status.php:184
 msgid "Link"
 msgstr ""
 
@@ -6586,6 +6620,7 @@ msgid "%1$d of %2$d ready"
 msgstr ""
 
 #: templates/portal/partials/campaign-order-summary.php:147
+#: templates/portal/partials/campaign-status.php:190
 msgid "Total"
 msgstr ""
 
@@ -6760,6 +6795,7 @@ msgstr "Empfohlen"
 
 #. translators: 1: duration, e.g. 30 days. 2: number of ad sizes.
 #: templates/portal/partials/campaign-plan-step.php:117
+#: templates/portal/screens/dashboard.php:301
 #, fuzzy, php-format
 msgid "%1$s · %2$d size"
 msgid_plural "%1$s · %2$d sizes"
@@ -6944,7 +6980,7 @@ msgstr ""
 "der Anzeige angezeigt."
 
 #: templates/portal/partials/campaign-review-step.php:271
-#: templates/portal/screens/organization.php:257
+#: templates/portal/screens/organization.php:314
 msgid "Save name"
 msgstr "Name speichern"
 
@@ -6999,29 +7035,123 @@ msgstr ""
 msgid "You are notified if changes are needed."
 msgstr ""
 
+#: templates/portal/partials/campaign-status.php:48
+#, fuzzy
+msgid "Complete"
+msgstr "Abgeschlossen"
+
+#: templates/portal/partials/campaign-status.php:63
+#, fuzzy
+msgid ""
+"The review team has your campaign. You can withdraw it to edit until a "
+"reviewer starts."
+msgstr ""
+"Warten auf das Prüfungsteam. Sie können es noch zurückziehen, bis jemand mit "
+"der Prüfung beginnt."
+
+#: templates/portal/partials/campaign-status.php:64
+#, fuzzy
+msgid "Someone on the review team is looking at it now."
+msgstr "Jemand prüft es gerade."
+
+#: templates/portal/partials/campaign-status.php:66
+#, fuzzy
+msgid "Not approved. The reason is in the notes from the review team."
+msgstr "Nicht genehmigt. Der Grund steht in der Kampagne."
+
+#: templates/portal/partials/campaign-status.php:67
+#, fuzzy
+msgid "Approved. It starts by itself on its start date."
+msgstr ""
+"Sobald sie genehmigt wurde, startet sie automatisch an Ihrem Startdatum und "
+"endet an Ihrem Enddatum."
+
+#: templates/portal/partials/campaign-status.php:79
+msgid "Where it has got to"
+msgstr ""
+
+#: templates/portal/partials/campaign-status.php:80
+msgid "Each stage is dated as it happens."
+msgstr ""
+
+#: templates/portal/partials/campaign-status.php:92
+#, fuzzy
+msgid "Now"
+msgstr "Nein"
+
+#: templates/portal/partials/campaign-status.php:104
+#: templates/portal/screens/campaign.php:284
+#, fuzzy
+msgid "Withdraw to edit"
+msgstr "Zurückziehen und bearbeiten"
+
+#: templates/portal/partials/campaign-status.php:111
+#, fuzzy
+msgid "Activity"
+msgstr "Aktiv"
+
+#: templates/portal/partials/campaign-status.php:120
+msgid "Submitted for review with a note for the team"
+msgstr ""
+
+#: templates/portal/partials/campaign-status.php:121
+#, fuzzy
+msgid "Submitted for review"
+msgstr "Zur Prüfung einreichen"
+
+#. translators: %s: package name.
+#: templates/portal/partials/campaign-status.php:136
+#, fuzzy, php-format
+msgid "Draft started from %s"
+msgstr "Entwurf gespeichert."
+
+#: templates/portal/partials/campaign-status.php:139
+#, fuzzy
+msgid "Draft started"
+msgstr "Entwurf gespeichert."
+
+#. translators: %d: number of ad sizes.
+#: templates/portal/partials/campaign-status.php:203
+#, fuzzy, php-format
+msgid "%d size"
+msgid_plural "%d sizes"
+msgstr[0] "Größe hinzufügen"
+msgstr[1] "Größe hinzufügen"
+
 #: templates/portal/partials/campaign-summary-facts.php:37
-#: templates/portal/partials/campaign-table.php:81
 msgid "None selected"
 msgstr "Keine ausgewählt"
 
-#: templates/portal/partials/campaign-table.php:31
+#: templates/portal/partials/campaign-table.php:35
 msgid "No campaigns yet"
 msgstr "Noch keine Kampagnen"
 
-#: templates/portal/partials/campaign-table.php:32
+#: templates/portal/partials/campaign-table.php:36
 msgid "When you create a campaign it will appear here with its status."
 msgstr ""
 "Wenn Sie eine Kampagne erstellen, wird sie hier mit ihrem Status angezeigt."
 
-#: templates/portal/partials/campaign-table.php:35
+#: templates/portal/partials/campaign-table.php:39
 msgid "Campaigns table"
 msgstr "Kampagnentabelle"
 
-#: templates/portal/partials/campaign-table.php:42
-msgid "Dates"
-msgstr "Datum"
+#: templates/portal/partials/campaign-table.php:58
+#, fuzzy
+msgid "Next step"
+msgstr "Weiter"
 
-#: templates/portal/partials/campaign-table.php:72
+#: templates/portal/partials/campaign-table.php:130
+#, fuzzy
+msgid "Continue setup"
+msgstr "Weiter"
+
+#: templates/portal/partials/campaign-table.php:132
+#: templates/portal/screens/dashboard.php:279
+#, fuzzy
+msgid "Make changes"
+msgstr "Änderungen speichern"
+
+#: templates/portal/partials/campaign-table.php:139
 #, fuzzy
 msgid "Run again"
 msgstr "Erneut versuchen"
@@ -7030,43 +7160,43 @@ msgstr "Erneut versuchen"
 msgid "Ad update history"
 msgstr "Änderungsverlauf der Werbung"
 
-#: templates/portal/partials/campaign-upload-form.php:84
+#: templates/portal/partials/campaign-upload-form.php:71
 msgid ""
 "Uploads by itself: choose a file, enter its link, and the upload starts when "
 "you leave the link field."
 msgstr ""
 
-#: templates/portal/partials/campaign-upload-form.php:85
+#: templates/portal/partials/campaign-upload-form.php:72
 msgid ""
 "Uploads as soon as you choose a file, linking to the address below unless "
 "you change it first."
 msgstr ""
 
-#: templates/portal/partials/campaign-upload-form.php:91
+#: templates/portal/partials/campaign-upload-form.php:78
 msgid "Ad creative file"
 msgstr "Werbemitteldatei"
 
 #. translators: %s: this placement's maximum file size, e.g. 150 KB.
-#: templates/portal/partials/campaign-upload-form.php:96
+#: templates/portal/partials/campaign-upload-form.php:83
 #, fuzzy, php-format
 msgid "Maximum file size: %s."
 msgstr "Maximale Dateigröße (KB)"
 
-#: templates/portal/partials/campaign-upload-form.php:122
+#: templates/portal/partials/campaign-upload-form.php:109
 msgid "Download template"
 msgstr ""
 
 #. translators: %s: required image dimensions, e.g. 728x90.
-#: templates/portal/partials/campaign-upload-form.php:126
+#: templates/portal/partials/campaign-upload-form.php:113
 #, php-format
 msgid "for %s"
 msgstr ""
 
-#: templates/portal/partials/campaign-upload-form.php:150
+#: templates/portal/partials/campaign-upload-form.php:137
 msgid "Use a different link"
 msgstr ""
 
-#: templates/portal/partials/campaign-upload-form.php:155
+#: templates/portal/partials/campaign-upload-form.php:142
 msgid ""
 "Where someone should go after selecting the advertisement. Use a complete "
 "http or https URL."
@@ -7074,7 +7204,7 @@ msgstr ""
 "Wohin der Nutzer nach Auswahl der Anzeige weitergeleitet werden soll. "
 "Verwenden Sie eine vollständige http- oder https-URL."
 
-#: templates/portal/partials/campaign-upload-form.php:162
+#: templates/portal/partials/campaign-upload-form.php:149
 msgid "Upload creative"
 msgstr "Werbemittel hochladen"
 
@@ -7165,6 +7295,8 @@ msgstr "Portal"
 
 #: templates/portal/partials/rail.php:109
 #: templates/portal/screens/campaign.php:191
+#: templates/portal/screens/campaigns.php:88
+#: templates/portal/screens/dashboard.php:90
 #, fuzzy
 msgid "New campaign"
 msgstr "Kampagne verlängern"
@@ -7175,8 +7307,13 @@ msgstr "Kampagne verlängern"
 msgid "Daily impressions, %1$s to %2$s"
 msgstr "Tägliche Impressionen, %1$s bis %2$s"
 
+#: templates/portal/partials/sparkline.php:35
+#, fuzzy
+msgid "Impressions per day"
+msgstr "Impressionen"
+
 #. translators: 1: weekday. 2: impression count.
-#: templates/portal/partials/sparkline.php:46
+#: templates/portal/partials/sparkline.php:48
 #, php-format
 msgid "%1$s: %2$s impression"
 msgid_plural "%1$s: %2$s impressions"
@@ -7184,7 +7321,7 @@ msgstr[0] "%1$s: %2$s Impression"
 msgstr[1] "%1$s: %2$s Impressionen"
 
 #. translators: %d: number of days covered by the export.
-#: templates/portal/partials/sparkline.php:102
+#: templates/portal/partials/sparkline.php:104
 #, php-format
 msgid "Download %d days (CSV)"
 msgstr "Herunterladen %d Tage (CSV)"
@@ -7209,57 +7346,67 @@ msgstr "Diese Adresse entspricht nichts im Portal."
 msgid "Go to your dashboard"
 msgstr "Gehen Sie zu Ihrem Dashboard"
 
-#: templates/portal/screens/account.php:34
+#: templates/portal/screens/account.php:36
 msgid "Your name, sign-in details and password."
 msgstr "Ihr Name, Anmeldedaten und Passwort."
 
-#: templates/portal/screens/account.php:42
+#: templates/portal/screens/account.php:44
 msgid "Your details were saved."
 msgstr "Ihre Angaben wurden gespeichert."
 
-#: templates/portal/screens/account.php:45
+#: templates/portal/screens/account.php:47
 msgid "Check your email for a link to set a new password."
 msgstr ""
 "Prüfen Sie Ihre E-Mails auf einen Link zum Festlegen eines neuen Passworts."
 
-#: templates/portal/screens/account.php:61
+#: templates/portal/screens/account.php:81
 msgid "Your details"
 msgstr "Ihre Angaben"
 
-#: templates/portal/screens/account.php:68
+#: templates/portal/screens/account.php:82
+#, fuzzy
+msgid "How your name appears to your team and the review team."
+msgstr "Ihre Notizen für das Prüfungsteam"
+
+#: templates/portal/screens/account.php:89
 msgid "Name to display"
 msgstr "Anzeigename"
 
-#: templates/portal/screens/account.php:82
+#: templates/portal/screens/account.php:103
 #: templates/portal/screens/signup.php:66
 msgid "First name"
 msgstr "Vorname"
 
-#: templates/portal/screens/account.php:94
+#: templates/portal/screens/account.php:115
 #: templates/portal/screens/signup.php:71
 msgid "Last name"
 msgstr "Nachname"
 
-#: templates/portal/screens/account.php:106
+#: templates/portal/screens/account.php:128
 msgid "Save details"
 msgstr "Details speichern"
 
-#: templates/portal/screens/account.php:114
+#: templates/portal/screens/account.php:134
 msgid "Signing in"
 msgstr "Anmelden"
 
-#: templates/portal/screens/account.php:118
-#: templates/portal/screens/organization.php:84
-#: templates/portal/screens/organization.php:150
+#: templates/portal/screens/account.php:135
+msgid "The address you sign in with and where we send notices."
+msgstr ""
+
+#: templates/portal/screens/account.php:139
+#: templates/portal/screens/organization.php:100
+#: templates/portal/screens/organization.php:190
 msgid "Email"
 msgstr "E-Mail"
 
-#: templates/portal/screens/account.php:127
+#: templates/portal/screens/account.php:147
+#: templates/portal/screens/account.php:226
 msgid "Not linked yet"
 msgstr "Noch nicht verknüpft"
 
 #. translators: %s: pending new email address.
-#: templates/portal/screens/account.php:140
+#: templates/portal/screens/account.php:159
 #, php-format
 msgid ""
 "A confirmation is waiting for %s. Check that inbox, or cancel and try again."
@@ -7267,38 +7414,58 @@ msgstr ""
 "Eine Bestätigung wartet auf %s. Prüfen Sie das Postfach oder brechen Sie ab "
 "und versuchen Sie es erneut."
 
-#: templates/portal/screens/account.php:149
+#: templates/portal/screens/account.php:169
 msgid "Cancel email change"
 msgstr "E-Mail-Änderung abbrechen"
 
-#: templates/portal/screens/account.php:158
+#: templates/portal/screens/account.php:179
 msgid "New email address"
 msgstr "Neue E-Mail-Adresse"
 
-#: templates/portal/screens/account.php:170
+#: templates/portal/screens/account.php:193
+msgid "Send confirmation link"
+msgstr "Bestätigungslink senden"
+
+#: templates/portal/screens/account.php:196
+#, fuzzy
 msgid ""
-"We will email a one-time confirmation link to the new address. You must be "
-"signed in to finish, and your current address stays active until then."
+"We email a one-time link to the new address. Your current address stays "
+"active until you confirm it while signed in."
 msgstr ""
 "Wir senden einen einmaligen Bestätigungslink an die neue Adresse. Sie müssen "
 "angemeldet sein, um den Vorgang abzuschließen, und Ihre aktuelle Adresse "
 "bleibt bis dahin aktiv."
 
-#: templates/portal/screens/account.php:174
-msgid "Send confirmation link"
-msgstr "Bestätigungslink senden"
+#: templates/portal/screens/account.php:205
+#: templates/portal/screens/login.php:56
+msgid "Password"
+msgstr "Passwort"
 
-#: templates/portal/screens/account.php:184
-msgid ""
-"We will email you a link to set a new password. The link can only be used "
-"once."
+#: templates/portal/screens/account.php:206
+#, fuzzy
+msgid "We email you a link to set a new one. It works once."
 msgstr ""
 "Wir senden Ihnen per E-Mail einen Link zum Festlegen eines neuen Passworts. "
 "Der Link kann nur einmal verwendet werden."
 
-#: templates/portal/screens/account.php:188
-msgid "Email me a password reset link"
+#: templates/portal/screens/account.php:212
+#, fuzzy
+msgid "Email me a reset link"
 msgstr "Senden Sie mir einen Link zum Zurücksetzen des Passworts"
+
+#: templates/portal/screens/account.php:219
+msgid "Your profile"
+msgstr ""
+
+#: templates/portal/screens/account.php:230
+#: templates/portal/screens/organization.php:101
+msgid "Role"
+msgstr "Rolle"
+
+#: templates/portal/screens/account.php:231
+#: templates/portal/screens/organization.php:132
+msgid "Member"
+msgstr "Mitglied"
 
 #: templates/portal/screens/campaign-not-found.php:21
 msgid "This campaign does not exist, or it is not one of yours."
@@ -7342,11 +7509,6 @@ msgstr "Fortschritt der Kampagnenerstellung"
 #, fuzzy, php-format
 msgid "Step %1$d of %2$d"
 msgstr "Schritt %1$s von %2$s: %3$s"
-
-#: templates/portal/screens/campaign.php:284
-#, fuzzy
-msgid "Withdraw to edit"
-msgstr "Zurückziehen und bearbeiten"
 
 #: templates/portal/screens/campaign.php:307
 #, fuzzy
@@ -7481,22 +7643,22 @@ msgstr ""
 "Änderungen, die Sie hier speichern, werden für %s erfasst und erscheinen in "
 "deren Audit-Verlauf als Bearbeitung durch das Personal."
 
-#: templates/portal/screens/campaign.php:580
-#: templates/portal/screens/organization.php:204
+#: templates/portal/screens/campaign.php:586
+#: templates/portal/screens/organization.php:255
 msgid "Summary"
 msgstr "Zusammenfassung"
 
-#: templates/portal/screens/campaign.php:604
+#: templates/portal/screens/campaign.php:610
 msgid "No creatives yet"
 msgstr "Noch keine Werbemittel"
 
-#: templates/portal/screens/campaign.php:605
+#: templates/portal/screens/campaign.php:611
 msgid "A campaign needs at least one creative before it can be submitted."
 msgstr ""
 "Eine Kampagne benötigt mindestens ein Werbemittel, bevor sie eingereicht "
 "werden kann."
 
-#: templates/portal/screens/campaign.php:608
+#: templates/portal/screens/campaign.php:614
 msgid "Creatives table"
 msgstr "Werbemittel-Tabelle"
 
@@ -7508,23 +7670,52 @@ msgstr ""
 "Kampagne beendet. Sie bleibt in Ihrer Liste als storniert, zusammen mit "
 "allem, was sie ausgeliefert hat."
 
-#. translators: %s: number of campaigns.
-#: templates/portal/screens/campaigns.php:59
-#, php-format
-msgid "%s campaign"
-msgid_plural "%s campaigns"
-msgstr[0] "%s Kampagne"
-msgstr[1] "%s Kampagnen"
+#: templates/portal/screens/campaigns.php:56
+#, fuzzy
+msgid "Every campaign, and where each one has got to."
+msgstr "Ihre Kampagnen und der Stand jeder einzelnen."
 
 #. translators: %s: the slice being shown, e.g. Needs your attention.
-#: templates/portal/screens/campaigns.php:79
+#: templates/portal/screens/campaigns.php:72
 #, php-format
 msgid "Showing only: %s."
 msgstr "Nur angezeigt: %s."
 
-#: templates/portal/screens/campaigns.php:84
+#: templates/portal/screens/campaigns.php:77
 msgid "Show all campaigns"
 msgstr "Alle Kampagnen anzeigen"
+
+#: templates/portal/screens/campaigns.php:104
+#, fuzzy
+msgid "All"
+msgstr "Zulässig"
+
+#: templates/portal/screens/campaigns.php:118
+#, fuzzy
+msgid "Filter campaigns"
+msgstr "Kampagne löschen"
+
+#: templates/portal/screens/campaigns.php:132
+#: templates/portal/screens/campaigns.php:133
+#, fuzzy
+msgid "Search campaigns"
+msgstr "Diese Kampagne neu starten"
+
+#: templates/portal/screens/campaigns.php:134
+#, fuzzy
+msgid "Searching is coming soon."
+msgstr "Conversions suchen"
+
+#. translators: 1: campaigns on this page. 2: campaigns in this view.
+#: templates/portal/screens/campaigns.php:153
+#, fuzzy, php-format
+msgid "Showing %1$s of %2$s"
+msgstr "Seite %1$s von %2$s"
+
+#: templates/portal/screens/campaigns.php:160
+#, fuzzy
+msgid "Delivery figures are all-time, from native delivery."
+msgstr "Impressionen und Klicks aus der nativen Auslieferung"
 
 #: templates/portal/screens/confirm-email.php:59
 msgid ""
@@ -7558,54 +7749,60 @@ msgstr ""
 msgid "Confirm email change"
 msgstr "E-Mail-Änderung bestätigen"
 
-#. translators: %s: the advertiser's display name.
 #: templates/portal/screens/dashboard.php:49
+msgid "Live or paused"
+msgstr ""
+
+#: templates/portal/screens/dashboard.php:50
+#, fuzzy
+msgid "With the review team"
+msgstr "Prüfteam fragen"
+
+#: templates/portal/screens/dashboard.php:66
+#, fuzzy
+msgid "Overview"
+msgstr "Prüfung"
+
+#. translators: %s: the advertiser's display name.
+#: templates/portal/screens/dashboard.php:71
 #, php-format
 msgid "Welcome back, %s"
 msgstr "Willkommen zurück, %s"
 
-#: templates/portal/screens/dashboard.php:57
+#: templates/portal/screens/dashboard.php:79
 msgid "Your campaigns and where each one has got to."
 msgstr "Ihre Kampagnen und der Stand jeder einzelnen."
 
-#: templates/portal/screens/dashboard.php:58
+#: templates/portal/screens/dashboard.php:80
 msgid "Your campaigns, and how they are delivering."
 msgstr "Ihre Kampagnen und wie sie ausgeliefert werden."
 
-#: templates/portal/screens/dashboard.php:130
-#, fuzzy
-msgid "Start a campaign"
-msgstr "Diese Kampagne neu starten"
-
-#: templates/portal/screens/dashboard.php:136
-msgid "Pick a package to begin. You choose the dates and add your ads next."
+#: templates/portal/screens/dashboard.php:123
+msgid "Since you joined"
 msgstr ""
 
-#: templates/portal/screens/dashboard.php:166
+#: templates/portal/screens/dashboard.php:141
 msgid "Native delivery"
 msgstr "Native-Auslieferung"
 
-#: templates/portal/screens/dashboard.php:172
+#: templates/portal/screens/dashboard.php:147
 msgid "Choose a reporting window"
 msgstr "Wählen Sie einen Berichtszeitraum"
 
-#: templates/portal/screens/dashboard.php:175
+#: templates/portal/screens/dashboard.php:177
+#, fuzzy
+msgid "Custom"
+msgstr "Benutzerdefinierte Größe"
+
+#: templates/portal/screens/dashboard.php:180
 msgid "From (UTC)"
 msgstr "Von (UTC)"
 
-#: templates/portal/screens/dashboard.php:180
+#: templates/portal/screens/dashboard.php:185
 msgid "To (UTC)"
 msgstr "Bis (UTC)"
 
-#. translators: %d: number of days.
-#: templates/portal/screens/dashboard.php:200
-#, php-format
-msgid "Last %d day"
-msgid_plural "Last %d days"
-msgstr[0] "Letzte %d Tage"
-msgstr[1] "Letzte %d Tage"
-
-#: templates/portal/screens/dashboard.php:220
+#: templates/portal/screens/dashboard.php:204
 msgid ""
 "That date range could not be used, so the default window is shown. A range "
 "must be two valid dates, in order, and no longer than 92 days."
@@ -7614,17 +7811,31 @@ msgstr ""
 "Standardfenster angezeigt. Ein Bereich muss aus zwei gültigen Daten in der "
 "richtigen Reihenfolge bestehen und darf nicht länger als 92 Tage umfassen."
 
-#: templates/portal/screens/dashboard.php:247
+#: templates/portal/screens/dashboard.php:234
 msgid "Impressions and clicks from native delivery."
 msgstr "Impressionen und Klicks aus der nativen Auslieferung"
 
-#: templates/portal/screens/dashboard.php:260
+#: templates/portal/screens/dashboard.php:257
 msgid "Your campaigns"
 msgstr "Ihre Kampagnen"
 
+#: templates/portal/screens/dashboard.php:259
+#, fuzzy
+msgid "View all"
+msgstr "sichtbar"
+
+#: templates/portal/screens/dashboard.php:286
+#, fuzzy
+msgid "Start a campaign"
+msgstr "Diese Kampagne neu starten"
+
+#: templates/portal/screens/dashboard.php:287
+msgid "Pick a package. Dates and ads come next."
+msgstr ""
+
 #: templates/portal/screens/forgot-password.php:57
 #: templates/portal/screens/login.php:51
-#: templates/portal/screens/organization.php:229
+#: templates/portal/screens/organization.php:285
 #: templates/portal/screens/signup.php:85
 msgid "Work email"
 msgstr "Geschäftliche E-Mail"
@@ -7637,131 +7848,151 @@ msgstr "Passwort-Link per E-Mail senden"
 msgid "Back to sign in"
 msgstr "Zurück zur Anmeldung"
 
-#: templates/portal/screens/help.php:30
-msgid "How advertising here works, and what your artwork needs to be."
-msgstr ""
-"Wie Werbung hier funktioniert und welche Anforderungen Ihr Werbemittel "
-"erfüllen muss."
-
-#: templates/portal/screens/help.php:34
-msgid "Go to your campaigns"
-msgstr "Wechseln Sie zu Ihren Kampagnen"
-
-#: templates/portal/screens/help.php:39
-msgid "How a campaign runs"
-msgstr "So läuft eine Kampagne ab"
-
-#: templates/portal/screens/help.php:52
+#: templates/portal/screens/help.php:28
 #, fuzzy
 msgid "The package sets the price and where your ads appear."
 msgstr ""
 "Wählen Sie ein Paket. Damit werden der Preis und die Platzierung Ihrer "
 "Anzeige festgelegt."
 
-#: templates/portal/screens/help.php:56
-msgid ""
-"One image for each size, all linking to the address you give the first one "
-"unless you change it."
+#: templates/portal/screens/help.php:29
+msgid "One file per size. They all link to one address unless you change one."
 msgstr ""
 
-#: templates/portal/screens/help.php:60
+#: templates/portal/screens/help.php:30
 #, fuzzy
 msgid "Check everything on one page, then send it to the review team."
 msgstr "Diese Änderungen sind bereits beim Prüfungsteam."
 
-#: templates/portal/screens/help.php:64
+#: templates/portal/screens/help.php:31
 #, fuzzy
-msgid "The review team checks the artwork, the links and the dates."
+msgid "The team checks the artwork, the links and the dates."
 msgstr ""
 "Reichen Sie es ein. Das Prüfungsteam prüft das Werbemittel, die Links und "
 "die Daten."
 
-#: templates/portal/screens/help.php:68
+#: templates/portal/screens/help.php:32
 #, fuzzy
-msgid "Once approved, it starts by itself on your start date."
+msgid "Once approved it starts by itself on your start date."
 msgstr ""
 "Sobald sie genehmigt wurde, startet sie automatisch an Ihrem Startdatum und "
 "endet an Ihrem Enddatum."
 
-#: templates/portal/screens/help.php:71
+#: templates/portal/screens/help.php:33
 msgid "Live, then complete"
 msgstr ""
 
-#: templates/portal/screens/help.php:72
+#: templates/portal/screens/help.php:33
 msgid "It stops on its end date. Run it again from your campaign list."
 msgstr ""
 
-#: templates/portal/screens/help.php:76
+#: templates/portal/screens/help.php:39
+#, fuzzy
+msgid "Support"
+msgstr "Support-E-Mail"
+
+#: templates/portal/screens/help.php:41
+msgid "How advertising here works, and what your artwork needs to be."
+msgstr ""
+"Wie Werbung hier funktioniert und welche Anforderungen Ihr Werbemittel "
+"erfüllen muss."
+
+#: templates/portal/screens/help.php:45 templates/portal/screens/help.php:171
+msgid "Go to your campaigns"
+msgstr "Wechseln Sie zu Ihren Kampagnen"
+
+#: templates/portal/screens/help.php:52
+msgid "How a campaign runs"
+msgstr "So läuft eine Kampagne ab"
+
+#: templates/portal/screens/help.php:53
+msgid "Three steps from you, then the review team takes it from there."
+msgstr ""
+
+#: templates/portal/screens/help.php:73
+#, fuzzy
 msgid ""
-"We email you when the review team asks for changes, and when your campaign "
-"is approved, starts and finishes."
+"We email you when changes are requested, and when your campaign is approved, "
+"starts and finishes."
 msgstr ""
 "Wir senden Ihnen eine E-Mail, wenn das Prüfteam Änderungen anfordert und "
 "wenn Ihre Kampagne genehmigt wird, startet und endet."
 
-#: templates/portal/screens/help.php:80
+#: templates/portal/screens/help.php:78
 msgid "What your artwork needs"
 msgstr "Was Ihr Werbemittel benötigt"
 
-#. translators: 1: comma-separated file types, e.g. JPG, PNG. 2: the largest file any placement accepts, e.g. 2 MB.
-#: templates/portal/screens/help.php:87
-#, php-format
-msgid ""
-"Images only: %1$s, and never larger than %2$s. Most placements ask for a "
-"good deal less — the table below gives the limit for each one."
-msgstr ""
-"Nur Bilder: %1$s, und nie größer als %2$s. Die meisten Platzierungen "
-"erlauben deutlich weniger — die Tabelle unten zeigt das Limit für jede."
-
-#: templates/portal/screens/help.php:93
+#: templates/portal/screens/help.php:79
 #, fuzzy
-msgid ""
-"Each ad must be exactly the size of the placement it is for. A short "
-"description for people who cannot see the image is added for you, from the "
-"address the ad links to."
+msgid "Each ad must be exactly the size of its placement."
 msgstr ""
-"Jedes Werbemittel muss exakt die Größe der jeweiligen Platzierung haben. "
-"Jedes Werbemittel benötigt zudem eine kurze Beschreibung für Menschen, die "
-"es nicht sehen können – dies ist sowohl eine gesetzliche Vorgabe als auch "
-"eine Höflichkeitsgeste."
+"Das Werbemittel muss der erforderlichen Pixelgröße dieser Platzierung "
+"entsprechen."
 
-#: templates/portal/screens/help.php:97
+#: templates/portal/screens/help.php:84
+msgid "Formats"
+msgstr ""
+
+#: templates/portal/screens/help.php:86
+msgid "Images only"
+msgstr ""
+
+#: templates/portal/screens/help.php:89
+#, fuzzy
+msgid "Dimensions"
+msgstr "Impressionen"
+
+#: templates/portal/screens/help.php:90
+msgid "Exact pixel size"
+msgstr ""
+
+#: templates/portal/screens/help.php:91
+msgid "Checked as you upload"
+msgstr ""
+
+#: templates/portal/screens/help.php:94
+#, fuzzy
+msgid "File size"
+msgstr "Erforderliche Größe"
+
+#. translators: %s: the largest file any placement accepts, e.g. 2 MB.
+#: templates/portal/screens/help.php:99
+#, php-format
+msgid "Up to %s"
+msgstr ""
+
+#: templates/portal/screens/help.php:104
+#, fuzzy
+msgid "Most placements ask for less"
+msgstr "Keine aktiven Platzierungen zur Prognose."
+
+#: templates/portal/screens/help.php:109
 msgid "Artwork requirements table"
 msgstr "Werbemittel-Anforderungstabelle"
 
-#: templates/portal/screens/help.php:103
+#: templates/portal/screens/help.php:115
 msgid "Largest file"
 msgstr "Größte Datei"
 
-#. translators: %s: image dimensions, e.g. 728x90.
-#: templates/portal/screens/help.php:114
-#, php-format
-msgid "%s pixels"
-msgstr "%s Pixel"
+#: templates/portal/screens/help.php:116 templates/portal/screens/help.php:129
+msgid "Template"
+msgstr ""
 
-#: templates/portal/screens/help.php:129
+#: templates/portal/screens/help.php:142
 msgid "What each status means"
 msgstr "Bedeutung jedes Status"
 
-#: templates/portal/screens/help.php:131
-msgid "Campaign statuses table"
-msgstr "Kampagnenstatus-Tabelle"
+#: templates/portal/screens/help.php:143
+msgid "The label on every campaign, and what it asks of you."
+msgstr ""
 
-#: templates/portal/screens/help.php:136
-msgid "What it means"
-msgstr "Was es bedeutet"
-
-#: templates/portal/screens/help.php:157
+#: templates/portal/screens/help.php:166
 msgid "Still stuck?"
 msgstr "Immer noch festgefahren?"
 
-#: templates/portal/screens/help.php:161
+#: templates/portal/screens/help.php:167
 msgid "Email us and we will help."
 msgstr "Schreiben Sie uns eine E-Mail und wir helfen Ihnen."
-
-#: templates/portal/screens/login.php:56
-msgid "Password"
-msgstr "Passwort"
 
 #: templates/portal/screens/login.php:62
 msgid "Keep me signed in"
@@ -7787,15 +8018,15 @@ msgstr ""
 "Ihr Konto ist noch nicht mit einer Werbeorganisation verknüpft. Setzen Sie "
 "sich mit uns in Verbindung, und wir verknüpfen es."
 
-#: templates/portal/screens/organization.php:48
+#: templates/portal/screens/organization.php:58
 msgid "Who can work on this organization’s campaigns."
 msgstr "Wer kann an den Kampagnen dieser Organisation arbeiten."
 
-#: templates/portal/screens/organization.php:62
+#: templates/portal/screens/organization.php:64
 msgid "This organization cannot submit campaigns"
 msgstr "Diese Organisation kann keine Kampagnen einreichen"
 
-#: templates/portal/screens/organization.php:63
+#: templates/portal/screens/organization.php:65
 msgid ""
 "Existing campaigns are unaffected. Please get in touch to discuss "
 "reactivating the account."
@@ -7803,100 +8034,119 @@ msgstr ""
 "Bestehende Kampagnen sind nicht betroffen. Bitte melden Sie sich, um die "
 "Reaktivierung des Kontos zu besprechen."
 
-#: templates/portal/screens/organization.php:77
-#: templates/portal/screens/organization.php:208
+#: templates/portal/screens/organization.php:81
+#: templates/portal/screens/organization.php:263
 msgid "People"
 msgstr "Personen"
 
-#: templates/portal/screens/organization.php:79
+#: templates/portal/screens/organization.php:82
+#, fuzzy
+msgid ""
+"Everyone here can create, edit and submit this organization’s campaigns."
+msgstr "Wer kann an den Kampagnen dieser Organisation arbeiten."
+
+#. translators: %s: number of people in the organization.
+#: templates/portal/screens/organization.php:88
+#, fuzzy, php-format
+msgid "%s person"
+msgid_plural "%s people"
+msgstr[0] "%s Pixel"
+msgstr[1] "%s Pixel"
+
+#: templates/portal/screens/organization.php:95
 msgid "Organization members table"
 msgstr "Tabelle der Organisationsmitglieder"
 
-#: templates/portal/screens/organization.php:85
-msgid "Role"
-msgstr "Rolle"
-
-#: templates/portal/screens/organization.php:97
+#: templates/portal/screens/organization.php:123
 msgid "You"
 msgstr "Sie"
 
-#: templates/portal/screens/organization.php:105
-msgid "Member"
-msgstr "Mitglied"
-
-#: templates/portal/screens/organization.php:143
+#: templates/portal/screens/organization.php:172
 msgid "Pending access"
 msgstr "Ausstehender Zugriff"
 
-#: templates/portal/screens/organization.php:144
+#: templates/portal/screens/organization.php:173
+#, fuzzy
 msgid ""
-"Name matches are suggestions only. Review the email before granting access."
+"Name matches are suggestions only. Check the email before granting access."
 msgstr ""
 "Namensübereinstimmungen sind lediglich Vorschläge. Prüfen Sie die E-Mail, "
 "bevor Sie den Zugriff gewähren."
 
-#: templates/portal/screens/organization.php:146
+#. translators: %s: number of pending requests and invitations.
+#: templates/portal/screens/organization.php:179
+#, fuzzy, php-format
+msgid "%s waiting"
+msgstr "und %s weitere warten"
+
+#: templates/portal/screens/organization.php:186
 msgid "Pending invitations table"
 msgstr "Tabelle der ausstehenden Einladungen"
 
-#: templates/portal/screens/organization.php:151
+#: templates/portal/screens/organization.php:191
 msgid "Type"
 msgstr "Typ"
 
-#: templates/portal/screens/organization.php:152
+#: templates/portal/screens/organization.php:192
 msgid "Expires"
 msgstr "Läuft ab"
 
-#: templates/portal/screens/organization.php:161
+#: templates/portal/screens/organization.php:203
+msgid "Asked to join"
+msgstr ""
+
+#: templates/portal/screens/organization.php:203
+msgid "Invited"
+msgstr ""
+
+#: templates/portal/screens/organization.php:208
 msgid "Access request"
 msgstr "Zugangsanfrage"
 
-#: templates/portal/screens/organization.php:161
+#: templates/portal/screens/organization.php:208
 msgid "Invitation"
 msgstr "Einladung"
 
-#: templates/portal/screens/organization.php:176
+#: templates/portal/screens/organization.php:224
 msgid "Approve"
 msgstr "Freigeben"
 
-#: templates/portal/screens/organization.php:185
+#: templates/portal/screens/organization.php:233
 msgid "Deny"
 msgstr "Ablehnen"
 
-#: templates/portal/screens/organization.php:198
+#: templates/portal/screens/organization.php:248
+#, fuzzy
 msgid ""
-"Only the organization owner can rename the organization, invite people, "
-"approve requests, remove members, or transfer ownership."
+"Only the owner can rename the organization, invite people, approve requests, "
+"remove members, or transfer ownership."
 msgstr ""
 "Nur der Inhaber der Organisation kann die Organisation umbenennen, Personen "
 "einladen, Anfragen genehmigen, Mitglieder entfernen oder die "
 "Eigentümerschaft übertragen."
 
-#: templates/portal/screens/organization.php:221
+#: templates/portal/screens/organization.php:276
 msgid "Invite a person"
 msgstr "Person einladen"
 
-#: templates/portal/screens/organization.php:222
+#: templates/portal/screens/organization.php:277
+#, fuzzy
 msgid ""
-"We will email a single-use invitation that expires after three days. "
-"Membership is granted only after the recipient completes it."
+"A single-use invitation that expires after three days. They join only once "
+"they accept it."
 msgstr ""
 "Wir senden Ihnen per E-Mail eine einmalige Einladung, die nach drei Tagen "
 "abläuft. Die Mitgliedschaft wird erst gewährt, nachdem der Empfänger sie "
 "abgeschlossen hat."
 
-#: templates/portal/screens/organization.php:239
-msgid ""
-"Names are stored in uppercase. Exact matches of another organization’s name "
-"are refused so two tenants cannot claim the same identity."
-msgstr ""
-"Namen werden in Großbuchstaben gespeichert. Exakte Übereinstimmungen mit dem "
-"Namen einer anderen Organisation werden abgelehnt, damit zwei Mandanten "
-"dieselbe Identität nicht beanspruchen können."
-
-#: templates/portal/screens/organization.php:246
+#: templates/portal/screens/organization.php:301
 msgid "Display name"
 msgstr "Anzeigename"
+
+#: templates/portal/screens/organization.php:311
+msgid ""
+"Stored in uppercase. A name another organization already uses is refused."
+msgstr ""
 
 #: templates/portal/screens/placeholder.php:15
 msgid "This part of the portal is not ready yet."
@@ -8146,6 +8396,54 @@ msgctxt "block keyword"
 msgid "banner"
 msgstr "Banner"
 
+#~ msgid "Dates"
+#~ msgstr "Datum"
+
+#, php-format
+#~ msgid "%s campaign"
+#~ msgid_plural "%s campaigns"
+#~ msgstr[0] "%s Kampagne"
+#~ msgstr[1] "%s Kampagnen"
+
+#, php-format
+#~ msgid "Last %d day"
+#~ msgid_plural "Last %d days"
+#~ msgstr[0] "Letzte %d Tage"
+#~ msgstr[1] "Letzte %d Tage"
+
+#, php-format
+#~ msgid ""
+#~ "Images only: %1$s, and never larger than %2$s. Most placements ask for a "
+#~ "good deal less — the table below gives the limit for each one."
+#~ msgstr ""
+#~ "Nur Bilder: %1$s, und nie größer als %2$s. Die meisten Platzierungen "
+#~ "erlauben deutlich weniger — die Tabelle unten zeigt das Limit für jede."
+
+#, fuzzy
+#~ msgid ""
+#~ "Each ad must be exactly the size of the placement it is for. A short "
+#~ "description for people who cannot see the image is added for you, from "
+#~ "the address the ad links to."
+#~ msgstr ""
+#~ "Jedes Werbemittel muss exakt die Größe der jeweiligen Platzierung haben. "
+#~ "Jedes Werbemittel benötigt zudem eine kurze Beschreibung für Menschen, "
+#~ "die es nicht sehen können – dies ist sowohl eine gesetzliche Vorgabe als "
+#~ "auch eine Höflichkeitsgeste."
+
+#~ msgid "Campaign statuses table"
+#~ msgstr "Kampagnenstatus-Tabelle"
+
+#~ msgid "What it means"
+#~ msgstr "Was es bedeutet"
+
+#~ msgid ""
+#~ "Names are stored in uppercase. Exact matches of another organization’s "
+#~ "name are refused so two tenants cannot claim the same identity."
+#~ msgstr ""
+#~ "Namen werden in Großbuchstaben gespeichert. Exakte Übereinstimmungen mit "
+#~ "dem Namen einer anderen Organisation werden abgelehnt, damit zwei "
+#~ "Mandanten dieselbe Identität nicht beanspruchen können."
+
 #~ msgid "Accent"
 #~ msgstr "Akzent"
 
@@ -8257,9 +8555,6 @@ msgstr "Banner"
 #~ "Katalogänderungen Ihren Entwurf nicht verändern können. Sobald die "
 #~ "Kampagne einen Namen hat, überspringt die Auswahl eines Pakets diesen "
 #~ "Schritt und geht direkt zum Werbemittel weiter."
-
-#~ msgid "Continue"
-#~ msgstr "Weiter"
 
 #~ msgid "Creative destinations"
 #~ msgstr "Zielseiten der Werbemittel"
