@@ -386,6 +386,6 @@ re-submission, and both the settings screen and the review screen say so.
 
 Distinct from the above, and older: `submitted → draft` is a legal edge for the
 advertiser while the `unclaimed` guard passes. The portal exposes it as
-**Withdraw and edit**, which returns the campaign to an editable draft at the
+**Withdraw to edit**, which returns the campaign to an editable draft at the
 first wizard step. Once a reviewer claims the campaign its status is `review`,
 and there is no `review → draft` edge at all.

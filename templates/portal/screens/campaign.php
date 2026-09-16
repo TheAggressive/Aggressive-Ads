@@ -574,6 +574,12 @@ if ( in_array( $aggr_creative_notice, array( 'creative_uploaded', 'creative_remo
  * panels, except on review, which already summarises the campaign itself.
  */
 ?>
+<?php
+if ( true !== $aggr_campaign['editable'] && ! $aggr_editing_changes ) {
+	require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-status.php';
+}
+?>
+
 <?php if ( ! $aggr_wizard_on_screen && ( true !== $aggr_campaign['editable'] || 'review' !== $aggr_step ) ) : ?>
 <section class="aggr-panel" aria-labelledby="aggr-summary-heading">
 	<h2 id="aggr-summary-heading" class="aggr-panel__head">

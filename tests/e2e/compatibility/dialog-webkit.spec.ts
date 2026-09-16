@@ -26,7 +26,10 @@ test( 'the shared creative dialog works in WebKit', async ( { page } ) => {
 	await signIn( page, 'advertiser@example.test', 'advertiser' );
 	await expectPortalA11y( page );
 
-	await page.getByRole( 'button', { name: 'Create campaign' } ).click();
+	await page
+		.getByRole( 'main' )
+		.getByRole( 'button', { name: 'New campaign' } )
+		.click();
 
 	/*
 	 * Wait for the step before touching it. Creating a draft redirects, and a

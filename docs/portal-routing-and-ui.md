@@ -117,7 +117,7 @@ step had already collected, its dates belonged beside the package that prices
 them, and submit was the review screen with a notes box. Each cost a page load
 and asked nothing new.
 
-**Package and dates** asks what the campaign is and when it runs. There is no
+**Package & dates** asks what the campaign is and when it runs. There is no
 name field. The name used to be the first question, which made inventing a
 label the price of starting; the wizard now names an unnamed campaign after
 its plan — "Launch bundle – October 2026" — and keeps that name following the
@@ -184,12 +184,12 @@ when every placement is covered and the stored dates pass the window rule; a
 refused date sends the advertiser to details, anything else back to the
 uploads.
 
-**Review and submit** presents the stored campaign, commercial package
-snapshot, schedule, and authenticated creative previews, and aggregates every
-current submission problem with a link back to the exact step and field. While
-the campaign is ready it also explains the editing lock, withdrawal boundary,
-and changes-requested path, collects the advertiser's notes for the review
-team, and offers the submit button. The notes are posted by that button rather
+**Review & submit** opens on the **Ready check** and aggregates every current
+submission problem with a link back to the exact step and field; the Ads row
+names the sizes still without a file and its action reads **Add file**. While
+the campaign is ready it also collects the advertiser's **Notes for the review
+team** and offers **Submit for review**, and beneath it states the editing
+lock, the withdrawal boundary and the changes-requested path. The notes are posted by that button rather
 than autosaved — the gap between a last keystroke and the click is where a
 debounced save loses them.
 
@@ -197,8 +197,16 @@ Resume points stored by the five-step wizard are mapped on read: `package` and
 `destination` resume on details, where the questions they were asking now are.
 `?step=submit` falls back to the stored resume point.
 
-Beside every step sits an **order summary**: package, schedule, sizes ready,
-destination and total, with the one action that moves the advertiser on. The
+Beside every step sits an **order summary**: package and its duration, schedule
+and its length in days, the sizes the package asks for (grouped, so two 728×90
+placements read `728×90 ×2`), the link, how many ads are ready (from the Ads step
+on) and the total, with the one action that moves the advertiser on —
+**Continue to ads**, **Continue to review**, **Submit for review**. A locked
+action says why beneath it; when all that is missing is one file, it names the
+size. The page heading carries a breadcrumb, "All changes saved" while the
+wizard is on screen, and "Step N of 3" on a phone, where the bar has no room
+for labels. The first step's calendar states how many days are selected and
+draws the design's key; marking days as limited or sold out waits on #293. The
 wizard is a CSS container, so the two columns follow the panel's width rather
 than the viewport's. On a wide panel the step's own primary button is hidden and
 the summary's button submits the step's form through the `form` attribute; on a
@@ -213,6 +221,14 @@ the shapes, clamped so a skyscraper and a leaderboard both fit a card.
 
 All three steps work without JavaScript.
 
+Once the campaign is no longer editable its screen opens on a **status view**
+(`partials/campaign-status.php`): the stages Draft → Submitted → In review →
+Approved → Scheduled → Live → Complete as a dated line, a note on what the
+advertiser can do now (with **Withdraw to edit** while that edge is open), an
+activity list built from the dates the campaign already stores, and a campaign
+card and thumbnails of its ads beside it. A stage with no stored date says `—`;
+the full audit-backed activity log is #295.
+
 Panels that describe a campaign which already exists — Summary, Creatives,
 delivery strategy, ad updates, variant comparison, update history — are hidden
 for as long as an advertiser has the wizard on screen. Staff editing on a
@@ -223,13 +239,26 @@ would blank those panels for a reviewer.
 A completed or otherwise uneditable campaign can be copied from the detail
 screen. Complete campaigns label the action **Renew campaign**; others say
 **Duplicate campaign**. Both create a new draft with the stored snapshot and
-artwork, never the old dates or provider ads. The campaign list also offers **Run again**
-beneath each completed campaign's name, through the same copy action. A copy
+artwork, never the old dates or provider ads. The campaign list offers each row's next
+step in its last column: **Continue setup** on a draft, **Make changes** when
+changes were requested, and **Run again** on a completed campaign, through the
+same copy action. A copy
 resumes on details, because the dates are the one thing it never carries.
 
-The dashboard always shows campaign-by-state counts. Impression, click and CTR
-tiles, a seven-day impression sparkline, and the matching campaign-table
-columns appear only when Reporting is on. Native delivery is always recording.
+The dashboard always shows campaign-by-state counts — running, in review, needs
+your attention, and all campaigns — each with a line saying what it counts.
+Impression, click and CTR tiles, the "Impressions per day" chart inside the
+delivery card, and the table's impression column appear only when Reporting is
+on. The window is chosen from 7/14/30/90-day links with the current one marked,
+and a **Custom** fold holds the two UTC date fields. Below sit the five most
+recent campaigns with **View all**, the first campaign waiting on the
+advertiser with the review team's reason, and **Start a campaign** as a compact
+package list. **New campaign** is also at the foot of the rail on every screen.
+
+The campaigns list has tabs for the same slices with their counts, the current
+one marked, and a search field drawn disabled until #296. Rows show the package
+under the name and short `Sep 6 → Oct 4` schedules; the foot says
+"Showing N of M". Native delivery is always recording.
 They read `aggr_rollups` and never invented zeros. Spend stays absent.
 
 The counts are tiles on the page ground, each linking to the filtered list, and
@@ -239,7 +268,10 @@ the counts can be tiles at all. Organization and Account use one layout: a
 column somebody reads (people and pending access; your details) beside a
 narrower column of things they act on (summary, invite, organization name;
 signing in and password), stacking below 64rem. Help lists how a campaign runs
-as numbered cards drawn from a CSS counter, so the steps renumber themselves.
+as numbered cards drawn from a CSS counter, so the steps renumber themselves,
+then a strip of what artwork needs (formats derived from the upload rules), each
+placement's size and limit with a blank template from `Domain\Size_Template` —
+the same file the upload form offers — and the status glossary in two columns.
 
 
 Saving details persists `creative` as the resume point. Saving a package copies

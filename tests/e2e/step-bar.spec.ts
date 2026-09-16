@@ -14,7 +14,10 @@ import { signIn } from './sign-in-helper';
 async function openWizard( page: Page ): Promise< Locator > {
 	await page.goto( '/advertiser/' );
 	await signIn( page, 'advertiser@example.test', 'advertiser' );
-	await page.getByRole( 'button', { name: 'Create campaign' } ).click();
+	await page
+		.getByRole( 'main' )
+		.getByRole( 'button', { name: 'New campaign' } )
+		.click();
 
 	const bar = page.locator( 'ol.aggr-steps' );
 

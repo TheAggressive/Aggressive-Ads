@@ -2,16 +2,15 @@
 /**
  * Dashboard contents.
  *
- * Campaign-by-state tiles always ship. Impression, click and CTR tiles, a
- * seven-day sparkline, and table CTR appear only when Reporting is on, and
+ * Campaign-by-state tiles always ship. Impression, click and CTR tiles, the
+ * daily chart and table impressions appear only when Reporting is on, and
  * they read `aggr_rollups` — never invented zeros. Spend stays absent until
  * billing has a source.
  *
  * The delivery tiles cover a bounded window and say which one, in UTC, along
- * with the first day whose figures may still move. They used to be all-time
- * totals with neither statement attached. Each also carries its change against
- * the equal window immediately before it, as text with a sign — the colour is
- * decoration over a figure that reads correctly without it.
+ * with the first day whose figures may still move. Each also carries its
+ * change against the equal window immediately before it, as text with a sign —
+ * the colour is decoration over a figure that reads correctly without it.
  *
  * @package Aggressive\Ads
  */
@@ -22,10 +21,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use Aggressive\Ads\Domain\Campaign_Filter;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Portal\Campaign_Actions;
+use Aggressive\Ads\Portal\Request;
+use Aggressive\Ads\Portal\Routes;
 use Aggressive\Ads\Portal\View_Data;
 use Aggressive\Ads\Security\Capabilities;
+use Aggressive\Ads\Workflow\Reporting_Read;
 
 $aggr_view      = Plugin::instance()->container()->get( View_Data::class );
 $aggr_campaigns = $aggr_view->campaigns();
@@ -39,9 +42,28 @@ $aggr_export_days = $aggr_window['export_days'];
 $aggr_export_from = $aggr_window['export_from'];
 $aggr_export_to   = $aggr_window['export_to'];
 $aggr_user        = wp_get_current_user();
+$aggr_list_url    = Routes::url( Request::ROUTE_CAMPAIGNS );
+$aggr_can_create  = current_user_can( Capabilities::SUBMIT_CAMPAIGN );
+
+$aggr_tile_hints = array(
+	Campaign_Filter::RUNNING   => __( 'Live or paused', 'aggressive-ads' ),
+	Campaign_Filter::IN_REVIEW => __( 'With the review team', 'aggressive-ads' ),
+	Campaign_Filter::ATTENTION => __( 'Changes requested', 'aggressive-ads' ),
+);
+
+// The first campaign that is waiting on the advertiser, with the review team's reason.
+$aggr_attention = null;
+
+foreach ( $aggr_campaigns['rows'] as $aggr_candidate ) {
+	if ( in_array( (string) $aggr_candidate['status'], Campaign_Filter::statuses( Campaign_Filter::ATTENTION ), true ) && '' !== (string) ( $aggr_candidate['review_notes'] ?? '' ) ) {
+		$aggr_attention = $aggr_candidate;
+		break;
+	}
+}
 ?>
 <div class="aggr-pagehead">
 	<div>
+		<p class="aggr-eyebrow"><?php esc_html_e( 'Overview', 'aggressive-ads' ); ?></p>
 		<h1 class="aggr-title">
 			<?php
 			printf(
@@ -60,13 +82,15 @@ $aggr_user        = wp_get_current_user();
 		</p>
 	</div>
 
-	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-		<input type="hidden" name="action" value="<?php echo esc_attr( Campaign_Actions::CREATE_ACTION ); ?>">
-		<?php wp_nonce_field( Campaign_Actions::CREATE_ACTION ); ?>
-		<button class="aggr-button" type="submit">
-			<?php esc_html_e( 'Create campaign', 'aggressive-ads' ); ?>
-		</button>
-	</form>
+	<?php if ( $aggr_can_create ) : ?>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+			<input type="hidden" name="action" value="<?php echo esc_attr( Campaign_Actions::CREATE_ACTION ); ?>">
+			<?php wp_nonce_field( Campaign_Actions::CREATE_ACTION ); ?>
+			<button class="aggr-button" type="submit">
+				<?php esc_html_e( 'New campaign', 'aggressive-ads' ); ?>
+			</button>
+		</form>
+	<?php endif; ?>
 </div>
 
 <?php
@@ -78,77 +102,28 @@ $aggr_user        = wp_get_current_user();
  * between two rows that looked identical, so narrowing to seven days read as
  * "3 campaigns ran this week": a correct number answering a question nobody
  * asked, which is the same failure as a wrong one.
+ *
+ * Each count links to the campaigns it counted, and a zero is still a link.
  */
 ?>
 <ul class="aggr-pipeline">
 	<?php foreach ( $aggr_view->counts() as $aggr_stat ) : ?>
 		<li class="aggr-pipeline__item">
-			<?php
-			/*
-			 * Each count links to the campaigns it counted.
-			 *
-			 * "Needs your attention: 3" was a statement with nowhere to go, so
-			 * the reader's next move was the campaign list and a manual scan
-			 * for the three. The link answers the question the tile raises,
-			 * and both ends read the same definition of the slice, so the
-			 * number and the rows cannot disagree.
-			 *
-			 * A zero is still a link. It says the same true thing, and a
-			 * control that appears only sometimes costs more attention than
-			 * one that is always there.
-			 */
-			$aggr_filter_url = add_query_arg(
-				'status',
-				(string) $aggr_stat['filter'],
-				\Aggressive\Ads\Portal\Routes::url( \Aggressive\Ads\Portal\Request::ROUTE_CAMPAIGNS )
-			);
-			?>
-			<a class="aggr-pipeline__link" href="<?php echo esc_url( $aggr_filter_url ); ?>">
-				<span class="aggr-pipeline__value"><?php echo esc_html( number_format_i18n( (int) $aggr_stat['value'] ) ); ?></span>
+			<a class="aggr-pipeline__link" href="<?php echo esc_url( add_query_arg( 'status', (string) $aggr_stat['filter'], $aggr_list_url ) ); ?>">
 				<span class="aggr-pipeline__label"><?php echo esc_html( (string) $aggr_stat['label'] ); ?></span>
+				<span class="aggr-pipeline__value"><?php echo esc_html( number_format_i18n( (int) $aggr_stat['value'] ) ); ?></span>
+				<span class="aggr-pipeline__hint"><?php echo esc_html( $aggr_tile_hints[ (string) $aggr_stat['filter'] ] ?? '' ); ?></span>
 			</a>
 		</li>
 	<?php endforeach; ?>
+	<li class="aggr-pipeline__item">
+		<a class="aggr-pipeline__link" href="<?php echo esc_url( $aggr_list_url ); ?>">
+			<span class="aggr-pipeline__label"><?php esc_html_e( 'All campaigns', 'aggressive-ads' ); ?></span>
+			<span class="aggr-pipeline__value"><?php echo esc_html( number_format_i18n( (int) $aggr_campaigns['total'] ) ); ?></span>
+			<span class="aggr-pipeline__hint"><?php esc_html_e( 'Since you joined', 'aggressive-ads' ); ?></span>
+		</a>
+	</li>
 </ul>
-
-<?php
-/*
- * **Choosing what to buy starts the campaign.** "Create campaign" opened an
- * empty draft whose first question was which package — so the catalogue was
- * one click and one page load away from the screen an advertiser lands on.
- * Each card posts the same create action with its package, and the draft
- * opens on the dates.
- *
- * One form with a submit button per package, not a form per card: the button
- * that was pressed posts its own `package_id`, and one nonce serves them all.
- */
-$aggr_start_packages = current_user_can( Capabilities::SUBMIT_CAMPAIGN ) ? $aggr_view->package_options() : array();
-?>
-<?php if ( array() !== $aggr_start_packages ) : ?>
-	<section class="aggr-panel" aria-labelledby="aggr-start-heading">
-		<h2 id="aggr-start-heading" class="aggr-panel__head">
-			<?php esc_html_e( 'Start a campaign', 'aggressive-ads' ); ?>
-		</h2>
-
-		<form class="aggr-form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-			<input type="hidden" name="action" value="<?php echo esc_attr( Campaign_Actions::CREATE_ACTION ); ?>">
-			<?php wp_nonce_field( Campaign_Actions::CREATE_ACTION ); ?>
-			<p class="aggr-hint"><?php esc_html_e( 'Pick a package to begin. You choose the dates and add your ads next.', 'aggressive-ads' ); ?></p>
-
-			<div class="aggr-choicegrid">
-				<?php foreach ( $aggr_start_packages as $aggr_start_package ) : ?>
-					<button class="aggr-choice aggr-choice--package aggr-start__choice" type="submit" name="package_id" value="<?php echo esc_attr( (string) $aggr_start_package['id'] ); ?>">
-						<span class="aggr-choice__text">
-							<strong><?php echo esc_html( (string) $aggr_start_package['name'] ); ?></strong>
-							<small><?php echo esc_html( (string) $aggr_start_package['price'] . ' · ' . (string) $aggr_start_package['duration'] ); ?></small>
-							<small><?php echo esc_html( implode( ', ', $aggr_start_package['placements'] ) ); ?></small>
-						</span>
-					</button>
-				<?php endforeach; ?>
-			</div>
-		</form>
-	</section>
-<?php endif; ?>
 
 <?php
 /*
@@ -168,36 +143,28 @@ if ( array() !== $aggr_delivery ) :
 		<p id="aggr-delivery-window" class="aggr-delivery__window"><?php echo esc_html( $aggr_range ); ?></p>
 	</div>
 
-<form class="aggr-range" method="get" action="<?php echo esc_url( \Aggressive\Ads\Portal\Routes::url() ); ?>">
+<form class="aggr-range" method="get" action="<?php echo esc_url( Routes::url() ); ?>">
 	<h2 class="aggr-sr"><?php esc_html_e( 'Choose a reporting window', 'aggressive-ads' ); ?></h2>
-
-	<div class="aggr-range__field">
-		<label for="aggr-range-from"><?php esc_html_e( 'From (UTC)', 'aggressive-ads' ); ?></label>
-		<input type="date" id="aggr-range-from" name="from" value="<?php echo esc_attr( $aggr_window['from'] ); ?>">
-	</div>
-
-	<div class="aggr-range__field">
-		<label for="aggr-range-to"><?php esc_html_e( 'To (UTC)', 'aggressive-ads' ); ?></label>
-		<input type="date" id="aggr-range-to" name="to" value="<?php echo esc_attr( $aggr_window['to'] ); ?>">
-	</div>
-
-	<button class="aggr-button aggr-button--secondary" type="submit"><?php esc_html_e( 'Show', 'aggressive-ads' ); ?></button>
 
 	<?php
 	/*
 	 * The presets are links rather than a second control. A select beside two
 	 * date inputs asks the reader which one wins; a link that fills the same
-	 * range in answers that by not competing.
+	 * range in answers that by not competing. The one that matches the window
+	 * on screen is marked current.
 	 */
 	?>
 	<ul class="aggr-range__presets">
-		<?php foreach ( \Aggressive\Ads\Workflow\Reporting_Read::WINDOWS as $aggr_preset ) : ?>
+		<?php foreach ( Reporting_Read::WINDOWS as $aggr_preset ) : ?>
 			<li>
-				<a href="<?php echo esc_url( add_query_arg( 'days', (int) $aggr_preset, \Aggressive\Ads\Portal\Routes::url() ) ); ?>">
+				<a
+					href="<?php echo esc_url( add_query_arg( 'days', (int) $aggr_preset, Routes::url() ) ); ?>"
+					<?php echo (int) $aggr_preset === (int) $aggr_window['days'] ? 'aria-current="true"' : ''; ?>
+				>
 					<?php
 					printf(
 						/* translators: %d: number of days. */
-						esc_html( _n( 'Last %d day', 'Last %d days', (int) $aggr_preset, 'aggressive-ads' ) ),
+						esc_html( _n( '%d day', '%d days', (int) $aggr_preset, 'aggressive-ads' ) ),
 						(int) $aggr_preset
 					);
 					?>
@@ -205,6 +172,23 @@ if ( array() !== $aggr_delivery ) :
 			</li>
 		<?php endforeach; ?>
 	</ul>
+
+	<details class="aggr-range__custom">
+		<summary><?php esc_html_e( 'Custom', 'aggressive-ads' ); ?></summary>
+		<div class="aggr-range__fields">
+			<div class="aggr-range__field">
+				<label for="aggr-range-from"><?php esc_html_e( 'From (UTC)', 'aggressive-ads' ); ?></label>
+				<input type="date" id="aggr-range-from" name="from" value="<?php echo esc_attr( $aggr_window['from'] ); ?>">
+			</div>
+
+			<div class="aggr-range__field">
+				<label for="aggr-range-to"><?php esc_html_e( 'To (UTC)', 'aggressive-ads' ); ?></label>
+				<input type="date" id="aggr-range-to" name="to" value="<?php echo esc_attr( $aggr_window['to'] ); ?>">
+			</div>
+
+			<button class="aggr-button aggr-button--secondary" type="submit"><?php esc_html_e( 'Show', 'aggressive-ads' ); ?></button>
+		</div>
+	</details>
 </form>
 </div>
 
@@ -243,6 +227,9 @@ if ( array() !== $aggr_delivery ) :
 		</div>
 	<?php endforeach; ?>
 </div>
+
+	<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/sparkline.php'; ?>
+
 <p class="aggr-hint">
 	<?php esc_html_e( 'Impressions and clicks from native delivery.', 'aggressive-ads' ); ?>
 	<?php if ( '' !== $aggr_freshness ) : ?>
@@ -254,19 +241,75 @@ if ( array() !== $aggr_delivery ) :
 endif;
 ?>
 
-<div class="<?php echo array() === $aggr_series ? 'aggr-dashboard' : 'aggr-dashboard aggr-dashboard--split'; ?>">
-	<section class="aggr-panel" aria-labelledby="aggr-campaigns-heading">
-		<h2 id="aggr-campaigns-heading" class="aggr-panel__head">
-			<?php esc_html_e( 'Your campaigns', 'aggressive-ads' ); ?>
-		</h2>
+<?php
+/*
+ * **Choosing what to buy starts the campaign.** Each package posts the create
+ * action with its id, and the draft opens on the dates. One form with a submit
+ * button per package: the button pressed posts its own `package_id`, and one
+ * nonce serves them all.
+ */
+$aggr_start_packages = $aggr_can_create ? $aggr_view->package_options() : array();
+?>
+<div class="aggr-columns aggr-dashboard">
+	<section class="aggr-panel aggr-columns__main" aria-labelledby="aggr-campaigns-heading">
+		<div class="aggr-panel__headrow">
+			<h2 id="aggr-campaigns-heading" class="aggr-panel__head">
+				<?php esc_html_e( 'Your campaigns', 'aggressive-ads' ); ?>
+			</h2>
+			<a class="aggr-panel__link" href="<?php echo esc_url( $aggr_list_url ); ?>"><?php esc_html_e( 'View all', 'aggressive-ads' ); ?></a>
+		</div>
 
 		<?php
-		$aggr_rows         = $aggr_campaigns['rows'];
-		$aggr_show_metrics = ! empty( $aggr_campaigns['show_metrics'] );
+		$aggr_rows          = array_slice( $aggr_campaigns['rows'], 0, 5 );
+		$aggr_show_metrics  = ! empty( $aggr_campaigns['show_metrics'] );
+		$aggr_table_compact = true;
 
 		require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-table.php';
 		?>
 	</section>
 
-	<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/sparkline.php'; ?>
+	<aside class="aggr-columns__side">
+		<?php if ( null !== $aggr_attention ) : ?>
+			<section class="aggr-summary aggr-attention" aria-labelledby="aggr-attention-heading">
+				<div class="aggr-summary__head">
+					<h2 id="aggr-attention-heading" class="aggr-eyebrow"><?php esc_html_e( 'Needs your attention', 'aggressive-ads' ); ?></h2>
+				</div>
+				<p class="aggr-attention__name"><?php echo esc_html( (string) $aggr_attention['title'] ); ?></p>
+				<p class="aggr-hint"><?php echo esc_html( (string) $aggr_attention['review_notes'] ); ?></p>
+				<a class="aggr-button aggr-button--secondary" href="<?php echo esc_url( (string) $aggr_attention['url'] ); ?>"><?php esc_html_e( 'Make changes', 'aggressive-ads' ); ?><span class="aggr-sr">: <?php echo esc_html( (string) $aggr_attention['title'] ); ?></span></a>
+			</section>
+		<?php endif; ?>
+
+		<?php if ( array() !== $aggr_start_packages ) : ?>
+			<section class="aggr-summary" aria-labelledby="aggr-start-heading">
+				<div>
+					<h2 id="aggr-start-heading" class="aggr-eyebrow"><?php esc_html_e( 'Start a campaign', 'aggressive-ads' ); ?></h2>
+					<p class="aggr-hint"><?php esc_html_e( 'Pick a package. Dates and ads come next.', 'aggressive-ads' ); ?></p>
+				</div>
+
+				<form class="aggr-start" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+					<input type="hidden" name="action" value="<?php echo esc_attr( Campaign_Actions::CREATE_ACTION ); ?>">
+					<?php wp_nonce_field( Campaign_Actions::CREATE_ACTION ); ?>
+					<?php foreach ( $aggr_start_packages as $aggr_start_package ) : ?>
+						<button class="aggr-start__choice" type="submit" name="package_id" value="<?php echo esc_attr( (string) $aggr_start_package['id'] ); ?>">
+							<span class="aggr-start__text">
+								<span class="aggr-start__name"><?php echo esc_html( (string) $aggr_start_package['name'] ); ?></span>
+								<span class="aggr-start__meta">
+									<?php
+									printf(
+										/* translators: 1: duration, e.g. 30 days. 2: number of ad sizes. */
+										esc_html( _n( '%1$s · %2$d size', '%1$s · %2$d sizes', count( $aggr_start_package['sizes'] ), 'aggressive-ads' ) ),
+										esc_html( (string) $aggr_start_package['duration'] ),
+										(int) count( $aggr_start_package['sizes'] )
+									);
+									?>
+								</span>
+							</span>
+							<span class="aggr-start__price"><?php echo esc_html( (string) $aggr_start_package['price'] ); ?></span>
+						</button>
+					<?php endforeach; ?>
+				</form>
+			</section>
+		<?php endif; ?>
+	</aside>
 </div>

@@ -245,7 +245,7 @@
  */
 .aggr-pipeline__link {
 	display: flex;
-	flex-direction: column-reverse;
+	flex-direction: column;
 	align-items: flex-start;
 	gap: var(--aggr-space-xs);
 	height: 100%;

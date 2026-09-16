@@ -285,7 +285,7 @@ first.
 approval describes what is being served. Either enable the fields you are happy
 for them to propose under Settings → Changes to running campaigns, or have them
 use the creative replacement flow. A campaign still awaiting review can be
-pulled back with **Withdraw and edit** until a reviewer opens it.
+pulled back with **Withdraw to edit** until a reviewer opens it.
 
 **A campaign was approved but never went live.** `aggr_reconcile_campaigns` is
 not running. Approval sets the campaign up for the clock; it does not transition

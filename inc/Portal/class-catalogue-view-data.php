@@ -204,15 +204,15 @@ final class Catalogue_View_Data {
 	private static function status_description( string $status ): string {
 		return match ( $status ) {
 			Post_Statuses::DRAFT     => __( 'Yours to edit. Nobody else can see it yet.', 'aggressive-ads' ),
-			Post_Statuses::SUBMITTED => __( 'Waiting for the review team. You can still withdraw it until someone starts reviewing.', 'aggressive-ads' ),
+			Post_Statuses::SUBMITTED => __( 'Waiting for the review team. You can withdraw it until someone starts reviewing.', 'aggressive-ads' ),
 			Post_Statuses::REVIEW    => __( 'Someone is reviewing it now.', 'aggressive-ads' ),
-			Post_Statuses::CHANGES   => __( 'The review team has asked for changes. Edit it and submit again.', 'aggressive-ads' ),
+			Post_Statuses::CHANGES   => __( 'The review team asked for changes. Edit it and submit again.', 'aggressive-ads' ),
 			Post_Statuses::REJECTED  => __( 'Not approved. The reason is on the campaign.', 'aggressive-ads' ),
 			Post_Statuses::APPROVED  => __( 'Approved, and it will start on its scheduled date.', 'aggressive-ads' ),
 			Post_Statuses::SCHEDULED => __( 'Ready and waiting for its start date.', 'aggressive-ads' ),
 			Post_Statuses::LIVE      => __( 'Being shown on the site right now.', 'aggressive-ads' ),
 			Post_Statuses::PAUSED    => __( 'Temporarily not being shown. Get in touch if this is unexpected.', 'aggressive-ads' ),
-			Post_Statuses::COMPLETE  => __( 'Finished. Duplicate it to run the campaign again.', 'aggressive-ads' ),
+			Post_Statuses::COMPLETE  => __( 'Finished. Run it again from your campaign list.', 'aggressive-ads' ),
 			default                  => __( 'Cancelled and no longer running.', 'aggressive-ads' ),
 		};
 	}

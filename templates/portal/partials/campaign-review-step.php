@@ -113,7 +113,7 @@ $aggr_check_rows    = array(
 		'title'  => __( 'Schedule', 'aggressive-ads' ),
 		'detail' => (string) ( $aggr_campaign['dates'] ?? '' ) . ( $aggr_run_days > 0
 			? ' · ' . sprintf(
-				/* translators: %d: number of days the campaign runs. */
+				/* translators: %d: number of days. */
 				_n( '%d day', '%d days', $aggr_run_days, 'aggressive-ads' ),
 				$aggr_run_days
 			)

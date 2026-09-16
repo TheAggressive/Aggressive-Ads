@@ -723,23 +723,60 @@ final class View_Data {
 			}
 		}
 
+		$package_id = $this->campaigns->package_id( $campaign_id );
+
 		return array(
-			'id'          => $campaign_id,
-			'title'       => $this->campaigns->title( $campaign_id ),
-			'status'      => $status,
-			'status_text' => $this->status_label( $status ),
-			'pill'        => self::pill_for( $status ),
-			'placements'  => $names,
-			'dates'       => $this->window( $campaign_id ),
-			'url'         => Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id ),
+			'id'           => $campaign_id,
+			'title'        => $this->campaigns->title( $campaign_id ),
+			'status'       => $status,
+			'status_text'  => $this->status_label( $status ),
+			'pill'         => self::pill_for( $status ),
+			'placements'   => $names,
+			'dates'        => $this->window( $campaign_id ),
+			'url'          => Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id ),
+
+			// What a list row shows under the name, and in its own columns.
+			'package'      => $package_id > 0 ? $this->packages->name( $package_id ) : '',
+			'sizes'        => count( $names ),
+			'schedule'     => $this->short_window( $campaign_id ),
+			'review_notes' => $this->campaigns->review_notes( $campaign_id ),
+		);
+	}
+
+	/**
+	 * The campaign's window for a list row: short dates, in the site timezone.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return string
+	 */
+	private function short_window( int $campaign_id ): string {
+		$start = $this->campaigns->start_ts( $campaign_id );
+		$end   = $this->campaigns->end_ts( $campaign_id );
+
+		if ( 0 === $start ) {
+			return __( 'Not scheduled', 'aggressive-ads' );
+		}
+
+		$from = (string) wp_date( 'M j', $start );
+
+		if ( 0 === $end ) {
+			return sprintf(
+				/* translators: %s: campaign start date. */
+				__( 'From %s', 'aggressive-ads' ),
+				$from
+			);
+		}
+
+		return sprintf(
+			/* translators: 1: campaign start date, e.g. Sep 6. 2: campaign end date, e.g. Oct 4. */
+			__( '%1$s → %2$s', 'aggressive-ads' ),
+			$from,
+			(string) wp_date( 'M j', $end )
 		);
 	}
 
 	/**
 	 * The campaign's window, in the site's own timezone and format.
-	 *
-	 * Formatted with wp_date() rather than date(): the stored values are UTC
-	 * integers, and the reader is not in UTC.
 	 *
 	 * @param int $campaign_id Campaign post id.
 	 * @return string

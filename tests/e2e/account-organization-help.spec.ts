@@ -21,7 +21,9 @@ test( 'advertiser reads and edits their account, organization and help', async (
 	// is being asserted.
 	await page.getByRole( 'link', { name: 'Organization' } ).click();
 	await expect( page ).toHaveURL( /\/advertiser\/organization\/$/ );
-	await expect( page.getByRole( 'heading', { level: 1 } ) ).toBeVisible();
+	await expect(
+		page.getByRole( 'heading', { level: 1 } ).first()
+	).toBeVisible();
 	await expect(
 		page.getByRole( 'columnheader', { name: 'Role' } )
 	).toBeVisible();
@@ -43,7 +45,7 @@ test( 'advertiser reads and edits their account, organization and help', async (
 	// Derived from the upload rules rather than written into the page, so this
 	// also pins that the derivation still produces something readable.
 	await expect(
-		page.getByText( /Images only: JPEG, PNG, GIF, WebP/ )
+		page.getByText( 'JPEG · PNG · GIF · WebP', { exact: true } )
 	).toBeVisible();
 	await expectPortalA11y( page );
 

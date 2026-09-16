@@ -81,7 +81,10 @@ test( 'pressing Continue waits for the save already on the wire', async ( {
 
 	const saveApplied = await holdAutosaveResponse( page );
 
-	await page.getByRole( 'button', { name: 'Create campaign' } ).click();
+	await page
+		.getByRole( 'main' )
+		.getByRole( 'button', { name: 'New campaign' } )
+		.click();
 	await expect(
 		page.locator( 'form[data-aggr-autosave][data-aggr-autosave-ready]' )
 	).toBeAttached();
@@ -138,7 +141,10 @@ test( 'the page heading renames the campaign, markup characters and all', async 
 	await page.goto( '/advertiser/' );
 	await signIn( page, 'advertiser@example.test', 'advertiser' );
 
-	await page.getByRole( 'button', { name: 'Create campaign' } ).click();
+	await page
+		.getByRole( 'main' )
+		.getByRole( 'button', { name: 'New campaign' } )
+		.click();
 
 	const heading = page.locator( 'h1.aggr-title' );
 	const rename = heading.getByRole( 'button' );
@@ -367,7 +373,10 @@ test( 'advertiser completes and submits the accessible three-step wizard', async
 	await expect( page.locator( '#aggr-main' ) ).toBeFocused();
 	await expectPortalA11y( page );
 
-	await page.getByRole( 'button', { name: 'Create campaign' } ).click();
+	await page
+		.getByRole( 'main' )
+		.getByRole( 'button', { name: 'New campaign' } )
+		.click();
 	await expect(
 		page.getByRole( 'heading', {
 			level: 2,

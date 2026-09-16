@@ -24,6 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use Aggressive\Ads\Assets\Assets;
+use Aggressive\Ads\Domain\Size_Template;
 use Aggressive\Ads\Portal\Creative_Actions;
 
 $aggr_slot_key          = (string) $aggr_slot['id'];
@@ -36,21 +37,7 @@ $aggr_click_error       = ( 'aggr-click-' . $aggr_slot_key ) === $aggr_creative_
  * from a number copied out of this sentence. Built here, from a size already
  * validated by the placement, as a data URI: nothing to host, nothing to fetch.
  */
-$aggr_template   = '';
-$aggr_size_parts = array();
-
-if ( 1 === preg_match( '/^(\d+)x(\d+)$/', (string) $aggr_slot['size'], $aggr_size_parts ) ) {
-	$aggr_template_w = (int) $aggr_size_parts[1];
-	$aggr_template_h = (int) $aggr_size_parts[2];
-	$aggr_template   = sprintf(
-		'<svg xmlns="http://www.w3.org/2000/svg" width="%1$d" height="%2$d" viewBox="0 0 %1$d %2$d"><rect width="%1$d" height="%2$d" fill="#f2f2f2"/><rect x="1" y="1" width="%3$d" height="%4$d" fill="none" stroke="#8a8a8a" stroke-width="2" stroke-dasharray="8 6"/><text x="50%%" y="50%%" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="%5$d" fill="#555555">%1$d x %2$d</text></svg>',
-		$aggr_template_w,
-		$aggr_template_h,
-		max( 0, $aggr_template_w - 2 ),
-		max( 0, $aggr_template_h - 2 ),
-		max( 10, min( 32, intdiv( $aggr_template_h, 4 ) ) )
-	);
-}
+$aggr_template = Size_Template::svg( (string) $aggr_slot['size'] );
 ?>
 <form
 	class="aggr-upload-form"
