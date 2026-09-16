@@ -755,7 +755,10 @@ test( 'advertiser completes and submits the accessible three-step wizard', async
 	 * is exactly the sequence that has to keep it. No wait, no debounce.
 	 */
 	const note = 'Please run this in the evening slot if you can.';
-	await page.getByLabel( 'Notes for the review team' ).fill( note );
+	// A textbox, not a label lookup: the notes card is also named by that heading.
+	await page
+		.getByRole( 'textbox', { name: 'Notes for the review team' } )
+		.fill( note );
 
 	await expectPortalA11y( page );
 	await page.getByRole( 'button', { name: 'Submit for review' } ).click();

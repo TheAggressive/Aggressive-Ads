@@ -447,6 +447,9 @@
 	   the page scroll sideways on a phone. */
 .aggr-tablewrap {
 	overflow-x: auto;
+
+	/* Screen-reader text inside a scrolled table is placed against this, not the page. */
+	position: relative;
 }
 
 /*

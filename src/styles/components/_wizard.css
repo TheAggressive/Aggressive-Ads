@@ -470,7 +470,12 @@
 	margin-bottom: var(--aggr-space-lg);
 }
 
+/*
+ * A fieldset's default minimum width is its content's, so the date field and
+ * calendar held the schedule card open past a 320px screen.
+ */
 .aggr-step-card .aggr-fieldset {
+	min-inline-size: 0;
 	margin: 0;
 }
 
