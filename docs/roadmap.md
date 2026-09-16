@@ -1,170 +1,194 @@
 # Roadmap
 
-This is the capability sequence, not a claim that implementation has landed in
-strict phase order. The repository currently contains the foundation, domain,
-private-upload, portal, staff review, native publishing, and reporting tiles;
-the status on each phase below names the remaining product work.
+This document records the product capability sequence that built Aggressive Ads.
+Completed phases stay here as durable product history. **Actionable future work
+lives in GitHub Issues**, not in a second checklist inside this file.
 
-Nothing here is built merely because the architecture supports it.
+- Suite/product direction: [suite-roadmap.md](suite-roadmap.md)
+- Platform status: [platform-implementation-progress.md](platform-implementation-progress.md)
+- Work-tracking rules and execution order: [work-tracking.md](work-tracking.md)
+- Roadmap tracking migration: #259
+- Competitive product expansion: #258
 
-**Suite direction** (white-label, unified admin, native ad serving, cache-safe
-tracking) lives in [suite-roadmap.md](suite-roadmap.md).
-
-**Platform direction** — line items, a decision engine, targeting, frequency,
-pacing, viewability, conversions, billing, forecasting and the provider registry
-— lives in
-[platform-implementation-progress.md](platform-implementation-progress.md). That
-file is the sequence beyond this one, and it carries the audit of what exists
-today rather than repeating it here.
+Nothing is complete merely because the architecture can support it.
 
 ## Phase 1 — Foundation *(complete)*
 
-Bootstrap, autoloader, container, post types and statuses, installer, schema
-upgrader, audit log, roles and org-scoped ownership, design tokens, portal route
-shell, CI, reproducible packaging, a SHA-256-verifying GitHub plugin updater,
-and tag-driven release automation with build provenance.
+Bootstrap, autoloader, container, private post types/statuses, installer/schema
+upgrader, audit log, roles and organization-scoped ownership, design tokens,
+portal routing, CI, reproducible packaging, SHA-256-verifying updater and
+release automation.
 
-**Ends with:** a plugin that installs, upgrades, uninstalls, enforces its capability model, routes its portal under any theme, and packages reproducibly. No campaign can be created yet — deliberately. The security foundation lands before the UI does.
+**Outcome:** the plugin installs/upgrades/uninstalls safely, enforces its
+capability model, routes its portal under any theme and packages reproducibly.
 
 ## Phase 2 — Domain layer *(complete)*
 
-The repositories, domain value objects, the campaign validator, and `Campaign_State_Machine` with exhaustive transition coverage including every illegal edge. Placement and package resolution.
+Repositories, domain value objects, campaign validation and the campaign state
+machine with exhaustive legal/illegal transition coverage. Placement/package
+resolution belongs to the domain/workflow boundaries rather than UI handlers.
 
 ## Phase 3 — Creative upload *(complete)*
 
-The REST upload route, private two-stage storage, MIME/dimension/integrity validation, the authenticated file-stream endpoint, rate limiting, and the security regression tests for every upload threat in [threat-model.md](threat-model.md).
+Private two-stage creative storage, MIME/dimension/integrity validation,
+authenticated streaming, rate limiting and upload-threat regression coverage.
+See [threat-model.md](threat-model.md).
 
 ## Phase 4 — Portal UI *(complete)*
 
-Dashboard, campaign list and detail, organization, account. The wizard: package and dates → ads → review and submit. The complete creation and submission flow now works without JavaScript, including draft creation, package snapshots, exact-size private creative upload, authenticated preview, removal, destination confirmation, submission-grade scheduling, actionable review, final confirmation, transition-time revalidation, audit, and reviewer notification. REST and forms converge on the same workflows. Atomic replacement for scheduled and live ads is also built: advertisers stage private revisions without interrupting delivery, staff review them in a dedicated queue, and approval reconciles the live publication with exact read-back and rollback. The shared dialog Interactivity store is shipped (creative replace, live-ad preview, draft preview and remove confirmation on campaign detail; imperative open/close — see [interactivity-stores.md](interactivity-stores.md)).
+Dashboard, campaign list/detail, organization, account and the advertiser
+campaign flow.
 
-Public advertiser signup is also built. It is opt-in through WordPress's
-"Anyone can register" policy (with a dedicated filter for managed identity
-deployments), creates the user and organization as a compensating transaction,
-and sends a core-backed one-time password setup link to a portal-owned password
-screen. Password setup, recovery and subsequent sign-in remain inside the
-advertiser portal while WordPress core still owns key validation, password
-hashing, session invalidation and authentication. The public response never
-reveals whether an email address already exists.
+The current campaign wizard is **three steps**; the retired five-step flow's
+stored resume points are mapped on read:
+
+1. package & dates;
+2. ads, with one destination link for the campaign; and
+3. review & submit.
+
+The complete flow works without JavaScript, including draft creation, package
+snapshot, exact-size private creative upload, authenticated preview/removal,
+a campaign destination link, scheduling, review and submission,
+transition-time revalidation, audit and reviewer notification. JavaScript adds
+progressive autosave/upload/dialog behavior rather than being the only path.
+
+Atomic replacement for scheduled/live ads is also built: advertisers stage
+private revisions without interrupting delivery, staff review them, and approval
+reconciles publication with read-back/rollback semantics.
+
+Public advertiser signup, portal-owned password setup/recovery/sign-in and
+self-service account/organization workflows are built while WordPress core owns
+user authentication, password hashing and sessions.
 
 ## Phase 5 — Staff review and notifications *(complete)*
 
-A purpose-built, capability-gated admin surface keeps the private post types out
-of WordPress's generic editor and forces every status write through the campaign
-state machine. The review queue and campaign detail are built, including
-authenticated creative previews, internal notes, required advertiser-facing
-feedback, approval controls, and the object-and-organization-scoped audit
-timeline.
+Capability-gated staff UI, review queue, campaign detail, authenticated creative
+preview, internal notes, required advertiser-facing feedback, approval controls
+and scoped audit timeline.
 
-Notification infrastructure lives here because it depends on the queue:
-`Notification_Service`, dynamically resolved capability-based recipients,
-individual submission and resubmission emails, per-recipient duplicate
-suppression and bounded partial retry, and failure handling that never reverses
-a successful submission. See [notifications.md](notifications.md).
+Notification infrastructure includes capability-resolved recipients, duplicate
+suppression, bounded partial retry and failure handling that never reverses a
+successful business transition. See [notifications.md](notifications.md).
 
-## Phase 6 — Publisher *(complete; adapter superseded)*
+## Phase 6 — Publisher *(complete; native provider)*
 
-`Ad_Provider_Interface` is implemented by `Integration\Native\Publisher`. Placements is the slot catalogue (common IAB sizes plus custom WxH). There is no AdSanity adapter.
+`Ad_Provider_Interface` is implemented by the native publisher. Placements are
+the slot catalogue. There is no AdSanity adapter/downstream ads CPT; native fill
+is the baseline publisher.
 
 ## Phase 7 — Lifecycle automation *(complete)*
 
-`Campaign_Clock` and its hourly reconcile event are **built**: approved → scheduled → live → complete, driven by the guards rather than by the reconciler, with the sweep's source statuses derived from `Transition_Table::system_sources()`.
-
-Pause, resume and cancel need no separate UI — the review screen derives its buttons from the transition table. Ending-soon notifications and the private-file retention purge are built: live and paused campaigns with a finite `end_ts` inside a seven-day window receive one receipt-backed reminder per end date; private creative bytes for terminal campaigns past ninety days are deleted while campaign records, checksums and Media Library attachments remain.
+The campaign clock reconciles approved → scheduled → live → complete while
+serve-time guards remain authoritative. Pause/resume/cancel are state-machine
+operations. Ending-soon notifications and private-file retention purge are
+built.
 
 ## Phase 8 — Organizations and members *(complete)*
 
-The organization screen shows name, active state, people with owner/member roles,
-and campaign count. Initial creation is atomic during signup. Organization names
-are uppercase with a unique private canonical identity; exact or unambiguous
-misspellings create an owner-reviewed pending request rather than a duplicate
-tenant or automatic attachment. Owner/staff email invitations are expiring,
-email-bound and single-use, and the screen supports approve, deny and revoke.
+Organization creation, owner/member administration, invitation/approval/revoke,
+rename/collision handling, member removal, ownership transfer, self-service
+email change and staff suspension controls are built.
 
-Remaining here: none for membership administration. Self-service email change is
-built: the account screen issues a portal-owned confirmation token to the new
-address, stores only a salted HMAC with expiry, rate-limits requests, and
-completes on `/advertiser/confirm-email/` with a signed-in session. Staff
-suspension controls remain on the Organizations admin screen.
-
-Organization rename with canonical-key collision handling, member removal with
-the last-owner rule, and ownership transfer remain available on the portal
-organization screen for owners and staff.
+The later multi-organization-per-user authorization expansion is a separate
+platform phase tracked in P21 (#265); it is not unfinished Phase 8 work.
 
 ## Phase 9 — Packages and pricing *(complete)*
 
-The validated catalogue, wizard selection, price display, campaign snapshot,
-staff package-management surface, and campaign copy (renew / duplicate) are
-implemented.
-**Payment processing is deliberately out of scope** — the currency fields exist so that adding it later is not a migration, not because it is planned.
+Validated package catalogue, advertiser selection, displayed pricing, campaign
+snapshot, staff management and campaign copy/renew behavior are built.
+
+Payment processing was deliberately excluded from this phase. The real billing
+and commercial ledger is P19 (#263), not an implied capability of price fields.
 
 ## Phase 10 — Reporting *(complete)*
 
-Org-scoped impression, click and CTR tiles from `aggr_rollups`, gated on the
-Reporting module. Native delivery is always on.
-Campaign list/detail and `GET /campaigns` expose the same integer counts for
-authorized objects. Spend stays absent until billing has a source.
+Org-scoped delivery metrics, campaign list/detail reporting, REST reporting and
+bounded CSV export are built from rollups rather than raw event scans.
 
-CSV export is built: `Portal\Report_Actions` streams a per-campaign, per-day
-document for the caller's own organization, bounded to 31 days, behind the same
-Reporting gate as every other surface. `Domain\Csv_Writer` neutralizes
-spreadsheet formulas — see [threat-model.md](threat-model.md), which explains
-why HTML escaping is not the relevant defence here.
+The expanded measurement/reporting platform work is P10–P14 and is recorded in
+[platform-implementation-progress.md](platform-implementation-progress.md).
+Scheduled client delivery is now an explicit product issue (#279) rather than an
+implicit gap in this completed phase.
 
-## Phase 11 — Hardening and launch
+## Phase 11 — Hardening and launch *(complete)*
 
-The 1,000-ad delivery query-budget regression, delivery Site Health dependency
-check, atomic persistent-cache rate limiting, exact rollup reconciliation, and
-bounded event retention are built. The rewrite-staleness Site Health assertion
-and its repair control are built (`Install\Rewrite_Health`). Administrator
-documentation and the production rollout runbook are written —
-[administration.md](administration.md) and [runbook.md](runbook.md).
+Delivery query budgets, Site Health checks, persistent-cache rate limiting,
+rollup reconciliation, bounded event retention, rewrite-health repair,
+administrator/runbook documentation, authorization/failure-state review,
+audit-table load testing and concurrent soak testing are complete for the
+recorded reference environments.
 
-Audit-table load testing at volume is **done**, and it found something. At a
-million rows with fifty thousand on one campaign, `Audit_Repository::for_object()`
-was resolved as an index-merge intersection of `object` and `org` followed by a
-filesort: 9,645 rows examined and sorted to return fifty, about 27 ms. The
-`object` index now carries `org_id`, which the query also filters on, and the
-same read is a backward index scan that stops at fifty — about 0.7 ms, with no
-optimizer hint, because the planner chooses it unaided. Replacing the index
-rather than adding a sixth cost 13 MB per million rows. See db version 9.
+The recorded soak profile sustained 463.22 complete views/second at 64 clients
+with 1,000 eligible ads, ~94.31 ms p95 and ~132.55 ms p99, zero request errors
+and exact durable-ledger/reporting projection agreement. See
+[load-and-soak-testing.md](load-and-soak-testing.md). Each production topology
+still requires its own qualification.
 
-What that testing also established is that nothing bounded the table at all.
-That is now a setting — **Settings → Retention → Audit log retention** — offering
-keep forever (the default and the shipped behaviour), 1, 2, 3 or 7 years. A
-choice rather than a number, because an audit window has a small set of real
-answers and a free-text field would let somebody type 3. Refusals outlive any
-window: `outcome = denied` is the row an investigation opens the log for.
+## Platform expansion
 
-The full authorization/failure-state review is **complete**. It inventoried the
-REST, form, portal, staff, public-delivery and scheduled surfaces; traced
-partial-failure behavior through their workflows; added closed REST and public
-form authorization contracts; and found and fixed both a revoked-capability gap
-in the organization form handlers and a database-error disclosure during event
-ledger failure. See
-[authorization-failure-review.md](authorization-failure-review.md).
+The current platform phase sequence is no longer maintained as prose checkboxes
+here. It is summarized in
+[platform-implementation-progress.md](platform-implementation-progress.md) and
+tracked by Issues:
 
-Concurrent request/soak testing is **complete** for the recorded reference
-profile. A 15-minute, 64-client run against 1,000 eligible ads sustained 463.22
-complete views per second with a 94.31 ms p95 and 132.55 ms p99, zero request
-errors, and an exact 416,936-row match between acknowledged beacons, the durable
-ledger and the reporting projection. No duplicate event pairs or new InnoDB
-deadlocks were observed. The checked-in, fail-closed harness and the qualified
-infrastructure profile are documented in
-[load-and-soak-testing.md](load-and-soak-testing.md). This completes Phase 11;
-each production topology still needs its own qualification before launch.
+- P17 #260 (remaining action #261)
+- P18 #262
+- P19 #263
+- P20 #264
+- P21 #265
+- P22 #266
+- P23 #267
+- P24 #268
+- P25 #269
+- P26 #270
+- P27 #271
+- P28 #272
+- P29 #273
+- P30 #274
+- P31 #275
+- P32 #276
+- P33 #277
+- P34 #278
 
-## Architected for, not planned
+The durable group contracts remain authoritative for architecture and exit
+rules:
 
-The domain model accommodates these without redesign. None is scheduled *here* —
-several are now sequenced in
-[platform-implementation-progress.md](platform-implementation-progress.md)
-instead, which is where they gained dependencies and migration notes:
-online payments and invoices (P19), richer creative formats (P17, P18), an
-organization-scoped role model beyond a single Advertising Manager (P21), and
-multiple providers behind `Ad_Provider_Interface` (P24). Downloadable reports
-were on this list and are built: P14 closed 2026-09-02.
+- [platform-inventory-commerce-contract.md](platform-inventory-commerce-contract.md)
+- [platform-api-privacy-contract.md](platform-api-privacy-contract.md)
+- [platform-scale-assurance-contract.md](platform-scale-assurance-contract.md)
 
-Still architected for and still unscheduled anywhere: campaign templates ·
-sponsored content · notification channels beyond email · CRM integration ·
-self-service exports.
+## Competitive product expansion
+
+Capabilities previously described as merely “architected for” are now either
+sequenced platform phases or explicit product issues under #258.
+
+Current product issues include:
+
+- #279 scheduled white-label advertiser reports;
+- #280 advertiser inventory storefront/booking;
+- #281 campaign templates / reusable sales-product presets;
+- #282 proposal, quote and insertion-order workflow;
+- #283 publisher sales/revenue dashboard;
+- #284 deterministic renewal/sales intelligence;
+- #285 CRM integration boundary;
+- #286 cross-channel campaign model;
+- #287 newsletter advertising; and
+- #288 sponsored-content/native sponsorship.
+
+Notification channels beyond email and self-service data exports remain ideas,
+not roadmap commitments, until they receive an Issue with an outcome,
+dependency placement and acceptance criteria.
+
+## Rule for future roadmap changes
+
+Do not add implementation checklists here.
+
+If a new capability is approved:
+
+1. place it in the dependency model;
+2. create/update its umbrella Issue;
+3. define durable architecture/invariants in docs where needed;
+4. create PR-sized action Issues only when the contract is concrete; and
+5. close those action Issues with the PRs that implement them.
+
+See [work-tracking.md](work-tracking.md).
