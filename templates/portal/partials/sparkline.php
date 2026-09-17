@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use Aggressive\Ads\Domain\Chart_Path;
-use Aggressive\Ads\Domain\Chart_Scale;
+use Aggressive\Ads\Domain\Chart_Geometry;
 
 if ( ! isset( $aggr_series ) || array() === $aggr_series ) {
 	return;
@@ -35,23 +35,32 @@ $aggr_spark_label = sprintf(
 $aggr_counting = isset( $aggr_counting ) && is_string( $aggr_counting ) ? $aggr_counting : '';
 
 /*
- * A scale a person can read, fitted to the numbers: round gridlines, three to
- * five of them, with the smallest top that clears the busiest day of either
- * period. See Domain\Chart_Scale.
+ * The shapes come from Domain\Chart_Geometry, where they are tested: a fitted
+ * round scale, this period's line solid until the first day still being
+ * counted and dashed after it, the previous period's line, and end labels that
+ * do not overlap. This template only labels and draws them.
  */
-$aggr_spark_peak     = 0;
-$aggr_spark_has_prev = false;
+$aggr_spark_days  = count( $aggr_series );
+$aggr_spark_split = $aggr_spark_days;
 
-foreach ( $aggr_series as $aggr_bar ) {
-	$aggr_spark_peak     = max( $aggr_spark_peak, (int) $aggr_bar['impressions'], (int) ( $aggr_bar['previous'] ?? 0 ) );
-	$aggr_spark_has_prev = $aggr_spark_has_prev || (int) ( $aggr_bar['previous'] ?? 0 ) > 0;
+foreach ( $aggr_series as $aggr_index => $aggr_bar ) {
+	if ( '' !== $aggr_counting && (string) $aggr_bar['day'] >= $aggr_counting ) {
+		$aggr_spark_split = $aggr_index;
+		break;
+	}
 }
 
-$aggr_spark_fit   = Chart_Scale::fit( $aggr_spark_peak );
-$aggr_spark_top   = $aggr_spark_fit['top'];
-$aggr_spark_ticks = array_reverse( $aggr_spark_fit['ticks'] );
+$aggr_chart = Chart_Geometry::build(
+	array_map( static fn ( array $bar ): int => (int) $bar['impressions'], $aggr_series ),
+	array_map( static fn ( array $bar ): int => (int) ( $bar['previous'] ?? 0 ), $aggr_series ),
+	$aggr_spark_split
+);
 
-$aggr_spark_scale = static function ( float $value ): string {
+$aggr_spark_top      = $aggr_chart['top'];
+$aggr_spark_ticks    = $aggr_chart['ticks'];
+$aggr_spark_has_prev = $aggr_chart['has_previous'];
+$aggr_spark_pos      = static fn ( float $value ): string => Chart_Path::number( Chart_Geometry::height( $value, $aggr_spark_top ) );
+$aggr_spark_scale    = static function ( float $value ): string {
 	$whole = abs( $value - round( $value ) ) < 0.001;
 
 	return $value >= 1000
@@ -62,62 +71,6 @@ $aggr_spark_scale = static function ( float $value ): string {
 		)
 		: number_format_i18n( $value, $whole ? 0 : 1 );
 };
-
-/*
- * The geometry, in a 1000 × 100 box the SVG stretches to the chart's width.
- * Each day sits at the middle of its own column, which is where its hover
- * target and its date label are, so the line, the dots and the dates agree.
- */
-$aggr_spark_days   = count( $aggr_series );
-$aggr_spark_x      = static fn ( int $index ): float => ( $index + 0.5 ) * 1000 / $aggr_spark_days;
-$aggr_spark_y      = static fn ( int $value ): float => 100 - 100 * $value / $aggr_spark_top;
-$aggr_spark_pos    = static fn ( float $value ): string => Chart_Path::number( 100 - 100 * $value / $aggr_spark_top );
-$aggr_spark_now    = array();
-$aggr_spark_before = array();
-$aggr_spark_split  = $aggr_spark_days;
-
-foreach ( $aggr_series as $aggr_index => $aggr_bar ) {
-	$aggr_spark_now[]    = array( $aggr_spark_x( $aggr_index ), $aggr_spark_y( (int) $aggr_bar['impressions'] ) );
-	$aggr_spark_before[] = array( $aggr_spark_x( $aggr_index ), $aggr_spark_y( (int) ( $aggr_bar['previous'] ?? 0 ) ) );
-
-	if ( $aggr_spark_split === $aggr_spark_days && '' !== $aggr_counting && (string) $aggr_bar['day'] >= $aggr_counting ) {
-		$aggr_spark_split = $aggr_index;
-	}
-}
-
-$aggr_spark_move     = static fn ( array $point ): string => 'M ' . Chart_Path::number( $point[0] ) . ' ' . Chart_Path::number( $point[1] );
-$aggr_spark_curve    = Chart_Path::segments( $aggr_spark_now );
-$aggr_spark_last     = $aggr_spark_now[ $aggr_spark_days - 1 ];
-$aggr_spark_line     = $aggr_spark_move( $aggr_spark_now[0] ) . ' ' . implode( ' ', array_slice( $aggr_spark_curve, 0, max( 0, $aggr_spark_split - 1 ) ) );
-$aggr_spark_dashed   = $aggr_spark_split < $aggr_spark_days && $aggr_spark_days > 1
-	? $aggr_spark_move( $aggr_spark_now[ max( 0, $aggr_spark_split - 1 ) ] ) . ' ' . implode( ' ', array_slice( $aggr_spark_curve, max( 0, $aggr_spark_split - 1 ) ) )
-	: '';
-$aggr_spark_area     = $aggr_spark_move( $aggr_spark_now[0] ) . ' ' . implode( ' ', $aggr_spark_curve ) . ' L ' . Chart_Path::number( $aggr_spark_last[0] ) . ' 100 L ' . Chart_Path::number( $aggr_spark_now[0][0] ) . ' 100 Z';
-$aggr_spark_previous = $aggr_spark_has_prev ? $aggr_spark_move( $aggr_spark_before[0] ) . ' ' . implode( ' ', Chart_Path::segments( $aggr_spark_before ) ) : '';
-
-/*
- * End labels beside each line's last point. When the two ends are close the
- * lower label steps down, because two labels on one line read as neither.
- */
-$aggr_end_now  = 100 - 100 * (int) $aggr_series[ $aggr_spark_days - 1 ]['impressions'] / $aggr_spark_top;
-$aggr_end_prev = 100 - 100 * (int) ( $aggr_series[ $aggr_spark_days - 1 ]['previous'] ?? 0 ) / $aggr_spark_top;
-
-if ( $aggr_spark_has_prev && abs( $aggr_end_now - $aggr_end_prev ) < 14 ) {
-	// The higher label keeps its place and the lower one steps down — unless
-	// that would leave the chart, in which case the higher one steps up. On a
-	// tie "Now" is the lower, so it stays beside this period's dot.
-	$aggr_end_high = min( $aggr_end_now, $aggr_end_prev );
-	$aggr_end_low  = min( 100, $aggr_end_high + 14 );
-	$aggr_end_high = $aggr_end_low - 14;
-
-	if ( $aggr_end_now < $aggr_end_prev ) {
-		$aggr_end_now  = $aggr_end_high;
-		$aggr_end_prev = $aggr_end_low;
-	} else {
-		$aggr_end_prev = $aggr_end_high;
-		$aggr_end_now  = $aggr_end_low;
-	}
-}
 
 // About seven dates along the bottom, whatever the window.
 $aggr_spark_every = max( 1, (int) ceil( $aggr_spark_days / 7 ) );
@@ -155,15 +108,15 @@ $aggr_spark_every = max( 1, (int) ceil( $aggr_spark_days / 7 ) );
 							<stop offset="1" class="aggr-spark__fill-bottom"/>
 						</linearGradient>
 					</defs>
-					<path d="<?php echo esc_attr( $aggr_spark_area ); ?>" fill="url(#aggr-spark-fill)"/>
-					<?php if ( '' !== $aggr_spark_previous ) : ?>
-						<path class="aggr-spark__line aggr-spark__line--previous" d="<?php echo esc_attr( $aggr_spark_previous ); ?>" vector-effect="non-scaling-stroke"/>
+					<path d="<?php echo esc_attr( $aggr_chart['area'] ); ?>" fill="url(#aggr-spark-fill)"/>
+					<?php if ( '' !== $aggr_chart['previous'] ) : ?>
+						<path class="aggr-spark__line aggr-spark__line--previous" d="<?php echo esc_attr( $aggr_chart['previous'] ); ?>" vector-effect="non-scaling-stroke"/>
 					<?php endif; ?>
-					<?php if ( $aggr_spark_split > 1 ) : ?>
-						<path class="aggr-spark__line" d="<?php echo esc_attr( $aggr_spark_line ); ?>" vector-effect="non-scaling-stroke"/>
+					<?php if ( '' !== $aggr_chart['line'] ) : ?>
+						<path class="aggr-spark__line" d="<?php echo esc_attr( $aggr_chart['line'] ); ?>" vector-effect="non-scaling-stroke"/>
 					<?php endif; ?>
-					<?php if ( '' !== $aggr_spark_dashed ) : ?>
-						<path class="aggr-spark__line aggr-spark__line--counting" d="<?php echo esc_attr( $aggr_spark_dashed ); ?>" vector-effect="non-scaling-stroke"/>
+					<?php if ( '' !== $aggr_chart['dashed'] ) : ?>
+						<path class="aggr-spark__line aggr-spark__line--counting" d="<?php echo esc_attr( $aggr_chart['dashed'] ); ?>" vector-effect="non-scaling-stroke"/>
 					<?php endif; ?>
 				</svg>
 
@@ -226,9 +179,9 @@ $aggr_spark_every = max( 1, (int) ceil( $aggr_spark_days / 7 ) );
 		</div>
 
 		<div class="aggr-spark__ends" aria-hidden="true">
-			<span class="aggr-spark__end" style="top: <?php echo esc_attr( Chart_Path::number( $aggr_end_now ) ); ?>%"><?php esc_html_e( 'Now', 'aggressive-ads' ); ?></span>
+			<span class="aggr-spark__end" style="top: <?php echo esc_attr( Chart_Path::number( $aggr_chart['end_now'] ) ); ?>%"><?php esc_html_e( 'Now', 'aggressive-ads' ); ?></span>
 			<?php if ( $aggr_spark_has_prev ) : ?>
-				<span class="aggr-spark__end aggr-spark__end--previous" style="top: <?php echo esc_attr( Chart_Path::number( $aggr_end_prev ) ); ?>%"><?php esc_html_e( 'Before', 'aggressive-ads' ); ?></span>
+				<span class="aggr-spark__end aggr-spark__end--previous" style="top: <?php echo esc_attr( Chart_Path::number( $aggr_chart['end_previous'] ) ); ?>%"><?php esc_html_e( 'Before', 'aggressive-ads' ); ?></span>
 			<?php endif; ?>
 		</div>
 	</div>

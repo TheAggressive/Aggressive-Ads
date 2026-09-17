@@ -287,6 +287,16 @@ own search and archive paging. Rows show the package under the name and short
 Next, which `@aggr/list-more` turns into a bounded, announced "Show more
 campaigns" (see [interactivity-stores.md](interactivity-stores.md)).
 
+The list, its tab and tile counts and the attention card come from
+`Portal\Campaign_List_View_Data`, which takes the organization as an argument
+rather than resolving one; `View_Data` passes the caller's organization down.
+Each page loads its campaigns' posts and meta, then their packages and
+placements, in batches before building rows — see
+[delivery-performance.md](delivery-performance.md#the-campaigns-list-is-a-handful-of-queries-not-one-per-row).
+Status pills use `View_Data::pill_for()`: neutral for a draft, pending for
+submitted or in review, attention for changes requested, info for approved or
+scheduled, live, paused, ended for complete, danger for rejected or cancelled.
+
 The dashboard's counts are each a query total, not a classification of the
 first page of rows, which stopped counting at twenty. Its "Needs your
 attention" card lists every draft and every campaign sent back — five named,

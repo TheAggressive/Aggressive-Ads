@@ -386,6 +386,24 @@ final class Campaign_Repository {
 	}
 
 	/**
+	 * Loads several campaigns and their meta in two queries, ahead of reading them.
+	 *
+	 * A list builds each row from a post and its meta. Read one post at a time
+	 * that is a query per post and another per post's meta; loaded together it
+	 * is two queries for the whole page, and every later read is a cache hit.
+	 *
+	 * @param array<int, int> $ids Post ids.
+	 * @return void
+	 */
+	public function prime( array $ids ): void {
+		$ids = array_values( array_unique( array_filter( array_map( 'intval', $ids ) ) ) );
+
+		if ( array() !== $ids ) {
+			_prime_post_caches( $ids, false, true );
+		}
+	}
+
+	/**
 	 * Whether a post exists and is a campaign.
 	 *
 	 * @param int $campaign_id Campaign post id.
@@ -789,10 +807,22 @@ final class Campaign_Repository {
 	 * @param int                $page   1-based page number.
 	 * @param array<int, string> $statuses Statuses to include, or empty for every status.
 	 * @param string             $search   Words to find in the campaign name, or '' for none.
+	 * @param int                $per_page Rows per page.
 	 * @return array{ids: array<int, int>, total: int, pages: int}
 	 */
-	public function for_org( int $org_id, int $page = 1, array $statuses = array(), string $search = '' ): array {
-		return ( new Campaign_Query_Repository() )->for_org( $org_id, $page, $statuses, $search );
+	public function for_org( int $org_id, int $page = 1, array $statuses = array(), string $search = '', int $per_page = self::PAGE_SIZE ): array {
+		return ( new Campaign_Query_Repository() )->for_org( $org_id, $page, $statuses, $search, $per_page );
+	}
+
+	/**
+	 * How many of an organization's campaigns are in the given statuses.
+	 *
+	 * @param int                $org_id   Owning organization.
+	 * @param array<int, string> $statuses Statuses to include, or empty for every status.
+	 * @return int
+	 */
+	public function count_for_org( int $org_id, array $statuses = array() ): int {
+		return ( new Campaign_Query_Repository() )->count_for_org( $org_id, $statuses );
 	}
 
 	/**

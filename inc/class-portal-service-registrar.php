@@ -117,7 +117,17 @@ final class Portal_Service_Registrar {
 				$c->get( Line_Item_Repository::class ),
 				$c->get( \Aggressive\Ads\Portal\Delivery_View_Data::class ),
 				$c->get( \Aggressive\Ads\Portal\Creative_View_Data::class ),
-				$c->get( Campaign_Request_Repository::class )
+				$c->get( Campaign_Request_Repository::class ),
+				$c->get( \Aggressive\Ads\Portal\Campaign_List_View_Data::class )
+			)
+		);
+		$container->register(
+			\Aggressive\Ads\Portal\Campaign_List_View_Data::class,
+			static fn ( Service_Container $c ): \Aggressive\Ads\Portal\Campaign_List_View_Data => new \Aggressive\Ads\Portal\Campaign_List_View_Data(
+				$c->get( Campaign_Repository::class ),
+				$c->get( Placement_Repository::class ),
+				$c->get( Package_Repository::class ),
+				$c->get( Reporting_Read::class )
 			)
 		);
 		$container->register(

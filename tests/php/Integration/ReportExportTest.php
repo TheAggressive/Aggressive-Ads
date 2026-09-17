@@ -449,6 +449,36 @@ final class ReportExportTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * With a persistent object cache a report read is reused for its five minutes,
+	 * and without one every read is fresh. Both halves, because a cache that
+	 * never hits and one that serves stale figures to a plain site both pass a
+	 * test that only checks one.
+	 *
+	 * @return void
+	 */
+	public function test_report_reads_are_reused_only_with_a_persistent_cache(): void {
+		$this->enable_reporting( true );
+		$this->bump( $this->campaign_a, 3, 0 );
+
+		$period  = Report_Period::trailing( 7, gmdate( 'Y-m-d' ) );
+		$was_ext = wp_using_ext_object_cache( true );
+
+		try {
+			$this->assertSame( 3, $this->reporting->totals_for_org( $this->org_a, $period, $this->campaign_a )['impressions'] );
+
+			$this->bump( $this->campaign_a, 4, 0 );
+
+			$this->assertSame( 3, $this->reporting->totals_for_org( $this->org_a, $period, $this->campaign_a )['impressions'], 'A persistent cache did not reuse the read.' );
+			$this->assertSame( 7, $this->reporting->totals_for_org( $this->org_a, $period )['impressions'], 'The organization read shared the campaign read\'s cache entry.' );
+		} finally {
+			wp_using_ext_object_cache( $was_ext );
+			wp_cache_flush_group( \Aggressive\Ads\Repository\Rollup_Report_Repository::CACHE_GROUP );
+		}
+
+		$this->assertSame( 7, $this->reporting->totals_for_org( $this->org_a, $period, $this->campaign_a )['impressions'], 'A plain site was served a cached figure.' );
+	}
+
+	/**
 	 * Runs the export handler and returns the message it died with.
 	 *
 	 * @return string

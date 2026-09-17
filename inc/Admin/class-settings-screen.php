@@ -226,7 +226,7 @@ final class Settings_Screen implements Service {
 				'colours'      => array(
 					array(
 						'key'   => 'accent',
-						'label' => __( 'Accent (buttons, selection and focus)', 'aggressive-ads' ),
+						'label' => __( 'Accent (selection, focus and highlights)', 'aggressive-ads' ),
 						'value' => (string) $settings['brand']['accent'],
 					),
 					array(

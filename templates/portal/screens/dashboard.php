@@ -30,7 +30,7 @@ use Aggressive\Ads\Portal\View_Data;
 use Aggressive\Ads\Security\Capabilities;
 
 $aggr_view      = Plugin::instance()->container()->get( View_Data::class );
-$aggr_campaigns = $aggr_view->campaigns();
+$aggr_campaigns = $aggr_view->campaigns( 1, '', '', 5 );
 $aggr_delivery  = $aggr_view->delivery_counts();
 $aggr_series    = $aggr_view->delivery_series();
 $aggr_range     = $aggr_view->delivery_range_label();
@@ -38,12 +38,9 @@ $aggr_freshness = $aggr_view->delivery_freshness_note();
 $aggr_counting  = $aggr_view->delivery_counting_from();
 $aggr_window    = $aggr_view->delivery_window();
 
-$aggr_export_days = $aggr_window['export_days'];
-$aggr_export_from = $aggr_window['export_from'];
-$aggr_export_to   = $aggr_window['export_to'];
-$aggr_user        = wp_get_current_user();
-$aggr_list_url    = Routes::url( Request::ROUTE_CAMPAIGNS );
-$aggr_can_create  = current_user_can( Capabilities::SUBMIT_CAMPAIGN );
+$aggr_user       = wp_get_current_user();
+$aggr_list_url   = Routes::url( Request::ROUTE_CAMPAIGNS );
+$aggr_can_create = current_user_can( Capabilities::SUBMIT_CAMPAIGN );
 
 $aggr_tile_hints = array(
 	Campaign_Filter::RUNNING   => __( 'Live or paused', 'aggressive-ads' ),
@@ -145,7 +142,7 @@ $aggr_start_packages = $aggr_can_create ? $aggr_view->package_options() : array(
 		</div>
 
 		<?php
-		$aggr_rows          = array_slice( $aggr_campaigns['rows'], 0, 5 );
+		$aggr_rows          = $aggr_campaigns['rows'];
 		$aggr_show_metrics  = ! empty( $aggr_campaigns['show_metrics'] );
 		$aggr_table_compact = true;
 

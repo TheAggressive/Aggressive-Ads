@@ -162,12 +162,49 @@ This closes a real gap. The LAAO theme currently patches missing ad alt text at 
 
 Ads this portal publishes will not need it: accessible text is generated during upload and travels with the file. The theme's shim can stay as a safety net for legacy ads, but it will have nothing to do for ours.
 
+## The portal's lists and charts
+
+**Loading more campaigns is bounded, announced and optional.** The campaigns
+list renders Previous and Next links, which work without script and are what a
+failed load falls back to. `@aggr/list-more` replaces them with a "Show more
+campaigns" button. Reaching the button loads the next page for up to three pages
+in a row and then waits for a press, so a keyboard user can always reach the
+footer — the failure unbounded infinite scroll is known for. Every load updates
+the visible count and announces "20 more campaigns loaded. Showing 40 of 46."
+through a polite status region. Focus never moves by itself; pressing the button
+moves it to the first new campaign, which is where the reader asked to go. The
+button keeps one width for both of its labels and the table's columns are fixed,
+so rows arriving do not shift what the reader is looking at.
+
+**Status colour is never the only cue.** Each pill carries its word and a dot,
+and every ink-on-tint pair — grey, amber, orange, blue, green, purple, slate,
+red — is asserted at AA in `PortalContrastTest`. Counts beside the list's tabs
+use a muted colour rather than reduced opacity, which measured below AA.
+
+**The daily chart is decoration over a list.** The SVG and the hover card are
+`aria-hidden`; each day's date and figures, and the previous period's, are in an
+ordered list a screen reader reads in full. The "still coming in" sentence and
+the day boundary are true in UTC as written, and `@aggr/local-time` restates them
+in the viewer's time with the UTC wording kept on hover.
+
+**The rail is a labelled landmark** (`<aside aria-label="Advertising portal">`),
+so the brand and the site name are reachable by landmark, and no two regions on a
+screen share a name.
+
+**Buttons.** Primary buttons are graphite with white labels (18.7:1); anything
+set on the orange accent is labelled graphite (5.53:1), because white on it is
+3.39:1 and fails at button size.
+
 ## Verification
 
-- `pnpm test:e2e` runs axe on the dashboard, package, creative, destination,
-  review, and submit wizard steps, plus open dialog overlays (which sit
-  outside `.aggr-shell`), failing on every violation carrying one of the
+- `pnpm test:e2e` runs axe on the dashboard, each of the three wizard steps —
+  package and dates, ads, review and submit — and open dialog overlays (which
+  sit outside `.aggr-shell`), failing on every violation carrying one of the
   configured WCAG conformance tags.
+- An axe scan with WCAG 2.2 AA and best-practice rules is clean on the
+  dashboard, the campaigns list with and without a search, all three wizard
+  steps, a campaign's delivery card, organization, account and help, at 1440
+  and 390 CSS pixels.
 - The browser suite asserts the keyboard skip path, complete native-form campaign flow, private preview, review, final submission, labeled mapping controls, and the real mapping write; these are not inferred from axe.
 - Focus order, trap, and restoration are asserted per dialog: open from the
   trigger, Tab stays inside the overlay, Escape closes, focus returns to the

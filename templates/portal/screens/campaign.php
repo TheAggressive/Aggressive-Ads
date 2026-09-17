@@ -18,6 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use Aggressive\Ads\Assets\Assets;
+use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Workflow\Campaign_Editor;
 use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Portal\Request;
@@ -26,6 +27,7 @@ use Aggressive\Ads\Portal\Campaign_Actions;
 use Aggressive\Ads\Portal\Campaign_Nonces;
 use Aggressive\Ads\Portal\Creative_Feedback;
 use Aggressive\Ads\Portal\Portal_Notice;
+use Aggressive\Ads\Portal\View_Data;
 
 $aggr_creatives          = is_array( $aggr_campaign['creatives'] ) ? $aggr_campaign['creatives'] : array();
 $aggr_creative_updates   = is_array( $aggr_campaign['creative_updates'] ) ? $aggr_campaign['creative_updates'] : array();
@@ -581,7 +583,7 @@ if ( in_array( $aggr_creative_notice, array( 'creative_uploaded', 'creative_remo
  * delivered, and when Reporting is off.
  */
 if ( ! $aggr_editing_changes && array() !== ( $aggr_campaign['delivery'] ?? array() ) ) {
-	$aggr_delivery_view   = \Aggressive\Ads\Plugin::instance()->container()->get( \Aggressive\Ads\Portal\View_Data::class );
+	$aggr_delivery_view   = Plugin::instance()->container()->get( View_Data::class );
 	$aggr_delivery        = $aggr_campaign['delivery'];
 	$aggr_series          = $aggr_campaign['delivery_series'];
 	$aggr_range           = $aggr_delivery_view->delivery_range_label();

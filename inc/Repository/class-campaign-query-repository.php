@@ -144,9 +144,10 @@ final class Campaign_Query_Repository {
 	 * @param int                $page Page number.
 	 * @param array<int, string> $statuses Statuses to include, or empty for every status.
 	 * @param string             $search   Words to find in the campaign name, or '' for none.
+	 * @param int                $per_page Rows per page.
 	 * @return array{ids: array<int, int>, total: int, pages: int}
 	 */
-	public function for_org( int $org_id, int $page, array $statuses = array(), string $search = '' ): array {
+	public function for_org( int $org_id, int $page, array $statuses = array(), string $search = '', int $per_page = Campaign_Repository::PAGE_SIZE ): array {
 		if ( $org_id <= 0 ) {
 			return array(
 				'ids'   => array(),
@@ -166,7 +167,7 @@ final class Campaign_Query_Repository {
 			 * would come back empty and read as "you have no campaigns".
 			 */
 			'post_status'            => self::requested_statuses( $statuses ),
-			'posts_per_page'         => Campaign_Repository::PAGE_SIZE,
+			'posts_per_page'         => max( 1, min( 100, $per_page ) ),
 			'paged'                  => max( 1, $page ),
 			'fields'                 => 'ids',
 			'orderby'                => 'date',
@@ -195,6 +196,41 @@ final class Campaign_Query_Repository {
 		}
 
 		return $this->page_result( new \WP_Query( $args ) );
+	}
+
+	/**
+	 * How many of an organization's campaigns are in the given statuses.
+	 *
+	 * One id and the found-rows count, with no caches primed: a dashboard tile
+	 * needs the number, not twenty campaigns it will never draw.
+	 *
+	 * @param int                $org_id   Organization id.
+	 * @param array<int, string> $statuses Statuses to include, or empty for every status.
+	 * @return int
+	 */
+	public function count_for_org( int $org_id, array $statuses = array() ): int {
+		if ( $org_id <= 0 ) {
+			return 0;
+		}
+
+		$query = new \WP_Query(
+			array(
+				'post_type'              => Post_Types::CAMPAIGN,
+				'post_status'            => self::requested_statuses( $statuses ),
+				'posts_per_page'         => 1,
+				'fields'                 => 'ids',
+				'update_post_meta_cache' => false,
+				'update_post_term_cache' => false,
+				'meta_query'             => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- This indexed meta predicate is the tenant scope.
+					array(
+						'key'   => Campaign_Repository::META_ORG_ID,
+						'value' => (string) $org_id,
+					),
+				),
+			)
+		);
+
+		return (int) $query->found_posts;
 	}
 
 	/**

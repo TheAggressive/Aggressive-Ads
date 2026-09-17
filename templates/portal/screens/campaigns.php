@@ -116,7 +116,7 @@ if ( 'error' === $aggr_notice ) {
  * URL somebody can keep, and the one on screen is marked current. A search in
  * progress is kept when the slice changes; the counts are of the whole slice.
  */
-$aggr_all_total = (int) $aggr_view->campaigns( 1 )['total'];
+$aggr_all_total = (int) $aggr_view->campaigns( 1, '', '', 1 )['total'];
 $aggr_tabs      = array(
 	array(
 		'filter' => '',

@@ -36,13 +36,10 @@ interface Labels {
  * @param values   Replacements, in placeholder order.
  */
 export function fill( template: string, values: string[] ): string {
-	return values.reduce(
-		( text, value, index ) =>
-			text
-				.split( `%${ index + 1 }$s` )
-				.join( value )
-				.replace( '%s', index === 0 ? value : '%s' ),
-		template
+	return template.replace(
+		/%(?:(\d+)\$)?s/g,
+		( match: string, position?: string ) =>
+			values[ position ? Number( position ) - 1 : 0 ] ?? match
 	);
 }
 
