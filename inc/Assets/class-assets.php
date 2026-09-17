@@ -58,6 +58,7 @@ final class Assets implements Service {
 	public const MODULE_AUTOSAVE    = '@aggr/autosave';
 	public const MODULE_UPLOAD      = '@aggr/upload';
 	public const MODULE_SAVE        = '@aggr/save';
+	public const MODULE_LOCAL_TIME  = '@aggr/local-time';
 
 	/**
 	 * Interactivity store namespaces.
@@ -190,6 +191,15 @@ final class Assets implements Service {
 
 		$this->enqueue_style( self::HANDLE, self::STYLE_PORTAL );
 		$this->register_interactivity_modules();
+
+		/*
+		 * On every portal screen, because UTC moments are stated on more than
+		 * one. It depends on nothing, so it needs no gate beyond its own file.
+		 */
+		if ( function_exists( 'wp_register_script_module' ) && is_file( AGGR_PLUGIN_DIR . 'dist/interactivity/local-time.js' ) ) {
+			$this->register_module( self::MODULE_LOCAL_TIME, 'local-time', array() );
+			wp_enqueue_script_module( self::MODULE_LOCAL_TIME );
+		}
 
 		/*
 		 * Block themes print the import map in wp_head. Enqueue the dialog

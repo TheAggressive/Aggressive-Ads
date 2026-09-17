@@ -29,6 +29,7 @@ Author under `src/`; ship compiled `dist/` (see [build-and-release.md](build-and
 | `@aggr/wizard` | `src/interactivity/wizard.ts` | `dist/interactivity/wizard.js` |
 | `@aggr/autosave` | `src/interactivity/autosave.ts` | `dist/interactivity/autosave.js` |
 | `@aggr/upload` | `src/interactivity/upload.ts` | `dist/interactivity/upload.js` |
+| `@aggr/local-time` | `src/interactivity/local-time.ts` | `dist/interactivity/local-time.js` |
 
 `inc/Assets/class-assets.php` registers modules from `dist/`, reads `.asset.php`
 manifests, and early-enqueues the dialog store (plus `@wordpress/interactivity`)
@@ -103,7 +104,11 @@ Through `inc/Assets/class-assets.php`, which:
 - declares `@wordpress/interactivity` where the store needs it
 - reads version and dependencies from `.asset.php` manifests
 
-Shared modules (`dialog`, `logic`, `scroll-lock`, `helpers`) are **registered but not enqueued** until a feature calls `enqueue_dialog()` or the campaign editor hydrates. A screen with no dialog ships no dialog code. Wizard, autosave and upload enqueue only on campaign detail.
+Shared modules (`dialog`, `logic`, `scroll-lock`, `helpers`) are **registered but not enqueued** until a feature calls `enqueue_dialog()` or the campaign editor hydrates. A screen with no dialog ships no dialog code. Wizard, autosave and upload enqueue only on campaign detail. `local-time` is not a store and has no dependencies; it enqueues on every portal
+screen and rewrites elements marked `data-aggr-local` ("clock" or "moment", with
+an ISO `data-aggr-datetime` and a translated `data-aggr-local-format` holding
+`%s`) into the viewer's own time zone. The server's text is the UTC sentence,
+true without script, and stays on hover; a viewer whose clock is UTC keeps it.
 
 Modules are enqueued only on the portal route. The plugin adds nothing to any other page on the site.
 

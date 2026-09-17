@@ -142,6 +142,20 @@ if ( array() !== $aggr_delivery ) :
 			<?php esc_html_e( 'Native delivery', 'aggressive-ads' ); ?>
 		</h2>
 		<p id="aggr-delivery-window" class="aggr-delivery__window"><?php echo esc_html( $aggr_range ); ?></p>
+		<?php
+		/*
+		 * Days are UTC, and midnight UTC is somebody's afternoon. The sentence
+		 * is true as written; the local-time module restates when a day starts
+		 * in the viewer's own zone.
+		 */
+		?>
+		<p class="aggr-delivery__window">
+			<span
+				data-aggr-local="clock"
+				data-aggr-datetime="<?php echo esc_attr( gmdate( 'Y-m-d' ) . 'T00:00:00Z' ); ?>"
+				data-aggr-local-format="<?php /* translators: %s: midnight UTC as the viewer's local time, e.g. 5:00 PM. */ esc_attr_e( 'Each day starts at %s your time.', 'aggressive-ads' ); ?>"
+			><?php esc_html_e( 'Each day runs midnight to midnight UTC.', 'aggressive-ads' ); ?></span>
+		</p>
 	</div>
 
 <form class="aggr-range" method="get" action="<?php echo esc_url( Routes::url() ); ?>">
@@ -233,7 +247,25 @@ if ( array() !== $aggr_delivery ) :
 
 <p class="aggr-hint">
 	<?php esc_html_e( 'Impressions and clicks from native delivery.', 'aggressive-ads' ); ?>
-	<?php if ( '' !== $aggr_freshness ) : ?>
+	<?php if ( '' !== $aggr_counting ) : ?>
+		<?php
+		$aggr_counting_ts = (int) strtotime( $aggr_counting . ' UTC' );
+		?>
+		<span
+			class="aggr-hint__freshness"
+			data-aggr-local="moment"
+			data-aggr-datetime="<?php echo esc_attr( $aggr_counting . 'T00:00:00Z' ); ?>"
+			data-aggr-local-format="<?php /* translators: %s: a date and time in the viewer's zone, e.g. Sep 16, 5:00 PM. */ esc_attr_e( 'Figures since %s (your time) are still coming in.', 'aggressive-ads' ); ?>"
+		>
+			<?php
+			printf(
+				/* translators: %s: a UTC date, e.g. September 17. */
+				esc_html__( 'Figures from %s (UTC) onward are still coming in.', 'aggressive-ads' ),
+				esc_html( (string) wp_date( 'F j', $aggr_counting_ts, new DateTimeZone( 'UTC' ) ) )
+			);
+			?>
+		</span>
+	<?php elseif ( '' !== $aggr_freshness ) : ?>
 		<span class="aggr-hint__freshness"><?php echo esc_html( $aggr_freshness ); ?></span>
 	<?php endif; ?>
 </p>
