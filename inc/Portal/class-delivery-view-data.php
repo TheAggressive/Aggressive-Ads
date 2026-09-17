@@ -170,6 +170,20 @@ final class Delivery_View_Data {
 	}
 
 	/**
+	 * The first UTC day whose figures may still move, or '' when none may.
+	 *
+	 * The chart draws those days lighter; the note beneath it says the same in
+	 * words. Both read one boundary, so the bars and the sentence agree.
+	 */
+	public function unreconciled_from(): string {
+		$freshness = $this->reporting->freshness( $this->period() );
+
+		return Report_Period::RECONCILED === $freshness['state'] || null === $freshness['unreconciled_from']
+			? ''
+			: (string) $freshness['unreconciled_from'];
+	}
+
+	/**
 	 * A sentence naming the first day whose numbers may still move, or ''.
 	 *
 	 * Empty means every day in range has been rebuilt from the event ledger and

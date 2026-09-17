@@ -203,37 +203,142 @@
 	}
 }
 
-.aggr-spark__lede {
-	margin: 0;
-	padding: 0 var(--aggr-space-lg) var(--aggr-space-sm);
+/*
+ * The daily chart: a round-number scale on the left, gridlines behind the
+ * bars, a date every few bars beneath, and each bar's figure on hover. Days
+ * still being counted are drawn lighter, with a key in the header.
+ */
+.aggr-spark__plot {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr);
+	gap: var(--aggr-space-sm);
+}
+
+.aggr-spark__scale {
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	height: 160px;
+	margin-top: -0.4em;
+	margin-bottom: -0.4em;
 	color: var(--aggr-color-text-subtle);
-	font-size: 12px;
+	font-family: var(--aggr-font-mono);
+	font-size: 11px;
+	text-align: right;
+}
+
+.aggr-spark__chart {
+	min-width: 0;
 }
 
 .aggr-spark__track {
+	position: relative;
+	display: grid;
+	grid-template-columns: repeat(var(--aggr-spark-bars), minmax(0, 1fr));
+	gap: 4px;
+	align-items: end;
+	height: 160px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	background:
+		linear-gradient(var(--aggr-border-color), var(--aggr-border-color)) top / 100% 1px no-repeat,
+		linear-gradient(var(--aggr-border-color), var(--aggr-border-color)) center / 100% 1px no-repeat,
+		linear-gradient(var(--aggr-border-color-strong), var(--aggr-border-color-strong)) bottom / 100% 1px no-repeat;
+}
+
+.aggr-spark__day {
+	position: relative;
 	display: flex;
 	align-items: flex-end;
-	gap: 8px;
-	height: 110px;
-	margin: 0;
-	padding: 0 var(--aggr-space-lg);
-	list-style: none;
+	height: 100%;
 }
 
 .aggr-spark__bar {
-	flex: 1 1 0;
-	min-width: 0;
+	display: block;
+	width: 100%;
+	max-width: 2.5rem;
+	margin: 0 auto;
 	background: var(--aggr-color-accent);
-	border-radius: 4px 4px 0 0;
+	border-radius: 3px 3px 0 0;
+}
+
+.aggr-spark__day--counting .aggr-spark__bar {
+	opacity: 0.4;
+}
+
+.aggr-spark__day:hover .aggr-spark__bar {
+	filter: brightness(0.9);
+}
+
+.aggr-spark__tip {
+	position: absolute;
+	bottom: calc(100% + 6px);
+	left: 50%;
+	z-index: 3;
+	display: none;
+	padding: 4px 8px;
+	background: var(--aggr-color-rail);
+	border-radius: 6px;
+	color: var(--aggr-color-rail-text-strong);
+	font-size: 12px;
+	white-space: nowrap;
+	transform: translateX(-50%);
+	pointer-events: none;
+}
+
+.aggr-spark__day:hover .aggr-spark__tip {
+	display: block;
+}
+
+/* Near either end the label hangs inward, so it stays inside the chart. */
+.aggr-spark__day:nth-child(-n + 3) .aggr-spark__tip {
+	left: 0;
+	transform: none;
+}
+
+.aggr-spark__day:nth-last-child(-n + 3) .aggr-spark__tip {
+	right: 0;
+	left: auto;
+	transform: none;
 }
 
 .aggr-spark__axis {
-	display: flex;
-	justify-content: space-between;
-	margin: var(--aggr-space-xs) 0 0;
-	padding: 0 var(--aggr-space-lg) var(--aggr-space-md);
+	display: grid;
+	grid-template-columns: repeat(var(--aggr-spark-bars), minmax(0, 1fr));
+	gap: 4px;
+	margin-top: var(--aggr-space-xs);
 	color: var(--aggr-color-text-subtle);
+	font-family: var(--aggr-font-mono);
 	font-size: 11px;
+}
+
+.aggr-spark__axis span {
+	overflow: visible;
+	white-space: nowrap;
+}
+
+@media (max-width: 40rem) {
+	.aggr-spark__tick--minor {
+		visibility: hidden;
+	}
+}
+
+.aggr-spark__key {
+	display: inline-flex;
+	gap: 6px;
+	align-items: center;
+	color: var(--aggr-color-text-muted);
+	font-size: 12px;
+}
+
+.aggr-spark__key::before {
+	width: 10px;
+	height: 10px;
+	border-radius: 2px;
+	background: var(--aggr-color-accent);
+	opacity: 0.4;
+	content: "";
 }
 
 /*

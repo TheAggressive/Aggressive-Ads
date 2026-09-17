@@ -107,19 +107,15 @@
 	display: flex;
 	flex-wrap: wrap;
 	gap: var(--aggr-space-sm);
-	align-items: baseline;
+	align-items: center;
 	justify-content: space-between;
-	padding: 0 var(--aggr-space-lg) var(--aggr-space-sm);
+	margin-bottom: var(--aggr-space-md);
 }
 
 .aggr-spark__title {
 	margin: 0;
 	font-size: 14px;
 	font-weight: 600;
-}
-
-.aggr-spark__head .aggr-spark__lede {
-	padding: 0;
 }
 
 .aggr-dashboard {

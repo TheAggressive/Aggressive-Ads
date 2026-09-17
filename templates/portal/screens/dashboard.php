@@ -36,6 +36,7 @@ $aggr_delivery  = $aggr_view->delivery_counts();
 $aggr_series    = $aggr_view->delivery_series();
 $aggr_range     = $aggr_view->delivery_range_label();
 $aggr_freshness = $aggr_view->delivery_freshness_note();
+$aggr_counting  = $aggr_view->delivery_counting_from();
 $aggr_window    = $aggr_view->delivery_window();
 
 $aggr_export_days = $aggr_window['export_days'];

@@ -675,7 +675,14 @@ final class View_Data {
 	}
 
 	/**
-	 * Which days in that window may still change, or '' when none.
+	 * The first UTC day whose figures may still change, or '' when none may.
+	 */
+	public function delivery_counting_from(): string {
+		return $this->delivery->unreconciled_from();
+	}
+
+	/**
+	 * Which days in that window may still change, as a sentence, or ''.
 	 */
 	public function delivery_freshness_note(): string {
 		return $this->delivery->freshness_note();
