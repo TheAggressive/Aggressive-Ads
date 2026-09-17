@@ -22,6 +22,7 @@ const PLUGIN_MODULE_IDS = {
 	'@aggr/autosave': '@aggr/autosave',
 	'@aggr/upload': '@aggr/upload',
 	'@aggr/save': '@aggr/save',
+	'@aggr/local-time': '@aggr/local-time',
 };
 
 export default ( env = {}, argv = {} ) => {

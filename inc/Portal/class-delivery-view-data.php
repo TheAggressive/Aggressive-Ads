@@ -131,6 +131,18 @@ final class Delivery_View_Data {
 	}
 
 	/**
+	 * The site's date format, which is what "the full date" means to its readers.
+	 *
+	 * `9/11/2026` is September to some and November to others; the site's own
+	 * setting is the one its advertisers already read everywhere else.
+	 */
+	private function long_date_format(): string {
+		$format = (string) get_option( 'date_format', 'F j, Y' );
+
+		return '' === $format ? 'F j, Y' : $format;
+	}
+
+	/**
 	 * One UTC day in the site's date format.
 	 *
 	 * @param string $day_utc `Y-m-d`.
@@ -167,6 +179,20 @@ final class Delivery_View_Data {
 			$timestamp,
 			new DateTimeZone( 'UTC' )
 		);
+	}
+
+	/**
+	 * The first UTC day whose figures may still move, or '' when none may.
+	 *
+	 * The chart draws those days lighter; the note beneath it says the same in
+	 * words. Both read one boundary, so the bars and the sentence agree.
+	 */
+	public function unreconciled_from(): string {
+		$freshness = $this->reporting->freshness( $this->period() );
+
+		return Report_Period::RECONCILED === $freshness['state'] || null === $freshness['unreconciled_from']
+			? ''
+			: (string) $freshness['unreconciled_from'];
 	}
 
 	/**
@@ -338,16 +364,29 @@ final class Delivery_View_Data {
 	 * quarter, where the same seven names repeat thirteen times, so longer
 	 * windows label by date instead.
 	 *
+	 * Each day also carries the same day of the previous equal window — the
+	 * window the tiles compare against — so the chart draws the comparison the
+	 * figures above it state. Matched by position: day three of this window
+	 * against day three of that one.
+	 *
 	 * @param int $org_id Organization to report on.
-	 * @return list<array{day: string, label: string, impressions: int, height: int}>
+	 * Each day also carries its clicks and its date in words, and the previous
+	 * window's clicks and date, for the chart's hover card: it names the day it
+	 * is compared with rather than calling it "historic", because a reader
+	 * checking a spike wants the date to look up.
+	 *
+	 * @return list<array{day: string, label: string, date: string, impressions: int, clicks: int, height: int, previous: int, previous_clicks: int, previous_date: string}>
 	 */
 	public function series( int $org_id ): array {
 		if ( ! $this->reporting->surfaces() ) {
 			return array();
 		}
 
-		$raw = $this->reporting->series_for_org( $org_id, $this->period() );
-		$max = 0;
+		$period  = $this->period();
+		$earlier = $period->previous();
+		$raw     = $this->reporting->series_for_org( $org_id, $period );
+		$before  = $earlier === $period ? array() : array_values( $this->reporting->series_for_org( $org_id, $earlier ) );
+		$max     = 0;
 
 		foreach ( $raw as $row ) {
 			$max = max( $max, $row['impressions'] );
@@ -357,12 +396,18 @@ final class Delivery_View_Data {
 
 		$format = count( $raw ) > 7 ? 'j M' : 'D';
 
-		foreach ( $raw as $row ) {
+		foreach ( array_values( $raw ) as $index => $row ) {
 			$series[] = array(
-				'day'         => $row['day'],
-				'label'       => $this->day_label( $row['day'], $format ),
-				'impressions' => $row['impressions'],
-				'height'      => Reporting_Rules::bar_height( $row['impressions'], $max ),
+				'day'             => $row['day'],
+				'label'           => $this->day_label( $row['day'], $format ),
+				'impressions'     => $row['impressions'],
+				'height'          => Reporting_Rules::bar_height( $row['impressions'], $max ),
+				'previous'        => (int) ( $before[ $index ]['impressions'] ?? 0 ),
+				'date'            => $this->day_label( $row['day'], 'l, ' . $this->long_date_format() ),
+				'clicks'          => (int) ( $row['clicks'] ?? 0 ),
+
+				'previous_clicks' => (int) ( $before[ $index ]['clicks'] ?? 0 ),
+				'previous_date'   => isset( $before[ $index ]['day'] ) ? $this->day_label( (string) $before[ $index ]['day'], 'D, M j' ) : '',
 			);
 		}
 

@@ -661,7 +661,7 @@ final class View_Data {
 	 * another would invite a comparison that was always wrong. A docblock
 	 * naming a fixed window is how someone later "fixes" the code to match it.
 	 *
-	 * @return list<array{day: string, label: string, impressions: int, height: int}>
+	 * @return list<array{day: string, label: string, date: string, impressions: int, clicks: int, height: int, previous: int, previous_clicks: int, previous_date: string}>
 	 */
 	public function delivery_series(): array {
 		return $this->delivery->series( $this->org_id() );
@@ -675,7 +675,14 @@ final class View_Data {
 	}
 
 	/**
-	 * Which days in that window may still change, or '' when none.
+	 * The first UTC day whose figures may still change, or '' when none may.
+	 */
+	public function delivery_counting_from(): string {
+		return $this->delivery->unreconciled_from();
+	}
+
+	/**
+	 * Which days in that window may still change, as a sentence, or ''.
 	 */
 	public function delivery_freshness_note(): string {
 		return $this->delivery->freshness_note();

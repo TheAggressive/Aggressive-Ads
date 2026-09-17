@@ -325,6 +325,32 @@ final class ReportingTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Each day of the chart carries the same day of the window before it — the
+	 * window the tiles compare against — and still only this organization's.
+	 *
+	 * @return void
+	 */
+	public function test_series_carries_the_previous_window_day_for_day(): void {
+		$days    = Reporting_Read::DEFAULT_DAYS;
+		$earlier = gmdate( 'Y-m-d', time() - $days * DAY_IN_SECONDS );
+
+		$this->bump( $this->campaign_a, 7, 0, $earlier );
+		$this->bump( $this->campaign_b, 70, 0, $earlier );
+		$this->enable_reporting( true );
+
+		wp_set_current_user( $this->advertiser_a );
+
+		$series = $this->view->delivery_series();
+		$last   = array_key_last( $series );
+
+		$this->assertSame( 7, $series[ $last ]['previous'], 'The chart did not line up the previous window day for day.' );
+		$this->assertSame( gmdate( 'D, M j', strtotime( $earlier . ' UTC' ) ), $series[ $last ]['previous_date'], 'The hover card names a different day from the one it compares.' );
+		$this->assertStringStartsWith( gmdate( 'l', time() ), $series[ $last ]['date'] );
+		$this->assertSame( 0, $series[ $last ]['impressions'], 'Delivery from the earlier window leaked into this one.' );
+		$this->assertSame( 0, $series[0]['previous'] );
+	}
+
+	/**
 	 * Direct rollup reads for another org's id still cannot be reached through
 	 * the org-scoped query used by the dashboard.
 	 *

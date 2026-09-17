@@ -75,15 +75,26 @@
 	right: 0;
 	z-index: 5;
 	display: flex;
-	flex-wrap: wrap;
+	flex-direction: column;
 	gap: var(--aggr-space-sm);
-	align-items: flex-end;
+	align-items: stretch;
+	min-width: 12rem;
 	margin-top: var(--aggr-space-xs);
 	padding: var(--aggr-space-md);
 	background: var(--aggr-color-surface);
 	border: 1px solid var(--aggr-border-color);
 	border-radius: var(--aggr-radius-panel);
 	box-shadow: 0 8px 24px rgb(0 0 0 / 12%);
+}
+
+/* One column in the fold, so the fields and the button share its width. */
+.aggr-portal .aggr-range__fields .aggr-button {
+	justify-content: center;
+	width: 100%;
+}
+
+.aggr-range__fields .aggr-range__field input {
+	width: 100%;
 }
 
 .aggr-spark {
@@ -96,19 +107,15 @@
 	display: flex;
 	flex-wrap: wrap;
 	gap: var(--aggr-space-sm);
-	align-items: baseline;
+	align-items: center;
 	justify-content: space-between;
-	padding: 0 var(--aggr-space-lg) var(--aggr-space-sm);
+	margin-bottom: var(--aggr-space-md);
 }
 
 .aggr-spark__title {
 	margin: 0;
 	font-size: 14px;
 	font-weight: 600;
-}
-
-.aggr-spark__head .aggr-spark__lede {
-	padding: 0;
 }
 
 .aggr-dashboard {

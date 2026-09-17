@@ -387,9 +387,9 @@
 
 /* The CSV download sits under the axis, inside the same panel as the chart. */
 .aggr-spark__export {
-	margin-top: var(--aggr-space-lg);
+	margin-top: var(--aggr-space-md);
 	display: flex;
-	justify-content: center;
+	justify-content: flex-end;
 }
 
 .aggr-table {

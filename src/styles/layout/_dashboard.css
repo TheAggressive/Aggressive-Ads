@@ -203,37 +203,297 @@
 	}
 }
 
-.aggr-spark__lede {
-	margin: 0;
-	padding: 0 var(--aggr-space-lg) var(--aggr-space-sm);
+/*
+ * The daily chart: a smooth line over a fading area, the previous window as a
+ * dotted line behind it, and the days still being counted dashed. A round
+ * number scale on the left, a date every few days beneath, a label at each
+ * line's end, and each day's figures on hover over its own column.
+ */
+.aggr-spark__plot {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr) auto;
+	gap: var(--aggr-space-sm);
+}
+
+/* Each number is centred on its own gridline. */
+.aggr-spark__scale {
+	position: relative;
+	min-width: 4.5ch;
+	height: 180px;
 	color: var(--aggr-color-text-subtle);
-	font-size: 12px;
+	font-family: var(--aggr-font-mono);
+	font-size: 11px;
+	text-align: right;
+}
+
+.aggr-spark__scale span {
+	position: absolute;
+	right: 0;
+	line-height: 1;
+	white-space: nowrap;
+	transform: translateY(-50%);
+}
+
+
+
+.aggr-spark__chart {
+	min-width: 0;
+}
+
+.aggr-spark__canvas {
+	position: relative;
+	height: 180px;
+}
+
+/* One gridline per tick on the scale, placed where its label is. */
+.aggr-spark__grid {
+	position: absolute;
+	right: 0;
+	left: 0;
+	height: 1px;
+	background: var(--aggr-border-color);
+}
+
+.aggr-spark__grid--base {
+	background: var(--aggr-border-color-strong);
+}
+
+.aggr-spark__svg {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	overflow: visible;
+}
+
+.aggr-spark__fill-top {
+	stop-color: var(--aggr-color-accent);
+	stop-opacity: 0.24;
+}
+
+.aggr-spark__fill-bottom {
+	stop-color: var(--aggr-color-accent);
+	stop-opacity: 0;
+}
+
+.aggr-spark__line {
+	fill: none;
+	stroke: var(--aggr-color-accent);
+	stroke-width: 2.5px;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+.aggr-spark__line--previous {
+	stroke: var(--aggr-color-text-subtle);
+	stroke-width: 1.5px;
+	stroke-dasharray: 1 5;
+}
+
+.aggr-spark__line--counting {
+	stroke-dasharray: 6 5;
 }
 
 .aggr-spark__track {
-	display: flex;
-	align-items: flex-end;
-	gap: 8px;
-	height: 110px;
+	position: absolute;
+	inset: 0;
+	display: grid;
+	grid-template-columns: repeat(var(--aggr-spark-bars), minmax(0, 1fr));
 	margin: 0;
-	padding: 0 var(--aggr-space-lg);
+	padding: 0;
 	list-style: none;
 }
 
-.aggr-spark__bar {
-	flex: 1 1 0;
-	min-width: 0;
+.aggr-spark__day {
+	position: relative;
+}
+
+/* A guide down the column under the pointer. */
+.aggr-spark__day:hover::before {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 50%;
+	width: 1px;
+	background: var(--aggr-border-color-strong);
+	content: "";
+}
+
+.aggr-spark__dot {
+	position: absolute;
+	left: 50%;
+	display: none;
+	width: 10px;
+	height: 10px;
+	background: var(--aggr-color-surface);
+	border: 2.5px solid var(--aggr-color-accent);
+	border-radius: 50%;
+	box-sizing: border-box;
+	transform: translate(-50%, 50%);
+}
+
+.aggr-spark__day:hover .aggr-spark__dot,
+.aggr-spark__day--last .aggr-spark__dot {
+	display: block;
+}
+
+.aggr-spark__day--last .aggr-spark__dot {
 	background: var(--aggr-color-accent);
-	border-radius: 4px 4px 0 0;
+}
+
+/* The hover card: the day in full, then this period and the day it is compared with. */
+.aggr-spark__tip {
+	position: absolute;
+	top: -6px;
+	left: 50%;
+	z-index: 3;
+	display: none;
+	flex-direction: column;
+	gap: 4px;
+	padding: 8px 10px;
+	background: var(--aggr-color-rail);
+	border-radius: 8px;
+	box-shadow: 0 6px 18px rgb(0 0 0 / 18%);
+	color: var(--aggr-color-rail-text-strong);
+	font-size: 12px;
+	white-space: nowrap;
+	transform: translate(-50%, -100%);
+	pointer-events: none;
+}
+
+.aggr-spark__day:hover .aggr-spark__tip {
+	display: flex;
+}
+
+.aggr-spark__tip-date {
+	font-weight: 700;
+}
+
+.aggr-spark__tip-row {
+	display: flex;
+	gap: 10px;
+	align-items: center;
+	justify-content: space-between;
+	font-variant-numeric: tabular-nums;
+}
+
+.aggr-spark__tip-name {
+	display: inline-flex;
+	gap: 6px;
+	align-items: center;
+	color: var(--aggr-color-rail-text);
+}
+
+.aggr-spark__tip-name::before {
+	width: 12px;
+	height: 0;
+	border-top: 2.5px solid var(--aggr-color-accent-rail);
+	content: "";
+}
+
+.aggr-spark__tip-row--previous .aggr-spark__tip-name::before {
+	border-top: 2px dotted var(--aggr-color-rail-text);
+}
+
+/* Near either end the label hangs inward, so it stays inside the chart. */
+.aggr-spark__day:nth-child(-n + 3) .aggr-spark__tip {
+	left: 0;
+	transform: translateY(-100%);
+}
+
+.aggr-spark__day:nth-last-child(-n + 3) .aggr-spark__tip {
+	right: 0;
+	left: auto;
+	transform: translateY(-100%);
 }
 
 .aggr-spark__axis {
-	display: flex;
-	justify-content: space-between;
-	margin: var(--aggr-space-xs) 0 0;
-	padding: 0 var(--aggr-space-lg) var(--aggr-space-md);
+	display: grid;
+	grid-template-columns: repeat(var(--aggr-spark-bars), minmax(0, 1fr));
+	margin-top: var(--aggr-space-xs);
 	color: var(--aggr-color-text-subtle);
+	font-family: var(--aggr-font-mono);
 	font-size: 11px;
+}
+
+/* Under the middle of its day, where the line's point is. */
+.aggr-spark__axis span {
+	justify-self: center;
+	white-space: nowrap;
+}
+
+.aggr-spark__ends {
+	position: relative;
+	width: 3.75rem;
+	height: 180px;
+}
+
+.aggr-spark__end {
+	position: absolute;
+	left: 0;
+	padding: 1px 6px;
+	border: 1.5px solid var(--aggr-color-accent);
+	border-radius: var(--aggr-radius-pill);
+	color: var(--aggr-color-accent-strong);
+	font-family: var(--aggr-font-mono);
+	font-size: 10px;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	transform: translateY(-50%);
+}
+
+.aggr-spark__end--previous {
+	border-style: dashed;
+	border-color: var(--aggr-color-text-subtle);
+	color: var(--aggr-color-text-muted);
+}
+
+.aggr-spark__legend {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--aggr-space-md);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.aggr-spark__key {
+	display: inline-flex;
+	gap: 6px;
+	align-items: center;
+	color: var(--aggr-color-text-muted);
+	font-size: 12px;
+}
+
+.aggr-spark__key::before {
+	width: 16px;
+	height: 0;
+	border-top: 2.5px solid var(--aggr-color-accent);
+	content: "";
+}
+
+.aggr-spark__key--previous::before {
+	border-top: 2px dotted var(--aggr-color-text-subtle);
+}
+
+.aggr-spark__key--counting::before {
+	border-top-style: dashed;
+}
+
+@media (max-width: 40rem) {
+	.aggr-spark__tick--minor {
+		visibility: hidden;
+	}
+
+	.aggr-spark__plot {
+		grid-template-columns: auto minmax(0, 1fr);
+	}
+
+	/* The legend names both lines; there is no room beside them on a phone. */
+	.aggr-spark__ends {
+		display: none;
+	}
 }
 
 /*
