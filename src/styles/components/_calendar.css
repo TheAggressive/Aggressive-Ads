@@ -141,8 +141,16 @@
 	opacity: 0.7;
 }
 
-/* Held to its column, so two months side by side never widen the card. */
+/*
+ * Held to its column, so two months side by side never widen the card.
+ *
+ * The range is a light tint of the accent that marks its ends, mixed with the
+ * surface rather than set translucent, so the colour is the same over any
+ * background and the day numbers keep the body text's contrast on it.
+ */
 .aggr-calendar-picker {
+	--aggr-calendar-range: color-mix(in srgb, var(--aggr-color-accent) 16%, var(--aggr-color-surface));
+
 	min-inline-size: 0;
 }
 
@@ -243,23 +251,33 @@ button.aggr-calendar__day:focus-visible {
 
 .aggr-calendar__cell--in,
 .aggr-calendar__cell--preview {
-	background: var(--aggr-color-surface-sunken);
+	background: var(--aggr-calendar-range);
+	transition: background-color 120ms ease-out;
 }
 
-.aggr-calendar__cell--from {
-	background: linear-gradient(to right, transparent 50%, var(--aggr-color-surface-sunken) 50%);
+.aggr-calendar__cell--from,
+.aggr-calendar__cell--preview-from {
+	background: linear-gradient(to right, transparent 50%, var(--aggr-calendar-range) 50%);
 }
 
 .aggr-calendar__cell--to {
-	background: linear-gradient(to left, transparent 50%, var(--aggr-color-surface-sunken) 50%);
+	background: linear-gradient(to left, transparent 50%, var(--aggr-calendar-range) 50%);
 }
 
-[dir="rtl"] .aggr-calendar__cell--from {
-	background: linear-gradient(to left, transparent 50%, var(--aggr-color-surface-sunken) 50%);
+[dir="rtl"] .aggr-calendar__cell--from,
+[dir="rtl"] .aggr-calendar__cell--preview-from {
+	background: linear-gradient(to left, transparent 50%, var(--aggr-calendar-range) 50%);
 }
 
 [dir="rtl"] .aggr-calendar__cell--to {
-	background: linear-gradient(to right, transparent 50%, var(--aggr-color-surface-sunken) 50%);
+	background: linear-gradient(to right, transparent 50%, var(--aggr-calendar-range) 50%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.aggr-calendar__cell--in,
+	.aggr-calendar__cell--preview {
+		transition: none;
+	}
 }
 
 /* The script shows one month here too; see `narrow` in calendar.ts. */

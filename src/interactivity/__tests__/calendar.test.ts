@@ -519,6 +519,36 @@ describe( 'initCalendar', () => {
 		}
 	} );
 
+	it( 'keeps the end shading steady while the pointer crosses the gaps', () => {
+		const root = mount();
+
+		initCalendar( root );
+		day( '2026-09-20' ).click();
+
+		const over = ( target: Element ) =>
+			target.dispatchEvent(
+				new Event( 'pointerover', { bubbles: true } )
+			);
+		const shaded = () =>
+			root.querySelectorAll( '.aggr-calendar__cell--preview' ).length;
+
+		over( day( '2026-09-24' ) );
+		expect( shaded() ).toBe( 4 );
+		expect( day( '2026-09-20' ).parentElement?.classList ).toContain(
+			'aggr-calendar__cell--preview-from'
+		);
+
+		// A row, a blank cell: between days, not away from them.
+		over( day( '2026-09-24' ).closest( 'tr' ) as Element );
+		over( root.querySelector( 'td:empty' ) as Element );
+		expect( shaded() ).toBe( 4 );
+
+		root
+			.querySelector( '[data-aggr-calendar-grids]' )
+			?.dispatchEvent( new Event( 'pointerleave' ) );
+		expect( shaded() ).toBe( 0 );
+	} );
+
 	it( 'attaches once', () => {
 		const root = mount();
 

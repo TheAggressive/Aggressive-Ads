@@ -512,6 +512,8 @@ export function initCalendar( root: HTMLElement ): {
 	let view = monthOf( isDay( range.start ) ? range.start : rules().min );
 	let active = isDay( range.start ) ? range.start : rules().min;
 	let writing = false;
+	// The last day the end shading was drawn to; see `shade` below.
+	let previewed = '';
 
 	const lastShown = (): string => shiftMonths( view, shown() - 1 ) ?? view;
 
@@ -643,6 +645,7 @@ export function initCalendar( root: HTMLElement ): {
 		}
 
 		grids.replaceChildren( ...months );
+		previewed = '';
 		grids.removeAttribute( 'aria-hidden' );
 
 		previous.disabled = view <= monthOf( current.min );
@@ -786,22 +789,21 @@ export function initCalendar( root: HTMLElement ): {
 			?.focus();
 	} );
 
-	// Shading the days an end would cover, before it is pressed.
-	const preview = ( event: Event ): void => {
-		const day =
-			( event.target as HTMLElement ).closest< HTMLElement >(
-				'[data-aggr-day]'
-			)?.dataset.aggrDay ?? '';
-		const current = rules();
-		const until =
-			'end' === awaiting &&
-			current.fixedDays === 0 &&
-			! current.startLocked &&
-			'' !== range.start &&
-			day >= range.start
-				? day
-				: '';
+	/*
+	 * Shading the days an end would cover, before it is pressed.
+	 *
+	 * Only a day changes it. The gaps between rows and the blank cells are
+	 * part of the grid too, and treating them as "nowhere" cleared the shading
+	 * and drew it again every time the pointer crossed a row, which flickered.
+	 * It clears when the pointer leaves the grids, and cells are only touched
+	 * when the day under the pointer actually changes.
+	 */
+	const shade = ( until: string ): void => {
+		if ( until === previewed ) {
+			return;
+		}
 
+		previewed = until;
 		grids
 			.querySelectorAll< HTMLElement >( '[data-aggr-day]' )
 			.forEach( ( button ) => {
@@ -811,12 +813,39 @@ export function initCalendar( root: HTMLElement ): {
 					'aggr-calendar__cell--preview',
 					'' !== until && at > range.start && at <= until
 				);
+				// The start's half-fill, so the shading joins it.
+				button.parentElement?.classList.toggle(
+					'aggr-calendar__cell--preview-from',
+					'' !== until && at === range.start
+				);
 			} );
+	};
+
+	const preview = ( event: Event ): void => {
+		const day = ( event.target as HTMLElement ).closest< HTMLElement >(
+			'[data-aggr-day]'
+		)?.dataset.aggrDay;
+
+		if ( undefined === day ) {
+			return;
+		}
+
+		const current = rules();
+
+		shade(
+			'end' === awaiting &&
+				0 === current.fixedDays &&
+				! current.startLocked &&
+				'' !== range.start &&
+				day > range.start
+				? day
+				: ''
+		);
 	};
 
 	grids.addEventListener( 'pointerover', preview );
 	grids.addEventListener( 'focusin', preview );
-	grids.addEventListener( 'pointerleave', preview );
+	grids.addEventListener( 'pointerleave', () => shade( '' ) );
 
 	previous.addEventListener( 'click', () => move( -1 ) );
 	next.addEventListener( 'click', () => move( 1 ) );
