@@ -192,7 +192,8 @@ $aggr_status_note = match ( $aggr_status_now ) {
 			</div>
 		</section>
 
-		<?php if ( array() !== $aggr_creatives ) : ?>
+		<?php // Once ads can be updated, the "Your ads" panel below lists them with their controls. ?>
+		<?php if ( array() !== $aggr_creatives && true !== $aggr_campaign['can_request_updates'] ) : ?>
 			<section class="aggr-summary" aria-labelledby="aggr-status-ads-heading">
 				<div class="aggr-summary__head">
 					<h2 id="aggr-status-ads-heading" class="aggr-eyebrow"><?php esc_html_e( 'Your ads', 'aggressive-ads' ); ?></h2>

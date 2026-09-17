@@ -132,12 +132,17 @@
 }
 
 /*
- * The page head's bar has no side padding, so a tap area stretched 8px past
- * each step reached past the last one and made the bar scroll sideways.
- * These steps are wide enough to be their own targets.
+ * The page head's bar has no side padding, so the tap area stretched 8px past
+ * each step reached past the last one and made the bar scroll sideways. The
+ * stretch stays between steps, where it catches a tap just beside a number,
+ * and stops at the bar's two ends.
  */
 @container (max-width: 36rem) {
-	.aggr-pagehead .aggr-steps a::after {
-		inset: 0;
+	.aggr-pagehead .aggr-steps li:first-child a::after {
+		left: 0;
+	}
+
+	.aggr-pagehead .aggr-steps li:last-child a::after {
+		right: 0;
 	}
 }

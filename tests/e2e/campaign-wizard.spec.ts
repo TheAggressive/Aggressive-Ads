@@ -767,7 +767,9 @@ test( 'advertiser completes and submits the accessible three-step wizard', async
 		page.getByRole( 'status' ).filter( { hasText: 'Campaign submitted' } )
 	).toBeVisible();
 	await expect(
-		page.getByText( 'Submitted', { exact: true } )
+		page
+			.locator( '.aggr-pagehead' )
+			.getByText( 'Submitted', { exact: true } )
 	).toBeVisible();
 	await expect(
 		page.getByRole( 'button', { name: 'Submit for review' } )
@@ -794,7 +796,9 @@ test( 'advertiser completes and submits the accessible three-step wizard', async
 
 	await page.reload();
 	await expect(
-		page.getByText( 'Submitted', { exact: true } )
+		page
+			.locator( '.aggr-pagehead' )
+			.getByText( 'Submitted', { exact: true } )
 	).toBeVisible();
 	await expect(
 		page.getByRole( 'button', { name: 'Submit for review' } )
