@@ -18,6 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use Aggressive\Ads\Domain\Chart_Path;
+use Aggressive\Ads\Domain\Chart_Scale;
 
 if ( ! isset( $aggr_series ) || array() === $aggr_series ) {
 	return;
@@ -34,9 +35,9 @@ $aggr_spark_label = sprintf(
 $aggr_counting = isset( $aggr_counting ) && is_string( $aggr_counting ) ? $aggr_counting : '';
 
 /*
- * A scale a person can read: the top of the chart is a round number — 20k,
- * not 17,318 — with a gridline at its half, and a little headroom so the
- * busiest day does not sit on the top line. Both periods share it.
+ * A scale a person can read, fitted to the numbers: round gridlines, three to
+ * five of them, with the smallest top that clears the busiest day of either
+ * period. See Domain\Chart_Scale.
  */
 $aggr_spark_peak     = 0;
 $aggr_spark_has_prev = false;
@@ -46,19 +47,9 @@ foreach ( $aggr_series as $aggr_bar ) {
 	$aggr_spark_has_prev = $aggr_spark_has_prev || (int) ( $aggr_bar['previous'] ?? 0 ) > 0;
 }
 
-$aggr_spark_top = 10;
-
-if ( $aggr_spark_peak > 0 ) {
-	$aggr_spark_need      = (int) ceil( $aggr_spark_peak * 1.1 );
-	$aggr_spark_magnitude = 10 ** (int) floor( log10( $aggr_spark_need ) );
-
-	foreach ( array( 1, 2, 5, 10 ) as $aggr_spark_step ) {
-		if ( $aggr_spark_step * $aggr_spark_magnitude >= $aggr_spark_need ) {
-			$aggr_spark_top = $aggr_spark_step * $aggr_spark_magnitude;
-			break;
-		}
-	}
-}
+$aggr_spark_fit   = Chart_Scale::fit( $aggr_spark_peak );
+$aggr_spark_top   = $aggr_spark_fit['top'];
+$aggr_spark_ticks = array_reverse( $aggr_spark_fit['ticks'] );
 
 $aggr_spark_scale = static function ( float $value ): string {
 	$whole = abs( $value - round( $value ) ) < 0.001;
@@ -80,6 +71,7 @@ $aggr_spark_scale = static function ( float $value ): string {
 $aggr_spark_days   = count( $aggr_series );
 $aggr_spark_x      = static fn ( int $index ): float => ( $index + 0.5 ) * 1000 / $aggr_spark_days;
 $aggr_spark_y      = static fn ( int $value ): float => 100 - 100 * $value / $aggr_spark_top;
+$aggr_spark_pos    = static fn ( float $value ): string => Chart_Path::number( 100 - 100 * $value / $aggr_spark_top );
 $aggr_spark_now    = array();
 $aggr_spark_before = array();
 $aggr_spark_split  = $aggr_spark_days;
@@ -111,10 +103,19 @@ $aggr_end_now  = 100 - 100 * (int) $aggr_series[ $aggr_spark_days - 1 ]['impress
 $aggr_end_prev = 100 - 100 * (int) ( $aggr_series[ $aggr_spark_days - 1 ]['previous'] ?? 0 ) / $aggr_spark_top;
 
 if ( $aggr_spark_has_prev && abs( $aggr_end_now - $aggr_end_prev ) < 14 ) {
-	if ( $aggr_end_now <= $aggr_end_prev ) {
-		$aggr_end_prev = min( 100, $aggr_end_now + 14 );
+	// The higher label keeps its place and the lower one steps down — unless
+	// that would leave the chart, in which case the higher one steps up. On a
+	// tie "Now" is the lower, so it stays beside this period's dot.
+	$aggr_end_high = min( $aggr_end_now, $aggr_end_prev );
+	$aggr_end_low  = min( 100, $aggr_end_high + 14 );
+	$aggr_end_high = $aggr_end_low - 14;
+
+	if ( $aggr_end_now < $aggr_end_prev ) {
+		$aggr_end_now  = $aggr_end_high;
+		$aggr_end_prev = $aggr_end_low;
 	} else {
-		$aggr_end_now = min( 100, $aggr_end_prev + 14 );
+		$aggr_end_prev = $aggr_end_high;
+		$aggr_end_now  = $aggr_end_low;
 	}
 }
 
@@ -137,13 +138,16 @@ $aggr_spark_every = max( 1, (int) ceil( $aggr_spark_days / 7 ) );
 
 	<div class="aggr-spark__plot" style="--aggr-spark-bars: <?php echo esc_attr( (string) $aggr_spark_days ); ?>">
 		<div class="aggr-spark__scale" aria-hidden="true">
-			<span><?php echo esc_html( $aggr_spark_scale( (float) $aggr_spark_top ) ); ?></span>
-			<span><?php echo esc_html( $aggr_spark_scale( $aggr_spark_top / 2 ) ); ?></span>
-			<span>0</span>
+			<?php foreach ( $aggr_spark_ticks as $aggr_spark_tick ) : ?>
+				<span style="top: <?php echo esc_attr( $aggr_spark_pos( $aggr_spark_tick ) ); ?>%"><?php echo esc_html( $aggr_spark_scale( $aggr_spark_tick ) ); ?></span>
+			<?php endforeach; ?>
 		</div>
 
 		<div class="aggr-spark__chart">
 			<div class="aggr-spark__canvas">
+				<?php foreach ( $aggr_spark_ticks as $aggr_spark_tick ) : ?>
+					<span class="aggr-spark__grid<?php echo 0.0 === $aggr_spark_tick ? ' aggr-spark__grid--base' : ''; ?>" style="top: <?php echo esc_attr( $aggr_spark_pos( $aggr_spark_tick ) ); ?>%" aria-hidden="true"></span>
+				<?php endforeach; ?>
 				<svg class="aggr-spark__svg" viewBox="0 0 1000 100" preserveAspectRatio="none" aria-hidden="true" focusable="false">
 					<defs>
 						<linearGradient id="aggr-spark-fill" x1="0" y1="0" x2="0" y2="1">

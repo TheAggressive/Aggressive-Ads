@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-17T00:46:16+00:00\n"
+"POT-Creation-Date: 2026-09-17T00:53:18+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -6073,7 +6073,7 @@ msgid "Each stage is dated as it happens."
 msgstr ""
 
 #: templates/portal/partials/campaign-status.php:92
-#: templates/portal/partials/sparkline.php:212
+#: templates/portal/partials/sparkline.php:216
 msgid "Now"
 msgstr ""
 
@@ -6275,35 +6275,35 @@ msgid "New campaign"
 msgstr ""
 
 #. translators: 1: first day of the range. 2: last day of the range.
-#: templates/portal/partials/sparkline.php:30
+#: templates/portal/partials/sparkline.php:31
 #, php-format
 msgid "Daily impressions, %1$s to %2$s"
 msgstr ""
 
 #. translators: %s: a number of thousands, e.g. 20 for 20,000.
-#: templates/portal/partials/sparkline.php:69
+#: templates/portal/partials/sparkline.php:60
 #, php-format
 msgid "%sk"
 msgstr ""
 
-#: templates/portal/partials/sparkline.php:126
+#: templates/portal/partials/sparkline.php:127
 msgid "Impressions per day"
 msgstr ""
 
-#: templates/portal/partials/sparkline.php:128
+#: templates/portal/partials/sparkline.php:129
 msgid "This period"
 msgstr ""
 
-#: templates/portal/partials/sparkline.php:130
+#: templates/portal/partials/sparkline.php:131
 msgid "Previous period"
 msgstr ""
 
-#: templates/portal/partials/sparkline.php:133
+#: templates/portal/partials/sparkline.php:134
 msgid "Still being counted"
 msgstr ""
 
 #. translators: 1: weekday. 2: impression count.
-#: templates/portal/partials/sparkline.php:172
+#: templates/portal/partials/sparkline.php:176
 #, php-format
 msgid "%1$s: %2$s impression"
 msgid_plural "%1$s: %2$s impressions"
@@ -6311,17 +6311,17 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: impressions on the same day of the previous period.
-#: templates/portal/partials/sparkline.php:180
+#: templates/portal/partials/sparkline.php:184
 #, php-format
 msgid "previous period %s"
 msgstr ""
 
-#: templates/portal/partials/sparkline.php:214
+#: templates/portal/partials/sparkline.php:218
 msgid "Before"
 msgstr ""
 
 #. translators: %d: number of days covered by the export.
-#: templates/portal/partials/sparkline.php:246
+#: templates/portal/partials/sparkline.php:250
 #, php-format
 msgid "Download %d days (CSV)"
 msgstr ""

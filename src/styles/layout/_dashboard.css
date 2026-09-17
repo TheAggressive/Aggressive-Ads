@@ -215,7 +215,7 @@
 	gap: var(--aggr-space-sm);
 }
 
-/* Each number is centred on its own gridline: top, middle and bottom. */
+/* Each number is centred on its own gridline. */
 .aggr-spark__scale {
 	position: relative;
 	min-width: 4.5ch;
@@ -234,17 +234,7 @@
 	transform: translateY(-50%);
 }
 
-.aggr-spark__scale span:nth-child(1) {
-	top: 0;
-}
 
-.aggr-spark__scale span:nth-child(2) {
-	top: 50%;
-}
-
-.aggr-spark__scale span:nth-child(3) {
-	top: 100%;
-}
 
 .aggr-spark__chart {
 	min-width: 0;
@@ -253,10 +243,19 @@
 .aggr-spark__canvas {
 	position: relative;
 	height: 180px;
-	background:
-		linear-gradient(var(--aggr-border-color), var(--aggr-border-color)) top / 100% 1px no-repeat,
-		linear-gradient(var(--aggr-border-color), var(--aggr-border-color)) center / 100% 1px no-repeat,
-		linear-gradient(var(--aggr-border-color-strong), var(--aggr-border-color-strong)) bottom / 100% 1px no-repeat;
+}
+
+/* One gridline per tick on the scale, placed where its label is. */
+.aggr-spark__grid {
+	position: absolute;
+	right: 0;
+	left: 0;
+	height: 1px;
+	background: var(--aggr-border-color);
+}
+
+.aggr-spark__grid--base {
+	background: var(--aggr-border-color-strong);
 }
 
 .aggr-spark__svg {
