@@ -1,0 +1,134 @@
+/*
+ * A submitted campaign: its stages as a dated line, what has happened, and the
+ * campaign beside it.
+ */
+
+.aggr-status {
+	margin-bottom: var(--aggr-space-lg);
+}
+
+.aggr-status .aggr-summary + .aggr-summary {
+	margin-top: var(--aggr-space-md);
+}
+
+.aggr-timeline {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr));
+	gap: var(--aggr-space-sm);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.aggr-timeline__stage {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding-top: var(--aggr-space-sm);
+	border-top: 3px solid var(--aggr-border-color);
+	color: var(--aggr-color-text-muted);
+	font-size: 13px;
+}
+
+.aggr-timeline__stage--done {
+	border-top-color: var(--aggr-color-text);
+	color: var(--aggr-color-text);
+}
+
+.aggr-timeline__stage--now {
+	border-top-color: var(--aggr-color-accent);
+	color: var(--aggr-color-text);
+}
+
+.aggr-timeline__mark {
+	width: 10px;
+	height: 10px;
+	border: 2px solid currentcolor;
+	border-radius: 50%;
+}
+
+.aggr-timeline__stage--done .aggr-timeline__mark {
+	background: currentcolor;
+}
+
+.aggr-timeline__stage--now .aggr-timeline__mark {
+	border-color: var(--aggr-color-accent);
+	background: var(--aggr-color-accent);
+}
+
+.aggr-timeline__name {
+	font-weight: 600;
+}
+
+.aggr-timeline__date,
+.aggr-activity__when {
+	font-family: var(--aggr-font-mono);
+	font-size: 11.5px;
+}
+
+.aggr-status__note {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--aggr-space-sm);
+	align-items: center;
+	justify-content: space-between;
+	padding: var(--aggr-space-sm) var(--aggr-space-md);
+	background: var(--aggr-color-surface-raised);
+	border-radius: var(--aggr-radius-control);
+	font-size: 14px;
+}
+
+.aggr-status__note p,
+.aggr-status__note form {
+	margin: 0;
+}
+
+.aggr-portal .aggr-status__note button {
+	min-height: auto;
+	padding: 0;
+	background: none;
+	border: 0;
+	color: var(--aggr-color-accent-strong);
+	font: inherit;
+	font-weight: 600;
+	text-transform: none;
+	cursor: pointer;
+}
+
+.aggr-activity {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.aggr-activity li {
+	display: grid;
+	grid-template-columns: 9rem minmax(0, 1fr);
+	gap: var(--aggr-space-md);
+	padding: var(--aggr-space-sm) 0;
+	border-top: 1px solid var(--aggr-border-color);
+	font-size: 14px;
+}
+
+.aggr-status__ads {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: var(--aggr-space-sm);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.aggr-status__ads li {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	align-items: flex-start;
+}
+
+.aggr-status__ads img {
+	max-width: 100%;
+	height: auto;
+	border: 1px solid var(--aggr-border-color);
+	border-radius: 3px;
+}

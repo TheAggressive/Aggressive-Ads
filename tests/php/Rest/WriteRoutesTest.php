@@ -209,14 +209,22 @@ final class WriteRoutesTest extends WP_UnitTestCase {
 	public function test_the_owner_can_autosave_an_editable_campaign(): void {
 		wp_set_current_user( $this->owner );
 
+		/*
+		 * Whole local days. Moving to `creative` with a start is leaving
+		 * details, which applies the submission-grade window — the same rule
+		 * the form meets — so arbitrary timestamps are refused here now.
+		 */
+		$start = ( new \DateTimeImmutable( '+10 days', wp_timezone() ) )->setTime( 0, 0 )->getTimestamp();
+		$end   = ( new \DateTimeImmutable( '+11 days', wp_timezone() ) )->setTime( 23, 59, 59 )->getTimestamp();
+
 		$original_org = get_post_meta( $this->campaign_id, Campaign_Repository::META_ORG_ID, true );
 		$request      = new WP_REST_Request( 'PATCH', '/aggr/v1/campaigns/' . $this->campaign_id );
 		$request->set_body_params(
 			array(
 				'title'            => 'Updated campaign',
 				'placement_ids'    => array( $this->placement_id ),
-				'start_ts'         => 1_900_000_000,
-				'end_ts'           => 1_900_086_400,
+				'start_ts'         => $start,
+				'end_ts'           => $end,
 				'advertiser_notes' => 'Please review this artwork.',
 				'wizard_step'      => 'creative',
 				'autosave_rev'     => 0,

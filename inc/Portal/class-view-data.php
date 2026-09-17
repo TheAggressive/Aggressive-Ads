@@ -224,6 +224,22 @@ final class View_Data {
 		$row['placement_ids']      = $this->campaigns->placement_ids( $campaign_id );
 
 		/*
+		 * The link the next upload starts from: the one set for the campaign,
+		 * or else the first one its ads already have. A package of three sizes
+		 * nearly always sends all three to one page, so asking for the address
+		 * on every card was typing the same thing three times — and a chance to
+		 * mistype it twice.
+		 */
+		$row['default_click_url'] = $this->campaigns->default_click_url( $campaign_id );
+
+		foreach ( '' === $row['default_click_url'] ? $row['creatives'] : array() as $creative ) {
+			if ( '' !== (string) ( $creative['click_url'] ?? '' ) ) {
+				$row['default_click_url'] = (string) $creative['click_url'];
+				break;
+			}
+		}
+
+		/*
 		 * Whether the name is still the one the wizard invented.
 		 *
 		 * Recorded rather than inferred — comparing the stored title to the
@@ -476,7 +492,7 @@ final class View_Data {
 	/**
 	 * Active, complete packages with their advertiser-facing catalogue details.
 	 *
-	 * @return array<int, array{id: int, name: string, duration: string, price: string, placements: array<int, string>, is_default: bool}>
+	 * @return array<int, array{id: int, name: string, duration: string, price: string, placements: array<int, string>, is_default: bool, duration_days: int, sizes: array<int, array{label: string, width: int, height: int}>}>
 	 */
 	public function package_options(): array {
 		return $this->catalogue()->package_options();
@@ -645,7 +661,7 @@ final class View_Data {
 	 * another would invite a comparison that was always wrong. A docblock
 	 * naming a fixed window is how someone later "fixes" the code to match it.
 	 *
-	 * @return list<array{day: string, label: string, impressions: int, height: int}>
+	 * @return list<array{day: string, label: string, date: string, impressions: int, clicks: int, height: int, previous: int, previous_clicks: int, previous_date: string}>
 	 */
 	public function delivery_series(): array {
 		return $this->delivery->series( $this->org_id() );
@@ -659,7 +675,14 @@ final class View_Data {
 	}
 
 	/**
-	 * Which days in that window may still change, or '' when none.
+	 * The first UTC day whose figures may still change, or '' when none may.
+	 */
+	public function delivery_counting_from(): string {
+		return $this->delivery->unreconciled_from();
+	}
+
+	/**
+	 * Which days in that window may still change, as a sentence, or ''.
 	 */
 	public function delivery_freshness_note(): string {
 		return $this->delivery->freshness_note();
@@ -707,23 +730,60 @@ final class View_Data {
 			}
 		}
 
+		$package_id = $this->campaigns->package_id( $campaign_id );
+
 		return array(
-			'id'          => $campaign_id,
-			'title'       => $this->campaigns->title( $campaign_id ),
-			'status'      => $status,
-			'status_text' => $this->status_label( $status ),
-			'pill'        => self::pill_for( $status ),
-			'placements'  => $names,
-			'dates'       => $this->window( $campaign_id ),
-			'url'         => Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id ),
+			'id'           => $campaign_id,
+			'title'        => $this->campaigns->title( $campaign_id ),
+			'status'       => $status,
+			'status_text'  => $this->status_label( $status ),
+			'pill'         => self::pill_for( $status ),
+			'placements'   => $names,
+			'dates'        => $this->window( $campaign_id ),
+			'url'          => Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id ),
+
+			// What a list row shows under the name, and in its own columns.
+			'package'      => $package_id > 0 ? $this->packages->name( $package_id ) : '',
+			'sizes'        => count( $names ),
+			'schedule'     => $this->short_window( $campaign_id ),
+			'review_notes' => $this->campaigns->review_notes( $campaign_id ),
+		);
+	}
+
+	/**
+	 * The campaign's window for a list row: short dates, in the site timezone.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return string
+	 */
+	private function short_window( int $campaign_id ): string {
+		$start = $this->campaigns->start_ts( $campaign_id );
+		$end   = $this->campaigns->end_ts( $campaign_id );
+
+		if ( 0 === $start ) {
+			return __( 'Not scheduled', 'aggressive-ads' );
+		}
+
+		$from = (string) wp_date( 'M j', $start );
+
+		if ( 0 === $end ) {
+			return sprintf(
+				/* translators: %s: campaign start date. */
+				__( 'From %s', 'aggressive-ads' ),
+				$from
+			);
+		}
+
+		return sprintf(
+			/* translators: 1: campaign start date, e.g. Sep 6. 2: campaign end date, e.g. Oct 4. */
+			__( '%1$s → %2$s', 'aggressive-ads' ),
+			$from,
+			(string) wp_date( 'M j', $end )
 		);
 	}
 
 	/**
 	 * The campaign's window, in the site's own timezone and format.
-	 *
-	 * Formatted with wp_date() rather than date(): the stored values are UTC
-	 * integers, and the reader is not in UTC.
 	 *
 	 * @param int $campaign_id Campaign post id.
 	 * @return string

@@ -6,7 +6,6 @@
  *
  * @var array<string, mixed> $aggr_campaign Campaign row.
  * @var string               $aggr_step     Current display step.
- * @var bool                 $aggr_review_ready Whether submit is reachable.
  * @var array<int, mixed>    $aggr_slots    Creative slots.
  */
 
@@ -21,11 +20,10 @@ use Aggressive\Ads\Domain\Upload_Rules;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Workflow\Campaign_Editor;
 
-$aggr_campaign     = isset( $aggr_campaign ) && is_array( $aggr_campaign ) ? $aggr_campaign : array();
-$aggr_step         = isset( $aggr_step ) && is_string( $aggr_step ) ? $aggr_step : 'details';
-$aggr_review_ready = true === ( $aggr_review_ready ?? false );
-$aggr_slots        = isset( $aggr_slots ) && is_array( $aggr_slots ) ? $aggr_slots : array();
-$aggr_wizard_id    = 'campaign-' . (int) ( $aggr_campaign['id'] ?? 0 );
+$aggr_campaign  = isset( $aggr_campaign ) && is_array( $aggr_campaign ) ? $aggr_campaign : array();
+$aggr_step      = isset( $aggr_step ) && is_string( $aggr_step ) ? $aggr_step : 'details';
+$aggr_slots     = isset( $aggr_slots ) && is_array( $aggr_slots ) ? $aggr_slots : array();
+$aggr_wizard_id = 'campaign-' . (int) ( $aggr_campaign['id'] ?? 0 );
 
 /*
  * Read from the canonical list rather than a copy of it. This is what a screen
@@ -41,11 +39,9 @@ $aggr_step_label = sprintf(
 	(string) ( false === $aggr_step_position ? 1 : $aggr_step_position + 1 ),
 	(string) count( Campaign_Editor::DISPLAY_STEPS ),
 	match ( $aggr_step ) {
-		'details'     => __( 'Name your campaign and choose a package', 'aggressive-ads' ),
-		'creative'    => __( 'Upload creative', 'aggressive-ads' ),
-		'destination' => __( 'Confirm destinations and schedule', 'aggressive-ads' ),
-		'review'      => __( 'Review your campaign', 'aggressive-ads' ),
-		default       => __( 'Submit your campaign', 'aggressive-ads' ),
+		'details'  => __( 'Choose a package and dates', 'aggressive-ads' ),
+		'creative' => __( 'Add your ads', 'aggressive-ads' ),
+		default    => __( 'Review and submit', 'aggressive-ads' ),
 	}
 );
 
@@ -77,7 +73,6 @@ Plugin::instance()->container()->get( Assets::class )->hydrate_campaign_editor(
 		'id'           => (int) ( $aggr_campaign['id'] ?? 0 ),
 		'wizard_step'  => $aggr_step,
 		'autosave_rev' => (int) ( $aggr_campaign['autosave_rev'] ?? 0 ),
-		'submit_ready' => $aggr_review_ready,
 		'step_label'   => $aggr_step_label,
 		'slots'        => $aggr_editor_slots,
 	)

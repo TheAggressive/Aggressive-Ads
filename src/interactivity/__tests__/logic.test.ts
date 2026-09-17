@@ -3,20 +3,51 @@
  */
 
 import {
-	canVisitStep,
+	addDays,
 	checkCreativeFile,
 	debounce,
 	isWizardStep,
 	nextStep,
+	normaliseLink,
 	parsePixelSize,
 	previousStep,
+	runEndDate,
 	stepIndex,
 } from '../logic';
 
+describe( 'destination links', () => {
+	it( 'adds https to an address typed without a scheme', () => {
+		expect( normaliseLink( 'example.com/page' ) ).toBe(
+			'https://example.com/page'
+		);
+		expect( normaliseLink( '  https://example.com ' ) ).toBe(
+			'https://example.com'
+		);
+		expect( normaliseLink( 'http://example.com' ) ).toBe(
+			'http://example.com'
+		);
+	} );
+
+	it( 'keeps empty as the way to clear the link', () => {
+		expect( normaliseLink( '   ' ) ).toBe( '' );
+	} );
+
+	it( 'refuses what the server would refuse', () => {
+		expect( normaliseLink( 'javascript:alert(1)' ) ).toBeNull();
+		expect( normaliseLink( 'ftp://example.com' ) ).toBeNull();
+		expect( normaliseLink( 'https://user:pass@example.com' ) ).toBeNull();
+		expect( normaliseLink( 'https://' ) ).toBeNull();
+	} );
+} );
+
 describe( 'wizard steps', () => {
-	it( 'accepts only the five display steps', () => {
+	it( 'accepts only the three display steps', () => {
 		expect( isWizardStep( 'details' ) ).toBe( true );
-		expect( isWizardStep( 'submit' ) ).toBe( true );
+		expect( isWizardStep( 'review' ) ).toBe( true );
+		// Folded into review and details. A stale link to either must not
+		// address a step the wizard no longer renders.
+		expect( isWizardStep( 'submit' ) ).toBe( false );
+		expect( isWizardStep( 'destination' ) ).toBe( false );
 		expect( isWizardStep( 'lap_draft' ) ).toBe( false );
 		expect( isWizardStep( '' ) ).toBe( false );
 		// The package step was folded into details. Still accepting it would
@@ -27,20 +58,35 @@ describe( 'wizard steps', () => {
 
 	it( 'walks forward and back without wrapping', () => {
 		expect( nextStep( 'details' ) ).toBe( 'creative' );
-		expect( nextStep( 'review' ) ).toBe( 'submit' );
-		expect( nextStep( 'submit' ) ).toBeNull();
+		expect( nextStep( 'creative' ) ).toBe( 'review' );
+		expect( nextStep( 'review' ) ).toBeNull();
 		expect( nextStep( 'nope' ) ).toBeNull();
 		expect( previousStep( 'creative' ) ).toBe( 'details' );
 		expect( previousStep( 'details' ) ).toBeNull();
 		expect( stepIndex( 'creative' ) ).toBe( 1 );
 	} );
+} );
 
-	it( 'gates only the submit step', () => {
-		expect( canVisitStep( 'details', false ) ).toBe( true );
-		expect( canVisitStep( 'review', false ) ).toBe( true );
-		expect( canVisitStep( 'submit', false ) ).toBe( false );
-		expect( canVisitStep( 'submit', true ) ).toBe( true );
-		expect( canVisitStep( 'unknown', true ) ).toBe( false );
+describe( 'run end dates', () => {
+	it( 'counts the start day as the first day', () => {
+		expect( runEndDate( '2027-10-01', 30 ) ).toBe( '2027-10-30' );
+		expect( runEndDate( '2027-10-01', 1 ) ).toBe( '2027-10-01' );
+	} );
+
+	it( 'crosses months, years and leap days on the calendar', () => {
+		expect( addDays( '2027-12-25', 10 ) ).toBe( '2028-01-04' );
+		expect( addDays( '2028-02-28', 1 ) ).toBe( '2028-02-29' );
+		expect( addDays( '2027-02-28', 1 ) ).toBe( '2027-03-01' );
+		expect( addDays( '2027-03-10', -10 ) ).toBe( '2027-02-28' );
+	} );
+
+	it( 'refuses what is not a date or not a length', () => {
+		expect( addDays( '2027-02-31', 1 ) ).toBeNull();
+		expect( addDays( '', 1 ) ).toBeNull();
+		expect( addDays( '2027-1-1', 1 ) ).toBeNull();
+		expect( runEndDate( '2027-10-01', 0 ) ).toBeNull();
+		expect( runEndDate( '2027-10-01', 2.5 ) ).toBeNull();
+		expect( runEndDate( '', 30 ) ).toBeNull();
 	} );
 } );
 

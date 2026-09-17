@@ -77,4 +77,11 @@
 	--aggr-color-rail-chip: #2c3338;
 	--aggr-color-rail-text: #f0f0f1;
 	--aggr-color-rail-text-strong: #ffffff;
+
+	/* Shared rules read these; core's blue keeps white labels. */
+	--aggr-color-on-accent: #ffffff;
+	--aggr-color-on-accent-rail: #1d2327;
+	--aggr-font-mono:
+		ui-monospace, "SFMono-Regular", "Cascadia Mono", "Segoe UI Mono", "Menlo",
+		"Consolas", monospace;
 }

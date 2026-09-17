@@ -124,15 +124,18 @@ final class PortalViewDataTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function test_a_draft_stored_on_the_retired_step_resumes_on_details(): void {
-		$mine = $this->make_campaign( $this->org_a, Post_Statuses::DRAFT, 'Parked mid-wizard' );
-		update_post_meta( $mine, Campaign_Repository::META_WIZARD_STEP, 'package' );
-
 		wp_set_current_user( $this->advertiser_a );
 
-		$campaign = $this->view->campaign( $mine );
+		// `destination` retired with its step: the dates it asked for moved to details.
+		foreach ( array( 'package', 'destination' ) as $retired ) {
+			$mine = $this->make_campaign( $this->org_a, Post_Statuses::DRAFT, 'Parked on ' . $retired );
+			update_post_meta( $mine, Campaign_Repository::META_WIZARD_STEP, $retired );
 
-		$this->assertIsArray( $campaign );
-		$this->assertSame( 'details', $campaign['wizard_step'] );
+			$campaign = $this->view->campaign( $mine );
+
+			$this->assertIsArray( $campaign );
+			$this->assertSame( 'details', $campaign['wizard_step'], $retired . ' must resume on details.' );
+		}
 	}
 
 	/**
@@ -147,7 +150,7 @@ final class PortalViewDataTest extends WP_UnitTestCase {
 	public function test_other_stored_steps_are_left_alone(): void {
 		wp_set_current_user( $this->advertiser_a );
 
-		foreach ( array( 'details', 'creative', 'destination', 'review' ) as $step ) {
+		foreach ( array( 'details', 'creative', 'review' ) as $step ) {
 			$campaign = $this->make_campaign( $this->org_a, Post_Statuses::DRAFT, 'Parked on ' . $step );
 			update_post_meta( $campaign, Campaign_Repository::META_WIZARD_STEP, $step );
 
@@ -366,7 +369,7 @@ final class PortalViewDataTest extends WP_UnitTestCase {
 		$this->assertSame(
 			array(
 				'package_missing'    => array( 'details', 'aggr-packages' ),
-				'start_date_missing' => array( 'destination', 'aggr-start-date' ),
+				'start_date_missing' => array( 'details', 'aggr-start-date' ),
 				'no_placements'      => array( 'details', 'aggr-packages' ),
 				'no_creatives'       => array( 'creative', 'aggr-details-heading' ),
 			),
@@ -471,6 +474,19 @@ final class PortalViewDataTest extends WP_UnitTestCase {
 		$this->assertSame( $package_id, $campaign['package_options'][0]['id'] );
 		$this->assertSame( 'USD 450.00', $campaign['package_options'][0]['price'] );
 		$this->assertSame( 'Custom schedule', $campaign['package_options'][0]['duration'] );
+		// No length for the schedule field to derive an end from.
+		$this->assertSame( 0, $campaign['package_options'][0]['duration_days'] );
+		// Drawn to scale for the card, labelled as the size it stands for.
+		$this->assertSame(
+			array(
+				array(
+					'label'  => '728×90',
+					'width'  => 66,
+					'height' => 8,
+				),
+			),
+			$campaign['package_options'][0]['sizes']
+		);
 		$this->assertTrue( $campaign['package_options'][0]['is_default'] );
 		$this->assertSame( array( 'Homepage Leaderboard (728x90 px)' ), $campaign['package_options'][0]['placements'] );
 	}

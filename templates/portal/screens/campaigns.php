@@ -51,16 +51,9 @@ if ( 'error' === $aggr_notice ) {
 
 <div class="aggr-pagehead">
 	<div>
+		<p class="aggr-eyebrow"><?php esc_html_e( 'Campaigns', 'aggressive-ads' ); ?></p>
 		<h1 class="aggr-title"><?php esc_html_e( 'Campaigns', 'aggressive-ads' ); ?></h1>
-		<p class="aggr-lede">
-			<?php
-			printf(
-				/* translators: %s: number of campaigns. */
-				esc_html( _n( '%s campaign', '%s campaigns', (int) $aggr_campaigns['total'], 'aggressive-ads' ) ),
-				esc_html( number_format_i18n( (int) $aggr_campaigns['total'] ) )
-			);
-			?>
-		</p>
+		<p class="aggr-lede"><?php esc_html_e( 'Every campaign, and where each one has got to.', 'aggressive-ads' ); ?></p>
 
 		<?php if ( '' !== $aggr_filter ) : ?>
 			<?php
@@ -72,7 +65,7 @@ if ( 'error' === $aggr_notice ) {
 			 * it is everything.
 			 */
 			?>
-			<p class="aggr-filter" role="status">
+			<p class="aggr-filter aggr-sr" role="status">
 				<?php
 				printf(
 					/* translators: %s: the slice being shown, e.g. Needs your attention. */
@@ -92,17 +85,80 @@ if ( 'error' === $aggr_notice ) {
 			<input type="hidden" name="action" value="<?php echo esc_attr( Campaign_Actions::CREATE_ACTION ); ?>">
 			<?php wp_nonce_field( Campaign_Actions::CREATE_ACTION ); ?>
 			<button class="aggr-button" type="submit">
-				<?php esc_html_e( 'Create campaign', 'aggressive-ads' ); ?>
+				<?php esc_html_e( 'New campaign', 'aggressive-ads' ); ?>
 			</button>
 		</form>
 	<?php endif; ?>
 </div>
 
+<?php
+/*
+ * The same slices the dashboard counts, as tabs. Links, not buttons: each is a
+ * URL somebody can keep, and the one on screen is marked current. Searching
+ * the list is #296, drawn now where the design puts it.
+ */
+$aggr_all_total = (int) $aggr_view->campaigns( 1 )['total'];
+$aggr_tabs      = array(
+	array(
+		'filter' => '',
+		'label'  => __( 'All', 'aggressive-ads' ),
+		'value'  => $aggr_all_total,
+	),
+);
+
+foreach ( $aggr_view->counts() as $aggr_count ) {
+	$aggr_tabs[] = array(
+		'filter' => (string) $aggr_count['filter'],
+		'label'  => (string) $aggr_count['label'],
+		'value'  => (int) $aggr_count['value'],
+	);
+}
+?>
+<div class="aggr-listbar">
+	<nav class="aggr-tabs" aria-label="<?php esc_attr_e( 'Filter campaigns', 'aggressive-ads' ); ?>">
+		<?php foreach ( $aggr_tabs as $aggr_tab ) : ?>
+			<a
+				class="aggr-tabs__tab"
+				href="<?php echo esc_url( '' === $aggr_tab['filter'] ? Routes::url( Request::ROUTE_CAMPAIGNS ) : add_query_arg( 'status', $aggr_tab['filter'], Routes::url( Request::ROUTE_CAMPAIGNS ) ) ); ?>"
+				<?php echo $aggr_tab['filter'] === $aggr_filter ? 'aria-current="page"' : ''; ?>
+			>
+				<?php echo esc_html( $aggr_tab['label'] ); ?>
+				<span class="aggr-tabs__count"><?php echo esc_html( number_format_i18n( $aggr_tab['value'] ) ); ?></span>
+			</a>
+		<?php endforeach; ?>
+	</nav>
+
+	<div class="aggr-search">
+		<label class="aggr-sr" for="aggr-campaign-search"><?php esc_html_e( 'Search campaigns', 'aggressive-ads' ); ?></label>
+		<input id="aggr-campaign-search" type="search" placeholder="<?php esc_attr_e( 'Search campaigns', 'aggressive-ads' ); ?>" disabled aria-describedby="aggr-search-note">
+		<span id="aggr-search-note" class="aggr-sr"><?php esc_html_e( 'Searching is coming soon.', 'aggressive-ads' ); ?></span>
+	</div>
+</div>
+
 <section class="aggr-panel">
 	<?php
-	$aggr_rows         = $aggr_campaigns['rows'];
-	$aggr_show_metrics = ! empty( $aggr_campaigns['show_metrics'] );
+	$aggr_rows          = $aggr_campaigns['rows'];
+	$aggr_show_metrics  = ! empty( $aggr_campaigns['show_metrics'] );
+	$aggr_table_compact = false;
 
 	require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-table.php';
 	?>
+
+	<?php if ( array() !== $aggr_rows ) : ?>
+		<div class="aggr-panel__footrow">
+			<span class="aggr-table__mono">
+				<?php
+				printf(
+					/* translators: 1: campaigns on this page. 2: campaigns in this view. */
+					esc_html__( 'Showing %1$s of %2$s', 'aggressive-ads' ),
+					esc_html( number_format_i18n( count( $aggr_rows ) ) ),
+					esc_html( number_format_i18n( (int) $aggr_campaigns['total'] ) )
+				);
+				?>
+			</span>
+			<?php if ( $aggr_show_metrics ) : ?>
+				<span class="aggr-hint"><?php esc_html_e( 'Delivery figures are all-time, from native delivery.', 'aggressive-ads' ); ?></span>
+			<?php endif; ?>
+		</div>
+	<?php endif; ?>
 </section>

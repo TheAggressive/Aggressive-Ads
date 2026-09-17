@@ -117,7 +117,7 @@ final class Catalogue_View_Data {
 	/**
 	 * Active, complete packages with advertiser-facing details.
 	 *
-	 * @return array<int, array{id: int, name: string, duration: string, price: string, placements: array<int, string>, is_default: bool}>
+	 * @return array<int, array{id: int, name: string, duration: string, price: string, placements: array<int, string>, is_default: bool, duration_days: int, sizes: array<int, array{label: string, width: int, height: int}>}>
 	 */
 	public function package_options(): array {
 		$options    = array();
@@ -131,31 +131,68 @@ final class Catalogue_View_Data {
 			}
 
 			$placement_names = array();
+			$sizes           = array();
 
 			foreach ( $snapshot['placement_ids'] as $placement_id ) {
 				$name              = $this->placements->name( $placement_id );
 				$size              = $this->placements->size( $placement_id );
 				$placement_names[] = '' === $size ? $name : sprintf( '%1$s (%2$s px)', $name, $size );
+				$shape             = self::size_shape( $size );
+
+				if ( null !== $shape ) {
+					$sizes[] = $shape;
+				}
 			}
 
 			$duration  = $this->packages->duration_days( $package_id );
 			$options[] = array(
-				'id'         => $package_id,
-				'name'       => $this->packages->name( $package_id ),
-				'duration'   => $this->packages->has_custom_duration( $package_id )
+				'id'            => $package_id,
+				'name'          => $this->packages->name( $package_id ),
+				'duration'      => $this->packages->has_custom_duration( $package_id )
 					? __( 'Custom schedule', 'aggressive-ads' )
 					: sprintf(
 						/* translators: %s: number of days. */
 						_n( '%s day', '%s days', $duration, 'aggressive-ads' ),
 						number_format_i18n( $duration )
 					),
-				'price'      => sprintf( '%1$s %2$s', $snapshot['currency'], number_format_i18n( $snapshot['budget_cents'] / 100, 2 ) ),
-				'placements' => $placement_names,
-				'is_default' => $package_id === $default_id,
+				'price'         => sprintf( '%1$s %2$s', $snapshot['currency'], number_format_i18n( $snapshot['budget_cents'] / 100, 2 ) ),
+				'placements'    => $placement_names,
+				'is_default'    => $package_id === $default_id,
+
+				// The number, beside the sentence above: the schedule field
+				// works out an end date from it, and a custom package has none.
+				'duration_days' => $this->packages->has_custom_duration( $package_id ) ? 0 : $duration,
+				'sizes'         => $sizes,
 			);
 		}
 
 		return $options;
+	}
+
+	/**
+	 * A placement size drawn to scale for a package card.
+	 *
+	 * Scaled rather than exact, and clamped so a skyscraper and a leaderboard
+	 * both fit the card: the point is that one is tall and one is wide.
+	 *
+	 * @param string $size `WIDTHxHEIGHT`, as placements store it.
+	 * @return array{label: string, width: int, height: int}|null Null when the size is not one.
+	 */
+	private static function size_shape( string $size ): ?array {
+		$parts = array();
+
+		if ( 1 !== preg_match( '/^(\d+)x(\d+)$/', $size, $parts ) ) {
+			return null;
+		}
+
+		$width  = (int) $parts[1];
+		$height = (int) $parts[2];
+
+		return array(
+			'label'  => $width . '×' . $height,
+			'width'  => max( 4, min( 72, (int) round( $width * 0.09 ) ) ),
+			'height' => max( 4, min( 60, (int) round( $height * 0.09 ) ) ),
+		);
 	}
 
 	/**
@@ -167,15 +204,15 @@ final class Catalogue_View_Data {
 	private static function status_description( string $status ): string {
 		return match ( $status ) {
 			Post_Statuses::DRAFT     => __( 'Yours to edit. Nobody else can see it yet.', 'aggressive-ads' ),
-			Post_Statuses::SUBMITTED => __( 'Waiting for the review team. You can still withdraw it until someone starts reviewing.', 'aggressive-ads' ),
+			Post_Statuses::SUBMITTED => __( 'Waiting for the review team. You can withdraw it until someone starts reviewing.', 'aggressive-ads' ),
 			Post_Statuses::REVIEW    => __( 'Someone is reviewing it now.', 'aggressive-ads' ),
-			Post_Statuses::CHANGES   => __( 'The review team has asked for changes. Edit it and submit again.', 'aggressive-ads' ),
+			Post_Statuses::CHANGES   => __( 'The review team asked for changes. Edit it and submit again.', 'aggressive-ads' ),
 			Post_Statuses::REJECTED  => __( 'Not approved. The reason is on the campaign.', 'aggressive-ads' ),
 			Post_Statuses::APPROVED  => __( 'Approved, and it will start on its scheduled date.', 'aggressive-ads' ),
 			Post_Statuses::SCHEDULED => __( 'Ready and waiting for its start date.', 'aggressive-ads' ),
 			Post_Statuses::LIVE      => __( 'Being shown on the site right now.', 'aggressive-ads' ),
 			Post_Statuses::PAUSED    => __( 'Temporarily not being shown. Get in touch if this is unexpected.', 'aggressive-ads' ),
-			Post_Statuses::COMPLETE  => __( 'Finished. Duplicate it to run the campaign again.', 'aggressive-ads' ),
+			Post_Statuses::COMPLETE  => __( 'Finished. Run it again from your campaign list.', 'aggressive-ads' ),
 			default                  => __( 'Cancelled and no longer running.', 'aggressive-ads' ),
 		};
 	}

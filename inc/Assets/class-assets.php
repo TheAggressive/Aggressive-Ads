@@ -58,6 +58,7 @@ final class Assets implements Service {
 	public const MODULE_AUTOSAVE    = '@aggr/autosave';
 	public const MODULE_UPLOAD      = '@aggr/upload';
 	public const MODULE_SAVE        = '@aggr/save';
+	public const MODULE_LOCAL_TIME  = '@aggr/local-time';
 
 	/**
 	 * Interactivity store namespaces.
@@ -192,6 +193,15 @@ final class Assets implements Service {
 		$this->register_interactivity_modules();
 
 		/*
+		 * On every portal screen, because UTC moments are stated on more than
+		 * one. It depends on nothing, so it needs no gate beyond its own file.
+		 */
+		if ( function_exists( 'wp_register_script_module' ) && is_file( AGGR_PLUGIN_DIR . 'dist/interactivity/local-time.js' ) ) {
+			$this->register_module( self::MODULE_LOCAL_TIME, 'local-time', array() );
+			wp_enqueue_script_module( self::MODULE_LOCAL_TIME );
+		}
+
+		/*
 		 * Block themes print the import map in wp_head. Enqueue the dialog
 		 * module here — not during template render — so @wordpress/interactivity
 		 * and the shared @aggr/* modules are in that map before the browser
@@ -322,7 +332,7 @@ final class Assets implements Service {
 	 * Modules are enqueued from enqueue() so the import map prints in wp_head.
 	 * This only writes Interactivity state. Safe to call when the APIs are absent.
 	 *
-	 * @param array{id: int, wizard_step: string, autosave_rev: int, submit_ready: bool, step_label: string, slots: array<int, array{id: int, size: string, max_bytes: int, max_size: string}>} $campaign Campaign view data.
+	 * @param array{id: int, wizard_step: string, autosave_rev: int, step_label: string, slots: array<int, array{id: int, size: string, max_bytes: int, max_size: string}>} $campaign Campaign view data.
 	 * @return void
 	 */
 	public function hydrate_campaign_editor( array $campaign ): void {
@@ -342,8 +352,7 @@ final class Assets implements Service {
 			array(
 				'wizards' => array(
 					$wizard_id => array(
-						'current'     => $campaign['wizard_step'],
-						'submitReady' => $campaign['submit_ready'],
+						'current' => $campaign['wizard_step'],
 					),
 				),
 				'i18n'    => array(
@@ -364,11 +373,20 @@ final class Assets implements Service {
 					),
 				),
 				'i18n'      => array(
-					'idle'     => '',
-					'saving'   => __( 'Saving…', 'aggressive-ads' ),
-					'saved'    => __( 'Draft saved.', 'aggressive-ads' ),
-					'error'    => __( 'Could not save the draft. Your last change may not be stored.', 'aggressive-ads' ),
-					'conflict' => __( 'This campaign was saved elsewhere. Refresh to continue from the latest draft.', 'aggressive-ads' ),
+					'idle'        => '',
+					'saving'      => __( 'Saving…', 'aggressive-ads' ),
+					'saved'       => __( 'Draft saved.', 'aggressive-ads' ),
+					'error'       => __( 'Could not save the draft. Your last change may not be stored.', 'aggressive-ads' ),
+					'conflict'    => __( 'This campaign was saved elsewhere. Refresh to continue from the latest draft.', 'aggressive-ads' ),
+					/* translators: %s: the campaign's last day, e.g. October 30, 2026. */
+					'runsThrough' => __( 'Runs through %s.', 'aggressive-ads' ),
+					'rename'      => __( 'Rename campaign', 'aggressive-ads' ),
+					'nameLabel'   => __( 'Campaign name', 'aggressive-ads' ),
+					'nameSaved'   => __( 'Campaign renamed.', 'aggressive-ads' ),
+					'nameEmpty'   => __( 'A campaign needs a name. The previous name was kept.', 'aggressive-ads' ),
+					'nameError'   => __( 'The name could not be saved. The previous name was kept.', 'aggressive-ads' ),
+					'linkSaved'   => __( 'Link saved.', 'aggressive-ads' ),
+					'linkInvalid' => __( 'That is not a link we can use. Enter a web address, such as https://example.com.', 'aggressive-ads' ),
 				),
 			)
 		);

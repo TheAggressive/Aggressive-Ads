@@ -337,11 +337,59 @@ function wireUpload( uploadId: string, zone: HTMLElement ): void {
 }
 
 /**
+ * Carries the campaign's link into every size card still using it.
+ *
+ * A card whose link was changed by hand keeps its own: only a field that is
+ * empty or still holds the link it was given follows the new one.
+ */
+let followingLink = false;
+
+function followCampaignLink(): void {
+	const link = document.getElementById( 'aggr-campaign-link' );
+
+	if ( followingLink || ! ( link instanceof HTMLInputElement ) ) {
+		return;
+	}
+
+	followingLink = true;
+	let previous = link.value.trim();
+
+	link.addEventListener( 'input', () => {
+		const next = link.value.trim();
+
+		document
+			.querySelectorAll< HTMLInputElement >(
+				'[data-aggr-upload] input[name="click_url"]'
+			)
+			.forEach( ( input ) => {
+				if (
+					'' === input.value.trim() ||
+					previous === input.value.trim()
+				) {
+					input.value = next;
+				}
+			} );
+
+		document
+			.querySelectorAll< HTMLElement >(
+				'[data-aggr-upload] .aggr-uploaded__destination-value'
+			)
+			.forEach( ( value ) => {
+				value.textContent = next;
+			} );
+
+		previous = next;
+	} );
+}
+
+/**
  * Wires one upload form, once, whoever asks first.
  *
  * @param uploadId The placement id this form uploads to.
  */
 function initUpload( uploadId: string ): void {
+	followCampaignLink();
+
 	if ( '' === uploadId || initializedIds.has( uploadId ) ) {
 		return;
 	}

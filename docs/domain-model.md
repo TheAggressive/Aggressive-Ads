@@ -85,10 +85,12 @@ All meta is `_aggr_`-prefixed and leading-underscore. The underscore is load-bea
 | `_aggr_internal_notes` | string | Staff-only; never leaves the admin |
 | `_aggr_notification_receipt` | string, repeated | Internal notification type/revision/recipient receipt for idempotent delivery |
 | `_aggr_advertiser_notes` | string | |
+| `_aggr_default_click_url` | string | The link new ads start from. Empty or a valid click URL; every creative still stores and validates its own `_aggr_click_url`, and delivery never reads this one |
 | `_aggr_revision` | int | Increments on each resubmission |
 | `_aggr_adsanity_ad_id` | int | **Repeated**, unused. Former provider checkpoint. Not read for fill. |
 | `_aggr_autosave_rev` | int | Optimistic-concurrency token for wizard autosave |
-| `_aggr_wizard_step` | string | Resume point; advancing to `review` requires complete creative coverage and a submission-grade date window. Review itself is read-only; submit is a state transition, not another persisted edit step. |
+| `_aggr_wizard_step` | string | Resume point: `details`, `creative`, or `review`. Advancing to `review` requires complete creative coverage and a submission-grade date window; submit is a state transition from review, not another persisted edit step. Stored `package` and `destination` read as `details`. |
+| `_aggr_title_is_automatic` | flag | Set while the title is one the wizard built from the package and start month. It follows the plan until a title is posted, which clears it; unlike `_aggr_title_is_placeholder` it does not block submission. |
 
 ### Line Item — `aggr_line_items` custom table
 

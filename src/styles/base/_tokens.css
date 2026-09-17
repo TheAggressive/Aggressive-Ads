@@ -8,17 +8,17 @@
 @layer aggr-tokens {
 	.aggr-portal {
 		/* Canvas and surfaces. */
-		--aggr-color-canvas: #f7f4ee;
+		--aggr-color-canvas: #f7f7f5;
 		--aggr-color-surface: #ffffff;
-		--aggr-color-surface-raised: #faf9f6;
-		--aggr-color-surface-sunken: #efede7;
-		--aggr-color-surface-inset: #eceae4;
+		--aggr-color-surface-raised: #fafaf9;
+		--aggr-color-surface-sunken: #efefec;
+		--aggr-color-surface-inset: #ededea;
 
 		/* Ink. */
 		--aggr-color-text: #111214;
-		--aggr-color-text-body: #4a4844;
-		/* 4.55:1 on the inset surface the empty state uses, its worst pairing. */
-		--aggr-color-text-muted: #6d695f;
+		--aggr-color-text-body: #3d3f45;
+		/* 5.58:1 on the inset surface the empty state uses, its worst pairing. */
+		--aggr-color-text-muted: #5c5e65;
 		/*
 		 * Darker than the design's #8a8676, which measured 3.65:1 on white and
 		 * 3.12:1 on the sunken surface. It carries table headers and stat
@@ -26,53 +26,49 @@
 		 * least forgiving of low contrast. WCAG 2.2 AA wants 4.5:1 for text
 		 * this size and every pairing now clears it.
 		 */
-		--aggr-color-text-subtle: #6d6a5d;
+		--aggr-color-text-subtle: #5c5e65;
 
-		--aggr-border-color: #e3dfd4;
-		--aggr-border-color-strong: #d8d4c8;
+		--aggr-border-color: #e3e3df;
+		--aggr-border-color-strong: #d4d4cf;
 
 		/*
-		 * The accent. The design offers four; this is the default, and it is
-		 * the one place to change it — every accented surface reads this token
-		 * rather than repeating a hex.
+		 * The accent: Signal orange, from the brand sheet. It fills, selects,
+		 * marks progress and draws the focus ring — everything that is a shape
+		 * rather than text. On white it is 3.39:1, which clears the 3:1 a
+		 * graphical object needs and is why it never carries small text itself.
 		 */
-		--aggr-color-accent: #ff3b2f;
+		--aggr-color-accent: #f05a28;
+
 		/*
-		 * Oxblood: the brand-forward accent, dark enough to carry white text.
-		 *
-		 * White on #ff3b2f is 3.55:1 — fine behind an icon, a failure behind a
-		 * 14px button label. Buttons, primary CTAs and account links read this
-		 * one; the focus ring keeps the brighter accent, because it is not text.
-		 *
-		 * It replaced #e90d00, which cleared the 4.5:1 button threshold by
-		 * 0.14. Oxblood is 8.88:1 on white and 7.58:1 on the sunken surface, so
-		 * a later nudge toward a mock has room to move without failing.
+		 * The accent as text: links and accented labels. A darker orange,
+		 * because the brand orange is 3.39:1 on white and a 14px link needs
+		 * 4.5:1. This one is 5.66:1 on white and 5.27:1 on the canvas.
 		 */
-		--aggr-color-accent-strong: #8e1f1f;
+		--aggr-color-accent-strong: #b5401a;
+
+		/* Text on danger and other dark fills. */
 		--aggr-color-accent-contrast: #ffffff;
 
 		/*
-		 * The accent as it lands on the dark rail — today, the active nav chip.
-		 *
-		 * Every other accented surface sits on a light one, where darker is
-		 * safer. The rail inverts that: oxblood measures 1.89:1 on #1d1d20, and
-		 * no rail dark enough to still be a rail can rescue it — reading the
-		 * ratio backwards puts the required row at roughly #949189, a light
-		 * grey. So the chip gets its own token rather than borrowing either
-		 * accent, and this is about as dark as it goes while clearing the 3:1
-		 * non-text minimum, at 3.62:1.
-		 *
-		 * Unlike accent and accent-strong this is not brand-overridable, for
-		 * the same reason the rail's own colours are not: it is measured
-		 * against a fixed dark surface.
+		 * Text on the accent — every button label. Graphite, not white: white
+		 * on the brand orange is 3.39:1, graphite is 5.53:1. A site's own
+		 * accent recomputes this in Brand_Styles, so a dark accent gets white.
 		 */
-		--aggr-color-accent-rail: #e90d00;
+		--aggr-color-on-accent: #111214;
+
+		/*
+		 * The accent as it lands on the dark rail — the active nav chip. Not
+		 * brand-overridable, like the rail's own colours, because it is
+		 * measured against a fixed dark surface: 4.94:1 on the active row.
+		 */
+		--aggr-color-accent-rail: #f05a28;
+		--aggr-color-on-accent-rail: #111214;
 
 		/* The rail. */
 		--aggr-color-rail: #111214;
-		--aggr-color-rail-active: #1d1d20;
-		--aggr-color-rail-chip: #26262a;
-		--aggr-color-rail-text: #b9b6ac;
+		--aggr-color-rail-active: #1d1e22;
+		--aggr-color-rail-chip: #26272b;
+		--aggr-color-rail-text: #b4b5b9;
 		--aggr-color-rail-text-strong: #ffffff;
 
 		/*
@@ -85,12 +81,12 @@
 		 */
 		--aggr-color-live: #1a7a4d;
 		--aggr-color-live-tint: #e3f3ea;
-		--aggr-color-pending: #91630d;
-		--aggr-color-pending-tint: #fbf0dc;
-		--aggr-color-neutral: #6c685e;
-		--aggr-color-neutral-tint: #eceae4;
-		--aggr-color-ended: #6d6a5d;
-		--aggr-color-ended-tint: #efede7;
+		--aggr-color-pending: #735400;
+		--aggr-color-pending-tint: #faf1d2;
+		--aggr-color-neutral: #5c5e65;
+		--aggr-color-neutral-tint: #ededea;
+		--aggr-color-ended: #5c5e65;
+		--aggr-color-ended-tint: #efefec;
 		--aggr-color-danger: #c03826;
 		--aggr-color-danger-tint: #fbe7e3;
 
@@ -127,6 +123,15 @@
 		--aggr-font:
 			"Archivo", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
 			Arial, sans-serif;
+
+		/*
+		 * Numbers, sizes, dates and small labels. The system's own monospace,
+		 * so there is no second font to host and nothing fetched from a third
+		 * party — the same privacy rule Archivo is self-hosted for.
+		 */
+		--aggr-font-mono:
+			ui-monospace, "SFMono-Regular", "Cascadia Mono", "Segoe UI Mono", "Menlo",
+			"Consolas", monospace;
 
 		--aggr-control-min: 44px;
 

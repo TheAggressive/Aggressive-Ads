@@ -65,13 +65,19 @@ final class Review_Readiness {
 			Campaign_Rules::ERROR_START_MISSING,
 			Campaign_Rules::ERROR_START_IN_PAST,
 			Campaign_Rules::ERROR_START_NOT_MIDNIGHT => array(
-				'step'   => 'destination',
+				'step'   => 'details',
 				'target' => 'aggr-start-date',
 			),
+			// The schedule fieldset, not the end field: a fixed package renders
+			// that field disabled and hidden, and a link to it would land nowhere.
 			Campaign_Rules::ERROR_END_BEFORE_START,
 			Campaign_Rules::ERROR_END_NOT_DAY_END => array(
-				'step'   => 'destination',
-				'target' => 'aggr-end-date',
+				'step'   => 'details',
+				'target' => 'aggr-schedule',
+			),
+			Campaign_Rules::ERROR_TITLE_MISSING      => array(
+				'step'   => 'review',
+				'target' => 'aggr-rename',
 			),
 			Campaign_Rules::ERROR_NO_PLACEMENTS,
 			Campaign_Rules::ERROR_PLACEMENT_INACTIVE,

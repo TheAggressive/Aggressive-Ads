@@ -19,14 +19,7 @@ declare module '@aggr/scroll-lock' {
 }
 
 declare module '@aggr/logic' {
-	export const DISPLAY_STEPS: readonly [
-		'details',
-		'package',
-		'creative',
-		'destination',
-		'review',
-		'submit',
-	];
+	export const DISPLAY_STEPS: readonly [ 'details', 'creative', 'review' ];
 	export type WizardStep = ( typeof DISPLAY_STEPS )[ number ];
 	export type FileCheckCode =
 		| 'type'
@@ -41,10 +34,12 @@ declare module '@aggr/logic' {
 	export function stepIndex( step: string ): number;
 	export function nextStep( current: string ): WizardStep | null;
 	export function previousStep( current: string ): WizardStep | null;
-	export function canVisitStep(
-		target: string,
-		submitReady: boolean
-	): boolean;
+	export function addDays( date: string, days: number ): string | null;
+	export function normaliseLink( value: string ): string | null;
+	export function runEndDate(
+		start: string,
+		durationDays: number
+	): string | null;
 	export function parsePixelSize(
 		value: string
 	): { width: number; height: number } | null;

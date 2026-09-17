@@ -93,9 +93,11 @@ derived from the authenticated user; an account without an active organization
 cannot create an unowned draft.
 
 `PATCH /campaigns/{id}` accepts only `title`, `package_id`, `placement_ids`, `start_ts`,
-`end_ts`, `advertiser_notes`, and `wizard_step`, plus the required
+`end_ts`, `advertiser_notes`, `default_click_url`, and `wizard_step`, plus the required
 `autosave_rev` concurrency token. Placement references must still be active,
-the date window must be internally ordered, and only advertiser-editable
+the date window must be internally ordered, `default_click_url` must be empty
+(which clears it) or a link a creative could be saved with
+(`422 aggr_default_click_url_invalid` otherwise), and only advertiser-editable
 statuses may be changed. A stale revision returns `409 aggr_edit_conflict`
 with the current revision and does not overwrite the newer draft. Successful
 writes return the newly incremented `autosave_rev`.
@@ -113,12 +115,27 @@ must not infer a custom schedule merely from a zero duration.
 The server-rendered form calls the same `Campaign_Editor` workflow. It converts
 HTML dates from the WordPress timezone to UTC Unix integers before saving, so
 progressive enhancement and REST autosave cannot develop different rules.
-Setting `wizard_step` to `review` is the Step 4 completion boundary: both
-deliveries require exactly one creative for every selected placement, a future
+`wizard_step` accepts `details`, `creative`, and `review`; the retired
+`package`, `destination`, and `submit` are refused, and a stored `package` or
+`destination` reads back as `details`. When a save moves `package_id` or
+`start_ts` without supplying `end_ts`, a fixed-duration package's end is
+derived — 23:59:59 on the last of its days, counting the start day as the
+first — and an unset start derives no end. A supplied `end_ts` is kept. While
+a campaign still carries the wizard's name (placeholder or automatic), the
+same save renames it after the package and start month; a posted `title` ends
+that for good.
+
+Setting `wizard_step` to `creative` together with a non-zero `start_ts` is
+leaving details, and applies the submission-grade date window to the candidate
+dates — a future (or today's) start at local midnight and an end at 23:59:59.
+Staff are exempt from the past-start rule, as they are at review.
+
+Setting `wizard_step` to `review` is the creative-step completion boundary: both
+deliveries require a creative for every selected placement, a future
 start at `00:00:00` in the WordPress site timezone, and either no end or an end
 at `23:59:59` after the start. The inclusive end is the last second before the
 following midnight, matching AdSanity's comparison semantics. Partial-day REST
-timestamps are rejected at Step 4 completion and by submission/approval
+timestamps are rejected when advancing to review and by submission/approval
 validation. Validation runs only after object authorization and the optimistic
 revision check, so readiness failures cannot be used to probe another tenant's
 campaign.
@@ -131,11 +148,11 @@ context is never serialized because it may contain destinations or internal
 object identifiers. This is presentation guidance, not a submission claim:
 the transition endpoint revalidates immediately before changing status.
 
-The progressive Step 6 form is a second delivery of that transition contract,
+The review step's submit form is a second delivery of that transition contract,
 not a second implementation. It posts a campaign-bound nonce to `admin-post`,
 uses the transition rate limiter, and calls the same state machine with
-`aggr_submitted`. The `submit` confirmation is selected by query string only;
-`PATCH /campaigns/{id}` cannot persist it as `wizard_step`. Replayed form or
+`aggr_submitted`. There is no separate `submit` step to select, and
+`PATCH /campaigns/{id}` cannot persist one as `wizard_step`. Replayed form or
 REST submissions are refused by the current-state edge check and recorded as
 denied transitions.
 

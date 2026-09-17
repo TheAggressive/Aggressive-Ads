@@ -381,79 +381,6 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Step four writes a submission-grade local date window and advances review.
-	 *
-	 * @return void
-	 */
-	public function test_schedule_step_persists_dates_and_advances_to_review(): void {
-		wp_set_current_user( $this->advertiser );
-
-		$campaign_id = $this->editor->create( 'Scheduled campaign' );
-		$this->assertIsInt( $campaign_id );
-		$this->assertSame( 1, $this->actions->process_save( $campaign_id, array( 'package_id' => $this->package_id ), 0 ) );
-		$this->add_creative( $campaign_id );
-
-		$start_date = ( new \DateTimeImmutable( '+10 days', wp_timezone() ) )->format( 'Y-m-d' );
-		$end_date   = ( new \DateTimeImmutable( '+20 days', wp_timezone() ) )->format( 'Y-m-d' );
-		$result     = $this->actions->process_save_schedule( $campaign_id, $start_date, $end_date, 1 );
-
-		$this->assertSame( 2, $result );
-		$this->assertSame( $start_date, wp_date( 'Y-m-d', (int) get_post_meta( $campaign_id, Campaign_Repository::META_START_TS, true ), wp_timezone() ) );
-		$this->assertSame( $end_date . ' 23:59:59', wp_date( 'Y-m-d H:i:s', (int) get_post_meta( $campaign_id, Campaign_Repository::META_END_TS, true ), wp_timezone() ) );
-		$this->assertSame( 'review', get_post_meta( $campaign_id, Campaign_Repository::META_WIZARD_STEP, true ) );
-	}
-
-	/**
-	 * Scheduling cannot bypass the one-creative-per-placement contract.
-	 *
-	 * @return void
-	 */
-	public function test_schedule_step_requires_complete_creative_coverage(): void {
-		wp_set_current_user( $this->advertiser );
-
-		$campaign_id = $this->editor->create( 'Incomplete campaign' );
-		$this->assertIsInt( $campaign_id );
-		$this->assertSame( 1, $this->actions->process_save( $campaign_id, array( 'package_id' => $this->package_id ), 0 ) );
-
-		$start_date = ( new \DateTimeImmutable( '+10 days', wp_timezone() ) )->format( 'Y-m-d' );
-		$result     = $this->actions->process_save_schedule( $campaign_id, $start_date, '', 1 );
-
-		$this->assertWPError( $result );
-		$this->assertSame( 'aggr_creatives_incomplete', $result->get_error_code() );
-		$this->assertSame( 0, (int) get_post_meta( $campaign_id, Campaign_Repository::META_START_TS, true ) );
-		$this->assertSame( 'creative', get_post_meta( $campaign_id, Campaign_Repository::META_WIZARD_STEP, true ) );
-	}
-
-	/**
-	 * Step completion rejects missing, elapsed, and reversed date windows.
-	 *
-	 * @return void
-	 */
-	public function test_schedule_step_enforces_submission_grade_dates(): void {
-		wp_set_current_user( $this->advertiser );
-
-		$campaign_id = $this->editor->create( 'Invalid schedule' );
-		$this->assertIsInt( $campaign_id );
-		$this->assertSame( 1, $this->actions->process_save( $campaign_id, array( 'package_id' => $this->package_id ), 0 ) );
-		$this->add_creative( $campaign_id );
-
-		$missing = $this->actions->process_save_schedule( $campaign_id, '', '', 1 );
-		$this->assertWPError( $missing );
-		$this->assertSame( 'aggr_start_date_required', $missing->get_error_code() );
-
-		$past = $this->actions->process_save_schedule( $campaign_id, '2020-01-01', '', 1 );
-		$this->assertWPError( $past );
-		$this->assertSame( 'aggr_start_date_past', $past->get_error_code() );
-
-		$start_date = ( new \DateTimeImmutable( '+20 days', wp_timezone() ) )->format( 'Y-m-d' );
-		$end_date   = ( new \DateTimeImmutable( '+10 days', wp_timezone() ) )->format( 'Y-m-d' );
-		$reversed   = $this->actions->process_save_schedule( $campaign_id, $start_date, $end_date, 1 );
-		$this->assertWPError( $reversed );
-		$this->assertSame( 'aggr_end_before_start', $reversed->get_error_code() );
-		$this->assertSame( 1, Plugin::instance()->container()->get( Campaign_Repository::class )->autosave_revision( $campaign_id ) );
-	}
-
-	/**
 	 * The shared editor prevents API clients from bypassing date-only form
 	 * boundaries with arbitrary timestamps.
 	 *
@@ -602,6 +529,12 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 
 		$this->assertWPError( $result );
 		$this->assertSame( 'aggr_wizard_step_invalid', $result->get_error_code() );
+
+		// Retired with its step. A stale client naming it is refused, not stored.
+		$retired = $this->editor->save( $campaign_id, array( 'wizard_step' => 'destination' ), 0 );
+
+		$this->assertWPError( $retired );
+		$this->assertSame( 'aggr_wizard_step_invalid', $retired->get_error_code() );
 		$this->assertSame( 'details', get_post_meta( $campaign_id, Campaign_Repository::META_WIZARD_STEP, true ) );
 		$this->assertSame( 0, Plugin::instance()->container()->get( Campaign_Repository::class )->autosave_revision( $campaign_id ) );
 	}
@@ -644,11 +577,10 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 		$this->assertSame( 'aggr_forbidden', $result->get_error_code() );
 		$this->assertSame( 'Protected', get_the_title( $campaign_id ) );
 
-		$start_date = ( new \DateTimeImmutable( '+10 days', wp_timezone() ) )->format( 'Y-m-d' );
-		$schedule   = $this->actions->process_save_schedule( $campaign_id, $start_date, '', 0 );
+		$complete = $this->actions->process_complete_creative( $campaign_id, 0 );
 
-		$this->assertWPError( $schedule );
-		$this->assertSame( 'aggr_forbidden', $schedule->get_error_code(), 'Readiness checks must not reveal another tenant campaign state.' );
+		$this->assertWPError( $complete );
+		$this->assertSame( 'aggr_forbidden', $complete->get_error_code(), 'Readiness checks must not reveal another tenant campaign state.' );
 	}
 
 	/**
@@ -845,13 +777,19 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 			'aggr_notice' => 'submitted',
 		);
 
-		$this->assertSame( 'submit', Campaign_Actions::request_step( 'review' ) );
+		// Submit is part of review now, so asking for it lands on the resume point.
+		$this->assertSame( 'creative', Campaign_Actions::request_step( 'creative' ) );
 		$this->assertSame( 'submitted', Campaign_Actions::request_notice() );
+
+		$_GET['step'] = 'creative';
+
+		$this->assertSame( 'creative', Campaign_Actions::request_step( 'details' ) );
 
 		$_GET['step']        = 'approved';
 		$_GET['aggr_notice'] = 'campaign.transitioned';
 
 		$this->assertSame( 'review', Campaign_Actions::request_step( 'review' ) );
+		$this->assertSame( 'details', Campaign_Actions::request_step( 'destination' ), 'A retired stored step must not be displayed.' );
 		$this->assertSame( '', Campaign_Actions::request_notice() );
 	}
 
@@ -889,11 +827,11 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 
 
 	/**
-	 * A package nonce cannot authorize the schedule write action.
+	 * A submit nonce cannot authorize leaving the creative step.
 	 *
 	 * @return void
 	 */
-	public function test_schedule_handler_rejects_a_nonce_for_another_action(): void {
+	public function test_creative_handler_rejects_a_nonce_for_another_action(): void {
 		wp_set_current_user( $this->advertiser );
 		$campaign_id = $this->editor->create();
 		$this->assertIsInt( $campaign_id );
@@ -904,7 +842,31 @@ final class CampaignEditorTest extends WP_UnitTestCase {
 		);
 
 		$this->expectException( 'WPDieException' );
-		$this->actions->handle_save_schedule();
+		$this->actions->handle_complete_creative();
+	}
+
+	/**
+	 * Another campaign's rename nonce cannot rename this one.
+	 *
+	 * @return void
+	 */
+	public function test_rename_handler_requires_its_campaign_bound_nonce(): void {
+		wp_set_current_user( $this->advertiser );
+		$campaign_id = $this->editor->create( 'Kept name' );
+		$this->assertIsInt( $campaign_id );
+
+		$_POST = array(
+			'campaign_id' => (string) $campaign_id,
+			'title'       => 'Taken over',
+			'_wpnonce'    => wp_create_nonce( Campaign_Nonces::rename_nonce_action( $campaign_id + 1 ) ),
+		);
+
+		try {
+			$this->actions->handle_rename();
+			$this->fail( 'A rename with another campaign\'s nonce was not refused.' );
+		} catch ( \WPDieException $e ) {
+			$this->assertSame( 'Kept name', get_the_title( $campaign_id ) );
+		}
 	}
 
 	/**

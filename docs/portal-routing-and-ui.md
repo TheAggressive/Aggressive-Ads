@@ -105,26 +105,71 @@ It creates an organization-scoped `aggr_draft` and redirects to the ordinary
 `/advertiser/campaigns/{id}/` detail URL, keeping the documented URL grammar
 numeric rather than inventing a special `new` object segment.
 
-The detail screen is also the resumable wizard surface. All five steps
-currently ship.
+The dashboard also lists each active package as a button in one create form.
+The button pressed posts its own `package_id`, so choosing what to buy and
+starting the campaign are one click: the draft opens on details with that
+package applied. A package that cannot be applied leaves the draft in place
+and reports why on it.
 
-**Details** collects the campaign name and the package together. The package
-was its own step until the two were merged: the step before it offered a
-"placement interests" checkbox grid, and selecting a package overwrote those
-placements with the package's own through `package_snapshot()`, so the grid
-asked a question whose answer never survived. It is gone, and with it a page
-load and a decision that changed nothing. The step presents only active,
-completely configured catalogue entries as native radio controls, with price,
-duration, and included placement sizes. A package explicitly marked for a
-custom schedule displays that label instead of inventing a duration, and the
-active package marked as default is preselected only while the campaign has no
-saved package. The package is **not** `required` on the control: a draft must
-be savable with a name alone, and `Review_Readiness` points the missing-package
-error back at this fieldset.
+The detail screen is also the resumable wizard surface. It has three steps.
+There were five: the destination step only read back addresses the creative
+step had already collected, its dates belonged beside the package that prices
+them, and submit was the review screen with a notes box. Each cost a page load
+and asked nothing new.
 
-**Creative** presents one upload card per package placement, including exact
-dimensions, a native file input, destination URL, authenticated preview, and
-nonce-protected removal. Accessible image text is generated from the validated
+**Package & dates** asks what the campaign is and when it runs. There is no
+name field. The name used to be the first question, which made inventing a
+label the price of starting; the wizard now names an unnamed campaign after
+its plan — "Launch bundle – October 2026" — and keeps that name following the
+package and start month until somebody renames it. The page heading is the
+rename control: the autosave module turns the heading's text into a button
+styled to be indistinguishable from it, and Enter or leaving the field saves
+through REST autosave. Without script, review carries an ordinary rename form.
+`_aggr_title_is_automatic` records that the name is the wizard's, beside
+`_aggr_title_is_placeholder`, which still blocks submission of "Untitled
+campaign".
+
+The package list presents only active, completely configured catalogue entries
+as native radio controls, with price, duration, and included placement sizes.
+A package explicitly marked for a custom schedule displays that label instead
+of inventing a duration, and the active package marked as default is
+preselected only while the campaign has no saved package. The package is
+**not** `required`: a draft must be savable before anything is decided, and
+`Review_Readiness` points the missing-package error back at this fieldset.
+Choosing a package no longer submits the step, because a date now sits beside
+it; Continue is the only way on.
+
+The schedule is beside the package because the package prices it. A fixed
+package sells a number of calendar days, so its end date is derived —
+`Campaign_Rules::fixed_end_ts()`, counting the start day as day one, set by
+calendar day so a daylight-saving change cannot move it — and stated as "Runs
+through …" instead of asked for. The end field is still rendered, disabled and
+hidden, so it is not posted and switching to a custom package only has to
+enable it; a custom package asks for an optional end. `Campaign_Editor` derives
+the end whenever the package or start moves and no end was supplied, so an
+explicit `end_ts` from a REST client or a staff correction still wins. Leaving
+this step with a start date applies the submission-grade window, so a past
+date is refused beside the field; leaving without one is allowed. Dates travel
+as the local `YYYY-MM-DD` string the input holds and are resolved by
+`Date_Input::parse()` on the server, never in the browser: a date input carries
+no timezone, and a stamp built client-side is the visitor's zone rather than
+the site's.
+
+**Ads** restates the plan — package, dates, price, and how many sizes are
+ready — above one upload card per package placement, including exact
+dimensions, a downloadable blank SVG template at that size, a native file
+input, destination URL, authenticated preview, and nonce-protected removal.
+The Destination card above the sizes is a real field: `default_click_url`,
+saved on the campaign by autosave once the browser accepts it as a URL, or by
+a "Save link" button drawn only inside `<noscript>` (a refused link returns to
+this step). Under it, "Used by N of M ads" counts sizes whose first ad goes to
+the link; "Add tracking tags" is drawn disabled until #291.
+Typing in it updates every card whose link is empty or still the old one; a
+card changed by hand keeps its own. Without a campaign link, the first uploaded
+ad's link is used as before. Once the campaign has a destination, every further
+card arrives with that link filled in and folded behind "Goes to …", so choosing a file is the whole
+upload; the field is still a posted input inside a native `<details>`, and a
+refused address reopens it. Accessible image text is generated from the validated
 destination host unless an API client supplies its own. The upload sends itself
 once a file and a valid destination are both present, so the submit button is
 hidden — by script, after the module attaches, so a browser without it keeps
@@ -134,25 +179,55 @@ upload to it; the button is restored if an attempt is refused. Uploading is a
 change of context, so a sentence describing it precedes both controls and is in
 `aria-describedby` on each (WCAG 3.2.2).
 
-**Destination and schedule** confirms every per-creative destination, then
-collects a required future local start date and optional end date. Both dates
-autosave. They travel as the local `YYYY-MM-DD` string the input holds and are
-resolved by `Date_Input::parse()` on the server, never in the browser: a date
-input carries no timezone, and a stamp built client-side is the visitor's zone
-rather than the site's — hours out for anyone who is not local.
+Continue to review is a POST, not a link. It advances the resume point only
+when every placement is covered and the stored dates pass the window rule; a
+refused date sends the advertiser to details, anything else back to the
+uploads.
 
-**Review** presents the stored campaign, commercial package snapshot, schedule,
-and authenticated creative previews. It aggregates every current submission
-problem and links each one back to the exact editing step and field.
+**Review & submit** opens on the **Ready check** and aggregates every current
+submission problem with a link back to the exact step and field; the Ads row
+names the sizes still without a file and its action reads **Add file**. While
+the campaign is ready it also collects the advertiser's **Notes for the review
+team** and offers **Submit for review**, and beneath it states the editing
+lock, the withdrawal boundary and the changes-requested path. The notes are posted by that button rather
+than autosaved — the gap between a last keystroke and the click is where a
+debounced save loses them.
 
-**Submit** explains the editing lock, withdrawal boundary, and changes-requested
-path before presenting the final action, and collects the advertiser's notes for
-the review team. The notes sit here rather than on the first step because they
-describe a campaign the advertiser has by then finished assembling, and they are
-posted by the submit button rather than autosaved — the gap between a last
-keystroke and the click is where a debounced save loses them.
+Resume points stored by the five-step wizard are mapped on read: `package` and
+`destination` resume on details, where the questions they were asking now are.
+`?step=submit` falls back to the stored resume point.
 
-All five steps work without JavaScript.
+Beside every step sits an **order summary**: package and its duration, schedule
+and its length in days, the sizes the package asks for (grouped, so two 728×90
+placements read `728×90 ×2`), the link, how many ads are ready (from the Ads step
+on) and the total, with the one action that moves the advertiser on —
+**Continue to ads**, **Continue to review**, **Submit for review**. A locked
+action says why beneath it; when all that is missing is one file, it names the
+size. The page heading carries a breadcrumb, "All changes saved" while the
+wizard is on screen, and "Step N of 3" on a phone, where the bar has no room
+for labels. The first step's calendar states how many days are selected and
+draws the design's key; marking days as limited or sold out waits on #293. The
+wizard is a CSS container, so the two columns follow the panel's width rather
+than the viewport's. On a wide panel the step's own primary button is hidden and
+the summary's button submits the step's form through the `form` attribute; on a
+narrow one the step keeps its button and the summary sits below as a card. There
+is exactly one primary action on screen at any width, which is also what keeps
+browser tests unambiguous. Review shows the submit button locked, with how many
+things are left, until every submission check passes.
+
+Package cards lead with the price, then the length and number of sizes in the
+monospace face, then each size drawn to scale — `Catalogue_View_Data` supplies
+the shapes, clamped so a skyscraper and a leaderboard both fit a card.
+
+All three steps work without JavaScript.
+
+Once the campaign is no longer editable its screen opens on a **status view**
+(`partials/campaign-status.php`): the stages Draft → Submitted → In review →
+Approved → Scheduled → Live → Complete as a dated line, a note on what the
+advertiser can do now (with **Withdraw to edit** while that edge is open), an
+activity list built from the dates the campaign already stores, and a campaign
+card and thumbnails of its ads beside it. A stage with no stored date says `—`;
+the full audit-backed activity log is #295.
 
 Panels that describe a campaign which already exists — Summary, Creatives,
 delivery strategy, ad updates, variant comparison, update history — are hidden
@@ -164,14 +239,52 @@ would blank those panels for a reviewer.
 A completed or otherwise uneditable campaign can be copied from the detail
 screen. Complete campaigns label the action **Renew campaign**; others say
 **Duplicate campaign**. Both create a new draft with the stored snapshot and
-artwork, never the old dates or provider ads.
+artwork, never the old dates or provider ads. The campaign list offers each row's next
+step in its last column: **Continue setup** on a draft, **Make changes** when
+changes were requested, and **Run again** on a completed campaign, through the
+same copy action. A copy
+resumes on details, because the dates are the one thing it never carries.
 
-The dashboard always shows campaign-by-state counts. Impression, click and CTR
-tiles, a seven-day impression sparkline, and the matching campaign-table
-columns appear only when Reporting is on. Native delivery is always recording.
+The dashboard always shows campaign-by-state counts — running, in review, needs
+your attention, and all campaigns — each with a line saying what it counts.
+Impression, click and CTR tiles, the "Impressions per day" chart inside the
+delivery card, and the table's impression column appear only when Reporting is
+on. The chart is a smooth line over a fading area, drawn as server-side SVG:
+`Domain\Chart_Path` uses monotone (Fritsch–Carlson) tangents so the curve never
+overshoots a measured day, the previous equal window — the one the tiles compare
+against — is a dotted line behind it, days still being counted are dashed, and
+each day's figures appear on hover over its column while the same figures are
+announced from a list. The window is chosen from 7/14/30/90-day links with the current one marked,
+and a **Custom** fold holds the two UTC date fields. Reporting days are UTC
+days — the counts are stored per UTC day, so they cannot be re-cut into a
+viewer's local day without hourly data. What is exact is when a day starts, so
+the card says "Each day starts at 5:00 PM your time" and the freshness note
+"Figures since Sep 16, 5:00 PM (your time) are still coming in", through
+`@aggr/local-time`; without script both read in UTC. Below sit the five most
+recent campaigns with **View all**, the first campaign waiting on the
+advertiser with the review team's reason, and **Start a campaign** as a compact
+package list. **New campaign** is also at the foot of the rail on every screen.
+
+The campaigns list has tabs for the same slices with their counts, the current
+one marked, and a search field drawn disabled until #296. Rows show the package
+under the name and short `Sep 6 → Oct 4` schedules; the foot says
+"Showing N of M". Native delivery is always recording.
 They read `aggr_rollups` and never invented zeros. Spend stays absent.
 
-Saving details persists `package` as the resume point. Saving a package copies
+The counts are tiles on the page ground, each linking to the filtered list, and
+the delivery figures are tiles inside a card whose header carries the reporting
+window — the two rows are told apart by what governs one of them, which is why
+the counts can be tiles at all. Organization and Account use one layout: a
+column somebody reads (people and pending access; your details) beside a
+narrower column of things they act on (summary, invite, organization name;
+signing in and password), stacking below 64rem. Help lists how a campaign runs
+as numbered cards drawn from a CSS counter, so the steps renumber themselves,
+then a strip of what artwork needs (formats derived from the upload rules), each
+placement's size and limit with a blank template from `Domain\Size_Template` —
+the same file the upload form offers — and the status glossary in two columns.
+
+
+Saving details persists `creative` as the resume point. Saving a package copies
 its current placement set, integer-cent price, and currency onto the campaign;
 the catalogue remains mutable without retroactively changing the draft. Each
 campaign form has its own campaign-bound nonce, and campaign-field writes carry
@@ -196,27 +309,34 @@ and permits withdrawal. Rejected revisions remain visible with staff feedback;
 approved revisions become the new current creative. Drag/drop and client-side
 type/size/dimension checks enhance the native file input; they do not replace it.
 
-Step 4 has its own campaign-bound nonce and optimistic revision. Completion is
-not cosmetic: `Campaign_Editor` refuses to advance the resume point to `review`
-unless every selected placement has exactly one creative and the date window
-already satisfies submission-grade rules. Existing REST clients continue to
-write Unix timestamps; the HTML form performs the timezone conversion. Both
-paths enforce complete calendar days in the WordPress site timezone: start at
-`00:00:00`, inclusive end at `23:59:59`, or an open end. Fill eligibility
-ends at the next midnight.
+Leaving the creative step has its own campaign-bound nonce and optimistic
+revision. Completion is not cosmetic: `Campaign_Editor::complete_creative()`
+refuses to advance the resume point to `review` unless every selected placement
+has a creative and the stored date window already satisfies submission-grade
+rules. Existing REST clients continue to write Unix timestamps; the HTML form
+performs the timezone conversion. Both paths enforce complete calendar days in
+the WordPress site timezone: start at `00:00:00`, inclusive end at `23:59:59`,
+or an open end. Fill eligibility ends at the next midnight.
 
-Step 5 is intentionally read-only. `Review_Readiness` adapts the canonical
+Review is read-only apart from its rename and submit forms. `Review_Readiness` adapts the canonical
 submission validator into advertiser-safe `code`, `message`, `step`, and
 `target` values, discarding raw validation context that can contain URLs or
-internal identifiers. The success state and issue summary are announced, edit
-links use the normal resumable wizard URL plus an in-page target, and creative
-destinations remain text instead of active external links. The final submit
-step will re-run the validator because readiness can change while the review
-screen is open.
+internal identifiers. The step draws them as one check list with a row each for
+package, schedule, destination, ads and name (plus account when a problem is
+about neither): a done row says what it holds and links to change it, and a row
+with problems lists each message and links to the first problem's target. The
+success state and issue summary are announced, edit links use the normal
+resumable wizard URL plus an in-page target, and creative destinations remain
+text instead of active external links. Submission re-runs the validator because
+readiness can change while the review screen is open.
 
-Step 6 is a query-only confirmation screen, not another draft mutation. The
-durable resume point remains `review`; REST autosave rejects `submit` as a
-persisted wizard step. Its campaign-bound nonce authorizes only final
+"See it on the page" is an `aria-hidden` illustration: the stored creatives on
+an article sketch, wide sizes across the column and the rest in the side column.
+The creative list under it says the same thing in words. Placing each ad where
+its placement really sits is #294.
+
+Submission is not another draft mutation. The durable resume point remains
+`review`; REST autosave rejects `submit` as a persisted wizard step. Its campaign-bound nonce authorizes only final
 submission, and the form uses the same transition rate limit and
 `Campaign_State_Machine` as REST. The machine reauthorizes ownership and
 capabilities, re-runs the validator against current storage, stamps submission,

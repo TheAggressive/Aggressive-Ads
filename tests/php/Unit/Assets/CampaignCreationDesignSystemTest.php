@@ -38,8 +38,10 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 		$this->assertStringContainsString( 'Campaign_Nonces::copy_nonce_action', $detail );
 		$this->assertStringContainsString( 'Campaign_Actions::SAVE_ACTION', $detail );
 		$this->assertStringContainsString( 'name="package_id"', $detail );
-		$this->assertStringContainsString( 'Campaign_Actions::SAVE_SCHEDULE_ACTION', $detail );
-		$this->assertStringContainsString( 'Campaign_Nonces::schedule_nonce_action', $detail );
+		$this->assertStringContainsString( 'Campaign_Actions::COMPLETE_CREATIVE_ACTION', $detail );
+		$this->assertStringContainsString( 'Campaign_Nonces::creative_nonce_action', $detail );
+		$this->assertStringContainsString( 'Campaign_Actions::RENAME_ACTION', $detail );
+		$this->assertStringContainsString( 'Campaign_Nonces::rename_nonce_action', $detail );
 		$this->assertStringContainsString( 'Campaign_Actions::SUBMIT_ACTION', $detail );
 		$this->assertStringContainsString( 'Campaign_Nonces::submit_nonce_action', $detail );
 		$this->assertStringContainsString( 'Creative_Actions::UPLOAD_ACTION', $detail );
@@ -70,14 +72,23 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 		$this->assertStringContainsString( 'aria-current="step"', $template );
 		$this->assertStringContainsString( 'Campaign creation progress', $template );
 		$this->assertSame( 1, preg_match( '/<ol class="aggr-steps".*?<\/ol>/s', $template, $progress ) );
-		$this->assertSame( 5, substr_count( $progress[0], '<li' ), 'The documented wizard has five named steps.' );
+
+		/*
+		 * The bar is rendered from a list, so counting `<li` in the markup
+		 * counts the loop, not the steps. The list is what has to name one
+		 * label per displayable step, and the bar has to be drawn from it.
+		 */
+		$labels = array();
+		$this->assertSame( 1, preg_match( '/\$aggr_steps\s*=\s*array\((.*?)\);/s', $template, $labels ) );
+		$this->assertSame( 3, substr_count( $labels[1], '=> __(' ), 'The documented wizard has three named steps.' );
+		$this->assertStringContainsString( 'foreach ( $aggr_steps as', $progress[0] );
 		$this->assertStringContainsString( 'role="alert"', $template );
 		$this->assertStringContainsString( 'aria-describedby=', $template );
 		$this->assertStringContainsString( 'aggr-readiness-heading', $template );
-		$this->assertStringContainsString( 'aggr-review-details-heading', $template );
-		$this->assertStringContainsString( 'aggr-review-creative-heading', $template );
+		$this->assertStringContainsString( 'aggr-review-preview-heading', $template );
+		$this->assertStringContainsString( 'id="aggr-rename"', $template );
 		$this->assertStringContainsString( 'aggr-submit-heading', $template );
-		$this->assertStringContainsString( 'Submit campaign for review', $template );
+		$this->assertStringContainsString( 'Submit for review', $template );
 		$this->assertStringContainsString( '<fieldset', $template );
 		$this->assertStringContainsString( '<legend>', $template );
 		$this->assertStringContainsString( 'Assets::WIZARD_STORE', $template );
@@ -87,19 +98,24 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 		$this->assertStringContainsString( 'id="aggr-details-heading"', $template );
 
 		/*
-		 * Both questions the merged first step asks. The name is a labelled
-		 * input and the package a radio group in its own fieldset: merging two
-		 * steps into one screen is only an improvement if each still announces
-		 * as its own named group.
+		 * Both questions the first step asks, each its own named group: the
+		 * package a radio group and the dates a fieldset of labelled inputs.
+		 * Merging steps is only an improvement if each still announces as the
+		 * question it is. The name keeps a labelled input for a browser without
+		 * script, on review.
 		 */
 		$this->assertStringContainsString( 'for="aggr-title"', $template );
 		$this->assertStringContainsString( 'id="aggr-packages"', $template );
+		$this->assertStringContainsString( 'id="aggr-schedule"', $template );
 		$this->assertStringContainsString( 'aria-describedby="aggr-packages-hint"', $template );
-		$this->assertSame(
-			0,
-			substr_count( $template, "add_query_arg( 'step', 'package'" ),
-			'Nothing may still link to the step that no longer exists.'
-		);
+
+		foreach ( array( 'package', 'destination', 'submit' ) as $retired ) {
+			$this->assertSame(
+				0,
+				substr_count( $template, "add_query_arg( 'step', '{$retired}'" ),
+				"Nothing may still link to the {$retired} step, which no longer exists."
+			);
+		}
 	}
 
 	/**
@@ -116,7 +132,9 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 	private function wizard(): string {
 		$parts = array(
 			AGGR_PLUGIN_DIR . 'templates/portal/screens/campaign.php',
+			AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-plan-step.php',
 			AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-creative-step.php',
+			AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-review-step.php',
 			AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-upload-form.php',
 			AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-variant-destination.php',
 			AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-variant-artwork.php',
@@ -145,6 +163,25 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 	 * costing width in a card that is already a third of the page. Asserted
 	 * here because the defence is one declaration and its absence looks
 	 * exactly like nothing being wrong.
+	 *
+	 * @return void
+	 */
+	public function test_submit_buttons_resist_a_theme_button_rule(): void {
+		$css = Portal_Styles::contents();
+
+		/*
+		 * LAAO styles `button[type="submit"]` red, white and uppercase, which
+		 * outranks every single-class button rule in the portal. The guard is
+		 * a handful of `.aggr-portal`-scoped declarations, and losing any of
+		 * them looks like nothing until a theme repaints the buttons.
+		 */
+		$this->assertSame( 1, preg_match( '/\.aggr-portal button\[type="submit"\] \{[^}]*text-transform: none;/s', $css ), 'Portal submit buttons will take a theme\'s capitals again.' );
+		$this->assertSame( 1, preg_match( '/\.aggr-portal \.aggr-button \{[^}]*background: var\(--aggr-color-accent\);[^}]*color: var\(--aggr-color-on-accent\);/s', $css ), 'Portal buttons will take a theme\'s colours again.' );
+		$this->assertSame( 1, preg_match( '/\.aggr-portal \.aggr-button--secondary \{[^}]*background: var\(--aggr-color-surface\);/s', $css ), 'Secondary buttons will take a theme\'s red again.' );
+	}
+
+	/**
+	 * Field labels state their own case rather than inheriting the theme's.
 	 *
 	 * @return void
 	 */

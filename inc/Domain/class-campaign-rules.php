@@ -164,6 +164,39 @@ final class Campaign_Rules {
 	}
 
 	/**
+	 * The last second of a fixed-length run, in a named timezone.
+	 *
+	 * A package sells a number of calendar days, and the start day is the first
+	 * of them — a 30-day package starting on the 1st runs through the 30th, not
+	 * the 31st. The day is found first and the clock set afterwards, because
+	 * adding `N × 86400` seconds lands an hour off across a daylight-saving
+	 * change and fails `validate_day_boundaries()`.
+	 *
+	 * @param int    $start_ts Start of the first day, UTC Unix seconds. Zero means unset.
+	 * @param int    $days     Calendar days the package runs.
+	 * @param string $timezone Timezone name, e.g. `Europe/London`.
+	 * @return int 23:59:59 on the last day, UTC Unix seconds, or zero when either input is unset.
+	 */
+	public static function fixed_end_ts( int $start_ts, int $days, string $timezone ): int {
+		if ( $start_ts <= 0 || $days <= 0 ) {
+			return 0;
+		}
+
+		try {
+			$zone = new \DateTimeZone( $timezone );
+		} catch ( \Exception $e ) {
+			$zone = new \DateTimeZone( 'UTC' );
+		}
+
+		return ( new \DateTimeImmutable( '@' . $start_ts ) )
+			->setTimezone( $zone )
+			->setTime( 0, 0 )
+			->modify( '+' . ( $days - 1 ) . ' days' )
+			->setTime( 23, 59, 59 )
+			->getTimestamp();
+	}
+
+	/**
 	 * Checks a campaign's date window.
 	 *
 	 * **The bound is the start of the current day, not the current moment.**

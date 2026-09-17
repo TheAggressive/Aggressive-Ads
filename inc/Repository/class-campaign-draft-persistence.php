@@ -84,13 +84,14 @@ final class Campaign_Draft_Persistence {
 		}
 
 		$meta = array(
-			'start_ts'         => Campaign_Repository::META_START_TS,
-			'end_ts'           => Campaign_Repository::META_END_TS,
-			'advertiser_notes' => Campaign_Repository::META_ADVERTISER_NOTES,
-			'wizard_step'      => Campaign_Repository::META_WIZARD_STEP,
-			'package_id'       => Campaign_Repository::META_PACKAGE_ID,
-			'budget_cents'     => Campaign_Repository::META_BUDGET_CENTS,
-			'currency'         => Campaign_Repository::META_CURRENCY,
+			'start_ts'          => Campaign_Repository::META_START_TS,
+			'end_ts'            => Campaign_Repository::META_END_TS,
+			'advertiser_notes'  => Campaign_Repository::META_ADVERTISER_NOTES,
+			'default_click_url' => Campaign_Repository::META_DEFAULT_CLICK_URL,
+			'wizard_step'       => Campaign_Repository::META_WIZARD_STEP,
+			'package_id'        => Campaign_Repository::META_PACKAGE_ID,
+			'budget_cents'      => Campaign_Repository::META_BUDGET_CENTS,
+			'currency'          => Campaign_Repository::META_CURRENCY,
 		);
 
 		foreach ( $meta as $field => $meta_key ) {
@@ -121,15 +122,16 @@ final class Campaign_Draft_Persistence {
 	 */
 	private function values( int $campaign_id, array $keys ): array {
 		$getters = array(
-			'title'            => 'raw_title',
-			'start_ts'         => 'start_ts',
-			'end_ts'           => 'end_ts',
-			'advertiser_notes' => 'advertiser_notes',
-			'wizard_step'      => 'wizard_step',
-			'package_id'       => 'package_id',
-			'budget_cents'     => 'budget_cents',
-			'currency'         => 'currency',
-			'placement_ids'    => 'placement_ids',
+			'title'             => 'raw_title',
+			'start_ts'          => 'start_ts',
+			'end_ts'            => 'end_ts',
+			'advertiser_notes'  => 'advertiser_notes',
+			'default_click_url' => 'default_click_url',
+			'wizard_step'       => 'wizard_step',
+			'package_id'        => 'package_id',
+			'budget_cents'      => 'budget_cents',
+			'currency'          => 'currency',
+			'placement_ids'     => 'placement_ids',
 		);
 		$values  = array();
 
@@ -158,7 +160,7 @@ final class Campaign_Draft_Persistence {
 				$normalized[ $key ] = (int) $fields[ $key ];
 			} elseif ( 'title' === $key ) {
 				$normalized[ $key ] = Post_Title::as_stored( (string) $fields[ $key ] );
-			} elseif ( in_array( $key, array( 'advertiser_notes', 'wizard_step', 'currency' ), true ) ) {
+			} elseif ( in_array( $key, array( 'advertiser_notes', 'default_click_url', 'wizard_step', 'currency' ), true ) ) {
 				$normalized[ $key ] = (string) $fields[ $key ];
 			}
 		}
