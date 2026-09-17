@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
-"POT-Creation-Date: 2026-09-17T04:48:07+00:00\n"
+"POT-Creation-Date: 2026-09-17T05:33:24+00:00\n"
 "PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -950,13 +950,13 @@ msgstr "Noch nicht gespeichert…"
 
 #: inc/Admin/class-package-screen.php:168
 #: inc/Admin/class-placement-screen.php:220
-#: inc/Admin/class-settings-screen.php:308 inc/Assets/class-assets.php:392
+#: inc/Admin/class-settings-screen.php:308 inc/Assets/class-assets.php:398
 msgid "Saving…"
 msgstr "Wird gespeichert…"
 
 #: inc/Admin/class-package-screen.php:169
 #: inc/Admin/class-placement-screen.php:221
-#: inc/Admin/class-settings-screen.php:309 inc/Assets/class-assets.php:419
+#: inc/Admin/class-settings-screen.php:309 inc/Assets/class-assets.php:425
 msgid "Saved."
 msgstr "Gespeichert."
 
@@ -1804,7 +1804,7 @@ msgid "Choose an advertiser"
 msgstr "Wählen Sie einen Werbetreibenden"
 
 #: inc/Admin/class-review-screen.php:292
-#: inc/Admin/class-settings-screen.php:215 inc/Assets/class-assets.php:399
+#: inc/Admin/class-settings-screen.php:215 inc/Assets/class-assets.php:405
 #: inc/Workflow/class-campaign-change-manager.php:761
 #: templates/portal/partials/campaign-changes.php:142
 #: templates/portal/partials/campaign-review-step.php:256
@@ -2521,25 +2521,25 @@ msgstr "Immer, als Administrator"
 msgid "Advertising settings need JavaScript enabled."
 msgstr "Für die Werbeeinstellungen muss JavaScript aktiviert sein."
 
-#: inc/Assets/class-assets.php:337
+#: inc/Assets/class-assets.php:343
 msgid "Dialog opened"
 msgstr "Dialog geöffnet"
 
-#: inc/Assets/class-assets.php:338
+#: inc/Assets/class-assets.php:344
 msgid "Dialog closed"
 msgstr "Dialog geschlossen"
 
-#: inc/Assets/class-assets.php:393
+#: inc/Assets/class-assets.php:399
 msgid "Draft saved."
 msgstr "Entwurf gespeichert."
 
-#: inc/Assets/class-assets.php:394
+#: inc/Assets/class-assets.php:400
 msgid "Could not save the draft. Your last change may not be stored."
 msgstr ""
 "Entwurf konnte nicht gespeichert werden. Ihre letzte Änderung wurde "
 "möglicherweise nicht gespeichert."
 
-#: inc/Assets/class-assets.php:395
+#: inc/Assets/class-assets.php:401
 msgid ""
 "This campaign was saved elsewhere. Refresh to continue from the latest draft."
 msgstr ""
@@ -2547,131 +2547,131 @@ msgstr ""
 "neuesten Entwurf fortzufahren."
 
 #. translators: %s: the campaign's last day, e.g. October 30, 2026.
-#: inc/Assets/class-assets.php:397
+#: inc/Assets/class-assets.php:403
 #: templates/portal/partials/campaign-plan-step.php:204
 #, fuzzy, php-format
 msgid "Runs through %s."
 msgstr "Abgeglichen bis %s (UTC)."
 
-#: inc/Assets/class-assets.php:398
+#: inc/Assets/class-assets.php:404
 #, fuzzy
 msgid "Rename campaign"
 msgstr "Kampagne verlängern"
 
-#: inc/Assets/class-assets.php:400 templates/portal/screens/campaign.php:391
+#: inc/Assets/class-assets.php:406 templates/portal/screens/campaign.php:391
 #, fuzzy
 msgid "Campaign renamed."
 msgstr "Kampagnenname"
 
-#: inc/Assets/class-assets.php:401
+#: inc/Assets/class-assets.php:407
 msgid "A campaign needs a name. The previous name was kept."
 msgstr ""
 
-#: inc/Assets/class-assets.php:402
+#: inc/Assets/class-assets.php:408
 #, fuzzy
 msgid "The name could not be saved. The previous name was kept."
 msgstr ""
 "Die Aktualisierung konnte nicht gespeichert werden. Die aktuelle Anzeige "
 "wurde wiederhergestellt."
 
-#: inc/Assets/class-assets.php:403
+#: inc/Assets/class-assets.php:409
 #, fuzzy
 msgid "Link saved."
 msgstr "Nicht gespeichert."
 
-#: inc/Assets/class-assets.php:404
+#: inc/Assets/class-assets.php:410
 msgid ""
 "That is not a link we can use. Enter a web address, such as https://"
 "example.com."
 msgstr ""
 
-#: inc/Assets/class-assets.php:420 templates/portal/partials/toast.php:75
+#: inc/Assets/class-assets.php:426 templates/portal/partials/toast.php:75
 msgid "Dismiss this notice"
 msgstr "Diesen Hinweis schließen"
 
-#: inc/Assets/class-assets.php:421 templates/portal/partials/toast.php:45
+#: inc/Assets/class-assets.php:427 templates/portal/partials/toast.php:45
 msgid "Success"
 msgstr "Erfolg"
 
-#: inc/Assets/class-assets.php:422 templates/portal/partials/toast.php:46
+#: inc/Assets/class-assets.php:428 templates/portal/partials/toast.php:46
 msgid "Error"
 msgstr "Fehler"
 
-#: inc/Assets/class-assets.php:423 templates/portal/partials/toast.php:47
+#: inc/Assets/class-assets.php:429 templates/portal/partials/toast.php:47
 msgid "Warning"
 msgstr "Warnung"
 
-#: inc/Assets/class-assets.php:424 templates/portal/partials/toast.php:48
+#: inc/Assets/class-assets.php:430 templates/portal/partials/toast.php:48
 msgid "Notice"
 msgstr "Hinweis"
 
-#: inc/Assets/class-assets.php:425
+#: inc/Assets/class-assets.php:431
 msgid "Creative uploaded."
 msgstr "Werbemittel hochgeladen."
 
-#: inc/Assets/class-assets.php:426 templates/portal/screens/campaign.php:409
+#: inc/Assets/class-assets.php:432 templates/portal/screens/campaign.php:409
 msgid "Creative removed."
 msgstr "Werbemittel entfernt."
 
-#: inc/Assets/class-assets.php:427 templates/portal/screens/campaign.php:415
+#: inc/Assets/class-assets.php:433 templates/portal/screens/campaign.php:415
 msgid "Destination saved."
 msgstr "Ziel gespeichert."
 
-#: inc/Assets/class-assets.php:428
+#: inc/Assets/class-assets.php:434
 msgid "Artwork replaced."
 msgstr "Werbemittel ersetzt."
 
-#: inc/Assets/class-assets.php:429 templates/portal/screens/campaign.php:414
+#: inc/Assets/class-assets.php:435 templates/portal/screens/campaign.php:414
 msgid "Dates saved."
 msgstr "Datumsangaben gespeichert."
 
-#: inc/Assets/class-assets.php:430
+#: inc/Assets/class-assets.php:436
 msgid "Share saved."
 msgstr "Freigabe gespeichert."
 
-#: inc/Assets/class-assets.php:431
+#: inc/Assets/class-assets.php:437
 msgid "Paused."
 msgstr "Pausiert."
 
-#: inc/Assets/class-assets.php:432
+#: inc/Assets/class-assets.php:438
 msgid "Resumed."
 msgstr "Wiederaufgenommen."
 
-#: inc/Assets/class-assets.php:433
+#: inc/Assets/class-assets.php:439
 msgid "Update sent for review."
 msgstr "Update zur Prüfung gesendet."
 
-#: inc/Assets/class-assets.php:434
+#: inc/Assets/class-assets.php:440
 msgid "Update withdrawn."
 msgstr "Update zurückgezogen."
 
 #. translators: %s: this placement's maximum file size, e.g. 150 KB.
-#: inc/Assets/class-assets.php:456
+#: inc/Assets/class-assets.php:462
 #, php-format
 msgid "That file is larger than %s. Choose a smaller ad creative."
 msgstr "Diese Datei ist größer als %s. Wählen Sie ein kleineres Werbemittel."
 
-#: inc/Assets/class-assets.php:468
+#: inc/Assets/class-assets.php:474
 msgid "File selected. Add a destination URL to upload it."
 msgstr "Datei ausgewählt. Fügen Sie eine Ziel-URL hinzu, um sie hochzuladen."
 
-#: inc/Assets/class-assets.php:469
+#: inc/Assets/class-assets.php:475
 msgid "Uploading the creative."
 msgstr "Werbemittel wird hochgeladen."
 
-#: inc/Assets/class-assets.php:470
+#: inc/Assets/class-assets.php:476
 msgid "Enter a complete destination URL to finish the upload."
 msgstr "Geben Sie eine vollständige Ziel-URL ein, um den Upload abzuschließen."
 
-#: inc/Assets/class-assets.php:471
+#: inc/Assets/class-assets.php:477
 msgid "Choose an ad creative file to upload."
 msgstr "Wählen Sie eine Werbemittel-Datei zum Hochladen."
 
-#: inc/Assets/class-assets.php:472
+#: inc/Assets/class-assets.php:478
 msgid "Use a JPEG, PNG, GIF, or WebP image."
 msgstr "Verwenden Sie ein JPEG-, PNG-, GIF- oder WebP-Bild."
 
-#: inc/Assets/class-assets.php:473
+#: inc/Assets/class-assets.php:479
 msgid ""
 "That ad creative is too large in pixels to process safely. Choose a smaller "
 "one."
@@ -2679,7 +2679,7 @@ msgstr ""
 "Dieses Werbemittel ist in Pixeln zu groß, um es sicher zu verarbeiten. "
 "Wählen Sie ein kleineres aus."
 
-#: inc/Assets/class-assets.php:474
+#: inc/Assets/class-assets.php:480
 msgid "The ad creative must match the required pixel size for this placement."
 msgstr ""
 "Das Werbemittel muss der erforderlichen Pixelgröße dieser Platzierung "
@@ -6261,24 +6261,99 @@ msgstr "Diese Anzeige läuft nicht."
 msgid "Select Update to supply a replacement."
 msgstr "Wählen Sie Update, um einen Ersatz bereitzustellen."
 
-#. translators: %d: number of days between the start and end dates, inclusive.
-#: templates/portal/partials/campaign-calendar-preview.php:62
+#. translators: %s: number of days between the start and end dates, inclusive.
+#: templates/portal/partials/campaign-calendar.php:70
+#: templates/portal/partials/campaign-calendar.php:72
 #, fuzzy, php-format
-msgid "%d day selected"
-msgid_plural "%d days selected"
+msgid "%s day selected"
+msgid_plural "%s days selected"
 msgstr[0] "Nicht ausgewählt"
 msgstr[1] "Nicht ausgewählt"
 
-#: templates/portal/partials/campaign-calendar-preview.php:103
+#: templates/portal/partials/campaign-calendar.php:85
+#, fuzzy
+msgid "first day"
+msgstr "%s Tag"
+
+#: templates/portal/partials/campaign-calendar.php:86
+#, fuzzy
+msgid "last day"
+msgstr "Letzte %d Tage"
+
+#: templates/portal/partials/campaign-calendar.php:87
+#, fuzzy
+msgid "not available"
+msgstr "Verfügbar"
+
+#. translators: 1: first day, e.g. Friday, September 18, 2026. 2: last day.
+#: templates/portal/partials/campaign-calendar.php:88
+#, fuzzy, php-format
+msgid "Runs from %1$s through %2$s."
+msgstr "Abgeglichen bis %s (UTC)."
+
+#. translators: %s: first day, e.g. Friday, September 18, 2026.
+#: templates/portal/partials/campaign-calendar.php:89
+#, php-format
+msgid ""
+"Starts %s. Choose an end date, or leave it open to run until it is ended."
+msgstr ""
+
+#. translators: 1: first day, e.g. Friday, September 18, 2026. 2: last day.
+#: templates/portal/partials/campaign-calendar.php:90
+#, fuzzy, php-format
+msgid "Starts %1$s and runs through %2$s."
+msgstr "Abgeglichen bis %s (UTC)."
+
+#: templates/portal/partials/campaign-calendar.php:94
+msgid "Quick picks"
+msgstr ""
+
+#: templates/portal/partials/campaign-calendar.php:98
+#, fuzzy
+msgid "Starts today"
+msgstr "Startdatum"
+
+#: templates/portal/partials/campaign-calendar.php:99
+msgid "Next Monday"
+msgstr ""
+
+#: templates/portal/partials/campaign-calendar.php:100
+msgid "2 weeks"
+msgstr ""
+
+#: templates/portal/partials/campaign-calendar.php:101
+msgid "This month"
+msgstr ""
+
+#: templates/portal/partials/campaign-calendar.php:102
+#, fuzzy
+msgid "No end date"
+msgstr "Enddatum"
+
+#: templates/portal/partials/campaign-calendar.php:115
+#, fuzzy
+msgid "Previous month"
+msgstr "Zurück"
+
+#: templates/portal/partials/campaign-calendar.php:118
+#, fuzzy
+msgid "Next month"
+msgstr "Weiter"
+
+#: templates/portal/partials/campaign-calendar.php:124
+msgid "Arrow keys move between days. Page Up and Page Down change the month."
+msgstr ""
+
+#: templates/portal/partials/campaign-calendar.php:187
 #, fuzzy
 msgid "Selected"
 msgstr "Abgelehnt"
 
-#: templates/portal/partials/campaign-calendar-preview.php:104
+#: templates/portal/partials/campaign-calendar.php:188
 msgid "Limited availability"
 msgstr ""
 
-#: templates/portal/partials/campaign-calendar-preview.php:105
+#: templates/portal/partials/campaign-calendar.php:189
 #, fuzzy
 msgid "Sold out"
 msgstr "Abmelden"
@@ -6377,14 +6452,14 @@ msgid "Notes for the review team"
 msgstr "Hinweise für das Prüfungsteam"
 
 #. translators: %s: the placement this advertisement runs in.
-#: templates/portal/partials/campaign-changes.php:203
+#: templates/portal/partials/campaign-changes.php:220
 #, php-format
 msgid "Destination for %s"
 msgstr "Ziel für %s"
 
-#: templates/portal/partials/campaign-changes.php:219
+#: templates/portal/partials/campaign-changes.php:236
 #: templates/portal/partials/campaign-order-summary.php:153
-#: templates/portal/partials/campaign-plan-step.php:242
+#: templates/portal/partials/campaign-plan-step.php:236
 msgid "Save and continue"
 msgstr "Speichern und fortfahren"
 
@@ -6661,7 +6736,7 @@ msgid "Total"
 msgstr ""
 
 #: templates/portal/partials/campaign-order-summary.php:154
-#: templates/portal/partials/campaign-plan-step.php:243
+#: templates/portal/partials/campaign-plan-step.php:237
 #, fuzzy
 msgid "Continue to ads"
 msgstr "Absenden fortsetzen"
@@ -6876,34 +6951,6 @@ msgstr "Optional. Die Kampagne läuft bis zum Ende dieses Tages."
 
 #: templates/portal/partials/campaign-plan-step.php:194
 msgid "23:59 site time"
-msgstr ""
-
-#: templates/portal/partials/campaign-plan-step.php:219
-#, fuzzy
-msgid "Starts today"
-msgstr "Startdatum"
-
-#: templates/portal/partials/campaign-plan-step.php:220
-msgid "Next Monday"
-msgstr ""
-
-#: templates/portal/partials/campaign-plan-step.php:221
-msgid "2 weeks"
-msgstr ""
-
-#: templates/portal/partials/campaign-plan-step.php:222
-msgid "This month"
-msgstr ""
-
-#: templates/portal/partials/campaign-plan-step.php:223
-#, fuzzy
-msgid "No end date"
-msgstr "Enddatum"
-
-#: templates/portal/partials/campaign-plan-step.php:225
-msgid ""
-"Quick picks and choosing on the calendar are coming soon. Use the date "
-"fields for now."
 msgstr ""
 
 #: templates/portal/partials/campaign-request.php:36
@@ -8566,12 +8613,6 @@ msgstr "Banner"
 #~ msgid_plural "%s campaigns"
 #~ msgstr[0] "%s Kampagne"
 #~ msgstr[1] "%s Kampagnen"
-
-#, php-format
-#~ msgid "Last %d day"
-#~ msgid_plural "Last %d days"
-#~ msgstr[0] "Letzte %d Tage"
-#~ msgstr[1] "Letzte %d Tage"
 
 #, php-format
 #~ msgid ""

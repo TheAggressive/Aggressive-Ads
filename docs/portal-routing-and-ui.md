@@ -205,8 +205,19 @@ on) and the total, with the one action that moves the advertiser on —
 action says why beneath it; when all that is missing is one file, it names the
 size. The page heading carries a breadcrumb, "All changes saved" while the
 wizard is on screen, and "Step N of 3" on a phone, where the bar has no room
-for labels. The first step's calendar states how many days are selected and
-draws the design's key; marking days as limited or sold out waits on #293. The
+for labels. The first step's dates are also chosen on a range calendar
+(`@aggr/calendar`, `partials/campaign-calendar.php`): two months, one on a phone,
+with month buttons, Page Up/Page Down and a horizontal swipe to reach later
+months, and quick picks — Starts today and Next Monday always, 2 weeks, This
+month and No end date only for a custom package, since a fixed one derives its
+end. The calendar writes into the date fields and raises the events typing
+would, so autosave and "Runs through …" follow it; the fields stay the posted
+values and the only path without script, where the calendar is a hidden picture
+of the range. The live-campaign change editor's Schedule step uses the same
+partial; once the stored start has passed, only the end moves and the start
+picks are not offered, matching `Live_Edit_Rules`. It draws the design's key,
+but marks no day limited or sold out until availability comes from the forecast
+(#293). The
 wizard is a CSS container, so the two columns follow the panel's width rather
 than the viewport's. On a wide panel the step's own primary button is hidden and
 the summary's button submits the step's form through the `form` attribute; on a

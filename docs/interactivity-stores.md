@@ -31,6 +31,7 @@ Author under `src/`; ship compiled `dist/` (see [build-and-release.md](build-and
 | `@aggr/upload` | `src/interactivity/upload.ts` | `dist/interactivity/upload.js` |
 | `@aggr/local-time` | `src/interactivity/local-time.ts` | `dist/interactivity/local-time.js` |
 | `@aggr/list-more` | `src/interactivity/list-more.ts` | `dist/interactivity/list-more.js` |
+| `@aggr/calendar` | `src/interactivity/calendar.ts` | `dist/interactivity/calendar.js` |
 
 `inc/Assets/class-assets.php` registers modules from `dist/`, reads `.asset.php`
 manifests, and early-enqueues the dialog store (plus `@wordpress/interactivity`)
@@ -119,6 +120,14 @@ press so the footer stays reachable. Every load announces the new count through
 a polite status region; only a press moves focus, to the first new campaign.
 A failed load says so, keeps the button for a retry and shows the page links
 again.
+
+`calendar` is not a store and has no dependencies; it enqueues on campaign
+detail and attaches to each `data-aggr-calendar` element, reading the input ids,
+the site's today, the earliest allowed day, `start_of_week`, whether the start is
+locked and its translated labels from data attributes. It never posts: it sets
+the date inputs' values and dispatches `input` and `change`, which is how
+autosave and the run-through line learn of the change. A fixed package is read
+from the checked `package_id` radio's `data-aggr-duration-days`.
 
 Modules are enqueued only on the portal route. The plugin adds nothing to any other page on the site.
 

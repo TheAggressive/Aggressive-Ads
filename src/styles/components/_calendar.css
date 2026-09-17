@@ -1,0 +1,276 @@
+/*
+ * The schedule's range calendar: the server's picture of the dates and the
+ * grid `@aggr/calendar` puts in its place, drawn by the same rules.
+ *
+ * Its own partial because the wizard sheet is at the thousand-line gate and
+ * the calendar is one component, used by the creation wizard and the
+ * live-campaign change editor alike.
+ */
+
+/*
+ * Controls that only script can make do anything. Hidden only where scripting
+ * is known to be off, rather than shown only where it is known to be on: the
+ * controls render disabled until their module enables them, so a browser that
+ * does not know the media feature sees inert buttons, never live dead ones.
+ */
+@media (scripting: none) {
+	.aggr-script-only {
+		display: none;
+	}
+}
+
+/*
+ * The day count and the month buttons share a row that is always there, so
+ * neither appearing nor the count changing moves the calendar under it.
+ */
+.aggr-calendar__bar {
+	display: flex;
+	gap: var(--aggr-space-sm);
+	align-items: center;
+	justify-content: space-between;
+	min-height: 2.25rem;
+	margin: var(--aggr-space-md) 0 var(--aggr-space-xs);
+}
+
+.aggr-calendar__nav {
+	display: flex;
+	gap: var(--aggr-space-2xs);
+	margin-inline-start: auto;
+}
+
+.aggr-calendar__turn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 2.25rem;
+	height: 2.25rem;
+	padding: 0;
+	background: var(--aggr-color-surface);
+	border: 1px solid var(--aggr-border-color-strong);
+	border-radius: var(--aggr-radius-control);
+	color: var(--aggr-color-text);
+	cursor: pointer;
+}
+
+.aggr-calendar__turn:hover:not(:disabled) {
+	border-color: var(--aggr-color-text);
+}
+
+.aggr-calendar__turn:disabled {
+	color: var(--aggr-color-text-subtle);
+	cursor: not-allowed;
+}
+
+.aggr-calendar__span {
+	margin: 0;
+	color: var(--aggr-color-text-body);
+	font-family: var(--aggr-font-mono);
+	font-size: 12px;
+}
+
+.aggr-calendar__legend {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--aggr-space-md);
+	margin: var(--aggr-space-sm) 0 0;
+	padding: 0;
+	color: var(--aggr-color-text-muted);
+	font-size: 12px;
+	list-style: none;
+}
+
+.aggr-calendar__key {
+	display: inline-flex;
+	gap: 6px;
+	align-items: center;
+}
+
+.aggr-calendar__key::before {
+	width: 10px;
+	height: 10px;
+	border-radius: 3px;
+	content: "";
+}
+
+.aggr-calendar__key--selected::before {
+	background: var(--aggr-color-accent);
+}
+
+.aggr-calendar__key--limited::before {
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: var(--aggr-color-pending);
+}
+
+.aggr-calendar__key--sold::before {
+	background: var(--aggr-color-surface-inset);
+}
+
+/*
+ * Scoped under the portal so the theme's own button colours, which carry the
+ * same weight, cannot land on these and wash the text out.
+ */
+.aggr-presets {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--aggr-space-xs);
+	margin-top: var(--aggr-space-md);
+}
+
+.aggr-portal .aggr-presets button {
+	min-height: 2rem;
+	padding: 0 var(--aggr-space-sm);
+	background: var(--aggr-color-surface);
+	border: 1px solid var(--aggr-border-color-strong);
+	border-radius: var(--aggr-radius-pill);
+	color: var(--aggr-color-text-body);
+	font: inherit;
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.aggr-portal .aggr-presets button:hover:not(:disabled) {
+	border-color: var(--aggr-color-text);
+	color: var(--aggr-color-text);
+}
+
+.aggr-portal .aggr-presets button:disabled {
+	cursor: not-allowed;
+	opacity: 0.7;
+}
+
+/* Held to its column, so two months side by side never widen the card. */
+.aggr-calendar-picker {
+	min-inline-size: 0;
+}
+
+.aggr-calendar {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+	gap: var(--aggr-space-xl);
+	margin-top: var(--aggr-space-sm);
+	padding: var(--aggr-space-lg);
+	border: 1px solid var(--aggr-border-color);
+	border-radius: var(--aggr-radius-control);
+	touch-action: pan-y;
+}
+
+.aggr-calendar__month {
+	min-width: 0;
+}
+
+/*
+ * A table in both renderings, the server's picture and the module's grid,
+ * with the same fixed rows, so swapping one for the other moves nothing.
+ */
+.aggr-calendar__table {
+	width: 100%;
+	border-collapse: separate;
+	border-spacing: 0 4px;
+	table-layout: fixed;
+}
+
+.aggr-calendar__name {
+	margin-bottom: var(--aggr-space-xs);
+	font-weight: 600;
+	text-align: start;
+}
+
+.aggr-calendar__weekday {
+	height: 1.5rem;
+	padding: 0;
+	color: var(--aggr-color-text-subtle);
+	font-family: var(--aggr-font-mono);
+	font-size: 10px;
+	font-weight: 400;
+	text-align: center;
+}
+
+.aggr-calendar__weekday abbr {
+	text-decoration: none;
+}
+
+.aggr-calendar__table td {
+	height: 2.5rem;
+	padding: 0;
+}
+
+.aggr-calendar__day {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: 2.5rem;
+	margin: 0;
+	padding: 0;
+	background: transparent;
+	border: 0;
+	border-radius: var(--aggr-radius-control);
+	color: inherit;
+	font: inherit;
+	font-size: 13px;
+	font-variant-numeric: tabular-nums;
+}
+
+button.aggr-calendar__day {
+	cursor: pointer;
+}
+
+button.aggr-calendar__day:hover:not([aria-disabled="true"], .aggr-calendar__day--edge) {
+	box-shadow: inset 0 0 0 1px var(--aggr-color-text);
+}
+
+/* Ink, not the accent: the accent is the fill of a chosen day. */
+button.aggr-calendar__day:focus-visible {
+	position: relative;
+	outline: 2px solid var(--aggr-color-text);
+	outline-offset: 2px;
+}
+
+.aggr-calendar__day[aria-disabled="true"]:not(.aggr-calendar__day--edge) {
+	color: var(--aggr-color-text-subtle);
+	text-decoration: line-through;
+	cursor: not-allowed;
+}
+
+.aggr-calendar__day[aria-current="date"]:not(.aggr-calendar__day--edge) {
+	font-weight: 700;
+	text-decoration: underline;
+	text-underline-offset: 3px;
+}
+
+.aggr-calendar__cell--in,
+.aggr-calendar__cell--preview {
+	background: var(--aggr-color-surface-sunken);
+}
+
+.aggr-calendar__cell--from {
+	background: linear-gradient(to right, transparent 50%, var(--aggr-color-surface-sunken) 50%);
+}
+
+.aggr-calendar__cell--to {
+	background: linear-gradient(to left, transparent 50%, var(--aggr-color-surface-sunken) 50%);
+}
+
+[dir="rtl"] .aggr-calendar__cell--from {
+	background: linear-gradient(to left, transparent 50%, var(--aggr-color-surface-sunken) 50%);
+}
+
+[dir="rtl"] .aggr-calendar__cell--to {
+	background: linear-gradient(to right, transparent 50%, var(--aggr-color-surface-sunken) 50%);
+}
+
+/* The script shows one month here too; see `narrow` in calendar.ts. */
+@media (max-width: 40rem) {
+	.aggr-calendar__month + .aggr-calendar__month {
+		display: none;
+	}
+}
+
+.aggr-calendar__day--edge {
+	background: var(--aggr-color-accent);
+	color: var(--aggr-color-on-accent);
+	font-weight: 700;
+}

@@ -305,6 +305,72 @@ test( 'the first link given is the link every other size starts from', async ( {
 	).toBeVisible();
 } );
 
+test( 'the calendar picks a start by keyboard, months ahead', async ( {
+	page,
+} ) => {
+	/*
+	 * The calendar only ever writes into the date field, so the field's value
+	 * is the assertion, and autosave saying it saved is the proof that the
+	 * write raised the same events typing does. Keyboard only, past the months
+	 * first shown, because reaching a later month is what the static picture
+	 * could never do.
+	 */
+	await page.goto( '/advertiser/' );
+	await signIn( page, 'advertiser@example.test', 'advertiser' );
+
+	await page
+		.getByRole( 'region', { name: 'Start a campaign' } )
+		.getByRole( 'button', { name: /Launch bundle/ } )
+		.click();
+	await expect(
+		page.locator( 'form[data-aggr-autosave][data-aggr-autosave-ready]' )
+	).toBeAttached();
+
+	const calendar = page.locator(
+		'[data-aggr-calendar][data-aggr-calendar-ready]'
+	);
+	await expect( calendar ).toBeAttached();
+
+	// A fixed package sets the end, so only the start picks are offered.
+	await expect(
+		calendar.getByRole( 'button', { name: 'No end date' } )
+	).toBeHidden();
+
+	await calendar.getByRole( 'button', { name: 'Next month' } ).click();
+
+	const tabStop = calendar.locator( '[data-aggr-day][tabindex="0"]' );
+	await expect( tabStop ).toHaveCount( 1 );
+	await tabStop.focus();
+	await page.keyboard.press( 'PageDown' );
+	await page.keyboard.press( 'ArrowRight' );
+
+	const chosen = await page.evaluate(
+		() => ( document.activeElement as HTMLElement | null )?.dataset.aggrDay
+	);
+	expect( chosen ).toMatch( /^\d{4}-\d{2}-\d{2}$/ );
+
+	await page.keyboard.press( 'Enter' );
+
+	await expect(
+		page.getByLabel( 'Start date', { exact: true } )
+	).toHaveValue( chosen as string );
+	await expect(
+		calendar.locator( `[data-aggr-day="${ chosen }"]` )
+	).toBeFocused();
+	await expect( page.locator( '#aggr-run-through' ) ).toContainText(
+		'Runs through'
+	);
+	await expect( calendar.getByRole( 'status' ) ).toContainText(
+		'runs through'
+	);
+	await expect( page.locator( '[id^="aggr-autosave-status-"]' ) ).toHaveText(
+		'Draft saved.',
+		{ timeout: 15_000 }
+	);
+
+	await expectPortalA11y( page );
+} );
+
 test( 'advertiser completes and submits the accessible three-step wizard', async ( {
 	page,
 } ) => {

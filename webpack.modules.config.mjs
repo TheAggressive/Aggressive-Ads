@@ -24,6 +24,7 @@ const PLUGIN_MODULE_IDS = {
 	'@aggr/save': '@aggr/save',
 	'@aggr/local-time': '@aggr/local-time',
 	'@aggr/list-more': '@aggr/list-more',
+	'@aggr/calendar': '@aggr/calendar',
 };
 
 export default ( env = {}, argv = {} ) => {

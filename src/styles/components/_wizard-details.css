@@ -1,6 +1,6 @@
 /*
  * The wizard's smaller furniture: the step count on a phone, the second line
- * under each summary row, the calendar's key and the review preview's toolbar.
+ * under each summary row and the review preview's toolbar.
  *
  * Its own partial because `_wizard.css` is near the thousand-line gate, and
  * these are details of the same screens rather than a new surface.
@@ -39,52 +39,6 @@
 	color: var(--aggr-color-text-muted);
 	font-size: 12px;
 	font-weight: 500;
-}
-
-.aggr-calendar__span {
-	margin: var(--aggr-space-md) 0 var(--aggr-space-xs);
-	color: var(--aggr-color-text-body);
-	font-family: var(--aggr-font-mono);
-	font-size: 12px;
-}
-
-.aggr-calendar__legend {
-	display: flex;
-	flex-wrap: wrap;
-	gap: var(--aggr-space-md);
-	margin: var(--aggr-space-sm) 0 0;
-	padding: 0;
-	color: var(--aggr-color-text-muted);
-	font-size: 12px;
-	list-style: none;
-}
-
-.aggr-calendar__key {
-	display: inline-flex;
-	gap: 6px;
-	align-items: center;
-}
-
-.aggr-calendar__key::before {
-	width: 10px;
-	height: 10px;
-	border-radius: 3px;
-	content: "";
-}
-
-.aggr-calendar__key--selected::before {
-	background: var(--aggr-color-accent);
-}
-
-.aggr-calendar__key--limited::before {
-	width: 6px;
-	height: 6px;
-	border-radius: 50%;
-	background: var(--aggr-color-pending);
-}
-
-.aggr-calendar__key--sold::before {
-	background: var(--aggr-color-surface-inset);
 }
 
 .aggr-dropzone__actions {

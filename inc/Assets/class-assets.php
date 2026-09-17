@@ -60,6 +60,7 @@ final class Assets implements Service {
 	public const MODULE_SAVE        = '@aggr/save';
 	public const MODULE_LOCAL_TIME  = '@aggr/local-time';
 	public const MODULE_LIST_MORE   = '@aggr/list-more';
+	public const MODULE_CALENDAR    = '@aggr/calendar';
 
 	/**
 	 * Interactivity store namespaces.
@@ -257,6 +258,11 @@ final class Assets implements Service {
 			 */
 			if ( is_file( AGGR_PLUGIN_DIR . 'dist/interactivity/save.js' ) ) {
 				wp_enqueue_script_module( self::MODULE_SAVE );
+			}
+
+			// Self-contained: the date fields work without it, so nothing gates it.
+			if ( is_file( AGGR_PLUGIN_DIR . 'dist/interactivity/calendar.js' ) ) {
+				wp_enqueue_script_module( self::MODULE_CALENDAR );
 			}
 		}
 	}
@@ -540,6 +546,7 @@ final class Assets implements Service {
 			'save',
 			array( '@wordpress/interactivity' )
 		);
+		$this->register_module( self::MODULE_CALENDAR, 'calendar', array() );
 
 		return $ok;
 	}

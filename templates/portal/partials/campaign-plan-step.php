@@ -209,22 +209,16 @@ $aggr_date_errors = in_array( $aggr_error_for, array( 'aggr-start-date', 'aggr-e
 		</p>
 
 		<?php
-		/*
-		 * Quick picks and the calendar are shown for what they will be, and
-		 * say so. The date fields above are what is saved; the calendar only
-		 * draws the range they hold, and never availability it does not have.
-		 */
-		?>
-		<div class="aggr-presets" aria-describedby="aggr-presets-note">
-			<button type="button" disabled><?php esc_html_e( 'Starts today', 'aggressive-ads' ); ?></button>
-			<button type="button" disabled><?php esc_html_e( 'Next Monday', 'aggressive-ads' ); ?></button>
-			<button type="button" disabled><?php esc_html_e( '2 weeks', 'aggressive-ads' ); ?></button>
-			<button type="button" disabled><?php esc_html_e( 'This month', 'aggressive-ads' ); ?></button>
-			<button type="button" disabled><?php esc_html_e( 'No end date', 'aggressive-ads' ); ?></button>
-		</div>
-		<p id="aggr-presets-note" class="aggr-hint"><?php esc_html_e( 'Quick picks and choosing on the calendar are coming soon. Use the date fields for now.', 'aggressive-ads' ); ?></p>
+		$aggr_cal_start_id = 'aggr-start-date';
+		$aggr_cal_end_id   = 'aggr-end-date';
+		$aggr_cal_start    = (string) $aggr_campaign['start_date'];
+		$aggr_cal_end      = $aggr_run_end > 0 ? (string) wp_date( 'Y-m-d', $aggr_run_end, wp_timezone() ) : (string) $aggr_campaign['end_date'];
+		$aggr_cal_min      = $aggr_min_start_date;
+		$aggr_cal_fixed    = $aggr_fixed_run;
+		$aggr_cal_locked   = false;
 
-		<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-calendar-preview.php'; ?>
+		require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-calendar.php';
+		?>
 	</fieldset>
 	</div>
 
