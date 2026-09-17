@@ -5,6 +5,15 @@
 import { formatLocal, isUtcClock, localize } from '../local-time';
 
 describe( 'local time', () => {
+	it( 'uses a 12-hour clock where the locale would not', () => {
+		expect(
+			formatLocal( 'clock', '2026-09-17T14:05:00Z', 'en-GB', 'UTC' )
+		).toMatch( /^2:05\s?pm$/i );
+		expect(
+			formatLocal( 'moment', '2026-09-17T14:05:00Z', 'en-GB', 'UTC' )
+		).not.toContain( '14:05' );
+	} );
+
 	it( 'states midnight UTC as the viewer’s clock', () => {
 		expect(
 			formatLocal(

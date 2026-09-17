@@ -73,7 +73,7 @@ All meta is `_aggr_`-prefixed and leading-underscore. The underscore is load-bea
 |---|---|---|
 | `_aggr_org_id` | int | Owning organization. **Never accepted from client input.** |
 | `_aggr_start_ts` | int | UTC Unix seconds |
-| `_aggr_end_ts` | int | UTC Unix seconds; `0` means open-ended |
+| `_aggr_end_ts` | int | UTC Unix seconds; required at submission. `0` survives only on campaigns stored before that rule, and means open-ended |
 | `_aggr_package_id` | int | |
 | `_aggr_placement_id` | int | **Repeated** (`single => false`) |
 | `_aggr_budget_cents` | int | Integer cents; never a float |

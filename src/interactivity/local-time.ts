@@ -36,14 +36,20 @@ export function formatLocal(
 		return null;
 	}
 
+	/*
+	 * Always a 12-hour clock, even where the locale defaults to 24: advertisers
+	 * are not all fluent in 24-hour time, and the server's own timestamps are
+	 * 12-hour too.
+	 */
 	const options: Intl.DateTimeFormatOptions =
 		'clock' === kind
-			? { hour: 'numeric', minute: '2-digit', timeZone }
+			? { hour: 'numeric', minute: '2-digit', hour12: true, timeZone }
 			: {
 					month: 'short',
 					day: 'numeric',
 					hour: 'numeric',
 					minute: '2-digit',
+					hour12: true,
 					timeZone,
 			  };
 

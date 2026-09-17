@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test';
+import { wpPluginFile } from './wp-cli';
 
 /**
  * Signs a person in through the portal's own form.
@@ -12,6 +13,9 @@ export async function signIn(
 	login: string,
 	password: string
 ): Promise< void > {
+	// Test isolation, not a raised limit: see tests/e2e/reset-rate-limits.php.
+	wpPluginFile( 'tests/e2e/reset-rate-limits.php' );
+
 	await page.getByLabel( 'Work email' ).fill( login );
 	await page.getByLabel( 'Password' ).fill( password );
 	await page.getByRole( 'button', { name: 'Sign in' } ).click();

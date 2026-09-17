@@ -292,7 +292,10 @@ The submission validator requires:
 - every creative `image`-kind, with dimensions matching a placement selected on the campaign
 - every creative carrying a valid `http`/`https` click URL
 - `start_ts` in the future at local `00:00:00`; `end_ts` at local `23:59:59`
-  after `start_ts`, or `0` for open-ended
+  after `start_ts`. Every campaign ends: `0` is refused (`end_date_missing`).
+  Open-ended campaigns were once allowed, and one stored that way keeps running
+  until it is ended; a live change may move its start without adding an end,
+  but may not clear an end once one is set (`live_edit_end_missing`)
 - the owning organization `active`
 - every selected placement `_aggr_is_active`
 

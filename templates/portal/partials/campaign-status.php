@@ -25,6 +25,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Portal\Date_Input;
 use Aggressive\Ads\Portal\Campaign_Actions;
 use Aggressive\Ads\Portal\Campaign_Nonces;
 
@@ -32,7 +33,14 @@ $aggr_status_now   = (string) $aggr_campaign['status'];
 $aggr_status_zone  = wp_timezone();
 $aggr_created_ts   = (int) get_post_timestamp( (int) $aggr_campaign['id'] );
 $aggr_submitted_ts = (int) $aggr_campaign['submitted_at'];
-$aggr_status_day   = static function ( string $ymd ) use ( $aggr_status_zone ): string {
+
+/*
+ * A 12-hour clock: advertisers are not all fluent in 24-hour time. The format
+ * is translatable, so a locale that reads 24-hour time naturally can have it.
+ */
+/* translators: date and time of a campaign event, as a PHP date format (https://www.php.net/manual/datetime.format.php), e.g. Sep 16 · 2:05 PM. */
+$aggr_when_format = __( 'M j · g:i A', 'aggressive-ads' );
+$aggr_status_day  = static function ( string $ymd ) use ( $aggr_status_zone ): string {
 	$day = '' === $ymd ? false : DateTimeImmutable::createFromFormat( '!Y-m-d', $ymd, $aggr_status_zone );
 
 	return false === $day ? '—' : (string) wp_date( 'M j', $day->getTimestamp(), $aggr_status_zone );
@@ -40,7 +48,7 @@ $aggr_status_day   = static function ( string $ymd ) use ( $aggr_status_zone ): 
 
 $aggr_stages = array(
 	array( Post_Statuses::DRAFT, __( 'Draft', 'aggressive-ads' ), $aggr_created_ts > 0 ? (string) wp_date( 'M j', $aggr_created_ts ) : '—' ),
-	array( Post_Statuses::SUBMITTED, __( 'Submitted', 'aggressive-ads' ), $aggr_submitted_ts > 0 ? (string) wp_date( 'M j · H:i', $aggr_submitted_ts ) : '—' ),
+	array( Post_Statuses::SUBMITTED, __( 'Submitted', 'aggressive-ads' ), $aggr_submitted_ts > 0 ? (string) wp_date( $aggr_when_format, $aggr_submitted_ts ) : '—' ),
 	array( Post_Statuses::REVIEW, __( 'In review', 'aggressive-ads' ), '—' ),
 	array( Post_Statuses::APPROVED, __( 'Approved', 'aggressive-ads' ), '—' ),
 	array( Post_Statuses::SCHEDULED, __( 'Scheduled', 'aggressive-ads' ), $aggr_status_day( (string) $aggr_campaign['start_date'] ) ),
@@ -112,7 +120,7 @@ $aggr_status_note = match ( $aggr_status_now ) {
 			<ul class="aggr-activity">
 				<?php if ( $aggr_submitted_ts > 0 ) : ?>
 					<li>
-						<span class="aggr-activity__when"><?php echo esc_html( (string) wp_date( 'M j · H:i', $aggr_submitted_ts ) ); ?></span>
+						<span class="aggr-activity__when"><?php echo esc_html( (string) wp_date( $aggr_when_format, $aggr_submitted_ts ) ); ?></span>
 						<span>
 							<?php
 							echo esc_html(
@@ -126,7 +134,7 @@ $aggr_status_note = match ( $aggr_status_now ) {
 				<?php endif; ?>
 				<?php if ( $aggr_created_ts > 0 ) : ?>
 					<li>
-						<span class="aggr-activity__when"><?php echo esc_html( (string) wp_date( 'M j · H:i', $aggr_created_ts ) ); ?></span>
+						<span class="aggr-activity__when"><?php echo esc_html( (string) wp_date( $aggr_when_format, $aggr_created_ts ) ); ?></span>
 						<span>
 							<?php
 							echo esc_html(
@@ -170,9 +178,10 @@ $aggr_status_note = match ( $aggr_status_now ) {
 							<span class="aggr-summary__sub">
 								<?php
 								printf(
-									/* translators: %d: number of days the campaign runs. */
-									esc_html( _n( '%d day · site time', '%d days · site time', $aggr_run_days, 'aggressive-ads' ) ),
-									(int) $aggr_run_days
+									/* translators: 1: number of days the campaign runs. 2: the site's timezone on the first day, e.g. PDT. */
+									esc_html( _n( '%1$d day · %2$s', '%1$d days · %2$s', $aggr_run_days, 'aggressive-ads' ) ),
+									(int) $aggr_run_days,
+									esc_html( Date_Input::zone_abbreviation( (string) ( $aggr_campaign['start_date'] ?? '' ) ) )
 								);
 								?>
 							</span>

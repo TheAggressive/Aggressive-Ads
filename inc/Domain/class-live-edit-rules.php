@@ -33,6 +33,7 @@ final class Live_Edit_Rules {
 	public const ERROR_TITLE_LONG       = 'live_edit_title_too_long';
 	public const ERROR_NOTES_LONG       = 'live_edit_notes_too_long';
 	public const ERROR_START_LOCKED     = 'live_edit_start_locked';
+	public const ERROR_END_MISSING      = 'live_edit_end_missing';
 	public const ERROR_END_BEFORE_START = 'live_edit_end_before_start';
 	public const ERROR_END_IN_PAST      = 'live_edit_end_in_past';
 	public const ERROR_URL_INVALID      = 'live_edit_click_url_invalid';
@@ -226,8 +227,14 @@ final class Live_Edit_Rules {
 
 		$end = (int) $diff['end_ts'];
 
-		// Zero stays open-ended, exactly as it does at submission.
-		if ( 0 === $end ) {
+		/*
+		 * Clearing the end is refused, as it is at submission. A campaign
+		 * stored open-ended keeps running: this only judges an end the
+		 * change touches, and leaving the field as it was is no change.
+		 */
+		if ( $end <= 0 ) {
+			$result->add( self::ERROR_END_MISSING, 'end_ts' );
+
 			return;
 		}
 

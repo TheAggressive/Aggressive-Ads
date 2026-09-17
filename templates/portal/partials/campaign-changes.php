@@ -189,8 +189,25 @@ $aggr_step_link = static function ( string $step, string $label, string $current
 				</div>
 				<div class="aggr-field">
 					<label for="aggr-edit-end"><?php esc_html_e( 'End date', 'aggressive-ads' ); ?></label>
-					<input type="date" id="aggr-edit-end" name="end_date" value="<?php echo esc_attr( (string) ( $aggr_values['end_date'] ?? $aggr_campaign['end_date'] ) ); ?>">
+					<input type="date" id="aggr-edit-end" name="end_date" <?php echo '' !== (string) $aggr_campaign['end_date'] ? 'required' : ''; ?> value="<?php echo esc_attr( (string) ( $aggr_values['end_date'] ?? $aggr_campaign['end_date'] ) ); ?>">
 				</div>
+
+				<?php
+				/*
+				 * The stored start decides the lock, not the staged one: it is
+				 * the campaign already running that cannot be moved, and
+				 * Live_Edit_Rules refuses the same change on the server.
+				 */
+				$aggr_cal_start_id = 'aggr-edit-start';
+				$aggr_cal_end_id   = 'aggr-edit-end';
+				$aggr_cal_start    = (string) ( $aggr_values['start_date'] ?? $aggr_campaign['start_date'] );
+				$aggr_cal_end      = (string) ( $aggr_values['end_date'] ?? $aggr_campaign['end_date'] );
+				$aggr_cal_min      = '';
+				$aggr_cal_fixed    = false;
+				$aggr_cal_locked   = '' !== (string) $aggr_campaign['start_date'] && (string) $aggr_campaign['start_date'] <= (string) wp_date( 'Y-m-d', null, wp_timezone() );
+
+				require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-calendar.php';
+				?>
 			<?php else : ?>
 				<input type="hidden" name="next_step" value="review">
 

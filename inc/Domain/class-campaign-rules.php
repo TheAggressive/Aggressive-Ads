@@ -31,6 +31,7 @@ final class Campaign_Rules {
 	public const ERROR_START_MISSING       = 'start_date_missing';
 	public const ERROR_START_IN_PAST       = 'start_date_in_past';
 	public const ERROR_START_NOT_MIDNIGHT  = 'start_date_not_midnight';
+	public const ERROR_END_MISSING         = 'end_date_missing';
 	public const ERROR_END_BEFORE_START    = 'end_date_before_start';
 	public const ERROR_END_NOT_DAY_END     = 'end_date_not_day_end';
 	public const ERROR_ORG_NOT_ACTIVE      = 'organization_not_active';
@@ -212,7 +213,7 @@ final class Campaign_Rules {
 	 * *day* has passed, not whether its first second has.
 	 *
 	 * @param int $start_ts          Start time, UTC Unix seconds.
-	 * @param int $end_ts            End time, UTC Unix seconds. Zero means open-ended.
+	 * @param int $end_ts            End time, UTC Unix seconds. Zero means none, which is refused.
 	 * @param int $earliest_start_ts Earliest acceptable start, normally midnight today.
 	 * @return Validation_Result
 	 */
@@ -236,8 +237,15 @@ final class Campaign_Rules {
 			);
 		}
 
-		// Zero is open-ended and therefore never before the start.
-		if ( 0 !== $end_ts && $end_ts <= $start_ts ) {
+		/*
+		 * Every campaign ends. Open-ended runs were allowed once, and a
+		 * campaign stored that way still runs until it is ended; a new or
+		 * resubmitted one has to say when it stops, so it can be priced,
+		 * scheduled against inventory and reminded before it finishes.
+		 */
+		if ( $end_ts <= 0 ) {
+			$result->add( self::ERROR_END_MISSING, 'end_ts' );
+		} elseif ( $end_ts <= $start_ts ) {
 			$result->add(
 				self::ERROR_END_BEFORE_START,
 				'end_ts',

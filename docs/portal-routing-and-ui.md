@@ -145,7 +145,7 @@ package sells a number of calendar days, so its end date is derived —
 calendar day so a daylight-saving change cannot move it — and stated as "Runs
 through …" instead of asked for. The end field is still rendered, disabled and
 hidden, so it is not posted and switching to a custom package only has to
-enable it; a custom package asks for an optional end. `Campaign_Editor` derives
+enable it; a custom package requires an end, because every campaign ends. `Campaign_Editor` derives
 the end whenever the package or start moves and no end was supplied, so an
 explicit `end_ts` from a REST client or a staff correction still wins. Leaving
 this step with a start date applies the submission-grade window, so a past
@@ -205,8 +205,26 @@ on) and the total, with the one action that moves the advertiser on —
 action says why beneath it; when all that is missing is one file, it names the
 size. The page heading carries a breadcrumb, "All changes saved" while the
 wizard is on screen, and "Step N of 3" on a phone, where the bar has no room
-for labels. The first step's calendar states how many days are selected and
-draws the design's key; marking days as limited or sold out waits on #293. The
+for labels. The first step's dates are also chosen on a range calendar
+(`@aggr/calendar`, `partials/campaign-calendar.php`): two months, one on a phone,
+with month buttons, Page Up/Page Down and a horizontal swipe to reach later
+months, and quick picks — Starts today and Next Monday always, 2 weeks and This
+month only for a custom package, since a fixed one derives its end. There is no
+"No end date": every campaign ends. The calendar writes into the date fields and raises the events typing
+would, so autosave and "Runs through …" follow it; the fields stay the posted
+values and the only path without script, where the calendar is a hidden picture
+of the range. The live-campaign change editor's Schedule step uses the same
+partial; once the stored start has passed, only the end moves and the start
+picks are not offered, matching `Live_Edit_Rules`. It draws the design's key,
+but marks no day limited or sold out until availability comes from the forecast
+(#293). Beside each date field a note says when that day begins or ends in the
+site's zone, with the zone's short name for that date — "12:00 AM PDT" in
+September, "12:00 AM PST" in December — because an abbreviation is only true
+for part of the year. The server writes it for the saved date
+(`Date_Input::edge_label()`, readable offsets from `Domain\Timezone_Label`);
+`@aggr/zone-notes` restates it as the field changes, in the page's language (the
+WordPress user's locale), always on a 12-hour clock. The schedule's day count
+names the zone the same way. The
 wizard is a CSS container, so the two columns follow the panel's width rather
 than the viewport's. On a wide panel the step's own primary button is hidden and
 the summary's button submits the step's form through the `form` attribute; on a

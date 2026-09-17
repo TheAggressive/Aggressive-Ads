@@ -611,6 +611,7 @@ final class Campaign_Editor {
 			Campaign_Rules::ERROR_START_MISSING    => 'aggr_start_date_required',
 			Campaign_Rules::ERROR_START_IN_PAST    => 'aggr_start_date_past',
 			Campaign_Rules::ERROR_START_NOT_MIDNIGHT => 'aggr_start_date_not_midnight',
+			Campaign_Rules::ERROR_END_MISSING      => 'aggr_end_date_required',
 			Campaign_Rules::ERROR_END_BEFORE_START => 'aggr_end_before_start',
 			Campaign_Rules::ERROR_END_NOT_DAY_END  => 'aggr_end_date_not_day_end',
 			default                                => 'aggr_schedule_invalid',

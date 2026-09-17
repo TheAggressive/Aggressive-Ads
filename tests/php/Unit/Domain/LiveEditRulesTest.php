@@ -193,14 +193,33 @@ final class LiveEditRulesTest extends TestCase {
 	}
 
 	/**
-	 * Open-ended stays legal.
+	 * Clearing a running campaign's end is refused, as it is at submission;
+	 * a campaign already stored without one is left running, because leaving
+	 * that empty end as it was is not a change to judge.
 	 *
 	 * @return void
 	 */
-	public function test_a_zero_end_is_open_ended(): void {
-		$result = Live_Edit_Rules::validate( array( 'end_ts' => 0 ), $this->current(), self::NOW );
+	public function test_clearing_the_end_is_refused_but_a_stored_open_end_is_left_alone(): void {
+		$cleared = Live_Edit_Rules::validate( array( 'end_ts' => 0 ), $this->current(), self::NOW );
 
-		$this->assertTrue( $result->is_valid() );
+		$this->assertTrue( $cleared->has( Live_Edit_Rules::ERROR_END_MISSING ) );
+		$this->assertCount( 1, $cleared->codes() );
+
+		// The form posts both dates; an end left empty on an open-ended campaign is no change.
+		$open_ended = array( 'end_ts' => 0 ) + $this->current();
+		$diff       = Live_Edit_Rules::diff(
+			$this->all_allowed(),
+			$open_ended,
+			array(
+				'title'    => 'Winter flight',
+				'start_ts' => $open_ended['start_ts'],
+				'end_ts'   => 0,
+			)
+		);
+		$renamed    = Live_Edit_Rules::validate( $diff, $open_ended, self::NOW );
+
+		$this->assertSame( array( 'title' => 'Winter flight' ), $diff );
+		$this->assertFalse( $renamed->has( Live_Edit_Rules::ERROR_END_MISSING ) );
 	}
 
 	/**

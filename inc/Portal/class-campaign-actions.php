@@ -46,7 +46,7 @@ final class Campaign_Actions implements Service {
 	 *
 	 * @var array<int, string>
 	 */
-	private const DATE_ERRORS = array( 'aggr_start_date_required', 'aggr_start_date_past', 'aggr_start_date_not_midnight', 'aggr_start_date_invalid', 'aggr_end_before_start', 'aggr_end_date_not_day_end', 'aggr_end_date_invalid' );
+	private const DATE_ERRORS = array( 'aggr_start_date_required', 'aggr_start_date_past', 'aggr_start_date_not_midnight', 'aggr_start_date_invalid', 'aggr_end_date_required', 'aggr_end_before_start', 'aggr_end_date_not_day_end', 'aggr_end_date_invalid' );
 
 	/**
 	 * Constructor.
@@ -835,6 +835,7 @@ final class Campaign_Actions implements Service {
 		return match ( $code ) {
 			'aggr_title_required'          => __( 'Enter a campaign name.', 'aggressive-ads' ),
 			'aggr_title_too_long'          => __( 'Use 160 characters or fewer for the campaign name.', 'aggressive-ads' ),
+			'aggr_end_date_required'       => __( 'Choose an end date.', 'aggressive-ads' ),
 			'aggr_end_before_start'        => __( 'The end date must be after the start date.', 'aggressive-ads' ),
 			'aggr_start_date_required'     => __( 'Choose a start date.', 'aggressive-ads' ),
 			'aggr_start_date_past'         => __( 'The start date has already passed. Choose a later one.', 'aggressive-ads' ),
@@ -870,6 +871,7 @@ final class Campaign_Actions implements Service {
 		return match ( $code ) {
 			'aggr_title_required',
 			'aggr_title_too_long'          => 'aggr-title',
+			'aggr_end_date_required',
 			'aggr_end_before_start',
 			'aggr_end_date_not_day_end',
 			'aggr_end_date_invalid'        => 'aggr-end-date',

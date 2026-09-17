@@ -29,6 +29,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use Aggressive\Ads\Portal\Date_Input;
+
 $aggr_summary_total   = 0;
 $aggr_summary_ready   = 0;
 $aggr_summary_missing = array();
@@ -85,9 +87,10 @@ $aggr_summary_one_file = 1 === count( $aggr_summary_missing ) && array() === arr
 					<span class="aggr-summary__sub">
 						<?php
 						printf(
-							/* translators: %d: number of days the campaign runs. */
-							esc_html( _n( '%d day · site time', '%d days · site time', $aggr_run_days, 'aggressive-ads' ) ),
-							(int) $aggr_run_days
+							/* translators: 1: number of days the campaign runs. 2: the site's timezone on the first day, e.g. PDT. */
+							esc_html( _n( '%1$d day · %2$s', '%1$d days · %2$s', $aggr_run_days, 'aggressive-ads' ) ),
+							(int) $aggr_run_days,
+							esc_html( Date_Input::zone_abbreviation( (string) ( $aggr_campaign['start_date'] ?? '' ) ) )
 						);
 						?>
 					</span>

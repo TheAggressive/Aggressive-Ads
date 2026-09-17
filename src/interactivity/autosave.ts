@@ -213,6 +213,8 @@ function followPlan( form: HTMLFormElement ): void {
 		if ( endField && end ) {
 			endField.hidden = fixed;
 			end.disabled = fixed;
+			// Every campaign ends; a custom package has to say when.
+			end.required = ! fixed;
 		}
 
 		if ( through ) {

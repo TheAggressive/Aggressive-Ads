@@ -147,14 +147,14 @@ $aggr_date_errors = in_array( $aggr_error_for, array( 'aggr-start-date', 'aggr-e
 			<?php
 			echo $aggr_fixed_run
 				? esc_html__( 'The package sets how long it runs. The start day counts as the first day.', 'aggressive-ads' )
-				: esc_html__( 'A custom schedule: choose a start and an end, or leave it open-ended.', 'aggressive-ads' );
+				: esc_html__( 'A custom schedule: choose a start and an end.', 'aggressive-ads' );
 			?>
 		</p>
 
 		<div class="aggr-formgrid">
 			<div class="aggr-field">
 				<label for="aggr-start-date"><?php esc_html_e( 'Start date', 'aggressive-ads' ); ?></label>
-				<p id="aggr-start-hint" class="aggr-hint"><?php esc_html_e( 'The campaign begins at the start of this day in the site timezone.', 'aggressive-ads' ); ?></p>
+				<p id="aggr-start-hint" class="aggr-hint"><?php esc_html_e( 'The campaign begins at the start of this day.', 'aggressive-ads' ); ?></p>
 				<div class="aggr-date-input">
 				<input
 					id="aggr-start-date"
@@ -166,7 +166,7 @@ $aggr_date_errors = in_array( $aggr_error_for, array( 'aggr-start-date', 'aggr-e
 					aria-describedby="aggr-start-hint aggr-run-through<?php echo 'aggr-start-date' === $aggr_error_for ? ' aggr-campaign-error' : ''; ?>"
 					<?php echo 'aggr-start-date' === $aggr_error_for ? 'aria-invalid="true"' : ''; ?>
 				>
-					<span class="aggr-date-input__note" aria-hidden="true"><?php esc_html_e( '00:00 site time', 'aggressive-ads' ); ?></span>
+					<span class="aggr-date-input__note" aria-hidden="true" data-aggr-zone-note data-aggr-edge="start" data-aggr-for="aggr-start-date" data-aggr-zone="<?php echo esc_attr( wp_timezone_string() ); ?>"><?php echo esc_html( Date_Input::edge_label( (string) $aggr_campaign['start_date'], false ) ); ?></span>
 				</div>
 			</div>
 
@@ -180,7 +180,7 @@ $aggr_date_errors = in_array( $aggr_error_for, array( 'aggr-start-date', 'aggr-e
 			?>
 			<div class="aggr-field" data-aggr-end-field <?php echo $aggr_fixed_run ? 'hidden' : ''; ?>>
 				<label for="aggr-end-date"><?php esc_html_e( 'End date', 'aggressive-ads' ); ?></label>
-				<p id="aggr-end-hint" class="aggr-hint"><?php esc_html_e( 'Optional. The campaign runs through the end of this day. Leave it empty to keep it running until it is ended.', 'aggressive-ads' ); ?></p>
+				<p id="aggr-end-hint" class="aggr-hint"><?php esc_html_e( 'The campaign runs through the end of this day.', 'aggressive-ads' ); ?></p>
 				<div class="aggr-date-input">
 				<input
 					id="aggr-end-date"
@@ -188,10 +188,10 @@ $aggr_date_errors = in_array( $aggr_error_for, array( 'aggr-start-date', 'aggr-e
 					type="date"
 					value="<?php echo esc_attr( (string) $aggr_campaign['end_date'] ); ?>"
 					aria-describedby="aggr-end-hint<?php echo 'aggr-end-date' === $aggr_error_for ? ' aggr-campaign-error' : ''; ?>"
-					<?php echo $aggr_fixed_run ? 'disabled' : ''; ?>
+					<?php echo $aggr_fixed_run ? 'disabled' : 'required'; ?>
 					<?php echo 'aggr-end-date' === $aggr_error_for ? 'aria-invalid="true"' : ''; ?>
 				>
-					<span class="aggr-date-input__note" aria-hidden="true"><?php esc_html_e( '23:59 site time', 'aggressive-ads' ); ?></span>
+					<span class="aggr-date-input__note" aria-hidden="true" data-aggr-zone-note data-aggr-edge="end" data-aggr-for="aggr-end-date" data-aggr-fallback="aggr-start-date" data-aggr-zone="<?php echo esc_attr( wp_timezone_string() ); ?>"><?php echo esc_html( Date_Input::edge_label( '' !== (string) $aggr_campaign['end_date'] ? (string) $aggr_campaign['end_date'] : (string) $aggr_campaign['start_date'], true ) ); ?></span>
 				</div>
 			</div>
 		</div>
@@ -209,22 +209,16 @@ $aggr_date_errors = in_array( $aggr_error_for, array( 'aggr-start-date', 'aggr-e
 		</p>
 
 		<?php
-		/*
-		 * Quick picks and the calendar are shown for what they will be, and
-		 * say so. The date fields above are what is saved; the calendar only
-		 * draws the range they hold, and never availability it does not have.
-		 */
-		?>
-		<div class="aggr-presets" aria-describedby="aggr-presets-note">
-			<button type="button" disabled><?php esc_html_e( 'Starts today', 'aggressive-ads' ); ?></button>
-			<button type="button" disabled><?php esc_html_e( 'Next Monday', 'aggressive-ads' ); ?></button>
-			<button type="button" disabled><?php esc_html_e( '2 weeks', 'aggressive-ads' ); ?></button>
-			<button type="button" disabled><?php esc_html_e( 'This month', 'aggressive-ads' ); ?></button>
-			<button type="button" disabled><?php esc_html_e( 'No end date', 'aggressive-ads' ); ?></button>
-		</div>
-		<p id="aggr-presets-note" class="aggr-hint"><?php esc_html_e( 'Quick picks and choosing on the calendar are coming soon. Use the date fields for now.', 'aggressive-ads' ); ?></p>
+		$aggr_cal_start_id = 'aggr-start-date';
+		$aggr_cal_end_id   = 'aggr-end-date';
+		$aggr_cal_start    = (string) $aggr_campaign['start_date'];
+		$aggr_cal_end      = $aggr_run_end > 0 ? (string) wp_date( 'Y-m-d', $aggr_run_end, wp_timezone() ) : (string) $aggr_campaign['end_date'];
+		$aggr_cal_min      = $aggr_min_start_date;
+		$aggr_cal_fixed    = $aggr_fixed_run;
+		$aggr_cal_locked   = false;
 
-		<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-calendar-preview.php'; ?>
+		require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-calendar.php';
+		?>
 	</fieldset>
 	</div>
 

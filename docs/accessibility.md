@@ -176,6 +176,21 @@ moves it to the first new campaign, which is where the reader asked to go. The
 button keeps one width for both of its labels and the table's columns are fixed,
 so rows arriving do not shift what the reader is looking at.
 
+**The schedule calendar enhances the date fields, never replaces them.** The
+labelled date inputs are what is posted and remain the whole path without
+script, where the calendar is an `aria-hidden` picture. With script each month
+is a `role="grid"` table whose days are buttons with one roving tab stop: arrows
+move by day and week, Home/End to the week's ends, Page Up/Page Down by month
+(Shift for a year), and moving past the months on show turns the view with the
+focus. Each day is named in full ("Friday, September 18, 2026, first day"), the
+chosen range is `aria-selected`, today is `aria-current="date"`, and a day that
+cannot be chosen stays focusable and says "not available" instead of being
+skipped. Choosing announces the result ("Starts … and runs through …") through
+a polite status region; focus stays on the day. Day names avoid "start date" and
+"end date" so they never compete with the fields' labels. The month buttons and
+quick picks render in place before the module attaches, disabled, and the grid
+replaces a picture of the same size, so nothing shifts when it does.
+
 **Status colour is never the only cue.** Each pill carries its word and a dot,
 and every ink-on-tint pair — grey, amber, orange, blue, green, purple, slate,
 red — is asserted at AA in `PortalContrastTest`. Counts beside the list's tabs
