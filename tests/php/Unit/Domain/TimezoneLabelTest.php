@@ -1,6 +1,6 @@
 <?php
 /**
- * Naming a site timezone.
+ * A timezone's short name.
  *
  * @package Aggressive\Ads
  */
@@ -14,33 +14,44 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
 /**
- * Every form `wp_timezone_string()` returns becomes something a reader knows.
+ * Every shape PHP's `T` format produces becomes something a reader knows.
  */
 final class TimezoneLabelTest extends TestCase {
 
 	/**
-	 * Identifiers and their names.
+	 * `T` output and what is shown.
 	 *
 	 * @return array<string, array{string, string}>
 	 */
-	public static function zones(): array {
+	public static function abbreviations(): array {
 		return array(
-			'city'             => array( 'America/Los_Angeles', 'Los Angeles' ),
-			'two-level region' => array( 'America/Argentina/Buenos_Aires', 'Buenos Aires' ),
-			'single segment'   => array( 'Japan', 'Japan' ),
+			'common name'      => array( 'PDT', 'PDT' ),
 			'utc'              => array( 'UTC', 'UTC' ),
-			'etc utc'          => array( 'Etc/UTC', 'UTC' ),
-			'etc offset'       => array( 'Etc/GMT+5', 'GMT+5' ),
-			'manual offset'    => array( '+05:30', 'UTC+05:30' ),
-			'negative offset'  => array( '-03:00', 'UTC-03:00' ),
+			'offset, colon'    => array( '+05:30', 'UTC+05:30' ),
+			'offset, no colon' => array( '+0530', 'UTC+05:30' ),
+			'gmt prefix'       => array( 'GMT+0530', 'UTC+05:30' ),
+			'whole hours'      => array( '-0300', 'UTC-03' ),
+			'hours only'       => array( '-03', 'UTC-03' ),
+			'gmt zero'         => array( 'GMT+0000', 'UTC' ),
 			'zero offset'      => array( '+00:00', 'UTC' ),
+			'zero hours'       => array( '+00', 'UTC' ),
 			'empty'            => array( '', 'UTC' ),
-			'trailing slash'   => array( 'America/', 'UTC' ),
 		);
 	}
 
-	#[DataProvider( 'zones' )]
-	public function test_it_names_the_zone( string $identifier, string $expected ): void {
-		$this->assertSame( $expected, Timezone_Label::name( $identifier ) );
+	#[DataProvider( 'abbreviations' )]
+	public function test_it_reads_as_a_zone( string $abbreviation, string $expected ): void {
+		$this->assertSame( $expected, Timezone_Label::abbreviation( $abbreviation ) );
+	}
+
+	/**
+	 * The name follows the date: one zone, two names a season apart.
+	 */
+	public function test_the_name_belongs_to_the_date_not_the_zone(): void {
+		$zone = new \DateTimeZone( 'America/Los_Angeles' );
+
+		$this->assertSame( 'PDT', Timezone_Label::abbreviation( ( new \DateTimeImmutable( '2026-09-17 00:00', $zone ) )->format( 'T' ) ) );
+		$this->assertSame( 'PST', Timezone_Label::abbreviation( ( new \DateTimeImmutable( '2026-12-17 00:00', $zone ) )->format( 'T' ) ) );
+		$this->assertSame( 'UTC-03', Timezone_Label::abbreviation( ( new \DateTimeImmutable( '2026-12-17 00:00', new \DateTimeZone( 'America/Argentina/Buenos_Aires' ) ) )->format( 'T' ) ) );
 	}
 }

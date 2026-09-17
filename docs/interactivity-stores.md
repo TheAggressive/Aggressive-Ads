@@ -32,6 +32,7 @@ Author under `src/`; ship compiled `dist/` (see [build-and-release.md](build-and
 | `@aggr/local-time` | `src/interactivity/local-time.ts` | `dist/interactivity/local-time.js` |
 | `@aggr/list-more` | `src/interactivity/list-more.ts` | `dist/interactivity/list-more.js` |
 | `@aggr/calendar` | `src/interactivity/calendar.ts` | `dist/interactivity/calendar.js` |
+| `@aggr/zone-notes` | `src/interactivity/zone-notes.ts` | `dist/interactivity/zone-notes.js` |
 
 `inc/Assets/class-assets.php` registers modules from `dist/`, reads `.asset.php`
 manifests, and early-enqueues the dialog store (plus `@wordpress/interactivity`)

@@ -1,6 +1,6 @@
 <?php
 /**
- * A site timezone as an advertiser would name it.
+ * A timezone's short name, readable wherever PHP only has an offset.
  *
  * @package Aggressive\Ads
  */
@@ -10,37 +10,35 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Domain;
 
 /**
- * "Site time" asked the advertiser to know which zone the site keeps. This
- * names it: the city of an IANA identifier, or UTC and its offset.
+ * PHP's `T` format gives "PDT" for a zone with a common abbreviation and a
+ * bare "+0530" or "-03" for one without, which reads as arithmetic. This
+ * keeps the first and prefixes the second with UTC.
  *
- * A place, not an abbreviation. "PDT" is only true for summer dates and a
- * campaign picked in September may start in December, when it is "PST"; the
- * city is right all year.
+ * The name belongs to one date: a zone is "PDT" in September and "PST" in
+ * December, so callers pass the `T` of the day being described, never today's.
  */
 final class Timezone_Label {
 
 	/**
-	 * The zone's name for a sentence such as "Los Angeles time".
+	 * A readable short name for PHP's `T` output.
 	 *
-	 * @param string $identifier What `wp_timezone_string()` returns: an IANA
-	 *                           identifier such as `America/Los_Angeles`,
-	 *                           `UTC`, or a manual offset such as `+05:30`.
-	 * @return string `Los Angeles`, `UTC` or `UTC+05:30`; `UTC` for anything unreadable.
+	 * @param string $abbreviation `DateTimeInterface::format( 'T' )` for the day described.
+	 * @return string `PDT`, `UTC+05:30`, `UTC-03`, or `UTC` for an empty or zero offset.
 	 */
-	public static function name( string $identifier ): string {
-		$identifier = trim( $identifier );
+	public static function abbreviation( string $abbreviation ): string {
+		$abbreviation = trim( $abbreviation );
 
-		if ( 1 === preg_match( '/^[+-]\d{2}:\d{2}$/', $identifier ) ) {
-			return '+00:00' === $identifier || '-00:00' === $identifier ? 'UTC' : 'UTC' . $identifier;
+		// PHP writes a manual offset as "+05:30", "+0530", "-03" or "GMT+0530".
+		if ( 1 !== preg_match( '/^(?:GMT|UTC)?([+-])(\d{2}):?(\d{2})?$/', $abbreviation, $offset ) ) {
+			return '' === $abbreviation ? 'UTC' : $abbreviation;
 		}
 
-		if ( '' === $identifier || 'UTC' === $identifier || 'Etc/UTC' === $identifier ) {
+		$minutes = $offset[3] ?? '';
+
+		if ( '00' === $offset[2] && in_array( $minutes, array( '', '00' ), true ) ) {
 			return 'UTC';
 		}
 
-		$slash = strrpos( $identifier, '/' );
-		$place = false === $slash ? $identifier : substr( $identifier, $slash + 1 );
-
-		return '' === $place ? 'UTC' : str_replace( '_', ' ', $place );
+		return 'UTC' . $offset[1] . $offset[2] . ( '' === $minutes || '00' === $minutes ? '' : ':' . $minutes );
 	}
 }

@@ -21,6 +21,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Portal;
 
+use Aggressive\Ads\Domain\Timezone_Label;
 use DateTimeImmutable;
 use WP_Error;
 
@@ -66,6 +67,67 @@ final class Date_Input {
 		}
 
 		return $date->getTimestamp();
+	}
+
+	/**
+	 * When a campaign day begins or ends, with the site zone's name for that day.
+	 *
+	 * "12:00 AM PDT" for a September day, "12:00 AM PST" for a December one.
+	 * The browser restates it in the reader's language; this is the text a
+	 * page without script keeps. An empty or invalid day describes today.
+	 *
+	 * @param string $value      YYYY-MM-DD or empty.
+	 * @param bool   $end_of_day Whether the day's end (11:59 PM) is meant.
+	 * @return string
+	 */
+	public static function edge_label( string $value, bool $end_of_day ): string {
+		$timestamp = self::day_timestamp( $value, $end_of_day );
+
+		return sprintf(
+			/* translators: 1: a time of day, e.g. 12:00 AM. 2: the site's timezone for that day, e.g. PDT. */
+			__( '%1$s %2$s', 'aggressive-ads' ),
+			$end_of_day ? __( '11:59 PM', 'aggressive-ads' ) : __( '12:00 AM', 'aggressive-ads' ),
+			self::zone_name( $timestamp )
+		);
+	}
+
+	/**
+	 * The site zone's short name on a day, e.g. PDT.
+	 *
+	 * @param string $value YYYY-MM-DD or empty for today.
+	 * @return string
+	 */
+	public static function zone_abbreviation( string $value ): string {
+		return self::zone_name( self::day_timestamp( $value, false ) );
+	}
+
+	/**
+	 * A day's start or end, falling back to today's.
+	 *
+	 * @param string $value      YYYY-MM-DD or empty.
+	 * @param bool   $end_of_day Whether the day's end is meant.
+	 * @return int
+	 */
+	private static function day_timestamp( string $value, bool $end_of_day ): int {
+		$timestamp = self::parse( $value, $end_of_day );
+
+		if ( is_int( $timestamp ) && $timestamp > 0 ) {
+			return $timestamp;
+		}
+
+		$today = self::parse( (string) wp_date( 'Y-m-d', null, wp_timezone() ), $end_of_day );
+
+		return is_int( $today ) ? $today : time();
+	}
+
+	/**
+	 * The zone's name at an instant.
+	 *
+	 * @param int $timestamp UTC Unix timestamp.
+	 * @return string
+	 */
+	private static function zone_name( int $timestamp ): string {
+		return Timezone_Label::abbreviation( ( new DateTimeImmutable( '@' . $timestamp ) )->setTimezone( wp_timezone() )->format( 'T' ) );
 	}
 
 	/**

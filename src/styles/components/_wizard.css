@@ -528,10 +528,11 @@
  * The note sits in the input's end padding, after the browser's calendar
  * button. That button is drawn at the end of the content box, so the padding
  * is what makes room for the note; placing the note further in put it on top
- * of the button once "00:00" became "12:00 AM".
+ * of the button once "00:00" became "12:00 AM". This fits the server's
+ * "12:00 AM PDT"; `@aggr/zone-notes` resizes it for the reader's language.
  */
 .aggr-field .aggr-date-input input[type="date"] {
-	padding-right: 5.5rem;
+	padding-right: 7.5rem;
 }
 
 .aggr-date-input__note {

@@ -217,7 +217,14 @@ of the range. The live-campaign change editor's Schedule step uses the same
 partial; once the stored start has passed, only the end moves and the start
 picks are not offered, matching `Live_Edit_Rules`. It draws the design's key,
 but marks no day limited or sold out until availability comes from the forecast
-(#293). The
+(#293). Beside each date field a note says when that day begins or ends in the
+site's zone, with the zone's short name for that date — "12:00 AM PDT" in
+September, "12:00 AM PST" in December — because an abbreviation is only true
+for part of the year. The server writes it for the saved date
+(`Date_Input::edge_label()`, readable offsets from `Domain\Timezone_Label`);
+`@aggr/zone-notes` restates it as the field changes, in the page's language (the
+WordPress user's locale), always on a 12-hour clock. The schedule's day count
+names the zone the same way. The
 wizard is a CSS container, so the two columns follow the panel's width rather
 than the viewport's. On a wide panel the step's own primary button is hidden and
 the summary's button submits the step's form through the `form` attribute; on a

@@ -61,6 +61,7 @@ final class Assets implements Service {
 	public const MODULE_LOCAL_TIME  = '@aggr/local-time';
 	public const MODULE_LIST_MORE   = '@aggr/list-more';
 	public const MODULE_CALENDAR    = '@aggr/calendar';
+	public const MODULE_ZONE_NOTES  = '@aggr/zone-notes';
 
 	/**
 	 * Interactivity store namespaces.
@@ -263,6 +264,10 @@ final class Assets implements Service {
 			// Self-contained: the date fields work without it, so nothing gates it.
 			if ( is_file( AGGR_PLUGIN_DIR . 'dist/interactivity/calendar.js' ) ) {
 				wp_enqueue_script_module( self::MODULE_CALENDAR );
+			}
+
+			if ( is_file( AGGR_PLUGIN_DIR . 'dist/interactivity/zone-notes.js' ) ) {
+				wp_enqueue_script_module( self::MODULE_ZONE_NOTES );
 			}
 		}
 	}
@@ -547,6 +552,7 @@ final class Assets implements Service {
 			array( '@wordpress/interactivity' )
 		);
 		$this->register_module( self::MODULE_CALENDAR, 'calendar', array() );
+		$this->register_module( self::MODULE_ZONE_NOTES, 'zone-notes', array() );
 
 		return $ok;
 	}

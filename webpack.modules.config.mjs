@@ -25,6 +25,7 @@ const PLUGIN_MODULE_IDS = {
 	'@aggr/local-time': '@aggr/local-time',
 	'@aggr/list-more': '@aggr/list-more',
 	'@aggr/calendar': '@aggr/calendar',
+	'@aggr/zone-notes': '@aggr/zone-notes',
 };
 
 export default ( env = {}, argv = {} ) => {
