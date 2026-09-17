@@ -32,6 +32,7 @@ Routes marked “planned” remain contracts for later phases. Every other row i
 | `GET` | `/campaigns/{id}/line-items` | `aggr_access_portal` + `read_aggr_campaign` | The campaign's delivery strategy. Creates the default row on first read. Omits `organization_id` and the timestamps |
 | `PATCH` | `/campaigns/{id}/line-items/{line_item_id}` | `aggr_submit_campaign` + `edit_aggr_campaign` | Whole-number fields reject decimal and exponent forms. `revision` is required. `budget_cents` is not accepted |
 | `POST` | `/campaigns/{id}/transitions` | varies by target | Body carries `to`; the state machine authorizes the specific edge |
+| `POST` | `/campaigns/{id}/link-check` | `aggr_submit_campaign` + `read_aggr_campaign` | Fetches the campaign's **stored** destination and reports `works`/`missing`/`private`/`broken`/`unreachable` with the status code. Takes no URL. Rate-limited. The plugin's only outbound fetch — see the SSRF section of `threat-model.md` |
 | `POST` | `/campaigns/{id}/creatives` | `aggr_upload_creative` | Multipart. Rate-limited |
 | `GET` | `/creatives/{id}/file` | `read_aggr_creative` | **Streams bytes. Never redirects** |
 | `DELETE` | `/creatives/{id}` | `delete_aggr_creative` | Removes private bytes and the record only while advertiser-editable and unpublished |
@@ -333,6 +334,19 @@ learns nothing about the click otherwise. `add_query_arg` replaces an existing
 parameter rather than appending a second, so a destination already carrying one
 ends up with this click's token and no other; existing query strings and
 fragments survive.
+
+**Tracking templates.** A destination may carry macros, which `Domain\Click_Macros`
+fills in on the hop — `{campaign_id}`, `{creative_id}`, `{placement_id}`,
+`{timestamp}`, `{cachebuster}` and `{click_id}` — so one stored link reports
+which ad in which placement earned the visit, the way an ad server's click
+macros do. `Click_Hop::landing_url()` composes the final address: macros first,
+then the token, so no macro can displace `aggr_ct`. Every value is one this
+plugin produced and is URL encoded, so nothing between braces can change the
+host, the scheme or the query it sits in. A macro the plugin does not know is
+**removed**: a stray `{mistake}` would otherwise be counted by the advertiser's
+analytics as a real value. The portal's link check expands the same macros
+before fetching, with the campaign's own id and zeros for what only a click
+knows, so a link written as a template is still checkable.
 
 ## The impression beacon
 

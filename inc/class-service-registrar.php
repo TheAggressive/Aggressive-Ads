@@ -91,6 +91,7 @@ use Aggressive\Ads\Workflow\Booking_Service;
 use Aggressive\Ads\Workflow\Campaign_Change_Manager;
 use Aggressive\Ads\Workflow\Campaign_Clock;
 use Aggressive\Ads\Workflow\Campaign_Copier;
+use Aggressive\Ads\Workflow\Link_Checker;
 use Aggressive\Ads\Workflow\Campaign_Editor;
 use Aggressive\Ads\Workflow\Campaign_State_Machine;
 use Aggressive\Ads\Workflow\Campaign_Validator;
@@ -552,6 +553,14 @@ final class Service_Registrar {
 				$c->get( Private_Storage::class ),
 				$c->get( Audit_Repository::class ),
 				$c->get( Line_Item_Repository::class )
+			)
+		);
+
+		$container->register(
+			Link_Checker::class,
+			static fn ( Service_Container $c ): Link_Checker => new Link_Checker(
+				$c->get( Campaign_Repository::class ),
+				$c->get( Rate_Limiter::class )
 			)
 		);
 

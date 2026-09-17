@@ -26,6 +26,7 @@ const PLUGIN_MODULE_IDS = {
 	'@aggr/list-more': '@aggr/list-more',
 	'@aggr/calendar': '@aggr/calendar',
 	'@aggr/zone-notes': '@aggr/zone-notes',
+	'@aggr/link-tools': '@aggr/link-tools',
 };
 
 export default ( env = {}, argv = {} ) => {

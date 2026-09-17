@@ -62,6 +62,7 @@ final class Assets implements Service {
 	public const MODULE_LIST_MORE   = '@aggr/list-more';
 	public const MODULE_CALENDAR    = '@aggr/calendar';
 	public const MODULE_ZONE_NOTES  = '@aggr/zone-notes';
+	public const MODULE_LINK_TOOLS  = '@aggr/link-tools';
 
 	/**
 	 * Interactivity store namespaces.
@@ -268,6 +269,11 @@ final class Assets implements Service {
 
 			if ( is_file( AGGR_PLUGIN_DIR . 'dist/interactivity/zone-notes.js' ) ) {
 				wp_enqueue_script_module( self::MODULE_ZONE_NOTES );
+			}
+
+			// Also self-contained: the link saves and the step finishes without it.
+			if ( is_file( AGGR_PLUGIN_DIR . 'dist/interactivity/link-tools.js' ) ) {
+				wp_enqueue_script_module( self::MODULE_LINK_TOOLS );
 			}
 		}
 	}
@@ -553,6 +559,7 @@ final class Assets implements Service {
 		);
 		$this->register_module( self::MODULE_CALENDAR, 'calendar', array() );
 		$this->register_module( self::MODULE_ZONE_NOTES, 'zone-notes', array() );
+		$this->register_module( self::MODULE_LINK_TOOLS, 'link-tools', array() );
 
 		return $ok;
 	}

@@ -33,6 +33,7 @@ Author under `src/`; ship compiled `dist/` (see [build-and-release.md](build-and
 | `@aggr/list-more` | `src/interactivity/list-more.ts` | `dist/interactivity/list-more.js` |
 | `@aggr/calendar` | `src/interactivity/calendar.ts` | `dist/interactivity/calendar.js` |
 | `@aggr/zone-notes` | `src/interactivity/zone-notes.ts` | `dist/interactivity/zone-notes.js` |
+| `@aggr/link-tools` | `src/interactivity/link-tools.ts` | `dist/interactivity/link-tools.js` |
 
 `inc/Assets/class-assets.php` registers modules from `dist/`, reads `.asset.php`
 manifests, and early-enqueues the dialog store (plus `@wordpress/interactivity`)
@@ -129,6 +130,14 @@ locked and its translated labels from data attributes. It never posts: it sets
 the date inputs' values and dispatches `input` and `change`, which is how
 autosave and the run-through line learn of the change. A fixed package is read
 from the checked `package_id` radio's `data-aggr-duration-days`.
+
+`link-tools` is not a store either; it enqueues on campaign detail and wires the
+two helpers beside the destination field. The check POSTs to
+`/campaigns/{id}/link-check` with the REST nonce and **no body**: the route
+reads the campaign's stored link, so the browser has no say in what is fetched.
+The tag builder runs entirely in the browser, previews the link it would write
+and only writes it when Apply is pressed — through the same `input`/`change`
+events typing raises, so autosave stores it as an ordinary edit.
 
 Modules are enqueued only on the portal route. The plugin adds nothing to any other page on the site.
 

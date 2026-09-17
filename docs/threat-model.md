@@ -83,7 +83,19 @@ advertiser DNS part of tracking availability.
 
 **Open redirect is an accepted risk with a named control.** The click URL is by design a third-party destination rendered as an `href` on the public site. It cannot be restricted to an allowlist without breaking the product. The control is human review plus the audit trail, not filtering. Recorded here so it is a decision rather than an oversight.
 
-**SSRF: nothing server-side ever fetches a destination URL.** If a preview or screenshot feature is ever added, it must use `wp_safe_remote_get()` and appear in this document first.
+**SSRF: one server-side fetch exists, and this is it.** `POST /campaigns/{id}/link-check` asks whether a campaign's destination answers. Nothing else server-side ever fetches a destination URL, and anything new that would must appear here first.
+
+The route **takes no URL**. It names a campaign and reads that campaign's stored `default_click_url`, so pointing this at an address means first saving it to a campaign you own, through validation that already refuses credentials and non-`http(s)` schemes. Three layers then apply, in `Domain\Link_Check_Rules` and `Workflow\Link_Checker`:
+
+1. **The URL's text.** `http`/`https` only; ports 80 and 443 only; no credentials; no control characters. The host must be a name with a dot in it — a bare IPv4 or IPv6 address is refused outright rather than range-checked, as are `localhost`, `.local`, `.internal`, `.home.arpa` and the other names that only resolve inside a network.
+2. **Every address the name resolves to**, A and AAAA both, must be public (`FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE`). This is what stops an ordinary-looking name answering with `169.254.169.254`. A name that resolves to nothing is refused without a connection.
+3. **`wp_safe_remote_head()`/`wp_safe_remote_get()` with `reject_unsafe_urls`**, so WordPress re-validates the URL and every redirect it follows, after this plugin's own checks. Redirects are capped at 3, the timeout at 5 seconds, a GET body at 2 KB, and no cookie of this site travels with the request.
+
+**Accepted residual risk: DNS rebinding.** Between (2) and (3) a name can change what it answers with. Layer (3) is WordPress's own resolution and validation at connection time, which is why the check is not left to this plugin's resolution alone. What survives is an unauthenticated HEAD, or a short GET, of a page the advertiser chose.
+
+**What the caller learns** is one of `works`, `missing`, `private`, `broken` or `unreachable` and the status code — for their own link, on their own campaign. No body, no headers, no redirect chain. Checks are rate-limited (`Rate_Limiter::ACTION_LINK_CHECK`, 30 an hour per user), which is what bounds this site as a source of traffic to somebody else's server. The tracking-tag helper beside it is entirely client-side and never fetches anything.
+
+**Click macros are substitution, never parsing.** A destination may carry `{creative_id}` and friends, filled in on the click hop by `Domain\Click_Macros`. Values come from this plugin — ids from the signed click token, the time, the hashed token — and each is `rawurlencode`d before it is placed, so what an advertiser writes between braces cannot introduce a host, a scheme or a second query string. Unknown macros are removed rather than passed through. The stored link is still validated by `Campaign_Rules::is_valid_click_url()` as text, and the open-redirect position above is unchanged: the destination was always the advertiser's to choose.
 
 House click URLs use both checks at save. The hop repeats the pure URL check
 against current placement meta. House attachments use `Upload_Rules` — JPEG,

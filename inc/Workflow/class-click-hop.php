@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Workflow;
 
 use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Domain\Click_Macros;
 use Aggressive\Ads\Repository\Event_Repository;
 use Aggressive\Ads\Security\Rate_Limiter;
 
@@ -163,9 +164,37 @@ final class Click_Hop implements Service {
 		}
 
 		// phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect -- First-party hop to an advertiser destination. wp_safe_redirect would refuse every paid click that leaves this host.
-		wp_redirect( self::with_token( $dest, $token ), 302 );
+		wp_redirect( self::landing_url( $dest, $parsed, $this->tokens->hash( $token ), $token ), 302 );
 
 		exit;
+	}
+
+	/**
+	 * The address this click sends the visitor to.
+	 *
+	 * Composed in one place so the hop and its test build the same URL. The
+	 * order matters: macros are filled in first, then the token is added, so
+	 * a macro cannot displace `aggr_ct` or introduce a second one.
+	 *
+	 * @param string                                                                                $destination Stored destination, already validated.
+	 * @param array{placement_id: int, campaign_id: int, creative_id: int, exp: int, nonce: string} $parsed      The click's token.
+	 * @param string                                                                                $click_id    Hashed token, unique to this click.
+	 * @param string                                                                                $token       Full signed token.
+	 * @return string
+	 */
+	public static function landing_url( string $destination, array $parsed, string $click_id, string $token ): string {
+		$expanded = Click_Macros::expand(
+			$destination,
+			array(
+				'campaign_id'  => $parsed['campaign_id'],
+				'creative_id'  => $parsed['creative_id'],
+				'placement_id' => $parsed['placement_id'],
+				'click_id'     => $click_id,
+				'now'          => time(),
+			)
+		);
+
+		return self::with_token( $expanded, $token );
 	}
 
 	/**

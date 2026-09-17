@@ -32,6 +32,7 @@ final class Rate_Limiter {
 	public const ACTION_TRANSITION     = 'transition';
 	public const ACTION_AUTOSAVE       = 'autosave';
 	public const ACTION_COPY           = 'copy';
+	public const ACTION_LINK_CHECK     = 'link_check';
 	public const ACTION_LOGIN          = 'login';
 	public const ACTION_SIGNUP         = 'signup';
 	public const ACTION_PASSWORD_RESET = 'password_reset';
@@ -63,6 +64,18 @@ final class Rate_Limiter {
 		),
 		self::ACTION_COPY           => array(
 			'limit'  => 20,
+			'window' => HOUR_IN_SECONDS,
+		),
+
+		/*
+		 * Each attempt is an outbound request this site makes on an
+		 * advertiser's word, so the limit is what bounds this plugin as a
+		 * source of traffic to somebody else's server. Generous for the
+		 * handful of campaigns one person edits in a sitting; far short of
+		 * useful for anyone wanting a request engine.
+		 */
+		self::ACTION_LINK_CHECK     => array(
+			'limit'  => 30,
 			'window' => HOUR_IN_SECONDS,
 		),
 

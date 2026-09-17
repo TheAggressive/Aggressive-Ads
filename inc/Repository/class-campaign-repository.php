@@ -38,6 +38,7 @@ final class Campaign_Repository {
 	public const META_WIZARD_STEP          = '_aggr_wizard_step';
 	public const META_ADVERTISER_NOTES     = '_aggr_advertiser_notes';
 	public const META_DEFAULT_CLICK_URL    = '_aggr_default_click_url';
+	public const META_LINK_CHECK           = '_aggr_link_check';
 	public const META_PACKAGE_ID           = '_aggr_package_id';
 	public const META_BUDGET_CENTS         = '_aggr_budget_cents';
 	public const META_CURRENCY             = '_aggr_currency';
@@ -271,6 +272,41 @@ final class Campaign_Repository {
 	 */
 	public function default_click_url( int $campaign_id ): string {
 		return (string) get_post_meta( $campaign_id, self::META_DEFAULT_CLICK_URL, true );
+	}
+
+	/**
+	 * The last link check stored for this campaign, or null.
+	 *
+	 * Shaped on the way out rather than trusted: this is meta, and meta
+	 * survives imports, hand edits and older versions of this plugin.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return array{url: string, status: int, outcome: string, checked_at: int}|null
+	 */
+	public function link_check( int $campaign_id ): ?array {
+		$stored = get_post_meta( $campaign_id, self::META_LINK_CHECK, true );
+
+		if ( ! is_array( $stored ) || ! isset( $stored['url'], $stored['outcome'] ) ) {
+			return null;
+		}
+
+		return array(
+			'url'        => (string) $stored['url'],
+			'status'     => (int) ( $stored['status'] ?? 0 ),
+			'outcome'    => (string) $stored['outcome'],
+			'checked_at' => (int) ( $stored['checked_at'] ?? 0 ),
+		);
+	}
+
+	/**
+	 * Stores a link check result.
+	 *
+	 * @param int                                                               $campaign_id Campaign post id.
+	 * @param array{url: string, status: int, outcome: string, checked_at: int} $result      What the check found.
+	 * @return void
+	 */
+	public function set_link_check( int $campaign_id, array $result ): void {
+		update_post_meta( $campaign_id, self::META_LINK_CHECK, $result );
 	}
 
 	/**

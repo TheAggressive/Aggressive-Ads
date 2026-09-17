@@ -24,6 +24,7 @@ use Aggressive\Ads\Portal\Date_Input;
 use Aggressive\Ads\Workflow\Edit_Window;
 use Aggressive\Ads\Workflow\Campaign_Copier;
 use Aggressive\Ads\Workflow\Campaign_Editor;
+use Aggressive\Ads\Workflow\Link_Checker;
 use Aggressive\Ads\Workflow\Reporting_Read;
 use Aggressive\Ads\Workflow\Review_Readiness;
 use WP_Error;
@@ -59,6 +60,7 @@ final class Campaigns_Controller implements Service {
 	 * @param Edit_Window          $window     When editing is permitted.
 	 * @param Acting_As            $acting     Staff acting for an advertiser.
 	 * @param Line_Item_Repository $line_items Campaign delivery strategies.
+	 * @param Link_Checker         $links      The campaign link check.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -72,7 +74,8 @@ final class Campaigns_Controller implements Service {
 		private readonly Reporting_Read $reporting,
 		private readonly Edit_Window $window,
 		private readonly Acting_As $acting,
-		private readonly Line_Item_Repository $line_items
+		private readonly Line_Item_Repository $line_items,
+		private readonly Link_Checker $links
 	) {
 	}
 
@@ -205,6 +208,24 @@ final class Campaigns_Controller implements Service {
 						'wizard_step'       => $this->string_arg( false ),
 						'autosave_rev'      => $this->nonnegative_int_arg( true ),
 					),
+				),
+			)
+		);
+
+		/*
+		 * The one route that makes this site fetch a URL somebody else chose.
+		 * It takes no URL: the campaign names itself and the link comes from
+		 * what is stored on it. See Workflow\Link_Checker and the SSRF section
+		 * of docs/threat-model.md before changing anything here.
+		 */
+		Creative_File_Controller::register_route(
+			'/campaigns/(?P<id>\d+)/link-check',
+			array(
+				'methods'             => 'POST',
+				'callback'            => array( $this, 'link_check' ),
+				'permission_callback' => array( $this, 'write_permission' ),
+				'args'                => array(
+					'id' => $this->positive_int_arg( true ),
 				),
 			)
 		);
@@ -397,6 +418,20 @@ final class Campaigns_Controller implements Service {
 		}
 
 		return new WP_REST_Response( $this->advertised_summary( $campaign_id ), 201 );
+	}
+
+	/**
+	 * Checks the campaign's saved destination link.
+	 *
+	 * @param WP_REST_Request $request The request.
+	 * @return WP_REST_Response|WP_Error
+	 *
+	 * @phpstan-param WP_REST_Request<array<string, mixed>> $request
+	 */
+	public function link_check( WP_REST_Request $request ) {
+		$result = $this->links->check( (int) $request->get_param( 'id' ) );
+
+		return is_wp_error( $result ) ? $result : new WP_REST_Response( $result, 200 );
 	}
 
 	/**
