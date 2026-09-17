@@ -76,11 +76,12 @@ final class Rollup_Report_Repository {
 	 *
 	 * House rows (`campaign_id = 0`) are excluded and never attributed.
 	 *
-	 * @param int           $org_id Owning organization.
-	 * @param Report_Period $period Bounded UTC range.
+	 * @param int           $org_id      Owning organization.
+	 * @param Report_Period $period      Bounded UTC range.
+	 * @param int           $campaign_id One of the organization's campaigns, or 0 for all of them.
 	 * @return array{impressions: int, clicks: int, viewables: int|null, conversions: int|null}
 	 */
-	public function totals_for_org( int $org_id, Report_Period $period ): array {
+	public function totals_for_org( int $org_id, Report_Period $period, int $campaign_id = 0 ): array {
 		$empty = array(
 			'impressions' => 0,
 			'clicks'      => 0,
@@ -104,9 +105,12 @@ final class Rollup_Report_Repository {
 				FROM {$table} r
 				WHERE r.org_id = %d
 					AND r.campaign_id > 0
+					AND ( %d = 0 OR r.campaign_id = %d )
 					AND r.day_utc >= %s
 					AND r.day_utc <= %s",
 				$org_id,
+				$campaign_id,
+				$campaign_id,
 				$period->start,
 				$period->end
 			),
@@ -133,11 +137,12 @@ final class Rollup_Report_Repository {
 	 * a zero day are the same picture in a chart and different facts, and the
 	 * only place that knows which days were asked for is the period.
 	 *
-	 * @param int           $org_id Owning organization.
-	 * @param Report_Period $period Bounded UTC range.
+	 * @param int           $org_id      Owning organization.
+	 * @param Report_Period $period      Bounded UTC range.
+	 * @param int           $campaign_id One of the organization's campaigns, or 0 for all of them.
 	 * @return list<array{day: string, impressions: int, clicks: int}>
 	 */
-	public function series_for_org( int $org_id, Report_Period $period ): array {
+	public function series_for_org( int $org_id, Report_Period $period, int $campaign_id = 0 ): array {
 		$padded = array();
 
 		foreach ( $period->keys() as $day ) {
@@ -163,10 +168,13 @@ final class Rollup_Report_Repository {
 				FROM {$table} r
 				WHERE r.org_id = %d
 					AND r.campaign_id > 0
+					AND ( %d = 0 OR r.campaign_id = %d )
 					AND r.day_utc >= %s
 					AND r.day_utc <= %s
 				GROUP BY r.day_utc",
 				$org_id,
+				$campaign_id,
+				$campaign_id,
 				$period->start,
 				$period->end
 			),
@@ -202,11 +210,12 @@ final class Rollup_Report_Repository {
 	 * which is why the `org_id` predicate reads the frozen column and not the
 	 * campaign's current meta.
 	 *
-	 * @param int           $org_id Owning organization.
-	 * @param Report_Period $period Bounded UTC range.
+	 * @param int           $org_id      Owning organization.
+	 * @param Report_Period $period      Bounded UTC range.
+	 * @param int           $campaign_id One of the organization's campaigns, or 0 for all of them.
 	 * @return list<array{day: string, campaign_id: int, campaign: string, impressions: int, clicks: int, conversions: int|null}>
 	 */
-	public function daily_rows_for_org( int $org_id, Report_Period $period ): array {
+	public function daily_rows_for_org( int $org_id, Report_Period $period, int $campaign_id = 0 ): array {
 		if ( $org_id <= 0 ) {
 			return array();
 		}
@@ -230,11 +239,14 @@ final class Rollup_Report_Repository {
 					ON p.ID = r.campaign_id
 				WHERE r.org_id = %d
 					AND r.campaign_id > 0
+					AND ( %d = 0 OR r.campaign_id = %d )
 					AND r.day_utc >= %s
 					AND r.day_utc <= %s
 				GROUP BY r.day_utc, r.campaign_id, p.post_title
 				ORDER BY r.day_utc ASC, p.post_title ASC",
 				$org_id,
+				$campaign_id,
+				$campaign_id,
 				$period->start,
 				$period->end
 			),

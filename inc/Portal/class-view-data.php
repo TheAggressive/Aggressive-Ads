@@ -45,6 +45,21 @@ use Aggressive\Ads\Workflow\Review_Readiness;
 final class View_Data {
 
 	/**
+	 * Statuses in which a campaign can have delivered, and so has figures.
+	 *
+	 * @var array<int, string>
+	 */
+	private const DELIVERY_STATUSES = array(
+		Post_Statuses::APPROVED,
+		Post_Statuses::SCHEDULED,
+		Post_Statuses::LIVE,
+		Post_Statuses::PAUSED,
+		Post_Statuses::COMPLETE,
+		Post_Statuses::CANCELLED,
+	);
+
+
+	/**
 	 * Constructor.
 	 *
 	 * @param Campaign_Repository         $campaigns  Campaign persistence.
@@ -222,7 +237,17 @@ final class View_Data {
 		$row['creative_updates']   = $this->creative_view->creative_update_rows( $campaign_id );
 		$row['creative_slots']     = $this->creative_view->creative_slots( $campaign_id, $row['creatives'] );
 		$row['variant_comparison'] = $this->delivery->variant_comparison( $this->campaigns->org_id( $campaign_id ), $campaign_id, $row['creatives'] );
-		$row['placement_ids']      = $this->campaigns->placement_ids( $campaign_id );
+
+		/*
+		 * The campaign's own delivery, on the same card as the dashboard's.
+		 * Read only once it could have delivered, and only here, after the
+		 * `read_post` check above: the organization is the campaign's own,
+		 * so staff opening a client's campaign see that client's figures.
+		 */
+		$delivers               = in_array( (string) $row['status'], self::DELIVERY_STATUSES, true );
+		$row['delivery']        = $delivers ? $this->delivery->counts( $this->campaigns->org_id( $campaign_id ), null, $campaign_id ) : array();
+		$row['delivery_series'] = $delivers && array() !== $row['delivery'] ? $this->delivery->series( $this->campaigns->org_id( $campaign_id ), $campaign_id ) : array();
+		$row['placement_ids']   = $this->campaigns->placement_ids( $campaign_id );
 
 		/*
 		 * The link the next upload starts from: the one set for the campaign,

@@ -253,6 +253,9 @@ $aggr_spark_every = max( 1, (int) ceil( $aggr_spark_days / 7 ) );
 		 */
 		?>
 		<input type="hidden" name="days" value="<?php echo esc_attr( (string) $aggr_export_days ); ?>">
+		<?php if ( isset( $aggr_export_campaign ) && $aggr_export_campaign > 0 ) : ?>
+			<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) (int) $aggr_export_campaign ); ?>">
+		<?php endif; ?>
 		<input type="hidden" name="from" value="<?php echo esc_attr( $aggr_export_from ); ?>">
 		<input type="hidden" name="to" value="<?php echo esc_attr( $aggr_export_to ); ?>">
 		<?php wp_nonce_field( \Aggressive\Ads\Portal\Report_Actions::EXPORT_ACTION ); ?>

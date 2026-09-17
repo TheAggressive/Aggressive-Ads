@@ -199,7 +199,8 @@ final class Portal_Service_Registrar {
 			Report_Actions::class,
 			static fn ( Service_Container $c ): Report_Actions => new Report_Actions(
 				$c->get( Reporting_Read::class ),
-				$c->get( Org_Repository::class )
+				$c->get( Org_Repository::class ),
+				$c->get( Campaign_Repository::class )
 			)
 		);
 		$container->register(

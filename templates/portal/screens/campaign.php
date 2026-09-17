@@ -575,6 +575,26 @@ if ( in_array( $aggr_creative_notice, array( 'creative_uploaded', 'creative_remo
  */
 ?>
 <?php
+/*
+ * The campaign's own delivery, above where it has got to: once a campaign is
+ * running, how it is doing is the first question. Empty until it could have
+ * delivered, and when Reporting is off.
+ */
+if ( ! $aggr_editing_changes && array() !== ( $aggr_campaign['delivery'] ?? array() ) ) {
+	$aggr_delivery_view   = \Aggressive\Ads\Plugin::instance()->container()->get( \Aggressive\Ads\Portal\View_Data::class );
+	$aggr_delivery        = $aggr_campaign['delivery'];
+	$aggr_series          = $aggr_campaign['delivery_series'];
+	$aggr_range           = $aggr_delivery_view->delivery_range_label();
+	$aggr_freshness       = $aggr_delivery_view->delivery_freshness_note();
+	$aggr_counting        = $aggr_delivery_view->delivery_counting_from();
+	$aggr_window          = $aggr_delivery_view->delivery_window();
+	$aggr_delivery_base   = $aggr_campaign_url;
+	$aggr_delivery_title  = __( 'Delivery', 'aggressive-ads' );
+	$aggr_export_campaign = (int) $aggr_campaign['id'];
+
+	require AGGR_PLUGIN_DIR . 'templates/portal/partials/delivery-card.php';
+}
+
 if ( true !== $aggr_campaign['editable'] && ! $aggr_editing_changes ) {
 	require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-status.php';
 }

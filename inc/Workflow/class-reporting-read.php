@@ -120,11 +120,12 @@ final class Reporting_Read {
 	/**
 	 * Organization totals over a range, or zeros when the surface is off.
 	 *
-	 * @param int                $org_id Owning organization.
-	 * @param Report_Period|null $period Range, or the default window.
+	 * @param int                $org_id      Owning organization.
+	 * @param Report_Period|null $period      Range, or the default window.
+	 * @param int                $campaign_id One of its campaigns, or 0 for all of them.
 	 * @return array{impressions: int, clicks: int, viewables: int|null, conversions: int|null}
 	 */
-	public function totals_for_org( int $org_id, ?Report_Period $period = null ): array {
+	public function totals_for_org( int $org_id, ?Report_Period $period = null, int $campaign_id = 0 ): array {
 		if ( ! $this->surfaces() ) {
 			// Null rather than 0, matching the rest of the contract: Reporting
 			// being off is not a claim that nothing was seen.
@@ -136,7 +137,7 @@ final class Reporting_Read {
 			);
 		}
 
-		return $this->reports->totals_for_org( $org_id, $period ?? $this->default_period() );
+		return $this->reports->totals_for_org( $org_id, $period ?? $this->default_period(), $campaign_id );
 	}
 
 	/**
@@ -147,16 +148,17 @@ final class Reporting_Read {
 	 * means reading twice as many of them into memory to answer a question SQL
 	 * can already scope.
 	 *
-	 * @param int                $org_id Owning organization.
-	 * @param Report_Period|null $period Range, or the default window.
+	 * @param int                $org_id      Owning organization.
+	 * @param Report_Period|null $period      Range, or the default window.
+	 * @param int                $campaign_id One of its campaigns, or 0 for all of them.
 	 * @return array{current: array{impressions: int, clicks: int, viewables: int|null, conversions: int|null}, previous: array{impressions: int, clicks: int, viewables: int|null, conversions: int|null}}
 	 */
-	public function totals_with_comparison( int $org_id, ?Report_Period $period = null ): array {
+	public function totals_with_comparison( int $org_id, ?Report_Period $period = null, int $campaign_id = 0 ): array {
 		$period = $period ?? $this->default_period();
 
 		return array(
-			'current'  => $this->totals_for_org( $org_id, $period ),
-			'previous' => $this->totals_for_org( $org_id, $period->previous() ),
+			'current'  => $this->totals_for_org( $org_id, $period, $campaign_id ),
+			'previous' => $this->totals_for_org( $org_id, $period->previous(), $campaign_id ),
 		);
 	}
 
@@ -227,14 +229,15 @@ final class Reporting_Read {
 	 *
 	 * @param int                $org_id Owning organization.
 	 * @param Report_Period|null $period Range, or the default sparkline window.
+	 * @param int                $campaign_id One of its campaigns, or 0 for all of them.
 	 * @return list<array{day: string, impressions: int, clicks: int}>
 	 */
-	public function series_for_org( int $org_id, ?Report_Period $period = null ): array {
+	public function series_for_org( int $org_id, ?Report_Period $period = null, int $campaign_id = 0 ): array {
 		if ( ! $this->surfaces() ) {
 			return array();
 		}
 
-		return $this->reports->series_for_org( $org_id, $period ?? $this->default_period( self::SERIES_DAYS ) );
+		return $this->reports->series_for_org( $org_id, $period ?? $this->default_period( self::SERIES_DAYS ), $campaign_id );
 	}
 
 	/**
@@ -247,14 +250,15 @@ final class Reporting_Read {
 	 *
 	 * @param int           $org_id Owning organization.
 	 * @param Report_Period $period Bounded UTC range.
+	 * @param int           $campaign_id One of its campaigns, or 0 for all of them.
 	 * @return list<array{day: string, campaign_id: int, campaign: string, impressions: int, clicks: int, conversions: int|null}>
 	 */
-	public function daily_rows_for_org( int $org_id, Report_Period $period ): array {
+	public function daily_rows_for_org( int $org_id, Report_Period $period, int $campaign_id = 0 ): array {
 		if ( ! $this->surfaces() ) {
 			return array();
 		}
 
-		return $this->reports->daily_rows_for_org( $org_id, $period );
+		return $this->reports->daily_rows_for_org( $org_id, $period, $campaign_id );
 	}
 
 	/**
