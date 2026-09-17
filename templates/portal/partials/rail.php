@@ -37,7 +37,13 @@ $aggr_items = array(
 	Request::ROUTE_HELP         => __( 'Help', 'aggressive-ads' ),
 );
 ?>
-<div class="aggr-rail">
+<?php
+/*
+ * A labelled landmark, so the brand and the site name are inside one: a
+ * screen reader moving by landmark skipped straight past them before.
+ */
+?>
+<aside class="aggr-rail" aria-label="<?php esc_attr_e( 'Advertising portal', 'aggressive-ads' ); ?>">
 	<a class="aggr-brand" href="<?php echo esc_url( Routes::url() ); ?>">
 		<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/brand.php'; ?>
 	</a>
@@ -114,4 +120,4 @@ $aggr_items = array(
 			<p class="aggr-rail__site"><?php echo esc_html( $aggr_host ); ?></p>
 		<?php endif; ?>
 	</div>
-</div>
+</aside>

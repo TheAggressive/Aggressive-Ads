@@ -201,6 +201,15 @@ final class PortalContrastTest extends TestCase {
 	}
 
 	/**
+	 * Primary buttons' labels read on them.
+	 *
+	 * @return void
+	 */
+	public function test_primary_button_text_reads_on_the_primary(): void {
+		$this->assertContrast( 'on-primary', 'primary', self::AA_NORMAL );
+	}
+
+	/**
 	 * White on the brand orange is the pairing the palette exists to avoid.
 	 *
 	 * The negative half of the test above: if the label ink drifted back to

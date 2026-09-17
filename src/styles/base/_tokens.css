@@ -57,6 +57,15 @@
 		--aggr-color-on-accent: #111214;
 
 		/*
+		 * Primary actions: graphite with white. Signal orange stays for what
+		 * it is best at — marking where you are and what is live — rather than
+		 * being spent on every button, where graphite type on orange read
+		 * heavy and white on it fails at button size (3.39:1).
+		 */
+		--aggr-color-primary: #111214;
+		--aggr-color-on-primary: #ffffff;
+
+		/*
 		 * The accent as it lands on the dark rail — the active nav chip. Not
 		 * brand-overridable, like the rail's own colours, because it is
 		 * measured against a fixed dark surface: 4.94:1 on the active row.

@@ -261,10 +261,15 @@
 	color: var(--aggr-color-rail-text-strong);
 }
 
+/* A colour, not opacity: faded ink measured below AA on the canvas. */
 .aggr-tabs__count {
+	color: var(--aggr-color-text-muted);
 	font-family: var(--aggr-font-mono);
 	font-size: 11px;
-	opacity: 0.75;
+}
+
+.aggr-tabs__tab[aria-current="page"] .aggr-tabs__count {
+	color: inherit;
 }
 
 /*

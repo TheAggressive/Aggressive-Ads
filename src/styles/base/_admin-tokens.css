@@ -86,6 +86,10 @@
 
 	/* Shared rules read these; core's blue keeps white labels. */
 	--aggr-color-on-accent: #ffffff;
+
+	/* wp-admin keeps core's blue primary buttons. */
+	--aggr-color-primary: #2271b1;
+	--aggr-color-on-primary: #ffffff;
 	--aggr-color-on-accent-rail: #1d2327;
 	--aggr-font-mono:
 		ui-monospace, "SFMono-Regular", "Cascadia Mono", "Segoe UI Mono", "Menlo",

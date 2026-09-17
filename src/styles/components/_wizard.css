@@ -16,8 +16,18 @@
 	gap: var(--aggr-space-xl);
 }
 
+/*
+ * The step starts level with the order summary beside it. Each step's form
+ * brings the vertical padding every portal form has, which put the first card
+ * a padding's height below the summary's top edge.
+ */
 .aggr-wizard__main {
 	min-width: 0;
+}
+
+.aggr-wizard__main > .aggr-form,
+.aggr-wizard__main > form > .aggr-form:first-child {
+	padding-top: 0;
 }
 
 /* Narrow: the step's own button carries the action, so this one stands down. */

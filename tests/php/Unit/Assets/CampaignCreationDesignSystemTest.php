@@ -176,7 +176,7 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 		 * them looks like nothing until a theme repaints the buttons.
 		 */
 		$this->assertSame( 1, preg_match( '/\.aggr-portal button\[type="submit"\] \{[^}]*text-transform: none;/s', $css ), 'Portal submit buttons will take a theme\'s capitals again.' );
-		$this->assertSame( 1, preg_match( '/\.aggr-portal \.aggr-button \{[^}]*background: var\(--aggr-color-accent\);[^}]*color: var\(--aggr-color-on-accent\);/s', $css ), 'Portal buttons will take a theme\'s colours again.' );
+		$this->assertSame( 1, preg_match( '/\.aggr-portal \.aggr-button \{[^}]*background: var\(--aggr-color-primary\);[^}]*color: var\(--aggr-color-on-primary\);/s', $css ), 'Portal buttons will take a theme\'s colours again.' );
 		$this->assertSame( 1, preg_match( '/\.aggr-portal \.aggr-button--secondary \{[^}]*background: var\(--aggr-color-surface\);/s', $css ), 'Secondary buttons will take a theme\'s red again.' );
 	}
 
@@ -195,6 +195,13 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 				$css
 			),
 			'A theme with a bare label rule will uppercase every field in the portal again.'
+		);
+
+		// The package cards are labels too, and shouted their names until guarded.
+		$this->assertSame(
+			1,
+			preg_match( '/\.aggr-portal label\.aggr-choice \{[^}]*text-transform: none;/s', $css ),
+			'A theme with a bare label rule will uppercase the package cards again.'
 		);
 	}
 

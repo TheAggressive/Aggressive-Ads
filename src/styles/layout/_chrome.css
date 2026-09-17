@@ -573,8 +573,8 @@
 	justify-content: center;
 	min-height: var(--aggr-control-min);
 	padding: 0 var(--aggr-space-lg);
-	background: var(--aggr-color-accent);
-	color: var(--aggr-color-on-accent);
+	background: var(--aggr-color-primary);
+	color: var(--aggr-color-on-primary);
 	border: 1px solid transparent;
 	border-radius: var(--aggr-radius-control);
 	font: inherit;
@@ -585,8 +585,9 @@
 	cursor: pointer;
 }
 
+/* A brightness filter does nothing visible to graphite, so hover mixes toward the surface. */
 .aggr-button:hover {
-	filter: brightness(0.92);
+	background: color-mix(in srgb, var(--aggr-color-primary) 84%, var(--aggr-color-surface));
 }
 
 .aggr-button--secondary {
