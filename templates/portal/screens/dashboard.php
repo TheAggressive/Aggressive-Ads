@@ -52,15 +52,8 @@ $aggr_tile_hints = array(
 	Campaign_Filter::ATTENTION => __( 'Changes requested', 'aggressive-ads' ),
 );
 
-// The first campaign that is waiting on the advertiser, with the review team's reason.
-$aggr_attention = null;
-
-foreach ( $aggr_campaigns['rows'] as $aggr_candidate ) {
-	if ( in_array( (string) $aggr_candidate['status'], Campaign_Filter::statuses( Campaign_Filter::ATTENTION ), true ) && '' !== (string) ( $aggr_candidate['review_notes'] ?? '' ) ) {
-		$aggr_attention = $aggr_candidate;
-		break;
-	}
-}
+// Every campaign waiting on the advertiser, the first few named with why.
+$aggr_attention = $aggr_view->attention();
 ?>
 <div class="aggr-pagehead">
 	<div>
@@ -302,14 +295,32 @@ $aggr_start_packages = $aggr_can_create ? $aggr_view->package_options() : array(
 	</section>
 
 	<aside class="aggr-columns__side">
-		<?php if ( null !== $aggr_attention ) : ?>
+		<?php if ( $aggr_attention['total'] > 0 ) : ?>
 			<section class="aggr-summary aggr-attention" aria-labelledby="aggr-attention-heading">
 				<div class="aggr-summary__head">
 					<h2 id="aggr-attention-heading" class="aggr-eyebrow"><?php esc_html_e( 'Needs your attention', 'aggressive-ads' ); ?></h2>
+					<span class="aggr-pill aggr-pill--pending"><?php echo esc_html( number_format_i18n( $aggr_attention['total'] ) ); ?></span>
 				</div>
-				<p class="aggr-attention__name"><?php echo esc_html( (string) $aggr_attention['title'] ); ?></p>
-				<p class="aggr-hint"><?php echo esc_html( (string) $aggr_attention['review_notes'] ); ?></p>
-				<a class="aggr-button aggr-button--secondary" href="<?php echo esc_url( (string) $aggr_attention['url'] ); ?>"><?php esc_html_e( 'Make changes', 'aggressive-ads' ); ?><span class="aggr-sr">: <?php echo esc_html( (string) $aggr_attention['title'] ); ?></span></a>
+				<ul class="aggr-attention__list">
+					<?php foreach ( array_slice( $aggr_attention['rows'], 0, 5 ) as $aggr_waiting ) : ?>
+						<li class="aggr-attention__item">
+							<span class="aggr-attention__name"><?php echo esc_html( $aggr_waiting['title'] ); ?></span>
+							<span class="aggr-hint"><?php echo esc_html( $aggr_waiting['reason'] ); ?></span>
+							<a class="aggr-attention__action" href="<?php echo esc_url( $aggr_waiting['url'] ); ?>"><?php echo esc_html( $aggr_waiting['action'] ); ?><span class="aggr-sr">: <?php echo esc_html( $aggr_waiting['title'] ); ?></span></a>
+						</li>
+					<?php endforeach; ?>
+				</ul>
+				<?php if ( $aggr_attention['total'] > 5 ) : ?>
+					<a class="aggr-panel__link" href="<?php echo esc_url( add_query_arg( 'status', Campaign_Filter::ATTENTION, $aggr_list_url ) ); ?>">
+						<?php
+						printf(
+							/* translators: %s: number of further campaigns needing attention. */
+							esc_html( _n( 'And %s more', 'And %s more', $aggr_attention['total'] - 5, 'aggressive-ads' ) ),
+							esc_html( number_format_i18n( $aggr_attention['total'] - 5 ) )
+						);
+						?>
+					</a>
+				<?php endif; ?>
 			</section>
 		<?php endif; ?>
 

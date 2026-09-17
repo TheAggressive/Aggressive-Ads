@@ -59,10 +59,10 @@ $aggr_can_renew     = current_user_can( Capabilities::SUBMIT_CAMPAIGN );
 					<?php endif; ?>
 				</tr>
 			</thead>
-			<tbody>
+			<tbody <?php echo $aggr_table_compact ? '' : 'data-aggr-list-rows'; ?>>
 				<?php foreach ( $aggr_rows as $aggr_row ) : ?>
 					<?php $aggr_row_status = (string) $aggr_row['status']; ?>
-					<tr>
+					<tr data-aggr-row="<?php echo esc_attr( (string) (int) $aggr_row['id'] ); ?>">
 						<td class="aggr-table__primary">
 							<a href="<?php echo esc_url( (string) $aggr_row['url'] ); ?>">
 								<?php echo esc_html( (string) $aggr_row['title'] ); ?>

@@ -151,11 +151,12 @@ final class View_Data {
 	/**
 	 * The caller's campaigns, ready to render.
 	 *
-	 * @param int    $page 1-based page.
+	 * @param int    $page   1-based page.
 	 * @param string $filter Slice to show, or '' for every campaign.
+	 * @param string $search Words to find in campaign names, or '' for none.
 	 * @return array{rows: array<int, array<string, mixed>>, total: int, pages: int, page: int, show_metrics: bool}
 	 */
-	public function campaigns( int $page = 1, string $filter = '' ): array {
+	public function campaigns( int $page = 1, string $filter = '', string $search = '' ): array {
 		$org_id = $this->org_id();
 
 		/*
@@ -175,7 +176,7 @@ final class View_Data {
 			);
 		}
 
-		$result = $this->campaigns->for_org( $org_id, $page, Campaign_Filter::statuses( $filter ) );
+		$result = $this->campaigns->for_org( $org_id, $page, Campaign_Filter::statuses( $filter ), self::search_term( $search ) );
 		$rows   = array();
 
 		foreach ( $result['ids'] as $campaign_id ) {
@@ -569,39 +570,24 @@ final class View_Data {
 	 * @return array<int, array{label: string, value: int, filter: string}>
 	 */
 	public function counts(): array {
-		$campaigns = $this->campaigns( 1 );
+		$org_id = $this->org_id();
+		$totals = array();
 
-		$running   = 0;
-		$reviewing = 0;
-		$drafts    = 0;
-
-		foreach ( $campaigns['rows'] as $row ) {
-			$status = (string) $row['status'];
-
-			/*
-			 * Grouped by the same definition the list filters on, rather than
-			 * by a copy of it. These are one question asked twice — the tile
-			 * says how many need attention and the list shows which ones — and
-			 * two definitions of "needs attention" is one edit away from a
-			 * count that does not match the rows beneath it. A reader cannot
-			 * resolve that disagreement, and stops trusting both halves.
-			 */
-			if ( in_array( $status, Campaign_Filter::statuses( Campaign_Filter::RUNNING ), true ) ) {
-				++$running;
-
-				continue;
-			}
-
-			if ( in_array( $status, Campaign_Filter::statuses( Campaign_Filter::IN_REVIEW ), true ) ) {
-				++$reviewing;
-
-				continue;
-			}
-
-			if ( in_array( $status, Campaign_Filter::statuses( Campaign_Filter::ATTENTION ), true ) ) {
-				++$drafts;
-			}
+		/*
+		 * **Counted by the query that lists them, not from a page of rows.**
+		 * These were classified from `campaigns( 1 )`, which is one page of
+		 * twenty: an advertiser with a twenty-first campaign saw tiles that
+		 * stopped counting while the lists they linked to kept going.
+		 */
+		foreach ( Campaign_Filter::all() as $filter ) {
+			$totals[ $filter ] = $org_id > 0
+				? (int) $this->campaigns->for_org( $org_id, 1, Campaign_Filter::statuses( $filter ) )['total']
+				: 0;
 		}
+
+		$running   = $totals[ Campaign_Filter::RUNNING ];
+		$reviewing = $totals[ Campaign_Filter::IN_REVIEW ];
+		$drafts    = $totals[ Campaign_Filter::ATTENTION ];
 
 		return array(
 			array(
@@ -620,6 +606,52 @@ final class View_Data {
 				'filter' => Campaign_Filter::ATTENTION,
 			),
 		);
+	}
+
+	/**
+	 * Every campaign waiting on the advertiser, each with why and what to do.
+	 *
+	 * The dashboard's card named the first one only, so an advertiser with
+	 * three campaigns sent back saw one reason and no sign of the others.
+	 * The reason for a campaign sent back is the review team's note — the
+	 * advertiser-visible one, never the internal notes — and a draft's is that
+	 * it has not been submitted.
+	 *
+	 * @return array{rows: list<array{id: int, title: string, url: string, reason: string, action: string}>, total: int}
+	 */
+	public function attention(): array {
+		$slice = $this->campaigns( 1, Campaign_Filter::ATTENTION );
+		$rows  = array();
+
+		foreach ( $slice['rows'] as $row ) {
+			$sent_back = Post_Statuses::CHANGES === (string) $row['status'];
+			$notes     = trim( (string) ( $row['review_notes'] ?? '' ) );
+
+			$rows[] = array(
+				'id'     => (int) $row['id'],
+				'title'  => (string) $row['title'],
+				'url'    => (string) $row['url'],
+				'reason' => $sent_back
+					? ( '' !== $notes ? $notes : __( 'The review team asked for changes.', 'aggressive-ads' ) )
+					: __( 'Not submitted yet.', 'aggressive-ads' ),
+				'action' => $sent_back ? __( 'Make changes', 'aggressive-ads' ) : __( 'Continue setup', 'aggressive-ads' ),
+			);
+		}
+
+		return array(
+			'rows'  => $rows,
+			'total' => (int) $slice['total'],
+		);
+	}
+
+	/**
+	 * A search term as the list query takes it: trimmed, and bounded.
+	 *
+	 * @param string $search Raw words.
+	 * @return string
+	 */
+	public static function search_term( string $search ): string {
+		return mb_substr( trim( $search ), 0, 100 );
 	}
 
 	/**

@@ -266,9 +266,21 @@ advertiser with the review team's reason, and **Start a campaign** as a compact
 package list. **New campaign** is also at the foot of the rail on every screen.
 
 The campaigns list has tabs for the same slices with their counts, the current
-one marked, and a search field drawn disabled until #296. Rows show the package
-under the name and short `Sep 6 → Oct 4` schedules; the foot says
-"Showing N of M". Native delivery is always recording.
+one marked, and a name search: a GET form (`?search=`, kept across tabs, 100
+characters) whose query narrows the organization-scoped `for_org()` read to
+titles, so a name only another organization uses finds nothing. `search` and
+`list_page` are used rather than `s` and `paged`, which WordPress reads as its
+own search and archive paging. Rows show the package under the name and short
+`Sep 6 → Oct 4` schedules; the foot says "Showing 1–20 of 46" with Previous and
+Next, which `@aggr/list-more` turns into a bounded, announced "Show more
+campaigns" (see [interactivity-stores.md](interactivity-stores.md)).
+
+The dashboard's counts are each a query total, not a classification of the
+first page of rows, which stopped counting at twenty. Its "Needs your
+attention" card lists every draft and every campaign sent back — five named,
+then "And N more" to the filtered list — each with its reason: the review
+team's advertiser-visible note for one sent back, "Not submitted yet" for a
+draft. Native delivery is always recording.
 They read `aggr_rollups` and never invented zeros. Spend stays absent.
 
 The counts are tiles on the page ground, each linking to the filtered list, and

@@ -788,10 +788,11 @@ final class Campaign_Repository {
 	 * @param int                $org_id Owning organization.
 	 * @param int                $page   1-based page number.
 	 * @param array<int, string> $statuses Statuses to include, or empty for every status.
+	 * @param string             $search   Words to find in the campaign name, or '' for none.
 	 * @return array{ids: array<int, int>, total: int, pages: int}
 	 */
-	public function for_org( int $org_id, int $page = 1, array $statuses = array() ): array {
-		return ( new Campaign_Query_Repository() )->for_org( $org_id, $page, $statuses );
+	public function for_org( int $org_id, int $page = 1, array $statuses = array(), string $search = '' ): array {
+		return ( new Campaign_Query_Repository() )->for_org( $org_id, $page, $statuses, $search );
 	}
 
 	/**

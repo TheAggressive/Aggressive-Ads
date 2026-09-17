@@ -30,6 +30,7 @@ Author under `src/`; ship compiled `dist/` (see [build-and-release.md](build-and
 | `@aggr/autosave` | `src/interactivity/autosave.ts` | `dist/interactivity/autosave.js` |
 | `@aggr/upload` | `src/interactivity/upload.ts` | `dist/interactivity/upload.js` |
 | `@aggr/local-time` | `src/interactivity/local-time.ts` | `dist/interactivity/local-time.js` |
+| `@aggr/list-more` | `src/interactivity/list-more.ts` | `dist/interactivity/list-more.js` |
 
 `inc/Assets/class-assets.php` registers modules from `dist/`, reads `.asset.php`
 manifests, and early-enqueues the dialog store (plus `@wordpress/interactivity`)
@@ -109,6 +110,15 @@ screen and rewrites elements marked `data-aggr-local` ("clock" or "moment", with
 an ISO `data-aggr-datetime` and a translated `data-aggr-local-format` holding
 `%s`) into the viewer's own time zone. The server's text is the UTC sentence,
 true without script, and stays on hover; a viewer whose clock is UTC keeps it.
+`list-more` is not a store either; it enqueues on the campaigns list only and
+turns the server's Previous/Next links into a "Show more campaigns" button that
+fetches the next page's own URL (same query, session and tenant scope; same
+origin only) and appends rows marked `data-aggr-row`, skipping any already
+shown. Reaching the button loads up to three pages in a row, then waits for a
+press so the footer stays reachable. Every load announces the new count through
+a polite status region; only a press moves focus, to the first new campaign.
+A failed load says so, keeps the button for a retry and shows the page links
+again.
 
 Modules are enqueued only on the portal route. The plugin adds nothing to any other page on the site.
 

@@ -276,3 +276,56 @@
 	border-radius: var(--aggr-radius-control);
 	font: inherit;
 }
+
+/* Every campaign waiting on the advertiser, each with why and a way to fix it. */
+.aggr-attention__list {
+	display: flex;
+	flex-direction: column;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.aggr-attention__item {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+	padding: var(--aggr-space-sm) 0;
+	border-top: 1px solid var(--aggr-border-color);
+}
+
+.aggr-attention__item:first-child {
+	padding-top: 0;
+	border-top: 0;
+}
+
+.aggr-attention__item .aggr-hint {
+	margin: 0;
+	overflow-wrap: anywhere;
+}
+
+.aggr-attention__action {
+	align-self: flex-start;
+	margin-top: 2px;
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.aggr-search {
+	display: flex;
+	gap: var(--aggr-space-xs);
+	margin: 0;
+}
+
+.aggr-pager {
+	display: flex;
+	gap: var(--aggr-space-md);
+	align-items: center;
+	font-size: 13px;
+	font-weight: 600;
+}
+
+/* "Show more campaigns", in the footer where the page links were. */
+.aggr-portal .aggr-list-more__button {
+	min-height: var(--aggr-control-min);
+}

@@ -143,9 +143,10 @@ final class Campaign_Query_Repository {
 	 * @param int                $org_id Organization id.
 	 * @param int                $page Page number.
 	 * @param array<int, string> $statuses Statuses to include, or empty for every status.
+	 * @param string             $search   Words to find in the campaign name, or '' for none.
 	 * @return array{ids: array<int, int>, total: int, pages: int}
 	 */
-	public function for_org( int $org_id, int $page, array $statuses = array() ): array {
+	public function for_org( int $org_id, int $page, array $statuses = array(), string $search = '' ): array {
 		if ( $org_id <= 0 ) {
 			return array(
 				'ids'   => array(),
@@ -154,34 +155,46 @@ final class Campaign_Query_Repository {
 			);
 		}
 
-		$query = new \WP_Query(
-			array(
-				'post_type'              => Post_Types::CAMPAIGN,
+		$args = array(
+			'post_type'              => Post_Types::CAMPAIGN,
 
-				/*
-				 * Narrowed to our own statuses whatever the caller asked for.
-				 * An unrecognised status reaching `WP_Query` would be dropped
-				 * by WordPress and the query would widen to its default, which
-				 * is `publish` — a status no campaign ever has, so the list
-				 * would come back empty and read as "you have no campaigns".
-				 */
-				'post_status'            => self::requested_statuses( $statuses ),
-				'posts_per_page'         => Campaign_Repository::PAGE_SIZE,
-				'paged'                  => max( 1, $page ),
-				'fields'                 => 'ids',
-				'orderby'                => 'date',
-				'order'                  => 'DESC',
-				'update_post_term_cache' => false,
-				'meta_query'             => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- This indexed meta predicate is the tenant scope.
-					array(
-						'key'   => Campaign_Repository::META_ORG_ID,
-						'value' => (string) $org_id,
-					),
+			/*
+			 * Narrowed to our own statuses whatever the caller asked for.
+			 * An unrecognised status reaching `WP_Query` would be dropped
+			 * by WordPress and the query would widen to its default, which
+			 * is `publish` — a status no campaign ever has, so the list
+			 * would come back empty and read as "you have no campaigns".
+			 */
+			'post_status'            => self::requested_statuses( $statuses ),
+			'posts_per_page'         => Campaign_Repository::PAGE_SIZE,
+			'paged'                  => max( 1, $page ),
+			'fields'                 => 'ids',
+			'orderby'                => 'date',
+			'order'                  => 'DESC',
+			'update_post_term_cache' => false,
+			'meta_query'             => array( // phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query -- This indexed meta predicate is the tenant scope.
+				array(
+					'key'   => Campaign_Repository::META_ORG_ID,
+					'value' => (string) $org_id,
 				),
-			)
+			),
 		);
 
-		return $this->page_result( $query );
+		/*
+		 * **The search narrows the tenant query; it never replaces it.** The
+		 * organization predicate above is in the same query, so a name that
+		 * matches only another organization's campaign finds nothing. Names
+		 * only: a campaign has no body an advertiser wrote, and matching
+		 * excerpts or content would surface rows for text nobody can see.
+		 */
+		$search = trim( $search );
+
+		if ( '' !== $search ) {
+			$args['s']              = $search;
+			$args['search_columns'] = array( 'post_title' );
+		}
+
+		return $this->page_result( new \WP_Query( $args ) );
 	}
 
 	/**

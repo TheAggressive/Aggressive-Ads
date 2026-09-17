@@ -59,6 +59,7 @@ final class Assets implements Service {
 	public const MODULE_UPLOAD      = '@aggr/upload';
 	public const MODULE_SAVE        = '@aggr/save';
 	public const MODULE_LOCAL_TIME  = '@aggr/local-time';
+	public const MODULE_LIST_MORE   = '@aggr/list-more';
 
 	/**
 	 * Interactivity store namespaces.
@@ -199,6 +200,20 @@ final class Assets implements Service {
 		if ( function_exists( 'wp_register_script_module' ) && is_file( AGGR_PLUGIN_DIR . 'dist/interactivity/local-time.js' ) ) {
 			$this->register_module( self::MODULE_LOCAL_TIME, 'local-time', array() );
 			wp_enqueue_script_module( self::MODULE_LOCAL_TIME );
+		}
+
+		// The campaigns list only: it is the one screen with pages to load.
+		$list_request = $this->router->request();
+
+		if (
+			null !== $list_request
+			&& Request::ROUTE_CAMPAIGNS === $list_request->route
+			&& 0 === $list_request->object_id
+			&& function_exists( 'wp_register_script_module' )
+			&& is_file( AGGR_PLUGIN_DIR . 'dist/interactivity/list-more.js' )
+		) {
+			$this->register_module( self::MODULE_LIST_MORE, 'list-more', array() );
+			wp_enqueue_script_module( self::MODULE_LIST_MORE );
 		}
 
 		/*
