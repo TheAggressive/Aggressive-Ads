@@ -33,20 +33,20 @@ final class ViewDataPillTest extends TestCase {
 	 */
 	public static function status_provider(): array {
 		return array(
-			'draft is neutral'             => array( Post_Statuses::DRAFT, 'neutral' ),
-			'submitted is pending'         => array( Post_Statuses::SUBMITTED, 'pending' ),
-			'in review is pending'         => array( Post_Statuses::REVIEW, 'pending' ),
-			'changes requested is pending' => array( Post_Statuses::CHANGES, 'pending' ),
-			'rejected is danger'           => array( Post_Statuses::REJECTED, 'danger' ),
-			'approved is live'             => array( Post_Statuses::APPROVED, 'live' ),
-			'scheduled is live'            => array( Post_Statuses::SCHEDULED, 'live' ),
-			'live is live'                 => array( Post_Statuses::LIVE, 'live' ),
-			'paused is pending, not live'  => array( Post_Statuses::PAUSED, 'pending' ),
-			'complete is ended'            => array( Post_Statuses::COMPLETE, 'ended' ),
-			'cancelled is danger'          => array( Post_Statuses::CANCELLED, 'danger' ),
-			'an unknown status is neutral' => array( 'aggr_invented', 'neutral' ),
-			'a core status is neutral'     => array( 'publish', 'neutral' ),
-			'the empty string is neutral'  => array( '', 'neutral' ),
+			'draft is neutral'               => array( Post_Statuses::DRAFT, 'neutral' ),
+			'submitted is pending'           => array( Post_Statuses::SUBMITTED, 'pending' ),
+			'in review is pending'           => array( Post_Statuses::REVIEW, 'pending' ),
+			'changes requested is attention' => array( Post_Statuses::CHANGES, 'attention' ),
+			'rejected is danger'             => array( Post_Statuses::REJECTED, 'danger' ),
+			'approved is info'               => array( Post_Statuses::APPROVED, 'info' ),
+			'scheduled is info, not live'    => array( Post_Statuses::SCHEDULED, 'info' ),
+			'live is live'                   => array( Post_Statuses::LIVE, 'live' ),
+			'paused is paused, not live'     => array( Post_Statuses::PAUSED, 'paused' ),
+			'complete is ended'              => array( Post_Statuses::COMPLETE, 'ended' ),
+			'cancelled is danger'            => array( Post_Statuses::CANCELLED, 'danger' ),
+			'an unknown status is neutral'   => array( 'aggr_invented', 'neutral' ),
+			'a core status is neutral'       => array( 'publish', 'neutral' ),
+			'the empty string is neutral'    => array( '', 'neutral' ),
 		);
 	}
 

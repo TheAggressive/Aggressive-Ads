@@ -70,3 +70,20 @@
 		display: none;
 	}
 }
+
+/*
+ * On a desktop the rail stays where it is while the page scrolls. It used to
+ * stretch to the page's height with its foot pinned to the bottom, so every
+ * row the campaigns list loaded dragged "New campaign" down the side of the
+ * screen — the layout shift readers saw while the list grew.
+ */
+@media (min-width: 783px) {
+	.aggr-rail {
+		position: sticky;
+		top: 0;
+		align-self: flex-start;
+		height: 100vh;
+		height: 100dvh;
+		overflow-y: auto;
+	}
+}

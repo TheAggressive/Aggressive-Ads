@@ -509,6 +509,21 @@
 	color: var(--aggr-color-danger);
 }
 
+.aggr-pill--info {
+	background: var(--aggr-color-info-tint);
+	color: var(--aggr-color-info);
+}
+
+.aggr-pill--attention {
+	background: var(--aggr-color-attention-tint);
+	color: var(--aggr-color-attention);
+}
+
+.aggr-pill--paused {
+	background: var(--aggr-color-paused-tint);
+	color: var(--aggr-color-paused);
+}
+
 /*
  * Which of a control's two labels a reader sees, decided at first paint.
  *

@@ -870,15 +870,22 @@ final class View_Data {
 	 * @return string
 	 */
 	public static function pill_for( string $status ): string {
-		if ( in_array( $status, Post_Statuses::published(), true ) ) {
-			return Post_Statuses::PAUSED === $status ? 'pending' : 'live';
-		}
-
+		/*
+		 * One colour per meaning, so a list reads at a glance: grey not
+		 * started, amber with the review team, orange back with the
+		 * advertiser, blue approved and waiting to start, green running,
+		 * purple paused, slate finished, red refused or ended early. Draft and
+		 * finished were two greys nobody could tell apart, and "sent back to
+		 * you" wore the same amber as "being reviewed".
+		 */
 		return match ( $status ) {
-			Post_Statuses::APPROVED  => 'live',
 			Post_Statuses::SUBMITTED,
-			Post_Statuses::REVIEW,
-			Post_Statuses::CHANGES   => 'pending',
+			Post_Statuses::REVIEW    => 'pending',
+			Post_Statuses::CHANGES   => 'attention',
+			Post_Statuses::APPROVED,
+			Post_Statuses::SCHEDULED => 'info',
+			Post_Statuses::LIVE      => 'live',
+			Post_Statuses::PAUSED    => 'paused',
 			Post_Statuses::COMPLETE  => 'ended',
 			Post_Statuses::REJECTED,
 			Post_Statuses::CANCELLED => 'danger',

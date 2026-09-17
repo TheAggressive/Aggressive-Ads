@@ -267,8 +267,14 @@
 	opacity: 0.75;
 }
 
+/*
+ * The search shrinks before it pushes the row wider than the page, and wraps
+ * under the tabs when there is no room beside them.
+ */
 .aggr-search input {
-	min-width: min(18rem, 100%);
+	flex: 1 1 auto;
+	width: 100%;
+	min-width: 0;
 	min-height: var(--aggr-control-min);
 	padding: 0 var(--aggr-space-md);
 	background: var(--aggr-color-surface);
@@ -313,8 +319,52 @@
 
 .aggr-search {
 	display: flex;
+	flex: 0 1 24rem;
 	gap: var(--aggr-space-xs);
+	min-width: min(16rem, 100%);
 	margin: 0;
+}
+
+.aggr-search .aggr-button {
+	flex: none;
+}
+
+/* Fixed widths, so a batch of rows loading in never re-spaces the columns. */
+.aggr-table--list {
+	min-width: 60rem;
+	table-layout: fixed;
+}
+
+.aggr-table--list .aggr-col--status {
+	width: 11rem;
+}
+
+.aggr-table--list .aggr-col--schedule {
+	width: 9.5rem;
+}
+
+.aggr-table--list .aggr-col--sizes {
+	width: 5rem;
+}
+
+.aggr-table--list .aggr-col--count {
+	width: 7.5rem;
+}
+
+.aggr-table--list .aggr-col--rate {
+	width: 5.5rem;
+}
+
+.aggr-table--list .aggr-col--conversions {
+	width: 8.5rem;
+}
+
+.aggr-table--list .aggr-col--next {
+	width: 9rem;
+}
+
+.aggr-table--list td {
+	overflow-wrap: anywhere;
 }
 
 .aggr-pager {
@@ -326,6 +376,17 @@
 }
 
 /* "Show more campaigns", in the footer where the page links were. */
+/* One width for both of its labels, so "Loading…" does not move the footer. */
 .aggr-portal .aggr-list-more__button {
+	min-width: 15rem;
 	min-height: var(--aggr-control-min);
+}
+
+/*
+ * No scroll anchoring on the list's foot: anchored to it, the browser would
+ * hold the button still and insert the new campaigns above the screen, where
+ * nobody who asked for them would see them arrive.
+ */
+[data-aggr-list-more] {
+	overflow-anchor: none;
 }

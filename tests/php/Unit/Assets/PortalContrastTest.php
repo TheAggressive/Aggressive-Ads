@@ -186,7 +186,7 @@ final class PortalContrastTest extends TestCase {
 	 * @return void
 	 */
 	public function test_every_status_pill_reads_on_its_tint(): void {
-		foreach ( array( 'live', 'pending', 'ended', 'danger', 'neutral' ) as $status ) {
+		foreach ( array( 'live', 'pending', 'ended', 'danger', 'neutral', 'info', 'attention', 'paused' ) as $status ) {
 			$this->assertContrast( $status, $status . '-tint', self::AA_NORMAL );
 		}
 	}

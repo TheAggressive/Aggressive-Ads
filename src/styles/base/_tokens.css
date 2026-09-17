@@ -85,8 +85,21 @@
 		--aggr-color-pending-tint: #faf1d2;
 		--aggr-color-neutral: #5c5e65;
 		--aggr-color-neutral-tint: #ededea;
-		--aggr-color-ended: #5c5e65;
-		--aggr-color-ended-tint: #efefec;
+		--aggr-color-ended: #3e4c5e;
+		--aggr-color-ended-tint: #e5eaf0;
+
+		/*
+		 * Three more, so a status says what it needs at a glance: blue for
+		 * approved and waiting to start, orange for sent back to the
+		 * advertiser, purple for paused. Draft stays grey and finished is
+		 * slate, which is why the two no longer read as the same pill.
+		 */
+		--aggr-color-info: #1f5aa6;
+		--aggr-color-info-tint: #e4eefb;
+		--aggr-color-attention: #a33a12;
+		--aggr-color-attention-tint: #fde9df;
+		--aggr-color-paused: #5b3fa3;
+		--aggr-color-paused-tint: #eee9fa;
 		--aggr-color-danger: #c03826;
 		--aggr-color-danger-tint: #fbe7e3;
 

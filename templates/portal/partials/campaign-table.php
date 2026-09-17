@@ -37,25 +37,33 @@ $aggr_can_renew     = current_user_can( Capabilities::SUBMIT_CAMPAIGN );
 	</div>
 <?php else : ?>
 	<div class="aggr-tablewrap" role="region" aria-label="<?php esc_attr_e( 'Campaigns table', 'aggressive-ads' ); ?>" tabindex="0">
-		<table class="aggr-table">
+		<?php
+		/*
+		 * The full list sets its column widths rather than letting the rows
+		 * decide them: rows arrive in batches as the list loads more, and an
+		 * auto-sized table re-spaced every column each time a longer name or a
+		 * bigger number came in. The name column takes whatever is left.
+		 */
+		?>
+		<table class="aggr-table<?php echo $aggr_table_compact ? '' : ' aggr-table--list'; ?>">
 			<thead>
 				<tr>
 					<th scope="col"><?php esc_html_e( 'Campaign', 'aggressive-ads' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'Status', 'aggressive-ads' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'Schedule', 'aggressive-ads' ); ?></th>
+					<th scope="col" class="aggr-col--status"><?php esc_html_e( 'Status', 'aggressive-ads' ); ?></th>
+					<th scope="col" class="aggr-col--schedule"><?php esc_html_e( 'Schedule', 'aggressive-ads' ); ?></th>
 					<?php if ( ! $aggr_table_compact ) : ?>
-					<th scope="col"><?php esc_html_e( 'Sizes', 'aggressive-ads' ); ?></th>
+					<th scope="col" class="aggr-col--sizes"><?php esc_html_e( 'Sizes', 'aggressive-ads' ); ?></th>
 					<?php endif; ?>
 					<?php if ( $aggr_show_metrics ) : ?>
-					<th scope="col"><?php esc_html_e( 'Impressions', 'aggressive-ads' ); ?></th>
+					<th scope="col" class="aggr-col--count"><?php esc_html_e( 'Impressions', 'aggressive-ads' ); ?></th>
 						<?php if ( ! $aggr_table_compact ) : ?>
-					<th scope="col"><?php esc_html_e( 'Clicks', 'aggressive-ads' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'CTR', 'aggressive-ads' ); ?></th>
-					<th scope="col"><?php esc_html_e( 'Conversions', 'aggressive-ads' ); ?></th>
+					<th scope="col" class="aggr-col--count"><?php esc_html_e( 'Clicks', 'aggressive-ads' ); ?></th>
+					<th scope="col" class="aggr-col--rate"><?php esc_html_e( 'CTR', 'aggressive-ads' ); ?></th>
+					<th scope="col" class="aggr-col--conversions"><?php esc_html_e( 'Conversions', 'aggressive-ads' ); ?></th>
 						<?php endif; ?>
 					<?php endif; ?>
 					<?php if ( ! $aggr_table_compact ) : ?>
-					<th scope="col"><span class="aggr-sr"><?php esc_html_e( 'Next step', 'aggressive-ads' ); ?></span></th>
+					<th scope="col" class="aggr-col--next"><span class="aggr-sr"><?php esc_html_e( 'Next step', 'aggressive-ads' ); ?></span></th>
 					<?php endif; ?>
 				</tr>
 			</thead>
