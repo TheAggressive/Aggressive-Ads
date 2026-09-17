@@ -118,7 +118,8 @@ final class Portal_Service_Registrar {
 				$c->get( \Aggressive\Ads\Portal\Delivery_View_Data::class ),
 				$c->get( \Aggressive\Ads\Portal\Creative_View_Data::class ),
 				$c->get( Campaign_Request_Repository::class ),
-				$c->get( \Aggressive\Ads\Portal\Campaign_List_View_Data::class )
+				$c->get( \Aggressive\Ads\Portal\Campaign_List_View_Data::class ),
+				$c->get( \Aggressive\Ads\Workflow\Link_Checker::class )
 			)
 		);
 		$container->register(

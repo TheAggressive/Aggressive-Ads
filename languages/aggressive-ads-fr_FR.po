@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
-"POT-Creation-Date: 2026-09-17T06:45:30+00:00\n"
+"POT-Creation-Date: 2026-09-17T23:21:53+00:00\n"
 "PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -695,7 +695,7 @@ msgstr ""
 #: inc/Admin/class-organization-screen.php:162
 #: inc/Admin/class-placement-screen.php:195
 #: inc/Admin/class-settings-screen.php:306
-#: templates/portal/partials/campaign-creative-step.php:354
+#: templates/portal/partials/campaign-creative-step.php:499
 #: templates/portal/screens/organization.php:152
 msgid "Remove"
 msgstr ""
@@ -899,13 +899,13 @@ msgstr ""
 
 #: inc/Admin/class-package-screen.php:168
 #: inc/Admin/class-placement-screen.php:220
-#: inc/Admin/class-settings-screen.php:308 inc/Assets/class-assets.php:403
+#: inc/Admin/class-settings-screen.php:308 inc/Assets/class-assets.php:409
 msgid "Saving…"
 msgstr ""
 
 #: inc/Admin/class-package-screen.php:169
 #: inc/Admin/class-placement-screen.php:221
-#: inc/Admin/class-settings-screen.php:309 inc/Assets/class-assets.php:430
+#: inc/Admin/class-settings-screen.php:309 inc/Assets/class-assets.php:436
 msgid "Saved."
 msgstr ""
 
@@ -1582,7 +1582,7 @@ msgstr ""
 msgid "Resume campaign"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:717 inc/Portal/class-view-data.php:365
+#: inc/Admin/class-review-data.php:717 inc/Portal/class-view-data.php:371
 msgid "Cancel campaign"
 msgstr ""
 
@@ -1690,7 +1690,7 @@ msgid "Choose an advertiser"
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:292
-#: inc/Admin/class-settings-screen.php:215 inc/Assets/class-assets.php:410
+#: inc/Admin/class-settings-screen.php:215 inc/Assets/class-assets.php:416
 #: inc/Workflow/class-campaign-change-manager.php:761
 #: templates/portal/partials/campaign-changes.php:142
 #: templates/portal/partials/campaign-review-step.php:256
@@ -2351,153 +2351,153 @@ msgstr ""
 msgid "Advertising settings need JavaScript enabled."
 msgstr ""
 
-#: inc/Assets/class-assets.php:348
+#: inc/Assets/class-assets.php:354
 msgid "Dialog opened"
 msgstr ""
 
-#: inc/Assets/class-assets.php:349
+#: inc/Assets/class-assets.php:355
 msgid "Dialog closed"
 msgstr ""
 
-#: inc/Assets/class-assets.php:404
+#: inc/Assets/class-assets.php:410
 msgid "Draft saved."
 msgstr ""
 
-#: inc/Assets/class-assets.php:405
+#: inc/Assets/class-assets.php:411
 msgid "Could not save the draft. Your last change may not be stored."
 msgstr ""
 
-#: inc/Assets/class-assets.php:406
+#: inc/Assets/class-assets.php:412
 msgid ""
 "This campaign was saved elsewhere. Refresh to continue from the latest draft."
 msgstr ""
 
 #. translators: %s: the campaign's last day, e.g. October 30, 2026.
-#: inc/Assets/class-assets.php:408
+#: inc/Assets/class-assets.php:414
 #: templates/portal/partials/campaign-plan-step.php:204
 #, php-format
 msgid "Runs through %s."
 msgstr ""
 
-#: inc/Assets/class-assets.php:409
+#: inc/Assets/class-assets.php:415
 msgid "Rename campaign"
 msgstr ""
 
-#: inc/Assets/class-assets.php:411 templates/portal/screens/campaign.php:391
+#: inc/Assets/class-assets.php:417 templates/portal/screens/campaign.php:391
 msgid "Campaign renamed."
 msgstr ""
 
-#: inc/Assets/class-assets.php:412
+#: inc/Assets/class-assets.php:418
 msgid "A campaign needs a name. The previous name was kept."
 msgstr ""
 
-#: inc/Assets/class-assets.php:413
+#: inc/Assets/class-assets.php:419
 msgid "The name could not be saved. The previous name was kept."
 msgstr ""
 
-#: inc/Assets/class-assets.php:414
+#: inc/Assets/class-assets.php:420
 msgid "Link saved."
 msgstr ""
 
-#: inc/Assets/class-assets.php:415
+#: inc/Assets/class-assets.php:421
 msgid ""
 "That is not a link we can use. Enter a web address, such as https://"
 "example.com."
 msgstr ""
 
-#: inc/Assets/class-assets.php:431 templates/portal/partials/toast.php:75
+#: inc/Assets/class-assets.php:437 templates/portal/partials/toast.php:75
 msgid "Dismiss this notice"
 msgstr ""
 
-#: inc/Assets/class-assets.php:432 templates/portal/partials/toast.php:45
+#: inc/Assets/class-assets.php:438 templates/portal/partials/toast.php:45
 msgid "Success"
 msgstr ""
 
-#: inc/Assets/class-assets.php:433 templates/portal/partials/toast.php:46
+#: inc/Assets/class-assets.php:439 templates/portal/partials/toast.php:46
 msgid "Error"
 msgstr ""
 
-#: inc/Assets/class-assets.php:434 templates/portal/partials/toast.php:47
+#: inc/Assets/class-assets.php:440 templates/portal/partials/toast.php:47
 msgid "Warning"
 msgstr ""
 
-#: inc/Assets/class-assets.php:435 templates/portal/partials/toast.php:48
+#: inc/Assets/class-assets.php:441 templates/portal/partials/toast.php:48
 msgid "Notice"
 msgstr ""
 
-#: inc/Assets/class-assets.php:436
+#: inc/Assets/class-assets.php:442
 msgid "Creative uploaded."
 msgstr ""
 
-#: inc/Assets/class-assets.php:437 templates/portal/screens/campaign.php:409
+#: inc/Assets/class-assets.php:443 templates/portal/screens/campaign.php:409
 msgid "Creative removed."
 msgstr ""
 
-#: inc/Assets/class-assets.php:438 templates/portal/screens/campaign.php:415
+#: inc/Assets/class-assets.php:444 templates/portal/screens/campaign.php:415
 msgid "Destination saved."
 msgstr ""
 
-#: inc/Assets/class-assets.php:439
+#: inc/Assets/class-assets.php:445
 msgid "Artwork replaced."
 msgstr ""
 
-#: inc/Assets/class-assets.php:440 templates/portal/screens/campaign.php:414
+#: inc/Assets/class-assets.php:446 templates/portal/screens/campaign.php:414
 msgid "Dates saved."
 msgstr ""
 
-#: inc/Assets/class-assets.php:441
+#: inc/Assets/class-assets.php:447
 msgid "Share saved."
 msgstr ""
 
-#: inc/Assets/class-assets.php:442
+#: inc/Assets/class-assets.php:448
 msgid "Paused."
 msgstr ""
 
-#: inc/Assets/class-assets.php:443
+#: inc/Assets/class-assets.php:449
 msgid "Resumed."
 msgstr ""
 
-#: inc/Assets/class-assets.php:444
+#: inc/Assets/class-assets.php:450
 msgid "Update sent for review."
 msgstr ""
 
-#: inc/Assets/class-assets.php:445
+#: inc/Assets/class-assets.php:451
 msgid "Update withdrawn."
 msgstr ""
 
 #. translators: %s: this placement's maximum file size, e.g. 150 KB.
-#: inc/Assets/class-assets.php:467
+#: inc/Assets/class-assets.php:473
 #, php-format
 msgid "That file is larger than %s. Choose a smaller ad creative."
 msgstr ""
 
-#: inc/Assets/class-assets.php:479
+#: inc/Assets/class-assets.php:485
 msgid "File selected. Add a destination URL to upload it."
 msgstr ""
 
-#: inc/Assets/class-assets.php:480
+#: inc/Assets/class-assets.php:486
 msgid "Uploading the creative."
 msgstr ""
 
-#: inc/Assets/class-assets.php:481
+#: inc/Assets/class-assets.php:487
 msgid "Enter a complete destination URL to finish the upload."
 msgstr ""
 
-#: inc/Assets/class-assets.php:482
+#: inc/Assets/class-assets.php:488
 msgid "Choose an ad creative file to upload."
 msgstr ""
 
-#: inc/Assets/class-assets.php:483
+#: inc/Assets/class-assets.php:489
 msgid "Use a JPEG, PNG, GIF, or WebP image."
 msgstr ""
 
-#: inc/Assets/class-assets.php:484
+#: inc/Assets/class-assets.php:490
 msgid ""
 "That ad creative is too large in pixels to process safely. Choose a smaller "
 "one."
 msgstr ""
 
-#: inc/Assets/class-assets.php:485
+#: inc/Assets/class-assets.php:491
 msgid "The ad creative must match the required pixel size for this placement."
 msgstr ""
 
@@ -3662,12 +3662,12 @@ msgid "About %s of this placement."
 msgstr ""
 
 #: inc/Portal/class-creative-feedback.php:90
-#: templates/portal/partials/campaign-creative-step.php:451
+#: templates/portal/partials/campaign-creative-step.php:596
 msgid "Custom run dates set"
 msgstr ""
 
 #: inc/Portal/class-creative-feedback.php:91
-#: templates/portal/partials/campaign-creative-step.php:452
+#: templates/portal/partials/campaign-creative-step.php:597
 msgid "Add custom run dates"
 msgstr ""
 
@@ -4160,15 +4160,15 @@ msgstr ""
 msgid "We could not create the account. Please try again later."
 msgstr ""
 
-#: inc/Portal/class-view-data.php:312
+#: inc/Portal/class-view-data.php:318
 msgid "Renew campaign"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:313
+#: inc/Portal/class-view-data.php:319
 msgid "Duplicate campaign"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:364
+#: inc/Portal/class-view-data.php:370
 msgid "Delete campaign"
 msgstr ""
 
@@ -4251,12 +4251,12 @@ msgstr ""
 msgid "That impression could not be recorded. Please try again."
 msgstr ""
 
-#: inc/REST/class-campaigns-controller.php:308
+#: inc/REST/class-campaigns-controller.php:329
 #: inc/Workflow/class-campaign-editor.php:124
 msgid "That advertiser could not be found."
 msgstr ""
 
-#: inc/REST/class-campaigns-controller.php:446
+#: inc/REST/class-campaigns-controller.php:481
 #: inc/REST/class-creative-file-controller.php:186
 #: inc/REST/class-line-items-controller.php:358
 #: inc/Workflow/class-assignment-editor.php:337
@@ -4599,11 +4599,11 @@ msgstr ""
 msgid "Security"
 msgstr ""
 
-#: inc/Security/class-rate-limiter.php:219
+#: inc/Security/class-rate-limiter.php:232
 msgid "This request could not be safely accepted. Please try again."
 msgstr ""
 
-#: inc/Security/class-rate-limiter.php:242
+#: inc/Security/class-rate-limiter.php:255
 msgid ""
 "That is more requests than we can accept right now. Please wait a moment and "
 "try again."
@@ -5272,6 +5272,20 @@ msgstr ""
 msgid "That delivery policy cannot be used: %s"
 msgstr ""
 
+#: inc/Workflow/class-link-checker.php:118
+msgid "Add a destination link first."
+msgstr ""
+
+#: inc/Workflow/class-link-checker.php:126
+msgid ""
+"This link cannot be checked from here. Open it in a browser to make sure it "
+"works."
+msgstr ""
+
+#: inc/Workflow/class-link-checker.php:172
+msgid "There is no campaign to check."
+msgstr ""
+
 #: inc/Workflow/class-organization-membership.php:113
 #: inc/Workflow/class-organization-membership.php:209
 #: inc/Workflow/class-organization-membership.php:264
@@ -5532,7 +5546,10 @@ msgstr ""
 msgid "No access"
 msgstr ""
 
-#: templates/portal/404.php:22 templates/portal/screens/404.php:19
+#: templates/portal/404.php:22
+#: templates/portal/partials/campaign-creative-step.php:93
+#: templates/portal/partials/campaign-creative-step.php:135
+#: templates/portal/screens/404.php:19
 msgid "Page not found"
 msgstr ""
 
@@ -5797,164 +5814,262 @@ msgstr ""
 msgid "Save and continue"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:78
+#: templates/portal/partials/campaign-creative-step.php:82
 msgid "01 · Destination"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:79
+#: templates/portal/partials/campaign-creative-step.php:83
 msgid "Where should people go when they click?"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:80
+#: templates/portal/partials/campaign-creative-step.php:84
 msgid "One link for every ad. Any single size can still have its own."
 msgstr ""
 
+#: templates/portal/partials/campaign-creative-step.php:92
+#: templates/portal/partials/campaign-creative-step.php:134
+msgid "Link works"
+msgstr ""
+
+#: templates/portal/partials/campaign-creative-step.php:94
+#: templates/portal/partials/campaign-creative-step.php:136
+msgid "Could not be read"
+msgstr ""
+
+#: templates/portal/partials/campaign-creative-step.php:95
+#: templates/portal/partials/campaign-creative-step.php:137
+msgid "The site returned an error"
+msgstr ""
+
 #: templates/portal/partials/campaign-creative-step.php:96
+#: templates/portal/partials/campaign-creative-step.php:138
+msgid "No answer"
+msgstr ""
+
+#: templates/portal/partials/campaign-creative-step.php:97
+msgid "Checking…"
+msgstr ""
+
+#: templates/portal/partials/campaign-creative-step.php:98
+msgid "Could not check it"
+msgstr ""
+
+#: templates/portal/partials/campaign-creative-step.php:109
 msgid "Destination link for every ad"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:112
+#: templates/portal/partials/campaign-creative-step.php:140
 msgid "Valid link"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:122
+#: templates/portal/partials/campaign-creative-step.php:151
 msgid "Save link"
 msgstr ""
 
 #. translators: 1: sizes whose ad goes to this link. 2: sizes in the package.
-#: templates/portal/partials/campaign-creative-step.php:128
+#: templates/portal/partials/campaign-creative-step.php:157
 #, php-format
 msgid "Used by %1$d of %2$d ad"
 msgid_plural "Used by %1$d of %2$d ads"
 msgstr[0] ""
 msgstr[1] ""
 
-#: templates/portal/partials/campaign-creative-step.php:135
+#: templates/portal/partials/campaign-creative-step.php:171
+msgid "Check link"
+msgstr ""
+
+#: templates/portal/partials/campaign-creative-step.php:199
+msgid "Where it came from"
+msgstr ""
+
+#: templates/portal/partials/campaign-creative-step.php:200
+msgid "How it was shown"
+msgstr ""
+
+#: templates/portal/partials/campaign-creative-step.php:201
+msgid "Which campaign"
+msgstr ""
+
+#: templates/portal/partials/campaign-creative-step.php:202
+msgid "Which ad, when you run more than one"
+msgstr ""
+
+#: templates/portal/partials/campaign-creative-step.php:203
+msgid "Keyword, if your team uses one"
+msgstr ""
+
+#: templates/portal/partials/campaign-creative-step.php:226
 msgid "Add tracking tags"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:136
-msgid "Coming soon."
+#. translators: %s: comma-separated parameter names, e.g. utm_source, utm_medium.
+#: templates/portal/partials/campaign-creative-step.php:231
+#, php-format
+msgid "Already on your link, so it was left alone: %s"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:145
+#: templates/portal/partials/campaign-creative-step.php:233
+msgid ""
+"These tell your analytics where a visit came from. Filled in from this "
+"campaign — change them if your team uses different words."
+msgstr ""
+
+#: templates/portal/partials/campaign-creative-step.php:242
+msgid "More options"
+msgstr ""
+
+#: templates/portal/partials/campaign-creative-step.php:252
+msgid "Which ad"
+msgstr ""
+
+#: templates/portal/partials/campaign-creative-step.php:253
+msgid "Which placement"
+msgstr ""
+
+#: templates/portal/partials/campaign-creative-step.php:254
+msgid "Campaign id"
+msgstr ""
+
+#: templates/portal/partials/campaign-creative-step.php:255
+msgid "Time of the click"
+msgstr ""
+
+#: templates/portal/partials/campaign-creative-step.php:256
+msgid "Cache buster"
+msgstr ""
+
+#: templates/portal/partials/campaign-creative-step.php:257
+msgid "Click id"
+msgstr ""
+
+#: templates/portal/partials/campaign-creative-step.php:260
+msgid ""
+"Add a value that is filled in when somebody clicks, so your reports name the "
+"ad that earned the visit."
+msgstr ""
+
+#: templates/portal/partials/campaign-creative-step.php:279
+msgid "Add tags to link"
+msgstr ""
+
+#: templates/portal/partials/campaign-creative-step.php:290
 msgid "02 · Ads"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:146
+#: templates/portal/partials/campaign-creative-step.php:291
 #: templates/portal/partials/campaign-editor-modules.php:43
 #: templates/portal/screens/campaign.php:535
 #: templates/portal/screens/help.php:29
 msgid "Add your ads"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:147
+#: templates/portal/partials/campaign-creative-step.php:292
 msgid ""
 "One image for each size. Files stay private until staff approve the campaign."
 msgstr ""
 
 #. translators: 1: sizes that have an ad. 2: sizes in the package.
-#: templates/portal/partials/campaign-creative-step.php:155
+#: templates/portal/partials/campaign-creative-step.php:300
 #, php-format
 msgid "%1$d of %2$d size ready"
 msgid_plural "%1$d of %2$d sizes ready"
 msgstr[0] ""
 msgstr[1] ""
 
-#: templates/portal/partials/campaign-creative-step.php:178
+#: templates/portal/partials/campaign-creative-step.php:323
 msgid "Drop all your files here"
 msgstr ""
 
 #. translators: %s: the largest file any size in this package accepts, e.g. 150 KB.
-#: templates/portal/partials/campaign-creative-step.php:183
+#: templates/portal/partials/campaign-creative-step.php:328
 #, php-format
 msgid ""
 "JPEG, PNG, GIF or WebP · up to %s each · files stay private until approved"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:188
+#: templates/portal/partials/campaign-creative-step.php:333
 msgid ""
 "Dropping every file at once is coming soon. Add each file to its size below."
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:191
+#: templates/portal/partials/campaign-creative-step.php:336
 msgid "Browse files"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:192
+#: templates/portal/partials/campaign-creative-step.php:337
 msgid "Blank templates"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:199
+#: templates/portal/partials/campaign-creative-step.php:344
 msgid "Choose a package first"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:200
+#: templates/portal/partials/campaign-creative-step.php:345
 msgid ""
 "A package supplies the placements and exact ad creative sizes required for "
 "this campaign."
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:270
+#: templates/portal/partials/campaign-creative-step.php:415
 msgid "Needs a file"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:273
+#: templates/portal/partials/campaign-creative-step.php:418
 #: templates/portal/partials/campaign-review-step.php:181
 msgid "Ready"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:279
+#: templates/portal/partials/campaign-creative-step.php:424
 msgid ""
 "This placement is no longer available. Go back to package and dates and "
 "choose an available package."
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:340
+#: templates/portal/partials/campaign-creative-step.php:485
 msgid "Preview"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:347
+#: templates/portal/partials/campaign-creative-step.php:492
 msgid "Replace"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:372
+#: templates/portal/partials/campaign-creative-step.php:517
 #: templates/portal/partials/campaign-upload-form.php:135
 msgid "Goes to"
 msgstr ""
 
 #. translators: 1: file name. 2: file size, e.g. 54 KB. 3: where it links, e.g. goes to shared link.
-#: templates/portal/partials/campaign-creative-step.php:380
+#: templates/portal/partials/campaign-creative-step.php:525
 #, php-format
 msgid "%1$s · %2$s · %3$s"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:384
+#: templates/portal/partials/campaign-creative-step.php:529
 msgid "goes to shared link"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:385
+#: templates/portal/partials/campaign-creative-step.php:530
 msgid "has its own link"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:423
+#: templates/portal/partials/campaign-creative-step.php:568
 #: templates/portal/partials/campaign-overlays.php:199
 msgid "Edit destination"
 msgstr ""
 
 #. translators: %d: maximum creatives allowed on one placement.
-#: templates/portal/partials/campaign-creative-step.php:475
+#: templates/portal/partials/campaign-creative-step.php:620
 #, php-format
 msgid ""
 "This placement has the maximum of %d creatives. Remove one to add another."
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:515
+#: templates/portal/partials/campaign-creative-step.php:660
 msgid "Add a rotating creative"
 msgstr ""
 
 #. translators: %d: sizes that still need a file.
-#: templates/portal/partials/campaign-creative-step.php:531
+#: templates/portal/partials/campaign-creative-step.php:676
 #: templates/portal/partials/campaign-order-summary.php:169
 #, php-format
 msgid "%d size still needs a file."
@@ -5962,11 +6077,11 @@ msgid_plural "%d sizes still need a file."
 msgstr[0] ""
 msgstr[1] ""
 
-#: templates/portal/partials/campaign-creative-step.php:537
+#: templates/portal/partials/campaign-creative-step.php:682
 msgid "Back to package & dates"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:551
+#: templates/portal/partials/campaign-creative-step.php:696
 #: templates/portal/partials/campaign-order-summary.php:162
 #: templates/portal/partials/campaign-order-summary.php:164
 msgid "Continue to review"

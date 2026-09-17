@@ -357,6 +357,7 @@
 	font-size: 12px;
 }
 
+/* The fold's summary, which is a link in everything but element. */
 .aggr-portal .aggr-ads-link__tags {
 	min-height: auto;
 	padding: 0;
@@ -365,8 +366,118 @@
 	color: var(--aggr-color-accent-strong);
 	font: inherit;
 	font-weight: 600;
-	cursor: not-allowed;
+	cursor: pointer;
+	list-style: none;
+}
+
+.aggr-portal .aggr-ads-link__tags::-webkit-details-marker {
+	display: none;
+}
+
+.aggr-portal .aggr-ads-link__check {
+	min-height: 2rem;
+	padding: 0 var(--aggr-space-sm);
+	background: var(--aggr-color-surface);
+	border: 1px solid var(--aggr-border-color-strong);
+	border-radius: var(--aggr-radius-pill);
+	color: var(--aggr-color-text-body);
+	font: inherit;
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.aggr-portal .aggr-ads-link__check:hover:not(:disabled) {
+	border-color: var(--aggr-color-text);
+	color: var(--aggr-color-text);
+}
+
+.aggr-portal .aggr-ads-link__check:disabled {
+	cursor: progress;
 	opacity: 0.7;
+}
+
+.aggr-tags {
+	flex-basis: 100%;
+}
+
+.aggr-tags__body {
+	margin-top: var(--aggr-space-sm);
+	padding: var(--aggr-space-md);
+	background: var(--aggr-color-surface-sunken);
+	border-radius: var(--aggr-radius-control);
+}
+
+.aggr-tags__grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+	gap: var(--aggr-space-sm);
+	margin: var(--aggr-space-sm) 0;
+}
+
+/* The parameter's real name, under the words for it. */
+.aggr-tags__code {
+	display: block;
+	color: var(--aggr-color-text-subtle);
+	font-family: var(--aggr-font-mono);
+	font-size: 11px;
+	font-weight: 400;
+}
+
+.aggr-tags__more {
+	margin-bottom: var(--aggr-space-sm);
+	font-size: 13px;
+}
+
+.aggr-tags__more > summary {
+	color: var(--aggr-color-accent-strong);
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.aggr-tags__macros {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--aggr-space-xs);
+	margin-bottom: var(--aggr-space-sm);
+}
+
+.aggr-portal .aggr-tags__macro {
+	padding: var(--aggr-space-2xs) var(--aggr-space-sm);
+	background: var(--aggr-color-surface);
+	border: 1px solid var(--aggr-border-color-strong);
+	border-radius: var(--aggr-radius-control);
+	color: var(--aggr-color-text-body);
+	font: inherit;
+	font-size: 12px;
+	font-weight: 600;
+	text-align: start;
+	cursor: pointer;
+}
+
+.aggr-portal .aggr-tags__macro:hover {
+	border-color: var(--aggr-color-text);
+	color: var(--aggr-color-text);
+}
+
+/* What is being added, against the link that is already on screen. */
+.aggr-tags__added {
+	background: color-mix(in srgb, var(--aggr-color-accent) 16%, var(--aggr-color-surface));
+	color: var(--aggr-color-text);
+	font-weight: 600;
+}
+
+/*
+ * The link as it would be saved. It wraps anywhere, because a destination
+ * with five tags on it is one long word to a browser and would otherwise
+ * push the card wider than the step.
+ */
+.aggr-tags__preview {
+	margin: 0 0 var(--aggr-space-sm);
+	overflow-wrap: anywhere;
+	color: var(--aggr-color-text-body);
+	font-family: var(--aggr-font-mono);
+	font-size: 12px;
 }
 
 .aggr-ads-progress {

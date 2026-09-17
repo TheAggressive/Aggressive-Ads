@@ -40,6 +40,7 @@ use Aggressive\Ads\Security\Rate_Limiter;
 use Aggressive\Ads\Storage\Private_Storage;
 use Aggressive\Ads\Workflow\Assignment_Editor;
 use Aggressive\Ads\Workflow\Campaign_Copier;
+use Aggressive\Ads\Workflow\Link_Checker;
 use Aggressive\Ads\Workflow\Campaign_Editor;
 use Aggressive\Ads\Workflow\Campaign_State_Machine;
 use Aggressive\Ads\Workflow\Creative_Change_Manager;
@@ -85,7 +86,8 @@ final class Rest_Service_Registrar {
 				$c->get( Reporting_Read::class ),
 				$c->get( Edit_Window::class ),
 				$c->get( Acting_As::class ),
-				$c->get( Line_Item_Repository::class )
+				$c->get( Line_Item_Repository::class ),
+				$c->get( Link_Checker::class )
 			)
 		);
 		$container->register(

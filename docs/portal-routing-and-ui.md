@@ -163,7 +163,24 @@ The Destination card above the sizes is a real field: `default_click_url`,
 saved on the campaign by autosave once the browser accepts it as a URL, or by
 a "Save link" button drawn only inside `<noscript>` (a refused link returns to
 this step). Under it, "Used by N of M ads" counts sizes whose first ad goes to
-the link; "Add tracking tags" is drawn disabled until #291.
+the link, beside two script-only helpers (`@aggr/link-tools`). **Check link**
+asks `POST /campaigns/{id}/link-check` about the link already saved — the
+route takes no URL — and the chip beside the field becomes "Link works",
+"Page not found", "Could not be read", "The site returned an error" or "No
+answer"; the chip says "Valid link" until something has answered, and the
+result goes stale the moment the link changes. The check also runs on its own a
+moment after a link is saved, so a broken destination is noticed without
+anyone pressing anything. **Add tracking tags** opens a fold that is already
+filled in from the campaign — the site's name, `display`, and the campaign's
+own name as tags — with the three that matter on show and `utm_content` and
+`utm_term` behind "More options". Values are tidied to what analytics tools
+expect (`Autumn Sale` becomes `autumn-sale`), the preview marks only the part
+being added, a tag the advertiser already wrote is kept and named, and the
+source and medium they chose are remembered for their next campaign. The same
+fold inserts click macros — `{creative_id}`, `{placement_id}`, `{campaign_id}`,
+`{timestamp}`, `{cachebuster}`, `{click_id}` — which `Click_Hop` fills in on
+each click, so one stored link reports which ad earned the visit. Nothing is
+written to the link until Apply is pressed.
 Typing in it updates every card whose link is empty or still the old one; a
 card changed by hand keeps its own. Without a campaign link, the first uploaded
 ad's link is used as before. Once the campaign has a destination, every further

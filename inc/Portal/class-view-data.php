@@ -27,6 +27,7 @@ use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Repository\Line_Item_Repository;
 use Aggressive\Ads\REST\Creative_File_Controller;
 use Aggressive\Ads\Workflow\Edit_Window;
+use Aggressive\Ads\Workflow\Link_Checker;
 use Aggressive\Ads\Workflow\Campaign_Change_Manager;
 use Aggressive\Ads\Workflow\Campaign_Editor;
 use Aggressive\Ads\Workflow\Creative_Approval;
@@ -80,6 +81,7 @@ final class View_Data {
 	 * @param Creative_View_Data          $creative_view Campaign creative rows.
 	 * @param Campaign_Request_Repository $requests      Advertiser requests and proposed changes.
 	 * @param Campaign_List_View_Data     $campaign_list The campaigns list and its counts.
+	 * @param Link_Checker                $links         The campaign link check.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -99,7 +101,8 @@ final class View_Data {
 		private readonly Delivery_View_Data $delivery,
 		private readonly Creative_View_Data $creative_view,
 		private readonly Campaign_Request_Repository $requests,
-		private readonly Campaign_List_View_Data $campaign_list
+		private readonly Campaign_List_View_Data $campaign_list,
+		private readonly Link_Checker $links
 	) {
 	}
 
@@ -273,6 +276,9 @@ final class View_Data {
 				break;
 			}
 		}
+
+		// Null until it is checked, and null again the moment the link changes.
+		$row['link_check'] = $this->links->last( $campaign_id );
 
 		/*
 		 * Whether the name is still the one the wizard invented.
