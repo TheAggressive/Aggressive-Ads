@@ -86,7 +86,7 @@ $aggr_cal_hint_id    = $aggr_cal_start_id . '-calendar-hint';
 	data-aggr-label-end="<?php esc_attr_e( 'last day', 'aggressive-ads' ); ?>"
 	data-aggr-label-unavailable="<?php esc_attr_e( 'not available', 'aggressive-ads' ); ?>"
 	data-aggr-label-range="<?php /* translators: 1: first day, e.g. Friday, September 18, 2026. 2: last day. */ esc_attr_e( 'Runs from %1$s through %2$s.', 'aggressive-ads' ); ?>"
-	data-aggr-label-open="<?php /* translators: %s: first day, e.g. Friday, September 18, 2026. */ esc_attr_e( 'Starts %s. Choose an end date, or leave it open to run until it is ended.', 'aggressive-ads' ); ?>"
+	data-aggr-label-open="<?php /* translators: %s: first day, e.g. Friday, September 18, 2026. */ esc_attr_e( 'Starts %s. Now choose an end date.', 'aggressive-ads' ); ?>"
 	data-aggr-label-fixed="<?php /* translators: 1: first day, e.g. Friday, September 18, 2026. 2: last day. */ esc_attr_e( 'Starts %1$s and runs through %2$s.', 'aggressive-ads' ); ?>"
 	data-aggr-label-days-one="<?php echo esc_attr( $aggr_cal_days_one ); ?>"
 	data-aggr-label-days-other="<?php echo esc_attr( $aggr_cal_days_other ); ?>"
@@ -99,7 +99,6 @@ $aggr_cal_hint_id    = $aggr_cal_start_id . '-calendar-hint';
 			'monday'    => array( __( 'Next Monday', 'aggressive-ads' ), $aggr_cal_locked ),
 			'two-weeks' => array( __( '2 weeks', 'aggressive-ads' ), $aggr_cal_fixed ),
 			'month'     => array( __( 'This month', 'aggressive-ads' ), $aggr_cal_fixed ),
-			'open'      => array( __( 'No end date', 'aggressive-ads' ), $aggr_cal_fixed ),
 		);
 		?>
 		<?php foreach ( $aggr_cal_presets as $aggr_cal_preset => $aggr_cal_preset_def ) : ?>

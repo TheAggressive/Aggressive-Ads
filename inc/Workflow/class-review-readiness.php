@@ -70,6 +70,7 @@ final class Review_Readiness {
 			),
 			// The schedule fieldset, not the end field: a fixed package renders
 			// that field disabled and hidden, and a link to it would land nowhere.
+			Campaign_Rules::ERROR_END_MISSING,
 			Campaign_Rules::ERROR_END_BEFORE_START,
 			Campaign_Rules::ERROR_END_NOT_DAY_END => array(
 				'step'   => 'details',

@@ -128,7 +128,7 @@ final class CampaignCalendarTest extends WP_UnitTestCase {
 
 		$this->assertSame( 2, $xpath->query( '//*[@data-aggr-calendar-grids][@aria-hidden="true"]//table' )->length );
 		$this->assertSame( 0, $xpath->query( '//*[@data-aggr-calendar-grids]//button' )->length );
-		$this->assertSame( 5, $xpath->query( '//button[@data-aggr-preset][@disabled]' )->length );
+		$this->assertSame( 4, $xpath->query( '//button[@data-aggr-preset][@disabled]' )->length );
 		$this->assertSame( 2, $xpath->query( '//*[contains(@class,"aggr-calendar__nav")]//button[@disabled]' )->length );
 		$this->assertSame( 0, $xpath->query( '//button[@data-aggr-preset][not(@disabled)]' )->length );
 	}
@@ -144,14 +144,14 @@ final class CampaignCalendarTest extends WP_UnitTestCase {
 	}
 
 	public function test_a_fixed_package_offers_only_start_picks(): void {
-		$this->assertSame( array( 'today', 'monday', 'two-weeks', 'month', 'open' ), $this->offered( $this->render() ) );
+		$this->assertSame( array( 'today', 'monday', 'two-weeks', 'month' ), $this->offered( $this->render() ) );
 		$this->assertSame( array( 'today', 'monday' ), $this->offered( $this->render( array( 'fixed' => true ) ) ) );
 	}
 
 	public function test_a_started_campaign_offers_only_end_picks(): void {
 		$xpath = $this->render( array( 'locked' => true ) );
 
-		$this->assertSame( array( 'two-weeks', 'month', 'open' ), $this->offered( $xpath ) );
+		$this->assertSame( array( 'two-weeks', 'month' ), $this->offered( $xpath ) );
 		$this->assertSame( '1', $this->root( $xpath )->getAttribute( 'data-aggr-start-locked' ) );
 	}
 

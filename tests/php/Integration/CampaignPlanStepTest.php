@@ -185,30 +185,48 @@ final class CampaignPlanStepTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * A custom package derives nothing: the posted end, or no end at all.
+	 * A custom package derives nothing, and every campaign ends: a draft
+	 * autosaves without an end, but leaving the step with a start and no end
+	 * is refused beside the field and writes nothing.
 	 *
 	 * @return void
 	 */
-	public function test_a_custom_package_takes_the_posted_end_or_none(): void {
+	public function test_a_custom_package_needs_the_posted_end_to_leave_the_step(): void {
 		update_post_meta( $this->package_id, Package_Repository::META_DURATION_DAYS, 0 );
 		update_post_meta( $this->package_id, Package_Repository::META_CUSTOM_DURATION, 1 );
 
 		$campaign_id = $this->draft( 'Custom run' );
 		$start       = $this->local_date( '+10 days' );
 
+		// Autosave: no step change, so an undecided end is still a savable draft.
+		$zone = wp_timezone();
 		$this->assertSame(
 			1,
-			$this->actions->process_save(
+			$this->editor->save(
 				$campaign_id,
 				array(
 					'package_id' => $this->package_id,
-					'start_date' => $start,
-					'end_date'   => '',
+					'start_ts'   => ( new \DateTimeImmutable( $start, $zone ) )->getTimestamp(),
 				),
 				0
 			)
 		);
 		$this->assertSame( 0, $this->campaigns->end_ts( $campaign_id ), 'A custom package invented an end date.' );
+
+		$refused = $this->actions->process_save(
+			$campaign_id,
+			array(
+				'start_date' => $start,
+				'end_date'   => '',
+			),
+			1
+		);
+
+		$this->assertInstanceOf( \WP_Error::class, $refused );
+		$this->assertSame( 'aggr_end_date_required', $refused->get_error_code() );
+		$this->assertSame( 'aggr-end-date', Campaign_Actions::error_field( 'aggr_end_date_required' ) );
+		$this->assertSame( 1, $this->campaigns->autosave_revision( $campaign_id ), 'A refused step still wrote.' );
+		$this->assertNotSame( 'creative', $this->campaigns->wizard_step( $campaign_id ) );
 
 		$end = $this->local_date( '+20 days' );
 
@@ -224,6 +242,7 @@ final class CampaignPlanStepTest extends WP_UnitTestCase {
 			)
 		);
 		$this->assertSame( $end . ' 23:59:59', wp_date( 'Y-m-d H:i:s', $this->campaigns->end_ts( $campaign_id ), wp_timezone() ) );
+		$this->assertSame( 'creative', $this->campaigns->wizard_step( $campaign_id ) );
 	}
 
 	/**

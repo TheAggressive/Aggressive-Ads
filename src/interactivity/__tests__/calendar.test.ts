@@ -241,14 +241,6 @@ describe( 'quick picks', () => {
 			start: '2026-09-20',
 			end: '2026-09-30',
 		} );
-		expect(
-			applyPreset(
-				'open',
-				today,
-				{ start: '2026-09-20', end: '2026-09-30' },
-				custom
-			)
-		).toEqual( range );
 	} );
 
 	it( 'offers no end picks for a fixed package and no start picks once started', () => {
@@ -256,10 +248,12 @@ describe( 'quick picks', () => {
 
 		expect( applyPreset( 'two-weeks', today, range, fixed ) ).toBeNull();
 		expect( applyPreset( 'month', today, range, fixed ) ).toBeNull();
-		expect( applyPreset( 'open', today, range, fixed ) ).toBeNull();
 		expect( applyPreset( 'today', today, range, locked ) ).toBeNull();
 		expect( applyPreset( 'monday', today, range, locked ) ).toBeNull();
-		expect( applyPreset( 'open', today, range, locked ) ).toEqual( range );
+		expect( applyPreset( 'two-weeks', today, range, locked ) ).toEqual( {
+			start: '2026-09-20',
+			end: '2026-10-03',
+		} );
 	} );
 } );
 

@@ -333,7 +333,7 @@ test( 'the calendar picks a start by keyboard, months ahead', async ( {
 
 	// A fixed package sets the end, so only the start picks are offered.
 	await expect(
-		calendar.getByRole( 'button', { name: 'No end date' } )
+		calendar.getByRole( 'button', { name: '2 weeks' } )
 	).toBeHidden();
 
 	await calendar.getByRole( 'button', { name: 'Next month' } ).click();

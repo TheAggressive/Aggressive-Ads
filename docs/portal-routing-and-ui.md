@@ -145,7 +145,7 @@ package sells a number of calendar days, so its end date is derived —
 calendar day so a daylight-saving change cannot move it — and stated as "Runs
 through …" instead of asked for. The end field is still rendered, disabled and
 hidden, so it is not posted and switching to a custom package only has to
-enable it; a custom package asks for an optional end. `Campaign_Editor` derives
+enable it; a custom package requires an end, because every campaign ends. `Campaign_Editor` derives
 the end whenever the package or start moves and no end was supplied, so an
 explicit `end_ts` from a REST client or a staff correction still wins. Leaving
 this step with a start date applies the submission-grade window, so a past
@@ -208,9 +208,9 @@ wizard is on screen, and "Step N of 3" on a phone, where the bar has no room
 for labels. The first step's dates are also chosen on a range calendar
 (`@aggr/calendar`, `partials/campaign-calendar.php`): two months, one on a phone,
 with month buttons, Page Up/Page Down and a horizontal swipe to reach later
-months, and quick picks — Starts today and Next Monday always, 2 weeks, This
-month and No end date only for a custom package, since a fixed one derives its
-end. The calendar writes into the date fields and raises the events typing
+months, and quick picks — Starts today and Next Monday always, 2 weeks and This
+month only for a custom package, since a fixed one derives its end. There is no
+"No end date": every campaign ends. The calendar writes into the date fields and raises the events typing
 would, so autosave and "Runs through …" follow it; the fields stay the posted
 values and the only path without script, where the calendar is a hidden picture
 of the range. The live-campaign change editor's Schedule step uses the same

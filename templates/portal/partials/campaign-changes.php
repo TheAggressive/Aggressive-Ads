@@ -189,7 +189,7 @@ $aggr_step_link = static function ( string $step, string $label, string $current
 				</div>
 				<div class="aggr-field">
 					<label for="aggr-edit-end"><?php esc_html_e( 'End date', 'aggressive-ads' ); ?></label>
-					<input type="date" id="aggr-edit-end" name="end_date" value="<?php echo esc_attr( (string) ( $aggr_values['end_date'] ?? $aggr_campaign['end_date'] ) ); ?>">
+					<input type="date" id="aggr-edit-end" name="end_date" <?php echo '' !== (string) $aggr_campaign['end_date'] ? 'required' : ''; ?> value="<?php echo esc_attr( (string) ( $aggr_values['end_date'] ?? $aggr_campaign['end_date'] ) ); ?>">
 				</div>
 
 				<?php

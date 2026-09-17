@@ -173,16 +173,18 @@ final class CampaignRulesTest extends TestCase {
 	}
 
 	/**
-	 * An open-ended campaign is valid; zero is not "before the start".
+	 * Every campaign has to say when it ends. A missing end is its own
+	 * problem, reported once, and not also "before the start".
 	 *
 	 * @return void
 	 */
-	public function test_an_open_ended_window_is_valid(): void {
+	public function test_a_window_without_an_end_is_refused(): void {
 		$now = 1_800_000_000;
 
 		$result = Campaign_Rules::validate_window( $now + 86400, 0, $now );
 
-		$this->assertTrue( $result->is_valid() );
+		$this->assertSame( array( Campaign_Rules::ERROR_END_MISSING ), $result->codes() );
+		$this->assertTrue( Campaign_Rules::validate_window( $now + 86400, $now + 2 * 86400, $now )->is_valid() );
 	}
 
 	/**

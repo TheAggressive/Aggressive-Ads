@@ -232,6 +232,9 @@ final class Campaign_Validator {
 			case Campaign_Rules::ERROR_START_NOT_MIDNIGHT:
 				return __( 'The start date must begin at midnight in the site timezone.', 'aggressive-ads' );
 
+			case Campaign_Rules::ERROR_END_MISSING:
+				return __( 'Choose an end date.', 'aggressive-ads' );
+
 			case Campaign_Rules::ERROR_END_BEFORE_START:
 				return __( 'The end date must be after the start date.', 'aggressive-ads' );
 

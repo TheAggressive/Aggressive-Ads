@@ -40,7 +40,7 @@ export interface Rules {
 	startLocked: boolean;
 }
 
-export type Preset = 'today' | 'monday' | 'two-weeks' | 'month' | 'open';
+export type Preset = 'today' | 'monday' | 'two-weeks' | 'month';
 
 const DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
 
@@ -317,10 +317,7 @@ export function applyPreset(
 		return null;
 	}
 
-	if (
-		fixed &&
-		( 'two-weeks' === preset || 'month' === preset || 'open' === preset )
-	) {
+	if ( fixed && ( 'two-weeks' === preset || 'month' === preset ) ) {
 		return null;
 	}
 
@@ -349,8 +346,6 @@ export function applyPreset(
 
 			return { start, end: end < earliest ? '' : end };
 		}
-		case 'open':
-			return { ...range, end: '' };
 	}
 
 	return null;

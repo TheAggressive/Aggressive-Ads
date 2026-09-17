@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
-"POT-Creation-Date: 2026-09-17T06:42:17+00:00\n"
+"POT-Creation-Date: 2026-09-17T06:45:30+00:00\n"
 "PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -1332,7 +1332,7 @@ msgstr "Kein Grund wurde erfasst"
 
 #: inc/Admin/class-report-export.php:78
 #: inc/Portal/class-account-actions.php:220
-#: inc/Portal/class-campaign-actions.php:935
+#: inc/Portal/class-campaign-actions.php:937
 #: inc/Portal/class-creative-actions.php:627
 #: inc/Portal/class-email-change-actions.php:178
 #: inc/Portal/class-organization-actions.php:222
@@ -1621,7 +1621,7 @@ msgstr "Nicht geplant"
 #. translators: 1: package name. 2: month and year the campaign starts, e.g. October 2026.
 #: inc/Admin/class-review-data.php:354
 #: inc/Portal/class-campaign-list-view-data.php:315
-#: inc/Workflow/class-campaign-editor.php:697
+#: inc/Workflow/class-campaign-editor.php:698
 #, php-format
 msgid "%1$s – %2$s"
 msgstr "%1$s – %2$s"
@@ -3764,7 +3764,7 @@ msgid "You do not have permission to copy that campaign."
 msgstr "Sie haben keine Berechtigung, diese Kampagne zu kopieren."
 
 #: inc/Portal/class-campaign-actions.php:693
-#: inc/Portal/class-campaign-actions.php:857
+#: inc/Portal/class-campaign-actions.php:858
 msgid "You do not have permission to submit that campaign."
 msgstr "Sie haben keine Berechtigung, diese Kampagne einzureichen."
 
@@ -3784,51 +3784,57 @@ msgid "Use 160 characters or fewer for the campaign name."
 msgstr "Verwenden Sie für den Kampagnennamen maximal 160 Zeichen."
 
 #: inc/Portal/class-campaign-actions.php:838
-#: inc/Workflow/class-campaign-editor.php:448
 #: inc/Workflow/class-campaign-validator.php:236
+#, fuzzy
+msgid "Choose an end date."
+msgstr "Wählen Sie ein Startdatum."
+
+#: inc/Portal/class-campaign-actions.php:839
+#: inc/Workflow/class-campaign-editor.php:448
+#: inc/Workflow/class-campaign-validator.php:239
 msgid "The end date must be after the start date."
 msgstr "Das Enddatum muss nach dem Startdatum liegen."
 
-#: inc/Portal/class-campaign-actions.php:839
+#: inc/Portal/class-campaign-actions.php:840
 #: inc/Workflow/class-campaign-validator.php:227
 msgid "Choose a start date."
 msgstr "Wählen Sie ein Startdatum."
 
-#: inc/Portal/class-campaign-actions.php:840
+#: inc/Portal/class-campaign-actions.php:841
 #: inc/Workflow/class-campaign-validator.php:230
 msgid "The start date has already passed. Choose a later one."
 msgstr "Das Startdatum ist bereits abgelaufen. Wählen Sie ein späteres."
 
-#: inc/Portal/class-campaign-actions.php:841
+#: inc/Portal/class-campaign-actions.php:842
 #: inc/Workflow/class-campaign-validator.php:233
 msgid "The start date must begin at midnight in the site timezone."
 msgstr ""
 "Das Startdatum muss um Mitternacht in der Zeitzone der Website beginnen."
 
-#: inc/Portal/class-campaign-actions.php:842
-#: inc/Workflow/class-campaign-validator.php:239
+#: inc/Portal/class-campaign-actions.php:843
+#: inc/Workflow/class-campaign-validator.php:242
 msgid "The end date must include the full selected day in the site timezone."
 msgstr ""
 "Das Enddatum muss den gesamten ausgewählten Tag in der Zeitzone der Website "
 "umfassen."
 
-#: inc/Portal/class-campaign-actions.php:844 inc/Portal/class-date-input.php:60
+#: inc/Portal/class-campaign-actions.php:845 inc/Portal/class-date-input.php:60
 msgid "Enter a valid date in the required format."
 msgstr "Geben Sie ein gültiges Datum im erforderlichen Format ein."
 
-#: inc/Portal/class-campaign-actions.php:845
+#: inc/Portal/class-campaign-actions.php:846
 msgid "One of the selected placements is no longer available."
 msgstr "Eine der ausgewählten Platzierungen ist nicht mehr verfügbar."
 
-#: inc/Portal/class-campaign-actions.php:846
+#: inc/Portal/class-campaign-actions.php:847
 msgid "Choose a package."
 msgstr "Wählen Sie ein Paket."
 
-#: inc/Portal/class-campaign-actions.php:847
+#: inc/Portal/class-campaign-actions.php:848
 msgid "That package is no longer available. Choose another package."
 msgstr "Dieses Paket ist nicht mehr verfügbar. Wählen Sie ein anderes Paket."
 
-#: inc/Portal/class-campaign-actions.php:848
+#: inc/Portal/class-campaign-actions.php:849
 msgid ""
 "That package is not configured completely. Choose another package or get in "
 "touch."
@@ -3836,13 +3842,13 @@ msgstr ""
 "Dieses Paket ist nicht vollständig konfiguriert. Wählen Sie ein anderes "
 "Paket oder setzen Sie sich mit uns in Verbindung."
 
-#: inc/Portal/class-campaign-actions.php:849
+#: inc/Portal/class-campaign-actions.php:850
 #: inc/Workflow/class-campaign-editor.php:552
 #: inc/Workflow/class-campaign-editor.php:557
 msgid "Add an ad for every size in the package before continuing."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:850
+#: inc/Portal/class-campaign-actions.php:851
 msgid ""
 "This campaign changed in another window. Review the current values and save "
 "again."
@@ -3850,19 +3856,19 @@ msgstr ""
 "Diese Kampagne wurde in einem anderen Fenster geändert. Prüfen Sie die "
 "aktuellen Werte und speichern Sie erneut."
 
-#: inc/Portal/class-campaign-actions.php:851
+#: inc/Portal/class-campaign-actions.php:852
 #: inc/Workflow/class-campaign-editor.php:97
 msgid "Your account is not connected to an organization."
 msgstr "Ihr Konto ist nicht mit einer Organisation verbunden."
 
-#: inc/Portal/class-campaign-actions.php:852
+#: inc/Portal/class-campaign-actions.php:853
 #: inc/Workflow/class-campaign-editor.php:142
 msgid "This organization cannot create campaigns. Please get in touch."
 msgstr ""
 "Diese Organisation kann keine Kampagnen erstellen. Bitte nehmen Sie Kontakt "
 "auf."
 
-#: inc/Portal/class-campaign-actions.php:853
+#: inc/Portal/class-campaign-actions.php:854
 msgid ""
 "The campaign changed and is no longer ready to submit. Resolve every review "
 "item and try again."
@@ -3870,31 +3876,31 @@ msgstr ""
 "Die Kampagne wurde geändert und ist nicht mehr zur Einreichung bereit. "
 "Beheben Sie alle Prüfpunkte und versuchen Sie es erneut."
 
-#: inc/Portal/class-campaign-actions.php:854
+#: inc/Portal/class-campaign-actions.php:855
 msgid ""
 "This campaign has already been submitted or cannot be submitted right now."
 msgstr ""
 "Diese Kampagne wurde bereits eingereicht oder kann derzeit nicht eingereicht "
 "werden."
 
-#: inc/Portal/class-campaign-actions.php:855
+#: inc/Portal/class-campaign-actions.php:856
 #: inc/Workflow/class-campaign-copier.php:387
 msgid "The campaign could not be copied. Please try again."
 msgstr ""
 "Die Kampagne konnte nicht kopiert werden. Bitte versuchen Sie es erneut."
 
-#: inc/Portal/class-campaign-actions.php:856
+#: inc/Portal/class-campaign-actions.php:857
 msgid "There have been too many attempts. Wait a moment and try again."
 msgstr ""
 "Es gab zu viele Versuche. Warten Sie einen Moment und versuchen Sie es "
 "erneut."
 
-#: inc/Portal/class-campaign-actions.php:858
+#: inc/Portal/class-campaign-actions.php:859
 msgid "The campaign could not be submitted. Please try again."
 msgstr ""
 "Die Kampagne konnte nicht eingereicht werden. Bitte versuchen Sie es erneut."
 
-#: inc/Portal/class-campaign-actions.php:859
+#: inc/Portal/class-campaign-actions.php:860
 #: inc/Workflow/class-campaign-editor.php:256
 msgid "The campaign could not be saved. Please try again."
 msgstr ""
@@ -5442,11 +5448,11 @@ msgstr ""
 msgid "That campaign step is not valid."
 msgstr "Dieser Kampagnenschritt ist nicht gültig."
 
-#: inc/Workflow/class-campaign-editor.php:648
+#: inc/Workflow/class-campaign-editor.php:649
 msgid "That package is not available."
 msgstr "Dieses Paket ist nicht verfügbar."
 
-#: inc/Workflow/class-campaign-editor.php:659
+#: inc/Workflow/class-campaign-editor.php:660
 msgid ""
 "That package is not configured completely. Please choose another package or "
 "get in touch."
@@ -5454,7 +5460,7 @@ msgstr ""
 "Dieses Paket ist nicht vollständig konfiguriert. Bitte wählen Sie ein "
 "anderes Paket oder setzen Sie sich mit uns in Verbindung."
 
-#: inc/Workflow/class-campaign-editor.php:664
+#: inc/Workflow/class-campaign-editor.php:665
 msgid ""
 "That package includes a placement that is not available. Please choose "
 "another package or get in touch."
@@ -5532,35 +5538,35 @@ msgstr "Jedes Werbemittel benötigt eine Ziel-URL."
 msgid "A destination URL is not a valid http or https address."
 msgstr "Eine Ziel-URL ist keine gültige http- oder https-Adresse."
 
-#: inc/Workflow/class-campaign-validator.php:242
+#: inc/Workflow/class-campaign-validator.php:245
 msgid "This organization cannot submit campaigns. Please get in touch."
 msgstr ""
 "Diese Organisation kann keine Kampagnen einreichen. Bitte nehmen Sie Kontakt "
 "auf."
 
-#: inc/Workflow/class-campaign-validator.php:245
+#: inc/Workflow/class-campaign-validator.php:248
 msgid "This campaign is not connected to an organization. Please get in touch."
 msgstr ""
 "Diese Kampagne ist keiner Organisation zugeordnet. Bitte nehmen Sie Kontakt "
 "auf."
 
-#: inc/Workflow/class-campaign-validator.php:248
+#: inc/Workflow/class-campaign-validator.php:251
 msgid "Choose a package before submitting."
 msgstr "Wählen Sie vor dem Absenden ein Paket."
 
-#: inc/Workflow/class-campaign-validator.php:251
+#: inc/Workflow/class-campaign-validator.php:254
 msgid "The package on this campaign is no longer offered. Choose another one."
 msgstr ""
 "Das Paket dieser Kampagne wird nicht mehr angeboten. Wählen Sie ein anderes "
 "aus."
 
-#: inc/Workflow/class-campaign-validator.php:254
+#: inc/Workflow/class-campaign-validator.php:257
 msgid "This campaign has no price recorded. Choose its package again."
 msgstr ""
 "Für diese Kampagne ist kein Preis hinterlegt. Wählen Sie das Paket erneut "
 "aus."
 
-#: inc/Workflow/class-campaign-validator.php:257
+#: inc/Workflow/class-campaign-validator.php:260
 msgid "This campaign is not ready to submit."
 msgstr "Diese Kampagne ist nicht bereit zur Einreichung."
 
@@ -6302,10 +6308,9 @@ msgstr "Abgeglichen bis %s (UTC)."
 
 #. translators: %s: first day, e.g. Friday, September 18, 2026.
 #: templates/portal/partials/campaign-calendar.php:89
-#, php-format
-msgid ""
-"Starts %s. Choose an end date, or leave it open to run until it is ended."
-msgstr ""
+#, fuzzy, php-format
+msgid "Starts %s. Now choose an end date."
+msgstr "Start- und Enddatum"
 
 #. translators: 1: first day, e.g. Friday, September 18, 2026. 2: last day.
 #: templates/portal/partials/campaign-calendar.php:90
@@ -6334,35 +6339,30 @@ msgstr ""
 msgid "This month"
 msgstr ""
 
-#: templates/portal/partials/campaign-calendar.php:102
-#, fuzzy
-msgid "No end date"
-msgstr "Enddatum"
-
-#: templates/portal/partials/campaign-calendar.php:115
+#: templates/portal/partials/campaign-calendar.php:114
 #, fuzzy
 msgid "Previous month"
 msgstr "Zurück"
 
-#: templates/portal/partials/campaign-calendar.php:118
+#: templates/portal/partials/campaign-calendar.php:117
 #, fuzzy
 msgid "Next month"
 msgstr "Weiter"
 
-#: templates/portal/partials/campaign-calendar.php:124
+#: templates/portal/partials/campaign-calendar.php:123
 msgid "Arrow keys move between days. Page Up and Page Down change the month."
 msgstr ""
 
-#: templates/portal/partials/campaign-calendar.php:187
+#: templates/portal/partials/campaign-calendar.php:186
 #, fuzzy
 msgid "Selected"
 msgstr "Abgelehnt"
 
-#: templates/portal/partials/campaign-calendar.php:188
+#: templates/portal/partials/campaign-calendar.php:187
 msgid "Limited availability"
 msgstr ""
 
-#: templates/portal/partials/campaign-calendar.php:189
+#: templates/portal/partials/campaign-calendar.php:188
 #, fuzzy
 msgid "Sold out"
 msgstr "Abmelden"
@@ -6937,7 +6937,7 @@ msgid ""
 msgstr ""
 
 #: templates/portal/partials/campaign-plan-step.php:150
-msgid "A custom schedule: choose a start and an end, or leave it open-ended."
+msgid "A custom schedule: choose a start and an end."
 msgstr ""
 
 #: templates/portal/partials/campaign-plan-step.php:157
@@ -6948,8 +6948,11 @@ msgstr ""
 "Website."
 
 #: templates/portal/partials/campaign-plan-step.php:183
-msgid "Optional. Leave empty to run until you end it."
+#, fuzzy
+msgid "The campaign runs through the end of this day."
 msgstr ""
+"Pflichtfeld. Die Kampagne beginnt zu Beginn dieses Tages in der Zeitzone der "
+"Website."
 
 #: templates/portal/partials/campaign-request.php:36
 msgid "Ask the review team"
@@ -8599,6 +8602,10 @@ msgstr "Rotieren"
 msgctxt "block keyword"
 msgid "banner"
 msgstr "Banner"
+
+#, fuzzy
+#~ msgid "No end date"
+#~ msgstr "Enddatum"
 
 #, fuzzy
 #~ msgid ""
