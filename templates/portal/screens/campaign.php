@@ -239,7 +239,7 @@ $aggr_step_number = (int) array_search( $aggr_step, array_keys( $aggr_steps ), t
 					printf(
 						/* translators: %s: when the campaign was submitted, e.g. Sep 13 · 10:42. */
 						esc_html__( 'Submitted %s', 'aggressive-ads' ),
-						esc_html( (string) wp_date( 'M j · H:i', (int) $aggr_campaign['submitted_at'] ) )
+						esc_html( (string) wp_date( /* translators: date and time of a campaign event, as a PHP date format, e.g. Sep 16 · 2:05 PM. */ __( 'M j · g:i A', 'aggressive-ads' ), (int) $aggr_campaign['submitted_at'] ) )
 					);
 					?>
 				</span>

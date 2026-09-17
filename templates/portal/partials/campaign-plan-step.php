@@ -166,7 +166,7 @@ $aggr_date_errors = in_array( $aggr_error_for, array( 'aggr-start-date', 'aggr-e
 					aria-describedby="aggr-start-hint aggr-run-through<?php echo 'aggr-start-date' === $aggr_error_for ? ' aggr-campaign-error' : ''; ?>"
 					<?php echo 'aggr-start-date' === $aggr_error_for ? 'aria-invalid="true"' : ''; ?>
 				>
-					<span class="aggr-date-input__note" aria-hidden="true"><?php esc_html_e( '00:00 site time', 'aggressive-ads' ); ?></span>
+					<span class="aggr-date-input__note" aria-hidden="true"><?php esc_html_e( '12:00 AM site time', 'aggressive-ads' ); ?></span>
 				</div>
 			</div>
 
@@ -180,7 +180,7 @@ $aggr_date_errors = in_array( $aggr_error_for, array( 'aggr-start-date', 'aggr-e
 			?>
 			<div class="aggr-field" data-aggr-end-field <?php echo $aggr_fixed_run ? 'hidden' : ''; ?>>
 				<label for="aggr-end-date"><?php esc_html_e( 'End date', 'aggressive-ads' ); ?></label>
-				<p id="aggr-end-hint" class="aggr-hint"><?php esc_html_e( 'Optional. The campaign runs through the end of this day. Leave it empty to keep it running until it is ended.', 'aggressive-ads' ); ?></p>
+				<p id="aggr-end-hint" class="aggr-hint"><?php esc_html_e( 'Optional. Leave empty to run until you end it.', 'aggressive-ads' ); ?></p>
 				<div class="aggr-date-input">
 				<input
 					id="aggr-end-date"
@@ -191,7 +191,7 @@ $aggr_date_errors = in_array( $aggr_error_for, array( 'aggr-start-date', 'aggr-e
 					<?php echo $aggr_fixed_run ? 'disabled' : ''; ?>
 					<?php echo 'aggr-end-date' === $aggr_error_for ? 'aria-invalid="true"' : ''; ?>
 				>
-					<span class="aggr-date-input__note" aria-hidden="true"><?php esc_html_e( '23:59 site time', 'aggressive-ads' ); ?></span>
+					<span class="aggr-date-input__note" aria-hidden="true"><?php esc_html_e( '11:59 PM site time', 'aggressive-ads' ); ?></span>
 				</div>
 			</div>
 		</div>
