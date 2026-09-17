@@ -4,7 +4,7 @@
  *
  * @package Aggressive\Ads
  *
- * @var list<array{day: string, label: string, impressions: int, height: int, previous: int}> $aggr_series Daily points.
+ * @var list<array{day: string, label: string, date: string, impressions: int, clicks: int, height: int, previous: int, previous_clicks: int, previous_date: string}> $aggr_series Daily points.
  * @var string                                                                  $aggr_range       The window in words, including its timezone.
  * @var int                                                                     $aggr_export_days Days the export will actually produce.
  * @var string                                                                  $aggr_export_from First UTC day of the export.
@@ -171,25 +171,38 @@ $aggr_spark_every = max( 1, (int) ceil( $aggr_spark_days / 7 ) );
 					<?php foreach ( $aggr_series as $aggr_index => $aggr_bar ) : ?>
 						<?php
 						$aggr_bar_count = (int) $aggr_bar['impressions'];
-						$aggr_bar_text  = sprintf(
-							/* translators: 1: weekday. 2: impression count. */
-							_n( '%1$s: %2$s impression', '%1$s: %2$s impressions', $aggr_bar_count, 'aggressive-ads' ),
-							(string) $aggr_bar['label'],
-							number_format_i18n( $aggr_bar_count )
+						$aggr_bar_line  = static fn ( int $shown, int $clicked ): string => sprintf(
+							/* translators: 1: impressions count. 2: clicks count. */
+							__( 'Impressions: %1$s · Clicks: %2$s', 'aggressive-ads' ),
+							number_format_i18n( $shown ),
+							number_format_i18n( $clicked )
 						);
-
-						if ( $aggr_spark_has_prev ) {
-							$aggr_bar_text .= ' · ' . sprintf(
-								/* translators: %s: impressions on the same day of the previous period. */
-								__( 'previous period %s', 'aggressive-ads' ),
-								number_format_i18n( (int) $aggr_bar['previous'] )
-							);
-						}
+						$aggr_bar_now   = $aggr_bar_line( $aggr_bar_count, (int) $aggr_bar['clicks'] );
+						$aggr_bar_then  = $aggr_spark_has_prev ? $aggr_bar_line( (int) $aggr_bar['previous'], (int) $aggr_bar['previous_clicks'] ) : '';
+						$aggr_bar_text  = (string) $aggr_bar['date'] . ': ' . $aggr_bar_now
+							. ( '' === $aggr_bar_then ? '' : '. ' . sprintf(
+								/* translators: 1: the compared day, e.g. Fri, Sep 4. 2: its impressions and clicks. */
+								__( 'Previous period, %1$s: %2$s', 'aggressive-ads' ),
+								(string) $aggr_bar['previous_date'],
+								$aggr_bar_then
+							) );
 						?>
 						<li class="aggr-spark__day<?php echo $aggr_index === $aggr_spark_days - 1 ? ' aggr-spark__day--last' : ''; ?>">
 							<span class="aggr-spark__dot" style="bottom: <?php echo esc_attr( Chart_Path::number( 100 * $aggr_bar_count / $aggr_spark_top ) ); ?>%" aria-hidden="true"></span>
 							<span class="aggr-sr"><?php echo esc_html( $aggr_bar_text ); ?></span>
-							<span class="aggr-spark__tip" aria-hidden="true"><?php echo esc_html( $aggr_bar_text ); ?></span>
+							<span class="aggr-spark__tip" aria-hidden="true">
+								<span class="aggr-spark__tip-date"><?php echo esc_html( (string) $aggr_bar['date'] ); ?></span>
+								<span class="aggr-spark__tip-row">
+									<span class="aggr-spark__tip-name"><?php esc_html_e( 'This period', 'aggressive-ads' ); ?></span>
+									<span><?php echo esc_html( $aggr_bar_now ); ?></span>
+								</span>
+								<?php if ( '' !== $aggr_bar_then ) : ?>
+									<span class="aggr-spark__tip-row aggr-spark__tip-row--previous">
+										<span class="aggr-spark__tip-name"><?php echo esc_html( (string) $aggr_bar['previous_date'] ); ?></span>
+										<span><?php echo esc_html( $aggr_bar_then ); ?></span>
+									</span>
+								<?php endif; ?>
+							</span>
 						</li>
 					<?php endforeach; ?>
 				</ol>

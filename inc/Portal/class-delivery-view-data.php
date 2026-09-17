@@ -131,6 +131,18 @@ final class Delivery_View_Data {
 	}
 
 	/**
+	 * The site's date format, which is what "the full date" means to its readers.
+	 *
+	 * `9/11/2026` is September to some and November to others; the site's own
+	 * setting is the one its advertisers already read everywhere else.
+	 */
+	private function long_date_format(): string {
+		$format = (string) get_option( 'date_format', 'F j, Y' );
+
+		return '' === $format ? 'F j, Y' : $format;
+	}
+
+	/**
 	 * One UTC day in the site's date format.
 	 *
 	 * @param string $day_utc `Y-m-d`.
@@ -358,7 +370,12 @@ final class Delivery_View_Data {
 	 * against day three of that one.
 	 *
 	 * @param int $org_id Organization to report on.
-	 * @return list<array{day: string, label: string, impressions: int, height: int, previous: int}>
+	 * Each day also carries its clicks and its date in words, and the previous
+	 * window's clicks and date, for the chart's hover card: it names the day it
+	 * is compared with rather than calling it "historic", because a reader
+	 * checking a spike wants the date to look up.
+	 *
+	 * @return list<array{day: string, label: string, date: string, impressions: int, clicks: int, height: int, previous: int, previous_clicks: int, previous_date: string}>
 	 */
 	public function series( int $org_id ): array {
 		if ( ! $this->reporting->surfaces() ) {
@@ -381,11 +398,16 @@ final class Delivery_View_Data {
 
 		foreach ( array_values( $raw ) as $index => $row ) {
 			$series[] = array(
-				'day'         => $row['day'],
-				'label'       => $this->day_label( $row['day'], $format ),
-				'impressions' => $row['impressions'],
-				'height'      => Reporting_Rules::bar_height( $row['impressions'], $max ),
-				'previous'    => (int) ( $before[ $index ]['impressions'] ?? 0 ),
+				'day'             => $row['day'],
+				'label'           => $this->day_label( $row['day'], $format ),
+				'impressions'     => $row['impressions'],
+				'height'          => Reporting_Rules::bar_height( $row['impressions'], $max ),
+				'previous'        => (int) ( $before[ $index ]['impressions'] ?? 0 ),
+				'date'            => $this->day_label( $row['day'], 'l, ' . $this->long_date_format() ),
+				'clicks'          => (int) ( $row['clicks'] ?? 0 ),
+
+				'previous_clicks' => (int) ( $before[ $index ]['clicks'] ?? 0 ),
+				'previous_date'   => isset( $before[ $index ]['day'] ) ? $this->day_label( (string) $before[ $index ]['day'], 'D, M j' ) : '',
 			);
 		}
 

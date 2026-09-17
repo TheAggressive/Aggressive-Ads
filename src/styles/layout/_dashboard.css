@@ -341,15 +341,19 @@
 	background: var(--aggr-color-accent);
 }
 
+/* The hover card: the day in full, then this period and the day it is compared with. */
 .aggr-spark__tip {
 	position: absolute;
 	top: -6px;
 	left: 50%;
 	z-index: 3;
 	display: none;
-	padding: 4px 8px;
+	flex-direction: column;
+	gap: 4px;
+	padding: 8px 10px;
 	background: var(--aggr-color-rail);
-	border-radius: 6px;
+	border-radius: 8px;
+	box-shadow: 0 6px 18px rgb(0 0 0 / 18%);
 	color: var(--aggr-color-rail-text-strong);
 	font-size: 12px;
 	white-space: nowrap;
@@ -358,7 +362,37 @@
 }
 
 .aggr-spark__day:hover .aggr-spark__tip {
-	display: block;
+	display: flex;
+}
+
+.aggr-spark__tip-date {
+	font-weight: 700;
+}
+
+.aggr-spark__tip-row {
+	display: flex;
+	gap: 10px;
+	align-items: center;
+	justify-content: space-between;
+	font-variant-numeric: tabular-nums;
+}
+
+.aggr-spark__tip-name {
+	display: inline-flex;
+	gap: 6px;
+	align-items: center;
+	color: var(--aggr-color-rail-text);
+}
+
+.aggr-spark__tip-name::before {
+	width: 12px;
+	height: 0;
+	border-top: 2.5px solid var(--aggr-color-accent-rail);
+	content: "";
+}
+
+.aggr-spark__tip-row--previous .aggr-spark__tip-name::before {
+	border-top: 2px dotted var(--aggr-color-rail-text);
 }
 
 /* Near either end the label hangs inward, so it stays inside the chart. */

@@ -344,6 +344,8 @@ final class ReportingTest extends WP_UnitTestCase {
 		$last   = array_key_last( $series );
 
 		$this->assertSame( 7, $series[ $last ]['previous'], 'The chart did not line up the previous window day for day.' );
+		$this->assertSame( gmdate( 'D, M j', strtotime( $earlier . ' UTC' ) ), $series[ $last ]['previous_date'], 'The hover card names a different day from the one it compares.' );
+		$this->assertStringStartsWith( gmdate( 'l', time() ), $series[ $last ]['date'] );
 		$this->assertSame( 0, $series[ $last ]['impressions'], 'Delivery from the earlier window leaked into this one.' );
 		$this->assertSame( 0, $series[0]['previous'] );
 	}

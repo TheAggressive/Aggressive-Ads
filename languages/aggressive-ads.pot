@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-17T00:53:18+00:00\n"
+"POT-Creation-Date: 2026-09-17T01:01:07+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -99,7 +99,7 @@ msgstr ""
 #: inc/Admin/class-conversions-screen.php:155
 #: inc/Admin/class-conversions-screen.php:198
 #: inc/Admin/class-conversions-screen.php:260
-#: inc/Portal/class-delivery-view-data.php:258
+#: inc/Portal/class-delivery-view-data.php:270
 #: inc/Portal/class-report-actions.php:193
 #: templates/portal/partials/campaign-summary-facts.php:81
 #: templates/portal/partials/campaign-table.php:54
@@ -1139,7 +1139,7 @@ msgstr ""
 
 #. translators: %s: a date, e.g. 30 August 2026.
 #: inc/Admin/class-report-data.php:334
-#: inc/Portal/class-delivery-view-data.php:206
+#: inc/Portal/class-delivery-view-data.php:218
 #, php-format
 msgid "Figures from %s onward are still being counted."
 msgstr ""
@@ -1411,10 +1411,10 @@ msgid "%s page requests belong to placements that no longer exist, so they are c
 msgstr ""
 
 #: inc/Admin/class-reports-screen.php:611
-#: inc/Portal/class-delivery-view-data.php:473
-#: inc/Portal/class-delivery-view-data.php:536
-#: inc/Portal/class-delivery-view-data.php:553
-#: inc/Portal/class-delivery-view-data.php:604
+#: inc/Portal/class-delivery-view-data.php:495
+#: inc/Portal/class-delivery-view-data.php:558
+#: inc/Portal/class-delivery-view-data.php:575
+#: inc/Portal/class-delivery-view-data.php:626
 #: templates/portal/partials/campaign-summary-facts.php:75
 #: templates/portal/partials/campaign-table.php:97
 msgid "—"
@@ -1424,9 +1424,9 @@ msgstr ""
 #. translators: %s: click-through rate as a percentage, e.g. 1.2.
 #. translators: %s: share of impressions that were viewable, e.g. 62.5.
 #: inc/Admin/class-reports-screen.php:616
-#: inc/Portal/class-delivery-view-data.php:541
-#: inc/Portal/class-delivery-view-data.php:558
-#: inc/Portal/class-delivery-view-data.php:609
+#: inc/Portal/class-delivery-view-data.php:563
+#: inc/Portal/class-delivery-view-data.php:580
+#: inc/Portal/class-delivery-view-data.php:631
 #: templates/portal/partials/campaign-summary-facts.php:72
 #: templates/portal/partials/campaign-table.php:94
 #, php-format
@@ -3715,7 +3715,7 @@ msgstr ""
 msgid "%1$s to %2$s (UTC)"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:236
+#: inc/Portal/class-delivery-view-data.php:248
 #: inc/Portal/class-report-actions.php:190
 #: templates/portal/partials/campaign-summary-facts.php:56
 #: templates/portal/partials/campaign-table.php:50
@@ -3723,7 +3723,7 @@ msgstr ""
 msgid "Impressions"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:241
+#: inc/Portal/class-delivery-view-data.php:253
 #: inc/Portal/class-report-actions.php:191
 #: templates/portal/partials/campaign-summary-facts.php:60
 #: templates/portal/partials/campaign-table.php:52
@@ -3731,46 +3731,46 @@ msgstr ""
 msgid "Clicks"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:246
+#: inc/Portal/class-delivery-view-data.php:258
 #: templates/portal/partials/campaign-summary-facts.php:64
 #: templates/portal/partials/campaign-table.php:53
 #: templates/portal/partials/campaign-variant-comparison.php:48
 msgid "CTR"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:252
+#: inc/Portal/class-delivery-view-data.php:264
 #: templates/portal/partials/campaign-variant-comparison.php:49
 msgid "Viewable"
 msgstr ""
 
 #. translators: %s: signed change in percentage points, e.g. +0.5.
-#: inc/Portal/class-delivery-view-data.php:317
+#: inc/Portal/class-delivery-view-data.php:329
 #, php-format
 msgid "%s pp vs previous period"
 msgstr ""
 
 #. translators: %s: signed percentage change, e.g. +12.4.
-#: inc/Portal/class-delivery-view-data.php:321
+#: inc/Portal/class-delivery-view-data.php:333
 #, php-format
 msgid "%s%% vs previous period"
 msgstr ""
 
 #. translators: %d: creative id.
-#: inc/Portal/class-delivery-view-data.php:459
+#: inc/Portal/class-delivery-view-data.php:481
 #, php-format
 msgid "Ad %d"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:471
+#: inc/Portal/class-delivery-view-data.php:493
 msgid "Before per-ad counting"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:472
+#: inc/Portal/class-delivery-view-data.php:494
 msgid "An ad no longer on this placement"
 msgstr ""
 
-#: inc/Portal/class-delivery-view-data.php:576
 #: inc/Portal/class-delivery-view-data.php:598
+#: inc/Portal/class-delivery-view-data.php:620
 #: templates/portal/partials/campaign-summary-facts.php:90
 #: templates/portal/partials/campaign-table.php:113
 msgid "Not measured"
@@ -6073,7 +6073,7 @@ msgid "Each stage is dated as it happens."
 msgstr ""
 
 #: templates/portal/partials/campaign-status.php:92
-#: templates/portal/partials/sparkline.php:216
+#: templates/portal/partials/sparkline.php:229
 msgid "Now"
 msgstr ""
 
@@ -6291,6 +6291,7 @@ msgid "Impressions per day"
 msgstr ""
 
 #: templates/portal/partials/sparkline.php:129
+#: templates/portal/partials/sparkline.php:196
 msgid "This period"
 msgstr ""
 
@@ -6302,26 +6303,24 @@ msgstr ""
 msgid "Still being counted"
 msgstr ""
 
-#. translators: 1: weekday. 2: impression count.
+#. translators: 1: impressions count. 2: clicks count.
 #: templates/portal/partials/sparkline.php:176
 #, php-format
-msgid "%1$s: %2$s impression"
-msgid_plural "%1$s: %2$s impressions"
-msgstr[0] ""
-msgstr[1] ""
-
-#. translators: %s: impressions on the same day of the previous period.
-#: templates/portal/partials/sparkline.php:184
-#, php-format
-msgid "previous period %s"
+msgid "Impressions: %1$s · Clicks: %2$s"
 msgstr ""
 
-#: templates/portal/partials/sparkline.php:218
+#. translators: 1: the compared day, e.g. Fri, Sep 4. 2: its impressions and clicks.
+#: templates/portal/partials/sparkline.php:185
+#, php-format
+msgid "Previous period, %1$s: %2$s"
+msgstr ""
+
+#: templates/portal/partials/sparkline.php:231
 msgid "Before"
 msgstr ""
 
 #. translators: %d: number of days covered by the export.
-#: templates/portal/partials/sparkline.php:250
+#: templates/portal/partials/sparkline.php:263
 #, php-format
 msgid "Download %d days (CSV)"
 msgstr ""
