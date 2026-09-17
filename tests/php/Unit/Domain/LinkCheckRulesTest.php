@@ -71,15 +71,15 @@ final class LinkCheckRulesTest extends TestCase {
 	 */
 	public static function allowed(): array {
 		return array(
-			'plain https'     => array( 'https://example.com/' ),
-			'no path'         => array( 'https://example.com' ),
-			'http'            => array( 'http://example.com/offer' ),
-			'explicit 443'    => array( 'https://example.com:443/offer' ),
-			'explicit 80'     => array( 'http://example.com:80/offer' ),
-			'query and hash'  => array( 'https://shop.example.co.uk/a?utm_source=x#top' ),
-			'subdomain'       => array( 'https://www.example.com/landing/page' ),
-			'uppercase host'  => array( 'HTTPS://Example.COM/Landing' ),
-			'trailing dot'    => array( 'https://example.com./' ),
+			'plain https'      => array( 'https://example.com/' ),
+			'no path'          => array( 'https://example.com' ),
+			'http'             => array( 'http://example.com/offer' ),
+			'explicit 443'     => array( 'https://example.com:443/offer' ),
+			'explicit 80'      => array( 'http://example.com:80/offer' ),
+			'query and hash'   => array( 'https://shop.example.co.uk/a?utm_source=x#top' ),
+			'subdomain'        => array( 'https://www.example.com/landing/page' ),
+			'uppercase host'   => array( 'HTTPS://Example.COM/Landing' ),
+			'trailing dot'     => array( 'https://example.com./' ),
 			'internal in path' => array( 'https://example.com/internal/local' ),
 		);
 	}
@@ -112,20 +112,20 @@ final class LinkCheckRulesTest extends TestCase {
 	 */
 	public static function outcomes(): array {
 		return array(
-			'ok'            => array( 200, Link_Check_Rules::OUTCOME_WORKS ),
-			'created'       => array( 201, Link_Check_Rules::OUTCOME_WORKS ),
-			'moved'         => array( 301, Link_Check_Rules::OUTCOME_WORKS ),
-			'not modified'  => array( 304, Link_Check_Rules::OUTCOME_WORKS ),
-			'unauthorized'  => array( 401, Link_Check_Rules::OUTCOME_PRIVATE ),
-			'forbidden'     => array( 403, Link_Check_Rules::OUTCOME_PRIVATE ),
-			'method'        => array( 405, Link_Check_Rules::OUTCOME_PRIVATE ),
-			'rate limited'  => array( 429, Link_Check_Rules::OUTCOME_PRIVATE ),
-			'not found'     => array( 404, Link_Check_Rules::OUTCOME_MISSING ),
-			'gone'          => array( 410, Link_Check_Rules::OUTCOME_MISSING ),
-			'teapot'        => array( 418, Link_Check_Rules::OUTCOME_BROKEN ),
-			'server error'  => array( 500, Link_Check_Rules::OUTCOME_BROKEN ),
-			'bad gateway'   => array( 502, Link_Check_Rules::OUTCOME_BROKEN ),
-			'no answer'     => array( 0, Link_Check_Rules::OUTCOME_UNREACHABLE ),
+			'ok'           => array( 200, Link_Check_Rules::OUTCOME_WORKS ),
+			'created'      => array( 201, Link_Check_Rules::OUTCOME_WORKS ),
+			'moved'        => array( 301, Link_Check_Rules::OUTCOME_WORKS ),
+			'not modified' => array( 304, Link_Check_Rules::OUTCOME_WORKS ),
+			'unauthorized' => array( 401, Link_Check_Rules::OUTCOME_PRIVATE ),
+			'forbidden'    => array( 403, Link_Check_Rules::OUTCOME_PRIVATE ),
+			'method'       => array( 405, Link_Check_Rules::OUTCOME_PRIVATE ),
+			'rate limited' => array( 429, Link_Check_Rules::OUTCOME_PRIVATE ),
+			'not found'    => array( 404, Link_Check_Rules::OUTCOME_MISSING ),
+			'gone'         => array( 410, Link_Check_Rules::OUTCOME_MISSING ),
+			'teapot'       => array( 418, Link_Check_Rules::OUTCOME_BROKEN ),
+			'server error' => array( 500, Link_Check_Rules::OUTCOME_BROKEN ),
+			'bad gateway'  => array( 502, Link_Check_Rules::OUTCOME_BROKEN ),
+			'no answer'    => array( 0, Link_Check_Rules::OUTCOME_UNREACHABLE ),
 		);
 	}
 
