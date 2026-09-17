@@ -204,76 +204,147 @@
 }
 
 /*
- * The daily chart: a round-number scale on the left, gridlines behind the
- * bars, a date every few bars beneath, and each bar's figure on hover. Days
- * still being counted are drawn lighter, with a key in the header.
+ * The daily chart: a smooth line over a fading area, the previous window as a
+ * dotted line behind it, and the days still being counted dashed. A round
+ * number scale on the left, a date every few days beneath, a label at each
+ * line's end, and each day's figures on hover over its own column.
  */
 .aggr-spark__plot {
 	display: grid;
-	grid-template-columns: auto minmax(0, 1fr);
+	grid-template-columns: auto minmax(0, 1fr) auto;
 	gap: var(--aggr-space-sm);
 }
 
+/* Each number is centred on its own gridline: top, middle and bottom. */
 .aggr-spark__scale {
-	display: flex;
-	flex-direction: column;
-	justify-content: space-between;
-	height: 160px;
-	margin-top: -0.4em;
-	margin-bottom: -0.4em;
+	position: relative;
+	min-width: 4.5ch;
+	height: 180px;
 	color: var(--aggr-color-text-subtle);
 	font-family: var(--aggr-font-mono);
 	font-size: 11px;
 	text-align: right;
 }
 
+.aggr-spark__scale span {
+	position: absolute;
+	right: 0;
+	line-height: 1;
+	white-space: nowrap;
+	transform: translateY(-50%);
+}
+
+.aggr-spark__scale span:nth-child(1) {
+	top: 0;
+}
+
+.aggr-spark__scale span:nth-child(2) {
+	top: 50%;
+}
+
+.aggr-spark__scale span:nth-child(3) {
+	top: 100%;
+}
+
 .aggr-spark__chart {
 	min-width: 0;
 }
 
-.aggr-spark__track {
+.aggr-spark__canvas {
 	position: relative;
-	display: grid;
-	grid-template-columns: repeat(var(--aggr-spark-bars), minmax(0, 1fr));
-	gap: 4px;
-	align-items: end;
-	height: 160px;
-	margin: 0;
-	padding: 0;
-	list-style: none;
+	height: 180px;
 	background:
 		linear-gradient(var(--aggr-border-color), var(--aggr-border-color)) top / 100% 1px no-repeat,
 		linear-gradient(var(--aggr-border-color), var(--aggr-border-color)) center / 100% 1px no-repeat,
 		linear-gradient(var(--aggr-border-color-strong), var(--aggr-border-color-strong)) bottom / 100% 1px no-repeat;
 }
 
+.aggr-spark__svg {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	overflow: visible;
+}
+
+.aggr-spark__fill-top {
+	stop-color: var(--aggr-color-accent);
+	stop-opacity: 0.24;
+}
+
+.aggr-spark__fill-bottom {
+	stop-color: var(--aggr-color-accent);
+	stop-opacity: 0;
+}
+
+.aggr-spark__line {
+	fill: none;
+	stroke: var(--aggr-color-accent);
+	stroke-width: 2.5px;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+.aggr-spark__line--previous {
+	stroke: var(--aggr-color-text-subtle);
+	stroke-width: 1.5px;
+	stroke-dasharray: 1 5;
+}
+
+.aggr-spark__line--counting {
+	stroke-dasharray: 6 5;
+}
+
+.aggr-spark__track {
+	position: absolute;
+	inset: 0;
+	display: grid;
+	grid-template-columns: repeat(var(--aggr-spark-bars), minmax(0, 1fr));
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
 .aggr-spark__day {
 	position: relative;
-	display: flex;
-	align-items: flex-end;
-	height: 100%;
 }
 
-.aggr-spark__bar {
+/* A guide down the column under the pointer. */
+.aggr-spark__day:hover::before {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	left: 50%;
+	width: 1px;
+	background: var(--aggr-border-color-strong);
+	content: "";
+}
+
+.aggr-spark__dot {
+	position: absolute;
+	left: 50%;
+	display: none;
+	width: 10px;
+	height: 10px;
+	background: var(--aggr-color-surface);
+	border: 2.5px solid var(--aggr-color-accent);
+	border-radius: 50%;
+	box-sizing: border-box;
+	transform: translate(-50%, 50%);
+}
+
+.aggr-spark__day:hover .aggr-spark__dot,
+.aggr-spark__day--last .aggr-spark__dot {
 	display: block;
-	width: 100%;
-	max-width: 2.5rem;
-	margin: 0 auto;
+}
+
+.aggr-spark__day--last .aggr-spark__dot {
 	background: var(--aggr-color-accent);
-	border-radius: 3px 3px 0 0;
-}
-
-.aggr-spark__day--counting .aggr-spark__bar {
-	opacity: 0.4;
-}
-
-.aggr-spark__day:hover .aggr-spark__bar {
-	filter: brightness(0.9);
 }
 
 .aggr-spark__tip {
 	position: absolute;
-	bottom: calc(100% + 6px);
+	top: -6px;
 	left: 50%;
 	z-index: 3;
 	display: none;
@@ -283,7 +354,7 @@
 	color: var(--aggr-color-rail-text-strong);
 	font-size: 12px;
 	white-space: nowrap;
-	transform: translateX(-50%);
+	transform: translate(-50%, -100%);
 	pointer-events: none;
 }
 
@@ -294,34 +365,64 @@
 /* Near either end the label hangs inward, so it stays inside the chart. */
 .aggr-spark__day:nth-child(-n + 3) .aggr-spark__tip {
 	left: 0;
-	transform: none;
+	transform: translateY(-100%);
 }
 
 .aggr-spark__day:nth-last-child(-n + 3) .aggr-spark__tip {
 	right: 0;
 	left: auto;
-	transform: none;
+	transform: translateY(-100%);
 }
 
 .aggr-spark__axis {
 	display: grid;
 	grid-template-columns: repeat(var(--aggr-spark-bars), minmax(0, 1fr));
-	gap: 4px;
 	margin-top: var(--aggr-space-xs);
 	color: var(--aggr-color-text-subtle);
 	font-family: var(--aggr-font-mono);
 	font-size: 11px;
 }
 
+/* Under the middle of its day, where the line's point is. */
 .aggr-spark__axis span {
-	overflow: visible;
+	justify-self: center;
 	white-space: nowrap;
 }
 
-@media (max-width: 40rem) {
-	.aggr-spark__tick--minor {
-		visibility: hidden;
-	}
+.aggr-spark__ends {
+	position: relative;
+	width: 3.75rem;
+	height: 180px;
+}
+
+.aggr-spark__end {
+	position: absolute;
+	left: 0;
+	padding: 1px 6px;
+	border: 1.5px solid var(--aggr-color-accent);
+	border-radius: var(--aggr-radius-pill);
+	color: var(--aggr-color-accent-strong);
+	font-family: var(--aggr-font-mono);
+	font-size: 10px;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	transform: translateY(-50%);
+}
+
+.aggr-spark__end--previous {
+	border-style: dashed;
+	border-color: var(--aggr-color-text-subtle);
+	color: var(--aggr-color-text-muted);
+}
+
+.aggr-spark__legend {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--aggr-space-md);
+	margin: 0;
+	padding: 0;
+	list-style: none;
 }
 
 .aggr-spark__key {
@@ -333,12 +434,33 @@
 }
 
 .aggr-spark__key::before {
-	width: 10px;
-	height: 10px;
-	border-radius: 2px;
-	background: var(--aggr-color-accent);
-	opacity: 0.4;
+	width: 16px;
+	height: 0;
+	border-top: 2.5px solid var(--aggr-color-accent);
 	content: "";
+}
+
+.aggr-spark__key--previous::before {
+	border-top: 2px dotted var(--aggr-color-text-subtle);
+}
+
+.aggr-spark__key--counting::before {
+	border-top-style: dashed;
+}
+
+@media (max-width: 40rem) {
+	.aggr-spark__tick--minor {
+		visibility: hidden;
+	}
+
+	.aggr-spark__plot {
+		grid-template-columns: auto minmax(0, 1fr);
+	}
+
+	/* The legend names both lines; there is no room beside them on a phone. */
+	.aggr-spark__ends {
+		display: none;
+	}
 }
 
 /*

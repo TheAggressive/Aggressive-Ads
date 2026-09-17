@@ -661,7 +661,7 @@ final class View_Data {
 	 * another would invite a comparison that was always wrong. A docblock
 	 * naming a fixed window is how someone later "fixes" the code to match it.
 	 *
-	 * @return list<array{day: string, label: string, impressions: int, height: int}>
+	 * @return list<array{day: string, label: string, impressions: int, height: int, previous: int}>
 	 */
 	public function delivery_series(): array {
 		return $this->delivery->series( $this->org_id() );

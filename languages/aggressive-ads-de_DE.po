@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
-"POT-Creation-Date: 2026-09-17T00:26:51+00:00\n"
+"POT-Creation-Date: 2026-09-17T00:46:16+00:00\n"
 "PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -1571,10 +1571,10 @@ msgstr ""
 "erscheinen. Dies ist normal, nachdem eine Platzierung gelöscht wurde."
 
 #: inc/Admin/class-reports-screen.php:611
-#: inc/Portal/class-delivery-view-data.php:464
-#: inc/Portal/class-delivery-view-data.php:527
-#: inc/Portal/class-delivery-view-data.php:544
-#: inc/Portal/class-delivery-view-data.php:595
+#: inc/Portal/class-delivery-view-data.php:473
+#: inc/Portal/class-delivery-view-data.php:536
+#: inc/Portal/class-delivery-view-data.php:553
+#: inc/Portal/class-delivery-view-data.php:604
 #: templates/portal/partials/campaign-summary-facts.php:75
 #: templates/portal/partials/campaign-table.php:97
 msgid "—"
@@ -1584,9 +1584,9 @@ msgstr "—"
 #. translators: %s: click-through rate as a percentage, e.g. 1.2.
 #. translators: %s: share of impressions that were viewable, e.g. 62.5.
 #: inc/Admin/class-reports-screen.php:616
-#: inc/Portal/class-delivery-view-data.php:532
-#: inc/Portal/class-delivery-view-data.php:549
-#: inc/Portal/class-delivery-view-data.php:600
+#: inc/Portal/class-delivery-view-data.php:541
+#: inc/Portal/class-delivery-view-data.php:558
+#: inc/Portal/class-delivery-view-data.php:609
 #: templates/portal/partials/campaign-summary-facts.php:72
 #: templates/portal/partials/campaign-table.php:94
 #, php-format
@@ -4348,21 +4348,21 @@ msgid "%s%% vs previous period"
 msgstr "%s%% ggü. Vorperiode"
 
 #. translators: %d: creative id.
-#: inc/Portal/class-delivery-view-data.php:450
+#: inc/Portal/class-delivery-view-data.php:459
 #, php-format
 msgid "Ad %d"
 msgstr "Anzeige %d"
 
-#: inc/Portal/class-delivery-view-data.php:462
+#: inc/Portal/class-delivery-view-data.php:471
 msgid "Before per-ad counting"
 msgstr "Vor der Zählung pro Anzeige"
 
-#: inc/Portal/class-delivery-view-data.php:463
+#: inc/Portal/class-delivery-view-data.php:472
 msgid "An ad no longer on this placement"
 msgstr "Eine Anzeige, die nicht mehr auf dieser Platzierung ist"
 
-#: inc/Portal/class-delivery-view-data.php:567
-#: inc/Portal/class-delivery-view-data.php:589
+#: inc/Portal/class-delivery-view-data.php:576
+#: inc/Portal/class-delivery-view-data.php:598
 #: templates/portal/partials/campaign-summary-facts.php:90
 #: templates/portal/partials/campaign-table.php:113
 msgid "Not measured"
@@ -7075,6 +7075,7 @@ msgid "Each stage is dated as it happens."
 msgstr ""
 
 #: templates/portal/partials/campaign-status.php:92
+#: templates/portal/partials/sparkline.php:212
 #, fuzzy
 msgid "Now"
 msgstr "Nein"
@@ -7302,36 +7303,56 @@ msgid "New campaign"
 msgstr "Kampagne verlängern"
 
 #. translators: 1: first day of the range. 2: last day of the range.
-#: templates/portal/partials/sparkline.php:28
+#: templates/portal/partials/sparkline.php:30
 #, php-format
 msgid "Daily impressions, %1$s to %2$s"
 msgstr "Tägliche Impressionen, %1$s bis %2$s"
 
 #. translators: %s: a number of thousands, e.g. 20 for 20,000.
-#: templates/portal/partials/sparkline.php:66
+#: templates/portal/partials/sparkline.php:69
 #, php-format
 msgid "%sk"
 msgstr ""
 
-#: templates/portal/partials/sparkline.php:77
+#: templates/portal/partials/sparkline.php:126
 #, fuzzy
 msgid "Impressions per day"
 msgstr "Impressionen"
 
-#: templates/portal/partials/sparkline.php:79
+#: templates/portal/partials/sparkline.php:128
+#, fuzzy
+msgid "This period"
+msgstr "%s Pixel"
+
+#: templates/portal/partials/sparkline.php:130
+#, fuzzy
+msgid "Previous period"
+msgstr "%s%% ggü. Vorperiode"
+
+#: templates/portal/partials/sparkline.php:133
 msgid "Still being counted"
 msgstr ""
 
 #. translators: 1: weekday. 2: impression count.
-#: templates/portal/partials/sparkline.php:98
+#: templates/portal/partials/sparkline.php:172
 #, php-format
 msgid "%1$s: %2$s impression"
 msgid_plural "%1$s: %2$s impressions"
 msgstr[0] "%1$s: %2$s Impression"
 msgstr[1] "%1$s: %2$s Impressionen"
 
+#. translators: %s: impressions on the same day of the previous period.
+#: templates/portal/partials/sparkline.php:180
+#, fuzzy, php-format
+msgid "previous period %s"
+msgstr "%s%% ggü. Vorperiode"
+
+#: templates/portal/partials/sparkline.php:214
+msgid "Before"
+msgstr ""
+
 #. translators: %d: number of days covered by the export.
-#: templates/portal/partials/sparkline.php:156
+#: templates/portal/partials/sparkline.php:246
 #, php-format
 msgid "Download %d days (CSV)"
 msgstr "Herunterladen %d Tage (CSV)"

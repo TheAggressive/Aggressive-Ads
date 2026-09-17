@@ -1,10 +1,10 @@
 <?php
 /**
- * Seven-day impression sparkline.
+ * Daily impressions as a smooth line, against the previous equal window.
  *
  * @package Aggressive\Ads
  *
- * @var list<array{day: string, label: string, impressions: int, height: int}> $aggr_series Daily bars.
+ * @var list<array{day: string, label: string, impressions: int, height: int, previous: int}> $aggr_series Daily points.
  * @var string                                                                  $aggr_range       The window in words, including its timezone.
  * @var int                                                                     $aggr_export_days Days the export will actually produce.
  * @var string                                                                  $aggr_export_from First UTC day of the export.
@@ -16,6 +16,8 @@ declare(strict_types=1);
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
+
+use Aggressive\Ads\Domain\Chart_Path;
 
 if ( ! isset( $aggr_series ) || array() === $aggr_series ) {
 	return;
@@ -33,19 +35,20 @@ $aggr_counting = isset( $aggr_counting ) && is_string( $aggr_counting ) ? $aggr_
 
 /*
  * A scale a person can read: the top of the chart is a round number — 20k,
- * not 17,318 — with a gridline at its half, so a bar's height is a figure
- * rather than a proportion of whatever the busiest day happened to be.
+ * not 17,318 — with a gridline at its half, and a little headroom so the
+ * busiest day does not sit on the top line. Both periods share it.
  */
-$aggr_spark_peak = 0;
+$aggr_spark_peak     = 0;
+$aggr_spark_has_prev = false;
 
 foreach ( $aggr_series as $aggr_bar ) {
-	$aggr_spark_peak = max( $aggr_spark_peak, (int) $aggr_bar['impressions'] );
+	$aggr_spark_peak     = max( $aggr_spark_peak, (int) $aggr_bar['impressions'], (int) ( $aggr_bar['previous'] ?? 0 ) );
+	$aggr_spark_has_prev = $aggr_spark_has_prev || (int) ( $aggr_bar['previous'] ?? 0 ) > 0;
 }
 
 $aggr_spark_top = 10;
 
 if ( $aggr_spark_peak > 0 ) {
-	// A little headroom, so the busiest day does not sit on the top line.
 	$aggr_spark_need      = (int) ceil( $aggr_spark_peak * 1.1 );
 	$aggr_spark_magnitude = 10 ** (int) floor( log10( $aggr_spark_need ) );
 
@@ -69,18 +72,70 @@ $aggr_spark_scale = static function ( float $value ): string {
 		: number_format_i18n( $value, $whole ? 0 : 1 );
 };
 
+/*
+ * The geometry, in a 1000 × 100 box the SVG stretches to the chart's width.
+ * Each day sits at the middle of its own column, which is where its hover
+ * target and its date label are, so the line, the dots and the dates agree.
+ */
+$aggr_spark_days   = count( $aggr_series );
+$aggr_spark_x      = static fn ( int $index ): float => ( $index + 0.5 ) * 1000 / $aggr_spark_days;
+$aggr_spark_y      = static fn ( int $value ): float => 100 - 100 * $value / $aggr_spark_top;
+$aggr_spark_now    = array();
+$aggr_spark_before = array();
+$aggr_spark_split  = $aggr_spark_days;
+
+foreach ( $aggr_series as $aggr_index => $aggr_bar ) {
+	$aggr_spark_now[]    = array( $aggr_spark_x( $aggr_index ), $aggr_spark_y( (int) $aggr_bar['impressions'] ) );
+	$aggr_spark_before[] = array( $aggr_spark_x( $aggr_index ), $aggr_spark_y( (int) ( $aggr_bar['previous'] ?? 0 ) ) );
+
+	if ( $aggr_spark_split === $aggr_spark_days && '' !== $aggr_counting && (string) $aggr_bar['day'] >= $aggr_counting ) {
+		$aggr_spark_split = $aggr_index;
+	}
+}
+
+$aggr_spark_move     = static fn ( array $point ): string => 'M ' . Chart_Path::number( $point[0] ) . ' ' . Chart_Path::number( $point[1] );
+$aggr_spark_curve    = Chart_Path::segments( $aggr_spark_now );
+$aggr_spark_last     = $aggr_spark_now[ $aggr_spark_days - 1 ];
+$aggr_spark_line     = $aggr_spark_move( $aggr_spark_now[0] ) . ' ' . implode( ' ', array_slice( $aggr_spark_curve, 0, max( 0, $aggr_spark_split - 1 ) ) );
+$aggr_spark_dashed   = $aggr_spark_split < $aggr_spark_days && $aggr_spark_days > 1
+	? $aggr_spark_move( $aggr_spark_now[ max( 0, $aggr_spark_split - 1 ) ] ) . ' ' . implode( ' ', array_slice( $aggr_spark_curve, max( 0, $aggr_spark_split - 1 ) ) )
+	: '';
+$aggr_spark_area     = $aggr_spark_move( $aggr_spark_now[0] ) . ' ' . implode( ' ', $aggr_spark_curve ) . ' L ' . Chart_Path::number( $aggr_spark_last[0] ) . ' 100 L ' . Chart_Path::number( $aggr_spark_now[0][0] ) . ' 100 Z';
+$aggr_spark_previous = $aggr_spark_has_prev ? $aggr_spark_move( $aggr_spark_before[0] ) . ' ' . implode( ' ', Chart_Path::segments( $aggr_spark_before ) ) : '';
+
+/*
+ * End labels beside each line's last point. When the two ends are close the
+ * lower label steps down, because two labels on one line read as neither.
+ */
+$aggr_end_now  = 100 - 100 * (int) $aggr_series[ $aggr_spark_days - 1 ]['impressions'] / $aggr_spark_top;
+$aggr_end_prev = 100 - 100 * (int) ( $aggr_series[ $aggr_spark_days - 1 ]['previous'] ?? 0 ) / $aggr_spark_top;
+
+if ( $aggr_spark_has_prev && abs( $aggr_end_now - $aggr_end_prev ) < 14 ) {
+	if ( $aggr_end_now <= $aggr_end_prev ) {
+		$aggr_end_prev = min( 100, $aggr_end_now + 14 );
+	} else {
+		$aggr_end_now = min( 100, $aggr_end_prev + 14 );
+	}
+}
+
 // About seven dates along the bottom, whatever the window.
-$aggr_spark_every = max( 1, (int) ceil( count( $aggr_series ) / 7 ) );
+$aggr_spark_every = max( 1, (int) ceil( $aggr_spark_days / 7 ) );
 ?>
 <section class="aggr-spark" aria-labelledby="aggr-spark-heading">
 	<div class="aggr-spark__head">
 		<h3 id="aggr-spark-heading" class="aggr-spark__title"><?php esc_html_e( 'Impressions per day', 'aggressive-ads' ); ?></h3>
-		<?php if ( '' !== $aggr_counting ) : ?>
-			<span class="aggr-spark__key" aria-hidden="true"><?php esc_html_e( 'Still being counted', 'aggressive-ads' ); ?></span>
-		<?php endif; ?>
+		<ul class="aggr-spark__legend" aria-hidden="true">
+			<li class="aggr-spark__key"><?php esc_html_e( 'This period', 'aggressive-ads' ); ?></li>
+			<?php if ( $aggr_spark_has_prev ) : ?>
+				<li class="aggr-spark__key aggr-spark__key--previous"><?php esc_html_e( 'Previous period', 'aggressive-ads' ); ?></li>
+			<?php endif; ?>
+			<?php if ( '' !== $aggr_counting ) : ?>
+				<li class="aggr-spark__key aggr-spark__key--counting"><?php esc_html_e( 'Still being counted', 'aggressive-ads' ); ?></li>
+			<?php endif; ?>
+		</ul>
 	</div>
 
-	<div class="aggr-spark__plot" style="--aggr-spark-bars: <?php echo esc_attr( (string) count( $aggr_series ) ); ?>">
+	<div class="aggr-spark__plot" style="--aggr-spark-bars: <?php echo esc_attr( (string) $aggr_spark_days ); ?>">
 		<div class="aggr-spark__scale" aria-hidden="true">
 			<span><?php echo esc_html( $aggr_spark_scale( (float) $aggr_spark_top ) ); ?></span>
 			<span><?php echo esc_html( $aggr_spark_scale( $aggr_spark_top / 2 ) ); ?></span>
@@ -88,30 +143,58 @@ $aggr_spark_every = max( 1, (int) ceil( count( $aggr_series ) / 7 ) );
 		</div>
 
 		<div class="aggr-spark__chart">
-			<ol class="aggr-spark__track" aria-label="<?php echo esc_attr( $aggr_spark_label ); ?>">
-				<?php foreach ( $aggr_series as $aggr_bar ) : ?>
-					<?php
-					$aggr_bar_count    = (int) $aggr_bar['impressions'];
-					$aggr_bar_counting = '' !== $aggr_counting && (string) $aggr_bar['day'] >= $aggr_counting;
-					$aggr_bar_text     = sprintf(
-						/* translators: 1: weekday. 2: impression count. */
-						_n( '%1$s: %2$s impression', '%1$s: %2$s impressions', $aggr_bar_count, 'aggressive-ads' ),
-						(string) $aggr_bar['label'],
-						number_format_i18n( $aggr_bar_count )
-					);
-					?>
-					<li class="aggr-spark__day<?php echo $aggr_bar_counting ? ' aggr-spark__day--counting' : ''; ?>">
-						<span class="aggr-spark__bar" style="height: <?php echo esc_attr( (string) round( 100 * $aggr_bar_count / $aggr_spark_top, 2 ) ); ?>%"></span>
-						<span class="aggr-sr"><?php echo esc_html( $aggr_bar_text ); ?></span>
-						<span class="aggr-spark__tip" aria-hidden="true"><?php echo esc_html( $aggr_bar_text ); ?></span>
-					</li>
-				<?php endforeach; ?>
-			</ol>
+			<div class="aggr-spark__canvas">
+				<svg class="aggr-spark__svg" viewBox="0 0 1000 100" preserveAspectRatio="none" aria-hidden="true" focusable="false">
+					<defs>
+						<linearGradient id="aggr-spark-fill" x1="0" y1="0" x2="0" y2="1">
+							<stop offset="0" class="aggr-spark__fill-top"/>
+							<stop offset="1" class="aggr-spark__fill-bottom"/>
+						</linearGradient>
+					</defs>
+					<path d="<?php echo esc_attr( $aggr_spark_area ); ?>" fill="url(#aggr-spark-fill)"/>
+					<?php if ( '' !== $aggr_spark_previous ) : ?>
+						<path class="aggr-spark__line aggr-spark__line--previous" d="<?php echo esc_attr( $aggr_spark_previous ); ?>" vector-effect="non-scaling-stroke"/>
+					<?php endif; ?>
+					<?php if ( $aggr_spark_split > 1 ) : ?>
+						<path class="aggr-spark__line" d="<?php echo esc_attr( $aggr_spark_line ); ?>" vector-effect="non-scaling-stroke"/>
+					<?php endif; ?>
+					<?php if ( '' !== $aggr_spark_dashed ) : ?>
+						<path class="aggr-spark__line aggr-spark__line--counting" d="<?php echo esc_attr( $aggr_spark_dashed ); ?>" vector-effect="non-scaling-stroke"/>
+					<?php endif; ?>
+				</svg>
+
+				<ol class="aggr-spark__track" aria-label="<?php echo esc_attr( $aggr_spark_label ); ?>">
+					<?php foreach ( $aggr_series as $aggr_index => $aggr_bar ) : ?>
+						<?php
+						$aggr_bar_count = (int) $aggr_bar['impressions'];
+						$aggr_bar_text  = sprintf(
+							/* translators: 1: weekday. 2: impression count. */
+							_n( '%1$s: %2$s impression', '%1$s: %2$s impressions', $aggr_bar_count, 'aggressive-ads' ),
+							(string) $aggr_bar['label'],
+							number_format_i18n( $aggr_bar_count )
+						);
+
+						if ( $aggr_spark_has_prev ) {
+							$aggr_bar_text .= ' · ' . sprintf(
+								/* translators: %s: impressions on the same day of the previous period. */
+								__( 'previous period %s', 'aggressive-ads' ),
+								number_format_i18n( (int) $aggr_bar['previous'] )
+							);
+						}
+						?>
+						<li class="aggr-spark__day<?php echo $aggr_index === $aggr_spark_days - 1 ? ' aggr-spark__day--last' : ''; ?>">
+							<span class="aggr-spark__dot" style="bottom: <?php echo esc_attr( Chart_Path::number( 100 * $aggr_bar_count / $aggr_spark_top ) ); ?>%" aria-hidden="true"></span>
+							<span class="aggr-sr"><?php echo esc_html( $aggr_bar_text ); ?></span>
+							<span class="aggr-spark__tip" aria-hidden="true"><?php echo esc_html( $aggr_bar_text ); ?></span>
+						</li>
+					<?php endforeach; ?>
+				</ol>
+			</div>
 
 			<?php
 			/*
-			 * A label every few bars rather than one per bar or only the two
-			 * ends: a per-bar label is a smear over a quarter, and two ends leave
+			 * A label every few days rather than one per day or only the two
+			 * ends: a per-day label is a smear over a quarter, and two ends leave
 			 * the middle to guesswork. The per-day figures are announced from the
 			 * list above, so thinning these loses nothing for a screen reader.
 			 */
@@ -123,6 +206,13 @@ $aggr_spark_every = max( 1, (int) ceil( count( $aggr_series ) / 7 ) );
 					<span <?php echo $aggr_tick > 0 && 1 === $aggr_tick % 2 ? 'class="aggr-spark__tick--minor"' : ''; ?>><?php echo $aggr_tick >= 0 ? esc_html( (string) $aggr_bar['label'] ) : ''; ?></span>
 				<?php endforeach; ?>
 			</div>
+		</div>
+
+		<div class="aggr-spark__ends" aria-hidden="true">
+			<span class="aggr-spark__end" style="top: <?php echo esc_attr( Chart_Path::number( $aggr_end_now ) ); ?>%"><?php esc_html_e( 'Now', 'aggressive-ads' ); ?></span>
+			<?php if ( $aggr_spark_has_prev ) : ?>
+				<span class="aggr-spark__end aggr-spark__end--previous" style="top: <?php echo esc_attr( Chart_Path::number( $aggr_end_prev ) ); ?>%"><?php esc_html_e( 'Before', 'aggressive-ads' ); ?></span>
+			<?php endif; ?>
 		</div>
 	</div>
 

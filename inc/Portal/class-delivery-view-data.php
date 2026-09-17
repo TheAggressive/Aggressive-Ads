@@ -352,16 +352,24 @@ final class Delivery_View_Data {
 	 * quarter, where the same seven names repeat thirteen times, so longer
 	 * windows label by date instead.
 	 *
+	 * Each day also carries the same day of the previous equal window — the
+	 * window the tiles compare against — so the chart draws the comparison the
+	 * figures above it state. Matched by position: day three of this window
+	 * against day three of that one.
+	 *
 	 * @param int $org_id Organization to report on.
-	 * @return list<array{day: string, label: string, impressions: int, height: int}>
+	 * @return list<array{day: string, label: string, impressions: int, height: int, previous: int}>
 	 */
 	public function series( int $org_id ): array {
 		if ( ! $this->reporting->surfaces() ) {
 			return array();
 		}
 
-		$raw = $this->reporting->series_for_org( $org_id, $this->period() );
-		$max = 0;
+		$period  = $this->period();
+		$earlier = $period->previous();
+		$raw     = $this->reporting->series_for_org( $org_id, $period );
+		$before  = $earlier === $period ? array() : array_values( $this->reporting->series_for_org( $org_id, $earlier ) );
+		$max     = 0;
 
 		foreach ( $raw as $row ) {
 			$max = max( $max, $row['impressions'] );
@@ -371,12 +379,13 @@ final class Delivery_View_Data {
 
 		$format = count( $raw ) > 7 ? 'j M' : 'D';
 
-		foreach ( $raw as $row ) {
+		foreach ( array_values( $raw ) as $index => $row ) {
 			$series[] = array(
 				'day'         => $row['day'],
 				'label'       => $this->day_label( $row['day'], $format ),
 				'impressions' => $row['impressions'],
 				'height'      => Reporting_Rules::bar_height( $row['impressions'], $max ),
+				'previous'    => (int) ( $before[ $index ]['impressions'] ?? 0 ),
 			);
 		}
 
