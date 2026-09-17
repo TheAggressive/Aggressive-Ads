@@ -28,6 +28,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 use Aggressive\Ads\Assets\Assets;
 use Aggressive\Ads\Domain\Campaign_Rules;
+use Aggressive\Ads\Domain\Timezone_Label;
 use Aggressive\Ads\Portal\Campaign_Actions;
 use Aggressive\Ads\Portal\Campaign_Nonces;
 use Aggressive\Ads\Portal\Date_Input;
@@ -154,7 +155,15 @@ $aggr_date_errors = in_array( $aggr_error_for, array( 'aggr-start-date', 'aggr-e
 		<div class="aggr-formgrid">
 			<div class="aggr-field">
 				<label for="aggr-start-date"><?php esc_html_e( 'Start date', 'aggressive-ads' ); ?></label>
-				<p id="aggr-start-hint" class="aggr-hint"><?php esc_html_e( 'The campaign begins at the start of this day in the site timezone.', 'aggressive-ads' ); ?></p>
+				<p id="aggr-start-hint" class="aggr-hint">
+				<?php
+				printf(
+					/* translators: %s: the site's timezone as a place, e.g. Los Angeles. */
+					esc_html__( 'The campaign begins at the start of this day, %s time.', 'aggressive-ads' ),
+					esc_html( Timezone_Label::name( wp_timezone_string() ) )
+				);
+				?>
+				</p>
 				<div class="aggr-date-input">
 				<input
 					id="aggr-start-date"
@@ -166,7 +175,7 @@ $aggr_date_errors = in_array( $aggr_error_for, array( 'aggr-start-date', 'aggr-e
 					aria-describedby="aggr-start-hint aggr-run-through<?php echo 'aggr-start-date' === $aggr_error_for ? ' aggr-campaign-error' : ''; ?>"
 					<?php echo 'aggr-start-date' === $aggr_error_for ? 'aria-invalid="true"' : ''; ?>
 				>
-					<span class="aggr-date-input__note" aria-hidden="true"><?php esc_html_e( '12:00 AM site time', 'aggressive-ads' ); ?></span>
+					<span class="aggr-date-input__note" aria-hidden="true"><?php esc_html_e( '12:00 AM', 'aggressive-ads' ); ?></span>
 				</div>
 			</div>
 
@@ -191,7 +200,7 @@ $aggr_date_errors = in_array( $aggr_error_for, array( 'aggr-start-date', 'aggr-e
 					<?php echo $aggr_fixed_run ? 'disabled' : ''; ?>
 					<?php echo 'aggr-end-date' === $aggr_error_for ? 'aria-invalid="true"' : ''; ?>
 				>
-					<span class="aggr-date-input__note" aria-hidden="true"><?php esc_html_e( '11:59 PM site time', 'aggressive-ads' ); ?></span>
+					<span class="aggr-date-input__note" aria-hidden="true"><?php esc_html_e( '11:59 PM', 'aggressive-ads' ); ?></span>
 				</div>
 			</div>
 		</div>

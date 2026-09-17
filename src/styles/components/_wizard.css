@@ -524,14 +524,20 @@
 	max-width: var(--aggr-field-measure);
 }
 
+/*
+ * The note sits in the input's end padding, after the browser's calendar
+ * button. That button is drawn at the end of the content box, so the padding
+ * is what makes room for the note; placing the note further in put it on top
+ * of the button once "00:00" became "12:00 AM".
+ */
 .aggr-field .aggr-date-input input[type="date"] {
-	padding-right: 9rem;
+	padding-right: 5.5rem;
 }
 
 .aggr-date-input__note {
 	position: absolute;
 	top: 50%;
-	right: 2.75rem;
+	right: var(--aggr-space-md);
 	color: var(--aggr-color-text-muted);
 	font-family: var(--aggr-font-mono);
 	font-size: 11px;

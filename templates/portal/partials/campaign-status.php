@@ -25,6 +25,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Domain\Timezone_Label;
 use Aggressive\Ads\Portal\Campaign_Actions;
 use Aggressive\Ads\Portal\Campaign_Nonces;
 
@@ -177,9 +178,10 @@ $aggr_status_note = match ( $aggr_status_now ) {
 							<span class="aggr-summary__sub">
 								<?php
 								printf(
-									/* translators: %d: number of days the campaign runs. */
-									esc_html( _n( '%d day · site time', '%d days · site time', $aggr_run_days, 'aggressive-ads' ) ),
-									(int) $aggr_run_days
+									/* translators: 1: number of days the campaign runs. 2: the site's timezone as a place, e.g. Los Angeles. */
+									esc_html( _n( '%1$d day · %2$s time', '%1$d days · %2$s time', $aggr_run_days, 'aggressive-ads' ) ),
+									(int) $aggr_run_days,
+									esc_html( Timezone_Label::name( wp_timezone_string() ) )
 								);
 								?>
 							</span>
