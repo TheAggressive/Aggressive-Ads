@@ -51,7 +51,7 @@ weighting has always been real; what was missing until recently was any way to
 reach it outside the REST route.
 
 **Reporting** (when the Reporting module is on) reads `aggr_rollups`: dashboard
-tiles, a seven-day sparkline, campaign list/detail columns, REST
+tiles, a daily impressions chart, campaign list/detail columns, REST
 `impressions` / `clicks` / `ctr`. House and other orgs are excluded in SQL.
 Spend stays absent until billing has a source.
 

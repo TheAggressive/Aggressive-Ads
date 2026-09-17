@@ -1,0 +1,72 @@
+/*
+ * The rail's foot and the top bar's role label.
+ *
+ * Out of `_chrome.css`, which reached the thousand-line gate when these were
+ * added: both are chrome, and both are small enough to read on their own.
+ */
+
+.aggr-org__role {
+	color: var(--aggr-color-text-subtle);
+	font-family: var(--aggr-font-mono);
+	font-size: 10.5px;
+	font-weight: 600;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+}
+
+/* The rail's foot: the one action every screen offers, and whose site it is. */
+.aggr-rail__foot {
+	display: flex;
+	flex-direction: column;
+	gap: var(--aggr-space-sm);
+	margin-top: auto;
+	padding-top: var(--aggr-space-lg);
+}
+
+.aggr-rail__foot form {
+	margin: 0;
+}
+
+.aggr-portal .aggr-rail__new {
+	display: flex;
+	gap: var(--aggr-space-xs);
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	min-height: var(--aggr-control-min);
+	padding: 0 var(--aggr-space-md);
+	background: var(--aggr-color-accent-rail);
+	border: 0;
+	border-radius: var(--aggr-radius-control);
+	color: var(--aggr-color-on-accent-rail);
+	font: inherit;
+	font-size: 14px;
+	font-weight: 600;
+	text-transform: none;
+	cursor: pointer;
+}
+
+.aggr-rail__new:hover {
+	filter: brightness(1.06);
+}
+
+.aggr-rail__site {
+	margin: 0;
+	color: var(--aggr-color-rail-text);
+	font-family: var(--aggr-font-mono);
+	font-size: 11px;
+	text-align: center;
+}
+
+@media (max-width: 782px) {
+	.aggr-rail__foot {
+		flex-direction: row;
+		align-items: center;
+		margin: 0 0 0 auto;
+		padding: 0;
+	}
+
+	.aggr-rail__site {
+		display: none;
+	}
+}

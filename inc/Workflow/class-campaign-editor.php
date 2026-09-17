@@ -37,16 +37,21 @@ final class Campaign_Editor {
 	/**
 	 * Wizard steps that may be persisted as a resume point.
 	 *
-	 * @var array<int, string>
-	 */
-	public const WIZARD_STEPS = array( 'details', 'creative', 'destination', 'review' );
-
-	/**
-	 * Displayable wizard steps, including query-only final confirmation.
+	 * Three, not five. The destination step only read back addresses the
+	 * creative step had already collected, its dates belonged beside the
+	 * package they are priced against, and the submit step was the review
+	 * screen with a notes box — each cost a page load and asked nothing new.
 	 *
 	 * @var array<int, string>
 	 */
-	public const DISPLAY_STEPS = array( 'details', 'creative', 'destination', 'review', 'submit' );
+	public const WIZARD_STEPS = array( 'details', 'creative', 'review' );
+
+	/**
+	 * Displayable wizard steps. Submission happens on review.
+	 *
+	 * @var array<int, string>
+	 */
+	public const DISPLAY_STEPS = array( 'details', 'creative', 'review' );
 
 	/**
 	 * Constructor.
@@ -251,11 +256,16 @@ final class Campaign_Editor {
 			return $this->error( 'aggr_campaign_not_saved', __( 'The campaign could not be saved. Please try again.', 'aggressive-ads' ), 500 );
 		}
 
-		// A saved title is one the advertiser chose: validate_fields() has
-		// already refused an empty one, so reaching here means the placeholder
-		// is gone.
-		if ( array_key_exists( 'title', $clean ) ) {
+		// A posted title is one the advertiser chose: validate_fields() has
+		// already refused an empty one, so reaching here means the wizard's
+		// name, placeholder or automatic, is gone for good. A title in $clean
+		// that nobody posted is the wizard naming the campaign from its plan.
+		if ( array_key_exists( 'title', $fields ) ) {
 			$this->campaigns->set_title_is_placeholder( $campaign_id, false );
+			$this->campaigns->set_title_is_automatic( $campaign_id, false );
+		} elseif ( array_key_exists( 'title', $clean ) ) {
+			$this->campaigns->set_title_is_placeholder( $campaign_id, false );
+			$this->campaigns->set_title_is_automatic( $campaign_id, true );
 		}
 
 		if ( null !== $this->line_items && array_intersect( array( 'start_ts', 'end_ts', 'package_id', 'budget_cents' ), array_keys( $clean ) ) ) {
@@ -268,28 +278,19 @@ final class Campaign_Editor {
 	}
 
 	/**
-	 * Completes the destination-and-schedule step with submission-grade dates.
+	 * Leaves the creative step for review.
 	 *
-	 * Ordinary draft autosave may retain an unset or stale schedule. Completing
-	 * this wizard step is a stronger promise, so it applies the same date-window
-	 * rule used at submission and advances the durable resume point to review.
+	 * Nothing is posted with it: the dates were chosen on details and the ads
+	 * were uploaded one by one. What this adds is the promise that both are
+	 * complete, checked against what is stored — so a date that has passed
+	 * since details was saved is caught here rather than at submission.
 	 *
-	 * @param int $campaign_id Campaign post id.
-	 * @param int $start_ts    Start of the selected local day, as UTC Unix time.
-	 * @param int $end_ts      End of the selected local day, or zero for open-ended.
+	 * @param int $campaign_id  Campaign post id.
 	 * @param int $expected_rev Client's last-seen revision.
 	 * @return int|WP_Error New autosave revision on success.
 	 */
-	public function save_schedule( int $campaign_id, int $start_ts, int $end_ts, int $expected_rev ): int|WP_Error {
-		return $this->save(
-			$campaign_id,
-			array(
-				'start_ts'    => $start_ts,
-				'end_ts'      => $end_ts,
-				'wizard_step' => 'review',
-			),
-			$expected_rev
-		);
+	public function complete_creative( int $campaign_id, int $expected_rev ): int|WP_Error {
+		return $this->save( $campaign_id, array( 'wizard_step' => 'review' ), $expected_rev );
 	}
 
 	/**
@@ -414,12 +415,62 @@ final class Campaign_Editor {
 			$clean['end_ts'] = $end;
 		}
 
+		$package_id = array_key_exists( 'package_id', $clean ) ? (int) $clean['package_id'] : $this->campaigns->package_id( $campaign_id );
+		$plan_moved = array_key_exists( 'package_id', $clean ) || array_key_exists( 'start_ts', $clean );
+
+		/*
+		 * **A fixed package decides its own end date.** The advertiser bought a
+		 * number of days, so the portal no longer asks for an end it would only
+		 * have to check against the package. Derived whenever the package or
+		 * the start moves, and only when no end was supplied: a REST client or
+		 * a staff correction that names one explicitly still wins.
+		 */
+		if ( $plan_moved && ! array_key_exists( 'end_ts', $fields ) && $package_id > 0 && ! $this->packages->has_custom_duration( $package_id ) ) {
+			$end             = Campaign_Rules::fixed_end_ts( $start, $this->packages->duration_days( $package_id ), wp_timezone()->getName() );
+			$clean['end_ts'] = $end;
+		}
+
+		/*
+		 * The wizard names the campaign after its plan until somebody names it
+		 * themselves, so nobody has to invent a label before choosing what
+		 * they are buying. It keeps following the plan — switching package
+		 * renames it — for exactly as long as the name is still the wizard's.
+		 */
+		if ( $plan_moved && ! array_key_exists( 'title', $fields ) && $package_id > 0 && ( $this->campaigns->title_is_placeholder( $campaign_id ) || $this->campaigns->title_is_automatic( $campaign_id ) ) ) {
+			$automatic = $this->automatic_title( $package_id, $start );
+
+			if ( '' !== $automatic ) {
+				$clean['title'] = $automatic;
+			}
+		}
+
 		if ( 0 !== $end && ( 0 === $start || $end <= $start ) ) {
 			return $this->error( 'aggr_end_before_start', __( 'The end date must be after the start date.', 'aggressive-ads' ), 422, 'end_ts' );
 		}
 
 		if ( array_key_exists( 'advertiser_notes', $fields ) ) {
 			$clean['advertiser_notes'] = sanitize_textarea_field( (string) $fields['advertiser_notes'] );
+		}
+
+		/*
+		 * Empty is allowed and clears it: the link is a starting point for the
+		 * next upload, and every creative still carries and validates its own.
+		 * Anything else must be a link a creative could be saved with, so the
+		 * address the cards fill in is never one the upload would then refuse.
+		 */
+		if ( array_key_exists( 'default_click_url', $fields ) ) {
+			$link = trim( (string) $fields['default_click_url'] );
+
+			// `example.com/page` is how people type a link; it means https.
+			if ( '' !== $link && 1 !== preg_match( '#^[a-z][a-z0-9+.-]*:#i', $link ) ) {
+				$link = 'https://' . $link;
+			}
+
+			if ( '' !== $link && ( ! Campaign_Rules::is_valid_click_url( $link ) || false === wp_http_validate_url( $link ) ) ) {
+				return $this->error( 'aggr_default_click_url_invalid', __( 'Enter a valid http or https link, such as https://example.com.', 'aggressive-ads' ), 422, 'default_click_url' );
+			}
+
+			$clean['default_click_url'] = $link;
 		}
 
 		if ( array_key_exists( 'wizard_step', $fields ) ) {
@@ -441,6 +492,20 @@ final class Campaign_Editor {
 
 			if ( is_wp_error( $ready ) ) {
 				return $ready;
+			}
+		}
+
+		/*
+		 * Leaving details with a date is a promise about that date. Refusing a
+		 * past start here, beside the field, beats carrying it through the
+		 * uploads to be refused on review. An empty start still leaves: a draft
+		 * has to be savable before its schedule is decided.
+		 */
+		if ( 'creative' === ( $clean['wizard_step'] ?? '' ) && array_key_exists( 'start_ts', $clean ) && $start > 0 ) {
+			$dated = $this->validate_dates( $start, $end );
+
+			if ( is_wp_error( $dated ) ) {
+				return $dated;
 			}
 		}
 
@@ -484,12 +549,12 @@ final class Campaign_Editor {
 		}
 
 		if ( array() === $placement_ids || count( $creative_rows ) !== count( $placement_ids ) ) {
-			return $this->error( 'aggr_creatives_incomplete', __( 'Upload one creative for every package placement before scheduling.', 'aggressive-ads' ), 422, 'creatives' );
+			return $this->error( 'aggr_creatives_incomplete', __( 'Add an ad for every size in the package before continuing.', 'aggressive-ads' ), 422, 'creatives' );
 		}
 
 		foreach ( $placement_ids as $placement_id ) {
 			if ( 1 !== ( $coverage[ $placement_id ] ?? 0 ) ) {
-				return $this->error( 'aggr_creatives_incomplete', __( 'Upload one creative for every package placement before scheduling.', 'aggressive-ads' ), 422, 'creatives' );
+				return $this->error( 'aggr_creatives_incomplete', __( 'Add an ad for every size in the package before continuing.', 'aggressive-ads' ), 422, 'creatives' );
 			}
 		}
 
@@ -497,7 +562,7 @@ final class Campaign_Editor {
 	}
 
 	/**
-	 * Applies the additional invariants required to leave wizard Step 4.
+	 * Applies the additional invariants required to advance to review.
 	 *
 	 * Called only after campaign authorization and optimistic revision checks,
 	 * so coverage failures cannot reveal whether another tenant's object exists.
@@ -515,6 +580,17 @@ final class Campaign_Editor {
 			return $covered;
 		}
 
+		return $this->validate_dates( $start_ts, $end_ts );
+	}
+
+	/**
+	 * The submission-grade date window, as one delivery-safe error.
+	 *
+	 * @param int $start_ts Candidate start timestamp.
+	 * @param int $end_ts   Candidate end timestamp.
+	 * @return true|WP_Error
+	 */
+	private function validate_dates( int $start_ts, int $end_ts ): bool|WP_Error {
 		$window = Campaign_Rules::validate_window( $start_ts, $end_ts, Campaign_Rules::day_start_ts( time(), wp_timezone()->getName() ) );
 		$window->absorb( Campaign_Rules::validate_day_boundaries( $start_ts, $end_ts, wp_timezone()->getName() ) );
 
@@ -595,6 +671,35 @@ final class Campaign_Editor {
 			'budget_cents'  => $price_cents,
 			'currency'      => $currency,
 		);
+	}
+
+	/**
+	 * The name the wizard gives a campaign from its plan.
+	 *
+	 * The month is the site's, through wp_date(), because that is the calendar
+	 * the start date was chosen in.
+	 *
+	 * @param int $package_id Selected package.
+	 * @param int $start_ts   Start, or zero when not chosen yet.
+	 * @return string Empty when the package has no name to build from.
+	 */
+	private function automatic_title( int $package_id, int $start_ts ): string {
+		$name = $this->clean_title( $this->packages->name( $package_id ) );
+
+		if ( '' === $name ) {
+			return '';
+		}
+
+		$title = 0 === $start_ts
+			? $name
+			: sprintf(
+				/* translators: 1: package name. 2: month and year the campaign starts, e.g. October 2026. */
+				__( '%1$s – %2$s', 'aggressive-ads' ),
+				$name,
+				(string) wp_date( 'F Y', $start_ts )
+			);
+
+		return mb_substr( $this->clean_title( $title ), 0, self::MAX_TITLE_LENGTH );
 	}
 
 	/**

@@ -26,34 +26,41 @@ test( 'the shared creative dialog works in WebKit', async ( { page } ) => {
 	await signIn( page, 'advertiser@example.test', 'advertiser' );
 	await expectPortalA11y( page );
 
-	await page.getByRole( 'button', { name: 'Create campaign' } ).click();
+	await page
+		.getByRole( 'main' )
+		.getByRole( 'button', { name: 'New campaign' } )
+		.click();
 
 	/*
-	 * Wait for the step before typing into it. Creating a draft redirects, and
-	 * a name typed into the form that is on its way out is discarded with it —
-	 * which then reads as "choosing a package did nothing", because an unnamed
-	 * campaign deliberately does not advance.
+	 * Wait for the step before touching it. Creating a draft redirects, and a
+	 * date entered into the form that is on its way out is discarded with it.
 	 *
 	 * The module marks the form when it attaches, and that is the wait worth
-	 * making: the button's label cannot serve, because CSS now picks it
-	 * before paint and it is the same whether this code has run or not.
+	 * making: the button's label cannot serve, because CSS picks it before
+	 * paint and it is the same whether this code has run or not.
 	 */
 	await expect(
 		page.getByRole( 'heading', {
 			level: 2,
-			name: 'Name your campaign and choose a package',
+			name: 'Choose a package and dates',
 		} )
 	).toBeVisible();
 	await expect(
 		page.locator( 'form[data-aggr-autosave][data-aggr-autosave-ready]' )
 	).toBeAttached();
 
-	await page
-		.getByLabel( 'Campaign name' )
-		.fill( `E2E browser campaign WebKit ${ Date.now() }` );
-
-	// Name and package are one step now, and choosing the package finishes it.
+	// Package and dates are one step, and Continue is the only way on.
 	await page.getByRole( 'radio', { name: /Focused sidebar/ } ).check();
+	await page
+		.getByLabel( 'Start date' )
+		.fill(
+			new Date( Date.now() + 10 * 24 * 60 * 60 * 1000 )
+				.toISOString()
+				.slice( 0, 10 )
+		);
+	await page
+		.getByRole( 'button', { name: 'Continue to ads', exact: true } )
+		.click();
 
 	const upload = page.getByRole( 'region', { name: 'Article sidebar' } );
 

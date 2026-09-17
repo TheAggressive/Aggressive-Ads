@@ -8,9 +8,9 @@ Interactivity API stores: no SPA, no router, and no client-side state tree.
 | Namespace | Status | Owns |
 |---|---|---|
 | `aggr/dialog` | **Shipped** | Shared dialog primitive — open/close, stack, focus, scroll lock. Consumers: creative replace, live-ad preview, draft preview, remove confirmation |
-| `aggr/wizard` | **Shipped** | Step announcement, submit-step gating on the existing no-JS forms |
+| `aggr/wizard` | **Shipped** | Step announcement and focus on the existing no-JS forms; every step is an ordinary link |
 | `aggr/upload` | **Shipped** | Drag/drop onto the native file input, client size/type/dimension checks |
-| `aggr/autosave` | **Shipped** | Debounced PATCH of the public allowlist, dirty/save status |
+| `aggr/autosave` | **Shipped** | Debounced PATCH of the public allowlist, dirty/save status; the schedule fieldset following the chosen package; the page heading as the rename control, with its PATCH queued behind the form's so the two never race one revision |
 | `aggr/save` | **Shipped** | Posts a portal write without a page load and confirms it in a toast. Binds by `data-aggr-save`, not `data-wp-interactive`, because an element carries one namespace and the upload form already carries `aggr/upload`. Adds no endpoint: the same `admin-post.php` action, nonce and handler answer it, and `Portal\Creative_Actions::redirect()` returns JSON when the post carries `aggr_async`. **The server sends a `patch` map of selector → text and the client applies nothing else** — reading the new value off the submitted form is right only while a write changes nothing but its own field, and a share is a percentage of the other creatives on the placement. Text, never markup: the dialogs are printed separately in the footer, so swapping a card's HTML would orphan every trigger in it. An empty map means the page cannot be brought up to date and the client falls back to the redirect, which is why upload, remove and replace stay ordinary posts. Failures always follow the redirect back to the page that renders them beside their field |
 
 Four namespaces, deliberately. A single `portal` store would become the client-side god object this architecture exists to avoid.

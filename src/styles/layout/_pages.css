@@ -1,0 +1,305 @@
+/*
+ * Organization, account and help.
+ *
+ * Their own partial because they share a shape the wizard and the dashboard do
+ * not: a column somebody reads and a narrower column of things they act on.
+ */
+
+.aggr-columns {
+	display: grid;
+	gap: var(--aggr-space-lg);
+	align-items: start;
+}
+
+.aggr-columns__main,
+.aggr-columns__side {
+	display: flex;
+	flex-direction: column;
+	gap: var(--aggr-space-md);
+	min-width: 0;
+}
+
+@media (min-width: 64rem) {
+	.aggr-columns {
+		grid-template-columns: minmax(0, 1fr) 22rem;
+	}
+}
+
+/* Ownership is a role, not a status, so it does not borrow a status colour. */
+.aggr-pill--owner {
+	background: var(--aggr-color-rail);
+	color: var(--aggr-color-rail-text-strong);
+}
+
+/*
+ * How a campaign runs, as numbered cards. The list keeps its semantics; the
+ * counter is drawn rather than typed, so a step added or removed renumbers.
+ */
+.aggr-flow {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+	gap: var(--aggr-space-md);
+	margin: 0 0 var(--aggr-space-md);
+	padding: 0;
+	list-style: none;
+	counter-reset: aggr-flow;
+}
+
+.aggr-flow__step {
+	display: flex;
+	flex-direction: column;
+	gap: var(--aggr-space-2xs);
+	padding: var(--aggr-space-md) var(--aggr-space-lg);
+	background: var(--aggr-color-surface-raised);
+	border: 1px solid var(--aggr-border-color);
+	border-radius: var(--aggr-radius-control);
+	color: var(--aggr-color-text-muted);
+	font-size: 13px;
+	counter-increment: aggr-flow;
+}
+
+.aggr-flow__step::before {
+	color: var(--aggr-color-accent-strong);
+	font-family: var(--aggr-font-mono);
+	font-size: 12px;
+	font-weight: 600;
+	content: counter(aggr-flow, decimal-leading-zero);
+}
+
+.aggr-flow__step strong {
+	color: var(--aggr-color-text);
+	font-size: 15px;
+	font-weight: 650;
+}
+
+.aggr-columns__main > .aggr-panel,
+.aggr-columns__side > .aggr-panel {
+	margin-bottom: 0;
+}
+
+/* A card with its own padding, for headed forms rather than edge-to-edge tables. */
+.aggr-panel--padded {
+	display: flex;
+	flex-direction: column;
+	gap: var(--aggr-space-sm);
+	padding: var(--aggr-space-lg);
+}
+
+.aggr-panel--padded .aggr-hint {
+	margin: 0;
+}
+
+.aggr-panel__headrow--hinted {
+	align-items: flex-start;
+	padding: var(--aggr-space-lg) var(--aggr-space-lg) var(--aggr-space-sm);
+}
+
+.aggr-panel__headrow--hinted .aggr-panel__head {
+	padding: 0;
+	border: 0;
+}
+
+.aggr-panel__hint {
+	margin: var(--aggr-space-2xs) 0 0;
+	color: var(--aggr-color-text-muted);
+	font-size: 13px;
+}
+
+.aggr-person {
+	display: inline-flex;
+	gap: var(--aggr-space-sm);
+	align-items: center;
+}
+
+.aggr-person__initials,
+.aggr-profile__initials {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: 2rem;
+	height: 2rem;
+	border-radius: 50%;
+	background: var(--aggr-color-rail);
+	color: var(--aggr-color-rail-text-strong);
+	font-size: 12px;
+	font-weight: 700;
+}
+
+.aggr-table__strong {
+	display: block;
+	color: var(--aggr-color-text);
+	font-weight: 600;
+}
+
+.aggr-table__sub--plain {
+	font-family: inherit;
+}
+
+/* An action in a table row that reads as a link, still a real form button. */
+.aggr-portal .aggr-link-button {
+	min-height: auto;
+	padding: 0;
+	background: none;
+	border: 0;
+	color: var(--aggr-color-accent-strong);
+	font: inherit;
+	font-size: 13px;
+	font-weight: 600;
+	text-transform: none;
+	cursor: pointer;
+}
+
+.aggr-portal .aggr-link-button--danger {
+	color: var(--aggr-color-danger);
+}
+
+.aggr-callout {
+	display: flex;
+	gap: var(--aggr-space-sm);
+	align-items: center;
+	margin: 0;
+	padding: var(--aggr-space-sm) var(--aggr-space-md);
+	background: var(--aggr-color-surface-raised);
+	border: 1px solid var(--aggr-border-color);
+	border-radius: var(--aggr-radius-control);
+	color: var(--aggr-color-text-body);
+	font-size: 13px;
+}
+
+.aggr-callout svg {
+	flex: none;
+	color: var(--aggr-color-text-muted);
+}
+
+.aggr-bigfacts {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: var(--aggr-space-md);
+	margin: 0;
+}
+
+.aggr-bigfacts dt,
+.aggr-specs dt {
+	color: var(--aggr-color-text-subtle);
+	font-family: var(--aggr-font-mono);
+	font-size: 10.5px;
+	font-weight: 600;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+}
+
+.aggr-bigfacts dd {
+	margin: var(--aggr-space-2xs) 0 0;
+	font-size: 1.75rem;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+}
+
+.aggr-bigfacts--text dd {
+	font-size: 15px;
+	font-weight: 600;
+	overflow-wrap: anywhere;
+}
+
+.aggr-inline-form {
+	flex-direction: row;
+	flex-wrap: wrap;
+	gap: var(--aggr-space-sm);
+	align-items: flex-end;
+}
+
+.aggr-inline-form .aggr-field {
+	flex: 1 1 16rem;
+}
+
+.aggr-password {
+	flex-direction: row;
+	flex-wrap: wrap;
+	gap: var(--aggr-space-md);
+	align-items: center;
+}
+
+.aggr-password__icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 2.5rem;
+	height: 2.5rem;
+	border-radius: 10px;
+	background: var(--aggr-color-surface-sunken);
+}
+
+.aggr-password__text {
+	flex: 1 1 14rem;
+}
+
+.aggr-password form {
+	margin: 0;
+}
+
+.aggr-profile {
+	align-items: flex-start;
+}
+
+.aggr-profile__initials {
+	width: 3rem;
+	height: 3rem;
+	font-size: 15px;
+}
+
+.aggr-profile p {
+	margin: 0;
+}
+
+.aggr-profile__name {
+	font-size: 16px;
+	font-weight: 650;
+}
+
+.aggr-specs {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+	gap: var(--aggr-space-sm);
+	margin: var(--aggr-space-sm) 0;
+}
+
+.aggr-specs > div {
+	padding: var(--aggr-space-md);
+	background: var(--aggr-color-surface-raised);
+	border: 1px solid var(--aggr-border-color);
+	border-radius: var(--aggr-radius-control);
+}
+
+.aggr-specs dd {
+	margin: var(--aggr-space-2xs) 0 0;
+	font-weight: 600;
+}
+
+.aggr-specs dd.aggr-hint {
+	font-weight: 400;
+}
+
+.aggr-glossary {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+	gap: 0 var(--aggr-space-lg);
+}
+
+.aggr-glossary dl {
+	margin: 0;
+}
+
+.aggr-glossary dl > div {
+	display: grid;
+	grid-template-columns: 9.5rem minmax(0, 1fr);
+	gap: var(--aggr-space-sm);
+	align-items: baseline;
+	padding: var(--aggr-space-sm) 0;
+	border-top: 1px solid var(--aggr-border-color);
+	font-size: 13px;
+}
+
+.aggr-glossary dd {
+	margin: 0;
+}

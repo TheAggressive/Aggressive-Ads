@@ -30,9 +30,11 @@ $aggr_spark_label = sprintf(
 	$aggr_last
 );
 ?>
-<section class="aggr-panel" aria-labelledby="aggr-spark-heading">
-	<h2 id="aggr-spark-heading" class="aggr-panel__head"><?php esc_html_e( 'Impressions', 'aggressive-ads' ); ?></h2>
-	<p class="aggr-spark__lede"><?php echo esc_html( $aggr_range ); ?></p>
+<section class="aggr-spark" aria-labelledby="aggr-spark-heading">
+	<div class="aggr-spark__head">
+		<h3 id="aggr-spark-heading" class="aggr-spark__title"><?php esc_html_e( 'Impressions per day', 'aggressive-ads' ); ?></h3>
+		<p class="aggr-spark__lede"><?php echo esc_html( $aggr_range ); ?></p>
+	</div>
 	<ol class="aggr-spark__track" aria-label="<?php echo esc_attr( $aggr_spark_label ); ?>">
 		<?php foreach ( $aggr_series as $aggr_bar ) : ?>
 			<li

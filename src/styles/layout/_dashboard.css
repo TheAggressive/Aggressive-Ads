@@ -23,9 +23,10 @@
 }
 
 .aggr-stat__label {
-	font-size: 11px;
-	font-weight: 700;
-	letter-spacing: 1px;
+	font-family: var(--aggr-font-mono);
+	font-size: 10.5px;
+	font-weight: 600;
+	letter-spacing: 0.12em;
 	text-transform: uppercase;
 	color: var(--aggr-color-text-subtle);
 }
@@ -33,7 +34,9 @@
 .aggr-stat__value {
 	margin-top: var(--aggr-space-xs);
 	font-size: 30px;
-	font-weight: 800;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
+	letter-spacing: -0.025em;
 	line-height: 1.1;
 }
 
@@ -67,27 +70,30 @@
  * Not `.aggr-stat`, and the difference is the point. These are all-time counts;
  * the tiles are delivery for a chosen window. Giving both the same card put the
  * window picker between two identical-looking rows, so narrowing to seven days
- * read as "3 campaigns ran this week". Text on the page ground rather than a
- * card also spends the reader's attention where the money is, one row down.
+ * read as "3 campaigns ran this week".
+ *
+ * They are tiles on the page ground, and the delivery figures are tiles inside
+ * a card of their own with the window in its header — so the two rows are
+ * separated by the thing that governs one of them, not by one being plainer.
  */
 .aggr-pipeline {
-	display: flex;
-	flex-wrap: wrap;
-	gap: var(--aggr-space-lg);
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+	gap: var(--aggr-space-md);
 	margin: 0 0 var(--aggr-space-lg);
 	padding: 0;
 	list-style: none;
 }
 
 .aggr-pipeline__item {
-	display: flex;
-	align-items: baseline;
-	gap: var(--aggr-space-2xs);
+	display: block;
 }
 
 .aggr-pipeline__value {
-	font-size: 20px;
-	font-weight: 800;
+	font-size: 2rem;
+	letter-spacing: -0.03em;
+	font-weight: 700;
+	font-variant-numeric: tabular-nums;
 	line-height: 1;
 }
 
@@ -104,6 +110,14 @@
  */
 .aggr-delivery {
 	margin-bottom: var(--aggr-space-lg);
+	padding: var(--aggr-space-lg);
+	background: var(--aggr-color-surface);
+	border: 1px solid var(--aggr-border-color);
+	border-radius: var(--aggr-radius-panel);
+}
+
+.aggr-delivery .aggr-stat {
+	background: var(--aggr-color-surface-raised);
 }
 
 .aggr-delivery__head {
@@ -231,10 +245,20 @@
  */
 .aggr-pipeline__link {
 	display: flex;
-	align-items: baseline;
-	gap: var(--aggr-space-2xs);
+	flex-direction: column;
+	align-items: flex-start;
+	gap: var(--aggr-space-xs);
+	height: 100%;
+	padding: var(--aggr-space-md) var(--aggr-space-lg);
+	background: var(--aggr-color-surface);
+	border: 1px solid var(--aggr-border-color);
+	border-radius: var(--aggr-radius-panel);
 	color: inherit;
 	text-decoration: none;
+}
+
+.aggr-pipeline__link:hover {
+	border-color: var(--aggr-color-accent);
 }
 
 .aggr-pipeline__link:hover .aggr-pipeline__label,
@@ -248,4 +272,20 @@
 	margin: var(--aggr-space-xs) 0 0;
 	font-size: 13px;
 	color: var(--aggr-color-text-muted);
+}
+
+/*
+ * A package card that starts a campaign. It borrows the wizard's package
+ * choice so the catalogue reads the same in both places; these rules only
+ * undo what a button brings with it.
+ */
+.aggr-start__choice {
+	width: 100%;
+	color: inherit;
+	font: inherit;
+	text-align: start;
+}
+
+.aggr-start__choice:hover {
+	border-color: var(--aggr-color-accent);
 }

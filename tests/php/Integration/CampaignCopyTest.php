@@ -230,7 +230,8 @@ final class CampaignCopyTest extends WP_UnitTestCase {
 		$this->assertSame( array(), $this->campaigns->provider_ad_ids( $result ) );
 		$this->assertSame( '', $this->campaigns->internal_notes( $result ) );
 		$this->assertSame( '', $this->campaigns->review_notes( $result ) );
-		$this->assertSame( 'destination', $this->campaigns->wizard_step( $result ) );
+		// Details, not creative: the artwork came across, the dates never do.
+		$this->assertSame( 'details', $this->campaigns->wizard_step( $result ) );
 		$this->assertStringEndsWith( ' (renewal)', $this->campaigns->title( $result ) );
 
 		$copied = $this->creatives->for_campaign( $result );

@@ -97,7 +97,7 @@ final class Campaign_Copier {
 			return $creatives;
 		}
 
-		$wizard = $this->resume_step( $campaign_id, $creatives );
+		$wizard = $this->resume_step();
 		$step   = $this->campaigns->update_draft( $campaign_id, array( 'wizard_step' => $wizard ) );
 
 		if ( is_wp_error( $step ) ) {
@@ -141,11 +141,12 @@ final class Campaign_Copier {
 		$saved = $this->campaigns->update_draft(
 			$campaign_id,
 			array(
-				'package_id'       => $this->campaigns->package_id( $source_id ),
-				'placement_ids'    => $this->campaigns->placement_ids( $source_id ),
-				'budget_cents'     => $this->campaigns->budget_cents( $source_id ),
-				'currency'         => $this->campaigns->currency( $source_id ),
-				'advertiser_notes' => $this->campaigns->advertiser_notes( $source_id ),
+				'package_id'        => $this->campaigns->package_id( $source_id ),
+				'placement_ids'     => $this->campaigns->placement_ids( $source_id ),
+				'budget_cents'      => $this->campaigns->budget_cents( $source_id ),
+				'currency'          => $this->campaigns->currency( $source_id ),
+				'advertiser_notes'  => $this->campaigns->advertiser_notes( $source_id ),
+				'default_click_url' => $this->campaigns->default_click_url( $source_id ),
 			)
 		);
 
@@ -291,22 +292,15 @@ final class Campaign_Copier {
 	}
 
 	/**
-	 * Wizard resume point for the copy: new dates are always required.
+	 * Wizard resume point for the copy.
 	 *
-	 * @param int $campaign_id New draft.
-	 * @param int $copied      Creatives successfully copied.
+	 * Always details. A copy never carries the old dates, and the dates are
+	 * asked for there now, beside the package — resuming on the creative step
+	 * because the artwork came across would only send the advertiser back.
+	 *
+	 * @return string
 	 */
-	private function resume_step( int $campaign_id, int $copied ): string {
-		$placements = $this->campaigns->placement_ids( $campaign_id );
-
-		if ( $copied > 0 && array() !== $placements && $copied >= count( $placements ) ) {
-			return 'destination';
-		}
-
-		if ( $this->campaigns->package_id( $campaign_id ) > 0 || array() !== $placements ) {
-			return 'creative';
-		}
-
+	private function resume_step(): string {
 		return 'details';
 	}
 

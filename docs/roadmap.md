@@ -39,17 +39,16 @@ See [threat-model.md](threat-model.md).
 Dashboard, campaign list/detail, organization, account and the advertiser
 campaign flow.
 
-The current campaign wizard is **five steps**, not the retired six-step flow:
+The current campaign wizard is **three steps**; the retired five-step flow's
+stored resume points are mapped on read:
 
-1. details + package;
-2. creative;
-3. destination + schedule;
-4. review; and
-5. submit.
+1. package & dates;
+2. ads, with one destination link for the campaign; and
+3. review & submit.
 
 The complete flow works without JavaScript, including draft creation, package
 snapshot, exact-size private creative upload, authenticated preview/removal,
-destination confirmation, scheduling, review, final confirmation,
+a campaign destination link, scheduling, review and submission,
 transition-time revalidation, audit and reviewer notification. JavaScript adds
 progressive autosave/upload/dialog behavior rather than being the only path.
 

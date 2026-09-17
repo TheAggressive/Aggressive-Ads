@@ -105,6 +105,7 @@
 		align-items: center;
 	}
 
+
 	.aggr-main {
 		padding: var(--aggr-space-lg) var(--aggr-space-md);
 	}
@@ -114,8 +115,8 @@
 	position: absolute;
 	left: -9999px;
 	padding: var(--aggr-space-xs) var(--aggr-space-md);
-	background: var(--aggr-color-accent-strong);
-	color: var(--aggr-color-accent-contrast);
+	background: var(--aggr-color-accent);
+	color: var(--aggr-color-on-accent);
 	border-radius: var(--aggr-radius-control);
 }
 
@@ -145,10 +146,33 @@
 	text-decoration: none;
 }
 
+/*
+ * The default lockup: the product name, its last word in the accent. A site's
+ * own logo replaces all of it.
+ */
+.aggr-brand__lockup {
+	display: flex;
+	align-items: center;
+	gap: var(--aggr-space-sm);
+}
+
 .aggr-brand__mark {
-	font-size: 22px;
-	font-weight: 900;
-	letter-spacing: -0.5px;
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+	font-size: 13px;
+	font-weight: 600;
+	letter-spacing: 0.3em;
+	line-height: 1;
+	text-transform: uppercase;
+}
+
+.aggr-brand__word {
+	display: block;
+}
+
+.aggr-brand__word--accent {
+	color: var(--aggr-color-accent);
 }
 
 .aggr-brand__logo {
@@ -230,13 +254,13 @@
 
 .aggr-nav__link[aria-current="page"] .aggr-nav__icon {
 	background: var(--aggr-color-accent-rail);
-	color: var(--aggr-color-accent-contrast);
+	color: var(--aggr-color-on-accent-rail);
 }
 
 .aggr-org {
 	display: flex;
 	align-items: center;
-	gap: var(--aggr-space-xs);
+	gap: var(--aggr-space-sm);
 	font-size: 14px;
 	font-weight: 700;
 }
@@ -255,10 +279,10 @@
 	width: 34px;
 	height: 34px;
 	border-radius: 50%;
-	background: var(--aggr-color-accent-strong);
-	color: var(--aggr-color-accent-contrast);
-	font-size: 13px;
-	font-weight: 800;
+	background: var(--aggr-color-rail);
+	color: var(--aggr-color-rail-text-strong);
+	font-size: 12px;
+	font-weight: 700;
 }
 
 .aggr-pagehead {
@@ -303,8 +327,8 @@
 .aggr-title {
 	margin: 0;
 	font-size: clamp(1.5rem, 1.2rem + 1.4vw, 2rem);
-	font-weight: 800;
-	letter-spacing: -0.5px;
+	font-weight: 700;
+	letter-spacing: -0.025em;
 	line-height: 1.15;
 }
 
@@ -324,17 +348,16 @@
 }
 
 /*
- * Capitalized on purpose: it is the portal's chosen voice, and the portal is a
- * branded surface the site owner controls. wp-admin is not — the staff screens
- * use native WordPress markup and inherit core's typography, so this rule never
- * reaches them.
+ * Sentence case, and no rule under it. Capitalizing every word read as
+ * shouting once the rest of the portal went quiet, and the line beneath
+ * repeated a separation the panel's own padding already makes.
  */
 .aggr-panel__head {
-	padding: var(--aggr-space-md) var(--aggr-space-sm);
-	border-bottom: 1px solid var(--aggr-border-color);
-	font-size: 1.5rem;
-	font-weight: 700;
-	text-transform: capitalize;
+	padding: 0;
+	font-size: 1.1875rem;
+	font-weight: 650;
+	letter-spacing: -0.012em;
+	text-transform: none;
 	margin-bottom: var(--aggr-space-md);
 	margin-top: 0;
 }
@@ -378,9 +401,10 @@
 	padding: var(--aggr-space-sm) var(--aggr-space-lg);
 	background: var(--aggr-color-surface-sunken);
 	border-bottom: 1px solid var(--aggr-border-color);
-	font-size: 11px;
-	font-weight: 700;
-	letter-spacing: 0.5px;
+	font-family: var(--aggr-font-mono);
+	font-size: 10.5px;
+	font-weight: 600;
+	letter-spacing: 0.1em;
 	text-transform: uppercase;
 	color: var(--aggr-color-text-subtle);
 	text-align: left;
@@ -423,6 +447,9 @@
 	   the page scroll sideways on a phone. */
 .aggr-tablewrap {
 	overflow-x: auto;
+
+	/* Screen-reader text inside a scrolled table is placed against this, not the page. */
+	position: relative;
 }
 
 /*
@@ -430,14 +457,26 @@
 	 * information; the tint is emphasis.
 	 */
 .aggr-pill {
-	display: inline-block;
-	padding: 4px 10px;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 3px 10px;
 	border-radius: var(--aggr-radius-pill);
 	background: var(--aggr-color-neutral-tint);
 	color: var(--aggr-color-neutral);
 	font-size: 12px;
-	font-weight: 700;
+	font-weight: 600;
 	white-space: nowrap;
+}
+
+/* A dot in the pill's own ink: a second cue beside the word, never instead of it. */
+.aggr-pill::before {
+	flex: none;
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: currentcolor;
+	content: "";
 }
 
 /*
@@ -519,12 +558,12 @@
 	justify-content: center;
 	min-height: var(--aggr-control-min);
 	padding: 0 var(--aggr-space-lg);
-	background: var(--aggr-color-accent-strong);
-	color: var(--aggr-color-accent-contrast);
+	background: var(--aggr-color-accent);
+	color: var(--aggr-color-on-accent);
 	border: 1px solid transparent;
 	border-radius: var(--aggr-radius-control);
 	font: inherit;
-	font-weight: 700;
+	font-weight: 600;
 	font-size: 14px;
 	text-decoration: none;
 	white-space: nowrap;
@@ -666,7 +705,7 @@
 
 .aggr-signin__brand {
 	display: flex;
-	align-items: baseline;
+	align-items: center;
 	gap: var(--aggr-space-xs);
 	margin-bottom: var(--aggr-space-lg);
 }
@@ -677,8 +716,14 @@
 	 * need re-colouring — axe caught the subtitle at 1.84:1, which is what a
 	 * rail colour looks like on a pale background.
 	 */
-.aggr-signin .aggr-brand__mark {
+.aggr-signin .aggr-brand__mark,
+.aggr-signin .aggr-brand__lockup {
 	color: var(--aggr-color-text);
+}
+
+/* The brand orange is 3.2:1 on the canvas; as text here it needs the darker one. */
+.aggr-signin .aggr-brand__word--accent {
+	color: var(--aggr-color-accent-strong);
 }
 
 .aggr-signin .aggr-brand__sub {

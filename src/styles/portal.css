@@ -1,8 +1,9 @@
 /*
  * Portal styles entry.
  *
- * Implements the portal design: a dark rail, a warm paper canvas, and Archivo
- * set heavy for headings.
+ * Implements the portal design: a graphite rail, a soft white canvas, Signal
+ * orange for everything you act on, Archivo for words and the system monospace
+ * for numbers and labels.
  *
  * Every token carries a literal value. Nothing resolves through
  * --wp--preset--*, because Twenty Twenty-Five and the LAAO theme expose
@@ -22,7 +23,14 @@
 @import './base/_fonts.css';
 @import './base/_tokens.css';
 @import './layout/_chrome.css';
+@import './layout/_rail-foot.css';
 @import './layout/_dashboard.css';
+@import './layout/_lists.css';
+@import './layout/_pages.css';
 @import './components/_surfaces.css';
+@import './components/_wizard.css';
+@import './components/_wizard-details.css';
+@import './components/_status.css';
 @import './components/_creative-card.css';
 @import './components/_overlay.css';
+@import './base/_theme-guard.css';
