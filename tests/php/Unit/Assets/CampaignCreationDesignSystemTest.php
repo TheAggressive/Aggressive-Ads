@@ -176,7 +176,7 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 		 * them looks like nothing until a theme repaints the buttons.
 		 */
 		$this->assertSame( 1, preg_match( '/\.aggr-portal button\[type="submit"\] \{[^}]*text-transform: none;/s', $css ), 'Portal submit buttons will take a theme\'s capitals again.' );
-		$this->assertSame( 1, preg_match( '/\.aggr-portal \.aggr-button \{[^}]*background: var\(--aggr-color-accent\);[^}]*color: var\(--aggr-color-on-accent\);/s', $css ), 'Portal buttons will take a theme\'s colours again.' );
+		$this->assertSame( 1, preg_match( '/\.aggr-portal \.aggr-button \{[^}]*background: var\(--aggr-color-primary\);[^}]*color: var\(--aggr-color-on-primary\);/s', $css ), 'Portal buttons will take a theme\'s colours again.' );
 		$this->assertSame( 1, preg_match( '/\.aggr-portal \.aggr-button--secondary \{[^}]*background: var\(--aggr-color-surface\);/s', $css ), 'Secondary buttons will take a theme\'s red again.' );
 	}
 
@@ -195,6 +195,13 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 				$css
 			),
 			'A theme with a bare label rule will uppercase every field in the portal again.'
+		);
+
+		// The package cards are labels too, and shouted their names until guarded.
+		$this->assertSame(
+			1,
+			preg_match( '/\.aggr-portal label\.aggr-choice \{[^}]*text-transform: none;/s', $css ),
+			'A theme with a bare label rule will uppercase the package cards again.'
 		);
 	}
 
@@ -290,10 +297,16 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 		$this->assertIsString( $table );
 		$this->assertIsString( $detail );
 		$this->assertIsString( $facts );
+		// The delivery card is shared by the dashboard and a campaign's page.
+		$card = file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/partials/delivery-card.php' );
+
+		$this->assertIsString( $card );
 		$this->assertStringContainsString( 'delivery_counts()', $dashboard );
 		$this->assertStringContainsString( 'delivery_series()', $dashboard );
-		$this->assertStringContainsString( 'partials/sparkline.php', $dashboard );
-		$this->assertStringContainsString( 'Impressions and clicks from native delivery', $dashboard );
+		$this->assertStringContainsString( 'partials/delivery-card.php', $dashboard );
+		$this->assertStringContainsString( 'partials/delivery-card.php', $detail );
+		$this->assertStringContainsString( 'partials/sparkline.php', $card );
+		$this->assertStringContainsString( 'Impressions and clicks from native delivery', $card );
 		$this->assertStringContainsString( '$aggr_show_metrics', $table );
 		$this->assertStringContainsString( 'CTR', $table );
 		$this->assertStringContainsString( 'partials/campaign-summary-facts.php', $detail );
@@ -411,26 +424,33 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 	 */
 	public function test_the_reporting_window_is_scoped_to_the_delivery_figures(): void {
 		$dashboard = file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/screens/dashboard.php' );
+		$card      = file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/partials/delivery-card.php' );
 
 		$this->assertIsString( $dashboard );
+		$this->assertIsString( $card );
 
+		// The pipeline counts come first, then the card that carries the window.
 		$counts  = strpos( $dashboard, 'class="aggr-pipeline"' );
-		$section = strpos( $dashboard, 'class="aggr-delivery"' );
-		$picker  = strpos( $dashboard, 'class="aggr-range"' );
-		$tiles   = strpos( $dashboard, 'class="aggr-stats"' );
+		$include = strpos( $dashboard, 'partials/delivery-card.php' );
 
 		$this->assertIsInt( $counts, 'The pipeline counts render as their own list, not as metric tiles.' );
+		$this->assertIsInt( $include );
+		$this->assertLessThan( $include, $counts );
+		$this->assertSame( 0, substr_count( $dashboard, 'class="aggr-stats"' ), 'Delivery tiles belong to the card, not the dashboard.' );
+
+		$section = strpos( $card, 'class="aggr-delivery"' );
+		$picker  = strpos( $card, 'class="aggr-range"' );
+		$tiles   = strpos( $card, 'class="aggr-stats"' );
+
 		$this->assertIsInt( $section, 'Delivery is a section so the picker has something to belong to.' );
 		$this->assertIsInt( $picker );
 		$this->assertIsInt( $tiles );
-
-		$this->assertLessThan( $section, $counts );
 		$this->assertLessThan( $picker, $section, 'The picker must sit inside the section it governs.' );
 		$this->assertLessThan( $tiles, $picker );
 
 		$this->assertSame(
 			1,
-			substr_count( $dashboard, 'class="aggr-stats"' ),
+			substr_count( $card, 'class="aggr-stats"' ),
 			'A second tile row is how the two kinds of number became indistinguishable.'
 		);
 	}

@@ -68,8 +68,14 @@
 	--aggr-color-danger-tint: #fcf0f1;
 	--aggr-color-neutral: #2271b1;
 	--aggr-color-neutral-tint: #f0f6fc;
-	--aggr-color-ended: #50575e;
-	--aggr-color-ended-tint: #f0f0f1;
+	--aggr-color-ended: #3c434a;
+	--aggr-color-ended-tint: #e6eaee;
+	--aggr-color-info: #135e96;
+	--aggr-color-info-tint: #e8f1f8;
+	--aggr-color-attention: #a33a12;
+	--aggr-color-attention-tint: #fcf0e8;
+	--aggr-color-paused: #5b3fa3;
+	--aggr-color-paused-tint: #f1edfb;
 
 	/* The rail is core's admin menu, for any component that reaches for it. */
 	--aggr-color-rail: #1d2327;
@@ -80,6 +86,10 @@
 
 	/* Shared rules read these; core's blue keeps white labels. */
 	--aggr-color-on-accent: #ffffff;
+
+	/* wp-admin keeps core's blue primary buttons. */
+	--aggr-color-primary: #2271b1;
+	--aggr-color-on-primary: #ffffff;
 	--aggr-color-on-accent-rail: #1d2327;
 	--aggr-font-mono:
 		ui-monospace, "SFMono-Regular", "Cascadia Mono", "Segoe UI Mono", "Menlo",

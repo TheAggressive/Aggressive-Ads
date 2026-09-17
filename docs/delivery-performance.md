@@ -155,6 +155,43 @@ P13 hit twice. Restoring the missing predicate is what the test was proven
 against: with the date filter made non-sargable the values stay correct and the
 plan still names `org_day`, and the assertion fails at 12,775 of 18,250.
 
+### A campaign's reads are the organization's, narrowed
+
+A campaign page reads the same two ranged totals and series with
+`AND ( %d = 0 OR r.campaign_id = %d )` beside the tenant predicate. With no
+campaign the condition folds to true and the plan is the organization read
+above; with one it narrows rows already scoped by `org_day`. It never replaces
+the organization predicate, so a campaign id alone reads nothing.
+
+### Reused for five minutes, only where a cache persists
+
+`totals_for_org()` and `series_for_org()` go through `remember()`: keyed by the
+read, the organization, the campaign and both days of the range, and kept for
+five minutes in the `aggr_reports` group — but only when
+`wp_using_ext_object_cache()` is true. Without a persistent cache WordPress's
+cache lasts one request, in which each read already happens once, so caching
+would only add work. Five minutes is WordPress VIP's floor for object cache
+lifetimes; the card already says recent days are still coming in, so a figure a
+few minutes old is one the reader was told to expect. The CSV export is never
+cached: a download is the figure somebody files.
+
+## The campaigns list is a handful of queries, not one per row
+
+Each list row reads a campaign's post and a dozen meta keys, then its package
+and placements by id. Built one row at a time that was about two and a half
+queries a row. `Campaign_List_View_Data` loads a page's posts and meta together
+(`_prime_post_caches()`), then its packages and placements together, before
+building any row; dashboard tiles count with a one-row `found_posts` query; and
+the dashboard asks for the five rows it shows rather than a page of twenty.
+
+Measured on the Studio site, advertiser with 46 campaigns, cold cache:
+
+| read | before | after |
+|---|---:|---:|
+| campaigns list, page of 20 | 49 queries | 13 |
+| needs-your-attention card | 46 queries | 10 |
+| whole dashboard | 76 queries | 40 |
+
 ## Frequency capping needs the object cache more than the rest
 
 `Transient_Frequency_Store` uses `wp_cache_incr()` when a persistent object

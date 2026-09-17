@@ -99,7 +99,7 @@ determined user can navigate around.
 
 | Module | Off means |
 |---|---|
-| Reporting | No impression, click or CTR figures anywhere: no tiles, no sparkline, no table column, no REST fields, no CSV export. Delivery keeps counting; you are choosing not to show the numbers |
+| Reporting | No impression, click or CTR figures anywhere: no tiles, no daily chart on the dashboard or a campaign's page, no table column, no REST fields, no CSV export. Delivery keeps counting; you are choosing not to show the numbers |
 | Public signup | `/advertiser/signup/` returns 404 unless the URL carries a valid invitation token |
 | Billing | Currency fields still exist on stored campaigns; no checkout is implied anywhere |
 
@@ -111,12 +111,27 @@ served, not a feature.
 Product name, logo, tagline, and the accent and surface colours written as
 `--aggr-*` custom properties onto `.aggr-portal` and the staff screens.
 
-The two accents do different jobs. **Accent** fills buttons, marks what is
-selected and draws the focus ring; the label on a button is set in whichever of
-the text colour and white reads better on it, so a dark accent keeps white
-labels without a separate setting. **Accent for links** is the accent as text
-and must read on the surface. The shipped palette is Graphite `#111214`, Signal
-orange `#F05A28` (links `#B5401A`) and Soft white `#F7F7F5`.
+The colours do different jobs. **Primary buttons** are the **text** colour,
+labelled in whichever of the surface and white reads better on it — graphite
+with white on the shipped palette. **Accent** marks where you are and what is
+live: the current step, the active tab and navigation item, selected choices,
+the chart line and the focus ring, plus the rail's own "New campaign" button,
+where graphite would disappear against the dark rail; anything set on the
+accent is labelled in whichever of the text colour and white reads better.
+**Accent for links** is the accent as text and must read on the surface. The
+shipped palette is Graphite `#111214`, Signal orange `#F05A28` (links `#B5401A`)
+and Soft white `#F7F7F5`.
+
+Buttons moved off the accent because orange works best as a marker. Graphite on
+Signal orange passes AA at 5.53:1 but reads heavy on every button, and white on
+it fails at 3.39:1; graphite with white is 18.7:1. wp-admin keeps core's blue
+primary buttons.
+
+Campaign statuses have fixed colours, not brand colours, so a status means the
+same thing on every site: grey draft, amber with the review team, orange sent
+back, blue approved or scheduled, green live, purple paused, slate completed,
+red rejected or cancelled. Each pill carries its word and a dot as well, and
+every pair is asserted at AA.
 
 A site that saved brand colours before a palette change keeps what it saved:
 stored settings always win over the plugin's defaults. Re-save the Brand

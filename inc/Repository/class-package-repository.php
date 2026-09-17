@@ -81,6 +81,24 @@ final class Package_Repository {
 	}
 
 	/**
+	 * Loads several packages and their meta in two queries, ahead of reading them.
+	 *
+	 * A list builds each row from a post and its meta. Read one post at a time
+	 * that is a query per post and another per post's meta; loaded together it
+	 * is two queries for the whole page, and every later read is a cache hit.
+	 *
+	 * @param array<int, int> $ids Post ids.
+	 * @return void
+	 */
+	public function prime( array $ids ): void {
+		$ids = array_values( array_unique( array_filter( array_map( 'intval', $ids ) ) ) );
+
+		if ( array() !== $ids ) {
+			_prime_post_caches( $ids, false, true );
+		}
+	}
+
+	/**
 	 * Package display name.
 	 *
 	 * @param int $package_id Package post id.

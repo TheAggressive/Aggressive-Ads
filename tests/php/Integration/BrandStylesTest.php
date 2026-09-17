@@ -77,6 +77,7 @@ final class BrandStylesTest extends WP_UnitTestCase {
 		$this->assertStringContainsString( '--aggr-color-accent-strong:#b5401a;', $css );
 		$this->assertStringContainsString( '--aggr-color-canvas:#f7f7f5;', $css );
 		$this->assertStringContainsString( '--aggr-color-on-accent:#111214;', $css, 'Button labels on the orange must be graphite; white is 3.4:1.' );
+		$this->assertStringContainsString( '--aggr-color-primary:#111214;--aggr-color-on-primary:#ffffff;', $css, 'Primary buttons follow the saved text colour with a readable label.' );
 	}
 
 	/**

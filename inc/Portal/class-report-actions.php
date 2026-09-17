@@ -15,6 +15,7 @@ use Aggressive\Ads\Domain\Csv_Writer;
 use Aggressive\Ads\Domain\Report_Period;
 use Aggressive\Ads\Domain\Report_Request;
 use Aggressive\Ads\Domain\Reporting_Rules;
+use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Workflow\Reporting_Read;
@@ -50,12 +51,14 @@ final class Report_Actions implements Service {
 	/**
 	 * Constructor.
 	 *
-	 * @param Reporting_Read $reporting Gate and rollup reads.
-	 * @param Org_Repository $orgs      Organization membership.
+	 * @param Reporting_Read      $reporting Gate and rollup reads.
+	 * @param Org_Repository      $orgs      Organization membership.
+	 * @param Campaign_Repository $campaigns A campaign's existence, organization and name.
 	 */
 	public function __construct(
 		private readonly Reporting_Read $reporting,
-		private readonly Org_Repository $orgs
+		private readonly Org_Repository $orgs,
+		private readonly Campaign_Repository $campaigns
 	) {
 	}
 
@@ -93,6 +96,30 @@ final class Report_Actions implements Service {
 				'',
 				array( 'response' => 404 )
 			);
+		}
+
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- check_admin_referer() ran above.
+		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( wp_unslash( $_POST['campaign_id'] ) ) : 0;
+
+		if ( $campaign_id > 0 ) {
+			/*
+			 * One campaign's CSV. Authorized the way its page is, by
+			 * `read_post`, and scoped to the organization it belongs to. A
+			 * campaign the caller may not see is answered exactly like one that
+			 * does not exist, so the id reveals nothing.
+			 */
+			if ( ! $this->campaigns->exists( $campaign_id ) || ! current_user_can( 'read_post', $campaign_id ) ) {
+				wp_die(
+					esc_html__( 'There is no campaign to report on.', 'aggressive-ads' ),
+					'',
+					array( 'response' => 404 )
+				);
+			}
+
+			$period = $this->requested_period();
+			$rows   = $this->reporting->daily_rows_for_org( $this->campaigns->org_id( $campaign_id ), $period, $campaign_id );
+
+			Csv_Download::send( $this->document( $rows ), $this->campaign_filename( $campaign_id, $period->days ) );
 		}
 
 		$org_id = $this->current_org_id();
@@ -211,6 +238,20 @@ final class Report_Actions implements Service {
 		}
 
 		return Csv_Writer::document( $header, $body );
+	}
+
+	/**
+	 * A download name for one campaign's report. The name is advertiser-set,
+	 * so it goes through sanitize_file_name() before it reaches a header.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @param int $days        Window length.
+	 */
+	private function campaign_filename( int $campaign_id, int $days ): string {
+		$name = sanitize_file_name( $this->campaigns->title( $campaign_id ) );
+		$name = '' === $name ? 'campaign-' . $campaign_id : $name;
+
+		return sprintf( '%s-performance-%dd-%s.csv', $name, $days, gmdate( 'Y-m-d' ) );
 	}
 
 	/**

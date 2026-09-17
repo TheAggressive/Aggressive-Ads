@@ -748,10 +748,10 @@
 	margin-top: var(--aggr-space-xs);
 	min-height: var(--aggr-control-min);
 	padding: 0.45rem 0.85rem;
-	border: 1px solid var(--aggr-color-accent);
+	border: 1px solid var(--aggr-color-primary);
 	border-radius: var(--aggr-radius-control);
-	background: var(--aggr-color-accent);
-	color: var(--aggr-color-on-accent);
+	background: var(--aggr-color-primary);
+	color: var(--aggr-color-on-primary);
 	font-size: 13px;
 	font-weight: 700;
 	line-height: 1.2;

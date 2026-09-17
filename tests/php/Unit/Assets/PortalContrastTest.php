@@ -186,7 +186,7 @@ final class PortalContrastTest extends TestCase {
 	 * @return void
 	 */
 	public function test_every_status_pill_reads_on_its_tint(): void {
-		foreach ( array( 'live', 'pending', 'ended', 'danger', 'neutral' ) as $status ) {
+		foreach ( array( 'live', 'pending', 'ended', 'danger', 'neutral', 'info', 'attention', 'paused' ) as $status ) {
 			$this->assertContrast( $status, $status . '-tint', self::AA_NORMAL );
 		}
 	}
@@ -198,6 +198,15 @@ final class PortalContrastTest extends TestCase {
 	 */
 	public function test_button_text_reads_on_the_accent(): void {
 		$this->assertContrast( 'on-accent', 'accent', self::AA_NORMAL );
+	}
+
+	/**
+	 * Primary buttons' labels read on them.
+	 *
+	 * @return void
+	 */
+	public function test_primary_button_text_reads_on_the_primary(): void {
+		$this->assertContrast( 'on-primary', 'primary', self::AA_NORMAL );
 	}
 
 	/**

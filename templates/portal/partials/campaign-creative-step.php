@@ -138,7 +138,8 @@ foreach ( $aggr_slots as $aggr_counted_slot ) {
 					</form>
 				</section>
 
-				<section class="aggr-ads-section" aria-labelledby="aggr-ads-heading">
+				<?php // Not a named region: the step around it already carries this name, and two landmarks called "Add your ads" is one too many. ?>
+				<section class="aggr-ads-section">
 					<div class="aggr-ads-section__head">
 						<div>
 							<p class="aggr-eyebrow"><?php esc_html_e( '02 · Ads', 'aggressive-ads' ); ?></p>

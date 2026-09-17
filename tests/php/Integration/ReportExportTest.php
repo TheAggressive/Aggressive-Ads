@@ -17,6 +17,7 @@ use Aggressive\Ads\Domain\Settings_Schema;
 use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Portal\Report_Actions;
+use Aggressive\Ads\Portal\View_Data;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
@@ -351,6 +352,130 @@ final class ReportExportTest extends WP_UnitTestCase {
 		);
 
 		unset( $_REQUEST['_wpnonce'] );
+	}
+
+	/**
+	 * **A campaign's figures are that campaign's alone.** The campaign filter
+	 * narrows the organization-scoped reads; it never replaces the tenant
+	 * predicate, so a sibling campaign and another organization's delivery are
+	 * both absent from the totals, the chart and the rows.
+	 *
+	 * @return void
+	 */
+	public function test_campaign_reads_are_scoped_to_that_campaign(): void {
+		$sibling = $this->make_campaign( $this->org_a, 'A second flight' );
+
+		$this->enable_reporting( true );
+		$this->bump( $this->campaign_a, 5, 2 );
+		$this->bump( $sibling, 40, 9 );
+		$this->bump( $this->campaign_b, 70, 30 );
+
+		$period = Report_Period::trailing( 7, gmdate( 'Y-m-d' ) );
+		$totals = $this->reporting->totals_for_org( $this->org_a, $period, $this->campaign_a );
+		$rows   = $this->reporting->daily_rows_for_org( $this->org_a, $period, $this->campaign_a );
+		$series = $this->reporting->series_for_org( $this->org_a, $period, $this->campaign_a );
+
+		$this->assertSame( 5, $totals['impressions'] );
+		$this->assertSame( 2, $totals['clicks'] );
+		$this->assertSame( array( $this->campaign_a ), array_values( array_unique( array_column( $rows, 'campaign_id' ) ) ) );
+		$this->assertSame( 5, array_sum( array_column( $series, 'impressions' ) ) );
+
+		// Another organization's campaign id under this organization reads nothing.
+		$this->assertSame( 0, $this->reporting->totals_for_org( $this->org_a, $period, $this->campaign_b )['impressions'] );
+
+		// And no campaign is still the whole organization.
+		$this->assertSame( 45, $this->reporting->totals_for_org( $this->org_a, $period )['impressions'] );
+	}
+
+	/**
+	 * The campaign page carries its own tiles once it could have delivered, and
+	 * none while it is a draft.
+	 *
+	 * @return void
+	 */
+	public function test_a_campaign_page_shows_its_own_delivery(): void {
+		$sibling = $this->make_campaign( $this->org_a, 'A second flight' );
+		$draft   = $this->make_campaign( $this->org_a, 'Not yet' );
+
+		wp_update_post(
+			array(
+				'ID'          => $draft,
+				'post_status' => Post_Statuses::DRAFT,
+			)
+		);
+
+		$this->enable_reporting( true );
+		$this->bump( $this->campaign_a, 6, 1 );
+		$this->bump( $sibling, 50, 5 );
+
+		wp_set_current_user( $this->advertiser_a );
+
+		$view     = Plugin::instance()->container()->get( View_Data::class );
+		$campaign = $view->campaign( $this->campaign_a );
+
+		$this->assertIsArray( $campaign );
+		$this->assertNotSame( array(), $campaign['delivery'] );
+		$this->assertSame( '6', (string) $campaign['delivery'][0]['value'], 'The campaign page counted another campaign’s impressions.' );
+		$this->assertSame( 6, array_sum( array_column( $campaign['delivery_series'], 'impressions' ) ) );
+
+		$not_yet = $view->campaign( $draft );
+
+		$this->assertIsArray( $not_yet );
+		$this->assertSame( array(), $not_yet['delivery'] );
+	}
+
+	/**
+	 * A campaign's CSV is refused for a campaign the caller may not see, in the
+	 * same words as one that does not exist.
+	 *
+	 * @return void
+	 */
+	public function test_a_campaign_export_refuses_a_campaign_the_caller_cannot_see(): void {
+		$this->enable_reporting( true );
+		wp_set_current_user( $this->advertiser_a );
+
+		$_REQUEST['_wpnonce'] = wp_create_nonce( Report_Actions::EXPORT_ACTION );
+
+		$_POST['campaign_id'] = $this->campaign_b;
+		$theirs               = $this->refusal_from_export();
+
+		$_POST['campaign_id'] = 999999;
+		$missing              = $this->refusal_from_export();
+
+		unset( $_POST['campaign_id'], $_REQUEST['_wpnonce'] );
+
+		$this->assertStringContainsString( 'There is no campaign to report on', $theirs, 'Another organization’s campaign was not refused.' );
+		$this->assertSame( $missing, $theirs, 'The refusal told a campaign that exists apart from one that does not.' );
+	}
+
+	/**
+	 * With a persistent object cache a report read is reused for its five minutes,
+	 * and without one every read is fresh. Both halves, because a cache that
+	 * never hits and one that serves stale figures to a plain site both pass a
+	 * test that only checks one.
+	 *
+	 * @return void
+	 */
+	public function test_report_reads_are_reused_only_with_a_persistent_cache(): void {
+		$this->enable_reporting( true );
+		$this->bump( $this->campaign_a, 3, 0 );
+
+		$period  = Report_Period::trailing( 7, gmdate( 'Y-m-d' ) );
+		$was_ext = wp_using_ext_object_cache( true );
+
+		try {
+			$this->assertSame( 3, $this->reporting->totals_for_org( $this->org_a, $period, $this->campaign_a )['impressions'] );
+
+			$this->bump( $this->campaign_a, 4, 0 );
+
+			$this->assertSame( 3, $this->reporting->totals_for_org( $this->org_a, $period, $this->campaign_a )['impressions'], 'A persistent cache did not reuse the read.' );
+			$this->assertSame( 7, $this->reporting->totals_for_org( $this->org_a, $period )['impressions'], 'The organization read shared the campaign read\'s cache entry.' );
+		} finally {
+			wp_using_ext_object_cache( $was_ext );
+			wp_cache_flush_group( \Aggressive\Ads\Repository\Rollup_Report_Repository::CACHE_GROUP );
+		}
+
+		$this->assertSame( 7, $this->reporting->totals_for_org( $this->org_a, $period, $this->campaign_a )['impressions'], 'A plain site was served a cached figure.' );
 	}
 
 	/**

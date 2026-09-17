@@ -228,14 +228,15 @@ final class Delivery_View_Data {
 	 *
 	 * @param int                $org_id Organization to report on.
 	 * @param Report_Period|null $period Range, or the dashboard's own window.
+	 * @param int                $campaign_id One of its campaigns, or 0 for all of them.
 	 * @return array<int, array{label: string, value: string}>
 	 */
-	public function counts( int $org_id, ?Report_Period $period = null ): array {
+	public function counts( int $org_id, ?Report_Period $period = null, int $campaign_id = 0 ): array {
 		if ( ! $this->reporting->surfaces() ) {
 			return array();
 		}
 
-		$read     = $this->reporting->totals_with_comparison( $org_id, $period ?? $this->period() );
+		$read     = $this->reporting->totals_with_comparison( $org_id, $period ?? $this->period(), $campaign_id );
 		$totals   = $read['current'];
 		$was      = $read['previous'];
 		$ctr      = Reporting_Rules::ctr( $totals['impressions'], $totals['clicks'] );
@@ -369,23 +370,24 @@ final class Delivery_View_Data {
 	 * figures above it state. Matched by position: day three of this window
 	 * against day three of that one.
 	 *
-	 * @param int $org_id Organization to report on.
 	 * Each day also carries its clicks and its date in words, and the previous
 	 * window's clicks and date, for the chart's hover card: it names the day it
 	 * is compared with rather than calling it "historic", because a reader
 	 * checking a spike wants the date to look up.
 	 *
+	 * @param int $org_id      Organization to report on.
+	 * @param int $campaign_id One of its campaigns, or 0 for all of them.
 	 * @return list<array{day: string, label: string, date: string, impressions: int, clicks: int, height: int, previous: int, previous_clicks: int, previous_date: string}>
 	 */
-	public function series( int $org_id ): array {
+	public function series( int $org_id, int $campaign_id = 0 ): array {
 		if ( ! $this->reporting->surfaces() ) {
 			return array();
 		}
 
 		$period  = $this->period();
 		$earlier = $period->previous();
-		$raw     = $this->reporting->series_for_org( $org_id, $period );
-		$before  = $earlier === $period ? array() : array_values( $this->reporting->series_for_org( $org_id, $earlier ) );
+		$raw     = $this->reporting->series_for_org( $org_id, $period, $campaign_id );
+		$before  = $earlier === $period ? array() : array_values( $this->reporting->series_for_org( $org_id, $earlier, $campaign_id ) );
 		$max     = 0;
 
 		foreach ( $raw as $row ) {

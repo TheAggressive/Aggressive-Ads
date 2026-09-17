@@ -265,10 +265,44 @@ recent campaigns with **View all**, the first campaign waiting on the
 advertiser with the review team's reason, and **Start a campaign** as a compact
 package list. **New campaign** is also at the foot of the rail on every screen.
 
+A campaign that could have delivered — approved, scheduled, live, paused,
+complete or cancelled — opens on the same delivery card, through the shared
+`partials/delivery-card.php`: its own tiles against the previous window, the
+7/14/30/90 switch and Custom range returning to the campaign's URL, the daily
+chart and a CSV of just that campaign. The reads are the organization-scoped
+ones with a campaign predicate added (`AND (campaign = 0 OR r.campaign_id = …)`),
+so the tenant check stays in the same query, and they run in
+`View_Data::campaign()` after its `read_post` check with the campaign's own
+organization — staff opening a client's campaign see that client's figures.
+`Report_Actions` accepts `campaign_id` and answers a campaign the caller may not
+read exactly as one that does not exist.
+
 The campaigns list has tabs for the same slices with their counts, the current
-one marked, and a search field drawn disabled until #296. Rows show the package
-under the name and short `Sep 6 → Oct 4` schedules; the foot says
-"Showing N of M". Native delivery is always recording.
+one marked, and a name search: a GET form (`?search=`, kept across tabs, 100
+characters) whose query narrows the organization-scoped `for_org()` read to
+titles, so a name only another organization uses finds nothing. `search` and
+`list_page` are used rather than `s` and `paged`, which WordPress reads as its
+own search and archive paging. Rows show the package under the name and short
+`Sep 6 → Oct 4` schedules; the foot says "Showing 1–20 of 46" with Previous and
+Next, which `@aggr/list-more` turns into a bounded, announced "Show more
+campaigns" (see [interactivity-stores.md](interactivity-stores.md)).
+
+The list, its tab and tile counts and the attention card come from
+`Portal\Campaign_List_View_Data`, which takes the organization as an argument
+rather than resolving one; `View_Data` passes the caller's organization down.
+Each page loads its campaigns' posts and meta, then their packages and
+placements, in batches before building rows — see
+[delivery-performance.md](delivery-performance.md#the-campaigns-list-is-a-handful-of-queries-not-one-per-row).
+Status pills use `View_Data::pill_for()`: neutral for a draft, pending for
+submitted or in review, attention for changes requested, info for approved or
+scheduled, live, paused, ended for complete, danger for rejected or cancelled.
+
+The dashboard's counts are each a query total, not a classification of the
+first page of rows, which stopped counting at twenty. Its "Needs your
+attention" card lists every draft and every campaign sent back — five named,
+then "And N more" to the filtered list — each with its reason: the review
+team's advertiser-visible note for one sent back, "Not submitted yet" for a
+draft. Native delivery is always recording.
 They read `aggr_rollups` and never invented zeros. Spend stays absent.
 
 The counts are tiles on the page ground, each linking to the filtered list, and

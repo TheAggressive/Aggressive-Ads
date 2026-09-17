@@ -18,10 +18,30 @@
 	text-transform: none;
 }
 
+/*
+ * A choice card is a <label>, so a theme's bare `label` rule reached it too:
+ * LAAO's uppercased every package name. Stated here with the other theme
+ * defences rather than on the card, where it would tie on specificity.
+ */
+.aggr-portal label.aggr-choice {
+	font-size: inherit;
+	font-weight: inherit;
+	letter-spacing: normal;
+	text-transform: none;
+}
+
 .aggr-portal .aggr-button {
 	padding: 0 var(--aggr-space-lg);
-	background: var(--aggr-color-accent);
-	color: var(--aggr-color-on-accent);
+	background: var(--aggr-color-primary);
+	color: var(--aggr-color-on-primary);
+}
+
+.aggr-portal .aggr-button:hover {
+	background: color-mix(in srgb, var(--aggr-color-primary) 84%, var(--aggr-color-surface));
+}
+
+.aggr-portal .aggr-button--secondary:hover {
+	background: var(--aggr-color-surface-raised);
 }
 
 .aggr-portal .aggr-button--small {

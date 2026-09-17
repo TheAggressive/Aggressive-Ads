@@ -41,6 +41,96 @@ use Aggressive\Ads\Install\Schema;
 final class Rollup_Report_Repository {
 
 	/**
+	 * Object cache group for the dashboard and campaign report reads.
+	 */
+	public const CACHE_GROUP = 'aggr_reports';
+
+	/**
+	 * Delivery totals for an organization, or one of its campaigns, over a range.
+	 *
+	 * @param int           $org_id      Owning organization.
+	 * @param Report_Period $period      Bounded UTC range.
+	 * @param int           $campaign_id One of the organization's campaigns, or 0 for all of them.
+	 * @return array{impressions: int, clicks: int, viewables: int|null, conversions: int|null}
+	 */
+	public function totals_for_org( int $org_id, Report_Period $period, int $campaign_id = 0 ): array {
+		return $this->remember(
+			'totals',
+			array( $org_id, $campaign_id, $period->start, $period->end ),
+			fn (): array => $this->read_totals_for_org( $org_id, $period, $campaign_id )
+		);
+	}
+
+	/**
+	 * Daily totals for an organization, or one of its campaigns, zeros padded.
+	 *
+	 * @param int           $org_id      Owning organization.
+	 * @param Report_Period $period      Bounded UTC range.
+	 * @param int           $campaign_id One of the organization's campaigns, or 0 for all of them.
+	 * @return list<array{day: string, impressions: int, clicks: int}>
+	 */
+	public function series_for_org( int $org_id, Report_Period $period, int $campaign_id = 0 ): array {
+		return $this->remember(
+			'series',
+			array( $org_id, $campaign_id, $period->start, $period->end ),
+			fn (): array => $this->read_series_for_org( $org_id, $period, $campaign_id )
+		);
+	}
+
+	/**
+	 * A report read, reused for five minutes where a persistent object cache exists.
+	 *
+	 * **Only with a persistent cache.** Without one, WordPress's cache lasts a
+	 * single request, in which each of these reads already happens once, so
+	 * caching would add work and save none. The organization and campaign are
+	 * part of the key, so one tenant's figures can never answer another's.
+	 * Exports are deliberately not routed through here: a download is the
+	 * figure somebody files, and it should be the current one.
+	 *
+	 * @template T of array
+	 *
+	 * @param string            $name Which read.
+	 * @param array<int, mixed> $args Everything the result depends on.
+	 * @param callable(): T     $read The read itself.
+	 * @return T
+	 */
+	private function remember( string $name, array $args, callable $read ): array {
+		if ( ! wp_using_ext_object_cache() ) {
+			return $read();
+		}
+
+		$key   = $name . ':' . md5( (string) wp_json_encode( $args ) );
+		$found = false;
+
+		/**
+		 * What `$read` returned when this entry was stored: the key names the
+		 * read and everything it depends on, so a hit has the same shape.
+		 *
+		 * @var T $hit
+		 */
+		$hit = wp_cache_get( $key, self::CACHE_GROUP, false, $found );
+
+		if ( $found && is_array( $hit ) ) {
+			return $hit;
+		}
+
+		$value = $read();
+
+		/*
+		 * Five minutes. The counters behind these reads move with every
+		 * impression, and the card already says which days are still coming
+		 * in, so a figure a few minutes old is one the reader has been told to
+		 * expect. What it buys is that a dashboard reloaded, or opened by
+		 * several people in one account, does not re-sum the same rows. Shorter
+		 * lifetimes churn a shared cache for little gain, which is why WordPress
+		 * VIP's rules set this as the floor.
+		 */
+		wp_cache_set( $key, $value, self::CACHE_GROUP, 5 * MINUTE_IN_SECONDS );
+
+		return $value;
+	}
+
+	/**
 	 * The most rows one variant comparison may return.
 	 *
 	 * A campaign's placements times `Creative_Manager::MAX_CREATIVES_PER_PLACEMENT`
@@ -76,11 +166,12 @@ final class Rollup_Report_Repository {
 	 *
 	 * House rows (`campaign_id = 0`) are excluded and never attributed.
 	 *
-	 * @param int           $org_id Owning organization.
-	 * @param Report_Period $period Bounded UTC range.
+	 * @param int           $org_id      Owning organization.
+	 * @param Report_Period $period      Bounded UTC range.
+	 * @param int           $campaign_id One of the organization's campaigns, or 0 for all of them.
 	 * @return array{impressions: int, clicks: int, viewables: int|null, conversions: int|null}
 	 */
-	public function totals_for_org( int $org_id, Report_Period $period ): array {
+	private function read_totals_for_org( int $org_id, Report_Period $period, int $campaign_id = 0 ): array {
 		$empty = array(
 			'impressions' => 0,
 			'clicks'      => 0,
@@ -104,9 +195,12 @@ final class Rollup_Report_Repository {
 				FROM {$table} r
 				WHERE r.org_id = %d
 					AND r.campaign_id > 0
+					AND ( %d = 0 OR r.campaign_id = %d )
 					AND r.day_utc >= %s
 					AND r.day_utc <= %s",
 				$org_id,
+				$campaign_id,
+				$campaign_id,
 				$period->start,
 				$period->end
 			),
@@ -133,11 +227,12 @@ final class Rollup_Report_Repository {
 	 * a zero day are the same picture in a chart and different facts, and the
 	 * only place that knows which days were asked for is the period.
 	 *
-	 * @param int           $org_id Owning organization.
-	 * @param Report_Period $period Bounded UTC range.
+	 * @param int           $org_id      Owning organization.
+	 * @param Report_Period $period      Bounded UTC range.
+	 * @param int           $campaign_id One of the organization's campaigns, or 0 for all of them.
 	 * @return list<array{day: string, impressions: int, clicks: int}>
 	 */
-	public function series_for_org( int $org_id, Report_Period $period ): array {
+	private function read_series_for_org( int $org_id, Report_Period $period, int $campaign_id = 0 ): array {
 		$padded = array();
 
 		foreach ( $period->keys() as $day ) {
@@ -163,10 +258,13 @@ final class Rollup_Report_Repository {
 				FROM {$table} r
 				WHERE r.org_id = %d
 					AND r.campaign_id > 0
+					AND ( %d = 0 OR r.campaign_id = %d )
 					AND r.day_utc >= %s
 					AND r.day_utc <= %s
 				GROUP BY r.day_utc",
 				$org_id,
+				$campaign_id,
+				$campaign_id,
 				$period->start,
 				$period->end
 			),
@@ -202,11 +300,12 @@ final class Rollup_Report_Repository {
 	 * which is why the `org_id` predicate reads the frozen column and not the
 	 * campaign's current meta.
 	 *
-	 * @param int           $org_id Owning organization.
-	 * @param Report_Period $period Bounded UTC range.
+	 * @param int           $org_id      Owning organization.
+	 * @param Report_Period $period      Bounded UTC range.
+	 * @param int           $campaign_id One of the organization's campaigns, or 0 for all of them.
 	 * @return list<array{day: string, campaign_id: int, campaign: string, impressions: int, clicks: int, conversions: int|null}>
 	 */
-	public function daily_rows_for_org( int $org_id, Report_Period $period ): array {
+	public function daily_rows_for_org( int $org_id, Report_Period $period, int $campaign_id = 0 ): array {
 		if ( $org_id <= 0 ) {
 			return array();
 		}
@@ -230,11 +329,14 @@ final class Rollup_Report_Repository {
 					ON p.ID = r.campaign_id
 				WHERE r.org_id = %d
 					AND r.campaign_id > 0
+					AND ( %d = 0 OR r.campaign_id = %d )
 					AND r.day_utc >= %s
 					AND r.day_utc <= %s
 				GROUP BY r.day_utc, r.campaign_id, p.post_title
 				ORDER BY r.day_utc ASC, p.post_title ASC",
 				$org_id,
+				$campaign_id,
+				$campaign_id,
 				$period->start,
 				$period->end
 			),
