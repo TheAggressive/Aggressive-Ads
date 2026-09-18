@@ -259,6 +259,20 @@ final class Router implements Service {
 	}
 
 	/**
+	 * Whether the portal draws this page, including its own "not found".
+	 *
+	 * Not the same as a recognised request. An address under the portal that
+	 * names no screen still gets the portal's 404 template, and a caller that
+	 * asked only `request()` treated that page as somebody else's: the
+	 * stylesheet was never enqueued, and the 404 rendered as unstyled text.
+	 *
+	 * @return bool
+	 */
+	public function draws_page(): bool {
+		return null !== $this->request || $this->is_portal_url;
+	}
+
+	/**
 	 * Requires a logged-in user who may reach the portal.
 	 *
 	 * Core's auth_redirect() is used rather than a hand-rolled login redirect.

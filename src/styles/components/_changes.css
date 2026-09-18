@@ -1,0 +1,166 @@
+/*
+ * Editing a running campaign, and asking the review team to pause or cancel
+ * one. Both reuse the wizard's parts — step card, choice cards, summary card —
+ * so these rules are only what those parts do not already say.
+ */
+
+/* A primary action that fills its card, as the order summary's does. */
+.aggr-button--block {
+	width: 100%;
+	min-height: 3rem;
+}
+
+/* The summary card stays the height of its content beside a long step. */
+.aggr-changes {
+	align-items: start;
+}
+
+/* The first step is two cards in one form, as creation's first step is. */
+.aggr-changes__steps,
+.aggr-changes__form {
+	display: grid;
+	gap: var(--aggr-space-lg);
+	padding-top: 0;
+}
+
+.aggr-changes__form .aggr-step-card {
+	display: grid;
+	gap: var(--aggr-space-md);
+}
+
+/* A legend that reads as a field label, not a card title. */
+.aggr-changes__legend {
+	margin-bottom: var(--aggr-space-2xs);
+	color: var(--aggr-color-text);
+	font-weight: 600;
+}
+
+.aggr-changes__placements {
+	margin-top: var(--aggr-space-sm);
+}
+
+.aggr-changes__link input {
+	max-width: var(--aggr-field-measure);
+}
+
+/* What is changing, one row per field: the old value struck, then the new. */
+.aggr-changes__list {
+	display: grid;
+	gap: 0;
+	margin: var(--aggr-space-md) 0 0;
+	padding: 0;
+	list-style: none;
+	border-top: 1px solid var(--aggr-border-color);
+}
+
+.aggr-changes__item {
+	display: grid;
+	grid-template-columns: minmax(8rem, 12rem) minmax(0, 1fr) auto minmax(0, 1fr);
+	gap: var(--aggr-space-sm);
+	align-items: baseline;
+	padding: var(--aggr-space-sm) 0;
+	border-bottom: 1px solid var(--aggr-border-color);
+}
+
+.aggr-changes__field {
+	color: var(--aggr-color-text-muted);
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.aggr-changes__from,
+.aggr-changes__to {
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.aggr-changes__from {
+	color: var(--aggr-color-text-muted);
+	text-decoration: line-through;
+}
+
+.aggr-changes__to {
+	color: var(--aggr-color-text);
+	font-weight: 600;
+}
+
+.aggr-changes__arrow {
+	color: var(--aggr-color-text-subtle);
+}
+
+/* On a phone, the field above and the two values stacked under it. */
+@media (max-width: 40rem) {
+	.aggr-changes__item {
+		grid-template-columns: minmax(0, 1fr);
+		gap: var(--aggr-space-2xs);
+	}
+
+	.aggr-changes__arrow {
+		display: none;
+	}
+}
+
+.aggr-changes__none {
+	margin: var(--aggr-space-sm) 0 0;
+	color: var(--aggr-color-text-muted);
+}
+
+.aggr-summary__actions {
+	display: grid;
+	gap: var(--aggr-space-xs);
+	justify-items: start;
+	margin-top: var(--aggr-space-md);
+}
+
+.aggr-summary__actions form:first-child:has(.aggr-button--block) {
+	justify-self: stretch;
+}
+
+/*
+ * The pause and cancel request: folded by default, and a card like the rest
+ * when there is one waiting.
+ */
+.aggr-request {
+	margin-top: var(--aggr-space-lg);
+}
+
+.aggr-request__summary {
+	display: grid;
+	gap: var(--aggr-space-2xs);
+	cursor: pointer;
+	list-style: none;
+}
+
+.aggr-request__summary::-webkit-details-marker {
+	display: none;
+}
+
+/* The disclosure's own marker, drawn after the title so it reads as one line. */
+.aggr-request__summary .aggr-step-card__title::after {
+	margin-inline-start: var(--aggr-space-xs);
+	color: var(--aggr-color-text-subtle);
+	content: "+";
+}
+
+.aggr-request[open] .aggr-request__summary .aggr-step-card__title::after {
+	content: "−";
+}
+
+.aggr-request__form {
+	display: grid;
+	gap: var(--aggr-space-md);
+	margin-top: var(--aggr-space-md);
+}
+
+.aggr-request__reason {
+	margin: var(--aggr-space-sm) 0;
+	padding-inline-start: var(--aggr-space-md);
+	border-inline-start: 3px solid var(--aggr-border-color-strong);
+	color: var(--aggr-color-text-body);
+}
+
+/* Name, then size under it, whatever the length of the name. */
+.aggr-changes__placements .aggr-choice__text {
+	display: grid;
+	gap: 2px;
+}

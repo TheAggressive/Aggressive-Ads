@@ -846,19 +846,23 @@ test( 'advertiser completes and submits the accessible three-step wizard', async
 			.getByRole( 'region', { name: 'Your notes for the review team' } )
 			.getByText( note )
 	).toBeVisible();
-	const deliveryStrategy = page.getByRole( 'region', {
-		name: 'Delivery strategy',
+	/*
+	 * How the campaign is delivered is in the side card, in the advertiser's
+	 * words, rather than a panel of its own leading with "Line item" and
+	 * "FLAT". Absence of the old panel is asserted so a second copy of the
+	 * same facts cannot come back unnoticed.
+	 */
+	const campaignCard = page.getByRole( 'region', {
+		name: 'Campaign',
+		exact: true,
 	} );
-	await expect( deliveryStrategy ).toBeVisible();
+	await expect( campaignCard ).toBeVisible();
 	await expect(
-		deliveryStrategy.getByText( title, { exact: true } )
+		campaignCard.getByText( 'Flat fee', { exact: true } )
 	).toBeVisible();
 	await expect(
-		deliveryStrategy
-			.locator( '.aggr-fact' )
-			.filter( { hasText: 'Pricing' } )
-			.getByText( 'FLAT', { exact: true } )
-	).toBeVisible();
+		page.getByRole( 'region', { name: 'Delivery strategy' } )
+	).toHaveCount( 0 );
 
 	await page.reload();
 	await expect(

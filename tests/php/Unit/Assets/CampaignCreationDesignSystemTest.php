@@ -288,15 +288,9 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 		$table     = file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-table.php' );
 		$detail    = file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/screens/campaign.php' );
 
-		// The campaign summary's facts moved out of the screen when it reached
-		// the file-length gate. The guard follows them: reading the screen for
-		// a block that is no longer in it is how this stops watching anything.
-		$facts = file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-summary-facts.php' );
-
 		$this->assertIsString( $dashboard );
 		$this->assertIsString( $table );
 		$this->assertIsString( $detail );
-		$this->assertIsString( $facts );
 		// The delivery card is shared by the dashboard and a campaign's page.
 		$card = file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/partials/delivery-card.php' );
 
@@ -309,8 +303,14 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 		$this->assertStringContainsString( 'Impressions and clicks from native delivery', $card );
 		$this->assertStringContainsString( '$aggr_show_metrics', $table );
 		$this->assertStringContainsString( 'CTR', $table );
-		$this->assertStringContainsString( 'partials/campaign-summary-facts.php', $detail );
-		$this->assertStringContainsString( "isset( \$aggr_campaign['impressions'], \$aggr_campaign['clicks'] )", $facts );
+
+		/*
+		 * A campaign's figures are the delivery card's alone now; the Summary
+		 * panel that repeated them is gone. The card is only drawn when there
+		 * is delivery to show, which is empty whenever Reporting is off — the
+		 * gate this assertion follows to where it now lives.
+		 */
+		$this->assertStringContainsString( "array() !== ( \$aggr_campaign['delivery'] ?? array() )", $detail );
 
 		/*
 		 * Conversions are gated the same way and, unlike the others, have an
@@ -318,7 +318,12 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 		 * says so in words. A template that printed `0` there would claim the
 		 * campaign converted nobody.
 		 */
-		$this->assertStringContainsString( 'Not measured', $facts );
+		// The card prints what Delivery_View_Data formats, which is where the
+		// words for an unmeasured figure live.
+		$delivery = file_get_contents( AGGR_PLUGIN_DIR . 'inc/Portal/class-delivery-view-data.php' );
+
+		$this->assertIsString( $delivery );
+		$this->assertStringContainsString( "__( 'Not measured', 'aggressive-ads' )", $delivery );
 		$this->assertStringContainsString( 'Not measured', $table );
 	}
 

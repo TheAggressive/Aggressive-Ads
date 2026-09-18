@@ -22,7 +22,7 @@ Three rewrite rules, registered `top`:
 '^advertiser/([^/]+)/([^/]+)/?$' → index.php?aggr_portal=1&aggr_route=$matches[1]&aggr_object=$matches[2]
 ```
 
-`aggr_portal`, `aggr_route`, and `aggr_object` are registered via the `query_vars` filter. Route and object are parsed into an immutable `Portal\Request` value object which validates the grammar — unknown routes, over-long segments, and anything containing a path separator resolve to a 404 before the controller runs. `Request` has no WordPress dependency, so the grammar is unit-tested without a bootstrap.
+`aggr_portal`, `aggr_route`, and `aggr_object` are registered via the `query_vars` filter. Route and object are parsed into an immutable `Portal\Request` value object which validates the grammar — unknown routes, over-long segments, and anything containing a path separator resolve to a 404 before the controller runs. `Request` has no WordPress dependency, so the grammar is unit-tested without a bootstrap. That 404 is the portal's own template, and `Router::draws_page()` — not `request()`, which is null for it — is what the stylesheet, the icon and the host-script stripping key on, so it renders in the portal's design rather than as unstyled text.
 
 ## Request lifecycle
 
@@ -284,8 +284,37 @@ and a stage with no date says `—` rather than guessing. "Draft started" is
 always the oldest entry: no event records a campaign being created, so the
 post's own date is the only source for it.
 
-Panels that describe a campaign which already exists — Summary, Creatives,
-delivery strategy, ad updates, variant comparison, update history — are hidden
+The status view's side card carries what the old Delivery strategy and Summary
+panels did, without the ad-server terms: the package and total when there is
+one, the schedule, the link, the placements with how many ads, and pricing and
+pacing in words ("Flat fee", "Spread evenly over the dates"). A row with nothing
+to say is left out rather than shown as `—`. Both panels are gone — the Summary
+repeated the delivery card's figures a second time — and so is the always-open
+pause/cancel form: **Need to pause or cancel?** is a folded card at the foot of
+the page, and becomes an open **Your request** card while one is waiting on the
+review team.
+
+**Editing a running campaign** (`?edit=1`) is laid out as the creation wizard
+is, in three steps as creation has: **Details & dates**, **Links**, **Review &
+submit** — only those the site's live-edit settings allow, and the first named
+"Details" or "Dates" when only one half is enabled. They sit in the page head
+(`partials/campaign-changes-steps.php`). The first step is two cards in one form
+(`partials/campaign-changes.php`), name and placements then dates, as creation's
+first step holds the package and the schedule; the change handler reads
+whichever fields a post carries, and an unchanged date is not a change, so a
+started campaign is not refused for a start date it left alone. A link to the
+old `step=schedule` lands on the combined step. A **Your changes** card beside it lists
+each staged change as its new value with the old one under it, and holds
+**Submit for review** on the last step, **Discard these edits** once there is
+something to discard, and **Back to the campaign**. Placements are choice cards
+with their sizes, and the dates use the range calendar. Nothing else is
+drawn while editing — delivery, ads and the request card would describe the
+campaign the advertiser is in the middle of changing. Every form posts exactly
+what it did before: same actions, nonces, field names and `next_step`, pinned by
+`CampaignChangesScreenTest`.
+
+Panels that describe a campaign which already exists — Creatives, ad updates,
+variant comparison, update history — are hidden
 for as long as an advertiser has the wizard on screen. Staff editing on a
 client's behalf keep them. `editable` alone is the wrong test for this:
 `Edit_Window::allows()` is true for staff in every status, so keying on it
