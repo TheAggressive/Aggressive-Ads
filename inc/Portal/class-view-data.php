@@ -82,6 +82,7 @@ final class View_Data {
 	 * @param Campaign_Request_Repository $requests      Advertiser requests and proposed changes.
 	 * @param Campaign_List_View_Data     $campaign_list The campaigns list and its counts.
 	 * @param Link_Checker                $links         The campaign link check.
+	 * @param Campaign_History_View_Data  $history       The campaign's own audit trail.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -102,7 +103,8 @@ final class View_Data {
 		private readonly Creative_View_Data $creative_view,
 		private readonly Campaign_Request_Repository $requests,
 		private readonly Campaign_List_View_Data $campaign_list,
-		private readonly Link_Checker $links
+		private readonly Link_Checker $links,
+		private readonly Campaign_History_View_Data $history
 	) {
 	}
 
@@ -279,6 +281,7 @@ final class View_Data {
 
 		// Null until it is checked, and null again the moment the link changes.
 		$row['link_check'] = $this->links->last( $campaign_id );
+		$row['history']    = $this->history->history( $campaign_id, $this->org_id() );
 
 		/*
 		 * Whether the name is still the one the wizard invented.
