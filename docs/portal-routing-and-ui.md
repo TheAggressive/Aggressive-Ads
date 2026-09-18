@@ -260,9 +260,29 @@ Once the campaign is no longer editable its screen opens on a **status view**
 (`partials/campaign-status.php`): the stages Draft → Submitted → In review →
 Approved → Scheduled → Live → Complete as a dated line, a note on what the
 advertiser can do now (with **Withdraw to edit** while that edge is open), an
-activity list built from the dates the campaign already stores, and a campaign
-card and thumbnails of its ads beside it. A stage with no stored date says `—`;
-the full audit-backed activity log is #295.
+activity list, and a campaign card and thumbnails of its ads beside it.
+
+Both the stage dates and the activity list come from the audit trail, through
+`Portal\Campaign_History_View_Data`, which reads `Audit_Repository::for_object()`
+scoped to the organization. **What an advertiser may see is decided in
+`Domain\Advertiser_Events`**, as an allowlist: transitions become "Submitted for
+review", "Review started", "Approved", "Paused", "Running again" and so on, and
+creative uploads, replacements, removals and destination changes appear as
+themselves. Everything else is invisible — internal notes, refused transitions,
+notification failures and retries, status changes made outside the workflow,
+purged files, and any event added later that nobody has judged. A refused row is
+never shown whatever its event, and no audit message text, reviewer name or
+actor identity reaches the screen: each entry says only "You", "Your team", "The
+review team" or "Automatically".
+
+Returning to draft reads as *Changes requested* when it came from review and
+*Withdrawn for editing* when the advertiser did it. A stage is dated from the
+first time it was reached, so resubmitting does not rewrite when the campaign
+was first submitted. Where the trail has nothing — a campaign older than these
+events — the stored timestamps still date Draft, Scheduled, Live and Complete,
+and a stage with no date says `—` rather than guessing. "Draft started" is
+always the oldest entry: no event records a campaign being created, so the
+post's own date is the only source for it.
 
 Panels that describe a campaign which already exists — Summary, Creatives,
 delivery strategy, ad updates, variant comparison, update history — are hidden

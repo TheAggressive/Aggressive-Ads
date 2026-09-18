@@ -66,6 +66,12 @@
 	font-size: 11.5px;
 }
 
+/* Who did it, after what happened, because what happened is the news. */
+.aggr-activity__who {
+	margin-inline-start: var(--aggr-space-2xs);
+	color: var(--aggr-color-text-subtle);
+}
+
 .aggr-status__note {
 	display: flex;
 	flex-wrap: wrap;

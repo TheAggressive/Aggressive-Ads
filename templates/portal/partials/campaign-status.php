@@ -4,8 +4,8 @@
  *
  * The screen after the wizard: a dated line of stages, what the advertiser can
  * do now, what has happened so far, and the campaign and its ads beside it.
- * Every date on it is one the campaign already stores; a stage that has not
- * happened says so rather than guessing. The full activity log is #295.
+ * Every date on it is one the campaign already stores or the audit trail
+ * recorded; a stage that has not happened says so rather than guessing.
  *
  * Scope is inherited from the screen, as it is for every partial here.
  *
@@ -46,14 +46,32 @@ $aggr_status_day  = static function ( string $ymd ) use ( $aggr_status_zone ): s
 	return false === $day ? '—' : (string) wp_date( 'M j', $day->getTimestamp(), $aggr_status_zone );
 };
 
+$aggr_history = is_array( $aggr_campaign['history'] ?? null ) ? $aggr_campaign['history'] : array(
+	'items'  => array(),
+	'stages' => array(),
+);
+
+/*
+ * A stage is dated from the audit trail, which records when the campaign
+ * actually reached it. The stored timestamps stay as the fallback: a campaign
+ * older than this feature has no rows for stages it passed, and "—" beside
+ * Approved on a campaign that is plainly live reads as a fault.
+ */
+$aggr_stage_dates = is_array( $aggr_history['stages'] ?? null ) ? $aggr_history['stages'] : array();
+$aggr_stage_when  = static function ( string $status, string $fallback = '—' ) use ( $aggr_stage_dates, $aggr_when_format ): string {
+	$at = (int) ( $aggr_stage_dates[ $status ] ?? 0 );
+
+	return $at > 0 ? (string) wp_date( $aggr_when_format, $at ) : $fallback;
+};
+
 $aggr_stages = array(
 	array( Post_Statuses::DRAFT, __( 'Draft', 'aggressive-ads' ), $aggr_created_ts > 0 ? (string) wp_date( 'M j', $aggr_created_ts ) : '—' ),
-	array( Post_Statuses::SUBMITTED, __( 'Submitted', 'aggressive-ads' ), $aggr_submitted_ts > 0 ? (string) wp_date( $aggr_when_format, $aggr_submitted_ts ) : '—' ),
-	array( Post_Statuses::REVIEW, __( 'In review', 'aggressive-ads' ), '—' ),
-	array( Post_Statuses::APPROVED, __( 'Approved', 'aggressive-ads' ), '—' ),
-	array( Post_Statuses::SCHEDULED, __( 'Scheduled', 'aggressive-ads' ), $aggr_status_day( (string) $aggr_campaign['start_date'] ) ),
-	array( Post_Statuses::LIVE, __( 'Live', 'aggressive-ads' ), $aggr_status_day( (string) $aggr_campaign['start_date'] ) ),
-	array( Post_Statuses::COMPLETE, __( 'Complete', 'aggressive-ads' ), $aggr_status_day( (string) $aggr_campaign['end_date'] ) ),
+	array( Post_Statuses::SUBMITTED, __( 'Submitted', 'aggressive-ads' ), $aggr_stage_when( Post_Statuses::SUBMITTED, $aggr_submitted_ts > 0 ? (string) wp_date( $aggr_when_format, $aggr_submitted_ts ) : '—' ) ),
+	array( Post_Statuses::REVIEW, __( 'In review', 'aggressive-ads' ), $aggr_stage_when( Post_Statuses::REVIEW ) ),
+	array( Post_Statuses::APPROVED, __( 'Approved', 'aggressive-ads' ), $aggr_stage_when( Post_Statuses::APPROVED ) ),
+	array( Post_Statuses::SCHEDULED, __( 'Scheduled', 'aggressive-ads' ), $aggr_stage_when( Post_Statuses::SCHEDULED, $aggr_status_day( (string) $aggr_campaign['start_date'] ) ) ),
+	array( Post_Statuses::LIVE, __( 'Live', 'aggressive-ads' ), $aggr_stage_when( Post_Statuses::LIVE, $aggr_status_day( (string) $aggr_campaign['start_date'] ) ) ),
+	array( Post_Statuses::COMPLETE, __( 'Complete', 'aggressive-ads' ), $aggr_stage_when( Post_Statuses::COMPLETE, $aggr_status_day( (string) $aggr_campaign['end_date'] ) ) ),
 );
 
 // Where on that line the campaign is. Paused is still live; changes requested is back at draft.
@@ -118,7 +136,29 @@ $aggr_status_note = match ( $aggr_status_now ) {
 		<section class="aggr-step-card" aria-labelledby="aggr-activity-heading">
 			<h2 id="aggr-activity-heading" class="aggr-step-card__title"><?php esc_html_e( 'Activity', 'aggressive-ads' ); ?></h2>
 			<ul class="aggr-activity">
-				<?php if ( $aggr_submitted_ts > 0 ) : ?>
+				<?php
+				/*
+				 * Straight from the audit trail, filtered by
+				 * Domain\Advertiser_Events, oldest entry last.
+				 *
+				 * "Draft started" is always the last line: nothing records a
+				 * campaign being created — the post's own date is that fact —
+				 * so the trail cannot supply it. The submitted line below it
+				 * is only for a campaign older than these events, where the
+				 * stored timestamp is all there is.
+				 */
+				$aggr_activity = is_array( $aggr_history['items'] ?? null ) ? $aggr_history['items'] : array();
+				?>
+				<?php foreach ( $aggr_activity as $aggr_entry ) : ?>
+					<li>
+						<span class="aggr-activity__when"><?php echo esc_html( (int) $aggr_entry['at'] > 0 ? (string) wp_date( $aggr_when_format, (int) $aggr_entry['at'] ) : '—' ); ?></span>
+						<span>
+							<?php echo esc_html( (string) $aggr_entry['text'] ); ?>
+							<span class="aggr-activity__who"><?php echo esc_html( (string) $aggr_entry['who'] ); ?></span>
+						</span>
+					</li>
+				<?php endforeach; ?>
+				<?php if ( array() === $aggr_activity && $aggr_submitted_ts > 0 ) : ?>
 					<li>
 						<span class="aggr-activity__when"><?php echo esc_html( (string) wp_date( $aggr_when_format, $aggr_submitted_ts ) ); ?></span>
 						<span>

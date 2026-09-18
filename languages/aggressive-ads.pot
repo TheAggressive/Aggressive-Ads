@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-17T23:21:53+00:00\n"
+"POT-Creation-Date: 2026-09-17T23:59:24+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -331,7 +331,7 @@ msgstr ""
 
 #: inc/Admin/class-conversions-screen.php:245
 #: inc/Core/class-post-statuses.php:211
-#: templates/portal/partials/campaign-status.php:55
+#: templates/portal/partials/campaign-status.php:73
 msgid "Live"
 msgstr ""
 
@@ -1494,6 +1494,7 @@ msgid "Running"
 msgstr ""
 
 #: inc/Admin/class-review-data.php:693
+#: inc/Portal/class-campaign-history-view-data.php:151
 msgid "Finished"
 msgstr ""
 
@@ -1530,7 +1531,7 @@ msgid "Resume campaign"
 msgstr ""
 
 #: inc/Admin/class-review-data.php:717
-#: inc/Portal/class-view-data.php:371
+#: inc/Portal/class-view-data.php:374
 msgid "Cancel campaign"
 msgstr ""
 
@@ -1604,14 +1605,14 @@ msgstr ""
 #: inc/Admin/class-review-screen.php:279
 #: inc/Core/class-post-types.php:201
 #: inc/Portal/class-report-actions.php:215
-#: templates/portal/partials/campaign-status.php:160
+#: templates/portal/partials/campaign-status.php:200
 #: templates/portal/partials/campaign-table.php:51
 msgid "Campaign"
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:283
 #: inc/Core/class-post-statuses.php:205
-#: templates/portal/partials/campaign-status.php:51
+#: templates/portal/partials/campaign-status.php:69
 msgid "Submitted"
 msgstr ""
 
@@ -1706,7 +1707,7 @@ msgstr ""
 #: templates/portal/partials/campaign-changes.php:74
 #: templates/portal/partials/campaign-order-summary.php:83
 #: templates/portal/partials/campaign-review-step.php:113
-#: templates/portal/partials/campaign-status.php:174
+#: templates/portal/partials/campaign-status.php:214
 #: templates/portal/partials/campaign-table.php:53
 msgid "Schedule"
 msgstr ""
@@ -2431,7 +2432,7 @@ msgid "The ad creative must match the required pixel size for this placement."
 msgstr ""
 
 #: inc/Core/class-post-statuses.php:204
-#: templates/portal/partials/campaign-status.php:50
+#: templates/portal/partials/campaign-status.php:68
 msgid "Draft"
 msgstr ""
 
@@ -2448,17 +2449,19 @@ msgid "Rejected"
 msgstr ""
 
 #: inc/Core/class-post-statuses.php:209
-#: templates/portal/partials/campaign-status.php:53
+#: inc/Portal/class-campaign-history-view-data.php:145
+#: templates/portal/partials/campaign-status.php:71
 msgid "Approved"
 msgstr ""
 
 #: inc/Core/class-post-statuses.php:210
-#: templates/portal/partials/campaign-status.php:54
+#: templates/portal/partials/campaign-status.php:72
 #: templates/portal/screens/help.php:32
 msgid "Scheduled"
 msgstr ""
 
 #: inc/Core/class-post-statuses.php:212
+#: inc/Portal/class-campaign-history-view-data.php:149
 msgid "Paused"
 msgstr ""
 
@@ -2467,6 +2470,7 @@ msgid "Completed"
 msgstr ""
 
 #: inc/Core/class-post-statuses.php:214
+#: inc/Portal/class-campaign-history-view-data.php:152
 msgid "Cancelled"
 msgstr ""
 
@@ -2561,7 +2565,7 @@ msgstr[1] ""
 #: inc/Core/class-post-types.php:200
 #: templates/portal/partials/campaign-order-summary.php:70
 #: templates/portal/partials/campaign-review-step.php:106
-#: templates/portal/partials/campaign-status.php:165
+#: templates/portal/partials/campaign-status.php:205
 msgid "Package"
 msgstr ""
 
@@ -2975,6 +2979,7 @@ msgstr ""
 
 #: inc/Notification/class-notification-service.php:500
 #: inc/Notification/class-request-mailer.php:322
+#: inc/Portal/class-campaign-history-view-data.php:143
 #: templates/portal/screens/dashboard.php:48
 msgid "Changes requested"
 msgstr ""
@@ -3397,6 +3402,73 @@ msgstr ""
 msgid "The campaign could not be saved. Please try again."
 msgstr ""
 
+#: inc/Portal/class-campaign-history-view-data.php:140
+msgid "Campaign created"
+msgstr ""
+
+#: inc/Portal/class-campaign-history-view-data.php:141
+#: templates/portal/partials/campaign-status.php:169
+msgid "Submitted for review"
+msgstr ""
+
+#: inc/Portal/class-campaign-history-view-data.php:142
+msgid "Review started"
+msgstr ""
+
+#: inc/Portal/class-campaign-history-view-data.php:144
+msgid "Withdrawn for editing"
+msgstr ""
+
+#: inc/Portal/class-campaign-history-view-data.php:146
+#: inc/Portal/class-creative-view-data.php:240
+msgid "Not approved"
+msgstr ""
+
+#: inc/Portal/class-campaign-history-view-data.php:147
+msgid "Scheduled to start"
+msgstr ""
+
+#: inc/Portal/class-campaign-history-view-data.php:148
+msgid "Started running"
+msgstr ""
+
+#: inc/Portal/class-campaign-history-view-data.php:150
+msgid "Running again"
+msgstr ""
+
+#: inc/Portal/class-campaign-history-view-data.php:153
+msgid "An ad was uploaded"
+msgstr ""
+
+#: inc/Portal/class-campaign-history-view-data.php:154
+msgid "An ad was replaced"
+msgstr ""
+
+#: inc/Portal/class-campaign-history-view-data.php:155
+msgid "An ad was removed"
+msgstr ""
+
+#: inc/Portal/class-campaign-history-view-data.php:156
+msgid "A destination link changed"
+msgstr ""
+
+#: inc/Portal/class-campaign-history-view-data.php:174
+msgid "Automatically"
+msgstr ""
+
+#: inc/Portal/class-campaign-history-view-data.php:178
+#: templates/portal/screens/organization.php:123
+msgid "You"
+msgstr ""
+
+#: inc/Portal/class-campaign-history-view-data.php:186
+msgid "The review team"
+msgstr ""
+
+#: inc/Portal/class-campaign-history-view-data.php:187
+msgid "Your team"
+msgstr ""
+
 #: inc/Portal/class-campaign-list-view-data.php:173
 msgid "The review team asked for changes."
 msgstr ""
@@ -3416,7 +3488,7 @@ msgid "Continue setup"
 msgstr ""
 
 #: inc/Portal/class-campaign-list-view-data.php:211
-#: templates/portal/partials/campaign-status.php:52
+#: templates/portal/partials/campaign-status.php:70
 msgid "In review"
 msgstr ""
 
@@ -3468,7 +3540,7 @@ msgid "Someone is reviewing it now."
 msgstr ""
 
 #: inc/Portal/class-catalogue-view-data.php:209
-#: templates/portal/partials/campaign-status.php:73
+#: templates/portal/partials/campaign-status.php:91
 msgid "The review team asked for changes. Edit it and submit again."
 msgstr ""
 
@@ -3485,22 +3557,22 @@ msgid "Ready and waiting for its start date."
 msgstr ""
 
 #: inc/Portal/class-catalogue-view-data.php:213
-#: templates/portal/partials/campaign-status.php:76
+#: templates/portal/partials/campaign-status.php:94
 msgid "Being shown on the site right now."
 msgstr ""
 
 #: inc/Portal/class-catalogue-view-data.php:214
-#: templates/portal/partials/campaign-status.php:77
+#: templates/portal/partials/campaign-status.php:95
 msgid "Temporarily not being shown. Get in touch if this is unexpected."
 msgstr ""
 
 #: inc/Portal/class-catalogue-view-data.php:215
-#: templates/portal/partials/campaign-status.php:78
+#: templates/portal/partials/campaign-status.php:96
 msgid "Finished. Run it again from your campaign list."
 msgstr ""
 
 #: inc/Portal/class-catalogue-view-data.php:216
-#: templates/portal/partials/campaign-status.php:79
+#: templates/portal/partials/campaign-status.php:97
 msgid "Cancelled and no longer running."
 msgstr ""
 
@@ -3752,10 +3824,6 @@ msgstr ""
 msgid "Change the destination or description before requesting an update."
 msgstr ""
 
-#: inc/Portal/class-creative-view-data.php:240
-msgid "Not approved"
-msgstr ""
-
 #: inc/Portal/class-creative-view-data.php:245
 #: inc/Portal/class-creative-view-data.php:274
 #: templates/portal/partials/campaign-ad-updates.php:64
@@ -3993,15 +4061,15 @@ msgstr ""
 msgid "We could not create the account. Please try again later."
 msgstr ""
 
-#: inc/Portal/class-view-data.php:318
+#: inc/Portal/class-view-data.php:321
 msgid "Renew campaign"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:319
+#: inc/Portal/class-view-data.php:322
 msgid "Duplicate campaign"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:370
+#: inc/Portal/class-view-data.php:373
 msgid "Delete campaign"
 msgstr ""
 
@@ -5360,7 +5428,7 @@ msgid "Sign in"
 msgstr ""
 
 #: templates/portal/partials/campaign-ad-updates.php:40
-#: templates/portal/partials/campaign-status.php:208
+#: templates/portal/partials/campaign-status.php:248
 msgid "Your ads"
 msgstr ""
 
@@ -5842,7 +5910,7 @@ msgstr ""
 
 #. translators: 1: number of days the campaign runs. 2: the site's timezone on the first day, e.g. PDT.
 #: templates/portal/partials/campaign-order-summary.php:91
-#: templates/portal/partials/campaign-status.php:182
+#: templates/portal/partials/campaign-status.php:222
 #, php-format
 msgid "%1$d day · %2$s"
 msgid_plural "%1$d days · %2$s"
@@ -5867,7 +5935,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: templates/portal/partials/campaign-order-summary.php:118
-#: templates/portal/partials/campaign-status.php:193
+#: templates/portal/partials/campaign-status.php:233
 msgid "Link"
 msgstr ""
 
@@ -5892,7 +5960,7 @@ msgid "%1$d of %2$d ready"
 msgstr ""
 
 #: templates/portal/partials/campaign-order-summary.php:150
-#: templates/portal/partials/campaign-status.php:199
+#: templates/portal/partials/campaign-status.php:239
 msgid "Total"
 msgstr ""
 
@@ -6231,68 +6299,64 @@ msgstr ""
 msgid "M j · g:i A"
 msgstr ""
 
-#: templates/portal/partials/campaign-status.php:56
+#: templates/portal/partials/campaign-status.php:74
 msgid "Complete"
 msgstr ""
 
-#: templates/portal/partials/campaign-status.php:71
+#: templates/portal/partials/campaign-status.php:89
 msgid "The review team has your campaign. You can withdraw it to edit until a reviewer starts."
 msgstr ""
 
-#: templates/portal/partials/campaign-status.php:72
+#: templates/portal/partials/campaign-status.php:90
 msgid "Someone on the review team is looking at it now."
 msgstr ""
 
-#: templates/portal/partials/campaign-status.php:74
+#: templates/portal/partials/campaign-status.php:92
 msgid "Not approved. The reason is in the notes from the review team."
 msgstr ""
 
-#: templates/portal/partials/campaign-status.php:75
+#: templates/portal/partials/campaign-status.php:93
 msgid "Approved. It starts by itself on its start date."
 msgstr ""
 
-#: templates/portal/partials/campaign-status.php:87
+#: templates/portal/partials/campaign-status.php:105
 msgid "Where it has got to"
 msgstr ""
 
-#: templates/portal/partials/campaign-status.php:88
+#: templates/portal/partials/campaign-status.php:106
 msgid "Each stage is dated as it happens."
 msgstr ""
 
-#: templates/portal/partials/campaign-status.php:100
+#: templates/portal/partials/campaign-status.php:118
 #: templates/portal/partials/sparkline.php:182
 msgid "Now"
 msgstr ""
 
-#: templates/portal/partials/campaign-status.php:112
+#: templates/portal/partials/campaign-status.php:130
 #: templates/portal/screens/campaign.php:286
 msgid "Withdraw to edit"
 msgstr ""
 
-#: templates/portal/partials/campaign-status.php:119
+#: templates/portal/partials/campaign-status.php:137
 msgid "Activity"
 msgstr ""
 
-#: templates/portal/partials/campaign-status.php:128
+#: templates/portal/partials/campaign-status.php:168
 msgid "Submitted for review with a note for the team"
 msgstr ""
 
-#: templates/portal/partials/campaign-status.php:129
-msgid "Submitted for review"
-msgstr ""
-
 #. translators: %s: package name.
-#: templates/portal/partials/campaign-status.php:144
+#: templates/portal/partials/campaign-status.php:184
 #, php-format
 msgid "Draft started from %s"
 msgstr ""
 
-#: templates/portal/partials/campaign-status.php:147
+#: templates/portal/partials/campaign-status.php:187
 msgid "Draft started"
 msgstr ""
 
 #. translators: %d: number of ad sizes.
-#: templates/portal/partials/campaign-status.php:213
+#: templates/portal/partials/campaign-status.php:253
 #, php-format
 msgid "%d size"
 msgid_plural "%d sizes"
@@ -7205,10 +7269,6 @@ msgstr[1] ""
 
 #: templates/portal/screens/organization.php:95
 msgid "Organization members table"
-msgstr ""
-
-#: templates/portal/screens/organization.php:123
-msgid "You"
 msgstr ""
 
 #: templates/portal/screens/organization.php:172
