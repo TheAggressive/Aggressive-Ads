@@ -208,8 +208,8 @@ final class CampaignHistoryTest extends WP_UnitTestCase {
 
 		$this->assertCount( 1, $items );
 		$this->assertSame( 'Review started', $items[0]['text'] );
-		$this->assertStringNotContainsString( 'Dana', wp_json_encode( $items ) ?: '' );
-		$this->assertStringNotContainsString( 'off-brand', wp_json_encode( $items ) ?: '' );
+		$this->assertStringNotContainsString( 'Dana', (string) wp_json_encode( $items ) );
+		$this->assertStringNotContainsString( 'off-brand', (string) wp_json_encode( $items ) );
 	}
 
 	public function test_it_names_the_actor_in_three_terms_and_no_others(): void {
@@ -258,7 +258,7 @@ final class CampaignHistoryTest extends WP_UnitTestCase {
 		$names = array( get_userdata( $this->reviewer )->user_login, get_userdata( $colleague )->user_login );
 
 		foreach ( $names as $name ) {
-			$this->assertStringNotContainsString( $name, wp_json_encode( $who ) ?: '', 'A person was named.' );
+			$this->assertStringNotContainsString( $name, (string) wp_json_encode( $who ), 'A person was named.' );
 		}
 	}
 
@@ -445,6 +445,7 @@ final class CampaignHistoryTest extends WP_UnitTestCase {
 		 */
 		$this->assertSame( 4, substr_count( $timeline, $today ) );
 		$this->assertSame( 0, substr_count( $timeline, '—' ), 'A stage the trail dates was still showing a dash.' );
+
 		/*
 		 * Still there, and correctly: no event records a campaign being
 		 * created, so the post's own date is the only source for it.
