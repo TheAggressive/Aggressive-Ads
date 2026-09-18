@@ -102,6 +102,27 @@ $aggr_template = Size_Template::svg( (string) $aggr_slot['size'] );
 		?>
 		<p id="aggr-upload-status-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?>" class="aggr-upload-status" role="status" aria-live="polite"></p>
 
+		<?php
+		/*
+		 * Shown only while a file is on its way, and only by script: a plain
+		 * form post has no progress to read, and a bar standing still at zero
+		 * would say the upload had stalled.
+		 */
+		?>
+		<div class="aggr-upload-progress" data-aggr-upload-progress hidden>
+			<span class="aggr-pill aggr-pill--pending">
+				<?php esc_html_e( 'Uploading', 'aggressive-ads' ); ?>
+				<span aria-hidden="true">·</span>
+				<span data-aggr-upload-percent>0%</span>
+			</span>
+			<?php /* translators: %s: required image dimensions, e.g. 728x90. */ ?>
+			<progress class="aggr-upload-progress__bar" max="100" value="0" aria-label="<?php echo esc_attr( sprintf( __( 'Upload progress for %s', 'aggressive-ads' ), (string) $aggr_slot['size'] ) ); ?>"></progress>
+			<div class="aggr-upload-progress__foot">
+				<p class="aggr-upload-progress__file" data-aggr-upload-file></p>
+				<button class="aggr-card-action" type="button" data-aggr-upload-cancel disabled><?php esc_html_e( 'Cancel upload', 'aggressive-ads' ); ?></button>
+			</div>
+		</div>
+
 		<?php if ( '' !== $aggr_template ) : ?>
 			<p class="aggr-hint">
 				<a class="aggr-card-action" download="<?php echo esc_attr( 'ad-template-' . (string) $aggr_slot['size'] . '.svg' ); ?>" href="<?php echo esc_url( 'data:image/svg+xml;charset=utf-8,' . rawurlencode( $aggr_template ), array( 'data' ) ); ?>">

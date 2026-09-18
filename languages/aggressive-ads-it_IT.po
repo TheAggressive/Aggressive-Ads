@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
-"POT-Creation-Date: 2026-09-17T23:59:24+00:00\n"
+"POT-Creation-Date: 2026-09-18T23:10:25+00:00\n"
 "PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -2158,7 +2158,7 @@ msgstr ""
 
 #: inc/Admin/class-settings-screen.php:218
 #: templates/portal/partials/campaign-overlays.php:303
-#: templates/portal/partials/campaign-upload-form.php:141
+#: templates/portal/partials/campaign-upload-form.php:162
 #: templates/portal/partials/campaign-variant-destination.php:54
 msgid "Destination URL"
 msgstr ""
@@ -2480,25 +2480,54 @@ msgstr ""
 msgid "Uploading the creative."
 msgstr ""
 
-#: inc/Assets/class-assets.php:487
-msgid "Enter a complete destination URL to finish the upload."
-msgstr ""
-
+#. translators: %s: the file's name, e.g. skyscraper-160x600.png.
 #: inc/Assets/class-assets.php:488
-msgid "Choose an ad creative file to upload."
+#, php-format
+msgid "Uploading %s."
 msgstr ""
 
 #: inc/Assets/class-assets.php:489
-msgid "Use a JPEG, PNG, GIF, or WebP image."
+msgid "Uploaded. Showing your ad…"
 msgstr ""
 
 #: inc/Assets/class-assets.php:490
+msgid "The upload did not finish. Check your connection and try again."
+msgstr ""
+
+#: inc/Assets/class-assets.php:491
+msgid "Upload cancelled. Choose the file again when you are ready."
+msgstr ""
+
+#: inc/Assets/class-assets.php:492
+msgid ""
+"The upload took too long and was stopped. Try again, or try a smaller file."
+msgstr ""
+
+#. translators: %s: the file's name, e.g. skyscraper-160x600.png.
+#: inc/Assets/class-assets.php:494
+#, php-format
+msgid "%s · matched by size"
+msgstr ""
+
+#: inc/Assets/class-assets.php:495
+msgid "Enter a complete destination URL to finish the upload."
+msgstr ""
+
+#: inc/Assets/class-assets.php:496
+msgid "Choose an ad creative file to upload."
+msgstr ""
+
+#: inc/Assets/class-assets.php:497
+msgid "Use a JPEG, PNG, GIF, or WebP image."
+msgstr ""
+
+#: inc/Assets/class-assets.php:498
 msgid ""
 "That ad creative is too large in pixels to process safely. Choose a smaller "
 "one."
 msgstr ""
 
-#: inc/Assets/class-assets.php:491
+#: inc/Assets/class-assets.php:499
 msgid "The ad creative must match the required pixel size for this placement."
 msgstr ""
 
@@ -6102,7 +6131,7 @@ msgid "Replace"
 msgstr ""
 
 #: templates/portal/partials/campaign-creative-step.php:517
-#: templates/portal/partials/campaign-upload-form.php:135
+#: templates/portal/partials/campaign-upload-form.php:156
 msgid "Goes to"
 msgstr ""
 
@@ -6696,27 +6725,41 @@ msgstr ""
 msgid "Maximum file size: %s."
 msgstr ""
 
-#: templates/portal/partials/campaign-upload-form.php:109
+#: templates/portal/partials/campaign-upload-form.php:114
+msgid "Uploading"
+msgstr ""
+
+#. translators: %s: required image dimensions, e.g. 728x90.
+#: templates/portal/partials/campaign-upload-form.php:119
+#, php-format
+msgid "Upload progress for %s"
+msgstr ""
+
+#: templates/portal/partials/campaign-upload-form.php:122
+msgid "Cancel upload"
+msgstr ""
+
+#: templates/portal/partials/campaign-upload-form.php:130
 msgid "Download template"
 msgstr ""
 
 #. translators: %s: required image dimensions, e.g. 728x90.
-#: templates/portal/partials/campaign-upload-form.php:113
+#: templates/portal/partials/campaign-upload-form.php:134
 #, php-format
 msgid "for %s"
 msgstr ""
 
-#: templates/portal/partials/campaign-upload-form.php:137
+#: templates/portal/partials/campaign-upload-form.php:158
 msgid "Use a different link"
 msgstr ""
 
-#: templates/portal/partials/campaign-upload-form.php:142
+#: templates/portal/partials/campaign-upload-form.php:163
 msgid ""
 "Where someone should go after selecting the advertisement. Use a complete "
 "http or https URL."
 msgstr ""
 
-#: templates/portal/partials/campaign-upload-form.php:149
+#: templates/portal/partials/campaign-upload-form.php:170
 msgid "Upload creative"
 msgstr ""
 
