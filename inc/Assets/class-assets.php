@@ -482,13 +482,21 @@ final class Assets implements Service {
 				array(
 					'uploads' => $uploads,
 					'i18n'    => array(
-						'ready'      => __( 'File selected. Add a destination URL to upload it.', 'aggressive-ads' ),
-						'uploading'  => __( 'Uploading the creative.', 'aggressive-ads' ),
-						'needsUrl'   => __( 'Enter a complete destination URL to finish the upload.', 'aggressive-ads' ),
-						'empty'      => __( 'Choose an ad creative file to upload.', 'aggressive-ads' ),
-						'type'       => __( 'Use a JPEG, PNG, GIF, or WebP image.', 'aggressive-ads' ),
-						'pixels'     => __( 'That ad creative is too large in pixels to process safely. Choose a smaller one.', 'aggressive-ads' ),
-						'dimensions' => __( 'The ad creative must match the required pixel size for this placement.', 'aggressive-ads' ),
+						'ready'           => __( 'File selected. Add a destination URL to upload it.', 'aggressive-ads' ),
+						'uploading'       => __( 'Uploading the creative.', 'aggressive-ads' ),
+						/* translators: %s: the file's name, e.g. skyscraper-160x600.png. */
+						'uploadingFile'   => __( 'Uploading %s.', 'aggressive-ads' ),
+						'uploaded'        => __( 'Uploaded. Showing your ad…', 'aggressive-ads' ),
+						'uploadFailed'    => __( 'The upload did not finish. Check your connection and try again.', 'aggressive-ads' ),
+						'uploadCancelled' => __( 'Upload cancelled. Choose the file again when you are ready.', 'aggressive-ads' ),
+						'uploadTimedOut'  => __( 'The upload took too long and was stopped. Try again, or try a smaller file.', 'aggressive-ads' ),
+						/* translators: %s: the file's name, e.g. skyscraper-160x600.png. */
+						'matched'         => __( '%s · matched by size', 'aggressive-ads' ),
+						'needsUrl'        => __( 'Enter a complete destination URL to finish the upload.', 'aggressive-ads' ),
+						'empty'           => __( 'Choose an ad creative file to upload.', 'aggressive-ads' ),
+						'type'            => __( 'Use a JPEG, PNG, GIF, or WebP image.', 'aggressive-ads' ),
+						'pixels'          => __( 'That ad creative is too large in pixels to process safely. Choose a smaller one.', 'aggressive-ads' ),
+						'dimensions'      => __( 'The ad creative must match the required pixel size for this placement.', 'aggressive-ads' ),
 					),
 				)
 			);

@@ -91,6 +91,68 @@
  * `:empty` rather than a hidden class, so nothing has to remember to clear a
  * modifier: the paragraph is out of the layout exactly when it has no text.
  */
+/*
+ * An upload on its way: the design's Uploading pill with the percentage, a
+ * bar, and the file's name under it. A native <progress> styled rather than a
+ * div, so assistive technology reads its value on request without anything
+ * having to announce each percent.
+ */
+.aggr-upload-progress {
+	display: grid;
+	gap: var(--aggr-space-2xs);
+	margin: var(--aggr-space-xs) 0 var(--aggr-space-md);
+}
+
+.aggr-upload-progress .aggr-pill {
+	justify-self: start;
+	font-variant-numeric: tabular-nums;
+}
+
+.aggr-upload-progress__bar {
+	width: 100%;
+	height: 6px;
+	overflow: hidden;
+	background: var(--aggr-color-surface-sunken);
+	border: 0;
+	border-radius: var(--aggr-radius-pill);
+	appearance: none;
+}
+
+.aggr-upload-progress__bar::-webkit-progress-bar {
+	background: var(--aggr-color-surface-sunken);
+}
+
+.aggr-upload-progress__bar::-webkit-progress-value {
+	background: var(--aggr-color-accent);
+	transition: width 120ms linear;
+}
+
+.aggr-upload-progress__bar::-moz-progress-bar {
+	background: var(--aggr-color-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.aggr-upload-progress__bar::-webkit-progress-value {
+		transition: none;
+	}
+}
+
+.aggr-upload-progress__foot {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--aggr-space-sm);
+	align-items: baseline;
+	justify-content: space-between;
+}
+
+.aggr-upload-progress__file {
+	margin: 0;
+	overflow-wrap: anywhere;
+	color: var(--aggr-color-text-muted);
+	font-family: var(--aggr-font-mono);
+	font-size: 12px;
+}
+
 .aggr-upload-status {
 	margin: var(--aggr-space-2xs) 0 var(--aggr-space-md);
 	color: var(--aggr-color-text-muted);

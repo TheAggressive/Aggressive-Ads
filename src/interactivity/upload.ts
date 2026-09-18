@@ -10,6 +10,8 @@
 
 import { store, getContext } from '@wordpress/interactivity';
 import { checkCreativeFile, parsePixelSize } from '@aggr/logic';
+import { sendWithProgress } from './shared/upload-send';
+import { navigateSameOrigin } from '../admin/shared/navigate';
 
 interface UploadState {
 	expectedSize: string;
@@ -124,8 +126,145 @@ function maybeSubmit( id: string ): void {
 
 	url.removeAttribute( 'aria-invalid' );
 	submitted.add( id );
-	announce( id, state.i18n.uploading ?? '' );
-	form.requestSubmit();
+	send( id, form, file.files[ 0 ] );
+}
+
+/**
+ * Sends the upload and shows it going.
+ *
+ * The card draws the design's Uploading pill, a bar and the percentage, and
+ * names the file. The status region is told when it starts and when it ends
+ * and nothing in between: a percentage read aloud every second is noise that
+ * talks over whatever the person is doing, and the bar itself is a native
+ * `<progress>`, which assistive technology can already read on request.
+ *
+ * @param id   The placement this upload is for.
+ * @param form Its form.
+ * @param file The file being sent, for its name.
+ */
+function send( id: string, form: HTMLFormElement, file?: File ): void {
+	const panel = form.querySelector< HTMLElement >(
+		'[data-aggr-upload-progress]'
+	);
+	const bar = panel?.querySelector< HTMLProgressElement >( 'progress' );
+	const percent = panel?.querySelector< HTMLElement >(
+		'[data-aggr-upload-percent]'
+	);
+	const name = panel?.querySelector< HTMLElement >(
+		'[data-aggr-upload-file]'
+	);
+
+	const cancel = panel?.querySelector< HTMLButtonElement >(
+		'[data-aggr-upload-cancel]'
+	);
+
+	/*
+	 * Leaving the page drops the file on the floor, and nothing would say so:
+	 * the browser asks first while bytes are on their way. Removed before the
+	 * page moves on by itself, or the warning would stop its own redirect.
+	 */
+	const guard = ( event: BeforeUnloadEvent ): void => {
+		event.preventDefault();
+	};
+	const settle = (): void => {
+		window.removeEventListener( 'beforeunload', guard );
+	};
+
+	const handle = sendWithProgress( form, {
+		progress: ( value ) => {
+			if ( bar ) {
+				bar.value = value;
+			}
+
+			if ( percent ) {
+				percent.textContent = `${ value }%`;
+			}
+		},
+		done: ( landedAt ) => {
+			settle();
+
+			if ( bar ) {
+				bar.value = 100;
+			}
+
+			if ( percent ) {
+				percent.textContent = '100%';
+			}
+
+			if ( cancel ) {
+				// Too late to stop: the server has it.
+				cancel.disabled = true;
+			}
+
+			announce( id, state.i18n.uploaded ?? '' );
+
+			/*
+			 * The server's own page, with its own notice or refusal on it.
+			 * Same origin only: the handler redirects within the portal, and
+			 * anything else is not somewhere this should follow. Refusing it
+			 * falls back to reloading, which shows the server's answer too.
+			 */
+			if ( ! navigateSameOrigin( landedAt ) ) {
+				window.location.reload();
+			}
+		},
+		fail: ( reason ) => {
+			settle();
+			submitted.delete( id );
+
+			if ( panel ) {
+				panel.hidden = true;
+			}
+
+			// A cancel was asked for, so it is news, not an error.
+			const message = {
+				cancelled: state.i18n.uploadCancelled,
+				timeout: state.i18n.uploadTimedOut,
+				error: state.i18n.uploadFailed,
+			}[ reason ];
+
+			announce(
+				id,
+				message ?? state.i18n.uploadFailed ?? '',
+				'cancelled' === reason ? 'note' : 'error'
+			);
+			revealButton( id );
+		},
+	} );
+
+	if ( null === handle ) {
+		// No readable progress in this browser: the plain post it always was.
+		announce( id, state.i18n.uploading ?? '' );
+		form.requestSubmit();
+
+		return;
+	}
+
+	window.addEventListener( 'beforeunload', guard );
+
+	if ( panel ) {
+		panel.hidden = false;
+	}
+
+	if ( cancel ) {
+		cancel.disabled = false;
+		cancel.onclick = () => handle.cancel();
+	}
+
+	if ( name && file ) {
+		name.textContent = ( state.i18n.matched ?? '%s' ).replace(
+			'%s',
+			file.name
+		);
+	}
+
+	announce(
+		id,
+		( state.i18n.uploadingFile ?? state.i18n.uploading ?? '' ).replace(
+			'%s',
+			file?.name ?? ''
+		)
+	);
 }
 
 /**
