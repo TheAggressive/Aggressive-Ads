@@ -294,17 +294,21 @@ pause/cancel form: **Need to pause or cancel?** is a folded card at the foot of
 the page, and becomes an open **Your request** card while one is waiting on the
 review team.
 
-**Editing a running campaign** (`?edit=1`) is laid out as the creation wizard
-is, in three steps as creation has: **Details & dates**, **Links**, **Review &
-submit** — only those the site's live-edit settings allow, and the first named
-"Details" or "Dates" when only one half is enabled. They sit in the page head
-(`partials/campaign-changes-steps.php`). The first step is two cards in one form
-(`partials/campaign-changes.php`), name and placements then dates, as creation's
-first step holds the package and the schedule; the change handler reads
-whichever fields a post carries, and an unchanged date is not a change, so a
-started campaign is not refused for a start date it left alone. A link to the
-old `step=schedule` lands on the combined step. A **Your changes** card beside it lists
-each staged change as its new value with the old one under it, and holds
+**Editing a running campaign** (`?edit=1`) has creation's three steps with
+creation's names: **Package & dates**, **Ads**, **Review & submit**
+(`Portal\Campaign_Edit_Steps`, read by the page head and the flow alike). The
+first is two cards in one form — the package, its placements and the name, then
+the schedule — posted to a handler that stages whichever fields arrive; an
+unchanged date is not a change, so a started campaign is not refused for a start
+date it left alone, and a link to the old `step=schedule` lands here. **Ads** is
+laid out as creation's is: the Destination card (when the site allows link
+edits) and then the ads themselves, each with its **Update** dialog for new
+artwork — the reason editing has an Ads step at all. A replacement goes to the
+review team as soon as its file is chosen, on its own track, so it is not a
+staged edit; the Ads step is offered whenever ads can be replaced, even where
+links cannot change. A **Your changes** card beside it lists
+each staged change as its new value with the old one under it, then any new
+artwork already with the review team, and holds
 **Submit for review** on the last step, **Discard these edits** once there is
 something to discard, and **Back to the campaign**. Placements are drawn as the package cards
 are — name, file limit, and the size as a silhouette and in figures — and only

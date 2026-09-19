@@ -24,7 +24,8 @@ use Aggressive\Ads\Portal\Campaign_Actions;
 use Aggressive\Ads\Portal\Campaign_Edit_Steps;
 
 $aggr_edit_fields = is_array( $aggr_campaign['live_edit_fields'] ?? null ) ? $aggr_campaign['live_edit_fields'] : array();
-$aggr_edit_steps  = Campaign_Edit_Steps::for_fields( $aggr_edit_fields );
+$aggr_can_update  = true === ( $aggr_campaign['can_request_updates'] ?? false );
+$aggr_edit_steps  = Campaign_Edit_Steps::for_fields( $aggr_edit_fields, $aggr_can_update );
 $aggr_edit_step   = Campaign_Edit_Steps::current( Campaign_Actions::request_change_step(), $aggr_edit_steps );
 $aggr_edit_number = (int) array_search( $aggr_edit_step, array_keys( $aggr_edit_steps ), true ) + 1;
 ?>

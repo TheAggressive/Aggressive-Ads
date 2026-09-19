@@ -23,6 +23,12 @@
 	padding-top: 0;
 }
 
+/* The cards set the rhythm; their own outer margins would double it. */
+.aggr-changes__steps > *,
+.aggr-changes__form > .aggr-step-card {
+	margin: 0;
+}
+
 .aggr-changes__form .aggr-step-card {
 	display: grid;
 	gap: var(--aggr-space-md);
@@ -163,4 +169,17 @@
 .aggr-changes__placements .aggr-choice__text {
 	display: grid;
 	gap: 2px;
+}
+
+/* The package the campaign bought, named above what it includes. */
+.aggr-changes__package {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--aggr-space-sm);
+	align-items: baseline;
+	justify-content: space-between;
+	margin: 0;
+	padding: var(--aggr-space-sm) var(--aggr-space-md);
+	background: var(--aggr-color-surface-sunken);
+	border-radius: var(--aggr-radius-control);
 }

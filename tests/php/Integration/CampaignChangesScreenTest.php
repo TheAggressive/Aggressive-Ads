@@ -151,9 +151,9 @@ final class CampaignChangesScreenTest extends WP_UnitTestCase {
 			return $found;
 		};
 
-		// Three steps, as creation has: details and dates together, then links, then review.
-		$this->assertSame( array( 'Details & dates', 'Links', 'Review & submit' ), $labels( $all ) );
-		$this->assertSame( array( 'Links', 'Review & submit' ), $labels( $some ), 'A switched-off step was still offered.' );
+		// The same three steps as creation, with the same names.
+		$this->assertSame( array( 'Package & dates', 'Ads', 'Review & submit' ), $labels( $all ) );
+		$this->assertSame( array( 'Ads', 'Review & submit' ), $labels( $some ), 'A switched-off step was still offered.' );
 		$this->assertSame( 1, $all->query( '//li[@aria-current="step"]' )->length );
 	}
 
@@ -225,14 +225,31 @@ final class CampaignChangesScreenTest extends WP_UnitTestCase {
 		$head = $this->render( 'campaign-changes-steps.php', 'schedule', $this->campaign() );
 		$flow = $this->render( 'campaign-changes.php', 'schedule', $this->campaign() );
 
-		$this->assertSame( 'Details & dates', trim( (string) $head->evaluate( 'string(//li[@aria-current="step"])' ) ) );
+		$this->assertSame( 'Package & dates', trim( (string) $head->evaluate( 'string(//li[@aria-current="step"])' ) ) );
 		$this->assertSame( 1, $flow->query( '//input[@name="start_date"]' )->length );
 		$this->assertSame( 1, $flow->query( '//input[@name="title"]' )->length );
 	}
 
-	public function test_dates_alone_are_a_step_of_their_own_name(): void {
-		$xpath = $this->render( 'campaign-changes-steps.php', 'details', $this->campaign( array( 'live_edit_fields' => array( 'start_ts', 'end_ts' ) ) ) );
+	/**
+	 * Replacing an ad's artwork is why editing needs an Ads step, so it is
+	 * there whenever the ads can be replaced, even where links cannot change.
+	 *
+	 * @return void
+	 */
+	public function test_the_ads_step_is_there_whenever_ads_can_be_replaced(): void {
+		$without_links = $this->campaign( array( 'live_edit_fields' => array( 'title' ) ) );
+		$replaceable   = $this->campaign(
+			array(
+				'live_edit_fields'    => array( 'title' ),
+				'can_request_updates' => true,
+			)
+		);
 
-		$this->assertSame( 'Dates', trim( (string) $xpath->evaluate( 'string(//li[1])' ) ) );
+		$labels = static function ( DOMXPath $xpath ): string {
+			return trim( (string) preg_replace( '/\s+/', ' ', (string) $xpath->evaluate( 'string(//ol[@class="aggr-steps"])' ) ) );
+		};
+
+		$this->assertStringNotContainsString( 'Ads', $labels( $this->render( 'campaign-changes-steps.php', 'details', $without_links ) ) );
+		$this->assertStringContainsString( 'Ads', $labels( $this->render( 'campaign-changes-steps.php', 'details', $replaceable ) ) );
 	}
 }
