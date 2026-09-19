@@ -519,7 +519,7 @@ final class Placement_Manager {
 			) {
 				return new WP_Error(
 					'aggr_invalid_house_attachment',
-					__( 'House creative must be a JPEG, PNG, GIF, WebP, or AVIF image.', 'aggressive-ads' )
+					$this->house_type_message()
 				);
 			}
 
@@ -528,7 +528,7 @@ final class Placement_Manager {
 			if ( '' === $file || ! is_readable( $file ) ) {
 				return new WP_Error(
 					'aggr_invalid_house_attachment',
-					__( 'House creative must be a JPEG, PNG, GIF, WebP, or AVIF image.', 'aggressive-ads' )
+					$this->house_type_message()
 				);
 			}
 
@@ -537,7 +537,7 @@ final class Placement_Manager {
 			if ( ! is_array( $dimensions ) ) {
 				return new WP_Error(
 					'aggr_invalid_house_attachment',
-					__( 'House creative must be a JPEG, PNG, GIF, WebP, or AVIF image.', 'aggressive-ads' )
+					$this->house_type_message()
 				);
 			}
 
@@ -549,7 +549,7 @@ final class Placement_Manager {
 			) {
 				return new WP_Error(
 					'aggr_invalid_house_attachment',
-					__( 'House creative must be a JPEG, PNG, GIF, WebP, or AVIF image.', 'aggressive-ads' )
+					$this->house_type_message()
 				);
 			}
 		}
@@ -613,6 +613,20 @@ final class Placement_Manager {
 				message: $message,
 				actor_user_id: get_current_user_id()
 			)
+		);
+	}
+
+	/**
+	 * Why a house attachment was refused. One sentence for the four checks
+	 * that can refuse it, since the fix is the same for each.
+	 *
+	 * @return string
+	 */
+	private function house_type_message(): string {
+		return sprintf(
+			/* translators: %s: the accepted image formats, e.g. JPEG, PNG, GIF. */
+			__( 'House creative must be an image in one of these formats: %s.', 'aggressive-ads' ),
+			Upload_Rules::type_list()
 		);
 	}
 }

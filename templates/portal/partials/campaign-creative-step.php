@@ -122,8 +122,9 @@ foreach ( $aggr_slots as $aggr_counted_slot ) {
 								<span id="aggr-dropzone-note" class="aggr-hint">
 									<?php
 									printf(
-										/* translators: %s: the largest file any size in this package accepts, e.g. 150 KB. */
-										esc_html__( 'Each file goes to the size it matches. JPEG, PNG, GIF, WebP or AVIF · up to %s each · files stay private until approved', 'aggressive-ads' ),
+										/* translators: 1: the accepted image formats, e.g. JPEG, PNG, GIF. 2: the largest file any size in this package accepts, e.g. 150 KB. */
+										esc_html__( 'Each file goes to the size it matches. %1$s · up to %2$s each · files stay private until approved', 'aggressive-ads' ),
+										esc_html( Upload_Rules::type_list() ),
 										esc_html( (string) size_format( $aggr_max_bytes > 0 ? $aggr_max_bytes : 153600 ) )
 									);
 									?>

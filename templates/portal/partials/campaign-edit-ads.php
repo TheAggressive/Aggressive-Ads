@@ -55,6 +55,8 @@ foreach ( $aggr_edit_slots as $aggr_open_slot ) {
 			'size'      => (string) $aggr_open_slot['size'],
 			'max_bytes' => $aggr_open_max,
 			'max_size'  => (string) size_format( $aggr_open_max ),
+			'name'      => (string) $aggr_open_slot['name'],
+			'open'      => true,
 		);
 	}
 }

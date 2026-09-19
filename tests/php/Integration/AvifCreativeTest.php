@@ -9,20 +9,14 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Tests\Integration;
 
-use Aggressive\Ads\Core\Post_Statuses;
-use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Domain\Upload_Rules;
 use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Audit_Repository;
-use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Attachment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
-use Aggressive\Ads\Repository\Org_Repository;
-use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Security\Ownership;
 use Aggressive\Ads\Security\Roles;
-use Aggressive\Ads\Storage\Private_Storage;
 use Aggressive\Ads\Workflow\Creative_Manager;
 use Aggressive\Ads\Workflow\Creative_Promoter;
 use WP_UnitTestCase;
@@ -38,6 +32,8 @@ use WP_UnitTestCase;
  * built by the test, so what is read is what an encoder produces.
  */
 final class AvifCreativeTest extends WP_UnitTestCase {
+
+	use CreativeFixtures;
 
 	/**
 	 * Owning advertiser user id.
@@ -61,13 +57,6 @@ final class AvifCreativeTest extends WP_UnitTestCase {
 	private int $placement_id;
 
 	/**
-	 * Temporary copies of the fixture, which the upload consumes.
-	 *
-	 * @var array<int, string>
-	 */
-	private array $temporary = array();
-
-	/**
 	 * Media Library files made by promotion.
 	 *
 	 * @var array<int, int>
@@ -84,34 +73,9 @@ final class AvifCreativeTest extends WP_UnitTestCase {
 
 		( new Installer( new Audit_Repository(), new Roles() ) )->install_roles();
 
-		$this->owner = self::factory()->user->create( array( 'role' => Roles::ADVERTISER ) );
-		$org_id      = (int) self::factory()->post->create(
-			array(
-				'post_type'   => Post_Types::ORGANIZATION,
-				'post_status' => 'publish',
-			)
-		);
-		update_post_meta( $org_id, Org_Repository::META_OWNER_USER, $this->owner );
-
-		$this->placement_id = (int) self::factory()->post->create(
-			array(
-				'post_type'   => Post_Types::PLACEMENT,
-				'post_status' => 'publish',
-				'post_title'  => 'Header',
-			)
-		);
-		update_post_meta( $this->placement_id, Placement_Repository::META_IS_ACTIVE, 1 );
-		update_post_meta( $this->placement_id, Placement_Repository::META_SIZE, '728x90' );
-
-		$this->campaign_id = (int) self::factory()->post->create(
-			array(
-				'post_type'   => Post_Types::CAMPAIGN,
-				'post_status' => Post_Statuses::DRAFT,
-				'post_author' => $this->owner,
-			)
-		);
-		update_post_meta( $this->campaign_id, Campaign_Repository::META_ORG_ID, $org_id );
-		add_post_meta( $this->campaign_id, Campaign_Repository::META_PLACEMENT_ID, $this->placement_id );
+		$this->owner        = self::factory()->user->create( array( 'role' => Roles::ADVERTISER ) );
+		$this->placement_id = $this->placement( 'Header', '728x90' );
+		$this->campaign_id  = $this->campaign( $this->owner, $this->org( $this->owner ), array( $this->placement_id ) );
 
 		Plugin::instance()->container()->get( Ownership::class )->flush_cache();
 	}
@@ -122,26 +86,11 @@ final class AvifCreativeTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function tear_down(): void {
-		$creatives = Plugin::instance()->container()->get( Creative_Repository::class );
-		$storage   = Plugin::instance()->container()->get( Private_Storage::class );
-
-		foreach ( $creatives->ids_for_campaign( $this->campaign_id ) as $creative_id ) {
-			$stored = $creatives->storage_details( $creative_id );
-
-			if ( null !== $stored && '' !== $stored['path'] ) {
-				$storage->delete( $stored['path'] );
-			}
-		}
-
 		foreach ( $this->attachments as $attachment_id ) {
 			wp_delete_attachment( $attachment_id, true );
 		}
 
-		foreach ( $this->temporary as $path ) {
-			if ( is_file( $path ) ) {
-				unlink( $path );
-			}
-		}
+		$this->remove_creative_files( $this->campaign_id );
 
 		parent::tear_down();
 	}
