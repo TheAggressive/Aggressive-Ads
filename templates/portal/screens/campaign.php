@@ -32,9 +32,6 @@ use Aggressive\Ads\Portal\View_Data;
 $aggr_creatives          = is_array( $aggr_campaign['creatives'] ) ? $aggr_campaign['creatives'] : array();
 $aggr_creative_updates   = is_array( $aggr_campaign['creative_updates'] ) ? $aggr_campaign['creative_updates'] : array();
 $aggr_notes              = (string) $aggr_campaign['review_notes'];
-$aggr_places             = is_array( $aggr_campaign['placements'] ) ? $aggr_campaign['placements'] : array();
-$aggr_place_ids          = is_array( $aggr_campaign['placement_ids'] ) ? array_map( 'intval', $aggr_campaign['placement_ids'] ) : array();
-$aggr_options            = is_array( $aggr_campaign['placement_options'] ) ? $aggr_campaign['placement_options'] : array();
 $aggr_packages           = is_array( $aggr_campaign['package_options'] ) ? $aggr_campaign['package_options'] : array();
 $aggr_slots              = is_array( $aggr_campaign['creative_slots'] ) ? $aggr_campaign['creative_slots'] : array();
 $aggr_readiness          = is_array( $aggr_campaign['readiness'] ) ? $aggr_campaign['readiness'] : array();
@@ -81,7 +78,6 @@ foreach ( $aggr_slots as $aggr_error_slot ) {
 $aggr_min_start_date = (string) ( $aggr_campaign['min_start_date'] ?? '' );
 $aggr_creative_ready = array() !== $aggr_slots;
 $aggr_overlays       = array();
-$aggr_line_items     = is_array( $aggr_campaign['line_items'] ?? null ) ? $aggr_campaign['line_items'] : array();
 
 /*
  * The wizard is on screen, and the panels below it are describing steps the
@@ -288,6 +284,10 @@ $aggr_step_number = (int) array_search( $aggr_step, array_keys( $aggr_steps ), t
 			</form>
 		<?php endif; ?>
 
+		<?php if ( $aggr_editing_changes && true !== ( $aggr_campaign['edits_submitted'] ?? false ) ) : ?>
+			<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-changes-steps.php'; ?>
+		<?php endif; ?>
+
 		<?php if ( true === $aggr_campaign['can_request_changes'] && ! $aggr_editing_changes ) : ?>
 			<a class="aggr-button" href="<?php echo esc_url( add_query_arg( 'edit', '1', $aggr_campaign_url ) ); ?>">
 				<?php esc_html_e( 'Edit', 'aggressive-ads' ); ?>
@@ -455,29 +455,13 @@ if ( in_array( $aggr_creative_notice, array( 'creative_uploaded', 'creative_remo
 
 <?php
 /*
- * Every value here is a default the repository wrote at creation, not a choice
- * the advertiser made, and the first row only repeats the campaign name from
- * the form below it — five rows of jargon between somebody and step 1. Once the
- * campaign is submitted the wizard is gone and this panel is the only
- * description of how it will be delivered, which is when it earns the space.
+ * How the campaign is delivered — pricing and pacing — is part of the status
+ * view's side card now, in words an advertiser uses. The panel that stood here
+ * led every campaign page with "Line item", "FLAT" and "Even": ad-server terms
+ * above the only question a running campaign's owner has, which is how it is
+ * doing.
  */
 ?>
-<?php if ( array() !== $aggr_line_items && ! $aggr_wizard_on_screen ) : ?>
-	<section class="aggr-panel" aria-labelledby="aggr-delivery-strategy-heading">
-		<h2 id="aggr-delivery-strategy-heading" class="aggr-panel__head">
-			<?php esc_html_e( 'Delivery strategy', 'aggressive-ads' ); ?>
-		</h2>
-		<?php foreach ( $aggr_line_items as $aggr_line_item ) : ?>
-			<dl class="aggr-facts">
-				<div class="aggr-fact"><dt><?php esc_html_e( 'Line item', 'aggressive-ads' ); ?></dt><dd><?php echo esc_html( (string) $aggr_line_item['name'] ); ?></dd></div>
-				<div class="aggr-fact"><dt><?php esc_html_e( 'Status', 'aggressive-ads' ); ?></dt><dd><?php echo esc_html( ucwords( str_replace( '_', ' ', (string) $aggr_line_item['status'] ) ) ); ?></dd></div>
-				<div class="aggr-fact"><dt><?php esc_html_e( 'Pricing', 'aggressive-ads' ); ?></dt><dd><?php echo esc_html( strtoupper( (string) $aggr_line_item['pricing_model'] ) ); ?></dd></div>
-				<div class="aggr-fact"><dt><?php esc_html_e( 'Goal', 'aggressive-ads' ); ?></dt><dd><?php echo esc_html( ucwords( str_replace( '_', ' ', (string) $aggr_line_item['goal_type'] ) ) ); ?></dd></div>
-				<div class="aggr-fact"><dt><?php esc_html_e( 'Pacing', 'aggressive-ads' ); ?></dt><dd><?php echo esc_html( ucwords( (string) $aggr_line_item['pacing_mode'] ) ); ?></dd></div>
-			</dl>
-		<?php endforeach; ?>
-	</section>
-<?php endif; ?>
 
 <?php
 /*
@@ -602,20 +586,28 @@ if ( true !== $aggr_campaign['editable'] && ! $aggr_editing_changes ) {
 }
 ?>
 
-<?php if ( ! $aggr_wizard_on_screen && ( true !== $aggr_campaign['editable'] || 'review' !== $aggr_step ) ) : ?>
-<section class="aggr-panel" aria-labelledby="aggr-summary-heading">
-	<h2 id="aggr-summary-heading" class="aggr-panel__head">
-		<?php esc_html_e( 'Summary', 'aggressive-ads' ); ?>
-	</h2>
-
-	<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-summary-facts.php'; ?>
-</section>
-
+<?php
+/*
+ * Editing a running campaign is a flow of its own, laid out as the creation
+ * wizard is. Everything that describes the campaign as it stands — delivery,
+ * its ads, the request form — would sit under that flow describing values the
+ * advertiser is in the middle of changing, so none of it is drawn while they
+ * edit; "Back to the campaign" is one click away.
+ */
+?>
+<?php if ( $aggr_editing_changes && true !== ( $aggr_campaign['edits_submitted'] ?? false ) ) : ?>
+	<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-changes.php'; ?>
+<?php elseif ( ! $aggr_wizard_on_screen && ( true !== $aggr_campaign['editable'] || 'review' !== $aggr_step ) ) : ?>
+	<?php
+	/*
+	 * The Summary panel that stood here repeated the delivery card's figures
+	 * and the side card's placements a third time; what it alone said is in
+	 * the side card now.
+	 */
+	?>
 	<?php
 	if ( true === ( $aggr_campaign['edits_submitted'] ?? false ) ) {
 		require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-changes-pending.php';
-	} elseif ( $aggr_editing_changes ) {
-		require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-changes.php';
 	}
 	?>
 

@@ -46,6 +46,24 @@ $aggr_status_day  = static function ( string $ymd ) use ( $aggr_status_zone ): s
 	return false === $day ? '—' : (string) wp_date( 'M j', $day->getTimestamp(), $aggr_status_zone );
 };
 
+$aggr_status_places = is_array( $aggr_campaign['placements'] ?? null ) ? array_map( 'strval', $aggr_campaign['placements'] ) : array();
+$aggr_status_lines  = is_array( $aggr_campaign['line_items'] ?? null ) ? $aggr_campaign['line_items'] : array();
+$aggr_status_line   = is_array( $aggr_status_lines[0] ?? null ) ? $aggr_status_lines[0] : null;
+
+$aggr_status_pricing = match ( (string) ( $aggr_status_line['pricing_model'] ?? '' ) ) {
+	'flat'           => __( 'Flat fee', 'aggressive-ads' ),
+	'cpm'            => __( 'Per 1,000 impressions', 'aggressive-ads' ),
+	'cpc'            => __( 'Per click', 'aggressive-ads' ),
+	'cpa'            => __( 'Per conversion', 'aggressive-ads' ),
+	'share_of_voice' => __( 'Share of the placement', 'aggressive-ads' ),
+	default          => '—',
+};
+$aggr_status_pacing = match ( (string) ( $aggr_status_line['pacing_mode'] ?? '' ) ) {
+	'even'  => __( 'Spread evenly over the dates', 'aggressive-ads' ),
+	'asap'  => __( 'As fast as possible', 'aggressive-ads' ),
+	default => '—',
+};
+
 $aggr_history = is_array( $aggr_campaign['history'] ?? null ) ? $aggr_campaign['history'] : array(
 	'items'  => array(),
 	'stages' => array(),
@@ -201,15 +219,18 @@ $aggr_status_note = match ( $aggr_status_now ) {
 				<span class="aggr-pill aggr-pill--<?php echo esc_attr( (string) $aggr_campaign['pill'] ); ?>"><?php echo esc_html( (string) $aggr_campaign['status_text'] ); ?></span>
 			</div>
 			<dl class="aggr-summary__rows">
-				<div>
-					<dt><?php esc_html_e( 'Package', 'aggressive-ads' ); ?></dt>
-					<dd>
-						<?php echo esc_html( '' !== (string) $aggr_campaign['package_name'] ? (string) $aggr_campaign['package_name'] : '—' ); ?>
-						<?php if ( '' !== $aggr_package_duration ) : ?>
-							<span class="aggr-summary__sub"><?php echo esc_html( $aggr_package_duration ); ?></span>
-						<?php endif; ?>
-					</dd>
-				</div>
+				<?php // A campaign made before packages, or by staff, has none; a row saying "—" is noise. ?>
+				<?php if ( '' !== (string) $aggr_campaign['package_name'] ) : ?>
+					<div>
+						<dt><?php esc_html_e( 'Package', 'aggressive-ads' ); ?></dt>
+						<dd>
+							<?php echo esc_html( (string) $aggr_campaign['package_name'] ); ?>
+							<?php if ( '' !== $aggr_package_duration ) : ?>
+								<span class="aggr-summary__sub"><?php echo esc_html( $aggr_package_duration ); ?></span>
+							<?php endif; ?>
+						</dd>
+					</div>
+				<?php endif; ?>
 				<div>
 					<dt><?php esc_html_e( 'Schedule', 'aggressive-ads' ); ?></dt>
 					<dd>
@@ -234,11 +255,47 @@ $aggr_status_note = match ( $aggr_status_now ) {
 						<dd><span class="aggr-summary__link"><?php echo esc_html( (string) $aggr_campaign['default_click_url'] ); ?></span></dd>
 					</div>
 				<?php endif; ?>
+				<?php if ( array() !== $aggr_status_places ) : ?>
+					<div>
+						<dt><?php echo esc_html( _n( 'Placement', 'Placements', count( $aggr_status_places ), 'aggressive-ads' ) ); ?></dt>
+						<dd>
+							<?php echo esc_html( implode( ', ', $aggr_status_places ) ); ?>
+							<span class="aggr-summary__sub">
+								<?php
+								printf(
+									/* translators: %s: number of ads on the campaign. */
+									esc_html( _n( '%s ad', '%s ads', count( $aggr_creatives ), 'aggressive-ads' ) ),
+									esc_html( number_format_i18n( count( $aggr_creatives ) ) )
+								);
+								?>
+							</span>
+						</dd>
+					</div>
+				<?php endif; ?>
+				<?php if ( null !== $aggr_status_line ) : ?>
+					<?php
+					/*
+					 * How it is delivered, in the advertiser's words. This was a
+					 * panel of its own that led the page with "Line item", "FLAT"
+					 * and "Even"; the facts are the same, the terms are theirs.
+					 */
+					?>
+					<div>
+						<dt><?php esc_html_e( 'Pricing', 'aggressive-ads' ); ?></dt>
+						<dd><?php echo esc_html( $aggr_status_pricing ); ?></dd>
+					</div>
+					<div>
+						<dt><?php esc_html_e( 'Pacing', 'aggressive-ads' ); ?></dt>
+						<dd><?php echo esc_html( $aggr_status_pacing ); ?></dd>
+					</div>
+				<?php endif; ?>
 			</dl>
-			<div class="aggr-summary__total">
-				<span><?php esc_html_e( 'Total', 'aggressive-ads' ); ?></span>
-				<span class="aggr-summary__price"><?php echo esc_html( '' !== (string) $aggr_campaign['package_price'] ? (string) $aggr_campaign['package_price'] : '—' ); ?></span>
-			</div>
+			<?php if ( '' !== (string) $aggr_campaign['package_price'] ) : ?>
+				<div class="aggr-summary__total">
+					<span><?php esc_html_e( 'Total', 'aggressive-ads' ); ?></span>
+					<span class="aggr-summary__price"><?php echo esc_html( (string) $aggr_campaign['package_price'] ); ?></span>
+				</div>
+			<?php endif; ?>
 		</section>
 
 		<?php // Once ads can be updated, the "Your ads" panel below lists them with their controls. ?>

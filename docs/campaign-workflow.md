@@ -296,6 +296,9 @@ The submission validator requires:
   Open-ended campaigns were once allowed, and one stored that way keeps running
   until it is ended; a live change may move its start without adding an end,
   but may not clear an end once one is set (`live_edit_end_missing`)
+- a live placement change stays within the campaign's package: its placements,
+  plus any the campaign runs on now, or `live_edit_placement_not_offered`. A
+  campaign with no package may choose from the whole catalogue
 - the owning organization `active`
 - every selected placement `_aggr_is_active`
 

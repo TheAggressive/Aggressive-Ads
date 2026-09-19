@@ -336,4 +336,40 @@ final class LiveEditRulesTest extends TestCase {
 			}
 		}
 	}
+
+	/**
+	 * A package's placements, and nothing it did not sell.
+	 *
+	 * The negatives carry this: the edit screen only offers the package's
+	 * placements, so an id outside them can only arrive in a hand-built post,
+	 * and that post is what this refuses.
+	 *
+	 * @return void
+	 */
+	public function test_a_placement_outside_the_package_is_refused(): void {
+		$current = array( 'placement_choices' => array( 3, 7, 9 ) ) + $this->current();
+
+		$outside = Live_Edit_Rules::validate( array( 'placement_ids' => array( 7, 42 ) ), $current, self::NOW );
+
+		$this->assertTrue( $outside->has( Live_Edit_Rules::ERROR_PLACEMENT_NOT_OFFERED ) );
+		$this->assertCount( 1, $outside->codes() );
+
+		// Dropping one and taking another the package sells is an ordinary edit.
+		$inside = Live_Edit_Rules::validate( array( 'placement_ids' => array( 9 ) ), $current, self::NOW );
+
+		$this->assertTrue( $inside->is_valid() );
+	}
+
+	/**
+	 * No package, no package rule: the behaviour a campaign always had.
+	 *
+	 * @return void
+	 */
+	public function test_without_a_package_any_placement_may_be_chosen(): void {
+		$this->assertTrue( Live_Edit_Rules::validate( array( 'placement_ids' => array( 42 ) ), $this->current(), self::NOW )->is_valid() );
+
+		$empty = array( 'placement_choices' => array() ) + $this->current();
+
+		$this->assertTrue( Live_Edit_Rules::validate( array( 'placement_ids' => array( 42 ) ), $empty, self::NOW )->is_valid() );
+	}
 }

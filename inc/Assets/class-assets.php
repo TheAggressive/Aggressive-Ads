@@ -121,7 +121,7 @@ final class Assets implements Service {
 	 * @return void
 	 */
 	public function print_icon(): void {
-		if ( null === $this->router->request() || has_site_icon() ) {
+		if ( ! $this->router->draws_page() || has_site_icon() ) {
 			return;
 		}
 
@@ -148,7 +148,7 @@ final class Assets implements Service {
 	 * @return void
 	 */
 	public function strip_host_chrome_assets(): void {
-		if ( null === $this->router->request() ) {
+		if ( ! $this->router->draws_page() ) {
 			return;
 		}
 
@@ -189,7 +189,8 @@ final class Assets implements Service {
 	 * @return void
 	 */
 	public function enqueue(): void {
-		if ( null === $this->router->request() ) {
+		// Every page the portal draws, its own 404 included.
+		if ( ! $this->router->draws_page() ) {
 			return;
 		}
 
