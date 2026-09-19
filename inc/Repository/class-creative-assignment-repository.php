@@ -68,12 +68,29 @@ final class Creative_Assignment_Repository {
 	}
 
 	/**
-	 * Finds or creates the compatibility assignment for one creative.
+	 * Finds or creates the assignment for one creative on one placement.
 	 *
-	 * Idempotent by database rule rather than by application care: the unique
+	 * **One row per creative, not one per placement.** This used to hand back
+	 * the placement's compatibility row whoever it belonged to, so a second
+	 * creative on a placement — a rotation, or the upload after one was
+	 * removed — was saved and never assigned. The Ads step lists creatives
+	 * from this table, so each one saved and vanished; coverage read the same
+	 * rows, so the size stayed "needs a file" with its file sitting in the
+	 * database. In order:
+	 *
+	 * 1. this creative's own row, if it has one;
+	 * 2. the placement's compatibility slot, if it is free, or is held by a
+	 *    creative that no longer exists (removed before removal retired its
+	 *    row — this is what heals a site that met the old behaviour);
+	 * 3. otherwise a row of its own beside the slot's holder, with a NULL
+	 *    `compat_key`, which the unique key permits any number of.
+	 *
+	 * The slot itself is idempotent by database rule: the unique
 	 * `(line_item_id, placement_id, compat_key)` key means a concurrent lazy
 	 * read and a background batch cannot both create one, and the loser reads
-	 * the winner's row instead of failing.
+	 * the winner's row instead of failing. A row beside it has no such key,
+	 * so after inserting one, any duplicate for the same creative is removed
+	 * and the oldest kept.
 	 *
 	 * The delivery columns are copied from the creative deliberately — see
 	 * docs/data-schema.md. The source is an immutable revision, so the copy
@@ -91,10 +108,23 @@ final class Creative_Assignment_Repository {
 			return null;
 		}
 
-		$existing = $this->compatibility_row( $line_item_id, $placement_id );
+		$revision_id = (int) ( $fields['revision_id'] ?? 0 );
+		$own         = $this->row_for_revision( $line_item_id, $placement_id, $revision_id );
 
-		if ( null !== $existing ) {
-			return $existing;
+		if ( null !== $own ) {
+			return $own;
+		}
+
+		$slot = $this->compatibility_row( $line_item_id, $placement_id );
+
+		/*
+		 * Held by a creative that was deleted: retired, and taken fresh.
+		 * Moved instead, the row would keep the deleted creative's asset,
+		 * dimensions and attachment under this one's id.
+		 */
+		if ( null !== $slot && null === get_post( (int) $slot['revision_id'] ) ) {
+			$this->retire_for_revision( (int) $slot['revision_id'] );
+			$slot = $this->compatibility_row( $line_item_id, $placement_id );
 		}
 
 		global $wpdb;
@@ -117,7 +147,7 @@ final class Creative_Assignment_Repository {
 			'height'          => (int) ( $fields['height'] ?? 0 ),
 			'attachment_id'   => (int) ( $fields['attachment_id'] ?? 0 ),
 			'revision'        => 1,
-			'compat_key'      => 1,
+			'compat_key'      => null === $slot ? 1 : null,
 			'created_at_ts'   => $now,
 			'updated_at_ts'   => $now,
 		);
@@ -135,9 +165,61 @@ final class Creative_Assignment_Repository {
 			$wpdb->suppress_errors( $was_suppressing );
 		}
 
-		// Either this request created it or another one did; both answers are
-		// the same row, which is the point of the unique key.
-		return $this->compatibility_row( $line_item_id, $placement_id );
+		if ( null === $slot ) {
+			// Either this request took the slot or another one did; both
+			// answers are the slot's row, which is the point of the unique key.
+			return $this->row_for_revision( $line_item_id, $placement_id, $revision_id )
+				?? $this->compatibility_row( $line_item_id, $placement_id );
+		}
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom-table cleanup owned by this repository.
+		$wpdb->query(
+			$wpdb->prepare(
+				'DELETE FROM %i WHERE line_item_id = %d AND placement_id = %d AND revision_id = %d AND compat_key IS NULL AND id > (
+					SELECT keep FROM ( SELECT MIN( id ) AS keep FROM %i WHERE line_item_id = %d AND placement_id = %d AND revision_id = %d ) AS oldest
+				)',
+				$this->table_name(),
+				$line_item_id,
+				$placement_id,
+				$revision_id,
+				$this->table_name(),
+				$line_item_id,
+				$placement_id,
+				$revision_id
+			)
+		);
+
+		return $this->row_for_revision( $line_item_id, $placement_id, $revision_id );
+	}
+
+	/**
+	 * One creative's own assignment on a placement, the oldest if several.
+	 *
+	 * @param int $line_item_id Line-item id.
+	 * @param int $placement_id Placement id.
+	 * @param int $revision_id  Creative revision id.
+	 * @return array<string, mixed>|null
+	 */
+	public function row_for_revision( int $line_item_id, int $placement_id, int $revision_id ): ?array {
+		if ( $line_item_id <= 0 || $placement_id <= 0 || $revision_id <= 0 || ! $this->table_exists() ) {
+			return null;
+		}
+
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Custom-table read owned by this repository.
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				'SELECT * FROM %i WHERE line_item_id = %d AND placement_id = %d AND revision_id = %d ORDER BY id ASC LIMIT 1',
+				$this->table_name(),
+				$line_item_id,
+				$placement_id,
+				$revision_id
+			),
+			ARRAY_A
+		);
+
+		return is_array( $row ) ? $row : null;
 	}
 
 	/**
@@ -199,14 +281,22 @@ final class Creative_Assignment_Repository {
 	 * @param int                  $placement_id Placement id.
 	 * @param int                  $revision_id  New revision id.
 	 * @param array<string, mixed> $snapshot     Delivery fields to refresh.
+	 * @param int                  $from_revision The superseded revision, whose own row moves; zero for the placement's slot.
 	 * @return bool Whether a row was moved.
 	 */
-	public function point_at_revision( int $line_item_id, int $placement_id, int $revision_id, array $snapshot ): bool {
+	public function point_at_revision( int $line_item_id, int $placement_id, int $revision_id, array $snapshot, int $from_revision = 0 ): bool {
 		if ( $line_item_id <= 0 || $placement_id <= 0 || $revision_id <= 0 || ! $this->table_exists() ) {
 			return false;
 		}
 
-		$current = $this->compatibility_row( $line_item_id, $placement_id );
+		/*
+		 * The superseded creative's own row when it is named. With several
+		 * creatives on a placement, "the placement's row" is whichever holds
+		 * the slot, and replacing a rotation's second creative would have
+		 * moved the first one's assignment onto it.
+		 */
+		$current = ( $from_revision > 0 ? $this->row_for_revision( $line_item_id, $placement_id, $from_revision ) : null )
+			?? $this->compatibility_row( $line_item_id, $placement_id );
 
 		if ( null === $current ) {
 			return false;
@@ -640,6 +730,41 @@ final class Creative_Assignment_Repository {
 		);
 
 		return 1 === $written ? $next : false;
+	}
+
+	/**
+	 * Retires every live assignment of one creative, which is being removed.
+	 *
+	 * Removal deleted the creative and left its rows `draft` and holding the
+	 * placement's slot, so the next upload to that placement was saved and
+	 * never assigned. Retired rather than deleted, for the reason the other
+	 * retirements give: the row still says what was there.
+	 *
+	 * @param int $revision_id Creative revision id.
+	 * @return int Rows retired.
+	 */
+	public function retire_for_revision( int $revision_id ): int {
+		if ( $revision_id <= 0 || ! $this->table_exists() ) {
+			return 0;
+		}
+
+		global $wpdb;
+
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared -- Query values are prepared; the identifier is this repository's own table.
+		$written = $wpdb->query(
+			$wpdb->prepare(
+				'UPDATE %i SET status = %s, compat_key = NULL, revision = revision + 1, updated_at_ts = %d
+				WHERE revision_id = %d AND status NOT IN ( %s, %s )',
+				$this->table_name(),
+				Assignment_Rules::CANCELLED,
+				time(),
+				$revision_id,
+				Assignment_Rules::CANCELLED,
+				Assignment_Rules::COMPLETED
+			)
+		);
+
+		return is_int( $written ) ? $written : 0;
 	}
 
 	/**

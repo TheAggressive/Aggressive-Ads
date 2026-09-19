@@ -782,6 +782,9 @@ final class Creative_Manager {
 			$this->storage->delete( $quarantined );
 		}
 
+		// Frees the placement's slot, so the next upload there is assigned.
+		$this->assignments->retire_for_revision( $creative_id );
+
 		$this->audit->insert(
 			new Audit_Event(
 				event: 'creative.removed',

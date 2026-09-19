@@ -198,6 +198,18 @@ editing, because an advertiser editing a draft still updates post meta in place.
 
 Withdrawing a creative retires its assignment and frees the compatibility slot
 rather than deleting the row; a retired assignment stops covering its placement.
+Removing a draft creative does the same (`retire_for_revision()`); it used not
+to, and the row it left kept the slot, so every later upload to that placement
+was saved and never assigned — invisible on the Ads step and to coverage.
+
+**Every creative on a placement has a row of its own.** The compatibility slot
+(`compat_key = 1`, unique per line item and placement) belongs to the first;
+each further creative gets a row beside it with a NULL `compat_key`, which the
+unique key permits any number of. `ensure()` looks for the creative's own row
+first, and a slot still held by a creative that no longer exists is retired and
+taken fresh, which heals data written before removal retired. A text revision
+moves the superseded creative's own row (`point_at_revision(…, $from_revision)`),
+never merely whichever row holds the slot.
 Deleting a placement retires its assignments for the same reason: the row still
 explains what ran there.
 
