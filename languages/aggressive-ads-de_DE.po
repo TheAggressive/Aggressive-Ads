@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
-"POT-Creation-Date: 2026-09-19T17:03:22+00:00\n"
+"POT-Creation-Date: 2026-09-19T17:35:16+00:00\n"
 "PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -412,9 +412,9 @@ msgstr "Zugangsdaten ausgestellt"
 #: inc/Admin/class-organization-screen.php:196
 #: inc/Admin/class-placement-screen.php:167
 #: inc/Admin/class-review-screen.php:347
-#: templates/portal/partials/campaign-overlays.php:263
-#: templates/portal/partials/campaign-overlays.php:315
-#: templates/portal/partials/campaign-variant-artwork.php:79
+#: templates/portal/partials/campaign-overlays.php:264
+#: templates/portal/partials/campaign-overlays.php:316
+#: templates/portal/partials/campaign-variant-artwork.php:80
 msgid "Cancel"
 msgstr "Abbrechen"
 
@@ -736,7 +736,7 @@ msgstr "Eigentum übertragen."
 #: inc/Admin/class-organization-screen.php:162
 #: inc/Admin/class-placement-screen.php:195
 #: inc/Admin/class-settings-screen.php:306
-#: templates/portal/partials/campaign-creative-step.php:266
+#: templates/portal/partials/campaign-creative-step.php:267
 #: templates/portal/screens/organization.php:152
 msgid "Remove"
 msgstr "Entfernen"
@@ -1925,7 +1925,7 @@ msgstr "Alternativtext"
 #: inc/Workflow/class-campaign-change-summary.php:81
 #: templates/portal/partials/campaign-ad-card.php:75
 #: templates/portal/partials/campaign-review-step.php:126
-#: templates/portal/partials/campaign-upload-form.php:162
+#: templates/portal/partials/campaign-upload-form.php:163
 #: templates/portal/screens/campaign.php:664
 msgid "Destination"
 msgstr "Zielseite"
@@ -2052,7 +2052,7 @@ msgid "Feedback the advertiser will see"
 msgstr "Feedback, das der Werbetreibende sieht"
 
 #: inc/Admin/class-review-screen.php:348
-#: templates/portal/partials/campaign-overlays.php:220
+#: templates/portal/partials/campaign-overlays.php:221
 msgid "Close"
 msgstr "Schließen"
 
@@ -2301,8 +2301,8 @@ msgstr ""
 "Ein Startdatum, das bereits verstrichen ist, kann nicht verschoben werden."
 
 #: inc/Admin/class-settings-screen.php:218
-#: templates/portal/partials/campaign-overlays.php:305
-#: templates/portal/partials/campaign-upload-form.php:168
+#: templates/portal/partials/campaign-overlays.php:306
+#: templates/portal/partials/campaign-upload-form.php:169
 #: templates/portal/partials/campaign-variant-destination.php:54
 msgid "Destination URL"
 msgstr "Ziel-URL"
@@ -2693,7 +2693,8 @@ msgid "Choose an ad creative file to upload."
 msgstr "Wählen Sie eine Werbemittel-Datei zum Hochladen."
 
 #: inc/Assets/class-assets.php:521
-msgid "Use a JPEG, PNG, GIF, or WebP image."
+#, fuzzy
+msgid "Use a JPEG, PNG, GIF, WebP, or AVIF image."
 msgstr "Verwenden Sie ein JPEG-, PNG-, GIF- oder WebP-Bild."
 
 #: inc/Assets/class-assets.php:522
@@ -2750,8 +2751,8 @@ msgstr "Jede Platzierung benötigt ein eigenes Werbemittel."
 #: inc/Assets/class-assets.php:535
 #, fuzzy
 msgid ""
-"This file is not an image that can be read. Use a JPEG, PNG, GIF, or WebP "
-"image."
+"This file is not an image that can be read. Use a JPEG, PNG, GIF, WebP, or "
+"AVIF image."
 msgstr ""
 "Diese Datei ist kein Bild, das wir lesen können. JPEG, PNG, GIF und WebP "
 "werden unterstützt."
@@ -4210,23 +4211,23 @@ msgstr "Ab %s"
 msgid "%1$s → %2$s"
 msgstr "%1$s — %2$s"
 
-#: inc/Portal/class-catalogue-view-data.php:157
+#: inc/Portal/class-catalogue-view-data.php:158
 msgid "Custom schedule"
 msgstr "Benutzerdefinierter Zeitplan"
 
 #. translators: %s: number of days.
-#: inc/Portal/class-catalogue-view-data.php:160
+#: inc/Portal/class-catalogue-view-data.php:161
 #, php-format
 msgid "%s day"
 msgid_plural "%s days"
 msgstr[0] "%s Tag"
 msgstr[1] "%s Tage"
 
-#: inc/Portal/class-catalogue-view-data.php:211
+#: inc/Portal/class-catalogue-view-data.php:212
 msgid "Yours to edit. Nobody else can see it yet."
 msgstr "Sie können es bearbeiten. Niemand anderes kann es noch sehen."
 
-#: inc/Portal/class-catalogue-view-data.php:212
+#: inc/Portal/class-catalogue-view-data.php:213
 #, fuzzy
 msgid ""
 "Waiting for the review team. You can withdraw it until someone starts "
@@ -4235,11 +4236,11 @@ msgstr ""
 "Warten auf das Prüfungsteam. Sie können es noch zurückziehen, bis jemand mit "
 "der Prüfung beginnt."
 
-#: inc/Portal/class-catalogue-view-data.php:213
+#: inc/Portal/class-catalogue-view-data.php:214
 msgid "Someone is reviewing it now."
 msgstr "Jemand prüft es gerade."
 
-#: inc/Portal/class-catalogue-view-data.php:214
+#: inc/Portal/class-catalogue-view-data.php:215
 #: templates/portal/partials/campaign-status.php:109
 #, fuzzy
 msgid "The review team asked for changes. Edit it and submit again."
@@ -4247,38 +4248,38 @@ msgstr ""
 "Das Prüfungsteam hat Änderungen angefordert. Bearbeiten Sie es und reichen "
 "Sie es erneut ein."
 
-#: inc/Portal/class-catalogue-view-data.php:215
+#: inc/Portal/class-catalogue-view-data.php:216
 msgid "Not approved. The reason is on the campaign."
 msgstr "Nicht genehmigt. Der Grund steht in der Kampagne."
 
-#: inc/Portal/class-catalogue-view-data.php:216
+#: inc/Portal/class-catalogue-view-data.php:217
 msgid "Approved, and it will start on its scheduled date."
 msgstr "Genehmigt, und sie beginnt am geplanten Datum."
 
-#: inc/Portal/class-catalogue-view-data.php:217
+#: inc/Portal/class-catalogue-view-data.php:218
 msgid "Ready and waiting for its start date."
 msgstr "Bereit und wartet auf den Starttermin."
 
-#: inc/Portal/class-catalogue-view-data.php:218
+#: inc/Portal/class-catalogue-view-data.php:219
 #: templates/portal/partials/campaign-status.php:112
 msgid "Being shown on the site right now."
 msgstr "Aktuell auf der Website ausgeliefert."
 
-#: inc/Portal/class-catalogue-view-data.php:219
+#: inc/Portal/class-catalogue-view-data.php:220
 #: templates/portal/partials/campaign-status.php:113
 msgid "Temporarily not being shown. Get in touch if this is unexpected."
 msgstr ""
 "Wird vorübergehend nicht angezeigt. Kontaktieren Sie uns, wenn dies "
 "unerwartet ist."
 
-#: inc/Portal/class-catalogue-view-data.php:220
+#: inc/Portal/class-catalogue-view-data.php:221
 #: templates/portal/partials/campaign-status.php:114
 #, fuzzy
 msgid "Finished. Run it again from your campaign list."
 msgstr ""
 "Abgeschlossen. Duplizieren Sie die Kampagne, um sie erneut auszuführen."
 
-#: inc/Portal/class-catalogue-view-data.php:221
+#: inc/Portal/class-catalogue-view-data.php:222
 #: templates/portal/partials/campaign-status.php:115
 msgid "Cancelled and no longer running."
 msgstr "Storniert und läuft nicht mehr."
@@ -4435,8 +4436,10 @@ msgstr ""
 "an die Abmessungen der Platzierung an und versuchen Sie es erneut."
 
 #: inc/Portal/class-creative-feedback.php:286
+#, fuzzy
 msgid ""
-"That file is not a readable image. JPEG, PNG, GIF, and WebP are supported."
+"That file is not a readable image. JPEG, PNG, GIF, WebP, and AVIF are "
+"supported."
 msgstr ""
 "Diese Datei ist kein lesbares Bild. Unterstützt werden JPEG, PNG, GIF und "
 "WebP."
@@ -4448,7 +4451,8 @@ msgstr ""
 "akzeptiert."
 
 #: inc/Portal/class-creative-feedback.php:288
-msgid "That file type is not supported. Use JPEG, PNG, GIF, or WebP."
+#, fuzzy
+msgid "That file type is not supported. Use JPEG, PNG, GIF, WebP, or AVIF."
 msgstr ""
 "Dieser Dateityp wird nicht unterstützt. Verwenden Sie JPEG, PNG, GIF oder "
 "WebP."
@@ -6074,8 +6078,10 @@ msgstr ""
 "in der Größe, die die Platzierung erfordert."
 
 #: inc/Workflow/class-creative-uploader.php:184
+#, fuzzy
 msgid ""
-"That file is not an image we can read. JPEG, PNG, GIF and WebP are supported."
+"That file is not an image we can read. JPEG, PNG, GIF, WebP and AVIF are "
+"supported."
 msgstr ""
 "Diese Datei ist kein Bild, das wir lesen können. JPEG, PNG, GIF und WebP "
 "werden unterstützt."
@@ -6093,7 +6099,8 @@ msgid "The upload did not complete. Please try again."
 msgstr "Der Upload wurde nicht abgeschlossen. Bitte versuchen Sie es erneut."
 
 #: inc/Workflow/class-creative-uploader.php:187
-msgid "That file type is not supported. JPEG, PNG, GIF and WebP are."
+#, fuzzy
+msgid "That file type is not supported. JPEG, PNG, GIF, WebP and AVIF are."
 msgstr ""
 "Dieser Dateityp wird nicht unterstützt. Unterstützt werden JPEG, PNG, GIF "
 "und WebP."
@@ -6394,7 +6401,8 @@ msgstr "Die Platzierungsgruppen konnten nicht gespeichert werden."
 #: inc/Workflow/class-placement-manager.php:531
 #: inc/Workflow/class-placement-manager.php:540
 #: inc/Workflow/class-placement-manager.php:552
-msgid "House creative must be a JPEG, PNG, GIF, or WebP image."
+#, fuzzy
+msgid "House creative must be a JPEG, PNG, GIF, WebP, or AVIF image."
 msgstr "Das eigene Werbemittel muss ein JPEG-, PNG-, GIF- oder WebP-Bild sein."
 
 #: inc/Workflow/class-placement-manager.php:572
@@ -6521,7 +6529,7 @@ msgid "Sign in"
 msgstr "Anmelden"
 
 #: templates/portal/partials/campaign-ad-card-draft.php:55
-#: templates/portal/partials/campaign-overlays.php:199
+#: templates/portal/partials/campaign-overlays.php:200
 msgid "Edit destination"
 msgstr "Ziel bearbeiten"
 
@@ -6813,7 +6821,7 @@ msgid "Save and continue"
 msgstr "Speichern und fortfahren"
 
 #: templates/portal/partials/campaign-changes.php:311
-#: templates/portal/partials/campaign-creative-step.php:81
+#: templates/portal/partials/campaign-creative-step.php:82
 msgid "02 · Ads"
 msgstr ""
 
@@ -6823,13 +6831,13 @@ msgid "01 · Ads"
 msgstr "Paket"
 
 #: templates/portal/partials/campaign-changes.php:318
-#: templates/portal/partials/campaign-creative-step.php:355
+#: templates/portal/partials/campaign-creative-step.php:356
 #, fuzzy
 msgid "Back to package & dates"
 msgstr "Zurück zum Paket"
 
 #: templates/portal/partials/campaign-changes.php:325
-#: templates/portal/partials/campaign-creative-step.php:369
+#: templates/portal/partials/campaign-creative-step.php:370
 #: templates/portal/partials/campaign-order-summary.php:162
 #: templates/portal/partials/campaign-order-summary.php:164
 msgid "Continue to review"
@@ -6880,7 +6888,7 @@ msgstr "Prüfteam fragen"
 #: templates/portal/partials/campaign-changes.php:382
 #: templates/portal/partials/campaign-order-summary.php:176
 #: templates/portal/partials/campaign-order-summary.php:179
-#: templates/portal/partials/campaign-overlays.php:317
+#: templates/portal/partials/campaign-overlays.php:318
 #: templates/portal/partials/campaign-review-step.php:390
 msgid "Submit for review"
 msgstr "Zur Prüfung einreichen"
@@ -6894,7 +6902,7 @@ msgstr "Diese Änderungen verwerfen"
 msgid "Back to the campaign"
 msgstr "Zurück zu den Kampagnen"
 
-#: templates/portal/partials/campaign-creative-step.php:82
+#: templates/portal/partials/campaign-creative-step.php:83
 #: templates/portal/partials/campaign-editor-modules.php:43
 #: templates/portal/screens/campaign.php:549
 #: templates/portal/screens/help.php:29
@@ -6902,44 +6910,44 @@ msgstr "Zurück zu den Kampagnen"
 msgid "Add your ads"
 msgstr "Ihre Anzeigen"
 
-#: templates/portal/partials/campaign-creative-step.php:83
+#: templates/portal/partials/campaign-creative-step.php:84
 msgid ""
 "One image for each size. Files stay private until staff approve the campaign."
 msgstr ""
 
 #. translators: 1: sizes that have an ad. 2: sizes in the package.
-#: templates/portal/partials/campaign-creative-step.php:91
+#: templates/portal/partials/campaign-creative-step.php:92
 #, php-format
 msgid "%1$d of %2$d size ready"
 msgid_plural "%1$d of %2$d sizes ready"
 msgstr[0] ""
 msgstr[1] ""
 
-#: templates/portal/partials/campaign-creative-step.php:120
+#: templates/portal/partials/campaign-creative-step.php:121
 msgid "Drop all your files here"
 msgstr ""
 
 #. translators: %s: the largest file any size in this package accepts, e.g. 150 KB.
-#: templates/portal/partials/campaign-creative-step.php:125
+#: templates/portal/partials/campaign-creative-step.php:126
 #, php-format
 msgid ""
-"Each file goes to the size it matches. JPEG, PNG, GIF or WebP · up to %s "
-"each · files stay private until approved"
+"Each file goes to the size it matches. JPEG, PNG, GIF, WebP or AVIF · up to "
+"%s each · files stay private until approved"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:132
+#: templates/portal/partials/campaign-creative-step.php:133
 msgid "Browse files"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:135
+#: templates/portal/partials/campaign-creative-step.php:136
 msgid "Blank templates"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:145
+#: templates/portal/partials/campaign-creative-step.php:146
 msgid "Choose a package first"
 msgstr "Wählen Sie zuerst ein Paket"
 
-#: templates/portal/partials/campaign-creative-step.php:146
+#: templates/portal/partials/campaign-creative-step.php:147
 msgid ""
 "A package supplies the placements and exact ad creative sizes required for "
 "this campaign."
@@ -6947,18 +6955,18 @@ msgstr ""
 "Ein Paket stellt die für diese Kampagne erforderlichen Platzierungen und "
 "exakten Werbemittelgrößen bereit."
 
-#: templates/portal/partials/campaign-creative-step.php:216
+#: templates/portal/partials/campaign-creative-step.php:217
 #: templates/portal/partials/campaign-edit-ads.php:103
 #, fuzzy
 msgid "Needs a file"
 msgstr "Prüfung erforderlich"
 
-#: templates/portal/partials/campaign-creative-step.php:219
+#: templates/portal/partials/campaign-creative-step.php:220
 #: templates/portal/partials/campaign-review-step.php:181
 msgid "Ready"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:225
+#: templates/portal/partials/campaign-creative-step.php:226
 #, fuzzy
 msgid ""
 "This placement is no longer available. Go back to package and dates and "
@@ -6967,17 +6975,17 @@ msgstr ""
 "Diese Platzierung ist nicht mehr verfügbar. Kehren Sie zum Paket-Schritt "
 "zurück und wählen Sie ein verfügbares Paket aus."
 
-#: templates/portal/partials/campaign-creative-step.php:264
+#: templates/portal/partials/campaign-creative-step.php:265
 #: templates/portal/partials/campaign-edit-ads.php:171
 msgid "Preview"
 msgstr "Vorschau"
 
-#: templates/portal/partials/campaign-creative-step.php:265
+#: templates/portal/partials/campaign-creative-step.php:266
 msgid "Replace"
 msgstr "Ersetzen"
 
 #. translators: %d: maximum creatives allowed on one placement.
-#: templates/portal/partials/campaign-creative-step.php:288
+#: templates/portal/partials/campaign-creative-step.php:289
 #, php-format
 msgid ""
 "This placement has the maximum of %d creatives. Remove one to add another."
@@ -6985,12 +6993,12 @@ msgstr ""
 "Diese Platzierung hat die maximale Anzahl von %d Werbemitteln. Entfernen Sie "
 "eines, um ein anderes hinzuzufügen."
 
-#: templates/portal/partials/campaign-creative-step.php:333
+#: templates/portal/partials/campaign-creative-step.php:334
 msgid "Add a rotating creative"
 msgstr "Rotierendes Werbemittel hinzufügen"
 
 #. translators: %d: sizes that still need a file.
-#: templates/portal/partials/campaign-creative-step.php:349
+#: templates/portal/partials/campaign-creative-step.php:350
 #: templates/portal/partials/campaign-order-summary.php:169
 #, php-format
 msgid "%d size still needs a file."
@@ -7303,79 +7311,79 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: placement name.
-#: templates/portal/partials/campaign-overlays.php:130
+#: templates/portal/partials/campaign-overlays.php:131
 #, php-format
 msgid "Preview dialog opened for %s"
 msgstr "Vorschau-Dialog für %s geöffnet"
 
 #. translators: %s: placement name.
-#: templates/portal/partials/campaign-overlays.php:135
+#: templates/portal/partials/campaign-overlays.php:136
 #, php-format
 msgid "Remove creative dialog opened for %s"
 msgstr "Werbemittel-Entfernungsdialog für %s geöffnet"
 
 #. translators: %s: placement name.
-#: templates/portal/partials/campaign-overlays.php:140
+#: templates/portal/partials/campaign-overlays.php:141
 #, php-format
 msgid "Run dates dialog opened for %s"
 msgstr "Laufzeit-Dialog für %s geöffnet"
 
 #. translators: %s: placement name.
-#: templates/portal/partials/campaign-overlays.php:145
+#: templates/portal/partials/campaign-overlays.php:146
 #, php-format
 msgid "Destination dialog opened for %s"
 msgstr "Ziel-Dialog für %s geöffnet"
 
 #. translators: %s: placement name.
-#: templates/portal/partials/campaign-overlays.php:150
+#: templates/portal/partials/campaign-overlays.php:151
 #, php-format
 msgid "Replace artwork dialog opened for %s"
 msgstr "Werbemittel-Ersatzdialog für %s geöffnet"
 
 #. translators: %s: placement name.
-#: templates/portal/partials/campaign-overlays.php:155
+#: templates/portal/partials/campaign-overlays.php:156
 #, php-format
 msgid "Add creative dialog opened for %s"
 msgstr "Werbemittel hinzufügen-Dialog geöffnet für %s"
 
 #. translators: %s: placement name.
-#: templates/portal/partials/campaign-overlays.php:160
+#: templates/portal/partials/campaign-overlays.php:161
 #, php-format
 msgid "Update ad dialog opened for %s"
 msgstr "Dialog zum Aktualisieren des Werbemittels für %s geöffnet"
 
 #. translators: %s: placement name.
-#: templates/portal/partials/campaign-overlays.php:191
+#: templates/portal/partials/campaign-overlays.php:192
 #, php-format
 msgid "Preview %s"
 msgstr "Vorschau %s"
 
-#: templates/portal/partials/campaign-overlays.php:195
+#: templates/portal/partials/campaign-overlays.php:196
 msgid "Remove this creative?"
 msgstr "Dieses Werbemittel entfernen?"
 
-#: templates/portal/partials/campaign-overlays.php:197
+#: templates/portal/partials/campaign-overlays.php:198
 msgid "Custom run dates"
 msgstr "Eigene Laufzeiten"
 
-#: templates/portal/partials/campaign-overlays.php:201
-#: templates/portal/partials/campaign-variant-artwork.php:80
+#: templates/portal/partials/campaign-overlays.php:202
+#: templates/portal/partials/campaign-variant-artwork.php:81
 msgid "Replace artwork"
 msgstr "Werbemittel ersetzen"
 
 #. translators: %s: placement name.
-#: templates/portal/partials/campaign-overlays.php:205
+#: templates/portal/partials/campaign-overlays.php:206
 #, php-format
 msgid "Add a creative to %s"
 msgstr "Werbemittel zu %s hinzufügen"
 
 #. translators: %s: placement name.
-#: templates/portal/partials/campaign-overlays.php:211
+#: templates/portal/partials/campaign-overlays.php:212
 #, php-format
 msgid "Update %s"
 msgstr "Aktualisieren %s"
 
-#: templates/portal/partials/campaign-overlays.php:247
+#: templates/portal/partials/campaign-overlays.php:248
 msgid ""
 "This removes the file from the campaign. You can upload a replacement "
 "afterwards."
@@ -7383,25 +7391,25 @@ msgstr ""
 "Dadurch wird die Datei aus der Kampagne entfernt. Sie können anschließend "
 "eine Ersatzdatei hochladen."
 
-#: templates/portal/partials/campaign-overlays.php:265
+#: templates/portal/partials/campaign-overlays.php:266
 msgid "Remove creative"
 msgstr "Werbemittel entfernen"
 
-#: templates/portal/partials/campaign-overlays.php:270
+#: templates/portal/partials/campaign-overlays.php:271
 msgid "The current ad keeps running until staff approve this replacement."
 msgstr ""
 "Die aktuelle Anzeige läuft weiter, bis das Personal diesen Ersatz genehmigt."
 
-#: templates/portal/partials/campaign-overlays.php:281
+#: templates/portal/partials/campaign-overlays.php:282
 msgid "Replacement ad creative (optional)"
 msgstr "Ersatz-Werbemittel (optional)"
 
 #. translators: %s: required creative dimensions, for example 728x90.
-#: templates/portal/partials/campaign-overlays.php:297
-#, php-format
+#: templates/portal/partials/campaign-overlays.php:298
+#, fuzzy, php-format
 msgid ""
-"Exactly %s. JPEG, PNG, GIF, or WebP. Leave this empty to change only the "
-"destination."
+"Exactly %s. JPEG, PNG, GIF, WebP, or AVIF. Leave this empty to change only "
+"the destination."
 msgstr ""
 "Genau %s. JPEG, PNG, GIF oder WebP. Lassen Sie dieses Feld leer, um nur das "
 "Ziel zu ändern."
@@ -7832,59 +7840,59 @@ msgstr "Erneut versuchen"
 msgid "Ad update history"
 msgstr "Änderungsverlauf der Werbung"
 
-#: templates/portal/partials/campaign-upload-form.php:77
+#: templates/portal/partials/campaign-upload-form.php:78
 msgid ""
 "Uploads by itself: choose a file, enter its link, and the upload starts when "
 "you leave the link field."
 msgstr ""
 
-#: templates/portal/partials/campaign-upload-form.php:78
+#: templates/portal/partials/campaign-upload-form.php:79
 msgid ""
 "Uploads as soon as you choose a file, linking to the address below unless "
 "you change it first."
 msgstr ""
 
-#: templates/portal/partials/campaign-upload-form.php:84
+#: templates/portal/partials/campaign-upload-form.php:85
 msgid "Ad creative file"
 msgstr "Werbemitteldatei"
 
 #. translators: %s: this placement's maximum file size, e.g. 150 KB.
-#: templates/portal/partials/campaign-upload-form.php:89
+#: templates/portal/partials/campaign-upload-form.php:90
 #, fuzzy, php-format
 msgid "Maximum file size: %s."
 msgstr "Maximale Dateigröße (KB)"
 
-#: templates/portal/partials/campaign-upload-form.php:120
+#: templates/portal/partials/campaign-upload-form.php:121
 #, fuzzy
 msgid "Uploading"
 msgstr "Hochgeladen"
 
 #. translators: %s: required image dimensions, e.g. 728x90.
-#: templates/portal/partials/campaign-upload-form.php:125
+#: templates/portal/partials/campaign-upload-form.php:126
 #, php-format
 msgid "Upload progress for %s"
 msgstr ""
 
-#: templates/portal/partials/campaign-upload-form.php:128
+#: templates/portal/partials/campaign-upload-form.php:129
 #, fuzzy
 msgid "Cancel upload"
 msgstr "Storniert"
 
-#: templates/portal/partials/campaign-upload-form.php:136
+#: templates/portal/partials/campaign-upload-form.php:137
 msgid "Download template"
 msgstr ""
 
 #. translators: %s: required image dimensions, e.g. 728x90.
-#: templates/portal/partials/campaign-upload-form.php:140
+#: templates/portal/partials/campaign-upload-form.php:141
 #, php-format
 msgid "for %s"
 msgstr ""
 
-#: templates/portal/partials/campaign-upload-form.php:164
+#: templates/portal/partials/campaign-upload-form.php:165
 msgid "Use a different link"
 msgstr ""
 
-#: templates/portal/partials/campaign-upload-form.php:169
+#: templates/portal/partials/campaign-upload-form.php:170
 msgid ""
 "Where someone should go after selecting the advertisement. Use a complete "
 "http or https URL."
@@ -7892,11 +7900,11 @@ msgstr ""
 "Wohin der Nutzer nach Auswahl der Anzeige weitergeleitet werden soll. "
 "Verwenden Sie eine vollständige http- oder https-URL."
 
-#: templates/portal/partials/campaign-upload-form.php:176
+#: templates/portal/partials/campaign-upload-form.php:177
 msgid "Upload creative"
 msgstr "Werbemittel hochladen"
 
-#: templates/portal/partials/campaign-variant-artwork.php:42
+#: templates/portal/partials/campaign-variant-artwork.php:43
 msgid ""
 "The destination, the share and the run dates stay as they are. Only the "
 "image changes."
@@ -7904,12 +7912,12 @@ msgstr ""
 "Das Ziel, der Anteil und die Laufzeit bleiben unverändert. Nur das Bild "
 "ändert sich."
 
-#: templates/portal/partials/campaign-variant-artwork.php:54
+#: templates/portal/partials/campaign-variant-artwork.php:55
 msgid "New ad creative file"
 msgstr "Neue Werbemitteldatei"
 
 #. translators: %s: required image dimensions, e.g. 728x90.
-#: templates/portal/partials/campaign-variant-artwork.php:60
+#: templates/portal/partials/campaign-variant-artwork.php:61
 #, php-format
 msgid "Required: %s pixels, the same as the creative it replaces."
 msgstr "Erforderlich: %s Pixel, wie das ersetzte Werbemittel."

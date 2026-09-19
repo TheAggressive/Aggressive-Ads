@@ -181,10 +181,10 @@ final class Creative_Uploader {
 				size_format( Upload_Rules::resolve_max_bytes( $max_bytes ) )
 			),
 			Upload_Rules::ERROR_TOO_MANY_PIXELS => __( 'That ad creative has too many pixels to process. Please save it at the size the placement asks for.', 'aggressive-ads' ),
-			Upload_Rules::ERROR_NOT_AN_IMAGE    => __( 'That file is not an image we can read. JPEG, PNG, GIF and WebP are supported.', 'aggressive-ads' ),
+			Upload_Rules::ERROR_NOT_AN_IMAGE    => __( 'That file is not an image we can read. JPEG, PNG, GIF, WebP and AVIF are supported.', 'aggressive-ads' ),
 			Upload_Rules::ERROR_TYPE_MISMATCH   => __( 'That file does not match the type its name suggests, so it has not been accepted.', 'aggressive-ads' ),
 			Upload_Rules::ERROR_FAILED          => __( 'The upload did not complete. Please try again.', 'aggressive-ads' ),
-			default                             => __( 'That file type is not supported. JPEG, PNG, GIF and WebP are.', 'aggressive-ads' ),
+			default                             => __( 'That file type is not supported. JPEG, PNG, GIF, WebP and AVIF are.', 'aggressive-ads' ),
 		};
 
 		return new WP_Error( 'aggr_' . $code, $message );

@@ -61,6 +61,7 @@ final class Catalogue_View_Data {
 			'image/png'  => 'PNG',
 			'image/gif'  => 'GIF',
 			'image/webp' => 'WebP',
+			'image/avif' => 'AVIF',
 		);
 		$types  = array();
 

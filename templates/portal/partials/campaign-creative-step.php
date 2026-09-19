@@ -28,6 +28,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use Aggressive\Ads\Domain\Upload_Rules;
 use Aggressive\Ads\Portal\Campaign_Actions;
 use Aggressive\Ads\Portal\Campaign_Nonces;
 use Aggressive\Ads\Portal\Request;
@@ -122,7 +123,7 @@ foreach ( $aggr_slots as $aggr_counted_slot ) {
 									<?php
 									printf(
 										/* translators: %s: the largest file any size in this package accepts, e.g. 150 KB. */
-										esc_html__( 'Each file goes to the size it matches. JPEG, PNG, GIF or WebP · up to %s each · files stay private until approved', 'aggressive-ads' ),
+										esc_html__( 'Each file goes to the size it matches. JPEG, PNG, GIF, WebP or AVIF · up to %s each · files stay private until approved', 'aggressive-ads' ),
 										esc_html( (string) size_format( $aggr_max_bytes > 0 ? $aggr_max_bytes : 153600 ) )
 									);
 									?>
@@ -131,7 +132,7 @@ foreach ( $aggr_slots as $aggr_counted_slot ) {
 							<span class="aggr-dropzone__actions">
 								<button class="aggr-button aggr-button--secondary" type="button" data-aggr-bulk-browse aria-describedby="aggr-dropzone-note"><?php esc_html_e( 'Browse files', 'aggressive-ads' ); ?></button>
 								<?php // Opened by the button; out of the tab order so the one control is not announced twice. ?>
-								<input class="aggr-sr" type="file" multiple accept="image/jpeg,image/png,image/gif,image/webp" tabindex="-1" aria-hidden="true" data-aggr-bulk-input>
+								<input class="aggr-sr" type="file" multiple accept="<?php echo esc_attr( Upload_Rules::accept_attribute() ); ?>" tabindex="-1" aria-hidden="true" data-aggr-bulk-input>
 								<a class="aggr-card-action" href="<?php echo esc_url( Routes::url( Request::ROUTE_HELP ) . '#aggr-help-artwork' ); ?>"><?php esc_html_e( 'Blank templates', 'aggressive-ads' ); ?></a>
 							</span>
 							<p class="aggr-upload-status aggr-dropzone__summary" role="status" aria-live="polite" data-aggr-bulk-status></p>

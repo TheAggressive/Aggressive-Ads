@@ -518,7 +518,7 @@ final class Assets implements Service {
 						'matched'         => __( '%s · matched by size', 'aggressive-ads' ),
 						'needsUrl'        => __( 'Enter a complete destination URL to finish the upload.', 'aggressive-ads' ),
 						'empty'           => __( 'Choose an ad creative file to upload.', 'aggressive-ads' ),
-						'type'            => __( 'Use a JPEG, PNG, GIF, or WebP image.', 'aggressive-ads' ),
+						'type'            => __( 'Use a JPEG, PNG, GIF, WebP, or AVIF image.', 'aggressive-ads' ),
 						'pixels'          => __( 'That ad creative is too large in pixels to process safely. Choose a smaller one.', 'aggressive-ads' ),
 						'dimensions'      => __( 'The ad creative must match the required pixel size for this placement.', 'aggressive-ads' ),
 						/* translators: %s: a placement's name, e.g. Header. */
@@ -532,7 +532,7 @@ final class Assets implements Service {
 						'bulkNone'        => __( 'This file is %1$s. The sizes still needed are %2$s.', 'aggressive-ads' ),
 						/* translators: %s: the file's dimensions, e.g. 300 × 250. */
 						'bulkTaken'       => __( 'Every %s placement already has an ad or a file.', 'aggressive-ads' ),
-						'bulkUnreadable'  => __( 'This file is not an image that can be read. Use a JPEG, PNG, GIF, or WebP image.', 'aggressive-ads' ),
+						'bulkUnreadable'  => __( 'This file is not an image that can be read. Use a JPEG, PNG, GIF, WebP, or AVIF image.', 'aggressive-ads' ),
 						'bulkNeedsUrl'    => __( 'Add the address your ads link to, above, before uploading.', 'aggressive-ads' ),
 						'bulkWaiting'     => __( 'Waiting to upload.', 'aggressive-ads' ),
 						'bulkSent'        => __( 'Uploaded.', 'aggressive-ads' ),

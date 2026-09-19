@@ -37,6 +37,7 @@ final class UploadRulesTest extends TestCase {
 			'png'  => array( 'image/png' ),
 			'gif'  => array( 'image/gif' ),
 			'webp' => array( 'image/webp' ),
+			'avif' => array( 'image/avif' ),
 		);
 	}
 
@@ -72,6 +73,7 @@ final class UploadRulesTest extends TestCase {
 			'png'  => array( 'png' ),
 			'gif'  => array( 'gif' ),
 			'webp' => array( 'webp' ),
+			'avif' => array( 'avif' ),
 		);
 	}
 
@@ -172,6 +174,7 @@ final class UploadRulesTest extends TestCase {
 		$this->assertSame( 'png', Upload_Rules::extension_for_mime( 'IMAGE/PNG' ) );
 		$this->assertSame( 'gif', Upload_Rules::extension_for_mime( 'image/gif' ) );
 		$this->assertSame( 'webp', Upload_Rules::extension_for_mime( 'image/webp' ) );
+		$this->assertSame( 'avif', Upload_Rules::extension_for_mime( 'image/avif' ) );
 		$this->assertSame( '', Upload_Rules::extension_for_mime( 'image/svg+xml' ) );
 		$this->assertSame( '', Upload_Rules::extension_for_mime( '' ) );
 	}

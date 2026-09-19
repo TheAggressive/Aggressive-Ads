@@ -24,6 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use Aggressive\Ads\Domain\Upload_Rules;
 use Aggressive\Ads\Portal\Creative_Actions;
 
 $aggr_artwork_creative = (int) ( $aggr_creative['id'] ?? 0 );
@@ -66,7 +67,7 @@ $aggr_close_href = isset( $aggr_close_href ) && is_string( $aggr_close_href ) ? 
 			id="<?php echo esc_attr( $aggr_artwork_field ); ?>"
 			name="file"
 			type="file"
-			accept="image/jpeg,image/png,image/gif,image/webp"
+			accept="<?php echo esc_attr( Upload_Rules::accept_attribute() ); ?>"
 			required
 		>
 	</div>

@@ -519,7 +519,7 @@ final class Placement_Manager {
 			) {
 				return new WP_Error(
 					'aggr_invalid_house_attachment',
-					__( 'House creative must be a JPEG, PNG, GIF, or WebP image.', 'aggressive-ads' )
+					__( 'House creative must be a JPEG, PNG, GIF, WebP, or AVIF image.', 'aggressive-ads' )
 				);
 			}
 
@@ -528,7 +528,7 @@ final class Placement_Manager {
 			if ( '' === $file || ! is_readable( $file ) ) {
 				return new WP_Error(
 					'aggr_invalid_house_attachment',
-					__( 'House creative must be a JPEG, PNG, GIF, or WebP image.', 'aggressive-ads' )
+					__( 'House creative must be a JPEG, PNG, GIF, WebP, or AVIF image.', 'aggressive-ads' )
 				);
 			}
 
@@ -537,7 +537,7 @@ final class Placement_Manager {
 			if ( ! is_array( $dimensions ) ) {
 				return new WP_Error(
 					'aggr_invalid_house_attachment',
-					__( 'House creative must be a JPEG, PNG, GIF, or WebP image.', 'aggressive-ads' )
+					__( 'House creative must be a JPEG, PNG, GIF, WebP, or AVIF image.', 'aggressive-ads' )
 				);
 			}
 
@@ -549,7 +549,7 @@ final class Placement_Manager {
 			) {
 				return new WP_Error(
 					'aggr_invalid_house_attachment',
-					__( 'House creative must be a JPEG, PNG, GIF, or WebP image.', 'aggressive-ads' )
+					__( 'House creative must be a JPEG, PNG, GIF, WebP, or AVIF image.', 'aggressive-ads' )
 				);
 			}
 		}
