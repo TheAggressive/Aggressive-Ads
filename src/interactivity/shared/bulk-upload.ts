@@ -69,7 +69,10 @@ interface Round {
 	sent: number;
 	landed: string;
 	refused: string;
-	failed: number;
+	failed: string[];
+
+	// Answered, but not with anything this could read: the server has it.
+	unknown: number;
 	busy: boolean;
 
 	// Files are in, the campaign's link is not: held until it is.
@@ -212,7 +215,8 @@ export function wireBulkUpload( zone: HTMLElement, deps: BulkDeps ): void {
 		sent: 0,
 		landed: '',
 		refused: '',
-		failed: 0,
+		failed: [],
+		unknown: 0,
 		busy: false,
 		waitingForLink: false,
 	};
@@ -544,20 +548,27 @@ export function wireBulkUpload( zone: HTMLElement, deps: BulkDeps ): void {
 			next.file.name
 		);
 
-		const settle = ( ok: boolean, message: string, redirect = '' ) => {
+		type Outcome = 'sent' | 'refused' | 'unknown' | 'lost';
+
+		const settle = ( outcome: Outcome, message: string, redirect = '' ) => {
 			round.busy = false;
 			window.removeEventListener( 'beforeunload', guard );
 			bar.remove();
 			next.status.textContent = message;
-			next.row.classList.toggle( 'is-error', ! ok );
+			next.row.classList.toggle(
+				'is-error',
+				'refused' === outcome || 'lost' === outcome
+			);
 
-			if ( ok ) {
+			if ( 'sent' === outcome ) {
 				round.sent++;
 				round.landed = redirect || round.landed;
-			} else if ( '' !== redirect ) {
+			} else if ( 'refused' === outcome ) {
 				round.refused = round.refused || redirect;
+			} else if ( 'unknown' === outcome ) {
+				round.unknown++;
 			} else {
-				round.failed++;
+				round.failed.push( next.file.name );
 			}
 
 			pump();
@@ -568,26 +579,44 @@ export function wireBulkUpload( zone: HTMLElement, deps: BulkDeps ): void {
 				bar.value = percent;
 			},
 			done: ( _landedAt, text ) => {
-				let answer: { ok?: boolean; redirect?: string } = {};
+				let answer: unknown = null;
 
 				try {
 					answer = JSON.parse( text );
 				} catch {
-					// Not the JSON a scripted post is answered with: nothing
-					// here can say what happened, so the page will.
+					// Handled below with every other unreadable answer.
 				}
 
-				settle(
-					true === answer.ok,
-					( true === answer.ok
-						? t( 'bulkSent' )
-						: t( 'bulkRefused' ) ) ?? '',
-					typeof answer.redirect === 'string' ? answer.redirect : ''
-				);
+				const read =
+					typeof answer === 'object' && answer !== null
+						? ( answer as { ok?: unknown; redirect?: unknown } )
+						: {};
+				const redirect =
+					typeof read.redirect === 'string' ? read.redirect : '';
+
+				/*
+				 * **An answer is not a lost upload.** Anything that arrived
+				 * back reached the server, which may well have saved the
+				 * file — so an unreadable one (a notice printed ahead of the
+				 * JSON, a login page) is "sent, outcome unknown", and the
+				 * page the round ends on is the server's, which knows.
+				 *
+				 * It used to count as never sent. The round stopped on
+				 * stale cards with every row saying "Not uploaded", the
+				 * advertiser dropped the files again, and each size ended
+				 * up with two copies of one ad.
+				 */
+				if ( true === read.ok ) {
+					settle( 'sent', t( 'bulkSent' ) ?? '', redirect );
+				} else if ( false === read.ok && '' !== redirect ) {
+					settle( 'refused', t( 'bulkRefused' ) ?? '', redirect );
+				} else {
+					settle( 'unknown', t( 'bulkSentUnknown' ) ?? '' );
+				}
 			},
 			fail: ( reason ) => {
 				settle(
-					false,
+					'lost',
 					( {
 						cancelled: t( 'uploadCancelled' ),
 						timeout: t( 'uploadTimedOut' ),
@@ -600,7 +629,7 @@ export function wireBulkUpload( zone: HTMLElement, deps: BulkDeps ): void {
 		if ( null === handle ) {
 			// No readable progress in this browser, and no way to send a file
 			// that is not in a form: the cards' own forms still work.
-			settle( false, t( 'uploadFailed' ) ?? '' );
+			settle( 'lost', t( 'uploadFailed' ) ?? '' );
 		}
 	};
 
@@ -621,23 +650,34 @@ export function wireBulkUpload( zone: HTMLElement, deps: BulkDeps ): void {
 		}
 
 		const notes = notesFor();
+		const reached =
+			round.sent + round.unknown + ( '' === round.refused ? 0 : 1 );
 
-		// Nothing sent, so nothing to reload: what there is to say goes here.
-		if ( round.sent === 0 && '' === round.refused ) {
-			const unused = notes.find( ( note ) => 'info' === note.level );
+		// Nothing reached the server, so there is nothing to reload for.
+		if ( 0 === reached ) {
+			if ( round.failed.length > 0 ) {
+				// Only lost files: the rows say which, and a new drop retries.
+				say( t( 'bulkPartial' ) ?? '', 'error' );
+			} else {
+				const unused = notes.find( ( note ) => 'info' === note.level );
 
-			say( unused?.message ?? '' );
+				say( unused?.message ?? '' );
+			}
+
 			return;
 		}
 
 		/*
-		 * A file that never reached the server has no page to show its
-		 * reason on. Moving on would take the row saying so off the screen,
-		 * so the list stays, and choosing that file again is the retry.
+		 * Something reached the server, so the page is stale whatever else
+		 * happened, and staying on it is how files get dropped twice. Files
+		 * that were lost on the way are named on the page that loads, so
+		 * those, and only those, are added again.
 		 */
-		if ( round.failed > 0 ) {
-			say( t( 'bulkPartial' ) ?? '', 'error' );
-			return;
+		if ( round.failed.length > 0 ) {
+			notes.unshift( {
+				message: format( t( 'bulkLost' ), round.failed.join( ', ' ) ),
+				level: 'warning',
+			} );
 		}
 
 		const target = '' !== round.refused ? round.refused : round.landed;
@@ -662,7 +702,8 @@ export function wireBulkUpload( zone: HTMLElement, deps: BulkDeps ): void {
 			// Storage refused: the uploads still landed, and the page says so.
 		}
 
-		if ( '' === target || ! navigateSameOrigin( target ) ) {
+		// No address to follow means this page, loaded again: it is stale.
+		if ( ! navigateSameOrigin( target || window.location.href ) ) {
 			window.location.reload();
 		}
 	};

@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
-"POT-Creation-Date: 2026-09-19T18:13:24+00:00\n"
+"POT-Creation-Date: 2026-09-19T18:38:44+00:00\n"
 "PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -2789,12 +2789,21 @@ msgid "Not uploaded. The reason is shown once the others finish."
 msgstr "Nicht genehmigt. Der Grund steht in der Kampagne."
 
 #: inc/Assets/class-assets.php:545
-msgid ""
-"Some files did not finish uploading. Choose them again to try once more."
+msgid "These files did not reach the server. Drop them again to retry."
+msgstr ""
+
+#: inc/Assets/class-assets.php:546
+msgid "Sent. Checking the result…"
+msgstr ""
+
+#. translators: %s: file names, separated by commas.
+#: inc/Assets/class-assets.php:548
+#, php-format
+msgid "Not uploaded, the connection dropped: %s. Add them again."
 msgstr ""
 
 #. translators: %d: how many files were uploaded.
-#: inc/Assets/class-assets.php:547
+#: inc/Assets/class-assets.php:550
 #, php-format
 msgid "Uploaded %d. Showing your ads…"
 msgstr ""
