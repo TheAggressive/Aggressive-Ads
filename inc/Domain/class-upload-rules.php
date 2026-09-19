@@ -144,6 +144,38 @@ final class Upload_Rules {
 	}
 
 	/**
+	 * What each allowed type is called in a sentence.
+	 *
+	 * Keyed by the same MIME types as `ALLOWED_MIME`, and asserted against it,
+	 * so a type added there cannot reach a reader unnamed.
+	 *
+	 * @var array<string, string>
+	 */
+	public const LABELS = array(
+		'image/jpeg' => 'JPEG',
+		'image/png'  => 'PNG',
+		'image/gif'  => 'GIF',
+		'image/webp' => 'WebP',
+		'image/avif' => 'AVIF',
+	);
+
+	/**
+	 * The allowed types, named for a sentence: "JPEG, PNG, GIF, WebP, AVIF".
+	 *
+	 * Every sentence that lists them takes this instead of spelling them out.
+	 * Eleven did, across six files, and adding AVIF meant finding each one.
+	 *
+	 * @param string $separator Between names.
+	 * @return string
+	 */
+	public static function type_list( string $separator = ', ' ): string {
+		return implode(
+			$separator,
+			array_map( static fn ( string $mime ): string => self::LABELS[ $mime ], self::ALLOWED_MIME )
+		);
+	}
+
+	/**
 	 * The file input's `accept` value.
 	 *
 	 * From the list rather than written out in each template, where four

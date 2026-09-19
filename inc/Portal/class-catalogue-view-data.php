@@ -56,19 +56,6 @@ final class Catalogue_View_Data {
 			);
 		}
 
-		$labels = array(
-			'image/jpeg' => 'JPEG',
-			'image/png'  => 'PNG',
-			'image/gif'  => 'GIF',
-			'image/webp' => 'WebP',
-			'image/avif' => 'AVIF',
-		);
-		$types  = array();
-
-		foreach ( Upload_Rules::ALLOWED_MIME as $mime ) {
-			$types[] = $labels[ $mime ];
-		}
-
 		return array(
 			'statuses'   => $statuses,
 			'placements' => $this->placement_options(),
@@ -80,7 +67,7 @@ final class Catalogue_View_Data {
 			 * the sentence this feeds, per row.
 			 */
 			'max_size'   => size_format( Upload_Rules::CEILING_MAX_BYTES ),
-			'file_types' => array_values( array_unique( $types ) ),
+			'file_types' => explode( ', ', Upload_Rules::type_list() ),
 
 			/*
 			 * The configured support address, falling back to the site's admin
