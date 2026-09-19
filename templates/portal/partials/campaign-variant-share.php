@@ -8,6 +8,13 @@
  * Showing it anyway would be the interface asserting a choice the selector never
  * makes.
  *
+ * **A share is dragged, not typed.** The percentage is a proportion of one
+ * placement, and a number box says nothing about proportion — so the control
+ * is a slider, the figure beside it reads out where it is, and the bar above
+ * the ads shows the split it makes. It saves on release, like the destination
+ * link; the button below it is for a browser that will not run the module,
+ * where the slider is still a slider and Save is how it gets sent.
+ *
  * **The number is the percentage.** It used to be the stored weight — a
  * relative number, so 70 could show as 41% — and setting one creative's left
  * the others alone, which is why a column of them never added to anything.
@@ -47,6 +54,7 @@ $aggr_share_max = Assignment_Rules::SHARE_TOTAL - ( count( $aggr_slot['creatives
 	method="post"
 	action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"
 	data-aggr-save="<?php echo esc_attr( 'aggr-save-share-' . (int) $aggr_creative['id'] ); ?>"
+	data-aggr-share-form="<?php echo esc_attr( (string) (int) $aggr_creative['id'] ); ?>"
 >
 	<input type="hidden" name="action" value="<?php echo esc_attr( Creative_Actions::WEIGHT_ACTION ); ?>">
 	<input type="hidden" name="creative_id" value="<?php echo esc_attr( (string) (int) $aggr_creative['id'] ); ?>">
@@ -57,24 +65,45 @@ $aggr_share_max = Assignment_Rules::SHARE_TOTAL - ( count( $aggr_slot['creatives
 		<?php esc_html_e( 'Share of this placement', 'aggressive-ads' ); ?>
 	</label>
 
-	<span class="aggr-share__field">
-		<input
-			class="aggr-share__input"
-			id="<?php echo esc_attr( $aggr_share_id ); ?>"
-			type="number"
-			name="share"
-			value="<?php echo esc_attr( (string) $aggr_share_percent ); ?>"
-			min="<?php echo esc_attr( (string) Assignment_Rules::MIN_WEIGHT ); ?>"
-			max="<?php echo esc_attr( (string) $aggr_share_max ); ?>"
-			step="1"
-			inputmode="numeric"
-			aria-describedby="<?php echo esc_attr( 'aggr-share-note-' . (int) $aggr_creative['id'] ); ?>"
-		>
-		<?php // Decoration: the label and the hint below both say what the number is. ?>
-		<span class="aggr-share__suffix" aria-hidden="true"><?php echo esc_html( _x( '%', 'per cent, beside a share field', 'aggressive-ads' ) ); ?></span>
-	</span>
+	<?php
+	/*
+	 * A range, so the control is the proportion rather than a number that
+	 * stands for one. It posts the same field a number box did, and a browser
+	 * without the module still drags it and presses Save.
+	 */
+	?>
+	<input
+		class="aggr-share__range"
+		id="<?php echo esc_attr( $aggr_share_id ); ?>"
+		type="range"
+		name="share"
+		value="<?php echo esc_attr( (string) $aggr_share_percent ); ?>"
+		min="<?php echo esc_attr( (string) Assignment_Rules::MIN_WEIGHT ); ?>"
+		max="<?php echo esc_attr( (string) $aggr_share_max ); ?>"
+		step="1"
+		aria-describedby="<?php echo esc_attr( 'aggr-share-note-' . (int) $aggr_creative['id'] ); ?>"
+	>
 
-	<button class="aggr-button aggr-button--small aggr-button--secondary" type="submit"><?php esc_html_e( 'Save', 'aggressive-ads' ); ?></button>
+	<?php // Not `aria-live`: the slider announces its own value as it moves. ?>
+	<output class="aggr-share__value" for="<?php echo esc_attr( $aggr_share_id ); ?>" data-aggr-share-value>
+		<?php
+		printf(
+			/* translators: %d: a share of one placement, e.g. 70. */
+			esc_html__( '%d%%', 'aggressive-ads' ),
+			(int) $aggr_share_percent
+		);
+		?>
+	</output>
+
+	<?php
+	/*
+	 * Hidden in the markup rather than by script, so it never paints for the
+	 * browsers that save on release. `<noscript>` brings it back, the way the
+	 * upload form's own button does.
+	 */
+	?>
+	<noscript><style>.aggr-portal .aggr-share button[type="submit"][hidden]{display:inline-flex!important}</style></noscript>
+	<button class="aggr-button aggr-button--small aggr-button--secondary" type="submit" hidden><?php esc_html_e( 'Save', 'aggressive-ads' ); ?></button>
 
 	<?php
 	/*

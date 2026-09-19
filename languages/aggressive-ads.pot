@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-19T22:07:48+00:00\n"
+"POT-Creation-Date: 2026-09-19T22:21:57+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -3753,7 +3753,7 @@ msgstr ""
 
 #. translators: 1: this ad's share, e.g. 70. 2: what is left for the others, e.g. 30.
 #: inc/Portal/class-creative-actions.php:678
-#: templates/portal/partials/campaign-variant-share.php:90
+#: templates/portal/partials/campaign-variant-share.php:119
 #, php-format
 msgid "Shown %1$d%% of the time here. The other ads share the remaining %2$d%%."
 msgstr ""
@@ -6843,16 +6843,17 @@ msgstr ""
 msgid "Save destination"
 msgstr ""
 
-#: templates/portal/partials/campaign-variant-share.php:57
+#: templates/portal/partials/campaign-variant-share.php:65
 msgid "Share of this placement"
 msgstr ""
 
-#: templates/portal/partials/campaign-variant-share.php:74
-msgctxt "per cent, beside a share field"
-msgid "%"
+#. translators: %d: a share of one placement, e.g. 70.
+#: templates/portal/partials/campaign-variant-share.php:92
+#, php-format
+msgid "%d%%"
 msgstr ""
 
-#: templates/portal/partials/campaign-variant-share.php:77
+#: templates/portal/partials/campaign-variant-share.php:106
 msgid "Save"
 msgstr ""
 

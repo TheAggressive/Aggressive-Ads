@@ -282,7 +282,12 @@ async function submit( form: HTMLFormElement ): Promise< void > {
 	 * a creative added or removed, a control whose own meaning flipped — and
 	 * a full load is the honest answer there.
 	 */
-	if ( ! applyPatch( payload.patch ) ) {
+	const patched = applyPatch( payload.patch );
+
+	// The patch moved the other sliders; their figures and slices follow.
+	drawShares();
+
+	if ( ! patched ) {
 		if ( ! navigateSameOrigin( payload.redirect ?? '' ) ) {
 			window.location.reload();
 		}
@@ -363,6 +368,77 @@ function markForms(): void {
 }
 
 markForms();
+
+/**
+ * One share's own figure and its slice of the bar above the ads.
+ *
+ * Read from the slider rather than kept beside it: the slider is the value,
+ * and a second copy of it is a second thing to get wrong.
+ *
+ * @param range The share slider.
+ */
+function drawShare( range: HTMLInputElement ): void {
+	const form = range.closest< HTMLFormElement >( '[data-aggr-share-form]' );
+	const id = form?.dataset.aggrShareForm ?? '';
+	const value = range.valueAsNumber;
+
+	const readout = form?.querySelector< HTMLElement >(
+		'[data-aggr-share-value]'
+	);
+
+	if ( readout ) {
+		readout.textContent = `${ value }%`;
+	}
+
+	const slice = document.querySelector< HTMLElement >(
+		`[data-aggr-share-slice="${ CSS.escape( id ) }"]`
+	);
+
+	slice?.style.setProperty( '--aggr-slice', String( value ) );
+}
+
+/** Every share on the page, redrawn from what its slider now says. */
+function drawShares(): void {
+	document
+		.querySelectorAll< HTMLInputElement >(
+			'[data-aggr-share-form] .aggr-share__range'
+		)
+		.forEach( drawShare );
+}
+
+/**
+ * Wires the share sliders: the figure and the bar follow the drag, and the
+ * release saves.
+ *
+ * **On `change`, not `input`.** `input` fires for every pixel of a drag, and
+ * saving on each would send fifty writes for one decision — and each one
+ * rebalances every other share on the placement. `change` is the release,
+ * which is when the advertiser has decided.
+ *
+ * The save patches every share on the placement, sliders included, so the
+ * bar is redrawn from them afterwards rather than from what was dragged.
+ */
+function initShares(): void {
+	document
+		.querySelectorAll< HTMLInputElement >(
+			'[data-aggr-share-form] .aggr-share__range'
+		)
+		.forEach( ( range ) => {
+			if ( '1' === range.dataset.aggrShareReady ) {
+				return;
+			}
+
+			range.dataset.aggrShareReady = '1';
+			range.addEventListener( 'input', () => drawShare( range ) );
+			range.addEventListener( 'change', () => {
+				range.form?.requestSubmit();
+			} );
+		} );
+
+	drawShares();
+}
+
+initShares();
 
 export { state };
 

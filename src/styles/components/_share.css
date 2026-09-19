@@ -16,12 +16,16 @@
 .aggr-share {
 	display: grid;
 
-	/* The field takes what it needs; Save sits beside it, not opposite it. */
-	grid-template-columns: max-content max-content;
-	justify-content: start;
+	/* The slider takes the row; its figure sits at the end of the same line. */
+	grid-template-columns: minmax(0, 1fr) max-content;
 	align-items: center;
-	gap: var(--aggr-space-2xs) var(--aggr-space-xs);
-	margin: var(--aggr-space-xs) 0;
+	gap: var(--aggr-space-2xs) var(--aggr-space-sm);
+	margin: var(--aggr-space-xs) 0 0;
+}
+
+.aggr-share button[type="submit"] {
+	grid-column: 1 / -1;
+	justify-self: start;
 }
 
 .aggr-share__label {
@@ -33,43 +37,31 @@
 	text-transform: uppercase;
 }
 
-/* The % belongs to the number, so it sits inside the field's border. */
-.aggr-share__field {
-	display: inline-flex;
-	align-items: center;
-	gap: var(--aggr-space-2xs);
-	padding-right: var(--aggr-space-xs);
-	background: var(--aggr-color-surface);
-	border: 1px solid var(--aggr-border-color);
-	border-radius: var(--aggr-radius-control);
-}
-
-/* The ring the field's own focus style would have drawn, moved to its border. */
-.aggr-share__field:focus-within {
-	border-color: var(--aggr-color-accent);
-	outline: 2px solid var(--aggr-color-accent);
-	outline-offset: 1px;
-}
-
-.aggr-portal .aggr-share__input {
-	width: 4.5rem;
+/*
+ * The control is the proportion. `accent-color` paints the filled track and
+ * the thumb in the brand's own orange without rebuilding either, which is
+ * what a hand-styled track costs in every browser it has to be right in.
+ */
+.aggr-portal .aggr-share__range {
+	width: 100%;
+	min-width: 8rem;
+	max-width: 18rem;
 	min-height: var(--aggr-control-min);
-	padding: var(--aggr-space-2xs) var(--aggr-space-xs);
+	margin: 0;
+	padding: 0;
 	background: none;
 	border: 0;
+	accent-color: var(--aggr-color-accent);
+	cursor: pointer;
+}
+
+.aggr-share__value {
+	min-width: 3ch;
 	color: var(--aggr-color-text);
-	font: inherit;
+	font-size: 15px;
+	font-weight: 650;
 	font-variant-numeric: tabular-nums;
 	text-align: right;
-}
-
-.aggr-portal .aggr-share__input:focus {
-	outline: none;
-}
-
-.aggr-share__suffix {
-	color: var(--aggr-color-text-muted);
-	font-size: 13px;
 }
 
 .aggr-share__result {
@@ -92,4 +84,44 @@
 	margin: 0;
 	color: var(--aggr-color-text-muted);
 	font-size: 13px;
+}
+
+/* The split, one slice per ad, as wide as the share it stands for. */
+.aggr-rotation__bar {
+	display: flex;
+	flex-basis: 100%;
+	gap: 2px;
+	overflow: hidden;
+	height: 6px;
+	background: var(--aggr-color-surface-sunken);
+	border-radius: 999px;
+}
+
+.aggr-rotation__slice {
+	flex: 0 0 calc(var(--aggr-slice, 0) * 1%);
+	background: var(--aggr-color-accent);
+	transition: flex-basis 120ms ease-out;
+}
+
+/*
+ * Each slice a step paler than the one before it, so a bar of three reads as
+ * three rather than as one long block. `nth-child` rather than a class per
+ * slice: the order is the cards' order, which is what the eye matches it to.
+ */
+.aggr-rotation__slice:nth-child(2) {
+	background: color-mix(in srgb, var(--aggr-color-accent) 62%, var(--aggr-color-surface));
+}
+
+.aggr-rotation__slice:nth-child(3) {
+	background: color-mix(in srgb, var(--aggr-color-accent) 40%, var(--aggr-color-surface));
+}
+
+.aggr-rotation__slice:nth-child(n + 4) {
+	background: color-mix(in srgb, var(--aggr-color-accent) 24%, var(--aggr-color-surface));
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.aggr-rotation__slice {
+		transition: none;
+	}
 }

@@ -166,9 +166,22 @@ final class UploadStoreContractTest extends TestCase {
 			preg_match( '/form\[data-aggr-save\]/', $module ),
 			'The module stopped looking for the attribute the templates carry.'
 		);
+
+		/*
+		 * The result of the patch decides whether a toast is raised, whether
+		 * it is read inline or through a variable — it gained one when the
+		 * share sliders needed redrawing after the patch and before the
+		 * fallback. What must not come back is a toast over a page that was
+		 * never brought up to date.
+		 */
 		$this->assertSame(
 			1,
-			preg_match( '/if \( ! applyPatch\( payload\.patch \) \) \{/', $module ),
+			preg_match( '/(if \( ! applyPatch\( payload\.patch \) \)|=\s*applyPatch\( payload\.patch \);)/', $module ),
+			'The module stopped deciding on the patch it applied.'
+		);
+		$this->assertSame(
+			1,
+			preg_match( '/if \( ! patched \) \{|if \( ! applyPatch\( payload\.patch \) \) \{/', $module ),
 			'A toast can now appear over values the page never updated.'
 		);
 		$this->assertStringContainsString(
