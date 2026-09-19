@@ -49,6 +49,7 @@ use Aggressive\Ads\Workflow\Campaign_Editor;
 use Aggressive\Ads\Workflow\Campaign_State_Machine;
 use Aggressive\Ads\Workflow\Assignment_Editor;
 use Aggressive\Ads\Workflow\Creative_Change_Manager;
+use Aggressive\Ads\Workflow\Creative_Copies;
 use Aggressive\Ads\Workflow\Creative_Manager;
 use Aggressive\Ads\Workflow\Email_Change;
 use Aggressive\Ads\Workflow\Organization_Membership;
@@ -243,7 +244,8 @@ final class Portal_Service_Registrar {
 				$c->get( Creative_Manager::class ),
 				$c->get( Creative_Change_Manager::class ),
 				$c->get( Assignment_Editor::class ),
-				$c->get( Creative_View_Data::class )
+				$c->get( Creative_View_Data::class ),
+				$c->get( Creative_Copies::class )
 			)
 		);
 	}

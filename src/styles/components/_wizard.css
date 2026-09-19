@@ -532,11 +532,6 @@
 	font-weight: 650;
 }
 
-.aggr-dropzone .aggr-button:disabled {
-	cursor: not-allowed;
-	opacity: 0.6;
-}
-
 /* Two columns of sizes; a large wide size takes the row so its shape stays wide. */
 .aggr-wizard .aggr-upload-list {
 	display: grid;

@@ -314,6 +314,7 @@ final class Creative_Feedback {
 			'aggr_creative_not_deleted'     => __( 'The creative could not be removed. Please try again.', 'aggressive-ads' ),
 			'aggr_creative_restore_failed'  => __( 'The creative record and file could not be reconciled. Please contact an administrator.', 'aggressive-ads' ),
 			'aggr_creative_not_created'     => __( 'The creative could not be saved. Please try again.', 'aggressive-ads' ),
+			'aggr_copy_source_unavailable'  => __( 'That ad\'s file could not be read. Upload it to this size instead.', 'aggressive-ads' ),
 
 			/*
 			 * **Twelve codes that reached a reader as "could not be saved".**

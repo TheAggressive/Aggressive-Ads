@@ -252,6 +252,7 @@ if ( true !== ( $aggr_overlay_print ?? false ) ) {
 							<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) ( $aggr_campaign['id'] ?? '' ) ); ?>">
 							<input type="hidden" name="creative_id" value="<?php echo esc_attr( (string) $aggr_creative['id'] ); ?>">
 							<?php wp_nonce_field( Creative_Actions::remove_nonce_action( (int) $aggr_creative['id'] ) ); ?>
+							<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-same-file-remove.php'; ?>
 
 							<div class="aggr-overlay__actions">
 								<a
@@ -268,6 +269,7 @@ if ( true !== ( $aggr_overlay_print ?? false ) ) {
 						<p class="aggr-hint">
 							<?php esc_html_e( 'The current ad keeps running until staff approve this replacement.', 'aggressive-ads' ); ?>
 						</p>
+						<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-same-file-note.php'; ?>
 
 						<form class="aggr-form" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post" enctype="multipart/form-data">
 							<input type="hidden" name="action" value="<?php echo esc_attr( Creative_Actions::REPLACE_ACTION ); ?>">

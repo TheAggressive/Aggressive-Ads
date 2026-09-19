@@ -215,6 +215,18 @@ as present on a placement — because a wrongly sized creative should report
 "wrong size" rather than "no creative". Telling somebody the second points them
 at the wrong fix.
 
+**One file on two placements is two creatives.** When a package sells two
+placements of one size, `Workflow\Creative_Copies` puts the first's file on the
+second by handing its bytes (`Creative_Source`: the private file, or the Media
+Library copy once approved) to `Creative_Manager::upload()`, so the copy is
+re-inspected, size-checked, rate limited, capped and reviewed like any upload.
+A shared reference was rejected: a revision belongs to one placement throughout
+— coverage, review, replacement and delivery read `placement_id` off it — and
+sharing one would make replacing either silently replace both. Which creatives
+share a file is derived from `_aggr_sha256` (`same_file_elsewhere()`), never
+stored, so it also finds one image uploaded twice by hand. Removal of copies is
+opt-in and narrowed server-side to that derived set.
+
 A placement holds at most `Creative_Manager::MAX_CREATIVES_PER_PLACEMENT`
 creatives. It is a backstop rather than a product rule: rate limiting bounds how
 fast creatives arrive and nothing bounded the total, and the cost of a runaway

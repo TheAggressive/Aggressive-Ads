@@ -607,4 +607,38 @@ final class Creative_Repository {
 
 		return $creatives;
 	}
+
+	/**
+	 * Other placements on the same campaign carrying the same file as this one.
+	 *
+	 * Worked out from the checksum rather than recorded when a copy is made,
+	 * so it also finds the case nobody announced: the same image uploaded to
+	 * two sizes by hand. Either way, removing one is the moment to mention the
+	 * other.
+	 *
+	 * @param int $creative_id Creative post id.
+	 * @return array<int, int> Creative ids, ascending.
+	 */
+	public function same_file_elsewhere( int $creative_id ): array {
+		$details = $this->details( $creative_id );
+		$sha256  = (string) get_post_meta( $creative_id, self::META_SHA256, true );
+
+		if ( null === $details || '' === $sha256 ) {
+			return array();
+		}
+
+		$ids = array();
+
+		foreach ( $this->for_campaign( $details['campaign_id'] ) as $other ) {
+			if ( $other['placement_id'] === $details['placement_id'] ) {
+				continue;
+			}
+
+			if ( hash_equals( $sha256, (string) get_post_meta( $other['id'], self::META_SHA256, true ) ) ) {
+				$ids[] = $other['id'];
+			}
+		}
+
+		return $ids;
+	}
 }

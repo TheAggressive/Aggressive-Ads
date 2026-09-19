@@ -196,6 +196,27 @@ upload to it; the button is restored if an attempt is refused. Uploading is a
 change of context, so a sentence describing it precedes both controls and is in
 `aria-describedby` on each (WCAG 3.2.2).
 
+Above the cards, while any size still needs a file, a script-only drop zone
+takes every file at once (`shared/bulk-upload.ts`, bundled into
+`@aggr/upload`; `<noscript>` hides it, and the cards' own forms are the
+no-script path). Each file's dimensions are read in the browser and matched by
+`matchFilesToSizes()` in `@aggr/logic`: one open size of that shape and it goes
+there; several and the file asks which, with "All of them" as an answer; none
+and it is named with its dimensions and the sizes still needed; sizes that all
+have an ad say so. A matched file is posted through **its size's own upload
+form** — that form's fields and nonce, the file set on the body, `aggr_async=1`
+— so there is no second upload route and the server cannot tell a dropped file
+from a chosen one. Files go one at a time; the page moves on once, after the
+last, to the server's refusal if there was one and otherwise to its success
+page. A file that never reached the server keeps the list on screen instead.
+
+An empty size with the same dimensions as another placement that already has an
+ad also offers **Same file as …** (a plain form post, `aggr_copy_creative`, also
+on a running campaign's edit flow). It makes a copy, not a shared reference —
+see [domain-model.md](domain-model.md) — so removing an ad whose file is on
+another placement offers a box to remove that copy too, and replacing one says
+the others keep their file.
+
 Continue to review is a POST, not a link. It advances the resume point only
 when every placement is covered and the stored dates pass the window rule; a
 refused date sends the advertiser to details, anything else back to the

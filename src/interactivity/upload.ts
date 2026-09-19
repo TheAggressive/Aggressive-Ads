@@ -11,6 +11,7 @@
 import { store, getContext } from '@wordpress/interactivity';
 import { checkCreativeFile, parsePixelSize } from '@aggr/logic';
 import { sendWithProgress } from './shared/upload-send';
+import { wireBulkUpload } from './shared/bulk-upload';
 import { navigateSameOrigin } from '../admin/shared/navigate';
 
 interface UploadState {
@@ -22,6 +23,11 @@ interface UploadState {
 	// Per placement, because the number inside it is. Every other refusal
 	// says the same thing on every slot and lives in the shared i18n map.
 	sizeMessage: string;
+
+	// For the drop zone: what the placement is called, and whether it is
+	// waiting for a file.
+	name?: string;
+	open?: boolean;
 }
 
 interface UploadContext {
@@ -564,6 +570,21 @@ function bootAllUploads(): void {
 		.querySelectorAll< HTMLElement >( '[data-aggr-upload]' )
 		.forEach( ( zone ) => {
 			initUpload( zone.getAttribute( 'data-aggr-upload' ) ?? '' );
+		} );
+
+	document
+		.querySelectorAll< HTMLElement >( '[data-aggr-bulk]' )
+		.forEach( ( zone ) => {
+			if ( zone.hasAttribute( READY_ATTRIBUTE ) ) {
+				return;
+			}
+
+			zone.setAttribute( READY_ATTRIBUTE, '1' );
+			wireBulkUpload( zone, {
+				uploads: () => state.uploads,
+				i18n: () => state.i18n,
+				readImageSize,
+			} );
 		} );
 }
 

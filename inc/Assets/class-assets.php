@@ -464,7 +464,7 @@ final class Assets implements Service {
 	 * nothing about them — no size, no limit, no messages — so choosing a file
 	 * did nothing at all. The browser test caught it; the markup test could not.
 	 *
-	 * @param array<int, array{id: int, size: string, max_bytes: int, max_size: string}> $slots Placements that take an upload.
+	 * @param array<int, array{id: int, size: string, max_bytes: int, max_size: string, name?: string, active?: bool, creatives?: array<int, mixed>}> $slots Placements that take an upload.
 	 * @return void
 	 */
 	public function hydrate_uploads( array $slots ): void {
@@ -480,6 +480,11 @@ final class Assets implements Service {
 				'maxBytes'     => $slot['max_bytes'],
 				'maxPixels'    => Upload_Rules::MAX_PIXELS,
 				'allowedMime'  => Upload_Rules::ALLOWED_MIME,
+
+				// For the drop zone, which matches every file against every
+				// placement: what to call one, and whether it wants a file.
+				'name'         => (string) ( $slot['name'] ?? '' ),
+				'open'         => false !== ( $slot['active'] ?? true ) && array() === ( $slot['creatives'] ?? array() ),
 
 				/*
 				 * The refusal sentence, per placement, because the number in it
@@ -516,6 +521,25 @@ final class Assets implements Service {
 						'type'            => __( 'Use a JPEG, PNG, GIF, or WebP image.', 'aggressive-ads' ),
 						'pixels'          => __( 'That ad creative is too large in pixels to process safely. Choose a smaller one.', 'aggressive-ads' ),
 						'dimensions'      => __( 'The ad creative must match the required pixel size for this placement.', 'aggressive-ads' ),
+						/* translators: %s: a placement's name, e.g. Header. */
+						'bulkGoesTo'      => __( 'Goes to %s.', 'aggressive-ads' ),
+						'bulkChoose'      => __( 'More than one placement is this size. Choose where it goes.', 'aggressive-ads' ),
+						/* translators: %s: a file name, e.g. banner-728x90.png. */
+						'bulkChooseLabel' => __( 'Placement for %s', 'aggressive-ads' ),
+						'bulkPick'        => __( 'Choose a placement', 'aggressive-ads' ),
+						'bulkAll'         => __( 'All of them', 'aggressive-ads' ),
+						/* translators: 1: the file's dimensions, e.g. 300 × 250. 2: the sizes still needed, e.g. 728 × 90, 160 × 600. */
+						'bulkNone'        => __( 'This file is %1$s. The sizes still needed are %2$s.', 'aggressive-ads' ),
+						/* translators: %s: the file's dimensions, e.g. 300 × 250. */
+						'bulkTaken'       => __( 'Every %s placement already has an ad or a file.', 'aggressive-ads' ),
+						'bulkUnreadable'  => __( 'This file is not an image that can be read. Use a JPEG, PNG, GIF, or WebP image.', 'aggressive-ads' ),
+						'bulkNeedsUrl'    => __( 'Add the address your ads link to, above, before uploading.', 'aggressive-ads' ),
+						'bulkWaiting'     => __( 'Waiting to upload.', 'aggressive-ads' ),
+						'bulkSent'        => __( 'Uploaded.', 'aggressive-ads' ),
+						'bulkRefused'     => __( 'Not uploaded. The reason is shown once the others finish.', 'aggressive-ads' ),
+						'bulkPartial'     => __( 'Some files did not finish uploading. Choose them again to try once more.', 'aggressive-ads' ),
+						/* translators: %d: how many files were uploaded. */
+						'bulkDone'        => __( 'Uploaded %d. Showing your ads…', 'aggressive-ads' ),
 					),
 				)
 			);

@@ -101,7 +101,9 @@ use Aggressive\Ads\Workflow\Conversion_Metrics;
 use Aggressive\Ads\Workflow\Coverage_Service;
 use Aggressive\Ads\Workflow\Creative_Approval;
 use Aggressive\Ads\Workflow\Creative_Change_Manager;
+use Aggressive\Ads\Workflow\Creative_Copies;
 use Aggressive\Ads\Workflow\Creative_Manager;
+use Aggressive\Ads\Workflow\Creative_Source;
 use Aggressive\Ads\Workflow\Creative_Promoter;
 use Aggressive\Ads\Workflow\Creative_Retention;
 use Aggressive\Ads\Workflow\Creative_Uploader;
@@ -549,12 +551,21 @@ final class Service_Registrar {
 		);
 
 		$container->register(
+			Creative_Source::class,
+			static fn ( Service_Container $c ): Creative_Source => new Creative_Source(
+				$c->get( Creative_Repository::class ),
+				$c->get( Creative_Attachment_Repository::class ),
+				$c->get( Private_Storage::class )
+			)
+		);
+
+		$container->register(
 			Campaign_Copier::class,
 			static fn ( Service_Container $c ): Campaign_Copier => new Campaign_Copier(
 				$c->get( Campaign_Editor::class ),
 				$c->get( Campaign_Repository::class ),
 				$c->get( Creative_Repository::class ),
-				$c->get( Creative_Attachment_Repository::class ),
+				$c->get( Creative_Source::class ),
 				$c->get( Private_Storage::class ),
 				$c->get( Audit_Repository::class ),
 				$c->get( Line_Item_Repository::class )
@@ -769,6 +780,17 @@ final class Service_Registrar {
 				$c->get( Creative_Approval::class ),
 				$c->get( Creative_Assignment_Repository::class ),
 				$c->get( Revision_Policy::class )
+			)
+		);
+
+		$container->register(
+			Creative_Copies::class,
+			static fn ( Service_Container $c ): Creative_Copies => new Creative_Copies(
+				$c->get( Creative_Manager::class ),
+				$c->get( Creative_Repository::class ),
+				$c->get( Creative_Source::class ),
+				$c->get( Campaign_Repository::class ),
+				$c->get( Audit_Repository::class )
 			)
 		);
 

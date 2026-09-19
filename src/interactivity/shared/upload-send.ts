@@ -102,6 +102,48 @@ export function sendWithProgress(
 	handlers: SendHandlers,
 	make: () => XMLHttpRequest = () => new XMLHttpRequest()
 ): SendHandle | null {
+	/*
+	 * The attribute, never `form.action`. WordPress forms post a field named
+	 * `action`, and a named control shadows the form's own property, so
+	 * `form.action` is that <input> — the request went to
+	 * "[object HTMLInputElement]" and failed before a byte was sent. jsdom
+	 * does not shadow, which is how a passing test hid it; the browser check
+	 * is what found it.
+	 */
+	return sendBody(
+		actionOf( form ),
+		new FormData( form ),
+		{ ...handlers, done: ( landedAt ) => handlers.done( landedAt ) },
+		make
+	);
+}
+
+/** As `SendHandlers`, with the answer's body for a caller that reads it. */
+export interface BodyHandlers extends Omit< SendHandlers, 'done' > {
+	done: ( landedAt: string, body: string ) => void;
+}
+
+/**
+ * Sends a body the caller built, reporting upload progress.
+ *
+ * For the drop zone, which sends each file through the form of the size it
+ * matched: the same fields that form would post, with the file set on them,
+ * since a dropped file cannot be put into another form's input everywhere
+ * (`DataTransfer` is not constructible in WebKit). Same rules as
+ * `sendWithProgress`, which is this with the form's own fields.
+ *
+ * @param url      Where to post, same origin.
+ * @param body     The fields.
+ * @param handlers What to do as it goes.
+ * @param make     Builds the request; the browser's own by default.
+ * @return A handle to cancel it, or null when it could not be started.
+ */
+export function sendBody(
+	url: string,
+	body: FormData,
+	handlers: BodyHandlers,
+	make: () => XMLHttpRequest = () => new XMLHttpRequest()
+): SendHandle | null {
 	let request: XMLHttpRequest;
 
 	try {
@@ -140,7 +182,10 @@ export function sendWithProgress(
 	request.addEventListener( 'load', () => {
 		if ( ! ended ) {
 			ended = true;
-			handlers.done( request.responseURL || window.location.href );
+			handlers.done(
+				request.responseURL || window.location.href,
+				request.responseText ?? ''
+			);
 		}
 	} );
 
@@ -149,19 +194,12 @@ export function sendWithProgress(
 	request.addEventListener( 'timeout', end( 'timeout' ) );
 
 	/*
-	 * The attribute, never `form.action`. WordPress forms post a field named
-	 * `action`, and a named control shadows the form's own property, so
-	 * `form.action` is that <input> — the request went to
-	 * "[object HTMLInputElement]" and failed before a byte was sent. jsdom
-	 * does not shadow, which is how a passing test hid it; the browser check
-	 * is what found it.
-	 *
 	 * Same origin, so the session cookie goes with it exactly as it would
 	 * with a form post; nothing is added to what the form already carries.
 	 */
-	request.open( 'POST', actionOf( form ) );
+	request.open( 'POST', url );
 	request.timeout = SEND_TIMEOUT_MS;
-	request.send( new FormData( form ) );
+	request.send( body );
 
 	return {
 		cancel: () => request.abort(),

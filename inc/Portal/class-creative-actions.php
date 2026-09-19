@@ -14,6 +14,7 @@ use Aggressive\Ads\Domain\Assignment_Rules;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Workflow\Assignment_Editor;
 use Aggressive\Ads\Workflow\Creative_Change_Manager;
+use Aggressive\Ads\Workflow\Creative_Copies;
 use Aggressive\Ads\Workflow\Creative_Manager;
 use WP_Error;
 
@@ -31,6 +32,7 @@ final class Creative_Actions implements Service {
 	public const WINDOW_ACTION      = 'aggr_set_creative_window';
 	public const DESTINATION_ACTION = 'aggr_set_creative_destination';
 	public const ARTWORK_ACTION     = 'aggr_replace_creative_artwork';
+	public const COPY_ACTION        = 'aggr_copy_creative';
 
 	/**
 	 * Constructor.
@@ -39,12 +41,14 @@ final class Creative_Actions implements Service {
 	 * @param Creative_Change_Manager $changes     Reviewed published-ad changes.
 	 * @param Assignment_Editor       $assignments Delivery settings on one assignment.
 	 * @param Creative_View_Data      $creatives   Render-ready creative rows, for restating shares.
+	 * @param Creative_Copies         $copies      One file on several placements of the same size.
 	 */
 	public function __construct(
 		private readonly Creative_Manager $manager,
 		private readonly Creative_Change_Manager $changes,
 		private readonly Assignment_Editor $assignments,
-		private readonly Creative_View_Data $creatives
+		private readonly Creative_View_Data $creatives,
+		private readonly Creative_Copies $copies
 	) {
 	}
 
@@ -63,6 +67,7 @@ final class Creative_Actions implements Service {
 		add_action( 'admin_post_' . self::WINDOW_ACTION, array( $this, 'handle_window' ) );
 		add_action( 'admin_post_' . self::DESTINATION_ACTION, array( $this, 'handle_destination' ) );
 		add_action( 'admin_post_' . self::ARTWORK_ACTION, array( $this, 'handle_artwork' ) );
+		add_action( 'admin_post_' . self::COPY_ACTION, array( $this, 'handle_copy' ) );
 	}
 
 	/**
@@ -197,13 +202,55 @@ final class Creative_Actions implements Service {
 
 		check_admin_referer( self::remove_nonce_action( $creative_id ) );
 
-		$result = $this->process_remove( $creative_id );
+		// The same file on other placements, ticked in the dialog. Only ids the
+		// manager itself finds carrying this file are acted on.
+		$also   = isset( $_POST['also_remove'] ) && is_array( $_POST['also_remove'] ) ? array_map( 'absint', wp_unslash( $_POST['also_remove'] ) ) : array();
+		$result = $this->process_remove( $creative_id, $also );
 
 		if ( is_wp_error( $result ) ) {
 			Creative_Feedback::after( $campaign_id, 'error', $result );
 		}
 
 		Creative_Feedback::after( $campaign_id, 'creative_removed' );
+	}
+
+	/**
+	 * Puts the file already on one placement onto another of the same size.
+	 *
+	 * @return void
+	 */
+	public function handle_copy(): void {
+		$this->assert_portal_access();
+
+		$campaign_id  = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0;
+		$placement_id = isset( $_POST['placement_id'] ) ? absint( $_POST['placement_id'] ) : 0;
+		$source_id    = isset( $_POST['source_id'] ) ? absint( $_POST['source_id'] ) : 0;
+
+		check_admin_referer( self::copy_nonce_action( $campaign_id, $placement_id ) );
+
+		$result = $this->process_copy( $campaign_id, $source_id, $placement_id );
+
+		if ( is_wp_error( $result ) ) {
+			Creative_Feedback::after( $campaign_id, 'error', $result, $placement_id );
+		}
+
+		Creative_Feedback::after( $campaign_id, 'creative_uploaded' );
+	}
+
+	/**
+	 * Testable copy entry point.
+	 *
+	 * The campaign the form was drawn for has to be the source's own. The
+	 * nonce is bound to it, and without this check a valid nonce for one
+	 * campaign would carry a copy request for a creative on another.
+	 *
+	 * @param int $campaign_id  Campaign the form belongs to.
+	 * @param int $source_id    Creative whose file to reuse.
+	 * @param int $placement_id Placement to put it on.
+	 * @return array<string, mixed>|WP_Error
+	 */
+	public function process_copy( int $campaign_id, int $source_id, int $placement_id ): array|WP_Error {
+		return $this->copies->copy_to_placement( $source_id, $placement_id, $campaign_id );
 	}
 
 	/**
@@ -223,11 +270,14 @@ final class Creative_Actions implements Service {
 	/**
 	 * Testable form removal entry point.
 	 *
-	 * @param int $creative_id Creative post id.
+	 * @param int             $creative_id Creative post id.
+	 * @param array<int, int> $also        Other placements' copies of the same file to remove with it.
 	 * @return true|WP_Error
 	 */
-	public function process_remove( int $creative_id ): bool|WP_Error {
-		return $this->manager->remove( $creative_id );
+	public function process_remove( int $creative_id, array $also = array() ): bool|WP_Error {
+		return array() === $also
+			? $this->manager->remove( $creative_id )
+			: $this->copies->remove_with_copies( $creative_id, $also );
 	}
 
 	/**
@@ -239,6 +289,20 @@ final class Creative_Actions implements Service {
 	 */
 	public static function upload_nonce_action( int $campaign_id, int $placement_id ): string {
 		return self::UPLOAD_ACTION . '_' . max( 0, $campaign_id ) . '_' . max( 0, $placement_id );
+	}
+
+	/**
+	 * Nonce scoped to one campaign placement's copy form.
+	 *
+	 * Its own action rather than the upload's: the two forms post different
+	 * fields, and a token for one should not be accepted by the other.
+	 *
+	 * @param int $campaign_id  Campaign post id.
+	 * @param int $placement_id Placement post id.
+	 * @return string
+	 */
+	public static function copy_nonce_action( int $campaign_id, int $placement_id ): string {
+		return self::COPY_ACTION . '_' . max( 0, $campaign_id ) . '_' . max( 0, $placement_id );
 	}
 
 	/**

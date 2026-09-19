@@ -8,7 +8,9 @@ import {
 	debounce,
 	isWizardStep,
 	nextStep,
+	matchFilesToSizes,
 	normaliseLink,
+	openSizes,
 	parsePixelSize,
 	previousStep,
 	runEndDate,
@@ -171,5 +173,81 @@ describe( 'debounce', () => {
 		delayed.cancel();
 		jest.advanceTimersByTime( 500 );
 		expect( fn ).toHaveBeenCalledTimes( 1 );
+	} );
+} );
+
+describe( 'matching dropped files to sizes', () => {
+	const header = { id: '1', width: 728, height: 90, open: true };
+	const breaker = { id: '2', width: 728, height: 90, open: true };
+	const side = { id: '3', width: 300, height: 250, open: true };
+
+	it( 'sends a file to the one open placement of its size', () => {
+		expect(
+			matchFilesToSizes(
+				[ { width: 300, height: 250 } ],
+				[ header, side ]
+			)
+		).toEqual( [ { kind: 'one', target: '3' } ] );
+	} );
+
+	it( 'asks when two open placements are the size, and claims neither', () => {
+		expect(
+			matchFilesToSizes(
+				[
+					{ width: 728, height: 90 },
+					{ width: 300, height: 250 },
+				],
+				[ header, breaker, side ]
+			)
+		).toEqual( [
+			{ kind: 'choose', targets: [ '1', '2' ] },
+			{ kind: 'one', target: '3' },
+		] );
+	} );
+
+	it( 'does not send two files of one size to the same placement', () => {
+		const matches = matchFilesToSizes(
+			[
+				{ width: 300, height: 250 },
+				{ width: 300, height: 250 },
+			],
+			[ side ]
+		);
+
+		expect( matches ).toEqual( [
+			{ kind: 'one', target: '3' },
+			{ kind: 'taken' },
+		] );
+	} );
+
+	it( 'resolves a choice once the other placement is claimed', () => {
+		expect(
+			matchFilesToSizes(
+				[ { width: 728, height: 90 } ],
+				[ header, breaker ],
+				new Set( [ '1' ] )
+			)
+		).toEqual( [ { kind: 'one', target: '2' } ] );
+	} );
+
+	it( 'says taken, not none, when the size exists but already has an ad', () => {
+		expect(
+			matchFilesToSizes(
+				[ { width: 728, height: 90 } ],
+				[ { ...header, open: false }, side ]
+			)
+		).toEqual( [ { kind: 'taken' } ] );
+	} );
+
+	it( 'says none for a size the package does not have', () => {
+		expect(
+			matchFilesToSizes( [ { width: 160, height: 600 } ], [ header ] )
+		).toEqual( [ { kind: 'none' } ] );
+	} );
+
+	it( 'lists each open size once, for a file that matched nothing', () => {
+		expect(
+			openSizes( [ header, breaker, { ...side, open: false } ] )
+		).toEqual( [ '728 × 90' ] );
 	} );
 } );

@@ -127,7 +127,9 @@ if ( array() !== $aggr_uploadable ) {
 				<p class="aggr-hint"><?php esc_html_e( 'This size has no ad, so nothing runs here yet. The ad you add is reviewed before it runs.', 'aggressive-ads' ); ?></p>
 				<?php
 				$aggr_upload_from_edit = true === ( $aggr_ads_in_edit ?? true );
+				$aggr_reuse_slots      = $aggr_edit_slots;
 
+				require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-same-file.php';
 				require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-upload-form.php';
 				?>
 			<?php else : ?>
