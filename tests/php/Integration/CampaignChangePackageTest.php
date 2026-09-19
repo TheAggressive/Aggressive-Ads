@@ -22,6 +22,8 @@ use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Package_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Security\Roles;
+use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Workflow\Live_Package_Change;
 use WP_UnitTestCase;
 
 /**
@@ -199,12 +201,12 @@ final class CampaignChangePackageTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * An upgrade brings its placements with it: one the current package does
-	 * not sell is a choice only alongside the package that does.
+	 * An upgrade brings every placement it sells, and a placement list posted
+	 * beside it is ignored: as at creation, the package decides them.
 	 *
 	 * @return void
 	 */
-	public function test_the_placements_follow_the_proposed_package(): void {
+	public function test_the_package_decides_the_placements(): void {
 		wp_set_current_user( $this->advertiser );
 		$campaign_id = $this->running_campaign();
 
@@ -212,20 +214,28 @@ final class CampaignChangePackageTest extends WP_UnitTestCase {
 
 		$this->allow( Settings_Schema::structural_edit_keys() );
 
-		$this->assertWPError( $this->changes->stage( $campaign_id, array( 'placement_ids' => array( $sidebar ) ) ), 'A placement the current package does not sell was accepted.' );
-		$this->assertContains( $sidebar, $this->changes->placement_choices( $campaign_id, $premium ) );
-
-		$staged = $this->changes->stage(
-			$campaign_id,
-			array(
-				'package_id'    => $premium,
-				'placement_ids' => array( $sidebar ),
-			)
+		$this->assertSame(
+			array( 'package_id' => $premium ),
+			$this->changes->stage(
+				$campaign_id,
+				array(
+					'package_id'    => $premium,
+					'placement_ids' => array( $sidebar ),
+				)
+			),
+			'A hand-picked placement list rode along with the package.'
 		);
 
-		$this->assertIsArray( $staged );
-		$this->assertSame( $premium, $staged['package_id'] ?? null );
-		$this->assertSame( array( $sidebar ), $staged['placement_ids'] ?? null );
+		$this->assertTrue( $this->changes->submit( $campaign_id ) );
+		wp_set_current_user( self::factory()->user->create( array( 'role' => Roles::REVIEWER ) ) );
+		$this->assertTrue( $this->changes->approve( $campaign_id ) );
+
+		$placements = ( new Campaign_Repository() )->placement_ids( $campaign_id );
+		sort( $placements );
+		$expected = array( $this->placement_id, $sidebar );
+		sort( $expected );
+
+		$this->assertSame( $expected, $placements, 'The upgrade did not bring all of its placements.' );
 	}
 
 	/**
@@ -310,5 +320,29 @@ final class CampaignChangePackageTest extends WP_UnitTestCase {
 		$this->assertTrue( $this->changes->approve( $campaign_id ) );
 
 		$this->assertSame( Campaign_Rules::fixed_end_ts( $start, 14, wp_timezone()->getName() ), ( new Campaign_Repository() )->end_ts( $campaign_id ) );
+	}
+
+	/**
+	 * The reviewer is told an upgrade changes the ad sizes and what it does
+	 * to the price. The warning used to look for a placement row only.
+	 *
+	 * @return void
+	 */
+	public function test_the_reviewer_sees_the_sizes_and_the_price_move(): void {
+		wp_set_current_user( $this->advertiser );
+		$campaign_id = $this->running_campaign();
+
+		list( $premium ) = $this->premium_package();
+
+		$this->allow( Settings_Schema::structural_edit_keys() );
+		$this->assertIsArray( $this->changes->stage( $campaign_id, array( 'package_id' => $premium ) ) );
+		$this->assertTrue( $this->changes->submit( $campaign_id ) );
+
+		$facts = $this->changes->pending_review_facts( $campaign_id );
+
+		$this->assertTrue( $facts['structural'], 'A package change was not flagged as changing the sizes.' );
+		$this->assertStringContainsString( 'USD 450.00', $facts['price'] );
+		$this->assertStringContainsString( 'USD 900.00', $facts['price'] );
+		$this->assertStringContainsString( '+USD 450.00', $facts['price'] );
 	}
 }

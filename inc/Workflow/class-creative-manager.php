@@ -327,7 +327,7 @@ final class Creative_Manager {
 	 * reviewer is waiting on anything. Asking the queue is what distinguishes
 	 * the two, and it is the same question the retry re-asks later.
 	 *
-	 * Failures are swallowed for the reason `Campaign_Change_Manager::notify_request()`
+	 * Failures are swallowed for the reason `Request_Notifier::send()`
 	 * swallows them: the creative is already saved, and returning an error now
 	 * would tell the advertiser their upload failed when it did not.
 	 *

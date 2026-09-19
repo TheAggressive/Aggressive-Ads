@@ -132,19 +132,34 @@ final class CampaignChangeLinkTest extends WP_UnitTestCase {
 		$this->allow( array( Settings_Schema::EDIT_DESTINATION ) );
 		$this->changes->stage( $campaign_id, array( 'default_click_url' => 'https://example.com/autumn' ) );
 
-		( new Campaign_Repository() )->set_link_check(
+		$serving = array(
+			'url'        => 'https://example.com/exhibition',
+			'status'     => 200,
+			'outcome'    => 'works',
+			'checked_at' => time(),
+		);
+
+		( new Campaign_Repository() )->set_link_check( $campaign_id, $serving );
+		$this->requests->set_proposed_link_check(
 			$campaign_id,
 			array(
 				'url'        => 'https://example.com/autumn',
-				'status'     => 200,
-				'outcome'    => 'works',
+				'status'     => 404,
+				'outcome'    => 'missing',
 				'checked_at' => time(),
 			)
 		);
 
 		$checker = Plugin::instance()->container()->get( Link_Checker::class );
 
-		$this->assertSame( 'works', $checker->last( $campaign_id, true )['outcome'] ?? null );
-		$this->assertNull( $checker->last( $campaign_id ), 'A check of the proposed link was shown as the serving link\'s.' );
+		$this->assertSame( 'missing', $checker->last( $campaign_id, true )['outcome'] ?? null );
+
+		// The serving link keeps its own result: checking a proposal used to erase it.
+		$this->assertSame( 'works', $checker->last( $campaign_id )['outcome'] ?? null, 'A check of the proposed link replaced the serving link\'s.' );
+
+		// The proposal's result goes with the proposal.
+		$this->requests->clear_pending_edits( $campaign_id );
+		$this->assertNull( $this->requests->proposed_link_check( $campaign_id ) );
+		$this->assertSame( 'works', $checker->last( $campaign_id )['outcome'] ?? null );
 	}
 }

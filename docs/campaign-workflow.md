@@ -296,9 +296,12 @@ The submission validator requires:
   Open-ended campaigns were once allowed, and one stored that way keeps running
   until it is ended; a live change may move its start without adding an end,
   but may not clear an end once one is set (`live_edit_end_missing`)
-- a live placement change stays within the campaign's package: its placements,
-  plus any the campaign runs on now, or `live_edit_placement_not_offered`. A
-  campaign with no package may choose from the whole catalogue
+- a live change's placements are its package's: they change only with the
+  package. A placement change staged before the placements switch was retired
+  is still held to the package at approval (`live_edit_placement_not_offered`)
+- on a fixed-length package the end follows the start; a live change naming
+  any other end is refused (`live_edit_end_set_by_package`). Running longer
+  means choosing a package that runs longer
 - the owning organization `active`
 - every selected placement `_aggr_is_active`
 
@@ -372,7 +375,7 @@ handful of scalars does not need one.
 ### What may be proposed is site policy
 
 `Settings_Schema::edit_keys()` — campaign name, advertiser notes, schedule,
-destination URL, placements, package — each a checkbox under **Advertising →
+destination URL, package — each a checkbox under **Advertising →
 Settings → Changes to running campaigns**. Every one ships **off**: a running campaign is
 one staff already approved, and widening what an advertiser may change
 underneath an approval is not a default anybody chose.
@@ -383,10 +386,16 @@ would tell an advertiser which fields exist behind a switch the site owner
 turned off — and `CampaignChangeTest` asserts a disabled field cannot be
 smuggled in by hand-building the POST.
 
-**Placements and package are not peers of the others.** Changing either
-changes the required creative sizes, so an approved change can leave a size
-with no ad. Both are `Settings_Schema::structural_edit_keys()`, and both the
-settings screen and the review screen say so.
+**Package is not a peer of the others.** It changes the price and the required
+ad sizes, so an approved change can leave a size with no ad. It is
+`Settings_Schema::structural_edit_keys()`, and the settings screen and the
+review screen say so; the review screen also states the price moving
+(`Campaign_Change_Manager::pending_review_facts()`).
+
+**There is no placements switch.** There was, and it let an advertiser untick
+placements their package sold — which creation never offers, because the
+package decides them. Placements now change only with the package. A stored
+`placements` setting is ignored.
 
 ### The edit flow is creation's screens
 

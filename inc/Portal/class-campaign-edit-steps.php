@@ -104,13 +104,13 @@ final class Campaign_Edit_Steps {
 	}
 
 	/**
-	 * Whether the package, name, placements or notes may change.
+	 * Whether the package, name or notes may change.
 	 *
 	 * @param array<int, string> $fields Live-edit fields the site allows.
 	 * @return bool
 	 */
 	public static function has_details( array $fields ): bool {
-		return array() !== array_intersect( array( 'package_id', 'title', 'advertiser_notes', 'placement_ids' ), $fields );
+		return array() !== array_intersect( array( 'package_id', 'title', 'advertiser_notes' ), $fields );
 	}
 
 	/**

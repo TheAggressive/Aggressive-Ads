@@ -247,152 +247,19 @@ foreach ( $aggr_slots as $aggr_counted_slot ) {
 											);
 										}
 										?>
-										<div class="aggr-uploaded">
 										<?php
-										/*
-										* Beneath the artwork, not on it.
-										*
-										* They were text over a gradient, which is a bet on what
-										* the advertiser uploaded: a scrim tuned for a dark banner
-										* is unreadable over a light one, and a creative is
-										* whatever somebody sends. Off the image the contrast is
-										* the page’s own and known, nothing covers the artwork, and
-										* there is no reveal to get right for keyboards and
-										* touchscreens because nothing is hidden.
-										*/
+										$aggr_card_image   = (string) $aggr_creative['preview'];
+										$aggr_card_link    = (string) $aggr_creative['click_url'];
+										$aggr_card_actions = array(
+											array( __( 'Preview', 'aggressive-ads' ), $aggr_preview_id, false ),
+											array( __( 'Replace', 'aggressive-ads' ), $aggr_artwork_id, false ),
+											array( __( 'Remove', 'aggressive-ads' ), $aggr_remove_id, true ),
+										);
+										$aggr_card_extras  = 'campaign-ad-card-draft.php';
+										$aggr_card_place   = (string) $aggr_slot['name'];
+
+										require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-ad-card.php';
 										?>
-											<div class="aggr-uploaded__figure">
-												<div class="aggr-uploaded__thumb">
-													<img class="aggr-uploaded__image" src="<?php echo esc_url( (string) $aggr_creative['preview'] ); ?>" alt="<?php echo esc_attr( (string) $aggr_creative['alt_text'] ); ?>" loading="lazy">
-												</div>
-
-												<div class="aggr-creative-actions">
-													<a
-														class="aggr-card-action"
-														href="#<?php echo esc_attr( $aggr_preview_id ); ?>"
-														aria-haspopup="dialog"
-														aria-controls="<?php echo esc_attr( $aggr_preview_id ); ?>"
-														aria-expanded="false"
-													><?php esc_html_e( 'Preview', 'aggressive-ads' ); ?></a>
-													<a
-														class="aggr-card-action"
-														href="#<?php echo esc_attr( $aggr_artwork_id ); ?>"
-														aria-haspopup="dialog"
-														aria-controls="<?php echo esc_attr( $aggr_artwork_id ); ?>"
-														aria-expanded="false"
-													><?php esc_html_e( 'Replace', 'aggressive-ads' ); ?></a>
-													<a
-														class="aggr-card-action aggr-card-action--danger"
-														href="#<?php echo esc_attr( $aggr_remove_id ); ?>"
-														aria-haspopup="dialog"
-														aria-controls="<?php echo esc_attr( $aggr_remove_id ); ?>"
-														aria-expanded="false"
-													><?php esc_html_e( 'Remove', 'aggressive-ads' ); ?></a>
-												</div>
-											</div>
-											<div class="aggr-uploaded__details">
-												<?php
-												/*
-												 * Destination first, filename after.
-												 *
-												 * The filename was the bold line and the
-												 * destination was unlabelled grey text that
-												 * read as debris. It is the wrong way round:
-												 * nobody checks what the file was called, and
-												 * the address every click goes to is both the
-												 * thing that defines the creative and the
-												 * thing most likely to be wrong.
-												 */
-												?>
-												<p class="aggr-uploaded__destination">
-													<span class="aggr-uploaded__destination-label"><?php esc_html_e( 'Goes to', 'aggressive-ads' ); ?></span>
-													<span class="aggr-uploaded__destination-value" id="<?php echo esc_attr( 'aggr-destination-value-' . $aggr_creative_key ); ?>"><?php echo esc_html( (string) $aggr_creative['click_url'] ); ?></span>
-												</p>
-												<p class="aggr-uploaded__meta">
-													<?php
-													echo esc_html(
-														sprintf(
-															/* translators: 1: file name. 2: file size, e.g. 54 KB. 3: where it links, e.g. goes to shared link. */
-															__( '%1$s · %2$s · %3$s', 'aggressive-ads' ),
-															(string) $aggr_creative['name'],
-															size_format( (int) $aggr_creative['bytes'] ),
-															'' !== $aggr_link && (string) $aggr_creative['click_url'] === $aggr_link
-																? __( 'goes to shared link', 'aggressive-ads' )
-																: __( 'has its own link', 'aggressive-ads' )
-														)
-													);
-													?>
-												</p>
-												<?php if ( true === $aggr_creative['rejected'] ) : ?>
-													<?php
-													/*
-													 * A creative turned down while the campaign was
-													 * running is still here when the advertiser comes
-													 * back to edit, and it still will not serve. Saying
-													 * why here as well as on the running view is what
-													 * makes the next upload the right one.
-													 */
-													?>
-													<p><span class="aggr-pill aggr-pill--danger"><?php echo esc_html( (string) $aggr_creative['state_text'] ); ?></span></p>
-													<?php if ( '' !== (string) $aggr_creative['notes'] ) : ?>
-														<p><?php echo esc_html( (string) $aggr_creative['notes'] ); ?></p>
-													<?php endif; ?>
-												<?php endif; ?>
-												<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-variant-share.php'; ?>
-												<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-variant-status.php'; ?>
-
-												<?php
-												/*
-												 * Two edits, two dialogs, one row. Removal is not
-												 * among them any more: it lives on the artwork it
-												 * destroys, where the thing being removed is in
-												 * front of you when you ask for it.
-												 */
-												?>
-												<div class="aggr-uploaded__actions">
-													<a
-														class="aggr-card-action"
-														href="#<?php echo esc_attr( $aggr_destination_dlg ); ?>"
-														aria-haspopup="dialog"
-														aria-controls="<?php echo esc_attr( $aggr_destination_dlg ); ?>"
-														aria-expanded="false"
-													><?php esc_html_e( 'Edit destination', 'aggressive-ads' ); ?></a>
-
-													<?php
-													/*
-													 * The trigger says whether there is anything
-													 * behind it.
-													 *
-													 * The fold this replaces showed a saved window
-													 * without being opened. A dialog cannot, so the
-													 * label has to carry it — otherwise dates
-													 * somebody set are indistinguishable from dates
-													 * nobody set, which is the whole reason the
-													 * fold used to open itself.
-													 */
-													$aggr_has_window = '' !== (string) ( $aggr_creative['starts_on'] ?? '' )
-														|| '' !== (string) ( $aggr_creative['ends_on'] ?? '' );
-													?>
-													<a
-														class="aggr-card-action<?php echo $aggr_has_window ? ' aggr-card-action--set' : ''; ?>"
-														href="#<?php echo esc_attr( $aggr_window_id ); ?>"
-														aria-haspopup="dialog"
-														aria-controls="<?php echo esc_attr( $aggr_window_id ); ?>"
-														aria-expanded="false"
-													>
-														<span id="<?php echo esc_attr( 'aggr-window-label-' . (int) ( $aggr_creative['assignment_id'] ?? 0 ) ); ?>">
-															<?php
-															echo esc_html(
-																$aggr_has_window
-																	? __( 'Custom run dates set', 'aggressive-ads' )
-																	: __( 'Add custom run dates', 'aggressive-ads' )
-															);
-															?>
-														</span>
-													</a>
-												</div>
-											</div>
-										</div>
 									<?php endforeach; ?>
 
 									<?php

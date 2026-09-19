@@ -133,7 +133,7 @@ final class Link_Checker {
 			);
 		}
 
-		return $this->record( $campaign_id, $url, $this->status( $url ) );
+		return $this->record( $campaign_id, $url, $this->status( $url ), $proposed );
 	}
 
 	/**
@@ -144,7 +144,7 @@ final class Link_Checker {
 	 * @return array{url: string, status: int, outcome: string, checked_at: int}|null
 	 */
 	public function last( int $campaign_id, bool $proposed = false ): ?array {
-		$stored = $this->campaigns->link_check( $campaign_id );
+		$stored = $proposed ? $this->requests->proposed_link_check( $campaign_id ) : $this->campaigns->link_check( $campaign_id );
 
 		// A result is about one link. The moment the link changes it is stale.
 		$saved = $this->link( $campaign_id, $proposed );
@@ -312,9 +312,10 @@ final class Link_Checker {
 	 * @param int    $campaign_id Campaign post id.
 	 * @param string $url         The link checked.
 	 * @param int    $status      Status code, or zero.
+	 * @param bool   $proposed    Whether it was the link staged in a proposal.
 	 * @return array{url: string, status: int, outcome: string, checked_at: int}
 	 */
-	private function record( int $campaign_id, string $url, int $status ): array {
+	private function record( int $campaign_id, string $url, int $status, bool $proposed ): array {
 		$result = array(
 			'url'        => $url,
 			'status'     => $status,
@@ -322,7 +323,11 @@ final class Link_Checker {
 			'checked_at' => time(),
 		);
 
-		$this->campaigns->set_link_check( $campaign_id, $result );
+		if ( $proposed ) {
+			$this->requests->set_proposed_link_check( $campaign_id, $result );
+		} else {
+			$this->campaigns->set_link_check( $campaign_id, $result );
+		}
 
 		return $result;
 	}

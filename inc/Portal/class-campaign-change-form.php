@@ -118,6 +118,7 @@ final class Campaign_Change_Form {
 			'live_edit_start_locked'          => __( 'The campaign has already started, so its start date cannot move.', 'aggressive-ads' ),
 			'live_edit_end_missing'           => __( 'Choose an end date.', 'aggressive-ads' ),
 			'live_edit_end_before_start'      => __( 'The end date must be after the start date.', 'aggressive-ads' ),
+			'live_edit_end_set_by_package'    => __( 'Your package sets how long the campaign runs, so its end follows the start. To run longer, choose a package that runs longer.', 'aggressive-ads' ),
 			'live_edit_end_in_past'           => __( 'The campaign would end on a day that has already passed. Choose a later end date, or a package that runs longer.', 'aggressive-ads' ),
 			'live_edit_click_url_invalid'     => __( 'Enter a valid http or https link, such as https://example.com.', 'aggressive-ads' ),
 			'live_edit_no_placements'         => __( 'Keep at least one placement.', 'aggressive-ads' ),

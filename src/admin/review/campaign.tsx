@@ -417,9 +417,12 @@ export function CampaignView( {
 	) => void;
 } ): ReactElement {
 	const request = requestOf( campaign );
-	const changesPlacements = campaign.pending_edits.some(
-		( row ) => 'placement_ids' === row.field
-	);
+	/*
+	 * Decided on the server. This looked for a placement row itself, so a
+	 * package change — which changes the sizes just the same — arrived
+	 * without the warning.
+	 */
+	const changesSizes = campaign.pending_sizes;
 
 	/*
 	 * Every action lives in the header now, including the two that need
@@ -698,7 +701,12 @@ export function CampaignView( {
 								</tbody>
 							</table>
 						</div>
-						{ changesPlacements ? (
+						{ '' === campaign.pending_price ? null : (
+							<p className="aggr-hint">
+								{ campaign.pending_price }
+							</p>
+						) }
+						{ changesSizes ? (
 							<p className="aggr-hint">
 								<strong>{ t( 'placementChangeWarn' ) }</strong>{ ' ' }
 								{ t( 'placementChangeBody' ) }

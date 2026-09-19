@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Workflow;
 
+use Aggressive\Ads\Core\Money;
 use Aggressive\Ads\Domain\Campaign_Rules;
 use Aggressive\Ads\Domain\Live_Edit_Rules;
 use Aggressive\Ads\Domain\Validation_Result;
@@ -111,6 +112,12 @@ final class Live_Package_Change {
 		if ( array_key_exists( 'package_id', $edits ) ) {
 			$current['placement_choices'] = $this->placement_choices( $campaign_id, (int) $edits['package_id'] );
 		}
+
+		// The length the package being run, or moved to, sells: its end is not the advertiser's to choose.
+		$package = (int) ( $edits['package_id'] ?? $this->campaigns->package_id( $campaign_id ) );
+
+		$current['fixed_days'] = $package > 0 && ! $this->packages->has_custom_duration( $package ) ? $this->packages->duration_days( $package ) : 0;
+		$current['timezone']   = wp_timezone()->getName();
 
 		return $current;
 	}
@@ -283,6 +290,45 @@ final class Live_Package_Change {
 		}
 
 		return $snapshot;
+	}
+
+	/**
+	 * The price change a package change makes, in a sentence, or empty.
+	 *
+	 * For the reviewer approving it: what the campaign was sold at, what the
+	 * new package costs, and the difference — said as not yet charged, because
+	 * nothing is until billing settles it (#263).
+	 *
+	 * @param int                  $campaign_id Campaign post id.
+	 * @param array<string, mixed> $edits       Change set.
+	 * @return string
+	 */
+	public function price_note( int $campaign_id, array $edits ): string {
+		if ( ! array_key_exists( 'package_id', $edits ) ) {
+			return '';
+		}
+
+		$prices = $this->prices( $campaign_id, (int) $edits['package_id'] );
+		$from   = Money::format( $prices['from_cents'], $prices['from_currency'] );
+		$to     = Money::format( $prices['to_cents'], $prices['to_currency'] );
+
+		if ( '' === $from || '' === $to || $prices['from_currency'] !== $prices['to_currency'] ) {
+			return '' === $to ? '' : sprintf(
+				/* translators: %s: the new package's price, e.g. USD 900.00. */
+				__( 'The new package costs %s. Nothing is charged yet: billing settles it.', 'aggressive-ads' ),
+				$to
+			);
+		}
+
+		$difference = $prices['to_cents'] - $prices['from_cents'];
+
+		return sprintf(
+			/* translators: 1: price paid, e.g. USD 450.00. 2: new price. 3: signed difference, e.g. +USD 450.00. */
+			__( 'Price changes from %1$s to %2$s, a difference of %3$s. Nothing is charged or credited yet: billing settles it.', 'aggressive-ads' ),
+			$from,
+			$to,
+			( $difference < 0 ? '−' : '+' ) . Money::format( abs( $difference ), $prices['to_currency'] )
+		);
 	}
 
 	/**

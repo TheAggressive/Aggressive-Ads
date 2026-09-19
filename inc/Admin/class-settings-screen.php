@@ -216,8 +216,7 @@ final class Settings_Screen implements Service {
 				$toggle( Settings_Schema::EDIT_NOTES, __( 'Advertiser notes', 'aggressive-ads' ), ! empty( $settings['live_edits'][ Settings_Schema::EDIT_NOTES ] ) ),
 				$toggle( Settings_Schema::EDIT_SCHEDULE, __( 'Start and end dates', 'aggressive-ads' ), ! empty( $settings['live_edits'][ Settings_Schema::EDIT_SCHEDULE ] ), __( 'A start date that has already passed cannot be moved.', 'aggressive-ads' ) ),
 				$toggle( Settings_Schema::EDIT_DESTINATION, __( 'Destination URL', 'aggressive-ads' ), ! empty( $settings['live_edits'][ Settings_Schema::EDIT_DESTINATION ] ), __( 'Repoints the click without replacing the artwork.', 'aggressive-ads' ) ),
-				$toggle( Settings_Schema::EDIT_PLACEMENTS, __( 'Placements (structural)', 'aggressive-ads' ), ! empty( $settings['live_edits'][ Settings_Schema::EDIT_PLACEMENTS ] ), __( 'Advertisers choose among the placements their package includes. Stops the campaign serving until a correctly sized creative is uploaded and reviewed.', 'aggressive-ads' ) ),
-				$toggle( Settings_Schema::EDIT_PACKAGE, __( 'Package (structural)', 'aggressive-ads' ), ! empty( $settings['live_edits'][ Settings_Schema::EDIT_PACKAGE ] ), __( 'Advertisers move to another package on sale, upgrading or downgrading. The campaign keeps running on its current package until the change is approved; both prices are recorded for billing.', 'aggressive-ads' ) ),
+				$toggle( Settings_Schema::EDIT_PACKAGE, __( 'Package (structural)', 'aggressive-ads' ), ! empty( $settings['live_edits'][ Settings_Schema::EDIT_PACKAGE ] ), __( 'Advertisers move to another package on sale, upgrading or downgrading; its placements and ad sizes come with it. The campaign keeps running on its current package until the change is approved, and both prices are recorded for billing.', 'aggressive-ads' ) ),
 			),
 			'brand'     => array(
 				'productName'  => (string) $settings['brand']['product_name'],

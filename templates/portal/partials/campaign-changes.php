@@ -64,9 +64,6 @@ foreach ( is_array( $aggr_creative_updates ?? null ) ? $aggr_creative_updates : 
 		}
 	}
 }
-$aggr_placement_cards = is_array( $aggr_campaign['edit_placement_options'] ?? null ) ? $aggr_campaign['edit_placement_options'] : array();
-
-$aggr_selected_placements = array_map( 'intval', (array) ( $aggr_values['placement_ids'] ?? array() ) );
 
 /*
  * The package the proposal holds, and whether it sets the length. A fixed
@@ -91,9 +88,17 @@ $aggr_edit_fixed    = $aggr_package_days > 0;
 $aggr_edit_run_end  = $aggr_edit_fixed && $aggr_edit_start_ts > 0 ? Campaign_Rules::fixed_end_ts( $aggr_edit_start_ts, $aggr_package_days, wp_timezone()->getName() ) : 0;
 $aggr_edit_card     = 0;
 ?>
-<?php // `aggr-wizard` is creation's container, so the size cards lay out as creation's do at every width. ?>
-<div class="aggr-columns aggr-changes aggr-wizard">
-	<div class="aggr-columns__main">
+<?php
+/*
+ * Creation's layout, not a lookalike: the same container, so the size cards
+ * lay out as creation's do at every width, and the same two columns, so the
+ * summary card starts level with the step and follows the page down as the
+ * order summary does.
+ */
+?>
+<div class="aggr-wizard">
+	<div class="aggr-wizard__layout">
+	<div class="aggr-wizard__main">
 		<div class="<?php echo 'review' === $aggr_edit_step ? 'aggr-step-card' : 'aggr-changes__steps'; ?>">
 			<?php
 			if ( 'review' === $aggr_edit_step ) :
@@ -155,7 +160,15 @@ $aggr_edit_card     = 0;
 					 * started is not refused for a start it left alone.
 					 */
 					?>
-					<?php if ( $aggr_can_package || in_array( 'placement_ids', $aggr_edit_fields, true ) ) : ?>
+					<?php
+					/*
+					 * Placements are the package's, as at creation: they change
+					 * with it and never on their own, so the card is the package
+					 * and nothing else. Where the site does not let the package
+					 * change, it says what the campaign runs on.
+					 */
+					?>
+					<?php if ( $aggr_can_package || '' !== (string) ( $aggr_campaign['package_name'] ?? '' ) ) : ?>
 						<div class="aggr-step-card">
 						<fieldset id="aggr-packages" class="aggr-fieldset">
 							<legend>
@@ -192,45 +205,6 @@ $aggr_edit_card     = 0;
 								</p>
 							<?php endif; ?>
 
-							<?php if ( in_array( 'placement_ids', $aggr_edit_fields, true ) ) : ?>
-								<fieldset class="aggr-fieldset" aria-describedby="aggr-edit-placements-hint">
-									<legend class="aggr-changes__legend"><?php esc_html_e( 'Placements', 'aggressive-ads' ); ?></legend>
-									<p id="aggr-edit-placements-hint" class="aggr-hint"><?php esc_html_e( 'The placements your package includes. Changing them changes the ad sizes you must supply: if this is approved, a size with no ad does not run until you add one and it is reviewed.', 'aggressive-ads' ); ?></p>
-									<div class="aggr-choicegrid aggr-changes__placements">
-										<?php foreach ( $aggr_placement_cards as $aggr_option ) : ?>
-											<label class="aggr-choice aggr-choice--package">
-												<input
-													type="checkbox"
-													name="placement_ids[]"
-													value="<?php echo esc_attr( (string) (int) $aggr_option['id'] ); ?>"
-													<?php checked( in_array( (int) $aggr_option['id'], $aggr_selected_placements, true ) ); ?>
-												>
-												<span class="aggr-choice__text">
-													<span class="aggr-package__name"><?php echo esc_html( (string) $aggr_option['name'] ); ?></span>
-													<span class="aggr-package__meta">
-														<?php
-														printf(
-															/* translators: %s: the largest file this placement accepts, e.g. 150 KB. */
-															esc_html__( 'Files up to %s', 'aggressive-ads' ),
-															esc_html( (string) $aggr_option['max_size'] )
-														);
-														?>
-													</span>
-													<?php if ( is_array( $aggr_option['shape'] ?? null ) ) : ?>
-														<span class="aggr-package__sizes" aria-hidden="true">
-															<span class="aggr-package__size">
-																<span class="aggr-package__shape" style="width: <?php echo esc_attr( (string) (int) $aggr_option['shape']['width'] ); ?>px; height: <?php echo esc_attr( (string) (int) $aggr_option['shape']['height'] ); ?>px"></span>
-																<?php echo esc_html( (string) $aggr_option['shape']['label'] ); ?>
-															</span>
-														</span>
-														<span class="aggr-sr"><?php echo esc_html( (string) $aggr_option['shape']['label'] ); ?></span>
-													<?php endif; ?>
-												</span>
-											</label>
-										<?php endforeach; ?>
-									</div>
-								</fieldset>
-							<?php endif; ?>
 						</fieldset>
 						</div>
 					<?php endif; ?>
@@ -272,24 +246,33 @@ $aggr_edit_card     = 0;
 						</div>
 					<?php endif; ?>
 
-					<?php if ( in_array( 'title', $aggr_edit_fields, true ) || in_array( 'advertiser_notes', $aggr_edit_fields, true ) ) : ?>
-						<section class="aggr-step-card" aria-labelledby="aggr-edit-name-heading">
-							<p class="aggr-eyebrow" aria-hidden="true"><?php echo esc_html( sprintf( /* translators: %s: the card's number, e.g. 03. */ __( '%s · Details', 'aggressive-ads' ), str_pad( (string) ++$aggr_edit_card, 2, '0', STR_PAD_LEFT ) ) ); ?></p>
-							<h2 id="aggr-edit-name-heading" class="aggr-step-card__title"><?php esc_html_e( 'Name and notes', 'aggressive-ads' ); ?></h2>
-
-							<?php if ( in_array( 'title', $aggr_edit_fields, true ) ) : ?>
+					<?php
+					/*
+					 * The name is changed from the page heading, as creation's
+					 * is. A browser without script cannot, so it alone gets the
+					 * field — inside the form, so it posts with the step.
+					 */
+					?>
+					<?php if ( in_array( 'title', $aggr_edit_fields, true ) ) : ?>
+						<noscript>
+							<section class="aggr-step-card" aria-labelledby="aggr-edit-name-heading">
+								<h2 id="aggr-edit-name-heading" class="aggr-step-card__title"><?php esc_html_e( 'Campaign name', 'aggressive-ads' ); ?></h2>
 								<div class="aggr-field">
 									<label for="aggr-edit-title"><?php esc_html_e( 'Campaign name', 'aggressive-ads' ); ?></label>
 									<input type="text" id="aggr-edit-title" name="title" value="<?php echo esc_attr( (string) ( $aggr_values['title'] ?? '' ) ); ?>" maxlength="200">
 								</div>
-							<?php endif; ?>
+							</section>
+						</noscript>
+					<?php endif; ?>
 
-							<?php if ( in_array( 'advertiser_notes', $aggr_edit_fields, true ) ) : ?>
-								<div class="aggr-field">
-									<label for="aggr-edit-notes"><?php esc_html_e( 'Notes for the review team', 'aggressive-ads' ); ?></label>
-									<textarea id="aggr-edit-notes" name="advertiser_notes" rows="4" maxlength="2000"><?php echo esc_textarea( (string) ( $aggr_values['advertiser_notes'] ?? '' ) ); ?></textarea>
-								</div>
-							<?php endif; ?>
+					<?php if ( in_array( 'advertiser_notes', $aggr_edit_fields, true ) ) : ?>
+						<section class="aggr-step-card" aria-labelledby="aggr-edit-notes-heading">
+							<p class="aggr-eyebrow" aria-hidden="true"><?php echo esc_html( sprintf( /* translators: %s: the card's number, e.g. 03. */ __( '%s · Notes', 'aggressive-ads' ), str_pad( (string) ++$aggr_edit_card, 2, '0', STR_PAD_LEFT ) ) ); ?></p>
+							<h2 id="aggr-edit-notes-heading" class="aggr-step-card__title"><?php esc_html_e( 'Anything the review team should know?', 'aggressive-ads' ); ?></h2>
+							<div class="aggr-field">
+								<label for="aggr-edit-notes"><?php esc_html_e( 'Notes for the review team', 'aggressive-ads' ); ?></label>
+								<textarea id="aggr-edit-notes" name="advertiser_notes" rows="4" maxlength="2000"><?php echo esc_textarea( (string) ( $aggr_values['advertiser_notes'] ?? '' ) ); ?></textarea>
+							</div>
 						</section>
 					<?php endif; ?>
 
@@ -347,8 +330,7 @@ $aggr_edit_card     = 0;
 		</div>
 	</div>
 
-	<aside class="aggr-columns__side">
-		<section class="aggr-summary" aria-labelledby="aggr-changes-summary-heading">
+		<aside class="aggr-summary" aria-labelledby="aggr-changes-summary-heading" data-aggr-changes-summary>
 			<div class="aggr-summary__head">
 				<h2 id="aggr-changes-summary-heading" class="aggr-eyebrow"><?php esc_html_e( 'Your changes', 'aggressive-ads' ); ?></h2>
 				<span class="aggr-pill aggr-pill--pending"><?php esc_html_e( 'Editing', 'aggressive-ads' ); ?></span>
@@ -361,11 +343,12 @@ $aggr_edit_card     = 0;
 			<?php else : ?>
 				<dl class="aggr-summary__rows">
 					<?php foreach ( $aggr_draft as $aggr_change ) : ?>
-						<div>
+						<?php // Named by field, so the heading's rename can update its row in place. ?>
+						<div data-aggr-change="<?php echo esc_attr( (string) ( $aggr_change['field'] ?? '' ) ); ?>">
 							<dt><?php echo esc_html( (string) $aggr_change['label'] ); ?></dt>
 							<dd>
 								<?php echo esc_html( '' !== (string) $aggr_change['to'] ? (string) $aggr_change['to'] : '—' ); ?>
-								<span class="aggr-summary__sub">
+								<span class="aggr-summary__sub" data-aggr-change-was="<?php echo esc_attr( (string) $aggr_change['from'] ); ?>">
 									<?php
 									printf(
 										/* translators: %s: the value before the change. */
@@ -415,6 +398,6 @@ $aggr_edit_card     = 0;
 				<?php // Leaving keeps what was staged; it is still there on the next visit. ?>
 				<a class="aggr-card-action" href="<?php echo esc_url( Routes::url( Request::ROUTE_CAMPAIGNS, $aggr_campaign_id ) ); ?>"><?php esc_html_e( 'Back to the campaign', 'aggressive-ads' ); ?></a>
 			</div>
-		</section>
-	</aside>
+		</aside>
+	</div>
 </div>

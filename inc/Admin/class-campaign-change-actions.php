@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Admin;
 
 use Aggressive\Ads\Security\Capabilities;
+use Aggressive\Ads\Workflow\Campaign_Action_Requests;
 use Aggressive\Ads\Workflow\Campaign_Change_Manager;
 use WP_Error;
 
@@ -28,9 +29,13 @@ final class Campaign_Change_Actions {
 	/**
 	 * Constructor.
 	 *
-	 * @param Campaign_Change_Manager $manager Change workflow.
+	 * @param Campaign_Change_Manager  $manager  Change workflow.
+	 * @param Campaign_Action_Requests $requests Pause, restart and cancel requests.
 	 */
-	public function __construct( private readonly Campaign_Change_Manager $manager ) {
+	public function __construct(
+		private readonly Campaign_Change_Manager $manager,
+		private readonly Campaign_Action_Requests $requests
+	) {
 	}
 
 	/**
@@ -65,6 +70,6 @@ final class Campaign_Change_Actions {
 	 * @return true|WP_Error
 	 */
 	public function decline( int $campaign_id, string $notes = '' ): bool|WP_Error {
-		return $this->manager->resolve_action( $campaign_id, $notes );
+		return $this->requests->resolve_action( $campaign_id, $notes );
 	}
 }

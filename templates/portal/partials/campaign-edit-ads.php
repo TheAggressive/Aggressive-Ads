@@ -16,7 +16,8 @@
  * @var array<string, mixed>             $aggr_campaign         The campaign.
  * @var array<int, array<string, mixed>> $aggr_creative_updates Replacement history rows.
  * @var bool                             $aggr_can_update       Whether the ads can be replaced.
- * @var string                           $aggr_ads_eyebrow      The card's number, e.g. "02 · Ads".
+ * @var string                           $aggr_ads_eyebrow      The card's number, e.g. "02 · Ads", or empty on the campaign page.
+ * @var bool                             $aggr_ads_in_edit      Drawn in the edit flow, which an upload returns to.
  *
  * @package Aggressive\Ads
  */
@@ -27,25 +28,25 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-use Aggressive\Ads\Portal\Creative_Actions;
-
-$aggr_edit_slots  = is_array( $aggr_campaign['edit_slots'] ?? null ) ? $aggr_campaign['edit_slots'] : array();
-$aggr_shared_link = (string) ( $aggr_campaign['edit_link'] ?? '' );
-$aggr_updates     = isset( $aggr_creative_updates ) && is_array( $aggr_creative_updates ) ? $aggr_creative_updates : array();
-$aggr_overlays    = array();
+$aggr_edit_slots = is_array( $aggr_campaign['edit_slots'] ?? null ) ? $aggr_campaign['edit_slots'] : array();
+$aggr_updates    = isset( $aggr_creative_updates ) && is_array( $aggr_creative_updates ) ? $aggr_creative_updates : array();
+$aggr_overlays   = array();
 
 // The one form a refused upload reopens, as the wizard does.
 $aggr_creative_error_for = isset( $aggr_creative_error_for ) ? (string) $aggr_creative_error_for : '';
 ?>
-<section class="aggr-ads-section">
-	<div class="aggr-ads-section__head">
-		<div>
-			<p class="aggr-eyebrow"><?php echo esc_html( $aggr_ads_eyebrow ); ?></p>
-			<h3 id="aggr-update-creatives-heading"><?php esc_html_e( 'Your ads', 'aggressive-ads' ); ?></h3>
-			<p class="aggr-hint"><?php esc_html_e( 'Select Update to send new artwork or a link of its own for one ad. The current ad keeps running until the review team accepts the new one.', 'aggressive-ads' ); ?></p>
+<?php // The campaign page draws its own panel heading; the edit flow numbers this as a step card. ?>
+<?php if ( '' !== $aggr_ads_eyebrow ) : ?>
+	<section class="aggr-ads-section">
+		<div class="aggr-ads-section__head">
+			<div>
+				<p class="aggr-eyebrow"><?php echo esc_html( $aggr_ads_eyebrow ); ?></p>
+				<h3 id="aggr-update-creatives-heading"><?php esc_html_e( 'Your ads', 'aggressive-ads' ); ?></h3>
+				<p class="aggr-hint"><?php esc_html_e( 'Select Update to send new artwork or a link of its own for one ad. The current ad keeps running until the review team accepts the new one.', 'aggressive-ads' ); ?></p>
+			</div>
 		</div>
-	</div>
-</section>
+	</section>
+<?php endif; ?>
 
 <noscript><style>.aggr-portal .aggr-upload-form button[type="submit"][hidden]{display:inline-flex!important}</style></noscript>
 <div class="aggr-upload-list">
@@ -97,7 +98,7 @@ $aggr_creative_error_for = isset( $aggr_creative_error_for ) ? (string) $aggr_cr
 				<?php endif; ?>
 				<p class="aggr-hint"><?php esc_html_e( 'This size has no ad, so nothing runs here yet. The ad you add is reviewed before it runs.', 'aggressive-ads' ); ?></p>
 				<?php
-				$aggr_upload_from_edit = true;
+				$aggr_upload_from_edit = true === ( $aggr_ads_in_edit ?? true );
 
 				require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-upload-form.php';
 				?>
@@ -134,74 +135,19 @@ $aggr_creative_error_for = isset( $aggr_creative_error_for ) ? (string) $aggr_cr
 						);
 					}
 					?>
-					<div class="aggr-uploaded">
-						<div class="aggr-uploaded__figure">
-							<div class="aggr-uploaded__thumb">
-								<img class="aggr-uploaded__image" src="<?php echo esc_url( (string) ( null === $aggr_pending ? $aggr_creative['preview'] : $aggr_pending['preview'] ) ); ?>" alt="<?php echo esc_attr( (string) ( $aggr_creative['alt_text'] ?? '' ) ); ?>" loading="lazy">
-							</div>
+					<?php
+					$aggr_card_image   = (string) ( null === $aggr_pending ? $aggr_creative['preview'] : $aggr_pending['preview'] );
+					$aggr_card_link    = (string) ( null === $aggr_pending ? $aggr_creative['click_url'] : $aggr_pending['click_url'] );
+					$aggr_card_actions = array( array( __( 'Preview', 'aggressive-ads' ), $aggr_preview_id, false ) );
+					$aggr_card_extras  = 'campaign-ad-card-running.php';
+					$aggr_card_place   = (string) $aggr_slot['name'];
 
-							<div class="aggr-creative-actions">
-								<a
-									class="aggr-card-action"
-									href="#<?php echo esc_attr( $aggr_preview_id ); ?>"
-									aria-haspopup="dialog"
-									aria-controls="<?php echo esc_attr( $aggr_preview_id ); ?>"
-									aria-expanded="false"
-								><?php esc_html_e( 'Preview', 'aggressive-ads' ); ?></a>
-								<?php if ( $aggr_can_update && null === $aggr_pending ) : ?>
-									<a
-										class="aggr-card-action"
-										href="#<?php echo esc_attr( $aggr_replace_id ); ?>"
-										aria-haspopup="dialog"
-										aria-controls="<?php echo esc_attr( $aggr_replace_id ); ?>"
-										aria-expanded="false"
-									><?php esc_html_e( 'Update', 'aggressive-ads' ); ?></a>
-								<?php endif; ?>
-							</div>
-						</div>
-						<div class="aggr-uploaded__details">
-							<p class="aggr-uploaded__destination">
-								<span class="aggr-uploaded__destination-label"><?php esc_html_e( 'Goes to', 'aggressive-ads' ); ?></span>
-								<span class="aggr-uploaded__destination-value"><?php echo esc_html( (string) ( null === $aggr_pending ? $aggr_creative['click_url'] : $aggr_pending['click_url'] ) ); ?></span>
-							</p>
-							<p class="aggr-uploaded__meta">
-								<?php
-								echo esc_html(
-									sprintf(
-										/* translators: 1: file name. 2: file size, e.g. 54 KB. 3: where it links, e.g. goes to shared link. */
-										__( '%1$s · %2$s · %3$s', 'aggressive-ads' ),
-										(string) $aggr_creative['name'],
-										size_format( (int) $aggr_creative['bytes'] ),
-										'' !== $aggr_shared_link && (string) $aggr_creative['click_url'] === $aggr_shared_link
-											? __( 'goes to shared link', 'aggressive-ads' )
-											: __( 'has its own link', 'aggressive-ads' )
-									)
-								);
-								?>
-							</p>
+					if ( $aggr_can_update && null === $aggr_pending ) {
+						$aggr_card_actions[] = array( __( 'Update', 'aggressive-ads' ), $aggr_replace_id, false );
+					}
 
-							<?php if ( null !== $aggr_pending ) : ?>
-								<p><span class="aggr-pill aggr-pill--pending"><?php esc_html_e( 'Update waiting for review', 'aggressive-ads' ); ?></span></p>
-								<p class="aggr-hint"><?php esc_html_e( 'The ad above is the update. The current one keeps running until the review team accepts it.', 'aggressive-ads' ); ?></p>
-								<form class="aggr-uploaded__actions" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post">
-									<input type="hidden" name="action" value="<?php echo esc_attr( Creative_Actions::WITHDRAW_ACTION ); ?>">
-									<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) $aggr_campaign['id'] ); ?>">
-									<input type="hidden" name="replacement_id" value="<?php echo esc_attr( (string) $aggr_pending['id'] ); ?>">
-									<?php wp_nonce_field( Creative_Actions::withdraw_nonce_action( (int) $aggr_pending['id'] ) ); ?>
-									<button class="aggr-card-action" type="submit"><?php esc_html_e( 'Withdraw update', 'aggressive-ads' ); ?></button>
-								</form>
-							<?php elseif ( true === $aggr_creative['rejected'] ) : ?>
-								<?php // The reason, to the person it was written for, and what to do about it. ?>
-								<p><span class="aggr-pill aggr-pill--danger"><?php echo esc_html( (string) $aggr_creative['state_text'] ); ?></span></p>
-								<?php if ( '' !== (string) $aggr_creative['notes'] ) : ?>
-									<p><?php echo esc_html( (string) $aggr_creative['notes'] ); ?></p>
-								<?php endif; ?>
-								<p class="aggr-hint"><?php esc_html_e( 'This ad is not running. Select Update to supply a replacement.', 'aggressive-ads' ); ?></p>
-							<?php elseif ( true !== $aggr_creative['approved'] ) : ?>
-								<p><span class="aggr-pill aggr-pill--pending"><?php echo esc_html( (string) $aggr_creative['state_text'] ); ?></span></p>
-							<?php endif; ?>
-						</div>
-					</div>
+					require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-ad-card.php';
+					?>
 				<?php endforeach; ?>
 			<?php endif; ?>
 		</section>

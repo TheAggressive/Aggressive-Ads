@@ -26,6 +26,7 @@ use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Security\Ownership;
 use Aggressive\Ads\Security\Roles;
 use Aggressive\Ads\Portal\Campaign_Actions;
+use Aggressive\Ads\Workflow\Campaign_Action_Requests;
 use Aggressive\Ads\Workflow\Campaign_Change_Manager;
 use Aggressive\Ads\Admin\Review_Data;
 use Aggressive\Ads\Workflow\Campaign_State_Machine;
@@ -225,6 +226,14 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 		update_post_meta( $campaign_id, Campaign_Repository::META_START_TS, time() - self::DAY );
 		update_post_meta( $campaign_id, Campaign_Repository::META_END_TS, time() + self::DAY );
 
+		/*
+		 * A custom-length package, so the schedule tests here may choose an end.
+		 * A fixed package sets its own end, which a live change may not move
+		 * (`Live_Edit_Rules::ERROR_END_SET_BY_PACKAGE`); CampaignChangePackageTest
+		 * covers that case.
+		 */
+		update_post_meta( $this->package_id, Package_Repository::META_CUSTOM_DURATION, 1 );
+
 		return $campaign_id;
 	}
 
@@ -349,7 +358,7 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 		$campaign_id = $this->running_campaign();
 
 		$this->assertTrue(
-			$this->changes->request_action( $campaign_id, Post_Statuses::CANCELLED, 'The client pulled the budget.' )
+			$this->action_requests()->request_action( $campaign_id, Post_Statuses::CANCELLED, 'The client pulled the budget.' )
 		);
 
 		wp_set_current_user( self::factory()->user->create( array( 'role' => Roles::REVIEWER ) ) );
@@ -813,7 +822,7 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 		wp_set_current_user( $this->advertiser );
 		$campaign_id = $this->running_campaign();
 
-		$actions = array_column( $this->changes->requestable_actions( $campaign_id ), 'action' );
+		$actions = array_column( $this->action_requests()->requestable_actions( $campaign_id ), 'action' );
 
 		$this->assertContains( Post_Statuses::PAUSED, $actions );
 		$this->assertContains( Post_Statuses::CANCELLED, $actions );
@@ -828,7 +837,7 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 		wp_set_current_user( $this->advertiser );
 		$campaign_id = $this->running_campaign();
 
-		$this->assertTrue( $this->changes->request_action( $campaign_id, Post_Statuses::PAUSED, 'Product sold out.' ) );
+		$this->assertTrue( $this->action_requests()->request_action( $campaign_id, Post_Statuses::PAUSED, 'Product sold out.' ) );
 
 		$this->assertSame( Post_Statuses::LIVE, get_post_status( $campaign_id ) );
 		$this->assertSame( Post_Statuses::PAUSED, $this->requests->action_request( $campaign_id )['action'] );
@@ -845,7 +854,7 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 		wp_set_current_user( $this->advertiser );
 		$campaign_id = $this->running_campaign();
 
-		$result = $this->changes->request_action( $campaign_id, Post_Statuses::PAUSED, '   ' );
+		$result = $this->action_requests()->request_action( $campaign_id, Post_Statuses::PAUSED, '   ' );
 
 		$this->assertWPError( $result );
 		$this->assertSame( array(), $this->requests->action_request( $campaign_id ) );
@@ -868,7 +877,7 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 			)
 		);
 
-		$actions = array_column( $this->changes->requestable_actions( $campaign_id ), 'action' );
+		$actions = array_column( $this->action_requests()->requestable_actions( $campaign_id ), 'action' );
 
 		$this->assertNotContains( Post_Statuses::CANCELLED, $actions, 'An advertiser can already cancel a scheduled campaign.' );
 	}
@@ -882,7 +891,7 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 		wp_set_current_user( $this->advertiser );
 		$campaign_id = $this->running_campaign();
 
-		$result = $this->changes->request_action( $campaign_id, Post_Statuses::APPROVED, 'Please approve.' );
+		$result = $this->action_requests()->request_action( $campaign_id, Post_Statuses::APPROVED, 'Please approve.' );
 
 		$this->assertWPError( $result );
 		$this->assertSame( 'aggr_action_not_requestable', $result->get_error_code() );
@@ -896,11 +905,11 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 	public function test_staff_can_decline_a_request(): void {
 		wp_set_current_user( $this->advertiser );
 		$campaign_id = $this->running_campaign();
-		$this->assertTrue( $this->changes->request_action( $campaign_id, Post_Statuses::PAUSED, 'Please pause.' ) );
+		$this->assertTrue( $this->action_requests()->request_action( $campaign_id, Post_Statuses::PAUSED, 'Please pause.' ) );
 
 		wp_set_current_user( self::factory()->user->create( array( 'role' => Roles::REVIEWER ) ) );
 
-		$this->assertTrue( $this->changes->resolve_action( $campaign_id, 'Your flight ends in two days anyway.' ) );
+		$this->assertTrue( $this->action_requests()->resolve_action( $campaign_id, 'Your flight ends in two days anyway.' ) );
 		$this->assertSame( array(), $this->requests->action_request( $campaign_id ) );
 		$this->assertStringContainsString( 'two days', $this->campaigns->review_notes( $campaign_id ) );
 		$this->assertSame( Post_Statuses::LIVE, get_post_status( $campaign_id ) );
@@ -914,7 +923,7 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 	public function test_a_request_clears_when_staff_act(): void {
 		wp_set_current_user( $this->advertiser );
 		$campaign_id = $this->running_campaign();
-		$this->assertTrue( $this->changes->request_action( $campaign_id, Post_Statuses::PAUSED, 'Please pause.' ) );
+		$this->assertTrue( $this->action_requests()->request_action( $campaign_id, Post_Statuses::PAUSED, 'Please pause.' ) );
 
 		wp_set_current_user( self::factory()->user->create( array( 'role' => Roles::REVIEWER ) ) );
 
@@ -935,8 +944,8 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 		wp_set_current_user( $this->advertiser );
 		$campaign_id = $this->running_campaign();
 
-		$this->assertTrue( $this->changes->request_action( $campaign_id, Post_Statuses::CANCELLED, 'Changed our minds.' ) );
-		$this->assertTrue( $this->changes->withdraw_action( $campaign_id ) );
+		$this->assertTrue( $this->action_requests()->request_action( $campaign_id, Post_Statuses::CANCELLED, 'Changed our minds.' ) );
+		$this->assertTrue( $this->action_requests()->withdraw_action( $campaign_id ) );
 		$this->assertSame( array(), $this->requests->action_request( $campaign_id ) );
 	}
 
@@ -950,7 +959,7 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 		$campaign_id = $this->running_campaign();
 
 		wp_set_current_user( $this->other_advertiser );
-		$result = $this->changes->request_action( $campaign_id, Post_Statuses::PAUSED, 'Not mine.' );
+		$result = $this->action_requests()->request_action( $campaign_id, Post_Statuses::PAUSED, 'Not mine.' );
 
 		$this->assertWPError( $result );
 		$this->assertSame( array(), $this->requests->action_request( $campaign_id ) );
@@ -975,5 +984,14 @@ final class CampaignChangeTest extends WP_UnitTestCase {
 
 		$this->assertContains( 'campaign.changes_requested', $events );
 		$this->assertContains( 'campaign.changes_approved', $events );
+	}
+
+	/**
+	 * Pause, restart and cancel requests.
+	 *
+	 * @return Campaign_Action_Requests
+	 */
+	private function action_requests(): Campaign_Action_Requests {
+		return Plugin::instance()->container()->get( Campaign_Action_Requests::class );
 	}
 }

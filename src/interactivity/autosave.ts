@@ -12,6 +12,7 @@
 
 import { store, getContext } from '@wordpress/interactivity';
 import { debounce, normaliseLink } from '@aggr/logic';
+import { enableRename } from './shared/rename-heading';
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error' | 'conflict';
 
@@ -314,137 +315,6 @@ function showLinkStatus(
 	}
 }
 
-/**
- * Makes the page heading the campaign's rename control.
- *
- * The heading's text becomes a button styled to be indistinguishable from it,
- * so nothing moves when this attaches. Pressing it swaps in a text field in the
- * same type; Enter or leaving the field saves, Escape keeps the old name.
- *
- * The heading's accessible name stays the campaign's name, because that is
- * what the page is about. What the button does is a description, held in a
- * visually hidden node beside the heading rather than inside it.
- *
- * @param id      Autosave instance.
- * @param heading The page's `<h1>`.
- */
-function enableRename( id: string, heading: HTMLElement ): void {
-	let name = ( heading.textContent ?? '' ).trim();
-
-	const button = document.createElement( 'button' );
-	button.type = 'button';
-	button.className = 'aggr-title__button';
-	button.textContent = name;
-
-	const hint = document.createElement( 'span' );
-	hint.id = `${ heading.id }-hint`;
-	hint.className = 'aggr-sr';
-	hint.textContent = state.i18n.rename ?? '';
-	heading.after( hint );
-	button.setAttribute( 'aria-describedby', hint.id );
-
-	heading.replaceChildren( button );
-
-	const show = ( text: string, refocus: boolean ): void => {
-		button.textContent = text;
-		heading.replaceChildren( button );
-
-		// Only after Enter or Escape. Leaving the field by clicking elsewhere
-		// put focus somewhere on purpose, and taking it back would fight that.
-		if ( refocus ) {
-			button.focus();
-		}
-	};
-
-	button.addEventListener( 'click', () => {
-		const input = document.createElement( 'input' );
-		input.type = 'text';
-		input.className = 'aggr-title__input';
-		input.value = name;
-		input.maxLength = 160;
-		input.setAttribute( 'aria-label', state.i18n.nameLabel ?? '' );
-
-		const fit = (): void => {
-			input.style.width = `${ Math.max( input.value.length, 4 ) + 1 }ch`;
-		};
-
-		fit();
-		input.addEventListener( 'input', fit );
-		heading.replaceChildren( input );
-		input.focus();
-		input.select();
-
-		/*
-		 * Once per edit. Enter saves and then removes the field, and removing a
-		 * focused field raises `blur` — which would save a second time, a
-		 * revision behind the first.
-		 */
-		let settled = false;
-
-		const settle = async (
-			commit: boolean,
-			refocus: boolean
-		): Promise< void > => {
-			if ( settled ) {
-				return;
-			}
-			settled = true;
-
-			const next = input.value.trim();
-
-			if ( ! commit || next === name ) {
-				show( name, refocus );
-				return;
-			}
-
-			if ( '' === next ) {
-				show( name, refocus );
-				announce( id, state.i18n.nameEmpty ?? '' );
-				return;
-			}
-
-			input.readOnly = true;
-
-			const outcome = await serialise( id, () =>
-				send( id, { title: next } )
-			);
-
-			if ( 'saved' !== outcome ) {
-				show( name, refocus );
-				announce(
-					id,
-					( 'conflict' === outcome
-						? state.i18n.conflict
-						: state.i18n.nameError ) ?? ''
-				);
-				return;
-			}
-
-			if ( document.title.includes( name ) ) {
-				document.title = document.title.replace( name, next );
-			}
-
-			name = next;
-			show( name, refocus );
-			announce( id, state.i18n.nameSaved ?? '' );
-		};
-
-		input.addEventListener( 'keydown', ( event ) => {
-			if ( 'Enter' === event.key ) {
-				event.preventDefault();
-				void settle( true, true );
-			} else if ( 'Escape' === event.key ) {
-				event.preventDefault();
-				void settle( false, true );
-			}
-		} );
-
-		input.addEventListener( 'blur', () => {
-			void settle( true, false );
-		} );
-	} );
-}
-
 const { state } = store( 'aggr/autosave', {
 	state: {
 		autosaves: {} as Record< string, AutosaveState >,
@@ -677,7 +547,25 @@ const { state } = store( 'aggr/autosave', {
 			// In the DOM, for the same reason the upload store marks its forms:
 			// a module evaluated twice would otherwise wrap the heading twice.
 			heading.dataset.aggrTitleReady = '1';
-			enableRename( autosaveId, heading );
+			enableRename( heading, {
+				hint: state.i18n.rename ?? '',
+				label: state.i18n.nameLabel ?? '',
+				maxLength: 160,
+				save: ( next ) =>
+					serialise( autosaveId, () =>
+						send( autosaveId, { title: next } )
+					),
+				said: ( outcome ) => {
+					const copy = {
+						saved: state.i18n.nameSaved,
+						empty: state.i18n.nameEmpty,
+						conflict: state.i18n.conflict,
+						error: state.i18n.nameError,
+					}[ outcome ];
+
+					announce( autosaveId, copy ?? '' );
+				},
+			} );
 		},
 	},
 } );

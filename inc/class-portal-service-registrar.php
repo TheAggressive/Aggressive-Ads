@@ -121,7 +121,8 @@ final class Portal_Service_Registrar {
 				$c->get( \Aggressive\Ads\Portal\Campaign_List_View_Data::class ),
 				$c->get( \Aggressive\Ads\Workflow\Link_Checker::class ),
 				$c->get( \Aggressive\Ads\Portal\Campaign_History_View_Data::class ),
-				$c->get( \Aggressive\Ads\Portal\Campaign_Edit_View_Data::class )
+				$c->get( \Aggressive\Ads\Portal\Campaign_Edit_View_Data::class ),
+				$c->get( \Aggressive\Ads\Workflow\Campaign_Action_Requests::class )
 			)
 		);
 		$container->register(
@@ -178,7 +179,8 @@ final class Portal_Service_Registrar {
 				$c->get( Campaign_Copier::class ),
 				$c->get( Campaign_State_Machine::class ),
 				$c->get( Rate_Limiter::class ),
-				$c->get( Campaign_Change_Manager::class )
+				$c->get( Campaign_Change_Manager::class ),
+				$c->get( \Aggressive\Ads\Workflow\Campaign_Action_Requests::class )
 			)
 		);
 		$container->register(

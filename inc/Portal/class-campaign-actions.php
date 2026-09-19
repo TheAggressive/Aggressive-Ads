@@ -13,6 +13,7 @@ use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Security\Rate_Limiter;
+use Aggressive\Ads\Workflow\Campaign_Action_Requests;
 use Aggressive\Ads\Workflow\Campaign_Change_Manager;
 use Aggressive\Ads\Workflow\Campaign_Copier;
 use Aggressive\Ads\Workflow\Campaign_Editor;
@@ -51,18 +52,20 @@ final class Campaign_Actions implements Service {
 	/**
 	 * Constructor.
 	 *
-	 * @param Campaign_Editor         $editor  Draft workflow.
-	 * @param Campaign_Copier         $copier  Campaign copy into a new draft.
-	 * @param Campaign_State_Machine  $machine Campaign lifecycle.
-	 * @param Rate_Limiter            $limiter Transition abuse bounding.
-	 * @param Campaign_Change_Manager $changes Running-campaign change proposals.
+	 * @param Campaign_Editor          $editor  Draft workflow.
+	 * @param Campaign_Copier          $copier  Campaign copy into a new draft.
+	 * @param Campaign_State_Machine   $machine Campaign lifecycle.
+	 * @param Rate_Limiter             $limiter Transition abuse bounding.
+	 * @param Campaign_Change_Manager  $changes Running-campaign change proposals.
+	 * @param Campaign_Action_Requests $action_requests Pause, restart and cancel requests.
 	 */
 	public function __construct(
 		private readonly Campaign_Editor $editor,
 		private readonly Campaign_Copier $copier,
 		private readonly Campaign_State_Machine $machine,
 		private readonly Rate_Limiter $limiter,
-		private readonly Campaign_Change_Manager $changes
+		private readonly Campaign_Change_Manager $changes,
+		private readonly Campaign_Action_Requests $action_requests
 	) {
 	}
 
@@ -415,7 +418,7 @@ final class Campaign_Actions implements Service {
 		$reason = isset( $_POST['reason'] ) ? sanitize_textarea_field( wp_unslash( $_POST['reason'] ) ) : '';
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 
-		$result = $this->changes->request_action( $campaign_id, $action, $reason );
+		$result = $this->action_requests->request_action( $campaign_id, $action, $reason );
 		$url    = Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id );
 
 		if ( is_wp_error( $result ) ) {
@@ -437,7 +440,7 @@ final class Campaign_Actions implements Service {
 
 		check_admin_referer( Campaign_Nonces::withdraw_action_nonce_action( $campaign_id ) );
 
-		$result = $this->changes->withdraw_action( $campaign_id );
+		$result = $this->action_requests->withdraw_action( $campaign_id );
 		$url    = Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id );
 
 		if ( is_wp_error( $result ) ) {

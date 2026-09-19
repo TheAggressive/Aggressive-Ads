@@ -159,7 +159,7 @@ $aggr_template = Size_Template::svg( (string) $aggr_slot['size'] );
 	<?php if ( '' !== $aggr_default_click_url ) : ?>
 		<details class="aggr-upload-destination" <?php echo $aggr_click_error ? 'open' : ''; ?>>
 			<summary>
-				<span class="aggr-uploaded__destination-label"><?php esc_html_e( 'Goes to', 'aggressive-ads' ); ?></span>
+				<span class="aggr-uploaded__destination-label"><?php esc_html_e( 'Destination', 'aggressive-ads' ); ?></span>
 				<span class="aggr-uploaded__destination-value"><?php echo esc_html( $aggr_default_click_url ); ?></span>
 				<span class="aggr-upload-destination__change"><?php esc_html_e( 'Use a different link', 'aggressive-ads' ); ?></span>
 			</summary>

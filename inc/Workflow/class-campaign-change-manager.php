@@ -14,7 +14,6 @@ use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Core\Settings;
 use Aggressive\Ads\Domain\Live_Edit_Rules;
-use Aggressive\Ads\Domain\Transition_Table;
 use Aggressive\Ads\Notification\Request_Mailer;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
@@ -22,7 +21,6 @@ use Aggressive\Ads\Repository\Campaign_Request_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Security\Rate_Limiter;
-use Throwable;
 use WP_Error;
 
 /**
@@ -57,6 +55,7 @@ final class Campaign_Change_Manager implements Service {
 	 * @param Campaign_Change_Summary     $summary    Words a change set for people.
 	 * @param Live_Package_Change         $package_change Upgrades and downgrades.
 	 * @param Live_Link_Change            $links      The link every ad goes to.
+	 * @param Request_Notifier            $notifier   Tells the review team.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -69,7 +68,8 @@ final class Campaign_Change_Manager implements Service {
 		private readonly Campaign_Request_Repository $requests,
 		private readonly Campaign_Change_Summary $summary,
 		private readonly Live_Package_Change $package_change,
-		private readonly Live_Link_Change $links
+		private readonly Live_Link_Change $links,
+		private readonly Request_Notifier $notifier
 	) {
 	}
 
@@ -226,180 +226,6 @@ final class Campaign_Change_Manager implements Service {
 	}
 
 	/**
-	 * The transitions an advertiser may ask staff to perform from here.
-	 *
-	 * Derived: everything staff can drive from this status, minus everything
-	 * the advertiser can already drive themselves. So it is never possible to
-	 * request something you could just do, and a new staff edge added to
-	 * Transition_Table becomes requestable without touching this method.
-	 *
-	 * @param int $campaign_id Campaign post id.
-	 * @return array<int, array{action: string, label: string}>
-	 */
-	public function requestable_actions( int $campaign_id ): array {
-		$status = $this->campaigns->status( $campaign_id );
-
-		if ( ! in_array( $status, self::editable_statuses(), true ) ) {
-			return array();
-		}
-
-		$own = array();
-
-		foreach ( Transition_Table::available_to( $status, Transition_Table::ACTOR_ADVERTISER ) as $transition ) {
-			$own[ $transition->to ] = true;
-		}
-
-		$actions = array();
-
-		foreach ( Transition_Table::available_to( $status, Transition_Table::ACTOR_STAFF ) as $transition ) {
-			if ( isset( $own[ $transition->to ] ) || $transition->is_system() ) {
-				continue;
-			}
-
-			$actions[] = array(
-				'action' => $transition->to,
-				'label'  => self::request_label( $transition->to ),
-			);
-		}
-
-		return $actions;
-	}
-
-	/**
-	 * Asks staff to perform one of those transitions.
-	 *
-	 * Records a request; it never performs the transition. Staff decide, and
-	 * they decide with the buttons the review screen already derives from
-	 * Transition_Table — so this adds a message, not a second way to change a
-	 * campaign's status.
-	 *
-	 * @param int    $campaign_id Campaign post id.
-	 * @param string $action      Requested target status.
-	 * @param string $reason      Advertiser's explanation.
-	 * @return true|WP_Error
-	 */
-	public function request_action( int $campaign_id, string $action, string $reason ): bool|WP_Error {
-		$authorized = $this->authorize( $campaign_id, Capabilities::SUBMIT_CAMPAIGN );
-
-		if ( is_wp_error( $authorized ) ) {
-			return $authorized;
-		}
-
-		$allowed = array();
-
-		foreach ( $this->requestable_actions( $campaign_id ) as $candidate ) {
-			$allowed[] = $candidate['action'];
-		}
-
-		if ( ! in_array( $action, $allowed, true ) ) {
-			return $this->error( 'aggr_action_not_requestable', __( 'That cannot be requested for this campaign.', 'aggressive-ads' ), 422 );
-		}
-
-		$limited = $this->limiter->attempt( Rate_Limiter::ACTION_TRANSITION, get_current_user_id() );
-
-		if ( is_wp_error( $limited ) ) {
-			return $limited;
-		}
-
-		if ( array() !== $this->requests->action_request( $campaign_id ) ) {
-			return $this->error( 'aggr_action_already_requested', __( 'You have already asked the review team about this campaign.', 'aggressive-ads' ), 409 );
-		}
-
-		$reason = trim( $reason );
-
-		if ( '' === $reason ) {
-			return $this->error( 'aggr_action_reason_required', __( 'Tell the review team why.', 'aggressive-ads' ), 422 );
-		}
-
-		if ( strlen( $reason ) > self::MAX_REVIEW_NOTES_LENGTH ) {
-			return $this->error( 'aggr_action_reason_long', __( 'That explanation is too long.', 'aggressive-ads' ), 422 );
-		}
-
-		if ( ! $this->requests->set_action_request( $campaign_id, $action, $reason, get_current_user_id() ) ) {
-			return $this->error( 'aggr_action_not_saved', __( 'The request could not be saved. Please try again.', 'aggressive-ads' ), 500 );
-		}
-
-		$this->log( 'campaign.action_requested', $campaign_id, array( $action => $reason ), 'Advertiser requested a campaign action.' );
-		$this->notify_request( $campaign_id, $action );
-
-		return true;
-	}
-
-	/**
-	 * Lets the advertiser take back their request.
-	 *
-	 * @param int $campaign_id Campaign post id.
-	 * @return true|WP_Error
-	 */
-	public function withdraw_action( int $campaign_id ): bool|WP_Error {
-		$authorized = $this->authorize( $campaign_id, Capabilities::SUBMIT_CAMPAIGN );
-
-		if ( is_wp_error( $authorized ) ) {
-			return $authorized;
-		}
-
-		if ( array() === $this->requests->action_request( $campaign_id ) ) {
-			return $this->error( 'aggr_no_action_request', __( 'There is no request to withdraw.', 'aggressive-ads' ), 404 );
-		}
-
-		$this->requests->clear_action_request( $campaign_id );
-		$this->log( 'campaign.action_request_withdrawn', $campaign_id, array(), 'Advertiser withdrew a campaign action request.' );
-
-		return true;
-	}
-
-	/**
-	 * Clears a request staff have dealt with, one way or the other.
-	 *
-	 * Called after a staff transition so a request cannot outlive the thing it
-	 * asked for, and separately when staff decline it.
-	 *
-	 * @param int    $campaign_id Campaign post id.
-	 * @param string $notes       Advertiser-facing explanation when declining.
-	 * @return true|WP_Error
-	 */
-	public function resolve_action( int $campaign_id, string $notes = '' ): bool|WP_Error {
-		if ( ! current_user_can( Capabilities::REVIEW_CAMPAIGNS ) ) {
-			return $this->error( 'aggr_forbidden', __( 'You do not have permission to decide campaign requests.', 'aggressive-ads' ), 403 );
-		}
-
-		if ( array() === $this->requests->action_request( $campaign_id ) ) {
-			return $this->error( 'aggr_no_action_request', __( 'This campaign has no request waiting.', 'aggressive-ads' ), 404 );
-		}
-
-		$notes = trim( $notes );
-
-		if ( '' !== $notes ) {
-			$this->campaigns->set_review_notes( $campaign_id, $notes );
-		}
-
-		$this->requests->clear_action_request( $campaign_id );
-		$this->log( 'campaign.action_request_resolved', $campaign_id, array(), 'Campaign action request resolved by staff.' );
-
-		return true;
-	}
-
-	/**
-	 * Advertiser-facing name for a requested transition.
-	 *
-	 * @param string $status Target status.
-	 */
-	public static function request_label( string $status ): string {
-		switch ( $status ) {
-			case Post_Statuses::PAUSED:
-				return __( 'Pause this campaign', 'aggressive-ads' );
-			case Post_Statuses::LIVE:
-				return __( 'Restart this campaign', 'aggressive-ads' );
-			case Post_Statuses::CANCELLED:
-				return __( 'Cancel this campaign', 'aggressive-ads' );
-			case Post_Statuses::COMPLETE:
-				return __( 'End this campaign now', 'aggressive-ads' );
-		}
-
-		return $status;
-	}
-
-	/**
 	 * Merges one wizard step into the proposal without sending it for review.
 	 *
 	 * Each step posts only its own fields, so the merge is over the *stored*
@@ -537,49 +363,9 @@ final class Campaign_Change_Manager implements Service {
 
 		// The prices the advertiser was shown, for billing to settle from (#263).
 		$this->log( 'campaign.changes_requested', $campaign_id, $edits, 'Campaign changes submitted for review.', Audit_Event::OUTCOME_OK, $this->package_change->price_context( $campaign_id, $edits ) );
-		$this->notify_request( $campaign_id, Request_Mailer::KIND_EDITS );
+		$this->notifier->send( $campaign_id, Request_Mailer::KIND_EDITS );
 
 		return true;
-	}
-
-	/**
-	 * Tells the review team something is waiting, after the write has committed.
-	 *
-	 * The counter is bumped here rather than in the mailer, and that is the
-	 * whole point of it: the mailer reads it, so a cron retry re-reads the same
-	 * number and reserves the same receipt. Bumping it on the retry path would
-	 * make every attempt a new notification and mail the review team on every
-	 * tick.
-	 *
-	 * Failures are swallowed for the reason `Campaign_State_Machine::notify()`
-	 * swallows them — the advertiser's request is already saved, and returning
-	 * an error now would tell them it was not.
-	 *
-	 * @param int    $campaign_id Campaign post id.
-	 * @param string $kind        `edits`, or the requested target status.
-	 * @return void
-	 */
-	private function notify_request( int $campaign_id, string $kind ): void {
-		$this->requests->increment_request_revision( $campaign_id );
-
-		try {
-			// Spelled out rather than referenced through Request_Mailer, as
-			// Campaign_State_Machine spells out its own notify hook: a hook name
-			// that only exists as a constant is a hook nobody can grep for.
-			do_action( 'aggr_notify_advertiser_request', $campaign_id, $kind );
-		} catch ( Throwable $exception ) {
-			$this->audit->insert(
-				new Audit_Event(
-					event: 'campaign.notification_failed',
-					outcome: Audit_Event::OUTCOME_FAILED,
-					object_type: 'campaign',
-					object_id: $campaign_id,
-					org_id: $this->campaigns->org_id( $campaign_id ),
-					message: $exception->getMessage(),
-					context: array( 'kind' => $kind )
-				)
-			);
-		}
 	}
 
 	/**
@@ -714,6 +500,26 @@ final class Campaign_Change_Manager implements Service {
 	}
 
 	/**
+	 * What a reviewer must know about a submitted change beyond its rows.
+	 *
+	 * Whether it changes the ad sizes — a package change does, and the review
+	 * screen's warning used to look for a placement row only, so a package
+	 * change arrived without one — and, for a package change, the price moving
+	 * in words.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return array{structural: bool, price: string}
+	 */
+	public function pending_review_facts( int $campaign_id ): array {
+		$edits = $this->submitted_edits( $campaign_id );
+
+		return array(
+			'structural' => Live_Edit_Rules::is_structural( $edits ),
+			'price'      => $this->package_change->price_note( $campaign_id, $edits ),
+		);
+	}
+
+	/**
 	 * A pending change rendered as before/after rows.
 	 *
 	 * One presenter, used by both the advertiser's screen and the reviewer's,
@@ -774,7 +580,7 @@ final class Campaign_Change_Manager implements Service {
 			'package_id'        => $this->campaigns->package_id( $campaign_id ),
 
 			// Not a field: what Live_Edit_Rules holds a placement change to.
-			'placement_choices' => $this->placement_choices( $campaign_id ),
+			'placement_choices' => $this->package_change->placement_choices( $campaign_id ),
 
 			// Not fields: what a package change may move to, and what was paid.
 			'package_choices'   => $this->package_change->on_sale(),
@@ -782,22 +588,6 @@ final class Campaign_Change_Manager implements Service {
 			'currency'          => $this->campaigns->currency( $campaign_id ),
 		);
 	}
-
-	/**
-	 * The placements an edit may choose from, or none to mean any.
-	 *
-	 * `Live_Package_Change::placement_choices()` decides; the edit screen
-	 * offers exactly this list and the rules refuse anything outside it, so
-	 * the two cannot disagree.
-	 *
-	 * @param int      $campaign_id      Campaign post id.
-	 * @param int|null $proposed_package A package being moved to, or null for the campaign's own.
-	 * @return array<int, int>
-	 */
-	public function placement_choices( int $campaign_id, ?int $proposed_package = null ): array {
-		return $this->package_change->placement_choices( $campaign_id, $proposed_package );
-	}
-
 
 	/**
 	 * Writes an approved change set.

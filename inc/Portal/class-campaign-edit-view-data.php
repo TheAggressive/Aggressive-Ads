@@ -75,23 +75,6 @@ final class Campaign_Edit_View_Data {
 		$values['end_date']   = Date_Input::format( (int) ( $values['end_ts'] ?? 0 ) );
 		$row['edit_values']   = $values;
 
-		$package = (int) ( $values['package_id'] ?? 0 );
-
-		/*
-		 * What editing may choose from: the proposed package's placements and
-		 * the campaign's own, the same list Live_Edit_Rules holds a change to.
-		 * No package means the whole catalogue, as before.
-		 */
-		$choices                       = $this->changes->placement_choices( $campaign_id, $package > 0 ? $package : null );
-		$row['edit_placement_options'] = array() === $choices
-			? (array) ( $row['placement_options'] ?? array() )
-			: array_values(
-				array_filter(
-					(array) ( $row['placement_options'] ?? array() ),
-					static fn ( array $option ): bool => in_array( (int) $option['id'], $choices, true )
-				)
-			);
-
 		list( $used, $total ) = $this->links->usage( $campaign_id );
 
 		$row['edit_link']       = (string) ( $values['default_click_url'] ?? '' );

@@ -83,6 +83,7 @@ use Aggressive\Ads\Update\Plugin_Updates;
 use Aggressive\Ads\Update\Release_Repository;
 use Aggressive\Ads\Update\Update_Http_Client;
 use Aggressive\Ads\Workflow\Advertiser_Registration;
+use Aggressive\Ads\Workflow\Campaign_Action_Requests;
 use Aggressive\Ads\Workflow\Assigned_Creatives;
 use Aggressive\Ads\Workflow\Assignment_Editor;
 use Aggressive\Ads\Workflow\Assignment_Projection;
@@ -121,6 +122,7 @@ use Aggressive\Ads\Workflow\Organization_State_Manager;
 use Aggressive\Ads\Workflow\Password_Reset;
 use Aggressive\Ads\Workflow\Placement_Manager;
 use Aggressive\Ads\Workflow\Reporting_Read;
+use Aggressive\Ads\Workflow\Request_Notifier;
 use Aggressive\Ads\Workflow\Review_Readiness;
 use Aggressive\Ads\Workflow\Reviewer_Access;
 use Aggressive\Ads\Workflow\Revision_Policy;
@@ -839,7 +841,8 @@ final class Service_Registrar {
 		$container->register(
 			Campaign_Change_Actions::class,
 			static fn ( Service_Container $c ): Campaign_Change_Actions => new Campaign_Change_Actions(
-				$c->get( Campaign_Change_Manager::class )
+				$c->get( Campaign_Change_Manager::class ),
+				$c->get( Campaign_Action_Requests::class )
 			)
 		);
 
@@ -864,7 +867,28 @@ final class Service_Registrar {
 				$c->get( Campaign_Request_Repository::class ),
 				new Campaign_Change_Summary( $c->get( Placement_Repository::class ), $c->get( Package_Repository::class ) ),
 				$c->get( Live_Package_Change::class ),
-				$c->get( Live_Link_Change::class )
+				$c->get( Live_Link_Change::class ),
+				$c->get( Request_Notifier::class )
+			)
+		);
+
+		$container->register(
+			Request_Notifier::class,
+			static fn ( Service_Container $c ): Request_Notifier => new Request_Notifier(
+				$c->get( Campaign_Repository::class ),
+				$c->get( Campaign_Request_Repository::class ),
+				$c->get( Audit_Repository::class )
+			)
+		);
+
+		$container->register(
+			Campaign_Action_Requests::class,
+			static fn ( Service_Container $c ): Campaign_Action_Requests => new Campaign_Action_Requests(
+				$c->get( Campaign_Repository::class ),
+				$c->get( Campaign_Request_Repository::class ),
+				$c->get( Rate_Limiter::class ),
+				$c->get( Audit_Repository::class ),
+				$c->get( Request_Notifier::class )
 			)
 		);
 

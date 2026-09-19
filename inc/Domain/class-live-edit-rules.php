@@ -59,6 +59,16 @@ final class Live_Edit_Rules {
 	 */
 	public const ERROR_PACKAGE_NOT_OFFERED = 'live_edit_package_not_offered';
 
+	/**
+	 * An end date on a package that sets its own length.
+	 *
+	 * A fixed package sells a number of days, so its end follows from the
+	 * start — creation never asks for one, and neither does the edit screen.
+	 * A hand-built post that names another end would buy days nobody paid
+	 * for; running longer means choosing a package that runs longer.
+	 */
+	public const ERROR_END_SET_BY_PACKAGE = 'live_edit_end_set_by_package';
+
 	public const MAX_TITLE = 200;
 	public const MAX_NOTES = 2000;
 
@@ -77,7 +87,6 @@ final class Live_Edit_Rules {
 			Settings_Schema::EDIT_NOTES       => array( 'advertiser_notes' ),
 			Settings_Schema::EDIT_SCHEDULE    => array( 'start_ts', 'end_ts' ),
 			Settings_Schema::EDIT_DESTINATION => array( 'click_urls', 'default_click_url' ),
-			Settings_Schema::EDIT_PLACEMENTS  => array( 'placement_ids' ),
 			Settings_Schema::EDIT_PACKAGE     => array( 'package_id' ),
 		);
 	}
@@ -117,6 +126,11 @@ final class Live_Edit_Rules {
 	 * @param array<string, mixed> $diff Reduced change set.
 	 */
 	public static function is_structural( array $diff ): bool {
+		// A proposal staged before placements lost their own switch still changes the sizes.
+		if ( array_key_exists( 'placement_ids', $diff ) ) {
+			return true;
+		}
+
 		$fields = self::fields_for();
 
 		foreach ( Settings_Schema::structural_edit_keys() as $key ) {
@@ -312,6 +326,20 @@ final class Live_Edit_Rules {
 		// was approved. If that is what somebody wants, cancelling says so.
 		if ( $end <= $now ) {
 			$result->add( self::ERROR_END_IN_PAST, 'end_ts', array( 'end_ts' => $end ) );
+		}
+
+		/*
+		 * `fixed_days` is the length the package being run — or moved to —
+		 * sells; zero for a custom package or none. Absent means the caller
+		 * did not say, and the rule stays as it was.
+		 */
+		$days = isset( $current['fixed_days'] ) ? (int) $current['fixed_days'] : 0;
+		$zone = isset( $current['timezone'] ) && is_string( $current['timezone'] ) ? $current['timezone'] : 'UTC';
+
+		$sold = $days > 0 && $start > 0 ? Campaign_Rules::fixed_end_ts( $start, $days, $zone ) : 0;
+
+		if ( $sold > 0 && $sold !== $end ) {
+			$result->add( self::ERROR_END_SET_BY_PACKAGE, 'end_ts', array( 'end_ts' => $end ) );
 		}
 	}
 

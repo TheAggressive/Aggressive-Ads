@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Tests\Unit\Domain;
 
+use Aggressive\Ads\Domain\Campaign_Rules;
 use Aggressive\Ads\Domain\Live_Edit_Rules;
 use Aggressive\Ads\Domain\Settings_Schema;
 use PHPUnit\Framework\TestCase;
@@ -435,5 +436,44 @@ final class LiveEditRulesTest extends TestCase {
 		}
 
 		$this->assertTrue( Live_Edit_Rules::validate( array( 'default_click_url' => 'https://example.com/b?utm_content={creative_id}' ), $current, self::NOW )->is_valid() );
+	}
+
+	/**
+	 * A fixed package's end follows its start; any other end is refused. A
+	 * custom package, or none, keeps the rule it had.
+	 *
+	 * @return void
+	 */
+	public function test_a_fixed_package_sets_the_end(): void {
+		$current = array(
+			'start_ts'   => self::NOW + 86400,
+			'end_ts'     => 0,
+			'fixed_days' => 14,
+			'timezone'   => 'America/Los_Angeles',
+		);
+		$derived = Campaign_Rules::fixed_end_ts( self::NOW + 86400, 14, 'America/Los_Angeles' );
+
+		$this->assertFalse( Live_Edit_Rules::validate( array( 'end_ts' => $derived ), $current, self::NOW )->has( Live_Edit_Rules::ERROR_END_SET_BY_PACKAGE ) );
+		$this->assertTrue( Live_Edit_Rules::validate( array( 'end_ts' => $derived + 7 * 86400 ), $current, self::NOW )->has( Live_Edit_Rules::ERROR_END_SET_BY_PACKAGE ), 'A week nobody paid for was accepted.' );
+
+		// Judged from the start being proposed, not the stored one.
+		$later = self::NOW + 3 * 86400;
+
+		$this->assertTrue(
+			Live_Edit_Rules::validate(
+				array(
+					'start_ts' => $later,
+					'end_ts'   => Campaign_Rules::fixed_end_ts( $later, 14, 'America/Los_Angeles' ),
+				),
+				$current,
+				self::NOW
+			)->is_valid()
+		);
+
+		foreach ( array( 0, null ) as $days ) {
+			$custom = array( 'fixed_days' => $days ) + $current;
+
+			$this->assertFalse( Live_Edit_Rules::validate( array( 'end_ts' => $derived + 7 * 86400 ), $custom, self::NOW )->has( Live_Edit_Rules::ERROR_END_SET_BY_PACKAGE ) );
+		}
 	}
 }

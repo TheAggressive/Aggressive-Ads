@@ -29,6 +29,7 @@ use Aggressive\Ads\Repository\Line_Item_Repository;
 use Aggressive\Ads\REST\Creative_File_Controller;
 use Aggressive\Ads\Workflow\Edit_Window;
 use Aggressive\Ads\Workflow\Link_Checker;
+use Aggressive\Ads\Workflow\Campaign_Action_Requests;
 use Aggressive\Ads\Workflow\Campaign_Change_Manager;
 use Aggressive\Ads\Workflow\Campaign_Editor;
 use Aggressive\Ads\Workflow\Creative_Approval;
@@ -85,6 +86,7 @@ final class View_Data {
 	 * @param Link_Checker                $links         The campaign link check.
 	 * @param Campaign_History_View_Data  $history       The campaign's own audit trail.
 	 * @param Campaign_Edit_View_Data     $edit_view     What the running-campaign edit flow renders.
+	 * @param Campaign_Action_Requests    $action_requests Pause, restart and cancel requests.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -107,7 +109,8 @@ final class View_Data {
 		private readonly Campaign_List_View_Data $campaign_list,
 		private readonly Link_Checker $links,
 		private readonly Campaign_History_View_Data $history,
-		private readonly Campaign_Edit_View_Data $edit_view
+		private readonly Campaign_Edit_View_Data $edit_view,
+		private readonly Campaign_Action_Requests $action_requests
 	) {
 	}
 
@@ -360,11 +363,11 @@ final class View_Data {
 
 		$row['action_request']       = $this->requests->action_request( $campaign_id );
 		$row['requestable_actions']  = array() === $row['action_request']
-			? $this->changes->requestable_actions( $campaign_id )
+			? $this->action_requests->requestable_actions( $campaign_id )
 			: array();
 		$row['action_request_label'] = array() === $row['action_request']
 			? ''
-			: Campaign_Change_Manager::request_label( (string) $row['action_request']['action'] );
+			: Campaign_Action_Requests::request_label( (string) $row['action_request']['action'] );
 
 		$row['can_cancel']   = $this->advertiser_may_cancel( $campaign_id, $this->campaigns->status( $campaign_id ) );
 		$row['cancel_label'] = Post_Statuses::DRAFT === $this->campaigns->status( $campaign_id )

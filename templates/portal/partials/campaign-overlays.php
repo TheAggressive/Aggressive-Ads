@@ -312,7 +312,7 @@ if ( true !== ( $aggr_overlay_print ?? false ) ) {
 								>
 									<?php esc_html_e( 'Cancel', 'aggressive-ads' ); ?>
 								</a>
-								<button class="aggr-button" type="submit"><?php esc_html_e( 'Submit replacement for review', 'aggressive-ads' ); ?></button>
+								<button class="aggr-button" type="submit"><?php esc_html_e( 'Submit for review', 'aggressive-ads' ); ?></button>
 							</div>
 						</form>
 					<?php endif; ?>
