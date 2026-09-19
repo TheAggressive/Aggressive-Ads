@@ -93,7 +93,7 @@ final class Catalogue_View_Data {
 	/**
 	 * Active placements with preparation details.
 	 *
-	 * @return array<int, array{id: int, name: string, size: string, max_size: string}>
+	 * @return array<int, array{id: int, name: string, size: string, max_size: string, shape: array{label: string, width: int, height: int}|null}>
 	 */
 	public function placement_options(): array {
 		$options = array();
@@ -108,6 +108,9 @@ final class Catalogue_View_Data {
 				// sentence as the one on the upload form, and two callers
 				// formatting the same number is how they come to disagree.
 				'max_size' => (string) size_format( $this->placements->max_bytes( $placement_id ) ),
+
+				// The silhouette the package cards draw, so a placement card looks like one.
+				'shape'    => self::size_shape( $this->placements->size( $placement_id ) ),
 			);
 		}
 

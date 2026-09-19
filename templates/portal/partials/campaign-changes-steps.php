@@ -2,11 +2,10 @@
 /**
  * The edit flow's steps, in the page head where the creation wizard puts its.
  *
- * Its own partial because the head is drawn before the flow itself, and both
- * have to agree on which steps exist: a site that has switched off schedule
- * edits must not show a Schedule step here that the flow below never renders.
- * `Campaign_Changes_Steps::for_fields()` would be the Portal-class version of
- * this; four lines of array building did not earn one.
+ * Its own partial because the head is drawn before the flow itself. Which
+ * steps exist, and what they are called, is `Portal\Campaign_Edit_Steps`,
+ * which the flow below reads too, so the head cannot offer a step the flow
+ * never renders.
  *
  * Scope is inherited from the screen.
  *
@@ -22,46 +21,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use Aggressive\Ads\Portal\Campaign_Actions;
-use Aggressive\Ads\Portal\Request;
-use Aggressive\Ads\Portal\Routes;
+use Aggressive\Ads\Portal\Campaign_Edit_Steps;
 
 $aggr_edit_fields = is_array( $aggr_campaign['live_edit_fields'] ?? null ) ? $aggr_campaign['live_edit_fields'] : array();
-$aggr_edit_step   = Campaign_Actions::request_change_step();
-$aggr_edit_url    = add_query_arg( 'edit', '1', Routes::url( Request::ROUTE_CAMPAIGNS, (int) $aggr_campaign['id'] ) );
-$aggr_edit_steps  = array();
-
-$aggr_edit_details = in_array( 'title', $aggr_edit_fields, true ) || in_array( 'advertiser_notes', $aggr_edit_fields, true ) || in_array( 'placement_ids', $aggr_edit_fields, true );
-$aggr_edit_dates   = in_array( 'start_ts', $aggr_edit_fields, true );
-
-/*
- * Three steps, as creation has: what it is and when it runs together, then
- * the links, then review. Name, placements and dates were two steps with a
- * save between them for no reason the advertiser could see; they post to
- * the same handler, which reads whichever fields arrive.
- */
-if ( $aggr_edit_details || $aggr_edit_dates ) {
-	$aggr_edit_steps['details'] = $aggr_edit_details && $aggr_edit_dates
-		? __( 'Details & dates', 'aggressive-ads' )
-		: ( $aggr_edit_details ? __( 'Details', 'aggressive-ads' ) : __( 'Dates', 'aggressive-ads' ) );
-}
-
-if ( in_array( 'click_urls', $aggr_edit_fields, true ) ) {
-	$aggr_edit_steps['destination'] = __( 'Links', 'aggressive-ads' );
-}
-
-$aggr_edit_steps['review'] = __( 'Review & submit', 'aggressive-ads' );
-
-// A link to the old separate Schedule step lands on the step that holds it now.
-if ( 'schedule' === $aggr_edit_step ) {
-	$aggr_edit_step = 'details';
-}
-
+$aggr_edit_steps  = Campaign_Edit_Steps::for_fields( $aggr_edit_fields );
+$aggr_edit_step   = Campaign_Edit_Steps::current( Campaign_Actions::request_change_step(), $aggr_edit_steps );
 $aggr_edit_number = (int) array_search( $aggr_edit_step, array_keys( $aggr_edit_steps ), true ) + 1;
 ?>
 <ol class="aggr-steps" aria-label="<?php esc_attr_e( 'Campaign edit progress', 'aggressive-ads' ); ?>">
 	<?php foreach ( $aggr_edit_steps as $aggr_edit_key => $aggr_edit_name ) : ?>
 		<li <?php echo $aggr_edit_key === $aggr_edit_step ? 'aria-current="step"' : ''; ?>>
-			<a href="<?php echo esc_url( add_query_arg( 'step', $aggr_edit_key, $aggr_edit_url ) ); ?>"><span class="aggr-steps__label"><?php echo esc_html( $aggr_edit_name ); ?></span></a>
+			<a href="<?php echo esc_url( Campaign_Edit_Steps::url( (int) $aggr_campaign['id'], $aggr_edit_key ) ); ?>"><span class="aggr-steps__label"><?php echo esc_html( $aggr_edit_name ); ?></span></a>
 		</li>
 	<?php endforeach; ?>
 </ol>

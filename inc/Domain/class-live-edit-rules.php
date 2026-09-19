@@ -39,6 +39,17 @@ final class Live_Edit_Rules {
 	public const ERROR_URL_INVALID      = 'live_edit_click_url_invalid';
 	public const ERROR_NO_PLACEMENTS    = 'live_edit_no_placements';
 
+	/**
+	 * A placement the campaign's package does not sell.
+	 *
+	 * The package priced the campaign, and its placements are what that price
+	 * bought; a running campaign may drop one and take it back, but moving to
+	 * a placement it never paid for is a different purchase. Checked here, not
+	 * only by what the edit screen offers, because a hand-built post carries
+	 * any id it likes.
+	 */
+	public const ERROR_PLACEMENT_NOT_OFFERED = 'live_edit_placement_not_offered';
+
 	public const MAX_TITLE = 200;
 	public const MAX_NOTES = 2000;
 
@@ -189,6 +200,24 @@ final class Live_Edit_Rules {
 
 			if ( array() === $ids ) {
 				$result->add( self::ERROR_NO_PLACEMENTS, 'placement_ids' );
+			}
+
+			/*
+			 * `placement_choices` is what may be chosen: the package's own
+			 * placements and whatever the campaign runs on now. Absent or
+			 * empty means no package to hold it to — a campaign made before
+			 * packages, or by staff — which keeps the rule it always had.
+			 */
+			$choices = isset( $current['placement_choices'] ) && is_array( $current['placement_choices'] )
+				? array_map( 'intval', $current['placement_choices'] )
+				: array();
+
+			if ( array() !== $choices ) {
+				$outside = array_values( array_diff( array_map( 'intval', $ids ), $choices ) );
+
+				if ( array() !== $outside ) {
+					$result->add( self::ERROR_PLACEMENT_NOT_OFFERED, 'placement_ids', array( 'placement_ids' => $outside ) );
+				}
 			}
 		}
 

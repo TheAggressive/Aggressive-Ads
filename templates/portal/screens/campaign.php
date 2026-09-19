@@ -32,9 +32,6 @@ use Aggressive\Ads\Portal\View_Data;
 $aggr_creatives          = is_array( $aggr_campaign['creatives'] ) ? $aggr_campaign['creatives'] : array();
 $aggr_creative_updates   = is_array( $aggr_campaign['creative_updates'] ) ? $aggr_campaign['creative_updates'] : array();
 $aggr_notes              = (string) $aggr_campaign['review_notes'];
-$aggr_places             = is_array( $aggr_campaign['placements'] ) ? $aggr_campaign['placements'] : array();
-$aggr_place_ids          = is_array( $aggr_campaign['placement_ids'] ) ? array_map( 'intval', $aggr_campaign['placement_ids'] ) : array();
-$aggr_options            = is_array( $aggr_campaign['placement_options'] ) ? $aggr_campaign['placement_options'] : array();
 $aggr_packages           = is_array( $aggr_campaign['package_options'] ) ? $aggr_campaign['package_options'] : array();
 $aggr_slots              = is_array( $aggr_campaign['creative_slots'] ) ? $aggr_campaign['creative_slots'] : array();
 $aggr_readiness          = is_array( $aggr_campaign['readiness'] ) ? $aggr_campaign['readiness'] : array();
@@ -81,7 +78,6 @@ foreach ( $aggr_slots as $aggr_error_slot ) {
 $aggr_min_start_date = (string) ( $aggr_campaign['min_start_date'] ?? '' );
 $aggr_creative_ready = array() !== $aggr_slots;
 $aggr_overlays       = array();
-$aggr_line_items     = is_array( $aggr_campaign['line_items'] ?? null ) ? $aggr_campaign['line_items'] : array();
 
 /*
  * The wizard is on screen, and the panels below it are describing steps the

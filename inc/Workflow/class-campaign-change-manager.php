@@ -20,6 +20,7 @@ use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Campaign_Request_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Repository\Package_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Security\Rate_Limiter;
@@ -56,6 +57,7 @@ final class Campaign_Change_Manager implements Service {
 	 * @param Rate_Limiter                $limiter    Abuse bounding.
 	 * @param Audit_Repository            $audit      Audit persistence.
 	 * @param Campaign_Request_Repository $requests   Advertiser requests and proposed changes.
+	 * @param Package_Repository          $packages   What each package sells.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -66,7 +68,8 @@ final class Campaign_Change_Manager implements Service {
 		private readonly Fill_Cache $fill,
 		private readonly Rate_Limiter $limiter,
 		private readonly Audit_Repository $audit,
-		private readonly Campaign_Request_Repository $requests
+		private readonly Campaign_Request_Repository $requests,
+		private readonly Package_Repository $packages
 	) {
 	}
 
@@ -827,12 +830,45 @@ final class Campaign_Change_Manager implements Service {
 		}
 
 		return array(
-			'title'            => $this->campaigns->title( $campaign_id ),
-			'advertiser_notes' => $this->campaigns->advertiser_notes( $campaign_id ),
-			'start_ts'         => $this->campaigns->start_ts( $campaign_id ),
-			'end_ts'           => $this->campaigns->end_ts( $campaign_id ),
-			'placement_ids'    => $this->campaigns->placement_ids( $campaign_id ),
-			'click_urls'       => $click_urls,
+			'title'             => $this->campaigns->title( $campaign_id ),
+			'advertiser_notes'  => $this->campaigns->advertiser_notes( $campaign_id ),
+			'start_ts'          => $this->campaigns->start_ts( $campaign_id ),
+			'end_ts'            => $this->campaigns->end_ts( $campaign_id ),
+			'placement_ids'     => $this->campaigns->placement_ids( $campaign_id ),
+			'click_urls'        => $click_urls,
+
+			// Not a field: what Live_Edit_Rules holds a placement change to.
+			'placement_choices' => $this->placement_choices( $campaign_id ),
+		);
+	}
+
+	/**
+	 * The placements an edit may choose from, or none to mean any.
+	 *
+	 * The package's own placements, because the package is what was priced,
+	 * and whatever the campaign runs on now, so nothing live is taken away by
+	 * a package being edited after the sale. Empty when there is no package —
+	 * a campaign made before packages, or by staff — which leaves the rule as
+	 * it was. The edit screen offers exactly this list, and the rules refuse
+	 * anything outside it, so the two cannot disagree.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return array<int, int>
+	 */
+	public function placement_choices( int $campaign_id ): array {
+		$package_id = $this->campaigns->package_id( $campaign_id );
+
+		if ( $package_id <= 0 ) {
+			return array();
+		}
+
+		return array_values(
+			array_unique(
+				array_map(
+					'intval',
+					array_merge( $this->packages->placement_ids( $package_id ), $this->campaigns->placement_ids( $campaign_id ) )
+				)
+			)
 		);
 	}
 

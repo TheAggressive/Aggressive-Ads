@@ -27,6 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use Aggressive\Ads\Portal\Campaign_Actions;
+use Aggressive\Ads\Portal\Campaign_Edit_Steps;
 use Aggressive\Ads\Portal\Campaign_Nonces;
 use Aggressive\Ads\Portal\Request;
 use Aggressive\Ads\Portal\Routes;
@@ -35,29 +36,14 @@ $aggr_edit_fields = is_array( $aggr_campaign['live_edit_fields'] ?? null ) ? $ag
 $aggr_draft       = is_array( $aggr_campaign['draft_edits'] ?? null ) ? $aggr_campaign['draft_edits'] : array();
 $aggr_values      = is_array( $aggr_campaign['edit_values'] ?? null ) ? $aggr_campaign['edit_values'] : array();
 $aggr_campaign_id = (int) $aggr_campaign['id'];
-$aggr_edit_step   = Campaign_Actions::request_change_step();
-$aggr_edit_url    = add_query_arg( 'edit', '1', Routes::url( Request::ROUTE_CAMPAIGNS, $aggr_campaign_id ) );
+$aggr_edit_steps  = Campaign_Edit_Steps::for_fields( $aggr_edit_fields );
+$aggr_edit_step   = Campaign_Edit_Steps::current( Campaign_Actions::request_change_step(), $aggr_edit_steps );
+$aggr_edit_next   = Campaign_Edit_Steps::next( $aggr_edit_step, $aggr_edit_steps );
 
-$aggr_has_details     = in_array( 'title', $aggr_edit_fields, true ) || in_array( 'advertiser_notes', $aggr_edit_fields, true ) || in_array( 'placement_ids', $aggr_edit_fields, true );
-$aggr_has_schedule    = in_array( 'start_ts', $aggr_edit_fields, true );
-$aggr_has_destination = in_array( 'click_urls', $aggr_edit_fields, true );
+$aggr_has_details     = Campaign_Edit_Steps::has_details( $aggr_edit_fields );
+$aggr_has_schedule    = Campaign_Edit_Steps::has_dates( $aggr_edit_fields );
+$aggr_placement_cards = is_array( $aggr_campaign['edit_placement_options'] ?? null ) ? $aggr_campaign['edit_placement_options'] : array();
 
-// A link to the old separate Schedule step lands on the step that holds it now.
-if ( 'schedule' === $aggr_edit_step ) {
-	$aggr_edit_step = 'details';
-}
-
-$aggr_edit_order          = array_values(
-	array_filter(
-		array(
-			$aggr_has_details || $aggr_has_schedule ? 'details' : '',
-			$aggr_has_destination ? 'destination' : '',
-			'review',
-		)
-	)
-);
-$aggr_edit_index          = (int) array_search( $aggr_edit_step, $aggr_edit_order, true );
-$aggr_edit_next           = $aggr_edit_order[ $aggr_edit_index + 1 ] ?? 'review';
 $aggr_selected_placements = array_map( 'intval', (array) ( $aggr_values['placement_ids'] ?? array() ) );
 ?>
 <div class="aggr-columns aggr-changes">
@@ -123,10 +109,18 @@ $aggr_selected_placements = array_map( 'intval', (array) ( $aggr_values['placeme
 								<?php if ( in_array( 'placement_ids', $aggr_edit_fields, true ) ) : ?>
 									<fieldset class="aggr-fieldset" aria-describedby="aggr-edit-placements-hint">
 										<legend class="aggr-changes__legend"><?php esc_html_e( 'Placements', 'aggressive-ads' ); ?></legend>
-										<p id="aggr-edit-placements-hint" class="aggr-hint"><?php esc_html_e( 'Changing placements changes the ad sizes you must supply. If this is approved, the campaign stops running until you upload correctly sized ads and they are reviewed.', 'aggressive-ads' ); ?></p>
+										<p id="aggr-edit-placements-hint" class="aggr-hint"><?php esc_html_e( 'The placements your package includes. Changing them changes the ad sizes you must supply: if this is approved, the campaign stops running until you upload correctly sized ads and they are reviewed.', 'aggressive-ads' ); ?></p>
 										<div class="aggr-choicegrid aggr-changes__placements">
-											<?php foreach ( $aggr_campaign['placement_options'] as $aggr_option ) : ?>
-												<label class="aggr-choice">
+											<?php
+											/*
+											 * Drawn as the package cards are — name, then the size
+											 * as a silhouette and in figures — because a placement
+											 * is the thing a package is made of, and "728×90" on its
+											 * own means little until it is a wide, flat shape.
+											 */
+											?>
+											<?php foreach ( $aggr_placement_cards as $aggr_option ) : ?>
+												<label class="aggr-choice aggr-choice--package">
 													<input
 														type="checkbox"
 														name="placement_ids[]"
@@ -135,8 +129,23 @@ $aggr_selected_placements = array_map( 'intval', (array) ( $aggr_values['placeme
 													>
 													<span class="aggr-choice__text">
 														<span class="aggr-package__name"><?php echo esc_html( (string) $aggr_option['name'] ); ?></span>
-														<?php if ( '' !== (string) ( $aggr_option['size'] ?? '' ) ) : ?>
-															<span class="aggr-package__meta"><?php echo esc_html( str_replace( 'x', '×', (string) $aggr_option['size'] ) ); ?></span>
+														<span class="aggr-package__meta">
+															<?php
+															printf(
+																/* translators: %s: the largest file this placement accepts, e.g. 150 KB. */
+																esc_html__( 'Files up to %s', 'aggressive-ads' ),
+																esc_html( (string) $aggr_option['max_size'] )
+															);
+															?>
+														</span>
+														<?php if ( is_array( $aggr_option['shape'] ?? null ) ) : ?>
+															<span class="aggr-package__sizes" aria-hidden="true">
+																<span class="aggr-package__size">
+																	<span class="aggr-package__shape" style="width: <?php echo esc_attr( (string) (int) $aggr_option['shape']['width'] ); ?>px; height: <?php echo esc_attr( (string) (int) $aggr_option['shape']['height'] ); ?>px"></span>
+																	<?php echo esc_html( (string) $aggr_option['shape']['label'] ); ?>
+																</span>
+															</span>
+															<span class="aggr-sr"><?php echo esc_html( (string) $aggr_option['shape']['label'] ); ?></span>
 														<?php endif; ?>
 													</span>
 												</label>

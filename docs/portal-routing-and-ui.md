@@ -306,8 +306,16 @@ started campaign is not refused for a start date it left alone. A link to the
 old `step=schedule` lands on the combined step. A **Your changes** card beside it lists
 each staged change as its new value with the old one under it, and holds
 **Submit for review** on the last step, **Discard these edits** once there is
-something to discard, and **Back to the campaign**. Placements are choice cards
-with their sizes, and the dates use the range calendar. Nothing else is
+something to discard, and **Back to the campaign**. Placements are drawn as the package cards
+are — name, file limit, and the size as a silhouette and in figures — and only
+the campaign's own package's placements are offered, plus any it runs on now.
+`Campaign_Change_Manager::placement_choices()` is that list for the screen and
+for `Live_Edit_Rules`, which refuses anything outside it
+(`live_edit_placement_not_offered`), so a hand-built post cannot buy a
+placement the package never sold. A campaign with no package keeps the whole
+catalogue, as before. The dates use the range calendar. Which steps exist, their
+names and the step after each are `Portal\Campaign_Edit_Steps`, read by both
+the head and the flow. Nothing else is
 drawn while editing — delivery, ads and the request card would describe the
 campaign the advertiser is in the middle of changing. Every form posts exactly
 what it did before: same actions, nonces, field names and `next_step`, pinned by

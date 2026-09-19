@@ -42,30 +42,43 @@ final class CampaignChangesScreenTest extends WP_UnitTestCase {
 	private function campaign( array $overrides = array() ): array {
 		return array_merge(
 			array(
-				'id'                => 4242,
-				'title'             => 'Spring season launch',
-				'start_date'        => '2030-06-01',
-				'end_date'          => '2030-06-30',
-				'live_edit_fields'  => array( 'title', 'placement_ids', 'start_ts', 'end_ts', 'click_urls' ),
-				'draft_edits'       => array(),
-				'edit_values'       => array(
+				'id'                     => 4242,
+				'title'                  => 'Spring season launch',
+				'start_date'             => '2030-06-01',
+				'end_date'               => '2030-06-30',
+				'live_edit_fields'       => array( 'title', 'placement_ids', 'start_ts', 'end_ts', 'click_urls' ),
+				'draft_edits'            => array(),
+				'edit_values'            => array(
 					'title'         => 'Spring season launch',
 					'placement_ids' => array( 7 ),
 					'click_urls'    => array( 11 => 'https://example.com/a' ),
 				),
-				'placement_options' => array(
+				// What View_Data offers an edit: the package's placements, with their shapes.
+				'edit_placement_options' => array(
 					array(
-						'id'   => 7,
-						'name' => 'Homepage leaderboard',
-						'size' => '728x90',
+						'id'       => 7,
+						'name'     => 'Homepage leaderboard',
+						'size'     => '728x90',
+						'max_size' => '150 KB',
+						'shape'    => array(
+							'label'  => '728×90',
+							'width'  => 66,
+							'height' => 8,
+						),
 					),
 					array(
-						'id'   => 8,
-						'name' => 'Article sidebar',
-						'size' => '300x250',
+						'id'       => 8,
+						'name'     => 'Article sidebar',
+						'size'     => '300x250',
+						'max_size' => '150 KB',
+						'shape'    => array(
+							'label'  => '300×250',
+							'width'  => 27,
+							'height' => 23,
+						),
 					),
 				),
-				'creatives'         => array(
+				'creatives'              => array(
 					array(
 						'id'        => 11,
 						'placement' => 'Homepage leaderboard',
@@ -158,7 +171,8 @@ final class CampaignChangesScreenTest extends WP_UnitTestCase {
 		$this->assertTrue( wp_verify_nonce( $fields['_wpnonce'], Campaign_Nonces::changes_nonce_action( 4242 ) ) > 0, 'The form lost its nonce.' );
 		$this->assertSame( 'Spring season launch', $fields['title'] );
 
-		// Both placements offered, and only the campaign's own one ticked.
+		// Both package placements offered as package cards, and only the campaign's own one ticked.
+		$this->assertSame( 2, $xpath->query( '//label[contains(@class,"aggr-choice--package")]//span[@class="aggr-package__shape"]' )->length, 'A placement card lost its silhouette.' );
 		$this->assertSame( 2, $xpath->query( '//input[@name="placement_ids[]"]' )->length );
 		$this->assertSame( 1, $xpath->query( '//input[@name="placement_ids[]"][@checked]' )->length );
 		$this->assertSame( '7', $xpath->query( '//input[@name="placement_ids[]"][@checked]' )->item( 0 )?->getAttribute( 'value' ) );

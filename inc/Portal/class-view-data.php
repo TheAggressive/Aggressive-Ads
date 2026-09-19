@@ -294,21 +294,36 @@ final class View_Data {
 		 */
 		$row['title_is_placeholder'] = $this->campaigns->title_is_placeholder( $campaign_id );
 		$row['placement_options']    = $this->placement_options();
-		$row['package_id']           = $this->campaigns->package_id( $campaign_id );
-		$row['package_name']         = $row['package_id'] > 0 ? $this->packages->name( $row['package_id'] ) : '';
-		$row['package_options']      = $this->package_options();
-		$row['budget_cents']         = $this->campaigns->budget_cents( $campaign_id );
-		$row['currency']             = $this->campaigns->currency( $campaign_id );
-		$row['package_price']        = '' === $row['currency'] ? '' : $this->format_money( $row['budget_cents'], $row['currency'] );
-		$row['wizard_step']          = $this->campaigns->wizard_step( $campaign_id );
-		$row['start_date']           = $this->date_input_value( $this->campaigns->start_ts( $campaign_id ) );
-		$row['end_date']             = $this->date_input_value( $this->campaigns->end_ts( $campaign_id ) );
-		$row['min_start_date']       = $this->min_start_date( $row['start_date'] );
-		$row['advertiser_notes']     = $this->campaigns->advertiser_notes( $campaign_id );
-		$row['autosave_rev']         = $this->campaigns->autosave_revision( $campaign_id );
-		$row['readiness']            = $this->readiness->for_campaign( $campaign_id );
-		$row['editable']             = $this->window->allows( $campaign_id );
-		$row['on_behalf']            = $this->window->is_on_behalf( $campaign_id );
+
+		/*
+		 * What editing a running campaign may choose from: its package's
+		 * placements and its own, the same list Live_Edit_Rules holds a
+		 * change to. No package means the whole catalogue, as before.
+		 */
+		$choices                       = $this->changes->placement_choices( $campaign_id );
+		$row['edit_placement_options'] = array() === $choices
+			? $row['placement_options']
+			: array_values(
+				array_filter(
+					$row['placement_options'],
+					static fn ( array $option ): bool => in_array( (int) $option['id'], $choices, true )
+				)
+			);
+		$row['package_id']             = $this->campaigns->package_id( $campaign_id );
+		$row['package_name']           = $row['package_id'] > 0 ? $this->packages->name( $row['package_id'] ) : '';
+		$row['package_options']        = $this->package_options();
+		$row['budget_cents']           = $this->campaigns->budget_cents( $campaign_id );
+		$row['currency']               = $this->campaigns->currency( $campaign_id );
+		$row['package_price']          = '' === $row['currency'] ? '' : $this->format_money( $row['budget_cents'], $row['currency'] );
+		$row['wizard_step']            = $this->campaigns->wizard_step( $campaign_id );
+		$row['start_date']             = $this->date_input_value( $this->campaigns->start_ts( $campaign_id ) );
+		$row['end_date']               = $this->date_input_value( $this->campaigns->end_ts( $campaign_id ) );
+		$row['min_start_date']         = $this->min_start_date( $row['start_date'] );
+		$row['advertiser_notes']       = $this->campaigns->advertiser_notes( $campaign_id );
+		$row['autosave_rev']           = $this->campaigns->autosave_revision( $campaign_id );
+		$row['readiness']              = $this->readiness->for_campaign( $campaign_id );
+		$row['editable']               = $this->window->allows( $campaign_id );
+		$row['on_behalf']              = $this->window->is_on_behalf( $campaign_id );
 		$this->line_items->ensure_default( $campaign_id );
 		$row['line_items'] = $this->line_items->for_campaign( $campaign_id );
 
