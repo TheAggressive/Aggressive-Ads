@@ -17,6 +17,7 @@ import {
 	checkCreativeFile,
 	matchFilesToSizes,
 	nearMiss,
+	normaliseLink,
 	parsePixelSize,
 	type FileMatch,
 	type SizeTarget,
@@ -70,6 +71,9 @@ interface Round {
 	refused: string;
 	failed: number;
 	busy: boolean;
+
+	// Files are in, the campaign's link is not: held until it is.
+	waitingForLink: boolean;
 }
 
 /**
@@ -210,6 +214,7 @@ export function wireBulkUpload( zone: HTMLElement, deps: BulkDeps ): void {
 		refused: '',
 		failed: 0,
 		busy: false,
+		waitingForLink: false,
 	};
 
 	// Files that are not images at all. Not used, like the rest, and said once.
@@ -225,8 +230,93 @@ export function wireBulkUpload( zone: HTMLElement, deps: BulkDeps ): void {
 		event.preventDefault();
 	};
 
-	const nameOf = ( id: string ): string =>
-		deps.uploads()[ id ]?.name || deps.uploads()[ id ]?.expectedSize || id;
+	const nameOf = ( id: string ): string => {
+		const upload = deps.uploads()[ id ];
+		const size = parsePixelSize( upload?.expectedSize ?? '' );
+
+		return (
+			upload?.name || ( size ? `${ size.width } × ${ size.height }` : id )
+		);
+	};
+
+	const campaignLink = (): HTMLInputElement | null => {
+		const link = document.getElementById( 'aggr-campaign-link' );
+
+		return link instanceof HTMLInputElement ? link : null;
+	};
+
+	/**
+	 * Whether a size's form has a destination the server will accept,
+	 * taking the campaign's link when the card has none of its own.
+	 *
+	 * The campaign's field is copied into the cards as it is typed, so a
+	 * card holds `example.com` while the campaign field is still being
+	 * written — valid to a person, not to a URL input. Normalised here the
+	 * way the campaign field itself is saved, and only into a card that is
+	 * empty or still following the campaign's link: a card given a link of
+	 * its own keeps it.
+	 */
+	const readyUrl = ( form: HTMLFormElement ): boolean => {
+		const url = form.querySelector< HTMLInputElement >(
+			'input[name="click_url"]'
+		);
+
+		if ( ! url ) {
+			return false;
+		}
+
+		const link = campaignLink();
+		const typed = link?.value.trim() ?? '';
+		const own = url.value.trim();
+
+		const normal = normaliseLink( typed );
+
+		/*
+		 * Compared normalised on both sides: the campaign field may already
+		 * have been tidied to `https://…` by its own save while the card still
+		 * holds the text as typed, and those are the same link.
+		 */
+		if ( normal && ( '' === own || normaliseLink( own ) === normal ) ) {
+			url.value = normal;
+		}
+
+		return '' !== url.value.trim() && url.checkValidity();
+	};
+
+	/**
+	 * Picks the round back up once the link it was waiting for is there.
+	 *
+	 * On commit rather than on each keystroke, for the reason the cards
+	 * give: `https://exa` is already a valid URL.
+	 */
+	const resume = (): void => {
+		if ( ! round.waitingForLink ) {
+			return;
+		}
+
+		round.waitingForLink = false;
+		window.removeEventListener( 'beforeunload', guard );
+		say( '' );
+		pump();
+	};
+
+	campaignLink()?.addEventListener( 'change', resume );
+	campaignLink()?.addEventListener( 'blur', resume );
+
+	/*
+	 * Said before anything is dropped, while there is no link: the files
+	 * will wait for it, and knowing that up front is what stops the drop
+	 * looking stuck.
+	 */
+	const linkHint = zone.querySelector< HTMLElement >(
+		'[data-aggr-bulk-link-hint]'
+	);
+
+	campaignLink()?.addEventListener( 'input', () => {
+		if ( linkHint ) {
+			linkHint.hidden = '' !== ( campaignLink()?.value.trim() ?? '' );
+		}
+	} );
 
 	/**
 	 * Re-matches everything, then shows and queues what the matches say.
@@ -408,17 +498,31 @@ export function wireBulkUpload( zone: HTMLElement, deps: BulkDeps ): void {
 			return;
 		}
 
-		const url = form.querySelector< HTMLInputElement >(
-			'input[name="click_url"]'
-		);
+		/*
+		 * **Held, not dropped.** No link yet means every file would be
+		 * refused for the same reason, and throwing them away made the
+		 * advertiser drag them in a second time after typing it. They wait,
+		 * listed, and go by themselves once the link is committed.
+		 */
+		if ( ! readyUrl( form ) ) {
+			next.pending.unshift( id );
 
-		if ( ! url || '' === url.value.trim() || ! url.checkValidity() ) {
-			// Stops everything: every file would be refused for the same reason.
-			entries.forEach( ( entry ) => {
-				entry.pending = [];
-			} );
-			say( t( 'bulkNeedsUrl' ) ?? '', 'error' );
-			document.getElementById( 'aggr-campaign-link' )?.focus();
+			for ( const entry of entries ) {
+				if ( entry.queued && entry.pending.length > 0 ) {
+					entry.status.textContent = format(
+						t( 'bulkWaitingLink' ),
+						entry.pending.map( nameOf ).join( ', ' )
+					);
+				}
+			}
+
+			if ( ! round.waitingForLink ) {
+				round.waitingForLink = true;
+				window.addEventListener( 'beforeunload', guard );
+				say( t( 'bulkNeedsUrl' ) ?? '' );
+				campaignLink()?.focus();
+			}
+
 			return;
 		}
 
@@ -512,7 +616,7 @@ export function wireBulkUpload( zone: HTMLElement, deps: BulkDeps ): void {
 			( entry ) => ! entry.queued && entry.match?.kind === 'choose'
 		);
 
-		if ( round.busy || asking ) {
+		if ( round.busy || asking || round.waitingForLink ) {
 			return;
 		}
 

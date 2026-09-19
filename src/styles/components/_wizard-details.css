@@ -48,6 +48,16 @@
 	align-items: center;
 }
 
+/* Two lines of guidance under the title, not two paragraphs. */
+.aggr-dropzone__text .aggr-hint {
+	margin: 0;
+}
+
+.aggr-dropzone__link-hint {
+	color: var(--aggr-color-text);
+	font-weight: 600;
+}
+
 .aggr-dropzone.is-drop-target {
 	background-color: var(--aggr-color-surface-inset);
 	border-color: var(--aggr-color-accent);

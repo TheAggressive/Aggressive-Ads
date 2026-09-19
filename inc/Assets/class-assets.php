@@ -365,7 +365,7 @@ final class Assets implements Service {
 	 * Modules are enqueued from enqueue() so the import map prints in wp_head.
 	 * This only writes Interactivity state. Safe to call when the APIs are absent.
 	 *
-	 * @param array{id: int, wizard_step: string, autosave_rev: int, step_label: string, slots: array<int, array{id: int, size: string, max_bytes: int, max_size: string}>} $campaign Campaign view data.
+	 * @param array{id: int, wizard_step: string, autosave_rev: int, step_label: string, slots: array<int, array{id: int, size: string, max_bytes: int, max_size: string, name?: string, active?: bool, creatives?: array<int, mixed>}>} $campaign Campaign view data.
 	 * @return void
 	 */
 	public function hydrate_campaign_editor( array $campaign ): void {
@@ -536,7 +536,9 @@ final class Assets implements Service {
 						'bulkUnusedOne'   => __( 'Not used: %s. No size in this campaign is waiting for it.', 'aggressive-ads' ),
 						/* translators: %s: file names, separated by commas. */
 						'bulkUnusedMany'  => __( 'Not used: %s. No size in this campaign is waiting for them.', 'aggressive-ads' ),
-						'bulkNeedsUrl'    => __( 'Add the address your ads link to, above, before uploading.', 'aggressive-ads' ),
+						'bulkNeedsUrl'    => __( 'Add the link your ads go to, above. Your files upload as soon as it is in.', 'aggressive-ads' ),
+						/* translators: %s: a placement's name, or several separated by commas. */
+						'bulkWaitingLink' => __( 'Goes to %s once the link is added.', 'aggressive-ads' ),
 						'bulkWaiting'     => __( 'Waiting to upload.', 'aggressive-ads' ),
 						'bulkSent'        => __( 'Uploaded.', 'aggressive-ads' ),
 						'bulkRefused'     => __( 'Not uploaded. The reason is shown once the others finish.', 'aggressive-ads' ),

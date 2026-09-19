@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
-"POT-Creation-Date: 2026-09-19T17:38:31+00:00\n"
+"POT-Creation-Date: 2026-09-19T18:13:24+00:00\n"
 "PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -695,7 +695,7 @@ msgstr ""
 #: inc/Admin/class-organization-screen.php:162
 #: inc/Admin/class-placement-screen.php:195
 #: inc/Admin/class-settings-screen.php:306
-#: templates/portal/partials/campaign-creative-step.php:267
+#: templates/portal/partials/campaign-creative-step.php:269
 #: templates/portal/screens/organization.php:152
 msgid "Remove"
 msgstr ""
@@ -2576,28 +2576,35 @@ msgid "Not used: %s. No size in this campaign is waiting for them."
 msgstr ""
 
 #: inc/Assets/class-assets.php:539
-msgid "Add the address your ads link to, above, before uploading."
+msgid ""
+"Add the link your ads go to, above. Your files upload as soon as it is in."
 msgstr ""
 
-#: inc/Assets/class-assets.php:540
-msgid "Waiting to upload."
-msgstr ""
-
+#. translators: %s: a placement's name, or several separated by commas.
 #: inc/Assets/class-assets.php:541
-msgid "Uploaded."
+#, php-format
+msgid "Goes to %s once the link is added."
 msgstr ""
 
 #: inc/Assets/class-assets.php:542
-msgid "Not uploaded. The reason is shown once the others finish."
+msgid "Waiting to upload."
 msgstr ""
 
 #: inc/Assets/class-assets.php:543
+msgid "Uploaded."
+msgstr ""
+
+#: inc/Assets/class-assets.php:544
+msgid "Not uploaded. The reason is shown once the others finish."
+msgstr ""
+
+#: inc/Assets/class-assets.php:545
 msgid ""
 "Some files did not finish uploading. Choose them again to try once more."
 msgstr ""
 
 #. translators: %d: how many files were uploaded.
-#: inc/Assets/class-assets.php:545
+#: inc/Assets/class-assets.php:547
 #, php-format
 msgid "Uploaded %d. Showing your ads…"
 msgstr ""
@@ -6116,12 +6123,12 @@ msgid "01 · Ads"
 msgstr ""
 
 #: templates/portal/partials/campaign-changes.php:318
-#: templates/portal/partials/campaign-creative-step.php:356
+#: templates/portal/partials/campaign-creative-step.php:358
 msgid "Back to package & dates"
 msgstr ""
 
 #: templates/portal/partials/campaign-changes.php:325
-#: templates/portal/partials/campaign-creative-step.php:370
+#: templates/portal/partials/campaign-creative-step.php:372
 #: templates/portal/partials/campaign-order-summary.php:162
 #: templates/portal/partials/campaign-order-summary.php:164
 msgid "Continue to review"
@@ -6208,62 +6215,67 @@ msgid ""
 "%s each · files stay private until approved"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:133
+#: templates/portal/partials/campaign-creative-step.php:132
+msgid ""
+"Add the link your ads go to above. Files dropped before then wait for it."
+msgstr ""
+
+#: templates/portal/partials/campaign-creative-step.php:135
 msgid "Browse files"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:136
+#: templates/portal/partials/campaign-creative-step.php:138
 msgid "Blank templates"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:146
+#: templates/portal/partials/campaign-creative-step.php:148
 msgid "Choose a package first"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:147
+#: templates/portal/partials/campaign-creative-step.php:149
 msgid ""
 "A package supplies the placements and exact ad creative sizes required for "
 "this campaign."
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:217
+#: templates/portal/partials/campaign-creative-step.php:219
 #: templates/portal/partials/campaign-edit-ads.php:103
 msgid "Needs a file"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:220
+#: templates/portal/partials/campaign-creative-step.php:222
 #: templates/portal/partials/campaign-review-step.php:181
 msgid "Ready"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:226
+#: templates/portal/partials/campaign-creative-step.php:228
 msgid ""
 "This placement is no longer available. Go back to package and dates and "
 "choose an available package."
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:265
+#: templates/portal/partials/campaign-creative-step.php:267
 #: templates/portal/partials/campaign-edit-ads.php:171
 msgid "Preview"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:266
+#: templates/portal/partials/campaign-creative-step.php:268
 msgid "Replace"
 msgstr ""
 
 #. translators: %d: maximum creatives allowed on one placement.
-#: templates/portal/partials/campaign-creative-step.php:289
+#: templates/portal/partials/campaign-creative-step.php:291
 #, php-format
 msgid ""
 "This placement has the maximum of %d creatives. Remove one to add another."
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:334
+#: templates/portal/partials/campaign-creative-step.php:336
 msgid "Add a rotating creative"
 msgstr ""
 
 #. translators: %d: sizes that still need a file.
-#: templates/portal/partials/campaign-creative-step.php:350
+#: templates/portal/partials/campaign-creative-step.php:352
 #: templates/portal/partials/campaign-order-summary.php:169
 #, php-format
 msgid "%d size still needs a file."

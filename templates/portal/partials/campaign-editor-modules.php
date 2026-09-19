@@ -65,6 +65,15 @@ foreach ( $aggr_slots as $aggr_slot ) {
 		'size'      => (string) ( $aggr_slot['size'] ?? '' ),
 		'max_bytes' => $aggr_slot_max,
 		'max_size'  => (string) size_format( $aggr_slot_max ),
+
+		/*
+		 * What the drop zone names a placement by and whether it is waiting
+		 * for a file. Left out, it said "Goes to 728x90" for a placement
+		 * called Header, and read every size as empty.
+		 */
+		'name'      => (string) ( $aggr_slot['name'] ?? '' ),
+		'active'    => true === ( $aggr_slot['active'] ?? false ),
+		'creatives' => is_array( $aggr_slot['creatives'] ?? null ) ? $aggr_slot['creatives'] : array(),
 	);
 }
 

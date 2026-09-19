@@ -49,12 +49,11 @@ test( 'every file dropped at once lands on the size it matches', async ( {
 		page.getByRole( 'heading', { level: 2, name: 'Add your ads' } )
 	).toBeFocused();
 
-	// One link for every ad, which each size's form carries into its upload.
-	await page
-		.getByLabel( 'Destination link for every ad' )
-		.fill( 'https://www.example.com/drop' );
-
 	const zone = page.locator( '[data-aggr-bulk][data-aggr-upload-ready]' );
+	const link = page.getByLabel( 'Destination link for every ad' );
+
+	// No link yet, and the zone says so before anything is dropped.
+	await expect( zone.locator( '[data-aggr-bulk-link-hint]' ) ).toBeVisible();
 	const input = zone.locator( 'input[data-aggr-bulk-input]' );
 
 	await expect( zone ).toBeVisible();
@@ -136,6 +135,33 @@ test( 'every file dropped at once lands on the size it matches', async ( {
 			buffer: solidPng( 120, 600 ),
 		},
 	] );
+
+	/*
+	 * **Held, not thrown away.** Dropped before the link, the files wait,
+	 * each saying where it will go, and nothing is sent. Adding the link is
+	 * all it takes: they were dragged in once, and once is enough.
+	 */
+	const leaderboardRow = zone
+		.locator( '.aggr-dropzone__item' )
+		.filter( { hasText: 'e2e-drop-leaderboard.png' } );
+
+	await expect( leaderboardRow ).toContainText(
+		'Goes to Homepage leaderboard once the link is added.'
+	);
+	await expect(
+		zone
+			.locator( '.aggr-dropzone__item' )
+			.filter( { hasText: 'e2e-drop-sidebar.png' } )
+	).toContainText( 'Goes to Article sidebar once the link is added.' );
+	await expect( zone.locator( '[data-aggr-bulk-status]' ) ).toContainText(
+		'Your files upload as soon as it is in.'
+	);
+	await expect( link ).toBeFocused();
+	expect( posts, 'A file was sent before there was a link.' ).toBe( 0 );
+
+	await link.fill( 'www.example.com/drop' );
+	await expect( zone.locator( '[data-aggr-bulk-link-hint]' ) ).toBeHidden();
+	await link.blur();
 
 	await expect(
 		page.getByRole( 'status' ).filter( { hasText: 'Creative uploaded' } )

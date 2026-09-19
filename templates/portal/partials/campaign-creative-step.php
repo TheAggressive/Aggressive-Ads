@@ -128,6 +128,8 @@ foreach ( $aggr_slots as $aggr_counted_slot ) {
 									);
 									?>
 								</span>
+								<?php // Toggled by the drop zone as the link is typed; drawn by the server for the first paint. ?>
+								<span class="aggr-hint aggr-dropzone__link-hint" data-aggr-bulk-link-hint <?php echo '' !== $aggr_link ? 'hidden' : ''; ?>><?php esc_html_e( 'Add the link your ads go to above. Files dropped before then wait for it.', 'aggressive-ads' ); ?></span>
 							</span>
 							<span class="aggr-dropzone__actions">
 								<button class="aggr-button aggr-button--secondary" type="button" data-aggr-bulk-browse aria-describedby="aggr-dropzone-note"><?php esc_html_e( 'Browse files', 'aggressive-ads' ); ?></button>

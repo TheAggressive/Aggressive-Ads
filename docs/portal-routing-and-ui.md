@@ -211,7 +211,12 @@ warning, because that size would otherwise stay empty while the advertiser
 believes it is done. Both are carried across the page load that follows the
 uploads (`sessionStorage`, keyed by the campaign's path) and shown as the
 portal's toasts, drawn by `@aggr/save` from an `aggr:toast` event so toast
-markup keeps one author. A matched file is posted through **its size's own upload
+markup keeps one author. Files dropped before the campaign has a link are **held, not
+discarded**: each row says where it will go "once the link is added", nothing
+is sent, and the round resumes by itself when the link field commits (`change`
+or `blur`, so a half-typed `https://exa` never uploads). The link is normalised
+the way the field saves it, and only into a card still following the
+campaign's link. A matched file is posted through **its size's own upload
 form** — that form's fields and nonce, the file set on the body, `aggr_async=1`
 — so there is no second upload route and the server cannot tell a dropped file
 from a chosen one. Files go one at a time; the page moves on once, after the
