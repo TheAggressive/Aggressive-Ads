@@ -542,7 +542,10 @@ final class Assets implements Service {
 						'bulkWaiting'     => __( 'Waiting to upload.', 'aggressive-ads' ),
 						'bulkSent'        => __( 'Uploaded.', 'aggressive-ads' ),
 						'bulkRefused'     => __( 'Not uploaded. The reason is shown once the others finish.', 'aggressive-ads' ),
-						'bulkPartial'     => __( 'Some files did not finish uploading. Choose them again to try once more.', 'aggressive-ads' ),
+						'bulkPartial'     => __( 'These files did not reach the server. Drop them again to retry.', 'aggressive-ads' ),
+						'bulkSentUnknown' => __( 'Sent. Checking the result…', 'aggressive-ads' ),
+						/* translators: %s: file names, separated by commas. */
+						'bulkLost'        => __( 'Not uploaded, the connection dropped: %s. Add them again.', 'aggressive-ads' ),
 						/* translators: %d: how many files were uploaded. */
 						'bulkDone'        => __( 'Uploaded %d. Showing your ads…', 'aggressive-ads' ),
 					),
