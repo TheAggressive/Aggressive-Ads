@@ -39,6 +39,12 @@ final class Creative_Feedback {
 	public const ASYNC_FIELD = 'aggr_async';
 
 	/**
+	 * Which screen a form was drawn on, when it is not the wizard's.
+	 */
+	public const RETURN_FIELD = 'aggr_return';
+	public const RETURN_EDIT  = 'edit';
+
+	/**
 	 * The notice value a refused creative write redirects with.
 	 *
 	 * **Not `error`.** The campaign screen reads two notices off the same
@@ -105,6 +111,19 @@ final class Creative_Feedback {
 	 */
 	public static function destination_patch( int $creative_id, string $click_url ): array {
 		return array( '#aggr-destination-value-' . $creative_id => $click_url );
+	}
+
+	/**
+	 * Whether the form was drawn in a running campaign's edit flow.
+	 *
+	 * Only chooses which of the campaign's own screens to return to; the
+	 * handler has already decided whether the write was allowed.
+	 *
+	 * @return bool
+	 */
+	private static function from_edit_flow(): bool {
+		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- Every caller has already run check_admin_referer(); this only picks the return screen.
+		return isset( $_POST[ self::RETURN_FIELD ] ) && self::RETURN_EDIT === $_POST[ self::RETURN_FIELD ];
 	}
 
 	/**
@@ -380,6 +399,12 @@ final class Creative_Feedback {
 			'step'        => 'creative',
 			'aggr_notice' => null === $error ? $notice : self::ERROR_NOTICE,
 		);
+
+		// Back to where the form was: the edit flow's Ads step, for a running campaign.
+		if ( self::from_edit_flow() ) {
+			$args['edit'] = '1';
+			$args['step'] = Campaign_Edit_Steps::DESTINATION;
+		}
 
 		if ( null !== $error ) {
 			$args['aggr_error'] = sanitize_key( (string) $error->get_error_code() );

@@ -93,46 +93,14 @@ $aggr_date_errors = in_array( $aggr_error_for, array( 'aggr-start-date', 'aggr-e
 				<p><?php esc_html_e( 'The catalogue is not configured yet. Your draft is safe; please return later or get in touch.', 'aggressive-ads' ); ?></p>
 			</div>
 		<?php else : ?>
-			<div class="aggr-choicegrid">
-				<?php foreach ( $aggr_packages as $aggr_package ) : ?>
-					<label class="aggr-choice aggr-choice--package">
-						<input
-							type="radio"
-							name="package_id"
-							value="<?php echo esc_attr( (string) $aggr_package['id'] ); ?>"
-							data-aggr-duration-days="<?php echo esc_attr( (string) (int) $aggr_package['duration_days'] ); ?>"
-							aria-describedby="aggr-packages-hint"
-							<?php checked( (int) $aggr_package['id'], $aggr_selected_package_id ); ?>
-						>
-						<span class="aggr-choice__text">
-							<span class="aggr-package__name"><?php echo esc_html( (string) $aggr_package['name'] ); ?></span>
-							<?php if ( (bool) $aggr_package['is_default'] ) : ?>
-								<span class="aggr-package__badge"><?php esc_html_e( 'Recommended', 'aggressive-ads' ); ?></span>
-							<?php endif; ?>
-							<span class="aggr-package__price"><?php echo esc_html( (string) $aggr_package['price'] ); ?></span>
-							<span class="aggr-package__meta">
-								<?php
-								printf(
-									/* translators: 1: duration, e.g. 30 days. 2: number of ad sizes. */
-									esc_html( _n( '%1$s · %2$d size', '%1$s · %2$d sizes', count( $aggr_package['sizes'] ), 'aggressive-ads' ) ),
-									esc_html( (string) $aggr_package['duration'] ),
-									(int) count( $aggr_package['sizes'] )
-								);
-								?>
-							</span>
-							<span class="aggr-package__sizes" aria-hidden="true">
-								<?php foreach ( $aggr_package['sizes'] as $aggr_package_size ) : ?>
-									<span class="aggr-package__size">
-										<span class="aggr-package__shape" style="width: <?php echo esc_attr( (string) (int) $aggr_package_size['width'] ); ?>px; height: <?php echo esc_attr( (string) (int) $aggr_package_size['height'] ); ?>px"></span>
-										<?php echo esc_html( (string) $aggr_package_size['label'] ); ?>
-									</span>
-								<?php endforeach; ?>
-							</span>
-							<span class="aggr-package__places"><?php echo esc_html( implode( ', ', $aggr_package['placements'] ) ); ?></span>
-						</span>
-					</label>
-				<?php endforeach; ?>
-			</div>
+			<?php
+			$aggr_grid_packages = $aggr_packages;
+			$aggr_grid_selected = $aggr_selected_package_id;
+			$aggr_grid_current  = 0;
+			$aggr_grid_hint     = 'aggr-packages-hint';
+
+			require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-package-grid.php';
+			?>
 		<?php endif; ?>
 	</fieldset>
 	</div>
@@ -151,73 +119,16 @@ $aggr_date_errors = in_array( $aggr_error_for, array( 'aggr-start-date', 'aggr-e
 			?>
 		</p>
 
-		<div class="aggr-formgrid">
-			<div class="aggr-field">
-				<label for="aggr-start-date"><?php esc_html_e( 'Start date', 'aggressive-ads' ); ?></label>
-				<p id="aggr-start-hint" class="aggr-hint"><?php esc_html_e( 'The campaign begins at the start of this day.', 'aggressive-ads' ); ?></p>
-				<div class="aggr-date-input">
-				<input
-					id="aggr-start-date"
-					name="start_date"
-					type="date"
-					value="<?php echo esc_attr( (string) $aggr_campaign['start_date'] ); ?>"
-					min="<?php echo esc_attr( $aggr_min_start_date ); ?>"
-					required
-					aria-describedby="aggr-start-hint aggr-run-through<?php echo 'aggr-start-date' === $aggr_error_for ? ' aggr-campaign-error' : ''; ?>"
-					<?php echo 'aggr-start-date' === $aggr_error_for ? 'aria-invalid="true"' : ''; ?>
-				>
-					<span class="aggr-date-input__note" aria-hidden="true" data-aggr-zone-note data-aggr-edge="start" data-aggr-for="aggr-start-date" data-aggr-zone="<?php echo esc_attr( wp_timezone_string() ); ?>"><?php echo esc_html( Date_Input::edge_label( (string) $aggr_campaign['start_date'], false ) ); ?></span>
-				</div>
-			</div>
-
-			<?php
-			/*
-			 * Rendered for every package and disabled for a fixed one, rather
-			 * than left out. A disabled control is not posted, so the server
-			 * derives the end; and switching to a custom package only has to
-			 * enable it, not build a field the page never had.
-			 */
-			?>
-			<div class="aggr-field" data-aggr-end-field <?php echo $aggr_fixed_run ? 'hidden' : ''; ?>>
-				<label for="aggr-end-date"><?php esc_html_e( 'End date', 'aggressive-ads' ); ?></label>
-				<p id="aggr-end-hint" class="aggr-hint"><?php esc_html_e( 'The campaign runs through the end of this day.', 'aggressive-ads' ); ?></p>
-				<div class="aggr-date-input">
-				<input
-					id="aggr-end-date"
-					name="end_date"
-					type="date"
-					value="<?php echo esc_attr( (string) $aggr_campaign['end_date'] ); ?>"
-					aria-describedby="aggr-end-hint<?php echo 'aggr-end-date' === $aggr_error_for ? ' aggr-campaign-error' : ''; ?>"
-					<?php echo $aggr_fixed_run ? 'disabled' : 'required'; ?>
-					<?php echo 'aggr-end-date' === $aggr_error_for ? 'aria-invalid="true"' : ''; ?>
-				>
-					<span class="aggr-date-input__note" aria-hidden="true" data-aggr-zone-note data-aggr-edge="end" data-aggr-for="aggr-end-date" data-aggr-fallback="aggr-start-date" data-aggr-zone="<?php echo esc_attr( wp_timezone_string() ); ?>"><?php echo esc_html( Date_Input::edge_label( '' !== (string) $aggr_campaign['end_date'] ? (string) $aggr_campaign['end_date'] : (string) $aggr_campaign['start_date'], true ) ); ?></span>
-				</div>
-			</div>
-		</div>
-
-		<p id="aggr-run-through" class="aggr-hint" data-aggr-run-through aria-live="polite" <?php echo 0 === $aggr_run_end ? 'hidden' : ''; ?>>
-			<?php
-			if ( $aggr_run_end > 0 ) {
-				printf(
-					/* translators: %s: the campaign's last day, e.g. October 30, 2026. */
-					esc_html__( 'Runs through %s.', 'aggressive-ads' ),
-					esc_html( (string) wp_date( (string) get_option( 'date_format', 'F j, Y' ), $aggr_run_end ) )
-				);
-			}
-			?>
-		</p>
-
 		<?php
-		$aggr_cal_start_id = 'aggr-start-date';
-		$aggr_cal_end_id   = 'aggr-end-date';
-		$aggr_cal_start    = (string) $aggr_campaign['start_date'];
-		$aggr_cal_end      = $aggr_run_end > 0 ? (string) wp_date( 'Y-m-d', $aggr_run_end, wp_timezone() ) : (string) $aggr_campaign['end_date'];
-		$aggr_cal_min      = $aggr_min_start_date;
-		$aggr_cal_fixed    = $aggr_fixed_run;
-		$aggr_cal_locked   = false;
+		$aggr_sched_start        = (string) $aggr_campaign['start_date'];
+		$aggr_sched_end          = (string) $aggr_campaign['end_date'];
+		$aggr_sched_min          = $aggr_min_start_date;
+		$aggr_sched_fixed        = $aggr_fixed_run;
+		$aggr_sched_run_end      = $aggr_run_end;
+		$aggr_sched_locked       = false;
+		$aggr_sched_end_required = true;
 
-		require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-calendar.php';
+		require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-schedule-fields.php';
 		?>
 	</fieldset>
 	</div>

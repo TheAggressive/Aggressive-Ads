@@ -38,6 +38,20 @@ rests on:
 Two of the three entries this rule was written from were already correct. The
 one that was not is the one that stated a verdict instead of a condition.
 
+## Settling a package change
+
+A running campaign's package change is proposed, reviewed and applied
+(`Workflow\Live_Package_Change`), and the campaign's price becomes the new
+package's at approval. Nothing charges or credits the difference yet, because
+billing has no source (#263). What billing will need is already recorded: the
+audit events `campaign.changes_requested` and `campaign.changes_approved` carry
+`package_change` — both packages, the price paid and the new price, each with
+its currency — read before approval overwrites the old price.
+
+**Revisit when billing gets a source.** Settle from the prices recorded at
+submission (what the advertiser was shown), not from the package's price at
+settlement time; charge an upgrade's difference and credit a downgrade's.
+
 ## Nothing else is open
 
 Every other entry that was here has shipped and been deleted, which is this

@@ -24,6 +24,7 @@ use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Security\Ownership;
 use Aggressive\Ads\Security\Roles;
 use Aggressive\Ads\Storage\Private_Storage;
+use Aggressive\Ads\Workflow\Creative_Approval;
 use Aggressive\Ads\Workflow\Creative_Manager;
 use WP_Error;
 use WP_UnitTestCase;
@@ -170,6 +171,58 @@ final class CreativeManagerTest extends WP_UnitTestCase {
 		$_POST  = array();
 
 		parent::tear_down();
+	}
+
+	/**
+	 * A running campaign may be given an ad for a size it has none of — the
+	 * size a package or placement change added — and nothing else. The ad is
+	 * held for a reviewer, never served on upload.
+	 *
+	 * @return void
+	 */
+	public function test_a_running_campaign_takes_an_ad_only_for_an_empty_size(): void {
+		wp_set_current_user( $this->owner );
+
+		wp_update_post(
+			array(
+				'ID'          => $this->campaign_id,
+				'post_status' => Post_Statuses::LIVE,
+			)
+		);
+
+		$first = $this->manager->upload( $this->campaign_id, $this->placement_id, $this->image_file( 728, 90 ), 'https://example.com/a', 'First' );
+
+		$this->assertIsArray( $first, 'An empty size on a running campaign could not be filled.' );
+		$this->assertContains(
+			(int) $first['id'],
+			Plugin::instance()->container()->get( Creative_Approval::class )->awaiting( $this->campaign_id ),
+			'The ad skipped review.'
+		);
+
+		// Covered now: a second ad beside one that is running is a replacement, not an upload.
+		$second = $this->manager->upload( $this->campaign_id, $this->placement_id, $this->image_file( 728, 90 ), 'https://example.com/b', 'Second' );
+
+		$this->assertWPError( $second );
+		$this->assertSame( 'aggr_campaign_not_editable', $second->get_error_code() );
+		$this->assertCount( 1, Plugin::instance()->container()->get( Creative_Repository::class )->for_campaign( $this->campaign_id ) );
+
+		// A campaign that has finished takes nothing, empty size or not.
+		$finished = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::CAMPAIGN,
+				'post_status' => Post_Statuses::COMPLETE,
+				'post_author' => $this->owner,
+			)
+		);
+
+		update_post_meta( $finished, Campaign_Repository::META_ORG_ID, $this->org_id );
+		add_post_meta( $finished, Campaign_Repository::META_PLACEMENT_ID, $this->placement_id );
+		Plugin::instance()->container()->get( Ownership::class )->flush_cache();
+
+		$refused = $this->manager->upload( $finished, $this->placement_id, $this->image_file( 728, 90 ), 'https://example.com/c', 'Late' );
+
+		$this->assertWPError( $refused );
+		$this->assertContains( $refused->get_error_code(), array( 'aggr_campaign_not_editable', 'aggr_forbidden' ) );
 	}
 
 	/**

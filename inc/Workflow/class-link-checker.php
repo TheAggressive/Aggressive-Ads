@@ -12,6 +12,7 @@ namespace Aggressive\Ads\Workflow;
 use Aggressive\Ads\Domain\Click_Macros;
 use Aggressive\Ads\Domain\Link_Check_Rules;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Repository\Campaign_Request_Repository;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Security\Rate_Limiter;
 use WP_Error;
@@ -22,7 +23,8 @@ use WP_Error;
  * **It checks the saved link, never one that arrives in the request.** The
  * caller names a campaign; the URL comes from that campaign's stored
  * destination, which already passed `Campaign_Rules::is_valid_click_url()` on
- * its way in. There is no parameter to point this at an address, so reaching a
+ * its way in — or, for a running campaign being edited, from the link staged
+ * in its proposal, which passed `Live_Edit_Rules` on the way into storage. There is no parameter to point this at an address, so reaching a
  * new one means first saving it to a campaign you own — which leaves an
  * audited write behind it and still meets every rule below.
  *
@@ -68,22 +70,25 @@ final class Link_Checker {
 	/**
 	 * Constructor.
 	 *
-	 * @param Campaign_Repository $campaigns Campaign persistence.
-	 * @param Rate_Limiter        $limiter   Outbound request bounding.
+	 * @param Campaign_Repository         $campaigns Campaign persistence.
+	 * @param Rate_Limiter                $limiter   Outbound request bounding.
+	 * @param Campaign_Request_Repository $requests Staged changes to running campaigns.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
-		private readonly Rate_Limiter $limiter
+		private readonly Rate_Limiter $limiter,
+		private readonly Campaign_Request_Repository $requests
 	) {
 	}
 
 	/**
 	 * Checks one campaign's destination link.
 	 *
-	 * @param int $campaign_id Campaign post id.
+	 * @param int  $campaign_id Campaign post id.
+	 * @param bool $proposed    The link staged in a change to a running campaign, not the one serving.
 	 * @return array{url: string, status: int, outcome: string, checked_at: int}|WP_Error
 	 */
-	public function check( int $campaign_id ): array|WP_Error {
+	public function check( int $campaign_id, bool $proposed = false ): array|WP_Error {
 		$authorized = $this->authorize( $campaign_id );
 
 		if ( is_wp_error( $authorized ) ) {
@@ -96,7 +101,7 @@ final class Link_Checker {
 			return $allowed;
 		}
 
-		$url = trim( $this->campaigns->default_click_url( $campaign_id ) );
+		$url = $this->link( $campaign_id, $proposed );
 
 		/*
 		 * A link with macros in it is not a URL until a click fills them in,
@@ -134,20 +139,37 @@ final class Link_Checker {
 	/**
 	 * The last result stored for a campaign, or null.
 	 *
-	 * @param int $campaign_id Campaign post id.
+	 * @param int  $campaign_id Campaign post id.
+	 * @param bool $proposed    About the staged link rather than the saved one.
 	 * @return array{url: string, status: int, outcome: string, checked_at: int}|null
 	 */
-	public function last( int $campaign_id ): ?array {
+	public function last( int $campaign_id, bool $proposed = false ): ?array {
 		$stored = $this->campaigns->link_check( $campaign_id );
 
 		// A result is about one link. The moment the link changes it is stale.
-		$saved = trim( $this->campaigns->default_click_url( $campaign_id ) );
+		$saved = $this->link( $campaign_id, $proposed );
 
 		if ( null === $stored || $saved !== $stored['url'] ) {
 			return null;
 		}
 
 		return $stored;
+	}
+
+	/**
+	 * The link a check is about.
+	 *
+	 * A proposal with no link of its own falls back to the saved one, so the
+	 * edit screen's chip is about whatever its field shows.
+	 *
+	 * @param int  $campaign_id Campaign post id.
+	 * @param bool $proposed    Prefer the staged link.
+	 * @return string
+	 */
+	private function link( int $campaign_id, bool $proposed ): string {
+		$staged = $proposed ? ( $this->requests->pending_edits( $campaign_id )['default_click_url'] ?? '' ) : '';
+
+		return trim( is_string( $staged ) && '' !== $staged ? $staged : $this->campaigns->default_click_url( $campaign_id ) );
 	}
 
 	/**

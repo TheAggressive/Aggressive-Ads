@@ -52,7 +52,9 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 		$this->assertStringContainsString( 'wp_nonce_field', $list );
 		$this->assertStringContainsString( 'wp_nonce_field', $detail );
 		$this->assertStringContainsString( 'type="date"', $detail );
-		$this->assertStringContainsString( 'min="<?php echo esc_attr( $aggr_min_start_date ); ?>"', $detail );
+		// The earliest start reaches the date field through the shared schedule.
+		$this->assertStringContainsString( '$aggr_sched_min          = $aggr_min_start_date;', $detail );
+		$this->assertStringContainsString( 'min="\' . esc_attr( $aggr_sched_min )', $detail );
 		$this->assertStringContainsString( 'type="radio"', $detail );
 		$this->assertStringContainsString( 'type="file"', $detail );
 		$this->assertStringContainsString( 'enctype="multipart/form-data"', $detail );
@@ -107,7 +109,9 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 		$this->assertStringContainsString( 'for="aggr-title"', $template );
 		$this->assertStringContainsString( 'id="aggr-packages"', $template );
 		$this->assertStringContainsString( 'id="aggr-schedule"', $template );
-		$this->assertStringContainsString( 'aria-describedby="aggr-packages-hint"', $template );
+		// Each package card is described by the sentence above the grid, named by the step that draws it.
+		$this->assertStringContainsString( "\$aggr_grid_hint     = 'aggr-packages-hint';", $template );
+		$this->assertStringContainsString( 'aria-describedby="<?php echo esc_attr( $aggr_grid_hint ); ?>"', $template );
 
 		foreach ( array( 'package', 'destination', 'submit' ) as $retired ) {
 			$this->assertSame(
@@ -133,6 +137,9 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 		$parts = array(
 			AGGR_PLUGIN_DIR . 'templates/portal/screens/campaign.php',
 			AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-plan-step.php',
+			AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-package-grid.php',
+			AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-schedule-fields.php',
+			AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-destination-card.php',
 			AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-creative-step.php',
 			AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-review-step.php',
 			AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-upload-form.php',

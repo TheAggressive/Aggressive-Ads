@@ -324,10 +324,18 @@ final class Campaign_Actions implements Service {
 
 		check_admin_referer( Campaign_Nonces::changes_nonce_action( $campaign_id ) );
 
-		$result = $this->changes->stage( $campaign_id, $this->posted_changes() );
+		$result = $this->changes->stage( $campaign_id, Campaign_Change_Form::read( $this->changes->allowed_fields() ) );
 		$url    = add_query_arg( 'edit', '1', Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id ) );
 		$next   = isset( $_POST['next_step'] ) ? sanitize_key( wp_unslash( $_POST['next_step'] ) ) : 'review'; // phpcs:ignore WordPress.Security.NonceVerification.Missing -- Verified above; only ever an allowlisted step name.
 		$next   = in_array( $next, self::CHANGE_STEPS, true ) ? $next : 'review';
+
+		if ( is_wp_error( $result ) ) {
+			$result = Campaign_Change_Form::refusal( $result );
+		}
+
+		if ( Campaign_Change_Form::is_async() ) {
+			Campaign_Change_Form::answer( $result, add_query_arg( 'step', $next, $url ) );
+		}
 
 		if ( is_wp_error( $result ) ) {
 			$this->redirect( $url, 'error', $result );
@@ -361,7 +369,7 @@ final class Campaign_Actions implements Service {
 					$url
 				),
 				'error',
-				$result
+				Campaign_Change_Form::refusal( $result )
 			);
 		}
 
@@ -388,54 +396,6 @@ final class Campaign_Actions implements Service {
 		}
 
 		$this->redirect( $url, 'changes_cancelled' );
-	}
-
-	/**
-	 * Reads only the proposal fields this site has enabled.
-	 *
-	 * @return array<string, mixed>
-	 */
-	private function posted_changes(): array {
-		$allowed  = $this->changes->allowed_fields();
-		$proposed = array();
-
-		// phpcs:disable WordPress.Security.NonceVerification.Missing -- Every caller verifies the action nonce before reaching this.
-		if ( in_array( 'title', $allowed, true ) && isset( $_POST['title'] ) ) {
-			$proposed['title'] = sanitize_text_field( wp_unslash( $_POST['title'] ) );
-		}
-
-		if ( in_array( 'advertiser_notes', $allowed, true ) && isset( $_POST['advertiser_notes'] ) ) {
-			$proposed['advertiser_notes'] = sanitize_textarea_field( wp_unslash( $_POST['advertiser_notes'] ) );
-		}
-
-		if ( in_array( 'start_ts', $allowed, true ) && isset( $_POST['start_date'] ) ) {
-			$proposed['start_ts'] = $this->proposed_date( sanitize_text_field( wp_unslash( $_POST['start_date'] ) ), false );
-		}
-
-		if ( in_array( 'end_ts', $allowed, true ) && isset( $_POST['end_date'] ) ) {
-			$proposed['end_ts'] = $this->proposed_date( sanitize_text_field( wp_unslash( $_POST['end_date'] ) ), true );
-		}
-
-		if ( in_array( 'placement_ids', $allowed, true ) && isset( $_POST['placement_ids'] ) && is_array( $_POST['placement_ids'] ) ) {
-			$proposed['placement_ids'] = array_map( 'absint', wp_unslash( $_POST['placement_ids'] ) );
-		}
-
-		if ( in_array( 'click_urls', $allowed, true ) && isset( $_POST['click_urls'] ) && is_array( $_POST['click_urls'] ) ) {
-			$urls = array();
-
-			// esc_url_raw rather than sanitize_text_field: the workflow rejects
-			// anything that is not http(s), and a mangled scheme would fail
-			// that check for the wrong reason and confuse the message.
-			// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Each element is esc_url_raw()'d in the loop body; the array itself carries no value.
-			foreach ( wp_unslash( $_POST['click_urls'] ) as $creative_id => $url ) {
-				$urls[ absint( $creative_id ) ] = is_string( $url ) ? esc_url_raw( trim( $url ) ) : '';
-			}
-
-			$proposed['click_urls'] = $urls;
-		}
-		// phpcs:enable WordPress.Security.NonceVerification.Missing
-
-		return $proposed;
 	}
 
 	/**
@@ -832,6 +792,12 @@ final class Campaign_Actions implements Service {
 	 * @return string
 	 */
 	public static function error_message( string $code ): string {
+		$change = Campaign_Change_Form::problem_message( $code );
+
+		if ( '' !== $change ) {
+			return $change;
+		}
+
 		return match ( $code ) {
 			'aggr_title_required'          => __( 'Enter a campaign name.', 'aggressive-ads' ),
 			'aggr_title_too_long'          => __( 'Use 160 characters or fewer for the campaign name.', 'aggressive-ads' ),
@@ -888,25 +854,6 @@ final class Campaign_Actions implements Service {
 			'aggr_campaign_invalid'        => 'aggr-readiness-heading',
 			default                            => '',
 		};
-	}
-
-	/**
-	 * A proposed date as a timestamp, or -1 when it will not parse.
-	 *
-	 * -1 rather than 0 or a WP_Error: zero is the model's legitimate
-	 * open-ended value, so returning it for garbage would silently clear an end
-	 * date the advertiser meant to change. -1 can never equal a stored value,
-	 * so it always reaches the validator as a change and is refused there,
-	 * where the message belongs.
-	 *
-	 * @param string $value      YYYY-MM-DD or empty.
-	 * @param bool   $end_of_day Whether to use 23:59:59.
-	 * @return int
-	 */
-	private function proposed_date( string $value, bool $end_of_day ): int {
-		$parsed = $this->parse_date( $value, $end_of_day );
-
-		return is_wp_error( $parsed ) ? -1 : $parsed;
 	}
 
 	/**

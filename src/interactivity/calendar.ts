@@ -24,6 +24,8 @@
  * real timestamps in the site timezone.
  */
 
+import { followPlan } from './shared/follow-plan';
+
 export type Awaiting = 'start' | 'end';
 
 export interface Range {
@@ -931,5 +933,13 @@ if ( typeof document !== 'undefined' ) {
 		.querySelectorAll< HTMLElement >( '[data-aggr-calendar]' )
 		.forEach( ( root ) => {
 			initCalendar( root );
+
+			const field = document.getElementById(
+				root.dataset.aggrStart ?? ''
+			);
+
+			if ( field instanceof HTMLInputElement && field.form ) {
+				followPlan( field.form );
+			}
 		} );
 }

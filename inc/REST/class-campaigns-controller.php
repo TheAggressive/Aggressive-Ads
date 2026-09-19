@@ -225,7 +225,13 @@ final class Campaigns_Controller implements Service {
 				'callback'            => array( $this, 'link_check' ),
 				'permission_callback' => array( $this, 'write_permission' ),
 				'args'                => array(
-					'id' => $this->positive_int_arg( true ),
+					'id'       => $this->positive_int_arg( true ),
+					// Which stored link, never a link: the one staged in a change to a running campaign.
+					'proposed' => array(
+						'type'     => 'boolean',
+						'required' => false,
+						'default'  => false,
+					),
 				),
 			)
 		);
@@ -429,7 +435,7 @@ final class Campaigns_Controller implements Service {
 	 * @phpstan-param WP_REST_Request<array<string, mixed>> $request
 	 */
 	public function link_check( WP_REST_Request $request ) {
-		$result = $this->links->check( (int) $request->get_param( 'id' ) );
+		$result = $this->links->check( (int) $request->get_param( 'id' ), true === $request->get_param( 'proposed' ) );
 
 		return is_wp_error( $result ) ? $result : new WP_REST_Response( $result, 200 );
 	}

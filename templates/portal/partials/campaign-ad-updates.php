@@ -7,7 +7,6 @@
  * @var array<string, mixed>       $aggr_campaign         Campaign row.
  * @var list<array<string, mixed>> $aggr_creatives        Creatives.
  * @var list<array<string, mixed>> $aggr_creative_updates Replacement history rows.
- * @var bool                       $aggr_ads_in_flow      Drawn as the edit flow's Ads step card.
  */
 
 declare(strict_types=1);
@@ -34,22 +33,8 @@ if ( true !== ( $aggr_campaign['can_request_updates'] ?? false ) ) {
  */
 $aggr_overlays = array();
 ?>
-<?php
-/*
- * The same cards and dialogs in both places. On the campaign page they are a
- * panel of their own; in the edit flow they are the Ads step's second card,
- * labelled as creation's cards are.
- */
-$aggr_ads_in_flow = isset( $aggr_ads_in_flow ) && true === $aggr_ads_in_flow;
-?>
-<section
-	class="<?php echo esc_attr( $aggr_ads_in_flow ? 'aggr-step-card' : 'aggr-panel' ); ?>"
-	aria-labelledby="aggr-update-creatives-heading"
->
-	<?php if ( $aggr_ads_in_flow ) : ?>
-		<p class="aggr-eyebrow" aria-hidden="true"><?php echo esc_html( ( $aggr_has_links ?? false ) ? __( '02 · Ads', 'aggressive-ads' ) : __( '01 · Ads', 'aggressive-ads' ) ); ?></p>
-	<?php endif; ?>
-	<h2 id="aggr-update-creatives-heading" class="<?php echo esc_attr( $aggr_ads_in_flow ? 'aggr-step-card__title' : 'aggr-panel__head' ); ?>"><?php esc_html_e( 'Your ads', 'aggressive-ads' ); ?></h2>
+<section class="aggr-panel" aria-labelledby="aggr-update-creatives-heading">
+	<h2 id="aggr-update-creatives-heading" class="aggr-panel__head"><?php esc_html_e( 'Your ads', 'aggressive-ads' ); ?></h2>
 	<p><?php esc_html_e( 'Select an ad to change its ad creative or destination. The current ad keeps running until staff approve its replacement.', 'aggressive-ads' ); ?></p>
 
 	<div class="aggr-creative-grid">

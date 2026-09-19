@@ -9,6 +9,8 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Portal;
 
+use Aggressive\Ads\Core\Money;
+
 use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Domain\Upload_Rules;
 use Aggressive\Ads\Repository\Package_Repository;
@@ -158,7 +160,7 @@ final class Catalogue_View_Data {
 						_n( '%s day', '%s days', $duration, 'aggressive-ads' ),
 						number_format_i18n( $duration )
 					),
-				'price'         => sprintf( '%1$s %2$s', $snapshot['currency'], number_format_i18n( $snapshot['budget_cents'] / 100, 2 ) ),
+				'price'         => Money::format( (int) $snapshot['budget_cents'], (string) $snapshot['currency'] ),
 				'placements'    => $placement_names,
 				'is_default'    => $package_id === $default_id,
 

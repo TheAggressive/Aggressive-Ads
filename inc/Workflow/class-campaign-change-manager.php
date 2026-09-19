@@ -20,8 +20,6 @@ use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Campaign_Request_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
-use Aggressive\Ads\Repository\Package_Repository;
-use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Security\Rate_Limiter;
 use Throwable;
@@ -51,25 +49,27 @@ final class Campaign_Change_Manager implements Service {
 	 * @param Campaign_Repository         $campaigns  Campaign persistence.
 	 * @param Creative_Repository         $creatives  Creative persistence.
 	 * @param Revision_Policy             $revisions  Immutability policy for approved creatives.
-	 * @param Placement_Repository        $placements Placement names for the change summary.
 	 * @param Settings                    $settings   Site policy.
 	 * @param Fill_Cache                  $fill       Delivery cache.
 	 * @param Rate_Limiter                $limiter    Abuse bounding.
 	 * @param Audit_Repository            $audit      Audit persistence.
 	 * @param Campaign_Request_Repository $requests   Advertiser requests and proposed changes.
-	 * @param Package_Repository          $packages   What each package sells.
+	 * @param Campaign_Change_Summary     $summary    Words a change set for people.
+	 * @param Live_Package_Change         $package_change Upgrades and downgrades.
+	 * @param Live_Link_Change            $links      The link every ad goes to.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
 		private readonly Creative_Repository $creatives,
 		private readonly Revision_Policy $revisions,
-		private readonly Placement_Repository $placements,
 		private readonly Settings $settings,
 		private readonly Fill_Cache $fill,
 		private readonly Rate_Limiter $limiter,
 		private readonly Audit_Repository $audit,
 		private readonly Campaign_Request_Repository $requests,
-		private readonly Package_Repository $packages
+		private readonly Campaign_Change_Summary $summary,
+		private readonly Live_Package_Change $package_change,
+		private readonly Live_Link_Change $links
 	) {
 	}
 
@@ -194,9 +194,10 @@ final class Campaign_Change_Manager implements Service {
 			return $this->error( 'aggr_edits_pending', __( 'This campaign already has changes waiting for review. Withdraw them first.', 'aggressive-ads' ), 409 );
 		}
 
-		$diff = Live_Edit_Rules::diff( $allowed, $this->current( $campaign_id ), $proposed );
+		$proposed = $this->package_change->with_derived_end( $campaign_id, $this->links->expand( $campaign_id, $proposed ), array() );
+		$diff     = Live_Edit_Rules::diff( $allowed, $this->current( $campaign_id ), $proposed );
 
-		$validation = Live_Edit_Rules::validate( $diff, $this->current( $campaign_id ), time() );
+		$validation = $this->package_change->validate( $this->current( $campaign_id ), $campaign_id, $diff );
 
 		if ( ! $validation->is_valid() ) {
 			return new WP_Error(
@@ -207,6 +208,12 @@ final class Campaign_Change_Manager implements Service {
 					'problems' => $validation->problems(),
 				)
 			);
+		}
+
+		$buyable = $this->package_change->buyable( $diff );
+
+		if ( is_wp_error( $buyable ) ) {
+			return $buyable;
 		}
 
 		if ( ! $this->requests->set_pending_edits( $campaign_id, $diff, get_current_user_id() ) ) {
@@ -425,9 +432,10 @@ final class Campaign_Change_Manager implements Service {
 			return $this->error( 'aggr_edits_pending', __( 'These changes are already with the review team. Withdraw them to keep editing.', 'aggressive-ads' ), 409 );
 		}
 
-		$current = $this->current( $campaign_id );
-		$step    = Live_Edit_Rules::diff( $allowed, $current, $proposed );
-		$merged  = $this->requests->pending_edits( $campaign_id );
+		$current  = $this->current( $campaign_id );
+		$merged   = $this->requests->pending_edits( $campaign_id );
+		$proposed = $this->package_change->with_derived_end( $campaign_id, $this->links->expand( $campaign_id, $proposed ), $merged );
+		$step     = Live_Edit_Rules::diff( $allowed, $current, $proposed );
 
 		// A field the advertiser has put back to its original value is no
 		// longer a change, so it leaves the proposal rather than lingering as
@@ -453,7 +461,7 @@ final class Campaign_Change_Manager implements Service {
 		 * value is a legitimate thing to do on a step, and it is only a problem
 		 * at submission time.
 		 */
-		$validation = Live_Edit_Rules::validate( $merged, $current, time() );
+		$validation = $this->package_change->validate( $current, $campaign_id, $merged );
 
 		if ( ! $validation->is_valid() && ! $validation->has( Live_Edit_Rules::ERROR_NOTHING_CHANGED ) ) {
 			return new WP_Error(
@@ -464,6 +472,13 @@ final class Campaign_Change_Manager implements Service {
 					'problems' => $validation->problems(),
 				)
 			);
+		}
+
+		// On sale is not enough; creation's own test decides whether it can be bought.
+		$buyable = $this->package_change->buyable( $merged );
+
+		if ( is_wp_error( $buyable ) ) {
+			return $buyable;
 		}
 
 		if ( ! $this->requests->set_pending_edits( $campaign_id, $merged, get_current_user_id() ) ) {
@@ -497,7 +512,7 @@ final class Campaign_Change_Manager implements Service {
 		}
 
 		$edits      = $this->requests->pending_edits( $campaign_id );
-		$validation = Live_Edit_Rules::validate( $edits, $this->current( $campaign_id ), time() );
+		$validation = $this->package_change->validate( $this->current( $campaign_id ), $campaign_id, $edits );
 
 		if ( ! $validation->is_valid() ) {
 			return new WP_Error(
@@ -514,7 +529,14 @@ final class Campaign_Change_Manager implements Service {
 			return $this->error( 'aggr_edits_not_saved', __( 'The changes could not be submitted. Please try again.', 'aggressive-ads' ), 500 );
 		}
 
-		$this->log( 'campaign.changes_requested', $campaign_id, $edits, 'Campaign changes submitted for review.' );
+		$buyable = $this->package_change->buyable( $edits );
+
+		if ( is_wp_error( $buyable ) ) {
+			return $buyable;
+		}
+
+		// The prices the advertiser was shown, for billing to settle from (#263).
+		$this->log( 'campaign.changes_requested', $campaign_id, $edits, 'Campaign changes submitted for review.', Audit_Event::OUTCOME_OK, $this->package_change->price_context( $campaign_id, $edits ) );
 		$this->notify_request( $campaign_id, Request_Mailer::KIND_EDITS );
 
 		return true;
@@ -594,7 +616,7 @@ final class Campaign_Change_Manager implements Service {
 		// Re-judged at approval, not merely at request. A proposal can sit in
 		// the queue past its own end date, and approving it then would write a
 		// window that was valid on Tuesday and is nonsense today.
-		$validation = Live_Edit_Rules::validate( $edits, $this->current( $campaign_id ), time() );
+		$validation = $this->package_change->validate( $this->current( $campaign_id ), $campaign_id, $edits );
 
 		if ( ! $validation->is_valid() ) {
 			$this->log( 'campaign.changes_stale', $campaign_id, $edits, 'Pending campaign changes were no longer valid at approval.', Audit_Event::OUTCOME_FAILED );
@@ -609,6 +631,8 @@ final class Campaign_Change_Manager implements Service {
 			);
 		}
 
+		// Read before apply(): the old price is the campaign's only until it is overwritten.
+		$prices  = $this->package_change->price_context( $campaign_id, $edits );
 		$applied = $this->apply( $campaign_id, $edits );
 
 		if ( is_wp_error( $applied ) ) {
@@ -623,7 +647,7 @@ final class Campaign_Change_Manager implements Service {
 		// destination change riding out a CDN TTL pointing at the old URL.
 		$this->fill->bust_campaign( $campaign_id );
 
-		$this->log( 'campaign.changes_approved', $campaign_id, $edits, 'Campaign changes approved and applied.' );
+		$this->log( 'campaign.changes_approved', $campaign_id, $edits, 'Campaign changes approved and applied.', Audit_Event::OUTCOME_OK, $prices );
 
 		return true;
 	}
@@ -701,7 +725,7 @@ final class Campaign_Change_Manager implements Service {
 	 * @return array<int, array{field: string, label: string, from: string, to: string}>
 	 */
 	public function pending_summary( int $campaign_id ): array {
-		return $this->summarize( $this->submitted_edits( $campaign_id ), $campaign_id );
+		return $this->summary->rows( $this->package_change->implied( $campaign_id, $this->submitted_edits( $campaign_id ) ), $this->current( $campaign_id ) );
 	}
 
 	/**
@@ -711,7 +735,7 @@ final class Campaign_Change_Manager implements Service {
 	 * @return array<int, array{field: string, label: string, from: string, to: string}>
 	 */
 	public function draft_summary( int $campaign_id ): array {
-		return $this->summarize( $this->requests->pending_edits( $campaign_id ), $campaign_id );
+		return $this->summary->rows( $this->package_change->implied( $campaign_id, $this->requests->pending_edits( $campaign_id ) ), $this->current( $campaign_id ) );
 	}
 
 	/**
@@ -724,96 +748,6 @@ final class Campaign_Change_Manager implements Service {
 		return $this->requests->pending_edits_submitted( $campaign_id )
 			? $this->requests->pending_edits( $campaign_id )
 			: array();
-	}
-
-	/**
-	 * Renders one change set as before/after rows.
-	 *
-	 * @param array<string, mixed> $edits       Change set.
-	 * @param int                  $campaign_id Campaign post id.
-	 * @return array<int, array{field: string, label: string, from: string, to: string}>
-	 */
-	private function summarize( array $edits, int $campaign_id ): array {
-		if ( array() === $edits ) {
-			return array();
-		}
-
-		$current = $this->current( $campaign_id );
-		$rows    = array();
-
-		foreach ( $edits as $field => $value ) {
-			$rows[] = array(
-				'field' => (string) $field,
-				'label' => self::field_label( (string) $field ),
-				'from'  => $this->render( (string) $field, $current[ $field ] ?? null ),
-				'to'    => $this->render( (string) $field, $value ),
-			);
-		}
-
-		return $rows;
-	}
-
-	/**
-	 * Human label for one proposal field.
-	 *
-	 * @param string $field Field name.
-	 */
-	public static function field_label( string $field ): string {
-		switch ( $field ) {
-			case 'title':
-				return __( 'Campaign name', 'aggressive-ads' );
-			case 'advertiser_notes':
-				return __( 'Advertiser notes', 'aggressive-ads' );
-			case 'start_ts':
-				return __( 'Start date', 'aggressive-ads' );
-			case 'end_ts':
-				return __( 'End date', 'aggressive-ads' );
-			case 'click_urls':
-				return __( 'Destination', 'aggressive-ads' );
-			case 'placement_ids':
-				return __( 'Placements', 'aggressive-ads' );
-		}
-
-		return $field;
-	}
-
-	/**
-	 * Displayable form of one field's value.
-	 *
-	 * @param string $field Field name.
-	 * @param mixed  $value Raw value.
-	 */
-	private function render( string $field, mixed $value ): string {
-		if ( 'start_ts' === $field || 'end_ts' === $field ) {
-			$timestamp = (int) $value;
-
-			if ( $timestamp <= 0 ) {
-				return __( 'Open-ended', 'aggressive-ads' );
-			}
-
-			// wp_date() returns false when the timezone cannot be resolved.
-			// Falling back to the raw ISO date keeps a reviewer looking at a
-			// date rather than at an empty cell.
-			$formatted = wp_date( (string) get_option( 'date_format', 'Y-m-d' ), $timestamp );
-
-			return false === $formatted ? gmdate( 'Y-m-d', $timestamp ) : $formatted;
-		}
-
-		if ( 'placement_ids' === $field ) {
-			$names = array();
-
-			foreach ( is_array( $value ) ? $value : array() as $placement_id ) {
-				$names[] = $this->placements->name( (int) $placement_id );
-			}
-
-			return implode( ', ', array_filter( $names ) );
-		}
-
-		if ( 'click_urls' === $field ) {
-			return implode( ', ', array_map( 'strval', is_array( $value ) ? $value : array() ) );
-		}
-
-		return is_string( $value ) ? $value : '';
 	}
 
 	/**
@@ -836,41 +770,34 @@ final class Campaign_Change_Manager implements Service {
 			'end_ts'            => $this->campaigns->end_ts( $campaign_id ),
 			'placement_ids'     => $this->campaigns->placement_ids( $campaign_id ),
 			'click_urls'        => $click_urls,
+			'default_click_url' => $this->links->shared( $campaign_id ),
+			'package_id'        => $this->campaigns->package_id( $campaign_id ),
 
 			// Not a field: what Live_Edit_Rules holds a placement change to.
 			'placement_choices' => $this->placement_choices( $campaign_id ),
+
+			// Not fields: what a package change may move to, and what was paid.
+			'package_choices'   => $this->package_change->on_sale(),
+			'budget_cents'      => $this->campaigns->budget_cents( $campaign_id ),
+			'currency'          => $this->campaigns->currency( $campaign_id ),
 		);
 	}
 
 	/**
 	 * The placements an edit may choose from, or none to mean any.
 	 *
-	 * The package's own placements, because the package is what was priced,
-	 * and whatever the campaign runs on now, so nothing live is taken away by
-	 * a package being edited after the sale. Empty when there is no package —
-	 * a campaign made before packages, or by staff — which leaves the rule as
-	 * it was. The edit screen offers exactly this list, and the rules refuse
-	 * anything outside it, so the two cannot disagree.
+	 * `Live_Package_Change::placement_choices()` decides; the edit screen
+	 * offers exactly this list and the rules refuse anything outside it, so
+	 * the two cannot disagree.
 	 *
-	 * @param int $campaign_id Campaign post id.
+	 * @param int      $campaign_id      Campaign post id.
+	 * @param int|null $proposed_package A package being moved to, or null for the campaign's own.
 	 * @return array<int, int>
 	 */
-	public function placement_choices( int $campaign_id ): array {
-		$package_id = $this->campaigns->package_id( $campaign_id );
-
-		if ( $package_id <= 0 ) {
-			return array();
-		}
-
-		return array_values(
-			array_unique(
-				array_map(
-					'intval',
-					array_merge( $this->packages->placement_ids( $package_id ), $this->campaigns->placement_ids( $campaign_id ) )
-				)
-			)
-		);
+	public function placement_choices( int $campaign_id, ?int $proposed_package = null ): array {
+		return $this->package_change->placement_choices( $campaign_id, $proposed_package );
 	}
+
 
 	/**
 	 * Writes an approved change set.
@@ -886,7 +813,18 @@ final class Campaign_Change_Manager implements Service {
 	private function apply( int $campaign_id, array $edits ) {
 		$fields = array();
 
-		foreach ( array( 'title', 'advertiser_notes', 'start_ts', 'end_ts', 'placement_ids' ) as $field ) {
+		// The package first, so a placement or date change in the same edit wins over what it implies.
+		if ( array_key_exists( 'package_id', $edits ) ) {
+			$package = $this->package_change->fields( $campaign_id, $edits );
+
+			if ( is_wp_error( $package ) ) {
+				return $package;
+			}
+
+			$fields = $package;
+		}
+
+		foreach ( array( 'title', 'advertiser_notes', 'start_ts', 'end_ts', 'placement_ids', 'default_click_url' ) as $field ) {
 			if ( array_key_exists( $field, $edits ) ) {
 				$fields[ $field ] = $edits[ $field ];
 			}
@@ -959,9 +897,10 @@ final class Campaign_Change_Manager implements Service {
 	 * @param array<string, mixed> $edits       Change set.
 	 * @param string               $message     Human-readable summary.
 	 * @param string               $outcome     Audit outcome.
+	 * @param array<string, mixed> $extra       Further context, such as a package change's prices.
 	 * @return void
 	 */
-	private function log( string $event, int $campaign_id, array $edits, string $message, string $outcome = Audit_Event::OUTCOME_OK ): void {
+	private function log( string $event, int $campaign_id, array $edits, string $message, string $outcome = Audit_Event::OUTCOME_OK, array $extra = array() ): void {
 		$this->audit->insert(
 			new Audit_Event(
 				event: $event,
@@ -970,7 +909,7 @@ final class Campaign_Change_Manager implements Service {
 				org_id: $this->campaigns->org_id( $campaign_id ),
 				message: $message,
 				outcome: $outcome,
-				context: array( 'fields' => array_keys( $edits ) ),
+				context: array( 'fields' => array_keys( $edits ) ) + $extra,
 				actor_user_id: get_current_user_id()
 			)
 		);

@@ -411,8 +411,6 @@ final class Assets implements Service {
 					'saved'       => __( 'Draft saved.', 'aggressive-ads' ),
 					'error'       => __( 'Could not save the draft. Your last change may not be stored.', 'aggressive-ads' ),
 					'conflict'    => __( 'This campaign was saved elsewhere. Refresh to continue from the latest draft.', 'aggressive-ads' ),
-					/* translators: %s: the campaign's last day, e.g. October 30, 2026. */
-					'runsThrough' => __( 'Runs through %s.', 'aggressive-ads' ),
 					'rename'      => __( 'Rename campaign', 'aggressive-ads' ),
 					'nameLabel'   => __( 'Campaign name', 'aggressive-ads' ),
 					'nameSaved'   => __( 'Campaign renamed.', 'aggressive-ads' ),

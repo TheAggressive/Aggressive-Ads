@@ -2,12 +2,13 @@
 /**
  * Editing a campaign that is already running.
  *
- * Laid out as the creation wizard is — steps in the page head, one step card,
- * and a summary card beside it — because an advertiser who has made a campaign
- * already knows that shape. It is not the same wizard: package selection and
- * creative upload are not proposal fields, and every save here stages a change
- * instead of writing to the campaign, which is why the summary card is "Your
- * changes" rather than the order.
+ * Creation's screens, drawn from creation's own partials — the package grid,
+ * the schedule, the Destination card, the size cards — because an advertiser
+ * who made the campaign already knows them, and two copies of a screen are
+ * how one of them drifts. What differs is what saving means: every save here
+ * stages a proposal instead of writing to the campaign, which keeps running
+ * exactly as approved until the review team accepts it. That is why the
+ * summary card is "Your changes" rather than the order.
  *
  * The steps themselves are drawn in the head by `campaign-changes-steps.php`.
  *
@@ -26,6 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use Aggressive\Ads\Domain\Campaign_Rules;
 use Aggressive\Ads\Portal\Campaign_Actions;
 use Aggressive\Ads\Portal\Campaign_Edit_Steps;
 use Aggressive\Ads\Portal\Campaign_Nonces;
@@ -41,7 +43,6 @@ $aggr_edit_steps  = Campaign_Edit_Steps::for_fields( $aggr_edit_fields, $aggr_ca
 $aggr_edit_step   = Campaign_Edit_Steps::current( Campaign_Actions::request_change_step(), $aggr_edit_steps );
 $aggr_edit_next   = Campaign_Edit_Steps::next( $aggr_edit_step, $aggr_edit_steps );
 
-$aggr_has_details  = Campaign_Edit_Steps::has_details( $aggr_edit_fields );
 $aggr_has_schedule = Campaign_Edit_Steps::has_dates( $aggr_edit_fields );
 $aggr_has_links    = Campaign_Edit_Steps::has_links( $aggr_edit_fields );
 
@@ -66,8 +67,32 @@ foreach ( is_array( $aggr_creative_updates ?? null ) ? $aggr_creative_updates : 
 $aggr_placement_cards = is_array( $aggr_campaign['edit_placement_options'] ?? null ) ? $aggr_campaign['edit_placement_options'] : array();
 
 $aggr_selected_placements = array_map( 'intval', (array) ( $aggr_values['placement_ids'] ?? array() ) );
+
+/*
+ * The package the proposal holds, and whether it sets the length. A fixed
+ * package's end is derived, exactly as creation derives it, so the schedule
+ * below hides the end and states the last day instead.
+ */
+$aggr_can_package   = in_array( 'package_id', $aggr_edit_fields, true );
+$aggr_on_sale       = is_array( $aggr_campaign['package_options'] ?? null ) ? $aggr_campaign['package_options'] : array();
+$aggr_edit_package  = (int) ( $aggr_values['package_id'] ?? 0 );
+$aggr_package_days  = 0;
+$aggr_package_found = false;
+
+foreach ( $aggr_on_sale as $aggr_sale_package ) {
+	if ( (int) $aggr_sale_package['id'] === $aggr_edit_package ) {
+		$aggr_package_days  = (int) $aggr_sale_package['duration_days'];
+		$aggr_package_found = true;
+	}
+}
+
+$aggr_edit_start_ts = (int) ( $aggr_values['start_ts'] ?? 0 );
+$aggr_edit_fixed    = $aggr_package_days > 0;
+$aggr_edit_run_end  = $aggr_edit_fixed && $aggr_edit_start_ts > 0 ? Campaign_Rules::fixed_end_ts( $aggr_edit_start_ts, $aggr_package_days, wp_timezone()->getName() ) : 0;
+$aggr_edit_card     = 0;
 ?>
-<div class="aggr-columns aggr-changes">
+<?php // `aggr-wizard` is creation's container, so the size cards lay out as creation's do at every width. ?>
+<div class="aggr-columns aggr-changes aggr-wizard">
 	<div class="aggr-columns__main">
 		<div class="<?php echo 'review' === $aggr_edit_step ? 'aggr-step-card' : 'aggr-changes__steps'; ?>">
 			<?php
@@ -121,139 +146,152 @@ $aggr_selected_placements = array_map( 'intval', (array) ( $aggr_values['placeme
 					<input type="hidden" name="next_step" value="<?php echo esc_attr( $aggr_edit_next ); ?>">
 					<?php wp_nonce_field( Campaign_Nonces::changes_nonce_action( $aggr_campaign_id ) ); ?>
 
-						<?php
-						/*
-						 * One step, two cards, as creation's first step holds the
-						 * package and the schedule. Both post in one form to the
-						 * same handler, which stages whichever fields arrive; an
-						 * unchanged date is not a change, so a campaign that has
-						 * started is not refused for a start date it left alone.
-						 */
-						?>
-						<?php if ( $aggr_has_details ) : ?>
-							<section class="aggr-step-card" aria-labelledby="aggr-edit-heading">
-								<p class="aggr-eyebrow" aria-hidden="true"><?php esc_html_e( '01 · Package', 'aggressive-ads' ); ?></p>
-								<h2 id="aggr-edit-heading" class="aggr-step-card__title"><?php esc_html_e( 'Your package', 'aggressive-ads' ); ?></h2>
+					<?php
+					/*
+					 * Creation's first step: the package, then the schedule, in
+					 * one form, so the schedule follows the package as it is
+					 * chosen. The handler stages whichever fields arrive; an
+					 * unchanged value is not a change, so a campaign that has
+					 * started is not refused for a start it left alone.
+					 */
+					?>
+					<?php if ( $aggr_can_package || in_array( 'placement_ids', $aggr_edit_fields, true ) ) : ?>
+						<div class="aggr-step-card">
+						<fieldset id="aggr-packages" class="aggr-fieldset">
+							<legend>
+								<span class="aggr-eyebrow" aria-hidden="true"><?php echo esc_html( sprintf( /* translators: %s: the card's number, e.g. 01. */ __( '%s · Package', 'aggressive-ads' ), str_pad( (string) ++$aggr_edit_card, 2, '0', STR_PAD_LEFT ) ) ); ?></span>
+								<span id="aggr-edit-heading" class="aggr-step-card__title"><?php echo esc_html( $aggr_can_package ? __( 'Choose a package', 'aggressive-ads' ) : __( 'Your package', 'aggressive-ads' ) ); ?></span>
+							</legend>
 
-								<?php if ( '' !== (string) ( $aggr_campaign['package_name'] ?? '' ) ) : ?>
+							<?php if ( $aggr_can_package && array() !== $aggr_on_sale ) : ?>
+								<p id="aggr-packages-hint" class="aggr-hint"><?php esc_html_e( 'Upgrade or change your package here. Your campaign keeps running on its current package, at its current price, until the review team accepts the change.', 'aggressive-ads' ); ?></p>
+
+								<?php if ( ! $aggr_package_found && '' !== (string) ( $aggr_campaign['package_name'] ?? '' ) ) : ?>
+									<?php // Retired since it was bought: still what is running, so still named. ?>
 									<p class="aggr-changes__package">
 										<span class="aggr-package__name"><?php echo esc_html( (string) $aggr_campaign['package_name'] ); ?></span>
-										<?php if ( '' !== (string) ( $aggr_campaign['package_price'] ?? '' ) ) : ?>
-											<span class="aggr-package__price"><?php echo esc_html( (string) $aggr_campaign['package_price'] ); ?></span>
-										<?php endif; ?>
+										<span class="aggr-package__badge"><?php esc_html_e( 'Your package', 'aggressive-ads' ); ?></span>
+										<span class="aggr-package__price"><?php echo esc_html( (string) ( $aggr_campaign['package_price'] ?? '' ) ); ?></span>
 									</p>
 								<?php endif; ?>
 
-								<?php if ( in_array( 'title', $aggr_edit_fields, true ) ) : ?>
-									<div class="aggr-field">
-										<label for="aggr-edit-title"><?php esc_html_e( 'Campaign name', 'aggressive-ads' ); ?></label>
-										<input type="text" id="aggr-edit-title" name="title" value="<?php echo esc_attr( (string) ( $aggr_values['title'] ?? '' ) ); ?>" maxlength="200">
-									</div>
-								<?php endif; ?>
+								<?php
+								$aggr_grid_packages = $aggr_on_sale;
+								$aggr_grid_selected = $aggr_edit_package;
+								$aggr_grid_current  = (int) ( $aggr_campaign['package_id'] ?? 0 );
+								$aggr_grid_hint     = 'aggr-packages-hint';
 
-								<?php if ( in_array( 'placement_ids', $aggr_edit_fields, true ) ) : ?>
-									<fieldset class="aggr-fieldset" aria-describedby="aggr-edit-placements-hint">
-										<legend class="aggr-changes__legend"><?php esc_html_e( 'Placements', 'aggressive-ads' ); ?></legend>
-										<p id="aggr-edit-placements-hint" class="aggr-hint"><?php esc_html_e( 'The placements your package includes. Changing them changes the ad sizes you must supply: if this is approved, the campaign stops running until you upload correctly sized ads and they are reviewed.', 'aggressive-ads' ); ?></p>
-										<div class="aggr-choicegrid aggr-changes__placements">
-											<?php
-											/*
-											 * Drawn as the package cards are — name, then the size
-											 * as a silhouette and in figures — because a placement
-											 * is the thing a package is made of, and "728×90" on its
-											 * own means little until it is a wide, flat shape.
-											 */
-											?>
-											<?php foreach ( $aggr_placement_cards as $aggr_option ) : ?>
-												<label class="aggr-choice aggr-choice--package">
-													<input
-														type="checkbox"
-														name="placement_ids[]"
-														value="<?php echo esc_attr( (string) (int) $aggr_option['id'] ); ?>"
-														<?php checked( in_array( (int) $aggr_option['id'], $aggr_selected_placements, true ) ); ?>
-													>
-													<span class="aggr-choice__text">
-														<span class="aggr-package__name"><?php echo esc_html( (string) $aggr_option['name'] ); ?></span>
-														<span class="aggr-package__meta">
-															<?php
-															printf(
-																/* translators: %s: the largest file this placement accepts, e.g. 150 KB. */
-																esc_html__( 'Files up to %s', 'aggressive-ads' ),
-																esc_html( (string) $aggr_option['max_size'] )
-															);
-															?>
-														</span>
-														<?php if ( is_array( $aggr_option['shape'] ?? null ) ) : ?>
-															<span class="aggr-package__sizes" aria-hidden="true">
-																<span class="aggr-package__size">
-																	<span class="aggr-package__shape" style="width: <?php echo esc_attr( (string) (int) $aggr_option['shape']['width'] ); ?>px; height: <?php echo esc_attr( (string) (int) $aggr_option['shape']['height'] ); ?>px"></span>
-																	<?php echo esc_html( (string) $aggr_option['shape']['label'] ); ?>
-																</span>
-															</span>
-															<span class="aggr-sr"><?php echo esc_html( (string) $aggr_option['shape']['label'] ); ?></span>
-														<?php endif; ?>
+								require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-package-grid.php';
+								?>
+							<?php elseif ( '' !== (string) ( $aggr_campaign['package_name'] ?? '' ) ) : ?>
+								<p class="aggr-changes__package">
+									<span class="aggr-package__name"><?php echo esc_html( (string) $aggr_campaign['package_name'] ); ?></span>
+									<?php if ( '' !== (string) ( $aggr_campaign['package_price'] ?? '' ) ) : ?>
+										<span class="aggr-package__price"><?php echo esc_html( (string) $aggr_campaign['package_price'] ); ?></span>
+									<?php endif; ?>
+								</p>
+							<?php endif; ?>
+
+							<?php if ( in_array( 'placement_ids', $aggr_edit_fields, true ) ) : ?>
+								<fieldset class="aggr-fieldset" aria-describedby="aggr-edit-placements-hint">
+									<legend class="aggr-changes__legend"><?php esc_html_e( 'Placements', 'aggressive-ads' ); ?></legend>
+									<p id="aggr-edit-placements-hint" class="aggr-hint"><?php esc_html_e( 'The placements your package includes. Changing them changes the ad sizes you must supply: if this is approved, a size with no ad does not run until you add one and it is reviewed.', 'aggressive-ads' ); ?></p>
+									<div class="aggr-choicegrid aggr-changes__placements">
+										<?php foreach ( $aggr_placement_cards as $aggr_option ) : ?>
+											<label class="aggr-choice aggr-choice--package">
+												<input
+													type="checkbox"
+													name="placement_ids[]"
+													value="<?php echo esc_attr( (string) (int) $aggr_option['id'] ); ?>"
+													<?php checked( in_array( (int) $aggr_option['id'], $aggr_selected_placements, true ) ); ?>
+												>
+												<span class="aggr-choice__text">
+													<span class="aggr-package__name"><?php echo esc_html( (string) $aggr_option['name'] ); ?></span>
+													<span class="aggr-package__meta">
+														<?php
+														printf(
+															/* translators: %s: the largest file this placement accepts, e.g. 150 KB. */
+															esc_html__( 'Files up to %s', 'aggressive-ads' ),
+															esc_html( (string) $aggr_option['max_size'] )
+														);
+														?>
 													</span>
-												</label>
-											<?php endforeach; ?>
-										</div>
-									</fieldset>
-								<?php endif; ?>
-
-								<?php if ( in_array( 'advertiser_notes', $aggr_edit_fields, true ) ) : ?>
-									<div class="aggr-field">
-										<label for="aggr-edit-notes"><?php esc_html_e( 'Notes for the review team', 'aggressive-ads' ); ?></label>
-										<textarea id="aggr-edit-notes" name="advertiser_notes" rows="4" maxlength="2000"><?php echo esc_textarea( (string) ( $aggr_values['advertiser_notes'] ?? '' ) ); ?></textarea>
+													<?php if ( is_array( $aggr_option['shape'] ?? null ) ) : ?>
+														<span class="aggr-package__sizes" aria-hidden="true">
+															<span class="aggr-package__size">
+																<span class="aggr-package__shape" style="width: <?php echo esc_attr( (string) (int) $aggr_option['shape']['width'] ); ?>px; height: <?php echo esc_attr( (string) (int) $aggr_option['shape']['height'] ); ?>px"></span>
+																<?php echo esc_html( (string) $aggr_option['shape']['label'] ); ?>
+															</span>
+														</span>
+														<span class="aggr-sr"><?php echo esc_html( (string) $aggr_option['shape']['label'] ); ?></span>
+													<?php endif; ?>
+												</span>
+											</label>
+										<?php endforeach; ?>
 									</div>
-								<?php endif; ?>
-							</section>
-						<?php endif; ?>
+								</fieldset>
+							<?php endif; ?>
+						</fieldset>
+						</div>
+					<?php endif; ?>
 
-						<?php if ( $aggr_has_schedule ) : ?>
+					<?php if ( $aggr_has_schedule ) : ?>
+						<div class="aggr-step-card">
+						<fieldset id="aggr-schedule" class="aggr-fieldset">
+							<legend>
+								<span class="aggr-eyebrow" aria-hidden="true"><?php echo esc_html( sprintf( /* translators: %s: the card's number, e.g. 02. */ __( '%s · Schedule', 'aggressive-ads' ), str_pad( (string) ++$aggr_edit_card, 2, '0', STR_PAD_LEFT ) ) ); ?></span>
+								<span id="aggr-edit-dates-heading" class="aggr-step-card__title"><?php esc_html_e( 'When should it run?', 'aggressive-ads' ); ?></span>
+							</legend>
+							<p class="aggr-hint">
+								<?php
+								echo $aggr_edit_fixed
+									? esc_html__( 'The package sets how long it runs. The start day counts as the first day.', 'aggressive-ads' )
+									: esc_html__( 'A custom schedule: choose a start and an end.', 'aggressive-ads' );
+								?>
+							</p>
+
 							<?php
 							/*
-							 * Staged values first, stored campaign only as the fallback.
-							 *
-							 * The dates read the stored campaign once, so stepping back
-							 * redisplayed the live dates and saving wrote them straight
-							 * back over a date change the advertiser had already staged —
-							 * silently, because the form looked exactly as it should.
+							 * Staged values first, the stored campaign only as the
+							 * fallback — `edit_values` is both. The stored start
+							 * decides the lock, not the staged one: it is the
+							 * campaign already running that cannot be moved, and
+							 * Live_Edit_Rules refuses the same change on the server.
 							 */
+							$aggr_sched_start        = (string) ( $aggr_values['start_date'] ?? $aggr_campaign['start_date'] );
+							$aggr_sched_end          = (string) ( $aggr_values['end_date'] ?? $aggr_campaign['end_date'] );
+							$aggr_sched_min          = '';
+							$aggr_sched_fixed        = $aggr_edit_fixed;
+							$aggr_sched_run_end      = $aggr_edit_run_end;
+							$aggr_sched_locked       = '' !== (string) $aggr_campaign['start_date'] && (string) $aggr_campaign['start_date'] <= (string) wp_date( 'Y-m-d', null, wp_timezone() );
+							$aggr_sched_end_required = '' !== (string) $aggr_campaign['end_date'];
+
+							require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-schedule-fields.php';
 							?>
-							<section class="aggr-step-card" aria-labelledby="aggr-edit-dates-heading">
-								<p class="aggr-eyebrow" aria-hidden="true"><?php echo esc_html( $aggr_has_details ? __( '02 · Schedule', 'aggressive-ads' ) : __( '01 · Schedule', 'aggressive-ads' ) ); ?></p>
-								<h2 id="aggr-edit-dates-heading" class="aggr-step-card__title"><?php esc_html_e( 'When should it run?', 'aggressive-ads' ); ?></h2>
+						</fieldset>
+						</div>
+					<?php endif; ?>
 
-								<div class="aggr-formgrid">
-									<div class="aggr-field">
-										<label for="aggr-edit-start"><?php esc_html_e( 'Start date', 'aggressive-ads' ); ?></label>
-										<p id="aggr-edit-start-hint" class="aggr-hint"><?php esc_html_e( 'A start date that has already passed cannot be moved.', 'aggressive-ads' ); ?></p>
-										<input type="date" id="aggr-edit-start" name="start_date" aria-describedby="aggr-edit-start-hint" value="<?php echo esc_attr( (string) ( $aggr_values['start_date'] ?? $aggr_campaign['start_date'] ) ); ?>">
-									</div>
-									<div class="aggr-field">
-										<label for="aggr-edit-end"><?php esc_html_e( 'End date', 'aggressive-ads' ); ?></label>
-										<p id="aggr-edit-end-hint" class="aggr-hint"><?php esc_html_e( 'The campaign runs through the end of this day.', 'aggressive-ads' ); ?></p>
-										<input type="date" id="aggr-edit-end" name="end_date" aria-describedby="aggr-edit-end-hint" <?php echo '' !== (string) $aggr_campaign['end_date'] ? 'required' : ''; ?> value="<?php echo esc_attr( (string) ( $aggr_values['end_date'] ?? $aggr_campaign['end_date'] ) ); ?>">
-									</div>
+					<?php if ( in_array( 'title', $aggr_edit_fields, true ) || in_array( 'advertiser_notes', $aggr_edit_fields, true ) ) : ?>
+						<section class="aggr-step-card" aria-labelledby="aggr-edit-name-heading">
+							<p class="aggr-eyebrow" aria-hidden="true"><?php echo esc_html( sprintf( /* translators: %s: the card's number, e.g. 03. */ __( '%s · Details', 'aggressive-ads' ), str_pad( (string) ++$aggr_edit_card, 2, '0', STR_PAD_LEFT ) ) ); ?></p>
+							<h2 id="aggr-edit-name-heading" class="aggr-step-card__title"><?php esc_html_e( 'Name and notes', 'aggressive-ads' ); ?></h2>
+
+							<?php if ( in_array( 'title', $aggr_edit_fields, true ) ) : ?>
+								<div class="aggr-field">
+									<label for="aggr-edit-title"><?php esc_html_e( 'Campaign name', 'aggressive-ads' ); ?></label>
+									<input type="text" id="aggr-edit-title" name="title" value="<?php echo esc_attr( (string) ( $aggr_values['title'] ?? '' ) ); ?>" maxlength="200">
 								</div>
+							<?php endif; ?>
 
-								<?php
-								/*
-								 * The stored start decides the lock, not the staged one: it is
-								 * the campaign already running that cannot be moved, and
-								 * Live_Edit_Rules refuses the same change on the server.
-								 */
-								$aggr_cal_start_id = 'aggr-edit-start';
-								$aggr_cal_end_id   = 'aggr-edit-end';
-								$aggr_cal_start    = (string) ( $aggr_values['start_date'] ?? $aggr_campaign['start_date'] );
-								$aggr_cal_end      = (string) ( $aggr_values['end_date'] ?? $aggr_campaign['end_date'] );
-								$aggr_cal_min      = '';
-								$aggr_cal_fixed    = false;
-								$aggr_cal_locked   = '' !== (string) $aggr_campaign['start_date'] && (string) $aggr_campaign['start_date'] <= (string) wp_date( 'Y-m-d', null, wp_timezone() );
-
-								require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-calendar.php';
-								?>
-							</section>
-						<?php endif; ?>
+							<?php if ( in_array( 'advertiser_notes', $aggr_edit_fields, true ) ) : ?>
+								<div class="aggr-field">
+									<label for="aggr-edit-notes"><?php esc_html_e( 'Notes for the review team', 'aggressive-ads' ); ?></label>
+									<textarea id="aggr-edit-notes" name="advertiser_notes" rows="4" maxlength="2000"><?php echo esc_textarea( (string) ( $aggr_values['advertiser_notes'] ?? '' ) ); ?></textarea>
+								</div>
+							<?php endif; ?>
+						</section>
+					<?php endif; ?>
 
 					<div class="aggr-form__actions">
 						<button class="aggr-button" type="submit">
@@ -264,65 +302,46 @@ $aggr_selected_placements = array_map( 'intval', (array) ( $aggr_values['placeme
 			<?php else : ?>
 				<?php
 				/*
-				 * Ads, as creation's second step is: the link every ad goes to,
-				 * then the ads themselves. Replacing an ad's artwork is its own
-				 * request, sent from its Update dialog as soon as the file is
-				 * chosen; the links are staged with the rest of the edit.
+				 * Ads, as creation's second step is: the link every ad goes
+				 * to, then the ads themselves. The link is staged with the
+				 * rest of the edit; replacing an ad is its own request, sent
+				 * from its Update dialog as soon as the file is chosen.
 				 */
 				?>
-				<?php if ( $aggr_has_links ) : ?>
-					<form id="aggr-changes-form" class="aggr-form aggr-changes__form" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-						<input type="hidden" name="action" value="<?php echo esc_attr( Campaign_Actions::CHANGES_ACTION ); ?>">
-						<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) $aggr_campaign_id ); ?>">
-						<input type="hidden" name="next_step" value="<?php echo esc_attr( $aggr_edit_next ); ?>">
-						<?php wp_nonce_field( Campaign_Nonces::changes_nonce_action( $aggr_campaign_id ) ); ?>
-
-	<section class="aggr-step-card" aria-labelledby="aggr-edit-heading">
-								<p class="aggr-eyebrow" aria-hidden="true"><?php esc_html_e( '01 · Destination', 'aggressive-ads' ); ?></p>
-								<h2 id="aggr-edit-heading" class="aggr-step-card__title"><?php esc_html_e( 'Where should people go when they click?', 'aggressive-ads' ); ?></h2>
-								<p class="aggr-hint"><?php esc_html_e( 'Each ad keeps its own link. A change starts sending clicks to the new address once the review team accepts it.', 'aggressive-ads' ); ?></p>
-
-								<?php foreach ( $aggr_campaign['creatives'] as $aggr_creative ) : ?>
-									<div class="aggr-field aggr-changes__link">
-										<label for="aggr-edit-url-<?php echo esc_attr( (string) (int) $aggr_creative['id'] ); ?>">
-											<?php
-											printf(
-												/* translators: %s: the placement this advertisement runs in. */
-												esc_html__( 'Destination for %s', 'aggressive-ads' ),
-												esc_html( (string) $aggr_creative['placement'] )
-											);
-											?>
-										</label>
-										<input
-											type="url"
-											inputmode="url"
-											placeholder="https://"
-											id="aggr-edit-url-<?php echo esc_attr( (string) (int) $aggr_creative['id'] ); ?>"
-											name="click_urls[<?php echo esc_attr( (string) (int) $aggr_creative['id'] ); ?>]"
-											value="<?php echo esc_attr( (string) ( $aggr_values['click_urls'][ (int) $aggr_creative['id'] ] ?? $aggr_creative['click_url'] ) ); ?>"
-										>
-									</div>
-								<?php endforeach; ?>
-							</section>
-					</form>
-				<?php endif; ?>
-
-				<?php
-				if ( $aggr_can_update ) {
-					$aggr_ads_in_flow = true;
-
-					require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-ad-updates.php';
-				}
-				?>
-
-				<div class="aggr-form__actions">
+				<div class="aggr-form">
+					<?php // The step's name, so the cards' headings below it are not a level skipped. ?>
+					<h2 id="aggr-edit-heading" class="aggr-sr"><?php echo esc_html( $aggr_edit_steps[ Campaign_Edit_Steps::DESTINATION ] ?? __( 'Ads', 'aggressive-ads' ) ); ?></h2>
 					<?php if ( $aggr_has_links ) : ?>
-						<button class="aggr-button" type="submit" form="aggr-changes-form">
-							<?php esc_html_e( 'Save and continue', 'aggressive-ads' ); ?>
-						</button>
-					<?php else : ?>
-						<a class="aggr-button" href="<?php echo esc_url( Campaign_Edit_Steps::url( $aggr_campaign_id, Campaign_Edit_Steps::REVIEW ) ); ?>"><?php esc_html_e( 'Continue to review', 'aggressive-ads' ); ?></a>
+						<?php
+						$aggr_dest_mode  = 'edit';
+						$aggr_dest_link  = (string) ( $aggr_campaign['edit_link'] ?? '' );
+						$aggr_dest_used  = (int) ( $aggr_campaign['edit_link_used'] ?? 0 );
+						$aggr_dest_total = (int) ( $aggr_campaign['edit_link_total'] ?? 0 );
+						$aggr_dest_check = is_array( $aggr_campaign['edit_link_check'] ?? null ) ? $aggr_campaign['edit_link_check'] : null;
+						$aggr_dest_next  = $aggr_edit_next;
+
+						require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-destination-card.php';
+						?>
 					<?php endif; ?>
+
+					<?php
+					$aggr_ads_eyebrow = $aggr_has_links ? __( '02 · Ads', 'aggressive-ads' ) : __( '01 · Ads', 'aggressive-ads' );
+
+					require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-edit-ads.php';
+					?>
+
+					<div class="aggr-form__actions">
+						<?php if ( isset( $aggr_edit_steps[ Campaign_Edit_Steps::DETAILS ] ) ) : ?>
+							<a class="aggr-button aggr-button--secondary" href="<?php echo esc_url( Campaign_Edit_Steps::url( $aggr_campaign_id, Campaign_Edit_Steps::DETAILS ) ); ?>"><?php esc_html_e( 'Back to package & dates', 'aggressive-ads' ); ?></a>
+						<?php endif; ?>
+						<?php if ( $aggr_has_links ) : ?>
+							<button class="aggr-button" type="submit" form="aggr-changes-form">
+								<?php esc_html_e( 'Save and continue', 'aggressive-ads' ); ?>
+							</button>
+						<?php else : ?>
+							<a class="aggr-button" href="<?php echo esc_url( Campaign_Edit_Steps::url( $aggr_campaign_id, Campaign_Edit_Steps::REVIEW ) ); ?>"><?php esc_html_e( 'Continue to review', 'aggressive-ads' ); ?></a>
+						<?php endif; ?>
+					</div>
 				</div>
 			<?php endif; ?>
 		</div>

@@ -89,6 +89,7 @@ use Aggressive\Ads\Workflow\Assignment_Projection;
 use Aggressive\Ads\Workflow\Audit_Retention;
 use Aggressive\Ads\Workflow\Booking_Service;
 use Aggressive\Ads\Workflow\Campaign_Change_Manager;
+use Aggressive\Ads\Workflow\Campaign_Change_Summary;
 use Aggressive\Ads\Workflow\Campaign_Clock;
 use Aggressive\Ads\Workflow\Campaign_Copier;
 use Aggressive\Ads\Workflow\Link_Checker;
@@ -113,6 +114,8 @@ use Aggressive\Ads\Workflow\Forecast_Scheduler;
 use Aggressive\Ads\Workflow\Line_Item_Editor;
 use Aggressive\Ads\Workflow\Line_Item_Lifecycle;
 use Aggressive\Ads\Workflow\Line_Item_Validator;
+use Aggressive\Ads\Workflow\Live_Link_Change;
+use Aggressive\Ads\Workflow\Live_Package_Change;
 use Aggressive\Ads\Workflow\Organization_Membership;
 use Aggressive\Ads\Workflow\Organization_State_Manager;
 use Aggressive\Ads\Workflow\Password_Reset;
@@ -560,7 +563,25 @@ final class Service_Registrar {
 			Link_Checker::class,
 			static fn ( Service_Container $c ): Link_Checker => new Link_Checker(
 				$c->get( Campaign_Repository::class ),
-				$c->get( Rate_Limiter::class )
+				$c->get( Rate_Limiter::class ),
+				$c->get( Campaign_Request_Repository::class )
+			)
+		);
+
+		$container->register(
+			Live_Package_Change::class,
+			static fn ( Service_Container $c ): Live_Package_Change => new Live_Package_Change(
+				$c->get( Campaign_Repository::class ),
+				$c->get( Package_Repository::class ),
+				$c->get( Campaign_Editor::class )
+			)
+		);
+
+		$container->register(
+			Live_Link_Change::class,
+			static fn ( Service_Container $c ): Live_Link_Change => new Live_Link_Change(
+				$c->get( Campaign_Repository::class ),
+				$c->get( Creative_Repository::class )
 			)
 		);
 
@@ -836,13 +857,14 @@ final class Service_Registrar {
 				$c->get( Campaign_Repository::class ),
 				$c->get( Creative_Repository::class ),
 				$c->get( Revision_Policy::class ),
-				$c->get( Placement_Repository::class ),
 				$c->get( Settings::class ),
 				$c->get( Fill_Cache::class ),
 				$c->get( Rate_Limiter::class ),
 				$c->get( Audit_Repository::class ),
 				$c->get( Campaign_Request_Repository::class ),
-				$c->get( Package_Repository::class )
+				new Campaign_Change_Summary( $c->get( Placement_Repository::class ), $c->get( Package_Repository::class ) ),
+				$c->get( Live_Package_Change::class ),
+				$c->get( Live_Link_Change::class )
 			)
 		);
 

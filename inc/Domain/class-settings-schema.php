@@ -34,6 +34,15 @@ final class Settings_Schema {
 	public const EDIT_DESTINATION = 'destination';
 	public const EDIT_PLACEMENTS  = 'placements';
 
+	/**
+	 * Choosing a different package for a running campaign.
+	 *
+	 * A package prices the campaign, so this is an upgrade or a downgrade,
+	 * reviewed like any other edit; billing settles the difference once it
+	 * exists (#263). Structural, because a package brings its own placements.
+	 */
+	public const EDIT_PACKAGE = 'package';
+
 	public const MAX_PRODUCT_NAME  = 60;
 	public const MAX_TAGLINE       = 80;
 	public const MAX_LOGO_URL      = 500;
@@ -106,6 +115,7 @@ final class Settings_Schema {
 			self::EDIT_SCHEDULE,
 			self::EDIT_DESTINATION,
 			self::EDIT_PLACEMENTS,
+			self::EDIT_PACKAGE,
 		);
 	}
 
@@ -115,7 +125,7 @@ final class Settings_Schema {
 	 * @return list<string>
 	 */
 	public static function structural_edit_keys(): array {
-		return array( self::EDIT_PLACEMENTS );
+		return array( self::EDIT_PLACEMENTS, self::EDIT_PACKAGE );
 	}
 
 	/**
@@ -186,6 +196,7 @@ final class Settings_Schema {
 				self::EDIT_SCHEDULE    => false,
 				self::EDIT_DESTINATION => false,
 				self::EDIT_PLACEMENTS  => false,
+				self::EDIT_PACKAGE     => false,
 			),
 		);
 	}

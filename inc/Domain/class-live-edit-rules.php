@@ -50,6 +50,15 @@ final class Live_Edit_Rules {
 	 */
 	public const ERROR_PLACEMENT_NOT_OFFERED = 'live_edit_placement_not_offered';
 
+	/**
+	 * A package that is not on sale, or no package at all.
+	 *
+	 * `package_choices` is the catalogue an advertiser may buy from today; a
+	 * retired or incomplete package id, or zero, has no price to settle and
+	 * nothing to deliver.
+	 */
+	public const ERROR_PACKAGE_NOT_OFFERED = 'live_edit_package_not_offered';
+
 	public const MAX_TITLE = 200;
 	public const MAX_NOTES = 2000;
 
@@ -67,8 +76,9 @@ final class Live_Edit_Rules {
 			Settings_Schema::EDIT_TITLE       => array( 'title' ),
 			Settings_Schema::EDIT_NOTES       => array( 'advertiser_notes' ),
 			Settings_Schema::EDIT_SCHEDULE    => array( 'start_ts', 'end_ts' ),
-			Settings_Schema::EDIT_DESTINATION => array( 'click_urls' ),
+			Settings_Schema::EDIT_DESTINATION => array( 'click_urls', 'default_click_url' ),
 			Settings_Schema::EDIT_PLACEMENTS  => array( 'placement_ids' ),
+			Settings_Schema::EDIT_PACKAGE     => array( 'package_id' ),
 		);
 	}
 
@@ -195,6 +205,26 @@ final class Live_Edit_Rules {
 			}
 		}
 
+		// The link every ad starts from, as creation's Destination card sets it.
+		if ( array_key_exists( 'default_click_url', $diff ) ) {
+			$link = is_string( $diff['default_click_url'] ) ? $diff['default_click_url'] : '';
+
+			if ( ! Campaign_Rules::is_valid_click_url( $link ) ) {
+				$result->add( self::ERROR_URL_INVALID, 'default_click_url' );
+			}
+		}
+
+		if ( array_key_exists( 'package_id', $diff ) ) {
+			$package  = (int) $diff['package_id'];
+			$packages = isset( $current['package_choices'] ) && is_array( $current['package_choices'] )
+				? array_map( 'intval', $current['package_choices'] )
+				: array();
+
+			if ( $package <= 0 || ! in_array( $package, $packages, true ) ) {
+				$result->add( self::ERROR_PACKAGE_NOT_OFFERED, 'package_id', array( 'package_id' => $package ) );
+			}
+		}
+
 		if ( array_key_exists( 'placement_ids', $diff ) ) {
 			$ids = is_array( $diff['placement_ids'] ) ? $diff['placement_ids'] : array();
 
@@ -297,10 +327,12 @@ final class Live_Edit_Rules {
 		switch ( $field ) {
 			case 'title':
 			case 'advertiser_notes':
+			case 'default_click_url':
 				return is_string( $value ) ? trim( $value ) : '';
 
 			case 'start_ts':
 			case 'end_ts':
+			case 'package_id':
 				return is_numeric( $value ) ? (int) $value : 0;
 
 			case 'placement_ids':

@@ -372,8 +372,8 @@ handful of scalars does not need one.
 ### What may be proposed is site policy
 
 `Settings_Schema::edit_keys()` — campaign name, advertiser notes, schedule,
-destination URL, placements — each a checkbox under **Advertising → Settings →
-Changes to running campaigns**. Every one ships **off**: a running campaign is
+destination URL, placements, package — each a checkbox under **Advertising →
+Settings → Changes to running campaigns**. Every one ships **off**: a running campaign is
 one staff already approved, and widening what an advertiser may change
 underneath an approval is not a default anybody chose.
 
@@ -383,10 +383,51 @@ would tell an advertiser which fields exist behind a switch the site owner
 turned off — and `CampaignChangeTest` asserts a disabled field cannot be
 smuggled in by hand-building the POST.
 
-**Placements is not a peer of the others.** Changing it changes the required
-creative size, so an approved placement change leaves the campaign unable to
-serve until a correctly sized creative is uploaded and reviewed. It is a
-re-submission, and both the settings screen and the review screen say so.
+**Placements and package are not peers of the others.** Changing either
+changes the required creative sizes, so an approved change can leave a size
+with no ad. Both are `Settings_Schema::structural_edit_keys()`, and both the
+settings screen and the review screen say so.
+
+### The edit flow is creation's screens
+
+The edit flow draws creation's own partials — the package grid, the schedule
+and calendar, the Destination card with its link check and tracking tags, the
+size cards — so what differs is only what saving means: every save stages a
+proposal. Three rules follow from reusing creation's cards rather than
+imitating them.
+
+**A package change is creation's purchase, applied at approval.** The new
+package must pass `Campaign_Editor::package_snapshot()`, the test creation uses,
+and approval writes that snapshot: package, placements, price and currency. The
+campaign keeps running on its current package, at its current price, until
+then (`Workflow\Live_Package_Change`). Both prices are recorded in the audit
+context, as `package_change`, when the change is submitted and again when it
+is approved — before approval overwrites the old one — for billing to settle
+the difference from (#263). An upgrade brings its placements with it: a
+placement change proposed alongside one is judged against the *new* package.
+
+**A fixed package's end is derived, not chosen.** As at creation, the end field
+is hidden for a fixed-length package and the last day is stated. Moving the
+start or the package derives the end (`with_derived_end()`); putting either
+back restores the stored end, so nothing is left to review. Where a site allows
+package changes but not dates, the implied end is still validated and shown to
+the reviewer (`implied()`) — a downgrade whose derived end has already passed
+is refused as `live_edit_end_in_past` rather than approved into a campaign that
+completes on the spot.
+
+**The shared link moves the ads that use it.** Creation's Destination card sets
+one link for every ad; changing it on a running campaign moves every ad whose
+link is the shared one, and no other (`Workflow\Live_Link_Change`). Each moving
+ad's destination is added to the proposal, so the reviewer sees exactly which
+ads change. Its check reads the *staged* link — see the SSRF section of
+[threat-model.md](threat-model.md).
+
+**A size with no ad takes one, reviewed before it serves.** The single upload an
+advertiser may make outside the edit window: the first ad on a size a running
+campaign has none of, which is what an approved package or placement change
+leaves. It is held private until `Creative_Approval` publishes it. A size a
+proposal *would* add is shown on the Ads step and not offered an upload: the
+placement is not the campaign's until the change is approved.
 
 ### Withdrawing a submission
 

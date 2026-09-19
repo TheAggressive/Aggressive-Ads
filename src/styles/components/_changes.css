@@ -23,9 +23,14 @@
 	padding-top: 0;
 }
 
-/* The cards set the rhythm; their own outer margins would double it. */
+/*
+ * The cards set the rhythm; their own outer margins would double it. And no
+ * wider than the column: a grid item is otherwise as wide as its content, and
+ * a long link in the Destination card pushed the Ads step off a phone screen.
+ */
 .aggr-changes__steps > *,
 .aggr-changes__form > .aggr-step-card {
+	min-width: 0;
 	margin: 0;
 }
 
@@ -43,10 +48,6 @@
 
 .aggr-changes__placements {
 	margin-top: var(--aggr-space-sm);
-}
-
-.aggr-changes__link input {
-	max-width: var(--aggr-field-measure);
 }
 
 /* What is changing, one row per field: the old value struck, then the new. */

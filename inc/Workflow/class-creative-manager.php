@@ -801,6 +801,39 @@ final class Creative_Manager {
 	}
 
 	/**
+	 * Whether this upload supplies a size a running campaign has no ad for.
+	 *
+	 * The one upload an advertiser may make outside the edit window. A package
+	 * or placement change approved on a running campaign adds sizes it has no
+	 * ad for, and without this there was nothing the advertiser could do about
+	 * it: the wizard is closed to a running campaign, and a replacement needs
+	 * an ad to replace.
+	 *
+	 * Nothing about it reaches the public early. A creative added to a running
+	 * campaign stays private and unserved until `Creative_Approval` publishes
+	 * it — the same per-creative review staff already use — so this opens a
+	 * way to ask, not a way to serve. Only the first ad on an empty size: a
+	 * second one, or one beside an ad already running, is a replacement.
+	 *
+	 * @param int $campaign_id  Campaign post id.
+	 * @param int $placement_id Placement post id.
+	 * @return bool
+	 */
+	private function fills_missing_size( int $campaign_id, int $placement_id ): bool {
+		if ( ! in_array( $this->campaigns->status( $campaign_id ), array( Post_Statuses::SCHEDULED, Post_Statuses::LIVE, Post_Statuses::PAUSED ), true ) ) {
+			return false;
+		}
+
+		foreach ( $this->creatives->for_campaign( $campaign_id ) as $creative ) {
+			if ( $placement_id === $creative['placement_id'] ) {
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	/**
 	 * Campaign and placement authorization shared by every delivery layer.
 	 *
 	 * @param int $campaign_id  Campaign post id.
@@ -820,7 +853,7 @@ final class Creative_Manager {
 			return $this->error( 'aggr_forbidden', __( 'You do not have permission to do that.', 'aggressive-ads' ), 403 );
 		}
 
-		if ( ! $this->window->allows( $campaign_id ) ) {
+		if ( ! $this->window->allows( $campaign_id ) && ! $this->fills_missing_size( $campaign_id, $placement_id ) ) {
 			return $this->error( 'aggr_campaign_not_editable', __( 'This campaign cannot be changed right now.', 'aggressive-ads' ), 409 );
 		}
 

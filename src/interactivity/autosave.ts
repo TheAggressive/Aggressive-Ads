@@ -11,7 +11,7 @@
  */
 
 import { store, getContext } from '@wordpress/interactivity';
-import { debounce, normaliseLink, runEndDate } from '@aggr/logic';
+import { debounce, normaliseLink } from '@aggr/logic';
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error' | 'conflict';
 
@@ -19,7 +19,6 @@ type Outcome = 'saved' | 'error' | 'conflict';
 
 type Copy =
 	| SaveStatus
-	| 'runsThrough'
 	| 'rename'
 	| 'nameLabel'
 	| 'nameSaved'
@@ -137,103 +136,6 @@ function fieldsFrom( form: HTMLFormElement ): Record< string, unknown > {
 	}
 
 	return fields;
-}
-
-/**
- * A `YYYY-MM-DD` date in words, in the page's language.
- *
- * Formatted in UTC from the date's own parts, so no timezone can move it.
- *
- * @param date `YYYY-MM-DD`.
- * @return The date for reading, or the input if the browser cannot format it.
- */
-function formatDay( date: string ): string {
-	const [ year = 0, month = 1, day = 1 ] = date.split( '-' ).map( Number );
-
-	try {
-		return new Intl.DateTimeFormat(
-			document.documentElement.lang || undefined,
-			{
-				year: 'numeric',
-				month: 'long',
-				day: 'numeric',
-				timeZone: 'UTC',
-			}
-		).format( new Date( Date.UTC( year, month - 1, day ) ) );
-	} catch {
-		return date;
-	}
-}
-
-/**
- * Keeps the schedule fieldset describing the package that is chosen.
- *
- * A fixed package decides its own end date, so its end field is disabled —
- * which also keeps it out of `FormData`, and so out of the autosave, and so
- * lets the server derive the end — and the last day is stated instead. A
- * custom package gets the field back.
- *
- * Nothing runs on attach. The server rendered this fieldset for the package it
- * had selected, and rewriting it before anyone has changed anything would only
- * swap one date format for another in front of them.
- *
- * Synchronous on `change`, which matters: the debounce reads the form 600ms
- * later, and must find the end field already enabled or disabled to match.
- *
- * @param form The first step's form.
- */
-function followPlan( form: HTMLFormElement ): void {
-	const radios = Array.from(
-		form.querySelectorAll< HTMLInputElement >(
-			'input[type="radio"][name="package_id"]'
-		)
-	);
-	const start = form.querySelector< HTMLInputElement >(
-		'input[name="start_date"]'
-	);
-	const endField = form.querySelector< HTMLElement >(
-		'[data-aggr-end-field]'
-	);
-	const end = form.querySelector< HTMLInputElement >(
-		'input[name="end_date"]'
-	);
-	const through = form.querySelector< HTMLElement >(
-		'[data-aggr-run-through]'
-	);
-
-	if ( 0 === radios.length || null === start ) {
-		return;
-	}
-
-	const sync = (): void => {
-		const chosen = radios.find( ( radio ) => radio.checked );
-		const days = Number( chosen?.dataset.aggrDurationDays ?? '0' );
-		const fixed = undefined !== chosen && days > 0;
-
-		if ( endField && end ) {
-			endField.hidden = fixed;
-			end.disabled = fixed;
-			// Every campaign ends; a custom package has to say when.
-			end.required = ! fixed;
-		}
-
-		if ( through ) {
-			const last = fixed ? runEndDate( start.value, days ) : null;
-
-			through.hidden = null === last;
-			through.textContent =
-				null === last
-					? ''
-					: ( state.i18n.runsThrough ?? '' ).replace(
-							'%s',
-							formatDay( last )
-					  );
-		}
-	};
-
-	radios.forEach( ( radio ) => radio.addEventListener( 'change', sync ) );
-	start.addEventListener( 'input', sync );
-	start.addEventListener( 'change', sync );
 }
 
 function syncRevision( revision: number ): void {
@@ -749,8 +651,6 @@ const { state } = store( 'aggr/autosave', {
 			window.addEventListener( 'pagehide', () => {
 				run.cancel();
 			} );
-
-			followPlan( root );
 
 			/*
 			 * Says the module is attached, for anything that has to wait for

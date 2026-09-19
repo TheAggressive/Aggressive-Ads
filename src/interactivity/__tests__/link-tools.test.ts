@@ -322,6 +322,95 @@ describe( 'the link check', () => {
 	} );
 } );
 
+describe( 'checking a running campaign’s proposed link', () => {
+	function mount(): HTMLFormElement {
+		document.body.innerHTML = `
+			<form method="post" action="https://site.test/wp-admin/admin-post.php"
+				data-aggr-stage="1"
+				data-aggr-link-check="https://site.test/wp-json/aggr/v1/campaigns/7/link-check?proposed=1"
+				data-aggr-nonce="abc123"
+				data-aggr-label-works="Link works"
+				data-aggr-label-failed="Could not check it"
+				data-aggr-label-checking="Checking…">
+				<input type="hidden" name="action" value="aggr_request_campaign_changes">
+				<input type="hidden" name="_wpnonce" value="n0nce">
+				<input name="default_click_url" value="https://example.com/new">
+				<span data-aggr-link-chip>Valid link</span>
+				<p data-aggr-link-status></p>
+				<button type="button" data-aggr-link-check-button disabled>Check link</button>
+			</form>`;
+
+		return document.querySelector( 'form' ) as HTMLFormElement;
+	}
+
+	function replies( ...bodies: unknown[] ): jest.Mock {
+		const queue = [ ...bodies ];
+
+		return jest.fn( async () =>
+			Promise.resolve( {
+				ok: true,
+				status: 200,
+				json: async () => Promise.resolve( queue.shift() ),
+			} as Response )
+		);
+	}
+
+	it( 'stages the link through the form’s own handler, then checks what was staged', async () => {
+		const fetcher = replies(
+			{ ok: true },
+			{ outcome: 'works', status: 200 }
+		);
+
+		await initLinkCheck( mount(), fetcher )?.check();
+
+		expect( fetcher ).toHaveBeenCalledTimes( 2 );
+
+		const [ stageUrl, stage ] = fetcher.mock.calls[ 0 ] as [
+			string,
+			RequestInit,
+		];
+		const body = stage.body as FormData;
+
+		// The attribute, not the property an `<input name="action">` shadows.
+		expect( stageUrl ).toBe( 'https://site.test/wp-admin/admin-post.php' );
+		expect( body.get( 'aggr_async' ) ).toBe( '1' );
+		expect( body.get( '_wpnonce' ) ).toBe( 'n0nce' );
+		expect( body.get( 'default_click_url' ) ).toBe(
+			'https://example.com/new'
+		);
+
+		const [ checkUrl, check ] = fetcher.mock.calls[ 1 ] as [
+			string,
+			RequestInit,
+		];
+
+		expect( checkUrl ).toContain( 'proposed=1' );
+		expect( check.body ).toBeUndefined();
+		expect(
+			document.querySelector( '[data-aggr-link-chip]' )?.textContent
+		).toBe( 'Link works' );
+	} );
+
+	it( 'never checks a link the rules refused, and says why', async () => {
+		const fetcher = replies( { ok: false, notice: 'Enter a valid link.' } );
+
+		await initLinkCheck( mount(), fetcher )?.check();
+
+		expect( fetcher ).toHaveBeenCalledTimes( 1 );
+		expect(
+			document.querySelector( '[data-aggr-link-chip]' )?.textContent
+		).toBe( 'Could not check it' );
+		expect(
+			document.querySelector( '[data-aggr-link-status]' )?.textContent
+		).toBe( 'Enter a valid link.' );
+		expect(
+			document.querySelector< HTMLButtonElement >(
+				'[data-aggr-link-check-button]'
+			)?.disabled
+		).toBe( false );
+	} );
+} );
+
 describe( 'checking without being asked', () => {
 	jest.useFakeTimers();
 
