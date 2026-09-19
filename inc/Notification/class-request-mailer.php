@@ -18,7 +18,7 @@ use Aggressive\Ads\Repository\Campaign_Request_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\User_Repository;
 use Aggressive\Ads\Security\Capabilities;
-use Aggressive\Ads\Workflow\Campaign_Change_Manager;
+use Aggressive\Ads\Workflow\Campaign_Action_Requests;
 use RuntimeException;
 
 /**
@@ -339,7 +339,7 @@ final class Request_Mailer implements Service {
 			$body[] = sprintf(
 				/* translators: %s: the requested action, already translated. */
 				__( 'Requested: %s', 'aggressive-ads' ),
-				sanitize_text_field( Campaign_Change_Manager::request_label( $kind ) )
+				sanitize_text_field( Campaign_Action_Requests::request_label( $kind ) )
 			);
 
 			$reason = array() === $request ? '' : trim( $request['reason'] );

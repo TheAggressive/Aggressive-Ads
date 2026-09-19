@@ -13,6 +13,7 @@
  * @var array<string, mixed> $aggr_slot     Placement and the creatives on it.
  * @var array<string, mixed> $aggr_campaign The campaign being edited.
  * @var string               $aggr_creative_error_for Which field owns the current error.
+ * @var bool                 $aggr_upload_from_edit   Drawn in a running campaign's edit flow.
  *
  * @package Aggressive\Ads
  */
@@ -26,6 +27,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 use Aggressive\Ads\Assets\Assets;
 use Aggressive\Ads\Domain\Size_Template;
 use Aggressive\Ads\Portal\Creative_Actions;
+use Aggressive\Ads\Portal\Creative_Feedback;
 
 $aggr_slot_key          = (string) $aggr_slot['id'];
 $aggr_default_click_url = (string) ( $aggr_campaign['default_click_url'] ?? '' );
@@ -53,6 +55,10 @@ $aggr_template = Size_Template::svg( (string) $aggr_slot['size'] );
 	<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) $aggr_campaign['id'] ); ?>">
 	<input type="hidden" name="placement_id" value="<?php echo esc_attr( (string) $aggr_slot['id'] ); ?>">
 	<?php wp_nonce_field( Creative_Actions::upload_nonce_action( (int) $aggr_campaign['id'], (int) $aggr_slot['id'] ) ); ?>
+	<?php if ( true === ( $aggr_upload_from_edit ?? false ) ) : ?>
+		<?php // Back to the edit flow's Ads step afterwards, not to the wizard a running campaign cannot open. ?>
+		<input type="hidden" name="<?php echo esc_attr( Creative_Feedback::RETURN_FIELD ); ?>" value="<?php echo esc_attr( Creative_Feedback::RETURN_EDIT ); ?>">
+	<?php endif; ?>
 
 	<?php
 	/*
@@ -153,7 +159,7 @@ $aggr_template = Size_Template::svg( (string) $aggr_slot['size'] );
 	<?php if ( '' !== $aggr_default_click_url ) : ?>
 		<details class="aggr-upload-destination" <?php echo $aggr_click_error ? 'open' : ''; ?>>
 			<summary>
-				<span class="aggr-uploaded__destination-label"><?php esc_html_e( 'Goes to', 'aggressive-ads' ); ?></span>
+				<span class="aggr-uploaded__destination-label"><?php esc_html_e( 'Destination', 'aggressive-ads' ); ?></span>
 				<span class="aggr-uploaded__destination-value"><?php echo esc_html( $aggr_default_click_url ); ?></span>
 				<span class="aggr-upload-destination__change"><?php esc_html_e( 'Use a different link', 'aggressive-ads' ); ?></span>
 			</summary>

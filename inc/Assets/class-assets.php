@@ -411,8 +411,6 @@ final class Assets implements Service {
 					'saved'       => __( 'Draft saved.', 'aggressive-ads' ),
 					'error'       => __( 'Could not save the draft. Your last change may not be stored.', 'aggressive-ads' ),
 					'conflict'    => __( 'This campaign was saved elsewhere. Refresh to continue from the latest draft.', 'aggressive-ads' ),
-					/* translators: %s: the campaign's last day, e.g. October 30, 2026. */
-					'runsThrough' => __( 'Runs through %s.', 'aggressive-ads' ),
 					'rename'      => __( 'Rename campaign', 'aggressive-ads' ),
 					'nameLabel'   => __( 'Campaign name', 'aggressive-ads' ),
 					'nameSaved'   => __( 'Campaign renamed.', 'aggressive-ads' ),
@@ -454,9 +452,29 @@ final class Assets implements Service {
 			)
 		);
 
+		$this->hydrate_uploads( $campaign['slots'] );
+	}
+
+	/**
+	 * Hydrates the upload store for the upload forms on the page.
+	 *
+	 * Its own method because the wizard is not the only place an ad is
+	 * uploaded: a running campaign's size with no ad takes one from the edit
+	 * flow and the campaign page. Those forms rendered and the store knew
+	 * nothing about them — no size, no limit, no messages — so choosing a file
+	 * did nothing at all. The browser test caught it; the markup test could not.
+	 *
+	 * @param array<int, array{id: int, size: string, max_bytes: int, max_size: string}> $slots Placements that take an upload.
+	 * @return void
+	 */
+	public function hydrate_uploads( array $slots ): void {
+		if ( null === $this->router->request() || ! function_exists( 'wp_interactivity_state' ) ) {
+			return;
+		}
+
 		$uploads = array();
 
-		foreach ( $campaign['slots'] as $slot ) {
+		foreach ( $slots as $slot ) {
 			$uploads[ (string) $slot['id'] ] = array(
 				'expectedSize' => $slot['size'],
 				'maxBytes'     => $slot['max_bytes'],

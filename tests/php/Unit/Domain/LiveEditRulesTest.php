@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Tests\Unit\Domain;
 
+use Aggressive\Ads\Domain\Campaign_Rules;
 use Aggressive\Ads\Domain\Live_Edit_Rules;
 use Aggressive\Ads\Domain\Settings_Schema;
 use PHPUnit\Framework\TestCase;
@@ -371,5 +372,108 @@ final class LiveEditRulesTest extends TestCase {
 		$empty = array( 'placement_choices' => array() ) + $this->current();
 
 		$this->assertTrue( Live_Edit_Rules::validate( array( 'placement_ids' => array( 42 ) ), $empty, self::NOW )->is_valid() );
+	}
+
+	/**
+	 * A different package, but only one on sale.
+	 *
+	 * @return void
+	 */
+	public function test_a_package_change_must_be_to_a_package_on_sale(): void {
+		$current = array(
+			'package_id'      => 5,
+			'package_choices' => array( 5, 6 ),
+		) + $this->current();
+
+		$this->assertTrue( Live_Edit_Rules::validate( array( 'package_id' => 6 ), $current, self::NOW )->is_valid(), 'An upgrade to a package on sale was refused.' );
+
+		foreach ( array( 99, 0, -3 ) as $refused ) {
+			$result = Live_Edit_Rules::validate( array( 'package_id' => $refused ), $current, self::NOW );
+
+			$this->assertTrue( $result->has( Live_Edit_Rules::ERROR_PACKAGE_NOT_OFFERED ), (string) $refused );
+		}
+
+		// No catalogue passed means nothing is on sale, not everything.
+		$this->assertFalse( Live_Edit_Rules::validate( array( 'package_id' => 6 ), $this->current(), self::NOW )->is_valid() );
+	}
+
+	/**
+	 * The package switch is its own settings key, and structural.
+	 *
+	 * @return void
+	 */
+	public function test_the_package_is_governed_by_its_own_switch(): void {
+		$this->assertSame( array( 'package_id' ), Live_Edit_Rules::allowed_fields( array( Settings_Schema::EDIT_PACKAGE ) ) );
+		$this->assertContains( Settings_Schema::EDIT_PACKAGE, Settings_Schema::structural_edit_keys() );
+
+		$diff = Live_Edit_Rules::diff( array( Settings_Schema::EDIT_PACKAGE ), array( 'package_id' => 5 ), array( 'package_id' => '6' ) );
+
+		$this->assertSame( array( 'package_id' => 6 ), $diff );
+		$this->assertSame( array(), Live_Edit_Rules::diff( array( Settings_Schema::EDIT_PACKAGE ), array( 'package_id' => 5 ), array( 'package_id' => '5' ) ) );
+	}
+
+	/**
+	 * The link every ad starts from travels with the destination switch, and
+	 * is held to the same rule as each ad's own link.
+	 *
+	 * @return void
+	 */
+	public function test_the_shared_link_is_a_destination_change(): void {
+		$current = $this->current() + array( 'default_click_url' => 'https://example.com/a' );
+
+		$this->assertSame(
+			array( 'default_click_url' => 'https://example.com/new' ),
+			Live_Edit_Rules::diff( array( Settings_Schema::EDIT_DESTINATION ), $current, array( 'default_click_url' => ' https://example.com/new ' ) )
+		);
+		$this->assertSame( array(), Live_Edit_Rules::diff( array( Settings_Schema::EDIT_TITLE ), $current, array( 'default_click_url' => 'https://example.com/new' ) ), 'The shared link escaped its switch.' );
+		$this->assertSame( array(), Live_Edit_Rules::diff( array( Settings_Schema::EDIT_DESTINATION ), $current, array( 'default_click_url' => 'https://example.com/a ' ) ), 'Whitespace counted as a change.' );
+
+		foreach ( array( '', 'javascript:alert(1)', "https://exa\nmple.com/" ) as $bad ) {
+			$this->assertTrue(
+				Live_Edit_Rules::validate( array( 'default_click_url' => $bad ), $current, self::NOW )->has( Live_Edit_Rules::ERROR_URL_INVALID ),
+				'Accepted as a shared link: ' . addcslashes( $bad, "\0..\37" )
+			);
+		}
+
+		$this->assertTrue( Live_Edit_Rules::validate( array( 'default_click_url' => 'https://example.com/b?utm_content={creative_id}' ), $current, self::NOW )->is_valid() );
+	}
+
+	/**
+	 * A fixed package's end follows its start; any other end is refused. A
+	 * custom package, or none, keeps the rule it had.
+	 *
+	 * @return void
+	 */
+	public function test_a_fixed_package_sets_the_end(): void {
+		$current = array(
+			'start_ts'   => self::NOW + 86400,
+			'end_ts'     => 0,
+			'fixed_days' => 14,
+			'timezone'   => 'America/Los_Angeles',
+		);
+		$derived = Campaign_Rules::fixed_end_ts( self::NOW + 86400, 14, 'America/Los_Angeles' );
+
+		$this->assertFalse( Live_Edit_Rules::validate( array( 'end_ts' => $derived ), $current, self::NOW )->has( Live_Edit_Rules::ERROR_END_SET_BY_PACKAGE ) );
+		$this->assertTrue( Live_Edit_Rules::validate( array( 'end_ts' => $derived + 7 * 86400 ), $current, self::NOW )->has( Live_Edit_Rules::ERROR_END_SET_BY_PACKAGE ), 'A week nobody paid for was accepted.' );
+
+		// Judged from the start being proposed, not the stored one.
+		$later = self::NOW + 3 * 86400;
+
+		$this->assertTrue(
+			Live_Edit_Rules::validate(
+				array(
+					'start_ts' => $later,
+					'end_ts'   => Campaign_Rules::fixed_end_ts( $later, 14, 'America/Los_Angeles' ),
+				),
+				$current,
+				self::NOW
+			)->is_valid()
+		);
+
+		foreach ( array( 0, null ) as $days ) {
+			$custom = array( 'fixed_days' => $days ) + $current;
+
+			$this->assertFalse( Live_Edit_Rules::validate( array( 'end_ts' => $derived + 7 * 86400 ), $custom, self::NOW )->has( Live_Edit_Rules::ERROR_END_SET_BY_PACKAGE ) );
+		}
 	}
 }

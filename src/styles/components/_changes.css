@@ -10,9 +10,13 @@
 	min-height: 3rem;
 }
 
-/* The summary card stays the height of its content beside a long step. */
-.aggr-changes {
-	align-items: start;
+/*
+ * The step starts level with the summary beside it, as creation's does. The
+ * forms inside bring the vertical padding every portal form has, which put the
+ * first card a padding's height below the summary's top edge.
+ */
+.aggr-changes__steps > .aggr-form {
+	padding-top: 0;
 }
 
 /* The first step is two cards in one form, as creation's first step is. */
@@ -23,9 +27,14 @@
 	padding-top: 0;
 }
 
-/* The cards set the rhythm; their own outer margins would double it. */
+/*
+ * The cards set the rhythm; their own outer margins would double it. And no
+ * wider than the column: a grid item is otherwise as wide as its content, and
+ * a long link in the Destination card pushed the Ads step off a phone screen.
+ */
 .aggr-changes__steps > *,
 .aggr-changes__form > .aggr-step-card {
+	min-width: 0;
 	margin: 0;
 }
 
@@ -43,10 +52,6 @@
 
 .aggr-changes__placements {
 	margin-top: var(--aggr-space-sm);
-}
-
-.aggr-changes__link input {
-	max-width: var(--aggr-field-measure);
 }
 
 /* What is changing, one row per field: the old value struck, then the new. */

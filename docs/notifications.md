@@ -81,8 +81,8 @@ failure-without-rollback.
 ## Advertiser requests
 
 An advertiser with a *running* campaign cannot edit it or stop it themselves.
-They ask, through `Workflow\Campaign_Change_Manager`: `submit()` sends staged
-field changes, `request_action()` asks staff to perform a transition the
+They ask, through `Workflow\Campaign_Change_Manager::submit()`, which sends staged
+field changes, or `Workflow\Campaign_Action_Requests::request_action()`, which asks staff to perform a transition the
 advertiser has no edge for. Both are meta writes against a campaign whose status
 does not move, so neither reaches `aggr_notify_campaign_transitioned`. They fire
 `aggr_notify_advertiser_request` instead, with `$campaign_id` and a `$kind` of
@@ -109,7 +109,7 @@ still outstanding — still-submitted edits, or an action request still naming t
 same status. A withdrawn or already-decided request cancels its own retry.
 
 A delivery failure never becomes the advertiser's error. Their request is
-already stored when mail is attempted, so `Campaign_Change_Manager` audits
+already stored when mail is attempted, so `Workflow\Request_Notifier` audits
 `campaign.notification_failed` and still returns success — the same reason
 `Campaign_State_Machine::notify()` swallows what its notifications throw.
 

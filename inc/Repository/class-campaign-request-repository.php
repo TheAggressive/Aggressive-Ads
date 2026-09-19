@@ -26,6 +26,16 @@ namespace Aggressive\Ads\Repository;
 final class Campaign_Request_Repository {
 
 	/**
+	 * The last check of the link staged in a proposal.
+	 *
+	 * Kept apart from the campaign's own result. They shared one slot, so
+	 * checking a proposed link erased the "Link works" the campaign page showed
+	 * for the link actually serving. Kept here, beside the proposal, because
+	 * it describes the proposal and goes when it does.
+	 */
+	public const META_PROPOSED_LINK_CHECK = '_aggr_proposed_link_check';
+
+	/**
 	 * The change set an advertiser has proposed for a running campaign.
 	 *
 	 * Stored as meta on the campaign rather than as a shadow post, unlike a
@@ -97,8 +107,43 @@ final class Campaign_Request_Repository {
 	public function clear_pending_edits( int $campaign_id ): bool {
 		delete_post_meta( $campaign_id, Campaign_Repository::META_PENDING_EDITS );
 		delete_post_meta( $campaign_id, Campaign_Repository::META_PENDING_EDITS_SENT );
+		delete_post_meta( $campaign_id, self::META_PROPOSED_LINK_CHECK );
 
 		return array() === $this->pending_edits( $campaign_id );
+	}
+
+	/**
+	 * The last check of the proposal's link, or null.
+	 *
+	 * Shaped on the way out rather than trusted, as the campaign's own is.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return array{url: string, status: int, outcome: string, checked_at: int}|null
+	 */
+	public function proposed_link_check( int $campaign_id ): ?array {
+		$stored = get_post_meta( $campaign_id, self::META_PROPOSED_LINK_CHECK, true );
+
+		if ( ! is_array( $stored ) || ! isset( $stored['url'], $stored['outcome'] ) ) {
+			return null;
+		}
+
+		return array(
+			'url'        => (string) $stored['url'],
+			'status'     => (int) ( $stored['status'] ?? 0 ),
+			'outcome'    => (string) $stored['outcome'],
+			'checked_at' => (int) ( $stored['checked_at'] ?? 0 ),
+		);
+	}
+
+	/**
+	 * Stores a check of the proposal's link.
+	 *
+	 * @param int                                                               $campaign_id Campaign post id.
+	 * @param array{url: string, status: int, outcome: string, checked_at: int} $result      What the check found.
+	 * @return void
+	 */
+	public function set_proposed_link_check( int $campaign_id, array $result ): void {
+		update_post_meta( $campaign_id, self::META_PROPOSED_LINK_CHECK, $result );
 	}
 
 	/**

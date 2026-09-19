@@ -244,7 +244,9 @@ test( 'the first link given is the link every other size starts from', async ( {
 	const sidebar = page.getByRole( 'region', { name: 'Article sidebar' } );
 
 	// Nothing to start from yet: the first card asks for the address.
-	await expect( leaderboard.getByText( 'Goes to' ) ).toHaveCount( 0 );
+	await expect(
+		leaderboard.getByText( 'Destination', { exact: true } )
+	).toHaveCount( 0 );
 	await expect(
 		leaderboard.getByRole( 'button', { name: 'Upload creative' } )
 	).toBeHidden();
@@ -887,8 +889,9 @@ test( 'advertiser completes and submits the accessible three-step wizard', async
 		page.getByRole( 'heading', { level: 2, name: 'Your ads' } )
 	).toBeVisible();
 
+	// The shared ad card names each action for its ad.
 	const livePreview = page.getByRole( 'link', {
-		name: 'View larger preview of Article sidebar',
+		name: 'Preview (Article sidebar)',
 	} );
 	await expectDialogKeyboard( page, livePreview, 'Preview Article sidebar' );
 

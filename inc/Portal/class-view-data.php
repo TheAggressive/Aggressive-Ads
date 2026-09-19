@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Portal;
 
+use Aggressive\Ads\Core\Money;
 use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Domain\Campaign_Filter;
 use Aggressive\Ads\Core\Settings;
@@ -28,6 +29,7 @@ use Aggressive\Ads\Repository\Line_Item_Repository;
 use Aggressive\Ads\REST\Creative_File_Controller;
 use Aggressive\Ads\Workflow\Edit_Window;
 use Aggressive\Ads\Workflow\Link_Checker;
+use Aggressive\Ads\Workflow\Campaign_Action_Requests;
 use Aggressive\Ads\Workflow\Campaign_Change_Manager;
 use Aggressive\Ads\Workflow\Campaign_Editor;
 use Aggressive\Ads\Workflow\Creative_Approval;
@@ -83,6 +85,8 @@ final class View_Data {
 	 * @param Campaign_List_View_Data     $campaign_list The campaigns list and its counts.
 	 * @param Link_Checker                $links         The campaign link check.
 	 * @param Campaign_History_View_Data  $history       The campaign's own audit trail.
+	 * @param Campaign_Edit_View_Data     $edit_view     What the running-campaign edit flow renders.
+	 * @param Campaign_Action_Requests    $action_requests Pause, restart and cancel requests.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -104,7 +108,9 @@ final class View_Data {
 		private readonly Campaign_Request_Repository $requests,
 		private readonly Campaign_List_View_Data $campaign_list,
 		private readonly Link_Checker $links,
-		private readonly Campaign_History_View_Data $history
+		private readonly Campaign_History_View_Data $history,
+		private readonly Campaign_Edit_View_Data $edit_view,
+		private readonly Campaign_Action_Requests $action_requests
 	) {
 	}
 
@@ -295,35 +301,21 @@ final class View_Data {
 		$row['title_is_placeholder'] = $this->campaigns->title_is_placeholder( $campaign_id );
 		$row['placement_options']    = $this->placement_options();
 
-		/*
-		 * What editing a running campaign may choose from: its package's
-		 * placements and its own, the same list Live_Edit_Rules holds a
-		 * change to. No package means the whole catalogue, as before.
-		 */
-		$choices                       = $this->changes->placement_choices( $campaign_id );
-		$row['edit_placement_options'] = array() === $choices
-			? $row['placement_options']
-			: array_values(
-				array_filter(
-					$row['placement_options'],
-					static fn ( array $option ): bool => in_array( (int) $option['id'], $choices, true )
-				)
-			);
-		$row['package_id']             = $this->campaigns->package_id( $campaign_id );
-		$row['package_name']           = $row['package_id'] > 0 ? $this->packages->name( $row['package_id'] ) : '';
-		$row['package_options']        = $this->package_options();
-		$row['budget_cents']           = $this->campaigns->budget_cents( $campaign_id );
-		$row['currency']               = $this->campaigns->currency( $campaign_id );
-		$row['package_price']          = '' === $row['currency'] ? '' : $this->format_money( $row['budget_cents'], $row['currency'] );
-		$row['wizard_step']            = $this->campaigns->wizard_step( $campaign_id );
-		$row['start_date']             = $this->date_input_value( $this->campaigns->start_ts( $campaign_id ) );
-		$row['end_date']               = $this->date_input_value( $this->campaigns->end_ts( $campaign_id ) );
-		$row['min_start_date']         = $this->min_start_date( $row['start_date'] );
-		$row['advertiser_notes']       = $this->campaigns->advertiser_notes( $campaign_id );
-		$row['autosave_rev']           = $this->campaigns->autosave_revision( $campaign_id );
-		$row['readiness']              = $this->readiness->for_campaign( $campaign_id );
-		$row['editable']               = $this->window->allows( $campaign_id );
-		$row['on_behalf']              = $this->window->is_on_behalf( $campaign_id );
+		$row['package_id']       = $this->campaigns->package_id( $campaign_id );
+		$row['package_name']     = $row['package_id'] > 0 ? $this->packages->name( $row['package_id'] ) : '';
+		$row['package_options']  = $this->package_options();
+		$row['budget_cents']     = $this->campaigns->budget_cents( $campaign_id );
+		$row['currency']         = $this->campaigns->currency( $campaign_id );
+		$row['package_price']    = '' === $row['currency'] ? '' : $this->format_money( $row['budget_cents'], $row['currency'] );
+		$row['wizard_step']      = $this->campaigns->wizard_step( $campaign_id );
+		$row['start_date']       = $this->date_input_value( $this->campaigns->start_ts( $campaign_id ) );
+		$row['end_date']         = $this->date_input_value( $this->campaigns->end_ts( $campaign_id ) );
+		$row['min_start_date']   = $this->min_start_date( $row['start_date'] );
+		$row['advertiser_notes'] = $this->campaigns->advertiser_notes( $campaign_id );
+		$row['autosave_rev']     = $this->campaigns->autosave_revision( $campaign_id );
+		$row['readiness']        = $this->readiness->for_campaign( $campaign_id );
+		$row['editable']         = $this->window->allows( $campaign_id );
+		$row['on_behalf']        = $this->window->is_on_behalf( $campaign_id );
 		$this->line_items->ensure_default( $campaign_id );
 		$row['line_items'] = $this->line_items->for_campaign( $campaign_id );
 
@@ -367,21 +359,15 @@ final class View_Data {
 			? $this->changes->allowed_fields()
 			: array();
 
-		/*
-		 * Values the edit screen shows: the campaign, overlaid with whatever
-		 * the advertiser has staged so far. Rendering the stored campaign
-		 * instead would silently discard a half-finished proposal every time
-		 * they moved between steps.
-		 */
-		$row['edit_values'] = array_merge( $this->changes->current( $campaign_id ), $this->requests->pending_edits( $campaign_id ) );
+		$row = $this->edit_view->add( $campaign_id, $row );
 
 		$row['action_request']       = $this->requests->action_request( $campaign_id );
 		$row['requestable_actions']  = array() === $row['action_request']
-			? $this->changes->requestable_actions( $campaign_id )
+			? $this->action_requests->requestable_actions( $campaign_id )
 			: array();
 		$row['action_request_label'] = array() === $row['action_request']
 			? ''
-			: Campaign_Change_Manager::request_label( (string) $row['action_request']['action'] );
+			: Campaign_Action_Requests::request_label( (string) $row['action_request']['action'] );
 
 		$row['can_cancel']   = $this->advertiser_may_cancel( $campaign_id, $this->campaigns->status( $campaign_id ) );
 		$row['cancel_label'] = Post_Statuses::DRAFT === $this->campaigns->status( $campaign_id )
@@ -574,7 +560,7 @@ final class View_Data {
 	 * @return string
 	 */
 	private function format_money( int $cents, string $currency ): string {
-		return sprintf( '%1$s %2$s', $currency, number_format_i18n( $cents / 100, 2 ) );
+		return Money::format( $cents, $currency );
 	}
 
 	/**

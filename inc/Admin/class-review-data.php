@@ -25,6 +25,7 @@ use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Repository\Line_Item_Repository;
 use Aggressive\Ads\REST\Api;
 use Aggressive\Ads\Security\Capabilities;
+use Aggressive\Ads\Workflow\Campaign_Action_Requests;
 use Aggressive\Ads\Workflow\Campaign_Change_Manager;
 
 /**
@@ -284,6 +285,9 @@ final class Review_Data {
 		$row['creatives']        = $this->creative_rows( $campaign_id );
 		$row['creative_updates'] = $this->replacement_rows( $campaign_id );
 		$row['pending_edits']    = $this->changes->pending_summary( $campaign_id );
+		$facts                   = $this->changes->pending_review_facts( $campaign_id );
+		$row['pending_sizes']    = $facts['structural'];
+		$row['pending_price']    = $facts['price'];
 		$row['action_request']   = self::labelled_request( $this->requests->action_request( $campaign_id ) );
 		$row['actions']          = $this->actions_for( $campaign_id, $row['status'] );
 		$row['internal_notes']   = $this->campaigns->internal_notes( $campaign_id );
@@ -360,7 +364,7 @@ final class Review_Data {
 	/**
 	 * The advertiser's request, carrying the label staff will read.
 	 *
-	 * The label is resolved here because `Campaign_Change_Manager` owns the
+	 * The label is resolved here because `Campaign_Action_Requests` owns the
 	 * wording and it is translated; a client that mapped the status slug to a
 	 * word itself would be a second vocabulary to keep in step.
 	 *
@@ -372,7 +376,7 @@ final class Review_Data {
 			return array();
 		}
 
-		$request['action_label'] = Campaign_Change_Manager::request_label( $request['action'] );
+		$request['action_label'] = Campaign_Action_Requests::request_label( $request['action'] );
 
 		return $request;
 	}

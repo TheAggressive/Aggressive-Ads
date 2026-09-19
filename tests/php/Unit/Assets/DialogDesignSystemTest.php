@@ -23,7 +23,14 @@ final class DialogDesignSystemTest extends TestCase {
 	 * @return void
 	 */
 	public function test_campaign_dialogs_use_the_shared_overlay(): void {
-		$cards    = file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-ad-updates.php' );
+		// The panel, the cards it draws and the card they share, read together.
+		$cards    = implode(
+			"\n",
+			array_map(
+				static fn ( string $file ): string => (string) file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/partials/' . $file ),
+				array( 'campaign-ad-updates.php', 'campaign-edit-ads.php', 'campaign-ad-card.php' )
+			)
+		);
 		$overlays = file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-overlays.php' );
 
 		/*
@@ -35,7 +42,7 @@ final class DialogDesignSystemTest extends TestCase {
 		 * unchanged and the guard had simply stopped looking at it.
 		 */
 		$screen = file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/screens/campaign.php' );
-		$step   = file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-creative-step.php' );
+		$step   = file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-creative-step.php' ) . file_get_contents( AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-ad-card.php' );
 
 		$this->assertIsString( $cards );
 		$this->assertIsString( $overlays );
@@ -50,9 +57,11 @@ final class DialogDesignSystemTest extends TestCase {
 		$this->assertStringNotContainsString( '<details', $cards );
 		$this->assertStringContainsString( 'aria-haspopup="dialog"', $cards );
 		$this->assertStringContainsString( 'aria-haspopup="dialog"', $campaign );
-		$this->assertStringContainsString( 'href="#<?php echo esc_attr( $aggr_dialog_id ); ?>"', $cards );
-		$this->assertStringContainsString( 'href="#<?php echo esc_attr( $aggr_preview_id ); ?>"', $campaign );
-		$this->assertStringContainsString( 'href="#<?php echo esc_attr( $aggr_remove_id ); ?>"', $campaign );
+		// Every card action is a link to its dialog, drawn by the shared card from the actions each caller passes.
+		$this->assertStringContainsString( 'href="#<?php echo esc_attr( $aggr_card_action[1] ); ?>"', $cards );
+		$this->assertStringContainsString( "array( __( 'Update', 'aggressive-ads' ), \$aggr_replace_id, false )", $cards );
+		$this->assertStringContainsString( "array( __( 'Preview', 'aggressive-ads' ), \$aggr_preview_id, false )", $campaign );
+		$this->assertStringContainsString( "array( __( 'Remove', 'aggressive-ads' ), \$aggr_remove_id, true )", $campaign );
 		$this->assertStringNotContainsString( 'Creative_Actions::REMOVE_ACTION', $campaign );
 
 		$this->assertStringContainsString( 'enqueue_dialog', $overlays );
@@ -66,7 +75,8 @@ final class DialogDesignSystemTest extends TestCase {
 		$this->assertStringContainsString( 'Assets::DIALOG_STORE', $overlays );
 		$this->assertStringContainsString( 'aggr-overlay--preview', $overlays );
 		$this->assertStringContainsString( 'Remove this creative?', $overlays );
-		$this->assertStringContainsString( 'View larger preview of', $cards );
+		// Each action says which ad it acts on, not only what it does.
+		$this->assertStringContainsString( '$aggr_card_place', $cards );
 	}
 
 	/**

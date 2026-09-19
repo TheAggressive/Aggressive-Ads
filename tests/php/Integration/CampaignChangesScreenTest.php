@@ -42,43 +42,18 @@ final class CampaignChangesScreenTest extends WP_UnitTestCase {
 	private function campaign( array $overrides = array() ): array {
 		return array_merge(
 			array(
-				'id'                     => 4242,
-				'title'                  => 'Spring season launch',
-				'start_date'             => '2030-06-01',
-				'end_date'               => '2030-06-30',
-				'live_edit_fields'       => array( 'title', 'placement_ids', 'start_ts', 'end_ts', 'click_urls' ),
-				'draft_edits'            => array(),
-				'edit_values'            => array(
+				'id'               => 4242,
+				'title'            => 'Spring season launch',
+				'start_date'       => '2030-06-01',
+				'end_date'         => '2030-06-30',
+				'live_edit_fields' => array( 'title', 'placement_ids', 'start_ts', 'end_ts', 'click_urls' ),
+				'draft_edits'      => array(),
+				'edit_values'      => array(
 					'title'         => 'Spring season launch',
 					'placement_ids' => array( 7 ),
 					'click_urls'    => array( 11 => 'https://example.com/a' ),
 				),
-				// What View_Data offers an edit: the package's placements, with their shapes.
-				'edit_placement_options' => array(
-					array(
-						'id'       => 7,
-						'name'     => 'Homepage leaderboard',
-						'size'     => '728x90',
-						'max_size' => '150 KB',
-						'shape'    => array(
-							'label'  => '728×90',
-							'width'  => 66,
-							'height' => 8,
-						),
-					),
-					array(
-						'id'       => 8,
-						'name'     => 'Article sidebar',
-						'size'     => '300x250',
-						'max_size' => '150 KB',
-						'shape'    => array(
-							'label'  => '300×250',
-							'width'  => 27,
-							'height' => 23,
-						),
-					),
-				),
-				'creatives'              => array(
+				'creatives'        => array(
 					array(
 						'id'        => 11,
 						'placement' => 'Homepage leaderboard',
@@ -171,11 +146,8 @@ final class CampaignChangesScreenTest extends WP_UnitTestCase {
 		$this->assertTrue( wp_verify_nonce( $fields['_wpnonce'], Campaign_Nonces::changes_nonce_action( 4242 ) ) > 0, 'The form lost its nonce.' );
 		$this->assertSame( 'Spring season launch', $fields['title'] );
 
-		// Both package placements offered as package cards, and only the campaign's own one ticked.
-		$this->assertSame( 2, $xpath->query( '//label[contains(@class,"aggr-choice--package")]//span[@class="aggr-package__shape"]' )->length, 'A placement card lost its silhouette.' );
-		$this->assertSame( 2, $xpath->query( '//input[@name="placement_ids[]"]' )->length );
-		$this->assertSame( 1, $xpath->query( '//input[@name="placement_ids[]"][@checked]' )->length );
-		$this->assertSame( '7', $xpath->query( '//input[@name="placement_ids[]"][@checked]' )->item( 0 )?->getAttribute( 'value' ) );
+		// Placements are the package's, as at creation: nothing to tick.
+		$this->assertSame( 0, $xpath->query( '//input[@name="placement_ids[]"]' )->length, 'Placements were offered on their own.' );
 	}
 
 	public function test_the_last_step_before_review_moves_to_review(): void {
@@ -183,7 +155,158 @@ final class CampaignChangesScreenTest extends WP_UnitTestCase {
 		$fields = $this->fields( $xpath, '//form[@id="aggr-changes-form"]' );
 
 		$this->assertSame( 'review', $fields['next_step'] );
-		$this->assertSame( 'https://example.com/a', $fields['click_urls[11]'] );
+		$this->assertSame( Campaign_Actions::CHANGES_ACTION, $fields['action'] );
+		$this->assertTrue( wp_verify_nonce( $fields['_wpnonce'], Campaign_Nonces::changes_nonce_action( 4242 ) ) > 0, 'The Destination card lost its nonce.' );
+	}
+
+	/**
+	 * Creation's Destination card, posting a proposal: the same field, check
+	 * and tags, but staged rather than autosaved, and checked as staged.
+	 *
+	 * @return void
+	 */
+	public function test_the_destination_is_creations_card_staging_a_proposal(): void {
+		$xpath = $this->render(
+			'campaign-changes.php',
+			'destination',
+			$this->campaign(
+				array(
+					'edit_link'       => 'https://example.com/a',
+					'edit_link_used'  => 1,
+					'edit_link_total' => 2,
+				)
+			)
+		);
+		$form  = '//form[@id="aggr-changes-form"]';
+
+		$this->assertSame( 1, $xpath->query( $form )->length );
+		$this->assertSame( 'https://example.com/a', $this->fields( $xpath, $form )['default_click_url'] ?? null );
+		$this->assertSame( '1', (string) $xpath->evaluate( 'string(' . $form . '/@data-aggr-stage)' ), 'The check would read a link nobody staged.' );
+		$this->assertStringContainsString( 'proposed=1', (string) $xpath->evaluate( 'string(' . $form . '/@data-aggr-link-check)' ) );
+
+		// Autosave writes drafts; a running campaign's link is a proposal.
+		$this->assertSame( 0, $xpath->query( $form . '[@data-aggr-autosave]' )->length );
+		$this->assertSame( 0, $xpath->query( $form . '//input[@name="autosave_rev"]' )->length );
+
+		$this->assertSame( 1, $xpath->query( $form . '//button[@data-aggr-link-check-button]' )->length, 'The check is missing.' );
+		$this->assertSame( 1, $xpath->query( $form . '//*[@data-aggr-tags]' )->length, 'The tracking tags are missing.' );
+		$this->assertStringContainsString( 'Used by 1 of 2 ads', (string) $xpath->evaluate( 'string(' . $form . ')' ) );
+	}
+
+	/**
+	 * Creation's size cards: an ad has Update rather than Replace and Remove;
+	 * an empty size takes an upload that comes back here; a size the proposal
+	 * adds is described and not offered an upload the server would refuse.
+	 *
+	 * @return void
+	 */
+	public function test_the_ads_are_creations_size_cards_with_an_update(): void {
+		$creative = array(
+			'id'         => 11,
+			'placement'  => 'Homepage leaderboard',
+			'click_url'  => 'https://example.com/a',
+			'preview'    => 'https://example.com/a.png',
+			'alt_text'   => '',
+			'name'       => 'leaderboard.png',
+			'bytes'      => 2048,
+			'approved'   => true,
+			'rejected'   => false,
+			'state_text' => 'Approved',
+			'notes'      => '',
+		);
+		$slot     = static fn ( int $id, string $name, string $size, array $creatives, bool $proposed ): array => array(
+			'id'        => $id,
+			'name'      => $name,
+			'size'      => $size,
+			'max_bytes' => 153600,
+			'max_size'  => '150 KB',
+			'active'    => true,
+			'creatives' => $creatives,
+			'proposed'  => $proposed,
+			'leaving'   => false,
+		);
+
+		$xpath = $this->render(
+			'campaign-changes.php',
+			'destination',
+			$this->campaign(
+				array(
+					'can_request_updates' => true,
+					'edit_slots'          => array(
+						$slot( 7, 'Homepage leaderboard', '728x90', array( $creative ), false ),
+						$slot( 8, 'Article sidebar', '300x250', array(), false ),
+						$slot( 9, 'Footer banner', '468x60', array(), true ),
+					),
+				)
+			)
+		);
+
+		$this->assertSame( 3, $xpath->query( '//section[contains(@class,"aggr-upload-card")]' )->length );
+		// Named for its ad, so several Update links can be told apart.
+		$this->assertSame( 'Update (Homepage leaderboard)', trim( (string) preg_replace( '/\s+/', ' ', (string) $xpath->evaluate( 'string(//section[@aria-labelledby="aggr-slot-7"]//a[@aria-controls="aggr-replace-11"])' ) ) ) );
+		$this->assertSame( 0, $xpath->query( '//section[@aria-labelledby="aggr-slot-7"]//form[contains(@class,"aggr-upload-form")]' )->length, 'A serving ad was offered a second upload.' );
+
+		$upload = $this->fields( $xpath, '//section[@aria-labelledby="aggr-slot-8"]//form[contains(@class,"aggr-upload-form")]' );
+
+		$this->assertSame( '8', $upload['placement_id'] ?? null );
+		$this->assertSame( 'edit', $upload['aggr_return'] ?? null, 'An upload from the edit flow would land in the wizard.' );
+
+		$this->assertSame( 0, $xpath->query( '//section[@aria-labelledby="aggr-slot-9"]//form' )->length, 'A size the change has not added yet was offered an upload.' );
+		$this->assertStringContainsString( 'Added by your change', (string) $xpath->evaluate( 'string(//section[@aria-labelledby="aggr-slot-9"])' ) );
+	}
+
+	/**
+	 * Creation's package grid, with the package running now marked, and
+	 * creation's schedule: a fixed package states its end rather than asking.
+	 *
+	 * @return void
+	 */
+	public function test_the_package_is_creations_grid_and_the_schedule_follows_it(): void {
+		$package = static fn ( int $id, string $name, int $days ): array => array(
+			'id'            => $id,
+			'name'          => $name,
+			'price'         => 'USD 450.00',
+			'duration'      => $days . ' days',
+			'duration_days' => $days,
+			'is_default'    => false,
+			'sizes'         => array(
+				array(
+					'label'  => '728×90',
+					'width'  => 66,
+					'height' => 8,
+				),
+			),
+			'placements'    => array( 'Homepage leaderboard' ),
+		);
+
+		$xpath = $this->render(
+			'campaign-changes.php',
+			'details',
+			$this->campaign(
+				array(
+					'live_edit_fields' => array( 'package_id', 'start_ts', 'end_ts' ),
+					'package_id'       => 5,
+					'package_options'  => array( $package( 5, 'Launch', 30 ), $package( 6, 'Premium', 14 ) ),
+					'edit_values'      => array(
+						'package_id' => 6,
+						'start_ts'   => (int) strtotime( '2030-06-01 00:00:00' ),
+						'start_date' => '2030-06-01',
+						'end_date'   => '2030-06-30',
+					),
+				)
+			)
+		);
+		$form  = '//form[@id="aggr-changes-form"]';
+
+		$this->assertSame( 2, $xpath->query( $form . '//input[@type="radio"][@name="package_id"]' )->length );
+		$this->assertSame( '6', (string) $xpath->evaluate( 'string(' . $form . '//input[@name="package_id"][@checked]/@value)' ), 'The staged package is not the one selected.' );
+		$this->assertStringContainsString( 'Your package', (string) $xpath->evaluate( 'string(//label[.//input[@value="5"]])' ), 'The running package is not marked.' );
+		$this->assertStringContainsString( 'Choose a package', (string) $xpath->evaluate( 'string(' . $form . ')' ) );
+
+		// A fixed package: the end is derived, so it is not posted.
+		$this->assertSame( 1, $xpath->query( $form . '//input[@name="end_date"][@disabled]' )->length );
+		$this->assertStringContainsString( 'Runs through', (string) $xpath->evaluate( 'string(//*[@id="aggr-run-through"])' ) );
+		$this->assertSame( 1, $xpath->query( $form . '//*[@data-aggr-calendar]' )->length, 'The calendar is missing.' );
 	}
 
 	public function test_review_lists_each_change_and_offers_submit_and_discard(): void {

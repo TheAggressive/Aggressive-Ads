@@ -50,6 +50,25 @@ final class Live_Edit_Rules {
 	 */
 	public const ERROR_PLACEMENT_NOT_OFFERED = 'live_edit_placement_not_offered';
 
+	/**
+	 * A package that is not on sale, or no package at all.
+	 *
+	 * `package_choices` is the catalogue an advertiser may buy from today; a
+	 * retired or incomplete package id, or zero, has no price to settle and
+	 * nothing to deliver.
+	 */
+	public const ERROR_PACKAGE_NOT_OFFERED = 'live_edit_package_not_offered';
+
+	/**
+	 * An end date on a package that sets its own length.
+	 *
+	 * A fixed package sells a number of days, so its end follows from the
+	 * start — creation never asks for one, and neither does the edit screen.
+	 * A hand-built post that names another end would buy days nobody paid
+	 * for; running longer means choosing a package that runs longer.
+	 */
+	public const ERROR_END_SET_BY_PACKAGE = 'live_edit_end_set_by_package';
+
 	public const MAX_TITLE = 200;
 	public const MAX_NOTES = 2000;
 
@@ -67,8 +86,8 @@ final class Live_Edit_Rules {
 			Settings_Schema::EDIT_TITLE       => array( 'title' ),
 			Settings_Schema::EDIT_NOTES       => array( 'advertiser_notes' ),
 			Settings_Schema::EDIT_SCHEDULE    => array( 'start_ts', 'end_ts' ),
-			Settings_Schema::EDIT_DESTINATION => array( 'click_urls' ),
-			Settings_Schema::EDIT_PLACEMENTS  => array( 'placement_ids' ),
+			Settings_Schema::EDIT_DESTINATION => array( 'click_urls', 'default_click_url' ),
+			Settings_Schema::EDIT_PACKAGE     => array( 'package_id' ),
 		);
 	}
 
@@ -107,6 +126,11 @@ final class Live_Edit_Rules {
 	 * @param array<string, mixed> $diff Reduced change set.
 	 */
 	public static function is_structural( array $diff ): bool {
+		// A proposal staged before placements lost their own switch still changes the sizes.
+		if ( array_key_exists( 'placement_ids', $diff ) ) {
+			return true;
+		}
+
 		$fields = self::fields_for();
 
 		foreach ( Settings_Schema::structural_edit_keys() as $key ) {
@@ -192,6 +216,26 @@ final class Live_Edit_Rules {
 				if ( ! is_string( $url ) || ! Campaign_Rules::is_valid_click_url( $url ) ) {
 					$result->add( self::ERROR_URL_INVALID, 'click_urls', array( 'creative_id' => (int) $creative_id ) );
 				}
+			}
+		}
+
+		// The link every ad starts from, as creation's Destination card sets it.
+		if ( array_key_exists( 'default_click_url', $diff ) ) {
+			$link = is_string( $diff['default_click_url'] ) ? $diff['default_click_url'] : '';
+
+			if ( ! Campaign_Rules::is_valid_click_url( $link ) ) {
+				$result->add( self::ERROR_URL_INVALID, 'default_click_url' );
+			}
+		}
+
+		if ( array_key_exists( 'package_id', $diff ) ) {
+			$package  = (int) $diff['package_id'];
+			$packages = isset( $current['package_choices'] ) && is_array( $current['package_choices'] )
+				? array_map( 'intval', $current['package_choices'] )
+				: array();
+
+			if ( $package <= 0 || ! in_array( $package, $packages, true ) ) {
+				$result->add( self::ERROR_PACKAGE_NOT_OFFERED, 'package_id', array( 'package_id' => $package ) );
 			}
 		}
 
@@ -283,6 +327,20 @@ final class Live_Edit_Rules {
 		if ( $end <= $now ) {
 			$result->add( self::ERROR_END_IN_PAST, 'end_ts', array( 'end_ts' => $end ) );
 		}
+
+		/*
+		 * `fixed_days` is the length the package being run — or moved to —
+		 * sells; zero for a custom package or none. Absent means the caller
+		 * did not say, and the rule stays as it was.
+		 */
+		$days = isset( $current['fixed_days'] ) ? (int) $current['fixed_days'] : 0;
+		$zone = isset( $current['timezone'] ) && is_string( $current['timezone'] ) ? $current['timezone'] : 'UTC';
+
+		$sold = $days > 0 && $start > 0 ? Campaign_Rules::fixed_end_ts( $start, $days, $zone ) : 0;
+
+		if ( $sold > 0 && $sold !== $end ) {
+			$result->add( self::ERROR_END_SET_BY_PACKAGE, 'end_ts', array( 'end_ts' => $end ) );
+		}
 	}
 
 	/**
@@ -297,10 +355,12 @@ final class Live_Edit_Rules {
 		switch ( $field ) {
 			case 'title':
 			case 'advertiser_notes':
+			case 'default_click_url':
 				return is_string( $value ) ? trim( $value ) : '';
 
 			case 'start_ts':
 			case 'end_ts':
+			case 'package_id':
 				return is_numeric( $value ) ? (int) $value : 0;
 
 			case 'placement_ids':

@@ -11,7 +11,8 @@
  */
 
 import { store, getContext } from '@wordpress/interactivity';
-import { debounce, normaliseLink, runEndDate } from '@aggr/logic';
+import { debounce, normaliseLink } from '@aggr/logic';
+import { enableRename } from './shared/rename-heading';
 
 type SaveStatus = 'idle' | 'saving' | 'saved' | 'error' | 'conflict';
 
@@ -19,7 +20,6 @@ type Outcome = 'saved' | 'error' | 'conflict';
 
 type Copy =
 	| SaveStatus
-	| 'runsThrough'
 	| 'rename'
 	| 'nameLabel'
 	| 'nameSaved'
@@ -137,103 +137,6 @@ function fieldsFrom( form: HTMLFormElement ): Record< string, unknown > {
 	}
 
 	return fields;
-}
-
-/**
- * A `YYYY-MM-DD` date in words, in the page's language.
- *
- * Formatted in UTC from the date's own parts, so no timezone can move it.
- *
- * @param date `YYYY-MM-DD`.
- * @return The date for reading, or the input if the browser cannot format it.
- */
-function formatDay( date: string ): string {
-	const [ year = 0, month = 1, day = 1 ] = date.split( '-' ).map( Number );
-
-	try {
-		return new Intl.DateTimeFormat(
-			document.documentElement.lang || undefined,
-			{
-				year: 'numeric',
-				month: 'long',
-				day: 'numeric',
-				timeZone: 'UTC',
-			}
-		).format( new Date( Date.UTC( year, month - 1, day ) ) );
-	} catch {
-		return date;
-	}
-}
-
-/**
- * Keeps the schedule fieldset describing the package that is chosen.
- *
- * A fixed package decides its own end date, so its end field is disabled —
- * which also keeps it out of `FormData`, and so out of the autosave, and so
- * lets the server derive the end — and the last day is stated instead. A
- * custom package gets the field back.
- *
- * Nothing runs on attach. The server rendered this fieldset for the package it
- * had selected, and rewriting it before anyone has changed anything would only
- * swap one date format for another in front of them.
- *
- * Synchronous on `change`, which matters: the debounce reads the form 600ms
- * later, and must find the end field already enabled or disabled to match.
- *
- * @param form The first step's form.
- */
-function followPlan( form: HTMLFormElement ): void {
-	const radios = Array.from(
-		form.querySelectorAll< HTMLInputElement >(
-			'input[type="radio"][name="package_id"]'
-		)
-	);
-	const start = form.querySelector< HTMLInputElement >(
-		'input[name="start_date"]'
-	);
-	const endField = form.querySelector< HTMLElement >(
-		'[data-aggr-end-field]'
-	);
-	const end = form.querySelector< HTMLInputElement >(
-		'input[name="end_date"]'
-	);
-	const through = form.querySelector< HTMLElement >(
-		'[data-aggr-run-through]'
-	);
-
-	if ( 0 === radios.length || null === start ) {
-		return;
-	}
-
-	const sync = (): void => {
-		const chosen = radios.find( ( radio ) => radio.checked );
-		const days = Number( chosen?.dataset.aggrDurationDays ?? '0' );
-		const fixed = undefined !== chosen && days > 0;
-
-		if ( endField && end ) {
-			endField.hidden = fixed;
-			end.disabled = fixed;
-			// Every campaign ends; a custom package has to say when.
-			end.required = ! fixed;
-		}
-
-		if ( through ) {
-			const last = fixed ? runEndDate( start.value, days ) : null;
-
-			through.hidden = null === last;
-			through.textContent =
-				null === last
-					? ''
-					: ( state.i18n.runsThrough ?? '' ).replace(
-							'%s',
-							formatDay( last )
-					  );
-		}
-	};
-
-	radios.forEach( ( radio ) => radio.addEventListener( 'change', sync ) );
-	start.addEventListener( 'input', sync );
-	start.addEventListener( 'change', sync );
 }
 
 function syncRevision( revision: number ): void {
@@ -410,137 +313,6 @@ function showLinkStatus(
 	} else {
 		link.removeAttribute( 'aria-invalid' );
 	}
-}
-
-/**
- * Makes the page heading the campaign's rename control.
- *
- * The heading's text becomes a button styled to be indistinguishable from it,
- * so nothing moves when this attaches. Pressing it swaps in a text field in the
- * same type; Enter or leaving the field saves, Escape keeps the old name.
- *
- * The heading's accessible name stays the campaign's name, because that is
- * what the page is about. What the button does is a description, held in a
- * visually hidden node beside the heading rather than inside it.
- *
- * @param id      Autosave instance.
- * @param heading The page's `<h1>`.
- */
-function enableRename( id: string, heading: HTMLElement ): void {
-	let name = ( heading.textContent ?? '' ).trim();
-
-	const button = document.createElement( 'button' );
-	button.type = 'button';
-	button.className = 'aggr-title__button';
-	button.textContent = name;
-
-	const hint = document.createElement( 'span' );
-	hint.id = `${ heading.id }-hint`;
-	hint.className = 'aggr-sr';
-	hint.textContent = state.i18n.rename ?? '';
-	heading.after( hint );
-	button.setAttribute( 'aria-describedby', hint.id );
-
-	heading.replaceChildren( button );
-
-	const show = ( text: string, refocus: boolean ): void => {
-		button.textContent = text;
-		heading.replaceChildren( button );
-
-		// Only after Enter or Escape. Leaving the field by clicking elsewhere
-		// put focus somewhere on purpose, and taking it back would fight that.
-		if ( refocus ) {
-			button.focus();
-		}
-	};
-
-	button.addEventListener( 'click', () => {
-		const input = document.createElement( 'input' );
-		input.type = 'text';
-		input.className = 'aggr-title__input';
-		input.value = name;
-		input.maxLength = 160;
-		input.setAttribute( 'aria-label', state.i18n.nameLabel ?? '' );
-
-		const fit = (): void => {
-			input.style.width = `${ Math.max( input.value.length, 4 ) + 1 }ch`;
-		};
-
-		fit();
-		input.addEventListener( 'input', fit );
-		heading.replaceChildren( input );
-		input.focus();
-		input.select();
-
-		/*
-		 * Once per edit. Enter saves and then removes the field, and removing a
-		 * focused field raises `blur` — which would save a second time, a
-		 * revision behind the first.
-		 */
-		let settled = false;
-
-		const settle = async (
-			commit: boolean,
-			refocus: boolean
-		): Promise< void > => {
-			if ( settled ) {
-				return;
-			}
-			settled = true;
-
-			const next = input.value.trim();
-
-			if ( ! commit || next === name ) {
-				show( name, refocus );
-				return;
-			}
-
-			if ( '' === next ) {
-				show( name, refocus );
-				announce( id, state.i18n.nameEmpty ?? '' );
-				return;
-			}
-
-			input.readOnly = true;
-
-			const outcome = await serialise( id, () =>
-				send( id, { title: next } )
-			);
-
-			if ( 'saved' !== outcome ) {
-				show( name, refocus );
-				announce(
-					id,
-					( 'conflict' === outcome
-						? state.i18n.conflict
-						: state.i18n.nameError ) ?? ''
-				);
-				return;
-			}
-
-			if ( document.title.includes( name ) ) {
-				document.title = document.title.replace( name, next );
-			}
-
-			name = next;
-			show( name, refocus );
-			announce( id, state.i18n.nameSaved ?? '' );
-		};
-
-		input.addEventListener( 'keydown', ( event ) => {
-			if ( 'Enter' === event.key ) {
-				event.preventDefault();
-				void settle( true, true );
-			} else if ( 'Escape' === event.key ) {
-				event.preventDefault();
-				void settle( false, true );
-			}
-		} );
-
-		input.addEventListener( 'blur', () => {
-			void settle( true, false );
-		} );
-	} );
 }
 
 const { state } = store( 'aggr/autosave', {
@@ -750,8 +522,6 @@ const { state } = store( 'aggr/autosave', {
 				run.cancel();
 			} );
 
-			followPlan( root );
-
 			/*
 			 * Says the module is attached, for anything that has to wait for
 			 * it. The button's label used to serve as this signal and no longer
@@ -777,7 +547,25 @@ const { state } = store( 'aggr/autosave', {
 			// In the DOM, for the same reason the upload store marks its forms:
 			// a module evaluated twice would otherwise wrap the heading twice.
 			heading.dataset.aggrTitleReady = '1';
-			enableRename( autosaveId, heading );
+			enableRename( heading, {
+				hint: state.i18n.rename ?? '',
+				label: state.i18n.nameLabel ?? '',
+				maxLength: 160,
+				save: ( next ) =>
+					serialise( autosaveId, () =>
+						send( autosaveId, { title: next } )
+					),
+				said: ( outcome ) => {
+					const copy = {
+						saved: state.i18n.nameSaved,
+						empty: state.i18n.nameEmpty,
+						conflict: state.i18n.conflict,
+						error: state.i18n.nameError,
+					}[ outcome ];
+
+					announce( autosaveId, copy ?? '' );
+				},
+			} );
 		},
 	},
 } );

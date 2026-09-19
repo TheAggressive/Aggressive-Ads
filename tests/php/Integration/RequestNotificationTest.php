@@ -24,6 +24,7 @@ use Aggressive\Ads\Repository\User_Repository;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Security\Ownership;
 use Aggressive\Ads\Security\Roles;
+use Aggressive\Ads\Workflow\Campaign_Action_Requests;
 use Aggressive\Ads\Workflow\Campaign_Change_Manager;
 use RuntimeException;
 use WP_UnitTestCase;
@@ -244,7 +245,7 @@ final class RequestNotificationTest extends WP_UnitTestCase {
 	private function request_pause( int $campaign_id, string $reason = 'The sponsor has paused the budget.' ): void {
 		wp_set_current_user( $this->advertiser );
 
-		$this->assertTrue( $this->changes->request_action( $campaign_id, Post_Statuses::PAUSED, $reason ) );
+		$this->assertTrue( $this->action_requests()->request_action( $campaign_id, Post_Statuses::PAUSED, $reason ) );
 	}
 
 	/**
@@ -351,7 +352,7 @@ final class RequestNotificationTest extends WP_UnitTestCase {
 
 		$first = count( $this->mail );
 
-		$this->assertTrue( $this->changes->withdraw_action( $campaign ) );
+		$this->assertTrue( $this->action_requests()->withdraw_action( $campaign ) );
 
 		$this->request_pause( $campaign, 'Asking again, the sponsor confirmed.' );
 
@@ -450,7 +451,7 @@ final class RequestNotificationTest extends WP_UnitTestCase {
 		);
 
 		wp_set_current_user( $this->advertiser );
-		$this->assertTrue( $this->changes->withdraw_action( $campaign ) );
+		$this->assertTrue( $this->action_requests()->withdraw_action( $campaign ) );
 
 		$this->mail = array();
 		$this->mail_results[ (string) get_option( 'admin_email' ) ] = true;
@@ -524,7 +525,7 @@ final class RequestNotificationTest extends WP_UnitTestCase {
 
 		wp_set_current_user( $this->advertiser );
 
-		$result = $this->changes->request_action( $campaign, Post_Statuses::PAUSED, 'The sponsor has paused the budget.' );
+		$result = $this->action_requests()->request_action( $campaign, Post_Statuses::PAUSED, 'The sponsor has paused the budget.' );
 
 		$this->assertTrue( $result, 'A mail failure must not become the advertiser\'s error.' );
 		$this->assertSame( Post_Statuses::PAUSED, $this->requests->action_request( $campaign )['action'] );
@@ -563,5 +564,14 @@ final class RequestNotificationTest extends WP_UnitTestCase {
 		} finally {
 			remove_filter( 'user_has_cap', $revoke, 10 );
 		}
+	}
+
+	/**
+	 * Pause, restart and cancel requests.
+	 *
+	 * @return Campaign_Action_Requests
+	 */
+	private function action_requests(): Campaign_Action_Requests {
+		return Plugin::instance()->container()->get( Campaign_Action_Requests::class );
 	}
 }

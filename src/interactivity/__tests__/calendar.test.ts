@@ -15,6 +15,7 @@ import {
 	shiftMonths,
 	type Rules,
 } from '../calendar';
+import { followPlan } from '../shared/follow-plan';
 
 const custom: Rules = { min: '2026-09-16', fixedDays: 0, startLocked: false };
 const fixed: Rules = { ...custom, fixedDays: 30 };
@@ -548,5 +549,76 @@ describe( 'initCalendar', () => {
 
 		expect( initCalendar( root ) ).not.toBeNull();
 		expect( initCalendar( root ) ).toBeNull();
+	} );
+} );
+
+describe( 'the schedule follows the package', () => {
+	function mount(): HTMLFormElement {
+		document.documentElement.lang = 'en-US';
+		document.body.innerHTML = `
+			<form>
+				<input type="radio" name="package_id" value="1" data-aggr-duration-days="0" checked>
+				<input type="radio" name="package_id" value="2" data-aggr-duration-days="14">
+				<input name="start_date" value="2026-10-01">
+				<div data-aggr-end-field><input name="end_date" value="2026-10-31" required></div>
+				<p data-aggr-run-through data-aggr-template="Runs through %s." hidden></p>
+			</form>`;
+
+		return document.querySelector( 'form' ) as HTMLFormElement;
+	}
+
+	const end = () =>
+		document.querySelector< HTMLInputElement >(
+			'input[name="end_date"]'
+		) as HTMLInputElement;
+	const through = () =>
+		document.querySelector< HTMLElement >(
+			'[data-aggr-run-through]'
+		) as HTMLElement;
+	const choose = ( value: string ) => {
+		const radio = document.querySelector< HTMLInputElement >(
+			`input[value="${ value }"]`
+		) as HTMLInputElement;
+
+		radio.checked = true;
+		radio.dispatchEvent( new Event( 'change' ) );
+	};
+
+	it( 'derives the end of a fixed package, and hands a custom one back its field', () => {
+		followPlan( mount() );
+
+		choose( '2' );
+		expect( end().disabled ).toBe( true );
+		expect( end().required ).toBe( false );
+		expect( through().hidden ).toBe( false );
+		// The start counts as the first of the fourteen days.
+		expect( through().textContent ).toBe(
+			'Runs through October 14, 2026.'
+		);
+
+		choose( '1' );
+		expect( end().disabled ).toBe( false );
+		expect( end().required ).toBe( true );
+		expect( through().hidden ).toBe( true );
+	} );
+
+	it( 'changes nothing until something is chosen, and attaches once', () => {
+		const form = mount();
+
+		followPlan( form );
+		followPlan( form );
+		expect( end().disabled ).toBe( false );
+		expect( through().hidden ).toBe( true );
+
+		const start = form.querySelector< HTMLInputElement >(
+			'input[name="start_date"]'
+		) as HTMLInputElement;
+
+		choose( '2' );
+		start.value = '2026-11-10';
+		start.dispatchEvent( new Event( 'input' ) );
+		expect( through().textContent ).toBe(
+			'Runs through November 23, 2026.'
+		);
 	} );
 } );

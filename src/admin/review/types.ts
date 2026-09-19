@@ -125,6 +125,10 @@ export type Campaign = {
 	creatives: Creative[];
 	creative_updates: CreativeUpdate[];
 	pending_edits: ChangeRow[];
+	/** Whether approving the change alters the ad sizes: a package change does. */
+	pending_sizes: boolean;
+	/** For a package change, the price moving, in words; otherwise empty. */
+	pending_price: string;
 	action_request: ActionRequest | [];
 	actions: ReviewAction[];
 	can_view_audit: boolean;

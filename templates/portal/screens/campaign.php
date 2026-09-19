@@ -122,6 +122,10 @@ $aggr_confirming_cancel = true === ( $aggr_campaign['can_cancel'] ?? false )
 $aggr_editing_changes = Campaign_Actions::wants_change_editor()
 	&& true === ( $aggr_campaign['can_request_changes'] ?? false );
 
+// Renamed from the heading, as creation is, when the site lets a running campaign be renamed.
+$aggr_proposes_title = $aggr_editing_changes
+	&& in_array( 'title', (array) ( $aggr_campaign['live_edit_fields'] ?? array() ), true );
+
 $aggr_wizard_id        = 'campaign-' . (int) $aggr_campaign['id'];
 $aggr_autosave_context = function_exists( 'wp_interactivity_data_wp_context' )
 	? wp_interactivity_data_wp_context( array( 'autosaveId' => $aggr_wizard_id ) )
@@ -215,6 +219,32 @@ $aggr_step_number = (int) array_search( $aggr_step, array_keys( $aggr_steps ), t
 					<?php echo $aggr_autosave_context; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_interactivity_data_wp_context(). ?>
 					data-wp-init="actions.initTitle"
 				><?php echo esc_html( (string) $aggr_campaign['title'] ); ?></h1>
+				<svg class="aggr-pagehead__rename" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>
+			<?php elseif ( $aggr_proposes_title ) : ?>
+				<?php
+				/*
+				 * The same heading, renaming a running campaign. It shows the
+				 * name the proposal holds, and saving adds the new name to the
+				 * proposal rather than to the campaign. Without script, step
+				 * one carries the name field instead.
+				 */
+				?>
+				<h1
+					id="aggr-campaign-title"
+					class="aggr-title"
+					data-aggr-propose="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"
+					data-aggr-action="<?php echo esc_attr( Campaign_Actions::CHANGES_ACTION ); ?>"
+					data-aggr-campaign="<?php echo esc_attr( (string) (int) $aggr_campaign['id'] ); ?>"
+					data-aggr-nonce="<?php echo esc_attr( wp_create_nonce( Campaign_Nonces::changes_nonce_action( (int) $aggr_campaign['id'] ) ) ); ?>"
+					data-aggr-step="<?php echo esc_attr( Campaign_Actions::request_change_step() ); ?>"
+					data-aggr-label-rename="<?php esc_attr_e( 'Rename campaign', 'aggressive-ads' ); ?>"
+					data-aggr-label-name="<?php esc_attr_e( 'Campaign name', 'aggressive-ads' ); ?>"
+					data-aggr-label-field="<?php esc_attr_e( 'Campaign name', 'aggressive-ads' ); ?>"
+					data-aggr-label-was="<?php /* translators: %s: the value before the change. */ esc_attr_e( 'was %s', 'aggressive-ads' ); ?>"
+					data-aggr-label-saved="<?php esc_attr_e( 'New name added to your changes.', 'aggressive-ads' ); ?>"
+					data-aggr-label-empty="<?php esc_attr_e( 'A campaign needs a name. The previous name was kept.', 'aggressive-ads' ); ?>"
+					data-aggr-label-error="<?php esc_attr_e( 'The name could not be saved. The previous name was kept.', 'aggressive-ads' ); ?>"
+				><?php echo esc_html( (string) ( $aggr_campaign['edit_values']['title'] ?? $aggr_campaign['title'] ) ); ?></h1>
 				<svg class="aggr-pagehead__rename" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>
 			<?php else : ?>
 				<h1 class="aggr-title"><?php echo esc_html( (string) $aggr_campaign['title'] ); ?></h1>

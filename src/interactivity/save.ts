@@ -20,6 +20,7 @@
 import { store } from '@wordpress/interactivity';
 import { endpointOf } from '@aggr/helpers';
 import { navigateSameOrigin } from '../admin/shared/navigate';
+import { initProposedTitle } from './shared/propose-title';
 
 type ToastLevel = 'success' | 'error' | 'warning' | 'info';
 
@@ -400,6 +401,19 @@ function forgetSpentNotice(): void {
 }
 
 forgetSpentNotice();
+
+/*
+ * A running campaign's heading renames it as a proposed change. Here because
+ * this module is what saves a portal write without leaving the page, and it
+ * already owns the notices that say how the save went.
+ */
+const proposedTitle = document.querySelector( '[data-aggr-propose]' );
+
+if ( proposedTitle instanceof HTMLElement ) {
+	initProposedTitle( proposedTitle, ( message, level ) =>
+		toast( message, level )
+	);
+}
 
 document.addEventListener( 'click', ( event ) => {
 	const target = event.target;

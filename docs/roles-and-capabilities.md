@@ -81,6 +81,12 @@ draft or a campaign with changes requested, while staff may edit in any status,
 acting on the client's behalf. See
 [campaign-workflow.md](campaign-workflow.md#editing-and-the-edit-window).
 
+One upload is allowed outside the window: an advertiser may add the first ad
+to a size their scheduled, live or paused campaign has none of — the gap an
+approved package or placement change leaves. It stays private and unserved
+until a reviewer publishes it through `Creative_Approval`
+(`Creative_Manager::fills_missing_size()`).
+
 The two gates are independent, and both still apply. Widening the window did
 not widen anyone's reach — ownership decides *which* campaigns a user can
 address, so an advertiser from another organization is refused in every status

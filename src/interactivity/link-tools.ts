@@ -5,7 +5,9 @@
  *
  * Both sit beside the link field and neither is required to use it. The check
  * asks the server about the link already saved on the campaign — it sends no
- * URL, because the route accepts none. The tag builder runs entirely here and
+ * URL, because the route accepts none. On a running campaign the link is
+ * staged in the edit proposal first, through the same form handler a press of
+ * "Save and continue" reaches, and the check reads that. The tag builder runs entirely here and
  * never rewrites the field on its own: it shows what it would write and waits
  * to be told.
  */
@@ -127,6 +129,46 @@ interface CheckResult {
 	status: number;
 }
 
+interface StageResult {
+	ok?: boolean;
+	notice?: string;
+}
+
+/**
+ * Stages the edit form's link so the check has something stored to read.
+ *
+ * The form's own handler, nonce and rules, asked for JSON instead of a
+ * redirect — the marker every scripted portal save uses — so a link the rules
+ * refuse is refused here in the words the page would have used.
+ *
+ * @param form    The Destination card's form.
+ * @param fetcher Network access.
+ * @return Whether it was staged, and the refusal when not.
+ */
+export async function stageLink(
+	form: HTMLFormElement,
+	fetcher: Fetcher
+): Promise< { ok: boolean; notice: string } > {
+	const body = new FormData( form );
+
+	body.set( 'aggr_async', '1' );
+
+	try {
+		// The attribute, not `form.action`: an `<input name="action">` shadows the property.
+		const response = await fetcher( form.getAttribute( 'action' ) ?? '', {
+			method: 'POST',
+			credentials: 'same-origin',
+			headers: { Accept: 'application/json' },
+			body,
+		} );
+		const result = ( await response.json() ) as StageResult;
+
+		return { ok: true === result.ok, notice: result.notice ?? '' };
+	} catch {
+		return { ok: false, notice: '' };
+	}
+}
+
 /**
  * Wires the "Check link" button. Returns a handle for tests, or null when the
  * markup it needs is absent.
@@ -185,9 +227,36 @@ export function initLinkCheck(
 		} aggr-ads-link__status`;
 	};
 
+	const status = root.querySelector< HTMLElement >(
+		'[data-aggr-link-status]'
+	);
+
 	const check = async (): Promise< void > => {
 		button.disabled = true;
 		show( 'checking' );
+
+		if ( status ) {
+			status.textContent = '';
+		}
+
+		if (
+			'1' === root.dataset.aggrStage &&
+			root instanceof HTMLFormElement
+		) {
+			const staged = await stageLink( root, fetcher );
+
+			if ( ! staged.ok ) {
+				show( 'failed' );
+
+				if ( status ) {
+					status.textContent = staged.notice;
+				}
+
+				button.disabled = false;
+
+				return;
+			}
+		}
 
 		try {
 			const response = await fetcher( endpoint, {
@@ -227,7 +296,8 @@ export function initLinkCheck(
 	 * And without being asked. A link nobody checks is a link nobody knows is
 	 * broken, so a saved change checks itself: the delay lets autosave store
 	 * the link first — the route reads what is stored, not what is typed —
-	 * and lets somebody finish pasting before anything is fetched.
+	 * and lets somebody finish pasting before anything is fetched. Where there
+	 * is no autosave, `check` stages the link itself.
 	 *
 	 * If the field moved on while the request was in flight, the answer is
 	 * about the old link, so it is thrown away and asked again. Once: two

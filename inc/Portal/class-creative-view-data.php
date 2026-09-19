@@ -289,14 +289,15 @@ final class Creative_View_Data {
 	/**
 	 * Selected placements paired with any creative already covering them.
 	 *
-	 * @param int                              $campaign_id Campaign post id.
-	 * @param array<int, array<string, mixed>> $creatives   Render-ready creative rows.
+	 * @param int                              $campaign_id   Campaign post id.
+	 * @param array<int, array<string, mixed>> $creatives     Render-ready creative rows.
+	 * @param array<int, int>|null             $placement_ids Placements to pair, or null for the campaign's own.
 	 * @return array<int, array{id: int, name: string, size: string, max_bytes: int, max_size: string, active: bool, creatives: array<int, array<string, mixed>>}>
 	 */
-	public function creative_slots( int $campaign_id, array $creatives ): array {
+	public function creative_slots( int $campaign_id, array $creatives, ?array $placement_ids = null ): array {
 		$slots = array();
 
-		foreach ( $this->campaigns->placement_ids( $campaign_id ) as $placement_id ) {
+		foreach ( $placement_ids ?? $this->campaigns->placement_ids( $campaign_id ) as $placement_id ) {
 			$matching = array();
 
 			foreach ( $creatives as $creative ) {

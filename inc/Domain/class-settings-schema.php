@@ -32,7 +32,15 @@ final class Settings_Schema {
 	public const EDIT_NOTES       = 'notes';
 	public const EDIT_SCHEDULE    = 'schedule';
 	public const EDIT_DESTINATION = 'destination';
-	public const EDIT_PLACEMENTS  = 'placements';
+
+	/**
+	 * Choosing a different package for a running campaign.
+	 *
+	 * A package prices the campaign, so this is an upgrade or a downgrade,
+	 * reviewed like any other edit; billing settles the difference once it
+	 * exists (#263). Structural, because a package brings its own placements.
+	 */
+	public const EDIT_PACKAGE = 'package';
 
 	public const MAX_PRODUCT_NAME  = 60;
 	public const MAX_TAGLINE       = 80;
@@ -91,11 +99,14 @@ final class Settings_Schema {
 	/**
 	 * Editable-field keys in display order.
 	 *
-	 * `EDIT_PLACEMENTS` is last and deliberately separated in the UI: it is not
-	 * a peer of the others. Changing placements changes the required creative
-	 * size, so an approved placement change leaves the campaign unable to serve
-	 * until a correctly sized creative is uploaded and reviewed. It is a
-	 * re-submission, not a field edit.
+	 * `EDIT_PACKAGE` is last and deliberately separated in the UI: it is not a
+	 * peer of the others. It changes the price and the required ad sizes.
+	 *
+	 * There is no switch for placements. There was, and it let an advertiser
+	 * untick placements their package sold — which creation never offers,
+	 * because the package decides them. Placements now change only with the
+	 * package. A stored `placements` value is ignored: `live_edit_fields()`
+	 * reads only these keys.
 	 *
 	 * @return list<string>
 	 */
@@ -105,7 +116,7 @@ final class Settings_Schema {
 			self::EDIT_NOTES,
 			self::EDIT_SCHEDULE,
 			self::EDIT_DESTINATION,
-			self::EDIT_PLACEMENTS,
+			self::EDIT_PACKAGE,
 		);
 	}
 
@@ -115,7 +126,7 @@ final class Settings_Schema {
 	 * @return list<string>
 	 */
 	public static function structural_edit_keys(): array {
-		return array( self::EDIT_PLACEMENTS );
+		return array( self::EDIT_PACKAGE );
 	}
 
 	/**
@@ -185,7 +196,7 @@ final class Settings_Schema {
 				self::EDIT_NOTES       => false,
 				self::EDIT_SCHEDULE    => false,
 				self::EDIT_DESTINATION => false,
-				self::EDIT_PLACEMENTS  => false,
+				self::EDIT_PACKAGE     => false,
 			),
 		);
 	}

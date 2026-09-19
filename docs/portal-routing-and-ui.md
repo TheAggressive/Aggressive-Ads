@@ -310,14 +310,11 @@ links cannot change. A **Your changes** card beside it lists
 each staged change as its new value with the old one under it, then any new
 artwork already with the review team, and holds
 **Submit for review** on the last step, **Discard these edits** once there is
-something to discard, and **Back to the campaign**. Placements are drawn as the package cards
-are — name, file limit, and the size as a silhouette and in figures — and only
-the campaign's own package's placements are offered, plus any it runs on now.
-`Campaign_Change_Manager::placement_choices()` is that list for the screen and
-for `Live_Edit_Rules`, which refuses anything outside it
-(`live_edit_placement_not_offered`), so a hand-built post cannot buy a
-placement the package never sold. A campaign with no package keeps the whole
-catalogue, as before. The dates use the range calendar. Which steps exist, their
+something to discard, and **Back to the campaign**. The card sits in
+creation's layout and follows the page down as the order summary does. The
+campaign is renamed from its heading, as a draft is; the new name joins the
+proposal. Placements are not offered on their own: they come with the
+package, as at creation. The dates use the range calendar. Which steps exist, their
 names and the step after each are `Portal\Campaign_Edit_Steps`, read by both
 the head and the flow. Nothing else is
 drawn while editing — delivery, ads and the request card would describe the
