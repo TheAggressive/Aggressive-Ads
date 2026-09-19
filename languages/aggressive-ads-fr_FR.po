@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
-"POT-Creation-Date: 2026-09-19T09:03:27+00:00\n"
+"POT-Creation-Date: 2026-09-19T09:25:21+00:00\n"
 "PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -2460,67 +2460,67 @@ msgid "Update withdrawn."
 msgstr ""
 
 #. translators: %s: this placement's maximum file size, e.g. 150 KB.
-#: inc/Assets/class-assets.php:472
+#: inc/Assets/class-assets.php:492
 #, php-format
 msgid "That file is larger than %s. Choose a smaller ad creative."
 msgstr ""
 
-#: inc/Assets/class-assets.php:484
+#: inc/Assets/class-assets.php:504
 msgid "File selected. Add a destination URL to upload it."
 msgstr ""
 
-#: inc/Assets/class-assets.php:485
+#: inc/Assets/class-assets.php:505
 msgid "Uploading the creative."
 msgstr ""
 
 #. translators: %s: the file's name, e.g. skyscraper-160x600.png.
-#: inc/Assets/class-assets.php:487
+#: inc/Assets/class-assets.php:507
 #, php-format
 msgid "Uploading %s."
 msgstr ""
 
-#: inc/Assets/class-assets.php:488
+#: inc/Assets/class-assets.php:508
 msgid "Uploaded. Showing your ad…"
 msgstr ""
 
-#: inc/Assets/class-assets.php:489
+#: inc/Assets/class-assets.php:509
 msgid "The upload did not finish. Check your connection and try again."
 msgstr ""
 
-#: inc/Assets/class-assets.php:490
+#: inc/Assets/class-assets.php:510
 msgid "Upload cancelled. Choose the file again when you are ready."
 msgstr ""
 
-#: inc/Assets/class-assets.php:491
+#: inc/Assets/class-assets.php:511
 msgid ""
 "The upload took too long and was stopped. Try again, or try a smaller file."
 msgstr ""
 
 #. translators: %s: the file's name, e.g. skyscraper-160x600.png.
-#: inc/Assets/class-assets.php:493
+#: inc/Assets/class-assets.php:513
 #, php-format
 msgid "%s · matched by size"
 msgstr ""
 
-#: inc/Assets/class-assets.php:494
+#: inc/Assets/class-assets.php:514
 msgid "Enter a complete destination URL to finish the upload."
 msgstr ""
 
-#: inc/Assets/class-assets.php:495
+#: inc/Assets/class-assets.php:515
 msgid "Choose an ad creative file to upload."
 msgstr ""
 
-#: inc/Assets/class-assets.php:496
+#: inc/Assets/class-assets.php:516
 msgid "Use a JPEG, PNG, GIF, or WebP image."
 msgstr ""
 
-#: inc/Assets/class-assets.php:497
+#: inc/Assets/class-assets.php:517
 msgid ""
 "That ad creative is too large in pixels to process safely. Choose a smaller "
 "one."
 msgstr ""
 
-#: inc/Assets/class-assets.php:498
+#: inc/Assets/class-assets.php:518
 msgid "The ad creative must match the required pixel size for this placement."
 msgstr ""
 
@@ -5796,7 +5796,7 @@ msgid "%1$s · %2$s"
 msgstr ""
 
 #: templates/portal/partials/campaign-ad-updates.php:33
-#: templates/portal/partials/campaign-edit-ads.php:44
+#: templates/portal/partials/campaign-edit-ads.php:72
 #: templates/portal/partials/campaign-status.php:305
 msgid "Your ads"
 msgstr ""
@@ -6146,7 +6146,7 @@ msgid ""
 msgstr ""
 
 #: templates/portal/partials/campaign-creative-step.php:206
-#: templates/portal/partials/campaign-edit-ads.php:75
+#: templates/portal/partials/campaign-edit-ads.php:103
 msgid "Needs a file"
 msgstr ""
 
@@ -6162,7 +6162,7 @@ msgid ""
 msgstr ""
 
 #: templates/portal/partials/campaign-creative-step.php:254
-#: templates/portal/partials/campaign-edit-ads.php:141
+#: templates/portal/partials/campaign-edit-ads.php:169
 msgid "Preview"
 msgstr ""
 
@@ -6334,33 +6334,33 @@ msgstr ""
 msgid "Add tags to link"
 msgstr ""
 
-#: templates/portal/partials/campaign-edit-ads.php:45
+#: templates/portal/partials/campaign-edit-ads.php:73
 msgid ""
 "Select Update to send new artwork or a link of its own for one ad. The "
 "current ad keeps running until the review team accepts the new one."
 msgstr ""
 
-#: templates/portal/partials/campaign-edit-ads.php:71
+#: templates/portal/partials/campaign-edit-ads.php:99
 msgid "Added by your change"
 msgstr ""
 
-#: templates/portal/partials/campaign-edit-ads.php:73
+#: templates/portal/partials/campaign-edit-ads.php:101
 msgid "Removed by your change"
 msgstr ""
 
-#: templates/portal/partials/campaign-edit-ads.php:92
+#: templates/portal/partials/campaign-edit-ads.php:120
 msgid ""
 "Your change adds this size. Once the review team accepts it, add an ad for "
 "it here; it is reviewed before it runs."
 msgstr ""
 
-#: templates/portal/partials/campaign-edit-ads.php:99
+#: templates/portal/partials/campaign-edit-ads.php:127
 msgid ""
 "This size has no ad, so nothing runs here yet. The ad you add is reviewed "
 "before it runs."
 msgstr ""
 
-#: templates/portal/partials/campaign-edit-ads.php:146
+#: templates/portal/partials/campaign-edit-ads.php:174
 msgid "Update"
 msgstr ""
 

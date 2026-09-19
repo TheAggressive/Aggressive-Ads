@@ -28,12 +28,40 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use Aggressive\Ads\Assets\Assets;
+use Aggressive\Ads\Domain\Upload_Rules;
+use Aggressive\Ads\Plugin;
+
 $aggr_edit_slots = is_array( $aggr_campaign['edit_slots'] ?? null ) ? $aggr_campaign['edit_slots'] : array();
 $aggr_updates    = isset( $aggr_creative_updates ) && is_array( $aggr_creative_updates ) ? $aggr_creative_updates : array();
 $aggr_overlays   = array();
 
 // The one form a refused upload reopens, as the wizard does.
 $aggr_creative_error_for = isset( $aggr_creative_error_for ) ? (string) $aggr_creative_error_for : '';
+
+/*
+ * What the upload script needs for each size that shows an upload form: the
+ * size it checks a file against, the limit, the messages. The wizard sends
+ * these for a draft; without them here the form rendered and choosing a file
+ * did nothing.
+ */
+$aggr_uploadable = array();
+
+foreach ( $aggr_edit_slots as $aggr_open_slot ) {
+	if ( array() === $aggr_open_slot['creatives'] && true !== ( $aggr_open_slot['proposed'] ?? false ) ) {
+		$aggr_open_max     = Upload_Rules::resolve_max_bytes( (int) ( $aggr_open_slot['max_bytes'] ?? 0 ) );
+		$aggr_uploadable[] = array(
+			'id'        => (int) $aggr_open_slot['id'],
+			'size'      => (string) $aggr_open_slot['size'],
+			'max_bytes' => $aggr_open_max,
+			'max_size'  => (string) size_format( $aggr_open_max ),
+		);
+	}
+}
+
+if ( array() !== $aggr_uploadable ) {
+	Plugin::instance()->container()->get( Assets::class )->hydrate_uploads( $aggr_uploadable );
+}
 ?>
 <?php // The campaign page draws its own panel heading; the edit flow numbers this as a step card. ?>
 <?php if ( '' !== $aggr_ads_eyebrow ) : ?>

@@ -190,16 +190,25 @@ test( 'a size a running campaign has no ad for takes one, held for review', asyn
 	await expect( sidebar.getByText( 'Needs a file' ) ).toBeVisible();
 
 	// The campaign has a link, so choosing the file is the whole upload.
+	const uploaded = page.waitForURL( /creative_uploaded/, {
+		// At commit: the notice is tidied out of the address once the page has it.
+		waitUntil: 'commit',
+	} );
+
 	await sidebar.locator( 'input[type="file"]' ).setInputFiles( {
 		name: 'sidebar.png',
 		mimeType: 'image/png',
 		buffer: solidPng( 300, 250 ),
 	} );
 
-	// Back on the edit flow's Ads step, not in the wizard a running campaign cannot open.
-	await expect( page ).toHaveURL(
-		/edit=1.*step=destination|step=destination.*edit=1/
-	);
+	/*
+	 * Back on the edit flow's Ads step, not in the wizard a running campaign
+	 * cannot open. Waited for rather than read: the page was already on this
+	 * address, so a URL check alone passed with no upload at all.
+	 */
+	await uploaded;
+	await expect( page ).toHaveURL( /edit=1/ );
+	await expect( page ).toHaveURL( /step=destination/ );
 
 	const filled = page.getByRole( 'region', { name: 'E2E sidebar' } );
 	await expect( filled.getByText( 'Needs a file' ) ).toHaveCount( 0 );
