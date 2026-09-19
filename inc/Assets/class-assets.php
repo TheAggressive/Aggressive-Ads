@@ -528,11 +528,14 @@ final class Assets implements Service {
 						'bulkChooseLabel' => __( 'Placement for %s', 'aggressive-ads' ),
 						'bulkPick'        => __( 'Choose a placement', 'aggressive-ads' ),
 						'bulkAll'         => __( 'All of them', 'aggressive-ads' ),
-						/* translators: 1: the file's dimensions, e.g. 300 × 250. 2: the sizes still needed, e.g. 728 × 90, 160 × 600. */
-						'bulkNone'        => __( 'This file is %1$s. The sizes still needed are %2$s.', 'aggressive-ads' ),
-						/* translators: %s: the file's dimensions, e.g. 300 × 250. */
-						'bulkTaken'       => __( 'Every %s placement already has an ad or a file.', 'aggressive-ads' ),
-						'bulkUnreadable'  => __( 'This file is not an image that can be read. Use a JPEG, PNG, GIF, WebP, or AVIF image.', 'aggressive-ads' ),
+						/* translators: 1: a file name. 2: its dimensions, e.g. 1456 × 180. 3: a placement's name. 4: the size it needs, e.g. 728 × 90. 5: how many times too large, e.g. 2. */
+						'bulkScaled'      => __( '%1$s is %2$s, %5$s times the %4$s %3$s needs, so it was not used. Save it at %4$s and add it again.', 'aggressive-ads' ),
+						/* translators: 1: a file name. 2: its dimensions, e.g. 728 × 91. 3: a placement's name. 4: the size it needs, e.g. 728 × 90. */
+						'bulkOff'         => __( '%1$s is %2$s, so it was not used. %3$s needs exactly %4$s.', 'aggressive-ads' ),
+						/* translators: %s: a file name. */
+						'bulkUnusedOne'   => __( 'Not used: %s. No size in this campaign is waiting for it.', 'aggressive-ads' ),
+						/* translators: %s: file names, separated by commas. */
+						'bulkUnusedMany'  => __( 'Not used: %s. No size in this campaign is waiting for them.', 'aggressive-ads' ),
 						'bulkNeedsUrl'    => __( 'Add the address your ads link to, above, before uploading.', 'aggressive-ads' ),
 						'bulkWaiting'     => __( 'Waiting to upload.', 'aggressive-ads' ),
 						'bulkSent'        => __( 'Uploaded.', 'aggressive-ads' ),

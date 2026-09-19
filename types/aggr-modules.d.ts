@@ -74,7 +74,13 @@ declare module '@aggr/logic' {
 		targets: readonly SizeTarget[],
 		claimed?: ReadonlySet< string >
 	): FileMatch[];
-	export function openSizes( targets: readonly SizeTarget[] ): string[];
+	export type NearMiss =
+		| { kind: 'scaled'; target: string; factor: number }
+		| { kind: 'off'; target: string };
+	export function nearMiss(
+		file: { width: number; height: number },
+		targets: readonly SizeTarget[]
+	): NearMiss | null;
 }
 
 declare module '@aggr/dialog' {}

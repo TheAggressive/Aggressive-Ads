@@ -25,9 +25,10 @@ test( 'every file dropped at once lands on the size it matches', async ( {
 	 * accepts one chosen on the card, and that the page moves on once, after
 	 * both, rather than after the first.
 	 *
-	 * The negative half comes first: a file of a size the package does not
-	 * have is named with its dimensions and the sizes still wanted, and
-	 * sends nothing.
+	 * The negative half comes first. A file of a size nothing is waiting
+	 * for is left out and named once, not raised as an error; a file that is
+	 * exactly twice a waiting size is called out, because that size would
+	 * otherwise stay empty. Neither sends anything.
 	 */
 	await page.goto( '/advertiser/' );
 	await signIn( page, 'advertiser@example.test', 'advertiser' );
@@ -81,20 +82,41 @@ test( 'every file dropped at once lands on the size it matches', async ( {
 		}
 	} );
 
-	await input.setInputFiles( {
-		name: 'e2e-skyscraper.png',
-		mimeType: 'image/png',
-		buffer: solidPng( 160, 600 ),
-	} );
+	// A file for another campaign, and one exported at twice the size.
+	await input.setInputFiles( [
+		{
+			name: 'e2e-skyscraper.png',
+			mimeType: 'image/png',
+			buffer: solidPng( 160, 600 ),
+		},
+		{
+			name: 'e2e-leaderboard@2x.png',
+			mimeType: 'image/png',
+			buffer: solidPng( 1456, 180 ),
+		},
+	] );
 
-	const wrong = zone
+	// Not for this campaign: named once, quietly, with no row of its own.
+	await expect( zone.locator( '[data-aggr-bulk-status]' ) ).toHaveText(
+		/^Not used: e2e-skyscraper\.png\./
+	);
+	await expect(
+		zone
+			.locator( '.aggr-dropzone__item:visible' )
+			.filter( { hasText: 'e2e-skyscraper.png' } )
+	).toHaveCount( 0 );
+
+	// Nearly fits a size still waiting: said, because that size stays empty.
+	const retina = zone
 		.locator( '.aggr-dropzone__item' )
-		.filter( { hasText: 'e2e-skyscraper.png' } );
+		.filter( { hasText: 'e2e-leaderboard@2x.png' } );
 
-	await expect( wrong ).toContainText( 'This file is 160 × 600' );
-	await expect( wrong ).toContainText( '728 × 90' );
-	await expect( wrong ).toContainText( '300 × 250' );
-	expect( posts, 'A file that matched no size was sent.' ).toBe( 0 );
+	await expect( retina ).toBeVisible();
+	await expect( retina ).toContainText(
+		'is 1456 × 180, 2 times the 728 × 90'
+	);
+	await expect( retina ).toContainText( 'Save it at 728 × 90' );
+	expect( posts, 'A file that fits no waiting size was sent.' ).toBe( 0 );
 	await expectPortalA11y( page );
 
 	await input.setInputFiles( [
@@ -108,6 +130,11 @@ test( 'every file dropped at once lands on the size it matches', async ( {
 			mimeType: 'image/png',
 			buffer: solidPng( 300, 250 ),
 		},
+		{
+			name: 'e2e-drop-extra.png',
+			mimeType: 'image/png',
+			buffer: solidPng( 120, 600 ),
+		},
 	] );
 
 	await expect(
@@ -117,6 +144,13 @@ test( 'every file dropped at once lands on the size it matches', async ( {
 		'2 of 2 sizes ready'
 	);
 	expect( posts, 'Each file is one post through its own form.' ).toBe( 2 );
+
+	// The file that was not used is still named once the page has moved on.
+	await expect(
+		page
+			.locator( '.aggr-toast' )
+			.filter( { hasText: 'Not used: e2e-drop-extra.png.' } )
+	).toBeVisible();
 
 	for ( const [ region, file ] of [
 		[ 'Homepage leaderboard', 'e2e-drop-leaderboard.png' ],

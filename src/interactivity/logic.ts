@@ -231,19 +231,60 @@ export function matchFilesToSizes(
 	} );
 }
 
-/**
- * The sizes still waiting for a file, each once, for telling someone what a
- * file that matched nothing should have been.
- *
- * @param targets The campaign's placements.
- * @return Sizes such as `728 × 90`, in placement order.
- */
-export function openSizes( targets: readonly SizeTarget[] ): string[] {
-	const sizes = targets
-		.filter( ( target ) => target.open )
-		.map( ( target ) => `${ target.width } × ${ target.height }` );
+/** How a file nearly fits a size that is waiting for one. */
+export type NearMiss =
+	| { kind: 'scaled'; target: string; factor: number }
+	| { kind: 'off'; target: string };
 
-	return [ ...new Set( sizes ) ];
+/**
+ * The open size a file was almost certainly meant for, or null.
+ *
+ * Most files that match nothing are simply not for this campaign, and are
+ * left out without a word. Two kinds are mistakes worth stopping for, because
+ * the size they were meant for will otherwise sit empty while the advertiser
+ * believes it is done:
+ *
+ * - `scaled`: exactly two to four times the size — a retina export.
+ * - `off`: within two pixels on each side — a crop or canvas slip.
+ *
+ * Only open sizes are considered: nearly matching a size that already has an
+ * ad is no reason to interrupt anyone.
+ *
+ * @param file    The file's measured size.
+ * @param targets The campaign's placements.
+ * @return The size it nearly fits, and how.
+ */
+export function nearMiss(
+	file: { width: number; height: number },
+	targets: readonly SizeTarget[]
+): NearMiss | null {
+	for ( const target of targets ) {
+		if ( ! target.open ) {
+			continue;
+		}
+
+		for ( let factor = 2; factor <= 4; factor++ ) {
+			if (
+				file.width === target.width * factor &&
+				file.height === target.height * factor
+			) {
+				return { kind: 'scaled', target: target.id, factor };
+			}
+		}
+	}
+
+	for ( const target of targets ) {
+		if (
+			target.open &&
+			Math.abs( file.width - target.width ) <= 2 &&
+			Math.abs( file.height - target.height ) <= 2 &&
+			( file.width !== target.width || file.height !== target.height )
+		) {
+			return { kind: 'off', target: target.id };
+		}
+	}
+
+	return null;
 }
 
 /**

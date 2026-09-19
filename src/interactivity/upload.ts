@@ -11,7 +11,7 @@
 import { store, getContext } from '@wordpress/interactivity';
 import { checkCreativeFile, parsePixelSize } from '@aggr/logic';
 import { sendWithProgress } from './shared/upload-send';
-import { wireBulkUpload } from './shared/bulk-upload';
+import { showCarriedNotes, wireBulkUpload } from './shared/bulk-upload';
 import { navigateSameOrigin } from '../admin/shared/navigate';
 
 interface UploadState {
@@ -608,5 +608,6 @@ const { state } = store( 'aggr/upload', {
 } );
 
 bootAllUploads();
+showCarriedNotes();
 
 export { state };

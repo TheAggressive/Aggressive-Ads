@@ -9,8 +9,8 @@ import {
 	isWizardStep,
 	nextStep,
 	matchFilesToSizes,
+	nearMiss,
 	normaliseLink,
-	openSizes,
 	parsePixelSize,
 	previousStep,
 	runEndDate,
@@ -244,10 +244,50 @@ describe( 'matching dropped files to sizes', () => {
 			matchFilesToSizes( [ { width: 160, height: 600 } ], [ header ] )
 		).toEqual( [ { kind: 'none' } ] );
 	} );
+} );
 
-	it( 'lists each open size once, for a file that matched nothing', () => {
+describe( 'files that nearly fit a size still waiting', () => {
+	const header = { id: '1', width: 728, height: 90, open: true };
+	const side = { id: '3', width: 300, height: 250, open: true };
+
+	it( 'recognises a retina export at two, three and four times', () => {
+		expect( nearMiss( { width: 1456, height: 180 }, [ header ] ) ).toEqual(
+			{ kind: 'scaled', target: '1', factor: 2 }
+		);
+		expect( nearMiss( { width: 1200, height: 1000 }, [ side ] ) ).toEqual( {
+			kind: 'scaled',
+			target: '3',
+			factor: 4,
+		} );
+	} );
+
+	it( 'recognises a file a pixel or two out', () => {
+		expect( nearMiss( { width: 728, height: 91 }, [ header ] ) ).toEqual( {
+			kind: 'off',
+			target: '1',
+		} );
+		expect( nearMiss( { width: 730, height: 88 }, [ header ] ) ).toEqual( {
+			kind: 'off',
+			target: '1',
+		} );
+	} );
+
+	it( 'stays quiet about anything further off, or an exact fit', () => {
+		expect( nearMiss( { width: 731, height: 90 }, [ header ] ) ).toBeNull();
 		expect(
-			openSizes( [ header, breaker, { ...side, open: false } ] )
-		).toEqual( [ '728 × 90' ] );
+			nearMiss( { width: 1456, height: 181 }, [ header ] )
+		).toBeNull();
+		expect(
+			nearMiss( { width: 160, height: 600 }, [ header, side ] )
+		).toBeNull();
+		expect( nearMiss( { width: 728, height: 90 }, [ header ] ) ).toBeNull();
+	} );
+
+	it( 'says nothing about a size that already has an ad', () => {
+		expect(
+			nearMiss( { width: 1456, height: 180 }, [
+				{ ...header, open: false },
+			] )
+		).toBeNull();
 	} );
 } );

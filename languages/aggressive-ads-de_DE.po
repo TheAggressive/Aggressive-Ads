@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
-"POT-Creation-Date: 2026-09-19T17:35:16+00:00\n"
+"POT-Creation-Date: 2026-09-19T17:38:31+00:00\n"
 "PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -2736,53 +2736,58 @@ msgstr "Platzierung erstellen"
 msgid "All of them"
 msgstr ""
 
-#. translators: 1: the file's dimensions, e.g. 300 × 250. 2: the sizes still needed, e.g. 728 × 90, 160 × 600.
+#. translators: 1: a file name. 2: its dimensions, e.g. 1456 × 180. 3: a placement's name. 4: the size it needs, e.g. 728 × 90. 5: how many times too large, e.g. 2.
 #: inc/Assets/class-assets.php:532
 #, php-format
-msgid "This file is %1$s. The sizes still needed are %2$s."
-msgstr ""
-
-#. translators: %s: the file's dimensions, e.g. 300 × 250.
-#: inc/Assets/class-assets.php:534
-#, fuzzy, php-format
-msgid "Every %s placement already has an ad or a file."
-msgstr "Jede Platzierung benötigt ein eigenes Werbemittel."
-
-#: inc/Assets/class-assets.php:535
-#, fuzzy
 msgid ""
-"This file is not an image that can be read. Use a JPEG, PNG, GIF, WebP, or "
-"AVIF image."
+"%1$s is %2$s, %5$s times the %4$s %3$s needs, so it was not used. Save it at "
+"%4$s and add it again."
 msgstr ""
-"Diese Datei ist kein Bild, das wir lesen können. JPEG, PNG, GIF und WebP "
-"werden unterstützt."
 
+#. translators: 1: a file name. 2: its dimensions, e.g. 728 × 91. 3: a placement's name. 4: the size it needs, e.g. 728 × 90.
+#: inc/Assets/class-assets.php:534
+#, php-format
+msgid "%1$s is %2$s, so it was not used. %3$s needs exactly %4$s."
+msgstr ""
+
+#. translators: %s: a file name.
 #: inc/Assets/class-assets.php:536
+#, fuzzy, php-format
+msgid "Not used: %s. No size in this campaign is waiting for it."
+msgstr "Das kann diese Kampagne im Moment nicht."
+
+#. translators: %s: file names, separated by commas.
+#: inc/Assets/class-assets.php:538
+#, php-format
+msgid "Not used: %s. No size in this campaign is waiting for them."
+msgstr ""
+
+#: inc/Assets/class-assets.php:539
 msgid "Add the address your ads link to, above, before uploading."
 msgstr ""
 
-#: inc/Assets/class-assets.php:537
+#: inc/Assets/class-assets.php:540
 #, fuzzy
 msgid "Waiting to upload."
 msgstr "Werbemittel hochgeladen."
 
-#: inc/Assets/class-assets.php:538
+#: inc/Assets/class-assets.php:541
 #, fuzzy
 msgid "Uploaded."
 msgstr "Hochgeladene Größe"
 
-#: inc/Assets/class-assets.php:539
+#: inc/Assets/class-assets.php:542
 #, fuzzy
 msgid "Not uploaded. The reason is shown once the others finish."
 msgstr "Nicht genehmigt. Der Grund steht in der Kampagne."
 
-#: inc/Assets/class-assets.php:540
+#: inc/Assets/class-assets.php:543
 msgid ""
 "Some files did not finish uploading. Choose them again to try once more."
 msgstr ""
 
 #. translators: %d: how many files were uploaded.
-#: inc/Assets/class-assets.php:542
+#: inc/Assets/class-assets.php:545
 #, php-format
 msgid "Uploaded %d. Showing your ads…"
 msgstr ""
@@ -9202,6 +9207,18 @@ msgstr "Rotieren"
 msgctxt "block keyword"
 msgid "banner"
 msgstr "Banner"
+
+#, fuzzy, php-format
+#~ msgid "Every %s placement already has an ad or a file."
+#~ msgstr "Jede Platzierung benötigt ein eigenes Werbemittel."
+
+#, fuzzy
+#~ msgid ""
+#~ "This file is not an image that can be read. Use a JPEG, PNG, GIF, WebP, "
+#~ "or AVIF image."
+#~ msgstr ""
+#~ "Diese Datei ist kein Bild, das wir lesen können. JPEG, PNG, GIF und WebP "
+#~ "werden unterstützt."
 
 #~ msgid ""
 #~ "The existing creative will no longer match the required size, and the "

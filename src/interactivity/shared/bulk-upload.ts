@@ -16,7 +16,7 @@
 import {
 	checkCreativeFile,
 	matchFilesToSizes,
-	openSizes,
+	nearMiss,
 	parsePixelSize,
 	type FileMatch,
 	type SizeTarget,
@@ -58,6 +58,9 @@ interface Entry {
 	// Of those, the ones not sent yet.
 	pending: string[];
 	queued: boolean;
+
+	// Why a file that nearly fits a waiting size was not used; empty otherwise.
+	warning: string;
 }
 
 /** Everything sent this round, so the page moves on once, at the end. */
@@ -67,6 +70,63 @@ interface Round {
 	refused: string;
 	failed: number;
 	busy: boolean;
+}
+
+/**
+ * Where the notes for the page an upload lands on are kept until it loads.
+ *
+ * Per path, so a note can only be shown on the campaign it was written for.
+ *
+ * @param path The campaign page's path.
+ * @return The storage key.
+ */
+function notesKey( path: string ): string {
+	return `aggr-bulk-notes:${ path }`;
+}
+
+/** A notice to show once the page has moved on. */
+interface Note {
+	message: string;
+	level: 'info' | 'warning';
+}
+
+/**
+ * Shows what the last drop left to say, now that its page has loaded.
+ *
+ * The upload replaces the page, and the rows that said which files were not
+ * used went with it. Raised as the portal's own toasts, drawn by the save
+ * module, after every module has run so its listener is there to hear it.
+ */
+export function showCarriedNotes(): void {
+	let notes: Note[] = [];
+
+	try {
+		const key = notesKey( window.location.pathname );
+		const raw = window.sessionStorage.getItem( key );
+
+		window.sessionStorage.removeItem( key );
+		notes = raw ? ( JSON.parse( raw ) as Note[] ) : [];
+	} catch {
+		return;
+	}
+
+	if ( ! Array.isArray( notes ) || notes.length === 0 ) {
+		return;
+	}
+
+	const raise = () => {
+		for ( const note of notes ) {
+			document.dispatchEvent(
+				new CustomEvent( 'aggr:toast', { detail: note } )
+			);
+		}
+	};
+
+	if ( 'loading' === document.readyState ) {
+		document.addEventListener( 'DOMContentLoaded', raise, { once: true } );
+	} else {
+		window.setTimeout( raise, 0 );
+	}
 }
 
 function formFor( id: string ): HTMLFormElement | null {
@@ -151,6 +211,9 @@ export function wireBulkUpload( zone: HTMLElement, deps: BulkDeps ): void {
 		failed: 0,
 		busy: false,
 	};
+
+	// Files that are not images at all. Not used, like the rest, and said once.
+	const unreadable: string[] = [];
 	const t = ( key: string ): string | undefined => deps.i18n()[ key ];
 	const say = ( message: string, tone: 'note' | 'error' = 'note' ) => {
 		status.textContent = message;
@@ -201,24 +264,45 @@ export function wireBulkUpload( zone: HTMLElement, deps: BulkDeps ): void {
 			return;
 		}
 
-		const dims = `${ entry.width } × ${ entry.height }`;
+		/*
+		 * **No size for it: left out, not refused.** A folder of artwork
+		 * holds sizes for other campaigns, and a red row for each was a page
+		 * of errors about files nobody meant to use here. They are named once,
+		 * together, at the end.
+		 *
+		 * The exception is a file that nearly fits a size still waiting — an
+		 * @2x export, a pixel off. That size would otherwise stay empty while
+		 * the advertiser thinks it is done, so it is said here and carried.
+		 */
+		if ( 'none' === match.kind || 'taken' === match.kind ) {
+			const near = nearMiss( entry, targets );
+			const dims = `${ entry.width } × ${ entry.height }`;
+			const wanted = near
+				? deps.uploads()[ near.target ]?.expectedSize ?? ''
+				: '';
+			const size = parsePixelSize( wanted );
+			const needs = size ? `${ size.width } × ${ size.height }` : wanted;
 
-		if ( 'none' === match.kind ) {
-			entry.status.textContent = format(
-				t( 'bulkNone' ),
-				dims,
-				openSizes( targets ).join( ', ' )
-			);
-			entry.row.classList.add( 'is-error' );
+			entry.warning = near
+				? format(
+						'scaled' === near.kind
+							? t( 'bulkScaled' )
+							: t( 'bulkOff' ),
+						entry.file.name,
+						dims,
+						nameOf( near.target ),
+						needs,
+						'scaled' === near.kind ? String( near.factor ) : ''
+				  )
+				: '';
+			entry.row.hidden = '' === entry.warning;
+			entry.row.classList.toggle( 'is-error', '' !== entry.warning );
+			entry.status.textContent = entry.warning;
 			return;
 		}
 
-		if ( 'taken' === match.kind ) {
-			entry.status.textContent = format( t( 'bulkTaken' ), dims );
-			entry.row.classList.add( 'is-error' );
-			return;
-		}
-
+		entry.warning = '';
+		entry.row.hidden = false;
 		entry.row.classList.remove( 'is-error' );
 
 		if ( 'one' === match.kind ) {
@@ -428,11 +512,17 @@ export function wireBulkUpload( zone: HTMLElement, deps: BulkDeps ): void {
 			( entry ) => ! entry.queued && entry.match?.kind === 'choose'
 		);
 
-		if (
-			round.busy ||
-			asking ||
-			( round.sent === 0 && '' === round.refused )
-		) {
+		if ( round.busy || asking ) {
+			return;
+		}
+
+		const notes = notesFor();
+
+		// Nothing sent, so nothing to reload: what there is to say goes here.
+		if ( round.sent === 0 && '' === round.refused ) {
+			const unused = notes.find( ( note ) => 'info' === note.level );
+
+			say( unused?.message ?? '' );
 			return;
 		}
 
@@ -452,9 +542,63 @@ export function wireBulkUpload( zone: HTMLElement, deps: BulkDeps ): void {
 			say( format( t( 'bulkDone' ), String( round.sent ) ) );
 		}
 
+		try {
+			const path =
+				'' === target
+					? window.location.pathname
+					: new URL( target, window.location.href ).pathname;
+
+			if ( notes.length > 0 ) {
+				window.sessionStorage.setItem(
+					notesKey( path ),
+					JSON.stringify( notes )
+				);
+			}
+		} catch {
+			// Storage refused: the uploads still landed, and the page says so.
+		}
+
 		if ( '' === target || ! navigateSameOrigin( target ) ) {
 			window.location.reload();
 		}
+	};
+
+	/**
+	 * What is left to say once the round is over: a warning for each file
+	 * that nearly fit, and one line naming every file that was not used.
+	 */
+	const notesFor = (): Note[] => {
+		const notes: Note[] = entries
+			.filter( ( entry ) => '' !== entry.warning )
+			.map( ( entry ) => ( {
+				message: entry.warning,
+				level: 'warning' as const,
+			} ) );
+		const unused = [
+			...entries
+				.filter(
+					( entry ) =>
+						'' === entry.warning &&
+						( entry.match?.kind === 'none' ||
+							entry.match?.kind === 'taken' )
+				)
+				.map( ( entry ) => entry.file.name ),
+			...unreadable,
+		];
+
+		if ( unused.length > 0 ) {
+			notes.push( {
+				message: format(
+					1 === unused.length
+						? t( 'bulkUnusedOne' )
+						: t( 'bulkUnusedMany' ),
+					unused.join( ', ' )
+				),
+				level: 'info',
+			} );
+		}
+
+		return notes;
 	};
 
 	const checkFor = ( entry: Entry, upload: BulkUploadState ): string => {
@@ -490,6 +634,21 @@ export function wireBulkUpload( zone: HTMLElement, deps: BulkDeps ): void {
 			return;
 		}
 
+		/*
+		 * A new drop is a new answer. Files the last one left out, or warned
+		 * about, have been seen; carrying them into this round's summary would
+		 * name them again under files that have nothing to do with them.
+		 */
+		for ( let i = entries.length - 1; i >= 0; i-- ) {
+			const entry = entries[ i ];
+
+			if ( entry && ! entry.queued && entry.match?.kind !== 'choose' ) {
+				entry.row.remove();
+				entries.splice( i, 1 );
+			}
+		}
+
+		unreadable.length = 0;
 		say( '' );
 		list.hidden = false;
 
@@ -518,10 +677,12 @@ export function wireBulkUpload( zone: HTMLElement, deps: BulkDeps ): void {
 					chosen: null,
 					pending: [],
 					queued: false,
+					warning: '',
 				} );
 			} catch {
-				line.textContent = t( 'bulkUnreadable' ) ?? '';
-				row.classList.add( 'is-error' );
+				// Not an image: not used, named with the others at the end.
+				row.remove();
+				unreadable.push( file.name );
 			}
 		}
 

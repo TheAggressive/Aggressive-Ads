@@ -201,9 +201,17 @@ takes every file at once (`shared/bulk-upload.ts`, bundled into
 `@aggr/upload`; `<noscript>` hides it, and the cards' own forms are the
 no-script path). Each file's dimensions are read in the browser and matched by
 `matchFilesToSizes()` in `@aggr/logic`: one open size of that shape and it goes
-there; several and the file asks which, with "All of them" as an answer; none
-and it is named with its dimensions and the sizes still needed; sizes that all
-have an ad say so. A matched file is posted through **its size's own upload
+there; several and the file asks which, with "All of them" as an answer. A
+file no size is waiting for is **left out, not refused** — a folder of artwork
+holds other campaigns' sizes, and a red row for each was a page of errors about
+files nobody meant to use — and every such file is named once, in one neutral
+line. The exception is a file that nearly fits a size still waiting
+(`nearMiss()`: exactly 2–4× the size, or within two pixels), which gets a
+warning, because that size would otherwise stay empty while the advertiser
+believes it is done. Both are carried across the page load that follows the
+uploads (`sessionStorage`, keyed by the campaign's path) and shown as the
+portal's toasts, drawn by `@aggr/save` from an `aggr:toast` event so toast
+markup keeps one author. A matched file is posted through **its size's own upload
 form** — that form's fields and nonce, the file set on the body, `aggr_async=1`
 — so there is no second upload route and the server cannot tell a dropped file
 from a chosen one. Files go one at a time; the page moves on once, after the

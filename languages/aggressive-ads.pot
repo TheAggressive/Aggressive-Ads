@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-19T17:35:16+00:00\n"
+"POT-Creation-Date: 2026-09-19T17:38:31+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -2476,44 +2476,52 @@ msgstr ""
 msgid "All of them"
 msgstr ""
 
-#. translators: 1: the file's dimensions, e.g. 300 × 250. 2: the sizes still needed, e.g. 728 × 90, 160 × 600.
+#. translators: 1: a file name. 2: its dimensions, e.g. 1456 × 180. 3: a placement's name. 4: the size it needs, e.g. 728 × 90. 5: how many times too large, e.g. 2.
 #: inc/Assets/class-assets.php:532
 #, php-format
-msgid "This file is %1$s. The sizes still needed are %2$s."
+msgid "%1$s is %2$s, %5$s times the %4$s %3$s needs, so it was not used. Save it at %4$s and add it again."
 msgstr ""
 
-#. translators: %s: the file's dimensions, e.g. 300 × 250.
+#. translators: 1: a file name. 2: its dimensions, e.g. 728 × 91. 3: a placement's name. 4: the size it needs, e.g. 728 × 90.
 #: inc/Assets/class-assets.php:534
 #, php-format
-msgid "Every %s placement already has an ad or a file."
+msgid "%1$s is %2$s, so it was not used. %3$s needs exactly %4$s."
 msgstr ""
 
-#: inc/Assets/class-assets.php:535
-msgid "This file is not an image that can be read. Use a JPEG, PNG, GIF, WebP, or AVIF image."
-msgstr ""
-
+#. translators: %s: a file name.
 #: inc/Assets/class-assets.php:536
-msgid "Add the address your ads link to, above, before uploading."
+#, php-format
+msgid "Not used: %s. No size in this campaign is waiting for it."
 msgstr ""
 
-#: inc/Assets/class-assets.php:537
-msgid "Waiting to upload."
-msgstr ""
-
+#. translators: %s: file names, separated by commas.
 #: inc/Assets/class-assets.php:538
-msgid "Uploaded."
+#, php-format
+msgid "Not used: %s. No size in this campaign is waiting for them."
 msgstr ""
 
 #: inc/Assets/class-assets.php:539
-msgid "Not uploaded. The reason is shown once the others finish."
+msgid "Add the address your ads link to, above, before uploading."
 msgstr ""
 
 #: inc/Assets/class-assets.php:540
+msgid "Waiting to upload."
+msgstr ""
+
+#: inc/Assets/class-assets.php:541
+msgid "Uploaded."
+msgstr ""
+
+#: inc/Assets/class-assets.php:542
+msgid "Not uploaded. The reason is shown once the others finish."
+msgstr ""
+
+#: inc/Assets/class-assets.php:543
 msgid "Some files did not finish uploading. Choose them again to try once more."
 msgstr ""
 
 #. translators: %d: how many files were uploaded.
-#: inc/Assets/class-assets.php:542
+#: inc/Assets/class-assets.php:545
 #, php-format
 msgid "Uploaded %d. Showing your ads…"
 msgstr ""
