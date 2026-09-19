@@ -309,7 +309,7 @@ final class PortalAccountTest extends WP_UnitTestCase {
 	public function test_help_states_the_real_upload_limits(): void {
 		$help = $this->view->help();
 
-		$this->assertSame( array( 'JPEG', 'PNG', 'GIF', 'WebP' ), $help['file_types'] );
+		$this->assertSame( array( 'JPEG', 'PNG', 'GIF', 'WebP', 'AVIF' ), $help['file_types'] );
 		$this->assertSame( '2 MB', $help['max_size'] );
 	}
 

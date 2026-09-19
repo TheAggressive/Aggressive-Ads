@@ -365,7 +365,7 @@ final class Assets implements Service {
 	 * Modules are enqueued from enqueue() so the import map prints in wp_head.
 	 * This only writes Interactivity state. Safe to call when the APIs are absent.
 	 *
-	 * @param array{id: int, wizard_step: string, autosave_rev: int, step_label: string, slots: array<int, array{id: int, size: string, max_bytes: int, max_size: string}>} $campaign Campaign view data.
+	 * @param array{id: int, wizard_step: string, autosave_rev: int, step_label: string, slots: array<int, array{id: int, size: string, max_bytes: int, max_size: string, name?: string, active?: bool, creatives?: array<int, mixed>}>} $campaign Campaign view data.
 	 * @return void
 	 */
 	public function hydrate_campaign_editor( array $campaign ): void {
@@ -464,7 +464,7 @@ final class Assets implements Service {
 	 * nothing about them — no size, no limit, no messages — so choosing a file
 	 * did nothing at all. The browser test caught it; the markup test could not.
 	 *
-	 * @param array<int, array{id: int, size: string, max_bytes: int, max_size: string}> $slots Placements that take an upload.
+	 * @param array<int, array{id: int, size: string, max_bytes: int, max_size: string, name?: string, active?: bool, creatives?: array<int, mixed>}> $slots Placements that take an upload.
 	 * @return void
 	 */
 	public function hydrate_uploads( array $slots ): void {
@@ -480,6 +480,11 @@ final class Assets implements Service {
 				'maxBytes'     => $slot['max_bytes'],
 				'maxPixels'    => Upload_Rules::MAX_PIXELS,
 				'allowedMime'  => Upload_Rules::ALLOWED_MIME,
+
+				// For the drop zone, which matches every file against every
+				// placement: what to call one, and whether it wants a file.
+				'name'         => (string) ( $slot['name'] ?? '' ),
+				'open'         => false !== ( $slot['active'] ?? true ) && array() === ( $slot['creatives'] ?? array() ),
 
 				/*
 				 * The refusal sentence, per placement, because the number in it
@@ -513,9 +518,33 @@ final class Assets implements Service {
 						'matched'         => __( '%s · matched by size', 'aggressive-ads' ),
 						'needsUrl'        => __( 'Enter a complete destination URL to finish the upload.', 'aggressive-ads' ),
 						'empty'           => __( 'Choose an ad creative file to upload.', 'aggressive-ads' ),
-						'type'            => __( 'Use a JPEG, PNG, GIF, or WebP image.', 'aggressive-ads' ),
+						'type'            => __( 'Use a JPEG, PNG, GIF, WebP, or AVIF image.', 'aggressive-ads' ),
 						'pixels'          => __( 'That ad creative is too large in pixels to process safely. Choose a smaller one.', 'aggressive-ads' ),
 						'dimensions'      => __( 'The ad creative must match the required pixel size for this placement.', 'aggressive-ads' ),
+						/* translators: %s: a placement's name, e.g. Header. */
+						'bulkGoesTo'      => __( 'Goes to %s.', 'aggressive-ads' ),
+						'bulkChoose'      => __( 'More than one placement is this size. Choose where it goes.', 'aggressive-ads' ),
+						/* translators: %s: a file name, e.g. banner-728x90.png. */
+						'bulkChooseLabel' => __( 'Placement for %s', 'aggressive-ads' ),
+						'bulkPick'        => __( 'Choose a placement', 'aggressive-ads' ),
+						'bulkAll'         => __( 'All of them', 'aggressive-ads' ),
+						/* translators: 1: a file name. 2: its dimensions, e.g. 1456 × 180. 3: a placement's name. 4: the size it needs, e.g. 728 × 90. 5: how many times too large, e.g. 2. */
+						'bulkScaled'      => __( '%1$s is %2$s, %5$s times the %4$s %3$s needs, so it was not used. Save it at %4$s and add it again.', 'aggressive-ads' ),
+						/* translators: 1: a file name. 2: its dimensions, e.g. 728 × 91. 3: a placement's name. 4: the size it needs, e.g. 728 × 90. */
+						'bulkOff'         => __( '%1$s is %2$s, so it was not used. %3$s needs exactly %4$s.', 'aggressive-ads' ),
+						/* translators: %s: a file name. */
+						'bulkUnusedOne'   => __( 'Not used: %s. No size in this campaign is waiting for it.', 'aggressive-ads' ),
+						/* translators: %s: file names, separated by commas. */
+						'bulkUnusedMany'  => __( 'Not used: %s. No size in this campaign is waiting for them.', 'aggressive-ads' ),
+						'bulkNeedsUrl'    => __( 'Add the link your ads go to, above. Your files upload as soon as it is in.', 'aggressive-ads' ),
+						/* translators: %s: a placement's name, or several separated by commas. */
+						'bulkWaitingLink' => __( 'Goes to %s once the link is added.', 'aggressive-ads' ),
+						'bulkWaiting'     => __( 'Waiting to upload.', 'aggressive-ads' ),
+						'bulkSent'        => __( 'Uploaded.', 'aggressive-ads' ),
+						'bulkRefused'     => __( 'Not uploaded. The reason is shown once the others finish.', 'aggressive-ads' ),
+						'bulkPartial'     => __( 'Some files did not finish uploading. Choose them again to try once more.', 'aggressive-ads' ),
+						/* translators: %d: how many files were uploaded. */
+						'bulkDone'        => __( 'Uploaded %d. Showing your ads…', 'aggressive-ads' ),
 					),
 				)
 			);

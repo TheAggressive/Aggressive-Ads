@@ -24,6 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use Aggressive\Ads\Domain\Upload_Rules;
 use Aggressive\Ads\Assets\Assets;
 use Aggressive\Ads\Domain\Size_Template;
 use Aggressive\Ads\Portal\Creative_Actions;
@@ -91,7 +92,7 @@ $aggr_template = Size_Template::svg( (string) $aggr_slot['size'] );
 			);
 			?>
 		</p>
-		<input id="aggr-file-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?>" name="file" type="file" accept="image/jpeg,image/png,image/gif,image/webp" required aria-describedby="aggr-upload-auto-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?> aggr-file-hint-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?> aggr-upload-status-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?><?php echo ( 'aggr-file-' . $aggr_slot['id'] ) === $aggr_creative_error_for ? ' aggr-creative-error' : ''; ?>" <?php echo ( 'aggr-file-' . $aggr_slot['id'] ) === $aggr_creative_error_for ? 'aria-invalid="true"' : ''; ?>>
+		<input id="aggr-file-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?>" name="file" type="file" accept="<?php echo esc_attr( Upload_Rules::accept_attribute() ); ?>" required aria-describedby="aggr-upload-auto-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?> aggr-file-hint-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?> aggr-upload-status-<?php echo esc_attr( (string) $aggr_slot['id'] ); ?><?php echo ( 'aggr-file-' . $aggr_slot['id'] ) === $aggr_creative_error_for ? ' aggr-creative-error' : ''; ?>" <?php echo ( 'aggr-file-' . $aggr_slot['id'] ) === $aggr_creative_error_for ? 'aria-invalid="true"' : ''; ?>>
 		<?php
 		/*
 		 * Visible, not `aggr-sr`.

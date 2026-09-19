@@ -99,7 +99,14 @@ The route **takes no URL**. It names a campaign and reads that campaign's stored
 
 House click URLs use both checks at save. The hop repeats the pure URL check
 against current placement meta. House attachments use `Upload_Rules` — JPEG,
-PNG, GIF, WebP only; SVG is refused.
+PNG, GIF, WebP, AVIF only; SVG is refused.
+
+The allowlist is the plugin's own and is not widened by `upload_mimes`.
+WordPress's `wp_check_filetype_and_ext()` still runs on every upload, so a type
+must pass both; a plugin that teaches WordPress a new type (SVG support is the
+common one) cannot make it a creative. A new type is added to `Upload_Rules`
+deliberately, with a real encoded fixture through upload and promotion
+(`AvifCreativeTest` is the pattern).
 
 ## Native fill
 

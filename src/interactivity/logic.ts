@@ -153,6 +153,141 @@ export function checkCreativeFile( input: {
 }
 
 /**
+ * One placement a dropped file could go to.
+ *
+ * `open` is whether it is waiting for a file: active, and with no ad yet. A
+ * placement that already has one is still listed, so a file of its size can
+ * be told why it was not used rather than that nothing was that size.
+ */
+export interface SizeTarget {
+	id: string;
+	width: number;
+	height: number;
+	open: boolean;
+}
+
+/**
+ * Where one dropped file goes.
+ *
+ * - `one`: exactly one open placement of its size; it goes there.
+ * - `choose`: several are open; the advertiser picks, or picks all of them.
+ * - `taken`: placements of its size exist, and each has an ad or a file.
+ * - `none`: no placement is its size.
+ */
+export type FileMatch =
+	| { kind: 'one'; target: string }
+	| { kind: 'choose'; targets: string[] }
+	| { kind: 'taken' }
+	| { kind: 'none' };
+
+/**
+ * Matches dropped files to placements by their pixel dimensions.
+ *
+ * In order, and a placement a file has been matched to is not offered to the
+ * next one: two 300×250 files on a package with two open 300×250 placements
+ * would otherwise both be sent to the first. Files that have to ask claim
+ * nothing yet, because what they will be given is not known until they are
+ * answered — the caller re-runs this after each answer, passing the answers
+ * as `claimed`.
+ *
+ * @param files   Each file's measured size.
+ * @param targets The campaign's placements.
+ * @param claimed Placements already spoken for.
+ * @return One match per file, in the files' order.
+ */
+export function matchFilesToSizes(
+	files: ReadonlyArray< { width: number; height: number } >,
+	targets: readonly SizeTarget[],
+	claimed: ReadonlySet< string > = new Set()
+): FileMatch[] {
+	const taken = new Set( claimed );
+
+	return files.map( ( file ): FileMatch => {
+		const sameSize = targets.filter(
+			( target ) =>
+				target.width === file.width && target.height === file.height
+		);
+
+		if ( sameSize.length === 0 ) {
+			return { kind: 'none' };
+		}
+
+		const free = sameSize
+			.filter( ( target ) => target.open && ! taken.has( target.id ) )
+			.map( ( target ) => target.id );
+		const [ only ] = free;
+
+		if ( only === undefined ) {
+			return { kind: 'taken' };
+		}
+
+		if ( free.length === 1 ) {
+			taken.add( only );
+
+			return { kind: 'one', target: only };
+		}
+
+		return { kind: 'choose', targets: free };
+	} );
+}
+
+/** How a file nearly fits a size that is waiting for one. */
+export type NearMiss =
+	| { kind: 'scaled'; target: string; factor: number }
+	| { kind: 'off'; target: string };
+
+/**
+ * The open size a file was almost certainly meant for, or null.
+ *
+ * Most files that match nothing are simply not for this campaign, and are
+ * left out without a word. Two kinds are mistakes worth stopping for, because
+ * the size they were meant for will otherwise sit empty while the advertiser
+ * believes it is done:
+ *
+ * - `scaled`: exactly two to four times the size — a retina export.
+ * - `off`: within two pixels on each side — a crop or canvas slip.
+ *
+ * Only open sizes are considered: nearly matching a size that already has an
+ * ad is no reason to interrupt anyone.
+ *
+ * @param file    The file's measured size.
+ * @param targets The campaign's placements.
+ * @return The size it nearly fits, and how.
+ */
+export function nearMiss(
+	file: { width: number; height: number },
+	targets: readonly SizeTarget[]
+): NearMiss | null {
+	for ( const target of targets ) {
+		if ( ! target.open ) {
+			continue;
+		}
+
+		for ( let factor = 2; factor <= 4; factor++ ) {
+			if (
+				file.width === target.width * factor &&
+				file.height === target.height * factor
+			) {
+				return { kind: 'scaled', target: target.id, factor };
+			}
+		}
+	}
+
+	for ( const target of targets ) {
+		if (
+			target.open &&
+			Math.abs( file.width - target.width ) <= 2 &&
+			Math.abs( file.height - target.height ) <= 2 &&
+			( file.width !== target.width || file.height !== target.height )
+		) {
+			return { kind: 'off', target: target.id };
+		}
+	}
+
+	return null;
+}
+
+/**
  * A destination link as it will be saved, or null when it cannot be one.
  *
  * People type `example.com/page`, which a URL input calls invalid and which

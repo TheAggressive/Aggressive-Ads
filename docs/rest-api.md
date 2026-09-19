@@ -397,8 +397,8 @@ GET /wp-json/aggr/v1/creatives/{id}/file
 `POST /campaigns/{id}/creatives` and the server-rendered form share
 `Creative_Manager`. A write requires a selected active placement, valid HTTP(S)
 destination without credentials, non-empty alternative text, and
-server-detected dimensions exactly matching the placement. JPEG, PNG, GIF, and
-WebP are allowed up to the placement's own `max_bytes` — 150 KB by default,
+server-detected dimensions exactly matching the placement. JPEG, PNG, GIF,
+WebP, and AVIF are allowed up to the placement's own `max_bytes` — 150 KB by default,
 never above the 2 MB ceiling — and SVG remains denied regardless of site-wide
 MIME plugins. One creative may cover each placement.
 

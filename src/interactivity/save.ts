@@ -426,3 +426,28 @@ document.addEventListener( 'click', ( event ) => {
 
 	closer?.closest( '.aggr-toast' )?.remove();
 } );
+
+/*
+ * Notices raised by another module, drawn here so the portal has one author
+ * of toast markup. The drop zone uses it for what it has to say after the
+ * page it uploaded from has been replaced.
+ */
+document.addEventListener( 'aggr:toast', ( event ) => {
+	const detail = ( event as CustomEvent< unknown > ).detail;
+
+	if ( typeof detail !== 'object' || detail === null ) {
+		return;
+	}
+
+	const { message, level } = detail as { message?: unknown; level?: unknown };
+	const levels: ToastLevel[] = [ 'success', 'error', 'warning', 'info' ];
+
+	if ( typeof message === 'string' ) {
+		toast(
+			message,
+			levels.includes( level as ToastLevel )
+				? ( level as ToastLevel )
+				: 'info'
+		);
+	}
+} );

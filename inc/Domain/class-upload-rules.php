@@ -69,16 +69,27 @@ final class Upload_Rules {
 	/**
 	 * MIME types a creative may be.
 	 *
+	 * Ours rather than WordPress's, deliberately. `upload_mimes` is widened by
+	 * plugins and themes (SVG support above all), and WordPress answers "may
+	 * this go in the Media Library", not "may this render inside every page
+	 * the site serves". WordPress's own check still runs on every upload, so
+	 * what is accepted is both lists at once.
+	 *
+	 * AVIF was added once every current browser displayed it. On a host whose
+	 * image library cannot resize it, promotion still succeeds: the Media
+	 * Library copy is simply made without sub-sizes, and the original is what
+	 * serves.
+	 *
 	 * @var array<int, string>
 	 */
-	public const ALLOWED_MIME = array( 'image/jpeg', 'image/png', 'image/gif', 'image/webp' );
+	public const ALLOWED_MIME = array( 'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif' );
 
 	/**
 	 * Extensions a creative may use.
 	 *
 	 * @var array<int, string>
 	 */
-	public const ALLOWED_EXTENSIONS = array( 'jpg', 'jpeg', 'png', 'gif', 'webp' );
+	public const ALLOWED_EXTENSIONS = array( 'jpg', 'jpeg', 'png', 'gif', 'webp', 'avif' );
 
 	/**
 	 * Types refused outright, whatever the site's own settings say.
@@ -133,6 +144,18 @@ final class Upload_Rules {
 	}
 
 	/**
+	 * The file input's `accept` value.
+	 *
+	 * From the list rather than written out in each template, where four
+	 * copies of it would each have to learn about a new type separately.
+	 *
+	 * @return string
+	 */
+	public static function accept_attribute(): string {
+		return implode( ',', self::ALLOWED_MIME );
+	}
+
+	/**
 	 * The extension a MIME type should carry.
 	 *
 	 * Used to name the stored file from what it actually is, rather than from
@@ -147,6 +170,7 @@ final class Upload_Rules {
 			'image/png'  => 'png',
 			'image/gif'  => 'gif',
 			'image/webp' => 'webp',
+			'image/avif' => 'avif',
 			default      => '',
 		};
 	}

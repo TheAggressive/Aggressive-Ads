@@ -48,6 +48,94 @@
 	align-items: center;
 }
 
+/* Two lines of guidance under the title, not two paragraphs. */
+.aggr-dropzone__text .aggr-hint {
+	margin: 0;
+}
+
+.aggr-dropzone__link-hint {
+	color: var(--aggr-color-text);
+	font-weight: 600;
+}
+
+.aggr-dropzone.is-drop-target {
+	background-color: var(--aggr-color-surface-inset);
+	border-color: var(--aggr-color-accent);
+}
+
+/* What happened to each file: under the zone's own row, the full width. */
+.aggr-dropzone__summary,
+.aggr-dropzone__list {
+	flex-basis: 100%;
+}
+
+.aggr-dropzone__list {
+	display: grid;
+	gap: var(--aggr-space-xs);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.aggr-dropzone__item {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--aggr-space-2xs) var(--aggr-space-md);
+	align-items: center;
+	padding: var(--aggr-space-xs) var(--aggr-space-sm);
+	background: var(--aggr-color-surface);
+	border: 1px solid var(--aggr-border-color);
+	border-radius: var(--aggr-radius-control);
+	font-size: 13px;
+}
+
+.aggr-dropzone__name {
+	font-weight: 600;
+	overflow-wrap: anywhere;
+}
+
+.aggr-dropzone__status {
+	color: var(--aggr-color-text-muted);
+}
+
+/* Bordered as well as coloured, as the cards' own refusals are. */
+.aggr-dropzone__item.is-error {
+	border-left: 3px solid var(--aggr-color-danger);
+}
+
+.aggr-dropzone__item.is-error .aggr-dropzone__status {
+	color: var(--aggr-color-danger);
+}
+
+.aggr-dropzone__progress {
+	flex-basis: 100%;
+	width: 100%;
+}
+
+/* "Same file as …" above an empty size's own upload form. */
+.aggr-same-file {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--aggr-space-xs);
+	align-items: center;
+	margin-bottom: var(--aggr-space-md);
+}
+
+.aggr-same-file .aggr-hint {
+	flex-basis: 100%;
+	margin: 0;
+}
+
+.aggr-same-file-remove {
+	margin: 0 0 var(--aggr-space-md);
+	padding: 0;
+	border: 0;
+}
+
+.aggr-same-file-remove legend {
+	padding: 0;
+}
+
 /* Two options side by side, one of them chosen. */
 .aggr-segmented {
 	display: inline-flex;

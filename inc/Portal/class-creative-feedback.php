@@ -283,9 +283,9 @@ final class Creative_Feedback {
 				size_format( Upload_Rules::resolve_max_bytes( $max_bytes ) )
 			),
 			'aggr_upload_too_many_pixels'   => __( 'That ad creative has too many pixels to process. Resize it to the placement dimensions and try again.', 'aggressive-ads' ),
-			'aggr_upload_not_an_image'      => __( 'That file is not a readable image. JPEG, PNG, GIF, and WebP are supported.', 'aggressive-ads' ),
+			'aggr_upload_not_an_image'      => __( 'That file is not a readable image. JPEG, PNG, GIF, WebP, and AVIF are supported.', 'aggressive-ads' ),
 			'aggr_upload_type_mismatch'     => __( 'The file contents do not match its filename, so it was not accepted.', 'aggressive-ads' ),
-			'aggr_upload_type_not_allowed'  => __( 'That file type is not supported. Use JPEG, PNG, GIF, or WebP.', 'aggressive-ads' ),
+			'aggr_upload_type_not_allowed'  => __( 'That file type is not supported. Use JPEG, PNG, GIF, WebP, or AVIF.', 'aggressive-ads' ),
 			'aggr_upload_failed'            => __( 'The upload did not complete. Try again.', 'aggressive-ads' ),
 			'aggr_placement_unavailable',
 			'aggr_placement_not_selected'   => __( 'That placement is not available for this campaign.', 'aggressive-ads' ),
@@ -314,6 +314,7 @@ final class Creative_Feedback {
 			'aggr_creative_not_deleted'     => __( 'The creative could not be removed. Please try again.', 'aggressive-ads' ),
 			'aggr_creative_restore_failed'  => __( 'The creative record and file could not be reconciled. Please contact an administrator.', 'aggressive-ads' ),
 			'aggr_creative_not_created'     => __( 'The creative could not be saved. Please try again.', 'aggressive-ads' ),
+			'aggr_copy_source_unavailable'  => __( 'That ad\'s file could not be read. Upload it to this size instead.', 'aggressive-ads' ),
 
 			/*
 			 * **Twelve codes that reached a reader as "could not be saved".**

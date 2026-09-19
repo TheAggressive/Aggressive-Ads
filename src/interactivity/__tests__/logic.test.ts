@@ -8,6 +8,8 @@ import {
 	debounce,
 	isWizardStep,
 	nextStep,
+	matchFilesToSizes,
+	nearMiss,
 	normaliseLink,
 	parsePixelSize,
 	previousStep,
@@ -171,5 +173,121 @@ describe( 'debounce', () => {
 		delayed.cancel();
 		jest.advanceTimersByTime( 500 );
 		expect( fn ).toHaveBeenCalledTimes( 1 );
+	} );
+} );
+
+describe( 'matching dropped files to sizes', () => {
+	const header = { id: '1', width: 728, height: 90, open: true };
+	const breaker = { id: '2', width: 728, height: 90, open: true };
+	const side = { id: '3', width: 300, height: 250, open: true };
+
+	it( 'sends a file to the one open placement of its size', () => {
+		expect(
+			matchFilesToSizes(
+				[ { width: 300, height: 250 } ],
+				[ header, side ]
+			)
+		).toEqual( [ { kind: 'one', target: '3' } ] );
+	} );
+
+	it( 'asks when two open placements are the size, and claims neither', () => {
+		expect(
+			matchFilesToSizes(
+				[
+					{ width: 728, height: 90 },
+					{ width: 300, height: 250 },
+				],
+				[ header, breaker, side ]
+			)
+		).toEqual( [
+			{ kind: 'choose', targets: [ '1', '2' ] },
+			{ kind: 'one', target: '3' },
+		] );
+	} );
+
+	it( 'does not send two files of one size to the same placement', () => {
+		const matches = matchFilesToSizes(
+			[
+				{ width: 300, height: 250 },
+				{ width: 300, height: 250 },
+			],
+			[ side ]
+		);
+
+		expect( matches ).toEqual( [
+			{ kind: 'one', target: '3' },
+			{ kind: 'taken' },
+		] );
+	} );
+
+	it( 'resolves a choice once the other placement is claimed', () => {
+		expect(
+			matchFilesToSizes(
+				[ { width: 728, height: 90 } ],
+				[ header, breaker ],
+				new Set( [ '1' ] )
+			)
+		).toEqual( [ { kind: 'one', target: '2' } ] );
+	} );
+
+	it( 'says taken, not none, when the size exists but already has an ad', () => {
+		expect(
+			matchFilesToSizes(
+				[ { width: 728, height: 90 } ],
+				[ { ...header, open: false }, side ]
+			)
+		).toEqual( [ { kind: 'taken' } ] );
+	} );
+
+	it( 'says none for a size the package does not have', () => {
+		expect(
+			matchFilesToSizes( [ { width: 160, height: 600 } ], [ header ] )
+		).toEqual( [ { kind: 'none' } ] );
+	} );
+} );
+
+describe( 'files that nearly fit a size still waiting', () => {
+	const header = { id: '1', width: 728, height: 90, open: true };
+	const side = { id: '3', width: 300, height: 250, open: true };
+
+	it( 'recognises a retina export at two, three and four times', () => {
+		expect( nearMiss( { width: 1456, height: 180 }, [ header ] ) ).toEqual(
+			{ kind: 'scaled', target: '1', factor: 2 }
+		);
+		expect( nearMiss( { width: 1200, height: 1000 }, [ side ] ) ).toEqual( {
+			kind: 'scaled',
+			target: '3',
+			factor: 4,
+		} );
+	} );
+
+	it( 'recognises a file a pixel or two out', () => {
+		expect( nearMiss( { width: 728, height: 91 }, [ header ] ) ).toEqual( {
+			kind: 'off',
+			target: '1',
+		} );
+		expect( nearMiss( { width: 730, height: 88 }, [ header ] ) ).toEqual( {
+			kind: 'off',
+			target: '1',
+		} );
+	} );
+
+	it( 'stays quiet about anything further off, or an exact fit', () => {
+		expect( nearMiss( { width: 731, height: 90 }, [ header ] ) ).toBeNull();
+		expect(
+			nearMiss( { width: 1456, height: 181 }, [ header ] )
+		).toBeNull();
+		expect(
+			nearMiss( { width: 160, height: 600 }, [ header, side ] )
+		).toBeNull();
+		expect( nearMiss( { width: 728, height: 90 }, [ header ] ) ).toBeNull();
+	} );
+
+	it( 'says nothing about a size that already has an ad', () => {
+		expect(
+			nearMiss( { width: 1456, height: 180 }, [
+				{ ...header, open: false },
+			] )
+		).toBeNull();
 	} );
 } );

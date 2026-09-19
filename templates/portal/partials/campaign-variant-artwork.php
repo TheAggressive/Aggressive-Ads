@@ -24,6 +24,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use Aggressive\Ads\Domain\Upload_Rules;
 use Aggressive\Ads\Portal\Creative_Actions;
 
 $aggr_artwork_creative = (int) ( $aggr_creative['id'] ?? 0 );
@@ -41,6 +42,7 @@ $aggr_close_href = isset( $aggr_close_href ) && is_string( $aggr_close_href ) ? 
 <p class="aggr-hint">
 	<?php esc_html_e( 'The destination, the share and the run dates stay as they are. Only the image changes.', 'aggressive-ads' ); ?>
 </p>
+<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-same-file-note.php'; ?>
 
 <form class="aggr-form" method="post" enctype="multipart/form-data" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 	<input type="hidden" name="action" value="<?php echo esc_attr( Creative_Actions::ARTWORK_ACTION ); ?>">
@@ -65,7 +67,7 @@ $aggr_close_href = isset( $aggr_close_href ) && is_string( $aggr_close_href ) ? 
 			id="<?php echo esc_attr( $aggr_artwork_field ); ?>"
 			name="file"
 			type="file"
-			accept="image/jpeg,image/png,image/gif,image/webp"
+			accept="<?php echo esc_attr( Upload_Rules::accept_attribute() ); ?>"
 			required
 		>
 	</div>

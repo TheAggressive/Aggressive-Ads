@@ -19,6 +19,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use Aggressive\Ads\Domain\Upload_Rules;
 use Aggressive\Ads\Assets\Assets;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Portal\Creative_Actions;
@@ -252,6 +253,7 @@ if ( true !== ( $aggr_overlay_print ?? false ) ) {
 							<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) ( $aggr_campaign['id'] ?? '' ) ); ?>">
 							<input type="hidden" name="creative_id" value="<?php echo esc_attr( (string) $aggr_creative['id'] ); ?>">
 							<?php wp_nonce_field( Creative_Actions::remove_nonce_action( (int) $aggr_creative['id'] ) ); ?>
+							<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-same-file-remove.php'; ?>
 
 							<div class="aggr-overlay__actions">
 								<a
@@ -268,6 +270,7 @@ if ( true !== ( $aggr_overlay_print ?? false ) ) {
 						<p class="aggr-hint">
 							<?php esc_html_e( 'The current ad keeps running until staff approve this replacement.', 'aggressive-ads' ); ?>
 						</p>
+						<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-same-file-note.php'; ?>
 
 						<form class="aggr-form" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" method="post" enctype="multipart/form-data">
 							<input type="hidden" name="action" value="<?php echo esc_attr( Creative_Actions::REPLACE_ACTION ); ?>">
@@ -287,12 +290,12 @@ if ( true !== ( $aggr_overlay_print ?? false ) ) {
 								 * keeps the current ad serving meanwhile.
 								 */
 								?>
-								<input id="aggr-replacement-file-<?php echo esc_attr( (string) $aggr_creative['id'] ); ?>" name="file" type="file" accept="image/jpeg,image/png,image/gif,image/webp">
+								<input id="aggr-replacement-file-<?php echo esc_attr( (string) $aggr_creative['id'] ); ?>" name="file" type="file" accept="<?php echo esc_attr( Upload_Rules::accept_attribute() ); ?>">
 								<p class="aggr-hint">
 									<?php
 									printf(
 										/* translators: %s: required creative dimensions, for example 728x90. */
-										esc_html__( 'Exactly %s. JPEG, PNG, GIF, or WebP. Leave this empty to change only the destination.', 'aggressive-ads' ),
+										esc_html__( 'Exactly %s. JPEG, PNG, GIF, WebP, or AVIF. Leave this empty to change only the destination.', 'aggressive-ads' ),
 										esc_html( (string) $aggr_creative['size'] )
 									);
 									?>

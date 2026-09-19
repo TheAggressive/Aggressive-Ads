@@ -93,7 +93,7 @@ final class Creative_View_Data {
 	 * ever needs to be told.
 	 *
 	 * @param int $campaign_id Campaign post id.
-	 * @return array<int, array{id: int, placement_id: int, placement: string, size: string, dimensions: string, click_url: string, alt_text: string, approved: bool, rejected: bool, state_text: string, notes: string, name: string, bytes: int, preview: string, weight: int|null, share: float|null, assignment_id: int, revision: int}>
+	 * @return array<int, array{id: int, placement_id: int, placement: string, size: string, dimensions: string, click_url: string, alt_text: string, approved: bool, rejected: bool, state_text: string, notes: string, name: string, bytes: int, preview: string, same_file: array<int, array{id: int, placement: string, approved: bool}>, weight: int|null, share: float|null, assignment_id: int, revision: int}>
 	 */
 	public function creative_rows( int $campaign_id ): array {
 		$rows = array();
@@ -150,6 +150,10 @@ final class Creative_View_Data {
 				'bytes'         => null === $stored ? 0 : $stored['bytes'],
 				'preview'       => $this->creative_preview( $creative['id'] ),
 
+				// Other placements holding this file, by name — never the
+				// checksum that found them. See `same_file()`.
+				'same_file'     => $this->same_file( $creative['id'] ),
+
 				/*
 				 * Null rather than zero for a creative with no assignment yet.
 				 * Zero is a real weight the rules do not even permit, and a
@@ -175,6 +179,31 @@ final class Creative_View_Data {
 		}
 
 		return $rows;
+	}
+
+	/**
+	 * The other placements this creative's file is also on.
+	 *
+	 * What removing or replacing it has to mention: each is a creative of its
+	 * own, so neither action reaches it, and saying nothing would leave the
+	 * advertiser believing one file was changed everywhere. `approved` says
+	 * whether it could be removed alongside, which a published ad cannot.
+	 *
+	 * @param int $creative_id Creative post id.
+	 * @return array<int, array{id: int, placement: string, approved: bool}>
+	 */
+	private function same_file( int $creative_id ): array {
+		$others = array();
+
+		foreach ( $this->creatives->same_file_elsewhere( $creative_id ) as $other_id ) {
+			$others[] = array(
+				'id'        => $other_id,
+				'placement' => $this->placements->name( (int) ( $this->creatives->details( $other_id )['placement_id'] ?? 0 ) ),
+				'approved'  => $this->attachments->has_attachment( $other_id ),
+			);
+		}
+
+		return $others;
 	}
 
 	/**

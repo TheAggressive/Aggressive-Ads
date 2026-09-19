@@ -11,10 +11,8 @@ namespace Aggressive\Ads\Workflow;
 
 use Aggressive\Ads\Audit\Audit_Event;
 use Aggressive\Ads\Core\Post_Statuses;
-use Aggressive\Ads\Domain\Upload_Rules;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
-use Aggressive\Ads\Repository\Creative_Attachment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Line_Item_Repository;
 use Aggressive\Ads\Security\Capabilities;
@@ -29,19 +27,19 @@ final class Campaign_Copier {
 	/**
 	 * Constructor.
 	 *
-	 * @param Campaign_Editor                $editor    Draft allocation.
-	 * @param Campaign_Repository            $campaigns Campaign persistence.
-	 * @param Creative_Repository            $creatives Creative persistence.
-	 * @param Creative_Attachment_Repository $attachments Media Library copy of the artwork.
-	 * @param Private_Storage                $storage   Private file storage.
-	 * @param Audit_Repository               $audit     Audit persistence.
-	 * @param Line_Item_Repository|null      $line_items Line-item compatibility persistence.
+	 * @param Campaign_Editor           $editor    Draft allocation.
+	 * @param Campaign_Repository       $campaigns Campaign persistence.
+	 * @param Creative_Repository       $creatives Creative persistence.
+	 * @param Creative_Source           $sources   Where each creative's bytes are read from.
+	 * @param Private_Storage           $storage   Private file storage.
+	 * @param Audit_Repository          $audit     Audit persistence.
+	 * @param Line_Item_Repository|null $line_items Line-item compatibility persistence.
 	 */
 	public function __construct(
 		private readonly Campaign_Editor $editor,
 		private readonly Campaign_Repository $campaigns,
 		private readonly Creative_Repository $creatives,
-		private readonly Creative_Attachment_Repository $attachments,
+		private readonly Creative_Source $sources,
 		private readonly Private_Storage $storage,
 		private readonly Audit_Repository $audit,
 		private readonly ?Line_Item_Repository $line_items = null
@@ -165,7 +163,7 @@ final class Campaign_Copier {
 		$org_id = $this->campaigns->org_id( $campaign_id );
 
 		foreach ( $this->creatives->for_campaign( $source_id ) as $creative ) {
-			$file = $this->source_file( $creative['id'] );
+			$file = $this->sources->resolve( $creative['id'] );
 
 			if ( null === $file ) {
 				continue;
@@ -228,67 +226,6 @@ final class Campaign_Copier {
 		}
 
 		return $copied;
-	}
-
-	/**
-	 * Resolves bytes to copy: private file first, then the promoted attachment.
-	 *
-	 * The private file is encrypted, so it is decrypted into a temporary file
-	 * the caller must delete; the promoted attachment is ordinary Media Library
-	 * bytes and is read where it lies. `temporary` says which of the two this
-	 * is, because deleting the wrong one destroys a published creative.
-	 *
-	 * @param int $creative_id Source creative.
-	 * @return array{path: string, extension: string, mime: string, sha256: string, name: string, temporary: bool}|null
-	 */
-	private function source_file( int $creative_id ): ?array {
-		$details = $this->creatives->storage_details( $creative_id );
-
-		if ( null === $details ) {
-			return null;
-		}
-
-		$temporary = false;
-		$path      = '' !== $details['path'] ? $this->storage->export( $details['path'] ) : null;
-
-		if ( null !== $path ) {
-			$temporary = true;
-		} else {
-			$attachment = $this->attachments->attachment_file( $creative_id );
-			$path       = '' !== $attachment && is_readable( $attachment ) ? $attachment : null;
-		}
-
-		if ( null === $path ) {
-			return null;
-		}
-
-		$mime = $details['mime'];
-		$ext  = Upload_Rules::extension_for_mime( $mime );
-
-		if ( '' === $ext ) {
-			// From the stored name when the bytes are a decrypted temporary
-			// file, because that file is named .tmp and always would be.
-			$ext = strtolower(
-				(string) pathinfo( $temporary ? $details['path'] : $path, PATHINFO_EXTENSION )
-			);
-		}
-
-		if ( ! Upload_Rules::is_allowed_extension( $ext ) || ! Upload_Rules::is_allowed_mime( $mime ) ) {
-			if ( $temporary ) {
-				wp_delete_file( $path );
-			}
-
-			return null;
-		}
-
-		return array(
-			'path'      => $path,
-			'extension' => $ext,
-			'mime'      => $mime,
-			'sha256'    => $details['sha256'],
-			'name'      => $details['name'],
-			'temporary' => $temporary,
-		);
 	}
 
 	/**

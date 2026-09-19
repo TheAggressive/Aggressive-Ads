@@ -45,7 +45,7 @@ test( 'advertiser reads and edits their account, organization and help', async (
 	// Derived from the upload rules rather than written into the page, so this
 	// also pins that the derivation still produces something readable.
 	await expect(
-		page.getByText( 'JPEG · PNG · GIF · WebP', { exact: true } )
+		page.getByText( 'JPEG · PNG · GIF · WebP · AVIF', { exact: true } )
 	).toBeVisible();
 	await expectPortalA11y( page );
 

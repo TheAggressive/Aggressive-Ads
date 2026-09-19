@@ -46,6 +46,7 @@ const WORKFLOWS = [
 	'inc/Workflow/class-creative-uploader.php',
 	'inc/Workflow/class-creative-change-manager.php',
 	'inc/Workflow/class-assignment-editor.php',
+	'inc/Workflow/class-creative-copies.php',
 ];
 
 /**

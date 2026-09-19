@@ -28,6 +28,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+use Aggressive\Ads\Domain\Upload_Rules;
 use Aggressive\Ads\Portal\Campaign_Actions;
 use Aggressive\Ads\Portal\Campaign_Nonces;
 use Aggressive\Ads\Portal\Request;
@@ -101,33 +102,45 @@ foreach ( $aggr_slots as $aggr_counted_slot ) {
 
 					<?php
 					/*
-					 * A preview of uploading every size at once. Disabled and labelled as
-					 * coming, because a drop target that accepts files and does nothing is
-					 * worse than none; each size's own form below does the uploading today.
+					 * Every file at once, each sent to the size it matches.
+					 *
+					 * Script only, and hidden without it rather than drawn and
+					 * inert: a drop target that accepts files and does nothing is
+					 * worse than none, and each size's own form below uploads the
+					 * same way it always has. Shown only while a size is waiting
+					 * for a file, since with none open every drop would be refused.
 					 */
 					?>
-					<div class="aggr-dropzone" aria-describedby="aggr-dropzone-note">
-						<span class="aggr-dropzone__icon" aria-hidden="true">
-							<svg class="aggr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4"/><path d="M7 9l5-5 5 5"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
-						</span>
-						<span class="aggr-dropzone__text">
-							<span class="aggr-dropzone__title"><?php esc_html_e( 'Drop all your files here', 'aggressive-ads' ); ?></span>
-							<span class="aggr-hint" style="margin: 0">
-								<?php
-								printf(
-									/* translators: %s: the largest file any size in this package accepts, e.g. 150 KB. */
-									esc_html__( 'JPEG, PNG, GIF or WebP · up to %s each · files stay private until approved', 'aggressive-ads' ),
-									esc_html( (string) size_format( $aggr_max_bytes > 0 ? $aggr_max_bytes : 153600 ) )
-								);
-								?>
+					<?php if ( $aggr_missing > 0 ) : ?>
+						<noscript><style>.aggr-portal .aggr-dropzone{display:none!important}</style></noscript>
+						<div class="aggr-dropzone" data-aggr-bulk>
+							<span class="aggr-dropzone__icon" aria-hidden="true">
+								<svg class="aggr-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4"/><path d="M7 9l5-5 5 5"/><path d="M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>
 							</span>
-							<span id="aggr-dropzone-note" class="aggr-sr"><?php esc_html_e( 'Dropping every file at once is coming soon. Add each file to its size below.', 'aggressive-ads' ); ?></span>
-						</span>
-						<span class="aggr-dropzone__actions">
-							<button class="aggr-button aggr-button--secondary" type="button" disabled><?php esc_html_e( 'Browse files', 'aggressive-ads' ); ?></button>
-							<a class="aggr-card-action" href="<?php echo esc_url( Routes::url( Request::ROUTE_HELP ) . '#aggr-help-artwork' ); ?>"><?php esc_html_e( 'Blank templates', 'aggressive-ads' ); ?></a>
-						</span>
-					</div>
+							<span class="aggr-dropzone__text">
+								<span class="aggr-dropzone__title"><?php esc_html_e( 'Drop all your files here', 'aggressive-ads' ); ?></span>
+								<span id="aggr-dropzone-note" class="aggr-hint">
+									<?php
+									printf(
+										/* translators: %s: the largest file any size in this package accepts, e.g. 150 KB. */
+										esc_html__( 'Each file goes to the size it matches. JPEG, PNG, GIF, WebP or AVIF · up to %s each · files stay private until approved', 'aggressive-ads' ),
+										esc_html( (string) size_format( $aggr_max_bytes > 0 ? $aggr_max_bytes : 153600 ) )
+									);
+									?>
+								</span>
+								<?php // Toggled by the drop zone as the link is typed; drawn by the server for the first paint. ?>
+								<span class="aggr-hint aggr-dropzone__link-hint" data-aggr-bulk-link-hint <?php echo '' !== $aggr_link ? 'hidden' : ''; ?>><?php esc_html_e( 'Add the link your ads go to above. Files dropped before then wait for it.', 'aggressive-ads' ); ?></span>
+							</span>
+							<span class="aggr-dropzone__actions">
+								<button class="aggr-button aggr-button--secondary" type="button" data-aggr-bulk-browse aria-describedby="aggr-dropzone-note"><?php esc_html_e( 'Browse files', 'aggressive-ads' ); ?></button>
+								<?php // Opened by the button; out of the tab order so the one control is not announced twice. ?>
+								<input class="aggr-sr" type="file" multiple accept="<?php echo esc_attr( Upload_Rules::accept_attribute() ); ?>" tabindex="-1" aria-hidden="true" data-aggr-bulk-input>
+								<a class="aggr-card-action" href="<?php echo esc_url( Routes::url( Request::ROUTE_HELP ) . '#aggr-help-artwork' ); ?>"><?php esc_html_e( 'Blank templates', 'aggressive-ads' ); ?></a>
+							</span>
+							<p class="aggr-upload-status aggr-dropzone__summary" role="status" aria-live="polite" data-aggr-bulk-status></p>
+							<ul class="aggr-dropzone__list" aria-live="polite" data-aggr-bulk-list hidden></ul>
+						</div>
+					<?php endif; ?>
 				</section>
 
 				<?php if ( array() === $aggr_slots ) : ?>
@@ -294,7 +307,12 @@ foreach ( $aggr_slots as $aggr_counted_slot ) {
 												<span class="aggr-upload-card__frame" style="aspect-ratio: <?php echo esc_attr( $aggr_slot_w . ' / ' . $aggr_slot_h ); ?>; --aggr-frame-width: <?php echo esc_attr( (string) min( 20, max( 3, round( $aggr_slot_w / 36, 1 ) ) ) ); ?>rem"><?php echo esc_html( $aggr_slot_w . ' × ' . $aggr_slot_h ); ?></span>
 											</div>
 										<?php endif; ?>
-										<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-upload-form.php'; ?>
+										<?php
+										$aggr_reuse_slots = $aggr_slots;
+
+										require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-same-file.php';
+										require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-upload-form.php';
+										?>
 									<?php else : ?>
 										<?php
 										$aggr_add_id     = 'aggr-add-' . (int) $aggr_slot['id'];

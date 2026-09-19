@@ -58,6 +58,29 @@ declare module '@aggr/logic' {
 		fn: T,
 		ms: number
 	): T & { cancel: () => void };
+	export interface SizeTarget {
+		id: string;
+		width: number;
+		height: number;
+		open: boolean;
+	}
+	export type FileMatch =
+		| { kind: 'one'; target: string }
+		| { kind: 'choose'; targets: string[] }
+		| { kind: 'taken' }
+		| { kind: 'none' };
+	export function matchFilesToSizes(
+		files: ReadonlyArray< { width: number; height: number } >,
+		targets: readonly SizeTarget[],
+		claimed?: ReadonlySet< string >
+	): FileMatch[];
+	export type NearMiss =
+		| { kind: 'scaled'; target: string; factor: number }
+		| { kind: 'off'; target: string };
+	export function nearMiss(
+		file: { width: number; height: number },
+		targets: readonly SizeTarget[]
+	): NearMiss | null;
 }
 
 declare module '@aggr/dialog' {}

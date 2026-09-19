@@ -196,6 +196,40 @@ upload to it; the button is restored if an attempt is refused. Uploading is a
 change of context, so a sentence describing it precedes both controls and is in
 `aria-describedby` on each (WCAG 3.2.2).
 
+Above the cards, while any size still needs a file, a script-only drop zone
+takes every file at once (`shared/bulk-upload.ts`, bundled into
+`@aggr/upload`; `<noscript>` hides it, and the cards' own forms are the
+no-script path). Each file's dimensions are read in the browser and matched by
+`matchFilesToSizes()` in `@aggr/logic`: one open size of that shape and it goes
+there; several and the file asks which, with "All of them" as an answer. A
+file no size is waiting for is **left out, not refused** — a folder of artwork
+holds other campaigns' sizes, and a red row for each was a page of errors about
+files nobody meant to use — and every such file is named once, in one neutral
+line. The exception is a file that nearly fits a size still waiting
+(`nearMiss()`: exactly 2–4× the size, or within two pixels), which gets a
+warning, because that size would otherwise stay empty while the advertiser
+believes it is done. Both are carried across the page load that follows the
+uploads (`sessionStorage`, keyed by the campaign's path) and shown as the
+portal's toasts, drawn by `@aggr/save` from an `aggr:toast` event so toast
+markup keeps one author. Files dropped before the campaign has a link are **held, not
+discarded**: each row says where it will go "once the link is added", nothing
+is sent, and the round resumes by itself when the link field commits (`change`
+or `blur`, so a half-typed `https://exa` never uploads). The link is normalised
+the way the field saves it, and only into a card still following the
+campaign's link. A matched file is posted through **its size's own upload
+form** — that form's fields and nonce, the file set on the body, `aggr_async=1`
+— so there is no second upload route and the server cannot tell a dropped file
+from a chosen one. Files go one at a time; the page moves on once, after the
+last, to the server's refusal if there was one and otherwise to its success
+page. A file that never reached the server keeps the list on screen instead.
+
+An empty size with the same dimensions as another placement that already has an
+ad also offers **Same file as …** (a plain form post, `aggr_copy_creative`, also
+on a running campaign's edit flow). It makes a copy, not a shared reference —
+see [domain-model.md](domain-model.md) — so removing an ad whose file is on
+another placement offers a box to remove that copy too, and replacing one says
+the others keep their file.
+
 Continue to review is a POST, not a link. It advances the resume point only
 when every placement is covered and the stored dates pass the window rule; a
 refused date sends the advertiser to details, anything else back to the

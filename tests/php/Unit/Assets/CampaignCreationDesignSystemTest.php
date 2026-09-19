@@ -58,7 +58,9 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 		$this->assertStringContainsString( 'type="radio"', $detail );
 		$this->assertStringContainsString( 'type="file"', $detail );
 		$this->assertStringContainsString( 'enctype="multipart/form-data"', $detail );
-		$this->assertStringContainsString( 'accept="image/jpeg,image/png,image/gif,image/webp"', $detail );
+		// From the rules, not written out: four hand-kept copies were how a new type would miss one.
+		$this->assertStringContainsString( 'accept="<?php echo esc_attr( Upload_Rules::accept_attribute() ); ?>"', $detail );
+		$this->assertStringNotContainsString( 'accept="image/', $detail );
 		$this->assertStringContainsString( 'required', $detail );
 	}
 
