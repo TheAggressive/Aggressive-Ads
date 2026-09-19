@@ -299,6 +299,15 @@ async function submit( form: HTMLFormElement ): Promise< void > {
 		state.i18n[ payload.notice ?? '' ] ?? state.i18n.saved ?? '',
 		'success'
 	);
+
+	/*
+	 * Said once the server has answered and the page agrees with it. The
+	 * link check listens: it reads the stored link, so it has to know when
+	 * what is on screen has become what is stored.
+	 */
+	document.dispatchEvent(
+		new CustomEvent( 'aggr:saved', { detail: { form } } )
+	);
 	closeDialogAround( form );
 }
 

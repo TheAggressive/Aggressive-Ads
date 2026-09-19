@@ -12,6 +12,8 @@ namespace Aggressive\Ads\Tests\Integration;
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
@@ -244,6 +246,51 @@ final class LinkCheckTest extends WP_UnitTestCase {
 		$this->assertSame( 0, $result['status'] );
 	}
 
+	/**
+	 * One ad's own link is checked, not the campaign's.
+	 *
+	 * The ad's destination dialog draws the campaign's own field now, check
+	 * included, and an ad may link somewhere the campaign does not.
+	 *
+	 * @return void
+	 */
+	public function test_an_ads_own_link_is_what_gets_checked(): void {
+		$this->store( 'https://example.com/campaign' );
+
+		$creative_id = $this->creative( $this->campaign_id, 'https://example.com/this-ad' );
+		$result      = $this->checker->check( $this->campaign_id, false, $creative_id );
+
+		$this->assertIsArray( $result );
+		$this->assertSame( array( 'https://example.com/this-ad' ), $this->requested, "The campaign's link was checked instead of the ad's." );
+	}
+
+	/**
+	 * An ad id from another campaign fetches nothing of that campaign's.
+	 *
+	 * **The route takes no URL for a reason**: it is the one place this site
+	 * fetches an address somebody else chose, and it only ever fetches a link
+	 * the caller's own campaign stores. An id belonging to somebody else
+	 * falls back to this campaign's link rather than reaching theirs.
+	 *
+	 * @return void
+	 */
+	public function test_an_ad_from_another_campaign_is_not_fetched(): void {
+		$this->store( 'https://example.com/campaign' );
+
+		$other  = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::CAMPAIGN,
+				'post_status' => Post_Statuses::DRAFT,
+			)
+		);
+		$theirs = $this->creative( $other, 'https://not-mine.example.com/secret' );
+		$result = $this->checker->check( $this->campaign_id, false, $theirs );
+
+		$this->assertIsArray( $result );
+		$this->assertSame( array( 'https://example.com/campaign' ), $this->requested );
+		$this->assertNotContains( 'https://not-mine.example.com/secret', $this->requested );
+	}
+
 	public function test_a_campaign_with_no_link_is_not_checked(): void {
 		$result = $this->checker->check( $this->campaign_id );
 
@@ -304,5 +351,26 @@ final class LinkCheckTest extends WP_UnitTestCase {
 		$this->assertNotNull( $refused, 'Forty checks in a row were all allowed.' );
 		$this->assertSame( 'aggr_rate_limited', $refused->get_error_code() );
 		$this->assertLessThanOrEqual( 30, count( $this->requested ) );
+	}
+
+	/**
+	 * A creative on one campaign, with a link of its own.
+	 *
+	 * @param int    $campaign_id Owning campaign.
+	 * @param string $click_url   Where it goes.
+	 * @return int
+	 */
+	private function creative( int $campaign_id, string $click_url ): int {
+		$creative_id = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::CREATIVE,
+				'post_status' => 'publish',
+			)
+		);
+
+		update_post_meta( $creative_id, Creative_Repository::META_CAMPAIGN_ID, $campaign_id );
+		update_post_meta( $creative_id, Creative_Repository::META_CLICK_URL, $click_url );
+
+		return $creative_id;
 	}
 }

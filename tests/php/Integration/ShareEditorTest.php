@@ -14,6 +14,8 @@ use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Portal\Creative_Actions;
 use Aggressive\Ads\Portal\Creative_View_Data;
 use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Creative_Assignment_Repository;
+use Aggressive\Ads\Repository\Creative_Attachment_Repository;
 use Aggressive\Ads\Security\Ownership;
 use Aggressive\Ads\Security\Roles;
 use Aggressive\Ads\Workflow\Creative_Manager;
@@ -226,6 +228,104 @@ final class ShareEditorTest extends WP_UnitTestCase {
 			$result
 		);
 		$this->assertSame( array( 25, 75 ), $this->percentages() );
+	}
+
+	/**
+	 * A stale row in the set stops the whole write, not part of it.
+	 *
+	 * Written a row at a time, a refusal half way through left the first ads
+	 * moved and the rest as they were — a rotation adding to a total nobody
+	 * chose. The repository is where that is decided, and it is asked here
+	 * directly because `Share_Editor` reads the rows itself immediately
+	 * before writing them: through it, the stale revision would never be the
+	 * one used.
+	 *
+	 * @return void
+	 */
+	public function test_one_stale_row_stops_the_whole_write(): void {
+		wp_set_current_user( $this->owner );
+
+		$first  = $this->ad( 1 );
+		$second = $this->ad( 2 );
+
+		$assignments = Plugin::instance()->container()->get( Creative_Assignment_Repository::class );
+		$rows        = array();
+
+		foreach ( $assignments->for_campaign( $this->campaign_id ) as $row ) {
+			$rows[ (int) $row['revision_id'] ] = $row;
+		}
+
+		$written = $assignments->set_weights(
+			$this->campaign_id,
+			array(
+				(int) $rows[ $first ]['id']  => array(
+					'weight'   => 70,
+					'revision' => (int) $rows[ $first ]['revision'],
+				),
+				// Somebody else saved this one since the page was drawn.
+				(int) $rows[ $second ]['id'] => array(
+					'weight'   => 30,
+					'revision' => (int) $rows[ $second ]['revision'] + 5,
+				),
+			)
+		);
+
+		$this->assertFalse( $written );
+		$this->assertSame( array( 50, 50 ), $this->percentages(), 'A share moved although the write was refused.' );
+
+		// And the same set, all current, is written whole.
+		$this->assertTrue(
+			$assignments->set_weights(
+				$this->campaign_id,
+				array(
+					(int) $rows[ $first ]['id']  => array(
+						'weight'   => 70,
+						'revision' => (int) $rows[ $first ]['revision'],
+					),
+					(int) $rows[ $second ]['id'] => array(
+						'weight'   => 30,
+						'revision' => (int) $rows[ $second ]['revision'],
+					),
+				)
+			)
+		);
+		$this->assertSame( array( 70, 30 ), $this->percentages() );
+	}
+
+	/**
+	 * An ad that cannot run is not counted as taking a share of the traffic.
+	 *
+	 * @return void
+	 */
+	public function test_an_ad_that_cannot_run_is_marked_as_not_delivering(): void {
+		wp_set_current_user( $this->owner );
+
+		$first  = $this->ad( 1 );
+		$second = $this->ad( 2 );
+
+		$rows = array();
+
+		foreach ( Plugin::instance()->container()->get( Creative_View_Data::class )->creative_rows( $this->campaign_id ) as $row ) {
+			$rows[ (int) $row['id'] ] = $row;
+		}
+
+		// Neither is approved yet, so neither is delivering; the card says so
+		// rather than promising a share of traffic that is not flowing.
+		$this->assertFalse( $rows[ $first ]['delivering'] );
+		$this->assertFalse( $rows[ $second ]['delivering'] );
+
+		// Approved, and it can run.
+		Plugin::instance()->container()->get( Creative_Attachment_Repository::class )
+			->set_attachment_id( $first, self::factory()->attachment->create() );
+
+		$rows = array();
+
+		foreach ( Plugin::instance()->container()->get( Creative_View_Data::class )->creative_rows( $this->campaign_id ) as $row ) {
+			$rows[ (int) $row['id'] ] = $row;
+		}
+
+		$this->assertTrue( $rows[ $first ]['delivering'] );
+		$this->assertFalse( $rows[ $second ]['delivering'], 'An unapproved ad was counted as running.' );
 	}
 
 	/**

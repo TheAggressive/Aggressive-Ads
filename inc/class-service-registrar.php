@@ -578,7 +578,8 @@ final class Service_Registrar {
 			static fn ( Service_Container $c ): Link_Checker => new Link_Checker(
 				$c->get( Campaign_Repository::class ),
 				$c->get( Rate_Limiter::class ),
-				$c->get( Campaign_Request_Repository::class )
+				$c->get( Campaign_Request_Repository::class ),
+				$c->get( Creative_Repository::class )
 			)
 		);
 

@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
-"POT-Creation-Date: 2026-09-19T22:21:57+00:00\n"
+"POT-Creation-Date: 2026-09-19T23:50:12+00:00\n"
 "PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -1651,7 +1651,7 @@ msgstr "Entschieden"
 
 #: inc/Admin/class-review-data.php:696
 #: inc/Portal/class-campaign-list-view-data.php:210
-#: inc/Portal/class-creative-view-data.php:286
+#: inc/Portal/class-creative-view-data.php:297
 msgid "Running"
 msgstr "Läuft"
 
@@ -2302,7 +2302,6 @@ msgstr ""
 #: inc/Admin/class-settings-screen.php:218
 #: templates/portal/partials/campaign-overlays.php:307
 #: templates/portal/partials/campaign-upload-form.php:169
-#: templates/portal/partials/campaign-variant-destination.php:54
 msgid "Destination URL"
 msgstr "Ziel-URL"
 
@@ -4124,7 +4123,7 @@ msgid "Withdrawn for editing"
 msgstr "Zurückziehen und bearbeiten"
 
 #: inc/Portal/class-campaign-history-view-data.php:146
-#: inc/Portal/class-creative-view-data.php:282
+#: inc/Portal/class-creative-view-data.php:293
 msgid "Not approved"
 msgstr "Nicht freigegeben"
 
@@ -4311,10 +4310,10 @@ msgstr "Das ist keine Aktion, die Sie an einem Werbemittel durchführen können.
 
 #. translators: 1: this ad's share, e.g. 70. 2: what is left for the others, e.g. 30.
 #: inc/Portal/class-creative-actions.php:678
-#: templates/portal/partials/campaign-variant-share.php:119
+#: templates/portal/partials/campaign-variant-share.php:134
 #, php-format
 msgid ""
-"Shown %1$d%% of the time here. The other ads share the remaining %2$d%%."
+"Set to %1$d%% of this placement. The other ads share the remaining %2$d%%."
 msgstr ""
 
 #: inc/Portal/class-creative-feedback.php:96
@@ -4566,7 +4565,7 @@ msgstr ""
 "einzustellen."
 
 #: inc/Portal/class-creative-feedback.php:340
-#: inc/Workflow/class-share-editor.php:120
+#: inc/Workflow/class-share-editor.php:124
 #, fuzzy
 msgid "Those shares could not be saved. Reload the page and try again."
 msgstr ""
@@ -4652,12 +4651,12 @@ msgstr ""
 "Ändern Sie das Ziel oder die Beschreibung, bevor Sie eine Aktualisierung "
 "anfordern."
 
-#: inc/Portal/class-creative-view-data.php:287
-#: inc/Portal/class-creative-view-data.php:316
+#: inc/Portal/class-creative-view-data.php:298
+#: inc/Portal/class-creative-view-data.php:327
 msgid "Waiting for review"
 msgstr "Wartend auf Prüfung"
 
-#: inc/Portal/class-creative-view-data.php:317
+#: inc/Portal/class-creative-view-data.php:328
 msgid "Changes needed"
 msgstr "Benötigte Änderungen"
 
@@ -5009,12 +5008,12 @@ msgstr ""
 "Diese Impression konnte nicht aufgezeichnet werden. Bitte versuchen Sie es "
 "erneut."
 
-#: inc/REST/class-campaigns-controller.php:335
+#: inc/REST/class-campaigns-controller.php:343
 #: inc/Workflow/class-campaign-editor.php:124
 msgid "That advertiser could not be found."
 msgstr "Dieser Werbetreibende konnte nicht gefunden werden."
 
-#: inc/REST/class-campaigns-controller.php:487
+#: inc/REST/class-campaigns-controller.php:499
 #: inc/REST/class-creative-file-controller.php:186
 #: inc/REST/class-line-items-controller.php:358
 #: inc/Workflow/class-assignment-editor.php:337
@@ -6189,18 +6188,18 @@ msgstr "Diese Auslieferungsrichtlinie ist kein gültiges JSON."
 msgid "That delivery policy cannot be used: %s"
 msgstr "Diese Auslieferungsrichtlinie kann nicht verwendet werden: %s"
 
-#: inc/Workflow/class-link-checker.php:123
+#: inc/Workflow/class-link-checker.php:127
 #, fuzzy
 msgid "Add a destination link first."
 msgstr "Ziel für %s"
 
-#: inc/Workflow/class-link-checker.php:131
+#: inc/Workflow/class-link-checker.php:135
 msgid ""
 "This link cannot be checked from here. Open it in a browser to make sure it "
 "works."
 msgstr ""
 
-#: inc/Workflow/class-link-checker.php:194
+#: inc/Workflow/class-link-checker.php:214
 #, fuzzy
 msgid "There is no campaign to check."
 msgstr "Es gibt keine Organisation zum Berichten."
@@ -6497,8 +6496,8 @@ msgid "No access"
 msgstr "Kein Zugriff"
 
 #: templates/portal/404.php:22
-#: templates/portal/partials/campaign-destination-card.php:79
-#: templates/portal/partials/campaign-destination-card.php:130
+#: templates/portal/partials/destination-field.php:50
+#: templates/portal/partials/destination-field.php:82
 #: templates/portal/screens/404.php:19
 msgid "Page not found"
 msgstr "Seite nicht gefunden"
@@ -7056,142 +7055,23 @@ msgstr ""
 msgid "One link for every ad. Any single size can still have its own."
 msgstr ""
 
-#: templates/portal/partials/campaign-destination-card.php:78
-#: templates/portal/partials/campaign-destination-card.php:129
-msgid "Link works"
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:80
-#: templates/portal/partials/campaign-destination-card.php:131
-#, fuzzy
-msgid "Could not be read"
-msgstr "Ihr Konto konnte nicht abgerufen werden."
-
-#: templates/portal/partials/campaign-destination-card.php:81
-#: templates/portal/partials/campaign-destination-card.php:132
-msgid "The site returned an error"
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:82
-#: templates/portal/partials/campaign-destination-card.php:133
-msgid "No answer"
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:83
-#, fuzzy
-msgid "Checking…"
-msgstr "Wird gespeichert…"
-
-#: templates/portal/partials/campaign-destination-card.php:84
-msgid "Could not check it"
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:105
+#: templates/portal/partials/campaign-destination-card.php:106
 #, fuzzy
 msgid "Destination link for every ad"
 msgstr "Ziel für %s"
 
-#: templates/portal/partials/campaign-destination-card.php:135
-msgid "Valid link"
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:147
-#, fuzzy
-msgid "Save link"
-msgstr "Name speichern"
-
 #. translators: 1: sizes whose ad goes to this link. 2: sizes in the package.
-#: templates/portal/partials/campaign-destination-card.php:154
+#: templates/portal/partials/campaign-destination-card.php:111
 #, fuzzy, php-format
 msgid "Used by %1$d of %2$d ad"
 msgid_plural "Used by %1$d of %2$d ads"
 msgstr[0] "Seite %1$s von %2$s"
 msgstr[1] "Seite %1$s von %2$s"
 
-#: templates/portal/partials/campaign-destination-card.php:168
+#: templates/portal/partials/campaign-destination-card.php:115
 #, fuzzy
-msgid "Check link"
+msgid "Save link"
 msgstr "Name speichern"
-
-#: templates/portal/partials/campaign-destination-card.php:196
-#, fuzzy
-msgid "Where it came from"
-msgstr "Es gibt ein Problem"
-
-#: templates/portal/partials/campaign-destination-card.php:197
-msgid "How it was shown"
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:198
-#, fuzzy
-msgid "Which campaign"
-msgstr "Kampagne bearbeiten"
-
-#: templates/portal/partials/campaign-destination-card.php:199
-msgid "Which ad, when you run more than one"
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:200
-msgid "Keyword, if your team uses one"
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:223
-msgid "Add tracking tags"
-msgstr ""
-
-#. translators: %s: comma-separated parameter names, e.g. utm_source, utm_medium.
-#: templates/portal/partials/campaign-destination-card.php:228
-#, php-format
-msgid "Already on your link, so it was left alone: %s"
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:230
-msgid ""
-"These tell your analytics where a visit came from. Filled in from this "
-"campaign — change them if your team uses different words."
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:239
-#, fuzzy
-msgid "More options"
-msgstr "Prüfaktionen"
-
-#: templates/portal/partials/campaign-destination-card.php:249
-msgid "Which ad"
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:250
-#, fuzzy
-msgid "Which placement"
-msgstr "Platzierung bearbeiten"
-
-#: templates/portal/partials/campaign-destination-card.php:251
-#, fuzzy
-msgid "Campaign id"
-msgstr "Kampagne"
-
-#: templates/portal/partials/campaign-destination-card.php:252
-msgid "Time of the click"
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:253
-msgid "Cache buster"
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:254
-#, fuzzy
-msgid "Click id"
-msgstr "Klicks"
-
-#: templates/portal/partials/campaign-destination-card.php:257
-msgid ""
-"Add a value that is filled in when somebody clicks, so your reports name the "
-"ad that earned the visit."
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:276
-msgid "Add tags to link"
-msgstr ""
 
 #: templates/portal/partials/campaign-edit-ads.php:75
 #, fuzzy
@@ -7977,7 +7857,12 @@ msgstr "Anzeige"
 msgid "Share of rotation"
 msgstr "Rotationsanteil"
 
-#: templates/portal/partials/campaign-variant-destination.php:68
+#: templates/portal/partials/campaign-variant-destination.php:63
+#, fuzzy
+msgid "Destination URL for this ad"
+msgstr "Ziel für %s"
+
+#: templates/portal/partials/campaign-variant-destination.php:84
 msgid "Save destination"
 msgstr "Speicherort"
 
@@ -7996,6 +7881,14 @@ msgstr ""
 #, fuzzy
 msgid "Save"
 msgstr "Gespeichert."
+
+#. translators: %s: file names of ads that are not running, separated by commas.
+#: templates/portal/partials/campaign-variant-share.php:143
+#, php-format
+msgid "While %s is not running, this ad takes its share too."
+msgid_plural "While %s are not running, this ad takes their share too."
+msgstr[0] ""
+msgstr[1] ""
 
 #: templates/portal/partials/campaign-variant-status.php:58
 msgid "Resume this creative"
@@ -8084,6 +7977,125 @@ msgstr "Zahlen ab %s werden noch gezählt."
 #, fuzzy, php-format
 msgid "Figures from %s (UTC) onward are still coming in."
 msgstr "Zahlen ab %s werden noch gezählt."
+
+#: templates/portal/partials/destination-field.php:49
+#: templates/portal/partials/destination-field.php:81
+msgid "Link works"
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:51
+#: templates/portal/partials/destination-field.php:83
+#, fuzzy
+msgid "Could not be read"
+msgstr "Ihr Konto konnte nicht abgerufen werden."
+
+#: templates/portal/partials/destination-field.php:52
+#: templates/portal/partials/destination-field.php:84
+msgid "The site returned an error"
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:53
+#: templates/portal/partials/destination-field.php:85
+msgid "No answer"
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:54
+#, fuzzy
+msgid "Checking…"
+msgstr "Wird gespeichert…"
+
+#: templates/portal/partials/destination-field.php:55
+msgid "Could not check it"
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:87
+msgid "Valid link"
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:113
+#, fuzzy
+msgid "Check link"
+msgstr "Name speichern"
+
+#: templates/portal/partials/destination-field.php:141
+#, fuzzy
+msgid "Where it came from"
+msgstr "Es gibt ein Problem"
+
+#: templates/portal/partials/destination-field.php:142
+msgid "How it was shown"
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:143
+#, fuzzy
+msgid "Which campaign"
+msgstr "Kampagne bearbeiten"
+
+#: templates/portal/partials/destination-field.php:144
+msgid "Which ad, when you run more than one"
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:145
+msgid "Keyword, if your team uses one"
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:168
+msgid "Add tracking tags"
+msgstr ""
+
+#. translators: %s: comma-separated parameter names, e.g. utm_source, utm_medium.
+#: templates/portal/partials/destination-field.php:173
+#, php-format
+msgid "Already on your link, so it was left alone: %s"
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:175
+msgid ""
+"These tell your analytics where a visit came from. Filled in from this "
+"campaign — change them if your team uses different words."
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:184
+#, fuzzy
+msgid "More options"
+msgstr "Prüfaktionen"
+
+#: templates/portal/partials/destination-field.php:194
+msgid "Which ad"
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:195
+#, fuzzy
+msgid "Which placement"
+msgstr "Platzierung bearbeiten"
+
+#: templates/portal/partials/destination-field.php:196
+#, fuzzy
+msgid "Campaign id"
+msgstr "Kampagne"
+
+#: templates/portal/partials/destination-field.php:197
+msgid "Time of the click"
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:198
+msgid "Cache buster"
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:199
+#, fuzzy
+msgid "Click id"
+msgstr "Klicks"
+
+#: templates/portal/partials/destination-field.php:202
+msgid ""
+"Add a value that is filled in when somebody clicks, so your reports name the "
+"ad that earned the visit."
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:221
+msgid "Add tags to link"
+msgstr ""
 
 #: templates/portal/partials/rail.php:46
 #, fuzzy
@@ -9355,10 +9367,6 @@ msgstr "Banner"
 #, fuzzy
 #~ msgid "01 · Schedule"
 #~ msgstr "Zeitplan"
-
-#, php-format
-#~ msgid "Destination for %s"
-#~ msgstr "Ziel für %s"
 
 #, fuzzy
 #~ msgid "Details & dates"

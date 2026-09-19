@@ -100,8 +100,9 @@ final class Share_Editor {
 			$weights[ (int) $row['id'] ] = (int) $row['weight'];
 		}
 
-		$shares = Assignment_Rules::rebalance( $weights, $mine, $percent );
-		$by_id  = array();
+		$shares  = Assignment_Rules::rebalance( $weights, $mine, $percent );
+		$by_id   = array();
+		$changed = array();
 
 		foreach ( $rows as $row ) {
 			$id = (int) $row['id'];
@@ -109,19 +110,18 @@ final class Share_Editor {
 			// Only what changed: a write of the same number is a revision
 			// bump that makes somebody else's open page conflict for nothing.
 			if ( $shares[ $id ] !== $weights[ $id ] ) {
-				$written = $this->assignments->update(
-					$id,
-					$campaign_id,
-					array( 'weight' => $shares[ $id ] ),
-					(int) $row['revision']
+				$changed[ $id ] = array(
+					'weight'   => $shares[ $id ],
+					'revision' => (int) $row['revision'],
 				);
-
-				if ( false === $written || $written < 1 ) {
-					return $this->error( 'aggr_share_not_saved', __( 'Those shares could not be saved. Reload the page and try again.', 'aggressive-ads' ), 409 );
-				}
 			}
 
 			$by_id[ (int) $row['revision_id'] ] = $shares[ $id ];
+		}
+
+		// All of them or none: a rotation half written adds to nothing anybody chose.
+		if ( array() !== $changed && ! $this->assignments->set_weights( $campaign_id, $changed ) ) {
+			return $this->error( 'aggr_share_not_saved', __( 'Those shares could not be saved. Reload the page and try again.', 'aggressive-ads' ), 409 );
 		}
 
 		$this->audit->insert(

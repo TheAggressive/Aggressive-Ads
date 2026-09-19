@@ -675,7 +675,7 @@ final class Creative_Actions implements Service {
 			$patch[ '#aggr-share-' . (int) $creative['id'] ]      = (string) $percent;
 			$patch[ '#aggr-share-note-' . (int) $creative['id'] ] = sprintf(
 				/* translators: 1: this ad's share, e.g. 70. 2: what is left for the others, e.g. 30. */
-				__( 'Shown %1$d%% of the time here. The other ads share the remaining %2$d%%.', 'aggressive-ads' ),
+				__( 'Set to %1$d%% of this placement. The other ads share the remaining %2$d%%.', 'aggressive-ads' ),
 				$percent,
 				Assignment_Rules::SHARE_TOTAL - $percent
 			);

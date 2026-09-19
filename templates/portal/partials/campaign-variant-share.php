@@ -114,12 +114,36 @@ $aggr_share_max = Assignment_Rules::SHARE_TOTAL - ( count( $aggr_slot['creatives
 	?>
 	<p class="aggr-share__result" id="<?php echo esc_attr( 'aggr-share-note-' . (int) $aggr_creative['id'] ); ?>">
 		<?php
+		/*
+		 * **What is set, and what is happening.** A share is divided between
+		 * the ads that can run: while one is paused or waiting for approval,
+		 * the others take its traffic, and a card saying "shown 70% of the
+		 * time" would be promising something the selector will not do. The
+		 * second sentence appears only when the two differ.
+		 */
+		$aggr_share_waiting = array();
+
+		foreach ( $aggr_slot['creatives'] as $aggr_share_other ) {
+			if ( (int) $aggr_share_other['id'] !== (int) $aggr_creative['id'] && true !== ( $aggr_share_other['delivering'] ?? false ) ) {
+				$aggr_share_waiting[] = (string) $aggr_share_other['name'];
+			}
+		}
+
 		printf(
 			/* translators: 1: this ad's share, e.g. 70. 2: what is left for the others, e.g. 30. */
-			esc_html__( 'Shown %1$d%% of the time here. The other ads share the remaining %2$d%%.', 'aggressive-ads' ),
+			esc_html__( 'Set to %1$d%% of this placement. The other ads share the remaining %2$d%%.', 'aggressive-ads' ),
 			(int) $aggr_share_percent,
 			(int) ( Assignment_Rules::SHARE_TOTAL - $aggr_share_percent )
 		);
+
+		if ( array() !== $aggr_share_waiting && true === ( $aggr_creative['delivering'] ?? false ) ) {
+			echo ' ';
+			printf(
+				/* translators: %s: file names of ads that are not running, separated by commas. */
+				esc_html( _n( 'While %s is not running, this ad takes its share too.', 'While %s are not running, this ad takes their share too.', count( $aggr_share_waiting ), 'aggressive-ads' ) ),
+				esc_html( implode( ', ', $aggr_share_waiting ) )
+			);
+		}
 		?>
 	</p>
 </form>

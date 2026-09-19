@@ -13,6 +13,7 @@ use Aggressive\Ads\Domain\Click_Macros;
 use Aggressive\Ads\Domain\Link_Check_Rules;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Campaign_Request_Repository;
+use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Security\Rate_Limiter;
 use WP_Error;
@@ -72,12 +73,14 @@ final class Link_Checker {
 	 *
 	 * @param Campaign_Repository         $campaigns Campaign persistence.
 	 * @param Rate_Limiter                $limiter   Outbound request bounding.
-	 * @param Campaign_Request_Repository $requests Staged changes to running campaigns.
+	 * @param Campaign_Request_Repository $requests  Staged changes to running campaigns.
+	 * @param Creative_Repository         $creatives An ad's own link, when one is asked about.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
 		private readonly Rate_Limiter $limiter,
-		private readonly Campaign_Request_Repository $requests
+		private readonly Campaign_Request_Repository $requests,
+		private readonly Creative_Repository $creatives
 	) {
 	}
 
@@ -86,9 +89,10 @@ final class Link_Checker {
 	 *
 	 * @param int  $campaign_id Campaign post id.
 	 * @param bool $proposed    The link staged in a change to a running campaign, not the one serving.
+	 * @param int  $creative_id One ad's own link instead of the campaign's; zero for the campaign's.
 	 * @return array{url: string, status: int, outcome: string, checked_at: int}|WP_Error
 	 */
-	public function check( int $campaign_id, bool $proposed = false ): array|WP_Error {
+	public function check( int $campaign_id, bool $proposed = false, int $creative_id = 0 ): array|WP_Error {
 		$authorized = $this->authorize( $campaign_id );
 
 		if ( is_wp_error( $authorized ) ) {
@@ -101,7 +105,7 @@ final class Link_Checker {
 			return $allowed;
 		}
 
-		$url = $this->link( $campaign_id, $proposed );
+		$url = $this->link( $campaign_id, $proposed, $creative_id );
 
 		/*
 		 * A link with macros in it is not a URL until a click fills them in,
@@ -164,9 +168,25 @@ final class Link_Checker {
 	 *
 	 * @param int  $campaign_id Campaign post id.
 	 * @param bool $proposed    Prefer the staged link.
+	 * @param int  $creative_id One ad's own link instead of the campaign's; zero for the campaign's.
 	 * @return string
 	 */
-	private function link( int $campaign_id, bool $proposed ): string {
+	private function link( int $campaign_id, bool $proposed, int $creative_id = 0 ): string {
+		/*
+		 * **An ad's own link is read from the ad, and only from one this
+		 * campaign owns.** The campaign is already authorized above; the
+		 * creative is checked against it here, so an id belonging to another
+		 * advertiser falls through to the campaign's link rather than being
+		 * fetched. The route still never takes a URL.
+		 */
+		if ( $creative_id > 0 ) {
+			$creative = $this->creatives->details( $creative_id );
+
+			if ( null !== $creative && $campaign_id === (int) $creative['campaign_id'] ) {
+				return trim( (string) $creative['click_url'] );
+			}
+		}
+
 		$staged = $proposed ? ( $this->requests->pending_edits( $campaign_id )['default_click_url'] ?? '' ) : '';
 
 		return trim( is_string( $staged ) && '' !== $staged ? $staged : $this->campaigns->default_click_url( $campaign_id ) );
