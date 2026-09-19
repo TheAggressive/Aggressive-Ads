@@ -288,7 +288,8 @@ final class CreativeEditsTest extends WP_UnitTestCase {
 	/**
 	 * The portal entry points reach the manager they claim to.
 	 *
-	 * `set_weight()` and `set_destination()` are both tested directly above.
+	 * `set_destination()` is tested directly above, and shares have their own
+	 * suite.
 	 * Neither says anything about whether the form an advertiser posts ever
 	 * arrives: the share control shipped complete and unreachable once
 	 * already, and `Creative_Actions::process_weight()` had no test at all
@@ -335,7 +336,8 @@ final class CreativeEditsTest extends WP_UnitTestCase {
 		$this->assertIsArray( $details );
 		$this->assertSame( 'https://example.com/via-portal', (string) $details['click_url'] );
 
-		$this->assertTrue( $this->actions->process_weight( $creative_id, 5 ) );
+		// The only ad on its placement takes all of it, whatever is asked.
+		$this->assertSame( array( $creative_id => 100 ), $this->actions->process_weight( $creative_id, 5 ) );
 
 		$saved = null;
 
@@ -346,11 +348,13 @@ final class CreativeEditsTest extends WP_UnitTestCase {
 		}
 
 		$this->assertIsArray( $saved, 'The assignment disappeared.' );
-		$this->assertSame( 5, (int) $saved['weight'] );
+		$this->assertSame( 100, (int) $saved['weight'] );
 
 		// And each entry point passes a refusal back rather than swallowing it.
 		$this->assertInstanceOf( \WP_Error::class, $this->actions->process_destination( $creative_id, 'javascript:alert(1)' ) );
-		$this->assertInstanceOf( \WP_Error::class, $this->actions->process_weight( $creative_id, 0 ) );
+		wp_set_current_user( 0 );
+		$this->assertInstanceOf( \WP_Error::class, $this->actions->process_weight( $creative_id, 50 ) );
+		wp_set_current_user( $this->owner );
 
 		// And the artwork entry point reaches its manager too.
 		$swapped = $this->actions->process_artwork( $creative_id, $this->image_file( 728, 90 ) );

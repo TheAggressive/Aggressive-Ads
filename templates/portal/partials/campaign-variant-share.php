@@ -8,9 +8,11 @@
  * Showing it anyway would be the interface asserting a choice the selector never
  * makes.
  *
- * Weighted delivery is not new — `Domain\Weighted_Selection` has always read
- * this number, and two creatives at 3 and 1 have always rotated three to one.
- * What was missing was any way to see or set it outside the REST route.
+ * **The number is the percentage.** It used to be the stored weight — a
+ * relative number, so 70 could show as 41% — and setting one creative's left
+ * the others alone, which is why a column of them never added to anything.
+ * `Share_Editor` gives this one the percentage asked for and divides the rest
+ * between the others in the proportions they already had.
  *
  * @var array<string, mixed> $aggr_creative One uploaded creative, with its weight and share attached.
  * @var array<string, mixed> $aggr_slot     The placement it competes on, and every creative on it.
@@ -28,14 +30,17 @@ if ( ! defined( 'ABSPATH' ) ) {
 use Aggressive\Ads\Domain\Assignment_Rules;
 use Aggressive\Ads\Portal\Creative_Actions;
 
-$aggr_share_weight = $aggr_creative['weight'] ?? null;
+$aggr_share_ratio = $aggr_creative['share'] ?? null;
 
-if ( count( $aggr_slot['creatives'] ) < 2 || null === $aggr_share_weight ) {
+if ( count( $aggr_slot['creatives'] ) < 2 || null === ( $aggr_creative['weight'] ?? null ) || null === $aggr_share_ratio ) {
 	return;
 }
 
-$aggr_share_id    = 'aggr-share-' . (int) $aggr_creative['id'];
-$aggr_share_ratio = $aggr_creative['share'] ?? null;
+$aggr_share_id      = 'aggr-share-' . (int) $aggr_creative['id'];
+$aggr_share_percent = max( Assignment_Rules::MIN_WEIGHT, (int) round( (float) $aggr_share_ratio * Assignment_Rules::SHARE_TOTAL ) );
+
+// Everything else on the placement keeps at least one per cent.
+$aggr_share_max = Assignment_Rules::SHARE_TOTAL - ( count( $aggr_slot['creatives'] ) - 1 );
 ?>
 <form
 	class="aggr-share"
@@ -49,40 +54,43 @@ $aggr_share_ratio = $aggr_creative['share'] ?? null;
 	<?php wp_nonce_field( Creative_Actions::weight_nonce_action( (int) $aggr_creative['id'] ) ); ?>
 
 	<label class="aggr-share__label" for="<?php echo esc_attr( $aggr_share_id ); ?>">
-		<?php esc_html_e( 'Share', 'aggressive-ads' ); ?>
+		<?php esc_html_e( 'Share of this placement', 'aggressive-ads' ); ?>
 	</label>
 
-	<input
-		class="aggr-share__input"
-		id="<?php echo esc_attr( $aggr_share_id ); ?>"
-		type="number"
-		name="weight"
-		value="<?php echo esc_attr( (string) (int) $aggr_share_weight ); ?>"
-		min="<?php echo esc_attr( (string) Assignment_Rules::MIN_WEIGHT ); ?>"
-		max="<?php echo esc_attr( (string) Assignment_Rules::MAX_WEIGHT ); ?>"
-		step="1"
-		inputmode="numeric"
-	>
+	<span class="aggr-share__field">
+		<input
+			class="aggr-share__input"
+			id="<?php echo esc_attr( $aggr_share_id ); ?>"
+			type="number"
+			name="share"
+			value="<?php echo esc_attr( (string) $aggr_share_percent ); ?>"
+			min="<?php echo esc_attr( (string) Assignment_Rules::MIN_WEIGHT ); ?>"
+			max="<?php echo esc_attr( (string) $aggr_share_max ); ?>"
+			step="1"
+			inputmode="numeric"
+			aria-describedby="<?php echo esc_attr( 'aggr-share-note-' . (int) $aggr_creative['id'] ); ?>"
+		>
+		<?php // Decoration: the label and the hint below both say what the number is. ?>
+		<span class="aggr-share__suffix" aria-hidden="true"><?php echo esc_html( _x( '%', 'per cent, beside a share field', 'aggressive-ads' ) ); ?></span>
+	</span>
 
-	<button class="aggr-button aggr-button--small" type="submit"><?php esc_html_e( 'Save share', 'aggressive-ads' ); ?></button>
+	<button class="aggr-button aggr-button--small aggr-button--secondary" type="submit"><?php esc_html_e( 'Save', 'aggressive-ads' ); ?></button>
 
-	<?php if ( null !== $aggr_share_ratio ) : ?>
+	<?php
+	/*
+	 * What setting this one does to the others, said where it is set. The id
+	 * is what the server patches after a save, so the sentence moves with the
+	 * numbers rather than going stale until the next page load.
+	 */
+	?>
+	<p class="aggr-share__result" id="<?php echo esc_attr( 'aggr-share-note-' . (int) $aggr_creative['id'] ); ?>">
 		<?php
-		/*
-		 * The weight is a relative number and means nothing on its own — 3 is
-		 * only three times something. The percentage is what the advertiser is
-		 * actually deciding, so it is shown beside the control that sets it
-		 * rather than left to be worked out.
-		 */
+		printf(
+			/* translators: 1: this ad's share, e.g. 70. 2: what is left for the others, e.g. 30. */
+			esc_html__( 'Shown %1$d%% of the time here. The other ads share the remaining %2$d%%.', 'aggressive-ads' ),
+			(int) $aggr_share_percent,
+			(int) ( Assignment_Rules::SHARE_TOTAL - $aggr_share_percent )
+		);
 		?>
-		<p class="aggr-share__result" id="<?php echo esc_attr( 'aggr-share-ratio-' . (int) $aggr_creative['id'] ); ?>">
-			<?php
-			printf(
-				/* translators: %s: this creative's share of the placement, e.g. 75%. */
-				esc_html__( 'About %s of this placement.', 'aggressive-ads' ),
-				esc_html( number_format_i18n( (float) $aggr_share_ratio * 100, 0 ) . '%' )
-			);
-			?>
-		</p>
-	<?php endif; ?>
+	</p>
 </form>

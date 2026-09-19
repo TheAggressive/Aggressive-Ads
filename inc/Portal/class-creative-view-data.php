@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Portal;
 
+use Aggressive\Ads\Domain\Assignment_Rules;
 use Aggressive\Ads\REST\Api;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Attachment_Repository;
@@ -221,6 +222,18 @@ final class Creative_View_Data {
 		$totals      = array();
 
 		foreach ( $this->assignments->for_campaign( $campaign_id ) as $assignment ) {
+			/*
+			 * **A retired assignment is not competing for anything.** Its
+			 * weight used to be counted in the placement's total, so on a
+			 * campaign where ads had been removed and replaced, two live ads
+			 * at 100 each read as "about 10% of this placement" — the removed
+			 * ads' weights were still in the denominator. Delivery never
+			 * considered them; only this sum did.
+			 */
+			if ( Assignment_Rules::is_terminal( (string) ( $assignment['status'] ?? '' ) ) ) {
+				continue;
+			}
+
 			$revision_id = (int) $assignment['revision_id'];
 			$placement   = (int) $assignment['placement_id'];
 

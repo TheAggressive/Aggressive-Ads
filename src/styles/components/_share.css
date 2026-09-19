@@ -1,0 +1,95 @@
+/*
+ * How much of a placement each of its ads takes, and the line above them
+ * that says they take turns.
+ *
+ * Its own file: it left `_chrome.css` when that reached the thousand-line
+ * gate, and a rotation's controls are a component rather than page chrome.
+ */
+
+/*
+ * The share control beside a variant.
+ *
+ * Inline and small on purpose: it sits inside an uploaded creative's details,
+ * where the primary act is still "remove", and a full-width form would make
+ * adjusting a split look like the main thing to do here.
+ */
+.aggr-share {
+	display: grid;
+
+	/* The field takes what it needs; Save sits beside it, not opposite it. */
+	grid-template-columns: max-content max-content;
+	justify-content: start;
+	align-items: center;
+	gap: var(--aggr-space-2xs) var(--aggr-space-xs);
+	margin: var(--aggr-space-xs) 0;
+}
+
+.aggr-share__label {
+	grid-column: 1 / -1;
+	color: var(--aggr-color-text-muted);
+	font-size: 12px;
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+}
+
+/* The % belongs to the number, so it sits inside the field's border. */
+.aggr-share__field {
+	display: inline-flex;
+	align-items: center;
+	gap: var(--aggr-space-2xs);
+	padding-right: var(--aggr-space-xs);
+	background: var(--aggr-color-surface);
+	border: 1px solid var(--aggr-border-color);
+	border-radius: var(--aggr-radius-control);
+}
+
+/* The ring the field's own focus style would have drawn, moved to its border. */
+.aggr-share__field:focus-within {
+	border-color: var(--aggr-color-accent);
+	outline: 2px solid var(--aggr-color-accent);
+	outline-offset: 1px;
+}
+
+.aggr-portal .aggr-share__input {
+	width: 4.5rem;
+	min-height: var(--aggr-control-min);
+	padding: var(--aggr-space-2xs) var(--aggr-space-xs);
+	background: none;
+	border: 0;
+	color: var(--aggr-color-text);
+	font: inherit;
+	font-variant-numeric: tabular-nums;
+	text-align: right;
+}
+
+.aggr-portal .aggr-share__input:focus {
+	outline: none;
+}
+
+.aggr-share__suffix {
+	color: var(--aggr-color-text-muted);
+	font-size: 13px;
+}
+
+.aggr-share__result {
+	grid-column: 1 / -1;
+	margin: 0;
+	color: var(--aggr-color-text-muted);
+	font-size: 12px;
+}
+
+/* One line that says these ads take turns, above the ads that do. */
+.aggr-rotation {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--aggr-space-xs);
+	margin: 0 0 var(--aggr-space-sm);
+}
+
+.aggr-rotation__note {
+	margin: 0;
+	color: var(--aggr-color-text-muted);
+	font-size: 13px;
+}

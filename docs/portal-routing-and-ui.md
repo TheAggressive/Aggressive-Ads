@@ -230,6 +230,18 @@ see [domain-model.md](domain-model.md) — so removing an ad whose file is on
 another placement offers a box to remove that copy too, and replacing one says
 the others keep their file.
 
+A size holding more than one ad says so above them — "2 ads rotating", and
+that each visitor sees one — and each card carries its **share of the
+placement as a percentage**. Setting one gives it that percentage and divides
+the rest between the others in the proportions they already had
+(`Domain\Assignment_Rules::rebalance()`, whole numbers summing to 100 by
+largest remainder, every ad keeping at least 1%). `Workflow\Share_Editor`
+writes every row on the placement, each at the revision it was read at, and
+the save patches every field and sentence on that placement, because setting
+one share moves them all. Retired assignments are left out of the total: a
+removed ad's weight in the denominator is what made two live ads read "about
+10% of this placement".
+
 Continue to review is a POST, not a link. It advances the resume point only
 when every placement is covered and the stored dates pass the window rule; a
 refused date sends the advertiser to details, anything else back to the

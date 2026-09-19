@@ -210,7 +210,19 @@ function applyPatch( patch: Record< string, string > | undefined ): boolean {
 	entries.forEach( ( [ selector, text ] ) => {
 		const node = document.querySelector( selector );
 
-		if ( node instanceof HTMLElement ) {
+		/*
+		 * A control carries its value, not its text. Shares are the case:
+		 * saving one rebalances the others, and writing the new number into
+		 * their fields is the only way the page agrees with the server —
+		 * `textContent` on an <input> puts it nowhere anybody can see.
+		 */
+		if (
+			node instanceof HTMLInputElement ||
+			node instanceof HTMLSelectElement ||
+			node instanceof HTMLTextAreaElement
+		) {
+			node.value = text;
+		} else if ( node instanceof HTMLElement ) {
 			node.textContent = text;
 		}
 	} );

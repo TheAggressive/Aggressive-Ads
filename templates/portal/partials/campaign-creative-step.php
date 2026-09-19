@@ -229,6 +229,7 @@ foreach ( $aggr_slots as $aggr_counted_slot ) {
 										<p><?php esc_html_e( 'This placement is no longer available. Go back to package and dates and choose an available package.', 'aggressive-ads' ); ?></p>
 									</div>
 								<?php else : ?>
+									<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-rotation-note.php'; ?>
 									<?php foreach ( $aggr_slot['creatives'] as $aggr_creative ) : ?>
 										<?php
 										$aggr_creative_key    = (int) $aggr_creative['id'];

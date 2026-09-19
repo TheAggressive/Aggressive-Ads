@@ -128,6 +128,7 @@ use Aggressive\Ads\Workflow\Request_Notifier;
 use Aggressive\Ads\Workflow\Review_Readiness;
 use Aggressive\Ads\Workflow\Reviewer_Access;
 use Aggressive\Ads\Workflow\Revision_Policy;
+use Aggressive\Ads\Workflow\Share_Editor;
 use Aggressive\Ads\Workflow\Rollup_Reconciler;
 use Aggressive\Ads\Workflow\Supply_History;
 use Aggressive\Ads\Workflow\Transition_Guards;
@@ -780,6 +781,17 @@ final class Service_Registrar {
 				$c->get( Creative_Approval::class ),
 				$c->get( Creative_Assignment_Repository::class ),
 				$c->get( Revision_Policy::class )
+			)
+		);
+
+		$container->register(
+			Share_Editor::class,
+			static fn ( Service_Container $c ): Share_Editor => new Share_Editor(
+				$c->get( Creative_Repository::class ),
+				$c->get( Creative_Assignment_Repository::class ),
+				$c->get( Campaign_Repository::class ),
+				$c->get( Edit_Window::class ),
+				$c->get( Audit_Repository::class )
 			)
 		);
 

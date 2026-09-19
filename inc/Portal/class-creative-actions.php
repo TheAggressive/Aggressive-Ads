@@ -16,6 +16,7 @@ use Aggressive\Ads\Workflow\Assignment_Editor;
 use Aggressive\Ads\Workflow\Creative_Change_Manager;
 use Aggressive\Ads\Workflow\Creative_Copies;
 use Aggressive\Ads\Workflow\Creative_Manager;
+use Aggressive\Ads\Workflow\Share_Editor;
 use WP_Error;
 
 /**
@@ -42,13 +43,15 @@ final class Creative_Actions implements Service {
 	 * @param Assignment_Editor       $assignments Delivery settings on one assignment.
 	 * @param Creative_View_Data      $creatives   Render-ready creative rows, for restating shares.
 	 * @param Creative_Copies         $copies      One file on several placements of the same size.
+	 * @param Share_Editor            $shares      How much of a placement each creative takes.
 	 */
 	public function __construct(
 		private readonly Creative_Manager $manager,
 		private readonly Creative_Change_Manager $changes,
 		private readonly Assignment_Editor $assignments,
 		private readonly Creative_View_Data $creatives,
-		private readonly Creative_Copies $copies
+		private readonly Creative_Copies $copies,
+		private readonly Share_Editor $shares
 	) {
 	}
 
@@ -355,11 +358,11 @@ final class Creative_Actions implements Service {
 
 		$creative_id = isset( $_POST['creative_id'] ) ? absint( $_POST['creative_id'] ) : 0;
 		$campaign_id = isset( $_POST['campaign_id'] ) ? absint( $_POST['campaign_id'] ) : 0;
-		$weight      = isset( $_POST['weight'] ) ? absint( $_POST['weight'] ) : 0;
+		$share       = isset( $_POST['share'] ) ? absint( $_POST['share'] ) : 0;
 
 		check_admin_referer( self::weight_nonce_action( $creative_id ) );
 
-		$result = $this->process_weight( $creative_id, $weight );
+		$result = $this->process_weight( $creative_id, $share );
 
 		if ( is_wp_error( $result ) ) {
 			Creative_Feedback::after( $campaign_id, 'error', $result );
@@ -369,14 +372,14 @@ final class Creative_Actions implements Service {
 	}
 
 	/**
-	 * Testable weight entry point.
+	 * Testable share entry point.
 	 *
 	 * @param int $creative_id Creative post id.
-	 * @param int $weight      Relative share.
-	 * @return true|WP_Error
+	 * @param int $percent     Share of its placement, as a percentage.
+	 * @return array<int, int>|WP_Error Percentage by creative id.
 	 */
-	public function process_weight( int $creative_id, int $weight ): bool|WP_Error {
-		return $this->manager->set_weight( $creative_id, $weight );
+	public function process_weight( int $creative_id, int $percent ): array|WP_Error {
+		return $this->shares->set_share( $creative_id, $percent );
 	}
 
 	/**
@@ -661,10 +664,20 @@ final class Creative_Actions implements Service {
 				continue;
 			}
 
-			$patch[ '#aggr-share-ratio-' . (int) $creative['id'] ] = sprintf(
-				/* translators: %s: this creative's share of the placement, e.g. 75%. */
-				__( 'About %s of this placement.', 'aggressive-ads' ),
-				number_format_i18n( (float) $share * 100, 0 ) . '%'
+			/*
+			 * The field as well as the sentence. Setting one share moves every
+			 * other on the placement, so a page that updated only the sentence
+			 * would leave each field showing the number somebody typed before
+			 * the rest were rebalanced around it.
+			 */
+			$percent = max( Assignment_Rules::MIN_WEIGHT, (int) round( (float) $share * Assignment_Rules::SHARE_TOTAL ) );
+
+			$patch[ '#aggr-share-' . (int) $creative['id'] ]      = (string) $percent;
+			$patch[ '#aggr-share-note-' . (int) $creative['id'] ] = sprintf(
+				/* translators: 1: this ad's share, e.g. 70. 2: what is left for the others, e.g. 30. */
+				__( 'Shown %1$d%% of the time here. The other ads share the remaining %2$d%%.', 'aggressive-ads' ),
+				$percent,
+				Assignment_Rules::SHARE_TOTAL - $percent
 			);
 		}
 
