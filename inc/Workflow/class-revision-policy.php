@@ -130,7 +130,8 @@ final class Revision_Policy {
 			array(
 				'click_url' => $click_url,
 				'alt_text'  => $alt_text,
-			)
+			),
+			(int) ( $current['id'] ?? 0 )
 		);
 	}
 }

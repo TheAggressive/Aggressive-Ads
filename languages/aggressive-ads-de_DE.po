@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
-"POT-Creation-Date: 2026-09-19T18:38:44+00:00\n"
+"POT-Creation-Date: 2026-09-19T19:38:09+00:00\n"
 "PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -1341,7 +1341,7 @@ msgstr "Kein Grund wurde erfasst"
 #: inc/Workflow/class-campaign-state-machine.php:245
 #: inc/Workflow/class-campaign-state-machine.php:263
 #: inc/Workflow/class-creative-copies.php:83
-#: inc/Workflow/class-creative-manager.php:853
+#: inc/Workflow/class-creative-manager.php:856
 #: inc/Workflow/class-email-change.php:245
 #: inc/Workflow/class-review-actions.php:62
 msgid "You do not have permission to do that."
@@ -4493,7 +4493,7 @@ msgstr "Diese Platzierung ist für diese Kampagne nicht verfügbar."
 #: inc/Workflow/class-creative-manager.php:577
 #: inc/Workflow/class-creative-manager.php:671
 #: inc/Workflow/class-creative-manager.php:755
-#: inc/Workflow/class-creative-manager.php:857
+#: inc/Workflow/class-creative-manager.php:860
 #: inc/Workflow/class-line-item-editor.php:73
 msgid "This campaign cannot be changed right now."
 msgstr "Diese Kampagne kann derzeit nicht geändert werden."
@@ -6022,11 +6022,11 @@ msgstr "Anzeige"
 msgid "Advertisement linking to %s"
 msgstr "Anzeige mit Link zu %s"
 
-#: inc/Workflow/class-creative-manager.php:861
+#: inc/Workflow/class-creative-manager.php:864
 msgid "That placement is not available."
 msgstr "Diese Platzierung ist nicht verfügbar."
 
-#: inc/Workflow/class-creative-manager.php:865
+#: inc/Workflow/class-creative-manager.php:868
 msgid "That placement is not part of this campaign."
 msgstr "Diese Platzierung ist nicht Teil dieser Kampagne."
 
