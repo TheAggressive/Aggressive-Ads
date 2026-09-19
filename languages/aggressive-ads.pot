@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-19T09:25:21+00:00\n"
+"POT-Creation-Date: 2026-09-19T17:03:22+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -358,9 +358,9 @@ msgstr ""
 #: inc/Admin/class-organization-screen.php:196
 #: inc/Admin/class-placement-screen.php:167
 #: inc/Admin/class-review-screen.php:347
-#: templates/portal/partials/campaign-overlays.php:262
-#: templates/portal/partials/campaign-overlays.php:313
-#: templates/portal/partials/campaign-variant-artwork.php:78
+#: templates/portal/partials/campaign-overlays.php:263
+#: templates/portal/partials/campaign-overlays.php:315
+#: templates/portal/partials/campaign-variant-artwork.php:79
 msgid "Cancel"
 msgstr ""
 
@@ -676,7 +676,7 @@ msgstr ""
 #: inc/Admin/class-organization-screen.php:162
 #: inc/Admin/class-placement-screen.php:195
 #: inc/Admin/class-settings-screen.php:306
-#: templates/portal/partials/campaign-creative-step.php:256
+#: templates/portal/partials/campaign-creative-step.php:266
 #: templates/portal/screens/organization.php:152
 msgid "Remove"
 msgstr ""
@@ -1193,12 +1193,13 @@ msgstr ""
 #: inc/Admin/class-report-export.php:78
 #: inc/Portal/class-account-actions.php:220
 #: inc/Portal/class-campaign-actions.php:887
-#: inc/Portal/class-creative-actions.php:627
+#: inc/Portal/class-creative-actions.php:691
 #: inc/Portal/class-email-change-actions.php:178
 #: inc/Portal/class-organization-actions.php:222
 #: inc/Portal/class-report-actions.php:82
 #: inc/Workflow/class-campaign-state-machine.php:245
 #: inc/Workflow/class-campaign-state-machine.php:263
+#: inc/Workflow/class-creative-copies.php:83
 #: inc/Workflow/class-creative-manager.php:853
 #: inc/Workflow/class-email-change.php:245
 #: inc/Workflow/class-review-actions.php:62
@@ -1486,7 +1487,7 @@ msgstr ""
 
 #: inc/Admin/class-review-data.php:696
 #: inc/Portal/class-campaign-list-view-data.php:210
-#: inc/Portal/class-creative-view-data.php:244
+#: inc/Portal/class-creative-view-data.php:273
 msgid "Running"
 msgstr ""
 
@@ -2099,7 +2100,7 @@ msgid "A start date that has already passed cannot be moved."
 msgstr ""
 
 #: inc/Admin/class-settings-screen.php:218
-#: templates/portal/partials/campaign-overlays.php:303
+#: templates/portal/partials/campaign-overlays.php:305
 #: templates/portal/partials/campaign-upload-form.php:168
 #: templates/portal/partials/campaign-variant-destination.php:54
 msgid "Destination URL"
@@ -2390,65 +2391,131 @@ msgid "Update withdrawn."
 msgstr ""
 
 #. translators: %s: this placement's maximum file size, e.g. 150 KB.
-#: inc/Assets/class-assets.php:492
+#: inc/Assets/class-assets.php:497
 #, php-format
 msgid "That file is larger than %s. Choose a smaller ad creative."
 msgstr ""
 
-#: inc/Assets/class-assets.php:504
+#: inc/Assets/class-assets.php:509
 msgid "File selected. Add a destination URL to upload it."
 msgstr ""
 
-#: inc/Assets/class-assets.php:505
+#: inc/Assets/class-assets.php:510
 msgid "Uploading the creative."
 msgstr ""
 
 #. translators: %s: the file's name, e.g. skyscraper-160x600.png.
-#: inc/Assets/class-assets.php:507
+#: inc/Assets/class-assets.php:512
 #, php-format
 msgid "Uploading %s."
 msgstr ""
 
-#: inc/Assets/class-assets.php:508
+#: inc/Assets/class-assets.php:513
 msgid "Uploaded. Showing your ad…"
 msgstr ""
 
-#: inc/Assets/class-assets.php:509
+#: inc/Assets/class-assets.php:514
 msgid "The upload did not finish. Check your connection and try again."
 msgstr ""
 
-#: inc/Assets/class-assets.php:510
+#: inc/Assets/class-assets.php:515
 msgid "Upload cancelled. Choose the file again when you are ready."
 msgstr ""
 
-#: inc/Assets/class-assets.php:511
+#: inc/Assets/class-assets.php:516
 msgid "The upload took too long and was stopped. Try again, or try a smaller file."
 msgstr ""
 
 #. translators: %s: the file's name, e.g. skyscraper-160x600.png.
-#: inc/Assets/class-assets.php:513
+#: inc/Assets/class-assets.php:518
 #, php-format
 msgid "%s · matched by size"
 msgstr ""
 
-#: inc/Assets/class-assets.php:514
+#: inc/Assets/class-assets.php:519
 msgid "Enter a complete destination URL to finish the upload."
 msgstr ""
 
-#: inc/Assets/class-assets.php:515
+#: inc/Assets/class-assets.php:520
 msgid "Choose an ad creative file to upload."
 msgstr ""
 
-#: inc/Assets/class-assets.php:516
+#: inc/Assets/class-assets.php:521
 msgid "Use a JPEG, PNG, GIF, or WebP image."
 msgstr ""
 
-#: inc/Assets/class-assets.php:517
+#: inc/Assets/class-assets.php:522
 msgid "That ad creative is too large in pixels to process safely. Choose a smaller one."
 msgstr ""
 
-#: inc/Assets/class-assets.php:518
+#: inc/Assets/class-assets.php:523
 msgid "The ad creative must match the required pixel size for this placement."
+msgstr ""
+
+#. translators: %s: a placement's name, e.g. Header.
+#: inc/Assets/class-assets.php:525
+#, php-format
+msgid "Goes to %s."
+msgstr ""
+
+#: inc/Assets/class-assets.php:526
+msgid "More than one placement is this size. Choose where it goes."
+msgstr ""
+
+#. translators: %s: a file name, e.g. banner-728x90.png.
+#: inc/Assets/class-assets.php:528
+#, php-format
+msgid "Placement for %s"
+msgstr ""
+
+#: inc/Assets/class-assets.php:529
+msgid "Choose a placement"
+msgstr ""
+
+#: inc/Assets/class-assets.php:530
+msgid "All of them"
+msgstr ""
+
+#. translators: 1: the file's dimensions, e.g. 300 × 250. 2: the sizes still needed, e.g. 728 × 90, 160 × 600.
+#: inc/Assets/class-assets.php:532
+#, php-format
+msgid "This file is %1$s. The sizes still needed are %2$s."
+msgstr ""
+
+#. translators: %s: the file's dimensions, e.g. 300 × 250.
+#: inc/Assets/class-assets.php:534
+#, php-format
+msgid "Every %s placement already has an ad or a file."
+msgstr ""
+
+#: inc/Assets/class-assets.php:535
+msgid "This file is not an image that can be read. Use a JPEG, PNG, GIF, or WebP image."
+msgstr ""
+
+#: inc/Assets/class-assets.php:536
+msgid "Add the address your ads link to, above, before uploading."
+msgstr ""
+
+#: inc/Assets/class-assets.php:537
+msgid "Waiting to upload."
+msgstr ""
+
+#: inc/Assets/class-assets.php:538
+msgid "Uploaded."
+msgstr ""
+
+#: inc/Assets/class-assets.php:539
+msgid "Not uploaded. The reason is shown once the others finish."
+msgstr ""
+
+#: inc/Assets/class-assets.php:540
+msgid "Some files did not finish uploading. Choose them again to try once more."
+msgstr ""
+
+#. translators: %d: how many files were uploaded.
+#: inc/Assets/class-assets.php:542
+#, php-format
+msgid "Uploaded %d. Showing your ads…"
 msgstr ""
 
 #: inc/Core/class-post-statuses.php:204
@@ -3286,7 +3353,7 @@ msgid "You do not have permission to end that campaign."
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:514
-#: inc/Workflow/class-campaign-copier.php:67
+#: inc/Workflow/class-campaign-copier.php:65
 #: inc/Workflow/class-campaign-editor.php:90
 msgid "You do not have permission to create a campaign."
 msgstr ""
@@ -3300,7 +3367,7 @@ msgid "You do not have permission to edit that campaign."
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:547
-#: inc/Workflow/class-campaign-copier.php:71
+#: inc/Workflow/class-campaign-copier.php:69
 msgid "You do not have permission to copy that campaign."
 msgstr ""
 
@@ -3409,7 +3476,7 @@ msgid "This campaign has already been submitted or cannot be submitted right now
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:825
-#: inc/Workflow/class-campaign-copier.php:387
+#: inc/Workflow/class-campaign-copier.php:324
 msgid "The campaign could not be copied. Please try again."
 msgstr ""
 
@@ -3499,7 +3566,7 @@ msgid "Withdrawn for editing"
 msgstr ""
 
 #: inc/Portal/class-campaign-history-view-data.php:146
-#: inc/Portal/class-creative-view-data.php:240
+#: inc/Portal/class-creative-view-data.php:269
 msgid "Not approved"
 msgstr ""
 
@@ -3655,12 +3722,12 @@ msgstr ""
 msgid "Cancelled and no longer running."
 msgstr ""
 
-#: inc/Portal/class-creative-actions.php:448
+#: inc/Portal/class-creative-actions.php:512
 msgid "That is not something you can do to a creative."
 msgstr ""
 
 #. translators: %s: this creative's share of the placement, e.g. 75%.
-#: inc/Portal/class-creative-actions.php:602
+#: inc/Portal/class-creative-actions.php:666
 #: templates/portal/partials/campaign-variant-share.php:82
 #, php-format
 msgid "About %s of this placement."
@@ -3710,7 +3777,7 @@ msgstr ""
 #: inc/Portal/class-creative-feedback.php:270
 #: inc/Portal/class-creative-feedback.php:271
 #: inc/Portal/class-creative-feedback.php:312
-#: inc/Portal/class-creative-feedback.php:341
+#: inc/Portal/class-creative-feedback.php:342
 #: inc/Workflow/class-creative-manager.php:415
 #: inc/Workflow/class-creative-manager.php:421
 #: inc/Workflow/class-creative-manager.php:565
@@ -3833,82 +3900,87 @@ msgid "The creative record and file could not be reconciled. Please contact an a
 msgstr ""
 
 #: inc/Portal/class-creative-feedback.php:316
-#: inc/Portal/class-creative-feedback.php:353
+#: inc/Portal/class-creative-feedback.php:354
 #: inc/Workflow/class-creative-manager.php:234
 #: inc/Workflow/class-creative-manager.php:278
 msgid "The creative could not be saved. Please try again."
 msgstr ""
 
+#: inc/Portal/class-creative-feedback.php:317
+#: inc/Workflow/class-creative-copies.php:89
+msgid "That ad's file could not be read. Upload it to this size instead."
+msgstr ""
+
 #. translators: 1: lowest permitted share, 2: highest permitted share.
 #. translators: 1: lowest permitted weight, 2: highest permitted weight.
-#: inc/Portal/class-creative-feedback.php:337
+#: inc/Portal/class-creative-feedback.php:338
 #: inc/Workflow/class-creative-manager.php:679
 #, php-format
 msgid "A share must be between %1$d and %2$d."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:342
+#: inc/Portal/class-creative-feedback.php:343
 #: inc/Workflow/class-creative-manager.php:698
 msgid "That creative is not delivering yet, so it has no share to set."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:343
+#: inc/Portal/class-creative-feedback.php:344
 #: inc/Workflow/class-creative-manager.php:714
 msgid "That share could not be saved. Reload the page and try again."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:344
+#: inc/Portal/class-creative-feedback.php:345
 #: inc/Workflow/class-creative-change-manager.php:286
 msgid "Only a scheduled or live campaign can apply an ad update."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:345
+#: inc/Portal/class-creative-feedback.php:346
 #: inc/Workflow/class-creative-change-manager.php:475
 msgid "That ad update is no longer available."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:346
+#: inc/Portal/class-creative-feedback.php:347
 #: inc/Workflow/class-creative-change-manager.php:133
 #: inc/Workflow/class-creative-change-manager.php:238
 msgid "The ad update could not be saved. Please try again."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:347
+#: inc/Portal/class-creative-feedback.php:348
 #: inc/Workflow/class-creative-change-manager.php:407
 msgid "The update file could not be removed. Please try again."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:348
+#: inc/Portal/class-creative-feedback.php:349
 #: inc/Workflow/class-creative-change-manager.php:343
 msgid "Explain why this ad update needs changes."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:349
+#: inc/Portal/class-creative-feedback.php:350
 #: inc/Workflow/class-creative-change-manager.php:347
 msgid "Use 2,000 characters or fewer for update feedback."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:350
+#: inc/Portal/class-creative-feedback.php:351
 #: inc/Workflow/class-creative-change-manager.php:364
 msgid "The update decision could not be saved. Please try again."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:351
+#: inc/Portal/class-creative-feedback.php:352
 #: inc/Workflow/class-creative-change-manager.php:413
 msgid "The update record and file could not be reconciled. Please contact an administrator."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:352
+#: inc/Portal/class-creative-feedback.php:353
 #: inc/Workflow/class-creative-change-manager.php:112
 msgid "Change the destination or description before requesting an update."
 msgstr ""
 
-#: inc/Portal/class-creative-view-data.php:245
 #: inc/Portal/class-creative-view-data.php:274
+#: inc/Portal/class-creative-view-data.php:303
 msgid "Waiting for review"
 msgstr ""
 
-#: inc/Portal/class-creative-view-data.php:275
+#: inc/Portal/class-creative-view-data.php:304
 msgid "Changes needed"
 msgstr ""
 
@@ -4763,7 +4835,7 @@ msgstr ""
 msgid "Open-ended"
 msgstr ""
 
-#: inc/Workflow/class-campaign-copier.php:317
+#: inc/Workflow/class-campaign-copier.php:254
 #: inc/Workflow/class-campaign-editor.php:154
 msgid "Untitled campaign"
 msgstr ""
@@ -5763,12 +5835,12 @@ msgid "01 · Ads"
 msgstr ""
 
 #: templates/portal/partials/campaign-changes.php:318
-#: templates/portal/partials/campaign-creative-step.php:340
+#: templates/portal/partials/campaign-creative-step.php:355
 msgid "Back to package & dates"
 msgstr ""
 
 #: templates/portal/partials/campaign-changes.php:325
-#: templates/portal/partials/campaign-creative-step.php:354
+#: templates/portal/partials/campaign-creative-step.php:369
 #: templates/portal/partials/campaign-order-summary.php:162
 #: templates/portal/partials/campaign-order-summary.php:164
 msgid "Continue to review"
@@ -5808,7 +5880,7 @@ msgstr ""
 #: templates/portal/partials/campaign-changes.php:382
 #: templates/portal/partials/campaign-order-summary.php:176
 #: templates/portal/partials/campaign-order-summary.php:179
-#: templates/portal/partials/campaign-overlays.php:315
+#: templates/portal/partials/campaign-overlays.php:317
 #: templates/portal/partials/campaign-review-step.php:390
 msgid "Submit for review"
 msgstr ""
@@ -5840,71 +5912,67 @@ msgid_plural "%1$d of %2$d sizes ready"
 msgstr[0] ""
 msgstr[1] ""
 
-#: templates/portal/partials/campaign-creative-step.php:114
+#: templates/portal/partials/campaign-creative-step.php:120
 msgid "Drop all your files here"
 msgstr ""
 
 #. translators: %s: the largest file any size in this package accepts, e.g. 150 KB.
-#: templates/portal/partials/campaign-creative-step.php:119
+#: templates/portal/partials/campaign-creative-step.php:125
 #, php-format
-msgid "JPEG, PNG, GIF or WebP · up to %s each · files stay private until approved"
+msgid "Each file goes to the size it matches. JPEG, PNG, GIF or WebP · up to %s each · files stay private until approved"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:124
-msgid "Dropping every file at once is coming soon. Add each file to its size below."
-msgstr ""
-
-#: templates/portal/partials/campaign-creative-step.php:127
+#: templates/portal/partials/campaign-creative-step.php:132
 msgid "Browse files"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:128
+#: templates/portal/partials/campaign-creative-step.php:135
 msgid "Blank templates"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:135
+#: templates/portal/partials/campaign-creative-step.php:145
 msgid "Choose a package first"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:136
+#: templates/portal/partials/campaign-creative-step.php:146
 msgid "A package supplies the placements and exact ad creative sizes required for this campaign."
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:206
+#: templates/portal/partials/campaign-creative-step.php:216
 #: templates/portal/partials/campaign-edit-ads.php:103
 msgid "Needs a file"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:209
+#: templates/portal/partials/campaign-creative-step.php:219
 #: templates/portal/partials/campaign-review-step.php:181
 msgid "Ready"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:215
+#: templates/portal/partials/campaign-creative-step.php:225
 msgid "This placement is no longer available. Go back to package and dates and choose an available package."
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:254
-#: templates/portal/partials/campaign-edit-ads.php:169
+#: templates/portal/partials/campaign-creative-step.php:264
+#: templates/portal/partials/campaign-edit-ads.php:171
 msgid "Preview"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:255
+#: templates/portal/partials/campaign-creative-step.php:265
 msgid "Replace"
 msgstr ""
 
 #. translators: %d: maximum creatives allowed on one placement.
-#: templates/portal/partials/campaign-creative-step.php:278
+#: templates/portal/partials/campaign-creative-step.php:288
 #, php-format
 msgid "This placement has the maximum of %d creatives. Remove one to add another."
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:318
+#: templates/portal/partials/campaign-creative-step.php:333
 msgid "Add a rotating creative"
 msgstr ""
 
 #. translators: %d: sizes that still need a file.
-#: templates/portal/partials/campaign-creative-step.php:334
+#: templates/portal/partials/campaign-creative-step.php:349
 #: templates/portal/partials/campaign-order-summary.php:169
 #, php-format
 msgid "%d size still needs a file."
@@ -6070,7 +6138,7 @@ msgstr ""
 msgid "This size has no ad, so nothing runs here yet. The ad you add is reviewed before it runs."
 msgstr ""
 
-#: templates/portal/partials/campaign-edit-ads.php:174
+#: templates/portal/partials/campaign-edit-ads.php:176
 msgid "Update"
 msgstr ""
 
@@ -6235,7 +6303,7 @@ msgid "Custom run dates"
 msgstr ""
 
 #: templates/portal/partials/campaign-overlays.php:201
-#: templates/portal/partials/campaign-variant-artwork.php:79
+#: templates/portal/partials/campaign-variant-artwork.php:80
 msgid "Replace artwork"
 msgstr ""
 
@@ -6255,20 +6323,20 @@ msgstr ""
 msgid "This removes the file from the campaign. You can upload a replacement afterwards."
 msgstr ""
 
-#: templates/portal/partials/campaign-overlays.php:264
+#: templates/portal/partials/campaign-overlays.php:265
 msgid "Remove creative"
 msgstr ""
 
-#: templates/portal/partials/campaign-overlays.php:269
+#: templates/portal/partials/campaign-overlays.php:270
 msgid "The current ad keeps running until staff approve this replacement."
 msgstr ""
 
-#: templates/portal/partials/campaign-overlays.php:279
+#: templates/portal/partials/campaign-overlays.php:281
 msgid "Replacement ad creative (optional)"
 msgstr ""
 
 #. translators: %s: required creative dimensions, for example 728x90.
-#: templates/portal/partials/campaign-overlays.php:295
+#: templates/portal/partials/campaign-overlays.php:297
 #, php-format
 msgid "Exactly %s. JPEG, PNG, GIF, or WebP. Leave this empty to change only the destination."
 msgstr ""
@@ -6453,6 +6521,46 @@ msgstr ""
 
 #: templates/portal/partials/campaign-review-step.php:411
 msgid "You are notified if changes are needed."
+msgstr ""
+
+#. translators: %s: one placement's name, or several separated by commas, e.g. Break, Footer.
+#: templates/portal/partials/campaign-same-file-note.php:34
+#, php-format
+msgid "Only this placement changes. %s keeps the current file; change it there too if it should match."
+msgid_plural "Only this placement changes. %s keep the current file; change them there too if they should match."
+msgstr[0] ""
+msgstr[1] ""
+
+#: templates/portal/partials/campaign-same-file-remove.php:30
+msgid "The same file is on other placements. Removing it here leaves them as they are unless you tick them."
+msgstr ""
+
+#. translators: %s: a placement's name, e.g. Break.
+#: templates/portal/partials/campaign-same-file-remove.php:38
+#, php-format
+msgid "%s keeps its copy: it has been approved."
+msgstr ""
+
+#. translators: %s: a placement's name, e.g. Break.
+#: templates/portal/partials/campaign-same-file-remove.php:47
+#, php-format
+msgid "Also remove it from %s"
+msgstr ""
+
+#: templates/portal/partials/campaign-same-file.php:56
+msgid "Same size as another placement. Use its file here too, or upload a different one below."
+msgstr ""
+
+#. translators: 1: a placement's name, e.g. Header. 2: a file name.
+#: templates/portal/partials/campaign-same-file.php:72
+#, php-format
+msgid "Same file as %1$s (%2$s)"
+msgstr ""
+
+#. translators: %s: a placement's name, e.g. Header.
+#: templates/portal/partials/campaign-same-file.php:74
+#, php-format
+msgid "Same file as %s"
 msgstr ""
 
 #: templates/portal/partials/campaign-schedule-fields.php:41
@@ -6659,12 +6767,12 @@ msgstr ""
 msgid "The destination, the share and the run dates stay as they are. Only the image changes."
 msgstr ""
 
-#: templates/portal/partials/campaign-variant-artwork.php:53
+#: templates/portal/partials/campaign-variant-artwork.php:54
 msgid "New ad creative file"
 msgstr ""
 
 #. translators: %s: required image dimensions, e.g. 728x90.
-#: templates/portal/partials/campaign-variant-artwork.php:59
+#: templates/portal/partials/campaign-variant-artwork.php:60
 #, php-format
 msgid "Required: %s pixels, the same as the creative it replaces."
 msgstr ""
