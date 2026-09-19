@@ -63,12 +63,19 @@ test( 'every file dropped at once lands on the size it matches', async ( {
 
 	let posts = 0;
 	page.on( 'request', ( request ) => {
-		// Uploads only: the link field saves through the same endpoint.
+		/*
+		 * Matched on the request's shape, not its body: Playwright hands back
+		 * no body for a multipart post carrying a file, so looking for the
+		 * action name in it counted nothing and passed the negative below over
+		 * a check that could never fire. Nothing else on this step posts a
+		 * multipart form to admin-post.php once the link is in.
+		 */
 		if (
 			'POST' === request.method() &&
 			request.url().includes( 'admin-post.php' ) &&
-			( request.postDataBuffer()?.includes( 'aggr_upload_creative' ) ??
-				false )
+			( request.headers()[ 'content-type' ] ?? '' ).startsWith(
+				'multipart/form-data'
+			)
 		) {
 			posts++;
 		}
