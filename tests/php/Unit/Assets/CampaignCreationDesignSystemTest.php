@@ -360,15 +360,21 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 		);
 
 		/*
-		 * A creative with no assignment carries a null weight rather than zero,
-		 * and the control must not offer to set a share for something that is
-		 * not delivering yet.
+		 * A creative with no assignment carries a null weight and a null
+		 * share rather than zero, and the control must not offer to set a
+		 * share for something that is not delivering yet.
 		 */
-		$this->assertStringContainsString( 'null === $aggr_share_weight', $partial );
+		$this->assertStringContainsString( "null === ( \$aggr_creative['weight'] ?? null )", $partial );
+		$this->assertStringContainsString( 'null === $aggr_share_ratio', $partial );
 
-		// The bounds come from the domain rather than being retyped here.
+		/*
+		 * The field is the percentage, and its bounds come from the domain:
+		 * at least the minimum, and at most a hundred less one per cent for
+		 * every other creative on the placement.
+		 */
+		$this->assertStringContainsString( 'name="share"', $partial );
 		$this->assertStringContainsString( 'Assignment_Rules::MIN_WEIGHT', $partial );
-		$this->assertStringContainsString( 'Assignment_Rules::MAX_WEIGHT', $partial );
+		$this->assertStringContainsString( 'Assignment_Rules::SHARE_TOTAL - ( count( $aggr_slot[\'creatives\'] ) - 1 )', $partial );
 
 		// And the write is nonce-protected, like every other portal write.
 		$this->assertStringContainsString( 'weight_nonce_action', $partial );
