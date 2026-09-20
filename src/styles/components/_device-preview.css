@@ -1,0 +1,89 @@
+/*
+ * An ad at the widths people browse at.
+ *
+ * The width is chosen by a radio group, and the chosen one sizes the stage
+ * through `:has()` — no script, so the preview works in a dialog opened by
+ * `:target` alone, which is how this portal's dialogs open without a module.
+ */
+
+.aggr-device {
+	display: grid;
+	gap: var(--aggr-space-sm);
+}
+
+.aggr-device__widths {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--aggr-space-2xs);
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
+.aggr-device__width {
+	display: inline-flex;
+	gap: var(--aggr-space-2xs);
+	align-items: baseline;
+	padding: var(--aggr-space-2xs) var(--aggr-space-sm);
+	background: var(--aggr-color-surface);
+	border: 1px solid var(--aggr-border-color);
+	border-radius: 999px;
+	color: var(--aggr-color-text-body);
+	font-size: 13px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.aggr-device__px {
+	color: var(--aggr-color-text-muted);
+	font-size: 11px;
+	font-variant-numeric: tabular-nums;
+	font-weight: 500;
+}
+
+.aggr-device__choice:checked + .aggr-device__width {
+	background: var(--aggr-color-text);
+	border-color: var(--aggr-color-text);
+	color: var(--aggr-color-surface);
+}
+
+.aggr-device__choice:checked + .aggr-device__width .aggr-device__px {
+	color: var(--aggr-color-surface);
+}
+
+/* The focus ring belongs on the label, since the input itself is hidden. */
+.aggr-device__choice:focus-visible + .aggr-device__width {
+	outline: 2px solid var(--aggr-color-accent);
+	outline-offset: 2px;
+}
+
+.aggr-device__stage {
+	display: flex;
+	justify-content: center;
+	padding: var(--aggr-space-sm);
+	overflow-x: auto;
+	background: var(--aggr-color-surface-sunken);
+	border-radius: var(--aggr-radius-panel);
+}
+
+/*
+ * The frame is the screen, not the ad: it takes the chosen width and the ad
+ * sits inside it at its own size, which is the comparison somebody previewing
+ * is making.
+ */
+.aggr-device__frame {
+	width: 390px;
+	height: 320px;
+	max-width: 100%;
+	background: var(--aggr-color-surface);
+	border: 1px solid var(--aggr-border-color);
+	border-radius: var(--aggr-radius-control);
+}
+
+.aggr-device:has( .aggr-device__choice[value="tablet"]:checked ) .aggr-device__frame {
+	width: 834px;
+}
+
+.aggr-device:has( .aggr-device__choice[value="desktop"]:checked ) .aggr-device__frame {
+	width: 1280px;
+}

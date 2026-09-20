@@ -656,6 +656,40 @@ test( 'advertiser completes and submits the accessible three-step wizard', async
 		'Preview Article sidebar'
 	);
 
+	/*
+	 * **The preview is a sandboxed frame, not a picture of one.** A creative
+	 * is somebody else's file, and P17 says a reviewer's browser is not a
+	 * safer place to run one than a visitor's — so the isolation is asserted
+	 * on the attribute rather than on how the dialog looks, which is the one
+	 * thing a screenshot could never show.
+	 */
+	const previewDialog = page.getByRole( 'dialog', {
+		name: 'Preview Article sidebar',
+	} );
+	const frame = previewDialog.locator( 'iframe.aggr-device__frame' );
+
+	await expect( frame ).toHaveAttribute( 'sandbox', '' );
+	await expect( frame ).toHaveAttribute( 'referrerpolicy', 'no-referrer' );
+
+	// And the widths are a radio group, so they work from the keyboard and
+	// without the module: the chosen one sizes the frame in CSS.
+	const phone = previewDialog.getByRole( 'radio', { name: /Phone/ } );
+
+	await expect( phone ).toBeChecked();
+
+	const narrow = await frame.boundingBox();
+
+	await phone.focus();
+	await page.keyboard.press( 'ArrowRight' );
+
+	await expect(
+		previewDialog.getByRole( 'radio', { name: /Tablet/ } )
+	).toBeChecked();
+
+	const wider = await frame.boundingBox();
+
+	expect( wider?.width ?? 0 ).toBeGreaterThan( narrow?.width ?? 0 );
+
 	const removeTrigger = page.getByRole( 'link', { name: 'Remove' } );
 	await expectDialogKeyboard( page, removeTrigger, 'Remove this creative?' );
 

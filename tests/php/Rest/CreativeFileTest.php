@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Tests\Rest;
 
+use Aggressive\Ads\Domain\Preview_Frame;
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Plugin;
@@ -325,6 +326,36 @@ final class CreativeFileTest extends WP_UnitTestCase {
 		$this->assertStringContainsString( 'no-store', $headers['Cache-Control'] );
 		$this->assertStringContainsString( 'private', $headers['Cache-Control'] );
 		$this->assertStringContainsString( 'inline;', $headers['Content-Disposition'] );
+	}
+
+	/**
+	 * Unapproved artwork is served under a policy that permits nothing else.
+	 *
+	 * **P17 calls preview untrusted rendering**: a reviewer's browser is not a
+	 * safer place to run a creative than a visitor's. Asserted on the headers
+	 * rather than on what a preview looks like, because the isolation is the
+	 * thing being claimed and a picture cannot show it.
+	 *
+	 * @return void
+	 */
+	public function test_the_bytes_are_served_under_a_deny_all_policy(): void {
+		wp_set_current_user( $this->owner );
+
+		$headers = $this->request( $this->creative_id )->get_headers();
+		$policy  = (string) ( $headers['Content-Security-Policy'] ?? '' );
+
+		$this->assertSame( Preview_Frame::POLICY, $policy, 'The response no longer carries the preview policy.' );
+
+		// Each clause, named: a policy asserted only as a whole string is one
+		// nobody notices the weakening of.
+		$this->assertStringContainsString( "default-src 'none'", $policy );
+		$this->assertStringContainsString( 'sandbox', $policy, 'A framed creative could run script.' );
+		$this->assertStringContainsString( "frame-ancestors 'self'", $policy, "Another site could frame an advertiser's unapproved artwork." );
+		$this->assertStringContainsString( "form-action 'none'", $policy );
+		$this->assertStringNotContainsString( 'unsafe-inline', $policy );
+		$this->assertStringNotContainsString( 'script-src', $policy, 'The policy grew a script source.' );
+
+		$this->assertSame( 'SAMEORIGIN', $headers['X-Frame-Options'] ?? '' );
 	}
 
 	/**

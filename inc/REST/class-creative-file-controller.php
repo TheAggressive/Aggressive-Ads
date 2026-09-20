@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\REST;
 
+use Aggressive\Ads\Domain\Preview_Frame;
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Domain\Upload_Rules;
 use Aggressive\Ads\Repository\Creative_Repository;
@@ -162,6 +163,20 @@ final class Creative_File_Controller implements Service {
 		// artwork, and a cache between here and them does not know that.
 		$response->header( 'Cache-Control', 'private, no-store, max-age=0' );
 		$response->header( 'Referrer-Policy', 'no-referrer' );
+
+		/*
+		 * **Untrusted rendering, and P17 says so.** A reviewer's browser is
+		 * not a safer place to run a creative than a visitor's, so the bytes
+		 * are served under a policy that permits the image and nothing else:
+		 * no script, no style, no fetch, no frame of its own, no form, and no
+		 * embedding by another site. `sandbox` covers the case where this
+		 * response is the document — opened directly, or framed for a device
+		 * preview — where the attribute alone would not be enough.
+		 */
+		$response->header( 'Content-Security-Policy', Preview_Frame::POLICY );
+
+		// For the browsers that still read the older header instead.
+		$response->header( 'X-Frame-Options', 'SAMEORIGIN' );
 
 		return $response;
 	}

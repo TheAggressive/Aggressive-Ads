@@ -14,20 +14,29 @@
 import type { ReactElement } from 'react';
 import { useState } from '@wordpress/element';
 import { Dialog } from './dialog';
+import { DevicePreview } from './preview';
 import { DeliveryPolicy } from './delivery';
 import { t } from '../shared/save';
-import type { Campaign, Creative, CreativeUpdate, ReviewAction } from './types';
+import type {
+	Bootstrap,
+	Campaign,
+	Creative,
+	CreativeUpdate,
+	ReviewAction,
+} from './types';
 import { requestOf } from './types';
 
 /** One creative, previewed through the authenticated file route. */
 function CreativeCard( {
 	creative,
+	preview,
 	children,
 	onPublish,
 	onReject,
 	busy,
 }: {
 	creative: Creative | CreativeUpdate;
+	preview: Bootstrap[ 'preview' ];
 	children?: ReactElement | null;
 	onPublish?: ( id: number ) => void;
 	onReject?: ( id: number, notes: string ) => void;
@@ -58,10 +67,11 @@ function CreativeCard( {
 	return (
 		<article className="aggr-creative">
 			<div className="aggr-creative__preview">
-				<img
+				<DevicePreview
 					src={ creative.preview }
-					alt={ creative.alt_text }
-					loading="lazy"
+					placement={ creative.placement }
+					widths={ preview.widths }
+					sandbox={ preview.sandbox }
 				/>
 			</div>
 			<div className="aggr-creative__body">
@@ -398,9 +408,11 @@ export function CampaignView( {
 	onPublishCreative,
 	onRejectCreative,
 	onDeliveryPolicy,
+	preview,
 }: {
 	campaign: Campaign;
 	busy: boolean;
+	preview: Bootstrap[ 'preview' ];
 	onBack: () => void;
 	onEdit: () => void;
 	onTransition: ( to: string, notes: string ) => void;
@@ -621,6 +633,7 @@ export function CampaignView( {
 								<CreativeCard
 									key={ creative.id }
 									creative={ creative }
+									preview={ preview }
 									busy={ busy }
 									onPublish={ onPublishCreative }
 									onReject={ onRejectCreative }
@@ -739,6 +752,7 @@ export function CampaignView( {
 								<CreativeCard
 									key={ update.id }
 									creative={ update }
+									preview={ preview }
 								>
 									<Decision
 										label={ t( 'approveReplace' ) }

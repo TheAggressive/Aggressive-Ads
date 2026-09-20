@@ -152,6 +152,17 @@ export type Bootstrap = {
 	campaign: Campaign | null;
 	advertisers: Advertiser[];
 	portalBase: string;
+
+	/**
+	 * How a creative is previewed: the widths, and the sandbox the frame
+	 * carries. From `Domain\Preview_Frame`, because the advertiser's portal
+	 * draws the same frame from PHP and two copies of "a phone is 390 pixels"
+	 * are two answers to one question.
+	 */
+	preview: {
+		widths: Record< string, number >;
+		sandbox: string;
+	};
 	i18n: Record< string, string >;
 };
 

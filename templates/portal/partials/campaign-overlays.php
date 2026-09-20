@@ -230,11 +230,7 @@ if ( true !== ( $aggr_overlay_print ?? false ) ) {
 
 				<div class="aggr-overlay__body">
 					<?php if ( 'preview' === $aggr_kind ) : ?>
-						<img
-							class="aggr-overlay__preview-image"
-							src="<?php echo esc_url( (string) $aggr_creative['preview'] ); ?>"
-							alt="<?php echo esc_attr( (string) $aggr_creative['alt_text'] ); ?>"
-						>
+						<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-device-preview.php'; ?>
 					<?php elseif ( 'window' === $aggr_kind ) : ?>
 						<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-variant-window.php'; ?>
 					<?php elseif ( 'destination' === $aggr_kind ) : ?>
