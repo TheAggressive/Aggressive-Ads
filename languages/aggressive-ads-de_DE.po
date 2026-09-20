@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
-"POT-Creation-Date: 2026-09-19T23:50:12+00:00\n"
+"POT-Creation-Date: 2026-09-20T03:44:24+00:00\n"
 "PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -4489,7 +4489,7 @@ msgid "That placement is not available for this campaign."
 msgstr "Diese Platzierung ist für diese Kampagne nicht verfügbar."
 
 #: inc/Portal/class-creative-feedback.php:294
-#: inc/Workflow/class-assignment-editor.php:192
+#: inc/Workflow/class-assignment-editor.php:226
 #: inc/Workflow/class-campaign-editor.php:355
 #: inc/Workflow/class-creative-manager.php:428
 #: inc/Workflow/class-creative-manager.php:577
@@ -4565,7 +4565,7 @@ msgstr ""
 "einzustellen."
 
 #: inc/Portal/class-creative-feedback.php:340
-#: inc/Workflow/class-share-editor.php:124
+#: inc/Workflow/class-share-editor.php:155
 #, fuzzy
 msgid "Those shares could not be saved. Reload the page and try again."
 msgstr ""
@@ -4579,7 +4579,8 @@ msgid "A share must be between %1$d and %2$d."
 msgstr "Ein Anteil muss zwischen %1$d und %2$d liegen."
 
 #: inc/Portal/class-creative-feedback.php:348
-#: inc/Workflow/class-share-editor.php:94
+#: inc/Workflow/class-share-editor.php:93
+#: inc/Workflow/class-share-editor.php:121
 msgid "That creative is not delivering yet, so it has no share to set."
 msgstr ""
 "Dieses Werbemittel wird noch nicht ausgeliefert, daher gibt es keinen Anteil "
@@ -5016,7 +5017,7 @@ msgstr "Dieser Werbetreibende konnte nicht gefunden werden."
 #: inc/REST/class-campaigns-controller.php:499
 #: inc/REST/class-creative-file-controller.php:186
 #: inc/REST/class-line-items-controller.php:358
-#: inc/Workflow/class-assignment-editor.php:337
+#: inc/Workflow/class-assignment-editor.php:384
 #: inc/Workflow/class-line-item-editor.php:69
 #: inc/Workflow/class-line-item-editor.php:78
 msgid "Not found."
@@ -5473,38 +5474,40 @@ msgstr "Es wurden keine Versionshinweise bereitgestellt."
 msgid "Account registration is not available."
 msgstr "Die Kontoerstellung ist nicht verfügbar."
 
-#: inc/Workflow/class-assignment-editor.php:139
+#: inc/Workflow/class-assignment-editor.php:173
 msgid "This creative cannot be withdrawn from where it is now."
 msgstr ""
 "Dieses Werbemittel kann nicht von seinem aktuellen Standort zurückgezogen "
 "werden."
 
-#: inc/Workflow/class-assignment-editor.php:222
+#: inc/Workflow/class-assignment-editor.php:256
 msgid "This creative changed in another window. Reload it before saving again."
 msgstr ""
 "Dieses Werbemittel wurde in einem anderen Fenster geändert. Laden Sie es "
 "neu, bevor Sie es erneut speichern."
 
-#: inc/Workflow/class-assignment-editor.php:250
+#: inc/Workflow/class-assignment-editor.php:284
 msgid "Change at least one delivery setting before saving."
 msgstr ""
 "Ändern Sie mindestens eine Auslieferungseinstellung, bevor Sie speichern."
 
-#. translators: 1: minimum weight, 2: maximum weight.
-#: inc/Workflow/class-assignment-editor.php:260
-#, php-format
-msgid "Use a whole number between %1$d and %2$d for the rotation weight."
+#. translators: 1: smallest share, 2: largest share.
+#: inc/Workflow/class-assignment-editor.php:307
+#, fuzzy, php-format
+msgid ""
+"Use a whole number between %1$d and %2$d for this creative's share of the "
+"placement."
 msgstr ""
 "Verwenden Sie eine ganze Zahl zwischen %1$d und %2$d für das "
 "Rotationsgewicht."
 
-#: inc/Workflow/class-assignment-editor.php:274
+#: inc/Workflow/class-assignment-editor.php:321
 msgid "This creative cannot move to that state from where it is now."
 msgstr ""
 "Dieses Werbemittel kann aus seinem aktuellen Zustand nicht in diesen Zustand "
 "überführt werden."
 
-#: inc/Workflow/class-assignment-editor.php:301
+#: inc/Workflow/class-assignment-editor.php:348
 msgid "Creative dates must fall inside the campaign’s own dates."
 msgstr ""
 "Die Daten des Werbemittels müssen innerhalb der eigenen Kampagnendaten "

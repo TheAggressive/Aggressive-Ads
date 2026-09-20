@@ -18,6 +18,7 @@ use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Creative_Attachment_Repository;
 use Aggressive\Ads\Security\Ownership;
 use Aggressive\Ads\Security\Roles;
+use Aggressive\Ads\Workflow\Assignment_Editor;
 use Aggressive\Ads\Workflow\Creative_Manager;
 use Aggressive\Ads\Workflow\Share_Editor;
 use WP_UnitTestCase;
@@ -326,6 +327,97 @@ final class ShareEditorTest extends WP_UnitTestCase {
 
 		$this->assertTrue( $rows[ $first ]['delivering'] );
 		$this->assertFalse( $rows[ $second ]['delivering'], 'An unapproved ad was counted as running.' );
+	}
+
+	/**
+	 * The API and the portal set a share the same way, because it is one rule.
+	 *
+	 * The REST route used to write the weight column straight through, so a
+	 * share set by an API client left the placement adding to whatever it
+	 * happened to add to, while the portal kept it at a hundred. Both reach
+	 * `Share_Editor` now, and this asserts they agree rather than asserting
+	 * each separately and hoping.
+	 *
+	 * @return void
+	 */
+	public function test_the_api_and_the_portal_agree_on_what_a_share_is(): void {
+		wp_set_current_user( $this->owner );
+
+		$first  = $this->ad( 1 );
+		$second = $this->ad( 2 );
+
+		// The portal's own entry point.
+		Plugin::instance()->container()->get( Creative_Actions::class )->process_weight( $first, 65 );
+
+		$through_portal = $this->percentages();
+
+		// And the API's, on the same placement, asking for the same share.
+		$assignment = 0;
+
+		foreach ( Plugin::instance()->container()->get( Creative_Assignment_Repository::class )->for_campaign( $this->campaign_id ) as $row ) {
+			if ( (int) $row['revision_id'] === $first ) {
+				$assignment = (int) $row['id'];
+			}
+		}
+
+		// Back to an even split, so the API is asked to make the same change.
+		$this->shares->set_share( $first, 50 );
+		$this->assertSame( array( 50, 50 ), $this->percentages() );
+
+		$applied = Plugin::instance()->container()->get( Assignment_Editor::class )->update(
+			$this->campaign_id,
+			$assignment,
+			array( 'weight' => 65 ),
+			$this->revision_of( $assignment )
+		);
+
+		$this->assertIsInt( $applied, is_wp_error( $applied ) ? $applied->get_error_code() : '' );
+		$this->assertSame( $through_portal, $this->percentages(), 'The API and the portal disagree about a share.' );
+		$this->assertSame( array( 65, 35 ), $this->percentages() );
+		$this->assertNotSame( 0, $second );
+	}
+
+	/**
+	 * A share the API sends that is not a share of anything is refused.
+	 *
+	 * @return void
+	 */
+	public function test_the_api_refuses_a_share_over_a_hundred(): void {
+		wp_set_current_user( $this->owner );
+
+		$first = $this->ad( 1 );
+		$this->ad( 2 );
+
+		$assignment = 0;
+
+		foreach ( Plugin::instance()->container()->get( Creative_Assignment_Repository::class )->for_campaign( $this->campaign_id ) as $row ) {
+			if ( (int) $row['revision_id'] === $first ) {
+				$assignment = (int) $row['id'];
+			}
+		}
+
+		$refused = Plugin::instance()->container()->get( Assignment_Editor::class )->update(
+			$this->campaign_id,
+			$assignment,
+			array( 'weight' => 4000 ),
+			$this->revision_of( $assignment )
+		);
+
+		$this->assertWPError( $refused );
+		$this->assertSame( 'aggr_assignment_weight_invalid', $refused->get_error_code() );
+		$this->assertSame( array( 50, 50 ), $this->percentages(), 'A refused share was written anyway.' );
+	}
+
+	/**
+	 * One assignment's current revision, as a caller would have read it.
+	 *
+	 * @param int $assignment_id Assignment id.
+	 * @return int
+	 */
+	private function revision_of( int $assignment_id ): int {
+		$row = Plugin::instance()->container()->get( Creative_Assignment_Repository::class )->find_for_campaign( $assignment_id, $this->campaign_id );
+
+		return null === $row ? 0 : (int) $row['revision'];
 	}
 
 	/**

@@ -181,9 +181,17 @@ client-supplied** — that is the property that keeps it a review lane rather th
 an exemption from review.
 
 Assignment statuses are `draft|ready|live|paused|completed|cancelled`, and
-`completed` and `cancelled` are terminal. Weight is a share rather than a
-percentage: any whole number from 1 to 10000, bounded because a later phase
-divides by the sum of the weights on a placement.
+`completed` and `cancelled` are terminal.
+
+**Weight is the percentage of its placement**, and every writer goes through
+`Workflow\Share_Editor`, which rebalances the rest of the placement around it
+(`Domain\Assignment_Rules::rebalance()`: whole numbers summing to
+`SHARE_TOTAL`, none below `MIN_WEIGHT`) and writes every row together or not
+at all. The column still stores a weight and delivery still divides by the sum
+of the weights it can serve, so a placement whose rows were written before this
+— or by a future writer that skips the editor — still rotates in the right
+proportions; what it loses is the guarantee that the numbers on screen add to
+a hundred. `MAX_WEIGHT` remains the column's bound rather than the share's.
 
 An assignment's delivery window **may only narrow its parent's, never widen it**,
 and a widening is refused rather than clamped. A campaign sold for June must not

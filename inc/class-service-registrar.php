@@ -325,7 +325,8 @@ final class Service_Registrar {
 				$c->get( Line_Item_Repository::class ),
 				$c->get( Campaign_Repository::class ),
 				$c->get( Audit_Repository::class ),
-				$c->get( Edit_Window::class )
+				$c->get( Edit_Window::class ),
+				$c->get( Share_Editor::class )
 			)
 		);
 

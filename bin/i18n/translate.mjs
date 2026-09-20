@@ -279,7 +279,36 @@ export function translatorNotes( entry ) {
 		.trim();
 }
 
+/**
+ * Where a progress mark goes, and when it goes anywhere at all.
+ *
+ * **Never stdout.** Node's test runner talks to its child processes over
+ * their stdout, in a binary protocol, so a dot written there lands in the
+ * middle of a serialized message and the runner dies with "Unable to
+ * deserialize cloned data" — a failure that looked like a flaky test and was
+ * this. Progress is something a person watches, not output anything reads:
+ * stderr, and only when somebody is there to see it.
+ *
+ * @param {string} mark What to draw.
+ * @return {void}
+ */
+export function drawProgress( mark ) {
+	if ( process.stderr.isTTY ) {
+		process.stderr.write( mark );
+	}
+}
+
+/**
+ * Fills a locale's empty and fuzzy strings from the machine translator.
+ *
+ * @param {string} file  Path to the .po file.
+ * @param {Record<string, any>} [opts] Options; `progress` draws each filled
+ *                                     string, and defaults to a dot on a
+ *                                     terminal and nothing anywhere else.
+ * @return {Promise<Record<string, any>>} What the run did to this locale.
+ */
 export async function translatePoFile( file, opts ) {
+	const progress = opts?.progress ?? drawProgress;
 	const locale = localeFromPo( file );
 	if ( ! isSupportedLocale( locale ) ) {
 		console.warn(
@@ -431,7 +460,7 @@ export async function translatePoFile( file, opts ) {
 			}
 			updated += 1;
 			dirty = true;
-			process.stdout.write( '.' );
+			progress( '.' );
 
 			if ( flushEvery > 0 && 0 === updated % flushEvery ) {
 				flush();
@@ -476,7 +505,7 @@ export async function translatePoFile( file, opts ) {
 		await sleep( delay );
 	}
 
-	process.stdout.write( '\n' );
+	progress( '\n' );
 
 	flush();
 

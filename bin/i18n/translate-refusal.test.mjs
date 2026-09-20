@@ -18,7 +18,7 @@ import assert from 'node:assert/strict';
 import test, { afterEach, beforeEach } from 'node:test';
 
 import { mt } from './providers.mjs';
-import { translatePoFile } from './translate.mjs';
+import { drawProgress, translatePoFile } from './translate.mjs';
 import { classifyMtFailure } from './run-completeness.mjs';
 import { findPlaceholderMismatches } from './lint-placeholders.mjs';
 import { parsePo } from './po.mjs';
@@ -396,6 +396,112 @@ msgstr ""
 		restore();
 		fs.rmSync( dir, { recursive: true, force: true } );
 	}
+} );
+
+/*
+ * **The runner reads this process's stdout.** Node's test runner talks to each
+ * test file over stdout, in a binary protocol, so anything the code under test
+ * writes there lands inside a serialized message: the runner dies with "Unable
+ * to deserialize cloned data" and reports the whole file as failing, with
+ * nothing to say which test did it. A progress dot did exactly that here,
+ * intermittently, for as long as it took to notice the file passed alone and
+ * failed in company.
+ *
+ * The first attempt at this test spied on `process.stdout.write` and caught
+ * the runner's own protocol frames — which is the proof, and is why the
+ * assertion is on the writer's behaviour instead: progress goes to stderr, and
+ * only to a terminal.
+ */
+test( 'progress is drawn on stderr, and only for somebody watching', () => {
+	const seen = { out: [], err: [] };
+	const real = {
+		out: process.stdout.write,
+		err: process.stderr.write,
+		tty: process.stderr.isTTY,
+	};
+
+	process.stderr.write = ( chunk ) => {
+		seen.err.push( String( chunk ) );
+
+		return true;
+	};
+
+	try {
+		process.stderr.isTTY = true;
+		drawProgress( '.' );
+
+		assert.deepEqual( seen.err, [ '.' ], 'a terminal should see the dot' );
+
+		// Anywhere else — a pipe, a log, a test runner — it draws nothing.
+		seen.err.length = 0;
+		process.stderr.isTTY = false;
+		drawProgress( '.' );
+
+		assert.deepEqual( seen.err, [] );
+
+		/*
+		 * And never stdout, whatever the terminal says. This is the assertion
+		 * the crash was about; the spy is installed around the call alone so
+		 * the runner's own frames are not counted.
+		 */
+		process.stdout.write = ( chunk ) => {
+			seen.out.push( String( chunk ) );
+
+			return true;
+		};
+		process.stderr.isTTY = true;
+		drawProgress( '.' );
+		process.stdout.write = real.out;
+
+		assert.deepEqual(
+			seen.out,
+			[],
+			"Progress reached stdout, which is the test runner's own channel."
+		);
+	} finally {
+		process.stdout.write = real.out;
+		process.stderr.write = real.err;
+		process.stderr.isTTY = real.tty;
+	}
+} );
+
+/*
+ * And the walk reports through whatever it was given, so a caller that wants
+ * the marks — a CLI drawing a line of dots — asks for them rather than the
+ * walk deciding where they land.
+ */
+test( "the walk draws its progress through the caller's own writer", async () => {
+	const restore = useLocalProvider();
+	const dir = fs.mkdtempSync( path.join( os.tmpdir(), 'aggr-i18n-' ) );
+	const file = path.join( dir, 'aggressive-ads-de_DE.po' );
+
+	fs.writeFileSync(
+		file,
+		`msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\\n"
+
+msgid "Campaign name"
+msgstr ""
+`,
+		'utf8'
+	);
+
+	stubProvider( 'Kampagnenname' );
+
+	const marks = [];
+
+	try {
+		await translatePoFile( file, {
+			progress: ( mark ) => marks.push( mark ),
+		} );
+	} finally {
+		restore();
+		fs.rmSync( dir, { recursive: true, force: true } );
+	}
+
+	assert.deepEqual( marks, [ '.', '\n' ] );
 } );
 
 test( 'an unsupported locale keeps the result contract', async () => {
