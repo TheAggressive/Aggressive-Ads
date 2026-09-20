@@ -44,13 +44,15 @@ final class Assignment_Editor {
 	 * @param Campaign_Repository            $campaigns   Campaign persistence.
 	 * @param Audit_Repository               $audit       Audit persistence.
 	 * @param Edit_Window                    $window      Campaign edit policy.
+	 * @param Share_Editor                   $shares      The one rule for what a share of a placement means.
 	 */
 	public function __construct(
 		private readonly Creative_Assignment_Repository $assignments,
 		private readonly Line_Item_Repository $line_items,
 		private readonly Campaign_Repository $campaigns,
 		private readonly Audit_Repository $audit,
-		private readonly Edit_Window $window
+		private readonly Edit_Window $window,
+		private readonly Share_Editor $shares
 	) {
 	}
 
@@ -76,10 +78,42 @@ final class Assignment_Editor {
 			return $clean;
 		}
 
-		$revision = $this->assignments->update( $assignment_id, $campaign_id, $clean, $expected_revision );
+		/*
+		 * **A weight is a share, and a share is of something.** Written
+		 * straight into the column, a weight set through here left the
+		 * placement adding to whatever it happened to add to, while the
+		 * portal kept it at a hundred — one rule with two implementations,
+		 * which is two rules. `Share_Editor` is the one, and it rebalances
+		 * the rest of the placement around this number.
+		 *
+		 * Taken out of the field list first, so the write below is the other
+		 * settings and the share is applied once, afterwards.
+		 */
+		$share = null;
+
+		if ( array_key_exists( 'weight', $clean ) ) {
+			$share = (int) $clean['weight'];
+
+			unset( $clean['weight'] );
+		}
+
+		$revision = array() === $clean
+			? $expected_revision
+			: $this->assignments->update( $assignment_id, $campaign_id, $clean, $expected_revision );
 
 		if ( false === $revision ) {
 			return $this->conflict( $assignment_id, $campaign_id );
+		}
+
+		if ( null !== $share ) {
+			$applied = $this->shares->apply( $campaign_id, $assignment_id, $share );
+
+			if ( is_wp_error( $applied ) ) {
+				return $applied;
+			}
+
+			$row      = $this->assignments->find_for_campaign( $assignment_id, $campaign_id );
+			$revision = null === $row ? $revision : (int) $row['revision'];
 		}
 
 		$this->audit->insert(
@@ -93,7 +127,7 @@ final class Assignment_Editor {
 				message: 'Creative delivery settings updated.',
 				context: array(
 					'campaign_id' => $campaign_id,
-					'fields'      => array_keys( $clean ),
+					'fields'      => null === $share ? array_keys( $clean ) : array_merge( array_keys( $clean ), array( 'weight' ) ),
 					'revision'    => $revision,
 				),
 				actor_user_id: get_current_user_id()
@@ -252,14 +286,27 @@ final class Assignment_Editor {
 			);
 		}
 
-		if ( array_key_exists( 'weight', $clean ) && ! Assignment_Rules::is_weight( (int) $clean['weight'] ) ) {
+		/*
+		 * A share of a placement, so a hundred is all of it. It used to be the
+		 * raw weight column — any number to ten thousand, meaning nothing on
+		 * its own — and the portal meanwhile showed and wrote percentages.
+		 * Refused rather than clamped: a number somebody sent and did not get
+		 * is worth saying out loud.
+		 */
+		if (
+			array_key_exists( 'weight', $clean )
+			&& (
+				(int) $clean['weight'] < Assignment_Rules::MIN_WEIGHT
+				|| (int) $clean['weight'] > Assignment_Rules::SHARE_TOTAL
+			)
+		) {
 			return new WP_Error(
 				'aggr_assignment_weight_invalid',
 				sprintf(
-					/* translators: 1: minimum weight, 2: maximum weight. */
-					__( 'Use a whole number between %1$d and %2$d for the rotation weight.', 'aggressive-ads' ),
+					/* translators: 1: smallest share, 2: largest share. */
+					__( 'Use a whole number between %1$d and %2$d for this creative\'s share of the placement.', 'aggressive-ads' ),
 					Assignment_Rules::MIN_WEIGHT,
-					Assignment_Rules::MAX_WEIGHT
+					Assignment_Rules::SHARE_TOTAL
 				),
 				array( 'status' => 422 )
 			);

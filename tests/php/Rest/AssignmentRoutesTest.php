@@ -69,6 +69,20 @@ final class AssignmentRoutesTest extends WP_UnitTestCase {
 	private int $assignment = 0;
 
 	/**
+	 * A second assignment on the same placement, once a test asks for one.
+	 *
+	 * @var int
+	 */
+	private int $sibling = 0;
+
+	/**
+	 * The placement both creatives compete on.
+	 *
+	 * @var int
+	 */
+	private int $placement = 0;
+
+	/**
 	 * Owning organization.
 	 *
 	 * @var int
@@ -106,7 +120,7 @@ final class AssignmentRoutesTest extends WP_UnitTestCase {
 
 		update_post_meta( $this->org_id, Org_Repository::META_OWNER_USER, $this->owner );
 
-		$placement = (int) self::factory()->post->create(
+		$this->placement = (int) self::factory()->post->create(
 			array(
 				'post_type'   => Post_Types::PLACEMENT,
 				'post_status' => 'publish',
@@ -124,7 +138,7 @@ final class AssignmentRoutesTest extends WP_UnitTestCase {
 		update_post_meta( $this->campaign, Campaign_Repository::META_ORG_ID, $this->org_id );
 		update_post_meta( $this->campaign, Campaign_Repository::META_START_TS, self::PARENT_START );
 		update_post_meta( $this->campaign, Campaign_Repository::META_END_TS, self::PARENT_END );
-		add_post_meta( $this->campaign, Campaign_Repository::META_PLACEMENT_ID, $placement );
+		add_post_meta( $this->campaign, Campaign_Repository::META_PLACEMENT_ID, $this->placement );
 
 		$creative = (int) self::factory()->post->create(
 			array(
@@ -136,7 +150,7 @@ final class AssignmentRoutesTest extends WP_UnitTestCase {
 
 		update_post_meta( $creative, Creative_Repository::META_CAMPAIGN_ID, $this->campaign );
 		update_post_meta( $creative, Creative_Repository::META_ORG_ID, $this->org_id );
-		update_post_meta( $creative, Creative_Repository::META_PLACEMENT_ID, $placement );
+		update_post_meta( $creative, Creative_Repository::META_PLACEMENT_ID, $this->placement );
 		update_post_meta( $creative, Creative_Repository::META_KIND, 'image' );
 
 		$row = $container->get( Creative_Assignment_Migrator::class )->migrate_one( $creative );
@@ -167,6 +181,40 @@ final class AssignmentRoutesTest extends WP_UnitTestCase {
 		}
 
 		return rest_get_server()->dispatch( $request );
+	}
+
+	/**
+	 * Puts a second creative on the same placement, and returns its assignment.
+	 *
+	 * **A share is a share of something.** With one creative the answer is a
+	 * hundred whatever is asked for, so a test of the number would pass over a
+	 * write that never happened. Asked for rather than built into the fixture,
+	 * because most of these tests are about one assignment's isolation and
+	 * concurrency, and a second row changes what they count.
+	 *
+	 * @return int Assignment id.
+	 */
+	private function sibling(): int {
+		$creative = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::CREATIVE,
+				'post_status' => 'publish',
+				'post_author' => $this->owner,
+			)
+		);
+
+		update_post_meta( $creative, Creative_Repository::META_CAMPAIGN_ID, $this->campaign );
+		update_post_meta( $creative, Creative_Repository::META_ORG_ID, $this->org_id );
+		update_post_meta( $creative, Creative_Repository::META_PLACEMENT_ID, $this->placement );
+		update_post_meta( $creative, Creative_Repository::META_KIND, 'image' );
+
+		$row = Plugin::instance()->container()->get( Creative_Assignment_Migrator::class )->migrate_one( $creative );
+
+		$this->assertIsArray( $row, 'The fixture produced no second assignment.' );
+
+		$this->sibling = (int) $row['id'];
+
+		return $this->sibling;
 	}
 
 	/** The path to this campaign's assignment. */
@@ -201,7 +249,51 @@ final class AssignmentRoutesTest extends WP_UnitTestCase {
 		);
 	}
 
-	public function test_the_owner_can_set_a_weight(): void {
+	/**
+	 * The number is a share of the placement, as it is in the portal.
+	 *
+	 * It used to be the raw weight column — any number up to ten thousand,
+	 * meaning nothing on its own — while the portal wrote percentages that
+	 * add to a hundred. One rule now: the only creative on this placement
+	 * takes all of it, whatever is asked for.
+	 *
+	 * @return void
+	 */
+	public function test_the_owner_sets_a_share_of_the_placement(): void {
+		wp_set_current_user( $this->owner );
+		$this->sibling();
+
+		$response = $this->request(
+			'PATCH',
+			$this->path(),
+			array(
+				'revision' => 1,
+				'weight'   => 60,
+			)
+		);
+
+		$this->assertSame( 200, $response->get_status() );
+		$this->assertSame( 60, (int) $response->get_data()['weight'] );
+		$this->assertSame( 2, (int) $response->get_data()['revision'] );
+
+		// And the rest of the placement went to the other creative, exactly
+		// as it does when the portal sets the same share.
+		$sibling = $this->assignments->find_for_campaign( $this->sibling, $this->campaign );
+
+		$this->assertSame( 40, (int) $sibling['weight'] );
+		$this->assertSame(
+			100,
+			(int) $response->get_data()['weight'] + (int) $sibling['weight'],
+			'The placement adds to something other than a hundred.'
+		);
+	}
+
+	/**
+	 * A share outside the placement is refused, not quietly clamped.
+	 *
+	 * @return void
+	 */
+	public function test_a_share_over_a_hundred_is_refused(): void {
 		wp_set_current_user( $this->owner );
 
 		$response = $this->request(
@@ -210,12 +302,14 @@ final class AssignmentRoutesTest extends WP_UnitTestCase {
 			array(
 				'revision' => 1,
 				'weight'   => 250,
-			) 
+			)
 		);
 
-		$this->assertSame( 200, $response->get_status() );
-		$this->assertSame( 250, (int) $response->get_data()['weight'] );
-		$this->assertSame( 2, (int) $response->get_data()['revision'] );
+		$this->assertSame( 422, $response->get_status() );
+		$this->assertSame( 'aggr_assignment_weight_invalid', $response->get_data()['code'] );
+
+		$row = $this->assignments->find_for_campaign( $this->assignment, $this->campaign );
+		$this->assertSame( 100, (int) $row['weight'], 'A refused share was written anyway.' );
 	}
 
 	/**
@@ -334,6 +428,7 @@ final class AssignmentRoutesTest extends WP_UnitTestCase {
 	/** A stale revision loses, and is told what the current one is. */
 	public function test_a_stale_revision_conflicts(): void {
 		wp_set_current_user( $this->owner );
+		$this->sibling();
 
 		$this->assertSame(
 			200,
@@ -342,7 +437,7 @@ final class AssignmentRoutesTest extends WP_UnitTestCase {
 				$this->path(),
 				array(
 					'revision' => 1,
-					'weight'   => 200,
+					'weight'   => 60,
 				) 
 			)->get_status() 
 		);
@@ -352,16 +447,16 @@ final class AssignmentRoutesTest extends WP_UnitTestCase {
 			$this->path(),
 			array(
 				'revision' => 1,
-				'weight'   => 300,
+				'weight'   => 70,
 			) 
 		);
 
 		$this->assertSame( 409, $stale->get_status() );
 		$this->assertSame( 2, (int) $stale->get_data()['data']['current_revision'] );
 
-		// The losing write changed nothing.
+		// The losing write changed nothing; the winner's share stands.
 		$row = $this->assignments->find_for_campaign( $this->assignment, $this->campaign );
-		$this->assertSame( 200, (int) $row['weight'] );
+		$this->assertSame( 60, (int) $row['weight'] );
 	}
 
 	/** An empty update is refused rather than bumping the revision. */
@@ -590,14 +685,15 @@ final class AssignmentRoutesTest extends WP_UnitTestCase {
 	/** A stale revision loses the withdrawal too. */
 	public function test_withdrawing_with_a_stale_revision_conflicts(): void {
 		wp_set_current_user( $this->owner );
+		$this->sibling();
 
 		$this->request(
 			'PATCH',
 			$this->path(),
 			array(
 				'revision' => 1,
-				'weight'   => 200,
-			) 
+				'weight'   => 60,
+			)
 		);
 
 		$response = $this->request( 'DELETE', $this->unassign_path(), array( 'revision' => 1 ) );
@@ -642,14 +738,15 @@ final class AssignmentRoutesTest extends WP_UnitTestCase {
 	 */
 	public function test_the_change_is_audited(): void {
 		wp_set_current_user( $this->owner );
+		$this->sibling();
 
 		$this->request(
 			'PATCH',
 			$this->path(),
 			array(
 				'revision' => 1,
-				'weight'   => 400,
-			) 
+				'weight'   => 40,
+			)
 		);
 
 		global $wpdb;

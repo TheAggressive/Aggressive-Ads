@@ -81,10 +81,9 @@ final class Share_Editor {
 			return $this->error( 'aggr_campaign_not_editable', __( 'This campaign cannot be changed right now.', 'aggressive-ads' ), 409 );
 		}
 
-		$rows = $this->rotation( $campaign_id, (int) $creative['placement_id'] );
 		$mine = 0;
 
-		foreach ( $rows as $row ) {
+		foreach ( $this->rotation( $campaign_id, (int) $creative['placement_id'] ) as $row ) {
 			if ( (int) $row['revision_id'] === $creative_id ) {
 				$mine = (int) $row['id'];
 			}
@@ -93,6 +92,38 @@ final class Share_Editor {
 		if ( 0 === $mine ) {
 			return $this->error( 'aggr_share_no_assignment', __( 'That creative is not delivering yet, so it has no share to set.', 'aggressive-ads' ), 409 );
 		}
+
+		return $this->apply( $campaign_id, $mine, $percent );
+	}
+
+	/**
+	 * Gives one assignment a percentage of its placement.
+	 *
+	 * The same rebalance the portal does, reached by assignment rather than by
+	 * creative, because the API addresses assignments. **One rule with two
+	 * front doors, not two rules**: the REST route used to write the raw
+	 * weight column, so a share set through the API left the placement adding
+	 * to whatever it happened to add to, while the portal kept it at a
+	 * hundred.
+	 *
+	 * The caller is responsible for authorizing the campaign; every write goes
+	 * through the assignment's own campaign scope regardless.
+	 *
+	 * @param int $campaign_id   Campaign post id.
+	 * @param int $assignment_id The assignment to set.
+	 * @param int $percent       Share of the placement, 1–100.
+	 * @return array<int, int>|WP_Error Percentage by creative id, or a refusal.
+	 */
+	public function apply( int $campaign_id, int $assignment_id, int $percent ): array|WP_Error {
+		$assignment = $this->assignments->find_for_campaign( $assignment_id, $campaign_id );
+
+		if ( null === $assignment ) {
+			return $this->error( 'aggr_share_no_assignment', __( 'That creative is not delivering yet, so it has no share to set.', 'aggressive-ads' ), 409 );
+		}
+
+		$rows        = $this->rotation( $campaign_id, (int) $assignment['placement_id'] );
+		$mine        = $assignment_id;
+		$creative_id = (int) $assignment['revision_id'];
 
 		$weights = array();
 
@@ -133,7 +164,7 @@ final class Share_Editor {
 				message: 'Placement shares changed.',
 				context: array(
 					'creative_id'  => $creative_id,
-					'placement_id' => (int) $creative['placement_id'],
+					'placement_id' => (int) $assignment['placement_id'],
 					'percent'      => $shares[ $mine ],
 					'shares'       => $by_id,
 				),

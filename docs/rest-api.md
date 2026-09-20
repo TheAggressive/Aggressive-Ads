@@ -222,6 +222,16 @@ caller reached through rather than by an id they supplied.
 `revision` like every other write here — the same optimistic-concurrency
 mechanism, checked in the SQL `WHERE` rather than read-then-written.
 
+**`weight` is a share of the placement, 1–100**, and the rest of that
+placement is rebalanced around it in the proportions the other creatives
+already had — the same `Workflow\Share_Editor` the portal's slider reaches,
+so the two cannot mean different things. A number above 100 is **refused**,
+not clamped. It was the raw weight column until then: any value to 10000,
+meaning nothing on its own, which left a placement written through the API
+adding to something other than a hundred while the portal kept it exact. The
+response carries the share that was stored, which is what the rebalance
+decided, and every row on the placement is written together or not at all.
+
 `DELETE` withdraws the creative from its placement and keeps the creative. It
 retires the assignment and frees the compatibility slot rather than removing the
 row, so the history of what ran there survives the withdrawal. Withdrawing an
