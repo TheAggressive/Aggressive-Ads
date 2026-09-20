@@ -663,6 +663,10 @@ test( 'advertiser completes and submits the accessible three-step wizard', async
 	 * on the attribute rather than on how the dialog looks, which is the one
 	 * thing a screenshot could never show.
 	 */
+	// Opened again: the keyboard helper above closes what it opens, with
+	// Escape, which is the last thing it asserts.
+	await previewTrigger.click();
+
 	const previewDialog = page.getByRole( 'dialog', {
 		name: 'Preview Article sidebar',
 	} );
@@ -689,6 +693,9 @@ test( 'advertiser completes and submits the accessible three-step wizard', async
 	const wider = await frame.boundingBox();
 
 	expect( wider?.width ?? 0 ).toBeGreaterThan( narrow?.width ?? 0 );
+
+	await page.keyboard.press( 'Escape' );
+	await expect( previewDialog ).toBeHidden();
 
 	const removeTrigger = page.getByRole( 'link', { name: 'Remove' } );
 	await expectDialogKeyboard( page, removeTrigger, 'Remove this creative?' );
