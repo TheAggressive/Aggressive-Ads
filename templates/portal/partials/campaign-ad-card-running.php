@@ -40,3 +40,4 @@ use Aggressive\Ads\Portal\Creative_Actions;
 <?php elseif ( true !== $aggr_creative['approved'] ) : ?>
 	<p><span class="aggr-pill aggr-pill--pending"><?php echo esc_html( (string) $aggr_creative['state_text'] ); ?></span></p>
 <?php endif; ?>
+<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-ad-history.php'; ?>

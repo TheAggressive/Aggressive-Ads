@@ -13,6 +13,7 @@ use Aggressive\Ads\Domain\Refresh_Policy;
 use Aggressive\Ads\Domain\Slot_Options;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Repository\Audit_Repository;
+use Aggressive\Ads\Repository\Creative_Decision_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Decision_Rollup_Repository;
@@ -405,6 +406,16 @@ final class Migration_Map {
 			 */
 			30 => static function () use ( $c ): void {
 				$c->get( Rollup_Repository::class )->install_table();
+			},
+
+			/*
+			 * The review history's own table. Nothing is backfilled into it:
+			 * decisions taken before it existed are in the audit log, and
+			 * inventing rows for them would put a date and an actor on a
+			 * record that is a guess. A screen shows what it has.
+			 */
+			31 => static function () use ( $c ): void {
+				$c->get( Creative_Decision_Repository::class )->install_table();
 			},
 		);
 	}

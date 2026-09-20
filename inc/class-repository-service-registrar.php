@@ -15,6 +15,7 @@ use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Campaign_Request_Repository;
 use Aggressive\Ads\Repository\Creative_Asset_Repository;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
+use Aggressive\Ads\Repository\Creative_Decision_Repository;
 use Aggressive\Ads\Repository\Creative_Attachment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Creative_Revision_Repository;
@@ -93,6 +94,10 @@ final class Repository_Service_Registrar {
 		$container->register(
 			Creative_Assignment_Repository::class,
 			static fn (): Creative_Assignment_Repository => new Creative_Assignment_Repository()
+		);
+		$container->register(
+			Creative_Decision_Repository::class,
+			static fn (): Creative_Decision_Repository => new Creative_Decision_Repository()
 		);
 		$container->register(
 			Creative_Revision_Repository::class,

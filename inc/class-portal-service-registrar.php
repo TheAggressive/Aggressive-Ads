@@ -171,7 +171,8 @@ final class Portal_Service_Registrar {
 				$c->get( Placement_Repository::class ),
 				$c->get( Assigned_Creatives::class ),
 				$c->get( \Aggressive\Ads\Workflow\Creative_Approval::class ),
-				$c->get( \Aggressive\Ads\Repository\Creative_Assignment_Repository::class )
+				$c->get( \Aggressive\Ads\Repository\Creative_Assignment_Repository::class ),
+				$c->get( \Aggressive\Ads\Repository\Creative_Decision_Repository::class )
 			)
 		);
 		$container->register(

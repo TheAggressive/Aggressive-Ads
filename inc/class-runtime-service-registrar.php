@@ -143,7 +143,8 @@ final class Runtime_Service_Registrar {
 				$c->get( \Aggressive\Ads\Workflow\Creative_Promoter::class ),
 				$c->get( \Aggressive\Ads\Workflow\Assignment_Projection::class ),
 				$c->get( \Aggressive\Ads\Workflow\Fill_Cache::class ),
-				$c->get( \Aggressive\Ads\Repository\Audit_Repository::class )
+				$c->get( \Aggressive\Ads\Repository\Audit_Repository::class ),
+				$c->get( \Aggressive\Ads\Repository\Creative_Decision_Repository::class )
 			)
 		);
 

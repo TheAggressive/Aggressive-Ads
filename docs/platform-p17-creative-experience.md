@@ -242,7 +242,8 @@ Ordered by dependency, not by size.
    the counters from slice 1. An experiment is this plus a hypothesis; it is
    not a separate mechanism. See the slice 3 closeout below.
 4. **Review history and preview.** What was approved or rejected, when and why,
-   and a device preview of the exact revision reviewed.
+   and a device preview of the exact revision reviewed. The history half is
+   built — see the slice 4 note below; the preview is what remains.
 
 ## Slice 1 closeout — per-creative measurement
 
@@ -510,3 +511,39 @@ To be completed at closeout.
 Completed at closeout. The measured row-growth figure from slice 1 belongs here
 as a number, not a description — it is the one cost this phase takes on that a
 reader cannot infer from the code.
+
+## Slice 4 note — review history, and what the audit log could not be
+
+**A decision has its own table.** `aggr_creative_decisions` is append-only:
+one row per decision, carrying the revision, the campaign, the organization,
+the decision, the reason and when. `Creative_Approval` writes it after the
+publish or the refusal has happened, never before — a record of an approval
+that did not happen is worse than one that is missing.
+
+**Why not the audit log.** The audit log records everything that happened for
+somebody investigating; this is a product surface two different readers open —
+the reviewer's own history and the advertiser's answer to "what happened to my
+ad". A screen that filters an audit stream to draw that drifts from what was
+decided the moment either changes, and the audit log's shape is a contract with
+administrators rather than with screens.
+
+**The durability is the point.** The reason a creative was turned down lived on
+the revision's meta and was read only while that revision still counted as
+rejected, so a campaign that moved on took the explanation with it — and the
+same artwork came back. `CreativeDecisionHistoryTest` moves the campaign to
+`complete` and asserts the reason is still there, and reverting either the
+recording or the reason fails it.
+
+**The advertiser is not told who decided.** `actor_user_id` is stored, because
+an administrator asking "who refused this" is a real question, and the portal's
+row carries `decision`, `reason` and `at` and nothing else — asserted on the
+row's exact keys rather than by searching the response for an id, which passes
+whatever the response holds once the id is a digit in a timestamp.
+
+**Nothing is backfilled.** Decisions taken before the table existed are in the
+audit log; inventing rows for them would put a date and an actor on a guess.
+The migration test asserts the table comes up empty.
+
+**Still to build:** the device preview, and the reviewer-facing history screen.
+The decisions are recorded and the advertiser's card reads them; a reviewer
+still reads the audit log for anything older than the current queue.

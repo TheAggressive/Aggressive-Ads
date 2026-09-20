@@ -54,6 +54,7 @@ use Aggressive\Ads\Repository\Conversion_Definition_Repository;
 use Aggressive\Ads\Repository\Creative_Asset_Repository;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Creative_Attachment_Repository;
+use Aggressive\Ads\Repository\Creative_Decision_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Creative_Revision_Repository;
 use Aggressive\Ads\Repository\Decision_Rollup_Repository;
@@ -548,7 +549,8 @@ final class Service_Registrar {
 			Line_Item_Lifecycle::class,
 			static fn ( Service_Container $c ): Line_Item_Lifecycle => new Line_Item_Lifecycle(
 				$c->get( Line_Item_Repository::class ),
-				$c->get( Creative_Assignment_Repository::class )
+				$c->get( Creative_Assignment_Repository::class ),
+				$c->get( Creative_Decision_Repository::class )
 			)
 		);
 

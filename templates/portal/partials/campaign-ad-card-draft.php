@@ -36,6 +36,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 <?php endif; ?>
 <?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-variant-share.php'; ?>
 <?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-variant-status.php'; ?>
+<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-ad-history.php'; ?>
 
 <?php
 /*
