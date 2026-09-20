@@ -99,8 +99,16 @@ test( 'two ads on one size rotate, and their shares move together', async ( {
 		leaderboard.getByText( '70%', { exact: true } )
 	).toBeVisible();
 	await expect( leaderboard ).toContainText(
-		'Shown 30% of the time here. The other ads share the remaining 70%.'
+		'Set to 30% of this placement. The other ads share the remaining 70%.'
 	);
+
+	/*
+	 * And what is set is not claimed as what is happening: neither ad is
+	 * approved yet, so neither is delivering, and the card says the running
+	 * ad would take the other's share rather than promising a split of
+	 * traffic that is not flowing.
+	 */
+	await expect( leaderboard ).not.toContainText( 'of the time here' );
 
 	// And it was the server that decided, so it survives the page.
 	await page.reload();
