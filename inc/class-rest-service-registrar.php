@@ -193,7 +193,8 @@ final class Rest_Service_Registrar {
 			Creative_File_Controller::class,
 			static fn ( Service_Container $c ): Creative_File_Controller => new Creative_File_Controller(
 				$c->get( Creative_Repository::class ),
-				$c->get( Private_Storage::class )
+				$c->get( Private_Storage::class ),
+				$c->get( Creative_Attachment_Repository::class )
 			)
 		);
 		$container->register(

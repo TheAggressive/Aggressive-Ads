@@ -47,6 +47,27 @@ final class Preview_Frame {
 	public const POLICY = "default-src 'none'; img-src 'self' data:; sandbox; frame-ancestors 'self'; base-uri 'none'; form-action 'none'";
 
 	/**
+	 * The policy the preview document itself carries.
+	 *
+	 * **The frame holds a document of ours, not the creative's bytes.** A
+	 * browser handed an image to render builds a viewer document around it —
+	 * with its own inline styles and its own script — and the policy above
+	 * correctly blocked both, sixty-seven times per preview, in a console the
+	 * next person to open it would have to read past. So the frame loads this
+	 * document instead: one `img`, no script of its own, and the creative
+	 * where a creative belongs.
+	 *
+	 * `img-src` names the site rather than `'self'`, because a sandboxed
+	 * document has an opaque origin and `'self'` would match nothing.
+	 *
+	 * @param string $origin The site's own scheme and host.
+	 * @return string
+	 */
+	public static function document_policy( string $origin ): string {
+		return "default-src 'none'; img-src {$origin}; style-src 'unsafe-inline'; sandbox; frame-ancestors 'self'; base-uri 'none'; form-action 'none'";
+	}
+
+	/**
 	 * The widths a creative is previewed at, narrowest first.
 	 *
 	 * A phone, a tablet and a desktop as the common cases rather than as
