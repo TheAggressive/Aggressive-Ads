@@ -24,6 +24,7 @@ use Aggressive\Ads\Repository\Conversion_Definition_Repository;
 use Aggressive\Ads\Repository\Conversion_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Asset_Repository;
+use Aggressive\Ads\Repository\Creative_Decision_Repository;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Line_Item_Repository;
 use Aggressive\Ads\Storage\Creative_Cipher;
@@ -221,6 +222,7 @@ final class Installer {
 	/** Creates or repairs the P2 creative asset and assignment tables. */
 	public function install_creative_model(): void {
 		( new Creative_Asset_Repository() )->install_table();
+		( new Creative_Decision_Repository() )->install_table();
 		( new Creative_Assignment_Repository() )->install_table();
 	}
 

@@ -12,6 +12,7 @@ namespace Aggressive\Ads\Workflow;
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
+use Aggressive\Ads\Repository\Creative_Decision_Repository;
 use Aggressive\Ads\Repository\Line_Item_Repository;
 
 /** Keeps the P1 compatibility line item aligned after official transitions. */
@@ -22,10 +23,12 @@ final class Line_Item_Lifecycle implements Service {
 	 *
 	 * @param Line_Item_Repository           $line_items  Line-item persistence.
 	 * @param Creative_Assignment_Repository $assignments Creative assignment persistence.
+	 * @param Creative_Decision_Repository   $decisions   Review history, which a deleted campaign takes with it.
 	 */
 	public function __construct(
 		private readonly Line_Item_Repository $line_items,
-		private readonly Creative_Assignment_Repository $assignments
+		private readonly Creative_Assignment_Repository $assignments,
+		private readonly Creative_Decision_Repository $decisions
 	) {
 	}
 
@@ -83,6 +86,9 @@ final class Line_Item_Lifecycle implements Service {
 			 */
 			$this->assignments->delete_for_campaign( $post_id );
 			$this->line_items->delete_for_campaign( $post_id );
+
+			// The decisions went with the campaign they were about.
+			$this->decisions->delete_for_campaign( $post_id );
 		}
 	}
 }

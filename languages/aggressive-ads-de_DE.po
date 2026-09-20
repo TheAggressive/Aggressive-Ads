@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
-"POT-Creation-Date: 2026-09-20T03:44:24+00:00\n"
+"POT-Creation-Date: 2026-09-20T04:14:25+00:00\n"
 "PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -1651,7 +1651,7 @@ msgstr "Entschieden"
 
 #: inc/Admin/class-review-data.php:696
 #: inc/Portal/class-campaign-list-view-data.php:210
-#: inc/Portal/class-creative-view-data.php:297
+#: inc/Portal/class-creative-view-data.php:333
 msgid "Running"
 msgstr "Läuft"
 
@@ -2826,6 +2826,7 @@ msgstr "Abgelehnt"
 
 #: inc/Core/class-post-statuses.php:209
 #: inc/Portal/class-campaign-history-view-data.php:145
+#: templates/portal/partials/campaign-ad-history.php:46
 #: templates/portal/partials/campaign-status.php:89
 msgid "Approved"
 msgstr "Genehmigt"
@@ -4123,7 +4124,8 @@ msgid "Withdrawn for editing"
 msgstr "Zurückziehen und bearbeiten"
 
 #: inc/Portal/class-campaign-history-view-data.php:146
-#: inc/Portal/class-creative-view-data.php:293
+#: inc/Portal/class-creative-view-data.php:329
+#: templates/portal/partials/campaign-ad-history.php:47
 msgid "Not approved"
 msgstr "Nicht freigegeben"
 
@@ -4317,12 +4319,12 @@ msgid ""
 msgstr ""
 
 #: inc/Portal/class-creative-feedback.php:96
-#: templates/portal/partials/campaign-ad-card-draft.php:83
+#: templates/portal/partials/campaign-ad-card-draft.php:84
 msgid "Custom run dates set"
 msgstr "Benutzerdefinierte Laufzeiten gesetzt"
 
 #: inc/Portal/class-creative-feedback.php:97
-#: templates/portal/partials/campaign-ad-card-draft.php:84
+#: templates/portal/partials/campaign-ad-card-draft.php:85
 msgid "Add custom run dates"
 msgstr "Eigene Laufdaten hinzufügen"
 
@@ -4652,12 +4654,12 @@ msgstr ""
 "Ändern Sie das Ziel oder die Beschreibung, bevor Sie eine Aktualisierung "
 "anfordern."
 
-#: inc/Portal/class-creative-view-data.php:298
-#: inc/Portal/class-creative-view-data.php:327
+#: inc/Portal/class-creative-view-data.php:334
+#: inc/Portal/class-creative-view-data.php:363
 msgid "Waiting for review"
 msgstr "Wartend auf Prüfung"
 
-#: inc/Portal/class-creative-view-data.php:328
+#: inc/Portal/class-creative-view-data.php:364
 msgid "Changes needed"
 msgstr "Benötigte Änderungen"
 
@@ -5908,33 +5910,33 @@ msgstr ""
 msgid "That conversion definition is not valid."
 msgstr "Diese Konversionsdefinition ist nicht gültig."
 
-#: inc/Workflow/class-creative-approval.php:93
+#: inc/Workflow/class-creative-approval.php:96
 msgid "You do not have permission to publish creative."
 msgstr "Sie haben keine Berechtigung, Werbemittel zu veröffentlichen."
 
-#: inc/Workflow/class-creative-approval.php:103
-#: inc/Workflow/class-creative-approval.php:207
+#: inc/Workflow/class-creative-approval.php:106
+#: inc/Workflow/class-creative-approval.php:226
 msgid "That creative no longer exists."
 msgstr "Dieses Werbemittel existiert nicht mehr."
 
-#: inc/Workflow/class-creative-approval.php:116
-#: inc/Workflow/class-creative-approval.php:215
+#: inc/Workflow/class-creative-approval.php:119
+#: inc/Workflow/class-creative-approval.php:234
 msgid "That creative is not waiting to be published."
 msgstr "Dieses Werbemittel wartet nicht auf die Veröffentlichung."
 
-#: inc/Workflow/class-creative-approval.php:179
+#: inc/Workflow/class-creative-approval.php:198
 msgid "You do not have permission to review creative."
 msgstr "Sie haben keine Berechtigung, das Werbemittel zu prüfen."
 
-#: inc/Workflow/class-creative-approval.php:189
+#: inc/Workflow/class-creative-approval.php:208
 msgid "Explain why this advertisement is not being published."
 msgstr "Erklären Sie, warum diese Anzeige nicht veröffentlicht wird."
 
-#: inc/Workflow/class-creative-approval.php:197
+#: inc/Workflow/class-creative-approval.php:216
 msgid "Use 2,000 characters or fewer for this explanation."
 msgstr "Verwenden Sie für diese Beschreibung maximal 2.000 Zeichen."
 
-#: inc/Workflow/class-creative-approval.php:225
+#: inc/Workflow/class-creative-approval.php:244
 msgid "That decision could not be saved. Please try again."
 msgstr ""
 "Diese Entscheidung konnte nicht gespeichert werden. Bitte versuchen Sie es "
@@ -6556,7 +6558,7 @@ msgstr "Hilfe"
 msgid "Sign in"
 msgstr "Anmelden"
 
-#: templates/portal/partials/campaign-ad-card-draft.php:55
+#: templates/portal/partials/campaign-ad-card-draft.php:56
 #: templates/portal/partials/campaign-overlays.php:200
 msgid "Edit destination"
 msgstr "Ziel bearbeiten"
@@ -6595,6 +6597,26 @@ msgstr ""
 #, fuzzy, php-format
 msgid "%1$s · %2$s"
 msgstr "%1$s %2$s"
+
+#: templates/portal/partials/campaign-ad-history.php:40
+#, fuzzy
+msgid "Review history"
+msgstr "Prüfaktionen"
+
+#: templates/portal/partials/campaign-ad-history.php:48
+#, fuzzy
+msgid "Update approved"
+msgstr "Werbemittel-Update genehmigt."
+
+#: templates/portal/partials/campaign-ad-history.php:49
+#, fuzzy
+msgid "Update not approved"
+msgstr "Kampagne nicht freigegeben"
+
+#: templates/portal/partials/campaign-ad-history.php:50
+#, fuzzy
+msgid "Reviewed"
+msgstr "Prüfer"
 
 #: templates/portal/partials/campaign-ad-updates.php:33
 #: templates/portal/partials/campaign-edit-ads.php:74

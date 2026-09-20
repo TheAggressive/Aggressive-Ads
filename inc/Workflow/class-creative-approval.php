@@ -14,6 +14,7 @@ use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
+use Aggressive\Ads\Repository\Creative_Decision_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Security\Capabilities;
 use WP_Error;
@@ -45,6 +46,7 @@ final class Creative_Approval {
 	 * @param Assignment_Projection          $projection  Assignment snapshot refresh.
 	 * @param Fill_Cache                     $cache       Delivery cache.
 	 * @param Audit_Repository               $audit       Audit persistence.
+	 * @param Creative_Decision_Repository   $decisions   What was decided about a revision, for the screens that show it.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -53,7 +55,8 @@ final class Creative_Approval {
 		private readonly Creative_Promoter $promoter,
 		private readonly Assignment_Projection $projection,
 		private readonly Fill_Cache $cache,
-		private readonly Audit_Repository $audit
+		private readonly Audit_Repository $audit,
+		private readonly Creative_Decision_Repository $decisions
 	) {
 	}
 
@@ -143,6 +146,22 @@ final class Creative_Approval {
 		$this->cache->bust_campaign( $campaign_id );
 
 		$this->record( $campaign_id, $creative_id, Audit_Event::OUTCOME_OK, 'Creative published on a running campaign.' );
+
+		/*
+		 * The decision itself, where a screen can read it without filtering an
+		 * audit stream. After the publish, not before: a record of an approval
+		 * that did not happen is worse than one that is missing, and by here
+		 * the artwork is public.
+		 */
+		$this->decisions->record(
+			array(
+				'revision_id'     => $creative_id,
+				'campaign_id'     => $campaign_id,
+				'organization_id' => $this->campaigns->org_id( $campaign_id ),
+				'decision'        => Creative_Decision_Repository::APPROVED,
+				'actor_user_id'   => get_current_user_id(),
+			)
+		);
 
 		return $campaign_id;
 	}
@@ -235,6 +254,23 @@ final class Creative_Approval {
 		);
 
 		$this->record( $campaign_id, $creative_id, Audit_Event::OUTCOME_OK, 'Creative turned down on a running campaign.' );
+
+		/*
+		 * **A rejection is as durable as an approval.** The reason used to
+		 * live on the revision's own meta and was read only while that
+		 * revision still counted as rejected, so a campaign that moved on
+		 * took the explanation with it and the same artwork came back.
+		 */
+		$this->decisions->record(
+			array(
+				'revision_id'     => $creative_id,
+				'campaign_id'     => $campaign_id,
+				'organization_id' => $this->campaigns->org_id( $campaign_id ),
+				'decision'        => Creative_Decision_Repository::REJECTED,
+				'reason'          => $notes,
+				'actor_user_id'   => get_current_user_id(),
+			)
+		);
 
 		return $campaign_id;
 	}

@@ -24,12 +24,24 @@ final class Schema {
 	 *
 	 * Drives the migration walker in Upgrader.
 	 */
-	public const DB_VERSION = 30;
+	public const DB_VERSION = 31;
 
 	/**
 	 * The audit table's name, without the site's table prefix.
 	 */
 	public const AUDIT_TABLE = 'aggr_audit_log';
+
+	/**
+	 * What a reviewer decided about one revision, and why.
+	 *
+	 * Append-only, and deliberately not the audit log: the audit log is a
+	 * record of everything that happened, read by an administrator looking
+	 * into something. This is a product surface — the reviewer's own history
+	 * and the advertiser's answer to "what happened to my ad" — and a screen
+	 * that has to filter an audit stream to draw it will drift from what was
+	 * actually decided. See docs/platform-p17-creative-experience.md.
+	 */
+	public const CREATIVE_DECISIONS_TABLE = 'aggr_creative_decisions';
 
 	/** Organization identity, invitation, and access-request registry. */
 	public const ORG_ACCESS_TABLE = 'aggr_org_access';
@@ -138,6 +150,54 @@ final class Schema {
 	UNIQUE KEY root_site (root_creative_id,blog_id),
 	KEY organization_site (organization_id,blog_id,id)
 ) {$charset_collate};";
+	}
+
+	/**
+	 * Creative decision table DDL.
+	 *
+	 * One row per decision, never updated. `reason` is the advertiser-facing
+	 * explanation and is as durable as the decision it belongs to: deleting
+	 * why something was refused is how the same creative gets resubmitted for
+	 * ever.
+	 *
+	 * @param string $table_name       Prefixed table name.
+	 * @param string $charset_collate  Charset and collation clause.
+	 * @return string
+	 */
+	public static function creative_decisions_table_ddl( string $table_name, string $charset_collate ): string {
+		return "CREATE TABLE {$table_name} (
+	id bigint(20) unsigned NOT NULL AUTO_INCREMENT,
+	revision_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	campaign_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	organization_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	blog_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	decision varchar(20) NOT NULL DEFAULT '',
+	reason text NOT NULL,
+	actor_user_id bigint(20) unsigned NOT NULL DEFAULT 0,
+	decided_at_ts bigint(20) unsigned NOT NULL DEFAULT 0,
+	PRIMARY KEY  (id),
+	KEY revision_site (revision_id,blog_id,id),
+	KEY campaign_site (campaign_id,blog_id,id)
+) {$charset_collate};";
+	}
+
+	/**
+	 * Creative decision table columns.
+	 *
+	 * @return array<int, string>
+	 */
+	public static function creative_decisions_columns(): array {
+		return array(
+			'id',
+			'revision_id',
+			'campaign_id',
+			'organization_id',
+			'blog_id',
+			'decision',
+			'reason',
+			'actor_user_id',
+			'decided_at_ts',
+		);
 	}
 
 	/**

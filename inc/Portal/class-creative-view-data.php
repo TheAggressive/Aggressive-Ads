@@ -14,6 +14,7 @@ use Aggressive\Ads\REST\Api;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Attachment_Repository;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
+use Aggressive\Ads\Repository\Creative_Decision_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Creative_Revision_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
@@ -43,6 +44,7 @@ final class Creative_View_Data {
 	 * @param Assigned_Creatives             $assigned   What is assigned where.
 	 * @param Creative_Approval              $approvals  Creative review decisions.
 	 * @param Creative_Assignment_Repository $assignments Delivery assignments, which carry each variant's weight.
+	 * @param Creative_Decision_Repository   $decisions   What a reviewer decided about each revision.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -52,7 +54,8 @@ final class Creative_View_Data {
 		private readonly Placement_Repository $placements,
 		private readonly Assigned_Creatives $assigned,
 		private readonly Creative_Approval $approvals,
-		private readonly Creative_Assignment_Repository $assignments
+		private readonly Creative_Assignment_Repository $assignments,
+		private readonly Creative_Decision_Repository $decisions
 	) {
 	}
 
@@ -94,7 +97,7 @@ final class Creative_View_Data {
 	 * ever needs to be told.
 	 *
 	 * @param int $campaign_id Campaign post id.
-	 * @return array<int, array{id: int, placement_id: int, placement: string, size: string, dimensions: string, click_url: string, alt_text: string, approved: bool, rejected: bool, state_text: string, notes: string, name: string, bytes: int, preview: string, delivering: bool, same_file: array<int, array{id: int, placement: string, approved: bool}>, weight: int|null, share: float|null, assignment_id: int, revision: int}>
+	 * @return array<int, array{id: int, placement_id: int, placement: string, size: string, dimensions: string, click_url: string, alt_text: string, approved: bool, rejected: bool, state_text: string, notes: string, name: string, bytes: int, preview: string, delivering: bool, decisions: array<int, array{decision: string, reason: string, at: int}>, same_file: array<int, array{id: int, placement: string, approved: bool}>, weight: int|null, share: float|null, assignment_id: int, revision: int}>
 	 */
 	public function creative_rows( int $campaign_id ): array {
 		$rows = array();
@@ -156,6 +159,14 @@ final class Creative_View_Data {
 				'same_file'     => $this->same_file( $creative['id'] ),
 
 				/*
+				 * What a reviewer decided about this exact revision, oldest
+				 * first. From the decision table rather than the revision's
+				 * own state, so a rejection's reason survives the campaign
+				 * moving on — which is what it is for.
+				 */
+				'decisions'     => $this->decisions_for( $creative['id'] ),
+
+				/*
 				 * Null rather than zero for a creative with no assignment yet.
 				 * Zero is a real weight the rules do not even permit, and a
 				 * share of 0% would tell the advertiser this creative had been
@@ -191,6 +202,31 @@ final class Creative_View_Data {
 		}
 
 		return $rows;
+	}
+
+	/**
+	 * What was decided about one revision, for the advertiser who reads it.
+	 *
+	 * The reviewer's identity is deliberately absent: the advertiser is owed
+	 * the decision and the reason, not the name of the person who made it.
+	 * `docs/platform-p17-creative-experience.md` lists that among the things
+	 * never put in an advertiser-facing response.
+	 *
+	 * @param int $creative_id Creative post id.
+	 * @return array<int, array{decision: string, reason: string, at: int}>
+	 */
+	private function decisions_for( int $creative_id ): array {
+		$history = array();
+
+		foreach ( $this->decisions->for_revision( $creative_id ) as $row ) {
+			$history[] = array(
+				'decision' => (string) $row['decision'],
+				'reason'   => (string) $row['reason'],
+				'at'       => (int) $row['decided_at_ts'],
+			);
+		}
+
+		return $history;
 	}
 
 	/**
