@@ -124,6 +124,16 @@ export function existingTags( url: string ): string[] {
 
 type Fetcher = ( url: string, init: RequestInit ) => Promise< Response >;
 
+/**
+ * How long to wait for a form's own save before checking anyway.
+ *
+ * The check reads the stored link, so an edited one is saved first. If that
+ * save never answers, the check still asks — about the link as stored — which
+ * is a truthful answer, where waiting for ever is a chip that says "Checking…"
+ * and never changes.
+ */
+const SAVE_WAIT = 8000;
+
 interface CheckResult {
 	outcome: string;
 	status: number;
@@ -231,6 +241,54 @@ export function initLinkCheck(
 		'[data-aggr-link-status]'
 	);
 
+	/*
+	 * Whichever field this root holds. It was the campaign's by name, so an
+	 * ad's own destination — the same link, in a different form — could not
+	 * be checked at all.
+	 */
+	const field = root.dataset.aggrLinkField ?? 'default_click_url';
+	const input =
+		Array.from( root.querySelectorAll< HTMLInputElement >( 'input' ) ).find(
+			( candidate ) => candidate.name === field
+		) ?? null;
+
+	// What the server last had. Anything else typed into the field is unsaved.
+	let stored = input?.value.trim() ?? '';
+	const dirty = (): boolean => ( input?.value.trim() ?? '' ) !== stored;
+
+	/**
+	 * Saves the form this field is in, and answers when the save has landed.
+	 *
+	 * `aggr:saved` is raised by the save module once the server has answered
+	 * and the page has been brought up to date. The timeout is the case where
+	 * nothing answers: the check then asks about the stored link anyway and
+	 * reports on that, rather than hanging on "Checking…" for ever.
+	 *
+	 * @param form The form to save.
+	 * @return Whether the save was seen.
+	 */
+	const saveFirst = ( form: HTMLFormElement ): Promise< boolean > =>
+		new Promise( ( resolve ) => {
+			const done = ( event: Event ) => {
+				if (
+					( event as CustomEvent< { form?: unknown } > ).detail
+						?.form === form
+				) {
+					window.clearTimeout( timer );
+					document.removeEventListener( 'aggr:saved', done );
+					resolve( true );
+				}
+			};
+
+			const timer = setTimeout( () => {
+				document.removeEventListener( 'aggr:saved', done );
+				resolve( false );
+			}, SAVE_WAIT );
+
+			document.addEventListener( 'aggr:saved', done );
+			form.requestSubmit();
+		} );
+
 	const check = async (): Promise< void > => {
 		button.disabled = true;
 		show( 'checking' );
@@ -239,11 +297,36 @@ export function initLinkCheck(
 			status.textContent = '';
 		}
 
+		const form = root.closest< HTMLFormElement >( 'form' );
+
+		/*
+		 * **The route checks what is stored, never what is typed.** That is
+		 * what keeps it from being a way to make this site fetch any address
+		 * somebody puts in a box. So an edited link has to be saved first:
+		 * the edit flow stages it as a proposal, and everywhere else the
+		 * form's own save does it, which is the same save the button beside
+		 * it would have run.
+		 */
+		/*
+		 * Only a form the save module owns, which is the one that announces
+		 * the save this waits for. The campaign's field has autosave storing
+		 * it already and the edit flow stages it below; waiting on either
+		 * would be waiting for an event nothing raises.
+		 */
 		if (
-			'1' === root.dataset.aggrStage &&
-			root instanceof HTMLFormElement
+			form &&
+			undefined !== form.dataset.aggrSave &&
+			'1' !== form.dataset.aggrStage &&
+			dirty()
 		) {
-			const staged = await stageLink( root, fetcher );
+			await saveFirst( form );
+			stored = input?.value.trim() ?? stored;
+		}
+
+		if ( form && '1' === form.dataset.aggrStage ) {
+			// The edit flow stages the link as part of its proposal; the
+			// check then reads what was staged, which is what will run.
+			const staged = await stageLink( form, fetcher );
 
 			if ( ! staged.ok ) {
 				show( 'failed' );
@@ -303,9 +386,7 @@ export function initLinkCheck(
 	 * about the old link, so it is thrown away and asked again. Once: two
 	 * rounds is the correction, more would be a loop chasing every keystroke.
 	 */
-	const link = root.querySelector< HTMLInputElement >(
-		'input[name="default_click_url"]'
-	);
+	const link = input;
 
 	if ( link ) {
 		let timer: ReturnType< typeof setTimeout > | undefined;

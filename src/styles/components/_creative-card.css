@@ -199,6 +199,21 @@
 	align-items: start;
 }
 
+/*
+ * Room between the ads of a rotation, and a line to say where one ends.
+ *
+ * They were flush: one ad's "Remove" sat directly above the next ad's
+ * picture, so three ads read as one long card and it took a moment to see
+ * which share belonged to which artwork. A rotation is the case that made it
+ * matter — the cards carry a slider and two sentences each now — but the
+ * separation is right wherever a size holds more than one.
+ */
+.aggr-uploaded + .aggr-uploaded {
+	margin-top: var(--aggr-space-lg);
+	padding-top: var(--aggr-space-lg);
+	border-top: 1px solid var(--aggr-border-color);
+}
+
 /* A card narrow enough that the preview and its details would fight. */
 @container (max-width: 34rem) {
 

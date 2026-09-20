@@ -8,9 +8,18 @@
  * Showing it anyway would be the interface asserting a choice the selector never
  * makes.
  *
- * Weighted delivery is not new — `Domain\Weighted_Selection` has always read
- * this number, and two creatives at 3 and 1 have always rotated three to one.
- * What was missing was any way to see or set it outside the REST route.
+ * **A share is dragged, not typed.** The percentage is a proportion of one
+ * placement, and a number box says nothing about proportion — so the control
+ * is a slider, the figure beside it reads out where it is, and the bar above
+ * the ads shows the split it makes. It saves on release, like the destination
+ * link; the button below it is for a browser that will not run the module,
+ * where the slider is still a slider and Save is how it gets sent.
+ *
+ * **The number is the percentage.** It used to be the stored weight — a
+ * relative number, so 70 could show as 41% — and setting one creative's left
+ * the others alone, which is why a column of them never added to anything.
+ * `Share_Editor` gives this one the percentage asked for and divides the rest
+ * between the others in the proportions they already had.
  *
  * @var array<string, mixed> $aggr_creative One uploaded creative, with its weight and share attached.
  * @var array<string, mixed> $aggr_slot     The placement it competes on, and every creative on it.
@@ -28,20 +37,24 @@ if ( ! defined( 'ABSPATH' ) ) {
 use Aggressive\Ads\Domain\Assignment_Rules;
 use Aggressive\Ads\Portal\Creative_Actions;
 
-$aggr_share_weight = $aggr_creative['weight'] ?? null;
+$aggr_share_ratio = $aggr_creative['share'] ?? null;
 
-if ( count( $aggr_slot['creatives'] ) < 2 || null === $aggr_share_weight ) {
+if ( count( $aggr_slot['creatives'] ) < 2 || null === ( $aggr_creative['weight'] ?? null ) || null === $aggr_share_ratio ) {
 	return;
 }
 
-$aggr_share_id    = 'aggr-share-' . (int) $aggr_creative['id'];
-$aggr_share_ratio = $aggr_creative['share'] ?? null;
+$aggr_share_id      = 'aggr-share-' . (int) $aggr_creative['id'];
+$aggr_share_percent = max( Assignment_Rules::MIN_WEIGHT, (int) round( (float) $aggr_share_ratio * Assignment_Rules::SHARE_TOTAL ) );
+
+// Everything else on the placement keeps at least one per cent.
+$aggr_share_max = Assignment_Rules::SHARE_TOTAL - ( count( $aggr_slot['creatives'] ) - 1 );
 ?>
 <form
 	class="aggr-share"
 	method="post"
 	action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>"
 	data-aggr-save="<?php echo esc_attr( 'aggr-save-share-' . (int) $aggr_creative['id'] ); ?>"
+	data-aggr-share-form="<?php echo esc_attr( (string) (int) $aggr_creative['id'] ); ?>"
 >
 	<input type="hidden" name="action" value="<?php echo esc_attr( Creative_Actions::WEIGHT_ACTION ); ?>">
 	<input type="hidden" name="creative_id" value="<?php echo esc_attr( (string) (int) $aggr_creative['id'] ); ?>">
@@ -49,40 +62,88 @@ $aggr_share_ratio = $aggr_creative['share'] ?? null;
 	<?php wp_nonce_field( Creative_Actions::weight_nonce_action( (int) $aggr_creative['id'] ) ); ?>
 
 	<label class="aggr-share__label" for="<?php echo esc_attr( $aggr_share_id ); ?>">
-		<?php esc_html_e( 'Share', 'aggressive-ads' ); ?>
+		<?php esc_html_e( 'Share of this placement', 'aggressive-ads' ); ?>
 	</label>
 
+	<?php
+	/*
+	 * A range, so the control is the proportion rather than a number that
+	 * stands for one. It posts the same field a number box did, and a browser
+	 * without the module still drags it and presses Save.
+	 */
+	?>
 	<input
-		class="aggr-share__input"
+		class="aggr-share__range"
 		id="<?php echo esc_attr( $aggr_share_id ); ?>"
-		type="number"
-		name="weight"
-		value="<?php echo esc_attr( (string) (int) $aggr_share_weight ); ?>"
+		type="range"
+		name="share"
+		value="<?php echo esc_attr( (string) $aggr_share_percent ); ?>"
 		min="<?php echo esc_attr( (string) Assignment_Rules::MIN_WEIGHT ); ?>"
-		max="<?php echo esc_attr( (string) Assignment_Rules::MAX_WEIGHT ); ?>"
+		max="<?php echo esc_attr( (string) $aggr_share_max ); ?>"
 		step="1"
-		inputmode="numeric"
+		aria-describedby="<?php echo esc_attr( 'aggr-share-note-' . (int) $aggr_creative['id'] ); ?>"
 	>
 
-	<button class="aggr-button aggr-button--small" type="submit"><?php esc_html_e( 'Save share', 'aggressive-ads' ); ?></button>
+	<?php // Not `aria-live`: the slider announces its own value as it moves. ?>
+	<output class="aggr-share__value" for="<?php echo esc_attr( $aggr_share_id ); ?>" data-aggr-share-value>
+		<?php
+		printf(
+			/* translators: %d: a share of one placement, e.g. 70. */
+			esc_html__( '%d%%', 'aggressive-ads' ),
+			(int) $aggr_share_percent
+		);
+		?>
+	</output>
 
-	<?php if ( null !== $aggr_share_ratio ) : ?>
+	<?php
+	/*
+	 * Hidden in the markup rather than by script, so it never paints for the
+	 * browsers that save on release. `<noscript>` brings it back, the way the
+	 * upload form's own button does.
+	 */
+	?>
+	<noscript><style>.aggr-portal .aggr-share button[type="submit"][hidden]{display:inline-flex!important}</style></noscript>
+	<button class="aggr-button aggr-button--small aggr-button--secondary" type="submit" hidden><?php esc_html_e( 'Save', 'aggressive-ads' ); ?></button>
+
+	<?php
+	/*
+	 * What setting this one does to the others, said where it is set. The id
+	 * is what the server patches after a save, so the sentence moves with the
+	 * numbers rather than going stale until the next page load.
+	 */
+	?>
+	<p class="aggr-share__result" id="<?php echo esc_attr( 'aggr-share-note-' . (int) $aggr_creative['id'] ); ?>">
 		<?php
 		/*
-		 * The weight is a relative number and means nothing on its own — 3 is
-		 * only three times something. The percentage is what the advertiser is
-		 * actually deciding, so it is shown beside the control that sets it
-		 * rather than left to be worked out.
+		 * **What is set, and what is happening.** A share is divided between
+		 * the ads that can run: while one is paused or waiting for approval,
+		 * the others take its traffic, and a card saying "shown 70% of the
+		 * time" would be promising something the selector will not do. The
+		 * second sentence appears only when the two differ.
 		 */
-		?>
-		<p class="aggr-share__result" id="<?php echo esc_attr( 'aggr-share-ratio-' . (int) $aggr_creative['id'] ); ?>">
-			<?php
+		$aggr_share_waiting = array();
+
+		foreach ( $aggr_slot['creatives'] as $aggr_share_other ) {
+			if ( (int) $aggr_share_other['id'] !== (int) $aggr_creative['id'] && true !== ( $aggr_share_other['delivering'] ?? false ) ) {
+				$aggr_share_waiting[] = (string) $aggr_share_other['name'];
+			}
+		}
+
+		printf(
+			/* translators: 1: this ad's share, e.g. 70. 2: what is left for the others, e.g. 30. */
+			esc_html__( 'Set to %1$d%% of this placement. The other ads share the remaining %2$d%%.', 'aggressive-ads' ),
+			(int) $aggr_share_percent,
+			(int) ( Assignment_Rules::SHARE_TOTAL - $aggr_share_percent )
+		);
+
+		if ( array() !== $aggr_share_waiting && true === ( $aggr_creative['delivering'] ?? false ) ) {
+			echo ' ';
 			printf(
-				/* translators: %s: this creative's share of the placement, e.g. 75%. */
-				esc_html__( 'About %s of this placement.', 'aggressive-ads' ),
-				esc_html( number_format_i18n( (float) $aggr_share_ratio * 100, 0 ) . '%' )
+				/* translators: %s: file names of ads that are not running, separated by commas. */
+				esc_html( _n( 'While %s is not running, this ad takes its share too.', 'While %s are not running, this ad takes their share too.', count( $aggr_share_waiting ), 'aggressive-ads' ) ),
+				esc_html( implode( ', ', $aggr_share_waiting ) )
 			);
-			?>
-		</p>
-	<?php endif; ?>
+		}
+		?>
+	</p>
 </form>

@@ -183,6 +183,103 @@ final class Assignment_Rules {
 	}
 
 	/**
+	 * What every creative on one placement adds up to, as a percentage.
+	 */
+	public const SHARE_TOTAL = 100;
+
+	/**
+	 * The placement's weights after one creative is given a share of it.
+	 *
+	 * **A share is a share of something.** The stored weight is relative —
+	 * 3 is only three times something — and setting one creative's number
+	 * without touching the others meant the advertiser typed 70 and got 41%,
+	 * with no way to say "seventy per cent" at all. Here the number is the
+	 * percentage: the creative takes it, and what is left is divided between
+	 * the others **in the proportions they already had**, so a rotation set
+	 * to 60/30/10 and then changed at the top keeps 3:1 underneath.
+	 *
+	 * Whole numbers that sum to exactly `SHARE_TOTAL`, by largest remainder —
+	 * rounding each independently leaves 99 or 101 and a rotation that never
+	 * quite matches what the screen says. Every creative keeps at least one
+	 * per cent, because a weight below `MIN_WEIGHT` is not a valid assignment
+	 * and "0%" is `Remove`, not a share.
+	 *
+	 * @param array<int, int> $weights Current weight by assignment id, the target included.
+	 * @param int             $target  The assignment being set.
+	 * @param int             $percent The share it should take.
+	 * @return array<int, int> New weight by assignment id, summing to SHARE_TOTAL.
+	 */
+	public static function rebalance( array $weights, int $target, int $percent ): array {
+		if ( ! isset( $weights[ $target ] ) ) {
+			return $weights;
+		}
+
+		$others = array_diff_key( $weights, array( $target => 0 ) );
+
+		if ( array() === $others ) {
+			return array( $target => self::SHARE_TOTAL );
+		}
+
+		// One per cent each for the others, and one for this one.
+		$percent = max( self::MIN_WEIGHT, min( self::SHARE_TOTAL - count( $others ), $percent ) );
+		$rest    = self::SHARE_TOTAL - $percent;
+		$sum     = array_sum( array_map( static fn ( int $weight ): int => max( 0, $weight ), $others ) );
+		$shares  = array();
+		$exact   = array();
+
+		foreach ( $others as $id => $weight ) {
+			$share         = $sum > 0 ? ( max( 0, $weight ) / $sum ) * $rest : $rest / count( $others );
+			$shares[ $id ] = max( self::MIN_WEIGHT, (int) floor( $share ) );
+			$exact[ $id ]  = $share - floor( $share );
+		}
+
+		/*
+		 * The floors lose up to one per cent each; largest remainder first
+		 * gives those back, so the column adds to a hundred rather than to
+		 * ninety-seven.
+		 */
+		arsort( $exact );
+
+		$left = $rest - array_sum( $shares );
+
+		foreach ( array_keys( $exact ) as $id ) {
+			if ( $left <= 0 ) {
+				break;
+			}
+
+			++$shares[ $id ];
+			--$left;
+		}
+
+		// Over a hundred only when every other was floored up to its minimum.
+		foreach ( array_keys( $shares ) as $id ) {
+			if ( $left >= 0 ) {
+				break;
+			}
+
+			if ( $shares[ $id ] > self::MIN_WEIGHT ) {
+				--$shares[ $id ];
+				++$left;
+			}
+		}
+
+		$shares[ $target ] = self::SHARE_TOTAL - array_sum( $shares );
+
+		/*
+		 * In the order they arrived, which is the order the placement's cards
+		 * are drawn in. A caller reading this as a list would otherwise find
+		 * the creative it just set at the end.
+		 */
+		$ordered = array();
+
+		foreach ( array_keys( $weights ) as $id ) {
+			$ordered[ $id ] = $shares[ $id ];
+		}
+
+		return $ordered;
+	}
+
+	/**
 	 * Whether a weight is a usable share.
 	 *
 	 * @param int $weight Candidate weight.

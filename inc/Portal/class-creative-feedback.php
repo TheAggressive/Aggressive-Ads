@@ -335,6 +335,9 @@ final class Creative_Feedback {
 			 * two read the same; `bin/ci/check-error-messages.mjs` fails when
 			 * a code the creative workflows can return has no arm here.
 			 */
+			'aggr_share_forbidden'          => __( 'You do not have permission to change that creative.', 'aggressive-ads' ),
+			'aggr_share_no_assignment'      => __( 'That ad is not delivering yet, so it has no share to set.', 'aggressive-ads' ),
+			'aggr_share_not_saved'          => __( 'Those shares could not be saved. Reload the page and try again.', 'aggressive-ads' ),
 			'aggr_weight_out_of_range'      => sprintf(
 				/* translators: 1: lowest permitted share, 2: highest permitted share. */
 				__( 'A share must be between %1$d and %2$d.', 'aggressive-ads' ),

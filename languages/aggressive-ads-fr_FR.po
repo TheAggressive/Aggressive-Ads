@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
-"POT-Creation-Date: 2026-09-19T21:54:56+00:00\n"
+"POT-Creation-Date: 2026-09-19T23:50:12+00:00\n"
 "PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -695,7 +695,7 @@ msgstr ""
 #: inc/Admin/class-organization-screen.php:162
 #: inc/Admin/class-placement-screen.php:195
 #: inc/Admin/class-settings-screen.php:306
-#: templates/portal/partials/campaign-creative-step.php:270
+#: templates/portal/partials/campaign-creative-step.php:271
 #: templates/portal/screens/organization.php:152
 msgid "Remove"
 msgstr ""
@@ -1238,14 +1238,14 @@ msgstr ""
 #: inc/Admin/class-report-export.php:78
 #: inc/Portal/class-account-actions.php:220
 #: inc/Portal/class-campaign-actions.php:887
-#: inc/Portal/class-creative-actions.php:691
+#: inc/Portal/class-creative-actions.php:704
 #: inc/Portal/class-email-change-actions.php:178
 #: inc/Portal/class-organization-actions.php:222
 #: inc/Portal/class-report-actions.php:82
 #: inc/Workflow/class-campaign-state-machine.php:245
 #: inc/Workflow/class-campaign-state-machine.php:263
 #: inc/Workflow/class-creative-copies.php:83
-#: inc/Workflow/class-creative-manager.php:856
+#: inc/Workflow/class-creative-manager.php:755
 #: inc/Workflow/class-email-change.php:245
 #: inc/Workflow/class-review-actions.php:62
 msgid "You do not have permission to do that."
@@ -1407,7 +1407,6 @@ msgid "Requests"
 msgstr ""
 
 #: inc/Admin/class-reports-screen.php:491
-#: templates/portal/partials/campaign-variant-share.php:52
 msgid "Share"
 msgstr ""
 
@@ -1541,7 +1540,7 @@ msgstr ""
 
 #: inc/Admin/class-review-data.php:696
 #: inc/Portal/class-campaign-list-view-data.php:210
-#: inc/Portal/class-creative-view-data.php:273
+#: inc/Portal/class-creative-view-data.php:297
 msgid "Running"
 msgstr ""
 
@@ -2158,7 +2157,6 @@ msgstr ""
 #: inc/Admin/class-settings-screen.php:218
 #: templates/portal/partials/campaign-overlays.php:307
 #: templates/portal/partials/campaign-upload-form.php:169
-#: templates/portal/partials/campaign-variant-destination.php:54
 msgid "Destination URL"
 msgstr ""
 
@@ -3744,7 +3742,7 @@ msgid "Withdrawn for editing"
 msgstr ""
 
 #: inc/Portal/class-campaign-history-view-data.php:146
-#: inc/Portal/class-creative-view-data.php:269
+#: inc/Portal/class-creative-view-data.php:293
 msgid "Not approved"
 msgstr ""
 
@@ -3902,15 +3900,16 @@ msgstr ""
 msgid "Cancelled and no longer running."
 msgstr ""
 
-#: inc/Portal/class-creative-actions.php:512
+#: inc/Portal/class-creative-actions.php:515
 msgid "That is not something you can do to a creative."
 msgstr ""
 
-#. translators: %s: this creative's share of the placement, e.g. 75%.
-#: inc/Portal/class-creative-actions.php:666
-#: templates/portal/partials/campaign-variant-share.php:82
+#. translators: 1: this ad's share, e.g. 70. 2: what is left for the others, e.g. 30.
+#: inc/Portal/class-creative-actions.php:678
+#: templates/portal/partials/campaign-variant-share.php:134
 #, php-format
-msgid "About %s of this placement."
+msgid ""
+"Set to %1$d%% of this placement. The other ads share the remaining %2$d%%."
 msgstr ""
 
 #: inc/Portal/class-creative-feedback.php:96
@@ -3960,13 +3959,14 @@ msgstr ""
 #: inc/Portal/class-creative-feedback.php:270
 #: inc/Portal/class-creative-feedback.php:271
 #: inc/Portal/class-creative-feedback.php:314
-#: inc/Portal/class-creative-feedback.php:344
+#: inc/Portal/class-creative-feedback.php:338
+#: inc/Portal/class-creative-feedback.php:347
 #: inc/Workflow/class-creative-manager.php:415
 #: inc/Workflow/class-creative-manager.php:421
 #: inc/Workflow/class-creative-manager.php:565
 #: inc/Workflow/class-creative-manager.php:571
-#: inc/Workflow/class-creative-manager.php:659
-#: inc/Workflow/class-creative-manager.php:665
+#: inc/Workflow/class-share-editor.php:69
+#: inc/Workflow/class-share-editor.php:75
 msgid "You do not have permission to change that creative."
 msgstr ""
 
@@ -4058,10 +4058,10 @@ msgstr ""
 #: inc/Workflow/class-campaign-editor.php:355
 #: inc/Workflow/class-creative-manager.php:428
 #: inc/Workflow/class-creative-manager.php:577
-#: inc/Workflow/class-creative-manager.php:671
-#: inc/Workflow/class-creative-manager.php:755
-#: inc/Workflow/class-creative-manager.php:860
+#: inc/Workflow/class-creative-manager.php:654
+#: inc/Workflow/class-creative-manager.php:759
 #: inc/Workflow/class-line-item-editor.php:73
+#: inc/Workflow/class-share-editor.php:81
 msgid "This campaign cannot be changed right now."
 msgstr ""
 
@@ -4074,31 +4074,31 @@ msgid "You do not have permission to upload creative for this campaign."
 msgstr ""
 
 #: inc/Portal/class-creative-feedback.php:313
-#: inc/Workflow/class-creative-manager.php:743
-#: inc/Workflow/class-creative-manager.php:749
+#: inc/Workflow/class-creative-manager.php:642
+#: inc/Workflow/class-creative-manager.php:648
 msgid "You do not have permission to remove that creative."
 msgstr ""
 
 #: inc/Portal/class-creative-feedback.php:315
-#: inc/Workflow/class-creative-manager.php:759
+#: inc/Workflow/class-creative-manager.php:658
 msgid "A published creative cannot be removed from this draft workflow."
 msgstr ""
 
 #: inc/Portal/class-creative-feedback.php:316
-#: inc/Workflow/class-creative-manager.php:769
-#: inc/Workflow/class-creative-manager.php:778
+#: inc/Workflow/class-creative-manager.php:668
+#: inc/Workflow/class-creative-manager.php:677
 msgid "The creative could not be removed. Please try again."
 msgstr ""
 
 #: inc/Portal/class-creative-feedback.php:317
-#: inc/Workflow/class-creative-manager.php:775
+#: inc/Workflow/class-creative-manager.php:674
 msgid ""
 "The creative record and file could not be reconciled. Please contact an "
 "administrator."
 msgstr ""
 
 #: inc/Portal/class-creative-feedback.php:318
-#: inc/Portal/class-creative-feedback.php:356
+#: inc/Portal/class-creative-feedback.php:359
 #: inc/Workflow/class-creative-manager.php:234
 #: inc/Workflow/class-creative-manager.php:278
 msgid "The creative could not be saved. Please try again."
@@ -4109,78 +4109,84 @@ msgstr ""
 msgid "That ad's file could not be read. Upload it to this size instead."
 msgstr ""
 
-#. translators: 1: lowest permitted share, 2: highest permitted share.
-#. translators: 1: lowest permitted weight, 2: highest permitted weight.
+#: inc/Portal/class-creative-feedback.php:339
+msgid "That ad is not delivering yet, so it has no share to set."
+msgstr ""
+
 #: inc/Portal/class-creative-feedback.php:340
-#: inc/Workflow/class-creative-manager.php:679
+#: inc/Workflow/class-share-editor.php:124
+msgid "Those shares could not be saved. Reload the page and try again."
+msgstr ""
+
+#. translators: 1: lowest permitted share, 2: highest permitted share.
+#: inc/Portal/class-creative-feedback.php:343
 #, php-format
 msgid "A share must be between %1$d and %2$d."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:345
-#: inc/Workflow/class-creative-manager.php:698
+#: inc/Portal/class-creative-feedback.php:348
+#: inc/Workflow/class-share-editor.php:94
 msgid "That creative is not delivering yet, so it has no share to set."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:346
-#: inc/Workflow/class-creative-manager.php:714
+#: inc/Portal/class-creative-feedback.php:349
 msgid "That share could not be saved. Reload the page and try again."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:347
+#: inc/Portal/class-creative-feedback.php:350
 #: inc/Workflow/class-creative-change-manager.php:286
 msgid "Only a scheduled or live campaign can apply an ad update."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:348
+#: inc/Portal/class-creative-feedback.php:351
 #: inc/Workflow/class-creative-change-manager.php:475
 msgid "That ad update is no longer available."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:349
+#: inc/Portal/class-creative-feedback.php:352
 #: inc/Workflow/class-creative-change-manager.php:133
 #: inc/Workflow/class-creative-change-manager.php:238
 msgid "The ad update could not be saved. Please try again."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:350
+#: inc/Portal/class-creative-feedback.php:353
 #: inc/Workflow/class-creative-change-manager.php:407
 msgid "The update file could not be removed. Please try again."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:351
+#: inc/Portal/class-creative-feedback.php:354
 #: inc/Workflow/class-creative-change-manager.php:343
 msgid "Explain why this ad update needs changes."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:352
+#: inc/Portal/class-creative-feedback.php:355
 #: inc/Workflow/class-creative-change-manager.php:347
 msgid "Use 2,000 characters or fewer for update feedback."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:353
+#: inc/Portal/class-creative-feedback.php:356
 #: inc/Workflow/class-creative-change-manager.php:364
 msgid "The update decision could not be saved. Please try again."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:354
+#: inc/Portal/class-creative-feedback.php:357
 #: inc/Workflow/class-creative-change-manager.php:413
 msgid ""
 "The update record and file could not be reconciled. Please contact an "
 "administrator."
 msgstr ""
 
-#: inc/Portal/class-creative-feedback.php:355
+#: inc/Portal/class-creative-feedback.php:358
 #: inc/Workflow/class-creative-change-manager.php:112
 msgid "Change the destination or description before requesting an update."
 msgstr ""
 
-#: inc/Portal/class-creative-view-data.php:274
-#: inc/Portal/class-creative-view-data.php:303
+#: inc/Portal/class-creative-view-data.php:298
+#: inc/Portal/class-creative-view-data.php:327
 msgid "Waiting for review"
 msgstr ""
 
-#: inc/Portal/class-creative-view-data.php:304
+#: inc/Portal/class-creative-view-data.php:328
 msgid "Changes needed"
 msgstr ""
 
@@ -4503,12 +4509,12 @@ msgstr ""
 msgid "That impression could not be recorded. Please try again."
 msgstr ""
 
-#: inc/REST/class-campaigns-controller.php:335
+#: inc/REST/class-campaigns-controller.php:343
 #: inc/Workflow/class-campaign-editor.php:124
 msgid "That advertiser could not be found."
 msgstr ""
 
-#: inc/REST/class-campaigns-controller.php:487
+#: inc/REST/class-campaigns-controller.php:499
 #: inc/REST/class-creative-file-controller.php:186
 #: inc/REST/class-line-items-controller.php:358
 #: inc/Workflow/class-assignment-editor.php:337
@@ -5388,11 +5394,11 @@ msgstr ""
 msgid "Advertisement linking to %s"
 msgstr ""
 
-#: inc/Workflow/class-creative-manager.php:864
+#: inc/Workflow/class-creative-manager.php:763
 msgid "That placement is not available."
 msgstr ""
 
-#: inc/Workflow/class-creative-manager.php:868
+#: inc/Workflow/class-creative-manager.php:767
 msgid "That placement is not part of this campaign."
 msgstr ""
 
@@ -5516,17 +5522,17 @@ msgstr ""
 msgid "That delivery policy cannot be used: %s"
 msgstr ""
 
-#: inc/Workflow/class-link-checker.php:123
+#: inc/Workflow/class-link-checker.php:127
 msgid "Add a destination link first."
 msgstr ""
 
-#: inc/Workflow/class-link-checker.php:131
+#: inc/Workflow/class-link-checker.php:135
 msgid ""
 "This link cannot be checked from here. Open it in a browser to make sure it "
 "works."
 msgstr ""
 
-#: inc/Workflow/class-link-checker.php:194
+#: inc/Workflow/class-link-checker.php:214
 msgid "There is no campaign to check."
 msgstr ""
 
@@ -5804,8 +5810,8 @@ msgid "No access"
 msgstr ""
 
 #: templates/portal/404.php:22
-#: templates/portal/partials/campaign-destination-card.php:79
-#: templates/portal/partials/campaign-destination-card.php:130
+#: templates/portal/partials/destination-field.php:50
+#: templates/portal/partials/destination-field.php:82
 #: templates/portal/screens/404.php:19
 msgid "Page not found"
 msgstr ""
@@ -6132,12 +6138,12 @@ msgid "01 · Ads"
 msgstr ""
 
 #: templates/portal/partials/campaign-changes.php:318
-#: templates/portal/partials/campaign-creative-step.php:359
+#: templates/portal/partials/campaign-creative-step.php:360
 msgid "Back to package & dates"
 msgstr ""
 
 #: templates/portal/partials/campaign-changes.php:325
-#: templates/portal/partials/campaign-creative-step.php:373
+#: templates/portal/partials/campaign-creative-step.php:374
 #: templates/portal/partials/campaign-order-summary.php:162
 #: templates/portal/partials/campaign-order-summary.php:164
 msgid "Continue to review"
@@ -6263,28 +6269,28 @@ msgid ""
 "choose an available package."
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:268
-#: templates/portal/partials/campaign-edit-ads.php:173
+#: templates/portal/partials/campaign-creative-step.php:269
+#: templates/portal/partials/campaign-edit-ads.php:174
 msgid "Preview"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:269
+#: templates/portal/partials/campaign-creative-step.php:270
 msgid "Replace"
 msgstr ""
 
 #. translators: %d: maximum creatives allowed on one placement.
-#: templates/portal/partials/campaign-creative-step.php:292
+#: templates/portal/partials/campaign-creative-step.php:293
 #, php-format
 msgid ""
 "This placement has the maximum of %d creatives. Remove one to add another."
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:337
+#: templates/portal/partials/campaign-creative-step.php:338
 msgid "Add a rotating creative"
 msgstr ""
 
 #. translators: %d: sizes that still need a file.
-#: templates/portal/partials/campaign-creative-step.php:353
+#: templates/portal/partials/campaign-creative-step.php:354
 #: templates/portal/partials/campaign-order-summary.php:169
 #, php-format
 msgid "%d size still needs a file."
@@ -6310,130 +6316,20 @@ msgstr ""
 msgid "One link for every ad. Any single size can still have its own."
 msgstr ""
 
-#: templates/portal/partials/campaign-destination-card.php:78
-#: templates/portal/partials/campaign-destination-card.php:129
-msgid "Link works"
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:80
-#: templates/portal/partials/campaign-destination-card.php:131
-msgid "Could not be read"
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:81
-#: templates/portal/partials/campaign-destination-card.php:132
-msgid "The site returned an error"
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:82
-#: templates/portal/partials/campaign-destination-card.php:133
-msgid "No answer"
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:83
-msgid "Checking…"
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:84
-msgid "Could not check it"
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:105
+#: templates/portal/partials/campaign-destination-card.php:106
 msgid "Destination link for every ad"
 msgstr ""
 
-#: templates/portal/partials/campaign-destination-card.php:135
-msgid "Valid link"
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:147
-msgid "Save link"
-msgstr ""
-
 #. translators: 1: sizes whose ad goes to this link. 2: sizes in the package.
-#: templates/portal/partials/campaign-destination-card.php:154
+#: templates/portal/partials/campaign-destination-card.php:111
 #, php-format
 msgid "Used by %1$d of %2$d ad"
 msgid_plural "Used by %1$d of %2$d ads"
 msgstr[0] ""
 msgstr[1] ""
 
-#: templates/portal/partials/campaign-destination-card.php:168
-msgid "Check link"
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:196
-msgid "Where it came from"
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:197
-msgid "How it was shown"
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:198
-msgid "Which campaign"
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:199
-msgid "Which ad, when you run more than one"
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:200
-msgid "Keyword, if your team uses one"
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:223
-msgid "Add tracking tags"
-msgstr ""
-
-#. translators: %s: comma-separated parameter names, e.g. utm_source, utm_medium.
-#: templates/portal/partials/campaign-destination-card.php:228
-#, php-format
-msgid "Already on your link, so it was left alone: %s"
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:230
-msgid ""
-"These tell your analytics where a visit came from. Filled in from this "
-"campaign — change them if your team uses different words."
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:239
-msgid "More options"
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:249
-msgid "Which ad"
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:250
-msgid "Which placement"
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:251
-msgid "Campaign id"
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:252
-msgid "Time of the click"
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:253
-msgid "Cache buster"
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:254
-msgid "Click id"
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:257
-msgid ""
-"Add a value that is filled in when somebody clicks, so your reports name the "
-"ad that earned the visit."
-msgstr ""
-
-#: templates/portal/partials/campaign-destination-card.php:276
-msgid "Add tags to link"
+#: templates/portal/partials/campaign-destination-card.php:115
+msgid "Save link"
 msgstr ""
 
 #: templates/portal/partials/campaign-edit-ads.php:75
@@ -6462,7 +6358,7 @@ msgid ""
 "before it runs."
 msgstr ""
 
-#: templates/portal/partials/campaign-edit-ads.php:178
+#: templates/portal/partials/campaign-edit-ads.php:179
 msgid "Update"
 msgstr ""
 
@@ -6855,6 +6751,20 @@ msgstr ""
 msgid "You are notified if changes are needed."
 msgstr ""
 
+#. translators: %d: how many ads are on this size.
+#: templates/portal/partials/campaign-rotation-note.php:33
+#, php-format
+msgid "%d ad rotating"
+msgid_plural "%d ads rotating"
+msgstr[0] ""
+msgstr[1] ""
+
+#: templates/portal/partials/campaign-rotation-note.php:39
+msgid ""
+"Each visitor sees one of these. The shares below decide how often each is "
+"chosen."
+msgstr ""
+
 #. translators: %s: one placement's name, or several separated by commas, e.g. Break, Footer.
 #: templates/portal/partials/campaign-same-file-note.php:34
 #, php-format
@@ -7139,13 +7049,35 @@ msgstr ""
 msgid "Share of rotation"
 msgstr ""
 
-#: templates/portal/partials/campaign-variant-destination.php:68
+#: templates/portal/partials/campaign-variant-destination.php:63
+msgid "Destination URL for this ad"
+msgstr ""
+
+#: templates/portal/partials/campaign-variant-destination.php:84
 msgid "Save destination"
 msgstr ""
 
-#: templates/portal/partials/campaign-variant-share.php:67
-msgid "Save share"
+#: templates/portal/partials/campaign-variant-share.php:65
+msgid "Share of this placement"
 msgstr ""
+
+#. translators: %d: a share of one placement, e.g. 70.
+#: templates/portal/partials/campaign-variant-share.php:92
+#, php-format
+msgid "%d%%"
+msgstr ""
+
+#: templates/portal/partials/campaign-variant-share.php:106
+msgid "Save"
+msgstr ""
+
+#. translators: %s: file names of ads that are not running, separated by commas.
+#: templates/portal/partials/campaign-variant-share.php:143
+#, php-format
+msgid "While %s is not running, this ad takes its share too."
+msgid_plural "While %s are not running, this ad takes their share too."
+msgstr[0] ""
+msgstr[1] ""
 
 #: templates/portal/partials/campaign-variant-status.php:58
 msgid "Resume this creative"
@@ -7226,6 +7158,116 @@ msgstr ""
 #: templates/portal/partials/delivery-card.php:168
 #, php-format
 msgid "Figures from %s (UTC) onward are still coming in."
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:49
+#: templates/portal/partials/destination-field.php:81
+msgid "Link works"
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:51
+#: templates/portal/partials/destination-field.php:83
+msgid "Could not be read"
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:52
+#: templates/portal/partials/destination-field.php:84
+msgid "The site returned an error"
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:53
+#: templates/portal/partials/destination-field.php:85
+msgid "No answer"
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:54
+msgid "Checking…"
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:55
+msgid "Could not check it"
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:87
+msgid "Valid link"
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:113
+msgid "Check link"
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:141
+msgid "Where it came from"
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:142
+msgid "How it was shown"
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:143
+msgid "Which campaign"
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:144
+msgid "Which ad, when you run more than one"
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:145
+msgid "Keyword, if your team uses one"
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:168
+msgid "Add tracking tags"
+msgstr ""
+
+#. translators: %s: comma-separated parameter names, e.g. utm_source, utm_medium.
+#: templates/portal/partials/destination-field.php:173
+#, php-format
+msgid "Already on your link, so it was left alone: %s"
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:175
+msgid ""
+"These tell your analytics where a visit came from. Filled in from this "
+"campaign — change them if your team uses different words."
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:184
+msgid "More options"
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:194
+msgid "Which ad"
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:195
+msgid "Which placement"
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:196
+msgid "Campaign id"
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:197
+msgid "Time of the click"
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:198
+msgid "Cache buster"
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:199
+msgid "Click id"
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:202
+msgid ""
+"Add a value that is filled in when somebody clicks, so your reports name the "
+"ad that earned the visit."
+msgstr ""
+
+#: templates/portal/partials/destination-field.php:221
+msgid "Add tags to link"
 msgstr ""
 
 #: templates/portal/partials/rail.php:46

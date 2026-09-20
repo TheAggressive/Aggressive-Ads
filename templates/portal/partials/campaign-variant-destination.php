@@ -28,6 +28,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use Aggressive\Ads\Portal\Creative_Actions;
+use Aggressive\Ads\REST\Api;
 
 $aggr_destination_creative = (int) ( $aggr_creative['id'] ?? 0 );
 
@@ -49,20 +50,35 @@ $aggr_destination_error = $aggr_destination_id === $aggr_creative_error_for;
 	<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) (int) $aggr_campaign['id'] ); ?>">
 	<?php wp_nonce_field( Creative_Actions::destination_nonce_action( $aggr_destination_creative ) ); ?>
 
-	<div class="aggr-field">
-		<label for="<?php echo esc_attr( $aggr_destination_id ); ?>">
-			<?php esc_html_e( 'Destination URL', 'aggressive-ads' ); ?>
-		</label>
-		<input
-			id="<?php echo esc_attr( $aggr_destination_id ); ?>"
-			type="url"
-			inputmode="url"
-			name="click_url"
-			required
-			value="<?php echo esc_attr( (string) ( $aggr_creative['click_url'] ?? '' ) ); ?>"
-			<?php echo $aggr_destination_error ? 'aria-invalid="true"' : ''; ?>
-		>
-	</div>
+	<?php
+	/*
+	 * The campaign's own destination field, the same one: its checking, its
+	 * tracking tags and the tidying that saves `example.com` as a URL. An ad's
+	 * link is a link like any other, and the two asked for it differently for
+	 * as long as there were two of them.
+	 */
+	$aggr_dest_field_id    = $aggr_destination_id;
+	$aggr_dest_field_name  = 'click_url';
+	$aggr_dest_field_value = (string) ( $aggr_creative['click_url'] ?? '' );
+	$aggr_dest_field_label = __( 'Destination URL for this ad', 'aggressive-ads' );
+
+	/*
+	 * No stored result for an ad's own link yet — the campaign keeps its
+	 * last check, an ad does not — so the chip starts at "Valid link" and
+	 * says what the check answers from the moment one is run.
+	 */
+	$aggr_dest_field_check     = null;
+	$aggr_dest_field_error     = $aggr_destination_error;
+	$aggr_dest_field_used      = '';
+	$aggr_dest_field_save      = '';
+	$aggr_dest_field_check_url = add_query_arg(
+		'creative',
+		$aggr_destination_creative,
+		rest_url( Api::NAMESPACE . '/campaigns/' . (int) $aggr_campaign['id'] . '/link-check' )
+	);
+
+	require AGGR_PLUGIN_DIR . 'templates/portal/partials/destination-field.php';
+	?>
 
 	<button class="aggr-button aggr-button--secondary" type="submit">
 		<?php esc_html_e( 'Save destination', 'aggressive-ads' ); ?>

@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Portal;
 
+use Aggressive\Ads\Domain\Assignment_Rules;
 use Aggressive\Ads\REST\Api;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Attachment_Repository;
@@ -93,7 +94,7 @@ final class Creative_View_Data {
 	 * ever needs to be told.
 	 *
 	 * @param int $campaign_id Campaign post id.
-	 * @return array<int, array{id: int, placement_id: int, placement: string, size: string, dimensions: string, click_url: string, alt_text: string, approved: bool, rejected: bool, state_text: string, notes: string, name: string, bytes: int, preview: string, same_file: array<int, array{id: int, placement: string, approved: bool}>, weight: int|null, share: float|null, assignment_id: int, revision: int}>
+	 * @return array<int, array{id: int, placement_id: int, placement: string, size: string, dimensions: string, click_url: string, alt_text: string, approved: bool, rejected: bool, state_text: string, notes: string, name: string, bytes: int, preview: string, delivering: bool, same_file: array<int, array{id: int, placement: string, approved: bool}>, weight: int|null, share: float|null, assignment_id: int, revision: int}>
 	 */
 	public function creative_rows( int $campaign_id ): array {
 		$rows = array();
@@ -162,6 +163,17 @@ final class Creative_View_Data {
 				 */
 				'weight'        => isset( $weights[ $revision_id ] ) ? (int) $weights[ $revision_id ]['weight'] : null,
 				'share'         => $this->share_of( $weights[ $revision_id ] ?? null, $totals[ (int) $creative['placement_id'] ] ?? 0 ),
+
+				/*
+				 * Whether this one can be chosen at all right now. A share is
+				 * a share of the ads that are running: while a paused or
+				 * unapproved ad sits beside it, the one that can run takes
+				 * that traffic too, and a card claiming 70% would be stating
+				 * something the selector will not do.
+				 */
+				'delivering'    => $approved && isset( $weights[ $revision_id ] )
+					&& ! Assignment_Rules::is_terminal( (string) $weights[ $revision_id ]['status'] )
+					&& Assignment_Rules::PAUSED !== (string) $weights[ $revision_id ]['status'],
 				'assignment_id' => isset( $weights[ $revision_id ] ) ? (int) $weights[ $revision_id ]['id'] : 0,
 				'revision'      => isset( $weights[ $revision_id ] ) ? (int) $weights[ $revision_id ]['revision'] : 0,
 
@@ -221,6 +233,18 @@ final class Creative_View_Data {
 		$totals      = array();
 
 		foreach ( $this->assignments->for_campaign( $campaign_id ) as $assignment ) {
+			/*
+			 * **A retired assignment is not competing for anything.** Its
+			 * weight used to be counted in the placement's total, so on a
+			 * campaign where ads had been removed and replaced, two live ads
+			 * at 100 each read as "about 10% of this placement" — the removed
+			 * ads' weights were still in the denominator. Delivery never
+			 * considered them; only this sum did.
+			 */
+			if ( Assignment_Rules::is_terminal( (string) ( $assignment['status'] ?? '' ) ) ) {
+				continue;
+			}
+
 			$revision_id = (int) $assignment['revision_id'];
 			$placement   = (int) $assignment['placement_id'];
 

@@ -232,6 +232,14 @@ final class Campaigns_Controller implements Service {
 						'required' => false,
 						'default'  => false,
 					),
+
+					/*
+					 * One ad's own link instead of the campaign's, named by
+					 * id — still a stored link this campaign owns, which is
+					 * what keeps this route from fetching whatever a caller
+					 * types. An id from elsewhere resolves to nothing.
+					 */
+					'creative' => $this->positive_int_arg( false ),
 				),
 			)
 		);
@@ -435,7 +443,11 @@ final class Campaigns_Controller implements Service {
 	 * @phpstan-param WP_REST_Request<array<string, mixed>> $request
 	 */
 	public function link_check( WP_REST_Request $request ) {
-		$result = $this->links->check( (int) $request->get_param( 'id' ), true === $request->get_param( 'proposed' ) );
+		$result = $this->links->check(
+			(int) $request->get_param( 'id' ),
+			true === $request->get_param( 'proposed' ),
+			(int) $request->get_param( 'creative' )
+		);
 
 		return is_wp_error( $result ) ? $result : new WP_REST_Response( $result, 200 );
 	}

@@ -135,6 +135,7 @@ if ( array() !== $aggr_uploadable ) {
 				require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-upload-form.php';
 				?>
 			<?php else : ?>
+				<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-rotation-note.php'; ?>
 				<?php foreach ( $aggr_slot['creatives'] as $aggr_creative ) : ?>
 					<?php
 					$aggr_creative_key = (int) $aggr_creative['id'];

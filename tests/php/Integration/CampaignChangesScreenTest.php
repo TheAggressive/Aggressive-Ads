@@ -182,7 +182,12 @@ final class CampaignChangesScreenTest extends WP_UnitTestCase {
 		$this->assertSame( 1, $xpath->query( $form )->length );
 		$this->assertSame( 'https://example.com/a', $this->fields( $xpath, $form )['default_click_url'] ?? null );
 		$this->assertSame( '1', (string) $xpath->evaluate( 'string(' . $form . '/@data-aggr-stage)' ), 'The check would read a link nobody staged.' );
-		$this->assertStringContainsString( 'proposed=1', (string) $xpath->evaluate( 'string(' . $form . '/@data-aggr-link-check)' ) );
+		// On the field the partial draws, inside this form: one destination
+		// field, drawn by creation's card and by an ad's own dialog alike.
+		$this->assertStringContainsString(
+			'proposed=1',
+			(string) $xpath->evaluate( 'string(' . $form . '//*[@data-aggr-link-check]/@data-aggr-link-check)' )
+		);
 
 		// Autosave writes drafts; a running campaign's link is a proposal.
 		$this->assertSame( 0, $xpath->query( $form . '[@data-aggr-autosave]' )->length );

@@ -733,6 +733,84 @@ final class Creative_Assignment_Repository {
 	}
 
 	/**
+	 * Writes every weight on one placement in one statement, or none of them.
+	 *
+	 * **A rotation is one decision.** Written a row at a time, a refusal half
+	 * way through left the first ads moved and the rest as they were, adding
+	 * to a total nobody chose.
+	 *
+	 * One `UPDATE` guarded by every row's expected revision, after counting
+	 * that they all still match. Not `START TRANSACTION`: WordPress runs each
+	 * test inside a transaction of its own and MySQL commits an outer one when
+	 * a new one begins, so a transaction here would quietly destroy the
+	 * isolation every suite depends on — a high price for a window this
+	 * closes anyway. A concurrent save between the count and the write loses
+	 * its rows to the revision guard and is reported, rather than half
+	 * applied.
+	 *
+	 * @param int                                           $campaign_id Campaign that must own every row.
+	 * @param array<int, array{weight: int, revision: int}> $rows        New weight and expected revision, by assignment id.
+	 * @return bool Whether every row was written.
+	 */
+	public function set_weights( int $campaign_id, array $rows ): bool {
+		if ( $campaign_id <= 0 || array() === $rows || ! $this->table_exists() ) {
+			return false;
+		}
+
+		global $wpdb;
+
+		$ids      = array_map( 'intval', array_keys( $rows ) );
+		$pairs    = array();
+		$cases    = array();
+		$bindings = array();
+
+		foreach ( $rows as $assignment_id => $fields ) {
+			$pairs[]    = '( id = %d AND revision = %d )';
+			$bindings[] = (int) $assignment_id;
+			$bindings[] = (int) $fields['revision'];
+			$cases[]    = 'WHEN %d THEN %d';
+		}
+
+		$guard = implode( ' OR ', $pairs );
+
+		$count = 'SELECT COUNT(*) FROM %i WHERE campaign_id = %d AND ( ' . $guard . ' )';
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- The statement is placeholders and this repository's own per-row fragments; every value is bound in the array below, which the sniff cannot follow through the concatenation.
+		$ready = (int) $wpdb->get_var(
+			$wpdb->prepare(
+				$count,
+				array_merge( array( $this->table_name(), $campaign_id ), $bindings )
+			)
+		);
+		// phpcs:enable
+
+		// One of them moved since the page was drawn: none of them is written.
+		if ( count( $rows ) !== $ready ) {
+			return false;
+		}
+
+		$weights = array();
+
+		foreach ( $rows as $assignment_id => $fields ) {
+			$weights[] = (int) $assignment_id;
+			$weights[] = max( Assignment_Rules::MIN_WEIGHT, (int) $fields['weight'] );
+		}
+
+		$sql = 'UPDATE %i SET weight = CASE id ' . implode( ' ', $cases ) . ' END, revision = revision + 1, updated_at_ts = %d WHERE campaign_id = %d AND ( ' . $guard . ' )';
+
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- As above: placeholders and bound values only.
+		$written = $wpdb->query(
+			$wpdb->prepare(
+				$sql,
+				array_merge( array( $this->table_name() ), $weights, array( time(), $campaign_id ), $bindings )
+			)
+		);
+		// phpcs:enable
+
+		return count( $ids ) === (int) $written;
+	}
+
+	/**
 	 * Retires every live assignment of one creative, which is being removed.
 	 *
 	 * Removal deleted the creative and left its rows `draft` and holding the

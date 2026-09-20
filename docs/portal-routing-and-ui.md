@@ -230,6 +230,31 @@ see [domain-model.md](domain-model.md) — so removing an ad whose file is on
 another placement offers a box to remove that copy too, and replacing one says
 the others keep their file.
 
+**One destination field, drawn in both places.**
+`partials/destination-field.php` is the field, its check chip, its status line
+and the tracking-tag builder; the campaign's Destination card and an ad's own
+"Edit destination" dialog each supply the form around it. They had diverged —
+only the card checked links, built tags, or accepted `example.com` — and a fix
+to any of that reached one of them. `@aggr/link-tools` binds to the markup
+(`data-aggr-link-check`, `data-aggr-link-field`, `data-aggr-tags`) rather than
+to either caller. The check still **takes no URL**: it reads a stored link, now
+either the campaign's or one ad's (`creative` on the route, refused unless that
+campaign owns it), and a field edited but not saved is saved first — staged as
+a proposal in the edit flow, or through the form's own save, which announces
+itself with `aggr:saved`.
+
+A size holding more than one ad says so above them — "2 ads rotating", and
+that each visitor sees one — and each card carries its **share of the
+placement as a percentage**. Setting one gives it that percentage and divides
+the rest between the others in the proportions they already had
+(`Domain\Assignment_Rules::rebalance()`, whole numbers summing to 100 by
+largest remainder, every ad keeping at least 1%). `Workflow\Share_Editor`
+writes every row on the placement, each at the revision it was read at, and
+the save patches every field and sentence on that placement, because setting
+one share moves them all. Retired assignments are left out of the total: a
+removed ad's weight in the denominator is what made two live ads read "about
+10% of this placement".
+
 Continue to review is a POST, not a link. It advances the resume point only
 when every placement is covered and the stored dates pass the window rule; a
 refused date sends the advertiser to details, anything else back to the
