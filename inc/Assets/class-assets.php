@@ -365,7 +365,7 @@ final class Assets implements Service {
 	 * Modules are enqueued from enqueue() so the import map prints in wp_head.
 	 * This only writes Interactivity state. Safe to call when the APIs are absent.
 	 *
-	 * @param array{id: int, wizard_step: string, autosave_rev: int, step_label: string, slots: array<int, array{id: int, size: string, max_bytes: int, max_size: string, name?: string, active?: bool, creatives?: array<int, mixed>}>} $campaign Campaign view data.
+	 * @param array{id: int, wizard_step: string, autosave_rev: int, step_label: string, slots: array<int, array{id: int, size: string, max_bytes: int, max_size: string, name: string, open: bool}>} $campaign Campaign view data.
 	 * @return void
 	 */
 	public function hydrate_campaign_editor( array $campaign ): void {
@@ -464,7 +464,13 @@ final class Assets implements Service {
 	 * nothing about them — no size, no limit, no messages — so choosing a file
 	 * did nothing at all. The browser test caught it; the markup test could not.
 	 *
-	 * @param array<int, array{id: int, size: string, max_bytes: int, max_size: string, name?: string, active?: bool, creatives?: array<int, mixed>}> $slots Placements that take an upload.
+	 * **`name` and `open` are required, and nothing here guesses them.** They
+	 * were optional with defaults, and a caller that left them out shipped a
+	 * drop zone that said "Goes to 728x90" for a placement called Header and
+	 * treated every size as waiting for a file. Required, the array shape
+	 * makes PHPStan name the caller instead.
+	 *
+	 * @param array<int, array{id: int, size: string, max_bytes: int, max_size: string, name: string, open: bool}> $slots Placements that take an upload.
 	 * @return void
 	 */
 	public function hydrate_uploads( array $slots ): void {
@@ -483,8 +489,8 @@ final class Assets implements Service {
 
 				// For the drop zone, which matches every file against every
 				// placement: what to call one, and whether it wants a file.
-				'name'         => (string) ( $slot['name'] ?? '' ),
-				'open'         => false !== ( $slot['active'] ?? true ) && array() === ( $slot['creatives'] ?? array() ),
+				'name'         => $slot['name'],
+				'open'         => $slot['open'],
 
 				/*
 				 * The refusal sentence, per placement, because the number in it
@@ -518,7 +524,8 @@ final class Assets implements Service {
 						'matched'         => __( '%s · matched by size', 'aggressive-ads' ),
 						'needsUrl'        => __( 'Enter a complete destination URL to finish the upload.', 'aggressive-ads' ),
 						'empty'           => __( 'Choose an ad creative file to upload.', 'aggressive-ads' ),
-						'type'            => __( 'Use a JPEG, PNG, GIF, WebP, or AVIF image.', 'aggressive-ads' ),
+						/* translators: %s: the accepted image formats, e.g. JPEG, PNG, GIF. */
+						'type'            => sprintf( __( 'Use an image in one of these formats: %s.', 'aggressive-ads' ), Upload_Rules::type_list() ),
 						'pixels'          => __( 'That ad creative is too large in pixels to process safely. Choose a smaller one.', 'aggressive-ads' ),
 						'dimensions'      => __( 'The ad creative must match the required pixel size for this placement.', 'aggressive-ads' ),
 						/* translators: %s: a placement's name, e.g. Header. */

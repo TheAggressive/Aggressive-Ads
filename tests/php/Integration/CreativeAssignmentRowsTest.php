@@ -9,20 +9,15 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Tests\Integration;
 
-use Aggressive\Ads\Core\Post_Statuses;
-use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Domain\Assignment_Rules;
 use Aggressive\Ads\Install\Creative_Assignment_Migrator;
 use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Portal\Creative_View_Data;
 use Aggressive\Ads\Repository\Audit_Repository;
-use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Creative_Attachment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
-use Aggressive\Ads\Repository\Org_Repository;
-use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Security\Ownership;
 use Aggressive\Ads\Security\Roles;
 use Aggressive\Ads\Storage\Private_Storage;
@@ -39,6 +34,8 @@ use WP_UnitTestCase;
  * move: the first ad's row when the second is replaced.
  */
 final class CreativeAssignmentRowsTest extends WP_UnitTestCase {
+
+	use CreativeFixtures;
 
 	/**
 	 * Owning advertiser user id.
@@ -111,13 +108,6 @@ final class CreativeAssignmentRowsTest extends WP_UnitTestCase {
 	private Private_Storage $storage;
 
 	/**
-	 * Temporary source files.
-	 *
-	 * @var array<int, string>
-	 */
-	private array $temporary = array();
-
-	/**
 	 * A draft with two 728×90 placements; these tests use the first.
 	 *
 	 * @return void
@@ -151,19 +141,7 @@ final class CreativeAssignmentRowsTest extends WP_UnitTestCase {
 	 * @return void
 	 */
 	public function tear_down(): void {
-		foreach ( $this->creatives->ids_for_campaign( $this->campaign_id ) as $creative_id ) {
-			$stored = $this->creatives->storage_details( $creative_id );
-
-			if ( null !== $stored && '' !== $stored['path'] ) {
-				$this->storage->delete( $stored['path'] );
-			}
-		}
-
-		foreach ( $this->temporary as $path ) {
-			if ( is_file( $path ) ) {
-				unlink( $path );
-			}
-		}
+		$this->remove_creative_files( $this->campaign_id );
 
 		$_POST = array();
 
@@ -349,95 +327,5 @@ final class CreativeAssignmentRowsTest extends WP_UnitTestCase {
 	 */
 	private function sha( int $creative_id ): string {
 		return (string) ( $this->creatives->storage_details( $creative_id )['sha256'] ?? '' );
-	}
-
-	/**
-	 * A PNG whose bytes depend on `$variant`, so two variants never share a checksum.
-	 *
-	 * @param int $width   Width.
-	 * @param int $height  Height.
-	 * @param int $variant Distinguishing pixel.
-	 * @return array<string, mixed>
-	 */
-	private function image_file( int $width, int $height, int $variant ): array {
-		$image = imagecreatetruecolor( $width, $height );
-		imagesetpixel( $image, $variant % $width, 0, (int) imagecolorallocate( $image, 255, 255, 255 ) );
-		ob_start();
-		imagepng( $image );
-		$bytes = (string) ob_get_clean();
-		$path  = wp_tempnam( 'aggr-creative-copies' );
-		file_put_contents( $path, $bytes );
-		$this->temporary[] = $path;
-
-		return array(
-			'name'     => 'creative.png',
-			'tmp_name' => $path,
-			'error'    => UPLOAD_ERR_OK,
-			'size'     => strlen( $bytes ),
-		);
-	}
-
-	/**
-	 * An organization owned by one advertiser.
-	 *
-	 * @param int $owner Owner user id.
-	 * @return int
-	 */
-	private function org( int $owner ): int {
-		$org_id = (int) self::factory()->post->create(
-			array(
-				'post_type'   => Post_Types::ORGANIZATION,
-				'post_status' => 'publish',
-			)
-		);
-		update_post_meta( $org_id, Org_Repository::META_OWNER_USER, $owner );
-
-		return $org_id;
-	}
-
-	/**
-	 * An active placement.
-	 *
-	 * @param string $name Title.
-	 * @param string $size Size, e.g. 728x90.
-	 * @return int
-	 */
-	private function placement( string $name, string $size ): int {
-		$placement_id = (int) self::factory()->post->create(
-			array(
-				'post_type'   => Post_Types::PLACEMENT,
-				'post_status' => 'publish',
-				'post_title'  => $name,
-			)
-		);
-		update_post_meta( $placement_id, Placement_Repository::META_IS_ACTIVE, 1 );
-		update_post_meta( $placement_id, Placement_Repository::META_SIZE, $size );
-
-		return $placement_id;
-	}
-
-	/**
-	 * A draft campaign on the given placements.
-	 *
-	 * @param int             $owner      Author.
-	 * @param int             $org_id     Organization.
-	 * @param array<int, int> $placements Placement ids.
-	 * @return int
-	 */
-	private function campaign( int $owner, int $org_id, array $placements ): int {
-		$campaign_id = (int) self::factory()->post->create(
-			array(
-				'post_type'   => Post_Types::CAMPAIGN,
-				'post_status' => Post_Statuses::DRAFT,
-				'post_author' => $owner,
-			)
-		);
-		update_post_meta( $campaign_id, Campaign_Repository::META_ORG_ID, $org_id );
-
-		foreach ( $placements as $placement_id ) {
-			add_post_meta( $campaign_id, Campaign_Repository::META_PLACEMENT_ID, $placement_id );
-		}
-
-		return $campaign_id;
 	}
 }

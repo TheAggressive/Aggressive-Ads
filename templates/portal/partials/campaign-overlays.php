@@ -294,9 +294,10 @@ if ( true !== ( $aggr_overlay_print ?? false ) ) {
 								<p class="aggr-hint">
 									<?php
 									printf(
-										/* translators: %s: required creative dimensions, for example 728x90. */
-										esc_html__( 'Exactly %s. JPEG, PNG, GIF, WebP, or AVIF. Leave this empty to change only the destination.', 'aggressive-ads' ),
-										esc_html( (string) $aggr_creative['size'] )
+										/* translators: 1: required creative dimensions, for example 728x90. 2: the accepted image formats, e.g. JPEG, PNG, GIF. */
+										esc_html__( 'Exactly %1$s. %2$s. Leave this empty to change only the destination.', 'aggressive-ads' ),
+										esc_html( (string) $aggr_creative['size'] ),
+										esc_html( Upload_Rules::type_list() )
 									);
 									?>
 								</p>

@@ -202,6 +202,21 @@ final class UploadRulesTest extends TestCase {
 	}
 
 	/**
+	 * Every allowed type has a name for sentences, and nothing else does.
+	 *
+	 * The sentences that list formats take `type_list()`, so a type added to
+	 * the allowlist without a label would be named by its MIME type in front
+	 * of an advertiser.
+	 *
+	 * @return void
+	 */
+	public function test_every_allowed_type_is_named_once(): void {
+		$this->assertSame( Upload_Rules::ALLOWED_MIME, array_keys( Upload_Rules::LABELS ) );
+		$this->assertSame( 'JPEG, PNG, GIF, WebP, AVIF', Upload_Rules::type_list() );
+		$this->assertSame( 'JPEG · PNG · GIF · WebP · AVIF', Upload_Rules::type_list( ' · ' ) );
+	}
+
+	/**
 	 * No entry appears on both an allowlist and its denylist.
 	 *
 	 * If one ever did, the answer would depend on which check runs first — and
