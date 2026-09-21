@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
-"POT-Creation-Date: 2026-09-20T05:11:39+00:00\n"
+"POT-Creation-Date: 2026-09-20T23:40:39+00:00\n"
 "PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -1514,74 +1514,74 @@ msgstr ""
 msgid "%1$s – %2$s"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:645
+#: inc/Admin/class-review-data.php:668
 msgid "System"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:691
+#: inc/Admin/class-review-data.php:714
 msgid "Needs review"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:692 inc/Admin/class-review-screen.php:297
+#: inc/Admin/class-review-data.php:715 inc/Admin/class-review-screen.php:297
 msgid "Ad updates"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:693
+#: inc/Admin/class-review-data.php:716
 msgid "Advertiser requests"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:694
+#: inc/Admin/class-review-data.php:717
 msgid "With the advertiser"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:695
+#: inc/Admin/class-review-data.php:718
 msgid "Decided"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:696
+#: inc/Admin/class-review-data.php:719
 #: inc/Portal/class-campaign-list-view-data.php:210
-#: inc/Portal/class-creative-view-data.php:333
+#: inc/Portal/class-creative-view-data.php:355
 msgid "Running"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:697
+#: inc/Admin/class-review-data.php:720
 #: inc/Portal/class-campaign-history-view-data.php:151
 msgid "Finished"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:713
+#: inc/Admin/class-review-data.php:736
 msgid "Start review"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:714
+#: inc/Admin/class-review-data.php:737
 msgid "Release back to the queue"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:715
+#: inc/Admin/class-review-data.php:738
 msgid "Request changes"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:716
+#: inc/Admin/class-review-data.php:739
 msgid "Reject"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:717
+#: inc/Admin/class-review-data.php:740
 msgid "Approve and publish"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:718
+#: inc/Admin/class-review-data.php:741
 msgid "Reopen as a draft"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:719
+#: inc/Admin/class-review-data.php:742
 msgid "Pause campaign"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:720
+#: inc/Admin/class-review-data.php:743
 msgid "Resume campaign"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:721 inc/Portal/class-view-data.php:375
+#: inc/Admin/class-review-data.php:744 inc/Portal/class-view-data.php:375
 msgid "Cancel campaign"
 msgstr ""
 
@@ -1797,29 +1797,29 @@ msgid "Artwork unchanged — only the text differs"
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:330
-#: templates/portal/partials/campaign-device-preview.php:46
+#: templates/portal/partials/campaign-device-preview.php:48
 msgid "Preview width"
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:331
-#: templates/portal/partials/campaign-device-preview.php:38
+#: templates/portal/partials/campaign-device-preview.php:40
 msgid "Phone"
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:332
-#: templates/portal/partials/campaign-device-preview.php:39
+#: templates/portal/partials/campaign-device-preview.php:41
 msgid "Tablet"
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:333
-#: templates/portal/partials/campaign-device-preview.php:40
+#: templates/portal/partials/campaign-device-preview.php:42
 #: templates/portal/partials/campaign-review-step.php:293
 msgid "Desktop"
 msgstr ""
 
 #. translators: %s: the placement an ad runs in.
 #: inc/Admin/class-review-screen.php:335
-#: templates/portal/partials/campaign-device-preview.php:90
+#: templates/portal/partials/campaign-device-preview.php:92
 #, php-format
 msgid "Preview of the ad for %s"
 msgstr ""
@@ -3771,7 +3771,7 @@ msgid "Withdrawn for editing"
 msgstr ""
 
 #: inc/Portal/class-campaign-history-view-data.php:146
-#: inc/Portal/class-creative-view-data.php:329
+#: inc/Portal/class-creative-view-data.php:351
 #: templates/portal/partials/campaign-ad-history.php:47
 msgid "Not approved"
 msgstr ""
@@ -4212,12 +4212,12 @@ msgstr ""
 msgid "Change the destination or description before requesting an update."
 msgstr ""
 
-#: inc/Portal/class-creative-view-data.php:334
-#: inc/Portal/class-creative-view-data.php:363
+#: inc/Portal/class-creative-view-data.php:356
+#: inc/Portal/class-creative-view-data.php:385
 msgid "Waiting for review"
 msgstr ""
 
-#: inc/Portal/class-creative-view-data.php:364
+#: inc/Portal/class-creative-view-data.php:386
 msgid "Changes needed"
 msgstr ""
 
@@ -4546,7 +4546,9 @@ msgid "That advertiser could not be found."
 msgstr ""
 
 #: inc/REST/class-campaigns-controller.php:499
-#: inc/REST/class-creative-file-controller.php:201
+#: inc/REST/class-creative-file-controller.php:176
+#: inc/REST/class-creative-file-controller.php:195
+#: inc/REST/class-creative-file-controller.php:329
 #: inc/REST/class-line-items-controller.php:358
 #: inc/Workflow/class-assignment-editor.php:384
 #: inc/Workflow/class-line-item-editor.php:69
@@ -4563,6 +4565,10 @@ msgstr ""
 #: inc/REST/class-conversions-controller.php:248
 #: inc/REST/class-server-conversions-controller.php:339
 msgid "That conversion could not be recorded."
+msgstr ""
+
+#: inc/REST/class-creative-file-controller.php:211
+msgid "Advertisement preview"
 msgstr ""
 
 #: inc/REST/class-decision-trace-controller.php:83
@@ -6382,13 +6388,13 @@ msgid "Save link"
 msgstr ""
 
 #. translators: %d: a width in CSS pixels, e.g. 390.
-#: templates/portal/partials/campaign-device-preview.php:63
+#: templates/portal/partials/campaign-device-preview.php:65
 #, php-format
 msgid "%dpx"
 msgstr ""
 
 #. translators: %s: the ad's pixel size, e.g. 728 × 90.
-#: templates/portal/partials/campaign-device-preview.php:98
+#: templates/portal/partials/campaign-device-preview.php:100
 #, php-format
 msgid ""
 "The ad is %s. The width above is the screen it is shown on, not the ad "
