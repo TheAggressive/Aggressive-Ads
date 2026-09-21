@@ -41,6 +41,12 @@ export type Creative = {
 	click_url: string;
 	preview: string;
 	/**
+	 * What the device-preview frame loads: a document holding the artwork,
+	 * not the artwork itself. A browser handed bare bytes writes its own
+	 * viewer around them, and the policy on those bytes refuses it.
+	 */
+	preview_frame: string;
+	/**
 	 * Still waiting to be published.
 	 *
 	 * Server-derived from "has no Media Library attachment", which is what

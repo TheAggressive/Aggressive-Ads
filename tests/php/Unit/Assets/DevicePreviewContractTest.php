@@ -55,8 +55,36 @@ final class DevicePreviewContractTest extends TestCase {
 		 * The exact revision, from the route that authorizes it — never a copy
 		 * made to look at, which P17 forbids, and never a stored path.
 		 */
-		$this->assertStringContainsString( "esc_url( (string) \$aggr_creative['preview'] )", $partial );
+		$this->assertStringContainsString( "esc_url( (string) \$aggr_creative['preview_frame'] )", $partial );
 		$this->assertStringNotContainsString( 'private_path', $partial );
+	}
+
+	/**
+	 * Both frames load the document route, not the artwork.
+	 *
+	 * The route that answers with a document was added and nothing was pointed
+	 * at it, so both frames went on loading the bytes directly — and a browser
+	 * handed bare artwork writes its own viewer around it, script and all,
+	 * which the policy on those bytes refuses once per frame. The preview
+	 * rendered; the console filled up, and the wizard's "no page errors"
+	 * assertion is what finally said so.
+	 *
+	 * @return void
+	 */
+	public function test_both_frames_load_the_preview_document_not_the_bytes(): void {
+		foreach ( array( 'inc/Portal/class-creative-view-data.php', 'inc/Admin/class-review-data.php' ) as $relative ) {
+			$this->assertStringContainsString(
+				"'/creatives/' . \$creative_id . '/preview'",
+				$this->source( $relative ),
+				$relative . ' stopped offering a document for the frame to load.'
+			);
+		}
+
+		$this->assertStringContainsString(
+			'src={ creative.preview_frame }',
+			$this->source( 'src/admin/review/preview.tsx' ) . $this->source( 'src/admin/review/campaign.tsx' ),
+			"The reviewer's frame went back to loading the artwork directly."
+		);
 	}
 
 	/**

@@ -68,7 +68,7 @@ function CreativeCard( {
 		<article className="aggr-creative">
 			<div className="aggr-creative__preview">
 				<DevicePreview
-					src={ creative.preview }
+					src={ creative.preview_frame }
 					placement={ creative.placement }
 					widths={ preview.widths }
 					sandbox={ preview.sandbox }

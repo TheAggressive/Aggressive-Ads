@@ -110,6 +110,7 @@ final class CreativeCardFoldsTest extends WP_UnitTestCase {
 				'click_url'     => 'https://example.com/show',
 				'alt_text'      => 'LA Art Show, January 2027',
 				'preview'       => 'https://example.test/preview.png',
+				'preview_frame' => 'https://example.test/preview-frame',
 				'rejected'      => false,
 				'state_text'    => '',
 				'notes'         => '',

@@ -3,8 +3,10 @@
  * One ad as it will appear, at the widths people actually browse at.
  *
  * **The exact revision, never a copy made to look at.** P17 forbids editing a
- * reviewed revision to produce a preview, so this renders the bytes that were
- * uploaded, from the same authenticated route the card's thumbnail uses.
+ * reviewed revision to produce a preview, so this frames the bytes that were
+ * uploaded, from an authenticated route carrying the same authorization as the
+ * card's thumbnail — a document holding that one image, not the image itself,
+ * because a browser handed bare artwork writes its own viewer around it.
  *
  * **Untrusted rendering.** A creative is somebody else's file, and a reviewer's
  * browser is not a safer place to run one than a visitor's, so the frame
@@ -83,7 +85,7 @@ $aggr_preview_first = true;
 		?>
 		<iframe
 			class="aggr-device__frame"
-			src="<?php echo esc_url( (string) $aggr_creative['preview'] ); ?>"
+			src="<?php echo esc_url( (string) $aggr_creative['preview_frame'] ); ?>"
 			sandbox="<?php echo esc_attr( Preview_Frame::SANDBOX ); ?>"
 			referrerpolicy="no-referrer"
 			loading="lazy"

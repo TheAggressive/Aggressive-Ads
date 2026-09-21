@@ -219,14 +219,31 @@ final class Creative_File_Controller implements Service {
 		$response->header( 'Cache-Control', 'private, no-store, max-age=0' );
 		$response->header( 'Referrer-Policy', 'no-referrer' );
 		$response->header( 'X-Frame-Options', 'SAMEORIGIN' );
-		$response->header(
-			'Content-Security-Policy',
-			Preview_Frame::document_policy( (string) wp_parse_url( home_url(), PHP_URL_SCHEME ) . '://' . (string) wp_parse_url( home_url(), PHP_URL_HOST ) )
-		);
+		$response->header( 'Content-Security-Policy', Preview_Frame::document_policy( self::document_origin() ) );
 
 		$this->pending_document = $document;
 
 		return $response;
+	}
+
+	/**
+	 * The site's own origin, as a source expression `img-src` will match.
+	 *
+	 * The port is part of it. Built from scheme and host alone this read
+	 * `http://localhost` for a site served at `http://localhost:8882`, which
+	 * matches nothing it is pointed at — so the policy blocked the very image
+	 * the document exists to show, on every install not using a default port,
+	 * which is every local and CI environment this runs in.
+	 *
+	 * @return string
+	 */
+	private static function document_origin(): string {
+		$home   = home_url();
+		$scheme = (string) wp_parse_url( $home, PHP_URL_SCHEME );
+		$host   = (string) wp_parse_url( $home, PHP_URL_HOST );
+		$port   = wp_parse_url( $home, PHP_URL_PORT );
+
+		return $scheme . '://' . $host . ( null === $port ? '' : ':' . (int) $port );
 	}
 
 	/**

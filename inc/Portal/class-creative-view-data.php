@@ -90,6 +90,27 @@ final class Creative_View_Data {
 	}
 
 	/**
+	 * What the device-preview frame loads.
+	 *
+	 * **A document, never the bytes.** Pointed at the artwork directly, a
+	 * browser builds a viewer document around it with a script of its own,
+	 * which the policy on those bytes correctly refuses — once per frame, in a
+	 * console the next person to open has to read past. The preview route
+	 * answers with one `img` under a policy that expects it, and picks the
+	 * promoted or private source itself, so this does not branch on approval.
+	 *
+	 * @param int $creative_id Creative post id.
+	 * @return string
+	 */
+	private function creative_preview_frame( int $creative_id ): string {
+		return add_query_arg(
+			'_wpnonce',
+			wp_create_nonce( 'wp_rest' ),
+			rest_url( Api::NAMESPACE . '/creatives/' . $creative_id . '/preview' )
+		);
+	}
+
+	/**
 	 * The campaign's creatives, shaped for display.
 	 *
 	 * No file path, no storage token and no checksum: those describe where the
@@ -97,7 +118,7 @@ final class Creative_View_Data {
 	 * ever needs to be told.
 	 *
 	 * @param int $campaign_id Campaign post id.
-	 * @return array<int, array{id: int, placement_id: int, placement: string, size: string, dimensions: string, click_url: string, alt_text: string, approved: bool, rejected: bool, state_text: string, notes: string, name: string, bytes: int, preview: string, delivering: bool, decisions: array<int, array{decision: string, reason: string, at: int}>, same_file: array<int, array{id: int, placement: string, approved: bool}>, weight: int|null, share: float|null, assignment_id: int, revision: int}>
+	 * @return array<int, array{id: int, placement_id: int, placement: string, size: string, dimensions: string, click_url: string, alt_text: string, approved: bool, rejected: bool, state_text: string, notes: string, name: string, bytes: int, preview: string, preview_frame: string, delivering: bool, decisions: array<int, array{decision: string, reason: string, at: int}>, same_file: array<int, array{id: int, placement: string, approved: bool}>, weight: int|null, share: float|null, assignment_id: int, revision: int}>
 	 */
 	public function creative_rows( int $campaign_id ): array {
 		$rows = array();
@@ -153,6 +174,7 @@ final class Creative_View_Data {
 				'name'          => null === $stored ? '' : $stored['name'],
 				'bytes'         => null === $stored ? 0 : $stored['bytes'],
 				'preview'       => $this->creative_preview( $creative['id'] ),
+				'preview_frame' => $this->creative_preview_frame( $creative['id'] ),
 
 				// Other placements holding this file, by name — never the
 				// checksum that found them. See `same_file()`.
