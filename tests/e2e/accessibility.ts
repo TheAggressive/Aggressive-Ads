@@ -4,6 +4,22 @@ import { expect, type Locator, type Page } from '@playwright/test';
 const wcagTags = [ 'wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa' ];
 
 /**
+ * The one console error that is the product working rather than failing.
+ *
+ * The device preview frames a creative — somebody else's file — under an empty
+ * `sandbox`, so nothing inside it may run script. A browser says so once per
+ * frame, but only because the harness reaches in: Playwright and the axe scan
+ * below both inject themselves into every frame they find. A real session
+ * injects nothing and prints nothing.
+ *
+ * Matched by the frame's own route rather than by the browser's wording alone,
+ * so a script blocked anywhere else still fails the specs that watch the
+ * console — as does this one ceasing to be blocked.
+ */
+export const sandboxRefusedInjection =
+	/^Blocked script execution in '[^']*\/aggr\/v1\/creatives\/\d+\/preview[^']*' because the document's frame is sandboxed/;
+
+/**
  * WCAG 1.4.10: content reflows at 320 CSS pixels without two-dimensional scrolling.
  */
 export async function expectNoHorizontalOverflow(
@@ -126,8 +142,21 @@ async function expectScopedA11y(
 	page: Page,
 	selector: string
 ): Promise< void > {
+	/*
+	 * The device preview is excluded because axe cannot enter it, not to spare
+	 * it scrutiny. Axe audits a frame by injecting itself into it, and that
+	 * frame forbids script (see above), so each attempt is refused — sixty-odd
+	 * times per scan as it walked the frame's contexts, and in WebKit it hung
+	 * until the test timed out rather than failing quickly.
+	 *
+	 * Nothing is lost. The `iframe` element itself is still audited here — its
+	 * accessible name and its place in the tab order live in this document —
+	 * and what it frames is one `img` with an empty `alt`, served by a route
+	 * of ours, not markup a scan of this page could ever reach.
+	 */
 	const result = await new AxeBuilder( { page } )
 		.include( selector )
+		.exclude( '.aggr-device__frame' )
 		.withTags( wcagTags )
 		.analyze();
 

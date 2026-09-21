@@ -3,6 +3,7 @@ import {
 	expectDialogKeyboard,
 	expectOpenDialogA11y,
 	expectPortalA11y,
+	sandboxRefusedInjection,
 } from './accessibility';
 import { signIn } from './sign-in-helper';
 import { solidPng } from './png';
@@ -402,7 +403,10 @@ test( 'advertiser completes and submits the accessible three-step wizard', async
 		} );
 	} );
 	page.on( 'console', ( message ) => {
-		if ( 'error' === message.type() ) {
+		if (
+			'error' === message.type() &&
+			! sandboxRefusedInjection.test( message.text() )
+		) {
 			pageErrors.push( message.text() );
 		}
 	} );

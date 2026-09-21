@@ -1,5 +1,9 @@
 import { expect, test } from '@playwright/test';
-import { expectDialogKeyboard, expectPortalA11y } from '../accessibility';
+import {
+	expectDialogKeyboard,
+	expectPortalA11y,
+	sandboxRefusedInjection,
+} from '../accessibility';
 import { signIn } from '../sign-in-helper';
 import { solidPng } from '../png';
 
@@ -18,7 +22,10 @@ test( 'the shared creative dialog works in WebKit', async ( { page } ) => {
 
 	page.on( 'pageerror', ( error ) => pageErrors.push( error.message ) );
 	page.on( 'console', ( message ) => {
-		if ( 'error' === message.type() ) {
+		if (
+			'error' === message.type() &&
+			! sandboxRefusedInjection.test( message.text() )
+		) {
 			pageErrors.push( message.text() );
 		}
 	} );
