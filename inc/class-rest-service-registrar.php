@@ -31,6 +31,7 @@ use Aggressive\Ads\REST\Settings_Controller;
 use Aggressive\Ads\REST\Transitions_Controller;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
+use Aggressive\Ads\Repository\Creative_Attachment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Line_Item_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
