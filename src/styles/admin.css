@@ -280,9 +280,26 @@
 	 * on a different surface. Everything else is inherited on purpose.
 	 */
 	.aggr-admin .aggr-creative__preview {
-		height: 22rem;
+		height: auto;
 		padding: var(--aggr-space-lg);
 		background: var(--aggr-color-surface-sunken);
+	}
+
+	/*
+	 * The device frame decides its own height here.
+	 *
+	 * The card's fixed height was right for a thumbnail and wrong for a frame
+	 * that changes width: a desktop preview inside an 22rem box scrolled
+	 * rather than showed, which is the opposite of what a reviewer opened it
+	 * for. The stage scrolls sideways instead, so a 1280px frame is reachable
+	 * on a laptop without stretching the card.
+	 */
+	.aggr-admin .aggr-creative__preview .aggr-device {
+		width: 100%;
+	}
+
+	.aggr-admin .aggr-device__frame {
+		height: 16rem;
 	}
 
 	.aggr-creative__body {

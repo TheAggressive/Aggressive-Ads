@@ -509,16 +509,16 @@ final class Review_Data {
 			}
 
 			$rows[] = array(
-				'id'           => $creative['id'],
-				'current_id'   => $current_id,
-				'placement'    => $this->placements->name( $creative['placement_id'] ),
-				'size'         => $creative['size'],
-				'dimensions'   => $creative['width'] . '×' . $creative['height'],
-				'click_url'    => $creative['click_url'],
-				'alt_text'     => $creative['alt_text'],
-				'current_url'  => $current['click_url'],
-				'current_alt'  => $current['alt_text'],
-				'requested_at' => $this->revisions->requested_at( $creative['id'] ),
+				'id'            => $creative['id'],
+				'current_id'    => $current_id,
+				'placement'     => $this->placements->name( $creative['placement_id'] ),
+				'size'          => $creative['size'],
+				'dimensions'    => $creative['width'] . '×' . $creative['height'],
+				'click_url'     => $creative['click_url'],
+				'alt_text'      => $creative['alt_text'],
+				'current_url'   => $current['click_url'],
+				'current_alt'   => $current['alt_text'],
+				'requested_at'  => $this->revisions->requested_at( $creative['id'] ),
 
 				/*
 				 * Derived from the two checksums, never from the request that
@@ -526,8 +526,9 @@ final class Review_Data {
 				 * is being told something the server verified, which is the
 				 * whole basis for approving it at a glance.
 				 */
-				'text_only'    => $this->revisions->is_text_only_revision( (int) $creative['id'] ),
-				'preview'      => $this->creative_preview( (int) $creative['id'] ),
+				'text_only'     => $this->revisions->is_text_only_revision( (int) $creative['id'] ),
+				'preview'       => $this->creative_preview( (int) $creative['id'] ),
+				'preview_frame' => $this->creative_preview_frame( (int) $creative['id'] ),
 			);
 		}
 
@@ -571,6 +572,27 @@ final class Review_Data {
 	}
 
 	/**
+	 * What the device-preview frame loads.
+	 *
+	 * **A document, never the bytes.** Pointed at the artwork directly, a
+	 * browser builds a viewer document around it with a script of its own,
+	 * which the policy on those bytes correctly refuses — once per frame, in a
+	 * console the next person to open has to read past. The preview route
+	 * answers with one `img` under a policy that expects it, and picks the
+	 * promoted or private source itself, so this does not branch on approval.
+	 *
+	 * @param int $creative_id Creative post id.
+	 * @return string
+	 */
+	private function creative_preview_frame( int $creative_id ): string {
+		return add_query_arg(
+			'_wpnonce',
+			wp_create_nonce( 'wp_rest' ),
+			rest_url( Api::NAMESPACE . '/creatives/' . $creative_id . '/preview' )
+		);
+	}
+
+	/**
 	 * The campaign's creatives, as a reviewer needs to see them.
 	 *
 	 * The private path and the checksum stay out: a reviewer judges the
@@ -604,14 +626,14 @@ final class Review_Data {
 			}
 
 			$rows[] = array(
-				'id'         => $creative['id'],
-				'placement'  => $this->placements->name( $creative['placement_id'] ),
-				'size'       => $creative['size'],
-				'dimensions' => $creative['width'] > 0 && $creative['height'] > 0
+				'id'            => $creative['id'],
+				'placement'     => $this->placements->name( $creative['placement_id'] ),
+				'size'          => $creative['size'],
+				'dimensions'    => $creative['width'] > 0 && $creative['height'] > 0
 					? $creative['width'] . '×' . $creative['height']
 					: '',
-				'click_url'  => $creative['click_url'],
-				'alt_text'   => $creative['alt_text'],
+				'click_url'     => $creative['click_url'],
+				'alt_text'      => $creative['alt_text'],
 
 				/*
 				 * Whether this creative is still waiting to be published.
@@ -620,8 +642,9 @@ final class Review_Data {
 				 * the replacement path, so it reads `pending` for creatives
 				 * that have been serving for weeks.
 				 */
-				'awaiting'   => in_array( (int) $creative['id'], $awaiting, true ),
-				'preview'    => $this->creative_preview( (int) $creative['id'] ),
+				'awaiting'      => in_array( (int) $creative['id'], $awaiting, true ),
+				'preview'       => $this->creative_preview( (int) $creative['id'] ),
+				'preview_frame' => $this->creative_preview_frame( (int) $creative['id'] ),
 			);
 		}
 

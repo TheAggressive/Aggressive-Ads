@@ -9,8 +9,10 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\REST;
 
+use Aggressive\Ads\Domain\Preview_Frame;
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Domain\Upload_Rules;
+use Aggressive\Ads\Repository\Creative_Attachment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Storage\Private_Storage;
@@ -72,14 +74,27 @@ final class Creative_File_Controller implements Service {
 	private string $pending_path = '';
 
 	/**
+	 * The preview document waiting to be emitted, if any.
+	 *
+	 * Held the way `$pending_path` is, and for the same reason: the response
+	 * body is not JSON, so it is written by the serve hook rather than
+	 * returned.
+	 *
+	 * @var string
+	 */
+	private string $pending_document = '';
+
+	/**
 	 * Constructor.
 	 *
-	 * @param Creative_Repository $creatives Creative persistence.
-	 * @param Private_Storage     $storage   Private file storage.
+	 * @param Creative_Repository            $creatives Creative persistence.
+	 * @param Private_Storage                $storage   Private file storage.
+	 * @param Creative_Attachment_Repository $attachments Where an approved creative's bytes live.
 	 */
 	public function __construct(
 		private readonly Creative_Repository $creatives,
-		private readonly Private_Storage $storage
+		private readonly Private_Storage $storage,
+		private readonly Creative_Attachment_Repository $attachments
 	) {
 	}
 
@@ -100,6 +115,23 @@ final class Creative_File_Controller implements Service {
 	 */
 	public function register_routes(): void {
 		self::register_route(
+			'/creatives/(?P<id>\d+)/preview',
+			array(
+				'methods'             => 'GET',
+				'callback'            => array( $this, 'preview' ),
+				'permission_callback' => array( $this, 'permission' ),
+				'args'                => array(
+					'id' => array(
+						'type'              => 'integer',
+						'required'          => true,
+						'sanitize_callback' => 'absint',
+						'validate_callback' => static fn ( $value ): bool => is_numeric( $value ) && (int) $value > 0,
+					),
+				),
+			)
+		);
+
+		self::register_route(
 			'/creatives/(?P<id>\d+)/file',
 			array(
 				'methods'             => 'GET',
@@ -115,6 +147,103 @@ final class Creative_File_Controller implements Service {
 				),
 			)
 		);
+	}
+
+	/**
+	 * A document holding one creative, for a frame to render.
+	 *
+	 * **Ours, not the browser's.** Handed an image to render on its own, a
+	 * browser builds a viewer document around it, with inline styles and a
+	 * script of its own; the policy on those bytes correctly refuses both, and
+	 * says so in the console sixty-seven times per preview. This is the
+	 * document that frame loads instead: one `img`, no script, and the same
+	 * authorization as the bytes it points at — checked here so a document is
+	 * never produced for a creative the caller may not see.
+	 *
+	 * @param WP_REST_Request $request The request.
+	 * @return WP_REST_Response|WP_Error
+	 *
+	 * @phpstan-param WP_REST_Request<array<string, mixed>> $request
+	 */
+	public function preview( WP_REST_Request $request ) {
+		$creative_id = (int) $request->get_param( 'id' );
+
+		/*
+		 * The same one answer every failure gets below: not a creative, no
+		 * such id, not yours. Distinguishing them is what builds the oracle.
+		 */
+		if ( ! current_user_can( 'read_aggr_creative', $creative_id ) ) {
+			return new WP_Error( 'aggr_not_found', __( 'Not found.', 'aggressive-ads' ), array( 'status' => 404 ) );
+		}
+
+		/*
+		 * **Where the bytes are depends on whether they were approved.**
+		 * Promotion copies the artwork into the Media Library and may clear
+		 * the private stage, so an approved creative has no private file to
+		 * stream — the same order the card's own thumbnail uses.
+		 */
+		$promoted = $this->attachments->attachment_url( $creative_id );
+		$source   = '' !== $promoted
+			? $promoted
+			: add_query_arg(
+				'_wpnonce',
+				wp_create_nonce( 'wp_rest' ),
+				rest_url( Api::NAMESPACE . '/creatives/' . $creative_id . '/file' )
+			);
+
+		if ( '' === $promoted && is_wp_error( $this->prepare( $creative_id ) ) ) {
+			return new WP_Error( 'aggr_not_found', __( 'Not found.', 'aggressive-ads' ), array( 'status' => 404 ) );
+		}
+
+		$document = sprintf(
+			'<!DOCTYPE html><html lang="%1$s"><head><meta charset="utf-8"><title>%2$s</title>'
+			. '<style>html,body{margin:0;height:100%%;display:flex;align-items:center;justify-content:center;background:#fff}'
+			. 'img{max-width:100%%;height:auto;display:block}</style></head>'
+
+			/*
+			 * `alt=""`: the frame carries the accessible name — "Preview of
+			 * the ad for Header" — and the creative's own description is on
+			 * the card beside it. A second name here would be read twice, and
+			 * inventing one from a filename is worse than none.
+			 */
+			. '<body><img src="%3$s" alt=""></body></html>',
+			esc_attr( str_replace( '_', '-', (string) get_locale() ) ),
+			esc_html__( 'Advertisement preview', 'aggressive-ads' ),
+			esc_url( $source )
+		);
+
+		$response = new WP_REST_Response( null, 200 );
+
+		$response->header( 'Content-Type', 'text/html; charset=utf-8' );
+		$response->header( 'X-Content-Type-Options', 'nosniff' );
+		$response->header( 'Cache-Control', 'private, no-store, max-age=0' );
+		$response->header( 'Referrer-Policy', 'no-referrer' );
+		$response->header( 'X-Frame-Options', 'SAMEORIGIN' );
+		$response->header( 'Content-Security-Policy', Preview_Frame::document_policy( self::document_origin() ) );
+
+		$this->pending_document = $document;
+
+		return $response;
+	}
+
+	/**
+	 * The site's own origin, as a source expression `img-src` will match.
+	 *
+	 * The port is part of it. Built from scheme and host alone this read
+	 * `http://localhost` for a site served at `http://localhost:8882`, which
+	 * matches nothing it is pointed at — so the policy blocked the very image
+	 * the document exists to show, on every install not using a default port,
+	 * which is every local and CI environment this runs in.
+	 *
+	 * @return string
+	 */
+	private static function document_origin(): string {
+		$home   = home_url();
+		$scheme = (string) wp_parse_url( $home, PHP_URL_SCHEME );
+		$host   = (string) wp_parse_url( $home, PHP_URL_HOST );
+		$port   = wp_parse_url( $home, PHP_URL_PORT );
+
+		return $scheme . '://' . $host . ( null === $port ? '' : ':' . (int) $port );
 	}
 
 	/**
@@ -162,6 +291,20 @@ final class Creative_File_Controller implements Service {
 		// artwork, and a cache between here and them does not know that.
 		$response->header( 'Cache-Control', 'private, no-store, max-age=0' );
 		$response->header( 'Referrer-Policy', 'no-referrer' );
+
+		/*
+		 * **Untrusted rendering, and P17 says so.** A reviewer's browser is
+		 * not a safer place to run a creative than a visitor's, so the bytes
+		 * are served under a policy that permits the image and nothing else:
+		 * no script, no style, no fetch, no frame of its own, no form, and no
+		 * embedding by another site. `sandbox` covers the case where this
+		 * response is the document — opened directly, or framed for a device
+		 * preview — where the attribute alone would not be enough.
+		 */
+		$response->header( 'Content-Security-Policy', Preview_Frame::POLICY );
+
+		// For the browsers that still read the older header instead.
+		$response->header( 'X-Frame-Options', 'SAMEORIGIN' );
 
 		return $response;
 	}
@@ -230,7 +373,27 @@ final class Creative_File_Controller implements Service {
 	 * @return bool
 	 */
 	public function serve( bool $served, WP_HTTP_Response $result ): bool {
-		if ( $served || '' === $this->pending_path ) {
+		if ( $served ) {
+			return $served;
+		}
+
+		if ( '' !== $this->pending_document ) {
+			$document = $this->pending_document;
+
+			// Cleared before emitting, as the path below is, so a later
+			// response in the same request cannot inherit it.
+			$this->pending_document = '';
+
+			if ( 200 !== $result->get_status() ) {
+				return $served;
+			}
+
+			echo $document; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Built in preview() from escaped parts; it is the response body, not a fragment.
+
+			return true;
+		}
+
+		if ( '' === $this->pending_path ) {
 			return $served;
 		}
 

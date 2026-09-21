@@ -241,9 +241,9 @@ Ordered by dependency, not by size.
 3. **Comparison.** *(built)* Two variants side by side over a window, using
    the counters from slice 1. An experiment is this plus a hypothesis; it is
    not a separate mechanism. See the slice 3 closeout below.
-4. **Review history and preview.** What was approved or rejected, when and why,
-   and a device preview of the exact revision reviewed. The history half is
-   built — see the slice 4 note below; the preview is what remains.
+4. **Review history and preview.** *(built)* What was approved or rejected,
+   when and why, and a device preview of the exact revision reviewed. See the
+   slice 4 notes below.
 
 ## Slice 1 closeout — per-creative measurement
 
@@ -547,3 +547,40 @@ The migration test asserts the table comes up empty.
 **Still to build:** the device preview, and the reviewer-facing history screen.
 The decisions are recorded and the advertiser's card reads them; a reviewer
 still reads the audit log for anything older than the current queue.
+
+## Slice 4 note — the device preview, and where its isolation is asserted
+
+**One frame, drawn twice.** `Domain\Preview_Frame` holds the widths (390, 834,
+1280) and the sandbox; the advertiser's portal draws the frame in PHP and the
+reviewer's screen draws it in React from the same values, sent in the review
+screen's payload. A phone that is 390 pixels on one surface and 375 on the
+other is two answers to the question a preview exists to ask.
+
+**The isolation is on the response, not only on the frame.** The creative's
+bytes now carry `Content-Security-Policy: default-src 'none'; img-src 'self'
+data:; sandbox; frame-ancestors 'self'; base-uri 'none'; form-action 'none'`
+and `X-Frame-Options: SAMEORIGIN`, beside the `nosniff`, allowlisted type and
+`no-store` they already had. The attribute alone would not cover the response
+being opened directly rather than framed, and the policy alone would not cover
+a browser that ignores it.
+
+**Asserted where it can be seen to be true.** `CreativeFileTest` asserts each
+clause by name rather than the whole string, because a policy asserted only as
+one string is one nobody notices the weakening of. `PreviewFrameTest` asserts
+the sandbox is empty and that no width was invented. `DevicePreviewContractTest`
+reads both drawings and fails when either stops taking the sandbox and the
+widths from the server. The browser suite asserts `sandbox=""` on the frame and
+that the widths are a radio group that works from the keyboard — the axe and
+focus coverage the dialog already had now covers this UI too.
+
+**No revision is touched to produce a preview.** The frame's source is the same
+authenticated file route the card's thumbnail uses, which is the exact bytes
+that were uploaded; the invariant that forbids editing a reviewed revision to
+make something to look at is satisfied by not having anything to edit.
+
+**Deliberately not built: a preview of how the creative sits in the page.** The
+frame shows the ad at a screen width, not the publisher's layout around it.
+Rendering the surrounding page would mean serving the site inside the frame,
+which is a different security question — the preview would no longer be one
+untrusted file. **Revisit when** a publisher asks to see placement context and
+somebody has decided what the frame is allowed to load.

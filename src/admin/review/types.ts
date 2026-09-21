@@ -41,6 +41,12 @@ export type Creative = {
 	click_url: string;
 	preview: string;
 	/**
+	 * What the device-preview frame loads: a document holding the artwork,
+	 * not the artwork itself. A browser handed bare bytes writes its own
+	 * viewer around them, and the policy on those bytes refuses it.
+	 */
+	preview_frame: string;
+	/**
 	 * Still waiting to be published.
 	 *
 	 * Server-derived from "has no Media Library attachment", which is what
@@ -152,6 +158,17 @@ export type Bootstrap = {
 	campaign: Campaign | null;
 	advertisers: Advertiser[];
 	portalBase: string;
+
+	/**
+	 * How a creative is previewed: the widths, and the sandbox the frame
+	 * carries. From `Domain\Preview_Frame`, because the advertiser's portal
+	 * draws the same frame from PHP and two copies of "a phone is 390 pixels"
+	 * are two answers to one question.
+	 */
+	preview: {
+		widths: Record< string, number >;
+		sandbox: string;
+	};
 	i18n: Record< string, string >;
 };
 

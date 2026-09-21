@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Admin;
 
+use Aggressive\Ads\Domain\Preview_Frame;
 use Aggressive\Ads\Portal\Routes;
 use Aggressive\Ads\Assets\Assets;
 use Aggressive\Ads\Core\Service;
@@ -224,6 +225,17 @@ final class Review_Screen implements Service {
 			// query and a payload behind a control that is not on the screen.
 			'advertisers' => $campaign_id > 0 ? array() : $this->data->advertisers(),
 			'portalBase'  => Routes::url( 'campaigns' ),
+
+			/*
+			 * The widths and the sandbox the preview frame uses, from the
+			 * domain rather than retyped here. The advertiser's portal draws
+			 * the same frame from PHP, and a phone that is 390 pixels in one
+			 * and 375 in the other is two answers to one question.
+			 */
+			'preview'     => array(
+				'widths'  => Preview_Frame::widths(),
+				'sandbox' => Preview_Frame::SANDBOX,
+			),
 			'i18n'        => self::strings(),
 		);
 
@@ -315,6 +327,12 @@ final class Review_Screen implements Service {
 			'requiredSize'             => __( 'Required size', 'aggressive-ads' ),
 			'uploadedSize'             => __( 'Uploaded size', 'aggressive-ads' ),
 			'artworkUnchanged'         => __( 'Artwork unchanged — only the text differs', 'aggressive-ads' ),
+			'previewWidth'             => __( 'Preview width', 'aggressive-ads' ),
+			'previewPhone'             => __( 'Phone', 'aggressive-ads' ),
+			'previewTablet'            => __( 'Tablet', 'aggressive-ads' ),
+			'previewDesktop'           => __( 'Desktop', 'aggressive-ads' ),
+			/* translators: %s: the placement an ad runs in. */
+			'previewTitle'             => __( 'Preview of the ad for %s', 'aggressive-ads' ),
 			'altText'                  => __( 'Alt text', 'aggressive-ads' ),
 			'destination'              => __( 'Destination', 'aggressive-ads' ),
 			'currentDestination'       => __( 'Current destination', 'aggressive-ads' ),

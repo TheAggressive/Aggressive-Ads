@@ -40,6 +40,7 @@ const EMPTY: Bootstrap = {
 	campaign: null,
 	advertisers: [],
 	portalBase: '',
+	preview: { widths: {}, sandbox: '' },
 	i18n: {},
 };
 
@@ -411,6 +412,7 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 			{ campaign ? (
 				<CampaignView
 					campaign={ campaign }
+					preview={ data.preview }
 					busy={ busy }
 					onBack={ () => void loadQueue( filter, queue.page ) }
 					onEdit={ () =>

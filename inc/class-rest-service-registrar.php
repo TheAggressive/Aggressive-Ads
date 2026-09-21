@@ -31,6 +31,7 @@ use Aggressive\Ads\REST\Settings_Controller;
 use Aggressive\Ads\REST\Transitions_Controller;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
+use Aggressive\Ads\Repository\Creative_Attachment_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Line_Item_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
@@ -193,7 +194,8 @@ final class Rest_Service_Registrar {
 			Creative_File_Controller::class,
 			static fn ( Service_Container $c ): Creative_File_Controller => new Creative_File_Controller(
 				$c->get( Creative_Repository::class ),
-				$c->get( Private_Storage::class )
+				$c->get( Private_Storage::class ),
+				$c->get( Creative_Attachment_Repository::class )
 			)
 		);
 		$container->register(

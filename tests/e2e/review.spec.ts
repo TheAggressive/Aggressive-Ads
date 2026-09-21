@@ -1,7 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { expectAdminA11y } from './accessibility';
 import { signInToAdmin } from './admin-login';
-import { solidPng } from './png';
 import { wpPluginFile } from './wp-cli';
 
 /**
@@ -122,11 +121,17 @@ test( 'a reviewer works the queue, claims a campaign and writes notes', async ( 
 
 test( 'a tall creative stays inside its preview box', async ( { page } ) => {
 	/*
-	 * A 160x600 skyscraper used to render 204px below its own card and over the
-	 * text beneath it. The cause was CSS rather than data — the staff card
+	 * A 160x600 skyscraper used to render 204px below its own card and over
+	 * the text beneath it. The cause was CSS rather than data — the staff card
 	 * redefined a box the portal already sizes, and a percentage max-height
-	 * lost the definite parent it resolves against — so this drives the real
-	 * screen and swaps the image, which is what actually exercises the rules.
+	 * lost the definite parent it resolves against.
+	 *
+	 * **The creative is inside a sandboxed frame now**, so this can no longer
+	 * swap the image and watch what the card does: nothing here can reach into
+	 * that document, which is the point of it. What it asserts instead is the
+	 * property the swap was a way of reaching — the frame stays inside its box
+	 * at every width the preview offers, including the widest, which is the
+	 * one that would push a card sideways if the stage did not scroll.
 	 */
 	await signInToAdmin( page );
 
@@ -144,42 +149,50 @@ test( 'a tall creative stays inside its preview box', async ( { page } ) => {
 	);
 
 	const preview = page.locator( '.aggr-creative__preview' ).first();
+	const frame = preview.locator( 'iframe.aggr-device__frame' );
 
-	await preview.locator( 'img' ).waitFor();
+	await frame.waitFor();
 
-	const tall = `data:image/png;base64,${ solidPng( 160, 600 ).toString(
-		'base64'
-	) }`;
+	// The isolation, on the reviewer's screen as on the advertiser's.
+	await expect( frame ).toHaveAttribute( 'sandbox', '' );
 
-	await page.evaluate( ( src ) => {
-		document
-			.querySelectorAll< HTMLImageElement >(
-				'.aggr-creative__preview img'
+	for ( const width of [ 'Phone', 'Tablet', 'Desktop' ] ) {
+		await preview
+			.getByRole( 'button', { name: new RegExp( width ) } )
+			.click();
+
+		await expect
+			.poll( async () =>
+				page.evaluate( () => {
+					const element = document.querySelector(
+						'.aggr-device__frame'
+					);
+					const box = document.querySelector(
+						'.aggr-creative__preview'
+					);
+
+					if ( ! element || ! box ) {
+						return 999;
+					}
+
+					return Math.round(
+						element.getBoundingClientRect().bottom -
+							box.getBoundingClientRect().bottom
+					);
+				} )
 			)
-			.forEach( ( img ) => {
-				img.src = src;
-			} );
-	}, tall );
+			.toBeLessThanOrEqual( 0 );
+	}
 
-	await expect
-		.poll( async () =>
-			page.evaluate( () => {
-				const img = document.querySelector(
-					'.aggr-creative__preview img'
-				);
-				const box = document.querySelector( '.aggr-creative__preview' );
+	// And the page itself never scrolls sideways because of it: the stage
+	// scrolls instead, which is what keeps a 1280px frame usable on a laptop.
+	const overflow = await page.evaluate(
+		() =>
+			document.documentElement.scrollWidth -
+			document.documentElement.clientWidth
+	);
 
-				if ( ! img || ! box ) {
-					return 999;
-				}
-
-				return Math.round(
-					img.getBoundingClientRect().bottom -
-						box.getBoundingClientRect().bottom
-				);
-			} )
-		)
-		.toBeLessThanOrEqual( 0 );
+	expect( overflow ).toBeLessThanOrEqual( 0 );
 } );
 
 test( 'a decision that needs feedback is taken in an accessible dialog', async ( {
