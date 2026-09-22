@@ -17,6 +17,7 @@ use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Campaign_Request_Repository;
 use Aggressive\Ads\Repository\Creative_Attachment_Repository;
+use Aggressive\Ads\Repository\Creative_Decision_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Creative_Revision_Repository;
 use Aggressive\Ads\Workflow\Assigned_Creatives;
@@ -94,6 +95,7 @@ final class Review_Data {
 	 * @param \Aggressive\Ads\Workflow\Creative_Approval $approvals  Creatives awaiting publication.
 	 * @param Pending_Work                               $pending    Waiting-work count, shared with the menu.
 	 * @param Campaign_Request_Repository                $requests   Advertiser requests and proposed changes.
+	 * @param Creative_Decision_Repository               $decisions  What a reviewer decided about each revision.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -108,7 +110,8 @@ final class Review_Data {
 		private readonly Line_Item_Repository $line_items,
 		private readonly \Aggressive\Ads\Workflow\Creative_Approval $approvals,
 		private readonly Pending_Work $pending,
-		private readonly Campaign_Request_Repository $requests
+		private readonly Campaign_Request_Repository $requests,
+		private readonly Creative_Decision_Repository $decisions
 	) {
 	}
 
@@ -645,6 +648,35 @@ final class Review_Data {
 				'awaiting'      => in_array( (int) $creative['id'], $awaiting, true ),
 				'preview'       => $this->creative_preview( (int) $creative['id'] ),
 				'preview_frame' => $this->creative_preview_frame( (int) $creative['id'] ),
+				'decisions'     => $this->decision_rows( (int) $creative['id'] ),
+			);
+		}
+
+		return $rows;
+	}
+
+	/**
+	 * What reviewers decided about this revision, newest first.
+	 *
+	 * The advertiser's card shows the same decisions without the actor. Staff
+	 * are the people who need to see who refused an ad; the portal payload
+	 * deliberately does not.
+	 *
+	 * @param int $creative_id Creative id.
+	 * @return array<int, array{decision: string, reason: string, at: int, at_text: string, actor: string}>
+	 */
+	private function decision_rows( int $creative_id ): array {
+		$rows = array();
+
+		foreach ( array_reverse( $this->decisions->for_revision( $creative_id ) ) as $row ) {
+			$at = (int) $row['decided_at_ts'];
+
+			$rows[] = array(
+				'decision' => (string) $row['decision'],
+				'reason'   => (string) $row['reason'],
+				'at'       => $at,
+				'at_text'  => self::format_timestamp( $at, true ),
+				'actor'    => self::user_name( (int) $row['actor_user_id'] ),
 			);
 		}
 

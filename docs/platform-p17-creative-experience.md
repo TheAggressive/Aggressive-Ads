@@ -3,11 +3,11 @@
 ## Status
 
 - Phase: **P17 — Creative experience**
-- Roadmap state: `[ ]` — slices 1 to 3 of 4 built
-- Last audited: 2026-09-06
+- Roadmap state: `[x]`
+- Last audited: 2026-09-22
 - Authoritative environments: CI's pinned MySQL 8.4 / PHP 8.4 lanes
 
-This document records planned work. It does not claim completion.
+This document records the exit evidence. The phase is complete.
 
 ## Outcome
 
@@ -481,12 +481,20 @@ audit an individual decision rather than compare totals.
   because a refusal that distinguishes "forbidden" from "missing" enumerates.
   *(done — slice 2.)*
 - Approving a variant does not alter any other variant's revision, asserted by
-  checksum rather than by absence of an error.
+  checksum rather than by absence of an error. *(done — slice 4.)*
+  `CreativeDecisionHistoryTest::test_approving_one_ad_leaves_the_others_checksum_alone`
+  records both ads' checksum and private path, approves the second, and asserts
+  the first is unchanged and has no decision of its own.
 - A rejected revision keeps its reason after the campaign moves on.
+  *(done — slice 4.)*
+  `CreativeDecisionHistoryTest::test_a_rejection_keeps_its_reason_after_the_campaign_moves_on`
+  moves the campaign to `complete` and reads the reason back.
 - Preview renders under the same isolation as delivery, asserted on the headers
-  and the sandbox rather than on the rendered output.
+  and the sandbox rather than on the rendered output. *(done — slice 4.)*
+  Named in the device-preview note below.
 - The projector's added dimension is measured for row growth on a seeded
-  multi-creative placement, and the figure is recorded here.
+  multi-creative placement, and the figure is recorded here. *(done — slice 1.)*
+  Four creatives over seven days: **28 rows where the old grain produced 7.**
 
 ## Entry criteria
 
@@ -504,13 +512,54 @@ behind P16 — the two are independent and P17 is the one that can start.
 
 ## Exit criteria
 
-To be completed at closeout.
+- An advertiser can tell which variant was delivered. A seeded placement serving
+  four creatives over seven days writes **28 rollup rows where the old grain
+  wrote 7**.
+- A reviewer and an advertiser can read what was decided about a revision after
+  the campaign has moved on. The advertiser sees the decision, the reason and
+  when. The review screen also sees who decided.
+- Approving one revision does not change any other revision's checksum.
+- The device preview shows the exact uploaded bytes, in a sandbox, at the widths
+  the server names. It does not load the publisher's page.
 
 ## Exit evidence and decision
 
-Completed at closeout. The measured row-growth figure from slice 1 belongs here
-as a number, not a description — it is the one cost this phase takes on that a
-reader cannot infer from the code.
+Closed 2026-09-22. The four slices are built. #261 closed with the history
+table and the device preview; the review screen's history list is the surface
+that sentence was still missing, and it is in this closeout.
+
+**Row growth.** Four creatives over seven days: 28 rows, was 7.
+`RollupCreativeGrainTest::test_the_creative_grain_multiplies_rows_by_the_creatives_serving`.
+
+**A refusal outlives the campaign.** The reason is still on the revision after
+the campaign is `complete`.
+`CreativeDecisionHistoryTest::test_a_rejection_keeps_its_reason_after_the_campaign_moves_on`.
+
+**Who may see whom.** The advertiser's row is exactly `decision`, `reason`,
+`at`. The review payload adds `at_text` and the reviewer's display name, and
+does not include `actor_user_id`.
+`test_the_advertisers_card_shows_the_decision_without_naming_the_reviewer` and
+`test_the_review_screen_names_who_decided`.
+
+**A decision is the site's.** Moving the row's `blog_id` makes both reads
+return nothing.
+`CreativeDecisionHistoryTest::test_a_decision_is_scoped_to_its_own_site`.
+A reviewer works across organizations by capability; the history read itself
+is the campaign the screen was already authorized to open.
+
+**One approval, one revision.** Approving the second ad leaves the first ad's
+checksum and private path untouched, and writes no decision against it.
+`test_approving_one_ad_leaves_the_others_checksum_alone`.
+
+**Preview isolation.** `CreativeFileTest` asserts each CSP clause by name.
+`PreviewFrameTest` asserts an empty sandbox and the three widths.
+`DevicePreviewContractTest` reads both drawings. The browser suite asserts
+`sandbox=""` on the frame.
+
+**Not built, on purpose.** Decisions from before the table are not backfilled.
+Comparison does not replay one past impression: no selection seed is stored.
+The frame does not render the publisher's page around the ad. Each of those
+is named in the slice notes, with the condition that would reopen it.
 
 ## Slice 4 note — review history, and what the audit log could not be
 
@@ -544,9 +593,10 @@ whatever the response holds once the id is a digit in a timestamp.
 audit log; inventing rows for them would put a date and an actor on a guess.
 The migration test asserts the table comes up empty.
 
-**Still to build:** the device preview, and the reviewer-facing history screen.
-The decisions are recorded and the advertiser's card reads them; a reviewer
-still reads the audit log for anything older than the current queue.
+**The review screen reads the same rows.** Each creative on the staff campaign
+carries its decisions, newest first, including the reviewer's display name.
+The audit timeline is still there for everything else that happened; it is no
+longer the only place a past refusal can be read.
 
 ## Slice 4 note — the device preview, and where its isolation is asserted
 

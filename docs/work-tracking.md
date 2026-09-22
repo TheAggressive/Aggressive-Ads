@@ -65,7 +65,7 @@ operations and documentation as applicable.
 
 | Phase | Tracking issue | Notes |
 |---|---:|---|
-| P17 Creative experience | #260 | 3/4 slices built; remaining action is #261. |
+| P17 Creative experience | #260 | Closed 2026-09-22. Four slices built. |
 | P18 Rich creative types | #262 | Define the detailed phase before implementation. |
 | P19 Billing domain | #263 | Authoritative commercial model for later workflow/revenue work. |
 | P20 Publisher workflow | #264 | Blocked on P19 for renewals/make-goods with commercial meaning. |
@@ -104,25 +104,24 @@ publisher platform without duplicating P17–P34:
 
 Issue numbers are identifiers, not priority. The current dependency order is:
 
-1. Finish P17: #261, then close #260.
-2. Near-term competitive value with foundations already present: #279 and #280.
-3. P18 rich creatives: #262.
-4. P19 billing/commercial domain: #263.
-5. Commercial product layer: #281 and #282.
-6. P20 publisher workflow: #264.
-7. Sales operations: #283 and #284.
-8. P21 RBAC: #265.
-9. P22 API/service accounts: #266.
-10. P23 webhooks: #267.
-11. CRM boundary: #285.
-12. P27 privacy/consent: #271 before new identifier-dependent provider work.
-13. Cross-channel model: #286.
-14. Newsletter and sponsored-content channels: #287 and #288.
-15. Provider/programmatic/supply chain: #268 → #269 → #270.
-16. Traffic quality: #272.
-17. Scale/ingestion/observability/performance: #273 → #274 → #275 → #276.
-18. P33 accessibility (#277) remains an active gate throughout all UI work.
-19. P34 intelligence (#278) begins only after the data/privacy/audit model is
+1. Near-term competitive value with foundations already present: #279 and #280.
+2. P18 rich creatives: #262.
+3. P19 billing/commercial domain: #263.
+4. Commercial product layer: #281 and #282.
+5. P20 publisher workflow: #264.
+6. Sales operations: #283 and #284.
+7. P21 RBAC: #265.
+8. P22 API/service accounts: #266.
+9. P23 webhooks: #267.
+10. CRM boundary: #285.
+11. P27 privacy/consent: #271 before new identifier-dependent provider work.
+12. Cross-channel model: #286.
+13. Newsletter and sponsored-content channels: #287 and #288.
+14. Provider/programmatic/supply chain: #268 → #269 → #270.
+15. Traffic quality: #272.
+16. Scale/ingestion/observability/performance: #273 → #274 → #275 → #276.
+17. P33 accessibility (#277) remains an active gate throughout all UI work.
+18. P34 intelligence (#278) begins only after the data/privacy/audit model is
     mature enough to constrain and evaluate suggestions.
 
 Independent work may run in parallel when it does not share an unresolved

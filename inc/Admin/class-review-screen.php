@@ -333,6 +333,12 @@ final class Review_Screen implements Service {
 			'previewDesktop'           => __( 'Desktop', 'aggressive-ads' ),
 			/* translators: %s: the placement an ad runs in. */
 			'previewTitle'             => __( 'Preview of the ad for %s', 'aggressive-ads' ),
+			'reviewHistory'            => __( 'Review history', 'aggressive-ads' ),
+			'decisionApproved'         => __( 'Approved', 'aggressive-ads' ),
+			'decisionRejected'         => __( 'Not approved', 'aggressive-ads' ),
+			'decisionUpdateApproved'   => __( 'Update approved', 'aggressive-ads' ),
+			'decisionUpdateRejected'   => __( 'Update not approved', 'aggressive-ads' ),
+			'reviewed'                 => __( 'Reviewed', 'aggressive-ads' ),
 			'altText'                  => __( 'Alt text', 'aggressive-ads' ),
 			'destination'              => __( 'Destination', 'aggressive-ads' ),
 			'currentDestination'       => __( 'Current destination', 'aggressive-ads' ),

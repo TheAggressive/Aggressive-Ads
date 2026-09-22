@@ -14,6 +14,7 @@
 import type { ReactElement } from 'react';
 import { useState } from '@wordpress/element';
 import { Dialog } from './dialog';
+import { DecisionHistory } from './history';
 import { DevicePreview } from './preview';
 import { DeliveryPolicy } from './delivery';
 import { t } from '../shared/save';
@@ -149,6 +150,7 @@ function CreativeCard( {
 						</>
 					) }
 				</dl>
+				<DecisionHistory decisions={ creative.decisions } />
 				{ awaiting ? (
 					<div className="aggr-form aggr-creative__decision">
 						<p className="aggr-hint">

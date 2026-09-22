@@ -32,6 +32,14 @@ export type Queue = {
 	page: number;
 };
 
+export type CreativeDecision = {
+	decision: string;
+	reason: string;
+	at: number;
+	at_text: string;
+	actor: string;
+};
+
 export type Creative = {
 	id: number;
 	placement: string;
@@ -55,6 +63,13 @@ export type Creative = {
 	 * creatives that have been serving for weeks.
 	 */
 	awaiting?: boolean;
+	/**
+	 * What reviewers decided about this revision, newest first.
+	 *
+	 * Absent on a pending replacement: that revision has no decisions yet.
+	 * The actor is staff-only; the advertiser card never receives it.
+	 */
+	decisions?: CreativeDecision[];
 };
 
 export type CreativeUpdate = Creative & {

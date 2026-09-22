@@ -131,7 +131,7 @@ here. It is summarized in
 [platform-implementation-progress.md](platform-implementation-progress.md) and
 tracked by Issues:
 
-- P17 #260 (remaining action #261)
+- P17 #260 *(complete)*
 - P18 #262
 - P19 #263
 - P20 #264

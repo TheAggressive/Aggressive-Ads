@@ -9,12 +9,14 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Tests\Integration;
 
+use Aggressive\Ads\Admin\Review_Data;
 use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Portal\Creative_View_Data;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Creative_Decision_Repository;
+use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Security\Ownership;
 use Aggressive\Ads\Security\Roles;
 use Aggressive\Ads\Workflow\Creative_Approval;
@@ -240,6 +242,67 @@ final class CreativeDecisionHistoryTest extends WP_UnitTestCase {
 			array_keys( $rows[0]['decisions'][0] ),
 			'An advertiser-facing decision grew a field; who decided is not theirs to read.'
 		);
+	}
+
+	/**
+	 * Publishing one ad leaves every other ad's bytes where they were.
+	 *
+	 * The checksum is the revision. Approving a sibling must not rewrite it,
+	 * or a later file check would be judging artwork nobody reviewed.
+	 *
+	 * @return void
+	 */
+	public function test_approving_one_ad_leaves_the_others_checksum_alone(): void {
+		$first  = $this->ad();
+		$second = $this->ad( $this->second_placement );
+		$hash   = (string) get_post_meta( $first, Creative_Repository::META_SHA256, true );
+		$path   = (string) get_post_meta( $first, Creative_Repository::META_PRIVATE_PATH, true );
+
+		$this->assertNotSame( '', $hash );
+		$this->assertNotSame( '', $path );
+
+		wp_set_current_user( $this->reviewer );
+		$this->assertSame( $this->campaign_id, $this->approvals->approve( $second ) );
+
+		$this->assertSame( $hash, (string) get_post_meta( $first, Creative_Repository::META_SHA256, true ) );
+		$this->assertSame( $path, (string) get_post_meta( $first, Creative_Repository::META_PRIVATE_PATH, true ) );
+		$this->assertSame( array(), $this->decisions->for_revision( $first ) );
+	}
+
+	/**
+	 * The review screen shows who decided; the advertiser's card does not.
+	 *
+	 * @return void
+	 */
+	public function test_the_review_screen_names_who_decided(): void {
+		$creative_id = $this->ad();
+
+		wp_update_user(
+			array(
+				'ID'           => $this->reviewer,
+				'display_name' => 'Reviewer Lane',
+			)
+		);
+		wp_set_current_user( $this->reviewer );
+		$this->approvals->reject( $creative_id, 'Use the approved logo.' );
+
+		$campaign = Plugin::instance()->container()->get( Review_Data::class )->campaign( $this->campaign_id );
+
+		$this->assertIsArray( $campaign );
+
+		$match = null;
+
+		foreach ( $campaign['creatives'] as $row ) {
+			if ( (int) $row['id'] === $creative_id ) {
+				$match = $row;
+			}
+		}
+
+		$this->assertIsArray( $match );
+		$this->assertSame( Creative_Decision_Repository::REJECTED, $match['decisions'][0]['decision'] );
+		$this->assertSame( 'Use the approved logo.', $match['decisions'][0]['reason'] );
+		$this->assertSame( 'Reviewer Lane', $match['decisions'][0]['actor'] );
+		$this->assertArrayNotHasKey( 'actor_user_id', $match['decisions'][0] );
 	}
 
 	/**

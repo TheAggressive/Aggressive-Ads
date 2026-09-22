@@ -290,6 +290,40 @@ test( 'a decision that needs feedback is taken in an accessible dialog', async (
 } );
 
 /**
+ * The review screen lists who decided.
+ *
+ * The payload test proves the name is sent. This one proves the bundle
+ * renders it: a field the server sends and the screen never reads is how the
+ * advertiser's card shipped without a reviewer ever seeing the same rows.
+ */
+test( 'a reviewer reads who decided about an ad', async ( { page } ) => {
+	await signInToAdmin( page );
+
+	wpPluginFile( 'tests/e2e/seed-review-creative.php' );
+
+	const seeded = JSON.parse(
+		wpPluginFile( 'tests/e2e/seed-review-history.php' )
+	) as { campaign: number; actor: string };
+
+	expect( seeded.actor ).not.toBe( '' );
+
+	await page.goto(
+		`/wp-admin/admin.php?page=aggr-review&campaign=${ seeded.campaign }`
+	);
+
+	const history = page.locator( '.aggr-ad-history' );
+
+	await expect( history ).toBeVisible();
+	await expect( history.getByText( 'Review history' ) ).toBeVisible();
+	await expect( history.getByText( 'Not approved' ) ).toBeVisible();
+	await expect( history.getByText( 'The logo is stretched.' ) ).toBeVisible();
+	await expect(
+		history.getByText( seeded.actor, { exact: true } )
+	).toBeVisible();
+	await expectAdminA11y( page );
+} );
+
+/**
  * Creating a campaign for an advertiser, from the queue.
  *
  * The dialog is the only place in the product where a staff member chooses
