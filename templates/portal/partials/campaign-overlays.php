@@ -1,6 +1,6 @@
 <?php
 /**
- * Portal dialog overlays — one host, three bodies, shared chrome.
+ * Portal dialog overlays — one host, shared chrome.
  *
  * Included from a campaign screen with `$aggr_overlays`. Enqueues the dialog
  * store and prints in wp_footer, outside .aggr-shell, so inert on the page
@@ -22,8 +22,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 use Aggressive\Ads\Domain\Upload_Rules;
 use Aggressive\Ads\Assets\Assets;
 use Aggressive\Ads\Plugin;
+use Aggressive\Ads\Portal\Campaign_Actions;
 use Aggressive\Ads\Portal\Creative_Actions;
 use Aggressive\Ads\Portal\Creative_Feedback;
+use Aggressive\Ads\Workflow\Campaign_Action_Requests;
 
 $aggr_campaign = isset( $aggr_campaign ) && is_array( $aggr_campaign ) ? $aggr_campaign : array();
 $aggr_overlays = isset( $aggr_overlays ) && is_array( $aggr_overlays ) ? $aggr_overlays : array();
@@ -33,7 +35,9 @@ if ( array() === $aggr_overlays ) {
 }
 
 if ( true !== ( $aggr_overlay_print ?? false ) ) {
-	$aggr_dialog_state = array();
+	// A second require of this file would register a second footer and print every dialog twice.
+	$aggr_overlays_enqueued = true;
+	$aggr_dialog_state      = array();
 
 	foreach ( $aggr_overlays as $aggr_queued ) {
 		if ( ! is_array( $aggr_queued ) ) {
@@ -99,9 +103,9 @@ if ( true !== ( $aggr_overlay_print ?? false ) ) {
 		$aggr_placement = (string) ( $aggr_overlay['placement'] ?? ( $aggr_creative['placement'] ?? '' ) );
 
 		/*
-		 * `add` is the one kind with no creative behind it — it is the form
-		 * for the creative that does not exist yet — so the creative check
-		 * has to skip it rather than silently dropping the dialog.
+		 * `add` has no creative behind it — it is the form for the creative
+		 * that does not exist yet — and `request` asks about the campaign.
+		 * The creative check has to skip both rather than dropping the dialog.
 		 */
 		$aggr_slot = is_array( $aggr_overlay['slot'] ?? null ) ? $aggr_overlay['slot'] : array();
 
@@ -109,12 +113,40 @@ if ( true !== ( $aggr_overlay_print ?? false ) ) {
 		// that marks its own invalid field has to be told which one that is.
 		$aggr_creative_error_for = (string) ( $aggr_overlay['error_for'] ?? '' );
 
-		if ( '' === $aggr_dialog_id || ! in_array( $aggr_kind, array( 'preview', 'remove', 'replace', 'window', 'destination', 'artwork', 'add' ), true ) ) {
+		if ( '' === $aggr_dialog_id || ! in_array( $aggr_kind, array( 'preview', 'remove', 'replace', 'window', 'destination', 'artwork', 'add', 'request' ), true ) ) {
 			continue;
 		}
 
-		if ( 'add' === $aggr_kind ? array() === $aggr_slot : array() === $aggr_creative ) {
+		/*
+		 * `request` is the other kind with no creative: it asks staff to pause,
+		 * restart or cancel the campaign. An empty option list means the
+		 * advertiser can already do the thing, so there is no dialog.
+		 */
+		$aggr_request_options = array();
+
+		if ( 'request' === $aggr_kind ) {
+			$aggr_request_options = is_array( $aggr_campaign['requestable_actions'] ?? null ) ? $aggr_campaign['requestable_actions'] : array();
+
+			if ( array() === $aggr_request_options ) {
+				continue;
+			}
+		} elseif ( 'add' === $aggr_kind ? array() === $aggr_slot : array() === $aggr_creative ) {
 			continue;
+		}
+
+		$aggr_request_prompt     = '';
+		$aggr_request_error      = '';
+		$aggr_request_error_code = '';
+		$aggr_describedby        = '';
+
+		if ( 'request' === $aggr_kind ) {
+			$aggr_request_prompt     = Campaign_Action_Requests::prompt_label( $aggr_request_options );
+			$aggr_request_error_code = (string) ( $aggr_overlay['error_code'] ?? '' );
+
+			if ( in_array( $aggr_request_error_code, Campaign_Action_Requests::FORM_ERROR_CODES, true ) ) {
+				$aggr_request_error = Campaign_Actions::error_message( $aggr_request_error_code );
+				$aggr_describedby   = $aggr_dialog_id . '-error';
+			}
 		}
 
 		$aggr_close_href     = (string) ( $aggr_overlay['close_href'] ?? 'aggr-details-heading' );
@@ -156,6 +188,11 @@ if ( true !== ( $aggr_overlay_print ?? false ) ) {
 				__( 'Add creative dialog opened for %s', 'aggressive-ads' ),
 				$aggr_placement
 			),
+			'request' => sprintf(
+				/* translators: %s: what was asked, e.g. Pause or cancel. */
+				__( '%s dialog opened', 'aggressive-ads' ),
+				$aggr_request_prompt
+			),
 			default   => sprintf(
 				/* translators: %s: placement name. */
 				__( 'Update ad dialog opened for %s', 'aggressive-ads' ),
@@ -181,6 +218,9 @@ if ( true !== ( $aggr_overlay_print ?? false ) ) {
 				role="dialog"
 				aria-modal="true"
 				aria-labelledby="<?php echo esc_attr( $aggr_label_id ); ?>"
+				<?php if ( '' !== $aggr_describedby ) : ?>
+					aria-describedby="<?php echo esc_attr( $aggr_describedby ); ?>"
+				<?php endif; ?>
 				tabindex="-1"
 			>
 				<div class="aggr-overlay__header">
@@ -206,6 +246,8 @@ if ( true !== ( $aggr_overlay_print ?? false ) ) {
 								esc_html__( 'Add a creative to %s', 'aggressive-ads' ),
 								esc_html( $aggr_placement )
 							);
+						} elseif ( 'request' === $aggr_kind ) {
+							echo esc_html( $aggr_request_prompt );
 						} else {
 							printf(
 								/* translators: %s: placement name. */
@@ -239,6 +281,8 @@ if ( true !== ( $aggr_overlay_print ?? false ) ) {
 						<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-variant-artwork.php'; ?>
 					<?php elseif ( 'add' === $aggr_kind ) : ?>
 						<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-upload-form.php'; ?>
+					<?php elseif ( 'request' === $aggr_kind ) : ?>
+						<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-request-form.php'; ?>
 					<?php elseif ( 'remove' === $aggr_kind ) : ?>
 						<p class="aggr-hint">
 							<?php esc_html_e( 'This removes the file from the campaign. You can upload a replacement afterwards.', 'aggressive-ads' ); ?>
@@ -326,7 +370,7 @@ if ( true !== ( $aggr_overlay_print ?? false ) ) {
 			></div>
 		</div>
 		<?php
-		unset( $aggr_dialog_context, $aggr_opened_label, $aggr_label_id, $aggr_is_preview );
+		unset( $aggr_dialog_context, $aggr_opened_label, $aggr_label_id, $aggr_is_preview, $aggr_request_options, $aggr_request_prompt, $aggr_request_error, $aggr_request_error_code, $aggr_describedby );
 		?>
 	<?php endforeach; ?>
 </div>

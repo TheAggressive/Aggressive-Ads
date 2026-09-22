@@ -35,6 +35,27 @@ final class Campaign_Action_Requests {
 	public const MAX_REASON_LENGTH = 2000;
 
 	/**
+	 * Failures of this form, as redirect codes.
+	 *
+	 * The sentence the workflow built does not survive `admin-post.php`.
+	 * These are the codes this dialog's own handler can redirect with, so
+	 * the screen can put the sentence back inside the dialog. A rate limit
+	 * raised by a different form shares `aggr_rate_limited`; the dialog
+	 * stays shut unless this handler appended its fragment.
+	 *
+	 * @var array<int, string>
+	 */
+	public const FORM_ERROR_CODES = array(
+		'aggr_action_not_requestable',
+		'aggr_action_already_requested',
+		'aggr_action_reason_required',
+		'aggr_action_reason_long',
+		'aggr_action_not_saved',
+		'aggr_rate_limited',
+		'aggr_forbidden',
+	);
+
+	/**
 	 * Constructor.
 	 *
 	 * @param Campaign_Repository         $campaigns Campaign status and ownership.
@@ -204,6 +225,58 @@ final class Campaign_Action_Requests {
 		$this->log( 'campaign.action_request_resolved', $campaign_id, array(), 'Campaign action request resolved by staff.' );
 
 		return true;
+	}
+
+	/**
+	 * Element id of the dialog that asks for one of these.
+	 *
+	 * Stable per campaign, and the fragment a refused send redirects to.
+	 * Built only from the id, so it is safe to put on a URL.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 */
+	public static function dialog_id( int $campaign_id ): string {
+		return 'aggr-request-' . max( 0, $campaign_id );
+	}
+
+	/**
+	 * What the menu and the dialog are called for this set of asks.
+	 *
+	 * One ask uses that ask's own name. Two are named for what they are, so a
+	 * scheduled campaign — where the advertiser can already cancel — does not
+	 * offer a second cancel beside the one that ends the campaign now.
+	 *
+	 * @param array<int, array{action: string, label: string}> $actions Requestable transitions.
+	 */
+	public static function prompt_label( array $actions ): string {
+		$targets = array();
+
+		foreach ( $actions as $option ) {
+			if ( ! is_array( $option ) ) {
+				continue;
+			}
+
+			$target = (string) ( $option['action'] ?? '' );
+
+			if ( '' !== $target ) {
+				$targets[] = $target;
+			}
+		}
+
+		$targets = array_values( array_unique( $targets ) );
+
+		if ( 1 === count( $targets ) ) {
+			return self::request_label( $targets[0] );
+		}
+
+		$restart = in_array( Post_Statuses::LIVE, $targets, true );
+		$cancel  = in_array( Post_Statuses::CANCELLED, $targets, true );
+
+		if ( $restart && $cancel ) {
+			return __( 'Restart or cancel', 'aggressive-ads' );
+		}
+
+		return __( 'Pause or cancel', 'aggressive-ads' );
 	}
 
 	/**

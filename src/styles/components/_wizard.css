@@ -798,10 +798,12 @@
 	min-height: var(--aggr-control-min);
 	border: 0;
 	border-radius: var(--aggr-radius-small);
+	color: inherit;
 	font: inherit;
 	font-size: 14px;
 	font-weight: 500;
 	text-align: start;
+	text-decoration: none;
 	cursor: pointer;
 }
 

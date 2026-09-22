@@ -127,40 +127,9 @@
 	justify-self: stretch;
 }
 
-/*
- * The pause and cancel request: folded by default, and a card like the rest
- * when there is one waiting.
- */
+/* A request already with the review team. Asking lives in the dialog. */
 .aggr-request {
 	margin-top: var(--aggr-space-lg);
-}
-
-.aggr-request__summary {
-	display: grid;
-	gap: var(--aggr-space-2xs);
-	cursor: pointer;
-	list-style: none;
-}
-
-.aggr-request__summary::-webkit-details-marker {
-	display: none;
-}
-
-/* The disclosure's own marker, drawn after the title so it reads as one line. */
-.aggr-request__summary .aggr-step-card__title::after {
-	margin-inline-start: var(--aggr-space-xs);
-	color: var(--aggr-color-text-subtle);
-	content: "+";
-}
-
-.aggr-request[open] .aggr-request__summary .aggr-step-card__title::after {
-	content: "−";
-}
-
-.aggr-request__form {
-	display: grid;
-	gap: var(--aggr-space-md);
-	margin-top: var(--aggr-space-md);
 }
 
 .aggr-request__reason {

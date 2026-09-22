@@ -138,6 +138,7 @@ final class CampaignCreationDesignSystemTest extends TestCase {
 	private function wizard(): string {
 		$parts = array(
 			AGGR_PLUGIN_DIR . 'templates/portal/screens/campaign.php',
+			AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-more-actions.php',
 			AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-plan-step.php',
 			AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-package-grid.php',
 			AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-schedule-fields.php',

@@ -123,6 +123,11 @@
 	margin-top: 0;
 }
 
+/* One ask per row: the dialog is a narrow column, and two choices side by side wrap mid-word. */
+.aggr-overlay__body .aggr-request__choices {
+	grid-template-columns: 1fr;
+}
+
 .aggr-overlay__actions {
 	display: flex;
 	flex-wrap: wrap;
