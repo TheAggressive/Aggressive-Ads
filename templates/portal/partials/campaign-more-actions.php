@@ -39,7 +39,14 @@ if ( true !== ( $aggr_campaign['can_copy'] ?? false ) && true !== ( $aggr_campai
 }
 ?>
 <details class="aggr-menu">
-	<summary class="aggr-button aggr-button--secondary aggr-menu__toggle" aria-label="<?php esc_attr_e( 'More actions', 'aggressive-ads' ); ?>">
+	<?php
+	/*
+	 * The button class sets inline-flex, and that drops the button role
+	 * Chromium gives a summary. The toggle is then a generic: it still
+	 * opens, and nothing can find it as a button.
+	 */
+	?>
+	<summary class="aggr-button aggr-button--secondary aggr-menu__toggle" role="button" aria-label="<?php esc_attr_e( 'More actions', 'aggressive-ads' ); ?>">
 		<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg>
 	</summary>
 	<div class="aggr-menu__panel">
