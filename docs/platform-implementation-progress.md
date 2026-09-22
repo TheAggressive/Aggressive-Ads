@@ -99,9 +99,9 @@ Shared contract:
 - [x] **P16 — Forecasting and reservations.** See
   [platform-p16-forecasting-reservations.md](platform-p16-forecasting-reservations.md).
   Advertiser-facing booking is intentionally separate and tracked in #280.
-- [~] **P17 — Creative experience.** Tracking: #260. Per-creative measurement,
-  variant management and comparison are built. The remaining action is durable
-  review/rejection history plus exact-revision device preview in #261. See
+- [x] **P17 — Creative experience.** Tracking: #260. Per-creative measurement,
+  variant management, comparison, durable review history and exact-revision
+  device preview are built. See
   [platform-p17-creative-experience.md](platform-p17-creative-experience.md).
 - [ ] **P18 — Rich creative types.** Tracking: #262. Responsive images,
   sandboxed HTML5, staff-only third-party tags and VAST-compatible video remain

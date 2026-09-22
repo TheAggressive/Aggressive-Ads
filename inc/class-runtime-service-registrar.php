@@ -121,7 +121,8 @@ final class Runtime_Service_Registrar {
 				$c->get( Line_Item_Repository::class ),
 				$c->get( \Aggressive\Ads\Workflow\Creative_Approval::class ),
 				$c->get( \Aggressive\Ads\Admin\Pending_Work::class ),
-				$c->get( Campaign_Request_Repository::class )
+				$c->get( Campaign_Request_Repository::class ),
+				$c->get( \Aggressive\Ads\Repository\Creative_Decision_Repository::class )
 			)
 		);
 
