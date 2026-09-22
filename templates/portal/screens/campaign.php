@@ -25,6 +25,7 @@ use Aggressive\Ads\Portal\Request;
 use Aggressive\Ads\Portal\Routes;
 use Aggressive\Ads\Portal\Campaign_Actions;
 use Aggressive\Ads\Portal\Campaign_Nonces;
+use Aggressive\Ads\Workflow\Campaign_Action_Requests;
 use Aggressive\Ads\Portal\Creative_Feedback;
 use Aggressive\Ads\Portal\Portal_Notice;
 use Aggressive\Ads\Portal\View_Data;
@@ -178,6 +179,30 @@ foreach ( $aggr_packages as $aggr_known_package ) {
 }
 
 $aggr_step_number = (int) array_search( $aggr_step, array_keys( $aggr_steps ), true ) + 1;
+
+/*
+ * Pause, restart and cancel are a request, not a transition the advertiser
+ * can make. The menu only opens the dialog; a request already waiting is a
+ * card further down, because that is news. Hidden while they are editing or
+ * confirming an immediate cancel, which is the same rule the card used.
+ */
+$aggr_request_options   = is_array( $aggr_campaign['requestable_actions'] ?? null ) ? $aggr_campaign['requestable_actions'] : array();
+$aggr_request_dialog_id = Campaign_Action_Requests::dialog_id( (int) $aggr_campaign['id'] );
+$aggr_request_prompt    = Campaign_Action_Requests::prompt_label( $aggr_request_options );
+$aggr_request_dialog    = array() !== $aggr_request_options
+	&& ! $aggr_editing_changes
+	&& ! $aggr_confirming_cancel
+	&& ! $aggr_wizard_on_screen
+	&& ( true !== $aggr_campaign['editable'] || 'review' !== $aggr_step );
+
+if ( $aggr_request_dialog ) {
+	$aggr_overlays[] = array(
+		'kind'       => 'request',
+		'id'         => $aggr_request_dialog_id,
+		'close_href' => $aggr_request_dialog_id . '-open',
+		'error_code' => in_array( $aggr_error, Campaign_Action_Requests::FORM_ERROR_CODES, true ) ? $aggr_error : '',
+	);
+}
 ?>
 <div class="aggr-pagehead aggr-pagehead--campaign">
 	<div class="aggr-pagehead__main">
@@ -324,44 +349,7 @@ $aggr_step_number = (int) array_search( $aggr_step, array_keys( $aggr_steps ), t
 			</a>
 		<?php endif; ?>
 
-		<?php
-		/*
-		 * Duplicate and delete in a menu, not beside the steps as two large
-		 * buttons. Neither moves this campaign on, and a solid button beside
-		 * the progress bar competes with the one action that does. Delete is
-		 * last and still leads to its confirmation screen rather than acting.
-		 *
-		 * Native <details>, so it opens from the keyboard and without script.
-		 */
-		?>
-		<?php if ( true === $aggr_campaign['can_copy'] || true === $aggr_campaign['can_cancel'] ) : ?>
-			<details class="aggr-menu">
-				<summary class="aggr-button aggr-button--secondary aggr-menu__toggle" aria-label="<?php esc_attr_e( 'More actions', 'aggressive-ads' ); ?>">
-					<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg>
-				</summary>
-				<div class="aggr-menu__panel">
-					<?php if ( true === $aggr_campaign['can_copy'] ) : ?>
-						<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-							<input type="hidden" name="action" value="<?php echo esc_attr( Campaign_Actions::COPY_ACTION ); ?>">
-							<input type="hidden" name="campaign_id" value="<?php echo esc_attr( (string) (int) $aggr_campaign['id'] ); ?>">
-							<?php wp_nonce_field( Campaign_Nonces::copy_nonce_action( (int) $aggr_campaign['id'] ) ); ?>
-							<button class="aggr-menu__item" type="submit">
-								<?php echo esc_html( (string) $aggr_campaign['copy_label'] ); ?>
-							</button>
-						</form>
-					<?php endif; ?>
-
-					<?php if ( true === $aggr_campaign['can_cancel'] ) : ?>
-						<form method="get" action="<?php echo esc_url( $aggr_campaign_url ); ?>">
-							<input type="hidden" name="confirm" value="cancel">
-							<button class="aggr-menu__item aggr-menu__item--danger" type="submit">
-								<?php echo esc_html( (string) $aggr_campaign['cancel_label'] ); ?>
-							</button>
-						</form>
-					<?php endif; ?>
-				</div>
-			</details>
-		<?php endif; ?>
+		<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-more-actions.php'; ?>
 	</div>
 </div>
 
@@ -695,3 +683,15 @@ if ( true !== $aggr_campaign['editable'] && ! $aggr_editing_changes ) {
 
 		<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-update-history.php'; ?>
 	<?php endif; ?>
+
+<?php
+/*
+ * Dialogs print from one require. The creative step requires this file itself
+ * when it has any, and sets the flag; requiring it again would register a
+ * second footer and draw every dialog twice. A running campaign that is not
+ * on that step still needs the request dialog.
+ */
+if ( array() !== $aggr_overlays && empty( $aggr_overlays_enqueued ) ) {
+	require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-overlays.php';
+}
+?>

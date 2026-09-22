@@ -34,7 +34,15 @@ use Aggressive\Ads\Plugin;
 
 $aggr_edit_slots = is_array( $aggr_campaign['edit_slots'] ?? null ) ? $aggr_campaign['edit_slots'] : array();
 $aggr_updates    = isset( $aggr_creative_updates ) && is_array( $aggr_creative_updates ) ? $aggr_creative_updates : array();
-$aggr_overlays   = array();
+
+/*
+ * Keep dialogs the page already queued.
+ *
+ * Replacing the list here dropped the pause/cancel dialog the campaign
+ * screen had just added. The menu link stayed, the overlay did not, and
+ * the hash had no element to open.
+ */
+$aggr_overlays = isset( $aggr_overlays ) && is_array( $aggr_overlays ) ? $aggr_overlays : array();
 
 // The one form a refused upload reopens, as the wizard does.
 $aggr_creative_error_for = isset( $aggr_creative_error_for ) ? (string) $aggr_creative_error_for : '';

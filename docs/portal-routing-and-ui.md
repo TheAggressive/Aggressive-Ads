@@ -349,9 +349,10 @@ one, the schedule, the link, the placements with how many ads, and pricing and
 pacing in words ("Flat fee", "Spread evenly over the dates"). A row with nothing
 to say is left out rather than shown as `—`. Both panels are gone — the Summary
 repeated the delivery card's figures a second time — and so is the always-open
-pause/cancel form: **Need to pause or cancel?** is a folded card at the foot of
-the page, and becomes an open **Your request** card while one is waiting on the
-review team.
+pause/cancel form. **Pause or cancel** (or only the ask this status can make)
+is an item in **More actions** and opens the shared dialog; the campaign is
+unchanged until the review team acts. While a request is waiting it is an open
+**Your request** card on the page, with the reason and **Withdraw this request**.
 
 **Editing a running campaign** (`?edit=1`) has creation's three steps with
 creation's names: **Package & dates**, **Ads**, **Review & submit**

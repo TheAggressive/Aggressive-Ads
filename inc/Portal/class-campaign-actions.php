@@ -422,7 +422,12 @@ final class Campaign_Actions implements Service {
 		$url    = Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id );
 
 		if ( is_wp_error( $result ) ) {
-			$this->redirect( $url, 'error', $result );
+			/*
+			 * The fragment is what reopens the dialog. `add_query_arg()` keeps
+			 * a fragment it is given, and both halves of the dialog contract
+			 * read it: `:target` with no script, and the module's boot.
+			 */
+			$this->redirect( $url . '#' . Campaign_Action_Requests::dialog_id( $campaign_id ), 'error', $result );
 		}
 
 		$this->redirect( $url, 'action_requested' );
@@ -826,6 +831,12 @@ final class Campaign_Actions implements Service {
 			'aggr_rate_limited'            => __( 'There have been too many attempts. Wait a moment and try again.', 'aggressive-ads' ),
 			'aggr_forbidden'               => __( 'You do not have permission to submit that campaign.', 'aggressive-ads' ),
 			'aggr_status_write_failed'     => __( 'The campaign could not be submitted. Please try again.', 'aggressive-ads' ),
+			'aggr_action_not_requestable'  => __( 'That cannot be requested for this campaign.', 'aggressive-ads' ),
+			'aggr_action_already_requested' => __( 'You have already asked the review team about this campaign.', 'aggressive-ads' ),
+			'aggr_action_reason_required'  => __( 'Tell the review team why.', 'aggressive-ads' ),
+			'aggr_action_reason_long'      => __( 'That explanation is too long.', 'aggressive-ads' ),
+			'aggr_action_not_saved'        => __( 'The request could not be saved. Please try again.', 'aggressive-ads' ),
+			'aggr_no_action_request'       => __( 'There is no request to withdraw.', 'aggressive-ads' ),
 			default                            => __( 'The campaign could not be saved. Please try again.', 'aggressive-ads' ),
 		};
 	}

@@ -95,6 +95,7 @@
 	padding: var(--aggr-space-xs) var(--aggr-space-sm);
 	background: none;
 	color: var(--aggr-color-text);
+	text-decoration: none;
 }
 
 .aggr-portal .aggr-menu__item--danger {

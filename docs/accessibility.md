@@ -52,8 +52,9 @@ must use this stack — building a second one is how half of them end up without
 a focus trap.
 
 **Shipped today:** creative replace, live-ad preview, draft creative
-preview, remove confirmation, and the creative card's own four — custom run
-dates, edit destination, replace artwork and add a rotating creative — all on
+preview, remove confirmation, the creative card's own four — custom run
+dates, edit destination, replace artwork and add a rotating creative — and
+the campaign pause/restart/cancel request, all on
 the shared overlay (`templates/portal/partials/campaign-overlays.php`).
 
 **Reopening a dialog after a refused save is done with a URL fragment**, never
