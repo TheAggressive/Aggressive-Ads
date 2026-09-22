@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-22T00:20:08+00:00\n"
+"POT-Creation-Date: 2026-09-22T06:16:43+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -5715,7 +5715,7 @@ msgid "Reviewed"
 msgstr ""
 
 #: templates/portal/partials/campaign-ad-updates.php:33
-#: templates/portal/partials/campaign-edit-ads.php:74
+#: templates/portal/partials/campaign-edit-ads.php:82
 #: templates/portal/partials/campaign-status.php:305
 msgid "Your ads"
 msgstr ""
@@ -6044,7 +6044,7 @@ msgid "A package supplies the placements and exact ad creative sizes required fo
 msgstr ""
 
 #: templates/portal/partials/campaign-creative-step.php:220
-#: templates/portal/partials/campaign-edit-ads.php:105
+#: templates/portal/partials/campaign-edit-ads.php:113
 msgid "Needs a file"
 msgstr ""
 
@@ -6058,7 +6058,7 @@ msgid "This placement is no longer available. Go back to package and dates and c
 msgstr ""
 
 #: templates/portal/partials/campaign-creative-step.php:269
-#: templates/portal/partials/campaign-edit-ads.php:174
+#: templates/portal/partials/campaign-edit-ads.php:182
 msgid "Preview"
 msgstr ""
 
@@ -6129,27 +6129,27 @@ msgstr ""
 msgid "The ad is %s. The width above is the screen it is shown on, not the ad itself."
 msgstr ""
 
-#: templates/portal/partials/campaign-edit-ads.php:75
+#: templates/portal/partials/campaign-edit-ads.php:83
 msgid "Select Update to send new artwork or a link of its own for one ad. The current ad keeps running until the review team accepts the new one."
 msgstr ""
 
-#: templates/portal/partials/campaign-edit-ads.php:101
+#: templates/portal/partials/campaign-edit-ads.php:109
 msgid "Added by your change"
 msgstr ""
 
-#: templates/portal/partials/campaign-edit-ads.php:103
+#: templates/portal/partials/campaign-edit-ads.php:111
 msgid "Removed by your change"
 msgstr ""
 
-#: templates/portal/partials/campaign-edit-ads.php:122
+#: templates/portal/partials/campaign-edit-ads.php:130
 msgid "Your change adds this size. Once the review team accepts it, add an ad for it here; it is reviewed before it runs."
 msgstr ""
 
-#: templates/portal/partials/campaign-edit-ads.php:129
+#: templates/portal/partials/campaign-edit-ads.php:137
 msgid "This size has no ad, so nothing runs here yet. The ad you add is reviewed before it runs."
 msgstr ""
 
-#: templates/portal/partials/campaign-edit-ads.php:179
+#: templates/portal/partials/campaign-edit-ads.php:187
 msgid "Update"
 msgstr ""
 
