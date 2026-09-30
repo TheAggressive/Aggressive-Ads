@@ -293,6 +293,34 @@ body.aggr-admin-screen .components-button.is-destructive:not(.is-tertiary):not(.
 }
 
 /*
+ * An icon on a soft square, marking a section, a tile or an empty state.
+ * `src/admin/shared/icon.tsx` renders it; the portal's rail uses the same
+ * device, which is why a line icon here reads as a marker rather than a stray
+ * glyph.
+ */
+.aggr-icon-chip {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+	border-radius: 10px;
+	background: var(--aggr-color-surface-sunken);
+	color: var(--aggr-color-text);
+}
+
+.aggr-icon-chip--lg {
+	width: 52px;
+	height: 52px;
+	border-radius: 14px;
+}
+
+.aggr-icon-chip .aggr-icon {
+	display: block;
+}
+
+/*
  * A record's state, as the portal draws a status: the word, a dot in the same
  * ink, and the tint. `src/admin/shared/state.tsx` renders it.
  *
