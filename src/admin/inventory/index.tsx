@@ -37,6 +37,7 @@ import type {
 import { errorMessage, setStrings, t } from '../shared/save';
 import { State } from '../shared/state';
 import { Icon } from '../shared/icon';
+import { sameOriginUrl } from '../shared/navigate';
 import { Empty } from '../shared/empty';
 import { PlacementModal } from './form';
 import {
@@ -112,6 +113,15 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 	const [ formError, setFormError ] = useState( '' );
 	const [ saved, setSaved ] = useState( '' );
 	const [ busy, setBusy ] = useState( false );
+
+	/*
+	 * outlookUrl is text from data-aggr-inventory. An href of that text runs a
+	 * javascript: scheme on click, so the link exists only for an address on
+	 * this origin.
+	 */
+	const outlookHref = data.outlookUrl
+		? sameOriginUrl( data.outlookUrl )
+		: null;
 
 	const persist = async ( draft: Placement ): Promise< void > => {
 		setBusy( true );
@@ -334,10 +344,10 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 							 * sold. Two screens on one subject with no way
 							 * between them left the outlook undiscovered.
 							 */ }
-							{ data.outlookUrl ? (
+							{ outlookHref ? (
 								<Button
 									variant="tertiary"
-									href={ data.outlookUrl }
+									href={ outlookHref }
 									icon={ <Icon name="forecast" /> }
 								>
 									{ t( 'seeOutlook' ) }

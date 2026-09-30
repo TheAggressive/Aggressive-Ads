@@ -14,6 +14,7 @@ import { createRoot, useMemo, useState } from '@wordpress/element';
 import './style.css';
 import { State, type Tone } from '../shared/state';
 import { Icon, type IconName } from '../shared/icon';
+import { sameOriginUrl } from '../shared/navigate';
 
 import type {
 	Field as DataField,
@@ -209,6 +210,15 @@ const Outlook = ( {
 		[ rows, view, fields ]
 	);
 
+	/*
+	 * placementsUrl is text from data-aggr-forecast. An href of that text runs
+	 * a javascript: scheme on click, so the link exists only for an address on
+	 * this origin.
+	 */
+	const placementsHref = placementsUrl
+		? sameOriginUrl( placementsUrl )
+		: null;
+
 	return (
 		<>
 			{ /*
@@ -222,8 +232,8 @@ const Outlook = ( {
 					{ t( 'window' ) }: { range.from } – { range.to } ·{ ' ' }
 					{ t( 'pageOnly' ) }
 				</p>
-				{ placementsUrl ? (
-					<a className="aggr-forecast__link" href={ placementsUrl }>
+				{ placementsHref ? (
+					<a className="aggr-forecast__link" href={ placementsHref }>
 						<Icon name="placements" size={ 16 } />
 						{ t( 'managePlacements' ) }
 					</a>
