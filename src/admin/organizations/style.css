@@ -7,13 +7,11 @@
  */
 
 /*
- * Modals render through a portal at the end of the body, outside `.aggr-admin`
- * and therefore outside the block that declares `--aggr-*`. An unresolved
- * custom property in a colour declaration is transparent, not inherited, so the
- * modal rules below would have painted nothing. Re-declare what they use.
+ * Modals render at the end of `<body>`, outside `.aggr-admin`. The colour
+ * tokens reach them through `body.aggr-admin-screen`; the measure is this
+ * modal's own.
  */
 .dataviews-action-modal {
-	--aggr-color-danger: #b32d2e;
 	--aggr-measure: 60ch;
 }
 

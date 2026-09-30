@@ -14,15 +14,12 @@
  */
 
 /*
- * Modals render through a portal at the end of the body, outside `.aggr-admin`
- * and therefore outside the block that declares `--aggr-*`. Re-declare what the
- * rules below actually use, and nothing more.
+ * Modals render at the end of `<body>`, outside `.aggr-admin`. The colour
+ * tokens reach them through `body.aggr-admin-screen`; the measure is this
+ * modal's own.
  */
 .aggr-conversion-modal {
 	--aggr-measure: 60ch;
-	--aggr-color-surface-sunken: #f6f7f7;
-	--aggr-border-color: #dcdcde;
-	--aggr-color-text-muted: #646970;
 }
 
 /* Sections stack down the page; the heading owns the space above its table. */

@@ -126,8 +126,10 @@ and Soft white `#F7F7F5`.
 
 Buttons moved off the accent because orange works best as a marker. Graphite on
 Signal orange passes AA at 5.53:1 but reads heavy on every button, and white on
-it fails at 3.39:1; graphite with white is 18.7:1. wp-admin keeps core's blue
-primary buttons.
+it fails at 3.39:1; graphite with white is 18.7:1. The staff screens use the
+same graphite primary and the same palette, but these Brand settings do not
+recolour them: a rebrand is for advertisers, not for staff. See
+[admin-ui.md](admin-ui.md).
 
 Campaign statuses have fixed colours, not brand colours, so a status means the
 same thing on every site: grey draft, amber with the review team, orange sent

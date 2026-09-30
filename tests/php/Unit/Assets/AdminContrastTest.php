@@ -15,13 +15,15 @@ use PHPUnit\Framework\TestCase;
 /**
  * Every colour pair the staff screens can render, measured against WCAG 2.2 AA.
  *
- * The staff surface resolves the shared --aggr-* tokens to WordPress's own
- * admin palette, and **core's palette is not automatically AA at small sizes**.
- * Its primary blue on white is 4.6:1, which passes with almost nothing spare,
- * and its notice green on its notice tint is around 2.8:1, which does not pass
- * at all — the ink there had to be darkened. Borrowing a palette is not the
- * same as inheriting its accessibility, so this file measures the borrowed one
- * exactly as PortalContrastTest measures the product's own.
+ * The staff surface resolves the shared --aggr-* tokens through its own layer,
+ * and that layer is not the portal's verbatim. It began as WordPress's admin
+ * palette — whose notice green on its own tint is about 2.8:1 — and is now the
+ * portal's, with one deliberate difference this file is what holds: the staff
+ * accent is drawn as text (link buttons, the active tab), so it must be the
+ * text-safe orange. Bright Signal orange is 3.39:1 on white and lives in
+ * `--aggr-color-mark`, which nothing here measures because it is never text.
+ * A palette changed by eye is a palette nobody measured, so every pair is
+ * asserted exactly as PortalContrastTest asserts the portal's.
  *
  * Every threshold is 4.5:1, the small-text ratio. Nothing on these screens is
  * large text as WCAG defines it (18.66px bold or 24px).

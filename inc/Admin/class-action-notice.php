@@ -254,7 +254,14 @@ final class Action_Notice implements Service {
 	}
 
 	/**
-	 * Whether the reviewer is already looking at the queue.
+	 * Whether the reviewer is already inside Advertising.
+	 *
+	 * This used to be the review screen alone. On every other Advertising
+	 * screen the submenu is open, so the Review item and its count sit in the
+	 * sidebar beside the page — and the notice repeated them above the page in
+	 * a full-width box that pushed each screen's own content down. The notice
+	 * exists for staff working elsewhere in wp-admin, where the count is out of
+	 * sight; inside Advertising it is not.
 	 *
 	 * @return bool
 	 */
@@ -265,6 +272,6 @@ final class Action_Notice implements Service {
 
 		$screen = get_current_screen();
 
-		return null !== $screen && str_contains( $screen->id, Review_Screen::MENU_SLUG );
+		return null !== $screen && Menu::is_advertising_screen( $screen->id );
 	}
 }

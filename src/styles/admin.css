@@ -5,10 +5,12 @@
  * control sizing all come from the --aggr-* token layer, so the staff and
  * advertiser surfaces cannot become two visual systems.
  *
- * The staff surface resolves those tokens to WordPress's own admin palette —
- * see base/_admin-tokens.css. That is a token substitution and nothing more:
- * every rule below is unchanged by it, which is the whole reason the colours
- * were never written here in the first place.
+ * The staff surface resolves those tokens through base/_admin-tokens.css —
+ * the portal's palette, with a text-safe accent. That is a token substitution
+ * and nothing more: every rule below is unchanged by it, which is the whole
+ * reason the colours were never written here in the first place. The page
+ * header and tables are shared with the other staff screens in
+ * admin-native.css.
  */
 
 @import './base/_admin-tokens.css';
@@ -91,17 +93,25 @@
 	padding: 0;
 	border: 0;
 	background: none;
-	color: var(--aggr-color-accent);
+	color: var(--aggr-color-text);
 	font: inherit;
 	font-weight: 600;
 	text-align: left;
+	text-decoration: underline;
+	text-decoration-thickness: 1px;
+	text-underline-offset: 3px;
 	cursor: pointer;
 }
 
+/*
+ * The portal's campaign names are underlined graphite, turning to the
+ * text-safe accent on hover. The underline is always there, so the name reads
+ * as something to open without relying on colour.
+ */
 .aggr-linkbutton:hover,
 .aggr-linkbutton:focus-visible {
-	color: var(--aggr-color-accent-strong);
-	text-decoration: underline;
+	color: var(--aggr-color-accent);
+	text-decoration-thickness: 2px;
 }
 
 	.aggr-package-row {
@@ -127,10 +137,19 @@
 		}
 	}
 
+	/*
+	 * The queue filters, drawn as the portal draws its campaign filters: the
+	 * current one is a graphite chip, the rest are words with a count.
+	 *
+	 * They were seven outlined pills the height of a primary button, which
+	 * made a row of filters look like a row of actions and took a full line of
+	 * the screen to say which list was showing. The current filter is marked by
+	 * its fill and by `aria-current`, not by colour alone.
+	 */
 	.aggr-tabs {
 		display: flex;
-		gap: var(--aggr-space-xs);
-		margin-bottom: var(--aggr-space-lg);
+		gap: 4px;
+		margin-bottom: var(--aggr-space-md);
 		overflow-x: auto;
 		padding-bottom: 2px;
 	}
@@ -139,38 +158,45 @@
 		display: inline-flex;
 		align-items: center;
 		gap: var(--aggr-space-xs);
-		min-height: var(--aggr-control-min);
-		padding: 0 var(--aggr-space-md);
-		border: 1px solid var(--aggr-border-color-strong);
-		border-radius: var(--aggr-radius-pill);
-		background: var(--aggr-color-surface);
+		min-height: 36px;
+		padding: 0 var(--aggr-space-sm);
+		border: 0;
+		border-radius: var(--aggr-radius-control);
+		background: transparent;
 		color: var(--aggr-color-text-body);
-		font-weight: 700;
+		font: inherit;
+		font-size: 14px;
+		font-weight: 600;
 		text-decoration: none;
 		white-space: nowrap;
+		cursor: pointer;
 	}
 
-	.aggr-tab:hover,
-	.aggr-tab[aria-current="page"] {
-		border-color: var(--aggr-color-accent-strong);
+	.aggr-tab:hover {
+		background: var(--aggr-color-surface-sunken);
 		color: var(--aggr-color-text);
 	}
 
 	.aggr-tab[aria-current="page"] {
-		box-shadow: inset 0 -3px 0 var(--aggr-color-accent-strong);
+		background: var(--aggr-color-primary);
+		color: var(--aggr-color-on-primary);
 	}
 
 	.aggr-tab__count {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		min-width: 1.75rem;
-		height: 1.75rem;
-		padding: 0 var(--aggr-space-xs);
-		border-radius: var(--aggr-radius-pill);
-		background: var(--aggr-color-surface-sunken);
-		color: var(--aggr-color-text-subtle);
-		font-size: 12px;
+		color: inherit;
+		font-family: var(--aggr-font-mono);
+		font-size: 11px;
+		font-variant-numeric: tabular-nums;
+		opacity: 0.75;
+	}
+
+	/*
+	 * A panel that holds a table and nothing else draws no padding of its own:
+	 * the table's toolbar and cells already do, and the two together left a
+	 * frame inside a frame.
+	 */
+	.aggr-admin .aggr-panel--flush {
+		padding: 0;
 	}
 
 	.aggr-flash {

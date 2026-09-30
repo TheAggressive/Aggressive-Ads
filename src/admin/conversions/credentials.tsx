@@ -38,6 +38,7 @@ import {
 } from '@wordpress/components';
 import { DataViews, filterSortAndPaginate } from '@wordpress/dataviews';
 import { useCallback, useMemo, useState } from '@wordpress/element';
+import { State } from '../shared/state';
 
 import apiFetch from '@wordpress/api-fetch';
 
@@ -317,9 +318,14 @@ export function Credentials( { path, advertisers, seeded, i18n }: Props ) {
 				getValue: ( { item }: { item: Credential } ) =>
 					item.live ? 'live' : 'revoked',
 				render: ( { item }: { item: Credential } ) =>
-					item.live
-						? i18n.live
-						: `${ i18n.revoked } · ${ item.revoked_at }`,
+					item.live ? (
+						<State tone="live">{ i18n.live }</State>
+					) : (
+						<>
+							<State tone="neutral">{ i18n.revoked }</State>{ ' ' }
+							{ item.revoked_at }
+						</>
+					),
 			},
 		],
 		[ i18n ]

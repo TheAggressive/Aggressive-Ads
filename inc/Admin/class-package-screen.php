@@ -121,7 +121,8 @@ final class Package_Screen implements Service {
 		if ( ! is_file( AGGR_PLUGIN_DIR . 'dist/admin/packages.asset.php' ) ) {
 			Screen_Shell::unbuilt(
 				__( 'Packages', 'aggressive-ads' ),
-				__( 'The packages screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' )
+				__( 'The packages screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' ),
+				Screen_Shell::section( 'inventory' )
 			);
 
 			return;
@@ -179,7 +180,8 @@ final class Package_Screen implements Service {
 			'aggr-packages-root',
 			'data-aggr-packages',
 			$payload,
-			__( 'The packages screen needs JavaScript enabled.', 'aggressive-ads' )
+			__( 'The packages screen needs JavaScript enabled.', 'aggressive-ads' ),
+			Screen_Shell::section( 'inventory' )
 		);
 	}
 

@@ -42,25 +42,57 @@ final class Screen_Shell {
 	 *
 	 * @param string $title   Page title, already translated.
 	 * @param string $purpose One sentence saying what the screen is for, already translated. Empty for none.
+	 * @param string $section The group the screen belongs to, shown above the title, already translated. Empty for none.
 	 * @return void
 	 */
-	public static function open( string $title, string $purpose = '' ): void {
+	public static function open( string $title, string $purpose = '', string $section = '' ): void {
+		echo '<div class="wrap aggr-admin"><header class="aggr-admin-head"><div class="aggr-admin-head__text">';
+
 		/*
-		 * The mark is decorative and hidden from assistive technology: the
-		 * heading's accessible name is the title alone. It is drawn by CSS from
-		 * the same SVG the sidebar icon is, so there is one copy of the shape.
+		 * The eyebrow is the portal's page-head pattern: a small monospaced
+		 * label naming where you are, above the title. Here it names the group —
+		 * Inventory, Advertisers, Measurement — which the flat sidebar does not.
+		 *
+		 * The mark is decorative and hidden from assistive technology. It is
+		 * drawn by CSS from the same SVG the sidebar icon is, so there is one
+		 * copy of the shape.
 		 */
-		printf(
-			'<div class="wrap aggr-admin"><header class="aggr-admin-head"><h1 class="aggr-admin-head__title"><span class="aggr-admin-head__mark" aria-hidden="true"></span>%s</h1>',
-			esc_html( $title )
-		);
+		if ( '' !== $section ) {
+			printf(
+				'<p class="aggr-admin-head__eyebrow"><span class="aggr-admin-head__mark" aria-hidden="true"></span>%s</p>',
+				esc_html( $section )
+			);
+		}
+
+		printf( '<h1 class="aggr-admin-head__title">%s</h1>', esc_html( $title ) );
 
 		if ( '' !== $purpose ) {
 			printf( '<p class="aggr-admin-head__purpose">%s</p>', esc_html( $purpose ) );
 		}
 
 		// Core moves admin notices to sit directly after this element.
-		echo '</header><hr class="wp-header-end">';
+		echo '</div></header><hr class="wp-header-end">';
+	}
+
+	/**
+	 * The group names shown above a screen's title.
+	 *
+	 * One place, so two screens in the same group cannot spell it two ways,
+	 * and with a context, because each is a single word a translator meets out
+	 * of any sentence — "Measurement" as a noun for a set of screens, not an act.
+	 *
+	 * @param string $key One of `campaigns`, `inventory`, `advertisers`, `measurement`, `setup`.
+	 * @return string
+	 */
+	public static function section( string $key ): string {
+		return match ( $key ) {
+			'campaigns'   => _x( 'Campaigns', 'admin screen group', 'aggressive-ads' ),
+			'inventory'   => _x( 'Inventory', 'admin screen group', 'aggressive-ads' ),
+			'advertisers' => _x( 'Advertisers', 'admin screen group', 'aggressive-ads' ),
+			'measurement' => _x( 'Measurement', 'admin screen group', 'aggressive-ads' ),
+			'setup'       => _x( 'Setup', 'admin screen group', 'aggressive-ads' ),
+			default       => '',
+		};
 	}
 
 	/**
@@ -85,10 +117,11 @@ final class Screen_Shell {
 	 * @param string               $attribute Data attribute the bundle reads its payload from.
 	 * @param array<string, mixed> $payload   Bootstrap data.
 	 * @param string               $noscript  What to say when scripting is off, already translated.
+	 * @param string               $section   The group the screen belongs to, already translated.
 	 * @return void
 	 */
-	public static function mount( string $title, string $purpose, string $root_id, string $attribute, array $payload, string $noscript ): void {
-		self::open( $title, $purpose );
+	public static function mount( string $title, string $purpose, string $root_id, string $attribute, array $payload, string $noscript, string $section = '' ): void {
+		self::open( $title, $purpose, $section );
 
 		printf(
 			'<noscript><div class="notice notice-error"><p>%1$s</p></div></noscript><div id="%2$s" %3$s="%4$s"></div>',
@@ -110,10 +143,11 @@ final class Screen_Shell {
 	 *
 	 * @param string $title   Page title, already translated.
 	 * @param string $message What to do about it, already translated.
+	 * @param string $section The group the screen belongs to, already translated.
 	 * @return void
 	 */
-	public static function unbuilt( string $title, string $message ): void {
-		self::open( $title );
+	public static function unbuilt( string $title, string $message, string $section = '' ): void {
+		self::open( $title, '', $section );
 		printf( '<div class="notice notice-error"><p>%s</p></div>', esc_html( $message ) );
 		self::close();
 	}

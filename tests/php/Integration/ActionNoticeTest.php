@@ -56,6 +56,9 @@ final class ActionNoticeTest extends WP_UnitTestCase {
 	public function tear_down(): void {
 		Action_Notice::forget();
 
+		// A screen set by one test would silently decide the next one's notice.
+		unset( $GLOBALS['current_screen'] );
+
 		parent::tear_down();
 	}
 
@@ -141,6 +144,34 @@ final class ActionNoticeTest extends WP_UnitTestCase {
 
 		$this->assertStringContainsString( 'an untitled campaign', $output );
 		$this->assertStringNotContainsString( '  ', wp_strip_all_tags( $output ) );
+	}
+
+	/**
+	 * Inside Advertising the sidebar already shows the count; elsewhere it does not.
+	 *
+	 * @return void
+	 */
+	public function test_the_notice_stays_out_of_the_advertising_screens(): void {
+		$this->become_a_reviewer();
+		$this->submit_a_campaign( 'Spring Sale' );
+
+		// Screen ids as WordPress builds them: the parent, and children whose
+		// prefix follows whatever the product is called on this site.
+		foreach ( array( 'toplevel_page_aggr', 'advertising_page_aggr-packages', 'ads_page_aggr-review' ) as $id ) {
+			set_current_screen( $id );
+			Action_Notice::forget();
+
+			$this->assertSame( '', $this->render(), "The notice repeats the sidebar's own count on {$id}." );
+		}
+
+		// The negatives, which are the half that matters: the notice exists for
+		// every other screen, including one whose id merely contains "aggr".
+		foreach ( array( 'dashboard', 'edit-aggr_campaign', 'toplevel_page_aggregator' ) as $id ) {
+			set_current_screen( $id );
+			Action_Notice::forget();
+
+			$this->assertStringContainsString( 'Spring Sale', $this->render(), "The notice must still reach staff on {$id}." );
+		}
 	}
 
 	/**

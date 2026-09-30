@@ -1,37 +1,41 @@
 /*
- * The outlook's summary figures.
+ * The outlook's summary figures, drawn as the portal draws its stat tiles.
  *
- * The page header, the tokens and the table's surface are shared with every
- * Advertising screen and live in `src/styles/admin-native.css`. Until they did,
- * nothing on this page declared the tokens read below, so the cards drew no
- * border at all and the labels did not recede.
+ * The page header, the tokens, the table's surface and the verdict pills are
+ * shared with every Advertising screen and live in `src/styles/admin-native.css`.
  */
 .aggr-forecast__cards {
 	display: grid;
-	gap: 12px;
+	gap: 16px;
 	grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-	margin: 16px 0 24px;
+	margin: 12px 0 24px;
 }
 
-/* The same surface, hairline and radius as the table below them. */
 .aggr-forecast__card {
 	background: var(--aggr-color-surface);
 	border: 1px solid var(--aggr-border-color);
-	border-radius: 4px;
-	padding: 14px 16px;
+	border-radius: 12px;
+	padding: 20px 24px;
 }
 
+/* The portal's stat label: small, monospaced, spaced out, and quiet. */
 .aggr-forecast__label {
-	color: var(--aggr-color-text-muted);
-	font-size: 11px;
-	letter-spacing: 0.04em;
-	margin: 0 0 6px;
+	color: var(--aggr-color-text-subtle);
+	font-family: var(--aggr-font-mono);
+	font-size: 10.5px;
+	font-weight: 600;
+	letter-spacing: 0.12em;
+	margin: 0 0 8px;
 	text-transform: uppercase;
 }
 
 .aggr-forecast__figure {
-	font-size: 28px;
-	font-weight: 600;
+	color: var(--aggr-color-text);
+	font-family: var(--aggr-font);
+	font-size: 30px;
+	font-variant-numeric: tabular-nums;
+	font-weight: 700;
+	letter-spacing: -0.025em;
 	line-height: 1.1;
 	margin: 0;
 }
@@ -46,22 +50,14 @@
 	color: var(--aggr-color-danger);
 }
 
+/* The window is data, so it is set like the portal's dates. */
 .aggr-forecast__window {
 	color: var(--aggr-color-text-muted);
-	margin: 0 0 4px;
+	font-family: var(--aggr-font-mono);
+	font-size: 12px;
+	margin: 0;
 }
 
 .aggr-forecast__none {
 	color: var(--aggr-color-text-muted);
-}
-
-/*
- * An oversold row, marked rather than merely worded.
- *
- * The summary above the table has always counted these; until the verdict was
- * rendered there was no way to tell which rows it meant.
- */
-.aggr-forecast__oversold {
-	font-weight: 700;
-	color: var(--aggr-color-danger);
 }

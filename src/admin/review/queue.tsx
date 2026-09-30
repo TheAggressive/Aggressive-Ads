@@ -186,16 +186,39 @@ export function QueueView( {
 
 	return (
 		<>
-			<header className="aggr-pagehead">
-				<div>
-					<h1 className="aggr-title">{ t( 'queueTitle' ) }</h1>
-					<p className="aggr-lede">{ t( 'queueLede' ) }</p>
+			{ /*
+			 * The same header every other Advertising screen gets from
+			 * `Screen_Shell`, rendered here because the queue and the campaign
+			 * view swap headers without a page load. The classes are the
+			 * contract; `admin-native.css` draws them for both.
+			 */ }
+			<header className="aggr-admin-head">
+				<div className="aggr-admin-head__text">
+					<p className="aggr-admin-head__eyebrow">
+						<span
+							className="aggr-admin-head__mark"
+							aria-hidden="true"
+						></span>
+						{ t( 'queueSection' ) }
+					</p>
+					<h1 className="aggr-admin-head__title">
+						{ t( 'queueTitle' ) }
+					</h1>
+					<p className="aggr-admin-head__purpose">
+						{ t( 'queueLede' ) }
+					</p>
 				</div>
 
-				<div className="aggr-pagehead__actions">
+				<div className="aggr-admin-head__actions">
+					{ /*
+					 * Graphite, the primary colour — not the green positive
+					 * button. Green is approval's, the one edge that puts a
+					 * campaign in front of the public; creating a draft is not
+					 * that, and borrowing its colour dilutes what it means.
+					 */ }
 					<button
 						type="button"
-						className="aggr-button aggr-button--positive"
+						className="aggr-button"
 						onClick={ () => setCreating( true ) }
 					>
 						{ t( 'createCampaign' ) }
@@ -214,10 +237,16 @@ export function QueueView( {
 			<Tabs tabs={ tabs } active={ filter } onSelect={ onFilter } />
 
 			<section
-				className="aggr-panel"
+				className="aggr-panel aggr-panel--flush"
 				aria-labelledby="aggr-queue-heading"
 			>
-				<h2 id="aggr-queue-heading" className="aggr-panel__head">
+				{ /*
+				 * Named for assistive technology and hidden from sight. The count
+				 * is already on the selected tab directly above, and printing it
+				 * again as a heading put a second "Campaigns (1)" and a band of
+				 * empty space between the tabs and the table.
+				 */ }
+				<h2 id="aggr-queue-heading" className="screen-reader-text">
 					{ t( 'campaignsCount' ).replace(
 						'%s',
 						String( queue.total )

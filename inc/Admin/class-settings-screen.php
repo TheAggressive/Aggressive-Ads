@@ -189,7 +189,8 @@ final class Settings_Screen implements Service {
 		if ( ! is_file( $asset ) ) {
 			Screen_Shell::unbuilt(
 				__( 'Advertising Settings', 'aggressive-ads' ),
-				__( 'The settings screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' )
+				__( 'The settings screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' ),
+				Screen_Shell::section( 'setup' )
 			);
 
 			return;
@@ -357,7 +358,8 @@ final class Settings_Screen implements Service {
 			'aggr-settings-root',
 			'data-aggr-settings',
 			$payload,
-			__( 'Advertising settings need JavaScript enabled.', 'aggressive-ads' )
+			__( 'Advertising settings need JavaScript enabled.', 'aggressive-ads' ),
+			Screen_Shell::section( 'setup' )
 		);
 	}
 

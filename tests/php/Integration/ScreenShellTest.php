@@ -74,14 +74,36 @@ final class ScreenShellTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The mark is decorative, so the heading's accessible name is the title alone.
+	 * The heading is the title alone; the group and the decorative mark sit
+	 * above it, outside the heading's accessible name.
 	 */
 	public function test_the_heading_is_named_by_its_title_alone(): void {
-		$html = self::capture( static fn () => Screen_Shell::open( 'Organizations' ) );
+		$html = self::capture( static fn () => Screen_Shell::open( 'Organizations', '', 'Advertisers' ) );
 
 		$this->assertSame( 1, preg_match( '#<h1[^>]*>(.*?)</h1>#s', $html, $heading ) );
-		$this->assertSame( 'Organizations', wp_strip_all_tags( $heading[1] ) );
-		$this->assertStringContainsString( 'aria-hidden="true"', $heading[1] );
+		$this->assertSame( 'Organizations', $heading[1], 'Nothing but the title inside the heading.' );
+
+		$this->assertSame( 1, preg_match( '#<p class="aggr-admin-head__eyebrow">(.*?)</p>#s', $html, $eyebrow ) );
+		$this->assertSame( 'Advertisers', wp_strip_all_tags( $eyebrow[1] ) );
+		$this->assertStringContainsString( 'aria-hidden="true"', $eyebrow[1], 'The mark is decorative.' );
+		$this->assertLessThan( strpos( $html, '<h1' ), strpos( $html, 'aggr-admin-head__eyebrow' ) );
+	}
+
+	/**
+	 * Every group name resolves, and an unknown key prints nothing rather than
+	 * a raw key.
+	 */
+	public function test_every_section_has_a_name(): void {
+		foreach ( array( 'campaigns', 'inventory', 'advertisers', 'measurement', 'setup' ) as $key ) {
+			$this->assertNotSame( '', Screen_Shell::section( $key ), $key );
+		}
+
+		$this->assertSame( '', Screen_Shell::section( 'nonsense' ) );
+		$this->assertStringNotContainsString(
+			'aggr-admin-head__eyebrow',
+			self::capture( static fn () => Screen_Shell::open( 'Title' ) ),
+			'No group, no empty eyebrow.'
+		);
 	}
 
 	/**
@@ -185,5 +207,6 @@ final class ScreenShellTest extends WP_UnitTestCase {
 		$this->assertSame( 1, substr_count( $html, '<h1' ), 'One page title.' );
 		$this->assertSame( 1, substr_count( $html, 'class="aggr-admin-head"' ), 'Opened by Screen_Shell.' );
 		$this->assertSame( 1, substr_count( $html, 'class="wp-header-end"' ), 'One marker for core to put notices under.' );
+		$this->assertSame( 1, substr_count( $html, 'class="aggr-admin-head__eyebrow"' ), 'Every screen names its group.' );
 	}
 }
