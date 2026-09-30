@@ -52,22 +52,32 @@ different product. The dialog is still its own. The queue is server-paged, so
 sorting and search stay off until the server can answer them (see
 `queue-table.tsx`). Keep that.
 
-**Packages** renders every package as an always-open edit form, each with its
-own Save button, under a create form. At ten packages that is ten forms to
-scroll through to find one. Nothing shows active, default or price at a glance.
-This is the one screen that does not scale. It should become the Placements
-pattern: a DataViews list with status, price and placements as columns, and one
-modal editor.
+**Packages** rendered every package as an always-open edit form, each with its
+own Save button, so reading one price meant scrolling past every other
+package's fields. It is now a grid of product cards: price, run length,
+placement chips, and Active and Default badges. One dialog creates or edits.
+Cards, not a table, because a catalogue is a handful of offers and the portal
+shows advertisers the same packages as cards. If catalogues grow to dozens,
+revisit this.
 
 **Reports** put its only action, the CSV download, at the very bottom, under
-every table. It now sits in a toolbar beside the filters it exports, and the
-figure cards and reason tables are drawn as stat tiles and portal tables. The
-window and placement filters still have no visible labels.
+every table. It now sits in a toolbar beside the filters it exports. The two
+fill-rate tiles share the width with a meter under each rate, and the two
+no-fill tables sit side by side. Each no-fill reason says whether it is a rule
+**working as intended** or **worth a look**. That split is
+`No_Fill_Reason::is_expected()`, the same split administration.md describes
+in prose. The window and placement filters still have no
+visible labels.
 
-**Outlook** and **Placements** share a capability and a subject. They are two
-views of the catalogue with no link between them. Outlook's window is fixed
-server-side and it shows page inventory only. Say that on the screen rather
-than leaving it implied.
+**Outlook** and **Placements** share a capability and a subject, and now link
+to each other. Outlook states its window and that it counts page opportunities
+only. Each row's booked figure has a bar against its forecast, red when
+oversold.
+
+**Settings** is laid out as explanation beside controls: each section's icon,
+title and purpose in a sticky left column, and its controls in a panel on the
+right. Brand shows the advertiser portal in miniature, in the colours being
+chosen, before they are saved.
 
 **Organizations**, **Conversions** and **Settings** mostly work. Remaining
 issues: Conversions' first table has no heading while its second does.
@@ -136,6 +146,13 @@ have been closed since.
 - `src/styles/base/_admin-tokens.css`: the palette, contrast-measured in
   `AdminContrastTest`.
 - `src/admin/shared/state.tsx`: the status pill for a table cell.
+- `src/admin/shared/icon.tsx`: `Icon` and `IconChip`, in the portal rail's
+  geometry. PHP-rendered screens use `templates/portal/partials/icon.php`,
+  which shares the same shapes.
+- `src/admin/shared/initials.tsx`: `Named`, a name with its initials avatar —
+  round for people, squared for organizations.
+- `src/admin/shared/empty.tsx`: `Empty`, the icon and sentence a table shows
+  when it has no rows.
 - `src/admin/shared/save.tsx`: `useAction`, `SaveError`, the string table.
 - DataViews for any list of records. Core's `Modal` for any dialog on a
   DataViews screen.
@@ -218,9 +235,25 @@ together. A list of records is a table, not a stack of cards. Never nest a card
 in a card. Every surface — card, table, stat tile — is white with a hairline
 border, the portal's 12px radius and no shadow.
 
-**Stat tiles.** A monospaced label, the figure, an optional caption, and the
-counts it came from in monospace below. A tile shows a number the domain
-computes, never a derived score. Outlook and Reports use them.
+**Stat tiles.** An icon and monospaced label, the figure, an optional meter
+and caption, and the counts it came from in monospace below. A tile shows a
+number the domain computes, never a derived score. Outlook and Reports use
+them.
+
+**Icons.** Use an icon where it helps someone scan: a section's chip, a tile's
+label, an empty state, a link to another screen. Never on every button or
+column heading. Every icon sits beside a word that says the same thing and is
+`aria-hidden`. Draw new shapes in the portal's geometry (24-unit box, 1.75
+stroke, round caps) and add them to the one set.
+
+**Meters.** A rate can be drawn as a length beside or under its figure: a
+graphite bar on the sunken tint, `aria-hidden`, and never without the number.
+It goes red only when the row's own verdict already says oversold.
+
+**Identity in tables.** A person or an organization in a table gets its
+initials avatar (`Named`). A slug or key goes under the name it spells, in
+monospace, not in a column of its own. A placement's size gets its outline
+drawn to scale.
 
 **Tables.** Use DataViews for records. The surface and the portal's header row
 (tinted, monospaced uppercase labels) are shared in `admin-native.css`. Do not
@@ -245,10 +278,17 @@ organization active or suspended, placement active, credential live or revoked).
 is emphasis over the word, not a status of its own. Every status carries a word
 and a dot, never colour alone. Do not invent a derived status in the browser.
 
-**Empty states.** Keep the table and its controls, and put a sentence inside it
-saying what is missing and, where there is one, what creates it. Do not show a
-blank table, and do not replace the table with a sentence. That removes the
-search needed to undo the query.
+**Empty states.** Keep the table and its controls, and put `Empty` inside it:
+an icon and a sentence saying what is missing and why it matters. The
+creating action stays in the toolbar above rather than being repeated. Do not
+show a blank table, and do not replace the table with a sentence, which
+removes the search needed to undo the query.
+
+**Layout.** Lay out each screen for what it shows, not as one stretched
+column. Two things read against each other go side by side. A settings
+section puts its explanation beside its controls. A small catalogue is a card
+grid. A list that grows is a table. Nothing stretches a text field across the
+monitor.
 
 **Notices.** A server-side outcome uses core's notice, which goes under
 `wp-header-end`. An outcome of an in-page action uses the `Notice` component
@@ -281,23 +321,24 @@ scoped.
    `--wp-admin-theme-color`, the Reports export beside its filters, and the
    waiting-work notice kept off the Advertising screens. Review's queue joined
    the shared header.
-3. **Review components.** One dialog and one button vocabulary: move Review's
-   `Dialog` to core's `Modal` or state why not. Keep the status pills, the tab
-   filters and server paging.
-4. **Packages.** A DataViews list (name, price, placements, active, default)
-   with one modal editor, following the Placements pattern.
-5. **Inventory.** Cross-link Placements and Outlook, state the outlook's window
-   and inventory kind on screen, and regroup the sidebar so the sell-side
-   screens sit together (`add_submenu_page`'s position, not boot order).
-6. **Reports, Organizations, Conversions and Settings polish.** Visible filter
-   labels on Reports, section headings, empty-state wording, and the Billing
-   module toggle's copy until P19 exists.
-7. **Final pass.** Measure 320px reflow, 200% zoom and forced colours on every
+3. **Layouts** *(third)*. Settings as explanation beside controls with a
+   portal preview, Packages as product cards with one editor dialog, Reports
+   side by side with meters and no-fill diagnosis, Outlook and Placements
+   cross-linked with booked bars and size outlines, initials avatars, empty
+   states, and a shared icon set.
+4. **Review components.** One dialog and one button vocabulary: move Review's
+   `Dialog` to core's `Modal` or state why not. Look at the campaign detail
+   view's layout. Keep the status pills, the tab filters and server paging.
+5. **Sidebar and remaining copy.** Regroup the sidebar so the sell-side screens
+   sit together (`add_submenu_page`'s position, not boot order), add visible
+   filter labels on Reports, and fix the Billing module toggle's copy until P19
+   exists.
+6. **Final pass.** Measure 320px reflow, 200% zoom and forced colours on every
    screen in the browser suite, and record the evidence here.
 
 An operational overview screen is deliberately **not** on this list. The data
 for an honest one exists: `Pending_Work`, the review tab counts, fill rate and
-the outlook's oversold count. But it should come after slices 3–6, so that it
+the outlook's oversold count. But it should come after slices 4–5, so that it
 links into screens that already follow the contract. It shows only counts the
 domain computes. It shows no revenue until P19 exists, and no figure that
 duplicates a screen without linking to it.

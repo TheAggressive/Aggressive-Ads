@@ -154,9 +154,13 @@ final class Placement_Screen implements Service {
 		}
 
 		$payload = array(
-			'view'     => $this->data->view(),
-			'restPath' => '/' . Api::NAMESPACE . '/placements',
-			'i18n'     => array(
+			'view'       => $this->data->view(),
+			'restPath'   => '/' . Api::NAMESPACE . '/placements',
+
+			// Same capability as this screen, so anybody here may open it.
+			'outlookUrl' => add_query_arg( 'page', Forecast_Screen::MENU_SLUG, admin_url( 'admin.php' ) ),
+			'i18n'       => array(
+				'seeOutlook'          => __( 'Inventory outlook', 'aggressive-ads' ),
 				'newPlacement'        => __( 'New placement', 'aggressive-ads' ),
 				'editPlacement'       => __( 'Edit placement', 'aggressive-ads' ),
 				'create'              => __( 'Create placement', 'aggressive-ads' ),

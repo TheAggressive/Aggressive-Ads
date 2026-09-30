@@ -34,6 +34,7 @@ import {
 	__experimentalVStack as VStack,
 } from '@wordpress/components';
 import { IconChip, type IconName } from '../shared/icon';
+import { initialsOf } from '../shared/initials';
 import './style.css';
 import {
 	AFTER_DRAGGING,
@@ -577,10 +578,18 @@ function Access( {
 				<VStack spacing={ 3 }>
 					{ roster.map( ( person ) => (
 						<HStack key={ person.id } justify="space-between">
-							<VStack spacing={ 0 }>
-								<strong>{ person.name }</strong>
-								<span>{ person.email }</span>
-							</VStack>
+							<span className="aggr-named">
+								<span
+									className="aggr-initials aggr-initials--person"
+									aria-hidden="true"
+								>
+									{ initialsOf( person.name ) }
+								</span>
+								<VStack spacing={ 0 }>
+									<strong>{ person.name }</strong>
+									<span>{ person.email }</span>
+								</VStack>
+							</span>
 							{ person.is_admin ? (
 								<span>{ t( 'alwaysAdmin' ) }</span>
 							) : (

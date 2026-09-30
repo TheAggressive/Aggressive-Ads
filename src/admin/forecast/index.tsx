@@ -13,6 +13,7 @@ import { createRoot, useMemo, useState } from '@wordpress/element';
 
 import './style.css';
 import { State, type Tone } from '../shared/state';
+import { Icon, type IconName } from '../shared/icon';
 
 import type {
 	Field as DataField,
@@ -46,18 +47,23 @@ const t = ( key: string ): string => strings[ key ] ?? key;
 const figure = ( value: number | null ): string =>
 	null === value ? t( 'noFigure' ) : value.toLocaleString();
 
-/** One summary card. */
+/** One summary card, labelled by an icon of the thing it counts. */
 const Card = ( {
 	label,
 	value,
+	icon,
 	alarm = false,
 }: {
 	label: string;
 	value: string;
+	icon: IconName;
 	alarm?: boolean;
 } ): ReactElement => (
 	<div className="aggr-forecast__card">
-		<p className="aggr-forecast__label">{ label }</p>
+		<p className="aggr-forecast__label">
+			<Icon name={ icon } size={ 16 } />
+			{ label }
+		</p>
 		<p
 			className={
 				alarm
@@ -74,10 +80,12 @@ const Outlook = ( {
 	rows,
 	totals,
 	window: range,
+	placementsUrl,
 }: {
 	rows: ForecastRow[];
 	totals: ForecastTotals;
 	window: { from: string; to: string };
+	placementsUrl?: string;
 } ): ReactElement => {
 	const [ view, setView ] = useState< DataView >( {
 		type: 'table',
@@ -124,8 +132,41 @@ const Outlook = ( {
 				label: t( 'committed' ),
 				enableSorting: true,
 				getValue: ( { item } ) => item.committed,
+				/*
+				 * Booked, drawn against what the window is forecast to offer.
+				 * The bar is how full the placement is; the number is still
+				 * the answer, and the bar is hidden from assistive technology
+				 * because it adds nothing the figures do not. No forecast, no
+				 * bar: an empty track would say "nothing sold" about a
+				 * placement nobody has measured.
+				 */
 				render: ( { item } ) => (
-					<>{ item.committed.toLocaleString() }</>
+					<span className="aggr-rate">
+						{ null === item.forecast ||
+						item.forecast <= 0 ? null : (
+							<span
+								className={
+									'oversell' === item.verdict
+										? 'aggr-meter aggr-meter--inline aggr-meter--over'
+										: 'aggr-meter aggr-meter--inline'
+								}
+								aria-hidden="true"
+							>
+								<span
+									className="aggr-meter__fill"
+									style={ {
+										width: `${
+											Math.min(
+												1,
+												item.committed / item.forecast
+											) * 100
+										}%`,
+									} }
+								/>
+							</span>
+						) }
+						{ item.committed.toLocaleString() }
+					</span>
 				),
 			},
 			{
@@ -170,30 +211,50 @@ const Outlook = ( {
 
 	return (
 		<>
-			<p className="aggr-forecast__window">
-				{ t( 'window' ) }: { range.from } – { range.to }
-			</p>
+			{ /*
+			 * What the figures cover, and the way back to the catalogue they
+			 * are about. The window and the inventory kind are fixed by the
+			 * server, so they are stated rather than left for the reader to
+			 * assume.
+			 */ }
+			<div className="aggr-forecast__context">
+				<p className="aggr-forecast__window">
+					{ t( 'window' ) }: { range.from } – { range.to } ·{ ' ' }
+					{ t( 'pageOnly' ) }
+				</p>
+				{ placementsUrl ? (
+					<a className="aggr-forecast__link" href={ placementsUrl }>
+						<Icon name="placements" size={ 16 } />
+						{ t( 'managePlacements' ) }
+					</a>
+				) : null }
+			</div>
 
 			<div className="aggr-forecast__cards">
 				<Card
 					label={ t( 'placements' ) }
+					icon="placements"
 					value={ totals.placements.toLocaleString() }
 				/>
 				<Card
 					label={ t( 'forecast' ) }
+					icon="forecast"
 					value={ totals.forecast.toLocaleString() }
 				/>
 				<Card
 					label={ t( 'committed' ) }
+					icon="booked"
 					value={ totals.committed.toLocaleString() }
 				/>
 				<Card
 					label={ t( 'oversold' ) }
+					icon="warning"
 					value={ totals.oversold.toLocaleString() }
 					alarm={ totals.oversold > 0 }
 				/>
 				<Card
 					label={ t( 'unforecast' ) }
+					icon="unknown"
 					value={ totals.unforecast.toLocaleString() }
 				/>
 			</div>
@@ -240,6 +301,7 @@ if ( mount ) {
 				rows={ payload.view.rows }
 				totals={ payload.view.totals }
 				window={ payload.view.window }
+				placementsUrl={ payload.placementsUrl }
 			/>
 		);
 	}

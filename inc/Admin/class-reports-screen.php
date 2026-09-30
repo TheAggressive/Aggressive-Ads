@@ -539,10 +539,11 @@ final class Reports_Screen implements Service {
 			 */
 			$expected = No_Fill_Reason::is_expected( (string) ( $reason['code'] ?? '' ) );
 
+			// Whole class names, so check-styles can resolve each one.
 			printf(
-				'<tr><th scope="row"><span class="aggr-report-reason">%1$s</span><span class="aggr-state aggr-state--%2$s">%3$s</span></th><td>%4$s</td><td>%5$s</td></tr>',
+				'<tr><th scope="row"><span class="aggr-report-reason">%1$s</span><span class="aggr-state %2$s">%3$s</span></th><td>%4$s</td><td>%5$s</td></tr>',
 				esc_html( (string) $reason['label'] ),
-				esc_attr( $expected ? 'neutral' : 'attention' ),
+				esc_attr( $expected ? 'aggr-state--neutral' : 'aggr-state--attention' ),
 				esc_html( $expected ? __( 'Working as intended', 'aggressive-ads' ) : __( 'Worth a look', 'aggressive-ads' ) ),
 				esc_html( number_format_i18n( (int) $reason['events'] ) ),
 				esc_html( $this->rate( isset( $reason['share'] ) ? $reason['share'] : null ) )

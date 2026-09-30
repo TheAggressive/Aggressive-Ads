@@ -39,6 +39,7 @@ import {
 import { DataViews, filterSortAndPaginate } from '@wordpress/dataviews';
 import { useCallback, useMemo, useState } from '@wordpress/element';
 import { State } from '../shared/state';
+import { Empty } from '../shared/empty';
 
 import apiFetch from '@wordpress/api-fetch';
 
@@ -399,11 +400,11 @@ export function Credentials( { path, advertisers, seeded, i18n }: Props ) {
 					</Button>
 				}
 				empty={
-					<p>
+					<Empty icon="key">
 						{ 0 === advertisers.length
 							? i18n.noAdvertisers
 							: i18n.credentialsNone }
-					</p>
+					</Empty>
 				}
 			/>
 

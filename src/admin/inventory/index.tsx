@@ -36,6 +36,8 @@ import type {
 } from '@wordpress/dataviews';
 import { errorMessage, setStrings, t } from '../shared/save';
 import { State } from '../shared/state';
+import { Icon } from '../shared/icon';
+import { Empty } from '../shared/empty';
 import { PlacementModal } from './form';
 import {
 	EMPTY,
@@ -47,6 +49,12 @@ import {
 } from './types';
 import './style.css';
 
+/*
+ * The slug is shown under the name rather than in a column of its own: it is
+ * the name's machine spelling, and two columns of nearly the same word pushed
+ * everything else apart. It stays a field, so it is still searchable and can
+ * still be switched on as a column.
+ */
 const DEFAULT_VIEW: DataView = {
 	type: 'table',
 	search: '',
@@ -55,9 +63,46 @@ const DEFAULT_VIEW: DataView = {
 	sort: { field: 'name', direction: 'asc' },
 	filters: [],
 	titleField: 'name',
-	fields: [ 'slug', 'size', 'status', 'refresh', 'groups' ],
+	fields: [ 'size', 'status', 'refresh', 'groups' ],
 	layout: {},
 };
+
+/**
+ * A placement's shape, drawn to scale inside a fixed box.
+ *
+ * "300x250" and "728x90" are numbers somebody has to picture; the outline
+ * shows at a glance which slot is the leaderboard and which the square. The
+ * dimensions are printed beside it, so the drawing is never the only way to
+ * know the size, and it is hidden from assistive technology for that reason.
+ */
+function SizeGlyph( {
+	width,
+	height,
+}: {
+	width: number;
+	height: number;
+} ): ReactElement | null {
+	if ( width <= 0 || height <= 0 ) {
+		return null;
+	}
+
+	const box = { w: 40, h: 28 };
+	const scale = Math.min( box.w / width, box.h / height );
+
+	return (
+		<span className="aggr-size-glyph" aria-hidden="true">
+			<span
+				style={ {
+					width: `${ Math.max( 3, Math.round( width * scale ) ) }px`,
+					height: `${ Math.max(
+						3,
+						Math.round( height * scale )
+					) }px`,
+				} }
+			/>
+		</span>
+	);
+}
 
 function App( { data }: { data: Bootstrap } ): ReactElement {
 	const [ catalogue, setCatalogue ] = useState< Catalogue >( data.view );
@@ -109,6 +154,14 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 				label: t( 'name' ),
 				type: 'text',
 				enableGlobalSearch: true,
+				render: ( { item }: { item: Placement } ) => (
+					<span className="aggr-cell-title">
+						<span>{ item.name }</span>
+						<span className="aggr-cell-title__sub">
+							{ item.slug }
+						</span>
+					</span>
+				),
 			},
 			{
 				id: 'slug',
@@ -120,6 +173,15 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 				id: 'size',
 				label: t( 'size' ),
 				type: 'text',
+				render: ( { item }: { item: Placement } ) => (
+					<span className="aggr-size">
+						<SizeGlyph
+							width={ item.size_width }
+							height={ item.size_height }
+						/>
+						{ item.size }
+					</span>
+				),
 			},
 			{
 				/*
@@ -183,6 +245,15 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 				filterBy: { operators: [ 'contains' ] },
 				getValue: ( { item }: { item: Placement } ) =>
 					( item.groups ?? [] ).join( ' ' ),
+				render: ( { item }: { item: Placement } ) => (
+					<span className="aggr-chips">
+						{ ( item.groups ?? [] ).map( ( group ) => (
+							<span key={ group } className="aggr-chip">
+								{ group }
+							</span>
+						) ) }
+					</span>
+				),
 			},
 			{
 				id: 'sort_order',
@@ -256,19 +327,36 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 					defaultLayouts={ { table: {} } }
 					searchLabel={ t( 'search' ) }
 					header={
-						<Button
-							variant="primary"
-							onClick={ () => {
-								setFormError( '' );
-								setSaved( '' );
-								setEditing( null );
-								setCreating( true );
-							} }
-						>
-							{ t( 'newPlacement' ) }
-						</Button>
+						<>
+							{ /*
+							 * The other half of the same catalogue: what each
+							 * placement is forecast to offer and how much is
+							 * sold. Two screens on one subject with no way
+							 * between them left the outlook undiscovered.
+							 */ }
+							{ data.outlookUrl ? (
+								<Button
+									variant="tertiary"
+									href={ data.outlookUrl }
+									icon={ <Icon name="forecast" /> }
+								>
+									{ t( 'seeOutlook' ) }
+								</Button>
+							) : null }
+							<Button
+								variant="primary"
+								onClick={ () => {
+									setFormError( '' );
+									setSaved( '' );
+									setEditing( null );
+									setCreating( true );
+								} }
+							>
+								{ t( 'newPlacement' ) }
+							</Button>
+						</>
 					}
-					empty={ <p>{ t( 'none' ) }</p> }
+					empty={ <Empty icon="placements">{ t( 'none' ) }</Empty> }
 				/>
 			</section>
 

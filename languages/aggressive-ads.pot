@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-09-30T04:51:52+00:00\n"
+"POT-Creation-Date: 2026-09-30T05:34:59+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -110,11 +110,11 @@ msgstr ""
 #: inc/Admin/class-forecast-screen.php:116
 #: inc/Admin/class-menu.php:294
 #: inc/Admin/class-organization-screen.php:115
-#: inc/Admin/class-package-screen.php:106
+#: inc/Admin/class-package-screen.php:108
 #: inc/Admin/class-placement-screen.php:131
-#: inc/Admin/class-reports-screen.php:143
+#: inc/Admin/class-reports-screen.php:144
 #: inc/Admin/class-review-screen.php:181
-#: inc/Admin/class-settings-screen.php:161
+#: inc/Admin/class-settings-screen.php:154
 msgid "You do not have permission to view this page."
 msgstr ""
 
@@ -123,7 +123,7 @@ msgid "The conversions screen has not been built. Run “pnpm build” and reloa
 msgstr ""
 
 #: inc/Admin/class-conversions-screen.php:192
-#: inc/Admin/class-package-screen.php:144
+#: inc/Admin/class-package-screen.php:146
 msgid "Choose a currency"
 msgstr ""
 
@@ -137,8 +137,8 @@ msgstr ""
 
 #: inc/Admin/class-conversions-screen.php:200
 #: inc/Admin/class-conversions-screen.php:233
-#: inc/Admin/class-package-screen.php:153
-#: inc/Admin/class-placement-screen.php:173
+#: inc/Admin/class-package-screen.php:165
+#: inc/Admin/class-placement-screen.php:177
 #: templates/portal/partials/campaign-review-step.php:140
 #: templates/portal/screens/organization.php:99
 msgid "Name"
@@ -165,7 +165,7 @@ msgid "What one conversion is worth. Leave empty for a signup or anything else w
 msgstr ""
 
 #: inc/Admin/class-conversions-screen.php:206
-#: inc/Admin/class-package-screen.php:162
+#: inc/Admin/class-package-screen.php:174
 msgid "Currency"
 msgstr ""
 
@@ -190,8 +190,8 @@ msgid "Reporting key"
 msgstr ""
 
 #: inc/Admin/class-conversions-screen.php:212
-#: inc/Admin/class-forecast-screen.php:159
-#: inc/Admin/class-placement-screen.php:170
+#: inc/Admin/class-forecast-screen.php:164
+#: inc/Admin/class-placement-screen.php:174
 #: inc/Admin/class-review-screen.php:295
 #: inc/Admin/class-review-screen.php:313
 #: templates/portal/partials/campaign-table.php:52
@@ -217,7 +217,8 @@ msgid "Archive"
 msgstr ""
 
 #: inc/Admin/class-conversions-screen.php:217
-#: inc/Admin/class-placement-screen.php:166
+#: inc/Admin/class-package-screen.php:152
+#: inc/Admin/class-placement-screen.php:170
 #: inc/Admin/class-review-screen.php:309
 #: templates/portal/screens/campaign.php:348
 msgid "Edit"
@@ -323,7 +324,7 @@ msgid "Last used"
 msgstr ""
 
 #: inc/Admin/class-conversions-screen.php:244
-#: inc/Admin/class-settings-screen.php:264
+#: inc/Admin/class-settings-screen.php:257
 msgid "Never"
 msgstr ""
 
@@ -356,7 +357,7 @@ msgstr ""
 
 #: inc/Admin/class-conversions-screen.php:251
 #: inc/Admin/class-organization-screen.php:196
-#: inc/Admin/class-placement-screen.php:167
+#: inc/Admin/class-placement-screen.php:171
 #: inc/Admin/class-review-screen.php:372
 #: templates/portal/partials/campaign-overlays.php:304
 #: templates/portal/partials/campaign-overlays.php:357
@@ -385,7 +386,9 @@ msgid "The conversions screen needs JavaScript enabled."
 msgstr ""
 
 #. translators: %d: number of days.
+#. translators: %d: run length in days (one day).
 #: inc/Admin/class-conversions-screen.php:384
+#: inc/Admin/class-package-screen.php:156
 #: templates/portal/partials/campaign-review-step.php:117
 #: templates/portal/partials/delivery-card.php:87
 #, php-format
@@ -502,6 +505,7 @@ msgstr ""
 #: inc/Admin/class-forecast-screen.php:102
 #: inc/Admin/class-forecast-screen.php:124
 #: inc/Admin/class-forecast-screen.php:135
+#: inc/Admin/class-placement-screen.php:163
 msgid "Inventory outlook"
 msgstr ""
 
@@ -521,10 +525,18 @@ msgstr ""
 msgid "This screen needs JavaScript."
 msgstr ""
 
-#: inc/Admin/class-forecast-screen.php:155
+#: inc/Admin/class-forecast-screen.php:158
+msgid "Page opportunities only"
+msgstr ""
+
+#: inc/Admin/class-forecast-screen.php:159
+msgid "Manage placements"
+msgstr ""
+
+#: inc/Admin/class-forecast-screen.php:160
 #: inc/Admin/class-report-export.php:150
-#: inc/Admin/class-reports-screen.php:297
-#: inc/Admin/class-reports-screen.php:558
+#: inc/Admin/class-reports-screen.php:298
+#: inc/Admin/class-reports-screen.php:597
 #: inc/Admin/class-review-screen.php:294
 #: inc/Core/class-post-types.php:199
 #: templates/portal/partials/campaign-status.php:260
@@ -536,82 +548,82 @@ msgid_plural "Placements"
 msgstr[0] ""
 msgstr[1] ""
 
-#: inc/Admin/class-forecast-screen.php:156
+#: inc/Admin/class-forecast-screen.php:161
 msgid "Forecast"
 msgstr ""
 
-#: inc/Admin/class-forecast-screen.php:157
+#: inc/Admin/class-forecast-screen.php:162
 msgid "Booked"
 msgstr ""
 
-#: inc/Admin/class-forecast-screen.php:158
+#: inc/Admin/class-forecast-screen.php:163
 msgid "Remaining"
 msgstr ""
 
-#: inc/Admin/class-forecast-screen.php:160
+#: inc/Admin/class-forecast-screen.php:165
 msgid "Confidence"
 msgstr ""
 
-#: inc/Admin/class-forecast-screen.php:161
+#: inc/Admin/class-forecast-screen.php:166
 msgid "Window"
 msgstr ""
 
-#: inc/Admin/class-forecast-screen.php:162
-#: inc/Admin/class-package-screen.php:154
+#: inc/Admin/class-forecast-screen.php:167
+#: inc/Admin/class-package-screen.php:166
 #: inc/Admin/class-placement-screen.php:115
 #: inc/Admin/class-placement-screen.php:116
 #: inc/Admin/class-placement-screen.php:148
-#: inc/Admin/class-placement-screen.php:229
-#: inc/Admin/class-reports-screen.php:564
+#: inc/Admin/class-placement-screen.php:233
+#: inc/Admin/class-reports-screen.php:603
 #: inc/Admin/class-review-screen.php:318
 #: inc/Core/class-post-types.php:199
 #: inc/Workflow/class-campaign-change-summary.php:83
 msgid "Placements"
 msgstr ""
 
-#: inc/Admin/class-forecast-screen.php:163
-#: inc/Admin/class-forecast-screen.php:171
+#: inc/Admin/class-forecast-screen.php:168
+#: inc/Admin/class-forecast-screen.php:176
 msgid "Oversold"
 msgstr ""
 
-#: inc/Admin/class-forecast-screen.php:164
+#: inc/Admin/class-forecast-screen.php:169
 msgid "Not yet forecast"
 msgstr ""
 
-#: inc/Admin/class-forecast-screen.php:165
+#: inc/Admin/class-forecast-screen.php:170
 msgid "No active placements to forecast."
 msgstr ""
 
-#: inc/Admin/class-forecast-screen.php:166
+#: inc/Admin/class-forecast-screen.php:171
 msgid "Outlook for each placement"
 msgstr ""
 
 #. translators: shown instead of a number when a placement has never been forecast.
-#: inc/Admin/class-forecast-screen.php:169
+#: inc/Admin/class-forecast-screen.php:174
 msgid "Not forecast"
 msgstr ""
 
-#: inc/Admin/class-forecast-screen.php:170
+#: inc/Admin/class-forecast-screen.php:175
 msgid "Available"
 msgstr ""
 
-#: inc/Admin/class-forecast-screen.php:172
+#: inc/Admin/class-forecast-screen.php:177
 msgid "Unmeasured"
 msgstr ""
 
-#: inc/Admin/class-forecast-screen.php:173
+#: inc/Admin/class-forecast-screen.php:178
 msgid "None"
 msgstr ""
 
-#: inc/Admin/class-forecast-screen.php:174
+#: inc/Admin/class-forecast-screen.php:179
 msgid "Low"
 msgstr ""
 
-#: inc/Admin/class-forecast-screen.php:175
+#: inc/Admin/class-forecast-screen.php:180
 msgid "Medium"
 msgstr ""
 
-#: inc/Admin/class-forecast-screen.php:176
+#: inc/Admin/class-forecast-screen.php:181
 msgid "High"
 msgstr ""
 
@@ -632,8 +644,8 @@ msgid "No organizations match this search."
 msgstr ""
 
 #: inc/Admin/class-organization-screen.php:151
-#: inc/Admin/class-package-screen.php:163
-#: inc/Admin/class-placement-screen.php:186
+#: inc/Admin/class-package-screen.php:175
+#: inc/Admin/class-placement-screen.php:190
 #: templates/portal/screens/organization.php:53
 #: templates/portal/screens/organization.php:257
 msgid "Active"
@@ -686,8 +698,8 @@ msgid "Ownership transferred."
 msgstr ""
 
 #: inc/Admin/class-organization-screen.php:162
-#: inc/Admin/class-placement-screen.php:195
-#: inc/Admin/class-settings-screen.php:306
+#: inc/Admin/class-placement-screen.php:199
+#: inc/Admin/class-settings-screen.php:299
 #: templates/portal/partials/campaign-creative-step.php:271
 #: templates/portal/screens/organization.php:152
 msgid "Remove"
@@ -762,10 +774,10 @@ msgid "That organization could not be updated."
 msgstr ""
 
 #: inc/Admin/class-organization-screen.php:182
-#: inc/Admin/class-package-screen.php:173
-#: inc/Admin/class-placement-screen.php:224
+#: inc/Admin/class-package-screen.php:185
+#: inc/Admin/class-placement-screen.php:228
 #: inc/Admin/class-review-screen.php:412
-#: inc/Admin/class-settings-screen.php:312
+#: inc/Admin/class-settings-screen.php:305
 msgid "Try again"
 msgstr ""
 
@@ -811,118 +823,148 @@ msgstr ""
 msgid "The organizations screen needs JavaScript enabled."
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:81
-#: inc/Admin/class-package-screen.php:82
-#: inc/Admin/class-package-screen.php:123
-#: inc/Admin/class-package-screen.php:178
+#: inc/Admin/class-package-screen.php:92
+#: inc/Admin/class-package-screen.php:93
+#: inc/Admin/class-package-screen.php:125
+#: inc/Admin/class-package-screen.php:190
 #: inc/Core/class-post-types.php:200
 msgid "Packages"
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:124
+#: inc/Admin/class-package-screen.php:126
 msgid "The packages screen has not been built. Run “pnpm build” and reload."
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:148
+#: inc/Admin/class-package-screen.php:150
 msgid "New package"
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:149
-msgid "Create package"
-msgstr ""
-
-#: inc/Admin/class-package-screen.php:150
-msgid "Save package"
-msgstr ""
-
 #: inc/Admin/class-package-screen.php:151
-msgid "Package created."
+msgid "Edit package"
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:152
-msgid "Package saved."
+#: inc/Admin/class-package-screen.php:153
+msgctxt "package badge: pre-selected in the wizard"
+msgid "Default"
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:155
-msgid "No placements exist yet. Create one under Placements first."
+#: inc/Admin/class-package-screen.php:154
+msgctxt "package badge: hidden from advertisers"
+msgid "Inactive"
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:156
-#: inc/Admin/class-placement-screen.php:188
-msgid "inactive"
-msgstr ""
-
-#: inc/Admin/class-package-screen.php:157
-msgid "Advertiser chooses the dates"
-msgstr ""
-
+#. translators: %d: run length in days (more than one).
+#. translators: %d: number of days.
 #: inc/Admin/class-package-screen.php:158
-msgid "Leave off to sell a fixed run length."
+#: inc/Admin/class-settings-screen.php:82
+#, php-format
+msgid "%d days"
 msgstr ""
 
 #: inc/Admin/class-package-screen.php:159
-msgid "Duration (days)"
+msgid "No placements chosen yet."
 msgstr ""
 
 #: inc/Admin/class-package-screen.php:160
-msgid "Price"
+msgid "Advertisers choose from these in the campaign wizard. Create one to open the catalogue."
 msgstr ""
 
 #: inc/Admin/class-package-screen.php:161
-msgid "Stored as whole cents. Two decimal places."
+msgid "Create package"
+msgstr ""
+
+#: inc/Admin/class-package-screen.php:162
+msgid "Save package"
+msgstr ""
+
+#: inc/Admin/class-package-screen.php:163
+msgid "Package created."
 msgstr ""
 
 #: inc/Admin/class-package-screen.php:164
-msgid "Inactive packages are hidden from advertisers."
-msgstr ""
-
-#: inc/Admin/class-package-screen.php:165
-msgid "Catalogue default"
-msgstr ""
-
-#: inc/Admin/class-package-screen.php:166
-msgid "Pre-selected in the campaign wizard. Only one package can be the default."
+msgid "Package saved."
 msgstr ""
 
 #: inc/Admin/class-package-screen.php:167
-msgid "default"
+msgid "No placements exist yet. Create one under Placements first."
 msgstr ""
 
 #: inc/Admin/class-package-screen.php:168
-#: inc/Admin/class-placement-screen.php:219
-#: inc/Admin/class-settings-screen.php:307
-msgid "Not saved yet…"
+#: inc/Admin/class-placement-screen.php:192
+msgid "inactive"
 msgstr ""
 
 #: inc/Admin/class-package-screen.php:169
-#: inc/Admin/class-placement-screen.php:220
-#: inc/Admin/class-settings-screen.php:308
+msgid "Advertiser chooses the dates"
+msgstr ""
+
+#: inc/Admin/class-package-screen.php:170
+msgid "Leave off to sell a fixed run length."
+msgstr ""
+
+#: inc/Admin/class-package-screen.php:171
+msgid "Duration (days)"
+msgstr ""
+
+#: inc/Admin/class-package-screen.php:172
+msgid "Price"
+msgstr ""
+
+#: inc/Admin/class-package-screen.php:173
+msgid "Stored as whole cents. Two decimal places."
+msgstr ""
+
+#: inc/Admin/class-package-screen.php:176
+msgid "Inactive packages are hidden from advertisers."
+msgstr ""
+
+#: inc/Admin/class-package-screen.php:177
+msgid "Catalogue default"
+msgstr ""
+
+#: inc/Admin/class-package-screen.php:178
+msgid "Pre-selected in the campaign wizard. Only one package can be the default."
+msgstr ""
+
+#: inc/Admin/class-package-screen.php:179
+msgid "default"
+msgstr ""
+
+#: inc/Admin/class-package-screen.php:180
+#: inc/Admin/class-placement-screen.php:223
+#: inc/Admin/class-settings-screen.php:300
+msgid "Not saved yet…"
+msgstr ""
+
+#: inc/Admin/class-package-screen.php:181
+#: inc/Admin/class-placement-screen.php:224
+#: inc/Admin/class-settings-screen.php:301
 #: inc/Assets/class-assets.php:410
 msgid "Saving…"
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:170
-#: inc/Admin/class-placement-screen.php:221
-#: inc/Admin/class-settings-screen.php:309
+#: inc/Admin/class-package-screen.php:182
+#: inc/Admin/class-placement-screen.php:225
+#: inc/Admin/class-settings-screen.php:302
 #: inc/Assets/class-assets.php:435
 msgid "Saved."
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:171
-#: inc/Admin/class-placement-screen.php:222
-#: inc/Admin/class-settings-screen.php:310
+#: inc/Admin/class-package-screen.php:183
+#: inc/Admin/class-placement-screen.php:226
+#: inc/Admin/class-settings-screen.php:303
 msgid "Not saved."
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:172
+#: inc/Admin/class-package-screen.php:184
 msgid "That package could not be saved."
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:179
+#: inc/Admin/class-package-screen.php:191
 msgid "What advertisers can buy in the campaign wizard, and at what price."
 msgstr ""
 
-#: inc/Admin/class-package-screen.php:183
+#: inc/Admin/class-package-screen.php:195
 msgid "The packages screen needs JavaScript enabled."
 msgstr ""
 
@@ -938,227 +980,227 @@ msgstr ""
 msgid "The placements screen has not been built. Run “pnpm build” and reload."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:160
+#: inc/Admin/class-placement-screen.php:164
 msgid "New placement"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:161
+#: inc/Admin/class-placement-screen.php:165
 msgid "Edit placement"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:162
+#: inc/Admin/class-placement-screen.php:166
 msgid "Create placement"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:163
+#: inc/Admin/class-placement-screen.php:167
 msgid "Save placement"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:164
+#: inc/Admin/class-placement-screen.php:168
 msgid "Placement created."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:165
+#: inc/Admin/class-placement-screen.php:169
 msgid "Placement saved."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:168
+#: inc/Admin/class-placement-screen.php:172
 msgid "Search placements"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:169
+#: inc/Admin/class-placement-screen.php:173
 msgid "No placements yet."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:171
+#: inc/Admin/class-placement-screen.php:175
 msgid "Allowed"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:172
+#: inc/Admin/class-placement-screen.php:176
 msgid "Off"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:174
+#: inc/Admin/class-placement-screen.php:178
 msgid "Slot slug"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:175
+#: inc/Admin/class-placement-screen.php:179
 msgid "Used by the placement block to choose this slot. Lowercase letters, numbers and hyphens."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:176
+#: inc/Admin/class-placement-screen.php:180
 #: templates/portal/screens/campaign.php:651
 msgid "Size"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:177
+#: inc/Admin/class-placement-screen.php:181
 msgid "Choose a size"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:178
+#: inc/Admin/class-placement-screen.php:182
 msgid "Custom size"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:179
+#: inc/Admin/class-placement-screen.php:183
 msgid "Custom width (px)"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:180
+#: inc/Admin/class-placement-screen.php:184
 msgid "Custom height (px)"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:181
+#: inc/Admin/class-placement-screen.php:185
 msgid "Sort order"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:182
+#: inc/Admin/class-placement-screen.php:186
 msgid "Lower numbers appear first in the advertiser wizard."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:183
+#: inc/Admin/class-placement-screen.php:187
 msgid "Maximum file size (KB)"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:184
+#: inc/Admin/class-placement-screen.php:188
 msgid "The largest ad creative an advertiser may upload for this placement. 150 KB suits most display advertising; raise it only where the artwork genuinely needs it, because every kilobyte here is paid for by every visitor to the page."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:185
+#: inc/Admin/class-placement-screen.php:189
 msgid "Max file"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:187
+#: inc/Admin/class-placement-screen.php:191
 msgid "Inactive placements are hidden from advertisers and stop being filled."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:189
+#: inc/Admin/class-placement-screen.php:193
 #: inc/Admin/class-report-data.php:351
-#: inc/Admin/class-reports-screen.php:364
+#: inc/Admin/class-reports-screen.php:368
 msgid "Refresh"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:190
+#: inc/Admin/class-placement-screen.php:194
 msgid "Responsive sizes"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:191
+#: inc/Admin/class-placement-screen.php:195
 msgid "Serve a different size at different screen widths. Leave empty to serve one size everywhere. Each row is the narrowest screen that gets that size, so the first row must start at 0."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:192
+#: inc/Admin/class-placement-screen.php:196
 msgid "From screen width (px)"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:193
+#: inc/Admin/class-placement-screen.php:197
 msgid "Serves size"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:194
+#: inc/Admin/class-placement-screen.php:198
 msgid "Add a size"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:196
+#: inc/Admin/class-placement-screen.php:200
 msgid "A responsive placement needs a row starting at 0, or it serves its single size everywhere."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:197
-#: inc/Admin/class-reports-screen.php:559
+#: inc/Admin/class-placement-screen.php:201
+#: inc/Admin/class-reports-screen.php:598
 msgid "Groups"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:198
+#: inc/Admin/class-placement-screen.php:202
 msgid "Filed under"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:199
+#: inc/Admin/class-placement-screen.php:203
 msgid "Your own filing, for finding placements and totalling them together. Groups do not change which advertisement is served, and an advertiser never sees them. Labels are simplified when saved."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:200
+#: inc/Admin/class-placement-screen.php:204
 msgid "Allow refresh"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:201
+#: inc/Admin/class-placement-screen.php:205
 msgid "When on, a slot on this placement may replace its advertisement on a timer. The block still has to ask. Off is the default: a new placement is not inventory somebody chose to multiply."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:202
+#: inc/Admin/class-placement-screen.php:206
 msgid "Shortest interval (seconds)"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:203
+#: inc/Admin/class-placement-screen.php:207
 msgid "A block asking to rotate faster than this gets this number. A slower request is honoured."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:204
+#: inc/Admin/class-placement-screen.php:208
 msgid "Refreshes per page view"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:205
+#: inc/Admin/class-placement-screen.php:209
 msgid "How many times one slot may refresh after the first fill. Zero keeps refresh on but starts no timer."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:206
+#: inc/Admin/class-placement-screen.php:210
 msgid "House advertisement"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:207
+#: inc/Admin/class-placement-screen.php:211
 msgid "House attachment ID"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:208
+#: inc/Admin/class-placement-screen.php:212
 msgid "Shown when no paid creative is live, if the Delivery house-ad policy allows it. Leave empty for none."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:209
+#: inc/Admin/class-placement-screen.php:213
 msgid "With no house advertisement, this placement shows nothing when it is unsold — and nothing at all to visitors without JavaScript, whose slot is removed from the page rather than left as an empty box."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:210
+#: inc/Admin/class-placement-screen.php:214
 msgid "House click URL"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:211
+#: inc/Admin/class-placement-screen.php:215
 msgid "House alt text"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:212
+#: inc/Admin/class-placement-screen.php:216
 msgid "Choose image"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:213
+#: inc/Admin/class-placement-screen.php:217
 msgid "Replace image"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:214
+#: inc/Admin/class-placement-screen.php:218
 msgid "Remove image"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:215
+#: inc/Admin/class-placement-screen.php:219
 msgid "The house advertisement as it will be served"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:216
+#: inc/Admin/class-placement-screen.php:220
 msgid "Alt text is needed. A house advertisement is a linked image, and without it the link has no name a screen reader can announce."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:217
+#: inc/Admin/class-placement-screen.php:221
 msgid "Open in the same tab"
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:218
+#: inc/Admin/class-placement-screen.php:222
 msgid "Advertisements open in a new tab so a click does not take the reader off your page. Turn this on when the house advertisement points somewhere on this site, where a new tab is the wrong behaviour."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:223
+#: inc/Admin/class-placement-screen.php:227
 msgid "That placement could not be saved."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:230
+#: inc/Admin/class-placement-screen.php:234
 msgid "The slots a campaign can be bought into, and what each one shows when nothing is sold."
 msgstr ""
 
-#: inc/Admin/class-placement-screen.php:234
+#: inc/Admin/class-placement-screen.php:238
 msgid "The placements screen needs JavaScript enabled."
 msgstr ""
 
@@ -1170,7 +1212,7 @@ msgid "Figures from %s onward are still being counted."
 msgstr ""
 
 #: inc/Admin/class-report-data.php:350
-#: inc/Admin/class-reports-screen.php:357
+#: inc/Admin/class-reports-screen.php:360
 msgid "Page"
 msgstr ""
 
@@ -1271,175 +1313,183 @@ msgid "Requested"
 msgstr ""
 
 #: inc/Admin/class-report-export.php:199
-#: inc/Admin/class-reports-screen.php:561
+#: inc/Admin/class-reports-screen.php:600
 msgid "Filled"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:64
 #: inc/Admin/class-reports-screen.php:65
+#: inc/Admin/class-reports-screen.php:66
 msgid "Reports"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:150
+#: inc/Admin/class-reports-screen.php:151
 msgid "Advertising reports"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:151
+#: inc/Admin/class-reports-screen.php:152
 msgid "How often each slot filled when it was asked for, and why it stayed empty when it did not."
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:158
+#: inc/Admin/class-reports-screen.php:159
 msgid "Reporting is switched off for this site. Turn it on under Advertising → Settings → Modules to see delivery figures here."
 msgstr ""
 
 #. translators: %d: number of days the download will cover.
-#: inc/Admin/class-reports-screen.php:224
+#: inc/Admin/class-reports-screen.php:225
 #, php-format
 msgid "Download %d day (CSV)"
 msgid_plural "Download %d days (CSV)"
 msgstr[0] ""
 msgstr[1] ""
 
-#: inc/Admin/class-reports-screen.php:274
+#: inc/Admin/class-reports-screen.php:275
 msgid "Reporting window"
 msgstr ""
 
 #. translators: %d: number of days.
-#: inc/Admin/class-reports-screen.php:286
+#: inc/Admin/class-reports-screen.php:287
 #, php-format
 msgid "Last %d day (UTC)"
 msgid_plural "Last %d days (UTC)"
 msgstr[0] ""
 msgstr[1] ""
 
-#: inc/Admin/class-reports-screen.php:303
+#: inc/Admin/class-reports-screen.php:304
 msgid "Every placement"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:316
+#: inc/Admin/class-reports-screen.php:317
 #: templates/portal/partials/delivery-card.php:109
 msgid "Show"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:332
+#: inc/Admin/class-reports-screen.php:333
 msgid "(UTC)"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:359
+#: inc/Admin/class-reports-screen.php:362
 msgid "of page requests filled"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:360
+#: inc/Admin/class-reports-screen.php:363
 msgid "No page requests in this window."
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:366
+#: inc/Admin/class-reports-screen.php:370
 msgid "of refresh requests filled"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:367
+#: inc/Admin/class-reports-screen.php:371
 msgid "No refreshes in this window."
 msgstr ""
 
 #. translators: %s: a count of advertisement requests.
-#: inc/Admin/class-reports-screen.php:421
+#: inc/Admin/class-reports-screen.php:442
 #, php-format
 msgid "%s requests"
 msgstr ""
 
 #. translators: %s: a count of filled requests.
-#: inc/Admin/class-reports-screen.php:428
+#: inc/Admin/class-reports-screen.php:449
 #, php-format
 msgid "%s filled"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:454
+#: inc/Admin/class-reports-screen.php:475
 msgid "No advertisement was requested in this window, so there is nothing to explain yet."
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:462
+#: inc/Admin/class-reports-screen.php:486
 msgid "Why page requests were not filled"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:463
+#: inc/Admin/class-reports-screen.php:487
 msgid "Reasons a page request was not filled"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:464
+#: inc/Admin/class-reports-screen.php:488
 msgid "Every page request was filled."
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:468
+#: inc/Admin/class-reports-screen.php:492
 msgid "Why refresh requests were not filled"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:469
+#: inc/Admin/class-reports-screen.php:493
 msgid "Reasons a refresh request was not filled"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:470
+#: inc/Admin/class-reports-screen.php:494
 msgid "Every refresh request was filled."
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:501
+#: inc/Admin/class-reports-screen.php:527
 msgid "Reason"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:502
+#: inc/Admin/class-reports-screen.php:528
 msgid "Requests"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:503
+#: inc/Admin/class-reports-screen.php:529
 msgid "Share"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:540
+#: inc/Admin/class-reports-screen.php:547
+msgid "Working as intended"
+msgstr ""
+
+#: inc/Admin/class-reports-screen.php:547
+msgid "Worth a look"
+msgstr ""
+
+#: inc/Admin/class-reports-screen.php:579
 msgid "Utilisation by placement"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:544
+#: inc/Admin/class-reports-screen.php:583
 msgid "Page opportunities only. A refresh fills the same slot again on a timer, so it is delivery rather than new inventory and is deliberately not counted here."
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:550
+#: inc/Admin/class-reports-screen.php:589
 msgid "No placements are configured yet."
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:560
+#: inc/Admin/class-reports-screen.php:599
 msgid "Page requests"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:562
+#: inc/Admin/class-reports-screen.php:601
 msgid "Utilisation"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:563
+#: inc/Admin/class-reports-screen.php:602
 msgid "Group"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:565
+#: inc/Admin/class-reports-screen.php:604
 msgid "Utilisation by group"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:566
+#: inc/Admin/class-reports-screen.php:605
 msgid "Utilisation detail"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:567
+#: inc/Admin/class-reports-screen.php:606
 msgid "Group totals"
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:573
+#: inc/Admin/class-reports-screen.php:612
 msgid "The utilisation tables need JavaScript enabled. Every other figure on this page is above."
 msgstr ""
 
 #. translators: %s: a count of page requests recorded against deleted placements.
-#: inc/Admin/class-reports-screen.php:609
+#: inc/Admin/class-reports-screen.php:648
 #, php-format
 msgid "%s page requests belong to placements that no longer exist, so they are counted in the totals above but cannot appear in any row. This is normal after a placement is deleted."
 msgstr ""
 
-#: inc/Admin/class-reports-screen.php:623
+#: inc/Admin/class-reports-screen.php:662
 #: inc/Portal/class-delivery-view-data.php:497
 #: inc/Portal/class-delivery-view-data.php:560
 #: inc/Portal/class-delivery-view-data.php:577
@@ -1451,7 +1501,7 @@ msgstr ""
 #. translators: %s: a percentage, e.g. 92.4.
 #. translators: %s: click-through rate as a percentage, e.g. 1.2.
 #. translators: %s: share of impressions that were viewable, e.g. 62.5.
-#: inc/Admin/class-reports-screen.php:628
+#: inc/Admin/class-reports-screen.php:667
 #: inc/Portal/class-delivery-view-data.php:565
 #: inc/Portal/class-delivery-view-data.php:582
 #: inc/Portal/class-delivery-view-data.php:633
@@ -1461,7 +1511,7 @@ msgid "%s%%"
 msgstr ""
 
 #. translators: %s: a count of requests with no recorded outcome.
-#: inc/Admin/class-reports-screen.php:652
+#: inc/Admin/class-reports-screen.php:691
 #, php-format
 msgid "%s requests have no recorded outcome. This is a defect worth reporting: every request should be either a fill or a reason."
 msgstr ""
@@ -1668,7 +1718,7 @@ msgid "Choose an advertiser"
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:305
-#: inc/Admin/class-settings-screen.php:215
+#: inc/Admin/class-settings-screen.php:208
 #: inc/Assets/class-assets.php:415
 #: inc/Workflow/class-campaign-change-summary.php:73
 #: templates/portal/partials/campaign-changes.php:259
@@ -2160,12 +2210,6 @@ msgstr ""
 msgid "7 years"
 msgstr ""
 
-#. translators: %d: number of days.
-#: inc/Admin/class-settings-screen.php:82
-#, php-format
-msgid "%d days"
-msgstr ""
-
 #: inc/Admin/class-settings-screen.php:95
 #: inc/Admin/class-settings-screen.php:96
 #: templates/portal/screens/account.php:34
@@ -2173,219 +2217,223 @@ msgstr ""
 msgid "Settings"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:191
-#: inc/Admin/class-settings-screen.php:354
+#: inc/Admin/class-settings-screen.php:184
+#: inc/Admin/class-settings-screen.php:348
 msgid "Advertising Settings"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:192
+#: inc/Admin/class-settings-screen.php:185
 msgid "The settings screen has not been built. Run “pnpm build” and reload."
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:210
+#: inc/Admin/class-settings-screen.php:203
 msgid "Public signup"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:210
+#: inc/Admin/class-settings-screen.php:203
 msgid "WordPress “Anyone can register” must also be on."
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:211
+#: inc/Admin/class-settings-screen.php:204
 msgid "Billing UI"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:212
+#: inc/Admin/class-settings-screen.php:205
 msgid "Reporting"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:212
+#: inc/Admin/class-settings-screen.php:205
 msgid "Native fill is always recording; this switch only shows the numbers."
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:216
+#: inc/Admin/class-settings-screen.php:209
 #: inc/Workflow/class-campaign-change-summary.php:75
 msgid "Advertiser notes"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:217
+#: inc/Admin/class-settings-screen.php:210
 msgid "Start and end dates"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:217
+#: inc/Admin/class-settings-screen.php:210
 msgid "A start date that has already passed cannot be moved."
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:218
+#: inc/Admin/class-settings-screen.php:211
 #: templates/portal/partials/campaign-overlays.php:347
 #: templates/portal/partials/campaign-upload-form.php:169
 msgid "Destination URL"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:218
+#: inc/Admin/class-settings-screen.php:211
 msgid "Repoints the click without replacing the artwork."
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:219
+#: inc/Admin/class-settings-screen.php:212
 msgid "Package (structural)"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:219
+#: inc/Admin/class-settings-screen.php:212
 msgid "Advertisers move to another package on sale, upgrading or downgrading; its placements and ad sizes come with it. The campaign keeps running on its current package until the change is approved, and both prices are recorded for billing."
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:229
+#: inc/Admin/class-settings-screen.php:222
 msgid "Accent (selection, focus and highlights)"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:234
+#: inc/Admin/class-settings-screen.php:227
 msgid "Accent for links and accented text"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:239
+#: inc/Admin/class-settings-screen.php:232
 msgid "Canvas"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:244
+#: inc/Admin/class-settings-screen.php:237
 msgid "Surface"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:249
+#: inc/Admin/class-settings-screen.php:242
 msgid "Text"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:260
+#: inc/Admin/class-settings-screen.php:253
 msgid "When no paid creative is live"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:303
+#: inc/Admin/class-settings-screen.php:296
 msgid "Give access"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:304
+#: inc/Admin/class-settings-screen.php:297
 msgid "Give someone review access"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:305
+#: inc/Admin/class-settings-screen.php:298
 msgid "Username or email address. Advertiser accounts cannot be given review access — reviewing means reading every organization’s unpublished work."
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:311
+#: inc/Admin/class-settings-screen.php:304
 msgid "Those settings could not be saved."
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:313
+#: inc/Admin/class-settings-screen.php:306
 msgid "Modules"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:314
+#: inc/Admin/class-settings-screen.php:307
 msgid "Off means the route, menu, or field is not registered."
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:315
+#: inc/Admin/class-settings-screen.php:308
 msgid "Changes to running campaigns"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:316
+#: inc/Admin/class-settings-screen.php:309
 msgid "What an advertiser may ask to change on a campaign that is already scheduled, live or paused. Every change still waits for staff approval."
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:317
+#: inc/Admin/class-settings-screen.php:310
 msgid "Brand"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:318
+#: inc/Admin/class-settings-screen.php:311
 msgid "Advertiser-facing name and colours. The code prefix never changes."
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:319
+#: inc/Admin/class-settings-screen.php:312
 msgid "Product name"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:320
+#: inc/Admin/class-settings-screen.php:313
 msgid "Tagline"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:321
+#: inc/Admin/class-settings-screen.php:314
 msgid "Shown under the name on the portal rail and sign-in screens."
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:322
+#: inc/Admin/class-settings-screen.php:315
 msgid "Support email"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:323
+#: inc/Admin/class-settings-screen.php:316
 msgid "Shown to advertisers on the Help screen. Empty uses the site administration email."
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:324
+#: inc/Admin/class-settings-screen.php:317
 msgid "Logo URL"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:325
+#: inc/Admin/class-settings-screen.php:318
 msgid "Delivery and tracking"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:326
+#: inc/Admin/class-settings-screen.php:319
 msgid "Native fill cache and house-ad policy."
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:327
+#: inc/Admin/class-settings-screen.php:320
 msgid "Fill cache TTL (seconds)"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:328
+#: inc/Admin/class-settings-screen.php:321
 msgid "House ads"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:329
+#: inc/Admin/class-settings-screen.php:322
 msgid "Retention"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:330
+#: inc/Admin/class-settings-screen.php:323
 msgid "How long delivery detail and unapproved artwork are kept. Reported totals are never affected."
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:331
+#: inc/Admin/class-settings-screen.php:324
 msgid "Delivery log retention (days)"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:332
+#: inc/Admin/class-settings-screen.php:325
 msgid "How long individual impression and click rows are kept after they have been counted. Dashboard and CSV totals come from the daily rollups and survive this."
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:333
+#: inc/Admin/class-settings-screen.php:326
 msgid "Audit log retention"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:334
+#: inc/Admin/class-settings-screen.php:327
 msgid "How long the record of who approved what is kept. Refused actions are never deleted, whatever this is set to, because those are the entries an investigation needs."
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:335
+#: inc/Admin/class-settings-screen.php:328
 msgid "Unapproved creative retention (days)"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:336
+#: inc/Admin/class-settings-screen.php:329
 msgid "How long a finished campaign keeps artwork that was never approved. Approved artwork is removed from private storage as soon as it is approved, because the Media Library copy replaces it."
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:337
+#: inc/Admin/class-settings-screen.php:330
 msgid "Access"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:338
+#: inc/Admin/class-settings-screen.php:331
 msgid "Who can review advertising campaigns. Access is added to the person’s existing account, so their current role is unchanged."
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:339
+#: inc/Admin/class-settings-screen.php:332
 msgid "Nobody has been given review access yet."
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:340
+#: inc/Admin/class-settings-screen.php:333
+msgid "Preview of the advertiser portal in these colours"
+msgstr ""
+
+#: inc/Admin/class-settings-screen.php:334
 msgid "Always, as an administrator"
 msgstr ""
 
-#: inc/Admin/class-settings-screen.php:361
+#: inc/Admin/class-settings-screen.php:355
 msgid "Advertising settings need JavaScript enabled."
 msgstr ""
 

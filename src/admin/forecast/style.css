@@ -20,6 +20,9 @@
 
 /* The portal's stat label: small, monospaced, spaced out, and quiet. */
 .aggr-forecast__label {
+	display: flex;
+	gap: 8px;
+	align-items: center;
 	color: var(--aggr-color-text-subtle);
 	font-family: var(--aggr-font-mono);
 	font-size: 10.5px;
@@ -48,6 +51,31 @@
  */
 .aggr-forecast__figure--alarm {
 	color: var(--aggr-color-danger);
+}
+
+/* What the figures cover on the left, the way back to the catalogue on the right. */
+.aggr-forecast__context {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px 24px;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.aggr-forecast__link {
+	display: inline-flex;
+	gap: 6px;
+	align-items: center;
+	color: var(--aggr-color-text);
+	font-weight: 600;
+	text-decoration: underline;
+	text-decoration-thickness: 1px;
+	text-underline-offset: 3px;
+}
+
+.aggr-forecast__link:hover,
+.aggr-forecast__link:focus-visible {
+	color: var(--aggr-color-accent);
 }
 
 /* The window is data, so it is set like the portal's dates. */
