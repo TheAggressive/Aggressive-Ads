@@ -198,10 +198,9 @@ final class Review_Screen implements Service {
 	 */
 	private function render_screen(): void {
 		if ( ! is_file( AGGR_PLUGIN_DIR . 'dist/admin/review.asset.php' ) ) {
-			printf(
-				'<div class="wrap"><h1>%1$s</h1><div class="notice notice-error"><p>%2$s</p></div></div>',
-				esc_html__( 'Campaign review', 'aggressive-ads' ),
-				esc_html__( 'The review screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' )
+			Screen_Shell::unbuilt(
+				__( 'Campaign review', 'aggressive-ads' ),
+				__( 'The review screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' )
 			);
 
 			return;

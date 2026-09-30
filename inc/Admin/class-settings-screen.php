@@ -187,10 +187,9 @@ final class Settings_Screen implements Service {
 		 * beats an empty wrap the reader has to diagnose from the console.
 		 */
 		if ( ! is_file( $asset ) ) {
-			printf(
-				'<div class="wrap"><h1>%1$s</h1><div class="notice notice-error"><p>%2$s</p></div></div>',
-				esc_html__( 'Advertising Settings', 'aggressive-ads' ),
-				esc_html__( 'The settings screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' )
+			Screen_Shell::unbuilt(
+				__( 'Advertising Settings', 'aggressive-ads' ),
+				__( 'The settings screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' )
 			);
 
 			return;
@@ -350,11 +349,15 @@ final class Settings_Screen implements Service {
 		 * that need scripting, so the cost is a message rather than a dead end —
 		 * but it is a real cost, and it is stated here rather than discovered.
 		 */
-		printf(
-			'<div class="wrap aggr-admin"><h1>%1$s</h1><noscript><div class="notice notice-error"><p>%2$s</p></div></noscript><div id="aggr-settings-root" data-aggr-settings="%3$s"></div></div>',
-			esc_html__( 'Advertising Settings', 'aggressive-ads' ),
-			esc_html__( 'Advertising settings need JavaScript enabled.', 'aggressive-ads' ),
-			esc_attr( (string) wp_json_encode( $payload ) )
+		Screen_Shell::mount(
+			__( 'Advertising Settings', 'aggressive-ads' ),
+			// No purpose line: every section below already says what it is for,
+			// and a sentence listing them would be a table of contents.
+			'',
+			'aggr-settings-root',
+			'data-aggr-settings',
+			$payload,
+			__( 'Advertising settings need JavaScript enabled.', 'aggressive-ads' )
 		);
 	}
 

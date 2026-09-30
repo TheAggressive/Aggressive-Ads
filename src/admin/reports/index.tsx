@@ -137,7 +137,7 @@ function Placements( { rows }: { rows: PlacementRow[] } ): ReactElement {
 		 * make that control ambiguous to anyone asking for it by name.
 		 */
 		<div
-			className="aggr-reports-utilisation"
+			className="aggr-reports-utilisation aggr-scroll-region"
 			role="region"
 			tabIndex={ 0 }
 			aria-label={ t( 'detailRegion' ) }
@@ -215,26 +215,33 @@ function Groups( { rows }: { rows: GroupRow[] } ): ReactElement | null {
 	}
 
 	return (
-		// Not a superstring of the region above, for the same reason.
-		<div
-			className="aggr-reports-utilisation"
-			role="region"
-			tabIndex={ 0 }
-			aria-label={ t( 'groupRegion' ) }
-		>
+		<>
+			{ /*
+			 * The heading sits above the region, not inside it. The region is
+			 * the table's surface and scrolls sideways at narrow widths, and a
+			 * heading inside it would scroll away with the columns.
+			 */ }
 			<h2>{ t( 'byGroup' ) }</h2>
-			<DataViews< GroupRow >
-				data={ data }
-				fields={ fields }
-				view={ view }
-				onChangeView={ setView }
-				paginationInfo={ paginationInfo }
-				defaultLayouts={ { table: {} } }
-				actions={ [] }
-				getItemId={ ( item ) => item.slug }
-				isLoading={ false }
-			/>
-		</div>
+			{ /* Not a superstring of the region above, for the same reason. */ }
+			<div
+				className="aggr-reports-utilisation aggr-scroll-region"
+				role="region"
+				tabIndex={ 0 }
+				aria-label={ t( 'groupRegion' ) }
+			>
+				<DataViews< GroupRow >
+					data={ data }
+					fields={ fields }
+					view={ view }
+					onChangeView={ setView }
+					paginationInfo={ paginationInfo }
+					defaultLayouts={ { table: {} } }
+					actions={ [] }
+					getItemId={ ( item ) => item.slug }
+					isLoading={ false }
+				/>
+			</div>
+		</>
 	);
 }
 

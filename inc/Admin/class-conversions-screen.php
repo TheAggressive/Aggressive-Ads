@@ -150,10 +150,9 @@ final class Conversions_Screen implements Service {
 		}
 
 		if ( ! is_file( AGGR_PLUGIN_DIR . 'dist/admin/conversions.asset.php' ) ) {
-			printf(
-				'<div class="wrap"><h1>%1$s</h1><div class="notice notice-error"><p>%2$s</p></div></div>',
-				esc_html__( 'Conversions', 'aggressive-ads' ),
-				esc_html__( 'The conversions screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' )
+			Screen_Shell::unbuilt(
+				__( 'Conversions', 'aggressive-ads' ),
+				__( 'The conversions screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' )
 			);
 
 			return;
@@ -255,11 +254,13 @@ final class Conversions_Screen implements Service {
 			),
 		);
 
-		printf(
-			'<div class="wrap aggr-admin"><h1>%1$s</h1><noscript><div class="notice notice-error"><p>%2$s</p></div></noscript><div id="aggr-conversions-root" data-aggr-conversions="%3$s"></div></div>',
-			esc_html__( 'Conversions', 'aggressive-ads' ),
-			esc_html__( 'The conversions screen needs JavaScript enabled.', 'aggressive-ads' ),
-			esc_attr( (string) wp_json_encode( $payload ) )
+		Screen_Shell::mount(
+			__( 'Conversions', 'aggressive-ads' ),
+			__( 'What counts as a conversion, and the credentials advertisers’ servers report them with.', 'aggressive-ads' ),
+			'aggr-conversions-root',
+			'data-aggr-conversions',
+			$payload,
+			__( 'The conversions screen needs JavaScript enabled.', 'aggressive-ads' )
 		);
 	}
 

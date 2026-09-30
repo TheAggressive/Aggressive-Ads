@@ -146,17 +146,17 @@ final class Reports_Screen implements Service {
 			);
 		}
 
-		// `wrap aggr-admin` is what every staff screen here carries: `wrap` for
-		// core's margins, `aggr-admin` to scope the plugin's design tokens and
-		// to give the browser suite one selector to axe.
-		echo '<div class="wrap aggr-admin">';
-		printf( '<h1>%s</h1>', esc_html__( 'Advertising reports', 'aggressive-ads' ) );
+		Screen_Shell::open(
+			__( 'Advertising reports', 'aggressive-ads' ),
+			__( 'How often each slot filled when it was asked for, and why it stayed empty when it did not.', 'aggressive-ads' )
+		);
 
 		if ( ! $this->data->surfaces() ) {
 			printf(
-				'<div class="notice notice-info"><p>%s</p></div></div>',
+				'<div class="notice notice-info"><p>%s</p></div>',
 				esc_html__( 'Reporting is switched off for this site. Turn it on under Advertising → Settings → Modules to see delivery figures here.', 'aggressive-ads' )
 			);
+			Screen_Shell::close();
 
 			return;
 		}
@@ -172,7 +172,7 @@ final class Reports_Screen implements Service {
 		$this->render_utilisation( $this->data->utilisation( $period ) );
 		$this->render_export( $period, $placement );
 
-		echo '</div>';
+		Screen_Shell::close();
 	}
 
 	/**

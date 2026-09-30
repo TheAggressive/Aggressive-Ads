@@ -144,10 +144,9 @@ final class Placement_Screen implements Service {
 	 */
 	private function render_screen(): void {
 		if ( ! is_file( AGGR_PLUGIN_DIR . 'dist/admin/inventory.asset.php' ) ) {
-			printf(
-				'<div class="wrap"><h1>%1$s</h1><div class="notice notice-error"><p>%2$s</p></div></div>',
-				esc_html__( 'Placements', 'aggressive-ads' ),
-				esc_html__( 'The placements screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' )
+			Screen_Shell::unbuilt(
+				__( 'Placements', 'aggressive-ads' ),
+				__( 'The placements screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' )
 			);
 
 			return;
@@ -225,11 +224,13 @@ final class Placement_Screen implements Service {
 			),
 		);
 
-		printf(
-			'<div class="wrap aggr-admin"><h1>%1$s</h1><noscript><div class="notice notice-error"><p>%2$s</p></div></noscript><div id="aggr-inventory-root" data-aggr-inventory="%3$s"></div></div>',
-			esc_html__( 'Placements', 'aggressive-ads' ),
-			esc_html__( 'The placements screen needs JavaScript enabled.', 'aggressive-ads' ),
-			esc_attr( (string) wp_json_encode( $payload ) )
+		Screen_Shell::mount(
+			__( 'Placements', 'aggressive-ads' ),
+			__( 'The slots a campaign can be bought into, and what each one shows when nothing is sold.', 'aggressive-ads' ),
+			'aggr-inventory-root',
+			'data-aggr-inventory',
+			$payload,
+			__( 'The placements screen needs JavaScript enabled.', 'aggressive-ads' )
 		);
 	}
 

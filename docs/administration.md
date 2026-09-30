@@ -22,15 +22,17 @@ the portal.
 
 ## The Advertising menu
 
-Seven submenus, each gated by its own capability. A person sees only what their
+Eight submenus, each gated by its own capability. A person sees only what their
 capability grants — there is no "advertising manager" role that unlocks the
-whole menu.
+whole menu. How the screens are built, and the design contract they follow, is
+in [admin-ui.md](admin-ui.md).
 
 | Screen | Capability | What it is for |
 |---|---|---|
 | Review | `aggr_review_campaigns` | The queue. Approve, reject, pause, resume, cancel; the advertiser's submission notes; internal notes; audit history |
 | Organizations | `aggr_manage_orgs` | Tenants, membership, suspension |
 | Placements | `aggr_manage_placements` | The catalogue of slots a campaign can be bought into |
+| Outlook | `aggr_manage_placements` | Forecast, booked and remaining impressions per placement, and which are oversold |
 | Packages | `aggr_manage_packages` | What advertisers may buy, and at what price |
 | Conversions | `aggr_manage_settings` | What counts as a conversion, and the credentials advertisers report them with |
 | Reports | `aggr_view_reports` | Fill rate, and why a slot stayed empty |

@@ -343,7 +343,13 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 
 			<Card>
 				<CardHeader>
-					<Heading level={ 3 }>{ t( 'newPackage' ) }</Heading>
+					{ /*
+					 * Level 2, sized as a section title: each card is a section
+					 * directly under the page's h1. See the Settings screen.
+					 */ }
+					<Heading level={ 2 } size={ 15 }>
+						{ t( 'newPackage' ) }
+					</Heading>
 				</CardHeader>
 				<CardBody>
 					<PackageForm
@@ -374,7 +380,7 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 			{ view.rows.map( ( row ) => (
 				<Card key={ row.id }>
 					<CardHeader>
-						<Heading level={ 3 }>
+						<Heading level={ 2 } size={ 15 }>
 							{ row.name }
 							{ row.is_default
 								? ` — ${ t( 'defaultTag' ) }`

@@ -89,11 +89,12 @@ final class Package_Screen implements Service {
 	}
 
 	/*
-	 * No stylesheet is enqueued here.
+	 * No stylesheet of its own is enqueued here.
 	 *
-	 * This screen is native WordPress admin markup — poststuff, postbox,
-	 * form-table, notice, button — so core already styles every part of it.
-	 * Loading the plugin's design system would only give it something to fight.
+	 * The screen is `@wordpress/components` cards and controls, which
+	 * `wp-components` styles, inside the shared header and rhythm that
+	 * `Menu::enqueue_rhythm()` loads for every Advertising screen. It has
+	 * nothing that needs a rule of its own.
 	 */
 
 	/**
@@ -118,10 +119,9 @@ final class Package_Screen implements Service {
 	 */
 	private function render_screen(): void {
 		if ( ! is_file( AGGR_PLUGIN_DIR . 'dist/admin/packages.asset.php' ) ) {
-			printf(
-				'<div class="wrap"><h1>%1$s</h1><div class="notice notice-error"><p>%2$s</p></div></div>',
-				esc_html__( 'Packages', 'aggressive-ads' ),
-				esc_html__( 'The packages screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' )
+			Screen_Shell::unbuilt(
+				__( 'Packages', 'aggressive-ads' ),
+				__( 'The packages screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' )
 			);
 
 			return;
@@ -173,16 +173,15 @@ final class Package_Screen implements Service {
 			),
 		);
 
-		printf(
-			'<div class="wrap aggr-admin"><h1>%1$s</h1><noscript><div class="notice notice-error"><p>%2$s</p></div></noscript><div id="aggr-packages-root" data-aggr-packages="%3$s"></div></div>',
-			esc_html__( 'Packages', 'aggressive-ads' ),
-			esc_html__( 'The packages screen needs JavaScript enabled.', 'aggressive-ads' ),
-			esc_attr( (string) wp_json_encode( $payload ) )
+		Screen_Shell::mount(
+			__( 'Packages', 'aggressive-ads' ),
+			__( 'What advertisers can buy in the campaign wizard, and at what price.', 'aggressive-ads' ),
+			'aggr-packages-root',
+			'data-aggr-packages',
+			$payload,
+			__( 'The packages screen needs JavaScript enabled.', 'aggressive-ads' )
 		);
 	}
-
-
-
 
 	/**
 	 * Screen URL.
