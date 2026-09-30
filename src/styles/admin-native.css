@@ -460,7 +460,15 @@ body.aggr-admin-screen .components-button.is-destructive:not(.is-tertiary):not(.
 	border-bottom: 0;
 }
 
+/*
+ * Core lays a postbox heading out `space-between`, for the sort handles it
+ * puts on the right. These tiles have none, so the label sits beside its icon.
+ */
 .wrap.aggr-admin #poststuff .postbox-header .hndle {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	justify-content: flex-start;
 	padding: 20px 24px 0;
 	color: var(--aggr-color-text-subtle);
 	font-family: var(--aggr-font-mono);
@@ -500,6 +508,109 @@ body.aggr-admin-screen .components-button.is-destructive:not(.is-tertiary):not(.
 	.wrap.aggr-admin .aggr-card-grid {
 		grid-template-columns: repeat(3, minmax(0, 1fr));
 	}
+}
+
+/* Two tiles that share the width, for two things read against each other. */
+@media (min-width: 782px) {
+	.wrap.aggr-admin .aggr-card-grid--pair {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+/* A tile's label carries the icon of the thing it counts, in the label's ink. */
+.wrap.aggr-admin #poststuff .postbox-header .hndle .aggr-icon {
+	width: 16px;
+	height: 16px;
+	flex: none;
+}
+
+/*
+ * A rate drawn as a length, beside or under its figure. Graphite on the
+ * sunken tint — a proportion, not a status, so it takes no status colour.
+ * Always paired with the number it draws, and hidden from assistive
+ * technology for that reason.
+ */
+.aggr-meter {
+	display: block;
+	height: 6px;
+	margin: 12px 0 0;
+	overflow: hidden;
+	border-radius: 999px;
+	background: var(--aggr-color-surface-sunken);
+}
+
+.aggr-meter__fill {
+	display: block;
+	height: 100%;
+	border-radius: inherit;
+	background: var(--aggr-color-text);
+}
+
+.aggr-meter--inline {
+	display: inline-block;
+	width: 64px;
+	margin: 0;
+	vertical-align: middle;
+}
+
+.aggr-rate {
+	display: inline-flex;
+	gap: 10px;
+	align-items: center;
+	font-variant-numeric: tabular-nums;
+}
+
+@media (forced-colors: active) {
+	.aggr-meter {
+		border: 1px solid CanvasText;
+	}
+
+	.aggr-meter__fill {
+		background: CanvasText;
+		forced-color-adjust: none;
+	}
+}
+
+/* The reporting window, set as data. */
+.wrap.aggr-admin .aggr-report-window {
+	margin: 0 0 4px;
+	color: var(--aggr-color-text-body);
+	font-family: var(--aggr-font-mono);
+	font-size: 12px;
+}
+
+/*
+ * The two no-fill tables side by side where there is room. Each is a section
+ * with its own heading, so on a narrow screen they simply stack.
+ */
+.wrap.aggr-admin .aggr-report-pair {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: 0 24px;
+	align-items: start;
+}
+
+@media (min-width: 1100px) {
+	.wrap.aggr-admin .aggr-report-pair {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+.wrap.aggr-admin .aggr-report-group > h2 {
+	margin: 36px 0 12px;
+}
+
+.wrap.aggr-admin .aggr-report-group .aggr-report-table {
+	width: 100%;
+	max-width: none;
+}
+
+/* The reason, and under it whether it needs anything from you. */
+.wrap.aggr-admin .aggr-report-reason {
+	display: block;
+	margin-bottom: 6px;
+	color: var(--aggr-color-text);
+	font-weight: 600;
 }
 
 /*

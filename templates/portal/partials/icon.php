@@ -68,6 +68,28 @@ $aggr_icon = isset( $aggr_icon ) && is_string( $aggr_icon ) ? $aggr_icon : '';
 			<?php
 			break;
 
+		/*
+		 * The two inventory kinds, for the staff Reports tiles. Kept in this
+		 * one set so a shape means the same thing on both surfaces;
+		 * `src/admin/shared/icon.tsx` draws the React screens' icons to the
+		 * same geometry.
+		 */
+		case 'page':
+			?>
+			<rect x="4" y="3" width="16" height="18" rx="2" />
+			<path d="M8 8h8M8 12h8M8 16h5" />
+			<?php
+			break;
+
+		case 'refresh':
+			?>
+			<path d="M20 11a8 8 0 0 0-14.7-4.3L4 8" />
+			<path d="M4 4v4h4" />
+			<path d="M4 13a8 8 0 0 0 14.7 4.3L20 16" />
+			<path d="M20 20v-4h-4" />
+			<?php
+			break;
+
 		case 'close':
 			?>
 			<path d="M6 6l12 12" />

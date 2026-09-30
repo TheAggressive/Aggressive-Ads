@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Admin;
 
 use Aggressive\Ads\Core\Service;
+use Aggressive\Ads\Domain\No_Fill_Reason;
 use Aggressive\Ads\Domain\Report_Period;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Workflow\Reporting_Read;
@@ -326,7 +327,7 @@ final class Reports_Screen implements Service {
 	 */
 	private function render_summary( Report_Period $period, array $fill ): void {
 		printf(
-			'<p><strong>%1$s</strong> &ndash; <strong>%2$s</strong> %3$s</p>',
+			'<p class="aggr-report-window"><strong>%1$s</strong> &ndash; <strong>%2$s</strong> %3$s</p>',
 			esc_html( $period->start ),
 			esc_html( $period->end ),
 			esc_html__( '(UTC)', 'aggressive-ads' )
@@ -351,20 +352,24 @@ final class Reports_Screen implements Service {
 		 * the stylesheet waiting for a screen. Nothing is invented here, which
 		 * is what keeps this inside what `admin-native.css` is willing to own.
 		 */
-		echo '<div id="poststuff"><div class="aggr-card-grid">';
+		// A pair, not three columns with one empty: two kinds of inventory
+		// fill the width between them.
+		echo '<div id="poststuff"><div class="aggr-card-grid aggr-card-grid--pair">';
 
 		$this->render_kind_card(
 			__( 'Page', 'aggressive-ads' ),
 			$fill,
 			__( 'of page requests filled', 'aggressive-ads' ),
-			__( 'No page requests in this window.', 'aggressive-ads' )
+			__( 'No page requests in this window.', 'aggressive-ads' ),
+			'page'
 		);
 
 		$this->render_kind_card(
 			__( 'Refresh', 'aggressive-ads' ),
 			$fill['refresh'],
 			__( 'of refresh requests filled', 'aggressive-ads' ),
-			__( 'No refreshes in this window.', 'aggressive-ads' )
+			__( 'No refreshes in this window.', 'aggressive-ads' ),
+			'refresh'
 		);
 
 		echo '</div></div>';
@@ -386,16 +391,21 @@ final class Reports_Screen implements Service {
 	 * @param array{requests: int, fills: int, fill_rate: float|null} $figures Figures for that kind.
 	 * @param string                                                  $caption Caption under the rate.
 	 * @param string                                                  $none    Sentence shown when nothing was requested.
+	 * @param string                                                  $icon    Icon from the portal's set naming the kind.
 	 * @return void
 	 */
-	private function render_kind_card( string $heading, array $figures, string $caption, string $none ): void {
+	private function render_kind_card( string $heading, array $figures, string $caption, string $none, string $icon ): void {
 		$requests = (int) $figures['requests'];
 		$rate     = $figures['fill_rate'];
 
-		printf(
-			'<div class="postbox"><div class="postbox-header"><h2 class="hndle">%s</h2></div><div class="inside">',
-			esc_html( $heading )
-		);
+		echo '<div class="postbox"><div class="postbox-header"><h2 class="hndle">';
+
+		// The portal's own icon partial, so a shape means the same thing on
+		// both surfaces. Decorative: the heading's word is the name.
+		$aggr_icon = $icon;
+		require AGGR_PLUGIN_DIR . 'templates/portal/partials/icon.php';
+
+		printf( '%s</h2></div><div class="inside">', esc_html( $heading ) );
 
 		if ( null === $rate ) {
 			/*
@@ -410,6 +420,17 @@ final class Reports_Screen implements Service {
 			printf( '<p class="aggr-figure--none">%s</p>', esc_html( $none ) );
 		} else {
 			printf( '<p class="aggr-figure">%s</p>', esc_html( $this->rate( $rate ) ) );
+
+			/*
+			 * The rate as a length, under the number. Hidden from assistive
+			 * technology because it says nothing the figure above it does not;
+			 * it is there so two tiles can be compared at a glance.
+			 */
+			printf(
+				'<span class="aggr-meter" aria-hidden="true"><span class="aggr-meter__fill" style="width:%s%%"></span></span>',
+				esc_attr( number_format( max( 0.0, min( 1.0, $rate ) ) * 100, 1, '.', '' ) )
+			);
+
 			printf( '<p class="aggr-figure__caption">%s</p>', esc_html( $caption ) );
 		}
 
@@ -457,6 +478,9 @@ final class Reports_Screen implements Service {
 			return;
 		}
 
+		// Side by side on a wide screen: the two kinds are read against each
+		// other, and stacked they left half of every row empty.
+		echo '<div class="aggr-report-pair">';
 		$this->render_reason_group(
 			$fill,
 			__( 'Why page requests were not filled', 'aggressive-ads' ),
@@ -469,6 +493,7 @@ final class Reports_Screen implements Service {
 			__( 'Reasons a refresh request was not filled', 'aggressive-ads' ),
 			__( 'Every refresh request was filled.', 'aggressive-ads' )
 		);
+		echo '</div>';
 	}
 
 	/**
@@ -485,11 +510,12 @@ final class Reports_Screen implements Service {
 			return;
 		}
 
-		printf( '<h2>%s</h2>', esc_html( $heading ) );
+		printf( '<section class="aggr-report-group"><h2>%s</h2>', esc_html( $heading ) );
 
 		if ( array() === $figures['reasons'] ) {
 			printf( '<p>%s</p>', esc_html( $filled ) );
 			$this->render_unaccounted( $figures['unaccounted'] );
+			echo '</section>';
 
 			return;
 		}
@@ -504,9 +530,20 @@ final class Reports_Screen implements Service {
 		);
 
 		foreach ( $figures['reasons'] as $reason ) {
+			/*
+			 * Each reason says whether it is a rule working or something to
+			 * look at. The table used to be a list of causes ranked by size,
+			 * and the largest row is usually targeting or a frequency cap —
+			 * the system doing what somebody asked — so the eye went first to
+			 * the row that needed nothing. The classification is the domain's.
+			 */
+			$expected = No_Fill_Reason::is_expected( (string) ( $reason['code'] ?? '' ) );
+
 			printf(
-				'<tr><th scope="row">%1$s</th><td>%2$s</td><td>%3$s</td></tr>',
+				'<tr><th scope="row"><span class="aggr-report-reason">%1$s</span><span class="aggr-state aggr-state--%2$s">%3$s</span></th><td>%4$s</td><td>%5$s</td></tr>',
 				esc_html( (string) $reason['label'] ),
+				esc_attr( $expected ? 'neutral' : 'attention' ),
+				esc_html( $expected ? __( 'Working as intended', 'aggressive-ads' ) : __( 'Worth a look', 'aggressive-ads' ) ),
 				esc_html( number_format_i18n( (int) $reason['events'] ) ),
 				esc_html( $this->rate( isset( $reason['share'] ) ? $reason['share'] : null ) )
 			);
@@ -514,6 +551,7 @@ final class Reports_Screen implements Service {
 
 		echo '</tbody></table>';
 		$this->render_unaccounted( $figures['unaccounted'] );
+		echo '</section>';
 	}
 
 	/**

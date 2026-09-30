@@ -260,6 +260,54 @@ final class PublisherReportTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * Each no-fill row says whether it is a rule working or worth a look, and
+	 * the answer on screen is the domain's, row by row.
+	 *
+	 * Asserted per row rather than per page: both labels appearing somewhere
+	 * would pass with the two swapped, which is the one mistake that matters —
+	 * it would tell a publisher to ignore unsold inventory.
+	 *
+	 * @return void
+	 */
+	public function test_each_reason_row_carries_its_diagnosis(): void {
+		wp_set_current_user( (int) self::factory()->user->create( array( 'role' => Roles::REVIEWER ) ) );
+
+		$this->rollups->add(
+			gmdate( 'Y-m-d' ),
+			7,
+			array(
+				Decision_Outcome::REQUEST          => 20,
+				Decision_Outcome::FILL             => 12,
+				No_Fill_Reason::TARGETING_MISMATCH => 3,
+				No_Fill_Reason::NO_CANDIDATES      => 5,
+			),
+			Opportunity::PAGE
+		);
+
+		ob_start();
+		$this->screen->render();
+		$html = (string) ob_get_clean();
+
+		$labels = Report_Data::reason_labels();
+		$rows   = array();
+
+		preg_match_all( '#<tr><th scope="row">(.*?)</th>#s', $html, $rows );
+
+		$this->assertCount( 2, $rows[1], 'One row per reason with events.' );
+
+		foreach ( $rows[1] as $row ) {
+			if ( str_contains( $row, esc_html( $labels[ No_Fill_Reason::TARGETING_MISMATCH ] ) ) ) {
+				$this->assertStringContainsString( 'Working as intended', $row );
+				$this->assertStringNotContainsString( 'Worth a look', $row );
+			} else {
+				$this->assertStringContainsString( esc_html( $labels[ No_Fill_Reason::NO_CANDIDATES ] ), $row );
+				$this->assertStringContainsString( 'Worth a look', $row );
+				$this->assertStringNotContainsString( 'Working as intended', $row );
+			}
+		}
+	}
+
+	/**
 	 * Refresh-only traffic is a report, not the empty-state sentence.
 	 *
 	 * @return void
