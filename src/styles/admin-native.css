@@ -1,93 +1,136 @@
 /*
- * The frame every Advertising screen shares: header, rhythm and table surface.
+ * The staff screens' design layer: the portal's identity inside wp-admin.
  *
  * `Menu::enqueue_rhythm()` loads this on every screen under the Advertising
  * menu, so it is the one stylesheet a rule can rely on being present. The
- * contract it implements is written down in docs/admin-ui.md.
+ * contract it implements is in docs/admin-ui.md.
  *
- * It still restyles no core control: no buttons, no notices, no form fields,
- * no focus states. A rule that restyles a core component has to be re-checked
- * against every WordPress release, because those components carry states
- * (hover, focus, disabled, dismissible) that are easy to half-implement. A
- * rule that adjusts spacing or draws a container cannot fail that way: if core
- * changes underneath it, the worst outcome is slightly-off margins rather than
- * a broken control. DataViews is the one component given a container here, and
- * that is safe for the reason the screens' own stylesheets used to record — it
- * is bundled from a pinned `@wordpress/dataviews`, so its markup moves only
- * when we move the dependency.
+ * **What it takes from the portal:** the soft white canvas, graphite as the
+ * primary colour, Archivo for headings and figures, the monospaced eyebrow and
+ * table labels, stat tiles, status pills and 12px panels. The staff screens
+ * are the same product as the portal, and an earlier version that deferred to
+ * core's palette everywhere made them look like nobody had designed them.
  *
- * The Review screen carries the portal's design system (`admin.css`) and is
- * excluded with `:not(.aggr-portal)` wherever a rule here would otherwise
- * reach it.
+ * **What it leaves to WordPress:** the admin bar and sidebar, notices, routing,
+ * focus behaviour and every control's states. Components are recoloured through
+ * the variables they already read (`--wp-admin-theme-color`), not by
+ * re-implementing hover, focus and disabled, because a rule that redraws a
+ * control has to be re-checked against every WordPress release.
+ *
+ * DataViews is restyled structurally, which is safe because it is bundled from
+ * a pinned `@wordpress/dataviews`: its markup moves only when we move the
+ * dependency. The Review screen also loads the portal stylesheet and is
+ * excluded with `:not(.aggr-portal)` where a rule would fight it.
  */
+
+/*
+ * Archivo, self-hosted, for the same privacy reason the portal gives: a font
+ * host would learn every staff member's IP on every screen. Headings and
+ * figures only — body text and controls stay in core's system stack, so a
+ * form reads like every other form in wp-admin.
+ */
+@import './base/_fonts.css';
 
 /*
  * Tokens must be imported, not assumed.
  *
  * This is the only stylesheet the Reports and Outlook screens load besides
- * their own, and neither of those declared a token either. So both read
- * `--aggr-color-text-muted` and `--aggr-border-color` that nothing on the page
- * defined: captions meant to recede rendered in body ink, and the outlook's
- * summary cards lost their border altogether, because an unresolved custom
+ * their own. Before it declared the tokens, both read `--aggr-*` values that
+ * nothing on the page defined: captions meant to recede rendered in body ink,
+ * and the outlook's cards lost their border, because an unresolved custom
  * property in a `border` shorthand leaves the border style at `none`.
  */
 @import './base/_admin-tokens.css';
 
 /*
- * The page header.
+ * The page itself: the portal's canvas, and graphite for every component that
+ * takes the admin theme colour — primary buttons, toggles, checkboxes, focus
+ * rings, selected rows.
  *
- * Core gives `.wrap h1` 23px at normal weight and four pixels of bottom
- * padding, which works on its own screens because a list table or a form
- * follows with its own leading. Ours mount a card or a table immediately after
- * the heading, and the title sat on the first panel with nothing to say where
- * the page ended and its content began.
+ * On `body`, via the class `Menu::body_class()` adds, because modals render at
+ * the end of `<body>` and would keep core's blue if this were on the `.wrap`.
  *
- * A hairline, not a band of colour: core's own grouped screens separate header
- * from content with a rule, and a filled header would be the only one in
- * wp-admin.
+ * The "darker" shades are lighter here. Components use them for hover and
+ * pressed states, and a darker graphite than #111214 is indistinguishable from
+ * it, so a hover that went darker would show nothing at all.
+ */
+html:has(> body.aggr-admin-screen),
+body.aggr-admin-screen {
+	background: #f7f7f5;
+}
+
+body.aggr-admin-screen {
+	--wp-admin-theme-color: #111214;
+	--wp-admin-theme-color--rgb: 17, 18, 20;
+	--wp-admin-theme-color-darker-10: #2c2d31;
+	--wp-admin-theme-color-darker-10--rgb: 44, 45, 49;
+	--wp-admin-theme-color-darker-20: #3d3f45;
+	--wp-admin-theme-color-darker-20--rgb: 61, 63, 69;
+	--wp-components-color-accent: #111214;
+	--wp-components-color-accent-darker-10: #2c2d31;
+	--wp-components-color-accent-darker-20: #3d3f45;
+	--wp-components-color-accent-inverted: #ffffff;
+}
+
+/*
+ * The portal's button shape. Only the radius: colour comes from the theme
+ * variables above, and every state stays the component's own.
+ */
+body.aggr-admin-screen .components-button.is-primary,
+body.aggr-admin-screen .components-button.is-secondary,
+body.aggr-admin-screen .components-button.is-destructive:not(.is-tertiary):not(.is-link) {
+	border-radius: 8px;
+}
+
+/*
+ * The page header: an eyebrow naming the group, the title, one sentence of
+ * purpose — the portal's page head, laid out the same way.
+ *
+ * Core's `.wrap h1` is 23px at normal weight, which is the right size for a
+ * list of posts and too quiet for the top of a product's screen. The portal's
+ * title is 32px bold with tightened tracking, and it is what makes that surface
+ * read as designed rather than assembled.
  */
 .wrap.aggr-admin .aggr-admin-head {
-	margin: 0 0 24px;
-	padding: 0 0 16px;
-	border-bottom: 1px solid var(--aggr-border-color);
+	display: flex;
+	flex-wrap: wrap;
+	gap: 16px 24px;
+	align-items: flex-end;
+	justify-content: space-between;
+	margin: 16px 0 28px;
 }
 
-/*
- * Semibold rather than core's normal weight: the title is the largest text on
- * the page, and at 400 it read no heavier than the card headings under it.
- */
-.wrap.aggr-admin .aggr-admin-head__title {
+.wrap.aggr-admin .aggr-admin-head__text {
+	flex: 1 1 28rem;
+	min-width: 0;
+}
+
+.wrap.aggr-admin .aggr-admin-head__eyebrow {
 	display: flex;
 	align-items: center;
-	gap: 10px;
-	margin: 0;
-	padding: 9px 0 0;
-	font-size: 23px;
+	gap: 8px;
+	margin: 0 0 10px;
+	color: var(--aggr-color-text-subtle);
+	font-family: var(--aggr-font-mono);
+	font-size: 10.5px;
 	font-weight: 600;
-	line-height: 1.3;
+	letter-spacing: 0.12em;
+	line-height: 1;
+	text-transform: uppercase;
 }
 
 /*
- * The product mark, and the one place Signal orange appears on a staff screen.
- *
- * Only here, because everywhere else in wp-admin colour already means
- * something: blue is what you can click, and the status colours are fixed so a
- * pill reads the same on every site. The mark is decorative and hidden from
- * assistive technology, so the colour carries no meaning either — it is
- * recognition, not information.
- *
- * A literal, not a brand token. The Brand settings recolour the advertiser's
- * portal and never the staff screens, and this is the plugin's own mark rather
- * than the site's brand.
+ * The product mark, in Signal orange: the colour as a shape, which is the only
+ * way the bright orange is ever used, because as text it fails contrast.
  *
  * The shape is the sidebar icon's SVG, which the build inlines, so there is
  * still one copy of it and no second request.
  */
 .wrap.aggr-admin .aggr-admin-head__mark {
 	flex: none;
-	width: 20px;
-	height: 20px;
-	background-color: #f05a28;
+	width: 14px;
+	height: 14px;
+	background-color: var(--aggr-color-mark);
 	mask: url(../../assets/svg/aggressive-ads-icon.svg) no-repeat center / contain;
 }
 
@@ -102,39 +145,70 @@
 	}
 }
 
-/*
- * One sentence that orients somebody arriving cold — from a notice, a link in
- * an email, or the menu. Prose, so it keeps a reading measure.
- */
+.wrap.aggr-admin .aggr-admin-head__title {
+	margin: 0;
+	padding: 0;
+	color: var(--aggr-color-text);
+	font-family: var(--aggr-font);
+	font-size: clamp(1.5rem, 1.2rem + 1.4vw, 2rem);
+	font-weight: 700;
+	letter-spacing: -0.025em;
+	line-height: 1.15;
+}
+
 .wrap.aggr-admin .aggr-admin-head__purpose {
 	max-width: 75ch;
-	margin: 4px 0 0;
+	margin: 8px 0 0;
 	color: var(--aggr-color-text-muted);
 	font-size: 14px;
 	line-height: 1.5;
 }
 
+/* The screen's one creating action, where a React header has one. */
+.wrap.aggr-admin .aggr-admin-head__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px;
+	align-items: center;
+}
+
 /*
- * The table surface.
- *
- * DataViews arrives styled but without a container: dropped into a `.wrap`, a
- * table sits flat on the admin's grey canvas with no edge. Core's own list
- * tables carry a white surface and a hairline, and matching those is what makes
- * a table read as part of wp-admin rather than as an embedded application.
- *
- * Organizations, Placements and Conversions each carried an identical copy of
- * this block; Outlook and Reports had none, so two of seven screens drew their
- * tables differently for no reason anybody chose.
+ * Section headings, in the portal's panel-heading voice. Core's `.wrap h2` is
+ * the body face at 1.3em; these name the parts of a product screen.
+ */
+.wrap.aggr-admin:not(.aggr-portal) h2 {
+	color: var(--aggr-color-text);
+	font-family: var(--aggr-font);
+	font-size: 19px;
+	font-weight: 650;
+	letter-spacing: -0.012em;
+	line-height: 1.3;
+}
+
+.wrap.aggr-admin:not(.aggr-portal) > h2,
+.wrap.aggr-admin:not(.aggr-portal) .aggr-section > h2,
+.wrap.aggr-admin #aggr-reports-root > h2 {
+	margin: 36px 0 6px;
+}
+
+/*
+ * Surfaces: white, a hairline, and the portal's 12px radius. One radius for
+ * every panel, tile and table, so nothing on a screen looks borrowed from a
+ * different kit.
  */
 .wrap.aggr-admin:not(.aggr-portal) .dataviews-wrapper,
-.wrap.aggr-admin .aggr-scroll-region {
+.wrap.aggr-admin .aggr-scroll-region,
+.wrap.aggr-admin .components-card,
+.wrap.aggr-admin #poststuff .postbox {
 	box-sizing: border-box;
 	background: var(--aggr-color-surface);
 	border: 1px solid var(--aggr-border-color);
-	border-radius: 4px;
+	border-radius: 12px;
+	box-shadow: none;
 }
 
-.wrap.aggr-admin:not(.aggr-portal) .dataviews-wrapper {
+.wrap.aggr-admin:not(.aggr-portal) .dataviews-wrapper,
+.wrap.aggr-admin .components-card {
 	overflow: hidden;
 }
 
@@ -154,7 +228,7 @@
 }
 
 .wrap.aggr-admin .aggr-scroll-region:focus-visible {
-	outline: 2px solid currentcolor;
+	outline: 2px solid var(--aggr-color-text);
 	outline-offset: 2px;
 }
 
@@ -165,72 +239,229 @@
 	overflow: visible;
 }
 
-/* Search, filters and the primary action are a control strip, not content. */
+/*
+ * Tables, as the portal sets them: a tinted header row of small monospaced
+ * labels over quieter cells, with the row's name in the ink.
+ *
+ * Every Advertising table, the Review queue included — the queue is where the
+ * two surfaces most need to look like one product.
+ */
 .wrap.aggr-admin:not(.aggr-portal) .dataviews-filters__container {
-	padding: 12px 16px;
+	padding: 14px 20px;
 }
 
-/* Long names must not touch the column beside them. */
-.wrap.aggr-admin:not(.aggr-portal) .dataviews-view-table td,
-.wrap.aggr-admin:not(.aggr-portal) .dataviews-view-table th {
-	padding-inline: 16px;
+/*
+ * A table with nothing to search keeps only the column-settings button in its
+ * toolbar, and DataViews still gave that one icon a 60px band across the full
+ * width of the table — the first thing under the Review tabs was empty space.
+ * With no search field the band shrinks to fit the button.
+ */
+.wrap.aggr-admin .dataviews__view-actions:not(:has(.dataviews-search)) {
+	padding-block: 6px;
+}
+
+.wrap.aggr-admin .dataviews-view-table thead th {
+	background: var(--aggr-color-surface-sunken);
+	border-bottom: 1px solid var(--aggr-border-color);
+}
+
+.wrap.aggr-admin .dataviews-view-table thead th,
+.wrap.aggr-admin .dataviews-view-table thead th .components-button,
+.wrap.aggr-admin .dataviews-view-table thead th .components-dropdown button {
+	color: var(--aggr-color-text-subtle);
+	font-family: var(--aggr-font-mono);
+	font-size: 10.5px;
+	font-weight: 600;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+}
+
+.wrap.aggr-admin .dataviews-view-table td,
+.wrap.aggr-admin .dataviews-view-table th {
+	padding-inline: 20px;
+}
+
+.wrap.aggr-admin .dataviews-view-table td {
+	color: var(--aggr-color-text-body);
+	font-variant-numeric: tabular-nums;
 }
 
 /* A name is the row's identity and reads heavier than the values beside it. */
-.wrap.aggr-admin:not(.aggr-portal) .dataviews-view-table__primary-column-content {
+.wrap.aggr-admin .dataviews-view-table__primary-column-content {
+	color: var(--aggr-color-text);
 	font-weight: 600;
+}
+
+/*
+ * A record's state, as the portal draws a status: the word, a dot in the same
+ * ink, and the tint. `src/admin/shared/state.tsx` renders it.
+ *
+ * The word carries the information; the dot is a second cue beside it and the
+ * tint is emphasis, so nothing depends on colour alone. Every ink-on-tint pair
+ * is measured in AdminContrastTest.
+ */
+.aggr-state {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 3px 10px;
+	border-radius: 999px;
+	background: var(--aggr-color-neutral-tint);
+	color: var(--aggr-color-neutral);
+	font-size: 12px;
+	font-weight: 600;
+	line-height: 1.4;
+	white-space: nowrap;
+}
+
+.aggr-state::before {
+	flex: none;
+	width: 6px;
+	height: 6px;
+	border-radius: 50%;
+	background: currentcolor;
+	content: "";
+}
+
+.aggr-state--neutral {
+	background: var(--aggr-color-neutral-tint);
+	color: var(--aggr-color-neutral);
+}
+
+.aggr-state--live {
+	background: var(--aggr-color-live-tint);
+	color: var(--aggr-color-live);
+}
+
+.aggr-state--pending {
+	background: var(--aggr-color-pending-tint);
+	color: var(--aggr-color-pending);
+}
+
+.aggr-state--attention {
+	background: var(--aggr-color-attention-tint);
+	color: var(--aggr-color-attention);
+}
+
+.aggr-state--danger {
+	background: var(--aggr-color-danger-tint);
+	color: var(--aggr-color-danger);
+}
+
+/*
+ * Cards: the Settings sections and the package editor. A form column, not a
+ * full-width sheet — a text field stretched across a 1400px monitor is harder
+ * to scan and harder to aim at, and the portal caps its forms the same way.
+ */
+.wrap.aggr-admin .components-card {
+	max-width: 60rem;
+}
+
+.wrap.aggr-admin .components-card__header {
+	padding: 18px 24px;
+	border-bottom: 1px solid var(--aggr-border-color);
+}
+
+.wrap.aggr-admin .components-card__body {
+	padding: 24px;
+}
+
+.wrap.aggr-admin .components-card__header h2 {
+	margin: 0;
+	font-size: 17px;
+}
+
+/* Prose inside a card keeps a reading measure and recedes behind the controls. */
+.wrap.aggr-admin .components-card__body > div > p {
+	max-width: 75ch;
+	margin: 0;
+	color: var(--aggr-color-text-muted);
+}
+
+/*
+ * Text fields and selects keep the portal's field measure. Toggles and
+ * checkbox groups are left alone: they are as wide as their label.
+ */
+.wrap.aggr-admin .components-card .components-base-control:has(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+	max-width: 34rem;
+}
+
+/*
+ * A filter bar: the controls that choose what the screen shows, and the action
+ * that exports it, on one line. Reports uses it.
+ */
+.wrap.aggr-admin .aggr-toolbar {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px 24px;
+	align-items: center;
+	justify-content: space-between;
+	margin: 0 0 20px;
+}
+
+.wrap.aggr-admin .aggr-toolbar form {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+	margin: 0;
 }
 
 /*
  * Long-form guidance on these screens is prose, and prose past roughly 75
- * characters is measurably harder to scan. form-table already constrains
- * inputs; this constrains the sentences around them.
+ * characters is measurably harder to scan.
  */
 .wrap.aggr-admin #poststuff .inside > p,
 .wrap.aggr-admin #poststuff .inside > .description,
-.wrap.aggr-admin #poststuff .inside p.description {
+.wrap.aggr-admin #poststuff .inside p.description,
+.wrap.aggr-admin:not(.aggr-portal) > p.description {
 	max-width: 75ch;
 }
 
-/* Cards need room to read as separate things rather than one long sheet. */
-.wrap.aggr-admin #poststuff .postbox {
-	margin-bottom: 20px;
-}
-
 /*
- * A postbox header is a section title; core sets it at the same weight as body
- * text, which leaves a stack of cards with no visible hierarchy.
+ * The Reports figures, drawn as the portal's stat tiles: the postbox header
+ * becomes the small monospaced label, and the figure is the largest thing in
+ * the tile. The markup is still core's postbox, so it degrades to one.
  */
-.wrap.aggr-admin #poststuff .postbox-header .hndle {
-	font-size: 15px;
-	font-weight: 600;
+.wrap.aggr-admin #poststuff .postbox {
+	margin-bottom: 0;
+	overflow: hidden;
 }
 
-/* Secondary detail in a header — a slug, a size, a state — should recede. */
-.wrap.aggr-admin #poststuff .postbox-header .hndle .description {
-	font-weight: 400;
+.wrap.aggr-admin #poststuff .postbox-header {
+	border-bottom: 0;
+}
+
+.wrap.aggr-admin #poststuff .postbox-header .hndle {
+	padding: 20px 24px 0;
+	color: var(--aggr-color-text-subtle);
+	font-family: var(--aggr-font-mono);
+	font-size: 10.5px;
+	font-weight: 600;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+}
+
+.wrap.aggr-admin #poststuff .postbox .inside {
+	margin: 0;
+	padding: 8px 24px 24px;
 }
 
 /*
  * The saved catalogue, as a grid rather than one column.
  *
- * Layout only, which is why it belongs in this file: it positions cards and
- * restyles nothing inside them. A single column of full-width cards turns a
- * dozen placements into a page nobody scrolls to the bottom of.
- *
- * Mobile-first, so the stacked case needs no query and is what any browser
- * without media-query support would land on. `minmax(0, 1fr)` rather than a
- * bare `1fr`: a grid item's default minimum is its content, so a long slug or
- * URL in one card would otherwise push the whole row wider than the screen.
+ * `minmax(0, 1fr)` rather than a bare `1fr`: a grid item's default minimum is
+ * its content, so a long slug or URL in one card would otherwise push the whole
+ * row wider than the screen.
  */
 .wrap.aggr-admin .aggr-card-grid {
 	display: grid;
 	grid-template-columns: minmax(0, 1fr);
-	gap: 20px;
+	gap: 16px;
 	align-items: start;
+	margin-bottom: 8px;
 }
 
-/* Two up before three, or the cards are unreadably narrow on a tablet. */
 @media (min-width: 782px) {
 	.wrap.aggr-admin .aggr-card-grid {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -244,34 +475,25 @@
 }
 
 /*
- * The headline figure on a report card.
+ * The headline figure on a report tile.
  *
- * This is heading weight and measure, which is what this file owns — no
- * colours, no borders, no component of its own. The card around it is core's
- * `postbox` and the grid is `.aggr-card-grid`, both already here.
- *
- * The size is the entire design change. Six figures previously sat in one flat
- * list where the fill rate — the number this screen exists to deliver — read as
- * the fourth sentence of a paragraph, indistinguishable from the caption under
- * it. Scale is what separates a figure from prose.
- *
- * Deliberately not accented. WordPress uses blue for things you can click, and
- * a blue static number invites a click that does nothing.
+ * Deliberately not accented: a coloured static number invites a click that
+ * does nothing. Scale and the display face are what separate it from prose.
  */
 .wrap.aggr-admin .aggr-figure {
-	font-size: 32px;
-	font-weight: 600;
-	line-height: 1.1;
 	margin: 0;
+	color: var(--aggr-color-text);
+	font-family: var(--aggr-font);
+	font-size: 30px;
+	font-variant-numeric: tabular-nums;
+	font-weight: 700;
+	letter-spacing: -0.025em;
+	line-height: 1.1;
 }
 
 /*
- * No data is a sentence, not a big dash.
- *
- * An em dash in the figure slot renders at 32px as a thick horizontal bar that
- * reads as a redaction mark. Muting it did not help — the shape is the problem.
- * The card says what is missing in words instead, at body size, because an
- * absence is prose rather than a measurement.
+ * No data is a sentence, not a big dash. An em dash in the figure slot renders
+ * as a thick bar that reads as a redaction mark.
  */
 .wrap.aggr-admin .aggr-figure--none {
 	color: var(--aggr-color-text-muted);
@@ -279,45 +501,68 @@
 }
 
 .wrap.aggr-admin .aggr-figure__caption {
-	margin: 4px 0 0;
+	margin: 6px 0 0;
+	color: var(--aggr-color-text-body);
 }
 
 /*
- * The counts the rate came from.
- *
- * Present because a rate with no denominator on screen is a number nobody can
- * check, and quiet because they are the working, not the answer.
+ * The counts the rate came from: present because a rate with no denominator
+ * is a number nobody can check, quiet because they are the working.
  */
 .wrap.aggr-admin .aggr-figure__detail {
+	margin: 14px 0 0;
 	color: var(--aggr-color-text-muted);
-	margin: 12px 0 0;
+	font-family: var(--aggr-font-mono);
+	font-size: 12px;
+	line-height: 1.6;
 }
 
 /*
- * Figures sit near their headings, not stranded across the page.
+ * The reason tables, set like every other table here.
  *
- * A `widefat` table gives every column an equal share, so five columns on a
- * wide screen put "0" some five hundred pixels from the word "Filled" and left
- * the first column six times wider than the longest placement name in it. The
- * numeric columns are sized to their content and the name column takes what is
- * left, which is the only column whose length is unpredictable.
- *
- * Layout only — no colours, no borders, no cell chrome. Core still draws the
- * table.
+ * Figures sit near their headings: a `widefat` table gives every column an
+ * equal share, which put "0" some five hundred pixels from "Filled", so the
+ * numeric columns are sized to their content and the name column takes what
+ * is left. The measure matches the tiles above.
  */
 .wrap.aggr-admin .aggr-report-table {
-	/*
-	 * One measure for the screen.
-	 *
-	 * A `widefat` table fills whatever it is given, so on a wide monitor
-	 * right-aligned figures ended up a canyon away from the words they belong
-	 * to. This is the width the two summary cards already span, so the tables
-	 * line up under them instead of running past to the window edge.
-	 *
-	 * A max-width, not a width: below it the table still fills the space, which
-	 * is what keeps the narrow-viewport behaviour unchanged.
-	 */
 	max-width: 900px;
+	border: 1px solid var(--aggr-border-color);
+	border-collapse: separate;
+	border-radius: 12px;
+	border-spacing: 0;
+	box-shadow: none;
+	overflow: hidden;
+}
+
+.wrap.aggr-admin .aggr-report-table thead th {
+	padding: 12px 20px;
+	background: var(--aggr-color-surface-sunken);
+	border-bottom: 1px solid var(--aggr-border-color);
+	color: var(--aggr-color-text-subtle);
+	font-family: var(--aggr-font-mono);
+	font-size: 10.5px;
+	font-weight: 600;
+	letter-spacing: 0.1em;
+	text-transform: uppercase;
+}
+
+.wrap.aggr-admin .aggr-report-table tbody th,
+.wrap.aggr-admin .aggr-report-table tbody td {
+	padding: 14px 20px;
+	border-top: 1px solid var(--aggr-border-color);
+	color: var(--aggr-color-text-body);
+	font-variant-numeric: tabular-nums;
+}
+
+.wrap.aggr-admin .aggr-report-table tbody tr:first-child th,
+.wrap.aggr-admin .aggr-report-table tbody tr:first-child td {
+	border-top: 0;
+}
+
+/* The portal's tables are not striped; a rule between rows does the job. */
+.wrap.aggr-admin .aggr-report-table.striped > tbody > :nth-child(odd) {
+	background-color: var(--aggr-color-surface);
 }
 
 .wrap.aggr-admin .aggr-report-table td,

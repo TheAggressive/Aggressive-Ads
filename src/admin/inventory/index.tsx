@@ -35,6 +35,7 @@ import type {
 	View as DataView,
 } from '@wordpress/dataviews';
 import { errorMessage, setStrings, t } from '../shared/save';
+import { State } from '../shared/state';
 import { PlacementModal } from './form';
 import {
 	EMPTY,
@@ -143,6 +144,12 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 				filterBy: { operators: [ 'is' ] },
 				getValue: ( { item }: { item: Placement } ) =>
 					item.active ? 'active' : 'inactive',
+				render: ( { item }: { item: Placement } ) =>
+					item.active ? (
+						<State tone="live">{ t( 'active' ) }</State>
+					) : (
+						<State tone="neutral">{ t( 'inactive' ) }</State>
+					),
 			},
 			{
 				id: 'refresh',

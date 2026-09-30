@@ -148,7 +148,8 @@ final class Reports_Screen implements Service {
 
 		Screen_Shell::open(
 			__( 'Advertising reports', 'aggressive-ads' ),
-			__( 'How often each slot filled when it was asked for, and why it stayed empty when it did not.', 'aggressive-ads' )
+			__( 'How often each slot filled when it was asked for, and why it stayed empty when it did not.', 'aggressive-ads' ),
+			Screen_Shell::section( 'measurement' )
 		);
 
 		if ( ! $this->data->surfaces() ) {
@@ -166,11 +167,22 @@ final class Reports_Screen implements Service {
 		$period    = $this->data->period( $days );
 		$fill      = $this->data->fill( $period, $placement );
 
+		/*
+		 * The window, the placement and the download in one toolbar.
+		 *
+		 * The download used to be the last thing on the page, under every
+		 * table, so the one action this screen offers was the one nobody could
+		 * find without scrolling past the whole report. It exports what the
+		 * filters beside it select, so it belongs next to them.
+		 */
+		echo '<div class="aggr-toolbar">';
 		$this->render_filter( $period->days, $placement );
+		$this->render_export( $period, $placement );
+		echo '</div>';
+
 		$this->render_summary( $period, $fill );
 		$this->render_reasons( $fill );
 		$this->render_utilisation( $this->data->utilisation( $period ) );
-		$this->render_export( $period, $placement );
 
 		Screen_Shell::close();
 	}

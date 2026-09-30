@@ -56,6 +56,7 @@ import {
 	t,
 	useAction,
 } from '../shared/save';
+import { State } from '../shared/state';
 
 type Member = {
 	id: number;
@@ -752,6 +753,12 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 				filterBy: { operators: [ 'is' ] },
 				getValue: ( { item }: { item: Organization } ) =>
 					item.active ? 'active' : 'suspended',
+				render: ( { item }: { item: Organization } ) =>
+					item.active ? (
+						<State tone="live">{ t( 'stateActive' ) }</State>
+					) : (
+						<State tone="danger">{ t( 'stateSuspended' ) }</State>
+					),
 			},
 		],
 		[]

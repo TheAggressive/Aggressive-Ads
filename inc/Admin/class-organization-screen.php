@@ -130,7 +130,8 @@ final class Organization_Screen implements Service {
 		if ( ! is_file( AGGR_PLUGIN_DIR . 'dist/admin/organizations.asset.php' ) ) {
 			Screen_Shell::unbuilt(
 				__( 'Organizations', 'aggressive-ads' ),
-				__( 'The organizations screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' )
+				__( 'The organizations screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' ),
+				Screen_Shell::section( 'advertisers' )
 			);
 
 			return;
@@ -204,7 +205,8 @@ final class Organization_Screen implements Service {
 			'aggr-organizations-root',
 			'data-aggr-organizations',
 			$payload,
-			__( 'The organizations screen needs JavaScript enabled.', 'aggressive-ads' )
+			__( 'The organizations screen needs JavaScript enabled.', 'aggressive-ads' ),
+			Screen_Shell::section( 'advertisers' )
 		);
 	}
 

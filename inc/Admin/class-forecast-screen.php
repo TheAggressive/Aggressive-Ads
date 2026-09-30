@@ -122,7 +122,8 @@ final class Forecast_Screen implements Service {
 		if ( ! is_file( AGGR_PLUGIN_DIR . 'dist/admin/forecast.asset.php' ) ) {
 			Screen_Shell::unbuilt(
 				__( 'Inventory outlook', 'aggressive-ads' ),
-				__( 'The outlook screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' )
+				__( 'The outlook screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' ),
+				Screen_Shell::section( 'inventory' )
 			);
 
 			return;
@@ -136,7 +137,8 @@ final class Forecast_Screen implements Service {
 			'aggr-forecast-root',
 			'data-aggr-forecast',
 			$this->payload( $window ),
-			__( 'This screen needs JavaScript.', 'aggressive-ads' )
+			__( 'This screen needs JavaScript.', 'aggressive-ads' ),
+			Screen_Shell::section( 'inventory' )
 		);
 	}
 

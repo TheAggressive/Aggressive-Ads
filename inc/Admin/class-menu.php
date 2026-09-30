@@ -56,6 +56,7 @@ final class Menu implements Service {
 		add_action( 'admin_menu', array( $this, 'register_parent' ), 9 );
 		add_action( 'admin_menu', array( $this, 'remove_duplicate_parent' ), 11 );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_rhythm' ) );
+		add_filter( 'admin_body_class', array( $this, 'body_class' ) );
 
 		// Inline and on every admin page, because the menu is on every admin
 		// page. A stylesheet request for nine declarations would cost more than
@@ -166,6 +167,44 @@ final class Menu implements Service {
 			array(),
 			false === $mtime ? AGGR_VERSION : (string) $mtime
 		);
+	}
+
+	/**
+	 * Whether a screen id belongs to one of the Advertising screens.
+	 *
+	 * Every screen under the parent has an id ending `page_aggr` or
+	 * `page_aggr-…` — `toplevel_page_aggr` for the parent, and
+	 * `{menu title}_page_aggr-review` and so on for the children, where the
+	 * prefix follows the product name. The suffix is ours and stable; the
+	 * prefix is not, so this matches on the suffix.
+	 *
+	 * @param string $screen_id `WP_Screen::$id`.
+	 */
+	public static function is_advertising_screen( string $screen_id ): bool {
+		return 1 === preg_match( '/(^|_)page_' . preg_quote( self::PARENT_SLUG, '/' ) . '(-|$)/', $screen_id );
+	}
+
+	/**
+	 * Marks the Advertising screens on `<body>`.
+	 *
+	 * The product's primary colour has to reach `@wordpress/components`, which
+	 * read it from `--wp-admin-theme-color`. Declaring that on the screen's
+	 * `.wrap` would miss every modal, because a modal renders at the end of
+	 * `<body>`, outside it — the organizations screen has already shipped one
+	 * rule that never matched for exactly that reason. `<body>` is the one
+	 * element both are inside, and this class scopes it to our screens alone.
+	 *
+	 * @param string $classes Space-separated body classes.
+	 * @return string
+	 */
+	public function body_class( string $classes ): string {
+		$screen = function_exists( 'get_current_screen' ) ? get_current_screen() : null;
+
+		if ( null === $screen || ! self::is_advertising_screen( $screen->id ) ) {
+			return $classes;
+		}
+
+		return $classes . ' aggr-admin-screen';
 	}
 
 	/**

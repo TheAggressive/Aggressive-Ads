@@ -152,7 +152,8 @@ final class Conversions_Screen implements Service {
 		if ( ! is_file( AGGR_PLUGIN_DIR . 'dist/admin/conversions.asset.php' ) ) {
 			Screen_Shell::unbuilt(
 				__( 'Conversions', 'aggressive-ads' ),
-				__( 'The conversions screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' )
+				__( 'The conversions screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' ),
+				Screen_Shell::section( 'measurement' )
 			);
 
 			return;
@@ -260,7 +261,8 @@ final class Conversions_Screen implements Service {
 			'aggr-conversions-root',
 			'data-aggr-conversions',
 			$payload,
-			__( 'The conversions screen needs JavaScript enabled.', 'aggressive-ads' )
+			__( 'The conversions screen needs JavaScript enabled.', 'aggressive-ads' ),
+			Screen_Shell::section( 'measurement' )
 		);
 	}
 

@@ -6,12 +6,19 @@ like, and what is still uneven. The advertiser portal has its own document,
 is in [administration.md](administration.md) and
 [roles-and-capabilities.md](roles-and-capabilities.md).
 
-The portal and the staff screens are two surfaces of one product, not one
-design. The portal is the product's own page, with its own canvas, typeface and
-accent. The staff screens live inside wp-admin, next to core's lists and
-notices, and follow wp-admin's conventions wherever it already has one. They
-share the status vocabulary, the token names and the tone of the copy. They do
-not share a palette.
+The portal and the staff screens are two surfaces of one product. The staff
+screens carry the portal's identity: its soft white canvas, graphite primary
+colour, Archivo headings, monospaced labels, stat tiles and status pills. They
+carry it inside wp-admin's own chrome. The admin bar, the sidebar, notices,
+routing and every control's behaviour stay WordPress's.
+
+**This reverses an earlier decision, twice over.** The first staff screens used
+the portal's old warm palette and read as a plugin bolted into the admin, so the
+tokens were switched to core's palette. That made seven screens
+indistinguishable from any other wp-admin page, and the publisher's verdict was
+"boring". The portal has since moved to graphite and Signal orange, which sit
+beside wp-admin's dark sidebar without fighting it, so the staff screens now use
+the same palette.
 
 ## The screens
 
@@ -37,13 +44,13 @@ is surfaced by the menu badge (`Pending_Work`) and the admin notice
 
 ### Findings per screen
 
-**Review** is the most-used screen and the only one still drawn with the
-portal's design system: pill tabs, `aggr-button` buttons, its own `Dialog`
-(`role="dialog"`) where every other screen uses core's `Modal`, and a React
-page header (`aggr-pagehead`) that sits inside `.aggr-portal`. It works and it
-is contrast-gated. It also reads as a different product from the seven screens
-around it. The queue is server-paged, so sorting and search stay off until the
-server can answer them (see `queue-table.tsx`). Keep that.
+**Review** is the most-used screen and still loads the portal stylesheet: it has
+`aggr-button` buttons and its own `Dialog` (`role="dialog"`) where every other
+screen uses core's `Modal`. The identity slice gave its queue the shared header,
+the portal's filter chips and the shared table style, so it no longer reads as a
+different product. The dialog is still its own. The queue is server-paged, so
+sorting and search stay off until the server can answer them (see
+`queue-table.tsx`). Keep that.
 
 **Packages** renders every package as an always-open edit form, each with its
 own Save button, under a create form. At ten packages that is ten forms to
@@ -52,11 +59,10 @@ This is the one screen that does not scale. It should become the Placements
 pattern: a DataViews list with status, price and placements as columns, and one
 modal editor.
 
-**Reports** puts its only action, the CSV download, at the very bottom, under
-every table. Its window and placement filters are a bare GET form with no
-visible labels. The two figure cards are core postboxes and the reason tables
-are `widefat`. Each piece is fine alone, but together they give the page no
-visible structure.
+**Reports** put its only action, the CSV download, at the very bottom, under
+every table. It now sits in a toolbar beside the filters it exports, and the
+figure cards and reason tables are drawn as stat tiles and portal tables. The
+window and placement filters still have no visible labels.
 
 **Outlook** and **Placements** share a capability and a subject. They are two
 views of the catalogue with no link between them. Outlook's window is fixed
@@ -71,12 +77,20 @@ as a promise.
 
 ### Problems shared across screens
 
-These were true before the first slice. The ones marked **fixed** were closed by
-it.
+These were true before the modernization started. The ones marked **fixed**
+have been closed since.
 
+- **No identity.** Seven screens were stock wp-admin: core's grey, blue, 23px
+  titles and flat tables. Nothing said they were one product, or the same
+  product as the portal. **Fixed** by the identity slice.
 - **Two design systems.** Review uses the portal components; the other seven
-  use `@wordpress/components` and DataViews. So there are two dialogs, two
-  button vocabularies, two tab styles and two notice styles.
+  use `@wordpress/components` and DataViews. So there were two dialogs, two
+  button vocabularies, two tab styles and two notice styles. Tabs, tables and
+  colours now match; the dialog and button components do not.
+- **A notice about the queue on the queue's own product.** "Advertising is
+  waiting on you" printed on every Advertising screen, where the sidebar's
+  Review count is already on screen. It pushed each screen's content down.
+  **Fixed**: it now shows everywhere in wp-admin except the Advertising screens.
 - **No page header.** Seven screens printed a bare core `<h1>`. None said what
   the screen was for, none had room for a primary action beside the title, and
   none printed `wp-header-end`. Core's `common.js` moves every admin notice
@@ -96,13 +110,12 @@ it.
   danger and surface tokens. **Fixed.**
 - **Primary actions in different places.** Placements and Conversions put
   "New …" in the DataViews toolbar. Review puts "Create campaign" in its page
-  header. Packages uses a whole card. Reports puts its export last.
-- **Unverified reflow.** The shared DataViews surface uses `overflow: hidden` to
-  clip the table to its rounded corners. At 320 CSS pixels that may clip
-  columns instead of scrolling them. Reports measured DataViews at 465px wide on
-  a 320px viewport before its tables were given a scroll region. Organizations,
-  Placements and Conversions have not been measured. That belongs to the final
-  audit slice, and it needs a browser.
+  header. Packages uses a whole card. Reports put its export last (**fixed**).
+- **Reflow, partly measured.** At 360 CSS pixels no Advertising screen widens
+  the page: `scrollWidth` equals the viewport on all eight, measured in a
+  browser on 2026-09-30. DataViews tables scroll inside their own surface with
+  the actions column pinned, so the `overflow: hidden` on the surface does not
+  clip columns. 320px, 200% zoom and forced colours are still unmeasured.
 - **Sidebar order does not follow the work.** The sidebar runs Review,
   Placements, Outlook, Organizations, Conversions, Packages, Reports, Settings,
   so Packages sits apart from the other two sell-side screens.
@@ -114,18 +127,25 @@ it.
 
 - `Admin\Shared_Assets`: one DataViews bundle, and `enqueue_bundle()` for
   each screen's script.
-- `Admin\Screen_Shell`: the header and mount point (below).
-- `src/styles/base/_admin-tokens.css`: the admin palette, contrast-measured
-  in `AdminContrastTest`.
+- `Admin\Screen_Shell`: the header, its group eyebrow (`Screen_Shell::section()`)
+  and the mount point.
+- `Menu::body_class()`: `aggr-admin-screen` on `<body>`, which is how tokens
+  and the graphite theme colour reach modals rendered outside the `.wrap`.
+- `src/styles/admin-native.css`: header, surfaces, tables, stat tiles, pills,
+  toolbar.
+- `src/styles/base/_admin-tokens.css`: the palette, contrast-measured in
+  `AdminContrastTest`.
+- `src/admin/shared/state.tsx`: the status pill for a table cell.
 - `src/admin/shared/save.tsx`: `useAction`, `SaveError`, the string table.
 - DataViews for any list of records. Core's `Modal` for any dialog on a
   DataViews screen.
-- The status pill and its fixed colours. They carry the campaign status
-  vocabulary from `Post_Statuses`, and a status must mean the same thing on both
-  surfaces.
+- The campaign status pill and its fixed colours. It carries the campaign
+  status vocabulary from `Post_Statuses`, and a status means the same thing on
+  both surfaces.
 
-Do not reuse portal layout, the portal rail, Archivo or the portal's canvas and
-accent on staff screens. Sharing a colour is not a shared contract.
+Do not reuse the portal's layout or rail. wp-admin already has a sidebar, and a
+second one inside it would be the "unrelated application" this is meant to
+avoid.
 
 ### What a redesign can break
 
@@ -152,26 +172,39 @@ What every staff screen follows. It is only as big as the current screens need.
 Add to it when a new screen needs something the existing ones do not.
 
 **Container.** `<div class="wrap aggr-admin">`, which is core's `.wrap` for
-gutters, plus the scope for the tokens. Use no max-width on the page. Prose
-keeps a 75ch measure, and a table fills the width it has.
+gutters, plus the scope for the tokens. `<body>` carries `aggr-admin-screen`.
+Use no max-width on the page. Prose keeps a 75ch measure, form cards 60rem and
+text fields 34rem, and a table fills the width it has.
 
-**Header.** Printed by `Screen_Shell::open()` or `::mount()`. The anatomy is:
-the mark, the `<h1>` title, an optional one-sentence purpose line, a hairline,
-then `<hr class="wp-header-end">`. Notices go under it; core moves them there.
-The purpose line says what the screen is *for*, in the words of the person using
-it. Leave it out when the sections already say that (Settings does).
+**Canvas and colour.** The portal's soft white canvas (`#f7f7f5`) and graphite
+(`#111214`) as the primary colour. Graphite reaches `@wordpress/components`
+through `--wp-admin-theme-color`, so primary buttons, toggles, checkboxes and
+focus rings follow it without any control being restyled. The Brand settings
+still recolour only the portal. A publisher's rebrand is for their advertisers,
+not their staff.
 
-**Accent.** Signal orange appears once per screen, on the decorative mark in the
-header. It never goes on a control, a link, a focus ring or a status. In
-wp-admin, blue already means "clickable" and the status colours are fixed, so
-orange anywhere else would compete with both. Buttons and links stay core blue.
-The Brand settings recolour the portal only.
+**Header.** Printed by `Screen_Shell::open()` or `::mount()`; Review's React
+queue prints the same classes. The anatomy is: an eyebrow (the Signal orange
+mark and the group name — Campaigns, Inventory, Advertisers, Measurement,
+Setup), the `<h1>` title, an optional one-sentence purpose line, an optional
+actions slot on the right, then `<hr class="wp-header-end">`. Notices go under
+it; core moves them there. The purpose line says what the screen is *for*, in
+the words of the person using it. Leave it out when the sections already say
+that (Settings does).
 
-**Type.** The page title is 23px/600. A section title is an `<h2>` at 15px/600,
-which is the size `admin-native.css` gives postbox headings. Pass `size={ 15 }`
-to `Heading` rather than choosing a level for its size. Body text is core's
-13px. Secondary text uses `--aggr-color-text-muted`. Figures that are the point
-of the screen are 28–32px/600 and never accented.
+**Accent.** Bright Signal orange (`--aggr-color-mark`) is a shape only: the
+mark. It fails contrast as text. The staff accent (`--aggr-color-accent`) is the
+text-safe `#b5401a`, and it appears where the portal uses it: the hover of a
+record's name. It never goes on a primary button, which is graphite.
+
+**Type.** Archivo, self-hosted, for the page title (32px/700, tracking
+-0.025em), section headings (19px/650; 17px in a card header) and figures
+(30px/700, tabular). Small labels — the eyebrow, table headings, stat labels,
+dates in data — use the system monospace at 10.5px/600, uppercase, spaced
+0.1–0.12em. Body text and controls stay in core's system font, so a form reads
+like every other form in wp-admin. Secondary text uses
+`--aggr-color-text-muted`. Figures are never accented, except a count of
+problems in the danger ink.
 
 **Headings.** One `<h1>` per screen. Sections are `<h2>` and never skip a level.
 A card's title is its section's heading.
@@ -182,11 +215,18 @@ never a control's margin.
 
 **Cards.** A card groups controls that save together or figures that are read
 together. A list of records is a table, not a stack of cards. Never nest a card
-in a card. Cards have a hairline border, a 4px radius and no shadow.
+in a card. Every surface — card, table, stat tile — is white with a hairline
+border, the portal's 12px radius and no shadow.
 
-**Tables.** Use DataViews for records. The surface (white, hairline, 4px radius)
-is shared in `admin-native.css`. Do not restyle it per screen. The primary
-column is 600 weight. When a table can be wider than the viewport, wrap it in
+**Stat tiles.** A monospaced label, the figure, an optional caption, and the
+counts it came from in monospace below. A tile shows a number the domain
+computes, never a derived score. Outlook and Reports use them.
+
+**Tables.** Use DataViews for records. The surface and the portal's header row
+(tinted, monospaced uppercase labels) are shared in `admin-native.css`. Do not
+restyle them per screen. The primary column is graphite at 600 weight, and the
+other cells are body ink with tabular figures. A state column renders its label
+through `State` as a pill. When a table can be wider than the viewport, wrap it in
 `.aggr-scroll-region` with `role="region"`, a name and `tabindex="0"`. Sorting
 and search appear only when they apply to the whole set. A server-paged list
 keeps them off until the server can answer them.
@@ -199,9 +239,11 @@ confirmation in a `Modal` that names the consequence, and is never primary.
 Approval on Review stays the one green "positive" button.
 
 **Status.** Use the domain's words and colours only: the campaign pill from
-`Post_Statuses`, or a screen's own verdict from its data (forecast `oversell`,
-organization active or suspended). Every status carries a word, never colour
-alone. Do not invent a derived status in the browser.
+`Post_Statuses`, or a screen's own state from its data (forecast verdict,
+organization active or suspended, placement active, credential live or revoked).
+`State` maps each to a tone — live, neutral, pending, attention, danger — which
+is emphasis over the word, not a status of its own. Every status carries a word
+and a dot, never colour alone. Do not invent a derived status in the browser.
 
 **Empty states.** Keep the table and its controls, and put a sentence inside it
 saying what is missing and, where there is one, what creates it. Do not show a
@@ -234,26 +276,28 @@ scoped.
    screens, tokens declared on every screen, the shared table surface, heading
    levels on Settings and Packages, and Outlook's named focus region. No
    behaviour, route or capability changes.
-2. **Review.** Bring the queue and campaign views onto the header contract.
-   Decide, with evidence, whether the staff queue keeps the portal's components
-   or moves to core's, which means one dialog and one button vocabulary. Keep
-   the status pills, the tab filters and server paging.
-3. **Packages.** A DataViews list (name, price, placements, active, default)
+2. **Identity** *(second)*. The portal's palette, type, eyebrow, tables, pills,
+   stat tiles and filter chips on every staff screen, graphite through
+   `--wp-admin-theme-color`, the Reports export beside its filters, and the
+   waiting-work notice kept off the Advertising screens. Review's queue joined
+   the shared header.
+3. **Review components.** One dialog and one button vocabulary: move Review's
+   `Dialog` to core's `Modal` or state why not. Keep the status pills, the tab
+   filters and server paging.
+4. **Packages.** A DataViews list (name, price, placements, active, default)
    with one modal editor, following the Placements pattern.
-4. **Inventory.** Cross-link Placements and Outlook, state the outlook's window
+5. **Inventory.** Cross-link Placements and Outlook, state the outlook's window
    and inventory kind on screen, and regroup the sidebar so the sell-side
    screens sit together (`add_submenu_page`'s position, not boot order).
-5. **Reports.** Filters and export together at the top, visible labels, and the
-   figure cards and reason tables on the contract.
-6. **Organizations, Conversions and Settings polish.** Section headings,
-   empty-state wording, and the Billing module toggle's copy until P19 exists.
+6. **Reports, Organizations, Conversions and Settings polish.** Visible filter
+   labels on Reports, section headings, empty-state wording, and the Billing
+   module toggle's copy until P19 exists.
 7. **Final pass.** Measure 320px reflow, 200% zoom and forced colours on every
-   screen in the browser suite, including the DataViews `overflow: hidden`
-   question, and record the evidence here.
+   screen in the browser suite, and record the evidence here.
 
 An operational overview screen is deliberately **not** on this list. The data
 for an honest one exists: `Pending_Work`, the review tab counts, fill rate and
-the outlook's oversold count. But it should come after slices 2–5, so that it
+the outlook's oversold count. But it should come after slices 3–6, so that it
 links into screens that already follow the contract. It shows only counts the
 domain computes. It shows no revenue until P19 exists, and no figure that
 duplicates a screen without linking to it.

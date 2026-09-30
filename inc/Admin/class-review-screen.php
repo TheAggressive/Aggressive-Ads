@@ -200,7 +200,8 @@ final class Review_Screen implements Service {
 		if ( ! is_file( AGGR_PLUGIN_DIR . 'dist/admin/review.asset.php' ) ) {
 			Screen_Shell::unbuilt(
 				__( 'Campaign review', 'aggressive-ads' ),
-				__( 'The review screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' )
+				__( 'The review screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' ),
+				Screen_Shell::section( 'campaigns' )
 			);
 
 			return;
@@ -275,6 +276,7 @@ final class Review_Screen implements Service {
 	private static function strings(): array {
 		return array(
 			'queueTitle'               => __( 'Campaign review', 'aggressive-ads' ),
+			'queueSection'             => Screen_Shell::section( 'campaigns' ),
 			'queueLede'                => __( 'Review advertiser submissions, provide clear feedback, and approve campaigns into the live set.', 'aggressive-ads' ),
 			'tabsLabel'                => __( 'Review queue filters', 'aggressive-ads' ),
 			'pagesLabel'               => __( 'Campaign review pages', 'aggressive-ads' ),

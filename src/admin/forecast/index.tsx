@@ -12,6 +12,7 @@ import { DataViews, filterSortAndPaginate } from '@wordpress/dataviews';
 import { createRoot, useMemo, useState } from '@wordpress/element';
 
 import './style.css';
+import { State, type Tone } from '../shared/state';
 
 import type {
 	Field as DataField,
@@ -19,6 +20,17 @@ import type {
 } from '@wordpress/dataviews';
 
 import type { ForecastPayload, ForecastRow, ForecastTotals } from './types';
+
+/*
+ * The server's verdict, drawn as a pill. Oversold is the row somebody has to
+ * act on, so it is the one in the danger tone; a placement nobody has measured
+ * is neither good nor bad, so it stays neutral rather than borrowing a warning.
+ */
+const VERDICT_TONE: Record< ForecastRow[ 'verdict' ], Tone > = {
+	available: 'live',
+	oversell: 'danger',
+	unknown: 'neutral',
+};
 
 /** Strings come from PHP; Script Modules cannot carry translations below 7.0. */
 let strings: Record< string, string > = {};
@@ -135,15 +147,9 @@ const Outlook = ( {
 				enableSorting: true,
 				getValue: ( { item } ) => item.verdict,
 				render: ( { item } ) => (
-					<span
-						className={
-							'oversell' === item.verdict
-								? 'aggr-forecast__oversold'
-								: undefined
-						}
-					>
+					<State tone={ VERDICT_TONE[ item.verdict ] }>
 						{ t( item.verdict ) }
-					</span>
+					</State>
 				),
 			},
 			{

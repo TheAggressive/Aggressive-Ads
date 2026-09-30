@@ -146,7 +146,8 @@ final class Placement_Screen implements Service {
 		if ( ! is_file( AGGR_PLUGIN_DIR . 'dist/admin/inventory.asset.php' ) ) {
 			Screen_Shell::unbuilt(
 				__( 'Placements', 'aggressive-ads' ),
-				__( 'The placements screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' )
+				__( 'The placements screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' ),
+				Screen_Shell::section( 'inventory' )
 			);
 
 			return;
@@ -230,7 +231,8 @@ final class Placement_Screen implements Service {
 			'aggr-inventory-root',
 			'data-aggr-inventory',
 			$payload,
-			__( 'The placements screen needs JavaScript enabled.', 'aggressive-ads' )
+			__( 'The placements screen needs JavaScript enabled.', 'aggressive-ads' ),
+			Screen_Shell::section( 'inventory' )
 		);
 	}
 

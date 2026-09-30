@@ -1,96 +1,111 @@
 /*
- * WordPress admin palette for the staff screens.
+ * The product palette, as the staff screens use it.
  *
- * The review screens sit inside wp-admin, beside core's own lists and notices,
- * and the advertiser portal does not. Sharing one palette across both made the
- * staff surface read as a plugin bolted into the admin rather than part of it —
- * warm paper and a maroon accent next to core's grey and blue.
+ * **This used to be WordPress's "Fresh" palette, and that was reversed.** The
+ * first staff screens shared the portal's warm paper and a maroon accent, and
+ * next to core's grey and blue they read as a plugin bolted into the admin, so
+ * the tokens were resolved to core's values instead. That fixed the clash and
+ * produced the opposite problem: seven screens indistinguishable from any other
+ * wp-admin page, which the publisher called boring, and correctly. The portal
+ * has since moved to graphite, Signal orange and soft white — a palette that
+ * sits beside wp-admin's dark sidebar without fighting it — so the staff
+ * screens now carry the same one. docs/admin-ui.md records the decision.
  *
- * So this is a *token* override, not a rewrite: every component rule in
- * admin.css and the shared partials keeps referencing the same --aggr-* names
- * and simply resolves them to core's values here. Nothing about layout,
- * spacing, focus behaviour or structure changes, and the portal is untouched —
- * the block is scoped to .aggr-admin, which only the staff screens carry.
+ * Still a *token* override, not a rewrite: every component rule keeps the same
+ * --aggr-* names. What differs from the portal is deliberate:
  *
- * Values are the default "Fresh" admin scheme. They are literals for the reason
- * portal.css states about its own: a token resolving through --wp--preset--*
- * renders as *nothing* where that preset is absent, and an unresolved custom
- * property in a colour declaration is transparent text on a transparent
- * background. Not a degraded look; an unreadable screen.
+ * - `--aggr-color-accent` is the **text-safe** orange (#b5401a), because staff
+ *   components (Review's link buttons, active tabs) draw the accent as text.
+ *   Bright Signal orange is 3.39:1 on white and can only be a shape, so it is
+ *   `--aggr-color-mark` here and is used for marks and indicators alone.
+ * - `--aggr-border-color-strong` stays core's input grey: a control's boundary
+ *   needs 3:1, and the portal's softer rule does not have it.
  *
- * Every pair below is measured in AdminContrastTest. Core's own palette is not
- * automatically WCAG AA at small sizes — #2271b1 on white is 4.6:1, which
- * passes with almost nothing to spare — so these cannot be nudged by eye.
+ * Literals, for the reason portal.css states about its own: an unresolved
+ * custom property in a colour declaration is transparent text on a transparent
+ * background. Every pair is measured in AdminContrastTest.
+ *
+ * Declared on `body.aggr-admin-screen` as well as `.aggr-admin`, because a
+ * modal renders at the end of `<body>`, outside the screen's wrap. Three
+ * stylesheets used to re-declare the handful of tokens their modals read, as
+ * copies that had to be kept in step by hand; `Menu::body_class()` makes that
+ * unnecessary.
  */
 
-.aggr-admin {
-	/* Surfaces. Core's canvas is the grey behind every admin list. */
-	--aggr-color-canvas: #f0f0f1;
+.aggr-admin,
+body.aggr-admin-screen {
+	/* Surfaces: the portal's soft white canvas under white panels. */
+	--aggr-color-canvas: #f7f7f5;
 	--aggr-color-surface: #ffffff;
-	--aggr-color-surface-raised: #ffffff;
-	--aggr-color-surface-sunken: #f6f7f7;
-	--aggr-color-surface-inset: #f0f0f1;
+	--aggr-color-surface-raised: #fafaf9;
+	--aggr-color-surface-sunken: #efefec;
+	--aggr-color-surface-inset: #ededea;
 
-	/* Ink. #1d2327 is core's heading colour, #3c434a its body. */
-	--aggr-color-text: #1d2327;
-	--aggr-color-text-body: #3c434a;
-	--aggr-color-text-muted: #646970;
-	--aggr-color-text-subtle: #646970;
+	/* Ink: graphite, then the portal's measured body and muted greys. */
+	--aggr-color-text: #111214;
+	--aggr-color-text-body: #3d3f45;
+	--aggr-color-text-muted: #5c5e65;
+	--aggr-color-text-subtle: #5c5e65;
 
-	/*
-	 * Rules. The light one is core's row separator; the strong one is its
-	 * *input* border, which is a different and darker grey on purpose —
-	 * #c3c4c7 is 1.7:1 on white and cannot carry a control's boundary.
-	 */
-	--aggr-border-color: #dcdcde;
+	/* Rules. The strong one is core's input border — see the header. */
+	--aggr-border-color: #e3e3df;
 	--aggr-border-color-strong: #8c8f94;
 
 	/*
-	 * Accent. Core's primary blue, and the darker shade it uses for hover and
-	 * for links on a tinted background.
+	 * Accent, as text: 5.66:1 on white, 5.27:1 on the canvas. The darker
+	 * shade is for hover and for text on a tint.
 	 */
-	--aggr-color-accent: #2271b1;
-	--aggr-color-accent-strong: #135e96;
+	--aggr-color-accent: #b5401a;
+	--aggr-color-accent-strong: #8f3213;
 	--aggr-color-accent-contrast: #ffffff;
-	--aggr-color-accent-rail: #72aee6;
+	--aggr-color-accent-rail: #f05a28;
 
 	/*
-	 * Status. Core's notice colours, darkened where its own value would fail
-	 * on a tint: #00a32a on #edfaef is 2.8:1, so the ink is #007017 instead.
-	 * The tints are core's; the inks are the darkest shade that still reads as
-	 * the same colour.
+	 * Signal orange itself. A shape only — the product mark, the marker on the
+	 * current tab — never text and never the only cue for anything.
 	 */
-	--aggr-color-live: #007017;
-	--aggr-color-live-tint: #edfaef;
-	--aggr-color-pending: #8a6116;
-	--aggr-color-pending-tint: #fcf9e8;
-	--aggr-color-danger: #b32d2e;
-	--aggr-color-danger-tint: #fcf0f1;
-	--aggr-color-neutral: #2271b1;
-	--aggr-color-neutral-tint: #f0f6fc;
-	--aggr-color-ended: #3c434a;
-	--aggr-color-ended-tint: #e6eaee;
-	--aggr-color-info: #135e96;
-	--aggr-color-info-tint: #e8f1f8;
-	--aggr-color-attention: #a33a12;
-	--aggr-color-attention-tint: #fcf0e8;
-	--aggr-color-paused: #5b3fa3;
-	--aggr-color-paused-tint: #f1edfb;
+	--aggr-color-mark: #f05a28;
 
-	/* The rail is core's admin menu, for any component that reaches for it. */
-	--aggr-color-rail: #1d2327;
-	--aggr-color-rail-active: #2271b1;
-	--aggr-color-rail-chip: #2c3338;
-	--aggr-color-rail-text: #f0f0f1;
+	/*
+	 * Status: the portal's inks and tints, so a pill reads the same on both
+	 * surfaces as well as on every site.
+	 */
+	--aggr-color-live: #1a7a4d;
+	--aggr-color-live-tint: #e3f3ea;
+	--aggr-color-pending: #735400;
+	--aggr-color-pending-tint: #faf1d2;
+	--aggr-color-neutral: #5c5e65;
+	--aggr-color-neutral-tint: #ededea;
+	--aggr-color-ended: #3e4c5e;
+	--aggr-color-ended-tint: #e5eaf0;
+	--aggr-color-info: #1f5aa6;
+	--aggr-color-info-tint: #e4eefb;
+	--aggr-color-attention: #a33a12;
+	--aggr-color-attention-tint: #fde9df;
+	--aggr-color-paused: #5b3fa3;
+	--aggr-color-paused-tint: #eee9fa;
+	--aggr-color-danger: #c03826;
+	--aggr-color-danger-tint: #fbe7e3;
+
+	/* The portal rail, for any component that reaches for it. */
+	--aggr-color-rail: #111214;
+	--aggr-color-rail-active: #1d1e22;
+	--aggr-color-rail-chip: #26272b;
+	--aggr-color-rail-text: #b4b5b9;
 	--aggr-color-rail-text-strong: #ffffff;
 
-	/* Shared rules read these; core's blue keeps white labels. */
+	/* Labels on the text-safe accent. */
 	--aggr-color-on-accent: #ffffff;
 
-	/* wp-admin keeps core's blue primary buttons. */
-	--aggr-color-primary: #2271b1;
+	/* Primary actions: graphite with white, as in the portal. 18.7:1. */
+	--aggr-color-primary: #111214;
 	--aggr-color-on-primary: #ffffff;
-	--aggr-color-on-accent-rail: #1d2327;
+	--aggr-color-on-accent-rail: #111214;
+
+	/* Headings and figures in the product's typeface; body text stays core's. */
+	--aggr-font:
+		"Archivo", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue",
+		Arial, sans-serif;
 	--aggr-font-mono:
 		ui-monospace, "SFMono-Regular", "Cascadia Mono", "Segoe UI Mono", "Menlo",
 		"Consolas", monospace;

@@ -33,6 +33,7 @@ import { useMemo, useState } from '@wordpress/element';
 import apiFetch from '@wordpress/api-fetch';
 
 import { Credentials } from './credentials';
+import { State } from '../shared/state';
 import './style.css';
 
 import type {
@@ -511,6 +512,12 @@ function Screen( { payload }: { payload: Payload } ) {
 				filterBy: { operators: [ 'is' ] },
 				getValue: ( { item }: { item: Definition } ) =>
 					item.accepts_reports ? 'active' : 'archived',
+				render: ( { item }: { item: Definition } ) =>
+					item.accepts_reports ? (
+						<State tone="live">{ i18n.active }</State>
+					) : (
+						<State tone="neutral">{ i18n.archived }</State>
+					),
 			},
 		],
 		[ i18n ]
