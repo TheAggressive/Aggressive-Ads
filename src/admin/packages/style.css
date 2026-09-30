@@ -1,0 +1,177 @@
+/*
+ * The package catalogue: one card per offer, and the editor dialog.
+ *
+ * Tokens, the header, the pill and the icon chip are shared and live in
+ * `src/styles/admin-native.css`.
+ */
+
+/*
+ * As many columns as fit at a readable card width. `auto-fill`, not
+ * `auto-fit`, so one package does not stretch into a banner across the page.
+ */
+.aggr-package-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
+	gap: 16px;
+	align-items: stretch;
+}
+
+.aggr-package-card {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 22px 24px 18px;
+	border: 1px solid var(--aggr-border-color);
+	border-radius: 12px;
+	background: var(--aggr-color-surface);
+}
+
+/* Off sale reads as receded, and says so in its badge as well. */
+.aggr-package-card--inactive {
+	background: var(--aggr-color-surface-raised);
+}
+
+.aggr-package-card__head {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px 12px;
+	align-items: flex-start;
+	justify-content: space-between;
+}
+
+.wrap.aggr-admin .aggr-package-card__head h2 {
+	margin: 0;
+	font-size: 17px;
+}
+
+.aggr-package-card__badges {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+/* The price is what a catalogue is read for, so it is the largest thing here. */
+.aggr-package-card__price {
+	margin: 2px 0 0;
+	color: var(--aggr-color-text);
+	font-family: var(--aggr-font);
+	font-size: 28px;
+	font-variant-numeric: tabular-nums;
+	font-weight: 700;
+	letter-spacing: -0.02em;
+	line-height: 1.1;
+}
+
+.aggr-package-card__currency {
+	color: var(--aggr-color-text-muted);
+	font-family: var(--aggr-font-mono);
+	font-size: 13px;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	vertical-align: 0.45em;
+}
+
+.aggr-package-card__meta {
+	display: flex;
+	gap: 6px;
+	align-items: center;
+	margin: 0;
+	color: var(--aggr-color-text-muted);
+	font-family: var(--aggr-font-mono);
+	font-size: 12px;
+}
+
+.aggr-package-card__placements {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.aggr-package-card__placements li {
+	display: inline-flex;
+	gap: 6px;
+	align-items: baseline;
+	margin: 0;
+	padding: 4px 9px;
+	border-radius: 6px;
+	background: var(--aggr-color-surface-sunken);
+	color: var(--aggr-color-text-body);
+	font-size: 12px;
+	font-weight: 600;
+}
+
+.aggr-package-card__placements li span {
+	color: var(--aggr-color-text-muted);
+	font-family: var(--aggr-font-mono);
+	font-size: 11px;
+	font-weight: 400;
+}
+
+.aggr-package-card__none {
+	margin: 0;
+	color: var(--aggr-color-text-muted);
+}
+
+.aggr-package-card__foot {
+	display: flex;
+	justify-content: flex-end;
+	margin-top: auto;
+	padding-top: 14px;
+	border-top: 1px solid var(--aggr-border-color);
+}
+
+/*
+ * The empty slot at the end of the catalogue, where the next offer goes.
+ *
+ * A real button with its words visible; the dashed edge is what makes it read
+ * as a place rather than as another package.
+ */
+.aggr-package-new {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	align-items: center;
+	justify-content: center;
+	min-height: 12rem;
+	padding: 24px;
+	border: 1.5px dashed var(--aggr-border-color-strong);
+	border-radius: 12px;
+	background: transparent;
+	color: var(--aggr-color-text);
+	font: inherit;
+	font-size: 14px;
+	font-weight: 600;
+	text-align: center;
+	cursor: pointer;
+}
+
+.aggr-package-new:hover {
+	border-color: var(--aggr-color-text);
+	background: var(--aggr-color-surface);
+}
+
+.aggr-package-new:focus-visible {
+	outline: 2px solid var(--aggr-color-text);
+	outline-offset: 2px;
+}
+
+.aggr-package-new__hint {
+	max-width: 30ch;
+	color: var(--aggr-color-text-muted);
+	font-size: 13px;
+	font-weight: 400;
+}
+
+/*
+ * `.components-modal__frame.aggr-package-modal`, not a descendant selector:
+ * `Modal` puts `className` on the frame itself. See the conversions and
+ * inventory stylesheets, which each learned that the hard way.
+ */
+.components-modal__frame.aggr-package-modal {
+	width: fit-content;
+	min-width: min(90vw, 34rem);
+	max-width: min(90vw, 40rem);
+}

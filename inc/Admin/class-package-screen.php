@@ -65,11 +65,22 @@ final class Package_Screen implements Service {
 			return;
 		}
 
-		if ( '' === Shared_Assets::enqueue_bundle( 'aggr-packages', 'packages' ) ) {
+		$version = Shared_Assets::enqueue_bundle( 'aggr-packages', 'packages' );
+
+		if ( '' === $version ) {
 			return;
 		}
 
 		wp_enqueue_style( 'wp-components' );
+
+		// The catalogue's cards and the editor dialog's measure.
+		wp_enqueue_style(
+			'aggr-packages',
+			AGGR_PLUGIN_URL . 'dist/admin/packages.css',
+			array( 'wp-components' ),
+			$version
+		);
+		wp_style_add_data( 'aggr-packages', 'rtl', 'replace' );
 	}
 
 	/**
@@ -87,15 +98,6 @@ final class Package_Screen implements Service {
 
 		$this->hook_suffix = is_string( $hook ) ? $hook : '';
 	}
-
-	/*
-	 * No stylesheet of its own is enqueued here.
-	 *
-	 * The screen is `@wordpress/components` cards and controls, which
-	 * `wp-components` styles, inside the shared header and rhythm that
-	 * `Menu::enqueue_rhythm()` loads for every Advertising screen. It has
-	 * nothing that needs a rule of its own.
-	 */
 
 	/**
 	 * Renders the authorized catalogue.
@@ -146,6 +148,16 @@ final class Package_Screen implements Service {
 			'defaultCurrency' => Currency_Options::default_for( $priced ),
 			'i18n'            => array(
 				'newPackage'         => __( 'New package', 'aggressive-ads' ),
+				'editPackage'        => __( 'Edit package', 'aggressive-ads' ),
+				'edit'               => __( 'Edit', 'aggressive-ads' ),
+				'defaultBadge'       => _x( 'Default', 'package badge: pre-selected in the wizard', 'aggressive-ads' ),
+				'inactiveBadge'      => _x( 'Inactive', 'package badge: hidden from advertisers', 'aggressive-ads' ),
+				/* translators: %d: run length in days (one day). */
+				'dayOne'             => __( '%d day', 'aggressive-ads' ),
+				/* translators: %d: run length in days (more than one). */
+				'dayMany'            => __( '%d days', 'aggressive-ads' ),
+				'noPlacementsChosen' => __( 'No placements chosen yet.', 'aggressive-ads' ),
+				'emptyCatalogue'     => __( 'Advertisers choose from these in the campaign wizard. Create one to open the catalogue.', 'aggressive-ads' ),
 				'create'             => __( 'Create package', 'aggressive-ads' ),
 				'save'               => __( 'Save package', 'aggressive-ads' ),
 				'created'            => __( 'Package created.', 'aggressive-ads' ),
