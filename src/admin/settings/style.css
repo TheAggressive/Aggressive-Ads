@@ -1,0 +1,217 @@
+/*
+ * The Settings screen: each section's explanation beside its controls.
+ *
+ * Tokens, the header and the icon chip are shared and live in
+ * `src/styles/admin-native.css`.
+ */
+
+.aggr-settings-section {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: 16px;
+	padding: 32px 0;
+	border-top: 1px solid var(--aggr-border-color);
+}
+
+.aggr-settings-section:first-of-type {
+	padding-top: 4px;
+	border-top: 0;
+}
+
+/*
+ * A third for the explanation, two thirds for the controls. The explanation
+ * stays in view while a long section scrolls — Retention's three fields and
+ * their help run taller than the viewport on a laptop, and the sentence that
+ * says what they are for is the one worth keeping on screen.
+ */
+@media (min-width: 960px) {
+	.aggr-settings-section {
+		grid-template-columns: minmax(14rem, 1fr) minmax(0, 2fr);
+		gap: 48px;
+	}
+
+	.aggr-settings-section__intro {
+		position: sticky;
+		top: 56px;
+		align-self: start;
+	}
+}
+
+.wrap.aggr-admin .aggr-settings-section__intro h2 {
+	margin: 14px 0 6px;
+	font-size: 17px;
+}
+
+.aggr-settings-section__intro p {
+	max-width: 40ch;
+	margin: 0;
+	color: var(--aggr-color-text-muted);
+	font-size: 13px;
+	line-height: 1.55;
+}
+
+.aggr-settings-section__panel {
+	max-width: 46rem;
+	padding: 24px;
+	border: 1px solid var(--aggr-border-color);
+	border-radius: 12px;
+	background: var(--aggr-color-surface);
+}
+
+/* A field keeps a measure a person can aim at, as in every other form here. */
+.aggr-settings-section__panel .components-base-control:has(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+	max-width: 30rem;
+}
+
+/* The five colours beside the portal they paint; stacked when there is no room. */
+.aggr-brand-colours {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 24px;
+	align-items: flex-start;
+	padding-top: 8px;
+	border-top: 1px solid var(--aggr-border-color);
+}
+
+.aggr-brand-colours > :first-child {
+	flex: 1 1 16rem;
+}
+
+/*
+ * The portal in miniature.
+ *
+ * The rail is the portal's own fixed graphite: it is not brand-overridable
+ * there either, because its text is measured against that one dark surface.
+ * Everything else is drawn from the five colours being chosen.
+ */
+.aggr-brand-preview {
+	display: grid;
+	grid-template-columns: 34% 1fr;
+	flex: 0 0 18rem;
+	height: 11rem;
+	overflow: hidden;
+	border: 1px solid var(--aggr-border-color);
+	border-radius: 10px;
+	box-shadow: 0 8px 24px rgb(17 18 20 / 8%);
+}
+
+.aggr-brand-preview__rail {
+	display: flex;
+	flex-direction: column;
+	gap: 7px;
+	padding: 12px 10px;
+	background: #111214;
+}
+
+.aggr-brand-preview__name {
+	margin-bottom: 6px;
+	overflow: hidden;
+	color: #ffffff;
+	font-size: 8px;
+	font-weight: 700;
+	letter-spacing: 0.18em;
+	text-overflow: ellipsis;
+	text-transform: uppercase;
+	white-space: nowrap;
+}
+
+.aggr-brand-preview__nav {
+	height: 14px;
+	border-radius: 4px;
+	background:
+		linear-gradient(rgb(255 255 255 / 28%), rgb(255 255 255 / 28%)) 20px 50% / 55% 4px
+		no-repeat;
+}
+
+.aggr-brand-preview__nav--current {
+	background:
+		linear-gradient(var(--preview-accent), var(--preview-accent)) 4px 50% / 10px 10px no-repeat,
+		linear-gradient(#ffffff, #ffffff) 20px 50% / 55% 4px no-repeat,
+		#1d1e22;
+}
+
+.aggr-brand-preview__rail-button {
+	height: 14px;
+	margin-top: auto;
+	border-radius: 4px;
+	background: var(--preview-accent);
+}
+
+.aggr-brand-preview__main {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 14px 12px;
+	background: var(--preview-canvas);
+}
+
+.aggr-brand-preview__title {
+	width: 60%;
+	height: 9px;
+	border-radius: 2px;
+	background: var(--preview-text);
+}
+
+.aggr-brand-preview__lede {
+	width: 80%;
+	height: 4px;
+	border-radius: 2px;
+	background: var(--preview-text);
+	opacity: 0.3;
+}
+
+.aggr-brand-preview__panel {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	margin-top: 8px;
+	padding: 10px;
+	border: 1px solid rgb(17 18 20 / 10%);
+	border-radius: 6px;
+	background: var(--preview-surface);
+}
+
+.aggr-brand-preview__row {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.aggr-brand-preview__line {
+	flex: 1;
+	height: 4px;
+	border-radius: 2px;
+	background: var(--preview-text);
+	opacity: 0.25;
+}
+
+/* Status pills are fixed colours in the portal, so the preview's is too. */
+.aggr-brand-preview__pill {
+	width: 30px;
+	height: 10px;
+	border-radius: 999px;
+	background: #e3f3ea;
+	box-shadow: inset 6px 0 0 -2px #1a7a4d;
+}
+
+.aggr-brand-preview__link {
+	width: 38%;
+	height: 5px;
+	border-bottom: 1px solid var(--preview-link);
+	background: var(--preview-link);
+	opacity: 0.9;
+}
+
+.aggr-brand-preview__button {
+	width: 44px;
+	height: 16px;
+	border-radius: 4px;
+	background: var(--preview-text);
+}
+
+@media (forced-colors: active) {
+	.aggr-brand-preview {
+		forced-color-adjust: none;
+	}
+}

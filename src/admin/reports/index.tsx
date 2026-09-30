@@ -40,6 +40,32 @@ const t = ( key: string ): string => strings[ key ] ?? key;
 const rate = ( value: number | null ): string =>
 	null === value ? '—' : `${ ( value * 100 ).toFixed( 1 ) }%`;
 
+/**
+ * A rate as its figure and a short bar beside it.
+ *
+ * The column is sorted by this number and read against its neighbours, and a
+ * length compares faster than a percentage does. The bar is hidden from
+ * assistive technology — the figure says everything it does — and absent when
+ * there is no rate, because an empty bar would read as nought.
+ */
+const RateCell = ( { value }: { value: number | null } ): ReactElement => (
+	<span className="aggr-rate">
+		{ null === value ? null : (
+			<span className="aggr-meter aggr-meter--inline" aria-hidden="true">
+				<span
+					className="aggr-meter__fill"
+					style={ {
+						width: `${
+							Math.max( 0, Math.min( 1, value ) ) * 100
+						}%`,
+					} }
+				/>
+			</span>
+		) }
+		{ rate( value ) }
+	</span>
+);
+
 const count = ( value: number ): string => value.toLocaleString();
 
 const baseView: DataView = {
@@ -117,7 +143,7 @@ function Placements( { rows }: { rows: PlacementRow[] } ): ReactElement {
 				label: t( 'utilisation' ),
 				type: 'number',
 				render: ( { item }: { item: PlacementRow } ) => (
-					<>{ rate( item.fill_rate ) }</>
+					<RateCell value={ item.fill_rate } />
 				),
 			},
 		],
@@ -197,7 +223,7 @@ function Groups( { rows }: { rows: GroupRow[] } ): ReactElement | null {
 				label: t( 'utilisation' ),
 				type: 'number',
 				render: ( { item }: { item: GroupRow } ) => (
-					<>{ rate( item.fill_rate ) }</>
+					<RateCell value={ item.fill_rate } />
 				),
 			},
 		],

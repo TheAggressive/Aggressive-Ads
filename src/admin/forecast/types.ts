@@ -36,5 +36,7 @@ export type ForecastPayload = {
 		rows: ForecastRow[];
 		totals: ForecastTotals;
 	};
+	/** The Placements screen, for the same capability. */
+	placementsUrl?: string;
 	i18n: Record< string, string >;
 };

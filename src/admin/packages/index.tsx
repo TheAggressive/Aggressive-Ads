@@ -16,19 +16,19 @@ import apiFetch from '@wordpress/api-fetch';
 import { createRoot, useState } from '@wordpress/element';
 import {
 	Button,
-	Card,
-	CardBody,
-	CardHeader,
 	CheckboxControl,
+	Modal,
 	Notice,
 	SelectControl,
 	TextControl,
 	ToggleControl,
-	__experimentalHeading as Heading,
 	__experimentalHStack as HStack,
 	__experimentalVStack as VStack,
 } from '@wordpress/components';
 import { SaveError, setStrings, t, useAction } from '../shared/save';
+import { Icon, IconChip } from '../shared/icon';
+import { State } from '../shared/state';
+import './style.css';
 
 type Placement = {
 	id: number;
@@ -167,10 +167,11 @@ function PlacementPicker( {
 }
 
 /**
- * One package's editable form.
+ * One package's editable form, inside the editor dialog.
  *
- * Held as a draft rather than written through, so an abandoned edit changes
- * nothing. The Save button is the only thing that writes.
+ * Held as a draft rather than written through, so an abandoned edit — a dialog
+ * closed without saving — changes nothing. The Save button is the only thing
+ * that writes.
  */
 function PackageForm( {
 	value,
@@ -305,9 +306,117 @@ function PackageForm( {
 	);
 }
 
+/**
+ * One package as the product it is: name, price, run length, placements.
+ *
+ * Every package used to be an always-open form with its own Save button, so
+ * finding the price of one meant scrolling past every field of every other,
+ * and nothing showed which were on sale or which was the default without
+ * reading toggles. A catalogue is read far more often than it is edited, so
+ * the card is for reading and the form moves into a dialog.
+ *
+ * Cards rather than a table because a catalogue is a handful of offers, and
+ * the portal already shows advertisers these same packages as cards.
+ */
+function PackageCard( {
+	row,
+	placements,
+	onEdit,
+}: {
+	row: Package;
+	placements: Placement[];
+	onEdit: () => void;
+} ): ReactElement {
+	const headingId = `aggr-package-${ row.id }`;
+	const included = placements.filter( ( placement ) =>
+		row.placement_ids.includes( placement.id )
+	);
+
+	return (
+		<article
+			className={
+				row.is_active
+					? 'aggr-package-card'
+					: 'aggr-package-card aggr-package-card--inactive'
+			}
+			aria-labelledby={ headingId }
+		>
+			<div className="aggr-package-card__head">
+				<h2 id={ headingId }>{ row.name }</h2>
+				<span className="aggr-package-card__badges">
+					{ row.is_default ? (
+						<State tone="attention">{ t( 'defaultBadge' ) }</State>
+					) : null }
+					{ row.is_active ? (
+						<State tone="live">{ t( 'active' ) }</State>
+					) : (
+						<State tone="neutral">{ t( 'inactiveBadge' ) }</State>
+					) }
+				</span>
+			</div>
+
+			<p className="aggr-package-card__price">
+				<span className="aggr-package-card__currency">
+					{ row.currency }
+				</span>{ ' ' }
+				{ toAmount( row.price_cents ) }
+			</p>
+
+			<p className="aggr-package-card__meta">
+				<Icon name="clock" size={ 14 } />
+				{ row.custom_duration
+					? t( 'customDuration' )
+					: sprintfDays( row.duration_days ) }
+			</p>
+
+			{ included.length > 0 ? (
+				<ul
+					className="aggr-package-card__placements"
+					aria-label={ t( 'placements' ) }
+				>
+					{ included.map( ( placement ) => (
+						<li key={ placement.id }>
+							{ placement.name }
+							<span>{ placement.size }</span>
+						</li>
+					) ) }
+				</ul>
+			) : (
+				<p className="aggr-package-card__none">
+					{ t( 'noPlacementsChosen' ) }
+				</p>
+			) }
+
+			<div className="aggr-package-card__foot">
+				<Button
+					variant="secondary"
+					onClick={ onEdit }
+					// "Edit" alone, moving control to control, does not say
+					// which package; the visible word stays first so a voice
+					// user can still say what they see.
+					aria-label={ `${ t( 'edit' ) }: ${ row.name }` }
+				>
+					{ t( 'edit' ) }
+				</Button>
+			</div>
+		</article>
+	);
+}
+
+/** "30 days", in the translator's plural form. */
+function sprintfDays( days: number ): string {
+	return ( 1 === days ? t( 'dayOne' ) : t( 'dayMany' ) ).replace(
+		'%d',
+		String( days )
+	);
+}
+
 function App( { data }: { data: Bootstrap } ): ReactElement {
 	const [ view, setView ] = useState( data.view );
 	const [ saved, setSaved ] = useState( '' );
+
+	// `null` is closed, `0` is a new package, any other id is that package.
+	const [ editing, setEditing ] = useState< number | null >( null );
 	const { error, busy, run, clearError } = useAction< { view: View } >();
 
 	const write = async (
@@ -324,13 +433,23 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 			// the server knows what else moved.
 			setView( result.view );
 			setSaved( message );
+			setEditing( null );
 		}
 	};
 
+	const open = ( id: number ): void => {
+		clearError();
+		setSaved( '' );
+		setEditing( id );
+	};
+
+	const current =
+		null === editing || 0 === editing
+			? null
+			: view.rows.find( ( row ) => row.id === editing ) ?? null;
+
 	return (
 		<VStack spacing={ 5 }>
-			<SaveError message={ error } onRetry={ undefined } />
-
 			{ saved ? (
 				<Notice
 					status="success"
@@ -341,75 +460,85 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 				</Notice>
 			) : null }
 
-			<Card>
-				<CardHeader>
-					{ /*
-					 * Level 2, sized as a section title: each card is a section
-					 * directly under the page's h1. See the Settings screen.
-					 */ }
-					<Heading level={ 2 } size={ 15 }>
-						{ t( 'newPackage' ) }
-					</Heading>
-				</CardHeader>
-				<CardBody>
-					<PackageForm
-						// Remounting on catalogue length clears the form after a
-						// successful create, so the next package starts blank
-						// instead of inheriting the last one's fields.
-						key={ `new-${ view.rows.length }` }
-						value={ { ...BLANK, currency: data.defaultCurrency } }
+			<div className="aggr-package-grid">
+				{ view.rows.map( ( row ) => (
+					<PackageCard
+						key={ row.id }
+						row={ row }
 						placements={ view.placements }
-						currencies={ data.currencies }
-						submitLabel={ t( 'create' ) }
-						busy={ busy }
-						onSubmit={ ( draft, amount ) => {
-							clearError();
-							void write(
-								{
-									path: `${ data.restPath }/catalogue`,
-									method: 'POST',
-									data: body( draft, amount ),
-								},
-								t( 'created' )
-							);
-						} }
+						onEdit={ () => open( row.id ) }
 					/>
-				</CardBody>
-			</Card>
+				) ) }
 
-			{ view.rows.map( ( row ) => (
-				<Card key={ row.id }>
-					<CardHeader>
-						<Heading level={ 2 } size={ 15 }>
-							{ row.name }
-							{ row.is_default
-								? ` — ${ t( 'defaultTag' ) }`
-								: '' }
-						</Heading>
-					</CardHeader>
-					<CardBody>
+				<button
+					type="button"
+					className="aggr-package-new"
+					onClick={ () => open( 0 ) }
+				>
+					<IconChip name="plus" />
+					<span>{ t( 'newPackage' ) }</span>
+					{ 0 === view.rows.length ? (
+						<span className="aggr-package-new__hint">
+							{ t( 'emptyCatalogue' ) }
+						</span>
+					) : null }
+				</button>
+			</div>
+
+			{ null !== editing ? (
+				<Modal
+					title={
+						null === current
+							? t( 'newPackage' )
+							: `${ t( 'editPackage' ) }: ${ current.name }`
+					}
+					className="aggr-package-modal"
+					onRequestClose={ () => setEditing( null ) }
+				>
+					<VStack spacing={ 4 }>
+						{ /*
+						 * Inside the dialog, because that is where the reader
+						 * is: an error printed on the page behind a modal is an
+						 * error nobody sees until they close the thing they
+						 * were trying to fix.
+						 */ }
+						<SaveError message={ error } onRetry={ undefined } />
 						<PackageForm
-							key={ `${ row.id }-${ row.is_default }-${ row.is_active }` }
-							value={ row }
+							value={
+								current ?? {
+									...BLANK,
+									currency: data.defaultCurrency,
+								}
+							}
 							placements={ view.placements }
 							currencies={ data.currencies }
-							submitLabel={ t( 'save' ) }
+							submitLabel={
+								null === current ? t( 'create' ) : t( 'save' )
+							}
 							busy={ busy }
 							onSubmit={ ( draft, amount ) => {
 								clearError();
 								void write(
-									{
-										path: `${ data.restPath }/${ row.id }`,
-										method: 'PATCH',
-										data: body( draft, amount ),
-									},
-									t( 'saved' )
+									null === current
+										? {
+												path: `${ data.restPath }/catalogue`,
+												method: 'POST',
+												data: body( draft, amount ),
+										  }
+										: {
+												path: `${ data.restPath }/${ current.id }`,
+												method: 'PATCH',
+												data: body( draft, amount ),
+										  },
+									null === current
+										? t( 'created' )
+										: t( 'saved' )
 								);
 							} }
 						/>
-					</CardBody>
-				</Card>
-			) ) }
+					</VStack>
+				</Modal>
+			) : null }
 		</VStack>
 	);
 }

@@ -293,6 +293,160 @@ body.aggr-admin-screen .components-button.is-destructive:not(.is-tertiary):not(.
 }
 
 /*
+ * An icon on a soft square, marking a section, a tile or an empty state.
+ * `src/admin/shared/icon.tsx` renders it; the portal's rail uses the same
+ * device, which is why a line icon here reads as a marker rather than a stray
+ * glyph.
+ */
+.aggr-icon-chip {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+	border-radius: 10px;
+	background: var(--aggr-color-surface-sunken);
+	color: var(--aggr-color-text);
+}
+
+.aggr-icon-chip--lg {
+	width: 52px;
+	height: 52px;
+	border-radius: 14px;
+}
+
+.aggr-icon-chip .aggr-icon {
+	display: block;
+}
+
+/*
+ * A record's name with its machine spelling under it — a slug, a key — so
+ * the two read as one thing rather than as two columns of nearly the same word.
+ */
+.aggr-cell-title {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.aggr-cell-title__sub {
+	color: var(--aggr-color-text-muted);
+	font-family: var(--aggr-font-mono);
+	font-size: 11px;
+	font-weight: 400;
+}
+
+/*
+ * A table with no rows: an icon and a sentence, centred in the table's own
+ * body. `src/admin/shared/empty.tsx`.
+ */
+.aggr-empty-state {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	align-items: center;
+	padding: 32px 24px 36px;
+	text-align: center;
+}
+
+.aggr-empty-state p {
+	max-width: 44ch;
+	margin: 0;
+	color: var(--aggr-color-text-body);
+	font-size: 14px;
+	line-height: 1.5;
+}
+
+/*
+ * A name with its initials beside it. `src/admin/shared/initials.tsx`.
+ * People are round and graphite, as the portal's account avatar is;
+ * organizations are squared and tinted, so the two never read as the same
+ * kind of thing in one table.
+ */
+.aggr-named {
+	display: inline-flex;
+	gap: 10px;
+	align-items: center;
+}
+
+.aggr-initials {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: 28px;
+	height: 28px;
+	border-radius: 50%;
+	background: var(--aggr-color-text);
+	color: var(--aggr-color-surface);
+	font-family: var(--aggr-font);
+	font-size: 11px;
+	font-weight: 700;
+	letter-spacing: 0.02em;
+}
+
+/*
+ * Named explicitly though it is the base look: a modifier that exists in the
+ * markup and nowhere in CSS is the gap check-styles exists to catch.
+ */
+.aggr-initials--person {
+	border-radius: 50%;
+}
+
+.aggr-initials--organization {
+	width: 32px;
+	height: 32px;
+	border-radius: 8px;
+	background: var(--aggr-color-surface-sunken);
+	color: var(--aggr-color-text);
+	font-size: 12px;
+}
+
+/* A size, drawn to scale beside its dimensions. */
+.aggr-size {
+	display: inline-flex;
+	gap: 10px;
+	align-items: center;
+	font-family: var(--aggr-font-mono);
+	font-size: 12px;
+}
+
+.aggr-size-glyph {
+	display: inline-flex;
+	flex: none;
+	align-items: center;
+	justify-content: center;
+	width: 44px;
+	height: 32px;
+	border-radius: 6px;
+	background: var(--aggr-color-surface-sunken);
+}
+
+.aggr-size-glyph > span {
+	display: block;
+	border: 1.5px solid var(--aggr-color-text);
+	border-radius: 2px;
+	box-sizing: border-box;
+}
+
+/* Labels somebody filed a record under: quiet, and never mistaken for a status. */
+.aggr-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+}
+
+.aggr-chip {
+	padding: 2px 8px;
+	border: 1px solid var(--aggr-border-color);
+	border-radius: 6px;
+	color: var(--aggr-color-text-body);
+	font-family: var(--aggr-font-mono);
+	font-size: 11px;
+}
+
+/*
  * A record's state, as the portal draws a status: the word, a dot in the same
  * ink, and the tint. `src/admin/shared/state.tsx` renders it.
  *
@@ -432,7 +586,15 @@ body.aggr-admin-screen .components-button.is-destructive:not(.is-tertiary):not(.
 	border-bottom: 0;
 }
 
+/*
+ * Core lays a postbox heading out `space-between`, for the sort handles it
+ * puts on the right. These tiles have none, so the label sits beside its icon.
+ */
 .wrap.aggr-admin #poststuff .postbox-header .hndle {
+	display: flex;
+	gap: 8px;
+	align-items: center;
+	justify-content: flex-start;
 	padding: 20px 24px 0;
 	color: var(--aggr-color-text-subtle);
 	font-family: var(--aggr-font-mono);
@@ -472,6 +634,123 @@ body.aggr-admin-screen .components-button.is-destructive:not(.is-tertiary):not(.
 	.wrap.aggr-admin .aggr-card-grid {
 		grid-template-columns: repeat(3, minmax(0, 1fr));
 	}
+}
+
+/* Two tiles that share the width, for two things read against each other. */
+@media (min-width: 782px) {
+	.wrap.aggr-admin .aggr-card-grid--pair {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+/* A tile's label carries the icon of the thing it counts, in the label's ink. */
+.wrap.aggr-admin #poststuff .postbox-header .hndle .aggr-icon {
+	width: 16px;
+	height: 16px;
+	flex: none;
+}
+
+/*
+ * A rate drawn as a length, beside or under its figure. Graphite on the
+ * sunken tint — a proportion, not a status, so it takes no status colour.
+ * Always paired with the number it draws, and hidden from assistive
+ * technology for that reason.
+ */
+.aggr-meter {
+	display: block;
+	height: 6px;
+	margin: 12px 0 0;
+	overflow: hidden;
+	border-radius: 999px;
+	background: var(--aggr-color-surface-sunken);
+}
+
+.aggr-meter__fill {
+	display: block;
+	height: 100%;
+	border-radius: inherit;
+	background: var(--aggr-color-text);
+}
+
+.aggr-meter--inline {
+	display: inline-block;
+	width: 64px;
+	margin: 0;
+	vertical-align: middle;
+}
+
+/* Past full: the one place a meter takes a status colour, beside the verdict that names it. */
+.aggr-meter--over .aggr-meter__fill {
+	background: var(--aggr-color-danger);
+}
+
+.aggr-rate {
+	display: inline-flex;
+	gap: 10px;
+	align-items: center;
+	font-variant-numeric: tabular-nums;
+}
+
+@media (forced-colors: active) {
+	.aggr-meter {
+		border: 1px solid CanvasText;
+	}
+
+	.aggr-meter__fill {
+		background: CanvasText;
+		forced-color-adjust: none;
+	}
+}
+
+/* The reporting window, set as data. */
+.wrap.aggr-admin .aggr-report-window {
+	margin: 0 0 4px;
+	color: var(--aggr-color-text-body);
+	font-family: var(--aggr-font-mono);
+	font-size: 12px;
+}
+
+/*
+ * The two no-fill tables side by side where there is room. Each is a section
+ * with its own heading, so on a narrow screen they simply stack.
+ */
+.wrap.aggr-admin .aggr-report-pair {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: 0 24px;
+	align-items: start;
+}
+
+@media (min-width: 1100px) {
+	.wrap.aggr-admin .aggr-report-pair {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+/*
+ * The pair is a grid, and a grid item's minimum is its content. Without this
+ * the reason table's nowrap columns widen the page instead of scrolling
+ * inside `.aggr-scroll-region`.
+ */
+.wrap.aggr-admin .aggr-report-group {
+	min-width: 0;
+}
+
+.wrap.aggr-admin .aggr-report-group > h2 {
+	margin: 36px 0 12px;
+}
+
+.wrap.aggr-admin .aggr-report-group .aggr-report-table {
+	width: 100%;
+	max-width: none;
+}
+
+/* The reason, and under it whether it needs anything from you. */
+.wrap.aggr-admin .aggr-report-reason {
+	display: block;
+	margin-bottom: 6px;
+	color: var(--aggr-color-text);
+	font-weight: 600;
 }
 
 /*

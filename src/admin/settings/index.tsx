@@ -17,14 +17,11 @@
  * the no-JS path, not a fallback that needs building later.
  */
 
-import type { ReactElement } from 'react';
+import type { CSSProperties, ReactElement } from 'react';
 import apiFetch from '@wordpress/api-fetch';
 import { createRoot, useCallback, useState } from '@wordpress/element';
 import {
 	Button,
-	Card,
-	CardBody,
-	CardHeader,
 	ColorIndicator,
 	ColorPicker,
 	Dropdown,
@@ -32,11 +29,13 @@ import {
 	SelectControl,
 	TextControl,
 	ToggleControl,
-	__experimentalHeading as Heading,
 	__experimentalHStack as HStack,
 	__experimentalText as Text,
 	__experimentalVStack as VStack,
 } from '@wordpress/components';
+import { IconChip, type IconName } from '../shared/icon';
+import { initialsOf } from '../shared/initials';
+import './style.css';
 import {
 	AFTER_DRAGGING,
 	AFTER_TYPING,
@@ -161,35 +160,49 @@ function payload( doc: Doc ): Record< string, unknown > {
 	};
 }
 
+/**
+ * One settings section: what it is on the left, its controls on the right.
+ *
+ * It was a full-width card with the explanation printed inside, above the
+ * controls — six of them stacked into a page nearly three thousand pixels
+ * long, each control stretched across a monitor and the explanation read as
+ * one more field. Beside the controls, the explanation is where the eye starts
+ * and the controls keep a width a person can aim at. Below 960px the two stack,
+ * explanation first, so the reading order never changes.
+ *
+ * The heading is level 2: these are the page's sections, directly under its
+ * h1, and a skipped level tells a screen-reader user there is a parent section
+ * they cannot find. `aria-labelledby` names the region by that heading.
+ */
 function Section( {
+	id,
+	icon,
 	title,
 	help,
 	children,
 }: {
+	id: string;
+	icon: IconName;
 	title: string;
 	help?: string;
 	children: ReactElement | ReactElement[];
 } ): ReactElement {
+	const headingId = `aggr-settings-${ id }`;
+
 	return (
-		<Card>
-			<CardHeader>
-				{ /*
-				 * Level 2: these are the page's sections and sit directly under
-				 * its h1, and a skipped level tells a screen-reader user there is
-				 * a parent section they cannot find. Sized as a section title
-				 * rather than by level, so it stays quieter than the page title.
-				 */ }
-				<Heading level={ 2 } size={ 15 }>
-					{ title }
-				</Heading>
-			</CardHeader>
-			<CardBody>
-				<VStack spacing={ 4 }>
-					{ help ? <p>{ help }</p> : <></> }
-					{ children }
-				</VStack>
-			</CardBody>
-		</Card>
+		<section
+			className="aggr-settings-section"
+			aria-labelledby={ headingId }
+		>
+			<div className="aggr-settings-section__intro">
+				<IconChip name={ icon } />
+				<h2 id={ headingId }>{ title }</h2>
+				{ help ? <p>{ help }</p> : null }
+			</div>
+			<div className="aggr-settings-section__panel">
+				<VStack spacing={ 4 }>{ children }</VStack>
+			</div>
+		</section>
 	);
 }
 
@@ -217,6 +230,69 @@ function Toggles( {
 				/>
 			) ) }
 		</VStack>
+	);
+}
+
+/**
+ * The advertiser portal in miniature, in the colours being chosen.
+ *
+ * Five hex codes say nothing about how a screen will look, and the only way to
+ * find out was to save and open the portal in another tab. This draws the
+ * portal's own furniture — the rail and its active item, a heading, a panel
+ * with a pill, a link and the primary button — from the same roles the colours
+ * play there: accent marks the current item, accent-for-links is the link,
+ * text is the primary button.
+ *
+ * Shapes, not words, apart from the product name: it is a picture of a layout,
+ * announced once as a picture (`role="img"`), and a preview full of sample
+ * text would be sample text a translator has to translate.
+ *
+ * It shows unsaved values on purpose. The server refuses a combination that
+ * fails contrast, and seeing it here first is how somebody finds out why.
+ */
+function PortalPreview( { brand }: { brand: Brand } ): ReactElement {
+	const colour = ( key: string, fallback: string ): string =>
+		brand.colours.find( ( item ) => item.key === key )?.value ?? fallback;
+
+	const style = {
+		'--preview-accent': colour( 'accent', '#f05a28' ),
+		'--preview-link': colour( 'accent_strong', '#b5401a' ),
+		'--preview-canvas': colour( 'canvas', '#f7f7f5' ),
+		'--preview-surface': colour( 'surface', '#ffffff' ),
+		'--preview-text': colour( 'text', '#111214' ),
+	} as CSSProperties;
+
+	return (
+		<div
+			className="aggr-brand-preview"
+			role="img"
+			aria-label={ t( 'brandPreview' ) }
+			style={ style }
+		>
+			<div className="aggr-brand-preview__rail">
+				<span className="aggr-brand-preview__name">
+					{ brand.productName }
+				</span>
+				<span className="aggr-brand-preview__nav aggr-brand-preview__nav--current" />
+				<span className="aggr-brand-preview__nav" />
+				<span className="aggr-brand-preview__nav" />
+				<span className="aggr-brand-preview__rail-button" />
+			</div>
+			<div className="aggr-brand-preview__main">
+				<span className="aggr-brand-preview__title" />
+				<span className="aggr-brand-preview__lede" />
+				<div className="aggr-brand-preview__panel">
+					<span className="aggr-brand-preview__row">
+						<span className="aggr-brand-preview__line" />
+						<span className="aggr-brand-preview__pill" />
+					</span>
+					<span className="aggr-brand-preview__row">
+						<span className="aggr-brand-preview__link" />
+						<span className="aggr-brand-preview__button" />
+					</span>
+				</div>
+			</div>
+		</div>
 	);
 }
 
@@ -267,49 +343,55 @@ function BrandFields( {
 				__nextHasNoMarginBottom
 				__next40pxDefaultSize
 			/>
-			<VStack spacing={ 2 }>
-				{ brand.colours.map( ( colour, index ) => (
-					<HStack
-						key={ colour.key }
-						justify="flex-start"
-						spacing={ 3 }
-					>
-						<Dropdown
-							popoverProps={ { placement: 'bottom-start' } }
-							renderToggle={ ( { isOpen, onToggle } ) => (
-								<Button
-									variant="tertiary"
-									onClick={ onToggle }
-									aria-expanded={ isOpen }
-									// The swatch alone would identify the
-									// control by colour only, which is exactly
-									// what a colour-blind reader cannot use.
-									aria-label={ colour.label }
-								>
-									<HStack spacing={ 2 }>
-										<ColorIndicator
-											colorValue={ colour.value }
-										/>
-										<span>{ colour.label }</span>
-										<code>{ colour.value }</code>
-									</HStack>
-								</Button>
-							) }
-							renderContent={ () => (
-								<ColorPicker
-									color={ colour.value }
-									enableAlpha={ false }
-									onChange={ ( value: string ) => {
-										const next = [ ...brand.colours ];
-										next[ index ] = { ...colour, value };
-										onColour( next );
-									} }
-								/>
-							) }
-						/>
-					</HStack>
-				) ) }
-			</VStack>
+			<div className="aggr-brand-colours">
+				<VStack spacing={ 2 }>
+					{ brand.colours.map( ( colour, index ) => (
+						<HStack
+							key={ colour.key }
+							justify="flex-start"
+							spacing={ 3 }
+						>
+							<Dropdown
+								popoverProps={ { placement: 'bottom-start' } }
+								renderToggle={ ( { isOpen, onToggle } ) => (
+									<Button
+										variant="tertiary"
+										onClick={ onToggle }
+										aria-expanded={ isOpen }
+										// The swatch alone would identify the
+										// control by colour only, which is exactly
+										// what a colour-blind reader cannot use.
+										aria-label={ colour.label }
+									>
+										<HStack spacing={ 2 }>
+											<ColorIndicator
+												colorValue={ colour.value }
+											/>
+											<span>{ colour.label }</span>
+											<code>{ colour.value }</code>
+										</HStack>
+									</Button>
+								) }
+								renderContent={ () => (
+									<ColorPicker
+										color={ colour.value }
+										enableAlpha={ false }
+										onChange={ ( value: string ) => {
+											const next = [ ...brand.colours ];
+											next[ index ] = {
+												...colour,
+												value,
+											};
+											onColour( next );
+										} }
+									/>
+								) }
+							/>
+						</HStack>
+					) ) }
+				</VStack>
+				<PortalPreview brand={ brand } />
+			</div>
 		</VStack>
 	);
 }
@@ -496,10 +578,18 @@ function Access( {
 				<VStack spacing={ 3 }>
 					{ roster.map( ( person ) => (
 						<HStack key={ person.id } justify="space-between">
-							<VStack spacing={ 0 }>
-								<strong>{ person.name }</strong>
-								<span>{ person.email }</span>
-							</VStack>
+							<span className="aggr-named">
+								<span
+									className="aggr-initials aggr-initials--person"
+									aria-hidden="true"
+								>
+									{ initialsOf( person.name ) }
+								</span>
+								<VStack spacing={ 0 }>
+									<strong>{ person.name }</strong>
+									<span>{ person.email }</span>
+								</VStack>
+							</span>
 							{ person.is_admin ? (
 								<span>{ t( 'alwaysAdmin' ) }</span>
 							) : (
@@ -610,7 +700,12 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 
 			<SaveStatus status={ status } />
 
-			<Section title={ t( 'modules' ) } help={ t( 'modulesHelp' ) }>
+			<Section
+				id="modules"
+				icon="modules"
+				title={ t( 'modules' ) }
+				help={ t( 'modulesHelp' ) }
+			>
 				<Toggles
 					items={ doc.modules }
 					onChange={ ( modules ) =>
@@ -622,7 +717,12 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 				/>
 			</Section>
 
-			<Section title={ t( 'liveEdits' ) } help={ t( 'liveEditsHelp' ) }>
+			<Section
+				id="live-edits"
+				icon="edit"
+				title={ t( 'liveEdits' ) }
+				help={ t( 'liveEditsHelp' ) }
+			>
 				<Toggles
 					items={ doc.liveEdits }
 					onChange={ ( liveEdits ) =>
@@ -634,7 +734,12 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 				/>
 			</Section>
 
-			<Section title={ t( 'brand' ) } help={ t( 'brandHelp' ) }>
+			<Section
+				id="brand"
+				icon="brand"
+				title={ t( 'brand' ) }
+				help={ t( 'brandHelp' ) }
+			>
 				<BrandFields
 					brand={ doc.brand }
 					onText={ ( patch ) =>
@@ -658,7 +763,12 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 				/>
 			</Section>
 
-			<Section title={ t( 'delivery' ) } help={ t( 'deliveryHelp' ) }>
+			<Section
+				id="delivery"
+				icon="delivery"
+				title={ t( 'delivery' ) }
+				help={ t( 'deliveryHelp' ) }
+			>
 				<Delivery
 					delivery={ doc.delivery }
 					houseOptions={ data.delivery.houseOptions }
@@ -674,7 +784,12 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 				/>
 			</Section>
 
-			<Section title={ t( 'retention' ) } help={ t( 'retentionHelp' ) }>
+			<Section
+				id="retention"
+				icon="retention"
+				title={ t( 'retention' ) }
+				help={ t( 'retentionHelp' ) }
+			>
 				<Retention
 					tracking={ doc.tracking }
 					creative={ doc.creative }
@@ -710,7 +825,12 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 				/>
 			</Section>
 
-			<Section title={ t( 'access' ) } help={ t( 'accessHelp' ) }>
+			<Section
+				id="access"
+				icon="access"
+				title={ t( 'access' ) }
+				help={ t( 'accessHelp' ) }
+			>
 				<Access
 					initial={ data.roster }
 					path={ `${ data.restPath }/reviewers` }

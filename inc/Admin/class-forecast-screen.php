@@ -150,30 +150,35 @@ final class Forecast_Screen implements Service {
 	 */
 	private function payload( array $window ): array {
 		return array(
-			'view' => $this->data->view( Opportunity::PAGE, $window['from'], $window['to'] ),
-			'i18n' => array(
-				'placement'  => __( 'Placement', 'aggressive-ads' ),
-				'forecast'   => __( 'Forecast', 'aggressive-ads' ),
-				'committed'  => __( 'Booked', 'aggressive-ads' ),
-				'remaining'  => __( 'Remaining', 'aggressive-ads' ),
-				'status'     => __( 'Status', 'aggressive-ads' ),
-				'confidence' => __( 'Confidence', 'aggressive-ads' ),
-				'window'     => __( 'Window', 'aggressive-ads' ),
-				'placements' => __( 'Placements', 'aggressive-ads' ),
-				'oversold'   => __( 'Oversold', 'aggressive-ads' ),
-				'unforecast' => __( 'Not yet forecast', 'aggressive-ads' ),
-				'empty'      => __( 'No active placements to forecast.', 'aggressive-ads' ),
-				'region'     => __( 'Outlook for each placement', 'aggressive-ads' ),
+			'view'          => $this->data->view( Opportunity::PAGE, $window['from'], $window['to'] ),
+
+			// Same capability as this screen, so anybody here may open it.
+			'placementsUrl' => Placement_Screen::url(),
+			'i18n'          => array(
+				'pageOnly'         => __( 'Page opportunities only', 'aggressive-ads' ),
+				'managePlacements' => __( 'Manage placements', 'aggressive-ads' ),
+				'placement'        => __( 'Placement', 'aggressive-ads' ),
+				'forecast'         => __( 'Forecast', 'aggressive-ads' ),
+				'committed'        => __( 'Booked', 'aggressive-ads' ),
+				'remaining'        => __( 'Remaining', 'aggressive-ads' ),
+				'status'           => __( 'Status', 'aggressive-ads' ),
+				'confidence'       => __( 'Confidence', 'aggressive-ads' ),
+				'window'           => __( 'Window', 'aggressive-ads' ),
+				'placements'       => __( 'Placements', 'aggressive-ads' ),
+				'oversold'         => __( 'Oversold', 'aggressive-ads' ),
+				'unforecast'       => __( 'Not yet forecast', 'aggressive-ads' ),
+				'empty'            => __( 'No active placements to forecast.', 'aggressive-ads' ),
+				'region'           => __( 'Outlook for each placement', 'aggressive-ads' ),
 
 				/* translators: shown instead of a number when a placement has never been forecast. */
-				'noFigure'   => __( 'Not forecast', 'aggressive-ads' ),
-				'available'  => __( 'Available', 'aggressive-ads' ),
-				'oversell'   => __( 'Oversold', 'aggressive-ads' ),
-				'unknown'    => __( 'Unmeasured', 'aggressive-ads' ),
-				'none'       => __( 'None', 'aggressive-ads' ),
-				'low'        => __( 'Low', 'aggressive-ads' ),
-				'medium'     => __( 'Medium', 'aggressive-ads' ),
-				'high'       => __( 'High', 'aggressive-ads' ),
+				'noFigure'         => __( 'Not forecast', 'aggressive-ads' ),
+				'available'        => __( 'Available', 'aggressive-ads' ),
+				'oversell'         => __( 'Oversold', 'aggressive-ads' ),
+				'unknown'          => __( 'Unmeasured', 'aggressive-ads' ),
+				'none'             => __( 'None', 'aggressive-ads' ),
+				'low'              => __( 'Low', 'aggressive-ads' ),
+				'medium'           => __( 'Medium', 'aggressive-ads' ),
+				'high'             => __( 'High', 'aggressive-ads' ),
 			),
 		);
 	}

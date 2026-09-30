@@ -56,6 +56,38 @@ final class No_Fill_Reason {
 	}
 
 	/**
+	 * Whether an empty slot for this reason is the system doing its job.
+	 *
+	 * A publisher reading the no-fill table needs to know which rows to act on,
+	 * and the answer is not "the big ones". A visitor capped by frequency,
+	 * held back by pacing, outside the targeting or separated from a
+	 * competitor is a rule someone set, working — administration.md has told
+	 * publishers to read those as a diagnosis since the report shipped. That
+	 * sentence lived only in a document; this is it where the screen can use it.
+	 *
+	 * Everything else is worth a look: no ad assigned is unsold inventory,
+	 * every assignment ineligible or outside its schedule is demand that cannot
+	 * run, a missing size is configuration, and a pipeline error or an unknown
+	 * reason is a defect. An unrecognised code lands there too, because a new
+	 * reason nobody has classified should be looked at, not waved through.
+	 *
+	 * @param string $reason Structured reason.
+	 * @return bool
+	 */
+	public static function is_expected( string $reason ): bool {
+		return in_array(
+			$reason,
+			array(
+				self::TARGETING_MISMATCH,
+				self::FREQUENCY_CAPPED,
+				self::PACING_THROTTLED,
+				self::COMPETITIVE_EXCLUDE,
+			),
+			true
+		);
+	}
+
+	/**
 	 * Maps an internal Exclusion_Reason code to a structured No_Fill_Reason.
 	 *
 	 * @param string $exclusion_reason Internal exclusion code.

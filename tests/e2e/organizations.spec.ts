@@ -49,10 +49,16 @@ function rows( page: Page ) {
 	return page.locator( '.dataviews-view-table tbody tr' );
 }
 
-/** The organization names currently rendered, in table order. */
+/**
+ * The organization names currently rendered, in table order.
+ *
+ * The first cell also draws the initials chip, which repeats the name and is
+ * hidden from assistive technology. Reading the whole cell would assert "AG"
+ * ahead of "APEX ANALYTICS GROUP".
+ */
 async function names( page: Page ): Promise< string[] > {
 	const cells = page.locator(
-		'.dataviews-view-table tbody tr td:first-child'
+		'.dataviews-view-table tbody tr td:first-child .aggr-named > span:not([aria-hidden])'
 	);
 
 	return ( await cells.allInnerTexts() ).map( ( text ) => text.trim() );

@@ -34,6 +34,7 @@ import apiFetch from '@wordpress/api-fetch';
 
 import { Credentials } from './credentials';
 import { State } from '../shared/state';
+import { Empty } from '../shared/empty';
 import './style.css';
 
 import type {
@@ -595,7 +596,7 @@ function Screen( { payload }: { payload: Payload } ) {
 							{ i18n.newDefinition }
 						</Button>
 					}
-					empty={ <p>{ i18n.none }</p> }
+					empty={ <Empty icon="conversion">{ i18n.none }</Empty> }
 				/>
 			</section>
 

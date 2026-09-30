@@ -57,6 +57,8 @@ import {
 	useAction,
 } from '../shared/save';
 import { State } from '../shared/state';
+import { Named } from '../shared/initials';
+import { Empty } from '../shared/empty';
 
 type Member = {
 	id: number;
@@ -706,12 +708,21 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 				label: t( 'name' ),
 				type: 'text',
 				enableGlobalSearch: true,
+				render: ( { item }: { item: Organization } ) => (
+					<Named name={ item.name } variant="organization" />
+				),
 			},
 			{
 				id: 'owner_name',
 				enableSorting: false,
 				label: t( 'ownerColumn' ),
 				type: 'text',
+				render: ( { item }: { item: Organization } ) =>
+					'' === item.owner_name ? (
+						<></>
+					) : (
+						<Named name={ item.owner_name } />
+					),
 			},
 			{
 				id: 'members',
@@ -863,7 +874,9 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 					isLoading={ busy || loading }
 					defaultLayouts={ { table: {} } }
 					searchLabel={ t( 'searchLabel' ) }
-					empty={ <p>{ t( 'empty' ) }</p> }
+					empty={
+						<Empty icon="organization">{ t( 'empty' ) }</Empty>
+					}
 				/>
 			</VStack>
 		</ScreenContext.Provider>

@@ -4,13 +4,16 @@
  *
  * CodeQL found js/xss-through-dom in the review screen: bootstrap data arrives
  * in a `data-aggr-review` attribute, and assigning that DOM text to
- * `location.href` executes it when it carries a `javascript:` scheme. The value was
- * server-generated, so the code was safe in practice and unsafe in shape — the
- * guarantee lived in every producer upstream instead of at the point of use.
+ * `location.href` executes it when it carries a `javascript:` scheme. The same
+ * text in an `<a href>` runs on click. The value was server-generated, so the
+ * code was safe in practice and unsafe in shape — the guarantee lived in every
+ * producer upstream instead of at the point of use.
  *
  * Fixing the one line CodeQL named would have left the second identical sink in
  * the same file, and nothing stopping a third. So the sinks are banned outright
- * and `sameOriginUrl()` is the only place allowed to reach one.
+ * and `sameOriginUrl()` is the only place allowed to reach one. An href may
+ * name a local whose initializer calls `sameOriginUrl()`; the advertiser
+ * destination is the one expression that is not a staff screen.
  *
  * This runs in lint:files, which means it fails a local run and a pre-push. The
  * CodeQL scan is the backstop, not the first line: it only runs once a pull
@@ -50,6 +53,43 @@ const SINKS = [
 	{ pattern: /location\s*\.\s*assign\s*\(/, name: 'location.assign()' },
 	{ pattern: /location\s*\.\s*replace\s*\(/, name: 'location.replace()' },
 ];
+
+/*
+ * An advertiser destination a reviewer opens on purpose. Same-origin would
+ * refuse the off-site URL that screen exists to show. The exemption is the
+ * expression, not the file, so a second href beside it is still checked.
+ */
+const UNGATED_HREFS = new Set( [
+	'admin/review/campaign.tsx creative.click_url',
+] );
+
+const HREF_SINK = /href=\{\s*([^}]+?)\s*\}/g;
+
+/**
+ * Whether an href expression is the return value of sameOriginUrl().
+ *
+ * @param {string} source Whole file.
+ * @param {string} expr   Expression inside href={}.
+ * @return {boolean} True when the href cannot be the raw bootstrap text.
+ */
+function hrefGatedBySameOrigin( source, expr ) {
+	const trimmed = expr.trim();
+
+	if ( /\bsameOriginUrl\s*\(/.test( trimmed ) ) {
+		return true;
+	}
+
+	if ( ! /^[A-Za-z_$][\w$]*$/.test( trimmed ) ) {
+		return false;
+	}
+
+	const declaration = new RegExp(
+		`(?:const|let)\\s+${ trimmed }\\s*=\\s*([^;]*)`
+	);
+	const found = declaration.exec( source );
+
+	return null !== found && /\bsameOriginUrl\s*\(/.test( found[ 1 ] );
+}
 
 /** Fixtures describe what a component produced; they are not shipped markup. */
 const SKIP = /(^|\/)__tests__(\/|$)/;
@@ -109,6 +149,7 @@ async function main() {
 
 	const problems = [];
 	let gatewaySeen = false;
+	let hrefs = 0;
 
 	for ( const file of files ) {
 		const relative = path.relative( SOURCE_DIR, file );
@@ -131,6 +172,26 @@ async function main() {
 				}
 			}
 		} );
+
+		for ( const match of source.matchAll( HREF_SINK ) ) {
+			hrefs += 1;
+			const expr = match[ 1 ].trim();
+
+			if ( UNGATED_HREFS.has( `${ relative } ${ expr }` ) ) {
+				continue;
+			}
+
+			if ( hrefGatedBySameOrigin( source, expr ) ) {
+				continue;
+			}
+
+			const line = source.slice( 0, match.index ).split( '\n' ).length;
+
+			problems.push(
+				`${ relative }:${ line }: href of bootstrap text (${ expr }) — ` +
+					`pass it through sameOriginUrl() in ${ GATEWAY } instead.`
+			);
+		}
 	}
 
 	// The allowlist has to name something real, or a rename turns this lane into
@@ -152,7 +213,7 @@ async function main() {
 	}
 
 	console.log(
-		`check-navigation: ok (${ files.length } files, one gateway)`
+		`check-navigation: ok (${ files.length } files, one gateway, ${ hrefs } hrefs)`
 	);
 }
 

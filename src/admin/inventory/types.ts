@@ -111,6 +111,8 @@ export type Catalogue = {
 export type Bootstrap = {
 	view: Catalogue;
 	restPath: string;
+	/** The Outlook screen, for the same capability; absent means no link. */
+	outlookUrl?: string;
 	i18n: Record< string, string >;
 };
 

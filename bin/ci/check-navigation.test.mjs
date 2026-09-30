@@ -152,3 +152,63 @@ test( 'test fixtures under __tests__ are ignored', async () => {
 
 	assert.equal( run( root ).status, 0 );
 } );
+
+test( 'an href of a sameOriginUrl local is allowed', async () => {
+	const root = await fixture( {
+		...GATEWAY,
+		'admin/screen.tsx':
+			'const href = target ? sameOriginUrl( target ) : null;\n' +
+			'const link = href ? <a href={ href } /> : null;\n',
+	} );
+
+	assert.equal( run( root ).status, 0 );
+} );
+
+test( 'an href of raw bootstrap text is refused', async () => {
+	const root = await fixture( {
+		...GATEWAY,
+		'admin/screen.tsx': 'const link = <a href={ placementsUrl } />;\n',
+	} );
+
+	const result = run( root );
+
+	assert.equal( result.status, 1 );
+	assert.match( result.stderr, /href of bootstrap text/ );
+	assert.match( result.stderr, /admin\/screen\.tsx:1/ );
+} );
+
+test( 'a local that is not the sameOriginUrl result is refused', async () => {
+	const root = await fixture( {
+		...GATEWAY,
+		'admin/screen.tsx':
+			'const href = placementsUrl;\nconst link = <a href={ href } />;\n',
+	} );
+
+	const result = run( root );
+
+	assert.equal( result.status, 1 );
+	assert.match( result.stderr, /href of bootstrap text/ );
+} );
+
+test( 'the advertiser destination is the only ungated href', async () => {
+	const allowed = await fixture( {
+		...GATEWAY,
+		'admin/review/campaign.tsx':
+			'const link = <a href={ creative.click_url } />;\n',
+	} );
+
+	assert.equal( run( allowed ).status, 0 );
+
+	const besideIt = await fixture( {
+		...GATEWAY,
+		'admin/review/campaign.tsx':
+			'const link = <a href={ creative.click_url } />;\n' +
+			'const other = <a href={ editUrl } />;\n',
+	} );
+
+	const result = run( besideIt );
+
+	assert.equal( result.status, 1 );
+	assert.match( result.stderr, /editUrl/ );
+	assert.doesNotMatch( result.stderr, /creative\.click_url/ );
+} );

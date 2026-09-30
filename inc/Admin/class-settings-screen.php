@@ -121,36 +121,29 @@ final class Settings_Screen implements Service {
 			return;
 		}
 
-		$asset = AGGR_PLUGIN_DIR . 'dist/admin/settings.asset.php';
+		$version = Shared_Assets::enqueue_bundle( 'aggr-settings', 'settings' );
 
-		if ( ! is_file( $asset ) ) {
+		if ( '' === $version ) {
 			return;
 		}
-
-		$meta = require $asset;
-
-		wp_enqueue_script(
-			'aggr-settings',
-			AGGR_PLUGIN_URL . 'dist/admin/settings.js',
-			is_array( $meta['dependencies'] ?? null ) ? $meta['dependencies'] : array(),
-			is_string( $meta['version'] ?? null ) ? $meta['version'] : AGGR_VERSION,
-			true
-		);
 
 		// The component library brings its own stylesheet, and it is registered
 		// by core rather than shipped here.
 		wp_enqueue_style( 'wp-components' );
-	}
 
-	/*
-	 * No stylesheet is enqueued here.
-	 *
-	 * This screen is native WordPress admin markup — form-table, wp-list-table,
-	 * notice, button — so core already styles every part of it. Loading the
-	 * plugin's own design system would only give it something to fight, and
-	 * would hand us a second set of visuals to maintain across WordPress
-	 * releases for no gain.
-	 */
+		/*
+		 * The screen's own layout: each section's explanation beside its
+		 * controls, and the portal preview. `wp-components` first so these
+		 * rules land after core's.
+		 */
+		wp_enqueue_style(
+			'aggr-settings',
+			AGGR_PLUGIN_URL . 'dist/admin/settings.css',
+			array( 'wp-components' ),
+			$version
+		);
+		wp_style_add_data( 'aggr-settings', 'rtl', 'replace' );
+	}
 
 	/**
 	 * Renders modules and brand.
@@ -337,6 +330,7 @@ final class Settings_Screen implements Service {
 				'access'            => __( 'Access', 'aggressive-ads' ),
 				'accessHelp'        => __( 'Who can review advertising campaigns. Access is added to the person’s existing account, so their current role is unchanged.', 'aggressive-ads' ),
 				'accessEmpty'       => __( 'Nobody has been given review access yet.', 'aggressive-ads' ),
+				'brandPreview'      => __( 'Preview of the advertiser portal in these colours', 'aggressive-ads' ),
 				'alwaysAdmin'       => __( 'Always, as an administrator', 'aggressive-ads' ),
 			),
 		);
