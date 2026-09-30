@@ -485,13 +485,15 @@ final class Reports_Screen implements Service {
 			$fill,
 			__( 'Why page requests were not filled', 'aggressive-ads' ),
 			__( 'Reasons a page request was not filled', 'aggressive-ads' ),
-			__( 'Every page request was filled.', 'aggressive-ads' )
+			__( 'Every page request was filled.', 'aggressive-ads' ),
+			'aggr-report-page-reasons'
 		);
 		$this->render_reason_group(
 			$refresh,
 			__( 'Why refresh requests were not filled', 'aggressive-ads' ),
 			__( 'Reasons a refresh request was not filled', 'aggressive-ads' ),
-			__( 'Every refresh request was filled.', 'aggressive-ads' )
+			__( 'Every refresh request was filled.', 'aggressive-ads' ),
+			'aggr-report-refresh-reasons'
 		);
 		echo '</div>';
 	}
@@ -499,18 +501,23 @@ final class Reports_Screen implements Service {
 	/**
 	 * One inventory kind's no-fill table, or silence when that kind had none.
 	 *
-	 * @param array<string, mixed> $figures Figures for one kind.
-	 * @param string               $heading Visible heading.
-	 * @param string               $caption Screen-reader caption.
-	 * @param string               $filled  Copy when every request of this kind filled.
+	 * @param array<string, mixed> $figures   Figures for one kind.
+	 * @param string               $heading   Visible heading.
+	 * @param string               $caption   Screen-reader caption.
+	 * @param string               $filled    Copy when every request of this kind filled.
+	 * @param string               $region_id Element id the scroll region is named by.
 	 * @return void
 	 */
-	private function render_reason_group( array $figures, string $heading, string $caption, string $filled ): void {
+	private function render_reason_group( array $figures, string $heading, string $caption, string $filled, string $region_id ): void {
 		if ( 0 === $figures['requests'] ) {
 			return;
 		}
 
-		printf( '<section class="aggr-report-group"><h2>%s</h2>', esc_html( $heading ) );
+		printf(
+			'<section class="aggr-report-group"><h2 id="%1$s">%2$s</h2>',
+			esc_attr( $region_id ),
+			esc_html( $heading )
+		);
 
 		if ( array() === $figures['reasons'] ) {
 			printf( '<p>%s</p>', esc_html( $filled ) );
@@ -520,6 +527,15 @@ final class Reports_Screen implements Service {
 			return;
 		}
 
+		/*
+		 * The state pill does not wrap, and the numeric columns size to their
+		 * headings, so the table's minimum is wider than a 320px viewport. It
+		 * scrolls here rather than widening the page.
+		 */
+		printf(
+			'<div class="aggr-scroll-region" tabindex="0" role="region" aria-labelledby="%s">',
+			esc_attr( $region_id )
+		);
 		echo '<table class="widefat striped aggr-report-table">';
 		printf( '<caption class="screen-reader-text">%s</caption>', esc_html( $caption ) );
 		printf(
@@ -550,7 +566,7 @@ final class Reports_Screen implements Service {
 			);
 		}
 
-		echo '</tbody></table>';
+		echo '</tbody></table></div>';
 		$this->render_unaccounted( $figures['unaccounted'] );
 		echo '</section>';
 	}

@@ -727,6 +727,15 @@ body.aggr-admin-screen .components-button.is-destructive:not(.is-tertiary):not(.
 	}
 }
 
+/*
+ * The pair is a grid, and a grid item's minimum is its content. Without this
+ * the reason table's nowrap columns widen the page instead of scrolling
+ * inside `.aggr-scroll-region`.
+ */
+.wrap.aggr-admin .aggr-report-group {
+	min-width: 0;
+}
+
 .wrap.aggr-admin .aggr-report-group > h2 {
 	margin: 36px 0 12px;
 }
