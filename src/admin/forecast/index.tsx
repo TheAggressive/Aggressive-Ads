@@ -195,8 +195,15 @@ const Outlook = ( {
 			{ /*
 			 * Focusable, because a region that scrolls has to be reachable by
 			 * keyboard — axe reports `scrollable-region-focusable` otherwise.
+			 * Named, because a focus stop that announces nothing is one a screen
+			 * reader user has to explore to identify.
 			 */ }
-			<div className="aggr-forecast__table" tabIndex={ 0 }>
+			<div
+				className="aggr-scroll-region"
+				role="region"
+				tabIndex={ 0 }
+				aria-label={ t( 'region' ) }
+			>
 				<DataViews< ForecastRow >
 					data={ data }
 					fields={ fields }

@@ -1,3 +1,11 @@
+/*
+ * The outlook's summary figures.
+ *
+ * The page header, the tokens and the table's surface are shared with every
+ * Advertising screen and live in `src/styles/admin-native.css`. Until they did,
+ * nothing on this page declared the tokens read below, so the cards drew no
+ * border at all and the labels did not recede.
+ */
 .aggr-forecast__cards {
 	display: grid;
 	gap: 12px;
@@ -5,10 +13,11 @@
 	margin: 16px 0 24px;
 }
 
+/* The same surface, hairline and radius as the table below them. */
 .aggr-forecast__card {
-	background: #fff;
+	background: var(--aggr-color-surface);
 	border: 1px solid var(--aggr-border-color);
-	border-radius: 2px;
+	border-radius: 4px;
 	padding: 14px 16px;
 }
 
@@ -34,22 +43,12 @@
  * ordinary state look like an achievement.
  */
 .aggr-forecast__figure--alarm {
-	color: #b32d2e;
+	color: var(--aggr-color-danger);
 }
 
 .aggr-forecast__window {
 	color: var(--aggr-color-text-muted);
 	margin: 0 0 4px;
-}
-
-/*
- * Wide tables scroll inside their own region rather than the page, and the
- * region is focusable so a keyboard can reach the overflow. WCAG 1.4.10 at
- * 320 CSS pixels; `scrollable-region-focusable` is the rule that makes the
- * tabindex mandatory rather than optional.
- */
-.aggr-forecast__table {
-	overflow-x: auto;
 }
 
 .aggr-forecast__none {
@@ -64,5 +63,5 @@
  */
 .aggr-forecast__oversold {
 	font-weight: 700;
-	color: #b32d2e;
+	color: var(--aggr-color-danger);
 }

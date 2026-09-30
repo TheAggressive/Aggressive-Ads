@@ -39,6 +39,7 @@ restate it here.
 | What are we defending against? | `threat-model.md` |
 | How is this tested, and with which PHPUnit? | `testing-strategy.md` |
 | What is half-finished right now, and why? | `open-work.md` |
+| How must a staff (wp-admin) screen look and be built? | `admin-ui.md` |
 
 Also in `docs/`: `suite-roadmap.md`, `platform-implementation-progress.md`,
 `pull-request-automation.md`, `build-and-release.md`. Product rules live in

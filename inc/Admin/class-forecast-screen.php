@@ -120,10 +120,9 @@ final class Forecast_Screen implements Service {
 		}
 
 		if ( ! is_file( AGGR_PLUGIN_DIR . 'dist/admin/forecast.asset.php' ) ) {
-			printf(
-				'<div class="wrap"><h1>%1$s</h1><div class="notice notice-error"><p>%2$s</p></div></div>',
-				esc_html__( 'Inventory outlook', 'aggressive-ads' ),
-				esc_html__( 'The outlook screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' )
+			Screen_Shell::unbuilt(
+				__( 'Inventory outlook', 'aggressive-ads' ),
+				__( 'The outlook screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' )
 			);
 
 			return;
@@ -131,11 +130,13 @@ final class Forecast_Screen implements Service {
 
 		$window = $this->data->default_window();
 
-		printf(
-			'<div class="wrap aggr-admin"><h1>%1$s</h1><noscript><div class="notice notice-error"><p>%2$s</p></div></noscript><div id="aggr-forecast-root" data-aggr-forecast="%3$s"></div></div>',
-			esc_html__( 'Inventory outlook', 'aggressive-ads' ),
-			esc_html__( 'This screen needs JavaScript.', 'aggressive-ads' ),
-			esc_attr( (string) wp_json_encode( $this->payload( $window ) ) )
+		Screen_Shell::mount(
+			__( 'Inventory outlook', 'aggressive-ads' ),
+			__( 'How many impressions each placement is forecast to offer, how many are already booked, and what is left to sell.', 'aggressive-ads' ),
+			'aggr-forecast-root',
+			'data-aggr-forecast',
+			$this->payload( $window ),
+			__( 'This screen needs JavaScript.', 'aggressive-ads' )
 		);
 	}
 
@@ -160,6 +161,7 @@ final class Forecast_Screen implements Service {
 				'oversold'   => __( 'Oversold', 'aggressive-ads' ),
 				'unforecast' => __( 'Not yet forecast', 'aggressive-ads' ),
 				'empty'      => __( 'No active placements to forecast.', 'aggressive-ads' ),
+				'region'     => __( 'Outlook for each placement', 'aggressive-ads' ),
 
 				/* translators: shown instead of a number when a placement has never been forecast. */
 				'noFigure'   => __( 'Not forecast', 'aggressive-ads' ),

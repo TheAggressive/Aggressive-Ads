@@ -34,6 +34,7 @@ Then, as needed:
 | [known-issues.md](known-issues.md) | Live list of things that are true and annoying |
 | [open-work.md](open-work.md) | Work that is started, understood, and not done |
 | [administration.md](administration.md) | Running the plugin: screens, capabilities, scheduled work, Site Health, uninstall |
+| [admin-ui.md](admin-ui.md) | Staff screens: inventory, the design contract every screen follows, and the modernization slices |
 | [runbook.md](runbook.md) | Deploying to production, verifying each step, and rolling back |
 | [roadmap.md](roadmap.md) | Phases 1–11 (what already shipped vs remaining product) |
 | [platform-implementation-progress.md](platform-implementation-progress.md) | The platform sequence beyond the roadmap, and what exists today |

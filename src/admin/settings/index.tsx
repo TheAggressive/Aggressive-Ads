@@ -173,7 +173,15 @@ function Section( {
 	return (
 		<Card>
 			<CardHeader>
-				<Heading level={ 3 }>{ title }</Heading>
+				{ /*
+				 * Level 2: these are the page's sections and sit directly under
+				 * its h1, and a skipped level tells a screen-reader user there is
+				 * a parent section they cannot find. Sized as a section title
+				 * rather than by level, so it stays quieter than the page title.
+				 */ }
+				<Heading level={ 2 } size={ 15 }>
+					{ title }
+				</Heading>
 			</CardHeader>
 			<CardBody>
 				<VStack spacing={ 4 }>

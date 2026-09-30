@@ -1,22 +1,185 @@
 /*
- * Rhythm for the native staff screens. Nothing else.
+ * The frame every Advertising screen shares: header, rhythm and table surface.
  *
- * These screens are core markup — postbox, form-table, notice, button — and
- * core styles every component on them. This file deliberately touches none of
- * that: no colours, no buttons, no tables, no notices. Only spacing, measure
- * and heading weight.
+ * `Menu::enqueue_rhythm()` loads this on every screen under the Advertising
+ * menu, so it is the one stylesheet a rule can rely on being present. The
+ * contract it implements is written down in docs/admin-ui.md.
  *
- * That restraint is the entire point. A rule that restyles a core component
- * has to be re-checked against every WordPress release, because those
- * components carry states (hover, focus, disabled, dismissible) that are easy
- * to half-implement. A rule that adjusts spacing cannot fail that way: if core
+ * It still restyles no core control: no buttons, no notices, no form fields,
+ * no focus states. A rule that restyles a core component has to be re-checked
+ * against every WordPress release, because those components carry states
+ * (hover, focus, disabled, dismissible) that are easy to half-implement. A
+ * rule that adjusts spacing or draws a container cannot fail that way: if core
  * changes underneath it, the worst outcome is slightly-off margins rather than
- * a broken control.
+ * a broken control. DataViews is the one component given a container here, and
+ * that is safe for the reason the screens' own stylesheets used to record — it
+ * is bundled from a pinned `@wordpress/dataviews`, so its markup moves only
+ * when we move the dependency.
  *
- * Scoped to `#poststuff` inside our wrap, which only the converted screens
- * use — the review screens still carry the plugin's own design system and must
- * not be reached from here.
+ * The Review screen carries the portal's design system (`admin.css`) and is
+ * excluded with `:not(.aggr-portal)` wherever a rule here would otherwise
+ * reach it.
  */
+
+/*
+ * Tokens must be imported, not assumed.
+ *
+ * This is the only stylesheet the Reports and Outlook screens load besides
+ * their own, and neither of those declared a token either. So both read
+ * `--aggr-color-text-muted` and `--aggr-border-color` that nothing on the page
+ * defined: captions meant to recede rendered in body ink, and the outlook's
+ * summary cards lost their border altogether, because an unresolved custom
+ * property in a `border` shorthand leaves the border style at `none`.
+ */
+@import './base/_admin-tokens.css';
+
+/*
+ * The page header.
+ *
+ * Core gives `.wrap h1` 23px at normal weight and four pixels of bottom
+ * padding, which works on its own screens because a list table or a form
+ * follows with its own leading. Ours mount a card or a table immediately after
+ * the heading, and the title sat on the first panel with nothing to say where
+ * the page ended and its content began.
+ *
+ * A hairline, not a band of colour: core's own grouped screens separate header
+ * from content with a rule, and a filled header would be the only one in
+ * wp-admin.
+ */
+.wrap.aggr-admin .aggr-admin-head {
+	margin: 0 0 24px;
+	padding: 0 0 16px;
+	border-bottom: 1px solid var(--aggr-border-color);
+}
+
+/*
+ * Semibold rather than core's normal weight: the title is the largest text on
+ * the page, and at 400 it read no heavier than the card headings under it.
+ */
+.wrap.aggr-admin .aggr-admin-head__title {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	margin: 0;
+	padding: 9px 0 0;
+	font-size: 23px;
+	font-weight: 600;
+	line-height: 1.3;
+}
+
+/*
+ * The product mark, and the one place Signal orange appears on a staff screen.
+ *
+ * Only here, because everywhere else in wp-admin colour already means
+ * something: blue is what you can click, and the status colours are fixed so a
+ * pill reads the same on every site. The mark is decorative and hidden from
+ * assistive technology, so the colour carries no meaning either — it is
+ * recognition, not information.
+ *
+ * A literal, not a brand token. The Brand settings recolour the advertiser's
+ * portal and never the staff screens, and this is the plugin's own mark rather
+ * than the site's brand.
+ *
+ * The shape is the sidebar icon's SVG, which the build inlines, so there is
+ * still one copy of it and no second request.
+ */
+.wrap.aggr-admin .aggr-admin-head__mark {
+	flex: none;
+	width: 20px;
+	height: 20px;
+	background-color: #f05a28;
+	mask: url(../../assets/svg/aggressive-ads-icon.svg) no-repeat center / contain;
+}
+
+/*
+ * Forced colours replace every background with the system canvas, which would
+ * erase a mask-painted mark. Draw it in the text colour instead.
+ */
+@media (forced-colors: active) {
+	.wrap.aggr-admin .aggr-admin-head__mark {
+		background-color: CanvasText;
+		forced-color-adjust: none;
+	}
+}
+
+/*
+ * One sentence that orients somebody arriving cold — from a notice, a link in
+ * an email, or the menu. Prose, so it keeps a reading measure.
+ */
+.wrap.aggr-admin .aggr-admin-head__purpose {
+	max-width: 75ch;
+	margin: 4px 0 0;
+	color: var(--aggr-color-text-muted);
+	font-size: 14px;
+	line-height: 1.5;
+}
+
+/*
+ * The table surface.
+ *
+ * DataViews arrives styled but without a container: dropped into a `.wrap`, a
+ * table sits flat on the admin's grey canvas with no edge. Core's own list
+ * tables carry a white surface and a hairline, and matching those is what makes
+ * a table read as part of wp-admin rather than as an embedded application.
+ *
+ * Organizations, Placements and Conversions each carried an identical copy of
+ * this block; Outlook and Reports had none, so two of seven screens drew their
+ * tables differently for no reason anybody chose.
+ */
+.wrap.aggr-admin:not(.aggr-portal) .dataviews-wrapper,
+.wrap.aggr-admin .aggr-scroll-region {
+	box-sizing: border-box;
+	background: var(--aggr-color-surface);
+	border: 1px solid var(--aggr-border-color);
+	border-radius: 4px;
+}
+
+.wrap.aggr-admin:not(.aggr-portal) .dataviews-wrapper {
+	overflow: hidden;
+}
+
+/*
+ * A table too wide for the viewport scrolls inside its surface rather than
+ * widening the page — WCAG 1.4.10 at 320 CSS pixels. DataViews does not reflow
+ * on its own: the reports screen measured 465 pixels wide against a 320
+ * viewport before its tables were contained.
+ *
+ * The region must be keyboard focusable (`tabindex="0"` in the markup), or axe
+ * reports `scrollable-region-focusable` — and a focusable thing needs a
+ * visible focus state, or it trades 1.4.10 for 2.4.7.
+ */
+.wrap.aggr-admin .aggr-scroll-region {
+	max-width: 100%;
+	overflow-x: auto;
+}
+
+.wrap.aggr-admin .aggr-scroll-region:focus-visible {
+	outline: 2px solid currentcolor;
+	outline-offset: 2px;
+}
+
+/* A table inside a scroll region is already on the surface. */
+.wrap.aggr-admin:not(.aggr-portal) .aggr-scroll-region .dataviews-wrapper {
+	border: 0;
+	border-radius: 0;
+	overflow: visible;
+}
+
+/* Search, filters and the primary action are a control strip, not content. */
+.wrap.aggr-admin:not(.aggr-portal) .dataviews-filters__container {
+	padding: 12px 16px;
+}
+
+/* Long names must not touch the column beside them. */
+.wrap.aggr-admin:not(.aggr-portal) .dataviews-view-table td,
+.wrap.aggr-admin:not(.aggr-portal) .dataviews-view-table th {
+	padding-inline: 16px;
+}
+
+/* A name is the row's identity and reads heavier than the values beside it. */
+.wrap.aggr-admin:not(.aggr-portal) .dataviews-view-table__primary-column-content {
+	font-weight: 600;
+}
 
 /*
  * Long-form guidance on these screens is prose, and prose past roughly 75
@@ -46,30 +209,6 @@
 /* Secondary detail in a header — a slug, a size, a state — should recede. */
 .wrap.aggr-admin #poststuff .postbox-header .hndle .description {
 	font-weight: 400;
-}
-
-/*
- * Room under the page title.
- *
- * Core gives `.wrap h1` four pixels of bottom padding and no margin, which
- * works on its own screens because what follows is a table or a form with its
- * own leading. These screens mount a card immediately after the heading, so the
- * title ended up sitting on the first panel — Settings looked right only
- * because its first control happened to carry a margin, which is not a spacing
- * system.
- */
-.wrap.aggr-admin > h1 {
-	margin: 0 0 20px;
-}
-
-/*
- * The intro paragraph under the page title is the one line that orients
- * somebody arriving cold, and core leaves it tight against the heading.
- */
-.wrap.aggr-admin > h1 + p {
-	max-width: 75ch;
-	margin: 0 0 20px;
-	font-size: 14px;
 }
 
 /*

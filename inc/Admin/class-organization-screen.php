@@ -128,10 +128,9 @@ final class Organization_Screen implements Service {
 	 */
 	private function render_screen(): void {
 		if ( ! is_file( AGGR_PLUGIN_DIR . 'dist/admin/organizations.asset.php' ) ) {
-			printf(
-				'<div class="wrap"><h1>%1$s</h1><div class="notice notice-error"><p>%2$s</p></div></div>',
-				esc_html__( 'Organizations', 'aggressive-ads' ),
-				esc_html__( 'The organizations screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' )
+			Screen_Shell::unbuilt(
+				__( 'Organizations', 'aggressive-ads' ),
+				__( 'The organizations screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' )
 			);
 
 			return;
@@ -199,11 +198,13 @@ final class Organization_Screen implements Service {
 			),
 		);
 
-		printf(
-			'<div class="wrap aggr-admin"><h1>%1$s</h1><noscript><div class="notice notice-error"><p>%2$s</p></div></noscript><div id="aggr-organizations-root" data-aggr-organizations="%3$s"></div></div>',
-			esc_html__( 'Organizations', 'aggressive-ads' ),
-			esc_html__( 'The organizations screen needs JavaScript enabled.', 'aggressive-ads' ),
-			esc_attr( (string) wp_json_encode( $payload ) )
+		Screen_Shell::mount(
+			__( 'Organizations', 'aggressive-ads' ),
+			__( 'Advertiser accounts, who belongs to each one, and whether it may run campaigns.', 'aggressive-ads' ),
+			'aggr-organizations-root',
+			'data-aggr-organizations',
+			$payload,
+			__( 'The organizations screen needs JavaScript enabled.', 'aggressive-ads' )
 		);
 	}
 
