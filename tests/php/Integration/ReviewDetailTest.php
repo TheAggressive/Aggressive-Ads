@@ -272,4 +272,75 @@ final class ReviewDetailTest extends WP_UnitTestCase {
 		$this->assertSame( '', $note['from_label'] . $note['to_label'] . $note['from_pill'] . $note['to_pill'], 'Not a status change, so no pills.' );
 		$this->assertFalse( $note['system'] );
 	}
+
+	/**
+	 * **Opening a campaign costs the same however many people touched it.**
+	 *
+	 * The timeline resolved each actor's name with its own `get_userdata()`,
+	 * two queries per distinct person on a cold cache, so a campaign worked by
+	 * a busy team cost more to open the longer it ran — up to a hundred extra
+	 * queries at the log's fifty-row page. Without the priming read this
+	 * fails at fifty-three queries against fifteen.
+	 *
+	 * The absolute bound is generous on purpose; it fails on per-row work, not
+	 * on one added field. Measured at fifteen for a campaign under review,
+	 * which includes the readiness check's validator.
+	 *
+	 * @return void
+	 */
+	public function test_opening_a_campaign_does_not_query_once_per_actor(): void {
+		global $wpdb;
+
+		$quiet = $this->campaign( Post_Statuses::REVIEW );
+		$busy  = $this->campaign( Post_Statuses::REVIEW );
+
+		$this->note( $quiet, $this->reviewer );
+
+		for ( $i = 0; $i < 20; $i++ ) {
+			$this->note( $busy, self::factory()->user->create( array( 'role' => Roles::REVIEWER ) ) );
+		}
+
+		wp_set_current_user( $this->reviewer );
+
+		$cost = function ( int $campaign_id ) use ( $wpdb ): int {
+			$this->data->campaign( $campaign_id ); // The first read creates the default line item.
+			wp_cache_flush();
+
+			$before = $wpdb->num_queries;
+			$row    = $this->data->campaign( $campaign_id );
+			$spent  = $wpdb->num_queries - $before;
+
+			$this->assertIsArray( $row );
+			$this->assertIsArray( $row['readiness'], 'The readiness check must be in what this measures.' );
+
+			return $spent;
+		};
+
+		$one  = $cost( $quiet );
+		$many = $cost( $busy );
+
+		$this->assertCount( 20, (array) $this->data->campaign( $busy )['audit'], 'The fixture did not produce the trail this measures.' );
+		$this->assertLessThanOrEqual( $one, $many, sprintf( 'One actor cost %d queries and twenty cost %d: names are being read one person at a time.', $one, $many ) );
+		$this->assertLessThan( 25, $many, sprintf( 'Opening a campaign took %d queries.', $many ) );
+	}
+
+	/**
+	 * Writes one note to a campaign's log.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @param int $actor       Acting user.
+	 * @return void
+	 */
+	private function note( int $campaign_id, int $actor ): void {
+		$this->audit->insert(
+			new Audit_Event(
+				event: 'campaign.note',
+				object_type: 'campaign',
+				object_id: $campaign_id,
+				org_id: $this->org_id,
+				message: 'A note.',
+				actor_user_id: $actor
+			)
+		);
+	}
 }

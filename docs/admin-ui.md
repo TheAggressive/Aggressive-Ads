@@ -190,6 +190,10 @@ have been closed since.
 - `src/admin/shared/empty.tsx`: `Empty`, the icon and sentence a table shows
   when it has no rows.
 - `src/admin/shared/save.tsx`: `useAction`, `SaveError`, the string table.
+- `Admin\Review_Format`: how a date, a time, a status and a person print on
+  the review screens. `Admin\Audit_Trail` and `Admin\Line_Item_Labels` are
+  the timeline's rows and the line item's labels, apart from `Review_Data` so
+  each vocabulary is one file.
 - DataViews for any list of records. Core's `Modal` for any dialog on a
   DataViews screen.
 - The campaign status pill and its fixed colours. It carries the campaign
@@ -209,6 +213,10 @@ avoid.
 - **Payload contents.** The JSON bootstrap is what the browser may see.
   `ConversionsScreenTest` asserts an unauthorized render emits no reporting key.
   A redesign that adds fields to a payload widens what staff pages expose.
+- **Query cost.** Opening a campaign is fifteen queries under review and
+  twelve otherwise, however long its history. `Audit_Trail` primes every
+  actor in one read; `ReviewDetailTest` fails if a field reintroduces a read
+  per person or per row.
 - **Review semantics.** The tabs map to `Review_Data::FILTERS`. The decision
   buttons are workflow transitions whose labels and availability come from
   `Review_Data`: "Start review", for example, is the explicit move to `review`
@@ -241,7 +249,10 @@ queue prints the same classes. The anatomy is: an eyebrow (the Signal orange
 mark and the group name — Campaigns, Inventory, Advertisers, Measurement,
 Setup), the `<h1>` title, an optional one-sentence purpose line, an optional
 actions slot on the right, then `<hr class="wp-header-end">`. Notices go under
-it; core moves them there. The purpose line says what the screen is *for*, in
+it; core moves them there. The block is a `<div>`, not a `<header>`: core wraps
+the page in `#wpbody[role=main]`, and a header inside it is a second banner
+nested in main, which axe reports on every screen. `ScreenShellTest` counts
+them at zero. The purpose line says what the screen is *for*, in
 the words of the person using it. Leave it out when the sections already say
 that (Settings does).
 

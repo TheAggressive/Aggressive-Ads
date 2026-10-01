@@ -116,7 +116,7 @@ final class Runtime_Service_Registrar {
 				$c->get( Assigned_Creatives::class ),
 				$c->get( Placement_Repository::class ),
 				$c->get( Org_Repository::class ),
-				$c->get( Audit_Repository::class ),
+				$c->get( \Aggressive\Ads\Admin\Audit_Trail::class ),
 				$c->get( Campaign_Change_Manager::class ),
 				$c->get( Line_Item_Repository::class ),
 				$c->get( \Aggressive\Ads\Workflow\Creative_Approval::class ),
@@ -125,6 +125,14 @@ final class Runtime_Service_Registrar {
 				$c->get( \Aggressive\Ads\Repository\Creative_Decision_Repository::class ),
 				$c->get( \Aggressive\Ads\Admin\Approval_Readiness::class ),
 				$c->get( \Aggressive\Ads\Workflow\Edit_Window::class )
+			)
+		);
+
+		$container->register(
+			\Aggressive\Ads\Admin\Audit_Trail::class,
+			static fn ( Service_Container $c ): \Aggressive\Ads\Admin\Audit_Trail => new \Aggressive\Ads\Admin\Audit_Trail(
+				$c->get( Audit_Repository::class ),
+				$c->get( \Aggressive\Ads\Repository\User_Repository::class )
 			)
 		);
 

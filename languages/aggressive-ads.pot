@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-01T05:34:23+00:00\n"
+"POT-Creation-Date: 2026-10-01T06:09:01+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -123,6 +123,26 @@ msgstr ""
 
 #: inc/Admin/class-approval-readiness.php:105
 msgid "Artwork and links"
+msgstr ""
+
+#: inc/Admin/class-audit-trail.php:78
+msgid "System"
+msgstr ""
+
+#. translators: 1: previous campaign status, already translated. 2: new campaign status, already translated.
+#: inc/Admin/class-audit-trail.php:130
+#, php-format
+msgid "Campaign moved from %1$s to %2$s."
+msgstr ""
+
+#: inc/Admin/class-audit-trail.php:148
+msgctxt "audit outcome"
+msgid "Refused"
+msgstr ""
+
+#: inc/Admin/class-audit-trail.php:149
+msgctxt "audit outcome"
+msgid "Failed"
 msgstr ""
 
 #: inc/Admin/class-campaign-change-actions.php:51
@@ -651,6 +671,92 @@ msgstr ""
 
 #: inc/Admin/class-forecast-screen.php:181
 msgid "High"
+msgstr ""
+
+#: inc/Admin/class-line-item-labels.php:37
+msgctxt "line item status"
+msgid "Draft"
+msgstr ""
+
+#: inc/Admin/class-line-item-labels.php:38
+msgctxt "line item status"
+msgid "Ready"
+msgstr ""
+
+#: inc/Admin/class-line-item-labels.php:39
+msgctxt "line item status"
+msgid "Scheduled"
+msgstr ""
+
+#: inc/Admin/class-line-item-labels.php:40
+msgctxt "line item status"
+msgid "Live"
+msgstr ""
+
+#: inc/Admin/class-line-item-labels.php:41
+msgctxt "line item status"
+msgid "Paused"
+msgstr ""
+
+#: inc/Admin/class-line-item-labels.php:42
+msgctxt "line item status"
+msgid "Completed"
+msgstr ""
+
+#: inc/Admin/class-line-item-labels.php:43
+msgctxt "line item status"
+msgid "Cancelled"
+msgstr ""
+
+#: inc/Admin/class-line-item-labels.php:47
+#: templates/portal/partials/campaign-status.php:54
+msgid "Flat fee"
+msgstr ""
+
+#: inc/Admin/class-line-item-labels.php:48
+msgid "Per thousand impressions (CPM)"
+msgstr ""
+
+#: inc/Admin/class-line-item-labels.php:49
+msgid "Per click (CPC)"
+msgstr ""
+
+#: inc/Admin/class-line-item-labels.php:50
+msgid "Per conversion (CPA)"
+msgstr ""
+
+#: inc/Admin/class-line-item-labels.php:51
+msgid "Share of voice"
+msgstr ""
+
+#: inc/Admin/class-line-item-labels.php:55
+msgctxt "line item goal"
+msgid "No delivery goal"
+msgstr ""
+
+#: inc/Admin/class-line-item-labels.php:56
+msgctxt "line item goal"
+msgid "Impressions"
+msgstr ""
+
+#: inc/Admin/class-line-item-labels.php:57
+msgctxt "line item goal"
+msgid "Clicks"
+msgstr ""
+
+#: inc/Admin/class-line-item-labels.php:58
+msgctxt "line item goal"
+msgid "Conversions"
+msgstr ""
+
+#: inc/Admin/class-line-item-labels.php:59
+msgctxt "line item goal"
+msgid "Spend"
+msgstr ""
+
+#: inc/Admin/class-line-item-labels.php:60
+msgctxt "line item goal"
+msgid "Share of voice"
 msgstr ""
 
 #: inc/Admin/class-organization-screen.php:101
@@ -1542,13 +1648,7 @@ msgstr ""
 msgid "%s requests have no recorded outcome. This is a defect worth reporting: every request should be either a fill or a reason."
 msgstr ""
 
-#. translators: 1: previous campaign status, already translated. 2: new campaign status, already translated.
-#: inc/Admin/class-review-data.php:354
-#, php-format
-msgid "Campaign moved from %1$s to %2$s."
-msgstr ""
-
-#: inc/Admin/class-review-data.php:369
+#: inc/Admin/class-review-data.php:308
 #: inc/Portal/class-campaign-list-view-data.php:267
 #: inc/Portal/class-campaign-list-view-data.php:299
 msgid "Not scheduled"
@@ -1556,178 +1656,78 @@ msgstr ""
 
 #. translators: 1: campaign start date. 2: campaign end date.
 #. translators: 1: package name. 2: month and year the campaign starts, e.g. October 2026.
-#: inc/Admin/class-review-data.php:380
+#: inc/Admin/class-review-data.php:319
 #: inc/Portal/class-campaign-list-view-data.php:315
 #: inc/Workflow/class-campaign-editor.php:698
 #, php-format
 msgid "%1$s – %2$s"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:731
-msgid "System"
-msgstr ""
-
-#: inc/Admin/class-review-data.php:771
-msgctxt "line item status"
-msgid "Draft"
-msgstr ""
-
-#: inc/Admin/class-review-data.php:772
-msgctxt "line item status"
-msgid "Ready"
-msgstr ""
-
-#: inc/Admin/class-review-data.php:773
-msgctxt "line item status"
-msgid "Scheduled"
-msgstr ""
-
-#: inc/Admin/class-review-data.php:774
-msgctxt "line item status"
-msgid "Live"
-msgstr ""
-
-#: inc/Admin/class-review-data.php:775
-msgctxt "line item status"
-msgid "Paused"
-msgstr ""
-
-#: inc/Admin/class-review-data.php:776
-msgctxt "line item status"
-msgid "Completed"
-msgstr ""
-
-#: inc/Admin/class-review-data.php:777
-msgctxt "line item status"
-msgid "Cancelled"
-msgstr ""
-
-#: inc/Admin/class-review-data.php:781
-#: templates/portal/partials/campaign-status.php:54
-msgid "Flat fee"
-msgstr ""
-
-#: inc/Admin/class-review-data.php:782
-msgid "Per thousand impressions (CPM)"
-msgstr ""
-
-#: inc/Admin/class-review-data.php:783
-msgid "Per click (CPC)"
-msgstr ""
-
-#: inc/Admin/class-review-data.php:784
-msgid "Per conversion (CPA)"
-msgstr ""
-
-#: inc/Admin/class-review-data.php:785
-msgid "Share of voice"
-msgstr ""
-
-#: inc/Admin/class-review-data.php:789
-msgctxt "line item goal"
-msgid "No delivery goal"
-msgstr ""
-
-#: inc/Admin/class-review-data.php:790
-msgctxt "line item goal"
-msgid "Impressions"
-msgstr ""
-
-#: inc/Admin/class-review-data.php:791
-msgctxt "line item goal"
-msgid "Clicks"
-msgstr ""
-
-#: inc/Admin/class-review-data.php:792
-msgctxt "line item goal"
-msgid "Conversions"
-msgstr ""
-
-#: inc/Admin/class-review-data.php:793
-msgctxt "line item goal"
-msgid "Spend"
-msgstr ""
-
-#: inc/Admin/class-review-data.php:794
-msgctxt "line item goal"
-msgid "Share of voice"
-msgstr ""
-
-#: inc/Admin/class-review-data.php:834
-msgctxt "audit outcome"
-msgid "Refused"
-msgstr ""
-
-#: inc/Admin/class-review-data.php:835
-msgctxt "audit outcome"
-msgid "Failed"
-msgstr ""
-
-#: inc/Admin/class-review-data.php:876
+#: inc/Admin/class-review-data.php:652
 msgid "Needs review"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:877
+#: inc/Admin/class-review-data.php:653
 #: inc/Admin/class-review-screen.php:298
 msgid "Ad updates"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:878
+#: inc/Admin/class-review-data.php:654
 msgid "Advertiser requests"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:879
+#: inc/Admin/class-review-data.php:655
 msgid "With the advertiser"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:880
+#: inc/Admin/class-review-data.php:656
 msgid "Decided"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:881
+#: inc/Admin/class-review-data.php:657
 #: inc/Portal/class-campaign-list-view-data.php:210
 #: inc/Portal/class-creative-view-data.php:355
 msgid "Running"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:882
+#: inc/Admin/class-review-data.php:658
 #: inc/Portal/class-campaign-history-view-data.php:151
 msgid "Finished"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:898
+#: inc/Admin/class-review-data.php:674
 msgid "Start review"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:899
+#: inc/Admin/class-review-data.php:675
 msgid "Release back to the queue"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:900
+#: inc/Admin/class-review-data.php:676
 msgid "Request changes"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:901
+#: inc/Admin/class-review-data.php:677
 msgid "Reject"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:902
+#: inc/Admin/class-review-data.php:678
 msgid "Approve and publish"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:903
+#: inc/Admin/class-review-data.php:679
 msgid "Reopen as a draft"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:904
+#: inc/Admin/class-review-data.php:680
 msgid "Pause campaign"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:905
+#: inc/Admin/class-review-data.php:681
 msgid "Resume campaign"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:906
+#: inc/Admin/class-review-data.php:682
 #: inc/Portal/class-view-data.php:375
 msgid "Cancel campaign"
 msgstr ""
@@ -2564,27 +2564,27 @@ msgstr ""
 msgid "That change could not be saved."
 msgstr ""
 
-#: inc/Admin/class-screen-shell.php:89
+#: inc/Admin/class-screen-shell.php:95
 msgctxt "admin screen group"
 msgid "Campaigns"
 msgstr ""
 
-#: inc/Admin/class-screen-shell.php:90
+#: inc/Admin/class-screen-shell.php:96
 msgctxt "admin screen group"
 msgid "Inventory"
 msgstr ""
 
-#: inc/Admin/class-screen-shell.php:91
+#: inc/Admin/class-screen-shell.php:97
 msgctxt "admin screen group"
 msgid "Advertisers"
 msgstr ""
 
-#: inc/Admin/class-screen-shell.php:92
+#: inc/Admin/class-screen-shell.php:98
 msgctxt "admin screen group"
 msgid "Measurement"
 msgstr ""
 
-#: inc/Admin/class-screen-shell.php:93
+#: inc/Admin/class-screen-shell.php:99
 msgctxt "admin screen group"
 msgid "Setup"
 msgstr ""
