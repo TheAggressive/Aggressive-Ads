@@ -355,7 +355,14 @@ test( 'a reviewer creates a campaign for an advertiser', async ( { page } ) => {
 
 	await expect( submit ).toBeDisabled();
 
-	await dialog.getByLabel( 'Advertiser' ).selectOption( { index: 1 } );
+	/*
+	 * By name, the fixture's own advertiser. "The first one in the list" was
+	 * Bright Angle Media in CI and a real organization on a Studio site, which
+	 * collected forty "Created for a client" campaigns before anyone noticed.
+	 */
+	await dialog
+		.getByLabel( 'Advertiser' )
+		.selectOption( { label: 'Bright Angle Media' } );
 	await dialog.getByLabel( 'Campaign name' ).fill( 'Created for a client' );
 
 	await expect( submit ).toBeEnabled();

@@ -106,13 +106,20 @@ from a port, which would get the scheme wrong for a site with HTTPS enabled. Set
 asks you to choose, and `AGGR_STUDIO_URL` when Studio reports no address or you
 need to override the one it gives.
 
-That site has to opt in before anything runs, because the suite resets the
-`admin` and `advertiser` passwords to match its fixtures and seeds fixture
-campaigns — and nothing puts either back:
+The suite runs only on a Studio site made for it, because it resets the `admin`
+and `advertiser` passwords to match its fixtures and seeds campaigns,
+organizations and placements — and nothing puts any of that back. Create one
+once:
 
 ```bash
-touch /path/to/studio/site/.aggr-e2e-site   # or: AGGR_STUDIO_E2E_ALLOW=1
+pnpm e2e:site        # ~/Studio/aggr-e2e, serving this checkout, marked disposable
 ```
+
+The runner refuses any site that `e2e:site` did not mark (the mark is an option
+in the site's own database), so it cannot be pointed at a site you work in. A
+site the suite ran on before this existed can be cleaned up: `pnpm e2e:clean
+<site path>` reports what the fixtures left, and `--yes` backs the site up and
+removes it. See `bin/dev/clean-e2e-fixtures.php` for exactly what counts.
 
 Theme, permalink structure and the mail-capture mu-plugin are captured up front
 and restored on the way out, whether Playwright passes or fails.
@@ -148,7 +155,9 @@ pnpm test:e2e:install        # the same, plus system libraries (needs sudo; what
 pnpm test:e2e                # Playwright + axe (after pnpm build and env:start)
 pnpm test:php:native         # the WP suites natively; no Docker, no sudo
 pnpm db:local                # start|stop|status|destroy the local test MySQL
-pnpm test:e2e:studio         # Playwright + axe against the current Studio site
+pnpm e2e:site                # create the disposable Studio site the browser suite uses
+pnpm test:e2e:studio         # Playwright + axe against that site
+pnpm e2e:clean <site>        # report (or, with --yes, back up and remove) fixture leftovers
 pnpm qa:fast                 # Docker-free pre-push code and unit checks
 pnpm qa:local                # qa:fast + native WP suites + Studio browser workflows
 pnpm qa                      # every CI lane, serially; requires a clean worktree

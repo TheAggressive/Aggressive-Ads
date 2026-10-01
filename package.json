@@ -112,6 +112,8 @@
 		"test:e2e": "playwright test",
 		"test:load": "node bin/load/run.mjs",
 		"test:e2e:studio": "bash bin/local/studio-e2e.sh",
+		"e2e:site": "bash bin/local/studio-e2e-site.sh",
+		"e2e:clean": "bash bin/dev/clean-e2e-fixtures.sh",
 		"ci:doctor": "node bin/ci/doctor.mjs",
 		"ci:coverage": "bash bin/ci/run-coverage.sh",
 		"ci:security": "node bin/ci/check-patched-dependencies.mjs && bash bin/ci/retry.sh 3 composer audit --locked --no-interaction && bash bin/ci/retry.sh 3 composer audit --locked --no-interaction --working-dir=tests/wp && bash bin/ci/retry.sh 3 pnpm audit --audit-level moderate --ignore GHSA-xcpc-8h2w-3j85",

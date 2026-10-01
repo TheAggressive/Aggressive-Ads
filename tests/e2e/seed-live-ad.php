@@ -58,13 +58,11 @@ if ( array() === $aggr_placement || array() === $aggr_org ) {
 $aggr_placement_id = (int) $aggr_placement[0];
 $aggr_org_id       = (int) $aggr_org[0];
 
+require_once __DIR__ . '/fixture-campaign.php';
+
 // Reset rather than reuse: a previous run recorded events against the old
 // creative's tokens, and a viewability assertion has to start from nothing seen.
-$aggr_existing = get_page_by_path( 'e2e-live-ad', OBJECT, Post_Types::CAMPAIGN );
-
-if ( $aggr_existing instanceof WP_Post ) {
-	wp_delete_post( $aggr_existing->ID, true );
-}
+aggr_e2e_delete_campaign( 'e2e-live-ad' );
 
 /*
  * Scheduled, not live — and that difference is the point of this fixture.
@@ -663,11 +661,7 @@ if ( array() !== $aggr_carrier_placement ) {
 	 */
 	$aggr_stale_url = add_query_arg( 'aggr_ct', 'stale', home_url( '/e2e-click-landing/' ) );
 
-	$aggr_existing_carrier = get_page_by_path( 'e2e-carrier-ad', OBJECT, Post_Types::CAMPAIGN );
-
-	if ( $aggr_existing_carrier instanceof WP_Post ) {
-		wp_delete_post( $aggr_existing_carrier->ID, true );
-	}
+	aggr_e2e_delete_campaign( 'e2e-carrier-ad' );
 
 	$aggr_carrier_campaign_id = wp_insert_post(
 		array(
