@@ -48,12 +48,36 @@ type Flash = { type: 'success' | 'error'; message: string } | null;
 
 /** The screen's own notice, in the design system the screen already uses. */
 function FlashNotice( { flash }: { flash: Flash } ): ReactElement | null {
+	const box = useRef< HTMLDivElement | null >( null );
+
+	/*
+	 * A refusal brought into view. Decisions are taken from the bar at the
+	 * bottom of the screen and this notice prints at the top, so an error
+	 * would otherwise be announced and never seen. A success needs no scroll:
+	 * the bar beside the button shows the new status.
+	 */
+	useEffect( () => {
+		if ( 'error' !== flash?.type || ! box.current ) {
+			return;
+		}
+
+		const reduced = window.matchMedia(
+			'(prefers-reduced-motion: reduce)'
+		).matches;
+
+		box.current.scrollIntoView( {
+			behavior: reduced ? 'auto' : 'smooth',
+			block: 'nearest',
+		} );
+	}, [ flash ] );
+
 	if ( ! flash ) {
 		return null;
 	}
 
 	return (
 		<div
+			ref={ box }
 			className={ `aggr-flash aggr-flash--${ flash.type }` }
 			role="status"
 		>
@@ -304,22 +328,32 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 		setBusy( true );
 		setFlash( null );
 
+		let saved = false;
+
 		try {
 			await apiFetch( {
 				path: `/aggr/v1/campaigns/${ campaign.id }/line-items/${ lineItemId }`,
 				method: 'PATCH',
 				data: { ...fields, revision },
 			} );
-
-			setFlash( {
-				type: 'success',
-				message: t( 'deliveryPolicySaved' ),
-			} );
+			saved = true;
 		} catch ( reason ) {
 			setFlash( { type: 'error', message: errorMessage( reason ) } );
 		} finally {
 			setBusy( false );
 			await loadCampaign( campaign.id, false );
+		}
+
+		/*
+		 * Said once the page shows what was stored. Announced before the
+		 * re-read, the summary under "saved" still described the old policy
+		 * for a moment — which reads as the save having done nothing.
+		 */
+		if ( saved ) {
+			setFlash( {
+				type: 'success',
+				message: t( 'deliveryPolicySaved' ),
+			} );
 		}
 	};
 

@@ -91,7 +91,15 @@ final class CreativeFileTest extends WP_UnitTestCase {
 	public function set_up(): void {
 		parent::set_up();
 
-		$this->storage   = new Private_Storage();
+		/*
+		 * The route's own storage, not a new one. Its cipher caches the key
+		 * for the request, and in this suite the container outlives the
+		 * rollback between tests: a fixture encrypted by a fresh instance can
+		 * carry a different key from the one the route then decrypts with.
+		 * The streaming tests never decrypted, so only the preview, which
+		 * reads the bytes, met it.
+		 */
+		$this->storage   = Plugin::instance()->container()->get( Private_Storage::class );
 		$this->creatives = new Creative_Repository();
 
 		( new Installer( new Audit_Repository(), new Roles() ) )->install_roles();
@@ -458,5 +466,105 @@ final class CreativeFileTest extends WP_UnitTestCase {
 		$this->assertIsArray( $prepared );
 		$this->assertSame( 'image/png', $prepared['mime'] );
 		$this->assertGreaterThan( 0, $prepared['bytes'] );
+	}
+
+	/**
+	 * The preview document a frame receives: status, type and the body the
+	 * serve hook writes.
+	 *
+	 * @param int $creative_id Creative post id.
+	 * @return array{status: int, type: string, body: string}
+	 */
+	private function preview( int $creative_id ): array {
+		$response = rest_get_server()->dispatch(
+			new WP_REST_Request( 'GET', '/aggr/v1/creatives/' . $creative_id . '/preview' )
+		);
+
+		ob_start();
+		Plugin::instance()->container()->get( Creative_File_Controller::class )->serve( false, $response );
+		$body = (string) ob_get_clean();
+
+		return array(
+			'status' => $response->get_status(),
+			'type'   => (string) ( $response->get_headers()['Content-Type'] ?? '' ),
+			'body'   => $body,
+		);
+	}
+
+	/**
+	 * **An unapproved creative is carried inside the preview, byte for byte.**
+	 *
+	 * The frame is sandboxed to an opaque origin, so its own requests go
+	 * without the login cookie. Pointed at the file route, the image was
+	 * refused and Chrome blocked the refusal: every pending creative previewed
+	 * as an empty white box, here and in the portal. The document's request is
+	 * the authenticated one, so the bytes travel in it — and the frame makes
+	 * no request of its own for them.
+	 *
+	 * @return void
+	 */
+	public function test_an_unapproved_preview_carries_its_artwork(): void {
+		wp_set_current_user( $this->reviewer );
+
+		$preview = $this->preview( $this->creative_id );
+
+		$this->assertSame( 200, $preview['status'] );
+		$this->assertStringStartsWith( 'text/html', $preview['type'] );
+		$this->assertSame( 1, preg_match( '#<img src="data:image/png;base64,([A-Za-z0-9+/=]+)" alt="">#', $preview['body'], $inline ) );
+
+		$stored = $this->storage->read(
+			(string) get_post_meta( $this->creative_id, Creative_Repository::META_PRIVATE_PATH, true ),
+			Upload_Rules::CEILING_MAX_BYTES
+		);
+
+		$this->assertNotNull( $stored );
+		$this->assertSame( $stored, base64_decode( $inline[1], true ), 'The preview carries different bytes from the stored creative.' );
+		$this->assertStringNotContainsString( '/file', rawurldecode( $preview['body'] ), 'The frame would request the bytes itself, without a cookie.' );
+	}
+
+	/**
+	 * **A refused preview is a page, not JSON.**
+	 *
+	 * The caller is a frame, and a frame shows what it is given: a creative
+	 * whose file was gone rendered the REST error as raw JSON inside the
+	 * phone outline on the review screen, under the browser's "Pretty print"
+	 * box. A refusal is now a document saying the preview is unavailable.
+	 *
+	 * @return void
+	 */
+	public function test_a_preview_with_no_file_is_a_page_not_json(): void {
+		update_post_meta( $this->creative_id, Creative_Repository::META_PRIVATE_PATH, '' );
+
+		wp_set_current_user( $this->reviewer );
+
+		$preview = $this->preview( $this->creative_id );
+
+		$this->assertSame( 404, $preview['status'] );
+		$this->assertStringStartsWith( 'text/html', $preview['type'] );
+		$this->assertStringContainsString( 'Preview unavailable', $preview['body'] );
+		$this->assertStringNotContainsString( 'aggr_not_found', $preview['body'] );
+		$this->assertSame( 0, substr_count( $preview['body'], '<img' ) );
+	}
+
+	/**
+	 * Not yours, no such creative and no file read the same, byte for byte,
+	 * as the file route's refusals do. A page that differed would be the
+	 * oracle the single 404 exists to deny.
+	 *
+	 * @return void
+	 */
+	public function test_preview_refusals_are_indistinguishable(): void {
+		wp_set_current_user( $this->stranger );
+		$forbidden = $this->preview( $this->creative_id );
+
+		wp_set_current_user( $this->reviewer );
+		$nonexistent = $this->preview( 999999 );
+
+		update_post_meta( $this->creative_id, Creative_Repository::META_PRIVATE_PATH, '' );
+		$fileless = $this->preview( $this->creative_id );
+
+		$this->assertSame( 404, $forbidden['status'] );
+		$this->assertSame( $forbidden, $nonexistent );
+		$this->assertSame( $forbidden, $fileless );
 	}
 }

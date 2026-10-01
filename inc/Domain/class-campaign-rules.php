@@ -41,6 +41,56 @@ final class Campaign_Rules {
 	public const ERROR_PRICE_MISSING       = 'price_missing';
 
 	/**
+	 * The things a reviewer checks before approving, in the order they check them.
+	 *
+	 * The review screen's readiness list is these, each ticked or showing the
+	 * problems that block it. Every problem code below belongs to exactly one;
+	 * `CampaignRulesCheckGroupTest` finds every `ERROR_` constant by reflection
+	 * and fails if one is added without a group, so a new rule cannot be
+	 * enforced at approval and invisible on the list.
+	 *
+	 * @var list<string>
+	 */
+	public const CHECK_GROUPS = array( 'details', 'advertiser', 'package', 'schedule', 'placements', 'artwork' );
+
+	/**
+	 * Which readiness check a validation problem belongs to.
+	 *
+	 * Artwork and its destination link are one check: both are the creative,
+	 * and a reviewer fixes them in the same place. An unrecognised code lands
+	 * under details rather than nowhere, so a problem is never dropped from the
+	 * list — the guard would still refuse, and the list must say why.
+	 *
+	 * @param string $code Problem code from Campaign_Validator.
+	 * @return string One of CHECK_GROUPS.
+	 */
+	public static function check_group( string $code ): string {
+		return match ( $code ) {
+			self::ERROR_ORG_MISSING,
+			self::ERROR_ORG_NOT_ACTIVE      => 'advertiser',
+			self::ERROR_PACKAGE_MISSING,
+			self::ERROR_PACKAGE_UNAVAILABLE,
+			self::ERROR_PRICE_MISSING       => 'package',
+			self::ERROR_START_MISSING,
+			self::ERROR_START_IN_PAST,
+			self::ERROR_START_NOT_MIDNIGHT,
+			self::ERROR_END_MISSING,
+			self::ERROR_END_BEFORE_START,
+			self::ERROR_END_NOT_DAY_END     => 'schedule',
+			self::ERROR_NO_PLACEMENTS,
+			self::ERROR_PLACEMENT_INACTIVE  => 'placements',
+			self::ERROR_NO_CREATIVES,
+			self::ERROR_PLACEMENT_UNCOVERED,
+			self::ERROR_CREATIVE_KIND,
+			self::ERROR_CREATIVE_PLACEMENT,
+			self::ERROR_CREATIVE_SIZE,
+			self::ERROR_CLICK_URL_MISSING,
+			self::ERROR_CLICK_URL_INVALID   => 'artwork',
+			default                         => 'details',
+		};
+	}
+
+	/**
 	 * The only creative kind an advertiser may submit.
 	 *
 	 * `code` and `html5` are arbitrary markup on a public page, so they require

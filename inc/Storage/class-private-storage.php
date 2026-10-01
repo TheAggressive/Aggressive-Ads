@@ -310,6 +310,45 @@ final class Private_Storage {
 	}
 
 	/**
+	 * A stored file's plaintext, in memory, when it is no larger than a limit.
+	 *
+	 * For the preview document, which carries an unapproved creative inline
+	 * because its sandboxed frame cannot make an authenticated request. The
+	 * limit is the caller's, so a file larger than anything an upload accepts
+	 * is refused rather than read.
+	 *
+	 * @param string $relative  Stored relative path.
+	 * @param int    $max_bytes Largest plaintext to read.
+	 * @return string|null The bytes, or null when missing, too large or unreadable.
+	 */
+	public function read( string $relative, int $max_bytes ): ?string {
+		$bytes = $this->plaintext_bytes( $relative );
+
+		if ( null === $bytes || $bytes <= 0 || $bytes > $max_bytes ) {
+			return null;
+		}
+
+		// phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fopen -- An in-memory stream to decrypt into; nothing touches the filesystem.
+		$handle = fopen( 'php://temp', 'w+b' );
+
+		if ( false === $handle ) {
+			return null;
+		}
+
+		$ok       = $this->copy_to( $relative, $handle );
+		$contents = false;
+
+		if ( $ok ) {
+			rewind( $handle );
+			$contents = stream_get_contents( $handle );
+		}
+
+		fclose( $handle ); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_fclose -- Pairs with the fopen above.
+
+		return is_string( $contents ) && strlen( $contents ) === $bytes ? $contents : null;
+	}
+
+	/**
 	 * Materialises a stored file's plaintext in a temporary file.
 	 *
 	 * For the two callers that hand a path to code which cannot be given a

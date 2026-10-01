@@ -342,6 +342,21 @@ final class User_Repository {
 	}
 
 	/**
+	 * Loads many users and their meta in two queries, so a loop that reads
+	 * each one's name afterwards reads the object cache instead.
+	 *
+	 * @param array<int, int|string> $user_ids User ids; zero and duplicates are ignored.
+	 * @return void
+	 */
+	public function prime( array $user_ids ): void {
+		$ids = array_values( array_unique( array_filter( array_map( 'intval', $user_ids ), static fn ( int $id ): bool => $id > 0 ) ) );
+
+		if ( array() !== $ids ) {
+			cache_users( $ids );
+		}
+	}
+
+	/**
 	 * Loads the identity used to issue a core password-reset key.
 	 *
 	 * @param int $user_id User id.

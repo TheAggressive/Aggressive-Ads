@@ -59,6 +59,14 @@ export async function expectOpenDialogA11y( page: Page ): Promise< void > {
 }
 
 /**
+ * A staff screen's open core `Modal`. It renders in a portal on <body>,
+ * outside .aggr-admin, so the admin scan never reaches it.
+ */
+export async function expectModalA11y( page: Page ): Promise< void > {
+	await expectScopedA11y( page, '.components-modal__frame' );
+}
+
+/**
  * Whether focus is currently inside the open overlay.
  */
 function focusIsInsideOverlay( page: Page ): Promise< boolean > {

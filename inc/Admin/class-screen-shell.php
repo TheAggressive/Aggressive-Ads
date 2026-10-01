@@ -46,7 +46,13 @@ final class Screen_Shell {
 	 * @return void
 	 */
 	public static function open( string $title, string $purpose = '', string $section = '' ): void {
-		echo '<div class="wrap aggr-admin"><header class="aggr-admin-head"><div class="aggr-admin-head__text">';
+		/*
+		 * A div, not a header. WordPress wraps every admin page in
+		 * `#wpbody[role=main]`, and a header there is read as a second banner
+		 * nested inside main — axe flags it on every Advertising screen. This
+		 * is the page's title block, not the site's banner.
+		 */
+		echo '<div class="wrap aggr-admin"><div class="aggr-admin-head"><div class="aggr-admin-head__text">';
 
 		/*
 		 * The eyebrow is the portal's page-head pattern: a small monospaced
@@ -71,7 +77,7 @@ final class Screen_Shell {
 		}
 
 		// Core moves admin notices to sit directly after this element.
-		echo '</div></header><hr class="wp-header-end">';
+		echo '</div></div><hr class="wp-header-end">';
 	}
 
 	/**

@@ -60,11 +60,21 @@ final class Preview_Frame {
 	 * `img-src` names the site rather than `'self'`, because a sandboxed
 	 * document has an opaque origin and `'self'` would match nothing.
 	 *
+	 * **And `data:`, because an unapproved creative travels inside the
+	 * document.** Its bytes sit behind the authenticated file route, and the
+	 * opaque origin that keeps the frame harmless also means the browser
+	 * sends no login cookie with the frame's own requests: the image request
+	 * was refused, Chrome blocked the refusal (ERR_BLOCKED_BY_ORB), and every
+	 * pending creative previewed as an empty white box — on the review screen
+	 * and in the portal. The document's own request is authenticated, so the
+	 * bytes ride in it. A `data:` image in a document with no script source
+	 * runs nothing; `default-src 'none'` still refuses everything else.
+	 *
 	 * @param string $origin The site's own scheme and host.
 	 * @return string
 	 */
 	public static function document_policy( string $origin ): string {
-		return "default-src 'none'; img-src {$origin}; style-src 'unsafe-inline'; sandbox; frame-ancestors 'self'; base-uri 'none'; form-action 'none'";
+		return "default-src 'none'; img-src {$origin} data:; style-src 'unsafe-inline'; sandbox; frame-ancestors 'self'; base-uri 'none'; form-action 'none'";
 	}
 
 	/**
