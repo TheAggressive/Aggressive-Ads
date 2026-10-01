@@ -32,6 +32,8 @@ use Aggressive\Ads\Security\Capabilities;
  * design system rather than moving to core's component set. `src/styles/admin.css`
  * exists for these two views and is contrast-gated; replacing it would be a
  * decision about the product's visual direction, not part of moving the writes.
+ * Its dialogs are the exception, by decision: core's `Modal`, as everywhere
+ * else in wp-admin (`docs/admin-ui.md`, Dialogs).
  */
 final class Review_Screen implements Service {
 
@@ -446,6 +448,7 @@ final class Review_Screen implements Service {
 			'scheduleDay'              => __( 'Day %1$d of %2$d', 'aggressive-ads' ),
 			'readinessTitle'           => __( 'Before approval', 'aggressive-ads' ),
 			'readyToApprove'           => __( 'Ready to approve', 'aggressive-ads' ),
+			'showBlockers'             => __( 'Show what blocks it', 'aggressive-ads' ),
 			/* translators: %d: number of readiness checks that block approval (one). */
 			'blockedOne'               => __( '%d check blocks approval', 'aggressive-ads' ),
 			/* translators: %d: number of readiness checks that block approval (more than one). */

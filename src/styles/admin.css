@@ -49,20 +49,6 @@
 }
 
 /*
- * Status changes sit apart from Edit. Edit leaves the screen; these stay on
- * it, and a rule between them is what makes that difference visible without
- * another colour.
- */
-.aggr-pagehead__decisions {
-	display: flex;
-	flex-wrap: wrap;
-	align-items: center;
-	gap: var(--aggr-space-sm);
-	padding-left: var(--aggr-space-md);
-	border-left: 1px solid var(--aggr-border-color);
-}
-
-/*
  * Approval, drawn as an assertion.
  *
  * The one edge that puts a campaign in front of the public, and the only
@@ -82,17 +68,6 @@
 	background: var(--aggr-color-live);
 	color: var(--aggr-color-accent-contrast);
 	filter: brightness(0.92);
-}
-
-/*
- * Above the admin bar, which core puts at 99999.
- *
- * The overlay's own token is 1000, which is right on the front end and would
- * render this dialog *underneath* the admin menu and toolbar. The dialog is
- * portaled to <body>, so it is outside .aggr-admin and needs its own hook.
- */
-.aggr-overlay--admin {
-	z-index: 100000;
 }
 
 /*

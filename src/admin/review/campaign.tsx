@@ -13,7 +13,7 @@
 
 import type { ReactElement } from 'react';
 import { useState } from '@wordpress/element';
-import { Dialog } from './dialog';
+import { DecisionBar, DecisionDialog } from './decisions';
 import { CreativeCard, Decision } from './creative';
 import { DeliveryPolicy } from './delivery';
 import { Activity } from './activity';
@@ -23,112 +23,6 @@ import { t } from '../shared/save';
 import { Named } from '../shared/initials';
 import type { Bootstrap, Campaign, ReviewAction } from './types';
 import { requestOf } from './types';
-
-/**
- * The tone a transition is drawn in.
- *
- * Approval is the only filled assertion. Everything else in the page header is
- * a step, so it stays an ordinary button — a solid Pause beside Edit read as
- * the thing to click, and a solid Cancel outranked both. The dialog that
- * actually commits a destructive transition fills the button, because there
- * the danger is the decision being confirmed.
- */
-function toneClass( action: ReviewAction, committed = false ): string {
-	if ( action.destructive ) {
-		return committed
-			? 'aggr-button aggr-button--danger'
-			: 'aggr-button aggr-button--outline-danger';
-	}
-
-	if ( action.positive ) {
-		return 'aggr-button aggr-button--positive';
-	}
-
-	return committed ? 'aggr-button' : 'aggr-button aggr-button--secondary';
-}
-
-/**
- * The feedback a refusal requires, collected in a dialog.
- *
- * The box is compulsory, so the confirm button stays disabled until there is
- * something in it — GUARD_REVIEW_NOTES would refuse an empty one anyway, and
- * saying so before the click is kinder than saying so after.
- */
-function FeedbackDialog( {
-	action,
-	busy,
-	onConfirm,
-	onClose,
-}: {
-	action: ReviewAction | null;
-	busy: boolean;
-	onConfirm: ( to: string, notes: string ) => void;
-	onClose: () => void;
-} ): ReactElement {
-	const [ notes, setNotes ] = useState( '' );
-
-	/*
-	 * Two jobs, one dialog. A refusal needs the advertiser-facing reason, and
-	 * the box is compulsory. A destructive move that needs no reason — Cancel —
-	 * still needs a second step: it used to go through on one click, from a
-	 * button beside Pause, and a cancelled campaign has no way back.
-	 */
-	const needsNotes = true === action?.needs_notes;
-
-	return (
-		<Dialog
-			open={ null !== action }
-			title={ action ? action.label : '' }
-			labelId="aggr-review-dialog-title"
-			onClose={ onClose }
-		>
-			{ needsNotes ? (
-				<div className="aggr-form">
-					<label htmlFor="aggr-dialog-feedback">
-						{ t( 'advertiserFeedback' ) }
-					</label>
-					<textarea
-						id="aggr-dialog-feedback"
-						rows={ 6 }
-						maxLength={ 2000 }
-						value={ notes }
-						onChange={ ( event ) => setNotes( event.target.value ) }
-					/>
-				</div>
-			) : (
-				<p className="aggr-confirm-body">{ t( 'confirmFinal' ) }</p>
-			) }
-			<div className="aggr-overlay__actions">
-				{ /*
-				 * "Go back", not "Cancel": beside a button that says "Cancel
-				 * campaign", a second "Cancel" is the one word that could mean
-				 * either.
-				 */ }
-				<button
-					type="button"
-					className="aggr-button aggr-button--secondary"
-					onClick={ onClose }
-				>
-					{ t( 'goBack' ) }
-				</button>
-				<button
-					type="button"
-					className={
-						action ? toneClass( action, true ) : 'aggr-button'
-					}
-					disabled={ busy || ( needsNotes && '' === notes.trim() ) }
-					onClick={ () => {
-						if ( action ) {
-							onConfirm( action.to, notes );
-						}
-					} }
-				>
-					{ action ? action.label : '' }
-				</button>
-			</div>
-		</Dialog>
-	);
-}
 
 /*
  * What the advertiser wrote for this reviewer, read-only.
@@ -234,7 +128,7 @@ export function CampaignView( {
 	const changesSizes = campaign.pending_sizes;
 
 	/*
-	 * Every action lives in the header now, including the two that need
+	 * Every decision lives in the bar, including the two that need
 	 * advertiser-facing feedback. Those open a dialog carrying the textarea
 	 * instead of each printing one down the page — a screen that showed two
 	 * identical "Feedback the advertiser will see" boxes stacked above their
@@ -245,14 +139,10 @@ export function CampaignView( {
 	return (
 		<>
 			{ /*
-			 * Everything except the dialog, so the dialog can make it inert
-			 * without inerting itself. This replaces the portal-to-<body> a
-			 * modal would normally use: every --aggr-* token is declared on
-			 * `.aggr-portal`, and in wp-admin that class is on this wrap rather
-			 * than on <body>, so a dialog rendered outside it resolves every
-			 * token to nothing.
+			 * The decision bar's containing block: it sticks to the bottom of
+			 * the screen for as long as any of this is in view.
 			 */ }
-			<div data-aggr-review-content>
+			<div>
 				<p className="aggr-breadcrumb">
 					<button
 						type="button"
@@ -322,33 +212,6 @@ export function CampaignView( {
 						>
 							{ t( 'editCampaign' ) }
 						</button>
-
-						{ 0 < campaign.actions.length && (
-							<div
-								className="aggr-pagehead__decisions"
-								role="group"
-								aria-label={ t( 'reviewActions' ) }
-							>
-								{ campaign.actions.map( ( action ) => (
-									<button
-										key={ action.to }
-										type="button"
-										className={ toneClass( action ) }
-										disabled={ busy }
-										onClick={ () =>
-											// Anything that needs a reason or
-											// cannot be undone asks first.
-											action.needs_notes ||
-											action.destructive
-												? setPrompting( action )
-												: onTransition( action.to, '' )
-										}
-									>
-										{ action.label }
-									</button>
-								) ) }
-							</div>
-						) }
 					</div>
 				</div>
 
@@ -671,20 +534,35 @@ export function CampaignView( {
 						/>
 					</div>
 				</div>
+
+				<DecisionBar
+					campaign={ campaign }
+					busy={ busy }
+					onChoose={ ( action ) =>
+						// Anything that needs a reason or cannot be undone
+						// asks first.
+						action.needs_notes || action.destructive
+							? setPrompting( action )
+							: onTransition( action.to, '' )
+					}
+				/>
 			</div>
 
-			<FeedbackDialog
-				// Remounted per action, so the box opens empty rather than
-				// carrying what somebody typed into a decision they abandoned.
-				key={ prompting ? prompting.to : 'none' }
-				action={ prompting }
-				busy={ busy }
-				onConfirm={ ( to, notes ) => {
-					setPrompting( null );
-					onTransition( to, notes );
-				} }
-				onClose={ () => setPrompting( null ) }
-			/>
+			{ prompting ? (
+				<DecisionDialog
+					// Remounted per action, so the box opens empty rather than
+					// carrying what somebody typed into a decision they
+					// abandoned.
+					key={ prompting.to }
+					action={ prompting }
+					busy={ busy }
+					onConfirm={ ( to, notes ) => {
+						setPrompting( null );
+						onTransition( to, notes );
+					} }
+					onClose={ () => setPrompting( null ) }
+				/>
+			) : null }
 		</>
 	);
 }

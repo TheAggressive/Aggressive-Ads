@@ -47,17 +47,40 @@ function Mark( { ok }: { ok: boolean } ): ReactElement {
 	);
 }
 
+/**
+ * The checklist's verdict in words. Shared with the decision bar, so the line
+ * beside the Approve button and the pill above the checks cannot disagree.
+ *
+ * @param readiness The server's checks.
+ */
+export function verdictOf( readiness: ReadinessData ): string {
+	const blocked = readiness.checks.filter( ( check ) => ! check.ok ).length;
+
+	if ( readiness.ready ) {
+		return t( 'readyToApprove' );
+	}
+
+	return ( 1 === blocked ? t( 'blockedOne' ) : t( 'blockedMany' ) ).replace(
+		'%d',
+		String( blocked )
+	);
+}
+
 export function Readiness( {
 	readiness,
 }: {
 	readiness: ReadinessData;
 } ): ReactElement {
-	const blocked = readiness.checks.filter( ( check ) => ! check.ok ).length;
-
 	return (
 		<section className="aggr-panel" aria-labelledby="aggr-approval-heading">
 			<div className="aggr-approval__head">
-				<h2 id="aggr-approval-heading" className="aggr-panel__head">
+				{ /* Focusable from script only: the decision bar's
+				     "Show what blocks it" moves focus here. */ }
+				<h2
+					id="aggr-approval-heading"
+					className="aggr-panel__head"
+					tabIndex={ -1 }
+				>
 					{ t( 'readinessTitle' ) }
 				</h2>
 				<span
@@ -67,12 +90,7 @@ export function Readiness( {
 							: 'aggr-state aggr-state--attention'
 					}
 				>
-					{ readiness.ready
-						? t( 'readyToApprove' )
-						: ( 1 === blocked
-								? t( 'blockedOne' )
-								: t( 'blockedMany' )
-						  ).replace( '%d', String( blocked ) ) }
+					{ verdictOf( readiness ) }
 				</span>
 			</div>
 			<ul className="aggr-approval__list">

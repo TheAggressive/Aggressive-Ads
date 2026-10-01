@@ -58,11 +58,13 @@ final class AdminDesignSystemTest extends TestCase {
 	 * markup moved.
 	 *
 	 * **The design-system rule narrowed rather than went away.** The detail
-	 * screen still refuses wp-components, which is what `src/styles/admin.css`
-	 * exists for. The queue deliberately does not: it is a list of records,
-	 * which is the one thing DataViews is for, and it keeps the portal's own
-	 * pill through the field's `render` rather than adopting a core status
-	 * component.
+	 * screen's page still refuses wp-components, which is what
+	 * `src/styles/admin.css` exists for. Its dialogs do not: they are core's
+	 * `Modal`, like every other staff screen's, and that is the only door
+	 * wp-components has into the detail screen — `decisions.tsx`, importing
+	 * exactly the dialog and its two controls. The queue deliberately mixes
+	 * too: it is a list of records, which is the one thing DataViews is for,
+	 * and it keeps the portal's own pill through the field's `render`.
 	 *
 	 * @return void
 	 */
@@ -91,7 +93,7 @@ final class AdminDesignSystemTest extends TestCase {
 		 */
 		$detail = '';
 
-		foreach ( array( 'campaign.tsx', 'creative.tsx', 'delivery.tsx', 'activity.tsx' ) as $file ) {
+		foreach ( array( 'campaign.tsx', 'creative.tsx', 'delivery.tsx', 'activity.tsx', 'readiness.tsx' ) as $file ) {
 			$part = file_get_contents( AGGR_PLUGIN_DIR . 'src/admin/review/' . $file );
 			$this->assertIsString( $part, $file . ' is part of the detail screen and must be readable.' );
 			$detail .= $part;
@@ -121,11 +123,26 @@ final class AdminDesignSystemTest extends TestCase {
 			'The policy fallback textarea is not bound to its label.'
 		);
 
-		// The detail screen stays on the plugin's own design system. Mixing the
-		// two there is the half-done state src/styles/admin.css exists to
-		// avoid; see the note in Review_Screen.
+		// The detail screen's page stays on the plugin's own design system.
+		// Mixing the two there is the half-done state src/styles/admin.css
+		// exists to avoid; see the note in Review_Screen.
 		$this->assertStringContainsString( 'aggr-panel', $campaign );
 		$this->assertStringNotContainsString( '@wordpress/components', $detail );
+
+		// Its dialogs are core's, through one file, and nothing more of
+		// wp-components comes in with them.
+		$decisions = (string) file_get_contents( AGGR_PLUGIN_DIR . 'src/admin/review/decisions.tsx' );
+		$this->assertSame( 1, substr_count( $decisions, "from '@wordpress/components'" ) );
+		$this->assertStringContainsString( "import { Button, Modal, TextareaControl } from '@wordpress/components';", $decisions );
+		$this->assertStringContainsString( "from './decisions'", $campaign );
+
+		// And there is no second dialog: no screen of Review draws its own.
+		foreach ( (array) glob( AGGR_PLUGIN_DIR . 'src/admin/review/*.tsx' ) as $file ) {
+			$this->assertStringNotContainsString( 'role="dialog"', (string) file_get_contents( (string) $file ), basename( (string) $file ) . ' draws its own dialog; use core\'s Modal.' );
+		}
+
+		$this->assertStringContainsString( '<Modal', $decisions );
+		$this->assertStringContainsString( '<Modal', $queue );
 	}
 
 	/**

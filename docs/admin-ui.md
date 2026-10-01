@@ -44,17 +44,20 @@ is surfaced by the menu badge (`Pending_Work`) and the admin notice
 
 ### Findings per screen
 
-**Review** is the most-used screen and still loads the portal stylesheet: it has
-`aggr-button` buttons and its own `Dialog` (`role="dialog"`) where every other
-screen uses core's `Modal`. The queue has the shared header, the portal's filter
+**Review** is the most-used screen and still loads the portal stylesheet: its
+page uses `aggr-button` buttons where every other screen uses core's `Button`.
+Its dialogs are core's `Modal` with core controls, like every other screen's
+(`decisions.tsx`, `queue.tsx`). The queue has the shared header, the portal's filter
 chips and the shared table style. The queue is server-paged, so sorting and
 search stay off until the server can answer them (see `queue-table.tsx`). Keep
 that.
 
 The campaign view is two columns: the artwork, decisions, delivery policy and
 audit trail in the wide one, and the record (summary with schedule progress,
-strategy, notes) beside it. It has the shared header. Edit is set apart from
-the status decisions, and Cancel is an outline until its dialog confirms it.
+strategy, notes) beside it. It has the shared header, which keeps Edit; the
+status decisions are in the decision bar at the end of the content, stuck to
+the bottom of the screen, beside the status and the checklist's verdict.
+Cancel is an outline until its dialog confirms it.
 The delivery policy is fields — caps, "at most N per visit", days and hours,
 targeting conditions — and any stored shape the fields cannot show stays as
 JSON, so saving cannot flatten a rule the form did not understand
@@ -131,8 +134,8 @@ have been closed since.
   product as the portal. **Fixed** by the identity slice.
 - **Two design systems.** Review uses the portal components; the other seven
   use `@wordpress/components` and DataViews. So there were two dialogs, two
-  button vocabularies, two tab styles and two notice styles. Tabs, tables and
-  colours now match; the dialog and button components do not.
+  button vocabularies, two tab styles and two notice styles. Tabs, tables,
+  colours and dialogs now match; the page's buttons do not.
 - **A notice about the queue on the queue's own product.** "Advertising is
   waiting on you" printed on every Advertising screen, where the sidebar's
   Review count is already on screen. It pushed each screen's content down.
@@ -315,7 +318,9 @@ keeps them off until the server can answer them.
 DataViews `header` slot on a list screen, or in the page header when the screen
 is not a list. Row actions live in the DataViews actions menu, with the one most
 often used marked `isPrimary`. A destructive action is `isDestructive`, asks for
-confirmation in a `Modal` that names the consequence, and is never primary.
+confirmation in a `Modal` that names the consequence, and is never primary
+where it is offered. The button inside that confirmation which commits it is
+primary and `isDestructive` (Suspend on Organizations, Cancel on Review).
 Approval on Review stays the one green "positive" button.
 
 **Status.** Use the domain's words and colours only: the campaign pill from
@@ -343,8 +348,23 @@ above the content it concerns, and is dismissible when it is only information.
 Errors stay until the next attempt.
 
 **Dialogs.** Use core's `Modal`, sized to its content (`width: fit-content`
-between a floor and a measure). Focus returns to the control that opened it.
-Review's own `Dialog` is the exception until the Review slice.
+between a floor and a measure), with core controls inside. Focus returns to the
+control that opened it. Pass `focusOnMount="firstContentElement"` so focus
+lands on the first field, or on the safe answer when there is no field. Do not
+build a dialog: `AdminDesignSystemTest` fails on a `role="dialog"` in Review's
+sources.
+
+**Decision bar.** When a screen's decisions are read about at length before
+they are taken, put them in `.aggr-actionbar` (`_action-bar.css`) at the end of
+the content. It is `position: sticky` at the bottom, so it rides the screen
+while the content is in view and settles in place at the end. Each button
+exists once, never mirrored from the header. It carries the status and why a
+decision is blocked, because that is where the eye is when the decision lands.
+On a phone it is the actions alone. `scroll-padding-bottom` keeps a focused
+control above it (WCAG 2.4.11). An error raised from it is scrolled into view,
+since the screen's notice prints at the top. It lives in the portal's
+component set so the wizard's phone bar (#302) reuses it rather than building
+another.
 
 **Responsive.** Nothing may widen the page at 320 CSS pixels. Tables scroll
 inside their surface, and toolbars and header actions wrap. Check at 200% zoom
@@ -378,10 +398,10 @@ scoped.
    the audit trail as a timeline, schedule progress, the Before approval
    checklist from the guard's own validation, one translated summary panel,
    quieter empty states, summary-first on a phone, and checkboxes that look
-   like checkboxes. Still open: one dialog and one button vocabulary — move
-   Review's `Dialog` to core's `Modal` or state why not — and decision buttons
-   that stay in reach on a long page, which should be built once with the
-   portal wizard's sticky bar (#302).
+   like checkboxes, core's `Modal` for both dialogs, and the decision bar.
+   Still open: the page's own buttons move to core's `Button` in their own
+   change, so Review has one button vocabulary with the other screens; and
+   #302 adopts `.aggr-actionbar` for the wizard on a phone.
 5. **Sidebar and remaining copy.** Regroup the sidebar so the sell-side screens
    sit together (`add_submenu_page`'s position, not boot order), add visible
    filter labels on Reports, and fix the Billing module toggle's copy until P19

@@ -8,10 +8,11 @@
  *
  * The queue is a list of records, which is the one thing DataViews is for, and
  * it arrives with the search, column and pagination chrome every other staff
- * screen already has. Everything around it — tabs, panel, page head, dialogs —
- * stays in `src/styles/admin.css`, which is contrast-gated and is what keeps
+ * screen already has. Everything around it — tabs, panel, page head — stays in
+ * `src/styles/admin.css`, which is contrast-gated and is what keeps
  * this screen looking like the portal rather than like stock wp-admin. The
- * status pill survives inside the table through the field's `render`.
+ * status pill survives inside the table through the field's `render`. The
+ * dialog is core's `Modal`, as on every other staff screen.
  *
  * Strings arrive from PHP. `wp i18n make-pot` does not parse .tsx, so an __()
  * call here would compile, run, and produce no catalog entry at all.
@@ -19,7 +20,12 @@
 
 import type { ReactElement } from 'react';
 import { useState } from '@wordpress/element';
-import { Dialog } from './dialog';
+import {
+	Button,
+	Modal,
+	SelectControl,
+	TextControl,
+} from '@wordpress/components';
 import { QueueTable } from './queue-table';
 import { t } from '../shared/save';
 import type { Advertiser, Queue, Tab } from './types';
@@ -34,13 +40,11 @@ import type { Advertiser, Queue, Tab } from './types';
  * trusting that this dialog was only shown to staff.
  */
 function CreateDialog( {
-	open,
 	advertisers,
 	busy,
 	onClose,
 	onCreate,
 }: {
-	open: boolean;
 	advertisers: Advertiser[];
 	busy: boolean;
 	onClose: () => void;
@@ -50,81 +54,65 @@ function CreateDialog( {
 	const [ title, setTitle ] = useState( '' );
 
 	return (
-		<Dialog
-			open={ open }
+		<Modal
 			title={ t( 'createForAdvertiser' ) }
-			labelId="aggr-create-campaign-title"
-			onClose={ onClose }
+			className="aggr-review-modal"
+			focusOnMount="firstContentElement"
+			onRequestClose={ onClose }
 		>
 			{ 0 === advertisers.length ? (
 				<p>{ t( 'noAdvertisers' ) }</p>
 			) : (
-				<div className="aggr-form">
-					<p className="aggr-field">
-						<label htmlFor="aggr-create-org">
-							{ t( 'advertiserLabel' ) }
-						</label>
-						<select
-							id="aggr-create-org"
-							value={ orgId }
-							disabled={ busy }
-							onChange={ ( event ) =>
-								setOrgId( Number( event.target.value ) )
-							}
-						>
-							<option value={ 0 }>
-								{ t( 'advertiserChoose' ) }
-							</option>
-							{ advertisers.map( ( advertiser ) => (
-								<option
-									key={ advertiser.id }
-									value={ advertiser.id }
-								>
-									{ advertiser.name }
-								</option>
-							) ) }
-						</select>
-					</p>
+				<div className="aggr-review-modal__fields">
+					<SelectControl
+						__next40pxDefaultSize
+						__nextHasNoMarginBottom
+						label={ t( 'advertiserLabel' ) }
+						value={ String( orgId ) }
+						disabled={ busy }
+						options={ [
+							{ value: '0', label: t( 'advertiserChoose' ) },
+							...advertisers.map( ( advertiser ) => ( {
+								value: String( advertiser.id ),
+								label: advertiser.name,
+							} ) ),
+						] }
+						onChange={ ( value ) => setOrgId( Number( value ) ) }
+					/>
 
-					<p className="aggr-field">
-						<label htmlFor="aggr-create-title">
-							{ t( 'campaignNameLabel' ) }
-						</label>
-						<input
-							id="aggr-create-title"
-							type="text"
-							value={ title }
-							disabled={ busy }
-							onChange={ ( event ) =>
-								setTitle( event.target.value )
-							}
-						/>
-						<span className="aggr-hint">
-							{ t( 'campaignNameHint' ) }
-						</span>
-					</p>
-
-					<div className="aggr-overlay__actions">
-						<button
-							type="button"
-							className="aggr-button aggr-button--secondary"
-							onClick={ onClose }
-							disabled={ busy }
-						>
-							{ t( 'cancel' ) }
-						</button>
-						<button
-							type="button"
-							className="aggr-button aggr-button--positive"
-							disabled={ busy || 0 === orgId }
-							onClick={ () => onCreate( orgId, title ) }
-						>
-							{ t( 'createAndOpen' ) }
-						</button>
-					</div>
+					<TextControl
+						__next40pxDefaultSize
+						__nextHasNoMarginBottom
+						label={ t( 'campaignNameLabel' ) }
+						help={ t( 'campaignNameHint' ) }
+						value={ title }
+						disabled={ busy }
+						onChange={ setTitle }
+					/>
 				</div>
 			) }
-		</Dialog>
+
+			<div className="aggr-review-modal__actions">
+				<Button
+					__next40pxDefaultSize
+					variant="tertiary"
+					onClick={ onClose }
+					disabled={ busy }
+				>
+					{ t( 'cancel' ) }
+				</Button>
+				{ 0 < advertisers.length ? (
+					<Button
+						__next40pxDefaultSize
+						variant="primary"
+						disabled={ busy || 0 === orgId }
+						onClick={ () => onCreate( orgId, title ) }
+					>
+						{ t( 'createAndOpen' ) }
+					</Button>
+				) : null }
+			</div>
+		</Modal>
 	);
 }
 
@@ -226,13 +214,14 @@ export function QueueView( {
 				</div>
 			</div>
 
-			<CreateDialog
-				open={ creating }
-				advertisers={ advertisers }
-				busy={ busy }
-				onClose={ () => setCreating( false ) }
-				onCreate={ onCreate }
-			/>
+			{ creating ? (
+				<CreateDialog
+					advertisers={ advertisers }
+					busy={ busy }
+					onClose={ () => setCreating( false ) }
+					onCreate={ onCreate }
+				/>
+			) : null }
 
 			<Tabs tabs={ tabs } active={ filter } onSelect={ onFilter } />
 

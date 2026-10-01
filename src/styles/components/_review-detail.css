@@ -478,21 +478,34 @@
 	}
 }
 
-/*
- * The rule that sets the decisions apart from Edit only means something beside
- * Edit. Once the actions wrap onto their own row it is a stray line at the
- * start of it.
- */
-@media (max-width: 600px) {
-	.wrap.aggr-admin .aggr-pagehead__decisions {
-		padding-left: 0;
-		border-left: 0;
-	}
-}
-
 /* What confirming a final step means, in the dialog that asks for it. */
 .aggr-confirm-body {
 	max-width: 46ch;
-	margin: 0 0 var(--aggr-space-lg);
+	margin: 0;
 	color: var(--aggr-color-text-body);
+}
+
+/*
+ * Review's dialogs are core's `Modal`, sized to what they hold like every
+ * other staff dialog. `.components-modal__frame.aggr-review-modal`, not a
+ * descendant selector: `Modal` puts `className` on the frame itself (see the
+ * packages, inventory and conversions stylesheets).
+ */
+.components-modal__frame.aggr-review-modal {
+	width: fit-content;
+	min-width: min(90vw, 30rem);
+	max-width: min(90vw, 36rem);
+}
+
+.aggr-review-modal__fields {
+	display: grid;
+	gap: 16px;
+}
+
+.aggr-review-modal__actions {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+	gap: 8px;
+	margin-top: 24px;
 }

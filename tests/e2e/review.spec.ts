@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { expectAdminA11y } from './accessibility';
+import { expectAdminA11y, expectModalA11y } from './accessibility';
 import { signInToAdmin } from './admin-login';
 import { wpPluginFile } from './wp-cli';
 
@@ -248,17 +248,18 @@ test( 'a decision that needs feedback is taken in an accessible dialog', async (
 	const dialog = page.getByRole( 'dialog', { name: 'Request changes' } );
 
 	await expect( dialog ).toBeVisible();
-	await expect( dialog ).toBeFocused();
 
-	// The background is inert, so nothing behind the dialog is reachable.
-	expect(
-		await page.evaluate(
-			() =>
-				document
-					.querySelector( '[data-aggr-review-content]' )
-					?.hasAttribute( 'inert' ) ?? false
-		)
-	).toBe( true );
+	// Focus lands in the feedback box, so the reviewer can type at once.
+	await expect(
+		dialog.getByLabel( 'Feedback the advertiser will see' )
+	).toBeFocused();
+	await expectModalA11y( page );
+
+	// The page behind is hidden from assistive technology while it is open.
+	await expect( page.locator( '#wpwrap' ) ).toHaveAttribute(
+		'aria-hidden',
+		'true'
+	);
 
 	// Refusing without a reason is refused by the workflow, so the button says
 	// so before the click rather than after it.
@@ -268,7 +269,7 @@ test( 'a decision that needs feedback is taken in an accessible dialog', async (
 
 	// Focus is trapped: a full cycle plus one never leaves the panel.
 	const stops = await page.evaluate( () => {
-		const panel = document.querySelector( '.aggr-overlay__panel' );
+		const panel = document.querySelector( '[role="dialog"]' );
 		return panel
 			? panel.querySelectorAll(
 					'a[href], button:not([disabled]), textarea, input, select'
@@ -282,7 +283,7 @@ test( 'a decision that needs feedback is taken in an accessible dialog', async (
 			await page.evaluate(
 				() =>
 					document
-						.querySelector( '.aggr-overlay__panel' )
+						.querySelector( '[role="dialog"]' )
 						?.contains( document.activeElement ) ?? false
 			),
 			`Focus left the dialog after ${ press + 1 } Tab press(es).`
@@ -359,6 +360,65 @@ test( 'cancelling a campaign asks for confirmation first', async ( {
 } );
 
 /**
+ * The decisions stay in reach on a long page.
+ *
+ * They sat in the page header, so a reviewer read the artwork, the checklist,
+ * the policy and the trail and then scrolled back past all of it to act. They
+ * are in one bar at the end of the content now, stuck to the bottom of the
+ * screen. The page is made taller than the viewport first, or "the bar is at
+ * the bottom of the screen" would also be true of a bar that simply sat in its
+ * place under a short page.
+ */
+test( 'the decisions stay in reach at the bottom of a long page', async ( {
+	page,
+} ) => {
+	await signInToAdmin( page );
+
+	const campaignId = wpPluginFile( 'tests/e2e/seed-cancellable.php' ).trim();
+
+	await page.setViewportSize( { width: 1280, height: 480 } );
+	await page.goto(
+		`/wp-admin/admin.php?page=aggr-review&campaign=${ campaignId }`
+	);
+
+	const bar = page.getByRole( 'region', { name: 'Review actions' } );
+
+	await expect( bar ).toBeVisible();
+
+	const tall = await page.evaluate(
+		() => document.documentElement.scrollHeight > window.innerHeight + 200
+	);
+
+	expect( tall, 'The page must be longer than the screen.' ).toBe( true );
+
+	await page.evaluate( () => window.scrollTo( 0, 0 ) );
+
+	const box = await bar.boundingBox();
+
+	expect( box ).not.toBeNull();
+	expect( Math.round( ( box?.y ?? 0 ) + ( box?.height ?? 0 ) ) ).toBe( 480 );
+
+	// Each decision is on the page once, in the bar. The header keeps Edit,
+	// which leaves the screen, and nothing else.
+	const decisions = await bar
+		.locator( '.aggr-actionbar__actions button' )
+		.allInnerTexts();
+
+	expect( decisions.length ).toBeGreaterThan( 0 );
+
+	for ( const name of decisions ) {
+		await expect(
+			page.getByRole( 'button', { name, exact: true } )
+		).toHaveCount( 1 );
+	}
+
+	await expect(
+		page.locator( '.aggr-admin-head' ).getByRole( 'button' )
+	).toHaveText( [ 'Edit' ] );
+	await expectAdminA11y( page );
+} );
+
+/**
  * The review screen lists who decided.
  *
  * The payload test proves the name is sent. This one proves the bundle
@@ -415,9 +475,8 @@ test( 'a reviewer creates a campaign for an advertiser', async ( { page } ) => {
 
 	await expect( dialog ).toBeVisible();
 
-	// The dialog is a focus trap over the screen's own overlay, and it is new
-	// markup rather than a variant of one already covered.
-	await expectAdminA11y( page );
+	// Core's Modal renders outside .aggr-admin, so it is scanned on its own.
+	await expectModalA11y( page );
 
 	// Nothing can be created until an advertiser is named.
 	const submit = dialog.getByRole( 'button', { name: 'Create and open' } );
