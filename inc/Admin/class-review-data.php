@@ -97,6 +97,7 @@ final class Review_Data {
 	 * @param Pending_Work                               $pending    Waiting-work count, shared with the menu.
 	 * @param Campaign_Request_Repository                $requests   Advertiser requests and proposed changes.
 	 * @param Creative_Decision_Repository               $decisions  What a reviewer decided about each revision.
+	 * @param Approval_Readiness                         $readiness  What blocks approval, from the approval guard's own check.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -112,7 +113,8 @@ final class Review_Data {
 		private readonly \Aggressive\Ads\Workflow\Creative_Approval $approvals,
 		private readonly Pending_Work $pending,
 		private readonly Campaign_Request_Repository $requests,
-		private readonly Creative_Decision_Repository $decisions
+		private readonly Creative_Decision_Repository $decisions,
+		private readonly Approval_Readiness $readiness
 	) {
 	}
 
@@ -297,8 +299,12 @@ final class Review_Data {
 		$row['internal_notes']   = $this->campaigns->internal_notes( $campaign_id );
 		$row['can_view_audit']   = current_user_can( Capabilities::VIEW_AUDIT_LOG );
 		$row['audit']            = $row['can_view_audit'] ? $this->audit_rows( $campaign_id ) : array();
+
+		// Only while a decision is waiting, and only then is it worth the
+		// validator's queries.
+		$row['readiness'] = Approval_Readiness::applies_to( $row['status'] ) ? $this->readiness->for_campaign( $campaign_id ) : null;
 		$this->line_items->ensure_default( $campaign_id );
-		$row['line_items'] = $this->line_items->for_campaign( $campaign_id );
+		$row['line_items'] = array_map( array( self::class, 'labelled_line_item' ), $this->line_items->for_campaign( $campaign_id ) );
 
 		return $row;
 	}
@@ -730,6 +736,59 @@ final class Review_Data {
 		}
 
 		return $rows;
+	}
+
+	/**
+	 * A line item with its stored values labelled for reading.
+	 *
+	 * The panel printed `live`, `FLAT`, `none` and `even` — slugs, one of them
+	 * upper-cased to look deliberate. The raw values stay, because the delivery
+	 * policy form edits them; the labels sit beside them for the summary.
+	 * Unknown values fall back to the slug made readable rather than to
+	 * nothing, so a vocabulary that grows still shows something true.
+	 *
+	 * @param array<string, mixed> $item Line item row.
+	 * @return array<string, mixed>
+	 */
+	private static function labelled_line_item( array $item ): array {
+		$status  = (string) ( $item['status'] ?? '' );
+		$pricing = (string) ( $item['pricing_model'] ?? '' );
+		$goal    = (string) ( $item['goal_type'] ?? '' );
+
+		$statuses = array(
+			'draft'     => _x( 'Draft', 'line item status', 'aggressive-ads' ),
+			'ready'     => _x( 'Ready', 'line item status', 'aggressive-ads' ),
+			'scheduled' => _x( 'Scheduled', 'line item status', 'aggressive-ads' ),
+			'live'      => _x( 'Live', 'line item status', 'aggressive-ads' ),
+			'paused'    => _x( 'Paused', 'line item status', 'aggressive-ads' ),
+			'completed' => _x( 'Completed', 'line item status', 'aggressive-ads' ),
+			'cancelled' => _x( 'Cancelled', 'line item status', 'aggressive-ads' ),
+		);
+
+		$pricings = array(
+			'flat'           => __( 'Flat fee', 'aggressive-ads' ),
+			'cpm'            => __( 'Per thousand impressions (CPM)', 'aggressive-ads' ),
+			'cpc'            => __( 'Per click (CPC)', 'aggressive-ads' ),
+			'cpa'            => __( 'Per conversion (CPA)', 'aggressive-ads' ),
+			'share_of_voice' => __( 'Share of voice', 'aggressive-ads' ),
+		);
+
+		$goals = array(
+			'none'           => _x( 'No delivery goal', 'line item goal', 'aggressive-ads' ),
+			'impressions'    => _x( 'Impressions', 'line item goal', 'aggressive-ads' ),
+			'clicks'         => _x( 'Clicks', 'line item goal', 'aggressive-ads' ),
+			'conversions'    => _x( 'Conversions', 'line item goal', 'aggressive-ads' ),
+			'spend'          => _x( 'Spend', 'line item goal', 'aggressive-ads' ),
+			'share_of_voice' => _x( 'Share of voice', 'line item goal', 'aggressive-ads' ),
+		);
+
+		$readable = static fn ( string $slug ): string => ucfirst( str_replace( '_', ' ', $slug ) );
+
+		$item['status_label']  = $statuses[ $status ] ?? $readable( $status );
+		$item['pricing_label'] = $pricings[ $pricing ] ?? $readable( $pricing );
+		$item['goal_label']    = $goals[ $goal ] ?? $readable( $goal );
+
+		return $item;
 	}
 
 	/**

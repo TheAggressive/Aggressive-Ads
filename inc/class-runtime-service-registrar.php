@@ -122,7 +122,15 @@ final class Runtime_Service_Registrar {
 				$c->get( \Aggressive\Ads\Workflow\Creative_Approval::class ),
 				$c->get( \Aggressive\Ads\Admin\Pending_Work::class ),
 				$c->get( Campaign_Request_Repository::class ),
-				$c->get( \Aggressive\Ads\Repository\Creative_Decision_Repository::class )
+				$c->get( \Aggressive\Ads\Repository\Creative_Decision_Repository::class ),
+				$c->get( \Aggressive\Ads\Admin\Approval_Readiness::class )
+			)
+		);
+
+		$container->register(
+			\Aggressive\Ads\Admin\Approval_Readiness::class,
+			static fn ( Service_Container $c ): \Aggressive\Ads\Admin\Approval_Readiness => new \Aggressive\Ads\Admin\Approval_Readiness(
+				$c->get( \Aggressive\Ads\Workflow\Campaign_Validator::class )
 			)
 		);
 

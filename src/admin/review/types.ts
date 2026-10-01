@@ -120,12 +120,29 @@ export type AuditEvent = {
 	to_pill: string;
 };
 
+export type ReadinessCheck = {
+	key: string;
+	label: string;
+	ok: boolean;
+	/** The validator's own sentences; empty when the check passes. */
+	problems: string[];
+};
+
+export type Readiness = {
+	ready: boolean;
+	checks: ReadinessCheck[];
+};
+
 export type LineItem = {
 	id: number;
 	name: string;
 	status: string;
 	pricing_model: string;
 	goal_type: string;
+	/** The three above, translated for reading. */
+	status_label: string;
+	pricing_label: string;
+	goal_label: string;
 	pacing_mode: string;
 	priority: number;
 	weight: number;
@@ -166,6 +183,11 @@ export type Campaign = {
 	actions: ReviewAction[];
 	can_view_audit: boolean;
 	audit: AuditEvent[];
+	/**
+	 * What blocks approval, from the approval guard's own check; null outside
+	 * the statuses where a decision is waiting.
+	 */
+	readiness: Readiness | null;
 	/** Schedule bounds as Unix time; 0 when unscheduled. */
 	start_ts: number;
 	end_ts: number;

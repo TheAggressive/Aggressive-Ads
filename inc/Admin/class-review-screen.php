@@ -442,6 +442,34 @@ final class Review_Screen implements Service {
 			'activityShowFewer'        => __( 'Show fewer', 'aggressive-ads' ),
 			/* translators: 1: current day of the schedule. 2: total days in the schedule. */
 			'scheduleDay'              => __( 'Day %1$d of %2$d', 'aggressive-ads' ),
+			'readinessTitle'           => __( 'Before approval', 'aggressive-ads' ),
+			'readyToApprove'           => __( 'Ready to approve', 'aggressive-ads' ),
+			/* translators: %d: number of readiness checks that block approval (one). */
+			'blockedOne'               => __( '%d check blocks approval', 'aggressive-ads' ),
+			/* translators: %d: number of readiness checks that block approval (more than one). */
+			'blockedMany'              => __( '%d checks block approval', 'aggressive-ads' ),
+			'checkPassed'              => _x( '(passed)', 'readiness check state, read after its name', 'aggressive-ads' ),
+			'checkBlocked'             => _x( '(blocks approval)', 'readiness check state, read after its name', 'aggressive-ads' ),
+			'deliveryEdit'             => __( 'Edit delivery', 'aggressive-ads' ),
+			'deliveryClose'            => __( 'Close', 'aggressive-ads' ),
+			/* translators: %s: delivery priority number. */
+			'summaryPriority'          => __( 'Priority %s', 'aggressive-ads' ),
+			/* translators: %s: impressions per day. */
+			'summaryDailyCap'          => __( '%s a day', 'aggressive-ads' ),
+			/* translators: %s: impressions in total. */
+			'summaryLifetimeCap'       => __( '%s in total', 'aggressive-ads' ),
+			'summaryNoCaps'            => __( 'No impression limits', 'aggressive-ads' ),
+			/* translators: 1: most views per visitor. 2: the period, e.g. "day" or "visit". */
+			'summaryFrequency'         => __( 'At most %1$s per %2$s', 'aggressive-ads' ),
+			'summaryNoFrequency'       => __( 'No repeat-view limit', 'aggressive-ads' ),
+			'summaryAnyTime'           => __( 'Any time', 'aggressive-ads' ),
+			'summaryHours'             => __( 'Certain days and hours', 'aggressive-ads' ),
+			'summaryEveryone'          => __( 'Everyone', 'aggressive-ads' ),
+			/* translators: %d: number of targeting conditions (one). */
+			'summaryConditionOne'      => __( '%d targeting condition', 'aggressive-ads' ),
+			/* translators: %d: number of targeting conditions (more than one). */
+			'summaryConditionMany'     => __( '%d targeting conditions', 'aggressive-ads' ),
+			'summaryCustom'            => __( 'Custom rule', 'aggressive-ads' ),
 			'transitioned'             => __( 'Campaign updated.', 'aggressive-ads' ),
 			'notesSaved'               => __( 'Internal notes saved.', 'aggressive-ads' ),
 			'changesApproved'          => __( 'Campaign changes approved.', 'aggressive-ads' ),

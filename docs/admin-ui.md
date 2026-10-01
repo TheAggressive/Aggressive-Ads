@@ -62,9 +62,31 @@ JSON, so saving cannot flatten a rule the form did not understand
 draws status changes as pills, folds runs of identical entries into one with a
 count, and labels refusals in words.
 
-Two class names on this screen are traps: `.aggr-timeline` and
-`.aggr-activity` both belong to the portal, which this screen also loads. The
-trail is `aggr-trail` for that reason.
+While a decision is waiting (submitted or in review), the view opens with
+**Before approval**: six checks — details, advertiser, package and price,
+schedule, placements, artwork and links — each ticked or carrying the reasons
+it blocks. It is `Admin\Approval_Readiness`, which runs
+`Campaign_Validator::validate_for_approval()`, the same check the approval
+guard runs. The grouping is the domain's (`Campaign_Rules::check_group()`), and
+the sentences are the validator's. It must never be computed anywhere else:
+`ReviewDetailTest` runs the guard on the same campaign and fails if the guard
+gives a reason the list does not show.
+
+The delivery policy is collapsed to a row of facts from the saved line item
+("Priority 100", "No impression limits", "Everyone"); **Edit delivery** opens
+the form. A stored shape the fields cannot show reads "Custom rule", never
+something simpler than it is (`policyFacts()` in `policy.ts`). The summary
+panel holds the record once — no organization (the header has it), no pacing
+(the policy says it), and the line item's name only when it was renamed — in
+translated labels. On a narrow screen the summary moves above the main column.
+
+**Check a class name against the portal before using it on this screen.**
+Review loads the portal stylesheet, and four names have collided here already:
+`.aggr-timeline`, `.aggr-activity`, `.aggr-readiness` and
+`.aggr-panel__headrow` are all portal components. Each one restyled the staff
+element that borrowed its name. The staff equivalents are `aggr-trail`,
+`aggr-approval` and `aggr-policy-head`. `grep -rn '\.aggr-yourname' src/styles`
+before naming anything new.
 
 **Packages** rendered every package as an always-open edit form, each with its
 own Save button, so reading one price meant scrolling past every other
@@ -341,12 +363,14 @@ scoped.
    cross-linked with booked bars and size outlines, initials avatars, empty
    states, and a shared icon set.
 4. **Review campaign view** *(fourth)*. Two columns, shared header, the
-   delivery policy as fields with a JSON fallback, the audit trail as a
-   timeline, schedule progress, and checkboxes that look like checkboxes.
-   Still open from the original slice: one dialog and one button vocabulary —
-   move Review's `Dialog` to core's `Modal` or state why not — and translated
-   labels for the strategy facts, which still print raw slugs (`live`, `FLAT`,
-   `even`).
+   delivery policy as fields with a JSON fallback (collapsed to a summary),
+   the audit trail as a timeline, schedule progress, the Before approval
+   checklist from the guard's own validation, one translated summary panel,
+   quieter empty states, summary-first on a phone, and checkboxes that look
+   like checkboxes. Still open: one dialog and one button vocabulary — move
+   Review's `Dialog` to core's `Modal` or state why not — and decision buttons
+   that stay in reach on a long page, which should be built once with the
+   portal wizard's sticky bar (#302).
 5. **Sidebar and remaining copy.** Regroup the sidebar so the sell-side screens
    sit together (`add_submenu_page`'s position, not boot order), add visible
    filter labels on Reports, and fix the Billing module toggle's copy until P19

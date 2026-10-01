@@ -515,3 +515,78 @@ function isDimension( value: unknown ): value is Dimension {
 function isOperator( value: unknown ): value is TargetingOperator {
 	return OPERATORS.includes( value as TargetingOperator );
 }
+
+/**
+ * What a stored policy amounts to, for the one-line summary.
+ *
+ * Read from the saved line item, never from a draft, so the summary always
+ * says what is serving. A shape the fields cannot show is "custom" rather than
+ * guessed at — the summary must not describe a rule more simply than it is.
+ */
+export type PolicyFacts = {
+	priority: number;
+	pacing: 'even' | 'asap';
+	dailyCap: number;
+	lifetimeCap: number;
+	frequency:
+		| { kind: 'none' }
+		| { kind: 'custom' }
+		| { kind: 'limit'; max: number; window: FrequencyWindow };
+	hours: 'any' | 'limited' | 'custom';
+	targeting:
+		| { kind: 'everyone' }
+		| { kind: 'custom' }
+		| { kind: 'conditions'; count: number };
+};
+
+export function policyFacts( item: {
+	priority: number;
+	pacing_mode: string;
+	daily_cap: number;
+	lifetime_cap: number;
+	frequency_policy: Record< string, unknown >;
+	delivery_settings: Record< string, unknown >;
+	targeting_rules: Record< string, unknown >;
+} ): PolicyFacts {
+	const frequency = readFrequency( item.frequency_policy );
+	const schedule = readSchedule( item.delivery_settings );
+	const targeting = readTargeting( item.targeting_rules );
+
+	let frequencyFact: PolicyFacts[ 'frequency' ] = { kind: 'none' };
+
+	if ( 'raw' === frequency.mode ) {
+		frequencyFact = { kind: 'custom' };
+	} else if ( frequency.value.enabled && '' !== frequency.value.max ) {
+		frequencyFact = {
+			kind: 'limit',
+			max: Number( frequency.value.max ),
+			window: frequency.value.window,
+		};
+	}
+
+	let hours: PolicyFacts[ 'hours' ] = 'any';
+
+	if ( 'raw' === schedule.mode ) {
+		hours = 'custom';
+	} else if ( schedule.value.limited ) {
+		hours = 'limited';
+	}
+
+	let targetingFact: PolicyFacts[ 'targeting' ] = { kind: 'everyone' };
+
+	if ( 'raw' === targeting.mode ) {
+		targetingFact = { kind: 'custom' };
+	} else if ( targeting.value.length > 0 ) {
+		targetingFact = { kind: 'conditions', count: targeting.value.length };
+	}
+
+	return {
+		priority: item.priority,
+		pacing: 'asap' === item.pacing_mode ? 'asap' : 'even',
+		dailyCap: item.daily_cap,
+		lifetimeCap: item.lifetime_cap,
+		frequency: frequencyFact,
+		hours,
+		targeting: targetingFact,
+	};
+}

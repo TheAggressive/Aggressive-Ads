@@ -6,6 +6,7 @@ import {
 	readFrequency,
 	readSchedule,
 	readTargeting,
+	policyFacts,
 } from '../policy';
 
 describe( 'delivery policy fields', () => {
@@ -221,5 +222,96 @@ describe( 'delivery policy fields', () => {
 		expect( operatorForDimension( 'categories', 'contains' ) ).toBe(
 			'contains'
 		);
+	} );
+} );
+
+describe( 'policyFacts', () => {
+	const base = {
+		priority: 100,
+		pacing_mode: 'even',
+		daily_cap: 0,
+		lifetime_cap: 0,
+		frequency_policy: {},
+		delivery_settings: {},
+		targeting_rules: {},
+	};
+
+	it( 'reads an untouched policy as no limits and everyone', () => {
+		expect( policyFacts( base ) ).toEqual( {
+			priority: 100,
+			pacing: 'even',
+			dailyCap: 0,
+			lifetimeCap: 0,
+			frequency: { kind: 'none' },
+			hours: 'any',
+			targeting: { kind: 'everyone' },
+		} );
+	} );
+
+	it( 'reads the shapes the fields write', () => {
+		const facts = policyFacts( {
+			...base,
+			pacing_mode: 'asap',
+			frequency_policy: {
+				enabled: true,
+				max_impressions: 3,
+				window: 'day',
+				level: 'line_item',
+			},
+			delivery_settings: {
+				dayparts: [ { days: [ 1, 2 ], start_minute: 540 } ],
+			},
+			targeting_rules: {
+				operator: 'AND',
+				rules: [
+					{ dimension: 'post_type', operator: 'eq', value: 'post' },
+					{ dimension: 'size', operator: 'eq', value: '300x250' },
+				],
+			},
+		} );
+
+		expect( facts.pacing ).toBe( 'asap' );
+		expect( facts.frequency ).toEqual( {
+			kind: 'limit',
+			max: 3,
+			window: 'day',
+		} );
+		expect( facts.hours ).toBe( 'limited' );
+		expect( facts.targeting ).toEqual( { kind: 'conditions', count: 2 } );
+	} );
+
+	// The negative that matters: a rule the fields cannot show must not be
+	// summarised as something simpler than it is.
+	it( 'calls a shape the fields cannot show custom, not simpler than it is', () => {
+		const facts = policyFacts( {
+			...base,
+			frequency_policy: {
+				enabled: true,
+				max_impressions: 3,
+				window: 'week',
+			},
+			delivery_settings: {
+				dayparts: [ { days: [ 1 ] }, { days: [ 2 ] } ],
+			},
+			targeting_rules: {
+				operator: 'OR',
+				rules: [
+					{ dimension: 'post_type', operator: 'eq', value: 'post' },
+				],
+			},
+		} );
+
+		expect( facts.frequency ).toEqual( { kind: 'custom' } );
+		expect( facts.hours ).toBe( 'custom' );
+		expect( facts.targeting ).toEqual( { kind: 'custom' } );
+	} );
+
+	it( 'does not report a limit that is switched off', () => {
+		expect(
+			policyFacts( {
+				...base,
+				frequency_policy: { enabled: false, max_impressions: 3 },
+			} ).frequency
+		).toEqual( { kind: 'none' } );
 	} );
 } );

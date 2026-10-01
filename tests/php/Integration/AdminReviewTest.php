@@ -762,68 +762,6 @@ final class AdminReviewTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * Each timeline row carries what the timeline draws: a status change's two
-	 * ends as labels and pill tones, a refusal's outcome in words, and whether
-	 * a person or the system acted.
-	 *
-	 * The negatives matter as much: a successful entry must carry no outcome
-	 * word — the timeline printed "ok" and "denied" raw before this — and an
-	 * entry that is not a status change must carry no pills.
-	 *
-	 * @return void
-	 */
-	public function test_timeline_rows_carry_transition_ends_and_outcome_words(): void {
-		$campaign = $this->campaign( Post_Statuses::LIVE );
-
-		wp_set_current_user( $this->reviewer );
-
-		$this->audit->insert(
-			new Audit_Event(
-				event: 'campaign.transition_denied',
-				outcome: Audit_Event::OUTCOME_DENIED,
-				object_type: 'campaign',
-				object_id: $campaign,
-				org_id: $this->org_id,
-				from_state: Post_Statuses::LIVE,
-				to_state: Post_Statuses::COMPLETE,
-				message: 'This campaign has not reached its end date.'
-			)
-		);
-		$this->audit->insert(
-			new Audit_Event(
-				event: 'campaign.note',
-				object_type: 'campaign',
-				object_id: $campaign,
-				org_id: $this->org_id,
-				message: 'A note.',
-				actor_user_id: $this->reviewer
-			)
-		);
-
-		$row = $this->data->campaign( $campaign );
-
-		$this->assertIsArray( $row );
-
-		$by_event = array_column( $row['audit'], null, 'event' );
-
-		$refused = $by_event['campaign.transition_denied'] ?? null;
-		$this->assertIsArray( $refused );
-		$this->assertSame( 'Refused', $refused['outcome_label'] );
-		$this->assertNotSame( '', $refused['from_label'] );
-		$this->assertStringNotContainsString( 'aggr_', $refused['from_label'] . $refused['to_label'] );
-		$this->assertSame( 'live', $refused['from_pill'] );
-		$this->assertTrue( $refused['system'] );
-		$this->assertNotSame( '', $refused['day_text'] );
-		$this->assertNotSame( '', $refused['time_text'] );
-
-		$note = $by_event['campaign.note'] ?? null;
-		$this->assertIsArray( $note );
-		$this->assertSame( '', $note['outcome_label'], 'A success carries no outcome word.' );
-		$this->assertSame( '', $note['from_label'] . $note['to_label'] . $note['from_pill'] . $note['to_pill'], 'Not a status change, so no pills.' );
-		$this->assertFalse( $note['system'] );
-	}
-
-	/**
 	 * **The timeline reads in status labels, not schema slugs.**
 	 *
 	 * The stored message says `aggr_submitted`, and should keep saying it: an

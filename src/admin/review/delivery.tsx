@@ -18,6 +18,7 @@ import {
 	operatorFor,
 	operatorForDimension,
 	parseObject,
+	policyFacts,
 	readFrequency,
 	readSchedule,
 	readTargeting,
@@ -75,6 +76,10 @@ export function DeliveryPolicy( {
 	);
 	const [ localError, setLocalError ] = useState< string | null >( null );
 
+	// Closed until somebody means to change something. A refused save keeps
+	// it open, because the component only remounts on a stored revision.
+	const [ open, setOpen ] = useState( false );
+
 	const submit = (): void => {
 		const compiled = {
 			frequency_policy: compileView( frequency, compileFrequency ),
@@ -105,117 +110,234 @@ export function DeliveryPolicy( {
 			className="aggr-panel"
 			aria-labelledby={ `aggr-delivery-${ id }` }
 		>
-			<h2 id={ `aggr-delivery-${ id }` } className="aggr-panel__head">
-				{ t( 'deliveryPolicy' ) }
-			</h2>
-			<p className="aggr-form__help">{ t( 'deliveryPolicyLede' ) }</p>
-			<div className="aggr-form aggr-form--measure">
-				<label htmlFor={ `aggr-priority-${ id }` }>
-					{ t( 'priority' ) }
-				</label>
-				<input
-					id={ `aggr-priority-${ id }` }
-					type="number"
-					min={ 1 }
-					value={ priority }
-					aria-describedby={ `aggr-priority-help-${ id }` }
-					onChange={ ( event ) => setPriority( event.target.value ) }
-				/>
-				<p
-					id={ `aggr-priority-help-${ id }` }
-					className="aggr-form__help"
-				>
-					{ t( 'priorityHelp' ) }
-				</p>
-
-				<label htmlFor={ `aggr-pacing-${ id }` }>
-					{ t( 'pacingMode' ) }
-				</label>
-				<select
-					id={ `aggr-pacing-${ id }` }
-					value={ pacing }
-					aria-describedby={ `aggr-pacing-help-${ id }` }
-					onChange={ ( event ) => setPacing( event.target.value ) }
-				>
-					<option value="even">{ t( 'pacingEven' ) }</option>
-					<option value="asap">{ t( 'pacingAsap' ) }</option>
-				</select>
-				<p
-					id={ `aggr-pacing-help-${ id }` }
-					className="aggr-form__help"
-				>
-					{ t( 'pacingHelp' ) }
-				</p>
-
-				<div className="aggr-policy__caps">
-					<div className="aggr-policy__cap">
-						<label htmlFor={ `aggr-daily-cap-${ id }` }>
-							{ t( 'dailyCap' ) }
-						</label>
-						<input
-							id={ `aggr-daily-cap-${ id }` }
-							type="number"
-							min={ 0 }
-							value={ dailyCap }
-							aria-describedby={ `aggr-cap-help-${ id }` }
-							onChange={ ( event ) =>
-								setDailyCap( event.target.value )
-							}
-						/>
-					</div>
-					<div className="aggr-policy__cap">
-						<label htmlFor={ `aggr-lifetime-cap-${ id }` }>
-							{ t( 'lifetimeCap' ) }
-						</label>
-						<input
-							id={ `aggr-lifetime-cap-${ id }` }
-							type="number"
-							min={ 0 }
-							value={ lifetimeCap }
-							aria-describedby={ `aggr-cap-help-${ id }` }
-							onChange={ ( event ) =>
-								setLifetimeCap( event.target.value )
-							}
-						/>
-					</div>
-				</div>
-				<p id={ `aggr-cap-help-${ id }` } className="aggr-form__help">
-					{ t( 'capHelp' ) }
-				</p>
-
-				<FrequencyFields
-					itemId={ id }
-					view={ frequency }
-					onChange={ setFrequency }
-				/>
-				<ScheduleFields
-					itemId={ id }
-					view={ schedule }
-					onChange={ setSchedule }
-				/>
-				<TargetingFields
-					itemId={ id }
-					view={ targeting }
-					onChange={ setTargeting }
-				/>
-
-				{ localError && (
-					<p className="aggr-form__error" role="alert">
-						{ localError }
-					</p>
-				) }
-
+			<div className="aggr-policy-head">
+				<h2 id={ `aggr-delivery-${ id }` } className="aggr-panel__head">
+					{ t( 'deliveryPolicy' ) }
+				</h2>
 				<button
 					type="button"
-					className="aggr-button aggr-button--secondary"
-					disabled={ busy }
-					onClick={ submit }
+					className="aggr-button aggr-button--secondary aggr-button--small"
+					aria-expanded={ open }
+					aria-controls={ `aggr-delivery-form-${ id }` }
+					onClick={ () => setOpen( ! open ) }
 				>
-					{ t( 'saveDeliveryPolicy' ) }
+					{ open ? t( 'deliveryClose' ) : t( 'deliveryEdit' ) }
 				</button>
 			</div>
+
+			{ /*
+			 * What is serving, in one line. The form is most of a screen tall
+			 * and on most campaigns every field is at its default, so it opens
+			 * when somebody means to change something rather than standing open
+			 * for everybody who came to read.
+			 */ }
+			<ul className="aggr-policy-summary">
+				{ summaryOf( lineItem ).map( ( fact ) => (
+					<li key={ fact }>{ fact }</li>
+				) ) }
+			</ul>
+
+			{ open ? (
+				<div id={ `aggr-delivery-form-${ id }` }>
+					<p className="aggr-form__help aggr-policy-lede">
+						{ t( 'deliveryPolicyLede' ) }
+					</p>
+					<div className="aggr-form aggr-form--measure">
+						<label htmlFor={ `aggr-priority-${ id }` }>
+							{ t( 'priority' ) }
+						</label>
+						<input
+							id={ `aggr-priority-${ id }` }
+							type="number"
+							min={ 1 }
+							value={ priority }
+							aria-describedby={ `aggr-priority-help-${ id }` }
+							onChange={ ( event ) =>
+								setPriority( event.target.value )
+							}
+						/>
+						<p
+							id={ `aggr-priority-help-${ id }` }
+							className="aggr-form__help"
+						>
+							{ t( 'priorityHelp' ) }
+						</p>
+
+						<label htmlFor={ `aggr-pacing-${ id }` }>
+							{ t( 'pacingMode' ) }
+						</label>
+						<select
+							id={ `aggr-pacing-${ id }` }
+							value={ pacing }
+							aria-describedby={ `aggr-pacing-help-${ id }` }
+							onChange={ ( event ) =>
+								setPacing( event.target.value )
+							}
+						>
+							<option value="even">{ t( 'pacingEven' ) }</option>
+							<option value="asap">{ t( 'pacingAsap' ) }</option>
+						</select>
+						<p
+							id={ `aggr-pacing-help-${ id }` }
+							className="aggr-form__help"
+						>
+							{ t( 'pacingHelp' ) }
+						</p>
+
+						<div className="aggr-policy__caps">
+							<div className="aggr-policy__cap">
+								<label htmlFor={ `aggr-daily-cap-${ id }` }>
+									{ t( 'dailyCap' ) }
+								</label>
+								<input
+									id={ `aggr-daily-cap-${ id }` }
+									type="number"
+									min={ 0 }
+									value={ dailyCap }
+									aria-describedby={ `aggr-cap-help-${ id }` }
+									onChange={ ( event ) =>
+										setDailyCap( event.target.value )
+									}
+								/>
+							</div>
+							<div className="aggr-policy__cap">
+								<label htmlFor={ `aggr-lifetime-cap-${ id }` }>
+									{ t( 'lifetimeCap' ) }
+								</label>
+								<input
+									id={ `aggr-lifetime-cap-${ id }` }
+									type="number"
+									min={ 0 }
+									value={ lifetimeCap }
+									aria-describedby={ `aggr-cap-help-${ id }` }
+									onChange={ ( event ) =>
+										setLifetimeCap( event.target.value )
+									}
+								/>
+							</div>
+						</div>
+						<p
+							id={ `aggr-cap-help-${ id }` }
+							className="aggr-form__help"
+						>
+							{ t( 'capHelp' ) }
+						</p>
+
+						<FrequencyFields
+							itemId={ id }
+							view={ frequency }
+							onChange={ setFrequency }
+						/>
+						<ScheduleFields
+							itemId={ id }
+							view={ schedule }
+							onChange={ setSchedule }
+						/>
+						<TargetingFields
+							itemId={ id }
+							view={ targeting }
+							onChange={ setTargeting }
+						/>
+
+						{ localError && (
+							<p className="aggr-form__error" role="alert">
+								{ localError }
+							</p>
+						) }
+
+						<button
+							type="button"
+							className="aggr-button aggr-button--secondary"
+							disabled={ busy }
+							onClick={ submit }
+						>
+							{ t( 'saveDeliveryPolicy' ) }
+						</button>
+					</div>
+				</div>
+			) : null }
 		</section>
 	);
+}
+
+/**
+ * The saved policy as a handful of short phrases.
+ *
+ * Built from the stored line item, so it describes what is serving rather
+ * than an unsaved edit, and a rule the fields cannot show is called custom
+ * rather than described more simply than it is (`policyFacts`).
+ */
+function summaryOf( item: LineItem ): string[] {
+	const facts = policyFacts( item );
+	const number = ( value: number ): string => value.toLocaleString();
+	const parts = [
+		t( 'summaryPriority' ).replace( '%s', number( facts.priority ) ),
+		'asap' === facts.pacing ? t( 'pacingAsap' ) : t( 'pacingEven' ),
+	];
+
+	if ( facts.dailyCap > 0 ) {
+		parts.push(
+			t( 'summaryDailyCap' ).replace( '%s', number( facts.dailyCap ) )
+		);
+	}
+
+	if ( facts.lifetimeCap > 0 ) {
+		parts.push(
+			t( 'summaryLifetimeCap' ).replace(
+				'%s',
+				number( facts.lifetimeCap )
+			)
+		);
+	}
+
+	if ( facts.dailyCap <= 0 && facts.lifetimeCap <= 0 ) {
+		parts.push( t( 'summaryNoCaps' ) );
+	}
+
+	const windows: Record< FrequencyWindow, string > = {
+		session: 'frequencyWindowSession',
+		hour: 'frequencyWindowHour',
+		day: 'frequencyWindowDay',
+	};
+
+	if ( 'limit' === facts.frequency.kind ) {
+		parts.push(
+			t( 'summaryFrequency' )
+				.replace( '%1$s', number( facts.frequency.max ) )
+				.replace( '%2$s', t( windows[ facts.frequency.window ] ) )
+		);
+	} else {
+		parts.push(
+			'custom' === facts.frequency.kind
+				? t( 'summaryCustom' )
+				: t( 'summaryNoFrequency' )
+		);
+	}
+
+	parts.push(
+		{
+			any: t( 'summaryAnyTime' ),
+			limited: t( 'summaryHours' ),
+			custom: t( 'summaryCustom' ),
+		}[ facts.hours ]
+	);
+
+	if ( 'conditions' === facts.targeting.kind ) {
+		parts.push(
+			( 1 === facts.targeting.count
+				? t( 'summaryConditionOne' )
+				: t( 'summaryConditionMany' )
+			).replace( '%d', String( facts.targeting.count ) )
+		);
+	} else {
+		parts.push(
+			'custom' === facts.targeting.kind
+				? t( 'summaryCustom' )
+				: t( 'summaryEveryone' )
+		);
+	}
+
+	return parts;
 }
 
 function FrequencyFields( {

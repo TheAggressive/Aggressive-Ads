@@ -17,6 +17,7 @@ import { Dialog } from './dialog';
 import { CreativeCard, Decision } from './creative';
 import { DeliveryPolicy } from './delivery';
 import { Activity } from './activity';
+import { Readiness } from './readiness';
 import { scheduleProgress } from './schedule';
 import { t } from '../shared/save';
 import { Named } from '../shared/initials';
@@ -126,7 +127,7 @@ function AdvertiserNotes( { value }: { value: string } ): ReactElement {
 				{ t( 'advertiserNotes' ) }
 			</h2>
 			{ '' === value.trim() ? (
-				<p className="aggr-empty">{ t( 'noAdvertiserNotes' ) }</p>
+				<p className="aggr-quiet">{ t( 'noAdvertiserNotes' ) }</p>
 			) : (
 				<p className="aggr-notes-body">{ value }</p>
 			) }
@@ -339,6 +340,9 @@ export function CampaignView( {
 				 */ }
 				<div className="aggr-review-columns">
 					<div className="aggr-review-columns__main">
+						{ campaign.readiness ? (
+							<Readiness readiness={ campaign.readiness } />
+						) : null }
 						{ request ? (
 							<section
 								className="aggr-panel"
@@ -496,12 +500,16 @@ export function CampaignView( {
 								{ t( 'creativeReview' ) }
 							</h2>
 							{ 0 === campaign.creatives.length ? (
-								<div className="aggr-empty">
-									<h3 className="aggr-empty__title">
-										{ t( 'noCreativeTitle' ) }
-									</h3>
-									<p>{ t( 'noCreativeBody' ) }</p>
-								</div>
+								/*
+								 * One quiet line, not a grey block. When this
+								 * blocks approval the list above already says so
+								 * in the attention ink; a second panel shouting
+								 * the same thing read as two problems.
+								 */
+								<p className="aggr-quiet">
+									<strong>{ t( 'noCreativeTitle' ) }</strong>{ ' ' }
+									{ t( 'noCreativeBody' ) }
+								</p>
 							) : (
 								<div className="aggr-creative-grid">
 									{ campaign.creatives.map( ( creative ) => (
@@ -540,7 +548,7 @@ export function CampaignView( {
 									{ t( 'auditTimeline' ) }
 								</h2>
 								{ 0 === campaign.audit.length ? (
-									<p className="aggr-empty">
+									<p className="aggr-quiet">
 										{ t( 'noAudit' ) }
 									</p>
 								) : (
@@ -556,8 +564,15 @@ export function CampaignView( {
 						) : null }
 					</div>
 					<div className="aggr-review-columns__side">
+						{ /*
+						 * One panel for the record. It was two — a summary and
+						 * a "delivery strategy" — that between them repeated the
+						 * organization from the header, the campaign title as
+						 * the line item's name, and the pacing the delivery
+						 * policy states, and printed the strategy as raw slugs.
+						 */ }
 						<section
-							className="aggr-panel"
+							className="aggr-panel aggr-review-summary"
 							aria-labelledby="aggr-review-summary"
 						>
 							<h2
@@ -567,80 +582,25 @@ export function CampaignView( {
 								{ t( 'campaignSummary' ) }
 							</h2>
 							<dl className="aggr-facts">
-								{ [
-									[ t( 'organization' ), campaign.org_name ],
-									[
-										t( 'placements' ),
-										campaign.placements.join( ', ' ),
-									],
-									[ t( 'schedule' ), campaign.schedule_text ],
-									[
-										t( 'reviewer' ),
-										'' === campaign.reviewer
-											? t( 'unassigned' )
-											: campaign.reviewer,
-									],
-									[
-										t( 'submission' ),
-										'' === campaign.submitted_text
-											? t( 'notSubmitted' )
-											: campaign.submitted_text,
-									],
-									[
-										t( 'revision' ),
-										String( campaign.revision ),
-									],
-								].map( ( [ term, detail ] ) => (
-									<div className="aggr-fact" key={ term }>
-										<dt>{ term }</dt>
-										<dd>{ detail }</dd>
-									</div>
-								) ) }
-							</dl>
-							<ScheduleMeter
-								start={ campaign.start_ts }
-								end={ campaign.end_ts }
-							/>
-						</section>
-
-						<section
-							className="aggr-panel"
-							aria-labelledby="aggr-review-line-items"
-						>
-							<h2
-								id="aggr-review-line-items"
-								className="aggr-panel__head"
-							>
-								{ t( 'deliveryStrategy' ) }
-							</h2>
-							{ campaign.line_items.map( ( item ) => (
-								<dl className="aggr-facts" key={ item.id }>
-									{ [
-										[ t( 'lineItem' ), item.name ],
-										[
-											t( 'status' ),
-											item.status.replaceAll( '_', ' ' ),
-										],
-										[
-											t( 'pricing' ),
-											item.pricing_model.toUpperCase(),
-										],
-										[
-											t( 'goal' ),
-											item.goal_type.replaceAll(
-												'_',
-												' '
-											),
-										],
-										[ t( 'pacing' ), item.pacing_mode ],
-									].map( ( [ term, detail ] ) => (
+								<div className="aggr-fact">
+									<dt>{ t( 'schedule' ) }</dt>
+									<dd>
+										{ campaign.schedule_text }
+										<ScheduleMeter
+											start={ campaign.start_ts }
+											end={ campaign.end_ts }
+										/>
+									</dd>
+								</div>
+								{ summaryFacts( campaign ).map(
+									( [ term, detail ] ) => (
 										<div className="aggr-fact" key={ term }>
 											<dt>{ term }</dt>
 											<dd>{ detail }</dd>
 										</div>
-									) ) }
-								</dl>
-							) ) }
+									)
+								) }
+							</dl>
 						</section>
 
 						{ '' === campaign.review_notes ? null : (
@@ -706,6 +666,45 @@ export function CampaignView( {
 			/>
 		</>
 	);
+}
+
+/**
+ * The record's facts after the schedule, in the order a reviewer reads them.
+ *
+ * The line item's name is shown only when somebody renamed it: by default it
+ * follows the campaign title, and repeating the page's own heading told the
+ * reviewer nothing.
+ */
+function summaryFacts( campaign: Campaign ): Array< [ string, string ] > {
+	const facts: Array< [ string, string ] > = [
+		[ t( 'placements' ), campaign.placements.join( ', ' ) ],
+		[
+			t( 'reviewer' ),
+			'' === campaign.reviewer ? t( 'unassigned' ) : campaign.reviewer,
+		],
+		[
+			t( 'submission' ),
+			'' === campaign.submitted_text
+				? t( 'notSubmitted' )
+				: campaign.submitted_text,
+		],
+	];
+
+	for ( const item of campaign.line_items ) {
+		if ( item.name !== campaign.title ) {
+			facts.push( [ t( 'lineItem' ), item.name ] );
+		}
+
+		facts.push(
+			[ t( 'status' ), item.status_label ],
+			[ t( 'pricing' ), item.pricing_label ],
+			[ t( 'goal' ), item.goal_label ]
+		);
+	}
+
+	facts.push( [ t( 'revision' ), String( campaign.revision ) ] );
+
+	return facts;
 }
 
 /**
