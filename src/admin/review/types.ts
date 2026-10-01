@@ -103,9 +103,21 @@ export type ReviewAction = {
 export type AuditEvent = {
 	message: string;
 	actor: string;
+	/** The scheduler or another automated path, not a person. */
+	system: boolean;
 	created_at: number;
 	created_text: string;
+	/** The date alone and the time alone, in the site's timezone. */
+	day_text: string;
+	time_text: string;
 	outcome: string;
+	/** Translated, and empty for an ordinary success. */
+	outcome_label: string;
+	/** A status change's two ends, labelled and toned; empty otherwise. */
+	from_label: string;
+	from_pill: string;
+	to_label: string;
+	to_pill: string;
 };
 
 export type LineItem = {
@@ -120,7 +132,7 @@ export type LineItem = {
 	revision: number;
 	daily_cap: number;
 	lifetime_cap: number;
-	/* Decoded server-side; the panel edits them as JSON text. */
+	/* Decoded server-side. The panel edits the common shapes as fields. */
 	targeting_rules: Record< string, unknown >;
 	frequency_policy: Record< string, unknown >;
 	delivery_settings: Record< string, unknown >;
@@ -154,6 +166,9 @@ export type Campaign = {
 	actions: ReviewAction[];
 	can_view_audit: boolean;
 	audit: AuditEvent[];
+	/** Schedule bounds as Unix time; 0 when unscheduled. */
+	start_ts: number;
+	end_ts: number;
 	line_items: LineItem[];
 };
 

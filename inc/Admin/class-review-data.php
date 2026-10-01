@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Aggressive\Ads\Admin;
 
+use Aggressive\Ads\Audit\Audit_Event;
 use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Domain\Transition_Table;
 use Aggressive\Ads\Portal\Routes;
@@ -693,18 +694,76 @@ final class Review_Data {
 		$rows = array();
 
 		foreach ( $this->audit->for_object( 'campaign', $campaign_id, $this->campaigns->org_id( $campaign_id ) ) as $event ) {
+			$transition = '' !== $event['from_state'] && '' !== $event['to_state'];
+
 			$rows[] = array(
-				'id'           => $event['id'],
-				'created_at'   => $event['created_at_ts'],
-				'created_text' => self::format_timestamp( $event['created_at_ts'], true ),
-				'actor'        => 0 === $event['actor_user_id'] ? __( 'System', 'aggressive-ads' ) : self::user_name( $event['actor_user_id'] ),
-				'event'        => $event['event'],
-				'outcome'      => $event['outcome'],
-				'message'      => self::event_message( $event ),
+				'id'            => $event['id'],
+				'created_at'    => $event['created_at_ts'],
+				'created_text'  => self::format_timestamp( $event['created_at_ts'], true ),
+
+				/*
+				 * The day and the time apart, so the timeline can head each day
+				 * once and print only the time under it. Formatted here, in the
+				 * site's timezone, rather than in the browser's: a log grouped by
+				 * the reader's midnight puts a late-evening approval under the
+				 * wrong date for everybody in another zone.
+				 */
+				'day_text'      => self::format_timestamp( $event['created_at_ts'] ),
+				'time_text'     => self::format_time( $event['created_at_ts'] ),
+				'actor'         => 0 === $event['actor_user_id'] ? __( 'System', 'aggressive-ads' ) : self::user_name( $event['actor_user_id'] ),
+				'system'        => 0 === $event['actor_user_id'],
+				'event'         => $event['event'],
+				'outcome'       => $event['outcome'],
+				'outcome_label' => self::outcome_label( $event['outcome'] ),
+				'message'       => self::event_message( $event ),
+
+				/*
+				 * A status change carries its two ends, so the timeline can
+				 * draw them as the same pills the queue uses. A refused one
+				 * carries them too: it is the move that did not happen.
+				 */
+				'from_label'    => $transition ? self::status_label( $event['from_state'] ) : '',
+				'from_pill'     => $transition ? View_Data::pill_for( $event['from_state'] ) : '',
+				'to_label'      => $transition ? self::status_label( $event['to_state'] ) : '',
+				'to_pill'       => $transition ? View_Data::pill_for( $event['to_state'] ) : '',
 			);
 		}
 
 		return $rows;
+	}
+
+	/**
+	 * The time of day alone, in the site's format and timezone.
+	 *
+	 * @param int $timestamp Unix time.
+	 * @return string
+	 */
+	private static function format_time( int $timestamp ): string {
+		if ( $timestamp <= 0 ) {
+			return '';
+		}
+
+		$formatted = wp_date( (string) get_option( 'time_format', 'g:i a' ), $timestamp );
+
+		return is_string( $formatted ) ? $formatted : '';
+	}
+
+	/**
+	 * An audit outcome in words, or '' for an ordinary success.
+	 *
+	 * The timeline printed the stored slug — "denied" — untranslated, beside
+	 * every entry including the ones that simply happened. Success needs no
+	 * word; a refusal and a failure each need one a translator has seen.
+	 *
+	 * @param string $outcome Stored outcome.
+	 * @return string
+	 */
+	private static function outcome_label( string $outcome ): string {
+		return match ( $outcome ) {
+			Audit_Event::OUTCOME_DENIED => _x( 'Refused', 'audit outcome', 'aggressive-ads' ),
+			Audit_Event::OUTCOME_FAILED => _x( 'Failed', 'audit outcome', 'aggressive-ads' ),
+			default                     => '',
+		};
 	}
 
 	/**

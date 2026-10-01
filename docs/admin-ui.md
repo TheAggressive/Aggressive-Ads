@@ -46,11 +46,25 @@ is surfaced by the menu badge (`Pending_Work`) and the admin notice
 
 **Review** is the most-used screen and still loads the portal stylesheet: it has
 `aggr-button` buttons and its own `Dialog` (`role="dialog"`) where every other
-screen uses core's `Modal`. The identity slice gave its queue the shared header,
-the portal's filter chips and the shared table style, so it no longer reads as a
-different product. The dialog is still its own. The queue is server-paged, so
-sorting and search stay off until the server can answer them (see
-`queue-table.tsx`). Keep that.
+screen uses core's `Modal`. The queue has the shared header, the portal's filter
+chips and the shared table style. The queue is server-paged, so sorting and
+search stay off until the server can answer them (see `queue-table.tsx`). Keep
+that.
+
+The campaign view is two columns: the artwork, decisions, delivery policy and
+audit trail in the wide one, and the record (summary with schedule progress,
+strategy, notes) beside it. It has the shared header. Edit is set apart from
+the status decisions, and Cancel is an outline until its dialog confirms it.
+The delivery policy is fields — caps, "at most N per visit", days and hours,
+targeting conditions — and any stored shape the fields cannot show stays as
+JSON, so saving cannot flatten a rule the form did not understand
+(`policy.ts`). The audit trail (`activity.tsx`, `trail.ts`) heads each day once,
+draws status changes as pills, folds runs of identical entries into one with a
+count, and labels refusals in words.
+
+Two class names on this screen are traps: `.aggr-timeline` and
+`.aggr-activity` both belong to the portal, which this screen also loads. The
+trail is `aggr-trail` for that reason.
 
 **Packages** rendered every package as an always-open edit form, each with its
 own Save button, so reading one price meant scrolling past every other
@@ -326,9 +340,13 @@ scoped.
    side by side with meters and no-fill diagnosis, Outlook and Placements
    cross-linked with booked bars and size outlines, initials avatars, empty
    states, and a shared icon set.
-4. **Review components.** One dialog and one button vocabulary: move Review's
-   `Dialog` to core's `Modal` or state why not. Look at the campaign detail
-   view's layout. Keep the status pills, the tab filters and server paging.
+4. **Review campaign view** *(fourth)*. Two columns, shared header, the
+   delivery policy as fields with a JSON fallback, the audit trail as a
+   timeline, schedule progress, and checkboxes that look like checkboxes.
+   Still open from the original slice: one dialog and one button vocabulary —
+   move Review's `Dialog` to core's `Modal` or state why not — and translated
+   labels for the strategy facts, which still print raw slugs (`live`, `FLAT`,
+   `even`).
 5. **Sidebar and remaining copy.** Regroup the sidebar so the sell-side screens
    sit together (`add_submenu_page`'s position, not boot order), add visible
    filter labels on Reports, and fix the Billing module toggle's copy until P19
