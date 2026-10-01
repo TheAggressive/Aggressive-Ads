@@ -304,22 +304,32 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 		setBusy( true );
 		setFlash( null );
 
+		let saved = false;
+
 		try {
 			await apiFetch( {
 				path: `/aggr/v1/campaigns/${ campaign.id }/line-items/${ lineItemId }`,
 				method: 'PATCH',
 				data: { ...fields, revision },
 			} );
-
-			setFlash( {
-				type: 'success',
-				message: t( 'deliveryPolicySaved' ),
-			} );
+			saved = true;
 		} catch ( reason ) {
 			setFlash( { type: 'error', message: errorMessage( reason ) } );
 		} finally {
 			setBusy( false );
 			await loadCampaign( campaign.id, false );
+		}
+
+		/*
+		 * Said once the page shows what was stored. Announced before the
+		 * re-read, the summary under "saved" still described the old policy
+		 * for a moment — which reads as the save having done nothing.
+		 */
+		if ( saved ) {
+			setFlash( {
+				type: 'success',
+				message: t( 'deliveryPolicySaved' ),
+			} );
 		}
 	};
 

@@ -370,6 +370,8 @@ final class Review_Screen implements Service {
 			'noActions'                => __( 'No staff action is available from this status.', 'aggressive-ads' ),
 			'advertiserFeedback'       => __( 'Feedback the advertiser will see', 'aggressive-ads' ),
 			'cancel'                   => __( 'Cancel', 'aggressive-ads' ),
+			'goBack'                   => __( 'Go back', 'aggressive-ads' ),
+			'confirmFinal'             => __( 'This cannot be undone: a cancelled campaign cannot be reopened.', 'aggressive-ads' ),
 			'close'                    => __( 'Close', 'aggressive-ads' ),
 			'deliveryPolicy'           => __( 'Delivery policy', 'aggressive-ads' ),
 			'deliveryPolicyLede'       => __( 'These settings decide when a live campaign may fill a slot. Leave a section alone to place no limit.', 'aggressive-ads' ),

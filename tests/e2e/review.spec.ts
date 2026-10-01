@@ -290,6 +290,53 @@ test( 'a decision that needs feedback is taken in an accessible dialog', async (
 } );
 
 /**
+ * Cancelling asks first, and only goes through when confirmed.
+ *
+ * Cancel needs no feedback, so it skipped the dialog that refusals use and
+ * cancelled on one click — from a button beside Pause, and a cancelled campaign
+ * has no way back. The browser drive that found it is what this repeats.
+ */
+test( 'cancelling a campaign asks for confirmation first', async ( {
+	page,
+} ) => {
+	await signInToAdmin( page );
+
+	const campaignId = wpPluginFile( 'tests/e2e/seed-cancellable.php' ).trim();
+
+	expect( campaignId ).not.toBe( '0' );
+
+	await page.goto(
+		`/wp-admin/admin.php?page=aggr-review&campaign=${ campaignId }`
+	);
+
+	const status = page.locator( '.aggr-admin-head .aggr-pill' );
+	const trigger = page.getByRole( 'button', { name: 'Cancel campaign' } );
+
+	await expect( status ).toHaveText( /paused/i );
+	await trigger.click();
+
+	const dialog = page.getByRole( 'dialog', { name: 'Cancel campaign' } );
+
+	await expect( dialog ).toBeVisible();
+	await expect( dialog ).toContainText( 'cannot be undone' );
+
+	// Asking is not doing: nothing has moved while the question is open.
+	await expect( status ).toHaveText( /paused/i );
+
+	// "Go back", not a second "Cancel", and focus returns to the trigger.
+	await dialog.getByRole( 'button', { name: 'Go back' } ).click();
+	await expect( dialog ).toBeHidden();
+	await expect( trigger ).toBeFocused();
+	await expect( status ).toHaveText( /paused/i );
+
+	// Confirmed, it goes through.
+	await trigger.click();
+	await dialog.getByRole( 'button', { name: 'Cancel campaign' } ).click();
+	await expect( dialog ).toBeHidden();
+	await expect( status ).toHaveText( /cancel/i );
+} );
+
+/**
  * The review screen lists who decided.
  *
  * The payload test proves the name is sent. This one proves the bundle

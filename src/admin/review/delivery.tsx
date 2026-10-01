@@ -35,6 +35,8 @@ import type { LineItem } from './types';
 
 type Props = {
 	lineItem: LineItem;
+	/** False where the server would refuse a save; the summary still shows. */
+	editable: boolean;
 	busy: boolean;
 	onSave: (
 		id: number,
@@ -55,6 +57,7 @@ const DAYS: Array< [ number, string ] > = [
 
 export function DeliveryPolicy( {
 	lineItem,
+	editable,
 	busy,
 	onSave,
 }: Props ): ReactElement {
@@ -114,15 +117,17 @@ export function DeliveryPolicy( {
 				<h2 id={ `aggr-delivery-${ id }` } className="aggr-panel__head">
 					{ t( 'deliveryPolicy' ) }
 				</h2>
-				<button
-					type="button"
-					className="aggr-button aggr-button--secondary aggr-button--small"
-					aria-expanded={ open }
-					aria-controls={ `aggr-delivery-form-${ id }` }
-					onClick={ () => setOpen( ! open ) }
-				>
-					{ open ? t( 'deliveryClose' ) : t( 'deliveryEdit' ) }
-				</button>
+				{ editable ? (
+					<button
+						type="button"
+						className="aggr-button aggr-button--secondary aggr-button--small"
+						aria-expanded={ open }
+						aria-controls={ `aggr-delivery-form-${ id }` }
+						onClick={ () => setOpen( ! open ) }
+					>
+						{ open ? t( 'deliveryClose' ) : t( 'deliveryEdit' ) }
+					</button>
+				) : null }
 			</div>
 
 			{ /*
@@ -137,7 +142,7 @@ export function DeliveryPolicy( {
 				) ) }
 			</ul>
 
-			{ open ? (
+			{ open && editable ? (
 				<div id={ `aggr-delivery-form-${ id }` }>
 					<p className="aggr-form__help aggr-policy-lede">
 						{ t( 'deliveryPolicyLede' ) }

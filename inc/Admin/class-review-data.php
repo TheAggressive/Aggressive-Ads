@@ -98,6 +98,7 @@ final class Review_Data {
 	 * @param Campaign_Request_Repository                $requests   Advertiser requests and proposed changes.
 	 * @param Creative_Decision_Repository               $decisions  What a reviewer decided about each revision.
 	 * @param Approval_Readiness                         $readiness  What blocks approval, from the approval guard's own check.
+	 * @param \Aggressive\Ads\Workflow\Edit_Window       $window     Whether the campaign's status still allows edits.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -114,7 +115,8 @@ final class Review_Data {
 		private readonly Pending_Work $pending,
 		private readonly Campaign_Request_Repository $requests,
 		private readonly Creative_Decision_Repository $decisions,
-		private readonly Approval_Readiness $readiness
+		private readonly Approval_Readiness $readiness,
+		private readonly \Aggressive\Ads\Workflow\Edit_Window $window
 	) {
 	}
 
@@ -305,6 +307,16 @@ final class Review_Data {
 		$row['readiness'] = Approval_Readiness::applies_to( $row['status'] ) ? $this->readiness->for_campaign( $campaign_id ) : null;
 		$this->line_items->ensure_default( $campaign_id );
 		$row['line_items'] = array_map( array( self::class, 'labelled_line_item' ), $this->line_items->for_campaign( $campaign_id ) );
+
+		/*
+		 * Whether a delivery-policy save would be accepted, from the same check
+		 * the line-item route runs (`Edit_Window::allows()`), so the screen
+		 * never offers an edit the server would refuse. Staff may edit in every
+		 * status today (`Post_Statuses::staff_editable()`), so this is true on
+		 * this screen; it is asked rather than assumed so that narrowing the
+		 * staff window — or organization-scoped roles — needs no change here.
+		 */
+		$row['delivery_editable'] = $this->window->allows( $campaign_id );
 
 		return $row;
 	}

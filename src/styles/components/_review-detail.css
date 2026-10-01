@@ -489,3 +489,10 @@
 		border-left: 0;
 	}
 }
+
+/* What confirming a final step means, in the dialog that asks for it. */
+.aggr-confirm-body {
+	max-width: 46ch;
+	margin: 0 0 var(--aggr-space-lg);
+	color: var(--aggr-color-text-body);
+}

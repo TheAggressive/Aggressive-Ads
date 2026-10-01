@@ -67,6 +67,14 @@ function FeedbackDialog( {
 } ): ReactElement {
 	const [ notes, setNotes ] = useState( '' );
 
+	/*
+	 * Two jobs, one dialog. A refusal needs the advertiser-facing reason, and
+	 * the box is compulsory. A destructive move that needs no reason — Cancel —
+	 * still needs a second step: it used to go through on one click, from a
+	 * button beside Pause, and a cancelled campaign has no way back.
+	 */
+	const needsNotes = true === action?.needs_notes;
+
 	return (
 		<Dialog
 			open={ null !== action }
@@ -74,32 +82,41 @@ function FeedbackDialog( {
 			labelId="aggr-review-dialog-title"
 			onClose={ onClose }
 		>
-			<div className="aggr-form">
-				<label htmlFor="aggr-dialog-feedback">
-					{ t( 'advertiserFeedback' ) }
-				</label>
-				<textarea
-					id="aggr-dialog-feedback"
-					rows={ 6 }
-					maxLength={ 2000 }
-					value={ notes }
-					onChange={ ( event ) => setNotes( event.target.value ) }
-				/>
-			</div>
+			{ needsNotes ? (
+				<div className="aggr-form">
+					<label htmlFor="aggr-dialog-feedback">
+						{ t( 'advertiserFeedback' ) }
+					</label>
+					<textarea
+						id="aggr-dialog-feedback"
+						rows={ 6 }
+						maxLength={ 2000 }
+						value={ notes }
+						onChange={ ( event ) => setNotes( event.target.value ) }
+					/>
+				</div>
+			) : (
+				<p className="aggr-confirm-body">{ t( 'confirmFinal' ) }</p>
+			) }
 			<div className="aggr-overlay__actions">
+				{ /*
+				 * "Go back", not "Cancel": beside a button that says "Cancel
+				 * campaign", a second "Cancel" is the one word that could mean
+				 * either.
+				 */ }
 				<button
 					type="button"
 					className="aggr-button aggr-button--secondary"
 					onClick={ onClose }
 				>
-					{ t( 'cancel' ) }
+					{ t( 'goBack' ) }
 				</button>
 				<button
 					type="button"
 					className={
 						action ? toneClass( action, true ) : 'aggr-button'
 					}
-					disabled={ busy || '' === notes.trim() }
+					disabled={ busy || ( needsNotes && '' === notes.trim() ) }
 					onClick={ () => {
 						if ( action ) {
 							onConfirm( action.to, notes );
@@ -319,7 +336,10 @@ export function CampaignView( {
 										className={ toneClass( action ) }
 										disabled={ busy }
 										onClick={ () =>
-											action.needs_notes
+											// Anything that needs a reason or
+											// cannot be undone asks first.
+											action.needs_notes ||
+											action.destructive
 												? setPrompting( action )
 												: onTransition( action.to, '' )
 										}
@@ -532,6 +552,7 @@ export function CampaignView( {
 								// the boxes showing what the server actually holds.
 								key={ `${ lineItem.id }-${ lineItem.revision }` }
 								lineItem={ lineItem }
+								editable={ campaign.delivery_editable }
 								busy={ busy }
 								onSave={ onDeliveryPolicy }
 							/>

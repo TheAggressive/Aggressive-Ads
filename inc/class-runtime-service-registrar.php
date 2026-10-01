@@ -123,7 +123,8 @@ final class Runtime_Service_Registrar {
 				$c->get( \Aggressive\Ads\Admin\Pending_Work::class ),
 				$c->get( Campaign_Request_Repository::class ),
 				$c->get( \Aggressive\Ads\Repository\Creative_Decision_Repository::class ),
-				$c->get( \Aggressive\Ads\Admin\Approval_Readiness::class )
+				$c->get( \Aggressive\Ads\Admin\Approval_Readiness::class ),
+				$c->get( \Aggressive\Ads\Workflow\Edit_Window::class )
 			)
 		);
 

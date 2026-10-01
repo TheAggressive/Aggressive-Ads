@@ -188,6 +188,8 @@ export type Campaign = {
 	 * the statuses where a decision is waiting.
 	 */
 	readiness: Readiness | null;
+	/** Whether a delivery-policy save would be accepted in this status. */
+	delivery_editable: boolean;
 	/** Schedule bounds as Unix time; 0 when unscheduled. */
 	start_ts: number;
 	end_ts: number;
