@@ -278,7 +278,7 @@ export function CampaignView( {
 				 * with its own furniture: the group, the name with its status,
 				 * and who it belongs to.
 				 */ }
-				<header className="aggr-admin-head">
+				<div className="aggr-admin-head">
 					<div className="aggr-admin-head__text">
 						<p className="aggr-admin-head__eyebrow">
 							<span
@@ -350,7 +350,7 @@ export function CampaignView( {
 							</div>
 						) }
 					</div>
-				</header>
+				</div>
 
 				{ /*
 				 * The ad and anything waiting on a decision take the wide column.

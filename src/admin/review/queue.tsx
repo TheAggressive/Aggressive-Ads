@@ -192,7 +192,7 @@ export function QueueView( {
 			 * view swap headers without a page load. The classes are the
 			 * contract; `admin-native.css` draws them for both.
 			 */ }
-			<header className="aggr-admin-head">
+			<div className="aggr-admin-head">
 				<div className="aggr-admin-head__text">
 					<p className="aggr-admin-head__eyebrow">
 						<span
@@ -224,7 +224,7 @@ export function QueueView( {
 						{ t( 'createCampaign' ) }
 					</button>
 				</div>
-			</header>
+			</div>
 
 			<CreateDialog
 				open={ creating }

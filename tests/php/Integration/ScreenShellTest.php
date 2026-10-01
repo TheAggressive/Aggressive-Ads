@@ -208,5 +208,21 @@ final class ScreenShellTest extends WP_UnitTestCase {
 		$this->assertSame( 1, substr_count( $html, 'class="aggr-admin-head"' ), 'Opened by Screen_Shell.' );
 		$this->assertSame( 1, substr_count( $html, 'class="wp-header-end"' ), 'One marker for core to put notices under.' );
 		$this->assertSame( 1, substr_count( $html, 'class="aggr-admin-head__eyebrow"' ), 'Every screen names its group.' );
+		$this->assertSame( 0, substr_count( $html, '<header' ), 'Inside core\'s role=main a header reads as a nested banner.' );
+	}
+
+	/**
+	 * Review draws its own head in React, so the shell's markup does not reach
+	 * it. Read its source rather than trust that the two agree.
+	 */
+	public function test_the_review_heads_are_not_banners_either(): void {
+		$root = dirname( __DIR__, 3 ) . '/src/admin/review/';
+
+		foreach ( array( 'queue.tsx', 'campaign.tsx' ) as $file ) {
+			$source = (string) file_get_contents( $root . $file );
+
+			$this->assertSame( 1, substr_count( $source, 'className="aggr-admin-head"' ), "{$file} draws the head this reads." );
+			$this->assertSame( 0, substr_count( $source, '<header' ), "{$file} must not nest a banner in core's main." );
+		}
 	}
 }
