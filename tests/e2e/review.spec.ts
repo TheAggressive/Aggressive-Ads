@@ -60,19 +60,41 @@ test( 'a reviewer works the queue, claims a campaign and writes notes', async ( 
 		page.getByRole( 'heading', { level: 1, name: title } )
 	).toBeVisible();
 	await expect( page ).toHaveURL( /campaign=\d+/ );
-	const deliveryStrategy = page.getByRole( 'region', {
-		name: 'Delivery strategy',
-	} );
-	await expect( deliveryStrategy ).toBeVisible();
+	/*
+	 * The strategy reaches the screen, in words. It used to be a panel of its
+	 * own that printed the slugs (`FLAT`) and repeated the campaign title as
+	 * the line item's name; it is now part of the one summary, labelled, and
+	 * the name appears only when somebody renamed it.
+	 */
+	const summary = page.getByRole( 'region', { name: 'Campaign summary' } );
+	await expect( summary ).toBeVisible();
 	await expect(
-		deliveryStrategy.getByText( title, { exact: true } )
-	).toBeVisible();
-	await expect(
-		deliveryStrategy
+		summary
 			.locator( '.aggr-fact' )
 			.filter( { hasText: 'Pricing' } )
-			.getByText( 'FLAT', { exact: true } )
+			.getByText( 'Flat fee', { exact: true } )
 	).toBeVisible();
+	await expect( summary.getByText( 'FLAT', { exact: true } ) ).toHaveCount(
+		0
+	);
+	await expect( summary.getByText( title, { exact: true } ) ).toHaveCount(
+		0
+	);
+
+	// The saved delivery policy reads as a summary, and opens to edit.
+	const delivery = page.getByRole( 'region', { name: 'Delivery policy' } );
+	await expect(
+		delivery.locator( '.aggr-policy-summary li' )
+	).not.toHaveCount( 0 );
+	await delivery.getByRole( 'button', { name: 'Edit delivery' } ).click();
+	await expect(
+		delivery.getByLabel( 'Daily impression limit' )
+	).toBeVisible();
+	await expectAdminA11y( page );
+	await delivery.getByRole( 'button', { name: 'Close' } ).click();
+	await expect(
+		delivery.getByLabel( 'Daily impression limit' )
+	).toBeHidden();
 	await expectAdminA11y( page );
 
 	const campaignUrl = page.url();
