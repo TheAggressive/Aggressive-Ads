@@ -7,6 +7,12 @@
  * wizard spec, and depending on that would make the review spec fail or pass
  * according to which specs ran before it.
  *
+ * The creative has a real file. It used to have dimensions and no bytes,
+ * which was enough for a test about the frame's geometry and left a creative
+ * that could never be previewed or published: the review screen framed the
+ * preview route's refusal as raw JSON, and a Studio site that had run the
+ * suite kept the fixture. A run finds such a leftover and stores its file.
+ *
  * Echoes the campaign id so the caller can navigate straight to it.
  *
  * @package Aggressive\Ads
@@ -15,11 +21,51 @@
 declare(strict_types=1);
 
 use Aggressive\Ads\Core\Post_Statuses;
+use Aggressive\Ads\Domain\Upload_Rules;
+use Aggressive\Ads\Storage\Private_Storage;
+use Aggressive\Ads\Workflow\Creative_Uploader;
 use Aggressive\Ads\Core\Post_Types;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
+
+/*
+ * Stores a 160x600 image for a creative that has no file. A closure rather
+ * than a function, so requiring the seed twice in one process cannot
+ * redeclare it.
+ */
+$aggr_store_artwork = static function ( int $creative_id ): void {
+	$creatives = new Creative_Repository();
+	$details   = $creatives->storage_details( $creative_id );
+
+	if ( null !== $details && '' !== $details['path'] ) {
+		return;
+	}
+
+	$image = imagecreatetruecolor( 160, 600 );
+	imagefill( $image, 0, 0, (int) imagecolorallocate( $image, 240, 90, 40 ) );
+
+	$temp = wp_tempnam( 'aggr-e2e-review' );
+
+	imagepng( $image, $temp );
+
+	$accepted = ( new Creative_Uploader( new Private_Storage() ) )->accept(
+		array(
+			'name'     => 'e2e-tall.png',
+			'tmp_name' => $temp,
+			'error'    => UPLOAD_ERR_OK,
+			'size'     => (int) filesize( $temp ),
+		),
+		Upload_Rules::CEILING_MAX_BYTES
+	);
+
+	wp_delete_file( $temp );
+
+	if ( is_array( $accepted ) ) {
+		$creatives->record_upload( $creative_id, $accepted );
+	}
+};
 
 $aggr_slug = 'e2e-review-preview';
 $aggr_post = get_page_by_path( $aggr_slug, OBJECT, Post_Types::CAMPAIGN );
@@ -40,6 +86,10 @@ if ( $aggr_post instanceof WP_Post ) {
 
 	delete_post_meta( $aggr_post->ID, Campaign_Repository::META_REVIEW_NOTES );
 	delete_post_meta( $aggr_post->ID, Campaign_Repository::META_REVIEWED_BY );
+
+	foreach ( ( new Creative_Repository() )->for_campaign( $aggr_post->ID ) as $aggr_existing ) {
+		$aggr_store_artwork( (int) $aggr_existing['id'] );
+	}
 
 	echo (int) $aggr_post->ID;
 
@@ -91,6 +141,7 @@ $aggr_creative_id = wp_insert_post(
 	)
 );
 
+$aggr_store_artwork( (int) $aggr_creative_id );
 update_post_meta( $aggr_creative_id, Creative_Repository::META_CAMPAIGN_ID, (int) $aggr_campaign_id );
 update_post_meta( $aggr_creative_id, Creative_Repository::META_ORG_ID, (int) $aggr_org[0] );
 update_post_meta( $aggr_creative_id, Creative_Repository::META_PLACEMENT_ID, (int) $aggr_placement[0] );

@@ -18,6 +18,12 @@ use Aggressive\Ads\Install\Installer;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
+use Aggressive\Ads\Domain\Upload_Rules;
+use Aggressive\Ads\Repository\Creative_Repository;
+use Aggressive\Ads\Workflow\Creative_Promoter;
+use Aggressive\Ads\Workflow\Creative_Uploader;
+use Aggressive\Ads\Storage\Private_Storage;
+use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Security\Ownership;
 use Aggressive\Ads\Security\Roles;
@@ -342,5 +348,132 @@ final class ReviewDetailTest extends WP_UnitTestCase {
 				actor_user_id: $actor
 			)
 		);
+	}
+
+	/**
+	 * A creative on the campaign, with a stored file or without one.
+	 *
+	 * @param int  $campaign_id Campaign post id.
+	 * @param bool $stored      Whether a real file goes into private storage.
+	 * @return int Creative post id.
+	 */
+	private function creative_on( int $campaign_id, bool $stored ): int {
+		$placement_id = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::PLACEMENT,
+				'post_status' => 'publish',
+				'post_title'  => 'Homepage leaderboard',
+			)
+		);
+
+		update_post_meta( $placement_id, Placement_Repository::META_SIZE, '728x90' );
+		update_post_meta( $placement_id, Placement_Repository::META_IS_ACTIVE, 1 );
+		add_post_meta( $campaign_id, Campaign_Repository::META_PLACEMENT_ID, $placement_id );
+
+		$creative_id = (int) self::factory()->post->create(
+			array(
+				'post_type'   => Post_Types::CREATIVE,
+				'post_status' => 'publish',
+				'post_author' => $this->advertiser,
+			)
+		);
+
+		if ( $stored ) {
+			$image = imagecreatetruecolor( 728, 90 );
+
+			ob_start();
+			imagepng( $image );
+			$bytes = (string) ob_get_clean();
+			$temp  = wp_tempnam( 'aggr-review' );
+			file_put_contents( $temp, $bytes );
+
+			$accepted = ( new Creative_Uploader( new Private_Storage() ) )->accept(
+				array(
+					'name'     => 'leaderboard.png',
+					'tmp_name' => $temp,
+					'error'    => UPLOAD_ERR_OK,
+					'size'     => strlen( $bytes ),
+				),
+				Upload_Rules::CEILING_MAX_BYTES
+			);
+
+			$this->assertIsArray( $accepted );
+			( new Creative_Repository() )->record_upload( $creative_id, $accepted );
+		}
+
+		update_post_meta( $creative_id, Creative_Repository::META_CAMPAIGN_ID, $campaign_id );
+		update_post_meta( $creative_id, Creative_Repository::META_ORG_ID, $this->org_id );
+		update_post_meta( $creative_id, Creative_Repository::META_PLACEMENT_ID, $placement_id );
+		update_post_meta( $creative_id, Creative_Repository::META_SIZE, '728x90' );
+		update_post_meta( $creative_id, Creative_Repository::META_KIND, 'image' );
+		update_post_meta( $creative_id, Creative_Repository::META_WIDTH, 728 );
+		update_post_meta( $creative_id, Creative_Repository::META_HEIGHT, 90 );
+		update_post_meta( $creative_id, Creative_Repository::META_CLICK_URL, 'https://example.com/tickets' );
+
+		return $creative_id;
+	}
+
+	/**
+	 * The artwork check's sentences, from a campaign row.
+	 *
+	 * @param array<string, mixed> $row Campaign row.
+	 * @return array<int, string>
+	 */
+	private static function artwork_problems( array $row ): array {
+		foreach ( (array) $row['readiness']['checks'] as $check ) {
+			if ( 'artwork' === $check['key'] ) {
+				return $check['problems'];
+			}
+		}
+
+		return array();
+	}
+
+	/**
+	 * **A creative with no file says so, and blocks the checklist.**
+	 *
+	 * A seeded creative with no file showed the preview route's JSON refusal
+	 * inside the device frame, and the checklist could read "Ready to approve"
+	 * while publishing — which approval does — refuses a creative with no
+	 * file. The card and the checklist now ask the publisher's own question,
+	 * so this also runs the publisher's answer on the same creative.
+	 *
+	 * @return void
+	 */
+	public function test_a_creative_with_no_file_is_shown_missing_and_blocks_approval(): void {
+		$campaign = $this->campaign( Post_Statuses::REVIEW );
+		$creative = $this->creative_on( $campaign, false );
+
+		wp_set_current_user( $this->reviewer );
+
+		$row = $this->data->campaign( $campaign );
+		$this->assertIsArray( $row );
+		$this->assertCount( 1, $row['creatives'], 'The fixture did not reach the card.' );
+		$this->assertTrue( $row['creatives'][0]['file_missing'] );
+
+		$this->assertFalse( $row['readiness']['ready'] );
+		$this->assertContains( 'An ad’s artwork file is missing. Ask the advertiser to upload it again.', self::artwork_problems( $row ) );
+
+		$refusal = Plugin::instance()->container()->get( Creative_Promoter::class )->promote( $creative );
+		$this->assertInstanceOf( WP_Error::class, $refusal, 'The checklist blocks what publication would not refuse.' );
+		$this->assertSame( 'aggr_creative_file_missing', $refusal->get_error_code() );
+	}
+
+	/**
+	 * The negative: a stored file is neither flagged nor listed.
+	 *
+	 * @return void
+	 */
+	public function test_a_creative_with_its_file_is_not_flagged(): void {
+		$campaign = $this->campaign( Post_Statuses::REVIEW );
+		$this->creative_on( $campaign, true );
+
+		wp_set_current_user( $this->reviewer );
+
+		$row = $this->data->campaign( $campaign );
+		$this->assertIsArray( $row );
+		$this->assertCount( 1, $row['creatives'] );
+		$this->assertFalse( $row['creatives'][0]['file_missing'] );
+		$this->assertNotContains( 'An ad’s artwork file is missing. Ask the advertiser to upload it again.', self::artwork_problems( $row ) );
 	}
 }

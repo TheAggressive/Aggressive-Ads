@@ -11,7 +11,9 @@ namespace Aggressive\Ads\Admin;
 
 use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Domain\Campaign_Rules;
+use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Workflow\Campaign_Validator;
+use Aggressive\Ads\Workflow\Creative_Promoter;
 
 /**
  * The review screen's readiness list, from the guard that decides approval.
@@ -36,9 +38,15 @@ final class Approval_Readiness {
 	/**
 	 * Constructor.
 	 *
-	 * @param Campaign_Validator $validator The validator the approval guard uses.
+	 * @param Campaign_Validator  $validator The validator the approval guard uses.
+	 * @param Creative_Repository $creatives The campaign's creatives, as publication reads them.
+	 * @param Creative_Promoter   $promoter  Whether each has artwork to publish.
 	 */
-	public function __construct( private readonly Campaign_Validator $validator ) {
+	public function __construct(
+		private readonly Campaign_Validator $validator,
+		private readonly Creative_Repository $creatives,
+		private readonly Creative_Promoter $promoter
+	) {
 	}
 
 	/**
@@ -69,6 +77,20 @@ final class Approval_Readiness {
 			// One sentence once: two creatives missing a link is one thing to fix.
 			if ( ! in_array( $message, $problems[ $group ], true ) ) {
 				$problems[ $group ][] = $message;
+			}
+		}
+
+		/*
+		 * Approval also publishes, and publishing refuses a creative whose
+		 * file is gone (`Creative_Promoter::promote()`). The validator does not
+		 * look at files, so without this the list said "Ready to approve" and
+		 * the click was refused anyway — the one outcome the list exists to
+		 * prevent. Same creatives publication walks, same check it runs.
+		 */
+		foreach ( $this->creatives->for_campaign( $campaign_id ) as $creative ) {
+			if ( ! $this->promoter->has_artwork( (int) $creative['id'] ) ) {
+				$problems['artwork'][] = __( 'An ad’s artwork file is missing. Ask the advertiser to upload it again.', 'aggressive-ads' );
+				break;
 			}
 		}
 

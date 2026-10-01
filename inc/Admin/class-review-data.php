@@ -97,6 +97,7 @@ final class Review_Data {
 	 * @param Creative_Decision_Repository               $decisions  What a reviewer decided about each revision.
 	 * @param Approval_Readiness                         $readiness  What blocks approval, from the approval guard's own check.
 	 * @param \Aggressive\Ads\Workflow\Edit_Window       $window     Whether the campaign's status still allows edits.
+	 * @param \Aggressive\Ads\Workflow\Creative_Promoter $promoter   Whether a creative has artwork to publish.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -114,7 +115,8 @@ final class Review_Data {
 		private readonly Campaign_Request_Repository $requests,
 		private readonly Creative_Decision_Repository $decisions,
 		private readonly Approval_Readiness $readiness,
-		private readonly \Aggressive\Ads\Workflow\Edit_Window $window
+		private readonly \Aggressive\Ads\Workflow\Edit_Window $window,
+		private readonly \Aggressive\Ads\Workflow\Creative_Promoter $promoter
 	) {
 	}
 
@@ -490,6 +492,7 @@ final class Review_Data {
 				'text_only'     => $this->revisions->is_text_only_revision( (int) $creative['id'] ),
 				'preview'       => $this->creative_preview( (int) $creative['id'] ),
 				'preview_frame' => $this->creative_preview_frame( (int) $creative['id'] ),
+				'file_missing'  => ! $this->promoter->has_artwork( (int) $creative['id'] ),
 			);
 		}
 
@@ -606,6 +609,13 @@ final class Review_Data {
 				'awaiting'      => in_array( (int) $creative['id'], $awaiting, true ),
 				'preview'       => $this->creative_preview( (int) $creative['id'] ),
 				'preview_frame' => $this->creative_preview_frame( (int) $creative['id'] ),
+
+				/*
+				 * The file is gone, so there is nothing to preview and nothing
+				 * approval could publish. The card says so instead of framing
+				 * the preview route's refusal.
+				 */
+				'file_missing'  => ! $this->promoter->has_artwork( (int) $creative['id'] ),
 				'decisions'     => $this->decision_rows( (int) $creative['id'] ),
 			);
 		}

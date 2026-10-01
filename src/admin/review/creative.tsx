@@ -57,12 +57,26 @@ export function CreativeCard( {
 	return (
 		<article className="aggr-creative">
 			<div className="aggr-creative__preview">
-				<DevicePreview
-					src={ creative.preview_frame }
-					placement={ creative.placement }
-					widths={ preview.widths }
-					sandbox={ preview.sandbox }
-				/>
+				{ /*
+				 * No file, nothing to frame: the preview route can only refuse,
+				 * and approval would be refused for the same reason. Said in
+				 * words where the artwork would have been.
+				 */ }
+				{ creative.file_missing ? (
+					<div className="aggr-creative__missing" role="note">
+						<p className="aggr-creative__missing-title">
+							{ t( 'artworkMissingTitle' ) }
+						</p>
+						<p>{ t( 'artworkMissing' ) }</p>
+					</div>
+				) : (
+					<DevicePreview
+						src={ creative.preview_frame }
+						placement={ creative.placement }
+						widths={ preview.widths }
+						sandbox={ preview.sandbox }
+					/>
+				) }
 			</div>
 			<div className="aggr-creative__body">
 				<h3>{ creative.placement }</h3>

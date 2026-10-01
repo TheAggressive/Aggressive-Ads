@@ -449,6 +449,8 @@ final class Review_Screen implements Service {
 			'readinessTitle'           => __( 'Before approval', 'aggressive-ads' ),
 			'readyToApprove'           => __( 'Ready to approve', 'aggressive-ads' ),
 			'showBlockers'             => __( 'Show what blocks it', 'aggressive-ads' ),
+			'artworkMissingTitle'      => __( 'Artwork file missing', 'aggressive-ads' ),
+			'artworkMissing'           => __( 'This ad’s file is gone, so it cannot be previewed or published. Ask the advertiser to upload it again.', 'aggressive-ads' ),
 			/* translators: %d: number of readiness checks that block approval (one). */
 			'blockedOne'               => __( '%d check blocks approval', 'aggressive-ads' ),
 			/* translators: %d: number of readiness checks that block approval (more than one). */

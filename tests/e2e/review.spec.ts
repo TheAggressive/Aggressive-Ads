@@ -166,6 +166,28 @@ test( 'a tall creative stays inside its preview box', async ( { page } ) => {
 
 	expect( Number( campaignId ) ).toBeGreaterThan( 0 );
 
+	/*
+	 * The frame never asks for the bytes itself. Sandboxed to an opaque
+	 * origin, its requests carry no login cookie: the file route refused
+	 * them, Chrome blocked the refusal, and every unapproved creative
+	 * previewed as an empty white box while this test, which measures the
+	 * frame, passed. The artwork now travels inside the preview document.
+	 */
+	const frameFileRequests: string[] = [];
+
+	page.on( 'request', ( request ) => {
+		if (
+			/creatives(%2F|\/)\d+(%2F|\/)file/.test( request.url() ) &&
+			request.frame() !== page.mainFrame()
+		) {
+			frameFileRequests.push( request.url() );
+		}
+	} );
+
+	const previewDocument = page.waitForResponse( ( response ) =>
+		/creatives(%2F|\/)\d+(%2F|\/)preview/.test( response.url() )
+	);
+
 	await page.goto(
 		`/wp-admin/admin.php?page=aggr-review&campaign=${ campaignId }`
 	);
@@ -175,8 +197,15 @@ test( 'a tall creative stays inside its preview box', async ( { page } ) => {
 
 	await frame.waitFor();
 
+	const document = await previewDocument;
+
+	expect( document.status() ).toBe( 200 );
+	expect( document.headers()[ 'content-type' ] ).toContain( 'text/html' );
+	expect( await document.text() ).toContain( 'src="data:image/png;base64,' );
+
 	// The isolation, on the reviewer's screen as on the advertiser's.
 	await expect( frame ).toHaveAttribute( 'sandbox', '' );
+	expect( frameFileRequests ).toEqual( [] );
 
 	for ( const width of [ 'Phone', 'Tablet', 'Desktop' ] ) {
 		await preview

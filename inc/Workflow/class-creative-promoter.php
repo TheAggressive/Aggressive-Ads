@@ -45,6 +45,21 @@ final class Creative_Promoter {
 	}
 
 	/**
+	 * Whether there is artwork to publish: a Media Library copy already, or a
+	 * private file that still resolves.
+	 *
+	 * The question approval will ask, asked early. `promote()` answers it with
+	 * the same method, so the review screen's "artwork missing" and the refusal
+	 * an approval would meet cannot disagree.
+	 *
+	 * @param int $creative_id Creative post id.
+	 * @return bool
+	 */
+	public function has_artwork( int $creative_id ): bool {
+		return null === $this->missing_artwork( $creative_id );
+	}
+
+	/**
 	 * Promotes one creative, or returns why it cannot be.
 	 *
 	 * Idempotent: a creative already promoted returns its existing attachment
@@ -59,19 +74,19 @@ final class Creative_Promoter {
 			return $this->attachments->attachment_id( $creative_id );
 		}
 
+		$missing = $this->missing_artwork( $creative_id );
+
+		if ( null !== $missing ) {
+			return $missing;
+		}
+
 		$details = $this->creatives->storage_details( $creative_id );
 
-		if ( null === $details || '' === $details['path'] ) {
+		// Settled by missing_artwork() above; asked again for the type.
+		if ( null === $details ) {
 			return new WP_Error(
 				'aggr_creative_file_missing',
 				__( 'This creative has no file to publish.', 'aggressive-ads' )
-			);
-		}
-
-		if ( null === $this->storage->resolve( $details['path'] ) ) {
-			return new WP_Error(
-				'aggr_creative_file_missing',
-				__( 'This creative’s file could not be found.', 'aggressive-ads' )
 			);
 		}
 
@@ -242,5 +257,35 @@ final class Creative_Promoter {
 		);
 
 		return $attachment_id;
+	}
+
+	/**
+	 * Why there is no artwork to publish, or null when there is.
+	 *
+	 * @param int $creative_id Creative post id.
+	 * @return WP_Error|null
+	 */
+	private function missing_artwork( int $creative_id ): ?WP_Error {
+		if ( $this->attachments->has_attachment( $creative_id ) ) {
+			return null;
+		}
+
+		$details = $this->creatives->storage_details( $creative_id );
+
+		if ( null === $details || '' === $details['path'] ) {
+			return new WP_Error(
+				'aggr_creative_file_missing',
+				__( 'This creative has no file to publish.', 'aggressive-ads' )
+			);
+		}
+
+		if ( null === $this->storage->resolve( $details['path'] ) ) {
+			return new WP_Error(
+				'aggr_creative_file_missing',
+				__( 'This creative’s file could not be found.', 'aggressive-ads' )
+			);
+		}
+
+		return null;
 	}
 }

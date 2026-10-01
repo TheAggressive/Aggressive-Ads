@@ -55,6 +55,12 @@ export type Creative = {
 	 */
 	preview_frame: string;
 	/**
+	 * No artwork to publish: no Media Library copy and no private file that
+	 * resolves. The same check approval's publication runs
+	 * (`Creative_Promoter::has_artwork()`).
+	 */
+	file_missing: boolean;
+	/**
 	 * Still waiting to be published.
 	 *
 	 * Server-derived from "has no Media Library attachment", which is what

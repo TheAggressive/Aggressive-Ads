@@ -509,3 +509,27 @@
 	gap: 8px;
 	margin-top: 24px;
 }
+
+/*
+ * Where the artwork would be, when its file is gone. The preview route could
+ * only refuse, so the card says why rather than framing a refusal.
+ */
+.aggr-creative__missing {
+	max-width: 42ch;
+	padding: var(--aggr-space-md, 1rem) var(--aggr-space-lg, 1.5rem);
+	border: 1px solid var(--aggr-color-danger);
+	border-radius: var(--aggr-radius-control, 8px);
+	background: var(--aggr-color-danger-tint);
+	color: var(--aggr-color-text);
+	text-align: center;
+}
+
+.aggr-creative__missing p {
+	margin: 0;
+}
+
+.aggr-creative__missing .aggr-creative__missing-title {
+	margin-bottom: var(--aggr-space-2xs, 0.25rem);
+	color: var(--aggr-color-danger);
+	font-weight: 600;
+}

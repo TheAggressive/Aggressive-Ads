@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
-"POT-Creation-Date: 2026-10-01T06:42:43+00:00\n"
+"POT-Creation-Date: 2026-10-01T06:59:15+00:00\n"
 "PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -92,19 +92,23 @@ msgstr ""
 msgid "%1$s submitted %2$s for review"
 msgstr ""
 
-#: inc/Admin/class-approval-readiness.php:100
+#: inc/Admin/class-approval-readiness.php:92
+msgid "An ad’s artwork file is missing. Ask the advertiser to upload it again."
+msgstr ""
+
+#: inc/Admin/class-approval-readiness.php:122
 msgid "Campaign details"
 msgstr ""
 
-#: inc/Admin/class-approval-readiness.php:101
+#: inc/Admin/class-approval-readiness.php:123
 msgid "Advertiser account"
 msgstr ""
 
-#: inc/Admin/class-approval-readiness.php:102
+#: inc/Admin/class-approval-readiness.php:124
 msgid "Package and price"
 msgstr ""
 
-#: inc/Admin/class-approval-readiness.php:103
+#: inc/Admin/class-approval-readiness.php:125
 #: inc/Admin/class-review-screen.php:321
 #: templates/portal/partials/campaign-order-summary.php:83
 #: templates/portal/partials/campaign-review-step.php:113
@@ -113,7 +117,7 @@ msgstr ""
 msgid "Schedule"
 msgstr ""
 
-#: inc/Admin/class-approval-readiness.php:104
+#: inc/Admin/class-approval-readiness.php:126
 #: inc/Admin/class-forecast-screen.php:167
 #: inc/Admin/class-package-screen.php:166
 #: inc/Admin/class-placement-screen.php:115
@@ -126,7 +130,7 @@ msgstr ""
 msgid "Placements"
 msgstr ""
 
-#: inc/Admin/class-approval-readiness.php:105
+#: inc/Admin/class-approval-readiness.php:127
 msgid "Artwork and links"
 msgstr ""
 
@@ -933,7 +937,7 @@ msgstr ""
 #: inc/Admin/class-organization-screen.php:182
 #: inc/Admin/class-package-screen.php:185
 #: inc/Admin/class-placement-screen.php:228
-#: inc/Admin/class-review-screen.php:492
+#: inc/Admin/class-review-screen.php:494
 #: inc/Admin/class-settings-screen.php:305
 msgid "Try again"
 msgstr ""
@@ -1715,7 +1719,7 @@ msgid ""
 "every request should be either a fill or a reason."
 msgstr ""
 
-#: inc/Admin/class-review-data.php:308
+#: inc/Admin/class-review-data.php:310
 #: inc/Portal/class-campaign-list-view-data.php:267
 #: inc/Portal/class-campaign-list-view-data.php:299
 msgid "Not scheduled"
@@ -1723,77 +1727,77 @@ msgstr ""
 
 #. translators: 1: campaign start date. 2: campaign end date.
 #. translators: 1: package name. 2: month and year the campaign starts, e.g. October 2026.
-#: inc/Admin/class-review-data.php:319
+#: inc/Admin/class-review-data.php:321
 #: inc/Portal/class-campaign-list-view-data.php:315
 #: inc/Workflow/class-campaign-editor.php:698
 #, php-format
 msgid "%1$s – %2$s"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:652
+#: inc/Admin/class-review-data.php:662
 msgid "Needs review"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:653 inc/Admin/class-review-screen.php:300
+#: inc/Admin/class-review-data.php:663 inc/Admin/class-review-screen.php:300
 msgid "Ad updates"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:654
+#: inc/Admin/class-review-data.php:664
 msgid "Advertiser requests"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:655
+#: inc/Admin/class-review-data.php:665
 msgid "With the advertiser"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:656
+#: inc/Admin/class-review-data.php:666
 msgid "Decided"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:657
+#: inc/Admin/class-review-data.php:667
 #: inc/Portal/class-campaign-list-view-data.php:210
 #: inc/Portal/class-creative-view-data.php:355
 msgid "Running"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:658
+#: inc/Admin/class-review-data.php:668
 #: inc/Portal/class-campaign-history-view-data.php:151
 msgid "Finished"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:674
+#: inc/Admin/class-review-data.php:684
 msgid "Start review"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:675
+#: inc/Admin/class-review-data.php:685
 msgid "Release back to the queue"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:676
+#: inc/Admin/class-review-data.php:686
 msgid "Request changes"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:677
+#: inc/Admin/class-review-data.php:687
 msgid "Reject"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:678
+#: inc/Admin/class-review-data.php:688
 msgid "Approve and publish"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:679
+#: inc/Admin/class-review-data.php:689
 msgid "Reopen as a draft"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:680
+#: inc/Admin/class-review-data.php:690
 msgid "Pause campaign"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:681
+#: inc/Admin/class-review-data.php:691
 msgid "Resume campaign"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:682 inc/Portal/class-view-data.php:375
+#: inc/Admin/class-review-data.php:692 inc/Portal/class-view-data.php:375
 msgid "Cancel campaign"
 msgstr ""
 
@@ -2195,7 +2199,7 @@ msgstr ""
 msgid "This cannot be undone: a cancelled campaign cannot be reopened."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:377 inc/Admin/class-review-screen.php:459
+#: inc/Admin/class-review-screen.php:377 inc/Admin/class-review-screen.php:461
 #: templates/portal/partials/campaign-overlays.php:263
 #: templates/portal/partials/campaign-request-form.php:103
 msgid "Close"
@@ -2502,147 +2506,157 @@ msgstr ""
 msgid "Show what blocks it"
 msgstr ""
 
-#. translators: %d: number of readiness checks that block approval (one).
+#: inc/Admin/class-review-screen.php:452
+msgid "Artwork file missing"
+msgstr ""
+
 #: inc/Admin/class-review-screen.php:453
+msgid ""
+"This ad’s file is gone, so it cannot be previewed or published. Ask the "
+"advertiser to upload it again."
+msgstr ""
+
+#. translators: %d: number of readiness checks that block approval (one).
+#: inc/Admin/class-review-screen.php:455
 #, php-format
 msgid "%d check blocks approval"
 msgstr ""
 
 #. translators: %d: number of readiness checks that block approval (more than one).
-#: inc/Admin/class-review-screen.php:455
+#: inc/Admin/class-review-screen.php:457
 #, php-format
 msgid "%d checks block approval"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:456
+#: inc/Admin/class-review-screen.php:458
 msgctxt "readiness check state, read after its name"
 msgid "(passed)"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:457
+#: inc/Admin/class-review-screen.php:459
 msgctxt "readiness check state, read after its name"
 msgid "(blocks approval)"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:458
+#: inc/Admin/class-review-screen.php:460
 msgid "Edit delivery"
 msgstr ""
 
 #. translators: %s: delivery priority number.
-#: inc/Admin/class-review-screen.php:461
+#: inc/Admin/class-review-screen.php:463
 #, php-format
 msgid "Priority %s"
 msgstr ""
 
 #. translators: %s: impressions per day.
-#: inc/Admin/class-review-screen.php:463
+#: inc/Admin/class-review-screen.php:465
 #, php-format
 msgid "%s a day"
 msgstr ""
 
 #. translators: %s: impressions in total.
-#: inc/Admin/class-review-screen.php:465
+#: inc/Admin/class-review-screen.php:467
 #, php-format
 msgid "%s in total"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:466
+#: inc/Admin/class-review-screen.php:468
 msgid "No impression limits"
 msgstr ""
 
 #. translators: 1: most views per visitor. 2: the period, e.g. "day" or "visit".
-#: inc/Admin/class-review-screen.php:468
+#: inc/Admin/class-review-screen.php:470
 #, php-format
 msgid "At most %1$s per %2$s"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:469
+#: inc/Admin/class-review-screen.php:471
 msgid "No repeat-view limit"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:470
+#: inc/Admin/class-review-screen.php:472
 msgid "Any time"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:471
+#: inc/Admin/class-review-screen.php:473
 msgid "Certain days and hours"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:472
+#: inc/Admin/class-review-screen.php:474
 msgid "Everyone"
 msgstr ""
 
 #. translators: %d: number of targeting conditions (one).
-#: inc/Admin/class-review-screen.php:474
+#: inc/Admin/class-review-screen.php:476
 #, php-format
 msgid "%d targeting condition"
 msgstr ""
 
 #. translators: %d: number of targeting conditions (more than one).
-#: inc/Admin/class-review-screen.php:476
+#: inc/Admin/class-review-screen.php:478
 #, php-format
 msgid "%d targeting conditions"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:477
+#: inc/Admin/class-review-screen.php:479
 msgid "Custom rule"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:478
+#: inc/Admin/class-review-screen.php:480
 msgid "Campaign updated."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:479
+#: inc/Admin/class-review-screen.php:481
 msgid "Internal notes saved."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:480
+#: inc/Admin/class-review-screen.php:482
 msgid "Campaign changes approved."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:481
+#: inc/Admin/class-review-screen.php:483
 msgid "Campaign changes rejected."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:482
+#: inc/Admin/class-review-screen.php:484
 msgid "The advertiser request was declined."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:483
+#: inc/Admin/class-review-screen.php:485
 msgid "Ad update approved."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:484
+#: inc/Admin/class-review-screen.php:486
 msgid "Publish this advertisement"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:485
+#: inc/Admin/class-review-screen.php:487
 msgid ""
 "Added after this campaign went live, so it has not been published yet and is "
 "not being served."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:486
+#: inc/Admin/class-review-screen.php:488
 msgid "Advertisement published."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:487
+#: inc/Admin/class-review-screen.php:489
 msgid "Do not publish"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:488
+#: inc/Admin/class-review-screen.php:490
 msgid "Why not? The advertiser will read this."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:489
+#: inc/Admin/class-review-screen.php:491
 msgid "Advertisement turned down."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:490
+#: inc/Admin/class-review-screen.php:492
 msgid "Ad update rejected."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:491
+#: inc/Admin/class-review-screen.php:493
 msgid "That change could not be saved."
 msgstr ""
 
@@ -5126,9 +5140,7 @@ msgid "That advertiser could not be found."
 msgstr ""
 
 #: inc/REST/class-campaigns-controller.php:499
-#: inc/REST/class-creative-file-controller.php:176
-#: inc/REST/class-creative-file-controller.php:195
-#: inc/REST/class-creative-file-controller.php:329
+#: inc/REST/class-creative-file-controller.php:375
 #: inc/REST/class-line-items-controller.php:358
 #: inc/Workflow/class-assignment-editor.php:384
 #: inc/Workflow/class-line-item-editor.php:69
@@ -5147,7 +5159,11 @@ msgstr ""
 msgid "That conversion could not be recorded."
 msgstr ""
 
-#: inc/REST/class-creative-file-controller.php:211
+#: inc/REST/class-creative-file-controller.php:240
+msgid "Preview unavailable"
+msgstr ""
+
+#: inc/REST/class-creative-file-controller.php:258
 msgid "Advertisement preview"
 msgstr ""
 
@@ -6004,39 +6020,40 @@ msgstr ""
 msgid "That placement is not part of this campaign."
 msgstr ""
 
-#: inc/Workflow/class-creative-promoter.php:67
+#: inc/Workflow/class-creative-promoter.php:89
+#: inc/Workflow/class-creative-promoter.php:278
 msgid "This creative has no file to publish."
 msgstr ""
 
-#: inc/Workflow/class-creative-promoter.php:74
-msgid "This creative’s file could not be found."
-msgstr ""
-
-#: inc/Workflow/class-creative-promoter.php:87
-#: inc/Workflow/class-creative-promoter.php:109
+#: inc/Workflow/class-creative-promoter.php:102
+#: inc/Workflow/class-creative-promoter.php:124
 msgid ""
 "This creative’s file could not be read, so it has not been published. Its "
 "stored copy may be damaged, or the site’s creative encryption key may have "
 "changed."
 msgstr ""
 
-#: inc/Workflow/class-creative-promoter.php:96
+#: inc/Workflow/class-creative-promoter.php:111
 msgid ""
 "This creative’s file has changed since it was reviewed, so it has not been "
 "published."
 msgstr ""
 
-#: inc/Workflow/class-creative-promoter.php:132
+#: inc/Workflow/class-creative-promoter.php:147
 msgid "This creative could not be linked to its Media Library file."
 msgstr ""
 
-#: inc/Workflow/class-creative-promoter.php:199
+#: inc/Workflow/class-creative-promoter.php:214
 msgid ""
 "The Media Library is not writable, so this creative could not be published."
 msgstr ""
 
-#: inc/Workflow/class-creative-promoter.php:216
+#: inc/Workflow/class-creative-promoter.php:231
 msgid "This creative could not be copied into the Media Library."
+msgstr ""
+
+#: inc/Workflow/class-creative-promoter.php:285
+msgid "This creative’s file could not be found."
 msgstr ""
 
 #: inc/Workflow/class-creative-uploader.php:177
