@@ -44,13 +44,52 @@ is surfaced by the menu badge (`Pending_Work`) and the admin notice
 
 ### Findings per screen
 
-**Review** is the most-used screen and still loads the portal stylesheet: it has
-`aggr-button` buttons and its own `Dialog` (`role="dialog"`) where every other
-screen uses core's `Modal`. The identity slice gave its queue the shared header,
-the portal's filter chips and the shared table style, so it no longer reads as a
-different product. The dialog is still its own. The queue is server-paged, so
-sorting and search stay off until the server can answer them (see
-`queue-table.tsx`). Keep that.
+**Review** is the most-used screen and still loads the portal stylesheet: its
+page uses `aggr-button` buttons where every other screen uses core's `Button`.
+Its dialogs are core's `Modal` with core controls, like every other screen's
+(`decisions.tsx`, `queue.tsx`). The queue has the shared header, the portal's filter
+chips and the shared table style. The queue is server-paged, so sorting and
+search stay off until the server can answer them (see `queue-table.tsx`). Keep
+that.
+
+The campaign view is two columns: the artwork, decisions, delivery policy and
+audit trail in the wide one, and the record (summary with schedule progress,
+strategy, notes) beside it. It has the shared header, which keeps Edit; the
+status decisions are in the decision bar at the end of the content, stuck to
+the bottom of the screen, beside the status and the checklist's verdict.
+Cancel is an outline until its dialog confirms it.
+The delivery policy is fields — caps, "at most N per visit", days and hours,
+targeting conditions — and any stored shape the fields cannot show stays as
+JSON, so saving cannot flatten a rule the form did not understand
+(`policy.ts`). The audit trail (`activity.tsx`, `trail.ts`) heads each day once,
+draws status changes as pills, folds runs of identical entries into one with a
+count, and labels refusals in words.
+
+While a decision is waiting (submitted or in review), the view opens with
+**Before approval**: six checks — details, advertiser, package and price,
+schedule, placements, artwork and links — each ticked or carrying the reasons
+it blocks. It is `Admin\Approval_Readiness`, which runs
+`Campaign_Validator::validate_for_approval()`, the same check the approval
+guard runs. The grouping is the domain's (`Campaign_Rules::check_group()`), and
+the sentences are the validator's. It must never be computed anywhere else:
+`ReviewDetailTest` runs the guard on the same campaign and fails if the guard
+gives a reason the list does not show.
+
+The delivery policy is collapsed to a row of facts from the saved line item
+("Priority 100", "No impression limits", "Everyone"); **Edit delivery** opens
+the form. A stored shape the fields cannot show reads "Custom rule", never
+something simpler than it is (`policyFacts()` in `policy.ts`). The summary
+panel holds the record once — no organization (the header has it), no pacing
+(the policy says it), and the line item's name only when it was renamed — in
+translated labels. On a narrow screen the summary moves above the main column.
+
+**Check a class name against the portal before using it on this screen.**
+Review loads the portal stylesheet, and four names have collided here already:
+`.aggr-timeline`, `.aggr-activity`, `.aggr-readiness` and
+`.aggr-panel__headrow` are all portal components. Each one restyled the staff
+element that borrowed its name. The staff equivalents are `aggr-trail`,
+`aggr-approval` and `aggr-policy-head`. `grep -rn '\.aggr-yourname' src/styles`
+before naming anything new.
 
 **Packages** rendered every package as an always-open edit form, each with its
 own Save button, so reading one price meant scrolling past every other
@@ -95,8 +134,8 @@ have been closed since.
   product as the portal. **Fixed** by the identity slice.
 - **Two design systems.** Review uses the portal components; the other seven
   use `@wordpress/components` and DataViews. So there were two dialogs, two
-  button vocabularies, two tab styles and two notice styles. Tabs, tables and
-  colours now match; the dialog and button components do not.
+  button vocabularies, two tab styles and two notice styles. Tabs, tables,
+  colours and dialogs now match; the page's buttons do not.
 - **A notice about the queue on the queue's own product.** "Advertising is
   waiting on you" printed on every Advertising screen, where the sidebar's
   Review count is already on screen. It pushed each screen's content down.
@@ -154,6 +193,10 @@ have been closed since.
 - `src/admin/shared/empty.tsx`: `Empty`, the icon and sentence a table shows
   when it has no rows.
 - `src/admin/shared/save.tsx`: `useAction`, `SaveError`, the string table.
+- `Admin\Review_Format`: how a date, a time, a status and a person print on
+  the review screens. `Admin\Audit_Trail` and `Admin\Line_Item_Labels` are
+  the timeline's rows and the line item's labels, apart from `Review_Data` so
+  each vocabulary is one file.
 - DataViews for any list of records. Core's `Modal` for any dialog on a
   DataViews screen.
 - The campaign status pill and its fixed colours. It carries the campaign
@@ -173,6 +216,10 @@ avoid.
 - **Payload contents.** The JSON bootstrap is what the browser may see.
   `ConversionsScreenTest` asserts an unauthorized render emits no reporting key.
   A redesign that adds fields to a payload widens what staff pages expose.
+- **Query cost.** Opening a campaign is fifteen queries under review and
+  twelve otherwise, however long its history. `Audit_Trail` primes every
+  actor in one read; `ReviewDetailTest` fails if a field reintroduces a read
+  per person or per row.
 - **Review semantics.** The tabs map to `Review_Data::FILTERS`. The decision
   buttons are workflow transitions whose labels and availability come from
   `Review_Data`: "Start review", for example, is the explicit move to `review`
@@ -205,7 +252,10 @@ queue prints the same classes. The anatomy is: an eyebrow (the Signal orange
 mark and the group name — Campaigns, Inventory, Advertisers, Measurement,
 Setup), the `<h1>` title, an optional one-sentence purpose line, an optional
 actions slot on the right, then `<hr class="wp-header-end">`. Notices go under
-it; core moves them there. The purpose line says what the screen is *for*, in
+it; core moves them there. The block is a `<div>`, not a `<header>`: core wraps
+the page in `#wpbody[role=main]`, and a header inside it is a second banner
+nested in main, which axe reports on every screen. `ScreenShellTest` counts
+them at zero. The purpose line says what the screen is *for*, in
 the words of the person using it. Leave it out when the sections already say
 that (Settings does).
 
@@ -268,7 +318,9 @@ keeps them off until the server can answer them.
 DataViews `header` slot on a list screen, or in the page header when the screen
 is not a list. Row actions live in the DataViews actions menu, with the one most
 often used marked `isPrimary`. A destructive action is `isDestructive`, asks for
-confirmation in a `Modal` that names the consequence, and is never primary.
+confirmation in a `Modal` that names the consequence, and is never primary
+where it is offered. The button inside that confirmation which commits it is
+primary and `isDestructive` (Suspend on Organizations, Cancel on Review).
 Approval on Review stays the one green "positive" button.
 
 **Status.** Use the domain's words and colours only: the campaign pill from
@@ -296,8 +348,23 @@ above the content it concerns, and is dismissible when it is only information.
 Errors stay until the next attempt.
 
 **Dialogs.** Use core's `Modal`, sized to its content (`width: fit-content`
-between a floor and a measure). Focus returns to the control that opened it.
-Review's own `Dialog` is the exception until the Review slice.
+between a floor and a measure), with core controls inside. Focus returns to the
+control that opened it. Pass `focusOnMount="firstContentElement"` so focus
+lands on the first field, or on the safe answer when there is no field. Do not
+build a dialog: `AdminDesignSystemTest` fails on a `role="dialog"` in Review's
+sources.
+
+**Decision bar.** When a screen's decisions are read about at length before
+they are taken, put them in `.aggr-actionbar` (`_action-bar.css`) at the end of
+the content. It is `position: sticky` at the bottom, so it rides the screen
+while the content is in view and settles in place at the end. Each button
+exists once, never mirrored from the header. It carries the status and why a
+decision is blocked, because that is where the eye is when the decision lands.
+On a phone it is the actions alone. `scroll-padding-bottom` keeps a focused
+control above it (WCAG 2.4.11). An error raised from it is scrolled into view,
+since the screen's notice prints at the top. It lives in the portal's
+component set so the wizard's phone bar (#302) reuses it rather than building
+another.
 
 **Responsive.** Nothing may widen the page at 320 CSS pixels. Tables scroll
 inside their surface, and toolbars and header actions wrap. Check at 200% zoom
@@ -326,9 +393,15 @@ scoped.
    side by side with meters and no-fill diagnosis, Outlook and Placements
    cross-linked with booked bars and size outlines, initials avatars, empty
    states, and a shared icon set.
-4. **Review components.** One dialog and one button vocabulary: move Review's
-   `Dialog` to core's `Modal` or state why not. Look at the campaign detail
-   view's layout. Keep the status pills, the tab filters and server paging.
+4. **Review campaign view** *(fourth)*. Two columns, shared header, the
+   delivery policy as fields with a JSON fallback (collapsed to a summary),
+   the audit trail as a timeline, schedule progress, the Before approval
+   checklist from the guard's own validation, one translated summary panel,
+   quieter empty states, summary-first on a phone, and checkboxes that look
+   like checkboxes, core's `Modal` for both dialogs, and the decision bar.
+   Still open: the page's own buttons move to core's `Button` in their own
+   change, so Review has one button vocabulary with the other screens; and
+   #302 adopts `.aggr-actionbar` for the wizard on a phone.
 5. **Sidebar and remaining copy.** Regroup the sidebar so the sell-side screens
    sit together (`add_submenu_page`'s position, not boot order), add visible
    filter labels on Reports, and fix the Billing module toggle's copy until P19

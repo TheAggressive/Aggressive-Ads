@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
-"POT-Creation-Date: 2026-10-01T05:36:10+00:00\n"
+"POT-Creation-Date: 2026-10-02T02:21:31+00:00\n"
 "PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -98,6 +98,72 @@ msgstr "%1$s hat eine Änderung an %2$s angefragt"
 msgid "%1$s submitted %2$s for review"
 msgstr "%1$s hat %2$s zur Prüfung eingereicht"
 
+#: inc/Admin/class-approval-readiness.php:92
+msgid "An ad’s artwork file is missing. Ask the advertiser to upload it again."
+msgstr ""
+
+#: inc/Admin/class-approval-readiness.php:122
+msgid "Campaign details"
+msgstr "Kampagnendetails"
+
+#: inc/Admin/class-approval-readiness.php:123
+#, fuzzy
+msgid "Advertiser account"
+msgstr "Notizen des Werbetreibenden"
+
+#: inc/Admin/class-approval-readiness.php:124
+#, fuzzy
+msgid "Package and price"
+msgstr "Paket gespeichert."
+
+#: inc/Admin/class-approval-readiness.php:125
+#: inc/Admin/class-review-screen.php:321
+#: templates/portal/partials/campaign-order-summary.php:83
+#: templates/portal/partials/campaign-review-step.php:113
+#: templates/portal/partials/campaign-status.php:235
+#: templates/portal/partials/campaign-table.php:53
+msgid "Schedule"
+msgstr "Zeitplan"
+
+#: inc/Admin/class-approval-readiness.php:126
+#: inc/Admin/class-forecast-screen.php:167
+#: inc/Admin/class-package-screen.php:166
+#: inc/Admin/class-placement-screen.php:115
+#: inc/Admin/class-placement-screen.php:116
+#: inc/Admin/class-placement-screen.php:148
+#: inc/Admin/class-placement-screen.php:233
+#: inc/Admin/class-reports-screen.php:619 inc/Admin/class-review-screen.php:320
+#: inc/Core/class-post-types.php:199
+#: inc/Workflow/class-campaign-change-summary.php:83
+msgid "Placements"
+msgstr "Platzierungen"
+
+#: inc/Admin/class-approval-readiness.php:127
+#, fuzzy
+msgid "Artwork and links"
+msgstr "Freigeben und veröffentlichen"
+
+#: inc/Admin/class-audit-trail.php:78
+msgid "System"
+msgstr "System"
+
+#. translators: 1: previous campaign status, already translated. 2: new campaign status, already translated.
+#: inc/Admin/class-audit-trail.php:130
+#, php-format
+msgid "Campaign moved from %1$s to %2$s."
+msgstr "Kampagne von %1$s auf %2$s verschoben."
+
+#: inc/Admin/class-audit-trail.php:148
+#, fuzzy
+msgctxt "audit outcome"
+msgid "Refused"
+msgstr "Pausiert"
+
+#: inc/Admin/class-audit-trail.php:149
+msgctxt "audit outcome"
+msgid "Failed"
+msgstr ""
+
 #: inc/Admin/class-campaign-change-actions.php:51
 msgid "You do not have permission to review campaign changes."
 msgstr "Sie haben keine Berechtigung, Kampagnenänderungen zu prüfen."
@@ -123,7 +189,7 @@ msgstr "Conversions"
 #: inc/Admin/class-organization-screen.php:115
 #: inc/Admin/class-package-screen.php:108
 #: inc/Admin/class-placement-screen.php:131
-#: inc/Admin/class-reports-screen.php:144 inc/Admin/class-review-screen.php:181
+#: inc/Admin/class-reports-screen.php:144 inc/Admin/class-review-screen.php:183
 #: inc/Admin/class-settings-screen.php:154
 msgid "You do not have permission to view this page."
 msgstr "Sie haben keine Berechtigung, diese Seite anzuzeigen."
@@ -217,7 +283,7 @@ msgstr "Reporting-Schlüssel"
 #: inc/Admin/class-conversions-screen.php:212
 #: inc/Admin/class-forecast-screen.php:164
 #: inc/Admin/class-placement-screen.php:174
-#: inc/Admin/class-review-screen.php:295 inc/Admin/class-review-screen.php:313
+#: inc/Admin/class-review-screen.php:297 inc/Admin/class-review-screen.php:315
 #: templates/portal/partials/campaign-table.php:52
 msgid "Status"
 msgstr "Status"
@@ -243,7 +309,7 @@ msgstr "Archiv"
 #: inc/Admin/class-conversions-screen.php:217
 #: inc/Admin/class-package-screen.php:152
 #: inc/Admin/class-placement-screen.php:170
-#: inc/Admin/class-review-screen.php:309
+#: inc/Admin/class-review-screen.php:311
 #: templates/portal/screens/campaign.php:348
 msgid "Edit"
 msgstr "Bearbeiten"
@@ -328,7 +394,7 @@ msgstr ""
 "können, wenn eine widerrufen werden muss."
 
 #: inc/Admin/class-conversions-screen.php:235
-#: inc/Admin/class-review-screen.php:293 inc/Admin/class-review-screen.php:303
+#: inc/Admin/class-review-screen.php:295 inc/Admin/class-review-screen.php:305
 #: templates/portal/base.php:114
 msgid "Advertiser"
 msgstr "Werbetreibender"
@@ -412,7 +478,7 @@ msgstr "Zugangsdaten ausgestellt"
 #: inc/Admin/class-conversions-screen.php:251
 #: inc/Admin/class-organization-screen.php:196
 #: inc/Admin/class-placement-screen.php:171
-#: inc/Admin/class-review-screen.php:372
+#: inc/Admin/class-review-screen.php:374
 #: templates/portal/partials/campaign-overlays.php:304
 #: templates/portal/partials/campaign-overlays.php:357
 #: templates/portal/partials/campaign-variant-artwork.php:80
@@ -595,7 +661,7 @@ msgstr "Platzierung speichern"
 
 #: inc/Admin/class-forecast-screen.php:160
 #: inc/Admin/class-report-export.php:150 inc/Admin/class-reports-screen.php:298
-#: inc/Admin/class-reports-screen.php:613 inc/Admin/class-review-screen.php:294
+#: inc/Admin/class-reports-screen.php:613 inc/Admin/class-review-screen.php:296
 #: inc/Core/class-post-types.php:199
 #: templates/portal/partials/campaign-status.php:260
 #: templates/portal/screens/campaign.php:650
@@ -626,18 +692,6 @@ msgstr "Konfidenz"
 #: inc/Admin/class-forecast-screen.php:166
 msgid "Window"
 msgstr "Fenster"
-
-#: inc/Admin/class-forecast-screen.php:167
-#: inc/Admin/class-package-screen.php:166
-#: inc/Admin/class-placement-screen.php:115
-#: inc/Admin/class-placement-screen.php:116
-#: inc/Admin/class-placement-screen.php:148
-#: inc/Admin/class-placement-screen.php:233
-#: inc/Admin/class-reports-screen.php:619 inc/Admin/class-review-screen.php:318
-#: inc/Core/class-post-types.php:199
-#: inc/Workflow/class-campaign-change-summary.php:83
-msgid "Placements"
-msgstr "Platzierungen"
 
 #: inc/Admin/class-forecast-screen.php:168
 #: inc/Admin/class-forecast-screen.php:176
@@ -685,6 +739,107 @@ msgstr "Mittel"
 #: inc/Admin/class-forecast-screen.php:181
 msgid "High"
 msgstr "Hoch"
+
+#: inc/Admin/class-line-item-labels.php:37
+#, fuzzy
+msgctxt "line item status"
+msgid "Draft"
+msgstr "Entwurf"
+
+#: inc/Admin/class-line-item-labels.php:38
+msgctxt "line item status"
+msgid "Ready"
+msgstr ""
+
+#: inc/Admin/class-line-item-labels.php:39
+#, fuzzy
+msgctxt "line item status"
+msgid "Scheduled"
+msgstr "Geplant"
+
+#: inc/Admin/class-line-item-labels.php:40
+#, fuzzy
+msgctxt "line item status"
+msgid "Live"
+msgstr "Live"
+
+#: inc/Admin/class-line-item-labels.php:41
+#, fuzzy
+msgctxt "line item status"
+msgid "Paused"
+msgstr "Pausiert"
+
+#: inc/Admin/class-line-item-labels.php:42
+#, fuzzy
+msgctxt "line item status"
+msgid "Completed"
+msgstr "Abgeschlossen"
+
+#: inc/Admin/class-line-item-labels.php:43
+#, fuzzy
+msgctxt "line item status"
+msgid "Cancelled"
+msgstr "Storniert"
+
+#: inc/Admin/class-line-item-labels.php:47
+#: templates/portal/partials/campaign-status.php:54
+msgid "Flat fee"
+msgstr ""
+
+#: inc/Admin/class-line-item-labels.php:48
+#, fuzzy
+msgid "Per thousand impressions (CPM)"
+msgstr "Impressionen"
+
+#: inc/Admin/class-line-item-labels.php:49
+msgid "Per click (CPC)"
+msgstr ""
+
+#: inc/Admin/class-line-item-labels.php:50
+#, fuzzy
+msgid "Per conversion (CPA)"
+msgstr "Neue Conversion"
+
+#: inc/Admin/class-line-item-labels.php:51
+#, fuzzy
+msgid "Share of voice"
+msgstr "Rotationsanteil"
+
+#: inc/Admin/class-line-item-labels.php:55
+#, fuzzy
+msgctxt "line item goal"
+msgid "No delivery goal"
+msgstr "Auslieferungsrichtlinie speichern"
+
+#: inc/Admin/class-line-item-labels.php:56
+#, fuzzy
+msgctxt "line item goal"
+msgid "Impressions"
+msgstr "Impressionen"
+
+#: inc/Admin/class-line-item-labels.php:57
+#, fuzzy
+msgctxt "line item goal"
+msgid "Clicks"
+msgstr "Klicks"
+
+#: inc/Admin/class-line-item-labels.php:58
+#, fuzzy
+msgctxt "line item goal"
+msgid "Conversions"
+msgstr "Conversions"
+
+#: inc/Admin/class-line-item-labels.php:59
+#, fuzzy
+msgctxt "line item goal"
+msgid "Spend"
+msgstr "Aussetzen"
+
+#: inc/Admin/class-line-item-labels.php:60
+#, fuzzy
+msgctxt "line item goal"
+msgid "Share of voice"
+msgstr "Rotationsanteil"
 
 #: inc/Admin/class-organization-screen.php:101
 #: inc/Admin/class-organization-screen.php:102
@@ -849,7 +1004,7 @@ msgstr "Diese Organisation konnte nicht aktualisiert werden."
 #: inc/Admin/class-organization-screen.php:182
 #: inc/Admin/class-package-screen.php:185
 #: inc/Admin/class-placement-screen.php:228
-#: inc/Admin/class-review-screen.php:412
+#: inc/Admin/class-review-screen.php:494
 #: inc/Admin/class-settings-screen.php:305
 msgid "Try again"
 msgstr "Erneut versuchen"
@@ -1464,7 +1619,7 @@ msgstr "Typ"
 msgid "Events"
 msgstr "Ereignisse"
 
-#: inc/Admin/class-report-export.php:198 inc/Admin/class-review-screen.php:359
+#: inc/Admin/class-report-export.php:198 inc/Admin/class-review-screen.php:361
 #: templates/portal/partials/campaign-changes-pending.php:44
 msgid "Requested"
 msgstr "Angefordert"
@@ -1702,13 +1857,7 @@ msgstr ""
 "gemeldet werden sollte: Jede Anfrage sollte entweder bedient werden oder "
 "einen Grund haben."
 
-#. translators: 1: previous campaign status, already translated. 2: new campaign status, already translated.
-#: inc/Admin/class-review-data.php:335
-#, php-format
-msgid "Campaign moved from %1$s to %2$s."
-msgstr "Kampagne von %1$s auf %2$s verschoben."
-
-#: inc/Admin/class-review-data.php:350
+#: inc/Admin/class-review-data.php:310
 #: inc/Portal/class-campaign-list-view-data.php:267
 #: inc/Portal/class-campaign-list-view-data.php:299
 msgid "Not scheduled"
@@ -1716,106 +1865,102 @@ msgstr "Nicht geplant"
 
 #. translators: 1: campaign start date. 2: campaign end date.
 #. translators: 1: package name. 2: month and year the campaign starts, e.g. October 2026.
-#: inc/Admin/class-review-data.php:361
+#: inc/Admin/class-review-data.php:321
 #: inc/Portal/class-campaign-list-view-data.php:315
 #: inc/Workflow/class-campaign-editor.php:698
 #, php-format
 msgid "%1$s – %2$s"
 msgstr "%1$s – %2$s"
 
-#: inc/Admin/class-review-data.php:700
-msgid "System"
-msgstr "System"
-
-#: inc/Admin/class-review-data.php:746
+#: inc/Admin/class-review-data.php:662
 msgid "Needs review"
 msgstr "Prüfung erforderlich"
 
-#: inc/Admin/class-review-data.php:747 inc/Admin/class-review-screen.php:298
+#: inc/Admin/class-review-data.php:663 inc/Admin/class-review-screen.php:300
 msgid "Ad updates"
 msgstr "Anzeigeneintrag-Updates"
 
-#: inc/Admin/class-review-data.php:748
+#: inc/Admin/class-review-data.php:664
 msgid "Advertiser requests"
 msgstr "Anfragen der Werbetreibenden"
 
-#: inc/Admin/class-review-data.php:749
+#: inc/Admin/class-review-data.php:665
 msgid "With the advertiser"
 msgstr "Mit dem Werbetreibenden"
 
-#: inc/Admin/class-review-data.php:750
+#: inc/Admin/class-review-data.php:666
 msgid "Decided"
 msgstr "Entschieden"
 
-#: inc/Admin/class-review-data.php:751
+#: inc/Admin/class-review-data.php:667
 #: inc/Portal/class-campaign-list-view-data.php:210
 #: inc/Portal/class-creative-view-data.php:355
 msgid "Running"
 msgstr "Läuft"
 
-#: inc/Admin/class-review-data.php:752
+#: inc/Admin/class-review-data.php:668
 #: inc/Portal/class-campaign-history-view-data.php:151
 msgid "Finished"
 msgstr "Abgeschlossen"
 
-#: inc/Admin/class-review-data.php:768
+#: inc/Admin/class-review-data.php:684
 msgid "Start review"
 msgstr "Prüfung starten"
 
-#: inc/Admin/class-review-data.php:769
+#: inc/Admin/class-review-data.php:685
 msgid "Release back to the queue"
 msgstr "Zurück in die Warteschlange"
 
-#: inc/Admin/class-review-data.php:770
+#: inc/Admin/class-review-data.php:686
 msgid "Request changes"
 msgstr "Änderungen anfordern"
 
-#: inc/Admin/class-review-data.php:771
+#: inc/Admin/class-review-data.php:687
 msgid "Reject"
 msgstr "Ablehnen"
 
-#: inc/Admin/class-review-data.php:772
+#: inc/Admin/class-review-data.php:688
 msgid "Approve and publish"
 msgstr "Freigeben und veröffentlichen"
 
-#: inc/Admin/class-review-data.php:773
+#: inc/Admin/class-review-data.php:689
 msgid "Reopen as a draft"
 msgstr "Als Entwurf wieder öffnen"
 
-#: inc/Admin/class-review-data.php:774
+#: inc/Admin/class-review-data.php:690
 msgid "Pause campaign"
 msgstr "Kampagne pausieren"
 
-#: inc/Admin/class-review-data.php:775
+#: inc/Admin/class-review-data.php:691
 msgid "Resume campaign"
 msgstr "Kampagne fortsetzen"
 
-#: inc/Admin/class-review-data.php:776 inc/Portal/class-view-data.php:375
+#: inc/Admin/class-review-data.php:692 inc/Portal/class-view-data.php:375
 msgid "Cancel campaign"
 msgstr "Kampagne stornieren"
 
-#: inc/Admin/class-review-screen.php:77 inc/Admin/class-review-screen.php:202
-#: inc/Admin/class-review-screen.php:278
+#: inc/Admin/class-review-screen.php:79 inc/Admin/class-review-screen.php:204
+#: inc/Admin/class-review-screen.php:280
 msgid "Campaign review"
 msgstr "Kampagnenprüfung"
 
-#: inc/Admin/class-review-screen.php:105
+#: inc/Admin/class-review-screen.php:107
 #: templates/portal/partials/campaign-changes.php:106
 #: templates/portal/screens/help.php:31
 msgid "Review"
 msgstr "Prüfung"
 
-#: inc/Admin/class-review-screen.php:203
+#: inc/Admin/class-review-screen.php:205
 msgid "The review screen has not been built. Run “pnpm build” and reload."
 msgstr ""
 "Der Review-Bildschirm wurde noch nicht erstellt. Führen Sie \"pnpm build\" "
 "aus und laden Sie die Seite neu."
 
-#: inc/Admin/class-review-screen.php:244
+#: inc/Admin/class-review-screen.php:246
 msgid "The campaign review screen needs JavaScript enabled."
 msgstr "Die Kampagnen-Prüfseite benötigt JavaScript."
 
-#: inc/Admin/class-review-screen.php:280
+#: inc/Admin/class-review-screen.php:282
 msgid ""
 "Review advertiser submissions, provide clear feedback, and approve campaigns "
 "into the live set."
@@ -1823,88 +1968,88 @@ msgstr ""
 "Prüfen Sie die Einsendungen der Werbetreibenden, geben Sie klares Feedback "
 "und freigeben Sie Kampagnen für den Live-Betrieb."
 
-#: inc/Admin/class-review-screen.php:281
+#: inc/Admin/class-review-screen.php:283
 msgid "Review queue filters"
 msgstr "Filter für die Prüfungswarteschlange"
 
-#: inc/Admin/class-review-screen.php:282
+#: inc/Admin/class-review-screen.php:284
 msgid "Campaign review pages"
 msgstr "Kampagnenprüfungsseiten"
 
-#: inc/Admin/class-review-screen.php:283
+#: inc/Admin/class-review-screen.php:285
 #: templates/portal/screens/campaigns.php:245
 msgid "Previous"
 msgstr "Zurück"
 
-#: inc/Admin/class-review-screen.php:284
+#: inc/Admin/class-review-screen.php:286
 #: templates/portal/screens/campaigns.php:258
 msgid "Next"
 msgstr "Weiter"
 
 #. translators: 1: current page number. 2: total number of pages.
 #. translators: 1: current page. 2: number of pages.
-#: inc/Admin/class-review-screen.php:286
+#: inc/Admin/class-review-screen.php:288
 #: templates/portal/screens/campaigns.php:251
 #, php-format
 msgid "Page %1$s of %2$s"
 msgstr "Seite %1$s von %2$s"
 
 #. translators: %s: number of campaigns in the selected queue.
-#: inc/Admin/class-review-screen.php:288
+#: inc/Admin/class-review-screen.php:290
 #, php-format
 msgid "Campaigns (%s)"
 msgstr "Kampagnen (%s)"
 
-#: inc/Admin/class-review-screen.php:289
+#: inc/Admin/class-review-screen.php:291
 msgid "Nothing is waiting here."
 msgstr "Hier wartet nichts."
 
-#: inc/Admin/class-review-screen.php:290
+#: inc/Admin/class-review-screen.php:292
 msgid "Campaigns will appear in this view as their status changes."
 msgstr ""
 "Kampagnen werden in dieser Ansicht angezeigt, sobald sich ihr Status ändert."
 
-#: inc/Admin/class-review-screen.php:291
+#: inc/Admin/class-review-screen.php:293
 msgid "Campaign review queue table"
 msgstr "Tabelle der Kampagnen-Prüfungswarteschlange"
 
-#: inc/Admin/class-review-screen.php:292 inc/Core/class-post-types.php:201
+#: inc/Admin/class-review-screen.php:294 inc/Core/class-post-types.php:201
 #: inc/Portal/class-report-actions.php:215
 #: templates/portal/partials/campaign-status.php:218
 #: templates/portal/partials/campaign-table.php:51
 msgid "Campaign"
 msgstr "Kampagne"
 
-#: inc/Admin/class-review-screen.php:296 inc/Core/class-post-statuses.php:205
+#: inc/Admin/class-review-screen.php:298 inc/Core/class-post-statuses.php:205
 #: templates/portal/partials/campaign-status.php:87
 msgid "Submitted"
 msgstr "Eingereicht"
 
-#: inc/Admin/class-review-screen.php:297 inc/Admin/class-review-screen.php:320
+#: inc/Admin/class-review-screen.php:299 inc/Admin/class-review-screen.php:322
 msgid "Reviewer"
 msgstr "Prüfer"
 
-#: inc/Admin/class-review-screen.php:299
+#: inc/Admin/class-review-screen.php:301
 msgid "Unassigned"
 msgstr "Nicht zugewiesen"
 
-#: inc/Admin/class-review-screen.php:300
+#: inc/Admin/class-review-screen.php:302
 msgid "Back to campaign review"
 msgstr "Zurück zur Kampagnenprüfung"
 
-#: inc/Admin/class-review-screen.php:301
+#: inc/Admin/class-review-screen.php:303
 msgid "Create campaign"
 msgstr "Kampagne erstellen"
 
-#: inc/Admin/class-review-screen.php:302
+#: inc/Admin/class-review-screen.php:304
 msgid "Create a campaign for an advertiser"
 msgstr "Kampagne für einen Werbetreibenden erstellen"
 
-#: inc/Admin/class-review-screen.php:304
+#: inc/Admin/class-review-screen.php:306
 msgid "Choose an advertiser"
 msgstr "Wählen Sie einen Werbetreibenden"
 
-#: inc/Admin/class-review-screen.php:305
+#: inc/Admin/class-review-screen.php:307
 #: inc/Admin/class-settings-screen.php:208 inc/Assets/class-assets.php:415
 #: inc/Workflow/class-campaign-change-summary.php:73
 #: templates/portal/partials/campaign-changes.php:259
@@ -1915,47 +2060,47 @@ msgstr "Wählen Sie einen Werbetreibenden"
 msgid "Campaign name"
 msgstr "Kampagnenname"
 
-#: inc/Admin/class-review-screen.php:306
+#: inc/Admin/class-review-screen.php:308
 msgid "Optional. You can change this in the campaign."
 msgstr "Optional. Sie können dies in der Kampagne ändern."
 
-#: inc/Admin/class-review-screen.php:307
+#: inc/Admin/class-review-screen.php:309
 msgid "Create and open"
 msgstr "Erstellen und öffnen"
 
-#: inc/Admin/class-review-screen.php:308
+#: inc/Admin/class-review-screen.php:310
 msgid "No active advertisers yet. Add one from Organizations first."
 msgstr ""
 "Noch keine aktiven Werbetreibenden. Fügen Sie zuerst einen aus "
 "Organisationen hinzu."
 
-#: inc/Admin/class-review-screen.php:310
+#: inc/Admin/class-review-screen.php:312
 msgid "Campaign summary"
 msgstr "Kampagnenübersicht"
 
-#: inc/Admin/class-review-screen.php:311
+#: inc/Admin/class-review-screen.php:313
 msgid "Delivery strategy"
 msgstr "Auslieferungsstrategie"
 
-#: inc/Admin/class-review-screen.php:312
+#: inc/Admin/class-review-screen.php:314
 msgid "Line item"
 msgstr "Werbebuchung"
 
-#: inc/Admin/class-review-screen.php:314
+#: inc/Admin/class-review-screen.php:316
 #: templates/portal/partials/campaign-status.php:284
 msgid "Pricing"
 msgstr "Preise"
 
-#: inc/Admin/class-review-screen.php:315
+#: inc/Admin/class-review-screen.php:317
 msgid "Goal"
 msgstr "Ziel"
 
-#: inc/Admin/class-review-screen.php:316 inc/Admin/class-review-screen.php:376
+#: inc/Admin/class-review-screen.php:318 inc/Admin/class-review-screen.php:382
 #: templates/portal/partials/campaign-status.php:288
 msgid "Pacing"
 msgstr "Auslieferungstempo"
 
-#: inc/Admin/class-review-screen.php:317 inc/Core/class-post-types.php:198
+#: inc/Admin/class-review-screen.php:319 inc/Core/class-post-types.php:198
 #: templates/portal/organization.php:15 templates/portal/partials/rail.php:35
 #: templates/portal/screens/account.php:143
 #: templates/portal/screens/account.php:225
@@ -1964,128 +2109,120 @@ msgstr "Auslieferungstempo"
 msgid "Organization"
 msgstr "Organisation"
 
-#: inc/Admin/class-review-screen.php:319
-#: templates/portal/partials/campaign-order-summary.php:83
-#: templates/portal/partials/campaign-review-step.php:113
-#: templates/portal/partials/campaign-status.php:235
-#: templates/portal/partials/campaign-table.php:53
-msgid "Schedule"
-msgstr "Zeitplan"
-
-#: inc/Admin/class-review-screen.php:321
+#: inc/Admin/class-review-screen.php:323
 msgid "Submission"
 msgstr "Einreichung"
 
-#: inc/Admin/class-review-screen.php:322
+#: inc/Admin/class-review-screen.php:324
 msgid "Not submitted"
 msgstr "Nicht eingereicht"
 
-#: inc/Admin/class-review-screen.php:323
+#: inc/Admin/class-review-screen.php:325
 msgid "Revision"
 msgstr "Revision"
 
-#: inc/Admin/class-review-screen.php:324
+#: inc/Admin/class-review-screen.php:326
 msgid "Advertiser-facing feedback"
 msgstr "Feedback für Werbetreibende"
 
-#: inc/Admin/class-review-screen.php:325
+#: inc/Admin/class-review-screen.php:327
 msgid "Creative review"
 msgstr "Werbemittelprüfung"
 
-#: inc/Admin/class-review-screen.php:326
+#: inc/Admin/class-review-screen.php:328
 msgid "No creative uploaded"
 msgstr "Kein Werbemittel hochgeladen"
 
-#: inc/Admin/class-review-screen.php:327
+#: inc/Admin/class-review-screen.php:329
 msgid "This campaign cannot be approved until every placement has creative."
 msgstr ""
 "Diese Kampagne kann nicht genehmigt werden, bis alle Platzierungen ein "
 "Werbemittel haben."
 
-#: inc/Admin/class-review-screen.php:328 templates/portal/screens/help.php:114
+#: inc/Admin/class-review-screen.php:330 templates/portal/screens/help.php:114
 msgid "Required size"
 msgstr "Erforderliche Größe"
 
-#: inc/Admin/class-review-screen.php:329
+#: inc/Admin/class-review-screen.php:331
 msgid "Uploaded size"
 msgstr "Hochgeladene Größe"
 
-#: inc/Admin/class-review-screen.php:330
+#: inc/Admin/class-review-screen.php:332
 msgid "Artwork unchanged — only the text differs"
 msgstr "Werbemittel unverändert — nur der Text unterscheidet sich"
 
-#: inc/Admin/class-review-screen.php:331
+#: inc/Admin/class-review-screen.php:333
 #: templates/portal/partials/campaign-device-preview.php:48
 #, fuzzy
 msgid "Preview width"
 msgstr "Vorschau"
 
-#: inc/Admin/class-review-screen.php:332
+#: inc/Admin/class-review-screen.php:334
 #: templates/portal/partials/campaign-device-preview.php:40
 msgid "Phone"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:333
+#: inc/Admin/class-review-screen.php:335
 #: templates/portal/partials/campaign-device-preview.php:41
 msgid "Tablet"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:334
+#: inc/Admin/class-review-screen.php:336
 #: templates/portal/partials/campaign-device-preview.php:42
 #: templates/portal/partials/campaign-review-step.php:293
 msgid "Desktop"
 msgstr ""
 
 #. translators: %s: the placement an ad runs in.
-#: inc/Admin/class-review-screen.php:336
+#: inc/Admin/class-review-screen.php:338
 #: templates/portal/partials/campaign-device-preview.php:92
 #, fuzzy, php-format
 msgid "Preview of the ad for %s"
 msgstr "Vorschau-Dialog für %s geöffnet"
 
-#: inc/Admin/class-review-screen.php:337
+#: inc/Admin/class-review-screen.php:339
 #: templates/portal/partials/campaign-ad-history.php:40
 #, fuzzy
 msgid "Review history"
 msgstr "Prüfaktionen"
 
-#: inc/Admin/class-review-screen.php:338 inc/Core/class-post-statuses.php:209
+#: inc/Admin/class-review-screen.php:340 inc/Core/class-post-statuses.php:209
 #: inc/Portal/class-campaign-history-view-data.php:145
 #: templates/portal/partials/campaign-ad-history.php:46
 #: templates/portal/partials/campaign-status.php:89
 msgid "Approved"
 msgstr "Genehmigt"
 
-#: inc/Admin/class-review-screen.php:339
+#: inc/Admin/class-review-screen.php:341
 #: inc/Portal/class-campaign-history-view-data.php:146
 #: inc/Portal/class-creative-view-data.php:351
 #: templates/portal/partials/campaign-ad-history.php:47
 msgid "Not approved"
 msgstr "Nicht freigegeben"
 
-#: inc/Admin/class-review-screen.php:340
+#: inc/Admin/class-review-screen.php:342
 #: templates/portal/partials/campaign-ad-history.php:48
 #, fuzzy
 msgid "Update approved"
 msgstr "Werbemittel-Update genehmigt."
 
-#: inc/Admin/class-review-screen.php:341
+#: inc/Admin/class-review-screen.php:343
 #: templates/portal/partials/campaign-ad-history.php:49
 #, fuzzy
 msgid "Update not approved"
 msgstr "Kampagne nicht freigegeben"
 
-#: inc/Admin/class-review-screen.php:342
+#: inc/Admin/class-review-screen.php:344
 #: templates/portal/partials/campaign-ad-history.php:50
 #, fuzzy
 msgid "Reviewed"
 msgstr "Prüfer"
 
-#: inc/Admin/class-review-screen.php:343
+#: inc/Admin/class-review-screen.php:345
 msgid "Alt text"
 msgstr "Alternativtext"
 
-#: inc/Admin/class-review-screen.php:344
+#: inc/Admin/class-review-screen.php:346
 #: inc/Workflow/class-campaign-change-summary.php:81
 #: templates/portal/partials/campaign-ad-card.php:75
 #: templates/portal/partials/campaign-review-step.php:126
@@ -2094,34 +2231,34 @@ msgstr "Alternativtext"
 msgid "Destination"
 msgstr "Zielseite"
 
-#: inc/Admin/class-review-screen.php:345
+#: inc/Admin/class-review-screen.php:347
 msgid "Current destination"
 msgstr "Aktuelles Ziel"
 
-#: inc/Admin/class-review-screen.php:346
+#: inc/Admin/class-review-screen.php:348
 msgid "Proposed destination"
 msgstr "Vorgeschlagene Zielseite"
 
-#: inc/Admin/class-review-screen.php:347
+#: inc/Admin/class-review-screen.php:349
 msgid "Current alt text"
 msgstr "Aktueller Alt-Text"
 
-#: inc/Admin/class-review-screen.php:348
+#: inc/Admin/class-review-screen.php:350
 msgid "Proposed alt text"
 msgstr "Vorgeschlagener Alt-Text"
 
-#: inc/Admin/class-review-screen.php:349
+#: inc/Admin/class-review-screen.php:351
 msgid "The advertiser has asked for something"
 msgstr "Der Werbetreibende hat etwas angefragt."
 
 #. translators: %s: the requested action, already translated.
-#: inc/Admin/class-review-screen.php:351
+#: inc/Admin/class-review-screen.php:353
 #: inc/Notification/class-request-mailer.php:341
 #, php-format
 msgid "Requested: %s"
 msgstr "Angefordert: %s"
 
-#: inc/Admin/class-review-screen.php:352
+#: inc/Admin/class-review-screen.php:354
 msgid ""
 "Use the review actions below to carry this out. The request clears itself "
 "once the campaign moves, or you can decline it with an explanation."
@@ -2130,19 +2267,19 @@ msgstr ""
 "wird automatisch aufgelöst, sobald sich der Status der Kampagne ändert, oder "
 "Sie können sie mit einer Begründung ablehnen."
 
-#: inc/Admin/class-review-screen.php:353
+#: inc/Admin/class-review-screen.php:355
 msgid "Explanation for the advertiser"
 msgstr "Erklärung für den Werbetreibenden"
 
-#: inc/Admin/class-review-screen.php:354
+#: inc/Admin/class-review-screen.php:356
 msgid "Decline request"
 msgstr "Anfrage ablehnen"
 
-#: inc/Admin/class-review-screen.php:355
+#: inc/Admin/class-review-screen.php:357
 msgid "Requested campaign changes"
 msgstr "Angefragte Kampagnenänderungen"
 
-#: inc/Admin/class-review-screen.php:356
+#: inc/Admin/class-review-screen.php:358
 msgid ""
 "The campaign keeps running exactly as approved until you decide. Approving "
 "writes these values and refreshes delivery immediately."
@@ -2151,208 +2288,535 @@ msgstr ""
 "entscheiden. Die Genehmigung schreibt diese Werte und aktualisiert die "
 "Auslieferung sofort."
 
-#: inc/Admin/class-review-screen.php:357
+#: inc/Admin/class-review-screen.php:359
 #: templates/portal/partials/campaign-changes-pending.php:42
 msgid "Field"
 msgstr "Feld"
 
-#: inc/Admin/class-review-screen.php:358
+#: inc/Admin/class-review-screen.php:360
 #: templates/portal/partials/campaign-changes-pending.php:43
 #: templates/portal/partials/campaign-changes.php:133
 msgid "Currently"
 msgstr "Aktuell"
 
-#: inc/Admin/class-review-screen.php:360
+#: inc/Admin/class-review-screen.php:362
 #, fuzzy
 msgid "This change alters the ad sizes."
 msgstr "Diese Änderung ändert die Platzierungen."
 
-#: inc/Admin/class-review-screen.php:361
+#: inc/Admin/class-review-screen.php:363
 msgid ""
 "A size it adds runs no ad until the advertiser supplies one and it is "
 "reviewed."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:362
+#: inc/Admin/class-review-screen.php:364
 msgid "Approve changes"
 msgstr "Änderungen genehmigen"
 
-#: inc/Admin/class-review-screen.php:363
+#: inc/Admin/class-review-screen.php:365
 msgid "Reject changes"
 msgstr "Änderungen ablehnen"
 
-#: inc/Admin/class-review-screen.php:364
+#: inc/Admin/class-review-screen.php:366
 msgid "Feedback required when rejecting"
 msgstr "Feedback erforderlich bei Ablehnung"
 
-#: inc/Admin/class-review-screen.php:365
+#: inc/Admin/class-review-screen.php:367
 msgid "Pending ad updates"
 msgstr "Ausstehende Werbeanpassungen"
 
-#: inc/Admin/class-review-screen.php:366
+#: inc/Admin/class-review-screen.php:368
 msgid "The current ads remain in rotation until an update below is approved."
 msgstr ""
 "Die aktuellen Anzeigen bleiben in der Rotation, bis ein Update unten "
 "genehmigt wird."
 
-#: inc/Admin/class-review-screen.php:367
+#: inc/Admin/class-review-screen.php:369
 msgid "Approve and replace"
 msgstr "Freigeben und ersetzen"
 
-#: inc/Admin/class-review-screen.php:368
+#: inc/Admin/class-review-screen.php:370
 msgid "Reject update"
 msgstr "Update ablehnen"
 
-#: inc/Admin/class-review-screen.php:369
+#: inc/Admin/class-review-screen.php:371
 msgid "Review actions"
 msgstr "Prüfaktionen"
 
-#: inc/Admin/class-review-screen.php:370
+#: inc/Admin/class-review-screen.php:372
 msgid "No staff action is available from this status."
 msgstr "Von diesem Status aus ist keine Mitarbeiteraktion verfügbar."
 
-#: inc/Admin/class-review-screen.php:371
+#: inc/Admin/class-review-screen.php:373
 msgid "Feedback the advertiser will see"
 msgstr "Feedback, das der Werbetreibende sieht"
 
-#: inc/Admin/class-review-screen.php:373
+#: inc/Admin/class-review-screen.php:375
+msgid "Go back"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:376
+msgid "This cannot be undone: a cancelled campaign cannot be reopened."
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:377 inc/Admin/class-review-screen.php:461
 #: templates/portal/partials/campaign-overlays.php:263
 #: templates/portal/partials/campaign-request-form.php:103
 msgid "Close"
 msgstr "Schließen"
 
-#: inc/Admin/class-review-screen.php:374
+#: inc/Admin/class-review-screen.php:378
 msgid "Delivery policy"
 msgstr "Auslieferungsrichtlinie"
 
-#: inc/Admin/class-review-screen.php:375
-msgid "Priority (lower wins)"
-msgstr "Priorität (kleinere Werte haben Vorrang)"
-
-#: inc/Admin/class-review-screen.php:377
-msgid "Even"
-msgstr "Gerade"
-
-#: inc/Admin/class-review-screen.php:378
-#: templates/portal/partials/campaign-status.php:63
-msgid "As fast as possible"
-msgstr "Schnell wie möglich"
-
 #: inc/Admin/class-review-screen.php:379
-msgid "Daily impression cap (0 for none)"
-msgstr "Tägliche Impressions-Obergrenze (0 = keine)"
+msgid ""
+"These settings decide when a live campaign may fill a slot. Leave a section "
+"alone to place no limit."
+msgstr ""
 
 #: inc/Admin/class-review-screen.php:380
-msgid "Lifetime impression cap (0 for none)"
-msgstr "Gesamt-Impressions-Obergrenze (0 für keine)"
+msgid "Priority"
+msgstr ""
 
 #: inc/Admin/class-review-screen.php:381
-msgid "Targeting rules (JSON)"
-msgstr "Targeting-Regeln (JSON)"
-
-#: inc/Admin/class-review-screen.php:382
-msgid ""
-"Leave empty to target everyone. A rule needs a dimension, an operator and a "
-"value."
+msgid "When more than one campaign fits, the smaller number is served first."
 msgstr ""
-"Leer lassen, um alle anzusprechen. Eine Regel benötigt eine Dimension, einen "
-"Operator und einen Wert."
 
 #: inc/Admin/class-review-screen.php:383
-msgid "Frequency capping (JSON)"
-msgstr "Frequenzbegrenzung (JSON)"
+#, fuzzy
+msgid "Spread across the schedule"
+msgstr "Zurück zum Zeitplan"
 
 #: inc/Admin/class-review-screen.php:384
-msgid "Leave empty for no cap. Set enabled, max_impressions, window and level."
-msgstr ""
-"Leer lassen für keine Obergrenze. Setzen Sie enabled, max_impressions, "
-"window und level."
+#, fuzzy
+msgid "As fast as the caps allow"
+msgstr "Schnell wie möglich"
 
 #: inc/Admin/class-review-screen.php:385
-msgid "Dayparts and timezone (JSON)"
-msgstr "Tageszeiten und Zeitzone (JSON)"
+msgid ""
+"Spreading the schedule holds impressions back so a cap is not spent on the "
+"first day. As fast as the caps allow serves until a cap is reached."
+msgstr ""
 
 #: inc/Admin/class-review-screen.php:386
-msgid "Leave empty to run at any hour. Set dayparts and an optional timezone."
-msgstr ""
-"Leer lassen, um zu jeder Uhrzeit auszuliefern. Tageszeiten und optional eine "
-"Zeitzone festlegen."
+#, fuzzy
+msgid "Daily impression limit"
+msgstr "Tägliche Impressionen, %1$s bis %2$s"
 
 #: inc/Admin/class-review-screen.php:387
+#, fuzzy
+msgid "Lifetime impression limit"
+msgstr "Gesamt-Impressions-Obergrenze (0 für keine)"
+
+#: inc/Admin/class-review-screen.php:388
+msgid ""
+"0 means no limit. The daily limit cannot be higher than the lifetime limit."
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:389
+msgid "How often one visitor may see it"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:390
+msgid "Limit repeat views"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:391
+msgid "At most"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:392
+#, fuzzy
+msgid "times per"
+msgstr "%s Pixel"
+
+#: inc/Admin/class-review-screen.php:393
+#, fuzzy
+msgid "visit"
+msgstr "Revision"
+
+#: inc/Admin/class-review-screen.php:394
+msgid "hour"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:395
+#, fuzzy
+msgid "day"
+msgstr "Tage"
+
+#: inc/Admin/class-review-screen.php:396
+msgid "counted across"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:397
+#, fuzzy
+msgid "the whole campaign"
+msgstr "Kampagne verlängern"
+
+#: inc/Admin/class-review-screen.php:398
+#, fuzzy
+msgid "this line item"
+msgstr "Werbebuchung"
+
+#: inc/Admin/class-review-screen.php:399
+#, fuzzy
+msgid "each creative"
+msgstr "Zurück zum Werbemittel"
+
+#: inc/Admin/class-review-screen.php:400
+msgid ""
+"After this many views, that visitor stops seeing it until the period resets."
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:401
+msgid "Enter how many times one visitor may see it."
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:402
+#, fuzzy
+msgid "When it may run"
+msgstr "Was es bedeutet"
+
+#: inc/Admin/class-review-screen.php:403
+msgid "Only during certain hours"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:404
+#: templates/portal/partials/campaign-variant-window.php:59
+msgid "From"
+msgstr "Von"
+
+#: inc/Admin/class-review-screen.php:405
+msgid "until"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:406
+msgid "Timezone"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:407
+msgid "Enter a start and end time, or leave a time blank."
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:408
+msgid ""
+"The end time has to be different from the start. To run overnight, set the "
+"end earlier than the start."
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:409
+msgid "Mon"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:410
+msgid "Tue"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:411
+msgid "Wed"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:412
+msgid "Thu"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:413
+msgid "Fri"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:414
+#, fuzzy
+msgid "Sat"
+msgstr "Status"
+
+#: inc/Admin/class-review-screen.php:415
+#, fuzzy
+msgid "Sun"
+msgstr "Aussetzen"
+
+#: inc/Admin/class-review-screen.php:416
+msgid ""
+"Blank hours mean all day. Leave the timezone blank for UTC. Use a name such "
+"as America/Los_Angeles."
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:417
+msgid "Who can see it"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:418
+msgid "Add a condition"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:419
+#, fuzzy
+msgid "Remove condition"
+msgstr "Prüfaktionen"
+
+#: inc/Admin/class-review-screen.php:420
+msgid "Each condition needs a value."
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:421
+#, fuzzy
+msgid "Page type"
+msgstr "Seite"
+
+#: inc/Admin/class-review-screen.php:422
+msgid "Category"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:423
+msgid "Term"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:424
+#, fuzzy
+msgid "Ad size"
+msgstr "Größe hinzufügen"
+
+#: inc/Admin/class-review-screen.php:425
+msgid "is"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:426
+msgid "is not"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:427
+msgid "includes"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:428
+msgid "does not include"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:429
+msgid ""
+"Blank means everyone. A category is its slug. A term is taxonomy:slug, such "
+"as post_tag:news. A size is widthxheight, such as 300x250."
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:430
+msgid ""
+"This was saved in a shape the fields cannot show. Edit the JSON, or clear "
+"the box and save to start over."
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:431
 msgid "Save delivery policy"
 msgstr "Auslieferungsrichtlinie speichern"
 
-#: inc/Admin/class-review-screen.php:388
+#: inc/Admin/class-review-screen.php:432
 msgid "Delivery policy saved."
 msgstr "Auslieferungsrichtlinie gespeichert."
 
-#: inc/Admin/class-review-screen.php:389
+#: inc/Admin/class-review-screen.php:433
 msgid "One of the JSON fields is not valid JSON. Fix it and save again."
 msgstr ""
 "Ein JSON-Feld ist kein gültiges JSON. Korrigieren Sie es und speichern Sie "
 "erneut."
 
-#: inc/Admin/class-review-screen.php:390
+#: inc/Admin/class-review-screen.php:434
 msgid "Notes from the advertiser"
 msgstr "Notizen vom Werbetreibenden"
 
-#: inc/Admin/class-review-screen.php:391
+#: inc/Admin/class-review-screen.php:435
 msgid "The advertiser left no notes."
 msgstr "Der Werbetreibende hat keine Anmerkungen hinterlassen."
 
-#: inc/Admin/class-review-screen.php:392
+#: inc/Admin/class-review-screen.php:436
 msgid "Internal notes"
 msgstr "Interne Notizen"
 
-#: inc/Admin/class-review-screen.php:393
+#: inc/Admin/class-review-screen.php:437
 msgid "Visible to staff only"
 msgstr "Nur für Mitarbeiter sichtbar"
 
-#: inc/Admin/class-review-screen.php:394
+#: inc/Admin/class-review-screen.php:438
 msgid "Save internal notes"
 msgstr "Interne Notizen speichern"
 
-#: inc/Admin/class-review-screen.php:395
+#: inc/Admin/class-review-screen.php:439
 msgid "Audit timeline"
 msgstr "Prüfungszeitleiste"
 
-#: inc/Admin/class-review-screen.php:396
+#: inc/Admin/class-review-screen.php:440
 msgid "No audit events have been recorded for this campaign."
 msgstr "Für diese Kampagne wurden keine Audit-Ereignisse protokolliert."
 
-#: inc/Admin/class-review-screen.php:397
+#: inc/Admin/class-review-screen.php:441
 msgid "Unknown user"
 msgstr "Unbekannter Benutzer"
 
-#: inc/Admin/class-review-screen.php:398
+#. translators: 1: how many identical entries were collapsed into one. 2: date and time of the earliest of them.
+#: inc/Admin/class-review-screen.php:443
+#, fuzzy, php-format
+msgid "%1$d times since %2$s"
+msgstr "%1$s %2$s"
+
+#. translators: %d: number of older audit entries not shown.
+#: inc/Admin/class-review-screen.php:445
+#, php-format
+msgid "Show %d earlier entries"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:446
+msgid "Show fewer"
+msgstr ""
+
+#. translators: 1: current day of the schedule. 2: total days in the schedule.
+#: inc/Admin/class-review-screen.php:448
+#, fuzzy, php-format
+msgid "Day %1$d of %2$d"
+msgstr "Schritt %1$s von %2$s: %3$s"
+
+#: inc/Admin/class-review-screen.php:449
+msgid "Before approval"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:450
+#, fuzzy
+msgid "Ready to approve"
+msgstr "Werbemittel-Update genehmigt."
+
+#: inc/Admin/class-review-screen.php:451
+msgid "Show what blocks it"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:452
+msgid "Artwork file missing"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:453
+#, fuzzy
+msgid ""
+"This ad’s file is gone, so it cannot be previewed or published. Ask the "
+"advertiser to upload it again."
+msgstr ""
+"Diese Änderungen sind nicht mehr gültig und können nicht genehmigt werden. "
+"Bitten Sie den Werbetreibenden, sie erneut anzufordern."
+
+#. translators: %d: number of readiness checks that block approval (one).
+#: inc/Admin/class-review-screen.php:455
+#, php-format
+msgid "%d check blocks approval"
+msgstr ""
+
+#. translators: %d: number of readiness checks that block approval (more than one).
+#: inc/Admin/class-review-screen.php:457
+#, php-format
+msgid "%d checks block approval"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:458
+msgctxt "readiness check state, read after its name"
+msgid "(passed)"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:459
+msgctxt "readiness check state, read after its name"
+msgid "(blocks approval)"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:460
+#, fuzzy
+msgid "Edit delivery"
+msgstr "Native-Auslieferung"
+
+#. translators: %s: delivery priority number.
+#: inc/Admin/class-review-screen.php:463
+#, fuzzy, php-format
+msgid "Priority %s"
+msgstr "Priorität (kleinere Werte haben Vorrang)"
+
+#. translators: %s: impressions per day.
+#: inc/Admin/class-review-screen.php:465
+#, fuzzy, php-format
+msgid "%s a day"
+msgstr "%s Tag"
+
+#. translators: %s: impressions in total.
+#: inc/Admin/class-review-screen.php:467
+#, php-format
+msgid "%s in total"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:468
+#, fuzzy
+msgid "No impression limits"
+msgstr "Tägliche Impressionen, %1$s bis %2$s"
+
+#. translators: 1: most views per visitor. 2: the period, e.g. "day" or "visit".
+#: inc/Admin/class-review-screen.php:470
+#, fuzzy, php-format
+msgid "At most %1$s per %2$s"
+msgstr "%1$s %2$s"
+
+#: inc/Admin/class-review-screen.php:471
+msgid "No repeat-view limit"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:472
+msgid "Any time"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:473
+msgid "Certain days and hours"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:474
+msgid "Everyone"
+msgstr ""
+
+#. translators: %d: number of targeting conditions (one).
+#: inc/Admin/class-review-screen.php:476
+#, php-format
+msgid "%d targeting condition"
+msgstr ""
+
+#. translators: %d: number of targeting conditions (more than one).
+#: inc/Admin/class-review-screen.php:478
+#, php-format
+msgid "%d targeting conditions"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:479
+#, fuzzy
+msgid "Custom rule"
+msgstr "Benutzerdefinierter Zeitplan"
+
+#: inc/Admin/class-review-screen.php:480
 msgid "Campaign updated."
 msgstr "Kampagne aktualisiert."
 
-#: inc/Admin/class-review-screen.php:399
+#: inc/Admin/class-review-screen.php:481
 msgid "Internal notes saved."
 msgstr "Interne Notizen gespeichert."
 
-#: inc/Admin/class-review-screen.php:400
+#: inc/Admin/class-review-screen.php:482
 msgid "Campaign changes approved."
 msgstr "Kampagnenänderungen genehmigt."
 
-#: inc/Admin/class-review-screen.php:401
+#: inc/Admin/class-review-screen.php:483
 msgid "Campaign changes rejected."
 msgstr "Kampagnenänderungen abgelehnt."
 
-#: inc/Admin/class-review-screen.php:402
+#: inc/Admin/class-review-screen.php:484
 msgid "The advertiser request was declined."
 msgstr "Die Anfrage des Werbetreibenden wurde abgelehnt."
 
-#: inc/Admin/class-review-screen.php:403
+#: inc/Admin/class-review-screen.php:485
 msgid "Ad update approved."
 msgstr "Werbemittel-Update genehmigt."
 
-#: inc/Admin/class-review-screen.php:404
+#: inc/Admin/class-review-screen.php:486
 msgid "Publish this advertisement"
 msgstr "Diese Anzeige veröffentlichen"
 
-#: inc/Admin/class-review-screen.php:405
+#: inc/Admin/class-review-screen.php:487
 msgid ""
 "Added after this campaign went live, so it has not been published yet and is "
 "not being served."
@@ -2360,55 +2824,55 @@ msgstr ""
 "Hinzugefügt, nachdem diese Kampagne live ging, daher wurde sie noch nicht "
 "veröffentlicht und wird nicht ausgeliefert."
 
-#: inc/Admin/class-review-screen.php:406
+#: inc/Admin/class-review-screen.php:488
 msgid "Advertisement published."
 msgstr "Anzeige veröffentlicht."
 
-#: inc/Admin/class-review-screen.php:407
+#: inc/Admin/class-review-screen.php:489
 msgid "Do not publish"
 msgstr "Nicht veröffentlichen"
 
-#: inc/Admin/class-review-screen.php:408
+#: inc/Admin/class-review-screen.php:490
 msgid "Why not? The advertiser will read this."
 msgstr "Warum nicht? Der Werbetreibende wird dies lesen."
 
-#: inc/Admin/class-review-screen.php:409
+#: inc/Admin/class-review-screen.php:491
 msgid "Advertisement turned down."
 msgstr "Werbemittel abgelehnt."
 
-#: inc/Admin/class-review-screen.php:410
+#: inc/Admin/class-review-screen.php:492
 msgid "Ad update rejected."
 msgstr "Aktualisierung der Anzeige abgelehnt."
 
-#: inc/Admin/class-review-screen.php:411
+#: inc/Admin/class-review-screen.php:493
 msgid "That change could not be saved."
 msgstr "Diese Änderung konnte nicht gespeichert werden."
 
-#: inc/Admin/class-screen-shell.php:89
+#: inc/Admin/class-screen-shell.php:95
 #, fuzzy
 msgctxt "admin screen group"
 msgid "Campaigns"
 msgstr "Kampagnen"
 
-#: inc/Admin/class-screen-shell.php:90
+#: inc/Admin/class-screen-shell.php:96
 #, fuzzy
 msgctxt "admin screen group"
 msgid "Inventory"
 msgstr "Inventar-Ausblick"
 
-#: inc/Admin/class-screen-shell.php:91
+#: inc/Admin/class-screen-shell.php:97
 #, fuzzy
 msgctxt "admin screen group"
 msgid "Advertisers"
 msgstr "Werbetreibender"
 
-#: inc/Admin/class-screen-shell.php:92
+#: inc/Admin/class-screen-shell.php:98
 #, fuzzy
 msgctxt "admin screen group"
 msgid "Measurement"
 msgstr "Platzierung"
 
-#: inc/Admin/class-screen-shell.php:93
+#: inc/Admin/class-screen-shell.php:99
 msgctxt "admin screen group"
 msgid "Setup"
 msgstr ""
@@ -5230,9 +5694,7 @@ msgid "That advertiser could not be found."
 msgstr "Dieser Werbetreibende konnte nicht gefunden werden."
 
 #: inc/REST/class-campaigns-controller.php:499
-#: inc/REST/class-creative-file-controller.php:176
-#: inc/REST/class-creative-file-controller.php:195
-#: inc/REST/class-creative-file-controller.php:329
+#: inc/REST/class-creative-file-controller.php:375
 #: inc/REST/class-line-items-controller.php:366
 #: inc/Workflow/class-assignment-editor.php:384
 #: inc/Workflow/class-line-item-editor.php:69
@@ -5252,7 +5714,12 @@ msgstr ""
 msgid "That conversion could not be recorded."
 msgstr "Diese Conversion konnte nicht erfasst werden."
 
-#: inc/REST/class-creative-file-controller.php:211
+#: inc/REST/class-creative-file-controller.php:240
+#, fuzzy
+msgid "Preview unavailable"
+msgstr "Auslieferungszahlen nicht verfügbar"
+
+#: inc/REST/class-creative-file-controller.php:258
 msgid "Advertisement preview"
 msgstr "Anzeigenvorschau"
 
@@ -6250,16 +6717,13 @@ msgstr "Diese Platzierung ist nicht verfügbar."
 msgid "That placement is not part of this campaign."
 msgstr "Diese Platzierung ist nicht Teil dieser Kampagne."
 
-#: inc/Workflow/class-creative-promoter.php:67
+#: inc/Workflow/class-creative-promoter.php:89
+#: inc/Workflow/class-creative-promoter.php:278
 msgid "This creative has no file to publish."
 msgstr "Dieses Werbemittel hat keine Datei zum Veröffentlichen."
 
-#: inc/Workflow/class-creative-promoter.php:74
-msgid "This creative’s file could not be found."
-msgstr "Die Datei dieses Werbemittels konnte nicht gefunden werden."
-
-#: inc/Workflow/class-creative-promoter.php:87
-#: inc/Workflow/class-creative-promoter.php:109
+#: inc/Workflow/class-creative-promoter.php:102
+#: inc/Workflow/class-creative-promoter.php:124
 msgid ""
 "This creative’s file could not be read, so it has not been published. Its "
 "stored copy may be damaged, or the site’s creative encryption key may have "
@@ -6270,7 +6734,7 @@ msgstr ""
 "der Verschlüsselungsschlüssel für Werbemittel der Website könnte sich "
 "geändert haben."
 
-#: inc/Workflow/class-creative-promoter.php:96
+#: inc/Workflow/class-creative-promoter.php:111
 msgid ""
 "This creative’s file has changed since it was reviewed, so it has not been "
 "published."
@@ -6278,22 +6742,26 @@ msgstr ""
 "Die Datei dieses Werbemittels hat sich seit der Prüfung geändert, daher "
 "wurde es nicht veröffentlicht."
 
-#: inc/Workflow/class-creative-promoter.php:132
+#: inc/Workflow/class-creative-promoter.php:147
 msgid "This creative could not be linked to its Media Library file."
 msgstr ""
 "Dieses Werbemittel konnte nicht mit der Datei in der Medienbibliothek "
 "verknüpft werden."
 
-#: inc/Workflow/class-creative-promoter.php:199
+#: inc/Workflow/class-creative-promoter.php:214
 msgid ""
 "The Media Library is not writable, so this creative could not be published."
 msgstr ""
 "Die Mediabibliothek ist nicht beschreibbar, daher konnte dieses Werbemittel "
 "nicht veröffentlicht werden."
 
-#: inc/Workflow/class-creative-promoter.php:216
+#: inc/Workflow/class-creative-promoter.php:231
 msgid "This creative could not be copied into the Media Library."
 msgstr "Dieses Werbemittel konnte nicht in die Mediathek kopiert werden."
+
+#: inc/Workflow/class-creative-promoter.php:285
+msgid "This creative’s file could not be found."
+msgstr "Die Datei dieses Werbemittels konnte nicht gefunden werden."
 
 #: inc/Workflow/class-creative-uploader.php:177
 msgid "No file was received. Please choose a file and try again."
@@ -7845,10 +8313,6 @@ msgstr "Abgeglichen bis %s (UTC)."
 msgid "M j · g:i A"
 msgstr ""
 
-#: templates/portal/partials/campaign-status.php:54
-msgid "Flat fee"
-msgstr ""
-
 #: templates/portal/partials/campaign-status.php:55
 #, fuzzy
 msgid "Per 1,000 impressions"
@@ -7871,6 +8335,10 @@ msgstr "Platzierung erstellen"
 #: templates/portal/partials/campaign-status.php:62
 msgid "Spread evenly over the dates"
 msgstr ""
+
+#: templates/portal/partials/campaign-status.php:63
+msgid "As fast as possible"
+msgstr "Schnell wie möglich"
 
 #: templates/portal/partials/campaign-status.php:92
 #, fuzzy
@@ -8130,10 +8598,6 @@ msgstr ""
 #: templates/portal/partials/campaign-variant-window.php:55
 msgid "Runs between"
 msgstr "Läuft zwischen"
-
-#: templates/portal/partials/campaign-variant-window.php:59
-msgid "From"
-msgstr "Von"
 
 #: templates/portal/partials/campaign-variant-window.php:72
 msgid "To"
@@ -9488,6 +9952,40 @@ msgctxt "block keyword"
 msgid "banner"
 msgstr "Banner"
 
+#~ msgid "Even"
+#~ msgstr "Gerade"
+
+#~ msgid "Daily impression cap (0 for none)"
+#~ msgstr "Tägliche Impressions-Obergrenze (0 = keine)"
+
+#~ msgid "Targeting rules (JSON)"
+#~ msgstr "Targeting-Regeln (JSON)"
+
+#~ msgid ""
+#~ "Leave empty to target everyone. A rule needs a dimension, an operator and "
+#~ "a value."
+#~ msgstr ""
+#~ "Leer lassen, um alle anzusprechen. Eine Regel benötigt eine Dimension, "
+#~ "einen Operator und einen Wert."
+
+#~ msgid "Frequency capping (JSON)"
+#~ msgstr "Frequenzbegrenzung (JSON)"
+
+#~ msgid ""
+#~ "Leave empty for no cap. Set enabled, max_impressions, window and level."
+#~ msgstr ""
+#~ "Leer lassen für keine Obergrenze. Setzen Sie enabled, max_impressions, "
+#~ "window und level."
+
+#~ msgid "Dayparts and timezone (JSON)"
+#~ msgstr "Tageszeiten und Zeitzone (JSON)"
+
+#~ msgid ""
+#~ "Leave empty to run at any hour. Set dayparts and an optional timezone."
+#~ msgstr ""
+#~ "Leer lassen, um zu jeder Uhrzeit auszuliefern. Tageszeiten und optional "
+#~ "eine Zeitzone festlegen."
+
 #, php-format
 #~ msgid "About %s of this placement."
 #~ msgstr "Etwa %s dieser Platzierung"
@@ -9680,9 +10178,6 @@ msgstr "Banner"
 #~ msgid "Campaign statuses table"
 #~ msgstr "Kampagnenstatus-Tabelle"
 
-#~ msgid "What it means"
-#~ msgstr "Was es bedeutet"
-
 #~ msgid ""
 #~ "Names are stored in uppercase. Exact matches of another organization’s "
 #~ "name are refused so two tenants cannot claim the same identity."
@@ -9820,9 +10315,6 @@ msgstr "Banner"
 #~ "Jede aktive Paketplatzierung benötigt mindestens ein Werbemittel, bevor "
 #~ "dieser Zeitplan abgeschlossen werden kann."
 
-#~ msgid "Back to creative"
-#~ msgstr "Zurück zum Werbemittel"
-
 #~ msgid "Save and continue to review"
 #~ msgstr "Speichern und zur Prüfung fortfahren"
 
@@ -9841,12 +10333,6 @@ msgstr "Banner"
 
 #~ msgid "Resolve every item below before submitting this campaign."
 #~ msgstr "Beheben Sie alle Punkte unten, bevor Sie diese Kampagne einreichen."
-
-#~ msgid "Campaign details"
-#~ msgstr "Kampagnendetails"
-
-#~ msgid "Back to schedule"
-#~ msgstr "Zurück zum Zeitplan"
 
 #~ msgid "Send this campaign to the review team?"
 #~ msgstr "Diese Kampagne an das Prüfungsteam senden?"

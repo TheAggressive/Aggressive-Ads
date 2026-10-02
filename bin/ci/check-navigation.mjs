@@ -60,7 +60,7 @@ const SINKS = [
  * expression, not the file, so a second href beside it is still checked.
  */
 const UNGATED_HREFS = new Set( [
-	'admin/review/campaign.tsx creative.click_url',
+	'admin/review/creative.tsx creative.click_url',
 ] );
 
 const HREF_SINK = /href=\{\s*([^}]+?)\s*\}/g;

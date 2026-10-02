@@ -55,6 +55,12 @@ export type Creative = {
 	 */
 	preview_frame: string;
 	/**
+	 * No artwork to publish: no Media Library copy and no private file that
+	 * resolves. The same check approval's publication runs
+	 * (`Creative_Promoter::has_artwork()`).
+	 */
+	file_missing: boolean;
+	/**
 	 * Still waiting to be published.
 	 *
 	 * Server-derived from "has no Media Library attachment", which is what
@@ -103,9 +109,34 @@ export type ReviewAction = {
 export type AuditEvent = {
 	message: string;
 	actor: string;
+	/** The scheduler or another automated path, not a person. */
+	system: boolean;
 	created_at: number;
 	created_text: string;
+	/** The date alone and the time alone, in the site's timezone. */
+	day_text: string;
+	time_text: string;
 	outcome: string;
+	/** Translated, and empty for an ordinary success. */
+	outcome_label: string;
+	/** A status change's two ends, labelled and toned; empty otherwise. */
+	from_label: string;
+	from_pill: string;
+	to_label: string;
+	to_pill: string;
+};
+
+export type ReadinessCheck = {
+	key: string;
+	label: string;
+	ok: boolean;
+	/** The validator's own sentences; empty when the check passes. */
+	problems: string[];
+};
+
+export type Readiness = {
+	ready: boolean;
+	checks: ReadinessCheck[];
 };
 
 export type LineItem = {
@@ -114,13 +145,17 @@ export type LineItem = {
 	status: string;
 	pricing_model: string;
 	goal_type: string;
+	/** The three above, translated for reading. */
+	status_label: string;
+	pricing_label: string;
+	goal_label: string;
 	pacing_mode: string;
 	priority: number;
 	weight: number;
 	revision: number;
 	daily_cap: number;
 	lifetime_cap: number;
-	/* Decoded server-side; the panel edits them as JSON text. */
+	/* Decoded server-side. The panel edits the common shapes as fields. */
 	targeting_rules: Record< string, unknown >;
 	frequency_policy: Record< string, unknown >;
 	delivery_settings: Record< string, unknown >;
@@ -154,6 +189,16 @@ export type Campaign = {
 	actions: ReviewAction[];
 	can_view_audit: boolean;
 	audit: AuditEvent[];
+	/**
+	 * What blocks approval, from the approval guard's own check; null outside
+	 * the statuses where a decision is waiting.
+	 */
+	readiness: Readiness | null;
+	/** Whether a delivery-policy save would be accepted in this status. */
+	delivery_editable: boolean;
+	/** Schedule bounds as Unix time; 0 when unscheduled. */
+	start_ts: number;
+	end_ts: number;
 	line_items: LineItem[];
 };
 

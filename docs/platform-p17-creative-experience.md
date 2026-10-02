@@ -623,10 +623,29 @@ widths from the server. The browser suite asserts `sandbox=""` on the frame and
 that the widths are a radio group that works from the keyboard — the axe and
 focus coverage the dialog already had now covers this UI too.
 
-**No revision is touched to produce a preview.** The frame's source is the same
-authenticated file route the card's thumbnail uses, which is the exact bytes
-that were uploaded; the invariant that forbids editing a reviewed revision to
-make something to look at is satisfied by not having anything to edit.
+**No revision is touched to produce a preview.** The frame shows the exact
+bytes that were uploaded; the invariant that forbids editing a reviewed
+revision to make something to look at is satisfied by not having anything to
+edit.
+
+**An unapproved creative travels inside the preview document.** The frame
+used to point its `img` at the authenticated file route. Sandboxed to an
+opaque origin, the frame's requests carry no login cookie, so the route
+refused them, Chrome blocked the refusal (`ERR_BLOCKED_BY_ORB`), and every
+pending creative previewed as an empty white box — on the review screen and
+in the portal — while the browser suite, which measures the frame, passed.
+The document's own request is the authenticated one, so it now carries the
+bytes as a `data:` image (`Private_Storage::read()`, bounded by the upload
+ceiling), and the document policy admits `data:` images and still no script.
+An approved creative still loads from its public Media Library URL. The
+browser suite now fails if the frame requests the file route itself.
+
+**A refusal is a page.** Every preview refusal — not yours, no such creative,
+no file — is the same 404 document saying the preview is unavailable, not
+the REST error as JSON, which a frame renders verbatim. When the file is
+gone the review card does not frame the preview at all: it says the artwork
+is missing, and the Before approval checklist blocks on it, asking the same
+question publication asks (`Creative_Promoter::has_artwork()`).
 
 **Deliberately not built: a preview of how the creative sits in the page.** The
 frame shows the ad at a screen width, not the publisher's layout around it.
