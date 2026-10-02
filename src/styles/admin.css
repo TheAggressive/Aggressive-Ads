@@ -14,6 +14,7 @@
  */
 
 @import './base/_admin-tokens.css';
+@import './components/_review-detail.css';
 
 /*
  * Restores the gutter wp-admin gives every screen.
@@ -40,7 +41,7 @@
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
-	gap: var(--aggr-space-sm);
+	gap: var(--aggr-space-md);
 }
 
 .aggr-pagehead__actions .aggr-button {
@@ -67,17 +68,6 @@
 	background: var(--aggr-color-live);
 	color: var(--aggr-color-accent-contrast);
 	filter: brightness(0.92);
-}
-
-/*
- * Above the admin bar, which core puts at 99999.
- *
- * The overlay's own token is 1000, which is right on the front end and would
- * render this dialog *underneath* the admin menu and toolbar. The dialog is
- * portaled to <body>, so it is outside .aggr-admin and needs its own hook.
- */
-.aggr-overlay--admin {
-	z-index: 100000;
 }
 
 /*
@@ -124,17 +114,81 @@
 		border-top: 0;
 	}
 
+	/*
+	 * The ad and the decisions take the wide column. The record — summary,
+	 * strategy, notes — stays a sidebar, so a fact list does not become a row
+	 * of cells stretched across the monitor and the delivery fields do not
+	 * either.
+	 */
 	.aggr-review-columns {
 		display: grid;
-		grid-template-columns: minmax(0, 3fr) minmax(280px, 2fr);
+		grid-template-columns: minmax(0, 1fr) minmax(17rem, 22rem);
 		gap: var(--aggr-space-lg);
 		align-items: start;
+	}
+
+	.aggr-review-columns__main,
+	.aggr-review-columns__side {
+		min-width: 0;
 	}
 
 	@media (max-width: 960px) {
 		.aggr-review-columns {
 			grid-template-columns: 1fr;
 		}
+	}
+
+	.aggr-review-columns__side .aggr-facts {
+		grid-template-columns: 1fr;
+		gap: var(--aggr-space-md);
+		margin-top: var(--aggr-space-md);
+		padding: 0;
+		background: transparent;
+	}
+
+	.aggr-admin .aggr-panel .aggr-creative-grid {
+		margin-top: var(--aggr-space-md);
+		padding: 0;
+	}
+
+	/* A delivery field is a control, not a banner. */
+	.wrap.aggr-admin .aggr-form--measure {
+		max-width: 40rem;
+	}
+
+	/* A panel's introduction is prose before the fields, not a field's help. */
+	.wrap.aggr-admin .aggr-panel > .aggr-form__help {
+		max-width: 60ch;
+		margin-bottom: var(--aggr-space-lg);
+	}
+
+	/*
+	 * A form inside a panel is already inset by the panel. Its own padding
+	 * doubled that, so every field sat a second step in from its heading.
+	 */
+	.wrap.aggr-admin .aggr-panel .aggr-form {
+		padding: 0;
+	}
+
+	/*
+	 * A save button is as wide as its words. Stretched to the field width it
+	 * read as another input, and the panel's one action looked like a banner.
+	 */
+	.wrap.aggr-admin .aggr-panel .aggr-form > .aggr-button {
+		justify-self: start;
+		width: auto;
+	}
+
+	/* The two limits are read as a pair, so they sit as one. */
+	.aggr-policy__caps {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+		gap: var(--aggr-space-sm) var(--aggr-space-md);
+	}
+
+	.aggr-policy__cap {
+		display: grid;
+		gap: var(--aggr-space-2xs);
 	}
 
 	/*
@@ -402,8 +456,13 @@
 		font-weight: 700;
 	}
 
+	/*
+	 * Text fields only. A checkbox caught by this rule took the 8px control
+	 * radius, which on a 16px box is a circle — every checkbox in the delivery
+	 * policy read as a radio button. Checkboxes and radios keep core's own.
+	 */
 	.aggr-action textarea,
-	.aggr-form input,
+	.aggr-form input:not([type="checkbox"]):not([type="radio"]),
 	.aggr-form select,
 	.aggr-form textarea {
 		width: 100%;
@@ -433,6 +492,7 @@
 		font-weight: 700;
 	}
 
+
 	.aggr-button--secondary {
 		background: var(--aggr-color-surface);
 		border-color: var(--aggr-border-color-strong);
@@ -449,44 +509,6 @@
 		filter: brightness(0.96);
 	}
 
-	.aggr-timeline {
-		margin: 0;
-		padding: var(--aggr-space-lg);
-		list-style: none;
-	}
-
-	.aggr-timeline__item {
-		position: relative;
-		margin: 0;
-		padding: 0 0 var(--aggr-space-lg) var(--aggr-space-lg);
-		border-left: 2px solid var(--aggr-border-color-strong);
-	}
-
-	.aggr-timeline__item::before {
-		position: absolute;
-		top: 0.35rem;
-		left: -0.4rem;
-		width: 0.7rem;
-		height: 0.7rem;
-		border-radius: 50%;
-		background: var(--aggr-color-accent);
-		content: "";
-	}
-
-	.aggr-timeline__item:last-child {
-		padding-bottom: 0;
-	}
-
-	.aggr-timeline__message {
-		color: var(--aggr-color-text);
-		font-weight: 700;
-	}
-
-	.aggr-timeline__meta {
-		margin-top: var(--aggr-space-2xs);
-		color: var(--aggr-color-text-muted);
-		font-size: 13px;
-	}
 
 	.aggr-provider-state {
 		margin-bottom: var(--aggr-space-lg);

@@ -175,6 +175,11 @@ tests caught passing for the wrong reason, incident by incident.
   `bin/ci/check-client-contract.mjs` and `ClientContractParityTest` read both
   sources and fail when one side is missing — do not add a context key or a
   fill parameter without that lane seeing a reader.
+  It happened again at a route: the line-item `PATCH` declared and validated
+  the delivery-policy fields, then copied an allowlist that left them out.
+  The form saved, the route answered 200, and nothing was stored (#336).
+  A route test that writes a field must **read it back from storage**, not
+  assert on the response it built.
 
 ## Working style
 

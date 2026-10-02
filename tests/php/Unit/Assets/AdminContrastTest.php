@@ -72,7 +72,7 @@ final class AdminContrastTest extends TestCase {
 	public function test_every_colour_token_the_staff_screens_use_is_overridden(): void {
 		$used = array();
 
-		foreach ( array( 'admin.css', 'components/_surfaces.css', 'layout/_chrome.css' ) as $file ) {
+		foreach ( array( 'admin.css', 'components/_review-detail.css', 'components/_surfaces.css', 'layout/_chrome.css' ) as $file ) {
 			$css = file_get_contents( AGGR_PLUGIN_DIR . 'src/styles/' . $file );
 
 			$this->assertIsString( $css );

@@ -85,6 +85,17 @@ final class Creative_File_Controller implements Service {
 	private string $pending_document = '';
 
 	/**
+	 * The status the pending document was written for.
+	 *
+	 * The serve hook emits the document only when the response still carries
+	 * this status, so a response something else turned into an error is never
+	 * given a body meant for another outcome.
+	 *
+	 * @var int
+	 */
+	private int $pending_status = 200;
+
+	/**
 	 * Constructor.
 	 *
 	 * @param Creative_Repository            $creatives Creative persistence.
@@ -161,19 +172,24 @@ final class Creative_File_Controller implements Service {
 	 * never produced for a creative the caller may not see.
 	 *
 	 * @param WP_REST_Request $request The request.
-	 * @return WP_REST_Response|WP_Error
+	 * @return WP_REST_Response
 	 *
 	 * @phpstan-param WP_REST_Request<array<string, mixed>> $request
 	 */
-	public function preview( WP_REST_Request $request ) {
+	public function preview( WP_REST_Request $request ): WP_REST_Response {
 		$creative_id = (int) $request->get_param( 'id' );
 
 		/*
 		 * The same one answer every failure gets below: not a creative, no
-		 * such id, not yours. Distinguishing them is what builds the oracle.
+		 * such id, not yours, no file. Distinguishing them is what builds the
+		 * oracle.
+		 *
+		 * As a document, not JSON. The caller is a frame, and a frame shows
+		 * whatever it is given: the REST error rendered as raw JSON inside a
+		 * phone outline on the reviewer's screen, under a "Pretty print" box.
 		 */
 		if ( ! current_user_can( 'read_aggr_creative', $creative_id ) ) {
-			return new WP_Error( 'aggr_not_found', __( 'Not found.', 'aggressive-ads' ), array( 'status' => 404 ) );
+			return $this->document_response( 404, self::unavailable_body() );
 		}
 
 		/*
@@ -182,37 +198,69 @@ final class Creative_File_Controller implements Service {
 		 * the private stage, so an approved creative has no private file to
 		 * stream — the same order the card's own thumbnail uses.
 		 */
-		$promoted = $this->attachments->attachment_url( $creative_id );
-		$source   = '' !== $promoted
-			? $promoted
-			: add_query_arg(
-				'_wpnonce',
-				wp_create_nonce( 'wp_rest' ),
-				rest_url( Api::NAMESPACE . '/creatives/' . $creative_id . '/file' )
-			);
+		$source = $this->attachments->attachment_url( $creative_id );
 
-		if ( '' === $promoted && is_wp_error( $this->prepare( $creative_id ) ) ) {
-			return new WP_Error( 'aggr_not_found', __( 'Not found.', 'aggressive-ads' ), array( 'status' => 404 ) );
+		/*
+		 * **An unapproved creative rides inside the document.** The frame is
+		 * sandboxed to an opaque origin, so the browser sends no login cookie
+		 * with its requests: pointed at the file route, the image was refused,
+		 * Chrome blocked the refusal (ERR_BLOCKED_BY_ORB), and every pending
+		 * creative previewed as an empty white box. This request is
+		 * authenticated, so the bytes come with it (`Preview_Frame` allows
+		 * `data:` images and still no script).
+		 */
+		if ( '' === $source ) {
+			$file  = $this->prepare( $creative_id );
+			$bytes = is_wp_error( $file ) ? null : $this->storage->read( $file['path'], Upload_Rules::CEILING_MAX_BYTES );
+
+			if ( is_wp_error( $file ) || null === $bytes ) {
+				return $this->document_response( 404, self::unavailable_body() );
+			}
+
+			// phpcs:ignore WordPress.PHP.DiscouragedPHPFunctions.obfuscation_base64_encode -- A data: URI for an image the caller is authorized to see.
+			$source = 'data:' . $file['mime'] . ';base64,' . base64_encode( $bytes );
 		}
 
-		$document = sprintf(
+		/*
+		 * `alt=""`: the frame carries the accessible name — "Preview of the
+		 * ad for Header" — and the creative's own description is on the card
+		 * beside it. A second name here would be read twice, and inventing one
+		 * from a filename is worse than none.
+		 */
+		return $this->document_response( 200, sprintf( '<img src="%s" alt="">', esc_url( $source, array( 'http', 'https', 'data' ) ) ) );
+	}
+
+	/**
+	 * What the frame shows when there is nothing it may show. One sentence for
+	 * every refusal, for the reason the 404 is one answer.
+	 *
+	 * @return string
+	 */
+	private static function unavailable_body(): string {
+		return '<p>' . esc_html__( 'Preview unavailable', 'aggressive-ads' ) . '</p>';
+	}
+
+	/**
+	 * Wraps a body in the preview document and queues it for the serve hook.
+	 *
+	 * @param int    $status HTTP status.
+	 * @param string $body   Markup built from escaped parts.
+	 * @return WP_REST_Response
+	 */
+	private function document_response( int $status, string $body ): WP_REST_Response {
+		$this->pending_document = sprintf(
 			'<!DOCTYPE html><html lang="%1$s"><head><meta charset="utf-8"><title>%2$s</title>'
 			. '<style>html,body{margin:0;height:100%%;display:flex;align-items:center;justify-content:center;background:#fff}'
-			. 'img{max-width:100%%;height:auto;display:block}</style></head>'
-
-			/*
-			 * `alt=""`: the frame carries the accessible name — "Preview of
-			 * the ad for Header" — and the creative's own description is on
-			 * the card beside it. A second name here would be read twice, and
-			 * inventing one from a filename is worse than none.
-			 */
-			. '<body><img src="%3$s" alt=""></body></html>',
+			. 'img{max-width:100%%;height:auto;display:block}'
+			. 'p{margin:0;padding:1rem;font:14px/1.4 system-ui,sans-serif;color:#50575e;text-align:center}</style></head>'
+			. '<body>%3$s</body></html>',
 			esc_attr( str_replace( '_', '-', (string) get_locale() ) ),
 			esc_html__( 'Advertisement preview', 'aggressive-ads' ),
-			esc_url( $source )
+			$body
 		);
+		$this->pending_status   = $status;
 
-		$response = new WP_REST_Response( null, 200 );
+		$response = new WP_REST_Response( null, $status );
 
 		$response->header( 'Content-Type', 'text/html; charset=utf-8' );
 		$response->header( 'X-Content-Type-Options', 'nosniff' );
@@ -220,8 +268,6 @@ final class Creative_File_Controller implements Service {
 		$response->header( 'Referrer-Policy', 'no-referrer' );
 		$response->header( 'X-Frame-Options', 'SAMEORIGIN' );
 		$response->header( 'Content-Security-Policy', Preview_Frame::document_policy( self::document_origin() ) );
-
-		$this->pending_document = $document;
 
 		return $response;
 	}
@@ -384,7 +430,7 @@ final class Creative_File_Controller implements Service {
 			// response in the same request cannot inherit it.
 			$this->pending_document = '';
 
-			if ( 200 !== $result->get_status() ) {
+			if ( $this->pending_status !== $result->get_status() ) {
 				return $served;
 			}
 

@@ -193,15 +193,26 @@ test( 'a local that is not the sameOriginUrl result is refused', async () => {
 test( 'the advertiser destination is the only ungated href', async () => {
 	const allowed = await fixture( {
 		...GATEWAY,
-		'admin/review/campaign.tsx':
+		'admin/review/creative.tsx':
 			'const link = <a href={ creative.click_url } />;\n',
 	} );
 
 	assert.equal( run( allowed ).status, 0 );
 
-	const besideIt = await fixture( {
+	// The exemption names a file as well as an expression, so moving the
+	// creative card moved it rather than widening it: the same href anywhere
+	// else is still refused.
+	const elsewhere = await fixture( {
 		...GATEWAY,
 		'admin/review/campaign.tsx':
+			'const link = <a href={ creative.click_url } />;\n',
+	} );
+
+	assert.equal( run( elsewhere ).status, 1 );
+
+	const besideIt = await fixture( {
+		...GATEWAY,
+		'admin/review/creative.tsx':
 			'const link = <a href={ creative.click_url } />;\n' +
 			'const other = <a href={ editUrl } />;\n',
 	} );

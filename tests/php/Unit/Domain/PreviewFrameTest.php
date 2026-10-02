@@ -80,4 +80,27 @@ final class PreviewFrameTest extends TestCase {
 
 		$this->assertFalse( Preview_Frame::is_width( 'watch' ) );
 	}
+
+	/**
+	 * The document's policy admits the site's images and inline ones, and
+	 * nothing that runs.
+	 *
+	 * `data:` is there because an unapproved creative travels inside the
+	 * document: its sandboxed frame cannot make an authenticated request.
+	 *
+	 * @return void
+	 */
+	public function test_the_document_policy_admits_inline_images_and_no_script(): void {
+		$policy = Preview_Frame::document_policy( 'https://example.test' );
+
+		$this->assertStringContainsString( "default-src 'none'", $policy );
+		$this->assertStringContainsString( 'img-src https://example.test data:;', $policy );
+		$this->assertStringContainsString( 'sandbox', $policy );
+
+		foreach ( array( 'script-src', 'unsafe-eval', "'unsafe-hashes'", '*', 'blob:' ) as $forbidden ) {
+			$this->assertStringNotContainsString( $forbidden, $policy, "The document policy now contains {$forbidden}." );
+		}
+
+		$this->assertSame( 1, substr_count( $policy, 'data:' ), 'data: reaches a directive other than img-src.' );
+	}
 }

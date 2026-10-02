@@ -13,7 +13,6 @@ use Aggressive\Ads\Core\Post_Statuses;
 use Aggressive\Ads\Domain\Transition_Table;
 use Aggressive\Ads\Portal\Routes;
 use Aggressive\Ads\Portal\View_Data;
-use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Campaign_Request_Repository;
 use Aggressive\Ads\Repository\Creative_Attachment_Repository;
@@ -89,13 +88,16 @@ final class Review_Data {
 	 * @param Assigned_Creatives                         $assigned   What is assigned where.
 	 * @param Placement_Repository                       $placements Placement persistence.
 	 * @param Org_Repository                             $orgs       Organization lookups.
-	 * @param Audit_Repository                           $audit      Audit history.
+	 * @param Audit_Trail                                $trail      The campaign's audit log, as the timeline reads it.
 	 * @param Campaign_Change_Manager                    $changes    Running-campaign change proposals.
 	 * @param Line_Item_Repository                       $line_items Campaign delivery strategies.
 	 * @param \Aggressive\Ads\Workflow\Creative_Approval $approvals  Creatives awaiting publication.
 	 * @param Pending_Work                               $pending    Waiting-work count, shared with the menu.
 	 * @param Campaign_Request_Repository                $requests   Advertiser requests and proposed changes.
 	 * @param Creative_Decision_Repository               $decisions  What a reviewer decided about each revision.
+	 * @param Approval_Readiness                         $readiness  What blocks approval, from the approval guard's own check.
+	 * @param \Aggressive\Ads\Workflow\Edit_Window       $window     Whether the campaign's status still allows edits.
+	 * @param \Aggressive\Ads\Workflow\Creative_Promoter $promoter   Whether a creative has artwork to publish.
 	 */
 	public function __construct(
 		private readonly Campaign_Repository $campaigns,
@@ -105,13 +107,16 @@ final class Review_Data {
 		private readonly Assigned_Creatives $assigned,
 		private readonly Placement_Repository $placements,
 		private readonly Org_Repository $orgs,
-		private readonly Audit_Repository $audit,
+		private readonly Audit_Trail $trail,
 		private readonly Campaign_Change_Manager $changes,
 		private readonly Line_Item_Repository $line_items,
 		private readonly \Aggressive\Ads\Workflow\Creative_Approval $approvals,
 		private readonly Pending_Work $pending,
 		private readonly Campaign_Request_Repository $requests,
-		private readonly Creative_Decision_Repository $decisions
+		private readonly Creative_Decision_Repository $decisions,
+		private readonly Approval_Readiness $readiness,
+		private readonly \Aggressive\Ads\Workflow\Edit_Window $window,
+		private readonly \Aggressive\Ads\Workflow\Creative_Promoter $promoter
 	) {
 	}
 
@@ -133,29 +138,6 @@ final class Review_Data {
 	 */
 	public static function is_filter( string $filter ): bool {
 		return array_key_exists( $filter, self::FILTERS );
-	}
-
-	/**
-	 * Formats a UTC timestamp in the site's timezone, or returns an empty value.
-	 *
-	 * @param int  $timestamp UTC Unix timestamp.
-	 * @param bool $with_time Whether to include the site's time format.
-	 * @return string
-	 */
-	public static function format_timestamp( int $timestamp, bool $with_time = false ): string {
-		if ( $timestamp <= 0 ) {
-			return '';
-		}
-
-		$format = (string) get_option( 'date_format', 'M j, Y' );
-
-		if ( $with_time ) {
-			$format .= ' ' . (string) get_option( 'time_format', 'g:i a' );
-		}
-
-		$formatted = wp_date( $format, $timestamp );
-
-		return is_string( $formatted ) ? $formatted : '';
 	}
 
 	/**
@@ -295,47 +277,25 @@ final class Review_Data {
 		$row['actions']          = $this->actions_for( $campaign_id, $row['status'] );
 		$row['internal_notes']   = $this->campaigns->internal_notes( $campaign_id );
 		$row['can_view_audit']   = current_user_can( Capabilities::VIEW_AUDIT_LOG );
-		$row['audit']            = $row['can_view_audit'] ? $this->audit_rows( $campaign_id ) : array();
+		$row['audit']            = $row['can_view_audit'] ? $this->trail->for_campaign( $campaign_id, $this->campaigns->org_id( $campaign_id ) ) : array();
+
+		// Only while a decision is waiting, and only then is it worth the
+		// validator's queries.
+		$row['readiness'] = Approval_Readiness::applies_to( $row['status'] ) ? $this->readiness->for_campaign( $campaign_id ) : null;
 		$this->line_items->ensure_default( $campaign_id );
-		$row['line_items'] = $this->line_items->for_campaign( $campaign_id );
+		$row['line_items'] = array_map( array( Line_Item_Labels::class, 'labelled' ), $this->line_items->for_campaign( $campaign_id ) );
+
+		/*
+		 * Whether a delivery-policy save would be accepted, from the same check
+		 * the line-item route runs (`Edit_Window::allows()`), so the screen
+		 * never offers an edit the server would refuse. Staff may edit in every
+		 * status today (`Post_Statuses::staff_editable()`), so this is true on
+		 * this screen; it is asked rather than assumed so that narrowing the
+		 * staff window — or organization-scoped roles — needs no change here.
+		 */
+		$row['delivery_editable'] = $this->window->allows( $campaign_id );
 
 		return $row;
-	}
-
-	/**
-	 * One audit row's sentence, in the reader's words rather than the schema's.
-	 *
-	 * A transition stores its own message as `Campaign moved from aggr_submitted
-	 * to aggr_review.`, which is the right thing to *store* — an audit row is a
-	 * record, and freezing a translated string into it would make the log read
-	 * in whichever locale happened to be active when it was written. The status
-	 * slugs are also kept in their own columns for exactly this reason.
-	 *
-	 * So the sentence is composed here, at render time, from those columns. That
-	 * localizes it properly and fixes every row already in the table rather than
-	 * only the ones written from now on.
-	 *
-	 * Scoped to `campaign.transitioned` on purpose. A denial carries from/to as
-	 * well, and its own message says something this one does not.
-	 *
-	 * @param array{event: string, from_state: string, to_state: string, message: string} $event Stored row.
-	 * @return string
-	 */
-	private static function event_message( array $event ): string {
-		if (
-			'campaign.transitioned' !== $event['event']
-			|| '' === $event['from_state']
-			|| '' === $event['to_state']
-		) {
-			return $event['message'];
-		}
-
-		return sprintf(
-			/* translators: 1: previous campaign status, already translated. 2: new campaign status, already translated. */
-			__( 'Campaign moved from %1$s to %2$s.', 'aggressive-ads' ),
-			self::status_label( $event['from_state'] ),
-			self::status_label( $event['to_state'] )
-		);
 	}
 
 	/**
@@ -350,7 +310,7 @@ final class Review_Data {
 			return __( 'Not scheduled', 'aggressive-ads' );
 		}
 
-		$start = self::format_timestamp( $start_ts );
+		$start = Review_Format::date( $start_ts );
 
 		if ( $end_ts <= 0 ) {
 			return $start;
@@ -360,7 +320,7 @@ final class Review_Data {
 			/* translators: 1: campaign start date. 2: campaign end date. */
 			__( '%1$s – %2$s', 'aggressive-ads' ),
 			$start,
-			self::format_timestamp( $end_ts )
+			Review_Format::date( $end_ts )
 		);
 	}
 
@@ -449,7 +409,7 @@ final class Review_Data {
 			'id'               => $campaign_id,
 			'title'            => $this->campaigns->title( $campaign_id ),
 			'status'           => $status,
-			'status_text'      => self::status_label( $status ),
+			'status_text'      => Review_Format::status( $status ),
 			'pill'             => View_Data::pill_for( $status ),
 			'org_id'           => $this->campaigns->org_id( $campaign_id ),
 			'org_name'         => $this->orgs->name( $this->campaigns->org_id( $campaign_id ) ),
@@ -478,14 +438,14 @@ final class Review_Data {
 			 * the visitor's timezone, silently, and off by hours for anyone
 			 * whose is not the site's.
 			 */
-			'submitted_text'   => self::format_timestamp( $this->campaigns->submitted_at( $campaign_id ), true ),
+			'submitted_text'   => Review_Format::date( $this->campaigns->submitted_at( $campaign_id ), true ),
 			'schedule_text'    => self::schedule_text(
 				$this->campaigns->start_ts( $campaign_id ),
 				$this->campaigns->end_ts( $campaign_id )
 			),
 			'modified_at'      => $this->campaigns->modified_ts( $campaign_id ),
 			'reviewer_id'      => $reviewer_id,
-			'reviewer'         => self::user_name( $reviewer_id ),
+			'reviewer'         => Review_Format::user( $reviewer_id ),
 			'revision'         => $this->campaigns->revision( $campaign_id ),
 			'review_notes'     => $this->campaigns->review_notes( $campaign_id ),
 			'start_ts'         => $this->campaigns->start_ts( $campaign_id ),
@@ -532,6 +492,7 @@ final class Review_Data {
 				'text_only'     => $this->revisions->is_text_only_revision( (int) $creative['id'] ),
 				'preview'       => $this->creative_preview( (int) $creative['id'] ),
 				'preview_frame' => $this->creative_preview_frame( (int) $creative['id'] ),
+				'file_missing'  => ! $this->promoter->has_artwork( (int) $creative['id'] ),
 			);
 		}
 
@@ -648,6 +609,13 @@ final class Review_Data {
 				'awaiting'      => in_array( (int) $creative['id'], $awaiting, true ),
 				'preview'       => $this->creative_preview( (int) $creative['id'] ),
 				'preview_frame' => $this->creative_preview_frame( (int) $creative['id'] ),
+
+				/*
+				 * The file is gone, so there is nothing to preview and nothing
+				 * approval could publish. The card says so instead of framing
+				 * the preview route's refusal.
+				 */
+				'file_missing'  => ! $this->promoter->has_artwork( (int) $creative['id'] ),
 				'decisions'     => $this->decision_rows( (int) $creative['id'] ),
 			);
 		}
@@ -675,64 +643,12 @@ final class Review_Data {
 				'decision' => (string) $row['decision'],
 				'reason'   => (string) $row['reason'],
 				'at'       => $at,
-				'at_text'  => self::format_timestamp( $at, true ),
-				'actor'    => self::user_name( (int) $row['actor_user_id'] ),
+				'at_text'  => Review_Format::date( $at, true ),
+				'actor'    => Review_Format::user( (int) $row['actor_user_id'] ),
 			);
 		}
 
 		return $rows;
-	}
-
-	/**
-	 * Recent history for the staff timeline.
-	 *
-	 * @param int $campaign_id Campaign post id.
-	 * @return array<int, array<string, mixed>>
-	 */
-	private function audit_rows( int $campaign_id ): array {
-		$rows = array();
-
-		foreach ( $this->audit->for_object( 'campaign', $campaign_id, $this->campaigns->org_id( $campaign_id ) ) as $event ) {
-			$rows[] = array(
-				'id'           => $event['id'],
-				'created_at'   => $event['created_at_ts'],
-				'created_text' => self::format_timestamp( $event['created_at_ts'], true ),
-				'actor'        => 0 === $event['actor_user_id'] ? __( 'System', 'aggressive-ads' ) : self::user_name( $event['actor_user_id'] ),
-				'event'        => $event['event'],
-				'outcome'      => $event['outcome'],
-				'message'      => self::event_message( $event ),
-			);
-		}
-
-		return $rows;
-	}
-
-	/**
-	 * A user's display name, or a dash.
-	 *
-	 * @param int $user_id User id.
-	 * @return string
-	 */
-	private static function user_name( int $user_id ): string {
-		if ( $user_id <= 0 ) {
-			return '';
-		}
-
-		$user = get_userdata( $user_id );
-
-		return false === $user ? '' : (string) $user->display_name;
-	}
-
-	/**
-	 * The status's human label, from the registered status itself.
-	 *
-	 * @param string $status Status slug.
-	 * @return string
-	 */
-	private static function status_label( string $status ): string {
-		$object = get_post_status_object( $status );
-
-		return null === $object ? $status : (string) $object->label;
 	}
 
 	/**
@@ -774,7 +690,7 @@ final class Review_Data {
 			Post_Statuses::PAUSED    => __( 'Pause campaign', 'aggressive-ads' ),
 			Post_Statuses::LIVE      => __( 'Resume campaign', 'aggressive-ads' ),
 			Post_Statuses::CANCELLED => __( 'Cancel campaign', 'aggressive-ads' ),
-			default                  => self::status_label( $to ),
+			default                  => Review_Format::status( $to ),
 		};
 	}
 }

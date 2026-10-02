@@ -82,7 +82,7 @@ final class DevicePreviewContractTest extends TestCase {
 
 		$this->assertStringContainsString(
 			'src={ creative.preview_frame }',
-			$this->source( 'src/admin/review/preview.tsx' ) . $this->source( 'src/admin/review/campaign.tsx' ),
+			$this->source( 'src/admin/review/preview.tsx' ) . $this->source( 'src/admin/review/creative.tsx' ),
 			"The reviewer's frame went back to loading the artwork directly."
 		);
 	}

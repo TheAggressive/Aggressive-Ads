@@ -1,0 +1,87 @@
+/*
+ * A screen's decisions, kept in reach on a long page.
+ *
+ * Built for Review's campaign view, where the decision buttons sat in the page
+ * header: a reviewer read the artwork, the checklist, the delivery policy and
+ * the trail, then scrolled back up past all of it to act. #302 asks the same
+ * for the portal wizard on a phone, so it lives in the portal's component set
+ * (which Review already loads) to be built once rather than twice.
+ *
+ * `position: sticky` at the bottom, at the end of the content it belongs to,
+ * rather than `fixed`. It rides the bottom edge of the viewport while the
+ * content is on screen and settles into its own place at the end, so nothing
+ * is covered for good, and there is one copy of every button — a fixed bar
+ * beside the header's buttons would put each one on the page twice, for
+ * screen readers and for every test that finds a button by its name.
+ */
+.aggr-actionbar {
+	position: sticky;
+	bottom: 0;
+	z-index: 20;
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--aggr-space-sm, 0.75rem) var(--aggr-space-lg, 1.5rem);
+	margin-top: var(--aggr-space-lg, 1.5rem);
+	padding: var(--aggr-space-sm, 0.75rem) var(--aggr-space-md, 1rem);
+	border: 1px solid var(--aggr-border-color);
+	border-bottom: 0;
+	border-radius: var(--aggr-radius-panel, 12px) var(--aggr-radius-panel, 12px) 0 0;
+	background: var(--aggr-color-surface);
+	box-shadow: 0 -8px 24px rgb(17 18 20 / 8%);
+}
+
+.aggr-actionbar__status {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: var(--aggr-space-xs, 0.5rem) var(--aggr-space-sm, 0.75rem);
+	min-width: 0;
+}
+
+.aggr-actionbar__reason {
+	color: var(--aggr-color-text-muted);
+	font-size: 13px;
+}
+
+.aggr-actionbar__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--aggr-space-xs, 0.5rem);
+	margin-left: auto;
+}
+
+/*
+ * WCAG 2.4.11: a control that takes focus must not be hidden behind the bar.
+ * The browser scrolls a focused element into view inside the scroll padding,
+ * so this keeps it above the bar rather than underneath it.
+ */
+html:has(.aggr-actionbar) {
+	scroll-padding-bottom: 7rem;
+}
+
+/*
+ * On a phone the bar is the actions alone, at full width. The status and the
+ * reason are at the top of the page already, and two extra lines here would
+ * take a fifth of the screen from the thing being reviewed.
+ */
+@media (max-width: 40rem) {
+	.aggr-actionbar__status {
+		display: none;
+	}
+
+	.aggr-actionbar__actions {
+		width: 100%;
+	}
+
+	.aggr-actionbar__actions > * {
+		flex: 1 1 auto;
+	}
+}
+
+@media (forced-colors: active) {
+	.aggr-actionbar {
+		border-color: CanvasText;
+	}
+}
