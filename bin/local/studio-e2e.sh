@@ -15,9 +15,18 @@
 # mu-plugin — is captured up front and restored on the way out, on success and
 # on failure alike.
 #
-# Because discovery aims all of that at whichever site happens to serve this
-# checkout, the site has to say yes first: touch .aggr-e2e-site in its root, or
-# export AGGR_STUDIO_E2E_ALLOW=1 for one run.
+# So it runs only against a site made for it. `pnpm e2e:site` creates one and
+# marks it disposable in its own database (the `aggr_e2e_disposable` option);
+# this refuses any site without that mark. A file in the site root or an
+# environment variable used to be enough, and that is how the suite came to
+# seed about two hundred campaigns into a working site — forty of them into a
+# real organization — and reset its admin password. A mark that only the
+# creating script sets cannot be given to a working site by accident.
+#
+# When several Studio sites serve this checkout (the working site and the
+# disposable one, typically), the one carrying .aggr-e2e-disposable — written
+# only by `pnpm e2e:site` — is chosen. The old opt-in file, .aggr-e2e-site,
+# means nothing now; a working site may still carry one.
 
 set -euo pipefail
 
@@ -71,7 +80,7 @@ mapfile -t discovery < <(
 					process.exit(0);
 				}
 
-				const matches = sites.filter((site) => {
+				const candidates = sites.filter((site) => {
 					const sitePath = pathOf(site);
 
 					if (!sitePath) {
@@ -87,6 +96,17 @@ mapfile -t discovery < <(
 						root
 					);
 				});
+
+				/*
+				 * The working site serves this checkout too. Of several, the
+				 * one made for the suite wins; whether it really is disposable
+				 * is checked against its database below, not taken from this.
+				 */
+				const marked = candidates.filter((site) =>
+					fs.existsSync(path.join(pathOf(site), ".aggr-e2e-disposable"))
+				);
+				const matches =
+					candidates.length > 1 && 1 === marked.length ? marked : candidates;
 
 				if (1 === matches.length) {
 					const match = matches[0];
@@ -141,7 +161,8 @@ case "${discovery[0]:-}" in
 	ambiguous)
 		echo "studio-e2e: ${#discovery[@]} Studio sites serve this checkout:" >&2
 		printf '  %s\n' "${discovery[@]:1}" >&2
-		echo "Set AGGR_STUDIO_PATH to the one you mean." >&2
+		echo "Set AGGR_STUDIO_PATH to the one you mean, or create the suite's" >&2
+		echo "own site with: pnpm e2e:site" >&2
 		exit 1
 		;;
 	missing)
@@ -165,23 +186,6 @@ if [[ ! "${base_url}" =~ ^https?:// ]]; then
 	exit 1
 fi
 
-# The site consents, or nothing runs. See the header for what is irreversible.
-if [[ "${AGGR_STUDIO_E2E_ALLOW:-}" != "1" && ! -e "${site_path}/.aggr-e2e-site" ]]; then
-	cat >&2 <<-CONSENT
-		studio-e2e: ${site_path} has not opted in to browser testing.
-
-		The suite will reset the admin and advertiser passwords on that site and
-		seed fixture campaigns. Neither is undone afterwards.
-
-		If it is a site you are willing to lose:
-
-		  touch "${site_path}/.aggr-e2e-site"
-
-		or export AGGR_STUDIO_E2E_ALLOW=1 for a single run.
-	CONSENT
-	exit 1
-fi
-
 # stdout is dropped, stderr is not. `studio site start` prints the site's admin
 # username and password on success, and this script's output ends up in qa:local
 # logs that get pasted into issues.
@@ -196,6 +200,28 @@ if [[ "${served_plugin}" != "${repo_root}" ]]; then
 	echo "studio-e2e: ${site_path} is not serving this checkout." >&2
 	echo "Expected: ${repo_root}" >&2
 	echo "Actual:   ${served_plugin:-missing plugin}" >&2
+	exit 1
+fi
+
+# The site is disposable, by its own database's say-so, or nothing runs. Set
+# only by `pnpm e2e:site`, which creates the site it marks; see the header for
+# why a file or an environment variable no longer counts.
+disposable="$(
+	studio wp --path "${site_path}" option get aggr_e2e_disposable 2>/dev/null | tr -d '\r\n' || true
+)"
+
+if [[ "${disposable}" != "1" ]]; then
+	cat >&2 <<-REFUSE
+		studio-e2e: ${site_path} is not a disposable test site.
+
+		The suite resets the admin and advertiser passwords and seeds campaigns,
+		organizations and placements, and none of it is undone. It runs only on
+		a site made for it:
+
+		  pnpm e2e:site
+
+		creates one at ~/Studio/aggr-e2e serving this checkout.
+	REFUSE
 	exit 1
 fi
 

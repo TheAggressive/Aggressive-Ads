@@ -68,6 +68,8 @@ if ( 0 === $aggr_image ) {
 	return;
 }
 
+require_once __DIR__ . '/fixture-campaign.php';
+
 /**
  * A publishable organization.
  *
@@ -147,11 +149,7 @@ $aggr_line_items = Plugin::instance()->container()->get( Line_Item_Repository::c
 function aggr_coord_campaign( string $slug, string $title, int $org_id, int $placement_id, int $image ): int {
 	global $wpdb;
 
-	$existing = get_page_by_path( $slug, OBJECT, Post_Types::CAMPAIGN );
-
-	if ( $existing instanceof WP_Post ) {
-		wp_delete_post( $existing->ID, true );
-	}
+	aggr_e2e_delete_campaign( $slug );
 
 	$campaign_id = (int) wp_insert_post(
 		array(

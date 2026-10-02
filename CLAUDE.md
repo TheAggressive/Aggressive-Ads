@@ -68,7 +68,8 @@ bash bin/ci/install-wp-runner.sh   # PHPUnit 9.6 for the WordPress suites
 pnpm build              # src/ → dist/
 pnpm env:start          # disposable WordPress 7.1 at :9960
 pnpm dev:seed           # an advertiser, an org and five campaigns to look at
-pnpm qa:local           # Docker-free checks + E2E against WordPress Studio
+pnpm e2e:site           # the disposable Studio site the browser suite runs on
+pnpm qa:local           # Docker-free checks + E2E against that site
 pnpm ci:verify          # the contract for declaring a change finished
 
 pnpm lint:php / lint:js / lint:css / lint:files / typecheck

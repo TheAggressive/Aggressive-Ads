@@ -106,15 +106,9 @@ $aggr_launch  = $aggr_package( 'e2e-edit-launch', 'E2E Launch', 30, 45000, array
 $aggr_premium = $aggr_package( 'e2e-edit-premium', 'E2E Premium', 14, 90000, array_values( $aggr_placements ) );
 
 // A fresh campaign every run.
-$aggr_previous = get_page_by_path( 'e2e-edit-flight', OBJECT, Post_Types::CAMPAIGN );
+require_once __DIR__ . '/fixture-campaign.php';
 
-if ( $aggr_previous instanceof WP_Post ) {
-	foreach ( Plugin::instance()->container()->get( Creative_Repository::class )->for_campaign( $aggr_previous->ID ) as $aggr_old ) {
-		wp_delete_post( (int) $aggr_old['id'], true );
-	}
-
-	wp_delete_post( $aggr_previous->ID, true );
-}
+aggr_e2e_delete_campaign( 'e2e-edit-flight' );
 
 $aggr_start    = ( new DateTimeImmutable( 'yesterday midnight', wp_timezone() ) )->getTimestamp();
 $aggr_campaign = (int) wp_insert_post(

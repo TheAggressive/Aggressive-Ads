@@ -601,14 +601,28 @@ normal arrangement. `qa:local` discovers that site automatically, or accepts
 is whatever `studio site list` reports for that site; `AGGR_STUDIO_URL` overrides
 it, and a site Studio gives no URL for is refused rather than guessed at.
 
-The site must opt in — `.aggr-e2e-site` in its root, or
-`AGGR_STUDIO_E2E_ALLOW=1` — because the setup mutates it. Two of those
-mutations are permanent: `tests/e2e/seed-users.php` resets the `admin` and
+The site must be one made for the suite: `pnpm e2e:site` creates
+`~/Studio/aggr-e2e`, links this checkout into it, and marks it disposable with
+an option in its own database, and the runner refuses any site without that
+mark. It used to be enough to drop `.aggr-e2e-site` in a site's root or export
+`AGGR_STUDIO_E2E_ALLOW=1`, and that is how the suite seeded about two hundred
+campaigns into a working site — forty of them into a real organization, through
+a spec that picked "the first advertiser" — and reset its admin password. When
+both a working site and the disposable one serve the checkout, the runner picks
+the one carrying `.aggr-e2e-disposable`, which only `e2e:site` writes. Two of
+the setup's mutations are permanent: `tests/e2e/seed-users.php` resets the `admin` and
 `advertiser` passwords to the fixture values, and the seeds write fixture
 campaigns, an organization and a placement. The reversible ones — theme,
 permalink structure, the mail-capture mu-plugin — are captured before the run and
 restored afterwards on success and on failure, and a failed restore turns a
 passing run red rather than reporting a site it left half-changed.
+
+Seeds that rebuild a campaign every run delete it through
+`tests/e2e/fixture-campaign.php`, which takes the campaign's creatives and
+their private files with it. Deleting the campaign post alone takes only its
+line items, and the old seeds stranded a creative per run — 476 of them on the
+site above. `pnpm e2e:clean <site>` removes what a site collected before this,
+after backing it up.
 
 `home` and `siteurl` are deliberately not restored. They are set from whatever
 `studio site list` reports and left there, because the value a restore would put

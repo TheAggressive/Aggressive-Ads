@@ -79,15 +79,9 @@ update_post_meta( $aggr_package_id, Package_Repository::META_PRICE_CENTS, 45000 
 update_post_meta( $aggr_package_id, Package_Repository::META_CURRENCY, 'USD' );
 update_post_meta( $aggr_package_id, Package_Repository::META_IS_ACTIVE, 1 );
 
-$aggr_previous = get_page_by_path( 'e2e-request-flight', OBJECT, Post_Types::CAMPAIGN );
+require_once __DIR__ . '/fixture-campaign.php';
 
-if ( $aggr_previous instanceof WP_Post ) {
-	foreach ( Plugin::instance()->container()->get( Creative_Repository::class )->for_campaign( $aggr_previous->ID ) as $aggr_old ) {
-		wp_delete_post( (int) $aggr_old['id'], true );
-	}
-
-	wp_delete_post( $aggr_previous->ID, true );
-}
+aggr_e2e_delete_campaign( 'e2e-request-flight' );
 
 $aggr_start    = ( new DateTimeImmutable( 'yesterday midnight', wp_timezone() ) )->getTimestamp();
 $aggr_campaign = (int) wp_insert_post(
