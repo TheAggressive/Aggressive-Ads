@@ -227,6 +227,113 @@ final class LineItemsRoutesTest extends WP_UnitTestCase {
 		);
 	}
 
+	/**
+	 * **The delivery policy is written, and read back as written.**
+	 *
+	 * These three fields were declared on the route, validated and storable,
+	 * and missing from the list `update()` forwards — so a save answered 200,
+	 * bumped the revision and stored nothing. Every earlier test sent other
+	 * fields; none sent a policy and read it back, which is how a write half
+	 * that never met its read half shipped. This one goes through the route
+	 * both ways.
+	 *
+	 * @return void
+	 */
+	public function test_the_delivery_policy_is_stored_and_read_back(): void {
+		wp_set_current_user( $this->owner );
+		$row  = $this->line_items->ensure_default( $this->campaign );
+		$path = "/campaigns/{$this->campaign}/line-items/{$row['id']}";
+
+		$policy = array(
+			'targeting_rules'   => array(
+				'operator' => 'AND',
+				'rules'    => array(
+					array(
+						'dimension' => 'post_type',
+						'operator'  => 'eq',
+						'value'     => 'post',
+					),
+					array(
+						'dimension' => 'categories',
+						'operator'  => 'contains',
+						'value'     => 'news',
+					),
+				),
+			),
+			'frequency_policy'  => array(
+				'enabled'         => true,
+				'max_impressions' => 3,
+				'window'          => 'day',
+				'level'           => 'line_item',
+			),
+			'delivery_settings' => array(
+				'dayparts' => array(
+					array(
+						'days'         => array( 1, 3 ),
+						'start_minute' => 540,
+						'end_minute'   => 1020,
+					),
+				),
+				'timezone' => 'America/New_York',
+			),
+		);
+
+		$saved = $this->request( 'PATCH', $path, array( 'revision' => 1 ) + $policy );
+		$this->assertSame( 200, $saved->get_status() );
+		$this->assertSame( 2, $saved->get_data()['revision'] );
+
+		$read = $this->request( 'GET', "/campaigns/{$this->campaign}/line-items" )->get_data()['line_items'][0];
+
+		foreach ( $policy as $field => $value ) {
+			$this->assertEquals( $value, $read[ $field ], $field . ' was not stored as sent.' );
+		}
+
+		// A later save that names none of them leaves them alone.
+		$this->assertSame(
+			200,
+			$this->request(
+				'PATCH',
+				$path,
+				array(
+					'revision'  => 2,
+					'daily_cap' => 50,
+				)
+			)->get_status()
+		);
+		$kept = $this->line_items->default_for_campaign( $this->campaign );
+		$this->assertEquals( $policy['frequency_policy'], $kept['frequency_policy'], 'An unrelated save wiped the frequency policy.' );
+
+		// A rule the evaluator cannot run is refused, and nothing changes.
+		$refused = $this->request(
+			'PATCH',
+			$path,
+			array(
+				'revision'        => 3,
+				'targeting_rules' => array(
+					'dimension' => 'post_type',
+					'operator'  => 'resembles',
+					'value'     => 'post',
+				),
+			)
+		);
+		$this->assertGreaterThanOrEqual( 400, $refused->get_status() );
+		$this->assertEquals( $policy['targeting_rules'], $this->line_items->default_for_campaign( $this->campaign )['targeting_rules'] );
+
+		// And an empty object clears a policy, which is how the form says "no limit".
+		$this->assertSame(
+			200,
+			$this->request(
+				'PATCH',
+				$path,
+				array(
+					'revision'         => 3,
+					'frequency_policy' => array(),
+				)
+			)->get_status()
+		);
+		$this->assertEmpty( $this->line_items->default_for_campaign( $this->campaign )['frequency_policy'] );
+	}
+
 	public function test_cross_campaign_line_item_id_is_not_found(): void {
 		wp_set_current_user( $this->stranger );
 		$row      = $this->line_items->ensure_default( $this->campaign );

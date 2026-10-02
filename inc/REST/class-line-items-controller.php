@@ -320,9 +320,17 @@ final class Line_Items_Controller implements Service {
 		 * `name` remains the one field with two owners; `name_is_derived`
 		 * records which one wrote last, which is why it can be shared safely
 		 * and the budget cannot.
+		 *
+		 * **The three policy fields were declared and never read.** #112 added
+		 * `targeting_rules`, `frequency_policy` and `delivery_settings` to the
+		 * route's arguments, the validator and the repository, and not to this
+		 * list — so the route accepted them, answered 200, bumped the revision
+		 * and stored nothing. Every targeting rule, repeat-view limit and set of
+		 * hours a reviewer saved from the review screen was dropped in silence.
+		 * `LineItemsRoutesTest` now writes each one and reads it back.
 		 */
 		$fields = array();
-		foreach ( array( 'name', 'pricing_model', 'goal_type', 'goal_amount', 'daily_cap', 'lifetime_cap', 'priority', 'pacing_mode', 'weight' ) as $field ) {
+		foreach ( array( 'name', 'pricing_model', 'goal_type', 'goal_amount', 'daily_cap', 'lifetime_cap', 'priority', 'pacing_mode', 'weight', 'targeting_rules', 'frequency_policy', 'delivery_settings' ) as $field ) {
 			if ( $request->has_param( $field ) ) {
 				$fields[ $field ] = $request->get_param( $field );
 			}
