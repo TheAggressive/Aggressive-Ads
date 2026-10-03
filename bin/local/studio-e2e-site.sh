@@ -66,15 +66,29 @@ studio start --path "${site_path}" --skip-browser --skip-log-details >/dev/null
 
 plugin_link="${site_path}/wp-content/plugins/aggressive-ads"
 
+relinked=0
+
 if [[ -L "${plugin_link}" ]]; then
-	if [[ "$(realpath "${plugin_link}")" != "${repo_root}" ]]; then
+	if [[ "$(realpath "${plugin_link}" 2>/dev/null)" != "${repo_root}" ]]; then
 		ln -sfn "${repo_root}" "${plugin_link}"
+		relinked=1
 	fi
 elif [[ -e "${plugin_link}" ]]; then
 	echo "e2e-site: ${plugin_link} exists and is not a link to this checkout." >&2
 	exit 1
 else
 	ln -s "${repo_root}" "${plugin_link}"
+	relinked=1
+fi
+
+# Studio confines PHP to the site directory (open_basedir) plus the targets of
+# the links it finds *when the server starts*. A link made or repointed while
+# the site runs is outside that list until a restart, and every request then
+# opens with "open_basedir restriction in effect" for aggressive-ads.php —
+# CLI calls, which this script checks with, are not confined and still pass.
+if [[ "${relinked}" -eq 1 ]]; then
+	studio stop --path "${site_path}" >/dev/null
+	studio start --path "${site_path}" --skip-browser --skip-log-details >/dev/null
 fi
 
 served="$(
@@ -91,6 +105,21 @@ fi
 
 studio wp --path "${site_path}" plugin activate aggressive-ads >/dev/null
 studio wp --path "${site_path}" option update aggr_e2e_disposable 1 >/dev/null
+
+# Checked over HTTP, because that is where the confinement applies: the CLI
+# check above passes on a site whose web server cannot load the plugin.
+site_url="$(studio wp --path "${site_path}" option get siteurl | tr -d '\r\n')"
+
+login_page="$(curl -sS "${site_url}/wp-login.php" 2>&1)" || {
+	echo "e2e-site: ${site_url} did not answer: ${login_page}" >&2
+	exit 1
+}
+
+if grep -q "open_basedir" <<< "${login_page}"; then
+	echo "e2e-site: the web server cannot read this checkout (open_basedir)." >&2
+	echo "Restart the site in Studio and run this again." >&2
+	exit 1
+fi
 
 echo "e2e-site: ${site_path} serves this checkout and is marked disposable."
 echo "e2e-site: run the suite with: pnpm test:e2e:studio"

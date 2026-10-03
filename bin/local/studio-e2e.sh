@@ -297,12 +297,25 @@ cleanup() {
 }
 trap cleanup EXIT
 
-if [[ -e "${mail_link}" || -L "${mail_link}" ]]; then
-	if [[ "$(realpath "${mail_link}" 2>/dev/null)" != "${mail_fixture}" ]]; then
-		echo "studio-e2e: refusing to replace ${mail_link}." >&2
-		echo "It is not a link to ${mail_fixture}." >&2
-		exit 1
-	fi
+# A link this script left behind is this script's to replace, from any
+# checkout and even when it dangles. A run that dies before its trap leaves
+# the link, and the next run used to adopt it as somebody else's and keep it;
+# once the checkout it pointed into was gone, every page on the site opened
+# with an include_once warning. Anything that is not such a link — a real
+# file, a link elsewhere — is still refused.
+mail_target=""
+
+if [[ -L "${mail_link}" ]]; then
+	mail_target="$(readlink "${mail_link}")"
+fi
+
+if [[ -L "${mail_link}" && "${mail_target}" == */tests/fixtures/mu-plugins/dev-mail-sender.php ]]; then
+	ln -sfn "${mail_fixture}" "${mail_link}"
+	remove_mail_link=1
+elif [[ -e "${mail_link}" || -L "${mail_link}" ]]; then
+	echo "studio-e2e: refusing to replace ${mail_link}." >&2
+	echo "It is not a link to this plugin's mail fixture." >&2
+	exit 1
 else
 	mkdir -p "$(dirname "${mail_link}")"
 	ln -s "${mail_fixture}" "${mail_link}"

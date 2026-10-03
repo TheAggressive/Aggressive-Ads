@@ -32,6 +32,32 @@ final class Menu implements Service {
 	public const ICON = 'none';
 
 	/**
+	 * Every Advertising screen, in sidebar order, with the capability it opens
+	 * on. Grouped by the work, as each screen's header eyebrow names it
+	 * (`Screen_Shell::section()`): the campaigns waiting on a decision, then
+	 * the inventory that is sold (placements, what is free on them, the
+	 * packages that sell them), then who buys it, then how it performed, then
+	 * setup.
+	 *
+	 * One list for the sidebar and for the parent's landing redirect. They
+	 * were two — registration order for one, a hand-kept array for the other —
+	 * and they had drifted: Packages sat apart from the inventory it sells,
+	 * and the landing list did not know Conversions existed.
+	 *
+	 * @var array<string, string>
+	 */
+	public const SCREENS = array(
+		Review_Screen::MENU_SLUG       => Capabilities::REVIEW_CAMPAIGNS,
+		Placement_Screen::MENU_SLUG    => Capabilities::MANAGE_PLACEMENTS,
+		Forecast_Screen::MENU_SLUG     => Capabilities::MANAGE_PLACEMENTS,
+		Package_Screen::MENU_SLUG      => Capabilities::MANAGE_PACKAGES,
+		Organization_Screen::MENU_SLUG => Capabilities::MANAGE_ORGS,
+		Reports_Screen::MENU_SLUG      => Capabilities::VIEW_REPORTS,
+		Conversions_Screen::MENU_SLUG  => Capabilities::MANAGE_SETTINGS,
+		Settings_Screen::MENU_SLUG     => Capabilities::MANAGE_SETTINGS,
+	);
+
+	/**
 	 * Constructor.
 	 *
 	 * @param Settings $settings Product name for the sidebar label.
@@ -55,6 +81,7 @@ final class Menu implements Service {
 		add_filter( 'user_has_cap', array( $this, 'grant_staff_shell' ), 10, 3 );
 		add_action( 'admin_menu', array( $this, 'register_parent' ), 9 );
 		add_action( 'admin_menu', array( $this, 'remove_duplicate_parent' ), 11 );
+		add_action( 'admin_menu', array( $this, 'sort_submenu' ), 11 );
 		add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_rhythm' ) );
 		add_filter( 'admin_body_class', array( $this, 'body_class' ) );
 
@@ -280,6 +307,38 @@ final class Menu implements Service {
 	}
 
 	/**
+	 * Puts the submenu in `SCREENS` order, once every screen has registered.
+	 *
+	 * Sorted after the fact rather than passed as `add_submenu_page()`'s
+	 * position: that argument splices at an index *at the moment of the call*,
+	 * so the result depends on which screen boots first, and the boot order is
+	 * a service-registration detail nobody reads as a menu decision. Anything
+	 * another plugin adds under this parent keeps its own order, after ours.
+	 *
+	 * @return void
+	 */
+	public function sort_submenu(): void {
+		global $submenu;
+
+		if ( ! isset( $submenu[ self::PARENT_SLUG ] ) || ! is_array( $submenu[ self::PARENT_SLUG ] ) ) {
+			return;
+		}
+
+		$rank    = array_flip( array_keys( self::SCREENS ) );
+		$ordered = array();
+
+		foreach ( array_values( $submenu[ self::PARENT_SLUG ] ) as $index => $item ) {
+			$slug      = is_array( $item ) && isset( $item[2] ) ? (string) $item[2] : '';
+			$ordered[] = array( $rank[ $slug ] ?? count( $rank ) + $index, $item );
+		}
+
+		usort( $ordered, static fn ( array $a, array $b ): int => $a[0] <=> $b[0] );
+
+		// phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- Reordering this plugin's own submenu is the documented way to order it; nothing else can.
+		$submenu[ self::PARENT_SLUG ] = array_column( $ordered, 1 );
+	}
+
+	/**
 	 * Sends the parent click to the first screen this user can actually open.
 	 */
 	public function redirect_to_first_screen(): void {
@@ -303,14 +362,6 @@ final class Menu implements Service {
 	 * @return array<string, string>
 	 */
 	private function landing_pages(): array {
-		return array(
-			Review_Screen::MENU_SLUG       => Capabilities::REVIEW_CAMPAIGNS,
-			Organization_Screen::MENU_SLUG => Capabilities::MANAGE_ORGS,
-			Placement_Screen::MENU_SLUG    => Capabilities::MANAGE_PLACEMENTS,
-			Forecast_Screen::MENU_SLUG     => Capabilities::MANAGE_PLACEMENTS,
-			Package_Screen::MENU_SLUG      => Capabilities::MANAGE_PACKAGES,
-			Reports_Screen::MENU_SLUG      => Capabilities::VIEW_REPORTS,
-			Settings_Screen::MENU_SLUG     => Capabilities::MANAGE_SETTINGS,
-		);
+		return self::SCREENS;
 	}
 }

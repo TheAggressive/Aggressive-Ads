@@ -575,6 +575,7 @@ function Screen( { payload }: { payload: Payload } ) {
 			) : null }
 
 			<section className="aggr-section">
+				<h2>{ i18n.definitions }</h2>
 				<DataViews< Definition >
 					data={ rows }
 					fields={ fields }

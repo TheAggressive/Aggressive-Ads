@@ -62,6 +62,8 @@ export type Credential = {
  * because a payload parsed out of a data attribute is cast, not checked.
  */
 export type Strings = {
+	/** Heading over the first table, as the credentials table has its own. */
+	definitions: string;
 	newDefinition: string;
 	existing: string;
 	none: string;

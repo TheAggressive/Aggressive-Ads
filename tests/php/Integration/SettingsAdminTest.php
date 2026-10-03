@@ -213,6 +213,34 @@ final class SettingsAdminTest extends WP_UnitTestCase {
 	 * @param string $slug Submenu slug.
 	 * @return bool
 	 */
+	/**
+	 * **No switch for a module that does not exist.**
+	 *
+	 * Settings offered "Billing UI" and nothing anywhere read it; P19 has not
+	 * built billing. The key stays in the schema for P19, but the screen does
+	 * not present it. Read from the rendered payload, which is what the
+	 * screen draws its switches from.
+	 *
+	 * @return void
+	 */
+	public function test_the_modules_offered_are_ones_that_do_something(): void {
+		wp_set_current_user( (int) self::factory()->user->create( array( 'role' => 'administrator' ) ) );
+
+		ob_start();
+		$this->screen->render();
+		$html = (string) ob_get_clean();
+
+		$this->assertSame( 1, preg_match( '/data-aggr-settings="([^"]*)"/', $html, $found ), 'No payload rendered: is dist/ built?' );
+
+		$payload = json_decode( html_entity_decode( $found[1], ENT_QUOTES ), true );
+		$this->assertIsArray( $payload );
+
+		$offered = array_column( (array) $payload['modules'], 'key' );
+
+		$this->assertNotContains( Settings_Schema::MODULE_BILLING, $offered );
+		$this->assertSame( array( Settings_Schema::MODULE_PUBLIC_SIGNUP, Settings_Schema::MODULE_REPORTING ), $offered );
+	}
+
 	private function submenu_has( string $slug ): bool {
 		global $submenu;
 

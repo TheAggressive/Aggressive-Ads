@@ -181,7 +181,7 @@ final class Settings_Screen implements Service {
 		 */
 		if ( ! is_file( $asset ) ) {
 			Screen_Shell::unbuilt(
-				__( 'Advertising Settings', 'aggressive-ads' ),
+				__( 'Advertising settings', 'aggressive-ads' ),
 				__( 'The settings screen has not been built. Run “pnpm build” and reload.', 'aggressive-ads' ),
 				Screen_Shell::section( 'setup' )
 			);
@@ -201,7 +201,14 @@ final class Settings_Screen implements Service {
 		$payload = array(
 			'modules'   => array(
 				$toggle( Settings_Schema::MODULE_PUBLIC_SIGNUP, __( 'Public signup', 'aggressive-ads' ), ! empty( $settings['modules'][ Settings_Schema::MODULE_PUBLIC_SIGNUP ] ), __( 'WordPress “Anyone can register” must also be on.', 'aggressive-ads' ) ),
-				$toggle( Settings_Schema::MODULE_BILLING, __( 'Billing UI', 'aggressive-ads' ), ! empty( $settings['modules'][ Settings_Schema::MODULE_BILLING ] ) ),
+
+				/*
+				 * No Billing switch until billing exists. It was offered here
+				 * as "Billing UI" and nothing anywhere read it: P19 (#263) has
+				 * not built the domain, so the switch was a promise on a
+				 * settings screen. The schema keeps the key for P19; without a
+				 * control, the next save stores it off, which is its default.
+				 */
 				$toggle( Settings_Schema::MODULE_REPORTING, __( 'Reporting', 'aggressive-ads' ), ! empty( $settings['modules'][ Settings_Schema::MODULE_REPORTING ] ), __( 'Native fill is always recording; this switch only shows the numbers.', 'aggressive-ads' ) ),
 			),
 			'liveEdits' => array(
@@ -345,7 +352,7 @@ final class Settings_Screen implements Service {
 		 * but it is a real cost, and it is stated here rather than discovered.
 		 */
 		Screen_Shell::mount(
-			__( 'Advertising Settings', 'aggressive-ads' ),
+			__( 'Advertising settings', 'aggressive-ads' ),
 			// No purpose line: every section below already says what it is for,
 			// and a sentence listing them would be a table of contents.
 			'',

@@ -164,7 +164,7 @@ body.aggr-admin-screen .components-button.is-destructive:not(.is-tertiary):not(.
 	line-height: 1.5;
 }
 
-/* The screen's one creating action, where a React header has one. */
+/* The screen's one creating action, beside its title. Screen_Shell leaves the slot; the bundle fills it. */
 .wrap.aggr-admin .aggr-admin-head__actions {
 	display: flex;
 	flex-wrap: wrap;
@@ -548,7 +548,7 @@ body.aggr-admin-screen .components-button.is-destructive:not(.is-tertiary):not(.
 	display: flex;
 	flex-wrap: wrap;
 	gap: 12px 24px;
-	align-items: center;
+	align-items: flex-end;
 	justify-content: space-between;
 	margin: 0 0 20px;
 }
@@ -556,9 +556,25 @@ body.aggr-admin-screen .components-button.is-destructive:not(.is-tertiary):not(.
 .wrap.aggr-admin .aggr-toolbar form {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 8px;
-	align-items: center;
+	gap: 8px 12px;
+	align-items: flex-end;
 	margin: 0;
+}
+
+/* A filter with its label above it, in the screen's small-label voice. */
+.wrap.aggr-admin .aggr-filter {
+	display: inline-flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.wrap.aggr-admin .aggr-filter label {
+	color: var(--aggr-color-text-muted);
+	font-family: var(--aggr-font-mono);
+	font-size: 11px;
+	font-weight: 600;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
 }
 
 /*
