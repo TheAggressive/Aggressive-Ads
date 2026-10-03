@@ -1,7 +1,12 @@
 import { expect, test } from '@playwright/test';
 import { expectAdminA11y } from './accessibility';
 import { signInToAdmin } from './admin-login';
-import { openScreen, sidewaysScroll, staffScreens } from './staff-screens';
+import {
+	EVERY_SCREEN_TIMEOUT,
+	openScreen,
+	sidewaysScroll,
+	staffScreens,
+} from './staff-screens';
 
 /**
  * The evidence #330 closes on: every staff screen at 200% zoom, in forced
@@ -19,6 +24,7 @@ import { openScreen, sidewaysScroll, staffScreens } from './staff-screens';
  * at that size (WCAG 1.4.4, 1.4.10).
  */
 test( 'every staff screen holds together at 200% zoom', async ( { page } ) => {
+	test.setTimeout( EVERY_SCREEN_TIMEOUT );
 	await signInToAdmin( page );
 	await page.setViewportSize( { width: 640, height: 450 } );
 
@@ -50,6 +56,7 @@ test( 'every staff screen holds together at 200% zoom', async ( { page } ) => {
 test( 'every staff screen keeps its mark, statuses and focus in forced colours', async ( {
 	page,
 } ) => {
+	test.setTimeout( EVERY_SCREEN_TIMEOUT );
 	await signInToAdmin( page );
 	await page.emulateMedia( { forcedColors: 'active' } );
 
@@ -143,6 +150,7 @@ test( 'every staff screen keeps its mark, statuses and focus in forced colours',
 test( 'nothing moves on a staff screen when reduced motion is asked for', async ( {
 	page,
 } ) => {
+	test.setTimeout( EVERY_SCREEN_TIMEOUT );
 	await signInToAdmin( page );
 	await page.emulateMedia( { reducedMotion: 'reduce' } );
 

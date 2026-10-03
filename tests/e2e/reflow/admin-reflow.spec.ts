@@ -1,7 +1,12 @@
 import { expect, test } from '@playwright/test';
 import { expectAdminA11y } from '../accessibility';
 import { signInToAdmin } from '../admin-login';
-import { openScreen, sidewaysScroll, staffScreens } from '../staff-screens';
+import {
+	EVERY_SCREEN_TIMEOUT,
+	openScreen,
+	sidewaysScroll,
+	staffScreens,
+} from '../staff-screens';
 
 /**
  * Every staff screen at 320 CSS pixels (WCAG 1.4.10), axe-clean there too.
@@ -14,6 +19,7 @@ import { openScreen, sidewaysScroll, staffScreens } from '../staff-screens';
  * Tables may scroll inside their own surface; the page may not.
  */
 test( 'every staff screen reflows at 320 CSS pixels', async ( { page } ) => {
+	test.setTimeout( EVERY_SCREEN_TIMEOUT );
 	await signInToAdmin( page );
 
 	for ( const screen of await staffScreens( page ) ) {

@@ -50,8 +50,14 @@ export async function staffScreens( page: Page ): Promise< StaffScreen[] > {
 }
 
 /**
- * Opens a screen and waits for its bundle to have drawn: the header is PHP's,
- * so its presence says nothing about whether the screen beneath it rendered.
+ * Opens a screen and waits for it to have drawn.
+ *
+ * The header is PHP's, so its presence says nothing about the screen beneath
+ * it. Ready means the bundle's root has content and no spinner is left; a
+ * screen with no root (Reports renders in PHP) is ready with its header.
+ *
+ * Not `networkidle`: wp-admin's heartbeat keeps the network busy, and in CI
+ * that wait ran into the test timeout on every multi-screen check.
  *
  * @param page   Page.
  * @param screen Screen to open.
@@ -62,8 +68,22 @@ export async function openScreen(
 ): Promise< void > {
 	await page.goto( screen.url );
 	await expect( page.locator( '.aggr-admin-head h1' ) ).toBeVisible();
-	await page.waitForLoadState( 'networkidle' );
+	await page.waitForFunction( () => {
+		const root = document.querySelector( '.wrap.aggr-admin [id$="-root"]' );
+		const drawn = ! root || root.childElementCount > 0;
+		const spinning = document.querySelector(
+			'.wrap.aggr-admin .components-spinner'
+		);
+
+		return drawn && ! spinning;
+	} );
 }
+
+/**
+ * Time for a check that visits every screen: nine screens, each loaded and
+ * measured, does not fit the suite's 60-second default on a CI runner.
+ */
+export const EVERY_SCREEN_TIMEOUT = 240_000;
 
 /**
  * How far the page scrolls sideways, and the element that pushes it furthest,
