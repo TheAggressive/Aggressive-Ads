@@ -121,5 +121,9 @@ if grep -q "open_basedir" <<< "${login_page}"; then
 	exit 1
 fi
 
+# The runner starts it for a run and stops it after; it has no reason to be up
+# in between.
+studio site stop --path "${site_path}" >/dev/null
+
 echo "e2e-site: ${site_path} serves this checkout and is marked disposable."
 echo "e2e-site: run the suite with: pnpm test:e2e:studio"
