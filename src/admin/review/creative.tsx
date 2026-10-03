@@ -11,6 +11,7 @@
 
 import type { ReactElement } from 'react';
 import { useState } from '@wordpress/element';
+import { Button } from '@wordpress/components';
 import { DecisionHistory } from './history';
 import { DevicePreview } from './preview';
 import { t } from '../shared/save';
@@ -161,14 +162,14 @@ export function CreativeCard( {
 						</p>
 
 						<div className="aggr-form__actions">
-							<button
-								type="button"
-								className="aggr-button"
+							<Button
+								variant="primary"
+								__next40pxDefaultSize
 								disabled={ busy }
 								onClick={ () => onPublish?.( creative.id ) }
 							>
 								{ t( 'publishCreative' ) }
-							</button>
+							</Button>
 						</div>
 
 						<label htmlFor={ `aggr-reject-${ creative.id }` }>
@@ -190,14 +191,15 @@ export function CreativeCard( {
 						 * "no" learns nothing, and silence is the behaviour
 						 * this whole decision exists to replace.
 						 */ }
-						<button
-							type="button"
-							className="aggr-button aggr-button--danger"
+						<Button
+							variant="secondary"
+							isDestructive
+							__next40pxDefaultSize
 							disabled={ busy || '' === notes.trim() }
 							onClick={ () => onReject?.( creative.id, notes ) }
 						>
 							{ t( 'rejectCreative' ) }
-						</button>
+						</Button>
 					</div>
 				) : null }
 
@@ -234,14 +236,14 @@ export function Decision( {
 	return (
 		<div className="aggr-form">
 			<div className="aggr-form__actions">
-				<button
-					type="button"
-					className="aggr-button"
+				<Button
+					variant="primary"
+					__next40pxDefaultSize
 					disabled={ busy }
 					onClick={ () => onDecide( 'approve', notes ) }
 				>
 					{ label }
-				</button>
+				</Button>
 			</div>
 			<label htmlFor={ id }>{ noteLabel }</label>
 			<textarea
@@ -251,14 +253,15 @@ export function Decision( {
 				value={ notes }
 				onChange={ ( event ) => setNotes( event.target.value ) }
 			/>
-			<button
-				type="button"
-				className="aggr-button aggr-button--danger"
+			<Button
+				variant="secondary"
+				isDestructive
+				__next40pxDefaultSize
 				disabled={ busy || '' === notes.trim() }
 				onClick={ () => onDecide( 'reject', notes ) }
 			>
 				{ rejectLabel }
-			</button>
+			</Button>
 		</div>
 	);
 }

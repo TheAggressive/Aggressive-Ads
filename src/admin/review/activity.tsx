@@ -24,6 +24,7 @@
 
 import type { ReactElement } from 'react';
 import { useState } from '@wordpress/element';
+import { Button } from '@wordpress/components';
 import { t } from '../shared/save';
 import { initialsOf } from '../shared/initials';
 import type { AuditEvent } from './types';
@@ -158,9 +159,10 @@ export function Activity( { events }: { events: AuditEvent[] } ): ReactElement {
 			) ) }
 
 			{ entries.length > VISIBLE ? (
-				<button
-					type="button"
-					className="aggr-button aggr-button--secondary aggr-button--small aggr-trail__more"
+				<Button
+					variant="secondary"
+					size="compact"
+					className="aggr-trail__more"
 					aria-expanded={ all }
 					onClick={ () => setAll( ! all ) }
 				>
@@ -170,7 +172,7 @@ export function Activity( { events }: { events: AuditEvent[] } ): ReactElement {
 								'%d',
 								String( hidden )
 						  ) }
-				</button>
+				</Button>
 			) : null }
 		</div>
 	);

@@ -299,6 +299,7 @@ final class Review_Screen implements Service {
 			'colReviewer'              => __( 'Reviewer', 'aggressive-ads' ),
 			'colUpdates'               => __( 'Ad updates', 'aggressive-ads' ),
 			'unassigned'               => __( 'Unassigned', 'aggressive-ads' ),
+			'noPlacements'             => __( 'None chosen', 'aggressive-ads' ),
 			'backToQueue'              => __( 'Back to campaign review', 'aggressive-ads' ),
 			'createCampaign'           => __( 'Create campaign', 'aggressive-ads' ),
 			'createForAdvertiser'      => __( 'Create a campaign for an advertiser', 'aggressive-ads' ),
