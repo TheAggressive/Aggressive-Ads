@@ -146,6 +146,37 @@ export async function expectDialogKeyboard(
 	await expect( trigger ).toBeFocused();
 }
 
+/**
+ * Wait for every animation that will end to have ended.
+ *
+ * Axe measures colour through opacity, so an element still fading in is judged
+ * on a blend nobody reads. Core's Modal fades in, and the review dialog's help
+ * text — #757575 on white, 4.6:1 — was scanned a few frames early as #787878 on
+ * #fdfdfd, 4.34:1, and failed in four runs of ten.
+ *
+ * Endless animations (a spinner) are left out, since they never finish, and the
+ * wait is capped so a paused one costs a few seconds rather than the test.
+ */
+async function settled( page: Page ): Promise< void > {
+	await page.evaluate( () =>
+		Promise.race( [
+			Promise.all(
+				document
+					.getAnimations()
+					.filter(
+						( animation ) =>
+							Infinity !==
+							animation.effect?.getComputedTiming().endTime
+					)
+					.map( ( animation ) =>
+						animation.finished.catch( () => undefined )
+					)
+			),
+			new Promise( ( resolve ) => setTimeout( resolve, 5_000 ) ),
+		] )
+	);
+}
+
 async function expectScopedA11y(
 	page: Page,
 	selector: string
@@ -162,6 +193,8 @@ async function expectScopedA11y(
 	 * and what it frames is one `img` with an empty `alt`, served by a route
 	 * of ours, not markup a scan of this page could ever reach.
 	 */
+	await settled( page );
+
 	const result = await new AxeBuilder( { page } )
 		.include( selector )
 		.exclude( '.aggr-device__frame' )
