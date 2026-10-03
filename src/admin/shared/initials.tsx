@@ -29,7 +29,16 @@ export function Named( {
 }: {
 	name: string;
 	variant?: 'person' | 'organization';
-} ): ReactElement {
+} ): ReactElement | null {
+	/*
+	 * Nothing for no name. A campaign whose organization has since been
+	 * deleted arrives with an empty name, and drew an empty grey square
+	 * under the page title.
+	 */
+	if ( '' === name.trim() ) {
+		return null;
+	}
+
 	return (
 		<span className="aggr-named">
 			<span

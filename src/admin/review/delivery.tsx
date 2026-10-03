@@ -9,6 +9,7 @@
 
 import type { ReactElement } from 'react';
 import { useState } from '@wordpress/element';
+import { Button } from '@wordpress/components';
 import { t } from '../shared/save';
 import {
 	compileFrequency,
@@ -118,15 +119,15 @@ export function DeliveryPolicy( {
 					{ t( 'deliveryPolicy' ) }
 				</h2>
 				{ editable ? (
-					<button
-						type="button"
-						className="aggr-button aggr-button--secondary aggr-button--small"
+					<Button
+						variant="secondary"
+						size="compact"
 						aria-expanded={ open }
 						aria-controls={ `aggr-delivery-form-${ id }` }
 						onClick={ () => setOpen( ! open ) }
 					>
 						{ open ? t( 'deliveryClose' ) : t( 'deliveryEdit' ) }
-					</button>
+					</Button>
 				) : null }
 			</div>
 
@@ -250,14 +251,14 @@ export function DeliveryPolicy( {
 							</p>
 						) }
 
-						<button
-							type="button"
-							className="aggr-button aggr-button--secondary"
+						<Button
+							variant="secondary"
+							__next40pxDefaultSize
 							disabled={ busy }
 							onClick={ submit }
 						>
 							{ t( 'saveDeliveryPolicy' ) }
-						</button>
+						</Button>
 					</div>
 				</div>
 			) : null }
@@ -689,9 +690,9 @@ function TargetingFields( {
 							} )
 						}
 					/>
-					<button
-						type="button"
-						className="aggr-button aggr-button--secondary"
+					<Button
+						variant="secondary"
+						__next40pxDefaultSize
 						onClick={ () =>
 							onChange( {
 								mode: 'form',
@@ -700,12 +701,12 @@ function TargetingFields( {
 						}
 					>
 						{ t( 'targetingRemove' ) }
-					</button>
+					</Button>
 				</div>
 			) ) }
-			<button
-				type="button"
-				className="aggr-button aggr-button--secondary"
+			<Button
+				variant="secondary"
+				__next40pxDefaultSize
 				onClick={ () =>
 					onChange( {
 						mode: 'form',
@@ -721,7 +722,7 @@ function TargetingFields( {
 				}
 			>
 				{ t( 'targetingAdd' ) }
-			</button>
+			</Button>
 			<p className="aggr-form__help">{ t( 'targetingHelp' ) }</p>
 		</fieldset>
 	);

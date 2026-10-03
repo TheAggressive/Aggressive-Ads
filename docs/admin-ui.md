@@ -48,10 +48,11 @@ is surfaced by the menu badge (`Pending_Work`) and the admin notice
 
 ### Findings per screen
 
-**Review** is the most-used screen and still loads the portal stylesheet: its
-page uses `aggr-button` buttons where every other screen uses core's `Button`.
-Its dialogs are core's `Modal` with core controls, like every other screen's
-(`decisions.tsx`, `queue.tsx`). The queue has the shared header, the portal's filter
+**Review** is the most-used screen and still loads the portal stylesheet for
+its panels, pills and forms. Its buttons are core's `Button` and its dialogs
+core's `Modal` with core controls, like every other screen's;
+`AdminDesignSystemTest` refuses the portal's `aggr-button` there and any other
+piece of wp-components. The queue has the shared header, the portal's filter
 chips and the shared table style. The queue is server-paged, so sorting and
 search stay off until the server can answer them (see `queue-table.tsx`). Keep
 that.
@@ -140,7 +141,7 @@ have been closed since.
 - **Two design systems.** Review uses the portal components; the other seven
   use `@wordpress/components` and DataViews. So there were two dialogs, two
   button vocabularies, two tab styles and two notice styles. Tabs, tables,
-  colours and dialogs now match; the page's buttons do not.
+  colours, dialogs and buttons now match. (**Fixed**.)
 - **A notice about the queue on the queue's own product.** "Advertising is
   waiting on you" printed on every Advertising screen, where the sidebar's
   Review count is already on screen. It pushed each screen's content down.
@@ -347,7 +348,8 @@ often used marked `isPrimary`. A destructive action is `isDestructive`, asks for
 confirmation in a `Modal` that names the consequence, and is never primary
 where it is offered. The button inside that confirmation which commits it is
 primary and `isDestructive` (Suspend on Organizations, Cancel on Review).
-Approval on Review stays the one green "positive" button.
+Approval on Review stays the one green "positive" button: core's primary
+`Button` with `.aggr-positive`, which keeps the Live green through hover.
 
 **Status.** Use the domain's words and colours only: the campaign pill from
 `Post_Statuses`, or a screen's own state from its data (forecast verdict,
@@ -428,9 +430,10 @@ scoped.
    checklist from the guard's own validation, one translated summary panel,
    quieter empty states, summary-first on a phone, and checkboxes that look
    like checkboxes, core's `Modal` for both dialogs, and the decision bar.
-   Still open: the page's own buttons move to core's `Button` in their own
-   change, so Review has one button vocabulary with the other screens; and
-   #302 adopts `.aggr-actionbar` for the wizard on a phone.
+   Its buttons moved to core's `Button` after (#338), so Review shares one
+   button vocabulary with the other screens; refusals are outlined in red
+   where offered and filled only in the dialog that confirms them. Still
+   open: #302 adopts `.aggr-actionbar` for the wizard on a phone.
 5. **Sidebar and remaining copy** *(fifth)*. One screen order for the sidebar
    and the landing redirect (`Menu::SCREENS`, sorted after registration rather
    than by `add_submenu_page`'s position, which depends on boot order), visible

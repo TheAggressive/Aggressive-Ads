@@ -14,24 +14,31 @@ import { verdictOf } from './readiness';
 import type { Campaign, ReviewAction } from './types';
 
 /**
- * The tone a transition is drawn in.
+ * The tone a transition is drawn in, as core `Button` props.
  *
- * Approval is the only filled assertion. Everything else in the bar is a step,
- * so it stays an ordinary button — a solid Pause beside Edit read as the thing
- * to click, and a solid Cancel outranked both.
+ * Approval is the only filled assertion, in the Live green that marks the one
+ * edge putting a campaign in front of the public (`.aggr-positive`).
+ * Everything else is a step, so it stays secondary — a solid Pause beside Edit
+ * read as the thing to click. A destructive step is outlined in red where it
+ * is offered and filled only in the dialog that confirms it
+ * (`docs/admin-ui.md`, Actions).
  *
  * @param action The transition.
  */
-function toneClass( action: ReviewAction ): string {
+function tone( action: ReviewAction ): {
+	variant: 'primary' | 'secondary';
+	isDestructive?: boolean;
+	className?: string;
+} {
 	if ( action.destructive ) {
-		return 'aggr-button aggr-button--outline-danger';
+		return { variant: 'secondary', isDestructive: true };
 	}
 
 	if ( action.positive ) {
-		return 'aggr-button aggr-button--positive';
+		return { variant: 'primary', className: 'aggr-positive' };
 	}
 
-	return 'aggr-button aggr-button--secondary';
+	return { variant: 'secondary' };
 }
 
 /**
@@ -116,15 +123,15 @@ export function DecisionBar( {
 
 			<div className="aggr-actionbar__actions">
 				{ campaign.actions.map( ( action ) => (
-					<button
+					<Button
 						key={ action.to }
-						type="button"
-						className={ toneClass( action ) }
+						{ ...tone( action ) }
+						__next40pxDefaultSize
 						disabled={ busy }
 						onClick={ () => onChoose( action ) }
 					>
 						{ action.label }
-					</button>
+					</Button>
 				) ) }
 			</div>
 		</div>
