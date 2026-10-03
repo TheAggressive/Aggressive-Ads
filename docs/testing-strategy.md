@@ -609,20 +609,40 @@ mark. It used to be enough to drop `.aggr-e2e-site` in a site's root or export
 campaigns into a working site — forty of them into a real organization, through
 a spec that picked "the first advertiser" — and reset its admin password. When
 both a working site and the disposable one serve the checkout, the runner picks
-the one carrying `.aggr-e2e-disposable`, which only `e2e:site` writes. Two of
-the setup's mutations are permanent: `tests/e2e/seed-users.php` resets the `admin` and
-`advertiser` passwords to the fixture values, and the seeds write fixture
-campaigns, an organization and a placement. The reversible ones — theme,
-permalink structure, the mail-capture mu-plugin — are captured before the run and
-restored afterwards on success and on failure, and a failed restore turns a
-passing run red rather than reporting a site it left half-changed.
+the one carrying `.aggr-e2e-disposable`, which only `e2e:site` writes.
 
-Seeds that rebuild a campaign every run delete it through
-`tests/e2e/fixture-campaign.php`, which takes the campaign's creatives and
-their private files with it. Deleting the campaign post alone takes only its
-line items, and the old seeds stranded a creative per run — 476 of them on the
-site above. `pnpm e2e:clean <site>` removes what a site collected before this,
-after backing it up.
+The runner does not trust the suite to clean up after itself; it puts the site
+back as a whole. Before Playwright starts, `bin/local/e2e-snapshot.mjs` copies
+the site's SQLite database through SQLite's backup API and lists every file
+under `wp-content/uploads`; when the run ends, pass or fail, it copies the
+database back and deletes every upload the list does not name. The reset
+passwords, the switched theme and permalinks, and every fixture row go with it.
+The snapshot sits in the site at `.aggr-e2e-snapshot/` and is removed only by a
+restore that worked: a run that dies leaves it, the next run restores from it
+before taking its own, and `take` refuses to overwrite one, so a dead run's
+leftovers never become a baseline. A failed restore turns a passing run red.
+
+A snapshot alone cannot tell a crashed run from one still going, and reading a
+live run's snapshot as a crash would restore the site under it mid-test. So a
+run also holds a lock, `.aggr-e2e-lock`, naming its runner by pid and by that
+process's start time — a pid alone is reused — and a second run is refused while
+the holder lives. A dead holder's lock is taken over by exactly one claimant;
+`bin/local/e2e-lock.test.mjs` races eight real processes for it to prove that,
+and caught the first design letting two win. The site is stopped before every
+restore, so nothing the run started can write after the database is put back.
+
+Per-spec cleanup is what this replaced. Seeds that rebuilt a campaign deleted
+the post alone and stranded a creative per run — 476 of them on the working
+site — and a run that died never reached its cleanup at all. Those seeds still
+delete through `tests/e2e/fixture-campaign.php`, which takes the creatives and
+their private files with it, so a run's own state stays coherent; but whether
+the site comes back clean no longer depends on every spec remembering.
+`pnpm e2e:clean <site>` removes what a site collected before snapshots, after
+backing it up.
+
+The site is left running after a run only if it was running before, and
+`e2e:site` stops the one it creates, so the suite's site is up only while the
+suite is.
 
 `home` and `siteurl` are deliberately not restored. They are set from whatever
 `studio site list` reports and left there, because the value a restore would put
