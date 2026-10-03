@@ -106,23 +106,26 @@ from a port, which would get the scheme wrong for a site with HTTPS enabled. Set
 asks you to choose, and `AGGR_STUDIO_URL` when Studio reports no address or you
 need to override the one it gives.
 
-The suite runs only on a Studio site made for it, because it resets the `admin`
-and `advertiser` passwords to match its fixtures and seeds campaigns,
-organizations and placements — and nothing puts any of that back. Create one
-once:
+The suite runs only on a Studio site made for it. While it runs it resets the
+`admin` and `advertiser` passwords, switches the theme and seeds campaigns,
+organizations and placements, so the site is unusable for anything else until
+it finishes. Create one once:
 
 ```bash
 pnpm e2e:site        # ~/Studio/aggr-e2e, serving this checkout, marked disposable
 ```
 
 The runner refuses any site that `e2e:site` did not mark (the mark is an option
-in the site's own database), so it cannot be pointed at a site you work in. A
-site the suite ran on before this existed can be cleaned up: `pnpm e2e:clean
-<site path>` reports what the fixtures left, and `--yes` backs the site up and
-removes it. See `bin/dev/clean-e2e-fixtures.php` for exactly what counts.
+in the site's own database), so it cannot be pointed at a site you work in.
 
-Theme, permalink structure and the mail-capture mu-plugin are captured up front
-and restored on the way out, whether Playwright passes or fails.
+Every run puts the site back as it found it: the SQLite database is snapshotted
+before Playwright starts and restored when it ends, pass or fail, and uploads the
+run added are deleted. A run that dies first is restored by the next one, and
+a second run started beside a live one is refused. The runner starts the site
+and, if it was not running before, stops it again afterwards. A site the suite ran on before any of this existed can be cleaned
+up: `pnpm e2e:clean <site path>` reports what the fixtures left, and `--yes`
+backs the site up and removes it. See `bin/dev/clean-e2e-fixtures.php` for
+exactly what counts.
 
 `home` and `siteurl` are the exception: they are set from Studio and left that
 way. Studio assigns the port and can reassign it, so a URL captured before a run

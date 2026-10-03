@@ -2,18 +2,20 @@
 #
 # Run the browser suite against the Studio site that serves this checkout.
 #
-# This is not a disposable container. The suite mutates the site it runs
-# against, and two of those mutations are not reversible by anything here:
+# Whatever the suite does to the site is undone afterwards, as a whole: the
+# database is snapshotted before Playwright starts and copied back when it
+# ends, and every upload the run added is deleted (bin/local/e2e-snapshot.mjs).
+# The specs and seeds no longer have to clean up after themselves for the site
+# to come back clean, which they never reliably did — see that file.
 #
-#   * tests/e2e/seed-users.php resets the `admin` and `advertiser` passwords to
-#     match the fixtures, so whatever those accounts used before is gone — and
-#     Studio's own stored admin password no longer opens wp-admin;
-#   * bin/dev/seed.php and tests/e2e/seed-mappings.php write fixture campaigns,
-#     an organization and a placement.
+# The run itself is still destructive while it lasts: the seeds reset the
+# `admin` and `advertiser` passwords, switch the theme and rewrite permalinks.
+# A site it runs on is unusable for anything else until the restore.
 #
-# Everything else — theme, home, siteurl, permalink structure, the mail-capture
-# mu-plugin — is captured up front and restored on the way out, on success and
-# on failure alike.
+# One run holds a site at a time (bin/local/e2e-lock.mjs); a second is refused
+# rather than allowed to restore the site under the first. The site is stopped
+# for every restore, and left running afterwards only if it was running before,
+# so the suite's site is up only while the suite is.
 #
 # So it runs only against a site made for it. `pnpm e2e:site` creates one and
 # marks it disposable in its own database (the `aggr_e2e_disposable` option);
@@ -126,6 +128,8 @@ mapfile -t discovery < <(
 							pathOf(match) +
 							"\n" +
 							(match.url ?? "") +
+							"\n" +
+							(match.running ? "running" : "stopped") +
 							"\n"
 					);
 					process.exit(0);
@@ -146,10 +150,12 @@ case "${discovery[0]:-}" in
 	ok)
 		site_path="${discovery[1]}"
 		base_url="${AGGR_STUDIO_URL:-${discovery[2]}}"
+		site_state="${discovery[3]:-stopped}"
 		;;
 	nourl)
 		site_path="${discovery[1]}"
 		base_url="${AGGR_STUDIO_URL:-}"
+		site_state="${discovery[3]:-stopped}"
 
 		if [[ -z "${base_url}" ]]; then
 			echo "studio-e2e: Studio reported no URL for ${discovery[1]}." >&2
@@ -186,11 +192,6 @@ if [[ ! "${base_url}" =~ ^https?:// ]]; then
 	exit 1
 fi
 
-# stdout is dropped, stderr is not. `studio site start` prints the site's admin
-# username and password on success, and this script's output ends up in qa:local
-# logs that get pasted into issues.
-studio site start --path "${site_path}" >/dev/null
-
 served_plugin="$(
 	studio wp --path "${site_path}" eval \
 		'echo realpath( WP_PLUGIN_DIR . "/aggressive-ads" );' | tr -d '\r\n'
@@ -214,9 +215,9 @@ if [[ "${disposable}" != "1" ]]; then
 	cat >&2 <<-REFUSE
 		studio-e2e: ${site_path} is not a disposable test site.
 
-		The suite resets the admin and advertiser passwords and seeds campaigns,
-		organizations and placements, and none of it is undone. It runs only on
-		a site made for it:
+		While it runs, the suite resets the admin and advertiser passwords,
+		switches the theme and seeds campaigns, organizations and placements.
+		It runs only on a site made for it:
 
 		  pnpm e2e:site
 
@@ -225,39 +226,13 @@ if [[ "${disposable}" != "1" ]]; then
 	exit 1
 fi
 
-# What to put back, recorded where it survives this process.
-#
-# The obvious version of this reads the live theme at start and restores it at
-# the end, and it is wrong in one specific way: a run that dies without running
-# its trap — SIGKILL, a closed laptop, a killed terminal — leaves the site on the
-# test theme, and then *every later run* reads that as the original and restores
-# the site to it. The corruption is silent, permanent and self-perpetuating, and
-# the only symptom is somebody eventually asking why their theme keeps changing.
-#
-# So the record goes in a file. Its existence means a run is in progress or died
-# without cleaning up, and in both cases the file is the truth rather than
-# whatever the site currently says.
-restore_file="${site_path}/.aggr-e2e-restore"
+# One run per site. A second run would read the first one's snapshot as a
+# crash and restore the site under it, mid-test (bin/local/e2e-lock.mjs). Taken
+# after the checks above, so a site that is not the suite's never gets a lock
+# file written into it.
+node bin/local/e2e-lock.mjs lock "${site_path}" "$$"
 
-if [[ -f "${restore_file}" ]]; then
-	original_theme="$(sed -n '1p' "${restore_file}" | tr -d '\r\n')"
-	original_permalinks="$(sed -n '2p' "${restore_file}" | tr -d '\r\n')"
-
-	echo "studio-e2e: a previous run did not clean up; recovering its record." >&2
-	echo "  theme:      ${original_theme}" >&2
-	echo "  permalinks: ${original_permalinks}" >&2
-else
-	original_theme="$(studio wp --path "${site_path}" option get stylesheet | tr -d '\r\n')"
-
-	# global-setup.ts rewrites this with `--hard`, so it is as much this script's
-	# to put back as the theme and the URLs are.
-	original_permalinks="$(studio wp --path "${site_path}" option get permalink_structure | tr -d '\r\n')"
-
-	printf '%s\n%s\n' "${original_theme}" "${original_permalinks}" > "${restore_file}"
-fi
-
-mail_fixture="${repo_root}/tests/fixtures/mu-plugins/dev-mail-sender.php"
-mail_link="${site_path}/wp-content/mu-plugins/aggr-e2e-mail-capture.php"
+snapshot_taken=0
 remove_mail_link=0
 
 cleanup() {
@@ -266,36 +241,98 @@ cleanup() {
 	trap - EXIT
 	set +e
 
-	current_theme="$(studio wp --path "${site_path}" option get stylesheet 2>/dev/null | tr -d '\r\n')"
+	if [[ "${snapshot_taken}" -eq 1 ]]; then
+		# Stopped before the restore, so nothing the run set in motion — a
+		# cron spawn, a request still in flight — can write to the database
+		# after it has been put back.
+		studio site stop --path "${site_path}" >/dev/null || cleanup_failed=1
 
-	if [[ "${current_theme}" != "${original_theme}" ]]; then
-		studio wp --path "${site_path}" theme activate "${original_theme}" >/dev/null || cleanup_failed=1
+		# The snapshot is removed only by a restore that worked, so a failed
+		# one leaves it for the next run to restore from instead of re-taking.
+		node bin/local/e2e-snapshot.mjs restore "${site_path}" "${database_file}" || cleanup_failed=1
+
+		# The database is back, but global-setup's `--hard` flush also wrote the
+		# site's .htaccess, which is a file. Rewrite it from the restored rules.
+		studio wp --path "${site_path}" rewrite flush --hard >/dev/null || cleanup_failed=1
 	fi
-
-	studio wp --path "${site_path}" option update permalink_structure "${original_permalinks}" >/dev/null || cleanup_failed=1
-	studio wp --path "${site_path}" rewrite flush --hard >/dev/null || cleanup_failed=1
 
 	if [[ "${remove_mail_link}" -eq 1 ]]; then
 		rm -f "${mail_link}" || cleanup_failed=1
 	fi
 
-	# Last, and only when everything above worked. A record removed after a
-	# failed restore would hand the next run the corrupted live state as its
-	# baseline, which is the whole failure this file exists to prevent.
-	if [[ "${cleanup_failed}" -eq 0 ]]; then
-		rm -f "${restore_file}" || cleanup_failed=1
+	# Running afterwards only if it was running before: the suite's site is
+	# up only while the suite is, and a site somebody had open stays open.
+	if [[ "${site_state}" == "running" ]]; then
+		studio site start --path "${site_path}" >/dev/null || cleanup_failed=1
 	else
-		echo "studio-e2e: keeping ${restore_file} so the next run can recover." >&2
+		studio site stop --path "${site_path}" >/dev/null || cleanup_failed=1
 	fi
 
-	if [[ "${status}" -eq 0 && "${cleanup_failed}" -ne 0 ]]; then
-		echo "studio-e2e: the suite passed but the site was not fully restored." >&2
-		status=1
+	node bin/local/e2e-lock.mjs unlock "${site_path}" "$$" || cleanup_failed=1
+
+	if [[ "${cleanup_failed}" -ne 0 ]]; then
+		echo "studio-e2e: the site was not fully restored; the next run will retry." >&2
+
+		if [[ "${status}" -eq 0 ]]; then
+			echo "studio-e2e: the suite passed, but this run is failed for it." >&2
+			status=1
+		fi
 	fi
 
 	exit "${status}"
 }
 trap cleanup EXIT
+
+database_file="$(
+	studio wp --path "${site_path}" eval \
+		'echo defined( "FQDB" ) ? FQDB : "";' 2>/dev/null | tr -d '\r\n'
+)"
+
+if [[ -z "${database_file}" || ! -f "${database_file}" ]]; then
+	echo "studio-e2e: ${site_path} has no SQLite database to snapshot." >&2
+	echo "The suite runs only where it can put the site back afterwards." >&2
+	exit 1
+fi
+
+# A run before snapshots kept its theme and permalinks here instead, and one
+# that died left them changed. Put them back before the snapshot, or the
+# snapshot would keep the damage as the site's baseline.
+legacy_restore="${site_path}/.aggr-e2e-restore"
+
+if [[ -f "${legacy_restore}" ]]; then
+	echo "studio-e2e: recovering theme and permalinks from an older run." >&2
+	studio wp --path "${site_path}" theme activate "$(sed -n '1p' "${legacy_restore}" | tr -d '\r\n')" >/dev/null
+	studio wp --path "${site_path}" option update permalink_structure "$(sed -n '2p' "${legacy_restore}" | tr -d '\r\n')" >/dev/null
+	rm -f "${legacy_restore}"
+fi
+
+# A snapshot already here means a run died before restoring. The snapshot, not
+# the site as it is now, is the baseline, so restore from it first.
+# The lock above says no other run is alive, so this is a dead run's; stopped
+# for the restore, as at the end of a run.
+if [[ -d "${site_path}/.aggr-e2e-snapshot" ]]; then
+	echo "studio-e2e: a previous run did not restore the site; restoring it now." >&2
+
+	# The dead run started the site, so "running" now says nothing about
+	# whether it was running before; that run recorded the answer.
+	recorded_state="$(cat "${site_path}/.aggr-e2e-snapshot/site-state" 2>/dev/null || true)"
+
+	if [[ "${recorded_state}" == "running" || "${recorded_state}" == "stopped" ]]; then
+		site_state="${recorded_state}"
+	fi
+
+	studio site stop --path "${site_path}" >/dev/null
+	node bin/local/e2e-snapshot.mjs restore "${site_path}" "${database_file}"
+	studio wp --path "${site_path}" rewrite flush --hard >/dev/null
+fi
+
+# stdout is dropped, stderr is not. `studio site start` prints the site's admin
+# username and password on success, and this script's output ends up in qa:local
+# logs that get pasted into issues.
+studio site start --path "${site_path}" >/dev/null
+
+mail_fixture="${repo_root}/tests/fixtures/mu-plugins/dev-mail-sender.php"
+mail_link="${site_path}/wp-content/mu-plugins/aggr-e2e-mail-capture.php"
 
 # A link this script left behind is this script's to replace, from any
 # checkout and even when it dangles. A run that dies before its trap leaves
@@ -341,8 +378,16 @@ fi
 studio wp --path "${site_path}" option update home "${base_url}" >/dev/null
 studio wp --path "${site_path}" option update siteurl "${base_url}" >/dev/null
 
+# After home and siteurl, so the snapshot carries the address Studio serves now
+# and a restore does not put back a stale one.
+node bin/local/e2e-snapshot.mjs take "${site_path}" "${database_file}"
+snapshot_taken=1
+
+# For a run that recovers this one, should it die: see the restore above.
+printf '%s\n' "${site_state}" > "${site_path}/.aggr-e2e-snapshot/site-state"
+
 echo "studio-e2e: ${base_url} (${site_path})"
-echo "studio-e2e: home and siteurl now follow Studio; theme and permalinks are restored."
+echo "studio-e2e: the database and uploads are restored when the run ends."
 
 AGGR_E2E_BASE_URL="${base_url}" \
 	AGGR_E2E_WP_PATH="${site_path}" \
