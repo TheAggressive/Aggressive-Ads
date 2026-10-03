@@ -110,7 +110,12 @@ studio wp --path "${site_path}" option update aggr_e2e_disposable 1 >/dev/null
 # check above passes on a site whose web server cannot load the plugin.
 site_url="$(studio wp --path "${site_path}" option get siteurl | tr -d '\r\n')"
 
-if curl -fsS "${site_url}/wp-login.php" | grep -q "open_basedir"; then
+login_page="$(curl -sS "${site_url}/wp-login.php" 2>&1)" || {
+	echo "e2e-site: ${site_url} did not answer: ${login_page}" >&2
+	exit 1
+}
+
+if grep -q "open_basedir" <<< "${login_page}"; then
 	echo "e2e-site: the web server cannot read this checkout (open_basedir)." >&2
 	echo "Restart the site in Studio and run this again." >&2
 	exit 1
