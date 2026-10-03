@@ -168,11 +168,25 @@ have been closed since.
   further down the page with every package; it is now a primary button in the
   header's actions slot (`Screen_Shell::mount( …, actions: true )`), which the
   bundle fills through a portal. Reports put its export last. (**Fixed**.)
-- **Reflow, partly measured.** At 360 CSS pixels no Advertising screen widens
-  the page: `scrollWidth` equals the viewport on all eight, measured in a
-  browser on 2026-09-30. DataViews tables scroll inside their own surface with
-  the actions column pinned, so the `overflow: hidden` on the surface does not
-  clip columns. 320px, 200% zoom and forced colours are still unmeasured.
+- **Reflow, zoom, forced colours and motion: measured, and held by the browser
+  suite (#340).** Every screen in the sidebar plus the campaign view, read from
+  the sidebar so a new screen is measured without being listed:
+  - **320 CSS pixels** (`reflow/admin-reflow.spec.ts`): no screen scrolls
+    sideways, and each is axe-clean there. Settings did, by 83px: a brand
+    colour's button would not wrap its long role. **Fixed.** DataViews tables
+    scroll inside their own surface with the actions column pinned.
+  - **200% zoom** (`staff-screen-evidence.spec.ts`, 640×450): no screen scrolls
+    sideways; each is axe-clean.
+  - **Forced colours**: the mark is drawn in `CanvasText`; every status pill
+    keeps a border (they had none, and became bare words — **fixed**); every
+    visible control in the content shows an outline when focused. Core's
+    fields drew their focus ring as a box-shadow, which forced colours remove,
+    so the search box on four screens showed no focus at all (**fixed**, with
+    an outline that outweighs core's tripled class).
+  - **Reduced motion**: nothing is still animating once a screen has drawn.
+
+  Each failure names the screen and, for reflow, the element pushing the page
+  wider. Both new checks were seen to fail with the fix removed.
 - **Sidebar order did not follow the work.** The sidebar ran in boot order,
   with Packages apart from the other sell-side screens, and the landing
   redirect kept a second list that had drifted and left out Conversions. Both
@@ -378,9 +392,12 @@ since the screen's notice prints at the top. It lives in the portal's
 component set so the wizard's phone bar (#302) reuses it rather than building
 another.
 
-**Responsive.** Nothing may widen the page at 320 CSS pixels. Tables scroll
-inside their surface, and toolbars and header actions wrap. Check at 200% zoom
-and in forced colours. The mark switches to `CanvasText` there.
+**Responsive.** Nothing may widen the page at 320 CSS pixels or at 200% zoom.
+Tables scroll inside their surface, and toolbars, header actions and control
+labels wrap. In forced colours the mark is `CanvasText`, a status keeps a
+border, and focus is an outline, never only a box-shadow. The browser suite
+checks all of it on every screen; a new screen inherits the checks by being in
+the sidebar.
 
 **Performance.** Every screen renders its first view from the payload the page
 already carries. It does not fetch after load to fill the page. A summary figure
@@ -420,8 +437,10 @@ scoped.
    Reports filter labels, no Billing switch until billing exists, a heading on
    Conversions' first table, sentence-case Settings, and Packages' "New
    package" in the page header.
-6. **Final pass.** Measure 320px reflow, 200% zoom and forced colours on every
-   screen in the browser suite, and record the evidence here.
+6. **Final pass** *(sixth)*. 320px reflow, 200% zoom, forced colours and
+   reduced motion, measured on every screen by the browser suite and recorded
+   above (#340). It found and fixed Settings' reflow, borderless pills and
+   core fields with no forced-colours focus.
 
 An operational overview screen is deliberately **not** on this list. The data
 for an honest one exists: `Pending_Work`, the review tab counts, fill rate and

@@ -145,6 +145,35 @@ body.aggr-admin-screen .components-button.is-destructive:not(.is-tertiary):not(.
 	}
 }
 
+/*
+ * The rest of what forced colours take away, measured on every Advertising
+ * screen (#340).
+ *
+ * A status pill is its tint, and the tint is a background, so every pill
+ * became a bare word among other words. The word carries the status either
+ * way; the border keeps it reading as a status.
+ *
+ * Core draws a field's focus ring as a box-shadow, and forced colours remove
+ * box-shadows, so a focused search box or select showed nothing at all. The
+ * outline is the system's own highlight. Scoped to the body class so it also
+ * reaches the fields in a `Modal`, which renders outside the wrap.
+ */
+@media (forced-colors: active) {
+	.wrap.aggr-admin :is(.aggr-pill, .aggr-state) {
+		border: 1px solid CanvasText;
+	}
+
+	/*
+	 * `:focus-visible` as well as `:focus` for weight, not meaning: core's
+	 * inputs are styled through a class repeated three times (0,3,0), and a
+	 * rule that loses to it draws nothing.
+	 */
+	body.aggr-admin-screen :is(input, select, textarea):focus:focus-visible {
+		outline: 2px solid Highlight;
+		outline-offset: 1px;
+	}
+}
+
 .wrap.aggr-admin .aggr-admin-head__title {
 	margin: 0;
 	padding: 0;

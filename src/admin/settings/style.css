@@ -75,6 +75,26 @@
 
 .aggr-brand-colours > :first-child {
 	flex: 1 1 16rem;
+	min-width: 0;
+}
+
+/*
+ * A colour's button carries its swatch, its role and its value, and the
+ * longest role ("Accent (selection, focus and highlights)") is wider than a
+ * phone. Core's button does not wrap, so at 320 CSS pixels the row ran 83px
+ * past the screen (WCAG 1.4.10). It wraps here, keeping its 40px floor.
+ */
+.aggr-brand-colours .components-button {
+	max-width: 100%;
+	height: auto;
+	min-height: 40px;
+	text-align: start;
+	white-space: normal;
+}
+
+.aggr-brand-colours .components-button > * {
+	flex-wrap: wrap;
+	min-width: 0;
 }
 
 /*
@@ -87,7 +107,10 @@
 .aggr-brand-preview {
 	display: grid;
 	grid-template-columns: 34% 1fr;
-	flex: 0 0 18rem;
+	/* Shrinks rather than holding 18rem past the edge of a phone. */
+	flex: 0 1 18rem;
+	min-width: 0;
+	max-width: 100%;
 	height: 11rem;
 	overflow: hidden;
 	border: 1px solid var(--aggr-border-color);
