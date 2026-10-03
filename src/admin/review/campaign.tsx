@@ -13,6 +13,7 @@
 
 import type { ReactElement } from 'react';
 import { useState } from '@wordpress/element';
+import { Button } from '@wordpress/components';
 import { DecisionBar, DecisionDialog } from './decisions';
 import { CreativeCard, Decision } from './creative';
 import { DeliveryPolicy } from './delivery';
@@ -73,14 +74,14 @@ function InternalNotes( {
 					value={ notes }
 					onChange={ ( event ) => setNotes( event.target.value ) }
 				/>
-				<button
-					type="button"
-					className="aggr-button aggr-button--secondary"
+				<Button
+					variant="secondary"
+					__next40pxDefaultSize
 					disabled={ busy }
 					onClick={ () => onSave( notes ) }
 				>
 					{ t( 'saveInternalNotes' ) }
-				</button>
+				</Button>
 			</div>
 		</section>
 	);
@@ -204,14 +205,14 @@ export function CampaignView( {
 						 * is the statuses where the advertiser has no
 						 * transition available.
 						 */ }
-						<button
-							type="button"
-							className="aggr-button aggr-button--secondary"
+						<Button
+							variant="secondary"
+							__next40pxDefaultSize
 							disabled={ busy }
 							onClick={ () => onEdit() }
 						>
 							{ t( 'editCampaign' ) }
-						</button>
+						</Button>
 					</div>
 				</div>
 
@@ -576,7 +577,14 @@ export function CampaignView( {
  */
 function summaryFacts( campaign: Campaign ): Array< [ string, string ] > {
 	const facts: Array< [ string, string ] > = [
-		[ t( 'placements' ), campaign.placements.join( ', ' ) ],
+		[
+			t( 'placements' ),
+			// Said, not left blank: an empty value under a label reads as a
+			// rendering fault rather than as a campaign with none chosen.
+			0 === campaign.placements.length
+				? t( 'noPlacements' )
+				: campaign.placements.join( ', ' ),
+		],
 		[
 			t( 'reviewer' ),
 			'' === campaign.reviewer ? t( 'unassigned' ) : campaign.reviewer,
@@ -665,14 +673,14 @@ function DeclineRequest( {
 				value={ notes }
 				onChange={ ( event ) => setNotes( event.target.value ) }
 			/>
-			<button
-				type="button"
-				className="aggr-button aggr-button--secondary"
+			<Button
+				variant="secondary"
+				__next40pxDefaultSize
 				disabled={ busy }
 				onClick={ () => onDecline( notes ) }
 			>
 				{ t( 'declineRequest' ) }
-			</button>
+			</Button>
 		</div>
 	);
 }

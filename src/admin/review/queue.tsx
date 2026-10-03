@@ -204,13 +204,13 @@ export function QueueView( {
 					 * campaign in front of the public; creating a draft is not
 					 * that, and borrowing its colour dilutes what it means.
 					 */ }
-					<button
-						type="button"
-						className="aggr-button"
+					<Button
+						variant="primary"
+						__next40pxDefaultSize
 						onClick={ () => setCreating( true ) }
 					>
 						{ t( 'createCampaign' ) }
-					</button>
+					</Button>
 				</div>
 			</div>
 

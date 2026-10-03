@@ -44,30 +44,30 @@
 	gap: var(--aggr-space-md);
 }
 
-.aggr-pagehead__actions .aggr-button {
-	width: auto;
-}
-
 /*
- * Approval, drawn as an assertion.
+ * Approval, drawn as an assertion, on core's primary button.
  *
  * The one edge that puts a campaign in front of the public, and the only
  * button on the screen that should read as a decision rather than a step.
  * Uses the live token, which is the same green the Live pill carries, so the
- * colour means the same thing in both places.
+ * colour means the same thing in both places. Two classes past core's
+ * `.components-button.is-primary`, and its hover is matched state for state,
+ * so the green is not lost to the admin theme colour on hover.
  */
-.aggr-button--positive {
-	border-color: var(--aggr-color-live);
+.components-button.is-primary.aggr-positive,
+.components-button.is-primary.aggr-positive:hover:not(:disabled),
+.components-button.is-primary.aggr-positive:active:not(:disabled) {
 	background: var(--aggr-color-live);
 	color: var(--aggr-color-accent-contrast);
 }
 
-.aggr-button--positive:hover,
-.aggr-button--positive:focus-visible {
-	border-color: var(--aggr-color-live);
-	background: var(--aggr-color-live);
-	color: var(--aggr-color-accent-contrast);
+.components-button.is-primary.aggr-positive:hover:not(:disabled) {
 	filter: brightness(0.92);
+}
+
+/* Disabled while a decision is in flight, and it has to look it. */
+.components-button.is-primary.aggr-positive:disabled {
+	opacity: 0.55;
 }
 
 /*
@@ -174,7 +174,7 @@
 	 * A save button is as wide as its words. Stretched to the field width it
 	 * read as another input, and the panel's one action looked like a banner.
 	 */
-	.wrap.aggr-admin .aggr-panel .aggr-form > .aggr-button {
+	.wrap.aggr-admin .aggr-panel .aggr-form > .components-button {
 		justify-self: start;
 		width: auto;
 	}
@@ -491,24 +491,6 @@
 		color: var(--aggr-color-danger);
 		font-weight: 700;
 	}
-
-
-	.aggr-button--secondary {
-		background: var(--aggr-color-surface);
-		border-color: var(--aggr-border-color-strong);
-		color: var(--aggr-color-text);
-	}
-
-	.aggr-button--danger {
-		background: var(--aggr-color-danger-tint);
-		border-color: var(--aggr-color-danger);
-		color: var(--aggr-color-danger);
-	}
-
-	.aggr-button:hover {
-		filter: brightness(0.96);
-	}
-
 
 	.aggr-provider-state {
 		margin-bottom: var(--aggr-space-lg);
