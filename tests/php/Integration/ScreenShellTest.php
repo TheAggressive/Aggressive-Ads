@@ -225,4 +225,24 @@ final class ScreenShellTest extends WP_UnitTestCase {
 			$this->assertSame( 0, substr_count( $source, '<header' ), "{$file} must not nest a banner in core's main." );
 		}
 	}
+
+	/**
+	 * A screen that asks for an actions slot gets one, inside the header and
+	 * before the notices marker; a screen that does not, gets none.
+	 *
+	 * @return void
+	 */
+	public function test_the_actions_slot_is_in_the_header_only_when_asked_for(): void {
+		$with    = self::capture( static fn () => Screen_Shell::mount( 'Packages', '', 'aggr-x-root', 'data-aggr-x', array(), 'Needs JavaScript.', '', true ) );
+		$without = self::capture( static fn () => Screen_Shell::mount( 'Packages', '', 'aggr-x-root', 'data-aggr-x', array(), 'Needs JavaScript.' ) );
+
+		$slot   = strpos( $with, 'id="aggr-x-root-actions"' );
+		$marker = strpos( $with, 'class="wp-header-end"' );
+
+		$this->assertIsInt( $slot );
+		$this->assertIsInt( $marker );
+		$this->assertLessThan( $marker, $slot, 'The slot belongs to the header, above the notices.' );
+		$this->assertSame( 1, substr_count( $with, 'aggr-admin-head__actions' ) );
+		$this->assertSame( 0, substr_count( $without, 'aggr-admin-head__actions' ) );
+	}
 }

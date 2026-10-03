@@ -42,10 +42,11 @@ final class Screen_Shell {
 	 *
 	 * @param string $title   Page title, already translated.
 	 * @param string $purpose One sentence saying what the screen is for, already translated. Empty for none.
-	 * @param string $section The group the screen belongs to, shown above the title, already translated. Empty for none.
+	 * @param string $section    The group the screen belongs to, shown above the title, already translated. Empty for none.
+	 * @param string $actions_id Id for an empty actions slot beside the title, which a React screen fills. Empty for none.
 	 * @return void
 	 */
-	public static function open( string $title, string $purpose = '', string $section = '' ): void {
+	public static function open( string $title, string $purpose = '', string $section = '', string $actions_id = '' ): void {
 		/*
 		 * A div, not a header. WordPress wraps every admin page in
 		 * `#wpbody[role=main]`, and a header there is read as a second banner
@@ -76,8 +77,20 @@ final class Screen_Shell {
 			printf( '<p class="aggr-admin-head__purpose">%s</p>', esc_html( $purpose ) );
 		}
 
+		echo '</div>';
+
+		/*
+		 * The screen's one primary action, beside its title, when the screen
+		 * is not a list (a list puts it in the DataViews header instead). Empty
+		 * here and filled by the screen's bundle through a portal, so the
+		 * header stays PHP's and the action stays the bundle's.
+		 */
+		if ( '' !== $actions_id ) {
+			printf( '<div class="aggr-admin-head__actions" id="%s"></div>', esc_attr( $actions_id ) );
+		}
+
 		// Core moves admin notices to sit directly after this element.
-		echo '</div></div><hr class="wp-header-end">';
+		echo '</div><hr class="wp-header-end">';
 	}
 
 	/**
@@ -124,10 +137,11 @@ final class Screen_Shell {
 	 * @param array<string, mixed> $payload   Bootstrap data.
 	 * @param string               $noscript  What to say when scripting is off, already translated.
 	 * @param string               $section   The group the screen belongs to, already translated.
+	 * @param bool                 $actions   Whether to leave an actions slot in the header, as `{$root_id}-actions`.
 	 * @return void
 	 */
-	public static function mount( string $title, string $purpose, string $root_id, string $attribute, array $payload, string $noscript, string $section = '' ): void {
-		self::open( $title, $purpose, $section );
+	public static function mount( string $title, string $purpose, string $root_id, string $attribute, array $payload, string $noscript, string $section = '', bool $actions = false ): void {
+		self::open( $title, $purpose, $section, $actions ? $root_id . '-actions' : '' );
 
 		printf(
 			'<noscript><div class="notice notice-error"><p>%1$s</p></div></noscript><div id="%2$s" %3$s="%4$s"></div>',

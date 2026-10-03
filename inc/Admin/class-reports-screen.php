@@ -270,8 +270,13 @@ final class Reports_Screen implements Service {
 		echo '<form method="get" action="">';
 		printf( '<input type="hidden" name="page" value="%s">', esc_attr( self::MENU_SLUG ) );
 
+		/*
+		 * Visible labels. These were screen-reader text, so a sighted reader
+		 * met two bare selects and had to open each one to learn what it
+		 * chose — and a select's placeholder-like first option is not a label.
+		 */
 		printf(
-			'<label for="aggr-report-days" class="screen-reader-text">%s</label>',
+			'<span class="aggr-filter"><label for="aggr-report-days">%s</label>',
 			esc_html__( 'Reporting window', 'aggressive-ads' )
 		);
 		echo '<select name="days" id="aggr-report-days">';
@@ -291,10 +296,10 @@ final class Reports_Screen implements Service {
 			);
 		}
 
-		echo '</select> ';
+		echo '</select></span>';
 
 		printf(
-			'<label for="aggr-report-placement" class="screen-reader-text">%s</label>',
+			'<span class="aggr-filter"><label for="aggr-report-placement">%s</label>',
 			esc_html__( 'Placement', 'aggressive-ads' )
 		);
 		echo '<select name="placement" id="aggr-report-placement">';
@@ -313,7 +318,7 @@ final class Reports_Screen implements Service {
 			);
 		}
 
-		echo '</select> ';
+		echo '</select></span>';
 		printf( '<button type="submit" class="button">%s</button>', esc_html__( 'Show', 'aggressive-ads' ) );
 		echo '</form>';
 	}

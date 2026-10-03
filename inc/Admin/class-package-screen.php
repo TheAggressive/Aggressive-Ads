@@ -193,7 +193,8 @@ final class Package_Screen implements Service {
 			'data-aggr-packages',
 			$payload,
 			__( 'The packages screen needs JavaScript enabled.', 'aggressive-ads' ),
-			Screen_Shell::section( 'inventory' )
+			Screen_Shell::section( 'inventory' ),
+			actions: true
 		);
 	}
 

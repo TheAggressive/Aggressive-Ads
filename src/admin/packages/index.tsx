@@ -13,7 +13,7 @@
 
 import type { ReactElement } from 'react';
 import apiFetch from '@wordpress/api-fetch';
-import { createRoot, useState } from '@wordpress/element';
+import { createPortal, createRoot, useState } from '@wordpress/element';
 import {
 	Button,
 	CheckboxControl,
@@ -26,7 +26,8 @@ import {
 	__experimentalVStack as VStack,
 } from '@wordpress/components';
 import { SaveError, setStrings, t, useAction } from '../shared/save';
-import { Icon, IconChip } from '../shared/icon';
+import { Icon } from '../shared/icon';
+import { Empty } from '../shared/empty';
 import { State } from '../shared/state';
 import './style.css';
 
@@ -443,103 +444,126 @@ function App( { data }: { data: Bootstrap } ): ReactElement {
 		setEditing( id );
 	};
 
+	// The header's actions slot (`Screen_Shell::mount( …, actions: true )`).
+	const actions = document.getElementById( 'aggr-packages-root-actions' );
+
 	const current =
 		null === editing || 0 === editing
 			? null
 			: view.rows.find( ( row ) => row.id === editing ) ?? null;
 
 	return (
-		<VStack spacing={ 5 }>
-			{ saved ? (
-				<Notice
-					status="success"
-					isDismissible
-					onRemove={ () => setSaved( '' ) }
-				>
-					{ saved }
-				</Notice>
-			) : null }
+		<>
+			{ /*
+			 * The creating action beside the page title, where the contract
+			 * puts it on a screen that is not a list. It was a dashed card at
+			 * the end of the grid, so the one thing to do here moved further
+			 * down the page with every package added.
+			 *
+			 * Outside the VStack: Flex keeps only valid elements from its
+			 * children, and a portal is not one, so inside it this rendered
+			 * nothing at all — no error, an empty slot.
+			 */ }
+			{ actions
+				? createPortal(
+						<Button
+							variant="primary"
+							__next40pxDefaultSize
+							onClick={ () => open( 0 ) }
+						>
+							{ t( 'newPackage' ) }
+						</Button>,
+						actions
+				  )
+				: null }
 
-			<div className="aggr-package-grid">
-				{ view.rows.map( ( row ) => (
-					<PackageCard
-						key={ row.id }
-						row={ row }
-						placements={ view.placements }
-						onEdit={ () => open( row.id ) }
-					/>
-				) ) }
+			<VStack spacing={ 5 }>
+				{ saved ? (
+					<Notice
+						status="success"
+						isDismissible
+						onRemove={ () => setSaved( '' ) }
+					>
+						{ saved }
+					</Notice>
+				) : null }
 
-				<button
-					type="button"
-					className="aggr-package-new"
-					onClick={ () => open( 0 ) }
-				>
-					<IconChip name="plus" />
-					<span>{ t( 'newPackage' ) }</span>
-					{ 0 === view.rows.length ? (
-						<span className="aggr-package-new__hint">
-							{ t( 'emptyCatalogue' ) }
-						</span>
-					) : null }
-				</button>
-			</div>
+				{ 0 === view.rows.length ? (
+					<Empty icon="package">{ t( 'emptyCatalogue' ) }</Empty>
+				) : (
+					<div className="aggr-package-grid">
+						{ view.rows.map( ( row ) => (
+							<PackageCard
+								key={ row.id }
+								row={ row }
+								placements={ view.placements }
+								onEdit={ () => open( row.id ) }
+							/>
+						) ) }
+					</div>
+				) }
 
-			{ null !== editing ? (
-				<Modal
-					title={
-						null === current
-							? t( 'newPackage' )
-							: `${ t( 'editPackage' ) }: ${ current.name }`
-					}
-					className="aggr-package-modal"
-					onRequestClose={ () => setEditing( null ) }
-				>
-					<VStack spacing={ 4 }>
-						{ /*
-						 * Inside the dialog, because that is where the reader
-						 * is: an error printed on the page behind a modal is an
-						 * error nobody sees until they close the thing they
-						 * were trying to fix.
-						 */ }
-						<SaveError message={ error } onRetry={ undefined } />
-						<PackageForm
-							value={
-								current ?? {
-									...BLANK,
-									currency: data.defaultCurrency,
+				{ null !== editing ? (
+					<Modal
+						title={
+							null === current
+								? t( 'newPackage' )
+								: `${ t( 'editPackage' ) }: ${ current.name }`
+						}
+						className="aggr-package-modal"
+						onRequestClose={ () => setEditing( null ) }
+					>
+						<VStack spacing={ 4 }>
+							{ /*
+							 * Inside the dialog, because that is where the reader
+							 * is: an error printed on the page behind a modal is an
+							 * error nobody sees until they close the thing they
+							 * were trying to fix.
+							 */ }
+							<SaveError
+								message={ error }
+								onRetry={ undefined }
+							/>
+							<PackageForm
+								value={
+									current ?? {
+										...BLANK,
+										currency: data.defaultCurrency,
+									}
 								}
-							}
-							placements={ view.placements }
-							currencies={ data.currencies }
-							submitLabel={
-								null === current ? t( 'create' ) : t( 'save' )
-							}
-							busy={ busy }
-							onSubmit={ ( draft, amount ) => {
-								clearError();
-								void write(
+								placements={ view.placements }
+								currencies={ data.currencies }
+								submitLabel={
 									null === current
-										? {
-												path: `${ data.restPath }/catalogue`,
-												method: 'POST',
-												data: body( draft, amount ),
-										  }
-										: {
-												path: `${ data.restPath }/${ current.id }`,
-												method: 'PATCH',
-												data: body( draft, amount ),
-										  },
-									null === current
-										? t( 'created' )
-										: t( 'saved' )
-								);
-							} }
-						/>
-					</VStack>
-				</Modal>
-			) : null }
-		</VStack>
+										? t( 'create' )
+										: t( 'save' )
+								}
+								busy={ busy }
+								onSubmit={ ( draft, amount ) => {
+									clearError();
+									void write(
+										null === current
+											? {
+													path: `${ data.restPath }/catalogue`,
+													method: 'POST',
+													data: body( draft, amount ),
+											  }
+											: {
+													path: `${ data.restPath }/${ current.id }`,
+													method: 'PATCH',
+													data: body( draft, amount ),
+											  },
+										null === current
+											? t( 'created' )
+											: t( 'saved' )
+									);
+								} }
+							/>
+						</VStack>
+					</Modal>
+				) : null }
+			</VStack>
+		</>
 	);
 }
 

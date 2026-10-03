@@ -23,7 +23,11 @@ the same palette.
 ## The screens
 
 Eight submenus, in the order they appear in the sidebar. Every one is gated by
-its own capability. The umbrella issue tracks the work (see
+its own capability. The order is `Menu::SCREENS`, grouped by the work as each
+header's eyebrow names it: the campaigns waiting on a decision, the inventory
+that is sold, who buys it, how it performed, then setup. The sidebar is sorted
+to it after every screen registers, and the parent's landing redirect reads the
+same list; `MenuOrderTest` holds both. The umbrella issue tracks the work (see
 [Implementation slices](#implementation-slices)).
 
 | Menu | Slug | Capability | Primary job | Rendered by | Change needed |
@@ -31,10 +35,10 @@ its own capability. The umbrella issue tracks the work (see
 | Review | `aggr-review` | `aggr_review_campaigns` | Clear the queue: approve, reject, pause, resume and cancel campaigns, and decide on advertiser requests | `Review_Screen` → `src/admin/review/` (React, portal design system via `admin.css`) | Structural |
 | Placements | `aggr-placement-mapping` | `aggr_manage_placements` | Keep the catalogue of sellable slots correct | `Placement_Screen` → `src/admin/inventory/` (DataViews + modal) | Minor polish |
 | Outlook | `aggr-forecast` | `aggr_manage_placements` | See which placements are oversold and which have room | `Forecast_Screen` → `src/admin/forecast/` (summary figures + DataViews) | Minor polish, then a link with Placements |
+| Packages | `aggr-packages` | `aggr_manage_packages` | Decide what advertisers can buy and at what price | `Package_Screen` → `src/admin/packages/` (product cards + one modal editor) | Structural |
 | Organizations | `aggr-organizations` | `aggr_manage_orgs` | Suspend, reactivate and manage members of advertiser accounts | `Organization_Screen` → `src/admin/organizations/` (server-paged DataViews + modals) | Minor polish |
-| Conversions | `aggr-conversions` | `aggr_manage_settings` | Define conversions and issue server-to-server credentials | `Conversions_Screen` → `src/admin/conversions/` (two DataViews + modals) | Minor polish |
-| Packages | `aggr-packages` | `aggr_manage_packages` | Decide what advertisers can buy and at what price | `Package_Screen` → `src/admin/packages/` (a card with a full form per package) | Structural |
 | Reports | `aggr-reports` | `aggr_view_reports` | Explain fill: how often slots filled, and why they did not | `Reports_Screen` (PHP postboxes and tables) + `src/admin/reports/` (utilisation DataViews) | Structural |
+| Conversions | `aggr-conversions` | `aggr_manage_settings` | Define conversions and issue server-to-server credentials | `Conversions_Screen` → `src/admin/conversions/` (two DataViews + modals) | Minor polish |
 | Settings | `aggr-settings` | `aggr_manage_settings` | Modules, brand, live edits, delivery, retention, reviewer access | `Settings_Screen` → `src/admin/settings/` (cards of autosaving controls) | Minor polish |
 
 There is no overview screen. The parent menu item redirects to the first screen
@@ -105,8 +109,9 @@ fill-rate tiles share the width with a meter under each rate, and the two
 no-fill tables sit side by side. Each no-fill reason says whether it is a rule
 **working as intended** or **worth a look**. That split is
 `No_Fill_Reason::is_expected()`, the same split administration.md describes
-in prose. The window and placement filters still have no
-visible labels.
+in prose. The window and placement filters have visible
+labels above them (**fixed**); they were screen-reader text, so a sighted
+reader had to open each select to learn what it chose.
 
 **Outlook** and **Placements** share a capability and a subject, and now link
 to each other. Outlook states its window and that it counts page opportunities
@@ -118,11 +123,11 @@ title and purpose in a sticky left column, and its controls in a panel on the
 right. Brand shows the advertiser portal in miniature, in the colours being
 chosen, before they are saved.
 
-**Organizations**, **Conversions** and **Settings** mostly work. Remaining
-issues: Conversions' first table has no heading while its second does.
-Settings' "Billing UI" module toggle describes a domain that P19 has not built.
-Its documented behaviour is correct, but a switch for something absent reads
-as a promise.
+**Organizations**, **Conversions** and **Settings** mostly work.
+Conversions' first table had no heading while its second did; it is
+"Conversion definitions" now (**fixed**). Settings offered a "Billing UI"
+module switch that nothing read, for a domain P19 has not built; it is not
+offered until billing exists (**fixed**). The schema keeps the key for P19.
 
 ### Problems shared across screens
 
@@ -159,18 +164,21 @@ have been closed since.
   danger and surface tokens. **Fixed.**
 - **Primary actions in different places.** Placements and Conversions put
   "New …" in the DataViews toolbar. Review puts "Create campaign" in its page
-  header. Packages uses a whole card. Reports put its export last (**fixed**).
+  header. Packages used a dashed card at the end of its grid, which moved
+  further down the page with every package; it is now a primary button in the
+  header's actions slot (`Screen_Shell::mount( …, actions: true )`), which the
+  bundle fills through a portal. Reports put its export last. (**Fixed**.)
 - **Reflow, partly measured.** At 360 CSS pixels no Advertising screen widens
   the page: `scrollWidth` equals the viewport on all eight, measured in a
   browser on 2026-09-30. DataViews tables scroll inside their own surface with
   the actions column pinned, so the `overflow: hidden` on the surface does not
   clip columns. 320px, 200% zoom and forced colours are still unmeasured.
-- **Sidebar order does not follow the work.** The sidebar runs Review,
-  Placements, Outlook, Organizations, Conversions, Packages, Reports, Settings,
-  so Packages sits apart from the other two sell-side screens.
-  `Menu::landing_pages()` uses yet another order.
-- **Title casing.** "Advertising Settings" is title case, while "Advertising
-  reports" and "Inventory outlook" are sentence case.
+- **Sidebar order did not follow the work.** The sidebar ran in boot order,
+  with Packages apart from the other sell-side screens, and the landing
+  redirect kept a second list that had drifted and left out Conversions. Both
+  read `Menu::SCREENS` now. (**Fixed**.)
+- **Title casing.** "Advertising Settings" was title case among
+  sentence-case titles. (**Fixed**.)
 
 ### What to reuse
 
@@ -316,7 +324,11 @@ keeps them off until the server can answer them.
 
 **Actions.** A screen's one creating action is a primary button: in the
 DataViews `header` slot on a list screen, or in the page header when the screen
-is not a list. Row actions live in the DataViews actions menu, with the one most
+is not a list. For the page header, pass `actions: true` to
+`Screen_Shell::mount()` and fill the empty `{root}-actions` slot from the bundle
+with `createPortal`. Render that portal outside any `VStack`/`HStack`/`Flex`:
+they keep only valid elements from their children, a portal is not one, and it
+vanishes without an error (Packages did). Row actions live in the DataViews actions menu, with the one most
 often used marked `isPrimary`. A destructive action is `isDestructive`, asks for
 confirmation in a `Modal` that names the consequence, and is never primary
 where it is offered. The button inside that confirmation which commits it is
@@ -402,10 +414,12 @@ scoped.
    Still open: the page's own buttons move to core's `Button` in their own
    change, so Review has one button vocabulary with the other screens; and
    #302 adopts `.aggr-actionbar` for the wizard on a phone.
-5. **Sidebar and remaining copy.** Regroup the sidebar so the sell-side screens
-   sit together (`add_submenu_page`'s position, not boot order), add visible
-   filter labels on Reports, and fix the Billing module toggle's copy until P19
-   exists.
+5. **Sidebar and remaining copy** *(fifth)*. One screen order for the sidebar
+   and the landing redirect (`Menu::SCREENS`, sorted after registration rather
+   than by `add_submenu_page`'s position, which depends on boot order), visible
+   Reports filter labels, no Billing switch until billing exists, a heading on
+   Conversions' first table, sentence-case Settings, and Packages' "New
+   package" in the page header.
 6. **Final pass.** Measure 320px reflow, 200% zoom and forced colours on every
    screen in the browser suite, and record the evidence here.
 

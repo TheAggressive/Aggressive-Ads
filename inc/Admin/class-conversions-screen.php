@@ -226,6 +226,7 @@ final class Conversions_Screen implements Service {
 				'yes'                  => __( 'Yes', 'aggressive-ads' ),
 				'no'                   => __( 'No', 'aggressive-ads' ),
 
+				'definitions'          => __( 'Conversion definitions', 'aggressive-ads' ),
 				'credentials'          => __( 'Server-to-server credentials', 'aggressive-ads' ),
 				'credentialsHelp'      => __( 'A credential lets an advertiser’s own server report a conversion, and state what it was worth. Give one to a single integration, so revoking it stops that integration and nothing else.', 'aggressive-ads' ),
 				'credentialsNone'      => __( 'No credentials have been issued. A server cannot report a conversion without one.', 'aggressive-ads' ),
