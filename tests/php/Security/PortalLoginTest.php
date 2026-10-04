@@ -242,6 +242,41 @@ final class PortalLoginTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * An IPv6 client is its /64, not one of the addresses in it.
+	 *
+	 * A host is routinely handed a whole /64 — eighteen quintillion addresses,
+	 * any of which it may use — so a counter per address is a counter that
+	 * every request can step around. The anonymous limits on beacons and click
+	 * counting were bounded per address, and so were not bounded at all for a
+	 * client on IPv6.
+	 *
+	 * @return void
+	 */
+	public function test_an_ipv6_client_is_counted_by_its_network(): void {
+		$subject_for = static function ( string $address ): string {
+			// phpcs:ignore WordPressVIPMinimum.Variables.ServerVariables.UserControlledHeaders, WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Test fixture: this sets the value the subject under test reads, it does not consume one.
+			$_SERVER['REMOTE_ADDR'] = $address;
+
+			return Rate_Limiter::client_subject();
+		};
+
+		$network = $subject_for( '2001:db8:1234:5678::1' );
+
+		$this->assertSame( $network, $subject_for( '2001:db8:1234:5678:ffff:ffff:ffff:fffe' ), 'Two addresses in one /64 are one client.' );
+		$this->assertNotSame( $network, $subject_for( '2001:db8:1234:5679::1' ), 'The next /64 is somebody else.' );
+		$this->assertStringNotContainsString( '2001', $network, 'The network is hashed like an address is.' );
+
+		/*
+		 * An IPv4 client written as IPv6 is still its own address. Its first
+		 * 64 bits are zero for every IPv4 client there is, so masking it like a
+		 * native IPv6 address would put the whole IPv4 internet in one bucket —
+		 * and one client would exhaust it for everybody.
+		 */
+		$this->assertSame( $subject_for( '203.0.113.42' ), $subject_for( '::ffff:203.0.113.42' ) );
+		$this->assertNotSame( $subject_for( '::ffff:203.0.113.42' ), $subject_for( '::ffff:198.51.100.7' ) );
+	}
+
+	/**
 	 * The login route is part of the grammar, so it cannot 404.
 	 *
 	 * @return void

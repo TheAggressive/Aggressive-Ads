@@ -37,8 +37,16 @@ use WP_Error;
  * 2. Every address the host resolves to must be public. A name is ordinary
  *    and its DNS answer is not: `metadata.example.com` resolving to
  *    169.254.169.254 is the attack the text check cannot see.
- * 3. `wp_safe_remote_*()` with `reject_unsafe_urls` re-validates the URL and
- *    every redirect it follows, inside WordPress, after this code has run.
+ * 3. `wp_safe_remote_*()` with `reject_unsafe_urls` re-validates each URL
+ *    inside WordPress, after this code has run.
+ *
+ * **Redirects are followed here, one hop at a time, and each hop meets (1)
+ * and (2) again.** They used to be left to WordPress, which judges a hop by
+ * `wp_http_validate_url()` alone — a list this plugin does not control, and
+ * one that before WordPress 7.0 stopped at loopback and RFC 1918. A public
+ * page answering `302 Location: http://169.254.169.254/…` was followed on
+ * every supported version below 7.0, and its status code came back to the
+ * advertiser who chose the page.
  *
  * Between (2) and (3) a name can change its answer — DNS rebinding — which is
  * why (3) is not left to this code's own resolution. What survives is a short,
@@ -61,6 +69,13 @@ final class Link_Checker {
 	 * makes, few enough that a redirect loop ends quickly.
 	 */
 	private const REDIRECTS = 3;
+
+	/**
+	 * The statuses that send the checker somewhere else.
+	 *
+	 * @var array<int, int>
+	 */
+	private const REDIRECT_STATUSES = array( 301, 302, 303, 307, 308 );
 
 	/**
 	 * Bytes of the body accepted when a HEAD is refused and a GET is needed.
@@ -281,7 +296,43 @@ final class Link_Checker {
 	}
 
 	/**
-	 * The status code the destination answers with, or zero.
+	 * The status code the destination finally answers with, or zero.
+	 *
+	 * Zero, as WordPress itself would have answered, when a hop points
+	 * somewhere refused or the chain runs past `REDIRECTS`: the link is
+	 * unreachable from here, and nothing about where it pointed goes back.
+	 *
+	 * @param string $url An allowed URL.
+	 * @return int
+	 */
+	private function status( string $url ): int {
+		for ( $hop = 0; $hop <= self::REDIRECTS; $hop++ ) {
+			$response = $this->fetch( $url );
+			$status   = is_wp_error( $response ) ? 0 : (int) wp_remote_retrieve_response_code( $response );
+
+			if ( ! in_array( $status, self::REDIRECT_STATUSES, true ) ) {
+				return $status;
+			}
+
+			$next = $this->next_hop( $url, $response );
+
+			// A redirect with nowhere to go is the page's own answer.
+			if ( '' === $next ) {
+				return $status;
+			}
+
+			if ( '' !== Link_Check_Rules::refuse( $next ) || ! $this->resolves_publicly( $next ) ) {
+				return 0;
+			}
+
+			$url = $next;
+		}
+
+		return 0;
+	}
+
+	/**
+	 * One request, without following redirects.
 	 *
 	 * HEAD first, because the body is never read. Sites that refuse HEAD —
 	 * with 405, or 501, or by failing outright — are common enough that a GET
@@ -289,33 +340,52 @@ final class Link_Checker {
 	 * half the web broken.
 	 *
 	 * @param string $url An allowed URL.
-	 * @return int
+	 * @return array<string, mixed>|WP_Error
 	 */
-	private function status( string $url ): int {
+	private function fetch( string $url ): array|WP_Error {
 		$response = wp_safe_remote_head( $url, $this->args() );
 		$status   = is_wp_error( $response ) ? 0 : (int) wp_remote_retrieve_response_code( $response );
 
 		if ( 0 === $status || in_array( $status, array( 400, 403, 405, 406, 501 ), true ) ) {
 			$response = wp_safe_remote_get( $url, $this->args() + array( 'limit_response_size' => self::MAX_BODY ) );
-			$status   = is_wp_error( $response ) ? 0 : (int) wp_remote_retrieve_response_code( $response );
 		}
 
-		return $status;
+		return $response;
+	}
+
+	/**
+	 * Where a redirect points, made absolute against the page that sent it.
+	 *
+	 * @param string                        $from     The URL that answered.
+	 * @param array<string, mixed>|WP_Error $response Its response.
+	 * @return string Empty when it names no location.
+	 */
+	private function next_hop( string $from, array|WP_Error $response ): string {
+		$location = wp_remote_retrieve_header( $response, 'location' );
+
+		// Several Location headers: the last one is the one a browser follows.
+		if ( is_array( $location ) ) {
+			$location = (string) end( $location );
+		}
+
+		$location = trim( $location );
+
+		return '' === $location ? '' : \WP_Http::make_absolute_url( $location, $from );
 	}
 
 	/**
 	 * Arguments for both requests.
 	 *
-	 * `reject_unsafe_urls` is what makes `wp_safe_remote_*` safe: WordPress
-	 * re-validates the URL and each redirect against its own private-address
-	 * rules, after this class has done its own.
+	 * `reject_unsafe_urls` still runs WordPress's own check on every URL this
+	 * class requests. `redirection` is zero because `status()` follows each
+	 * hop itself; see the class comment for why.
 	 *
 	 * @return array<string, mixed>
 	 */
 	private function args(): array {
 		return array(
 			'timeout'            => self::TIMEOUT,
-			'redirection'        => self::REDIRECTS,
+			'redirection'        => 0,
 			'reject_unsafe_urls' => true,
 			'sslverify'          => true,
 			'blocking'           => true,

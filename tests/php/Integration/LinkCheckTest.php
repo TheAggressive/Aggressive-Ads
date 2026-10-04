@@ -73,6 +73,13 @@ final class LinkCheckTest extends WP_UnitTestCase {
 	 */
 	private $answer;
 
+	/**
+	 * Answers for particular URLs, where one hop must differ from the next.
+	 *
+	 * @var array<string, array<string, mixed>>
+	 */
+	private array $answers = array();
+
 	public function set_up(): void {
 		parent::set_up();
 
@@ -133,7 +140,7 @@ final class LinkCheckTest extends WP_UnitTestCase {
 		$this->requested[] = (string) $url;
 		$this->args        = (array) $args;
 
-		return $this->answer;
+		return $this->answers[ (string) $url ] ?? $this->answer;
 	}
 
 	/**
@@ -210,6 +217,105 @@ final class LinkCheckTest extends WP_UnitTestCase {
 		$this->assertLessThanOrEqual( 5, $this->args['timeout'] );
 		$this->assertLessThanOrEqual( 3, $this->args['redirection'] );
 		$this->assertSame( array(), $this->args['cookies'], 'No cookie of this site may travel to a third party.' );
+	}
+
+	/**
+	 * A response that sends the checker somewhere else.
+	 *
+	 * @param int    $code     Redirect status.
+	 * @param string $location Where it points.
+	 * @return array<string, mixed>
+	 */
+	private function redirect( int $code, string $location ): array {
+		return array(
+			'response' => array(
+				'code'    => $code,
+				'message' => 'Moved',
+			),
+			'body'     => '',
+			'headers'  => array( 'location' => $location ),
+			'cookies'  => array(),
+		);
+	}
+
+	/**
+	 * The checker follows redirects itself, so each hop meets this plugin's
+	 * rules and not only WordPress's.
+	 *
+	 * Left to `reject_unsafe_urls`, a hop is judged by core's
+	 * `wp_http_validate_url()`, whose private ranges this plugin does not
+	 * control. Before WordPress 7.0 that list stopped at loopback and RFC 1918,
+	 * so a public page redirecting to 169.254.169.254 was followed on every
+	 * supported version below it, and the status code came back to the
+	 * advertiser.
+	 */
+	public function test_the_checker_follows_redirects_itself(): void {
+		$this->store( 'https://example.com/offer' );
+		$this->checker->check( $this->campaign_id );
+
+		$this->assertSame( 0, $this->args['redirection'], 'Redirects left to WordPress skip this plugin\'s address rules.' );
+	}
+
+	/**
+	 * A redirect into the network is never requested.
+	 *
+	 * @dataProvider forbidden
+	 *
+	 * @param string $target Where the redirect points.
+	 */
+	public function test_a_redirect_to_a_refused_address_is_never_requested( string $target ): void {
+		$this->store( 'https://example.com/offer' );
+		$this->answers['https://example.com/offer'] = $this->redirect( 302, $target );
+
+		$result = $this->checker->check( $this->campaign_id );
+
+		$this->assertIsArray( $result );
+		$this->assertSame( array( 'https://example.com/offer' ), $this->requested, 'A refused redirect target was requested: ' . $target );
+		$this->assertSame( 'unreachable', $result['outcome'], 'A refused hop must not read as a working link.' );
+		$this->assertSame( 0, $result['status'] );
+	}
+
+	public function test_a_redirect_to_a_public_page_is_followed_to_its_answer(): void {
+		$this->store( 'https://example.com/offer' );
+		$this->answers['https://example.com/offer']   = $this->redirect( 301, 'https://example.com/landing' );
+		$this->answers['https://example.com/landing'] = array(
+			'response' => array(
+				'code'    => 404,
+				'message' => 'Not Found',
+			),
+			'body'     => '',
+			'headers'  => array(),
+			'cookies'  => array(),
+		);
+
+		$result = $this->checker->check( $this->campaign_id );
+
+		$this->assertIsArray( $result );
+		$this->assertSame( array( 'https://example.com/offer', 'https://example.com/landing' ), $this->requested );
+		$this->assertSame( 'missing', $result['outcome'], 'The answer is the last page\'s, not the redirect\'s.' );
+	}
+
+	public function test_a_relative_redirect_is_resolved_against_the_page_that_sent_it(): void {
+		$this->store( 'https://example.com/offer/' );
+		$this->answers['https://example.com/offer/'] = $this->redirect( 302, '../landing' );
+
+		$this->checker->check( $this->campaign_id );
+
+		$this->assertSame( array( 'https://example.com/offer/', 'https://example.com/landing' ), $this->requested );
+	}
+
+	public function test_a_redirect_chain_longer_than_three_hops_is_unreachable(): void {
+		$this->store( 'https://example.com/0' );
+
+		for ( $hop = 0; $hop < 5; $hop++ ) {
+			$this->answers[ 'https://example.com/' . $hop ] = $this->redirect( 302, 'https://example.com/' . ( $hop + 1 ) );
+		}
+
+		$result = $this->checker->check( $this->campaign_id );
+
+		$this->assertIsArray( $result );
+		$this->assertCount( 4, $this->requested, 'The first request and three redirects, and no more.' );
+		$this->assertSame( 'unreachable', $result['outcome'] );
 	}
 
 	public function test_a_site_that_refuses_head_is_asked_again_with_get(): void {
