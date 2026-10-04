@@ -158,15 +158,43 @@ final class Link_Check_Rules {
 	 * answers with 127.0.0.1 or 169.254.169.254 — the cloud metadata service —
 	 * is refused even though the name itself looked ordinary.
 	 *
+	 * **"Public" is IANA's globally-reachable list, not "not private".**
+	 * `NO_PRIV_RANGE | NO_RES_RANGE` alone passed shared address space
+	 * (100.64.0.0/10, where Alibaba Cloud answers metadata at 100.100.100.200),
+	 * benchmarking, protocol assignments, 6to4, Teredo and documentation
+	 * ranges. `GLOBAL_RANGE` refuses those, and two NAT64 prefixes it still
+	 * counts as global are judged here: the well-known one by the IPv4
+	 * address it carries, the local-use one not at all.
+	 *
 	 * @param string $ip A resolved IPv4 or IPv6 address.
 	 * @return bool
 	 */
 	public static function is_public_address( string $ip ): bool {
-		return false !== filter_var(
-			$ip,
-			FILTER_VALIDATE_IP,
-			FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE
-		);
+		if ( false === filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_GLOBAL_RANGE | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
+			return false;
+		}
+
+		$packed = inet_pton( $ip );
+
+		if ( false === $packed || 16 !== strlen( $packed ) ) {
+			return true;
+		}
+
+		// 64:ff9b:1::/48, local-use NAT64: translates into whatever the
+		// operator's network decides, which is never something to assume.
+		if ( str_starts_with( $packed, "\x00\x64\xff\x9b\x00\x01" ) ) {
+			return false;
+		}
+
+		// 64:ff9b::/96 reaches the IPv4 address in its last four bytes, so
+		// 64:ff9b::a9fe:a9fe is 169.254.169.254 to a NAT64 gateway.
+		if ( str_starts_with( $packed, "\x00\x64\xff\x9b" . str_repeat( "\x00", 8 ) ) ) {
+			$embedded = inet_ntop( substr( $packed, 12 ) );
+
+			return false !== $embedded && self::is_public_address( $embedded );
+		}
+
+		return true;
 	}
 
 	/**

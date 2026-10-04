@@ -363,6 +363,33 @@ final class Rate_Limiter {
 			return 'ip_unknown';
 		}
 
-		return 'ip_' . substr( wp_hash( $address ), 0, 32 );
+		return 'ip_' . substr( wp_hash( self::network_of( $address ) ), 0, 32 );
+	}
+
+	/**
+	 * The part of an address that identifies one client.
+	 *
+	 * All of it for IPv4. For IPv6, the /64: a host is routinely given the
+	 * whole prefix and may use any address in it, so a counter per address
+	 * was one that every request could step around. An IPv4 address written
+	 * as IPv6 (`::ffff:a.b.c.d`) is its IPv4 address — its first 64 bits are
+	 * zero for every IPv4 client there is, and masking it would put all of
+	 * them in one bucket for one client to exhaust.
+	 *
+	 * @param string $address A validated IPv4 or IPv6 address.
+	 * @return string
+	 */
+	private static function network_of( string $address ): string {
+		$packed = inet_pton( $address );
+
+		if ( false === $packed || 16 !== strlen( $packed ) ) {
+			return $address;
+		}
+
+		if ( str_starts_with( $packed, str_repeat( "\x00", 10 ) . "\xff\xff" ) ) {
+			return (string) inet_ntop( substr( $packed, 12 ) );
+		}
+
+		return (string) inet_ntop( substr( $packed, 0, 8 ) . str_repeat( "\x00", 8 ) ) . '/64';
 	}
 }

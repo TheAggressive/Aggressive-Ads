@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Tests\Security;
 
 use Aggressive\Ads\Core\Post_Types;
+use Aggressive\Ads\Core\Taxonomies;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Portal\Login_Actions;
 use Aggressive\Ads\Portal\Password_Actions;
@@ -40,30 +41,91 @@ final class AttackSurfaceTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The plugin registers no admin-ajax handlers at all.
+	 * Every admin-ajax hook carrying this plugin's prefix, wherever it sits.
+	 *
+	 * `wp_ajax_aggr_x`, `wp_ajax_nopriv_aggr_x`, and the `wp_ajax_add-aggr_x`
+	 * form core gives a taxonomy all count.
+	 *
+	 * @return array<int, string>
+	 */
+	private function plugin_ajax_hooks(): array {
+		global $wp_filter;
+
+		$found = array();
+
+		foreach ( array_keys( $wp_filter ) as $hook ) {
+			if ( is_string( $hook ) && str_starts_with( $hook, 'wp_ajax_' ) && str_contains( $hook, 'aggr' ) ) {
+				$found[] = $hook;
+			}
+		}
+
+		sort( $found );
+
+		return $found;
+	}
+
+	/**
+	 * The guard below can see a handler, so its silence means something.
+	 *
+	 * It matched `laao_ads` for as long as it existed — a prefix nothing here
+	 * has used since the rename — and so passed over every hook it was written
+	 * to find. A guard that cannot fail is checked by planting what it looks
+	 * for.
+	 *
+	 * @return void
+	 */
+	public function test_the_admin_ajax_guard_sees_a_planted_handler(): void {
+		add_action( 'wp_ajax_aggr_probe', '__return_null' );
+		add_action( 'wp_ajax_nopriv_aggr_probe', '__return_null' );
+
+		try {
+			$found = $this->plugin_ajax_hooks();
+		} finally {
+			remove_action( 'wp_ajax_aggr_probe', '__return_null' );
+			remove_action( 'wp_ajax_nopriv_aggr_probe', '__return_null' );
+		}
+
+		$this->assertContains( 'wp_ajax_aggr_probe', $found );
+		$this->assertContains( 'wp_ajax_nopriv_aggr_probe', $found );
+	}
+
+	/**
+	 * The plugin registers no admin-ajax handlers of its own.
 	 *
 	 * The attack surface is empty rather than guarded. Every wp_ajax_* endpoint
 	 * is a route with its own authorization to get right, and this plugin has
 	 * no reason to have any — REST is the surface.
+	 *
+	 * One hook is core's, not ours: WordPress registers `wp_ajax_add-{taxonomy}`
+	 * for every taxonomy, the placement-group one included, and answers it
+	 * with `_wp_ajax_add_hierarchical_term()`, which checks the taxonomy's own
+	 * `edit_terms`. That is `aggr_manage_placements`, so the hook adds nothing
+	 * the Inventory screen does not already allow — and is pinned to exactly
+	 * that callback and that capability, so either changing reopens this.
 	 *
 	 * @return void
 	 */
 	public function test_no_admin_ajax_handlers_are_registered(): void {
 		global $wp_filter;
 
-		$found = array();
+		$core_hook = 'wp_ajax_add-' . Taxonomies::PLACEMENT_GROUP;
 
-		foreach ( array_keys( $wp_filter ) as $hook ) {
-			if ( ! is_string( $hook ) ) {
-				continue;
-			}
+		$this->assertSame( array( $core_hook ), $this->plugin_ajax_hooks(), 'The plugin registered an admin-ajax handler.' );
 
-			if ( 1 === preg_match( '/^wp_ajax_(nopriv_)?laao_ads/', $hook ) ) {
-				$found[] = $hook;
+		$callbacks = array();
+
+		foreach ( $wp_filter[ $core_hook ]->callbacks as $registered ) {
+			foreach ( $registered as $callback ) {
+				$callbacks[] = $callback['function'];
 			}
 		}
 
-		$this->assertSame( array(), $found, 'The plugin registered an admin-ajax handler.' );
+		$this->assertSame( array( '_wp_ajax_add_hierarchical_term' ), $callbacks, 'The taxonomy hook is no longer only core\'s.' );
+		$this->assertSame(
+			Capabilities::MANAGE_PLACEMENTS,
+			get_taxonomy( Taxonomies::PLACEMENT_GROUP )->cap->edit_terms,
+			'Core\'s add-term handler is authorized by edit_terms; it must stay the Inventory capability.'
+		);
 	}
 
 	/**

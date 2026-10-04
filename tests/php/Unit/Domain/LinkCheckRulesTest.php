@@ -101,7 +101,21 @@ final class LinkCheckRulesTest extends TestCase {
 		$this->assertFalse( Link_Check_Rules::is_public_address( 'not-an-address' ) );
 		$this->assertFalse( Link_Check_Rules::is_public_address( '' ) );
 
+		// Not private, not reserved, and still not on the internet: PHP's
+		// NO_PRIV|NO_RES flags pass every one of these. Shared address space
+		// is where Alibaba Cloud keeps its metadata service (100.100.100.200);
+		// NAT64 and 6to4 carry an IPv4 address inside an IPv6 one.
+		$this->assertFalse( Link_Check_Rules::is_public_address( '100.100.100.200' ), 'Shared address space (100.64.0.0/10).' );
+		$this->assertFalse( Link_Check_Rules::is_public_address( '198.18.0.1' ), 'Benchmarking (198.18.0.0/15).' );
+		$this->assertFalse( Link_Check_Rules::is_public_address( '192.0.0.192' ), 'IETF protocol assignments (192.0.0.0/24).' );
+		$this->assertFalse( Link_Check_Rules::is_public_address( '64:ff9b::a9fe:a9fe' ), 'NAT64 of 169.254.169.254.' );
+		$this->assertFalse( Link_Check_Rules::is_public_address( '64:ff9b::7f00:1' ), 'NAT64 of 127.0.0.1.' );
+		$this->assertFalse( Link_Check_Rules::is_public_address( '64:ff9b:1::a00:1' ), 'Local-use NAT64 (64:ff9b:1::/48).' );
+		$this->assertFalse( Link_Check_Rules::is_public_address( '2002:7f00:1::' ), '6to4 of 127.0.0.1.' );
+		$this->assertFalse( Link_Check_Rules::is_public_address( '2001:db8::1' ), 'Documentation (2001:db8::/32).' );
+
 		$this->assertTrue( Link_Check_Rules::is_public_address( '93.184.216.34' ) );
+		$this->assertTrue( Link_Check_Rules::is_public_address( '64:ff9b::808:808' ), 'NAT64 of a public address is public.' );
 		$this->assertTrue( Link_Check_Rules::is_public_address( '2606:2800:220:1:248:1893:25c8:1946' ) );
 	}
 
