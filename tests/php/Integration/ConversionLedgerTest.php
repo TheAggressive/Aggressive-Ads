@@ -12,6 +12,7 @@ namespace Aggressive\Ads\Tests\Integration;
 use Aggressive\Ads\Domain\Conversion_Rules;
 use Aggressive\Ads\Domain\Measurement_Event_Type;
 use Aggressive\Ads\Install\Schema;
+use Aggressive\Ads\Install\Schema_Conversions;
 use Aggressive\Ads\Repository\Conversion_Repository;
 use WP_UnitTestCase;
 
@@ -86,7 +87,7 @@ final class ConversionLedgerTest extends WP_UnitTestCase {
 		$columns = $wpdb->get_col( "SHOW COLUMNS FROM {$table}" );
 		sort( $columns );
 
-		$expected = Schema::conversions_columns();
+		$expected = Schema_Conversions::conversions_columns();
 		sort( $expected );
 
 		$this->assertSame( $expected, $columns );
@@ -96,7 +97,7 @@ final class ConversionLedgerTest extends WP_UnitTestCase {
 		$names = array_values( array_unique( array_column( $rows, 'Key_name' ) ) );
 		sort( $names );
 
-		$declared = Schema::conversions_index_names();
+		$declared = Schema_Conversions::conversions_index_names();
 		sort( $declared );
 
 		$this->assertSame( $declared, $names );

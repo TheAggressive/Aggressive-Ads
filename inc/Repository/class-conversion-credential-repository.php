@@ -11,6 +11,7 @@ namespace Aggressive\Ads\Repository;
 
 use Aggressive\Ads\Domain\Conversion_Credential;
 use Aggressive\Ads\Install\Schema;
+use Aggressive\Ads\Install\Schema_Conversions;
 
 /**
  * The only code that touches aggr_conversion_credentials.
@@ -56,7 +57,7 @@ final class Conversion_Credential_Repository {
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
-		dbDelta( Schema::conversion_credentials_table_ddl( $this->table_name(), $wpdb->get_charset_collate() ) );
+		dbDelta( Schema_Conversions::conversion_credentials_table_ddl( $this->table_name(), $wpdb->get_charset_collate() ) );
 
 		$this->table_exists = null;
 	}
@@ -320,7 +321,7 @@ final class Conversion_Credential_Repository {
 	 * Verifier digest for one secret.
 	 *
 	 * `wp_salt( 'auth' )` deliberately, and see the note on
-	 * `Schema::conversion_credentials_table_ddl()`: this is a secret verifier,
+	 * `Schema_Conversions::conversion_credentials_table_ddl()`: this is a secret verifier,
 	 * not a lookup index over something stored in the clear, so a salt rotation
 	 * invalidating every outstanding credential is the intended behaviour rather
 	 * than the defect it was for `aggr_org_access.active_key`.

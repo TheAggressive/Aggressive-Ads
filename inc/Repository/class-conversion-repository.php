@@ -12,12 +12,13 @@ namespace Aggressive\Ads\Repository;
 use Aggressive\Ads\Domain\Conversion_Rules;
 use Aggressive\Ads\Domain\Measurement_Rules;
 use Aggressive\Ads\Install\Schema;
+use Aggressive\Ads\Install\Schema_Conversions;
 
 /**
  * The only code that touches aggr_conversions.
  *
  * A conversion is its own ledger rather than another `aggr_events` row, for the
- * reason recorded on `Schema::conversions_table_ddl()`: that table's
+ * reason recorded on `Schema_Conversions::conversions_table_ddl()`: that table's
  * `(token_hash, event)` unique key would allow exactly one conversion per fill
  * for all time. Here the unique key is `(definition_id, idempotency_key)`, so
  * two definitions from one click both count and the same outcome reported twice
@@ -42,7 +43,7 @@ final class Conversion_Repository {
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
-		dbDelta( Schema::conversions_table_ddl( $this->table_name(), $wpdb->get_charset_collate() ) );
+		dbDelta( Schema_Conversions::conversions_table_ddl( $this->table_name(), $wpdb->get_charset_collate() ) );
 	}
 
 	/**

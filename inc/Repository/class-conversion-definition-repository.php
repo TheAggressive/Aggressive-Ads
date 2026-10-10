@@ -11,6 +11,7 @@ namespace Aggressive\Ads\Repository;
 
 use Aggressive\Ads\Domain\Conversion_Definition;
 use Aggressive\Ads\Install\Schema;
+use Aggressive\Ads\Install\Schema_Conversions;
 
 /**
  * The only code that touches aggr_conversion_definitions.
@@ -51,7 +52,7 @@ final class Conversion_Definition_Repository {
 
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
-		dbDelta( Schema::conversion_definitions_table_ddl( $this->table_name(), $wpdb->get_charset_collate() ) );
+		dbDelta( Schema_Conversions::conversion_definitions_table_ddl( $this->table_name(), $wpdb->get_charset_collate() ) );
 
 		$this->table_exists = null;
 	}
