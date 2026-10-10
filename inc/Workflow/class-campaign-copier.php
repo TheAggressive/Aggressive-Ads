@@ -145,6 +145,7 @@ final class Campaign_Copier {
 				'currency'          => $this->campaigns->currency( $source_id ),
 				'advertiser_notes'  => $this->campaigns->advertiser_notes( $source_id ),
 				'default_click_url' => $this->campaigns->default_click_url( $source_id ),
+				'click_tracker'     => $this->campaigns->click_tracker( $source_id ),
 			)
 		);
 

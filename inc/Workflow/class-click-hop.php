@@ -11,6 +11,8 @@ namespace Aggressive\Ads\Workflow;
 
 use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Domain\Click_Macros;
+use Aggressive\Ads\Domain\Click_Tracker_Rules;
+use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Event_Repository;
 use Aggressive\Ads\Security\Rate_Limiter;
 
@@ -53,16 +55,18 @@ final class Click_Hop implements Service {
 	/**
 	 * Constructor.
 	 *
-	 * @param Fill_Service   $fill       Module gate and live check.
-	 * @param Fill_Token     $tokens     Token parser.
-	 * @param Rate_Limiter   $limiter    Anonymous click bound.
-	 * @param Event_Recorder $recorder Durable event and projection write.
+	 * @param Fill_Service        $fill       Module gate and live check.
+	 * @param Fill_Token          $tokens     Token parser.
+	 * @param Rate_Limiter        $limiter    Anonymous click bound.
+	 * @param Event_Recorder      $recorder  Durable event and projection write.
+	 * @param Campaign_Repository $campaigns Source of a campaign's click tracker.
 	 */
 	public function __construct(
 		private readonly Fill_Service $fill,
 		private readonly Fill_Token $tokens,
 		private readonly Rate_Limiter $limiter,
-		private readonly Event_Recorder $recorder
+		private readonly Event_Recorder $recorder,
+		private readonly Campaign_Repository $campaigns
 	) {
 	}
 
@@ -164,7 +168,7 @@ final class Click_Hop implements Service {
 		}
 
 		// phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect -- First-party hop to an advertiser destination. wp_safe_redirect would refuse every paid click that leaves this host.
-		wp_redirect( self::landing_url( $dest, $parsed, $this->tokens->hash( $token ), $token ), 302 );
+		wp_redirect( self::target_url( $dest, $this->tracker_for( $parsed ), $parsed, $this->tokens->hash( $token ), $token ), 302 );
 
 		exit;
 	}
@@ -195,6 +199,68 @@ final class Click_Hop implements Service {
 		);
 
 		return self::with_token( $expanded, $token );
+	}
+
+	/**
+	 * Where the visitor is sent: the landing page, or the tracker in front of it.
+	 *
+	 * With a tracker the visitor goes to the tracker first, and the landing page
+	 * — already carrying this click's token and its own macros — is encoded into
+	 * the tracker's `{lpurl}`. The token is then put on the tracker as well, so a
+	 * tracker URL that arrived carrying an `aggr_ct` of its own, or one that
+	 * forwards its own query string to the landing page, can only ever hand on
+	 * this click's token and never a forged or stale one.
+	 *
+	 * Without a tracker this is exactly {@see self::landing_url()}.
+	 *
+	 * @param string                                                                                $destination Stored destination, already validated.
+	 * @param string                                                                                $tracker     Stored tracker, already validated, or an empty string.
+	 * @param array{placement_id: int, campaign_id: int, creative_id: int, exp: int, nonce: string} $parsed      The click's token.
+	 * @param string                                                                                $click_id    Hashed token, unique to this click.
+	 * @param string                                                                                $token       Full signed token.
+	 * @return string
+	 */
+	public static function target_url( string $destination, string $tracker, array $parsed, string $click_id, string $token ): string {
+		$landing = self::landing_url( $destination, $parsed, $click_id, $token );
+
+		if ( '' === $tracker ) {
+			return $landing;
+		}
+
+		$expanded = Click_Macros::expand(
+			$tracker,
+			array(
+				'campaign_id'  => $parsed['campaign_id'],
+				'creative_id'  => $parsed['creative_id'],
+				'placement_id' => $parsed['placement_id'],
+				'click_id'     => $click_id,
+				'now'          => time(),
+				'landing_url'  => $landing,
+			)
+		);
+
+		return self::with_token( $expanded, $token );
+	}
+
+	/**
+	 * The tracker to put in front of this click's landing page, if one is valid.
+	 *
+	 * Read at click time and checked again here, never trusted from storage:
+	 * meta survives imports and hand edits, and a tracker that no longer passes
+	 * the rules is simply not used — the visitor still reaches the landing page
+	 * and the click is still counted. House creatives (no campaign) have none.
+	 *
+	 * @param array{placement_id: int, campaign_id: int, creative_id: int, exp: int, nonce: string} $parsed The click's token.
+	 * @return string The tracker, or an empty string.
+	 */
+	private function tracker_for( array $parsed ): string {
+		if ( $parsed['campaign_id'] <= 0 ) {
+			return '';
+		}
+
+		$tracker = trim( $this->campaigns->click_tracker( $parsed['campaign_id'] ) );
+
+		return null === Click_Tracker_Rules::error_for( $tracker ) ? $tracker : '';
 	}
 
 	/**

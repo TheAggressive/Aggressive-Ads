@@ -106,4 +106,25 @@ final class ClickMacrosTest extends TestCase {
 		);
 		$this->assertStringNotContainsString( 'evil.test/', $expanded );
 	}
+
+	public function test_the_landing_page_is_encoded_into_a_tracker(): void {
+		$expanded = Click_Macros::expand(
+			'https://track.example.com/c?u={lpurl}&c={campaign_id}',
+			$this->context() + array( 'landing_url' => 'https://example.com/offer?a=1&b=2#top' )
+		);
+
+		$this->assertSame(
+			'https://track.example.com/c?u=https%3A%2F%2Fexample.com%2Foffer%3Fa%3D1%26b%3D2%23top&c=7',
+			$expanded,
+			'An unencoded landing page would end the tracker\'s parameter at its first ampersand.'
+		);
+	}
+
+	public function test_the_landing_page_is_removed_from_a_destination_that_names_it(): void {
+		// No landing page was supplied, so `{lpurl}` is unknown like any other.
+		$this->assertSame(
+			'https://example.com/?u=',
+			Click_Macros::expand( 'https://example.com/?u={lpurl}', $this->context() )
+		);
+	}
 }
