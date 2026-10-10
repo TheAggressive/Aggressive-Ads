@@ -196,6 +196,21 @@ upload to it; the button is restored if an attempt is refused. Uploading is a
 change of context, so a sentence describing it precedes both controls and is in
 `aria-describedby` on each (WCAG 3.2.2).
 
+Folded under the Destination card is an optional **click tracker**
+(`campaign-tracker-card.php`): an agency's tracking link the visitor goes
+through before the landing page, with `{lpurl}` once where the tracker expects
+it (`Click_Tracker_Rules`; `docs/threat-model.md`). It is **its own form and its
+own save**, not the destination's autosave, whose script is built around one
+link field and its status. It posts the same save action with only
+`click_tracker`, and carries an `autosave_rev` that the autosave script keeps
+current in every copy on the page and waits on before another form submits —
+`campaign-tracker.spec.ts` saves a destination and then a tracker straight
+after, the order that would conflict if that were not so. A refusal returns to
+this step with the fold open and the field marked. Drafts only: a running
+campaign changes its destination by a reviewed proposal, and a tracker must not
+reach live traffic another way (`open-work.md`). It is shown on the review step,
+the status card and the staff review screen, where staff are the control for it.
+
 Above the cards, while any size still needs a file, a script-only drop zone
 takes every file at once (`shared/bulk-upload.ts`, bundled into
 `@aggr/upload`; `<noscript>` hides it, and the cards' own forms are the

@@ -18,6 +18,7 @@ use Aggressive\Ads\Workflow\Campaign_Change_Manager;
 use Aggressive\Ads\Workflow\Campaign_Copier;
 use Aggressive\Ads\Workflow\Campaign_Editor;
 use Aggressive\Ads\Workflow\Campaign_State_Machine;
+use Aggressive\Ads\Workflow\Click_Tracker_Validation;
 use WP_Error;
 
 /**
@@ -187,13 +188,18 @@ final class Campaign_Actions implements Service {
 			$fields['default_click_url'] = sanitize_text_field( wp_unslash( $_POST['default_click_url'] ) );
 		}
 
+		// Its own form, so present only when the tracker was what was submitted.
+		if ( isset( $_POST['click_tracker'] ) ) {
+			$fields['click_tracker'] = sanitize_text_field( wp_unslash( $_POST['click_tracker'] ) );
+		}
+
 		$revision = isset( $_POST['autosave_rev'] ) ? absint( $_POST['autosave_rev'] ) : -1;
 		$result   = $this->process_save( $campaign_id, $fields, $revision );
 		$url      = Routes::url( Request::ROUTE_CAMPAIGNS, $campaign_id );
 
 		if ( is_wp_error( $result ) ) {
 			// Back to the step the refused field is on, not always the first one.
-			$step = 'aggr_default_click_url_invalid' === $result->get_error_code() ? 'creative' : 'details';
+			$step = in_array( $result->get_error_code(), array( 'aggr_default_click_url_invalid', Click_Tracker_Validation::ERROR_CODE ), true ) ? 'creative' : 'details';
 
 			$this->redirect( add_query_arg( 'step', $step, $url ), 'error', $result );
 		}
@@ -583,7 +589,7 @@ final class Campaign_Actions implements Service {
 		 */
 		$clean = array( 'wizard_step' => 'creative' );
 
-		foreach ( array( 'title', 'placement_ids', 'package_id', 'advertiser_notes', 'default_click_url' ) as $key ) {
+		foreach ( array( 'title', 'placement_ids', 'package_id', 'advertiser_notes', 'default_click_url', 'click_tracker' ) as $key ) {
 			if ( array_key_exists( $key, $fields ) ) {
 				$clean[ $key ] = $fields[ $key ];
 			}
@@ -822,6 +828,7 @@ final class Campaign_Actions implements Service {
 			'aggr_package_unavailable'     => __( 'That package is no longer available. Choose another package.', 'aggressive-ads' ),
 			'aggr_package_misconfigured'   => __( 'That package is not configured completely. Choose another package or get in touch.', 'aggressive-ads' ),
 			'aggr_creatives_incomplete'    => __( 'Add an ad for every size in the package before continuing.', 'aggressive-ads' ),
+			Click_Tracker_Validation::ERROR_CODE => __( 'That tracking link cannot be used. It must be a web address with {lpurl} in it exactly once, and no username or password.', 'aggressive-ads' ),
 			'aggr_edit_conflict'           => __( 'This campaign changed in another window. Review the current values and save again.', 'aggressive-ads' ),
 			'aggr_organization_missing'    => __( 'Your account is not connected to an organization.', 'aggressive-ads' ),
 			'aggr_organization_inactive'   => __( 'This organization cannot create campaigns. Please get in touch.', 'aggressive-ads' ),
@@ -865,6 +872,7 @@ final class Campaign_Actions implements Service {
 			'aggr_package_misconfigured'   => 'aggr-packages',
 			'aggr_creatives_incomplete'    => 'aggr-uploads',
 			'aggr_default_click_url_invalid' => 'aggr-campaign-link',
+			Click_Tracker_Validation::ERROR_CODE => 'aggr-campaign-tracker',
 			'aggr_campaign_invalid'        => 'aggr-readiness-heading',
 			default                            => '',
 		};

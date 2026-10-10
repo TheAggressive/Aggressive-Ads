@@ -73,6 +73,8 @@ foreach ( $aggr_slots as $aggr_counted_slot ) {
 				$aggr_dest_check = is_array( $aggr_campaign['link_check'] ?? null ) ? $aggr_campaign['link_check'] : null;
 
 				require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-destination-card.php';
+
+				require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-tracker-card.php';
 				?>
 
 				<?php // Not a named region: the step around it already carries this name, and two landmarks called "Add your ads" is one too many. ?>

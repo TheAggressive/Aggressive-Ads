@@ -429,6 +429,13 @@ final class Review_Data {
 			 * read one was to open the campaign in the portal editor.
 			 */
 			'advertiser_notes' => $this->campaigns->advertiser_notes( $campaign_id ),
+
+			/*
+			 * A third party the publisher is agreeing to send readers through.
+			 * Reviewers see it because they are the control for it: the click
+			 * hop only checks its shape.
+			 */
+			'click_tracker'    => $this->campaigns->click_tracker( $campaign_id ),
 			'submitted_at'     => $this->campaigns->submitted_at( $campaign_id ),
 
 			/*

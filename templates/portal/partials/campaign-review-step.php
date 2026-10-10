@@ -43,6 +43,7 @@ $aggr_check_problems = array(
 	'package'     => array(),
 	'schedule'    => array(),
 	'destination' => array(),
+	'tracker'     => array(),
 	'ads'         => array(),
 	'name'        => array(),
 	'account'     => array(),
@@ -100,6 +101,7 @@ $aggr_check_host = (string) wp_parse_url( home_url(), PHP_URL_HOST );
 $aggr_check_package = (string) ( $aggr_campaign['package_name'] ?? '' );
 $aggr_check_price   = (string) ( $aggr_campaign['package_price'] ?? '' );
 $aggr_check_link    = (string) ( $aggr_campaign['default_click_url'] ?? '' );
+$aggr_check_tracker = (string) ( $aggr_campaign['click_tracker'] ?? '' );
 $aggr_check_rows    = array(
 	array(
 		'key'    => 'package',
@@ -143,6 +145,28 @@ $aggr_check_rows    = array(
 		'action' => __( 'Rename', 'aggressive-ads' ),
 	),
 );
+
+/*
+ * Only when there is one, and beside the destination it sits in front of: a
+ * reader sent through a third party should be a thing the advertiser sees
+ * stated before they submit, not something found later in the review.
+ */
+if ( '' !== $aggr_check_tracker ) {
+	array_splice(
+		$aggr_check_rows,
+		3,
+		0,
+		array(
+			array(
+				'key'    => 'tracker',
+				'title'  => __( 'Click tracker', 'aggressive-ads' ),
+				'detail' => $aggr_check_tracker,
+				'href'   => add_query_arg( 'step', 'creative', $aggr_campaign_url ) . '#aggr-campaign-tracker',
+				'action' => __( 'Change', 'aggressive-ads' ),
+			),
+		)
+	);
+}
 
 if ( array() !== $aggr_check_problems['account'] ) {
 	$aggr_check_rows[] = array(

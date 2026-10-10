@@ -47,6 +47,29 @@ function AdvertiserNotes( { value }: { value: string } ): ReactElement {
 	);
 }
 
+/*
+ * The advertiser's click tracker, drawn only when there is one.
+ *
+ * Staff are the control for it: the click hop checks its shape, and only a
+ * person can say whether the host is one the publisher is willing to send
+ * readers through. It sits above the notes so it is read before them.
+ */
+function ClickTracker( { value }: { value: string } ): ReactElement | null {
+	if ( '' === value ) {
+		return null;
+	}
+
+	return (
+		<section className="aggr-panel" aria-labelledby="aggr-click-tracker">
+			<h2 id="aggr-click-tracker" className="aggr-panel__head">
+				{ t( 'clickTracker' ) }
+			</h2>
+			<p className="aggr-quiet">{ t( 'clickTrackerHelp' ) }</p>
+			<p className="aggr-notes-body">{ value }</p>
+		</section>
+	);
+}
+
 /** The staff-only notes, saved on a button rather than as you type. */
 function InternalNotes( {
 	value,
@@ -523,6 +546,7 @@ export function CampaignView( {
 								</p>
 							</section>
 						) : null }
+						<ClickTracker value={ campaign.click_tracker } />
 						<AdvertiserNotes value={ campaign.advertiser_notes } />
 
 						<InternalNotes

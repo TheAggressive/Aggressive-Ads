@@ -52,13 +52,13 @@ its currency — read before approval overwrites the old price.
 submission (what the advertiser was shown), not from the package's price at
 settlement time; charge an upgrade's difference and credit a downgrade's.
 
-## Click tracker: the portal and review screens (#307)
+## Click tracker: changing one on a running campaign (#307)
 
-The server half has shipped: `Click_Tracker_Rules`, `Click_Tracker_Validation`, the `click_tracker` field on `Campaign_Editor` and the REST `PATCH`, the copier, and `Click_Hop::target_url()`, which puts the tracker in front of the landing page. A tracker can be set today only through REST, on an editable campaign.
+Shipped: the rules, the hop, the editor/REST field, the copier, the advertiser's field on the Destination step (`campaign-tracker-card.php`, its own form and save) and the tracker shown on the review step, the campaign's status card and the staff review screen.
 
-Not built: the advertiser's field on the Destination card (it must not ride the destination's autosave, whose latch in `autosave.ts` is specific to one field — a separate save with its own revision handling is simpler than teaching it two); showing the tracker next to the landing page on the review step and in the staff review screen, which is what makes human review of it real; and changing one on a **running** campaign, which must go through `Live_Edit_Rules` like the destination so it cannot reach live traffic without review. The REST route already refuses a live campaign, so nothing bypasses review meanwhile.
+Not built: changing a tracker on a **running** campaign. The card is drawn for drafts only, and the REST route refuses a live campaign, so nothing reaches live traffic unreviewed — but an advertiser who needs a tracker added to a running campaign has no way to ask. It has to go through `Live_Edit_Rules` and `Settings_Schema::EDIT_DESTINATION` like the destination, as a proposal staff see beside the current value, so review stays the control it is meant to be.
 
-**Revisit the REST-only state if** an advertiser needs it before the screens ship — the interim is a staff `PATCH`. The link checker still checks the landing page only; a tracker is not fetched (see `threat-model.md`).
+**Revisit if** an advertiser asks to add a tracker after launch, or if staff report approving campaigns whose tracker host they could not judge from the review screen (it shows the whole address, with no host extracted or flagged). The link checker still checks the landing page only; a tracker is not fetched (see `threat-model.md`).
 
 ## Nothing else is open
 

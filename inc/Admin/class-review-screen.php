@@ -433,6 +433,8 @@ final class Review_Screen implements Service {
 			'deliveryPolicySaved'      => __( 'Delivery policy saved.', 'aggressive-ads' ),
 			'deliveryPolicyNotJson'    => __( 'One of the JSON fields is not valid JSON. Fix it and save again.', 'aggressive-ads' ),
 			'advertiserNotes'          => __( 'Notes from the advertiser', 'aggressive-ads' ),
+			'clickTracker'             => __( 'Click tracker', 'aggressive-ads' ),
+			'clickTrackerHelp'         => __( 'Visitors are sent here first, then on to the destination. Check that you recognise the host before approving.', 'aggressive-ads' ),
 			'noAdvertiserNotes'        => __( 'The advertiser left no notes.', 'aggressive-ads' ),
 			'internalNotes'            => __( 'Internal notes', 'aggressive-ads' ),
 			'staffOnly'                => __( 'Visible to staff only', 'aggressive-ads' ),

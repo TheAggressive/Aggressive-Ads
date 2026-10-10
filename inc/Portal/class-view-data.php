@@ -277,6 +277,7 @@ final class View_Data {
 		 * mistype it twice.
 		 */
 		$row['default_click_url'] = $this->campaigns->default_click_url( $campaign_id );
+		$row['click_tracker']     = $this->campaigns->click_tracker( $campaign_id );
 
 		foreach ( '' === $row['default_click_url'] ? $row['creatives'] : array() as $creative ) {
 			if ( '' !== (string) ( $creative['click_url'] ?? '' ) ) {
