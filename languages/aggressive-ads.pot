@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-10T06:07:36+00:00\n"
+"POT-Creation-Date: 2026-10-10T06:28:13+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -105,7 +105,7 @@ msgstr ""
 #: inc/Admin/class-approval-readiness.php:125
 #: inc/Admin/class-review-screen.php:322
 #: templates/portal/partials/campaign-order-summary.php:147
-#: templates/portal/partials/campaign-review-step.php:113
+#: templates/portal/partials/campaign-review-step.php:115
 #: templates/portal/partials/campaign-status.php:235
 #: templates/portal/partials/campaign-table.php:53
 msgid "Schedule"
@@ -202,7 +202,7 @@ msgstr ""
 #: inc/Admin/class-conversions-screen.php:234
 #: inc/Admin/class-package-screen.php:165
 #: inc/Admin/class-placement-screen.php:177
-#: templates/portal/partials/campaign-review-step.php:140
+#: templates/portal/partials/campaign-review-step.php:142
 #: templates/portal/screens/organization.php:99
 msgid "Name"
 msgstr ""
@@ -456,7 +456,7 @@ msgstr ""
 #. translators: %d: run length in days (one day).
 #: inc/Admin/class-conversions-screen.php:385
 #: inc/Admin/class-package-screen.php:156
-#: templates/portal/partials/campaign-review-step.php:117
+#: templates/portal/partials/campaign-review-step.php:119
 #: templates/portal/partials/delivery-card.php:87
 #, php-format
 msgid "%d day"
@@ -606,7 +606,7 @@ msgstr ""
 #: inc/Admin/class-reports-screen.php:618
 #: inc/Admin/class-review-screen.php:296
 #: inc/Core/class-post-types.php:199
-#: templates/portal/partials/campaign-status.php:260
+#: templates/portal/partials/campaign-status.php:266
 #: templates/portal/screens/campaign.php:659
 #: templates/portal/screens/help.php:113
 #: src/blocks-interactivity/ad-slot/edit.js:141
@@ -815,8 +815,8 @@ msgid "Organization name"
 msgstr ""
 
 #: inc/Admin/class-organization-screen.php:157
-#: templates/portal/partials/campaign-review-step.php:143
-#: templates/portal/partials/campaign-review-step.php:247
+#: templates/portal/partials/campaign-review-step.php:145
+#: templates/portal/partials/campaign-review-step.php:271
 msgid "Rename"
 msgstr ""
 
@@ -840,7 +840,7 @@ msgstr ""
 #: inc/Admin/class-organization-screen.php:162
 #: inc/Admin/class-placement-screen.php:199
 #: inc/Admin/class-settings-screen.php:306
-#: templates/portal/partials/campaign-creative-step.php:271
+#: templates/portal/partials/campaign-creative-step.php:273
 #: templates/portal/screens/organization.php:152
 msgid "Remove"
 msgstr ""
@@ -916,7 +916,7 @@ msgstr ""
 #: inc/Admin/class-organization-screen.php:182
 #: inc/Admin/class-package-screen.php:185
 #: inc/Admin/class-placement-screen.php:228
-#: inc/Admin/class-review-screen.php:495
+#: inc/Admin/class-review-screen.php:497
 #: inc/Admin/class-settings-screen.php:312
 msgid "Try again"
 msgstr ""
@@ -1398,7 +1398,7 @@ msgstr ""
 
 #: inc/Admin/class-report-export.php:78
 #: inc/Portal/class-account-actions.php:220
-#: inc/Portal/class-campaign-actions.php:898
+#: inc/Portal/class-campaign-actions.php:906
 #: inc/Portal/class-creative-actions.php:704
 #: inc/Portal/class-email-change-actions.php:178
 #: inc/Portal/class-organization-actions.php:222
@@ -1671,72 +1671,72 @@ msgstr ""
 msgid "%1$s – %2$s"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:662
+#: inc/Admin/class-review-data.php:669
 msgid "Needs review"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:663
+#: inc/Admin/class-review-data.php:670
 #: inc/Admin/class-review-screen.php:300
 msgid "Ad updates"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:664
+#: inc/Admin/class-review-data.php:671
 msgid "Advertiser requests"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:665
+#: inc/Admin/class-review-data.php:672
 msgid "With the advertiser"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:666
+#: inc/Admin/class-review-data.php:673
 msgid "Decided"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:667
+#: inc/Admin/class-review-data.php:674
 #: inc/Portal/class-campaign-list-view-data.php:210
 #: inc/Portal/class-creative-view-data.php:355
 msgid "Running"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:668
+#: inc/Admin/class-review-data.php:675
 #: inc/Portal/class-campaign-history-view-data.php:151
 msgid "Finished"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:684
+#: inc/Admin/class-review-data.php:691
 msgid "Start review"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:685
+#: inc/Admin/class-review-data.php:692
 msgid "Release back to the queue"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:686
+#: inc/Admin/class-review-data.php:693
 msgid "Request changes"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:687
+#: inc/Admin/class-review-data.php:694
 msgid "Reject"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:688
+#: inc/Admin/class-review-data.php:695
 msgid "Approve and publish"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:689
+#: inc/Admin/class-review-data.php:696
 msgid "Reopen as a draft"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:690
+#: inc/Admin/class-review-data.php:697
 msgid "Pause campaign"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:691
+#: inc/Admin/class-review-data.php:698
 msgid "Resume campaign"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:692
-#: inc/Portal/class-view-data.php:375
+#: inc/Admin/class-review-data.php:699
+#: inc/Portal/class-view-data.php:376
 msgid "Cancel campaign"
 msgstr ""
 
@@ -1857,7 +1857,7 @@ msgstr ""
 #: inc/Workflow/class-campaign-change-summary.php:73
 #: templates/portal/partials/campaign-changes.php:259
 #: templates/portal/partials/campaign-changes.php:261
-#: templates/portal/partials/campaign-review-step.php:256
+#: templates/portal/partials/campaign-review-step.php:280
 #: templates/portal/screens/campaign.php:266
 #: templates/portal/screens/campaign.php:267
 msgid "Campaign name"
@@ -1888,7 +1888,7 @@ msgid "Line item"
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:317
-#: templates/portal/partials/campaign-status.php:284
+#: templates/portal/partials/campaign-status.php:290
 msgid "Pricing"
 msgstr ""
 
@@ -1898,7 +1898,7 @@ msgstr ""
 
 #: inc/Admin/class-review-screen.php:319
 #: inc/Admin/class-review-screen.php:383
-#: templates/portal/partials/campaign-status.php:288
+#: templates/portal/partials/campaign-status.php:294
 msgid "Pacing"
 msgstr ""
 
@@ -1956,7 +1956,7 @@ msgstr ""
 
 #: inc/Admin/class-review-screen.php:334
 #: templates/portal/partials/campaign-device-preview.php:48
-#: templates/portal/partials/campaign-review-step.php:300
+#: templates/portal/partials/campaign-review-step.php:324
 msgid "Preview width"
 msgstr ""
 
@@ -1972,7 +1972,7 @@ msgstr ""
 
 #: inc/Admin/class-review-screen.php:337
 #: templates/portal/partials/campaign-device-preview.php:42
-#: templates/portal/partials/campaign-review-step.php:303
+#: templates/portal/partials/campaign-review-step.php:327
 msgid "Desktop"
 msgstr ""
 
@@ -2025,7 +2025,7 @@ msgstr ""
 #: inc/Admin/class-review-screen.php:347
 #: inc/Workflow/class-campaign-change-summary.php:81
 #: templates/portal/partials/campaign-ad-card.php:75
-#: templates/portal/partials/campaign-review-step.php:126
+#: templates/portal/partials/campaign-review-step.php:128
 #: templates/portal/partials/campaign-upload-form.php:163
 #: templates/portal/screens/campaign.php:661
 msgid "Destination"
@@ -2146,7 +2146,7 @@ msgid "This cannot be undone: a cancelled campaign cannot be reopened."
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:378
-#: inc/Admin/class-review-screen.php:462
+#: inc/Admin/class-review-screen.php:464
 #: templates/portal/partials/campaign-overlays.php:263
 #: templates/portal/partials/campaign-request-form.php:103
 msgid "Close"
@@ -2378,214 +2378,224 @@ msgid "Notes from the advertiser"
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:436
-msgid "The advertiser left no notes."
+#: templates/portal/partials/campaign-review-step.php:162
+#: templates/portal/partials/campaign-status.php:260
+msgid "Click tracker"
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:437
-msgid "Internal notes"
+msgid "Visitors are sent here first, then on to the destination. Check that you recognise the host before approving."
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:438
-msgid "Visible to staff only"
+msgid "The advertiser left no notes."
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:439
-msgid "Save internal notes"
+msgid "Internal notes"
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:440
-msgid "Audit timeline"
+msgid "Visible to staff only"
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:441
-msgid "No audit events have been recorded for this campaign."
+msgid "Save internal notes"
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:442
+msgid "Audit timeline"
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:443
+msgid "No audit events have been recorded for this campaign."
+msgstr ""
+
+#: inc/Admin/class-review-screen.php:444
 msgid "Unknown user"
 msgstr ""
 
 #. translators: 1: how many identical entries were collapsed into one. 2: date and time of the earliest of them.
-#: inc/Admin/class-review-screen.php:444
+#: inc/Admin/class-review-screen.php:446
 #, php-format
 msgid "%1$d times since %2$s"
 msgstr ""
 
 #. translators: %d: number of older audit entries not shown.
-#: inc/Admin/class-review-screen.php:446
+#: inc/Admin/class-review-screen.php:448
 #, php-format
 msgid "Show %d earlier entries"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:447
+#: inc/Admin/class-review-screen.php:449
 msgid "Show fewer"
 msgstr ""
 
 #. translators: 1: current day of the schedule. 2: total days in the schedule.
-#: inc/Admin/class-review-screen.php:449
+#: inc/Admin/class-review-screen.php:451
 #, php-format
 msgid "Day %1$d of %2$d"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:450
+#: inc/Admin/class-review-screen.php:452
 msgid "Before approval"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:451
+#: inc/Admin/class-review-screen.php:453
 msgid "Ready to approve"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:452
+#: inc/Admin/class-review-screen.php:454
 msgid "Show what blocks it"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:453
+#: inc/Admin/class-review-screen.php:455
 msgid "Artwork file missing"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:454
+#: inc/Admin/class-review-screen.php:456
 msgid "This ad’s file is gone, so it cannot be previewed or published. Ask the advertiser to upload it again."
 msgstr ""
 
 #. translators: %d: number of readiness checks that block approval (one).
-#: inc/Admin/class-review-screen.php:456
+#: inc/Admin/class-review-screen.php:458
 #, php-format
 msgid "%d check blocks approval"
 msgstr ""
 
 #. translators: %d: number of readiness checks that block approval (more than one).
-#: inc/Admin/class-review-screen.php:458
+#: inc/Admin/class-review-screen.php:460
 #, php-format
 msgid "%d checks block approval"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:459
+#: inc/Admin/class-review-screen.php:461
 msgctxt "readiness check state, read after its name"
 msgid "(passed)"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:460
+#: inc/Admin/class-review-screen.php:462
 msgctxt "readiness check state, read after its name"
 msgid "(blocks approval)"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:461
+#: inc/Admin/class-review-screen.php:463
 msgid "Edit delivery"
 msgstr ""
 
 #. translators: %s: delivery priority number.
-#: inc/Admin/class-review-screen.php:464
+#: inc/Admin/class-review-screen.php:466
 #, php-format
 msgid "Priority %s"
 msgstr ""
 
 #. translators: %s: impressions per day.
-#: inc/Admin/class-review-screen.php:466
+#: inc/Admin/class-review-screen.php:468
 #, php-format
 msgid "%s a day"
 msgstr ""
 
 #. translators: %s: impressions in total.
-#: inc/Admin/class-review-screen.php:468
+#: inc/Admin/class-review-screen.php:470
 #, php-format
 msgid "%s in total"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:469
+#: inc/Admin/class-review-screen.php:471
 msgid "No impression limits"
 msgstr ""
 
 #. translators: 1: most views per visitor. 2: the period, e.g. "day" or "visit".
-#: inc/Admin/class-review-screen.php:471
+#: inc/Admin/class-review-screen.php:473
 #, php-format
 msgid "At most %1$s per %2$s"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:472
+#: inc/Admin/class-review-screen.php:474
 msgid "No repeat-view limit"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:473
+#: inc/Admin/class-review-screen.php:475
 msgid "Any time"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:474
+#: inc/Admin/class-review-screen.php:476
 msgid "Certain days and hours"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:475
+#: inc/Admin/class-review-screen.php:477
 msgid "Everyone"
 msgstr ""
 
 #. translators: %d: number of targeting conditions (one).
-#: inc/Admin/class-review-screen.php:477
+#: inc/Admin/class-review-screen.php:479
 #, php-format
 msgid "%d targeting condition"
 msgstr ""
 
 #. translators: %d: number of targeting conditions (more than one).
-#: inc/Admin/class-review-screen.php:479
+#: inc/Admin/class-review-screen.php:481
 #, php-format
 msgid "%d targeting conditions"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:480
+#: inc/Admin/class-review-screen.php:482
 msgid "Custom rule"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:481
+#: inc/Admin/class-review-screen.php:483
 msgid "Campaign updated."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:482
+#: inc/Admin/class-review-screen.php:484
 msgid "Internal notes saved."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:483
+#: inc/Admin/class-review-screen.php:485
 msgid "Campaign changes approved."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:484
+#: inc/Admin/class-review-screen.php:486
 msgid "Campaign changes rejected."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:485
+#: inc/Admin/class-review-screen.php:487
 msgid "The advertiser request was declined."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:486
+#: inc/Admin/class-review-screen.php:488
 msgid "Ad update approved."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:487
+#: inc/Admin/class-review-screen.php:489
 msgid "Publish this advertisement"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:488
+#: inc/Admin/class-review-screen.php:490
 msgid "Added after this campaign went live, so it has not been published yet and is not being served."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:489
+#: inc/Admin/class-review-screen.php:491
 msgid "Advertisement published."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:490
+#: inc/Admin/class-review-screen.php:492
 msgid "Do not publish"
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:491
+#: inc/Admin/class-review-screen.php:493
 msgid "Why not? The advertiser will read this."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:492
+#: inc/Admin/class-review-screen.php:494
 msgid "Advertisement turned down."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:493
+#: inc/Admin/class-review-screen.php:495
 msgid "Ad update rejected."
 msgstr ""
 
-#: inc/Admin/class-review-screen.php:494
+#: inc/Admin/class-review-screen.php:496
 msgid "That change could not be saved."
 msgstr ""
 
@@ -3255,7 +3265,7 @@ msgstr[1] ""
 #: inc/Core/class-post-types.php:200
 #: inc/Workflow/class-campaign-change-summary.php:85
 #: templates/portal/partials/campaign-order-summary.php:134
-#: templates/portal/partials/campaign-review-step.php:106
+#: templates/portal/partials/campaign-review-step.php:108
 #: templates/portal/partials/campaign-status.php:225
 msgid "Package"
 msgstr ""
@@ -3951,178 +3961,182 @@ msgstr ""
 msgid "The reset email could not be sent. Please try again shortly."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:500
+#: inc/Portal/class-campaign-actions.php:506
 msgid "You do not have permission to end that campaign."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:519
+#: inc/Portal/class-campaign-actions.php:525
 #: inc/Workflow/class-campaign-copier.php:65
 #: inc/Workflow/class-campaign-editor.php:90
 msgid "You do not have permission to create a campaign."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:538
-#: inc/Portal/class-campaign-actions.php:574
-#: inc/Portal/class-campaign-actions.php:626
-#: inc/Portal/class-campaign-actions.php:642
+#: inc/Portal/class-campaign-actions.php:544
+#: inc/Portal/class-campaign-actions.php:580
+#: inc/Portal/class-campaign-actions.php:632
+#: inc/Portal/class-campaign-actions.php:648
 #: inc/Workflow/class-campaign-editor.php:351
 msgid "You do not have permission to edit that campaign."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:552
+#: inc/Portal/class-campaign-actions.php:558
 #: inc/Workflow/class-campaign-copier.php:69
 msgid "You do not have permission to copy that campaign."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:661
-#: inc/Portal/class-campaign-actions.php:832
+#: inc/Portal/class-campaign-actions.php:667
+#: inc/Portal/class-campaign-actions.php:839
 msgid "You do not have permission to submit that campaign."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:702
+#: inc/Portal/class-campaign-actions.php:708
 msgid "You do not have permission to withdraw that campaign."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:810
+#: inc/Portal/class-campaign-actions.php:816
 #: inc/Portal/class-campaign-change-form.php:115
 #: inc/Workflow/class-campaign-editor.php:375
 msgid "Enter a campaign name."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:811
+#: inc/Portal/class-campaign-actions.php:817
 #: inc/Workflow/class-campaign-editor.php:148
 #: inc/Workflow/class-campaign-editor.php:379
 msgid "Use 160 characters or fewer for the campaign name."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:812
+#: inc/Portal/class-campaign-actions.php:818
 #: inc/Portal/class-campaign-change-form.php:119
 #: inc/Workflow/class-campaign-validator.php:236
 msgid "Choose an end date."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:813
+#: inc/Portal/class-campaign-actions.php:819
 #: inc/Portal/class-campaign-change-form.php:120
 #: inc/Workflow/class-campaign-editor.php:448
 #: inc/Workflow/class-campaign-validator.php:239
 msgid "The end date must be after the start date."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:814
+#: inc/Portal/class-campaign-actions.php:820
 #: inc/Workflow/class-campaign-validator.php:227
 msgid "Choose a start date."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:815
+#: inc/Portal/class-campaign-actions.php:821
 #: inc/Workflow/class-campaign-validator.php:230
 msgid "The start date has already passed. Choose a later one."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:816
+#: inc/Portal/class-campaign-actions.php:822
 #: inc/Workflow/class-campaign-validator.php:233
 msgid "The start date must begin at midnight in the site timezone."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:817
+#: inc/Portal/class-campaign-actions.php:823
 #: inc/Workflow/class-campaign-validator.php:242
 msgid "The end date must include the full selected day in the site timezone."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:819
+#: inc/Portal/class-campaign-actions.php:825
 #: inc/Portal/class-date-input.php:60
 msgid "Enter a valid date in the required format."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:820
+#: inc/Portal/class-campaign-actions.php:826
 msgid "One of the selected placements is no longer available."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:821
+#: inc/Portal/class-campaign-actions.php:827
 msgid "Choose a package."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:822
+#: inc/Portal/class-campaign-actions.php:828
 #: inc/Portal/class-campaign-change-form.php:126
 msgid "That package is no longer available. Choose another package."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:823
+#: inc/Portal/class-campaign-actions.php:829
 msgid "That package is not configured completely. Choose another package or get in touch."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:824
+#: inc/Portal/class-campaign-actions.php:830
 #: inc/Workflow/class-campaign-editor.php:567
 #: inc/Workflow/class-campaign-editor.php:572
 msgid "Add an ad for every size in the package before continuing."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:825
+#: inc/Portal/class-campaign-actions.php:831
+msgid "That tracking link cannot be used. It must be a web address with {lpurl} in it exactly once, and no username or password."
+msgstr ""
+
+#: inc/Portal/class-campaign-actions.php:832
 msgid "This campaign changed in another window. Review the current values and save again."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:826
+#: inc/Portal/class-campaign-actions.php:833
 #: inc/Workflow/class-campaign-editor.php:97
 msgid "Your account is not connected to an organization."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:827
+#: inc/Portal/class-campaign-actions.php:834
 #: inc/Workflow/class-campaign-editor.php:142
 msgid "This organization cannot create campaigns. Please get in touch."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:828
+#: inc/Portal/class-campaign-actions.php:835
 msgid "The campaign changed and is no longer ready to submit. Resolve every review item and try again."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:829
+#: inc/Portal/class-campaign-actions.php:836
 msgid "This campaign has already been submitted or cannot be submitted right now."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:830
+#: inc/Portal/class-campaign-actions.php:837
 #: inc/Workflow/class-campaign-copier.php:325
 msgid "The campaign could not be copied. Please try again."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:831
+#: inc/Portal/class-campaign-actions.php:838
 msgid "There have been too many attempts. Wait a moment and try again."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:833
+#: inc/Portal/class-campaign-actions.php:840
 msgid "The campaign could not be submitted. Please try again."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:834
+#: inc/Portal/class-campaign-actions.php:841
 #: inc/Workflow/class-campaign-action-requests.php:143
 msgid "That cannot be requested for this campaign."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:835
+#: inc/Portal/class-campaign-actions.php:842
 #: inc/Workflow/class-campaign-action-requests.php:153
 msgid "You have already asked the review team about this campaign."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:836
+#: inc/Portal/class-campaign-actions.php:843
 #: inc/Workflow/class-campaign-action-requests.php:159
 msgid "Tell the review team why."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:837
+#: inc/Portal/class-campaign-actions.php:844
 #: inc/Workflow/class-campaign-action-requests.php:163
 #: inc/Workflow/class-campaign-change-manager.php:460
 msgid "That explanation is too long."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:838
+#: inc/Portal/class-campaign-actions.php:845
 #: inc/Workflow/class-campaign-action-requests.php:167
 msgid "The request could not be saved. Please try again."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:839
+#: inc/Portal/class-campaign-actions.php:846
 #: inc/Workflow/class-campaign-action-requests.php:190
 msgid "There is no request to withdraw."
 msgstr ""
 
-#: inc/Portal/class-campaign-actions.php:840
+#: inc/Portal/class-campaign-actions.php:847
 #: inc/Workflow/class-campaign-editor.php:256
 msgid "The campaign could not be saved. Please try again."
 msgstr ""
@@ -4172,7 +4186,7 @@ msgstr ""
 #: inc/Portal/class-campaign-edit-steps.php:56
 #: templates/portal/partials/campaign-changes.php:296
 #: templates/portal/partials/campaign-order-summary.php:196
-#: templates/portal/partials/campaign-review-step.php:133
+#: templates/portal/partials/campaign-review-step.php:135
 #: templates/portal/screens/campaign.php:142
 msgid "Ads"
 msgstr ""
@@ -4849,15 +4863,15 @@ msgstr ""
 msgid "We could not create the account. Please try again later."
 msgstr ""
 
-#: inc/Portal/class-view-data.php:328
+#: inc/Portal/class-view-data.php:329
 msgid "Renew campaign"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:329
+#: inc/Portal/class-view-data.php:330
 msgid "Duplicate campaign"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:374
+#: inc/Portal/class-view-data.php:375
 msgid "Delete campaign"
 msgstr ""
 
@@ -6178,7 +6192,7 @@ msgid "Page not found"
 msgstr ""
 
 #: templates/portal/account.php:15
-#: templates/portal/partials/campaign-review-step.php:150
+#: templates/portal/partials/campaign-review-step.php:174
 #: templates/portal/partials/rail.php:36
 #: templates/portal/screens/account.php:35
 msgid "Account"
@@ -6270,7 +6284,7 @@ msgstr ""
 
 #: templates/portal/partials/campaign-ad-updates.php:33
 #: templates/portal/partials/campaign-edit-ads.php:82
-#: templates/portal/partials/campaign-status.php:305
+#: templates/portal/partials/campaign-status.php:311
 msgid "Your ads"
 msgstr ""
 
@@ -6468,8 +6482,8 @@ msgid "Anything the review team should know?"
 msgstr ""
 
 #: templates/portal/partials/campaign-changes.php:273
-#: templates/portal/partials/campaign-review-step.php:332
-#: templates/portal/partials/campaign-review-step.php:351
+#: templates/portal/partials/campaign-review-step.php:356
+#: templates/portal/partials/campaign-review-step.php:375
 msgid "Notes for the review team"
 msgstr ""
 
@@ -6481,7 +6495,7 @@ msgid "Save and continue"
 msgstr ""
 
 #: templates/portal/partials/campaign-changes.php:311
-#: templates/portal/partials/campaign-creative-step.php:82
+#: templates/portal/partials/campaign-creative-step.php:84
 msgid "02 · Ads"
 msgstr ""
 
@@ -6490,12 +6504,12 @@ msgid "01 · Ads"
 msgstr ""
 
 #: templates/portal/partials/campaign-changes.php:318
-#: templates/portal/partials/campaign-creative-step.php:360
+#: templates/portal/partials/campaign-creative-step.php:362
 msgid "Back to package & dates"
 msgstr ""
 
 #: templates/portal/partials/campaign-changes.php:325
-#: templates/portal/partials/campaign-creative-step.php:374
+#: templates/portal/partials/campaign-creative-step.php:376
 #: templates/portal/partials/campaign-order-summary.php:94
 msgid "Continue to review"
 msgstr ""
@@ -6534,7 +6548,7 @@ msgstr ""
 #: templates/portal/partials/campaign-changes.php:382
 #: templates/portal/partials/campaign-order-summary.php:100
 #: templates/portal/partials/campaign-overlays.php:359
-#: templates/portal/partials/campaign-review-step.php:357
+#: templates/portal/partials/campaign-review-step.php:381
 msgid "Submit for review"
 msgstr ""
 
@@ -6546,90 +6560,90 @@ msgstr ""
 msgid "Back to the campaign"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:83
+#: templates/portal/partials/campaign-creative-step.php:85
 #: templates/portal/partials/campaign-editor-modules.php:43
 #: templates/portal/screens/campaign.php:537
 #: templates/portal/screens/help.php:29
 msgid "Add your ads"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:84
+#: templates/portal/partials/campaign-creative-step.php:86
 msgid "One image for each size. Files stay private until staff approve the campaign."
 msgstr ""
 
 #. translators: 1: sizes that have an ad. 2: sizes in the package.
-#: templates/portal/partials/campaign-creative-step.php:92
+#: templates/portal/partials/campaign-creative-step.php:94
 #, php-format
 msgid "%1$d of %2$d size ready"
 msgid_plural "%1$d of %2$d sizes ready"
 msgstr[0] ""
 msgstr[1] ""
 
-#: templates/portal/partials/campaign-creative-step.php:121
+#: templates/portal/partials/campaign-creative-step.php:123
 msgid "Drop all your files here"
 msgstr ""
 
 #. translators: 1: the accepted image formats, e.g. JPEG, PNG, GIF. 2: the largest file any size in this package accepts, e.g. 150 KB.
-#: templates/portal/partials/campaign-creative-step.php:126
+#: templates/portal/partials/campaign-creative-step.php:128
 #, php-format
 msgid "Each file goes to the size it matches. %1$s · up to %2$s each · files stay private until approved"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:133
+#: templates/portal/partials/campaign-creative-step.php:135
 msgid "Add the link your ads go to above. Files dropped before then wait for it."
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:136
+#: templates/portal/partials/campaign-creative-step.php:138
 msgid "Browse files"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:139
+#: templates/portal/partials/campaign-creative-step.php:141
 msgid "Blank templates"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:149
+#: templates/portal/partials/campaign-creative-step.php:151
 msgid "Choose a package first"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:150
+#: templates/portal/partials/campaign-creative-step.php:152
 msgid "A package supplies the placements and exact ad creative sizes required for this campaign."
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:220
+#: templates/portal/partials/campaign-creative-step.php:222
 #: templates/portal/partials/campaign-edit-ads.php:113
 msgid "Needs a file"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:223
-#: templates/portal/partials/campaign-review-step.php:181
+#: templates/portal/partials/campaign-creative-step.php:225
+#: templates/portal/partials/campaign-review-step.php:205
 msgid "Ready"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:229
+#: templates/portal/partials/campaign-creative-step.php:231
 msgid "This placement is no longer available. Go back to package and dates and choose an available package."
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:269
+#: templates/portal/partials/campaign-creative-step.php:271
 #: templates/portal/partials/campaign-edit-ads.php:182
 msgid "Preview"
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:270
+#: templates/portal/partials/campaign-creative-step.php:272
 msgid "Replace"
 msgstr ""
 
 #. translators: %d: maximum creatives allowed on one placement.
-#: templates/portal/partials/campaign-creative-step.php:293
+#: templates/portal/partials/campaign-creative-step.php:295
 #, php-format
 msgid "This placement has the maximum of %d creatives. Remove one to add another."
 msgstr ""
 
-#: templates/portal/partials/campaign-creative-step.php:338
+#: templates/portal/partials/campaign-creative-step.php:340
 msgid "Add a rotating creative"
 msgstr ""
 
 #. translators: %d: sizes that still need a file.
-#: templates/portal/partials/campaign-creative-step.php:354
+#: templates/portal/partials/campaign-creative-step.php:356
 #: templates/portal/partials/campaign-order-summary.php:109
 #, php-format
 msgid "%d size still needs a file."
@@ -6759,7 +6773,7 @@ msgid "Order summary"
 msgstr ""
 
 #: templates/portal/partials/campaign-order-summary.php:137
-#: templates/portal/partials/campaign-review-step.php:107
+#: templates/portal/partials/campaign-review-step.php:109
 msgid "Not chosen yet"
 msgstr ""
 
@@ -6809,7 +6823,7 @@ msgid "%1$d of %2$d ready"
 msgstr ""
 
 #: templates/portal/partials/campaign-order-summary.php:214
-#: templates/portal/partials/campaign-status.php:295
+#: templates/portal/partials/campaign-status.php:301
 msgid "Total"
 msgstr ""
 
@@ -6984,7 +6998,7 @@ msgid "Withdraw this request"
 msgstr ""
 
 #. translators: 1: sizes that have an ad. 2: sizes in the package.
-#: templates/portal/partials/campaign-review-step.php:85
+#: templates/portal/partials/campaign-review-step.php:86
 #, php-format
 msgid "%1$d of %2$d size ready."
 msgid_plural "%1$d of %2$d sizes ready."
@@ -6992,105 +7006,106 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %s: placement names still without a file, comma-separated.
-#: templates/portal/partials/campaign-review-step.php:93
+#: templates/portal/partials/campaign-review-step.php:94
 #, php-format
 msgid "%s still needs a file."
 msgid_plural "%s still need a file."
 msgstr[0] ""
 msgstr[1] ""
 
-#: templates/portal/partials/campaign-review-step.php:109
-#: templates/portal/partials/campaign-review-step.php:122
-#: templates/portal/partials/campaign-review-step.php:129
-#: templates/portal/partials/campaign-review-step.php:136
+#: templates/portal/partials/campaign-review-step.php:111
+#: templates/portal/partials/campaign-review-step.php:124
+#: templates/portal/partials/campaign-review-step.php:131
+#: templates/portal/partials/campaign-review-step.php:138
+#: templates/portal/partials/campaign-review-step.php:165
 msgid "Change"
 msgstr ""
 
-#: templates/portal/partials/campaign-review-step.php:127
+#: templates/portal/partials/campaign-review-step.php:129
 msgid "Given with your first ad"
 msgstr ""
 
-#: templates/portal/partials/campaign-review-step.php:175
+#: templates/portal/partials/campaign-review-step.php:199
 msgid "Ready check"
 msgstr ""
 
-#: templates/portal/partials/campaign-review-step.php:178
+#: templates/portal/partials/campaign-review-step.php:202
 msgid "Everything the review team needs, checked as you go."
 msgstr ""
 
 #. translators: %d: number of things still to resolve.
-#: templates/portal/partials/campaign-review-step.php:187
+#: templates/portal/partials/campaign-review-step.php:211
 #, php-format
 msgid "%d thing left"
 msgid_plural "%d things left"
 msgstr[0] ""
 msgstr[1] ""
 
-#: templates/portal/partials/campaign-review-step.php:214
+#: templates/portal/partials/campaign-review-step.php:238
 msgid "done"
 msgstr ""
 
-#: templates/portal/partials/campaign-review-step.php:214
+#: templates/portal/partials/campaign-review-step.php:238
 msgid "needs attention"
 msgstr ""
 
-#: templates/portal/partials/campaign-review-step.php:228
+#: templates/portal/partials/campaign-review-step.php:252
 msgid "Add file"
 msgstr ""
 
-#: templates/portal/partials/campaign-review-step.php:228
+#: templates/portal/partials/campaign-review-step.php:252
 msgid "Fix"
 msgstr ""
 
-#: templates/portal/partials/campaign-review-step.php:257
+#: templates/portal/partials/campaign-review-step.php:281
 msgid "Only your team and the review team see this. It is not shown with the ad."
 msgstr ""
 
-#: templates/portal/partials/campaign-review-step.php:271
+#: templates/portal/partials/campaign-review-step.php:295
 #: templates/portal/screens/organization.php:314
 msgid "Save name"
 msgstr ""
 
-#: templates/portal/partials/campaign-review-step.php:280
+#: templates/portal/partials/campaign-review-step.php:304
 msgid "See it on the page"
 msgstr ""
 
 #. translators: %s: the site's name.
-#: templates/portal/partials/campaign-review-step.php:285
+#: templates/portal/partials/campaign-review-step.php:309
 #, php-format
 msgid "Your ads in their placements on a %s article."
 msgstr ""
 
-#: templates/portal/partials/campaign-review-step.php:307
+#: templates/portal/partials/campaign-review-step.php:331
 msgid "Mobile"
 msgstr ""
 
-#: templates/portal/partials/campaign-review-step.php:310
+#: templates/portal/partials/campaign-review-step.php:334
 msgid "An illustration of the page. The list below names every ad."
 msgstr ""
 
-#: templates/portal/partials/campaign-review-step.php:333
+#: templates/portal/partials/campaign-review-step.php:357
 msgid "Optional"
 msgstr ""
 
-#: templates/portal/partials/campaign-review-step.php:352
+#: templates/portal/partials/campaign-review-step.php:376
 msgid "Anything that helps the team review this campaign."
 msgstr ""
 
-#: templates/portal/partials/campaign-review-step.php:356
-#: templates/portal/partials/campaign-review-step.php:363
+#: templates/portal/partials/campaign-review-step.php:380
+#: templates/portal/partials/campaign-review-step.php:387
 msgid "Back to ads"
 msgstr ""
 
-#: templates/portal/partials/campaign-review-step.php:370
+#: templates/portal/partials/campaign-review-step.php:394
 msgid "Editing pauses while the campaign is in review."
 msgstr ""
 
-#: templates/portal/partials/campaign-review-step.php:374
+#: templates/portal/partials/campaign-review-step.php:398
 msgid "Withdraw it any time before a reviewer starts."
 msgstr ""
 
-#: templates/portal/partials/campaign-review-step.php:378
+#: templates/portal/partials/campaign-review-step.php:402
 msgid "You are notified if changes are needed."
 msgstr ""
 
@@ -7253,7 +7268,7 @@ msgid "Draft started"
 msgstr ""
 
 #. translators: %s: number of ads on the campaign.
-#: templates/portal/partials/campaign-status.php:267
+#: templates/portal/partials/campaign-status.php:273
 #, php-format
 msgid "%s ad"
 msgid_plural "%s ads"
@@ -7261,7 +7276,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. translators: %d: number of ad sizes.
-#: templates/portal/partials/campaign-status.php:310
+#: templates/portal/partials/campaign-status.php:316
 #, php-format
 msgid "%d size"
 msgid_plural "%d sizes"
@@ -7286,6 +7301,22 @@ msgstr ""
 
 #: templates/portal/partials/campaign-table.php:147
 msgid "Run again"
+msgstr ""
+
+#: templates/portal/partials/campaign-tracker-card.php:42
+msgid "Use an ad-server click tracker (optional)"
+msgstr ""
+
+#: templates/portal/partials/campaign-tracker-card.php:50
+msgid "Tracking link"
+msgstr ""
+
+#: templates/portal/partials/campaign-tracker-card.php:51
+msgid "A click goes to this link first, then on to your destination. Put {lpurl} where your tracker expects the destination — exactly once. The review team sees this link before approving."
+msgstr ""
+
+#: templates/portal/partials/campaign-tracker-card.php:67
+msgid "Save tracker"
 msgstr ""
 
 #: templates/portal/partials/campaign-update-history.php:17
