@@ -51,8 +51,9 @@ do not add an `adr/` log.
 Everything `docs/` describes is built except spend and billing, which have no
 source to read from. CSV export shipped — `Portal\Report_Actions` streams it and
 `Domain\Csv_Writer` neutralises formula injection — so a claim that it is
-outstanding is stale, not a plan. The open edge is P17's last two slices,
-comparison and review history. **Do not assume from this file what exists** — check
+outstanding is stale, not a plan. P17 is closed; the next platform phase is P18
+(rich creative types), with billing (P19) still having no source.
+**Do not assume from this file what exists** — check
 `docs/roadmap.md`, then `docs/open-work.md`, then the source. A per-feature
 inventory used to live here and was archived rather than maintained; it is gone
 now, because it went stale faster than it was read either way. Git history has
