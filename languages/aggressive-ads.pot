@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-03T21:26:20+00:00\n"
+"POT-Creation-Date: 2026-10-10T05:22:16+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -104,7 +104,7 @@ msgstr ""
 
 #: inc/Admin/class-approval-readiness.php:125
 #: inc/Admin/class-review-screen.php:322
-#: templates/portal/partials/campaign-order-summary.php:83
+#: templates/portal/partials/campaign-order-summary.php:147
 #: templates/portal/partials/campaign-review-step.php:113
 #: templates/portal/partials/campaign-status.php:235
 #: templates/portal/partials/campaign-table.php:53
@@ -607,7 +607,7 @@ msgstr ""
 #: inc/Admin/class-review-screen.php:296
 #: inc/Core/class-post-types.php:199
 #: templates/portal/partials/campaign-status.php:260
-#: templates/portal/screens/campaign.php:650
+#: templates/portal/screens/campaign.php:659
 #: templates/portal/screens/help.php:113
 #: src/blocks-interactivity/ad-slot/edit.js:141
 msgid "Placement"
@@ -1169,7 +1169,7 @@ msgid "Used by the placement block to choose this slot. Lowercase letters, numbe
 msgstr ""
 
 #: inc/Admin/class-placement-screen.php:180
-#: templates/portal/screens/campaign.php:651
+#: templates/portal/screens/campaign.php:660
 msgid "Size"
 msgstr ""
 
@@ -1956,6 +1956,7 @@ msgstr ""
 
 #: inc/Admin/class-review-screen.php:334
 #: templates/portal/partials/campaign-device-preview.php:48
+#: templates/portal/partials/campaign-review-step.php:300
 msgid "Preview width"
 msgstr ""
 
@@ -1971,7 +1972,7 @@ msgstr ""
 
 #: inc/Admin/class-review-screen.php:337
 #: templates/portal/partials/campaign-device-preview.php:42
-#: templates/portal/partials/campaign-review-step.php:293
+#: templates/portal/partials/campaign-review-step.php:303
 msgid "Desktop"
 msgstr ""
 
@@ -2026,7 +2027,7 @@ msgstr ""
 #: templates/portal/partials/campaign-ad-card.php:75
 #: templates/portal/partials/campaign-review-step.php:126
 #: templates/portal/partials/campaign-upload-form.php:163
-#: templates/portal/screens/campaign.php:652
+#: templates/portal/screens/campaign.php:661
 msgid "Destination"
 msgstr ""
 
@@ -3253,7 +3254,7 @@ msgstr[1] ""
 
 #: inc/Core/class-post-types.php:200
 #: inc/Workflow/class-campaign-change-summary.php:85
-#: templates/portal/partials/campaign-order-summary.php:70
+#: templates/portal/partials/campaign-order-summary.php:134
 #: templates/portal/partials/campaign-review-step.php:106
 #: templates/portal/partials/campaign-status.php:225
 msgid "Package"
@@ -3264,7 +3265,7 @@ msgid "Creative"
 msgstr ""
 
 #: inc/Core/class-post-types.php:202
-#: templates/portal/screens/campaign.php:637
+#: templates/portal/screens/campaign.php:646
 msgid "Creatives"
 msgstr ""
 
@@ -4170,7 +4171,7 @@ msgstr ""
 
 #: inc/Portal/class-campaign-edit-steps.php:56
 #: templates/portal/partials/campaign-changes.php:296
-#: templates/portal/partials/campaign-order-summary.php:132
+#: templates/portal/partials/campaign-order-summary.php:196
 #: templates/portal/partials/campaign-review-step.php:133
 #: templates/portal/screens/campaign.php:142
 msgid "Ads"
@@ -6210,6 +6211,10 @@ msgstr ""
 msgid "Sign in"
 msgstr ""
 
+#: templates/portal/partials/campaign-action-bar.php:31
+msgid "Continue"
+msgstr ""
+
 #: templates/portal/partials/campaign-ad-card-draft.php:56
 #: templates/portal/partials/campaign-overlays.php:240
 msgid "Edit destination"
@@ -6443,14 +6448,14 @@ msgid "Anything the review team should know?"
 msgstr ""
 
 #: templates/portal/partials/campaign-changes.php:273
-#: templates/portal/partials/campaign-review-step.php:365
-#: templates/portal/partials/campaign-review-step.php:384
+#: templates/portal/partials/campaign-review-step.php:332
+#: templates/portal/partials/campaign-review-step.php:351
 msgid "Notes for the review team"
 msgstr ""
 
 #: templates/portal/partials/campaign-changes.php:281
 #: templates/portal/partials/campaign-changes.php:322
-#: templates/portal/partials/campaign-order-summary.php:156
+#: templates/portal/partials/campaign-order-summary.php:84
 #: templates/portal/partials/campaign-plan-step.php:147
 msgid "Save and continue"
 msgstr ""
@@ -6471,8 +6476,7 @@ msgstr ""
 
 #: templates/portal/partials/campaign-changes.php:325
 #: templates/portal/partials/campaign-creative-step.php:374
-#: templates/portal/partials/campaign-order-summary.php:162
-#: templates/portal/partials/campaign-order-summary.php:164
+#: templates/portal/partials/campaign-order-summary.php:94
 msgid "Continue to review"
 msgstr ""
 
@@ -6508,10 +6512,9 @@ msgid "with the review team"
 msgstr ""
 
 #: templates/portal/partials/campaign-changes.php:382
-#: templates/portal/partials/campaign-order-summary.php:176
-#: templates/portal/partials/campaign-order-summary.php:179
+#: templates/portal/partials/campaign-order-summary.php:100
 #: templates/portal/partials/campaign-overlays.php:359
-#: templates/portal/partials/campaign-review-step.php:390
+#: templates/portal/partials/campaign-review-step.php:357
 msgid "Submit for review"
 msgstr ""
 
@@ -6607,7 +6610,7 @@ msgstr ""
 
 #. translators: %d: sizes that still need a file.
 #: templates/portal/partials/campaign-creative-step.php:354
-#: templates/portal/partials/campaign-order-summary.php:169
+#: templates/portal/partials/campaign-order-summary.php:109
 #, php-format
 msgid "%d size still needs a file."
 msgid_plural "%d sizes still need a file."
@@ -6704,17 +6707,44 @@ msgstr ""
 msgid "More actions"
 msgstr ""
 
-#: templates/portal/partials/campaign-order-summary.php:64
+#: templates/portal/partials/campaign-order-summary.php:88
+#: templates/portal/partials/campaign-plan-step.php:148
+msgid "Continue to ads"
+msgstr ""
+
+#: templates/portal/partials/campaign-order-summary.php:105
+msgid "You can change any of this until you submit."
+msgstr ""
+
+#: templates/portal/partials/campaign-order-summary.php:106
+msgid "The submission checks run again when you press it."
+msgstr ""
+
+#. translators: %s: the size still missing its file, e.g. 720×300.
+#: templates/portal/partials/campaign-order-summary.php:114
+#, php-format
+msgid "Add the %s file to submit."
+msgstr ""
+
+#. translators: %d: number of problems still to resolve.
+#: templates/portal/partials/campaign-order-summary.php:119
+#, php-format
+msgid "%d thing left before you can submit."
+msgid_plural "%d things left before you can submit."
+msgstr[0] ""
+msgstr[1] ""
+
+#: templates/portal/partials/campaign-order-summary.php:128
 msgid "Order summary"
 msgstr ""
 
-#: templates/portal/partials/campaign-order-summary.php:73
+#: templates/portal/partials/campaign-order-summary.php:137
 #: templates/portal/partials/campaign-review-step.php:107
 msgid "Not chosen yet"
 msgstr ""
 
 #. translators: 1: number of days the campaign runs. 2: the site's timezone on the first day, e.g. PDT.
-#: templates/portal/partials/campaign-order-summary.php:91
+#: templates/portal/partials/campaign-order-summary.php:155
 #: templates/portal/partials/campaign-status.php:243
 #, php-format
 msgid "%1$d day · %2$s"
@@ -6722,73 +6752,46 @@ msgid_plural "%1$d days · %2$s"
 msgstr[0] ""
 msgstr[1] ""
 
-#: templates/portal/partials/campaign-order-summary.php:101
+#: templates/portal/partials/campaign-order-summary.php:165
 #: templates/portal/partials/campaign-table.php:55
 msgid "Sizes"
 msgstr ""
 
-#: templates/portal/partials/campaign-order-summary.php:104
+#: templates/portal/partials/campaign-order-summary.php:168
 msgid "Sizes come with the package"
 msgstr ""
 
 #. translators: %d: number of placements in the package.
-#: templates/portal/partials/campaign-order-summary.php:109
+#: templates/portal/partials/campaign-order-summary.php:173
 #, php-format
 msgid "%d placement"
 msgid_plural "%d placements"
 msgstr[0] ""
 msgstr[1] ""
 
-#: templates/portal/partials/campaign-order-summary.php:118
+#: templates/portal/partials/campaign-order-summary.php:182
 #: templates/portal/partials/campaign-status.php:254
 msgid "Link"
 msgstr ""
 
-#: templates/portal/partials/campaign-order-summary.php:121
+#: templates/portal/partials/campaign-order-summary.php:185
 msgid "Added on the next step"
 msgstr ""
 
-#: templates/portal/partials/campaign-order-summary.php:125
+#: templates/portal/partials/campaign-order-summary.php:189
 msgid "Shared by every ad"
 msgstr ""
 
 #. translators: 1: sizes that have an ad. 2: sizes in the package.
-#: templates/portal/partials/campaign-order-summary.php:137
+#: templates/portal/partials/campaign-order-summary.php:201
 #, php-format
 msgid "%1$d of %2$d ready"
 msgstr ""
 
-#: templates/portal/partials/campaign-order-summary.php:150
+#: templates/portal/partials/campaign-order-summary.php:214
 #: templates/portal/partials/campaign-status.php:295
 msgid "Total"
 msgstr ""
-
-#: templates/portal/partials/campaign-order-summary.php:157
-#: templates/portal/partials/campaign-plan-step.php:148
-msgid "Continue to ads"
-msgstr ""
-
-#: templates/portal/partials/campaign-order-summary.php:159
-msgid "You can change any of this until you submit."
-msgstr ""
-
-#: templates/portal/partials/campaign-order-summary.php:177
-msgid "The submission checks run again when you press it."
-msgstr ""
-
-#. translators: %s: the size still missing its file, e.g. 720×300.
-#: templates/portal/partials/campaign-order-summary.php:185
-#, php-format
-msgid "Add the %s file to submit."
-msgstr ""
-
-#. translators: %d: number of problems still to resolve.
-#: templates/portal/partials/campaign-order-summary.php:191
-#, php-format
-msgid "%d thing left before you can submit."
-msgid_plural "%d things left before you can submit."
-msgstr[0] ""
-msgstr[1] ""
 
 #. translators: %s: placement name.
 #: templates/portal/partials/campaign-overlays.php:163
@@ -6903,6 +6906,12 @@ msgid "%1$s · %2$d size"
 msgid_plural "%1$s · %2$d sizes"
 msgstr[0] ""
 msgstr[1] ""
+
+#. translators: %s: a size, e.g. 300 × 250. The ad for it is not uploaded yet.
+#: templates/portal/partials/campaign-page-preview-tile.php:30
+#, php-format
+msgid "%s · needs a file"
+msgstr ""
 
 #: templates/portal/partials/campaign-plan-step.php:85
 msgid "01 · Package"
@@ -7032,36 +7041,36 @@ msgstr ""
 msgid "Your ads in their placements on a %s article."
 msgstr ""
 
-#: templates/portal/partials/campaign-review-step.php:294
+#: templates/portal/partials/campaign-review-step.php:307
 msgid "Mobile"
 msgstr ""
 
-#: templates/portal/partials/campaign-review-step.php:296
-msgid "A mobile preview is coming soon."
+#: templates/portal/partials/campaign-review-step.php:310
+msgid "An illustration of the page. The list below names every ad."
 msgstr ""
 
-#: templates/portal/partials/campaign-review-step.php:366
+#: templates/portal/partials/campaign-review-step.php:333
 msgid "Optional"
 msgstr ""
 
-#: templates/portal/partials/campaign-review-step.php:385
+#: templates/portal/partials/campaign-review-step.php:352
 msgid "Anything that helps the team review this campaign."
 msgstr ""
 
-#: templates/portal/partials/campaign-review-step.php:389
-#: templates/portal/partials/campaign-review-step.php:396
+#: templates/portal/partials/campaign-review-step.php:356
+#: templates/portal/partials/campaign-review-step.php:363
 msgid "Back to ads"
 msgstr ""
 
-#: templates/portal/partials/campaign-review-step.php:403
+#: templates/portal/partials/campaign-review-step.php:370
 msgid "Editing pauses while the campaign is in review."
 msgstr ""
 
-#: templates/portal/partials/campaign-review-step.php:407
+#: templates/portal/partials/campaign-review-step.php:374
 msgid "Withdraw it any time before a reviewer starts."
 msgstr ""
 
-#: templates/portal/partials/campaign-review-step.php:411
+#: templates/portal/partials/campaign-review-step.php:378
 msgid "You are notified if changes are needed."
 msgstr ""
 
@@ -7879,19 +7888,19 @@ msgstr ""
 msgid "Changes you save here are recorded against %s and appear in their audit history as a staff edit."
 msgstr ""
 
-#: templates/portal/screens/campaign.php:596
+#: templates/portal/screens/campaign.php:605
 msgid "Delivery"
 msgstr ""
 
-#: templates/portal/screens/campaign.php:642
+#: templates/portal/screens/campaign.php:651
 msgid "No creatives yet"
 msgstr ""
 
-#: templates/portal/screens/campaign.php:643
+#: templates/portal/screens/campaign.php:652
 msgid "A campaign needs at least one creative before it can be submitted."
 msgstr ""
 
-#: templates/portal/screens/campaign.php:646
+#: templates/portal/screens/campaign.php:655
 msgid "Creatives table"
 msgstr ""
 
