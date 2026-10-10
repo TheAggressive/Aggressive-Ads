@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
-"POT-Creation-Date: 2026-10-10T05:22:16+00:00\n"
+"POT-Creation-Date: 2026-10-10T06:07:36+00:00\n"
 "PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -1733,7 +1733,7 @@ msgstr ""
 #. translators: 1: package name. 2: month and year the campaign starts, e.g. October 2026.
 #: inc/Admin/class-review-data.php:321
 #: inc/Portal/class-campaign-list-view-data.php:315
-#: inc/Workflow/class-campaign-editor.php:698
+#: inc/Workflow/class-campaign-editor.php:713
 #, php-format
 msgid "%1$s – %2$s"
 msgstr ""
@@ -4218,8 +4218,8 @@ msgid ""
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:824
-#: inc/Workflow/class-campaign-editor.php:552
-#: inc/Workflow/class-campaign-editor.php:557
+#: inc/Workflow/class-campaign-editor.php:567
+#: inc/Workflow/class-campaign-editor.php:572
 msgid "Add an ad for every size in the package before continuing."
 msgstr ""
 
@@ -4251,7 +4251,7 @@ msgid ""
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:830
-#: inc/Workflow/class-campaign-copier.php:324
+#: inc/Workflow/class-campaign-copier.php:325
 msgid "The campaign could not be copied. Please try again."
 msgstr ""
 
@@ -5139,12 +5139,12 @@ msgstr ""
 msgid "That impression could not be recorded. Please try again."
 msgstr ""
 
-#: inc/REST/class-campaigns-controller.php:343
+#: inc/REST/class-campaigns-controller.php:344
 #: inc/Workflow/class-campaign-editor.php:124
 msgid "That advertiser could not be found."
 msgstr ""
 
-#: inc/REST/class-campaigns-controller.php:499
+#: inc/REST/class-campaigns-controller.php:500
 #: inc/REST/class-creative-file-controller.php:375
 #: inc/REST/class-line-items-controller.php:366
 #: inc/Workflow/class-assignment-editor.php:384
@@ -5723,7 +5723,7 @@ msgstr ""
 msgid "Open-ended"
 msgstr ""
 
-#: inc/Workflow/class-campaign-copier.php:254
+#: inc/Workflow/class-campaign-copier.php:255
 #: inc/Workflow/class-campaign-editor.php:154
 msgid "Untitled campaign"
 msgstr ""
@@ -5749,21 +5749,21 @@ msgstr ""
 msgid "One of the selected placements is not available."
 msgstr ""
 
-#: inc/Workflow/class-campaign-editor.php:480
+#: inc/Workflow/class-campaign-editor.php:495
 msgid "That campaign step is not valid."
 msgstr ""
 
-#: inc/Workflow/class-campaign-editor.php:649
+#: inc/Workflow/class-campaign-editor.php:664
 msgid "That package is not available."
 msgstr ""
 
-#: inc/Workflow/class-campaign-editor.php:660
+#: inc/Workflow/class-campaign-editor.php:675
 msgid ""
 "That package is not configured completely. Please choose another package or "
 "get in touch."
 msgstr ""
 
-#: inc/Workflow/class-campaign-editor.php:665
+#: inc/Workflow/class-campaign-editor.php:680
 msgid ""
 "That package includes a placement that is not available. Please choose "
 "another package or get in touch."
@@ -5857,6 +5857,33 @@ msgstr ""
 
 #: inc/Workflow/class-campaign-validator.php:260
 msgid "This campaign is not ready to submit."
+msgstr ""
+
+#: inc/Workflow/class-click-tracker-validation.php:81
+msgid ""
+"Add {lpurl} where the tracking link should send visitors on to your landing "
+"page."
+msgstr ""
+
+#: inc/Workflow/class-click-tracker-validation.php:82
+msgid ""
+"Use {lpurl} once. The tracking link can only send visitors on to one landing "
+"page."
+msgstr ""
+
+#: inc/Workflow/class-click-tracker-validation.php:83
+msgid ""
+"Use {lpurl} for the landing page. Other forms are not supported, because the "
+"page address has to be encoded to survive inside the tracking link."
+msgstr ""
+
+#: inc/Workflow/class-click-tracker-validation.php:84
+msgid "That tracking link is too long. Ask your agency for a shorter one."
+msgstr ""
+
+#: inc/Workflow/class-click-tracker-validation.php:85
+msgid ""
+"Enter a valid http or https tracking link without a username or password."
 msgstr ""
 
 #: inc/Workflow/class-conversion-credential-manager.php:68
