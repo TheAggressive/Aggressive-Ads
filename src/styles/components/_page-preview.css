@@ -1,0 +1,95 @@
+/*
+ * "See it on the page": the Review step's sketch of the ads in an article.
+ *
+ * An illustration drawn from the campaign's own sizes and creatives, not a
+ * measurement of the publisher's theme — a placement stores no position, so
+ * the layout is by shape alone (see portal-routing-and-ui.md, #294). The
+ * Mobile choice is read from the radio group in the same card with `:has()`,
+ * so it needs no script.
+ */
+.aggr-pagepreview {
+	overflow: hidden;
+	margin-bottom: var(--aggr-space-md);
+	background: var(--aggr-color-surface);
+	border: 1px solid var(--aggr-border-color);
+	border-radius: var(--aggr-radius-control);
+}
+
+.aggr-pagepreview__bar {
+	display: flex;
+	align-items: center;
+	height: 2.25rem;
+	padding: 0 var(--aggr-space-md);
+	background: var(--aggr-color-surface-raised);
+	border-bottom: 1px solid var(--aggr-border-color);
+}
+
+
+.aggr-pagepreview__body {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 30%;
+	gap: var(--aggr-space-lg);
+	padding: var(--aggr-space-lg);
+}
+
+.aggr-pagepreview__column,
+.aggr-pagepreview__rail {
+	display: flex;
+	flex-direction: column;
+	gap: var(--aggr-space-sm);
+	min-width: 0;
+}
+
+.aggr-pagepreview__line {
+	height: 0.5rem;
+	border-radius: 4px;
+	background: var(--aggr-color-surface-inset);
+}
+
+.aggr-pagepreview__line--title {
+	width: 70%;
+	height: 0.875rem;
+}
+
+.aggr-pagepreview__line--short {
+	width: 60%;
+}
+
+.aggr-pagepreview__slot {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: auto;
+	border-radius: 2px;
+	object-fit: cover;
+}
+
+.aggr-pagepreview__slot--empty {
+	background: var(--aggr-color-pending-tint);
+	border: 1.5px dashed var(--aggr-color-pending);
+	color: var(--aggr-color-pending);
+	font-family: var(--aggr-font-mono);
+	font-size: 11px;
+}
+
+/*
+ * Mobile: the same page, one column wide. The frame narrows to a phone's width
+ * and the side column falls beneath the text, which is where a responsive
+ * layout puts it — wide ads scale down to the frame, tall ones follow the copy.
+ * It is a sketch of that reflow, not a measurement of the site's theme.
+ */
+.aggr-review-preview:has(input[value="mobile"]:checked) .aggr-pagepreview {
+	max-width: 22rem;
+	margin-inline: auto;
+}
+
+.aggr-review-preview:has(input[value="mobile"]:checked) .aggr-pagepreview__body {
+	grid-template-columns: minmax(0, 1fr);
+}
+
+.aggr-pagepreview__url {
+	color: var(--aggr-color-text-muted);
+	font-family: var(--aggr-font-mono);
+	font-size: 11px;
+}

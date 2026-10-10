@@ -136,39 +136,6 @@
 	padding: 0;
 }
 
-/* Two options side by side, one of them chosen. */
-.aggr-segmented {
-	display: inline-flex;
-	padding: 3px;
-	background: var(--aggr-color-surface-sunken);
-	border-radius: var(--aggr-radius-control);
-}
-
-.aggr-portal .aggr-segmented button {
-	min-height: 2rem;
-	padding: 0 var(--aggr-space-sm);
-	background: transparent;
-	border: 0;
-	border-radius: calc(var(--aggr-radius-control) - 2px);
-	color: var(--aggr-color-text-muted);
-	font: inherit;
-	font-size: 13px;
-	font-weight: 600;
-	text-transform: none;
-}
-
-.aggr-portal .aggr-segmented button[aria-pressed="true"] {
-	background: var(--aggr-color-surface);
-	color: var(--aggr-color-text);
-	box-shadow: 0 1px 2px rgb(0 0 0 / 8%);
-}
-
-.aggr-pagepreview__url {
-	color: var(--aggr-color-text-muted);
-	font-family: var(--aggr-font-mono);
-	font-size: 11px;
-}
-
 .aggr-submit-card .aggr-ads-section__head {
 	align-items: center;
 }

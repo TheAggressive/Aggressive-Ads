@@ -2,7 +2,7 @@ import { expect, test } from '@playwright/test';
 import { expectPortalA11y } from './accessibility';
 import { signIn } from './sign-in-helper';
 
-test( "on a phone the step's one action is pinned, with why it is locked", async ( {
+test( "on a phone the step's action is pinned, and the review sketch marks gaps", async ( {
 	page,
 } ) => {
 	/*
@@ -96,4 +96,23 @@ test( "on a phone the step's one action is pinned, with why it is locked", async
 		page.getByRole( 'button', { name: 'Continue to review', exact: true } )
 	).toHaveCount( 1 );
 	await expectPortalA11y( page );
+
+	/*
+	 * The review step's sketch marks every size still without a file, and the
+	 * width switch works on a phone too. Reached by its link: a draft with no
+	 * files can be looked at, just not submitted.
+	 */
+	await page.goto( page.url().replace( 'step=creative', 'step=review' ) );
+
+	const missing = page.locator( '.aggr-pagepreview__slot--empty' );
+
+	expect( await missing.count() ).toBeGreaterThan( 0 );
+	await expect( missing.first() ).toContainText( 'needs a file' );
+	await page
+		.getByRole( 'radio', { name: 'Mobile' } )
+		.check( { force: true } );
+	await expect( page.locator( '.aggr-pagepreview__body' ) ).toHaveCSS(
+		'grid-template-columns',
+		/^[\d.]+px$/
+	);
 } );

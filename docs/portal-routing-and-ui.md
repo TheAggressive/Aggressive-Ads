@@ -526,8 +526,19 @@ readiness can change while the review screen is open.
 
 "See it on the page" is an `aria-hidden` illustration: the stored creatives on
 an article sketch, wide sizes across the column and the rest in the side column.
-The creative list under it says the same thing in words. Placing each ad where
-its placement really sits is #294.
+The creative list under it says the same thing in words. A size with no file
+yet is drawn dashed and says "needs a file". Desktop/Mobile is a pair of radios
+the stylesheet reads (`:has()`), so it works without script: Mobile narrows the
+frame and drops the side column beneath the copy.
+
+**What #294 still cannot do.** Placing each ad where its placement *really*
+sits on the publisher's pages. A placement stores a name, a size, its groups
+and its limits — nothing about where on a page it renders — so the sketch puts
+a wide size across the article and the rest in the side column by shape alone,
+and says it is an illustration. That shape rule is `Portal\Page_Preview`, kept
+out of the templates so `PagePreviewTest` can pin it. **Revisit if a placement gains a position or
+context** (an in-content/sidebar/header attribute the publisher sets); that is a
+placement-model change, and the sketch should read it rather than guess.
 
 Submission is not another draft mutation. The durable resume point remains
 `review`; REST autosave rejects `submit` as a persisted wizard step. Its campaign-bound nonce authorizes only final

@@ -1,0 +1,80 @@
+/*
+ * A segmented control: two or three options side by side, one chosen.
+ *
+ * Its own partial rather than part of the wizard's: the Review step's preview
+ * width is the first user, and nothing about the control is a wizard thing.
+ * Two forms of one look — buttons with `aria-pressed` for a choice a script
+ * acts on, and radios for a choice only the stylesheet reads.
+ */
+/* Two options side by side, one of them chosen. */
+.aggr-segmented {
+	display: inline-flex;
+	padding: 3px;
+	background: var(--aggr-color-surface-sunken);
+	border-radius: var(--aggr-radius-control);
+}
+
+.aggr-portal .aggr-segmented button {
+	min-height: 2rem;
+	padding: 0 var(--aggr-space-sm);
+	background: transparent;
+	border: 0;
+	border-radius: calc(var(--aggr-radius-control) - 2px);
+	color: var(--aggr-color-text-muted);
+	font: inherit;
+	font-size: 13px;
+	font-weight: 600;
+	text-transform: none;
+}
+
+.aggr-portal .aggr-segmented button[aria-pressed="true"] {
+	background: var(--aggr-color-surface);
+	color: var(--aggr-color-text);
+	box-shadow: 0 1px 2px rgb(0 0 0 / 8%);
+}
+
+/*
+ * The same control as radios (the preview's width). The input is visually
+ * hidden but stays focusable, so the arrow keys move between the two and the
+ * label carries the focus ring.
+ */
+.aggr-segmented--choice {
+	min-width: 0;
+	margin: 0;
+	border: 0;
+}
+
+.aggr-portal .aggr-segmented--choice label {
+	display: inline-flex;
+	cursor: pointer;
+}
+
+.aggr-portal .aggr-segmented--choice label > span {
+	display: inline-flex;
+	align-items: center;
+	min-height: 2rem;
+	padding: 0 var(--aggr-space-sm);
+	border: 1px solid transparent;
+	border-radius: calc(var(--aggr-radius-control) - 2px);
+	color: var(--aggr-color-text-muted);
+	font-size: 13px;
+	font-weight: 600;
+}
+
+.aggr-portal .aggr-segmented--choice input:checked + span {
+	background: var(--aggr-color-surface);
+	color: var(--aggr-color-text);
+	box-shadow: 0 1px 2px rgb(0 0 0 / 8%);
+}
+
+.aggr-portal .aggr-segmented--choice input:focus-visible + span {
+	outline: 2px solid var(--aggr-color-accent);
+	outline-offset: 1px;
+}
+
+/* A background alone does not survive forced colours; the border does. */
+@media (forced-colors: active) {
+	.aggr-portal .aggr-segmented--choice input:checked + span {
+		border-color: CanvasText;
+	}
+}
