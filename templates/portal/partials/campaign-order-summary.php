@@ -30,6 +30,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 use Aggressive\Ads\Portal\Date_Input;
+use Aggressive\Ads\Portal\Wizard_Action;
 
 $aggr_summary_total   = 0;
 $aggr_summary_ready   = 0;
@@ -52,12 +53,75 @@ foreach ( $aggr_slots as $aggr_summary_slot ) {
 $aggr_summary_package = (string) ( $aggr_campaign['package_name'] ?? '' );
 $aggr_summary_price   = (string) ( $aggr_campaign['package_price'] ?? '' );
 $aggr_summary_link    = (string) ( $aggr_campaign['default_click_url'] ?? '' );
-$aggr_summary_left    = count( $aggr_review_problems );
 $aggr_summary_percent = $aggr_summary_total > 0 ? (int) round( 100 * $aggr_summary_ready / $aggr_summary_total ) : 0;
 
-// Only the ads are missing, and only one: the note can name the file.
-$aggr_summary_codes    = array_unique( array_column( $aggr_review_problems, 'code' ) );
-$aggr_summary_one_file = 1 === count( $aggr_summary_missing ) && array() === array_diff( $aggr_summary_codes, array( 'no_creatives', 'placement_uncovered' ) );
+/*
+ * The step's one action. Whether it is locked, and what it says about why, is
+ * decided by `Wizard_Action` — one rule the card here and the phone's bar
+ * (`campaign-action-bar.php`) both read, so they cannot disagree. This block
+ * only gives that decision its words, which are translated and so live in the
+ * template.
+ *
+ * `labels` are spans so the details step can carry its script and no-script
+ * wordings; `note` is the line beneath the button — the reason when locked, a
+ * reassurance when not.
+ */
+$aggr_action = Wizard_Action::resolve(
+	(string) $aggr_step,
+	(bool) $aggr_creative_ready,
+	(bool) $aggr_review_ready,
+	$aggr_summary_missing,
+	array_map( static fn ( $aggr_problem ): string => (string) ( $aggr_problem['code'] ?? '' ), $aggr_review_problems )
+);
+
+$aggr_cta = array(
+	'form'   => $aggr_action->form,
+	'locked' => $aggr_action->locked,
+	'labels' => match ( $aggr_action->label ) {
+		Wizard_Action::LABEL_PLAN   => array(
+			array(
+				'class' => 'aggr-noscript-label',
+				'text'  => __( 'Save and continue', 'aggressive-ads' ),
+			),
+			array(
+				'class' => 'aggr-script-label',
+				'text'  => __( 'Continue to ads', 'aggressive-ads' ),
+			),
+		),
+		Wizard_Action::LABEL_REVIEW => array(
+			array(
+				'class' => '',
+				'text'  => __( 'Continue to review', 'aggressive-ads' ),
+			),
+		),
+		default                     => array(
+			array(
+				'class' => '',
+				'text'  => __( 'Submit for review', 'aggressive-ads' ),
+			),
+		),
+	},
+	'note'   => match ( $aggr_action->reason ) {
+		Wizard_Action::REASON_EDITABLE        => __( 'You can change any of this until you submit.', 'aggressive-ads' ),
+		Wizard_Action::REASON_RECHECKED       => __( 'The submission checks run again when you press it.', 'aggressive-ads' ),
+		Wizard_Action::REASON_SIZES_NEED_FILE => sprintf(
+			/* translators: %d: sizes that still need a file. */
+			_n( '%d size still needs a file.', '%d sizes still need a file.', $aggr_action->count, 'aggressive-ads' ),
+			$aggr_action->count
+		),
+		Wizard_Action::REASON_ADD_ONE_FILE    => sprintf(
+			/* translators: %s: the size still missing its file, e.g. 720×300. */
+			__( 'Add the %s file to submit.', 'aggressive-ads' ),
+			$aggr_action->size
+		),
+		Wizard_Action::REASON_THINGS_LEFT     => sprintf(
+			/* translators: %d: number of problems still to resolve. */
+			_n( '%d thing left before you can submit.', '%d things left before you can submit.', $aggr_action->count, 'aggressive-ads' ),
+			$aggr_action->count
+		),
+		default                               => '',
+	},
+);
 ?>
 <aside class="aggr-summary" aria-labelledby="aggr-order-summary-heading">
 	<div class="aggr-summary__head">
@@ -151,48 +215,20 @@ $aggr_summary_one_file = 1 === count( $aggr_summary_missing ) && array() === arr
 		<span class="aggr-summary__price"><?php echo esc_html( '' === $aggr_summary_price ? '—' : $aggr_summary_price ); ?></span>
 	</div>
 
-	<?php if ( 'details' === $aggr_step ) : ?>
-		<button class="aggr-button aggr-summary__cta" type="submit" form="aggr-plan-form">
-			<span class="aggr-noscript-label"><?php esc_html_e( 'Save and continue', 'aggressive-ads' ); ?></span>
-			<span class="aggr-script-label"><?php esc_html_e( 'Continue to ads', 'aggressive-ads' ); ?></span>
-		</button>
-		<p class="aggr-summary__note"><?php esc_html_e( 'You can change any of this until you submit.', 'aggressive-ads' ); ?></p>
-	<?php elseif ( 'creative' === $aggr_step ) : ?>
-		<?php if ( $aggr_creative_ready ) : ?>
-			<button class="aggr-button aggr-summary__cta" type="submit" form="aggr-creative-complete"><?php esc_html_e( 'Continue to review', 'aggressive-ads' ); ?></button>
-		<?php else : ?>
-			<button class="aggr-button aggr-summary__cta" type="button" disabled><?php esc_html_e( 'Continue to review', 'aggressive-ads' ); ?></button>
-			<p class="aggr-summary__note">
-				<?php
-				printf(
-					/* translators: %d: sizes that still need a file. */
-					esc_html( _n( '%d size still needs a file.', '%d sizes still need a file.', count( $aggr_summary_missing ), 'aggressive-ads' ) ),
-					(int) count( $aggr_summary_missing )
-				);
-				?>
-			</p>
-		<?php endif; ?>
-	<?php elseif ( $aggr_review_ready ) : ?>
-		<button class="aggr-button aggr-summary__cta" type="submit" form="aggr-submit-form"><?php esc_html_e( 'Submit for review', 'aggressive-ads' ); ?></button>
-		<p class="aggr-summary__note"><?php esc_html_e( 'The submission checks run again when you press it.', 'aggressive-ads' ); ?></p>
-	<?php else : ?>
-		<button class="aggr-button aggr-summary__cta" type="button" disabled><?php esc_html_e( 'Submit for review', 'aggressive-ads' ); ?></button>
-		<p class="aggr-summary__note">
-			<?php
-			if ( $aggr_summary_one_file ) {
-				printf(
-					/* translators: %s: the size still missing its file, e.g. 720×300. */
-					esc_html__( 'Add the %s file to submit.', 'aggressive-ads' ),
-					esc_html( $aggr_summary_missing[0] )
-				);
-			} else {
-				printf(
-					/* translators: %d: number of problems still to resolve. */
-					esc_html( _n( '%d thing left before you can submit.', '%d things left before you can submit.', $aggr_summary_left, 'aggressive-ads' ) ),
-					(int) $aggr_summary_left
-				);
-			}
-			?>
-		</p>
+	<button
+		class="aggr-button aggr-summary__cta"
+		type="<?php echo $aggr_cta['locked'] ? 'button' : 'submit'; ?>"
+		<?php echo $aggr_cta['locked'] ? 'disabled' : 'form="' . esc_attr( $aggr_cta['form'] ) . '"'; ?>
+	>
+		<?php foreach ( $aggr_cta['labels'] as $aggr_cta_label ) : ?>
+			<?php if ( '' === $aggr_cta_label['class'] ) : ?>
+				<?php echo esc_html( $aggr_cta_label['text'] ); ?>
+			<?php else : ?>
+				<span class="<?php echo esc_attr( $aggr_cta_label['class'] ); ?>"><?php echo esc_html( $aggr_cta_label['text'] ); ?></span>
+			<?php endif; ?>
+		<?php endforeach; ?>
+	</button>
+	<?php if ( '' !== $aggr_cta['note'] ) : ?>
+		<p class="aggr-summary__note"><?php echo esc_html( $aggr_cta['note'] ); ?></p>
 	<?php endif; ?>
 </aside>

@@ -58,6 +58,18 @@
 	}
 }
 
+/*
+ * On a phone the action lives in the pinned bar (`_action-bar.css`), so the
+ * step's own button stands down there as it does beside the summary. The
+ * viewport, not the container, because the bar is shown by the viewport; the
+ * two cannot disagree, since the container is never wider than the viewport.
+ */
+@media (max-width: 40rem) {
+	.aggr-wizard .aggr-wizard__primary {
+		display: none;
+	}
+}
+
 .aggr-summary {
 	display: flex;
 	flex-direction: column;

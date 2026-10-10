@@ -279,7 +279,14 @@ placements read `728×90 ×2`), the link, how many ads are ready (from the Ads s
 on) and the total, with the one action that moves the advertiser on —
 **Continue to ads**, **Continue to review**, **Submit for review**. A locked
 action says why beneath it; when all that is missing is one file, it names the
-size. The page heading carries a breadcrumb, "All changes saved" while the
+size. The action is decided once (`Portal\Wizard_Action`, a pure rule proven in
+`WizardActionTest`; the summary template only gives it words) and drawn in
+three places, of which exactly one shows at any width: the summary's
+button from 60rem of panel, the step's own button above 40rem of screen, and
+below that a bar pinned to the bottom of the screen (`.aggr-actionbar--wizard`,
+`partials/campaign-action-bar.php`) carrying the reason when the step is locked.
+The other two are `display: none`, which is what keeps one primary action in the
+accessibility tree. The page heading carries a breadcrumb, "All changes saved" while the
 wizard is on screen, and "Step N of 3" on a phone, where the bar has no room
 for labels. The first step's dates are also chosen on a range calendar
 (`@aggr/calendar`, `partials/campaign-calendar.php`): two months, one on a phone,
