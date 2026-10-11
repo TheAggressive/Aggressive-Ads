@@ -57,7 +57,7 @@
  * The browser scrolls a focused element into view inside the scroll padding,
  * so this keeps it above the bar rather than underneath it.
  */
-html:has(.aggr-actionbar) {
+html:has(.aggr-actionbar:not(.aggr-actionbar--wizard)) {
 	scroll-padding-bottom: 7rem;
 }
 
@@ -77,6 +77,46 @@ html:has(.aggr-actionbar) {
 
 	.aggr-actionbar__actions > * {
 		flex: 1 1 auto;
+	}
+}
+
+/*
+ * The wizard's bar (#302): the step's one action on a phone, and nowhere else.
+ * Above 40rem the step's own button and the order summary carry the action, so
+ * this is `display: none` there — which also takes it out of the accessibility
+ * tree, keeping "one primary action on screen" true at every width.
+ *
+ * Unlike Review's bar it keeps its status on a phone. Review prints its status
+ * at the top of the page; the wizard's reason ("Add 1 file to submit") exists
+ * nowhere near the button until this puts it there.
+ */
+.aggr-actionbar--wizard {
+	display: none;
+}
+
+@media (max-width: 40rem) {
+	.aggr-actionbar--wizard {
+		display: flex;
+	}
+
+	.aggr-actionbar--wizard .aggr-actionbar__status {
+		display: flex;
+		flex: 1 1 100%;
+	}
+
+	/* The scroll padding in force on Review, scoped to where this bar shows. */
+	html:has(.aggr-actionbar--wizard) {
+		scroll-padding-bottom: 7rem;
+	}
+
+	/*
+	 * Notices sit bottom-right at z-index 100, above this bar's 20, so a notice
+	 * would cover the very button it is usually about (a failed save, a
+	 * refused submit). Lift the region clear of the bar instead of stacking
+	 * them.
+	 */
+	body:has(.aggr-actionbar--wizard) .aggr-toasts {
+		inset-block-end: 7rem;
 	}
 }
 

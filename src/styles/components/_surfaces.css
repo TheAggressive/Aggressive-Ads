@@ -794,11 +794,13 @@
  * refused save can render it already open.
  */
 .aggr-rename,
+.aggr-tracker,
 .aggr-upload-destination {
 	margin-top: var(--aggr-space-md);
 }
 
 .aggr-rename > summary,
+.aggr-tracker > summary,
 .aggr-upload-destination > summary {
 	display: flex;
 	flex-wrap: wrap;
@@ -809,6 +811,7 @@
 }
 
 .aggr-rename > summary,
+.aggr-tracker > summary,
 .aggr-upload-destination__change {
 	color: var(--aggr-color-text-muted);
 	font-size: 13px;
@@ -822,6 +825,7 @@
 }
 
 .aggr-rename[open] > summary,
+.aggr-tracker[open] > summary,
 .aggr-upload-destination[open] > summary {
 	margin-bottom: var(--aggr-space-sm);
 }

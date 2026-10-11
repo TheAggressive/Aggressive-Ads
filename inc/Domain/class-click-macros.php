@@ -46,6 +46,21 @@ final class Click_Macros {
 	public const CLICK_ID     = 'click_id';
 
 	/**
+	 * Where a click tracker sends the visitor on to, and only there.
+	 *
+	 * Not in {@see self::names()}: a landing page has no landing page to name,
+	 * and offering it beside the others would invite `{lpurl}` into a
+	 * destination, where it would expand to nothing. It is filled in only when
+	 * the caller supplies `landing_url`, which is the hop composing a tracker.
+	 *
+	 * Always encoded, like every other value. A landing page is a URL with its
+	 * own `?`, `&` and `#`, and dropped into a query string unencoded those end
+	 * the tracker's parameter and start new ones — the tracker would be handed
+	 * a truncated destination and the rest as parameters of its own.
+	 */
+	public const LANDING_PAGE = 'lpurl';
+
+	/**
 	 * Every macro, in the order the page offers them.
 	 *
 	 * @return array<int, string>
@@ -74,8 +89,8 @@ final class Click_Macros {
 	/**
 	 * Fills a destination link's macros in.
 	 *
-	 * @param string                                                                                        $url     The stored destination.
-	 * @param array{campaign_id?: int, creative_id?: int, placement_id?: int, click_id?: string, now?: int} $context What this click knows.
+	 * @param string                                                                                                              $url     The stored destination.
+	 * @param array{campaign_id?: int, creative_id?: int, placement_id?: int, click_id?: string, now?: int, landing_url?: string} $context What this click knows.
 	 * @return string The link to send the visitor to.
 	 */
 	public static function expand( string $url, array $context ): string {
@@ -98,6 +113,12 @@ final class Click_Macros {
 			self::CACHEBUSTER  => (string) $now . '-' . substr( (string) ( $context['click_id'] ?? '' ), 0, 12 ),
 			self::CLICK_ID     => (string) ( $context['click_id'] ?? '' ),
 		);
+
+		// Absent unless supplied, so in a plain destination `{lpurl}` is an
+		// unknown macro and is removed like any other.
+		if ( isset( $context['landing_url'] ) && '' !== $context['landing_url'] ) {
+			$values[ self::LANDING_PAGE ] = $context['landing_url'];
+		}
 
 		return (string) preg_replace_callback(
 			'/\{([a-z_]{1,32})\}/i',

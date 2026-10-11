@@ -559,6 +559,15 @@ if ( in_array( $aggr_creative_notice, array( 'creative_uploaded', 'creative_remo
 				</div>
 				<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-order-summary.php'; ?>
 			</div>
+			<?php
+			/*
+			 * Outside the grid on purpose. A sticky element can only travel inside
+			 * its containing block, and a grid item's is its own grid area — here a
+			 * row exactly as tall as the bar, so inside the layout it sat in place
+			 * and never rode the screen. Drawn from the action the summary decided.
+			 */
+			require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-action-bar.php';
+			?>
 		</div>
 	</section>
 <?php endif; ?>

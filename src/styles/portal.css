@@ -30,6 +30,8 @@
 @import './components/_surfaces.css';
 @import './components/_wizard.css';
 @import './components/_wizard-details.css';
+@import './components/_segmented.css';
+@import './components/_page-preview.css';
 @import './components/_share.css';
 @import './components/_destination.css';
 @import './components/_device-preview.css';

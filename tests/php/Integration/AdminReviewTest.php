@@ -511,6 +511,28 @@ final class AdminReviewTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * A reviewer is told about a click tracker, because they are the control for it.
+	 *
+	 * @return void
+	 */
+	public function test_the_click_tracker_reaches_the_reviewer(): void {
+		$campaign = $this->campaign( Post_Statuses::SUBMITTED, 'Campaign with a tracker' );
+		update_post_meta( $campaign, Campaign_Repository::META_CLICK_TRACKER, 'https://track.example.com/c?u={lpurl}' );
+
+		wp_set_current_user( $this->reviewer );
+
+		$row = $this->data->campaign( $campaign );
+
+		$this->assertIsArray( $row );
+		$this->assertSame( 'https://track.example.com/c?u={lpurl}', $row['click_tracker'] );
+
+		$plain = $this->data->campaign( $this->campaign( Post_Statuses::SUBMITTED, 'Campaign without one' ) );
+
+		$this->assertIsArray( $plain );
+		$this->assertSame( '', $plain['click_tracker'], 'The key is always there; the screen branches on its value.' );
+	}
+
+	/**
 	 * **The review capability alone is not a licence over every organization.**
 	 *
 	 * `save_internal_notes()` checks the capability *and* `edit_aggr_campaign`

@@ -473,6 +473,21 @@ final class Campaign_Editor {
 			$clean['default_click_url'] = $link;
 		}
 
+		/*
+		 * A third party the publisher is agreeing to send readers through, so
+		 * it is validated by its own rules and stored apart from the landing
+		 * page. Empty removes it. Review sees it with the destination.
+		 */
+		if ( array_key_exists( 'click_tracker', $fields ) ) {
+			$tracker = Click_Tracker_Validation::clean( (string) $fields['click_tracker'] );
+
+			if ( is_wp_error( $tracker ) ) {
+				return $tracker;
+			}
+
+			$clean['click_tracker'] = $tracker;
+		}
+
 		if ( array_key_exists( 'wizard_step', $fields ) ) {
 			$step = sanitize_key( (string) $fields['wizard_step'] );
 

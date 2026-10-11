@@ -853,6 +853,29 @@ test( 'advertiser completes and submits the accessible three-step wizard', async
 		page.locator( 'a[href="https://www.example.com/rewritten"]' )
 	).toHaveCount( 0 );
 
+	// "See it on the page": the width switch redraws the sketch, no script.
+	const sketch = page.locator( '.aggr-pagepreview' );
+	const columns = () =>
+		sketch
+			.locator( '.aggr-pagepreview__body' )
+			.evaluate(
+				( el ) =>
+					getComputedStyle( el ).gridTemplateColumns.split( ' ' )
+						.length
+			);
+
+	await expect(
+		page.getByRole( 'radio', { name: 'Desktop' } )
+	).toBeChecked();
+	expect( await columns() ).toBe( 2 );
+	await page
+		.getByRole( 'radio', { name: 'Mobile' } )
+		.check( { force: true } );
+	expect( await columns() ).toBe( 1 );
+	expect( ( await sketch.boundingBox() )?.width ?? 0 ).toBeLessThanOrEqual(
+		22 * 16 + 2
+	);
+
 	// Submitting is the end of review, not a page of its own.
 	await expect(
 		page.getByRole( 'heading', {

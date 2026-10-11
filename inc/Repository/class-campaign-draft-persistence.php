@@ -88,6 +88,7 @@ final class Campaign_Draft_Persistence {
 			'end_ts'            => Campaign_Repository::META_END_TS,
 			'advertiser_notes'  => Campaign_Repository::META_ADVERTISER_NOTES,
 			'default_click_url' => Campaign_Repository::META_DEFAULT_CLICK_URL,
+			'click_tracker'     => Campaign_Repository::META_CLICK_TRACKER,
 			'wizard_step'       => Campaign_Repository::META_WIZARD_STEP,
 			'package_id'        => Campaign_Repository::META_PACKAGE_ID,
 			'budget_cents'      => Campaign_Repository::META_BUDGET_CENTS,
@@ -127,6 +128,7 @@ final class Campaign_Draft_Persistence {
 			'end_ts'            => 'end_ts',
 			'advertiser_notes'  => 'advertiser_notes',
 			'default_click_url' => 'default_click_url',
+			'click_tracker'     => 'click_tracker',
 			'wizard_step'       => 'wizard_step',
 			'package_id'        => 'package_id',
 			'budget_cents'      => 'budget_cents',
@@ -160,7 +162,7 @@ final class Campaign_Draft_Persistence {
 				$normalized[ $key ] = (int) $fields[ $key ];
 			} elseif ( 'title' === $key ) {
 				$normalized[ $key ] = Post_Title::as_stored( (string) $fields[ $key ] );
-			} elseif ( in_array( $key, array( 'advertiser_notes', 'default_click_url', 'wizard_step', 'currency' ), true ) ) {
+			} elseif ( in_array( $key, array( 'advertiser_notes', 'default_click_url', 'click_tracker', 'wizard_step', 'currency' ), true ) ) {
 				$normalized[ $key ] = (string) $fields[ $key ];
 			}
 		}

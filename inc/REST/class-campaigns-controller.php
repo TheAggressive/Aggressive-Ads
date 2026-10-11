@@ -205,6 +205,7 @@ final class Campaigns_Controller implements Service {
 						'end_date'          => $this->string_arg( false ),
 						'advertiser_notes'  => $this->textarea_arg( false ),
 						'default_click_url' => $this->string_arg( false ),
+						'click_tracker'     => $this->string_arg( false ),
 						'wizard_step'       => $this->string_arg( false ),
 						'autosave_rev'      => $this->nonnegative_int_arg( true ),
 					),
@@ -374,7 +375,7 @@ final class Campaigns_Controller implements Service {
 
 		$fields = array();
 
-		foreach ( array( 'title', 'package_id', 'placement_ids', 'start_ts', 'end_ts', 'advertiser_notes', 'default_click_url', 'wizard_step' ) as $field ) {
+		foreach ( array( 'title', 'package_id', 'placement_ids', 'start_ts', 'end_ts', 'advertiser_notes', 'default_click_url', 'click_tracker', 'wizard_step' ) as $field ) {
 			if ( $request->has_param( $field ) ) {
 				$fields[ $field ] = $request->get_param( $field );
 			}
@@ -552,6 +553,7 @@ final class Campaigns_Controller implements Service {
 			'review_notes'      => $this->campaigns->review_notes( $campaign_id ),
 			'advertiser_notes'  => $this->campaigns->advertiser_notes( $campaign_id ),
 			'default_click_url' => $this->campaigns->default_click_url( $campaign_id ),
+			'click_tracker'     => $this->campaigns->click_tracker( $campaign_id ),
 
 			'editable'          => $this->window->allows( $campaign_id ),
 			'can_copy'          => current_user_can( Capabilities::SUBMIT_CAMPAIGN ),

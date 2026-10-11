@@ -11,6 +11,7 @@ namespace Aggressive\Ads\Tests\Upgrade;
 
 use Aggressive\Ads\Install\Migration_Map;
 use Aggressive\Ads\Install\Schema;
+use Aggressive\Ads\Install\Schema_Conversions;
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Repository\Conversion_Credential_Repository;
 use Aggressive\Ads\Repository\Conversion_Definition_Repository;
@@ -242,7 +243,7 @@ final class ConversionSchemaTest extends WP_UnitTestCase {
 		$this->assertNotEmpty( $columns, 'The fixture table must exist before its shape is asserted.' );
 
 		sort( $columns );
-		$declared = Schema::conversion_definitions_columns();
+		$declared = Schema_Conversions::conversion_definitions_columns();
 		sort( $declared );
 
 		$this->assertSame( $declared, $columns );
@@ -260,14 +261,14 @@ final class ConversionSchemaTest extends WP_UnitTestCase {
 
 		/*
 		 * And the whole index set, not only the key this test was written
-		 * about. `Schema::conversion_definitions_index_names()` was declared
+		 * about. `Schema_Conversions::conversion_definitions_index_names()` was declared
 		 * beside the DDL and had no consumer at all — seven of the nine
 		 * `*_index_names()` methods were asserted somewhere and these two were
 		 * not — so any index but `public_key` could disappear silently, taking
 		 * a query plan with it and failing nothing.
 		 */
 		$this->assertSame(
-			Schema::conversion_definitions_index_names(),
+			Schema_Conversions::conversion_definitions_index_names(),
 			array_values( array_unique( array_column( $rows, 'Key_name' ) ) )
 		);
 	}
@@ -290,7 +291,7 @@ final class ConversionSchemaTest extends WP_UnitTestCase {
 		$this->assertNotEmpty( $columns, 'The fixture table must exist before its shape is asserted.' );
 
 		sort( $columns );
-		$declared = Schema::conversions_columns();
+		$declared = Schema_Conversions::conversions_columns();
 		sort( $declared );
 
 		$this->assertSame( $declared, $columns );
@@ -337,14 +338,14 @@ final class ConversionSchemaTest extends WP_UnitTestCase {
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Schema introspection in a test.
 		$columns = $wpdb->get_col( "SHOW COLUMNS FROM {$table}" );
 
-		$this->assertCount( count( Schema::conversions_columns() ), $columns );
+		$this->assertCount( count( Schema_Conversions::conversions_columns() ), $columns );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Schema introspection in a test.
 		$rows  = $wpdb->get_results( "SHOW INDEX FROM {$table}", ARRAY_A );
 		$names = array_values( array_unique( array_column( $rows, 'Key_name' ) ) );
 
 		$this->assertCount(
-			count( Schema::conversions_index_names() ),
+			count( Schema_Conversions::conversions_index_names() ),
 			$names,
 			'A repeated dbDelta added an index. It adds and never drops, so this would stay.'
 		);
@@ -413,7 +414,7 @@ final class ConversionSchemaTest extends WP_UnitTestCase {
 		$this->assertNotEmpty( $columns, 'The fixture table must exist before its shape is asserted.' );
 
 		sort( $columns );
-		$declared = Schema::conversion_credentials_columns();
+		$declared = Schema_Conversions::conversion_credentials_columns();
 		sort( $declared );
 
 		$this->assertSame( $declared, $columns );
@@ -435,7 +436,7 @@ final class ConversionSchemaTest extends WP_UnitTestCase {
 
 		// The whole index set, for the reason given on the definitions table.
 		$this->assertSame(
-			Schema::conversion_credentials_index_names(),
+			Schema_Conversions::conversion_credentials_index_names(),
 			array_values( array_unique( array_column( $rows, 'Key_name' ) ) )
 		);
 	}

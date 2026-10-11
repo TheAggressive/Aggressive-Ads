@@ -196,6 +196,21 @@ upload to it; the button is restored if an attempt is refused. Uploading is a
 change of context, so a sentence describing it precedes both controls and is in
 `aria-describedby` on each (WCAG 3.2.2).
 
+Folded under the Destination card is an optional **click tracker**
+(`campaign-tracker-card.php`): an agency's tracking link the visitor goes
+through before the landing page, with `{lpurl}` once where the tracker expects
+it (`Click_Tracker_Rules`; `docs/threat-model.md`). It is **its own form and its
+own save**, not the destination's autosave, whose script is built around one
+link field and its status. It posts the same save action with only
+`click_tracker`, and carries an `autosave_rev` that the autosave script keeps
+current in every copy on the page and waits on before another form submits —
+`campaign-tracker.spec.ts` saves a destination and then a tracker straight
+after, the order that would conflict if that were not so. A refusal returns to
+this step with the fold open and the field marked. Drafts only: a running
+campaign changes its destination by a reviewed proposal, and a tracker must not
+reach live traffic another way (`open-work.md`). It is shown on the review step,
+the status card and the staff review screen, where staff are the control for it.
+
 Above the cards, while any size still needs a file, a script-only drop zone
 takes every file at once (`shared/bulk-upload.ts`, bundled into
 `@aggr/upload`; `<noscript>` hides it, and the cards' own forms are the
@@ -279,7 +294,14 @@ placements read `728×90 ×2`), the link, how many ads are ready (from the Ads s
 on) and the total, with the one action that moves the advertiser on —
 **Continue to ads**, **Continue to review**, **Submit for review**. A locked
 action says why beneath it; when all that is missing is one file, it names the
-size. The page heading carries a breadcrumb, "All changes saved" while the
+size. The action is decided once (`Portal\Wizard_Action`, a pure rule proven in
+`WizardActionTest`; the summary template only gives it words) and drawn in
+three places, of which exactly one shows at any width: the summary's
+button from 60rem of panel, the step's own button above 40rem of screen, and
+below that a bar pinned to the bottom of the screen (`.aggr-actionbar--wizard`,
+`partials/campaign-action-bar.php`) carrying the reason when the step is locked.
+The other two are `display: none`, which is what keeps one primary action in the
+accessibility tree. The page heading carries a breadcrumb, "All changes saved" while the
 wizard is on screen, and "Step N of 3" on a phone, where the bar has no room
 for labels. The first step's dates are also chosen on a range calendar
 (`@aggr/calendar`, `partials/campaign-calendar.php`): two months, one on a phone,
@@ -519,8 +541,19 @@ readiness can change while the review screen is open.
 
 "See it on the page" is an `aria-hidden` illustration: the stored creatives on
 an article sketch, wide sizes across the column and the rest in the side column.
-The creative list under it says the same thing in words. Placing each ad where
-its placement really sits is #294.
+The creative list under it says the same thing in words. A size with no file
+yet is drawn dashed and says "needs a file". Desktop/Mobile is a pair of radios
+the stylesheet reads (`:has()`), so it works without script: Mobile narrows the
+frame and drops the side column beneath the copy.
+
+**What #294 still cannot do.** Placing each ad where its placement *really*
+sits on the publisher's pages. A placement stores a name, a size, its groups
+and its limits — nothing about where on a page it renders — so the sketch puts
+a wide size across the article and the rest in the side column by shape alone,
+and says it is an illustration. That shape rule is `Portal\Page_Preview`, kept
+out of the templates so `PagePreviewTest` can pin it. **Revisit if a placement gains a position or
+context** (an in-content/sidebar/header attribute the publisher sets); that is a
+placement-model change, and the sketch should read it rather than guess.
 
 Submission is not another draft mutation. The durable resume point remains
 `review`; REST autosave rejects `submit` as a persisted wizard step. Its campaign-bound nonce authorizes only final

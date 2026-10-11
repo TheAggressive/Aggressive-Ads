@@ -38,6 +38,7 @@ final class Campaign_Repository {
 	public const META_WIZARD_STEP          = '_aggr_wizard_step';
 	public const META_ADVERTISER_NOTES     = '_aggr_advertiser_notes';
 	public const META_DEFAULT_CLICK_URL    = '_aggr_default_click_url';
+	public const META_CLICK_TRACKER        = '_aggr_click_tracker';
 	public const META_LINK_CHECK           = '_aggr_link_check';
 	public const META_PACKAGE_ID           = '_aggr_package_id';
 	public const META_BUDGET_CENTS         = '_aggr_budget_cents';
@@ -272,6 +273,21 @@ final class Campaign_Repository {
 	 */
 	public function default_click_url( int $campaign_id ): string {
 		return (string) get_post_meta( $campaign_id, self::META_DEFAULT_CLICK_URL, true );
+	}
+
+	/**
+	 * The third-party click tracker in front of the landing page, or an empty string.
+	 *
+	 * Stored apart from the destination so the landing page stays readable
+	 * wherever the portal shows it. What is stored is never trusted at serve
+	 * time: the hop re-validates it, because meta survives imports and hand
+	 * edits.
+	 *
+	 * @param int $campaign_id Campaign post id.
+	 * @return string
+	 */
+	public function click_tracker( int $campaign_id ): string {
+		return (string) get_post_meta( $campaign_id, self::META_CLICK_TRACKER, true );
 	}
 
 	/**

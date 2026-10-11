@@ -392,7 +392,8 @@ On a phone it is the actions alone. `scroll-padding-bottom` keeps a focused
 control above it (WCAG 2.4.11). An error raised from it is scrolled into view,
 since the screen's notice prints at the top. It lives in the portal's
 component set so the wizard's phone bar (#302) reuses it rather than building
-another.
+another; that bar is the `--wizard` modifier, shown under 40rem only and keeping
+its status there.
 
 **Responsive.** Nothing may widen the page at 320 CSS pixels or at 200% zoom.
 Tables scroll inside their surface, and toolbars, header actions and control
@@ -433,7 +434,7 @@ scoped.
    Its buttons moved to core's `Button` after (#338), so Review shares one
    button vocabulary with the other screens; refusals are outlined in red
    where offered and filled only in the dialog that confirms them. Still
-   open: #302 adopts `.aggr-actionbar` for the wizard on a phone.
+   the portal wizard adopts `.aggr-actionbar` on a phone (#302).
 5. **Sidebar and remaining copy** *(fifth)*. One screen order for the sidebar
    and the landing redirect (`Menu::SCREENS`, sorted after registration rather
    than by `add_submenu_page`'s position, which depends on boot order), visible

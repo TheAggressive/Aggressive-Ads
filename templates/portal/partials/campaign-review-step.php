@@ -43,6 +43,7 @@ $aggr_check_problems = array(
 	'package'     => array(),
 	'schedule'    => array(),
 	'destination' => array(),
+	'tracker'     => array(),
 	'ads'         => array(),
 	'name'        => array(),
 	'account'     => array(),
@@ -100,6 +101,7 @@ $aggr_check_host = (string) wp_parse_url( home_url(), PHP_URL_HOST );
 $aggr_check_package = (string) ( $aggr_campaign['package_name'] ?? '' );
 $aggr_check_price   = (string) ( $aggr_campaign['package_price'] ?? '' );
 $aggr_check_link    = (string) ( $aggr_campaign['default_click_url'] ?? '' );
+$aggr_check_tracker = (string) ( $aggr_campaign['click_tracker'] ?? '' );
 $aggr_check_rows    = array(
 	array(
 		'key'    => 'package',
@@ -143,6 +145,28 @@ $aggr_check_rows    = array(
 		'action' => __( 'Rename', 'aggressive-ads' ),
 	),
 );
+
+/*
+ * Only when there is one, and beside the destination it sits in front of: a
+ * reader sent through a third party should be a thing the advertiser sees
+ * stated before they submit, not something found later in the review.
+ */
+if ( '' !== $aggr_check_tracker ) {
+	array_splice(
+		$aggr_check_rows,
+		3,
+		0,
+		array(
+			array(
+				'key'    => 'tracker',
+				'title'  => __( 'Click tracker', 'aggressive-ads' ),
+				'detail' => $aggr_check_tracker,
+				'href'   => add_query_arg( 'step', 'creative', $aggr_campaign_url ) . '#aggr-campaign-tracker',
+				'action' => __( 'Change', 'aggressive-ads' ),
+			),
+		)
+	);
+}
 
 if ( array() !== $aggr_check_problems['account'] ) {
 	$aggr_check_rows[] = array(
@@ -274,7 +298,7 @@ foreach ( $aggr_check_rows as $aggr_check_row ) {
 		</details>
 	</section>
 
-	<section class="aggr-step-card" aria-labelledby="aggr-review-preview-heading">
+	<section class="aggr-step-card aggr-review-preview" aria-labelledby="aggr-review-preview-heading">
 		<div class="aggr-ads-section__head">
 			<div>
 				<h3 id="aggr-review-preview-heading"><?php esc_html_e( 'See it on the page', 'aggressive-ads' ); ?></h3>
@@ -288,62 +312,29 @@ foreach ( $aggr_check_rows as $aggr_check_row ) {
 					?>
 				</p>
 			</div>
-			<?php // Switching the preview between widths is #294; drawn now in the approved place. ?>
-			<div class="aggr-segmented" aria-describedby="aggr-preview-note">
-				<button type="button" aria-pressed="true" disabled><?php esc_html_e( 'Desktop', 'aggressive-ads' ); ?></button>
-				<button type="button" aria-pressed="false" disabled><?php esc_html_e( 'Mobile', 'aggressive-ads' ); ?></button>
-			</div>
-			<span id="aggr-preview-note" class="aggr-sr"><?php esc_html_e( 'A mobile preview is coming soon.', 'aggressive-ads' ); ?></span>
+			<?php
+			/*
+			 * Two radios, not two buttons: choosing a width changes only how the
+			 * sketch below is drawn, so it needs no script and no request, and
+			 * the browser keeps the choice in the group like any other. The
+			 * stylesheet reads which one is checked.
+			 */
+			?>
+			<fieldset class="aggr-segmented aggr-segmented--choice" aria-describedby="aggr-preview-note">
+				<legend class="aggr-sr"><?php esc_html_e( 'Preview width', 'aggressive-ads' ); ?></legend>
+				<label>
+					<input class="aggr-sr" type="radio" name="aggr-preview-width" value="desktop" checked>
+					<span><?php esc_html_e( 'Desktop', 'aggressive-ads' ); ?></span>
+				</label>
+				<label>
+					<input class="aggr-sr" type="radio" name="aggr-preview-width" value="mobile">
+					<span><?php esc_html_e( 'Mobile', 'aggressive-ads' ); ?></span>
+				</label>
+			</fieldset>
+			<span id="aggr-preview-note" class="aggr-sr"><?php esc_html_e( 'An illustration of the page. The list below names every ad.', 'aggressive-ads' ); ?></span>
 		</div>
 
-		<?php
-		/*
-		 * An illustration, hidden from assistive technology: the list below
-		 * says the same thing in words. Placements wider than they are tall run
-		 * across the article; the rest sit in the side column.
-		 */
-		?>
-		<div class="aggr-pagepreview" aria-hidden="true">
-			<div class="aggr-pagepreview__bar"><span class="aggr-pagepreview__url"><?php echo esc_html( $aggr_check_host . ' / article' ); ?></span></div>
-			<div class="aggr-pagepreview__body">
-				<div class="aggr-pagepreview__column">
-					<span class="aggr-pagepreview__line aggr-pagepreview__line--title"></span>
-					<?php foreach ( array( true, false ) as $aggr_preview_wide ) : ?>
-						<?php if ( ! $aggr_preview_wide ) : ?>
-							<span class="aggr-pagepreview__line"></span>
-							<span class="aggr-pagepreview__line"></span>
-							<span class="aggr-pagepreview__line aggr-pagepreview__line--short"></span>
-							</div>
-							<div class="aggr-pagepreview__rail">
-						<?php endif; ?>
-						<?php foreach ( $aggr_slots as $aggr_preview_slot ) : ?>
-							<?php
-							$aggr_preview_dims = array();
-
-							if ( ! is_array( $aggr_preview_slot ) || 1 !== preg_match( '/^(\d+)x(\d+)$/', (string) $aggr_preview_slot['size'], $aggr_preview_dims ) ) {
-								continue;
-							}
-
-							$aggr_preview_w = (int) $aggr_preview_dims[1];
-							$aggr_preview_h = (int) $aggr_preview_dims[2];
-
-							if ( ( $aggr_preview_w >= 2 * $aggr_preview_h ) !== $aggr_preview_wide ) {
-								continue;
-							}
-
-							$aggr_preview_creative = is_array( $aggr_preview_slot['creatives'][0] ?? null ) ? $aggr_preview_slot['creatives'][0] : array();
-							$aggr_preview_ratio    = $aggr_preview_w . ' / ' . $aggr_preview_h;
-							?>
-							<?php if ( array() !== $aggr_preview_creative ) : ?>
-								<img class="aggr-pagepreview__slot" src="<?php echo esc_url( (string) $aggr_preview_creative['preview'] ); ?>" alt="" loading="lazy" style="aspect-ratio: <?php echo esc_attr( $aggr_preview_ratio ); ?>">
-							<?php else : ?>
-								<span class="aggr-pagepreview__slot aggr-pagepreview__slot--empty" style="aspect-ratio: <?php echo esc_attr( $aggr_preview_ratio ); ?>"><?php echo esc_html( $aggr_preview_w . ' × ' . $aggr_preview_h ); ?></span>
-							<?php endif; ?>
-						<?php endforeach; ?>
-					<?php endforeach; ?>
-				</div>
-			</div>
-		</div>
+		<?php require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-page-preview.php'; ?>
 
 		<div class="aggr-review-creatives">
 			<?php foreach ( $aggr_creatives as $aggr_creative ) : ?>

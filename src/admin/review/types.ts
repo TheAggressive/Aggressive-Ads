@@ -177,6 +177,8 @@ export type Campaign = {
 	reviewer: string;
 	review_notes: string;
 	advertiser_notes: string;
+	/** A third-party tracker clicks go through first; empty when there is none. */
+	click_tracker: string;
 	internal_notes: string;
 	creatives: Creative[];
 	creative_updates: CreativeUpdate[];

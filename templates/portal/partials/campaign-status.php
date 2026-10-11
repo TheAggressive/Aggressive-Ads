@@ -255,6 +255,12 @@ $aggr_status_note = match ( $aggr_status_now ) {
 						<dd><span class="aggr-summary__link"><?php echo esc_html( (string) $aggr_campaign['default_click_url'] ); ?></span></dd>
 					</div>
 				<?php endif; ?>
+				<?php if ( '' !== (string) ( $aggr_campaign['click_tracker'] ?? '' ) ) : ?>
+					<div>
+						<dt><?php esc_html_e( 'Click tracker', 'aggressive-ads' ); ?></dt>
+						<dd><span class="aggr-summary__link"><?php echo esc_html( (string) $aggr_campaign['click_tracker'] ); ?></span></dd>
+					</div>
+				<?php endif; ?>
 				<?php if ( array() !== $aggr_status_places ) : ?>
 					<div>
 						<dt><?php echo esc_html( _n( 'Placement', 'Placements', count( $aggr_status_places ), 'aggressive-ads' ) ); ?></dt>

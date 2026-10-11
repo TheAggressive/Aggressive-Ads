@@ -167,6 +167,16 @@ test( 'on a phone every step is still named and its number can be tapped', async
 	 * 18 pixels either side of it: all of them have to land on this step's
 	 * link, which is what a 44-pixel target means in practice.
 	 */
+	/*
+	 * "Campaign created" is on screen for four seconds, and on a phone the
+	 * wizard's action bar lifts the notice region clear of itself, which is
+	 * where this bar lands once it is scrolled to. A tap through a notice is
+	 * the notice's to refuse, not this test's subject.
+	 */
+	await expect( page.locator( '.aggr-toast' ) ).toHaveCount( 0, {
+		timeout: 10_000,
+	} );
+
 	// elementFromPoint() only sees the viewport, and the bar starts below it.
 	await bar.scrollIntoViewIfNeeded();
 
