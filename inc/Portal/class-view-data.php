@@ -21,7 +21,6 @@ use Aggressive\Ads\Repository\Creative_Repository;
 use Aggressive\Ads\Repository\Creative_Revision_Repository;
 use Aggressive\Ads\Workflow\Assigned_Creatives;
 use Aggressive\Ads\Repository\Org_Repository;
-use Aggressive\Ads\Repository\Org_Access_Repository;
 use Aggressive\Ads\Security\Capabilities;
 use Aggressive\Ads\Repository\Package_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
@@ -68,7 +67,7 @@ final class View_Data {
 	 * @param Campaign_Repository         $campaigns  Campaign persistence.
 	 * @param Placement_Repository        $placements Placement persistence.
 	 * @param Org_Repository              $orgs       Organization lookups.
-	 * @param Org_Access_Repository       $org_access Organization access persistence.
+	 * @param Pending_Access_View_Data    $pending_access Pending invitations and requests, with why each is there.
 	 * @param Package_Repository          $packages   Package persistence.
 	 * @param Campaign_Editor             $editor     Shared package validation.
 	 * @param Review_Readiness            $readiness  Safe canonical review readiness.
@@ -92,7 +91,7 @@ final class View_Data {
 		private readonly Campaign_Repository $campaigns,
 		private readonly Placement_Repository $placements,
 		private readonly Org_Repository $orgs,
-		private readonly Org_Access_Repository $org_access,
+		private readonly Pending_Access_View_Data $pending_access,
 		private readonly Package_Repository $packages,
 		private readonly Campaign_Editor $editor,
 		private readonly Review_Readiness $readiness,
@@ -423,6 +422,7 @@ final class View_Data {
 		}
 
 		$campaigns  = $this->campaigns->for_org( $org_id, 1 );
+		$members    = $this->member_rows( $org_id );
 		$can_manage = $this->orgs->is_owner( $org_id, get_current_user_id() )
 			|| current_user_can( Capabilities::MANAGE_ORGS );
 
@@ -430,32 +430,11 @@ final class View_Data {
 			'id'                 => $org_id,
 			'name'               => $this->orgs->name( $org_id ),
 			'active'             => $this->orgs->is_active( $org_id ),
-			'members'            => $this->member_rows( $org_id ),
+			'members'            => $members,
 			'campaigns'          => $campaigns['total'],
 			'can_manage_members' => $can_manage,
-			'pending_access'     => $can_manage ? $this->pending_access_rows( $org_id ) : array(),
+			'pending_access'     => $can_manage ? $this->pending_access->rows( $org_id, get_current_user_id(), $members ) : array(),
 		);
-	}
-
-	/**
-	 * Pending rows contain only addresses already scoped to this organization.
-	 *
-	 * @param int $org_id Organization id.
-	 * @return array<int, array{id: int, email: string, kind: string, expires_at_ts: int}>
-	 */
-	private function pending_access_rows( int $org_id ): array {
-		$rows = array();
-
-		foreach ( $this->org_access->pending_for_org( $org_id ) as $row ) {
-			$rows[] = array(
-				'id'            => (int) ( $row['id'] ?? 0 ),
-				'email'         => (string) ( $row['email'] ?? '' ),
-				'kind'          => (string) ( $row['kind'] ?? '' ),
-				'expires_at_ts' => (int) ( $row['expires_at_ts'] ?? 0 ),
-			);
-		}
-
-		return $rows;
 	}
 
 	/**

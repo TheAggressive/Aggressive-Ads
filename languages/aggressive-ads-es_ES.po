@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
-"POT-Creation-Date: 2026-10-10T06:28:13+00:00\n"
+"POT-Creation-Date: 2026-10-17T23:23:33+00:00\n"
 "PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -206,7 +206,7 @@ msgstr ""
 #: inc/Admin/class-package-screen.php:165
 #: inc/Admin/class-placement-screen.php:177
 #: templates/portal/partials/campaign-review-step.php:142
-#: templates/portal/screens/organization.php:99
+#: templates/portal/screens/organization.php:100
 msgid "Name"
 msgstr ""
 
@@ -268,8 +268,8 @@ msgid "Status"
 msgstr ""
 
 #: inc/Admin/class-conversions-screen.php:213
-#: templates/portal/screens/organization.php:103
-#: templates/portal/screens/organization.php:193
+#: templates/portal/screens/organization.php:104
+#: templates/portal/screens/organization.php:194
 msgid "Actions"
 msgstr ""
 
@@ -420,7 +420,7 @@ msgid "Live"
 msgstr ""
 
 #: inc/Admin/class-conversions-screen.php:247
-#: templates/portal/screens/organization.php:233
+#: templates/portal/screens/organization.php:265
 msgid "Revoke"
 msgstr ""
 
@@ -807,14 +807,14 @@ msgstr ""
 #: inc/Admin/class-organization-screen.php:151
 #: inc/Admin/class-package-screen.php:175
 #: inc/Admin/class-placement-screen.php:190
-#: templates/portal/screens/organization.php:53
-#: templates/portal/screens/organization.php:257
+#: templates/portal/screens/organization.php:54
+#: templates/portal/screens/organization.php:289
 msgid "Active"
 msgstr ""
 
 #: inc/Admin/class-organization-screen.php:152
-#: templates/portal/screens/organization.php:54
-#: templates/portal/screens/organization.php:257
+#: templates/portal/screens/organization.php:55
+#: templates/portal/screens/organization.php:289
 msgid "Suspended"
 msgstr ""
 
@@ -833,7 +833,7 @@ msgid ""
 msgstr ""
 
 #: inc/Admin/class-organization-screen.php:156
-#: templates/portal/screens/organization.php:294
+#: templates/portal/screens/organization.php:326
 msgid "Organization name"
 msgstr ""
 
@@ -852,7 +852,7 @@ msgid "owner"
 msgstr ""
 
 #: inc/Admin/class-organization-screen.php:160
-#: templates/portal/screens/organization.php:144
+#: templates/portal/screens/organization.php:145
 msgid "Make owner"
 msgstr ""
 
@@ -864,7 +864,7 @@ msgstr ""
 #: inc/Admin/class-placement-screen.php:199
 #: inc/Admin/class-settings-screen.php:306
 #: templates/portal/partials/campaign-creative-step.php:273
-#: templates/portal/screens/organization.php:152
+#: templates/portal/screens/organization.php:153
 msgid "Remove"
 msgstr ""
 
@@ -883,7 +883,7 @@ msgid ""
 msgstr ""
 
 #: inc/Admin/class-organization-screen.php:166
-#: templates/portal/screens/organization.php:289
+#: templates/portal/screens/organization.php:321
 msgid "Send invitation"
 msgstr ""
 
@@ -948,7 +948,7 @@ msgstr ""
 
 #: inc/Admin/class-organization-screen.php:183
 #: templates/portal/screens/account.php:231
-#: templates/portal/screens/organization.php:130
+#: templates/portal/screens/organization.php:131
 msgid "Owner"
 msgstr ""
 
@@ -958,7 +958,7 @@ msgstr ""
 #: templates/portal/screens/campaign.php:211
 #: templates/portal/screens/campaigns.php:73
 #: templates/portal/screens/campaigns.php:74
-#: templates/portal/screens/organization.php:267
+#: templates/portal/screens/organization.php:299
 msgid "Campaigns"
 msgstr ""
 
@@ -1801,7 +1801,7 @@ msgstr ""
 msgid "Resume campaign"
 msgstr ""
 
-#: inc/Admin/class-review-data.php:699 inc/Portal/class-view-data.php:376
+#: inc/Admin/class-review-data.php:699 inc/Portal/class-view-data.php:375
 msgid "Cancel campaign"
 msgstr ""
 
@@ -1967,7 +1967,7 @@ msgstr ""
 #: templates/portal/organization.php:15 templates/portal/partials/rail.php:35
 #: templates/portal/screens/account.php:143
 #: templates/portal/screens/account.php:225
-#: templates/portal/screens/organization.php:28
+#: templates/portal/screens/organization.php:29
 #: templates/portal/screens/signup.php:78
 msgid "Organization"
 msgstr ""
@@ -2729,7 +2729,7 @@ msgstr ""
 #: inc/Admin/class-settings-screen.php:95
 #: inc/Admin/class-settings-screen.php:96
 #: templates/portal/screens/account.php:34
-#: templates/portal/screens/organization.php:47
+#: templates/portal/screens/organization.php:48
 msgid "Settings"
 msgstr ""
 
@@ -4426,7 +4426,7 @@ msgid "Automatically"
 msgstr ""
 
 #: inc/Portal/class-campaign-history-view-data.php:178
-#: templates/portal/screens/organization.php:123
+#: templates/portal/screens/organization.php:124
 msgid "You"
 msgstr ""
 
@@ -5066,15 +5066,15 @@ msgstr ""
 msgid "We could not create the account. Please try again later."
 msgstr ""
 
-#: inc/Portal/class-view-data.php:329
+#: inc/Portal/class-view-data.php:328
 msgid "Renew campaign"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:330
+#: inc/Portal/class-view-data.php:329
 msgid "Duplicate campaign"
 msgstr ""
 
-#: inc/Portal/class-view-data.php:375
+#: inc/Portal/class-view-data.php:374
 msgid "Delete campaign"
 msgstr ""
 
@@ -7398,7 +7398,7 @@ msgid ""
 msgstr ""
 
 #: templates/portal/partials/campaign-review-step.php:295
-#: templates/portal/screens/organization.php:314
+#: templates/portal/screens/organization.php:346
 msgid "Save name"
 msgstr ""
 
@@ -8120,8 +8120,8 @@ msgid "The address you sign in with and where we send notices."
 msgstr ""
 
 #: templates/portal/screens/account.php:139
-#: templates/portal/screens/organization.php:100
-#: templates/portal/screens/organization.php:190
+#: templates/portal/screens/organization.php:101
+#: templates/portal/screens/organization.php:191
 msgid "Email"
 msgstr ""
 
@@ -8173,12 +8173,12 @@ msgid "Your profile"
 msgstr ""
 
 #: templates/portal/screens/account.php:230
-#: templates/portal/screens/organization.php:101
+#: templates/portal/screens/organization.php:102
 msgid "Role"
 msgstr ""
 
 #: templates/portal/screens/account.php:231
-#: templates/portal/screens/organization.php:132
+#: templates/portal/screens/organization.php:133
 msgid "Member"
 msgstr ""
 
@@ -8516,7 +8516,7 @@ msgstr ""
 
 #: templates/portal/screens/forgot-password.php:57
 #: templates/portal/screens/login.php:51
-#: templates/portal/screens/organization.php:285
+#: templates/portal/screens/organization.php:317
 #: templates/portal/screens/signup.php:85
 msgid "Work email"
 msgstr ""
@@ -8669,124 +8669,144 @@ msgstr ""
 msgid "Create an account"
 msgstr ""
 
-#: templates/portal/screens/organization.php:29
+#: templates/portal/screens/organization.php:30
 msgid ""
 "Your account is not linked to an advertising organization yet. Get in touch "
 "and we will connect it."
 msgstr ""
 
-#: templates/portal/screens/organization.php:58
+#: templates/portal/screens/organization.php:59
 msgid "Who can work on this organization’s campaigns."
 msgstr ""
 
-#: templates/portal/screens/organization.php:64
+#: templates/portal/screens/organization.php:65
 msgid "This organization cannot submit campaigns"
 msgstr ""
 
-#: templates/portal/screens/organization.php:65
+#: templates/portal/screens/organization.php:66
 msgid ""
 "Existing campaigns are unaffected. Please get in touch to discuss "
 "reactivating the account."
 msgstr ""
 
-#: templates/portal/screens/organization.php:81
-#: templates/portal/screens/organization.php:263
+#: templates/portal/screens/organization.php:82
+#: templates/portal/screens/organization.php:295
 msgid "People"
 msgstr ""
 
-#: templates/portal/screens/organization.php:82
+#: templates/portal/screens/organization.php:83
 msgid ""
 "Everyone here can create, edit and submit this organization’s campaigns."
 msgstr ""
 
 #. translators: %s: number of people in the organization.
-#: templates/portal/screens/organization.php:88
+#: templates/portal/screens/organization.php:89
 #, php-format
 msgid "%s person"
 msgid_plural "%s people"
 msgstr[0] ""
 msgstr[1] ""
 
-#: templates/portal/screens/organization.php:95
+#: templates/portal/screens/organization.php:96
 msgid "Organization members table"
 msgstr ""
 
-#: templates/portal/screens/organization.php:172
+#: templates/portal/screens/organization.php:173
 msgid "Pending access"
 msgstr ""
 
-#: templates/portal/screens/organization.php:173
+#: templates/portal/screens/organization.php:174
 msgid ""
 "Name matches are suggestions only. Check the email before granting access."
 msgstr ""
 
 #. translators: %s: number of pending requests and invitations.
-#: templates/portal/screens/organization.php:179
+#: templates/portal/screens/organization.php:180
 #, php-format
 msgid "%s waiting"
 msgstr ""
 
-#: templates/portal/screens/organization.php:186
+#: templates/portal/screens/organization.php:187
 msgid "Pending invitations table"
 msgstr ""
 
-#: templates/portal/screens/organization.php:191
+#: templates/portal/screens/organization.php:192
 msgid "Type"
 msgstr ""
 
-#: templates/portal/screens/organization.php:192
+#: templates/portal/screens/organization.php:193
 msgid "Expires"
 msgstr ""
 
-#: templates/portal/screens/organization.php:203
+#: templates/portal/screens/organization.php:212
 msgid "Asked to join"
 msgstr ""
 
-#: templates/portal/screens/organization.php:203
-msgid "Invited"
+#. translators: %s: the name of a member of this organization the requester resembles.
+#: templates/portal/screens/organization.php:216
+#, php-format
+msgid "Asked to join · matches the name “%s”"
 msgstr ""
 
-#: templates/portal/screens/organization.php:208
-msgid "Access request"
+#: templates/portal/screens/organization.php:221
+msgid "Invited by you"
 msgstr ""
 
-#: templates/portal/screens/organization.php:208
-msgid "Invitation"
+#: templates/portal/screens/organization.php:223
+msgid "Invited by the site team"
 msgstr ""
 
-#: templates/portal/screens/organization.php:224
-msgid "Approve"
+#. translators: %s: the name of the member who sent the invitation.
+#: templates/portal/screens/organization.php:228
+#, php-format
+msgid "Invited by %s"
 msgstr ""
 
 #: templates/portal/screens/organization.php:233
+msgid "Invited"
+msgstr ""
+
+#: templates/portal/screens/organization.php:240
+msgid "Access request"
+msgstr ""
+
+#: templates/portal/screens/organization.php:240
+msgid "Invitation"
+msgstr ""
+
+#: templates/portal/screens/organization.php:256
+msgid "Approve"
+msgstr ""
+
+#: templates/portal/screens/organization.php:265
 msgid "Deny"
 msgstr ""
 
-#: templates/portal/screens/organization.php:248
+#: templates/portal/screens/organization.php:280
 msgid ""
 "Only the owner can rename the organization, invite people, approve requests, "
 "remove members, or transfer ownership."
 msgstr ""
 
-#: templates/portal/screens/organization.php:255
+#: templates/portal/screens/organization.php:287
 msgid "Summary"
 msgstr ""
 
-#: templates/portal/screens/organization.php:276
+#: templates/portal/screens/organization.php:308
 msgid "Invite a person"
 msgstr ""
 
-#: templates/portal/screens/organization.php:277
+#: templates/portal/screens/organization.php:309
 msgid ""
 "A single-use invitation that expires after three days. They join only once "
 "they accept it."
 msgstr ""
 
-#: templates/portal/screens/organization.php:301
+#: templates/portal/screens/organization.php:333
 msgid "Display name"
 msgstr ""
 
-#: templates/portal/screens/organization.php:311
+#: templates/portal/screens/organization.php:343
 msgid ""
 "Stored in uppercase. A name another organization already uses is refused."
 msgstr ""
