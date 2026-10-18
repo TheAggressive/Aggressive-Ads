@@ -873,6 +873,7 @@ final class Campaign_Actions implements Service {
 			'aggr_creatives_incomplete'    => 'aggr-uploads',
 			'aggr_default_click_url_invalid' => 'aggr-campaign-link',
 			Click_Tracker_Validation::ERROR_CODE => 'aggr-campaign-tracker',
+			'live_edit_click_tracker_invalid' => 'aggr-campaign-tracker',
 			'aggr_campaign_invalid'        => 'aggr-readiness-heading',
 			default                            => '',
 		};
