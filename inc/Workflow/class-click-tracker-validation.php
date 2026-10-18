@@ -38,15 +38,10 @@ final class Click_Tracker_Validation {
 	 * @return string|WP_Error The tracker to store (possibly empty), or why not.
 	 */
 	public static function clean( string $typed ): string|WP_Error {
-		$tracker = trim( $typed );
+		$tracker = Click_Tracker_Rules::with_scheme( $typed );
 
 		if ( '' === $tracker ) {
 			return '';
-		}
-
-		// `tracker.example/c?u={lpurl}` is how people paste one; it means https.
-		if ( 1 !== preg_match( '#^[a-z][a-z0-9+.-]*:#i', $tracker ) ) {
-			$tracker = 'https://' . $tracker;
 		}
 
 		$reason = Click_Tracker_Rules::error_for( $tracker );

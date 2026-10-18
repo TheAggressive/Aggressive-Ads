@@ -4,7 +4,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Aggressive Ads 1.3.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/aggressive-ads\n"
-"POT-Creation-Date: 2026-10-10T06:28:13+00:00\n"
+"POT-Creation-Date: 2026-10-18T00:11:49+00:00\n"
 "PO-Revision-Date: 2026-08-23T06:42:20+00:00\n"
 "Last-Translator: Automatically generated\n"
 "Language-Team: none\n"
@@ -126,7 +126,7 @@ msgstr ""
 #: inc/Admin/class-placement-screen.php:233
 #: inc/Admin/class-reports-screen.php:624 inc/Admin/class-review-screen.php:321
 #: inc/Core/class-post-types.php:199
-#: inc/Workflow/class-campaign-change-summary.php:83
+#: inc/Workflow/class-campaign-change-summary.php:86
 msgid "Placements"
 msgstr ""
 
@@ -1453,7 +1453,7 @@ msgstr ""
 
 #: inc/Admin/class-report-export.php:78
 #: inc/Portal/class-account-actions.php:220
-#: inc/Portal/class-campaign-actions.php:906
+#: inc/Portal/class-campaign-actions.php:907
 #: inc/Portal/class-creative-actions.php:704
 #: inc/Portal/class-email-change-actions.php:178
 #: inc/Portal/class-organization-actions.php:222
@@ -2080,7 +2080,7 @@ msgid "Alt text"
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:347
-#: inc/Workflow/class-campaign-change-summary.php:81
+#: inc/Workflow/class-campaign-change-summary.php:82
 #: templates/portal/partials/campaign-ad-card.php:75
 #: templates/portal/partials/campaign-review-step.php:128
 #: templates/portal/partials/campaign-upload-form.php:163
@@ -2454,6 +2454,7 @@ msgid "Notes from the advertiser"
 msgstr ""
 
 #: inc/Admin/class-review-screen.php:436
+#: inc/Workflow/class-campaign-change-summary.php:84
 #: templates/portal/partials/campaign-review-step.php:162
 #: templates/portal/partials/campaign-status.php:260
 msgid "Click tracker"
@@ -2778,7 +2779,9 @@ msgid "Destination URL"
 msgstr ""
 
 #: inc/Admin/class-settings-screen.php:218
-msgid "Repoints the click without replacing the artwork."
+msgid ""
+"Repoints the click without replacing the artwork, including an agency click "
+"tracker in front of the landing page."
 msgstr ""
 
 #: inc/Admin/class-settings-screen.php:219
@@ -3365,7 +3368,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: inc/Core/class-post-types.php:200
-#: inc/Workflow/class-campaign-change-summary.php:85
+#: inc/Workflow/class-campaign-change-summary.php:88
 #: templates/portal/partials/campaign-order-summary.php:134
 #: templates/portal/partials/campaign-review-step.php:108
 #: templates/portal/partials/campaign-status.php:225
@@ -4162,7 +4165,7 @@ msgid "You do not have permission to withdraw that campaign."
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:816
-#: inc/Portal/class-campaign-change-form.php:115
+#: inc/Portal/class-campaign-change-form.php:121
 #: inc/Workflow/class-campaign-editor.php:375
 msgid "Enter a campaign name."
 msgstr ""
@@ -4174,13 +4177,13 @@ msgid "Use 160 characters or fewer for the campaign name."
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:818
-#: inc/Portal/class-campaign-change-form.php:119
+#: inc/Portal/class-campaign-change-form.php:125
 #: inc/Workflow/class-campaign-validator.php:236
 msgid "Choose an end date."
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:819
-#: inc/Portal/class-campaign-change-form.php:120
+#: inc/Portal/class-campaign-change-form.php:126
 #: inc/Workflow/class-campaign-editor.php:448
 #: inc/Workflow/class-campaign-validator.php:239
 msgid "The end date must be after the start date."
@@ -4219,7 +4222,7 @@ msgid "Choose a package."
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:828
-#: inc/Portal/class-campaign-change-form.php:126
+#: inc/Portal/class-campaign-change-form.php:133
 msgid "That package is no longer available. Choose another package."
 msgstr ""
 
@@ -4236,6 +4239,7 @@ msgid "Add an ad for every size in the package before continuing."
 msgstr ""
 
 #: inc/Portal/class-campaign-actions.php:831
+#: inc/Portal/class-campaign-change-form.php:130
 msgid ""
 "That tracking link cannot be used. It must be a web address with {lpurl} in "
 "it exactly once, and no username or password."
@@ -4317,44 +4321,44 @@ msgstr ""
 msgid "The campaign could not be saved. Please try again."
 msgstr ""
 
-#: inc/Portal/class-campaign-change-form.php:114
+#: inc/Portal/class-campaign-change-form.php:120
 msgid "Nothing has changed yet. Change something before you submit."
 msgstr ""
 
-#: inc/Portal/class-campaign-change-form.php:116
+#: inc/Portal/class-campaign-change-form.php:122
 msgid "Use 200 characters or fewer for the campaign name."
 msgstr ""
 
-#: inc/Portal/class-campaign-change-form.php:117
+#: inc/Portal/class-campaign-change-form.php:123
 msgid "Use 2,000 characters or fewer for your notes."
 msgstr ""
 
-#: inc/Portal/class-campaign-change-form.php:118
+#: inc/Portal/class-campaign-change-form.php:124
 msgid "The campaign has already started, so its start date cannot move."
 msgstr ""
 
-#: inc/Portal/class-campaign-change-form.php:121
+#: inc/Portal/class-campaign-change-form.php:127
 msgid ""
 "Your package sets how long the campaign runs, so its end follows the start. "
 "To run longer, choose a package that runs longer."
 msgstr ""
 
-#: inc/Portal/class-campaign-change-form.php:122
+#: inc/Portal/class-campaign-change-form.php:128
 msgid ""
 "The campaign would end on a day that has already passed. Choose a later end "
 "date, or a package that runs longer."
 msgstr ""
 
-#: inc/Portal/class-campaign-change-form.php:123
+#: inc/Portal/class-campaign-change-form.php:129
 #: inc/Workflow/class-campaign-editor.php:470
 msgid "Enter a valid http or https link, such as https://example.com."
 msgstr ""
 
-#: inc/Portal/class-campaign-change-form.php:124
+#: inc/Portal/class-campaign-change-form.php:131
 msgid "Keep at least one placement."
 msgstr ""
 
-#: inc/Portal/class-campaign-change-form.php:125
+#: inc/Portal/class-campaign-change-form.php:132
 msgid "Choose placements your package includes."
 msgstr ""
 
@@ -5643,7 +5647,7 @@ msgid "End this campaign now"
 msgstr ""
 
 #: inc/Workflow/class-campaign-action-requests.php:311
-#: inc/Workflow/class-campaign-change-manager.php:672
+#: inc/Workflow/class-campaign-change-manager.php:673
 msgid "You do not have permission to change that campaign."
 msgstr ""
 
@@ -5737,7 +5741,7 @@ msgstr ""
 msgid "End date"
 msgstr ""
 
-#: inc/Workflow/class-campaign-change-summary.php:124
+#: inc/Workflow/class-campaign-change-summary.php:127
 msgid "Open-ended"
 msgstr ""
 
@@ -5877,29 +5881,29 @@ msgstr ""
 msgid "This campaign is not ready to submit."
 msgstr ""
 
-#: inc/Workflow/class-click-tracker-validation.php:81
+#: inc/Workflow/class-click-tracker-validation.php:76
 msgid ""
 "Add {lpurl} where the tracking link should send visitors on to your landing "
 "page."
 msgstr ""
 
-#: inc/Workflow/class-click-tracker-validation.php:82
+#: inc/Workflow/class-click-tracker-validation.php:77
 msgid ""
 "Use {lpurl} once. The tracking link can only send visitors on to one landing "
 "page."
 msgstr ""
 
-#: inc/Workflow/class-click-tracker-validation.php:83
+#: inc/Workflow/class-click-tracker-validation.php:78
 msgid ""
 "Use {lpurl} for the landing page. Other forms are not supported, because the "
 "page address has to be encoded to survive inside the tracking link."
 msgstr ""
 
-#: inc/Workflow/class-click-tracker-validation.php:84
+#: inc/Workflow/class-click-tracker-validation.php:79
 msgid "That tracking link is too long. Ask your agency for a shorter one."
 msgstr ""
 
-#: inc/Workflow/class-click-tracker-validation.php:85
+#: inc/Workflow/class-click-tracker-validation.php:80
 msgid ""
 "Enter a valid http or https tracking link without a username or password."
 msgstr ""
@@ -6795,77 +6799,77 @@ msgid "Notes for the review team"
 msgstr ""
 
 #: templates/portal/partials/campaign-changes.php:281
-#: templates/portal/partials/campaign-changes.php:322
+#: templates/portal/partials/campaign-changes.php:324
 #: templates/portal/partials/campaign-order-summary.php:84
 #: templates/portal/partials/campaign-plan-step.php:147
 msgid "Save and continue"
 msgstr ""
 
-#: templates/portal/partials/campaign-changes.php:311
+#: templates/portal/partials/campaign-changes.php:313
 #: templates/portal/partials/campaign-creative-step.php:84
 msgid "02 · Ads"
 msgstr ""
 
-#: templates/portal/partials/campaign-changes.php:311
+#: templates/portal/partials/campaign-changes.php:313
 msgid "01 · Ads"
 msgstr ""
 
-#: templates/portal/partials/campaign-changes.php:318
+#: templates/portal/partials/campaign-changes.php:320
 #: templates/portal/partials/campaign-creative-step.php:362
 msgid "Back to package & dates"
 msgstr ""
 
-#: templates/portal/partials/campaign-changes.php:325
+#: templates/portal/partials/campaign-changes.php:327
 #: templates/portal/partials/campaign-creative-step.php:376
 #: templates/portal/partials/campaign-order-summary.php:94
 msgid "Continue to review"
 msgstr ""
 
-#: templates/portal/partials/campaign-changes.php:335
+#: templates/portal/partials/campaign-changes.php:337
 msgid "Your changes"
 msgstr ""
 
-#: templates/portal/partials/campaign-changes.php:336
+#: templates/portal/partials/campaign-changes.php:338
 msgid "Editing"
 msgstr ""
 
-#: templates/portal/partials/campaign-changes.php:339
+#: templates/portal/partials/campaign-changes.php:341
 msgid ""
 "Your campaign keeps running exactly as approved while you edit. Nothing "
 "changes until you submit these and the review team accepts them."
 msgstr ""
 
-#: templates/portal/partials/campaign-changes.php:342
+#: templates/portal/partials/campaign-changes.php:344
 msgid "Nothing changed yet."
 msgstr ""
 
 #. translators: %s: the value before the change.
-#: templates/portal/partials/campaign-changes.php:355
+#: templates/portal/partials/campaign-changes.php:357
 #: templates/portal/screens/campaign.php:268
 #, php-format
 msgid "was %s"
 msgstr ""
 
-#: templates/portal/partials/campaign-changes.php:365
+#: templates/portal/partials/campaign-changes.php:367
 msgid "New artwork"
 msgstr ""
 
-#: templates/portal/partials/campaign-changes.php:368
+#: templates/portal/partials/campaign-changes.php:370
 msgid "with the review team"
 msgstr ""
 
-#: templates/portal/partials/campaign-changes.php:382
+#: templates/portal/partials/campaign-changes.php:384
 #: templates/portal/partials/campaign-order-summary.php:100
 #: templates/portal/partials/campaign-overlays.php:359
 #: templates/portal/partials/campaign-review-step.php:381
 msgid "Submit for review"
 msgstr ""
 
-#: templates/portal/partials/campaign-changes.php:393
+#: templates/portal/partials/campaign-changes.php:395
 msgid "Discard these edits"
 msgstr ""
 
-#: templates/portal/partials/campaign-changes.php:399
+#: templates/portal/partials/campaign-changes.php:401
 msgid "Back to the campaign"
 msgstr ""
 
@@ -7651,22 +7655,29 @@ msgstr ""
 msgid "Run again"
 msgstr ""
 
-#: templates/portal/partials/campaign-tracker-card.php:42
+#: templates/portal/partials/campaign-tracker-card.php:49
 msgid "Use an ad-server click tracker (optional)"
 msgstr ""
 
-#: templates/portal/partials/campaign-tracker-card.php:50
+#: templates/portal/partials/campaign-tracker-card.php:59
 msgid "Tracking link"
 msgstr ""
 
-#: templates/portal/partials/campaign-tracker-card.php:51
+#: templates/portal/partials/campaign-tracker-card.php:63
+msgid ""
+"A click goes to this link first, then on to your destination. Put {lpurl} "
+"where your tracker expects the destination — exactly once. The campaign "
+"keeps using the current tracker until the review team accepts this change."
+msgstr ""
+
+#: templates/portal/partials/campaign-tracker-card.php:64
 msgid ""
 "A click goes to this link first, then on to your destination. Put {lpurl} "
 "where your tracker expects the destination — exactly once. The review team "
 "sees this link before approving."
 msgstr ""
 
-#: templates/portal/partials/campaign-tracker-card.php:67
+#: templates/portal/partials/campaign-tracker-card.php:84
 msgid "Save tracker"
 msgstr ""
 

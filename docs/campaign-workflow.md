@@ -375,7 +375,7 @@ handful of scalars does not need one.
 ### What may be proposed is site policy
 
 `Settings_Schema::edit_keys()` — campaign name, advertiser notes, schedule,
-destination URL, package — each a checkbox under **Advertising →
+destination URL (and the optional click tracker in front of it), package — each a checkbox under **Advertising →
 Settings → Changes to running campaigns**. Every one ships **off**: a running campaign is
 one staff already approved, and widening what an advertiser may change
 underneath an approval is not a default anybody chose.

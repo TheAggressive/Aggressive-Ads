@@ -577,6 +577,7 @@ final class Campaign_Change_Manager implements Service {
 			'placement_ids'     => $this->campaigns->placement_ids( $campaign_id ),
 			'click_urls'        => $click_urls,
 			'default_click_url' => $this->links->shared( $campaign_id ),
+			'click_tracker'     => $this->campaigns->click_tracker( $campaign_id ),
 			'package_id'        => $this->campaigns->package_id( $campaign_id ),
 
 			// Not a field: what Live_Edit_Rules holds a placement change to.
@@ -614,7 +615,7 @@ final class Campaign_Change_Manager implements Service {
 			$fields = $package;
 		}
 
-		foreach ( array( 'title', 'advertiser_notes', 'start_ts', 'end_ts', 'placement_ids', 'default_click_url' ) as $field ) {
+		foreach ( array( 'title', 'advertiser_notes', 'start_ts', 'end_ts', 'placement_ids', 'default_click_url', 'click_tracker' ) as $field ) {
 			if ( array_key_exists( $field, $edits ) ) {
 				$fields[ $field ] = $edits[ $field ];
 			}

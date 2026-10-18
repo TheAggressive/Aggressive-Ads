@@ -78,7 +78,10 @@ final class Campaign_Change_Summary {
 			case 'end_ts':
 				return __( 'End date', 'aggressive-ads' );
 			case 'click_urls':
+			case 'default_click_url':
 				return __( 'Destination', 'aggressive-ads' );
+			case 'click_tracker':
+				return __( 'Click tracker', 'aggressive-ads' );
 			case 'placement_ids':
 				return __( 'Placements', 'aggressive-ads' );
 			case 'package_id':
