@@ -37,6 +37,7 @@ final class Live_Edit_Rules {
 	public const ERROR_END_BEFORE_START = 'live_edit_end_before_start';
 	public const ERROR_END_IN_PAST      = 'live_edit_end_in_past';
 	public const ERROR_URL_INVALID      = 'live_edit_click_url_invalid';
+	public const ERROR_TRACKER_INVALID  = 'live_edit_click_tracker_invalid';
 	public const ERROR_NO_PLACEMENTS    = 'live_edit_no_placements';
 
 	/**
@@ -86,7 +87,7 @@ final class Live_Edit_Rules {
 			Settings_Schema::EDIT_TITLE       => array( 'title' ),
 			Settings_Schema::EDIT_NOTES       => array( 'advertiser_notes' ),
 			Settings_Schema::EDIT_SCHEDULE    => array( 'start_ts', 'end_ts' ),
-			Settings_Schema::EDIT_DESTINATION => array( 'click_urls', 'default_click_url' ),
+			Settings_Schema::EDIT_DESTINATION => array( 'click_urls', 'default_click_url', 'click_tracker' ),
 			Settings_Schema::EDIT_PACKAGE     => array( 'package_id' ),
 		);
 	}
@@ -228,6 +229,15 @@ final class Live_Edit_Rules {
 			}
 		}
 
+		// A third party readers are sent through; empty removes it.
+		if ( array_key_exists( 'click_tracker', $diff ) ) {
+			$tracker = is_string( $diff['click_tracker'] ) ? $diff['click_tracker'] : '';
+
+			if ( null !== Click_Tracker_Rules::error_for( $tracker ) ) {
+				$result->add( self::ERROR_TRACKER_INVALID, 'click_tracker' );
+			}
+		}
+
 		if ( array_key_exists( 'package_id', $diff ) ) {
 			$package  = (int) $diff['package_id'];
 			$packages = isset( $current['package_choices'] ) && is_array( $current['package_choices'] )
@@ -357,6 +367,9 @@ final class Live_Edit_Rules {
 			case 'advertiser_notes':
 			case 'default_click_url':
 				return is_string( $value ) ? trim( $value ) : '';
+
+			case 'click_tracker':
+				return Click_Tracker_Rules::with_scheme( is_string( $value ) ? $value : '' );
 
 			case 'start_ts':
 			case 'end_ts':

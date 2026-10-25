@@ -57,6 +57,27 @@ final class Click_Tracker_Rules {
 	public const MAX_LENGTH = 1024;
 
 	/**
+	 * Adds https when the advertiser left the scheme off.
+	 *
+	 * `tracker.example/c?u={lpurl}` is how people paste one. The rules below
+	 * still require a scheme, so this is the one place that meaning is applied
+	 * — the draft editor, the live-edit proposal and any later write all go
+	 * through it, rather than each inventing the prefix.
+	 *
+	 * @param string $tracker Candidate, as typed.
+	 * @return string Trimmed, with a scheme if it had none; empty stays empty.
+	 */
+	public static function with_scheme( string $tracker ): string {
+		$tracker = trim( $tracker );
+
+		if ( '' === $tracker || 1 === preg_match( '#^[a-z][a-z0-9+.-]*:#i', $tracker ) ) {
+			return $tracker;
+		}
+
+		return 'https://' . $tracker;
+	}
+
+	/**
 	 * Why a tracker is not acceptable, or null when it is.
 	 *
 	 * An empty string is not an error: it means "no tracker", and is how one is
