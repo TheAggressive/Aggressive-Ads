@@ -206,10 +206,16 @@ link field and its status. It posts the same save action with only
 current in every copy on the page and waits on before another form submits —
 `campaign-tracker.spec.ts` saves a destination and then a tracker straight
 after, the order that would conflict if that were not so. A refusal returns to
-this step with the fold open and the field marked. Drafts only: a running
-campaign changes its destination by a reviewed proposal, and a tracker must not
-reach live traffic another way (`open-work.md`). It is shown on the review step,
-the status card and the staff review screen, where staff are the control for it.
+this step with the fold open and the field marked. On a **running** campaign the
+same fold rides the Destination card's proposal form (`form="aggr-changes-form"`)
+and is governed by `Settings_Schema::EDIT_DESTINATION` with the landing page:
+`Live_Edit_Rules` accepts an empty tracker (removal) or one that passes
+`Click_Tracker_Rules`, staff see both values on the change summary, and nothing
+is written until they approve. The REST `PATCH` still refuses a live campaign,
+so there is no path around review. It is shown on the review step, the status
+card and the staff review screen, where staff are the control for it. The link
+checker still checks the landing page only; a tracker is not fetched
+(`threat-model.md`).
 
 Above the cards, while any size still needs a file, a script-only drop zone
 takes every file at once (`shared/bulk-upload.ts`, bundled into

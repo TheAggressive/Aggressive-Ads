@@ -439,6 +439,39 @@ final class LiveEditRulesTest extends TestCase {
 	}
 
 	/**
+	 * A click tracker travels with the destination switch: the same third
+	 * party a draft stores, held to the same rules, and removable.
+	 *
+	 * @return void
+	 */
+	public function test_a_click_tracker_is_a_destination_change(): void {
+		$current = $this->current() + array( 'click_tracker' => '' );
+		$tracker = 'https://track.example.com/c?u={lpurl}';
+
+		$this->assertContains( 'click_tracker', Live_Edit_Rules::allowed_fields( array( Settings_Schema::EDIT_DESTINATION ) ) );
+		$this->assertSame(
+			array( 'click_tracker' => $tracker ),
+			Live_Edit_Rules::diff( array( Settings_Schema::EDIT_DESTINATION ), $current, array( 'click_tracker' => 'track.example.com/c?u={lpurl}' ) ),
+			'A pasted tracker without a scheme must still be a change.'
+		);
+		$this->assertSame( array(), Live_Edit_Rules::diff( array( Settings_Schema::EDIT_TITLE ), $current, array( 'click_tracker' => $tracker ) ), 'A tracker escaped its switch.' );
+		$with_tracker                  = $current;
+		$with_tracker['click_tracker'] = $tracker;
+
+		$this->assertSame( array(), Live_Edit_Rules::diff( array( Settings_Schema::EDIT_DESTINATION ), $with_tracker, array( 'click_tracker' => ' ' . $tracker . ' ' ) ), 'Whitespace counted as a change.' );
+
+		$this->assertTrue( Live_Edit_Rules::validate( array( 'click_tracker' => $tracker ), $current, self::NOW )->is_valid() );
+		$this->assertTrue( Live_Edit_Rules::validate( array( 'click_tracker' => '' ), $with_tracker, self::NOW )->is_valid(), 'Clearing a tracker is how one is removed.' );
+
+		foreach ( array( 'https://track.example.com/c?cid=1', 'https://track.example.com/c?u={lpurl_unenc}', 'javascript:alert({lpurl})' ) as $bad ) {
+			$this->assertTrue(
+				Live_Edit_Rules::validate( array( 'click_tracker' => $bad ), $current, self::NOW )->has( Live_Edit_Rules::ERROR_TRACKER_INVALID ),
+				'Accepted as a tracker: ' . $bad
+			);
+		}
+	}
+
+	/**
 	 * A fixed package's end follows its start; any other end is refused. A
 	 * custom package, or none, keeps the rule it had.
 	 *

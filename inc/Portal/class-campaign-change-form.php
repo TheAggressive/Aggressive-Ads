@@ -68,6 +68,12 @@ final class Campaign_Change_Form {
 			$proposed['default_click_url'] = esc_url_raw( trim( sanitize_text_field( wp_unslash( $_POST['default_click_url'] ) ) ) );
 		}
 
+		// Not esc_url_raw: `{lpurl}` is the landing page, and encoding or
+		// stripping the braces would send the tracker nowhere.
+		if ( in_array( 'click_tracker', $allowed, true ) && isset( $_POST['click_tracker'] ) ) {
+			$proposed['click_tracker'] = sanitize_text_field( wp_unslash( $_POST['click_tracker'] ) );
+		}
+
 		if ( in_array( 'click_urls', $allowed, true ) && isset( $_POST['click_urls'] ) && is_array( $_POST['click_urls'] ) ) {
 			$urls = array();
 
@@ -121,6 +127,7 @@ final class Campaign_Change_Form {
 			'live_edit_end_set_by_package'    => __( 'Your package sets how long the campaign runs, so its end follows the start. To run longer, choose a package that runs longer.', 'aggressive-ads' ),
 			'live_edit_end_in_past'           => __( 'The campaign would end on a day that has already passed. Choose a later end date, or a package that runs longer.', 'aggressive-ads' ),
 			'live_edit_click_url_invalid'     => __( 'Enter a valid http or https link, such as https://example.com.', 'aggressive-ads' ),
+			'live_edit_click_tracker_invalid' => __( 'That tracking link cannot be used. It must be a web address with {lpurl} in it exactly once, and no username or password.', 'aggressive-ads' ),
 			'live_edit_no_placements'         => __( 'Keep at least one placement.', 'aggressive-ads' ),
 			'live_edit_placement_not_offered' => __( 'Choose placements your package includes.', 'aggressive-ads' ),
 			'live_edit_package_not_offered'   => __( 'That package is no longer available. Choose another package.', 'aggressive-ads' ),
