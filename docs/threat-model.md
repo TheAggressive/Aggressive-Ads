@@ -188,6 +188,16 @@ the tenant owner or `aggr_manage_orgs` staff. Approval actions derive the
 tenant from the authenticated user, then constrain the row again by primary
 key, organization, kind, status and expiry.
 
+Each pending row tells the owner why it is there, and only in names the owner
+may already know. An invitation says "you", a member's name, or "the site team"
+— never a staff member's name — and a request may say it resembles a member of
+*this* organization (`Domain\Member_Name_Match`, via
+`Portal\Pending_Access_View_Data`). The match is conservative (two or more name
+parts, all of them, nothing when two members fit) and is a suggestion only:
+nothing in the workflow reads it, and a matching name never approves a request.
+Tests: `MemberNameMatchTest`, `OrganizationPendingContextTest`, which pairs
+every case that names a person with one proving who is not named.
+
 Owner invitations use 256-bit random URL-safe bearer tokens. Only a salted HMAC
 is stored; each row is email-bound, three-day expiring and atomically claimed
 before side effects. Tokens are single-use. Failed membership, role, required
