@@ -304,6 +304,8 @@ $aggr_edit_card     = 0;
 						$aggr_dest_next  = $aggr_edit_next;
 
 						require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-destination-card.php';
+
+						require AGGR_PLUGIN_DIR . 'templates/portal/partials/campaign-tracker-card.php';
 						?>
 					<?php endif; ?>
 

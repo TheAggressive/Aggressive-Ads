@@ -199,6 +199,32 @@ final class CampaignChangesScreenTest extends WP_UnitTestCase {
 	}
 
 	/**
+	 * The tracker rides the destination form, so one save stages both.
+	 *
+	 * @return void
+	 */
+	public function test_the_tracker_rides_the_destination_form(): void {
+		$xpath = $this->render(
+			'campaign-changes.php',
+			'destination',
+			$this->campaign(
+				array(
+					'edit_link'    => 'https://example.com/a',
+					'edit_tracker' => 'https://track.example.com/c?u={lpurl}',
+				)
+			)
+		);
+
+		$input = $xpath->query( '//input[@id="aggr-campaign-tracker"]' );
+
+		$this->assertSame( 1, $input->length );
+		$this->assertSame( 'https://track.example.com/c?u={lpurl}', $input->item( 0 )->attributes->getNamedItem( 'value' )->nodeValue );
+		$this->assertSame( 'aggr-changes-form', $input->item( 0 )->attributes->getNamedItem( 'form' )->nodeValue, 'A second form would write the proposal twice.' );
+		$this->assertSame( 0, $xpath->query( '//form[.//input[@name="click_tracker"]]' )->length );
+		$this->assertSame( 1, $xpath->query( '//details[@class="aggr-tracker"][@open]' )->length );
+	}
+
+	/**
 	 * Creation's size cards: an ad has Update rather than Replace and Remove;
 	 * an empty size takes an upload that comes back here; a size the proposal
 	 * adds is described and not offered an upload the server would refuse.
