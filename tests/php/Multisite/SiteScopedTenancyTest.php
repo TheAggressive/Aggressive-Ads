@@ -19,6 +19,7 @@ use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Event_Repository;
 use Aggressive\Ads\Repository\Line_Item_Repository;
 use Aggressive\Ads\Repository\Org_Access_Repository;
+use Aggressive\Ads\Repository\Hourly_Rollup_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Workflow\Fill_Cache;
@@ -276,6 +277,7 @@ final class SiteScopedTenancyTest extends WP_UnitTestCase {
 					'org_access'           => ( new Org_Access_Repository() )->table_name(),
 					'events'               => ( new Event_Repository() )->table_name(),
 					'rollups'              => ( new Rollup_Repository() )->table_name(),
+					'hourly_rollups'       => ( new Hourly_Rollup_Repository() )->table_name(),
 					'line_items'           => ( new Line_Item_Repository( new Campaign_Repository() ) )->table_name(),
 					'creative_assets'      => ( new Creative_Asset_Repository() )->table_name(),
 					'creative_assignments' => ( new Creative_Assignment_Repository() )->table_name(),

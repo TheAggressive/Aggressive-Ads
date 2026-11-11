@@ -12,6 +12,7 @@ namespace Aggressive\Ads\Portal;
 use DateTimeZone;
 use Aggressive\Ads\Domain\Report_Period;
 use Aggressive\Ads\Domain\Report_Request;
+use Aggressive\Ads\Domain\Report_Zone;
 use Aggressive\Ads\Domain\Reporting_Rules;
 use Aggressive\Ads\Workflow\Reporting_Read;
 
@@ -59,6 +60,7 @@ final class Delivery_View_Data {
 		$from = isset( $_GET['from'] ) ? sanitize_text_field( wp_unslash( $_GET['from'] ) ) : '';
 		$to   = isset( $_GET['to'] ) ? sanitize_text_field( wp_unslash( $_GET['to'] ) ) : '';
 		$days = isset( $_GET['days'] ) ? absint( wp_unslash( $_GET['days'] ) ) : 0;
+		$tz   = $this->requested_timezone();
 		// phpcs:enable
 
 		return Report_Request::resolve(
@@ -66,9 +68,23 @@ final class Delivery_View_Data {
 			$to,
 			$days,
 			Reporting_Read::WINDOWS,
-			gmdate( 'Y-m-d' ),
-			Reporting_Read::DEFAULT_DAYS
+			$this->reporting->today( $tz ),
+			Reporting_Read::DEFAULT_DAYS,
+			$tz
 		);
+	}
+
+	/**
+	 * Site timezone, or UTC when the request asked for it.
+	 *
+	 * `tz=utc` is the staff/export option: the default is the site's day,
+	 * because that is the day a publisher means when they say Tuesday.
+	 */
+	public function requested_timezone(): string {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only zone switch; the value is compared to one literal.
+		$raw = isset( $_GET['tz'] ) ? sanitize_key( wp_unslash( $_GET['tz'] ) ) : '';
+
+		return 'utc' === $raw ? Report_Zone::UTC : $this->reporting->timezone();
 	}
 
 	/**
@@ -95,7 +111,7 @@ final class Delivery_View_Data {
 			return $period;
 		}
 
-		return Report_Period::trailing( Report_Actions::MAX_DAYS, $period->end );
+		return Report_Period::trailing( Report_Actions::MAX_DAYS, $period->end, $period->timezone );
 	}
 
 	/**
@@ -108,11 +124,10 @@ final class Delivery_View_Data {
 	/**
 	 * The range in words, timezone included.
 	 *
-	 * **UTC is stated, not implied.** Both projections are keyed by a UTC day
-	 * and neither carries an hour, so a publisher or advertiser east or west of
-	 * UTC is reading days that do not line up with their own. A report that
-	 * left that unsaid would be quietly wrong for most of the world for the
-	 * hours that matter most.
+	 * The zone is stated, not implied. Hours are stored in UTC and grouped
+	 * into the period's timezone at read time; a caption that left the zone
+	 * off would look like a local-day report while somebody was looking at
+	 * the UTC option, or the other way around.
 	 *
 	 * The dates themselves rather than "last 30 days", now that the window is
 	 * the reader's to choose: a label naming a length cannot describe a range
@@ -121,12 +136,24 @@ final class Delivery_View_Data {
 	 */
 	public function range_label(): string {
 		$period = $this->period();
+		$start  = $this->day_label( $period->start );
+		$end    = $this->day_label( $period->end );
+
+		if ( Report_Zone::UTC === $period->timezone ) {
+			return sprintf(
+				/* translators: 1: first day of the range. 2: last day of the range. */
+				__( '%1$s to %2$s (UTC)', 'aggressive-ads' ),
+				$start,
+				$end
+			);
+		}
 
 		return sprintf(
-			/* translators: 1: first day of the range. 2: last day of the range. */
-			__( '%1$s to %2$s (UTC)', 'aggressive-ads' ),
-			$this->day_label( $period->start ),
-			$this->day_label( $period->end )
+			/* translators: 1: first day of the range. 2: last day of the range. 3: timezone identifier, e.g. America/Los_Angeles. */
+			__( '%1$s to %2$s (%3$s)', 'aggressive-ads' ),
+			$start,
+			$end,
+			$period->timezone
 		);
 	}
 

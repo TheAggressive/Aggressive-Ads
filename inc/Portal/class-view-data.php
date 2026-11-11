@@ -655,7 +655,7 @@ final class View_Data {
 	 * One call rather than five, because a template that fetched these
 	 * separately could be edited into fetching them from different requests.
 	 *
-	 * @return array{from: string, to: string, days: int, rejected: bool, export_days: int, export_from: string, export_to: string}
+	 * @return array{from: string, to: string, days: int, rejected: bool, export_days: int, export_from: string, export_to: string, timezone: string}
 	 */
 	public function delivery_window(): array {
 		$period = $this->delivery->period();
@@ -669,6 +669,7 @@ final class View_Data {
 			'export_days' => $export->days,
 			'export_from' => $export->start,
 			'export_to'   => $export->end,
+			'timezone'    => $period->timezone,
 		);
 	}
 

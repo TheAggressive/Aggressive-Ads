@@ -210,6 +210,29 @@ final class SchemaTest extends TestCase {
 		}
 	}
 
+	/** Hourly rollups DDL keys the hour counter uniquely per slot and campaign. */
+	public function test_hourly_rollups_schema_has_declared_columns_and_indexes(): void {
+		$ddl = Schema::hourly_rollups_table_ddl( 'wp_aggr_hourly_rollups', 'DEFAULT CHARACTER SET utf8mb4' );
+
+		$this->assertStringContainsString( 'PRIMARY KEY  (id)', $ddl );
+		$this->assertDoesNotMatchRegularExpression( '/\bINDEX\b/i', $ddl );
+
+		foreach ( Schema::hourly_rollups_columns() as $column ) {
+			$this->assertMatchesRegularExpression( '/^\s*' . preg_quote( $column, '/' ) . '\s/mi', $ddl );
+		}
+
+		foreach ( Schema::hourly_rollups_index_names() as $index ) {
+			if ( 'PRIMARY' === $index ) {
+				continue;
+			}
+
+			$this->assertMatchesRegularExpression(
+				'/^\s*(?:UNIQUE )?KEY ' . preg_quote( $index, '/' ) . ' \(/mi',
+				$ddl
+			);
+		}
+	}
+
 	/** Rollups DDL keys the day counter uniquely per slot and campaign. */
 	public function test_rollups_schema_has_declared_columns_and_indexes(): void {
 		$ddl = Schema::rollups_table_ddl( 'wp_aggr_rollups', 'DEFAULT CHARACTER SET utf8mb4' );

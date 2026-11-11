@@ -138,4 +138,15 @@ final class ReportRequestTest extends TestCase {
 			$this->assertGreaterThanOrEqual( 1, $request->period->days );
 		}
 	}
+
+	/**
+	 * A timezone is passed through onto every period this class returns.
+	 */
+	public function test_a_timezone_is_kept_on_the_period(): void {
+		$request = Report_Request::resolve( '', '', 7, self::WINDOWS, self::TODAY, 30, 'America/Los_Angeles' );
+
+		$this->assertSame( 'America/Los_Angeles', $request->period->timezone );
+		$this->assertSame( 7, $request->period->days );
+		$this->assertSame( self::TODAY, $request->period->end );
+	}
 }

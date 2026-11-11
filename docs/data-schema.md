@@ -104,8 +104,13 @@ replay of the same event is a database refusal, while one fill may still
 record both an impression and a click. `ip_hash` is `HMAC(IP + daily salt)`, never a
 raw address. House fills store campaign_id and creative_id as 0.
 
-`{$wpdb->prefix}aggr_rollups` is the reporting source and the pacing counter:
-unique `(placement_id, campaign_id, line_item_id, day_utc)`. Advertiser tiles
+`{$wpdb->prefix}aggr_rollups` is the pacing counter and the lifetime-tile source,
+unique `(placement_id, campaign_id, line_item_id, creative_id, day_utc)`.
+Org-scoped reports read `{$wpdb->prefix}aggr_hourly_rollups` (schema 32) so a
+local day can be summed without moving the serving clock. The daily unique key
+cannot grow an hour — that would turn `delivered_today` into a twenty-four-row
+sum. Hours are backfilled from `aggr_events` where the ledger still has them;
+history the ledger has purged is not invented from daily rows. Advertiser tiles
 appear only when the reporting module is on.
 
 **`viewables` is schema 17, and it is nullable on purpose.** NULL means nobody
@@ -198,9 +203,12 @@ depends on the vocabulary in force when it was written — P10 already redefined
 `impression` as `served` once — and rows predating the column read 0, which is
 the honest answer rather than a guess.
 
-Event SQL lives in `Event_Repository`; rollup SQL in `Rollup_Repository`, except
-the org-scoped reporting reads, which live in `Rollup_Report_Repository` and
-take a bounded `Domain\Report_Period` rather than aggregating all of history.
+Event SQL lives in `Event_Repository`; daily rollup SQL in `Rollup_Repository`;
+hourly writes and rebuilds in `Hourly_Rollup_Repository`. Org-scoped reporting
+reads live in `Rollup_Report_Repository` and take a bounded
+`Domain\Report_Period` (calendar days in a named timezone, defaulting to the
+site zone, with UTC as a staff/export option) rather than aggregating all of
+history.
 The event row is the durable ledger; the synchronous rollup upsert is a
 low-latency projection. An hourly restartable reconciler rebuilds closed UTC
 days exactly after a ten-minute midnight grace period and stores its non-autoloaded watermark in

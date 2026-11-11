@@ -21,6 +21,14 @@ use Aggressive\Ads\Install\Schema;
 final class Rollup_Repository {
 
 	/**
+	 * Reporting projection at hour grain. Constructed once so a fill does not
+	 * allocate a repository per increment.
+	 *
+	 * @var Hourly_Rollup_Repository|null
+	 */
+	private ?Hourly_Rollup_Repository $hourly = null;
+
+	/**
 	 * The UTC day viewability measurement began, or '' when it has not.
 	 *
 	 * Recorded once by the migration rather than inferred, because "no viewable
@@ -59,6 +67,7 @@ final class Rollup_Repository {
 
 		dbDelta( Schema::rollups_table_ddl( $this->table_name(), $wpdb->get_charset_collate() ) );
 		$this->drop_legacy_slot_day_index();
+		$this->hourly()->install_table();
 	}
 
 	/**
@@ -350,6 +359,19 @@ final class Rollup_Repository {
 		);
 		// phpcs:enable
 
+		/*
+		 * The hourly write is the reporting half of the same event. A named
+		 * `$day_utc` is stored at midnight of that UTC day so existing tests
+		 * and backfills that already chose a day still land somewhere a UTC
+		 * report can find. Live traffic passes '' and is stored on the current
+		 * hour, which is what a local-day report needs to split.
+		 */
+		$hour = 1 === preg_match( '/^\d{4}-\d{2}-\d{2}$/', $day_utc )
+			? $day_utc . ' 00:00:00'
+			: gmdate( 'Y-m-d H:00:00' );
+
+		$this->hourly()->increment( $column, $placement_id, $campaign_id, $hour, $line_item_id, $org_id, $creative_id );
+
 		return false !== $written;
 	}
 
@@ -509,7 +531,14 @@ final class Rollup_Repository {
 		);
 		// phpcs:enable
 
-		return false !== $written && $this->reconcile_conversions( $day_utc, $start, $end );
+		return false !== $written && $this->reconcile_conversions( $day_utc, $start, $end ) && $this->hourly()->reconcile_span( $start, $end );
+	}
+
+	/**
+	 * The hourly projection, allocated on first use.
+	 */
+	private function hourly(): Hourly_Rollup_Repository {
+		return $this->hourly ??= new Hourly_Rollup_Repository();
 	}
 
 	/**

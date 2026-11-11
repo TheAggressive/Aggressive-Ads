@@ -14,6 +14,7 @@ use Aggressive\Ads\Core\Service;
 use Aggressive\Ads\Domain\Csv_Writer;
 use Aggressive\Ads\Domain\Report_Period;
 use Aggressive\Ads\Domain\Report_Request;
+use Aggressive\Ads\Domain\Report_Zone;
 use Aggressive\Ads\Domain\Reporting_Rules;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
@@ -119,7 +120,7 @@ final class Report_Actions implements Service {
 			$period = $this->requested_period();
 			$rows   = $this->reporting->daily_rows_for_org( $this->campaigns->org_id( $campaign_id ), $period, $campaign_id );
 
-			Csv_Download::send( $this->document( $rows ), $this->campaign_filename( $campaign_id, $period->days ) );
+			Csv_Download::send( $this->document( $rows, $period->timezone ), $this->campaign_filename( $campaign_id, $period->days ) );
 		}
 
 		$org_id = $this->current_org_id();
@@ -135,7 +136,7 @@ final class Report_Actions implements Service {
 		$period = $this->requested_period();
 		$rows   = $this->reporting->daily_rows_for_org( $org_id, $period );
 
-		Csv_Download::send( $this->document( $rows ), $this->filename( $org_id, $period->days ) );
+		Csv_Download::send( $this->document( $rows, $period->timezone ), $this->filename( $org_id, $period->days ) );
 	}
 
 	/**
@@ -168,22 +169,25 @@ final class Report_Actions implements Service {
 		$from = isset( $_POST['from'] ) ? sanitize_text_field( wp_unslash( $_POST['from'] ) ) : '';
 		$to   = isset( $_POST['to'] ) ? sanitize_text_field( wp_unslash( $_POST['to'] ) ) : '';
 		$days = isset( $_POST['days'] ) ? absint( wp_unslash( $_POST['days'] ) ) : 0;
+		$raw  = isset( $_POST['tz'] ) ? sanitize_key( wp_unslash( $_POST['tz'] ) ) : '';
 		// phpcs:enable
 
+		$tz     = 'utc' === $raw ? Report_Zone::UTC : $this->reporting->timezone();
 		$period = Report_Request::resolve(
 			$from,
 			$to,
 			$days,
 			Reporting_Read::WINDOWS,
-			gmdate( 'Y-m-d' ),
-			self::DEFAULT_DAYS
+			$this->reporting->today( $tz ),
+			self::DEFAULT_DAYS,
+			$tz
 		)->period;
 
 		if ( $period->days <= self::MAX_DAYS ) {
 			return $period;
 		}
 
-		return Report_Period::trailing( self::MAX_DAYS, $period->end );
+		return Report_Period::trailing( self::MAX_DAYS, $period->end, $period->timezone );
 	}
 
 	/**
@@ -207,11 +211,18 @@ final class Report_Actions implements Service {
 	 * its own process to reach a private method is a test nobody maintains.
 	 * This is a pure function of its argument; exposing it grants nothing.
 	 *
-	 * @param list<array{day: string, campaign_id: int, campaign: string, impressions: int, clicks: int, conversions?: int|null}> $rows Export rows.
+	 * @param list<array{day: string, campaign_id: int, campaign: string, impressions: int, clicks: int, conversions?: int|null}> $rows      Export rows.
+	 * @param string                                                                                                              $timezone  Zone the dates are in.
 	 */
-	public function document( array $rows ): string {
+	public function document( array $rows, string $timezone = Report_Zone::UTC ): string {
 		$header = array(
-			__( 'Date (UTC)', 'aggressive-ads' ),
+			Report_Zone::UTC === $timezone
+				? __( 'Date (UTC)', 'aggressive-ads' )
+				: sprintf(
+					/* translators: %s: timezone identifier, e.g. America/Los_Angeles. */
+					__( 'Date (%s)', 'aggressive-ads' ),
+					$timezone
+				),
 			__( 'Campaign', 'aggressive-ads' ),
 			__( 'Campaign ID', 'aggressive-ads' ),
 			__( 'Impressions', 'aggressive-ads' ),

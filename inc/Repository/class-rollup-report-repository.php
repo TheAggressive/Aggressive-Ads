@@ -10,11 +10,12 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Repository;
 
 use Aggressive\Ads\Domain\Report_Period;
+use Aggressive\Ads\Domain\Report_Zone;
 use Aggressive\Ads\Install\Schema;
 
 /**
- * What a tenant may read out of `aggr_rollups`, split from the class that
- * writes and reconciles it.
+ * What a tenant may read out of `aggr_hourly_rollups`, split from the class
+ * that writes and reconciles the daily table.
  *
  * **Why a separate class.** `Rollup_Repository` owns the table: its schema, the
  * live counter increment, the reconciler's rebuild and the pacing reads the
@@ -56,7 +57,7 @@ final class Rollup_Report_Repository {
 	public function totals_for_org( int $org_id, Report_Period $period, int $campaign_id = 0 ): array {
 		return $this->remember(
 			'totals',
-			array( $org_id, $campaign_id, $period->start, $period->end ),
+			array( $org_id, $campaign_id, $period->start, $period->end, $period->timezone ),
 			fn (): array => $this->read_totals_for_org( $org_id, $period, $campaign_id )
 		);
 	}
@@ -72,7 +73,7 @@ final class Rollup_Report_Repository {
 	public function series_for_org( int $org_id, Report_Period $period, int $campaign_id = 0 ): array {
 		return $this->remember(
 			'series',
-			array( $org_id, $campaign_id, $period->start, $period->end ),
+			array( $org_id, $campaign_id, $period->start, $period->end, $period->timezone ),
 			fn (): array => $this->read_series_for_org( $org_id, $period, $campaign_id )
 		);
 	}
@@ -152,7 +153,7 @@ final class Rollup_Report_Repository {
 	private function table_name(): string {
 		global $wpdb;
 
-		return $wpdb->prefix . Schema::ROLLUPS_TABLE;
+		return $wpdb->prefix . Schema::HOURLY_ROLLUPS_TABLE;
 	}
 
 	/**
@@ -196,13 +197,13 @@ final class Rollup_Report_Repository {
 				WHERE r.org_id = %d
 					AND r.campaign_id > 0
 					AND ( %d = 0 OR r.campaign_id = %d )
-					AND r.day_utc >= %s
-					AND r.day_utc <= %s",
+					AND r.hour_utc >= %s
+					AND r.hour_utc < %s",
 				$org_id,
 				$campaign_id,
 				$campaign_id,
-				$period->start,
-				$period->end
+				$period->hour_start(),
+				$period->hour_end()
 			),
 			ARRAY_A
 		);
@@ -228,7 +229,7 @@ final class Rollup_Report_Repository {
 	 * only place that knows which days were asked for is the period.
 	 *
 	 * @param int           $org_id      Owning organization.
-	 * @param Report_Period $period      Bounded UTC range.
+	 * @param Report_Period $period      Bounded calendar range in a named timezone.
 	 * @param int           $campaign_id One of the organization's campaigns, or 0 for all of them.
 	 * @return list<array{day: string, impressions: int, clicks: int}>
 	 */
@@ -254,19 +255,19 @@ final class Rollup_Report_Repository {
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is prefix+constant; org id and bounds are prepared.
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT r.day_utc AS day, COALESCE(SUM(r.impressions), 0) AS impressions, COALESCE(SUM(r.clicks), 0) AS clicks
+				"SELECT r.hour_utc AS hour, COALESCE(SUM(r.impressions), 0) AS impressions, COALESCE(SUM(r.clicks), 0) AS clicks
 				FROM {$table} r
 				WHERE r.org_id = %d
 					AND r.campaign_id > 0
 					AND ( %d = 0 OR r.campaign_id = %d )
-					AND r.day_utc >= %s
-					AND r.day_utc <= %s
-				GROUP BY r.day_utc",
+					AND r.hour_utc >= %s
+					AND r.hour_utc < %s
+				GROUP BY r.hour_utc",
 				$org_id,
 				$campaign_id,
 				$campaign_id,
-				$period->start,
-				$period->end
+				$period->hour_start(),
+				$period->hour_end()
 			),
 			ARRAY_A
 		);
@@ -278,14 +279,14 @@ final class Rollup_Report_Repository {
 					continue;
 				}
 
-				$day = (string) $row['day'];
+				$day = Report_Zone::local_day( (string) $row['hour'], $period->timezone );
 
 				if ( ! isset( $padded[ $day ] ) ) {
 					continue;
 				}
 
-				$padded[ $day ]['impressions'] = (int) $row['impressions'];
-				$padded[ $day ]['clicks']      = (int) $row['clicks'];
+				$padded[ $day ]['impressions'] += (int) $row['impressions'];
+				$padded[ $day ]['clicks']      += (int) $row['clicks'];
 			}
 		}
 
@@ -318,7 +319,7 @@ final class Rollup_Report_Repository {
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table names are prefix+constant / core posts; bounds and org id are prepared.
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT r.day_utc AS day,
+				"SELECT r.hour_utc AS hour,
 					r.campaign_id AS campaign_id,
 					p.post_title AS campaign,
 					COALESCE(SUM(r.impressions), 0) AS impressions,
@@ -330,15 +331,15 @@ final class Rollup_Report_Repository {
 				WHERE r.org_id = %d
 					AND r.campaign_id > 0
 					AND ( %d = 0 OR r.campaign_id = %d )
-					AND r.day_utc >= %s
-					AND r.day_utc <= %s
-				GROUP BY r.day_utc, r.campaign_id, p.post_title
-				ORDER BY r.day_utc ASC, p.post_title ASC",
+					AND r.hour_utc >= %s
+					AND r.hour_utc < %s
+				GROUP BY r.hour_utc, r.campaign_id, p.post_title
+				ORDER BY r.hour_utc ASC, p.post_title ASC",
 				$org_id,
 				$campaign_id,
 				$campaign_id,
-				$period->start,
-				$period->end
+				$period->hour_start(),
+				$period->hour_end()
 			),
 			ARRAY_A
 		);
@@ -348,24 +349,36 @@ final class Rollup_Report_Repository {
 			return array();
 		}
 
-		$out = array();
+		$folded = array();
 
 		foreach ( $rows as $row ) {
 			if ( ! is_array( $row ) ) {
 				continue;
 			}
 
-			$out[] = array(
-				'day'         => (string) $row['day'],
-				'campaign_id' => (int) $row['campaign_id'],
-				'campaign'    => (string) $row['campaign'],
-				'impressions' => (int) $row['impressions'],
-				'clicks'      => (int) $row['clicks'],
-				'conversions' => null === $row['conversions'] ? null : (int) $row['conversions'],
-			);
+			$day = Report_Zone::local_day( (string) $row['hour'], $period->timezone );
+			$key = $day . ':' . (string) (int) $row['campaign_id'];
+
+			if ( ! isset( $folded[ $key ] ) ) {
+				$folded[ $key ] = array(
+					'day'         => $day,
+					'campaign_id' => (int) $row['campaign_id'],
+					'campaign'    => (string) $row['campaign'],
+					'impressions' => 0,
+					'clicks'      => 0,
+					'conversions' => null,
+				);
+			}
+
+			$folded[ $key ]['impressions'] += (int) $row['impressions'];
+			$folded[ $key ]['clicks']      += (int) $row['clicks'];
+
+			if ( null !== $row['conversions'] ) {
+				$folded[ $key ]['conversions'] = (int) $folded[ $key ]['conversions'] + (int) $row['conversions'];
+			}
 		}
 
-		return $out;
+		return array_values( $folded );
 	}
 
 	/**
@@ -408,15 +421,15 @@ final class Rollup_Report_Repository {
 				FROM {$table} r
 				WHERE r.org_id = %d
 					AND r.campaign_id = %d
-					AND r.day_utc >= %s
-					AND r.day_utc <= %s
+					AND r.hour_utc >= %s
+					AND r.hour_utc < %s
 				GROUP BY r.placement_id, r.creative_id
 				ORDER BY r.placement_id, r.creative_id
 				LIMIT %d",
 				$org_id,
 				$campaign_id,
-				$period->start,
-				$period->end,
+				$period->hour_start(),
+				$period->hour_end(),
 				self::MAX_VARIANT_ROWS
 			),
 			ARRAY_A

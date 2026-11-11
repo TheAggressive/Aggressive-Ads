@@ -430,12 +430,12 @@ overshoots a measured day, the previous equal window — the one the tiles compa
 against — is a dotted line behind it, days still being counted are dashed, and
 each day's figures appear on hover over its column while the same figures are
 announced from a list. The window is chosen from 7/14/30/90-day links with the current one marked,
-and a **Custom** fold holds the two UTC date fields. Reporting days are UTC
-days — the counts are stored per UTC day, so they cannot be re-cut into a
-viewer's local day without hourly data. What is exact is when a day starts, so
-the card says "Each day starts at 5:00 PM your time" and the freshness note
-"Figures since Sep 16, 5:00 PM (your time) are still coming in", through
-`@aggr/local-time`; without script both read in UTC. Below sit the five most
+and a **Custom** fold holds the two date fields. Reporting days follow the
+site timezone by default; `tz=utc` keeps UTC days as a staff/export option.
+Hours are stored in UTC and grouped at read time, so a Tuesday in
+`America/Los_Angeles` is Tuesday local. The UTC option still says "Each day
+starts at 5:00 PM your time" through `@aggr/local-time`; site-day view names
+the timezone instead. Below sit the five most
 recent campaigns with **View all**, the first campaign waiting on the
 advertiser with the review team's reason, and **Start a campaign** as a compact
 package list. **New campaign** is also at the foot of the rail on every screen.

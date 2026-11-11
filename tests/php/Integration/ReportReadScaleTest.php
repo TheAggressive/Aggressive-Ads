@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Tests\Integration;
 
 use Aggressive\Ads\Domain\Report_Period;
+use Aggressive\Ads\Repository\Hourly_Rollup_Repository;
 use Aggressive\Ads\Repository\Rollup_Report_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use WP_UnitTestCase;
@@ -75,18 +76,18 @@ final class ReportReadScaleTest extends WP_UnitTestCase {
 	private function seed(): array {
 		global $wpdb;
 
-		$table  = ( new Rollup_Repository() )->table_name();
+		$table  = ( new Hourly_Rollup_Repository() )->table_name();
 		$values = array();
 		$mine   = 0;
 
 		for ( $day = 0; $day < self::DAYS; $day++ ) {
-			$day_utc = gmdate( 'Y-m-d', strtotime( "-{$day} days" ) );
+			$hour_utc = gmdate( 'Y-m-d', strtotime( "-{$day} days" ) ) . ' 00:00:00';
 
 			for ( $campaign = 1; $campaign <= self::CAMPAIGNS; $campaign++ ) {
 				for ( $placement = 1; $placement <= self::PLACEMENTS; $placement++ ) {
 					$values[] = $wpdb->prepare(
 						'(%s,%d,%d,%d,%d,%d,%d,%d)',
-						$day_utc,
+						$hour_utc,
 						$placement,
 						1000 + $campaign,
 						2000 + $campaign,
@@ -103,7 +104,7 @@ final class ReportReadScaleTest extends WP_UnitTestCase {
 				for ( $placement = 1; $placement <= self::PLACEMENTS; $placement++ ) {
 					$values[] = $wpdb->prepare(
 						'(%s,%d,%d,%d,%d,%d,%d,%d)',
-						$day_utc,
+						$hour_utc,
 						$placement,
 						5000 + $org,
 						6000 + $org,
@@ -118,7 +119,7 @@ final class ReportReadScaleTest extends WP_UnitTestCase {
 
 		foreach ( array_chunk( $values, 500 ) as $chunk ) {
 			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Bulk fixture for this plugin's own table; every value is prepared above.
-			$wpdb->query( "INSERT INTO {$table} (day_utc,placement_id,campaign_id,line_item_id,org_id,impressions,clicks,viewables) VALUES " . implode( ',', $chunk ) );
+			$wpdb->query( "INSERT INTO {$table} (hour_utc,placement_id,campaign_id,line_item_id,org_id,impressions,clicks,viewables) VALUES " . implode( ',', $chunk ) );
 		}
 
 		return array(
@@ -137,7 +138,7 @@ final class ReportReadScaleTest extends WP_UnitTestCase {
 
 		$sql = (string) $wpdb->last_query;
 
-		$this->assertStringContainsString( 'day_utc', $sql, 'The read issued no date predicate at all, so it is bounded by nothing.' );
+		$this->assertStringContainsString( 'hour_utc', $sql, 'The read issued no date predicate at all, so it is bounded by nothing.' );
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Query-plan introspection on a query this test just caused.
 		$plan = $wpdb->get_row( 'EXPLAIN ' . $sql, ARRAY_A );
@@ -176,9 +177,9 @@ final class ReportReadScaleTest extends WP_UnitTestCase {
 		$examined = (int) ( $plan['rows'] ?? PHP_INT_MAX );
 
 		$this->assertSame(
-			'org_day',
+			'org_hour',
 			$plan['key'] ?? null,
-			'The org total fell off org_day, so a tenant read scans the table.'
+			'The org total fell off org_hour, so a tenant read scans the table.'
 		);
 
 		/*

@@ -129,27 +129,31 @@ This phase does not own:
 - P10, P11 and P12 are `[x]`: the metrics a report names are no longer moving.
 - The complete P0 regression baseline is green before implementation starts.
 
-## Decision: the reporting day is UTC, and it says so
+## Decision: reports follow the site's local day; pacing stays on UTC days
 
-Both projections are keyed by `day_utc`, a `date`. There is no hour dimension
-anywhere in the schema. A report cannot therefore be re-bucketed into the site's
-timezone without either a schema change P13 did not make or an approximation
-that shifts counts between days.
+P14 shipped UTC-day reports because the only projection was `day_utc`. Schema 32
+adds `aggr_hourly_rollups`, written beside the daily table and rebuilt by the
+same reconciler pass. Org-scoped reports now group those hours into the site
+timezone. UTC remains a staff/export option (`tz=utc`).
 
-**So reports are in UTC, and every date, every range control and every export
-header says UTC in words.** Not a tooltip, not a footnote on one screen.
+**Pacing does not move.** `delivered_today` is still a UTC day on
+`aggr_rollups`. Growing that unique key by an hour would have turned every
+serving read into a twenty-four-row sum.
 
-This is a real limitation and it is written down rather than hidden: a publisher
-in `America/Los_Angeles` asking for "yesterday" gets a UTC day that began at
-17:00 local the day before. The alternative — hourly buckets, 24× the projection
-rows, re-bucketed at read time — is a storage decision with a write-amplification
-cost, and storage decisions belong to a schema phase that measures them. It is
-not something a reporting phase should smuggle in to make a date picker read
-better.
+A UTC hour is assigned to the local day that contains its start. That is exact
+for whole-hour offsets. For `Asia/Kolkata` (+05:30) the hour that straddles
+local midnight is counted on the day that contains the hour's start — never
+invented as two half-hours.
 
-`Reporting_Rules::utc_day_keys()` already refuses anything outside 1–31 days and
-already names UTC in its contract. The range work extends that; it does not
-replace it with local dates.
+History the event ledger has already purged is not backfilled from daily rows:
+a UTC day cannot be split honestly. Those days stay on the daily table for
+pacing and lifetime tiles.
+
+Fill-outcome reports (`aggr_decision_rollups`) are still UTC days: that table
+has no hour grain.
+
+`Reporting_Rules::utc_day_keys()` is unchanged. The range work lives on
+`Report_Period` and `Report_Zone`.
 
 ## Decision: three absences, never conflated
 

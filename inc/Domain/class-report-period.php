@@ -1,6 +1,6 @@
 <?php
 /**
- * A bounded, validated UTC day range and what can be said about its freshness.
+ * A bounded, validated calendar-day range and what can be said about its freshness.
  *
  * @package Aggressive\Ads
  */
@@ -24,12 +24,12 @@ namespace Aggressive\Ads\Domain;
  * bound that one caller forgets. There is no way to hold an unbounded instance
  * of this class.
  *
- * **The day is UTC, always.** Both projections are keyed by a `date` column and
- * neither carries an hour, so re-bucketing into a site's local timezone would
- * either need a schema change or move counts between days. That is a storage
- * decision, not a reporting one — see
- * `docs/platform-p14-reporting.md`. What this phase owes the reader instead is
- * that every surface says UTC out loud.
+ * **The days are calendar dates in a named timezone.** The default is UTC, which
+ * is how every period was constructed before hourly rollups existed and how a
+ * staff export still asks to read. A site-local period still stores `Y-m-d`
+ * keys — the sparkline and the CSV keep one row per day — and converts those
+ * days into a UTC hour range at the moment a query needs one. Daily pacing
+ * counters stay on UTC days; only the reporting projection is re-bucketed.
  */
 final class Report_Period {
 
@@ -72,29 +72,32 @@ final class Report_Period {
 	/**
 	 * Not constructible without going through a validating factory.
 	 *
-	 * @param string $start Inclusive first UTC day, `Y-m-d`.
-	 * @param string $end   Inclusive last UTC day, `Y-m-d`.
-	 * @param int    $days  Length in days, 1–92.
+	 * @param string $start     Inclusive first calendar day, `Y-m-d`.
+	 * @param string $end       Inclusive last calendar day, `Y-m-d`.
+	 * @param int    $days      Length in days, 1–92.
+	 * @param string $timezone  Zone the calendar days are in.
 	 */
 	private function __construct(
 		public readonly string $start,
 		public readonly string $end,
-		public readonly int $days
+		public readonly int $days,
+		public readonly string $timezone
 	) {
 	}
 
 	/**
-	 * A period from an inclusive pair of UTC days, or null.
+	 * A period from an inclusive pair of calendar days, or null.
 	 *
 	 * Null rather than an exception or a clamp. A malformed or over-long range
 	 * is a caller's bad input, and clamping it silently would answer a question
 	 * nobody asked — the report would render, look authoritative, and cover a
 	 * different period than the one requested.
 	 *
-	 * @param string $start Inclusive first UTC day, `Y-m-d`.
-	 * @param string $end   Inclusive last UTC day, `Y-m-d`.
+	 * @param string $start     Inclusive first calendar day, `Y-m-d`.
+	 * @param string $end       Inclusive last calendar day, `Y-m-d`.
+	 * @param string $timezone  Zone the days are in; invalid names become UTC.
 	 */
-	public static function between( string $start, string $end ): ?self {
+	public static function between( string $start, string $end, string $timezone = Report_Zone::UTC ): ?self {
 		$first = self::parse( $start );
 		$last  = self::parse( $end );
 
@@ -108,7 +111,7 @@ final class Report_Period {
 			return null;
 		}
 
-		return new self( $first->format( 'Y-m-d' ), $last->format( 'Y-m-d' ), $days );
+		return new self( $first->format( 'Y-m-d' ), $last->format( 'Y-m-d' ), $days, Report_Zone::normalize( $timezone ) );
 	}
 
 	/**
@@ -117,10 +120,11 @@ final class Report_Period {
 	 * "Last 30 days" includes today, so it starts 29 days back. Off-by-one here
 	 * is the reporting bug that looks like a rounding error for a week.
 	 *
-	 * @param int    $days    Length, 1–92.
-	 * @param string $end_day Inclusive last UTC day, `Y-m-d`.
+	 * @param int    $days      Length, 1–92.
+	 * @param string $end_day   Inclusive last calendar day, `Y-m-d`.
+	 * @param string $timezone  Zone the days are in.
 	 */
-	public static function ending( int $days, string $end_day ): ?self {
+	public static function ending( int $days, string $end_day, string $timezone = Report_Zone::UTC ): ?self {
 		if ( $days < 1 || $days > self::MAX_DAYS ) {
 			return null;
 		}
@@ -135,7 +139,7 @@ final class Report_Period {
 		// period comes into existence and one place its bound is enforced. Two
 		// factories each doing their own arithmetic is how they end up
 		// disagreeing about whether a range is inclusive.
-		return self::between( $last->modify( '-' . (string) ( $days - 1 ) . ' days' )->format( 'Y-m-d' ), $end_day );
+		return self::between( $last->modify( '-' . (string) ( $days - 1 ) . ' days' )->format( 'Y-m-d' ), $end_day, $timezone );
 	}
 
 	/**
@@ -149,19 +153,20 @@ final class Report_Period {
 	 * null would only push the same problem to a caller with less context — so
 	 * it is clamped here and caught in review instead.
 	 *
-	 * @param int    $days    Requested length; clamped to 1–92.
-	 * @param string $end_day Inclusive last UTC day, `Y-m-d`. A malformed value
-	 *                        yields the epoch rather than null, for the same reason.
+	 * @param int    $days      Requested length; clamped to 1–92.
+	 * @param string $end_day   Inclusive last calendar day, `Y-m-d`. A malformed value
+	 *                          yields the epoch rather than null, for the same reason.
+	 * @param string $timezone  Zone the days are in.
 	 */
-	public static function trailing( int $days, string $end_day ): self {
+	public static function trailing( int $days, string $end_day, string $timezone = Report_Zone::UTC ): self {
 		$days   = max( 1, min( self::MAX_DAYS, $days ) );
-		$period = self::ending( $days, $end_day );
+		$period = self::ending( $days, $end_day, $timezone );
 
-		return $period ?? new self( '1970-01-01', '1970-01-01', 1 );
+		return $period ?? new self( '1970-01-01', '1970-01-01', 1, Report_Zone::normalize( $timezone ) );
 	}
 
 	/**
-	 * Every UTC day in the range, oldest first.
+	 * Every calendar day in the range, oldest first.
 	 *
 	 * Callers pad a sparse result against this so a day with no delivery is a
 	 * zero in the series rather than a missing point the chart closes over.
@@ -184,6 +189,38 @@ final class Report_Period {
 	}
 
 	/**
+	 * Inclusive UTC instant of the first local midnight in range.
+	 */
+	public function utc_start(): \DateTimeImmutable {
+		$bounds = Report_Zone::utc_bounds( $this->start, $this->end, $this->timezone );
+
+		return $bounds['start'] ?? new \DateTimeImmutable( $this->start . ' 00:00:00', new \DateTimeZone( Report_Zone::UTC ) );
+	}
+
+	/**
+	 * Exclusive UTC instant of midnight after the last local day in range.
+	 */
+	public function utc_end(): \DateTimeImmutable {
+		$bounds = Report_Zone::utc_bounds( $this->start, $this->end, $this->timezone );
+
+		return $bounds['end'] ?? new \DateTimeImmutable( $this->end . ' 00:00:00', new \DateTimeZone( Report_Zone::UTC ) )->modify( '+1 day' );
+	}
+
+	/**
+	 * `hour_utc >=` bound, as MySQL datetime.
+	 */
+	public function hour_start(): string {
+		return $this->utc_start()->format( 'Y-m-d H:i:s' );
+	}
+
+	/**
+	 * `hour_utc <` bound, as MySQL datetime.
+	 */
+	public function hour_end(): string {
+		return $this->utc_end()->format( 'Y-m-d H:i:s' );
+	}
+
+	/**
 	 * The equal-length window immediately before this one.
 	 *
 	 * **Equal length and immediately preceding, with no calendar special
@@ -200,7 +237,7 @@ final class Report_Period {
 		}
 
 		$end      = $start->modify( '-1 day' );
-		$previous = self::ending( $this->days, $end->format( 'Y-m-d' ) );
+		$previous = self::ending( $this->days, $end->format( 'Y-m-d' ), $this->timezone );
 
 		// A period's own length is already inside the bound, so the window
 		// before it is too; the fallback exists only because the type says so.
@@ -216,15 +253,25 @@ final class Report_Period {
 	 * plans against and is wrong about, and it looks identical to a real
 	 * decline in traffic.
 	 *
-	 * @param string $watermark Last day reconciled from the ledger, or '' when never.
-	 * @param string $today     Current UTC day, `Y-m-d`.
+	 * The watermark is still a closed UTC day — that is what the reconciler
+	 * seals — and is compared as the last hour of that day. A local Tuesday in
+	 * Los Angeles that still contains Wednesday 00:00–06:00 UTC is therefore
+	 * provisional until UTC Wednesday is sealed, which is conservative and
+	 * the honest reading of a day-grained watermark against an hour-grained
+	 * period.
+	 *
+	 * @param string $watermark Last UTC day reconciled from the ledger, or '' when never.
+	 * @param string $today     Current calendar day in this period's timezone, `Y-m-d`.
 	 */
 	public function freshness( string $watermark, string $today ): string {
 		if ( null !== self::parse( $today ) && $this->end >= $today ) {
 			return self::PARTIAL;
 		}
 
-		if ( null === self::parse( $watermark ) || $this->end > $watermark ) {
+		$sealed = self::sealed_through( $watermark );
+		$last   = $this->utc_end()->modify( '-1 hour' );
+
+		if ( null === $sealed || $sealed < $last ) {
 			return self::PROVISIONAL;
 		}
 
@@ -238,50 +285,70 @@ final class Report_Period {
 	 * a date rather than being a disclaimer over the whole table. Null means
 	 * every day in range is settled.
 	 *
-	 * @param string $watermark Last day reconciled from the ledger, or '' when never.
-	 * @param string $today     Current UTC day, `Y-m-d`.
+	 * @param string $watermark Last UTC day reconciled from the ledger, or '' when never.
+	 * @param string $today     Current calendar day in this period's timezone, `Y-m-d`.
 	 */
 	public function unreconciled_from( string $watermark, string $today ): ?string {
 		if ( self::RECONCILED === $this->freshness( $watermark, $today ) ) {
 			return null;
 		}
 
-		$sealed = self::parse( $watermark );
+		$sealed = self::sealed_through( $watermark );
 
 		if ( null === $sealed ) {
 			// Nothing has ever been reconciled, so nothing in range is settled.
 			return $this->start;
 		}
 
-		$first = $sealed->modify( '+1 day' )->format( 'Y-m-d' );
+		$first = Report_Zone::local_day( $sealed->modify( '+1 hour' )->format( 'Y-m-d H:00:00' ), $this->timezone );
+
+		if ( '' === $first ) {
+			return $this->start;
+		}
 
 		// A watermark older than the range must not point outside it.
 		return $first > $this->start ? $first : $this->start;
 	}
 
 	/**
-	 * A `Y-m-d` string as a UTC date, or null.
+	 * Last stored UTC hour a sealed UTC day covers, or null.
+	 *
+	 * @param string $watermark Last reconciled UTC day, `Y-m-d`.
+	 */
+	private static function sealed_through( string $watermark ): ?\DateTimeImmutable {
+		if ( null === self::parse( $watermark ) ) {
+			return null;
+		}
+
+		return new \DateTimeImmutable( $watermark . ' 23:00:00', new \DateTimeZone( Report_Zone::UTC ) );
+	}
+
+	/**
+	 * A `Y-m-d` string as a calendar date, or null.
 	 *
 	 * The format is checked before parsing because `DateTimeImmutable` is
 	 * generous: it reads `2026-02-30` as 2 March and `13-08-2026` as something
 	 * else again, and a report that silently reinterprets a date is worse than
 	 * one that refuses it.
 	 *
-	 * @param string $day_utc Candidate day.
+	 * Parsed in UTC so the calendar date itself is what is validated, not the
+	 * instant that date begins in some other zone.
+	 *
+	 * @param string $day Candidate day.
 	 */
-	private static function parse( string $day_utc ): ?\DateTimeImmutable {
-		if ( 1 !== preg_match( '/^\d{4}-\d{2}-\d{2}$/', $day_utc ) ) {
+	private static function parse( string $day ): ?\DateTimeImmutable {
+		if ( 1 !== preg_match( '/^\d{4}-\d{2}-\d{2}$/', $day ) ) {
 			return null;
 		}
 
 		try {
-			$date = new \DateTimeImmutable( $day_utc . ' 00:00:00', new \DateTimeZone( 'UTC' ) );
+			$date = new \DateTimeImmutable( $day . ' 00:00:00', new \DateTimeZone( Report_Zone::UTC ) );
 		} catch ( \Exception $e ) {
 			return null;
 		}
 
 		// Round-trip check: a date the parser accepted but rewrote (30 February
 		// becomes 2 March) is not the day the caller asked for.
-		return $date->format( 'Y-m-d' ) === $day_utc ? $date : null;
+		return $date->format( 'Y-m-d' ) === $day ? $date : null;
 	}
 }
