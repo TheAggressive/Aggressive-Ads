@@ -152,7 +152,7 @@ final class Reporting_Read {
 		$since = (int) get_option( Report_Bucket_Repository::OPTION_SINCE, 0 );
 		$next  = (int) get_option( Report_Bucket_Repository::OPTION_NEXT, 0 );
 
-		return 0 === $next && ( 0 === $since || $period->utc_start()->getTimestamp() >= $since );
+		return $since > 0 && 0 === $next && $period->utc_start()->getTimestamp() >= $since;
 	}
 
 	/**
@@ -161,8 +161,10 @@ final class Reporting_Read {
 	 * @param Report_Period $period Range being described.
 	 */
 	public function history_available( Report_Period $period ): bool {
+		$since = (int) get_option( Report_Bucket_Repository::OPTION_SINCE, 0 );
+
 		return Report_Zone::UTC === $period->timezone
-			|| $period->utc_end()->getTimestamp() > (int) get_option( Report_Bucket_Repository::OPTION_SINCE, 0 );
+			|| ( $since > 0 && $period->utc_end()->getTimestamp() > $since );
 	}
 
 	/**
@@ -175,7 +177,7 @@ final class Reporting_Read {
 			return '';
 		}
 
-		if ( (int) get_option( Report_Bucket_Repository::OPTION_NEXT, 0 ) > 0 ) {
+		if ( (int) get_option( Report_Bucket_Repository::OPTION_SINCE, 0 ) <= 0 || (int) get_option( Report_Bucket_Repository::OPTION_NEXT, 0 ) > 0 ) {
 			return __( 'Earlier delivery is being rebuilt for local days. These totals may be incomplete; UTC days retain the daily history.', 'aggressive-ads' );
 		}
 

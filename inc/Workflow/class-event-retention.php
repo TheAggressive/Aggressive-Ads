@@ -83,6 +83,11 @@ final class Event_Retention implements Service {
 
 		$this->reconciler->run();
 
+		// A failed history probe must not let retention erase data needed by its retry.
+		if ( false === get_option( \Aggressive\Ads\Repository\Report_Bucket_Repository::OPTION_SINCE, false ) ) {
+			return;
+		}
+
 		$through = $this->reconciler->reconciled_through();
 		$safe    = '' === $through ? false : strtotime( $through . ' +1 day UTC' );
 

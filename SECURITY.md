@@ -61,6 +61,11 @@ Named so their absence is deliberate rather than overlooked:
 
 ## Our side of it
 
+Contributor and AI-assisted work follows [AGENTS.md](AGENTS.md), including
+failure-path regression tests and primary-source verification for changing
+security guidance. Those rules supplement the controls below; they do not
+constitute a security certification.
+
 - Security is a release blocker, not a hardening pass.
 - Every mitigation names the test that proves it. A mitigation without a test
   is an intention.

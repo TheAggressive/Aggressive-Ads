@@ -145,6 +145,44 @@ final class ReportBucketProjectionTest extends WP_UnitTestCase {
 		$this->assertSame( 1, ( new Rollup_Report_Repository() )->totals_for_org( 1200, Report_Period::between( gmdate( 'Y-m-d', $today ), gmdate( 'Y-m-d', $today ), '+00:15' ) )['impressions'] );
 	}
 
+	/** Failed probes leave history pending, retain its source, and retry on the next job. */
+	public function test_failed_history_probes_preserve_events_and_retry_without_claiming_complete_history(): void {
+		global $wpdb;
+		$at = strtotime( gmdate( 'Y-m-d', time() - 120 * DAY_IN_SECONDS ) . ' 12:00:00 UTC' );
+		$this->event( gmdate( 'Y-m-d H:i:s', $at ) );
+		update_post_meta( 120, Campaign_Repository::META_ORG_ID, 1200 );
+		update_option( \Aggressive\Ads\Workflow\Rollup_Reconciler::OPTION, gmdate( 'Y-m-d', time() - DAY_IN_SECONDS ), false );
+		$buckets = new Report_Bucket_Repository();
+		$read    = \Aggressive\Ads\Plugin::instance()->container()->get( \Aggressive\Ads\Workflow\Reporting_Read::class );
+		$period  = Report_Period::between( gmdate( 'Y-m-d', $at ), gmdate( 'Y-m-d', $at ), '+00:15' );
+
+		foreach ( array( 'created_at_ts', 'occurred_at_ts' ) as $column ) {
+			$fail_probe     = static fn ( string $query ): string => str_starts_with( $query, 'SELECT MIN(' . $column . ')' ) ? 'SELECT aggr_nonexistent_history_column' : $query;
+			$was_suppressed = $wpdb->suppress_errors( true );
+			add_filter( 'query', $fail_probe );
+			try {
+				$this->assertFalse( $buckets->begin_backfill(), $column );
+				foreach ( array( Report_Bucket_Repository::OPTION_SINCE, Report_Bucket_Repository::OPTION_NEXT, Report_Bucket_Repository::OPTION_UNTIL ) as $option ) {
+					$this->assertFalse( get_option( $option, false ), $option );
+				}
+				$this->assertFalse( $read->history_complete( $period ) );
+				$this->assertFalse( $read->history_available( $period ) );
+				$this->assertStringContainsString( 'being rebuilt', $read->history_note( $period ) );
+				$this->assertTrue( $read->history_complete( Report_Period::between( $period->start, $period->end ) ) );
+				\Aggressive\Ads\Plugin::instance()->container()->get( \Aggressive\Ads\Workflow\Event_Retention::class )->run();
+				$this->assertTrue( ( new Event_Repository() )->exists( 'served', hash( 'sha256', gmdate( 'Y-m-d H:i:s', $at ) . 120 ) ) );
+			} finally {
+				remove_filter( 'query', $fail_probe );
+				$wpdb->suppress_errors( $was_suppressed );
+			}
+		}
+
+		$next_day = $at - ( $at % DAY_IN_SECONDS ) + DAY_IN_SECONDS;
+		$this->assertSame( 1, $buckets->backfill_from_events( $next_day ) );
+		$this->assertSame( $next_day, (int) get_option( Report_Bucket_Repository::OPTION_NEXT ) );
+		$this->assertSame( 1, ( new Rollup_Report_Repository() )->totals_for_org( 1200, $period )['impressions'] );
+	}
+
 	/** Retention cannot erase a ledger day that its new projection still needs. */
 	public function test_retention_waits_for_the_reporting_backfill(): void {
 		$old     = gmdate( 'Y-m-d', time() - 140 * DAY_IN_SECONDS );

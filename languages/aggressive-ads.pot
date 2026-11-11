@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-11-11T05:56:47+00:00\n"
+"POT-Creation-Date: 2026-11-11T06:39:25+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: aggressive-ads\n"
@@ -164,7 +164,7 @@ msgstr ""
 #: inc/Admin/class-conversions-screen.php:260
 #: inc/Portal/class-delivery-view-data.php:275
 #: inc/Portal/class-delivery-view-data.php:313
-#: inc/Portal/class-report-actions.php:232
+#: inc/Portal/class-report-actions.php:230
 #: templates/portal/partials/campaign-table.php:62
 #: templates/portal/partials/campaign-variant-comparison.php:50
 msgid "Conversions"
@@ -1403,7 +1403,7 @@ msgstr ""
 #: inc/Portal/class-creative-actions.php:704
 #: inc/Portal/class-email-change-actions.php:178
 #: inc/Portal/class-organization-actions.php:222
-#: inc/Portal/class-report-actions.php:83
+#: inc/Portal/class-report-actions.php:81
 #: inc/Workflow/class-campaign-state-machine.php:245
 #: inc/Workflow/class-campaign-state-machine.php:263
 #: inc/Workflow/class-creative-copies.php:83
@@ -1414,12 +1414,12 @@ msgid "You do not have permission to do that."
 msgstr ""
 
 #: inc/Admin/class-report-export.php:90
-#: inc/Portal/class-report-actions.php:96
+#: inc/Portal/class-report-actions.php:94
 msgid "Reporting is not available on this site."
 msgstr ""
 
 #: inc/Admin/class-report-export.php:149
-#: inc/Portal/class-report-actions.php:221
+#: inc/Portal/class-report-actions.php:219
 msgid "Date (UTC)"
 msgstr ""
 
@@ -1811,7 +1811,7 @@ msgstr ""
 
 #: inc/Admin/class-review-screen.php:294
 #: inc/Core/class-post-types.php:201
-#: inc/Portal/class-report-actions.php:227
+#: inc/Portal/class-report-actions.php:225
 #: templates/portal/partials/campaign-status.php:218
 #: templates/portal/partials/campaign-table.php:51
 msgid "Campaign"
@@ -4673,7 +4673,7 @@ msgstr ""
 
 #: inc/Portal/class-delivery-view-data.php:275
 #: inc/Portal/class-delivery-view-data.php:291
-#: inc/Portal/class-report-actions.php:229
+#: inc/Portal/class-report-actions.php:227
 #: templates/portal/partials/campaign-table.php:58
 #: templates/portal/partials/campaign-variant-comparison.php:46
 msgid "Impressions"
@@ -4681,7 +4681,7 @@ msgstr ""
 
 #: inc/Portal/class-delivery-view-data.php:275
 #: inc/Portal/class-delivery-view-data.php:296
-#: inc/Portal/class-report-actions.php:230
+#: inc/Portal/class-report-actions.php:228
 #: templates/portal/partials/campaign-table.php:60
 #: templates/portal/partials/campaign-variant-comparison.php:47
 msgid "Clicks"
@@ -4840,25 +4840,25 @@ msgstr ""
 msgid "If a portal account uses that address, a one-time password link has been sent."
 msgstr ""
 
-#: inc/Portal/class-report-actions.php:114
+#: inc/Portal/class-report-actions.php:112
 msgid "There is no campaign to report on."
 msgstr ""
 
-#: inc/Portal/class-report-actions.php:130
+#: inc/Portal/class-report-actions.php:128
 msgid "There is no organization to report on."
 msgstr ""
 
 #. translators: %s: timezone identifier, e.g. America/Los_Angeles.
-#: inc/Portal/class-report-actions.php:224
+#: inc/Portal/class-report-actions.php:222
 #, php-format
 msgid "Date (%s)"
 msgstr ""
 
-#: inc/Portal/class-report-actions.php:228
+#: inc/Portal/class-report-actions.php:226
 msgid "Campaign ID"
 msgstr ""
 
-#: inc/Portal/class-report-actions.php:231
+#: inc/Portal/class-report-actions.php:229
 msgid "CTR %"
 msgstr ""
 
@@ -6173,12 +6173,12 @@ msgstr ""
 msgid "Ad Slot (legacy)"
 msgstr ""
 
-#: inc/Workflow/class-reporting-read.php:179
+#: inc/Workflow/class-reporting-read.php:181
 msgid "Earlier delivery is being rebuilt for local days. These totals may be incomplete; UTC days retain the daily history."
 msgstr ""
 
 #. translators: %s: earliest retained timestamp in UTC.
-#: inc/Workflow/class-reporting-read.php:184
+#: inc/Workflow/class-reporting-read.php:186
 #, php-format
 msgid "Local-day history is available from %s UTC. Earlier delivery cannot be reconstructed; UTC days retain the daily history."
 msgstr ""

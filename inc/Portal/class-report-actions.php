@@ -36,11 +36,9 @@ final class Report_Actions implements Service {
 	/**
 	 * Longest window the export will assemble.
 	 *
-	 * **Tighter than `Report_Period::MAX_DAYS`, and for a different reason.** A
-	 * screen's range is bounded by what a read may examine; an export is bounded
-	 * by the document it assembles in memory before sending a byte. Collapsing
-	 * the two into one number would mean one of them had been chosen for the
-	 * wrong constraint, so they stay separate and the tighter one wins here.
+	 * Tighter than the screen's date window because this handler assembles the
+	 * document in memory. This limits days, not campaign/day row cardinality;
+	 * the remaining resource bound is tracked in docs/open-work.md.
 	 */
 	public const MAX_DAYS = 31;
 
