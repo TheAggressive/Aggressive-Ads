@@ -18,7 +18,7 @@ use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Decision_Rollup_Repository;
 use Aggressive\Ads\Repository\Forecast_Repository;
 use Aggressive\Ads\Repository\Reservation_Repository;
-use Aggressive\Ads\Repository\Hourly_Rollup_Repository;
+use Aggressive\Ads\Repository\Report_Bucket_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Repository\Conversion_Credential_Repository;
 use Aggressive\Ads\Repository\Conversion_Definition_Repository;
@@ -69,6 +69,9 @@ final class Installer {
 			'aggr_settings',
 			Click_Hop::OPTION_REWRITE,
 			Rollup_Reconciler::OPTION,
+			Report_Bucket_Repository::OPTION_SINCE,
+			Report_Bucket_Repository::OPTION_NEXT,
+			Report_Bucket_Repository::OPTION_UNTIL,
 			Line_Item_Migrator::OPTION_CURSOR,
 			Line_Item_Migrator::OPTION_NAME_CURSOR,
 			Line_Item_Migrator::OPTION_NAME_DONE,
@@ -152,6 +155,7 @@ final class Installer {
 		$this->install_org_access();
 		$this->install_delivery_tables();
 		$this->install_conversions();
+		( new Report_Bucket_Repository() )->begin_backfill();
 		$this->install_line_items();
 		$this->install_creative_model();
 
@@ -203,7 +207,7 @@ final class Installer {
 	public function install_delivery_tables(): void {
 		( new Event_Repository() )->install_table();
 		( new Rollup_Repository() )->install_table();
-		( new Hourly_Rollup_Repository() )->install_table();
+		( new Report_Bucket_Repository() )->install_table();
 		( new Decision_Rollup_Repository() )->install_table();
 		( new Forecast_Repository() )->install_table();
 		( new Reservation_Repository() )->install_table();

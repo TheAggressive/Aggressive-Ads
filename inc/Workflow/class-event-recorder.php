@@ -55,7 +55,9 @@ final class Event_Recorder {
 	 * @return self::RECORDED|self::RECORDED_PENDING|self::REPLAY|self::FAILED
 	 */
 	public function record( string $type, int $placement_id, int $campaign_id, int $creative_id, string $token_hash, string $ip_hash ): string {
-		if ( ! $this->events->insert( $type, $placement_id, $campaign_id, $creative_id, $token_hash, $ip_hash ) ) {
+		$occurred_at_ts = time();
+
+		if ( ! $this->events->insert( $type, $placement_id, $campaign_id, $creative_id, $token_hash, $ip_hash, $occurred_at_ts ) ) {
 			return $this->events->exists( $type, $token_hash ) ? self::REPLAY : self::FAILED;
 		}
 
@@ -100,6 +102,7 @@ final class Event_Recorder {
 			line_item_id: $line_item_id,
 			org_id: $this->campaigns->org_id( $campaign_id ),
 			creative_id: $creative_id,
+			occurred_at_ts: $occurred_at_ts,
 		);
 
 		return $projected ? self::RECORDED : self::RECORDED_PENDING;

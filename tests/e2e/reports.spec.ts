@@ -1,6 +1,12 @@
 import { expect, test } from '@playwright/test';
 import { signInToAdmin } from './admin-login';
-import { expectAdminA11y, expectNoHorizontalOverflow } from './accessibility';
+import {
+	expectAdminA11y,
+	expectNoHorizontalOverflow,
+	expectPortalA11y,
+} from './accessibility';
+import { signIn } from './sign-in-helper';
+import { wp } from './wp-cli';
 
 /**
  * The publisher fill report, in a browser.
@@ -84,4 +90,45 @@ test( 'the fill report offers a download of what is on screen', async ( {
 
 	await expect( form ).toHaveAttribute( 'method', 'post' );
 	await expect( form.locator( 'input[name="_wpnonce"]' ) ).toHaveCount( 1 );
+} );
+
+test( 'advertiser local days and UTC exports keep the same selected dates', async ( {
+	page,
+} ) => {
+	const originalZone = wp( 'option', 'get', 'timezone_string' ).trim();
+
+	try {
+		wp( 'option', 'update', 'timezone_string', 'Asia/Kolkata' );
+		await page.goto( '/advertiser/' );
+		await signIn( page, 'advertiser@example.test', 'advertiser' );
+		await page.goto( '/advertiser/?from=2026-08-01&to=2026-08-07' );
+		await expect( page.locator( '#aggr-delivery-window' ) ).toContainText(
+			'Asia/Kolkata'
+		);
+		await page.getByRole( 'link', { name: 'View UTC days' } ).click();
+		await expect( page ).toHaveURL( /from=2026-08-01/ );
+		await expect( page ).toHaveURL( /to=2026-08-07/ );
+		await expect( page.locator( '#aggr-delivery-window' ) ).toContainText(
+			'(UTC)'
+		);
+		const exportForm = page.locator(
+			'form:has(input[value="aggr_export_report"])'
+		);
+		await expect( exportForm.locator( 'input[name="tz"]' ) ).toHaveValue(
+			'utc'
+		);
+		await expect( exportForm.locator( 'input[name="from"]' ) ).toHaveValue(
+			'2026-08-01'
+		);
+		await page.getByRole( 'link', { name: 'View site days' } ).click();
+		await expect( page.locator( '#aggr-delivery-window' ) ).toContainText(
+			'Asia/Kolkata'
+		);
+		await expect( exportForm.locator( 'input[name="tz"]' ) ).toHaveCount(
+			0
+		);
+		await expectPortalA11y( page );
+	} finally {
+		wp( 'option', 'update', 'timezone_string', originalZone );
+	}
 } );

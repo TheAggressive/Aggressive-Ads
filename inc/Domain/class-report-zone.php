@@ -1,6 +1,6 @@
 <?php
 /**
- * Turning a calendar day in a named timezone into the UTC hours it covers.
+ * Turning a calendar day in a named timezone into the UTC instants it covers.
  *
  * @package Aggressive\Ads
  */
@@ -17,12 +17,9 @@ namespace Aggressive\Ads\Domain;
  * a reading question: a publisher in `America/Los_Angeles` asking for Tuesday
  * means Tuesday local, including the hours that are still Monday in UTC.
  *
- * **Hours, not days, are what can be re-bucketed.** A UTC day cannot be split
- * after the fact. An hour can be assigned to whichever local day contains its
- * start, which is exact for whole-hour offsets and the documented approximation
- * for a zone such as `Asia/Kolkata` whose offset is thirty minutes: the UTC
- * hour that straddles local midnight is counted on the day that contains the
- * hour's start, never invented as two half-hours.
+ * Fifteen-minute UTC buckets preserve midnight boundaries in whole-hour,
+ * half-hour and 45-minute timezones, including DST. Grouping whole UTC hours
+ * would put events either side of Kolkata's midnight on the same local day.
  */
 final class Report_Zone {
 
@@ -69,13 +66,13 @@ final class Report_Zone {
 	}
 
 	/**
-	 * The local calendar day that contains the start of a stored UTC hour.
+	 * The local calendar day that contains the start of a stored UTC bucket.
 	 *
-	 * @param string $hour_utc  `Y-m-d H:00:00` (or a more precise UTC instant).
+	 * @param string $bucket_utc  `Y-m-d H:i:s` in UTC.
 	 * @param string $timezone  Named zone, or UTC.
 	 */
-	public static function local_day( string $hour_utc, string $timezone ): string {
-		$hour = self::parse_instant( $hour_utc );
+	public static function local_day( string $bucket_utc, string $timezone ): string {
+		$hour = self::parse_instant( $bucket_utc );
 
 		return null === $hour ? '' : $hour->setTimezone( new \DateTimeZone( self::normalize( $timezone ) ) )->format( 'Y-m-d' );
 	}
@@ -83,11 +80,10 @@ final class Report_Zone {
 	/**
 	 * Inclusive start and exclusive end of a local day range, as UTC instants.
 	 *
-	 * The end is exclusive so a query can use `hour_utc >= start AND hour_utc < end`
+	 * The end is exclusive so a query can use `bucket_utc >= start AND bucket_utc < end`
 	 * without caring whether the zone's offset is a whole hour. For
-	 * `Asia/Kolkata` the bounds land on the half-hour; stored hours are still
-	 * clock hours, and SQL's datetime comparison includes the ones whose start
-	 * falls inside the range.
+	 * `Asia/Kolkata` the bounds land on the half-hour; quarter-hour bucket
+	 * boundaries preserve that midnight exactly.
 	 *
 	 * @param string $start_day Inclusive first local day, `Y-m-d`.
 	 * @param string $end_day   Inclusive last local day, `Y-m-d`.
@@ -110,45 +106,16 @@ final class Report_Zone {
 			return null;
 		}
 
+		if ( $start->format( 'Y-m-d' ) !== $start_day || $end <= $start ) {
+			return null;
+		}
+
 		$utc = new \DateTimeZone( self::UTC );
 
 		return array(
 			'start' => $start->setTimezone( $utc ),
 			'end'   => $end->setTimezone( $utc ),
 		);
-	}
-
-	/**
-	 * Every stored UTC hour whose start falls inside a local day range.
-	 *
-	 * Spring-forward days yield 23 hours; fall-back days yield 25. That is
-	 * the test that the bounds came from the zone and not from `+ 24 hours`.
-	 *
-	 * @param string $start_day Inclusive first local day, `Y-m-d`.
-	 * @param string $end_day   Inclusive last local day, `Y-m-d`.
-	 * @param string $timezone  Named zone, or UTC.
-	 * @return list<string> `Y-m-d H:00:00` UTC, oldest first.
-	 */
-	public static function hours_in( string $start_day, string $end_day, string $timezone ): array {
-		$bounds = self::utc_bounds( $start_day, $end_day, $timezone );
-
-		if ( null === $bounds ) {
-			return array();
-		}
-
-		$hours  = array();
-		$cursor = $bounds['start'];
-
-		if ( (int) $cursor->format( 'i' ) > 0 || (int) $cursor->format( 's' ) > 0 ) {
-			$cursor = $cursor->setTime( (int) $cursor->format( 'H' ), 0, 0 )->modify( '+1 hour' );
-		}
-
-		while ( $cursor < $bounds['end'] ) {
-			$hours[] = $cursor->format( 'Y-m-d H:00:00' );
-			$cursor  = $cursor->modify( '+1 hour' );
-		}
-
-		return $hours;
 	}
 
 	/**

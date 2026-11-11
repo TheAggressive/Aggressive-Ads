@@ -438,7 +438,7 @@ each day's figures appear on hover over its column while the same figures are
 announced from a list. The window is chosen from 7/14/30/90-day links with the current one marked,
 and a **Custom** fold holds the two date fields. Reporting days follow the
 site timezone by default; `tz=utc` keeps UTC days as a staff/export option.
-Hours are stored in UTC and grouped at read time, so a Tuesday in
+Quarter-hour buckets are stored in UTC and grouped at read time, so a Tuesday in
 `America/Los_Angeles` is Tuesday local. The UTC option still says "Each day
 starts at 5:00 PM your time" through `@aggr/local-time`; site-day view names
 the timezone instead. Below sit the five most

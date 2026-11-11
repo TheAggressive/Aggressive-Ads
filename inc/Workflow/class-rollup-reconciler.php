@@ -115,6 +115,8 @@ final class Rollup_Reconciler implements Service {
 			return 0;
 		}
 
+		$this->rollups->backfill_reports( $open_day_start );
+
 		$latest_closed = gmdate( 'Y-m-d', $open_day_start - DAY_IN_SECONDS );
 		$next          = $this->next_day( $open_day_start );
 

@@ -10,7 +10,6 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Tests\Integration;
 
 use Aggressive\Ads\Domain\Report_Period;
-use Aggressive\Ads\Repository\Hourly_Rollup_Repository;
 use Aggressive\Ads\Repository\Rollup_Report_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use WP_UnitTestCase;
@@ -22,13 +21,6 @@ use WP_UnitTestCase;
 final class LocalDayReportTest extends WP_UnitTestCase {
 
 	/**
-	 * Hourly writes under test.
-	 *
-	 * @var Hourly_Rollup_Repository
-	 */
-	private Hourly_Rollup_Repository $hourly;
-
-	/**
 	 * Org-scoped reads under test.
 	 *
 	 * @var Rollup_Report_Repository
@@ -36,11 +28,9 @@ final class LocalDayReportTest extends WP_UnitTestCase {
 	private Rollup_Report_Repository $reports;
 
 	public function set_up(): void {
+		( new Rollup_Repository() )->install_table();
 		parent::set_up();
 
-		( new Rollup_Repository() )->install_table();
-
-		$this->hourly  = new Hourly_Rollup_Repository();
 		$this->reports = new Rollup_Report_Repository();
 	}
 
@@ -85,6 +75,53 @@ final class LocalDayReportTest extends WP_UnitTestCase {
 		$this->assertSame( 1, $this->reports->totals_for_org( 1200, $twelfth )['impressions'] );
 	}
 
+	/** A UTC hour contains both sides of Kolkata midnight. */
+	public function test_events_either_side_of_half_hour_midnight_stay_on_their_own_days(): void {
+		$this->write( '2026-08-12 18:29:59', 12, 120, 1200 );
+		$this->write( '2026-08-12 18:30:00', 12, 120, 1200 );
+		$this->write( '2026-08-12 18:59:59', 12, 120, 1200 );
+		$before = Report_Period::between( '2026-08-12', '2026-08-12', 'Asia/Kolkata' );
+		$after  = Report_Period::between( '2026-08-13', '2026-08-13', 'Asia/Kolkata' );
+		$this->assertSame( 1, $this->reports->totals_for_org( 1200, $before )['impressions'] );
+		$this->assertSame( 2, $this->reports->totals_for_org( 1200, $after )['impressions'] );
+		$this->assertSame( 2, $this->reports->series_for_org( 1200, $after )[0]['impressions'] );
+	}
+
+	/** Nepal's midnight is 18:15 UTC; the two events must not be collapsed. */
+	public function test_forty_five_minute_offsets_preserve_midnight(): void {
+		$this->write( '2026-08-12 18:14:59', 12, 120, 1200 );
+		$this->write( '2026-08-12 18:15:00', 12, 120, 1200 );
+		$before = Report_Period::between( '2026-08-12', '2026-08-12', 'Asia/Kathmandu' );
+		$after  = Report_Period::between( '2026-08-13', '2026-08-13', 'Asia/Kathmandu' );
+		$this->assertSame( 1, $this->reports->totals_for_org( 1200, $before )['impressions'] );
+		$this->assertSame( 1, $this->reports->totals_for_org( 1200, $after )['impressions'] );
+	}
+
+	/** Repeated clock hours on a fall-back day still aggregate to one local date. */
+	public function test_dst_transition_aggregates_without_database_timezone_tables(): void {
+		foreach ( array( '2026-11-01 07:00:00', '2026-11-01 08:59:59', '2026-11-01 09:00:00', '2026-11-02 07:59:59', '2026-11-02 08:00:00' ) as $at ) {
+			$this->write( $at, 12, 120, 1200 );
+		}
+		$period = Report_Period::between( '2026-11-01', '2026-11-02', 'America/Los_Angeles' );
+		$series = $this->reports->series_for_org( 1200, $period );
+		$this->assertSame( array( 4, 1 ), array_column( $series, 'impressions' ) );
+		$this->assertSame( 5, $this->reports->totals_for_org( 1200, $period )['impressions'] );
+	}
+
+	/** Export dates and totals use the same local-day grouping as the portal. */
+	public function test_csv_rows_follow_local_midnight_and_stay_scoped(): void {
+		$campaign = self::factory()->post->create( array( 'post_title' => 'Local day campaign' ) );
+		$this->write( '2026-08-12 18:29:59', 12, $campaign, 1200 );
+		$this->write( '2026-08-12 18:30:00', 12, $campaign, 1200 );
+		$this->write( '2026-08-12 18:45:00', 12, $campaign, 9990 );
+		$period = Report_Period::between( '2026-08-13', '2026-08-13', 'Asia/Kolkata' );
+		$rows   = $this->reports->daily_rows_for_org( 1200, $period );
+		$this->assertCount( 1, $rows );
+		$this->assertSame( '2026-08-13', $rows[0]['day'] );
+		$this->assertSame( 1, $rows[0]['impressions'] );
+		$this->assertSame( $campaign, $rows[0]['campaign_id'] );
+	}
+
 	/**
 	 * A daily increment dual-writes midnight of that UTC day so a UTC report
 	 * still finds a test that already named a day.
@@ -106,6 +143,6 @@ final class LocalDayReportTest extends WP_UnitTestCase {
 	 * @param int    $org       Organization id.
 	 */
 	private function write( string $hour, int $placement, int $campaign, int $org ): void {
-		$this->assertTrue( $this->hourly->increment( 'impressions', $placement, $campaign, $hour, $campaign, $org ) );
+		$this->assertTrue( ( new Rollup_Repository() )->increment( 'impressions', $placement, $campaign, '', $campaign, $org, 0, strtotime( $hour . ' UTC' ) ) );
 	}
 }

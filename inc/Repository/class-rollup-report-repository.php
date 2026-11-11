@@ -14,16 +14,15 @@ use Aggressive\Ads\Domain\Report_Zone;
 use Aggressive\Ads\Install\Schema;
 
 /**
- * What a tenant may read out of `aggr_hourly_rollups`, split from the class
+ * What a tenant may read out of `aggr_report_buckets`, split from the class
  * that writes and reconciles the daily table.
  *
  * **Why a separate class.** `Rollup_Repository` owns the table: its schema, the
  * live counter increment, the reconciler's rebuild and the pacing reads the
  * decision engine makes. Those are writes and hot-path reads reviewed for
  * contention and query budget. These are org-scoped aggregates reviewed for
- * tenant isolation and range bounds. Same table, two different review
- * standards, so they are two files — the reason the registrars are split the
- * same way.
+ * tenant isolation and range bounds. UTC reads retain the daily table;
+ * local-day reads use the finer reporting projection.
  *
  * **Every read here takes a `Report_Period`.** Not a day count, not a pair of
  * strings: a value object that cannot exist unbounded. Before P14 the
@@ -100,6 +99,10 @@ final class Rollup_Report_Repository {
 			return $read();
 		}
 
+		// Advancing the historical backfill must not reuse a partially rebuilt total.
+		$args[] = (int) get_option( Report_Bucket_Repository::OPTION_SINCE, 0 );
+		$args[] = (int) get_option( Report_Bucket_Repository::OPTION_NEXT, 0 );
+
 		$key   = $name . ':' . md5( (string) wp_json_encode( $args ) );
 		$found = false;
 
@@ -146,14 +149,48 @@ final class Rollup_Report_Repository {
 	/**
 	 * Fully prefixed table name.
 	 *
+	 * @param Report_Period $period UTC uses retained daily history; local days use buckets.
+	 *
 	 * Derived the same way `Rollup_Repository` derives it. Both read one
 	 * constant from `Schema`, so there is one name and two accessors rather
 	 * than a second source of truth.
 	 */
-	private function table_name(): string {
+	private function table_name( Report_Period $period ): string {
 		global $wpdb;
 
-		return $wpdb->prefix . Schema::HOURLY_ROLLUPS_TABLE;
+		return $wpdb->prefix . ( Report_Zone::UTC === $period->timezone ? Schema::ROLLUPS_TABLE : Schema::REPORT_BUCKETS_TABLE );
+	}
+
+	/**
+	 * Calendar-day SQL without depending on MySQL's optional timezone tables.
+	 * Only offset transitions inside the bounded period need branches. SQL then
+	 * returns one row per local day rather than shipping every bucket to PHP.
+	 *
+	 * @param Report_Period $period Bounded, validated reporting period.
+	 */
+	private function day_sql( Report_Period $period ): string {
+		if ( Report_Zone::UTC === $period->timezone ) {
+			return 'r.day_utc';
+		}
+
+		global $wpdb;
+		$zone        = new \DateTimeZone( $period->timezone );
+		$transitions = $zone->getTransitions( $period->utc_start()->getTimestamp(), $period->utc_end()->getTimestamp() );
+		$offset      = $zone->getOffset( $period->utc_start() );
+		$sql         = 'CASE ';
+
+		foreach ( false === $transitions ? array() : array_slice( $transitions, 1 ) as $transition ) {
+			$sql   .= $wpdb->prepare(
+				'WHEN r.bucket_utc < %s THEN DATE(DATE_ADD(r.bucket_utc, INTERVAL %d SECOND)) ',
+				gmdate( 'Y-m-d H:i:s', $transition['ts'] ),
+				$offset
+			);
+			$offset = $transition['offset'];
+		}
+
+		$day = $wpdb->prepare( 'DATE(DATE_ADD(r.bucket_utc, INTERVAL %d SECOND))', $offset );
+
+		return 'CASE ' === $sql ? $day : $sql . 'ELSE ' . $day . ' END';
 	}
 
 	/**
@@ -186,7 +223,8 @@ final class Rollup_Report_Repository {
 
 		global $wpdb;
 
-		$table = $this->table_name();
+		$table  = $this->table_name( $period );
+		$bucket = Report_Zone::UTC === $period->timezone ? 'r.day_utc' : 'r.bucket_utc';
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is prefix+constant; org id and bounds are prepared.
 		$row = $wpdb->get_row(
@@ -197,13 +235,13 @@ final class Rollup_Report_Repository {
 				WHERE r.org_id = %d
 					AND r.campaign_id > 0
 					AND ( %d = 0 OR r.campaign_id = %d )
-					AND r.hour_utc >= %s
-					AND r.hour_utc < %s",
+					AND {$bucket} >= %s
+					AND {$bucket} < %s",
 				$org_id,
 				$campaign_id,
 				$campaign_id,
-				$period->hour_start(),
-				$period->hour_end()
+				$period->bucket_start(),
+				$period->bucket_end()
 			),
 			ARRAY_A
 		);
@@ -250,24 +288,26 @@ final class Rollup_Report_Repository {
 
 		global $wpdb;
 
-		$table = $this->table_name();
+		$table   = $this->table_name( $period );
+		$bucket  = Report_Zone::UTC === $period->timezone ? 'r.day_utc' : 'r.bucket_utc';
+		$day_sql = $this->day_sql( $period );
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is prefix+constant; org id and bounds are prepared.
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT r.hour_utc AS hour, COALESCE(SUM(r.impressions), 0) AS impressions, COALESCE(SUM(r.clicks), 0) AS clicks
+				"SELECT {$day_sql} AS day, COALESCE(SUM(r.impressions), 0) AS impressions, COALESCE(SUM(r.clicks), 0) AS clicks
 				FROM {$table} r
 				WHERE r.org_id = %d
 					AND r.campaign_id > 0
 					AND ( %d = 0 OR r.campaign_id = %d )
-					AND r.hour_utc >= %s
-					AND r.hour_utc < %s
-				GROUP BY r.hour_utc",
+					AND {$bucket} >= %s
+					AND {$bucket} < %s
+				GROUP BY day",
 				$org_id,
 				$campaign_id,
 				$campaign_id,
-				$period->hour_start(),
-				$period->hour_end()
+				$period->bucket_start(),
+				$period->bucket_end()
 			),
 			ARRAY_A
 		);
@@ -279,7 +319,7 @@ final class Rollup_Report_Repository {
 					continue;
 				}
 
-				$day = Report_Zone::local_day( (string) $row['hour'], $period->timezone );
+				$day = (string) $row['day'];
 
 				if ( ! isset( $padded[ $day ] ) ) {
 					continue;
@@ -313,13 +353,15 @@ final class Rollup_Report_Repository {
 
 		global $wpdb;
 
-		$table = $this->table_name();
-		$posts = $wpdb->posts;
+		$table   = $this->table_name( $period );
+		$bucket  = Report_Zone::UTC === $period->timezone ? 'r.day_utc' : 'r.bucket_utc';
+		$day_sql = $this->day_sql( $period );
+		$posts   = $wpdb->posts;
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table names are prefix+constant / core posts; bounds and org id are prepared.
 		$rows = $wpdb->get_results(
 			$wpdb->prepare(
-				"SELECT r.hour_utc AS hour,
+				"SELECT {$day_sql} AS day,
 					r.campaign_id AS campaign_id,
 					p.post_title AS campaign,
 					COALESCE(SUM(r.impressions), 0) AS impressions,
@@ -331,15 +373,15 @@ final class Rollup_Report_Repository {
 				WHERE r.org_id = %d
 					AND r.campaign_id > 0
 					AND ( %d = 0 OR r.campaign_id = %d )
-					AND r.hour_utc >= %s
-					AND r.hour_utc < %s
-				GROUP BY r.hour_utc, r.campaign_id, p.post_title
-				ORDER BY r.hour_utc ASC, p.post_title ASC",
+					AND {$bucket} >= %s
+					AND {$bucket} < %s
+				GROUP BY day, r.campaign_id, p.post_title
+				ORDER BY day ASC, p.post_title ASC",
 				$org_id,
 				$campaign_id,
 				$campaign_id,
-				$period->hour_start(),
-				$period->hour_end()
+				$period->bucket_start(),
+				$period->bucket_end()
 			),
 			ARRAY_A
 		);
@@ -349,36 +391,17 @@ final class Rollup_Report_Repository {
 			return array();
 		}
 
-		$folded = array();
-
-		foreach ( $rows as $row ) {
-			if ( ! is_array( $row ) ) {
-				continue;
-			}
-
-			$day = Report_Zone::local_day( (string) $row['hour'], $period->timezone );
-			$key = $day . ':' . (string) (int) $row['campaign_id'];
-
-			if ( ! isset( $folded[ $key ] ) ) {
-				$folded[ $key ] = array(
-					'day'         => $day,
-					'campaign_id' => (int) $row['campaign_id'],
-					'campaign'    => (string) $row['campaign'],
-					'impressions' => 0,
-					'clicks'      => 0,
-					'conversions' => null,
-				);
-			}
-
-			$folded[ $key ]['impressions'] += (int) $row['impressions'];
-			$folded[ $key ]['clicks']      += (int) $row['clicks'];
-
-			if ( null !== $row['conversions'] ) {
-				$folded[ $key ]['conversions'] = (int) $folded[ $key ]['conversions'] + (int) $row['conversions'];
-			}
-		}
-
-		return array_values( $folded );
+		return array_map(
+			static fn ( array $row ): array => array(
+				'day'         => (string) $row['day'],
+				'campaign_id' => (int) $row['campaign_id'],
+				'campaign'    => (string) $row['campaign'],
+				'impressions' => (int) $row['impressions'],
+				'clicks'      => (int) $row['clicks'],
+				'conversions' => null === $row['conversions'] ? null : (int) $row['conversions'],
+			),
+			array_values( $rows )
+		);
 	}
 
 	/**
@@ -410,7 +433,8 @@ final class Rollup_Report_Repository {
 
 		global $wpdb;
 
-		$table = $this->table_name();
+		$table  = $this->table_name( $period );
+		$bucket = Report_Zone::UTC === $period->timezone ? 'r.day_utc' : 'r.bucket_utc';
 
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Table name is prefix+constant; ids, bounds and the row cap are prepared.
 		$rows = $wpdb->get_results(
@@ -421,15 +445,15 @@ final class Rollup_Report_Repository {
 				FROM {$table} r
 				WHERE r.org_id = %d
 					AND r.campaign_id = %d
-					AND r.hour_utc >= %s
-					AND r.hour_utc < %s
+					AND {$bucket} >= %s
+					AND {$bucket} < %s
 				GROUP BY r.placement_id, r.creative_id
 				ORDER BY r.placement_id, r.creative_id
 				LIMIT %d",
 				$org_id,
 				$campaign_id,
-				$period->hour_start(),
-				$period->hour_end(),
+				$period->bucket_start(),
+				$period->bucket_end(),
 				self::MAX_VARIANT_ROWS
 			),
 			ARRAY_A

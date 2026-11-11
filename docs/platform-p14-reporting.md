@@ -132,28 +132,44 @@ This phase does not own:
 ## Decision: reports follow the site's local day; pacing stays on UTC days
 
 P14 shipped UTC-day reports because the only projection was `day_utc`. Schema 32
-adds `aggr_hourly_rollups`, written beside the daily table and rebuilt by the
-same reconciler pass. Org-scoped reports now group those hours into the site
-timezone. UTC remains a staff/export option (`tz=utc`).
+adds `aggr_report_buckets`, written beside the daily table from the same ledger
+timestamp. Site-day reports use **fifteen-minute UTC buckets**: whole-hour
+buckets cannot distinguish the two halves of Kolkata's midnight or Kathmandu's
+quarter-hour boundary. DST days naturally cover 23 or 25 hours. The table is
+sparse; a busy creative can have at most 96 buckets per ordinary day, four times
+the storage of hourly aggregates. No empty buckets are written.
 
-**Pacing does not move.** `delivered_today` is still a UTC day on
-`aggr_rollups`. Growing that unique key by an hour would have turned every
-serving read into a twenty-four-row sum.
+**Pacing does not move.** `delivered_today`, lifetime counts and the UTC report
+option (`tz=utc`) retain `aggr_rollups`. UTC exports therefore preserve daily
+history even when raw events have already been purged.
 
-A UTC hour is assigned to the local day that contains its start. That is exact
-for whole-hour offsets. For `Asia/Kolkata` (+05:30) the hour that straddles
-local midnight is counted on the day that contains the hour's start — never
-invented as two half-hours.
+Site-day series and CSV rows are grouped in SQL using timezone offsets and
+transition instants computed by PHP. MySQL timezone tables are not required,
+and PHP receives daily rows rather than one row for every bucket. The range
+predicate still uses the organization/bucket index.
 
-History the event ledger has already purged is not backfilled from daily rows:
-a UTC day cannot be split honestly. Those days stay on the daily table for
-pacing and lifetime tiles.
+Migration initializes a restartable cursor; the existing hourly reconciliation
+job backfills at most seven closed UTC days per run from both event and
+conversion ledgers. Retention cannot delete past the pending cursor. A failed
+rebuild leaves that day pending. Open UTC days are repaired only after closure,
+so current figures remain partial during upgrade. Existing daily rows supply
+frozen organization attribution during a rebuild, including rows whose creative
+or line-item assignment no longer exists. Conflicting historical tenant evidence
+stays unattributed rather than selecting a tenant. Migration also installs
+time-leading conversion and daily-rollup indexes for those bounded reads.
 
-Fill-outcome reports (`aggr_decision_rollups`) are still UTC days: that table
-has no hour grain.
+History already removed from the ledgers cannot be split into local days.
+Portal captions and CSV date headers disclose the retained-history boundary or
+pending backfill. Trend percentages are omitted when either comparison window
+has incomplete history. Choose UTC days to recover the existing daily history.
 
-`Reporting_Rules::utc_day_keys()` is unchanged. The range work lives on
-`Report_Period` and `Report_Zone`.
+Fill-outcome reports (`aggr_decision_rollups`) remain UTC days. They are a
+separate projection and are not rebucketed by this change.
+
+Freshness compares the local period's exclusive UTC end to the exclusive end
+of the sealed UTC day. A Pacific day is not marked final merely because its
+local date matches the reconciliation watermark. `Reporting_Rules::utc_day_keys()`
+is unchanged; calendar arithmetic lives on `Report_Period` and `Report_Zone`.
 
 ## Decision: three absences, never conflated
 

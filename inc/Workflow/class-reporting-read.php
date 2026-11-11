@@ -15,6 +15,7 @@ use Aggressive\Ads\Domain\Report_Zone;
 use Aggressive\Ads\Domain\Reporting_Rules;
 use Aggressive\Ads\Domain\Settings_Schema;
 use Aggressive\Ads\Repository\Rollup_Report_Repository;
+use Aggressive\Ads\Repository\Report_Bucket_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 
 /**
@@ -135,6 +136,53 @@ final class Reporting_Read {
 			'state'              => $period->freshness( $watermark, $today ),
 			'unreconciled_from'  => $period->unreconciled_from( $watermark, $today ),
 			'reconciled_through' => $watermark,
+		);
+	}
+
+	/**
+	 * Whether local-day history fully covers a period; UTC keeps its daily ledger.
+	 *
+	 * @param Report_Period $period Range being described.
+	 */
+	public function history_complete( Report_Period $period ): bool {
+		if ( Report_Zone::UTC === $period->timezone ) {
+			return true;
+		}
+
+		$since = (int) get_option( Report_Bucket_Repository::OPTION_SINCE, 0 );
+		$next  = (int) get_option( Report_Bucket_Repository::OPTION_NEXT, 0 );
+
+		return 0 === $next && ( 0 === $since || $period->utc_start()->getTimestamp() >= $since );
+	}
+
+	/**
+	 * Whether any reconstructable local history can fall inside this range.
+	 *
+	 * @param Report_Period $period Range being described.
+	 */
+	public function history_available( Report_Period $period ): bool {
+		return Report_Zone::UTC === $period->timezone
+			|| $period->utc_end()->getTimestamp() > (int) get_option( Report_Bucket_Repository::OPTION_SINCE, 0 );
+	}
+
+	/**
+	 * Disclosure shared by the portal and CSV when history cannot be reconstructed.
+	 *
+	 * @param Report_Period $period Range being described.
+	 */
+	public function history_note( Report_Period $period ): string {
+		if ( $this->history_complete( $period ) ) {
+			return '';
+		}
+
+		if ( (int) get_option( Report_Bucket_Repository::OPTION_NEXT, 0 ) > 0 ) {
+			return __( 'Earlier delivery is being rebuilt for local days. These totals may be incomplete; UTC days retain the daily history.', 'aggressive-ads' );
+		}
+
+		return sprintf(
+			/* translators: %s: earliest retained timestamp in UTC. */
+			__( 'Local-day history is available from %s UTC. Earlier delivery cannot be reconstructed; UTC days retain the daily history.', 'aggressive-ads' ),
+			gmdate( 'Y-m-d H:i', (int) get_option( Report_Bucket_Repository::OPTION_SINCE, 0 ) )
 		);
 	}
 

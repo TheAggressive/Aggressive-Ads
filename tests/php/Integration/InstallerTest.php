@@ -14,7 +14,7 @@ use Aggressive\Ads\Install\Schema;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Event_Repository;
 use Aggressive\Ads\Repository\Org_Access_Repository;
-use Aggressive\Ads\Repository\Hourly_Rollup_Repository;
+use Aggressive\Ads\Repository\Report_Bucket_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Line_Item_Repository;
@@ -124,7 +124,7 @@ final class InstallerTest extends WP_UnitTestCase {
 
 		$events  = new Event_Repository();
 		$rollups = new Rollup_Repository();
-		$hourly  = new Hourly_Rollup_Repository();
+		$hourly  = new Report_Bucket_Repository();
 
 		$this->installer->install_delivery_tables();
 
@@ -132,7 +132,7 @@ final class InstallerTest extends WP_UnitTestCase {
 			array(
 				array( $events->table_name(), Schema::events_columns(), Schema::events_index_names() ),
 				array( $rollups->table_name(), Schema::rollups_columns(), Schema::rollups_index_names() ),
-				array( $hourly->table_name(), Schema::hourly_rollups_columns(), Schema::hourly_rollups_index_names() ),
+				array( $hourly->table_name(), Schema::report_buckets_columns(), Schema::report_buckets_index_names() ),
 			) as $spec
 		) {
 			[ $table, $declared_columns, $declared_indexes ] = $spec;

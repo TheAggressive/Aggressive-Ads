@@ -50,10 +50,12 @@ whether it is paused — from the campaign's creative step, without staff. The
 weighting has always been real; what was missing until recently was any way to
 reach it outside the REST route.
 
-**Reporting** (when the Reporting module is on) reads `aggr_rollups`: dashboard
-tiles, a daily impressions chart, campaign list/detail columns, REST
-`impressions` / `clicks` / `ctr`. House and other orgs are excluded in SQL.
-Spend stays absent until billing has a source.
+**Reporting** (when the Reporting module is on) provides dashboard tiles, a daily
+impressions chart, campaign list/detail columns, CSV exports and REST metrics.
+Portal ranges follow the site's local calendar days using fifteen-minute UTC
+buckets; the UTC option and lifetime figures retain the daily rollups. Reports
+disclose incomplete historical coverage. House and other orgs are excluded in
+SQL. Spend stays absent until billing has a source.
 
 **White-label** is Brand settings: product name, logo, tagline, contrast-gated
 `--aggr-*` tokens. A host theme may override tokens; the portal is fully

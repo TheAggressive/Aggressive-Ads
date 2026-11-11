@@ -204,8 +204,8 @@ final class ReportPeriodTest extends TestCase {
 
 		$this->assertNotNull( $period );
 		$this->assertSame( 'America/Los_Angeles', $period->timezone );
-		$this->assertSame( '2026-08-13 07:00:00', $period->hour_start() );
-		$this->assertSame( '2026-08-14 07:00:00', $period->hour_end() );
+		$this->assertSame( '2026-08-13 07:00:00', $period->bucket_start() );
+		$this->assertSame( '2026-08-14 07:00:00', $period->bucket_end() );
 		$this->assertSame( 'America/Los_Angeles', $period->previous()->timezone );
 	}
 

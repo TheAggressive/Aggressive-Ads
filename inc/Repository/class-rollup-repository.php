@@ -21,12 +21,12 @@ use Aggressive\Ads\Install\Schema;
 final class Rollup_Repository {
 
 	/**
-	 * Reporting projection at hour grain. Constructed once so a fill does not
+	 * Local-day reporting projection. Constructed once so a fill does not
 	 * allocate a repository per increment.
 	 *
-	 * @var Hourly_Rollup_Repository|null
+	 * @var Report_Bucket_Repository|null
 	 */
-	private ?Hourly_Rollup_Repository $hourly = null;
+	private ?Report_Bucket_Repository $report_buckets = null;
 
 	/**
 	 * The UTC day viewability measurement began, or '' when it has not.
@@ -67,7 +67,7 @@ final class Rollup_Repository {
 
 		dbDelta( Schema::rollups_table_ddl( $this->table_name(), $wpdb->get_charset_collate() ) );
 		$this->drop_legacy_slot_day_index();
-		$this->hourly()->install_table();
+		$this->report_buckets()->install_table();
 	}
 
 	/**
@@ -282,24 +282,27 @@ final class Rollup_Repository {
 	/**
 	 * Increments today's counter for one slot, campaign and line item.
 	 *
-	 * @param string $column       impressions|clicks|viewables|conversions.
-	 * @param int    $placement_id Placement id.
-	 * @param int    $campaign_id  Campaign id, or 0 for house.
-	 * @param string $day_utc      Optional UTC Y-m-d. Invalid values use today.
-	 * @param int    $line_item_id Line item the delivery is spent against, or 0.
-	 * @param int    $org_id       Owning organization, frozen onto the row.
-	 * @param int    $creative_id  Revision that served, or 0 when none is known.
+	 * @param string   $column       impressions|clicks|viewables|conversions.
+	 * @param int      $placement_id Placement id.
+	 * @param int      $campaign_id  Campaign id, or 0 for house.
+	 * @param string   $day_utc      Optional UTC Y-m-d. Invalid values use today.
+	 * @param int      $line_item_id Line item the delivery is spent against, or 0.
+	 * @param int      $org_id       Owning organization, frozen onto the row.
+	 * @param int      $creative_id  Revision that served, or 0 when none is known.
+	 * @param int|null $occurred_at_ts Exact ledger timestamp, or midnight of the named day.
 	 * @return bool
 	 */
-	public function increment( string $column, int $placement_id, int $campaign_id, string $day_utc = '', int $line_item_id = 0, int $org_id = 0, int $creative_id = 0 ): bool {
+	public function increment( string $column, int $placement_id, int $campaign_id, string $day_utc = '', int $line_item_id = 0, int $org_id = 0, int $creative_id = 0, ?int $occurred_at_ts = null ): bool {
 		global $wpdb;
 
 		if ( ! in_array( $column, array( 'impressions', 'clicks', 'viewables', 'conversions' ), true ) ) {
 			return false;
 		}
 
-		$table = $this->table_name();
-		$day   = 1 === preg_match( '/^\d{4}-\d{2}-\d{2}$/', $day_utc ) ? $day_utc : gmdate( 'Y-m-d' );
+		$table            = $this->table_name();
+		$occurred_at_ts ??= '' === $day_utc ? time() : strtotime( $day_utc . ' 00:00:00 UTC' );
+		$occurred_at_ts   = false === $occurred_at_ts ? time() : $occurred_at_ts;
+		$day              = gmdate( 'Y-m-d', $occurred_at_ts );
 
 		/*
 		 * Both nullable columns exist to keep "nobody was measuring" apart from
@@ -359,20 +362,17 @@ final class Rollup_Repository {
 		);
 		// phpcs:enable
 
-		/*
-		 * The hourly write is the reporting half of the same event. A named
-		 * `$day_utc` is stored at midnight of that UTC day so existing tests
-		 * and backfills that already chose a day still land somewhere a UTC
-		 * report can find. Live traffic passes '' and is stored on the current
-		 * hour, which is what a local-day report needs to split.
-		 */
-		$hour = 1 === preg_match( '/^\d{4}-\d{2}-\d{2}$/', $day_utc )
-			? $day_utc . ' 00:00:00'
-			: gmdate( 'Y-m-d H:00:00' );
+		$projected = $this->report_buckets()->increment(
+			$column,
+			$placement_id,
+			$campaign_id,
+			gmdate( 'Y-m-d H:i:s', $occurred_at_ts ),
+			$line_item_id,
+			$org_id,
+			$creative_id
+		);
 
-		$this->hourly()->increment( $column, $placement_id, $campaign_id, $hour, $line_item_id, $org_id, $creative_id );
-
-		return false !== $written;
+		return false !== $written && $projected;
 	}
 
 	/**
@@ -531,14 +531,23 @@ final class Rollup_Repository {
 		);
 		// phpcs:enable
 
-		return false !== $written && $this->reconcile_conversions( $day_utc, $start, $end ) && $this->hourly()->reconcile_span( $start, $end );
+		return false !== $written && $this->reconcile_conversions( $day_utc, $start, $end ) && $this->report_buckets()->reconcile_span( $start, $end );
 	}
 
 	/**
-	 * The hourly projection, allocated on first use.
+	 * Advances the reporting migration in bounded batches on the existing cron.
+	 *
+	 * @param int $before_ts Exclusive closed-day limit.
 	 */
-	private function hourly(): Hourly_Rollup_Repository {
-		return $this->hourly ??= new Hourly_Rollup_Repository();
+	public function backfill_reports( int $before_ts ): int {
+		return $this->report_buckets()->backfill_from_events( $before_ts );
+	}
+
+	/**
+	 * The reporting projection, allocated on first use.
+	 */
+	private function report_buckets(): Report_Bucket_Repository {
+		return $this->report_buckets ??= new Report_Bucket_Repository();
 	}
 
 	/**

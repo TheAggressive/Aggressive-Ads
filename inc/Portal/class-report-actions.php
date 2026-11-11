@@ -120,7 +120,7 @@ final class Report_Actions implements Service {
 			$period = $this->requested_period();
 			$rows   = $this->reporting->daily_rows_for_org( $this->campaigns->org_id( $campaign_id ), $period, $campaign_id );
 
-			Csv_Download::send( $this->document( $rows, $period->timezone ), $this->campaign_filename( $campaign_id, $period->days ) );
+			Csv_Download::send( $this->document( $rows, $period->timezone, $this->reporting->history_note( $period ) ), $this->campaign_filename( $campaign_id, $period->days ) );
 		}
 
 		$org_id = $this->current_org_id();
@@ -136,7 +136,7 @@ final class Report_Actions implements Service {
 		$period = $this->requested_period();
 		$rows   = $this->reporting->daily_rows_for_org( $org_id, $period );
 
-		Csv_Download::send( $this->document( $rows, $period->timezone ), $this->filename( $org_id, $period->days ) );
+		Csv_Download::send( $this->document( $rows, $period->timezone, $this->reporting->history_note( $period ) ), $this->filename( $org_id, $period->days ) );
 	}
 
 	/**
@@ -213,8 +213,9 @@ final class Report_Actions implements Service {
 	 *
 	 * @param list<array{day: string, campaign_id: int, campaign: string, impressions: int, clicks: int, conversions?: int|null}> $rows      Export rows.
 	 * @param string                                                                                                              $timezone  Zone the dates are in.
+	 * @param string                                                                                                              $history_note Historical coverage limitation, or empty.
 	 */
-	public function document( array $rows, string $timezone = Report_Zone::UTC ): string {
+	public function document( array $rows, string $timezone = Report_Zone::UTC, string $history_note = '' ): string {
 		$header = array(
 			Report_Zone::UTC === $timezone
 				? __( 'Date (UTC)', 'aggressive-ads' )
@@ -230,6 +231,10 @@ final class Report_Actions implements Service {
 			__( 'CTR %', 'aggressive-ads' ),
 			__( 'Conversions', 'aggressive-ads' ),
 		);
+
+		if ( '' !== $history_note ) {
+			$header[0] .= ' — ' . $history_note;
+		}
 
 		$body = array();
 

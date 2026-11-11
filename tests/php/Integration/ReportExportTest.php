@@ -461,7 +461,7 @@ final class ReportExportTest extends WP_UnitTestCase {
 		$this->bump( $this->campaign_a, 3, 0 );
 
 		$period  = Report_Period::trailing( 7, gmdate( 'Y-m-d' ) );
-		$was_ext = wp_using_ext_object_cache( true );
+		$was_ext = true === wp_using_ext_object_cache( true );
 
 		try {
 			$this->assertSame( 3, $this->reporting->totals_for_org( $this->org_a, $period, $this->campaign_a )['impressions'] );

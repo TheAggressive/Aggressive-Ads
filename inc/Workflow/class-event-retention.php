@@ -92,6 +92,12 @@ final class Event_Retention implements Service {
 
 		$cutoff = min( time() - ( $days * DAY_IN_SECONDS ), $safe );
 
+		$backfill = (int) get_option( \Aggressive\Ads\Repository\Report_Bucket_Repository::OPTION_NEXT, 0 );
+
+		if ( $backfill > 0 ) {
+			$cutoff = min( $cutoff, $backfill );
+		}
+
 		for ( $batch = 0; $batch < self::MAX_BATCHES_PER_RUN; ++$batch ) {
 			if ( self::BATCH_SIZE !== $this->events->purge_before( $cutoff, self::BATCH_SIZE ) ) {
 				break;

@@ -20,6 +20,17 @@ use PHPUnit\Framework\TestCase;
  */
 final class ReportZoneTest extends TestCase {
 
+	/** Test helper: enumerate the UTC intervals described by production's bounds. */
+	private function buckets_in( string $from, string $to, string $timezone ): array {
+		$bounds = Report_Zone::utc_bounds( $from, $to, $timezone );
+		$this->assertNotNull( $bounds );
+		$out = array();
+		for ( $at = $bounds['start']; $at < $bounds['end']; $at = $at->modify( '+15 minutes' ) ) {
+			$out[] = $at->format( 'Y-m-d H:i:s' );
+		}
+		return $out;
+	}
+
 	/**
 	 * An invalid timezone name is UTC, not a throw.
 	 */
@@ -39,37 +50,36 @@ final class ReportZoneTest extends TestCase {
 		$this->assertNotNull( $bounds );
 		$this->assertSame( '2026-08-13 07:00:00', $bounds['start']->format( 'Y-m-d H:i:s' ) );
 		$this->assertSame( '2026-08-14 07:00:00', $bounds['end']->format( 'Y-m-d H:i:s' ) );
-		$this->assertCount( 24, Report_Zone::hours_in( '2026-08-13', '2026-08-13', 'America/Los_Angeles' ) );
+		$this->assertCount( 96, $this->buckets_in( '2026-08-13', '2026-08-13', 'America/Los_Angeles' ) );
 	}
 
 	/**
 	 * 2026-03-08 is the US spring-forward: 23 hours, 02:00 local does not exist.
 	 */
 	public function test_a_spring_forward_day_has_twenty_three_hours(): void {
-		$hours = Report_Zone::hours_in( '2026-03-08', '2026-03-08', 'America/Los_Angeles' );
+		$hours = $this->buckets_in( '2026-03-08', '2026-03-08', 'America/Los_Angeles' );
 
-		$this->assertCount( 23, $hours );
+		$this->assertCount( 92, $hours );
 		$this->assertSame( '2026-03-08 08:00:00', $hours[0] );
-		$this->assertSame( '2026-03-09 06:00:00', $hours[22] );
+		$this->assertSame( '2026-03-09 06:45:00', $hours[91] );
 	}
 
 	/**
 	 * 2026-11-01 is the US fall-back: 25 hours, 01:00 local happens twice.
 	 */
 	public function test_a_fall_back_day_has_twenty_five_hours(): void {
-		$hours = Report_Zone::hours_in( '2026-11-01', '2026-11-01', 'America/Los_Angeles' );
+		$hours = $this->buckets_in( '2026-11-01', '2026-11-01', 'America/Los_Angeles' );
 
-		$this->assertCount( 25, $hours );
+		$this->assertCount( 100, $hours );
 		$this->assertSame( '2026-11-01 07:00:00', $hours[0] );
-		$this->assertSame( '2026-11-02 07:00:00', $hours[24] );
+		$this->assertSame( '2026-11-02 07:45:00', $hours[99] );
 	}
 
 	/**
 	 * Kolkata is UTC+05:30. Local midnight is the previous UTC day at 18:30.
 	 *
-	 * The hour that straddles midnight is assigned to the day that contains
-	 * its start: 18:00 UTC on the 12th is still the 12th locally (23:30),
-	 * 19:00 UTC is the 13th (00:30).
+	 * The quarter-hour starting at 18:30 UTC is exactly local midnight;
+	 * no part of the preceding bucket is counted on the new local day.
 	 */
 	public function test_kolkata_days_start_on_the_half_hour(): void {
 		$bounds = Report_Zone::utc_bounds( '2026-08-13', '2026-08-13', 'Asia/Kolkata' );
@@ -78,13 +88,21 @@ final class ReportZoneTest extends TestCase {
 		$this->assertSame( '2026-08-12 18:30:00', $bounds['start']->format( 'Y-m-d H:i:s' ) );
 		$this->assertSame( '2026-08-13 18:30:00', $bounds['end']->format( 'Y-m-d H:i:s' ) );
 
-		$hours = Report_Zone::hours_in( '2026-08-13', '2026-08-13', 'Asia/Kolkata' );
+		$hours = $this->buckets_in( '2026-08-13', '2026-08-13', 'Asia/Kolkata' );
 
-		$this->assertCount( 24, $hours );
-		$this->assertSame( '2026-08-12 19:00:00', $hours[0] );
-		$this->assertSame( '2026-08-13 18:00:00', $hours[23] );
+		$this->assertCount( 96, $hours );
+		$this->assertSame( '2026-08-12 18:30:00', $hours[0] );
+		$this->assertSame( '2026-08-13 18:15:00', $hours[95] );
 		$this->assertSame( '2026-08-12', Report_Zone::local_day( '2026-08-12 18:00:00', 'Asia/Kolkata' ) );
 		$this->assertSame( '2026-08-13', Report_Zone::local_day( '2026-08-12 19:00:00', 'Asia/Kolkata' ) );
+	}
+
+	/** A fractional-hour day needs a fractional-hour reporting grain. */
+	public function test_a_nepal_day_starts_at_the_quarter_hour(): void {
+		$buckets = $this->buckets_in( '2026-08-13', '2026-08-13', 'Asia/Kathmandu' );
+		$this->assertCount( 96, $buckets );
+		$this->assertSame( '2026-08-12 18:15:00', $buckets[0] );
+		$this->assertSame( '2026-08-13 18:00:00', $buckets[95] );
 	}
 
 	/**

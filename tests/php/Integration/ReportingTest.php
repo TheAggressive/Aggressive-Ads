@@ -23,7 +23,6 @@ use Aggressive\Ads\Portal\View_Data;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Campaign_Repository;
 use Aggressive\Ads\Repository\Org_Repository;
-use Aggressive\Ads\Repository\Hourly_Rollup_Repository;
 use Aggressive\Ads\Repository\Rollup_Report_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Security\Ownership;
@@ -391,9 +390,9 @@ final class ReportingTest extends WP_UnitTestCase {
 
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Seeding the corrupt row this guard exists for; no repository will write it.
 		$wpdb->insert(
-			( new Hourly_Rollup_Repository() )->table_name(),
+			$this->rollups->table_name(),
 			array(
-				'hour_utc'     => gmdate( 'Y-m-d H:00:00' ),
+				'day_utc'      => gmdate( 'Y-m-d' ),
 				'placement_id' => $this->placement_id,
 				'campaign_id'  => 0,
 				'line_item_id' => 0,
@@ -669,7 +668,7 @@ final class ReportingTest extends WP_UnitTestCase {
 	}
 
 	/**
-	 * The dashboard says which window it covers, and names the timezone.
+	 * The dashboard says which window it covers, and that the days are UTC.
 	 */
 	public function test_the_dashboard_names_its_window_and_its_timezone(): void {
 		$this->enable_reporting( true );
@@ -677,7 +676,7 @@ final class ReportingTest extends WP_UnitTestCase {
 		$label  = $this->view->delivery_range_label();
 		$window = $this->view->delivery_window();
 
-		$this->assertStringContainsString( 'UTC', $label, 'The tiles do not name the timezone the days are in.' );
+		$this->assertStringContainsString( 'UTC', $label, 'The tiles do not say the days are UTC, which they are.' );
 		$this->assertSame( gmdate( 'Y-m-d' ), $window['to'], 'The default window does not end today.' );
 		$this->assertSame( Reporting_Read::DEFAULT_DAYS, $window['days'] );
 		$this->assertFalse( $window['rejected'], 'A request with no range was treated as a refused one.' );
@@ -830,7 +829,7 @@ final class ReportingTest extends WP_UnitTestCase {
 		$wpdb->query(
 			$wpdb->prepare(
 				'UPDATE %i SET viewables = NULL WHERE campaign_id = %d',
-				( new Hourly_Rollup_Repository() )->table_name(),
+				$this->rollups->table_name(),
 				$this->campaign_a
 			)
 		);
@@ -846,12 +845,13 @@ final class ReportingTest extends WP_UnitTestCase {
 
 		// Now measured, and nothing seen.
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching -- Same fixture.
-		$wpdb->update(
-			( new Hourly_Rollup_Repository() )->table_name(),
-			array( 'viewables' => 0 ),
-			array( 'campaign_id' => $this->campaign_a )
+		$wpdb->query(
+			$wpdb->prepare(
+				'UPDATE %i SET viewables = 0 WHERE campaign_id = %d',
+				$this->rollups->table_name(),
+				$this->campaign_a
+			)
 		);
-		wp_cache_flush();
 
 		$this->assertSame(
 			'0.0%',
@@ -861,7 +861,6 @@ final class ReportingTest extends WP_UnitTestCase {
 
 		// And a real rate.
 		$this->bump_viewables( $this->campaign_a, 1 );
-		wp_cache_flush();
 
 		$this->assertSame(
 			'25.0%',

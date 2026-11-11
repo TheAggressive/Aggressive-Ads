@@ -77,11 +77,36 @@ if ( array() !== $aggr_delivery ) :
 		<?php endif; ?>
 		<p class="aggr-delivery__window">
 			<?php if ( $aggr_utc && 'UTC' !== wp_timezone()->getName() ) : ?>
-				<a href="<?php echo esc_url( remove_query_arg( 'tz', $aggr_delivery_base ) ); ?>">
+				<a href="
+				<?php
+				echo esc_url(
+					add_query_arg(
+						array(
+							'from' => $aggr_window['from'],
+							'to'   => $aggr_window['to'],
+						),
+						$aggr_delivery_base
+					)
+				);
+				?>
+							">
 					<?php esc_html_e( 'View site days', 'aggressive-ads' ); ?>
 				</a>
 			<?php elseif ( ! $aggr_utc ) : ?>
-				<a href="<?php echo esc_url( add_query_arg( 'tz', 'utc', $aggr_delivery_base ) ); ?>">
+				<a href="
+				<?php
+				echo esc_url(
+					add_query_arg(
+						array(
+							'from' => $aggr_window['from'],
+							'to'   => $aggr_window['to'],
+							'tz'   => 'utc',
+						),
+						$aggr_delivery_base
+					)
+				);
+				?>
+							">
 					<?php esc_html_e( 'View UTC days', 'aggressive-ads' ); ?>
 				</a>
 			<?php endif; ?>

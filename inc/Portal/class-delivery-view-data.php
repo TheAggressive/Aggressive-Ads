@@ -233,17 +233,21 @@ final class Delivery_View_Data {
 	 * @param Report_Period|null $period Range being described.
 	 */
 	public function freshness_note( ?Report_Period $period = null ): string {
-		$freshness = $this->reporting->freshness( $period ?? $this->period() );
+		$period    = $period ?? $this->period();
+		$history   = $this->reporting->history_note( $period );
+		$freshness = $this->reporting->freshness( $period );
 		$from      = $freshness['unreconciled_from'];
 
 		if ( Report_Period::RECONCILED === $freshness['state'] || null === $from ) {
-			return '';
+			return $history;
 		}
 
-		return sprintf(
+		return trim(
+			$history . ' ' . sprintf(
 			/* translators: %s: a date, e.g. 30 August 2026. */
-			__( 'Figures from %s onward are still being counted.', 'aggressive-ads' ),
-			$this->day_label( $from )
+				__( 'Figures from %s onward are still being counted.', 'aggressive-ads' ),
+				$this->day_label( $from )
+			)
 		);
 	}
 
@@ -263,9 +267,20 @@ final class Delivery_View_Data {
 			return array();
 		}
 
-		$read     = $this->reporting->totals_with_comparison( $org_id, $period ?? $this->period(), $campaign_id );
+		$period = $period ?? $this->period();
+
+		if ( ! $this->reporting->history_available( $period ) ) {
+			return array_map(
+				fn ( string $label ): array => $this->tile( $label, __( 'Not measured', 'aggressive-ads' ), null ),
+				array( __( 'Impressions', 'aggressive-ads' ), __( 'Clicks', 'aggressive-ads' ), __( 'CTR', 'aggressive-ads' ), __( 'Viewable', 'aggressive-ads' ), __( 'Conversions', 'aggressive-ads' ) )
+			);
+		}
+
+		$read     = $this->reporting->totals_with_comparison( $org_id, $period, $campaign_id );
 		$totals   = $read['current'];
 		$was      = $read['previous'];
+		$compare  = $this->reporting->history_complete( $period )
+			&& $this->reporting->history_complete( $period->previous() );
 		$ctr      = Reporting_Rules::ctr( $totals['impressions'], $totals['clicks'] );
 		$ctr_was  = Reporting_Rules::ctr( $was['impressions'], $was['clicks'] );
 		$view     = Reporting_Rules::viewability( $totals['impressions'], $totals['viewables'] );
@@ -275,29 +290,29 @@ final class Delivery_View_Data {
 			$this->tile(
 				__( 'Impressions', 'aggressive-ads' ),
 				(string) number_format_i18n( $totals['impressions'] ),
-				Reporting_Rules::change( $totals['impressions'], $was['impressions'] )
+				$compare ? Reporting_Rules::change( $totals['impressions'], $was['impressions'] ) : null
 			),
 			$this->tile(
 				__( 'Clicks', 'aggressive-ads' ),
 				(string) number_format_i18n( $totals['clicks'] ),
-				Reporting_Rules::change( $totals['clicks'], $was['clicks'] )
+				$compare ? Reporting_Rules::change( $totals['clicks'], $was['clicks'] ) : null
 			),
 			$this->tile(
 				__( 'CTR', 'aggressive-ads' ),
 				$this->format_ctr( $ctr ),
-				Reporting_Rules::point_change( $ctr, $ctr_was ),
+				$compare ? Reporting_Rules::point_change( $ctr, $ctr_was ) : null,
 				true
 			),
 			$this->tile(
 				__( 'Viewable', 'aggressive-ads' ),
 				$this->format_viewability( $totals['impressions'], $totals['viewables'] ),
-				Reporting_Rules::point_change( $view, $view_was ),
+				$compare ? Reporting_Rules::point_change( $view, $view_was ) : null,
 				true
 			),
 			$this->tile(
 				__( 'Conversions', 'aggressive-ads' ),
 				$this->format_count( $totals['conversions'] ),
-				Reporting_Rules::change( $totals['conversions'], $was['conversions'] )
+				$compare ? Reporting_Rules::change( $totals['conversions'], $was['conversions'] ) : null
 			),
 		);
 	}
@@ -411,10 +426,17 @@ final class Delivery_View_Data {
 			return array();
 		}
 
-		$period  = $this->period();
+		$period = $this->period();
+
+		if ( ! $this->reporting->history_available( $period ) ) {
+			return array();
+		}
+
 		$earlier = $period->previous();
 		$raw     = $this->reporting->series_for_org( $org_id, $period, $campaign_id );
-		$before  = $earlier === $period ? array() : array_values( $this->reporting->series_for_org( $org_id, $earlier, $campaign_id ) );
+		$before  = $earlier === $period || ! $this->reporting->history_complete( $earlier )
+			? array()
+			: array_values( $this->reporting->series_for_org( $org_id, $earlier, $campaign_id ) );
 		$max     = 0;
 
 		foreach ( $raw as $row ) {

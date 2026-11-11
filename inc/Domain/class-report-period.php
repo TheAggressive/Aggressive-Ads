@@ -25,10 +25,10 @@ namespace Aggressive\Ads\Domain;
  * of this class.
  *
  * **The days are calendar dates in a named timezone.** The default is UTC, which
- * is how every period was constructed before hourly rollups existed and how a
+ * is how every period was constructed before reporting buckets existed and how a
  * staff export still asks to read. A site-local period still stores `Y-m-d`
  * keys — the sparkline and the CSV keep one row per day — and converts those
- * days into a UTC hour range at the moment a query needs one. Daily pacing
+ * days into a UTC instant range at the moment a query needs one. Daily pacing
  * counters stay on UTC days; only the reporting projection is re-bucketed.
  */
 final class Report_Period {
@@ -207,16 +207,16 @@ final class Report_Period {
 	}
 
 	/**
-	 * `hour_utc >=` bound, as MySQL datetime.
+	 * `bucket_utc >=` bound, as MySQL datetime.
 	 */
-	public function hour_start(): string {
+	public function bucket_start(): string {
 		return $this->utc_start()->format( 'Y-m-d H:i:s' );
 	}
 
 	/**
-	 * `hour_utc <` bound, as MySQL datetime.
+	 * `bucket_utc <` bound, as MySQL datetime.
 	 */
-	public function hour_end(): string {
+	public function bucket_end(): string {
 		return $this->utc_end()->format( 'Y-m-d H:i:s' );
 	}
 
@@ -254,10 +254,10 @@ final class Report_Period {
 	 * decline in traffic.
 	 *
 	 * The watermark is still a closed UTC day — that is what the reconciler
-	 * seals — and is compared as the last hour of that day. A local Tuesday in
+	 * seals — and seals everything before midnight of the following day. A local Tuesday in
 	 * Los Angeles that still contains Wednesday 00:00–06:00 UTC is therefore
 	 * provisional until UTC Wednesday is sealed, which is conservative and
-	 * the honest reading of a day-grained watermark against an hour-grained
+	 * the honest reading of a day-grained watermark against an bucket-grained
 	 * period.
 	 *
 	 * @param string $watermark Last UTC day reconciled from the ledger, or '' when never.
@@ -269,7 +269,7 @@ final class Report_Period {
 		}
 
 		$sealed = self::sealed_through( $watermark );
-		$last   = $this->utc_end()->modify( '-1 hour' );
+		$last   = $this->utc_end();
 
 		if ( null === $sealed || $sealed < $last ) {
 			return self::PROVISIONAL;
@@ -300,7 +300,7 @@ final class Report_Period {
 			return $this->start;
 		}
 
-		$first = Report_Zone::local_day( $sealed->modify( '+1 hour' )->format( 'Y-m-d H:00:00' ), $this->timezone );
+		$first = Report_Zone::local_day( $sealed->format( 'Y-m-d H:i:s' ), $this->timezone );
 
 		if ( '' === $first ) {
 			return $this->start;
@@ -311,7 +311,7 @@ final class Report_Period {
 	}
 
 	/**
-	 * Last stored UTC hour a sealed UTC day covers, or null.
+	 * Exclusive UTC end of a sealed UTC day, or null.
 	 *
 	 * @param string $watermark Last reconciled UTC day, `Y-m-d`.
 	 */
@@ -320,7 +320,7 @@ final class Report_Period {
 			return null;
 		}
 
-		return new \DateTimeImmutable( $watermark . ' 23:00:00', new \DateTimeZone( Report_Zone::UTC ) );
+		return new \DateTimeImmutable( $watermark . ' 00:00:00', new \DateTimeZone( Report_Zone::UTC ) )->modify( '+1 day' );
 	}
 
 	/**

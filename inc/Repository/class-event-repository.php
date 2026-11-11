@@ -144,14 +144,15 @@ final class Event_Repository {
 	/**
 	 * Records one measurement event. Duplicate (token_hash, event) returns false.
 	 *
-	 * @param string $type         Measurement event type (canonical or legacy alias).
-	 * @param int    $placement_id Placement id.
-	 * @param int    $campaign_id  Campaign id, or 0 for house.
-	 * @param int    $creative_id  Creative id, or 0 for house.
-	 * @param string $token_hash   64-char hex digest.
-	 * @param string $ip_hash      64-char hex digest.
+	 * @param string   $type         Measurement event type (canonical or legacy alias).
+	 * @param int      $placement_id Placement id.
+	 * @param int      $campaign_id  Campaign id, or 0 for house.
+	 * @param int      $creative_id  Creative id, or 0 for house.
+	 * @param string   $token_hash   64-char hex digest.
+	 * @param string   $ip_hash      64-char hex digest.
+	 * @param int|null $created_at_ts Timestamp shared with the projections, or now.
 	 */
-	public function insert( string $type, int $placement_id, int $campaign_id, int $creative_id, string $token_hash, string $ip_hash ): bool {
+	public function insert( string $type, int $placement_id, int $campaign_id, int $creative_id, string $token_hash, string $ip_hash, ?int $created_at_ts = null ): bool {
 		global $wpdb;
 
 		$normalized = Measurement_Event_Type::normalize( $type );
@@ -170,7 +171,7 @@ final class Event_Repository {
 			$written = $wpdb->insert(
 				$this->table_name(),
 				array(
-					'created_at_ts'  => time(),
+					'created_at_ts'  => $created_at_ts ?? time(),
 					'event'          => $normalized,
 					'placement_id'   => $placement_id,
 					'campaign_id'    => $campaign_id,

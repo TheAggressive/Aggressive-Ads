@@ -15,7 +15,7 @@ use Aggressive\Ads\Repository\Org_Access_Repository;
 use Aggressive\Ads\Repository\Decision_Rollup_Repository;
 use Aggressive\Ads\Repository\Forecast_Repository;
 use Aggressive\Ads\Repository\Reservation_Repository;
-use Aggressive\Ads\Repository\Hourly_Rollup_Repository;
+use Aggressive\Ads\Repository\Report_Bucket_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Repository\Conversion_Credential_Repository;
 use Aggressive\Ads\Repository\Conversion_Definition_Repository;
@@ -146,7 +146,7 @@ final class Uninstaller {
 		( new Org_Access_Repository() )->drop_table();
 		( new Event_Repository() )->drop_table();
 		( new Rollup_Repository() )->drop_table();
-		( new Hourly_Rollup_Repository() )->drop_table();
+		( new Report_Bucket_Repository() )->drop_table();
 		( new Decision_Rollup_Repository() )->drop_table();
 		( new Forecast_Repository() )->drop_table();
 		( new Reservation_Repository() )->drop_table();

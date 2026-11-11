@@ -322,6 +322,7 @@ final class Conversion_Recorder {
 			line_item_id: $line_item_id,
 			org_id: $campaign_org_id,
 			creative_id: (int) $parsed['creative_id'],
+			occurred_at_ts: $occurred_at_ts,
 		);
 
 		return array(
