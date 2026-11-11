@@ -12,6 +12,7 @@ namespace Aggressive\Ads\Portal;
 use DateTimeZone;
 use Aggressive\Ads\Domain\Report_Period;
 use Aggressive\Ads\Domain\Report_Request;
+use Aggressive\Ads\Domain\Report_Zone;
 use Aggressive\Ads\Domain\Reporting_Rules;
 use Aggressive\Ads\Workflow\Reporting_Read;
 
@@ -59,6 +60,7 @@ final class Delivery_View_Data {
 		$from = isset( $_GET['from'] ) ? sanitize_text_field( wp_unslash( $_GET['from'] ) ) : '';
 		$to   = isset( $_GET['to'] ) ? sanitize_text_field( wp_unslash( $_GET['to'] ) ) : '';
 		$days = isset( $_GET['days'] ) ? absint( wp_unslash( $_GET['days'] ) ) : 0;
+		$tz   = $this->requested_timezone();
 		// phpcs:enable
 
 		return Report_Request::resolve(
@@ -66,9 +68,23 @@ final class Delivery_View_Data {
 			$to,
 			$days,
 			Reporting_Read::WINDOWS,
-			gmdate( 'Y-m-d' ),
-			Reporting_Read::DEFAULT_DAYS
+			$this->reporting->today( $tz ),
+			Reporting_Read::DEFAULT_DAYS,
+			$tz
 		);
+	}
+
+	/**
+	 * Site timezone, or UTC when the request asked for it.
+	 *
+	 * `tz=utc` is the staff/export option: the default is the site's day,
+	 * because that is the day a publisher means when they say Tuesday.
+	 */
+	public function requested_timezone(): string {
+		// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- Read-only zone switch; the value is compared to one literal.
+		$raw = isset( $_GET['tz'] ) ? sanitize_key( wp_unslash( $_GET['tz'] ) ) : '';
+
+		return 'utc' === $raw ? Report_Zone::UTC : $this->reporting->timezone();
 	}
 
 	/**
@@ -95,7 +111,7 @@ final class Delivery_View_Data {
 			return $period;
 		}
 
-		return Report_Period::trailing( Report_Actions::MAX_DAYS, $period->end );
+		return Report_Period::trailing( Report_Actions::MAX_DAYS, $period->end, $period->timezone );
 	}
 
 	/**
@@ -108,11 +124,10 @@ final class Delivery_View_Data {
 	/**
 	 * The range in words, timezone included.
 	 *
-	 * **UTC is stated, not implied.** Both projections are keyed by a UTC day
-	 * and neither carries an hour, so a publisher or advertiser east or west of
-	 * UTC is reading days that do not line up with their own. A report that
-	 * left that unsaid would be quietly wrong for most of the world for the
-	 * hours that matter most.
+	 * The zone is stated, not implied. Hours are stored in UTC and grouped
+	 * into the period's timezone at read time; a caption that left the zone
+	 * off would look like a local-day report while somebody was looking at
+	 * the UTC option, or the other way around.
 	 *
 	 * The dates themselves rather than "last 30 days", now that the window is
 	 * the reader's to choose: a label naming a length cannot describe a range
@@ -121,12 +136,24 @@ final class Delivery_View_Data {
 	 */
 	public function range_label(): string {
 		$period = $this->period();
+		$start  = $this->day_label( $period->start );
+		$end    = $this->day_label( $period->end );
+
+		if ( Report_Zone::UTC === $period->timezone ) {
+			return sprintf(
+				/* translators: 1: first day of the range. 2: last day of the range. */
+				__( '%1$s to %2$s (UTC)', 'aggressive-ads' ),
+				$start,
+				$end
+			);
+		}
 
 		return sprintf(
-			/* translators: 1: first day of the range. 2: last day of the range. */
-			__( '%1$s to %2$s (UTC)', 'aggressive-ads' ),
-			$this->day_label( $period->start ),
-			$this->day_label( $period->end )
+			/* translators: 1: first day of the range. 2: last day of the range. 3: timezone identifier, e.g. America/Los_Angeles. */
+			__( '%1$s to %2$s (%3$s)', 'aggressive-ads' ),
+			$start,
+			$end,
+			$period->timezone
 		);
 	}
 
@@ -206,17 +233,21 @@ final class Delivery_View_Data {
 	 * @param Report_Period|null $period Range being described.
 	 */
 	public function freshness_note( ?Report_Period $period = null ): string {
-		$freshness = $this->reporting->freshness( $period ?? $this->period() );
+		$period    = $period ?? $this->period();
+		$history   = $this->reporting->history_note( $period );
+		$freshness = $this->reporting->freshness( $period );
 		$from      = $freshness['unreconciled_from'];
 
 		if ( Report_Period::RECONCILED === $freshness['state'] || null === $from ) {
-			return '';
+			return $history;
 		}
 
-		return sprintf(
+		return trim(
+			$history . ' ' . sprintf(
 			/* translators: %s: a date, e.g. 30 August 2026. */
-			__( 'Figures from %s onward are still being counted.', 'aggressive-ads' ),
-			$this->day_label( $from )
+				__( 'Figures from %s onward are still being counted.', 'aggressive-ads' ),
+				$this->day_label( $from )
+			)
 		);
 	}
 
@@ -236,9 +267,20 @@ final class Delivery_View_Data {
 			return array();
 		}
 
-		$read     = $this->reporting->totals_with_comparison( $org_id, $period ?? $this->period(), $campaign_id );
+		$period = $period ?? $this->period();
+
+		if ( ! $this->reporting->history_available( $period ) ) {
+			return array_map(
+				fn ( string $label ): array => $this->tile( $label, __( 'Not measured', 'aggressive-ads' ), null ),
+				array( __( 'Impressions', 'aggressive-ads' ), __( 'Clicks', 'aggressive-ads' ), __( 'CTR', 'aggressive-ads' ), __( 'Viewable', 'aggressive-ads' ), __( 'Conversions', 'aggressive-ads' ) )
+			);
+		}
+
+		$read     = $this->reporting->totals_with_comparison( $org_id, $period, $campaign_id );
 		$totals   = $read['current'];
 		$was      = $read['previous'];
+		$compare  = $this->reporting->history_complete( $period )
+			&& $this->reporting->history_complete( $period->previous() );
 		$ctr      = Reporting_Rules::ctr( $totals['impressions'], $totals['clicks'] );
 		$ctr_was  = Reporting_Rules::ctr( $was['impressions'], $was['clicks'] );
 		$view     = Reporting_Rules::viewability( $totals['impressions'], $totals['viewables'] );
@@ -248,29 +290,29 @@ final class Delivery_View_Data {
 			$this->tile(
 				__( 'Impressions', 'aggressive-ads' ),
 				(string) number_format_i18n( $totals['impressions'] ),
-				Reporting_Rules::change( $totals['impressions'], $was['impressions'] )
+				$compare ? Reporting_Rules::change( $totals['impressions'], $was['impressions'] ) : null
 			),
 			$this->tile(
 				__( 'Clicks', 'aggressive-ads' ),
 				(string) number_format_i18n( $totals['clicks'] ),
-				Reporting_Rules::change( $totals['clicks'], $was['clicks'] )
+				$compare ? Reporting_Rules::change( $totals['clicks'], $was['clicks'] ) : null
 			),
 			$this->tile(
 				__( 'CTR', 'aggressive-ads' ),
 				$this->format_ctr( $ctr ),
-				Reporting_Rules::point_change( $ctr, $ctr_was ),
+				$compare ? Reporting_Rules::point_change( $ctr, $ctr_was ) : null,
 				true
 			),
 			$this->tile(
 				__( 'Viewable', 'aggressive-ads' ),
 				$this->format_viewability( $totals['impressions'], $totals['viewables'] ),
-				Reporting_Rules::point_change( $view, $view_was ),
+				$compare ? Reporting_Rules::point_change( $view, $view_was ) : null,
 				true
 			),
 			$this->tile(
 				__( 'Conversions', 'aggressive-ads' ),
 				$this->format_count( $totals['conversions'] ),
-				Reporting_Rules::change( $totals['conversions'], $was['conversions'] )
+				$compare ? Reporting_Rules::change( $totals['conversions'], $was['conversions'] ) : null
 			),
 		);
 	}
@@ -384,10 +426,17 @@ final class Delivery_View_Data {
 			return array();
 		}
 
-		$period  = $this->period();
+		$period = $this->period();
+
+		if ( ! $this->reporting->history_available( $period ) ) {
+			return array();
+		}
+
 		$earlier = $period->previous();
 		$raw     = $this->reporting->series_for_org( $org_id, $period, $campaign_id );
-		$before  = $earlier === $period ? array() : array_values( $this->reporting->series_for_org( $org_id, $earlier, $campaign_id ) );
+		$before  = $earlier === $period || ! $this->reporting->history_complete( $earlier )
+			? array()
+			: array_values( $this->reporting->series_for_org( $org_id, $earlier, $campaign_id ) );
 		$max     = 0;
 
 		foreach ( $raw as $row ) {

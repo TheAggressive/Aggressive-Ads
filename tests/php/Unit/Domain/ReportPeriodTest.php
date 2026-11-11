@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Aggressive\Ads\Tests\Unit\Domain;
 
 use Aggressive\Ads\Domain\Report_Period;
+use Aggressive\Ads\Domain\Report_Zone;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -193,5 +194,30 @@ final class ReportPeriodTest extends TestCase {
 		$this->assertSame( 1, Report_Period::trailing( 0, '2026-08-13' )->days );
 		$this->assertSame( Report_Period::MAX_DAYS, Report_Period::trailing( 9_999, '2026-08-13' )->days );
 		$this->assertSame( 30, Report_Period::trailing( 30, '2026-08-13' )->days );
+	}
+
+	/**
+	 * A named timezone is kept, and its hour range is the one a query uses.
+	 */
+	public function test_a_local_period_exposes_utc_hour_bounds(): void {
+		$period = Report_Period::between( '2026-08-13', '2026-08-13', 'America/Los_Angeles' );
+
+		$this->assertNotNull( $period );
+		$this->assertSame( 'America/Los_Angeles', $period->timezone );
+		$this->assertSame( '2026-08-13 07:00:00', $period->bucket_start() );
+		$this->assertSame( '2026-08-14 07:00:00', $period->bucket_end() );
+		$this->assertSame( 'America/Los_Angeles', $period->previous()->timezone );
+	}
+
+	/**
+	 * A Pacific Tuesday is not reconciled until the UTC day that still holds
+	 * its last hours has been sealed.
+	 */
+	public function test_a_local_day_is_provisional_until_its_last_utc_hour_is_sealed(): void {
+		$period = Report_Period::between( '2026-08-13', '2026-08-13', 'America/Los_Angeles' );
+
+		$this->assertSame( Report_Period::PROVISIONAL, $period?->freshness( '2026-08-13', '2026-08-20' ) );
+		$this->assertSame( Report_Period::RECONCILED, $period?->freshness( '2026-08-14', '2026-08-20' ) );
+		$this->assertSame( Report_Zone::UTC, Report_Period::between( '2026-08-13', '2026-08-13', 'Not/A_Zone' )?->timezone );
 	}
 }

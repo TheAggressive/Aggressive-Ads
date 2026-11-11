@@ -129,27 +129,47 @@ This phase does not own:
 - P10, P11 and P12 are `[x]`: the metrics a report names are no longer moving.
 - The complete P0 regression baseline is green before implementation starts.
 
-## Decision: the reporting day is UTC, and it says so
+## Decision: reports follow the site's local day; pacing stays on UTC days
 
-Both projections are keyed by `day_utc`, a `date`. There is no hour dimension
-anywhere in the schema. A report cannot therefore be re-bucketed into the site's
-timezone without either a schema change P13 did not make or an approximation
-that shifts counts between days.
+P14 shipped UTC-day reports because the only projection was `day_utc`. Schema 32
+adds `aggr_report_buckets`, written beside the daily table from the same ledger
+timestamp. Site-day reports use **fifteen-minute UTC buckets**: whole-hour
+buckets cannot distinguish the two halves of Kolkata's midnight or Kathmandu's
+quarter-hour boundary. DST days naturally cover 23 or 25 hours. The table is
+sparse; a busy creative can have at most 96 buckets per ordinary day, four times
+the storage of hourly aggregates. No empty buckets are written.
 
-**So reports are in UTC, and every date, every range control and every export
-header says UTC in words.** Not a tooltip, not a footnote on one screen.
+**Pacing does not move.** `delivered_today`, lifetime counts and the UTC report
+option (`tz=utc`) retain `aggr_rollups`. UTC exports therefore preserve daily
+history even when raw events have already been purged.
 
-This is a real limitation and it is written down rather than hidden: a publisher
-in `America/Los_Angeles` asking for "yesterday" gets a UTC day that began at
-17:00 local the day before. The alternative — hourly buckets, 24× the projection
-rows, re-bucketed at read time — is a storage decision with a write-amplification
-cost, and storage decisions belong to a schema phase that measures them. It is
-not something a reporting phase should smuggle in to make a date picker read
-better.
+Site-day series and CSV rows are grouped in SQL using timezone offsets and
+transition instants computed by PHP. MySQL timezone tables are not required,
+and PHP receives daily rows rather than one row for every bucket. The range
+predicate still uses the organization/bucket index.
 
-`Reporting_Rules::utc_day_keys()` already refuses anything outside 1–31 days and
-already names UTC in its contract. The range work extends that; it does not
-replace it with local dates.
+Migration initializes a restartable cursor; the existing hourly reconciliation
+job backfills at most seven closed UTC days per run from both event and
+conversion ledgers. Retention cannot delete past the pending cursor. A failed
+rebuild leaves that day pending. Open UTC days are repaired only after closure,
+so current figures remain partial during upgrade. Existing daily rows supply
+frozen organization attribution during a rebuild, including rows whose creative
+or line-item assignment no longer exists. Conflicting historical tenant evidence
+stays unattributed rather than selecting a tenant. Migration also installs
+time-leading conversion and daily-rollup indexes for those bounded reads.
+
+History already removed from the ledgers cannot be split into local days.
+Portal captions and CSV date headers disclose the retained-history boundary or
+pending backfill. Trend percentages are omitted when either comparison window
+has incomplete history. Choose UTC days to recover the existing daily history.
+
+Fill-outcome reports (`aggr_decision_rollups`) remain UTC days. They are a
+separate projection and are not rebucketed by this change.
+
+Freshness compares the local period's exclusive UTC end to the exclusive end
+of the sealed UTC day. A Pacific day is not marked final merely because its
+local date matches the reconciliation watermark. `Reporting_Rules::utc_day_keys()`
+is unchanged; calendar arithmetic lives on `Report_Period` and `Report_Zone`.
 
 ## Decision: three absences, never conflated
 

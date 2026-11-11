@@ -52,29 +52,30 @@ final class Report_Request {
 	 * rather than as an open-ended window, which is the whole reason periods
 	 * cannot be built unbounded.
 	 *
-	 * @param string          $from     Requested first UTC day, or '' when absent.
-	 * @param string          $to       Requested last UTC day, or '' when absent.
-	 * @param int             $days     Requested preset length, or 0 when absent.
-	 * @param array<int, int> $windows Preset lengths this screen offers.
-	 * @param string          $today    Current UTC day, `Y-m-d`.
-	 * @param int             $fallback Length to fall back to.
+	 * @param string          $from      Requested first calendar day, or '' when absent.
+	 * @param string          $to        Requested last calendar day, or '' when absent.
+	 * @param int             $days      Requested preset length, or 0 when absent.
+	 * @param array<int, int> $windows   Preset lengths this screen offers.
+	 * @param string          $today     Current calendar day in `$timezone`, `Y-m-d`.
+	 * @param int             $fallback  Length to fall back to.
+	 * @param string          $timezone  Zone the days are in; invalid names become UTC.
 	 */
-	public static function resolve( string $from, string $to, int $days, array $windows, string $today, int $fallback ): self {
+	public static function resolve( string $from, string $to, int $days, array $windows, string $today, int $fallback, string $timezone = Report_Zone::UTC ): self {
 		if ( '' !== $from || '' !== $to ) {
-			$period = Report_Period::between( $from, $to );
+			$period = Report_Period::between( $from, $to, $timezone );
 
 			return new self(
-				$period ?? Report_Period::trailing( $fallback, $today ),
+				$period ?? Report_Period::trailing( $fallback, $today, $timezone ),
 				null === $period
 			);
 		}
 
 		if ( 0 !== $days ) {
 			return in_array( $days, $windows, true )
-				? new self( Report_Period::trailing( $days, $today ), false )
-				: new self( Report_Period::trailing( $fallback, $today ), true );
+				? new self( Report_Period::trailing( $days, $today, $timezone ), false )
+				: new self( Report_Period::trailing( $fallback, $today, $timezone ), true );
 		}
 
-		return new self( Report_Period::trailing( $fallback, $today ), false );
+		return new self( Report_Period::trailing( $fallback, $today, $timezone ), false );
 	}
 }

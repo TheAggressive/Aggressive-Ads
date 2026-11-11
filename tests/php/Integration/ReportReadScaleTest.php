@@ -127,6 +127,30 @@ final class ReportReadScaleTest extends WP_UnitTestCase {
 		);
 	}
 
+	/** Local reads retain org/range index bounds with multiple buckets per day. */
+	public function test_local_reads_use_the_bucket_range_index(): void {
+		global $wpdb;
+		$seeded  = $this->seed();
+		$daily   = ( new Rollup_Repository() )->table_name();
+		$buckets = ( new \Aggressive\Ads\Repository\Report_Bucket_Repository() )->table_name();
+		foreach ( array( '12:00:00', '12:15:00' ) as $time ) {
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- Bulk projection fixture copied from prepared daily rows; table names are repository-owned.
+			$wpdb->query( $wpdb->prepare( "INSERT INTO {$buckets} (bucket_utc, placement_id, campaign_id, line_item_id, org_id, impressions, clicks, viewables) SELECT CONCAT(day_utc, ' ', %s), placement_id, campaign_id, line_item_id, org_id, impressions, clicks, viewables FROM {$daily}", $time ) );
+		}
+		$period = Report_Period::ending( 30, gmdate( 'Y-m-d' ), 'Asia/Kolkata' );
+		$totals = $this->reports->totals_for_org( self::ORG_ID, $period );
+		$this->assertSame( self::CAMPAIGNS * self::PLACEMENTS * 30 * 2 * 40, $totals['impressions'] );
+		$query = $wpdb->last_query;
+		$this->assertStringContainsString( 'bucket_utc', $query );
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- EXPLAIN the actual production query, not a hand-written copy.
+		$plan = $wpdb->get_row( 'EXPLAIN ' . $query, ARRAY_A );
+		$this->assertSame( 'org_bucket', $plan['key'] );
+		$this->assertLessThan( (int) ( $seeded['mine'] / 2 ), (int) $plan['rows'] );
+		$series = $this->reports->series_for_org( self::ORG_ID, $period );
+		$this->assertCount( 30, $series );
+		$this->assertSame( array_fill( 0, 30, self::CAMPAIGNS * self::PLACEMENTS * 2 * 40 ), array_column( $series, 'impressions' ) );
+	}
+
 	/**
 	 * The plan for the query the repository just ran.
 	 *

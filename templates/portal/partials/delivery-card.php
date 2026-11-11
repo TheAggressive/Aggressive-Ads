@@ -30,6 +30,8 @@ use Aggressive\Ads\Workflow\Reporting_Read;
 $aggr_export_days = $aggr_window['export_days'];
 $aggr_export_from = $aggr_window['export_from'];
 $aggr_export_to   = $aggr_window['export_to'];
+$aggr_zone        = (string) ( $aggr_window['timezone'] ?? 'UTC' );
+$aggr_utc         = 'UTC' === $aggr_zone;
 ?>
 <?php
 /*
@@ -47,19 +49,67 @@ if ( array() !== $aggr_delivery ) :
 			<?php echo esc_html( $aggr_delivery_title ); ?>
 		</h2>
 		<p id="aggr-delivery-window" class="aggr-delivery__window"><?php echo esc_html( $aggr_range ); ?></p>
-		<?php
-		/*
-		 * Days are UTC, and midnight UTC is somebody's afternoon. The sentence
-		 * is true as written; the local-time module restates when a day starts
-		 * in the viewer's own zone.
-		 */
-		?>
+		<?php if ( $aggr_utc ) : ?>
+			<?php
+			/*
+			 * The UTC option, and midnight UTC is somebody's afternoon. The
+			 * sentence is true as written; the local-time module restates when
+			 * a day starts in the viewer's own zone.
+			 */
+			?>
 		<p class="aggr-delivery__window">
 			<span
 				data-aggr-local="clock"
 				data-aggr-datetime="<?php echo esc_attr( gmdate( 'Y-m-d' ) . 'T00:00:00Z' ); ?>"
 				data-aggr-local-format="<?php /* translators: %s: midnight UTC as the viewer's local time, e.g. 5:00 PM. */ esc_attr_e( 'Each day starts at %s your time.', 'aggressive-ads' ); ?>"
 			><?php esc_html_e( 'Each day runs midnight to midnight UTC.', 'aggressive-ads' ); ?></span>
+		</p>
+		<?php else : ?>
+		<p class="aggr-delivery__window">
+			<?php
+			printf(
+				/* translators: %s: timezone identifier, e.g. America/Los_Angeles. */
+				esc_html__( 'Each day follows this site\'s timezone (%s).', 'aggressive-ads' ),
+				esc_html( $aggr_zone )
+			);
+			?>
+		</p>
+		<?php endif; ?>
+		<p class="aggr-delivery__window">
+			<?php if ( $aggr_utc && 'UTC' !== wp_timezone()->getName() ) : ?>
+				<a href="
+				<?php
+				echo esc_url(
+					add_query_arg(
+						array(
+							'from' => $aggr_window['from'],
+							'to'   => $aggr_window['to'],
+						),
+						$aggr_delivery_base
+					)
+				);
+				?>
+							">
+					<?php esc_html_e( 'View site days', 'aggressive-ads' ); ?>
+				</a>
+			<?php elseif ( ! $aggr_utc ) : ?>
+				<a href="
+				<?php
+				echo esc_url(
+					add_query_arg(
+						array(
+							'from' => $aggr_window['from'],
+							'to'   => $aggr_window['to'],
+							'tz'   => 'utc',
+						),
+						$aggr_delivery_base
+					)
+				);
+				?>
+							">
+					<?php esc_html_e( 'View UTC days', 'aggressive-ads' ); ?>
+				</a>
+			<?php endif; ?>
 		</p>
 	</div>
 
@@ -77,8 +127,18 @@ if ( array() !== $aggr_delivery ) :
 	<ul class="aggr-range__presets">
 		<?php foreach ( Reporting_Read::WINDOWS as $aggr_preset ) : ?>
 			<li>
+				<?php
+				$aggr_preset_args = $aggr_utc
+					? array(
+						'days' => (int) $aggr_preset,
+						'tz'   => 'utc',
+					)
+					: array(
+						'days' => (int) $aggr_preset,
+					);
+				?>
 				<a
-					href="<?php echo esc_url( add_query_arg( 'days', (int) $aggr_preset, $aggr_delivery_base ) ); ?>"
+					href="<?php echo esc_url( add_query_arg( $aggr_preset_args, $aggr_delivery_base ) ); ?>"
 					<?php echo (int) $aggr_preset === (int) $aggr_window['days'] ? 'aria-current="true"' : ''; ?>
 				>
 					<?php
@@ -97,15 +157,18 @@ if ( array() !== $aggr_delivery ) :
 		<summary><?php esc_html_e( 'Custom', 'aggressive-ads' ); ?></summary>
 		<div class="aggr-range__fields">
 			<div class="aggr-range__field">
-				<label for="aggr-range-from"><?php esc_html_e( 'From (UTC)', 'aggressive-ads' ); ?></label>
+				<label for="aggr-range-from"><?php echo $aggr_utc ? esc_html__( 'From (UTC)', 'aggressive-ads' ) : esc_html__( 'From', 'aggressive-ads' ); ?></label>
 				<input type="date" id="aggr-range-from" name="from" value="<?php echo esc_attr( $aggr_window['from'] ); ?>">
 			</div>
 
 			<div class="aggr-range__field">
-				<label for="aggr-range-to"><?php esc_html_e( 'To (UTC)', 'aggressive-ads' ); ?></label>
+				<label for="aggr-range-to"><?php echo $aggr_utc ? esc_html__( 'To (UTC)', 'aggressive-ads' ) : esc_html__( 'To', 'aggressive-ads' ); ?></label>
 				<input type="date" id="aggr-range-to" name="to" value="<?php echo esc_attr( $aggr_window['to'] ); ?>">
 			</div>
 
+			<?php if ( $aggr_utc ) : ?>
+				<input type="hidden" name="tz" value="utc">
+			<?php endif; ?>
 			<button class="aggr-button aggr-button--secondary" type="submit"><?php esc_html_e( 'Show', 'aggressive-ads' ); ?></button>
 		</div>
 	</details>

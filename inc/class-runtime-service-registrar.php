@@ -48,6 +48,7 @@ use Aggressive\Ads\Repository\Org_Repository;
 use Aggressive\Ads\Repository\Package_Repository;
 use Aggressive\Ads\Repository\Page_Context_Repository;
 use Aggressive\Ads\Repository\Placement_Repository;
+use Aggressive\Ads\Repository\Report_Bucket_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Repository\Line_Item_Repository;
 use Aggressive\Ads\Repository\User_Repository;
@@ -307,6 +308,7 @@ final class Runtime_Service_Registrar {
 			)
 		);
 		$container->register( Rollup_Repository::class, static fn (): Rollup_Repository => new Rollup_Repository() );
+		$container->register( Report_Bucket_Repository::class, static fn (): Report_Bucket_Repository => new Report_Bucket_Repository() );
 		$container->register( \Aggressive\Ads\Repository\Rollup_Report_Repository::class, static fn (): \Aggressive\Ads\Repository\Rollup_Report_Repository => new \Aggressive\Ads\Repository\Rollup_Report_Repository() );
 		$container->register( \Aggressive\Ads\Repository\Decision_Rollup_Repository::class, static fn (): \Aggressive\Ads\Repository\Decision_Rollup_Repository => new \Aggressive\Ads\Repository\Decision_Rollup_Repository() );
 		$container->register( Fill_Token::class, static fn (): Fill_Token => new Fill_Token() );

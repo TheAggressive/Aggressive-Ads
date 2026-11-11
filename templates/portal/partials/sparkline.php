@@ -211,6 +211,9 @@ $aggr_spark_every = max( 1, (int) ceil( $aggr_spark_days / 7 ) );
 		<?php endif; ?>
 		<input type="hidden" name="from" value="<?php echo esc_attr( $aggr_export_from ); ?>">
 		<input type="hidden" name="to" value="<?php echo esc_attr( $aggr_export_to ); ?>">
+		<?php if ( isset( $aggr_utc ) && $aggr_utc ) : ?>
+			<input type="hidden" name="tz" value="utc">
+		<?php endif; ?>
 		<?php wp_nonce_field( \Aggressive\Ads\Portal\Report_Actions::EXPORT_ACTION ); ?>
 		<button type="submit" class="aggr-button aggr-button--secondary aggr-button--small">
 			<?php

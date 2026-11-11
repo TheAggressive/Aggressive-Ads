@@ -24,7 +24,7 @@ final class Schema {
 	 *
 	 * Drives the migration walker in Upgrader.
 	 */
-	public const DB_VERSION = 31;
+	public const DB_VERSION = 32;
 
 	/**
 	 * The audit table's name, without the site's table prefix.
@@ -49,8 +49,14 @@ final class Schema {
 	/** Append-only fill impressions and clicks. */
 	public const EVENTS_TABLE = 'aggr_events';
 
-	/** Campaign/placement/day counters. Reporting reads this, never the event log. */
+	/** Campaign/placement/day counters. Pacing reads this; lifetime tiles do too. */
 	public const ROLLUPS_TABLE = 'aggr_rollups';
+
+	/**
+	 * Campaign/placement/quarter-hour counters. Org-scoped reports read this so a local
+	 * day can be summed without moving the daily pacing "today".
+	 */
+	public const REPORT_BUCKETS_TABLE = 'aggr_report_buckets';
 
 	/** Per-placement, per-day decision outcomes. See docs/platform-p13-event-analytics-schema.md. */
 	public const DECISION_ROLLUPS_TABLE = 'aggr_decision_rollups';
@@ -645,7 +651,8 @@ final class Schema {
 	KEY campaign_day (campaign_id,day_utc),
 	KEY line_item_day (line_item_id,day_utc),
 	KEY org_day (org_id,day_utc),
-	KEY creative_day (creative_id,day_utc)
+	KEY creative_day (creative_id,day_utc),
+	KEY day (day_utc)
 ) {$charset_collate};";
 	}
 
@@ -677,7 +684,7 @@ final class Schema {
 	 * @return array<int, string>
 	 */
 	public static function rollups_index_names(): array {
-		return array( 'PRIMARY', 'slot_creative_day', 'campaign_day', 'line_item_day', 'org_day', 'creative_day' );
+		return array( 'PRIMARY', 'slot_creative_day', 'campaign_day', 'line_item_day', 'org_day', 'creative_day', 'day' );
 	}
 
 	/**
@@ -754,5 +761,34 @@ final class Schema {
 	 */
 	public static function decision_rollups_index_names(): array {
 		return array( 'PRIMARY', 'slot_day_outcome_kind', 'day_outcome' );
+	}
+
+	/**
+	 * Reporting buckets DDL. Declared on {@see Schema_Report_Buckets}; named here
+	 * so there is still one place to answer "what tables exist".
+	 *
+	 * @param string $table_name      Fully prefixed table name.
+	 * @param string $charset_collate Database charset and collation.
+	 */
+	public static function report_buckets_table_ddl( string $table_name, string $charset_collate ): string {
+		return Schema_Report_Buckets::table_ddl( $table_name, $charset_collate );
+	}
+
+	/**
+	 * Reporting buckets columns.
+	 *
+	 * @return list<string>
+	 */
+	public static function report_buckets_columns(): array {
+		return Schema_Report_Buckets::columns();
+	}
+
+	/**
+	 * Reporting buckets indexes.
+	 *
+	 * @return list<string>
+	 */
+	public static function report_buckets_index_names(): array {
+		return Schema_Report_Buckets::index_names();
 	}
 }

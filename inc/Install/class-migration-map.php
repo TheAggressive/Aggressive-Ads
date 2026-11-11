@@ -14,6 +14,7 @@ use Aggressive\Ads\Domain\Slot_Options;
 use Aggressive\Ads\Repository\Placement_Repository;
 use Aggressive\Ads\Repository\Audit_Repository;
 use Aggressive\Ads\Repository\Creative_Decision_Repository;
+use Aggressive\Ads\Repository\Report_Bucket_Repository;
 use Aggressive\Ads\Repository\Rollup_Repository;
 use Aggressive\Ads\Repository\Creative_Assignment_Repository;
 use Aggressive\Ads\Repository\Decision_Rollup_Repository;
@@ -416,6 +417,33 @@ final class Migration_Map {
 			 */
 			31 => static function () use ( $c ): void {
 				$c->get( Creative_Decision_Repository::class )->install_table();
+			},
+
+			/*
+			 * Quarter-hour buckets, so a report can be cut on the site's local day.
+			 *
+			 * Daily `aggr_rollups` stay the pacing counter — growing that unique
+			 * key by an hour would turn `delivered_today` into a twenty-four-row
+			 * sum. This table is written beside it from increment() and rebuilt
+			 * by the same reconciler pass.
+			 *
+			 * Buckets are backfilled from the event ledger where it still has
+			 * them. History the ledger has already purged is not invented from
+			 * daily rows: a UTC day cannot be split honestly, and stuffing
+			 * every daily total into midnight would make a local-day chart
+			 * look precise about a guess. Those days stay on the daily table
+			 * for pacing and lifetime tiles.
+			 *
+			 * `install_table()` is also called from `install_delivery_tables()`,
+			 * so a repair install heals a site the upgrade missed.
+			 */
+			32 => static function () use ( $c ): void {
+				$c->get( \Aggressive\Ads\Repository\Conversion_Repository::class )->install_table();
+				$c->get( Rollup_Repository::class )->install_table();
+				$buckets = $c->get( Report_Bucket_Repository::class );
+				$buckets->install_table();
+
+				$buckets->begin_backfill();
 			},
 		);
 	}

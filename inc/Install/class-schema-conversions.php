@@ -69,6 +69,7 @@ final class Schema_Conversions {
 	PRIMARY KEY  (id),
 	UNIQUE KEY definition_key (definition_id,idempotency_key),
 	KEY created (created_at_ts,id),
+	KEY occurred (occurred_at_ts,id),
 	KEY campaign_day (campaign_id,occurred_at_ts,id),
 	KEY token_definition (token_hash,definition_id)
 ) {$charset_collate};";
@@ -106,7 +107,7 @@ final class Schema_Conversions {
 	 * @return array<int, string>
 	 */
 	public static function conversions_index_names(): array {
-		return array( 'PRIMARY', 'definition_key', 'created', 'campaign_day', 'token_definition' );
+		return array( 'PRIMARY', 'definition_key', 'created', 'occurred', 'campaign_day', 'token_definition' );
 	}
 
 	/**

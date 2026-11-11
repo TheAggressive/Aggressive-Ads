@@ -480,3 +480,28 @@ not this deployment. Before launch, run the same fail-closed harness against an
 isolated staging clone of the actual web tier, PHP worker pool, object cache and
 database topology. Record that result with the release evidence, and do not
 extrapolate the reference throughput to materially different hardware.
+
+
+## Local-day reporting upgrades
+
+Schema 32 adds `aggr_report_buckets` without changing UTC pacing counters.
+The `aggr_reconcile_fill_rollups` job also resumes its historical backfill,
+at most seven closed UTC days per invocation. The non-autoloaded options
+`aggr_report_buckets_backfill_next` and `aggr_report_buckets_backfill_until`
+are UTC Unix timestamps; absence of `backfill_next` means the initial backfill
+is complete. Retention holds events needed by an unfinished backfill. Inspect
+these options on the relevant site when reports say earlier delivery is still
+being rebuilt; verify cron runs before changing the cursor.
+
+The oldest retained event/conversion timestamp is recorded in
+`aggr_report_buckets_since`. Local reports and CSV headers disclose ranges
+that predate it; their trend comparisons are withheld. Raw history that was
+already purged cannot be reconstructed. The **View UTC days** option continues
+to read the existing daily table, including older history. An upgrade during
+a UTC day initially has partial current-day buckets; the closed-day reconciler
+repairs that day after the midnight grace period. The backfill stays pending
+until that repair, keeping local totals marked incomplete in the meantime.
+
+Rollback leaves the additive bucket table in place. Daily pacing and lifetime
+counters retain their old schema and semantics; do not delete their history to
+roll back reporting. A forward upgrade can resume an unfinished backfill.
