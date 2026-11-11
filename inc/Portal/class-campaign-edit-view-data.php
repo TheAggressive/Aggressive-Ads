@@ -78,6 +78,7 @@ final class Campaign_Edit_View_Data {
 		list( $used, $total ) = $this->links->usage( $campaign_id );
 
 		$row['edit_link']       = (string) ( $values['default_click_url'] ?? '' );
+		$row['edit_tracker']    = (string) ( $values['click_tracker'] ?? '' );
 		$row['edit_link_used']  = $used;
 		$row['edit_link_total'] = $total;
 		$row['edit_link_check'] = $this->checker->last( $campaign_id, true );

@@ -13,6 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
 use Aggressive\Ads\Plugin;
 use Aggressive\Ads\Portal\Organization_Actions;
+use Aggressive\Ads\Portal\Pending_Access_View_Data;
 use Aggressive\Ads\Portal\Portal_Notice;
 use Aggressive\Ads\Portal\View_Data;
 use Aggressive\Ads\Repository\Org_Access_Repository;
@@ -200,7 +201,38 @@ if ( '' !== $aggr_org_notice ) {
 									<td>
 										<span class="aggr-table__mono aggr-table__strong"><?php echo esc_html( (string) $aggr_access['email'] ); ?></span>
 										<span class="aggr-table__sub aggr-table__sub--plain">
-											<?php echo $aggr_is_request ? esc_html__( 'Asked to join', 'aggressive-ads' ) : esc_html__( 'Invited', 'aggressive-ads' ); ?>
+											<?php
+											/*
+											 * Why the row is here, in the words of a hint: a name that
+											 * matches is a suggestion the owner may use, and nothing
+											 * here approves anyone on it.
+											 */
+											if ( $aggr_is_request ) {
+												echo '' === $aggr_access['name_match']
+													? esc_html__( 'Asked to join', 'aggressive-ads' )
+													: esc_html(
+														sprintf(
+															/* translators: %s: the name of a member of this organization the requester resembles. */
+															__( 'Asked to join · matches the name “%s”', 'aggressive-ads' ),
+															$aggr_access['name_match']
+														)
+													);
+											} elseif ( $aggr_access['invited_by_you'] ) {
+												esc_html_e( 'Invited by you', 'aggressive-ads' );
+											} elseif ( Pending_Access_View_Data::INVITER_SITE_TEAM === $aggr_access['invited_by'] ) {
+												esc_html_e( 'Invited by the site team', 'aggressive-ads' );
+											} elseif ( '' !== $aggr_access['invited_by'] ) {
+												echo esc_html(
+													sprintf(
+														/* translators: %s: the name of the member who sent the invitation. */
+														__( 'Invited by %s', 'aggressive-ads' ),
+														$aggr_access['invited_by']
+													)
+												);
+											} else {
+												esc_html_e( 'Invited', 'aggressive-ads' );
+											}
+											?>
 										</span>
 									</td>
 									<td>

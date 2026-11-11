@@ -106,7 +106,7 @@ final class Portal_Service_Registrar {
 				$c->get( Campaign_Repository::class ),
 				$c->get( Placement_Repository::class ),
 				$c->get( Org_Repository::class ),
-				$c->get( Org_Access_Repository::class ),
+				$c->get( \Aggressive\Ads\Portal\Pending_Access_View_Data::class ),
 				$c->get( Package_Repository::class ),
 				$c->get( Campaign_Editor::class ),
 				$c->get( Review_Readiness::class ),
@@ -125,6 +125,12 @@ final class Portal_Service_Registrar {
 				$c->get( \Aggressive\Ads\Portal\Campaign_History_View_Data::class ),
 				$c->get( \Aggressive\Ads\Portal\Campaign_Edit_View_Data::class ),
 				$c->get( \Aggressive\Ads\Workflow\Campaign_Action_Requests::class )
+			)
+		);
+		$container->register(
+			\Aggressive\Ads\Portal\Pending_Access_View_Data::class,
+			static fn ( Service_Container $c ): \Aggressive\Ads\Portal\Pending_Access_View_Data => new \Aggressive\Ads\Portal\Pending_Access_View_Data(
+				$c->get( Org_Access_Repository::class )
 			)
 		);
 		$container->register(
