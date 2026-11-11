@@ -359,7 +359,9 @@ final class Report_Bucket_Repository {
 		$now    = time();
 		$oldest = min( array_filter( array( $event, $conversion, $now ), static fn ( int $at ): bool => $at > 0 ) );
 		$start  = $oldest - ( $oldest % DAY_IN_SECONDS );
-		$until  = $now - ( $now % DAY_IN_SECONDS );
+		// The upgrade day's earlier traffic also needs repair. Keep it pending
+		// until that day closes; rebuilding it now would race live increments.
+		$until = $now - ( $now % DAY_IN_SECONDS ) + DAY_IN_SECONDS;
 
 		update_option( self::OPTION_UNTIL, $until, false );
 		update_option( self::OPTION_NEXT, $start, false );

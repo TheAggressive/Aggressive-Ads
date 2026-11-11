@@ -128,6 +128,23 @@ final class ReportBucketProjectionTest extends WP_UnitTestCase {
 		$this->assertSame( 6, $buckets->backfill_from_events( strtotime( '2026-08-14 00:00:00 UTC' ) ) );
 		$this->assertSame( 1, ( new Rollup_Report_Repository() )->totals_for_org( 1200, Report_Period::between( '2026-08-13', '2026-08-13', 'Asia/Kolkata' ) )['impressions'] );
 	}
+
+	/** Earlier traffic on the upgrade day is pending until a closed-day repair can include it. */
+	public function test_backfill_waits_for_the_upgrade_day_to_close(): void {
+		$today = strtotime( gmdate( 'Y-m-d' ) . ' 00:00:00 UTC' );
+		$this->event( gmdate( 'Y-m-d H:i:s', $today ) );
+		update_post_meta( 120, Campaign_Repository::META_ORG_ID, 1200 );
+		$buckets = new Report_Bucket_Repository();
+		$buckets->begin_backfill();
+
+		$this->assertSame( $today + DAY_IN_SECONDS, (int) get_option( Report_Bucket_Repository::OPTION_UNTIL ) );
+		$this->assertSame( 0, $buckets->backfill_from_events( $today ) );
+		$this->assertSame( $today, (int) get_option( Report_Bucket_Repository::OPTION_NEXT ) );
+		$this->assertSame( 1, $buckets->backfill_from_events( $today + DAY_IN_SECONDS ) );
+		$this->assertFalse( get_option( Report_Bucket_Repository::OPTION_NEXT, false ) );
+		$this->assertSame( 1, ( new Rollup_Report_Repository() )->totals_for_org( 1200, Report_Period::between( gmdate( 'Y-m-d', $today ), gmdate( 'Y-m-d', $today ), '+00:15' ) )['impressions'] );
+	}
+
 	/** Retention cannot erase a ledger day that its new projection still needs. */
 	public function test_retention_waits_for_the_reporting_backfill(): void {
 		$old     = gmdate( 'Y-m-d', time() - 140 * DAY_IN_SECONDS );

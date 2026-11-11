@@ -499,7 +499,8 @@ that predate it; their trend comparisons are withheld. Raw history that was
 already purged cannot be reconstructed. The **View UTC days** option continues
 to read the existing daily table, including older history. An upgrade during
 a UTC day initially has partial current-day buckets; the closed-day reconciler
-repairs that day after the midnight grace period.
+repairs that day after the midnight grace period. The backfill stays pending
+until that repair, keeping local totals marked incomplete in the meantime.
 
 Rollback leaves the additive bucket table in place. Daily pacing and lifetime
 counters retain their old schema and semantics; do not delete their history to
