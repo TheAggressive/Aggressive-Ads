@@ -427,10 +427,11 @@ problem, not a report-generation one.
   reason labels, which are site-controlled rather than advertiser-controlled —
   lower risk, same treatment, because the writer is not the place to start making
   exceptions.
-- **Resource exhaustion.** Range bounds are the defence: an unbounded range is a
-  full-table aggregate that any logged-in advertiser could request repeatedly.
-  The bound is enforced in the domain object, and the export builds in memory, so
-  its bound stays the tighter of the two.
+- **Resource exhaustion.** Domain date bounds constrain indexed aggregate reads,
+  and exports use a tighter date window. They still assemble all matching
+  campaign/day rows in memory. Date bounds do not cap row count or document
+  bytes; [open work](open-work.md#bound-reporting-export-cardinality) records the
+  remaining large-catalogue limit and required capacity evidence.
 - **No new identifier.** Reports aggregate; nothing per-visitor is read, stored
   or rendered. `ip_hash` is never selected by a report query.
 - **Never logged:** report parameters are safe, report *results* for another

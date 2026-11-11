@@ -493,6 +493,12 @@ is complete. Retention holds events needed by an unfinished backfill. Inspect
 these options on the relevant site when reports say earlier delivery is still
 being rebuilt; verify cron runs before changing the cursor.
 
+If either ledger's initial history query fails, no history cursor is committed.
+Local history remains unavailable, retention preserves its source events, and
+the reconciliation job retries initialization. Check database availability and
+the ledger tables when this state persists; do not manufacture a completion
+option to silence it. UTC reports continue to use the existing daily history.
+
 The oldest retained event/conversion timestamp is recorded in
 `aggr_report_buckets_since`. Local reports and CSV headers disclose ranges
 that predate it; their trend comparisons are withheld. Raw history that was

@@ -303,6 +303,18 @@ final class ReportExportTest extends WP_UnitTestCase {
 		$this->assertStringContainsString( "'=HYPERLINK", $csv );
 	}
 
+	/** Locale-specific formula leaders survive storage and need CSV neutralization too. */
+	public function test_full_width_formula_leader_is_neutralized_after_campaign_storage(): void {
+		$campaign = $this->make_campaign( $this->org_a, '＝SUM(1,2)' );
+		$this->bump( $campaign, 1, 0 );
+		$this->enable_reporting( true );
+		$rows = $this->reporting->daily_rows_for_org( $this->org_a, Report_Period::trailing( 7, gmdate( 'Y-m-d' ) ) );
+
+		$this->assertCount( 1, $rows );
+		$this->assertSame( '＝SUM(1,2)', $rows[0]['campaign'] );
+		$this->assertStringContainsString( "\"'＝SUM(1,2)\"", $this->exports->document( $rows ) );
+	}
+
 	/**
 	 * **Each guard on the export is proven by the message it dies with.**
 	 *

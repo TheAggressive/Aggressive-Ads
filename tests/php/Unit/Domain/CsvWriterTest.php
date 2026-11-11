@@ -105,6 +105,11 @@ final class CsvWriterTest extends TestCase {
 			'at'              => array( '@SUM(A1:A9)' ),
 			'tab'             => array( "\t=1+1" ),
 			'carriage return' => array( "\r=1+1" ),
+			'line feed'       => array( "\n=1+1" ),
+			'wide equals'     => array( '＝1+1' ),
+			'wide plus'       => array( '＋1+1' ),
+			'wide minus'      => array( '－1+1' ),
+			'wide at'         => array( '＠SUM(A1:A9)' ),
 			'dde'             => array( '=cmd|\' /C calc\'!A0' ),
 		);
 	}
@@ -117,6 +122,7 @@ final class CsvWriterTest extends TestCase {
 	 */
 	public function test_a_quoted_field_is_still_neutralized(): void {
 		$this->assertSame( "\"'=SUM(1,2)\"\r\n", Csv_Writer::row( array( '=SUM(1,2)' ) ) );
+		$this->assertSame( "\"'=1+1\"\r\n", Csv_Writer::row( array( '=1+1' ) ) );
 	}
 
 	/**
