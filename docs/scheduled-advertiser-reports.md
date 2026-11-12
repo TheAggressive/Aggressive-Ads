@@ -18,10 +18,16 @@ attachment or public bearer link is created in this slice. Campaign goal/pacing
 summaries and optional share links remain parent-issue work; #279 stays open.
 
 The per-site subscription row holds current delivery state, attempt count,
-period and next action time. Workers process bounded indexed batches. A
-site-scoped worker lock and subscription lock serialize processing and settings
+period and next action time. Workers process bounded indexed batches. Lock names include the database, table
+and site. A worker lock and subscription locks serialize processing and settings
 changes. Membership, account capability, organization state, recipient address,
 Reporting state and timezone are checked again before sending.
+
+Workers and preference writes must use the same MySQL writer. Lock acquisition
+and release must stay on its connection; independent writers are not coordinated
+by [MySQL named locks](https://dev.mysql.com/doc/refman/8.4/en/locking-functions.html).
+The SQLite development browser run does not prove database-lock serialization;
+that is exercised separately against MySQL with a second connection.
 
 Transport acceptance is **queued**, not inbox delivery. Explicit failure retries
 after 5 minutes, 30 minutes, then 2 hours. Interrupted `sending` work and thrown

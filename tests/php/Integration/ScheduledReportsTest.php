@@ -630,11 +630,26 @@ final class ScheduledReportsTest extends WP_UnitTestCase {
 		$this->assertCount( 1, $this->messages );
 	}
 
+	/** Separate installations on one server must not contend on identical blog ids. */
+	public function test_distinct_table_prefixes_have_distinct_worker_locks(): void {
+		global $wpdb;
+		$prefix = $wpdb->prefix;
+		$this->assertTrue( $this->subscriptions->acquire( 'worker' ) );
+		try {
+			$wpdb->prefix = $prefix . 'other_install_';
+			$this->assertTrue( $this->subscriptions->acquire( 'worker' ) );
+		} finally {
+			$this->subscriptions->release( 'worker' );
+			$wpdb->prefix = $prefix;
+			$this->subscriptions->release( 'worker' );
+		}
+	}
+
 	/** The second connection proves contention, rather than same-session reentrancy. */
 	public function test_another_database_session_blocks_an_overlapping_worker(): void {
 		global $wpdb;
 		$this->subscribe();
-		$lock  = 'aggr_report_' . substr( hash( 'sha256', get_current_blog_id() . ':worker' ), 0, 48 );
+		$lock  = 'aggr_report_' . substr( hash( 'sha256', $wpdb->dbname . ':' . $this->subscriptions->table_name() . ':' . get_current_blog_id() . ':worker' ), 0, 48 );
 		$other = new \wpdb( $wpdb->dbuser, $wpdb->dbpassword, $wpdb->dbname, $wpdb->dbhost );
 		$this->assertSame( 1, (int) $other->get_var( $other->prepare( 'SELECT GET_LOCK(%s,0)', $lock ) ) );
 		try {

@@ -209,7 +209,10 @@ final class Report_Subscription_Repository {
 	 * @param string $scope Server-derived scope, never request input.
 	 */
 	private function lock_name( string $scope ): string {
-		return 'aggr_report_' . substr( hash( 'sha256', get_current_blog_id() . ':' . $scope ), 0, 48 );
+		global $wpdb;
+		// Named locks share a server namespace across databases and installations.
+		$identity = $wpdb->dbname . ':' . $this->table_name() . ':' . get_current_blog_id() . ':' . $scope;
+		return 'aggr_report_' . substr( hash( 'sha256', $identity ), 0, 48 );
 	}
 
 	/**
