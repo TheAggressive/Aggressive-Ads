@@ -208,6 +208,7 @@ final class Installer {
 		( new Event_Repository() )->install_table();
 		( new Rollup_Repository() )->install_table();
 		( new Report_Bucket_Repository() )->install_table();
+		( new \Aggressive\Ads\Repository\Report_Subscription_Repository() )->install_table();
 		( new Decision_Rollup_Repository() )->install_table();
 		( new Forecast_Repository() )->install_table();
 		( new Reservation_Repository() )->install_table();

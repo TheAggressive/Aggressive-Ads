@@ -87,6 +87,26 @@ final class Runtime_Service_Registrar {
 	 */
 	public function register( Service_Container $container ): void {
 		$container->register(
+			\Aggressive\Ads\Notification\Scheduled_Report_Mailer::class,
+			static fn ( Service_Container $c ): \Aggressive\Ads\Notification\Scheduled_Report_Mailer => new \Aggressive\Ads\Notification\Scheduled_Report_Mailer(
+				$c->get( Settings::class ),
+				$c->get( \Aggressive\Ads\Workflow\Reporting_Read::class ),
+				$c->get( \Aggressive\Ads\Portal\Delivery_View_Data::class ),
+				$c->get( Org_Repository::class )
+			)
+		);
+		$container->register(
+			\Aggressive\Ads\Workflow\Scheduled_Reports::class,
+			static fn ( Service_Container $c ): \Aggressive\Ads\Workflow\Scheduled_Reports => new \Aggressive\Ads\Workflow\Scheduled_Reports(
+				$c->get( \Aggressive\Ads\Repository\Report_Subscription_Repository::class ),
+				$c->get( Org_Repository::class ),
+				$c->get( User_Repository::class ),
+				$c->get( \Aggressive\Ads\Workflow\Reporting_Read::class ),
+				$c->get( \Aggressive\Ads\Notification\Scheduled_Report_Mailer::class ),
+				$c->get( Audit_Repository::class )
+			)
+		);
+		$container->register(
 			Campaign_State_Machine::class,
 			static fn ( Service_Container $c ): Campaign_State_Machine => new Campaign_State_Machine(
 				$c->get( Campaign_Repository::class ),

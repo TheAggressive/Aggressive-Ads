@@ -41,6 +41,13 @@ use Aggressive\Ads\Install\Schema;
  */
 final class Rollup_Report_Repository {
 
+	private const EMPTY_TOTALS = array(
+		'impressions' => 0,
+		'clicks'      => 0,
+		'viewables'   => null,
+		'conversions' => null,
+	);
+
 	/**
 	 * Object cache group for the dashboard and campaign report reads.
 	 */
@@ -58,8 +65,23 @@ final class Rollup_Report_Repository {
 		return $this->remember(
 			'totals',
 			array( $org_id, $campaign_id, $period->start, $period->end, $period->timezone ),
-			fn (): array => $this->read_totals_for_org( $org_id, $period, $campaign_id )
+			fn (): array => $this->read_totals_for_org( $org_id, $period, $campaign_id ) ?? self::EMPTY_TOTALS
 		);
+	}
+
+	/**
+	 * Uncached delivery snapshot; failed SQL cannot be mailed as measured zeros.
+	 *
+	 * @param int           $org_id Authorized organization id.
+	 * @param Report_Period $period Bounded report period.
+	 * @return array{impressions: int, clicks: int, viewables: int|null, conversions: int|null}|\WP_Error
+	 */
+	public function checked_totals_for_org( int $org_id, Report_Period $period ): array|\WP_Error {
+		if ( $org_id <= 0 ) {
+			return new \WP_Error( 'aggr_report_scope_invalid' );
+		}
+
+		return $this->read_totals_for_org( $org_id, $period ) ?? new \WP_Error( 'aggr_report_read_unavailable' );
 	}
 
 	/**
@@ -208,18 +230,11 @@ final class Rollup_Report_Repository {
 	 * @param int           $org_id      Owning organization.
 	 * @param Report_Period $period      Bounded UTC range.
 	 * @param int           $campaign_id One of the organization's campaigns, or 0 for all of them.
-	 * @return array{impressions: int, clicks: int, viewables: int|null, conversions: int|null}
+	 * @return array{impressions: int, clicks: int, viewables: int|null, conversions: int|null}|null Null means failed SQL.
 	 */
-	private function read_totals_for_org( int $org_id, Report_Period $period, int $campaign_id = 0 ): array {
-		$empty = array(
-			'impressions' => 0,
-			'clicks'      => 0,
-			'viewables'   => null,
-			'conversions' => null,
-		);
-
+	private function read_totals_for_org( int $org_id, Report_Period $period, int $campaign_id = 0 ): ?array {
 		if ( $org_id <= 0 ) {
-			return $empty;
+			return self::EMPTY_TOTALS;
 		}
 
 		global $wpdb;
@@ -249,7 +264,7 @@ final class Rollup_Report_Repository {
 		// phpcs:enable
 
 		if ( ! is_array( $row ) ) {
-			return $empty;
+			return null;
 		}
 
 		return array(

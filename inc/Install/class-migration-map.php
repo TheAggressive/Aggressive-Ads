@@ -445,6 +445,9 @@ final class Migration_Map {
 
 				$buckets->begin_backfill();
 			},
+			33 => static function (): void {
+				( new \Aggressive\Ads\Repository\Report_Subscription_Repository() )->install_table();
+			},
 		);
 	}
 }

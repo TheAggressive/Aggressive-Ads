@@ -131,3 +131,13 @@ remaining private creative file and clears `_aggr_private_path` /
 `_aggr_private_token`. Relevance is `end_ts` when set, otherwise last
 modified. Campaign posts, checksum metadata and Media Library attachments are
 kept. Audit context carries counts only — never paths.
+
+## Scheduled advertiser summaries
+
+Account settings provide personal weekly/monthly opt-in summaries at the current
+account email, disabled by default. These use shared reporting facts, metric
+formatting and freshness disclosures, with authenticated portal/CSV links. They
+have their own durable per-period retry state and do not reuse campaign reminder
+idempotence markers. See [scheduled advertiser report delivery](scheduled-advertiser-reports.md)
+and the [runbook recovery procedure](runbook.md#scheduled-report-recovery).
+Campaign goal/pacing summaries remain tracked in #279.
